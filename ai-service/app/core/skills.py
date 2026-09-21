@@ -100,7 +100,9 @@ def normalize(name: str) -> str:
 def extract_skills(text: str) -> list[str]:
     """Find canonical skills mentioned in free text."""
     found: set[str] = set()
-    low = text.lower()
+    # sentence-final periods sit in the no-trailing-punctuation boundary; blank them
+    probe = re.sub(r"\.(?=\s|$)", " ", text)
+    low = probe.lower()
     for alias, canon in ALIASES.items():
         if alias in ("es", "ml", "dl", "ts", "js", "c", "r"):
             if re.search(rf"(?<![\w.]){re.escape(alias)}(?![\w.])", low):
@@ -108,7 +110,7 @@ def extract_skills(text: str) -> list[str]:
         elif alias in low:
             found.add(canon)
     for pat, name in _CANON_PATTERNS:
-        if pat.search(text):
+        if pat.search(probe):
             found.add(name)
     return sorted(found, key=str.lower)
 
