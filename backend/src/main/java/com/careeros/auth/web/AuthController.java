@@ -1,0 +1,70 @@
+package com.careeros.auth.web;
+
+import com.careeros.auth.dto.AuthResponse;
+import com.careeros.auth.dto.AuthUserResponse;
+import com.careeros.auth.dto.ForgotPasswordRequest;
+import com.careeros.auth.dto.LoginRequest;
+import com.careeros.auth.dto.RefreshTokenRequest;
+import com.careeros.auth.dto.RegisterRequest;
+import com.careeros.auth.dto.ResetPasswordRequest;
+import com.careeros.auth.dto.TokenPairResponse;
+import com.careeros.auth.entity.User;
+import com.careeros.auth.service.AuthService;
+import com.careeros.auth.service.TokenService;
+import jakarta.validation.Valid;
+import java.util.Map;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/v1/auth")
+public class AuthController {
+
+    private final AuthService authService;
+    private final TokenService tokenService;
+
+    public AuthController(AuthService authService, TokenService tokenService) {
+        this.authService = authService;
+        this.tokenService = tokenService;
+    }
+
+    @PostMapping("/register")
+    @ResponseStatus(HttpStatus.CREATED)
+    public AuthResponse register(@RequestBody @Valid RegisterRequest request) {
+        User user = authService.register(request);
+        return new AuthResponse(AuthUserResponse.from(user), tokenService.issueForNewSession(user));
+    }
+
+    @PostMapping("/login")
+    public AuthResponse login(@RequestBody @Valid LoginRequest request) {
+        User user = authService.login(request);
+        return new AuthResponse(AuthUserResponse.from(user), tokenService.issueForNewSession(user));
+    }
+
+    @PostMapping("/refresh")
+    public TokenPairResponse refresh(@RequestBody @Valid RefreshTokenRequest request) {
+        return tokenService.refresh(request.refreshToken());
+    }
+
+    @PostMapping("/logout")
+    public Map<String, Object> logout(@RequestBody @Valid RefreshTokenRequest request) {
+        tokenService.logout(request.refreshToken());
+        return Map.of("loggedOut", true);
+    }
+
+    @PostMapping("/password/forgot")
+    public Map<String, Object> forgot(@RequestBody @Valid ForgotPasswordRequest request) {
+        authService.forgotPassword(request.email());
+        return Map.of("accepted", true);
+    }
+
+    @PostMapping("/password/reset")
+    public Map<String, Object> reset(@RequestBody @Valid ResetPasswordRequest request) {
+        authService.resetPassword(request);
+        return Map.of("reset", true);
+    }
+}
