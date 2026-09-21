@@ -250,6 +250,7 @@ public class JobService {
     @Transactional
     public CompanyItem upsertCompany(CompanyRequest request) {
         Company company = companies.findByName(request.name().trim()).orElseGet(Company::new);
+        company.setName(request.name().trim());
         if (request.website() != null) {
             company.setWebsite(request.website());
         }

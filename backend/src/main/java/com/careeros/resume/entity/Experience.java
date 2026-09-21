@@ -8,7 +8,6 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
-import org.hibernate.annotations.Array;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UuidGenerator;
 
@@ -45,9 +44,8 @@ public class Experience {
     @Column(name = "location")
     private String location;
 
-    @Array(length = 512)
     @Column(name = "bullets", nullable = false)
-    private List<String> bullets = List.of();
+    private String[] bullets = new String[0];
 
     @Column(name = "summary")
     private String summary;
@@ -124,11 +122,11 @@ public class Experience {
     }
 
     public List<String> getBullets() {
-        return bullets;
+        return bullets == null ? List.of() : List.of(bullets);
     }
 
     public void setBullets(List<String> bullets) {
-        this.bullets = bullets == null ? List.of() : bullets;
+        this.bullets = bullets == null ? new String[0] : bullets.toArray(String[]::new);
     }
 
     public String getSummary() {

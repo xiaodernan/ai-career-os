@@ -7,7 +7,6 @@ import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
-import org.hibernate.annotations.Array;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UuidGenerator;
 
@@ -50,21 +49,17 @@ public class Job {
     @Column(name = "description", nullable = false)
     private String description;
 
-    @Array(length = 512)
     @Column(name = "requirements", nullable = false)
-    private List<String> requirements = List.of();
+    private String[] requirements = new String[0];
 
-    @Array(length = 512)
     @Column(name = "nice_to_have", nullable = false)
-    private List<String> niceToHave = List.of();
+    private String[] niceToHave = new String[0];
 
-    @Array(length = 512)
     @Column(name = "responsibilities", nullable = false)
-    private List<String> responsibilities = List.of();
+    private String[] responsibilities = new String[0];
 
-    @Array(length = 512)
     @Column(name = "skills", nullable = false)
-    private List<String> skills = List.of();
+    private String[] skills = new String[0];
 
     @Column(name = "status", nullable = false)
     private String status = "open";
@@ -164,35 +159,35 @@ public class Job {
     }
 
     public List<String> getRequirements() {
-        return requirements;
+        return requirements == null ? List.of() : List.of(requirements);
     }
 
     public void setRequirements(List<String> requirements) {
-        this.requirements = requirements == null ? List.of() : requirements;
+        this.requirements = requirements == null ? new String[0] : requirements.toArray(String[]::new);
     }
 
     public List<String> getNiceToHave() {
-        return niceToHave;
+        return niceToHave == null ? List.of() : List.of(niceToHave);
     }
 
     public void setNiceToHave(List<String> niceToHave) {
-        this.niceToHave = niceToHave == null ? List.of() : niceToHave;
+        this.niceToHave = niceToHave == null ? new String[0] : niceToHave.toArray(String[]::new);
     }
 
     public List<String> getResponsibilities() {
-        return responsibilities;
+        return responsibilities == null ? List.of() : List.of(responsibilities);
     }
 
     public void setResponsibilities(List<String> responsibilities) {
-        this.responsibilities = responsibilities == null ? List.of() : responsibilities;
+        this.responsibilities = responsibilities == null ? new String[0] : responsibilities.toArray(String[]::new);
     }
 
     public List<String> getSkills() {
-        return skills;
+        return skills == null ? List.of() : List.of(skills);
     }
 
     public void setSkills(List<String> skills) {
-        this.skills = skills == null ? List.of() : skills;
+        this.skills = skills == null ? new String[0] : skills.toArray(String[]::new);
     }
 
     public String getStatus() {

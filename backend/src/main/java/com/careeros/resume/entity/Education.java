@@ -6,7 +6,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.util.List;
 import java.util.UUID;
-import org.hibernate.annotations.Array;
 import org.hibernate.annotations.UuidGenerator;
 
 @Entity
@@ -42,9 +41,8 @@ public class Education {
     @Column(name = "gpa")
     private String gpa;
 
-    @Array(length = 512)
     @Column(name = "courses", nullable = false)
-    private List<String> courses = List.of();
+    private String[] courses = new String[0];
 
     @Column(name = "ordinal", nullable = false)
     private int ordinal;
@@ -118,11 +116,11 @@ public class Education {
     }
 
     public List<String> getCourses() {
-        return courses;
+        return courses == null ? List.of() : List.of(courses);
     }
 
     public void setCourses(List<String> courses) {
-        this.courses = courses == null ? List.of() : courses;
+        this.courses = courses == null ? new String[0] : courses.toArray(String[]::new);
     }
 
     public int getOrdinal() {

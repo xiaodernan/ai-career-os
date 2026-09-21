@@ -3,6 +3,8 @@ package com.careeros.ai;
 import com.careeros.common.ApiErrorCode;
 import com.careeros.common.ApiException;
 import com.careeros.config.AppProperties;
+import java.net.http.HttpClient;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -10,6 +12,7 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
@@ -28,7 +31,17 @@ public class HttpAiServiceClient implements AiServiceClient {
 
     public HttpAiServiceClient(RestClient.Builder builder, AppProperties props) {
         this.internalToken = props.getInternal().getToken();
-        this.restClient = builder.baseUrl(props.getAiService().getBaseUrl()).build();
+        // JDK HttpClient defaults to HTTP/2 and probes with an h2c upgrade; uvicorn rejects the
+        // upgrade and loses the request body (FastAPI then 422s with body=null). Force HTTP/1.1.
+        HttpClient httpClient = HttpClient.newBuilder()
+                .version(HttpClient.Version.HTTP_1_1)
+                .connectTimeout(Duration.ofSeconds(5))
+                .build();
+        JdkClientHttpRequestFactory factory = new JdkClientHttpRequestFactory(httpClient);
+        factory.setReadTimeout(Duration.ofSeconds(180));
+        this.restClient = builder.baseUrl(props.getAiService().getBaseUrl())
+                .requestFactory(factory)
+                .build();
     }
 
     @Override

@@ -1,7 +1,7 @@
 package com.careeros.job.repository;
 
+import com.careeros.common.Times;
 import com.careeros.job.dto.JobDtos.JobListItem;
-import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -143,7 +143,7 @@ public class JobSearchRepository {
                 (String) row[9],
                 row[10] == null ? null : ((Number) row[10]).intValue(),
                 (String) row[11], (String) row[12], (String) row[13],
-                row[14] == null ? null : ((OffsetDateTime) row[14]),
+                Times.offset(row[14]),
                 row[15] == null ? List.<String>of()
                         : java.util.Arrays.stream((Object[]) row[15]).map(String::valueOf).toList(),
                 row[16] == null ? null : ((Number) row[16]).floatValue(),

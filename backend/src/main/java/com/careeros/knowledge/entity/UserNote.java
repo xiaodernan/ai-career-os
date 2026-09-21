@@ -7,7 +7,6 @@ import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
-import org.hibernate.annotations.Array;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UuidGenerator;
 
@@ -29,9 +28,8 @@ public class UserNote {
     @Column(name = "content", nullable = false)
     private String content;
 
-    @Array(length = 128)
     @Column(name = "tags", nullable = false)
-    private List<String> tags = List.of();
+    private String[] tags = new String[0];
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -69,11 +67,11 @@ public class UserNote {
     }
 
     public List<String> getTags() {
-        return tags;
+        return tags == null ? List.of() : List.of(tags);
     }
 
     public void setTags(List<String> tags) {
-        this.tags = tags == null ? List.of() : tags;
+        this.tags = tags == null ? new String[0] : tags.toArray(String[]::new);
     }
 
     public OffsetDateTime getCreatedAt() {

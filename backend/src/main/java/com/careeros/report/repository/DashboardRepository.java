@@ -1,9 +1,9 @@
 package com.careeros.report.repository;
 
+import com.careeros.common.Times;
 import com.careeros.report.dto.DashboardDtos.RecommendedJob;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
-import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Repository;
@@ -43,7 +43,7 @@ public class DashboardRepository {
         return ((List<Object[]>) query.getResultList()).stream()
                 .map(row -> new RecommendedJob(
                         (UUID) row[0], (String) row[1], (String) row[2], (String) row[3],
-                        (String) row[4], (OffsetDateTime) row[5],
+                        (String) row[4], Times.offset(row[5]),
                         row[6] == null ? null : ((Number) row[6]).floatValue(),
                         (UUID) row[7]))
                 .toList();

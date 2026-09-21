@@ -6,7 +6,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.util.List;
 import java.util.UUID;
-import org.hibernate.annotations.Array;
 import org.hibernate.annotations.UuidGenerator;
 
 @Entity
@@ -33,13 +32,11 @@ public class Project {
     @Column(name = "period")
     private String period;
 
-    @Array(length = 512)
     @Column(name = "bullets", nullable = false)
-    private List<String> bullets = List.of();
+    private String[] bullets = new String[0];
 
-    @Array(length = 512)
     @Column(name = "tech", nullable = false)
-    private List<String> tech = List.of();
+    private String[] tech = new String[0];
 
     @Column(name = "url")
     private String url;
@@ -92,19 +89,19 @@ public class Project {
     }
 
     public List<String> getBullets() {
-        return bullets;
+        return bullets == null ? List.of() : List.of(bullets);
     }
 
     public void setBullets(List<String> bullets) {
-        this.bullets = bullets == null ? List.of() : bullets;
+        this.bullets = bullets == null ? new String[0] : bullets.toArray(String[]::new);
     }
 
     public List<String> getTech() {
-        return tech;
+        return tech == null ? List.of() : List.of(tech);
     }
 
     public void setTech(List<String> tech) {
-        this.tech = tech == null ? List.of() : tech;
+        this.tech = tech == null ? new String[0] : tech.toArray(String[]::new);
     }
 
     public String getUrl() {

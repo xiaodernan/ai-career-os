@@ -8,7 +8,6 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import org.hibernate.annotations.Array;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UuidGenerator;
@@ -41,9 +40,8 @@ public class Company {
     @Column(name = "overview")
     private String overview;
 
-    @Array(length = 256)
     @Column(name = "tech_stack", nullable = false)
-    private List<String> techStack = List.of();
+    private String[] techStack = new String[0];
 
     @Column(name = "culture")
     private String culture;
@@ -115,11 +113,11 @@ public class Company {
     }
 
     public List<String> getTechStack() {
-        return techStack;
+        return techStack == null ? List.of() : List.of(techStack);
     }
 
     public void setTechStack(List<String> techStack) {
-        this.techStack = techStack == null ? List.of() : techStack;
+        this.techStack = techStack == null ? new String[0] : techStack.toArray(String[]::new);
     }
 
     public String getCulture() {

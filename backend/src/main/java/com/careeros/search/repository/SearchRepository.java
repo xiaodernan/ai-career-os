@@ -1,5 +1,6 @@
 package com.careeros.search.repository;
 
+import com.careeros.common.Times;
 import com.careeros.search.dto.SearchDtos.ApplicationHit;
 import com.careeros.search.dto.SearchDtos.CompanyHit;
 import com.careeros.search.dto.SearchDtos.ConversationHit;
@@ -8,7 +9,6 @@ import com.careeros.search.dto.SearchDtos.NoteHit;
 import com.careeros.search.dto.SearchDtos.ResumeHit;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
-import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Repository;
@@ -65,7 +65,7 @@ public class SearchRepository {
                  LIMIT :limit
                 """;
         return rows(sql, params(userId, q).set("limit", limit), (row) ->
-                new ResumeHit((UUID) row[0], (String) row[1], (String) row[2], (OffsetDateTime) row[3]));
+                new ResumeHit((UUID) row[0], (String) row[1], (String) row[2], Times.offset(row[3])));
     }
 
     public List<NoteHit> notes(UUID userId, String q, int limit) {
@@ -78,7 +78,7 @@ public class SearchRepository {
                  LIMIT :limit
                 """;
         return rows(sql, params(userId, q).set("limit", limit), (row) ->
-                new NoteHit((UUID) row[0], (String) row[1], (String) row[2], (OffsetDateTime) row[3]));
+                new NoteHit((UUID) row[0], (String) row[1], (String) row[2], Times.offset(row[3])));
     }
 
     public List<ConversationHit> conversations(UUID userId, String q, int limit) {
@@ -97,7 +97,7 @@ public class SearchRepository {
                  LIMIT :limit
                 """;
         return rows(sql, params(userId, q).set("limit", limit), (row) ->
-                new ConversationHit((UUID) row[0], (String) row[1], (String) row[2], (OffsetDateTime) row[3]));
+                new ConversationHit((UUID) row[0], (String) row[1], (String) row[2], Times.offset(row[3])));
     }
 
     public List<ApplicationHit> applications(UUID userId, String q, int limit) {
@@ -111,7 +111,7 @@ public class SearchRepository {
                 """;
         return rows(sql, params(userId, q).set("limit", limit), (row) ->
                 new ApplicationHit((UUID) row[0], (String) row[1], (String) row[2], (String) row[3],
-                        (OffsetDateTime) row[4]));
+                        Times.offset(row[4])));
     }
 
     private Params params(UUID userId, String q) {
@@ -120,7 +120,7 @@ public class SearchRepository {
 
     private <T> List<T> rows(String sql, Params p, java.util.function.Function<Object[], T> mapper) {
         Query query = em.createNativeQuery(sql);
-        if (p.userId != null) {
+        if (p.userId != null && sql.contains(":userId")) {
             query.setParameter("userId", p.userId);
         }
         query.setParameter("q", p.q);
