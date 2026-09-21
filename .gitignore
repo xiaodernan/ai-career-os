@@ -1,0 +1,36 @@
+# env & secrets
+.env
+.env.local
+*.env !.env.example
+
+# node / next
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+
+# java
+backend/target/
+*.class
+.mvn/wrapper/maven-wrapper.jar
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# data & artifacts
+storage/
+ai-service/evals/reports/
+playwright-report/
+test-results/
+
+# misc
+.DS_Store
+*.log
+.idea/
+.vscode/

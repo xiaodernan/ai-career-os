@@ -1,0 +1,74 @@
+name: career-os
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: careeros-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-career_os}
+      POSTGRES_USER: ${POSTGRES_USER:-career_os}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-career_os_dev_password}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-career_os} -d ${POSTGRES_DB:-career_os}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    container_name: careeros-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  minio:
+    image: quay.io/minio/minio:latest
+    container_name: careeros-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-careeros-minio-admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-careeros_minio_dev_password}
+    ports:
+      - "127.0.0.1:19000:9000"
+      - "127.0.0.1:19001:9001"
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  minio-init:
+    image: quay.io/minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 $${MINIO_ROOT_USER:-careeros-minio-admin} $${MINIO_ROOT_PASSWORD:-careeros_minio_dev_password} &&
+      mc mb -p local/careeros-files || true &&
+      mc anonymous set none local/careeros-files || true &&
+      echo 'bucket ready'
+      "
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-careeros-minio-admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-careeros_minio_dev_password}
+
+volumes:
+  pgdata:
+  redisdata:
+  miniodata:
