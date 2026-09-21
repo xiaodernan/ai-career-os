@@ -2,10 +2,15 @@
  * API surface for AI Career OS, derived from docs/architecture.md
  * (§3 module map, §9 conventions). Backend is being built in parallel;
  * when an endpoint 404s the UI must degrade to an EmptyState — never fake data.
+ *
+ * This file is the single source of truth for paths. Anything that needs an
+ * id/param exposes a builder function so no route hand-concatenates strings.
  */
 
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080/api/v1";
+
+const seg = (v: string | number) => encodeURIComponent(String(v));
 
 export const endpoints = {
   auth: {
@@ -16,22 +21,72 @@ export const endpoints = {
     me: "/users/me",
     profile: "/users/me/profile",
   },
+
+  /* ---------------- Resumes ---------------- */
   resumes: "/resumes",
+  resume: (id: string) => `/resumes/${seg(id)}`,
+  resumeUpload: "/resumes/upload",
+  resumeParse: (id: string) => `/resumes/${seg(id)}/parse`,
+  resumeSetCurrent: (id: string) => `/resumes/${seg(id)}/set-current`,
   resumeVersions: "/resume-versions",
+  resumeVersion: (id: string) => `/resume-versions/${seg(id)}`,
+
+  /* ---------------- Jobs / JD / matches ---------------- */
   jobs: "/jobs",
+  job: (id: string) => `/jobs/${seg(id)}`,
+  jobSave: (id: string) => `/jobs/${seg(id)}/save`,
+  jobMatch: (id: string) => `/jobs/${seg(id)}/match`,
   savedJobs: "/jobs/saved",
   matches: "/matches",
+  match: (id: string) => `/matches/${seg(id)}`,
   jobJds: "/jds",
+
+  /* ---------------- Applications ---------------- */
   applications: "/applications",
+  application: (id: string) => `/applications/${seg(id)}`,
+  applicationReorder: (id: string) => `/applications/${seg(id)}/reorder`,
+  applicationEvents: (id: string) => `/applications/${seg(id)}/events`,
+
+  /* ---------------- Companies ---------------- */
   companies: "/companies",
+  company: (id: string) => `/companies/${seg(id)}`,
+
+  /* ---------------- Interviews ---------------- */
   interviews: "/interview/sessions",
-  conversations: "/conversations",
+  interview: (id: string) => `/interview/sessions/${seg(id)}`,
+  interviewOpening: (id: string) => `/interview/sessions/${seg(id)}/opening`,
+  interviewAnswer: (id: string) => `/interview/sessions/${seg(id)}/answer`,
+  interviewFinalize: (id: string) => `/interview/sessions/${seg(id)}/finalize`,
+
+  /* ---------------- Knowledge base (RAG) ---------------- */
   knowledge: "/knowledge/sources",
+  knowledgeSource: (id: string) => `/knowledge/sources/${seg(id)}`,
+  knowledgeSourceStatus: (id: string) => `/knowledge/sources/${seg(id)}/status`,
+  knowledgeNotes: "/knowledge/notes",
+  knowledgeNote: (id: string) => `/knowledge/notes/${seg(id)}`,
+  knowledgeText: "/knowledge/text",
+
+  /* ---------------- AI actions (thin proxies over ai-service) ------------ */
+  copilotChat: "/copilot/chat",
+  aiTailor: "/ai/tailor",
+  aiCoverLetter: "/ai/cover-letter",
+  aiSuggestions: "/ai/suggestions",
+  aiUsage: "/ai-usage/summary",
+
+  /* ---------------- Activity / reports / search / chat history ----------- */
   activity: "/activity",
-  search: "/search",
+  activityRuns: "/activity/runs",
+  activityRun: (id: string) => `/activity/runs/${seg(id)}`,
+  reportsDashboard: "/reports/dashboard",
+  /** legacy alias kept so existing hooks don't fork */
   dashboard: "/reports/dashboard",
+  conversations: "/conversations",
+  conversation: (id: string) => `/conversations/${seg(id)}`,
+  conversationMessages: (id: string) => `/conversations/${seg(id)}/messages`,
+  search: "/search",
+
   /** SSE stream for any async AI task (match, tailor, copilot turn, ingestion…) */
-  aiStream: (taskId: string) => `/ai/stream/${encodeURIComponent(taskId)}`,
+  aiStream: (taskId: string) => `/ai/stream/${seg(taskId)}`,
 } as const;
 
 export function apiUrl(path: string): string {

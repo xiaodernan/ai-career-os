@@ -19,6 +19,8 @@ export interface UseSSEOptions {
   onTrace?: (data: SSETraceData) => void;
   onArtifact?: (data: unknown) => void;
   onDone?: (data: unknown) => void;
+  /** `message` frames — the relay's generic JSON channel (status/token payload). */
+  onMessage?: (data: unknown) => void;
   onError?: (data: { code?: string; message?: string; details?: unknown }) => void;
   /** Called on transport errors (network/abort), distinct from `error` events */
   onTransportError?: (err: unknown) => void;
@@ -122,6 +124,22 @@ export function useSSE(options: UseSSEOptions) {
         case "trace": h.onTrace?.(evt.data as SSETraceData); break;
         case "artifact": h.onArtifact?.(evt.data); break;
         case "done": h.onDone?.(evt.data); break;
+        case "message": {
+          // The relay wraps payloads in `message` frames — unwrap the common
+          // {type, data} shape so callers still see status/token/trace events.
+          const payload = evt.data as { type?: string; data?: unknown; token?: string; content?: string };
+          h.onMessage?.(evt.data);
+          if (payload && typeof payload === "object") {
+            if (payload.type === "token" && (payload.token ?? typeof payload.data === "string")) {
+              h.onToken?.(String(payload.token ?? payload.data));
+            } else if (payload.type === "status") {
+              h.onStatus?.((payload.data ?? payload) as SSEStatusData);
+            } else if (payload.type === "trace") {
+              h.onTrace?.((payload.data ?? payload) as SSETraceData);
+            }
+          }
+          break;
+        }
         case "error": h.onError?.(evt.data as { code?: string; message?: string; details?: unknown }); break;
         default: break;
       }
