@@ -6,7 +6,7 @@ ProcessingSteps UI: extracting → cleaning → chunking → embedding → index
 
 import json
 
-from app.core import db, taskbus
+from app.core import taskbus
 from app.core.config import get_settings
 from app.core.skills import extract_skills
 from app.db import documents as docs_repo

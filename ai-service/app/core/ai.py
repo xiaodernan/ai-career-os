@@ -7,10 +7,9 @@ import time
 from collections.abc import AsyncIterator
 from typing import Any
 
-from app.core import db
 from app.core.config import get_settings
 from app.db import observability
-from app.providers.base import LLMMessage, LLMRequest, LLMResponse, ToolSpec
+from app.providers.base import LLMMessage, LLMRequest, LLMResponse
 from app.providers.pricing import estimate_cost
 from app.providers.registry import get_llm
 

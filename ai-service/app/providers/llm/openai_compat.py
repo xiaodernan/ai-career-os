@@ -24,6 +24,13 @@ def _to_openai_messages(messages: list[LLMMessage]) -> list[dict]:
         item: dict = {"role": m.role, "content": m.content}
         if m.role == "tool":
             item = {"role": "tool", "tool_call_id": m.tool_call_id, "content": m.content}
+        elif m.role == "assistant" and m.tool_calls:
+            item["tool_calls"] = [
+                {"id": tc.id, "type": "function",
+                 "function": {"name": tc.name,
+                              "arguments": json.dumps(tc.arguments, ensure_ascii=False)}}
+                for tc in m.tool_calls
+            ]
         out.append(item)
     return out
 

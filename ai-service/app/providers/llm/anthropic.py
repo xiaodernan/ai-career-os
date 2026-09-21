@@ -5,7 +5,7 @@ from collections.abc import AsyncIterator
 import httpx
 
 from app.providers.base import LLMRequest, LLMResponse, StreamDelta, ToolCall, Usage
-from app.providers.llm.openai_compat import ProviderError, _safe_json
+from app.providers.llm.openai_compat import ProviderError
 
 
 class AnthropicProvider:
@@ -39,7 +39,14 @@ class AnthropicProvider:
                                  "content": m.content}],
                 })
             elif m.role == "assistant":
-                messages.append({"role": "assistant", "content": m.content})
+                if m.tool_calls:
+                    blocks = ([{"type": "text", "text": m.content}] if m.content else []) + [
+                        {"type": "tool_use", "id": tc.id, "name": tc.name,
+                         "input": tc.arguments} for tc in m.tool_calls
+                    ]
+                    messages.append({"role": "assistant", "content": blocks})
+                else:
+                    messages.append({"role": "assistant", "content": m.content})
             else:
                 messages.append({"role": "user", "content": m.content})
         p: dict = {

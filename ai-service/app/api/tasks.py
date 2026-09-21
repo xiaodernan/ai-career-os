@@ -32,6 +32,15 @@ async def task_stream(task_id: str, ctx: Ctx = Depends(require_internal)):
     return EventSourceResponse(gen())
 
 
+# alias the backend SSE relay calls (architecture.md §9)
+alias_router = APIRouter(prefix="/internal", tags=["tasks"])
+
+
+@alias_router.get("/stream/{task_id}")
+async def task_stream_alias(task_id: str, ctx: Ctx = Depends(require_internal)):
+    return await task_stream(task_id, ctx)
+
+
 def _json(data) -> str:
     import json
 

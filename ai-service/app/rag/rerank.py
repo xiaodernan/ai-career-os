@@ -1,6 +1,5 @@
 """Pointwise LLM reranking with graceful fallback to RRF order."""
 
-import json
 
 from app.core.ai import ask_json
 from app.core.config import get_settings

@@ -15,6 +15,7 @@ class LLMMessage:
     content: str
     tool_call_id: str | None = None
     name: str | None = None
+    tool_calls: list["ToolCall"] = field(default_factory=list)
 
 
 @dataclass

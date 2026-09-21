@@ -33,18 +33,53 @@ class MockProvider:
         await asyncio.sleep(0.01)
         prompt = self._system(req) + "\n" + self._last_user(req)
         text = self._respond(req, prompt)
+        tool_calls = []
+        tc = self._maybe_tool_call(req)
+        if tc:
+            text, tool_calls = "", [tc]
         h = hashlib.sha256(prompt.encode()).hexdigest()
         in_tok = max(1, len(prompt) // 4)
         out_tok = max(1, len(text) // 4)
         return LLMResponse(
             text=text,
+            tool_calls=tool_calls,
             usage=Usage(in_tok, out_tok, cached_tokens=in_tok if h[:4] == "0000" else 0),
             model=req.model or self.model,
             latency_ms=15,
         )
 
+    # --- deterministic tool-call emulation so the agent loop runs in CI ---
+
+    TOOL_HINTS = [
+        (("job", "岗位", "职位", "position", "hiring"), "search_jobs",
+         lambda low: {"query": "backend", "limit": 5}),
+        (("resume", "简历"), "search_resume",
+         lambda low: {"query": "experience projects skills"}),
+        (("profile", "档案", "背景"), "get_user_profile", lambda low: {}),
+    ]
+
+    def _maybe_tool_call(self, req: LLMRequest):
+        if not req.tools:
+            return None
+        available = {t.name for t in req.tools}
+        if any(m.role == "tool" for m in req.messages):
+            # Tools already ran: summarize their payload instead of looping.
+            return None
+        low = self._last_user(req).lower()
+        for keywords, name, args_fn in self.TOOL_HINTS:
+            if name in available and any(k in low for k in keywords):
+                from app.providers.base import ToolCall
+
+                return ToolCall(id="call_mock_1", name=name, arguments=args_fn(low))
+        return None
+
     def _respond(self, req: LLMRequest, prompt: str) -> str:
         low = prompt.lower()
+        tool_msgs = [m for m in req.messages if m.role == "tool"]
+        if tool_msgs and not req.json_mode and "return json" not in low:
+            preview = tool_msgs[-1].content[:280]
+            return (f"Done. Tool results ({len(tool_msgs)} call(s)); latest output: "
+                    f"{preview}")
         if req.json_mode or "return json" in low or "json only" in low:
             return self._json_response(low, prompt)
         if "interviewer" in low or "interview" in low:
@@ -89,6 +124,35 @@ class MockProvider:
                                "evidence": [{"criterion": "Java", "score": 0.9,
                                              "quote": "Built REST APIs with Java",
                                              "reasoning": "direct overlap"}]})
+        if "grade one interview answer" in low:
+            return json.dumps({
+                "score": 0.72, "dims": {"technical_accuracy": 0.8,
+                                        "communication": 0.7, "depth": 0.6,
+                                        "structure": 0.7},
+                "strengths": ["named a concrete system"], "weaknesses": ["no numbers"],
+                "missing_concepts": ["cache invalidation"],
+                "better_answer": "Describe problem, your decision, trade-offs, result.",
+                "question_was_answered": True})
+        if "interview director" in low:
+            return json.dumps({
+                "action": "followup",
+                "question": "Why did you choose Redis over a local in-process cache?",
+                "topic": "caching", "difficulty": 0.65,
+                "reasoning": "answer named a tool without justification"})
+        if "interview report" in low:
+            return json.dumps({
+                "dims": {d: 0.65 for d in ["technical_accuracy", "communication",
+                                           "depth", "structure", "problem_solving",
+                                           "system_thinking", "ai_knowledge",
+                                           "backend_knowledge"]},
+                "overall": 0.66, "what_you_did_well": ["concrete example"],
+                "what_was_weak": ["shallow trade-off analysis"],
+                "missing_concepts": ["cache stampede"],
+                "better_answers": [{"question": "Why Redis?", "model_answer": "..."}],
+                "follow_up_questions_to_prepare": ["How would you handle 100k QPS?"],
+                "recommended_study": [{"topic": "caching", "why": "gap",
+                                       "resource_hint": "DDIA ch.1"}],
+                "trajectory_note": "depth rose from naming to failure modes"})
         if "relevance" in low or "rerank" in low:
             nums = re.findall(r"\[(\d+)\]", prompt)
             scores = {n: max(0.1, 1.0 - i * 0.1) for i, n in enumerate(nums)}

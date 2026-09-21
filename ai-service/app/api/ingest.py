@@ -1,4 +1,3 @@
-import asyncio
 
 from fastapi import APIRouter, Depends, HTTPException
 
@@ -30,7 +29,6 @@ async def ingest_text(payload: dict, ctx: Ctx = Depends(require_internal)):
     body: {title, text, kind, ref_id?, source_id?}
     """
     from app.core.config import get_settings
-    from app.core.skills import normalize  # ensure import warm
     from app.core import db
 
     s = get_settings()
