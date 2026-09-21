@@ -312,15 +312,33 @@ recall@k, precision@k, MRR, context relevance, answer relevance, faithfulness
   `{"success":false,"data":null,"error":{"code":"JOB_NOT_FOUND","message":…,"details":[…]}}`.
 - Pagination `?page=&size=` → `{items,total,page,size}`; SSE endpoints set
   `text/event-stream`, events: `status|token|trace|artifact|done|error`.
+- Implemented seams (binding for all three apps):
+  - ai-service task SSE is both `/internal/tasks/{id}/stream` and the alias
+    `/internal/stream/{task_id}` that the backend relay proxies as
+    `/api/v1/ai/stream/{taskId}`.
+  - Copilot chat is synchronous from the public API view:
+    `POST /api/v1/copilot/chat` → ai-service `/internal/agents/chat/sync` →
+    `{answer, artifacts[], sources[], actions[], run_id, conversation_id}`;
+    both messages persisted by the backend.
+  - Ownership exception to "backend is sole domain writer": ai-service may
+    write `documents`, `document_chunks`, `knowledge_sources` (inline-text
+    ingest only), `job_matches` (derived match rows), `user_memories`,
+    `agent_runs`, `agent_traces`, `ai_usage_events`. Everything else stays
+    backend-owned.
+  - User routes exposed as `/api/v1/users/me` and `/api/v1/users/me/profile`.
 
 ## 10. Build & run
 
-- Dev: `docker compose up -d infra` → `backend: mvn spring-boot:run` →
-  `ai-service: uvicorn app.main:app` → `frontend: pnpm dev`.
+- Dev: `docker compose up -d postgres redis minio` → `backend: mvn spring-boot:run` →
+  `ai-service: uvicorn app.main:app` → `frontend: npm run dev` (pnpm not used on the
+  reference Windows dev box).
 - Prod: multi-stage Dockerfiles for the three apps; `docker compose --profile app up`
   brings up the full stack; Flyway + Python migrations run at startup (ordered:
   flyway owns schema; ai-service uses `documents`/`document_chunks`/`agent_*` only).
-- Tests: JUnit5+Testcontainers (backend), pytest (ai-service), Vitest+Playwright
+- Tests: JUnit5 (backend; integration tests run against localhost infra — a
+  dedicated `career_os_it` DB + redis:16399 auto-provisioned by the test bootstrap,
+  because Testcontainers' docker-java pipe proxy fails on Docker Desktop 29 here),
+  pytest (ai-service), Vitest+Playwright
   (frontend/E2E); `make test` runs all; E2E uses mock provider (clearly test-only).
 
 ## 11. Key tradeoffs recorded
