@@ -14,8 +14,11 @@ import {
   normalizeQuestion,
   normalizeResumeScore,
   normalizeRun,
+  normalizeSearch,
+  serializeJobFilters,
   normalizeSkillGaps,
   pick,
+  rec,
   str,
   num,
 } from "@/lib/api/normalize";
@@ -145,9 +148,7 @@ export function useJobs(params?: JobFilters) {
   return useQuery({
     queryKey: ["jobs", params],
     queryFn: async (): Promise<Page<Job>> => {
-      const clean = Object.fromEntries(
-        Object.entries(params ?? {}).filter(([, v]) => v !== "" && v !== undefined)
-      );
+      const clean = serializeJobFilters(params ?? {});
       return normalizePage(
         await api.get<unknown>(endpoints.jobs, { size: 20, ...clean }),
         (j) => normalizeJob(j)
@@ -227,7 +228,7 @@ export function useApplicationEvents(id: string | null) {
     queryKey: ["application", id, "events"],
     enabled: Boolean(id),
     queryFn: async (): Promise<ApplicationEvent[]> => {
-      const raw = await api.get<unknown>(endpoints.applicationEvents(id!));
+      const raw = await api.get<unknown>(endpoints.applicationTimeline(id!));
       return listOf(raw, "items", "events", "content").map((e, i) => ({
         id: idStr(e, `ev-${i}`),
         applicationId: str(e, "applicationId", "application_id"),
@@ -386,23 +387,30 @@ export function useInterviewSession(id: string | null) {
     enabled: Boolean(id),
     queryFn: async () => {
       const raw = await api.get<unknown>(endpoints.interview(id!));
-      const body = pick(raw, "session", "data") ?? raw;
+      // SessionDetail is {session, turns, evaluation} — session-level scalars come
+      // from `session`, but turns/evaluation are its SIBLINGS, not nested inside it.
+      const sess = pick(raw, "session") ?? raw;
+      const turns = listOf(raw, "turns", "history", "answers", "questions");
+      const lastAssistant = [...turns].reverse().find((t) => str(t, "role") === "assistant");
+      const cqMeta = rec(pick(lastAssistant, "questionMeta", "question_meta")) ?? {};
       return {
-        id: idStr(body, id ?? ""),
-        jobId: str(body, "jobId", "job_id") ?? null,
-        jobTitle: str(body, "jobTitle", "job_title") ?? null,
-        companyName: str(body, "companyName", "company_name") ?? null,
-        mode: str(body, "mode", "type") ?? "mixed",
-        status: str(body, "status") ?? "active",
-        difficulty: num(body, "difficulty", "depth", "level"),
-        questionCount: num(body, "questionCount", "question_count"),
-        startedAt: str(body, "startedAt", "started_at"),
-        finishedAt: str(body, "finishedAt", "finished_at") ?? null,
+        id: idStr(sess, id ?? ""),
+        jobId: str(sess, "jobId", "job_id") ?? null,
+        jobTitle: str(sess, "jobTitle", "job_title") ?? null,
+        companyName: str(sess, "companyName", "company_name") ?? null,
+        mode: str(sess, "mode", "type") ?? "mixed",
+        status: str(sess, "status") ?? "active",
+        difficulty: num(sess, "difficulty", "depth", "level"),
+        questionCount: num(sess, "questionCount", "question_count") || turns.length,
+        startedAt: str(sess, "startedAt", "started_at"),
+        finishedAt: str(sess, "finishedAt", "finished_at") ?? null,
         currentQuestion: normalizeQuestion(
-          pick(body, "currentQuestion", "current_question", "question", "next") ?? body
+          pick(raw, "currentQuestion", "current_question") ??
+            pick(sess, "currentQuestion", "current_question", "next") ??
+            (lastAssistant ? { ...cqMeta, text: str(lastAssistant, "content") } : null)
         ),
-        history: listOf(body, "history", "answers", "turns", "questions"),
-        report: pick(body, "report", "evaluation") ?? null,
+        history: turns,
+        report: pick(raw, "evaluation", "report") ?? pick(sess, "evaluation", "report") ?? null,
       };
     },
   });
@@ -497,40 +505,7 @@ export function useGlobalSearch(query: string) {
     queryKey: ["search", query],
     queryFn: async (): Promise<SearchResults> => {
       const raw = await api.get<unknown>(endpoints.search, { q: query });
-      const groupsRaw = listOf(raw, "groups");
-      if (groupsRaw.length) {
-        return {
-          groups: groupsRaw.map((g) => ({
-            label: str(g, "label", "type", "name") ?? "Results",
-            items: listOf(g, "items").map((i) => ({
-              id: idStr(i),
-              type: str(i, "type", "kind") ?? "result",
-              title: str(i, "title", "name") ?? "",
-              subtitle: str(i, "subtitle", "description", "snippet") ?? undefined,
-              href: str(i, "href", "url", "link") ?? "#",
-            })),
-          })),
-        };
-      }
-      // flat `{items:[…]}` — group client-side by the real `type` field
-      const flat = listOf(raw, "items", "results");
-      const byType = new Map<string, unknown[]>();
-      for (const i of flat) {
-        const t = str(i, "type", "kind") ?? "results";
-        byType.set(t, [...(byType.get(t) ?? []), i]);
-      }
-      return {
-        groups: [...byType.entries()].map(([label, items]) => ({
-          label: label.charAt(0).toUpperCase() + label.slice(1),
-          items: items.map((i) => ({
-            id: idStr(i),
-            type: label,
-            title: str(i, "title", "name") ?? "",
-            subtitle: str(i, "subtitle", "description") ?? undefined,
-            href: str(i, "href", "url", "link") ?? "#",
-          })),
-        })),
-      };
+      return normalizeSearch(raw);
     },
     enabled: query.trim().length >= 2,
     staleTime: 15_000,

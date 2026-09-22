@@ -103,6 +103,7 @@ public final class JobDtos {
     }
 
     public record CoverLetterRequest(@JsonAlias("resume_version_id") UUID resumeVersionId,
-                                     String mode, String previous, String goal) {
+                                     String mode, String previous, String goal,
+                                     String tone, String length) {
     }
 }

@@ -589,6 +589,7 @@ export interface ActivityRun {
   kind?: string;
   summary?: string;
   status?: string;
+  error?: string;
   model?: string | null;
   startedAt?: string;
   finishedAt?: string | null;

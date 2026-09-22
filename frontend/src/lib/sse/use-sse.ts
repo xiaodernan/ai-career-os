@@ -102,7 +102,7 @@ export function useSSE(options: UseSSEOptions) {
           const frame = buffer.slice(0, sep);
           buffer = buffer.slice(sep).replace(/^\r?\n\r?\n/, "");
           const parsed = parseFrame(frame);
-          if (parsed) dispatch(parsed);
+          if (parsed) dispatchEvent(parsed, handlersRef.current);
         }
       }
       setState((s) => (s === "open" ? "closed" : s));
@@ -110,39 +110,6 @@ export function useSSE(options: UseSSEOptions) {
       if (controller.signal.aborted) return; // intentional stop
       setState("error");
       handlersRef.current.onTransportError?.(err);
-    }
-
-    function dispatch(evt: SSEEvent) {
-      const h = handlersRef.current;
-      switch (evt.event) {
-        case "status": h.onStatus?.(evt.data as SSEStatusData); break;
-        case "token":
-          h.onToken?.(
-            typeof evt.data === "string" ? evt.data : String((evt.data as { token?: unknown }).token ?? ""),
-          );
-          break;
-        case "trace": h.onTrace?.(evt.data as SSETraceData); break;
-        case "artifact": h.onArtifact?.(evt.data); break;
-        case "done": h.onDone?.(evt.data); break;
-        case "message": {
-          // The relay wraps payloads in `message` frames — unwrap the common
-          // {type, data} shape so callers still see status/token/trace events.
-          const payload = evt.data as { type?: string; data?: unknown; token?: string; content?: string };
-          h.onMessage?.(evt.data);
-          if (payload && typeof payload === "object") {
-            if (payload.type === "token" && (payload.token ?? typeof payload.data === "string")) {
-              h.onToken?.(String(payload.token ?? payload.data));
-            } else if (payload.type === "status") {
-              h.onStatus?.((payload.data ?? payload) as SSEStatusData);
-            } else if (payload.type === "trace") {
-              h.onTrace?.((payload.data ?? payload) as SSETraceData);
-            }
-          }
-          break;
-        }
-        case "error": h.onError?.(evt.data as { code?: string; message?: string; details?: unknown }); break;
-        default: break;
-      }
     }
   }, [url, stop]);
 
@@ -156,7 +123,48 @@ export function useSSE(options: UseSSEOptions) {
   return { state, start, stop };
 }
 
-function findFrameEnd(buffer: string): number {
+export type SSEHandlers = Pick<
+  UseSSEOptions,
+  "onStatus" | "onToken" | "onTrace" | "onArtifact" | "onDone" | "onMessage" | "onError"
+>;
+
+/**
+ * Route one parsed SSE frame to the matching handler. Exported for testing:
+ * this is the transport-agnostic heart of every streaming AI feature.
+ */
+export function dispatchEvent(evt: SSEEvent, h: SSEHandlers): void {
+  switch (evt.event) {
+    case "status": h.onStatus?.(evt.data as SSEStatusData); break;
+    case "token":
+      h.onToken?.(
+        typeof evt.data === "string" ? evt.data : String((evt.data as { token?: unknown }).token ?? ""),
+      );
+      break;
+    case "trace": h.onTrace?.(evt.data as SSETraceData); break;
+    case "artifact": h.onArtifact?.(evt.data); break;
+    case "done": h.onDone?.(evt.data); break;
+    case "message": {
+      // The relay wraps payloads in `message` frames — unwrap the common
+      // {type, data} shape so callers still see status/token/trace events.
+      const payload = evt.data as { type?: string; data?: unknown; token?: string; content?: string };
+      h.onMessage?.(evt.data);
+      if (payload && typeof payload === "object") {
+        if (payload.type === "token" && (payload.token ?? typeof payload.data === "string")) {
+          h.onToken?.(String(payload.token ?? payload.data));
+        } else if (payload.type === "status") {
+          h.onStatus?.((payload.data ?? payload) as SSEStatusData);
+        } else if (payload.type === "trace") {
+          h.onTrace?.((payload.data ?? payload) as SSETraceData);
+        }
+      }
+      break;
+    }
+    case "error": h.onError?.(evt.data as { code?: string; message?: string; details?: unknown }); break;
+    default: break;
+  }
+}
+
+export function findFrameEnd(buffer: string): number {
   const a = buffer.indexOf("\n\n");
   const b = buffer.indexOf("\r\n\r\n");
   if (a === -1 && b === -1) return -1;
@@ -165,7 +173,7 @@ function findFrameEnd(buffer: string): number {
   return Math.min(a, b);
 }
 
-function parseFrame(frame: string): SSEEvent | null {
+export function parseFrame(frame: string): SSEEvent | null {
   let event = "message" as SSEEvent["event"];
   const dataLines: string[] = [];
   for (const line of frame.split(/\r?\n/)) {

@@ -36,16 +36,17 @@ export const endpoints = {
   job: (id: string) => `/jobs/${seg(id)}`,
   jobSave: (id: string) => `/jobs/${seg(id)}/save`,
   jobMatch: (id: string) => `/jobs/${seg(id)}/match`,
+  jobTailor: (id: string) => `/jobs/${seg(id)}/tailor`,
+  jobCoverLetter: (id: string) => `/jobs/${seg(id)}/cover-letter`,
   savedJobs: "/jobs/saved",
-  matches: "/matches",
-  match: (id: string) => `/matches/${seg(id)}`,
-  jobJds: "/jds",
+  jdAnalyze: "/jds",
+  jdSuggestions: "/jds/suggestions",
 
   /* ---------------- Applications ---------------- */
   applications: "/applications",
   application: (id: string) => `/applications/${seg(id)}`,
   applicationReorder: (id: string) => `/applications/${seg(id)}/reorder`,
-  applicationEvents: (id: string) => `/applications/${seg(id)}/events`,
+  applicationTimeline: (id: string) => `/applications/${seg(id)}/timeline`,
 
   /* ---------------- Companies ---------------- */
   companies: "/companies",
@@ -68,13 +69,9 @@ export const endpoints = {
 
   /* ---------------- AI actions (thin proxies over ai-service) ------------ */
   copilotChat: "/copilot/chat",
-  aiTailor: "/ai/tailor",
-  aiCoverLetter: "/ai/cover-letter",
-  aiSuggestions: "/ai/suggestions",
   aiUsage: "/ai-usage/summary",
 
   /* ---------------- Activity / reports / search / chat history ----------- */
-  activity: "/activity",
   activityRuns: "/activity/runs",
   activityRun: (id: string) => `/activity/runs/${seg(id)}`,
   reportsDashboard: "/reports/dashboard",

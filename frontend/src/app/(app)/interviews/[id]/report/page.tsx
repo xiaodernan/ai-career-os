@@ -27,20 +27,8 @@ import { MatchRing } from "@/components/ai/match-ring";
 import { AIBadge } from "@/components/ai/ai-badge";
 import { useFinalizeInterview } from "@/lib/hooks/actions";
 import { useInterviewSession } from "@/lib/hooks/resources";
-import { list, normalizeInterviewDims, num, pct, str } from "@/lib/api/normalize";
+import { normalizeInterviewReport, type InterviewTrajectoryPoint } from "@/lib/api/normalize";
 import { formatDate, titleCase } from "@/lib/format";
-
-interface StudyItem {
-  title?: string;
-  url?: string;
-  why?: string;
-  kind?: string;
-}
-interface TrajectoryPoint {
-  question?: string;
-  score?: number;
-  depth?: number;
-}
 
 export default function InterviewReportPage() {
   const params = useParams<{ id: string }>();
@@ -79,32 +67,19 @@ export default function InterviewReportPage() {
     );
   }
 
-  const report = data.report as Record<string, unknown> | null;
-  const dims = normalizeInterviewDims(report);
-  const overall = pct(num(report, "overall", "score", "overallScore", "overall_score"));
-  const well = list<string>(report, "what_went_well", "whatWentWell", "strengths", "well").map(String);
-  const weak = list<string>(report, "what_was_weak", "whatWasWeak", "weaknesses", "weak").map(String);
-  const summary = str(report, "summary", "comment", "assessment");
-  const study: StudyItem[] = list<Record<string, unknown>>(report, "study", "studyMaterials", "study_materials", "materials").map(
-    (s) => ({
-      title: str(s, "title", "name"),
-      url: str(s, "url", "link", "href"),
-      why: str(s, "why", "reason", "description"),
-      kind: str(s, "kind", "type"),
-    })
-  );
-  const trajectory: TrajectoryPoint[] = list<Record<string, unknown>>(
-    report,
-    "trajectory",
-    "depth_trajectory",
-    "depthTrajectory"
-  ).map((t) => ({
-    question: str(t, "question", "label", "topic"),
-    score: pct(num(t, "score", "value")),
-    depth: num(t, "depth", "level", "difficulty"),
-  }));
+  const normalized = normalizeInterviewReport(data.report);
+  const { overall, dims, well, weak, summary, study, trajectory } =
+    normalized ?? {
+      overall: undefined,
+      dims: [],
+      well: [],
+      weak: [],
+      summary: undefined,
+      study: [],
+      trajectory: [],
+    };
 
-  const hasReport = report != null && (overall != null || dims.length > 0 || well.length > 0 || weak.length > 0);
+  const hasReport = normalized?.hasContent ?? false;
 
   if (!hasReport) {
     return (
@@ -337,7 +312,7 @@ function BackLink({ id }: { id: string | null }) {
  * Depth trajectory — x = question order, bar = how deep the agent pushed,
  * dot = the score it gave. Purely from the evaluator's own numbers.
  */
-function TrajectoryChart({ points }: { points: TrajectoryPoint[] }) {
+function TrajectoryChart({ points }: { points: InterviewTrajectoryPoint[] }) {
   const W = 560;
   const H = 150;
   const pad = { l: 8, r: 8, t: 10, b: 22 };

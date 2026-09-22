@@ -88,11 +88,14 @@ public class HttpAiServiceClient implements AiServiceClient {
 
     @Override
     public Map<String, Object> coverLetter(UUID jobId, UUID resumeVersionId, String mode,
-                                           String previous, String goal, UUID userId) {
+                                           String previous, String goal, String tone,
+                                           String length, UUID userId) {
         Map<String, Object> body = withOptionalRv("job_id", jobId, resumeVersionId);
         body.put("mode", mode == null || mode.isBlank() ? "generate" : mode);
         body.put("previous", previous == null ? "" : previous);
         body.put("goal", goal == null ? "" : goal);
+        body.put("tone", tone == null ? "" : tone);
+        body.put("length", length == null ? "" : length);
         return post("/internal/features/cover-letter", userId, body);
     }
 

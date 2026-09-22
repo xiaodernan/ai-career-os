@@ -47,10 +47,10 @@ import { TailorPanel } from "@/components/jobs/tailor-panel";
 import { CoverLetterPanel } from "@/components/jobs/cover-letter-panel";
 import { useJob } from "@/lib/hooks/resources";
 import { useCreateApplication, useCreateInterviewSession, useRunJobMatch } from "@/lib/hooks/actions";
-import { list as listOf, pick, str } from "@/lib/api/normalize";
+import { list as listOf, pick, rec, str } from "@/lib/api/normalize";
 import { formatSalary, titleCase } from "@/lib/format";
 import type { Evidence, JdRequirement, PreparationItem, SkillGap } from "@/lib/api/types";
-import { normalizeEvidence, normalizeSkillGaps } from "@/lib/api/normalize";
+import { normalizeEvidence, normalizeJdParsed, normalizeSkillGaps } from "@/lib/api/normalize";
 
 const INTERVIEW_MODES = [
   { value: "behavioral", label: "Behavioral" },
@@ -75,26 +75,30 @@ export default function JobDetailPage() {
   const job = data?.job;
   const match = data?.match ?? null;
 
-  /* JD extraction may arrive as a structured object or free text. */
+  /* JD extraction may arrive as a structured object or free text.
+   * JobDetail.jd is a JdItem — the extracted dict is nested under `parsed`,
+   * so read skills/topics/responsibilities from there, not the JdItem top level. */
   const jd = data?.jd;
+  const jdBody = rec(pick(jd, "parsed")) ?? jd;
   const jdText = str(jd, "rawText", "raw_text", "text", "content") ?? job?.description ?? null;
-  const required = listOf<string>(jd, "requiredSkills", "required_skills", "requirements").map(String);
-  const preferred = listOf<string>(jd, "preferredSkills", "preferred_skills", "nice_to_have").map(String);
-  const responsibilities = listOf<string>(jd, "responsibilities", "duties").map(String);
-  const gaps: SkillGap[] = data?.skillGaps?.length ? data.skillGaps : normalizeSkillGaps(jd);
-  const evidence: Evidence[] = match?.evidence ?? normalizeEvidence(jd);
-  const topics: string[] = match?.interviewTopics?.length
-    ? match.interviewTopics
-    : listOf<string>(jd, "interviewTopics", "interview_topics").map(String);
+  const jdParsed = normalizeJdParsed(jd);
+  const required = jdParsed.requiredSkills;
+  const preferred = jdParsed.preferredSkills;
+  const responsibilities = jdParsed.responsibilities;
+  const gaps: SkillGap[] = data?.skillGaps?.length ? data.skillGaps : normalizeSkillGaps(jdBody);
+  const evidence: Evidence[] = match?.evidence ?? normalizeEvidence(jdBody);
+  const topics: string[] = match?.interviewTopics?.length ? match.interviewTopics : jdParsed.interviewTopics;
   const prep: PreparationItem[] = match?.preparation ?? [];
-  const requirementRows: JdRequirement[] = listOf<Record<string, unknown>>(jd, "requirements", "criteria").map(
-    (r) => ({
-      skill: str(r, "skill", "name", "text"),
-      required: Boolean(pick(r, "required", "is_required")),
-      priority: str(r, "priority", "level"),
-      evidence: str(r, "evidence", "quote"),
-    })
-  );
+  const reqRow = (r: unknown, requiredFlag: boolean): JdRequirement => ({
+    skill: str(r, "name", "skill", "text") ?? (typeof r === "string" ? r : undefined),
+    required: requiredFlag,
+    priority: str(r, "priority", "level") ?? (requiredFlag ? undefined : "nice"),
+    evidence: str(r, "evidence_phrase", "evidence", "quote"),
+  });
+  const requirementRows: JdRequirement[] = [
+    ...listOf(jdBody, "requiredSkills", "required_skills", "requirements").map((r) => reqRow(r, true)),
+    ...listOf(jdBody, "preferredSkills", "preferred_skills", "criteria").map((r) => reqRow(r, false)),
+  ];
 
   const resumeVersionId = null; // the backend resolves the current version when omitted
 

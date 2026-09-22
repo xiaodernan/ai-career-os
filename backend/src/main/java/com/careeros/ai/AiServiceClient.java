@@ -22,7 +22,8 @@ public interface AiServiceClient {
     Map<String, Object> tailorResume(UUID jobId, UUID resumeVersionId, UUID userId);
 
     Map<String, Object> coverLetter(UUID jobId, UUID resumeVersionId, String mode,
-                                    String previous, String goal, UUID userId);
+                                    String previous, String goal, String tone,
+                                    String length, UUID userId);
 
     Map<String, Object> jdSuggestions(UUID resumeVersionId, String jdRaw, UUID userId);
 

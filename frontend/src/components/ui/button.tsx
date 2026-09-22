@@ -66,6 +66,9 @@ function Button({
   const Comp = asChild ? Slot.Root : "button";
   const isBusy = loading;
 
+  // With `asChild` the children go straight to Slot, which requires exactly one
+  // element — adding a sibling spinner expression would turn them into an array
+  // and break slotting, so the loader only renders on the real <button>.
   return (
     <Comp
       data-slot="button"
@@ -77,10 +80,14 @@ function Button({
       className={cn(buttonVariants({ variant, size }), isBusy && "opacity-80", className)}
       {...props}
     >
-      {isBusy && !asChild && (
-        <Loader2 aria-hidden className="animate-spin [&_svg:not([class*='size-'])]:size-4" />
+      {asChild ? children : (
+        <>
+          {isBusy && (
+            <Loader2 aria-hidden className="animate-spin [&_svg:not([class*='size-'])]:size-4" />
+          )}
+          {children}
+        </>
       )}
-      {children}
     </Comp>
   );
 }

@@ -151,10 +151,13 @@ public class FakeAiServiceClientConfig {
 
         @Override
         public Map<String, Object> coverLetter(UUID jobId, UUID resumeVersionId, String mode,
-                                               String previous, String goal, UUID userId) {
+                                               String previous, String goal, String tone,
+                                               String length, UUID userId) {
             record("coverLetter");
             return map("letter", "Dear hiring manager, I am a great fit.",
-                    "mode", mode == null ? "generate" : mode);
+                    "mode", mode == null ? "generate" : mode,
+                    "tone", tone == null ? "" : tone,
+                    "length", length == null ? "" : length);
         }
 
         @Override

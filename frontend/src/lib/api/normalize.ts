@@ -9,6 +9,7 @@ import type {
   ActivityRun,
   AgentTrace,
   Application,
+  CopilotAction,
   CopilotArtifact,
   DashboardMetrics,
   DashboardPayload,
@@ -18,6 +19,7 @@ import type {
   JobMatch,
   MatchDimension,
   ResumeScore,
+  SearchResults,
   SkillGap,
   TailorChange,
   TailorDiff,
@@ -66,6 +68,9 @@ export function bool(obj: unknown, ...keys: string[]): boolean | undefined {
 }
 
 export function list<T = unknown>(obj: unknown, ...keys: string[]): T[] {
+  // A payload may already BE the list (e.g. a bare `List<TimelineEvent>`),
+  // not wrapped under a key — return it as-is rather than dropping it.
+  if (Array.isArray(obj)) return obj as T[];
   for (const k of keys) {
     const v = pick(obj, k);
     if (Array.isArray(v)) return v as T[];
@@ -129,19 +134,24 @@ function pathOf(obj: unknown, ...keys: string[]): string[] | undefined {
 }
 
 export function normalizeEvidence(raw: unknown): Evidence[] {
-  return list(raw, "evidence", "items", "citations", "sources", "chunks").map((e) => {
+  const items = Array.isArray(raw) ? raw : list(raw, "evidence", "items", "citations", "sources", "chunks");
+  return items.map((e) => {
     const src = pick(e, "source", "doc", "document", "metadata");
     return {
       criterion: str(e, "criterion", "name", "label", "requirement", "skill") ?? "Evidence",
       score: pct(num(e, "score", "value")),
       quote: str(e, "quote", "text", "excerpt", "snippet", "content") ?? "",
       reasoning: str(e, "reasoning", "why", "explanation", "rationale"),
-      chunkIds: list<string>(e, "chunkIds", "chunk_ids", "chunks").map(String),
+      chunkIds: list<string>(e, "chunkIds", "chunk_ids", "chunk_id", "chunks").map(String),
       source: {
         docTitle:
           str(src, "docTitle", "doc_title", "title", "name", "fileName", "file_name") ??
           str(e, "docTitle", "doc_title"),
-        docId: str(src, "docId", "doc_id", "documentId", "document_id") ?? str(e, "documentId"),
+        // Copilot/ai-service sources carry document_id at the TOP level (snake),
+        // not nested — read it or the /knowledge citation link is dead.
+        docId:
+          str(src, "docId", "doc_id", "documentId", "document_id") ??
+          str(e, "documentId", "document_id", "docId", "doc_id"),
         kind: str(src, "kind", "type", "sourceType", "source_type"),
         path: pathOf(src, "path", "section", "sections", "breadcrumbs") ?? pathOf(e, "path", "section"),
       },
@@ -223,7 +233,7 @@ export function normalizeMatch(raw: unknown): JobMatch | null {
     matchedSkills: matched.map(String),
     missingSkills: missing.map(String),
     whyMatch: list<string>(m, "whyMatch", "why_match", "reasons", "why").map(String),
-    reasoning: str(m, "reasoning", "summary", "explanation"),
+    reasoning: str(m, "reasoning", "narrative", "summary", "explanation"),
     evidence: evidence.length ? evidence : undefined,
     interviewTopics: list<string>(m, "interviewTopics", "interview_topics").map(String),
     preparation: list(m, "preparation", "recommendedPreparation", "recommended_preparation"),
@@ -256,6 +266,21 @@ export function normalizeSkillGaps(raw: unknown): SkillGap[] {
 
 export function normalizeJob(raw: unknown): Job {
   const company = pick(raw, "company");
+  // A job's match can arrive two ways: nested under `match`/`latestMatch` (the
+  // detail response) or as FLAT scalars `matchOverall`/`matchId` on JobListItem
+  // (GET /jobs list + discover). Reading only the nested form left every list
+  // card without a score ring even when the backend had computed one.
+  const nestedMatch = normalizeMatch(pick(raw, "latestMatch", "latest_match", "match"));
+  const flatOverall = pct(num(raw, "matchOverall", "match_overall"));
+  const resolvedMatch: JobMatch | null =
+    nestedMatch ??
+    (flatOverall != null
+      ? {
+          id: str(raw, "matchId", "match_id") ?? "",
+          jobId: idOf(raw, "job"),
+          overall: flatOverall,
+        }
+      : null);
   return {
     id: idOf(raw, "job"),
     companyId: str(raw, "companyId", "company_id") ?? str(company, "id") ?? "",
@@ -282,7 +307,7 @@ export function normalizeJob(raw: unknown): Job {
     source: str(raw, "source", "origin"),
     externalUrl: str(raw, "externalUrl", "external_url", "url", "applyUrl", "apply_url"),
     saved: bool(raw, "saved", "isSaved", "is_saved", "bookmarked"),
-    latestMatch: normalizeMatch(pick(raw, "latestMatch", "latest_match", "match")),
+    latestMatch: resolvedMatch,
     whyMatch: list<string>(raw, "whyMatch", "why_match", "why", "reasons").map(String),
     jd: rec(pick(raw, "jd", "jobDescription", "job_description"))
       ? (pick(raw, "jd", "jobDescription", "job_description") as Job["jd"])
@@ -298,6 +323,43 @@ export function jobDetailMatch(raw: unknown): JobMatch | null {
       pick(pick(raw, "detail", "job", "data"), "match", "latestMatch", "latest_match") ??
       raw
   );
+}
+
+export interface JdParsed {
+  requiredSkills: string[];
+  preferredSkills: string[];
+  responsibilities: string[];
+  interviewTopics: string[];
+  hiddenRequirements: string[];
+  skillGap: string[];
+}
+
+/** `POST /jds` returns a JdItem whose ai-service dict (skills / responsibilities
+ *  / topics / hidden asks) is nested under `parsed`, NOT at the top level —
+ *  read it there or the whole analysis dialog comes back empty. */
+export function normalizeJdParsed(raw: unknown): JdParsed {
+  const body = rec(pick(raw, "parsed", "jd", "analysis", "data")) ?? raw;
+  const arr = (...keys: string[]): string[] => {
+    for (const k of keys) {
+      const v = pick(body, k);
+      if (Array.isArray(v)) {
+        return v
+          .map((x): string =>
+            typeof x === "object" && x !== null ? str(x, "skill", "name", "text") ?? "" : String(x)
+          )
+          .filter(Boolean);
+      }
+    }
+    return [];
+  };
+  return {
+    requiredSkills: arr("requiredSkills", "required_skills", "requirements"),
+    preferredSkills: arr("preferredSkills", "preferred_skills", "nice_to_have", "niceToHave"),
+    responsibilities: arr("responsibilities", "duties"),
+    interviewTopics: arr("interviewTopics", "interview_topics", "topics"),
+    hiddenRequirements: arr("hiddenRequirements", "hidden_requirements"),
+    skillGap: arr("skillGap", "skill_gap", "skillGaps", "gaps"),
+  };
 }
 
 /* -------------------------------- tailor --------------------------------- */
@@ -334,13 +396,111 @@ export function normalizeTailorDiff(raw: unknown): TailorDiff {
   return { accepted, rejected };
 }
 
+/** Render a structured resume (the ai-service `tailored` payload — a resume
+ *  dict, not markdown) into the markdown the tailor panel copies/downloads.
+ *  Reads both camelCase and the snake_case the parser emits; never invents. */
+export function structuredResumeToMarkdown(raw: unknown): string {
+  const s = rec(pick(raw, "structured", "structuredResume", "structured_resume") ?? raw);
+  if (!s) return "";
+  const lines: string[] = [];
+  const push = (...t: Array<string | undefined>) => {
+    const l = t.filter(Boolean).join(" ").trim();
+    if (l) lines.push(l);
+  };
+  const bulletList = (o: unknown) => list<string>(o, "bullets", "highlights").map(String);
+
+  const profile = pick(s, "profile");
+  const name = str(profile, "name") ?? str(s, "name");
+  const headline = str(profile, "headline", "title") ?? str(s, "headline");
+  if (name) push("#", name);
+  else if (headline) push("#", headline);
+  if (name && headline) push("###", headline);
+  push(
+    [str(profile, "email"), str(profile, "phone"), str(profile, "location")]
+      .filter(Boolean)
+      .join(" · ")
+  );
+
+  const summary = str(s, "summary") ?? str(profile, "summary");
+  if (summary) {
+    push("## Summary");
+    push(summary);
+  }
+
+  const experience = list(s, "experience", "workExperience", "work_experience");
+  if (experience.length) {
+    push("## Experience");
+    for (const e of experience) {
+      const role = str(e, "role", "title") ?? "";
+      const org = str(e, "company", "organization", "organisation") ?? "";
+      let end = str(e, "end", "endDate", "end_date") ?? "";
+      if (!end && bool(e, "current")) end = "Present";
+      const start = str(e, "start", "startDate", "start_date") ?? "";
+      const dates = [start, end].filter(Boolean).join(" – ");
+      push("###", [role, org].filter(Boolean).join(" — "), dates ? `(${dates})` : "");
+      for (const b of bulletList(e)) push("- " + b);
+    }
+  }
+
+  const projects = list(s, "projects");
+  if (projects.length) {
+    push("## Projects");
+    for (const p of projects) {
+      const title = str(p, "name", "title") ?? "";
+      push("###", title, str(p, "period") ? `(${str(p, "period")})` : "");
+      const desc = str(p, "description");
+      if (desc) push(desc);
+      for (const b of bulletList(p)) push("- " + b);
+      const tech = list<string>(p, "techStack", "tech_stack", "skills").map(String);
+      if (tech.length) push("_" + tech.join(", ") + "_");
+    }
+  }
+
+  const education = list(s, "education");
+  if (education.length) {
+    push("## Education");
+    for (const ed of education) {
+      const school = str(ed, "school", "institution") ?? "";
+      const deg = [str(ed, "degree"), str(ed, "major") ?? str(ed, "field")].filter(Boolean).join(", ");
+      push("###", school, deg ? `— ${deg}` : "");
+    }
+  }
+
+  const skillLines: string[] = [];
+  for (const g of list(s, "skills")) {
+    const items = list<string>(g, "skills", "items").map(String);
+    const label = str(g, "group", "category", "name");
+    if (items.length) skillLines.push((label ? `${label}: ` : "") + items.join(", "));
+    else if (label) skillLines.push(label);
+  }
+  const tech = list<string>(s, "technologies").map(String);
+  if (tech.length) skillLines.push("Technologies: " + tech.join(", "));
+  if (skillLines.length) {
+    push("## Skills");
+    for (const l of skillLines) push("- " + l);
+  }
+
+  const achievements = list<string>(s, "achievements").map(String);
+  if (achievements.length) {
+    push("## Achievements");
+    for (const a of achievements) push("- " + a);
+  }
+
+  return lines.join("\n").trim();
+}
+
 export function normalizeTailor(raw: unknown): TailorResponse {
   const tailoredRaw = pick(raw, "tailored", "tailoredResume", "tailored_resume", "result") ?? raw;
   const stats = pick(raw, "stats", "statistics", "summary");
+  // ai-service returns `tailored` as a structured resume dict (no markdown/text);
+  // render one or the panel's Full-document / copy / download stay dead.
+  const markdown = str(tailoredRaw, "markdown", "md");
+  const text = str(tailoredRaw, "text", "content", "plainText", "plain_text", "body");
+  const derived = markdown || text ? "" : structuredResumeToMarkdown(tailoredRaw);
   const tailored: TailoredResult = {
     resumeVersionId: str(tailoredRaw, "resumeVersionId", "resume_version_id", "versionId", "version_id"),
-    markdown: str(tailoredRaw, "markdown", "md"),
-    text: str(tailoredRaw, "text", "content", "plainText", "plain_text", "body"),
+    markdown: markdown || derived || undefined,
+    text: text || undefined,
     sections: list(tailoredRaw, "sections"),
     notes: list<string>(tailoredRaw, "notes", "comments").map(String),
     stats: rec(stats) ? (stats as Record<string, unknown>) : undefined,
@@ -367,6 +527,16 @@ export function coverLetterText(raw: unknown): string {
 
 /* ------------------------------- dashboard -------------------------------- */
 
+/** {status: count} map → rows, keeping count coercion in one place. */
+function statusCountsToRows(statusCounts: unknown): { status: string; count: number }[] {
+  const record = rec(statusCounts);
+  if (!record) return [];
+  return Object.entries(record).map(([status, v]) => ({
+    status,
+    count: typeof v === "number" ? v : (num(v, "count", "total") ?? 0),
+  }));
+}
+
 export function normalizePipeline(raw: unknown): { status: string; count: number }[] {
   const p = pick(raw, "pipeline", "stages", "applicationPipeline", "application_pipeline");
   if (Array.isArray(p)) {
@@ -375,15 +545,28 @@ export function normalizePipeline(raw: unknown): { status: string; count: number
       count: num(row, "count", "total", "value") ?? 0,
     }));
   }
-  const record = rec(p);
-  if (record) {
-    return Object.entries(record).map(([status, v]) => ({
-      status,
-      count: typeof v === "number" ? v : (num(v, "count", "total") ?? 0),
-    }));
-  }
+  if (rec(p)) return statusCountsToRows(p);
+  // Real GET /reports/dashboard carries no `pipeline` key: the per-stage counts
+  // live at kanban.statusCounts. Reach into it or the mini-kanban is always empty.
+  const kanban = pick(raw, "kanban");
+  const fromKanban = pick(kanban, "statusCounts", "status_counts");
+  if (rec(fromKanban)) return statusCountsToRows(fromKanban);
   return [];
 }
+
+/** Human labels for the deterministic rubric criteria (ai-service resume_parse). */
+const RESUME_CRITERION_LABELS: Record<string, string> = {
+  has_contact: "Contact info (email / phone)",
+  has_summary: "A summary section",
+  has_experience: "Work experience",
+  experience_has_bullets: "Bullets under your roles",
+  quantified_impact: "Quantified impact (numbers or %)",
+  has_projects: "Projects",
+  has_education: "Education",
+  has_skills: "Enough skills (5+)",
+  years_experience_stated: "Stated years of experience",
+  dates_present: "Start dates on all roles",
+};
 
 export function normalizeResumeScore(raw: unknown): ResumeScore | null {
   const s = pick(raw, "score", "resumeScore", "resume_score") ?? raw;
@@ -391,7 +574,17 @@ export function normalizeResumeScore(raw: unknown): ResumeScore | null {
   const r = rec(s);
   if (!r) return null;
   const overall = pct(num(s, "overall", "score", "total"));
-  const gaps = list<string>(s, "gaps", "issues", "weaknesses").map(String);
+  const explicitGaps = list<string>(s, "gaps", "issues", "weaknesses").map(String);
+  // The backend's rubric is a checklist of {criterion, met, points}; the unmet
+  // items ARE the gaps. Derive them when the payload carries no explicit gaps.
+  const derivedGaps = list<Record<string, unknown>>(s, "detail", "checks", "criteria")
+    .filter((c) => bool(c, "met", "ok", "passed") === false)
+    .map((c) => {
+      const code = str(c, "criterion", "name", "why") ?? "";
+      return RESUME_CRITERION_LABELS[code] ?? code.replace(/_/g, " ");
+    })
+    .filter(Boolean);
+  const gaps = explicitGaps.length ? explicitGaps : derivedGaps;
   const suggestions = list<string>(s, "suggestions", "improvements", "tips").map(String);
   const out: ResumeScore = {
     overall,
@@ -412,41 +605,66 @@ export function normalizeResumeScore(raw: unknown): ResumeScore | null {
 export function normalizeDashboard(raw: unknown): DashboardPayload | null {
   const d = pick(raw, "dashboard", "data") ?? raw;
   if (!rec(d)) return null;
-  const resumeRaw = pick(d, "resume", "currentResume", "current_resume");
-  const metricsRaw = pick(d, "metrics", "stats", "summary") ?? d;
+  // Real GET /reports/dashboard: { kanban{statusCounts,total,offers}, interviews,
+  // currentResume{resumeId,versionId,title,status,score}, skillGaps(digest),
+  // recommendedJobs[], recentRuns[], recentActivity[] }. Fall back to `d` itself
+  // so older flat payloads still resolve.
+  const kanban = rec(pick(d, "kanban")) ? (pick(d, "kanban") as Record<string, unknown>) : d;
+  const currentResume = pick(d, "currentResume", "current_resume", "resume");
+  const skillGapDigest = pick(d, "skillGaps", "skill_gaps", "skillGap", "skill_gap");
+  // Older payloads wrapped the flat numbers under `metrics` / `stats`.
+  const legacy = pick(d, "metrics", "stats", "summary");
+
+  const pipelineRows = normalizePipeline(d);
+  const inPipeline = pipelineRows.reduce((s, r) => s + r.count, 0);
+  // Missing skills arrive inside a single digest object, not as a SkillGap list.
+  const gaps = normalizeSkillGaps({
+    gaps: list(skillGapDigest, "missingSkills", "missing_skills", "missing"),
+  });
+  const resumeScore = normalizeResumeScore(currentResume) ?? normalizeResumeScore(d);
+
   const metrics: DashboardMetrics = {
-    applications: num(metricsRaw, "applications", "applicationCount", "application_count", "total"),
-    inPipeline: num(metricsRaw, "inPipeline", "in_pipeline", "active"),
-    interviews: num(metricsRaw, "interviews", "interviewCount", "interview_count"),
-    offers: num(metricsRaw, "offers", "offerCount", "offer_count"),
-    skillGaps: num(metricsRaw, "skillGaps", "skill_gaps", "gapCount"),
-    resumeScore: pct(num(metricsRaw, "resumeScore", "resume_score")),
-    avgMatch: pct(num(metricsRaw, "avgMatch", "avg_match", "averageMatch", "average_match")),
-    needsAttention: num(metricsRaw, "needsAttention", "needs_attention", "attention"),
+    applications:
+      num(kanban, "total") ??
+      num(d, "applications", "applicationCount", "application_count") ??
+      num(legacy, "applications", "applicationCount", "application_count", "total"),
+    inPipeline: inPipeline || num(d, "inPipeline", "in_pipeline", "active") || num(legacy, "inPipeline", "in_pipeline", "active"),
+    interviews: num(d, "interviews", "interviewCount", "interview_count") ?? num(legacy, "interviews", "interviewCount", "interview_count"),
+    offers:
+      num(kanban, "offers") ??
+      num(d, "offers", "offerCount", "offer_count") ??
+      num(legacy, "offers", "offerCount", "offer_count"),
+    skillGaps: gaps.length || num(d, "skillGaps", "skill_gaps", "gapCount") || num(legacy, "skillGaps", "skill_gaps", "gapCount"),
+    resumeScore: resumeScore?.overall ?? pct(num(d, "resumeScore", "resume_score")) ?? pct(num(legacy, "resumeScore", "resume_score")),
+    avgMatch: pct(num(d, "avgMatch", "avg_match", "averageMatch", "average_match")) ?? pct(num(legacy, "avgMatch", "avg_match", "averageMatch", "average_match")),
+    needsAttention: num(d, "needsAttention", "needs_attention", "attention") ?? num(legacy, "needsAttention", "needs_attention", "attention"),
   };
   const runs = list(d, "recentRuns", "recent_runs", "activity", "runs").map(normalizeRun);
   return {
     metrics: Object.values(metrics).some((v) => v != null) ? metrics : undefined,
-    pipeline: pick(d, "pipeline", "stages", "applicationPipeline", "application_pipeline") as
-      | DashboardPayload["pipeline"]
-      | undefined,
+    pipeline:
+      (pick(d, "pipeline", "stages", "applicationPipeline", "application_pipeline") ??
+        pick(kanban, "statusCounts", "status_counts")) as
+        | DashboardPayload["pipeline"]
+        | undefined,
     pipelineItems: list(d, "pipelineItems", "pipeline_items", "applications", "recentApplications").map(
       (a) => a as Application
     ),
     recommendedJobs: list(d, "recommendedJobs", "recommended_jobs", "recommendations", "jobs").map(
       normalizeJob
     ),
-    skillGaps: normalizeSkillGaps(d),
-    resume: rec(resumeRaw)
+    skillGaps: gaps,
+    resume: rec(currentResume)
       ? {
-          id: str(resumeRaw, "id") ?? "",
-          title: str(resumeRaw, "title", "name") ?? "Resume",
-          status: str(resumeRaw, "status") ?? "uploaded",
-          currentVersionId: str(resumeRaw, "currentVersionId", "current_version_id") ?? null,
-          score: normalizeResumeScore(resumeRaw) ?? undefined,
+          id: str(currentResume, "resumeId", "resume_id", "id") ?? "",
+          title: str(currentResume, "title", "name") ?? "Resume",
+          status: str(currentResume, "status") ?? "uploaded",
+          currentVersionId:
+            str(currentResume, "versionId", "version_id", "currentVersionId", "current_version_id") ?? null,
+          score: resumeScore ?? undefined,
         }
       : null,
-    score: normalizeResumeScore(d),
+    score: resumeScore ?? normalizeResumeScore(d),
     recentRuns: runs.length ? runs : undefined,
     suggestion: str(d, "suggestion", "aiSuggestion", "ai_suggestion", "nextStep", "next_step"),
     insights: list<string>(d, "insights", "highlights").map(String),
@@ -482,16 +700,17 @@ export function normalizeRun(raw: unknown): ActivityRun {
   return {
     id: idOf(raw, "run"),
     agent: str(raw, "agent", "agentName", "agent_name", "orchestrator"),
-    kind: str(raw, "kind", "type", "task", "operation"),
+    kind: str(raw, "kind", "type", "task", "operation", "trigger"),
     summary: str(raw, "summary", "title", "label", "message", "name"),
     status: str(raw, "status", "state"),
+    error: str(raw, "error", "errorMessage", "error_message"),
     model: str(raw, "model", "modelName", "model_name"),
     startedAt: str(raw, "startedAt", "started_at", "createdAt", "created_at"),
     finishedAt: str(raw, "finishedAt", "finished_at", "endedAt", "ended_at"),
     createdAt: str(raw, "createdAt", "created_at"),
-    durationMs: num(raw, "durationMs", "duration_ms", "elapsedMs"),
-    tokensIn: num(raw, "tokensIn", "tokens_in", "promptTokens", "prompt_tokens"),
-    tokensOut: num(raw, "tokensOut", "tokens_out", "completionTokens", "completion_tokens"),
+    durationMs: num(raw, "durationMs", "duration_ms", "elapsedMs", "latencyMs", "latency_ms"),
+    tokensIn: num(raw, "tokensIn", "tokens_in", "promptTokens", "prompt_tokens", "inputTokens", "input_tokens"),
+    tokensOut: num(raw, "tokensOut", "tokens_out", "completionTokens", "completion_tokens", "outputTokens", "output_tokens"),
     costUsd: num(raw, "costUsd", "cost_usd", "totalCost", "total_cost", "cost"),
     traces: traces.length ? traces : undefined,
     relatedHref: str(raw, "relatedHref", "related_href", "href", "url"),
@@ -545,6 +764,189 @@ export function normalizeQuestion(raw: unknown): {
   };
 }
 
+/* --------------------------- interview report ---------------------------- */
+
+/**
+ * The backend stores an evaluation as `EvaluationItem{ dims, summary, trajectory }`,
+ * and the evaluator's scalar/text results (`overall`, `what_you_did_well`,
+ * `what_was_weak`, `recommended_study`, `trajectory_note`) live NESTED inside the
+ * `summary` map — not on the item root. The report page used to read them from the
+ * root (and never got a report object at all), so a finished session rendered empty.
+ * This flattens the real shape into view models, still tolerating a legacy payload
+ * that kept everything at the top level.
+ */
+export interface InterviewStudyItem {
+  title?: string;
+  url?: string;
+  why?: string;
+  kind?: string;
+}
+
+export interface InterviewTrajectoryPoint {
+  question?: string;
+  score?: number;
+  depth?: number;
+}
+
+export interface InterviewReport {
+  overall?: number;
+  dims: InterviewDimension[];
+  well: string[];
+  weak: string[];
+  summary?: string;
+  study: InterviewStudyItem[];
+  trajectory: InterviewTrajectoryPoint[];
+  hasContent: boolean;
+}
+
+export function normalizeInterviewReport(raw: unknown): InterviewReport | null {
+  const ev = pick(raw, "evaluation", "report") ?? raw;
+  if (!rec(ev)) return null;
+  const summary = pick(ev, "summary");
+  const merged = { ...(rec(ev) ?? {}), ...(rec(summary) ?? {}) };
+
+  const dims = normalizeInterviewDims(ev);
+  const overall = pct(num(merged, "overall", "score", "overallScore", "overall_score"));
+  const well = list<string>(merged, "what_you_did_well", "what_went_well", "whatWentWell", "strengths", "well").map(String);
+  const weak = list<string>(merged, "what_was_weak", "whatWasWeak", "weaknesses", "weak").map(String);
+  const summaryText =
+    str(merged, "trajectory_note", "narrative", "comment", "assessment") ??
+    (typeof summary === "string" ? summary : undefined);
+  const study = list<Record<string, unknown>>(
+    merged,
+    "recommended_study",
+    "study",
+    "studyMaterials",
+    "study_materials",
+    "materials"
+  ).map((s) => ({
+    title: str(s, "title", "name"),
+    url: str(s, "url", "link", "href"),
+    why: str(s, "why", "reason", "description"),
+    kind: str(s, "kind", "type"),
+  }));
+  const trajectory = list<Record<string, unknown>>(
+    merged,
+    "trajectory",
+    "trajectory_detail",
+    "depth_trajectory",
+    "depthTrajectory"
+  ).map((t) => ({
+    question: str(t, "question", "label", "topic"),
+    score: pct(num(t, "score", "value")),
+    depth: num(t, "depth", "level", "difficulty"),
+  }));
+
+  const hasContent =
+    overall != null ||
+    dims.length > 0 ||
+    well.length > 0 ||
+    weak.length > 0 ||
+    study.length > 0 ||
+    trajectory.length > 0 ||
+    !!summaryText;
+
+  return { overall, dims, well, weak, summary: summaryText, study, trajectory, hasContent };
+}
+
+/* --------------------------------- search --------------------------------- */
+
+/**
+ * Turn Jobs filter/URL state (snake_case) into the query string the backend
+ * actually binds: salary is `@RequestParam(minSalary/maxSalary)` in camelCase.
+ * Drops empty/undefined values. Any other key passes through unchanged.
+ */
+export function serializeJobFilters(params: object): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(params)) {
+    if (v === "" || v === undefined) continue;
+    const wire = k === "min_salary" ? "minSalary" : k === "max_salary" ? "maxSalary" : k;
+    out[wire] = v;
+  }
+  return out;
+}
+
+/**
+ * Global search: the backend /search returns results as typed top-level lists
+ * (`{query, jobs, companies, resumes, notes, conversations, applications}`), not
+ * a `groups` array. Map each entity to a navigable item, choosing the deepest
+ * real route that exists. Also tolerates `{groups:[…]}` and flat `{items:[…]}`.
+ */
+export function normalizeSearch(raw: unknown): SearchResults {
+  const typed: {
+    key: string;
+    type: string;
+    label: string;
+    href: (id: string) => string;
+  }[] = [
+    { key: "jobs", type: "job", label: "Jobs", href: (id) => `/jobs/${id}` },
+    { key: "companies", type: "company", label: "Companies", href: () => "/companies" },
+    { key: "resumes", type: "resume", label: "Resumes", href: (id) => `/resumes/${id}` },
+    { key: "notes", type: "note", label: "Notes", href: () => "/knowledge" },
+    { key: "conversations", type: "conversation", label: "Conversations", href: () => "/copilot" },
+    { key: "applications", type: "application", label: "Applications", href: () => "/applications" },
+  ];
+
+  const groups: SearchResults["groups"] = [];
+  let sawTyped = false;
+  for (const g of typed) {
+    const arr = list(raw, g.key);
+    if (!arr.length) continue;
+    sawTyped = true;
+    groups.push({
+      label: g.label,
+      items: arr.map((h) => {
+        const id = idOf(h, g.type);
+        return {
+          id,
+          type: g.type,
+          title: str(h, "title", "name") ?? "Untitled",
+          subtitle:
+            str(h, "companyName", "company_name", "industry", "snippet", "location", "status") ??
+            undefined,
+          href: g.href(id),
+        };
+      }),
+    });
+  }
+  if (sawTyped) return { groups };
+
+  const groupsRaw = list(raw, "groups");
+  if (groupsRaw.length) {
+    return {
+      groups: groupsRaw.map((g) => ({
+        label: str(g, "label", "type", "name") ?? "Results",
+        items: list(g, "items").map((i) => ({
+          id: idOf(i, "result"),
+          type: str(i, "type", "kind") ?? "result",
+          title: str(i, "title", "name") ?? "",
+          subtitle: str(i, "subtitle", "description", "snippet"),
+          href: str(i, "href", "url", "link") ?? "#",
+        })),
+      })),
+    };
+  }
+
+  const flat = list(raw, "items", "results");
+  const byType = new Map<string, unknown[]>();
+  for (const i of flat) {
+    const t = str(i, "type", "kind") ?? "results";
+    byType.set(t, [...(byType.get(t) ?? []), i]);
+  }
+  return {
+    groups: [...byType.entries()].map(([label, items]) => ({
+      label: label.charAt(0).toUpperCase() + label.slice(1),
+      items: items.map((i) => ({
+        id: idOf(i, "result"),
+        type: label,
+        title: str(i, "title", "name") ?? "",
+        subtitle: str(i, "subtitle", "description"),
+        href: str(i, "href", "url", "link") ?? "#",
+      })),
+    })),
+  };
+}
+
 /* --------------------------------- copilot -------------------------------- */
 
 export function normalizeArtifacts(raw: unknown): CopilotArtifact[] {
@@ -552,6 +954,17 @@ export function normalizeArtifacts(raw: unknown): CopilotArtifact[] {
     type: str(a, "type", "kind") ?? "text",
     title: str(a, "title", "name", "label"),
     data: pick(a, "data", "payload", "value") ?? a,
+  }));
+}
+
+/** Follow-up action chips. Shared by the history read path AND the live chat
+ *  reply so a freshly-generated reply can't drop actions until a refetch. */
+export function normalizeChatActions(raw: unknown): CopilotAction[] {
+  return list(raw, "actions").map((a) => ({
+    label: str(a, "label", "name", "title") ?? "Open",
+    href: str(a, "href", "url", "link", "path"),
+    kind: str(a, "kind", "type"),
+    payload: rec(pick(a, "payload", "data")) ? (pick(a, "payload", "data") as Record<string, unknown>) : undefined,
   }));
 }
 
@@ -563,11 +976,6 @@ export function normalizeMessages(raw: unknown) {
     createdAt: str(m, "createdAt", "created_at", "timestamp"),
     artifacts: normalizeArtifacts(pick(m, "artifacts")),
     sources: normalizeEvidence(pick(m, "sources", "citations")),
-    actions: list(m, "actions").map((a) => ({
-      label: str(a, "label", "name", "title") ?? "Open",
-      href: str(a, "href", "url", "link", "path"),
-      kind: str(a, "kind", "type"),
-      payload: rec(pick(a, "payload", "data")) ? (pick(a, "payload", "data") as Record<string, unknown>) : undefined,
-    })),
+    actions: normalizeChatActions(pick(m, "actions")),
   }));
 }

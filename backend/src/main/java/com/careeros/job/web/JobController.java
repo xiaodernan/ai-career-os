@@ -110,6 +110,8 @@ public class JobController {
                 request == null ? null : request.resumeVersionId(),
                 request == null ? null : request.mode(),
                 request == null ? null : request.previous(),
-                request == null ? null : request.goal());
+                request == null ? null : request.goal(),
+                request == null ? null : request.tone(),
+                request == null ? null : request.length());
     }
 }

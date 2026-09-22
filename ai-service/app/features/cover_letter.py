@@ -17,10 +17,36 @@ VARIANTS = {
     "concise": "Punchy, one idea per sentence, no filler.",
 }
 
+TONE_DIRECTIVES = {
+    "formal": "Use a formal, traditional business-letter register.",
+    "concise": "Be direct: short sentences, no filler or pleasantries.",
+    "confident": "Project confident, assured ownership of achievements.",
+    "balanced": "",
+}
+
+LENGTH_DIRECTIVES = {
+    "short": "Keep the whole letter under 180 words.",
+    "standard": "Aim for roughly 300 words.",
+    "detailed": "Aim for roughly 450 words with fuller proof.",
+}
+
+
+def style_directives(tone: str, length: str) -> list[str]:
+    """Map the UI's tone/length knobs to prompt directives (independent of mode)."""
+    out = []
+    t = TONE_DIRECTIVES.get((tone or "").strip().lower())
+    if t:
+        out.append(t)
+    ln = LENGTH_DIRECTIVES.get((length or "").strip().lower())
+    if ln:
+        out.append(ln)
+    return out
+
 
 async def generate(resume_structured: dict, resume_text: str, jd: dict,
                    company: dict | None, goal: str, *, user_id: str,
                    mode: str = "generate", previous: str = "",
+                   tone: str = "", length: str = "",
                    run_id: str | None = None) -> dict:
     query = " ".join([s.get("name", "") for s in (jd.get("requiredSkills") or [])][:10])
     r = await retrieve(query or jd.get("title", "top achievements"), user_id=user_id,
@@ -36,6 +62,9 @@ async def generate(resume_structured: dict, resume_text: str, jd: dict,
         f"EVIDENCE:\n{r.get('context_block','')}",
     ]
     prompt = "\n".join(f for f in facts if f)
+    directives = style_directives(tone, length)
+    if directives:
+        prompt = f"{prompt}\n\nSTYLE: " + " ".join(directives)
     if previous and (mode in VARIANTS or mode == "customize"):
         instruction = VARIANTS.get(mode) or str(jd.get("customization", "make it better"))
         prompt = (f"{prompt}\n\nPREVIOUS VERSION:\n{previous}\n\nINSTRUCTION: "

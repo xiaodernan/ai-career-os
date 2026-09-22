@@ -119,6 +119,8 @@ class CoverReq(BaseModel):
     mode: str = "generate"
     previous: str = ""
     goal: str = ""
+    tone: str = ""
+    length: str = ""
 
 
 @router.post("/cover-letter")
@@ -138,7 +140,8 @@ async def cover_ep(req: CoverReq, ctx: Ctx = Depends(require_internal)):
     company = {"name": job.get("company_name"), "overview": job.get("company_overview")}
     out = await cover_generate(structured, plaintext, jd, company, req.goal,
                                user_id=ctx.user_id, mode=req.mode,
-                               previous=req.previous, run_id=run_id)
+                               previous=req.previous, tone=req.tone,
+                               length=req.length, run_id=run_id)
     await observability.finish_run(run_id, "completed")
     return out
 

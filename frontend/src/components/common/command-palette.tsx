@@ -16,6 +16,7 @@ import {
 import { NAV_ITEMS } from "@/components/layout/nav";
 import { api } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
+import { normalizeSearch } from "@/lib/api/normalize";
 import type { SearchResults } from "@/lib/api/types";
 import { FileText, Briefcase, Building2, MessageSquare, LayoutDashboard, CornerDownLeft, type LucideIcon } from "lucide-react";
 
@@ -47,8 +48,8 @@ const RESULT_ICONS: Record<string, LucideIcon> = {
 
 type SearchFn = (q: string) => Promise<SearchResults>;
 
-const defaultSearch: SearchFn = (q) =>
-  api.get<SearchResults>(endpoints.search, { q, size: 8 });
+const defaultSearch: SearchFn = async (q) =>
+  normalizeSearch(await api.get<unknown>(endpoints.search, { q, size: 8 }));
 
 export function CommandPaletteProvider({
   children,

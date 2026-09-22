@@ -5,6 +5,7 @@ import asyncio
 import pytest
 
 from app.core.taskbus import finish, gc_old_tasks, is_done, new_task, publish, sse, state, subscribe
+from app.features.cover_letter import style_directives
 from app.features.tailor import verify_no_fabrication
 from app.providers.pricing import estimate_cost
 from app.rag.compress import compress
@@ -164,3 +165,23 @@ def test_sse_formats_event():
     line = sse({"event": "status", "data": {"步骤": "解析"}})
     assert line.startswith("event: status\ndata: ")
     assert '"步骤": "解析"' in line and line.endswith("\n\n")
+
+
+def test_style_directives_empty_defaults_add_nothing():
+    assert style_directives("", "") == []
+    assert style_directives("balanced", "") == []
+    # "balanced" tone maps to no directive, so only the length one survives
+    assert len(style_directives("balanced", "standard")) == 1
+
+
+def test_style_directives_maps_tone_and_length():
+    d = style_directives("formal", "short")
+    assert len(d) == 2
+    assert any("formal" in s.lower() for s in d)
+    assert any("180" in s for s in d)
+
+
+def test_style_directives_case_insensitive_and_ignores_unknown():
+    assert style_directives("  CONCISE ", "detailed") == style_directives("concise", "detailed")
+    assert style_directives("unknown-tone", "unknown-len") == []
+

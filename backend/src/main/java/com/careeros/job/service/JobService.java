@@ -235,7 +235,8 @@ public class JobService {
     }
 
     public Map<String, Object> coverLetter(UUID userId, UUID jobId, UUID resumeVersionId,
-                                           String mode, String previous, String goal) {
+                                           String mode, String previous, String goal,
+                                           String tone, String length) {
         requireJob(jobId);
         UUID rvId = resumeVersionId;
         if (rvId == null) {
@@ -244,7 +245,7 @@ public class JobService {
                             "No resume available"))
                     .getCurrentVersionId();
         }
-        return ai.coverLetter(jobId, rvId, mode, previous, goal, userId);
+        return ai.coverLetter(jobId, rvId, mode, previous, goal, tone, length, userId);
     }
 
     @Transactional

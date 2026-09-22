@@ -128,9 +128,11 @@ public class JobSearchRepository {
         if (f.skills() != null && !f.skills().isEmpty()) {
             query.setParameter("skills", String.join(",", f.skills()));
         }
+        // search() appends `LIMIT :limit OFFSET :offset`, so the named parameters
+        // must be bound here — JDBC pagination would add a second clause.
         if (limit > 0) {
-            query.setMaxResults(limit);
-            query.setFirstResult(offset);
+            query.setParameter("limit", limit);
+            query.setParameter("offset", offset);
         }
     }
 

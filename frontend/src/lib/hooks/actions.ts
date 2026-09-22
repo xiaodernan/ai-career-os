@@ -6,6 +6,11 @@ import { api, ApiError } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
 import {
   coverLetterText,
+  normalizeArtifacts,
+  normalizeChatActions,
+  normalizeEvidence,
+  normalizeInterviewReport,
+  normalizeJdParsed,
   normalizeMatch,
   normalizeTailor,
   pick,
@@ -16,7 +21,6 @@ import type {
   Application,
   ApplicationStatus,
   CopilotReply,
-  InterviewReport,
   InterviewQuestion,
   Job,
   JobMatch,
@@ -200,22 +204,16 @@ export interface JdAnalysis {
 export function useAnalyzeJd() {
   return useMutation({
     mutationFn: async (rawText: string): Promise<JdAnalysis> => {
-      const raw = await api.create<unknown>(endpoints.jobJds, { raw_text: rawText, rawText });
-      const body = pick(raw, "jd", "analysis", "data") ?? raw;
-      const arr = (...keys: string[]) => {
-        for (const k of keys) {
-          const v = pick(body, k);
-          if (Array.isArray(v)) return v.map((x) => String(typeof x === "object" ? (pick(x, "skill", "name", "text") ?? "") : x));
-        }
-        return [];
-      };
+      const raw = await api.create<unknown>(endpoints.jdAnalyze, { raw_text: rawText, rawText });
+      const parsed = normalizeJdParsed(raw);
+      const body = pick(raw, "parsed", "jd", "analysis", "data") ?? raw;
       return {
-        requiredSkills: arr("requiredSkills", "required_skills", "requirements"),
-        preferredSkills: arr("preferredSkills", "preferred_skills", "nice_to_have", "niceToHave"),
-        responsibilities: arr("responsibilities", "duties"),
-        interviewTopics: arr("interviewTopics", "interview_topics", "topics"),
-        skillGap: arr("skillGap", "skill_gap", "skillGaps", "gaps"),
-        hiddenRequirements: arr("hiddenRequirements", "hidden_requirements"),
+        requiredSkills: parsed.requiredSkills,
+        preferredSkills: parsed.preferredSkills,
+        responsibilities: parsed.responsibilities,
+        interviewTopics: parsed.interviewTopics,
+        skillGap: parsed.skillGap,
+        hiddenRequirements: parsed.hiddenRequirements,
         suggestions: (pick(body, "suggestions", "resumeSuggestions", "resume_suggestions") ??
           []) as Suggestion[],
         raw,
@@ -233,11 +231,9 @@ export function useTailorResume(jobId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (resumeVersionId?: string | null): Promise<TailorResponse> => {
-      const raw = await api.request<unknown>(endpoints.aiTailor, {
+      const raw = await api.request<unknown>(endpoints.jobTailor(jobId), {
         method: "POST",
         body: {
-          job_id: jobId,
-          jobId,
           ...(resumeVersionId ? { resume_version_id: resumeVersionId, resumeVersionId } : {}),
         },
       });
@@ -256,11 +252,9 @@ export function useTailorResume(jobId: string) {
 export function useCoverLetter(jobId: string) {
   return useMutation({
     mutationFn: async (opts?: { resumeVersionId?: string | null; tone?: string; length?: string }) => {
-      const raw = await api.request<unknown>(endpoints.aiCoverLetter, {
+      const raw = await api.request<unknown>(endpoints.jobCoverLetter(jobId), {
         method: "POST",
         body: {
-          job_id: jobId,
-          jobId,
           ...(opts?.resumeVersionId
             ? { resume_version_id: opts.resumeVersionId, resumeVersionId: opts.resumeVersionId }
             : {}),
@@ -277,7 +271,7 @@ export function useCoverLetter(jobId: string) {
 export function useResumeSuggestions() {
   return useMutation({
     mutationFn: async (body: { jdRaw: string; resumeVersionId?: string | null }) => {
-      const raw = await api.request<unknown>(endpoints.aiSuggestions, {
+      const raw = await api.request<unknown>(endpoints.jdSuggestions, {
         method: "POST",
         body: {
           jd_raw: body.jdRaw,
@@ -577,23 +571,15 @@ function normalizeDimsList(ev: unknown): { key: string; label: string; score: nu
 export function useFinalizeInterview(sessionId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (): Promise<InterviewReport> => {
+    mutationFn: async () => {
       const raw = await api.request<unknown>(endpoints.interviewFinalize(sessionId), {
         method: "POST",
       });
-      const r = (pick(raw, "evaluation", "report", "data") ?? raw) as Record<string, unknown>;
-      return {
-        sessionId,
-        dims: normalizeDimsList(r),
-        overall: pick<number>(r, "overall", "score", "overallScore") ?? undefined,
-        whatWentWell: (pick(r, "what_went_well", "whatWentWell", "strengths", "well") ?? []) as string[],
-        whatWasWeak: (pick(r, "what_was_weak", "whatWasWeak", "weaknesses", "weak") ?? []) as string[],
-        studyMaterials: (pick(r, "study", "studyMaterials", "study_materials", "materials") ??
-          []) as InterviewReport["studyMaterials"],
-        trajectory: (pick(r, "trajectory", "depth_trajectory", "depthTrajectory") ??
-          []) as InterviewReport["trajectory"],
-        summary: str(r, "summary", "comment"),
-      };
+      // The report page renders via normalizeInterviewReport on the fresh GET
+      // (persistFinalization stores the summary under what_you_did_well /
+      // recommended_study and trajectory_detail); reuse that same canonical
+      // mapping here so the two paths can never drift.
+      return { sessionId, report: normalizeInterviewReport(pick(raw, "evaluation", "report") ?? raw) };
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["interview"] });
@@ -635,9 +621,9 @@ export function useCopilotChat() {
       });
       return {
         answer: str(raw, "answer", "content", "text", "message", "reply") ?? "",
-        artifacts: (pick(raw, "artifacts") ?? []) as CopilotReply["artifacts"],
-        sources: (pick(raw, "sources", "citations") ?? []) as CopilotReply["sources"],
-        actions: (pick(raw, "actions") ?? []) as CopilotReply["actions"],
+        artifacts: normalizeArtifacts(pick(raw, "artifacts")),
+        sources: normalizeEvidence(pick(raw, "sources", "citations")),
+        actions: normalizeChatActions(pick(raw, "actions")),
         runId: str(raw, "runId", "run_id") ?? null,
         taskId: str(raw, "taskId", "task_id") ?? null,
         conversationId: str(raw, "conversationId", "conversation_id") ?? body.conversationId ?? null,

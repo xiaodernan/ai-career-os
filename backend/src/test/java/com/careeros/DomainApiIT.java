@@ -169,8 +169,12 @@ class DomainApiIT extends ApiIntegrationTest {
     @DisplayName("job create with a nested company persists the company name (regression)")
     void jobCreateWithNestedCompany() throws Exception {
         String alice = register("job-" + UUID.randomUUID() + "@example.com");
+        // Unique token: the board is shared across users, so listing assertions must
+        // filter to this job instead of depending on table totals.
+        String token = "qx" + Long.toString(Math.abs(UUID.randomUUID().getMostSignificantBits()), 36);
+        String title = "Backend Engineer, Payments " + token;
         Map<String, Object> body = Map.of(
-                "title", "Backend Engineer, Payments",
+                "title", title,
                 "company", Map.of("name", "TechCorp", "industry", "fintech"),
                 "location", "Hangzhou",
                 "description", "We are hiring a backend engineer for the payments platform.",
@@ -196,6 +200,25 @@ class DomainApiIT extends ApiIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.company.name").value("TechCorp"))
                 .andExpect(jsonPath("$.data.saved").value(true));
+
+        // The board listing exercises the native search SQL (facets + LIMIT/OFFSET bind).
+        mvc.perform(get("/api/v1/jobs?q=" + token + "&page=0&size=5&sort=posted")
+                        .header(authHeader(), "Bearer " + alice))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.size").value(5))
+                .andExpect(jsonPath("$.data.items[0].id").value(jobId))
+                .andExpect(jsonPath("$.data.items[0].title").value(title))
+                .andExpect(jsonPath("$.data.items[0].companyName").value("TechCorp"));
+        mvc.perform(get("/api/v1/jobs?q=" + token + "&location=Hangzhou&skills=Java&sort=match")
+                        .header(authHeader(), "Bearer " + alice))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items[0].id").value(jobId));
+        mvc.perform(get("/api/v1/jobs?q=nosuchrole" + token)
+                        .header(authHeader(), "Bearer " + alice))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(0))
+                .andExpect(jsonPath("$.data.items").isEmpty());
     }
 
     @Test

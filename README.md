@@ -64,10 +64,11 @@ configure any OpenAI-compatible / Anthropic / Ollama endpoint in `.env`.
 ## Tests
 
 ```bash
-cd ai-service && python -m pytest        # unit + orchestrator + eval metrics
-cd backend    && mvn test                # unit + auth/ratelimit integration (localhost infra)
-cd e2e        && npx playwright test     # golden user journey against the full stack
-python ai-service -m app.eval.run_eval --user-id <uuid> --answer   # RAG evaluation
+cd frontend    && npm test             # vitest: API normalizers, formatters, SSE, nav, pipeline taxonomy
+cd ai-service  && python -m pytest     # unit + orchestrator + eval metrics (offline: LLM_PROVIDER=mock EMBEDDING_PROVIDER=hash)
+cd backend     && mvn test             # unit tests (offline); *IT integration tests need Docker/Testcontainers
+# RAG eval (needs the DB/infra running): cd ai-service && python -m app.eval.run_eval --user-id <uuid> [--answer]
+# e2e/ Playwright golden-journey suite is planned (roadmap F9.4) and not yet in the repo
 ```
 
 ## Repo map
@@ -76,7 +77,7 @@ python ai-service -m app.eval.run_eval --user-id <uuid> --answer   # RAG evaluat
 backend/       Spring Boot — the only public API, owns all domain writes
 ai-service/    FastAPI — providers, ingestion, RAG, features, agents (internal only)
 frontend/      Next.js — app UI + AI activity views
-docs/          architecture, product plan, API/RAG/agents/eval/security/deployment
+docs/          architecture, product plan, RAG, security, deployment
 docker-compose.yml   infra + `--profile app` full-stack containers
 ```
 

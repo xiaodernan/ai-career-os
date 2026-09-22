@@ -25,6 +25,11 @@ public final class SkillNormalizer {
     private SkillNormalizer() {
     }
 
+    /** Separator-free form used only for alias lookup (react.js / react js → reactjs). */
+    private static String tighten(String s) {
+        return s.replaceAll("[ .\\-]+", "");
+    }
+
     public static String normalize(String name) {
         if (name == null) {
             return "";
@@ -32,6 +37,12 @@ public final class SkillNormalizer {
         String s = Normalizer.normalize(name, Normalizer.Form.NFKC).toLowerCase().trim();
         s = NON_ALNUM.matcher(s).replaceAll(" ");
         s = SPACES.matcher(s).replaceAll(" ").trim();
-        return ALIASES.getOrDefault(s, s);
+        String alias = ALIASES.get(s);
+        if (alias == null) {
+            // Collapse separator variants ("React JS", "react-js") onto the same alias so
+            // the (user_id, name_norm) unique key can't store duplicate skills.
+            alias = ALIASES.get(tighten(s));
+        }
+        return alias != null ? alias : s;
     }
 }
