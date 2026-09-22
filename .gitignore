@@ -34,3 +34,6 @@ test-results/
 *.log
 .idea/
 .vscode/
+
+# assistant workspace (local scratch, not project source)
+.workbuddy-ai/

@@ -143,6 +143,16 @@ user-scoped table (ownership is enforced in backend layer + a single SQL predica
    text[], responsibilities text[], skills text[], required_years numeric, status
    enum[open, closed], source enum[seed, user_paste, agent_research], external_url,
    embedding vector, tsv tsvector GENERATED)`
+
+  **Salary unit contract (binding).** `salary_min` / `salary_max` hold the amount in the
+  currency's *base unit per year*: for `CNY` that is 元/年, so `380000` renders as `38万`
+  through `formatSalary` (`frontend/src/lib/format.ts`), and the ai-service `search_jobs`
+  tool forwards these columns verbatim. Never store 万/年 — early smoke-test rows did
+  (e.g. `30` meaning 30万) and rendered as `0万`; `V2__normalize_salary_units.sql`
+  repairs such rows and both `salary_min` and `salary_max` must stay in this unit.
+  `min_salary` on the search API takes the same unit, so filter values are comparable
+  without conversion.
+
 - `job_jds(id, job_id nullable, user_id, raw_text, parsed jsonb /* JD Intelligence
    output: required/preferred skills, hidden requirements, priorities, interview
    topics */, created_at)` — pasted JDs may exist without a job.

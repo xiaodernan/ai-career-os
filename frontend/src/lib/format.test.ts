@@ -21,6 +21,15 @@ describe("formatSalary", () => {
   it("renders CNY in 万", () => {
     expect(formatSalary(300000, 450000, "CNY")).toBe("30万–45万");
   });
+  it("treats CNY input as 元/年, not 万/年", () => {
+    // Binding unit contract: the API and DB store CNY as base-unit-per-year (元/年),
+    // so 380000 must read as 38万. Legacy rows that stored 万/年 (30 meaning 30万)
+    // rendered as "0万"; they are repaired by V2__normalize_salary_units.sql and this
+    // test pins the convention so the formatter itself is never "fixed" to match them.
+    expect(formatSalary(380000, 680000, "CNY")).toBe("38万–68万");
+    expect(formatSalary(70000, 120000, "CNY")).toBe("7万–12万");
+    expect(formatSalary(30, 45, "CNY")).toBe("0万–0万");
+  });
   it("renders open-ended bounds", () => {
     expect(formatSalary(50000, null, "USD")).toBe("$50k+");
     expect(formatSalary(null, 20000, "USD")).toBe("up to $20k");
