@@ -68,6 +68,33 @@ services:
       MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-careeros-minio-admin}
       MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-careeros_minio_dev_password}
 
+  # One-shot demo seed: populates the job market once the Flyway schema exists.
+  # Runs on plain `docker compose up -d postgres redis minio` (no app profile
+  # needed) and is idempotent, so it is safe on every `up`.
+  seed-jobs:
+    image: pgvector/pgvector:pg16
+    container_name: careeros-seed
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./scripts/seed:/seed:ro
+    environment:
+      PGHOST: postgres
+      PGDATABASE: ${POSTGRES_DB:-career_os}
+      PGUSER: ${POSTGRES_USER:-career_os}
+      PGPASSWORD: ${POSTGRES_PASSWORD:-career_os_dev_password}
+    entrypoint: >
+      /bin/sh -c "
+      i=0;
+      until psql -tAc \"SELECT to_regclass('public.jobs')\" | grep -q jobs; do
+        i=$$((i+1));
+        if [ $$i -ge 60 ]; then echo 'schema not ready after 120s — skipping job seed (run: docker compose run --rm seed-jobs)'; exit 0; fi;
+        sleep 2;
+      done;
+      psql -v ON_ERROR_STOP=1 -f /seed/01_jobs.sql
+      "
+
   # ---- application stack: docker compose --profile app up ----
   ai-service:
     profiles: [app]
