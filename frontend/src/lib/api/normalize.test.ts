@@ -508,6 +508,21 @@ describe("structuredResumeToMarkdown / normalizeTailor document", () => {
     expect(structuredResumeToMarkdown("hi")).toBe("");
   });
 
+  it("renders flat {name,category} skill names under their category (not a bare label)", () => {
+    // ai-service parse/tailor emit skills as a FLAT list; without bucketing the
+    // markdown showed only "language"/"framework" and dropped every skill name.
+    const md = structuredResumeToMarkdown({
+      skills: [
+        { name: "Java", category: "language", proficiency: null },
+        { name: "Kotlin", category: "language", proficiency: null },
+        { name: "Spring", category: "framework", proficiency: null },
+      ],
+    });
+    expect(md).toContain("- language: Java, Kotlin");
+    expect(md).toContain("- framework: Spring");
+    expect(md).not.toMatch(/^- language\s*$/m); // no name-less "category only" line
+  });
+
   it("normalizeTailor derives markdown so the document view is no longer dead", () => {
     const t = normalizeTailor({
       tailored: tailoredStructured,

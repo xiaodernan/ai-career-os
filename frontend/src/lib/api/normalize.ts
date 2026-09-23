@@ -483,11 +483,12 @@ export function structuredResumeToMarkdown(raw: unknown): string {
   }
 
   const skillLines: string[] = [];
-  for (const g of list(s, "skills")) {
-    const items = list<string>(g, "skills", "items").map(String);
-    const label = str(g, "group", "category", "name");
-    if (items.length) skillLines.push((label ? `${label}: ` : "") + items.join(", "));
-    else if (label) skillLines.push(label);
+  // Bucket through the shared helper so ai-service's flat {name,category} skills
+  // render their names under a category instead of a bare, name-less label line.
+  for (const g of groupSkillBuckets(s) ?? []) {
+    const items = (g.skills ?? []).map(String);
+    if (!items.length) continue;
+    skillLines.push((g.group ? `${g.group}: ` : "") + items.join(", "));
   }
   const tech = list<string>(s, "technologies").map(String);
   if (tech.length) skillLines.push("Technologies: " + tech.join(", "));
