@@ -14,6 +14,7 @@ import com.careeros.ai.AiServiceClient;
 import com.careeros.common.ApiException;
 import com.careeros.knowledge.repository.KnowledgeSourceRepository;
 import com.careeros.knowledge.service.FileIngestService;
+import com.careeros.knowledge.service.KnowledgeService;
 import com.careeros.resume.dto.ResumeDtos.ResumeVersionItem;
 import com.careeros.resume.dto.ResumeDtos.TailoredVersionRequest;
 import com.careeros.resume.entity.Resume;
@@ -59,7 +60,8 @@ class ResumeServiceTailoredDraftTest {
                 mock(ProjectRepository.class), mock(EducationRepository.class),
                 mock(AchievementRepository.class), mock(SkillRepository.class),
                 mock(ResumeSkillRepository.class), mock(KnowledgeSourceRepository.class),
-                mock(FileIngestService.class), mock(StorageService.class), mock(AiServiceClient.class));
+                mock(KnowledgeService.class), mock(FileIngestService.class),
+                mock(StorageService.class), mock(AiServiceClient.class));
         when(versions.save(any(ResumeVersion.class))).thenAnswer(i -> i.getArgument(0));
     }
 

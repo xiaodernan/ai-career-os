@@ -16,7 +16,9 @@ import com.careeros.knowledge.entity.UserNote;
 import com.careeros.knowledge.repository.DocumentRepository;
 import com.careeros.knowledge.repository.KnowledgeSourceRepository;
 import com.careeros.knowledge.repository.UserNoteRepository;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.data.domain.PageRequest;
@@ -30,6 +32,9 @@ public class KnowledgeService {
 
     private static final List<String> KINDS = List.of("resume", "project", "note", "jd", "company",
             "interview_feedback", "certificate", "course", "goal");
+
+    /** Terminal, non-retrievable document status set when the owning row is deleted. */
+    private static final String STATUS_RETIRED = "retired";
 
     private final KnowledgeSourceRepository sources;
     private final DocumentRepository documents;
@@ -53,12 +58,42 @@ public class KnowledgeService {
     @Transactional
     public void deleteSource(UUID userId, UUID sourceId) {
         KnowledgeSource source = requireSource(userId, sourceId);
-        List<Document> docs = documents.findBySourceId(sourceId);
+        retireDocuments(userId, source);
+        sources.delete(source);
+    }
+
+    /**
+     * Drops the knowledge-base copy of a domain row that was deleted through its own page —
+     * a resume removed from the resume list otherwise keeps a source row (a ghost entry the
+     * user cannot open) and keeps feeding the AI.
+     */
+    @Transactional
+    public void retireRef(UUID userId, String kind, UUID refId) {
+        for (KnowledgeSource source : sources.findByUserIdAndKindAndRefId(userId, kind, refId)) {
+            retireDocuments(userId, source);
+            sources.delete(source);
+        }
+    }
+
+    /**
+     * Retrieval admits a chunk only while its document row reads
+     * {@code documents.status = 'ready'} — that single predicate is the gate all three hybrid
+     * channels share. So un-owning a source leaves the deleted material fully quotable: the
+     * row must stop being ready. The document and its chunks stay on disk as the audit record
+     * the original un-linking was written to preserve; the object-storage file is untouched.
+     */
+    private void retireDocuments(UUID userId, KnowledgeSource source) {
+        // Both directions of the link are covered: ingestion writes documents.source_id,
+        // while the ready callback only knows knowledge_sources.document_id.
+        Set<Document> docs = new LinkedHashSet<>(documents.findBySourceId(source.getId()));
+        if (source.getDocumentId() != null) {
+            documents.findByIdAndUserId(source.getDocumentId(), userId).ifPresent(docs::add);
+        }
         for (Document doc : docs) {
-            doc.setSourceId(null); // un-own: chunks cascade with the document, files stay for audit
+            doc.setSourceId(null);
+            doc.setStatus(STATUS_RETIRED);
         }
         documents.saveAll(docs);
-        sources.delete(source);
     }
 
     @Transactional(readOnly = true)

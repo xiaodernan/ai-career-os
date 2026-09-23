@@ -15,6 +15,7 @@ public interface KnowledgeSourceRepository extends JpaRepository<KnowledgeSource
     Optional<KnowledgeSource> findByIdAndUserId(UUID id, UUID userId);
 
     Optional<KnowledgeSource> findFirstByUserIdAndKindAndRefId(UUID userId, String kind, UUID refId);
+    List<KnowledgeSource> findByUserIdAndKindAndRefId(UUID userId, String kind, UUID refId);
 
     List<KnowledgeSource> findByUserId(UUID userId);
 }

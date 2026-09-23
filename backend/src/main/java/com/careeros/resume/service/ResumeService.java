@@ -9,6 +9,7 @@ import com.careeros.common.Texts;
 import com.careeros.knowledge.entity.KnowledgeSource;
 import com.careeros.knowledge.repository.KnowledgeSourceRepository;
 import com.careeros.knowledge.service.FileIngestService;
+import com.careeros.knowledge.service.KnowledgeService;
 import com.careeros.resume.dto.ResumeDtos.AchievementItem;
 import com.careeros.resume.dto.ResumeDtos.CreateResumeRequest;
 import com.careeros.resume.dto.ResumeDtos.EducationItem;
@@ -65,6 +66,7 @@ public class ResumeService {
     private final SkillRepository skills;
     private final ResumeSkillRepository resumeSkills;
     private final KnowledgeSourceRepository sources;
+    private final KnowledgeService knowledge;
     private final FileIngestService fileIngest;
     private final StorageService storage;
     private final AiServiceClient ai;
@@ -73,7 +75,8 @@ public class ResumeService {
                          ExperienceRepository experiences, ProjectRepository projects,
                          EducationRepository educations, AchievementRepository achievements,
                          SkillRepository skills, ResumeSkillRepository resumeSkills,
-                         KnowledgeSourceRepository sources, FileIngestService fileIngest,
+                         KnowledgeSourceRepository sources, KnowledgeService knowledge,
+                         FileIngestService fileIngest,
                          StorageService storage, AiServiceClient ai) {
         this.resumes = resumes;
         this.versions = versions;
@@ -84,6 +87,7 @@ public class ResumeService {
         this.skills = skills;
         this.resumeSkills = resumeSkills;
         this.sources = sources;
+        this.knowledge = knowledge;
         this.fileIngest = fileIngest;
         this.storage = storage;
         this.ai = ai;
@@ -169,8 +173,10 @@ public class ResumeService {
     @Transactional
     public void delete(UUID userId, UUID resumeId) {
         Resume resume = requireResume(userId, resumeId);
-        sources.findFirstByUserIdAndKindAndRefId(userId, "resume", resume.getId())
-                .ifPresent(s -> s.setRefId(null));
+        // Deleting the domain row is not enough: the ingested copy stays `ready`, so the AI
+        // keeps quoting a resume the user can no longer see, and the source row survives as a
+        // listing entry whose target is gone.
+        knowledge.retireRef(userId, "resume", resume.getId());
         resumes.delete(resume);
     }
 
