@@ -14,6 +14,8 @@ import {
   normalizeMatch,
   normalizeSuggestions,
   normalizeTailor,
+  tailoredDict,
+  tailorDiffDict,
   pick,
   str,
 } from "@/lib/api/normalize";
@@ -228,25 +230,63 @@ export function useAnalyzeJd() {
 /* AI actions                                                          */
 /* ------------------------------------------------------------------ */
 
+/** The server response is kept alongside the view because saving a draft posts it back verbatim. */
+export type TailorRun = TailorResponse & { raw: unknown };
+
 export function useTailorResume(jobId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (resumeVersionId?: string | null): Promise<TailorResponse> => {
+    mutationFn: async (resumeVersionId?: string | null): Promise<TailorRun> => {
       const raw = await api.request<unknown>(endpoints.jobTailor(jobId), {
         method: "POST",
         body: {
           ...(resumeVersionId ? { resume_version_id: resumeVersionId, resumeVersionId } : {}),
         },
       });
-      return normalizeTailor(raw);
+      return { ...normalizeTailor(raw), raw };
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["resumes"] });
-      qc.invalidateQueries({ queryKey: ["resume", jobId] });
       qc.invalidateQueries({ queryKey: ["activity"] });
       toast.success("Tailored resume ready — review the diff before you export it.");
     },
     onError: fail("Tailoring failed."),
+  });
+}
+
+/**
+ * Keeps a reviewed draft as a version of the resume it was tailored from. The structured body
+ * is posted back verbatim (not the rendered markdown) because the version's experience,
+ * project and skill rows are projected from it server-side.
+ */
+export function useSaveTailoredVersion(jobId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (draft: {
+      raw: unknown;
+      plaintext: string;
+      resumeVersionId?: string | null;
+    }): Promise<unknown> => {
+      const body: Record<string, unknown> = {
+        tailored: tailoredDict(draft.raw),
+        diff: tailorDiffDict(draft.raw),
+        plaintext: draft.plaintext,
+      };
+      if (draft.resumeVersionId) {
+        body.resume_version_id = draft.resumeVersionId;
+        body.resumeVersionId = draft.resumeVersionId;
+      }
+      return api.request<unknown>(endpoints.jobTailoredVersion(jobId), {
+        method: "POST",
+        body,
+      });
+    },
+    onSuccess: () => {
+      // ["resume"] covers every detail cache and every versions list.
+      qc.invalidateQueries({ queryKey: ["resume"] });
+      qc.invalidateQueries({ queryKey: ["resumes"] });
+    },
+    onError: fail("Couldn't save this draft as a version."),
   });
 }
 

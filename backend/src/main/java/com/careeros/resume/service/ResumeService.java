@@ -19,6 +19,7 @@ import com.careeros.resume.dto.ResumeDtos.ResumeDetail;
 import com.careeros.resume.dto.ResumeDtos.ResumeListItem;
 import com.careeros.resume.dto.ResumeDtos.ResumeVersionItem;
 import com.careeros.resume.dto.ResumeDtos.SkillItem;
+import com.careeros.resume.dto.ResumeDtos.TailoredVersionRequest;
 import com.careeros.resume.dto.ResumeDtos.UpdateResumeRequest;
 import com.careeros.resume.dto.ResumeDtos.UploadResumeResponse;
 import com.careeros.resume.entity.Achievement;
@@ -132,7 +133,7 @@ public class ResumeService {
         requireResume(userId, resumeId);
         return versions.findByResumeIdAndUserIdOrderByCreatedAtDesc(resumeId, userId).stream()
                 .map(v -> new ResumeVersionItem(v.getId(), v.getResumeId(), v.getLabel(),
-                        v.getKind(), v.getJobId(), v.getCreatedAt()))
+                        v.getKind(), v.getJobId(), v.getCreatedAt(), v.getDiff()))
                 .toList();
     }
 
@@ -140,7 +141,7 @@ public class ResumeService {
     public ResumeVersionItem versionMeta(UUID userId, UUID versionId) {
         ResumeVersion v = requireVersion(userId, versionId);
         return new ResumeVersionItem(v.getId(), v.getResumeId(), v.getLabel(), v.getKind(),
-                v.getJobId(), v.getCreatedAt());
+                v.getJobId(), v.getCreatedAt(), v.getDiff());
     }
 
     @Transactional
@@ -309,6 +310,29 @@ public class ResumeService {
         return ResumeListItem.from(resumes.save(resume));
     }
 
+    /**
+     * Keeps a kept draft. The client knows the version it tailored, not the resume behind it,
+     * so the resume is resolved from that version — and when the client named none (the single
+     * resume case), from the same "current resume" rule the tailor call itself used.
+     */
+    @Transactional
+    public ResumeVersionItem saveTailoredDraft(UUID userId, UUID jobId,
+                                               TailoredVersionRequest request) {
+        Map<String, Object> tailored = request.tailored();
+        if (tailored == null || tailored.isEmpty()) {
+            throw new ApiException(ApiErrorCode.VALIDATION_FAILED,
+                    "A tailored version needs the structured body it was generated with");
+        }
+        UUID resumeId = request.resumeVersionId() != null
+                ? requireVersion(userId, request.resumeVersionId()).getResumeId()
+                : currentResumeWithVersion(userId).map(Resume::getId).orElse(null);
+        if (resumeId == null) {
+            throw new ApiException(ApiErrorCode.RESUME_NOT_FOUND, "No resume available");
+        }
+        return saveTailoredVersion(userId, resumeId, jobId, tailored, request.diff(),
+                request.plaintext());
+    }
+
     /** Creates a tailored version for a job from ai tailor output (used by the job module). */
     @Transactional
     public ResumeVersionItem saveTailoredVersion(UUID userId, UUID resumeId, UUID jobId,
@@ -316,13 +340,17 @@ public class ResumeService {
                                                  Map<String, Object> diff, String plaintext) {
         Resume resume = requireResume(userId, resumeId);
         int next = versions.findByResumeIdAndUserIdOrderByCreatedAtDesc(resumeId, userId).size() + 1;
-        ResumeVersion version = newVersion(resume, "tailored-" + jobId, "tailored", jobId, plaintext);
+        // The sequence belongs in the label: the same job tailored twice must not produce two
+        // rows the user cannot tell apart in the version list.
+        String shortJob = jobId == null ? "" : "-" + jobId.toString().substring(0, 8);
+        ResumeVersion version = newVersion(resume, "tailored" + shortJob + "-" + next, "tailored",
+                jobId, plaintext);
         version.setStructured(tailored);
         version.setDiff(diff);
         versions.save(version);
         populateChildren(userId, version.getId(), tailored);
         return new ResumeVersionItem(version.getId(), version.getResumeId(), version.getLabel(),
-                version.getKind(), version.getJobId(), version.getCreatedAt());
+                version.getKind(), version.getJobId(), version.getCreatedAt(), version.getDiff());
     }
 
     public Optional<ResumeVersion> currentVersion(Resume resume) {

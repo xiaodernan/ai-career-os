@@ -100,6 +100,8 @@ export function mapResumeVersions(raw: unknown): ResumeVersion[] {
     score: normalizeResumeScore(v),
     structured: (pick(v, "structured", "structuredResume", "structured_resume") ??
       null) as ResumeVersion["structured"],
+    // The tailored change list; the panel renders it through normalizeTailorDiff.
+    diff: pick(v, "diff", "tailorDiff", "tailor_diff") ?? undefined,
   }));
 }
 

@@ -42,6 +42,10 @@ const VERSIONS = [
     kind: "tailored",
     jobId: "11111111-0000-0000-0000-000000000000",
     createdAt: "2026-09-02T09:00:00Z",
+    diff: {
+      accepted: [{ section: "experience", before: "Worked on APIs", after: "Cut p99 by 40%" }],
+      rejected: [{ section: "experience", reason: "no evidence" }],
+    },
   },
   {
     id: "bbbbbbbb-0000-0000-0000-000000000003",
@@ -70,6 +74,9 @@ describe("mapResumeVersions", () => {
       // the backend names this column `kind`; the panel renders it as `source`
       source: "tailored",
     });
+    // the change list the user reviewed has to survive, or the version is a black box
+    expect(JSON.stringify(got[0].diff)).toContain("Cut p99 by 40%");
+    expect(got[1].diff).toBeUndefined();
     expect(got[1].source).toBe("original");
   });
 

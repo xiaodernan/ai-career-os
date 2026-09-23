@@ -16,6 +16,8 @@ import com.careeros.job.dto.JobDtos.MatchResponse;
 import com.careeros.job.dto.JobDtos.MatchSummary;
 import com.careeros.job.dto.JobDtos.SavedJobItem;
 import com.careeros.job.entity.Company;
+import com.careeros.resume.dto.ResumeDtos.ResumeVersionItem;
+import com.careeros.resume.dto.ResumeDtos.TailoredVersionRequest;
 import com.careeros.job.entity.Job;
 import com.careeros.job.entity.JobJd;
 import com.careeros.job.entity.JobMatch;
@@ -232,6 +234,16 @@ public class JobService {
                     .getCurrentVersionId();
         }
         return ai.tailorResume(jobId, rvId, userId);
+    }
+
+    /**
+     * Keeps a tailored draft as a version. The job is what the user acted on, so its ownership
+     * is checked here; which resume the version lands on is the resume module's call.
+     */
+    @Transactional
+    public ResumeVersionItem saveTailored(UUID userId, UUID jobId, TailoredVersionRequest request) {
+        requireJob(jobId);
+        return resumeService.saveTailoredDraft(userId, jobId, request);
     }
 
     public Map<String, Object> coverLetter(UUID userId, UUID jobId, UUID resumeVersionId,

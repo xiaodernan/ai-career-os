@@ -617,8 +617,22 @@ function groupSkillBuckets(s: Record<string, unknown>): ResumeSkillGroup[] | und
   return out.length ? out : undefined;
 }
 
+/**
+ * The structured draft exactly as the tailor response carries it. normalizeTailor renders
+ * from this and saving a kept draft has to post the very same object back — reading the two
+ * independently is how a stored version stops matching the diff the user reviewed.
+ */
+export function tailoredDict(raw: unknown): unknown {
+  return pick(raw, "tailored", "tailoredResume", "tailored_resume", "result") ?? raw;
+}
+
+/** The change list the service attached to the draft, in whatever shape it arrived. */
+export function tailorDiffDict(raw: unknown): unknown {
+  return pick(raw, "diff", "changes", "edits") ?? {};
+}
+
 export function normalizeTailor(raw: unknown): TailorResponse {
-  const tailoredRaw = pick(raw, "tailored", "tailoredResume", "tailored_resume", "result") ?? raw;
+  const tailoredRaw = tailoredDict(raw);
   const stats = pick(raw, "stats", "statistics", "summary");
   // ai-service returns `tailored` as a structured resume dict (no markdown/text);
   // render one or the panel's Full-document / copy / download stay dead.

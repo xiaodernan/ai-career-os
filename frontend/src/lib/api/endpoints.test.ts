@@ -31,6 +31,7 @@ const BACKEND_ROUTES = [
   "/jobs/*/save",
   "/jobs/*/match",
   "/jobs/*/tailor",
+  "/jobs/*/tailored-version",
   "/jobs/*/cover-letter",
   "/applications",
   "/applications/*",

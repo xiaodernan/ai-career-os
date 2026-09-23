@@ -14,6 +14,8 @@ import com.careeros.job.dto.JobDtos.SaveJobRequest;
 import com.careeros.job.dto.JobDtos.SavedJobItem;
 import com.careeros.job.dto.JobDtos.TailorRequest;
 import com.careeros.job.service.JobService;
+import com.careeros.resume.dto.ResumeDtos.ResumeVersionItem;
+import com.careeros.resume.dto.ResumeDtos.TailoredVersionRequest;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.Map;
@@ -101,6 +103,14 @@ public class JobController {
     public Map<String, Object> tailor(@CurrentUser AuthUser user, @PathVariable UUID id,
                                       @RequestBody(required = false) TailorRequest request) {
         return jobs.tailor(user.id(), id, request == null ? null : request.resumeVersionId());
+    }
+
+    /** Keeps the draft the previous /tailor call produced as a new resume version. */
+    @PostMapping("/{id}/tailored-version")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ResumeVersionItem saveTailored(@CurrentUser AuthUser user, @PathVariable UUID id,
+                                         @RequestBody TailoredVersionRequest request) {
+        return jobs.saveTailored(user.id(), id, request);
     }
 
     @PostMapping("/{id}/cover-letter")

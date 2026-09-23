@@ -23,8 +23,12 @@ public final class ResumeDtos {
         }
     }
 
+    /**
+     * `diff` is the tailor change list that produced this version, so the version list can show
+     * what a draft actually changed. `structured` stays out: it is the whole resume body per row.
+     */
     public record ResumeVersionItem(UUID id, UUID resumeId, String label, String kind, UUID jobId,
-                                    OffsetDateTime createdAt) {
+                                    OffsetDateTime createdAt, Map<String, Object> diff) {
     }
 
     public record ExperienceItem(UUID id, String company, String title, String startDate,
@@ -71,6 +75,19 @@ public final class ResumeDtos {
     }
 
     public record SetCurrentVersionRequest(@JsonAlias({"version_id"}) UUID versionId) {
+    }
+
+    /**
+     * A tailored draft the user decided to keep. `tailored` is the structured body exactly as
+     * the AI returned it, `diff` the accepted/rejected change list, `plaintext` the assembled
+     * document. `resumeVersionId` names the version the draft was generated from; leave it out
+     * and the server applies the same "current resume" rule the tailor call itself used, so the
+     * version lands on the resume the draft came from.
+     */
+    public record TailoredVersionRequest(@JsonAlias("resume_version_id") UUID resumeVersionId,
+                                         Map<String, Object> tailored,
+                                         Map<String, Object> diff,
+                                         @JsonAlias({"plain_text", "markdown"}) String plaintext) {
     }
 
     public record UploadResumeResponse(UUID resumeId, UUID versionId, UUID documentId,

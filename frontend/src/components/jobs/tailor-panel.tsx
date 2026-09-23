@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { RefreshCw, Sparkles } from "lucide-react";
+import { Check, RefreshCw, Save, Sparkles } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,8 +12,8 @@ import { EvidenceList } from "@/components/ai/evidence-list";
 import { DiffView } from "@/components/common/diff-view";
 import { CopyButton, DownloadButton, SectionHeading } from "@/components/common/export-buttons";
 import { StreamingText } from "@/components/ai/streaming-text";
-import { useTailorResume } from "@/lib/hooks/actions";
-import type { TailorResponse } from "@/lib/api/types";
+import { useSaveTailoredVersion, useTailorResume, type TailorRun } from "@/lib/hooks/actions";
+import { str } from "@/lib/api/normalize";
 
 const STAGES = [
   "Reading your knowledge base",
@@ -24,7 +24,8 @@ const STAGES = [
 
 /**
  * Tailoring panel (§11): runs /ai/tailor, then shows the accepted/rejected diff
- * plus the assembled document with copy/download. Never auto-applied.
+ * plus the assembled document with copy/download. Never auto-applied — keeping a
+ * draft takes an explicit "save as version", which is the only thing that writes.
  */
 export function TailorPanel({
   jobId,
@@ -36,13 +37,18 @@ export function TailorPanel({
   resumeLabel?: string;
 }) {
   const tailor = useTailorResume(jobId);
-  const [result, setResult] = React.useState<TailorResponse | null>(null);
+  const save = useSaveTailoredVersion(jobId);
+  const [result, setResult] = React.useState<TailorRun | null>(null);
+  const [saved, setSaved] = React.useState<string | null>(null);
   const [view, setView] = React.useState<"diff" | "document">("diff");
 
-  const run = () => tailor.mutate(resumeVersionId ?? null, { onSuccess: setResult });
+  const run = () => {
+    setSaved(null);
+    tailor.mutate(resumeVersionId ?? null, { onSuccess: setResult });
+  };
   const tailored = result?.tailored;
   const document = tailored?.markdown || tailored?.text || "";
-  const error = tailor.error;
+  const error = tailor.error ?? save.error;
 
   return (
     <Card>
@@ -84,9 +90,10 @@ export function TailorPanel({
           <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-2">
               <AIBadge label="Tailored draft" />
-              {tailored?.resumeVersionId && (
-                <Badge variant="outline" className="text-2xs">
-                  Saved as version {tailored.resumeVersionId.slice(0, 8)}
+              {saved && (
+                <Badge variant="success" className="gap-1 text-2xs font-normal">
+                  <Check className="size-3" aria-hidden />
+                  Saved as {saved}
                 </Badge>
               )}
               <div className="ml-auto flex items-center gap-1.5">
@@ -107,6 +114,21 @@ export function TailorPanel({
                       aria-pressed={view === "document"}
                     >
                       Full document
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="xs"
+                      loading={save.isPending}
+                      disabled={!result}
+                      onClick={() =>
+                        save.mutate(
+                          { raw: result?.raw, plaintext: document, resumeVersionId },
+                          { onSuccess: (item) => setSaved(str(item, "label") ?? "version") }
+                        )
+                      }
+                    >
+                      <Save aria-hidden />
+                      {saved ? "Save again" : "Save as version"}
                     </Button>
                     <CopyButton text={document} />
                     <DownloadButton text={document} filename={`resume-${jobId.slice(0, 8)}.md`} mime="text/markdown;charset=utf-8" />
