@@ -102,6 +102,29 @@ async def evaluate_answer(*, mode: str, question: str, answer: str, resume_ctx: 
     return ev
 
 
+def decide_next(out: dict, *, difficulty: float, qnum: int, max_q: int,
+                turns: list[dict]) -> dict:
+    """Coerce the LLM's raw advance output into the session's next-move contract.
+
+    Pure and deterministic (no I/O): the action is whitelisted, the interview is
+    force-finished once the question budget is spent, and difficulty is clamped to
+    the band the adaptive ladder is designed for. Split out of ``advance`` so the
+    decision rule is unit-testable without an LLM.
+    """
+    action = out.get("action") if out.get("action") in ("followup", "next_topic",
+                                                        "finish") else "next_topic"
+    if qnum >= max_q and action != "finish":
+        action = "finish" if turns and turns[-1]["role"] == "candidate" else action
+    try:
+        d = float(out.get("difficulty", difficulty))
+    except (TypeError, ValueError):
+        d = difficulty
+    d = max(0.1, min(0.95, d))
+    return {"action": action, "question": (out.get("question") or "").strip(),
+            "topic": out.get("topic") or "", "difficulty": d,
+            "reasoning": out.get("reasoning", "")}
+
+
 async def advance(*, mode: str, turns: list[dict], difficulty: float, qnum: int,
                   max_q: int, resume_ctx: str, jd_topics: list[str],
                   user_id: str | None = None, run_id: str | None = None) -> dict:
@@ -117,18 +140,7 @@ async def advance(*, mode: str, turns: list[dict], difficulty: float, qnum: int,
         out = {"action": "next_topic", "question": "Could you tell me about another "
                "project relevant to this role?", "topic": "general",
                "difficulty": difficulty, "reasoning": "fallback"}
-    action = out.get("action") if out.get("action") in ("followup", "next_topic",
-                                                        "finish") else "next_topic"
-    if qnum >= max_q and action != "finish":
-        action = "finish" if turns and turns[-1]["role"] == "candidate" else action
-    try:
-        d = float(out.get("difficulty", difficulty))
-    except (TypeError, ValueError):
-        d = difficulty
-    d = max(0.1, min(0.95, d))
-    return {"action": action, "question": (out.get("question") or "").strip(),
-            "topic": out.get("topic") or "", "difficulty": d,
-            "reasoning": out.get("reasoning", "")}
+    return decide_next(out, difficulty=difficulty, qnum=qnum, max_q=max_q, turns=turns)
 
 
 FINALIZE_SYSTEM = f"""You produce the interview report. JSON only:
@@ -155,11 +167,17 @@ async def finalize(*, mode: str, turns: list[dict], resume_ctx: str,
             user_id=user_id, run_id=run_id, agent="interview", kind="interview_finalize")
     except Exception:
         out = {}
-    traj = [{"seq": t.get("seq"), "role": t["role"], "topic": (t.get("question_meta") or {}).get("topic"),
-             "depth": (t.get("question_meta") or {}).get("depth_level"),
-             "score": (t.get("evaluation") or {}).get("score")}
-            for t in turns]
-    out["trajectory_detail"] = traj
+    out["trajectory_detail"] = _trajectory_detail(turns)
     out.setdefault("dims", {})
     out.setdefault("overall", 0.5)
     return out
+
+
+def _trajectory_detail(turns: list[dict]) -> list[dict]:
+    """Per-turn trajectory the interview report renders (topic/depth/score may be absent
+    for a turn that never got a question_meta or evaluation)."""
+    return [{"seq": t.get("seq"), "role": t["role"],
+             "topic": (t.get("question_meta") or {}).get("topic"),
+             "depth": (t.get("question_meta") or {}).get("depth_level"),
+             "score": (t.get("evaluation") or {}).get("score")}
+            for t in turns]

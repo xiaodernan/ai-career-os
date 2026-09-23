@@ -91,6 +91,15 @@ for name in CATEGORY:
     _CANON_PATTERNS.append(
         (re.compile(rf"(?<![\w.+]){esc}(?![\w.+])", re.IGNORECASE), name))
 
+# Aliases must match as whole ASCII tokens too. The original `alias in text` probe let
+# interior fragments fire spurious tags — "sto*rag*e"→RAG, "inte*rest*ed"→REST API —
+# inflating keyword-derived skill sets. The boundary classes are ASCII-only so CJK
+# aliases (e.g. 大模型) still match without surrounding spaces.
+_BOUND = "a-z0-9._"
+_ALIAS_PATTERNS: list[tuple[re.Pattern, str]] = [
+    (re.compile(rf"(?<![{_BOUND}]){re.escape(alias)}(?![{_BOUND}])"), canon)
+    for alias, canon in ALIASES.items()]
+
 
 def normalize(name: str) -> str:
     key = (name or "").strip().lower()
@@ -103,16 +112,17 @@ def extract_skills(text: str) -> list[str]:
     # sentence-final periods sit in the no-trailing-punctuation boundary; blank them
     probe = re.sub(r"\.(?=\s|$)", " ", text)
     low = probe.lower()
-    for alias, canon in ALIASES.items():
-        if alias in ("es", "ml", "dl", "ts", "js", "c", "r"):
-            if re.search(rf"(?<![\w.]){re.escape(alias)}(?![\w.])", low):
-                found.add(canon)
-        elif alias in low:
+    for pat, canon in _ALIAS_PATTERNS:
+        if pat.search(low):
             found.add(canon)
     for pat, name in _CANON_PATTERNS:
         if pat.search(probe):
             found.add(name)
-    return sorted(found, key=str.lower)
+    # Every output must be a normalize() fixed-point: "K8s" is a CATEGORY key but folds
+    # to "Kubernetes" via the alias table, so without this a single mention of "k8s"
+    # yields two entries for one concept (and a non-canonical "K8s" downstream readers
+    # would collapse anyway). Normalize-then-dedup keeps the set to true canonicals.
+    return sorted({normalize(name) for name in found}, key=str.lower)
 
 
 def category(name: str) -> str:

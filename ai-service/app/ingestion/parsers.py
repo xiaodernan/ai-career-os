@@ -68,7 +68,16 @@ def _unescape(t: str) -> str:
 
 
 def _txt(data: bytes) -> str:
-    for enc in ("utf-8", "utf-16", "gbk", "latin-1"):
+    # utf-8 covers the overwhelming majority of modern files. utf-16 must be gated on
+    # its byte-order mark: the utf-16 codec accepts ANY even-length byte string, so an
+    # ungated attempt silently mis-decodes gbk (common for Chinese resumes) and latin-1
+    # text into CJK mojibake before those codecs are ever reached.
+    if data[:2] in (b"\xff\xfe", b"\xfe\xff"):
+        try:
+            return data.decode("utf-16")
+        except UnicodeDecodeError:
+            pass
+    for enc in ("utf-8", "gbk", "latin-1"):
         try:
             return data.decode(enc)
         except UnicodeDecodeError:

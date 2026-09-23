@@ -30,15 +30,22 @@ async def analyze_jd(raw_text: str, *, user_id=None, run_id=None) -> dict:
         temperature=0.0, max_tokens=3000)
     out = await ask_json(req, user_id=user_id, run_id=run_id, agent="jd_analyst",
                          kind="jd_analyze")
-    # deterministic skill capture + evidence backfill
+    return _backfill_skills(out, raw_text)
+
+
+def _backfill_skills(out: dict, raw_text: str) -> dict:
+    """Deterministic skill capture: append dictionary-extracted skills the model
+    missed and normalize every skill name. Mutates and returns ``out``."""
     dict_skills = extract_skills(raw_text)
     have = {normalize(s.get("name", "")) for s in (out.get("requiredSkills") or [])
             + (out.get("preferredSkills") or []) if isinstance(s, dict)}
     for sk in dict_skills:
         if normalize(sk) not in have:
-            out.setdefault("preferredSkills", []).append(
-                {"name": normalize(sk), "priority": "nice",
-                 "evidence_phrase": ""})
+            preferred = out.setdefault("preferredSkills", None) or []
+            preferred.append({"name": normalize(sk), "priority": "nice",
+                              "evidence_phrase": ""})
+            out["preferredSkills"] = preferred
+            have.add(normalize(sk))
     for lst in ("requiredSkills", "preferredSkills"):
         for s in out.get(lst) or []:
             if isinstance(s, dict):

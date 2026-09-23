@@ -51,15 +51,32 @@ async def generate(resume_structured: dict, resume_text: str, jd: dict,
     query = " ".join([s.get("name", "") for s in (jd.get("requiredSkills") or [])][:10])
     r = await retrieve(query or jd.get("title", "top achievements"), user_id=user_id,
                        run_id=run_id, top_k=6, kinds=["resume", "project", "goal"])
+    prompt = _build_prompt(resume_structured, jd, company, goal,
+                           r.get("context_block", ""), tone, length, mode, previous)
+    resp = await ask(LLMRequest(
+        messages=[LLMMessage("system", BASE_SYSTEM), LLMMessage("user", prompt)],
+        temperature=0.6 if mode in ("regenerate",) else 0.4, max_tokens=900),
+        user_id=user_id, run_id=run_id, agent="resume", kind="cover_letter")
+    return {"letter": resp.text, "sources": r["evidence"], "mode": mode,
+            "model": resp.model}
+
+
+def _build_prompt(resume_structured: dict, jd: dict, company: dict | None, goal: str,
+                  context_block: str, tone: str, length: str, mode: str,
+                  previous: str) -> str:
+    """Assemble the cover-letter user prompt. Pure (no LLM/DB) so the conditional
+    assembly — empty-fact dropping, company fallback, STYLE and previous-version gating —
+    is unit-testable in isolation."""
     facts = [
         f"ROLE: {jd.get('title','')}",
         f"COMPANY: {company.get('name') if company else jd.get('company','')}",
-        f"COMPANY OVERVIEW: {wrap_untrusted('COMPANY', (company or {}).get('overview','')) if company else ''}",
+        (f"COMPANY OVERVIEW: {wrap_untrusted('COMPANY', company.get('overview',''))}"
+         if company else ""),
         f"JD TOP REQUIREMENTS: {[s.get('name') for s in (jd.get('requiredSkills') or [])][:10]}",
         f"CANDIDATE: {resume_structured.get('profile',{}).get('name','')} - "
         f"{resume_structured.get('profile',{}).get('headline','')}",
         f"CAREER GOAL: {goal}" if goal else "",
-        f"EVIDENCE:\n{r.get('context_block','')}",
+        f"EVIDENCE:\n{context_block}",
     ]
     prompt = "\n".join(f for f in facts if f)
     directives = style_directives(tone, length)
@@ -69,9 +86,4 @@ async def generate(resume_structured: dict, resume_text: str, jd: dict,
         instruction = VARIANTS.get(mode) or str(jd.get("customization", "make it better"))
         prompt = (f"{prompt}\n\nPREVIOUS VERSION:\n{previous}\n\nINSTRUCTION: "
                   f"{instruction}")
-    resp = await ask(LLMRequest(
-        messages=[LLMMessage("system", BASE_SYSTEM), LLMMessage("user", prompt)],
-        temperature=0.6 if mode in ("regenerate",) else 0.4, max_tokens=900),
-        user_id=user_id, run_id=run_id, agent="resume", kind="cover_letter")
-    return {"letter": resp.text, "sources": r["evidence"], "mode": mode,
-            "model": resp.model}
+    return prompt

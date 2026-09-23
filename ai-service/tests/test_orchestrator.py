@@ -4,11 +4,12 @@ No DB / no LLM: ai.ask is scripted and observability.trace is recorded in-memory
 """
 
 import json
+import re
 
 import pytest
 
 from app.agents import orchestrator
-from app.agents.tools import TOOL_INDEX
+from app.agents.tools import TOOL_INDEX, _search_params
 from app.providers.base import LLMMessage, LLMResponse, ToolCall, Usage
 
 
@@ -156,3 +157,48 @@ async def test_tool_error_is_reported_not_raised(env, monkeypatch):
     assert "db exploded" in out.answer
     result = [t for t in traces if t[0] == "tool_result"][0]
     assert result[2]["ok"] is False
+
+
+# ---------------- search_jobs positional-binding symmetry + injection safety ----------------
+
+
+def _ph(sql: str) -> list[int]:
+    return sorted(int(n) for n in re.findall(r"\$(\d+)", sql))
+
+
+def test_search_params_all_filters_align_placeholder_to_bound_value():
+    where, args = _search_params(query="go", skills=["Go", ""], location="Berlin",
+                                 remote="remote", company="ACME", min_salary=100, limit=99)
+    joined = " AND ".join(where)
+    # every filter references $1..$6; the last arg (index 7) is reserved for LIMIT
+    assert _ph(joined) == [1, 1, 2, 3, 4, 5, 6]
+    assert max(_ph(joined)) == len(args) - 1
+    # positional symmetry: the value each clause points at is exactly right
+    assert args[0] == "go"
+    assert args[1] == ["Go"]                     # falsy skill entries dropped
+    assert args[2] == "Berlin"
+    assert args[3] == "remote"
+    assert args[4] == "ACME"
+    assert args[5] == 100
+    assert args[6] == 25                         # limit clamped to the 25 ceiling
+
+
+def test_search_params_never_interpolates_user_text_into_sql():
+    where, _ = _search_params(query="'; DROP TABLE jobs;--", location="x--MARK--",
+                              company="RobertDELETE", min_salary=5)
+    joined = " AND ".join(where)
+    for literal in ("DROP TABLE", "RobertDELETE", "x--MARK--"):
+        assert literal not in joined             # only $N placeholders, no user literals
+
+
+def test_search_params_empty_query_still_binds_limit_and_skips_fts():
+    where, args = _search_params(query="", limit=5)
+    assert where == ["j.status = 'open'"]        # no tsquery clause
+    assert args == ["", 5]                        # $1 always bound (empty), limit last
+
+
+def test_search_params_limit_clamped_to_bounds():
+    assert _search_params(query="x", limit=0)[1][-1] == 1
+    assert _search_params(query="x", limit=-8)[1][-1] == 1
+    assert _search_params(query="x", limit=1000)[1][-1] == 25
+    assert _search_params(query="x", limit=12)[1][-1] == 12

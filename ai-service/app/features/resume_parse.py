@@ -42,17 +42,7 @@ async def parse_resume(text: str, *, user_id=None, run_id=None) -> dict:
     # normalization passes that do NOT depend on the LLM being perfect:
     text_skills = extract_skills(text)
     llm_skills = [s for s in raw.get("skills") or [] if isinstance(s, dict) and s.get("name")]
-    seen = set()
-    merged = []
-    for s in llm_skills + [{"name": t} for t in text_skills]:
-        canon = normalize(s["name"])
-        if canon.lower() in seen:
-            continue
-        seen.add(canon.lower())
-        merged.append({"name": canon,
-                       "category": s.get("category") or category(canon),
-                       "proficiency": s.get("proficiency")})
-    raw["skills"] = merged
+    raw["skills"] = _merge_skills(llm_skills, text_skills)
     raw.setdefault("missingSections", [])
     raw.setdefault("warnings", [])
     for section, key in (("experience", "experience"), ("projects", "projects"),
@@ -65,6 +55,26 @@ async def parse_resume(text: str, *, user_id=None, run_id=None) -> dict:
     except Exception as e:  # noqa: BLE001
         raw["warnings"].append(f"schema_repair_needed: {e}")
     return raw
+
+
+def _merge_skills(llm_skills: list[dict], text_skills: list[str]) -> list[dict]:
+    """Canonicalise and de-duplicate the LLM-extracted + text-mined skill sets.
+
+    Load-bearing: the resulting list is what the match engine and resume score
+    both read. LLM skills are seen first, so an explicit ``category``/``proficiency``
+    from the model wins over the text-mined fallback; dedup keys on the lower-cased
+    canonical name so ``React`` and ``react.js`` collapse to one entry."""
+    seen = set()
+    merged = []
+    for s in llm_skills + [{"name": t} for t in text_skills]:
+        canon = normalize(s["name"])
+        if canon.lower() in seen:
+            continue
+        seen.add(canon.lower())
+        merged.append({"name": canon,
+                       "category": s.get("category") or category(canon),
+                       "proficiency": s.get("proficiency")})
+    return merged
 
 
 def compute_resume_score(parsed: dict) -> dict:

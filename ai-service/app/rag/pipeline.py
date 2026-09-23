@@ -69,6 +69,21 @@ async def retrieve(query: str, *, user_id: str, run_id: str | None = None,
         taskbus.publish(task_id, "status", {"step": "reranking", "state": "done"})
 
     compressed = compress([u["rewritten"]] + u["keywords"], top)
+    evidence = to_evidence(compressed)
+    return {"understanding": u, "evidence": evidence,
+            "context_block": evidence_block([{"chunk_id": e["chunk_id"],
+                                              "source": e["doc_title"],
+                                              "section": e["section"],
+                                              "text": e["quote"]} for e in evidence])}
+
+
+def to_evidence(compressed: list[dict]) -> list[dict]:
+    """Shape post-compression chunks into the citable evidence payload.
+
+    Pure: the displayed score is the best of the rerank / RRF signals (either may be
+    absent depending on rerank_mode), quotes are capped, and refs are 1-based so
+    downstream prompt citations stay stable.
+    """
     evidence = []
     for i, c in enumerate(compressed, 1):
         evidence.append({
@@ -81,8 +96,4 @@ async def retrieve(query: str, *, user_id: str, run_id: str | None = None,
             "quote": (c.get("text") or "")[:600],
             "score": round(max(c.get("rerank", 0) or 0, c.get("rrf", 0) or 0), 4),
         })
-    return {"understanding": u, "evidence": evidence,
-            "context_block": evidence_block([{"chunk_id": e["chunk_id"],
-                                              "source": e["doc_title"],
-                                              "section": e["section"],
-                                              "text": e["quote"]} for e in evidence])}
+    return evidence

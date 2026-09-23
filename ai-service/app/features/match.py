@@ -26,29 +26,73 @@ def _skill_set(parsed: dict) -> set[str]:
     return {s for s in out if s}
 
 
+def _year_month(s: object, default_month: int) -> tuple[int, int] | None:
+    """Parse a date string into (year, month).
+
+    The resume parser is instructed to emit ``YYYY-MM`` *when inferable, else keep
+    the original string*, so ``_user_years`` also receives bare years ("2019"),
+    dotted/space-separated ranges, and prose. A bare year is resolved to
+    ``default_month`` (Jan for a start, Dec for an end) so a whole-year span is
+    counted instead of silently dropped. Returns None only when no 4-digit year is
+    present at all.
+    """
+    import re
+    txt = str(s or "")
+    m = re.match(r"\s*(\d{4})\s*[-/.]\s*(\d{1,2})", txt)
+    if m:
+        return int(m.group(1)), max(1, min(12, int(m.group(2))))
+    m = re.match(r"\s*(\d{4})(?!\d)", txt)
+    if m:
+        return int(m.group(1)), default_month
+    return None
+
+
 def _user_years(parsed: dict) -> float:
     y = (parsed.get("profile") or {}).get("yearsExperience")
     if isinstance(y, (int, float)):
         return float(y)
-    import re
     from datetime import date
     total = 0.0
     today = date.today()
     for e in parsed.get("experience", []):
-        m = re.match(r"(\d{4})[-/.](\d{1,2})", str(e.get("start") or ""))
-        if not m:
+        st = _year_month(e.get("start"), 1)
+        if not st:
             continue
         end_txt = str(e.get("end") or "").lower()
         if "present" in end_txt or "now" in end_txt or "至今" in end_txt:
             endy, endm = today.year, today.month
         else:
-            m2 = re.match(r"(\d{4})[-/.](\d{1,2})", end_txt)
-            if not m2:
+            en = _year_month(end_txt, 12)
+            if not en:
                 continue
-            endy, endm = int(m2.group(1)), int(m2.group(2))
-        months = max(0, (endy - int(m.group(1))) * 12 + (endm - int(m.group(2))))
+            endy, endm = en
+        months = max(0, (endy - st[0]) * 12 + (endm - st[1]))
         total += min(months, 72) / 12.0
     return round(total, 1)
+
+
+def _technical_score(req: list[dict], pref: list[dict], r_skills: set[str]) -> float:
+    """Weighted required/preferred skill coverage, in 0..1.
+
+    Returns a neutral 0.6 only when the JD lists *no* skills at all, so a thin
+    posting is not punished with technical=0. The original inline version summed
+    ``req_total`` with ``or 1.0`` (a divide-by-zero guard), which forced a nonzero
+    denominator and made that neutral fallback unreachable — so a JD with zero
+    required/preferred skills scored technical=0 and dragged the overall down. The
+    guard also injected a phantom weight-of-1.0 into the *preferred-only* case,
+    under-counting coverage against a denominator that included a required skill
+    the JD never listed. Both are fixed by guarding on the real total here.
+    """
+    req_total = sum(_WEIGHT.get(s.get("priority", "must"), 3.0) for s in req)
+    req_got = sum(_WEIGHT.get(s.get("priority", "must"), 3.0) for s in req
+                  if normalize(s.get("name", "")) in r_skills)
+    pref_total = sum(_WEIGHT.get(s.get("priority", "nice"), 1.0) for s in pref)
+    pref_got = sum(_WEIGHT.get(s.get("priority", "nice"), 1.0) for s in pref
+                   if normalize(s.get("name", "")) in r_skills)
+    denom = req_total + 0.3 * pref_total
+    if not denom:
+        return 0.6
+    return min(1.0, (req_got + 0.3 * pref_got) / denom)
 
 
 def _edu_rank(parsed: dict) -> float:
@@ -61,6 +105,80 @@ def _edu_rank(parsed: dict) -> float:
     return best
 
 
+def _experience_score(parsed: dict, jd: dict) -> tuple[float, str]:
+    """Experience subscore (0..1) plus the human-readable note bound as evidence.
+
+    Neutral 0.75 when the JD states no explicit years; capped credit for meeting
+    the bar; a floor of 0.25 (never 0) when under so a junior candidate is not
+    zeroed out. Returns (score, note)."""
+    need_years = jd.get("experienceYears")
+    have_years = _user_years(parsed)
+    if not isinstance(need_years, (int, float)) or need_years <= 0:
+        return 0.75, "JD does not state explicit years; based on role level."
+    if have_years >= need_years:
+        return (min(1.0, 0.8 + 0.2 * have_years / max(need_years, 1) / 2),
+                f"{have_years}y experience >= required {need_years}y.")
+    return max(0.25, have_years / need_years), f"{have_years}y vs required {need_years}y."
+
+
+def _education_score(parsed: dict, jd: dict) -> float:
+    """Education subscore (0..1); neutral 0.8 when the JD sets no minDegree.
+
+    Degree ranks are ordered (associate<bachelor<master<phd); a resume ranked at
+    or above the bar scores 1.0, otherwise it decays 0.25 per rank below with a
+    0.3 floor."""
+    need_edu = (jd.get("education") or {}).get("minDegree") if isinstance(
+        jd.get("education"), dict) else None
+    if not need_edu:
+        return 0.8
+    user_edu = _edu_rank(parsed)
+    need_rank = next((v for k, v in _DEGREE_RANK.items() if k in need_edu.lower()), 2)
+    return 1.0 if user_edu >= need_rank else max(0.3, 0.5 + 0.25 * (user_edu - need_rank + 1))
+
+
+def _projects_score(parsed: dict, req: list[dict], pref: list[dict], jd: dict) -> float:
+    """Projects subscore (0..1): count credit (capped at 3) plus JD-term overlap.
+
+    With no projects it falls back to 0.35 if the candidate has work experience,
+    else 0.1, so a project-less resume is not zeroed out entirely."""
+    proj_terms = set(extract_skills(" ".join(
+        str((p.get("tech") or [])) + " ".join(p.get("bullets") or [])
+        for p in parsed.get("projects", []))))
+    jd_terms = {normalize(s.get("name", "")) for s in req + pref}
+    jd_terms |= {normalize(k) for k in jd.get("priorityOrder") or []}
+    proj_overlap = len(jd_terms & {normalize(x) for x in proj_terms})
+    n_proj = len(parsed.get("projects") or [])
+    return min(1.0, 0.25 * min(n_proj, 3) + 0.1 * min(proj_overlap, 5)) \
+        if n_proj else (0.35 if parsed.get("experience") else 0.1)
+
+
+def _matched_missing(req: list[dict], pref: list[dict],
+                     r_skills: set[str]) -> tuple[list[str], list[str]]:
+    """Skills the resume covers vs the gaps it must close (both sorted, deduped).
+
+    The asymmetry is deliberate and load-bearing for the UI: ``matched`` is drawn
+    from required *and* preferred skills (a nice-to-have you hold is still worth
+    surfacing), while ``missing`` is only the *required* skills you lack (a gap you
+    are not penalised for). Changing either set's source list shifts the user-visible
+    skill-gap panel, so this is pinned by tests."""
+    matched = sorted({normalize(s.get("name", "")) for s in req + pref
+                      if normalize(s.get("name", "")) in r_skills})
+    missing = sorted({normalize(s.get("name", "")) for s in req
+                      if normalize(s.get("name", "")) not in r_skills})
+    return matched, missing
+
+
+# Weights sum to exactly 1.0 so an all-perfect match scores 1.0 and an all-zero
+# one 0.0 — _overall keeps that normalisation invariant testable.
+_OVERALL_WEIGHTS = (0.42, 0.25, 0.2, 0.13)  # technical, experience, projects, education
+
+
+def _overall(technical: float, experience: float, projects: float,
+             education: float) -> float:
+    wt, we, wp, wE = _OVERALL_WEIGHTS
+    return round(wt * technical + we * experience + wp * projects + wE * education, 4)
+
+
 async def compute_match(resume_parsed: dict, jd: dict, *, user_id: str,
                         job_id: str | None = None, run_id: str | None = None) -> dict:
     r_skills = _skill_set(resume_parsed)
@@ -70,56 +188,20 @@ async def compute_match(resume_parsed: dict, jd: dict, *, user_id: str,
     pref = [s for s in jd.get("preferredSkills") or [] if isinstance(s, dict)]
 
     # ---- technical: weighted skill coverage ----
-    req_total = sum(_WEIGHT.get(s.get("priority", "must"), 3.0) for s in req) or 1.0
-    req_got = sum(_WEIGHT.get(s.get("priority", "must"), 3.0) for s in req
-                  if normalize(s.get("name", "")) in r_skills)
-    pref_total = sum(_WEIGHT.get(s.get("priority", "nice"), 1.0) for s in pref)
-    pref_got = sum(_WEIGHT.get(s.get("priority", "nice"), 1.0) for s in pref
-                   if normalize(s.get("name", "")) in r_skills)
-    technical = min(1.0, (req_got + 0.3 * pref_got) / (req_total + 0.3 * pref_total)) \
-        if (req_total + pref_total) else 0.6
+    technical = _technical_score(req, pref, r_skills)
 
-    matched = sorted({normalize(s.get("name", "")) for s in req + pref
-                      if normalize(s.get("name", "")) in r_skills})
-    missing = sorted({normalize(s.get("name", "")) for s in req
-                      if normalize(s.get("name", "")) not in r_skills})
+    matched, missing = _matched_missing(req, pref, r_skills)
 
     # ---- experience ----
-    need_years = jd.get("experienceYears")
-    have_years = _user_years(resume_parsed)
-    if not isinstance(need_years, (int, float)) or need_years <= 0:
-        experience = 0.75
-        exp_note = "JD does not state explicit years; based on role level."
-    elif have_years >= need_years:
-        experience = min(1.0, 0.8 + 0.2 * have_years / max(need_years, 1) / 2)
-        exp_note = f"{have_years}y experience >= required {need_years}y."
-    else:
-        experience = max(0.25, have_years / need_years)
-        exp_note = f"{have_years}y vs required {need_years}y."
+    experience, exp_note = _experience_score(resume_parsed, jd)
 
     # ---- projects ----
-    proj_terms = set(extract_skills(" ".join(
-        str((p.get("tech") or [])) + " ".join(p.get("bullets") or [])
-        for p in resume_parsed.get("projects", []))))
-    jd_terms = {normalize(s.get("name", "")) for s in req + pref}
-    jd_terms |= {normalize(k) for k in jd.get("priorityOrder") or []}
-    proj_overlap = len(jd_terms & {normalize(x) for x in proj_terms})
-    n_proj = len(resume_parsed.get("projects") or [])
-    projects = min(1.0, 0.25 * min(n_proj, 3) + 0.1 * min(proj_overlap, 5)) \
-        if n_proj else (0.35 if resume_parsed.get("experience") else 0.1)
+    projects = _projects_score(resume_parsed, req, pref, jd)
 
     # ---- education ----
-    need_edu = (jd.get("education") or {}).get("minDegree") if isinstance(
-        jd.get("education"), dict) else None
-    user_edu = _edu_rank(resume_parsed)
-    if not need_edu:
-        education = 0.8
-    else:
-        need_rank = next((v for k, v in _DEGREE_RANK.items() if k in need_edu.lower()), 2)
-        education = 1.0 if user_edu >= need_rank else max(0.3, 0.5 + 0.25 * (user_edu - need_rank + 1))
+    education = _education_score(resume_parsed, jd)
 
-    overall = round(0.42 * technical + 0.25 * experience + 0.2 * projects +
-                    0.13 * education, 4)
+    overall = _overall(technical, experience, projects, education)
 
     # ---- evidence binding: find resume chunks supporting each matched skill ----
     for sk in matched[:8]:

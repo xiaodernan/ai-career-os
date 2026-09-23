@@ -29,9 +29,15 @@ class Tool:
 
 # ---------------- handlers ----------------
 
-async def search_jobs(user_id: str, *, query: str = "", skills: list[str] | None = None,
-                      location: str = "", remote: str = "", company: str = "",
-                      min_salary: int | None = None, limit: int = 10) -> dict:
+def _search_params(*, query: str = "", skills: list[str] | None = None,
+                   location: str = "", remote: str = "", company: str = "",
+                   min_salary: int | None = None, limit: int = 10) -> tuple[list[str], list]:
+    """Build the WHERE clauses + positional ($N) args for search_jobs.
+
+    Only integer placeholder indices are ever interpolated into the SQL; every user
+    value is returned in ``args`` for asyncpg to bind. The last arg is the clamped
+    LIMIT (referenced by the caller's ``LIMIT $len(args)``).
+    """
     args: list[Any] = [query or ""]  # $1 always bound (used by ts_rank)
     where = ["j.status = 'open'"]
     if query:
@@ -53,6 +59,15 @@ async def search_jobs(user_id: str, *, query: str = "", skills: list[str] | None
         args.append(min_salary)
         where.append(f"j.salary_max >= ${len(args)}")
     args.append(max(1, min(int(limit), 25)))
+    return where, args
+
+
+async def search_jobs(user_id: str, *, query: str = "", skills: list[str] | None = None,
+                      location: str = "", remote: str = "", company: str = "",
+                      min_salary: int | None = None, limit: int = 10) -> dict:
+    where, args = _search_params(query=query, skills=skills, location=location,
+                                 remote=remote, company=company, min_salary=min_salary,
+                                 limit=limit)
     rows = await db.fetch(
         f"""SELECT j.id, j.title, c.name AS company, j.location, j.remote_type,
                    j.salary_min, j.salary_max, j.skills, j.posted_at,

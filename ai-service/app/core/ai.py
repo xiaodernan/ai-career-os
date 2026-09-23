@@ -3,6 +3,7 @@
 Every feature/agent must call through here so PRD §31/§33 observability holds.
 """
 
+import json
 import time
 from collections.abc import AsyncIterator
 from typing import Any
@@ -61,14 +62,30 @@ async def ask(req: LLMRequest, *, user_id: str | None = None, run_id: str | None
     return resp
 
 
+def _coerce_json(text: str) -> dict:
+    """Parse an LLM reply into a dict, tolerating code fences and stray prose.
+
+    LLMs frequently wrap the object in ``` fences and add a greeting before or a
+    "Hope this helps!" after it. Taking the outermost {...} (first '{' to last '}')
+    keeps it robust where a naive strip of backticks would leave trailing prose and
+    raise. Only engaged after a plain json.loads fails, so clean replies parse identically.
+    """
+    t = text.strip()
+    try:
+        return json.loads(t)
+    except json.JSONDecodeError:
+        start, end = t.find("{"), t.rfind("}")
+        if start != -1 and end > start:
+            return json.loads(t[start:end + 1])
+        raise
+
+
 async def ask_json(req: LLMRequest, **kw) -> dict:
     """ask() with JSON parsing + one self-repair retry."""
     req.json_mode = True
-    import json
-
     resp = await ask(req, **kw)
     try:
-        return json.loads(resp.text)
+        return _coerce_json(resp.text)
     except json.JSONDecodeError:
         fix = LLMRequest(
             messages=req.messages + [
@@ -78,11 +95,7 @@ async def ask_json(req: LLMRequest, **kw) -> dict:
             ],
             model=req.model, temperature=0.0, max_tokens=req.max_tokens, json_mode=True)
         resp2 = await ask(fix, **kw)
-        text = resp2.text.strip()
-        if text.startswith("```"):
-            text = text.strip("`")
-            text = text[text.find("{"):]
-        return json.loads(text)
+        return _coerce_json(resp2.text)
 
 
 async def stream(req: LLMRequest, *, user_id: str | None = None, run_id: str | None = None,
