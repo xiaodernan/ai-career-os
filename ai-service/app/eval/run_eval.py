@@ -29,11 +29,11 @@ evidence. Cite [n]. If evidence is missing, say so. Be concise."""
 async def _relevant_ids(user_id: str, case: EvalCase) -> set[str]:
     if not case.keywords:
         return set()
-    ors = " OR ".join(f"text ILIKE ${i + 2}" for i in range(len(case.keywords)))
+    ors = " OR ".join(f"text ILIKE ${i + 2} ESCAPE '!'" for i in range(len(case.keywords)))
     rows = await db.fetch(
         f"""SELECT id::text AS id FROM document_chunks
             WHERE user_id = $1::uuid AND ({ors})""",
-        user_id, *[f"%{k}%" for k in case.keywords])
+        user_id, *[db.like_contains(k) for k in case.keywords])
     return {r["id"] for r in rows}
 
 

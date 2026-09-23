@@ -177,17 +177,19 @@ def test_search_params_all_filters_align_placeholder_to_bound_value():
     where, args = _search_params(query="go", skills=["Go", ""], location="Berlin",
                                  remote="remote", company="ACME", min_salary=100, limit=99)
     joined = " AND ".join(where)
-    # every filter references $1..$6; the last arg (index 7) is reserved for LIMIT
-    assert _ph(joined) == [1, 1, 2, 3, 4, 5, 6]
+    # $1 is the raw tsquery term, $2 its escaped LIKE twin; every filter after them
+    # shifts by one, which is exactly what this alignment check protects.
+    assert _ph(joined) == [1, 2, 3, 4, 5, 6, 7]
     assert max(_ph(joined)) == len(args) - 1
     # positional symmetry: the value each clause points at is exactly right
     assert args[0] == "go"
-    assert args[1] == ["Go"]                     # falsy skill entries dropped
-    assert args[2] == "Berlin"
-    assert args[3] == "remote"
-    assert args[4] == "ACME"
-    assert args[5] == 100
-    assert args[6] == 25                         # limit clamped to the 25 ceiling
+    assert args[1] == "%go%"
+    assert args[2] == ["Go"]                     # falsy skill entries dropped
+    assert args[3] == "%Berlin%"
+    assert args[4] == "remote"                   # remote_type is compared, not matched
+    assert args[5] == "%ACME%"
+    assert args[6] == 100
+    assert args[7] == 25                         # limit clamped to the 25 ceiling
 
 
 def test_search_params_never_interpolates_user_text_into_sql():

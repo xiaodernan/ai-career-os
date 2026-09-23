@@ -29,11 +29,13 @@ async def vector_search(user_id: str, query_vec: list[float], k: int = 25,
     args: list[Any] = [db.vec(query_vec), user_id]
     _apply_scoping(where, args, kinds, document_ids)
     if skill:
-        args.append(f"%\"{skill}\"%")
+        args.append(db.like_contains(f'"{skill}"'))
         # The cast must wrap the -> result: `c.meta->'skills'::text` parses as
         # c.meta -> ('skills'::text) and leaves jsonb on the left of LIKE, which
-        # Postgres rejects (operator does not exist: jsonb ~~ unknown).
-        where.append(f"(c.meta->'skills')::text LIKE ${len(args)}")
+        # Postgres rejects (operator does not exist: jsonb ~~ unknown). The quotes are
+        # JSON syntax, so the skill name still needs its own wildcards neutralised
+        # ("ci_cd" must not select a chunk tagged "ci/cd").
+        where.append(f"(c.meta->'skills')::text LIKE ${len(args)} ESCAPE '!'")
     sql = f"""
         SELECT c.id, c.document_id, c.text, c.section_path, c.kind, c.meta,
                d.title AS doc_title, d.id AS doc_id, ks.kind AS source_kind,

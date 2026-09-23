@@ -37,24 +37,28 @@ def _search_params(*, query: str = "", skills: list[str] | None = None,
     Only integer placeholder indices are ever interpolated into the SQL; every user
     value is returned in ``args`` for asyncpg to bind. The last arg is the clamped
     LIMIT (referenced by the caller's ``LIMIT $len(args)``).
+
+    ``query`` is bound twice: raw for the tsquery/rank side and escaped for the LIKE
+    side, which is a distinct placeholder — one value cannot serve both.
     """
     args: list[Any] = [query or ""]  # $1 always bound (used by ts_rank)
     where = ["j.status = 'open'"]
     if query:
+        args.append(db.like_contains(query))
         where.append("(j.tsv @@ plainto_tsquery('simple', $1) "
-                     "OR j.title ILIKE '%'||$1||'%')")
+                     f"OR j.title ILIKE ${len(args)} ESCAPE '!')")
     if skills:
         args.append([s for s in skills if s])
         where.append(f"j.skills && ${len(args)}::text[]")
     if location:
-        args.append(location)
-        where.append(f"j.location ILIKE '%'||${len(args)}||'%'")
+        args.append(db.like_contains(location))
+        where.append(f"j.location ILIKE ${len(args)} ESCAPE '!'")
     if remote:
         args.append(remote)
         where.append(f"j.remote_type = ${len(args)}")
     if company:
-        args.append(company)
-        where.append(f"c.name ILIKE '%'||${len(args)}||'%'")
+        args.append(db.like_contains(company))
+        where.append(f"c.name ILIKE ${len(args)} ESCAPE '!'")
     if min_salary:
         args.append(min_salary)
         where.append(f"j.salary_max >= ${len(args)}")
@@ -96,9 +100,13 @@ async def get_job(user_id: str, *, job_id: str) -> dict:
 async def get_company(user_id: str, *, company_id: str = "", name: str = "") -> dict:
     if company_id:
         row = await db.fetchrow("SELECT * FROM companies WHERE id=$1::uuid", company_id)
+    elif name.strip():
+        row = await db.fetchrow(
+            "SELECT * FROM companies WHERE name ILIKE $1 ESCAPE '!' LIMIT 1",
+            db.like_contains(name))
     else:
-        row = await db.fetchrow("SELECT * FROM companies WHERE name ILIKE $1 LIMIT 1",
-                                f"%{name}%")
+        # No term to match on: `ILIKE '%%'` would answer with an unrelated company.
+        return {"error": "company lookup needs company_id or name"}
     if not row:
         return {"error": "company not found"}
     open_roles = await db.fetch(

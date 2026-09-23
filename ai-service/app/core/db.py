@@ -60,3 +60,16 @@ async def execute(query: str, *args: Any) -> str:
 
 def jsonb(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False)
+
+
+def like_contains(term: str) -> str:
+    """Encode user text as a LIKE "contains" pattern with its wildcards neutralised.
+
+    Without this the term's own metacharacters act as operators: "%" stops the filter
+    from filtering, "_" matches any character ("a_b" also hits "axb"), and a term
+    containing "\\" cannot match itself because backslash is LIKE's implicit escape
+    character. "!" is used as an explicit escape instead, so the result does not depend
+    on standard_conforming_strings — every call site must therefore emit ESCAPE '!'.
+    """
+    escaped = term.replace("!", "!!").replace("%", "!%").replace("_", "!_")
+    return f"%{escaped}%"
