@@ -322,3 +322,32 @@ def test_match_result_nested_evidence_dumps_snake_keys_persist_stores():
     assert dumped["matchedSkills"] == ["Go"] and dumped["missingSkills"] == ["Rust"]
     assert dumped["evidence"][0]["chunk_ids"] == ["c1"]   # snake persisted as jsonb
     assert dumped["narrative"] == "n" and dumped["model"] == "m"
+
+
+# ---------------- null-section robustness (Java-owned `structured` jsonb) ----------------
+
+# parse_resume defaults only skills/profile/missingSections/warnings; a stored resume
+# version can legitimately carry `"experience": null`, `"education": null` or
+# `"projects": null`. The old `.get(k, [])` returned that stored None, so
+# `for e in None` (was 57/100) and `None + []` (was 23-24) raised TypeError and 500'd
+# the whole compute_match flow. `or []` (matching line 150's existing idiom) is the fix.
+
+def test_match_helpers_survive_present_null_sections():
+    p = {"skills": None, "experience": None, "projects": None,
+         "education": None, "profile": None}
+    assert _skill_set(p) == set()
+    assert _user_years(p) == 0.0
+    assert _edu_rank(p) == -1.0
+    # null projects + no experience -> the documented 0.1 floor, not a crash
+    assert _projects_score(p, [], [], {}) == 0.1
+    assert isinstance(_education_score(p, {}), float)
+    # empty JD states no years -> neutral 0.75, exercising the guarded experience read
+    exp_score, _note = _experience_score(p, {})
+    assert exp_score == 0.75
+
+
+def test_skill_set_survives_null_experience_with_non_null_projects():
+    # the `experience or []` + `projects or []` concatenation used to be `None + [...]`
+    p = {"skills": [{"name": "Go"}], "experience": None, "projects": [{"tech": ["Rust"]}]}
+    got = _skill_set(p)
+    assert "Go" in got and "Rust" in got

@@ -18,10 +18,10 @@ _WEIGHT = {"must": 3.0, "should": 2.0, "nice": 1.0}
 
 
 def _skill_set(parsed: dict) -> set[str]:
-    out = {normalize(s.get("name", "")) for s in parsed.get("skills", [])
+    out = {normalize(s.get("name", "")) for s in (parsed.get("skills") or [])
            if isinstance(s, dict) and s.get("name")}
-    blob = " ".join(str(v) for v in (parsed.get("experience", []) +
-                                     parsed.get("projects", [])))
+    blob = " ".join(str(v) for v in ((parsed.get("experience") or []) +
+                                     (parsed.get("projects") or [])))
     out |= {normalize(s) for s in extract_skills(blob)}
     return {s for s in out if s}
 
@@ -54,7 +54,7 @@ def _user_years(parsed: dict) -> float:
     from datetime import date
     total = 0.0
     today = date.today()
-    for e in parsed.get("experience", []):
+    for e in parsed.get("experience") or []:
         st = _year_month(e.get("start"), 1)
         if not st:
             continue
@@ -97,7 +97,7 @@ def _technical_score(req: list[dict], pref: list[dict], r_skills: set[str]) -> f
 
 def _edu_rank(parsed: dict) -> float:
     best = -1.0
-    for e in parsed.get("education", []):
+    for e in parsed.get("education") or []:
         d = (e.get("degree") or "").lower()
         for k, v in _DEGREE_RANK.items():
             if k in d:
@@ -143,7 +143,7 @@ def _projects_score(parsed: dict, req: list[dict], pref: list[dict], jd: dict) -
     else 0.1, so a project-less resume is not zeroed out entirely."""
     proj_terms = set(extract_skills(" ".join(
         str((p.get("tech") or [])) + " ".join(p.get("bullets") or [])
-        for p in parsed.get("projects", []))))
+        for p in (parsed.get("projects") or []))))
     jd_terms = {normalize(s.get("name", "")) for s in req + pref}
     jd_terms |= {normalize(k) for k in jd.get("priorityOrder") or []}
     proj_overlap = len(jd_terms & {normalize(x) for x in proj_terms})
