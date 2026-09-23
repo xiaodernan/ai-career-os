@@ -379,23 +379,59 @@ export function useKnowledgeNotes() {
 
 /* -------------------------------- interviews ------------------------------- */
 
+/** SessionItem scalars, shared by the list row and the {session,…} detail envelope. */
+function mapSessionScalars(s: unknown) {
+  return {
+    id: idStr(s),
+    jobId: str(s, "jobId", "job_id") ?? null,
+    // InterviewDtos.SessionItem calls the role `positionTitle`; jobTitle/position were
+    // never on the wire, so the list row, the session header and the report all lost it.
+    jobTitle:
+      str(s, "positionTitle", "position_title", "jobTitle", "job_title", "position") ?? null,
+    companyName: str(s, "companyName", "company_name") ?? null,
+    mode: str(s, "mode", "type", "kind") ?? "mixed",
+    status: str(s, "status") ?? "active",
+    difficulty: num(s, "difficulty", "depth", "level"),
+    startedAt: str(s, "startedAt", "started_at", "createdAt", "created_at"),
+    finishedAt: str(s, "finishedAt", "finished_at") ?? null,
+  };
+}
+
+export function mapInterviewSessionItem(s: unknown): InterviewSession {
+  return {
+    ...mapSessionScalars(s),
+    questionCount: num(s, "questionCount", "question_count", "turnCount"),
+    overall: num(s, "overall", "score", "overallScore"),
+  };
+}
+
+/** SessionDetail is {session, turns, evaluation} — turns/evaluation are SIBLINGS of session. */
+export function mapInterviewSessionDetail(raw: unknown, fallbackId?: string | null) {
+  const sess = pick(raw, "session") ?? raw;
+  const turns = listOf(raw, "turns", "history", "answers", "questions");
+  const lastAssistant = [...turns].reverse().find((t) => str(t, "role") === "assistant");
+  const cqMeta = rec(pick(lastAssistant, "questionMeta", "question_meta")) ?? {};
+  return {
+    ...mapSessionScalars(sess),
+    id: idStr(sess, fallbackId ?? ""),
+    questionCount: num(sess, "questionCount", "question_count") || turns.length,
+    currentQuestion: normalizeQuestion(
+      pick(raw, "currentQuestion", "current_question") ??
+        pick(sess, "currentQuestion", "current_question", "next") ??
+        (lastAssistant ? { ...cqMeta, text: str(lastAssistant, "content") } : null)
+    ),
+    history: turns,
+    report: pick(raw, "evaluation", "report") ?? pick(sess, "evaluation", "report") ?? null,
+  };
+}
+
 export function useInterviewSessions() {
   return useQuery({
     queryKey: ["interview", "sessions"],
     queryFn: async (): Promise<Page<InterviewSession>> =>
-      normalizePage(await api.get<unknown>(endpoints.interviews, { size: 50 }), (s) => ({
-        id: idStr(s),
-        jobId: str(s, "jobId", "job_id") ?? null,
-        jobTitle: str(s, "jobTitle", "job_title", "position") ?? null,
-        companyName: str(s, "companyName", "company_name") ?? null,
-        mode: str(s, "mode", "type", "kind") ?? "mixed",
-        status: str(s, "status") ?? "active",
-        difficulty: num(s, "difficulty", "depth", "level"),
-        questionCount: num(s, "questionCount", "question_count", "turnCount"),
-        startedAt: str(s, "startedAt", "started_at", "createdAt", "created_at"),
-        finishedAt: str(s, "finishedAt", "finished_at") ?? null,
-        overall: num(s, "overall", "score", "overallScore"),
-      })),
+      normalizePage(await api.get<unknown>(endpoints.interviews, { size: 50 }), (s) =>
+        mapInterviewSessionItem(s)
+      ),
   });
 }
 
@@ -403,34 +439,8 @@ export function useInterviewSession(id: string | null) {
   return useQuery({
     queryKey: ["interview", "session", id],
     enabled: Boolean(id),
-    queryFn: async () => {
-      const raw = await api.get<unknown>(endpoints.interview(id!));
-      // SessionDetail is {session, turns, evaluation} — session-level scalars come
-      // from `session`, but turns/evaluation are its SIBLINGS, not nested inside it.
-      const sess = pick(raw, "session") ?? raw;
-      const turns = listOf(raw, "turns", "history", "answers", "questions");
-      const lastAssistant = [...turns].reverse().find((t) => str(t, "role") === "assistant");
-      const cqMeta = rec(pick(lastAssistant, "questionMeta", "question_meta")) ?? {};
-      return {
-        id: idStr(sess, id ?? ""),
-        jobId: str(sess, "jobId", "job_id") ?? null,
-        jobTitle: str(sess, "jobTitle", "job_title") ?? null,
-        companyName: str(sess, "companyName", "company_name") ?? null,
-        mode: str(sess, "mode", "type") ?? "mixed",
-        status: str(sess, "status") ?? "active",
-        difficulty: num(sess, "difficulty", "depth", "level"),
-        questionCount: num(sess, "questionCount", "question_count") || turns.length,
-        startedAt: str(sess, "startedAt", "started_at"),
-        finishedAt: str(sess, "finishedAt", "finished_at") ?? null,
-        currentQuestion: normalizeQuestion(
-          pick(raw, "currentQuestion", "current_question") ??
-            pick(sess, "currentQuestion", "current_question", "next") ??
-            (lastAssistant ? { ...cqMeta, text: str(lastAssistant, "content") } : null)
-        ),
-        history: turns,
-        report: pick(raw, "evaluation", "report") ?? pick(sess, "evaluation", "report") ?? null,
-      };
-    },
+    queryFn: async () =>
+      mapInterviewSessionDetail(await api.get<unknown>(endpoints.interview(id!)), id)
   });
 }
 
