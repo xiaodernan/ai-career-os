@@ -65,6 +65,27 @@ class RateLimitFilterTest {
     }
 
     @Test
+    void theThreeIngestAndImportRoutesAlsoSpendMoney() {
+        // Each of these reaches the ai-service and pays for it: /jobs/import runs the JD
+        // analyst, the two upload routes embed every chunk of the document. They are not
+        // reads, and leaving them out of the list means a scripted client can call them
+        // without limit — which is exactly what this filter exists to prevent.
+        assertThat(RateLimitFilter.ruleFor("/api/v1/jobs/import")).isEqualTo("ai");
+        assertThat(RateLimitFilter.ruleFor("/api/v1/knowledge/documents")).isEqualTo("ai");
+        assertThat(RateLimitFilter.ruleFor("/api/v1/resumes/upload")).isEqualTo("ai");
+    }
+
+    @Test
+    void storingTextWithoutEmbeddingItStaysUnthrottled() {
+        // Saving a note or creating a job row from pasted fields calls no model; classifying
+        // these as AI cost would throttle ordinary data entry.
+        assertThat(RateLimitFilter.ruleFor("/api/v1/knowledge/notes")).isNull();
+        assertThat(RateLimitFilter.ruleFor("/api/v1/jobs")).isNull();
+        assertThat(RateLimitFilter.ruleFor("/api/v1/resumes")).isNull();
+        assertThat(RateLimitFilter.ruleFor("/api/v1/knowledge/sources")).isNull();
+    }
+
+    @Test
     void trailingSlashIsToleratedOnAiSubPaths() {
         assertThat(RateLimitFilter.ruleFor("/api/v1/resumes/abc/parse/")).isEqualTo("ai");
         assertThat(RateLimitFilter.ruleFor("/api/v1/jobs/xyz/match/")).isEqualTo("ai");

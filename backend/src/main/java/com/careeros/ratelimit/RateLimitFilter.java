@@ -29,6 +29,10 @@ import org.springframework.security.core.context.SecurityContextHolder;
  * Limiting only `/ai` therefore left the costly endpoints effectively unthrottled. Read-only
  * routes (job search, dashboards, listing) are deliberately excluded so normal browsing is not
  * rate-limited.
+ *
+ * <p>The list is derived from the call sites, not from what the paths look like: every
+ * {@code AiServiceClient} method that is not a status read is traced to the route that reaches
+ * it, which is how the ingest and import routes joined the sub-path group below.
  */
 public class RateLimitFilter extends org.springframework.web.filter.OncePerRequestFilter {
 
@@ -90,7 +94,14 @@ public class RateLimitFilter extends org.springframework.web.filter.OncePerReque
         }
         // Sub-paths that trigger AI on an otherwise cheap resource.
         return uri.matches("^/api/v1/resumes/[^/]+/parse/?$")
-                || uri.matches("^/api/v1/jobs/[^/]+/(match|tailor|cover-letter)/?$");
+                || uri.matches("^/api/v1/jobs/[^/]+/(match|tailor|cover-letter)/?$")
+                // The three that spend money without living under an "AI-looking" path:
+                // importing a JD runs the analyst, and both upload routes embed every chunk
+                // of the document into pgvector. Left out, a scripted client could call them
+                // without limit — the exact hole this list exists to close.
+                || uri.matches("^/api/v1/jobs/import/?$")
+                || uri.matches("^/api/v1/knowledge/documents/?$")
+                || uri.matches("^/api/v1/resumes/upload/?$");
     }
 
     private static String userOrIp(HttpServletRequest request) {
