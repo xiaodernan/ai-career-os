@@ -102,11 +102,12 @@ public class ApplicationService {
         if (request.status() != null && !request.status().isBlank()) {
             validateStatus(request.status());
             if (!request.status().equals(app.getStatus())) {
+                String from = app.getStatus();
                 app.setStatus(request.status());
                 if ("applied".equals(request.status()) && app.getAppliedAt() == null) {
                     app.setAppliedAt(OffsetDateTime.now());
                 }
-                writeEvent(app, "status", Map.of("from", app.getStatus(), "to", request.status()));
+                writeEvent(app, "status", Map.of("from", from, "to", request.status()));
             }
         }
         if (request.position() != null) {

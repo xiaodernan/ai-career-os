@@ -331,8 +331,13 @@ public class JobService {
         if (employmentType != null) {
             job.setEmploymentType(employmentType);
         }
-        job.setSalaryMin(salaryMin);
-        job.setSalaryMax(salaryMax);
+        // Pin the salary unit contract on write: the V2 migration repairs existing
+        // rows but cannot stop this API create/import path re-inserting legacy
+        // 万/年 figures or an inverted range. Lenient (scale + swap), never rejects,
+        // so a valid save can't 400. Null currency => CNY, as in V2.
+        var salary = com.careeros.common.SalaryRange.normalize(salaryMin, salaryMax, salaryCurrency);
+        job.setSalaryMin(salary.min());
+        job.setSalaryMax(salary.max());
         if (salaryCurrency != null) {
             job.setSalaryCurrency(salaryCurrency);
         }

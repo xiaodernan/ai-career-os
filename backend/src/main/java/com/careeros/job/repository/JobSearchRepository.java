@@ -33,7 +33,11 @@ public class JobSearchRepository {
     public List<JobListItem> search(Filters f) {
         StringBuilder sql = new StringBuilder(BASE_WHERE);
         applyWhere(f, sql);
-        sql.append(" ORDER BY ").append(ORDERINGS.getOrDefault(f.sort(), ORDERINGS.get("posted")));
+        // ORDERINGS is an immutable Map.of; getOrDefault throws on a null key, so guard
+        // before the lookup — the HTTP layer defaults a missing sort to "posted", but a
+        // non-web caller may pass null, and a null must not 500 the search.
+        String sortKey = f.sort() == null ? "posted" : f.sort();
+        sql.append(" ORDER BY ").append(ORDERINGS.getOrDefault(sortKey, ORDERINGS.get("posted")));
         sql.append(" LIMIT :limit OFFSET :offset");
         Query query = em.createNativeQuery(sql.toString());
         bind(f, query, f.page() * f.size(), f.size());

@@ -56,8 +56,15 @@ public final class ResumeDtos {
                                List<SkillItem> skills) {
     }
 
+    /**
+     * The resume body is `plaintext`. The extra aliases matter because Jackson
+     * silently ignores unknown properties: a client sending `rawText` would get a
+     * 201 with an empty, unparseable resume instead of an error. Accepting the
+     * obvious spellings turns that silent data loss into a working request.
+     */
     public record CreateResumeRequest(@NotBlank @Size(max = 200) String title,
-                                      @JsonAlias({"plaintext", "plain_text"}) String plaintext) {
+                                      @JsonAlias({"plaintext", "plain_text", "rawText", "raw_text",
+                                              "text"}) String plaintext) {
     }
 
     public record UpdateResumeRequest(@Size(min = 1, max = 200) String title) {
