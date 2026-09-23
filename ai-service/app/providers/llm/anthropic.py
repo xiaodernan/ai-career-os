@@ -8,6 +8,29 @@ from app.providers.base import LLMRequest, LLMResponse, StreamDelta, ToolCall, U
 from app.providers.llm.openai_compat import ProviderError
 
 
+def _usage_from(u: dict) -> Usage:
+    """Map Anthropic's usage onto the shared Usage contract.
+
+    Anthropic reports three DISJOINT input-token buckets — ``input_tokens`` (new,
+    uncached), ``cache_read_input_tokens`` and ``cache_creation_input_tokens`` —
+    whereas ``estimate_cost`` assumes ``cached_tokens`` is a SUBSET of
+    ``input_tokens`` (OpenAI's ``prompt_tokens`` convention; locked by
+    test_estimate_cost_with_cached_input). Passing Anthropic's raw disjoint counts
+    straight through makes estimate_cost subtract the cache-read count from the
+    (much smaller) non-cached count, zeroing the base input charge, and silently
+    drops cache_creation. Reconcile here: report the full prompt as
+    ``input_tokens`` and only the cache-read subset as ``cached_tokens``.
+    """
+    new = u.get("input_tokens", 0) or 0
+    cache_read = u.get("cache_read_input_tokens", 0) or 0
+    cache_write = u.get("cache_creation_input_tokens", 0) or 0
+    return Usage(
+        input_tokens=new + cache_read + cache_write,
+        output_tokens=u.get("output_tokens", 0) or 0,
+        cached_tokens=cache_read,
+    )
+
+
 class AnthropicProvider:
     """Anthropic Messages API. Tool-calling normalized to the shared schema."""
 
@@ -83,11 +106,7 @@ class AnthropicProvider:
         return LLMResponse(
             text=text,
             tool_calls=tool_calls,
-            usage=Usage(
-                input_tokens=u.get("input_tokens", 0),
-                output_tokens=u.get("output_tokens", 0),
-                cached_tokens=u.get("cache_read_input_tokens", 0),
-            ),
+            usage=_usage_from(u),
             model=data.get("model", req.model or self.model),
             latency_ms=int((time.monotonic() - started) * 1000),
             finish_reason=data.get("stop_reason") or "stop",
@@ -114,7 +133,5 @@ class AnthropicProvider:
                 elif t == "message_delta":
                     usage.output_tokens = ev.get("usage", {}).get("output_tokens", 0)
                 elif t == "message_start":
-                    u = ev.get("message", {}).get("usage", {})
-                    usage.input_tokens = u.get("input_tokens", 0)
-        usage.cached_tokens = 0
+                    usage = _usage_from(ev.get("message", {}).get("usage", {}))
         yield StreamDelta(usage=usage, done=True)

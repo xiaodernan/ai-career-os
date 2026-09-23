@@ -14,6 +14,7 @@ from app.features.interview import (_trajectory_detail, advance, decide_next,
 from app.features.jd_analyze import _backfill_skills, suggest_resume_improvements
 from app.features.tailor import _apply_changes, verify_no_fabrication
 from app.providers.pricing import estimate_cost
+from app.providers.llm.anthropic import _usage_from
 from app.rag import rerank as rerank_mod
 from app.rag.compress import compress
 from app.rag.pipeline import to_evidence
@@ -255,6 +256,46 @@ def test_estimate_cost_with_cached_input():
 
 def test_estimate_cost_unknown_model_is_zero():
     assert estimate_cost("some-local-model", 999, 999) == 0.0
+
+
+# --- Anthropic usage reconciliation (estimate_cost assumes cached ⊆ input) ---------
+
+def test_anthropic_usage_maps_disjoint_cache_read_into_subset():
+    # Anthropic reports 1000 new + 8000 cache-read as SEPARATE buckets.
+    us = _usage_from({"input_tokens": 1000, "cache_read_input_tokens": 8000,
+                      "output_tokens": 500})
+    assert (us.input_tokens, us.cached_tokens, us.output_tokens) == (9000, 8000, 500)
+    # The load-bearing guard: cached must stay a subset, or estimate_cost zeroes the base.
+    assert us.cached_tokens <= us.input_tokens
+    cost = estimate_cost("claude-sonnet-4-5", us.input_tokens, us.output_tokens,
+                         us.cached_tokens)
+    assert cost == pytest.approx((1000 * 3.00 + 8000 * 0.30 + 500 * 15.00) / 1_000_000)
+
+
+def test_anthropic_usage_counts_cache_creation():
+    # Writing to the cache was previously dropped entirely (billed at $0).
+    us = _usage_from({"input_tokens": 0, "cache_creation_input_tokens": 9000,
+                      "output_tokens": 500})
+    assert (us.input_tokens, us.cached_tokens) == (9000, 0)
+    cost = estimate_cost("claude-sonnet-4-5", us.input_tokens, us.output_tokens,
+                         us.cached_tokens)
+    assert cost == pytest.approx((9000 * 3.00 + 500 * 15.00) / 1_000_000)
+
+
+def test_anthropic_usage_all_three_buckets():
+    us = _usage_from({"input_tokens": 200, "cache_read_input_tokens": 8000,
+                      "cache_creation_input_tokens": 1000, "output_tokens": 300})
+    assert (us.input_tokens, us.cached_tokens, us.output_tokens) == (9200, 8000, 300)
+
+
+def test_anthropic_usage_uncached_passthrough_and_null_safe():
+    us = _usage_from({"input_tokens": 500, "output_tokens": 100})
+    assert (us.input_tokens, us.cached_tokens, us.output_tokens) == (500, 0, 100)
+    # Anthropic may emit nulls for the cache buckets on non-cached calls.
+    empty = _usage_from({"input_tokens": None, "cache_read_input_tokens": None,
+                         "output_tokens": None})
+    assert (empty.input_tokens, empty.cached_tokens, empty.output_tokens) == (0, 0, 0)
+    assert _usage_from({}).input_tokens == 0
 
 
 # ---------------- rerank (graceful-degradation ordering) ----------------
