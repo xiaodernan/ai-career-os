@@ -19,9 +19,16 @@ import org.springframework.security.core.context.SecurityContextHolder;
 /**
  * Applies the Redis sliding-window limits:
  *  - /api/v1/auth/**  : per client IP, app.ratelimit.auth-per-minute (default 10/min)
- *  - /api/v1/ai*      : per authenticated user (falls back to IP), app.ratelimit.ai-per-minute (default 30/min)
+ *  - AI-costing paths : per authenticated user (falls back to IP), app.ratelimit.ai-per-minute (default 30/min)
  * Registered as a plain filter inside the security chain (see SecurityConfig) and toggled by
  * app.ratelimit.enabled. Over-limit requests receive HTTP 429 with the standard envelope, code RATE_LIMITED.
+ *
+ * <p>What counts as AI-costing is broader than the `/api/v1/ai/**` streaming routes. Every path
+ * in {@link #isAiCost} spends provider tokens or money, and the most expensive one — the copilot
+ * agent turn, which can run up to eight model calls plus tool work — is not under `/ai` at all.
+ * Limiting only `/ai` therefore left the costly endpoints effectively unthrottled. Read-only
+ * routes (job search, dashboards, listing) are deliberately excluded so normal browsing is not
+ * rate-limited.
  */
 public class RateLimitFilter extends org.springframework.web.filter.OncePerRequestFilter {
 
@@ -44,7 +51,7 @@ public class RateLimitFilter extends org.springframework.web.filter.OncePerReque
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
         String uri = request.getRequestURI();
-        boolean ai = uri.startsWith("/api/v1/ai");
+        boolean ai = !uri.startsWith("/api/v1/auth");
         int limit = ai ? props.getRatelimit().getAiPerMinute() : props.getRatelimit().getAuthPerMinute();
         String identity = ai ? userOrIp(request) : clientIp(request);
         String key = "ratelimit:" + (ai ? "ai:" : "auth:") + identity;
@@ -61,14 +68,29 @@ public class RateLimitFilter extends org.springframework.web.filter.OncePerReque
         chain.doFilter(request, response);
     }
 
-    private static String ruleFor(String uri) {
+    /** The bucket for a URI, or null when the path is not limited. Package-private for tests. */
+    static String ruleFor(String uri) {
         if (uri.startsWith("/api/v1/auth")) {
             return "auth";
         }
-        if (uri.startsWith("/api/v1/ai")) {
-            return "ai";
+        return isAiCost(uri) ? "ai" : null;
+    }
+
+    /**
+     * True for paths that invoke a model, an embedding, or the agent loop. Kept as an explicit
+     * list rather than a prefix sweep so cheap reads stay unthrottled.
+     */
+    static boolean isAiCost(String uri) {
+        if (uri.startsWith("/api/v1/ai")          // SSE streaming AI
+                || uri.startsWith("/api/v1/copilot")   // agent turn (most expensive)
+                || uri.startsWith("/api/v1/interview") // answer evaluation, finalize
+                || uri.startsWith("/api/v1/jds")       // JD analysis + suggestions
+                || uri.startsWith("/api/v1/knowledge/text")) { // embedding ingest
+            return true;
         }
-        return null;
+        // Sub-paths that trigger AI on an otherwise cheap resource.
+        return uri.matches("^/api/v1/resumes/[^/]+/parse/?$")
+                || uri.matches("^/api/v1/jobs/[^/]+/(match|tailor|cover-letter)/?$");
     }
 
     private static String userOrIp(HttpServletRequest request) {

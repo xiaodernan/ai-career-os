@@ -60,6 +60,58 @@ that rejects invented skills/numbers not present in the source evidence.
   production.
 - `ratelimit/RateLimitFilter` applies a Redis-backed sliding-window limit; it
   runs after JWT so AI-heavy endpoints can key limits off the user id.
+  - `/api/v1/auth/**` — 10/min per client IP.
+  - AI-costing paths — 30/min per user. This is an explicit list
+    (`RateLimitFilter.isAiCost`), not a prefix sweep: it covers the `/ai` SSE
+    routes **plus** `/copilot` (the agent turn, the single most expensive call),
+    `/interview`, `/jds`, `/knowledge/text`, `/resumes/{id}/parse` and
+    `/jobs/{id}/(match|tailor|cover-letter)`. Cheap reads (search, listings,
+    dashboards) are deliberately excluded so browsing is not throttled. Covered by
+    `RateLimitFilterTest`.
+  - **Fails open** when Redis is unavailable (logged at WARN) so an outage cannot
+    lock every user out. The tradeoff: during a Redis outage the limits do not
+    apply. Accept this only if availability outranks abuse protection for you.
+
+## PRD §30 review
+
+Audited against the eleven areas the PRD calls out. Findings are stated with their
+residual risk rather than as a clean bill of health.
+
+| Area | Result |
+| --- | --- |
+| SQL injection | **Clear.** Only four native queries exist (`JobSearchRepository`, `DashboardRepository`, `SearchRepository`); every value is bound as a parameter and only placeholder *indices* (`${len(args)}`) and an `int` limit are interpolated. `ORDER BY` cannot be parameterised, so it resolves through a whitelist map, not the request string. |
+| XSS | **Clear.** No `dangerouslySetInnerHTML` / `innerHTML` anywhere in the frontend; React escapes all model- and user-derived text. |
+| CSRF | **Not applicable by design.** No cookie credentials — the access token travels in `Authorization`, which a cross-site form cannot set. Spring CSRF is disabled for that reason, not by omission. |
+| SSRF | **Clear.** `externalUrl` on a job is stored and displayed but never fetched. The only outbound HTTP is to the configured LLM/embedding provider, whose endpoint comes from env, not from user input. |
+| Prompt injection | **Mitigated.** Untrusted resume/JD/web text is fenced by `wrap_untrusted` before entering a prompt, the system prompts state that fenced blocks are data, and generation passes a no-fabrication verifier. A safety scenario is pinned in the agent eval set (`tags=["safety","injection"]`). Residual risk: prompt injection is mitigated, never eliminated — treat generated text as untrusted on display. |
+| File upload | **Clear.** `storage/FileValidator` sniffs magic bytes (PDF `%PDF`, DOCX `PK\x03\x04`, UTF-8 text), caps size at 20 MB, and rejects anything else. Objects land in a private MinIO bucket under a random key; the original filename never becomes a path. |
+| Authorization bypass | **Clear.** Protected routes require a validated JWT; `/api/internal/**` is guarded by `InternalApiFilter` and ai-service by `X-Internal-Token`. |
+| Sensitive data leakage | **Clear.** No token/password/secret is logged (the only auth log line records a user id). Password hashes and refresh-token hashes are never serialised into a response DTO. Residual risk: `agent_traces` intentionally stores prompt/answer previews for the user-facing activity view — it is PII by nature and inherits whatever retention the DB has. |
+| IDOR | **Clear.** User-owned lookups go through `findByIdAndUserId` (`requireResume`, `requireVersion`, `ApplicationService.require`, `ConversationService.requireReadOnly`). Bare `findById` calls are either shared entities (jobs, companies) or ids obtained from an already user-scoped parent. |
+| API abuse | **Improved, see below.** |
+| Rate limiting | **Gap found and fixed, see below.** |
+
+### Findings
+
+1. **Rate limiting did not cover the expensive endpoints (fixed).**
+   `ruleFor` only matched `/api/v1/ai/**`, so `/copilot/chat` — an agent turn that
+   can run eight model calls plus tool work — and every other blocking AI endpoint
+   (`/interview`, `/jds`, `/jobs/{id}/match|tailor|cover-letter`,
+   `/resumes/{id}/parse`, `/knowledge/text`) were unthrottled. Coverage now
+   includes them, with `RateLimitFilterTest` pinning the classification.
+
+2. **`X-Forwarded-For` is trusted unconditionally (residual, deployment-dependent).**
+   `clientIp` reads the leftmost `X-Forwarded-For` entry. Behind a proxy that
+   *overwrites* the header this is correct and is what `RateLimitIT` exercises. If
+   the backend is ever exposed directly, a client can rotate a spoofed
+   `X-Forwarded-For` to get a fresh auth bucket per request and defeat login
+   throttling entirely. **Requirement: the backend must sit behind a reverse proxy
+   that sets (not appends) `X-Forwarded-For`.** Not changed in code because
+   removing the header trust would break the documented proxy deployment; flagged
+   here so the deployment posture is explicit.
+
+3. **Redis outage disables rate limiting (accepted tradeoff).** The limiter fails
+   open by design. Documented above rather than changed.
 
 ## Error envelope
 

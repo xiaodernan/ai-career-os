@@ -119,7 +119,14 @@ Known gaps, stated plainly rather than hidden:
   could not be served. It needs one live run.
 - Seeded jobs have no embeddings yet, so vector job search is inert until
   `ai-service/ops/embed_jobs.py` runs; keyword/skill search works today.
-- Security review against the PRD §30 checklist is tracked but not yet closed.
+
+A pass over the PRD §30 checklist is recorded in `docs/SECURITY.md`. It closed one
+real gap — the AI rate limit did not cover any of the blocking AI endpoints,
+including `/copilot/chat`, the most expensive call in the product — and documents
+two residual risks rather than papering over them: `X-Forwarded-For` is trusted
+for IP throttling (so the backend must sit behind a proxy that *sets* it, or
+login throttling can be spoofed away), and the limiter fails open when Redis is
+down.
 
 See `docs/product-plan.md` for the epic/task breakdown and
 `docs/architecture.md` for the system design.

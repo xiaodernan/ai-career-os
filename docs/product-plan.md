@@ -70,7 +70,7 @@ core → ai core → features → frontend → quality → delivery.
 - F9.2 RAG evaluation framework + dataset + first experiment report
 - F9.3 Agent evaluation (tool-selection accuracy, task completion on scripted scenarios)
 - F9.4 Playwright E2E: full flow PRD §35 (mock provider for CI; real provider manual)
-- F9.5 Security review pass vs PRD §30 checklist
+- F9.5 ✅ Security review pass vs PRD §30 checklist — [findings in SECURITY.md](SECURITY.md#prd-30-review)
 - F9.6 Nine delivery docs + production docker build + final demo verification
 
 ## Definition of Ready for each task
