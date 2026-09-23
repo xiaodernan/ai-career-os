@@ -86,6 +86,7 @@ export function useResumes() {
   });
 }
 
+/** GET /resume-versions?resumeId= returns a bare List<ResumeVersionItem{id,resumeId,label,kind,jobId,createdAt}>. */
 export function mapResumeVersions(raw: unknown): ResumeVersion[] {
   return listOf(raw, "versions", "resumeVersions", "resume_versions").map((v, i) => ({
     id: idStr(v, `v-${i}`),
@@ -93,12 +94,30 @@ export function mapResumeVersions(raw: unknown): ResumeVersion[] {
     label: str(v, "label", "name", "title"),
     versionNo: num(v, "versionNo", "version_no", "number", "index"),
     isCurrent: Boolean(pick(v, "isCurrent", "is_current", "current")),
-    source: str(v, "source", "origin"),
+    // The backend column is `kind` ("original" | "tailored"); `source` is only a legacy alias.
+    source: str(v, "kind", "source", "origin"),
     createdAt: str(v, "createdAt", "created_at"),
     score: normalizeResumeScore(v),
     structured: (pick(v, "structured", "structuredResume", "structured_resume") ??
       null) as ResumeVersion["structured"],
   }));
+}
+
+export async function fetchResumeVersions(resumeId: string): Promise<ResumeVersion[]> {
+  return mapResumeVersions(await api.get<unknown>(endpoints.resumeVersions, { resumeId }));
+}
+
+/**
+ * Versions live on their own route: the resume detail DTO has no versions array, so reading
+ * them off `useResume` yielded [] forever. The query key is prefixed by ["resume", id] so the
+ * existing invalidateQueries(["resume", resumeId]) after a parse or a "set current" refreshes it.
+ */
+export function useResumeVersions(resumeId: string | null) {
+  return useQuery({
+    queryKey: ["resume", resumeId, "versions"],
+    enabled: Boolean(resumeId),
+    queryFn: () => fetchResumeVersions(resumeId!),
+  });
 }
 
 export function useResume(id: string | null) {
@@ -115,7 +134,6 @@ export function useResume(id: string | null) {
         structured: (pick(body, "structured", "structuredResume", "structured_resume") ??
           null) as Resume["structured"],
         score: normalizeResumeScore(body),
-        versions: mapResumeVersions(body),
       };
     },
   });

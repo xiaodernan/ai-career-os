@@ -35,7 +35,7 @@ import { MatchRing } from "@/components/ai/match-ring";
 import { TaskProgress } from "@/components/ai/task-stream";
 import { AIBadge } from "@/components/ai/ai-badge";
 import { useParseResume, useSetCurrentResume } from "@/lib/hooks/actions";
-import { useResume } from "@/lib/hooks/resources";
+import { useResume, useResumeVersions } from "@/lib/hooks/resources";
 import { normalizeStructuredResume, normalizeTailorDiff, str } from "@/lib/api/normalize";
 import { formatDate, downloadText } from "@/lib/format";
 import type { ResumeProject, ResumeScore, StructuredResume } from "@/lib/api/types";
@@ -51,6 +51,7 @@ export default function ResumeDetailPage() {
   const params = useParams<{ id: string }>();
   const id = params?.id ?? null;
   const resume = useResume(id);
+  const versionsQ = useResumeVersions(id);
   const parse = useParseResume(id ?? "");
   const setCurrent = useSetCurrentResume(id ?? "");
   const [parseTask, setParseTask] = React.useState<string | null>(null);
@@ -103,7 +104,6 @@ export default function ResumeDetailPage() {
   }
 
   const structured = normalizeStructuredResume(r.structured);
-  const versions = r.versions ?? [];
 
   return (
     <div className="space-y-6">
@@ -235,8 +235,18 @@ export default function ResumeDetailPage() {
               />
             </CardHeader>
             <CardContent className="space-y-3">
-              {versions.length ? (
-                versions.map((v) => {
+              {versionsQ.isPending ? (
+                <Skeleton className="h-16 w-full" />
+              ) : versionsQ.isError ? (
+                <ErrorState
+                  className="px-0 py-6"
+                  title="Couldn't load versions"
+                  error={versionsQ.error}
+                  onRetry={() => void versionsQ.refetch()}
+                  retrying={versionsQ.isFetching}
+                />
+              ) : (versionsQ.data ?? []).length ? (
+                (versionsQ.data ?? []).map((v) => {
                   const isCurrent = v.isCurrent || v.id === r.currentVersionId;
                   const diff = v.diff ? normalizeTailorDiff(v.diff) : null;
                   return (
@@ -285,8 +295,7 @@ export default function ResumeDetailPage() {
                 })
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  No stored versions yet — versions appear after parsing and whenever you save a
-                  tailored draft.
+                  No stored versions yet — each parse of this resume stores a new one.
                 </p>
               )}
             </CardContent>
