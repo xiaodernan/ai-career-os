@@ -15,6 +15,10 @@ from app.rag.compress import compress
 from app.rag.rerank import rerank
 from app.rag.rewrite import understand
 
+# Extra full-text queries beyond the rewritten one. Each is a round trip, so the
+# multi-query expansion is bounded even though query understanding may return 8 keywords.
+KEYWORD_FANOUT = 4
+
 
 async def retrieve(query: str, *, user_id: str, run_id: str | None = None,
                    context_summary: str = "", top_k: int = 8,
@@ -45,9 +49,9 @@ async def retrieve(query: str, *, user_id: str, run_id: str | None = None,
     for v in vecs:
         lists.append(await store.vector_search(user_id, v, k=25, kinds=filter_kinds,
                                                document_ids=document_ids))
-    kw_terms = u["rewritten"] + " " + " ".join(u["keywords"])
-    lists.append(await store.keyword_search(user_id, kw_terms, k=25, kinds=filter_kinds,
-                                            document_ids=document_ids))
+    for phrase in keyword_phrases(u):
+        lists.append(await store.keyword_search(user_id, phrase, k=25, kinds=filter_kinds,
+                                                document_ids=document_ids))
     lists.append(await store.trigram_search(user_id, u["rewritten"], k=10,
                                             kinds=filter_kinds,
                                             document_ids=document_ids))
@@ -77,6 +81,24 @@ async def retrieve(query: str, *, user_id: str, run_id: str | None = None,
                                               "source": e["doc_title"],
                                               "section": e["section"],
                                               "text": e["quote"]} for e in evidence])}
+
+
+def keyword_phrases(u: dict) -> list[str]:
+    """Full-text queries to fan out over: the rewritten query plus each keyword.
+
+    One phrase per call, never one concatenation. `plainto_tsquery` ANDs every term it
+    is given, and a CJK run without spaces collapses to a *single* tsvector lexeme, so
+    `rewritten + all keywords` lets one unmatchable term veto the whole channel
+    (measured on live data: 'kafka' hits 5 chunks, '<zh question> Kafka Spring Boot
+    微服务' hits 0). Per phrase the AND stays inside a term group -- which is what
+    match.py relies on for 'Spring Boot' -- and RRF supplies the OR across them.
+    """
+    out: list[str] = []
+    for raw in [u["rewritten"], *u["keywords"]]:
+        phrase = " ".join((raw or "").split())
+        if phrase and phrase.lower() not in {p.lower() for p in out}:
+            out.append(phrase)
+    return out[:KEYWORD_FANOUT + 1]
 
 
 def to_evidence(compressed: list[dict]) -> list[dict]:

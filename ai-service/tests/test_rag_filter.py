@@ -142,12 +142,13 @@ async def test_retrieve_applies_caller_filters_to_every_channel(monkeypatch):
     vec, kw, tri = _patch_pipeline(monkeypatch, _understanding(), [chunk("c1", "resume")])
     await pipeline.retrieve("kafka experience", user_id="u", top_k=5,
                             kinds=["resume", "project"], document_ids=["doc-1"])
-    assert len(vec.calls) >= 1 and len(kw.calls) == 1 and len(tri.calls) == 1
+    assert len(vec.calls) >= 1 and len(kw.calls) >= 1 and len(tri.calls) == 1
     for rec in (vec, kw, tri):
-        assert rec.calls[0]["kwargs"].get("kinds") == ["resume", "project"], \
-            "a hybrid channel escaped the kinds restriction"
-        assert rec.calls[0]["kwargs"].get("document_ids") == ["doc-1"], \
-            "a hybrid channel escaped the document scope"
+        for call in rec.calls:
+            assert call["kwargs"].get("kinds") == ["resume", "project"], \
+                "a hybrid channel escaped the kinds restriction"
+            assert call["kwargs"].get("document_ids") == ["doc-1"], \
+                "a hybrid channel escaped the document scope"
 
 
 async def test_retrieve_applies_understanding_derived_filters_to_every_channel(monkeypatch):
@@ -158,6 +159,55 @@ async def test_retrieve_applies_understanding_derived_filters_to_every_channel(m
     await pipeline.retrieve("career goal", user_id="u")
     for rec in (vec, kw, tri):
         assert rec.calls[0]["kwargs"].get("kinds") == ["goal"]
+
+
+# ---------------- the FTS channel must not AND the whole query set ----------------
+
+
+def _phrases(**over):
+    u = _understanding()
+    u.update(over)
+    return pipeline.keyword_phrases(u)
+
+
+def test_keyword_phrases_are_one_per_term_group_not_one_giant_and():
+    """plainto_tsquery ANDs every term it is given, and a CJK run with no spaces becomes a
+    single tsvector lexeme — so feeding it `rewritten + all keywords` makes one
+    unmatchable term veto the entire channel (verified against live Postgres: 'kafka'
+    alone hits 5 chunks, 'rewritten-zh Kafka Spring Boot 微服务' hits 0)."""
+    got = _phrases(keywords=["Kafka", "Spring Boot", "微服务"])
+    assert got[0] == "backend experience with Kafka"
+    assert got[1:] == ["Kafka", "Spring Boot", "微服务"]
+    assert all(" Kafka Spring" not in p for p in got), "phrases must stay separate"
+
+
+def test_keyword_phrases_dedupe_and_collapse_whitespace():
+    got = _phrases(rewritten="  kafka   \n experience ",
+                   keywords=["KAFKA EXPERIENCE", "Kafka", "   ", "Redis"])
+    assert got == ["kafka experience", "Kafka", "Redis"]
+
+
+def test_keyword_phrases_capped_so_fanout_stays_bounded():
+    got = _phrases(keywords=[f"skill{i}" for i in range(8)])
+    assert len(got) == pipeline.KEYWORD_FANOUT + 1
+    assert got[0] == "backend experience with Kafka"
+
+
+def test_keyword_phrases_drop_blank_entries():
+    """understand() keeps any str, so blank/whitespace keywords do reach here."""
+    assert _phrases(rewritten="", keywords=["   ", "Kafka"]) == ["Kafka"]
+    assert _phrases(rewritten="", keywords=[]) == []
+
+
+async def test_retrieve_runs_one_fts_query_per_phrase_with_scoping(monkeypatch):
+    u = _understanding()
+    u["keywords"] = ["Kafka", "Redis"]
+    vec, kw, tri = _patch_pipeline(monkeypatch, u, [chunk("c1", "resume")])
+    await pipeline.retrieve("kafka", user_id="u", kinds=["resume"])
+    queries = [c["args"][1] for c in kw.calls]
+    assert queries == ["backend experience with Kafka", "Kafka", "Redis"]
+    for call in kw.calls:
+        assert call["kwargs"].get("kinds") == ["resume"]
 
 
 async def test_rrf_lets_an_unfiltered_channel_tail_hit_outrank_filtered_evidence():
