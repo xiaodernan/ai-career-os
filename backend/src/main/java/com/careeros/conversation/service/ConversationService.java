@@ -159,12 +159,18 @@ public class ConversationService {
         return history;
     }
 
-    private static String preview(String message) {
+    static String preview(String message) {
         if (message == null || message.isBlank()) {
             return "New chat";
         }
         String t = message.trim();
-        return t.length() <= 60 ? t : t.substring(0, 60) + "…";
+        if (t.length() <= 60) {
+            return t;
+        }
+        // Truncate on a code-point boundary: unit 59 is the last we keep, so if it is the high
+        // half of a surrogate pair we back off one unit rather than emit a lone surrogate.
+        int cut = Character.isHighSurrogate(t.charAt(59)) ? 59 : 60;
+        return t.substring(0, cut) + "…";
     }
 
     public static ConversationItem toItem(Conversation c) {
