@@ -32,12 +32,36 @@ async def create_run(user_id: str, agent: str, trigger: str, model: str = "",
     return run_id
 
 
+RUN_USAGE_SQL = """SELECT coalesce(sum(input_tokens), 0), coalesce(sum(output_tokens), 0),
+       coalesce(sum(cached_tokens), 0), coalesce(sum(cost_usd), 0)
+  FROM ai_usage_events WHERE run_id = $1::uuid"""
+
+
+async def _usage_of(run_id: str) -> tuple[int, int, int, float]:
+    """The totals a run's own LLM calls already recorded.
+
+    Most callers finish a run with only a latency (the copilot turn — the priciest path in the
+    product, up to eight model calls — never passes tokens at all), which left agent_runs'
+    rollup columns at zero while ai_usage_events held the real usage. The dashboard and the
+    activity page read the rollup, so they displayed a free-looking run that cost thousands of
+    tokens. Deriving it here means the number cannot be forgotten.
+    """
+    row = await db.fetchrow(RUN_USAGE_SQL, run_id)
+    if not row:
+        return 0, 0, 0, 0.0
+    return int(row[0]), int(row[1]), int(row[2]), float(row[3])
+
+
 async def finish_run(run_id: str, status: str, in_tok: int = 0, out_tok: int = 0,
                      cached: int = 0, cost: float = 0.0, latency_ms: int = 0,
                      error: str | None = None) -> None:
     # First terminal write wins. Every total below is `col = col + $n`, so a second finish
     # of the same run would bill and time it twice — and the one caller that finishes
     # 'completed' inside a try and 'failed' in its except makes that reachable.
+    # A caller that supplies any usage figure owns all of them; passing one and leaving the
+    # rest to the ledger would double-count the one it named.
+    if not (in_tok or out_tok or cached or cost):
+        in_tok, out_tok, cached, cost = await _usage_of(run_id)
     await db.execute(
         """UPDATE agent_runs SET status=$2, input_tokens=input_tokens+$3,
                output_tokens=output_tokens+$4, cached_tokens=cached_tokens+$5,

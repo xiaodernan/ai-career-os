@@ -58,9 +58,10 @@ async def rag_answer(req: AnswerReq, ctx: Ctx = Depends(require_internal)):
         messages=[LLMMessage("system", ANSWER_SYSTEM), LLMMessage("user", user_prompt)],
         temperature=0.3, max_tokens=1600),
         user_id=ctx.user_id, run_id=run_id, agent="rag", kind="rag_answer")
-    await observability.finish_run(run_id, "completed",
-                                  in_tok=llm.usage.input_tokens,
-                                  out_tok=llm.usage.output_tokens)
+    # No usage figures passed: the run's own events (this call plus the embeddings behind the
+    # evidence) are the ledger, and finish_run derives the rollup from them. Passing only this
+    # one response's usage would have undercounted the run.
+    await observability.finish_run(run_id, "completed")
     return {"answer": llm.text, "citations": evidence, "understanding": r["understanding"],
             "run_id": run_id}
 
