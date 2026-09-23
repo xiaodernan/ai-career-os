@@ -289,3 +289,46 @@ def test_derive_actions_match_without_job_id_yields_nothing():
     out = Outcome(artifacts=[{"type": "match", "job_id": None, "payload": {}}])
     _derive_actions(out)
     assert out.actions == []
+
+
+# ---------------- _tool_result_text / _emit (LLM-facing chokepoints) ----------------
+
+
+def test_tool_result_text_roundtrips_json_and_keeps_cjk_literal():
+    out = orchestrator._tool_result_text({"note": "简历经验", "n": 3, "ok": True})
+    assert json.loads(out) == {"note": "简历经验", "n": 3, "ok": True}
+    # ensure_ascii=False must survive — CJK may not be escaped to \uXXXX (token bloat,
+    # and this product's resumes/JDs are largely Chinese).
+    assert "简历" in out
+    assert "\\u" not in out
+
+
+def test_tool_result_text_stringifies_non_json_types_via_default():
+    from uuid import UUID
+    u = UUID("11111111-2222-3333-4444-555555555555")
+    out = orchestrator._tool_result_text({"id": u})  # UUID is not JSON-serialisable
+    assert str(u) in out  # default=str handled it, no TypeError escaping
+
+
+def test_tool_result_text_falls_back_to_str_on_unserialisable_structure():
+    circular: dict = {}
+    circular["self"] = circular  # json.dumps raises ValueError on a reference cycle
+    out = orchestrator._tool_result_text(circular)
+    assert isinstance(out, str) and out  # fell through to str(result), non-empty
+
+
+def test_tool_result_text_truncates_to_result_chars():
+    big = {"blob": "x" * (orchestrator.RESULT_CHARS + 500)}
+    full = json.dumps(big, ensure_ascii=False, default=str)
+    out = orchestrator._tool_result_text(big)
+    assert len(out) == orchestrator.RESULT_CHARS
+    assert full.startswith(out)
+
+
+def test_emit_publishes_only_when_task_id_present(monkeypatch):
+    calls: list[tuple] = []
+    monkeypatch.setattr(orchestrator.taskbus, "publish", lambda *a: calls.append(a))
+    orchestrator._emit(None, "status", {"step": "x"})
+    assert calls == []  # no task → nothing to fan out to
+    orchestrator._emit("t1", "status", {"step": "y"})
+    assert calls == [("t1", "status", {"step": "y"})]
