@@ -128,4 +128,26 @@ class JobSearchRepositoryTest {
         assertThat(sql).doesNotContain(":limit").doesNotContain(":offset");
         assertThat(bound).doesNotContain("limit", "offset");
     }
+
+    @Test
+    void everyLikeFilterBindsAnEscapedPattern() {
+        repo.search(fullFilters("salary"));
+        String sql = capturedSql();
+        assertThat(sql).doesNotContain("'%'||:q||'%'")
+                .doesNotContain("'%'||:location||'%'")
+                .doesNotContain("'%'||:company||'%'");
+        assertThat(occurrences(sql, "ILIKE"))
+                .as("every ILIKE needs ESCAPE '!': %s", sql)
+                .isEqualTo(occurrences(sql, "ESCAPE '!'"));
+        // :q stays raw for plainto_tsquery; only the LIKE side is a pattern
+        assertThat(bound).contains("q", "qLike", "locationLike", "companyLike");
+    }
+
+    private static int occurrences(String haystack, String needle) {
+        int n = 0;
+        for (int i = haystack.indexOf(needle); i >= 0; i = haystack.indexOf(needle, i + 1)) {
+            n++;
+        }
+        return n;
+    }
 }

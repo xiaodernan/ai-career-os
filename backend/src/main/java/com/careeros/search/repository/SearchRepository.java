@@ -1,5 +1,6 @@
 package com.careeros.search.repository;
 
+import com.careeros.common.LikePattern;
 import com.careeros.common.Times;
 import com.careeros.search.dto.SearchDtos.ApplicationHit;
 import com.careeros.search.dto.SearchDtos.CompanyHit;
@@ -33,8 +34,8 @@ public class SearchRepository {
                   FROM jobs j
                   JOIN companies c ON c.id = j.company_id
                  WHERE j.tsv @@ plainto_tsquery('simple', :q)
-                    OR j.title ILIKE '%'||:q||'%'
-                    OR c.name ILIKE '%'||:q||'%'
+                    OR j.title ILIKE :qLike ESCAPE '!'
+                    OR c.name ILIKE :qLike ESCAPE '!'
                  ORDER BY ts_rank(j.tsv, plainto_tsquery('simple', :q)) DESC, j.posted_at DESC
                  LIMIT :limit
                 """;
@@ -47,8 +48,8 @@ public class SearchRepository {
         String sql = """
                 SELECT id, name, industry, website
                   FROM companies
-                 WHERE name ILIKE '%'||:q||'%'
-                    OR COALESCE(industry, '') ILIKE '%'||:q||'%'
+                 WHERE name ILIKE :qLike ESCAPE '!'
+                    OR COALESCE(industry, '') ILIKE :qLike ESCAPE '!'
                  ORDER BY name ASC
                  LIMIT :limit
                 """;
@@ -60,7 +61,7 @@ public class SearchRepository {
         String sql = """
                 SELECT id, title, status, updated_at
                   FROM resumes
-                 WHERE user_id = :userId AND title ILIKE '%'||:q||'%'
+                 WHERE user_id = :userId AND title ILIKE :qLike ESCAPE '!'
                  ORDER BY updated_at DESC
                  LIMIT :limit
                 """;
@@ -73,7 +74,7 @@ public class SearchRepository {
                 SELECT id, title, left(content, 180), updated_at
                   FROM user_notes
                  WHERE user_id = :userId
-                   AND (title ILIKE '%'||:q||'%' OR content ILIKE '%'||:q||'%')
+                   AND (title ILIKE :qLike ESCAPE '!' OR content ILIKE :qLike ESCAPE '!')
                  ORDER BY updated_at DESC
                  LIMIT :limit
                 """;
@@ -85,14 +86,14 @@ public class SearchRepository {
         String sql = """
                 SELECT cv.id, cv.title,
                        (SELECT left(m.content, 180) FROM messages m
-                         WHERE m.conversation_id = cv.id AND m.content ILIKE '%'||:q||'%'
+                         WHERE m.conversation_id = cv.id AND m.content ILIKE :qLike ESCAPE '!'
                          ORDER BY m.created_at DESC LIMIT 1),
                        cv.updated_at
                   FROM conversations cv
                  WHERE cv.user_id = :userId
-                   AND (cv.title ILIKE '%'||:q||'%'
+                   AND (cv.title ILIKE :qLike ESCAPE '!'
                         OR EXISTS (SELECT 1 FROM messages m
-                                    WHERE m.conversation_id = cv.id AND m.content ILIKE '%'||:q||'%'))
+                                    WHERE m.conversation_id = cv.id AND m.content ILIKE :qLike ESCAPE '!'))
                  ORDER BY cv.updated_at DESC
                  LIMIT :limit
                 """;
@@ -105,7 +106,7 @@ public class SearchRepository {
                 SELECT id, title, company_name, status, updated_at
                   FROM applications
                  WHERE user_id = :userId
-                   AND (title ILIKE '%'||:q||'%' OR COALESCE(company_name, '') ILIKE '%'||:q||'%')
+                   AND (title ILIKE :qLike ESCAPE '!' OR COALESCE(company_name, '') ILIKE :qLike ESCAPE '!')
                  ORDER BY updated_at DESC
                  LIMIT :limit
                 """;
@@ -120,14 +121,28 @@ public class SearchRepository {
 
     private <T> List<T> rows(String sql, Params p, java.util.function.Function<Object[], T> mapper) {
         Query query = em.createNativeQuery(sql);
-        if (p.userId != null && sql.contains(":userId")) {
+        // Each group references a different subset (:userId, and only :jobs use the tsquery
+        // side), and Hibernate rejects a named bind the statement never mentions — so bind
+        // exactly what the SQL contains. :q is raw text for plainto_tsquery; :qLike is the
+        // same term with LIKE's wildcards escaped, so "a_b" matches itself instead of "axb".
+        if (p.userId != null && references(sql, "userId")) {
             query.setParameter("userId", p.userId);
         }
-        query.setParameter("q", p.q);
+        if (references(sql, "q")) {
+            query.setParameter("q", p.q);
+        }
+        if (references(sql, "qLike")) {
+            query.setParameter("qLike", LikePattern.contains(p.q));
+        }
         if (p.limit != null) {
             query.setParameter("limit", p.limit);
         }
         return ((List<Object[]>) query.getResultList()).stream().map(mapper).toList();
+    }
+
+    /** True only for a whole named parameter: ':q' must not match inside ':qLike'. */
+    private static boolean references(String sql, String param) {
+        return java.util.regex.Pattern.compile(":" + param + "\\b").matcher(sql).find();
     }
 
     /** Mutable builder so each query can bind its own extra params (limit). */

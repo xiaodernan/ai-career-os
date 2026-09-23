@@ -88,7 +88,8 @@ class SearchRepositoryTest {
     void companiesIsSharedCatalogBoundByQueryAndLimitOnly() {
         repo.companies("Acme", 5);
         assertThat(lastSql).doesNotContain(":userId");
-        assertThat(bound).containsExactlyInAnyOrder("q", "limit");
+        // companies has no tsvector, so the term arrives only as the escaped LIKE pattern
+        assertThat(bound).containsExactlyInAnyOrder("qLike", "limit");
     }
 
     @Test
@@ -116,5 +117,40 @@ class SearchRepositoryTest {
         bound.clear();
         call.accept(repo);
         return new HashSet<>(bound);
+    }
+
+    @Test
+    void everyLikeMatchTreatsTheTermAsALiteralNotAPattern() {
+        // '%'||:q||'%' hands user text to LIKE verbatim: "a_b" then matches "axb", "%"
+        // matches every row, and a term with a backslash finds nothing at all.
+        List<java.util.function.Consumer<SearchRepository>> calls = new java.util.ArrayList<>();
+        calls.add(r -> r.jobs(userId, "a_b", 1));
+        calls.add(r -> r.companies("a_b", 1));
+        calls.add(r -> r.resumes(userId, "a_b", 1));
+        calls.add(r -> r.notes(userId, "a_b", 1));
+        calls.add(r -> r.conversations(userId, "a_b", 1));
+        calls.add(r -> r.applications(userId, "a_b", 1));
+        for (java.util.function.Consumer<SearchRepository> call : calls) {
+            boundOf(call);
+            assertThat(lastSql).as("raw term used as a LIKE pattern").doesNotContain("'%'||:q||'%'");
+            assertThat(occurrences(lastSql, "ILIKE"))
+                    .as("every ILIKE needs ESCAPE '!': %s", lastSql)
+                    .isEqualTo(occurrences(lastSql, "ESCAPE '!'"));
+            assertThat(bound).as("escaped pattern bound for %s", lastSql).contains("qLike");
+        }
+        // ':q' survives only where a tsquery still consumes it, and the escaped value is a
+        // separate bind — one parameter cannot serve both roles.
+        boundOf(r -> r.jobs(userId, "a_b", 1));
+        assertThat(bound).contains("q", "qLike");
+        boundOf(r -> r.notes(userId, "a_b", 1));
+        assertThat(bound).doesNotContain("q");
+    }
+
+    private static int occurrences(String haystack, String needle) {
+        int n = 0;
+        for (int i = haystack.indexOf(needle); i >= 0; i = haystack.indexOf(needle, i + 1)) {
+            n++;
+        }
+        return n;
     }
 }

@@ -1,5 +1,6 @@
 package com.careeros.job.repository;
 
+import com.careeros.common.LikePattern;
 import com.careeros.common.Times;
 import com.careeros.job.dto.JobDtos.JobListItem;
 import java.util.List;
@@ -79,17 +80,17 @@ public class JobSearchRepository {
 
     private static void applyWhere(Filters f, StringBuilder sql) {
         if (f.q() != null && !f.q().isBlank()) {
-            sql.append(" AND (j.tsv @@ plainto_tsquery('simple', :q) OR j.title ILIKE '%'||:q||'%'"
-                    + " OR c.name ILIKE '%'||:q||'%')");
+            sql.append(" AND (j.tsv @@ plainto_tsquery('simple', :q) OR j.title ILIKE :qLike"
+                    + " ESCAPE '!' OR c.name ILIKE :qLike ESCAPE '!')");
         }
         if (f.location() != null && !f.location().isBlank()) {
-            sql.append(" AND j.location ILIKE '%'||:location||'%'");
+            sql.append(" AND j.location ILIKE :locationLike ESCAPE '!'");
         }
         if (f.remote() != null && !f.remote().isBlank()) {
             sql.append(" AND j.remote_type = :remote");
         }
         if (f.company() != null && !f.company().isBlank()) {
-            sql.append(" AND c.name ILIKE '%'||:company||'%'");
+            sql.append(" AND c.name ILIKE :companyLike ESCAPE '!'");
         }
         if (f.minSalary() != null) {
             sql.append(" AND j.salary_max >= :minSalary");
@@ -110,15 +111,18 @@ public class JobSearchRepository {
         query.setParameter("userId", f.userId());
         if (f.q() != null && !f.q().isBlank()) {
             query.setParameter("q", f.q());
+            query.setParameter("qLike", LikePattern.contains(f.q()));
         }
         if (f.location() != null && !f.location().isBlank()) {
-            query.setParameter("location", f.location());
+            // Only the escaped form reaches SQL now: a raw :location bind would be a
+            // parameter the statement never references.
+            query.setParameter("locationLike", LikePattern.contains(f.location()));
         }
         if (f.remote() != null && !f.remote().isBlank()) {
             query.setParameter("remote", f.remote());
         }
         if (f.company() != null && !f.company().isBlank()) {
-            query.setParameter("company", f.company());
+            query.setParameter("companyLike", LikePattern.contains(f.company()));
         }
         if (f.minSalary() != null) {
             query.setParameter("minSalary", f.minSalary());
