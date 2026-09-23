@@ -4,6 +4,7 @@ import com.careeros.ai.AiServiceClient;
 import com.careeros.common.ApiErrorCode;
 import com.careeros.common.ApiException;
 import com.careeros.common.Json;
+import com.careeros.common.Texts;
 import com.careeros.knowledge.entity.Document;
 import com.careeros.knowledge.entity.KnowledgeSource;
 import com.careeros.knowledge.repository.DocumentRepository;
@@ -138,7 +139,7 @@ public class FileIngestService {
         if (dot > 0) {
             base = base.substring(0, dot);
         }
-        return base.isBlank() ? "Untitled" : base.substring(0, Math.min(base.length(), 200));
+        return base.isBlank() ? "Untitled" : Texts.truncate(base, 200);
     }
 
     public static String sha256(byte[] content) {
@@ -155,7 +156,7 @@ public class FileIngestService {
             return null;
         }
         String text = new String(content, StandardCharsets.UTF_8);
-        return text.substring(0, Math.min(text.length(), 2000));
+        return Texts.truncate(text, 2000);
     }
 
     public Document requireDocument(UUID userId, UUID documentId) {

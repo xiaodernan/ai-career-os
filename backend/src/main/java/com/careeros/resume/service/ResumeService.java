@@ -5,6 +5,7 @@ import com.careeros.common.ApiErrorCode;
 import com.careeros.common.ApiException;
 import com.careeros.common.Json;
 import com.careeros.common.PageDTO;
+import com.careeros.common.Texts;
 import com.careeros.knowledge.entity.KnowledgeSource;
 import com.careeros.knowledge.repository.KnowledgeSourceRepository;
 import com.careeros.knowledge.service.FileIngestService;
@@ -501,6 +502,6 @@ public class ResumeService {
         if (text == null) {
             return null;
         }
-        return text.substring(0, Math.min(text.length(), 2000));
+        return Texts.truncate(text, 2000);
     }
 }

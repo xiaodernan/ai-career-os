@@ -5,6 +5,7 @@ import com.careeros.common.ApiErrorCode;
 import com.careeros.common.ApiException;
 import com.careeros.common.Json;
 import com.careeros.common.PageDTO;
+import com.careeros.common.Texts;
 import com.careeros.conversation.dto.ConversationDtos.ChatResponse;
 import com.careeros.conversation.dto.ConversationDtos.CreateConversationRequest;
 import com.careeros.conversation.dto.ConversationDtos.ConversationItem;
@@ -167,10 +168,7 @@ public class ConversationService {
         if (t.length() <= 60) {
             return t;
         }
-        // Truncate on a code-point boundary: unit 59 is the last we keep, so if it is the high
-        // half of a surrogate pair we back off one unit rather than emit a lone surrogate.
-        int cut = Character.isHighSurrogate(t.charAt(59)) ? 59 : 60;
-        return t.substring(0, cut) + "…";
+        return Texts.truncate(t, 60) + "…";
     }
 
     public static ConversationItem toItem(Conversation c) {
