@@ -92,12 +92,19 @@ async def trigram_search(user_id: str, query: str, k: int = 15,
     return [dict(r) for r in rows]
 
 
-async def get_chunks(chunk_ids: list[str], user_id: str | None = None) -> list[dict]:
+async def get_chunks(chunk_ids: list[str], user_id: str) -> list[dict]:
+    """Fetch chunks by id for the given viewer.
+
+    ``user_id`` is required, not optional: callers hand this a list of ids taken straight
+    from a request body, so the tenant predicate is the only thing keeping an enumerating
+    caller out of other users' documents. A default of None used to compile the filter
+    away (``$2 IS NULL OR ...``) and return the row.
+    """
     rows = await db.fetch(
         """SELECT c.id, c.document_id, c.user_id, c.text, c.section_path, c.meta,
                   d.title AS doc_title
            FROM document_chunks c JOIN documents d ON d.id = c.document_id
-           WHERE c.id = ANY($1::uuid[]) AND ($2::uuid IS NULL OR c.user_id = $2::uuid)""",
+           WHERE c.id = ANY($1::uuid[]) AND c.user_id = $2::uuid""",
         chunk_ids, user_id)
     return [dict(r) for r in rows]
 
