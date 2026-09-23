@@ -2,7 +2,9 @@ package com.careeros.job.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.careeros.job.dto.JobDtos.JobListItem;
 import com.careeros.job.dto.JobDtos.MatchSummary;
+import com.careeros.job.entity.Job;
 import com.careeros.job.entity.JobMatch;
 import java.lang.reflect.Field;
 import java.time.OffsetDateTime;
@@ -112,5 +114,101 @@ class JobServiceMapperTest {
         assertThat(s.matchedSkills()).isEmpty();
         assertThat(s.missingSkills()).isEmpty();
         assertThat(s.evidence()).isEmpty();
+    }
+
+    // ---------------- toItem / JobListItem ----------------
+
+    private static final UUID COMPANY_ID = UUID.fromString("22222222-2222-2222-2222-222222222222");
+    private static final UUID JOB_ID = UUID.fromString("33333333-3333-3333-3333-333333333333");
+    private static final OffsetDateTime POSTED_AT =
+            OffsetDateTime.of(2026, 4, 4, 12, 0, 0, 0, ZoneOffset.UTC);
+
+    private static Job populatedJob() {
+        Job job = new Job();
+        setField(job, "id", JOB_ID);
+        job.setCompanyId(COMPANY_ID);
+        job.setTitle("Senior Backend Engineer");
+        job.setLocation("Shanghai");
+        job.setRemoteType("hybrid");
+        job.setEmploymentType("contract");
+        job.setSalaryMin(30000);
+        job.setSalaryMax(50000);
+        job.setSalaryCurrency("CNY");
+        job.setExperienceYears(5);
+        job.setStatus("open");
+        job.setSource("crawler");
+        job.setExternalUrl("https://example.com/job/42");
+        job.setSkills(List.of("Java", "Go"));
+        setField(job, "postedAt", POSTED_AT);
+        return job;
+    }
+
+    @Test
+    void jobListItemMapsEveryFieldToItsOwnSlot() {
+        JobListItem item = JobService.toItem(populatedJob(), "Acme Corp");
+
+        assertThat(item.id()).isEqualTo(JOB_ID);
+        assertThat(item.title()).isEqualTo("Senior Backend Engineer");
+        assertThat(item.companyId()).isEqualTo(COMPANY_ID);
+        assertThat(item.companyName()).isEqualTo("Acme Corp");
+        assertThat(item.location()).isEqualTo("Shanghai");
+        assertThat(item.remoteType()).isEqualTo("hybrid");
+        assertThat(item.employmentType()).isEqualTo("contract");
+        assertThat(item.salaryMin()).isEqualTo(30000);
+        assertThat(item.salaryMax()).isEqualTo(50000);
+        assertThat(item.salaryCurrency()).isEqualTo("CNY");
+        assertThat(item.experienceYears()).isEqualTo(5);
+        assertThat(item.status()).isEqualTo("open");
+        assertThat(item.source()).isEqualTo("crawler");
+        assertThat(item.externalUrl()).isEqualTo("https://example.com/job/42");
+        assertThat(item.postedAt()).isEqualTo(POSTED_AT);
+        assertThat(item.skills()).containsExactly("Java", "Go");
+        // The list projection never carries match data; those slots stay null.
+        assertThat(item.matchOverall()).isNull();
+        assertThat(item.matchId()).isNull();
+    }
+
+    @Test
+    void theSalaryRangeSlotsNeverCross() {
+        // salaryMin / salaryMax are two adjacent Integers: swapping them compiles and renders an
+        // inverted range the whole UI then trusts.
+        JobListItem item = JobService.toItem(populatedJob(), "Acme Corp");
+
+        assertThat(item.salaryMin()).isEqualTo(30000);
+        assertThat(item.salaryMax()).isEqualTo(50000);
+        assertThat(item.salaryMin()).isLessThan(item.salaryMax());
+    }
+
+    @Test
+    void theAdjacentStringAndIntegerSlotsStayDistinct() {
+        JobListItem item = JobService.toItem(populatedJob(), "Acme Corp");
+
+        // companyName / location / remoteType / employmentType are four consecutive Strings, and
+        // salaryMin / salaryMax / experienceYears are three consecutive Integers.
+        assertThat(List.of(item.companyName(), item.location(), item.remoteType(),
+                item.employmentType())).doesNotHaveDuplicates();
+        assertThat(List.of(item.salaryMin(), item.salaryMax(), item.experienceYears()))
+                .doesNotHaveDuplicates();
+    }
+
+    @Test
+    void aBareJobFallsBackToEntityDefaultsAndNullOptionals() {
+        JobListItem item = JobService.toItem(new Job(), "Acme Corp");
+
+        assertThat(item.id()).isNull();
+        assertThat(item.postedAt()).isNull();
+        assertThat(item.companyId()).isNull();
+        assertThat(item.location()).isNull();
+        assertThat(item.externalUrl()).isNull();
+        assertThat(item.matchOverall()).isNull();
+        assertThat(item.matchId()).isNull();
+        assertThat(item.skills()).isEmpty();
+        // Entity-level defaults must pass through untouched.
+        assertThat(item.companyName()).isEqualTo("Acme Corp");
+        assertThat(item.remoteType()).isEqualTo("onsite");
+        assertThat(item.employmentType()).isEqualTo("full_time");
+        assertThat(item.salaryCurrency()).isEqualTo("CNY");
+        assertThat(item.status()).isEqualTo("open");
+        assertThat(item.source()).isEqualTo("user_paste");
     }
 }
