@@ -35,11 +35,14 @@ async def create_run(user_id: str, agent: str, trigger: str, model: str = "",
 async def finish_run(run_id: str, status: str, in_tok: int = 0, out_tok: int = 0,
                      cached: int = 0, cost: float = 0.0, latency_ms: int = 0,
                      error: str | None = None) -> None:
+    # First terminal write wins. Every total below is `col = col + $n`, so a second finish
+    # of the same run would bill and time it twice — and the one caller that finishes
+    # 'completed' inside a try and 'failed' in its except makes that reachable.
     await db.execute(
         """UPDATE agent_runs SET status=$2, input_tokens=input_tokens+$3,
                output_tokens=output_tokens+$4, cached_tokens=cached_tokens+$5,
                cost_usd=cost_usd+$6, latency_ms=latency_ms+$7, error=$8, finished_at=now()
-           WHERE id=$1::uuid""",
+           WHERE id=$1::uuid AND status NOT IN ('completed','failed')""",
         run_id, status, in_tok, out_tok, cached, cost, latency_ms, error)
 
 
