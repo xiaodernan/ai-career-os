@@ -150,6 +150,35 @@ describe("normalizeJob", () => {
     expect(j.latestMatch?.overall).toBe(90);
     expect(j.latestMatch?.matchedSkills).toEqual(["Go"]);
   });
+
+  it("unwraps a SavedJobItem envelope (GET /jobs/saved nests the job under `job`)", () => {
+    // Real shape: List<SavedJobItem{ job: JobListItem, note, savedAt }>.
+    const j = normalizeJob({
+      job: {
+        id: "8f1c-uuid",
+        title: "Senior Backend Engineer",
+        companyId: "co-1",
+        companyName: "Acme",
+        location: "Remote",
+        matchOverall: 0.72,
+        matchId: "m-3",
+      },
+      note: "referred by a friend",
+      savedAt: "2026-05-01T10:00:00Z",
+    });
+    expect(j.id).toBe("8f1c-uuid");
+    expect(j.title).toBe("Senior Backend Engineer");
+    expect(j.companyName).toBe("Acme");
+    expect(j.location).toBe("Remote");
+    expect(j.latestMatch?.overall).toBe(72);
+  });
+
+  it("still reads a flat JobListItem that carries no `job` envelope", () => {
+    const j = normalizeJob({ id: "job-5", title: "Data Engineer", companyName: "Beta" });
+    expect(j.id).toBe("job-5");
+    expect(j.title).toBe("Data Engineer");
+    expect(j.companyName).toBe("Beta");
+  });
 });
 
 describe("normalizeSkillGaps", () => {

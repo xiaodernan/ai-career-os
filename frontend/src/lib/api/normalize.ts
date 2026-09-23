@@ -266,6 +266,10 @@ export function normalizeSkillGaps(raw: unknown): SkillGap[] {
 /* --------------------------------- jobs ---------------------------------- */
 
 export function normalizeJob(raw: unknown): Job {
+  // GET /jobs/saved returns SavedJobItem{ job: JobListItem, note, savedAt } —
+  // the job is NESTED under `job`. Reading the wrapper's (absent) top-level
+  // keys rendered every saved card as "Untitled role" with a dead random id.
+  raw = rec(pick(raw, "job", "data")) ?? raw;
   const company = pick(raw, "company");
   // A job's match can arrive two ways: nested under `match`/`latestMatch` (the
   // detail response) or as FLAT scalars `matchOverall`/`matchId` on JobListItem
