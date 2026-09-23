@@ -702,6 +702,24 @@ def test_suggestions_handle_plain_string_required_skills():
     assert sugs[0]["type"] == "missing_required" and sugs[0]["skill"] == "Rust"
 
 
+def test_suggestions_survive_present_null_collections():
+    # The `structured` jsonb is Java-owned and can store `"experience": null` /
+    # `"skills": null` (a resume version whose LLM parse emitted null for those
+    # sections). `.get(k, [])` returns the stored None, and `for e in None` used to
+    # raise TypeError -> the analyze-jd suggestions endpoint 500'd. `or []` is the
+    # fix and mirrors the requiredSkills `or []` already used in this function.
+    resume = {"skills": None, "experience": None, "projects": None}
+    sugs = suggest_resume_improvements({"requiredSkills": [{"name": "Go"}]}, resume)
+    # no crash; Go is flagged missing and the null sections read as absent
+    assert any(s["type"] == "missing_required" and s["skill"] == "Go" for s in sugs)
+    assert "structure" in _types(sugs)   # projects null -> treated as no projects
+    assert "impact" in _types(sugs)      # experience null -> zero quantified bullets
+
+
+def test_suggestions_survive_whole_resume_missing():
+    assert isinstance(suggest_resume_improvements({"requiredSkills": []}, None), list)
+
+
 # ---------------- jd_analyze _backfill_skills (deterministic skill capture) ----------------
 
 

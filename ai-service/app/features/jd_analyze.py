@@ -57,10 +57,10 @@ def _backfill_skills(out: dict, raw_text: str) -> dict:
 def suggest_resume_improvements(jd: dict, resume_parsed: dict) -> list[dict]:
     """Rule-based, explainable suggestions: JD must-habs missing from resume."""
     resume_skills = {normalize(s.get("name", "")) for s in
-                     (resume_parsed or {}).get("skills", []) if isinstance(s, dict)}
+                     ((resume_parsed or {}).get("skills") or []) if isinstance(s, dict)}
     exp_text = " ".join(
         " ".join((e.get("bullets") or [])) for e in
-        (resume_parsed or {}).get("experience", [])).lower()
+        ((resume_parsed or {}).get("experience") or [])).lower()
     out = []
     for s in jd.get("requiredSkills") or []:
         name = s.get("name") if isinstance(s, dict) else str(s)
@@ -73,7 +73,7 @@ def suggest_resume_improvements(jd: dict, resume_parsed: dict) -> list[dict]:
     if not (resume_parsed or {}).get("projects"):
         out.append({"skill": "", "type": "structure",
                     "advice": "Add a projects section — this JD emphasizes hands-on delivery."})
-    quantified = sum(1 for e in (resume_parsed or {}).get("experience", [])
+    quantified = sum(1 for e in ((resume_parsed or {}).get("experience") or [])
                      for b in (e.get("bullets") or []) if any(c.isdigit() for c in b))
     if quantified < 2:
         out.append({"skill": "", "type": "impact",
