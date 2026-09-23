@@ -9,7 +9,8 @@ import pytest
 from app.core.ai import _coerce_json
 from app.core.taskbus import finish, gc_old_tasks, is_done, new_task, publish, sse, state, subscribe
 from app.features.cover_letter import _build_prompt, style_directives
-from app.features.interview import _trajectory_detail, decide_next
+from app.features.interview import (_trajectory_detail, advance, decide_next,
+                                    evaluate_answer, finalize)
 from app.features.jd_analyze import _backfill_skills, suggest_resume_improvements
 from app.features.tailor import _apply_changes, verify_no_fabrication
 from app.providers.pricing import estimate_cost
@@ -604,6 +605,58 @@ def test_trajectory_detail_handles_null_submaps_and_empty_turns():
 def test_trajectory_detail_omits_absent_seq_as_none():
     traj = _trajectory_detail([{"role": "interviewer"}])
     assert traj[0]["seq"] is None
+
+
+# ------------- interview LLM-failure graceful fallbacks (the report must survive) -------------
+
+
+async def test_evaluate_answer_falls_back_to_neutral_score_when_llm_fails(monkeypatch):
+    async def fake(*a, **k):
+        raise RuntimeError("provider down")
+    monkeypatch.setattr("app.features.interview.ask_json", fake)
+    ev = await evaluate_answer(mode="technical", question="q", answer="a", resume_ctx="ctx")
+    assert ev == {"score": 0.5, "question_was_answered": True}
+
+
+async def test_evaluate_answer_passes_through_model_output_on_success(monkeypatch):
+    async def fake(*a, **k):
+        return {"score": 0.8, "strengths": ["x"]}
+    monkeypatch.setattr("app.features.interview.ask_json", fake)
+    ev = await evaluate_answer(mode="technical", question="q", answer="a", resume_ctx="ctx")
+    assert ev["score"] == 0.8
+
+
+async def test_finalize_defaults_dims_and_overall_and_still_builds_trajectory_when_llm_fails(monkeypatch):
+    async def fake(*a, **k):
+        raise RuntimeError("provider down")
+    monkeypatch.setattr("app.features.interview.ask_json", fake)
+    turns = [{"seq": 0, "role": "interviewer", "content": "q"},
+             {"seq": 1, "role": "candidate", "content": "a"}]
+    out = await finalize(mode="mixed", turns=turns, resume_ctx="ctx")
+    assert out["dims"] == {}
+    assert out["overall"] == 0.5
+    assert out["trajectory_detail"] == _trajectory_detail(turns)
+
+
+async def test_finalize_keeps_model_dims_and_only_fills_absent_overall(monkeypatch):
+    async def fake(*a, **k):
+        return {"dims": {"technical_accuracy": 0.7}, "overall": 0.65}
+    monkeypatch.setattr("app.features.interview.ask_json", fake)
+    out = await finalize(mode="mixed", turns=[], resume_ctx="")
+    assert out["dims"] == {"technical_accuracy": 0.7}
+    assert out["overall"] == 0.65
+    assert out["trajectory_detail"] == []
+
+
+async def test_advance_falls_back_to_a_usable_next_topic_question_when_llm_fails(monkeypatch):
+    async def fake(*a, **k):
+        raise RuntimeError("provider down")
+    monkeypatch.setattr("app.features.interview.ask_json", fake)
+    out = await advance(mode="mixed", turns=[{"role": "candidate", "content": "a"}],
+                        difficulty=0.4, qnum=2, max_q=8, resume_ctx="", jd_topics=[])
+    assert out["action"] == "next_topic"
+    assert out["question"]  # non-empty so the session can keep going
+    assert out["difficulty"] == 0.4
 
 # ---------------- jd_analyze suggest_resume_improvements (rule engine) ----------------
 
