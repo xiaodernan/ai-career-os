@@ -15,6 +15,7 @@ import { JobFilterPanel } from "@/components/jobs/job-filters";
 import { AnalyzeJdDialog } from "@/components/jobs/analyze-jd-dialog";
 import { useJobs, useResumes, useResume, useSavedJobs } from "@/lib/hooks/resources";
 import { useUrlState } from "@/lib/hooks/use-url-state";
+import { normalizeStructuredResume } from "@/lib/api/normalize";
 import type { StructuredResume } from "@/lib/api/types";
 
 type FilterState = {
@@ -39,9 +40,10 @@ const DEFAULTS: FilterState = {
 };
 
 function skillsFrom(structured?: StructuredResume | null): string[] {
-  if (!structured) return [];
-  const grouped = (structured.skills ?? []).flatMap((g) => g.skills ?? []);
-  return [...new Set([...grouped, ...(structured.technologies ?? [])])].filter(Boolean).slice(0, 24);
+  const s = normalizeStructuredResume(structured);
+  if (!s) return [];
+  const grouped = (s.skills ?? []).flatMap((g) => g.skills ?? []);
+  return [...new Set([...grouped, ...(s.technologies ?? [])])].filter(Boolean).slice(0, 24);
 }
 
 export default function JobsPage() {

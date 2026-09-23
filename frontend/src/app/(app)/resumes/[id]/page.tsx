@@ -36,7 +36,7 @@ import { TaskProgress } from "@/components/ai/task-stream";
 import { AIBadge } from "@/components/ai/ai-badge";
 import { useParseResume, useSetCurrentResume } from "@/lib/hooks/actions";
 import { useResume } from "@/lib/hooks/resources";
-import { normalizeTailorDiff, str } from "@/lib/api/normalize";
+import { normalizeStructuredResume, normalizeTailorDiff, str } from "@/lib/api/normalize";
 import { formatDate, downloadText } from "@/lib/format";
 import type { ResumeProject, ResumeScore, StructuredResume } from "@/lib/api/types";
 
@@ -102,7 +102,7 @@ export default function ResumeDetailPage() {
     );
   }
 
-  const structured = r.structured as StructuredResume | null | undefined;
+  const structured = normalizeStructuredResume(r.structured);
   const versions = r.versions ?? [];
 
   return (

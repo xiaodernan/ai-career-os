@@ -23,6 +23,7 @@ import {
   normalizeSearch,
   serializeJobFilters,
   normalizeSkillGaps,
+  normalizeStructuredResume,
   normalizeTailor,
   normalizeTailorDiff,
   num,
@@ -809,5 +810,98 @@ describe("normalizeSuggestions / missingSkillGaps", () => {
       ],
     });
     expect(missingSkillGaps(sugs)).toEqual(["Go", "Kubernetes"]);
+  });
+});
+
+describe("normalizeStructuredResume", () => {
+  // Verbatim ai-service `parse_resume` output — this is exactly what
+  // ResumeService.persistParse stores in the `structured` jsonb.
+  const AISERVICE_SHAPED = {
+    profile: {
+      name: "Ada Lin",
+      headline: "Backend Engineer",
+      email: "ada@example.com",
+      phone: "+86 138",
+      location: "Shanghai",
+      links: { github: "https://github.com/ada", homepage: "ada.dev" },
+      summary: "Builds resilient services.",
+      yearsExperience: 5,
+    },
+    education: [
+      { school: "Fudan", degree: "BSc", field: "CS", startYear: 2014, endYear: 2018, gpa: "3.8", courses: ["OS"] },
+    ],
+    experience: [
+      { company: "Acme", title: "SDE II", start: "2020-01", end: "2023-06", location: "SH",
+        bullets: ["Cut p99 by 40%"], summary: "" },
+    ],
+    projects: [
+      { name: "gateway", role: "author", period: "2022", bullets: ["Rust"], tech: ["Rust", "gRPC"], url: "https://x" },
+    ],
+    skills: [
+      { name: "Java", category: "language", proficiency: null },
+      { name: "Kotlin", category: "language", proficiency: null },
+      { name: "Spring", category: "framework", proficiency: null },
+      { name: "Mlops", category: "other", proficiency: null },
+    ],
+    achievements: ["Hackathon winner"],
+    careerGoals: ["Staff engineer"],
+    preferredRoles: ["Platform"],
+    preferredLocations: ["Shanghai"],
+    missingSections: [],
+    warnings: [],
+  };
+
+  it("buckets flat {name,category} skills into grouped {group,skills[]} so badges render", () => {
+    const out = normalizeStructuredResume(AISERVICE_SHAPED);
+    expect(out?.skills).toEqual([
+      { group: "language", skills: ["Java", "Kotlin"], level: undefined },
+      { group: "framework", skills: ["Spring"], level: undefined },
+      { group: "other", skills: ["Mlops"], level: undefined },
+    ]);
+    // the exact consumer contract: every group must carry a non-empty skills[]
+    for (const g of out?.skills ?? []) expect((g.skills ?? []).length).toBeGreaterThan(0);
+  });
+
+  it("maps education startYear/endYear → start/end and field → major", () => {
+    const ed = normalizeStructuredResume(AISERVICE_SHAPED)?.education?.[0];
+    expect(ed).toMatchObject({ school: "Fudan", major: "CS", start: "2014", end: "2018" });
+  });
+
+  it("maps project tech → techStack and promotes profile.summary to the top level", () => {
+    const out = normalizeStructuredResume(AISERVICE_SHAPED);
+    expect(out?.projects?.[0]?.techStack).toEqual(["Rust", "gRPC"]);
+    expect(out?.summary).toBe("Builds resilient services.");
+  });
+
+  it("aliases experience title → role and keeps start/end/bullets", () => {
+    const exp = normalizeStructuredResume(AISERVICE_SHAPED)?.experience?.[0];
+    expect(exp).toMatchObject({ role: "SDE II", company: "Acme", start: "2020-01", end: "2023-06" });
+    expect(exp?.bullets).toEqual(["Cut p99 by 40%"]);
+  });
+
+  it("coerces an object-map of links into a string[] (renderer calls .slice on it)", () => {
+    const links = normalizeStructuredResume(AISERVICE_SHAPED)?.profile?.links;
+    expect(Array.isArray(links)).toBe(true);
+    expect(links).toContain("https://github.com/ada");
+  });
+
+  it("is idempotent on an already-grouped payload", () => {
+    const grouped = { skills: [{ group: "Languages", skills: ["Go"], level: "expert" }] };
+    expect(normalizeStructuredResume(grouped)?.skills).toEqual([
+      { group: "Languages", skills: ["Go"], level: "expert" },
+    ]);
+  });
+
+  it("puts a category-less flat skill in an unnamed group instead of dropping it", () => {
+    const out = normalizeStructuredResume({ skills: [{ name: "Solo" }] });
+    expect(out?.skills).toEqual([{ group: undefined, skills: ["Solo"], level: undefined }]);
+  });
+
+  it("returns null for absent input and an all-empty object for {} (no crash)", () => {
+    expect(normalizeStructuredResume(null)).toBeNull();
+    expect(normalizeStructuredResume(undefined)).toBeNull();
+    const empty = normalizeStructuredResume({});
+    expect(empty).not.toBeNull();
+    expect(empty && Object.values(empty).every((v) => v === undefined)).toBe(true);
   });
 });

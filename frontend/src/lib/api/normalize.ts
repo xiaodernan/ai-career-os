@@ -21,6 +21,12 @@ import type {
   ResumeScore,
   SearchResults,
   SkillGap,
+  ResumeExperience,
+  ResumeProfileSummary,
+  ResumeProject,
+  ResumeEducation,
+  ResumeSkillGroup,
+  StructuredResume,
   Suggestion,
   TailorChange,
   TailorDiff,
@@ -497,6 +503,117 @@ export function structuredResumeToMarkdown(raw: unknown): string {
   }
 
   return lines.join("\n").trim();
+}
+
+/**
+ * The `resume_versions.structured` jsonb is persisted verbatim from ai-service
+ * `parse_resume` (ResumeService.persistParse → `version.setStructured(parsed)`),
+ * whose schema is snake_case + flat: skills are `[{name,category,proficiency}]`,
+ * education dates are `startYear`/`endYear`, project tech is `tech`, and the
+ * summary lives under `profile.summary`. Both renderers here (`StructuredProfileView`
+ * and `skillsFrom`) expect the camel/grouped view model instead — so without this
+ * bridge the entire skill inventory renders as header-less empty badges and
+ * education dates silently vanish. Same alias policy as structuredResumeToMarkdown.
+ * Idempotent: an already-grouped payload (e.g. tailor output) passes through.
+ */
+export function normalizeStructuredResume(raw: unknown): StructuredResume | null {
+  const s = rec(pick(raw, "structured", "structuredResume", "structured_resume") ?? raw);
+  if (!s) return null;
+
+  const profile = rec(pick(s, "profile"));
+  const links = list<string>(profile ?? s, "links").map(String).filter(Boolean);
+  const viewProfile: ResumeProfileSummary = {
+    name: str(profile, "name"),
+    headline: str(profile, "headline", "title"),
+    email: str(profile, "email"),
+    phone: str(profile, "phone"),
+    location: str(profile, "location"),
+    links: links.length ? links : undefined,
+  };
+  const hasProfile = Object.values(viewProfile).some((v) => v !== undefined);
+
+  const experience: ResumeExperience[] = list(s, "experience", "workExperience", "work_experience")
+    .map((e): ResumeExperience => ({
+      company: str(e, "company", "organization", "organisation"),
+      role: str(e, "role", "title"),
+      location: str(e, "location"),
+      start: str(e, "start", "startDate", "start_date"),
+      end: str(e, "end", "endDate", "end_date"),
+      current: bool(e, "current"),
+      bullets: list<string>(e, "bullets", "highlights").map(String),
+      techStack: list<string>(e, "techStack", "tech_stack", "tech").map(String),
+    }));
+
+  const projects: ResumeProject[] = list(s, "projects").map((p): ResumeProject => ({
+    name: str(p, "name", "title"),
+    role: str(p, "role"),
+    period: str(p, "period"),
+    description: str(p, "description", "summary"),
+    bullets: list<string>(p, "bullets", "highlights").map(String),
+    techStack: list<string>(p, "techStack", "tech_stack", "tech").map(String),
+    url: str(p, "url", "link"),
+  }));
+
+  const education: ResumeEducation[] = list(s, "education").map((ed): ResumeEducation => ({
+    school: str(ed, "school", "institution"),
+    degree: str(ed, "degree"),
+    major: str(ed, "major", "field"),
+    start: str(ed, "start", "startDate", "start_date", "startYear", "start_year"),
+    end: str(ed, "end", "endDate", "end_date", "endYear", "end_year"),
+    gpa: str(ed, "gpa"),
+    courses: list<string>(ed, "courses").map(String),
+  }));
+
+  const achievements = list<string>(s, "achievements").map(String).filter(Boolean);
+  const technologies = list<string>(s, "technologies").map(String).filter(Boolean);
+  const careerGoals = list<string>(s, "careerGoals", "career_goals").map(String).filter(Boolean);
+  const preferredRoles = list<string>(s, "preferredRoles", "preferred_roles").map(String).filter(Boolean);
+  const preferredLocations = list<string>(s, "preferredLocations", "preferred_locations")
+    .map(String)
+    .filter(Boolean);
+
+  const group = (v: string[] | undefined) => (v && v.length ? v : undefined);
+  return {
+    profile: hasProfile ? viewProfile : undefined,
+    summary: str(s, "summary") ?? str(profile, "summary"),
+    experience: experience.length ? experience : undefined,
+    projects: projects.length ? projects : undefined,
+    education: education.length ? education : undefined,
+    skills: groupSkillBuckets(s),
+    achievements: group(achievements),
+    technologies: group(technologies),
+    careerGoals: group(careerGoals),
+    preferredRoles: group(preferredRoles),
+    preferredLocations: group(preferredLocations),
+  };
+}
+
+/**
+ * Bucket ai-service's flat `[{name,category}]` skills into the grouped view model
+ * the renderer expects (`{group, skills:string[]}`). Pre-grouped entries (a nested
+ * `skills`/`items` array) are carried through unchanged, so this is idempotent.
+ */
+function groupSkillBuckets(s: Record<string, unknown>): ResumeSkillGroup[] | undefined {
+  const out: ResumeSkillGroup[] = [];
+  const buckets = new Map<string, ResumeSkillGroup>();
+  for (const g of list(s, "skills")) {
+    const nested = list<string>(g, "skills", "items").map(String).filter(Boolean);
+    if (nested.length) {
+      out.push({ group: str(g, "group", "category", "name"), skills: nested, level: str(g, "level") });
+      continue;
+    }
+    const name = str(g, "name", "skill");
+    if (!name) continue;
+    const cat = str(g, "category", "group") ?? "";
+    let bucket = buckets.get(cat);
+    if (!bucket) {
+      bucket = { group: cat || undefined, skills: [] };
+      buckets.set(cat, bucket);
+      out.push(bucket);
+    }
+    if (!bucket.skills!.includes(name)) bucket.skills!.push(name);
+  }
+  return out.length ? out : undefined;
 }
 
 export function normalizeTailor(raw: unknown): TailorResponse {
