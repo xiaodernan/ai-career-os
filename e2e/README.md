@@ -1,0 +1,65 @@
+# e2e — Playwright golden-journey suite
+
+Drives the **real** stack through a real browser: PRD §35 says the golden flow
+"必须真正跑通", so nothing here stubs the API. What keeps it safe to re-run is
+that the backend runs with `LLM_PROVIDER=mock` / `EMBEDDING_PROVIDER=hash`, so
+every AI call is deterministic and free while still traversing the real
+orchestrator, retrieval and persistence paths.
+
+## What it covers (PRD §35)
+
+| Spec | Flow |
+| --- | --- |
+| account and session | Register → land in the app → sign in again; wrong password refused |
+| resume becomes a knowledge base | Upload file → parse → knowledge source listed → visible in `/resumes` |
+| find a role and understand the match | Search corpus → open role → evidence-backed match → tailor + cited cover letter |
+| track the application | Save role → create application → move stage → timeline → kanban agrees |
+| interview practice | Create session → opening → answer → scored follow-up → finalize report |
+| copilot and observability | Copilot artifact → run recorded → trace shows the llm/tool loop → usage summary |
+
+## Prerequisites
+
+Three services must be up, plus the infrastructure they need:
+
+```bash
+docker-compose up -d postgres redis minio
+docker-compose run --rm seed-jobs            # 12 companies / 41 roles
+
+cd backend   && APP_ENV=dev SERVER_PORT=8080 bash ../scripts/mvn.sh spring-boot:run
+cd ai-service && LLM_PROVIDER=mock EMBEDDING_PROVIDER=hash .venv/Scripts/python -m uvicorn app.main:app --port 8000
+cd frontend  && npx next dev -p 3000
+```
+
+## Run
+
+```bash
+cd e2e && npm install && npx playwright install chromium
+npx playwright test                 # headless
+npx playwright test --headed        # watch it
+npx playwright show-report          # HTML report (gitignored)
+```
+
+## Two traps worth knowing
+
+**1. Visit the frontend as `localhost`, not `127.0.0.1`.**
+The backend allows exactly the origins in `APP_CORS_ORIGINS`
+(default `http://localhost:3000`). A browser treats `localhost` and `127.0.0.1`
+as *different* origins, so browsing via the IP makes every call fail with
+`Invalid CORS request`. Override with `E2E_BASE_URL` if your allowlist differs.
+
+**2. Don't add custom request headers.**
+The backend's CORS allowlist covers only the headers the app actually sends. An
+extra header (e.g. a tracing tag) fails preflight with
+`Request header field X is not allowed by Access-Control-Allow-Headers`, which
+surfaces as a silent login failure.
+
+## Env overrides
+
+| Var | Default | Meaning |
+| --- | --- | --- |
+| `E2E_BASE_URL` | `http://localhost:3000` | frontend origin (must be CORS-allowed) |
+| `E2E_API_URL` | `http://127.0.0.1:8080/api/v1` | backend API base |
+| `E2E_AI_URL` | `http://127.0.0.1:8000` | ai-service, used for the readiness probe |
+
+Each run registers a **fresh** account (`e2e+<stamp>@careeros.test`) through the
+API, so the suite is idempotent and never touches an existing user's data.

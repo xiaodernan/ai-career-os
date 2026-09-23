@@ -68,7 +68,7 @@ cd frontend    && npm test             # vitest: API normalizers, formatters, SS
 cd ai-service  && python -m pytest     # unit + orchestrator + eval metrics (offline: LLM_PROVIDER=mock EMBEDDING_PROVIDER=hash)
 cd backend     && mvn test             # unit tests (offline); *IT integration tests need Docker/Testcontainers
 # RAG eval (needs the DB/infra running): cd ai-service && python -m app.eval.run_eval --user-id <uuid> [--answer]
-# e2e/ Playwright golden-journey suite is planned (roadmap F9.4) and not yet in the repo
+cd e2e && npm install && npx playwright test   # PRD §35 golden journey; needs all three services up (see e2e/README.md)
 ```
 
 ## Repo map
