@@ -144,18 +144,18 @@ async def calculate_match(user_id: str, *, job_id: str, resume_version_id: str =
     from app.features.jd_analyze import analyze_jd
     from app.features.match import compute_match, persist_match
 
-    structured, _ = (await domain.get_resume_version(resume_version_id, user_id)
-                     if resume_version_id
-                     else await domain.get_current_resume_version(user_id)) or (None, None)
+    rv = (await domain.get_resume_version(resume_version_id, user_id)
+          if resume_version_id
+          else await domain.get_current_resume_version(user_id))
+    structured = (rv or {}).get("structured")
     import json as _j
 
     if isinstance(structured, str):
         structured = _j.loads(structured)
-    if not structured:
+    if not rv or not structured:
         return {"error": "no parsed resume; ask the user to upload one"}
     jd = await analyze_jd(job["description"], user_id=user_id)
     result = await compute_match(structured, jd, user_id=user_id, job_id=job_id)
-    rv = await domain.get_current_resume_version(user_id)
     await persist_match(user_id, job_id, str(rv["id"]), result)
     return {"match": result, "job": {"id": job_id, "title": job["title"],
                                      "company": job.get("company_name")}}
@@ -278,7 +278,8 @@ async def get_user_profile(user_id: str) -> dict:
         structured = _j.loads(structured)
     return {"user": u, "profile": p, "memories": memories,
             "resume_headline": ((structured or {}).get("profile") or {}).get("headline"),
-            "skills": [s.get("name") for s in (structured or {}).get("skills", [])][:30]}
+            "skills": [s.get("name") for s in ((structured or {}).get("skills") or [])
+                       if isinstance(s, dict)][:30]}
 
 
 # ---------------- registry ----------------
