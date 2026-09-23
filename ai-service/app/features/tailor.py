@@ -106,7 +106,7 @@ def _apply_changes(structured: dict, changes: list[dict], out: dict,
                 bullets[idx] = b_after
             item["bullets"] = bullets
     if out.get("summary") and verify_no_fabrication(resume_text, "", out["summary"]) is None:
-        t.setdefault("profile", {})["summary"] = out["summary"]
+        t["profile"] = {**(t.get("profile") or {}), "summary": out["summary"]}
     skill_order = [s for s in (out.get("skillOrder") or [])
                    if normalize(s) in {normalize(x) for x in resume_text.split()}
                    or normalize(s) in {normalize(s2.get("name", ""))

@@ -43,8 +43,8 @@ async def parse_resume(text: str, *, user_id=None, run_id=None) -> dict:
     text_skills = extract_skills(text)
     llm_skills = [s for s in raw.get("skills") or [] if isinstance(s, dict) and s.get("name")]
     raw["skills"] = _merge_skills(llm_skills, text_skills)
-    raw.setdefault("missingSections", [])
-    raw.setdefault("warnings", [])
+    raw["missingSections"] = raw.get("missingSections") or []
+    raw["warnings"] = raw.get("warnings") or []
     for section, key in (("experience", "experience"), ("projects", "projects"),
                          ("education", "education"), ("skills", "skills")):
         if not raw.get(key) and section not in raw["missingSections"]:

@@ -10,7 +10,7 @@ showing a broken number. Changing the weights would move every stored score, whi
 is a product decision, so the max is asserted as-is.
 """
 
-from app.features.resume_parse import _merge_skills, compute_resume_score
+from app.features.resume_parse import _merge_skills, compute_resume_score, parse_resume
 
 _CRITERIA = {
     "has_contact", "has_summary", "has_experience", "experience_has_bullets",
@@ -126,3 +126,32 @@ def test_merge_skills_dedups_case_insensitively():
 
 def test_merge_skills_empty_inputs():
     assert _merge_skills([], []) == []
+
+
+# ---------------- parse_resume null-collection guard ----------------
+
+
+async def test_parse_resume_survives_null_missingsections_and_warnings(monkeypatch):
+    # Regression: the model may emit "missingSections": null / "warnings": null
+    # (JSON-mode does this when it finds nothing). The old raw.setdefault(...) only
+    # defaulted *missing* keys, so a present-null stayed None and the
+    # missingSections append crashed with AttributeError. parse_resume must coerce
+    # present-null to [] exactly like its sibling raw.get("skills") or [] guards.
+    async def fake_ask_json(*a, **k):
+        return {"profile": {"name": "Ada"}, "missingSections": None, "warnings": None}
+    monkeypatch.setattr("app.features.resume_parse.ask_json", fake_ask_json)
+    out = await parse_resume("Built dashboards with Python and React.")
+    assert isinstance(out["missingSections"], list)
+    assert isinstance(out["warnings"], list)
+    # sections absent from the parsed output are recorded, not swallowed.
+    assert "experience" in out["missingSections"]
+    assert "projects" in out["missingSections"]
+
+
+async def test_parse_resume_keeps_populated_missingsections(monkeypatch):
+    async def fake_ask_json(*a, **k):
+        return {"profile": {"name": "Ada"}, "missingSections": ["achievements"],
+                "warnings": []}
+    monkeypatch.setattr("app.features.resume_parse.ask_json", fake_ask_json)
+    out = await parse_resume("Ran Kafka pipelines.")
+    assert "achievements" in out["missingSections"]

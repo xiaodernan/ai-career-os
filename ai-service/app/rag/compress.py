@@ -36,7 +36,8 @@ def compress(query_terms: list[str], chunks: list[dict], min_keep: float = 0.12)
             if len(keep_idx) >= floor:
                 break
             keep_idx.add(i)
-        kept = " ".join(s for _, i, s in sorted(x for x in scored if x[1] in keep_idx))
+        kept = " ".join(s for _, i, s in sorted((x for x in scored if x[1] in keep_idx),
+                                                 key=lambda x: x[1]))
         c = dict(c)
         c["text_original"] = c["text"]
         c["text"] = kept[:2400]

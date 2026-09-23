@@ -125,6 +125,15 @@ def test_compress_floor_keeps_minimum_sentences():
     assert kept >= 2  # floor of 12% of 20 sentences
 
 
+def test_compress_preserves_original_sentence_order():
+    # Regression: reconstruction must join kept sentences in DOCUMENT order, not by
+    # query-overlap score. Here sentence 0 has overlap 2 and sentence 1 overlap 1; the
+    # buggy default-tuple sort ordered them by ascending overlap, reversing the text.
+    chunks = [{"id": "1", "text": "The Kafka AWS broker runs. Just Kafka here."}]
+    out = compress(["kafka", "aws"], chunks)
+    assert out[0]["text"] == "The Kafka AWS broker runs. Just Kafka here."
+
+
 # ---------------- verify_no_fabrication ----------------
 
 BASE_RESUME = "Built order services in Java with Spring Boot and MySQL, cut p99 latency by 40%."
@@ -213,6 +222,22 @@ def test_apply_changes_drops_skill_order_entries_not_on_the_resume():
     t = _apply_changes(structured, [], {"skillOrder": ["Kafka", "MySQL"]},
                        "Java resume")
     assert [s["name"] for s in t["skills"]] == ["MySQL", "Java"]
+
+
+def test_apply_changes_summary_survives_null_profile_from_storage():
+    # Regression: `structured` is loaded straight from the resume_versions.structured
+    # jsonb (Java-owned), so `profile` can be an explicit null. The old
+    # t.setdefault("profile", {})["summary"]=... returned None for a present-null key
+    # and then crashed on None["summary"]. Must coerce to a dict and set summary.
+    t = _apply_changes({"profile": None}, [], {"summary": "Java engineer"},
+                       "Java and Spring Boot engineer")
+    assert t["profile"]["summary"] == "Java engineer"
+
+
+def test_apply_changes_summary_creates_profile_when_key_absent():
+    t = _apply_changes({}, [], {"summary": "Java engineer"},
+                       "Java and Spring Boot engineer")
+    assert t["profile"] == {"summary": "Java engineer"}
 
 
 # ---------------- pricing ----------------
