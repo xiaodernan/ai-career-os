@@ -48,7 +48,9 @@ async def retrieve(query: str, *, user_id: str, run_id: str | None = None,
     kw_terms = u["rewritten"] + " " + " ".join(u["keywords"])
     lists.append(await store.keyword_search(user_id, kw_terms, k=25, kinds=filter_kinds,
                                             document_ids=document_ids))
-    lists.append(await store.trigram_search(user_id, u["rewritten"], k=10))
+    lists.append(await store.trigram_search(user_id, u["rewritten"], k=10,
+                                            kinds=filter_kinds,
+                                            document_ids=document_ids))
 
     merged = store.rrf_merge(lists)
     if run_id:
