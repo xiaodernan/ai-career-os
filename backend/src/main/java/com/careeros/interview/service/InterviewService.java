@@ -19,6 +19,8 @@ import com.careeros.interview.entity.InterviewTurn;
 import com.careeros.interview.repository.InterviewEvaluationRepository;
 import com.careeros.interview.repository.InterviewSessionRepository;
 import com.careeros.interview.repository.InterviewTurnRepository;
+import com.careeros.job.repository.CompanyRepository;
+import com.careeros.job.repository.JobRepository;
 import java.time.OffsetDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -35,13 +37,18 @@ public class InterviewService {
     private final InterviewSessionRepository sessions;
     private final InterviewTurnRepository turns;
     private final InterviewEvaluationRepository evaluations;
+    private final JobRepository jobs;
+    private final CompanyRepository companies;
     private final AiServiceClient ai;
 
     public InterviewService(InterviewSessionRepository sessions, InterviewTurnRepository turns,
-                            InterviewEvaluationRepository evaluations, AiServiceClient ai) {
+                            InterviewEvaluationRepository evaluations, JobRepository jobs,
+                            CompanyRepository companies, AiServiceClient ai) {
         this.sessions = sessions;
         this.turns = turns;
         this.evaluations = evaluations;
+        this.jobs = jobs;
+        this.companies = companies;
         this.ai = ai;
     }
 
@@ -71,6 +78,21 @@ public class InterviewService {
         session.setResumeVersionId(request.resumeVersionId());
         session.setCompanyName(request.companyName());
         session.setPositionTitle(request.positionTitle());
+        // The UI starts a job-targeted session with only job_id, so without this copy the row
+        // is born without a role or company and every screen naming the target stays blank.
+        // Text the caller supplied wins — including text the job cannot know about — and a
+        // job row that is gone (job_id has ON DELETE SET NULL) leaves the fields untouched.
+        if (request.jobId() != null) {
+            jobs.findById(request.jobId()).ifPresent(job -> {
+                if (isBlank(request.positionTitle())) {
+                    session.setPositionTitle(job.getTitle());
+                }
+                if (isBlank(request.companyName())) {
+                    companies.findById(job.getCompanyId())
+                            .ifPresent(c -> session.setCompanyName(c.getName()));
+                }
+            });
+        }
         if (request.mode() != null && !request.mode().isBlank()) {
             session.setMode(request.mode());
         }
@@ -250,8 +272,11 @@ public class InterviewService {
         return map;
     }
 
-    static SessionItem toItem(InterviewSession s) {
-        return new SessionItem(s.getId(), s.getJobId(), s.getJdId(), s.getResumeVersionId(),
+    private static boolean isBlank(String value) {
+        return value == null || value.isBlank();
+    }
+
+    static SessionItem toItem(InterviewSession s) {        return new SessionItem(s.getId(), s.getJobId(), s.getJdId(), s.getResumeVersionId(),
                 s.getCompanyName(), s.getPositionTitle(), s.getMode(), s.getStatus(),
                 s.getDifficulty(), s.getConfig(), s.getStartedAt(), s.getFinishedAt());
     }
