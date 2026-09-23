@@ -153,7 +153,12 @@ export function normalizeEvidence(raw: unknown): Evidence[] {
         docId:
           str(src, "docId", "doc_id", "documentId", "document_id") ??
           str(e, "documentId", "document_id", "docId", "doc_id"),
-        kind: str(src, "kind", "type", "sourceType", "source_type"),
+        kind:
+          str(src, "kind", "type", "sourceType", "source_type") ??
+          // ai-service `to_evidence` emits `source_kind` at the TOP level (flat
+          // evidence, no nested source object) — mirror the docTitle/docId
+          // fallbacks above or the citation's source type is silently dropped.
+          str(e, "sourceKind", "source_kind", "kind"),
         path: pathOf(src, "path", "section", "sections", "breadcrumbs") ?? pathOf(e, "path", "section"),
       },
       href: str(e, "href", "url"),

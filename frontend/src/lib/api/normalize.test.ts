@@ -96,6 +96,29 @@ describe("normalizeEvidence", () => {
       source: { docTitle: "Resume" },
     });
   });
+
+  it("reads source_kind/document_id/doc_title from a flat ai-service to_evidence item", () => {
+    // Exact shape produced by ai-service app/rag/pipeline.py::to_evidence.
+    const ev = normalizeEvidence([
+      {
+        ref: 1,
+        chunk_id: "c-1",
+        document_id: "doc-9",
+        doc_title: "resume-v3",
+        source_kind: "resume",
+        section: "Experience › Acme",
+        quote: "shipped the API",
+        score: 0.62,
+      },
+    ]);
+    expect(ev[0].source).toMatchObject({ kind: "resume", docId: "doc-9", docTitle: "resume-v3" });
+    expect(ev[0].source?.path).toEqual(["Experience", "Acme"]);
+  });
+
+  it("prefers a nested source.kind over the flat fallback", () => {
+    const ev = normalizeEvidence([{ source_kind: "note", source: { kind: "jd" } }]);
+    expect(ev[0].source?.kind).toBe("jd");
+  });
 });
 
 describe("normalizeMatch", () => {
