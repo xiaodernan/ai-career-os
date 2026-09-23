@@ -17,7 +17,9 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { ProcessingSteps, type ProcessingStep } from "@/components/ai/processing-steps";
 import { AIBadge } from "@/components/ai/ai-badge";
-import { useAnalyzeJd, type JdAnalysis } from "@/lib/hooks/actions";
+import { useAnalyzeJd, useResumeSuggestions, type JdAnalysis } from "@/lib/hooks/actions";
+import { missingSkillGaps } from "@/lib/api/normalize";
+import type { Suggestion } from "@/lib/api/types";
 import { ApiError } from "@/lib/api/client";
 
 /**
@@ -46,11 +48,13 @@ export function AnalyzeJdDialog({ onUseText }: { onUseText?: (text: string) => v
   const [text, setText] = React.useState("");
   const [result, setResult] = React.useState<JdAnalysis | null>(null);
   const analyze = useAnalyzeJd();
+  const suggest = useResumeSuggestions();
 
   React.useEffect(() => {
     if (!open) {
       setResult(null);
       analyze.reset();
+      suggest.reset();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -58,7 +62,13 @@ export function AnalyzeJdDialog({ onUseText }: { onUseText?: (text: string) => v
   const run = () => {
     const value = text.trim();
     if (value.length < 40) return;
-    analyze.mutate(value, { onSuccess: setResult });
+    analyze.mutate(value, {
+      onSuccess: (res) => {
+        setResult(res);
+        // /jds never returns suggestions; compare against the parsed resume via /jds/suggestions.
+        suggest.mutate({ jdRaw: value });
+      },
+    });
   };
 
   const error = analyze.error;
@@ -103,7 +113,11 @@ export function AnalyzeJdDialog({ onUseText }: { onUseText?: (text: string) => v
             {result && (
               <div className="space-y-4">
                 <ProcessingSteps steps={stepsFor(false, true)} className="mb-4" />
-                <JdResult result={result} />
+                <JdResult
+                  result={result}
+                  suggestions={suggest.data?.suggestions ?? []}
+                  loading={suggest.isPending}
+                />
               </div>
             )}
           </div>
@@ -135,16 +149,28 @@ export function AnalyzeJdDialog({ onUseText }: { onUseText?: (text: string) => v
   );
 }
 
-function JdResult({ result }: { result: JdAnalysis }) {
+function JdResult({
+  result,
+  suggestions,
+  loading,
+}: {
+  result: JdAnalysis;
+  suggestions: Suggestion[];
+  loading?: boolean;
+}) {
+  // /jds returns neither a resume-comparison gap nor suggestions; fall back to the
+  // missing-required skills the /jds/suggestions engine derived against the resume.
+  const gap = result.skillGap.length ? result.skillGap : missingSkillGaps(suggestions);
   const groups: { title: string; items: string[]; variant?: "ai" | "outline" | "warning" }[] = [
     { title: "Required skills", items: result.requiredSkills, variant: "ai" },
     { title: "Preferred skills", items: result.preferredSkills },
     { title: "Hidden requirements", items: result.hiddenRequirements, variant: "warning" },
     { title: "Interview topics", items: result.interviewTopics },
-    { title: "Your skill gap", items: result.skillGap, variant: "warning" },
+    { title: "Your skill gap", items: gap, variant: "warning" },
   ];
   const visible = groups.filter((g) => g.items.length > 0);
-  const nothing = !visible.length && !result.responsibilities.length && !result.suggestions.length;
+  const nothing =
+    !visible.length && !result.responsibilities.length && !suggestions.length && !loading;
 
   return (
     <div className="space-y-4">
@@ -181,13 +207,16 @@ function JdResult({ result }: { result: JdAnalysis }) {
         </section>
       ))}
 
-      {result.suggestions.length > 0 && (
+      {(suggestions.length > 0 || loading) && (
         <section className="space-y-2">
           <h4 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
             Resume improvement suggestions
           </h4>
+          {loading && !suggestions.length && (
+            <p className="text-sm text-muted-foreground">Comparing with your resume…</p>
+          )}
           <ul className="space-y-2">
-            {result.suggestions.slice(0, 8).map((s, i) => (
+            {suggestions.slice(0, 8).map((s, i) => (
               <li key={i} className="rounded-lg border border-border/70 bg-card p-3 text-sm">
                 {s.title && <p className="font-medium">{s.title}</p>}
                 <p className="text-muted-foreground">{s.text ?? s.body}</p>

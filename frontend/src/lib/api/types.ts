@@ -15,6 +15,16 @@ export interface AuthTokens {
   expiresIn?: number;
 }
 
+/**
+ * `POST /auth/register` and `POST /auth/login` both return the user *and* a fresh
+ * token pair (`AuthResponse` on the backend). Destructure `tokens` before passing
+ * it to `tokenStore.set` — the payload is not `AuthTokens` itself.
+ */
+export interface AuthResponse {
+  user: User;
+  tokens: AuthTokens;
+}
+
 export interface Page<T> {
   items: T[];
   total: number;

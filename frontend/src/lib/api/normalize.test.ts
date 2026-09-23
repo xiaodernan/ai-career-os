@@ -13,6 +13,8 @@ import {
   normalizeInterviewReport,
   normalizeJob,
   normalizeJdParsed,
+  normalizeSuggestions,
+  missingSkillGaps,
   normalizeMatch,
   normalizeMessages,
   normalizePage,
@@ -665,5 +667,50 @@ describe("normalizeMatch reasoning", () => {
   it("prefers an explicit reasoning over narrative when both are present", () => {
     const m = normalizeMatch({ overall: 50, reasoning: "r", narrative: "n" });
     expect(m?.reasoning).toBe("r");
+  });
+});
+
+describe("normalizeSuggestions / missingSkillGaps", () => {
+  it("maps the ai-service {skill,type,advice} shape into titled suggestions", () => {
+    const raw = {
+      suggestions: [
+        { skill: "Go", type: "missing_required", advice: "JD requires Go. Add a bullet." },
+        { skill: "", type: "structure", advice: "Add a projects section." },
+        { skill: "", type: "impact", advice: "Quantify impact." },
+      ],
+    };
+    const out = normalizeSuggestions(raw);
+    expect(out).toHaveLength(3);
+    expect(out[0]).toMatchObject({ title: "Add Go", section: "missing_required", priority: "high" });
+    expect(out[0].text).toContain("JD requires Go");
+    expect(out[1].title).toBe("Structure"); // type label when no skill
+    expect(out[2].title).toBe("Impact");
+    expect(out[2].priority).toBeUndefined();
+  });
+
+  it("accepts a bare array and passes through already-shaped items", () => {
+    expect(normalizeSuggestions([{ skill: "Rust", type: "missing_required", advice: "x" }])[0].title).toBe(
+      "Add Rust",
+    );
+    const shaped = normalizeSuggestions({ suggestions: [{ title: "T", text: "B" }] });
+    expect(shaped[0]).toMatchObject({ title: "T", text: "B", section: undefined });
+  });
+
+  it("drops entries with neither title nor text and returns [] for non-lists", () => {
+    expect(normalizeSuggestions([{ type: "", skill: "", advice: "" }])).toEqual([]);
+    expect(normalizeSuggestions(null)).toEqual([]);
+    expect(normalizeSuggestions("nope")).toEqual([]);
+    expect(normalizeSuggestions({ suggestions: [] })).toEqual([]);
+  });
+
+  it("extracts the resume-lacking skills for the gap list", () => {
+    const sugs = normalizeSuggestions({
+      suggestions: [
+        { skill: "Go", type: "missing_required", advice: "x" },
+        { skill: "Kubernetes", type: "missing_required", advice: "y" },
+        { skill: "", type: "impact", advice: "z" },
+      ],
+    });
+    expect(missingSkillGaps(sugs)).toEqual(["Go", "Kubernetes"]);
   });
 });

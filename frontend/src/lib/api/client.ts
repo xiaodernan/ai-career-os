@@ -1,6 +1,6 @@
 import { API_BASE_URL, endpoints } from "./endpoints";
 import { tokenStore } from "./token-store";
-import type { AuthTokens, Page, User } from "./types";
+import type { AuthResponse, AuthTokens, Page, User } from "./types";
 
 export interface ApiErrorDetails {
   code: string;
@@ -166,22 +166,22 @@ export interface RegisterPayload extends LoginPayload {
 
 export const authApi = {
   async register(payload: RegisterPayload): Promise<User> {
-    const tokens = await request<AuthTokens>(endpoints.auth.register, {
+    const res = await request<AuthResponse>(endpoints.auth.register, {
       method: "POST",
       body: payload,
       auth: false,
     });
-    tokenStore.set(tokens.accessToken, tokens.refreshToken);
+    tokenStore.set(res.tokens.accessToken, res.tokens.refreshToken);
     return authApi.me();
   },
 
   async login(payload: LoginPayload): Promise<User> {
-    const tokens = await request<AuthTokens>(endpoints.auth.login, {
+    const res = await request<AuthResponse>(endpoints.auth.login, {
       method: "POST",
       body: payload,
       auth: false,
     });
-    tokenStore.set(tokens.accessToken, tokens.refreshToken);
+    tokenStore.set(res.tokens.accessToken, res.tokens.refreshToken);
     return authApi.me();
   },
 

@@ -12,6 +12,7 @@ import {
   normalizeInterviewReport,
   normalizeJdParsed,
   normalizeMatch,
+  normalizeSuggestions,
   normalizeTailor,
   pick,
   str,
@@ -214,8 +215,8 @@ export function useAnalyzeJd() {
         interviewTopics: parsed.interviewTopics,
         skillGap: parsed.skillGap,
         hiddenRequirements: parsed.hiddenRequirements,
-        suggestions: (pick(body, "suggestions", "resumeSuggestions", "resume_suggestions") ??
-          []) as Suggestion[],
+        suggestions: normalizeSuggestions(
+          pick(body, "suggestions", "resumeSuggestions", "resume_suggestions")),
         raw,
       };
     },
@@ -281,8 +282,8 @@ export function useResumeSuggestions() {
             : {}),
         },
       });
-      const items = pick(raw, "suggestions", "items") ?? raw;
-      return { raw, items: Array.isArray(items) ? items : [] };
+      const suggestions = normalizeSuggestions(raw);
+      return { raw, suggestions };
     },
     onError: fail("Couldn't fetch suggestions."),
   });
