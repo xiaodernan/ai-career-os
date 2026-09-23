@@ -14,6 +14,7 @@ import com.careeros.application.repository.ApplicationEventRepository;
 import com.careeros.application.repository.ApplicationRepository;
 import com.careeros.job.repository.CompanyRepository;
 import com.careeros.job.repository.JobRepository;
+import java.time.OffsetDateTime;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -92,5 +93,31 @@ class ApplicationServiceTest {
                 .containsEntry("from", "applied")
                 .containsEntry("to", "interview");
         assertThat(app.getPosition()).isEqualTo(2);
+    }
+
+    @Test
+    void reorderIntoAppliedStampsAppliedAtLikeTheUpdatePathDoes() {
+        Application app = existing("saved");
+        assertThat(app.getAppliedAt()).isNull();
+
+        // The kanban drag is the primary way a card reaches "applied"; it must maintain
+        // the derived applied_at column just like create/update, or reports lose the date.
+        service.reorder(userId, appId, new ReorderRequest(0, "applied"));
+
+        assertThat(app.getStatus()).isEqualTo("applied");
+        assertThat(app.getAppliedAt()).isNotNull();
+    }
+
+    @Test
+    void reorderIntoAppliedKeepsTheOriginalAppliedAt() {
+        Application app = existing("rejected");
+        OffsetDateTime first = OffsetDateTime.parse("2020-01-02T03:04:05Z");
+        app.setAppliedAt(first);
+
+        // Re-applying must not overwrite the first application date (null-guarded stamp).
+        service.reorder(userId, appId, new ReorderRequest(0, "applied"));
+
+        assertThat(app.getStatus()).isEqualTo("applied");
+        assertThat(app.getAppliedAt()).isEqualTo(first);
     }
 }

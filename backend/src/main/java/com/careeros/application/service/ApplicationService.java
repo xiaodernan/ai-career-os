@@ -101,14 +101,7 @@ public class ApplicationService {
         Application app = require(userId, id);
         if (request.status() != null && !request.status().isBlank()) {
             validateStatus(request.status());
-            if (!request.status().equals(app.getStatus())) {
-                String from = app.getStatus();
-                app.setStatus(request.status());
-                if ("applied".equals(request.status()) && app.getAppliedAt() == null) {
-                    app.setAppliedAt(OffsetDateTime.now());
-                }
-                writeEvent(app, "status", Map.of("from", from, "to", request.status()));
-            }
+            applyStatusChange(app, request.status());
         }
         if (request.position() != null) {
             app.setPosition(request.position());
@@ -129,11 +122,7 @@ public class ApplicationService {
         Application app = require(userId, id);
         if (request.status() != null && !request.status().isBlank()) {
             validateStatus(request.status());
-            if (!request.status().equals(app.getStatus())) {
-                String from = app.getStatus();
-                app.setStatus(request.status());
-                writeEvent(app, "status", Map.of("from", from, "to", request.status()));
-            }
+            applyStatusChange(app, request.status());
         }
         app.setPosition(request.position());
         return toItem(applications.save(app));
@@ -156,6 +145,23 @@ public class ApplicationService {
         return applications.findByIdAndUserId(id, userId)
                 .orElseThrow(() -> new ApiException(ApiErrorCode.APPLICATION_NOT_FOUND,
                         "Application not found"));
+    }
+
+    /**
+     * The one place a status transition is applied, so every write path (PATCH update and
+     * the kanban reorder) maintains derived columns and audit history identically. A
+     * same-status call is a no-op — it must not fake a transition event.
+     */
+    private void applyStatusChange(Application app, String to) {
+        if (to.equals(app.getStatus())) {
+            return;
+        }
+        String from = app.getStatus();
+        app.setStatus(to);
+        if ("applied".equals(to) && app.getAppliedAt() == null) {
+            app.setAppliedAt(OffsetDateTime.now());
+        }
+        writeEvent(app, "status", Map.of("from", from, "to", to));
     }
 
     private void writeEvent(Application app, String kind, Map<String, Object> payload) {
