@@ -690,6 +690,51 @@ describe("normalizeInterviewReport", () => {
     expect(report?.hasContent).toBe(true);
   });
 
+  it("maps the real ai-service study shape {topic, why, resource_hint} onto title/why", () => {
+    // ai-service FINALIZE + InterviewService.persistFinalization emit/copy
+    // recommended_study as {topic, why, resource_hint}. Reading only title/name
+    // rendered every card as "Untitled resource".
+    const report = normalizeInterviewReport({
+      summary: {
+        overall: 0.6,
+        recommended_study: [
+          { topic: "Failure modes", why: "you skipped them", resource_hint: "DDIA ch.9" },
+        ],
+      },
+    });
+    expect(report?.study[0]).toEqual({
+      title: "Failure modes",
+      url: undefined,
+      why: "you skipped them · DDIA ch.9",
+      kind: undefined,
+    });
+    expect(report?.hasContent).toBe(true);
+  });
+
+  it("turns an http resource_hint into a real link, a plain one into the why line", () => {
+    const link = normalizeInterviewReport({
+      summary: { recommended_study: [{ topic: "Concurrency", resource_hint: "https://example.com/c" }] },
+    });
+    expect(link?.study[0].url).toBe("https://example.com/c");
+    expect(link?.study[0].why).toBeUndefined();
+
+    const name = normalizeInterviewReport({
+      summary: { recommended_study: [{ topic: "Concurrency", resource_hint: "The Art of Concurrency" }] },
+    });
+    expect(name?.study[0].url).toBeUndefined();
+    expect(name?.study[0].why).toBe("The Art of Concurrency");
+  });
+
+  it("keeps a bare-string recommended_study (the backend test fixture) from vanishing", () => {
+    // FakeAiServiceClientConfig returns recommended_study as List.of("Designing
+    // Data-Intensive Applications") — a string, not an object.
+    const report = normalizeInterviewReport({
+      summary: { overall: 0.5, recommended_study: ["Designing Data-Intensive Applications"] },
+    });
+    expect(report?.study[0].title).toBe("Designing Data-Intensive Applications");
+    expect(report?.hasContent).toBe(true);
+  });
+
   it("returns null for non-object payloads", () => {
     expect(normalizeInterviewReport(null)).toBeNull();
     expect(normalizeInterviewReport(undefined)).toBeNull();

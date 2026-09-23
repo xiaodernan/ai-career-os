@@ -873,19 +873,34 @@ export function normalizeInterviewReport(raw: unknown): InterviewReport | null {
   const summaryText =
     str(merged, "trajectory_note", "narrative", "comment", "assessment") ??
     (typeof summary === "string" ? summary : undefined);
-  const study = list<Record<string, unknown>>(
+  // ai-service FINALIZE emits recommended_study as {topic, why, resource_hint}, and
+  // the backend copies that dict verbatim into summary.recommended_study
+  // (InterviewService.persistFinalization); the mock and some models use a bare
+  // resource string. Reading only title/name+url made every card fall through to
+  // "Untitled resource" and silently dropped the hint.
+  const study = list<unknown>(
     merged,
     "recommended_study",
     "study",
     "studyMaterials",
     "study_materials",
     "materials"
-  ).map((s) => ({
-    title: str(s, "title", "name"),
-    url: str(s, "url", "link", "href"),
-    why: str(s, "why", "reason", "description"),
-    kind: str(s, "kind", "type"),
-  }));
+  ).map((s): InterviewStudyItem => {
+    if (typeof s === "string") return { title: s.trim() || undefined };
+    const url = str(s, "url", "link", "href", "resourceUrl", "resource_url");
+    const hint = str(s, "resource_hint", "resourceHint");
+    const hintIsLink = !!hint && /^https?:\/\//i.test(hint);
+    const nameHint = hintIsLink ? undefined : hint;
+    const reason = str(s, "why", "reason", "description");
+    return {
+      title: str(s, "title", "name", "topic", "resource"),
+      url: url ?? (hintIsLink ? hint : undefined),
+      // A non-URL resource_hint is a resource NAME: fold it into the why line so the
+      // recommendation still surfaces instead of being dropped.
+      why: reason && nameHint ? `${reason} · ${nameHint}` : reason ?? nameHint,
+      kind: str(s, "kind", "type"),
+    };
+  });
   const trajectory = list<Record<string, unknown>>(
     merged,
     "trajectory",
