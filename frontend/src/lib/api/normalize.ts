@@ -631,6 +631,28 @@ export function tailorDiffDict(raw: unknown): unknown {
   return pick(raw, "diff", "changes", "edits") ?? {};
 }
 
+/**
+ * Body for POST /jobs/{id}/tailored-version. The base version is sent under both spellings
+ * because the backend binds either and older deployments only knew one; the structured dict —
+ * not the rendered markdown — is what the version's rows are projected from.
+ */
+export function tailorSaveBody(draft: {
+  raw: unknown;
+  plaintext: string;
+  resumeVersionId?: string | null;
+}): Record<string, unknown> {
+  const body: Record<string, unknown> = {
+    tailored: tailoredDict(draft.raw),
+    diff: tailorDiffDict(draft.raw),
+    plaintext: draft.plaintext,
+  };
+  if (draft.resumeVersionId) {
+    body.resumeVersionId = draft.resumeVersionId;
+    body.resume_version_id = draft.resumeVersionId;
+  }
+  return body;
+}
+
 export function normalizeTailor(raw: unknown): TailorResponse {
   const tailoredRaw = tailoredDict(raw);
   const stats = pick(raw, "stats", "statistics", "summary");

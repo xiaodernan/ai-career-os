@@ -5,6 +5,7 @@ import {
   normalizeTailorDiff,
   tailoredDict,
   tailorDiffDict,
+  tailorSaveBody,
 } from "@/lib/api/normalize";
 
 /**
@@ -49,6 +50,45 @@ describe("tailoredDict", () => {
 
   it("treats an unwrapped draft as the draft, like the normalizer does", () => {
     expect(tailoredDict(RUN.tailored)).toEqual(RUN.tailored);
+  });
+});
+
+describe("tailorSaveBody", () => {
+  /** Names ResumeDtos.TailoredVersionRequest binds (component + @JsonAlias spellings). */
+  const BACKEND_ACCEPTS = [
+    "resumeVersionId",
+    "resume_version_id",
+    "tailored",
+    "diff",
+    "plaintext",
+    "plain_text",
+    "markdown",
+  ];
+
+  it("sends only keys the backend record binds", () => {
+    const body = tailorSaveBody({ raw: RUN, plaintext: "# Ada", resumeVersionId: "v-1" });
+    expect(Object.keys(body).sort()).toEqual(
+      ["diff", "plaintext", "resumeVersionId", "resume_version_id", "tailored"].sort()
+    );
+    for (const key of Object.keys(body)) {
+      expect(BACKEND_ACCEPTS).toContain(key);
+    }
+  });
+
+  it("posts the structured dict, never the rendered markdown, as the body", () => {
+    // experience/project/skill rows are projected from `tailored` server-side; posting the
+    // document would store a version with an empty body under a reviewable-looking diff.
+    const body = tailorSaveBody({ raw: RUN, plaintext: "# Ada" });
+    expect(body.tailored).toEqual(RUN.tailored);
+    expect(typeof body.plaintext).toBe("string");
+  });
+
+  it("omits the base version entirely rather than sending null", () => {
+    // null would mean "the caller knows there is none", which is not the same request as
+    // "resolve it the way /tailor did"; the service only falls back when the key is absent.
+    const body = tailorSaveBody({ raw: RUN, plaintext: "# Ada", resumeVersionId: null });
+    expect(body).not.toHaveProperty("resumeVersionId");
+    expect(body).not.toHaveProperty("resume_version_id");
   });
 });
 

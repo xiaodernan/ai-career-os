@@ -14,8 +14,7 @@ import {
   normalizeMatch,
   normalizeSuggestions,
   normalizeTailor,
-  tailoredDict,
-  tailorDiffDict,
+  tailorSaveBody,
   pick,
   str,
 } from "@/lib/api/normalize";
@@ -266,21 +265,11 @@ export function useSaveTailoredVersion(jobId: string) {
       raw: unknown;
       plaintext: string;
       resumeVersionId?: string | null;
-    }): Promise<unknown> => {
-      const body: Record<string, unknown> = {
-        tailored: tailoredDict(draft.raw),
-        diff: tailorDiffDict(draft.raw),
-        plaintext: draft.plaintext,
-      };
-      if (draft.resumeVersionId) {
-        body.resume_version_id = draft.resumeVersionId;
-        body.resumeVersionId = draft.resumeVersionId;
-      }
-      return api.request<unknown>(endpoints.jobTailoredVersion(jobId), {
+    }): Promise<unknown> =>
+      api.request<unknown>(endpoints.jobTailoredVersion(jobId), {
         method: "POST",
-        body,
-      });
-    },
+        body: tailorSaveBody(draft),
+      }),
     onSuccess: () => {
       // ["resume"] covers every detail cache and every versions list.
       qc.invalidateQueries({ queryKey: ["resume"] });
