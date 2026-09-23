@@ -9,11 +9,13 @@ import static org.mockito.Mockito.when;
 
 import com.careeros.knowledge.entity.Document;
 import com.careeros.knowledge.entity.KnowledgeSource;
+import com.careeros.knowledge.entity.UserNote;
 import com.careeros.knowledge.repository.DocumentRepository;
 import com.careeros.knowledge.repository.KnowledgeSourceRepository;
 import com.careeros.knowledge.repository.UserNoteRepository;
 import java.util.List;
 import java.util.Optional;
+import static org.mockito.Mockito.when;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,17 +31,19 @@ class KnowledgeRetirementTest {
     private final UUID sourceId = UUID.randomUUID();
     private final UUID documentId = UUID.randomUUID();
     private final UUID resumeId = UUID.randomUUID();
+    private final UUID noteId = UUID.randomUUID();
 
     private KnowledgeSourceRepository sources;
     private DocumentRepository documents;
+    private UserNoteRepository notes;
     private KnowledgeService service;
 
     @BeforeEach
     void setUp() {
         sources = mock(KnowledgeSourceRepository.class);
         documents = mock(DocumentRepository.class);
-        service = new KnowledgeService(sources, documents, mock(UserNoteRepository.class),
-                mock(FileIngestService.class));
+        notes = mock(UserNoteRepository.class);
+        service = new KnowledgeService(sources, documents, notes, mock(FileIngestService.class));
     }
 
     private KnowledgeSource source() {
@@ -107,6 +111,24 @@ class KnowledgeRetirementTest {
 
         assertThat(doc.getStatus()).isEqualTo("retired");
         verify(sources).delete(source);
+    }
+
+    @Test
+    void deletingANoteRetiresItsEmbeddedCopy() {
+        KnowledgeSource source = source();
+        Document doc = document();
+        when(documents.findBySourceId(any())).thenReturn(List.of(doc));
+        // UserNote's id is assigned by the database, so the entity is mocked to carry one.
+        UserNote note = mock(UserNote.class);
+        when(note.getId()).thenReturn(noteId);
+        when(notes.findByIdAndUserId(noteId, userId)).thenReturn(Optional.of(note));
+        when(sources.findByUserIdAndKindAndRefId(userId, "note", noteId)).thenReturn(List.of(source));
+
+        service.deleteNote(userId, noteId);
+
+        assertThat(doc.getStatus()).isEqualTo("retired");
+        verify(sources).delete(source);
+        verify(notes).delete(note);
     }
 
     @Test

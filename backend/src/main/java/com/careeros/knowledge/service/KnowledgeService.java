@@ -144,8 +144,9 @@ public class KnowledgeService {
     @Transactional
     public void deleteNote(UUID userId, UUID noteId) {
         UserNote note = requireNote(userId, noteId);
-        sources.findFirstByUserIdAndKindAndRefId(userId, "note", note.getId())
-                .ifPresent(s -> s.setRefId(null));
+        // Same rule as a deleted resume: the note was embedded, so dropping the row while its
+        // chunks stay 'ready' leaves the AI quoting text the user just deleted.
+        retireRef(userId, "note", note.getId());
         notes.delete(note);
     }
 
