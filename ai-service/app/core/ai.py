@@ -21,8 +21,17 @@ UNTRUSTED_HEADER = (
 
 
 def wrap_untrusted(label: str, content: str) -> str:
-    """Fence external text so it cannot masquerade as instructions (prompt-injection)."""
-    return f"<<<BEGIN UNTRUSTED {label}>>>\n{content}\n<<<END UNTRUSTED {label}>>>"
+    """Fence external text so it cannot masquerade as instructions (prompt-injection).
+
+    Triple-angle-bracket runs inside the content are defanged: without this a
+    document / JD / resume / answer containing a line like
+    ``<<<END UNTRUSTED EVIDENCE>>>`` would close our fence early and let
+    attacker-controlled prose escape into the trusted instruction region —
+    defeating the guarantee this wrapper exists to provide. Ordinary single ``<``
+    or ``>`` characters (comparison operators, arrows) pass through untouched.
+    """
+    safe = content.replace("<<<", "«««").replace(">>>", "»»»")
+    return f"<<<BEGIN UNTRUSTED {label}>>>\n{safe}\n<<<END UNTRUSTED {label}>>>"
 
 
 def evidence_block(items: list[dict[str, Any]]) -> str:
