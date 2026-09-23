@@ -9,8 +9,15 @@ import re
 import pytest
 
 from app.agents import orchestrator
-from app.agents.tools import TOOL_INDEX, _search_params
+from app.agents.orchestrator import Outcome, _collect_artifacts, _derive_actions
+from app.agents.tools import TOOL_INDEX, Tool, _search_params
 from app.providers.base import LLMMessage, LLMResponse, ToolCall, Usage
+
+
+def _tool(name: str, artifact: str | None = None) -> Tool:
+    async def _unused(*a, **k):  # _collect_artifacts never calls the handler
+        return {}
+    return Tool(name, "", {}, _unused, artifact=artifact)
 
 
 def _resp(tool_calls=None, text=""):
@@ -202,3 +209,83 @@ def test_search_params_limit_clamped_to_bounds():
     assert _search_params(query="x", limit=-8)[1][-1] == 1
     assert _search_params(query="x", limit=1000)[1][-1] == 25
     assert _search_params(query="x", limit=12)[1][-1] == 12
+
+
+# ---------------- _collect_artifacts / _derive_actions (pure UI-shapers) ----------------
+# These build the copilot's suggestion buttons and citation source chips. Reached via
+# career_turn only on the job_list path; every other branch had zero coverage.
+
+
+def test_collect_match_artifact_carries_job_id_and_payload():
+    out = Outcome()
+    _collect_artifacts(_tool("match_job", artifact="match"),
+                       {"match": {"overall": 0.8}, "job": {"id": "j7"}}, out)
+    assert out.artifacts == [{"type": "match", "job_id": "j7",
+                              "payload": {"overall": 0.8}}]
+
+
+def test_collect_skips_artifact_on_error_or_missing_payload():
+    out = Outcome()
+    _collect_artifacts(_tool("match_job", artifact="match"), {"error": "boom"}, out)
+    _collect_artifacts(_tool("match_job", artifact="match"), {"job": {"id": "j1"}}, out)
+    assert out.artifacts == []
+
+
+def test_collect_tailored_cover_and_interview_artifacts_map_payload():
+    out = Outcome()
+    _collect_artifacts(_tool("tailor", artifact="tailored_resume"),
+                       {"tailored": {"x": 1}, "diff": "d", "notes": "n",
+                        "stats": {"s": 2}, "irrelevant": "drop-me"}, out)
+    _collect_artifacts(_tool("cover", artifact="cover_letter"), {"body": "hi"}, out)
+    _collect_artifacts(_tool("interview", artifact="interview_session"),
+                       {"session_id": "s1"}, out)
+    _collect_artifacts(_tool("interview", artifact="interview_session"),
+                       {"no_session": True}, out)  # missing session_id -> skipped
+    assert [a["type"] for a in out.artifacts] == [
+        "tailored_resume", "cover_letter", "interview_session"]
+    # tailored payload whitelists exactly the four known keys
+    assert set(out.artifacts[0]["payload"]) == {"tailored", "diff", "notes", "stats"}
+    assert out.artifacts[2]["payload"] == {"session_id": "s1"}
+
+
+def test_collect_sources_dedups_by_chunk_id_and_drops_missing():
+    out = Outcome()
+    _collect_artifacts(_tool("search_resume", artifact=None),
+                       {"evidence": [
+                           {"chunk_id": "c1", "doc_title": "Resume", "section": "Exp",
+                            "quote": "did X" * 200},
+                           {"chunk_id": "c1", "quote": "dup"},        # same cid -> skipped
+                           {"quote": "no chunk id"},                  # no cid -> skipped
+                           {"chunk_id": "c2", "source_kind": "JD"}]}, out)
+    assert [s["chunk_id"] for s in out.sources] == ["c1", "c2"]
+    assert len(out.sources[0]["quote"]) == 300  # quote truncated to 300
+    # c1 label uses doc_title › section; c2 falls back to source_kind with empty section
+    assert out.sources[0]["label"] == "Resume › Exp"
+    assert out.sources[1]["label"] == "JD"
+
+
+def test_derive_actions_from_match_expands_to_three_ctas_deduped():
+    out = Outcome(artifacts=[{"type": "match", "job_id": "j5", "payload": {}},
+                             {"type": "match", "job_id": "j5", "payload": {}}])
+    _derive_actions(out)
+    kinds = [(a["kind"], a["job_id"]) for a in out.actions]
+    assert kinds == [("tailor", "j5"), ("interview", "j5"), ("cover_letter", "j5")]
+
+
+def test_derive_actions_job_list_and_interview_session():
+    out = Outcome(artifacts=[
+        {"type": "job_list", "payload": {"jobs": [{"id": f"j{i}", "title": f"T{i}",
+                                                   "company": f"C{i}"} for i in range(7)]}},
+        {"type": "interview_session", "payload": {"session_id": "s9"}}])
+    _derive_actions(out)
+    opens = [a for a in out.actions if a["kind"] == "open_job"]
+    assert len(opens) == 5  # capped at 5 of the 7 jobs
+    assert opens[0]["label"] == "Open T0 @ C0"
+    assert {"kind": "open_interview", "label": "Continue interview",
+            "session_id": "s9"} in out.actions
+
+
+def test_derive_actions_match_without_job_id_yields_nothing():
+    out = Outcome(artifacts=[{"type": "match", "job_id": None, "payload": {}}])
+    _derive_actions(out)
+    assert out.actions == []
