@@ -13,10 +13,15 @@ public final class InterviewDtos {
     private InterviewDtos() {
     }
 
+    /**
+     * `questionCount` and `overall` are aggregates over interview_turns / interview_evaluations:
+     * the list row shows how far a session got and how it scored, and `overall` stays null when
+     * no report exists (unknown is not zero). Null when the caller did not ask for digests.
+     */
     public record SessionItem(UUID id, UUID jobId, UUID jdId, UUID resumeVersionId,
                               String companyName, String positionTitle, String mode, String status,
                               float difficulty, Map<String, Object> config, OffsetDateTime startedAt,
-                              OffsetDateTime finishedAt) {
+                              OffsetDateTime finishedAt, Integer questionCount, Float overall) {
     }
 
     public record TurnItem(UUID id, int seq, String role, String content,

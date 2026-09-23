@@ -20,6 +20,8 @@ const SESSION_ITEM = {
   config: { focus: "concurrency" },
   startedAt: "2026-09-01T10:00:00Z",
   finishedAt: "2026-09-01T10:22:00Z",
+  questionCount: 6,
+  overall: 0.66,
 };
 
 describe("mapInterviewSessionItem", () => {
@@ -42,6 +44,19 @@ describe("mapInterviewSessionItem", () => {
     });
   });
 
+  it("scales the stored fraction to the 0-100 the badge renders and colours by", () => {
+    // interview_evaluations.summary.overall is a 0..1 fraction; the row prints
+    // `${Math.round(overall)}/100` and thresholds at 75/50, so 0.66 unscaled reads "1/100"
+    // and comes out red for a pass.
+    expect(mapInterviewSessionItem(SESSION_ITEM).overall).toBe(66);
+    expect(mapInterviewSessionItem(SESSION_ITEM).questionCount).toBe(6);
+  });
+
+  it("leaves an unscored session unscored rather than reporting zero", () => {
+    const got = mapInterviewSessionItem({ ...SESSION_ITEM, overall: null });
+    expect(got.overall).toBeUndefined();
+  });
+
   it("keeps the mock-mode defaults when the row is sparse", () => {
     expect(mapInterviewSessionItem({ id: "s-1" })).toMatchObject({
       id: "s-1",
@@ -53,8 +68,11 @@ describe("mapInterviewSessionItem", () => {
 });
 
 describe("mapInterviewSessionDetail", () => {
+  // GET /interview/sessions/{id} answers {session, turns, evaluation} and the session node is a
+  // single row: no aggregates are loaded there, which is why questionCount is absent.
+  const SINGLE = { ...SESSION_ITEM, questionCount: undefined, overall: undefined };
   const DETAIL = {
-    session: SESSION_ITEM,
+    session: SINGLE,
     turns: [
       { id: "t1", seq: 1, role: "user", content: "I used an index.", questionMeta: null },
       {

@@ -15,6 +15,7 @@ import {
   normalizeResumeScore,
   normalizeRun,
   normalizeSearch,
+  pct,
   serializeJobFilters,
   normalizeSkillGaps,
   pick,
@@ -403,7 +404,8 @@ export function mapInterviewSessionItem(s: unknown): InterviewSession {
   return {
     ...mapSessionScalars(s),
     questionCount: num(s, "questionCount", "question_count", "turnCount"),
-    overall: num(s, "overall", "score", "overallScore"),
+    // the server stores the report's 0..1 fraction; every score on screen is a percentage
+    overall: pct(num(s, "overall", "score", "overallScore")),
   };
 }
 

@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 import com.careeros.ai.AiServiceClient;
 import com.careeros.interview.dto.InterviewDtos.CreateSessionRequest;
 import com.careeros.interview.entity.InterviewSession;
+import com.careeros.interview.repository.InterviewDigestRepository;
 import com.careeros.interview.repository.InterviewEvaluationRepository;
 import com.careeros.interview.repository.InterviewSessionRepository;
 import com.careeros.interview.repository.InterviewTurnRepository;
@@ -46,7 +47,7 @@ class InterviewServiceCreateTest {
         companies = mock(CompanyRepository.class);
         service = new InterviewService(sessions, mock(InterviewTurnRepository.class),
                 mock(InterviewEvaluationRepository.class), jobs, companies,
-                mock(AiServiceClient.class));
+                mock(InterviewDigestRepository.class), mock(AiServiceClient.class));
         when(sessions.save(any(InterviewSession.class))).thenAnswer(i -> i.getArgument(0));
     }
 

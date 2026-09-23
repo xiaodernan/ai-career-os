@@ -16,6 +16,8 @@ import com.careeros.interview.dto.InterviewDtos.TurnItem;
 import com.careeros.interview.entity.InterviewEvaluation;
 import com.careeros.interview.entity.InterviewSession;
 import com.careeros.interview.entity.InterviewTurn;
+import com.careeros.interview.repository.InterviewDigestRepository;
+import com.careeros.interview.repository.InterviewDigestRepository;
 import com.careeros.interview.repository.InterviewEvaluationRepository;
 import com.careeros.interview.repository.InterviewSessionRepository;
 import com.careeros.interview.repository.InterviewTurnRepository;
@@ -39,23 +41,30 @@ public class InterviewService {
     private final InterviewEvaluationRepository evaluations;
     private final JobRepository jobs;
     private final CompanyRepository companies;
+    private final InterviewDigestRepository digests;
     private final AiServiceClient ai;
 
     public InterviewService(InterviewSessionRepository sessions, InterviewTurnRepository turns,
                             InterviewEvaluationRepository evaluations, JobRepository jobs,
-                            CompanyRepository companies, AiServiceClient ai) {
+                            CompanyRepository companies, InterviewDigestRepository digests,
+                            AiServiceClient ai) {
         this.sessions = sessions;
         this.turns = turns;
         this.evaluations = evaluations;
         this.jobs = jobs;
         this.companies = companies;
+        this.digests = digests;
         this.ai = ai;
     }
 
     @Transactional(readOnly = true)
     public PageDTO<SessionItem> list(UUID userId, int page, int size) {
         var result = sessions.findByUserIdOrderByStartedAtDesc(userId, PageRequest.of(page, size));
-        return PageDTO.from(result, InterviewService::toItem);
+        // Two grouped reads for the whole page; a per-row query would scale with the board.
+        Map<UUID, InterviewDigestRepository.Digest> rows = digests.forSessions(
+                result.getContent().stream().map(InterviewSession::getId).toList());
+        return PageDTO.from(result,
+                s -> toItem(s, rows.getOrDefault(s.getId(), InterviewDigestRepository.Digest.UNKNOWN)));
     }
 
     @Transactional(readOnly = true)
@@ -276,9 +285,15 @@ public class InterviewService {
         return value == null || value.isBlank();
     }
 
-    static SessionItem toItem(InterviewSession s) {        return new SessionItem(s.getId(), s.getJobId(), s.getJdId(), s.getResumeVersionId(),
+    static SessionItem toItem(InterviewSession s) {
+        return toItem(s, InterviewDigestRepository.Digest.UNKNOWN);
+    }
+
+    static SessionItem toItem(InterviewSession s, InterviewDigestRepository.Digest digest) {
+        return new SessionItem(s.getId(), s.getJobId(), s.getJdId(), s.getResumeVersionId(),
                 s.getCompanyName(), s.getPositionTitle(), s.getMode(), s.getStatus(),
-                s.getDifficulty(), s.getConfig(), s.getStartedAt(), s.getFinishedAt());
+                s.getDifficulty(), s.getConfig(), s.getStartedAt(), s.getFinishedAt(),
+                digest.questions(), digest.overall());
     }
 
     static TurnItem toTurnItem(InterviewTurn t) {
