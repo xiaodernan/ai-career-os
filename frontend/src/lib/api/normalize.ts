@@ -1053,9 +1053,15 @@ export function normalizeInterviewReport(raw: unknown): InterviewReport | null {
 export function serializeJobFilters(params: object): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(params)) {
-    if (v === "" || v === undefined) continue;
-    const wire = k === "min_salary" ? "minSalary" : k === "max_salary" ? "maxSalary" : k;
-    out[wire] = v;
+    if (v === "" || v === undefined || v === false) continue;
+    if (k === "min_salary") out.minSalary = v;
+    else if (k === "max_salary") out.maxSalary = v;
+    // The "Remote only" checkbox holds a boolean, but the backend filters on the
+    // remote_type DOMAIN (onsite|hybrid|remote): `j.remote_type = :remote`. Sending
+    // `true` matched nothing, so translate the boolean to its remote_type value and
+    // let a real value (e.g. "hybrid") pass through untouched.
+    else if (k === "remote") out.remote = v === true ? "remote" : v;
+    else out[k] = v;
   }
   return out;
 }

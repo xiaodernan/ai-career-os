@@ -611,12 +611,21 @@ describe("serializeJobFilters", () => {
   });
 
   it("passes other keys through unchanged", () => {
-    expect(serializeJobFilters({ q: "react", remote: true, page: 2, skills: "go,k8s" })).toEqual({
+    expect(serializeJobFilters({ q: "react", page: 2, skills: "go,k8s" })).toEqual({
       q: "react",
-      remote: true,
       page: 2,
       skills: "go,k8s",
     });
+  });
+
+  it("maps the remote boolean to a remote_type value the backend can match", () => {
+    // Backend filters `remote_type = :remote` over onsite|hybrid|remote; the old
+    // passthrough sent `true`, which matched no job. true -> "remote", a real
+    // value passes through untouched, false/undefined drop the filter entirely.
+    expect(serializeJobFilters({ remote: true })).toEqual({ remote: "remote" });
+    expect(serializeJobFilters({ remote: "hybrid" })).toEqual({ remote: "hybrid" });
+    expect(serializeJobFilters({ remote: false })).toEqual({});
+    expect(serializeJobFilters({ remote: undefined })).toEqual({});
   });
 
   it("drops empty strings and undefined values", () => {
