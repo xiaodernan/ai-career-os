@@ -5,6 +5,10 @@
  *
  * This file is the single source of truth for paths. Anything that needs an
  * id/param exposes a builder function so no route hand-concatenates strings.
+ *
+ * Bodies are the other half of the wire contract and they follow one rule: a field goes out
+ * under a single name (see lib/api/body.ts). The backend's @JsonAlias accepts either spelling,
+ * but not a body carrying both, so a duplicate is a failed request rather than a tolerant one.
  */
 
 export const API_BASE_URL =

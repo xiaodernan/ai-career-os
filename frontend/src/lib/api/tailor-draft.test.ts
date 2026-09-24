@@ -65,14 +65,24 @@ describe("tailorSaveBody", () => {
     "markdown",
   ];
 
+  /** `resume_version_id` and `resumeVersionId` collapse to one name: the record component. */
+  const canonical = (key: string) => key.replace(/_([a-z0-9])/g, (_, c: string) => c.toUpperCase());
+
   it("sends only keys the backend record binds", () => {
     const body = tailorSaveBody({ raw: RUN, plaintext: "# Ada", resumeVersionId: "v-1" });
-    expect(Object.keys(body).sort()).toEqual(
-      ["diff", "plaintext", "resumeVersionId", "resume_version_id", "tailored"].sort()
-    );
+    expect(Object.keys(body).sort()).toEqual(["diff", "plaintext", "resumeVersionId", "tailored"]);
     for (const key of Object.keys(body)) {
       expect(BACKEND_ACCEPTS).toContain(key);
     }
+  });
+
+  it("names each field once, because an alias twin aborts the request", () => {
+    // @JsonAlias resolves both spellings to the same constructor property, and a record has no
+    // setter for the second value, so Jackson fails to bind the body at all. This builder used to
+    // post the twin "for tolerance" and every save from a version-backed draft died on it.
+    const body = tailorSaveBody({ raw: RUN, plaintext: "# Ada", resumeVersionId: "v-1" });
+    const names = Object.keys(body).map(canonical);
+    expect(new Set(names).size).toBe(names.length);
   });
 
   it("posts the structured dict, never the rendered markdown, as the body", () => {

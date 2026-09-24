@@ -33,6 +33,7 @@ import type {
   TailorResponse,
   TailoredResult,
 } from "./types";
+import { field } from "./body";
 
 /* ------------------------------- primitives ------------------------------ */
 
@@ -632,25 +633,23 @@ export function tailorDiffDict(raw: unknown): unknown {
 }
 
 /**
- * Body for POST /jobs/{id}/tailored-version. The base version is sent under both spellings
- * because the backend binds either and older deployments only knew one; the structured dict —
- * not the rendered markdown — is what the version's rows are projected from.
+ * Body for POST /jobs/{id}/tailored-version. Each field goes out under exactly ONE name: the
+ * backend's request records accept either spelling through @JsonAlias, but a body carrying both
+ * makes Jackson bind the same constructor property twice, which it can only resolve through a
+ * setter a record does not have — so the request is refused before the handler runs. The
+ * structured dict — not the rendered markdown — is what the version's rows are projected from.
  */
 export function tailorSaveBody(draft: {
   raw: unknown;
   plaintext: string;
   resumeVersionId?: string | null;
 }): Record<string, unknown> {
-  const body: Record<string, unknown> = {
+  return {
     tailored: tailoredDict(draft.raw),
     diff: tailorDiffDict(draft.raw),
     plaintext: draft.plaintext,
+    ...field("resumeVersionId", draft.resumeVersionId),
   };
-  if (draft.resumeVersionId) {
-    body.resumeVersionId = draft.resumeVersionId;
-    body.resume_version_id = draft.resumeVersionId;
-  }
-  return body;
 }
 
 export function normalizeTailor(raw: unknown): TailorResponse {

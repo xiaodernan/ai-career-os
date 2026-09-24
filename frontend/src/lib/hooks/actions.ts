@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { api, ApiError } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
+import { field } from "@/lib/api/body";
 import {
   coverLetterText,
   normalizeArtifacts,
@@ -114,7 +115,7 @@ export function useSetCurrentResume(resumeId: string) {
     mutationFn: async (versionId: string) =>
       api.request<Resume>(endpoints.resumeSetCurrent(resumeId), {
         method: "POST",
-        body: { versionId, version_id: versionId },
+        body: field("versionId", versionId),
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["resume", resumeId] });
@@ -178,7 +179,7 @@ export function useRunJobMatch(jobId: string) {
     mutationFn: async (resumeVersionId?: string | null): Promise<JobMatch | null> => {
       const raw = await api.request<unknown>(endpoints.jobMatch(jobId), {
         method: "POST",
-        body: resumeVersionId ? { resumeVersionId, resume_version_id: resumeVersionId } : {},
+        body: field("resumeVersionId", resumeVersionId),
       });
       return normalizeMatch(pick(raw, "match") ?? raw);
     },
@@ -206,7 +207,7 @@ export interface JdAnalysis {
 export function useAnalyzeJd() {
   return useMutation({
     mutationFn: async (rawText: string): Promise<JdAnalysis> => {
-      const raw = await api.create<unknown>(endpoints.jdAnalyze, { raw_text: rawText, rawText });
+      const raw = await api.create<unknown>(endpoints.jdAnalyze, { rawText });
       const parsed = normalizeJdParsed(raw);
       const body = pick(raw, "parsed", "jd", "analysis", "data") ?? raw;
       return {
@@ -238,9 +239,7 @@ export function useTailorResume(jobId: string) {
     mutationFn: async (resumeVersionId?: string | null): Promise<TailorRun> => {
       const raw = await api.request<unknown>(endpoints.jobTailor(jobId), {
         method: "POST",
-        body: {
-          ...(resumeVersionId ? { resume_version_id: resumeVersionId, resumeVersionId } : {}),
-        },
+        body: field("resumeVersionId", resumeVersionId),
       });
       return { ...normalizeTailor(raw), raw };
     },
@@ -285,11 +284,9 @@ export function useCoverLetter(jobId: string) {
       const raw = await api.request<unknown>(endpoints.jobCoverLetter(jobId), {
         method: "POST",
         body: {
-          ...(opts?.resumeVersionId
-            ? { resume_version_id: opts.resumeVersionId, resumeVersionId: opts.resumeVersionId }
-            : {}),
-          ...(opts?.tone ? { tone: opts.tone } : {}),
-          ...(opts?.length ? { length: opts.length } : {}),
+          ...field("resumeVersionId", opts?.resumeVersionId),
+          ...field("tone", opts?.tone),
+          ...field("length", opts?.length),
         },
       });
       return { text: coverLetterText(raw), evidence: raw, taskId: str(raw, "taskId", "task_id") };
@@ -304,11 +301,8 @@ export function useResumeSuggestions() {
       const raw = await api.request<unknown>(endpoints.jdSuggestions, {
         method: "POST",
         body: {
-          jd_raw: body.jdRaw,
           jdRaw: body.jdRaw,
-          ...(body.resumeVersionId
-            ? { resume_version_id: body.resumeVersionId, resumeVersionId: body.resumeVersionId }
-            : {}),
+          ...field("resumeVersionId", body.resumeVersionId),
         },
       });
       const suggestions = normalizeSuggestions(raw);
@@ -645,7 +639,7 @@ export function useCopilotChat() {
         method: "POST",
         body: {
           message: body.message,
-          ...(body.conversationId ? { conversation_id: body.conversationId, conversationId: body.conversationId } : {}),
+          ...field("conversationId", body.conversationId),
           context: body.context ?? {},
         },
       });

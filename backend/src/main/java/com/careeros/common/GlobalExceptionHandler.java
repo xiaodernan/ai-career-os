@@ -8,7 +8,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageConversionException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.http.converter.HttpMessageNotWritableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
@@ -62,6 +64,21 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({HttpMessageNotReadableException.class, MissingServletRequestParameterException.class,
             MethodArgumentTypeMismatchException.class})
     public ResponseEntity<ApiResponse<Void>> unreadable(Exception ex) {
+        return badRequest(ApiErrorCode.MALFORMED_REQUEST, "Malformed request body or parameters", List.of());
+    }
+
+    /**
+     * Jackson reports a body whose shape it cannot bind at all — a constructor property filled
+     * twice, which is what a client asking for one field under both its name and its alias does
+     * to a record — as its superclass {@code HttpMessageConversionException}, not the
+     * {@code HttpMessageNotReadableException} mapped above. Without this the caller's malformed
+     * request surfaced as a 500 with a stack trace, i.e. as our bug.
+     */
+    @ExceptionHandler(HttpMessageConversionException.class)
+    public ResponseEntity<ApiResponse<Void>> conversion(HttpMessageConversionException ex) {
+        if (ex instanceof HttpMessageNotWritableException) {
+            return fallback(ex); // our serializer failed; blaming the caller would hide that
+        }
         return badRequest(ApiErrorCode.MALFORMED_REQUEST, "Malformed request body or parameters", List.of());
     }
 
