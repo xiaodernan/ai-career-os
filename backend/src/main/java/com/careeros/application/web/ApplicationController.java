@@ -9,10 +9,10 @@ import com.careeros.application.service.ApplicationService;
 import com.careeros.common.AuthUser;
 import com.careeros.common.CurrentUser;
 import com.careeros.common.PageDTO;
+import com.careeros.common.Paging;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -41,7 +41,7 @@ public class ApplicationController {
                                          @RequestParam(required = false) String status,
                                          @RequestParam(defaultValue = "0") int page,
                                          @RequestParam(defaultValue = "50") int size) {
-        return applications.list(user.id(), status, PageRequest.of(page, Math.min(size, 100)));
+        return applications.list(user.id(), status, Paging.of(page, size).pageable());
     }
 
     @PostMapping

@@ -32,7 +32,7 @@ public class CompanyController {
     public PageDTO<CompanyItem> list(@RequestParam(required = false) String q,
                                      @RequestParam(defaultValue = "0") int page,
                                      @RequestParam(defaultValue = "20") int size) {
-        return jobs.listCompanies(q, page, Math.min(size, 100));
+        return jobs.listCompanies(q, page, size);
     }
 
     @GetMapping("/{id}")

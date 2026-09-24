@@ -12,7 +12,9 @@ import com.careeros.job.repository.JobSearchRepository.Filters;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Matcher;
@@ -28,7 +30,8 @@ import org.mockito.ArgumentCaptor;
  *     referenced by the WHERE fragments is actually bound, and nothing is bound that the
  *     SQL does not reference. That binding symmetry is what keeps a future filter addition
  *     from silently 500-ing on "parameter not bound" — the only other coverage is the
- *     Docker-only integration test.
+ *     Docker-only integration test; (3) the paging window taken off the URL is made safe
+ *     before it is spliced into {@code LIMIT}/{@code OFFSET}.
  */
 class JobSearchRepositoryTest {
 
@@ -37,6 +40,7 @@ class JobSearchRepositoryTest {
     private Query query;
     private JobSearchRepository repo;
     private Set<String> bound;
+    private Map<String, Object> params;
 
     @BeforeEach
     void setUp() {
@@ -44,9 +48,11 @@ class JobSearchRepositoryTest {
         query = mock(Query.class);
         repo = new JobSearchRepository(em);
         bound = new HashSet<>();
+        params = new LinkedHashMap<>();
         when(em.createNativeQuery(anyString())).thenReturn(query);
         doAnswer(inv -> {
             bound.add(inv.getArgument(0));
+            params.put(inv.getArgument(0), inv.getArgument(1));
             return query;
         }).when(query).setParameter(anyString(), any());
         when(query.getResultList()).thenReturn(List.of());
@@ -71,6 +77,11 @@ class JobSearchRepositoryTest {
     private Filters fullFilters(String sort) {
         return new Filters(userId, "java", List.of("spring", "kafka"), "Remote", "remote",
                 "Acme", 100, 200, "open", sort, 2, 25);
+    }
+
+    /** Sparse filters, so the only bound parameters besides userId are the paging ones. */
+    private Filters paged(int page, int size) {
+        return new Filters(userId, null, null, null, null, null, null, null, null, null, page, size);
     }
 
     @Test
@@ -141,6 +152,52 @@ class JobSearchRepositoryTest {
                 .isEqualTo(occurrences(sql, "ESCAPE '!'"));
         // :q stays raw for plainto_tsquery; only the LIKE side is a pattern
         assertThat(bound).contains("q", "qLike", "locationLike", "companyLike");
+    }
+
+    /**
+     * {@code page}/{@code size} arrive straight from the query string, and this statement
+     * splices them into {@code LIMIT :limit OFFSET :offset} itself. A negative offset is a
+     * PostgreSQL error and an unbound parameter is a Hibernate one — both of which the HTTP
+     * layer used to hand back to the browser as a 500.
+     */
+    @Test
+    void aNegativePageBindsZeroOffsetNotANegativeOne() {
+        repo.search(paged(-1, 12));
+        assertThat(params).containsEntry("offset", 0L).containsEntry("limit", 12);
+    }
+
+    @Test
+    void offsetIsThePageTimesTheClampedWindowSize() {
+        repo.search(paged(3, 20));
+        assertThat(params).containsEntry("offset", 60L);
+        // size 1_000_000 is capped to 100 first, so the offset is 300 and not 3_000_000
+        repo.search(paged(3, 1_000_000));
+        assertThat(params).containsEntry("offset", 300L).containsEntry("limit", 100);
+    }
+
+    @Test
+    void aZeroSizedWindowStillBindsTheLimitItsSqlReferences() {
+        // ?size=0 used to mean "don't bind", on a statement that still says LIMIT :limit.
+        repo.search(paged(0, 0));
+        assertThat(placeholders(capturedSql())).isEqualTo(bound);
+        assertThat(params).containsEntry("limit", 1).containsEntry("offset", 0L);
+    }
+
+    @Test
+    void paginationIsBoundedInBothDirectionsBeforeItReachesTheDatabase() {
+        Set<String> paging = Set.of("limit", "offset");
+        int[] nasty = {Integer.MIN_VALUE, -1000, -1, 0, 1, 20, 100, 10_000, Integer.MAX_VALUE};
+        for (int page : nasty) {
+            for (int size : nasty) {
+                bound.clear();
+                params.clear();
+                repo.search(paged(page, size));
+                assertThat(bound).as("page=%d size=%d must both bind", page, size)
+                        .containsAll(paging);
+                assertThat((Long) params.get("offset")).isGreaterThanOrEqualTo(0L);
+                assertThat((Integer) params.get("limit")).isBetween(1, 100);
+            }
+        }
     }
 
     private static int occurrences(String haystack, String needle) {

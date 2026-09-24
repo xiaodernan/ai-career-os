@@ -6,6 +6,7 @@ import com.careeros.common.ApiException;
 import com.careeros.common.Json;
 import com.careeros.common.PageDTO;
 import com.careeros.common.Texts;
+import com.careeros.common.Paging;
 import com.careeros.conversation.dto.ConversationDtos.ChatResponse;
 import com.careeros.conversation.dto.ConversationDtos.CreateConversationRequest;
 import com.careeros.conversation.dto.ConversationDtos.ConversationItem;
@@ -21,7 +22,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -48,7 +48,7 @@ public class ConversationService {
 
     @Transactional(readOnly = true)
     public PageDTO<ConversationItem> list(UUID userId, int page, int size) {
-        var result = conversations.findByUserIdOrderByUpdatedAtDesc(userId, PageRequest.of(page, size));
+        var result = conversations.findByUserIdOrderByUpdatedAtDesc(userId, Paging.of(page, size).pageable());
         Map<UUID, ConversationDigestRepository.Digest> rows = digests.forConversations(
                 result.getContent().stream().map(Conversation::getId).toList());
         return PageDTO.from(result,
@@ -156,7 +156,7 @@ public class ConversationService {
 
     private List<Map<String, Object>> historyPayload(UUID conversationId) {
         List<Message> recent = messages.findByConversationIdOrderByCreatedAtDesc(conversationId,
-                PageRequest.of(0, HISTORY_TURNS));
+                Paging.first(HISTORY_TURNS));
         List<Map<String, Object>> history = new ArrayList<>();
         for (int i = recent.size() - 1; i >= 0; i--) {
             Message m = recent.get(i);

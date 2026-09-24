@@ -3,6 +3,7 @@ package com.careeros.resume.web;
 import com.careeros.common.AuthUser;
 import com.careeros.common.CurrentUser;
 import com.careeros.common.PageDTO;
+import com.careeros.common.Paging;
 import com.careeros.resume.dto.ResumeDtos.CreateResumeRequest;
 import com.careeros.resume.dto.ResumeDtos.ParseResumeResponse;
 import com.careeros.resume.dto.ResumeDtos.ResumeDetail;
@@ -15,7 +16,6 @@ import com.careeros.resume.service.ResumeService;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -44,7 +44,7 @@ public class ResumeController {
     public PageDTO<ResumeListItem> list(@CurrentUser AuthUser user,
                                         @RequestParam(defaultValue = "0") int page,
                                         @RequestParam(defaultValue = "20") int size) {
-        return resumes.list(user.id(), PageRequest.of(page, Math.min(size, 100)));
+        return resumes.list(user.id(), Paging.of(page, size).pageable());
     }
 
     @PostMapping

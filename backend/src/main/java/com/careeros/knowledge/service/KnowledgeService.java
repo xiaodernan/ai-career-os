@@ -4,6 +4,7 @@ import com.careeros.common.ApiErrorCode;
 import com.careeros.common.ApiException;
 import com.careeros.common.Json;
 import com.careeros.common.PageDTO;
+import com.careeros.common.Paging;
 import com.careeros.knowledge.dto.KnowledgeDtos.DocumentStatus;
 import com.careeros.knowledge.dto.KnowledgeDtos.IngestResultDto;
 import com.careeros.knowledge.dto.KnowledgeDtos.NoteItem;
@@ -21,7 +22,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.Map;
 import java.util.UUID;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -51,7 +51,7 @@ public class KnowledgeService {
 
     @Transactional(readOnly = true)
     public PageDTO<SourceItem> listSources(UUID userId, int page, int size) {
-        var result = sources.findByUserIdOrderByCreatedAtDesc(userId, PageRequest.of(page, size));
+        var result = sources.findByUserIdOrderByCreatedAtDesc(userId, Paging.of(page, size).pageable());
         return PageDTO.from(result, SourceItem::from);
     }
 
@@ -110,7 +110,7 @@ public class KnowledgeService {
 
     @Transactional(readOnly = true)
     public PageDTO<NoteItem> listNotes(UUID userId, int page, int size) {
-        var result = notes.findByUserIdOrderByUpdatedAtDesc(userId, PageRequest.of(page, size));
+        var result = notes.findByUserIdOrderByUpdatedAtDesc(userId, Paging.of(page, size).pageable());
         return PageDTO.from(result, KnowledgeService::toNoteItem);
     }
 

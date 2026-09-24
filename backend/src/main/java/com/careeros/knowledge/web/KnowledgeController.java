@@ -40,7 +40,7 @@ public class KnowledgeController {
     public PageDTO<SourceItem> sources(@CurrentUser AuthUser user,
                                        @RequestParam(defaultValue = "0") int page,
                                        @RequestParam(defaultValue = "20") int size) {
-        return knowledge.listSources(user.id(), page, Math.min(size, 100));
+        return knowledge.listSources(user.id(), page, size);
     }
 
     @DeleteMapping("/sources/{id}")
@@ -58,7 +58,7 @@ public class KnowledgeController {
     public PageDTO<NoteItem> notes(@CurrentUser AuthUser user,
                                    @RequestParam(defaultValue = "0") int page,
                                    @RequestParam(defaultValue = "20") int size) {
-        return knowledge.listNotes(user.id(), page, Math.min(size, 100));
+        return knowledge.listNotes(user.id(), page, size);
     }
 
     @PostMapping("/notes")

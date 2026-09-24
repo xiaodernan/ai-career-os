@@ -5,6 +5,7 @@ import com.careeros.common.ApiErrorCode;
 import com.careeros.common.ApiException;
 import com.careeros.common.Json;
 import com.careeros.common.PageDTO;
+import com.careeros.common.Paging;
 import com.careeros.job.dto.JobDtos.CompanyItem;
 import com.careeros.job.dto.JobDtos.CompanyRequest;
 import com.careeros.job.dto.JobDtos.CreateJobRequest;
@@ -37,7 +38,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -72,10 +72,13 @@ public class JobService {
                                      String remote, String company, Integer minSalary,
                                      Integer maxSalary, String status, String sort,
                                      int page, int size) {
+        // One clamped window, used for the query *and* for the page the client is told it
+        // got: ?page=-1 is served as page 0, so the pager must not be handed -1 back.
+        Paging.Window window = Paging.of(page, size);
         var filters = new JobSearchRepository.Filters(userId, q, skills, location, remote, company,
-                minSalary, maxSalary, status, sort, page, size);
+                minSalary, maxSalary, status, sort, window.page(), window.size());
         List<JobListItem> items = search.search(filters);
-        return PageDTO.of(items, search.count(filters), page, size);
+        return PageDTO.of(items, search.count(filters), window.page(), window.size());
     }
 
     @Transactional(readOnly = true)
@@ -325,7 +328,7 @@ public class JobService {
 
     @Transactional(readOnly = true)
     public PageDTO<CompanyItem> listCompanies(String q, int page, int size) {
-        var pageable = PageRequest.of(page, size);
+        var pageable = Paging.of(page, size).pageable();
         var result = (q == null || q.isBlank())
                 ? companies.findAll(pageable)
                 : companies.findByNameContainingIgnoreCase(q, pageable);

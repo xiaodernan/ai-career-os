@@ -55,7 +55,7 @@ public class JobController {
                                      @RequestParam(defaultValue = "0") int page,
                                      @RequestParam(defaultValue = "20") int size) {
         return jobs.list(user.id(), q, skills, location, remote, company, minSalary, maxSalary,
-                status, sort, page, Math.min(size, 100));
+                status, sort, page, size);
     }
 
     @GetMapping("/saved")

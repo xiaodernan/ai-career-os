@@ -6,6 +6,7 @@ import com.careeros.application.entity.ApplicationEvent;
 import com.careeros.application.repository.ApplicationEventRepository;
 import com.careeros.application.repository.ApplicationRepository;
 import com.careeros.application.service.ApplicationService;
+import com.careeros.common.Paging;
 import com.careeros.interview.repository.InterviewSessionRepository;
 import com.careeros.job.entity.Job;
 import com.careeros.job.entity.JobMatch;
@@ -23,7 +24,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -109,12 +109,12 @@ public class DashboardService {
     }
 
     private List<RecentRun> recentRuns(UUID userId) {
-        return runs.findRecent(userId, null, PageRequest.of(0, RECENT_LIMIT)).stream()
+        return runs.findRecent(userId, null, Paging.first(RECENT_LIMIT)).stream()
                 .map(DashboardService::toRun).toList();
     }
 
     private List<RecentActivity> recentActivity(UUID userId) {
-        return appEvents.findByUserIdOrderByCreatedAtDesc(userId, PageRequest.of(0, RECENT_LIMIT)).stream()
+        return appEvents.findByUserIdOrderByCreatedAtDesc(userId, Paging.first(RECENT_LIMIT)).stream()
                 .map(DashboardService::toActivity).toList();
     }
 

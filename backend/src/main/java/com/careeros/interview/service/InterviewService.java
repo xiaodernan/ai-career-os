@@ -5,6 +5,7 @@ import com.careeros.common.ApiErrorCode;
 import com.careeros.common.ApiException;
 import com.careeros.common.Json;
 import com.careeros.common.PageDTO;
+import com.careeros.common.Paging;
 import com.careeros.interview.dto.InterviewDtos.AnswerResponse;
 import com.careeros.interview.dto.InterviewDtos.CreateSessionRequest;
 import com.careeros.interview.dto.InterviewDtos.EvaluationItem;
@@ -28,7 +29,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -59,7 +59,7 @@ public class InterviewService {
 
     @Transactional(readOnly = true)
     public PageDTO<SessionItem> list(UUID userId, int page, int size) {
-        var result = sessions.findByUserIdOrderByStartedAtDesc(userId, PageRequest.of(page, size));
+        var result = sessions.findByUserIdOrderByStartedAtDesc(userId, Paging.of(page, size).pageable());
         // Two grouped reads for the whole page; a per-row query would scale with the board.
         Map<UUID, InterviewDigestRepository.Digest> rows = digests.forSessions(
                 result.getContent().stream().map(InterviewSession::getId).toList());

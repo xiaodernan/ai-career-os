@@ -37,7 +37,7 @@ public class ConversationController {
     public PageDTO<ConversationItem> list(@CurrentUser AuthUser user,
                                           @RequestParam(defaultValue = "0") int page,
                                           @RequestParam(defaultValue = "20") int size) {
-        return conversations.list(user.id(), page, Math.min(size, 100));
+        return conversations.list(user.id(), page, size);
     }
 
     @PostMapping

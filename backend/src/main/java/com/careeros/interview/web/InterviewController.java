@@ -40,7 +40,7 @@ public class InterviewController {
     public PageDTO<SessionItem> list(@CurrentUser AuthUser user,
                                      @RequestParam(defaultValue = "0") int page,
                                      @RequestParam(defaultValue = "20") int size) {
-        return interviews.list(user.id(), page, Math.min(size, 100));
+        return interviews.list(user.id(), page, size);
     }
 
     @PostMapping

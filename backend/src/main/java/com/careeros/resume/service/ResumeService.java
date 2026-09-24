@@ -5,6 +5,7 @@ import com.careeros.common.ApiErrorCode;
 import com.careeros.common.ApiException;
 import com.careeros.common.Json;
 import com.careeros.common.PageDTO;
+import com.careeros.common.Paging;
 import com.careeros.common.Texts;
 import com.careeros.knowledge.entity.KnowledgeSource;
 import com.careeros.knowledge.repository.KnowledgeSourceRepository;
@@ -370,7 +371,7 @@ public class ResumeService {
     /** Most recent resume that already has a current version (used for match/tailor defaults). */
     @Transactional(readOnly = true)
     public Optional<Resume> currentResumeWithVersion(UUID userId) {
-        return resumes.findByUserIdOrderByCreatedAtDesc(userId, Pageable.ofSize(20)).getContent()
+        return resumes.findByUserIdOrderByCreatedAtDesc(userId, Paging.first(20)).getContent()
                 .stream().filter(r -> r.getCurrentVersionId() != null).findFirst();
     }
 

@@ -1,6 +1,7 @@
 package com.careeros.job.repository;
 
 import com.careeros.common.LikePattern;
+import com.careeros.common.Paging;
 import com.careeros.common.Times;
 import com.careeros.job.dto.JobDtos.JobListItem;
 import java.util.List;
@@ -41,7 +42,7 @@ public class JobSearchRepository {
         sql.append(" ORDER BY ").append(ORDERINGS.getOrDefault(sortKey, ORDERINGS.get("posted")));
         sql.append(" LIMIT :limit OFFSET :offset");
         Query query = em.createNativeQuery(sql.toString());
-        bind(f, query, f.page() * f.size(), f.size());
+        bind(f, query, Paging.of(f.page(), f.size()));
         return ((List<Object[]>) query.getResultList()).stream().map(JobSearchRepository::toItem).toList();
     }
 
@@ -49,7 +50,7 @@ public class JobSearchRepository {
         StringBuilder sql = new StringBuilder(COUNT_WHERE);
         applyWhere(f, sql);
         Query query = em.createNativeQuery(sql.toString());
-        bind(f, query, 0, 0);
+        bind(f, query, null);
         return ((Number) query.getSingleResult()).longValue();
     }
 
@@ -107,7 +108,14 @@ public class JobSearchRepository {
         }
     }
 
-    private static void bind(Filters f, Query query, int offset, int limit) {
+    /**
+     * @param window the page to bind, or null for a statement that does not paginate. The
+     *     guard used to read {@code limit > 0} out of the same number the URL controls, so
+     *     {@code ?size=0} switched the binding off on a statement whose SQL still says
+     *     {@code LIMIT :limit OFFSET :offset} — an unbound parameter, i.e. a 500. Whether a
+     *     statement pages is now said by the caller, and the window itself cannot be empty.
+     */
+    private static void bind(Filters f, Query query, Paging.Window window) {
         query.setParameter("userId", f.userId());
         if (f.q() != null && !f.q().isBlank()) {
             query.setParameter("q", f.q());
@@ -136,11 +144,9 @@ public class JobSearchRepository {
         if (f.skills() != null && !f.skills().isEmpty()) {
             query.setParameter("skills", String.join(",", f.skills()));
         }
-        // search() appends `LIMIT :limit OFFSET :offset`, so the named parameters
-        // must be bound here — JDBC pagination would add a second clause.
-        if (limit > 0) {
-            query.setParameter("limit", limit);
-            query.setParameter("offset", offset);
+        if (window != null) {
+            query.setParameter("limit", window.size());
+            query.setParameter("offset", window.offset());
         }
     }
 

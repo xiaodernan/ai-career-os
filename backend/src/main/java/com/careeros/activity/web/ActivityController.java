@@ -10,13 +10,13 @@ import com.careeros.common.ApiException;
 import com.careeros.common.AuthUser;
 import com.careeros.common.CurrentUser;
 import com.careeros.common.Json;
+import com.careeros.common.Paging;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -55,7 +55,7 @@ public class ActivityController {
     public List<RunItem> listRuns(@CurrentUser AuthUser user,
                                   @RequestParam(defaultValue = "30") int limit,
                                   @RequestParam(required = false) String agent) {
-        return runs.findRecent(user.id(), agent, PageRequest.of(0, Math.min(limit, 100))).stream()
+        return runs.findRecent(user.id(), agent, Paging.first(limit)).stream()
                 .map(ActivityController::toItem).toList();
     }
 
