@@ -125,6 +125,25 @@ export function depthLabel(value: number): string {
   return DEPTH_LABELS[depthLevel(value) - 1] ?? String(depthLevel(value));
 }
 
+/** Beyond this the number is a parse artifact, not a requirement: no role asks for a
+ *  40-year career. The JD importer stores whatever the model answered verbatim. */
+const MAX_EXPERIENCE_YEARS = 30;
+
+/**
+ * `jobs.experience_years` → the one chip the job header draws for it. 0 is a real
+ * answer ("no experience required") and must not read as missing; null means the
+ * posting never said, so the chip hides instead of inventing "0+".
+ */
+export function seniorityLabel(
+  years: number | null | undefined
+): string | undefined {
+  if (typeof years !== "number" || !Number.isFinite(years)) return undefined;
+  const y = Math.trunc(years);
+  if (y < 0 || y > MAX_EXPERIENCE_YEARS) return undefined;
+  if (y === 0) return "Entry level";
+  return `${y}+ year${y === 1 ? "" : "s"} experience`;
+}
+
 export function initialsOf(...parts: (string | undefined | null)[]): string {
   const letters = parts
     .filter(Boolean)

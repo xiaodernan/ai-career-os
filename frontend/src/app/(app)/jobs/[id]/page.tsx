@@ -208,7 +208,7 @@ export default function JobDetailPage() {
                 )}
                 {job.experienceLevel && (
                   <Badge variant="outline" className="text-2xs font-normal">
-                    {titleCase(job.experienceLevel)}
+                    {job.experienceLevel}
                   </Badge>
                 )}
               </p>

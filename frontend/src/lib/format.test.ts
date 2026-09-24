@@ -9,6 +9,7 @@ import {
   initialsOf,
   pluralize,
   relativeTime,
+  seniorityLabel,
   slugify,
   titleCase,
 } from "./format";
@@ -101,6 +102,34 @@ describe("depthLevel / depthLabel", () => {
     expect(depthLabel(5)).toBe("Expert");
     expect(depthLabel(9)).toBe("Expert");
     expect(depthLabel(2)).toBe("Standard");
+  });
+});
+
+describe("seniorityLabel", () => {
+  it("turns the stored years into the chip text the job header draws", () => {
+    // Live DB distribution of jobs.experience_years today: 0(4) 2(5) 3(20) 4(9) 5(3),
+    // null(5) — so 41 of 46 job pages had a value and showed no chip at all.
+    expect(seniorityLabel(3)).toBe("3+ years experience");
+    expect(seniorityLabel(1)).toBe("1+ year experience");
+    expect(seniorityLabel(5)).toBe("5+ years experience");
+  });
+
+  it("keeps 0 as a real answer and null as not stated", () => {
+    // "Entry level" and "no chip" are different facts; printing "0+ years" would be
+    // neither, and faking 0 for a missing value would claim the posting said something.
+    expect(seniorityLabel(0)).toBe("Entry level");
+    expect(seniorityLabel(null)).toBeUndefined();
+    expect(seniorityLabel(undefined)).toBeUndefined();
+    expect(seniorityLabel(Number.NaN)).toBeUndefined();
+  });
+
+  it("refuses a number that can only be a parse artifact", () => {
+    // The JD importer stores whatever the model answered for experienceYears verbatim,
+    // and a bare year in the posting text ("founded 2024") is the classic misread.
+    expect(seniorityLabel(2024)).toBeUndefined();
+    expect(seniorityLabel(30)).toBe("30+ years experience");
+    expect(seniorityLabel(-1)).toBeUndefined();
+    expect(seniorityLabel(3.7)).toBe("3+ years experience");
   });
 });
 

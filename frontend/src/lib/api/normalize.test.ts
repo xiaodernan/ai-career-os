@@ -205,6 +205,24 @@ describe("normalizeJob", () => {
     expect(j.title).toBe("Data Engineer");
     expect(j.companyName).toBe("Beta");
   });
+
+  it("labels the seniority from experienceYears, the only seniority column there is", () => {
+    // `jobs.experience_years` reaches the client as `experienceYears` on both
+    // JobListItem and JobDetail. The header's chip used to read `experienceLevel` /
+    // `experience_level` / `seniority`, which no producer in either service ever sent,
+    // so 41 of the 46 stored jobs rendered a job page that never said what it asks for.
+    expect(normalizeJob({ id: "job-6", experienceYears: 3 }).experienceLevel).toBe(
+      "3+ years experience"
+    );
+    expect(normalizeJob({ id: "job-7", experience_years: 0 }).experienceLevel).toBe("Entry level");
+  });
+
+  it("hides the chip when the posting never stated a requirement", () => {
+    // null must not become "0+ years": that would claim the posting said something.
+    const j = normalizeJob({ id: "job-8", title: "T", experienceYears: null });
+    expect(j.experienceLevel).toBeUndefined();
+    expect(normalizeJob({ id: "job-9", experienceYears: 2024 }).experienceLevel).toBeUndefined();
+  });
 });
 
 describe("normalizeApplication", () => {
