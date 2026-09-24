@@ -16,6 +16,9 @@ import {
   normalizeSuggestions,
   normalizeTailor,
   tailorSaveBody,
+  list,
+  num,
+  pct,
   pick,
   str,
 } from "@/lib/api/normalize";
@@ -500,6 +503,7 @@ export function useInterviewOpening(sessionId: string) {
 
 export interface AnswerResponse {
   evaluation: {
+    /** 0–100 — the same scale the report page uses, because both feed one renderer. */
     score?: number;
     strengths: string[];
     weaknesses: string[];
@@ -513,6 +517,61 @@ export interface AnswerResponse {
   raw: unknown;
 }
 
+/**
+ * POST /interview/sessions/{id}/answer → {@link AnswerResponse}. Split out so the scale
+ * coercion below is testable without a renderer, and so the report path
+ * (`normalizeInterviewReport`) has a named sibling to be checked against.
+ */
+export function normalizeAnswerResponse(raw: unknown): AnswerResponse {
+  const ev = (pick(raw, "evaluation", "result") ?? raw) as Record<string, unknown>;
+  const nx = (pick(raw, "next", "question", "nextQuestion", "next_question") ?? null) as Record<
+    string,
+    unknown
+  > | null;
+  const arr = (...keys: string[]) => {
+    for (const k of keys) {
+      const v = pick(ev, k);
+      if (Array.isArray(v)) return v.map((x) => String(typeof x === "object" ? (pick(x, "text", "point", "item", "label") ?? "") : x));
+    }
+    return [];
+  };
+  return {
+    evaluation: {
+      // The evaluator answers in 0..1 (the ai-service prompt asks for it and its fallback is
+      // 0.5), while the badge on the other end compares against 75/50 and prints "/100".
+      score: pct(num(ev, "score", "overall")),
+      strengths: arr("strengths", "what_went_well", "whatWentWell", "good"),
+      weaknesses: arr("weaknesses", "what_was_weak", "whatWasWeak", "weak"),
+      missing: arr("missing", "missing_concepts", "missingConcepts", "gaps"),
+      betterAnswer: str(ev, "better_answer", "betterAnswer", "improved", "model_answer"),
+      feedback: str(ev, "feedback", "comment", "summary"),
+      dims: normalizeDimsList(ev),
+      // Same projection as normalizeInterviewReport's trajectory, so the live turn and the
+      // report of that turn cannot disagree about what the user scored.
+      trajectory: list<Record<string, unknown>>(
+        ev,
+        "trajectory",
+        "depth_trajectory",
+        "depthTrajectory"
+      ).map((t) => ({
+        question: str(t, "question", "label", "topic"),
+        score: pct(num(t, "score", "value")),
+        depth: num(t, "depth", "level", "difficulty"),
+      })),
+    },
+    next: nx
+      ? {
+          id: str(nx, "id", "questionId", "question_id") ?? undefined,
+          question: str(nx, "question", "text", "prompt", "content") ?? "",
+          topic: str(nx, "topic", "category") ?? undefined,
+          kind: str(nx, "kind", "type", "nextAction", "next_action") ?? undefined,
+          difficulty: pick<number>(nx, "difficulty", "depth", "level") ?? undefined,
+        }
+      : null,
+    raw,
+  };
+}
+
 export function useSubmitInterviewAnswer(sessionId: string) {
   const qc = useQueryClient();
   return useMutation({
@@ -521,44 +580,7 @@ export function useSubmitInterviewAnswer(sessionId: string) {
         method: "POST",
         body: { answer },
       });
-      const ev = (pick(raw, "evaluation", "result") ?? raw) as Record<string, unknown>;
-      const nx = (pick(raw, "next", "question", "nextQuestion", "next_question") ?? null) as Record<
-        string,
-        unknown
-      > | null;
-      const arr = (...keys: string[]) => {
-        for (const k of keys) {
-          const v = pick(ev, k);
-          if (Array.isArray(v)) return v.map((x) => String(typeof x === "object" ? (pick(x, "text", "point", "item", "label") ?? "") : x));
-        }
-        return [];
-      };
-      return {
-        evaluation: {
-          score: pick<number>(ev, "score", "overall") ?? undefined,
-          strengths: arr("strengths", "what_went_well", "whatWentWell", "good"),
-          weaknesses: arr("weaknesses", "what_was_weak", "whatWasWeak", "weak"),
-          missing: arr("missing", "missing_concepts", "missingConcepts", "gaps"),
-          betterAnswer: str(ev, "better_answer", "betterAnswer", "improved", "model_answer"),
-          feedback: str(ev, "feedback", "comment", "summary"),
-          dims: normalizeDimsList(ev),
-          trajectory: (pick(ev, "trajectory", "depth_trajectory", "depthTrajectory") ?? []) as {
-            question?: string;
-            score?: number;
-            depth?: number;
-          }[],
-        },
-        next: nx
-          ? {
-              id: str(nx, "id", "questionId", "question_id") ?? undefined,
-              question: str(nx, "question", "text", "prompt", "content") ?? "",
-              topic: str(nx, "topic", "category") ?? undefined,
-              kind: str(nx, "kind", "type", "nextAction", "next_action") ?? undefined,
-              difficulty: pick<number>(nx, "difficulty", "depth", "level") ?? undefined,
-            }
-          : null,
-        raw,
-      };
+      return normalizeAnswerResponse(raw);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["interview", "session", sessionId] }),
     onError: fail("Couldn't evaluate that answer."),
