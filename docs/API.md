@@ -68,18 +68,18 @@ per-user budget on AI endpoints.
 | POST | `/auth/refresh` | `{refreshToken}` → new token pair (rotates; reuse revokes) |
 | POST | `/auth/logout` | `{refreshToken}` |
 | POST | `/auth/password/forgot` | `{email}` → always 200 (no account enumeration) |
-| POST | `/auth/password/reset` | `{token, password}` |
+| POST | `/auth/password/reset` | `{token, newPassword}` |
 
 ### Current user
 
 | Method | Path | Notes |
 |---|---|---|
 | GET | `/me` | account summary |
-| PATCH | `/me` | `{displayName, avatarUrl}` |
+| PATCH | `/me` | `{displayName, headline, location, summary, yearsExperience, targetRoles, targetLocations, links, workAuthorization, preferences}` — every field optional, `null` means leave unchanged |
 | GET | `/users/me` | alias of `/me` (binding seam) |
-| PATCH | `/users/me` | `{displayName, headline, location}` |
+| PATCH | `/users/me` | same body as `PATCH /me` (`{displayName, headline, location, ...}`) |
 | GET | `/users/me/profile` | career profile |
-| PATCH | `/users/me/profile` | `{headline, summary, location, yearsExperience, targetRoles, targetLocations, links}` |
+| PATCH | `/users/me/profile` | `{headline, summary, location, yearsExperience, targetRoles, targetLocations, links, workAuthorization, preferences}` |
 
 ### Resumes (`/resumes`)
 
@@ -144,13 +144,18 @@ back to `posted` for the same reason.
 | Method | Path | Notes |
 |---|---|---|
 | GET | `/interview/sessions` | list |
-| POST | `/interview/sessions` | `{jobId, jdId?, resumeVersionId?, mode, maxQuestions}` |
+| POST | `/interview/sessions` | `{jobId, jdId?, resumeVersionId?, companyName?, positionTitle?, mode, config}` |
 | GET | `/interview/sessions/{id}` | session + turns + evaluation |
-| PATCH | `/interview/sessions/{id}` | pause / resume / abandon |
+| PATCH | `/interview/sessions/{id}` | `{status, mode, difficulty, config}` — pause / resume / abandon |
 | DELETE | `/interview/sessions/{id}` | |
 | POST | `/interview/sessions/{id}/opening` | first question |
 | POST | `/interview/sessions/{id}/answer` | `{answer}` → evaluation + follow-up + difficulty step |
 | POST | `/interview/sessions/{id}/finalize` | 8-dimension report + trajectory |
+
+There is no `maxQuestions` field: the body binds by name, so one sent at the top level is
+dropped without a word. The question budget is a key inside `config`, in the snake_case the
+interview engine reads it under — `{"config": {"max_questions": 12}}`, default 8. `config` is
+stored verbatim on the session, so the same place takes the rest of the run's tuning.
 
 ### Applications (`/applications`)
 
@@ -159,8 +164,8 @@ back to `posted` for the same reason.
 | GET | `/applications` | board (`?status=&page=&size=`) |
 | POST | `/applications` | create |
 | GET | `/applications/{id}` | detail |
-| PATCH | `/applications/{id}` | `{status, notes, reminderAt, ...}` — kanban drag & drop |
-| PUT | `/applications/{id}/reorder` | `{position}` within column |
+| PATCH | `/applications/{id}` | `{status, position, note, reminderAt}` — kanban drag & drop; `reminder_at` is accepted as an alias, `note` (singular) is the writable one |
+| PUT | `/applications/{id}/reorder` | `{position, status?}` within column |
 | GET | `/applications/{id}/timeline` | status-transition audit events |
 | DELETE | `/applications/{id}` | |
 
@@ -168,7 +173,7 @@ back to `posted` for the same reason.
 
 | Method | Path | Notes |
 |---|---|---|
-| POST | `/copilot/chat` | `{message, conversationId?}` → `{answer, artifacts[], sources[], actions[], runId, conversationId}` (synchronous; both messages persisted) |
+| POST | `/copilot/chat` | `{message, conversationId?, context?}` → `{answer, artifacts[], sources[], actions[], runId, conversationId}` (synchronous; both messages persisted) |
 | GET | `/conversations` | list |
 | POST | `/conversations` | create |
 | GET / PATCH / DELETE | `/conversations/{id}` | |

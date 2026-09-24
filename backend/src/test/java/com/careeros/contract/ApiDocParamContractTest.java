@@ -2,6 +2,7 @@ package com.careeros.contract;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.lang.reflect.Method;
@@ -15,6 +16,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -131,9 +133,12 @@ class ApiDocParamContractTest {
         return pairs;
     }
 
-    /** GET paths (without the /api/v1 prefix, one segment folded to {}) to the names they bind. */
-    private static Map<String, Set<String>> boundParams() {
-        Map<String, Set<String>> out = new HashMap<>();
+    /** A controller method's HTTP verb, its doc-shaped path, and what it binds from the request. */
+    private record Route(String verb, String path, Set<String> queryNames, Class<?> bodyType) {
+    }
+
+    private static List<Route> routes() {
+        List<Route> out = new ArrayList<>();
         for (String className : controllerClasses()) {
             Class<?> controller;
             try {
@@ -145,25 +150,165 @@ class ApiDocParamContractTest {
             RequestMapping root = AnnotatedElementUtils.findMergedAnnotation(controller, RequestMapping.class);
             String basePath = root == null ? "" : firstOf(root.path(), root.value());
             for (Method method : controller.getDeclaredMethods()) {
-                if (!"GET".equals(verbOf(method))) {
-                    continue;
-                }
+                String verb = verbOf(method);
                 RequestMapping route = AnnotatedElementUtils.findMergedAnnotation(method, RequestMapping.class);
                 String path = basePath + (route == null ? "" : firstOf(route.path(), route.value()));
-                if (!path.startsWith(API_PREFIX)) {
+                if (verb.isEmpty() || !path.startsWith(API_PREFIX)) {
                     continue;
                 }
                 Set<String> names = new LinkedHashSet<>();
+                Class<?> bodyType = null;
                 for (Parameter p : method.getParameters()) {
                     RequestParam param = AnnotatedElementUtils.findMergedAnnotation(p, RequestParam.class);
                     if (param != null) {
                         names.add(first(param.name(), param.value(), p.getName()));
                     }
+                    if (AnnotatedElementUtils.hasAnnotation(p,
+                            org.springframework.web.bind.annotation.RequestBody.class)) {
+                        bodyType = p.getType();
+                    }
                 }
-                out.putIfAbsent(documentedForm(path.replaceFirst("^" + API_PREFIX, "")), names);
+                out.add(new Route(verb, documentedForm(path.replaceFirst("^" + API_PREFIX, "")), names, bodyType));
             }
         }
         return out;
+    }
+
+    /**
+     * Jackson drops a body property the target record has no component for — no error, no
+     * warning, just a request that proceeds as if the caller had not sent it. So a field the doc
+     * names for a POST/PATCH/PUT body has to be a field the record actually binds, and a row that
+     * names any of them names all of them unless it says {@code ...}.
+     */
+    @Test
+    void everyBodyFieldTheDocNamesIsOneTheRecordBinds() {
+        Map<String, BodySpec> bound = boundBodies();
+        List<String> phantoms = new ArrayList<>();
+        documentedBodies().forEach((key, row) -> {
+            BodySpec real = bound.get(key);
+            assertThat(real).as("%s is documented with a body but no controller binds one", key)
+                    .isNotNull();
+            if (real.freeForm()) {
+                return; // a Map body has no field set to be wrong about
+            }
+            Set<String> phantom = new TreeSet<>(row.names());
+            phantom.removeAll(real.accepted());
+            if (!phantom.isEmpty()) {
+                phantoms.add(key + " names " + phantom);
+            }
+        });
+        assertThat(phantoms).as("documented body fields Jackson silently drops").isEmpty();
+    }
+
+    /**
+     * The rows that were wrong when this gate was written have to keep naming fields, so the gate
+     * cannot be passed by collapsing them to {@code {...}}.
+     */
+    @Test
+    void theBodyRowsThatCarryTheContractStayWritten() {
+        Map<String, BodyRow> rows = documentedBodies();
+        for (String key : List.of("PATCH /applications/{}", "PUT /applications/{}/reorder",
+                "PATCH /me", "POST /auth/password/reset", "POST /copilot/chat",
+                "POST /interview/sessions")) {
+            assertThat(rows).as("%s has to keep listing its body fields", key).containsKey(key);
+        }
+    }
+
+    /**
+     * Compared against the components, not the accepted spellings: {@code @JsonAlias} adds
+     * snake_case ways to say the same field, and the doc's job is to name each field once.
+     */
+    @Test
+    void aBodyRowThatNamesFieldsNamesAllOfThem() {
+        Map<String, BodySpec> bound = boundBodies();
+        List<String> omissions = new ArrayList<>();
+        documentedBodies().forEach((key, row) -> {
+            BodySpec real = bound.get(key);
+            assertThat(real).as("%s resolves to a real endpoint", key).isNotNull();
+            if (real.freeForm() || row.openEnded()) {
+                return;
+            }
+            Set<String> forgotten = new TreeSet<>(real.components());
+            forgotten.removeAll(row.names());
+            if (!forgotten.isEmpty()) {
+                omissions.add(key + " also binds " + forgotten);
+            }
+        });
+        assertThat(omissions).as("body fields an endpoint binds but the caller is never told about")
+                .isEmpty();
+    }
+
+    /** The walk sees request records at all, and reads their aliases as well as their names. */
+    @Test
+    void theBodySideOfTheWalkIsActuallyRead() {
+        Map<String, BodySpec> bound = boundBodies();
+        assertThat(bound).hasSizeGreaterThan(10);
+        BodySpec match = bound.get("POST /jobs/{}/match");
+        assertThat(match.components()).contains("resumeVersionId").doesNotContain("resume_version_id");
+        // the alias is an accepted spelling, not a second field the doc has to list
+        assertThat(match.accepted()).contains("resumeVersionId", "resume_version_id");
+        assertThat(bound.get("PATCH /interview/sessions/{}").freeForm()).isTrue();
+        assertThat(documentedBodies()).containsKey("POST /interview/sessions");
+    }
+
+    /** GET paths (without the /api/v1 prefix, one segment folded to {}) to the names they bind. */
+    private static Map<String, Set<String>> boundParams() {
+        Map<String, Set<String>> out = new HashMap<>();
+        for (Route r : routes()) {
+            if ("GET".equals(r.verb())) {
+                out.putIfAbsent(r.path(), r.queryNames());
+            }
+        }
+        return out;
+    }
+
+    /**
+     * "POST /jobs/{}/match" to what its request record accepts. {@code freeForm} marks the bodies
+     * declared as a Map — those take any key, so the phantom rule has nothing to say about them.
+     */
+    private static Map<String, BodySpec> boundBodies() {
+        Map<String, BodySpec> out = new HashMap<>();
+        for (Route r : routes()) {
+            if (r.bodyType() == null) {
+                continue;
+            }
+            java.lang.reflect.RecordComponent[] components = r.bodyType().getRecordComponents();
+            if (components == null) {
+                out.putIfAbsent(r.verb() + " " + r.path(), new BodySpec(Set.of(), Set.of(), true));
+                continue;
+            }
+            Set<String> names = new LinkedHashSet<>();
+            Set<String> accepted = new LinkedHashSet<>();
+            for (java.lang.reflect.RecordComponent c : components) {
+                names.add(c.getName());
+                accepted.add(c.getName());
+                accepted.addAll(aliasesOf(c));
+            }
+            out.putIfAbsent(r.verb() + " " + r.path(), new BodySpec(names, accepted, false));
+        }
+        return out;
+    }
+
+    /**
+     * A record component carries an annotation like {@code @JsonAlias} onto its field and its
+     * accessor, and {@link java.lang.reflect.RecordComponent} is not itself an annotated element,
+     * so the aliases are read from whichever of the two the compiler put them on.
+     */
+    private static List<String> aliasesOf(java.lang.reflect.RecordComponent component) {
+        JsonAlias alias = AnnotatedElementUtils.findMergedAnnotation(component.getAccessor(), JsonAlias.class);
+        if (alias == null) {
+            try {
+                alias = AnnotatedElementUtils.findMergedAnnotation(component.getAccessor()
+                        .getDeclaringClass().getDeclaredField(component.getName()), JsonAlias.class);
+            } catch (NoSuchFieldException e) {
+                return List.of();
+            }
+        }
+        return alias == null ? List.of() : Arrays.asList(alias.value());
+    }
+
+    /** What one endpoint's body binds: its fields, plus every spelling Jackson accepts for them. */
+    private record BodySpec(Set<String> components, Set<String> accepted, boolean freeForm) {
     }
 
     /** The doc folds a UUID or a task id to one shape; so must the resolved route. */
@@ -209,6 +354,51 @@ class ApiDocParamContractTest {
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
+    }
+
+    /** A documented body row: the field names it spells out, and whether it admits more with "...". */
+    private record BodyRow(Set<String> names, boolean openEnded) {
+    }
+
+    private static final List<String> BODY_VERBS = List.of("POST", "PATCH", "PUT");
+
+    /** "POST /jobs" to the first brace group of its Notes cell — the request, never the response. */
+    private static Map<String, BodyRow> documentedBodies() {
+        Map<String, BodyRow> rows = new TreeMap<>();
+        boolean inPublicApi = false;
+        for (String line : lines()) {
+            if (line.startsWith("## ")) {
+                inPublicApi = line.startsWith("## 2. Public API");
+                continue;
+            }
+            if (!inPublicApi || !line.startsWith("|")) {
+                continue;
+            }
+            String[] cells = line.replace("\\|", "¦").split("\\|");
+            if (cells.length < 4 || !BODY_VERBS.contains(cells[1].trim())) {
+                continue;
+            }
+            String path = cells[2].trim().replace("`", "");
+            String notes = String.join(" ", Arrays.copyOfRange(cells, 3, cells.length));
+            Matcher group = Pattern.compile("\\{([^{}]*)}").matcher(notes);
+            if (!group.find()) {
+                continue;
+            }
+            Set<String> names = new LinkedHashSet<>();
+            boolean openEnded = false;
+            for (String token : group.group(1).split(",")) {
+                String candidate = token.trim().replace("?", "");
+                if (candidate.equals("...")) {
+                    openEnded = true;
+                } else if (candidate.matches("[A-Za-z][A-Za-z0-9]*")) {
+                    names.add(candidate);
+                }
+            }
+            if (!names.isEmpty()) {
+                rows.put(cells[1].trim() + " " + documentedForm(path), new BodyRow(names, openEnded));
+            }
+        }
+        return rows;
     }
 
     /** Path in the doc (without the prefix) to the parameter names its Notes cell spells out. */
