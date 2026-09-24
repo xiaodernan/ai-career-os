@@ -118,7 +118,8 @@ Known gaps, stated plainly rather than hidden:
   green end to end** — the authoring environment cannot start Docker, so the stack
   could not be served. It needs one live run.
 - Seeded jobs have no embeddings yet, so vector job search is inert until
-  `ai-service/ops/embed_jobs.py` runs; keyword/skill search works today.
+  `python -m app.ops.embed_jobs` runs (in `ai-service/`); keyword/skill search
+  works today.
 
 A pass over the PRD §30 checklist is recorded in `docs/SECURITY.md`. It closed one
 real gap — the AI rate limit did not cover any of the blocking AI endpoints,

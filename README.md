@@ -45,10 +45,15 @@ security model: [docs/SECURITY.md](docs/SECURITY.md) · RAG design: [docs/RAG.md
 ```bash
 cp .env.example .env                # then set LLM_API_KEY / EMBEDDING_API_KEY (see docs/DEPLOYMENT.md)
 docker compose up -d postgres redis minio
+docker compose run --rm seed-jobs    # 12 companies / 41 roles, so search and matching have data
 
 # ai-service (Python 3.11+)
 cd ai-service && python -m venv .venv && .venv/Scripts/pip install -r requirements.txt -r requirements-dev.txt
 LLM_PROVIDER=mock EMBEDDING_PROVIDER=hash .venv/Scripts/python -m uvicorn app.main:app --port 8010   # offline dev
+
+# backfill job vectors so vector search works, then type the column + build the index
+python -m app.ops.embed_jobs
+psql "$DATABASE_URL" -v dim=1536 -f ops/vector_index.sql
 
 # backend (Java 21+, Maven)
 cd backend && mvn spring-boot:run
