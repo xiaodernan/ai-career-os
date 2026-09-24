@@ -956,7 +956,7 @@ describe("normalizeTrajectory", () => {
 
   it("borrows the next candidate grade without double-borrowing across questions", () => {
     // seq5 was never answered: the last question must not inherit seq4's grade.
-    const [first, second, third] = normalizeTrajectory({ trajectory: ROWS });
+    const [first, , third] = normalizeTrajectory({ trajectory: ROWS });
     expect(third.score).toBeUndefined();
     expect(first.score).toBe(72);
     // An unanswered question in the middle stops at its own answer row.

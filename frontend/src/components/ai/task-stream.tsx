@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { endpoints } from "@/lib/api/endpoints";
-import { useSSE, type SSEState } from "@/lib/sse/use-sse";
+import { useSSE, errorText, type SSEState } from "@/lib/sse/use-sse";
 import {
   applyStatusEvent,
   type ProcessingStep,
@@ -16,9 +16,13 @@ import { ChevronRight } from "lucide-react";
 
 /**
  * Task stream — the live progress surface for every async AI run.
- * `useTaskStream` subscribes to the SSE relay (status|token|trace|done|error)
- * and folds it into ProcessingSteps + an AgentTimeline. It never invents
- * progress: until the backend pushes something, the UI says so.
+ * `useTaskStream` subscribes to the SSE relay and folds it into ProcessingSteps +
+ * an AgentTimeline. Of the names the transport declares, the pipelines publish
+ * `status`, `progress`, `done`, `error` and a `ping` keep-alive; `token`, `trace`
+ * and `artifact` have no producer yet (ai.stream() would emit the first, and
+ * nothing calls it), so `text` stays empty and the trace drawer stays hidden until
+ * one lands. It never invents progress: until the backend pushes something, the UI
+ * says so.
  */
 
 const TRACE_KINDS: TraceKind[] = [
@@ -129,7 +133,7 @@ export function useTaskStream(taskId: string | null | undefined, options: UseTas
       onDone?.(data);
     },
     onError: (data) => {
-      const message = typeof data === "string" ? data : String(data?.message ?? "The run reported an error.");
+      const message = errorText(data) ?? "The run reported an error.";
       setError(message);
       setFinished(true);
       setSteps((prev) => prev.map((s) => (s.status === "active" ? { ...s, status: "error" } : s)));

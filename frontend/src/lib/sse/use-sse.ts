@@ -7,11 +7,12 @@ import type { SSEEventName } from "@/lib/api/types";
 
 export interface SSEEvent {
   /**
-   * `progress` is published by the ingestion pipeline between `status` frames and
-   * the backend relay forwards event names verbatim, so it reaches the client even
-   * though it isn't in the architecture.md §9 list.
+   * The backend relay forwards upstream event names verbatim
+   * (SseRelayService.relayEvents), so the two names the pipelines actually send
+   * outside architecture.md §9's list reach the client too: `progress` from the
+   * ingestion pipeline and `ping`, the idle keep-alive from taskbus.subscribe.
    */
-  event: SSEEventName | "message" | "progress";
+  event: SSEEventName | "message" | "progress" | "ping";
   data: unknown;
 }
 
@@ -26,7 +27,12 @@ export interface UseSSEOptions {
   onDone?: (data: unknown) => void;
   /** `message` frames — the relay's generic JSON channel (status/token payload). */
   onMessage?: (data: unknown) => void;
-  onError?: (data: { code?: string; message?: string; details?: unknown }) => void;
+  /**
+   * Failure frame, raw. Turn it into a sentence with {@link errorText} — the shape
+   * is `{error}` or a bare string, not the REST `{code,message,details}` envelope,
+   * because EnvelopeAdvice skips SseEmitter and never wraps this channel.
+   */
+  onError?: (data: unknown) => void;
   /** Called on transport errors (network/abort), distinct from `error` events */
   onTransportError?: (err: unknown) => void;
   /** Auto-open when url becomes non-null (default true) */
@@ -138,6 +144,42 @@ export type SSEHandlers = Pick<
   "onStatus" | "onToken" | "onTrace" | "onArtifact" | "onDone" | "onMessage" | "onError"
 >;
 
+/** Longest failure cause put on screen; the rest of the frame stays in the logs. */
+const MAX_CAUSE_CHARS = 180;
+
+/**
+ * The cause a run failed for, or null when the frame carries none.
+ *
+ * Every publisher on this channel names its key `error` — taskbus.finish writes
+ * `{result, error}` with the caught exception text, taskbus.subscribe answers an
+ * unknown id with `{error: "task not found"}` — while the relay's own upstream
+ * failure is a bare string (`"upstream status 502"`). Reading anything else
+ * silently swaps the real reason for a generic sentence on every failure.
+ *
+ * A cause is `str(e)[:500]` from ai-service and can carry a URL or a stack trace,
+ * so only its first line is shown, code-point safely and under `MAX_CAUSE_CHARS`.
+ */
+export function errorText(data: unknown): string | null {
+  const raw =
+    typeof data === "string"
+      ? data
+      : typeof (data as { error?: unknown } | null)?.error === "string"
+        ? (data as { error: string }).error
+        : null;
+  if (!raw) return null;
+  const firstLine = raw.split(/\r?\n/)[0].trim();
+  if (!firstLine) return null;
+  const chars = Array.from(firstLine);
+  return chars.length > MAX_CAUSE_CHARS ? `${chars.slice(0, MAX_CAUSE_CHARS - 1).join("")}…` : firstLine;
+}
+
+/** A streamed answer delta: ai.stream publishes `{text}`, the name implies `{token}`. */
+export function tokenText(data: unknown): string {
+  if (typeof data === "string") return data;
+  const d = data as { text?: unknown; token?: unknown } | null;
+  return String(d?.text ?? d?.token ?? "");
+}
+
 /**
  * Route one parsed SSE frame to the matching handler. Exported for testing:
  * this is the transport-agnostic heart of every streaming AI feature.
@@ -150,11 +192,13 @@ export function dispatchEvent(evt: SSEEvent, h: SSEHandlers): void {
     case "progress":
       h.onStatus?.(evt.data as SSEStatusData);
       break;
-    case "token":
-      h.onToken?.(
-        typeof evt.data === "string" ? evt.data : String((evt.data as { token?: unknown }).token ?? ""),
-      );
+    case "token": {
+      const text = tokenText(evt.data);
+      // An empty delta is not progress: onToken appends it and marks the run as
+      // reporting, so a frame we cannot read must not pretend to be one.
+      if (text) h.onToken?.(text);
       break;
+    }
     case "trace": h.onTrace?.(evt.data as SSETraceData); break;
     case "artifact": h.onArtifact?.(evt.data); break;
     case "done": h.onDone?.(evt.data); break;
@@ -174,7 +218,11 @@ export function dispatchEvent(evt: SSEEvent, h: SSEHandlers): void {
       }
       break;
     }
-    case "error": h.onError?.(evt.data as { code?: string; message?: string; details?: unknown }); break;
+    case "error": h.onError?.(evt.data); break;
+    // taskbus.subscribe sends `ping` every 15s while a run is quiet. It carries no
+    // step and no text, so naming it here is the audit trail: every event name the
+    // producers publish is either routed above or deliberately dropped.
+    case "ping": break;
     default: break;
   }
 }

@@ -1,6 +1,14 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 
-import { dispatchEvent, findFrameEnd, parseFrame, type SSEEvent } from "@/lib/sse/use-sse";
+import {
+  dispatchEvent,
+  errorText,
+  findFrameEnd,
+  parseFrame,
+  tokenText,
+  type SSEEvent,
+} from "@/lib/sse/use-sse";
 
 describe("parseFrame", () => {
   it("reads a bare string data frame", () => {
@@ -110,5 +118,108 @@ describe("dispatchEvent", () => {
     const h = handlers();
     dispatchEvent({ event: "bogus" as SSEEvent["event"], data: {} }, h);
     expect(h.onMessage).not.toHaveBeenCalled();
+  });
+
+  it("drops the taskbus keep-alive without claiming the run reported", () => {
+    const h = handlers();
+    dispatchEvent({ event: "ping", data: {} }, h);
+    expect(h.onStatus).not.toHaveBeenCalled();
+    expect(h.onError).not.toHaveBeenCalled();
+  });
+
+  it("does not turn an unreadable token frame into an empty delta", () => {
+    const h = handlers();
+    dispatchEvent({ event: "token", data: { text: "" } }, h);
+    expect(h.onToken).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * Frames copied from the publishers, not invented: taskbus.finish (app/core/taskbus.py)
+ * wraps `{result, error}`, taskbus.subscribe answers an unknown id the same way, and
+ * SseRelayService.pump sends a bare string.
+ */
+describe("errorText", () => {
+  it("reads the cause a failed agent turn published", () => {
+    // app/api/agents.py: taskbus.finish(task_id, False, error=str(e)[:500])
+    expect(errorText({ result: null, error: "ConnectionResetError: [Errno 104] Connection reset by peer" })).toBe(
+      "ConnectionResetError: [Errno 104] Connection reset by peer"
+    );
+  });
+
+  it("reads the cause the ingestion pipeline published before any step ran", () => {
+    // app/ingestion/pipeline.py: finish(task_id, False, error="document not found")
+    expect(errorText({ result: null, error: "document not found" })).toBe("document not found");
+    // ...and the `{type}: {e}` shape of its crash branch.
+    expect(errorText({ result: null, error: "ValueError: empty page text" })).toBe("ValueError: empty page text");
+  });
+
+  it("reads the relay's bare-string upstream failure", () => {
+    expect(errorText("upstream status 502")).toBe("upstream status 502");
+  });
+
+  it("shows the first line of a cause, not the stack trace under it", () => {
+    const frame = { result: null, error: "RuntimeError: pdf page 7 unreadable\nTraceback (inner most last):" };
+    expect(errorText(frame)).toBe("RuntimeError: pdf page 7 unreadable");
+  });
+
+  it("does not read the REST error envelope — SSE bodies are never enveloped", () => {
+    // EnvelopeAdvice.beforeBodyWrite skips SseEmitter, so {code,message,details}
+    // cannot arrive on this channel. Reading `message` is what hid every cause.
+    expect(errorText({ code: "JOB_NOT_FOUND", message: "no such job" })).toBeNull();
+  });
+
+  it("returns null instead of inventing a cause the frame does not carry", () => {
+    expect(errorText(null)).toBeNull();
+    expect(errorText(undefined)).toBeNull();
+    expect(errorText("")).toBeNull();
+    expect(errorText({ result: null, error: null })).toBeNull();
+    expect(errorText({ error: "   \nsecond line" })).toBeNull();
+  });
+
+  it("caps a one-line cause without splitting a code point", () => {
+    const ascii = errorText({ error: "x".repeat(500) });
+    expect(ascii).toHaveLength(180);
+    expect(ascii?.endsWith("…")).toBe(true);
+
+    const emoji = errorText({ error: "\u{1F4A5}".repeat(300) })!;
+    expect(Array.from(emoji)).toHaveLength(180); // 179 deltas + the ellipsis
+    expect(emoji.endsWith("…")).toBe(true);
+    // A `slice` cut here would strand the high surrogate of the 180th delta.
+    expect(emoji).not.toMatch(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/);
+  });
+});
+
+describe("tokenText", () => {
+  it("reads the delta shape ai.stream() publishes", () => {
+    // app/core/ai.py: await emit({"event": "token", "data": {"text": delta.text}})
+    expect(tokenText({ text: "Streaming the " })).toBe("Streaming the ");
+  });
+
+  it("still reads a bare string frame and the {token} spelling", () => {
+    expect(tokenText("hi")).toBe("hi");
+    expect(tokenText({ token: "x" })).toBe("x");
+  });
+
+  it("yields empty for a frame carrying neither", () => {
+    expect(tokenText({})).toBe("");
+    expect(tokenText(null)).toBe("");
+  });
+});
+
+/**
+ * `useTaskStream` is a hook in a node-environment suite, so nothing here can render
+ * it. The one regression this can still catch is the reader going back to a
+ * hand-picked key instead of the fold.
+ */
+describe("the run stream consumer", () => {
+  const source = readFileSync(
+    new URL("../../components/ai/task-stream.tsx", import.meta.url),
+    "utf8"
+  );
+
+  it("asks errorText for the cause instead of naming a key itself", () => {
+    expect(source).toContain("errorText(data)");
+    expect(source).not.toMatch(/data\?\.message/);
   });
 });
