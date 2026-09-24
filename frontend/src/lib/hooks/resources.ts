@@ -5,6 +5,7 @@ import { api } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
 import {
   list as listOf,
+  normalizeApplication,
   normalizeDashboard,
   normalizeJob,
   normalizeMatch,
@@ -215,31 +216,13 @@ export function useSavedJobs() {
 
 /* ------------------------------- applications ------------------------------ */
 
-function mapApplication(raw: unknown): Application {
-  return {
-    id: idStr(raw),
-    jobId: str(raw, "jobId", "job_id") ?? null,
-    companyId: str(raw, "companyId", "company_id"),
-    company: pick<NonNullable<Application["company"]>>(raw, "company") ?? undefined,
-    companyName: str(raw, "companyName", "company_name"),
-    title: str(raw, "title", "position", "role") ?? "Untitled",
-    status: str(raw, "status") ?? "saved",
-    matchScore: num(raw, "matchScore", "match_score") ?? null,
-    note: str(raw, "note", "notes") ?? null,
-    reminderAt: str(raw, "reminderAt", "reminder_at") ?? null,
-    position: num(raw, "position", "orderIndex", "order_index", "sortOrder", "sort_order"),
-    createdAt: str(raw, "createdAt", "created_at"),
-    updatedAt: str(raw, "updatedAt", "updated_at"),
-  };
-}
-
 export function useApplications(params?: { page?: number; size?: number; status?: string }) {
   return useQuery({
     queryKey: ["applications", params],
     queryFn: async (): Promise<Page<Application>> =>
       normalizePage(
         await api.get<unknown>(endpoints.applications, { size: 50, ...(params ?? {}) }),
-        mapApplication
+        normalizeApplication
       ),
   });
 }

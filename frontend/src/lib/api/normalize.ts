@@ -379,6 +379,42 @@ export function normalizeJdParsed(raw: unknown): JdParsed {
   };
 }
 
+/* ------------------------------ applications ------------------------------ */
+
+/**
+ * `ApplicationItem` names the company in flat columns (`companyId` + `companyName`) and never
+ * sends a nested object, while a list row reads `app.company?.name` — the shape `normalizeJob`
+ * already guarantees. So the flat name is projected into `company` here instead of teaching every
+ * reader which column the backend happened to use; an application with no company keeps
+ * `company` absent rather than getting an object with an empty name.
+ */
+export function normalizeApplication(raw: unknown): Application {
+  const nested = pick<Record<string, unknown>>(raw, "company");
+  const name = str(raw, "companyName", "company_name") ?? str(nested, "name") ?? null;
+  const companyId = str(raw, "companyId", "company_id") ?? str(nested, "id") ?? null;
+  return {
+    id: str(raw, "id") ?? "",
+    jobId: str(raw, "jobId", "job_id") ?? null,
+    companyId,
+    company: name
+      ? {
+          id: companyId ?? "",
+          name,
+          logoUrl: str(nested, "logoUrl", "logo_url", "logo") ?? null,
+        }
+      : undefined,
+    companyName: name,
+    title: str(raw, "title", "position", "role") ?? "Untitled",
+    status: str(raw, "status") ?? "saved",
+    matchScore: num(raw, "matchScore", "match_score") ?? null,
+    note: str(raw, "note", "notes") ?? null,
+    reminderAt: str(raw, "reminderAt", "reminder_at") ?? null,
+    position: num(raw, "position", "orderIndex", "order_index", "sortOrder", "sort_order"),
+    createdAt: str(raw, "createdAt", "created_at"),
+    updatedAt: str(raw, "updatedAt", "updated_at"),
+  };
+}
+
 /* -------------------------------- tailor --------------------------------- */
 
 function changeFrom(raw: unknown, index: number): TailorChange {

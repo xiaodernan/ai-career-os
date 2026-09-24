@@ -6,6 +6,7 @@ import {
   idOf,
   list,
   normalizeArtifacts,
+  normalizeApplication,
   normalizeChatActions,
   normalizeDashboard,
   normalizeDimensions,
@@ -202,6 +203,81 @@ describe("normalizeJob", () => {
     expect(j.id).toBe("job-5");
     expect(j.title).toBe("Data Engineer");
     expect(j.companyName).toBe("Beta");
+  });
+});
+
+describe("normalizeApplication", () => {
+  /** Exactly the columns `ApplicationDtos.ApplicationItem` serializes — no nested objects. */
+  const ITEM = {
+    id: "app-1",
+    jobId: "job-1",
+    companyId: "co-1",
+    title: "Senior Backend Engineer",
+    companyName: "Acme Cloud",
+    status: "interview",
+    position: 3,
+    notes: "onsite 周四",
+    reminderAt: "2026-09-30T09:00:00Z",
+    resumeVersionId: "rv-1",
+    jdId: "jd-1",
+    matchId: "m-1",
+    appliedAt: "2026-09-10T02:00:00Z",
+    createdAt: "2026-09-09T02:00:00Z",
+    updatedAt: "2026-09-20T02:00:00Z",
+  };
+
+  it("names the company on the field the row actually reads", () => {
+    // applications/page.tsx renders `app.company?.name`; the DTO only has flat columns, so
+    // without this projection every row's second line is blank.
+    const a = normalizeApplication(ITEM);
+    expect(a.company?.name).toBe("Acme Cloud");
+    expect(a.company?.id).toBe("co-1");
+    expect(a.companyName).toBe("Acme Cloud");
+  });
+
+  it("keeps the rest of the row: stage, kanban order, reminder and timestamps", () => {
+    const a = normalizeApplication(ITEM);
+    expect(a).toMatchObject({
+      id: "app-1",
+      jobId: "job-1",
+      title: "Senior Backend Engineer",
+      status: "interview",
+      position: 3,
+      reminderAt: "2026-09-30T09:00:00Z",
+    });
+  });
+
+  it("reads the note under the DTO's plural column", () => {
+    expect(normalizeApplication(ITEM).note).toBe("onsite 周四");
+    expect(normalizeApplication({ id: "a", note: "single" }).note).toBe("single");
+  });
+
+  it("accepts either spelling of the reminder column", () => {
+    expect(normalizeApplication({ id: "a", reminder_at: "2026-09-30" }).reminderAt).toBe("2026-09-30");
+  });
+
+  it("prefers a nested company object when a deployment sends one", () => {
+    const a = normalizeApplication({
+      id: "a",
+      company: { id: "co-9", name: "Nested Co", logoUrl: "https://x/logo.png" },
+    });
+    expect(a.company).toEqual({ id: "co-9", name: "Nested Co", logoUrl: "https://x/logo.png" });
+    expect(a.companyName).toBe("Nested Co");
+  });
+
+  it("leaves the company absent when the application has none", () => {
+    // a title-only application is real (create accepts one); an object with an empty name
+    // would render as a blank row that looks like a loading failure.
+    const a = normalizeApplication({ id: "a", title: "Freelance gig", status: "saved" });
+    expect(a.company).toBeUndefined();
+    expect(a.companyName).toBeNull();
+    expect(a.companyId).toBeNull();
+  });
+
+  it("reports no match score rather than a zero: the DTO carries no such column", () => {
+    // ApplicationItem has matchId but not matchScore, and no page renders it today. When the
+    // list starts embedding the score, this assertion is the one to change deliberately.
+    expect(normalizeApplication(ITEM).matchScore).toBeNull();
   });
 });
 
