@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { serializeJobFilters } from "@/lib/api/normalize";
 import { hydrateState } from "@/lib/hooks/use-url-state";
 
 type F = {
@@ -50,5 +51,46 @@ describe("hydrateState", () => {
     // The hook relies on this identity so its setState bails out of a re-render.
     expect(hydrateState(INITIAL, "", OPTS)).toBe(INITIAL);
     expect(hydrateState(INITIAL, "?", OPTS)).toBe(INITIAL);
+  });
+
+  it("drops a numeric value the request layer cannot bind", () => {
+    // Every one of these used to land in state as a number: NaN for the two
+    // unparseable ones, Infinity for the overflow, 0 for the empty values.
+    const got = hydrateState(INITIAL, "?size=abc&page=1e999&min_salary=many", OPTS);
+    expect(got).toEqual({ q: "", page: 0, size: 12 });
+    expect("min_salary" in got).toBe(false);
+  });
+
+  it("reads an empty value as absent, not as zero", () => {
+    // `?size=&page=` is what a half-typed or hand-edited link looks like. Number("")
+    // is 0, which serialized to a one-row page and made the pager disagree with it.
+    const got = hydrateState(INITIAL, "?size=&page=", OPTS);
+    expect(got).toEqual({ q: "", page: 0, size: 12 });
+    // Whitespace-only is the same trap wearing a disguise: Number("  ") is 0 too.
+    expect(hydrateState(INITIAL, "?size=%20%20", OPTS).size).toBe(12);
+  });
+
+  it("normalises whitespace but will not invent a fractional window", () => {
+    expect(hydrateState(INITIAL, "?size=%2024%20", OPTS).size).toBe(24);
+    // The backend binds these parameters as int, so "12.5" would 400 the request.
+    expect(hydrateState(INITIAL, "?size=12.5", OPTS).size).toBe(12);
+    expect(hydrateState(INITIAL, "?page=3.0", OPTS).page).toBe(3);
+  });
+
+  it("accepts a negative page, whose floor is the server's to enforce", () => {
+    // Paging clamps it and PageDTO reports the window actually served, so the pager
+    // corrects itself — the URL only has to carry something bindable.
+    expect(hydrateState(INITIAL, "?page=-3", OPTS).page).toBe(-3);
+  });
+
+  it("hands the serializer the default window, not size=NaN", () => {
+    // The consequence that matters: whatever hydrateState adopts is written back
+    // into the address bar by update() and put on the wire verbatim by buildUrl,
+    // so a poison number here is sticky across reloads.
+    const wire = serializeJobFilters(hydrateState(INITIAL, "?size=abc&page=NaN", OPTS));
+    expect(wire).toEqual({ page: 0, size: 12 });
+    for (const v of Object.values(wire)) {
+      expect(typeof v === "number" && Number.isFinite(v)).toBe(true);
+    }
   });
 });

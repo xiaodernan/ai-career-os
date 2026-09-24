@@ -30,6 +30,24 @@ function bound(wire: Wire, key: string): number | undefined {
   return typeof v === "number" && Number.isFinite(v) ? v : undefined;
 }
 
+/**
+ * What a salary box actually holds. `type="number"` reports anything the browser can
+ * read as a number, not just integers: `"12.5"` arrives intact (a step mismatch is not
+ * "bad input"), and so does `"1e999"`, which parses to `Infinity`. Both are sent as
+ * `minSalary`/`maxSalary`, which the server binds as `Integer` — so a fraction does not
+ * narrow the search, it fails the entire request and the board shows an error instead
+ * of jobs. Whole yuan is the only grain those columns hold, so that is what the field
+ * yields; a bound too large to be a salary is read as "no bound", which is what the
+ * person meant and is also how `bound()` below already treats it. An empty box stays
+ * no constraint at all.
+ */
+export function salaryFromInput(raw: string): number | undefined {
+  if (!raw.trim()) return undefined;
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return undefined;
+  return Math.trunc(n);
+}
+
 /** `ILIKE '%needle%'`: case-insensitive containment, no pattern metacharacters. */
 function contains(haystack: string | null | undefined, needle: string): boolean {
   if (!haystack) return false;

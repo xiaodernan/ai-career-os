@@ -553,10 +553,11 @@ export function structuredResumeToMarkdown(raw: unknown): string {
  * `parse_resume` (ResumeService.persistParse → `version.setStructured(parsed)`),
  * whose schema is snake_case + flat: skills are `[{name,category,proficiency}]`,
  * education dates are `startYear`/`endYear`, project tech is `tech`, and the
- * summary lives under `profile.summary`. Both renderers here (`StructuredProfileView`
- * and `skillsFrom`) expect the camel/grouped view model instead — so without this
- * bridge the entire skill inventory renders as header-less empty badges and
- * education dates silently vanish. Same alias policy as structuredResumeToMarkdown.
+ * summary lives under `profile.summary`. Both readers here (`StructuredProfileView`,
+ * and `profileSkillSuggestions` in `lib/job-filter`) expect the camel/grouped view
+ * model instead — so without this bridge the entire skill inventory renders as
+ * header-less empty badges and education dates silently vanish. Same alias policy as
+ * structuredResumeToMarkdown.
  * Idempotent: an already-grouped payload (e.g. tailor output) passes through.
  */
 export function normalizeStructuredResume(raw: unknown): StructuredResume | null {

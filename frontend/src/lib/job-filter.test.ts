@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { filterAndPaginate, hasActiveJobFilters, matchesJobFilters, profileSkillSuggestions } from "@/lib/job-filter";
+import {
+  filterAndPaginate,
+  hasActiveJobFilters,
+  matchesJobFilters,
+  profileSkillSuggestions,
+  salaryFromInput,
+} from "@/lib/job-filter";
+import { serializeJobFilters } from "@/lib/api/normalize";
 import type { Job, StructuredResume } from "@/lib/api/types";
 
 /**
@@ -271,5 +278,36 @@ describe("the skill filter's suggestion chips", () => {
     expect(page).toContain("profileSkillSuggestions(resume.data?.structured)");
     expect(page).not.toMatch(/function skillsFrom/);
     expect(page).not.toMatch(/normalizeStructuredResume/);
+  });
+});
+
+describe("salaryFromInput", () => {
+  const panel = readFileSync(new URL("../components/jobs/job-filters.tsx", import.meta.url), "utf8");
+
+  it("yields whole yuan, which is all the server can bind", () => {
+    // minSalary/maxSalary are `Integer` request parameters: a fraction does not
+    // narrow the search, it fails the request and the board shows an error.
+    expect(salaryFromInput("12.5")).toBe(12);
+    expect(salaryFromInput("120000")).toBe(120_000);
+    expect(salaryFromInput(" 120000 ")).toBe(120_000);
+  });
+
+  it("reads an empty box as no bound at all", () => {
+    expect(salaryFromInput("")).toBeUndefined();
+    expect(salaryFromInput("   ")).toBeUndefined();
+  });
+
+  it("reads a bound too large to be a salary as no bound", () => {
+    // Number("1e999") is Infinity, which <input type="number"> reports as a value;
+    // on the wire it is "Infinity" and the request dies. Unbounded is the intent.
+    expect(salaryFromInput("1e999")).toBeUndefined();
+    expect(salaryFromInput("abc")).toBeUndefined();
+  });
+
+  it("is what the panel's two boxes hand to the wire", () => {
+    expect(serializeJobFilters({ min_salary: salaryFromInput("12.5") })).toEqual({ minSalary: 12 });
+    expect(serializeJobFilters({ max_salary: salaryFromInput("1e999") })).toEqual({});
+    expect((panel.match(/salaryFromInput\(e\.target\.value\)/g) ?? []).length).toBe(2);
+    expect(panel).not.toMatch(/Number\(e\.target\.value\)/);
   });
 });

@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { salaryFromInput } from "@/lib/job-filter";
 import type { JobFilters as Filters } from "@/lib/hooks/resources";
 
 /**
@@ -170,7 +171,7 @@ function JobFilterPanel({ value, onApply, skillSuggestions, resultCount, loading
             inputMode="numeric"
             min={0}
             value={value.min_salary ?? ""}
-            onChange={(e) => set({ min_salary: e.target.value ? Number(e.target.value) : undefined })}
+            onChange={(e) => set({ min_salary: salaryFromInput(e.target.value) })}
             placeholder="Min"
             aria-label="Minimum salary"
           />
@@ -180,7 +181,7 @@ function JobFilterPanel({ value, onApply, skillSuggestions, resultCount, loading
             inputMode="numeric"
             min={0}
             value={value.max_salary ?? ""}
-            onChange={(e) => set({ max_salary: e.target.value ? Number(e.target.value) : undefined })}
+            onChange={(e) => set({ max_salary: salaryFromInput(e.target.value) })}
             placeholder="Max"
             aria-label="Maximum salary"
           />
