@@ -101,7 +101,7 @@ per-user budget on AI endpoints.
 
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/jobs` | search: `q, location, company, remoteType, employmentType, skills, minSalary, maxSalary, minExperience, sort=posted\|match, page, size` |
+| GET | `/jobs` | search: `q, skills, location, remote, company, minSalary, maxSalary, status, sort=posted\|salary\|title\|match, page, size` |
 | GET | `/jobs/saved` | bookmarked jobs |
 | POST | `/jobs` | create a job (with inline `company`) |
 | POST | `/jobs/import` | pasted/imported posting |
@@ -111,9 +111,14 @@ per-user budget on AI endpoints.
 | POST | `/jobs/{id}/match` | `{resumeVersionId?}` → evidence-bound match, persisted |
 | POST | `/jobs/{id}/tailor` | `{resumeVersionId?}` → tailored version + diff |
 | POST | `/jobs/{id}/cover-letter` | `{resumeVersionId?, mode, tone, length, previous, goal}` |
-| GET | `/companies` | list |
+| GET | `/companies` | list (`?q=&page=&size=`) |
 | GET | `/companies/{id}` | company intelligence + open roles |
 | POST / PUT / DELETE | `/companies`, `/companies/{id}` | maintained by the application |
+
+A query parameter binds by name, so one the endpoint does not declare is **ignored, not
+rejected**: `/jobs?remoteType=hybrid` answers 200 with the unfiltered board. `remote` takes a
+`remote_type` value (`onsite` / `hybrid` / `remote`), never `true`, and an unknown `sort` falls
+back to `posted` for the same reason.
 
 ### JD intelligence (`/jds`)
 
@@ -151,7 +156,7 @@ per-user budget on AI endpoints.
 
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/applications` | board (`?status=`) |
+| GET | `/applications` | board (`?status=&page=&size=`) |
 | POST | `/applications` | create |
 | GET | `/applications/{id}` | detail |
 | PATCH | `/applications/{id}` | `{status, notes, reminderAt, ...}` — kanban drag & drop |
@@ -177,7 +182,7 @@ per-user budget on AI endpoints.
 | GET | `/activity/runs` | agent runs (`?limit=&agent=`) |
 | GET | `/activity/runs/{id}` | run + ordered traces (AI Activity detail) |
 | GET | `/ai-usage/summary` | tokens, requests, cached tokens, estimated cost |
-| GET | `/search` | global ⌘K search across jobs/companies/resumes/interviews/notes/KB/conversations |
+| GET | `/search` | global ⌘K search (`?q=`, required) across jobs/companies/resumes/interviews/notes/KB/conversations |
 | GET | `/ai/stream/{taskId}` | SSE relay of an ai-service task |
 
 ## 3. Internal API — ai-service
@@ -227,7 +232,7 @@ curl -s -X POST $B/resumes/upload -H "Authorization: Bearer $TOKEN" \
 curl -s -X POST $B/resumes/$RID/parse -H "Authorization: Bearer $TOKEN"
 
 # search jobs, then score one against the resume
-curl -s "$B/jobs?q=Agent&remoteType=hybrid&sort=match" -H "Authorization: Bearer $TOKEN"
+curl -s "$B/jobs?q=Agent&remote=hybrid&sort=match" -H "Authorization: Bearer $TOKEN"
 curl -s -X POST $B/jobs/$JID/match -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' -d '{}'
 

@@ -1,0 +1,290 @@
+package com.careeros.contract;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Stream;
+import org.junit.jupiter.api.Test;
+import org.springframework.core.annotation.AnnotatedElementUtils;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+
+/**
+ * docs/API.md is the contract a hand-written client, a script or an agent reads before it
+ * calls the platform. Spring binds a query parameter by name and ignores any name it does not
+ * recognise — so a parameter the doc spells wrong is not an error, it is a filter that quietly
+ * stops filtering: {@code GET /jobs?remoteType=remote} answers 200 with the whole board.
+ *
+ * The names the endpoint really binds come from the compiled controllers, not from a copy kept
+ * next to this test, so the two sides can only agree by one of them actually changing.
+ */
+class ApiDocParamContractTest {
+
+    private static final Path MAIN = Path.of("src", "main", "java");
+    private static final Path DOC = Path.of("..", "docs", "API.md");
+    private static final String API_PREFIX = "/api/v1";
+
+    /** Rows that must keep spelling their parameters out, so the gate cannot be dodged by deleting the list. */
+    private static final List<String> MUST_DOCUMENT = List.of("/jobs", "/applications", "/companies",
+            "/activity/runs", "/search");
+
+    @Test
+    void everyParameterTheDocAdvertisesIsOneTheEndpointBinds() {
+        Map<String, Set<String>> bound = boundParams();
+        documentedRows().forEach((path, documented) -> {
+            Set<String> real = bound.get(path);
+            assertThat(real).as("GET %s is documented with parameters but no controller binds it", path)
+                    .isNotNull();
+            Set<String> phantom = new TreeSet<>(documented);
+            phantom.removeAll(real);
+            assertThat(phantom).as("GET %s documents parameters Spring silently drops", path).isEmpty();
+        });
+    }
+
+    @Test
+    void aRowThatNamesOneParameterNamesAllOfThem() {
+        Map<String, Set<String>> bound = boundParams();
+        documentedRows().forEach((path, documented) -> {
+            Set<String> real = bound.get(path);
+            assertThat(real).as("GET %s resolves to a real endpoint", path).isNotNull();
+            Set<String> forgotten = new TreeSet<>(real);
+            forgotten.removeAll(documented);
+            assertThat(forgotten).as("GET %s binds parameters the doc never mentions", path).isEmpty();
+        });
+    }
+
+    @Test
+    void theRowsThatCarryTheContractStayWritten() {
+        Map<String, Set<String>> documented = documentedRows();
+        MUST_DOCUMENT.forEach(row -> assertThat(documented)
+                .as("GET %s has to keep listing its parameters — an empty row is not a checked row", row)
+                .containsKey(row));
+    }
+
+    /**
+     * Positive control: both scanners read real bodies. An unparsed doc or a controller list that
+     * failed to load would leave every assertion above vacuously green.
+     */
+    @Test
+    void bothSidesOfTheComparisonAreActuallyRead() throws IOException {
+        Map<String, Set<String>> bound = boundParams();
+        assertThat(bound).hasSizeGreaterThan(20);
+        // `q` arrives by parameter name, which only Spring's -parameters compile retains; an
+        // unprefixed `arg0` here would mean the reflection is reading a build the doc cannot match.
+        assertThat(bound.get("/jobs")).contains("q", "minSalary", "remote");
+        assertThat(documentedRows().get("/jobs")).contains("minSalary");
+        assertThat(exampleQueries()).hasSizeGreaterThanOrEqualTo(2);
+        assertThat(Files.readString(DOC)).contains("## 2. Public API");
+    }
+
+    /**
+     * A table row is read by a human who then types the URL; the worked examples are the ones that
+     * get pasted straight into a shell, so a wrong name there is a command that runs and lies.
+     */
+    @Test
+    void theWorkedExamplesOnlyAskForParametersThatBind() {
+        Map<String, Set<String>> bound = boundParams();
+        List<String> ignored = new ArrayList<>();
+        exampleQueries().forEach(call -> {
+            Set<String> real = bound.get(documentedForm(call.getKey()));
+            assertThat(real).as("the examples call GET %s, which no controller maps", call.getKey())
+                    .isNotNull();
+            if (!real.contains(call.getValue())) {
+                ignored.add(call.getKey() + "?" + call.getValue());
+            }
+        });
+        assertThat(ignored).as("an example asks for a parameter Spring ignores").isEmpty();
+    }
+
+    /** Every (path, parameter name) pair the curl examples actually put on the wire. */
+    private static List<Map.Entry<String, String>> exampleQueries() {
+        List<Map.Entry<String, String>> pairs = new ArrayList<>();
+        Matcher url = Pattern.compile("\\$B(/[^?\"' ]+)\\?([^\"' ]+)").matcher(String.join("\n", lines()));
+        while (url.find()) {
+            for (String assignment : url.group(2).split("&")) {
+                String name = assignment.split("=")[0];
+                if (name.matches("[A-Za-z][A-Za-z0-9]*")) {
+                    pairs.add(Map.entry(url.group(1), name));
+                }
+            }
+        }
+        return pairs;
+    }
+
+    /** GET paths (without the /api/v1 prefix, one segment folded to {}) to the names they bind. */
+    private static Map<String, Set<String>> boundParams() {
+        Map<String, Set<String>> out = new HashMap<>();
+        for (String className : controllerClasses()) {
+            Class<?> controller;
+            try {
+                controller = Class.forName(className, false, ApiDocParamContractTest.class.getClassLoader());
+            } catch (ClassNotFoundException e) {
+                throw new IllegalStateException("walked a source file that is not on the test classpath: "
+                        + className, e);
+            }
+            RequestMapping root = AnnotatedElementUtils.findMergedAnnotation(controller, RequestMapping.class);
+            String basePath = root == null ? "" : firstOf(root.path(), root.value());
+            for (Method method : controller.getDeclaredMethods()) {
+                if (!"GET".equals(verbOf(method))) {
+                    continue;
+                }
+                RequestMapping route = AnnotatedElementUtils.findMergedAnnotation(method, RequestMapping.class);
+                String path = basePath + (route == null ? "" : firstOf(route.path(), route.value()));
+                if (!path.startsWith(API_PREFIX)) {
+                    continue;
+                }
+                Set<String> names = new LinkedHashSet<>();
+                for (Parameter p : method.getParameters()) {
+                    RequestParam param = AnnotatedElementUtils.findMergedAnnotation(p, RequestParam.class);
+                    if (param != null) {
+                        names.add(first(param.name(), param.value(), p.getName()));
+                    }
+                }
+                out.putIfAbsent(documentedForm(path.replaceFirst("^" + API_PREFIX, "")), names);
+            }
+        }
+        return out;
+    }
+
+    /** The doc folds a UUID or a task id to one shape; so must the resolved route. */
+    private static String documentedForm(String path) {
+        return path.replaceAll("\\{[^}]*}", "{}");
+    }
+
+    private static String verbOf(Method method) {
+        if (AnnotatedElementUtils.hasAnnotation(method, GetMapping.class)) {
+            return "GET";
+        }
+        if (AnnotatedElementUtils.hasAnnotation(method, PostMapping.class)) {
+            return "POST";
+        }
+        if (AnnotatedElementUtils.hasAnnotation(method, PutMapping.class)) {
+            return "PUT";
+        }
+        if (AnnotatedElementUtils.hasAnnotation(method, PatchMapping.class)) {
+            return "PATCH";
+        }
+        if (AnnotatedElementUtils.hasAnnotation(method, DeleteMapping.class)) {
+            return "DELETE";
+        }
+        RequestMapping raw = AnnotatedElementUtils.findMergedAnnotation(method, RequestMapping.class);
+        if (raw != null && raw.method().length == 1) {
+            return raw.method()[0].name();
+        }
+        return "";
+    }
+
+    private static List<String> controllerClasses() {
+        if (!Files.isDirectory(MAIN)) {
+            throw new IllegalStateException("expected the module directory as the working directory, found "
+                    + Path.of("").toAbsolutePath());
+        }
+        try (Stream<Path> files = Files.walk(MAIN)) {
+            List<String> sources = files.filter(p -> p.getFileName().toString().endsWith("Controller.java"))
+                    .map(p -> MAIN.relativize(p).toString().replace('\\', '/'))
+                    .map(p -> p.substring(0, p.length() - ".java".length()))
+                    .toList();
+            assertThat(sources).isNotEmpty();
+            return sources.stream().map(s -> s.replace('/', '.')).toList();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    /** Path in the doc (without the prefix) to the parameter names its Notes cell spells out. */
+    private static Map<String, Set<String>> documentedRows() {
+        Map<String, Set<String>> rows = new HashMap<>();
+        boolean inPublicApi = false;
+        for (String line : lines()) {
+            if (line.startsWith("## ")) {
+                inPublicApi = line.startsWith("## 2. Public API");
+                continue;
+            }
+            if (!inPublicApi || !line.startsWith("|")) {
+                continue;
+            }
+            String[] cells = line.replace("\\|", "¦").split("\\|");
+            if (cells.length < 4 || !"GET".equals(cells[1].trim())) {
+                continue;
+            }
+            String path = cells[2].trim().replace("`", "");
+            if (!path.startsWith("/")) {
+                continue;
+            }
+            Set<String> names = parameterNames(String.join(" ", Arrays.copyOfRange(cells, 3, cells.length)));
+            if (!names.isEmpty()) {
+                rows.put(documentedForm(path), names);
+            }
+        }
+        return rows;
+    }
+
+    /**
+     * Reads either spelling, and only inside backticks: a backticked {@code a, b, c} list or a
+     * {@code ?a=&b=} query string. Prose is not a parameter, so "list" and "detail" must not
+     * become one — an unquoted word would otherwise pose as a documented filter and demand a
+     * real endpoint answer to it.
+     */
+    private static Set<String> parameterNames(String notes) {
+        Set<String> names = new LinkedHashSet<>();
+        String[] chunks = notes.split("`");
+        for (int i = 1; i < chunks.length; i += 2) {
+            for (String token : chunks[i].split("[,&]")) {
+                String candidate = token.trim().replaceAll("^[?]", "").split("[=|\\s]")[0];
+                if (candidate.matches("[A-Za-z][A-Za-z0-9]*")) {
+                    names.add(candidate);
+                }
+            }
+        }
+        return names;
+    }
+
+    private static List<String> lines() {
+        if (!Files.isReadable(DOC)) {
+            throw new IllegalStateException("expected the repo docs next to the module, found "
+                    + DOC.toAbsolutePath());
+        }
+        try {
+            return Files.readAllLines(DOC);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    private static String first(String... values) {
+        for (String v : values) {
+            if (v != null && !v.isEmpty()) {
+                return v;
+            }
+        }
+        return "";
+    }
+
+    /** A mapping annotation answers from either {@code path} or {@code value}, whichever it spells. */
+    private static String firstOf(String[] primary, String[] fallback) {
+        if (primary.length > 0 && !primary[0].isEmpty()) {
+            return primary[0];
+        }
+        return fallback.length > 0 ? fallback[0] : "";
+    }
+}
