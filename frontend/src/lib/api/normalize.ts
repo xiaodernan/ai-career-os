@@ -1183,29 +1183,50 @@ export function serializeJobFilters(params: object): Record<string, unknown> {
 }
 
 /**
+ * The six lists GET /search answers with, in response order — each pinned to one
+ * `SearchDtos.SearchResponse` component (a contract test keeps them in step). The
+ * palette's "what can I search" copy reads this table too, so neither list can rot
+ * on its own.
+ */
+export const SEARCH_GROUPS: {
+  key: string;
+  type: string;
+  label: string;
+  href: (id: string) => string;
+}[] = [
+  { key: "jobs", type: "job", label: "Jobs", href: (id) => `/jobs/${id}` },
+  { key: "companies", type: "company", label: "Companies", href: () => "/companies" },
+  { key: "resumes", type: "resume", label: "Resumes", href: (id) => `/resumes/${id}` },
+  { key: "notes", type: "note", label: "Notes", href: () => "/knowledge" },
+  { key: "conversations", type: "conversation", label: "Conversations", href: () => "/copilot" },
+  { key: "applications", type: "application", label: "Applications", href: () => "/applications" },
+];
+
+/**
+ * "jobs, companies, resumes, notes, conversations and applications" — the palette's
+ * capability line, derived from the table that decodes the response so it can never
+ * claim fewer groups than /search actually answers.
+ */
+export function searchGroupNames(): string {
+  const names = SEARCH_GROUPS.map((g) => g.label.toLowerCase());
+  const last = names.pop();
+  return names.length ? `${names.join(", ")} and ${last}` : (last ?? "");
+}
+
+/**
  * Global search: the backend /search returns results as typed top-level lists
  * (`{query, jobs, companies, resumes, notes, conversations, applications}`), not
  * a `groups` array. Map each entity to a navigable item, choosing the deepest
  * real route that exists. Also tolerates `{groups:[…]}` and flat `{items:[…]}`.
+ *
+ * No item is dropped for the term not appearing in its title: four of the six
+ * groups can match a column the list never shows (see `SearchRepository`), so a
+ * title filter here would hide real hits.
  */
 export function normalizeSearch(raw: unknown): SearchResults {
-  const typed: {
-    key: string;
-    type: string;
-    label: string;
-    href: (id: string) => string;
-  }[] = [
-    { key: "jobs", type: "job", label: "Jobs", href: (id) => `/jobs/${id}` },
-    { key: "companies", type: "company", label: "Companies", href: () => "/companies" },
-    { key: "resumes", type: "resume", label: "Resumes", href: (id) => `/resumes/${id}` },
-    { key: "notes", type: "note", label: "Notes", href: () => "/knowledge" },
-    { key: "conversations", type: "conversation", label: "Conversations", href: () => "/copilot" },
-    { key: "applications", type: "application", label: "Applications", href: () => "/applications" },
-  ];
-
   const groups: SearchResults["groups"] = [];
   let sawTyped = false;
-  for (const g of typed) {
+  for (const g of SEARCH_GROUPS) {
     const arr = list(raw, g.key);
     if (!arr.length) continue;
     sawTyped = true;

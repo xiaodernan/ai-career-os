@@ -16,7 +16,7 @@ import {
 import { NAV_ITEMS } from "@/components/layout/nav";
 import { api } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
-import { normalizeSearch } from "@/lib/api/normalize";
+import { normalizeSearch, searchGroupNames } from "@/lib/api/normalize";
 import type { SearchResults } from "@/lib/api/types";
 import { FileText, Briefcase, Building2, MessageSquare, LayoutDashboard, CornerDownLeft, type LucideIcon } from "lucide-react";
 
@@ -48,8 +48,9 @@ const RESULT_ICONS: Record<string, LucideIcon> = {
 
 type SearchFn = (q: string) => Promise<SearchResults>;
 
+// /search binds exactly one parameter; the per-group cap is the server's own.
 const defaultSearch: SearchFn = async (q) =>
-  normalizeSearch(await api.get<unknown>(endpoints.search, { q, size: 8 }));
+  normalizeSearch(await api.get<unknown>(endpoints.search, { q }));
 
 export function CommandPaletteProvider({
   children,
@@ -93,16 +94,13 @@ export function CommandPaletteProvider({
     router.push(href);
   }, [router]);
 
-  const apiGroups = React.useMemo(() => {
-    if (!results.data?.groups) return [];
-    const q = debounced.toLowerCase();
-    return results.data.groups
-      .map((g) => ({
-        ...g,
-        items: g.items.filter((i) => i.title.toLowerCase().includes(q) || !q),
-      }))
-      .filter((g) => g.items.length > 0);
-  }, [results.data, debounced]);
+  // Rendered as-is: the response is already the filtered set, and `shouldFilter={false}`
+  // stops cmdk from filtering again. A local title match here used to delete every hit
+  // that matched outside its title — jobs match the full-text index and the company name,
+  // companies match industry, notes match content, conversations match message bodies,
+  // applications match company_name — so the palette printed "No results." over rows the
+  // server had actually returned.
+  const apiGroups = results.data?.groups ?? [];
 
   const navMatches = React.useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -188,7 +186,7 @@ export function CommandPaletteProvider({
             {!debounced && (
               <div className="flex items-center gap-1.5 border-t border-border/60 px-4 py-2.5 text-xs text-muted-foreground">
                 <LayoutDashboard className="size-3.5" aria-hidden />
-                Search resumes, jobs, companies and conversations once the API is live.
+                Search {searchGroupNames()} once the API is live.
               </div>
             )}
           </CommandList>

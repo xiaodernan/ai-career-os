@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
 
 import {
   bool,
@@ -28,6 +29,8 @@ import {
   normalizeTailor,
   normalizeTailorDiff,
   normalizeTrajectory,
+  SEARCH_GROUPS,
+  searchGroupNames,
   num,
   pct,
   pick,
@@ -734,6 +737,48 @@ describe("normalizeSearch", () => {
       ],
     });
     expect(groups.find((g) => g.label === "Job")?.items).toHaveLength(2);
+  });
+
+  it("keeps a hit whose match lives outside the title", () => {
+    // SearchRepository's WHERE clauses, group by group: only `resumes` match the title.
+    // The rest can answer for a term the displayed title never contains, so nothing in
+    // here may filter on the term — the palette used to, and printed "No results." over
+    // these exact rows.
+    const k8s = "k8s";
+    const { groups } = normalizeSearch({
+      query: k8s,
+      jobs: [{ id: "j1", title: "Platform Engineer", companyName: "Northwind", location: "Remote" }],
+      companies: [{ id: "c1", name: "Northwind", industry: "Kubernetes tooling" }],
+      resumes: [{ id: "r1", title: "k8s platform resume", status: "parsed" }],
+      notes: [{ id: "n1", title: "SRE plan", snippet: "adopt k8s in Q3" }],
+      conversations: [{ id: "v1", title: "Weekly sync", snippet: "we moved to k8s" }],
+      applications: [{ id: "a1", title: "Infra Engineer", companyName: "Northwind", status: "applied" }],
+    });
+    const survivors = groups.flatMap((g) => g.items);
+    expect(survivors.map((i) => i.id)).toEqual(["j1", "c1", "r1", "n1", "v1", "a1"]);
+    // Five of the six titles carry no trace of the term — resumes are the exception,
+    // because that one query matches the title and nothing else.
+    expect(survivors.filter((i) => !i.title.toLowerCase().includes(k8s))).toHaveLength(5);
+  });
+
+  it("answers for exactly the groups the backend's SearchResponse carries", () => {
+    // Cross-language contract: a new List<…> in the Java DTO that SEARCH_GROUPS doesn't
+    // know about would be searched, returned, and silently never shown.
+    const java = readFileSync(
+      new URL("../../../../backend/src/main/java/com/careeros/search/dto/SearchDtos.java", import.meta.url),
+      "utf8"
+    );
+    const response = java.slice(java.indexOf("record SearchResponse"));
+    const wireKeys = [...response.matchAll(/List<\w+>\s+(\w+)/g)].map((m) => m[1]);
+    expect(wireKeys.length).toBeGreaterThan(0);
+    // Same keys, same order — the palette renders groups in response order.
+    expect(SEARCH_GROUPS.map((g) => g.key)).toEqual(wireKeys);
+  });
+
+  it("says every group it can search, in one sentence", () => {
+    expect(searchGroupNames()).toBe(
+      "jobs, companies, resumes, notes, conversations and applications"
+    );
   });
 });
 
