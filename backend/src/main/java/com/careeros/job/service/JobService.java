@@ -32,8 +32,11 @@ import com.careeros.resume.entity.Resume;
 import com.careeros.resume.service.ResumeService;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -171,13 +174,38 @@ public class JobService {
 
     @Transactional(readOnly = true)
     public List<SavedJobItem> saved(UUID userId) {
-        return savedJobs.findByUserIdOrderByCreatedAtDesc(userId).stream()
-                .map(s -> jobs.findById(s.getJobId()).map(job -> {
-                    String name = companies.findById(job.getCompanyId())
-                            .map(Company::getName).orElse("");
+        List<SavedJob> saved = savedJobs.findByUserIdOrderByCreatedAtDesc(userId);
+        if (saved.isEmpty()) {
+            return List.of();
+        }
+        // Batched lookups, not per-row ones. The previous shape called jobs.findById and
+        // companies.findById inside the map, so a list of N bookmarks cost 1 + 2N queries
+        // (PRD §36 calls out N+1 explicitly). Three queries now, whatever N is; the saved
+        // order is preserved because we still iterate `saved`.
+        Map<UUID, Job> jobsById = jobs.findAllById(
+                        saved.stream().map(SavedJob::getJobId).collect(Collectors.toSet()))
+                .stream().collect(Collectors.toMap(Job::getId, j -> j));
+
+        Set<UUID> companyIds = jobsById.values().stream()
+                .map(Job::getCompanyId).filter(Objects::nonNull).collect(Collectors.toSet());
+        Map<UUID, String> companyNames = companyIds.isEmpty() ? Map.of()
+                : companies.findAllById(companyIds).stream()
+                        .collect(Collectors.toMap(Company::getId, Company::getName));
+
+        return saved.stream()
+                .map(s -> {
+                    Job job = jobsById.get(s.getJobId());
+                    if (job == null) {
+                        return null;
+                    }
+                    // Guard the null id explicitly: Map.of() is immutable and its
+                    // getOrDefault rejects a null key with an NPE, so a job without a
+                    // company would blow up the whole list rather than render unnamed.
+                    UUID companyId = job.getCompanyId();
+                    String name = companyId == null ? "" : companyNames.getOrDefault(companyId, "");
                     return new SavedJobItem(toItem(job, name), s.getNote(), s.getCreatedAt());
-                }).orElse(null))
-                .filter(java.util.Objects::nonNull)
+                })
+                .filter(Objects::nonNull)
                 .toList();
     }
 
