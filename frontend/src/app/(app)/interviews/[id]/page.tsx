@@ -33,7 +33,7 @@ import { AIBadge } from "@/components/ai/ai-badge";
 import { ProcessingSteps } from "@/components/ai/processing-steps";
 import { useInterviewOpening, useSubmitInterviewAnswer, useFinalizeInterview } from "@/lib/hooks/actions";
 import { useInterviewSession } from "@/lib/hooks/resources";
-import { titleCase } from "@/lib/format";
+import { depthLabel, depthLevel, titleCase } from "@/lib/format";
 import type { AnswerResponse } from "@/lib/hooks/actions";
 import type { InterviewQuestion } from "@/lib/api/types";
 
@@ -375,13 +375,12 @@ function BackLink() {
 }
 
 function DifficultyMeter({ value }: { value: number }) {
-  // Accept 0–1 or 1–5 scales from the backend; never relabel the level.
-  const level = value <= 1 ? Math.round(value * 5) : Math.round(Math.min(5, Math.max(1, value)));
-  const labels = ["Warm-up", "Standard", "Solid", "Deep", "Expert"];
+  // depthLevel owns the 0–1 ↔ 1–5 projection; every depth surface shares it.
+  const level = depthLevel(value);
   return (
     <span
       className="flex items-center gap-1.5"
-      title={`Depth: ${labels[level - 1] ?? level}/5`}
+      title={`Depth: ${depthLabel(value)}/5`}
       aria-label={`Difficulty level ${level} of 5`}
     >
       <Gauge className="size-3.5 text-muted-foreground" aria-hidden />
@@ -396,7 +395,7 @@ function DifficultyMeter({ value }: { value: number }) {
           />
         ))}
       </span>
-      <span className="text-2xs text-muted-foreground">{labels[level - 1]}</span>
+      <span className="text-2xs text-muted-foreground">{depthLabel(value)}</span>
     </span>
   );
 }

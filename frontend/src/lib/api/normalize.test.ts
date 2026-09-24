@@ -27,6 +27,7 @@ import {
   normalizeStructuredResume,
   normalizeTailor,
   normalizeTailorDiff,
+  normalizeTrajectory,
   num,
   pct,
   pick,
@@ -887,6 +888,95 @@ describe("normalizeInterviewReport", () => {
     expect(report).not.toBeNull();
     expect(report?.hasContent).toBe(false);
     expect(report?.dims).toEqual([]);
+  });
+});
+
+/**
+ * `interview_evaluations.trajectory` (ai-service `finalize` → `_trajectory_detail`) is
+ * one row per TURN: the `interviewer` row carries `topic` + `depth` where depth is only
+ * a follow-up FLAG (0 new topic / 1 followed up), and the grade lands on the following
+ * `candidate` row. Projecting every row as a question drew the chart with a phantom
+ * zero-depth point between each pair, gave every question `score: undefined`, and
+ * printed the candidate rows as unanswered questions. ROWS below is the longest run in
+ * the live database, transcribed verbatim.
+ */
+const ROWS = [
+  { seq: 1, role: "interviewer", depth: 0, score: null, topic: "your background" },
+  { seq: 2, role: "candidate", depth: null, score: 0.72, topic: null },
+  { seq: 3, role: "interviewer", depth: 1, score: null, topic: "caching" },
+  { seq: 4, role: "candidate", depth: null, score: 0.72, topic: null },
+  { seq: 5, role: "interviewer", depth: 1, score: null, topic: "caching" },
+];
+
+describe("normalizeTrajectory", () => {
+  it("folds per-turn rows into one point per question", () => {
+    expect(normalizeTrajectory({ trajectory: ROWS })).toEqual([
+      { question: "your background", score: 72, depth: 1 },
+      { question: "caching", score: 72, depth: 2 },
+      { question: "caching", score: undefined, depth: 3 },
+    ]);
+  });
+
+  it("makes the ladder the run length, because the producer only flags follow-ups", () => {
+    // Three follow-ups in a row is depth 2,3,4 — every row would otherwise say 1, and
+    // a chart of "how deep did it push" would be flat no matter how hard it pushed.
+    const rows = [
+      { role: "interviewer", depth: 1, score: null, topic: "a" },
+      { role: "candidate", depth: null, score: 0.4, topic: null },
+      { role: "interviewer", depth: 1, score: null, topic: "b" },
+      { role: "candidate", depth: null, score: 0.4, topic: null },
+      { role: "interviewer", depth: 1, score: null, topic: "c" },
+    ];
+    expect(normalizeTrajectory({ trajectory: rows }).map((p) => p.depth)).toEqual([1, 2, 3]);
+    // A new topic (depth 0) resets the ladder to the first rung.
+    expect(
+      normalizeTrajectory({
+        trajectory: [...rows.slice(0, 3), { role: "interviewer", depth: 0, score: null, topic: "d" }],
+      }).map((p) => p.depth)
+    ).toEqual([1, 2, 1]);
+  });
+
+  it("borrows the next candidate grade without double-borrowing across questions", () => {
+    // seq5 was never answered: the last question must not inherit seq4's grade.
+    const [first, second, third] = normalizeTrajectory({ trajectory: ROWS });
+    expect(third.score).toBeUndefined();
+    expect(first.score).toBe(72);
+    // An unanswered question in the middle stops at its own answer row.
+    const rows = [
+      { role: "interviewer", depth: 0, score: null, topic: "asked" },
+      { role: "candidate", depth: null, score: 0.9, topic: null },
+      { role: "interviewer", depth: 0, score: null, topic: "skipped" },
+      { role: "interviewer", depth: 1, score: null, topic: "answered" },
+      { role: "candidate", depth: null, score: 0.5, topic: null },
+    ];
+    expect(normalizeTrajectory({ trajectory: rows })).toEqual([
+      { question: "asked", score: 90, depth: 1 },
+      { question: "skipped", score: undefined, depth: 1 },
+      { question: "answered", score: 50, depth: 2 },
+    ]);
+  });
+
+  it("passes role-less one-per-question rows through untouched", () => {
+    // The mock evaluator and the report fixtures already emit folded rows; re-laddering
+    // those would rewrite depths the tests (and users) already read.
+    expect(
+      normalizeTrajectory({ trajectory: [{ question: "rate limiting", depth: 3, score: 0.6 }] })
+    ).toEqual([{ question: "rate limiting", score: 60, depth: 3 }]);
+    expect(normalizeTrajectory({ trajectory: [{ label: "q1", score: 80, level: 2 }] })).toEqual([
+      { question: "q1", score: 80, depth: 2 },
+    ]);
+  });
+
+  it("reads trajectory_detail, the name the backend column carries", () => {
+    expect(normalizeTrajectory({ trajectory_detail: ROWS })).toHaveLength(3);
+    expect(normalizeTrajectory({ depth_trajectory: ROWS })).toHaveLength(3);
+    expect(normalizeTrajectory({ trajectory: null, trajectory_detail: ROWS })).toHaveLength(3);
+  });
+
+  it("returns an empty list for a payload with no trajectory", () => {
+    expect(normalizeTrajectory({})).toEqual([]);
+    expect(normalizeTrajectory(null)).toEqual([]);
+    expect(normalizeTrajectory({ trajectory: [] })).toEqual([]);
   });
 });
 

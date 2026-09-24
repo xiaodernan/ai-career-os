@@ -28,7 +28,7 @@ import { AIBadge } from "@/components/ai/ai-badge";
 import { useFinalizeInterview } from "@/lib/hooks/actions";
 import { useInterviewSession } from "@/lib/hooks/resources";
 import { normalizeInterviewReport, type InterviewTrajectoryPoint } from "@/lib/api/normalize";
-import { formatDate, titleCase } from "@/lib/format";
+import { depthLabel, depthLevel, formatDate, titleCase } from "@/lib/format";
 
 export default function InterviewReportPage() {
   const params = useParams<{ id: string }>();
@@ -164,8 +164,8 @@ export default function InterviewReportPage() {
                   </Badge>
                 )}
                 {data.difficulty != null && (
-                  <Badge variant="outline" className="text-2xs font-normal">
-                    reached depth {data.difficulty}
+                  <Badge variant="outline" className="text-2xs font-normal tabular-nums">
+                    reached depth {depthLevel(data.difficulty)} / 5 · {depthLabel(data.difficulty)}
                   </Badge>
                 )}
               </div>
@@ -309,8 +309,10 @@ function BackLink({ id }: { id: string | null }) {
 }
 
 /**
- * Depth trajectory — x = question order, bar = how deep the agent pushed,
- * dot = the score it gave. Purely from the evaluator's own numbers.
+ * Depth trajectory — x = question order, solid line = how deep the agent had pushed
+ * when it asked (run length of follow-ups, 1–5), dotted line = the score it gave.
+ * One point per question, from the shared fold in `normalizeTrajectory`; scores are
+ * absent on questions that were never answered, and the dotted line skips them.
  */
 function TrajectoryChart({ points }: { points: InterviewTrajectoryPoint[] }) {
   const W = 560;
@@ -379,7 +381,9 @@ function TrajectoryChart({ points }: { points: InterviewTrajectoryPoint[] }) {
                       p.score >= 60 ? "fill-success" : p.score >= 40 ? "fill-warning" : "fill-destructive"
                     )}
                   >
-                    <title>{`Q${i + 1}: depth ${p.depth ?? "?"}, score ${p.score}`}</title>
+                    <title>{`Q${i + 1}${p.question ? ` · ${p.question}` : ""}: depth ${p.depth ?? "?"} of 5, score ${
+                      p.score != null ? p.score : "not graded"
+                    }`}</title>
                   </circle>
                 )}
                 <text x={x(i)} y={H - 6} textAnchor="middle" className="fill-muted-foreground" fontSize={9}>
@@ -390,7 +394,8 @@ function TrajectoryChart({ points }: { points: InterviewTrajectoryPoint[] }) {
           </svg>
           <figcaption className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-2xs text-muted-foreground">
             <span className="flex items-center gap-1.5">
-              <span className="size-2 rounded-full bg-primary" aria-hidden /> depth the agent pushed
+              <span className="size-2 rounded-full bg-primary" aria-hidden /> how many questions in a row the agent
+              followed up on
             </span>
             <span className="flex items-center gap-1.5">
               <span className="size-2 rounded-full bg-success" aria-hidden /> your score

@@ -66,6 +66,27 @@ describe("normalizeAnswerResponse score scale", () => {
     expect(live.map((t) => t.score)).toEqual([86, 44]);
   });
 
+  it("folds the real per-turn rows the same way on both ends", () => {
+    // What ai-service actually persists: interviewer rows with a follow-up flag and a
+    // null score, grades on the candidate rows between them. Before this the live turn
+    // read only "trajectory"/"depth_trajectory" and both ends counted answers as
+    // questions, so the panel showed five rows for three questions — and the second half
+    // of that list arrived mid-run, when only the answered prefix exists.
+    const rows = [
+      { seq: 1, role: "interviewer", depth: 0, score: null, topic: "your background" },
+      { seq: 2, role: "candidate", depth: null, score: 0.72, topic: null },
+      { seq: 3, role: "interviewer", depth: 1, score: null, topic: "caching" },
+    ];
+    const live = normalizeAnswerResponse(payload({ score: 0.72, trajectory_detail: rows }))
+      .evaluation.trajectory;
+    expect(live).toEqual([
+      { question: "your background", score: 72, depth: 1 },
+      { question: "caching", score: undefined, depth: 2 },
+    ]);
+    const report = normalizeInterviewReport({ trajectory: rows })!.trajectory;
+    expect(report.slice(0, live.length)).toEqual(live);
+  });
+
   it("maps the next move and stays null when there is none", () => {
     expect(normalizeAnswerResponse(payload({ score: 0.5 })).next).toMatchObject({
       question: "How do you rebalance?",

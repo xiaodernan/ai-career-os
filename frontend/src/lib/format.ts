@@ -103,6 +103,28 @@ export function titleCase(value?: string | null): string {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+/**
+ * The interview agent's own difficulty number, projected onto the 1–5 ladder every
+ * depth surface draws. The pipeline sends 0..1 (`decide_next` clamps to 0.1–0.95) and
+ * the trajectory rows send 0/1 follow-up flags; printing either raw put a fraction on
+ * a badge that reads "depth".
+ *
+ * The scales collide at exactly 1, which reads as the top of the 0–1 scale here. Only
+ * session/question difficulty goes through this function; the trajectory's 1–5 ladder
+ * is folded to run lengths in `normalizeTrajectory` and drawn as-is, so a ladder-1
+ * "Warm-up" can never be re-projected into "Expert".
+ */
+export function depthLevel(value: number): number {
+  const level = value <= 1 ? Math.round(value * 5) : Math.round(Math.min(5, Math.max(1, value)));
+  return Math.min(5, Math.max(1, level));
+}
+
+const DEPTH_LABELS = ["Warm-up", "Standard", "Solid", "Deep", "Expert"];
+
+export function depthLabel(value: number): string {
+  return DEPTH_LABELS[depthLevel(value) - 1] ?? String(depthLevel(value));
+}
+
 export function initialsOf(...parts: (string | undefined | null)[]): string {
   const letters = parts
     .filter(Boolean)

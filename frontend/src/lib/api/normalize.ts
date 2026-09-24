@@ -1036,8 +1036,56 @@ export interface InterviewStudyItem {
 
 export interface InterviewTrajectoryPoint {
   question?: string;
+  /** 0–100 */
   score?: number;
+  /**
+   * 1–5 ladder: how deep the agent had pushed when it asked this question.
+   * The producer only flags *whether* a question was a follow-up, so a run of
+   * follow-ups on one topic is what becomes ladder 2, 3, 4…
+   */
   depth?: number;
+}
+
+const TRAJECTORY_KEYS = ["trajectory", "trajectory_detail", "depth_trajectory", "depthTrajectory"];
+
+/**
+ * Fold the evaluator's per-turn rows into one point per QUESTION.
+ *
+ * `interview_evaluations.trajectory` (written by ai-service `finalize` →
+ * `_trajectory_detail`) stores one row per TURN, interleaved: the `interviewer` row
+ * carries `topic` + `depth_level` (1 when the agent chose to follow up, 0 for a new
+ * topic), the grade lands on the following `candidate` row. Projecting every row as a
+ * question counted answers as questions and drew a phantom zero-depth point between
+ * each pair. Rows that carry no `role` at all are already one-per-question and pass
+ * through untouched.
+ */
+export function normalizeTrajectory(source: unknown): InterviewTrajectoryPoint[] {
+  const rows = list<Record<string, unknown>>(source, ...TRAJECTORY_KEYS);
+  const plain = (t: Record<string, unknown>): InterviewTrajectoryPoint => ({
+    question: str(t, "question", "label", "topic"),
+    score: pct(num(t, "score", "value")),
+    depth: num(t, "depth", "level", "difficulty"),
+  });
+  if (!rows.some((r) => typeof r.role === "string")) return rows.map(plain);
+
+  const points: InterviewTrajectoryPoint[] = [];
+  let ladder = 0;
+  rows.forEach((row, i) => {
+    if (row.role !== "interviewer") return;
+    const question = str(row, "question", "label", "topic");
+    const depth = num(row, "depth", "level", "difficulty");
+    // depth_level is a follow-up flag, not a level: the ladder is the run length.
+    ladder = depth && depth >= 1 ? ladder + 1 : 1;
+    // The answer that grades this question is the first candidate row before the
+    // next question; a row already carrying its own score needs no look-ahead.
+    let score = pct(num(row, "score", "value"));
+    for (let j = i + 1; j < rows.length && score == null; j++) {
+      if (rows[j].role === "interviewer") break;
+      if (rows[j].role === "candidate") score = pct(num(rows[j], "score", "value"));
+    }
+    points.push({ question, score, depth: ladder });
+  });
+  return points;
 }
 
 export interface InterviewReport {
@@ -1092,17 +1140,7 @@ export function normalizeInterviewReport(raw: unknown): InterviewReport | null {
       kind: str(s, "kind", "type"),
     };
   });
-  const trajectory = list<Record<string, unknown>>(
-    merged,
-    "trajectory",
-    "trajectory_detail",
-    "depth_trajectory",
-    "depthTrajectory"
-  ).map((t) => ({
-    question: str(t, "question", "label", "topic"),
-    score: pct(num(t, "score", "value")),
-    depth: num(t, "depth", "level", "difficulty"),
-  }));
+  const trajectory = normalizeTrajectory(merged);
 
   const hasContent =
     overall != null ||

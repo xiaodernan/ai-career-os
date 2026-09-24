@@ -15,8 +15,8 @@ import {
   normalizeMatch,
   normalizeSuggestions,
   normalizeTailor,
+  normalizeTrajectory,
   tailorSaveBody,
-  list,
   num,
   pct,
   pick,
@@ -546,18 +546,10 @@ export function normalizeAnswerResponse(raw: unknown): AnswerResponse {
       betterAnswer: str(ev, "better_answer", "betterAnswer", "improved", "model_answer"),
       feedback: str(ev, "feedback", "comment", "summary"),
       dims: normalizeDimsList(ev),
-      // Same projection as normalizeInterviewReport's trajectory, so the live turn and the
-      // report of that turn cannot disagree about what the user scored.
-      trajectory: list<Record<string, unknown>>(
-        ev,
-        "trajectory",
-        "depth_trajectory",
-        "depthTrajectory"
-      ).map((t) => ({
-        question: str(t, "question", "label", "topic"),
-        score: pct(num(t, "score", "value")),
-        depth: num(t, "depth", "level", "difficulty"),
-      })),
+      // One shared fold with normalizeInterviewReport, so the live turn and the report
+      // of that turn cannot disagree about what the user scored — and cannot drift on
+      // which key names carry the rows (this call used to miss "trajectory_detail").
+      trajectory: normalizeTrajectory(ev),
     },
     next: nx
       ? {

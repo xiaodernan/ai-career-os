@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  depthLabel,
+  depthLevel,
   formatDuration,
   formatSalary,
   formatUsd,
@@ -70,6 +72,35 @@ describe("titleCase", () => {
   it("splits separators and uppercases words", () => {
     expect(titleCase("hello_world-x")).toBe("Hello World X");
     expect(titleCase("")).toBe("");
+  });
+});
+
+describe("depthLevel / depthLabel", () => {
+  it("projects the pipeline's 0–1 difficulty onto the 1–5 ladder it is drawn as", () => {
+    // interview_sessions.difficulty in the live DB sits in [0.5, 0.65]; decide_next
+    // clamps to [0.1, 0.95]. Printing that float on a badge reading "depth N / 5" made
+    // every session look like depth 0 with an empty meter.
+    expect(depthLevel(0.1)).toBe(1);
+    expect(depthLevel(0.6)).toBe(3);
+    expect(depthLevel(0.95)).toBe(5);
+  });
+
+  it("leaves an already-laddered value alone and stays inside 1–5", () => {
+    expect(depthLevel(3)).toBe(3);
+    expect(depthLevel(5)).toBe(5);
+    // A fraction of 1.0 is the top of the producer scale, not "Warm-up".
+    expect(depthLevel(1)).toBe(5);
+    // The meter draws five pips, so it must never be asked for 0 or 7.
+    expect(depthLevel(0)).toBe(1);
+    expect(depthLevel(7)).toBe(5);
+  });
+
+  it("names each rung, and never a rung that has no name", () => {
+    expect(depthLabel(0)).toBe("Warm-up");
+    expect(depthLabel(0.6)).toBe("Solid");
+    expect(depthLabel(5)).toBe("Expert");
+    expect(depthLabel(9)).toBe("Expert");
+    expect(depthLabel(2)).toBe("Standard");
   });
 });
 
