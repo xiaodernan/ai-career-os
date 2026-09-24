@@ -443,6 +443,46 @@ describe("normalizeDashboard", () => {
     expect(d.recommendedJobs?.[0]).toMatchObject({ id: "j2", title: "Senior Eng" });
     expect(d.recentRuns?.[0]).toMatchObject({ id: "r1", agent: "match", status: "success" });
   });
+
+  it("scales the reported 0..1 average match into the percentage the ring draws", () => {
+    // float4 round-trip, exactly as Postgres surfaces avg() over job_matches.overall.
+    const d = normalizeDashboard({
+      kanban: { statusCounts: { saved: 1 }, total: 1, offers: 0 },
+      interviews: 0,
+      avgMatch: 0.6956999897956848,
+      needsAttention: 3,
+    })!;
+    expect(d.metrics!.avgMatch).toBe(70);
+    expect(d.metrics!.needsAttention).toBe(3);
+  });
+
+  it("leaves the average undefined rather than zero for an account with no matches", () => {
+    // The endpoint sends null here; a coerced 0 would draw a 0% ring and read as "scored badly".
+    const d = normalizeDashboard({
+      kanban: {
+        statusCounts: { saved: 0, applied: 0, oa: 0, interview: 0, final_round: 0, offer: 0, rejected: 0 },
+        total: 0,
+        offers: 0,
+      },
+      interviews: 0,
+      avgMatch: null,
+      needsAttention: 0,
+      currentResume: null,
+      skillGaps: null,
+      recommendedJobs: [],
+      recentRuns: [],
+      recentActivity: [],
+    })!;
+    expect(d.metrics!.avgMatch).toBeUndefined();
+    // ...while the zero count still reports as zero, and the strip keeps rendering the other cards.
+    expect(d.metrics!.needsAttention).toBe(0);
+    expect(d.metrics).toBeDefined();
+  });
+
+  it("does not mistake the numeric needsAttention metric for attention rows", () => {
+    const d = normalizeDashboard({ avgMatch: 0.5, needsAttention: 4 })!;
+    expect(d.attention ?? []).toEqual([]);
+  });
 });
 
 describe("copilot chat: live reply must normalize identically to history", () => {

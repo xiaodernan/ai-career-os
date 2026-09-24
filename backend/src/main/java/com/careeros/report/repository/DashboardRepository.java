@@ -48,4 +48,45 @@ public class DashboardRepository {
                         (UUID) row[7]))
                 .toList();
     }
+
+    /**
+     * Mean of the *newest* match per scored job. Re-running a match on the same job re-scores the
+     * same role, so counting every run would weight the jobs the user re-checked most rather than
+     * the jobs themselves. Null when nothing is scored yet: "no average" and "average of zero"
+     * are different claims, and the card on the other end hides on null.
+     */
+    public Float averageMatch(UUID userId) {
+        String sql = """
+                SELECT avg(latest.overall) FROM (
+                      SELECT DISTINCT ON (jm.job_id) jm.job_id, jm.overall
+                        FROM job_matches jm
+                       WHERE jm.user_id = :userId
+                       ORDER BY jm.job_id, jm.created_at DESC, jm.id DESC
+                ) latest
+                """;
+        Query query = em.createNativeQuery(sql);
+        query.setParameter("userId", userId);
+        Object single = query.getSingleResult();
+        return single == null ? null : ((Number) single).floatValue();
+    }
+
+    /**
+     * Open applications waiting on the user: nothing logged for {@code staleDays}, or a reminder
+     * date that has arrived. `offer` and `rejected` are excluded because the stage taxonomy the
+     * frontend freezes (`lib/pipeline.ts`) treats those as closed out — a decision already made is
+     * not an outstanding item, and counting it would make the number grow as the user finishes work.
+     */
+    public long needsAttention(UUID userId, int staleDays) {
+        String sql = """
+                SELECT count(*) FROM applications a
+                 WHERE a.user_id = :userId
+                   AND a.status NOT IN ('offer', 'rejected')
+                   AND (a.updated_at < now() - make_interval(days => :staleDays)
+                        OR (a.reminder_at IS NOT NULL AND a.reminder_at <= now()))
+                """;
+        Query query = em.createNativeQuery(sql);
+        query.setParameter("userId", userId);
+        query.setParameter("staleDays", staleDays);
+        return ((Number) query.getSingleResult()).longValue();
+    }
 }

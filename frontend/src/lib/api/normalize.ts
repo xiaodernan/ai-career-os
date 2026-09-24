@@ -856,9 +856,9 @@ export function normalizeDashboard(raw: unknown): DashboardPayload | null {
   const d = pick(raw, "dashboard", "data") ?? raw;
   if (!rec(d)) return null;
   // Real GET /reports/dashboard: { kanban{statusCounts,total,offers}, interviews,
-  // currentResume{resumeId,versionId,title,status,score}, skillGaps(digest),
-  // recommendedJobs[], recentRuns[], recentActivity[] }. Fall back to `d` itself
-  // so older flat payloads still resolve.
+  // avgMatch(0..1 or null), needsAttention(long), currentResume{resumeId,versionId,title,
+  // status,score}, skillGaps(digest), recommendedJobs[], recentRuns[], recentActivity[] }.
+  // Fall back to `d` itself so older flat payloads still resolve.
   const kanban = rec(pick(d, "kanban")) ? (pick(d, "kanban") as Record<string, unknown>) : d;
   const currentResume = pick(d, "currentResume", "current_resume", "resume");
   const skillGapDigest = pick(d, "skillGaps", "skill_gaps", "skillGap", "skill_gap");
@@ -918,7 +918,9 @@ export function normalizeDashboard(raw: unknown): DashboardPayload | null {
     recentRuns: runs.length ? runs : undefined,
     suggestion: str(d, "suggestion", "aiSuggestion", "ai_suggestion", "nextStep", "next_step"),
     insights: list<string>(d, "insights", "highlights").map(String),
-    attention: list(d, "attention", "needsAttention", "needs_attention").map((a) => ({
+    // Deliberately not aliased to `needsAttention`: the dashboard endpoint sends that key as the
+    // metric count above, not as a list of rows.
+    attention: list(d, "attention").map((a) => ({
       label: str(a, "label", "title", "text"),
       href: str(a, "href", "url", "link"),
       count: num(a, "count", "total"),

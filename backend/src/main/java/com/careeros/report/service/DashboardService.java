@@ -36,6 +36,8 @@ public class DashboardService {
 
     private static final int RECOMMENDED_LIMIT = 5;
     private static final int RECENT_LIMIT = 5;
+    /** An application nobody has logged a step on for this long is the user's to chase. */
+    private static final int STALE_DAYS = 14;
 
     private final ApplicationRepository applications;
     private final ApplicationEventRepository appEvents;
@@ -64,6 +66,8 @@ public class DashboardService {
         return new DashboardResponse(
                 kanban(userId),
                 interviews.countByUserId(userId),
+                dashboard.averageMatch(userId),
+                dashboard.needsAttention(userId, STALE_DAYS),
                 currentResume(userId),
                 skillGaps(userId),
                 dashboard.recommendedJobs(userId, RECOMMENDED_LIMIT),

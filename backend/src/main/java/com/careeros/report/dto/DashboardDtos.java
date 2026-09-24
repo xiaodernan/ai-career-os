@@ -37,8 +37,15 @@ public final class DashboardDtos {
                                  OffsetDateTime createdAt) {
     }
 
+    /**
+     * `avgMatch` is the mean of the newest match per scored job (0..1) and null when nothing has
+     * been scored; `needsAttention` counts open applications that are waiting on the user. The
+     * stat strip hides the match ring on a null average rather than drawing a zero-scored resume.
+     */
     public record DashboardResponse(Kanban kanban,
                                     long interviews,
+                                    Float avgMatch,
+                                    long needsAttention,
                                     ResumeSummary currentResume,
                                     SkillGapDigest skillGaps,
                                     List<RecommendedJob> recommendedJobs,
