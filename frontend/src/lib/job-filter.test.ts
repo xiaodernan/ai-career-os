@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { filterAndPaginate, hasActiveJobFilters, matchesJobFilters } from "@/lib/job-filter";
-import type { Job } from "@/lib/api/types";
+import { filterAndPaginate, hasActiveJobFilters, matchesJobFilters, profileSkillSuggestions } from "@/lib/job-filter";
+import type { Job, StructuredResume } from "@/lib/api/types";
 
 /**
  * Fixtures are shaped like `normalizeJob`'s output for a `JobListItem`, i.e. what
@@ -208,5 +208,68 @@ describe("the saved tab's list screen", () => {
     expect(source).toContain("hasActiveJobFilters(filters)");
     // A bookmark set that is genuinely empty must still get its own state.
     expect(source).toContain("Nothing saved yet");
+  });
+});
+
+describe("profileSkillSuggestions", () => {
+  it("offers every skill the profile knows — a missing chip is a filter that cannot be set", () => {
+    const many = Array.from({ length: 31 }, (_, i) => `skill-${i}`);
+    const got = profileSkillSuggestions({ skills: [{ group: "Core", skills: many }], technologies: ["extra"] });
+    expect(got).toHaveLength(32);
+    expect(got).toContain("skill-24");
+    expect(got[got.length - 1]).toBe("extra");
+  });
+
+  it("folds case-only duplicates and keeps the first spelling", () => {
+    const got = profileSkillSuggestions({
+      skills: [{ skills: ["Kubernetes", "Go"] }],
+      technologies: ["kubernetes", "Rust"],
+    });
+    expect(got).toEqual(["Kubernetes", "Go", "Rust"]);
+  });
+
+  it("trims what it keeps and drops blanks", () => {
+    const got = profileSkillSuggestions({
+      skills: [{ skills: [" TypeScript ", "", "   "] }],
+      technologies: ["Node"],
+    });
+    expect(got).toEqual(["TypeScript", "Node"]);
+  });
+
+  it("answers with nothing when there is no parsed profile", () => {
+    expect(profileSkillSuggestions(null)).toEqual([]);
+    expect(profileSkillSuggestions(undefined)).toEqual([]);
+    expect(profileSkillSuggestions({})).toEqual([]);
+    expect(
+      profileSkillSuggestions({ skills: null, technologies: null } as unknown as StructuredResume)
+    ).toEqual([]);
+  });
+
+  it("reads a structured resume nested under the payload's own key", () => {
+    expect(profileSkillSuggestions({ structured: { technologies: ["Elixir"] } })).toEqual(["Elixir"]);
+  });
+
+  it("suggests only chips the rows can actually answer", () => {
+    // A chip is worth rendering only if picking it filters; the panel and the server
+    // both compare skills case-insensitively, so folded spelling must not break that.
+    const suggestion = profileSkillSuggestions({ skills: [{ skills: ["Kubernetes"] }] })[0];
+    expect(matchesJobFilters(job({ skills: ["kubernetes"] }), { skills: suggestion })).toBe(true);
+    expect(matchesJobFilters(job({ skills: ["Java"] }), { skills: suggestion })).toBe(false);
+  });
+});
+
+describe("the skill filter's suggestion chips", () => {
+  const panel = readFileSync(new URL("../components/jobs/job-filters.tsx", import.meta.url), "utf8");
+  const page = readFileSync(new URL("../app/(app)/jobs/page.tsx", import.meta.url), "utf8");
+
+  it("renders one chip per suggestion instead of a window", () => {
+    expect(panel).toContain("{skillSuggestions.map((s) => (");
+    expect(panel).not.toMatch(/skillSuggestions\.slice\(/);
+  });
+
+  it("builds the list in the shared module the filters live in", () => {
+    expect(page).toContain("profileSkillSuggestions(resume.data?.structured)");
+    expect(page).not.toMatch(/function skillsFrom/);
+    expect(page).not.toMatch(/normalizeStructuredResume/);
   });
 });

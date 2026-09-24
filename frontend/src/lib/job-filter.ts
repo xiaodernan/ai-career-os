@@ -1,7 +1,7 @@
-import type { Job } from "@/lib/api/types";
+import type { Job, StructuredResume } from "@/lib/api/types";
 import type { JobFilters } from "@/lib/hooks/resources";
 import type { NormalizedPage } from "@/lib/api/normalize";
-import { serializeJobFilters } from "@/lib/api/normalize";
+import { normalizeStructuredResume, serializeJobFilters } from "@/lib/api/normalize";
 
 /**
  * Local filtering for a set the server already handed over whole.
@@ -117,4 +117,27 @@ export function filterAndPaginate(
     page,
     size,
   };
+}
+
+/**
+ * The skill chips the filter panel offers, read off the parsed resume profile.
+ *
+ * Every skill the profile knows has to come back: the panel has no free-text entry,
+ * so a skill that isn't in this list is a filter the user cannot set, however much
+ * it describes them. Case is folded for the duplicate check only — both this panel's
+ * local predicate and the server's skill clause already compare skills
+ * case-insensitively, so "Kubernetes" and "kubernetes" are one chip, spelled the way
+ * the profile wrote it first.
+ */
+export function profileSkillSuggestions(structured?: StructuredResume | null): string[] {
+  const s = normalizeStructuredResume(structured);
+  if (!s) return [];
+  const owned = [...(s.skills ?? []).flatMap((g) => g.skills ?? []), ...(s.technologies ?? [])];
+  const byFoldedName = new Map<string, string>();
+  for (const raw of owned) {
+    const name = String(raw ?? "").trim();
+    const folded = name.toLowerCase();
+    if (name && !byFoldedName.has(folded)) byFoldedName.set(folded, name);
+  }
+  return [...byFoldedName.values()];
 }

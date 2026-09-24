@@ -15,9 +15,7 @@ import { JobFilterPanel } from "@/components/jobs/job-filters";
 import { AnalyzeJdDialog } from "@/components/jobs/analyze-jd-dialog";
 import { useJobs, useResumes, useResume, useSavedJobs } from "@/lib/hooks/resources";
 import { useUrlState } from "@/lib/hooks/use-url-state";
-import { filterAndPaginate, hasActiveJobFilters } from "@/lib/job-filter";
-import { normalizeStructuredResume } from "@/lib/api/normalize";
-import type { StructuredResume } from "@/lib/api/types";
+import { filterAndPaginate, hasActiveJobFilters, profileSkillSuggestions } from "@/lib/job-filter";
 
 type FilterState = {
   q: string;
@@ -40,13 +38,6 @@ const DEFAULTS: FilterState = {
   size: 12,
 };
 
-function skillsFrom(structured?: StructuredResume | null): string[] {
-  const s = normalizeStructuredResume(structured);
-  if (!s) return [];
-  const grouped = (s.skills ?? []).flatMap((g) => g.skills ?? []);
-  return [...new Set([...grouped, ...(s.technologies ?? [])])].filter(Boolean).slice(0, 24);
-}
-
 export default function JobsPage() {
   const [filters, setFilters] = useUrlState(DEFAULTS, {
     numericKeys: ["page", "min_salary", "max_salary", "size"],
@@ -61,7 +52,7 @@ export default function JobsPage() {
   const firstResumeId = resumes.data?.items?.[0]?.id ?? null;
   const resume = useResume(firstResumeId);
   const suggestions = React.useMemo(
-    () => skillsFrom(resume.data?.structured),
+    () => profileSkillSuggestions(resume.data?.structured),
     [resume.data?.structured]
   );
 

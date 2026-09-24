@@ -138,7 +138,10 @@ function JobFilterPanel({ value, onApply, skillSuggestions, resultCount, loading
         )}
         {skillSuggestions?.length ? (
           <div className="flex flex-wrap gap-1.5">
-            {skillSuggestions.slice(0, 12).map((s) => (
+            {/* Every suggestion is rendered: these chips are the only way to set the skill
+                filter, so a windowed list would leave part of the user's own profile
+                unfilterable with nothing to say so. */}
+            {skillSuggestions.map((s) => (
               <li key={s} className="list-none">
                 <Badge
                   variant="outline"
