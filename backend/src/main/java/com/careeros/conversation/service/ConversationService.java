@@ -13,6 +13,7 @@ import com.careeros.conversation.dto.ConversationDtos.MessageItem;
 import com.careeros.conversation.dto.ConversationDtos.UpdateConversationRequest;
 import com.careeros.conversation.entity.Conversation;
 import com.careeros.conversation.entity.Message;
+import com.careeros.conversation.repository.ConversationDigestRepository;
 import com.careeros.conversation.repository.ConversationRepository;
 import com.careeros.conversation.repository.MessageRepository;
 import java.util.ArrayList;
@@ -29,22 +30,29 @@ import org.springframework.transaction.annotation.Transactional;
 public class ConversationService {
 
     private static final int HISTORY_TURNS = 12;
+    /** Code units a chat title or a sidebar preview is allowed to occupy. */
+    private static final int PREVIEW_UNITS = 60;
 
     private final ConversationRepository conversations;
     private final MessageRepository messages;
+    private final ConversationDigestRepository digests;
     private final AiServiceClient ai;
 
     public ConversationService(ConversationRepository conversations, MessageRepository messages,
-                               AiServiceClient ai) {
+                               ConversationDigestRepository digests, AiServiceClient ai) {
         this.conversations = conversations;
         this.messages = messages;
+        this.digests = digests;
         this.ai = ai;
     }
 
     @Transactional(readOnly = true)
     public PageDTO<ConversationItem> list(UUID userId, int page, int size) {
         var result = conversations.findByUserIdOrderByUpdatedAtDesc(userId, PageRequest.of(page, size));
-        return PageDTO.from(result, ConversationService::toItem);
+        Map<UUID, ConversationDigestRepository.Digest> rows = digests.forConversations(
+                result.getContent().stream().map(Conversation::getId).toList());
+        return PageDTO.from(result,
+                c -> toItem(c, rows.getOrDefault(c.getId(), ConversationDigestRepository.Digest.UNKNOWN)));
     }
 
     @Transactional
@@ -165,15 +173,29 @@ public class ConversationService {
             return "New chat";
         }
         String t = message.trim();
-        if (t.length() <= 60) {
+        if (t.length() <= PREVIEW_UNITS) {
             return t;
         }
-        return Texts.truncate(t, 60) + "…";
+        return Texts.truncate(t, PREVIEW_UNITS) + "…";
+    }
+
+    static String excerpt(String content) {
+        if (content == null || content.isBlank()) {
+            return null;
+        }
+        // The sidebar renders one line, and an assistant answer is markdown: newlines would
+        // render as gaps that look like missing data, so the preview is folded onto one line.
+        String t = content.strip().replaceAll("\\s+", " ");
+        return t.length() <= PREVIEW_UNITS ? t : Texts.truncate(t, PREVIEW_UNITS) + "…";
     }
 
     public static ConversationItem toItem(Conversation c) {
+        return toItem(c, ConversationDigestRepository.Digest.UNKNOWN);
+    }
+
+    public static ConversationItem toItem(Conversation c, ConversationDigestRepository.Digest digest) {
         return new ConversationItem(c.getId(), c.getTitle(), c.getContext(), c.getCreatedAt(),
-                c.getUpdatedAt());
+                c.getUpdatedAt(), excerpt(digest.lastMessage()), digest.messageCount());
     }
 
     static MessageItem toMessageItem(Message m) {

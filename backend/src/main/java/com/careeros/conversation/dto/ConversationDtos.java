@@ -13,8 +13,14 @@ public final class ConversationDtos {
     private ConversationDtos() {
     }
 
+    /**
+     * `lastMessagePreview` and `messageCount` are aggregates over `messages`, filled only where
+     * the caller asked for a page: a single-row read has not looked at the thread, so both stay
+     * null rather than claiming an empty chat.
+     */
     public record ConversationItem(UUID id, String title, Map<String, Object> context,
-                                   OffsetDateTime createdAt, OffsetDateTime updatedAt) {
+                                   OffsetDateTime createdAt, OffsetDateTime updatedAt,
+                                   String lastMessagePreview, Integer messageCount) {
     }
 
     public record MessageItem(UUID id, String role, String content, List<Object> artifacts,
