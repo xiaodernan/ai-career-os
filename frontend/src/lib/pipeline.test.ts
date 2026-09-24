@@ -1,6 +1,7 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-import { APPLICATION_STAGES, isTerminal, STAGE_ORDER, stageMeta } from "./pipeline";
+import { APPLICATION_STAGES, isTerminal, pickerStages, STAGE_ORDER, stageMeta } from "./pipeline";
 
 describe("stageMeta", () => {
   it("returns known stage metadata", () => {
@@ -29,5 +30,63 @@ describe("isTerminal", () => {
     expect(isTerminal("offer")).toBe(true);
     expect(isTerminal("rejected")).toBe(true);
     expect(isTerminal("interview")).toBe(false);
+  });
+});
+
+describe("pickerStages", () => {
+  it("offers the whole ladder in board order for a known stage", () => {
+    const opts = pickerStages("oa");
+    expect(opts.map((o) => o.value)).toEqual([...STAGE_ORDER]);
+    expect(opts.find((o) => o.value === "oa")?.label).toBe("Online assessment");
+  });
+
+  it("includes the stage the row already sits in", () => {
+    // A control that cannot show its own value has nothing to select back to.
+    expect(pickerStages("interview").map((o) => o.value)).toContain("interview");
+  });
+
+  it("keeps a status outside the ladder selectable instead of rendering blank", () => {
+    // A <select> draws an empty box when its value matches no option, so a stage
+    // the backend adds first would erase the one fact the row exists to show.
+    const opts = pickerStages("screening");
+    expect(opts[0]).toEqual({ value: "screening", label: "screening" });
+    expect(opts).toHaveLength(STAGE_ORDER.length + 1);
+  });
+
+  it("never offers an option with a blank label", () => {
+    for (const status of [...STAGE_ORDER, "screening", ""]) {
+      for (const opt of pickerStages(status)) expect(opt.label.trim()).not.toBe("");
+    }
+  });
+});
+
+/**
+ * The row is JSX in a node-environment suite, so nothing here can render it. What
+ * this can pin is that the page drives the mutation the backend has always had,
+ * and that it stopped promising a board it does not ship.
+ */
+describe("the applications row", () => {
+  const source = readFileSync(
+    new URL("../app/(app)/applications/page.tsx", import.meta.url),
+    "utf8"
+  );
+
+  it("sends a status patch through the shared update mutation", () => {
+    expect(source).toContain("useUpdateApplication");
+    expect(source).toMatch(/mutate\(\{ id: app\.id, patch: \{ status:/);
+  });
+
+  it("labels the control for the row it belongs to", () => {
+    expect(source).toContain("aria-label={`Stage for ${app.title}`}");
+  });
+
+  it("takes its colours from pipeline metadata instead of a local map", () => {
+    expect(source).toContain("stageMeta(app.status).badgeVariant");
+    expect(source).not.toMatch(/const STAGE_VARIANT/);
+  });
+
+  it("does not describe a drag-and-drop board the app does not ship", () => {
+    expect(source.toLowerCase()).not.toContain("drag-and-drop");
+    expect(source.toLowerCase()).not.toContain("kanban");
   });
 });

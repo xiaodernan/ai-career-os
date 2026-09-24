@@ -3,29 +3,52 @@
 import { CalendarClock } from "lucide-react";
 import { ModuleView } from "@/components/common/module-view";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { badgeVariants } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import { useApplications } from "@/lib/hooks/resources";
+import { useUpdateApplication } from "@/lib/hooks/actions";
+import type { Application, ApplicationStatus } from "@/lib/api/types";
+import { pickerStages, stageMeta } from "@/lib/pipeline";
 
-const STAGE_VARIANT: Record<string, "success" | "warning" | "destructive" | "secondary" | "ai"> = {
-  saved: "secondary",
-  applied: "ai",
-  oa: "ai",
-  interview: "warning",
-  final_round: "warning",
-  offer: "success",
-  rejected: "destructive",
-};
+/**
+ * The row's stage pill *is* the control: PATCH /applications/{id} has been live
+ * since the first backend commit, and the only thing that ever moved a role out
+ * of `saved` was creating it from the job page.
+ */
+function StagePicker({ app }: { app: Application }) {
+  const update = useUpdateApplication();
+  return (
+    <select
+      aria-label={`Stage for ${app.title}`}
+      value={app.status}
+      disabled={update.isPending}
+      onChange={(e) =>
+        update.mutate({ id: app.id, patch: { status: e.target.value as ApplicationStatus } })
+      }
+      className={cn(
+        badgeVariants({ variant: stageMeta(app.status).badgeVariant }),
+        "capitalize focus-visible:ring-[3px] focus-visible:ring-primary/30"
+      )}
+    >
+      {pickerStages(app.status).map((s) => (
+        <option key={s.value} value={s.value}>
+          {s.label}
+        </option>
+      ))}
+    </select>
+  );
+}
 
 export default function ApplicationsPage() {
   const applications = useApplications({ size: 50 });
   return (
     <ModuleView
       title="Applications"
-      description="Every role in flight — the kanban board ships with drag-and-drop status changes; this list mirrors the same data."
+      description="Every role in flight. Pick a stage on any row to move it — the dashboard counts follow the same data."
       query={applications}
       emptyHint={{
         title: "Pipeline is empty",
-        description: "Match a job and track it from saved to offer. Reminders included.",
+        description: "Track a job from its detail page and it appears here, starting in Saved.",
       }}
       renderItem={(app) => (
         <Card key={app.id}>
@@ -40,9 +63,7 @@ export default function ApplicationsPage() {
                 {app.reminderAt && <> · reminder {new Date(app.reminderAt).toLocaleDateString()}</>}
               </p>
             </div>
-            <Badge variant={STAGE_VARIANT[app.status] ?? "secondary"} className="capitalize">
-              {app.status.replace("_", " ")}
-            </Badge>
+            <StagePicker app={app} />
           </CardContent>
         </Card>
       )}

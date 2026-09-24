@@ -101,3 +101,20 @@ export const STAGE_ORDER: ApplicationStatus[] = APPLICATION_STAGES.map((s) => s.
 export function isTerminal(status: string): boolean {
   return status === "offer" || status === "rejected";
 }
+
+/**
+ * The options a stage picker must offer for an application sitting in `current`.
+ *
+ * The current value always comes first: a `<select>` renders blank when its value
+ * is not among the options, so a status the backend adds before this ladder is
+ * updated would show as an empty badge instead of the stage the row is really in.
+ * `stageMeta` labels the stranger instead of hiding it; the rest follow board order.
+ */
+export function pickerStages(current: string): { value: string; label: string }[] {
+  const ladder: { value: string; label: string }[] = APPLICATION_STAGES.map((s) => ({
+    value: s.value,
+    label: s.label,
+  }));
+  if (STAGE_ORDER.includes(current as ApplicationStatus)) return ladder;
+  return [{ value: current, label: stageMeta(current).label }, ...ladder];
+}
