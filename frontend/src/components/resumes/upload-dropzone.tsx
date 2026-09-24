@@ -20,12 +20,18 @@ export interface UploadDropzoneProps extends React.ComponentProps<"div"> {
   compact?: boolean;
 }
 
-const INGEST_SEED = [
-  { id: "store", label: "Storing the document" },
-  { id: "extract", label: "Extracting text (pdf/docx → plain)" },
-  { id: "structure", label: "Structuring experience, projects, skills" },
-  { id: "index", label: "Chunking + indexing into the knowledge base" },
-  { id: "score", label: "Reviewing resume quality" },
+/**
+ * The five stages the ingestion pipeline reports, in the order it reports them.
+ * `id` must equal the `step` value published by ai-service/app/ingestion/pipeline.py
+ * (the backend relay renames nothing) — a mismatched id leaves this row pending
+ * forever while the real step is appended as a sixth, raw-named row.
+ */
+export const INGEST_SEED = [
+  { id: "extracting", label: "Extracting text from the file" },
+  { id: "cleaning", label: "Cleaning and normalizing the text" },
+  { id: "chunking", label: "Splitting into retrievable chunks" },
+  { id: "embedding", label: "Generating embeddings for each chunk" },
+  { id: "indexing", label: "Indexing the document" },
 ];
 
 function pickTaskId(raw: unknown): string | null {

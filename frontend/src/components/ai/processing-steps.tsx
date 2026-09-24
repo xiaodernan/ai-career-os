@@ -99,27 +99,51 @@ function Step({ step, isLast }: { step: ProcessingStep; isLast: boolean }) {
 }
 
 /**
+ * A `status` or `progress` frame from the run stream.
+ *
+ * `state` is what the ai-service pipelines actually send (`{"step","state"}`,
+ * `{"step","done","total"}`); `status`/`progress` are kept because callers that
+ * pre-date the pipelines normalize into them.
+ */
+export interface StatusEvent {
+  step?: string;
+  label?: string;
+  state?: string;
+  status?: string;
+  progress?: number;
+  done?: number;
+  total?: number;
+  /** Frames ride along with more than the fold reads: `count`, `intent`, `agent`. */
+  [key: string]: unknown;
+}
+
+export function statusFromEvent(evt: StatusEvent): StepStatus {
+  const s = evt.state ?? evt.status;
+  if (s === "done" || evt.progress === 100) return "done";
+  if (s === "error") return "error";
+  return "active";
+}
+
+/** "64 / 200" for a counted progress frame, undefined for a plain status flip. */
+export function progressDetail(evt: StatusEvent): string | undefined {
+  if (typeof evt.done !== "number" || typeof evt.total !== "number") return undefined;
+  return `${evt.done} / ${evt.total}`;
+}
+
+/**
  * Small helper to fold SSE `status` events into a steps array.
  * Unknown incoming steps are appended automatically.
  */
-export function applyStatusEvent(
-  prev: ProcessingStep[],
-  evt: { step?: string; label?: string; progress?: number; status?: string }
-): ProcessingStep[] {
+export function applyStatusEvent(prev: ProcessingStep[], evt: StatusEvent): ProcessingStep[] {
   if (!evt.step) return prev;
   const idx = prev.findIndex((s) => s.id === evt.step);
-  const status: StepStatus =
-    evt.status === "done" || evt.progress === 100
-      ? "done"
-      : evt.status === "error"
-        ? "error"
-        : "active";
+  const status = statusFromEvent(evt);
   const updated: ProcessingStep[] = [...prev];
   const next: ProcessingStep = {
     id: evt.step,
     label: evt.label ?? updated[idx]?.label ?? evt.step,
     status,
-    detail: updated[idx]?.detail,
+    detail: progressDetail(evt) ?? updated[idx]?.detail,
   };
   if (idx === -1) {
     // Everything that was `active` before this step finished.

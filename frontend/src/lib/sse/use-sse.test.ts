@@ -63,6 +63,7 @@ describe("dispatchEvent", () => {
       [{ event: "token", data: "hi" }, "onToken", ["hi"]],
       [{ event: "token", data: { token: "x" } }, "onToken", ["x"]],
       [{ event: "status", data: { progress: 1 } }, "onStatus", [{ progress: 1 }]],
+      [{ event: "progress", data: { step: "embedding", done: 64, total: 150 } }, "onStatus", [{ step: "embedding", done: 64, total: 150 }]],
       [{ event: "trace", data: { kind: "k" } }, "onTrace", [{ kind: "k" }]],
       [{ event: "artifact", data: { k: 1 } }, "onArtifact", [{ k: 1 }]],
       [{ event: "done", data: { ok: true } }, "onDone", [{ ok: true }]],

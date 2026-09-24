@@ -6,7 +6,12 @@ import { tokenStore } from "@/lib/api/token-store";
 import type { SSEEventName } from "@/lib/api/types";
 
 export interface SSEEvent {
-  event: SSEEventName | "message";
+  /**
+   * `progress` is published by the ingestion pipeline between `status` frames and
+   * the backend relay forwards event names verbatim, so it reaches the client even
+   * though it isn't in the architecture.md §9 list.
+   */
+  event: SSEEventName | "message" | "progress";
   data: unknown;
 }
 
@@ -31,8 +36,13 @@ export interface UseSSEOptions {
 interface SSEStatusData {
   step?: string;
   label?: string;
+  /** What the pipelines actually send: "active" | "done". */
+  state?: string;
   progress?: number;
   status?: string;
+  /** `progress` frames report `{done}/{total}` units finished for `step`. */
+  done?: number;
+  total?: number;
   [key: string]: unknown;
 }
 interface SSETraceData {
@@ -134,7 +144,12 @@ export type SSEHandlers = Pick<
  */
 export function dispatchEvent(evt: SSEEvent, h: SSEHandlers): void {
   switch (evt.event) {
-    case "status": h.onStatus?.(evt.data as SSEStatusData); break;
+    // `progress` is the same step fold as `status`, just carrying counts instead of a
+    // state flip, so it enters through the same door rather than a second handler.
+    case "status":
+    case "progress":
+      h.onStatus?.(evt.data as SSEStatusData);
+      break;
     case "token":
       h.onToken?.(
         typeof evt.data === "string" ? evt.data : String((evt.data as { token?: unknown }).token ?? ""),
