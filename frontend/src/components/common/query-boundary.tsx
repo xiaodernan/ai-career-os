@@ -22,6 +22,25 @@ export function isEndpointMissing(error: unknown): boolean {
   return error instanceof ApiError && (error.isNotFound || error.status === 501);
 }
 
+/**
+ * Whether a settled payload has no rows to show.
+ *
+ * A list can arrive as a bare array or as the `{items,total}` shape `normalizePage`
+ * builds, and the page-shaped one stays an object even when the server returned zero
+ * rows — so testing only for `null` and `[]` meant every `empty` state written for a
+ * list screen was unreachable: the boundary rendered `children` over an empty `<ul>`
+ * and the designed "Nothing here yet → next action" never appeared.
+ *
+ * An object without an `items` array is a detail payload, not an empty list, and is
+ * never guessed to be empty.
+ */
+export function isEmptyPage(data: unknown): boolean {
+  if (data == null) return true;
+  if (Array.isArray(data)) return data.length === 0;
+  const items = (data as { items?: unknown }).items;
+  return Array.isArray(items) && items.length === 0;
+}
+
 export interface QueryBoundaryProps<T> {
   query: UseQueryResult<T, unknown>;
   children: (data: NonNullable<T>) => React.ReactNode;
@@ -75,18 +94,14 @@ export function QueryBoundary<T>({
       }
       return <ErrorState error={query.error} onRetry={retry} retrying={query.isFetching} />;
     }
-    if (query.data == null || (Array.isArray(query.data) && query.data.length === 0)) {
-      return <EmptyState {...empty} icon={emptyIcon} />;
-    }
-    return children(query.data);
+    if (isEmptyPage(query.data)) return <EmptyState {...empty} icon={emptyIcon} />;
+    // `isEmptyPage` judges content, not types, so it cannot narrow `T` for the compiler;
+    // the predicate's own rule guarantees a non-null payload reached this line.
+    return children(query.data as NonNullable<T>);
   })();
 
   if (!boxed) return <>{body}</>;
-  const settled =
-    !query.isPending &&
-    !query.isError &&
-    query.data != null &&
-    !(Array.isArray(query.data) && query.data.length === 0);
+  const settled = !query.isPending && !query.isError && !isEmptyPage(query.data);
   if (settled) return <div className={className}>{body}</div>;
   return (
     <Card>

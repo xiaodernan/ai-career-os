@@ -15,6 +15,7 @@ import { JobFilterPanel } from "@/components/jobs/job-filters";
 import { AnalyzeJdDialog } from "@/components/jobs/analyze-jd-dialog";
 import { useJobs, useResumes, useResume, useSavedJobs } from "@/lib/hooks/resources";
 import { useUrlState } from "@/lib/hooks/use-url-state";
+import { filterAndPaginate, hasActiveJobFilters } from "@/lib/job-filter";
 import { normalizeStructuredResume } from "@/lib/api/normalize";
 import type { StructuredResume } from "@/lib/api/types";
 
@@ -65,7 +66,22 @@ export default function JobsPage() {
   );
 
   const active = tab === "discover" ? jobs : saved;
-  const total = active.data?.total ?? 0;
+  // `GET /jobs/saved` accepts no query parameters and returns the whole bookmark set,
+  // so on this tab the panel's predicates run here over rows already in hand —
+  // otherwise every control still moves the URL while the wire carries nothing.
+  // Discover keeps filtering in SQL; both tabs read the same filter values.
+  const savedPage = React.useMemo(
+    () => (saved.data ? filterAndPaginate(saved.data.items, filters) : undefined),
+    [saved.data, filters]
+  );
+  // Only `data` is swapped, and react-query's result is a discriminated union the
+  // spread cannot re-narrow on its own, so the swap is asserted back into shape.
+  const listView = tab === "saved" ? ({ ...saved, data: savedPage } as typeof saved) : jobs;
+  const total = listView.data?.total ?? 0;
+  // Empty means two different things on the Saved tab and only one of them is "you
+  // have saved nothing": a filter can empty a list that still has rows behind it.
+  const savedFilteredToEmpty =
+    tab === "saved" && hasActiveJobFilters(filters) && (saved.data?.items.length ?? 0) > 0;
 
   return (
     <div className="space-y-6">
@@ -103,7 +119,7 @@ export default function JobsPage() {
               value={filters}
               onApply={(next) => setFilters(next, { replaceAll: true })}
               skillSuggestions={suggestions}
-              resultCount={active.data?.items.length ? total : undefined}
+              resultCount={listView.data ? total : undefined}
               loading={active.isFetching}
             />
           </div>
@@ -127,38 +143,50 @@ export default function JobsPage() {
           </Tabs>
 
           <QueryBoundary
-            query={active}
+            query={listView}
             skeleton={<LoadingJobCardSkeleton count={4} />}
             className="gap-3"
             empty={
-              tab === "saved"
+              tab === "saved" && savedFilteredToEmpty
                 ? {
-                    icon: <Bookmark aria-hidden />,
-                    title: "Nothing saved yet",
+                    icon: <SlidersHorizontal aria-hidden />,
+                    title: "No saved role matches these filters",
                     description:
-                      "Save a role from Discover and it appears in your pipeline, ready for a match run and a tailored resume.",
+                      "You have bookmarks behind this filter set. Loosen one, or clear them all to see the whole saved list.",
                     action: (
-                      <Button variant="outline" size="sm" onClick={() => setTab("discover")}>
-                        Browse discover
+                      <Button variant="outline" size="sm" onClick={() => setFilters(DEFAULTS, { replaceAll: true })}>
+                        Clear filters
                       </Button>
                     ),
                   }
-                : {
-                    icon: <Briefcase aria-hidden />,
-                    title: "The job board is quiet",
-                    description:
-                      "No roles match these filters yet. Clear a filter, paste a JD for the analyst, or let Copilot research roles for your target.",
-                    action: (
-                      <>
-                        <Button variant="outline" size="sm" onClick={() => setFilters(DEFAULTS, { replaceAll: true })}>
-                          Clear filters
+                : tab === "saved"
+                  ? {
+                      icon: <Bookmark aria-hidden />,
+                      title: "Nothing saved yet",
+                      description:
+                        "Save a role from Discover and it appears in your pipeline, ready for a match run and a tailored resume.",
+                      action: (
+                        <Button variant="outline" size="sm" onClick={() => setTab("discover")}>
+                          Browse discover
                         </Button>
-                        <Button variant="ai" size="sm" asChild>
-                          <Link href="/copilot">Ask Copilot</Link>
-                        </Button>
-                      </>
-                    ),
-                  }
+                      ),
+                    }
+                  : {
+                      icon: <Briefcase aria-hidden />,
+                      title: "The job board is quiet",
+                      description:
+                        "No roles match these filters yet. Clear a filter, paste a JD for the analyst, or let Copilot research roles for your target.",
+                      action: (
+                        <>
+                          <Button variant="outline" size="sm" onClick={() => setFilters(DEFAULTS, { replaceAll: true })}>
+                            Clear filters
+                          </Button>
+                          <Button variant="ai" size="sm" asChild>
+                            <Link href="/copilot">Ask Copilot</Link>
+                          </Button>
+                        </>
+                      ),
+                    }
             }
             notLive={{
               title: tab === "saved" ? "Saved jobs aren't connected yet" : "Job search isn't connected yet",
@@ -175,7 +203,7 @@ export default function JobsPage() {
                 </ul>
                 {total > filters.size && (
                   <Pagination
-                    page={filters.page}
+                    page={listView.data?.page ?? filters.page}
                     size={filters.size}
                     total={total}
                     label="jobs"
