@@ -158,7 +158,7 @@ export default function JobDetailPage() {
     );
   }
 
-  const salary = formatSalary(job.salaryMin, job.salaryMax, job.salaryCurrency, job.salaryText);
+  const salary = formatSalary(job.salaryMin, job.salaryMax, job.salaryCurrency);
 
   return (
     <div className="space-y-6">

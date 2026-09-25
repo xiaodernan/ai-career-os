@@ -160,24 +160,19 @@ export interface Job {
   title: string;
   location?: string | null;
   remoteType?: string | null;
-  remote?: boolean | null;
   employmentType?: string | null;
   experienceLevel?: string | null;
   postedAt?: string | null;
   salaryMin?: number | null;
   salaryMax?: number | null;
   salaryCurrency?: string | null;
-  salaryText?: string | null;
   skills?: string[];
-  tags?: string[];
   status: "open" | "closed" | string;
   source?: "seed" | "user_paste" | "agent_research" | string;
   externalUrl?: string | null;
   saved?: boolean;
   /** joined from /jobs or /reports/dashboard */
   latestMatch?: JobMatch | null;
-  match?: JobMatch | null;
-  whyMatch?: string[];
   /** detail payload */
   jd?: JobDescription | null;
   description?: string | null;

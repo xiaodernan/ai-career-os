@@ -15,9 +15,6 @@ import {
 } from "./format";
 
 describe("formatSalary", () => {
-  it("prefers explicit text when present", () => {
-    expect(formatSalary(1, 2, "USD", "Negotiable")).toBe("Negotiable");
-  });
   it("renders a USD compact range with an en dash", () => {
     expect(formatSalary(40000, 60000, "USD")).toBe("$40k–$60k");
   });
@@ -37,8 +34,8 @@ describe("formatSalary", () => {
     expect(formatSalary(50000, null, "USD")).toBe("$50k+");
     expect(formatSalary(null, 20000, "USD")).toBe("up to $20k");
   });
-  it("returns null with no numbers and no text", () => {
-    expect(formatSalary(null, null, null, null)).toBeNull();
+  it("returns null when both bounds are missing", () => {
+    expect(formatSalary(null, null, null)).toBeNull();
   });
 });
 

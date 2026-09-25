@@ -50,15 +50,18 @@ PRODUCERS = {
     "MessageItem": ("java", "conversation/dto/ConversationDtos.java"),
     "MatchResponse": ("java", "job/dto/JobDtos.java"),
     "JobDetail": ("java", "job/dto/JobDtos.java"),
+    "JobListItem": ("java", "job/dto/JobDtos.java"),
+    "SavedJobItem": ("java", "job/dto/JobDtos.java"),
     "MatchSummary": ("java", "job/dto/JobDtos.java"),
     "MatchResult": ("pydantic",),
     "SkillGap": ("pydantic",),
 }
 
-# Readers whose producers are known per map. A reader with more producers than that --
-# `normalizeJob` answers for JobListItem, JobDetail and SavedJobItem, which disagree about
-# `match`/`matchOverall` -- is deliberately absent: one binding cannot answer for all of them, and
-# naming one would redden on the truth.
+# Readers whose producers are known per map. A reader with more producers than one is bound to their
+# **union** -- weaker than one record per map, so it is only taken where the same mapper really is
+# fed several endpoints (`normalizeJob` answers for JobListItem, JobDetail and SavedJobItem, which
+# disagree about `match`/`matchOverall`/`company`), and a site then has to be missed by *every*
+# author to count as dead.
 #
 #   record_of  receiver -> producer(s) it is read against; a list is the union of several
 #   drilled    local -> (parent receiver, key drilled out of it)
@@ -68,6 +71,18 @@ READERS: dict[str, dict] = {
     "normalizeApplication": {
         "record_of": {"raw": "ApplicationItem", "nested": "CompanyItem"},
         "drilled": {"nested": ("raw", "company")},
+        "elements": {},
+        "blind": {},
+    },
+    "normalizeJob": {
+        # `raw` is deliberately bound to all three job payloads: the saved-jobs list hands over a
+        # SavedJobItem and the reader's first statement unwraps it (`raw = rec(pick(raw, "job", …))`),
+        # so one local really does see three authors. `company` is the nested CompanyItem that only
+        # JobDetail carries -- the list rows project the company through flat `companyId`/`companyName`
+        # columns, which is why the reader reads both spellings.
+        "record_of": {"raw": ["JobListItem", "JobDetail", "SavedJobItem"],
+                      "company": "CompanyItem"},
+        "drilled": {"company": ("raw", "company")},
         "elements": {},
         "blind": {},
     },
@@ -368,6 +383,17 @@ def test_the_reads_are_actually_found():
     assert len(gaps) == 4
     assert {s["receiver"] for s in gaps} == {"raw", "g"}
     assert sum(1 for s in gaps if s["receiver"] == "g") == 3     # the three item reads
+    jobs = _sites("normalizeJob")
+    assert len(jobs) == 33
+    assert {s["receiver"] for s in jobs} == {"raw", "company"}
+    assert sum(1 for s in jobs if s["receiver"] == "company") == 5
+    # 33, not the 37 this reader had before #127 bound it: `remote`, `salaryText`, a standalone
+    # `tags` field and `whyMatch` had no author on any of the three job payloads, and the job card
+    # had a fifth name on top of them -- `Job.match`, which no hook ever set. Each one read as a
+    # nullable field the UI could only ever show as empty. `tags` still appears once, as a candidate
+    # inside the `skills` site, where a live sibling carries the call.
+    assert len(_emitted("JobListItem")) == 18
+    assert len(_emitted("SavedJobItem")) == 3
     assert len(_emitted("SkillGap")) == 3
     assert len(_emitted("ApplicationItem")) == 15
     assert len(_emitted("CompanyItem")) == 9

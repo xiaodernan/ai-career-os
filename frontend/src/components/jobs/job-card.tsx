@@ -33,9 +33,9 @@ function JobCard({
   className,
   ...props
 }: JobCardProps) {
-  const match = job.latestMatch ?? job.match ?? null;
+  const match = job.latestMatch ?? null;
   const to = href ?? `/jobs/${job.id}`;
-  const salary = formatSalary(job.salaryMin, job.salaryMax, job.salaryCurrency, job.salaryText);
+  const salary = formatSalary(job.salaryMin, job.salaryMax, job.salaryCurrency);
   const company = job.company?.name || job.companyName;
 
   return (

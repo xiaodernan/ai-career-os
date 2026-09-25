@@ -313,7 +313,6 @@ export function normalizeJob(raw: unknown): Job {
     title: str(raw, "title", "position", "name") ?? "Untitled role",
     location: str(raw, "location", "city"),
     remoteType: str(raw, "remoteType", "remote_type", "workMode", "work_mode"),
-    remote: bool(raw, "remote", "isRemote", "is_remote"),
     employmentType: str(raw, "employmentType", "employment_type", "type"),
     // The only seniority the backend models is `jobs.experience_years` (Integer on both
     // JobListItem and JobDetail); nothing ever sent an `experienceLevel` string, so the
@@ -324,15 +323,12 @@ export function normalizeJob(raw: unknown): Job {
     salaryMin: num(raw, "salaryMin", "salary_min", "minSalary", "min_salary"),
     salaryMax: num(raw, "salaryMax", "salary_max", "maxSalary", "max_salary"),
     salaryCurrency: str(raw, "salaryCurrency", "salary_currency", "currency"),
-    salaryText: str(raw, "salaryText", "salary_text", "salary"),
     skills: list<string>(raw, "skills", "requiredSkills", "required_skills", "tags").map(String),
-    tags: list<string>(raw, "tags").map(String),
     status: str(raw, "status") ?? "open",
     source: str(raw, "source", "origin"),
     externalUrl: str(raw, "externalUrl", "external_url", "url", "applyUrl", "apply_url"),
     saved: bool(raw, "saved", "isSaved", "is_saved", "bookmarked"),
     latestMatch: resolvedMatch,
-    whyMatch: list<string>(raw, "whyMatch", "why_match", "why", "reasons").map(String),
     jd: rec(pick(raw, "jd", "jobDescription", "job_description"))
       ? (pick(raw, "jd", "jobDescription", "job_description") as Job["jd"])
       : undefined,

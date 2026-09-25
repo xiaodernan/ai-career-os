@@ -55,10 +55,8 @@ function compact(n: number): string {
 export function formatSalary(
   min?: number | null,
   max?: number | null,
-  currency?: string | null,
-  text?: string | null
+  currency?: string | null
 ): string | null {
-  if (text) return text;
   if (min == null && max == null) return null;
   const cur = (currency ?? "USD").toUpperCase();
   const symbol = CURRENCY_SYMBOL[cur] ?? `${cur} `;
