@@ -173,3 +173,64 @@ def test_both_sides_are_actually_read():
     assert pipeline_steps() == ["extracting", "cleaning", "chunking", "embedding", "indexing"]
     assert len(seed_rows()) == 5
     assert seed_rows()[0][1].startswith("Extracting")
+
+
+# --------------------------------------------------- the data inside those frames
+
+def _frame_payloads() -> list[tuple[str, str]]:
+    """(file, text of the data argument) for every frame that can reach the client."""
+    out: list[tuple[str, str]] = []
+    emitters = _stream_emitters()
+    for path, source in _sources():
+        rel = path.relative_to(APP_ROOT).as_posix()
+        for opener in ("publish", "_emit"):
+            if opener == "_emit" and rel not in emitters:
+                continue
+            for match in re.finditer(r"(?<!\w)(?<!def )" + opener + r"\(", source):
+                inner, _ = _argument_list(source, match.end() - 1)
+                args = _top_level(inner, ",")
+                if len(args) == 3 and args[2].startswith("{"):
+                    out.append((rel, args[2]))
+    return out
+
+
+def published_frame_keys() -> set[str]:
+    keys: set[str] = set()
+    for _rel, payload in _frame_payloads():
+        keys.update(re.findall(r'"([a-z_]+)"\s*:', payload))
+    return keys
+
+
+STEPS_FILE = FRONTEND / "components" / "ai" / "processing-steps.tsx"
+
+
+def folded_frame_keys() -> set[str]:
+    """The keys `StatusEvent` says the checklist fold consults."""
+    source = STEPS_FILE.read_text(encoding="utf-8")
+    block = source[source.index("export interface StatusEvent"):]
+    block = block[:block.index("\n}")]
+    return set(re.findall(r"^\s+(\w+)\?:", block, re.M))
+
+
+# Keys the fold consults that no frame carries today. Each is a deliberate tolerance, not a bug:
+# `state ?? status` and `progress === 100` are alternates of live keys, and `label` is only ever a
+# nicety -- `applyStatusEvent` falls back to the seeded row's label, then to the raw step id, which
+# is why a step *without* a seed row would show `understanding_query` to a user rather than a phrase.
+UNFOLDED_KEYS = {"status", "progress", "label"}
+
+
+def test_what_the_checklist_folds_is_what_the_frames_carry():
+    missing = sorted(folded_frame_keys() - published_frame_keys() - UNFOLDED_KEYS)
+    assert missing == [], f"the fold consults keys no frame carries: {missing}"
+
+
+def test_the_tolerant_alternates_stay_declared():
+    assert folded_frame_keys() - published_frame_keys() == UNFOLDED_KEYS
+
+
+def test_the_frame_payloads_are_actually_read():
+    """Positive control: a reading that found no payloads would pass both gates above."""
+    assert published_frame_keys() == {
+        "agent", "count", "done", "error", "intent", "result", "state", "step", "total"}
+    assert folded_frame_keys() == {"done", "label", "progress", "state", "status", "step", "total"}
+    assert len(_frame_payloads()) >= 10
