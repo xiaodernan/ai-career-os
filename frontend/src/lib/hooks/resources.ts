@@ -207,7 +207,9 @@ export function useSavedJobs() {
   return useQuery({
     queryKey: ["saved-jobs"],
     queryFn: async (): Promise<Page<Job>> =>
-      normalizePage(await api.get<unknown>(endpoints.savedJobs, { size: 50 }), (j) => ({
+      // GET /jobs/saved binds no parameters and answers with the whole bookmark list, so a page
+      // size here would be a number the server never reads.
+      normalizePage(await api.get<unknown>(endpoints.savedJobs), (j) => ({
         ...normalizeJob(j),
         saved: true,
       })),
@@ -433,12 +435,15 @@ export function useInterviewSession(id: string | null) {
 
 /* -------------------------------- activity --------------------------------- */
 
-export function useActivityRuns(params?: { page?: number; size?: number }) {
+/** GET /activity/runs pages by "recent": it binds `limit`, and has no page index to send. */
+export function useActivityRuns(params?: { limit?: number }) {
   return useQuery({
     queryKey: ["activity", "runs", params],
     queryFn: async (): Promise<Page<ActivityRun>> =>
+      // An absent `limit` is left out of the URL rather than guessed at here, so the caller that
+      // wants the whole debug feed gets the window the handler itself defaults to.
       normalizePage(
-        await api.get<unknown>(endpoints.activityRuns, { size: 20, ...(params ?? {}) }),
+        await api.get<unknown>(endpoints.activityRuns, { limit: params?.limit }),
         (r) => normalizeRun(r)
       ),
   });

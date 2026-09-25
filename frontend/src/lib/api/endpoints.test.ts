@@ -16,6 +16,11 @@ import { endpoints } from "./endpoints";
  * having asked for nothing — which is how a drag posted `order` and `index` to a record that binds
  * `position`, and how five AI actions once posted one field under two spellings and failed to bind
  * at all. Both edges are checked against the records themselves, read as source, not a copy.
+ *
+ * The query strings are the third edge, and the quietest: a parameter no `@RequestParam` declares
+ * is dropped without a word, so `?size=5` on a feed that reads `?limit=` is a dashboard that asks
+ * for five rows and gets the server's default thirty. Routes, bodies and parameters are all read
+ * out of one pass over the controllers, so the three rules cannot disagree about a handler.
  */
 
 const CONTROLLERS = new URL("../../../../backend/src/main/java/com/careeros/", import.meta.url);
@@ -51,6 +56,58 @@ function servedRoutes(): Map<string, Set<string>> {
 /** Same table, but each verb also carries the `@RequestBody` type it binds, when the handler has one. */
 function routeTable(): Map<string, Map<string, string | undefined>> {
   const routes = new Map<string, Map<string, string | undefined>>();
+  for (const handler of javaHandlers()) {
+    const byVerb = routes.get(handler.pattern) ?? new Map<string, string | undefined>();
+    byVerb.set(handler.verb, handler.body);
+    routes.set(handler.pattern, byVerb);
+  }
+  return routes;
+}
+
+/**
+ * One `@RequestParam` in a handler's signature. `required` is Spring's own rule: an explicit
+ * `required = false` or a `defaultValue` makes the parameter optional, and anything else makes a
+ * request that omits it fail with a 400 before the handler runs.
+ */
+interface BoundParam {
+  name: string;
+  required: boolean;
+  /** `MultipartFile` parameters ride in the multipart parts of the body, never in the query string */
+  fromBody: boolean;
+  /** the wire name was spelled out as `name = "…"`/`value = "…"`, so it is not simply the variable */
+  spelledInAttribute: boolean;
+}
+
+/** One handler the controllers bind: its route, the record it asks for as a body, its query surface. */
+interface Handler {
+  verb: string;
+  pattern: string;
+  body: string | undefined;
+  params: BoundParam[];
+  /** a `@RequestParam` this reader could not name, kept verbatim so the gate says so out loud */
+  unparsed: string[];
+}
+
+/**
+ * The names a call site must put in the query string: required by Spring's rules (no
+ * `required = false`, no `defaultValue`) and not a multipart part. A `MultipartFile` arrives in
+ * the body's parts, so demanding it in the URL would indict every upload call site for a bug that
+ * cannot exist. This is the only place that decision is made; the floor test pins its whole-table
+ * answer, because no upload route is sent a query today and so the exclusion is otherwise
+ * invisible to the rule that consumes it.
+ */
+function requiredInQuery(h: Handler): string[] {
+  return h.params.filter((p) => p.required && !p.fromBody).map((p) => p.name);
+}
+
+/**
+ * The one walk of the controller sources. The route table, the `@RequestBody` types and the
+ * `@RequestParam` names all come out of the same pass over the same signature text, because a
+ * second parser written beside this one would drift from it — and a gate that reads a route the
+ * verb gate does not see reports an unbound parameter where the real handler binds it.
+ */
+function javaHandlers(): Handler[] {
+  const handlers: Handler[] = [];
   const files = javaFiles(CONTROLLERS);
   if (files.length < 15) {
     throw new Error(`only found ${files.length} controllers under ${fileURLToPath(CONTROLLERS)}`);
@@ -69,16 +126,73 @@ function routeTable(): Map<string, Map<string, string | undefined>> {
       const open = /^\s*\(/.exec(source.slice(nameEnd));
       const annotationEnd = open ? matchingClose(source, nameEnd + open[0].length - 1) + 1 : nameEnd;
       const signature = source.slice(annotationEnd, source.indexOf("{", annotationEnd));
-      // `@RequestBody(required = false) TailorRequest` and `@RequestBody @Valid JdRequest` are the
-      // same handler shape to Spring, so both have to yield the record name.
-      const body = /@RequestBody\s*(?:\([^)]*\))?\s+(?:@[\w.]+(?:\s*\([^)]*\))?\s+)*(\w+)/.exec(signature)?.[1];
-      const key = fold(path.slice(API_PREFIX.length));
-      const byVerb = routes.get(key) ?? new Map<string, string | undefined>();
-      byVerb.set(match[1].toUpperCase(), body);
-      routes.set(key, byVerb);
+      const bindings = boundParams(signature);
+      handlers.push({
+        verb: match[1].toUpperCase(),
+        pattern: fold(path.slice(API_PREFIX.length)),
+        // `@RequestBody(required = false) TailorRequest` and `@RequestBody @Valid JdRequest` are
+        // the same handler shape to Spring, so both have to yield the record name.
+        body: /@RequestBody\s*(?:\([^)]*\))?\s+(?:@[\w.]+(?:\s*\([^)]*\))?\s+)*(\w+)/.exec(signature)?.[1],
+        params: bindings.params,
+        unparsed: bindings.unparsed,
+      });
     }
   }
-  return routes;
+  return handlers;
+}
+
+/**
+ * Every `@RequestParam` a handler signature declares, named the way Spring will match it. A
+ * parameter this reader cannot name is reported, never guessed at: reading it as "a parameter
+ * nobody binds" would blame the client for the handler's own shape.
+ */
+function boundParams(signature: string): { params: BoundParam[]; unparsed: string[] } {
+  const marks = [...signature.matchAll(/@RequestParam\b/g)];
+  const params: BoundParam[] = [];
+  const unparsed: string[] = [];
+  for (let i = 0; i < marks.length; i += 1) {
+    const mark = marks[i];
+    const after = (mark.index ?? 0) + mark[0].length;
+    const until = i + 1 < marks.length ? (marks[i + 1].index ?? signature.length) : signature.length;
+    const parens = /^\s*\(/.exec(signature.slice(after));
+    const close = parens ? matchingClose(signature, after + parens[0].length - 1) : after;
+    const attributes = parens ? signature.slice(after + parens[0].length, close) : "";
+    // whatever follows the attribute list is the declaration itself: ` int limit`, ` String q`
+    const declared = signature.slice(parens ? close + 1 : close, until);
+    const attribute = /\b(?:name|value)\s*=\s*"([^"]+)"/.exec(attributes)?.[1];
+    const quoted = attribute ?? /^\s*"([^"]+)"/.exec(attributes)?.[1];
+    const variable = /([a-z]\w*)\s*$/.exec(declared.slice(0, topLevelParamEnd(declared)))?.[1];
+    const name = quoted ?? variable;
+    if (!name) {
+      unparsed.push(declared.trim().replace(/\s+/g, " "));
+      continue;
+    }
+    params.push({
+      name,
+      required: !/\brequired\s*=\s*false\b/.test(attributes) && !/\bdefaultValue\s*=/.test(attributes),
+      fromBody: /\bMultipartFile\b/.test(declared),
+      spelledInAttribute: quoted !== undefined,
+    });
+  }
+  return { params, unparsed };
+}
+
+/** Where a parameter declaration ends: the first comma or closing paren that is not nested. */
+function topLevelParamEnd(text: string): number {
+  let depth = 0;
+  for (let i = 0; i < text.length; i += 1) {
+    const c = text[i];
+    if (c === `"`) {
+      i = text.indexOf(`"`, i + 1);
+      continue;
+    }
+    if (c === "(" || c === "[" || c === "{" || c === "<") depth += 1;
+    else if (c === ")" || c === "]" || c === "}" || c === ">") {
+      if (depth === 0 && c === ")") return i;
+      depth -= 1;
+    } else if (c === "," && depth === 0) return i;
+  }
+  return text.length;
 }
 
 function toRegex(pattern: string): RegExp {
@@ -151,14 +265,22 @@ function verbOf(args: string, fallback: string): string {
   return /method:\s*"([A-Z]+)"/.exec(rest)?.[1] ?? fallback;
 }
 
-/** How the client reaches the network: helper name or explicit `method:` — both carry a verb. */
-const HELPER_VERB: Record<string, string> = {
-  get: "GET",
-  list: "GET",
-  create: "POST",
-  update: "PATCH",
-  remove: "DELETE",
-  upload: "POST",
+/**
+ * How the client reaches the network. `request`/`fetch` carry the verb inside an options object, so
+ * that object has to be read as far as it goes; the helpers all fix their verb, and what their
+ * second argument holds differs by kind — `get`/`list` hand it to `buildUrl` as query parameters,
+ * the writing helpers hand it to fetch as a body. Reading a query object as a body would report
+ * "a body with no keys", the most comfortable kind of false green.
+ */
+type ArgShape = "params" | "body" | "options";
+
+const HELPERS: Record<string, { verb: string; shape: ArgShape }> = {
+  get: { verb: "GET", shape: "params" },
+  list: { verb: "GET", shape: "params" },
+  create: { verb: "POST", shape: "body" },
+  update: { verb: "PATCH", shape: "body" },
+  remove: { verb: "DELETE", shape: "options" },
+  upload: { verb: "POST", shape: "body" },
 };
 
 function sourceFiles(): string[] {
@@ -194,9 +316,14 @@ function readFile(file: string): string {
 
 interface CallSite {
   file: string;
+  /** the same file as the scanner opened it, so a spread can be followed back to its declaration */
+  abs: string;
+  /** where the call starts in that file, which is how the enclosing function is found */
+  index: number;
   verb: string;
   path: string;
   body: string;
+  query: string;
 }
 
 /** Split a call's argument list on the commas that are not inside anything. */
@@ -337,10 +464,18 @@ function outerObject(text: string): string | undefined {
   return undefined;
 }
 
-/** Where the body is: the second argument for the helpers, the `body:` value of the options object. */
-function bodyOf(kind: "helper" | "raw", args: string): string {
+/** Where the body is: the second argument for a writing helper, the `body:` value of an options object. */
+function bodyOf(shape: ArgShape, args: string): string {
+  if (shape === "params") return "";
   const second = topArgs(args)[1] ?? "";
-  return kind === "helper" ? second : optionValue(second, "body");
+  return shape === "body" ? second : optionValue(second, "body");
+}
+
+/** Where the query is: the whole second argument for `api.get`, the `params:` value for `request`. */
+function queryOf(shape: ArgShape, args: string): string {
+  if (shape === "body") return "";
+  const second = topArgs(args)[1] ?? "";
+  return shape === "params" ? second : optionValue(second, "params");
 }
 
 /** The value of one key in an object literal, read as a whole expression and nothing after it. */
@@ -412,26 +547,39 @@ function callSites(): CallSite[] {
   for (const file of sourceFiles()) {
     const source = readFileSync(file, "utf8");
     const rel = file.replace(/\\/g, "/").split("/frontend/")[1] ?? file;
-    const announce = (verb: string, args: string, index: number, kind: "helper" | "raw") => {
+    const announce = (
+      verb: string,
+      args: string,
+      index: number,
+      shape: ArgShape,
+      absolute: string
+    ) => {
       const path = resolve(args);
       if (!path) return;
       const key = `${rel}:${index}`;
       if (seen.has(key)) return;
       seen.add(key);
-      calls.push({ file: rel, verb, path, body: bodyOf(kind, stripComments(args)) });
+      const stripped = stripComments(args);
+      calls.push({
+        file: rel,
+        abs: absolute,
+        index,
+        verb,
+        path,
+        body: bodyOf(shape, stripped),
+        query: queryOf(shape, stripped),
+      });
     };
 
     for (const m of source.matchAll(/\bapi\.(get|list|create|update|remove|upload)\s*(?:<[^>]*>)?\s*\(/g)) {
-      const verb = HELPER_VERB[m[1]];
-      // only the writing helpers carry a body; a GET's second argument is a query, not a payload
-      const sendsBody = m[1] === "create" || m[1] === "update" || m[1] === "upload";
-      if (verb) announce(verb, argsOf(source, (m.index ?? 0) + m[0].length - 1), m.index ?? 0, sendsBody ? "helper" : "raw");
+      const helper = HELPERS[m[1]];
+      if (helper) announce(helper.verb, argsOf(source, (m.index ?? 0) + m[0].length - 1), m.index ?? 0, helper.shape, file);
     }
     // `request(path, { method: "POST" })` and the raw `fetch` in the token refresh: the verb only
     // ever appears in the options object, so the argument list has to be read as far as it goes.
     for (const m of source.matchAll(/\b(?:api\.)?(request|fetch)\s*(?:<[^>]*>)?\s*\(/g)) {
       const args = argsOf(source, (m.index ?? 0) + m[0].length - 1);
-      announce(verbOf(args, "GET"), args, m.index ?? 0, "raw");
+      announce(verbOf(args, "GET"), args, m.index ?? 0, "options", file);
     }
   }
   return calls;
@@ -531,6 +679,85 @@ function splitComponents(declaration: string): string[] {
   }
   if (current.trim()) out.push(current.trim());
   return out;
+}
+
+/**
+ * The query object an `api.get` hands to `buildUrl`, read the same way as a request body: literal
+ * keys and shorthand names count, and a spread of a parameter the enclosing function declares with
+ * an inline object type counts through that declaration. Anything the reader cannot follow — a
+ * builder's result, a type with an index signature, a variable from another module — is reported
+ * as unresolved so the call site has to be written down rather than pass as "sends nothing".
+ */
+function readQuery(raw: string, abs: string, index: number): BodyReading {
+  const text = raw.trim();
+  const keys = new Set<string>();
+  const unresolved: string[] = [];
+  const literal = outerObject(text);
+  if (literal === undefined) return { keys: [], unresolved: [text] };
+  for (const piece of topArgs(literal)) {
+    if (piece.startsWith("...")) {
+      const spread = /^\.\.\.\s*\(?\s*([A-Za-z_$][\w$]*)/.exec(piece)?.[1];
+      const declared = spread === undefined ? undefined : declaredKeys(abs, index, spread);
+      if (declared) for (const key of declared) keys.add(key);
+      else unresolvedPush(piece, unresolved);
+      continue;
+    }
+    const named = /^["']?([A-Za-z_$][\w$]*)["']?\s*:/.exec(piece);
+    const shorthand = /^([A-Za-z_$][\w$]*)$/.exec(piece);
+    if (named) keys.add(named[1]);
+    else if (shorthand) keys.add(shorthand[1]);
+    else unresolvedPush(piece, unresolved);
+  }
+  return { keys: [...keys], unresolved };
+}
+
+/** The inline object type `name` is declared with in the function that encloses `index`. */
+function declaredKeys(abs: string, index: number, name: string): string[] | undefined {
+  const source = readFile(abs);
+  const before = source.slice(0, index);
+  const finder = /\bfunction\s+[A-Za-z_$][\w$]*\s*\(/g;
+  let header = finder.exec(before);
+  if (header) for (let next = finder.exec(before); next; next = finder.exec(before)) header = next;
+  if (!header) return undefined;
+  const params = balancedFrom(source, (header.index ?? 0) + header[0].length - 1);
+  if (!params) return undefined;
+  for (const piece of topArgs(stripComments(params).slice(1, -1))) {
+    const colon = new RegExp(`^${name}\\??\\s*:\\s*`).exec(piece);
+    if (colon) return typeKeys(piece.slice(colon[0].length));
+  }
+  return undefined;
+}
+
+/**
+ * The keys of an inline object type literal, whose members separate with `;` — so the comma splitter
+ * a value literal needs is the wrong tool here. An index signature (`[filter: string]: …`) means any
+ * name can travel through the spread, which is the one answer this gate must not guess at, so it
+ * comes back unresolvable.
+ */
+function typeKeys(text: string): string[] | undefined {
+  const literal = outerObject(text.trim());
+  if (literal === undefined) return undefined;
+  if (/\[\s*[A-Za-z_$][\w$]*\s*:\s*(?:string|number|symbol)\s*\]\s*:/.test(literal)) return undefined;
+  const parts: string[] = [];
+  let depth = 0;
+  let current = "";
+  for (const c of literal) {
+    if (c === "(" || c === "[" || c === "{" || c === "<") depth += 1;
+    else if (c === ")" || c === "]" || c === "}" || c === ">") depth -= 1;
+    if ((c === ";" || c === ",") && depth === 0) {
+      parts.push(current);
+      current = "";
+      continue;
+    }
+    current += c;
+  }
+  parts.push(current);
+  const keys: string[] = [];
+  for (const part of parts) {
+    const member = /^\s*(?:readonly\s+)?(["']?)([A-Za-z_$][\w$]*)\1\??\s*:/.exec(part);
+    if (member) keys.push(member[2]);
+  }
+  return keys;
 }
 
 describe("endpoints ↔ backend route parity", () => {
@@ -730,6 +957,188 @@ describe("endpoints ↔ backend route parity", () => {
     ["POST /jobs/{}/match", "POST /jobs/{}/tailor", "POST /jobs/{}/cover-letter",
       "POST /jobs/{}/tailored-version", "POST /jds/suggestions"].forEach((p) => expect(paths).toContain(p));
     expect(new Set(checked.flatMap((r) => r.keys))).toContain("resumeVersionId");
+  });
+
+  /* ------------------------------ query strings ----------------------------- */
+
+  interface QueryRow {
+    site: CallSite;
+    pattern: string;
+    keys: string[];
+    unresolved: string[];
+    bound: Set<string>;
+  }
+
+  let queryRowsCache: QueryRow[] | undefined;
+
+  function queryRows(): QueryRow[] {
+    if (queryRowsCache) return queryRowsCache;
+    const table = routeTable();
+    const patterns = [...table.keys()];
+    const handlers = new Map<string, Handler>();
+    for (const h of javaHandlers()) handlers.set(`${h.verb} ${h.pattern}`, h);
+    queryRowsCache = callSites()
+      .filter((c) => c.query.trim() !== "")
+      .map((c) => {
+        const pattern = mostSpecific(patterns, c.path) ?? "";
+        const handler = handlers.get(`${c.verb} ${pattern}`);
+        const reading = readQuery(c.query, c.abs, c.index);
+        return {
+          site: c,
+          pattern,
+          keys: reading.keys,
+          // a handler whose own parameter list the reader cannot finish makes the comparison
+          // unanswerable from either side, so the call site goes to the written-down list
+          unresolved: [
+            ...reading.unresolved,
+            ...(handler?.unparsed ?? []).map((u) => `handler binds @RequestParam(${u}) the reader cannot name`),
+          ],
+          bound: new Set((handler?.params ?? []).map((p) => p.name)),
+        };
+      });
+    return queryRowsCache;
+  }
+
+  /**
+   * A query the gate skips must be covered somewhere else, and that somewhere else has to still
+   * say so: the reason below names the test file and the test, both of which are checked here, so
+   * the exemption cannot outlive the gate that pays for it.
+   */
+  const COVERED_ELSEWHERE: Record<string, { file: URL; markers: string[] }> = {
+    "GET /jobs": {
+      file: new URL("../job-filter.test.ts", import.meta.url),
+      markers: ["sends nothing the endpoint has not declared", "JobController.java"],
+    },
+  };
+
+  /**
+   * Query objects whose key list this reader cannot produce, each with the reason it stays quiet.
+   * Shrink-only, like the body list above: `...clean` is the one entry today because the job
+   * filters are gated by name in `job-filter.test.ts`.
+   */
+  const UNREADABLE_QUERIES: Record<string, string> = {
+    "GET /jobs":
+      "`...clean` is serializeJobFilters' own key list, and job-filter.test.ts gates those names against this handler's parameters",
+  };
+
+  function unreadableQueries(): string[] {
+    return queryRows()
+      .filter((r) => r.unresolved.length > 0)
+      .map((r) => `${r.site.verb} ${r.pattern}`)
+      .sort();
+  }
+
+  const queryLabel = (row: QueryRow, msg: string) =>
+    `${row.site.verb} ${row.pattern} ${msg} (${row.site.file})`;
+
+  it("every query parameter the browser appends is one the handler binds", () => {
+    // Spring answers a parameter no `@RequestParam` declares by ignoring it: the request is a 200
+    // whose rows were never trimmed or filtered. That is how the dashboard asked for its five
+    // recent runs with `size=5` against a handler that binds `limit`, and shipped the thirty the
+    // server defaults to — while `GET /jobs/saved` was sent a page size it does not read at all.
+    const ignored = queryRows()
+      .filter((r) => !r.unresolved.length)
+      .map((r) => ({ row: r, bad: r.keys.filter((k) => !r.bound.has(k)) }))
+      .filter((x) => x.bad.length)
+      .map((x) => queryLabel(x.row, `appends ${JSON.stringify(x.bad)}, which Spring ignores`));
+    expect(ignored).toEqual([]);
+  });
+
+  it("a parameter the handler cannot do without is sent by every call site on that route", () => {
+    // The mirror of the rule above, and it has to be per call site: `@RequestParam String q` with
+    // neither `required = false` nor a `defaultValue` is a 400 for *the caller that forgot it*, not
+    // for the route. `GET /search` has two callers, the ⌘K palette and the global-search hook, and
+    // an earlier version of this rule folded them into one set — so the hook could drop `q` and
+    // still be green on the strength of the palette's query. A route nobody calls from the browser
+    // has no caller to break; an unreadable query is reported rather than assumed to carry it.
+    const byRoute = new Map<string, QueryRow[]>();
+    for (const r of queryRows()) {
+      const key = `${r.site.verb} ${r.pattern}`;
+      byRoute.set(key, [...(byRoute.get(key) ?? []), r]);
+    }
+    const missing: string[] = [];
+    for (const h of javaHandlers()) {
+      const required = requiredInQuery(h);
+      if (required.length === 0) continue;
+      for (const row of byRoute.get(`${h.verb} ${h.pattern}`) ?? []) {
+        for (const name of required) {
+          if (row.keys.includes(name)) continue;
+          missing.push(`${h.verb} ${h.pattern} binds ${name} as required and ${row.site.file} ${
+            row.unresolved.length ? "sends a query this reader cannot follow" : "does not send it"}`);
+        }
+      }
+    }
+    expect(missing).toEqual([]);
+  });
+
+  it("the queries this gate cannot read are written down, with a reason each", () => {
+    expect(unreadableQueries()).toEqual(Object.keys(UNREADABLE_QUERIES).sort());
+    Object.entries(UNREADABLE_QUERIES).forEach(([site, why]) =>
+      expect(why, `${site} needs a reason, not a blank`).not.toBe(""));
+    for (const [site, gate] of Object.entries(COVERED_ELSEWHERE)) {
+      expect(UNREADABLE_QUERIES, `${site} is exempted without being unreadable`).toHaveProperty(site);
+      const source = readFileSync(gate.file, "utf8");
+      for (const marker of gate.markers) {
+        expect(source, `${site} claims ${String(gate.file)} no longer covers it`).toContain(marker);
+      }
+    }
+  });
+
+  it("reads the queries it claims to read", () => {
+    const rows = queryRows();
+    // 12 call sites append a query and 14 distinct (route, parameter) pairs ride on them, measured.
+    // A reader that stopped understanding `api.get`'s second argument would satisfy every rule
+    // above by finding no queries at all, so the inventory itself has to be non-trivial.
+    expect(rows.length).toBeGreaterThanOrEqual(12);
+    const pairs = new Set(
+      rows
+        .filter((r) => !r.unresolved.length)
+        .flatMap((r) => r.keys.map((k) => `${r.site.verb} ${r.pattern} ${k}`))
+    );
+    expect(pairs.size).toBeGreaterThanOrEqual(14);
+    // Which routes more than one caller reaches, measured: the required-parameter rule is written
+    // per call site, and that distinction only exists where a route has two of them. `GET /search`
+    // is answered by both the ⌘K palette and the global-search hook, so a fold that merged the two
+    // would still satisfy the rule with one caller's parameters while the other got a 400.
+    const routes = rows.map((r) => `${r.site.verb} ${r.pattern}`);
+    expect([...new Set(routes.filter((k, i) => routes.indexOf(k) !== i))].sort()).toEqual([
+      "GET /search",
+    ]);
+    // one handler walk answers both gates, so a route cannot exist for one rule and not the other
+    const handlers = javaHandlers();
+    expect(new Set(handlers.map((h) => `${h.verb} ${h.pattern}`)).size).toBe(handlers.length);
+    expect(handlers.flatMap((h) => h.unparsed)).toEqual([]);
+    const bound = handlers.flatMap((h) => h.params);
+    expect(bound.length).toBeGreaterThanOrEqual(35);
+    // 35 parameters in 17 distinct names, measured: the reader's whole answer rather than a spot
+    // check, so a signature shape it stops understanding shrinks this set instead of passing quiet
+    expect(new Set(bound.map((p) => p.name))).toEqual(
+      new Set([
+        "agent", "company", "file", "kind", "limit", "location", "maxSalary", "minSalary", "page",
+        "q", "remote", "resumeId", "size", "skills", "sort", "status", "title",
+      ])
+    );
+    // five of them spell the name Spring matches on inside the annotation, so the reader's attribute
+    // path is exercised by real source rather than by the variable name that happens to agree
+    expect(bound.filter((p) => p.spelledInAttribute).map((p) => p.name).sort()).toEqual([
+      "file", "file", "maxSalary", "minSalary", "resumeId",
+    ]);
+    // The whole answer of the helper the required-parameter rule consumes, route-qualified. Without
+    // this the rule would be green because it found nothing to ask for — and the multipart
+    // exclusion would be green because nothing exercises it, which is how a guard that stops
+    // mattering would keep passing as if it did.
+    expect(javaHandlers()
+      .flatMap((h) => requiredInQuery(h).map((n) => `${h.verb} ${h.pattern} ${n}`))
+      .sort())
+      .toEqual(["GET /resume-versions resumeId", "GET /search q"]);
+    expect(javaHandlers()
+      .flatMap((h) => h.params.filter((p) => p.required && p.fromBody).map((p) => `${h.verb} ${h.pattern} ${p.name}`))
+      .sort())
+      .toEqual(["POST /knowledge/documents file", "POST /resumes/upload file"]);
+    ["GET /activity/runs limit", "GET /applications status", "GET /applications page",
+      "GET /companies q", "GET /resume-versions resumeId"].forEach((p) => expect(pairs).toContain(p));
+    // the bookmark list is not paged by the server, so it must not arrive here carrying a page size
+    expect([...pairs].some((p) => p.startsWith("GET /jobs/saved"))).toBe(false);
   });
 
   it("no dead routes that the backend removed (regression guards)", () => {
