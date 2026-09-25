@@ -110,6 +110,7 @@ per-user budget on AI endpoints.
 | DELETE | `/jobs/{id}/save` | |
 | POST | `/jobs/{id}/match` | `{resumeVersionId?}` → evidence-bound match, persisted |
 | POST | `/jobs/{id}/tailor` | `{resumeVersionId?}` → tailored version + diff |
+| POST | `/jobs/{id}/tailored-version` | `{resumeVersionId, tailored, diff, plaintext}` → keeps a reviewed draft as a new version of that resume (201) |
 | POST | `/jobs/{id}/cover-letter` | `{resumeVersionId?, mode, tone, length, previous, goal}` |
 | GET | `/companies` | list (`?q=&page=&size=`) |
 | GET | `/companies/{id}` | company intelligence + open roles |
