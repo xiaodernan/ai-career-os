@@ -478,3 +478,50 @@ def test_the_copilot_reads_line_up_with_chat_response():
         "content", "text", "message", "reply", "citations", "run_id", "conversation_id",
         "taskId", "task_id",
     }, f"undocumented dead reads on the copilot answer: {sorted(read - emitted)}"
+
+
+# ----------------------- the other DTO-backed reads, weakest form of the same rule
+
+# Three more browser readers whose producer is a Java record rather than a passed-through AI
+# answer. Only the coarse claim is checked here: at least one name the reader tries must be a real
+# component. A per-key dead list, as the copilot case carries, would be useless on these --
+# `normalizeMatch` alone asks for ~40 names because it reads the nested `MatchSummary` and the
+# resume-shaped sub-maps in the same body, and mixing those together would hide a real wrong-name
+# signal in noise. So: catch a wholesale rename or a record that moved, and leave the rest to the
+# gates that can see one map at a time.
+DTO_READS = {
+    "normalizeMatch": ("MatchResponse", "job/dto/JobDtos.java"),
+    "normalizeApplication": ("ApplicationItem", "application/dto/ApplicationDtos.java"),
+    "normalizeMessages": ("MessageItem", "conversation/dto/ConversationDtos.java"),
+}
+
+
+def _dto_reads(function_name: str) -> set[str]:
+    source = NORMALIZE.read_text(encoding="utf-8")
+    opener = f"export function {function_name}("
+    start = source.index(opener)
+    body = source[start:source.index("\n}\n", start)]
+    return {key for group in re.findall(r'(?:str|num|pick|list|bool)\(\s*\w+\s*,([^)]*)\)', body)
+            for key in re.findall(r'"([^"]+)"', group)}
+
+
+def _record_components_at(relative: str, record: str) -> set[str]:
+    source = (JAVA_ROOT / "com" / "careeros" / relative).read_text(encoding="utf-8")
+    opener = f"record {record}("
+    head = source[source.index(opener) + len(opener):]
+    block = head[:head.index(") {")]
+    names = []
+    for declaration in _top_level(block, ","):
+        tokens = declaration.strip().split()
+        if tokens:
+            names.append(tokens[-1])
+    return set(names)
+
+
+def test_the_dto_backed_readers_hit_a_field_the_record_has():
+    for function_name, (record, relative) in DTO_READS.items():
+        tried = _dto_reads(function_name)
+        emitted = _record_components_at(relative, record)
+        assert tried, f"{function_name}'s body was not read at all"
+        assert tried & emitted, (f"{function_name} tries {sorted(tried)}, none of which "
+                                 f"{record} serializes ({sorted(emitted)})")
