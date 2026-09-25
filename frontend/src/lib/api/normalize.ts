@@ -717,8 +717,6 @@ export function normalizeTailor(raw: unknown): TailorResponse {
     notes: list<string>(raw, "notes", "warnings").map(String),
     evidence: normalizeEvidence(raw),
     stats: rec(stats) ? (stats as Record<string, unknown>) : undefined,
-    taskId: str(raw, "taskId", "task_id"),
-    runId: str(raw, "runId", "run_id"),
   };
 }
 

@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ProcessingSteps } from "@/components/ai/processing-steps";
-import { TaskProgress, localStages } from "@/components/ai/task-stream";
+import { localStages } from "@/components/ai/task-stream";
 import { AIBadge } from "@/components/ai/ai-badge";
 import { EvidenceList } from "@/components/ai/evidence-list";
 import { DiffView } from "@/components/common/diff-view";
@@ -74,10 +74,6 @@ export function TailorPanel({
           <div className="rounded-lg border border-border/70 bg-muted/30 p-3">
             <ProcessingSteps steps={localStages(STAGES, 1)} />
           </div>
-        )}
-
-        {result?.taskId && !tailor.isPending && (
-          <TaskProgress taskId={result.taskId} title="Run stream" showTimeline />
         )}
 
         {error != null && (

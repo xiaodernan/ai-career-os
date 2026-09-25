@@ -680,6 +680,16 @@ describe("structuredResumeToMarkdown / normalizeTailor document", () => {
     const t = normalizeTailor({ tailored: { markdown: "PRESET", ...tailoredStructured } });
     expect(t.tailored?.markdown).toBe("PRESET");
   });
+
+  it("offers no run to follow: tailoring answers with the run itself", () => {
+    // /jobs/{id}/tailor is a synchronous pass-through of the ai-service answer, which carries
+    // these five keys and no task id. Reading `taskId` off it used to hand the panel a stream
+    // affordance that could never open.
+    const t = normalizeTailor({ tailored: tailoredStructured });
+    expect(Object.keys(t).sort()).toEqual([
+      "diff", "evidence", "notes", "stats", "tailored",
+    ]);
+  });
 });
 
 describe("normalizeSearch", () => {
