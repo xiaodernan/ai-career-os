@@ -23,24 +23,43 @@ error rather than a skip.
 snake_case naming strategy, so a `company_name` candidate against a record is dead weight that a
 live sibling in the same list saves. Only a site with *no* live name is a defect, and those are a
 declared, shrink-only list.
+
+The producer on the other side is not always a Java record. `normalizeMatch` reads a map the backend
+hands over from the AI service -- `MatchResult.model_dump()` -- so its class body is the wire shape,
+and a model is as static as a record. One local can also answer to *two* producers when the endpoint
+and the persisted row disagree about where the same score lives (`MatchResult` for a fresh match,
+`MatchSummary` for the stored one the job detail replays); such a receiver is bound to both, and a
+site is live if either one emits a name it tries. That is weaker than one record per map, so the
+weaker binding is only used where the response really has two authors.
 """
 
 import re
 from functools import lru_cache
 
-from tests.test_response_shape_contract import NORMALIZE, _record_components_at
+from tests.test_response_shape_contract import (
+    NORMALIZE,
+    _record_components_at,
+    pydantic_fields,
+)
 
-RECORDS = {
-    "ApplicationItem": ("ApplicationItem", "application/dto/ApplicationDtos.java"),
-    "CompanyItem": ("CompanyItem", "job/dto/JobDtos.java"),
-    "MessageItem": ("MessageItem", "conversation/dto/ConversationDtos.java"),
+# What puts keys on the wire for one map: a Java record (path given), or a Pydantic model, whose
+# annotated fields `model_dump()` emits verbatim.
+PRODUCERS = {
+    "ApplicationItem": ("java", "application/dto/ApplicationDtos.java"),
+    "CompanyItem": ("java", "job/dto/JobDtos.java"),
+    "MessageItem": ("java", "conversation/dto/ConversationDtos.java"),
+    "MatchResponse": ("java", "job/dto/JobDtos.java"),
+    "JobDetail": ("java", "job/dto/JobDtos.java"),
+    "MatchSummary": ("java", "job/dto/JobDtos.java"),
+    "MatchResult": ("pydantic",),
 }
 
-# Readers whose producer is exactly one record per map. A reader with several producers --
-# `normalizeJob` answers for JobListItem, JobDetail and SavedJobItem -- is deliberately absent:
-# one record cannot answer for all of them, and naming one would redden on the truth.
+# Readers whose producers are known per map. A reader with more producers than that --
+# `normalizeJob` answers for JobListItem, JobDetail and SavedJobItem, which disagree about
+# `match`/`matchOverall` -- is deliberately absent: one binding cannot answer for all of them, and
+# naming one would redden on the truth.
 #
-#   record_of  receiver -> record it is read against
+#   record_of  receiver -> producer(s) it is read against; a list is the union of several
 #   drilled    local -> (parent receiver, key drilled out of it)
 #   elements   local -> parent receiver, when it is a `.map((local, i) …)` element
 #   blind      receiver -> why no record can answer for it
@@ -58,13 +77,46 @@ READERS: dict[str, dict] = {
         "blind": {"raw": "the list response envelope: `list(raw, \"messages\", …)` reads a page "
                           "wrapper built by the controller, not a record's fields"},
     },
+    "normalizeMatch": {
+        # `raw` is the envelope `pick(raw, "match", "latestMatch", …)` drills; the payload is the
+        # union, because the score has two authors: POST /jobs/{id}/match answers with
+        # `MatchResult.model_dump()` relayed through `MatchResponse`, while GET /jobs/{id} replays
+        # the stored row as `MatchSummary`. Two of the five callers pre-unwrap
+        # (`pick(raw, "match") ?? raw`), and one hands a copilot artifact blob -- that path reads
+        # the same keys, and no site here is live only thanks to it.
+        "record_of": {"raw": ["MatchResponse", "JobDetail"],
+                      "m": ["MatchResult", "MatchSummary"]},
+        "drilled": {"m": ("raw", "match")},
+        "elements": {},
+        "blind": {},
+    },
 }
 
-# Sites that answer from their fallback on every response, declared rather than denied.
+# Sites that answer from their fallback on every response, declared rather than denied. The key is
+# the reader plus that one call's candidate list *verbatim*, in source order -- so renaming or
+# reordering the names in the reader has to come here and be thought about again.
 DEAD_SITES = {
     ("normalizeApplication", ("matchScore", "match_score")):
         "ApplicationItem has matchId but no score column, and no page renders one today; the "
         "frontend's own test pins `matchScore` to null so the reader cannot invent a zero",
+    ("normalizeMatch", ("jobId", "job_id")):
+        "neither author carries it: job_matches has the column, but MatchSummary projects the "
+        "scores and MatchResult is only what the AI service computed, so JobMatch.jobId stays "
+        "undefined -- harmless, because every caller already knows the job from its own route",
+    ("normalizeMatch", ("resumeVersionId", "resume_version_id")):
+        "same column, same omission: jobs/[id]/page.tsx:103 sets it to null on purpose (the "
+        "backend resolves the current version when the request omits it), so nothing reads it back",
+    ("normalizeMatch", ("whyMatch", "why_match", "reasons", "why")):
+        "no producer in backend/ or ai-service/ emits any of these four names -- the LLM's "
+        "justification arrives as prose in `narrative` -- so match-panel.tsx:109's bullet list and "
+        "job-card.tsx:124's one-line hook can never render; both guard on length, which is why "
+        "this reads as a missing feature rather than an empty box",
+    ("normalizeMatch", ("preparation", "recommendedPreparation", "recommended_preparation")):
+        "the PRD advertises Recommended preparation and the UI builds it (PreparationCard, "
+        "jobs/[id]/page.tsx:91, resources.ts:199), but MatchResult's prompt asks for prose 'top "
+        "2-3 concrete actions' and no DTO has a preparation key, so PreparationCard returns null; "
+        "the fix is a structured field through schema, DTO and API.md, not a reader that invents "
+        "items here",
 }
 
 # Drills whose key is not a component of the parent record, so the local can only ever be `{}`.
@@ -78,7 +130,11 @@ HOLLOW_DRILLS = {
         "name into `company` because the row renders `app.company?.name`",
 }
 
-_ACCESSORS = r"\b(?:str|strOr|num|bool|list|pick|rec|int|pct)\(\s*"
+_ACCESSORS = (r"\b(?:str|strOr|num|bool|list|pick|rec|int|pct)"
+              # A typed accessor reads like any other call once the annotation is skipped:
+              # `pick<Record<string, unknown>>(raw, "company")` is a read of `company`, and
+              # skipping only the generic -- not the call -- is what keeps that site visible.
+              r"(?:<[^<>]*(?:<[^<>]*>[^<>]*)*>)?\(\s*")
 _ID_OF = r"\bidOf\(\s*"
 
 
@@ -122,8 +178,27 @@ def _sites(function_name: str) -> list[dict]:
 
 
 def _emitted(alias: str) -> set[str]:
-    record, path = RECORDS[alias]
-    return _record_components_at(path, record)
+    """The keys one producer puts on the wire, read from its own source either way."""
+    if alias not in PRODUCERS:
+        raise AssertionError(f"{alias!r} is bound to a receiver and PRODUCERS has no source for it: "
+                             "the rule would compare its reads against nothing")
+    spec = PRODUCERS[alias]
+    if spec[0] == "java":
+        return _record_components_at(spec[1], alias)
+    return pydantic_fields(alias)
+
+
+def _emitted_for(receiver: str | list[str]) -> set[str]:
+    """What a map can hold: one producer's keys, or the union when the response has two authors.
+
+    A union is the weaker binding -- a site survives if *either* producer emits the name -- so it
+    is only taken where a real second endpoint exists, and `_emitted` keeps the per-producer count
+    the positive control pins.
+    """
+    names = [receiver] if isinstance(receiver, str) else receiver
+    if not names:
+        raise AssertionError("a receiver bound to zero producers compares nothing")
+    return set().union(*(_emitted(name) for name in names))
 
 
 def _undeclared_receivers(reader: str) -> list[str]:
@@ -172,10 +247,31 @@ def _broken_links(reader: str) -> list[str]:
     return problems
 
 
+def _producer_bookkeeping() -> list[str]:
+    """The producer table against the reader table, both ways. A name bound to nothing, or a
+    producer nothing binds, both leave a rule comparing a set nobody reads."""
+    problems = []
+    named = {alias for spec in READERS.values() for value in spec["record_of"].values()
+             for alias in ([value] if isinstance(value, str) else value)}
+    for alias in sorted(named - set(PRODUCERS)):
+        problems.append(f"{alias!r} is bound to a receiver but PRODUCERS has no source for it, so "
+                        "the liveness rule has nothing to compare against")
+    for alias in sorted(set(PRODUCERS) - named):
+        problems.append(f"{alias!r} is registered as a producer and bound to no receiver -- the "
+                        "reader that used it has moved, and its reads are now unchecked")
+    for alias in sorted(named & set(PRODUCERS)):
+        if not _emitted(alias):
+            problems.append(f"{alias} emits no keys at all: the source it names no longer has a "
+                            "record or model of that shape")
+    return problems
+
+
 def _structural_problems() -> list[str]:
     """Everything wrong with the table itself, which would make the liveness rule check less than
     it claims rather than make it red."""
-    return [p for reader in READERS for p in (*_undeclared_receivers(reader), *_broken_links(reader))]
+    return [p for reader in READERS
+            for p in (*_undeclared_receivers(reader), *_broken_links(reader))] + \
+        _producer_bookkeeping()
 
 
 def _hollow_drills() -> set[tuple]:
@@ -185,23 +281,35 @@ def _hollow_drills() -> set[tuple]:
     out = set()
     for reader, spec in READERS.items():
         for local, (parent, key) in spec["drilled"].items():
-            if parent in spec["record_of"] and key not in _emitted(spec["record_of"][parent]):
+            if parent in spec["record_of"] and key not in _emitted_for(spec["record_of"][parent]):
                 out.add((reader, local, key))
     return out
 
 
+def _hollow_drill_reads() -> set[tuple]:
+    """The one-name read that *performs* a hollow drill, on its parent receiver.
+    `pick(raw, "company")` on a record with no `company` component is the drill's own defect, which
+    HOLLOW_DRILLS already carries with the reason; counting it a second time as a dead read site
+    would let the two lists disagree about the same line without telling anyone more."""
+    return {(reader, READERS[reader]["drilled"][local][0], (key,))
+            for (reader, local, key) in _hollow_drills()}
+
+
 def _dead_read_sites() -> list[dict]:
-    """Sites whose every candidate name is absent from the record behind their receiver."""
+    """Sites whose every candidate name is absent from the producers behind their receiver."""
     out = []
     for reader, spec in READERS.items():
         hollow = {local for (r, local, _) in _hollow_drills() if r == reader}
+        drill_reads = _hollow_drill_reads()
         for site in _sites(reader):
             receiver = site["receiver"]
             if receiver not in spec["record_of"]:
                 continue  # unbound or blind: the structural rule has already named it
             if receiver in hollow:
                 continue
-            if not set(site["keys"]) & _emitted(spec["record_of"][receiver]):
+            if (reader, receiver, site["keys"]) in drill_reads:
+                continue
+            if not set(site["keys"]) & _emitted_for(spec["record_of"][receiver]):
                 out.append(dict(site, reader=reader))
     return out
 
@@ -241,16 +349,32 @@ def test_the_reads_are_actually_found():
     """Positive control: every rule above is satisfied by an empty reading, so the census itself is
     pinned -- real sites, at the receivers this gate claims to bind, against real components."""
     applications = _sites("normalizeApplication")
-    assert len(applications) == 15
+    assert len(applications) == 16
     assert {s["receiver"] for s in applications} == {"raw", "nested"}
     assert sum(1 for s in applications if s["receiver"] == "nested") == 3
     messages = _sites("normalizeMessages")
     assert len(messages) == 8
     assert {s["receiver"] for s in messages} == {"m", "raw"}
+    matches = _sites("normalizeMatch")
+    assert len(matches) == 18
+    assert {s["receiver"] for s in matches} == {"raw", "m"}
+    assert sum(1 for s in matches if s["receiver"] == "m") == 17  # every payload read, incl. idOf
     assert len(_emitted("ApplicationItem")) == 15
     assert len(_emitted("CompanyItem")) == 9
     assert len(_emitted("MessageItem")) == 8
+    assert len(_emitted("MatchResponse")) == 3
+    assert len(_emitted("JobDetail")) == 23
+    assert len(_emitted("MatchSummary")) == 11
+    assert len(_emitted("MatchResult")) == 12
+    # ...and the union is not a restatement of one side: `id`/`createdAt` come only from the stored
+    # row, `skillGaps`/`interviewTopics` only from the AI service's answer.
+    assert _emitted("MatchSummary") - _emitted("MatchResult") == {"id", "createdAt"}
+    assert _emitted("MatchResult") - _emitted("MatchSummary") == {"interviewTopics", "model",
+                                                                  "skillGaps"}
     assert _id_of_keys() == {"_id", "eventId", "event_id", "id", "key", "uuid"}
-    assert len(_dead_read_sites()) == 1
-    assert {s["line"] for s in _dead_read_sites()} == {19}
+    dead = _dead_read_sites()
+    assert len(dead) == 5
+    assert {(s["reader"], s["line"]) for s in dead} == {
+        ("normalizeApplication", 19), ("normalizeMatch", 12), ("normalizeMatch", 13),
+        ("normalizeMatch", 22), ("normalizeMatch", 26)}
     assert _structural_problems() == []

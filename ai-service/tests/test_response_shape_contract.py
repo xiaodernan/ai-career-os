@@ -43,21 +43,31 @@ def _app_root() -> Path:
 
 # ------------------------------------------------------------- python: what comes back
 
-def _index_defs() -> tuple[dict[str, list], dict[str, str]]:
-    """Functions by name, and the names that exist only because an import renamed them.
+def _index_defs() -> tuple[dict[str, list], dict[str, str], dict[str, list]]:
+    """Functions by name, the names that exist only because an import renamed them, and the
+    Pydantic models.
 
     `from app.features.cover_letter import generate as cover_generate` means the handler's
     `await cover_generate(...)` has no def to follow by that name: without the alias, that
     endpoint's answer reads as invisible -- and a shape the gate cannot read is a shape it
     never checks.
+
+    A model matters the same way. `/internal/features/match` answers with
+    `result = MatchResult(...)` then `result.model_dump()`: no function builds those keys, the
+    *class* does, and its annotated fields are exactly what `model_dump` emits.
     """
     defs: dict[str, list] = {}
+    models: dict[str, list] = {}
     aliased: dict[str, set] = {}
     for path in sorted(_app_root().rglob("*.py")):
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
         for node in ast.walk(tree):
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 defs.setdefault(node.name, []).append(node)
+            elif isinstance(node, ast.ClassDef):
+                if any(getattr(b, "id", getattr(b, "attr", None)) in {"BaseModel", "Model"}
+                       for b in node.bases):
+                    models.setdefault(node.name, []).append(node)
             elif isinstance(node, ast.ImportFrom):
                 for a in node.names:
                     if a.asname:
@@ -66,10 +76,32 @@ def _index_defs() -> tuple[dict[str, list], dict[str, str]]:
                 for a in node.names:
                     if a.asname:
                         aliased.setdefault(a.asname, set()).add(a.name.rsplit(".", 1)[-1])
-    return defs, {k: next(iter(v)) for k, v in aliased.items() if len(v) == 1}
+    return defs, {k: next(iter(v)) for k, v in aliased.items() if len(v) == 1}, models
 
 
-DEFS, ALIASES = _index_defs()
+DEFS, ALIASES, MODELS = _index_defs()
+
+
+def _model(name: str):
+    """The one Pydantic model class under `name`, or None."""
+    found = MODELS.get(name) or MODELS.get(ALIASES.get(name, "")) or []
+    return found[0] if len(found) == 1 else None
+
+
+def _model_fields(node) -> set[str]:
+    """What `model_dump()` will emit: the annotated names, `model_config` and privates aside."""
+    return {stmt.target.id for stmt in node.body
+            if isinstance(stmt, ast.AnnAssign) and isinstance(stmt.target, ast.Name)
+            and not stmt.target.id.startswith("_")}
+
+
+def pydantic_fields(name: str) -> set[str]:
+    """The keys a model puts on the wire, for a gate in another file to check its reads against."""
+    node = _model(name)
+    if node is None:
+        raise AssertionError(f"{name} is not exactly one BaseModel subclass under app/: the table "
+                             "names a producer that moved, so the rule it feeds compares nothing")
+    return _model_fields(node)
 
 
 def _sole(name: str):
@@ -115,6 +147,14 @@ def _assigned_call(fn, variable: str) -> str | None:
     return None
 
 
+def _dumped(node: ast.AST, fn) -> str | None:
+    """`x.model_dump()` names the model whose fields `x` holds, via the call that built it."""
+    if (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+            and node.func.attr in {"model_dump", "dict"} and isinstance(node.func.value, ast.Name)):
+        return _assigned_call(fn, node.func.value.id)
+    return None
+
+
 def _follow(node: ast.AST, fn, hops: int) -> Shape | None:
     """The shape of a returned expression: a literal, or a hop into where it is built.
 
@@ -131,10 +171,17 @@ def _follow(node: ast.AST, fn, hops: int) -> Shape | None:
     if hops > 2:
         return None
     name = _called_name(node)
+    if name in {"model_dump", "dict"}:
+        name = _dumped(node, fn) or name
     if name is None and isinstance(node, ast.Name):
         name = _assigned_call(fn, node.id)
     target = _sole(name) if name else None
-    return _shape_of(target, hops + 1) if target is not None else None
+    if target is not None:
+        return _shape_of(target, hops + 1)
+    model = _model(name) if name else None
+    # A model's own values are typed, not literal dicts, so they stay unseen -- the field names
+    # are what this boundary needs, and `model_dump` is what puts them on the wire.
+    return dict.fromkeys(_model_fields(model)) if model is not None else None
 
 
 def _subshape(value: ast.AST, fn, hops: int) -> set | None:
@@ -320,11 +367,13 @@ def test_the_backend_reads_only_keys_the_answer_returns():
 
 def test_the_shapes_this_gate_cannot_see_stay_a_declared_list():
     """The nested maps whose keys the producer only builds at runtime are where this gate is
-    blind -- so the blind spots are a fixed list that has to shrink, never grow quietly."""
+    blind -- so the blind spots are a fixed list that has to shrink, never grow quietly.
+    `/internal/features/match#match` left this list when the walker learned to read a Pydantic
+    model's fields: `result = MatchResult(...)` then `result.model_dump()` builds the map out of
+    a class, which is as static as a literal dict."""
     _problems, unseen = _findings()
     assert unseen == [
         "/internal/features/jd/analyze#parsed",
-        "/internal/features/match#match",
         "/internal/features/resume/parse#parsed",
         "/internal/interview/answer#evaluation",
         "/internal/interview/finalize#evaluation",
