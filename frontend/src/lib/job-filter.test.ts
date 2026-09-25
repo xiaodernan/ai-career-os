@@ -311,3 +311,38 @@ describe("salaryFromInput", () => {
     expect(panel).not.toMatch(/Number\(e\.target\.value\)/);
   });
 });
+
+describe("every job filter the UI can send is a parameter the endpoint binds", () => {
+  // Spring ignores a query parameter no `@RequestParam` declares: the request still returns 200
+  // with the unfiltered list, so a filter key that drifts is a chip that looks applied and a
+  // result that never changed -- which is how `remote=true` once matched nothing at all.
+  const resources = readFileSync(new URL("./hooks/resources.ts", import.meta.url), "utf8");
+  const controller = readFileSync(
+    new URL("../../../backend/src/main/java/com/careeros/job/web/JobController.java", import.meta.url),
+    "utf8",
+  );
+
+  const interface_ = resources.match(/export interface JobFilters \{([^}]*)\}/);
+  const declared = [...(interface_?.[1].matchAll(/^\s+(\w+)\?:/gm) ?? [])].map((m) => m[1]);
+
+  // every declared key, with a value that survives the serializer's "empty means absent" filter
+  const probe = Object.fromEntries(declared.map((k) => [k, k === "remote" ? true : "x"]));
+  const emitted = Object.keys(serializeJobFilters(probe));
+
+  // only the parameters *this* endpoint declares: another handler in the same file binding
+  // `company` must not stand in for the list, or the gate passes while the filter goes unanswered
+  const listBlock = controller.match(/PageDTO<JobListItem> list\(([\s\S]*?)\) \{/)?.[1] ?? "";
+  const bound = [...listBlock.matchAll(/@RequestParam\b(?:\(([^)]*)\))?\s+(?:[\w.]+(?:<[^>]*>)?)\s+(\w+)/g)]
+    .map((m) => m[1]?.match(/name\s*=\s*"([^"]+)"/)?.[1] ?? m[2]);
+
+  it("reads both sides, not an empty list of them", () => {
+    expect(declared.length).toBeGreaterThanOrEqual(8);
+    expect(bound).toEqual(expect.arrayContaining(["q", "skills", "minSalary", "maxSalary", "sort"]));
+    expect(emitted).toEqual(expect.arrayContaining(["q", "minSalary", "maxSalary", "remote"]));
+    expect(emitted).not.toContain("min_salary");
+  });
+
+  it("sends nothing the endpoint has not declared", () => {
+    expect(emitted.filter((key) => !bound.includes(key))).toEqual([]);
+  });
+});
