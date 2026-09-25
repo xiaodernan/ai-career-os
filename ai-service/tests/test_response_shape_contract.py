@@ -436,3 +436,45 @@ def test_the_browser_side_is_actually_read():
         "resolving `cover_generate` through its import alias is what makes this answer readable"
     assert _browser_reads("normalizeTailor", "raw") >= {"stats", "notes"}
     assert len(DEAD_ALTERNATES) >= 10
+
+
+# ------------------------------------- the same reading, against a Java record's fields
+
+CHAT_DTOS = JAVA_ROOT / "com" / "careeros" / "conversation" / "dto" / "ConversationDtos.java"
+
+
+def _record_components(record: str) -> set[str]:
+    """The components of a Java record, which are the keys Jackson emits for it."""
+    source = CHAT_DTOS.read_text(encoding="utf-8")
+    opener = f"record {record}("
+    head = source[source.index(opener) + len(opener):]
+    block = head[:head.index(") {")]
+    names = []
+    for declaration in _top_level(block, ","):
+        tokens = declaration.strip().split()
+        if tokens:
+            names.append(tokens[-1])
+    return set(names)
+
+
+def test_the_copilot_reads_line_up_with_chat_response():
+    """The browser's copilot reply is built from `ChatResponse`, not from a passed-through AI
+    answer, so its candidates have to be checked against the record -- which is where a key nothing
+    serializes (`taskId`, before the tailor panel stopped looking for one) belongs."""
+    actions = (ROOT_FRONTEND / "lib" / "hooks" / "actions.ts").read_text(encoding="utf-8")
+    start = actions.index("return {\n        answer: str(raw,")
+    block = actions[start:actions.index("\n      };", start)]
+    read = {key for group in re.findall(r'(?:str|num|pick|list)\(\s*raw\s*,([^)]*)\)', block)
+            for key in re.findall(r'"([^"]+)"', group)}
+    emitted = _record_components("ChatResponse")
+    assert read & emitted, f"the copilot reads {sorted(read)}, none of which is in {sorted(emitted)}"
+    assert emitted - read == {"assistantMessageId", "userMessageId"}, \
+        "the reply drops the two message ids today; if that changes, this line is where to look"
+    # Candidates `ChatResponse` never serializes. Each is either a tolerant alias of a live key
+    # (`content`/`text`/`message`/`reply` for `answer`, `citations` for `sources`, `run_id` for
+    # `runId`) or, like `taskId`, a leftover of a field that has never been on the answer -- the
+    # shape of mistake that left the tailor panel offering a stream it could not open.
+    assert read - emitted == {
+        "content", "text", "message", "reply", "citations", "run_id", "conversation_id",
+        "taskId", "task_id",
+    }, f"undocumented dead reads on the copilot answer: {sorted(read - emitted)}"
