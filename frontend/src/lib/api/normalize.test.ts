@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 
 import {
   bool,
@@ -1206,5 +1206,34 @@ describe("normalizeStructuredResume", () => {
     const empty = normalizeStructuredResume({});
     expect(empty).not.toBeNull();
     expect(empty && Object.values(empty).every((v) => v === undefined)).toBe(true);
+  });
+});
+
+/**
+ * `structured.technologies` is read by the resume view's "Core technologies" line and by the
+ * analyze dialog's skill suggestions, and neither service ever produces that key: the parse answer
+ * describes skills as `{name, category}`. So that section cannot render -- and the useful half of
+ * knowing that is saying it somewhere a build checks. When a producer starts emitting the key,
+ * this fails where someone will read it, and the section gets verified instead of trusted.
+ */
+describe("the technologies the resume view reads has no producer", () => {
+  const root = new URL("../../../../", import.meta.url);
+  const trees = ["backend/src/main/java", "ai-service/app"];
+  const scanned = trees.flatMap((dir) =>
+    readdirSync(new URL(dir, root), { recursive: true, encoding: "utf8" })
+      .filter((name) => /\.(java|py)$/.test(name))
+      .map((name) => readFileSync(new URL(`${dir}/${name}`, root), "utf8"))
+  );
+
+  it("walks the services, instead of finding nothing by accident", () => {
+    expect(scanned.length).toBeGreaterThan(150);
+    expect(scanned.join("\n")).toContain("document_chunks");
+  });
+
+  it("never mentions technologies, while the view does", () => {
+    expect(scanned.filter((src) => /\btechnologies\b/.test(src))).toEqual([]);
+    expect(readFileSync(new URL("./normalize.ts", import.meta.url), "utf8")).toContain(
+      'list<string>(s, "technologies")'
+    );
   });
 });
