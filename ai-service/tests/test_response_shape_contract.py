@@ -362,6 +362,11 @@ def test_the_reads_are_actually_found():
         "the copilot answer is resolved through `out.to_dict()`: the hop must name its keys"
     assert len(reads_by_endpoint()) >= 6
     assert len(_flows()) >= 8, "every consumer class should contribute several bindings"
+    # A record component whose type carries a comma is one field, not two: `Map<String, Object>`
+    # read naively yields `Map<String` as a name the response emits, which no reader can hit and
+    # which this gate would have matched `normalizeMatch` against unnoticed.
+    assert _record_components_at("job/dto/JobDtos.java", "MatchResponse") == {
+        "match", "matchId", "jd"}
 
 
 def test_the_files_that_hold_an_ai_answer_stay_declared():
@@ -490,7 +495,8 @@ def test_the_copilot_reads_line_up_with_chat_response():
 # `normalizeMatch` alone asks for ~40 names because it reads the nested `MatchSummary` and the
 # resume-shaped sub-maps in the same body, and mixing those together would hide a real wrong-name
 # signal in noise. So: catch a wholesale rename or a record that moved, and leave the rest to the
-# gates that can see one map at a time.
+# gates that can see one map at a time -- which `test_response_field_contract.py` now does for
+# `normalizeApplication` and `normalizeMessages`, per read site and per receiver.
 DTO_READS = {
     "normalizeMatch": ("MatchResponse", "job/dto/JobDtos.java"),
     "normalizeApplication": ("ApplicationItem", "application/dto/ApplicationDtos.java"),
@@ -509,6 +515,26 @@ def _dto_reads(function_name: str) -> set[str]:
             for key in re.findall(r'"([^"]+)"', group)}
 
 
+def _hide_generic_commas(block: str) -> str:
+    """Blank out the commas that are inside a generic type, so one component stays one component.
+
+    `Map<String, Object> match` split naively reads as two declarations and yields `Map<String` as
+    a field the record emits: a name no response can ever carry, and one the check below would
+    have happily matched a reader against.
+    """
+    depth, out = 0, []
+    for char in block:
+        if char == "<":
+            depth += 1
+        elif char == ">":
+            depth = max(0, depth - 1)
+        elif char == "," and depth:
+            out.append("\x00")
+            continue
+        out.append(char)
+    return "".join(out)
+
+
 def _record_components_at(relative: str, record: str) -> set[str]:
     source = (JAVA_ROOT / "com" / "careeros" / relative).read_text(encoding="utf-8")
     opener = f"record {record}("
@@ -517,8 +543,8 @@ def _record_components_at(relative: str, record: str) -> set[str]:
     head = source[source.index(opener) + len(opener):]
     block = head[:head.index(") {")]
     names = []
-    for declaration in _top_level(block, ","):
-        tokens = declaration.strip().split()
+    for declaration in _top_level(_hide_generic_commas(block), ","):
+        tokens = declaration.strip().replace("\x00", ",").split()
         if tokens:
             names.append(tokens[-1])
     return set(names)
