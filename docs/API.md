@@ -198,7 +198,7 @@ tenant context via `core.deps.Ctx`.
 
 | Method | Path | Purpose |
 |---|---|---|
-| POST | `/internal/agents/chat` | run a copilot turn as a background task → `{task_id, run_id}` |
+| POST | `/internal/agents/chat` | run a copilot turn as a background task → `{task_id, run_id}` (served, but no caller today: the product uses `/internal/agents/chat/sync`) |
 | POST | `/internal/agents/chat/sync` | blocking turn → `Outcome` (relay + E2E + eval harness) |
 | GET | `/internal/agents/runs` | runs list |
 | GET | `/internal/agents/runs/{run_id}` | run + traces |

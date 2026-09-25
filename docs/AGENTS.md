@@ -138,7 +138,9 @@ endpoints above; the frontend renders them as a timeline
 PRD §47 Demo 6 — you can open any run and see agent → tools → retrieval → sources
 → LLM → final answer.
 
-**Streaming**: a turn can run as a background task (`POST /internal/agents/chat`)
-publishing `status` / `token` / `message` / `done` events on the task bus; the
-backend relays them over SSE. `POST /internal/agents/chat/sync` is the blocking
-variant used by the backend relay and by the evaluation harness.
+**Streaming**: a turn *can* run as a background task (`POST /internal/agents/chat`)
+publishing `status` / `message` events plus the task bus's own `done` / `error` and its `ping`
+keep-alive, on the task bus — but nothing in the product calls it today: the copilot goes through
+`POST /internal/agents/chat/sync`, the blocking variant, and the SSE relay only carries ingest
+tasks. `token` deltas are produced only by `core/ai.py`'s per-call `emit` callback, which no
+caller wires to the stream, so the client's `token` branch waits for a publisher.

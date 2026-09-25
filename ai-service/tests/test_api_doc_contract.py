@@ -120,3 +120,39 @@ def test_both_sides_of_the_comparison_are_actually_read():
     assert response_claims() == {"/internal/agents/chat": ({"task_id", "run_id"}, False)}
     shape = _returned(_routes()[("POST", "/internal/agents/chat")])
     assert set(shape) == {"task_id", "run_id"}
+
+
+# --------------------------------------------------- who can reach an internal endpoint
+
+# Documented, registered, and not called by the backend -- each for its own reason, so that a new
+# caller means retiring a line here rather than letting the table quietly advertise surfaces the
+# product never reaches. `/internal/stream/{}` is *not* in this list: `SseRelayService` calls it.
+UNREACHED_BY_THE_APP = {
+    "/internal/agents/chat": "the copilot uses /chat/sync; the background-task form is unwired",
+    "/internal/agents/runs": "the Activity panel reads agent_runs over the shared database instead",
+    "/internal/agents/runs/{}": "same, for one run's detail",
+    "/internal/rag/retrieve": "retrieval happens in-process (agent tools -> pipeline.retrieve)",
+    "/internal/rag/answer": "same, for the grounded-answer variant",
+    "/internal/rag/chunks": "chunk inspection, kept for operators",
+    "/internal/tasks/{}": "task state; the app follows /internal/stream/{taskId} instead",
+    "/internal/tasks/{}/stream": "a second stream spelling, unused by the relay",
+}
+
+
+def unreached_paths() -> set[str]:
+    from tests.test_internal_contract import _calls, _relay_calls
+
+    reached = {c["path"] for c in _calls()} | {c["path"] for c in _relay_calls()}
+    return documented_paths() - reached
+
+
+def test_what_the_doc_lists_but_the_app_never_calls_stays_explained():
+    assert unreached_paths() == set(UNREACHED_BY_THE_APP)
+
+
+def test_the_unreached_list_is_not_just_a_long_list_of_nothings():
+    """Positive control: the comparison above also passes when both sides are empty."""
+    assert len(UNREACHED_BY_THE_APP) == 8
+    assert all(reason.strip() for reason in UNREACHED_BY_THE_APP.values())
+    assert "/internal/stream/{}" not in UNREACHED_BY_THE_APP, \
+        "the relay reaches that one; treating it as unreached would hide a live dependency"
