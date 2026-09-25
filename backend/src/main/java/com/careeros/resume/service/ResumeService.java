@@ -247,7 +247,7 @@ public class ResumeService {
     public ParseResumeResponse parse(UUID userId, UUID resumeId) {
         ParsedContext ctx = parseContext(userId, resumeId);
         Map<String, Object> result = ai.parseResumeText(ctx.text(), userId);
-        return persistParse(ctx.resumeId(), ctx.versionId(), userId, result);
+        return persistParse(ctx.resumeId(), ctx.versionId(), userId, result, ctx.text());
     }
 
     private record ParsedContext(UUID resumeId, UUID versionId, String text) {
@@ -275,7 +275,7 @@ public class ResumeService {
 
     @Transactional
     public ParseResumeResponse persistParse(UUID resumeId, UUID versionId, UUID userId,
-                                            Map<String, Object> result) {
+                                            Map<String, Object> result, String plaintext) {
         Resume resume = requireResume(userId, resumeId);
         ResumeVersion version = requireVersion(userId, versionId);
         Map<String, Object> parsed = Json.obj(result.get("parsed"));
@@ -285,7 +285,10 @@ public class ResumeService {
             version.setScore(score);
         }
         if (version.getPlaintext() == null || version.getPlaintext().isBlank()) {
-            version.setPlaintext(Json.str(result, "plaintext"));
+            // The parse answer carries {parsed, score} only, so the text has to come from the
+            // caller: it is the one that was just sent, and without it the version would stay
+            // blank and every later parse would re-read the document.
+            version.setPlaintext(plaintext);
         }
         versions.save(version);
 
