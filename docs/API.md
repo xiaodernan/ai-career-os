@@ -173,7 +173,7 @@ stored verbatim on the session, so the same place takes the rest of the run's tu
 
 | Method | Path | Notes |
 |---|---|---|
-| POST | `/copilot/chat` | `{message, conversationId?, context?}` → `{answer, artifacts[], sources[], actions[], runId, conversationId}` (synchronous; both messages persisted) |
+| POST | `/copilot/chat` | `{message, conversationId?, context?}` → `{conversationId, userMessageId, assistantMessageId, answer, artifacts[], sources[], actions[], runId}` (synchronous; both messages persisted) |
 | GET | `/conversations` | list |
 | POST | `/conversations` | create |
 | GET / PATCH / DELETE | `/conversations/{id}` | |
@@ -207,8 +207,8 @@ tenant context via `core.deps.Ctx`.
 | POST | `/internal/features/tailor` | tailoring + diff (no fabrication) |
 | POST | `/internal/features/cover-letter` | cover letter |
 | POST | `/internal/features/jd/suggestions` | improvement suggestions |
-| GET | `/internal/features/documents/{doc_id}/text` | extracted document text (used by backend resume parsing) |
 | POST | `/internal/ingest/document/{doc_id}` | ingest a stored document |
+| GET | `/internal/ingest/documents/{doc_id}/text` | extracted document text (used by backend resume parsing) |
 | POST | `/internal/ingest/text` | ingest inline text |
 | POST | `/internal/rag/retrieve` | hybrid retrieval + citations |
 | POST | `/internal/rag/answer` | retrieval + grounded answer |
