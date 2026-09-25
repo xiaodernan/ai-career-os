@@ -32,6 +32,7 @@ from tests.test_internal_contract import (
 )
 
 JAVA_ROOT = AI_PACKAGE.parents[2]
+ROOT_FRONTEND = Path(__file__).resolve().parents[2] / "frontend" / "src"
 
 
 def _app_root() -> Path:
@@ -42,23 +43,38 @@ def _app_root() -> Path:
 
 # ------------------------------------------------------------- python: what comes back
 
-def _index_defs() -> dict[str, list]:
-    """Every function and method defined under app/, by name, so a hop can be resolved."""
-    out: dict[str, list] = {}
+def _index_defs() -> tuple[dict[str, list], dict[str, str]]:
+    """Functions by name, and the names that exist only because an import renamed them.
+
+    `from app.features.cover_letter import generate as cover_generate` means the handler's
+    `await cover_generate(...)` has no def to follow by that name: without the alias, that
+    endpoint's answer reads as invisible -- and a shape the gate cannot read is a shape it
+    never checks.
+    """
+    defs: dict[str, list] = {}
+    aliased: dict[str, set] = {}
     for path in sorted(_app_root().rglob("*.py")):
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
         for node in ast.walk(tree):
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                out.setdefault(node.name, []).append(node)
-    return out
+                defs.setdefault(node.name, []).append(node)
+            elif isinstance(node, ast.ImportFrom):
+                for a in node.names:
+                    if a.asname:
+                        aliased.setdefault(a.asname, set()).add(a.name)
+            elif isinstance(node, ast.Import):
+                for a in node.names:
+                    if a.asname:
+                        aliased.setdefault(a.asname, set()).add(a.name.rsplit(".", 1)[-1])
+    return defs, {k: next(iter(v)) for k, v in aliased.items() if len(v) == 1}
 
 
-DEFS = _index_defs()
+DEFS, ALIASES = _index_defs()
 
 
 def _sole(name: str):
-    """The one definition of `name`, or None when it is missing or ambiguous."""
-    found = DEFS.get(name) or []
+    """The one definition of `name` -- or of whatever it was imported as -- or None."""
+    found = DEFS.get(name) or DEFS.get(ALIASES.get(name, "")) or []
     return found[0] if len(found) == 1 else None
 
 
@@ -358,3 +374,65 @@ def test_the_files_that_hold_an_ai_answer_stay_declared():
     assert holding == {"ConversationService.java", "InterviewService.java",
                        "JobService.java", "ResumeService.java"}
     assert holding < {p.name for p in _consumer_files()}
+
+
+# ------------------------------------------- the browser reads these answers verbatim too
+
+NORMALIZE = ROOT_FRONTEND / "lib" / "api" / "normalize.ts"
+
+# The backend hands three of these answers straight out as `Map<String, Object>`, so the keys the
+# browser asks for are read off the ai-service payload with nothing translating them in between.
+BROWSER_READS = {
+    "normalizeTailor": ("/internal/features/tailor", "raw"),
+    "coverLetterText": ("/internal/features/cover-letter", "raw"),
+    "normalizeSuggestions": ("/internal/features/jd/suggestions", "raw"),
+}
+
+# Candidates the browser tries that no answer carries: tolerant alternates, each harmless only
+# because a sibling in the same list does exist -- `taskId` was once in this list by accident and
+# it silently killed a UI affordance, so a new name here has to mean something.
+DEAD_ALTERNATES = {
+    "body", "coverLetter", "cover_letter", "improvements", "items", "markdown", "statistics",
+    "summary", "text", "warnings", "content",
+}
+
+
+def _browser_reads(function_name: str, receiver: str) -> set[str]:
+    source = NORMALIZE.read_text(encoding="utf-8")
+    start = source.index(f"export function {function_name}(")
+    body = source[start:source.index("\n}\n", start)]
+    return {key for group in re.findall(rf"(?:str|num|pick|list)(?:<[^>]*>)?\(\s*{receiver}\s*,([^)]*)\)", body)
+            for key in re.findall(r'"([^"]+)"', group)}
+
+
+def _answers_read_by_the_browser(path: str) -> set[str]:
+    return set(_returned(_routes()[("POST", path)]) or {})
+
+
+def test_what_the_browser_reads_off_a_passed_through_answer_exists():
+    problems = []
+    for function_name, (path, receiver) in BROWSER_READS.items():
+        read = _browser_reads(function_name, receiver)
+        answers = _answers_read_by_the_browser(path)
+        if not read & answers:
+            problems.append(f"{function_name} reads {sorted(read)} off {path}, which answers "
+                            f"{sorted(answers)}")
+    assert problems == [], "\n".join(problems)
+
+
+def test_the_alternate_spellings_with_no_producer_stay_declared():
+    dead = set()
+    for function_name, (path, receiver) in BROWSER_READS.items():
+        dead |= _browser_reads(function_name, receiver) - _answers_read_by_the_browser(path)
+    assert dead == DEAD_ALTERNATES, f"undocumented key the browser asks for: {sorted(dead ^ DEAD_ALTERNATES)}"
+
+
+def test_the_browser_side_is_actually_read():
+    """Positive control: the two gates above pass on an empty reading of either file."""
+    assert _browser_reads("coverLetterText", "raw") == {
+        "content", "text", "markdown", "body", "letter", "coverLetter", "cover_letter"}
+    assert _answers_read_by_the_browser("/internal/features/cover-letter") == {
+        "letter", "sources", "mode", "model"}, \
+        "resolving `cover_generate` through its import alias is what makes this answer readable"
+    assert _browser_reads("normalizeTailor", "raw") >= {"stats", "notes"}
+    assert len(DEAD_ALTERNATES) >= 10
