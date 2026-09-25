@@ -61,6 +61,21 @@ export async function registerUser(
   const res = await request.post(`${API_URL}/auth/register`, {
     data: { email, password: TEST_PASSWORD, displayName },
   });
+
+  // Every test provisions its own account for isolation, so a full run issues one
+  // registration per test — more than the product's auth limit (10/min per IP).
+  // Without this branch that arrives as a bare "expected 201" and looks like a
+  // broken endpoint; say what actually happened and how to fix it.
+  if (res.status() === 429) {
+    throw new Error(
+      `Registration was rate limited (429) after provisioning accounts for this run.\n` +
+      `The suite creates one account per test, and /api/v1/auth/** allows ` +
+      `${process.env.E2E_AUTH_LIMIT ?? "10"}/min per IP.\n` +
+      `Start the backend with a higher limit for E2E runs, e.g.:\n` +
+      `  RATELIMIT_AUTH_PER_MINUTE=100 bash scripts/mvn.sh spring-boot:run\n` +
+      `Or wait ~60s for the window to slide.`
+    );
+  }
   expect(res.status(), `register ${email} -> ${await res.text()}`).toBe(201);
   const body = (await res.json()) as {
     data: { user: { id: string }; tokens: { accessToken: string; refreshToken: string } };
@@ -84,9 +99,17 @@ export function apiFor(request: APIRequestContext, user: E2EUser) {
     post: (path: string, data?: unknown) => request.post(`${API_URL}${path}`, { headers, data }),
     patch: (path: string, data?: unknown) => request.patch(`${API_URL}${path}`, { headers, data }),
     delete: (path: string) => request.delete(`${API_URL}${path}`, { headers }),
-    /** multipart/form-data upload — the real "Upload Resume" path (PRD §35). */
-    upload: (path: string, file: { name: string; mimeType: string; buffer: Buffer }) =>
-      request.post(`${API_URL}${path}`, { headers, multipart: file }),
+    /**
+     * multipart/form-data upload — the real "Upload Resume" path (PRD §35).
+     *
+     * `multipart` is a map of *field name* → value, so the file has to be nested
+     * under the form field the controller reads (`file`). Passing the file object
+     * itself makes Playwright treat `name`/`mimeType`/`buffer` as three separate
+     * fields, and the raw Buffer then fails with `stream.on is not a function`.
+     */
+    upload: (path: string, file: { name: string; mimeType: string; buffer: Buffer },
+             field = "file") =>
+      request.post(`${API_URL}${path}`, { headers, multipart: { [field]: file } }),
   };
 }
 

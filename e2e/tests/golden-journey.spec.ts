@@ -123,9 +123,12 @@ test.describe("golden journey — resume becomes a knowledge base", () => {
     expect(parsed.score.total, "parser must score the resume").toBeGreaterThan(0);
 
     // "Career Profile Created": the knowledge base now carries the resume.
-    const sources = await unwrap<Array<{ id: string; kind: string }>>(await api.get("/knowledge/sources"));
+    // `/knowledge/sources` is paginated ({items,total,page,size}), not a bare array.
+    const sources = await unwrap<{ items: Array<{ id: string; kind: string }>; total: number }>(
+      await api.get("/knowledge/sources")
+    );
     expect(
-      sources.some((s) => s.id === up.sourceId),
+      sources.items.some((s) => s.id === up.sourceId),
       "the uploaded resume must be listed as a knowledge source"
     ).toBe(true);
 
@@ -145,14 +148,24 @@ test.describe("golden journey — find a role and understand the match", () => {
     await search.fill("Agent");
     await search.press("Enter");
 
+    // The filter panel renders "<n> matching roles" once the query has settled
+    // (it shows "Filtering…" while in flight). Waiting for it avoids clicking a
+    // link that is about to be replaced by the re-render.
+    await expect(authedPage.getByText(/\d+\s+matching\s+roles?/)).toBeVisible({ timeout: 25_000 });
+
     // Job titles are links to /jobs/{id}; skip any empty anchors (e.g. icon links).
     const jobLinks = authedPage.locator('a[href^="/jobs/"]').filter({ hasText: /\S/ });
     await expect(jobLinks.first()).toBeVisible({ timeout: 25_000 });
     const href = await jobLinks.first().getAttribute("href");
     expect(href, "a search result must link to a job").toMatch(/^\/jobs\/[0-9a-f-]{36}$/);
 
-    await jobLinks.first().click();
-    await expect(authedPage).toHaveURL(new RegExp(`${href}$`));
+    // Wait for the navigation the click causes, rather than clicking and then
+    // polling the URL — the click can be retried while the list re-renders, and
+    // the two waits then race.
+    await Promise.all([
+      authedPage.waitForURL(new RegExp(`${href}$`), { timeout: 30_000 }),
+      jobLinks.first().click(),
+    ]);
     await expect(authedPage.getByRole("heading", { level: 1 })).toBeVisible({ timeout: 20_000 });
   });
 
@@ -287,8 +300,17 @@ test.describe("golden journey — interview practice", () => {
     expect(Object.keys(report.evaluation.dims).length).toBeGreaterThan(0);
     expect(report.evaluation.summary, "report must carry a summary").toBeTruthy();
 
+    // A finalised session deliberately opens on a summary, not the live runner —
+    // the runner's <h1> only exists while the session is active.
     await authedPage.goto(`/interviews/${session.id}`);
-    await expect(authedPage.getByRole("heading", { level: 1 })).toBeVisible({ timeout: 20_000 });
+    await expect(
+      authedPage.getByRole("heading", { name: /interview is finished/i })
+    ).toBeVisible({ timeout: 20_000 });
+
+    // "Receive feedback" (PRD §35) is the report itself.
+    await authedPage.getByRole("link", { name: "Open report" }).click();
+    await expect(authedPage).toHaveURL(new RegExp(`/interviews/${session.id}/report$`));
+    await expect(authedPage.getByText("Dimension scores")).toBeVisible({ timeout: 20_000 });
   });
 });
 
@@ -307,7 +329,7 @@ test.describe("golden journey — copilot and observability", () => {
 
     // Every AI turn is traced; the activity feed is the proof.
     const runs = await unwrap<Array<{ id: string; agent: string; status: string }>>(
-      await api.get("/activity/runs", { size: 5 })
+      await api.get("/activity/runs", { limit: 5 })
     );
     expect(runs.length, "the copilot turn must be recorded").toBeGreaterThan(0);
     const copilotRun = runs.find((r) => r.agent === "career");

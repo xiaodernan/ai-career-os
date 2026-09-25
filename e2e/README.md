@@ -23,12 +23,15 @@ Three services must be up, plus the infrastructure they need:
 
 ```bash
 docker-compose up -d postgres redis minio
-docker-compose run --rm seed-jobs            # 12 companies / 41 roles
+docker-compose run --rm minio-init                 # creates the private app bucket
+docker-compose run --rm seed-jobs                  # 12 companies / 41 roles
 
-cd backend   && APP_ENV=dev SERVER_PORT=8080 bash ../scripts/mvn.sh spring-boot:run
+cd backend   && RATELIMIT_AUTH_PER_MINUTE=100 APP_ENV=dev SERVER_PORT=8080 bash ../scripts/mvn.sh spring-boot:run
 cd ai-service && LLM_PROVIDER=mock EMBEDDING_PROVIDER=hash .venv/Scripts/python -m uvicorn app.main:app --port 8000
-cd frontend  && npx next dev -p 3000
+cd frontend  && npx next build && npx next start -p 3000
 ```
+
+`RATELIMIT_AUTH_PER_MINUTE=100` is required, not cosmetic — see trap 3 below.
 
 ## Run
 
@@ -39,7 +42,7 @@ npx playwright test --headed        # watch it
 npx playwright show-report          # HTML report (gitignored)
 ```
 
-## Two traps worth knowing
+## Traps worth knowing
 
 **1. Visit the frontend as `localhost`, not `127.0.0.1`.**
 The backend allows exactly the origins in `APP_CORS_ORIGINS`
@@ -52,6 +55,19 @@ The backend's CORS allowlist covers only the headers the app actually sends. An
 extra header (e.g. a tracing tag) fails preflight with
 `Request header field X is not allowed by Access-Control-Allow-Headers`, which
 surfaces as a silent login failure.
+
+**3. Raise `RATELIMIT_AUTH_PER_MINUTE` for the run.**
+Each test provisions its own account so tests stay isolated, which means a full
+run issues one `POST /auth/register` per test — more than the product's
+10/min-per-IP auth limit. The suite would then fail on its own product's
+protection. Registration detects the 429 and says so explicitly rather than
+reporting a bare "expected 201".
+
+**4. `SERVER__PORT` in the sandbox environment.**
+Some harnesses export `SERVER__PORT`, which Spring's relaxed binding maps onto
+`server.port` and silently relocates the backend (it fails with
+"Port 62707 was already in use"). Start the backend with `env -u SERVER__PORT`
+if that happens.
 
 ## Env overrides
 
