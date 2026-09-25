@@ -134,7 +134,8 @@ class ApiDocParamContractTest {
     }
 
     /** A controller method's HTTP verb, its doc-shaped path, and what it binds from the request. */
-    private record Route(String verb, String path, Set<String> queryNames, Class<?> bodyType) {
+    private record Route(String verb, String path, Set<String> queryNames, Class<?> bodyType,
+                         Class<?> returnType) {
     }
 
     private static List<Route> routes() {
@@ -168,7 +169,8 @@ class ApiDocParamContractTest {
                         bodyType = p.getType();
                     }
                 }
-                out.add(new Route(verb, documentedForm(path.replaceFirst("^" + API_PREFIX, "")), names, bodyType));
+                out.add(new Route(verb, documentedForm(path.replaceFirst("^" + API_PREFIX, "")),
+                        names, bodyType, method.getReturnType()));
             }
         }
         return out;
@@ -390,7 +392,9 @@ class ApiDocParamContractTest {
                 String candidate = token.trim().replace("?", "");
                 if (candidate.equals("...")) {
                     openEnded = true;
-                } else if (candidate.matches("[A-Za-z][A-Za-z0-9]*")) {
+                } else if (candidate.matches("[A-Za-z][A-Za-z0-9_]*")) {
+                    // snake_case is how the aliases are spelled: filtering it out would hide a
+                    // documented field no record accepts, which is the whole point of this rule
                     names.add(candidate);
                 }
             }
@@ -476,5 +480,145 @@ class ApiDocParamContractTest {
             return primary[0];
         }
         return fallback.length > 0 ? fallback[0] : "";
+    }
+
+    /* ------------------------------------------------------------------ documented answers */
+
+    /**
+     * What an endpoint answers with, as Jackson will serialize it.
+     *
+     * The third hand-typed copy of a shape: the record declares it, the browser reads it, and
+     * docs/API.md is what a new integrator starts from. A key the row invents teaches a caller to
+     * read `undefined`; a key it omits is a field no one learns to ask for.
+     */
+    private record AnswerSpec(Set<String> components, boolean freeForm) {
+    }
+
+    /** The keys a row names after its arrow, and whether "..." leaves the list open. */
+    private record AnswerRow(Set<String> names, boolean openEnded) {
+    }
+
+    private static Map<String, AnswerSpec> boundAnswers() {
+        Map<String, AnswerSpec> out = new TreeMap<>();
+        for (Route route : routes()) {
+            String key = route.verb() + " " + route.path();
+            java.lang.reflect.RecordComponent[] fields = route.returnType().getRecordComponents();
+            if (fields == null || com.careeros.common.PageDTO.class.isAssignableFrom(route.returnType())) {
+                // a Map body is whatever ai-service answered with (its own gates read that), and a
+                // paged row describes its item, not the envelope
+                out.put(key, new AnswerSpec(Set.of(), true));
+                continue;
+            }
+            Set<String> names = new LinkedHashSet<>();
+            for (java.lang.reflect.RecordComponent field : fields) {
+                names.add(field.getName());
+            }
+            out.put(key, new AnswerSpec(names, false));
+        }
+        return out;
+    }
+
+    /** "POST /copilot/chat" to the brace group that follows its arrow -- the answer, not the body. */
+    private static Map<String, AnswerRow> documentedAnswers() {
+        Map<String, AnswerRow> rows = new TreeMap<>();
+        boolean inPublicApi = false;
+        for (String line : lines()) {
+            if (line.startsWith("## ")) {
+                inPublicApi = line.startsWith("## 2. Public API");
+                continue;
+            }
+            if (!inPublicApi || !line.startsWith("|")) {
+                continue;
+            }
+            String[] cells = line.replace("\\|", "¦").split("\\|");
+            if (cells.length < 4) {
+                continue;
+            }
+            String verb = cells[1].trim();
+            List<String> verbs = Arrays.stream(verb.split("/")).map(String::trim).toList();
+            if (verbs.stream().noneMatch(BODY_VERBS::contains) && !verbs.contains("GET")) {
+                continue;
+            }
+            String notes = String.join(" ", Arrays.copyOfRange(cells, 3, cells.length));
+            int arrow = notes.indexOf('→');
+            String afterArrow = arrow < 0 ? "" : notes.substring(arrow);
+            Matcher group = Pattern.compile("\\{([^{}]*)}").matcher(afterArrow);
+            if (!group.find()) {
+                continue;
+            }
+            Set<String> names = new LinkedHashSet<>();
+            boolean openEnded = false;
+            for (String token : group.group(1).split(",")) {
+                String candidate = token.trim().replace("?", "").replace("[]", "");
+                if (candidate.equals("...")) {
+                    openEnded = true;
+                } else if (candidate.matches("[A-Za-z][A-Za-z0-9_]*")) {
+                    // underscores stay legal names: the aliases this repo answers under are
+                    // snake_case, and dropping them would hide exactly the drift worth finding
+                    names.add(candidate);
+                }
+            }
+            if (!names.isEmpty()) {
+                rows.put(first(verbs.toArray(String[]::new)) + " "
+                        + documentedForm(cells[2].trim().replace("`", "")), new AnswerRow(names, openEnded));
+            }
+        }
+        return rows;
+    }
+
+    @Test
+    void everyAnswerKeyTheDocNamesIsOneTheEndpointReturns() {
+        Map<String, AnswerSpec> bound = boundAnswers();
+        List<String> problems = new ArrayList<>();
+        documentedAnswers().forEach((key, row) -> {
+            AnswerSpec real = bound.get(key);
+            assertThat(real).as("%s documents an answer but no controller serves it", key)
+                    .isNotNull();
+            if (real.freeForm()) {
+                return;
+            }
+            Set<String> phantom = new TreeSet<>(row.names());
+            phantom.removeAll(real.components());
+            if (!phantom.isEmpty()) {
+                problems.add(key + " is documented with " + phantom + ", which it never answers");
+            }
+        });
+        assertThat(problems).isEmpty();
+    }
+
+    @Test
+    void aRowThatNamesAnswerKeysNamesAllOfThem() {
+        Map<String, AnswerSpec> bound = boundAnswers();
+        List<String> problems = new ArrayList<>();
+        documentedAnswers().forEach((key, row) -> {
+            AnswerSpec real = bound.get(key);
+            if (real == null || real.freeForm() || row.openEnded()) {
+                return;
+            }
+            Set<String> forgotten = new TreeSet<>(real.components());
+            forgotten.removeAll(row.names());
+            if (!forgotten.isEmpty()) {
+                problems.add(key + " answers " + forgotten + " that the row never names");
+            }
+        });
+        assertThat(problems).isEmpty();
+    }
+
+    /** The one row that carries this half of the contract has to keep carrying it. */
+    @Test
+    void theAnswerRowsThatCarryTheContractStayWritten() {
+        assertThat(documentedAnswers()).containsKey("POST /copilot/chat");
+    }
+
+    @Test
+    void theAnswerSideOfTheWalkIsActuallyRead() {
+        Map<String, AnswerSpec> bound = boundAnswers();
+        assertThat(bound).hasSizeGreaterThan(20);
+        AnswerSpec chat = bound.get("POST /copilot/chat");
+        assertThat(chat.components()).contains("answer", "userMessageId", "assistantMessageId", "runId")
+                .doesNotContain("task_id");
+        assertThat(bound.get("GET /jobs").freeForm()).as("a paged row describes its item").isTrue();
+        assertThat(documentedAnswers().get("POST /copilot/chat").names())
+                .containsExactlyInAnyOrderElementsOf(chat.components());
     }
 }
