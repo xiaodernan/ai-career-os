@@ -623,4 +623,45 @@ class ApiDocParamContractTest {
         assertThat(documentedAnswers().get("POST /copilot/chat").names())
                 .containsExactlyInAnyOrderElementsOf(chat.components());
     }
+
+    /** Every path the public table names in backticks, folded the way the routes are. */
+    private static Set<String> documentedPublicPaths() {
+        Set<String> out = new TreeSet<>();
+        boolean inPublicApi = false;
+        for (String line : lines()) {
+            if (line.startsWith("## ")) {
+                inPublicApi = line.startsWith("## 2. Public API");
+                continue;
+            }
+            if (!inPublicApi || !line.startsWith("|")) {
+                continue;
+            }
+            Matcher path = Pattern.compile("`(/[A-Za-z0-9_/{}.-]*)`").matcher(line);
+            while (path.find()) {
+                out.add(documentedForm(path.group(1)));
+            }
+        }
+        return out;
+    }
+
+    /**
+     * A path the doc advertises and Spring does not serve is a 404 someone has to discover by
+     * hand, so anything documented without a mapping behind it has to say why.
+     */
+    @Test
+    void everyPublicPathTheDocNamesIsOneTheBackendServes() {
+        Set<String> served = new TreeSet<>();
+        for (Route route : routes()) {
+            served.add(route.path());
+        }
+        Set<String> ghosts = new TreeSet<>(documentedPublicPaths());
+        ghosts.removeAll(served);
+        assertThat(ghosts).as("documented paths with no mapping behind them").isEqualTo(EXEMPT_PATHS);
+        // measured floors: 58 distinct folded routes are served and the table names 50+ of them,
+        // so neither side of the comparison can pass by having read nothing
+        assertThat(served).hasSizeGreaterThanOrEqualTo(58);
+        assertThat(documentedPublicPaths()).hasSizeGreaterThanOrEqualTo(50);
+    }
+
+    private static final Set<String> EXEMPT_PATHS = Set.of();
 }
