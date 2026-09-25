@@ -375,7 +375,9 @@ export function useReorderApplication() {
     mutationFn: (body: { id: string; status: ApplicationStatus; order: number }) =>
       api.request<unknown>(endpoints.applicationReorder(body.id), {
         method: "PUT",
-        body: { status: body.status, order: body.order, position: body.order, index: body.order },
+        // ReorderRequest binds exactly these two; the extra spellings this call used to post were
+        // dropped by Jackson on every drag.
+        body: { status: body.status, position: body.order },
       }),
     onError: fail("Couldn't persist that move — the board was reverted."),
     onSettled: () => qc.invalidateQueries({ queryKey: ["applications"] }),
