@@ -106,17 +106,6 @@ DEAD_SITES = {
     ("normalizeMatch", ("resumeVersionId", "resume_version_id")):
         "same column, same omission: jobs/[id]/page.tsx:103 sets it to null on purpose (the "
         "backend resolves the current version when the request omits it), so nothing reads it back",
-    ("normalizeMatch", ("whyMatch", "why_match", "reasons", "why")):
-        "no producer in backend/ or ai-service/ emits any of these four names -- the LLM's "
-        "justification arrives as prose in `narrative` -- so match-panel.tsx:109's bullet list and "
-        "job-card.tsx:124's one-line hook can never render; both guard on length, which is why "
-        "this reads as a missing feature rather than an empty box",
-    ("normalizeMatch", ("preparation", "recommendedPreparation", "recommended_preparation")):
-        "the PRD advertises Recommended preparation and the UI builds it (PreparationCard, "
-        "jobs/[id]/page.tsx:91, resources.ts:199), but MatchResult's prompt asks for prose 'top "
-        "2-3 concrete actions' and no DTO has a preparation key, so PreparationCard returns null; "
-        "the fix is a structured field through schema, DTO and API.md, not a reader that invents "
-        "items here",
 }
 
 # Drills whose key is not a component of the parent record, so the local can only ever be `{}`.
@@ -364,8 +353,8 @@ def test_the_reads_are_actually_found():
     assert len(_emitted("MessageItem")) == 8
     assert len(_emitted("MatchResponse")) == 3
     assert len(_emitted("JobDetail")) == 23
-    assert len(_emitted("MatchSummary")) == 11
-    assert len(_emitted("MatchResult")) == 12
+    assert len(_emitted("MatchSummary")) == 13
+    assert len(_emitted("MatchResult")) == 14
     # ...and the union is not a restatement of one side: `id`/`createdAt` come only from the stored
     # row, `skillGaps`/`interviewTopics` only from the AI service's answer.
     assert _emitted("MatchSummary") - _emitted("MatchResult") == {"id", "createdAt"}
@@ -373,8 +362,7 @@ def test_the_reads_are_actually_found():
                                                                   "skillGaps"}
     assert _id_of_keys() == {"_id", "eventId", "event_id", "id", "key", "uuid"}
     dead = _dead_read_sites()
-    assert len(dead) == 5
+    assert len(dead) == 3
     assert {(s["reader"], s["line"]) for s in dead} == {
-        ("normalizeApplication", 19), ("normalizeMatch", 12), ("normalizeMatch", 13),
-        ("normalizeMatch", 22), ("normalizeMatch", 26)}
+        ("normalizeApplication", 19), ("normalizeMatch", 12), ("normalizeMatch", 13)}
     assert _structural_problems() == []

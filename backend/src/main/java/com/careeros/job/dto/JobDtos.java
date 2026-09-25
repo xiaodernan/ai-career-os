@@ -33,6 +33,7 @@ public final class JobDtos {
     public record MatchSummary(UUID id, float overall, float technical, float experience,
                                float projects, float education, List<Object> matchedSkills,
                                List<Object> missingSkills, List<Object> evidence,
+                               List<Object> whyMatch, List<Object> preparation,
                                String narrative, OffsetDateTime createdAt) {
     }
 

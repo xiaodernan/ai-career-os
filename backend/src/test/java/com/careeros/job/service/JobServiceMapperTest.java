@@ -10,16 +10,18 @@ import java.lang.reflect.Field;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 /**
- * Binding-symmetry lock for {@link JobService#toSummary}: it forwards eleven {@link JobMatch}
+ * Binding-symmetry lock for {@link JobService#toSummary}: it forwards thirteen {@link JobMatch}
  * getters into a positional record constructor. Five of them are adjacent {@code float} scores
- * (overall, technical, experience, projects, education) and three are adjacent {@code
- * List<Object>} fields (matchedSkills, missingSkills, evidence) — reordering any same-typed pair
- * compiles cleanly and would silently relabel every match score the UI shows. {@link JobMatch} is
- * written only by ai-service and exposes no setters, so the fixture is seeded by reflection.
+ * (overall, technical, experience, projects, education) and five are adjacent {@code
+ * List<Object>} fields (matchedSkills, missingSkills, evidence, whyMatch, preparation) — reordering
+ * any same-typed pair compiles cleanly and would silently relabel every match score the UI shows.
+ * {@link JobMatch} is written only by ai-service and exposes no setters, so the fixture is seeded by
+ * reflection.
  */
 class JobServiceMapperTest {
 
@@ -30,6 +32,12 @@ class JobServiceMapperTest {
     private static final List<Object> MATCHED = List.of("Java", "Spring Boot");
     private static final List<Object> MISSING = List.of("Kubernetes");
     private static final List<Object> EVIDENCE = List.of("exp-1", "proj-2");
+    private static final List<Object> WHY_MATCH =
+            List.of("Your resume covers 2 of the 4 skills this JD lists: java, spring boot.");
+    // Preparation items really are objects on the wire ({title,reason,priority}), so the fixture
+    // holds a Map: a list of Strings would not catch a reader that flattened them to titles.
+    private static final List<Object> PREPARATION =
+            List.of(Map.of("title", "Add concrete evidence of kubernetes", "priority", "must"));
 
     private static void setField(Object target, String name, Object value) {
         try {
@@ -52,6 +60,8 @@ class JobServiceMapperTest {
         setField(m, "matchedSkills", MATCHED);
         setField(m, "missingSkills", MISSING);
         setField(m, "evidence", EVIDENCE);
+        setField(m, "whyMatch", WHY_MATCH);
+        setField(m, "preparation", PREPARATION);
         setField(m, "narrative", "Strong backend fit");
         setField(m, "createdAt", CREATED_AT);
         return m;
@@ -70,6 +80,8 @@ class JobServiceMapperTest {
         assertThat(s.matchedSkills()).isEqualTo(MATCHED);
         assertThat(s.missingSkills()).isEqualTo(MISSING);
         assertThat(s.evidence()).isEqualTo(EVIDENCE);
+        assertThat(s.whyMatch()).isEqualTo(WHY_MATCH);
+        assertThat(s.preparation()).isEqualTo(PREPARATION);
         assertThat(s.narrative()).isEqualTo("Strong backend fit");
         assertThat(s.createdAt()).isEqualTo(CREATED_AT);
     }
@@ -89,12 +101,16 @@ class JobServiceMapperTest {
     }
 
     @Test
-    void theThreeListSlotsStayInOrder() {
+    void theFiveListSlotsStayInOrder() {
         MatchSummary s = JobService.toSummary(fullyPopulated());
 
         assertThat(s.matchedSkills()).containsExactly("Java", "Spring Boot");
         assertThat(s.missingSkills()).containsExactly("Kubernetes");
         assertThat(s.evidence()).containsExactly("exp-1", "proj-2");
+        assertThat(s.whyMatch()).containsExactly(
+                "Your resume covers 2 of the 4 skills this JD lists: java, spring boot.");
+        assertThat(s.preparation()).containsExactly(
+                Map.of("title", "Add concrete evidence of kubernetes", "priority", "must"));
     }
 
     @Test
@@ -114,6 +130,8 @@ class JobServiceMapperTest {
         assertThat(s.matchedSkills()).isEmpty();
         assertThat(s.missingSkills()).isEmpty();
         assertThat(s.evidence()).isEmpty();
+        assertThat(s.whyMatch()).isEmpty();
+        assertThat(s.preparation()).isEmpty();
     }
 
     // ---------------- toItem / JobListItem ----------------

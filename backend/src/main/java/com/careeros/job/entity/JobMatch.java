@@ -57,6 +57,14 @@ public class JobMatch {
     @Column(name = "evidence", nullable = false)
     private List<Object> evidence = List.of();
 
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "why_match", nullable = false)
+    private List<Object> whyMatch = List.of();
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "preparation", nullable = false)
+    private List<Object> preparation = List.of();
+
     @Column(name = "narrative")
     private String narrative;
 
@@ -113,6 +121,14 @@ public class JobMatch {
 
     public List<Object> getEvidence() {
         return evidence;
+    }
+
+    public List<Object> getWhyMatch() {
+        return whyMatch;
+    }
+
+    public List<Object> getPreparation() {
+        return preparation;
     }
 
     public String getNarrative() {

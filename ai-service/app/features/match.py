@@ -71,6 +71,17 @@ def _user_years(parsed: dict) -> float:
     return round(total, 1)
 
 
+def _technical_denominator(req: list[dict], pref: list[dict]) -> float:
+    """What `_technical_score` normalises against: 0 when the JD lists no skill at all.
+
+    Shared with `_preparation` on purpose. The worth of closing a gap is only honest if it is the
+    same arithmetic that produced the score the gap is measured against; a second copy would drift
+    the first time one of them changed."""
+    req_total = sum(_WEIGHT.get(s.get("priority", "must"), 3.0) for s in req)
+    pref_total = sum(_WEIGHT.get(s.get("priority", "nice"), 1.0) for s in pref)
+    return req_total + 0.3 * pref_total
+
+
 def _technical_score(req: list[dict], pref: list[dict], r_skills: set[str]) -> float:
     """Weighted required/preferred skill coverage, in 0..1.
 
@@ -83,15 +94,13 @@ def _technical_score(req: list[dict], pref: list[dict], r_skills: set[str]) -> f
     under-counting coverage against a denominator that included a required skill
     the JD never listed. Both are fixed by guarding on the real total here.
     """
-    req_total = sum(_WEIGHT.get(s.get("priority", "must"), 3.0) for s in req)
-    req_got = sum(_WEIGHT.get(s.get("priority", "must"), 3.0) for s in req
-                  if normalize(s.get("name", "")) in r_skills)
-    pref_total = sum(_WEIGHT.get(s.get("priority", "nice"), 1.0) for s in pref)
-    pref_got = sum(_WEIGHT.get(s.get("priority", "nice"), 1.0) for s in pref
-                   if normalize(s.get("name", "")) in r_skills)
-    denom = req_total + 0.3 * pref_total
+    denom = _technical_denominator(req, pref)
     if not denom:
         return 0.6
+    req_got = sum(_WEIGHT.get(s.get("priority", "must"), 3.0) for s in req
+                  if normalize(s.get("name", "")) in r_skills)
+    pref_got = sum(_WEIGHT.get(s.get("priority", "nice"), 1.0) for s in pref
+                   if normalize(s.get("name", "")) in r_skills)
     return min(1.0, (req_got + 0.3 * pref_got) / denom)
 
 
@@ -179,6 +188,84 @@ def _overall(technical: float, experience: float, projects: float,
     return round(wt * technical + we * experience + wp * projects + wE * education, 4)
 
 
+def _min_degree(jd: dict) -> str:
+    """The JD's stated minimum degree, or "" when it states none."""
+    edu = jd.get("education")
+    return str(edu.get("minDegree") or "") if isinstance(edu, dict) else ""
+
+
+def _preparation_worths(req: list[dict], pref: list[dict], r_skills: set[str],
+                        denom: float) -> list[tuple[dict, float]]:
+    """Every open gap with the overall-score points closing it can unlock, best first.
+
+    This is ``_technical_score``'s own arithmetic rather than a guess: a gap is worth its weight
+    over the same denominator, scaled by technical's share of the overall (``_OVERALL_WEIGHTS[0]``),
+    and a preferred skill carries the same 0.3 multiplier the score already applies to it. That is
+    what makes the panel's "Ordered by how much match score each item is worth" defensible, and it
+    is why an all-missing resume yields worths summing to exactly technical's 42 points
+    (``test_preparation_worths_sum_to_technicals_share_of_overall``).
+
+    Preferred gaps are included because ``_technical_score`` counts them; ``missingSkills`` is
+    required-only (the UI's gap panel is about penalties), so the two lists differ on purpose.
+    Empty when the JD lists no skill (denom 0): nothing to rank, no points to promise. A gap whose
+    name normalises to "" is skipped — it cannot be titled or acted on — while the denominator still
+    counts it, which is why that test's JD lists every skill by name.
+    """
+    if not denom:
+        return []
+    seen: set[str] = set()
+    scored: list[tuple[dict, float]] = []
+    for group, is_pref in ((req, False), (pref, True)):
+        default_priority, default_weight = ("nice", 1.0) if is_pref else ("must", 3.0)
+        for s in group:
+            name = normalize(s.get("name", ""))
+            if not name or name in seen or name in r_skills:
+                continue
+            seen.add(name)
+            priority = str(s.get("priority", default_priority))
+            points = round(100 * _OVERALL_WEIGHTS[0] * (0.3 if is_pref else 1.0)
+                           * _WEIGHT.get(priority, default_weight) / denom, 1)
+            scored.append(({
+                "title": f"Add concrete evidence of {name}",
+                "reason": (f"{'Preferred' if is_pref else 'Required'} by this JD and not matched "
+                           f"in your resume — closing it is worth up to {points} points of the "
+                           f"overall match."),
+                "priority": priority,
+            }, points))
+    scored.sort(key=lambda item_and_points: (-item_and_points[1], item_and_points[0]["title"]))
+    return scored
+
+
+def _preparation(req: list[dict], pref: list[dict], r_skills: set[str], denom: float,
+                 cap: int = 6) -> list[dict]:
+    """The capped list the UI shows; ranking and worth come from ``_preparation_worths``."""
+    return [item for item, _ in _preparation_worths(req, pref, r_skills, denom)[:cap]]
+
+
+def _why_match(matched: list[str], req: list[dict], pref: list[dict], experience: float,
+               exp_note: str, education: float, jd: dict) -> list[str]:
+    """Bullets the computed facts actually support, for the match panel's headline list.
+
+    Each bullet is gated on its dimension clearing the bar rather than merely existing, because a
+    neutral score is not an achievement: experience must be >= 0.8 (the 0.75 "JD states no explicit
+    years" fallback must not read as a strength) and education >= 1.0 *and* only when the JD states
+    a minimum degree (0.8 is the no-requirement neutral). The skill bullet reports coverage of the
+    skills the JD itself listed, so it cannot invent a transferable strength. At most three bullets
+    can clear their bars, which is inside the panel's slice of four."""
+    out: list[str] = []
+    total = len(req) + len(pref)
+    if matched and total:
+        shown = ", ".join(matched[:3])
+        extra = f" (+{len(matched) - 3} more)" if len(matched) > 3 else ""
+        out.append(f"Your resume covers {len(matched)} of the {total} skills this JD lists"
+                   f": {shown}{extra}.")
+    if experience >= 0.8:
+        out.append(f"Experience: {exp_note}")
+    if education >= 1.0 and _min_degree(jd):
+        out.append(f"Education meets the stated minimum ({_min_degree(jd)}).")
+    return out
+
+
 async def compute_match(resume_parsed: dict, jd: dict, *, user_id: str,
                         job_id: str | None = None, run_id: str | None = None) -> dict:
     r_skills = _skill_set(resume_parsed)
@@ -246,7 +333,10 @@ async def compute_match(resume_parsed: dict, jd: dict, *, user_id: str,
         matchedSkills=matched, missingSkills=missing,
         skillGaps=[{"skill": m, "importance": "must",
                     "advice": ""} for m in missing],
-        evidence=evidence, narrative=llm.text,
+        evidence=evidence,
+        whyMatch=_why_match(matched, req, pref, experience, exp_note, education, jd),
+        preparation=_preparation(req, pref, r_skills, _technical_denominator(req, pref)),
+        narrative=llm.text,
         interviewTopics=(jd.get("interviewTopics") or [])[:8], model=llm.model)
     return result.model_dump()
 
@@ -256,18 +346,20 @@ async def persist_match(user_id: str, job_id: str, resume_version_id: str,
     row = await db.fetchrow(
         """INSERT INTO job_matches(user_id, job_id, resume_version_id, overall, technical,
                experience, projects, education, matched_skills, missing_skills, evidence,
-               narrative, model)
+               why_match, preparation, narrative, model)
            VALUES ($1::uuid,$2::uuid,$3::uuid,$4,$5,$6,$7,$8,$9::jsonb,$10::jsonb,
-                   $11::jsonb,$12,$13)
+                   $11::jsonb,$12::jsonb,$13::jsonb,$14,$15)
            ON CONFLICT (user_id, job_id, resume_version_id) DO UPDATE SET
              overall=EXCLUDED.overall, technical=EXCLUDED.technical,
              experience=EXCLUDED.experience, projects=EXCLUDED.projects,
              education=EXCLUDED.education, matched_skills=EXCLUDED.matched_skills,
              missing_skills=EXCLUDED.missing_skills, evidence=EXCLUDED.evidence,
+             why_match=EXCLUDED.why_match, preparation=EXCLUDED.preparation,
              narrative=EXCLUDED.narrative, model=EXCLUDED.model, created_at=now()
            RETURNING id""",
         user_id, job_id, resume_version_id, result["overall"], result["technical"],
         result["experience"], result["projects"], result["education"],
         db.jsonb(result["matchedSkills"]), db.jsonb(result["missingSkills"]),
-        db.jsonb(result["evidence"]), result["narrative"], result.get("model"))
+        db.jsonb(result["evidence"]), db.jsonb(result["whyMatch"]),
+        db.jsonb(result["preparation"]), result["narrative"], result.get("model"))
     return str(row["id"])

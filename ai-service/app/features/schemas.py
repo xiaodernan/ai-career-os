@@ -105,6 +105,20 @@ class SkillGap(BaseModel):
     advice: str = ""
 
 
+class PreparationItem(BaseModel):
+    """One thing to work on, ordered by the overall-score points closing it can unlock.
+
+    Deliberately narrower than the UI's ``PreparationItem`` type: no ``resource`` and no
+    ``hours``, because nothing in the scoring path knows where to read something or how long it
+    takes, and a confident "~4h" invented here would be the first number on this panel that the
+    service cannot defend.
+    """
+
+    title: str
+    reason: str = ""
+    priority: str = "must"          # the JD's own word: must | should | nice
+
+
 class MatchResult(BaseModel):
     overall: float
     technical: float
@@ -115,6 +129,8 @@ class MatchResult(BaseModel):
     missingSkills: list[str] = Field(default_factory=list)
     skillGaps: list[SkillGap] = Field(default_factory=list)
     evidence: list[EvidenceItem] = Field(default_factory=list)
+    whyMatch: list[str] = Field(default_factory=list)
+    preparation: list[PreparationItem] = Field(default_factory=list)
     narrative: str = ""
     interviewTopics: list[str] = Field(default_factory=list)
     model: str = ""

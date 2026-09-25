@@ -1,19 +1,25 @@
 """Unit tests for the deterministic pieces of the match engine (PRD §10).
 
-Only the pure, I/O-free helpers are exercised here — the weighted-score
-orchestration lives in ``compute_match`` which needs the LLM/DB and is covered by
-integration tests. These lock the date-parsing behaviour that silently
-under-counted experience when resumes carried year-only ranges.
+Only the pure, I/O-free helpers are exercised here, plus one ``compute_match`` driver
+with the LLM and the RAG store stubbed — the builders that fill the job panel's
+"why" bullets and preparation card have to be shown to be *called*, not only correct.
+These also lock the date-parsing behaviour that silently under-counted experience
+when resumes carried year-only ranges.
 """
 
+import ast
+import inspect
+import re
 from datetime import date
 
 import pytest
 
+from app.features import match as match_mod
 from app.features.match import (_OVERALL_WEIGHTS, _education_score, _edu_rank,
-                                _experience_score, _matched_missing, _overall,
-                                _projects_score, _skill_set, _technical_score,
-                                _user_years, _year_month)
+                                _experience_score, _matched_missing, _min_degree,
+                                _overall, _preparation, _preparation_worths, _projects_score,
+                                _skill_set, _technical_denominator, _technical_score,
+                                _user_years, _why_match, _year_month, compute_match)
 
 
 # ---------------- _year_month ----------------
@@ -292,22 +298,123 @@ def test_overall_rounds_to_four_places():
     assert _overall(0.33333, 0.33333, 0.33333, 0.33333) == 0.3333
 
 
-# ---------------- compute_match result ↔ persist_match column contract ----------------
-# persist_match indexes these exact keys out of compute_match()'s MatchResult.model_dump();
-# the whole INSERT path is otherwise only exercised by Docker *IT. A field renamed in
-# schemas.MatchResult (or a key edited in persist_match) without the other would 500 at
-# runtime — this locks the two in sync offline.
+# ---------------- compute_match result ↔ persist_match SQL contract ----------------
+# persist_match is only exercised end-to-end by the Docker *ITs, and every one of its drift
+# classes is silent: a column listed without a bind argument raises at runtime, a bind argument
+# fed into the wrong column stores the wrong value with no error at all, and a column left out of
+# the ON CONFLICT DO UPDATE list keeps the *previous* match's text forever — which is what a
+# re-match of the same resume/job pair always is. So the far side of this gate is parsed out of
+# persist_match's own source rather than copied here; a hand-mirrored list could only ever catch
+# drift on the side someone remembered to write down.
 
-_PERSIST_INDEXED_KEYS = ["overall", "technical", "experience", "projects", "education",
-                         "matchedSkills", "missingSkills", "evidence", "narrative", "model"]
+
+def _fetchrow_call() -> tuple[str, list[ast.expr]]:
+    tree = ast.parse(inspect.getsource(match_mod))
+    fn = next((n for n in tree.body if isinstance(n, ast.AsyncFunctionDef)
+               and n.name == "persist_match"), None)
+    assert fn is not None, "persist_match is gone from app.features.match; this gate has no subject"
+    call = next((n for n in ast.walk(fn) if isinstance(n, ast.Call)
+                 and getattr(n.func, "attr", "") == "fetchrow"), None)
+    assert call is not None, "persist_match no longer builds its statement with db.fetchrow"
+    assert isinstance(call.args[0], ast.Constant), "persist_match's SQL is no longer a literal"
+    return call.args[0].value, list(call.args[1:])
 
 
-def test_match_result_dump_carries_every_key_persist_match_indexes():
+def _split_list(text: str) -> list[str]:
+    return [part.strip() for part in text.split(",")]
+
+
+def _insert_columns(sql: str) -> list[str]:
+    return _split_list(re.search(r"INSERT INTO job_matches\((.*?)\)", sql, re.S).group(1))
+
+
+def _bind_args(sql: str) -> list[str]:
+    return _split_list(re.search(r"VALUES\s*\((.*?)\)", sql, re.S).group(1))
+
+
+def _arg_source(node: ast.expr) -> str:
+    """Where a bind argument comes from: the local parameter name, or the ``result`` key."""
+    if isinstance(node, ast.Constant):       # result.get("model")
+        assert isinstance(node.value, str), "a non-string literal in persist_match's bind list"
+        return node.value
+    if isinstance(node, ast.Call):           # db.jsonb(result["x"]) / result.get("model")
+        if getattr(node.func, "attr", "") in ("jsonb", "get"):
+            return _arg_source(node.args[0])
+        return f"<call {ast.dump(node)}>"
+    if isinstance(node, ast.Subscript):
+        assert isinstance(node.value, ast.Name) and node.value.id == "result"
+        assert isinstance(node.slice, ast.Constant)
+        return node.slice.value
+    if isinstance(node, ast.Name):
+        return node.id
+    return f"<expr {ast.dump(node)}>"
+
+
+_IDENTITY_COLUMNS = ["user_id", "job_id", "resume_version_id"]
+# MatchResult fields persist_match deliberately does not store. Each one is re-derivable and the
+# consumer already falls back, so widening the row for them would buy nothing — but they must be
+# *declared*, because "the schema grew a field nobody persists" is otherwise invisible offline.
+UNPERSISTED_MATCH_FIELDS = {
+    "skillGaps": "derived from missingSkills, which IS stored; jobs/[id]/page.tsx:88 falls back "
+                 "to normalizeSkillGaps(jdBody) when a stored match carries none.",
+    "interviewTopics": "the JD's own list, not a property of this resume/job pair; it is stored "
+                       "with the analysis and jobs/[id]/page.tsx:90 falls back to "
+                       "jdParsed.interviewTopics.",
+}
+
+
+def test_persist_statement_binds_one_argument_per_column():
+    sql, args = _fetchrow_call()
+    cols, binds = _insert_columns(sql), _bind_args(sql)
+    assert [c for c in cols if c in _IDENTITY_COLUMNS] == _IDENTITY_COLUMNS
+    assert len(cols) == 15, "the measured column list this gate was written against"
+    assert cols == list(dict.fromkeys(cols)), "a column listed twice in the INSERT"
+    assert len(binds) == len(cols) == len(args)
+    assert [int(re.match(r"\$(\d+)", b).group(1)) for b in binds] == list(range(1, len(cols) + 1))
+
+
+def _camel(snake: str) -> str:
+    """job_matches column name -> the MatchResult field name that feeds it."""
+    head, *rest = snake.split("_")
+    return head + "".join(p.title() for p in rest)
+
+
+def test_each_column_is_fed_the_result_key_named_after_it():
+    sql, args = _fetchrow_call()
+    cols = _insert_columns(sql)
+    assert len(cols) == len(args)
+    drift = []
+    for col, node in zip(cols, args):
+        want = col if col in _IDENTITY_COLUMNS else _camel(col)
+        if _arg_source(node) != want:
+            drift.append(f"{col} <- {_arg_source(node)}")
+    assert drift == [], f"columns bound from a differently-named source: {drift}"
+
+
+def test_on_conflict_refreshes_every_stored_column():
+    sql, _args = _fetchrow_call()
+    assert "DO UPDATE SET" in sql, "persist_match stopped refreshing an existing match row"
+    updated = dict(re.findall(r"(\w+)\s*=\s*EXCLUDED\.(\w+)", sql.split("DO UPDATE SET")[1]))
+    stored = [c for c in _insert_columns(sql) if c not in _IDENTITY_COLUMNS]
+    assert sorted(updated) == sorted(stored), (
+        f"stale-on-rewrite columns: {set(stored) - set(updated)} / extra: "
+        f"{set(updated) - set(stored)}")
+    assert [k for k, v in updated.items() if k != v] == [], \
+        "an ON CONFLICT assignment that copies a different column"
+    assert "created_at=now()" in sql, "a re-match must not keep the original row's timestamp"
+
+
+def test_match_result_fields_are_all_persisted_or_declared():
     from app.features.schemas import MatchResult
 
-    dumped = MatchResult(overall=0.5, technical=0.5, experience=0.5, projects=0.5,
-                         education=0.5).model_dump()
-    assert [k for k in _PERSIST_INDEXED_KEYS if k not in dumped] == []
+    sql, args = _fetchrow_call()
+    persisted = {_arg_source(node) for col, node in zip(_insert_columns(sql), args)
+                 if col not in _IDENTITY_COLUMNS}
+    fields = set(MatchResult.model_fields)
+    assert sorted(fields - persisted - set(UNPERSISTED_MATCH_FIELDS)) == []
+    assert sorted(persisted - fields) == []
+    assert all(reason.strip() for reason in UNPERSISTED_MATCH_FIELDS.values())
+    assert [k for k, v in UNPERSISTED_MATCH_FIELDS.items() if k not in fields] == []
 
 
 def test_match_result_nested_evidence_dumps_snake_keys_persist_stores():
@@ -318,9 +425,18 @@ def test_match_result_nested_evidence_dumps_snake_keys_persist_stores():
         matchedSkills=["Go"], missingSkills=["Rust"],
         evidence=[{"criterion": "skill:Go", "score": 0.2, "chunk_ids": ["c1"],
                    "quote": "q", "source": "Resume", "section": "exp", "reasoning": "r"}],
+        whyMatch=["Your resume covers 1 of the 2 skills this JD lists: go."],
+        preparation=[{"title": "Add concrete evidence of rust", "reason": "r",
+                      "priority": "must"}],
         narrative="n", interviewTopics=["systems"], model="m").model_dump()
     assert dumped["matchedSkills"] == ["Go"] and dumped["missingSkills"] == ["Rust"]
     assert dumped["evidence"][0]["chunk_ids"] == ["c1"]   # snake persisted as jsonb
+    # the two explanation columns are persisted straight out of this dump, so what the browser
+    # reads back has to be the shape the panel indexes into: a list of sentences and a list of
+    # objects with exactly title/reason/priority.
+    assert dumped["whyMatch"] == ["Your resume covers 1 of the 2 skills this JD lists: go."]
+    assert dumped["preparation"] == [{"title": "Add concrete evidence of rust",
+                                      "reason": "r", "priority": "must"}]
     assert dumped["narrative"] == "n" and dumped["model"] == "m"
 
 
@@ -351,3 +467,231 @@ def test_skill_set_survives_null_experience_with_non_null_projects():
     p = {"skills": [{"name": "Go"}], "experience": None, "projects": [{"tech": ["Rust"]}]}
     got = _skill_set(p)
     assert "Go" in got and "Rust" in got
+
+
+# ---------------- _preparation / _preparation_worths ----------------
+# The job panel's "Recommended preparation" card promises its items are "ordered by how much
+# match score each item is worth", and `MatchResult.preparation` is what feeds it. Nothing
+# produced that promise until this unit: the card rendered nothing for every job in the product.
+# So the worths are derived from `_technical_score`'s own denominator, and these tests hold that
+# to the arithmetic rather than to wording someone liked.
+
+
+def test_preparation_ranks_gaps_by_worth_then_title():
+    req = [{"name": "kubernetes", "priority": "must"},
+           {"name": "terraform", "priority": "nice"}]
+    pref = [{"name": "rust", "priority": "nice"}]
+    scored = _preparation_worths(req, pref, set(), _technical_denominator(req, pref))
+    # the titles carry normalize()'s canonical spelling, the same name the skill chips show
+    assert [i["title"] for i, _ in scored] == [
+        "Add concrete evidence of Kubernetes",
+        "Add concrete evidence of Terraform",
+        "Add concrete evidence of Rust",
+    ]
+    # must(3.0) > a required-listed nice(1.0) > a preferred nice(0.3 * 1.0)
+    assert [p for _, p in scored] == sorted([p for _, p in scored], reverse=True)
+    assert scored[0][1] > scored[1][1] > scored[2][1]
+
+
+def test_preparation_worths_sum_to_technicals_share_of_overall():
+    # The invariant that keeps the shared denominator honest: when the resume covers nothing, the
+    # technical score is 0 and the points on offer across all gaps are exactly the 42 points
+    # technical is worth inside the overall score. Recompute the denominator in _technical_score
+    # or the scaling here and this goes red.
+    req = [{"name": "java", "priority": "must"}, {"name": "spring", "priority": "should"}]
+    pref = [{"name": "rust", "priority": "nice"}, {"name": "go", "priority": "must"}]
+    denom = _technical_denominator(req, pref)
+    assert _technical_score(req, pref, set()) == 0.0
+    total = sum(points for _, points in _preparation_worths(req, pref, set(), denom))
+    assert total == pytest.approx(100 * _OVERALL_WEIGHTS[0], abs=0.2)
+
+
+def test_preparation_closes_the_loop_when_every_gap_is_closed():
+    # The other half of the same arithmetic: matching every listed skill lifts technical to 1.0,
+    # which is worth exactly the points the full gap list promised.
+    req = [{"name": "java", "priority": "must"}, {"name": "spring", "priority": "should"}]
+    pref = [{"name": "rust", "priority": "nice"}]
+    denom = _technical_denominator(req, pref)
+    promised = sum(points for _, points in _preparation_worths(req, pref, set(), denom))
+    covered = {"Java", "Spring", "Rust", "Go"}
+    gained = 100 * _OVERALL_WEIGHTS[0] * (
+        _technical_score(req, pref, covered) - _technical_score(req, pref, set()))
+    assert gained == pytest.approx(promised, abs=0.2)
+
+
+def test_preparation_is_empty_when_the_jd_lists_no_skill():
+    # No denominator means no score to be missing points on, so there is nothing to promise. This
+    # is the same condition under which _technical_score falls back to its neutral 0.6.
+    assert _technical_score([], [], {"java"}) == 0.6
+    assert _preparation_worths([], [], {"java"}, _technical_denominator([], [])) == []
+    assert _preparation([], [], {"java"}, _technical_denominator([], [])) == []
+
+
+def test_preparation_skips_covered_skills_and_one_name_per_gap():
+    req = [{"name": "Java"}, {"name": "Kubernetes", "priority": "must"}]
+    pref = [{"name": "kubernetes", "priority": "nice"}]   # the JD double-lists one skill
+    items = _preparation(req, pref, {"Java"}, _technical_denominator(req, pref))
+    assert [i["title"] for i in items] == ["Add concrete evidence of Kubernetes"]
+    assert items[0]["priority"] == "must", "the required listing is the one that must be closed"
+
+
+def test_preparation_items_carry_only_what_the_scoring_path_can_defend():
+    req = [{"name": "kubernetes", "priority": "must"}]
+    items = _preparation(req, [], set(), _technical_denominator(req, []))
+    assert [set(i) for i in items] == [{"title", "reason", "priority"}]
+    # The UI renders `~{hours}h` and a `resource` link when present. Neither is produced here on
+    # purpose: the matcher knows which skill is missing and what that is worth, not where to read
+    # it or how long it takes, and a confident "~4h" would be the first number on this panel the
+    # service cannot derive.
+    assert "hours" not in items[0] and "resource" not in items[0]
+    assert items[0]["reason"].startswith("Required by this JD")
+
+
+def test_preparation_reports_the_worth_it_sorted_by():
+    req = [{"name": "java", "priority": "must"}, {"name": "spring", "priority": "nice"}]
+    pref = [{"name": "rust", "priority": "should"}]
+    denom = _technical_denominator(req, pref)
+    for item, points in _preparation_worths(req, pref, set(), denom):
+        assert str(points) in item["reason"]
+
+
+def test_preparation_caps_the_list_without_reordering_it():
+    req = [{"name": f"skill{i}", "priority": "must"} for i in range(8)]
+    full = [i for i, _ in _preparation_worths(req, [], set(), _technical_denominator(req, []))]
+    assert len(full) == 8
+    assert _preparation(req, [], set(), _technical_denominator(req, [])) == full[:6]
+    assert _preparation(req, [], set(), _technical_denominator(req, []), cap=0) == []
+
+
+def test_preparation_keeps_the_jds_own_priority_word():
+    # An unrecognised priority is scored as the group's default weight (3.0 for required), so the
+    # only gap must be worth the whole 42 points — and the badge still says what the JD said.
+    req = [{"name": "docker", "priority": "urgent"}]
+    denom = _technical_denominator(req, [])
+    scored = _preparation_worths(req, [], set(), denom)
+    assert scored[0][1] == pytest.approx(42.0)
+    assert scored[0][0]["priority"] == "urgent"
+
+
+# ---------------- _why_match / _min_degree ----------------
+
+
+def test_min_degree_only_reports_what_the_jd_states():
+    assert _min_degree({}) == ""
+    assert _min_degree({"education": None}) == ""
+    assert _min_degree({"education": "bachelor"}) == ""      # not the shaped object
+    assert _min_degree({"education": {}}) == ""
+    assert _min_degree({"education": {"minDegree": "Master"}}) == "Master"
+
+
+def test_why_match_reports_coverage_of_the_skills_the_jd_listed():
+    req = [{"name": f"s{i}"} for i in range(3)]
+    pref = [{"name": "s3"}]
+    bullets = _why_match(["s0", "s1", "s2", "s3"], req, pref, 0.5, "note", 0.5, {})
+    assert bullets == ["Your resume covers 4 of the 4 skills this JD lists: s0, s1, s2 (+1 more)."]
+
+
+def test_why_match_neutral_scores_are_not_offered_as_strengths():
+    # 0.75 experience and 0.8 education are what the engine returns when the JD states nothing;
+    # calling those strengths would be the panel lying about a fit the facts do not support.
+    assert _why_match([], [], [], 0.75, "JD does not state explicit years.", 0.8, {}) == []
+    assert _why_match([], [], [], 0.75, "JD does not state explicit years.", 1.0, {}) == []
+
+
+def test_why_match_experience_bullet_needs_the_bar_not_a_number():
+    bullets = _why_match([], [], [], 0.8, "7.0y experience >= required 5y.", 0.5, {})
+    assert bullets == ["Experience: 7.0y experience >= required 5y."]
+    assert _why_match([], [], [], 0.79, "under the bar", 0.5, {}) == []
+
+
+def test_why_match_education_bullet_needs_a_stated_minimum():
+    assert _why_match([], [], [], 0.5, "n", 1.0, {"education": {"minDegree": "bachelor"}}) == [
+        "Education meets the stated minimum (bachelor)."]
+    assert _why_match([], [], [], 0.5, "n", 1.0, {}) == []      # neutral: no minimum was stated
+    assert _why_match([], [], [], 0.5, "n", 0.9,
+                      {"education": {"minDegree": "bachelor"}}) == []
+
+
+def test_why_match_orders_the_three_bullets_it_can_clear():
+    req = [{"name": "java"}, {"name": "rust"}]
+    jd = {"education": {"minDegree": "bachelor"}}
+    bullets = _why_match(["java"], req, [], 0.9, "5y >= required 3y.", 1.0, jd)
+    assert len(bullets) == 3
+    assert bullets[0].startswith("Your resume covers 1 of the 2 skills")
+    assert bullets[1] == "Experience: 5y >= required 3y."
+    assert bullets[2] == "Education meets the stated minimum (bachelor)."
+
+
+# ---------------- compute_match wiring (LLM + RAG stubbed) ----------------
+# The two builders above are only user-visible if compute_match actually calls them and the
+# result carries them into the dump. Everything else in this file would stay green if the wiring
+# were dropped, so this drives the real coroutine with just the two I/O chokepoints faked.
+
+
+def _stub_io(monkeypatch, calls: list):
+    from app.providers.base import LLMResponse
+
+    async def fake_ask(req, *, user_id=None, run_id=None, agent="system", kind="chat"):
+        calls.append(("ask", agent, kind))
+        return LLMResponse(text="computed-facts narrative", model="mock-model")
+
+    async def fake_keyword_search(user_id, term, k=5, kinds=None):
+        calls.append(("search", term, tuple(kinds or ())))
+        return [{"id": "chunk-1", "text": f"built {term} at work", "doc_title": "Resume",
+                 "section_path": "experience"}]
+
+    monkeypatch.setattr(match_mod, "ask", fake_ask)
+    monkeypatch.setattr(match_mod.store, "keyword_search", fake_keyword_search)
+
+
+_RESUME = {"skills": [{"name": "Java"}], "experience": [{"company": "X", "title": "Engineer",
+           "start": "2019-01", "end": "present", "bullets": ["Java services"]}],
+           "projects": [], "education": [{"school": "S", "degree": "bachelor"}], "profile": {}}
+_JD = {"title": "Backend Engineer", "company": "Acme", "experienceYears": 3,
+       "education": {"minDegree": "bachelor"},
+       "requiredSkills": [{"name": "Java", "priority": "must", "evidence_phrase": "java"},
+                          {"name": "Kubernetes", "priority": "must", "evidence_phrase": "k8s"}],
+       "preferredSkills": [{"name": "Rust", "priority": "nice"}],
+       "interviewTopics": ["systems design"]}
+
+
+async def test_compute_match_emits_both_explanations(monkeypatch):
+    calls: list = []
+    _stub_io(monkeypatch, calls)
+    result = await compute_match(_RESUME, _JD, user_id="u-1")
+
+    assert result["whyMatch"] == [
+        "Your resume covers 1 of the 3 skills this JD lists: Java.",
+        "Experience: 6.0y experience >= required 3y.",
+        "Education meets the stated minimum (bachelor).",
+    ]
+    assert [i["title"] for i in result["preparation"]] == [
+        "Add concrete evidence of Kubernetes", "Add concrete evidence of Rust"]
+    assert [i["priority"] for i in result["preparation"]] == ["must", "nice"]
+    assert "why_match" not in result and "whyMatch" in result, "the wire key is the camelCase one"
+
+
+async def test_compute_match_preparation_worths_match_the_score_gap(monkeypatch):
+    # The card promises the ordering is by score worth; here the promise is checked against the
+    # overall score the same resume/job pair actually produces.
+    calls: list = []
+    _stub_io(monkeypatch, calls)
+    result = await compute_match(_RESUME, _JD, user_id="u-1")
+    full_resume = {**_RESUME, "skills": [{"name": "Java"}, {"name": "Kubernetes"},
+                                         {"name": "Rust"}]}
+    improved = await compute_match(full_resume, _JD, user_id="u-1")
+    promised = sum(float(re.search(r"([\d.]+) points", i["reason"]).group(1))
+                   for i in result["preparation"])
+    assert improved["overall"] - result["overall"] == pytest.approx(promised / 100, abs=0.005)
+
+
+async def test_compute_match_why_match_is_empty_for_a_thin_jd(monkeypatch):
+    # A JD listing no skills and stating no bars: every dimension is neutral, so the panel gets no
+    # bullets rather than three invented ones.
+    calls: list = []
+    _stub_io(monkeypatch, calls)
+    result = await compute_match({"skills": [], "experience": [], "projects": [],
+                                  "education": [], "profile": {}}, {"title": "Anonymous"},
+                                 user_id="u-1")
+    assert result["whyMatch"] == []
+    assert result["preparation"] == []

@@ -160,7 +160,10 @@ user-scoped table (ownership is enforced in backend layer + a single SQL predica
 - `job_matches(id, user_id, job_id, resume_version_id, overall float, technical float,
    experience float, projects float, education float, matched_skills jsonb,
    missing_skills jsonb, evidence jsonb /* [{criterion, score, chunk_ids, quote,
-   reasoning}] */, model, created_at, uniq(user,job,rv))`
+   reasoning}] */, why_match jsonb /* sentences, only for dimensions that clear their
+   bar — a neutral score is not a strength */, preparation jsonb /* [{title, reason,
+   priority}] open gaps ordered by the overall-score points closing each, i.e.
+   `_technical_score`'s own denominator */, model, created_at, uniq(user,job,rv))`
 - `applications(id, user_id, job_id nullable, company_id, title, status enum[saved,
    applied, oa, interview, final_round, offer, rejected], stage_order, notes,
    reminder_at, resume_version_id, jd_id, match_id, applied_at, updated_by_user)`
