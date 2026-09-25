@@ -18,7 +18,8 @@ from app.features import match as match_mod
 from app.features.match import (_OVERALL_WEIGHTS, _education_score, _edu_rank,
                                 _experience_score, _matched_missing, _min_degree,
                                 _overall, _preparation, _preparation_worths, _projects_score,
-                                _skill_set, _technical_denominator, _technical_score,
+                                _skill_gaps, _skill_set, _technical_denominator,
+                                _technical_score,
                                 _user_years, _why_match, _year_month, compute_match)
 
 
@@ -278,6 +279,63 @@ def test_matched_missing_empty():
     assert _matched_missing([], [], {"Python"}) == ([], [])
 
 
+# ---------------- _skill_gaps ----------------
+
+
+def test_skill_gap_carries_the_jds_own_priority_and_phrase():
+    # The panel colours the badge from `importance` and prints `reason` as the posting's own
+    # wording, so both must come from the requirement, not from a constant.
+    gaps = _skill_gaps([{"name": "Kubernetes", "priority": "should",
+                         "evidence_phrase": "production experience with Kubernetes"}],
+                       {"Java"})
+    assert gaps == [{"skill": "Kubernetes", "importance": "should",
+                     "reason": "production experience with Kubernetes"}]
+
+
+def test_skill_gap_defaults_to_must_only_when_the_jd_says_nothing():
+    assert [g["importance"] for g in _skill_gaps([{"name": "Go"}], set())] == ["must"]
+    assert [g["importance"] for g in _skill_gaps(
+        [{"name": "Go", "priority": "nice"}], set())] == ["nice"]
+
+
+def test_skill_gap_reason_is_empty_when_the_jd_gave_no_phrase():
+    # The mock provider and the deterministic backfill both emit requirements without an
+    # evidence_phrase; the card then shows the skill alone rather than a made-up sentence. The
+    # paired row is what makes this a statement about the producer: in one call, the requirement
+    # with a phrase must carry it and the one without must be empty. Asserting the bare row alone
+    # would stay green for a producer that hardcodes "" and never reads the key at all.
+    gaps = _skill_gaps([{"name": "Rust", "priority": "must"},
+                        {"name": "Go", "evidence_phrase": "go concurrency experience"}], set())
+    assert gaps == [{"skill": "Rust", "importance": "must", "reason": ""},
+                    {"skill": "Go", "importance": "must",
+                     "reason": "go concurrency experience"}]
+
+
+def test_skill_gaps_follow_the_jds_order_not_alphabetical():
+    # `missingSkills` is sorted for the chip row; the gap cards keep the posting's own ranking, so
+    # the two lists deliberately differ and a shared sorted() would silently re-order the panel.
+    gaps = _skill_gaps([{"name": "Kubernetes"}, {"name": "Go", "priority": "nice"}], set())
+    assert [g["skill"] for g in gaps] == ["Kubernetes", "Go"]
+
+
+def test_skill_gaps_only_cover_required_skills_the_resume_lacks():
+    gaps = _skill_gaps([{"name": "Java"}, {"name": "Go"}], {"Java"})
+    assert [g["skill"] for g in gaps] == ["Go"]
+
+
+def test_skill_gaps_dedup_a_skill_listed_twice_and_drop_the_blank_name():
+    # Two spellings of one skill normalize to the same name, and the JD can list it twice; the
+    # card keeps the first mention's priority, which is why `seen` is checked before appending.
+    gaps = _skill_gaps([{"name": "Kubernetes", "priority": "must"}, {"name": "kubernetes"},
+                        {"name": "Kubernetes", "priority": "nice"}, {"name": ""}], set())
+    assert [g["skill"] for g in gaps] == ["Kubernetes"]
+    assert gaps[0]["importance"] == "must"
+
+
+def test_skill_gaps_empty_when_everything_is_covered():
+    assert _skill_gaps([], {"Java"}) == []
+
+
 # ---------------- _overall ----------------
 
 
@@ -351,15 +409,17 @@ def _arg_source(node: ast.expr) -> str:
 
 
 _IDENTITY_COLUMNS = ["user_id", "job_id", "resume_version_id"]
-# MatchResult fields persist_match deliberately does not store. Each one is re-derivable and the
-# consumer already falls back, so widening the row for them would buy nothing — but they must be
-# *declared*, because "the schema grew a field nobody persists" is otherwise invisible offline.
+# MatchResult fields persist_match deliberately does not store. Each one is re-derivable from a
+# row that IS stored elsewhere and the consumer's fallback resolves, so widening this row would buy
+# nothing — but each must be *declared*, because "the schema grew a field nobody persists" is
+# otherwise invisible offline. This registry only shrinks: storing a field means deleting its entry.
 UNPERSISTED_MATCH_FIELDS = {
-    "skillGaps": "derived from missingSkills, which IS stored; jobs/[id]/page.tsx:88 falls back "
-                 "to normalizeSkillGaps(jdBody) when a stored match carries none.",
+    # Measured 2026-09-26, and this is the one that stays: interview_topics is a property of the
+    # JD, not of this resume/job pair, and the analysis already carries it — jdParsed.interviewTopics
+    # is a live source, unlike the skill-gaps fallback, which read a key no producer ever emitted.
     "interviewTopics": "the JD's own list, not a property of this resume/job pair; it is stored "
-                       "with the analysis and jobs/[id]/page.tsx:90 falls back to "
-                       "jdParsed.interviewTopics.",
+                       "with the analysis in job_jds.parsed and jobs/[id]/page.tsx falls back to "
+                       "jdParsed.interviewTopics, which does resolve.",
 }
 
 
@@ -367,7 +427,7 @@ def test_persist_statement_binds_one_argument_per_column():
     sql, args = _fetchrow_call()
     cols, binds = _insert_columns(sql), _bind_args(sql)
     assert [c for c in cols if c in _IDENTITY_COLUMNS] == _IDENTITY_COLUMNS
-    assert len(cols) == 15, "the measured column list this gate was written against"
+    assert len(cols) == 16, "the measured column list this gate was written against"
     assert cols == list(dict.fromkeys(cols)), "a column listed twice in the INSERT"
     assert len(binds) == len(cols) == len(args)
     assert [int(re.match(r"\$(\d+)", b).group(1)) for b in binds] == list(range(1, len(cols) + 1))
@@ -423,6 +483,8 @@ def test_match_result_nested_evidence_dumps_snake_keys_persist_stores():
     dumped = MatchResult(
         overall=0.1, technical=0.2, experience=0.3, projects=0.4, education=0.5,
         matchedSkills=["Go"], missingSkills=["Rust"],
+        skillGaps=[{"skill": "Rust", "importance": "should",
+                    "reason": "production experience with Rust"}],
         evidence=[{"criterion": "skill:Go", "score": 0.2, "chunk_ids": ["c1"],
                    "quote": "q", "source": "Resume", "section": "exp", "reasoning": "r"}],
         whyMatch=["Your resume covers 1 of the 2 skills this JD lists: go."],
@@ -437,6 +499,11 @@ def test_match_result_nested_evidence_dumps_snake_keys_persist_stores():
     assert dumped["whyMatch"] == ["Your resume covers 1 of the 2 skills this JD lists: go."]
     assert dumped["preparation"] == [{"title": "Add concrete evidence of rust",
                                       "reason": "r", "priority": "must"}]
+    # skill_gaps is persisted out of this same dump, and the panel renders the importance straight
+    # as a badge colour, so the JD's own word has to survive the round trip — and the retired
+    # `advice` key must not come back as an extra field the browser never reads.
+    assert dumped["skillGaps"] == [{"skill": "Rust", "importance": "should",
+                                   "reason": "production experience with Rust"}]
     assert dumped["narrative"] == "n" and dumped["model"] == "m"
 
 

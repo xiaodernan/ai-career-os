@@ -163,7 +163,10 @@ user-scoped table (ownership is enforced in backend layer + a single SQL predica
    reasoning}] */, why_match jsonb /* sentences, only for dimensions that clear their
    bar — a neutral score is not a strength */, preparation jsonb /* [{title, reason,
    priority}] open gaps ordered by the overall-score points closing each, i.e.
-   `_technical_score`'s own denominator */, model, created_at, uniq(user,job,rv))`
+   `_technical_score`'s own denominator */, skill_gaps jsonb /* [{skill, importance, reason}] —
+   required skills this resume cannot evidence, with the JD's OWN priority word so the badge never
+   invents urgency, and its own phrase for asking (closing advice belongs to `preparation`) */,
+   narrative, model, created_at, uniq(user,job,rv))`
 - `applications(id, user_id, job_id nullable, company_id, title, status enum[saved,
    applied, oa, interview, final_round, offer, rejected], stage_order, notes,
    reminder_at, resume_version_id, jd_id, match_id, applied_at, updated_by_user)`

@@ -143,6 +143,28 @@ describe("normalizeMatch", () => {
     expect(m!.overall).toBe(60);
     expect(m!.evidence?.[0].criterion).toBe("A");
   });
+  it("keeps the stored gap items when the row is replayed after a refresh", () => {
+    // GET /jobs/{id} answers MatchSummary — the persisted jsonb, not the compute response — and the
+    // gap card indexes `importance` for its badge and `reason` for its line. A reader that dropped
+    // either rendered an unlabelled skill, and a page that only looked at the fresh response
+    // emptied the whole card the moment the user reloaded.
+    const m = normalizeMatch({
+      match: {
+        overall: 0.62,
+        skillGaps: [{ skill: "Kubernetes", importance: "should",
+                      reason: "production experience with Kubernetes" }],
+      },
+    });
+    expect(m!.skillGaps).toEqual([
+      { skill: "Kubernetes", importance: "should",
+        reason: "production experience with Kubernetes" },
+    ]);
+  });
+  it("leaves the gap list undefined when the row carries none", () => {
+    // A stored match from before the column existed reads back as `[]`; the card hides itself
+    // rather than showing an empty "Growth" section.
+    expect(normalizeMatch({ overall: 0.5, skillGaps: [] })!.skillGaps).toBeUndefined();
+  });
 });
 
 describe("normalizeJob", () => {

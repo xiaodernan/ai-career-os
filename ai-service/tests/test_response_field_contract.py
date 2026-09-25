@@ -52,6 +52,7 @@ PRODUCERS = {
     "JobDetail": ("java", "job/dto/JobDtos.java"),
     "MatchSummary": ("java", "job/dto/JobDtos.java"),
     "MatchResult": ("pydantic",),
+    "SkillGap": ("pydantic",),
 }
 
 # Readers whose producers are known per map. A reader with more producers than that --
@@ -89,6 +90,21 @@ READERS: dict[str, dict] = {
         "drilled": {"m": ("raw", "match")},
         "elements": {},
         "blind": {},
+    },
+    "normalizeSkillGaps": {
+        # The gap card's own reader, and the one whose ITEM shape is the contract: `g` is an item of
+        # the `skillGaps` list that `arr` reads out of `raw`, and the only author of those items is
+        # ai-service's SkillGap, persisted verbatim into `job_matches.skill_gaps` and projected back
+        # by MatchSummary. `raw` cannot be bound: its two callers hand over two different shapes --
+        # the list normalizeMatch already drilled, and a literal `{gaps: …}` the dashboard reader
+        # builds from missingSkills -- so the shared name is checked where the risk actually is: on
+        # the item.
+        "record_of": {"g": "SkillGap"},
+        "drilled": {"arr": ("raw", "skillGaps")},
+        "elements": {"g": "raw"},
+        "blind": {"raw": "the caller's payload, whatever shape it brings: `list(raw, \"skillGaps\", "
+                         "…)` returns `raw` untouched when the caller already drilled the list, so "
+                         "no single record owns the name"},
     },
 }
 
@@ -348,18 +364,24 @@ def test_the_reads_are_actually_found():
     assert len(matches) == 18
     assert {s["receiver"] for s in matches} == {"raw", "m"}
     assert sum(1 for s in matches if s["receiver"] == "m") == 17  # every payload read, incl. idOf
+    gaps = _sites("normalizeSkillGaps")
+    assert len(gaps) == 4
+    assert {s["receiver"] for s in gaps} == {"raw", "g"}
+    assert sum(1 for s in gaps if s["receiver"] == "g") == 3     # the three item reads
+    assert len(_emitted("SkillGap")) == 3
     assert len(_emitted("ApplicationItem")) == 15
     assert len(_emitted("CompanyItem")) == 9
     assert len(_emitted("MessageItem")) == 8
     assert len(_emitted("MatchResponse")) == 3
     assert len(_emitted("JobDetail")) == 23
-    assert len(_emitted("MatchSummary")) == 13
+    assert len(_emitted("MatchSummary")) == 14
     assert len(_emitted("MatchResult")) == 14
     # ...and the union is not a restatement of one side: `id`/`createdAt` come only from the stored
-    # row, `skillGaps`/`interviewTopics` only from the AI service's answer.
+    # row, `interviewTopics`/`model` only from the AI service's answer. `skillGaps` used to sit on
+    # the second side too — #126 gave it a column, so both authors now emit it and the site that
+    # reads it is live on every path rather than only after a fresh compute.
     assert _emitted("MatchSummary") - _emitted("MatchResult") == {"id", "createdAt"}
-    assert _emitted("MatchResult") - _emitted("MatchSummary") == {"interviewTopics", "model",
-                                                                  "skillGaps"}
+    assert _emitted("MatchResult") - _emitted("MatchSummary") == {"interviewTopics", "model"}
     assert _id_of_keys() == {"_id", "eventId", "event_id", "id", "key", "uuid"}
     dead = _dead_read_sites()
     assert len(dead) == 3

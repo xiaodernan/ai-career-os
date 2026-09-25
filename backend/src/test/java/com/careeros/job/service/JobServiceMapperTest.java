@@ -15,10 +15,11 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 /**
- * Binding-symmetry lock for {@link JobService#toSummary}: it forwards thirteen {@link JobMatch}
+ * Binding-symmetry lock for {@link JobService#toSummary}: it forwards fourteen {@link JobMatch}
  * getters into a positional record constructor. Five of them are adjacent {@code float} scores
- * (overall, technical, experience, projects, education) and five are adjacent {@code
- * List<Object>} fields (matchedSkills, missingSkills, evidence, whyMatch, preparation) — reordering
+ * (overall, technical, experience, projects, education) and six are adjacent {@code
+ * List<Object>} fields (matchedSkills, missingSkills, evidence, whyMatch, preparation,
+ * skillGaps) — reordering
  * any same-typed pair compiles cleanly and would silently relabel every match score the UI shows.
  * {@link JobMatch} is written only by ai-service and exposes no setters, so the fixture is seeded by
  * reflection.
@@ -38,6 +39,12 @@ class JobServiceMapperTest {
     // holds a Map: a list of Strings would not catch a reader that flattened them to titles.
     private static final List<Object> PREPARATION =
             List.of(Map.of("title", "Add concrete evidence of kubernetes", "priority", "must"));
+    // Gap items are objects on the wire too ({skill,importance,reason}), and only this column can
+    // carry a priority that is not "must" -- so seeding one proves toSummary forwards the stored
+    // jsonb instead of rebuilding the card from missingSkills, which has no importance at all.
+    private static final List<Object> SKILL_GAPS = List.of(Map.of(
+            "skill", "Kubernetes", "importance", "should",
+            "reason", "production experience with Kubernetes"));
 
     private static void setField(Object target, String name, Object value) {
         try {
@@ -62,6 +69,7 @@ class JobServiceMapperTest {
         setField(m, "evidence", EVIDENCE);
         setField(m, "whyMatch", WHY_MATCH);
         setField(m, "preparation", PREPARATION);
+        setField(m, "skillGaps", SKILL_GAPS);
         setField(m, "narrative", "Strong backend fit");
         setField(m, "createdAt", CREATED_AT);
         return m;
@@ -82,6 +90,7 @@ class JobServiceMapperTest {
         assertThat(s.evidence()).isEqualTo(EVIDENCE);
         assertThat(s.whyMatch()).isEqualTo(WHY_MATCH);
         assertThat(s.preparation()).isEqualTo(PREPARATION);
+        assertThat(s.skillGaps()).isEqualTo(SKILL_GAPS);
         assertThat(s.narrative()).isEqualTo("Strong backend fit");
         assertThat(s.createdAt()).isEqualTo(CREATED_AT);
     }
@@ -101,7 +110,7 @@ class JobServiceMapperTest {
     }
 
     @Test
-    void theFiveListSlotsStayInOrder() {
+    void theSixListSlotsStayInOrder() {
         MatchSummary s = JobService.toSummary(fullyPopulated());
 
         assertThat(s.matchedSkills()).containsExactly("Java", "Spring Boot");
@@ -111,6 +120,9 @@ class JobServiceMapperTest {
                 "Your resume covers 2 of the 4 skills this JD lists: java, spring boot.");
         assertThat(s.preparation()).containsExactly(
                 Map.of("title", "Add concrete evidence of kubernetes", "priority", "must"));
+        assertThat(s.skillGaps()).containsExactly(
+                Map.of("skill", "Kubernetes", "importance", "should",
+                        "reason", "production experience with Kubernetes"));
     }
 
     @Test
@@ -132,6 +144,7 @@ class JobServiceMapperTest {
         assertThat(s.evidence()).isEmpty();
         assertThat(s.whyMatch()).isEmpty();
         assertThat(s.preparation()).isEmpty();
+        assertThat(s.skillGaps()).isEmpty();
     }
 
     // ---------------- toItem / JobListItem ----------------

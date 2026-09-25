@@ -252,7 +252,6 @@ export interface SkillGap {
   skill: string;
   importance?: "critical" | "high" | "medium" | "low" | string;
   reason?: string;
-  howToClose?: string;
   relatedEvidence?: string;
 }
 

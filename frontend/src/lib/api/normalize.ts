@@ -256,6 +256,9 @@ export function normalizeMatch(raw: unknown): JobMatch | null {
   };
 }
 
+/* Gap items are stored exactly as ai-service's SkillGap emits them: {skill, importance, reason},
+ * where `importance` is the JD's own priority word and `reason` the phrase it used to ask. There is
+ * deliberately no advice column — what to do about a gap is the preparation card's job. */
 export function normalizeSkillGaps(raw: unknown): SkillGap[] {
   const arr = list(raw, "skillGaps", "skill_gaps", "gaps");
   return arr
@@ -269,7 +272,6 @@ export function normalizeSkillGaps(raw: unknown): SkillGap[] {
         skill,
         importance: str(g, "importance", "severity", "level", "priority"),
         reason: str(g, "reason", "detail", "description", "why"),
-        howToClose: str(g, "howToClose", "how_to_close", "action", "recommendation", "suggestion"),
       };
     })
     .filter((g): g is SkillGap => Boolean(g))

@@ -168,12 +168,6 @@ export function SkillGapCard({ gaps, className }: { gaps: SkillGap[]; className?
                   )}
                 </p>
                 {g.reason && <p className="text-xs text-muted-foreground">{g.reason}</p>}
-                {g.howToClose && (
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    <span className="font-medium text-foreground">Close it: </span>
-                    {g.howToClose}
-                  </p>
-                )}
               </div>
             </li>
           ))}

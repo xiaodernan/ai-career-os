@@ -65,6 +65,10 @@ public class JobMatch {
     @Column(name = "preparation", nullable = false)
     private List<Object> preparation = List.of();
 
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "skill_gaps", nullable = false)
+    private List<Object> skillGaps = List.of();
+
     @Column(name = "narrative")
     private String narrative;
 
@@ -129,6 +133,10 @@ public class JobMatch {
 
     public List<Object> getPreparation() {
         return preparation;
+    }
+
+    public List<Object> getSkillGaps() {
+        return skillGaps;
     }
 
     public String getNarrative() {

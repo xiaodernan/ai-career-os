@@ -405,8 +405,8 @@ public class JobService {
     static MatchSummary toSummary(JobMatch m) {
         return new MatchSummary(m.getId(), m.getOverall(), m.getTechnical(), m.getExperience(),
                 m.getProjects(), m.getEducation(), m.getMatchedSkills(), m.getMissingSkills(),
-                m.getEvidence(), m.getWhyMatch(), m.getPreparation(), m.getNarrative(),
-                m.getCreatedAt());
+                m.getEvidence(), m.getWhyMatch(), m.getPreparation(), m.getSkillGaps(),
+                m.getNarrative(), m.getCreatedAt());
     }
 
     public static JdItem toJdItem(JobJd jd) {

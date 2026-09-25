@@ -50,7 +50,7 @@ import { useCreateApplication, useCreateInterviewSession, useRunJobMatch } from 
 import { list as listOf, pick, rec, str } from "@/lib/api/normalize";
 import { formatSalary, titleCase } from "@/lib/format";
 import type { Evidence, JdRequirement, PreparationItem, SkillGap } from "@/lib/api/types";
-import { normalizeEvidence, normalizeJdParsed, normalizeSkillGaps } from "@/lib/api/normalize";
+import { normalizeEvidence, normalizeJdParsed } from "@/lib/api/normalize";
 
 const INTERVIEW_MODES = [
   { value: "behavioral", label: "Behavioral" },
@@ -85,7 +85,9 @@ export default function JobDetailPage() {
   const required = jdParsed.requiredSkills;
   const preferred = jdParsed.preferredSkills;
   const responsibilities = jdParsed.responsibilities;
-  const gaps: SkillGap[] = data?.skillGaps?.length ? data.skillGaps : normalizeSkillGaps(jdBody);
+  // A gap belongs to the match, not to the JD: a required skill is only a gap for *this* resume,
+  // so there is no analysis-side list to fall back to and the card stays hidden before a match.
+  const gaps: SkillGap[] = match?.skillGaps ?? [];
   const evidence: Evidence[] = match?.evidence ?? normalizeEvidence(jdBody);
   const topics: string[] = match?.interviewTopics?.length ? match.interviewTopics : jdParsed.interviewTopics;
   const prep: PreparationItem[] = match?.preparation ?? [];

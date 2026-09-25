@@ -108,7 +108,7 @@ per-user budget on AI endpoints.
 | GET | `/jobs/{id}` | detail + match breakdown |
 | POST | `/jobs/{id}/save` | `{note}` → bookmark + `saved` application |
 | DELETE | `/jobs/{id}/save` | |
-| POST | `/jobs/{id}/match` | `{resumeVersionId?}` → evidence-bound match, persisted; the stored row also answers `whyMatch` (bullets only for dimensions that clear their bar) and `preparation` items with `title`, `reason`, `priority`, ordered by the overall-score points closing each gap |
+| POST | `/jobs/{id}/match` | `{resumeVersionId?}` → `{jd, match, matchId}` — evidence-bound match, persisted; the stored row also answers `whyMatch` (bullets only for dimensions that clear their bar), `preparation` items with `title`, `reason`, `priority`, ordered by the overall-score points closing each gap, and `skillGaps` items with `skill`, `importance` (the JD's own priority word) and `reason` (the phrase the JD used to ask) — all three are columns, so the job detail replays the same cards after a refresh |
 | POST | `/jobs/{id}/tailor` | `{resumeVersionId?}` → tailored version + diff |
 | POST | `/jobs/{id}/tailored-version` | `{resumeVersionId, tailored, diff, plaintext}` → keeps a reviewed draft as a new version of that resume (201) |
 | POST | `/jobs/{id}/cover-letter` | `{resumeVersionId?, mode, tone, length, previous, goal}` |

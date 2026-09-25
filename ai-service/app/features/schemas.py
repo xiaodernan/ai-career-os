@@ -100,9 +100,17 @@ class EvidenceItem(BaseModel):
 
 
 class SkillGap(BaseModel):
+    """One required skill this resume does not evidence.
+
+    ``reason`` is the phrase the JD itself used to ask for the skill — the only "why" this service
+    can put on the card without inventing anything. How to *close* a gap is the preparation card's
+    job, so this row carries no advice text: the same sentence on two cards is two sentences to
+    keep true, and ``preparation`` already prices each gap in overall-score points.
+    """
+
     skill: str
-    importance: str = "must"
-    advice: str = ""
+    importance: str = "must"          # the JD's own word: must | should | nice
+    reason: str = ""
 
 
 class PreparationItem(BaseModel):

@@ -34,6 +34,7 @@ public final class JobDtos {
                                float projects, float education, List<Object> matchedSkills,
                                List<Object> missingSkills, List<Object> evidence,
                                List<Object> whyMatch, List<Object> preparation,
+                               List<Object> skillGaps,
                                String narrative, OffsetDateTime createdAt) {
     }
 

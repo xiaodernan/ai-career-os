@@ -177,6 +177,29 @@ def _matched_missing(req: list[dict], pref: list[dict],
     return matched, missing
 
 
+def _skill_gaps(req: list[dict], r_skills: set[str]) -> list[dict]:
+    """The required skills the resume does not evidence, in the order the JD listed them.
+
+    Two things this refuses to invent. ``importance`` is the requirement's *own* priority word,
+    not a blanket "must": the panel renders "must" as a destructive red badge, so labelling a
+    nice-to-have that way manufactures an urgency the posting never stated. And ``reason`` is the
+    JD's own evidence phrase for asking, which is why this gap card has no advice column at all —
+    what to do about a gap is the preparation card's job, and it already prices each one in
+    overall-score points.
+    """
+    seen: set[str] = set()
+    gaps: list[dict] = []
+    for s in req:
+        name = normalize(s.get("name", ""))
+        if not name or name in r_skills or name in seen:
+            continue
+        seen.add(name)
+        gaps.append({"skill": name,
+                     "importance": str(s.get("priority") or "must"),
+                     "reason": str(s.get("evidence_phrase") or "")})
+    return gaps
+
+
 # Weights sum to exactly 1.0 so an all-perfect match scores 1.0 and an all-zero
 # one 0.0 — _overall keeps that normalisation invariant testable.
 _OVERALL_WEIGHTS = (0.42, 0.25, 0.2, 0.13)  # technical, experience, projects, education
@@ -331,8 +354,7 @@ async def compute_match(resume_parsed: dict, jd: dict, *, user_id: str,
         overall=overall, technical=round(technical, 4), experience=round(experience, 4),
         projects=round(projects, 4), education=round(education, 4),
         matchedSkills=matched, missingSkills=missing,
-        skillGaps=[{"skill": m, "importance": "must",
-                    "advice": ""} for m in missing],
+        skillGaps=_skill_gaps(req, r_skills),
         evidence=evidence,
         whyMatch=_why_match(matched, req, pref, experience, exp_note, education, jd),
         preparation=_preparation(req, pref, r_skills, _technical_denominator(req, pref)),
@@ -346,20 +368,22 @@ async def persist_match(user_id: str, job_id: str, resume_version_id: str,
     row = await db.fetchrow(
         """INSERT INTO job_matches(user_id, job_id, resume_version_id, overall, technical,
                experience, projects, education, matched_skills, missing_skills, evidence,
-               why_match, preparation, narrative, model)
+               why_match, preparation, skill_gaps, narrative, model)
            VALUES ($1::uuid,$2::uuid,$3::uuid,$4,$5,$6,$7,$8,$9::jsonb,$10::jsonb,
-                   $11::jsonb,$12::jsonb,$13::jsonb,$14,$15)
+                   $11::jsonb,$12::jsonb,$13::jsonb,$14::jsonb,$15,$16)
            ON CONFLICT (user_id, job_id, resume_version_id) DO UPDATE SET
              overall=EXCLUDED.overall, technical=EXCLUDED.technical,
              experience=EXCLUDED.experience, projects=EXCLUDED.projects,
              education=EXCLUDED.education, matched_skills=EXCLUDED.matched_skills,
              missing_skills=EXCLUDED.missing_skills, evidence=EXCLUDED.evidence,
              why_match=EXCLUDED.why_match, preparation=EXCLUDED.preparation,
+             skill_gaps=EXCLUDED.skill_gaps,
              narrative=EXCLUDED.narrative, model=EXCLUDED.model, created_at=now()
            RETURNING id""",
         user_id, job_id, resume_version_id, result["overall"], result["technical"],
         result["experience"], result["projects"], result["education"],
         db.jsonb(result["matchedSkills"]), db.jsonb(result["missingSkills"]),
         db.jsonb(result["evidence"]), db.jsonb(result["whyMatch"]),
-        db.jsonb(result["preparation"]), result["narrative"], result.get("model"))
+        db.jsonb(result["preparation"]), db.jsonb(result["skillGaps"]),
+        result["narrative"], result.get("model"))
     return str(row["id"])
