@@ -447,6 +447,8 @@ def _record_components(record: str) -> set[str]:
     """The components of a Java record, which are the keys Jackson emits for it."""
     source = CHAT_DTOS.read_text(encoding="utf-8")
     opener = f"record {record}("
+    if opener not in source:
+        raise AssertionError(f"{opener!r} not found: the record this reader is supposed to hit has moved or been renamed")
     head = source[source.index(opener) + len(opener):]
     block = head[:head.index(") {")]
     names = []
@@ -499,6 +501,8 @@ DTO_READS = {
 def _dto_reads(function_name: str) -> set[str]:
     source = NORMALIZE.read_text(encoding="utf-8")
     opener = f"export function {function_name}("
+    if opener not in source:
+        raise AssertionError(f"{opener!r} is gone from normalize.ts: the table names a reader that moved, so this rule compares nothing")
     start = source.index(opener)
     body = source[start:source.index("\n}\n", start)]
     return {key for group in re.findall(r'(?:str|num|pick|list|bool)\(\s*\w+\s*,([^)]*)\)', body)
@@ -508,6 +512,8 @@ def _dto_reads(function_name: str) -> set[str]:
 def _record_components_at(relative: str, record: str) -> set[str]:
     source = (JAVA_ROOT / "com" / "careeros" / relative).read_text(encoding="utf-8")
     opener = f"record {record}("
+    if opener not in source:
+        raise AssertionError(f"{opener!r} not found: the record this reader is supposed to hit has moved or been renamed")
     head = source[source.index(opener) + len(opener):]
     block = head[:head.index(") {")]
     names = []
