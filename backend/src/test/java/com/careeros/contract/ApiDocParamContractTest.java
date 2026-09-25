@@ -663,6 +663,25 @@ class ApiDocParamContractTest {
         assertThat(documentedPublicPaths()).hasSizeGreaterThanOrEqualTo(50);
     }
 
+    /**
+     * The other direction: a route that exists and is not in the table is a feature nobody can
+     * discover. Measured rather than assumed -- the set is the working list of undocumented
+     * endpoints, and it has to shrink, never grow.
+     */
+    @Test
+    void everyRouteTheBackendServesIsDocumented() {
+        Set<String> documented = documentedPublicPaths();
+        Set<String> undocumented = new TreeSet<>();
+        for (Route route : routes()) {
+            if (!documented.contains(route.path())) {
+                undocumented.add(route.verb() + " " + route.path());
+            }
+        }
+        assertThat(undocumented).isEqualTo(Set.of());
+        // without the floor an empty route table would satisfy the rule the same way
+        assertThat(routes()).as("the backend's own route table was read").hasSizeGreaterThanOrEqualTo(58);
+    }
+
     private static final Set<String> EXEMPT_PATHS = Set.of();
 
     /** The repository's own ordering whitelist, read off its source. */
