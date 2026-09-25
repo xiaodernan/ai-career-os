@@ -664,4 +664,50 @@ class ApiDocParamContractTest {
     }
 
     private static final Set<String> EXEMPT_PATHS = Set.of();
+
+    /** The client's own path map, which says it is the single source of truth for paths. */
+    private static final Path CLIENT_ENDPOINTS =
+            Path.of("..", "frontend", "src", "lib", "api", "endpoints.ts");
+
+    /** Every path the browser can build: string literals and `${...}` templates alike. */
+    private static Set<String> clientPaths() {
+        Set<String> out = new TreeSet<>();
+        String source;
+        try {
+            source = Files.readString(CLIENT_ENDPOINTS);
+        } catch (IOException e) {
+            throw new UncheckedIOException("expected the client's endpoint map at "
+                    + CLIENT_ENDPOINTS.toAbsolutePath(), e);
+        }
+        // a path must open with a real segment: the module's own url() helper contains "/" and
+        // `/${path}`, neither of which is an endpoint
+        Matcher literal = Pattern.compile("\"(/[A-Za-z][^\"]*)\"").matcher(source);
+        while (literal.find()) {
+            out.add(documentedForm(literal.group(1)));
+        }
+        Matcher template = Pattern.compile("`(/[A-Za-z][^`]*)`").matcher(source);
+        while (template.find()) {
+            out.add(documentedForm(template.group(1).replaceAll("\\$\\{[^}]*}", "{}")));
+        }
+        out.remove("/api/v1");
+        return out;
+    }
+
+    /**
+     * The client's path map has its own guard, but that one compares against a hand-copied list of
+     * what the backend serves -- so a route removed on this side keeps the client looking correct and
+     * 404 at runtime. Here the same claim is checked against the mappings themselves.
+     */
+    @Test
+    void everyPathTheClientBuildsIsOneSpringServes() {
+        Set<String> served = new TreeSet<>();
+        for (Route route : routes()) {
+            served.add(route.path());
+        }
+        Set<String> callers = clientPaths();
+        Set<String> orphans = new TreeSet<>(callers);
+        orphans.removeAll(served);
+        assertThat(orphans).as("client paths with no mapping behind them").isEqualTo(Set.of());
+        assertThat(callers).as("the client map was read").hasSizeGreaterThanOrEqualTo(45);
+    }
 }
