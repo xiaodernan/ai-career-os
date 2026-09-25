@@ -90,3 +90,38 @@ describe("the applications row", () => {
     expect(source.toLowerCase()).not.toContain("kanban");
   });
 });
+
+/**
+ * The board's stages and the statuses the backend accepts are the same seven words, written
+ * twice in two languages with nothing comparing them. Both directions fail quietly: a stage the
+ * backend rejects is a control that breaks the moment it is used, and a stage it accepts but the
+ * ladder does not know lands outside every column -- `pickerStages` even papers over that by
+ * prepending the unknown value as its own stage.
+ */
+describe("the stage ladder is the set of statuses the backend accepts", () => {
+  const service = readFileSync(
+    new URL(
+      "../../../backend/src/main/java/com/careeros/application/service/ApplicationService.java",
+      import.meta.url
+    ),
+    "utf8"
+  );
+  const block = service.match(/Set\.of\(([^)]*"saved"[^)]*)\)/);
+  const accepted = [...(block?.[1].matchAll(/"([a-z_]+)"/g) ?? [])].map((m) => m[1]);
+
+  it("reads a real list from the backend, not an empty one", () => {
+    expect(accepted.length).toBeGreaterThanOrEqual(7);
+    expect(accepted).toContain("final_round");
+    expect(new Set(accepted).size).toBe(accepted.length);
+  });
+
+  it("offers exactly those stages, and no others", () => {
+    expect([...APPLICATION_STAGES.map((s) => s.value)].sort()).toEqual([...accepted].sort());
+  });
+
+  it("calls only accepted stages terminal", () => {
+    const terminal = APPLICATION_STAGES.map((s) => s.value).filter(isTerminal);
+    expect(terminal).toEqual(["offer", "rejected"]);
+    expect(terminal.every((stage) => accepted.includes(stage))).toBe(true);
+  });
+});
