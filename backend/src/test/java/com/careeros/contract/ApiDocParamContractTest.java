@@ -125,7 +125,7 @@ class ApiDocParamContractTest {
         while (url.find()) {
             for (String assignment : url.group(2).split("&")) {
                 String name = assignment.split("=")[0];
-                if (name.matches("[A-Za-z][A-Za-z0-9]*")) {
+                if (name.matches("[A-Za-z][A-Za-z0-9_]*")) {
                     pairs.add(Map.entry(url.group(1), name));
                 }
             }
@@ -445,7 +445,9 @@ class ApiDocParamContractTest {
         for (int i = 1; i < chunks.length; i += 2) {
             for (String token : chunks[i].split("[,&]")) {
                 String candidate = token.trim().replaceAll("^[?]", "").split("[=|\\s]")[0];
-                if (candidate.matches("[A-Za-z][A-Za-z0-9]*")) {
+                if (candidate.matches("[A-Za-z][A-Za-z0-9_]*")) {
+                    // underscores are how a snake_case filter would be spelled;
+                    // dropping them here hid a documented parameter no endpoint binds
                     names.add(candidate);
                 }
             }
