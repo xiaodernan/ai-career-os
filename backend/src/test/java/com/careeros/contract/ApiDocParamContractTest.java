@@ -665,6 +665,63 @@ class ApiDocParamContractTest {
 
     private static final Set<String> EXEMPT_PATHS = Set.of();
 
+    /** The repository's own ordering whitelist, read off its source. */
+    private static final Path SEARCH_REPO = Path.of("src", "main", "java", "com", "careeros", "job",
+            "repository", "JobSearchRepository.java");
+
+    private static Set<String> orderings() {
+        String source;
+        try {
+            source = Files.readString(SEARCH_REPO);
+        } catch (IOException e) {
+            throw new UncheckedIOException("expected the job search repository at "
+                    + SEARCH_REPO.toAbsolutePath(), e);
+        }
+        int from = source.indexOf("ORDERINGS = Map.of(");
+        if (from < 0) {
+            throw new IllegalStateException("the ordering whitelist moved out of "
+                    + "Map.of(...) form; this rule has to be rewritten with it");
+        }
+        String block = source.substring(from, source.indexOf(");", from));
+        Set<String> keys = new TreeSet<>();
+        Matcher pair = Pattern.compile("\"([a-z_]+)\", \"").matcher(block);
+        while (pair.find()) {
+            keys.add(pair.group(1));
+        }
+        return keys;
+    }
+
+    /** The sort values the doc lists after `sort=`, from the same cell. */
+    private static Set<String> documentedSorts() {
+        Set<String> out = new TreeSet<>();
+        for (String line : lines()) {
+            // greedy to the end of the run: the list stops at a comma or a backtick, not at the
+            // last pipe -- `sort=a|b|c, page` must yield c as well as a and b. The pipes are
+            // backslash-escaped in the table, so the escapes come back off before comparing.
+            Matcher row = Pattern.compile("sort=([A-Za-z0-9_|\\\\]+)").matcher(line);
+            while (row.find()) {
+                for (String value : row.group(1).split("\\\\\\|")) {
+                    if (!value.isBlank()) {
+                        out.add(value.replace("\\", "").trim());
+                    }
+                }
+            }
+        }
+        return out;
+    }
+
+    /**
+     * `?sort=` is a name the reader picks and the repository maps to SQL, defaulting to `posted`
+     * for anything it does not know -- so a value the doc advertises and the map lacks is not an
+     * error, just a list that silently arrives in the wrong order.
+     */
+    @Test
+    void everySortValueTheDocOffersIsOneTheRepositoryOrdersBy() {
+        Set<String> offered = documentedSorts();
+        assertThat(offered).as("the doc was read for sort values").hasSizeGreaterThanOrEqualTo(4);
+        assertThat(new TreeSet<>(offered)).isEqualTo(orderings());
+    }
+
     /** The client's own path map, which says it is the single source of truth for paths. */
     private static final Path CLIENT_ENDPOINTS =
             Path.of("..", "frontend", "src", "lib", "api", "endpoints.ts");
