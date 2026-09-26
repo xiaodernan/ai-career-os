@@ -980,15 +980,22 @@ export function normalizeQuestion(raw: unknown): {
   difficulty?: number;
   id?: string;
 } | null {
-  const q = pick(raw, "question", "next", "prompt", "opening", "data") ?? raw;
-  const text = str(q, "question", "text", "prompt", "content", "title") ?? str(raw, "question", "text", "prompt");
+  // Three sources, all of them named rather than guessed: `NextMove` (ai-service `decide_next`,
+  // which returns exactly {action, question, topic, difficulty, reasoning}), `TurnItem` (what
+  // `OpeningResponse.question` carries, with the text in `content`), and the session mapper's own
+  // synthesis of a turn's `questionMeta` plus `text`. `kind` is the browser's name for the
+  // producer's `action`: the interview page branches on "followup" and "next_topic", which are
+  // `decide_next`'s whitelisted actions, while this read tried `kind`/`type`/`nextAction`/
+  // `next_action` -- none of which any producer sends -- so neither branch could ever fire.
+  const q = pick(raw, "question", "next") ?? raw;
+  const text = str(q, "question", "content", "text") ?? str(raw, "question", "text");
   if (!text) return null;
   return {
     text,
-    topic: str(q, "topic", "category", "area"),
-    kind: str(q, "kind", "type", "nextAction", "next_action"),
-    difficulty: num(q, "difficulty", "depth", "level"),
-    id: str(q, "id", "questionId", "question_id"),
+    topic: str(q, "topic"),
+    kind: str(q, "action"),
+    difficulty: num(q, "difficulty"),
+    id: str(q, "id"),
   };
 }
 

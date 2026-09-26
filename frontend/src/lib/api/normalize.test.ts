@@ -12,6 +12,7 @@ import {
   normalizeDashboard,
   normalizeDimensions,
   normalizeInterviewDims,
+  normalizeQuestion,
   normalizeEvidence,
   normalizeInterviewReport,
   normalizeJob,
@@ -920,6 +921,31 @@ describe("serializeJobFilters", () => {
     const out = serializeJobFilters({ q: "x" });
     expect("minSalary" in out).toBe(false);
     expect("min_salary" in out).toBe(false);
+  });
+});
+
+describe("normalizeQuestion", () => {
+  // This reader had no test at all, which is how `kind` could ask for four names no producer sends
+  // while the interview page branched on the one name the producer does send (`action`).
+  it("reads the NextMove map decide_next returns, and maps its action onto kind", () => {
+    const q = normalizeQuestion({
+      next: { action: "followup", question: "Why did the cache miss?", topic: "reliability",
+              difficulty: 0.8, reasoning: "the answer stayed shallow" },
+    });
+    expect(q).toEqual({ text: "Why did the cache miss?", topic: "reliability", kind: "followup",
+                        difficulty: 0.8, id: undefined });
+  });
+
+  it("reads a TurnItem row's content, and the session mapper's meta+text synthesis", () => {
+    expect(normalizeQuestion({ question: { id: "t1", role: "interviewer", content: "Tell me about X" } }))
+      .toMatchObject({ text: "Tell me about X", id: "t1" });
+    expect(normalizeQuestion({ topic: "system_design", text: "How would you scale it?" }))
+      .toMatchObject({ text: "How would you scale it?", topic: "system_design" });
+  });
+
+  it("answers null when no producer put a question anywhere", () => {
+    expect(normalizeQuestion({ action: "finish", topic: "" })).toBeNull();
+    expect(normalizeQuestion(null)).toBeNull();
   });
 });
 
