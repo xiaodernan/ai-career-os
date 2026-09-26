@@ -953,6 +953,19 @@ def _broken_links(reader: str) -> list[str]:
         if not re.search(rf"\.map\(\s*\(?\s*{re.escape(local)}\b", body):
             problems.append(f"{reader}: {local!r} is declared as an element of {parent!r}'s list "
                             "but is not a `.map` callback parameter")
+    # The other direction, which #147 measured missing: emptying `elements` of the `ed` binding left
+    # all four tests green, because nothing required a `for…of` element the reader actually reads from
+    # to be declared at all. A row iterated by `for…of` is exactly as much a record as one reached by
+    # `.map`, and the table is the only thing that says which one -- so an undeclared one is not a
+    # missing annotation but a receiver whose every read is unchecked while the gate stays green.
+    read = {site["receiver"] for site in _sites(reader)}
+    for local in sorted({found.group(1) for found in re.finditer(
+            r"for\s*\(\s*(?:const|let)\s+([\w$]+)\s+of", body)} & read & set(spec["record_of"])
+            - set(spec["elements"])):
+        problems.append(f"{reader}: {local!r} is iterated by a for…of and read from, and the table "
+                        f"binds it to {spec['record_of'][local]!r}, but {local!r} is declared in no "
+                        "`elements` -- so the list it walks is unnamed and a rename of that key would "
+                        "cost nothing")
     return problems
 
 
