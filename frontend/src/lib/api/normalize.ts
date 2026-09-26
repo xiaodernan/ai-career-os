@@ -790,20 +790,14 @@ function statusCountsToRows(statusCounts: unknown): { status: string; count: num
 }
 
 export function normalizePipeline(raw: unknown): { status: string; count: number }[] {
-  const p = pick(raw, "pipeline", "stages", "applicationPipeline", "application_pipeline");
-  if (Array.isArray(p)) {
-    return p.map((row) => ({
-      status: str(row, "status", "stage", "key", "name") ?? "saved",
-      count: num(row, "count", "total", "value") ?? 0,
-    }));
-  }
-  if (rec(p)) return statusCountsToRows(p);
-  // Real GET /reports/dashboard carries no `pipeline` key: the per-stage counts
-  // live at kanban.statusCounts. Reach into it or the mini-kanban is always empty.
+  // Both callers hand over the same body: `useDashboardPipeline` GETs /reports/dashboard and
+  // `normalizeDashboard` passes the payload it already has. That record carries no `pipeline` key
+  // (the per-stage counts live at `kanban.statusCounts`), so the array-of-stages branch and the
+  // `pipeline`/`stages`/`applicationPipeline` probe that fed it are #130's deletions: the shape was
+  // only ever reachable from a test fixture.
   const kanban = pick(raw, "kanban");
   const fromKanban = pick(kanban, "statusCounts", "status_counts");
-  if (rec(fromKanban)) return statusCountsToRows(fromKanban);
-  return [];
+  return rec(fromKanban) ? statusCountsToRows(fromKanban) : [];
 }
 
 /** Human labels for the deterministic rubric criteria (ai-service resume_parse). */

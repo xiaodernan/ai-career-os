@@ -403,15 +403,22 @@ describe("normalizeTailorDiff", () => {
 });
 
 describe("normalizePipeline", () => {
-  it("reads an array of stages", () => {
-    expect(normalizePipeline({ pipeline: [{ status: "applied", count: 3 }] })).toEqual([
-      { status: "applied", count: 3 },
-    ]);
-  });
-  it("reads a status->count record", () => {
-    const p = normalizePipeline({ pipeline: { saved: 2, offer: 1 } });
+  it("turns kanban.statusCounts into one row per stage", () => {
+    // This is what /reports/dashboard actually carries. The function used to also accept a
+    // `pipeline` key as an array of {status, count} or as a bare status->count record; no
+    // response of either service has ever sent either shape, so the branch and these fixtures
+    // went together in #130.
+    const p = normalizePipeline({
+      kanban: { statusCounts: { saved: 2, applied: 5, offer: 1 }, total: 8, offers: 1 },
+    });
     expect(p).toContainEqual({ status: "saved", count: 2 });
     expect(p).toContainEqual({ status: "offer", count: 1 });
+    expect(p.reduce((s, row) => s + row.count, 0)).toBe(8);
+  });
+
+  it("answers with no rows for a payload that has no kanban", () => {
+    expect(normalizePipeline({ interviews: 0 })).toEqual([]);
+    expect(normalizePipeline(null)).toEqual([]);
   });
 });
 

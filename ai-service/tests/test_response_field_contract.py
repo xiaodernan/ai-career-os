@@ -76,7 +76,10 @@ PRODUCERS = {
 # author to count as dead.
 #
 #   record_of  receiver -> producer(s) it is read against; a list is the union of several
-#   drilled    local -> (parent receiver, key drilled out of it)
+#   drilled    local -> (parent receiver, key drilled out of it). Every bound local the body builds
+#              by drilling has to appear here: the link is what `_broken_links` re-checks and what
+#              `_hollow_drills` compares to the parent record, so an undeclared one leaves the step
+#              where a wrong key silently yields `{}` unverified.
 #   elements   local -> parent receiver, when it is a `.map((local, i) …)` element
 #   blind      receiver -> why no record can answer for it
 #   dynamic    receiver -> why its names come from a variable rather than a call site, and which
@@ -96,6 +99,22 @@ READERS: dict[str, dict] = {
         "drilled": {"kanban": ("d", "kanban"),
                     "currentResume": ("d", "currentResume"),
                     "skillGapDigest": ("d", "skillGaps")},
+        "elements": {},
+        "blind": {},
+        "dynamic": {},
+    },
+    "normalizePipeline": {
+        # The pipeline widget's own fetcher, and it is handed the same body twice:
+        # `useDashboardPipeline` GETs /reports/dashboard, and `normalizeDashboard` passes on the
+        # payload it already unwrapped. `DashboardResponse` has no `pipeline` component -- the
+        # per-stage counts are `kanban.statusCounts` -- so the reader's array-of-stages branch and
+        # the `pipeline`/`stages`/`applicationPipeline` probe feeding it, reachable only from a test
+        # fixture, are #130's deletions. The stage names inside `statusCounts` are *data* (a
+        # `Map<String, Long>` the service builds by iterating `ApplicationStatus`), not record
+        # components, so `statusCountsToRows` walks `Object.entries` instead of naming one: that is
+        # why this reader has two sites and not one per stage.
+        "record_of": {"raw": "DashboardResponse", "kanban": "Kanban"},
+        "drilled": {"kanban": ("raw", "kanban")},
         "elements": {},
         "blind": {},
         "dynamic": {},
@@ -328,6 +347,18 @@ def _undeclared_receivers(reader: str) -> list[str]:
     for receiver in sorted(set(spec["blind"]) & set(spec["dynamic"])):
         problems.append(f"{reader}: {receiver!r} is declared blind and dynamic at once -- the table "
                         "should say which of the two explains it")
+    for receiver in sorted(set(spec["record_of"]) - set(spec["drilled"])):
+        # `#130` adds a reader whose entire contract is one link: it reads two names, and the second
+        # is only reachable through the map the first drills. A local the body builds with
+        # `const x = pick(parent, …)` but the table never declares is a record bound directly to
+        # that local -- so the drill itself, the one step where a wrong key yields `{}` and every
+        # read below it silently answers null, goes unchecked while the gate stays green.
+        made_by = re.search(rf"const\s+{re.escape(receiver)}\s*=\s*[^;\n]*\(\s*"
+                            rf"([A-Za-z_$][\w$.]*)\s*,", _body(reader))
+        if made_by is not None:
+            problems.append(f"{reader}: {receiver!r} is bound to a record but the reader builds it "
+                            f"by drilling {made_by.group(1)!r} -- `drilled` does not say so, so the "
+                            "key it drills is unchecked and dropping the link later costs nothing")
     return problems
 
 
@@ -550,6 +581,20 @@ def test_the_reads_are_actually_found():
         _emitted("Kanban")
     assert {key for s in dash if s["receiver"] == "currentResume" for key in s["keys"]} & \
         _emitted("ResumeSummary") == _emitted("ResumeSummary") - {"score"}
+    pipe = _sites("normalizePipeline")
+    assert len(pipe) == 2
+    assert {s["receiver"] for s in pipe} == {"raw", "kanban"}
+    # Down from 5. The three that went were the array-of-stages branch: the
+    # `pick(raw, "pipeline", "stages", "applicationPipeline", "application_pipeline")` probe and the
+    # two reads off its `row` element. `DashboardResponse` has no `pipeline` component, so that shape
+    # existed only in the fixture that fed it.
+    assert {k for s in pipe if s["receiver"] == "raw" for k in s["keys"]} & \
+        _emitted("DashboardResponse") == {"kanban"}
+    # One read of one component: the *stage* names are `Map` keys the service builds from
+    # `ApplicationStatus`, so no literal for them can appear in this reader at all -- which is the
+    # difference between this assertion and the dashboard's `== _emitted("Kanban")` coverage line.
+    assert {k for s in pipe if s["receiver"] == "kanban" for k in s["keys"]} & \
+        _emitted("Kanban") == {"statusCounts"}
     assert len(_emitted("JobListItem")) == 18
     assert len(_emitted("SavedJobItem")) == 3
     assert len(_emitted("SearchResponse")) == 7
