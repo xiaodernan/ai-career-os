@@ -91,6 +91,11 @@ PRODUCERS = {
     "EvaluationItem": ("java", "interview/dto/InterviewDtos.java"),
     "FinalizeReport": ("pyconst", ("app/features/interview.py", "FINALIZE_FIELDS")),
     "StudyItem": ("pyconst", ("app/features/interview.py", "STUDY_ITEM_FIELDS")),
+    # `trajectory_detail` is written by `finalize` rather than asked of the model, and a trajectory
+    # row is the dict literal `_trajectory_detail` builds -- neither has a record, and both are
+    # stated exactly once in the source that produces them.
+    "FinalizeComputed": ("pyconst", ("app/features/interview.py", "FINALIZE_COMPUTED_FIELDS")),
+    "TrajectoryRow": ("pyitem", "_trajectory_detail"),
 }
 
 # Readers whose producers are known per map. A reader with more producers than one is bound to their
@@ -187,12 +192,31 @@ READERS: dict[str, dict] = {
         # checked against.
         "record_of": {"raw": ["SessionDetail", "FinalizeResponse"],
                       "ev": "EvaluationItem",
-                      "merged": ["EvaluationItem", "FinalizeReport"],
+                      "merged": ["EvaluationItem", "FinalizeReport", "FinalizeComputed"],
                       "s": "StudyItem"},
         "drilled": {"ev": ("raw", "evaluation")},
         "elements": {"s": "merged"},
         "blind": {},
         "dynamic": {},
+    },
+    "normalizeTrajectory": {
+        # The fold that turns the evaluator's per-turn rows into one point per question. Where its
+        # list lives is named from a constant -- `list(source, ...TRAJECTORY_KEYS)` -- so the reach is
+        # a dynamic receiver and `_trajectory_keys` is what ties that constant to the producers: the
+        # rows arrive as `EvaluationItem.trajectory`, or as the `trajectory_detail` key `finalize`
+        # writes into the report map. The rows themselves are `_trajectory_detail`'s literal.
+        # `t`/`row` are deliberately not in `elements`: one is the parameter of an arrow assigned to
+        # `plain`, the other of `rows.forEach`, and neither is a `.map` callback the link rule could
+        # point at -- binding them to the row producer is what still checks every name they read.
+        "record_of": {"t": "TrajectoryRow", "row": "TrajectoryRow"},
+        "drilled": {},
+        "elements": {},
+        "blind": {},
+        "dynamic": {
+            "source": "`list(source, ...TRAJECTORY_KEYS)` spreads the candidate list names from a "
+                      "module constant, so no literal name exists at the call site; "
+                      "`_trajectory_keys` ties those names to the producers that carry them",
+        },
     },
     "normalizeApplication": {
         "record_of": {"raw": "ApplicationItem", "nested": "CompanyItem"},
@@ -416,6 +440,38 @@ def _py_const_keys(rel: str, name: str) -> set[str]:
     return keys
 
 
+def _returned_item_keys(func_name: str) -> set[str]:
+    """The keys of the one dict literal a function builds its rows from.
+
+    A trajectory row has no record and no model: `_trajectory_detail` returns a comprehension over a
+    literal. That literal states the row shape exactly once, which is as checkable as a class body
+    -- and two literals, or a computed key, means there is no single row contract to check, which is
+    a question for whoever reads it rather than for this gate to guess at.
+    """
+    fn = _sole(func_name)
+    if fn is None:
+        raise AssertionError(f"{func_name!r} is not exactly one function under app/: the table names "
+                             "a producer that moved, so the rule it feeds compares nothing")
+    items = [node for node in ast.walk(fn)
+             if isinstance(node, ast.Dict) and node.keys]
+    if len(items) != 1:
+        raise AssertionError(f"{func_name} builds {len(items)} non-empty dict literals (want "
+                             "exactly 1): the row it returns has no single shape to check reads "
+                             "against")
+    if any(not isinstance(k, ast.Constant) or not isinstance(k.value, str)
+           for k in items[0].keys):
+        raise AssertionError(f"{func_name}'s row literal carries a computed key")
+    return {k.value for k in items[0].keys}
+
+
+def _trajectory_keys() -> set[str]:
+    """The four names the trajectory fold reaches for, read out of the constant it spreads -- the
+    call site itself says `...TRAJECTORY_KEYS`, so no literal name exists where the read happens."""
+    source = NORMALIZE.read_text(encoding="utf-8")
+    start = source.index("const TRAJECTORY_KEYS")
+    return set(re.findall(r'"([^"]+)"', source[start:source.index("];", start)]))
+
+
 def _emitted(alias: str) -> set[str]:
     """The keys one producer puts on the wire, read from its own source either way."""
     if alias not in PRODUCERS:
@@ -435,6 +491,8 @@ def _emitted(alias: str) -> set[str]:
         return _appended_keys(*spec[1])
     if spec[0] == "pyconst":
         return _py_const_keys(*spec[1])
+    if spec[0] == "pyitem":
+        return _returned_item_keys(spec[1])
     return pydantic_fields(alias)
 
 
@@ -769,6 +827,19 @@ def test_the_reads_are_actually_found():
     assert {k for s in report if s["receiver"] == "s" for k in s["keys"]} == _emitted("StudyItem")
     # The study card reads exactly the three names of `STUDY_ITEM_FIELDS`, no more: after #137 there
     # is no undeclared name left in this reader, which is the whole reason it could be bound.
+    traj = _sites("normalizeTrajectory")
+    assert len(traj) == 6
+    assert {s["receiver"] for s in traj} == {"t", "row"}
+    carriers = ["EvaluationItem", "FinalizeReport", "FinalizeComputed"]
+    assert _trajectory_keys() & _emitted_for(carriers) == {"trajectory", "trajectory_detail"}
+    # The two list names that are real -- one a component of the DTO, one written by `finalize` --
+    # and the two that are speculation, named here so a future reader notices the fold still tries
+    # them rather than inheriting a quietly shrinking set:
+    assert _trajectory_keys() - _emitted_for(carriers) == {"depth_trajectory", "depthTrajectory"}
+    assert _emitted("TrajectoryRow") - {k for s in traj for k in s["keys"]} == {"seq", "role"}
+    # The row's two bookkeeping columns. `seq` orders the rows server-side; `role` decides which rows
+    # the fold keeps, but it is tested outside the accessor helpers (`row.role !== "interviewer"`),
+    # so no read site exists for this gate to point at.
     runs = _sites("normalizeRun")
     assert len(runs) == 12
     assert {s["receiver"] for s in runs} == {"raw"}

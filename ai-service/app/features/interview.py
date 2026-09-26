@@ -174,6 +174,11 @@ FINALIZE_FIELDS = (
 # ...and the one nested list the report panel renders cards from.
 STUDY_ITEM_FIELDS = ("topic", "why", "resource_hint")
 
+# Written by `finalize` itself rather than asked of the model, so it is guaranteed on every report
+# -- and it is the key the trajectory fold reads when the row list arrives inside the summary map
+# instead of as `EvaluationItem.trajectory`.
+FINALIZE_COMPUTED_FIELDS = ("trajectory_detail",)
+
 
 async def finalize(*, mode: str, turns: list[dict], resume_ctx: str,
                    user_id: str | None = None, run_id: str | None = None) -> dict:

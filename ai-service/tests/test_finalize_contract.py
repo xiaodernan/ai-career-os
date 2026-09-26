@@ -26,6 +26,20 @@ def test_the_study_item_fields_are_the_prompt_sownested_shape():
     assert [name for name in STUDY_ITEM_FIELDS if f'"{name}"' not in FINALIZE_SYSTEM] == []
 
 
+def test_every_computed_field_is_actually_written_by_finalize():
+    """The prompt guard above cannot speak for these: nobody is asked for them, so the only source
+    that can confirm them is the function that writes them."""
+    import inspect
+
+    from app.features import interview
+    from app.features.interview import FINALIZE_COMPUTED_FIELDS
+
+    body = inspect.getsource(interview.finalize)
+    missing = [name for name in FINALIZE_COMPUTED_FIELDS if f'out["{name}"]' not in body]
+    assert missing == [], (f"{missing} are declared as written by finalize, which no longer writes "
+                           "them -- the trajectory fold reads one of these names")
+
+
 def test_no_name_is_declared_twice_or_in_both_contracts():
     # Uniqueness, without pinning a count: asserting `len == 9` made this test a second copy of the
     # tuple's own contents, so a mutant that added an unasked field went red here as well as in the
