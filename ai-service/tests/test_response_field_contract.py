@@ -420,6 +420,30 @@ READERS: dict[str, dict] = {
         "blind": {},
         "dynamic": {},
     },
+    "normalizeStructuredResume": {
+        # The mapper both resume callers feed from `structured` -- the jsonb `ResumeService` persists
+        # verbatim out of `parse_resume`, so the parse prompt is the only author of every name here,
+        # exactly as it is for the renderer above. #148 measured this reader at 39 sites / 73 names
+        # and its four slices (`8ccf945` wrapper, `d66faa0` 24 alias spellings, `596e0d9` 5 reads with
+        # no author and the 4 page renders they made unreachable, `6aab196` 8 view-side alias fields
+        # and the 7 fallback reads that named them) left the 33 sites below, every one of them a key
+        # the prompt draws. Nothing in the reader now probes a spelling nobody writes.
+        # The one name it consumes that `_sites` cannot attribute is `links`: the call reads
+        # `list(profile ?? s, "links")`, and a receiver that is an expression rather than an
+        # identifier has no binding to check, so the floors below list `links` beside
+        # `yearsExperience` as drawn-and-not-read off `profile` rather than pretending it is covered.
+        "record_of": {"s": "ParsedResumeMap", "profile": "ParsedProfileMap",
+                      "e": "ParsedExperienceItem", "p": "ParsedProjectItem",
+                      "ed": "ParsedEducationItem"},
+        "drilled": {"profile": ("s", "profile")},
+        # Three `.map` callbacks over lists drilled out of `s` -- the shape #148 taught
+        # `_broken_links` to accept, since a row reached by `.map` is as much a record as one reached
+        # by `for…of` and the plain form only proved the local was *some* callback parameter.
+        "elements": {"e": ("s", "experience"), "p": ("s", "projects"),
+                     "ed": ("s", "education")},
+        "blind": {},
+        "dynamic": {},
+    },
     "normalizeJdParsed": {
         # Both callers hand over the `JdItem` a JD endpoint answers with, and the analysis sits one
         # level down in `parsed`. #143 deleted four wrapper names (`jd`, `analysis`, `data`), the flat
@@ -931,8 +955,8 @@ def _broken_links(reader: str) -> list[str]:
             problems.append(f"{reader}: {local!r} comes from {holder!r}, which the table neither "
                             "binds, declares blind, nor declares dynamic")
         if isinstance(parent, tuple):
-            # A `for…of` element: the row has no `.map` header to point at, so the link is stated as
-            # (map, key) and both halves have to be findable -- the list drilled out of that map
+            # An element row: the row has no accessor of its own to point at, so the link is stated
+            # as (map, key) and both halves have to be findable -- the list drilled out of that map
             # under that key, and this local bound to the rows of exactly that list. Without the key
             # the claim is only "some element of some local", which a renamed list survives.
             key = parent[1]
@@ -946,7 +970,16 @@ def _broken_links(reader: str) -> list[str]:
                                rf"\(\s*{re.escape(holder)}\s*,[^)]*\"{re.escape(key)}\"", body)
             named = made and re.search(rf"for\s*\(\s*(?:const|let)\s+{re.escape(local)}\s+of\s+"
                                        rf"{made.group(1)}\b", body)
-            if not (inline or named):
+            # #148: the same link reached by `.map` instead of `for…of`. A row written as
+            # `list(s, "experience").map((e) => ({…}))` has no `for` header, and the plain-string
+            # form below could not carry it either: it checks only that `e` is *a* `.map` callback
+            # parameter, so renaming "experience" to a key no producer writes would have left the
+            # gate green while every row of that section rendered blank. The `\s*` before `.map`
+            # spans the line break a typed callback parameter forces the reader to write.
+            mapped = re.search(rf"\(\s*{re.escape(holder)}\s*,[^)]*\"{re.escape(key)}\"\s*\)"
+                               rf"(?:\s*\.\w+\([^)]*\))*\s*\.map\(\s*\(?\s*{re.escape(local)}\s*[,)]",
+                               body)
+            if not (inline or named or mapped):
                 problems.append(f"{reader}: {local!r} is declared as an element of {holder!r}'s "
                                 f"{key!r} list, but nothing iterates the rows drilled that way")
             continue
@@ -958,14 +991,19 @@ def _broken_links(reader: str) -> list[str]:
     # to be declared at all. A row iterated by `for…of` is exactly as much a record as one reached by
     # `.map`, and the table is the only thing that says which one -- so an undeclared one is not a
     # missing annotation but a receiver whose every read is unchecked while the gate stays green.
+    # #148 widened the walk to `.map`/`.flatMap` callbacks, which are the same row read reached the
+    # other way: measured 0 violations over the readers bound before this unit, so it costs nothing
+    # today and only closes the door a future reader can walk through.
     read = {site["receiver"] for site in _sites(reader)}
-    for local in sorted({found.group(1) for found in re.finditer(
-            r"for\s*\(\s*(?:const|let)\s+([\w$]+)\s+of", body)} & read & set(spec["record_of"])
-            - set(spec["elements"])):
-        problems.append(f"{reader}: {local!r} is iterated by a for…of and read from, and the table "
-                        f"binds it to {spec['record_of'][local]!r}, but {local!r} is declared in no "
-                        "`elements` -- so the list it walks is unnamed and a rename of that key would "
-                        "cost nothing")
+    walked = {found.group(1) for found in re.finditer(
+        r"for\s*\(\s*(?:const|let)\s+([\w$]+)\s+of", body)}
+    walked |= {found.group(1) for found in re.finditer(
+        r"\.(?:map|flatMap)\(\s*\(?\s*([A-Za-z_$][\w$]*)\s*(?:,|\))", body)}
+    for local in sorted(walked & read & set(spec["record_of"]) - set(spec["elements"])):
+        problems.append(f"{reader}: {local!r} is walked by a for…of or a `.map` callback and read "
+                        f"from, and the table binds it to {spec['record_of'][local]!r}, but "
+                        f"{local!r} is declared in no `elements` -- so the list it walks is unnamed "
+                        "and a rename of that key would cost nothing")
     return problems
 
 
@@ -1404,6 +1442,46 @@ def test_the_reads_are_actually_found():
     # `g.level`, a name with no author, so the field and that consumer went together in #147.
     assert _emitted("MergedSkillItem") - {k for s in buckets if s["receiver"] == "g"
                                           for k in s["keys"]} == {"proficiency"}
+    # The mapper the resume page and the skill-suggestion panel both build their view model from.
+    # 33 sites / 5 receivers, after #148 deleted the 6 sites and 40-odd probe names that had no
+    # author; `s` is the jsonb itself, `profile` the one map drilled out of it, and `e`/`p`/`ed` the
+    # three `.map` rows whose list-key links the entry has to keep honest.
+    sr = _sites("normalizeStructuredResume")
+    assert len(sr) == 33, f"the structured mapper holds {len(sr)} sites, want the 33 that name a key"
+    assert {s["receiver"] for s in sr} == {"s", "profile", "e", "p", "ed"}
+    assert sum(1 for s in sr if s["receiver"] == "s") == 8
+    assert sum(1 for s in sr if s["receiver"] == "profile") == 6
+    assert sum(1 for s in sr if s["receiver"] == "e") == 6
+    assert sum(1 for s in sr if s["receiver"] == "p") == 6
+    assert sum(1 for s in sr if s["receiver"] == "ed") == 7
+    assert {k for s in sr if s["receiver"] == "s" for k in s["keys"]} == \
+        {"profile", "experience", "projects", "education", "achievements", "careerGoals",
+         "preferredRoles", "preferredLocations"}
+    assert {k for s in sr if s["receiver"] == "profile" for k in s["keys"]} == \
+        {"name", "headline", "email", "phone", "location", "summary"}
+    assert {k for s in sr if s["receiver"] == "e" for k in s["keys"]} == \
+        {"company", "title", "location", "start", "end", "bullets"}
+    assert {k for s in sr if s["receiver"] == "ed" for k in s["keys"]} == \
+        {"school", "degree", "field", "startYear", "endYear", "gpa", "courses"}
+    # A project row and an education row are read key for key -- every name the parse draws for them
+    # is a slot in the view model, which is why these two can be stated as equality with the producer
+    # instead of as a surplus set.
+    assert {k for s in sr if s["receiver"] == "p" for k in s["keys"]} == _emitted("ParsedProjectItem")
+    assert {k for s in sr if s["receiver"] == "ed" for k in s["keys"]} == \
+        _emitted("ParsedEducationItem")
+    # The sets it still leaves on the table, each named so a prompt that drops a key goes red here
+    # rather than by shrinking a resume: an experience row's own `summary`; the profile's
+    # `yearsExperience` plus `links`, which the mapper does consume but through an expression
+    # receiver `_sites` cannot attribute (see the entry's comment); and four top-level lists, of
+    # which `skills` reaches the page through the bucket reader above and the other three are stored
+    # and never rendered.
+    assert _emitted("ParsedExperienceItem") - {k for s in sr if s["receiver"] == "e"
+                                               for k in s["keys"]} == {"summary"}
+    assert _emitted("ParsedProfileMap") - {k for s in sr if s["receiver"] == "profile"
+                                           for k in s["keys"]} == {"links", "yearsExperience"}
+    assert _emitted("ParsedResumeMap") - {k for s in sr if s["receiver"] == "s"
+                                          for k in s["keys"]} == {"skills", "languages",
+                                                                  "missingSections", "warnings"}
     # Two different ways a read stops naming its key in the call: `normalizeTrajectory` spreads a
     # name table, which this rule covers, and `normalizeSearch` reaches `g.key`, a member of a group
     # object, which `_search_hits` covers. Telling them apart is what keeps each rule honest about
