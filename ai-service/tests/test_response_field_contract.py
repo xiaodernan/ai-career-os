@@ -509,6 +509,19 @@ def _emitted_for(receiver: str | list[str]) -> set[str]:
     return set().union(*(_emitted(name) for name in names))
 
 
+@lru_cache(maxsize=None)
+def _spread_receivers(reader: str) -> set[str]:
+    """Receivers reached through a spread name table -- `list(source, ...TRAJECTORY_KEYS)`.
+
+    No literal key sits at such a call site, so `_sites` cannot see the read and the `dynamic` entry
+    that excuses it is the only declaration covering it. That made deleting the entry free: the
+    receiver never appears in `used`, so neither the missing-binding nor the vanished-name rule had
+    anything to complain about.
+    """
+    return {match.group(1) for match in re.finditer(
+        _ACCESSORS + r"([A-Za-z_$][\w$.]*)\s*,[^)]*\.\.\.", _body(reader))}
+
+
 def _undeclared_receivers(reader: str) -> list[str]:
     """Receivers the reader reads from that no record answers for, and vice versa."""
     spec = READERS[reader]
@@ -533,6 +546,10 @@ def _undeclared_receivers(reader: str) -> list[str]:
         else:
             problems.append(f"{reader}: {receiver!r} is bound to a record no site reads from any "
                             "more -- a renamed local silently unchecks that record")
+    for receiver in sorted(_spread_receivers(reader) - known):
+        problems.append(f"{reader}: {receiver!r} is read through a spread name table, so a "
+                        "declaration is the only thing that says what it reaches -- and it has none; "
+                        "the liveness rule cannot see this call at all")
     for receiver in sorted(set(spec["record_of"]) & set(spec["blind"])):
         problems.append(f"{reader}: {receiver!r} is both bound to a record and declared blind")
     for receiver in sorted(set(spec["blind"]) & set(spec["dynamic"])):
@@ -840,6 +857,12 @@ def test_the_reads_are_actually_found():
     # The row's two bookkeeping columns. `seq` orders the rows server-side; `role` decides which rows
     # the fold keeps, but it is tested outside the accessor helpers (`row.role !== "interviewer"`),
     # so no read site exists for this gate to point at.
+    assert _spread_receivers("normalizeTrajectory") == {"source"}
+    assert _spread_receivers("normalizeSearch") == set()
+    # Two different ways a read stops naming its key in the call: `normalizeTrajectory` spreads a
+    # name table, which this rule covers, and `normalizeSearch` reaches `g.key`, a member of a group
+    # object, which `_search_hits` covers. Telling them apart is what keeps each rule honest about
+    # the half it cannot see.
     runs = _sites("normalizeRun")
     assert len(runs) == 12
     assert {s["receiver"] for s in runs} == {"raw"}
