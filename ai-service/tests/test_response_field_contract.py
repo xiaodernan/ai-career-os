@@ -121,6 +121,12 @@ PRODUCERS = {
     # rule-engine author for the cards inside it.
     "SuggestionEnvelope": ("pyfunc", "suggestions_ep"),
     "SuggestionItem": ("pyappend", ("suggest_resume_improvements", "out")),
+    # /jobs/{id}/tailor is a pass-through of the ai-service answer, so the reader's producer is that
+    # answer's own literal -- not the `TailorResponse` record named in JobDtos, which no controller,
+    # service or test anywhere in backend/src references (measured #145: zero hits). The two nested
+    # maps come out of the same return statement, one key down.
+    "TailorMap": ("pyfunc", "tailor"),
+    "TailorDiffMap": ("pyretsub", ("tailor", "diff")),
 }
 
 # Readers whose producers are known per map. A reader with more producers than one is bound to their
@@ -297,6 +303,34 @@ READERS: dict[str, dict] = {
         "record_of": {"raw": "SuggestionEnvelope", "item": "SuggestionItem"},
         "drilled": {},
         "elements": {"item": "raw"},
+        "blind": {},
+        "dynamic": {},
+    },
+    "normalizeTailor": {
+        # `useTailorRun` posts /jobs/{id}/tailor and `TailorArtifact` hands over the copilot's
+        # `tailored_resume` payload -- which is a *subset* of the same answer (`tailor`'s literal
+        # minus `evidence`), so binding the reader to the full answer is the stronger side of the
+        # pair and needs no union. #145 deleted what that left with no author at all: the
+        # `markdown`/`md`/`text`/`content`/`plainText`/`plain_text`/`body` layer inside `tailored`
+        # (the dict is the parsed resume, whose keys the parse prompt draws), a `resumeVersionId`
+        # the pass-through response never carries, `sections`/`notes`/`comments`/`evidence` read one
+        # level too deep, the `statistics`/`summary` twins, and `warnings` beside the real `notes`.
+        "record_of": {"raw": "TailorMap"},
+        "drilled": {},
+        "elements": {},
+        "blind": {},
+        "dynamic": {},
+    },
+    "normalizeTailorDiff": {
+        # Two callers, two shapes: `normalizeTailor` passes the whole answer and the reader drills
+        # `diff`, while the versions panel and the save-body helper pass the diff map itself -- that
+        # is what the `?? raw` fallback is for, and it is load-bearing, so `raw` is bound to both
+        # authors. The deleted flat branch (`changes`/`items`/`edits` partitioned by
+        # `status`/`state`/`decision`, plus `applied`/`kept`/`skipped`/`declined`) answered to a
+        # response no producer writes, and its `?? raw` was a third name for `diff`.
+        "record_of": {"raw": ["TailorMap", "TailorDiffMap"], "diff": "TailorDiffMap"},
+        "drilled": {"diff": ("raw", "diff")},
+        "elements": {},
         "blind": {},
         "dynamic": {},
     },
@@ -611,6 +645,32 @@ def _prompt_skeleton(rel: str, const: str) -> dict:
     return skeleton
 
 
+def _return_branch_keys(func_name: str, key: str) -> set[str]:
+    """The keys of the dict literal one answer carries under its own `key`, read off the return.
+
+    `tailor` builds `{tailored, diff:{accepted,rejected}, notes, evidence, stats:{accepted,
+    rejected}}` in a single statement, so a nested map's contract is in that source too. Transcribing
+    `{accepted, rejected}` beside the reader would let a producer rename the key and keep the gate
+    green, which is the drift this file exists to catch.
+    """
+    node = _sole(func_name)
+    if node is None:
+        raise AssertionError(f"{func_name} is gone: the table binds a producer the service no longer has")
+    branches = [
+        v for d in ast.walk(node)
+        if isinstance(d, ast.Return) and isinstance(d.value, ast.Dict)
+        for k, v in zip(d.value.keys, d.value.values)
+        if isinstance(k, ast.Constant) and k.value == key and isinstance(v, ast.Dict)
+    ]
+    if not branches:
+        raise AssertionError(f"{func_name} never returns a dict literal under {key!r}: the table names "
+                             "a nested map whose author has stopped being one")
+    shapes = [tuple(sorted(k.value for k in b.keys if isinstance(k, ast.Constant))) for b in branches]
+    if len(set(shapes)) > 1:
+        raise AssertionError(f"{func_name}.{key} returns {len(shapes)} different key sets {shapes}")
+    return set(shapes[0])
+
+
 def _prompt_item_keys(rel: str, const: str, member: tuple[str, ...]) -> set[str]:
     """The keys of one drawn list's item, or the answer's own keys when no list is named.
 
@@ -684,6 +744,8 @@ def _emitted(alias: str) -> set[str]:
         return _java_put_keys(*spec[1])
     if spec[0] == "pyskel":
         return _prompt_item_keys(*spec[1])
+    if spec[0] == "pyretsub":
+        return _return_branch_keys(*spec[1])
     return pydantic_fields(alias)
 
 
@@ -1124,6 +1186,19 @@ def test_the_reads_are_actually_found():
                                                                              "advice"}
     assert _emitted("SuggestionItem") == {"skill", "type", "advice"}
     assert _emitted("SuggestionEnvelope") == {"suggestions", "jd"}
+    # The tailor answer is a pass-through, so its own return statement is the whole contract here --
+    # including the two nested maps the reader drills, which `pyretsub` reads one key down. Before
+    # #145 bound it, the reader asked for 20 names of which 5 had an author.
+    tailor = _sites("normalizeTailor")
+    assert len(tailor) == 2, f"the tailor reader holds {len(tailor)} sites, want the 2 that name a key"
+    assert {s["receiver"] for s in tailor} == {"raw"}
+    assert {k for s in tailor for k in s["keys"]} == {"stats", "notes"}
+    tdiff = _sites("normalizeTailorDiff")
+    assert len(tdiff) == 3, tdiff
+    assert {s["receiver"] for s in tdiff} == {"raw", "diff"}
+    assert {k for s in tdiff if s["receiver"] == "diff" for k in s["keys"]} == {"accepted", "rejected"}
+    assert _emitted("TailorMap") == {"tailored", "diff", "notes", "evidence", "stats"}
+    assert _emitted("TailorDiffMap") == {"accepted", "rejected"}
     # Two different ways a read stops naming its key in the call: `normalizeTrajectory` spreads a
     # name table, which this rule covers, and `normalizeSearch` reaches `g.key`, a member of a group
     # object, which `_search_hits` covers. Telling them apart is what keeps each rule honest about

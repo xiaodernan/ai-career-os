@@ -427,25 +427,15 @@ function changeFrom(raw: unknown, index: number): TailorChange {
   };
 }
 
-/** `diff` may be {accepted:[],rejected:[]} or one flat list with a status field. */
+/** The two edit lists the verifier split. `raw` is either the tailor response (which wraps the
+ *  lists under `diff`) or the diff map itself — a saved tailored version projects that object, so
+ *  both shapes arrive here and both carry exactly `accepted` and `rejected`. */
 export function normalizeTailorDiff(raw: unknown): TailorDiff {
-  const diff = pick(raw, "diff", "changes", "edits") ?? raw;
-  const explicitAccepted = list(diff, "accepted", "applied", "kept");
-  const explicitRejected = list(diff, "rejected", "skipped", "declined");
-  if (explicitAccepted.length || explicitRejected.length) {
-    return {
-      accepted: explicitAccepted.map(changeFrom),
-      rejected: explicitRejected.map(changeFrom),
-    };
-  }
-  const flat = list(diff, "changes", "diff", "items", "edits");
-  const accepted: TailorChange[] = [];
-  const rejected: TailorChange[] = [];
-  flat.forEach((c, i) => {
-    const status = (str(c, "status", "state", "decision") ?? "accepted").toLowerCase();
-    (status === "rejected" || status === "skipped" ? rejected : accepted).push(changeFrom(c, i));
-  });
-  return { accepted, rejected };
+  const diff = pick(raw, "diff") ?? raw;
+  return {
+    accepted: list(diff, "accepted").map(changeFrom),
+    rejected: list(diff, "rejected").map(changeFrom),
+  };
 }
 
 /** Render a structured resume (the ai-service `tailored` payload — a resume
@@ -660,12 +650,12 @@ function groupSkillBuckets(s: Record<string, unknown>): ResumeSkillGroup[] | und
  * independently is how a stored version stops matching the diff the user reviewed.
  */
 export function tailoredDict(raw: unknown): unknown {
-  return pick(raw, "tailored", "tailoredResume", "tailored_resume", "result") ?? raw;
+  return pick(raw, "tailored") ?? raw;
 }
 
-/** The change list the service attached to the draft, in whatever shape it arrived. */
+/** The change list the service attached to the draft. */
 export function tailorDiffDict(raw: unknown): unknown {
-  return pick(raw, "diff", "changes", "edits") ?? {};
+  return pick(raw, "diff") ?? {};
 }
 
 /**
@@ -690,25 +680,18 @@ export function tailorSaveBody(draft: {
 
 export function normalizeTailor(raw: unknown): TailorResponse {
   const tailoredRaw = tailoredDict(raw);
-  const stats = pick(raw, "stats", "statistics", "summary");
-  // ai-service returns `tailored` as a structured resume dict (no markdown/text);
-  // render one or the panel's Full-document / copy / download stay dead.
-  const markdown = str(tailoredRaw, "markdown", "md");
-  const text = str(tailoredRaw, "text", "content", "plainText", "plain_text", "body");
-  const derived = markdown || text ? "" : structuredResumeToMarkdown(tailoredRaw);
-  const tailored: TailoredResult = {
-    resumeVersionId: str(tailoredRaw, "resumeVersionId", "resume_version_id", "versionId", "version_id"),
-    markdown: markdown || derived || undefined,
-    text: text || undefined,
-    sections: list(tailoredRaw, "sections"),
-    notes: list<string>(tailoredRaw, "notes", "comments").map(String),
-    stats: rec(stats) ? (stats as Record<string, unknown>) : undefined,
-    evidence: normalizeEvidence(pick(tailoredRaw, "evidence")),
-  };
+  const stats = pick(raw, "stats");
+  // `tailored` is the structured resume dict `_apply_changes` wrote the accepted edits onto, so it
+  // carries no markdown and the panel's document view is rendered from it here. #145 deleted the
+  // reads that pretended otherwise (`markdown`/`text`/`content` inside the dict, a
+  // `resumeVersionId` that lives nowhere on this response, `sections`/`notes`/`evidence` that
+  // belong to the wrapper rather than the dict) together with their authorless aliases.
+  const markdown = structuredResumeToMarkdown(tailoredRaw);
+  const tailored: TailoredResult = { markdown };
   return {
-    tailored: tailored.markdown || tailored.text || tailored.sections?.length ? tailored : undefined,
+    tailored: markdown ? tailored : undefined,
     diff: normalizeTailorDiff(raw),
-    notes: list<string>(raw, "notes", "warnings").map(String),
+    notes: list<string>(raw, "notes").map(String),
     evidence: normalizeEvidence(raw),
     stats: rec(stats) ? (stats as Record<string, unknown>) : undefined,
   };

@@ -406,17 +406,16 @@ describe("normalizeTailorDiff", () => {
     expect(d.accepted[0]).toMatchObject({ section: "summary", before: "a", after: "b" });
     expect(d.rejected).toHaveLength(1);
   });
-  it("partitions a flat list by status", () => {
-    const d = normalizeTailorDiff({
-      diff: {
-        changes: [
-          { section: "x", status: "accepted" },
-          { section: "y", status: "skipped" },
-        ],
-      },
-    });
-    expect(d.accepted).toHaveLength(1);
-    expect(d.rejected).toHaveLength(1);
+  it("reads only accepted and rejected, and takes the diff map on its own too", () => {
+    // The versions panel passes a saved version's `diff`, which *is* the map, so `?? raw` stays --
+    // but the flat `{changes:[…]}` partition this reader used to run on no producer ever answered
+    // with, and `#145` deleted it along with `applied`/`kept`/`skipped`/`declined` and `status`.
+    expect(
+      normalizeTailorDiff({ diff: { changes: [{ section: "x", status: "accepted" }] } }),
+    ).toEqual({ accepted: [], rejected: [] });
+    expect(
+      normalizeTailorDiff({ accepted: [{ section: "summary", after: "b" }] }).accepted[0],
+    ).toMatchObject({ section: "summary", after: "b" });
   });
 });
 
@@ -805,9 +804,16 @@ describe("structuredResumeToMarkdown / normalizeTailor document", () => {
     expect(t.stats).toMatchObject({ accepted: 1 });
   });
 
-  it("explicit markdown/text wins over derivation", () => {
-    const t = normalizeTailor({ tailored: { markdown: "PRESET", ...tailoredStructured } });
-    expect(t.tailored?.markdown).toBe("PRESET");
+  it("renders the document from the dict, because nothing writes markdown into it", () => {
+    // `tailored` is the structured resume `_apply_changes` edited: the parse prompt draws profile /
+    // experience / skills and no markdown, so a `{markdown:"PRESET"}` fixture invented a sixth shape
+    // and reading it shadowed the real dict on the one payload that has both.
+    const t = normalizeTailor({
+      tailored: { ...tailoredStructured, markdown: "PRESET", text: "PRESET", sections: [{ name: "x" }] },
+    });
+    expect(t.tailored?.markdown).toContain("# Ada L");
+    expect(t.tailored?.markdown).not.toContain("PRESET");
+    expect(Object.keys(t.tailored ?? {})).toEqual(["markdown"]);
   });
 
   it("offers no run to follow: tailoring answers with the run itself", () => {

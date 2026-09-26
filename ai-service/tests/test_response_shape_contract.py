@@ -448,8 +448,7 @@ BROWSER_READS = {
 # table: `normalizeSuggestions` no longer probes `items`/`improvements`, because the one handler
 # that answers it writes the list under `suggestions` and nothing else.
 DEAD_ALTERNATES = {
-    "body", "coverLetter", "cover_letter", "markdown", "statistics",
-    "summary", "text", "warnings", "content",
+    "body", "coverLetter", "cover_letter", "markdown", "text", "content",
 }
 
 
@@ -491,7 +490,7 @@ def test_the_browser_side_is_actually_read():
         "letter", "sources", "mode", "model"}, \
         "resolving `cover_generate` through its import alias is what makes this answer readable"
     assert _browser_reads("normalizeTailor", "raw") >= {"stats", "notes"}
-    assert len(DEAD_ALTERNATES) >= 9, DEAD_ALTERNATES  # #144 deleted the two suggestion aliases
+    assert len(DEAD_ALTERNATES) >= 6, DEAD_ALTERNATES  # #145 deleted the three tailor aliases
 
 
 # ------------------------------------- the same reading, against a Java record's fields

@@ -505,17 +505,7 @@ export interface TailorChange {
 }
 
 export interface TailoredResult {
-  resumeVersionId?: string | null;
   markdown?: string;
-  text?: string;
-  content?: string;
-  sections?: { name?: string; bullets?: string[]; text?: string }[];
-  notes?: string[];
-  stats?: { added?: number; removed?: number; rewritten?: number; tokens?: number } & Record<
-    string,
-    unknown
-  >;
-  evidence?: Evidence[];
 }
 
 export interface TailorDiff {

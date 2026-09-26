@@ -47,7 +47,7 @@ export function TailorPanel({
     tailor.mutate(resumeVersionId ?? null, { onSuccess: setResult });
   };
   const tailored = result?.tailored;
-  const document = tailored?.markdown || tailored?.text || "";
+  const document = tailored?.markdown || "";
   const error = tailor.error ?? save.error;
 
   return (

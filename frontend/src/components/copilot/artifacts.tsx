@@ -129,7 +129,7 @@ function JobListArtifact({ data, title }: { data?: unknown; title?: string }) {
 function TailorArtifact({ data, title }: { data?: unknown; title?: string }) {
   const t = normalizeTailor(data);
   const diff = t.diff;
-  const text = t.tailored?.markdown ?? t.tailored?.text;
+  const text = t.tailored?.markdown;
   if (!diff && !text) return null;
   return (
     <Card className="border-primary/25">
