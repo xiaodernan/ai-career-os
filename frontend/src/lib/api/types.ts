@@ -101,33 +101,25 @@ export interface ResumeProfileSummary {
 export interface ResumeExperience {
   company?: string;
   role?: string;
-  title?: string;
   location?: string;
   start?: string;
   end?: string;
-  startDate?: string;
-  endDate?: string;
   bullets?: string[];
-  highlights?: string[];
 }
 
 export interface ResumeProject {
   name?: string;
-  title?: string;
   role?: string;
   period?: string;
   bullets?: string[];
-  highlights?: string[];
   techStack?: string[];
   url?: string;
 }
 
 export interface ResumeEducation {
   school?: string;
-  institution?: string;
   degree?: string;
   major?: string;
-  field?: string;
   start?: string;
   end?: string;
   gpa?: string | number;

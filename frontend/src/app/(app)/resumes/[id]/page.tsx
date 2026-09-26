@@ -506,17 +506,17 @@ function StructuredProfileView({ structured }: { structured: StructuredResume })
                   style={i === structured.experience!.length - 1 ? { display: "none" } : undefined}
                 />
                 <span className="absolute -left-[3px] top-1.5 size-1.5 rounded-full bg-primary" aria-hidden />
-                <p className="text-sm font-semibold">{exp.role ?? exp.title ?? "Role"}</p>
+                <p className="text-sm font-semibold">{exp.role ?? "Role"}</p>
                 <p className="text-xs text-muted-foreground">
                   {[exp.company, exp.location].filter(Boolean).join(" · ")}{" "}
                   {[
-                    exp.start ?? exp.startDate,
-                    exp.end ?? exp.endDate,
+                    exp.start,
+                    exp.end,
                   ]
                     .filter(Boolean)
                     .join(" → ")}
                 </p>
-                <BulletList items={exp.bullets ?? exp.highlights} className="mt-2" />
+                <BulletList items={exp.bullets} className="mt-2" />
               </li>
             ))}
           </ol>
@@ -534,7 +534,7 @@ function StructuredProfileView({ structured }: { structured: StructuredResume })
             {structured.projects!.map((p: ResumeProject, i) => (
               <li key={i} className="rounded-lg border border-border/70 p-3">
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="min-w-0 flex-1 text-sm font-semibold">{p.name ?? p.title}</p>
+                  <p className="min-w-0 flex-1 text-sm font-semibold">{p.name}</p>
                   {p.period && <span className="text-xs text-muted-foreground">{p.period}</span>}
                   {p.url && (
                     <a
@@ -548,7 +548,7 @@ function StructuredProfileView({ structured }: { structured: StructuredResume })
                     </a>
                   )}
                 </div>
-                <BulletList items={p.bullets ?? p.highlights} />
+                <BulletList items={p.bullets} />
                 {(p.techStack?.length ?? 0) > 0 && <TechLine items={p.techStack!} />}
               </li>
             ))}
@@ -566,9 +566,9 @@ function StructuredProfileView({ structured }: { structured: StructuredResume })
           <ul className="space-y-3">
             {structured.education!.map((ed, i) => (
               <li key={i} className="flex flex-wrap items-baseline gap-x-2 text-sm">
-                <span className="font-semibold">{ed.school ?? ed.institution}</span>
+                <span className="font-semibold">{ed.school}</span>
                 <span className="text-muted-foreground">
-                  {[ed.degree, ed.major ?? ed.field].filter(Boolean).join(" · ")}
+                  {[ed.degree, ed.major].filter(Boolean).join(" · ")}
                 </span>
                 <span className="ml-auto text-xs text-muted-foreground">
                   {[ed.start, ed.end].filter(Boolean).join(" → ")}
