@@ -346,9 +346,23 @@ describe("normalizeResumeScore", () => {
   it("coerces a bare number", () => {
     expect(normalizeResumeScore(0.8)).toEqual({ overall: 80 });
   });
-  it("reads an object with subscores and gaps", () => {
-    const s = normalizeResumeScore({ overall: 0.75, bullets: 0.6, gaps: ["no metrics"] });
-    expect(s).toMatchObject({ overall: 75, bullets: 60, gaps: ["no metrics"] });
+  it("carries the rubric's own 0-100 dimension figures through unscaled", () => {
+    // #131 gave these a producer: ai-service reports each dimension as achieved/possible of *its
+    // own* points, so `structure: 38` means 38% of the structural criteria, not 38% of the total.
+    const s = normalizeResumeScore({
+      total: 65,
+      structure: 38,
+      bullets: 100,
+      impact: 47,
+      clarity: 50,
+      keywords: 0,
+      detail: [{ criterion: "has_skills", met: false, points: 10 }],
+    });
+    expect(s).toMatchObject({ overall: 65, structure: 38, bullets: 100, impact: 47, clarity: 50,
+                             keywords: 0 });
+    // ...which is why they do not go through `pct`: a dimension of exactly 1 is 1%, not 100%.
+    expect(normalizeResumeScore({ total: 105, clarity: 1 })?.clarity).toBe(1);
+    expect(normalizeResumeScore({ total: 105 })?.clarity).toBeUndefined();
   });
   it("returns null for an empty object", () => {
     expect(normalizeResumeScore({})).toBeNull();

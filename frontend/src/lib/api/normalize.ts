@@ -834,11 +834,15 @@ export function normalizeResumeScore(raw: unknown): ResumeScore | null {
   const suggestions = list<string>(s, "suggestions", "improvements", "tips").map(String);
   const out: ResumeScore = {
     overall,
-    bullets: pct(num(s, "bullets", "bulletScore", "bullet_score")),
-    structure: pct(num(s, "structure", "structureScore", "structure_score")),
-    impact: pct(num(s, "impact", "impactScore", "impact_score")),
-    clarity: pct(num(s, "clarity", "clarityScore", "clarity_score")),
-    keywords: pct(num(s, "keywords", "keywordScore", "keyword_score", "ats")),
+    // The rubric reports each of these on its own 0-100 scale (ai-service `_DIMENSION_OF`), so they
+    // go through `num` rather than `pct`: `pct` scales anything <=1 as a fraction, which would turn
+    // a dimension worth exactly 1 into a full 100 bar. A score stored before the dimensions existed
+    // has none of these keys, and the panel's own filter hides the bars it cannot fill.
+    bullets: num(s, "bullets") ?? undefined,
+    structure: num(s, "structure") ?? undefined,
+    impact: num(s, "impact") ?? undefined,
+    clarity: num(s, "clarity") ?? undefined,
+    keywords: num(s, "keywords") ?? undefined,
     gaps: gaps.length ? gaps : undefined,
     suggestions: suggestions.length ? suggestions : undefined,
     computedAt: str(s, "computedAt", "computed_at", "createdAt", "created_at"),

@@ -77,14 +77,41 @@ def _merge_skills(llm_skills: list[dict], text_skills: list[str]) -> list[dict]:
     return merged
 
 
+DIMENSIONS = ("bullets", "structure", "impact", "clarity", "keywords")
+
+# Which dimension each criterion measures. The resume panel shows one bar per dimension, so the
+# grouping has to live here with the rubric rather than in the UI: one table keyed by criterion
+# means a criterion is credited to exactly one dimension, and a new `add(...)` whose name is not
+# in here fails with a KeyError instead of quietly going uncounted. Each dimension is reported as
+# achieved/possible on its own 0-100 scale, so `structure` at 100 means "every structural criterion
+# met" even when the resume's `total` is nowhere near its 110 maximum.
+_DIMENSION_OF = {
+    "has_contact": "structure",
+    "has_summary": "structure",
+    "has_experience": "structure",
+    "has_projects": "structure",
+    "has_education": "structure",
+    "experience_has_bullets": "bullets",
+    "quantified_impact": "impact",
+    "has_skills": "keywords",
+    "years_experience_stated": "clarity",
+    "dates_present": "clarity",
+}
+
+
 def compute_resume_score(parsed: dict) -> dict:
     """Deterministic rubric (0-100) — no LLM, fully explainable (Resume Score)."""
     score, detail = 0, []
+    achieved = {dim: 0 for dim in DIMENSIONS}
+    possible = {dim: 0 for dim in DIMENSIONS}
 
     def add(pts: int, why: str, ok: bool):
         nonlocal score
+        dim = _DIMENSION_OF[why]
+        possible[dim] += pts
         if ok:
             score += pts
+            achieved[dim] += pts
         detail.append({"criterion": why, "met": bool(ok), "points": pts})
 
     p = parsed.get("profile") or {}
@@ -103,4 +130,20 @@ def compute_resume_score(parsed: dict) -> dict:
     add(5, "years_experience_stated", bool(p.get("yearsExperience")))
     dates_ok = all(bool(e.get("start")) for e in exp) if exp else False
     add(5, "dates_present", dates_ok)
-    return {"total": score, "detail": detail}
+    # One 0-100 figure per dimension, from that dimension's own achieved/possible; a score stored
+    # before these keys existed leaves the panel hiding the bars it cannot fill. Written as one
+    # literal on purpose: `test_response_shape_contract` reads this return to learn what the
+    # endpoint carries, and a `dict.update()` comprehension is invisible to it.
+    return {
+        "total": score,
+        "detail": detail,
+        "bullets": _percent(achieved["bullets"], possible["bullets"]),
+        "structure": _percent(achieved["structure"], possible["structure"]),
+        "impact": _percent(achieved["impact"], possible["impact"]),
+        "clarity": _percent(achieved["clarity"], possible["clarity"]),
+        "keywords": _percent(achieved["keywords"], possible["keywords"]),
+    }
+
+
+def _percent(achieved: int, possible: int) -> int:
+    return round(achieved / possible * 100) if possible else 0
