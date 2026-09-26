@@ -38,6 +38,14 @@ so `pyadd` walks that function's own AST for the literals, and the census pins t
 `ChatActionItem` is the union of two shapes. And the last thing that reader reaches for is not a wire
 field at all: `CHAT_ACTION_ROUTES[kind]` is keyed by a variable, so a fifth test checks the kinds the
 producer writes against the routes the browser declares, and every route against a page that exists.
+
+The same kind of read, one table over: `DIMENSION_LABELS[key]`. #150 found the shape's cost -- five of
+its entries were reachable only through a `dimensions` map no match endpoint ever sent, and the reader
+that probed for that map tried seventeen names of which sixteen had no author -- so a sixth test bounds
+the label table by the two dimension vocabularies that key it, each parsed from the source that
+declares it (`_overall`'s parameters on one side, ai-service's `DIMENSIONS` on the other). A
+variable-keyed lookup of browser-owned data is not outside the contract; it is the part of it a
+per-site rule cannot see.
 """
 
 import ast
@@ -510,6 +518,22 @@ READERS: dict[str, dict] = {
         "blind": {},
         "dynamic": {},
     },
+    "normalizeDimensions": {
+        # The same map `normalizeMatch` drills, handed over by that mapper's own body
+        # (`dimensions: normalizeDimensions(m)`), so it answers to the two authors of a match and to
+        # nothing else. #150 is why this reader has four sites instead of six receivers' worth: the
+        # `dimensions`/`dimension_scores`/`dimensionScores`/`breakdown`/`scores` probe it opened with
+        # has no author on either service, and neither did anything it then read off the entries it
+        # walked (`score`/`value`/`points`, `label`/`name`, `note`/`reason`/`comment`, `evidence`) or
+        # the `${key}_score`/`${key}Score` aliases it tried beside each column. What is left is one
+        # literal name per dimension, bounded by `_match_dimensions()` rather than by a candidate
+        # list here -- and by the label-table rule, since the *labels* are a read no record answers.
+        "record_of": {"raw": ["MatchResult", "MatchSummary"]},
+        "drilled": {},
+        "elements": {},
+        "blind": {},
+        "dynamic": {},
+    },
     "normalizeMatch": {
         # `raw` is the envelope `pick(raw, "match", "latestMatch", …)` drills; the payload is the
         # union, because the score has two authors: POST /jobs/{id}/match answers with
@@ -655,6 +679,62 @@ def _search_hits() -> dict[str, str]:
     head = source[source.index("record SearchResponse("):]
     body = head[:head.index(") {")]
     return {key: record for record, key in re.findall(r"List<(\w+)>\s+(\w+)", body)}
+
+
+def _dimension_labels() -> set[str]:
+    """The keys of the browser's bar-label table, read out of the file that looks them up.
+
+    `DIMENSION_LABELS[key]` is a read whose key is a variable and whose producer is neither service:
+    the table is the browser's own copy of the dimension vocabularies, which is exactly why it needs
+    a rule -- an entry no reader can key is a name the UI promises to label forever, and a name the
+    readers produce with no entry draws a raw column name where a word belongs.
+    """
+    source = NORMALIZE.read_text(encoding="utf-8")
+    if "const DIMENSION_LABELS" not in source:
+        raise AssertionError("DIMENSION_LABELS is gone from normalize.ts: the rule that bounds the "
+                             "bar labels has no table to read, so it would pass on an empty set")
+    start = source.index("const DIMENSION_LABELS")
+    block = source[start:source.index("\n};", start)]
+    keys = set(re.findall(r'^\s*(\w+):\s*"[^"]*"', block, re.M))
+    if not keys:
+        raise AssertionError("DIMENSION_LABELS no longer declares one `name: \"Label\"` entry per "
+                             "dimension: the reader of it would be guessing at the shape again")
+    return keys
+
+
+def _match_dimensions() -> tuple[str, ...]:
+    """What a match score is made of, read out of the arithmetic that makes it.
+
+    `_overall(technical, experience, projects, education)` weights its parameters by position against
+    `_OVERALL_WEIGHTS`, and `compute_match` answers with a field per name -- so the signature is the
+    producer's one statement of the dimension vocabulary. Copying those four words into the table
+    that checks them would leave a rename on the service side with nothing to disagree with.
+    """
+    fn = _sole("_overall")
+    if fn is None:
+        raise AssertionError("_overall is not exactly one function under app/: the rule that bounds "
+                             "the match's dimension bars reads a signature that has moved")
+    names = tuple(argument.arg for argument in fn.args.args)
+    if len(names) < 2:
+        raise AssertionError(f"`_overall` weights {names or 'nothing'}: a one-dimensional overall "
+                             "score is a different feature, and this reader's bars should follow")
+    return names
+
+
+def _interview_dimensions() -> set[str]:
+    """ai-service's interview `DIMENSIONS`, the other vocabulary the bar-label table serves.
+
+    The finalize and evaluate prompts interpolate it key by key (`", ".join(f'"{d}": 0.0-1.0' …)`),
+    so the list is what the model is asked to return, and `normalizeInterviewDims` walks whatever
+    comes back. Today none of those names carries a label -- the reader falls through to the
+    snake-split -- which is copy rather than contract, and #141 left it alone for that reason.
+    """
+    path = Path(__file__).resolve().parents[1] / "app" / "features" / "interview.py"
+    declared = re.search(r"^DIMENSIONS\s*=\s*\[([^\]]*)\]", path.read_text(encoding="utf-8"), re.M)
+    if declared is None:
+        raise AssertionError("interview.py no longer declares DIMENSIONS as one bracketed list: the "
+                             "label table's other half would be checked against nothing")
+    return set(re.findall(r'"([^"]+)"', declared.group(1)))
 
 
 def _chat_routes() -> dict[str, str]:
@@ -1313,6 +1393,33 @@ def test_the_reads_are_actually_found():
     assert len(matches) == 18
     assert {s["receiver"] for s in matches} == {"raw", "m"}
     assert sum(1 for s in matches if s["receiver"] == "m") == 17  # every payload read, incl. idOf
+    dims = _sites("normalizeDimensions")
+    assert len(dims) == 4, dims
+    assert {s["receiver"] for s in dims} == {"raw"}
+    # One name per site, exactly. A fourth candidate beside a live one used to be invisible here --
+    # the site stays live on the strength of its authored sibling -- so the per-site tuple is what
+    # says `technical_score` cannot come back as a "tolerance" without this line noticing.
+    assert [s["keys"] for s in dims] == [("technical",), ("experience",), ("projects",),
+                                         ("education",)]
+    # 4 sites, down from the 6 #150 measured, and the 17 candidate names those 6 tried were 16
+    # unauthored. The 17th was `evidence`, read off a *dimension entry* -- a name the match map does
+    # carry, one level up, where `normalizeMatch` already reads it. That is the shape this census is
+    # for: a wrong receiver can still name a real column, and only the per-receiver binding sees it.
+    assert {s["keys"][0] for s in dims} == set(_match_dimensions())
+    # The table row itself, asserted rather than inferred from its effect. #149's reader could not
+    # vanish quietly because `ChatActionItem` was its alone, and a producer no reader binds fails
+    # `_producer_bookkeeping`; this one shares both of its authors with the caller that hands over
+    # the map, so deleting the row would leave the four sites above read by nothing and the gate
+    # green. The claim is the substantive one: a dimension reader is bound to exactly the two
+    # authors of the map its own caller drills.
+    assert READERS.get("normalizeDimensions", {}).get("record_of", {}).get("raw") == \
+        READERS["normalizeMatch"]["record_of"]["m"], \
+        "normalizeDimensions is not bound to the pair normalizeMatch binds `m` to"
+    # Per author rather than through the union the liveness rule checks, because a bar that goes
+    # missing after a refresh is the defect: the fresh answer and the stored row both project all
+    # four columns today, and either stopping is a blank row on the job page, not a dead read.
+    assert all(set(_match_dimensions()) <= _emitted(name)
+               for name in ("MatchResult", "MatchSummary"))
     gaps = _sites("normalizeSkillGaps")
     assert len(gaps) == 4
     assert {s["receiver"] for s in gaps} == {"raw", "g"}
@@ -1732,4 +1839,30 @@ def test_every_action_kind_the_orchestrator_offers_lands_somewhere():
     assert sorted(_chat_routes()) == sorted(_added_values(*PRODUCERS["ChatActionItem"][1], "kind")) \
         == ["cover_letter", "interview", "open_interview", "open_job", "tailor"]
     assert all(_page_file(route) is not None for route in _chat_routes().values())
+
+
+def test_every_bar_label_belongs_to_a_dimension_somebody_scores():
+    """The other half of #150, and the half no record can answer for.
+
+    `DIMENSION_LABELS[key]` reads a table the browser owns, keyed by a variable, and both of this
+    file's dimension readers look a name up in it -- `normalizeDimensions` with the four columns
+    `_overall` weights, `normalizeInterviewDims` with whatever ai-service's `DIMENSIONS` list asked
+    the model for. Neither lookup is a wire read, so the liveness rule cannot see either one, and a
+    table entry no reader can reach is a label that will never render while the file keeps claiming
+    the vocabulary. That is the mistake #150 deleted: five entries were reachable only through a
+    `dimensions` map no endpoint ever sent.
+
+    Every match dimension still has to be labelled, because the match reader has no fallback left to
+    hide a missing entry behind -- it renders `undefined` where a word belongs. The interview names
+    are allowed to have no entry, and today have none: that reader splits on `_`, which is copy, not
+    contract.
+    """
+    labels, scored = _dimension_labels(), set(_match_dimensions())
+    assert scored and labels and _interview_dimensions(), \
+        "an empty side of this rule would satisfy every comparison below it"
+    assert scored <= labels, f"a match bar with no label: {sorted(scored - labels)}"
+    unreachable = labels - scored - _interview_dimensions()
+    assert unreachable == set(), (f"labels no dimension reader can ask for: {sorted(unreachable)} -- "
+                                  "either the reader that used them is gone, or the service renamed "
+                                  "the dimension and this table is now covering for nothing")
 

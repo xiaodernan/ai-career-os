@@ -180,46 +180,49 @@ export function evidencePath(e: Evidence): string[] | undefined {
 
 /* --------------------------------- match --------------------------------- */
 
+// A bar label is looked up by a dimension name, and there are only two vocabularies of those in the
+// product: the four scores a match is made of (below, and `normalizeDimensions`), and the interview
+// report's (`normalizeInterviewDims`, keyed by ai-service's `DIMENSIONS`). `project` and the
+// `skills`/`domain`/`location`/`seniority`/`overall` rows are #150's deletions -- the match reader
+// used to accept a caller-supplied dimension map, so those six names were reachable only by a
+// payload no endpoint ever sends. The gate checks this table's keys against both vocabularies.
 const DIMENSION_LABELS: Record<string, string> = {
   technical: "Technical",
   experience: "Experience",
   projects: "Projects",
-  project: "Projects",
   education: "Education",
-  skills: "Skills",
-  domain: "Domain fit",
-  location: "Location",
-  seniority: "Seniority",
-  overall: "Overall",
 };
 
+/**
+ * The match panel's bars. `MatchResult` and `MatchSummary` carry the four scores as flat columns,
+ * and `compute_match`'s own `_overall(technical, experience, projects, education)` is what fixes
+ * that vocabulary, so one name per dimension is the whole wire shape and this reads four literal
+ * names rather than walking a map.
+ *
+ * #150 deleted the map. The reader used to probe `dimensions` / `dimension_scores` /
+ * `dimensionScores` / `breakdown` / `scores` and walk whatever it got, either as a record of
+ * per-dimension values or as an array of rows, reading `score` / `value` / `points`, `label` /
+ * `name`, `note` / `reason` / `comment` and `evidence` off each entry. Six sites, and no author on
+ * either service writes any of those names for a match: `POST /jobs/{id}/match` answers with
+ * `MatchResult.model_dump()` relayed through a `Map`, `GET /jobs/{id}` replays the `MatchSummary`
+ * row, and neither has a dimension map to hand over. It is the same fold #141 made on the
+ * interview side -- a fallback no producer reaches is not tolerance but a shape the mapper silently
+ * reinterprets -- and the `${key}_score` / `${key}Score` alias twins went with it, for the same
+ * reason the nine beside `normalizeMatch`'s own four fields did.
+ *
+ * A dimension whose score is absent is skipped rather than shown as 0, which is what the panel's
+ * `?.length` branch and its own fallback list are written against.
+ */
 export function normalizeDimensions(raw: unknown): MatchDimension[] {
+  const bars: Array<[string, number | undefined]> = [
+    ["technical", pct(num(raw, "technical"))],
+    ["experience", pct(num(raw, "experience"))],
+    ["projects", pct(num(raw, "projects"))],
+    ["education", pct(num(raw, "education"))],
+  ];
   const out: MatchDimension[] = [];
-  const push = (key: string, value: unknown) => {
-    const score =
-      typeof value === "number" || typeof value === "string"
-        ? pct(num({ v: value }, "v"))
-        : pct(num(value, "score", "value", "points"));
-    const evidence = Array.isArray(value) ? [] : normalizeEvidence(pick(value, "evidence"));
-    const note = typeof value === "object" ? str(value, "note", "reason", "comment") : undefined;
-    if (score == null && !note && !evidence.length) return;
-    out.push({
-      key,
-      label: str(value, "label", "name") ?? DIMENSION_LABELS[key] ?? key.replace(/_/g, " "),
-      score,
-      note,
-      evidence: evidence.length ? evidence : undefined,
-    });
-  };
-
-  const dims = pick(raw, "dimensions", "dimension_scores", "dimensionScores", "breakdown", "scores");
-  const dimsRecord = rec(dims);
-  if (dimsRecord) for (const [k, v] of Object.entries(dimsRecord)) push(k, v);
-  else if (Array.isArray(dims)) for (const d of dims) push(str(d, "key", "name", "dimension") ?? "dim", d);
-
-  for (const key of ["technical", "experience", "projects", "education"] as const) {
-    const v = num(raw, key, `${key}_score`, `${key}Score`);
-    if (v != null && !out.some((d) => d.key === key)) push(key, { score: v });
+  for (const [key, score] of bars) {
+    if (score != null) out.push({ key, label: DIMENSION_LABELS[key], score });
   }
   return out;
 }
@@ -238,10 +241,14 @@ export function normalizeMatch(raw: unknown): JobMatch | null {
     jobId: str(m, "jobId", "job_id"),
     resumeVersionId: str(m, "resumeVersionId", "resume_version_id"),
     overall: overall ?? 0,
-    technical: pct(num(m, "technical", "technicalScore", "technical_score")),
-    experience: pct(num(m, "experience", "experienceScore", "experience_score")),
-    projects: pct(num(m, "projects", "projectScore", "project_score", "projectsScore")),
-    education: pct(num(m, "education", "educationScore", "education_score")),
+    // One name each. `technicalScore`/`technical_score` and their seven twins were read here until
+    // #150 measured that no author on either service writes them: `MatchResult`'s fields and
+    // `MatchSummary`'s components are all bare camel-free columns, and the relay that carries the
+    // fresh one is a `Map` copy of `model_dump()`. A dimension reaches this mapper under one key.
+    technical: pct(num(m, "technical")),
+    experience: pct(num(m, "experience")),
+    projects: pct(num(m, "projects")),
+    education: pct(num(m, "education")),
     dimensions: normalizeDimensions(m),
     matchedSkills: matched.map(String),
     missingSkills: missing.map(String),

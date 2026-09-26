@@ -337,11 +337,36 @@ describe("normalizeSkillGaps", () => {
 });
 
 describe("normalizeDimensions", () => {
-  it("reads a dimension record with mixed value shapes", () => {
-    const d = normalizeDimensions({ dimensions: { technical: 0.9, experience: { score: 60, note: "senior" } } });
-    expect(d).toHaveLength(2);
-    expect(d[0]).toMatchObject({ key: "technical", label: "Technical", score: 90 });
-    expect(d[1]).toMatchObject({ key: "experience", score: 60, note: "senior" });
+  // The fixture is a `MatchResult` body — which is what `normalizeMatch` hands over, since its only
+  // caller is `dimensions: normalizeDimensions(m)`. The reader used to be tested against
+  // `{dimensions: {technical: 0.9, experience: {score: 60, note: "senior"}}}` and nothing on either
+  // service sends a `dimensions` key for a match, so #150 deleted that path along with the fixture
+  // that invented it.
+  it("bars the four scores the matcher computes, in that order", () => {
+    const d = normalizeDimensions({ overall: 0.7, technical: 0.9, experience: 0.6, projects: 1,
+                                    education: 0 });
+    expect(d).toEqual([
+      { key: "technical", label: "Technical", score: 90 },
+      { key: "experience", label: "Experience", score: 60 },
+      { key: "projects", label: "Projects", score: 100 },
+      { key: "education", label: "Education", score: 0 },
+    ]);
+  });
+
+  it("skips a dimension the payload does not score", () => {
+    // An old persisted `MatchSummary` whose columns were left out of the projection, and a match
+    // computed before `projects` existed, both land here as a missing key rather than a zero bar.
+    expect(normalizeDimensions({ technical: 0.5 }).map((d) => d.key)).toEqual(["technical"]);
+    expect(normalizeDimensions({})).toEqual([]);
+    expect(normalizeDimensions({ overall: 0.8, narrative: "no scores" })).toEqual([]);
+  });
+
+  it("reads each dimension under its one wire name", () => {
+    // #150's alias deletion, stated as a case: `technical_score` and `technicalScore` were tried
+    // beside the real column on both this reader's loop and `normalizeMatch`'s own four fields, and
+    // no producer writes either.
+    expect(normalizeDimensions({ technical_score: 0.9, technicalScore: 0.8 })).toEqual([]);
+    expect(normalizeMatch({ overall: 0.5, technical_score: 0.9 })!.technical).toBeUndefined();
   });
 });
 

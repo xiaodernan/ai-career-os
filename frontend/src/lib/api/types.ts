@@ -197,12 +197,12 @@ export interface JobDetail extends Job {
   preparation?: PreparationItem[];
 }
 
+/** One scored bar of a match. `note`/`evidence` are #150's deletions: the mapper fills a dimension
+ *  from `MatchResult`'s four score columns, and no producer sends a per-dimension explanation. */
 export interface MatchDimension {
   key: string;
   label: string;
   score?: number;
-  note?: string;
-  evidence?: Evidence[];
 }
 
 export interface JobMatch {
