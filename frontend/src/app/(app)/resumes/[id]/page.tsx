@@ -593,8 +593,7 @@ function StructuredProfileView({ structured }: { structured: StructuredResume })
             {structured.skills!.map((g, i) => (
               <li key={i}>
                 <p className="text-2xs font-medium tracking-wide text-muted-foreground uppercase">
-                  {g.group ?? g.category ?? g.name ?? `Group ${i + 1}`}
-                  {g.level ? ` · ${g.level}` : ""}
+                  {g.group ?? `Group ${i + 1}`}
                 </p>
                 <ul className="mt-1 flex flex-wrap gap-1.5">
                   {(g.skills ?? []).map((s) => (

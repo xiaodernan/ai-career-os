@@ -132,6 +132,20 @@ PRODUCERS = {
     # names. #146 binds the private `changeFrom` mapper to this, so a sub-reader's aliases stop
     # being free of inspection just because the function is not exported.
     "TailorChangeItem": ("pyskel", ("app/features/tailor.py", "SYSTEM", ("changes",))),
+    # The resume dict `tailored` carries is the parse answer with three edits, so every name the
+    # markdown renderer can reach has to be drawn by this prompt. One producer per level, because a
+    # union of the levels would let `role` pass for a project as easily as for an experience row.
+    # `ParsedResumeMap.profile` is a drawn *object* rather than a list, which `_prompt_item_keys`
+    # reads from the same parsed skeleton.
+    "ParsedResumeMap": ("pyskel", ("app/features/resume_parse.py", "SYSTEM", ())),
+    "ParsedProfileMap": ("pyskel", ("app/features/resume_parse.py", "SYSTEM", ("profile",))),
+    "ParsedExperienceItem": ("pyskel", ("app/features/resume_parse.py", "SYSTEM", ("experience",))),
+    "ParsedProjectItem": ("pyskel", ("app/features/resume_parse.py", "SYSTEM", ("projects",))),
+    "ParsedEducationItem": ("pyskel", ("app/features/resume_parse.py", "SYSTEM", ("education",))),
+    # A skill row is the one list whose author is code, not the prompt: `parse_resume` overwrites
+    # `raw["skills"]` with `_merge_skills`, so what reaches the wire is that literal -- which is why
+    # `proficiency` is a key a reader may name even though the renderer never does.
+    "MergedSkillItem": ("pyappend", ("_merge_skills", "merged")),
 }
 
 # Readers whose producers are known per map. A reader with more producers than one is bound to their
@@ -145,7 +159,9 @@ PRODUCERS = {
 #              by drilling has to appear here: the link is what `_broken_links` re-checks and what
 #              `_hollow_drills` compares to the parent record, so an undeclared one leaves the step
 #              where a wrong key silently yields `{}` unverified.
-#   elements   local -> parent receiver, when it is a `.map((local, i) …)` element
+#   elements   local -> parent receiver, when it is a `.map((local, i) …)` element; or
+#              (parent, key) when a `for…of` walks a list the reader drilled out of that parent
+#              under that key -- the key is what makes the claim checkable rather than anecdotal
 #   blind      receiver -> why no record can answer for it
 #   dynamic    receiver -> why its names come from a variable rather than a call site, and which
 #              source-derived rule checks them instead (an unexplained entry is not allowed)
@@ -365,6 +381,42 @@ READERS: dict[str, dict] = {
         "record_of": {"raw": "TailorMap"},
         "drilled": {},
         "elements": {},
+        "blind": {},
+        "dynamic": {},
+    },
+    "structuredResumeToMarkdown": {
+        # The renderer of the tailor panel's document. Its one production caller is
+        # `normalizeTailor`, which hands over `tailored` -- the parse answer with its bullets,
+        # `profile.summary` and skill order edited -- so the parse prompt is the only author of
+        # every name here. #147 deleted 27 of the 48 names this probed: the three `structured`
+        # wrappers (no producer nests a resume under that key -- `ResumeVersionItem.structured` is
+        # a DTO field, and this reader never receives a version), the snake_case twins beside every
+        # live list, `endDate`/`startDate` (those belong to `ResumeDtos.ExperienceItem`, the
+        # editable-rows API, which is where the aliases looked authored), `current` and with it the
+        # unreachable "Present" branch, a project `description` line, top-level `name`/`headline`/
+        # `summary`, and `technologies` -- the read #106 had already proved no service emits.
+        "record_of": {"s": "ParsedResumeMap", "profile": "ParsedProfileMap",
+                      "e": "ParsedExperienceItem", "p": "ParsedProjectItem",
+                      "ed": "ParsedEducationItem",
+                      # `bulletList` is a local helper called with an experience row and a project
+                      # row and nothing else, so its parameter genuinely has two authors; both draw
+                      # `bullets`, so the union still cannot excuse a name neither one carries.
+                      "o": ["ParsedExperienceItem", "ParsedProjectItem"]},
+        "drilled": {"profile": ("s", "profile")},
+        "elements": {"e": ("s", "experience"), "p": ("s", "projects"),
+                     "ed": ("s", "education")},
+        "blind": {},
+        "dynamic": {},
+    },
+    "groupSkillBuckets": {
+        # Shared by the two resume readers, and fed the same `skills` list both of them reach
+        # through `s`: `_merge_skills` overwrites the prompt's version, so its literal -- not the
+        # prompt -- is what a row carries. #147 deleted the pre-grouped branch here, which asked for
+        # `skills`/`items`/`group`/`level` on a row that only ever has `name`/`category`/
+        # `proficiency`, and with it the `skill` and `group` twins of the two names that work.
+        "record_of": {"s": "ParsedResumeMap", "g": "MergedSkillItem"},
+        "drilled": {},
+        "elements": {"g": ("s", "skills")},
         "blind": {},
         "dynamic": {},
     },
@@ -706,7 +758,7 @@ def _return_branch_keys(func_name: str, key: str) -> set[str]:
 
 
 def _prompt_item_keys(rel: str, const: str, member: tuple[str, ...]) -> set[str]:
-    """The keys of one drawn list's item, or the answer's own keys when no list is named.
+    """The keys of one drawn map: the answer's own, a named list's item, or a named sub-object's.
 
     Both readings come from the same parse, so an item shape is checked against the prompt that asks
     for it rather than against a description of it. A prompt that drops the list, or draws it as
@@ -717,12 +769,14 @@ def _prompt_item_keys(rel: str, const: str, member: tuple[str, ...]) -> set[str]
         return set(skeleton)
     name = member[0]
     if name not in skeleton:
-        raise AssertionError(f"{rel}::{const} draws no {name!r} list: the table names an item shape "
+        raise AssertionError(f"{rel}::{const} draws no {name!r} member: the table names a shape "
                              "the prompt no longer asks for")
     rows = skeleton[name]
+    if isinstance(rows, dict):
+        return set(rows)  # a drawn sub-map (`profile`), not a list of rows
     if not isinstance(rows, list) or not rows or not isinstance(rows[0], dict):
-        raise AssertionError(f"{rel}::{const}'s {name!r} is not a list of objects, so its items have "
-                             "no key set to check a reader's item reads against")
+        raise AssertionError(f"{rel}::{const}'s {name!r} is neither an object nor a list of objects, "
+                             "so its items have no key set to check a reader's item reads against")
     return set(rows[0])
 
 
@@ -872,12 +926,33 @@ def _broken_links(reader: str) -> list[str]:
             problems.append(f"{reader}: {local!r} is drilled from {parent!r} under "
                             f"{bound.group(1)!r}, which the table calls {key!r}")
     for local, parent in spec["elements"].items():
+        holder = parent[0] if isinstance(parent, tuple) else parent
+        if holder not in (set(spec["record_of"]) | set(spec["blind"]) | set(spec["dynamic"])):
+            problems.append(f"{reader}: {local!r} comes from {holder!r}, which the table neither "
+                            "binds, declares blind, nor declares dynamic")
+        if isinstance(parent, tuple):
+            # A `for…of` element: the row has no `.map` header to point at, so the link is stated as
+            # (map, key) and both halves have to be findable -- the list drilled out of that map
+            # under that key, and this local bound to the rows of exactly that list. Without the key
+            # the claim is only "some element of some local", which a renamed list survives.
+            key = parent[1]
+            # One-way, and #147 measured the other direction free: emptying this reader's `elements`
+            # of the `ed` binding left all four tests green, because nothing requires a `for…of`
+            # receiver that `record_of` binds to appear here. A rule that only checks declared links
+            # can be deleted link by link; closing that needs the reverse check, not this one.
+            made = re.search(rf"(?:const|let)\s+([\w$]+)\s*=\s*[^;\n;]*\(\s*{re.escape(holder)}\s*,"
+                             rf"[^)]*\"{re.escape(key)}\"", body)
+            inline = re.search(rf"for\s*\(\s*(?:const|let)\s+{re.escape(local)}\s+of\s+[^;]*"
+                               rf"\(\s*{re.escape(holder)}\s*,[^)]*\"{re.escape(key)}\"", body)
+            named = made and re.search(rf"for\s*\(\s*(?:const|let)\s+{re.escape(local)}\s+of\s+"
+                                       rf"{made.group(1)}\b", body)
+            if not (inline or named):
+                problems.append(f"{reader}: {local!r} is declared as an element of {holder!r}'s "
+                                f"{key!r} list, but nothing iterates the rows drilled that way")
+            continue
         if not re.search(rf"\.map\(\s*\(?\s*{re.escape(local)}\b", body):
             problems.append(f"{reader}: {local!r} is declared as an element of {parent!r}'s list "
                             "but is not a `.map` callback parameter")
-        if parent not in (set(spec["record_of"]) | set(spec["blind"]) | set(spec["dynamic"])):
-            problems.append(f"{reader}: {local!r} comes from {parent!r}, which the table neither "
-                            "binds, declares blind, nor declares dynamic")
     return problems
 
 
@@ -1244,6 +1319,78 @@ def test_the_reads_are_actually_found():
     # The two one-name helpers the save body is built from, now bound like any other reader.
     assert len(_sites("tailoredDict")) == 1
     assert len(_sites("tailorDiffDict")) == 1
+    # The document a candidate copies or downloads, and the skill buckets the resume page renders off
+    # it. #147 measured `structuredResumeToMarkdown` at 31 sites / 48 names and deleted 8 sites and 27
+    # names; every one of them was a spelling no author of the `structured` jsonb ever wrote
+    # (`workExperience`, `role`, `organization`, `endDate`/`startDate`, `techStack`, `institution`,
+    # `major`, a top-level `name`/`headline`/`summary`, the `technologies` list #106 proved empty) or a
+    # wrapper no caller unwraps. Both readers are bound to the parse skeleton because `ResumeService`
+    # persists `parse_resume`'s answer unchanged -- the prompt, not a DTO, is their only author.
+    md = _sites("structuredResumeToMarkdown")
+    assert len(md) == 23, f"the markdown renderer holds {len(md)} sites, want the 23 that name a key"
+    assert {s["receiver"] for s in md} == {"s", "profile", "e", "p", "ed", "o"}
+    assert sum(1 for s in md if s["receiver"] == "s") == 5
+    assert sum(1 for s in md if s["receiver"] == "profile") == 6
+    assert sum(1 for s in md if s["receiver"] == "o") == 1
+    # p and e carry one more site than names: a row's `name`/`title` is read twice in its heading.
+    assert {k for s in md if s["receiver"] == "s" for k in s["keys"]} == \
+        {"profile", "experience", "projects", "education", "achievements"}
+    assert {k for s in md if s["receiver"] == "profile" for k in s["keys"]} == \
+        {"name", "headline", "location", "email", "phone", "summary"}
+    assert {k for s in md if s["receiver"] == "e" for k in s["keys"]} == \
+        {"title", "company", "start", "end"}
+    assert {k for s in md if s["receiver"] == "p" for k in s["keys"]} == {"name", "period", "tech"}
+    assert {k for s in md if s["receiver"] == "ed" for k in s["keys"]} == {"degree", "field", "school"}
+    assert {k for s in md if s["receiver"] == "o" for k in s["keys"]} == {"bullets"}
+    # Per author, not as the union each receiver is checked against: `title` belongs to the experience
+    # item alone, `name` to the project item alone, so a rename on either side has to cost something
+    # instead of hiding behind the other's live sibling.
+    assert _emitted("ParsedResumeMap") == {"profile", "experience", "projects", "education",
+                                          "achievements", "skills", "languages", "careerGoals",
+                                          "preferredRoles", "preferredLocations", "missingSections",
+                                          "warnings"}
+    assert _emitted("ParsedProfileMap") == {"name", "headline", "location", "email", "phone",
+                                           "summary", "links", "yearsExperience"}
+    assert _emitted("ParsedExperienceItem") == {"title", "company", "location", "start", "end",
+                                                "summary", "bullets"}
+    assert _emitted("ParsedProjectItem") == {"name", "role", "period", "tech", "url", "bullets"}
+    assert _emitted("ParsedEducationItem") == {"degree", "field", "school", "startYear", "endYear",
+                                               "gpa", "courses"}
+    assert _emitted("MergedSkillItem") == {"name", "category", "proficiency"}
+    # The prompt draws twelve sections and this renderer puts five of them in the document. The seven
+    # others are listed so the gap stays a decision: `skills` reaches the page through the bucket
+    # reader below, the other six are stored and never rendered.
+    assert _emitted("ParsedResumeMap") - {k for s in md if s["receiver"] == "s"
+                                          for k in s["keys"]} == {"skills", "languages", "careerGoals",
+                                                                  "preferredRoles", "preferredLocations",
+                                                                  "missingSections", "warnings"}
+    # `technologies` has no author on either side of this contract, which is #106's fact restated from
+    # the producer: the renderer's read of it went in #147, and the parse skeleton never had one.
+    assert "technologies" not in _emitted("ParsedResumeMap")
+    # Three of the four drawn row names the document drops: a candidate's links and years of
+    # experience, an entry's own `summary`/`location`, a project's `role`/`url`, an education row's
+    # `gpa`/`courses`/`startYear`/`endYear`. Parsed, persisted, and absent from the resume.
+    assert _emitted("ParsedProfileMap") - {k for s in md if s["receiver"] == "profile"
+                                           for k in s["keys"]} == {"links", "yearsExperience"}
+    assert _emitted("ParsedExperienceItem") - {k for s in md if s["receiver"] == "e"
+                                              for k in s["keys"]} == {"location", "summary", "bullets"}
+    assert _emitted("ParsedProjectItem") - {k for s in md if s["receiver"] == "p"
+                                            for k in s["keys"]} == {"role", "url", "bullets"}
+    assert _emitted("ParsedEducationItem") - {k for s in md if s["receiver"] == "ed"
+                                              for k in s["keys"]} == {"startYear", "endYear", "gpa",
+                                                                      "courses"}
+    buckets = _sites("groupSkillBuckets")
+    assert len(buckets) == 3, buckets
+    assert {s["receiver"] for s in buckets} == {"s", "g"}
+    assert {k for s in buckets if s["receiver"] == "s" for k in s["keys"]} == {"skills"}
+    assert {k for s in buckets if s["receiver"] == "g" for k in s["keys"]} == {"name", "category"}
+    # 3 sites, down from 6 sites / 11 names: the pre-grouped carry-through branch (a nested `skills`
+    # or `items` list inside the row, and `group`/`level` beside it) answered to a payload nobody
+    # writes -- `raw["skills"]` is only ever `_merge_skills`' flat list. `proficiency`, the one
+    # proficiency-shaped name the row does carry, is drawn and rendered nowhere: the page printed
+    # `g.level`, a name with no author, so the field and that consumer went together in #147.
+    assert _emitted("MergedSkillItem") - {k for s in buckets if s["receiver"] == "g"
+                                          for k in s["keys"]} == {"proficiency"}
     # Two different ways a read stops naming its key in the call: `normalizeTrajectory` spreads a
     # name table, which this rule covers, and `normalizeSearch` reaches `g.key`, a member of a group
     # object, which `_search_hits` covers. Telling them apart is what keeps each rule honest about

@@ -138,12 +138,10 @@ export interface ResumeEducation {
   courses?: string[];
 }
 
+/** One category bucket as `groupSkillBuckets` builds it: nothing else writes this shape. */
 export interface ResumeSkillGroup {
   group?: string;
-  category?: string;
-  name?: string;
   skills?: string[];
-  level?: string;
 }
 
 /* ------------------------------------------------------------------ */

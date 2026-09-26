@@ -754,23 +754,30 @@ describe("normalizeJdParsed", () => {
 });
 
 describe("structuredResumeToMarkdown / normalizeTailor document", () => {
-  // ai-service tailor returns `tailored` as a structured resume dict (no markdown).
+  // ai-service tailor returns `tailored` as a structured resume dict (no markdown), and that dict is
+  // the parse answer with its bullets edited: every key below is one resume_parse.py's prompt draws.
   const tailoredStructured = {
-    profile: { name: "Ada L", headline: "Backend Engineer", email: "ada@x.io" },
-    summary: "Builds distributed systems.",
+    profile: {
+      name: "Ada L",
+      headline: "Backend Engineer",
+      email: "ada@x.io",
+      summary: "Builds distributed systems.",
+    },
     experience: [
       {
         company: "Acme",
         title: "Senior Engineer",
         start: "2021-01",
-        current: true,
+        end: "",
+        location: "Remote",
+        summary: "Led the API team.",
         bullets: ["Shipped API", "Cut p99 40%"],
       },
     ],
-    projects: [{ name: "Gateway", bullets: ["Rate limiter"], tech_stack: ["Go", "gRPC"] }],
-    education: [{ school: "MIT", degree: "BS", major: "CS" }],
-    skills: [{ group: "Languages", skills: ["Go", "Java"] }],
-    technologies: ["Kubernetes"],
+    projects: [{ name: "Gateway", role: "Author", period: "2023", bullets: ["Rate limiter"],
+                tech: ["Go", "gRPC"], url: "https://x" }],
+    education: [{ school: "MIT", degree: "BS", field: "CS", startYear: 2012, endYear: 2016 }],
+    skills: [{ name: "Go", category: "language", proficiency: null }],
     achievements: ["Speaker"],
   };
 
@@ -780,14 +787,39 @@ describe("structuredResumeToMarkdown / normalizeTailor document", () => {
     expect(md).toContain("### Backend Engineer");
     expect(md).toContain("ada@x.io");
     expect(md).toContain("## Summary");
-    expect(md).toContain("### Senior Engineer — Acme (2021-01 – Present)");
+    expect(md).toContain("Builds distributed systems.");
+    expect(md).toContain("### Senior Engineer — Acme (2021-01)");
     expect(md).toContain("- Shipped API");
     expect(md).toContain("- Rate limiter");
     expect(md).toContain("_Go, gRPC_");
     expect(md).toContain("MIT — BS, CS");
-    expect(md).toContain("- Languages: Go, Java");
-    expect(md).toContain("Technologies: Kubernetes");
+    expect(md).toContain("- language: Go");
     expect(md).toContain("- Speaker");
+  });
+
+  it("renders nothing from the shapes no producer writes", () => {
+    // #147 deleted 35 names this reader and its skill helper probed. They are not style preferences:
+    // each one was a branch that could only ever answer from its fallback, so a resume whose
+    // `summary` sits at the top level, whose experience row says `current`, whose project tech is
+    // under `techStack`, or whose skills arrive pre-grouped, loses that line -- and the old fixture
+    // asserted the opposite because it was written in those invented shapes.
+    const md = structuredResumeToMarkdown({
+      structured: { profile: { name: "Hidden Behind A Wrapper" } },
+      summary: "Top-level summary is not a parse key.",
+      experience: [{ role: "Invented", organization: "ACME", startDate: "2021-01",
+                     current: true, highlights: ["Not bullets"] }],
+      projects: [{ title: "Gateway", description: "Not a project key", tech_stack: ["Go"] }],
+      education: [{ institution: "MIT", major: "CS" }],
+      skills: [{ group: "Languages", skills: ["Go", "Java"], level: "Senior" }],
+      technologies: ["Kubernetes"],
+    });
+    // The three headings are real -- those lists have rows -- while every row of theirs is empty of
+    // anything a producer writes. The bare "###" each row used to render is the other half of what
+    // the aliases were masking, so `push` drops a heading with no content after its marker.
+    expect(md).toBe("## Experience\n## Projects\n## Education");
+    expect(md).not.toMatch(
+      /Hidden Behind A Wrapper|Top-level summary|Invented|ACME|Present|Not bullets|Gateway|Not a project|Go, gRPC|MIT|CS|Languages|Senior|Kubernetes/
+    );
   });
 
   it("returns empty string for a non-object", () => {
@@ -1400,16 +1432,17 @@ describe("normalizeStructuredResume", () => {
     expect(links).toContain("https://github.com/ada");
   });
 
-  it("is idempotent on an already-grouped payload", () => {
+  it("carries nothing from a pre-grouped skills row, because no producer writes one", () => {
+    // This test used to assert the opposite: that such a payload came back unchanged, which was the
+    // idempotency of a branch whose input no author ever had. #147 deleted that branch (and `level`,
+    // which nothing writes any more), so a {group, skills, level} row now buckets to nothing.
     const grouped = { skills: [{ group: "Languages", skills: ["Go"], level: "expert" }] };
-    expect(normalizeStructuredResume(grouped)?.skills).toEqual([
-      { group: "Languages", skills: ["Go"], level: "expert" },
-    ]);
+    expect(normalizeStructuredResume(grouped)?.skills).toBeUndefined();
   });
 
   it("puts a category-less flat skill in an unnamed group instead of dropping it", () => {
     const out = normalizeStructuredResume({ skills: [{ name: "Solo" }] });
-    expect(out?.skills).toEqual([{ group: undefined, skills: ["Solo"], level: undefined }]);
+    expect(out?.skills).toEqual([{ group: undefined, skills: ["Solo"] }]);
   });
 
   it("returns null for absent input and an all-empty object for {} (no crash)", () => {

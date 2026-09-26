@@ -1,4 +1,4 @@
-import type { Job, StructuredResume } from "@/lib/api/types";
+import type { Job } from "@/lib/api/types";
 import type { JobFilters } from "@/lib/hooks/resources";
 import type { NormalizedPage } from "@/lib/api/normalize";
 import { normalizeStructuredResume, serializeJobFilters } from "@/lib/api/normalize";
@@ -146,8 +146,12 @@ export function filterAndPaginate(
  * local predicate and the server's skill clause already compare skills
  * case-insensitively, so "Kubernetes" and "kubernetes" are one chip, spelled the way
  * the profile wrote it first.
+ *
+ * The argument is the `resume_versions.structured` jsonb the caller holds, not a
+ * `StructuredResume`: this function normalizes it. (Its parameter used to claim the
+ * view model, which is how its fixtures ended up in a shape no producer writes.)
  */
-export function profileSkillSuggestions(structured?: StructuredResume | null): string[] {
+export function profileSkillSuggestions(structured?: unknown): string[] {
   const s = normalizeStructuredResume(structured);
   if (!s) return [];
   const owned = [...(s.skills ?? []).flatMap((g) => g.skills ?? []), ...(s.technologies ?? [])];

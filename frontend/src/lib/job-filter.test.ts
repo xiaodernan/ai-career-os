@@ -8,7 +8,7 @@ import {
   salaryFromInput,
 } from "@/lib/job-filter";
 import { serializeJobFilters } from "@/lib/api/normalize";
-import type { Job, StructuredResume } from "@/lib/api/types";
+import type { Job } from "@/lib/api/types";
 
 /**
  * Fixtures are shaped like `normalizeJob`'s output for a `JobListItem`, i.e. what
@@ -219,37 +219,37 @@ describe("the saved tab's list screen", () => {
 });
 
 describe("profileSkillSuggestions", () => {
+  // The one production caller passes `useResume(...).data?.structured`, which is the parse answer's
+  // jsonb: skills are the flat `{name, category, proficiency}` rows `_merge_skills` writes. #147
+  // deleted `groupSkillBuckets`' carry-through of an already-grouped row -- a shape only these
+  // fixtures ever had -- so the fixtures now use the shape that arrives.
+  const skill = (name: string, category = "tool") => ({ name, category, proficiency: null });
+
   it("offers every skill the profile knows — a missing chip is a filter that cannot be set", () => {
-    const many = Array.from({ length: 31 }, (_, i) => `skill-${i}`);
-    const got = profileSkillSuggestions({ skills: [{ group: "Core", skills: many }], technologies: ["extra"] });
-    expect(got).toHaveLength(32);
+    const many = Array.from({ length: 31 }, (_, i) => skill(`skill-${i}`));
+    const got = profileSkillSuggestions({ skills: many });
+    expect(got).toHaveLength(31);
     expect(got).toContain("skill-24");
-    expect(got[got.length - 1]).toBe("extra");
+    expect(got[got.length - 1]).toBe("skill-30");
   });
 
   it("folds case-only duplicates and keeps the first spelling", () => {
     const got = profileSkillSuggestions({
-      skills: [{ skills: ["Kubernetes", "Go"] }],
-      technologies: ["kubernetes", "Rust"],
+      skills: [skill("Kubernetes", "cloud"), skill("Go", "language"), skill("kubernetes", "cloud")],
     });
-    expect(got).toEqual(["Kubernetes", "Go", "Rust"]);
+    expect(got).toEqual(["Kubernetes", "Go"]);
   });
 
   it("trims what it keeps and drops blanks", () => {
-    const got = profileSkillSuggestions({
-      skills: [{ skills: [" TypeScript ", "", "   "] }],
-      technologies: ["Node"],
-    });
-    expect(got).toEqual(["TypeScript", "Node"]);
+    const got = profileSkillSuggestions({ skills: [skill(" TypeScript "), skill(""), skill("   ")] });
+    expect(got).toEqual(["TypeScript"]);
   });
 
   it("answers with nothing when there is no parsed profile", () => {
     expect(profileSkillSuggestions(null)).toEqual([]);
     expect(profileSkillSuggestions(undefined)).toEqual([]);
     expect(profileSkillSuggestions({})).toEqual([]);
-    expect(
-      profileSkillSuggestions({ skills: null, technologies: null } as unknown as StructuredResume)
-    ).toEqual([]);
+    expect(profileSkillSuggestions({ skills: null, experience: null })).toEqual([]);
   });
 
   it("reads a structured resume nested under the payload's own key", () => {
@@ -259,7 +259,7 @@ describe("profileSkillSuggestions", () => {
   it("suggests only chips the rows can actually answer", () => {
     // A chip is worth rendering only if picking it filters; the panel and the server
     // both compare skills case-insensitively, so folded spelling must not break that.
-    const suggestion = profileSkillSuggestions({ skills: [{ skills: ["Kubernetes"] }] })[0];
+    const suggestion = profileSkillSuggestions({ skills: [skill("Kubernetes", "cloud")] })[0];
     expect(matchesJobFilters(job({ skills: ["kubernetes"] }), { skills: suggestion })).toBe(true);
     expect(matchesJobFilters(job({ skills: ["Java"] }), { skills: suggestion })).toBe(false);
   });

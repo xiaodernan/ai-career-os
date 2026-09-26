@@ -441,20 +441,26 @@ export function normalizeTailorDiff(raw: unknown): TailorDiff {
 
 /** Render a structured resume (the ai-service `tailored` payload — a resume
  *  dict, not markdown) into the markdown the tailor panel copies/downloads.
- *  Reads both camelCase and the snake_case the parser emits; never invents. */
+ *  `tailored` is the parse answer with its bullets, `profile.summary` and skill
+ *  order edited, so the camelCase skeleton that prompt draws is the whole
+ *  vocabulary here; #147 deleted the snake_case twins no author ever wrote. */
 export function structuredResumeToMarkdown(raw: unknown): string {
-  const s = rec(pick(raw, "structured", "structuredResume", "structured_resume") ?? raw);
+  const s = rec(raw);
   if (!s) return "";
   const lines: string[] = [];
+  // A heading or bullet with nothing after it is not content. #147 removed the invented aliases
+  // that used to fill these slots, which is what exposed the case: a row whose names are all empty
+  // (the prompt allows `title: ""`, `company: ""`) put a bare "###" into the document the candidate
+  // copies or downloads as their resume.
   const push = (...t: Array<string | undefined>) => {
     const l = t.filter(Boolean).join(" ").trim();
-    if (l) lines.push(l);
+    if (l && !/^[#-]+$/.test(l)) lines.push(l);
   };
-  const bulletList = (o: unknown) => list<string>(o, "bullets", "highlights").map(String);
+  const bulletList = (o: unknown) => list<string>(o, "bullets").map(String);
 
   const profile = pick(s, "profile");
-  const name = str(profile, "name") ?? str(s, "name");
-  const headline = str(profile, "headline", "title") ?? str(s, "headline");
+  const name = str(profile, "name");
+  const headline = str(profile, "headline");
   if (name) push("#", name);
   else if (headline) push("#", headline);
   if (name && headline) push("###", headline);
@@ -464,23 +470,22 @@ export function structuredResumeToMarkdown(raw: unknown): string {
       .join(" · ")
   );
 
-  const summary = str(s, "summary") ?? str(profile, "summary");
+  const summary = str(profile, "summary");
   if (summary) {
     push("## Summary");
     push(summary);
   }
 
-  const experience = list(s, "experience", "workExperience", "work_experience");
+  const experience = list(s, "experience");
   if (experience.length) {
     push("## Experience");
     for (const e of experience) {
-      const role = str(e, "role", "title") ?? "";
-      const org = str(e, "company", "organization", "organisation") ?? "";
-      let end = str(e, "end", "endDate", "end_date") ?? "";
-      if (!end && bool(e, "current")) end = "Present";
-      const start = str(e, "start", "startDate", "start_date") ?? "";
+      const title = str(e, "title") ?? "";
+      const org = str(e, "company") ?? "";
+      const start = str(e, "start") ?? "";
+      const end = str(e, "end") ?? "";
       const dates = [start, end].filter(Boolean).join(" – ");
-      push("###", [role, org].filter(Boolean).join(" — "), dates ? `(${dates})` : "");
+      push("###", [title, org].filter(Boolean).join(" — "), dates ? `(${dates})` : "");
       for (const b of bulletList(e)) push("- " + b);
     }
   }
@@ -489,12 +494,10 @@ export function structuredResumeToMarkdown(raw: unknown): string {
   if (projects.length) {
     push("## Projects");
     for (const p of projects) {
-      const title = str(p, "name", "title") ?? "";
+      const title = str(p, "name") ?? "";
       push("###", title, str(p, "period") ? `(${str(p, "period")})` : "");
-      const desc = str(p, "description");
-      if (desc) push(desc);
       for (const b of bulletList(p)) push("- " + b);
-      const tech = list<string>(p, "techStack", "tech_stack", "skills").map(String);
+      const tech = list<string>(p, "tech").map(String);
       if (tech.length) push("_" + tech.join(", ") + "_");
     }
   }
@@ -503,8 +506,8 @@ export function structuredResumeToMarkdown(raw: unknown): string {
   if (education.length) {
     push("## Education");
     for (const ed of education) {
-      const school = str(ed, "school", "institution") ?? "";
-      const deg = [str(ed, "degree"), str(ed, "major") ?? str(ed, "field")].filter(Boolean).join(", ");
+      const school = str(ed, "school") ?? "";
+      const deg = [str(ed, "degree"), str(ed, "field")].filter(Boolean).join(", ");
       push("###", school, deg ? `— ${deg}` : "");
     }
   }
@@ -517,8 +520,6 @@ export function structuredResumeToMarkdown(raw: unknown): string {
     if (!items.length) continue;
     skillLines.push((g.group ? `${g.group}: ` : "") + items.join(", "));
   }
-  const tech = list<string>(s, "technologies").map(String);
-  if (tech.length) skillLines.push("Technologies: " + tech.join(", "));
   if (skillLines.length) {
     push("## Skills");
     for (const l of skillLines) push("- " + l);
@@ -618,22 +619,20 @@ export function normalizeStructuredResume(raw: unknown): StructuredResume | null
 }
 
 /**
- * Bucket ai-service's flat `[{name,category}]` skills into the grouped view model
- * the renderer expects (`{group, skills:string[]}`). Pre-grouped entries (a nested
- * `skills`/`items` array) are carried through unchanged, so this is idempotent.
+ * Bucket ai-service's flat `[{name,category,proficiency}]` skills into the grouped
+ * view model the renderer expects (`{group, skills:string[]}`). `_merge_skills` is
+ * the only author of a skill row and always states those three keys, so #147 deleted
+ * the pre-grouped branch — it probed for `skills`/`items`/`group`/`level` no
+ * producer writes, which made the whole nested case (and the renderer's `level`)
+ * unreachable rather than idempotent.
  */
 function groupSkillBuckets(s: Record<string, unknown>): ResumeSkillGroup[] | undefined {
   const out: ResumeSkillGroup[] = [];
   const buckets = new Map<string, ResumeSkillGroup>();
   for (const g of list(s, "skills")) {
-    const nested = list<string>(g, "skills", "items").map(String).filter(Boolean);
-    if (nested.length) {
-      out.push({ group: str(g, "group", "category", "name"), skills: nested, level: str(g, "level") });
-      continue;
-    }
-    const name = str(g, "name", "skill");
+    const name = str(g, "name");
     if (!name) continue;
-    const cat = str(g, "category", "group") ?? "";
+    const cat = str(g, "category") ?? "";
     let bucket = buckets.get(cat);
     if (!bucket) {
       bucket = { group: cat || undefined, skills: [] };
