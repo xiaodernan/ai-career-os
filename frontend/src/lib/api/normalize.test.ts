@@ -931,7 +931,10 @@ describe("normalizeInterviewReport", () => {
         overall: 0.72,
         what_you_did_well: ["clear structure", "solid tradeoffs"],
         what_was_weak: ["vague on scaling"],
-        recommended_study: [{ title: "DDIA", url: "https://x", why: "partitioning", kind: "book" }],
+        recommended_study: [
+          { topic: "DDIA", why: "partitioning", resource_hint: "https://x" },
+          { topic: "Idempotency", why: "retries", resource_hint: "the Kafka docs" },
+        ],
         trajectory_note: "Held altitude until depth-4.",
       },
       trajectory: [{ question: "rate limiting", depth: 3, score: 0.6 }],
@@ -941,19 +944,25 @@ describe("normalizeInterviewReport", () => {
     expect(report?.well).toEqual(["clear structure", "solid tradeoffs"]);
     expect(report?.weak).toEqual(["vague on scaling"]);
     expect(report?.summary).toBe("Held altitude until depth-4.");
-    expect(report?.study).toEqual([{ title: "DDIA", url: "https://x", why: "partitioning", kind: "book" }]);
+    expect(report?.study).toEqual([
+      { title: "DDIA", url: "https://x", why: "partitioning" },
+      { title: "Idempotency", why: "retries · the Kafka docs" },
+    ]);
     expect(report?.trajectory).toEqual([{ question: "rate limiting", score: 60, depth: 3 }]);
     expect(report?.dims.map((d) => d.key)).toEqual(["communication", "technical"]);
     expect(report?.hasContent).toBe(true);
   });
 
-  it("still reads a flat/legacy report with a string summary", () => {
+  it("reads a report whose summary is the plain string rather than a map", () => {
+    // The names here are the declared contract (ai-service `FINALIZE_FIELDS`): the fixture used to
+    // hand the reader `strengths`/`weaknesses`/`study`/`label`/`level`, none of which any producer
+    // has ever emitted, which is what kept those alternate probes alive.
     const report = normalizeInterviewReport({
       overall: 88,
-      strengths: ["fast"],
-      weaknesses: ["shaky tests"],
-      study: [{ name: "docs" }],
-      trajectory: [{ label: "q1", score: 80, level: 2 }],
+      what_you_did_well: ["fast"],
+      what_was_weak: ["shaky tests"],
+      recommended_study: [{ topic: "docs" }],
+      trajectory: [{ topic: "q1", score: 80, depth: 2 }],
       summary: "Strong overall.",
     });
     expect(report?.overall).toBe(88);
@@ -979,7 +988,7 @@ describe("normalizeInterviewReport", () => {
           overall: 0.78,
           what_you_did_well: ["grounded examples"],
           what_was_weak: ["skipped failure modes"],
-          recommended_study: [{ title: "Designing Data-Intensive Applications", kind: "book" }],
+          recommended_study: [{ topic: "Designing Data-Intensive Applications", why: "partitioning" }],
           trajectory_note: "Depth reached level 3.",
         },
         trajectory: [],

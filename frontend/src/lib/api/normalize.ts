@@ -1006,7 +1006,6 @@ export interface InterviewStudyItem {
   title?: string;
   url?: string;
   why?: string;
-  kind?: string;
 }
 
 export interface InterviewTrajectoryPoint {
@@ -1081,38 +1080,32 @@ export function normalizeInterviewReport(raw: unknown): InterviewReport | null {
   const merged = { ...(rec(ev) ?? {}), ...(rec(summary) ?? {}) };
 
   const dims = normalizeInterviewDims(ev);
-  const overall = pct(num(merged, "overall", "score", "overallScore", "overall_score"));
-  const well = list<string>(merged, "what_you_did_well", "what_went_well", "whatWentWell", "strengths", "well").map(String);
-  const weak = list<string>(merged, "what_was_weak", "whatWasWeak", "weaknesses", "weak").map(String);
+  // Names only as far as the report's declared contract (ai-service `FINALIZE_FIELDS`) reaches: the
+  // snake/camel twins and the speculative alternatives this reader used to try (`score`,
+  // `overallScore`, `strengths`, `narrative`, `studyMaterials`, …) are names no producer has ever
+  // sent for a report, and a dead candidate inside a live site is how a rename slips through.
+  const overall = pct(num(merged, "overall"));
+  const well = list<string>(merged, "what_you_did_well").map(String);
+  const weak = list<string>(merged, "what_was_weak").map(String);
   const summaryText =
-    str(merged, "trajectory_note", "narrative", "comment", "assessment") ??
+    str(merged, "trajectory_note") ??
     (typeof summary === "string" ? summary : undefined);
   // ai-service FINALIZE emits recommended_study as {topic, why, resource_hint}, and
   // the backend copies that dict verbatim into summary.recommended_study
   // (InterviewService.persistFinalization); the mock and some models use a bare
-  // resource string. Reading only title/name+url made every card fall through to
-  // "Untitled resource" and silently dropped the hint.
-  const study = list<unknown>(
-    merged,
-    "recommended_study",
-    "study",
-    "studyMaterials",
-    "study_materials",
-    "materials"
-  ).map((s): InterviewStudyItem => {
+  // resource string. A non-URL `resource_hint` is a resource NAME, so it folds into the why
+  // line rather than being dropped; there is no separate url/kind field in the contract, which is
+  // why the card's "Open" link appears only when the hint really is a link.
+  const study = list<unknown>(merged, "recommended_study").map((s): InterviewStudyItem => {
     if (typeof s === "string") return { title: s.trim() || undefined };
-    const url = str(s, "url", "link", "href", "resourceUrl", "resource_url");
-    const hint = str(s, "resource_hint", "resourceHint");
+    const hint = str(s, "resource_hint");
     const hintIsLink = !!hint && /^https?:\/\//i.test(hint);
     const nameHint = hintIsLink ? undefined : hint;
-    const reason = str(s, "why", "reason", "description");
+    const reason = str(s, "why");
     return {
-      title: str(s, "title", "name", "topic", "resource"),
-      url: url ?? (hintIsLink ? hint : undefined),
-      // A non-URL resource_hint is a resource NAME: fold it into the why line so the
-      // recommendation still surfaces instead of being dropped.
+      title: str(s, "topic"),
+      url: hintIsLink ? hint : undefined,
       why: reason && nameHint ? `${reason} · ${nameHint}` : reason ?? nameHint,
-      kind: str(s, "kind", "type"),
     };
   });
   const trajectory = normalizeTrajectory(merged);
