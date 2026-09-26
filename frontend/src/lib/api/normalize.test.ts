@@ -676,7 +676,9 @@ describe("copilot chat: live reply must normalize identically to history", () =>
     // this reader: the mapper used to probe `href`/`url`/`link`/`path` (four names no producer
     // emits) and `payload`/`data`/`type`/`name`/`title` beside them, and the page filtered on
     // `a.href`, so the CTA row was empty on every reply the product ever served.
-    const acts = normalizeChatActions(pick(aiServiceReply, "actions"));
+    // The reader takes the reply and picks `actions` itself, which is what production does and what
+    // lets the gate bind that name to a `ChatResponse` / `MessageItem` component.
+    const acts = normalizeChatActions(aiServiceReply);
     expect(acts.map((a) => [a.kind, a.href])).toEqual([
       ["open_job", "/jobs/j1"],
       ["tailor", "/jobs/j1#tailor"],
@@ -690,11 +692,13 @@ describe("copilot chat: live reply must normalize identically to history", () =>
   it("offers no chip it cannot route", () => {
     // `open_interview` is the one action whose locator `_derive_actions` reads with `.get(...)`, so
     // a session id can come back null — and an unmapped kind must not invent a destination either.
-    const acts = normalizeChatActions([
-      { kind: "open_interview", label: "Continue interview", session_id: null },
-      { kind: "archive_job", label: "Archive this", job_id: "j1" },
-      { kind: "tailor", label: "Tailor resume" },
-    ]);
+    const acts = normalizeChatActions({
+      actions: [
+        { kind: "open_interview", label: "Continue interview", session_id: null },
+        { kind: "archive_job", label: "Archive this", job_id: "j1" },
+        { kind: "tailor", label: "Tailor resume" },
+      ],
+    });
     expect(acts.map((a) => a.href)).toEqual([undefined, undefined, undefined]);
     expect(acts.map((a) => a.label)).toEqual(["Continue interview", "Archive this", "Tailor resume"]);
   });
@@ -710,7 +714,7 @@ describe("copilot chat: live reply must normalize identically to history", () =>
       { id: "m1", role: "assistant", content: aiServiceReply.answer, ...aiServiceReply },
     ]);
     const liveSources = normalizeEvidence(pick(aiServiceReply, "sources"));
-    const liveActions = normalizeChatActions(pick(aiServiceReply, "actions"));
+    const liveActions = normalizeChatActions(aiServiceReply);
     expect(historyMsg.sources).toEqual(liveSources);
     expect(historyMsg.actions).toEqual(liveActions);
   });

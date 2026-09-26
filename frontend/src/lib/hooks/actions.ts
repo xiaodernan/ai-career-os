@@ -650,7 +650,7 @@ export function useCopilotChat() {
         answer: str(raw, "answer", "content", "text", "message", "reply") ?? "",
         artifacts: normalizeArtifacts(pick(raw, "artifacts")),
         sources: normalizeEvidence(pick(raw, "sources", "citations")),
-        actions: normalizeChatActions(pick(raw, "actions")),
+        actions: normalizeChatActions(raw),
         runId: str(raw, "runId", "run_id") ?? null,
         taskId: str(raw, "taskId", "task_id") ?? null,
         conversationId: str(raw, "conversationId", "conversation_id") ?? body.conversationId ?? null,

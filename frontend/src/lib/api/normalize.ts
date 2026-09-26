@@ -1213,8 +1213,10 @@ export const CHAT_ACTION_ROUTES: Record<string, string> = {
   open_interview: "/interviews/{id}",
 };
 
-/** Follow-up action chips. Shared by the history read path AND the live chat
- *  reply so a freshly-generated reply can't drop actions until a refetch. */
+/** Follow-up action chips. Takes the whole reply — the live `ChatResponse` or a persisted
+ *  `MessageItem`, which carry the same `actions` list — and picks it itself, so the name the read
+ *  goes under has an author. Shared by the history read path AND the live chat reply so a
+ *  freshly-generated reply can't drop actions until a refetch. */
 export function normalizeChatActions(raw: unknown): CopilotAction[] {
   return list(raw, "actions").map((a) => {
     const kind = str(a, "kind");
@@ -1237,6 +1239,6 @@ export function normalizeMessages(raw: unknown) {
     createdAt: str(m, "createdAt", "created_at", "timestamp"),
     artifacts: normalizeArtifacts(pick(m, "artifacts")),
     sources: normalizeEvidence(pick(m, "sources", "citations")),
-    actions: normalizeChatActions(pick(m, "actions")),
+    actions: normalizeChatActions(m),
   }));
 }

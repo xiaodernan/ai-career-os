@@ -31,9 +31,17 @@ and the persisted row disagree about where the same score lives (`MatchResult` f
 `MatchSummary` for the stored one the job detail replays); such a receiver is bound to both, and a
 site is live if either one emits a name it tries. That is weaker than one record per map, so the
 weaker binding is only used where the response really has two authors.
+
+A producer can also be code rather than a declaration. `normalizeChatActions` reads action rows
+`_derive_actions` appends through a local `add(…)` closure -- no record, no model, no `Name.append` --
+so `pyadd` walks that function's own AST for the literals, and the census pins them per literal because
+`ChatActionItem` is the union of two shapes. And the last thing that reader reaches for is not a wire
+field at all: `CHAT_ACTION_ROUTES[kind]` is keyed by a variable, so a fifth test checks the kinds the
+producer writes against the routes the browser declares, and every route against a page that exists.
 """
 
 import ast
+import collections
 import json
 import re
 from functools import lru_cache
@@ -42,6 +50,7 @@ from pathlib import Path
 from tests.test_response_shape_contract import (
     JAVA_ROOT,
     NORMALIZE,
+    ROOT_FRONTEND,
     _record_components_at,
     _shape_of,
     _sole,
@@ -146,6 +155,14 @@ PRODUCERS = {
     # `raw["skills"]` with `_merge_skills`, so what reaches the wire is that literal -- which is why
     # `proficiency` is a key a reader may name even though the renderer never does.
     "MergedSkillItem": ("pyappend", ("_merge_skills", "merged")),
+    # The copilot's reply is the one conversation DTO whose action row has no record: `ChatResponse.
+    # actions` is a `List<Object>` the backend fills from ai-service's answer, and each item is a
+    # literal `add(…)` in `_derive_actions`. A helper call rather than an `append`, so `pyappend`
+    # cannot see it -- and the row has two shapes (a job-located action and a session-located one),
+    # which is why `_added_key_sets` returns the per-literal sets that CENSUS pins rather than
+    # insisting on one the way `pyappend` does.
+    "ChatResponse": ("java", "conversation/dto/ConversationDtos.java"),
+    "ChatActionItem": ("pyadd", ("_derive_actions", "add")),
 }
 
 # Readers whose producers are known per map. A reader with more producers than one is bound to their
@@ -476,6 +493,23 @@ READERS: dict[str, dict] = {
                           "wrapper built by the controller, not a record's fields"},
         "dynamic": {},
     },
+    "normalizeChatActions": {
+        # The copilot's CTA row. `raw` has two authors because the mapper is shared by the two paths
+        # that render an assistant turn: POST /copilot/chat answers with `ChatResponse`, and the
+        # history path replays the persisted row as `MessageItem`. Both carry `actions`, which is why
+        # #149 made this reader pick that name itself rather than receive a list its callers had
+        # already picked -- as a pre-picked parameter the probe was consulted by nobody, so binding it
+        # would have declared a dead read live.
+        # `a` is one action row, and `pyadd` is what makes it a producer at all: `_derive_actions`
+        # appends its literals through the `add(…)` closure, so no record, model or `Name.append`
+        # states the shape. The kinds those literals carry are read off a table rather than a call
+        # site (`CHAT_ACTION_ROUTES[kind]`), which is what `_route_problems` covers instead.
+        "record_of": {"raw": ["ChatResponse", "MessageItem"], "a": "ChatActionItem"},
+        "drilled": {},
+        "elements": {"a": ("raw", "actions")},
+        "blind": {},
+        "dynamic": {},
+    },
     "normalizeMatch": {
         # `raw` is the envelope `pick(raw, "match", "latestMatch", …)` drills; the payload is the
         # union, because the score has two authors: POST /jobs/{id}/match answers with
@@ -623,6 +657,77 @@ def _search_hits() -> dict[str, str]:
     return {key: record for record, key in re.findall(r"List<(\w+)>\s+(\w+)", body)}
 
 
+def _chat_routes() -> dict[str, str]:
+    """The destinations `normalizeChatActions` builds, read out of the table it builds them with.
+
+    Half of this reader's contract is not a record field at all: the wire carries a `kind` and the
+    browser owns where it goes. Copying the keys into this file would let the gate stay green the
+    moment a new kind forgot its route -- which is the exact defect #149 found on the page, so the
+    table is parsed from `normalize.ts` instead of restated here.
+    """
+    source = NORMALIZE.read_text(encoding="utf-8")
+    start = source.index("export const CHAT_ACTION_ROUTES")
+    block = source[start:source.index("\n};", start)]
+    pairs = re.findall(r'^\s*(\w+):\s*"([^"]+)"', block, re.M)
+    if not pairs:
+        raise AssertionError("CHAT_ACTION_ROUTES no longer declares a `kind: \"path\"` entry each: "
+                             "the rule that bounds which kinds are routable has nothing to read")
+    return dict(pairs)
+
+
+def _page_file(route: str) -> Path | None:
+    """The app-router page a URL path lands on. A `(group)` directory costs no path segment, and a
+    `{slot}` in a template is served by a `[slot]` directory -- so this resolves the route the way
+    Next does rather than the way the table's author hoped."""
+    segments = [s for s in route.split("#")[0].strip("/").split("/") if s]
+
+    def walk(directory: Path, rest: list[str]) -> Path | None:
+        if not rest:
+            page = directory / "page.tsx"
+            return page if page.exists() else None
+        head, *tail = rest
+        for child in sorted(directory.iterdir()):
+            if not child.is_dir():
+                continue
+            slot = (re.fullmatch(r"\[[^\]]+\]", child.name)
+                    and re.fullmatch(r"\{[^}]+\}", head))
+            if child.name.startswith("(") and child.name.endswith(")"):
+                found = walk(child, rest)
+            elif child.name == head or slot:
+                found = walk(child, tail)
+            else:
+                continue
+            if found is not None:
+                return found
+        return None
+
+    return walk(ROOT_FRONTEND / "app", segments)
+
+
+def _route_problems() -> list[str]:
+    """Every kind the orchestrator can offer has to land on a page that exists, and every anchor it
+    names has to be an id on that page. `MessageRow` filters a chip with no href out of the reply,
+    so either gap is a call to action the user never sees -- not an error anyone could read."""
+    routes, problems = _chat_routes(), []
+    spec = PRODUCERS["ChatActionItem"]
+    kinds = _added_values(*spec[1], "kind")
+    if kinds != set(routes):
+        problems.append(f"_derive_actions offers kinds {sorted(kinds)} while CHAT_ACTION_ROUTES "
+                        f"routes {sorted(routes)}: an unrouted kind silently loses its chip, and a "
+                        "route no producer writes is a destination the table only pretends to have")
+    for kind, route in sorted(routes.items()):
+        page = _page_file(route)
+        if page is None:
+            problems.append(f"{kind}: CHAT_ACTION_ROUTES points at {route!r}, which no page.tsx "
+                            "under frontend/src/app serves")
+            continue
+        anchor = route.split("#")[1] if "#" in route else None
+        if anchor and f'id="{anchor}"' not in page.read_text(encoding="utf-8"):
+            problems.append(f"{kind}: {route!r} anchors at #{anchor}, which is not an id in "
+                            f"{page.relative_to(ROOT_FRONTEND.parent)}")
+    return problems
+
+
 def _appended_keys(func_name: str, list_name: str) -> set[str]:
     """The keys of the dict literal a function appends to one of its own lists.
 
@@ -656,6 +761,64 @@ def _appended_keys(func_name: str, list_name: str) -> set[str]:
             f"{func_name}.{list_name} appends {len(found)} different key sets "
             f"{sorted(tuple(sorted(s)) for s in found)}: the item has no single contract to check")
     return found[0]
+
+
+def _helper_literals(func_name: str, helper_name: str) -> list:
+    """The dict literals one local helper is called with inside a function.
+
+    `_derive_actions` appends its action rows through a closure -- `add({...})`, which de-duplicates
+    by json key before pushing onto `out.actions` -- so no `Name.append(dict)` appears in its body and
+    `pyappend` cannot see the shape at all. A call with a computed key, or no literal call at all,
+    means the item has no contract this gate can read, which is a statement about the source rather
+    than a reason to skip the reader.
+    """
+    fn = _sole(func_name)
+    if fn is None:
+        raise AssertionError(f"{func_name!r} is not exactly one function under app/: the table names a "
+                             "producer that moved, so the rule it feeds compares nothing")
+    found = []
+    for node in ast.walk(fn):
+        if (isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+                and node.func.id == helper_name and node.args
+                and isinstance(node.args[0], ast.Dict)):
+            item = node.args[0]
+            if any(not isinstance(k, ast.Constant) or not isinstance(k.value, str)
+                   for k in item.keys):
+                raise AssertionError(f"{func_name}.{helper_name}(...) is called with a computed key")
+            found.append(item)
+    if not found:
+        raise AssertionError(f"{func_name} never calls {helper_name}(...) with a dict literal: the "
+                             "table names an item producer whose literal has stopped being one")
+    return found
+
+
+def _added_key_sets(func_name: str, helper_name: str) -> list[tuple[str, ...]]:
+    """The key set of each such literal, one entry per call. The shapes stay separate because
+    `_emitted` has to answer with their union -- CENSUS pins the per-literal sets so that union
+    cannot cover one row's rename with another row's live sibling."""
+    return [tuple(sorted(k.value for k in item.keys))
+            for item in _helper_literals(func_name, helper_name)]
+
+
+def _added_values(func_name: str, helper_name: str, key: str) -> set[str]:
+    """What one string-literal field of those rows can hold: the action kinds the wire can carry.
+
+    A value built at runtime (`f"open_{thing}"`) is refused rather than guessed at, because the rule
+    that reads it compares a set of names against a table of routes.
+    """
+    values = set()
+    for item in _helper_literals(func_name, helper_name):
+        for k, v in zip(item.keys, item.values):
+            if k.value == key:
+                if not isinstance(v, ast.Constant) or not isinstance(v.value, str):
+                    raise AssertionError(
+                        f"{func_name}.{helper_name} writes {key!r} from {ast.unparse(v)!r}: the rule "
+                        "that bounds which kinds exist would have to invent one")
+                values.add(v.value)
+    if not values:
+        raise AssertionError(f"no {func_name}.{helper_name}(...) literal carries {key!r}: the table "
+                             "reads a field the producer stopped writing")
+    return values
 
 
 def _py_const_keys(rel: str, name: str) -> set[str]:
@@ -848,6 +1011,11 @@ def _emitted(alias: str) -> set[str]:
         return set(shape)
     if spec[0] == "pyappend":
         return _appended_keys(*spec[1])
+    if spec[0] == "pyadd":
+        # The union of the helper's literals, which is what a heterogeneous list really offers one
+        # row: an action carries `job_id` or `session_id`, never both. CENSUS pins the per-literal
+        # shapes so the union cannot cover one row's rename with another row's live sibling.
+        return set().union(*(set(shape) for shape in _added_key_sets(*spec[1])))
     if spec[0] == "pyconst":
         return _py_const_keys(*spec[1])
     if spec[0] == "pyitem":
@@ -1136,7 +1304,10 @@ def test_the_reads_are_actually_found():
     assert {s["receiver"] for s in applications} == {"raw", "nested"}
     assert sum(1 for s in applications if s["receiver"] == "nested") == 3
     messages = _sites("normalizeMessages")
-    assert len(messages) == 8
+    # 7, down from the 8 this reader had until #149: `pick(m, "actions")` moved into the action mapper
+    # that owns the read, so the name is tried once, against `MessageItem`, where the rows are actually
+    # consumed -- and `normalizeChatActions`' own census line is what says it still happens.
+    assert len(messages) == 7
     assert {s["receiver"] for s in messages} == {"m", "raw"}
     matches = _sites("normalizeMatch")
     assert len(matches) == 18
@@ -1482,6 +1653,28 @@ def test_the_reads_are_actually_found():
     assert _emitted("ParsedResumeMap") - {k for s in sr if s["receiver"] == "s"
                                           for k in s["keys"]} == {"skills", "languages",
                                                                   "missingSections", "warnings"}
+    # The copilot's CTA row: four sites, and #149 measured that each one got an author only after the
+    # invented names left. Before the trim this reader probed `href`/`url`/`link`/`path` beside a live
+    # `payload`/`data`/`type`/`name`/`title` -- and the page filtered on `a.href`, so no wire shape
+    # could ever produce a chip.
+    chat = _sites("normalizeChatActions")
+    assert len(chat) == 4, chat
+    assert {s["receiver"] for s in chat} == {"raw", "a"}
+    assert sum(1 for s in chat if s["receiver"] == "a") == 3
+    assert {k for s in chat if s["receiver"] == "raw" for k in s["keys"]} == {"actions"}
+    assert {k for s in chat if s["receiver"] == "a" for k in s["keys"]} == \
+        {"kind", "label", "job_id", "session_id"}
+    # Per author, not as the union the site is checked against: the live reply and the replayed row
+    # agree on `actions`, so either one dropping the component would leave the other covering the
+    # read -- and a chip row that vanishes after a refresh is exactly what this reader exists to stop.
+    assert "actions" in _emitted("ChatResponse") and "actions" in _emitted("MessageItem")
+    # Per literal, for the same reason: four job-located rows and one session-located row, so a rename
+    # of `job_id` would have had `session_id` to cover for it inside the union `_emitted` answers with.
+    assert collections.Counter(_added_key_sets("_derive_actions", "add")) == {
+        ("job_id", "kind", "label"): 4,
+        ("kind", "label", "session_id"): 1,
+    }
+    assert _emitted("ChatActionItem") == {"kind", "label", "job_id", "session_id"}
     # Two different ways a read stops naming its key in the call: `normalizeTrajectory` spreads a
     # name table, which this rule covers, and `normalizeSearch` reaches `g.key`, a member of a group
     # object, which `_search_hits` covers. Telling them apart is what keeps each rule honest about
@@ -1521,3 +1714,22 @@ def test_the_reads_are_actually_found():
     assert {(s["reader"], s["line"]) for s in dead} == {
         ("normalizeApplication", 19), ("normalizeMatch", 12), ("normalizeMatch", 13)}
     assert _structural_problems() == []
+
+
+def test_every_action_kind_the_orchestrator_offers_lands_somewhere():
+    """The half of this reader's contract no record can answer for.
+
+    `CHAT_ACTION_ROUTES[kind]` is a read whose key is a variable and whose producer is Python code two
+    services away, so `_sites` cannot attribute it and the liveness rule has nothing to say about it.
+    What can still be checked is the pair of claims the reader makes: that every kind the orchestrator
+    writes has a destination, and that the destination exists in the app. A kind with no route is not
+    a broken link but a chip that never renders -- the defect #149 measured on a live page.
+    """
+    assert _route_problems() == []
+    # Positive control on the rule itself, in the same shape as the census above: the table has the
+    # five entries the orchestrator writes, so a `kinds != routes` assertion that compared two empty
+    # sets would prove nothing.
+    assert sorted(_chat_routes()) == sorted(_added_values(*PRODUCERS["ChatActionItem"][1], "kind")) \
+        == ["cover_letter", "interview", "open_interview", "open_job", "tailor"]
+    assert all(_page_file(route) is not None for route in _chat_routes().values())
+

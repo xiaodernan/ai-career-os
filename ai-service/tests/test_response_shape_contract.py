@@ -514,6 +514,28 @@ def _record_components(record: str) -> set[str]:
     return set(names)
 
 
+def _picks_off_reply(helper: str) -> set[str]:
+    """The reply keys a `normalize.ts` mapper reads off its own parameter.
+
+    Since #149 the copilot hands `raw` itself to `normalizeChatActions` and lets that reader pick
+    `actions`, so a rule that only scans the reply block would report the action row as dropped --
+    which the chips on a live page refute. The names come from the per-site gate's own reader rather
+    than from a second list written here, and the delegation is only free if that gate binds the
+    helper: an unbound mapper would take a piece of the record out of every contract's sight.
+    """
+    from tests import test_response_field_contract as field  # crosses back; safe at call time
+
+    source = NORMALIZE.read_text(encoding="utf-8")
+    start = source.index(f"export function {helper}(")
+    param = re.match(r"export function \w+\(\s*([A-Za-z_$][\w$]*)", source[start:]).group(1)
+    spec = field.READERS.get(helper)
+    assert spec is not None, (f"the copilot reply delegates a piece of itself to {helper}, which the "
+                              "per-site gate binds no reader for, so those reads go unchecked")
+    assert param in spec["record_of"], f"{helper} reads the reply off {param!r}, named nowhere in its " \
+                                       "own binding, so the delegation reaches an unchecked receiver"
+    return {key for site in field._sites(helper) if site["receiver"] == param for key in site["keys"]}
+
+
 def test_the_copilot_reads_line_up_with_chat_response():
     """The browser's copilot reply is built from `ChatResponse`, not from a passed-through AI
     answer, so its candidates have to be checked against the record -- which is where a key nothing
@@ -525,6 +547,15 @@ def test_the_copilot_reads_line_up_with_chat_response():
             for key in re.findall(r'"([^"]+)"', group)}
     emitted = _record_components("ChatResponse")
     assert read & emitted, f"the copilot reads {sorted(read)}, none of which is in {sorted(emitted)}"
+    assert emitted - read == {"actions", "assistantMessageId", "userMessageId"}, \
+        "the reply's own block reads three of its components; `actions` is the one it delegates"
+    # The delegation, resolved rather than excused: `actions` still reaches the page, through a mapper
+    # the per-site gate binds to this record and to `MessageItem` at once.
+    delegated = {helper: _picks_off_reply(helper)
+                 for helper in re.findall(r"\b(normalize\w+)\(\s*raw\s*\)", block)}
+    assert delegated == {"normalizeChatActions": {"actions"}}, \
+        f"the reply now leans on {sorted(delegated)}, which this gate has to keep honest"
+    read |= {key for names in delegated.values() for key in names}
     assert emitted - read == {"assistantMessageId", "userMessageId"}, \
         "the reply drops the two message ids today; if that changes, this line is where to look"
     # Candidates `ChatResponse` never serializes. Each is either a tolerant alias of a live key
