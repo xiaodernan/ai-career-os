@@ -460,11 +460,12 @@ export interface ChatMessage {
   error?: string | null;
 }
 
+/** One action chip the copilot offers. `href` is built from `kind` and the row's locator, because
+ *  the wire carries neither an href nor a payload — see `CHAT_ACTION_ROUTES`. */
 export interface CopilotAction {
-  label: string;
+  label?: string;
   href?: string;
   kind?: string;
-  payload?: Record<string, unknown>;
 }
 
 export interface CopilotReply {

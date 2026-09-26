@@ -501,7 +501,7 @@ function ChatPanel({
 
 function MessageRow({ message }: { message: ChatMessage }) {
   const isUser = message.role === "user";
-  const actions = (message.actions ?? []).filter((a) => a.href);
+  const actions = (message.actions ?? []).filter((a) => a.href && a.label);
   const sources = message.sources ?? [];
 
   return (

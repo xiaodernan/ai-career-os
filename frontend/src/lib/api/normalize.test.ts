@@ -654,7 +654,10 @@ describe("copilot chat: live reply must normalize identically to history", () =>
     ],
     actions: [
       { kind: "open_job", label: "Open Frontend @ Acme", job_id: "j1" },
-      { kind: "tailor", label: "Tailor resume", job_id: "j1" },
+      { kind: "tailor", label: "Tailor resume for this job", job_id: "j1" },
+      { kind: "cover_letter", label: "Draft cover letter", job_id: "j1" },
+      { kind: "interview", label: "Start mock interview", job_id: "j1" },
+      { kind: "open_interview", label: "Continue interview", session_id: "s9" },
     ],
   };
 
@@ -666,11 +669,34 @@ describe("copilot chat: live reply must normalize identically to history", () =>
     expect(src.criterion).toBe("resume › skills"); // label → criterion
   });
 
-  it("normalizeChatActions maps ai-service action objects", () => {
+  it("normalizeChatActions routes every kind the orchestrator offers", () => {
+    // `href` is not on the wire. `_derive_actions` appends `{kind,label,job_id}` for the four job
+    // actions and `{kind,label,session_id}` for a saved interview, so `CHAT_ACTION_ROUTES` is what
+    // turns an offer into a destination — which is the fix #149 had to make before it could bind
+    // this reader: the mapper used to probe `href`/`url`/`link`/`path` (four names no producer
+    // emits) and `payload`/`data`/`type`/`name`/`title` beside them, and the page filtered on
+    // `a.href`, so the CTA row was empty on every reply the product ever served.
     const acts = normalizeChatActions(pick(aiServiceReply, "actions"));
-    expect(acts[0]).toMatchObject({ label: "Open Frontend @ Acme", kind: "open_job" });
-    // no href on these → MessageRow filters them out; but label is preserved
+    expect(acts.map((a) => [a.kind, a.href])).toEqual([
+      ["open_job", "/jobs/j1"],
+      ["tailor", "/jobs/j1#tailor"],
+      ["cover_letter", "/jobs/j1#cover-letter"],
+      ["interview", "/interviews"],
+      ["open_interview", "/interviews/s9"],
+    ]);
     expect(acts.every((a) => typeof a.label === "string" && a.label.length)).toBe(true);
+  });
+
+  it("offers no chip it cannot route", () => {
+    // `open_interview` is the one action whose locator `_derive_actions` reads with `.get(...)`, so
+    // a session id can come back null — and an unmapped kind must not invent a destination either.
+    const acts = normalizeChatActions([
+      { kind: "open_interview", label: "Continue interview", session_id: null },
+      { kind: "archive_job", label: "Archive this", job_id: "j1" },
+      { kind: "tailor", label: "Tailor resume" },
+    ]);
+    expect(acts.map((a) => a.href)).toEqual([undefined, undefined, undefined]);
+    expect(acts.map((a) => a.label)).toEqual(["Continue interview", "Archive this", "Tailor resume"]);
   });
 
   it("normalizeArtifacts coerces type + payload", () => {

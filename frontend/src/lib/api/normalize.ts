@@ -1197,15 +1197,36 @@ export function normalizeArtifacts(raw: unknown): CopilotArtifact[] {
   }));
 }
 
+/**
+ * Where each action the orchestrator offers actually goes. The wire carries no `href`:
+ * `_derive_actions` states a `kind` plus one locator — `job_id` for the four job actions,
+ * `session_id` for a saved interview — so the destination is the browser's to build, and building
+ * it is what makes the chip a button instead of a label. `{id}` in a template is the locator slot:
+ * a row whose kind needs one and does not carry one gets no href, so the `open_interview` whose
+ * `session_id` came back null becomes no chip rather than a link to `/interviews/null`.
+ */
+export const CHAT_ACTION_ROUTES: Record<string, string> = {
+  open_job: "/jobs/{id}",
+  tailor: "/jobs/{id}#tailor",
+  cover_letter: "/jobs/{id}#cover-letter",
+  interview: "/interviews",
+  open_interview: "/interviews/{id}",
+};
+
 /** Follow-up action chips. Shared by the history read path AND the live chat
  *  reply so a freshly-generated reply can't drop actions until a refetch. */
 export function normalizeChatActions(raw: unknown): CopilotAction[] {
-  return list(raw, "actions").map((a) => ({
-    label: str(a, "label", "name", "title") ?? "Open",
-    href: str(a, "href", "url", "link", "path"),
-    kind: str(a, "kind", "type"),
-    payload: rec(pick(a, "payload", "data")) ? (pick(a, "payload", "data") as Record<string, unknown>) : undefined,
-  }));
+  return list(raw, "actions").map((a) => {
+    const kind = str(a, "kind");
+    const route = kind ? CHAT_ACTION_ROUTES[kind] : undefined;
+    const needsId = route?.includes("{id}");
+    const id = str(a, "job_id", "session_id");
+    return {
+      label: str(a, "label"),
+      kind,
+      href: !route || (needsId && !id) ? undefined : route.replace("{id}", id ?? ""),
+    };
+  });
 }
 
 export function normalizeMessages(raw: unknown) {
