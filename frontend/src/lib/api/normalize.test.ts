@@ -1437,23 +1437,35 @@ describe("normalizeStructuredResume", () => {
     const out = normalizeStructuredResume({
       workExperience: [{ role: "Invented", organization: "ACME", startDate: "2021-01",
                          endDate: "2023-06", highlights: ["Not bullets"] }],
+      experience: [{ company: "ACME", current: true, tech_stack: ["Go"], tech: ["Rust"] }],
       career_goals: ["SRE"],
       preferred_roles: ["Staff"],
       preferred_locations: ["Berlin"],
       summary: "The parse puts the summary under profile, not at the top level",
       education: [{ institution: "MIT", major: "CS", start_year: "2016", end_year: "2020" }],
-      projects: [{ title: "Gateway", tech_stack: ["Go"], link: "https://example.test" }],
+      projects: [{ title: "Gateway", description: "Not a project key",
+                   tech_stack: ["Go"], link: "https://example.test" }],
+      profile: { title: "Staff Engineer, invented" },
+      technologies: ["Kubernetes"],
     });
-    for (const key of ["experience", "skills", "careerGoals", "preferredRoles",
-                       "preferredLocations", "technologies", "summary"] as const) {
+    for (const key of ["skills", "careerGoals", "preferredRoles",
+                       "preferredLocations", "summary"] as const) {
       expect(out?.[key], key).toBeUndefined();
     }
+    // `headline` is the only name the parse draws for a profile's role; `title` beside it made a
+    // profile built entirely of invented keys render as a headline.
+    expect(out?.profile, "profile.title is not authored").toBeUndefined();
+    expect(out?.experience?.length, "workExperience is not a list name").toBe(1);
+    expect(out?.experience?.[0]).toEqual({ company: "ACME", role: undefined, location: undefined,
+                                           start: undefined, end: undefined, bullets: [] });
+    // `technologies` is not merely undefined here: no producer writes the key, so the reader stopped
+    // asking for it and the view lost the "Core technologies" line that could never fill in.
+    expect(Object.keys(out ?? {})).not.toContain("technologies");
     expect(out?.education?.[0]).toEqual({ school: undefined, degree: undefined, major: undefined,
                                           start: undefined, end: undefined, gpa: undefined,
                                           courses: [] });
     expect(out?.projects?.[0]).toEqual({ name: undefined, role: undefined, period: undefined,
-                                         description: undefined, bullets: [], techStack: [],
-                                         url: undefined });
+                                         bullets: [], techStack: [], url: undefined });
   });
 
   it("coerces an object-map of links into a string[] (renderer calls .slice on it)", () => {
@@ -1485,11 +1497,13 @@ describe("normalizeStructuredResume", () => {
 });
 
 /**
- * `structured.technologies` is read by the resume view's "Core technologies" line and by the
- * analyze dialog's skill suggestions, and neither service ever produces that key: the parse answer
- * describes skills as `{name, category}`. So that section cannot render -- and the useful half of
- * knowing that is saying it somewhere a build checks. When a producer starts emitting the key,
- * this fails where someone will read it, and the section gets verified instead of trusted.
+ * `structured.technologies` was read by the resume view's "Core technologies" line and by the skill
+ * suggestions, and neither service ever produces that key: the parse answer describes skills as
+ * `{name, category}`. #106 gated the fact while the read still existed; the view now has no line to
+ * render, so the same fact is stated twice over — no producer writes it, and no reader asks. When a
+ * producer starts emitting the key, the Python contract gate names the reader that should learn it
+ * (`_emitted("ParsedResumeMap")` in test_response_field_contract.py), while this one catches a read
+ * reappearing against a producer that still has none.
  */
 describe("the technologies the resume view reads has no producer", () => {
   const root = new URL("../../../../", import.meta.url);
@@ -1505,10 +1519,11 @@ describe("the technologies the resume view reads has no producer", () => {
     expect(scanned.join("\n")).toContain("document_chunks");
   });
 
-  it("never mentions technologies, while the view does", () => {
+  it("never mentions technologies, and neither does the view any more", () => {
     expect(scanned.filter((src) => /\btechnologies\b/.test(src))).toEqual([]);
-    expect(readFileSync(new URL("./normalize.ts", import.meta.url), "utf8")).toContain(
-      'list<string>(s, "technologies")'
-    );
+    expect(readFileSync(new URL("./normalize.ts", import.meta.url), "utf8"))
+      .not.toMatch(/["']technologies["']/);
+    expect(readFileSync(new URL("../../app/(app)/resumes/[id]/page.tsx", import.meta.url), "utf8"))
+      .not.toContain("Core technologies");
   });
 });

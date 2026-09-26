@@ -154,7 +154,7 @@ export function filterAndPaginate(
 export function profileSkillSuggestions(structured?: unknown): string[] {
   const s = normalizeStructuredResume(structured);
   if (!s) return [];
-  const owned = [...(s.skills ?? []).flatMap((g) => g.skills ?? []), ...(s.technologies ?? [])];
+  const owned = (s.skills ?? []).flatMap((g) => g.skills ?? []);
   const byFoldedName = new Map<string, string>();
   for (const raw of owned) {
     const name = String(raw ?? "").trim();

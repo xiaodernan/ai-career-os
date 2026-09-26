@@ -561,7 +561,7 @@ export function normalizeStructuredResume(raw: unknown): StructuredResume | null
   const links = list<string>(profile ?? s, "links").map(String).filter(Boolean);
   const viewProfile: ResumeProfileSummary = {
     name: str(profile, "name"),
-    headline: str(profile, "headline", "title"),
+    headline: str(profile, "headline"),
     email: str(profile, "email"),
     phone: str(profile, "phone"),
     location: str(profile, "location"),
@@ -576,16 +576,13 @@ export function normalizeStructuredResume(raw: unknown): StructuredResume | null
       location: str(e, "location"),
       start: str(e, "start"),
       end: str(e, "end"),
-      current: bool(e, "current"),
       bullets: list<string>(e, "bullets").map(String),
-      techStack: list<string>(e, "techStack", "tech_stack", "tech").map(String),
     }));
 
   const projects: ResumeProject[] = list(s, "projects").map((p): ResumeProject => ({
     name: str(p, "name"),
     role: str(p, "role"),
     period: str(p, "period"),
-    description: str(p, "description", "summary"),
     bullets: list<string>(p, "bullets").map(String),
     techStack: list<string>(p, "tech").map(String),
     url: str(p, "url"),
@@ -602,7 +599,6 @@ export function normalizeStructuredResume(raw: unknown): StructuredResume | null
   }));
 
   const achievements = list<string>(s, "achievements").map(String).filter(Boolean);
-  const technologies = list<string>(s, "technologies").map(String).filter(Boolean);
   const careerGoals = list<string>(s, "careerGoals").map(String).filter(Boolean);
   const preferredRoles = list<string>(s, "preferredRoles").map(String).filter(Boolean);
   const preferredLocations = list<string>(s, "preferredLocations").map(String).filter(Boolean);
@@ -616,7 +612,6 @@ export function normalizeStructuredResume(raw: unknown): StructuredResume | null
     education: education.length ? education : undefined,
     skills: groupSkillBuckets(s),
     achievements: group(achievements),
-    technologies: group(technologies),
     careerGoals: group(careerGoals),
     preferredRoles: group(preferredRoles),
     preferredLocations: group(preferredLocations),

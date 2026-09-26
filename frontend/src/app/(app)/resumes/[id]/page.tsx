@@ -511,13 +511,12 @@ function StructuredProfileView({ structured }: { structured: StructuredResume })
                   {[exp.company, exp.location].filter(Boolean).join(" · ")}{" "}
                   {[
                     exp.start ?? exp.startDate,
-                    exp.end ?? exp.endDate ?? (exp.current ? "present" : ""),
+                    exp.end ?? exp.endDate,
                   ]
                     .filter(Boolean)
                     .join(" → ")}
                 </p>
                 <BulletList items={exp.bullets ?? exp.highlights} className="mt-2" />
-                {(exp.techStack?.length ?? 0) > 0 && <TechLine items={exp.techStack!} />}
               </li>
             ))}
           </ol>
@@ -549,7 +548,6 @@ function StructuredProfileView({ structured }: { structured: StructuredResume })
                     </a>
                   )}
                 </div>
-                {p.description && <p className="mt-1 text-sm text-muted-foreground">{p.description}</p>}
                 <BulletList items={p.bullets ?? p.highlights} />
                 {(p.techStack?.length ?? 0) > 0 && <TechLine items={p.techStack!} />}
               </li>
@@ -624,7 +622,6 @@ function StructuredProfileView({ structured }: { structured: StructuredResume })
             {structured.preferredRoles && structured.preferredRoles.length > 0 && <Labelled label="Target roles" items={structured.preferredRoles} />}
             {structured.preferredLocations && structured.preferredLocations.length > 0 && <Labelled label="Preferred locations" items={structured.preferredLocations} />}
             {structured.careerGoals && structured.careerGoals.length > 0 && <Labelled label="Career goals" items={structured.careerGoals} />}
-            {structured.technologies && structured.technologies.length > 0 && <Labelled label="Core technologies" items={structured.technologies} />}
             {(structured.achievements?.length ?? 0) > 0 && (
               <div>
                 <p className="text-2xs font-medium tracking-wide text-muted-foreground uppercase">Achievements</p>

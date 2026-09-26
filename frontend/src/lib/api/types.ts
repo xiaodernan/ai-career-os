@@ -83,7 +83,6 @@ export interface StructuredResume {
   education?: ResumeEducation[];
   skills?: ResumeSkillGroup[];
   achievements?: string[];
-  technologies?: string[];
   careerGoals?: string[];
   preferredRoles?: string[];
   preferredLocations?: string[];
@@ -108,10 +107,8 @@ export interface ResumeExperience {
   end?: string;
   startDate?: string;
   endDate?: string;
-  current?: boolean;
   bullets?: string[];
   highlights?: string[];
-  techStack?: string[];
 }
 
 export interface ResumeProject {
@@ -119,7 +116,6 @@ export interface ResumeProject {
   title?: string;
   role?: string;
   period?: string;
-  description?: string;
   bullets?: string[];
   highlights?: string[];
   techStack?: string[];
