@@ -127,6 +127,11 @@ PRODUCERS = {
     # maps come out of the same return statement, one key down.
     "TailorMap": ("pyfunc", "tailor"),
     "TailorDiffMap": ("pyretsub", ("tailor", "diff")),
+    # The rows inside that diff are the LLM's own, drawn to the tailor prompt's `changes` item;
+    # `verify_no_fabrication` then adds `verifier_reject` to the rows it refused, which no reader
+    # names. #146 binds the private `changeFrom` mapper to this, so a sub-reader's aliases stop
+    # being free of inspection just because the function is not exported.
+    "TailorChangeItem": ("pyskel", ("app/features/tailor.py", "SYSTEM", ("changes",))),
 }
 
 # Readers whose producers are known per map. A reader with more producers than one is bound to their
@@ -334,6 +339,35 @@ READERS: dict[str, dict] = {
         "blind": {},
         "dynamic": {},
     },
+    "changeFrom": {
+        # The one mapper in normalize.ts that is not exported -- and therefore was invisible to this
+        # gate while it carried 19 names of which 4 had an author. It is the change row the tailor
+        # panel crosses out, so every alias (`area`/`category`, `original`/`from`/`old`/`previous`,
+        # `revised`/`to`/`new`/`proposed`, `why`/`explanation`/`rationale`) silently widened what a
+        # row could claim, and its `evidence`/`citations` list belongs to no change shape: evidence
+        # is attached to the *answer*, not to one bullet rewrite.
+        "record_of": {"raw": "TailorChangeItem"},
+        "drilled": {},
+        "elements": {},
+        "blind": {},
+        "dynamic": {},
+    },
+    "tailoredDict": {
+        # One name, and the fallback that hands back `raw` when it is missing: the save body is
+        # built from the run, and the run always carries the dict.
+        "record_of": {"raw": "TailorMap"},
+        "drilled": {},
+        "elements": {},
+        "blind": {},
+        "dynamic": {},
+    },
+    "tailorDiffDict": {
+        "record_of": {"raw": "TailorMap"},
+        "drilled": {},
+        "elements": {},
+        "blind": {},
+        "dynamic": {},
+    },
     "normalizeJdParsed": {
         # Both callers hand over the `JdItem` a JD endpoint answers with, and the analysis sits one
         # level down in `parsed`. #143 deleted four wrapper names (`jd`, `analysis`, `data`), the flat
@@ -461,7 +495,7 @@ _ID_OF = r"\bidOf\(\s*"
 @lru_cache(maxsize=None)
 def _body(function_name: str) -> str:
     source = NORMALIZE.read_text(encoding="utf-8")
-    opener = f"export function {function_name}("
+    opener = f"function {function_name}("
     if opener not in source:
         raise AssertionError(
             f"{opener!r} is gone from normalize.ts: the table names a reader that moved, "
@@ -1199,6 +1233,17 @@ def test_the_reads_are_actually_found():
     assert {k for s in tdiff if s["receiver"] == "diff" for k in s["keys"]} == {"accepted", "rejected"}
     assert _emitted("TailorMap") == {"tailored", "diff", "notes", "evidence", "stats"}
     assert _emitted("TailorDiffMap") == {"accepted", "rejected"}
+    # The change row the tailor panel crosses out. It is not exported, which is the only reason this
+    # gate never saw it: it carried 19 names, of which the prompt's own `changes` item answers for 4,
+    # and a fifth read (`idOf`) probed six spellings of an identifier no change row has ever carried.
+    chg = _sites("changeFrom")
+    assert len(chg) == 4, chg
+    assert {s["receiver"] for s in chg} == {"raw"}
+    assert {k for s in chg for k in s["keys"]} == {"section", "before", "after", "reason"}
+    assert _emitted("TailorChangeItem") == {"section", "index", "before", "after", "reason"}
+    # The two one-name helpers the save body is built from, now bound like any other reader.
+    assert len(_sites("tailoredDict")) == 1
+    assert len(_sites("tailorDiffDict")) == 1
     # Two different ways a read stops naming its key in the call: `normalizeTrajectory` spreads a
     # name table, which this rule covers, and `normalizeSearch` reaches `g.key`, a member of a group
     # object, which `_search_hits` covers. Telling them apart is what keeps each rule honest about

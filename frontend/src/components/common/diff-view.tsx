@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ArrowRight, Check, Minus, Quote, Sparkles } from "lucide-react";
+import { ArrowRight, Check, Minus, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { AIBadge } from "@/components/ai/ai-badge";
@@ -17,7 +17,7 @@ import type { TailorChange } from "@/lib/api/types";
 export interface DiffViewProps extends React.ComponentProps<"div"> {
   accepted: TailorChange[];
   rejected?: TailorChange[];
-  /** Shows the tailoring notes/evidence header row */
+  /** Shows the tailoring notes the model asked the candidate to double-check */
   notes?: string[];
   stats?: Record<string, unknown>;
 }
@@ -75,18 +75,6 @@ function ChangeRow({ change, kind }: { change: TailorChange; kind: "accepted" | 
           </span>
           {change.reason}
         </p>
-      )}
-
-      {change.evidence && change.evidence.length > 0 && (
-        <ul className="mt-2 space-y-1">
-          {change.evidence.slice(0, 2).map((e, i) => (
-            <li key={i} className="truncate text-2xs text-muted-foreground">
-              <Quote className="mr-1 inline size-2.5 -translate-y-px" aria-hidden />
-              {e.quote}
-              {e.source?.docTitle && <span className="ml-1 opacity-70">— {e.source.docTitle}</span>}
-            </li>
-          ))}
-        </ul>
       )}
     </li>
   );

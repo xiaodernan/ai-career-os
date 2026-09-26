@@ -501,7 +501,6 @@ export interface TailorChange {
   before?: string;
   after?: string;
   reason?: string;
-  evidence?: Evidence[];
 }
 
 export interface TailoredResult {

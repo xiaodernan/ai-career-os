@@ -418,12 +418,13 @@ export function normalizeApplication(raw: unknown): Application {
 
 function changeFrom(raw: unknown, index: number): TailorChange {
   return {
-    id: idOf(raw, `chg-${index}`),
-    section: str(raw, "section", "area", "category"),
-    before: str(raw, "before", "original", "from", "old", "previous"),
-    after: str(raw, "after", "revised", "to", "new", "proposed"),
-    reason: str(raw, "reason", "why", "explanation", "rationale"),
-    evidence: normalizeEvidence(pick(raw, "evidence", "citations")),
+    // A change row carries no identifier on any path (the prompt draws section/index/before/after/
+    // reason, and a kept version relays that same object), so the row is keyed by its position.
+    id: `chg-${index}`,
+    section: str(raw, "section"),
+    before: str(raw, "before"),
+    after: str(raw, "after"),
+    reason: str(raw, "reason"),
   };
 }
 

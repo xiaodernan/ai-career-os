@@ -417,6 +417,27 @@ describe("normalizeTailorDiff", () => {
       normalizeTailorDiff({ accepted: [{ section: "summary", after: "b" }] }).accepted[0],
     ).toMatchObject({ section: "summary", after: "b" });
   });
+
+  it("reads a change row by the four names the tailor prompt draws", () => {
+    // The row is the LLM's own (`{"section","index","before","after","reason"}`), and a kept version
+    // relays that object unchanged, so the fifteen aliases this mapper used to probe -- `area`,
+    // `original`/`from`/`old`/`previous`, `revised`/`to`/`new`/`proposed`, `why`/`explanation`/
+    // `rationale`, plus an `evidence` list -- could only ever be invented by a fixture.
+    const d = normalizeTailorDiff({
+      diff: {
+        accepted: [
+          { section: "experience", index: 0, before: "a", after: "b", reason: "JD term" },
+          { area: "summary", original: "x", revised: "y", why: "z", citations: [{ quote: "q" }] },
+        ],
+        rejected: [],
+      },
+    });
+    expect(d.accepted).toHaveLength(2);
+    expect(d.accepted[0]).toEqual({
+      id: "chg-0", section: "experience", before: "a", after: "b", reason: "JD term",
+    });
+    expect(d.accepted[1]).toEqual({ id: "chg-1" });
+  });
 });
 
 describe("normalizePipeline", () => {
