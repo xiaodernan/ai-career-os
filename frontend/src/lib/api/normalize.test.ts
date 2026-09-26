@@ -1426,6 +1426,36 @@ describe("normalizeStructuredResume", () => {
     expect(exp?.bullets).toEqual(["Cut p99 by 40%"]);
   });
 
+  it("reads nothing from the alias spellings no producer writes", () => {
+    // #148 collapsed this reader's probe lists down to the names `resume_parse.SYSTEM` actually
+    // draws: `workExperience`, `organization`, `startDate`/`endDate`, `highlights`, `institution`,
+    // `major`, `start_year`/`end_year`, `link` and the snake twins beside the three preference
+    // lists have no author on any path, and no existing fixture noticed the collapse -- which is
+    // exactly why this one is here: without it, re-adding an alias costs nothing.
+    // The two cases are not the same. A section under an invented *list* name is never read, so it
+    // vanishes; a row under the real list name still arrives, with nothing authored in it.
+    const out = normalizeStructuredResume({
+      workExperience: [{ role: "Invented", organization: "ACME", startDate: "2021-01",
+                         endDate: "2023-06", highlights: ["Not bullets"] }],
+      career_goals: ["SRE"],
+      preferred_roles: ["Staff"],
+      preferred_locations: ["Berlin"],
+      summary: "The parse puts the summary under profile, not at the top level",
+      education: [{ institution: "MIT", major: "CS", start_year: "2016", end_year: "2020" }],
+      projects: [{ title: "Gateway", tech_stack: ["Go"], link: "https://example.test" }],
+    });
+    for (const key of ["experience", "skills", "careerGoals", "preferredRoles",
+                       "preferredLocations", "technologies", "summary"] as const) {
+      expect(out?.[key], key).toBeUndefined();
+    }
+    expect(out?.education?.[0]).toEqual({ school: undefined, degree: undefined, major: undefined,
+                                          start: undefined, end: undefined, gpa: undefined,
+                                          courses: [] });
+    expect(out?.projects?.[0]).toEqual({ name: undefined, role: undefined, period: undefined,
+                                         description: undefined, bullets: [], techStack: [],
+                                         url: undefined });
+  });
+
   it("coerces an object-map of links into a string[] (renderer calls .slice on it)", () => {
     const links = normalizeStructuredResume(AISERVICE_SHAPED)?.profile?.links;
     expect(Array.isArray(links)).toBe(true);

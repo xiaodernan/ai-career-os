@@ -542,9 +542,12 @@ export function structuredResumeToMarkdown(raw: unknown): string {
  * summary lives under `profile.summary`. Both readers here (`StructuredProfileView`,
  * and `profileSkillSuggestions` in `lib/job-filter`) expect the camel/grouped view
  * model instead — so without this bridge the entire skill inventory renders as
- * header-less empty badges and education dates silently vanish. Same alias policy as
- * structuredResumeToMarkdown.
- * Idempotent: an already-grouped payload (e.g. tailor output) passes through.
+ * header-less empty badges and education dates silently vanish.
+ * Not idempotent, and cannot be: #147 deleted the branch that carried an already-grouped `skills`
+ * row through, because `_merge_skills` is the only author of a skill row and it always writes the
+ * flat `{name,category,proficiency}` shape. Feeding this function's own output back into it — which
+ * is what a stored tailored draft used to be — now yields no skills at all, so callers pass the
+ * jsonb and never the view model.
  */
 export function normalizeStructuredResume(raw: unknown): StructuredResume | null {
   // Both callers hand over the jsonb itself -- `normalizeStructuredResume(r.structured)` on the
@@ -566,50 +569,48 @@ export function normalizeStructuredResume(raw: unknown): StructuredResume | null
   };
   const hasProfile = Object.values(viewProfile).some((v) => v !== undefined);
 
-  const experience: ResumeExperience[] = list(s, "experience", "workExperience", "work_experience")
+  const experience: ResumeExperience[] = list(s, "experience")
     .map((e): ResumeExperience => ({
-      company: str(e, "company", "organization", "organisation"),
-      role: str(e, "role", "title"),
+      company: str(e, "company"),
+      role: str(e, "title"),
       location: str(e, "location"),
-      start: str(e, "start", "startDate", "start_date"),
-      end: str(e, "end", "endDate", "end_date"),
+      start: str(e, "start"),
+      end: str(e, "end"),
       current: bool(e, "current"),
-      bullets: list<string>(e, "bullets", "highlights").map(String),
+      bullets: list<string>(e, "bullets").map(String),
       techStack: list<string>(e, "techStack", "tech_stack", "tech").map(String),
     }));
 
   const projects: ResumeProject[] = list(s, "projects").map((p): ResumeProject => ({
-    name: str(p, "name", "title"),
+    name: str(p, "name"),
     role: str(p, "role"),
     period: str(p, "period"),
     description: str(p, "description", "summary"),
-    bullets: list<string>(p, "bullets", "highlights").map(String),
-    techStack: list<string>(p, "techStack", "tech_stack", "tech").map(String),
-    url: str(p, "url", "link"),
+    bullets: list<string>(p, "bullets").map(String),
+    techStack: list<string>(p, "tech").map(String),
+    url: str(p, "url"),
   }));
 
   const education: ResumeEducation[] = list(s, "education").map((ed): ResumeEducation => ({
-    school: str(ed, "school", "institution"),
+    school: str(ed, "school"),
     degree: str(ed, "degree"),
-    major: str(ed, "major", "field"),
-    start: str(ed, "start", "startDate", "start_date", "startYear", "start_year"),
-    end: str(ed, "end", "endDate", "end_date", "endYear", "end_year"),
+    major: str(ed, "field"),
+    start: str(ed, "startYear"),
+    end: str(ed, "endYear"),
     gpa: str(ed, "gpa"),
     courses: list<string>(ed, "courses").map(String),
   }));
 
   const achievements = list<string>(s, "achievements").map(String).filter(Boolean);
   const technologies = list<string>(s, "technologies").map(String).filter(Boolean);
-  const careerGoals = list<string>(s, "careerGoals", "career_goals").map(String).filter(Boolean);
-  const preferredRoles = list<string>(s, "preferredRoles", "preferred_roles").map(String).filter(Boolean);
-  const preferredLocations = list<string>(s, "preferredLocations", "preferred_locations")
-    .map(String)
-    .filter(Boolean);
+  const careerGoals = list<string>(s, "careerGoals").map(String).filter(Boolean);
+  const preferredRoles = list<string>(s, "preferredRoles").map(String).filter(Boolean);
+  const preferredLocations = list<string>(s, "preferredLocations").map(String).filter(Boolean);
 
   const group = (v: string[] | undefined) => (v && v.length ? v : undefined);
   return {
     profile: hasProfile ? viewProfile : undefined,
-    summary: str(s, "summary") ?? str(profile, "summary"),
+    summary: str(profile, "summary"),
     experience: experience.length ? experience : undefined,
     projects: projects.length ? projects : undefined,
     education: education.length ? education : undefined,
