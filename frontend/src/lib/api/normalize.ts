@@ -1211,10 +1211,12 @@ export function searchGroupNames(): string {
 }
 
 /**
- * Global search: the backend /search returns results as typed top-level lists
- * (`{query, jobs, companies, resumes, notes, conversations, applications}`), not
- * a `groups` array. Map each entity to a navigable item, choosing the deepest
- * real route that exists. Also tolerates `{groups:[…]}` and flat `{items:[…]}`.
+ * Global search: `GET /search` answers with typed top-level lists
+ * (`{query, jobs, companies, resumes, notes, conversations, applications}`), not a `groups`
+ * array, so each entity becomes a navigable item on the deepest route that really exists.
+ * `SEARCH_GROUPS` is the only table of those lists and the parity test ties its keys to the
+ * Java record's `List<…>` components, so a group nobody renders is a red test rather than a
+ * silently missing section.
  *
  * No item is dropped for the term not appearing in its title: four of the six
  * groups can match a column the list never shows (see `SearchRepository`), so a
@@ -1222,11 +1224,9 @@ export function searchGroupNames(): string {
  */
 export function normalizeSearch(raw: unknown): SearchResults {
   const groups: SearchResults["groups"] = [];
-  let sawTyped = false;
   for (const g of SEARCH_GROUPS) {
     const arr = list(raw, g.key);
     if (!arr.length) continue;
-    sawTyped = true;
     groups.push({
       label: g.label,
       items: arr.map((h) => {
@@ -1243,42 +1243,7 @@ export function normalizeSearch(raw: unknown): SearchResults {
       }),
     });
   }
-  if (sawTyped) return { groups };
-
-  const groupsRaw = list(raw, "groups");
-  if (groupsRaw.length) {
-    return {
-      groups: groupsRaw.map((g) => ({
-        label: str(g, "label", "type", "name") ?? "Results",
-        items: list(g, "items").map((i) => ({
-          id: idOf(i, "result"),
-          type: str(i, "type", "kind") ?? "result",
-          title: str(i, "title", "name") ?? "",
-          subtitle: str(i, "subtitle", "description", "snippet"),
-          href: str(i, "href", "url", "link") ?? "#",
-        })),
-      })),
-    };
-  }
-
-  const flat = list(raw, "items", "results");
-  const byType = new Map<string, unknown[]>();
-  for (const i of flat) {
-    const t = str(i, "type", "kind") ?? "results";
-    byType.set(t, [...(byType.get(t) ?? []), i]);
-  }
-  return {
-    groups: [...byType.entries()].map(([label, items]) => ({
-      label: label.charAt(0).toUpperCase() + label.slice(1),
-      items: items.map((i) => ({
-        id: idOf(i, "result"),
-        type: label,
-        title: str(i, "title", "name") ?? "",
-        subtitle: str(i, "subtitle", "description"),
-        href: str(i, "href", "url", "link") ?? "#",
-      })),
-    })),
-  };
+  return { groups };
 }
 
 /* --------------------------------- copilot -------------------------------- */

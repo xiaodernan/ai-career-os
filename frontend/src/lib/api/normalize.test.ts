@@ -752,25 +752,6 @@ describe("normalizeSearch", () => {
     expect(normalizeSearch({ query: "zzz", jobs: [], notes: [] }).groups).toEqual([]);
   });
 
-  it("still honours an explicit {groups:[…]} payload", () => {
-    const { groups } = normalizeSearch({
-      groups: [{ label: "People", items: [{ id: "p1", name: "Ada", href: "/people/p1" }] }],
-    });
-    expect(groups[0]).toMatchObject({ label: "People" });
-    expect(groups[0].items[0]).toMatchObject({ id: "p1", title: "Ada", href: "/people/p1" });
-  });
-
-  it("groups a flat {items:[…]} list by type", () => {
-    const { groups } = normalizeSearch({
-      items: [
-        { id: "a", type: "job", title: "A" },
-        { id: "b", type: "note", title: "B" },
-        { id: "c", type: "job", title: "C" },
-      ],
-    });
-    expect(groups.find((g) => g.label === "Job")?.items).toHaveLength(2);
-  });
-
   it("keeps a hit whose match lives outside the title", () => {
     // SearchRepository's WHERE clauses, group by group: only `resumes` match the title.
     // The rest can answer for a term the displayed title never contains, so nothing in

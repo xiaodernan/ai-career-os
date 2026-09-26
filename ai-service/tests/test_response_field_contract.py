@@ -37,6 +37,7 @@ import re
 from functools import lru_cache
 
 from tests.test_response_shape_contract import (
+    JAVA_ROOT,
     NORMALIZE,
     _record_components_at,
     pydantic_fields,
@@ -54,6 +55,13 @@ PRODUCERS = {
     "SavedJobItem": ("java", "job/dto/JobDtos.java"),
     "MatchSummary": ("java", "job/dto/JobDtos.java"),
     "MatchResult": ("pydantic",),
+    "SearchResponse": ("java", "search/dto/SearchDtos.java"),
+    "JobHit": ("java", "search/dto/SearchDtos.java"),
+    "CompanyHit": ("java", "search/dto/SearchDtos.java"),
+    "ResumeHit": ("java", "search/dto/SearchDtos.java"),
+    "NoteHit": ("java", "search/dto/SearchDtos.java"),
+    "ConversationHit": ("java", "search/dto/SearchDtos.java"),
+    "ApplicationHit": ("java", "search/dto/SearchDtos.java"),
     "SkillGap": ("pydantic",),
 }
 
@@ -67,12 +75,15 @@ PRODUCERS = {
 #   drilled    local -> (parent receiver, key drilled out of it)
 #   elements   local -> parent receiver, when it is a `.map((local, i) …)` element
 #   blind      receiver -> why no record can answer for it
+#   dynamic    receiver -> why its names come from a variable rather than a call site, and which
+#              source-derived rule checks them instead (an unexplained entry is not allowed)
 READERS: dict[str, dict] = {
     "normalizeApplication": {
         "record_of": {"raw": "ApplicationItem", "nested": "CompanyItem"},
         "drilled": {"nested": ("raw", "company")},
         "elements": {},
         "blind": {},
+        "dynamic": {},
     },
     "normalizeJob": {
         # `raw` is deliberately bound to all three job payloads: the saved-jobs list hands over a
@@ -85,6 +96,7 @@ READERS: dict[str, dict] = {
         "drilled": {"company": ("raw", "company")},
         "elements": {},
         "blind": {},
+        "dynamic": {},
     },
     "normalizeMessages": {
         "record_of": {"m": "MessageItem"},
@@ -92,6 +104,7 @@ READERS: dict[str, dict] = {
         "elements": {"m": "raw"},
         "blind": {"raw": "the list response envelope: `list(raw, \"messages\", …)` reads a page "
                           "wrapper built by the controller, not a record's fields"},
+        "dynamic": {},
     },
     "normalizeMatch": {
         # `raw` is the envelope `pick(raw, "match", "latestMatch", …)` drills; the payload is the
@@ -105,6 +118,32 @@ READERS: dict[str, dict] = {
         "drilled": {"m": ("raw", "match")},
         "elements": {},
         "blind": {},
+        "dynamic": {},
+    },
+    "normalizeSearch": {
+        # One endpoint feeds this mapper (`GET /search` via `useGlobalSearch` and the palette), and
+        # its answer is `SearchResponse`: seven flat components, six of them `List<*Hit>`. There is
+        # no other shape. The reader also used to accept `{groups:[…]}` and a flat `{items:[…]}`;
+        # nothing on either service emits either name for this route, so #128 deleted both paths along
+        # with the two tests that fed them invented payloads -- a fallback a producer cannot reach is
+        # a shape the mapper would silently reinterpret rather than a tolerance anyone needs.
+        # `h` is a hit of whichever group is being rendered, which is why it is bound to the union of
+        # the six records rather than to one of them: a name only `CompanyHit` carries is a real read
+        # for companies and a blank for jobs, and the palette shows a blank subtitle by design.
+        # `_search_hits` is what keeps that union honest rather than hand-picked.
+        "record_of": {"raw": "SearchResponse",
+                      "h": ["JobHit", "CompanyHit", "ResumeHit", "NoteHit",
+                            "ConversationHit", "ApplicationHit"]},
+        "drilled": {},
+        "elements": {"h": "arr"},
+        "blind": {},
+        "dynamic": {
+            "raw": "`const arr = list(raw, g.key)` asks for whichever list the group being rendered "
+                   "names, so no literal name appears at the site; `_search_hits` ties those keys to "
+                   "SearchResponse's components in both directions",
+            "arr": "the per-group list itself, keyed by the same SEARCH_GROUPS variable -- it exists "
+                   "to be `h`'s parent rather than to be read by name",
+        },
     },
     "normalizeSkillGaps": {
         # The gap card's own reader, and the one whose ITEM shape is the contract: `g` is an item of
@@ -120,6 +159,7 @@ READERS: dict[str, dict] = {
         "blind": {"raw": "the caller's payload, whatever shape it brings: `list(raw, \"skillGaps\", "
                          "…)` returns `raw` untouched when the caller already drilled the list, so "
                          "no single record owns the name"},
+        "dynamic": {},
     },
 }
 
@@ -197,6 +237,22 @@ def _sites(function_name: str) -> list[dict]:
     return sites
 
 
+def _search_group_keys() -> list[str]:
+    """The list names `SEARCH_GROUPS` walks, read out of that table rather than repeated here."""
+    source = NORMALIZE.read_text(encoding="utf-8")
+    start = source.index("export const SEARCH_GROUPS")
+    return re.findall(r'key:\s*"([^"]+)"', source[start:source.index("\n];", start)])
+
+
+def _search_hits() -> dict[str, str]:
+    """Which record answers for each group, off `SearchResponse`'s own declaration."""
+    source = (JAVA_ROOT / "com" / "careeros" / "search" / "dto" / "SearchDtos.java").read_text(
+        encoding="utf-8")
+    head = source[source.index("record SearchResponse("):]
+    body = head[:head.index(") {")]
+    return {key: record for record, key in re.findall(r"List<(\w+)>\s+(\w+)", body)}
+
+
 def _emitted(alias: str) -> set[str]:
     """The keys one producer puts on the wire, read from its own source either way."""
     if alias not in PRODUCERS:
@@ -226,12 +282,19 @@ def _undeclared_receivers(reader: str) -> list[str]:
     spec = READERS[reader]
     problems = []
     used = {site["receiver"] for site in _sites(reader)}
-    known = set(spec["record_of"]) | set(spec["blind"])
+    known = set(spec["record_of"]) | set(spec["blind"]) | set(spec["dynamic"])
     for receiver in sorted(used - known):
         lines = [s["line"] for s in _sites(reader) if s["receiver"] == receiver]
         problems.append(f"{reader}: no record is bound for the receiver {receiver!r} read at "
                         f"L{lines}, while {sorted(known)} are the ones this gate knows")
     for receiver in sorted(known - used):
+        if receiver in spec["dynamic"]:
+            # Suppressing the complaint is allowed, vanishing with it is not: a dynamic receiver the
+            # reader no longer names would leave the table excusing a local that moved.
+            if not re.search(rf"\b{re.escape(receiver)}\b", _body(reader)):
+                problems.append(f"{reader}: {receiver!r} is declared dynamic and appears nowhere in "
+                                "the reader -- the entry excuses a name that moved")
+            continue  # read under a name a variable supplies: no literal site can exist
         if not re.search(rf"\b{re.escape(receiver)}\b", _body(reader)):
             problems.append(f"{reader}: {receiver!r} is bound to a record and appears nowhere in "
                             "the reader -- the table links a name that moved")
@@ -240,6 +303,9 @@ def _undeclared_receivers(reader: str) -> list[str]:
                             "more -- a renamed local silently unchecks that record")
     for receiver in sorted(set(spec["record_of"]) & set(spec["blind"])):
         problems.append(f"{reader}: {receiver!r} is both bound to a record and declared blind")
+    for receiver in sorted(set(spec["blind"]) & set(spec["dynamic"])):
+        problems.append(f"{reader}: {receiver!r} is declared blind and dynamic at once -- the table "
+                        "should say which of the two explains it")
     return problems
 
 
@@ -261,9 +327,9 @@ def _broken_links(reader: str) -> list[str]:
         if not re.search(rf"\.map\(\s*\(?\s*{re.escape(local)}\b", body):
             problems.append(f"{reader}: {local!r} is declared as an element of {parent!r}'s list "
                             "but is not a `.map` callback parameter")
-        if parent not in set(spec["record_of"]) | set(spec["blind"]):
+        if parent not in (set(spec["record_of"]) | set(spec["blind"]) | set(spec["dynamic"])):
             problems.append(f"{reader}: {local!r} comes from {parent!r}, which the table neither "
-                            "binds nor declares blind")
+                            "binds, declares blind, nor declares dynamic")
     return problems
 
 
@@ -286,9 +352,32 @@ def _producer_bookkeeping() -> list[str]:
     return problems
 
 
+_SPEC_KEYS = {"record_of", "drilled", "elements", "blind", "dynamic"}
+
+
+def _spec_shape() -> list[str]:
+    """A reader that stops declaring one link stops being checked by the rule that reads it, and a
+    `dynamic` entry with a one-word reason is free tolerance rather than an explanation."""
+    problems = []
+    for reader, spec in READERS.items():
+        if set(spec) != _SPEC_KEYS:
+            problems.append(f"{reader}: declares {sorted(spec)}, not the five links "
+                            f"{sorted(_SPEC_KEYS)} -- a rule now has nothing to read")
+        for receiver, why in spec["dynamic"].items():
+            if len(why) <= 40:
+                problems.append(f"{reader}: {receiver!r} is excused by {why!r}, which is a label "
+                                "and not a reason the next reader can act on")
+    return problems
+
+
 def _structural_problems() -> list[str]:
     """Everything wrong with the table itself, which would make the liveness rule check less than
     it claims rather than make it red."""
+    problems = _spec_shape()
+    if problems:
+        # A spec missing one of the five links makes the rules below unreadable rather than wrong,
+        # so say which key vanished before anything tries to index it.
+        return problems
     return [p for reader in READERS
             for p in (*_undeclared_receivers(reader), *_broken_links(reader))] + \
         _producer_bookkeeping()
@@ -392,8 +481,36 @@ def test_the_reads_are_actually_found():
     # had a fifth name on top of them -- `Job.match`, which no hook ever set. Each one read as a
     # nullable field the UI could only ever show as empty. `tags` still appears once, as a candidate
     # inside the `skills` site, where a live sibling carries the call.
+    hits = _sites("normalizeSearch")
+    assert len(hits) == 3
+    assert {s["receiver"] for s in hits} == {"h"}
+    # Three sites, all on a hit -- and the reader had 17 before #128 measured that its two fallback
+    # paths answer to nothing: `/search` is the only caller's endpoint, `SearchResponse` has no
+    # `groups` component and no `items`/`results`, so `{groups:[…]}` and flat `{items:[…]}` payloads
+    # were shapes the mapper would silently reinterpret rather than shapes anyone served. The tests
+    # that fed them invented a "People" entity with a `/people/:id` route the product does not have.
+    # `list(raw, g.key)` is the one read of `raw` left, and it has no literal name to check, so the
+    # two source-derived lists below are what make it live instead of a candidate table here.
+    groups, records = _search_group_keys(), _search_hits()
+    assert groups == ["jobs", "companies", "resumes", "notes", "conversations", "applications"]
+    assert sorted(groups) == sorted(records)
+    assert set(records.values()) == set(READERS["normalizeSearch"]["record_of"]["h"])
+    assert set(groups) <= _emitted("SearchResponse")
+    # Per group, which names the subtitle site actually answers from. Measured, because a group whose
+    # record carries none of them renders a row with no second line in the palette.
+    subtitle = next(s for s in hits if "industry" in s["keys"])
+    assert {key: sorted(set(subtitle["keys"]) & _emitted(record))
+            for key, record in records.items()} == {
+        "jobs": ["companyName", "location", "status"],
+        "companies": ["industry"],
+        "resumes": ["status"],
+        "notes": ["snippet"],
+        "conversations": ["snippet"],
+        "applications": ["companyName", "status"],
+    }
     assert len(_emitted("JobListItem")) == 18
     assert len(_emitted("SavedJobItem")) == 3
+    assert len(_emitted("SearchResponse")) == 7
     assert len(_emitted("SkillGap")) == 3
     assert len(_emitted("ApplicationItem")) == 15
     assert len(_emitted("CompanyItem")) == 9
