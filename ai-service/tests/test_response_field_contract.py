@@ -36,6 +36,7 @@ weaker binding is only used where the response really has two authors.
 import ast
 import re
 from functools import lru_cache
+from pathlib import Path
 
 from tests.test_response_shape_contract import (
     JAVA_ROOT,
@@ -81,6 +82,15 @@ PRODUCERS = {
     "RubricCheck": ("pyappend", ("compute_resume_score", "detail")),
     "RecentRun": ("java", "report/dto/DashboardDtos.java"),
     "RunItem": ("java", "activity/web/ActivityController.java"),
+    # The interview report has no record for its body: `EvaluationItem.summary` is a
+    # `Map<String, Object>` whose keys exist only because the finalize prompt asks for them, so
+    # `FINALIZE_FIELDS` / `STUDY_ITEM_FIELDS` state them as data and this reads the declaration
+    # rather than a list copied into the table.
+    "SessionDetail": ("java", "interview/dto/InterviewDtos.java"),
+    "FinalizeResponse": ("java", "interview/dto/InterviewDtos.java"),
+    "EvaluationItem": ("java", "interview/dto/InterviewDtos.java"),
+    "FinalizeReport": ("pyconst", ("app/features/interview.py", "FINALIZE_FIELDS")),
+    "StudyItem": ("pyconst", ("app/features/interview.py", "STUDY_ITEM_FIELDS")),
 }
 
 # Readers whose producers are known per map. A reader with more producers than one is bound to their
@@ -162,6 +172,25 @@ READERS: dict[str, dict] = {
         "record_of": {"raw": ["RecentRun", "RunItem"]},
         "drilled": {},
         "elements": {},
+        "blind": {},
+        "dynamic": {},
+    },
+    "normalizeInterviewReport": {
+        # The report page reads `EvaluationItem` (from `SessionDetail.evaluation` or the
+        # `FinalizeResponse` the finalize POST returns), and `summary` is one of those Java
+        # records' two free `Map<String, Object>` components -- so the scalar half of the report has
+        # no record behind it at all. `FINALIZE_FIELDS` is that half made into data
+        # (`#135`/`#136`), which is why `merged` -- the object spread of the item and its summary
+        # map -- can be bound to both producers instead of excused. It is deliberately *not* in
+        # `drilled`: a spread is not a `pick`, so the link rule would be checking a call that does
+        # not exist. #137 trimmed the reader to these names first; this entry is what that trim is
+        # checked against.
+        "record_of": {"raw": ["SessionDetail", "FinalizeResponse"],
+                      "ev": "EvaluationItem",
+                      "merged": ["EvaluationItem", "FinalizeReport"],
+                      "s": "StudyItem"},
+        "drilled": {"ev": ("raw", "evaluation")},
+        "elements": {"s": "merged"},
         "blind": {},
         "dynamic": {},
     },
@@ -369,6 +398,24 @@ def _appended_keys(func_name: str, list_name: str) -> set[str]:
     return found[0]
 
 
+def _py_const_keys(rel: str, name: str) -> set[str]:
+    """The strings a module-level parenthesised tuple declares, read out of the source that states
+    the contract. A prompt's JSON skeleton is prose; the tuple beside it is the same list made
+    checkable, and copying it into this file instead would let the two drift apart silently."""
+    path = Path(__file__).resolve().parents[1] / rel
+    if not path.exists():
+        raise AssertionError(f"{rel} is not where the contract table says: {name} compares nothing")
+    source = path.read_text(encoding="utf-8")
+    declared = re.search(rf"^{name}\s*=\s*\(([^)]*)\)", source, re.M | re.S)
+    if declared is None:
+        raise AssertionError(f"{rel}::{name} is not one parenthesised tuple literal -- the rule that "
+                             "reads it would be guessing at the contract")
+    keys = set(re.findall(r'"([^"]+)"', declared.group(1)))
+    if not keys:
+        raise AssertionError(f"{rel}::{name} declares no string keys at all")
+    return keys
+
+
 def _emitted(alias: str) -> set[str]:
     """The keys one producer puts on the wire, read from its own source either way."""
     if alias not in PRODUCERS:
@@ -386,6 +433,8 @@ def _emitted(alias: str) -> set[str]:
         return set(shape)
     if spec[0] == "pyappend":
         return _appended_keys(*spec[1])
+    if spec[0] == "pyconst":
+        return _py_const_keys(*spec[1])
     return pydantic_fields(alias)
 
 
@@ -701,6 +750,25 @@ def test_the_reads_are_actually_found():
     # panel had been reading `v.score?.overall` off a DTO that never sent the field, so the suffix
     # never appeared -- which is exactly the kind of silence a union can hide, so the fact each
     # author carries `score` is asserted per author rather than inferred from the site being live.
+    report = _sites("normalizeInterviewReport")
+    assert len(report) == 10
+    assert {s["receiver"] for s in report} == {"ev", "merged", "raw", "s"}
+    read_merged = {k for s in report if s["receiver"] == "merged" for k in s["keys"]}
+    assert read_merged == {"overall", "what_you_did_well", "what_was_weak",
+                           "recommended_study", "trajectory_note"}
+    assert read_merged <= _emitted("FinalizeReport")
+    # Every name the report body tries is one `FINALIZE_FIELDS` declares -- which is #137's trim
+    # stated as a floor: a new read has to name a declared field, and a field the prompt stops
+    # asking for goes red here before a card on the page goes blank.
+    assert _emitted("FinalizeReport") - read_merged == {"dims", "missing_concepts",
+                                                        "better_answers",
+                                                        "follow_up_questions_to_prepare"}
+    # The four declared and not read here: `dims` is the dimension reader's, `better_answers` and
+    # `follow_up_questions_to_prepare` are rendered from the raw report elsewhere, and
+    # `missing_concepts` has no consumer yet. Named so the set cannot grow by accident.
+    assert {k for s in report if s["receiver"] == "s" for k in s["keys"]} == _emitted("StudyItem")
+    # The study card reads exactly the three names of `STUDY_ITEM_FIELDS`, no more: after #137 there
+    # is no undeclared name left in this reader, which is the whole reason it could be bound.
     runs = _sites("normalizeRun")
     assert len(runs) == 12
     assert {s["receiver"] for s in runs} == {"raw"}
