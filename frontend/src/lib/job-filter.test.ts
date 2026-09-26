@@ -252,8 +252,10 @@ describe("profileSkillSuggestions", () => {
     expect(profileSkillSuggestions({ skills: null, experience: null })).toEqual([]);
   });
 
-  it("reads a structured resume nested under the payload's own key", () => {
-    expect(profileSkillSuggestions({ structured: { technologies: ["Elixir"] } })).toEqual(["Elixir"]);
+  it("answers with nothing from a resume nested under a key no caller uses", () => {
+    // `ResumeVersionItem.structured` is the DTO's own field name, and both production callers pass
+    // the jsonb itself, so unwrapping a `structured` member was tolerance for a shape nobody serves.
+    expect(profileSkillSuggestions({ structured: { skills: [skill("Elixir")] } })).toEqual([]);
   });
 
   it("suggests only chips the rows can actually answer", () => {

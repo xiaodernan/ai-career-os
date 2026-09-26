@@ -547,7 +547,11 @@ export function structuredResumeToMarkdown(raw: unknown): string {
  * Idempotent: an already-grouped payload (e.g. tailor output) passes through.
  */
 export function normalizeStructuredResume(raw: unknown): StructuredResume | null {
-  const s = rec(pick(raw, "structured", "structuredResume", "structured_resume") ?? raw);
+  // Both callers hand over the jsonb itself -- `normalizeStructuredResume(r.structured)` on the
+  // resume page and `profileSkillSuggestions(resume.data?.structured)` in the filter panel -- so the
+  // `structured`/`structuredResume`/`structured_resume` probe unwrapped a nesting no producer writes:
+  // `ResumeVersionItem.structured` is the DTO's own field name, and nothing ever passed the DTO in.
+  const s = rec(raw);
   if (!s) return null;
 
   const profile = rec(pick(s, "profile"));
