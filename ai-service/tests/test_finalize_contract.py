@@ -26,8 +26,12 @@ def test_the_study_item_fields_are_the_prompt_sownested_shape():
     assert [name for name in STUDY_ITEM_FIELDS if f'"{name}"' not in FINALIZE_SYSTEM] == []
 
 
-def test_both_contracts_are_declared_once():
-    assert len(set(FINALIZE_FIELDS)) == len(FINALIZE_FIELDS) == 9
-    assert len(set(STUDY_ITEM_FIELDS)) == len(STUDY_ITEM_FIELDS) == 3
-    # The panel's own header line asks for these three; a rename here and not there is a blank card.
-    assert "recommended_study" in FINALIZE_FIELDS
+def test_no_name_is_declared_twice_or_in_both_contracts():
+    # Uniqueness, without pinning a count: asserting `len == 9` made this test a second copy of the
+    # tuple's own contents, so a mutant that added an unasked field went red here as well as in the
+    # prompt guard -- two assertions covering one fact, and the magic number is the weaker one.
+    assert len(set(FINALIZE_FIELDS)) == len(FINALIZE_FIELDS)
+    assert len(set(STUDY_ITEM_FIELDS)) == len(STUDY_ITEM_FIELDS)
+    # The report's own fields and the study card's are different levels of one answer; a name in both
+    # would let a reader satisfy the card-level read from the report-level map by accident.
+    assert not set(FINALIZE_FIELDS) & set(STUDY_ITEM_FIELDS)
