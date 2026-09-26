@@ -73,14 +73,41 @@ describe("mapInterviewSessionDetail", () => {
   const SINGLE = { ...SESSION_ITEM, questionCount: undefined, overall: undefined };
   const DETAIL = {
     session: SINGLE,
+    // Real `TurnItem` rows: the backend writes only the roles "interviewer" and "candidate", and
+    // the question's own metadata rides in the turn's free `questionMeta` map -- the follow-up
+    // shape from `InterviewService.answer`, the opening shape from ai-service's `opening_meta`.
     turns: [
-      { id: "t1", seq: 1, role: "user", content: "I used an index.", questionMeta: null },
+      {
+        id: "t1",
+        seq: 1,
+        role: "interviewer",
+        content: "Tell me about an outage you handled.",
+        questionMeta: { topic: "incident", depth_level: 0, expected_points: [], phase: "opening" },
+        evaluation: null,
+        createdAt: "2026-09-02T09:00:00Z",
+      },
       {
         id: "t2",
         seq: 2,
-        role: "assistant",
+        role: "candidate",
+        content: "I added an index.",
+        questionMeta: null,
+        evaluation: { score: 0.4 },
+        createdAt: "2026-09-02T09:01:00Z",
+      },
+      {
+        id: "t3",
+        seq: 3,
+        role: "interviewer",
         content: "Why did the planner still choose a seq scan?",
-        questionMeta: { topic: "planning", difficulty: 4 },
+        questionMeta: {
+          topic: "planning",
+          depth_level: 1,
+          action: "followup",
+          reasoning: "the answer stayed shallow",
+        },
+        evaluation: null,
+        createdAt: "2026-09-02T09:02:00Z",
       },
     ],
     evaluation: { id: "e1", dims: { depth: 70 }, summary: { overall: 66 } },
@@ -95,19 +122,42 @@ describe("mapInterviewSessionDetail", () => {
 
   it("keeps turns and evaluation as siblings of session", () => {
     const got = mapInterviewSessionDetail(DETAIL, "x");
-    expect(got.history).toHaveLength(2);
+    expect(got.history).toHaveLength(3);
     expect(got.report).toEqual({ id: "e1", dims: { depth: 70 }, summary: { overall: 66 } });
     // SessionItem has no questionCount, so the turn count is the only honest number.
-    expect(got.questionCount).toBe(2);
+    expect(got.questionCount).toBe(3);
   });
 
-  it("derives the pending question from the last assistant turn", () => {
+  it("derives the pending question from the last interviewer turn", () => {
+    // The role literal is the whole bug this test now pins: the runner page seeds its question
+    // from `currentQuestion`, and the search used to look for role "assistant", which no
+    // interview turn ever carries -- so a reload lost the question and re-fired the opening POST,
+    // which the backend answers with 400 "Session already has turns".
     const got = mapInterviewSessionDetail(DETAIL, "x");
     expect(got.currentQuestion).toMatchObject({
       text: "Why did the planner still choose a seq scan?",
       topic: "planning",
-      difficulty: 4,
+      kind: "followup",
+      id: "t3",
     });
+  });
+
+  it("takes the opening turn's meta, which has no action at all", () => {
+    // `opening_meta` states topic/depth_level/expected_points/phase and no `action`: the first
+    // question is not a follow-up, so `kind` stays undefined rather than inventing a value.
+    const got = mapInterviewSessionDetail(
+      { ...DETAIL, turns: DETAIL.turns.slice(0, 1) }, "x");
+    expect(got.currentQuestion).toEqual({
+      text: "Tell me about an outage you handled.",
+      topic: "incident",
+      kind: undefined,
+      id: "t1",
+    });
+  });
+
+  it("has no pending question when the payload carries no interviewer turn", () => {
+    const got = mapInterviewSessionDetail({ ...DETAIL, turns: [DETAIL.turns[1]] }, "x");
+    expect(got.currentQuestion).toBeNull();
   });
 
   it("falls back to the payload itself when there is no session wrapper", () => {

@@ -96,6 +96,14 @@ PRODUCERS = {
     # stated exactly once in the source that produces them.
     "FinalizeComputed": ("pyconst", ("app/features/interview.py", "FINALIZE_COMPUTED_FIELDS")),
     "TrajectoryRow": ("pyitem", "_trajectory_detail"),
+    # The current question is a turn row, and the one free map on it carries what the runner shows
+    # beside the text. Two authors put keys into `interview_turns.question_meta` -- the follow-up
+    # `meta` the answer handler builds, and the opening `meta` ai-service returns and the handler
+    # stores verbatim -- so each is read from its own source and bound separately: a union of the
+    # two would let either rename `topic` in silence (#133, #141).
+    "TurnItem": ("java", "interview/dto/InterviewDtos.java"),
+    "QuestionMetaFollowup": ("japut", ("interview/service/InterviewService.java", "answer")),
+    "QuestionMetaOpening": ("pyfunc", "opening_meta"),
 }
 
 # Readers whose producers are known per map. A reader with more producers than one is bound to their
@@ -225,6 +233,20 @@ READERS: dict[str, dict] = {
         # plus an object-valued form that no producer emits -- six sites, one of them authored.
         "record_of": {"raw": ["EvaluationItem", "FinalizeReport"]},
         "drilled": {},
+        "elements": {},
+        "blind": {},
+        "dynamic": {},
+    },
+    "normalizeQuestion": {
+        # One shape reaches this reader: an interviewer `TurnItem`, from `OpeningResponse.question`
+        # or as the last interviewer row of `SessionDetail.turns`. #142b deleted the two wrappers it
+        # used to probe (`{question: …}`, `{next: …}`) and the `difficulty`/`content`-on-a-synthesis
+        # reads: no endpoint hands a session mapper either wrapper, and the session path built its
+        # object from `questionMeta` plus a `text` key of its own making -- which is also why it
+        # never matched a real turn.
+        "record_of": {"raw": "TurnItem",
+                      "meta": ["QuestionMetaFollowup", "QuestionMetaOpening"]},
+        "drilled": {"meta": ("raw", "questionMeta")},
         "elements": {},
         "blind": {},
         "dynamic": {},
@@ -475,6 +497,30 @@ def _returned_item_keys(func_name: str) -> set[str]:
     return {k.value for k in items[0].keys}
 
 
+def _java_put_keys(rel: str, method: str) -> set[str]:
+    """The keys one Java method puts into its free `Map<String, Object>`.
+
+    A jsonb column projected through a `Map` has no record and no model: `InterviewService.answer`
+    states its question meta with `meta.put("topic", …)` calls, and that method body is the only
+    place those names exist. Read from the source, so a rename there moves the contract here.
+    """
+    path = JAVA_ROOT / "com" / "careeros" / rel
+    if not path.exists():
+        raise AssertionError(f"{rel} is not where the contract table says: {method} compares nothing")
+    source = path.read_text(encoding="utf-8")
+    opener = re.search(rf"\n[^\n]*\b{re.escape(method)}\(", source)
+    if opener is None:
+        raise AssertionError(f"{rel} declares no method named {method!r}: the table names a "
+                             "producer that moved, so the rule it feeds compares nothing")
+    body = source[opener.start():]
+    end = body.index("\n    }\n")
+    keys = set(re.findall(r'\.\s*put\(\s*"([^"]+)"', body[:end]))
+    if not keys:
+        raise AssertionError(f"{rel}::{method} puts no string keys into its map: the table binds a "
+                             "producer whose literal has stopped being one")
+    return keys
+
+
 def _trajectory_keys() -> set[str]:
     """The four names the trajectory fold reaches for, read out of the constant it spreads -- the
     call site itself says `...TRAJECTORY_KEYS`, so no literal name exists where the read happens."""
@@ -504,6 +550,8 @@ def _emitted(alias: str) -> set[str]:
         return _py_const_keys(*spec[1])
     if spec[0] == "pyitem":
         return _returned_item_keys(spec[1])
+    if spec[0] == "japut":
+        return _java_put_keys(*spec[1])
     return pydantic_fields(alias)
 
 
@@ -878,6 +926,28 @@ def test_the_reads_are_actually_found():
     # so no read site exists for this gate to point at.
     assert _spread_receivers("normalizeTrajectory") == {"source"}
     assert _spread_receivers("normalizeSearch") == set()
+    question = _sites("normalizeQuestion")
+    assert len(question) == 5
+    assert {s["receiver"] for s in question} == {"raw", "meta"}
+    assert sum(1 for s in question if s["receiver"] == "meta") == 2
+    # 5, down from 7, and this is the first time any of them had an author: the reader used to probe
+    # `{question: …}` and `{next: …}` wrappers no endpoint hands a session mapper, and the session
+    # path built its object from a `text` key of its own making after searching the turns for role
+    # "assistant" -- a role the backend never writes, so `currentQuestion` was null on every load
+    # and the runner re-fired an opening POST the service answers with 400.
+    assert _emitted("QuestionMetaFollowup") == {"topic", "depth_level", "action", "reasoning"}
+    assert _emitted("QuestionMetaOpening") == {"topic", "depth_level", "expected_points", "phase"}
+    # Stated per author rather than as the union the site is checked against: the two maps agree on
+    # `topic` and `depth_level`, so either one renaming `topic` leaves the other covering the read
+    # (#133, #141). The asymmetry is the point -- `action`, the name the runner branches on, has
+    # exactly one author.
+    assert _emitted("QuestionMetaFollowup") ^ _emitted("QuestionMetaOpening") == \
+        {"action", "reasoning", "expected_points", "phase"}
+    meta_reads = {k for s in question if s["receiver"] == "meta" for k in s["keys"]}
+    assert meta_reads <= _emitted("QuestionMetaFollowup")
+    # Both names the meta receiver tries come from the follow-up handler alone, so the opening
+    # handler's map is bound here for the fields it *does* carry, not to lend liveness.
+    assert "questionMeta" in _emitted("TurnItem")
     # Two different ways a read stops naming its key in the call: `normalizeTrajectory` spreads a
     # name table, which this rule covers, and `normalizeSearch` reaches `g.key`, a member of a group
     # object, which `_search_hits` covers. Telling them apart is what keeps each rule honest about

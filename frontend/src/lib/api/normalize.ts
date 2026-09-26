@@ -977,26 +977,19 @@ export function normalizeQuestion(raw: unknown): {
   text: string;
   topic?: string;
   kind?: string;
-  difficulty?: number;
   id?: string;
 } | null {
-  // Three sources, all of them named rather than guessed: `NextMove` (ai-service `decide_next`,
-  // which returns exactly {action, question, topic, difficulty, reasoning}), `TurnItem` (what
-  // `OpeningResponse.question` carries, with the text in `content`), and the session mapper's own
-  // synthesis of a turn's `questionMeta` plus `text`. `kind` is the browser's name for the
-  // producer's `action`: the interview page branches on "followup" and "next_topic", which are
-  // `decide_next`'s whitelisted actions, while this read tried `kind`/`type`/`nextAction`/
-  // `next_action` -- none of which any producer sends -- so neither branch could ever fire.
-  const q = pick(raw, "question", "next") ?? raw;
-  const text = str(q, "question", "content", "text") ?? str(raw, "question", "text");
+  // The current question is an interviewer `TurnItem`, whichever endpoint carried it: the
+  // `OpeningResponse.question` the opening POST answers with, or the last interviewer row of
+  // `SessionDetail.turns`. Its text is the turn's `content`. Everything else about the question
+  // lives in the turn's free `questionMeta` map -- the topic, and the `action` the runner branches
+  // on ("followup" / "next_topic"), which this mapper calls `kind`. That map has two authors
+  // (`InterviewService.answer` for follow-ups, ai-service's `opening_meta` for turn one) and the
+  // gate binds both; the snake twin is the shape the same column takes on the ai-service side.
+  const meta = rec(pick(raw, "questionMeta", "question_meta")) ?? {};
+  const text = str(raw, "content");
   if (!text) return null;
-  return {
-    text,
-    topic: str(q, "topic"),
-    kind: str(q, "action"),
-    difficulty: num(q, "difficulty"),
-    id: str(q, "id"),
-  };
+  return { text, topic: str(meta, "topic"), kind: str(meta, "action"), id: str(raw, "id") };
 }
 
 /* --------------------------- interview report ---------------------------- */

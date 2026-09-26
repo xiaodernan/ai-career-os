@@ -925,26 +925,29 @@ describe("serializeJobFilters", () => {
 });
 
 describe("normalizeQuestion", () => {
-  // This reader had no test at all, which is how `kind` could ask for four names no producer sends
-  // while the interview page branched on the one name the producer does send (`action`).
-  it("reads the NextMove map decide_next returns, and maps its action onto kind", () => {
-    const q = normalizeQuestion({
-      next: { action: "followup", question: "Why did the cache miss?", topic: "reliability",
-              difficulty: 0.8, reasoning: "the answer stayed shallow" },
+  // The only shape an endpoint can hand this mapper is an interviewer `TurnItem`: the text is the
+  // turn's `content`, and the topic plus the `action` the runner branches on ride in the turn's
+  // `questionMeta` map. The version before #142b walked `{next: …}` / `{question: …}` wrappers and
+  // asked for a `difficulty` that no producer puts anywhere this reader can see.
+  it("reads a follow-up turn's content, topic and action", () => {
+    expect(normalizeQuestion({
+      id: "t3", seq: 3, role: "interviewer",
+      content: "Why did the planner still choose a seq scan?",
+      questionMeta: { topic: "planning", depth_level: 1, action: "followup", reasoning: "shallow" },
+    })).toEqual({
+      text: "Why did the planner still choose a seq scan?",
+      topic: "planning", kind: "followup", id: "t3",
     });
-    expect(q).toEqual({ text: "Why did the cache miss?", topic: "reliability", kind: "followup",
-                        difficulty: 0.8, id: undefined });
   });
 
-  it("reads a TurnItem row's content, and the session mapper's meta+text synthesis", () => {
-    expect(normalizeQuestion({ question: { id: "t1", role: "interviewer", content: "Tell me about X" } }))
-      .toMatchObject({ text: "Tell me about X", id: "t1" });
-    expect(normalizeQuestion({ topic: "system_design", text: "How would you scale it?" }))
-      .toMatchObject({ text: "How would you scale it?", topic: "system_design" });
+  it("accepts the snake_case meta the ai-service side stores the same column with", () => {
+    expect(normalizeQuestion({
+      content: "How would you scale it?", question_meta: { topic: "system_design", action: "next_topic" },
+    })).toMatchObject({ text: "How would you scale it?", topic: "system_design", kind: "next_topic" });
   });
 
-  it("answers null when no producer put a question anywhere", () => {
-    expect(normalizeQuestion({ action: "finish", topic: "" })).toBeNull();
+  it("answers null when the turn carries no question text", () => {
+    expect(normalizeQuestion({ id: "t2", role: "candidate", content: "", questionMeta: null })).toBeNull();
     expect(normalizeQuestion(null)).toBeNull();
   });
 });

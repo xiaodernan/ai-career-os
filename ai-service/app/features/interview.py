@@ -65,6 +65,16 @@ def _state_brief(persona: str, mode: str, turns: list[dict], difficulty: float,
             f"{wrap_untrusted('CANDIDATE_CONTEXT', resume_ctx[:2500])}\n\nConversation:\n{convo}")
 
 
+def opening_meta(topic: str) -> dict:
+    """The `question_meta` the first turn of a session carries.
+
+    Its own function because that dict is the wire shape -- the backend stores it verbatim into
+    `interview_turns.question_meta` -- and the contract gate binds the browser's reads of it to the
+    single literal that states it.
+    """
+    return {"topic": topic, "depth_level": 0, "expected_points": [], "phase": "opening"}
+
+
 async def opening_question(*, mode: str, company: str, position: str, resume_ctx: str,
                           jd_topics: list[str], candidate_name: str = "",
                           user_id: str | None = None, run_id: str | None = None) -> dict:
@@ -81,9 +91,7 @@ async def opening_question(*, mode: str, company: str, position: str, resume_ctx
         user_id=user_id, run_id=run_id, agent="interview", kind="interview_open")
     text = resp.text.strip()
     topic = (jd_topics or ["background"])[0]
-    return {"question": text, "meta": {"topic": topic, "depth_level": 0,
-                                       "expected_points": [], "phase": "opening"},
-            "model": resp.model}
+    return {"question": text, "meta": opening_meta(topic), "model": resp.model}
 
 
 async def evaluate_answer(*, mode: str, question: str, answer: str, resume_ctx: str,

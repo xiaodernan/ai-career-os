@@ -19,7 +19,6 @@ import {
   pct,
   serializeJobFilters,
   pick,
-  rec,
   str,
   num,
 } from "@/lib/api/normalize";
@@ -396,17 +395,17 @@ export function mapInterviewSessionItem(s: unknown): InterviewSession {
 export function mapInterviewSessionDetail(raw: unknown, fallbackId?: string | null) {
   const sess = pick(raw, "session") ?? raw;
   const turns = listOf(raw, "turns", "history", "answers", "questions");
-  const lastAssistant = [...turns].reverse().find((t) => str(t, "role") === "assistant");
-  const cqMeta = rec(pick(lastAssistant, "questionMeta", "question_meta")) ?? {};
+  // The pending question is the last *interviewer* turn: those are the only two roles the backend
+  // writes ("interviewer" / "candidate" -- `assistant` belongs to the copilot's chat table, not
+  // here), so a search for an assistant row matched nothing on every payload, left
+  // `currentQuestion` null, and the runner page re-fired the opening POST -- which answers 400
+  // "Session already has turns". Reloading mid-interview therefore lost the question.
+  const lastQuestion = [...turns].reverse().find((t) => str(t, "role") === "interviewer");
   return {
     ...mapSessionScalars(sess),
     id: idStr(sess, fallbackId ?? ""),
     questionCount: num(sess, "questionCount", "question_count") || turns.length,
-    currentQuestion: normalizeQuestion(
-      pick(raw, "currentQuestion", "current_question") ??
-        pick(sess, "currentQuestion", "current_question", "next") ??
-        (lastAssistant ? { ...cqMeta, text: str(lastAssistant, "content") } : null)
-    ),
+    currentQuestion: normalizeQuestion(lastQuestion),
     history: turns,
     report: pick(raw, "evaluation", "report") ?? pick(sess, "evaluation", "report") ?? null,
   };
