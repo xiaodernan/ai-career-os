@@ -154,6 +154,27 @@ FINALIZE_SYSTEM = f"""You produce the interview report. JSON only:
 Base every judgement strictly on the transcript."""
 
 
+# The report contract, as data. The reader in `normalize.ts` may only ask for names in this list,
+# and `test_interview_finalize_lock` ties every one of them to the prompt below -- a field that
+# leaves the prompt has to leave this tuple in the same change, which is what makes the frontend's
+# reads checkable at all (`EvaluationItem.summary` is a free `Map<String,Object>`, so no record
+# names these keys for it).
+FINALIZE_FIELDS = (
+    "dims",
+    "overall",
+    "what_you_did_well",
+    "what_was_weak",
+    "missing_concepts",
+    "better_answers",
+    "follow_up_questions_to_prepare",
+    "recommended_study",
+    "trajectory_note",
+)
+
+# ...and the one nested list the report panel renders cards from.
+STUDY_ITEM_FIELDS = ("topic", "why", "resource_hint")
+
+
 async def finalize(*, mode: str, turns: list[dict], resume_ctx: str,
                    user_id: str | None = None, run_id: str | None = None) -> dict:
     convo = "\n".join(
