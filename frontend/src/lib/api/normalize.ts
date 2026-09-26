@@ -815,23 +815,29 @@ const RESUME_CRITERION_LABELS: Record<string, string> = {
 };
 
 export function normalizeResumeScore(raw: unknown): ResumeScore | null {
-  const s = pick(raw, "score", "resumeScore", "resume_score") ?? raw;
-  if (typeof s === "number") return { overall: pct(s) };
+  // `raw` is a record that *carries* the rubric map, never the map itself: `ResumeDetail` and
+  // `ResumeSummary` both have a `score` component, while the versions list hands over a
+  // `ResumeVersionItem`, which projects no score at all, so its rows answer null. The reader also
+  // used to take the map directly (`?? raw`) and a bare number; no caller sends either shape, and
+  // a fallback no producer reaches is a payload the mapper silently reinterprets rather than a
+  // tolerance anyone asked for.
+  const s = pick(raw, "score");
   const r = rec(s);
   if (!r) return null;
-  const overall = pct(num(s, "overall", "score", "total"));
-  const explicitGaps = list<string>(s, "gaps", "issues", "weaknesses").map(String);
-  // The backend's rubric is a checklist of {criterion, met, points}; the unmet
-  // items ARE the gaps. Derive them when the payload carries no explicit gaps.
-  const derivedGaps = list<Record<string, unknown>>(s, "detail", "checks", "criteria")
-    .filter((c) => bool(c, "met", "ok", "passed") === false)
+  // `total` is already a percentage, so it is clamped here rather than by `pct`: that helper scales
+  // any value <= 1 as a fraction, which would read a 1-point rubric as a perfect 100. The rubric's
+  // own maximum is 110, and a score above 100 has always been reported as 100.
+  const total = num(s, "total");
+  const overall = total == null ? undefined : Math.min(100, Math.round(total));
+  // The rubric's unmet criteria ARE the gaps: `detail: [{criterion, met, points}]` is the only gap
+  // source there is, and RESUME_CRITERION_LABELS above is the human half of that same table.
+  const gaps = list<Record<string, unknown>>(s, "detail")
+    .filter((c) => bool(c, "met") === false)
     .map((c) => {
-      const code = str(c, "criterion", "name", "why") ?? "";
+      const code = str(c, "criterion") ?? "";
       return RESUME_CRITERION_LABELS[code] ?? code.replace(/_/g, " ");
     })
     .filter(Boolean);
-  const gaps = explicitGaps.length ? explicitGaps : derivedGaps;
-  const suggestions = list<string>(s, "suggestions", "improvements", "tips").map(String);
   const out: ResumeScore = {
     overall,
     // The rubric reports each of these on its own 0-100 scale (ai-service `_DIMENSION_OF`), so they
@@ -844,10 +850,9 @@ export function normalizeResumeScore(raw: unknown): ResumeScore | null {
     clarity: num(s, "clarity") ?? undefined,
     keywords: num(s, "keywords") ?? undefined,
     gaps: gaps.length ? gaps : undefined,
-    suggestions: suggestions.length ? suggestions : undefined,
-    computedAt: str(s, "computedAt", "computed_at", "createdAt", "created_at"),
   };
-  return out.overall == null && !out.bullets && !out.structure && !out.impact && !out.clarity && !out.keywords && !gaps.length
+  return out.overall == null && !out.bullets && !out.structure && !out.impact && !out.clarity &&
+    !out.keywords && !gaps.length
     ? null
     : out;
 }

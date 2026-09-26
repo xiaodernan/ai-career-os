@@ -33,7 +33,6 @@ import { DiffView } from "@/components/common/diff-view";
 import { DimensionBars } from "@/components/common/skill-chips";
 import { MatchRing } from "@/components/ai/match-ring";
 import { TaskProgress } from "@/components/ai/task-stream";
-import { AIBadge } from "@/components/ai/ai-badge";
 import { useParseResume, useSetCurrentResume } from "@/lib/hooks/actions";
 import { useResume, useResumeVersions } from "@/lib/hooks/resources";
 import { normalizeStructuredResume, normalizeTailorDiff, str } from "@/lib/api/normalize";
@@ -387,9 +386,6 @@ function ScorePanel({ score }: { score: ResumeScore | null }) {
         <MatchRing value={score.overall} size={64} thickness={6} label="Resume score" />
         <div className="min-w-0 text-sm">
           <p className="font-medium">Overall {score.overall}/100</p>
-          {score.computedAt && (
-            <p className="text-xs text-muted-foreground">reviewed {formatDate(score.computedAt)}</p>
-          )}
         </div>
       </div>
       {dims.length > 0 && <DimensionBars dimensions={dims} dense />}
@@ -401,18 +397,6 @@ function ScorePanel({ score }: { score: ResumeScore | null }) {
           <ul className="ml-4 list-disc space-y-1 text-xs text-muted-foreground">
             {score.gaps.slice(0, 6).map((g, i) => (
               <li key={i}>{g}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-      {score.suggestions && score.suggestions.length > 0 && (
-        <div>
-          <p className="mb-1 text-2xs font-medium tracking-wide text-muted-foreground uppercase">
-            How to improve <AIBadge />
-          </p>
-          <ul className="ml-4 list-disc space-y-1 text-xs text-muted-foreground">
-            {score.suggestions.slice(0, 6).map((s, i) => (
-              <li key={i}>{s}</li>
             ))}
           </ul>
         </div>

@@ -73,8 +73,6 @@ export interface ResumeScore {
   clarity?: number;
   keywords?: number;
   gaps?: string[];
-  suggestions?: string[];
-  computedAt?: string;
 }
 
 export interface StructuredResume {

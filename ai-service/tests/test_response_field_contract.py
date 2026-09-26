@@ -33,6 +33,7 @@ site is live if either one emits a name it tries. That is weaker than one record
 weaker binding is only used where the response really has two authors.
 """
 
+import ast
 import re
 from functools import lru_cache
 
@@ -40,6 +41,8 @@ from tests.test_response_shape_contract import (
     JAVA_ROOT,
     NORMALIZE,
     _record_components_at,
+    _shape_of,
+    _sole,
     pydantic_fields,
 )
 
@@ -67,6 +70,15 @@ PRODUCERS = {
     "ResumeSummary": ("java", "report/dto/DashboardDtos.java"),
     "SkillGapDigest": ("java", "report/dto/DashboardDtos.java"),
     "SkillGap": ("pydantic",),
+    "ResumeDetail": ("java", "resume/dto/ResumeDtos.java"),
+    "ResumeVersionItem": ("java", "resume/dto/ResumeDtos.java"),
+    # The resume score map has no model and no record: `compute_resume_score` answers with one
+    # return literal and `ResumeService.persistParse` stores that dict verbatim into a jsonb column,
+    # so the literal *is* the wire shape -- and `test_response_shape_contract` walks the very same
+    # literal to learn what the parse endpoint carries. `RubricCheck` is one item of its `detail`
+    # list, whose keys the function states once, in the `detail.append(...)` it loops over.
+    "ResumeScoreMap": ("pyfunc", "compute_resume_score"),
+    "RubricCheck": ("pyappend", ("compute_resume_score", "detail")),
 }
 
 # Readers whose producers are known per map. A reader with more producers than one is bound to their
@@ -116,6 +128,25 @@ READERS: dict[str, dict] = {
         "record_of": {"raw": "DashboardResponse", "kanban": "Kanban"},
         "drilled": {"kanban": ("raw", "kanban")},
         "elements": {},
+        "blind": {},
+        "dynamic": {},
+    },
+    "normalizeResumeScore": {
+        # The rubric map the parsing run persisted, reached from three callers, and the third one is
+        # the reason `raw` is a union rather than one record: `useResume` and `useResumeScore` both
+        # hand over a `ResumeDetail` and the dashboard a `ResumeSummary`, each of which carries the
+        # jsonb as a `score` component, while `mapResumeVersions` asks a `ResumeVersionItem` for a
+        # score that DTO has never projected -- so that path answers null, and always has. The union
+        # keeps the drill live on the two paths that do carry it instead of pretending the third
+        # record has a column. #132 deleted the rest of what this reader used to ask for: the
+        # `resumeScore`/`resume_score` twins, `overall`/`score` beside the real `total`, the
+        # `checks`/`criteria`/`ok`/`passed`/`name`/`why` alternates, an explicit `gaps` list no
+        # producer writes (the unmet criteria *are* the gaps), `suggestions`, `computedAt`, and the
+        # `?? raw` + bare-number branches no caller could reach.
+        "record_of": {"raw": ["ResumeDetail", "ResumeSummary", "ResumeVersionItem"],
+                      "s": "ResumeScoreMap", "c": "RubricCheck"},
+        "drilled": {"s": ("raw", "score")},
+        "elements": {"c": "s"},
         "blind": {},
         "dynamic": {},
     },
@@ -294,6 +325,35 @@ def _search_hits() -> dict[str, str]:
     return {key: record for record, key in re.findall(r"List<(\w+)>\s+(\w+)", body)}
 
 
+def _appended_keys(func_name: str, list_name: str) -> set[str]:
+    """The keys of the dict literal a function appends to one of its own lists.
+
+    A list item has no record and no model to name it -- `compute_resume_score` loops over
+    `detail.append({...})` -- but its shape is stated exactly once in the source, and that is as
+    checkable as either. More than one literal, or a computed key, and the item contract is not one
+    thing any more, which is a question for whoever reads it rather than for this gate to guess.
+    """
+    fn = _sole(func_name)
+    if fn is None:
+        raise AssertionError(f"{func_name!r} is not exactly one function under app/: the table "
+                             "names a producer that moved, so the rule it feeds compares nothing")
+    found = []
+    for node in ast.walk(fn):
+        if (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+                and node.func.attr == "append" and isinstance(node.func.value, ast.Name)
+                and node.func.value.id == list_name and node.args
+                and isinstance(node.args[0], ast.Dict)):
+            item = node.args[0]
+            if any(not isinstance(k, ast.Constant) or not isinstance(k.value, str)
+                   for k in item.keys):
+                raise AssertionError(f"{func_name}.{list_name} appends a dict with a computed key")
+            found.append({k.value for k in item.keys})
+    if len(found) != 1:
+        raise AssertionError(f"{func_name}.{list_name} is appended to from {len(found)} literal "
+                             f"shapes (want exactly 1): the item has no single contract to check")
+    return found[0]
+
+
 def _emitted(alias: str) -> set[str]:
     """The keys one producer puts on the wire, read from its own source either way."""
     if alias not in PRODUCERS:
@@ -302,6 +362,15 @@ def _emitted(alias: str) -> set[str]:
     spec = PRODUCERS[alias]
     if spec[0] == "java":
         return _record_components_at(spec[1], alias)
+    if spec[0] == "pyfunc":
+        fn = _sole(spec[1])
+        shape = _shape_of(fn) if fn is not None else None
+        if shape is None:
+            raise AssertionError(f"{spec[1]} answers with a shape no walker can name: the table "
+                                 "binds a producer whose literal has stopped being one")
+        return set(shape)
+    if spec[0] == "pyappend":
+        return _appended_keys(*spec[1])
     return pydantic_fields(alias)
 
 
@@ -595,6 +664,27 @@ def test_the_reads_are_actually_found():
     # difference between this assertion and the dashboard's `== _emitted("Kanban")` coverage line.
     assert {k for s in pipe if s["receiver"] == "kanban" for k in s["keys"]} & \
         _emitted("Kanban") == {"statusCounts"}
+    score = _sites("normalizeResumeScore")
+    assert len(score) == 10
+    assert {s["receiver"] for s in score} == {"raw", "s", "c"}
+    assert sum(1 for s in score if s["receiver"] == "s") == 7
+    # 10, down from the 13 this reader had when #132 measured it, and all ten now have an author:
+    # what went was an explicit `gaps`/`issues`/`weaknesses` list (the unmet rubric criteria *are*
+    # the gaps, and nothing writes the flat list), `suggestions`, and `computedAt`/`createdAt`.
+    read_off_s = {k for s in score if s["receiver"] == "s" for k in s["keys"]}
+    assert _emitted("ResumeScoreMap") == read_off_s
+    # Key for key: the map this reader walks is the map `compute_resume_score` returns, so a
+    # criterion the rubric stops emitting shows up here as an unread name rather than as a blank
+    # card, and a new one is a name the reader has to be pointed at on purpose.
+    assert _emitted("RubricCheck") - {k for s in score if s["receiver"] == "c"
+                                     for k in s["keys"]} == {"points"}
+    # The one item field no read of the reader consumes: the panel reports which criteria went
+    # unmet, never what each was worth on its own.
+    assert all("score" in _emitted(name) for name in ("ResumeDetail", "ResumeSummary"))
+    assert "score" not in _emitted("ResumeVersionItem")
+    # ...which is why `raw` is a union and why `mapResumeVersions` has always answered null here:
+    # the versions DTO projects no score column, so binding `raw` to the two carriers alone would
+    # make this reader's one drill look like it can only ever succeed.
     assert len(_emitted("JobListItem")) == 18
     assert len(_emitted("SavedJobItem")) == 3
     assert len(_emitted("SearchResponse")) == 7

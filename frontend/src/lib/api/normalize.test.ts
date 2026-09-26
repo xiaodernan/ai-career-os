@@ -343,51 +343,52 @@ describe("normalizeDimensions", () => {
 });
 
 describe("normalizeResumeScore", () => {
-  it("coerces a bare number", () => {
-    expect(normalizeResumeScore(0.8)).toEqual({ overall: 80 });
-  });
-  it("carries the rubric's own 0-100 dimension figures through unscaled", () => {
-    // #131 gave these a producer: ai-service reports each dimension as achieved/possible of *its
-    // own* points, so `structure: 38` means 38% of the structural criteria, not 38% of the total.
+  // Every fixture is a record that *carries* the map, because that is all any caller sends:
+  // `useResume`/`useResumeScore` hand over a ResumeDetail and the dashboard hands over a
+  // ResumeSummary, both of which name the rubric map `score`. The fixtures that passed the map bare
+  // -- and the one that passed a bare 0.8 -- leaned on a `?? raw` fallback no producer ever
+  // reached, so they went with it in #132.
+  it("derives labeled gaps from unmet rubric detail", () => {
     const s = normalizeResumeScore({
-      total: 65,
-      structure: 38,
-      bullets: 100,
-      impact: 47,
-      clarity: 50,
-      keywords: 0,
-      detail: [{ criterion: "has_skills", met: false, points: 10 }],
-    });
-    expect(s).toMatchObject({ overall: 65, structure: 38, bullets: 100, impact: 47, clarity: 50,
-                             keywords: 0 });
-    // ...which is why they do not go through `pct`: a dimension of exactly 1 is 1%, not 100%.
-    expect(normalizeResumeScore({ total: 105, clarity: 1 })?.clarity).toBe(1);
-    expect(normalizeResumeScore({ total: 105 })?.clarity).toBeUndefined();
-  });
-  it("returns null for an empty object", () => {
-    expect(normalizeResumeScore({})).toBeNull();
-  });
-  it("derives labeled gaps from unmet rubric detail (the real backend shape)", () => {
-    const s = normalizeResumeScore({
-      total: 40,
-      detail: [
-        { criterion: "has_contact", met: true, points: 15 },
-        { criterion: "quantified_impact", met: false, points: 10 },
-        { criterion: "has_skills", met: false, points: 10 },
-      ],
+      score: {
+        total: 40,
+        detail: [
+          { criterion: "has_contact", met: true, points: 15 },
+          { criterion: "quantified_impact", met: false, points: 10 },
+          { criterion: "has_skills", met: false, points: 10 },
+        ],
+      },
     });
     expect(s).toMatchObject({
       overall: 40,
       gaps: ["Quantified impact (numbers or %)", "Enough skills (5+)"],
     });
   });
-  it("prefers explicit gaps over derived ones", () => {
+
+  it("carries the rubric's own 0-100 dimension figures through unscaled", () => {
+    // `structure: 38` means 38% of the structural criteria, not 38% of the total (#131).
     const s = normalizeResumeScore({
-      total: 40,
-      gaps: ["explicit one"],
-      detail: [{ criterion: "has_projects", met: false, points: 10 }],
+      score: { total: 65, structure: 38, bullets: 100, impact: 47, clarity: 50, keywords: 0 },
     });
-    expect(s?.gaps).toEqual(["explicit one"]);
+    expect(s).toMatchObject({ overall: 65, structure: 38, bullets: 100, impact: 47, clarity: 50,
+                             keywords: 0 });
+    // A dimension of exactly 1 is 1%, not a full bar: these must not go through `pct`.
+    expect(normalizeResumeScore({ score: { total: 105, clarity: 1 } })?.clarity).toBe(1);
+    expect(normalizeResumeScore({ score: { total: 105 } })?.clarity).toBeUndefined();
+  });
+
+  it("clamps the 110-point rubric to the 100 the panel prints, and leaves a low score low", () => {
+    expect(normalizeResumeScore({ score: { total: 110 } })?.overall).toBe(100);
+    expect(normalizeResumeScore({ score: { total: 1 } })?.overall).toBe(1);
+  });
+
+  it("answers null for a record with no score and a score with nothing in it", () => {
+    // `ResumeVersionItem` projects no score column, so a version row has always answered null here;
+    // an empty map would render "0/100", which is a claim about the resume rather than the absence
+    // of one, so it stays null too.
+    expect(normalizeResumeScore({ id: "v1", label: "Original", kind: "original" })).toBeNull();
+    expect(normalizeResumeScore({ score: {} })).toBeNull();
+    expect(normalizeResumeScore(null)).toBeNull();
   });
 });
 
@@ -465,7 +466,11 @@ describe("normalizeDashboard", () => {
         version_id: "v1",
         title: "My resume",
         status: "parsed",
-        score: { overall: 0.7 },
+        // The score map stays camel inside the snake wrapper: it is a jsonb blob the Python rubric
+        // wrote (`{total, detail, …}`), and Jackson renames the record's own components, not the
+        // keys of a Map it is handing through. This fixture used to claim `overall: 0.7`, a name
+        // and a scale nothing has ever emitted; #132's reader only asks for what is there.
+        score: { total: 70 },
       },
       skill_gaps: { missing_skills: ["Rust"] },
     });
