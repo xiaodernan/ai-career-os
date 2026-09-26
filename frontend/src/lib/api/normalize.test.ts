@@ -432,13 +432,24 @@ describe("runTotalTokens", () => {
 });
 
 describe("normalizeDashboard", () => {
-  it("coerces metrics from snake_case and computes resume score", () => {
+  it("accepts the snake_case twins of the record's own components", () => {
+    // The reader keeps one snake_case twin per drilled component; this is what they are for.
+    // It used to also read a `metrics`/`stats` wrapper of flat numbers, which no response of
+    // this route carries -- `/reports/dashboard` answers with DashboardResponse and `api.get`
+    // has already unwrapped the envelope by the time this function sees it.
     const d = normalizeDashboard({
-      metrics: { application_count: 12, in_pipeline: 5, resume_score: 0.7 },
-      resume: { id: "r1", title: "My resume", score: { overall: 0.7 } },
+      kanban: { status_counts: { applied: 3 }, total: 3, offers: 0 },
+      current_resume: {
+        resume_id: "r1",
+        version_id: "v1",
+        title: "My resume",
+        status: "parsed",
+        score: { overall: 0.7 },
+      },
+      skill_gaps: { missing_skills: ["Rust"] },
     });
-    expect(d!.metrics).toMatchObject({ applications: 12, inPipeline: 5, resumeScore: 70 });
-    expect(d!.resume?.title).toBe("My resume");
+    expect(d!.metrics).toMatchObject({ applications: 3, inPipeline: 3, resumeScore: 70, skillGaps: 1 });
+    expect(d!.resume).toMatchObject({ id: "r1", currentVersionId: "v1", title: "My resume" });
   });
 
   it("maps the real DashboardResponse (kanban / currentResume / skillGaps digest)", () => {
@@ -523,9 +534,16 @@ describe("normalizeDashboard", () => {
     expect(d.metrics).toBeDefined();
   });
 
-  it("does not mistake the numeric needsAttention metric for attention rows", () => {
-    const d = normalizeDashboard({ avgMatch: 0.5, needsAttention: 4 })!;
-    expect(d.attention ?? []).toEqual([]);
+  it("reports needsAttention as the metric, and never as rows it would have to invent", () => {
+    const d = normalizeDashboard({
+      kanban: { statusCounts: {}, total: 0, offers: 0 },
+      avgMatch: 0.5,
+      needsAttention: 4,
+    })!;
+    expect(d.metrics!.needsAttention).toBe(4);
+    // The reader used to also build an `attention` list from a key this record has never
+    // carried; it could only ever answer `[]`, so both the read and the empty list are gone.
+    expect("attention" in d).toBe(false);
   });
 });
 

@@ -855,17 +855,19 @@ export function normalizeResumeScore(raw: unknown): ResumeScore | null {
 }
 
 export function normalizeDashboard(raw: unknown): DashboardPayload | null {
-  const d = pick(raw, "dashboard", "data") ?? raw;
-  if (!rec(d)) return null;
-  // Real GET /reports/dashboard: { kanban{statusCounts,total,offers}, interviews,
+  // `api.get` already unwraps the {success,data} envelope, so what arrives here is
+  // `DashboardResponse` and nothing else: { kanban{statusCounts,total,offers}, interviews,
   // avgMatch(0..1 or null), needsAttention(long), currentResume{resumeId,versionId,title,
   // status,score}, skillGaps(digest), recommendedJobs[], recentRuns[], recentActivity[] }.
-  // Fall back to `d` itself so older flat payloads still resolve.
-  const kanban = rec(pick(d, "kanban")) ? (pick(d, "kanban") as Record<string, unknown>) : d;
+  // The `dashboard`/`data` pick, the `metrics`/`stats`/`summary` layer that hung off it, and the
+  // flat-number aliases (`applicationCount`, `in_pipeline`, `offerCount`, …) each read names no
+  // response of this route carries, so #129 deleted them: a fallback a producer cannot reach is
+  // not a tolerance, it is a second shape the mapper would silently prefer.
+  if (!rec(raw)) return null;
+  const d = raw;
+  const kanban = pick(d, "kanban");
   const currentResume = pick(d, "currentResume", "current_resume", "resume");
   const skillGapDigest = pick(d, "skillGaps", "skill_gaps", "skillGap", "skill_gap");
-  // Older payloads wrapped the flat numbers under `metrics` / `stats`.
-  const legacy = pick(d, "metrics", "stats", "summary");
 
   const pipelineRows = normalizePipeline(d);
   const inPipeline = pipelineRows.reduce((s, r) => s + r.count, 0);
@@ -873,35 +875,27 @@ export function normalizeDashboard(raw: unknown): DashboardPayload | null {
   const gaps = normalizeSkillGaps({
     gaps: list(skillGapDigest, "missingSkills", "missing_skills", "missing"),
   });
-  const resumeScore = normalizeResumeScore(currentResume) ?? normalizeResumeScore(d);
+  // The score map is the resume version's stored `score` jsonb, so it exists only while the
+  // current resume has a scored version; `currentResume` is null on a workspace with none.
+  const resumeScore = normalizeResumeScore(currentResume);
 
   const metrics: DashboardMetrics = {
-    applications:
-      num(kanban, "total") ??
-      num(d, "applications", "applicationCount", "application_count") ??
-      num(legacy, "applications", "applicationCount", "application_count", "total"),
-    inPipeline: inPipeline || num(d, "inPipeline", "in_pipeline", "active") || num(legacy, "inPipeline", "in_pipeline", "active"),
-    interviews: num(d, "interviews", "interviewCount", "interview_count") ?? num(legacy, "interviews", "interviewCount", "interview_count"),
-    offers:
-      num(kanban, "offers") ??
-      num(d, "offers", "offerCount", "offer_count") ??
-      num(legacy, "offers", "offerCount", "offer_count"),
-    skillGaps: gaps.length || num(d, "skillGaps", "skill_gaps", "gapCount") || num(legacy, "skillGaps", "skill_gaps", "gapCount"),
-    resumeScore: resumeScore?.overall ?? pct(num(d, "resumeScore", "resume_score")) ?? pct(num(legacy, "resumeScore", "resume_score")),
-    avgMatch: pct(num(d, "avgMatch", "avg_match", "averageMatch", "average_match")) ?? pct(num(legacy, "avgMatch", "avg_match", "averageMatch", "average_match")),
-    needsAttention: num(d, "needsAttention", "needs_attention", "attention") ?? num(legacy, "needsAttention", "needs_attention", "attention"),
+    applications: num(kanban, "total"),
+    inPipeline: inPipeline || undefined,
+    interviews: num(d, "interviews", "interviewCount", "interview_count"),
+    offers: num(kanban, "offers"),
+    skillGaps: gaps.length || undefined,
+    resumeScore: resumeScore?.overall,
+    avgMatch: pct(num(d, "avgMatch", "avg_match", "averageMatch", "average_match")),
+    needsAttention: num(d, "needsAttention", "needs_attention", "attention"),
   };
   const runs = list(d, "recentRuns", "recent_runs", "activity", "runs").map(normalizeRun);
   return {
-    metrics: Object.values(metrics).some((v) => v != null) ? metrics : undefined,
-    pipeline:
-      (pick(d, "pipeline", "stages", "applicationPipeline", "application_pipeline") ??
-        pick(kanban, "statusCounts", "status_counts")) as
-        | DashboardPayload["pipeline"]
-        | undefined,
-    pipelineItems: list(d, "pipelineItems", "pipeline_items", "applications", "recentApplications").map(
-      (a) => a as Application
-    ),
+    // `Kanban.total` is a primitive `long`, so `applications` is never missing on a served
+    // payload and the old "hide the strip when every metric is null" guard had no reachable
+    // false branch left once the fallbacks went.
+    metrics,
+    pipeline: pick(kanban, "statusCounts", "status_counts") as DashboardPayload["pipeline"],
     recommendedJobs: list(d, "recommendedJobs", "recommended_jobs", "recommendations", "jobs").map(
       normalizeJob
     ),
@@ -916,18 +910,8 @@ export function normalizeDashboard(raw: unknown): DashboardPayload | null {
           score: resumeScore ?? undefined,
         }
       : null,
-    score: resumeScore ?? normalizeResumeScore(d),
+    score: resumeScore,
     recentRuns: runs.length ? runs : undefined,
-    suggestion: str(d, "suggestion", "aiSuggestion", "ai_suggestion", "nextStep", "next_step"),
-    insights: list<string>(d, "insights", "highlights").map(String),
-    // Deliberately not aliased to `needsAttention`: the dashboard endpoint sends that key as the
-    // metric count above, not as a list of rows.
-    attention: list(d, "attention").map((a) => ({
-      label: str(a, "label", "title", "text"),
-      href: str(a, "href", "url", "link"),
-      count: num(a, "count", "total"),
-    })),
-    empty: bool(d, "empty", "isEmpty", "is_empty"),
   };
 }
 

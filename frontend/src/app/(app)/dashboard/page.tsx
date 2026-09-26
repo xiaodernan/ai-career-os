@@ -25,7 +25,6 @@ import { Separator } from "@/components/ui/separator";
 import { PageHeader } from "@/components/common/page-header";
 import { EmptyState } from "@/components/common/empty-state";
 import { MatchRing, scoreBand } from "@/components/ai/match-ring";
-import { AIBadge } from "@/components/ai/ai-badge";
 import { SectionHeading } from "@/components/common/export-buttons";
 import { LoadingListSkeleton, LoadingMetricGridSkeleton } from "@/components/common/loading-skeletons";
 import { SectionBoundary, isEndpointMissing } from "@/components/common/query-boundary";
@@ -78,7 +77,6 @@ export default function DashboardPage() {
 
   const resumeRow = data?.resume ?? null;
   const pipelineCounts = pipeline.data ?? [];
-  const suggestion = data?.suggestion ?? data?.insights?.[0] ?? null;
 
   const workspaceEmpty =
     !dashboard.isPending &&
@@ -116,21 +114,6 @@ export default function DashboardPage() {
           </>
         }
       />
-
-      {/* One-line AI direction (only when the backend actually says something) */}
-      {suggestion && (
-        <div className="animate-fade-up flex items-start gap-3 rounded-xl border border-primary/25 bg-primary/5 p-4">
-          <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <Sparkles className="size-4" aria-hidden />
-          </span>
-          <div className="min-w-0">
-            <p className="flex items-center gap-2 text-2xs font-medium tracking-wide text-primary uppercase">
-              Suggested next step <AIBadge />
-            </p>
-            <p className="mt-0.5 text-sm text-foreground">{suggestion}</p>
-          </div>
-        </div>
-      )}
 
       {/* Adaptive onboarding when the workspace holds nothing yet */}
       {workspaceEmpty ? (

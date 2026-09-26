@@ -634,7 +634,6 @@ export interface DashboardPayload {
   metrics?: DashboardMetrics;
   /** either {status: count} or [{status,count}] */
   pipeline?: Record<string, number> | { status: string; count: number }[];
-  pipelineItems?: Application[];
   recommendedJobs?: Job[];
   skillGaps?: SkillGap[];
   resume?: (Pick<Resume, "id" | "title" | "status" | "currentVersionId"> & {
@@ -643,12 +642,7 @@ export interface DashboardPayload {
   score?: ResumeScore | number | null;
   recentRuns?: ActivityRun[];
   activity?: ActivityRun[];
-  suggestion?: string | null;
-  aiSuggestion?: string | null;
-  insights?: string[];
-  attention?: { label?: string; href?: string; count?: number }[];
   greeting?: string | null;
-  empty?: boolean;
   [key: string]: unknown;
 }
 

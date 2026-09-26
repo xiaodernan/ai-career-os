@@ -62,6 +62,10 @@ PRODUCERS = {
     "NoteHit": ("java", "search/dto/SearchDtos.java"),
     "ConversationHit": ("java", "search/dto/SearchDtos.java"),
     "ApplicationHit": ("java", "search/dto/SearchDtos.java"),
+    "DashboardResponse": ("java", "report/dto/DashboardDtos.java"),
+    "Kanban": ("java", "report/dto/DashboardDtos.java"),
+    "ResumeSummary": ("java", "report/dto/DashboardDtos.java"),
+    "SkillGapDigest": ("java", "report/dto/DashboardDtos.java"),
     "SkillGap": ("pydantic",),
 }
 
@@ -78,6 +82,24 @@ PRODUCERS = {
 #   dynamic    receiver -> why its names come from a variable rather than a call site, and which
 #              source-derived rule checks them instead (an unexplained entry is not allowed)
 READERS: dict[str, dict] = {
+    "normalizeDashboard": {
+        # One endpoint and one record: `useDashboard` calls `GET /reports/dashboard`, and `api.get`
+        # unwraps the {success,data} envelope before the mapper sees the body, so `d` *is* the
+        # DashboardResponse. The reader opened with `pick(raw, "dashboard", "data")` anyway and hung
+        # a `metrics`/`stats`/`summary` layer off that -- 26 of its 41 sites had no author at all,
+        # including five whole returned fields (`pipelineItems`, `suggestion`, `insights`,
+        # `attention`, `empty`), the `normalizeResumeScore(d)` fallback (`d` has no `score`), and the
+        # flat numeric aliases (`applicationCount`, `in_pipeline`, `offerCount`, `gapCount`, …).
+        # `recentActivity` is the one component the mapper still never reads, and says so below.
+        "record_of": {"d": "DashboardResponse", "kanban": "Kanban",
+                      "currentResume": "ResumeSummary", "skillGapDigest": "SkillGapDigest"},
+        "drilled": {"kanban": ("d", "kanban"),
+                    "currentResume": ("d", "currentResume"),
+                    "skillGapDigest": ("d", "skillGaps")},
+        "elements": {},
+        "blind": {},
+        "dynamic": {},
+    },
     "normalizeApplication": {
         "record_of": {"raw": "ApplicationItem", "nested": "CompanyItem"},
         "drilled": {"nested": ("raw", "company")},
@@ -508,6 +530,26 @@ def test_the_reads_are_actually_found():
         "conversations": ["snippet"],
         "applications": ["companyName", "status"],
     }
+    dash = _sites("normalizeDashboard")
+    assert len(dash) == 16
+    assert {s["receiver"] for s in dash} == {"d", "kanban", "currentResume", "skillGapDigest"}
+    assert sum(1 for s in dash if s["receiver"] == "d") == 8
+    assert sum(1 for s in dash if s["receiver"] == "kanban") == 3
+    assert sum(1 for s in dash if s["receiver"] == "currentResume") == 4
+    # 16, down from the 41 this reader had when #129 measured it: 26 sites had no author on
+    # DashboardResponse / Kanban / ResumeSummary / SkillGapDigest -- the envelope pick, the whole
+    # `metrics`/`stats`/`summary` layer (10 sites), five returned fields nobody produced, the
+    # `normalizeResumeScore(d)` fallback and the flat numeric aliases.
+    read_off_d = {k for s in dash if s["receiver"] == "d" for k in s["keys"]}
+    assert _emitted("DashboardResponse") - read_off_d == {"recentActivity"}
+    # The one component the mapper still never reads. `recentActivity` rows are an event log the
+    # dashboard page renders from its own query, not off this payload, so the record carries it and
+    # the browser ignores it; that is a producer-side surplus, not a dead read, and it stays listed
+    # here so a future reader has to notice it rather than inherit a silently growing set.
+    assert {k for s in dash if s["receiver"] == "kanban" for k in s["keys"]} & _emitted("Kanban") == \
+        _emitted("Kanban")
+    assert {key for s in dash if s["receiver"] == "currentResume" for key in s["keys"]} & \
+        _emitted("ResumeSummary") == _emitted("ResumeSummary") - {"score"}
     assert len(_emitted("JobListItem")) == 18
     assert len(_emitted("SavedJobItem")) == 3
     assert len(_emitted("SearchResponse")) == 7
