@@ -671,21 +671,31 @@ describe("copilot chat: live reply must normalize identically to history", () =>
 });
 
 describe("normalizeJdParsed", () => {
-  // Real POST /jds response = JdItem: the ai-service dict is nested under `parsed`.
+  // Real POST /jds response = JdItem: the ai-service dict is nested under `parsed`, and the dict is
+  // written to the prompt's own shape (`app/features/jd_analyze.py`), which `test_response_field_contract`
+  // binds this reader to. `rawTextLength` is the one key `_backfill_skills` adds after the model.
   const jdItem = {
     id: "jd-1",
     jobId: "job-1",
     rawText: "We need a senior engineer…",
     parsed: {
       title: "Senior Engineer",
+      company: "ACME",
+      location: "Berlin",
+      experienceYears: 6,
+      education: { minDegree: "bachelor", preferred: "master" },
       requiredSkills: [
         { name: "go", priority: "must", evidence_phrase: "proficient in Go" },
         { name: "kubernetes", priority: "must", evidence_phrase: "k8s experience" },
       ],
-      preferredSkills: [{ name: "rust", priority: "nice" }],
+      preferredSkills: [{ name: "rust", priority: "nice", evidence_phrase: "" }],
       responsibilities: ["Own services", "Mentor juniors"],
-      interviewTopics: ["system design", "concurrency"],
+      softSkills: ["communication"],
       hiddenRequirements: ["on-call", "fast pace"],
+      interviewTopics: ["system design", "concurrency"],
+      priorityOrder: ["go", "kubernetes"],
+      domainKeywords: ["backend"],
+      rawTextLength: 26,
     },
     createdAt: "2026-01-01T00:00:00Z",
   };
@@ -699,20 +709,27 @@ describe("normalizeJdParsed", () => {
     expect(p.hiddenRequirements).toEqual(["on-call", "fast pace"]);
   });
 
-  it("returns empty arrays when the caller passes the flat top level only (regression guard)", () => {
-    // Before the fix the reader looked here and silently got nothing.
-    const flat = normalizeJdParsed({ requiredSkills: ["go"] }); // flat, no `parsed`
-    expect(flat.requiredSkills).toEqual(["go"]); // still tolerates a flat body
-    const wrongShape = normalizeJdParsed({ id: "jd-1", rawText: "…" }); // JdItem with empty parsed
-    expect(wrongShape.requiredSkills).toEqual([]);
+  it("gives empty lists for a JdItem whose parsed column carries nothing", () => {
+    // `job_jds.parsed` is a nullable jsonb column, so an empty analysis is a real response and the
+    // cards have to render empty rather than fall back to invented names on the JdItem top level.
+    expect(normalizeJdParsed({ id: "jd-1", rawText: "…" }).requiredSkills).toEqual([]);
+    expect(normalizeJdParsed({ id: "jd-1", parsed: null }).interviewTopics).toEqual([]);
   });
 
-  it("snake_case inner keys and skill/text aliases still resolve", () => {
+  it("does not reinterpret a snake_case body, because no producer writes one", () => {
+    // #143 deleted the snake twins and the `requirements`/`duties`/`topics`/`niceToHave` guesses: the
+    // analysis is stored exactly as the prompt drew it, so a reader that also accepted `required_skills`
+    // would turn a producer that broke into a card that silently shows nothing.
+    const p = normalizeJdParsed({ parsed: { required_skills: [{ name: "Go" }] } });
+    expect(p.requiredSkills).toEqual([]);
+  });
+
+  it("keeps prose items as strings and drops an object item that names no skill", () => {
     const p = normalizeJdParsed({
-      parsed: { required_skills: [{ skill: "Go" }], interview_topics: [{ text: "RAG" }] },
+      parsed: { interviewTopics: ["RAG", { topic: "sharding" }], responsibilities: [] },
     });
-    expect(p.requiredSkills).toEqual(["Go"]);
     expect(p.interviewTopics).toEqual(["RAG"]);
+    expect(p.responsibilities).toEqual([]);
   });
 });
 

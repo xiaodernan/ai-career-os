@@ -158,9 +158,9 @@ function JdResult({
   suggestions: Suggestion[];
   loading?: boolean;
 }) {
-  // /jds returns neither a resume-comparison gap nor suggestions; fall back to the
-  // missing-required skills the /jds/suggestions engine derived against the resume.
-  const gap = result.skillGap.length ? result.skillGap : missingSkillGaps(suggestions);
+  // A gap is a comparison against this resume, so the analysis itself never carries one: the card is
+  // built from the missing-required items /jds/suggestions derived (the contract gate checks that).
+  const gap = missingSkillGaps(suggestions);
   const groups: { title: string; items: string[]; variant?: "ai" | "outline" | "warning" }[] = [
     { title: "Required skills", items: result.requiredSkills, variant: "ai" },
     { title: "Preferred skills", items: result.preferredSkills },

@@ -33,7 +33,6 @@ import type {
   KnowledgeNote,
   ParseResult,
   Resume,
-  Suggestion,
   TailorResponse,
   TextIngestResult,
   UploadResult,
@@ -201,8 +200,6 @@ export interface JdAnalysis {
   preferredSkills: string[];
   responsibilities: string[];
   interviewTopics: string[];
-  skillGap: string[];
-  suggestions: Suggestion[];
   hiddenRequirements: string[];
   raw: unknown;
 }
@@ -210,20 +207,10 @@ export interface JdAnalysis {
 export function useAnalyzeJd() {
   return useMutation({
     mutationFn: async (rawText: string): Promise<JdAnalysis> => {
+      // `POST /jds` answers a JdItem and nothing else: no gap and no suggestion can come out of an
+      // analysis, which is why the dialog calls /jds/suggestions for those two cards itself (#143).
       const raw = await api.create<unknown>(endpoints.jdAnalyze, { rawText });
-      const parsed = normalizeJdParsed(raw);
-      const body = pick(raw, "parsed", "jd", "analysis", "data") ?? raw;
-      return {
-        requiredSkills: parsed.requiredSkills,
-        preferredSkills: parsed.preferredSkills,
-        responsibilities: parsed.responsibilities,
-        interviewTopics: parsed.interviewTopics,
-        skillGap: parsed.skillGap,
-        hiddenRequirements: parsed.hiddenRequirements,
-        suggestions: normalizeSuggestions(
-          pick(body, "suggestions", "resumeSuggestions", "resume_suggestions")),
-        raw,
-      };
+      return { ...normalizeJdParsed(raw), raw };
     },
     onError: fail("JD analysis failed."),
   });

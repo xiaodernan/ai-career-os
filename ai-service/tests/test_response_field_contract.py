@@ -34,6 +34,7 @@ weaker binding is only used where the response really has two authors.
 """
 
 import ast
+import json
 import re
 from functools import lru_cache
 from pathlib import Path
@@ -104,6 +105,18 @@ PRODUCERS = {
     "TurnItem": ("java", "interview/dto/InterviewDtos.java"),
     "QuestionMetaFollowup": ("japut", ("interview/service/InterviewService.java", "answer")),
     "QuestionMetaOpening": ("pyfunc", "opening_meta"),
+    # The JD analysis is one record wrapped around no record at all: `JdItem.parsed` is a `Map` the
+    # backend fills verbatim from ai-service's answer (`JobService:244 jd.setParsed(...)`), and that
+    # answer's keys exist because the analyze prompt draws them. The skeleton is valid JSON, so
+    # `pyskel` parses the list out of the prompt instead of reading a tuple transcribed beside it --
+    # a transcription is the drift this gate exists to catch, dressed up as a contract.
+    "JdItem": ("java", "job/dto/JobDtos.java"),
+    "JdAnalysisMap": ("pyskel", ("app/features/jd_analyze.py", "SYSTEM", ())),
+    "JdRequiredItem": ("pyskel", ("app/features/jd_analyze.py", "SYSTEM", ("requiredSkills",))),
+    "JdPreferredItem": ("pyskel", ("app/features/jd_analyze.py", "SYSTEM", ("preferredSkills",))),
+    # ...and the deterministic second author of a skill item: the dictionary-extracted skills the
+    # model missed, appended by `_backfill_skills` in the shape it asks the model for.
+    "JdBackfilledItem": ("pyappend", ("_backfill_skills", "preferred")),
 }
 
 # Readers whose producers are known per map. A reader with more producers than one is bound to their
@@ -270,6 +283,30 @@ READERS: dict[str, dict] = {
         "elements": {},
         "blind": {},
         "dynamic": {},
+    },
+    "normalizeJdParsed": {
+        # Both callers hand over the `JdItem` a JD endpoint answers with, and the analysis sits one
+        # level down in `parsed`. #143 deleted four wrapper names (`jd`, `analysis`, `data`), the flat
+        # `?? raw` fallback, three snake_case/camel twins per list and the `skillGap` field: no record
+        # and no caller ever produced any of them, and they stayed invisible to the liveness rule
+        # because `parsed` and `name` kept each site alive -- `_dead_read_sites` reports a site only
+        # when *every* candidate is missing, so an alias beside a live name is free tolerance.
+        # `skillGap` was the same claim one level up: gaps are a comparison against a resume, so they
+        # come from the match or from `/jds/suggestions`, never from an analysis.
+        # The five lists are the reader, and their names are arguments to its own `arr` helper rather
+        # than literals at an accessor call, which is why `_jd_arr_names` reads them from the source
+        # and the floor ties each one to the prompt's own key set.
+        "record_of": {"raw": "JdItem", "body": "JdAnalysisMap",
+                      "x": ["JdRequiredItem", "JdPreferredItem", "JdBackfilledItem"]},
+        "drilled": {"body": ("raw", "parsed")},
+        "elements": {"x": "body"},
+        "blind": {},
+        "dynamic": {
+            "body": "each output names its list by passing it to the reader's own `arr(…)` helper, so "
+                    "no accessor literal reaches `body` where `_sites` could see it; `_jd_arr_names()` "
+                    "reads those arguments out of the reader and every one has to be a key the prompt "
+                    "draws, which is the check this entry replaces rather than waives",
+        },
     },
     "normalizeMessages": {
         "record_of": {"m": "MessageItem"},
@@ -521,12 +558,83 @@ def _java_put_keys(rel: str, method: str) -> set[str]:
     return keys
 
 
+def _prompt_skeleton(rel: str, const: str) -> dict:
+    """The JSON skeleton one prompt draws, parsed out of the string that states it.
+
+    A passed-through AI answer has no record and no model behind it: `job_jds.parsed` carries these
+    keys because the analyze prompt asks for them, so the prompt is the producer and reading it is
+    the only way the contract has a source. The skeleton is written as valid JSON, which means the
+    key list can be parsed rather than transcribed -- and a transcription beside the prompt is the
+    drift this gate was built to catch.
+    """
+    path = Path(__file__).resolve().parents[1] / rel
+    if not path.exists():
+        raise AssertionError(f"{rel} is not where the contract table says: {const} declares nothing")
+    source = path.read_text(encoding="utf-8")
+    literal = re.search(rf'^{const}\s*=\s*"""(.*?)"""', source, re.M | re.S)
+    if literal is None:
+        raise AssertionError(f"{rel}::{const} is not one triple-quoted string -- the rule that reads "
+                             "its skeleton would be guessing at the prompt")
+    text = literal.group(1)
+    if "{" not in text:
+        raise AssertionError(f"{rel}::{const} draws no JSON skeleton: the answer's keys would be "
+                             "prose, and nothing here could name them honestly")
+    try:
+        skeleton, _ = json.JSONDecoder().raw_decode(text[text.index("{"):])
+    except json.JSONDecodeError as exc:
+        raise AssertionError(f"{rel}::{const}'s skeleton stopped being valid JSON ({exc}), so the "
+                             "answer keys can no longer be read from the prompt") from exc
+    if not isinstance(skeleton, dict) or not skeleton:
+        raise AssertionError(f"{rel}::{const}'s skeleton is not a non-empty JSON object")
+    return skeleton
+
+
+def _prompt_item_keys(rel: str, const: str, member: tuple[str, ...]) -> set[str]:
+    """The keys of one drawn list's item, or the answer's own keys when no list is named.
+
+    Both readings come from the same parse, so an item shape is checked against the prompt that asks
+    for it rather than against a description of it. A prompt that drops the list, or draws it as
+    strings, fails here instead of quietly leaving the reader's item reads unbound.
+    """
+    skeleton = _prompt_skeleton(rel, const)
+    if not member:
+        return set(skeleton)
+    name = member[0]
+    if name not in skeleton:
+        raise AssertionError(f"{rel}::{const} draws no {name!r} list: the table names an item shape "
+                             "the prompt no longer asks for")
+    rows = skeleton[name]
+    if not isinstance(rows, list) or not rows or not isinstance(rows[0], dict):
+        raise AssertionError(f"{rel}::{const}'s {name!r} is not a list of objects, so its items have "
+                             "no key set to check a reader's item reads against")
+    return set(rows[0])
+
+
 def _trajectory_keys() -> set[str]:
     """The four names the trajectory fold reaches for, read out of the constant it spreads -- the
     call site itself says `...TRAJECTORY_KEYS`, so no literal name exists where the read happens."""
     source = NORMALIZE.read_text(encoding="utf-8")
     start = source.index("const TRAJECTORY_KEYS")
     return set(re.findall(r'"([^"]+)"', source[start:source.index("];", start)]))
+
+
+def _jd_arr_names() -> dict[str, tuple[str, ...]]:
+    """Which names each output of `normalizeJdParsed` asks `body` for, read out of its own calls.
+
+    The reader reaches its lists through a helper it declares locally, so the name is a parameter and
+    `_sites` sees no literal at the read. Those arguments are this mapper's entire read contract,
+    which makes them worth parsing off the source instead of restating in this file.
+    """
+    found = {field: tuple(re.findall(r'"([^"]+)"', args))
+             for field, args in re.findall(r"\b(\w+):\s*arr\(([^)]*)\)", _body("normalizeJdParsed"))}
+    if not found:
+        raise AssertionError("normalizeJdParsed no longer builds its outputs with `arr(…)`: the rule "
+                             "that checks which names it probes has nothing left to read")
+    empty = sorted(field for field, names in found.items() if not names)
+    if empty:
+        raise AssertionError(f"{empty}: `arr()` is called with no name to try, so that output can "
+                             "only ever be an empty list and no floor here could notice")
+    return found
 
 
 def _emitted(alias: str) -> set[str]:
@@ -552,6 +660,8 @@ def _emitted(alias: str) -> set[str]:
         return _returned_item_keys(spec[1])
     if spec[0] == "japut":
         return _java_put_keys(*spec[1])
+    if spec[0] == "pyskel":
+        return _prompt_item_keys(*spec[1])
     return pydantic_fields(alias)
 
 
@@ -948,6 +1058,37 @@ def test_the_reads_are_actually_found():
     # Both names the meta receiver tries come from the follow-up handler alone, so the opening
     # handler's map is bound here for the fields it *does* carry, not to lend liveness.
     assert "questionMeta" in _emitted("TurnItem")
+    jd = _sites("normalizeJdParsed")
+    assert len(jd) == 2
+    assert {s["receiver"] for s in jd} == {"raw", "x"}
+    # Two sites, one name each, after #143. Before it the reader tried four wrappers on `raw` and
+    # three item names on `x`; the extra ones were not dead *sites* (`parsed` and `name` answered for
+    # each) but they were reads no producer ever wrote, which is the blind spot of a rule that only
+    # reports a site when *every* candidate is missing.
+    assert {k for s in jd if s["receiver"] == "raw" for k in s["keys"]} == {"parsed"}
+    assert {k for s in jd if s["receiver"] == "x" for k in s["keys"]} == {"name"}
+    assert "parsed" in _emitted("JdItem")
+    arr_lists = _jd_arr_names()
+    assert set(arr_lists) == {"requiredSkills", "preferredSkills", "responsibilities",
+                              "interviewTopics", "hiddenRequirements"}
+    # Each output asks for the one list the prompt draws, under the very spelling the output field
+    # carries: no second spelling to keep honest, and a re-added `gaps` guess names itself here.
+    assert {f: names for f, names in arr_lists.items() if names != (f,)} == {}
+    probed = {name for names in arr_lists.values() for name in names}
+    assert probed - _emitted("JdAnalysisMap") == set()
+    assert len(_emitted("JdAnalysisMap")) == 13
+    # The eight drawn keys no browser read: `title`/`company`/`location`/`experienceYears` reach the
+    # page through `JobDetail`'s own columns, and `education`/`softSkills`/`priorityOrder`/
+    # `domainKeywords` are stored and never rendered. Pinned as a surplus so a prompt that loses one
+    # goes red here -- a dropped key would leave no read missing, because nothing reads it.
+    assert _emitted("JdAnalysisMap") - probed == {"title", "company", "location", "experienceYears",
+                                                  "education", "softSkills", "priorityOrder",
+                                                  "domainKeywords"}
+    # The item shape, stated per author rather than as the union `x` is checked against: the prompt
+    # draws two skill lists and `_backfill_skills` appends items of its own, and all three agree
+    # today -- which is precisely the state in which one author's rename hides behind the others.
+    for author in ("JdRequiredItem", "JdPreferredItem", "JdBackfilledItem"):
+        assert _emitted(author) == {"name", "priority", "evidence_phrase"}, author
     # Two different ways a read stops naming its key in the call: `normalizeTrajectory` spreads a
     # name table, which this rule covers, and `normalizeSearch` reaches `g.key`, a member of a group
     # object, which `_search_hits` covers. Telling them apart is what keeps each rule honest about

@@ -350,34 +350,31 @@ export interface JdParsed {
   responsibilities: string[];
   interviewTopics: string[];
   hiddenRequirements: string[];
-  skillGap: string[];
 }
 
-/** `POST /jds` returns a JdItem whose ai-service dict (skills / responsibilities
- *  / topics / hidden asks) is nested under `parsed`, NOT at the top level —
- *  read it there or the whole analysis dialog comes back empty. */
+/** `POST /jds` and `GET /jobs/{id}` both answer a JdItem whose ai-service dict (skills /
+ *  responsibilities / topics / hidden asks) is nested under `parsed`, NOT at the top level — read it
+ *  there or the whole analysis dialog comes back empty. The names below are the only ones that dict
+ *  can carry: they are the keys the analyze prompt draws, tied to this reader by the cross-language
+ *  contract gate. A skill gap is a comparison against one resume, so no analysis emits one — the
+ *  gap card reads the match, and the analyze dialog `POST /jds/suggestions`. */
 export function normalizeJdParsed(raw: unknown): JdParsed {
-  const body = rec(pick(raw, "parsed", "jd", "analysis", "data")) ?? raw;
-  const arr = (...keys: string[]): string[] => {
-    for (const k of keys) {
-      const v = pick(body, k);
-      if (Array.isArray(v)) {
-        return v
-          .map((x): string =>
-            typeof x === "object" && x !== null ? str(x, "skill", "name", "text") ?? "" : String(x)
-          )
-          .filter(Boolean);
-      }
-    }
-    return [];
+  const body = rec(pick(raw, "parsed"));
+  const arr = (key: string): string[] => {
+    const v = pick(body, key);
+    if (!Array.isArray(v)) return [];
+    return v
+      .map((x): string =>
+        typeof x === "object" && x !== null ? str(x, "name") ?? "" : String(x)
+      )
+      .filter(Boolean);
   };
   return {
-    requiredSkills: arr("requiredSkills", "required_skills", "requirements"),
-    preferredSkills: arr("preferredSkills", "preferred_skills", "nice_to_have", "niceToHave"),
-    responsibilities: arr("responsibilities", "duties"),
-    interviewTopics: arr("interviewTopics", "interview_topics", "topics"),
-    hiddenRequirements: arr("hiddenRequirements", "hidden_requirements"),
-    skillGap: arr("skillGap", "skill_gap", "skillGaps", "gaps"),
+    requiredSkills: arr("requiredSkills"),
+    preferredSkills: arr("preferredSkills"),
+    responsibilities: arr("responsibilities"),
+    interviewTopics: arr("interviewTopics"),
+    hiddenRequirements: arr("hiddenRequirements"),
   };
 }
 
