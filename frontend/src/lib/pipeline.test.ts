@@ -65,29 +65,34 @@ describe("pickerStages", () => {
  * this can pin is that the page drives the mutation the backend has always had,
  * and that it stopped promising a board it does not ship.
  */
-describe("the applications row", () => {
+describe("the applications page", () => {
   const source = readFileSync(
     new URL("../app/(app)/applications/page.tsx", import.meta.url),
     "utf8"
   );
+  const kanbanSource = readFileSync(
+    new URL("../components/common/kanban.tsx", import.meta.url),
+    "utf8"
+  );
 
-  it("sends a status patch through the shared update mutation", () => {
-    expect(source).toContain("useUpdateApplication");
-    expect(source).toMatch(/mutate\(\{ id: app\.id, patch: \{ status:/);
+  it("sends a status patch through the shared reorder mutation", () => {
+    expect(source).toContain("useReorderApplication");
+    expect(source).toMatch(/reorderApp\.mutate\(\{ id, status, order \}\)/);
   });
 
-  it("labels the control for the row it belongs to", () => {
-    expect(source).toContain("aria-label={`Stage for ${app.title}`}");
+  it("labels the drag handle for the row it belongs to", () => {
+    expect(kanbanSource).toContain("aria-label=\"Drag to reorder\"");
   });
 
   it("takes its colours from pipeline metadata instead of a local map", () => {
-    expect(source).toContain("stageMeta(app.status).badgeVariant");
-    expect(source).not.toMatch(/const STAGE_VARIANT/);
+    expect(kanbanSource).toContain("stageMeta(app.status)");
+    expect(kanbanSource).toContain("meta.badgeVariant");
+    expect(kanbanSource).not.toMatch(/const STAGE_VARIANT/);
   });
 
-  it("does not describe a drag-and-drop board the app does not ship", () => {
-    expect(source.toLowerCase()).not.toContain("drag-and-drop");
-    expect(source.toLowerCase()).not.toContain("kanban");
+  it("renders the Kanban board with drag-and-drop reorder", () => {
+    expect(source).toContain("KanbanBoard");
+    expect(source).toContain("useReorderApplication");
   });
 });
 

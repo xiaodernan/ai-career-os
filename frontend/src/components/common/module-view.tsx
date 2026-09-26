@@ -26,15 +26,21 @@ export function ModuleView<T>({
   ctaLabel,
   renderItem,
   actions,
+  children,
 }: {
   title: string;
   description: string;
   query: UseQueryResult<Page<T>, unknown>;
-  emptyHint: { title: string; description: string };
+  emptyHint: { title: string; description: string; action?: React.ReactNode };
   ctaHref?: string;
   ctaLabel?: string;
-  renderItem: (item: T) => React.ReactNode;
+  /** Row renderer for the default list layout. Pages that render their own shape
+   * (a board, a grid) pass `children` instead. */
+  renderItem?: (item: T) => React.ReactNode;
   actions?: React.ReactNode;
+  /** Replaces the list layout once the query has data. Empty still shows `emptyHint`,
+   * so a board keeps the same "nothing here yet + call to action" contract. */
+  children?: React.ReactNode;
 }) {
   const notFound = query.error instanceof ApiError && query.error.isNotFound;
 
@@ -99,17 +105,20 @@ export function ModuleView<T>({
               title={emptyHint.title}
               description={emptyHint.description}
               action={
-                ctaHref ? (
+                emptyHint.action ??
+                (ctaHref ? (
                   <Button variant="ai" size="sm" asChild>
                     <Link href={ctaHref}>{ctaLabel ?? "Open Copilot"}</Link>
                   </Button>
-                ) : undefined
+                ) : undefined)
               }
             />
           </CardContent>
         </Card>
       ) : (
-        <div className="flex flex-col gap-2">{query.data.items.map(renderItem)}</div>
+        <div className="flex flex-col gap-2">
+          {children ?? query.data.items.map((item) => renderItem?.(item))}
+        </div>
       )}
     </div>
   );
