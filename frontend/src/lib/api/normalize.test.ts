@@ -11,6 +11,7 @@ import {
   normalizeChatActions,
   normalizeDashboard,
   normalizeDimensions,
+  normalizeInterviewDims,
   normalizeEvidence,
   normalizeInterviewReport,
   normalizeJob,
@@ -922,11 +923,42 @@ describe("serializeJobFilters", () => {
   });
 });
 
+describe("normalizeInterviewDims", () => {
+  // The only shape `EvaluationItem.dims` can hold is a jsonb copy of the finalize prompt's
+  // `"dims": {technical_accuracy: 0.0-1.0, …}` -- numbers keyed by the AI service's own dimension
+  // names. The reader also walked an array of `{key, score}` and an object-valued `{score, label}`
+  // per dimension; neither has an author, and #141 deleted both, so this function had no test at
+  // all before. Note the labels: `DIMENSION_LABELS` is the *match* vocabulary (technical,
+  // experience, …) and matches none of the interview names, so every interview row falls through to
+  // the snake-split fallback. Giving them real labels is copy, not a contract, and is left alone.
+  it("walks the report's dimension map, keyed by the AI service's names", () => {
+    const dims = normalizeInterviewDims({
+      dims: { technical_accuracy: 0.9, communication: 0.6, depth: 1 },
+    });
+    expect(dims.map((d) => [d.key, d.score])).toEqual([
+      ["technical_accuracy", 90],
+      ["communication", 60],
+      ["depth", 100],
+    ]);
+    expect(dims.map((d) => d.label)).toEqual(["technical accuracy", "communication", "depth"]);
+  });
+
+  it("drops a value that is not a number, and answers nothing for the shapes with no author", () => {
+    expect(normalizeInterviewDims({ dims: { depth: "high", communication: 0.4 } })).toEqual([
+      { key: "communication", label: "communication", score: 40 },
+    ]);
+    expect(normalizeInterviewDims({})).toEqual([]);
+    // the two deleted paths: an array of dimension objects, and one object per dimension
+    expect(normalizeInterviewDims({ dims: [{ key: "depth", score: 0.9 }] })).toEqual([]);
+    expect(normalizeInterviewDims({ dims: { depth: { score: 0.9, label: "Depth" } } })).toEqual([]);
+  });
+});
+
 describe("normalizeInterviewReport", () => {
   it("reads scalar results nested inside summary (real EvaluationItem shape)", () => {
     const report = normalizeInterviewReport({
       id: "e1",
-      dims: { communication: 0.8, technical: { score: 75 } },
+      dims: { communication: 0.8, technical_accuracy: 0.9 },
       summary: {
         overall: 0.72,
         what_you_did_well: ["clear structure", "solid tradeoffs"],
@@ -949,7 +981,7 @@ describe("normalizeInterviewReport", () => {
       { title: "Idempotency", why: "retries · the Kafka docs" },
     ]);
     expect(report?.trajectory).toEqual([{ question: "rate limiting", score: 60, depth: 3 }]);
-    expect(report?.dims.map((d) => d.key)).toEqual(["communication", "technical"]);
+    expect(report?.dims.map((d) => d.key)).toEqual(["communication", "technical_accuracy"]);
     expect(report?.hasContent).toBe(true);
   });
 

@@ -954,19 +954,20 @@ export function runTotalTokens(run: ActivityRun): number | undefined {
 /* ------------------------------- interviews ------------------------------- */
 
 export function normalizeInterviewDims(raw: unknown): InterviewDimension[] {
-  const dims = pick(raw, "dims", "dimensions", "scores", "evaluation");
+  // The one shape that exists: `EvaluationItem.dims` is the jsonb copy of the report's
+  // `"dims": {technical_accuracy: 0.0-1.0, …}` -- an object keyed by the AI service's `DIMENSIONS`
+  // with a number per dimension. The reader used to also walk an *array* of `{key, label, score}`
+  // and an object-valued `{score, label}` per dimension; neither has an author (a Java `Map` cannot
+  // arrive as a JSON array, and the prompt asks for scalars), and a fallback no producer reaches is
+  // a shape the mapper silently reinterprets rather than a tolerance anyone asked for.
+  const dims = pick(raw, "dims");
   const out: InterviewDimension[] = [];
   const dimsRecord = rec(dims);
-  if (dimsRecord) {
-    for (const [k, v] of Object.entries(dimsRecord)) {
-      const score = typeof v === "number" || typeof v === "string" ? pct(num({ v }, "v")) : pct(num(v, "score", "value"));
-      if (score != null) out.push({ key: k, label: str(v, "label", "name") ?? DIMENSION_LABELS[k] ?? k.replace(/_/g, " "), score });
-    }
-  } else if (Array.isArray(dims)) {
-    for (const d of dims) {
-      const score = pct(num(d, "score", "value"));
-      if (score != null)
-        out.push({ key: str(d, "key", "name", "dimension") ?? `dim-${out.length}`, label: str(d, "label", "name", "title") ?? "Score", score });
+  if (!dimsRecord) return out;
+  for (const [k, v] of Object.entries(dimsRecord)) {
+    const score = typeof v === "number" || typeof v === "string" ? pct(Number(v)) : undefined;
+    if (score != null) {
+      out.push({ key: k, label: DIMENSION_LABELS[k] ?? k.replace(/_/g, " "), score });
     }
   }
   return out;

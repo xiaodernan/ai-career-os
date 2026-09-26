@@ -218,6 +218,17 @@ READERS: dict[str, dict] = {
                       "`_trajectory_keys` ties those names to the producers that carry them",
         },
     },
+    "normalizeInterviewDims": {
+        # `EvaluationItem.dims` is the jsonb copy of the report's dimension map, and the report map
+        # itself carries the same key, so the two producers agree on the one name this reader
+        # reaches for. #141: it used to spread that name over four candidates and walk an array form
+        # plus an object-valued form that no producer emits -- six sites, one of them authored.
+        "record_of": {"raw": ["EvaluationItem", "FinalizeReport"]},
+        "drilled": {},
+        "elements": {},
+        "blind": {},
+        "dynamic": {},
+    },
     "normalizeApplication": {
         "record_of": {"raw": "ApplicationItem", "nested": "CompanyItem"},
         "drilled": {"nested": ("raw", "company")},
@@ -844,6 +855,14 @@ def test_the_reads_are_actually_found():
     assert {k for s in report if s["receiver"] == "s" for k in s["keys"]} == _emitted("StudyItem")
     # The study card reads exactly the three names of `STUDY_ITEM_FIELDS`, no more: after #137 there
     # is no undeclared name left in this reader, which is the whole reason it could be bound.
+    idims = _sites("normalizeInterviewDims")
+    assert len(idims) == 1
+    assert {s["receiver"] for s in idims} == {"raw"}
+    assert {k for s in idims for k in s["keys"]} == {"dims"}
+    # One site, one name, and that name is a component of the DTO as well as a key of the report
+    # map. The three other candidates (`dimensions`, `scores`, `evaluation`) and the two extra
+    # branches were #141's deletions: six sites, only one of them authored.
+    assert "dims" in _emitted("EvaluationItem") and "dims" in _emitted("FinalizeReport")
     traj = _sites("normalizeTrajectory")
     assert len(traj) == 6
     assert {s["receiver"] for s in traj} == {"t", "row"}
