@@ -723,35 +723,29 @@ const SUGGESTION_TYPE_LABELS: Record<string, string> = {
 };
 
 /**
- * Map the ai-service rule-engine's `{skill, type, advice}` suggestions (as
- * returned by `POST /jds/suggestions`, either a bare array or wrapped under a
- * `suggestions` key) into the view `Suggestion`. The dialog renders `title` +
- * `text`, which the raw ai-service shape never supplies — without this the
- * "Resume improvement suggestions" section would render blank `<li>`s. Objects
- * already shaped as a `Suggestion` pass through unchanged.
+ * Map the ai-service rule-engine's suggestions into the view `Suggestion`.
+ * `POST /jds/suggestions` answers `{"suggestions": [{"skill","type","advice"}], "jd": …}` — the
+ * backend relays that map untouched, so these three names are all any producer writes. The dialog
+ * renders `title` + `text`, which the raw shape never supplies, so both are derived here; an item
+ * that names neither a skill nor a type is dropped rather than rendered as an empty bullet.
  */
 export function normalizeSuggestions(raw: unknown): Suggestion[] {
-  const items = Array.isArray(raw) ? raw : list(raw, "suggestions", "items", "improvements");
-  return items
+  return list(raw, "suggestions")
     .map((item): Suggestion | null => {
-      const bare = typeof item === "string" ? item : undefined;
-      const skill = (str(item, "skill", "name") ?? "").trim();
-      const type = str(item, "type", "kind");
-      const advice = str(item, "advice", "reason", "why");
+      const skill = (str(item, "skill") ?? "").trim();
+      const type = str(item, "type");
+      const advice = str(item, "advice");
       const title =
-        str(item, "title") ??
-        (type === "missing_required" && skill
+        type === "missing_required" && skill
           ? `Add ${skill}`
-          : skill || (type ? SUGGESTION_TYPE_LABELS[type] ?? type.replace(/_/g, " ") : undefined));
-      const text = str(item, "text", "body") ?? advice ?? bare;
-      if (!title && !text) return null;
+          : skill || (type ? SUGGESTION_TYPE_LABELS[type] ?? type.replace(/_/g, " ") : undefined);
+      if (!title && !advice) return null;
       return {
-        id: str(item, "id") ?? undefined,
         title: title || undefined,
-        text,
-        body: str(item, "body") ?? advice ?? undefined,
+        text: advice ?? undefined,
+        body: advice ?? undefined,
         section: type ?? undefined,
-        priority: type === "missing_required" ? "high" : str(item, "priority") ?? undefined,
+        priority: type === "missing_required" ? "high" : undefined,
       };
     })
     .filter((s): s is Suggestion => s !== null);

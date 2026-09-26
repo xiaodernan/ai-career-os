@@ -444,9 +444,11 @@ BROWSER_READS = {
 
 # Candidates the browser tries that no answer carries: tolerant alternates, each harmless only
 # because a sibling in the same list does exist -- `taskId` was once in this list by accident and
-# it silently killed a UI affordance, so a new name here has to mean something.
+# it silently killed a UI affordance, so a new name here has to mean something. #144 shrank this
+# table: `normalizeSuggestions` no longer probes `items`/`improvements`, because the one handler
+# that answers it writes the list under `suggestions` and nothing else.
 DEAD_ALTERNATES = {
-    "body", "coverLetter", "cover_letter", "improvements", "items", "markdown", "statistics",
+    "body", "coverLetter", "cover_letter", "markdown", "statistics",
     "summary", "text", "warnings", "content",
 }
 
@@ -489,7 +491,7 @@ def test_the_browser_side_is_actually_read():
         "letter", "sources", "mode", "model"}, \
         "resolving `cover_generate` through its import alias is what makes this answer readable"
     assert _browser_reads("normalizeTailor", "raw") >= {"stats", "notes"}
-    assert len(DEAD_ALTERNATES) >= 10
+    assert len(DEAD_ALTERNATES) >= 9, DEAD_ALTERNATES  # #144 deleted the two suggestion aliases
 
 
 # ------------------------------------- the same reading, against a Java record's fields

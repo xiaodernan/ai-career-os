@@ -1267,12 +1267,19 @@ describe("normalizeSuggestions / missingSkillGaps", () => {
     expect(out[2].priority).toBeUndefined();
   });
 
-  it("accepts a bare array and passes through already-shaped items", () => {
-    expect(normalizeSuggestions([{ skill: "Rust", type: "missing_required", advice: "x" }])[0].title).toBe(
-      "Add Rust",
-    );
-    const shaped = normalizeSuggestions({ suggestions: [{ title: "T", text: "B" }] });
-    expect(shaped[0]).toMatchObject({ title: "T", text: "B", section: undefined });
+  it("reads only skill, type and advice, because no producer writes anything else", () => {
+    // #144 deleted two branches that answered to shapes nobody emits: `suggestions_ep` always wraps
+    // the list under `suggestions`, and `suggest_resume_improvements` always writes the same three
+    // keys. So a card carrying only view-level names is dropped rather than rendered. (The reader's
+    // own `Array.isArray(raw)` branch went too, but `list` is lenient about a top-level array, so a
+    // bare array still maps -- that tolerance belongs to the helper, not to this endpoint.)
+    expect(normalizeSuggestions({ suggestions: [{ title: "T", text: "B" }] })).toEqual([]);
+    const out = normalizeSuggestions({
+      suggestions: [{ skill: "Rust", type: "missing_required", advice: "Add a bullet." }],
+    });
+    expect(out[0]?.title).toBe("Add Rust");
+    expect(out[0]?.text).toBe("Add a bullet.");
+    expect(out[0]?.id).toBeUndefined();
   });
 
   it("drops entries with neither title nor text and returns [] for non-lists", () => {

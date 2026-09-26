@@ -117,6 +117,10 @@ PRODUCERS = {
     # ...and the deterministic second author of a skill item: the dictionary-extracted skills the
     # model missed, appended by `_backfill_skills` in the shape it asks the model for.
     "JdBackfilledItem": ("pyappend", ("_backfill_skills", "preferred")),
+    # /jds/suggestions is relayed untouched by JobService: one handler author for the wrapper, one
+    # rule-engine author for the cards inside it.
+    "SuggestionEnvelope": ("pyfunc", "suggestions_ep"),
+    "SuggestionItem": ("pyappend", ("suggest_resume_improvements", "out")),
 }
 
 # Readers whose producers are known per map. A reader with more producers than one is bound to their
@@ -281,6 +285,18 @@ READERS: dict[str, dict] = {
                       "company": "CompanyItem"},
         "drilled": {"company": ("raw", "company")},
         "elements": {},
+        "blind": {},
+        "dynamic": {},
+    },
+    "normalizeSuggestions": {
+        # `POST /jds/suggestions` is relayed untouched by JobService, so the wrapper has exactly one
+        # author (the handler's `return {…}`) and each card exactly one (the rule engine's append).
+        # #144 deleted the eleven names neither of them writes -- `items`/`improvements`, `name`,
+        # `kind`, `reason`/`why`, `title`, `text`/`body`, `id`, `priority` -- and with them the
+        # "already-shaped Suggestion passes through" branch, which no endpoint can produce.
+        "record_of": {"raw": "SuggestionEnvelope", "item": "SuggestionItem"},
+        "drilled": {},
+        "elements": {"item": "raw"},
         "blind": {},
         "dynamic": {},
     },
@@ -468,8 +484,10 @@ def _appended_keys(func_name: str, list_name: str) -> set[str]:
 
     A list item has no record and no model to name it -- `compute_resume_score` loops over
     `detail.append({...})` -- but its shape is stated exactly once in the source, and that is as
-    checkable as either. More than one literal, or a computed key, and the item contract is not one
-    thing any more, which is a question for whoever reads it rather than for this gate to guess.
+    checkable as either. Repetition is allowed only while every literal draws the same key set:
+    `suggest_resume_improvements` appends three cards, and three identical contracts are still one.
+    A computed key, or two literals whose key sets differ, means the item contract is not one thing
+    any more, which is a question for whoever reads it rather than for this gate to guess.
     """
     fn = _sole(func_name)
     if fn is None:
@@ -486,9 +504,13 @@ def _appended_keys(func_name: str, list_name: str) -> set[str]:
                    for k in item.keys):
                 raise AssertionError(f"{func_name}.{list_name} appends a dict with a computed key")
             found.append({k.value for k in item.keys})
-    if len(found) != 1:
-        raise AssertionError(f"{func_name}.{list_name} is appended to from {len(found)} literal "
-                             f"shapes (want exactly 1): the item has no single contract to check")
+    if not found:
+        raise AssertionError(f"{func_name}.{list_name} is never appended to from a dict literal: "
+                             "the table names an item producer whose literal has stopped being one")
+    if any(shape != found[0] for shape in found[1:]):
+        raise AssertionError(
+            f"{func_name}.{list_name} appends {len(found)} different key sets "
+            f"{sorted(tuple(sorted(s)) for s in found)}: the item has no single contract to check")
     return found[0]
 
 
@@ -1089,6 +1111,19 @@ def test_the_reads_are_actually_found():
     # today -- which is precisely the state in which one author's rename hides behind the others.
     for author in ("JdRequiredItem", "JdPreferredItem", "JdBackfilledItem"):
         assert _emitted(author) == {"name", "priority", "evidence_phrase"}, author
+
+    # normalizeSuggestions reads four names and every one of them is written by somebody. Before
+    # this unit the same reader also probed items/improvements, name, kind, reason/why, title,
+    # text/body, id and priority -- none of which any producer emits -- so a card whose skill name
+    # changed would have rendered an empty bullet instead of failing here.
+    sug = _sites("normalizeSuggestions")
+    assert len(sug) == 4, f"the suggestions reader holds {len(sug)} sites, want the 4 they can name"
+    assert {s["receiver"] for s in sug} == {"raw", "item"}
+    assert {k for s in sug if s["receiver"] == "raw" for k in s["keys"]} == {"suggestions"}
+    assert {k for s in sug if s["receiver"] == "item" for k in s["keys"]} == {"skill", "type",
+                                                                             "advice"}
+    assert _emitted("SuggestionItem") == {"skill", "type", "advice"}
+    assert _emitted("SuggestionEnvelope") == {"suggestions", "jd"}
     # Two different ways a read stops naming its key in the call: `normalizeTrajectory` spreads a
     # name table, which this rule covers, and `normalizeSearch` reaches `g.key`, a member of a group
     # object, which `_search_hits` covers. Telling them apart is what keeps each rule honest about
