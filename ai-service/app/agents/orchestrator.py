@@ -15,7 +15,7 @@ from app.agents import memory
 from app.agents.tools import SUBAGENT_TOOLS, TOOL_INDEX, Tool
 from app.core import ai, taskbus
 from app.db import observability
-from app.providers.base import LLMMessage, LLMRequest, ToolSpec
+from app.providers.base import LLMMessage, LLMRequest, LLMResponse, ToolSpec
 
 log = logging.getLogger("agents.orchestrator")
 
@@ -77,6 +77,19 @@ class Outcome:
 def _emit(task_id: str | None, event: str, data: dict) -> None:
     if task_id:
         taskbus.publish(task_id, event, data)
+
+
+def _token_emitter(task_id: str | None):
+    """Adapter from `ai.ask_stream`'s event dict to this run's task-bus frames.
+
+    Only `token` is forwarded: the streaming call reports exactly one event kind, and a
+    delta that carries no text is not progress worth putting on the wire.
+    """
+    async def emit(event: dict) -> None:
+        text = (event.get("data") or {}).get("text")
+        if event.get("event") == "token" and text:
+            _emit(task_id, "token", {"text": text})
+    return emit
 
 
 def _tool_result_text(result: Any) -> str:
@@ -162,17 +175,23 @@ async def _exec_tool(tool: Tool, user_id: str, args: dict, *, run_id: str | None
 
 async def _run_loop(*, user_id: str, messages: list[LLMMessage], tools: list[Tool],
                     run_id: str | None, agent: str, task_id: str | None, out: Outcome,
-                    max_steps: int, allow_transfer: bool) -> str:
+                    max_steps: int, allow_transfer: bool, stream: bool = False) -> str:
     specs = [t.spec() for t in tools]
     if allow_transfer:
         specs.append(TRANSFER_SPEC)
     tool_index = {t.name: t for t in tools}
+
+    async def _ask(req: LLMRequest, kind: str) -> LLMResponse:
+        if not stream:
+            return await ai.ask(req, user_id=user_id, run_id=run_id, agent=agent, kind=kind)
+        return await ai.ask_stream(req, user_id=user_id, run_id=run_id, agent=agent,
+                                   kind=kind, emit=_token_emitter(task_id))
+
     for step in range(max_steps):
         out.steps += 1
-        resp = await ai.ask(LLMRequest(messages=messages, tools=specs, temperature=0.3,
-                                       max_tokens=1800),
-                            user_id=user_id, run_id=run_id, agent=agent,
-                            kind=f"step_{step + 1}")
+        resp = await _ask(LLMRequest(messages=messages, tools=specs, temperature=0.3,
+                                     max_tokens=1800),
+                          kind=f"step_{step + 1}")
         if not resp.tool_calls:
             return resp.text
         messages.append(LLMMessage("assistant", resp.text, tool_calls=resp.tool_calls))
@@ -191,7 +210,10 @@ async def _run_loop(*, user_id: str, messages: list[LLMMessage], tools: list[Too
                                  if n in TOOL_INDEX]
                     sub_msgs = [
                         LLMMessage("system", SUBAGENT_SYSTEM.format(agent=sub_agent)),
-                        LLMMessage("user", f"Delegated task:\n{task}")]
+                        LLMMessage("user", f"Delegated task:\n{task}")
+                    ]
+                    # A subagent's report is input to this loop, not an answer to the
+                    # user, so it never streams: tokens belong to the final reply.
                     report = await _run_loop(
                         user_id=user_id, messages=sub_msgs, tools=sub_tools,
                         run_id=run_id, agent=sub_agent, task_id=task_id, out=out,
@@ -210,15 +232,21 @@ async def _run_loop(*, user_id: str, messages: list[LLMMessage], tools: list[Too
     # step budget exhausted — force a grounded summary
     messages.append(LLMMessage("user", "Step budget reached. Summarize what the "
                                        "tool results above already establish."))
-    resp = await ai.ask(LLMRequest(messages=messages, temperature=0.3, max_tokens=1200),
-                        user_id=user_id, run_id=run_id, agent=agent, kind="finalize")
+    resp = await _ask(LLMRequest(messages=messages, temperature=0.3, max_tokens=1200),
+                      kind="finalize")
     return resp.text
 
 
 async def career_turn(*, user_id: str, message: str, history: list[dict] | None = None,
                       context: dict | None = None, run_id: str | None = None,
-                      task_id: str | None = None) -> Outcome:
-    """One user turn of the copilot conversation."""
+                      task_id: str | None = None, stream: bool = False) -> Outcome:
+    """One user turn of the copilot conversation.
+
+    `stream=True` publishes every answer delta as a `token` frame on `task_id`'s task,
+    so a client watching the run reads the reply while it is still being written. The
+    returned `Outcome` stays the authority: tokens are provisional (the loop can still
+    decide to call a tool after emitting some), `answer` is what actually gets stored.
+    """
     out = Outcome(run_id=run_id)
     mem_ctx = await memory.build_memory_context(user_id)
     system = CAREER_SYSTEM
@@ -239,7 +267,7 @@ async def career_turn(*, user_id: str, message: str, history: list[dict] | None 
     answer = await _run_loop(user_id=user_id, messages=messages,
                              tools=list(TOOL_INDEX.values()), run_id=run_id,
                              agent="career", task_id=task_id, out=out,
-                             max_steps=MAX_STEPS, allow_transfer=True)
+                             max_steps=MAX_STEPS, allow_transfer=True, stream=stream)
     out.answer = answer
     _derive_actions(out)
     await observability.trace(run_id, "final", "career", {

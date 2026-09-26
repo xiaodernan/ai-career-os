@@ -39,7 +39,7 @@ async def chat(req: ChatReq, ctx: Ctx = Depends(require_internal)):
         try:
             out = await career_turn(user_id=ctx.user_id, message=req.message,
                                     history=req.history, context=req.context,
-                                    run_id=run_id, task_id=task_id)
+                                    run_id=run_id, task_id=task_id, stream=True)
             await observability.finish_run(run_id, "completed",
                                            latency_ms=int((time.monotonic() - started)
                                                           * 1000))

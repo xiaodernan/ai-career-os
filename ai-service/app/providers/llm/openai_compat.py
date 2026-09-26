@@ -128,6 +128,11 @@ class OpenAICompatProvider:
     async def stream(self, req: LLMRequest) -> AsyncIterator[StreamDelta]:
         payload = self._payload(req, stream=True)
         final_usage = Usage()
+        # Tool calls arrive as index-keyed fragments: id, then name, then the arguments
+        # string in as many chunks as the model likes. They are reassembled here and
+        # handed over on the closing delta, so a streamed step can still call a tool.
+        calls: dict[int, ToolCall] = {}
+        arg_fragments: dict[int, list[str]] = {}
         async with self.client.stream(
             "POST", f"{self.base}/chat/completions", json=payload,
             headers=self._headers(), timeout=180.0,
@@ -154,7 +159,22 @@ class OpenAICompatProvider:
                 text = delta.get("content") or ""
                 if text:
                     yield StreamDelta(text=text)
-        yield StreamDelta(usage=final_usage, done=True)
+                for fragment in delta.get("tool_calls") or []:
+                    index = int(fragment.get("index") or 0)
+                    function = fragment.get("function") or {}
+                    call = calls.setdefault(index, ToolCall(
+                        id=fragment.get("id") or f"call_{index}", name="", arguments={}))
+                    if fragment.get("id"):
+                        call.id = fragment["id"]
+                    if function.get("name"):
+                        call.name = function["name"]
+                    if function.get("arguments"):
+                        arg_fragments.setdefault(index, []).append(function["arguments"])
+        for index, call in calls.items():
+            raw = "".join(arg_fragments.get(index, []))
+            call.arguments = _safe_json(raw) if raw else {}
+        yield StreamDelta(usage=final_usage, done=True,
+                          tool_calls=[calls[i] for i in sorted(calls)])
 
     async def embed(self, texts: list[str], model: str, dim: int) -> list[list[float]]:
         payload: dict = {"model": model, "input": texts, "encoding_format": "float"}

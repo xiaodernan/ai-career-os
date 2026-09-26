@@ -61,6 +61,11 @@ class StreamDelta:
     text: str = ""
     usage: Usage | None = None
     done: bool = False
+    # Tool calls arrive fragmented across provider events, so they are accumulated by
+    # the provider and handed over once, on the closing delta. Without them a streamed
+    # reply could never answer a step that asks for a tool, and the agent loop would
+    # silently degrade to a single non-tool answer.
+    tool_calls: list[ToolCall] = field(default_factory=list)
 
 
 class LLMProvider(Protocol):

@@ -13,8 +13,9 @@ failure: `applyStatusEvent` *appends* an unknown step as a new row labelled with
 
 ai-service is the producer and the client is TypeScript, so this reads `use-sse.ts` as data the
 way the request-side gates read the Java client, and separates two channels that share the word
-"event": the taskbus stream, and `core/ai.py`'s per-call `emit(...)` callback that no endpoint
-wires to the stream yet.
+"event": the taskbus stream, and `core/ai.py`'s per-call `emit(...)` callback. The copilot turn
+wires the second into the first (`career_turn(stream=True)` -> `_token_emitter`), which is why
+`token` now belongs to both lists rather than only to the callback one.
 """
 
 import re
@@ -141,10 +142,11 @@ def test_every_event_the_stream_carries_is_one_the_client_routes():
 
 
 def test_the_channels_with_no_producer_stay_a_declared_list():
-    """`token` is produced only for a caller-supplied callback (`core/ai.py`), and `trace` /
-    `artifact` have no producer at all: three handlers waiting for a publisher. Declaring them
-    is what makes the fourth one arriving -- or a name losing its handler -- an explicit change."""
-    assert inert_channels() == {"artifact", "token", "trace"}
+    """`trace` and `artifact` have no producer at all: two handlers waiting for a publisher.
+    Declaring them is what makes a third one arriving -- or a name losing its handler -- an
+    explicit change. `token` is the one that moved: it used to sit in this list too, until the
+    copilot turn started forwarding `core/ai.py`'s deltas onto the task bus."""
+    assert inert_channels() == {"artifact", "trace"}
     assert callback_names() == {"token"}
 
 
@@ -167,8 +169,8 @@ def test_the_ingest_checklist_rows_are_the_steps_the_pipeline_publishes():
 
 def test_both_sides_are_actually_read():
     """Positive control: every gate above would stay green on an empty reading of either file."""
-    assert stream_names() == {"done", "error", "message", "ping", "progress", "status"}
-    assert {"message", "status", "done", "error", "ping", "progress"} <= handled_names()
+    assert stream_names() == {"done", "error", "message", "ping", "progress", "status", "token"}
+    assert {"message", "status", "done", "error", "ping", "progress", "token"} <= handled_names()
     assert len(handled_names()) >= 9, f"the dispatcher lost its cases: {sorted(handled_names())}"
     assert pipeline_steps() == ["extracting", "cleaning", "chunking", "embedding", "indexing"]
     assert len(seed_rows()) == 5
@@ -231,6 +233,6 @@ def test_the_tolerant_alternates_stay_declared():
 def test_the_frame_payloads_are_actually_read():
     """Positive control: a reading that found no payloads would pass both gates above."""
     assert published_frame_keys() == {
-        "agent", "count", "done", "error", "intent", "result", "state", "step", "total"}
+        "agent", "count", "done", "error", "intent", "result", "state", "step", "text", "total"}
     assert folded_frame_keys() == {"done", "label", "progress", "state", "status", "step", "total"}
     assert len(_frame_payloads()) >= 10

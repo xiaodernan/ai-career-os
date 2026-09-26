@@ -5,12 +5,11 @@ Every feature/agent must call through here so PRD §31/§33 observability holds.
 
 import json
 import time
-from collections.abc import AsyncIterator
 from typing import Any
 
 from app.core.config import get_settings
 from app.db import observability
-from app.providers.base import LLMMessage, LLMRequest, LLMResponse
+from app.providers.base import LLMMessage, LLMRequest, LLMResponse, ToolCall, Usage
 from app.providers.pricing import estimate_cost
 from app.providers.registry import get_llm
 
@@ -107,30 +106,52 @@ async def ask_json(req: LLMRequest, **kw) -> dict:
         return _coerce_json(resp2.text)
 
 
-async def stream(req: LLMRequest, *, user_id: str | None = None, run_id: str | None = None,
-                 agent: str = "system", emit=None) -> AsyncIterator[str]:
-    """Yield text deltas; optionally push each event through async callable emit(event:dict)."""
+async def ask_stream(req: LLMRequest, *, user_id: str | None = None,
+                     run_id: str | None = None, agent: str = "system",
+                     kind: str = "chat", emit=None) -> LLMResponse:
+    """ask() that streams: every text delta is pushed through ``emit`` as it arrives,
+    and the full reply (text, tool calls, usage) is assembled for the caller.
+
+    The tool loop needs the *whole* reply — a step that answers with a tool call has no
+    text to show and must not be reported as an answer — so the caller gets an ordinary
+    LLMResponse back and only the interim text reaches the stream. ``emit`` takes the
+    same ``{"event": ..., "data": ...}`` dict the task bus publishes, which is what lets
+    a caller forward a delta without inventing a second event shape.
+    """
     s = get_settings()
     provider = get_llm(s)
-    usage = None
     started = time.monotonic()
-    async for delta in provider.stream(req):
-        if delta.done:
-            usage = delta.usage
-            break
-        if delta.text:
-            if emit:
-                await emit({"event": "token", "data": {"text": delta.text}})
-            yield delta.text
-    if usage:
-        cost = estimate_cost(req.model or s.llm_model, usage.input_tokens,
-                             usage.output_tokens, usage.cached_tokens)
-        await observability.record_usage(
-            user_id, run_id, req.model or s.llm_model, provider.name, "stream",
-            usage.input_tokens, usage.output_tokens, usage.cached_tokens, cost,
-            int((time.monotonic() - started) * 1000))
+    pieces: list[str] = []
+    tool_calls: list[ToolCall] = []
+    usage = Usage()
+    try:
+        async for delta in provider.stream(req):
+            if delta.text:
+                pieces.append(delta.text)
+                if emit:
+                    await emit({"event": "token", "data": {"text": delta.text}})
+            if delta.tool_calls:
+                tool_calls.extend(delta.tool_calls)
+            if delta.done and delta.usage is not None:
+                usage = delta.usage
+    except Exception as e:
         if run_id:
-            await observability.trace(run_id, "llm_call", agent, {
-                "kind": "stream", "model": req.model or s.llm_model,
-                "in_tokens": usage.input_tokens, "out_tokens": usage.output_tokens,
-                "cost_usd": round(cost, 6)})
+            await observability.trace(run_id, "error", agent,
+                                      {"stage": kind, "error": str(e)[:800]})
+        raise
+    latency_ms = int((time.monotonic() - started) * 1000)
+    model = req.model or s.llm_model
+    cost = estimate_cost(model, usage.input_tokens, usage.output_tokens, usage.cached_tokens)
+    await observability.record_usage(
+        user_id, run_id, model, provider.name, kind,
+        usage.input_tokens, usage.output_tokens, usage.cached_tokens, cost, latency_ms)
+    if run_id:
+        await observability.trace(run_id, "llm_call", agent, {
+            "kind": kind, "model": model,
+            "in_tokens": usage.input_tokens, "out_tokens": usage.output_tokens,
+            "cost_usd": round(cost, 6), "latency_ms": latency_ms,
+            "tools": [tc.name for tc in tool_calls],
+            "text_preview": "".join(pieces)[:400],
+        })
+    return LLMResponse(text="".join(pieces), tool_calls=tool_calls, usage=usage,
+                       model=model, latency_ms=latency_ms)

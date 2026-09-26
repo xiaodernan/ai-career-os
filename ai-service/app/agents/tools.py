@@ -29,10 +29,50 @@ class Tool:
 
 # ---------------- handlers ----------------
 
+# The columns every job search returns, so both retrieval passes agree on shape.
+_JOB_COLS = """j.id, j.title, c.name AS company, j.location, j.remote_type,
+               j.salary_min, j.salary_max, j.skills, j.posted_at"""
+
+# Reciprocal-rank-fusion constant. 60 is the value from the original RRF paper and
+# what the RAG pipeline uses; it flattens the top of each list so a single
+# strong-but-unsupported hit cannot outrank agreement between the two retrievers.
+_RRF_K = 60
+
+
+def _filter_fragments(*, skills: list[str] | None = None, location: str = "",
+                      remote: str = "", company: str = "", min_salary: int | None = None
+                      ) -> list[tuple[str, Any]]:
+    """The non-text filters as ``(sql, value)`` with a ``{n}`` placeholder marker.
+
+    Kept separate from the text query so the same filters can be re-numbered for a
+    second retrieval pass (the semantic one) without hand-tracking ``$N`` offsets,
+    which is how placeholder/value misalignment bugs start.
+    """
+    out: list[tuple[str, Any]] = []
+    if skills:
+        out.append(("j.skills && ${n}::text[]", [s for s in skills if s]))
+    if location:
+        out.append(("j.location ILIKE ${n} ESCAPE '!'", db.like_contains(location)))
+    if remote:
+        out.append(("j.remote_type = ${n}", remote))
+    if company:
+        out.append(("c.name ILIKE ${n} ESCAPE '!'", db.like_contains(company)))
+    if min_salary:
+        out.append(("j.salary_max >= ${n}", min_salary))
+    return out
+
+
+def _apply_fragments(where: list[str], args: list, fragments: list[tuple[str, Any]]) -> None:
+    """Bind each fragment's value and record its placeholder index in the SQL."""
+    for sql, value in fragments:
+        args.append(value)
+        where.append(sql.replace("{n}", str(len(args))))
+
+
 def _search_params(*, query: str = "", skills: list[str] | None = None,
                    location: str = "", remote: str = "", company: str = "",
                    min_salary: int | None = None, limit: int = 10) -> tuple[list[str], list]:
-    """Build the WHERE clauses + positional ($N) args for search_jobs.
+    """Build the WHERE clauses + positional ($N) args for the keyword pass.
 
     Only integer placeholder indices are ever interpolated into the SQL; every user
     value is returned in ``args`` for asyncpg to bind. The last arg is the clamped
@@ -47,39 +87,98 @@ def _search_params(*, query: str = "", skills: list[str] | None = None,
         args.append(db.like_contains(query))
         where.append("(j.tsv @@ plainto_tsquery('simple', $1) "
                      f"OR j.title ILIKE ${len(args)} ESCAPE '!')")
-    if skills:
-        args.append([s for s in skills if s])
-        where.append(f"j.skills && ${len(args)}::text[]")
-    if location:
-        args.append(db.like_contains(location))
-        where.append(f"j.location ILIKE ${len(args)} ESCAPE '!'")
-    if remote:
-        args.append(remote)
-        where.append(f"j.remote_type = ${len(args)}")
-    if company:
-        args.append(db.like_contains(company))
-        where.append(f"c.name ILIKE ${len(args)} ESCAPE '!'")
-    if min_salary:
-        args.append(min_salary)
-        where.append(f"j.salary_max >= ${len(args)}")
+    _apply_fragments(where, args, _filter_fragments(
+        skills=skills, location=location, remote=remote, company=company,
+        min_salary=min_salary))
     args.append(max(1, min(int(limit), 25)))
     return where, args
+
+
+async def _embed_query(query: str) -> list[float] | None:
+    """Embed a search query, or None when that is not possible.
+
+    Semantic search is an enhancement: if no embedding provider is configured, the
+    provider errors, or `jobs.embedding` was never backfilled, the caller must still
+    answer with keyword results rather than fail the tool call.
+    """
+    try:
+        from app.core.config import get_settings
+        from app.providers.registry import get_embeddings
+
+        vectors = await get_embeddings(get_settings()).embed([query])
+    except Exception:  # noqa: BLE001 — degrade to keyword-only, never break search
+        return None
+    return vectors[0] if vectors else None
+
+
+async def _semantic_jobs(query: str, fragments: list[tuple[str, Any]], limit: int) -> list:
+    """Vector pass over `jobs.embedding`, honouring the same filters as keyword search.
+
+    Reusing `fragments` matters: without the filters this would happily return roles
+    that the user's location/salary/skill constraints exclude, and fusion would then
+    rank them above matching ones.
+    """
+    vector = await _embed_query(query)
+    if not vector:
+        return []
+    args: list[Any] = [db.vec(vector)]
+    where = ["j.status = 'open'", "j.embedding IS NOT NULL"]
+    _apply_fragments(where, args, fragments)
+    args.append(limit)
+    return await db.fetch(
+        f"""SELECT {_JOB_COLS}
+            FROM jobs j JOIN companies c ON c.id = j.company_id
+            WHERE {' AND '.join(where)}
+            ORDER BY j.embedding <=> $1::vector LIMIT ${len(args)}""",
+        *args)
+
+
+def _fuse_rrf(keyword_rows: list, semantic_rows: list, limit: int) -> list:
+    """Merge the two ranked lists by reciprocal rank, then cut to `limit`.
+
+    Score is Σ 1/(k + rank) across lists, so a job both retrievers found outranks one
+    only a single retriever liked — which is the whole point of running two. With an
+    empty semantic list the order is exactly the keyword order, so behaviour is
+    unchanged wherever embeddings are unavailable.
+    """
+    scores: dict[str, float] = {}
+    rows_by_id: dict[str, Any] = {}
+    for rows in (keyword_rows, semantic_rows):
+        for rank, row in enumerate(rows):
+            job_id = str(row["id"])
+            rows_by_id.setdefault(job_id, row)
+            scores[job_id] = scores.get(job_id, 0.0) + 1.0 / (_RRF_K + rank)
+    ordered = sorted(scores, key=lambda j: -scores[j])
+    return [rows_by_id[j] for j in ordered[:limit]]
 
 
 async def search_jobs(user_id: str, *, query: str = "", skills: list[str] | None = None,
                       location: str = "", remote: str = "", company: str = "",
                       min_salary: int | None = None, limit: int = 10) -> dict:
+    """Hybrid job search: keyword/tsv fused with vector similarity.
+
+    Keyword alone misses paraphrase ("支付平台" vs "payments platform"); vectors alone
+    miss exact tokens (a skill literally named "Go"). Both are filtered identically,
+    then fused by reciprocal rank. `user_id` is accepted for the tool contract but
+    jobs are a shared catalogue, so it does not scope this query.
+    """
+    fragments = _filter_fragments(skills=skills, location=location, remote=remote,
+                                  company=company, min_salary=min_salary)
+    capped = max(1, min(int(limit), 25))
+
     where, args = _search_params(query=query, skills=skills, location=location,
                                  remote=remote, company=company, min_salary=min_salary,
                                  limit=limit)
-    rows = await db.fetch(
-        f"""SELECT j.id, j.title, c.name AS company, j.location, j.remote_type,
-                   j.salary_min, j.salary_max, j.skills, j.posted_at,
-                   ts_rank(j.tsv, plainto_tsquery('simple', $1)) AS rank
+    keyword_rows = await db.fetch(
+        f"""SELECT {_JOB_COLS}, ts_rank(j.tsv, plainto_tsquery('simple', $1)) AS rank
             FROM jobs j JOIN companies c ON c.id = j.company_id
             WHERE {' AND '.join(where)}
             ORDER BY rank DESC, j.posted_at DESC LIMIT ${len(args)}""",
         *args)
+
+    semantic_rows = await _semantic_jobs(query, fragments, capped) if query.strip() else []
+    rows = _fuse_rrf(keyword_rows, semantic_rows, capped)
+
     return {"jobs": [{"id": str(r["id"]), "title": r["title"], "company": r["company"],
                       "location": r["location"], "remote": r["remote_type"],
                       "salary": [r["salary_min"], r["salary_max"]], "skills": r["skills"]}

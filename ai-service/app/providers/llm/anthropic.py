@@ -114,6 +114,10 @@ class AnthropicProvider:
 
     async def stream(self, req: LLMRequest) -> AsyncIterator[StreamDelta]:
         usage = Usage()
+        # Anthropic announces a tool call in content_block_start and streams its input as
+        # partial_json deltas, so the arguments are buffered per block until it stops.
+        calls: dict[int, ToolCall] = {}
+        arg_fragments: dict[int, list[str]] = {}
         async with self.client.stream("POST", f"{self.base}/v1/messages",
                                       json=self._payload(req, True),
                                       headers=self._headers(), timeout=180.0) as r:
@@ -128,10 +132,30 @@ class AnthropicProvider:
                 except json.JSONDecodeError:
                     continue
                 t = ev.get("type")
-                if t == "content_block_delta" and ev.get("delta", {}).get("type") == "text_delta":
-                    yield StreamDelta(text=ev["delta"]["text"])
+                if t == "content_block_start":
+                    block = ev.get("content_block") or {}
+                    index = int(ev.get("index") or 0)
+                    if block.get("type") == "tool_use":
+                        calls[index] = ToolCall(id=block.get("id") or f"call_{index}",
+                                                name=block.get("name") or "",
+                                                arguments=block.get("input") or {})
+                elif t == "content_block_delta":
+                    delta = ev.get("delta") or {}
+                    index = int(ev.get("index") or 0)
+                    if delta.get("type") == "text_delta":
+                        yield StreamDelta(text=delta["text"])
+                    elif delta.get("type") == "input_json_delta" and delta.get("partial_json"):
+                        arg_fragments.setdefault(index, []).append(delta["partial_json"])
                 elif t == "message_delta":
                     usage.output_tokens = ev.get("usage", {}).get("output_tokens", 0)
                 elif t == "message_start":
                     usage = _usage_from(ev.get("message", {}).get("usage", {}))
-        yield StreamDelta(usage=usage, done=True)
+        for index, call in calls.items():
+            raw = "".join(arg_fragments.get(index, []))
+            if raw and not call.arguments:
+                try:
+                    call.arguments = json.loads(raw)
+                except json.JSONDecodeError:
+                    call.arguments = {}
+        yield StreamDelta(usage=usage, done=True,
+                          tool_calls=[calls[i] for i in sorted(calls)])

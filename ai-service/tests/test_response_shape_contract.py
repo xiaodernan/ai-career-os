@@ -383,8 +383,8 @@ def test_the_shapes_this_gate_cannot_see_stay_a_declared_list():
 def test_the_backend_readers_this_gate_walks_are_the_ones_that_exist():
     """A new consumer class must widen the corpus here, not go unmeasured."""
     assert sorted(p.name for p in _consumer_files()) == [
-        "ConversationService.java", "FileIngestService.java", "InterviewService.java",
-        "JobService.java", "ResumeService.java",
+        "ConversationService.java", "CopilotStreamService.java", "FileIngestService.java",
+        "InterviewService.java", "JobService.java", "ResumeService.java",
     ]
 
 

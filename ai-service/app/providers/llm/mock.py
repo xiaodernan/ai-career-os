@@ -163,4 +163,4 @@ class MockProvider:
         resp = await self.complete(req)
         for i in range(0, len(resp.text), 24):
             yield StreamDelta(text=resp.text[i:i + 24])
-        yield StreamDelta(usage=resp.usage, done=True)
+        yield StreamDelta(usage=resp.usage, done=True, tool_calls=resp.tool_calls)

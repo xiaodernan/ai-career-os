@@ -54,6 +54,7 @@ class OllamaProvider:
 
     async def stream(self, req: LLMRequest) -> AsyncIterator[StreamDelta]:
         usage = Usage()
+        tool_calls: list[ToolCall] = []
         async with self.client.stream("POST", f"{self.base}/api/chat",
                                       json=self._payload(req, True), timeout=600.0) as r:
             if r.status_code >= 400:
@@ -63,12 +64,18 @@ class OllamaProvider:
                 if not line.strip():
                     continue
                 ev = json.loads(line)
-                delta = (ev.get("message") or {}).get("content") or ""
+                message = ev.get("message") or {}
+                delta = message.get("content") or ""
                 if delta:
                     yield StreamDelta(text=delta)
+                # ollama ships each tool call whole; index the ids the way complete() does.
+                for tc in message.get("tool_calls") or []:
+                    tool_calls.append(ToolCall(id=f"call_{len(tool_calls)}",
+                                               name=tc["function"]["name"],
+                                               arguments=tc["function"].get("arguments") or {}))
                 if ev.get("done"):
                     usage = Usage(ev.get("prompt_eval_count", 0), ev.get("eval_count", 0))
-        yield StreamDelta(usage=usage, done=True)
+        yield StreamDelta(usage=usage, done=True, tool_calls=tool_calls)
 
     async def embed(self, texts: list[str], model: str, dim: int) -> list[list[float]]:
         r = await self.client.post(f"{self.base}/api/embed",

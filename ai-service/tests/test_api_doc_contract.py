@@ -126,9 +126,9 @@ def test_both_sides_of_the_comparison_are_actually_read():
 
 # Documented, registered, and not called by the backend -- each for its own reason, so that a new
 # caller means retiring a line here rather than letting the table quietly advertise surfaces the
-# product never reaches. `/internal/stream/{}` is *not* in this list: `SseRelayService` calls it.
+# product never reaches. `/internal/stream/{}` and `/internal/agents/chat` are *not* in this list:
+# `SseRelayService` relays the first, and the copilot's streaming route starts the second.
 UNREACHED_BY_THE_APP = {
-    "/internal/agents/chat": "the copilot uses /chat/sync; the background-task form is unwired",
     "/internal/agents/runs": "the Activity panel reads agent_runs over the shared database instead",
     "/internal/agents/runs/{}": "same, for one run's detail",
     "/internal/rag/retrieve": "retrieval happens in-process (agent tools -> pipeline.retrieve)",
@@ -152,7 +152,7 @@ def test_what_the_doc_lists_but_the_app_never_calls_stays_explained():
 
 def test_the_unreached_list_is_not_just_a_long_list_of_nothings():
     """Positive control: the comparison above also passes when both sides are empty."""
-    assert len(UNREACHED_BY_THE_APP) == 8
+    assert len(UNREACHED_BY_THE_APP) == 7
     assert all(reason.strip() for reason in UNREACHED_BY_THE_APP.values())
     assert "/internal/stream/{}" not in UNREACHED_BY_THE_APP, \
         "the relay reaches that one; treating it as unreached would hide a live dependency"
