@@ -79,6 +79,8 @@ PRODUCERS = {
     # list, whose keys the function states once, in the `detail.append(...)` it loops over.
     "ResumeScoreMap": ("pyfunc", "compute_resume_score"),
     "RubricCheck": ("pyappend", ("compute_resume_score", "detail")),
+    "RecentRun": ("java", "report/dto/DashboardDtos.java"),
+    "RunItem": ("java", "activity/web/ActivityController.java"),
 }
 
 # Readers whose producers are known per map. A reader with more producers than one is bound to their
@@ -147,6 +149,20 @@ READERS: dict[str, dict] = {
                       "s": "ResumeScoreMap", "c": "RubricCheck"},
         "drilled": {"s": ("raw", "score")},
         "elements": {"c": "s"},
+        "blind": {},
+        "dynamic": {},
+    },
+    "normalizeRun": {
+        # Two records, one reader: the dashboard's `recentRuns` are `RecentRun`s and
+        # `GET /activity/runs` answers a bare `List<RunItem>`. Neither is snake_case (the backend has
+        # no naming strategy on this direction), and neither carries `traces` -- those belong to
+        # `RunDetail`, which the activity detail page hands to `activity-trace` after unwrapping
+        # `run`. #133 deleted the four authorless reads that confusion left behind (`traces`,
+        # `summary`, `createdAt`, `relatedHref`), the snake aliases beside every live name, and the
+        # `useActivityRun` hook that passed `normalizeRun` the envelope instead of the run.
+        "record_of": {"raw": ["RecentRun", "RunItem"]},
+        "drilled": {},
+        "elements": {},
         "blind": {},
         "dynamic": {},
     },
@@ -685,6 +701,18 @@ def test_the_reads_are_actually_found():
     # ...which is why `raw` is a union and why `mapResumeVersions` has always answered null here:
     # the versions DTO projects no score column, so binding `raw` to the two carriers alone would
     # make this reader's one drill look like it can only ever succeed.
+    runs = _sites("normalizeRun")
+    assert len(runs) == 12
+    assert {s["receiver"] for s in runs} == {"raw"}
+    # 12, down from 16: `traces`, `summary`, `createdAt` and `relatedHref` named nothing either run
+    # record has ever carried, and the snake aliases sat beside live names in the same lists.
+    read_off_run = {k for s in runs for k in s["keys"]}
+    assert (_emitted("RecentRun") | _emitted("RunItem")) - read_off_run == \
+        {"cachedTokens", "conversationId", "rootRunId"}
+    # The three columns `RunItem` sends that the browser has no place for: the cache-hit count, and
+    # the two ids the copilot timeline resolves server-side. A producer surplus, named so it cannot
+    # grow quietly -- and `RecentRun`, the smaller of the two, is read in full.
+    assert _emitted("RecentRun") - read_off_run == set()
     assert len(_emitted("JobListItem")) == 18
     assert len(_emitted("SavedJobItem")) == 3
     assert len(_emitted("SearchResponse")) == 7

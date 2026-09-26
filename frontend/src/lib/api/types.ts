@@ -573,35 +573,19 @@ export interface ActivityEvent {
   costUsd?: number;
 }
 
-export interface AgentTrace {
-  id: string;
-  kind: string;
-  label?: string;
-  durationMs?: number;
-  status?: string;
-  payload?: Record<string, unknown>;
-  createdAt?: string;
-  tokens?: number;
-  costUsd?: number;
-}
-
 export interface ActivityRun {
   id: string;
   agent?: string;
   kind?: string;
-  summary?: string;
   status?: string;
   error?: string;
   model?: string | null;
   startedAt?: string;
   finishedAt?: string | null;
-  createdAt?: string;
   durationMs?: number;
   tokensIn?: number;
   tokensOut?: number;
   costUsd?: number;
-  traces?: AgentTrace[];
-  relatedHref?: string | null;
 }
 
 export interface AIUsageSummary {

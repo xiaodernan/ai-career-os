@@ -21,6 +21,7 @@ import {
   normalizeMessages,
   normalizePage,
   normalizePipeline,
+  normalizeRun,
   normalizeResumeScore,
   normalizeSearch,
   serializeJobFilters,
@@ -445,11 +446,54 @@ describe("coverLetterText", () => {
   });
 });
 
+describe("normalizeRun", () => {
+  // Both fixtures are field-for-field out of the records that answer: `DashboardDtos.RecentRun` and
+  // `ActivityController.RunItem`. The reader had no direct test before #133 -- only the dashboard's
+  // recentRuns path touched it -- which is how four reads for columns neither record has ever had
+  // (`summary`, `createdAt`, `relatedHref`, `traces`) survived here.
+  it("maps the dashboard's RecentRun, whose kind is the trigger column", () => {
+    const run = normalizeRun({
+      id: "run-1", agent: "career", trigger: "manual", status: "success", model: "claude-x",
+      inputTokens: 120, outputTokens: 34, costUsd: 0.02,
+      startedAt: "2026-09-26T02:00:00Z", finishedAt: "2026-09-26T02:00:07Z",
+    });
+    expect(run).toMatchObject({
+      id: "run-1", agent: "career", kind: "manual", status: "success", model: "claude-x",
+      startedAt: "2026-09-26T02:00:00Z", finishedAt: "2026-09-26T02:00:07Z",
+      tokensIn: 120, tokensOut: 34, costUsd: 0.02,
+    });
+    expect(runTotalTokens(run)).toBe(154);
+    expect(run.error).toBeUndefined();
+    expect(run.durationMs).toBeUndefined();
+  });
+
+  it("maps the activity list's RunItem, including the columns RecentRun lacks", () => {
+    const run = normalizeRun({
+      id: "run-2", agent: "tailor", trigger: "scheduled", status: "failed", model: null,
+      inputTokens: 10, outputTokens: 0, cachedTokens: 4, costUsd: 0.01, latencyMs: 1830,
+      error: "provider timeout", startedAt: "2026-09-26T02:00:00Z", finishedAt: null,
+      rootRunId: "run-1", conversationId: "c-9",
+    });
+    expect(run).toMatchObject({
+      id: "run-2", kind: "scheduled", status: "failed", error: "provider timeout",
+      durationMs: 1830, tokensIn: 10, tokensOut: 0,
+    });
+    // cachedTokens / rootRunId / conversationId arrive and are dropped -- the row has no place for
+    // them, and the gate's surplus floor names that set so it cannot grow quietly.
+    expect("cachedTokens" in run).toBe(false);
+    expect("traces" in run).toBe(false);
+  });
+});
+
 describe("runTotalTokens", () => {
-  it("prefers direct counts, else sums traces, else undefined", () => {
-    expect(runTotalTokens({ tokensIn: 10, tokensOut: 5 } as never)).toBe(15);
-    expect(runTotalTokens({ traces: [{ tokens: 3 }, { tokens: 4 }] } as never)).toBe(7);
-    expect(runTotalTokens({} as never)).toBeUndefined();
+  it("adds the two token counts a run row carries", () => {
+    expect(runTotalTokens({ id: "r1", tokensIn: 10, tokensOut: 5 })).toBe(15);
+    expect(runTotalTokens({ id: "r1", tokensIn: 10 })).toBe(10);
+    // ...and answers undefined for a row the AI service never metered, so the activity list shows no
+    // chip rather than a confident zero. The trace-summing branch this test used to assert read
+    // `traces`, which no caller of `normalizeRun` can produce: traces arrive on `RunDetail`, and the
+    // detail page maps them through `activity-trace` instead.
+    expect(runTotalTokens({ id: "r1", agent: "career" })).toBeUndefined();
   });
 });
 

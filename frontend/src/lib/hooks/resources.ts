@@ -447,14 +447,6 @@ export function useActivityRuns(params?: { limit?: number }) {
   });
 }
 
-export function useActivityRun(id: string | null) {
-  return useQuery({
-    queryKey: ["activity", "run", id],
-    enabled: Boolean(id),
-    queryFn: async () => normalizeRun(await api.get<unknown>(endpoints.activityRun(id!))),
-  });
-}
-
 /* ------------------------------ conversations ------------------------------ */
 
 export function useConversations() {

@@ -24,7 +24,7 @@ function statusVariant(status?: string) {
 }
 
 function RunRow({ run }: { run: ActivityRun }) {
-  const when = run.startedAt ?? run.createdAt;
+  const when = run.startedAt;
   const tokens = runTotalTokens(run);
 
   return (
@@ -35,7 +35,7 @@ function RunRow({ run }: { run: ActivityRun }) {
         </span>
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium">
-            {run.summary ?? `${run.agent ?? "career"} · ${run.kind ?? "run"}`}
+            {`${run.agent ?? "career"} · ${run.kind ?? "run"}`}
           </p>
           <p className="mt-0.5 text-xs text-muted-foreground">
             {when ? formatDateTime(when) : "—"}

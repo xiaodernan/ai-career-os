@@ -536,10 +536,10 @@ function RunFeed({ runs }: { runs: ActivityRun[] }) {
             />
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm">
-                {run.summary ?? `${run.agent ?? "agent"} · ${run.kind ?? "run"}`}
+                {`${run.agent ?? "agent"} · ${run.kind ?? "run"}`}
               </p>
               <p className="truncate text-xs text-muted-foreground">
-                {relativeTime(run.startedAt ?? run.createdAt)}
+                {relativeTime(run.startedAt)}
                 {tokens ? ` · ${formatNumber(tokens)} tokens` : ""}
               </p>
             </div>

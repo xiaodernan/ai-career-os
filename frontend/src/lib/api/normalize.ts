@@ -7,7 +7,6 @@
 
 import type {
   ActivityRun,
-  AgentTrace,
   Application,
   CopilotAction,
   CopilotArtifact,
@@ -920,48 +919,35 @@ export function normalizeDashboard(raw: unknown): DashboardPayload | null {
 
 /* -------------------------------- activity -------------------------------- */
 
-export function normalizeTrace(raw: unknown, index: number): AgentTrace {
-  return {
-    id: idOf(raw, `trace-${index}`),
-    kind: str(raw, "kind", "type", "event", "phase") ?? "step_start",
-    label: str(raw, "label", "name", "title", "summary", "message") ?? str(raw, "kind") ?? "Step",
-    durationMs: num(raw, "durationMs", "duration_ms", "elapsedMs", "elapsed_ms"),
-    status: str(raw, "status", "state"),
-    payload: rec(pick(raw, "payload", "data", "details", "input", "output"))
-      ? (pick(raw, "payload", "data", "details") as Record<string, unknown>)
-      : undefined,
-    createdAt: str(raw, "createdAt", "created_at", "ts", "timestamp"),
-    tokens: num(raw, "tokens", "tokenCount", "token_count"),
-    costUsd: num(raw, "costUsd", "cost_usd", "cost"),
-  };
-}
-
 export function normalizeRun(raw: unknown): ActivityRun {
-  const traces = list(raw, "traces", "events", "steps").map(normalizeTrace);
+  // A run arrives as one of two Java records, both camelCase: `RecentRun` in the dashboard payload
+  // and `RunItem` from `GET /activity/runs`, which answers a bare list. So every snake_case twin this
+  // reader tried (`agent_name`, `latency_ms`, `input_tokens`, `cost_usd`, …) is a name neither record
+  // has ever had, and four fields had no author at all: `summary`, `createdAt` (a run row carries
+  // `startedAt`/`finishedAt`, never a created column), `relatedHref` (nothing on either service emits
+  // a href for a run) and `traces` -- the per-step list belongs to `GET /activity/runs/{id}`, and the
+  // detail page reads it through `activity-trace`, which unwraps the `RunDetail` envelope first;
+  // handing that envelope to *this* reader would have looked for `agent` on the wrapper. The two
+  // pages that list runs compose their own label from `agent` and `kind`, which is what the
+  // `summary ?? …` fallback always ended up rendering.
   return {
     id: idOf(raw, "run"),
-    agent: str(raw, "agent", "agentName", "agent_name", "orchestrator"),
-    kind: str(raw, "kind", "type", "task", "operation", "trigger"),
-    summary: str(raw, "summary", "title", "label", "message", "name"),
-    status: str(raw, "status", "state"),
-    error: str(raw, "error", "errorMessage", "error_message"),
-    model: str(raw, "model", "modelName", "model_name"),
-    startedAt: str(raw, "startedAt", "started_at", "createdAt", "created_at"),
-    finishedAt: str(raw, "finishedAt", "finished_at", "endedAt", "ended_at"),
-    createdAt: str(raw, "createdAt", "created_at"),
-    durationMs: num(raw, "durationMs", "duration_ms", "elapsedMs", "latencyMs", "latency_ms"),
-    tokensIn: num(raw, "tokensIn", "tokens_in", "promptTokens", "prompt_tokens", "inputTokens", "input_tokens"),
-    tokensOut: num(raw, "tokensOut", "tokens_out", "completionTokens", "completion_tokens", "outputTokens", "output_tokens"),
-    costUsd: num(raw, "costUsd", "cost_usd", "totalCost", "total_cost", "cost"),
-    traces: traces.length ? traces : undefined,
-    relatedHref: str(raw, "relatedHref", "related_href", "href", "url"),
+    agent: str(raw, "agent"),
+    kind: str(raw, "trigger"),
+    status: str(raw, "status"),
+    error: str(raw, "error"),
+    model: str(raw, "model"),
+    startedAt: str(raw, "startedAt"),
+    finishedAt: str(raw, "finishedAt"),
+    durationMs: num(raw, "latencyMs"),
+    tokensIn: num(raw, "inputTokens"),
+    tokensOut: num(raw, "outputTokens"),
+    costUsd: num(raw, "costUsd"),
   };
 }
 
 export function runTotalTokens(run: ActivityRun): number | undefined {
-  const fromTraces = run.traces?.reduce((sum, t) => sum + (t.tokens ?? 0), 0);
-  const direct = (run.tokensIn ?? 0) + (run.tokensOut ?? 0);
-  const total = direct || fromTraces || 0;
+  const total = (run.tokensIn ?? 0) + (run.tokensOut ?? 0);
   return total ? total : undefined;
 }
 
