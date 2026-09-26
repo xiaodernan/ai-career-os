@@ -134,12 +134,24 @@ public class HttpAiServiceClient implements AiServiceClient {
     @Override
     public Map<String, Object> copilotChatSync(String message, List<Map<String, Object>> history,
                                                UUID conversationId, Map<String, Object> context, UUID userId) {
+        return post("/internal/agents/chat/sync", userId, chatBody(message, history, conversationId, context));
+    }
+
+    @Override
+    public Map<String, Object> copilotChatStart(String message, List<Map<String, Object>> history,
+                                                UUID conversationId, Map<String, Object> context, UUID userId) {
+        return post("/internal/agents/chat", userId, chatBody(message, history, conversationId, context));
+    }
+
+    /** One request shape for both chat routes, so the two cannot drift on what the turn is given. */
+    private static Map<String, Object> chatBody(String message, List<Map<String, Object>> history,
+                                                UUID conversationId, Map<String, Object> context) {
         Map<String, Object> body = new HashMap<>();
         body.put("message", message);
         body.put("history", history == null ? List.of() : history);
         body.put("conversation_id", conversationId == null ? null : conversationId.toString());
         body.put("context", context == null ? Map.of() : context);
-        return post("/internal/agents/chat/sync", userId, body);
+        return body;
     }
 
     private static Map<String, Object> withOptionalRv(String idKey, UUID id, UUID resumeVersionId) {

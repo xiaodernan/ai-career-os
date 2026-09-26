@@ -213,6 +213,14 @@ public class FakeAiServiceClientConfig {
                     "run_id", UUID.randomUUID().toString());
         }
 
+        @Override
+        public Map<String, Object> copilotChatStart(String message, List<Map<String, Object>> history,
+                                                    UUID conversationId, Map<String, Object> context, UUID userId) {
+            record("copilotChatStart");
+            return map("task_id", UUID.randomUUID().toString(),
+                    "run_id", UUID.randomUUID().toString());
+        }
+
         private static Map<String, Object> map(Object... kv) {
             Map<String, Object> m = new LinkedHashMap<>();
             for (int i = 0; i < kv.length; i += 2) {

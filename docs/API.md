@@ -175,6 +175,7 @@ stored verbatim on the session, so the same place takes the rest of the run's tu
 | Method | Path | Notes |
 |---|---|---|
 | POST | `/copilot/chat` | `{message, conversationId?, context?}` → `{conversationId, userMessageId, assistantMessageId, answer, artifacts[], sources[], actions[], runId}` (synchronous; both messages persisted) |
+| POST | `/copilot/chat/stream` | `{message, conversationId?, context?}` → SSE: `status` / `token` frames as the agent works, then `done` carrying the same reply as `/copilot/chat` (both messages are stored before it closes), or `error`. This is the route the copilot page calls |
 | GET | `/conversations` | list |
 | POST | `/conversations` | create |
 | GET / PATCH / DELETE | `/conversations/{id}` | |
@@ -198,7 +199,7 @@ tenant context via `core.deps.Ctx`.
 
 | Method | Path | Purpose |
 |---|---|---|
-| POST | `/internal/agents/chat` | run a copilot turn as a background task → `{task_id, run_id}` (served, but no caller today: the product uses `/internal/agents/chat/sync`) |
+| POST | `/internal/agents/chat` | run a copilot turn as a background task → `{task_id, run_id}` (started by the backend's `/copilot/chat/stream`, whose reader takes its frames off `/internal/stream/{task_id}`) |
 | POST | `/internal/agents/chat/sync` | blocking turn → `Outcome` (relay + E2E + eval harness) |
 | GET | `/internal/agents/runs` | runs list |
 | GET | `/internal/agents/runs/{run_id}` | run + traces |

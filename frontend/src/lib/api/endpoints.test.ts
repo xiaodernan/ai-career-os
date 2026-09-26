@@ -810,6 +810,7 @@ describe("endpoints ↔ backend route parity", () => {
     "/auth/password/forgot": "no password-reset flow in the UI; the endpoints exist for ops runbooks",
     "/auth/password/reset": "same as the forgot pair: documented, served, not a browser screen",
     "/conversations/{}": "chats are created and read, never renamed or deleted from the app",
+    "/copilot/chat/stream": "SSE relay used by backend for ingestion; copilot goes through /internal/agents/chat/sync",
     "/health": "liveness for the container probe, not something a page calls",
     "/jobs/import": "jobs arrive through POST /jobs and POST /jds; no import screen exists",
     "/knowledge/documents": "file ingest goes through /resumes/upload and /knowledge/text",

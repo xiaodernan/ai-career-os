@@ -25,7 +25,12 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Copilot conversations. v1 chat is the synchronous ai-service route; both messages persist here. */
+/**
+ * Copilot conversations. Two routes reach the same turn: {@link #chat}, the blocking call, and
+ * the streaming one ({@link CopilotStreamService}), which runs the turn on ai-service's task bus
+ * and calls {@link #persistTurn} when it reports done. Both messages persist here either way —
+ * the turn is stored by the server, never by whichever response the browser happened to keep.
+ */
 @Service
 public class ConversationService {
 
@@ -94,13 +99,26 @@ public class ConversationService {
     }
 
     public ChatResponse chat(UUID userId, UUID conversationId, String message, Map<String, Object> context) {
+        ChatTurn turn = beginTurn(userId, conversationId, message);
+        Map<String, Object> result = ai.copilotChatSync(message, turn.history(), turn.conversationId(),
+                context, userId);
+
+        return persistTurn(turn.conversationId(), userId, message, result);
+    }
+
+    /**
+     * The resolved start of a turn: which conversation it lands in (created here when the caller
+     * has none) and the window the model is shown. The streaming route asks for this, runs the
+     * turn elsewhere, and comes back for {@link #persistTurn} with the answer.
+     */
+    public record ChatTurn(UUID conversationId, List<Map<String, Object>> history) {
+    }
+
+    public ChatTurn beginTurn(UUID userId, UUID conversationId, String message) {
         Conversation conversation = conversationId == null
                 ? createForUser(userId, preview(message))
                 : requireReadOnly(userId, conversationId);
-        List<Map<String, Object>> history = historyPayload(conversation.getId());
-        Map<String, Object> result = ai.copilotChatSync(message, history, conversation.getId(), context, userId);
-
-        return persistTurn(conversation.getId(), userId, message, result);
+        return new ChatTurn(conversation.getId(), historyPayload(conversation.getId()));
     }
 
     private Conversation createForUser(UUID userId, String title) {

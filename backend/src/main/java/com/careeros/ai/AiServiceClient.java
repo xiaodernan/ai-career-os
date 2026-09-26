@@ -36,4 +36,9 @@ public interface AiServiceClient {
 
     Map<String, Object> copilotChatSync(String message, List<Map<String, Object>> history,
                                         UUID conversationId, Map<String, Object> context, UUID userId);
+
+    /** Starts the same turn as {@link #copilotChatSync} in the background: answers at once with
+     * {@code {task_id, run_id}}, and the turn's frames are read off that task's stream. */
+    Map<String, Object> copilotChatStart(String message, List<Map<String, Object>> history,
+                                         UUID conversationId, Map<String, Object> context, UUID userId);
 }
