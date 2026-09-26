@@ -27,8 +27,16 @@ public final class ResumeDtos {
      * `diff` is the tailor change list that produced this version, so the version list can show
      * what a draft actually changed. `structured` stays out: it is the whole resume body per row.
      */
+    /**
+     * `score` is the same rubric map `ResumeDetail.score` carries -- the jsonb the parsing run
+     * persisted for this version. The versions panel shows one score per version, so a row without
+     * the column would answer "never scored" for versions that were (#134 gave the list the field
+     * its own UI had been reading since the panel was wired). Null only for a version that has
+     * never been parsed, such as a fresh tailored copy.
+     */
     public record ResumeVersionItem(UUID id, UUID resumeId, String label, String kind, UUID jobId,
-                                    OffsetDateTime createdAt, Map<String, Object> diff) {
+                                    OffsetDateTime createdAt, Map<String, Object> diff,
+                                    Map<String, Object> score) {
     }
 
     public record ExperienceItem(UUID id, String company, String title, String startDate,

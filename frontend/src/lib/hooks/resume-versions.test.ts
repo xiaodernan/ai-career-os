@@ -46,6 +46,8 @@ const VERSIONS = [
       accepted: [{ section: "experience", before: "Worked on APIs", after: "Cut p99 by 40%" }],
       rejected: [{ section: "experience", reason: "no evidence" }],
     },
+    // A tailored clone has never been parsed, so its version row carries no rubric map.
+    score: null,
   },
   {
     id: "bbbbbbbb-0000-0000-0000-000000000003",
@@ -54,6 +56,12 @@ const VERSIONS = [
     kind: "original",
     jobId: null,
     createdAt: "2026-09-01T08:05:00Z",
+    // The map `compute_resume_score` wrote for this version, stored as jsonb and replayed verbatim.
+    score: {
+      total: 72,
+      structure: 62,
+      detail: [{ criterion: "quantified_impact", met: false, points: 10 }],
+    },
   },
 ];
 
@@ -78,6 +86,14 @@ describe("mapResumeVersions", () => {
     expect(JSON.stringify(got[0].diff)).toContain("Cut p99 by 40%");
     expect(got[1].diff).toBeUndefined();
     expect(got[1].source).toBe("original");
+    // #134: the row shows one score per version, off the same rubric map the resume detail carries.
+    // A version that has never been parsed reports none, which the panel must not render as a zero.
+    expect(got[0].score).toBeNull();
+    expect(got[1].score).toMatchObject({
+      overall: 72,
+      structure: 62,
+      gaps: ["Quantified impact (numbers or %)"],
+    });
   });
 
   it("survives a wrapped or malformed payload without throwing", () => {

@@ -134,13 +134,12 @@ READERS: dict[str, dict] = {
         "dynamic": {},
     },
     "normalizeResumeScore": {
-        # The rubric map the parsing run persisted, reached from three callers, and the third one is
-        # the reason `raw` is a union rather than one record: `useResume` and `useResumeScore` both
-        # hand over a `ResumeDetail` and the dashboard a `ResumeSummary`, each of which carries the
-        # jsonb as a `score` component, while `mapResumeVersions` asks a `ResumeVersionItem` for a
-        # score that DTO has never projected -- so that path answers null, and always has. The union
-        # keeps the drill live on the two paths that do carry it instead of pretending the third
-        # record has a column. #132 deleted the rest of what this reader used to ask for: the
+        # The rubric map the parsing run persisted, reached from three callers that all carry it:
+        # the dashboard's `currentResume` is a `ResumeSummary`, `useResume` hands over a
+        # `ResumeDetail`, and `mapResumeVersions` a `ResumeVersionItem`. The last of those is #134's
+        # change -- the versions panel had been reading a per-version score off a DTO that never
+        # projected the column, so the suffix had never rendered once. #132 deleted the rest of what
+        # this reader used to ask for: the
         # `resumeScore`/`resume_score` twins, `overall`/`score` beside the real `total`, the
         # `checks`/`criteria`/`ok`/`passed`/`name`/`why` alternates, an explicit `gaps` list no
         # producer writes (the unmet criteria *are* the gaps), `suggestions`, `computedAt`, and the
@@ -696,11 +695,12 @@ def test_the_reads_are_actually_found():
                                      for k in s["keys"]} == {"points"}
     # The one item field no read of the reader consumes: the panel reports which criteria went
     # unmet, never what each was worth on its own.
-    assert all("score" in _emitted(name) for name in ("ResumeDetail", "ResumeSummary"))
-    assert "score" not in _emitted("ResumeVersionItem")
-    # ...which is why `raw` is a union and why `mapResumeVersions` has always answered null here:
-    # the versions DTO projects no score column, so binding `raw` to the two carriers alone would
-    # make this reader's one drill look like it can only ever succeed.
+    assert all("score" in _emitted(name) for name in ("ResumeDetail", "ResumeSummary",
+                                                      "ResumeVersionItem"))
+    # All three carriers project the column as of #134. The last one did not use to: the versions
+    # panel had been reading `v.score?.overall` off a DTO that never sent the field, so the suffix
+    # never appeared -- which is exactly the kind of silence a union can hide, so the fact each
+    # author carries `score` is asserted per author rather than inferred from the site being live.
     runs = _sites("normalizeRun")
     assert len(runs) == 12
     assert {s["receiver"] for s in runs} == {"raw"}

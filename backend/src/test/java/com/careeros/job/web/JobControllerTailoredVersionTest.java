@@ -97,7 +97,10 @@ class JobControllerTailoredVersionTest {
         when(jobs.saveTailored(any(), any(), any())).thenReturn(new ResumeVersionItem(
                 NEW_VERSION, RESUME, "tailored-" + JOB.toString().substring(0, 8) + "-2", "tailored",
                 JOB, OffsetDateTime.of(2026, 9, 20, 8, 0, 0, 0, ZoneOffset.UTC),
-                Map.of("accepted", List.of(Map.of("path", "experience.0.bullets.0")))));
+                Map.of("accepted", List.of(Map.of("path", "experience.0.bullets.0"))),
+                // A tailored clone has never been parsed, so it carries no rubric map yet; the
+                // panel must read that as "not scored", not as a zero.
+                Map.of()));
     }
 
     private TailoredVersionRequest capturedRequest() {

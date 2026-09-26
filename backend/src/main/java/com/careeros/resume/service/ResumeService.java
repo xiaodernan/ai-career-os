@@ -138,7 +138,7 @@ public class ResumeService {
         requireResume(userId, resumeId);
         return versions.findByResumeIdAndUserIdOrderByCreatedAtDesc(resumeId, userId).stream()
                 .map(v -> new ResumeVersionItem(v.getId(), v.getResumeId(), v.getLabel(),
-                        v.getKind(), v.getJobId(), v.getCreatedAt(), v.getDiff()))
+                        v.getKind(), v.getJobId(), v.getCreatedAt(), v.getDiff(), v.getScore()))
                 .toList();
     }
 
@@ -146,7 +146,7 @@ public class ResumeService {
     public ResumeVersionItem versionMeta(UUID userId, UUID versionId) {
         ResumeVersion v = requireVersion(userId, versionId);
         return new ResumeVersionItem(v.getId(), v.getResumeId(), v.getLabel(), v.getKind(),
-                v.getJobId(), v.getCreatedAt(), v.getDiff());
+                v.getJobId(), v.getCreatedAt(), v.getDiff(), v.getScore());
     }
 
     @Transactional
@@ -360,7 +360,8 @@ public class ResumeService {
         versions.save(version);
         populateChildren(userId, version.getId(), tailored);
         return new ResumeVersionItem(version.getId(), version.getResumeId(), version.getLabel(),
-                version.getKind(), version.getJobId(), version.getCreatedAt(), version.getDiff());
+                version.getKind(), version.getJobId(), version.getCreatedAt(), version.getDiff(),
+                version.getScore());
     }
 
     public Optional<ResumeVersion> currentVersion(Resume resume) {
