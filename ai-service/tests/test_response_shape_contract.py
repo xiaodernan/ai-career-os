@@ -452,10 +452,37 @@ BROWSER_READS = {
 DEAD_ALTERNATES: set[str] = set()
 
 
-def _browser_reads(function_name: str, receiver: str) -> set[str]:
+# The two shapes a declaration in this project can take, declared once (#160). Both halves of each
+# pattern are load-bearing: a generic before the paren is part of the declaration, so a probe that
+# dropped it walked straight past `normalizePage<T>`, `pick<T>`, `list<T>` and `PageDTO<T>` (#159's
+# scanner fix); and four of normalize.ts's mappers are module-private, so a probe that required the
+# export keyword named declarations that were never exported. Any third pattern of this shape is a
+# third probe that can silently match nothing, which the ban at the bottom of this file refuses.
+TS_OPENER = r"(?:export )?function {name}\s*(?:<[^<>]*>)?\("
+JAVA_OPENER = r"record {name}\s*(?:<[^<>]*>)?\("
+
+
+def _ts_function_body(function_name: str) -> str:
+    """The body of one mapper in normalize.ts, through the one probe both gates use.
+
+    Three tables here read mapper bodies, so the opener lives in one place rather than being copied a
+    fourth time: it used to be two copies that differed only in whether the export keyword was
+    required, which is how `changeFrom` came to fail one probe and pass the other.
+    """
     source = NORMALIZE.read_text(encoding="utf-8")
-    start = source.index(f"export function {function_name}(")
-    body = source[start:source.index("\n}\n", start)]
+    opener = re.search(TS_OPENER.format(name=function_name), source)
+    if opener is None:
+        raise AssertionError(f"{function_name} has no function declaration in normalize.ts: the table "
+                             "names a reader that moved, so this rule compares nothing")
+    start = opener.start()
+    if "\n}\n" not in source[start:]:
+        raise AssertionError(f"{function_name}'s body has no closing brace after its declaration in "
+                             "normalize.ts: the file shape changed under this probe")
+    return source[start:source.index("\n}\n", start)]
+
+
+def _browser_reads(function_name: str, receiver: str) -> set[str]:
+    body = _ts_function_body(function_name)
     return {key for group in re.findall(rf"(?:str|num|pick|list)(?:<[^>]*>)?\(\s*{receiver}\s*,([^)]*)\)", body)
             for key in re.findall(r'"([^"]+)"', group)}
 
@@ -501,23 +528,9 @@ def test_the_browser_side_is_actually_read():
 
 # ------------------------------------- the same reading, against a Java record's fields
 
-CHAT_DTOS = JAVA_ROOT / "com" / "careeros" / "conversation" / "dto" / "ConversationDtos.java"
-
-
-def _record_components(record: str) -> set[str]:
-    """The components of a Java record, which are the keys Jackson emits for it."""
-    source = CHAT_DTOS.read_text(encoding="utf-8")
-    opener = f"record {record}("
-    if opener not in source:
-        raise AssertionError(f"{opener!r} not found: the record this reader is supposed to hit has moved or been renamed")
-    head = source[source.index(opener) + len(opener):]
-    block = head[:head.index(") {")]
-    names = []
-    for declaration in _top_level(block, ","):
-        tokens = declaration.strip().split()
-        if tokens:
-            names.append(tokens[-1])
-    return set(names)
+# Relative to `com/careeros`, the same form DTO_READS uses, so one path serves both the copilot's own
+# record and the reader table that names it.
+CONVERSATION_DTOS = "conversation/dto/ConversationDtos.java"
 
 
 def _picks_off_reply(helper: str) -> set[str]:
@@ -531,9 +544,8 @@ def _picks_off_reply(helper: str) -> set[str]:
     """
     from tests import test_response_field_contract as field  # crosses back; safe at call time
 
-    source = NORMALIZE.read_text(encoding="utf-8")
-    start = source.index(f"export function {helper}(")
-    param = re.match(r"export function \w+\(\s*([A-Za-z_$][\w$]*)", source[start:]).group(1)
+    body = _ts_function_body(helper)
+    param = re.match(TS_OPENER.format(name=r"\w+") + r"\s*([A-Za-z_$][\w$]*)", body).group(1)
     spec = field.READERS.get(helper)
     assert spec is not None, (f"the copilot reply delegates a piece of itself to {helper}, which the "
                               "per-site gate binds no reader for, so those reads go unchecked")
@@ -551,7 +563,7 @@ def test_the_copilot_reads_line_up_with_chat_response():
     block = actions[start:actions.index("\n      };", start)]
     read = {key for group in re.findall(r'(?:str|num|pick|list)\(\s*raw\s*,([^)]*)\)', block)
             for key in re.findall(r'"([^"]+)"', group)}
-    emitted = _record_components("ChatResponse")
+    emitted = _record_components_at(CONVERSATION_DTOS, "ChatResponse")
     assert read & emitted, f"the copilot reads {sorted(read)}, none of which is in {sorted(emitted)}"
     assert emitted - read == {"actions", "artifacts", "assistantMessageId", "userMessageId"}, \
         "the reply's own block reads its scalar components; `actions` and `artifacts` are the two "\
@@ -591,17 +603,12 @@ def test_the_copilot_reads_line_up_with_chat_response():
 DTO_READS = {
     "normalizeMatch": ("MatchResponse", "job/dto/JobDtos.java"),
     "normalizeApplication": ("ApplicationItem", "application/dto/ApplicationDtos.java"),
-    "normalizeMessages": ("MessageItem", "conversation/dto/ConversationDtos.java"),
+    "normalizeMessages": ("MessageItem", CONVERSATION_DTOS),
 }
 
 
 def _dto_reads(function_name: str) -> set[str]:
-    source = NORMALIZE.read_text(encoding="utf-8")
-    opener = f"export function {function_name}("
-    if opener not in source:
-        raise AssertionError(f"{opener!r} is gone from normalize.ts: the table names a reader that moved, so this rule compares nothing")
-    start = source.index(opener)
-    body = source[start:source.index("\n}\n", start)]
+    body = _ts_function_body(function_name)
     return {key for group in re.findall(r'(?:str|num|pick|list|bool)\(\s*\w+\s*,([^)]*)\)', body)
             for key in re.findall(r'"([^"]+)"', group)}
 
@@ -626,17 +633,30 @@ def _hide_generic_commas(block: str) -> str:
     return "".join(out)
 
 
-def _record_components_at(relative: str, record: str) -> set[str]:
+def _java_record_body(relative: str, record: str) -> str:
+    """The component list of one Java record, off its own declaration, through the only Java opener
+    either gate has (#160).
+
+    A generic is part of the declaration, not a move: `PageDTO<T>` answers every paged route and
+    `ApiResponse<T>` wraps every public one, so a literal `record X(` probe walked straight past both
+    -- the blind spot #159 fixed on the reader side, where a producer the census cannot locate is a
+    producer no rule can bind. Two other probes of this shape were still in these files, one of them
+    also splitting `Map<String, Object>` into a field named `Map<String`; they now call this.
+    """
     source = (JAVA_ROOT / "com" / "careeros" / relative).read_text(encoding="utf-8")
-    # A generic is part of the declaration, not a move: `PageDTO<T>` answers every paged route, and a
-    # literal `record X(` probe walked straight past it -- the same blind spot #159 fixed on the
-    # reader side, which is how a whole envelope stayed unnamed by both gates.
-    opener = re.search(rf"record {record}\s*(?:<[^<>]*>)?\(", source)
+    opener = re.search(JAVA_OPENER.format(name=record), source)
     if opener is None:
-        raise AssertionError(f"record {record}( not found in {relative}: the record this reader is "
-                             "supposed to hit has moved or been renamed")
+        raise AssertionError(f"record {record} has no declaration in {relative}: the record this "
+                             "reader is supposed to hit has moved or been renamed")
     head = source[opener.end():]
-    block = head[:head.index(") {")]
+    if ") {" not in head:
+        raise AssertionError(f"record {record}'s component list never closes in {relative}: the "
+                             "file shape changed under this probe")
+    return head[:head.index(") {")]
+
+
+def _record_components_at(relative: str, record: str) -> set[str]:
+    block = _java_record_body(relative, record)
     names = []
     for declaration in _top_level(_hide_generic_commas(block), ","):
         tokens = declaration.strip().replace("\x00", ",").split()
@@ -652,3 +672,94 @@ def test_the_dto_backed_readers_hit_a_field_the_record_has():
         assert tried, f"{function_name}'s body was not read at all"
         assert tried & emitted, (f"{function_name} tries {sorted(tried)}, none of which "
                                  f"{record} serializes ({sorted(emitted)})")
+
+
+# --------------------- the probes themselves, since a probe that cannot see is indistinguishable from
+
+LOOKUP_METHODS = {"index", "search", "match", "findall", "finditer", "compile"}
+
+
+def _calls_in(scope) -> list:
+    """Call nodes written in one scope, without descending into the functions it declares."""
+    found = []
+    for child in ast.iter_child_nodes(scope):
+        if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            continue
+        if isinstance(child, ast.Call):
+            found.append(child)
+        found.extend(_calls_in(child))
+    return found
+
+
+def _declaration_lookups(path: Path) -> list[tuple[str, str]]:
+    """Where a gate file looks one declaration up by hand: a lookup call whose first argument is a
+    string naming a `function` or a `record` beside the name slot.
+
+    The pattern is `\b(function|record)` followed by a name slot -- the interpolated `{name}` of a
+    fixed literal (`export function idOf(`) or the first letter of one -- which is what both hand-typed
+    forms write, and what the two canonical constants do not: their `.format(name=...)` arguments are
+    calls, not string literals. An enumeration like `^function (\\w+)[<(]` reads as `function (` and is
+    deliberately out of scope -- listing every declaration cannot miss one category the way locating one
+    can.
+    """
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    scopes = [("module", tree)] + [(node.name, node) for node in ast.walk(tree)
+                                   if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))]
+    found = []
+    for scope, node in scopes:
+        for call in _calls_in(node):
+            if not (isinstance(call.func, ast.Attribute) and call.func.attr in LOOKUP_METHODS):
+                continue
+            if not call.args:
+                continue
+            first = call.args[0]
+            if isinstance(first, ast.Constant):
+                text = first.value
+            elif isinstance(first, ast.JoinedStr):
+                text = "".join(value.value if isinstance(value, ast.Constant) else "{}"
+                               for value in first.values)
+            else:
+                continue
+            if not isinstance(text, str):
+                continue
+            if re.search(r"\b(?:function|record)\s*[\w{]", text):
+                found.append((scope, text))
+    return found
+
+
+def test_no_gate_looks_a_declaration_up_by_hand():
+    """#160's ban. Four of these probes were copies of the same two openers, each missing a different
+    half of what a declaration can carry: `source.index("export function idOf(")` could not see a
+    generic, and the copy in the field gate could not see the four module-private mappers -- which is
+    how `statusCountsToRows` sat outside every reader census while reading `count`/`total` off values
+    the record types as `Map<String, Long>`. A hand-typed opener is a rule that passes when the code it
+    was written to check has moved, so the only place either shape may be typed is the two constants."""
+    from tests import test_response_field_contract as field  # both files, one rule
+
+    offenders = {}
+    for path in (Path(__file__), Path(field.__file__)):
+        found = _declaration_lookups(path)
+        assert {scope for scope, _ in found} <= {"module"}, \
+            f"{path.name}: a declaration probe is written in {sorted({s for s, _ in found})}"
+        offenders[path.name] = sorted({text for _, text in found})
+    assert offenders == {"test_response_shape_contract.py": [],
+                         "test_response_field_contract.py": []}, offenders
+
+
+def test_the_declaration_probes_reach_the_shapes_a_copy_would_miss():
+    """Positive control for the ban above: it is only worth having while the shared probes really do
+    what the hand-written copies did not, and each of these shapes is measured at this plane."""
+    source = NORMALIZE.read_text(encoding="utf-8")
+    assert len(re.findall(TS_OPENER.format(name=r"(\w+)"), source)) == 47, \
+        "43 exported mappers and 4 module-private ones, all through one opener"
+    assert "export function normalizePage(" not in source, \
+        "the generic really does sit between the name and the paren, so a literal opener finds nothing"
+    assert _ts_function_body("normalizePage").startswith("export function normalizePage<T>(")
+    assert _ts_function_body("changeFrom").startswith("function changeFrom("), \
+        "the reader #159's exported census could not name, found by the probe that does not require export"
+    page = (JAVA_ROOT / "com" / "careeros" / "common" / "PageDTO.java").read_text(encoding="utf-8")
+    assert "record PageDTO(" not in page, "same blind spot on the producer side"
+    assert _record_components_at("common/PageDTO.java", "PageDTO") == {"items", "total", "page", "size"}
+    assert _record_components_at("common/ApiResponse.java", "ApiResponse") == {
+        "success", "data", "error"}, "the other generic record, which no reader is bound to yet"
+

@@ -96,9 +96,11 @@ from tests.test_response_shape_contract import (
     JAVA_ROOT,
     NORMALIZE,
     ROOT_FRONTEND,
+    _java_record_body,
     _record_components_at,
     _shape_of,
     _sole,
+    _ts_function_body,
     pydantic_fields,
 )
 
@@ -787,25 +789,19 @@ FOLDED_ACCESSORS = {"idOf"}
 
 @lru_cache(maxsize=None)
 def _body(function_name: str) -> str:
-    source = NORMALIZE.read_text(encoding="utf-8")
-    # A generic before the paren is part of the declaration, not a move: `normalizePage<T>(` and the
-    # two accessor primitives `pick<T>(`/`list<T>(` were invisible to a literal `function X(` probe,
-    # which is #159's scanner fix -- a reader the census cannot locate is a reader no rule can bind.
-    opener = re.search(rf"function {function_name}\s*(?:<[^<>]*>)?\(", source)
-    if opener is None:
-        raise AssertionError(
-            f"'function {function_name}(' is gone from normalize.ts: the table names a reader "
-            "that moved, so this rule compares nothing")
-    start = opener.start()
-    return source[start:source.index("\n}\n", start)]
+    """One mapper's body in normalize.ts, through the shape gate's probe rather than a copy of it.
+
+    The two copies differed only in whether `export ` was required, so a declaration could satisfy one
+    opener and be invisible to the other; #159 made both tolerate a generic before the paren, and #160
+    collapsed them into the one probe that does.
+    """
+    return _ts_function_body(function_name)
 
 
 @lru_cache(maxsize=None)
 def _id_of_keys() -> set[str]:
     """The names `idOf` reaches for, read out of its own body rather than copied here."""
-    source = NORMALIZE.read_text(encoding="utf-8")
-    start = source.index("export function idOf(")
-    body = source[start:source.index("\n}\n", start)]
+    body = _body("idOf")
     return {key for group in re.findall(r'\(\s*raw\s*,([^)]*)\)', body)
             for key in re.findall(r'"([^"]+)"', group)}
 
@@ -836,10 +832,7 @@ def _search_group_keys() -> list[str]:
 
 def _search_hits() -> dict[str, str]:
     """Which record answers for each group, off `SearchResponse`'s own declaration."""
-    source = (JAVA_ROOT / "com" / "careeros" / "search" / "dto" / "SearchDtos.java").read_text(
-        encoding="utf-8")
-    head = source[source.index("record SearchResponse("):]
-    body = head[:head.index(") {")]
+    body = _java_record_body("search/dto/SearchDtos.java", "SearchResponse")
     return {key: record for record, key in re.findall(r"List<(\w+)>\s+(\w+)", body)}
 
 
@@ -1611,34 +1604,51 @@ def test_the_dead_reads_stay_declared():
         assert len(why) > 40, f"{key} needs a reason a reader can act on, not a label"
 
 
-def test_no_exported_mapper_is_left_unbound():
-    """#159's ban. A reader that is not in READERS is a reader no rule in this file checks, which is
-    how `coverLetterText` carried ten probes for four authored names until #158 had to go looking for
-    it by hand: every `export function` in normalize.ts whose own body asks for a literal name has to
-    be bound, or be a helper this file's own scanner folds into its callers' sites."""
-    population = _exported_readers()
+def test_no_mapper_is_left_unbound():
+    """#159's ban, widened by #160. A reader that is not in READERS is a reader no rule in this file
+    checks, which is how `coverLetterText` carried ten probes for four authored names until #158 had to
+    go looking for it by hand: every mapper in normalize.ts whose own body asks for a literal name has
+    to be bound, or be a helper this file's own scanner folds into its callers' sites.
+
+    The first version enumerated `^export function`, and #160's probe audit found four module-private
+    mappers it had never counted -- `pathOf`, `changeFrom`, `groupSkillBuckets`, `statusCountsToRows`.
+    Two were bound readers anyway; the fourth read `count`/`total` off a value that `Kanban.statusCounts`
+    types as `Map<String, Long>`, so the two names had no producer and the ban could not see them.
+    """
+    population = _mappers_that_read()
     unbound = sorted(set(population) - set(READERS) - FOLDED_ACCESSORS)
-    assert unbound == [], (f"exported readers taking names with no producer declared: {unbound} -- "
+    assert unbound == [], (f"readers taking names with no producer declared: {unbound} -- "
                            "bind them in READERS, or make the scanner fold them and prove the fold")
     # The exemption is only real while the mechanism is: a folded helper is visible because _ID_OF
     # reads its call sites into every caller's census, not because this table says so.
     assert all(f"\\b{name}\\(" in _ID_OF for name in FOLDED_ACCESSORS), \
         f"{sorted(FOLDED_ACCESSORS)} claims a fold the site scanner does not perform"
-    # Measured at this plane, so a new unbound reader cannot slip in under a stale count.
-    assert len(population) == 30, sorted(population)
+    # Measured at this plane, so a new unbound reader cannot slip in under a stale count: the 30 the
+    # exported census counted, plus the two module-private mappers that carry reads of their own.
+    assert len(population) == 32, sorted(population)
+    private = sorted(name for name, exported in _mapper_declarations() if not exported)
+    assert private == ["changeFrom", "groupSkillBuckets", "pathOf", "statusCountsToRows"]
+    assert sorted(n for n in private if n in population) == ["changeFrom", "groupSkillBuckets"], \
+        "the private half of this census is what #160 added; if it reads empty, the ban is exported-only again"
 
 
-def _exported_readers() -> dict[str, int]:
-    """Every `export function` in normalize.ts whose own body makes at least one named read. The two
-    `export const` tables (SEARCH_GROUPS, CHAT_ACTION_ROUTES) hold data, not reads, so they are out
-    of the population by construction rather than by exemption."""
-    source = NORMALIZE.read_text(encoding="utf-8")
-    out = {}
-    for name in re.findall(r"^export function (\w+)[<(]", source, re.M):
-        sites = _sites(name)
-        if sites:
-            out[name] = len(sites)
-    return out
+# One enumeration for both halves of the census above, so the private-name pin cannot drift away from
+# the population it claims to widen.
+MAPPER_DECL = re.compile(r"^(export )?function (\w+)[<(]", re.M)
+
+
+def _mapper_declarations() -> list[tuple[str, bool]]:
+    """Every mapper declared in normalize.ts, with whether the module exports it."""
+    return [(match.group(2), match.group(1) is not None)
+            for match in MAPPER_DECL.finditer(NORMALIZE.read_text(encoding="utf-8"))]
+
+
+def _mappers_that_read() -> dict[str, int]:
+    """Every mapper in normalize.ts -- exported or module-private -- whose own body makes a named read.
+    The two `export const` tables (SEARCH_GROUPS, CHAT_ACTION_ROUTES) hold data, not reads, so they are
+    out of the population by construction rather than by exemption."""
+    return {name: len(sites) for name, _ in _mapper_declarations()
+            for sites in [_sites(name)] if sites}
 
 
 def test_the_reads_are_actually_found():

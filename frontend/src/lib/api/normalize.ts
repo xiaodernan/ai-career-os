@@ -786,13 +786,16 @@ export function coverLetterText(raw: unknown): string {
 
 /* ------------------------------- dashboard -------------------------------- */
 
-/** {status: count} map → rows, keeping count coercion in one place. */
+/** {status: count} map → rows, keeping count coercion in one place. `DashboardDtos.Kanban` declares
+ *  `Map<String, Long>`, so a value is a number or nothing: the `num(v, "count", "total")` fallback
+ *  tried two names on a value that has never been a record, which #160's census caught only after the
+ *  ban started counting module-private mappers as well as exported ones. */
 function statusCountsToRows(statusCounts: unknown): { status: string; count: number }[] {
   const record = rec(statusCounts);
   if (!record) return [];
   return Object.entries(record).map(([status, v]) => ({
     status,
-    count: typeof v === "number" ? v : (num(v, "count", "total") ?? 0),
+    count: typeof v === "number" ? v : 0,
   }));
 }
 
