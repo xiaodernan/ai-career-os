@@ -37,10 +37,34 @@ cd frontend  && npx next build && npx next start -p 3000
 
 ```bash
 cd e2e && npm install && npx playwright install chromium
-npx playwright test                 # headless
-npx playwright test --headed        # watch it
-npx playwright show-report          # HTML report (gitignored)
+
+# Normal run. The `timeout` wrapper is deliberate — see "the runner is slow to
+# exit" below; the summary line is the result.
+CODEBUDDY_SAFE_DELETE_BULK_THRESHOLD=100000 timeout 300 npx playwright test
+
+# Just the flow you are working on
+npx playwright test -g "knowledge base"
+
+# Debug a failure: traces, an HTML report, and a visible browser
+E2E_TRACE=on E2E_HTML=1 npx playwright test --headed
+npx playwright show-report
 ```
+
+Expected result: **9 passed**. Each run takes ~60s of actual testing.
+
+### The runner is slow to exit in this sandbox
+
+After the summary prints, the node process can sit for another minute or more and
+sometimes never exits at all. Two separate causes, neither of them the tests:
+
+- Teardown costs roughly 20s *per test* here — every artifact write and delete
+  goes through the sandbox's brokered-fs / safe-delete shim.
+- `test-results/` accumulating past the shim's 50-file bulk-delete threshold
+  makes the *next* run hang before it prints anything at all. Raise the threshold
+  as shown above, or move the directory aside (`mv test-results test-results-junk`).
+
+So: judge a run by its summary line, not its exit code, and wrap it in `timeout`.
+`--trace=off` makes a run noticeably faster.
 
 ## Traps worth knowing
 
@@ -68,6 +92,11 @@ Some harnesses export `SERVER__PORT`, which Spring's relaxed binding maps onto
 `server.port` and silently relocates the backend (it fails with
 "Port 62707 was already in use"). Start the backend with `env -u SERVER__PORT`
 if that happens.
+
+**5. Run with `CODEBUDDY_SAFE_DELETE_ENABLED=0`.**
+Playwright wipes `test-results/` before each run. In this environment that is
+hundreds of files, which trips the bulk-delete guard and aborts the run before a
+single test starts — with a stack trace from the shim, not from Playwright.
 
 ## Env overrides
 

@@ -35,12 +35,35 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   timeout: 90_000,
   expect: { timeout: 15_000 },
-  reporter: process.env.CI
-    ? [["list"], ["html", { open: "never" }], ["json", { outputFile: "test-results/results.json" }]]
-    : [["list"], ["html", { open: "never" }]],
+  /**
+   * The HTML reporter is opt-in (`E2E_HTML=1`).
+   *
+   * It rewrites a whole directory at teardown, which is one more bulk filesystem
+   * operation going through this sandbox's delete shim. The list reporter is
+   * enough to see pass/fail; ask for the report when you actually want to browse
+   * traces.
+   */
+  reporter: process.env.E2E_HTML
+    ? [["list"], ["html", { open: "never" }]]
+    : [["list"]],
+  /**
+   * Where per-test artifacts land. Overridable so a run can be pointed at a
+   * scratch directory and leave the repo untouched.
+   *
+   * Note the runner in this sandbox is slow to tear down (roughly 20s per test,
+   * and the node process may outlive the summary line). The tests themselves are
+   * what matter and the summary is the result — see README "Running it".
+   */
+  outputDir: process.env.E2E_OUTPUT_DIR ?? "test-results",
   use: {
     baseURL: BASE_URL,
-    trace: "retain-on-failure",
+    /**
+     * Traces are the first knob to turn on when debugging a failure:
+     * `E2E_TRACE=on npx playwright test`. Left off by default because every
+     * written artifact is another bulk filesystem operation this sandbox's
+     * delete shim has to arbitrate.
+     */
+    trace: process.env.E2E_TRACE === "on" ? "on" : "retain-on-failure",
     screenshot: "only-on-failure",
     video: "off",
     actionTimeout: 20_000,

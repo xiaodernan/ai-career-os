@@ -112,14 +112,27 @@ what, instead of guessing.
 Working end to end: the three services, the full loop above, agent tracing, both
 evaluation harnesses, and a seeded 12-company / 41-role corpus.
 
-Known gaps, stated plainly rather than hidden:
+Verified against the live stack, not just in unit tests:
 
-- The Playwright golden-journey suite (`e2e/`) is written but has **not been run
-  green end to end** — the authoring environment cannot start Docker, so the stack
-  could not be served. It needs one live run.
-- Seeded jobs have no embeddings yet, so vector job search is inert until
-  `python -m app.ops.embed_jobs` runs (in `ai-service/`); keyword/skill search
-  works today.
+- The **Playwright golden-journey suite passes 9/9** (`e2e/`) against
+  postgres+redis+minio, ai-service, backend and a production frontend build. It
+  runs the PRD §35 flow for real: register → upload a resume → search → match →
+  tailor → track → interview → report → copilot.
+- **Job vectors are backfilled and indexed.** `python -m app.ops.embed_jobs`
+  embedded all 46 roles, `jobs.embedding` is `vector(1536)` and `idx_jobs_hnsw`
+  is built, so `search_jobs` now runs keyword and vector retrieval and fuses them
+  by reciprocal rank. Keyword-only behaviour is preserved whenever embeddings are
+  unavailable, which is what a provider outage or an un-backfilled database looks
+  like.
+
+Remaining gaps, stated plainly rather than hidden:
+
+- Semantic search quality is only as good as the embedding provider. The offline
+  default (`EMBEDDING_PROVIDER=hash`) exercises the whole path deterministically
+  but carries no meaning, so retrieval quality must be judged against a real
+  provider.
+- The backend's own `/jobs` search is still keyword/facet-based; only the agent's
+  `search_jobs` tool is hybrid today.
 
 A pass over the PRD §30 checklist is recorded in `docs/SECURITY.md`. It closed one
 real gap — the AI rate limit did not cover any of the blocking AI endpoints,

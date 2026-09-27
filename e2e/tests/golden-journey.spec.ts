@@ -149,24 +149,33 @@ test.describe("golden journey — find a role and understand the match", () => {
     await search.press("Enter");
 
     // The filter panel renders "<n> matching roles" once the query has settled
-    // (it shows "Filtering…" while in flight). Waiting for it avoids clicking a
-    // link that is about to be replaced by the re-render.
+    // (it shows "Filtering…" while in flight).
     await expect(authedPage.getByText(/\d+\s+matching\s+roles?/)).toBeVisible({ timeout: 25_000 });
+
+    // Submitting the search issues more than one router.replace (q, then page/size),
+    // and each one re-renders the list. Waiting for the final URL means the churn is
+    // over — otherwise the click can land on an anchor that is being replaced, which
+    // silently does nothing.
+    await expect(authedPage).toHaveURL(/[?&]q=Agent\b/);
+    await expect(authedPage).toHaveURL(/[?&]size=\d+/);
 
     // Job titles are links to /jobs/{id}; skip any empty anchors (e.g. icon links).
     const jobLinks = authedPage.locator('a[href^="/jobs/"]').filter({ hasText: /\S/ });
     await expect(jobLinks.first()).toBeVisible({ timeout: 25_000 });
     const href = await jobLinks.first().getAttribute("href");
     expect(href, "a search result must link to a job").toMatch(/^\/jobs\/[0-9a-f-]{36}$/);
+    const title = (await jobLinks.first().innerText()).trim();
 
-    // Wait for the navigation the click causes, rather than clicking and then
-    // polling the URL — the click can be retried while the list re-renders, and
-    // the two waits then race.
     await Promise.all([
       authedPage.waitForURL(new RegExp(`${href}$`), { timeout: 30_000 }),
       jobLinks.first().click(),
     ]);
-    await expect(authedPage.getByRole("heading", { level: 1 })).toBeVisible({ timeout: 20_000 });
+
+    // Asserting the destination heading carries the title we clicked is stronger than
+    // "some h1 exists": it proves the card we clicked is the role that opened.
+    await expect(authedPage.getByRole("heading", { level: 1, name: title })).toBeVisible({
+      timeout: 20_000,
+    });
   });
 
   test("computes an evidence-backed match and renders it in the UI", async ({ api, authedPage }) => {
