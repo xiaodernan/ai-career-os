@@ -999,3 +999,105 @@ def test_the_shared_read_scanners_see_the_calls_a_copy_missed():
     assert {"_id", "uuid", "event_id", "key"} <= _dto_reads("normalizeJob"), \
         "the identifier spellings arrive only through the `idOf` fold a spelled list cannot reach"
 
+
+# ------------------------------------------ #164: the two levels the Java census stops above
+
+_MAP_LOCAL = re.compile(r"(?:Map<String,\s*Object>|var|Object)\s+(\w+)\s*=\s*([^;]+);")
+_LIST_DRILL = re.compile(r'Json\.arr\((\w+)\.get\("(\w+)"\)\)')
+_ELEMENT_READ = re.compile(r'->\s*Json\.\w+\(Json\.obj\((\w+)\),\s*"(\w+)"\)')
+JD_PROMPT = Path(__file__).resolve().parents[1] / "app" / "features" / "jd_analyze.py"
+
+
+def _drilled_locals(path: Path, method_name: str, var: str) -> list[tuple]:
+    """Every local a flow variable is drilled into, and whether `_NESTED` binds it.
+
+    The scanner's second level is not a walk, it is a pattern: `_NESTED` only recognises a drill
+    written as `Map<String, Object> x = Json.obj(var.get("k"))` or as a cast of `var.get("k")`. A
+    drill declared with `var` -- and these four files write `var` locals in 8 places -- is invisible
+    to it: the reads below such a local would then be attributed to no key at all, and a renamed
+    producer key would fall through to `Json.str`'s empty string while every rule here stayed green.
+    This asks the same question by declaration shape rather than by `_NESTED`'s shape, so a drill the
+    census loses costs a red instead of a silence.
+    """
+    body = _methods_of(path)[method_name].body
+    bound = {m.group(1) for pattern in _NESTED
+             for m in re.finditer(pattern.format(var=re.escape(var)), body)}
+    out = []
+    for name, init in _MAP_LOCAL.findall(body):
+        if name != var and f'{var}.get("' in init:
+            out.append((path.name, method_name, name, init.strip(), name in bound))
+    return out
+
+
+def _element_reads() -> list[tuple]:
+    """Reads taken off one element of a list drilled out of an answer: the census's third level.
+
+    `Json.arr(parsed.get("requiredSkills")).stream().map(o -> Json.str(Json.obj(o), "name"))` is
+    how `JobService.persistImport` turns the analyzer's skills into rows. The scanner sees
+    `requiredSkills` (a key of `parsed`) and stops: `name` belongs to the *element*, which no
+    pattern here reads, so the name is checked against its producer by nothing in this direction.
+    """
+    out = []
+    for path in _consumer_files():
+        for method_name, method in sorted(_methods_of(path).items()):
+            for drill in _LIST_DRILL.finditer(method.body):
+                read = _ELEMENT_READ.search(method.body[drill.end():drill.end() + 240])
+                if read and read.group(1) != drill.group(1):
+                    out.append((path.name, method_name, drill.group(1), drill.group(2),
+                                read.group(2)))
+    return out
+
+
+def _jd_element_keys(list_key: str) -> set[str]:
+    """The keys the analyzer's own prompt skeleton puts inside one element of `list_key`."""
+    skeleton = JD_PROMPT.read_text(encoding="utf-8")
+    element = re.search(r'"' + list_key + r'"\s*:\s*\[\s*\{([^]]*)\}', skeleton)
+    assert element, f"the analyze prompt no longer draws {list_key} as a list of objects"
+    return set(re.findall(r'"(\w+)"\s*:', element.group(1)))
+
+
+def test_the_java_census_binds_every_drill_and_names_the_level_it_stops_at():
+    """#164: the Java census was re-derived through an independent rooting walk over every
+    answer-carrying method (12 flows, 4 files) and agreed key-for-key, so nothing here is a fix.
+    What the walk did expose are the two levels the census holds by pattern rather than by walk -- a
+    drill's declaration shape and the element inside a drilled list -- and those two are pinned here
+    the way the field gate pins its census: by population, with a control that says the probe still
+    matches the shape it is claiming. A third drill level, or a `var` drill, is a red rather than a
+    silence from now on.
+    """
+    drills = [row for flow in _flows() for row in _drilled_locals(flow.file, flow.method, flow.var)]
+    unbound = [row[:4] for row in drills if not row[4]]
+    assert unbound == [], (f"an AI answer is drilled into a local `_NESTED` does not bind, so every "
+                           f"read below it is attributed to nothing: {unbound}")
+    assert sorted({(row[0], row[1], row[2]) for row in drills}) == [
+        ("InterviewService.java", "answer", "evaluation"),
+        ("InterviewService.java", "answer", "next"),
+        ("InterviewService.java", "finalize", "evaluation"),
+        ("JobService.java", "match", "match"),
+        ("JobService.java", "persistImport", "parsed"),
+        ("ResumeService.java", "persistParse", "parsed"),
+        ("ResumeService.java", "persistParse", "score"),
+    ], "a drill appeared or disappeared: the second level of the census moved"
+
+    elements = sorted(_element_reads())
+    assert elements == [
+        ("JobService.java", "persistImport", "parsed", "preferredSkills", "name"),
+        ("JobService.java", "persistImport", "parsed", "requiredSkills", "name"),
+    ], (f"the element level is a two-site population and it moved: {elements} -- a third one has to "
+        "be checked against its producer, not added to a list blindly")
+    for _, _, _, list_key, element_key in elements:
+        assert element_key in _jd_element_keys(list_key), (
+            f"the backend reads {element_key!r} off an element of {list_key}, which the analyze "
+            "prompt never draws -- every such read becomes null and the imported job loses its "
+            "skills in silence")
+
+    # The controls that keep the two claims above from being descriptions of an accident.
+    var_drill = ('var drilled = Json.obj(result.get("evaluation"));\n'
+                 '        String note = Json.str(drilled, "summary");')
+    assert _MAP_LOCAL.findall(var_drill) == [("drilled", 'Json.obj(result.get("evaluation"))')], \
+        "the declaration probe stopped seeing a `var` drill, so the claim above proves nothing"
+    assert re.search(_NESTED[0].format(var="result"), var_drill) is None, \
+        "_NESTED learned to bind a `var` drill; then this rule and the census are one scanner twice"
+    assert _ELEMENT_READ.search('o -> Json.str(Json.obj(o), "plantedElement")') is not None, \
+        "the element probe stopped matching, and the population above would read as empty forever"
+
