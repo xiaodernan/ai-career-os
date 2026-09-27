@@ -818,8 +818,7 @@ def _body(function_name: str) -> str:
 def _id_of_keys() -> set[str]:
     """The names `idOf` reaches for, read out of its own body rather than copied here."""
     body = _body("idOf")
-    return {key for group in re.findall(r'\(\s*raw\s*,([^)]*)\)', body)
-            for key in re.findall(r'"([^"]+)"', group)}
+    return {key for group in re.findall(r'\(\s*raw\s*,([^)]*)\)', body) for key in _NAME.findall(group)}
 
 
 def _sites(function_name: str) -> list[dict]:
@@ -829,7 +828,7 @@ def _sites(function_name: str) -> list[dict]:
     for finder, keys in ((CENSUS_SITE, None), (ID_SITE, _id_of_keys())):
         for match in finder.finditer(body):
             receiver = match.group(1)
-            candidates = sorted(keys) if keys else re.findall(r'"([^"]+)"', match.group(2))
+            candidates = sorted(keys) if keys else _NAME.findall(match.group(2))
             if not candidates:
                 continue  # an accessor with no name to try is not a read of a key
             line = body.count("\n", 0, match.start()) + 1
@@ -842,7 +841,13 @@ def _sites(function_name: str) -> list[dict]:
 # patterns written by hand would drift apart, and the drift is the defect this rule is looking for.
 _CALL_OPEN = re.compile(_ACCESSORS_HEAD + _GENERIC + r"\(")
 _BARE = re.compile(r"[A-Za-z_$][\w$.]*")
-_LITERAL = re.compile(r'"[^"\n]*"')
+# The census pulls a name out of a call with `_NAME` below, which only recognises double quotes, so a
+# read written `str(profile, 'headline')` is invisible to it *and* to an oracle that asks the same
+# question the same way. #163 measured the shared blind spot at this plane -- 246 of normalize.ts's
+# reads are double-quoted, 0 single-quoted, 0 template-literal, and actions.ts agrees -- so the gap is
+# latent, and latent is exactly when a scanner should already be wide: recognising all three spellings
+# TypeScript allows costs nothing today and turns the next one into a divergence this file reports.
+_QUOTED = re.compile(r"(?:\"[^\"\n]*\"|'[^'\n]*'|`[^`\n]*`)")
 _NAME = re.compile(r'"([^"\n]*)"')
 _DECLARATION = re.compile(r"\bfunction\s+$")
 
@@ -986,9 +991,13 @@ def _key_read_calls(source: str) -> tuple[dict, ...]:
     `\\(\\s*(name)\\s*,([^)]*)\\)` -- so the shape of the *pattern* decides what counts as a read. Two
     shapes escape it: a receiver that is an expression rather than an identifier (`list<string>(profile
     ?? s, "links")`, `num(rows[j], "score", "value")`) never reaches the comma, and a name argument
-    sitting past an inner `)` is cut off. This oracle asks the same question without those assumptions:
-    find the call, pair its parentheses to get the whole argument list, and keep it as a key read
-    exactly when every argument after the first is a bare string literal -- which is what leaves
+    sitting past an inner `)` is cut off. A third escape is not in the finder at all but in the name
+    extractor: `_NAME` knows only double quotes, so `str(profile, 'headline')` matches and then yields
+    no candidates, which `_sites` drops -- invisible to census and oracle alike until #163 widened the
+    oracle to every spelling TypeScript allows. This oracle asks the same question without those
+    assumptions: find the call, pair its parentheses to get the whole argument
+    list, and keep it as a key read exactly when every argument after the first is a quoted literal --
+    which is what leaves
     `pct(num(row, "score"))` out on the outside (one argument, and not a name) while the inner `num`
     still counts, because the walk continues *into* a call rather than past it. `idOf` is folded here
     the way `_sites` folds it: its own call sites carry a fallback prefix, not a name, so the names it
@@ -1007,9 +1016,9 @@ def _key_read_calls(source: str) -> tuple[dict, ...]:
         _, end = _ts_args(clean, open_paren)
         parts = _ts_top_level(source[open_paren + 1:end - 1])
         names = parts[1:]
-        if names and all(_LITERAL.fullmatch(part) for part in names):
+        if names and all(_QUOTED.fullmatch(part) for part in names):
             calls.append({"name": source[match.start():open_paren].strip(), "receiver": parts[0],
-                          "keys": tuple(_NAME.findall(part)[0] for part in names),
+                          "keys": tuple(part[1:-1] for part in names),
                           "line": source.count("\n", 0, match.start()) + 1})
     for match in re.finditer(r"\bidOf\s*\(", clean):
         if _DECLARATION.search(clean, 0, match.start()):
@@ -2655,3 +2664,15 @@ def test_the_census_sees_every_read_the_mappers_hold():
         "the oracle no longer sees an expression receiver, so the agreement above is self-consistency"
     assert CENSUS_SITE.findall(plant) == [], \
         "the census learned to match an expression receiver; this rule now audits one scanner twice"
+    # A third escape hides in the extractor rather than the finder: `_NAME` pulls a name out with double
+    # quotes, so these two spellings match `CENSUS_SITE` and then yield no candidates, and `_sites` drops
+    # the site. Measured: normalize.ts and actions.ts hold 0 of either today, which is why the rule above
+    # is a widening rather than a fix -- and why the oracle, not the census, is the one that has to be wide.
+    for hidden, spelled in (("const headline = str(profile, 'plantedHeadline');", "plantedHeadline"),
+                            ("const email = str(profile, `plantedEmail`);", "plantedEmail")):
+        assert [site["keys"] for site in _key_read_calls(hidden)] == [(spelled,)], \
+            f"the oracle is blind to a name outside double quotes again: {hidden}"
+        match = CENSUS_SITE.search(hidden)
+        assert match is not None and _NAME.findall(match.group(2)) == [], \
+            (f"the census now extracts {spelled!r} itself, so this spelling is no longer a divergence "
+             "and the agreement above is one scanner reading itself")
