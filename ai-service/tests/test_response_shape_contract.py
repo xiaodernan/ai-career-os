@@ -628,10 +628,14 @@ def _hide_generic_commas(block: str) -> str:
 
 def _record_components_at(relative: str, record: str) -> set[str]:
     source = (JAVA_ROOT / "com" / "careeros" / relative).read_text(encoding="utf-8")
-    opener = f"record {record}("
-    if opener not in source:
-        raise AssertionError(f"{opener!r} not found: the record this reader is supposed to hit has moved or been renamed")
-    head = source[source.index(opener) + len(opener):]
+    # A generic is part of the declaration, not a move: `PageDTO<T>` answers every paged route, and a
+    # literal `record X(` probe walked straight past it -- the same blind spot #159 fixed on the
+    # reader side, which is how a whole envelope stayed unnamed by both gates.
+    opener = re.search(rf"record {record}\s*(?:<[^<>]*>)?\(", source)
+    if opener is None:
+        raise AssertionError(f"record {record}( not found in {relative}: the record this reader is "
+                             "supposed to hit has moved or been renamed")
+    head = source[opener.end():]
     block = head[:head.index(") {")]
     names = []
     for declaration in _top_level(_hide_generic_commas(block), ","):

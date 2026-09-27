@@ -83,14 +83,17 @@ describe("idOf", () => {
 });
 
 describe("normalizePage", () => {
-  it("handles a bare array", () => {
+  it("reads the envelope `PageDTO` answers — the shape every paged route in the backend returns", () => {
+    const p = normalizePage({ items: [{ id: "a" }], total: 41, page: 2, size: 20 }, (x) => x);
+    expect(p).toEqual({ items: [{ id: "a" }], total: 41, page: 2, size: 20 });
+  });
+  it("handles the bare array `GET /activity/runs` returns instead of an envelope", () => {
     const p = normalizePage([1, 2, 3], (x) => x);
     expect(p).toEqual({ items: [1, 2, 3], total: 3, page: 0, size: 3 });
   });
-  it("handles a spring-style content page", () => {
+  it("has no Spring-`Page` spelling to fall back on, because no controller answers one", () => {
     const p = normalizePage({ content: [{ id: "a" }], totalElements: 9, pageNumber: 2 }, (x) => x);
-    expect(p.total).toBe(9);
-    expect(p.page).toBe(2);
+    expect(p).toEqual({ items: [], total: 0, page: 0, size: 0 });
   });
 });
 

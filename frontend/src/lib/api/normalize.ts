@@ -114,7 +114,11 @@ export interface NormalizedPage<T> {
   size: number;
 }
 
-/** Accepts {items,total,page,size} | {content,totalElements} | bare array. */
+/** The one list envelope this backend answers — `PageDTO`'s `{items,total,page,size}` — plus the bare
+ *  array `GET /activity/runs` returns instead. The other sixteen names were Spring-`Page` folklore
+ *  (`content`/`totalElements`/`number`/`sizePerPage`…) and generic wrapper guesses (`data`/`results`/
+ *  `records`/`list`/`doc`/`document`/`metadata`): no controller in the repo returns a raw `Page`, so
+ *  a payload carrying them was silently read as an empty page rather than a tolerated shape. */
 export function normalizePage<T>(
   raw: unknown,
   map: (item: unknown, index: number) => T
@@ -122,12 +126,12 @@ export function normalizePage<T>(
   if (Array.isArray(raw)) {
     return { items: raw.map(map), total: raw.length, page: 0, size: raw.length };
   }
-  const arr = list(raw, "items", "content", "data", "results", "records", "list");
+  const arr = list(raw, "items");
   return {
     items: arr.map(map),
-    total: num(raw, "total", "totalElements", "totalCount", "count") ?? arr.length,
-    page: num(raw, "page", "pageNumber", "number") ?? 0,
-    size: num(raw, "size", "pageSize", "sizePerPage") ?? arr.length,
+    total: num(raw, "total") ?? arr.length,
+    page: num(raw, "page") ?? 0,
+    size: num(raw, "size") ?? arr.length,
   };
 }
 
@@ -371,15 +375,6 @@ export function normalizeJob(raw: unknown): Job {
       : undefined,
     description: str(raw, "description", "rawText", "raw_text", "content"),
   };
-}
-
-/** The `latest match` object on /jobs/{id} can sit under several keys. */
-export function jobDetailMatch(raw: unknown): JobMatch | null {
-  return normalizeMatch(
-    pick(raw, "match", "latestMatch", "latest_match") ??
-      pick(pick(raw, "detail", "job", "data"), "match", "latestMatch", "latest_match") ??
-      raw
-  );
 }
 
 export interface JdParsed {

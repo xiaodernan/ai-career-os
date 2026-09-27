@@ -137,6 +137,9 @@ PRODUCERS = {
     "RubricCheck": ("pyappend", ("compute_resume_score", "detail")),
     "RecentRun": ("java", "report/dto/DashboardDtos.java"),
     "RunItem": ("java", "activity/web/ActivityController.java"),
+    # The list envelope every paged browser read unwraps: the backend's list routes answer this one
+    # record rather than a Spring `Page`, which is what #159 bound `normalizePage` to.
+    "PageDTO": ("java", "common/PageDTO.java"),
     # The interview report has no record for its body: `EvaluationItem.summary` is a
     # `Map<String, Object>` whose keys exist only because the finalize prompt asks for them, so
     # `FINALIZE_FIELDS` / `STUDY_ITEM_FIELDS` state them as data and this reads the declaration
@@ -722,6 +725,20 @@ READERS: dict[str, dict] = {
                          "no single record owns the name"},
         "dynamic": {},
     },
+    "normalizePage": {
+        # The list envelope. `raw` is bound to the one record the backend answers for a paged route
+        # (`common/PageDTO.java`, whose four components are the four names read here), and the mapper's
+        # other branch is `GET /activity/runs`, which answers a bare JSON array and therefore carries
+        # no name to bind. The sixteen names that went in #159 were Spring-`Page` spellings
+        # (`content`/`totalElements`/`number`/`sizePerPage`…) and wrapper guesses (`data`/`results`/
+        # `records`/`list`/`doc`/`document`/`metadata`) no controller in this repo returns: a payload
+        # carrying them was never tolerated, it was read as an empty page.
+        "record_of": {"raw": "PageDTO"},
+        "drilled": {},
+        "elements": {},
+        "blind": {},
+        "dynamic": {},
+    },
 }
 
 # Sites that answer from their fallback on every response, declared rather than denied. The key is
@@ -762,17 +779,24 @@ _ACCESSORS = (r"\b(?:str|strOr|num|bool|list|pick|rec|int|pct|pathOf)"
               # new site, because this reader is the only one that calls it.
               r"(?:<[^<>]*(?:<[^<>]*>[^<>]*)*>)?\(\s*")
 _ID_OF = r"\bidOf\(\s*"
+# Helpers whose call sites the scanner above reads as part of their caller's census. `idOf` takes a
+# row and tries six spellings of its identifier, so binding it separately would describe the same
+# read twice -- and leaving it out of every census would be the blind spot #159's ban refuses.
+FOLDED_ACCESSORS = {"idOf"}
 
 
 @lru_cache(maxsize=None)
 def _body(function_name: str) -> str:
     source = NORMALIZE.read_text(encoding="utf-8")
-    opener = f"function {function_name}("
-    if opener not in source:
+    # A generic before the paren is part of the declaration, not a move: `normalizePage<T>(` and the
+    # two accessor primitives `pick<T>(`/`list<T>(` were invisible to a literal `function X(` probe,
+    # which is #159's scanner fix -- a reader the census cannot locate is a reader no rule can bind.
+    opener = re.search(rf"function {function_name}\s*(?:<[^<>]*>)?\(", source)
+    if opener is None:
         raise AssertionError(
-            f"{opener!r} is gone from normalize.ts: the table names a reader that moved, "
-            "so this rule compares nothing")
-    start = source.index(opener)
+            f"'function {function_name}(' is gone from normalize.ts: the table names a reader "
+            "that moved, so this rule compares nothing")
+    start = opener.start()
     return source[start:source.index("\n}\n", start)]
 
 
@@ -1587,6 +1611,36 @@ def test_the_dead_reads_stay_declared():
         assert len(why) > 40, f"{key} needs a reason a reader can act on, not a label"
 
 
+def test_no_exported_mapper_is_left_unbound():
+    """#159's ban. A reader that is not in READERS is a reader no rule in this file checks, which is
+    how `coverLetterText` carried ten probes for four authored names until #158 had to go looking for
+    it by hand: every `export function` in normalize.ts whose own body asks for a literal name has to
+    be bound, or be a helper this file's own scanner folds into its callers' sites."""
+    population = _exported_readers()
+    unbound = sorted(set(population) - set(READERS) - FOLDED_ACCESSORS)
+    assert unbound == [], (f"exported readers taking names with no producer declared: {unbound} -- "
+                           "bind them in READERS, or make the scanner fold them and prove the fold")
+    # The exemption is only real while the mechanism is: a folded helper is visible because _ID_OF
+    # reads its call sites into every caller's census, not because this table says so.
+    assert all(f"\\b{name}\\(" in _ID_OF for name in FOLDED_ACCESSORS), \
+        f"{sorted(FOLDED_ACCESSORS)} claims a fold the site scanner does not perform"
+    # Measured at this plane, so a new unbound reader cannot slip in under a stale count.
+    assert len(population) == 30, sorted(population)
+
+
+def _exported_readers() -> dict[str, int]:
+    """Every `export function` in normalize.ts whose own body makes at least one named read. The two
+    `export const` tables (SEARCH_GROUPS, CHAT_ACTION_ROUTES) hold data, not reads, so they are out
+    of the population by construction rather than by exemption."""
+    source = NORMALIZE.read_text(encoding="utf-8")
+    out = {}
+    for name in re.findall(r"^export function (\w+)[<(]", source, re.M):
+        sites = _sites(name)
+        if sites:
+            out[name] = len(sites)
+    return out
+
+
 def test_the_reads_are_actually_found():
     """Positive control: every rule above is satisfied by an empty reading, so the census itself is
     pinned -- real sites, at the receivers this gate claims to bind, against real components."""
@@ -2051,6 +2105,17 @@ def test_the_reads_are_actually_found():
         "mode", "model", "sources"}
     assert "cover_letter" in _artifact_switch(), \
         f"the copilot no longer appends a cover_letter artifact: {sorted(_artifact_switch())}"
+    # The page envelope, made visible by the same fix that let the ban above see it: `normalizePage`
+    # declares itself as `<T>(`, which a literal `function X(` probe walked straight past.
+    page = _sites("normalizePage")
+    assert len(page) == 4, page
+    assert {s["receiver"] for s in page} == {"raw"}
+    assert [s["keys"] for s in page] == [("items",), ("total",), ("page",), ("size",)]
+    assert _emitted("PageDTO") == {"items", "total", "page", "size"}, \
+        "the envelope the paged routes answer is no longer four names, so this reader is stale"
+    # Dead, and named so: nothing imported the reader, so no rule but this line notices its return.
+    assert "function jobDetailMatch" not in NORMALIZE.read_text(encoding="utf-8"), \
+        "the dead export is back: no caller, and six names no job detail response carries"
     # The citation mapper. 10 sites and 14 names, down from the 16 sites and 49 names #151 measured with
     # this same scanner -- and the 35 that went were mostly the nested `source` object (`pick(e,
     # "source", "doc", "document", "metadata")` plus the eighteen names tried on its result), a shape no
