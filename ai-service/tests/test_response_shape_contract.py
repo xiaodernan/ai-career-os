@@ -559,11 +559,12 @@ def test_the_copilot_reads_line_up_with_chat_response():
     assert emitted - read == {"assistantMessageId", "userMessageId"}, \
         "the reply drops the two message ids today; if that changes, this line is where to look"
     # Candidates `ChatResponse` never serializes. Each is either a tolerant alias of a live key
-    # (`content`/`text`/`message`/`reply` for `answer`, `citations` for `sources`, `run_id` for
-    # `runId`) or, like `taskId`, a leftover of a field that has never been on the answer -- the
-    # shape of mistake that left the tailor panel offering a stream it could not open.
+    # (`content`/`text`/`message`/`reply` for `answer`, `run_id` for `runId`) or, like `taskId`, a
+    # leftover of a field that has never been on the answer -- the shape of mistake that left the
+    # tailor panel offering a stream it could not open. `citations` used to sit here too, until #152
+    # measured that its only author is `/internal/rag/answer`, a route the app never calls.
     assert read - emitted == {
-        "content", "text", "message", "reply", "citations", "run_id", "conversation_id",
+        "content", "text", "message", "reply", "run_id", "conversation_id",
         "taskId", "task_id",
     }, f"undocumented dead reads on the copilot answer: {sorted(read - emitted)}"
 

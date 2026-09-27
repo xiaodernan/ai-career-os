@@ -243,6 +243,16 @@ describe("normalizeMatch", () => {
     // rather than showing an empty "Growth" section.
     expect(normalizeMatch({ overall: 0.5, skillGaps: [] })!.skillGaps).toBeUndefined();
   });
+  it("does not read citations, the spelling only /internal/rag/answer uses", () => {
+    // That route is not one the app calls, so no match payload can arrive under this key -- and the
+    // row below carries real values on purpose: a re-added `citations` candidate would show up as a
+    // rendered citation instead of silently matching an `undefined` that was always undefined.
+    const m = normalizeMatch({
+      overall: 0.6,
+      citations: [{ criterion: "skill:Go", quote: "wrote a service in Go", score: 0.9 }],
+    });
+    expect(m!.evidence).toBeUndefined();
+  });
 });
 
 describe("normalizeJob", () => {
@@ -817,6 +827,15 @@ describe("copilot chat: live reply must normalize identically to history", () =>
     const liveActions = normalizeChatActions(aiServiceReply);
     expect(historyMsg.sources).toEqual(liveSources);
     expect(historyMsg.actions).toEqual(liveActions);
+  });
+
+  it("drops a citations list, because MessageItem carries its sources under `sources`", () => {
+    // Same reason as the match case above: `/internal/rag/answer` is the only answerer of this key and
+    // the app never calls it, so a message row that names only `citations` has no citations to show.
+    const [msg] = normalizeMessages([
+      { id: "m1", role: "assistant", content: "answer", citations: aiServiceReply.sources },
+    ]);
+    expect(msg.sources).toEqual([]);
   });
 });
 

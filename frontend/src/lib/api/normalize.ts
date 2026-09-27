@@ -242,7 +242,10 @@ export function normalizeMatch(raw: unknown): JobMatch | null {
   const overall = pct(num(m, "overall", "overallScore", "overall_score", "score", "matchScore", "match_score"));
   const matched = list<string>(m, "matchedSkills", "matched_skills", "matched", "strengths");
   const missing = list<string>(m, "missingSkills", "missing_skills", "missing", "gaps", "skillGap", "skill_gap");
-  const evidence = normalizeEvidence(pick(m, "evidence", "citations"));
+  // One spelling. `citations` is what the RAG answer route calls this list, and the app never calls
+  // that route (the copilot answers through `ChatResponse`, whose sources field is `sources`), so
+  // tolerating it here bought nothing; the field-contract gate now refuses the name outright.
+  const evidence = normalizeEvidence(pick(m, "evidence"));
   const gaps = normalizeSkillGaps(pick(m, "skillGaps", "skill_gaps", "gaps"));
   if (overall == null && !matched.length && !missing.length && !evidence.length) return null;
   return {
@@ -1254,7 +1257,7 @@ export function normalizeMessages(raw: unknown) {
     content: str(m, "content", "text", "message", "body") ?? "",
     createdAt: str(m, "createdAt", "created_at", "timestamp"),
     artifacts: normalizeArtifacts(pick(m, "artifacts")),
-    sources: normalizeEvidence(pick(m, "sources", "citations")),
+    sources: normalizeEvidence(pick(m, "sources")),
     actions: normalizeChatActions(m),
   }));
 }

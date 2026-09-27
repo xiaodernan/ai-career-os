@@ -56,6 +56,16 @@ identifier, so the older entries keep matching exactly as before); and `pathOf` 
 since it takes a payload plus a list of names and splits whatever it finds, which made the reader's
 `section` breadcrumb a real read instead of a blind spot. Measured the same pass: none of the other
 26 readers gained or lost a site from either widening.
+
+A seventh rule (#152) covers what every rule above is blind to by construction. A site is dead only when
+*no* candidate names a real column, so a fourth "tolerant alias" beside a live one costs nothing here --
+and it is not free: it is a second shape the mapper silently reinterprets. #152 deleted `citations` from
+three such call sites and put the remaining claim where it can be checked, by reading which handler
+actually returns the key and whether the app can reach that handler at all. Both ends are parsed from
+code (the FastAPI route table, the handler's own `return`, the backend's call sites, the browser's
+source), so the ban cannot be satisfied by a table this file wrote for itself -- and it fails as a
+statement if the reason stops holding: a reachable route, a renamed key, or a browser read that came
+back each says which of the three it is.
 """
 
 import ast
@@ -1937,10 +1947,12 @@ def test_the_reads_are_actually_found():
     assert _emitted("MatchSummary") - _emitted("MatchResult") == {"id", "createdAt"}
     assert _emitted("MatchResult") - _emitted("MatchSummary") == {"interviewTopics", "model"}
     assert _id_of_keys() == {"_id", "eventId", "event_id", "id", "key", "uuid"}
-    dead = _dead_read_sites()
-    assert len(dead) == 3
-    assert {(s["reader"], s["line"]) for s in dead} == {
-        ("normalizeApplication", 19), ("normalizeMatch", 12), ("normalizeMatch", 13)}
+    # The scan is not returning an empty list, which is the only way the two rules that consume it
+    # (liveness, and the DECLARED reconciliation) could both go green on a broken reader. *Which*
+    # sites are dead is stated once, keyed by the reader and the names it probes; the line number is
+    # not an identity -- #152 added three comment lines above one of them and a line-keyed copy of
+    # that table would have reddened CENSUS for a comment.
+    assert len(_dead_read_sites()) == 3
     assert _structural_problems() == []
 
 
@@ -1986,4 +1998,66 @@ def test_every_bar_label_belongs_to_a_dimension_somebody_scores():
     assert unreachable == set(), (f"labels no dimension reader can ask for: {sorted(unreachable)} -- "
                                   "either the reader that used them is gone, or the service renamed "
                                   "the dimension and this table is now covering for nothing")
+
+
+# --------------------------------------------- a tolerated alias whose only author cannot be reached
+
+# `citations` is the name #152 deleted, and it is the shape the per-site rule is structurally blind to:
+# it sat beside a live `evidence`/`sources` in three mappers, so every one of those sites stayed live on
+# its sibling's strength while the name itself answered nothing the browser can receive. What such a
+# name claims is reachability, so that is what gets checked -- against the handler's own return
+# statement and against the app's real call sites, not against a sentence written here.
+REPLIED_ONLY_BY_UNREACHED_ROUTES = {
+    "citations": ("POST", "/internal/rag/answer"),
+}
+
+
+def _browser_names(literal: str) -> list[str]:
+    """Every browser source that spells `"literal"` as a string, as `file:line`.
+
+    Deliberately wider than the accessor list: a ban on a name should not hinge on which helper the
+    call used, and a false red costs one look at a line. Test files are excluded because #151 and #152
+    both keep fixtures that put the forbidden spelling *in* a payload to prove it renders nothing.
+    """
+    files = [p for p in sorted(list(ROOT_FRONTEND.rglob("*.ts")) + list(ROOT_FRONTEND.rglob("*.tsx")))
+             if ".test." not in p.name]
+    assert len(files) >= 60, f"the browser scan saw {len(files)} files, not the whole app"
+    needle = f'"{literal}"'
+    return [f"{p.relative_to(ROOT_FRONTEND.parent)}:{i}"
+            for p in files
+            for i, line in enumerate(p.read_text(encoding="utf-8").splitlines(), 1)
+            if needle in line]
+
+
+def test_a_key_only_an_unreached_route_answers_is_read_by_nobody():
+    """The reachability half of the contract: who answers this name, and can the app ask them?
+
+    Two ends, both read out of code. The producer end is `doc._returned`, which parses the handler's
+    own `return` statement in `app/api/rag.py`, so a rename there is caught here rather than
+    remembered here. The consumer end is the browser's source. Between them sits the route table the
+    #114 gate already derives: if the backend ever starts calling `/internal/rag/answer`, the ban has
+    to be retired, and this test is where that becomes loud.
+    """
+    from tests import test_api_doc_contract as doc  # crosses back; safe at call time
+
+    assert REPLIED_ONLY_BY_UNREACHED_ROUTES, "the ban table was emptied; the rule below proves nothing"
+    routes, unreached = doc._routes(), doc.unreached_paths()
+    for key, (verb, path) in REPLIED_ONLY_BY_UNREACHED_ROUTES.items():
+        assert (verb, path) in routes, (f"{verb} {path} is not served any more, so this ban has no "
+                                        "author left to reason about -- delete the entry with the route")
+        assert path in unreached, (f"{verb} {path} became reachable, which makes `{key}` a real spelling "
+                                   "again: this entry has to go and the mappers need the name back")
+        shape = doc._returned(routes[(verb, path)]) or {}
+        assert key in shape, (f"{verb} {path} no longer answers `{key}` (it returns {sorted(shape)}), so "
+                              "this entry is now asserting a fact the service stopped writing")
+        sites = _browser_names(key)
+        assert sites == [], (f"`{key}` is answered only by {verb} {path}, which the app never calls, yet "
+                             f"the browser still names it at {sites} -- those reads can only ever answer "
+                             "undefined, and they hide the shape of the payload they are wrapped around")
+    # Positive control on the consumer scan: a name the app really does receive has to be findable,
+    # or every assertion above passes on a reader that reads nothing at all.
+    seen = _browser_names("evidence")
+    assert len(seen) >= 3, f"the browser scan found {seen}; it cannot see the reads it claims to bound"
+
+
 
