@@ -481,10 +481,27 @@ def _ts_function_body(function_name: str) -> str:
     return source[start:source.index("\n}\n", start)]
 
 
-def _browser_reads(function_name: str, receiver: str) -> set[str]:
-    body = _ts_function_body(function_name)
-    return {key for group in re.findall(rf"(?:str|num|pick|list)(?:<[^>]*>)?\(\s*{receiver}\s*,([^)]*)\)", body)
+def _names_read_off(typescript: str, receiver: str) -> set[str]:
+    """The names an accessor call tries off one receiver in an arbitrary slice of TypeScript.
+
+    This file carried three copies of that scan, each spelling four or five of the ten accessor names
+    `_ACCESSORS` keeps, none of them able to see a typed call like `list<string>(m, "whyMatch")` or
+    the `idOf` fold at all. The vocabulary is composed here so it is written in exactly one place,
+    which is what #161's ban then checks.
+    """
+    from tests import test_response_field_contract as field  # crosses back; safe at call time
+
+    pattern = field._ACCESSORS + re.escape(receiver) + r"\s*,([^)]*)\)"
+    return {key for group in re.findall(pattern, typescript)
             for key in re.findall(r'"([^"]+)"', group)}
+
+
+def _browser_reads(function_name: str, receiver: str) -> set[str]:
+    """What one `normalize.ts` mapper asks for off one receiver, from the per-site scanner itself."""
+    from tests import test_response_field_contract as field
+
+    return {key for site in field._sites(function_name) if site["receiver"] == receiver
+            for key in site["keys"]}
 
 
 def _answers_read_by_the_browser(path: str) -> set[str]:
@@ -561,8 +578,7 @@ def test_the_copilot_reads_line_up_with_chat_response():
     actions = (ROOT_FRONTEND / "lib" / "hooks" / "actions.ts").read_text(encoding="utf-8")
     start = actions.index("return {\n        answer: str(raw,")
     block = actions[start:actions.index("\n      };", start)]
-    read = {key for group in re.findall(r'(?:str|num|pick|list)\(\s*raw\s*,([^)]*)\)', block)
-            for key in re.findall(r'"([^"]+)"', group)}
+    read = _names_read_off(block, "raw")
     emitted = _record_components_at(CONVERSATION_DTOS, "ChatResponse")
     assert read & emitted, f"the copilot reads {sorted(read)}, none of which is in {sorted(emitted)}"
     assert emitted - read == {"actions", "artifacts", "assistantMessageId", "userMessageId"}, \
@@ -608,9 +624,17 @@ DTO_READS = {
 
 
 def _dto_reads(function_name: str) -> set[str]:
-    body = _ts_function_body(function_name)
-    return {key for group in re.findall(r'(?:str|num|pick|list|bool)\(\s*\w+\s*,([^)]*)\)', body)
-            for key in re.findall(r'"([^"]+)"', group)}
+    """The names one browser reader tries, out of the field gate's site scanner.
+
+    This used to spell its own accessor vocabulary -- `(?:str|num|pick|list|bool)\\(` -- which is five
+    of the ten names `_ACCESSORS` carries, without its generic slot and without the `idOf` fold. The
+    gap is measured at this plane, per reader: `pick<Record<string, unknown>>(raw, "company")` and
+    three `list<string>(m, ...)` calls name fields the copy could never see, and every one of
+    `id`/`_id`/`uuid`/`eventId`/`event_id`/`key` comes only through the fold. #160's lesson repeated
+    one level up: a second copy is not a redundant scanner, it is a blind one."""
+    from tests import test_response_field_contract as field
+
+    return {key for site in field._sites(function_name) for key in site["keys"]}
 
 
 def _hide_generic_commas(block: str) -> str:
@@ -633,6 +657,53 @@ def _hide_generic_commas(block: str) -> str:
     return "".join(out)
 
 
+def _declared_records() -> list[tuple[str, str]]:
+    """Every record the backend declares, as (`path under the package`, name), located by the one
+    Java opener either gate has. The probes below are shared by readers this file never names, so the
+    population they have to survive is the whole repository, not the handful of DTOs bound here."""
+    package = JAVA_ROOT / "com" / "careeros"
+    found = []
+    for path in sorted(package.rglob("*.java")):
+        source = path.read_text(encoding="utf-8")
+        for match in re.finditer(JAVA_OPENER.format(name=r"(\w+)"), source):
+            found.append((path.relative_to(package).as_posix(), match.group(1)))
+    return found
+
+
+def _component_list(source: str, open_paren: int) -> str:
+    """Everything between `source[open_paren]` and its matching `)`, strings and comments skipped.
+
+    Counting parentheses is the only way to find the end of a component list, because the character
+    that follows it is not always a brace: `SavedJob.SavedJobId(UUID userId, UUID jobId) implements
+    Serializable {` puts an `implements` clause in between, so scanning for the text `") {"` walked
+    straight on into the entity's own accessor declarations and read `getUserId(`, `false` and
+    `"created_at"` as fields the record serializes -- while losing `jobId`, the one name in the real
+    list. Measured at this plane: 101 record declarations, 2 with an `implements` clause, and one of
+    those two is the entity above.
+    """
+    depth, index, length = 0, open_paren, len(source)
+    while index < length:
+        char = source[index]
+        if source.startswith("//", index):
+            index = source.index("\n", index)
+            continue
+        if source.startswith("/*", index):
+            index = source.index("*/", index) + 2
+            continue
+        if char in '"\'':
+            quote, index = char, index + 1
+            while index < length and source[index] != quote:
+                index += 2 if source[index] == "\\" else 1
+        elif char == "(":
+            depth += 1
+        elif char == ")":
+            depth -= 1
+            if depth == 0:
+                return source[open_paren + 1:index]
+        index += 1
+    raise AssertionError("a component list never closes: the file shape changed under this probe")
+
+
 def _java_record_body(relative: str, record: str) -> str:
     """The component list of one Java record, off its own declaration, through the only Java opener
     either gate has (#160).
@@ -642,27 +713,57 @@ def _java_record_body(relative: str, record: str) -> str:
     -- the blind spot #159 fixed on the reader side, where a producer the census cannot locate is a
     producer no rule can bind. Two other probes of this shape were still in these files, one of them
     also splitting `Map<String, Object>` into a field named `Map<String`; they now call this.
+
+    The list itself is found by `_component_list`, not by the `") {"` this used to cut on: an
+    `implements` clause after the list sent that scan into the record's (or its enclosing class's)
+    methods, which yield plausible-looking component names. A probe that cannot find the list says so
+    instead of returning something else.
     """
     source = (JAVA_ROOT / "com" / "careeros" / relative).read_text(encoding="utf-8")
     opener = re.search(JAVA_OPENER.format(name=record), source)
     if opener is None:
         raise AssertionError(f"record {record} has no declaration in {relative}: the record this "
                              "reader is supposed to hit has moved or been renamed")
-    head = source[opener.end():]
-    if ") {" not in head:
-        raise AssertionError(f"record {record}'s component list never closes in {relative}: the "
-                             "file shape changed under this probe")
-    return head[:head.index(") {")]
+    return _component_list(source, opener.end() - 1)
 
 
-def _record_components_at(relative: str, record: str) -> set[str]:
-    block = _java_record_body(relative, record)
+
+def _component_names(block: str) -> list[str]:
+    """The declared name of each top-level component: the last word of a comma-separated entry, with
+    generic commas hidden so `Map<String, Object> match` stays one component."""
     names = []
     for declaration in _top_level(_hide_generic_commas(block), ","):
         tokens = declaration.strip().replace("\x00", ",").split()
         if tokens:
             names.append(tokens[-1])
-    return set(names)
+    return names
+
+
+def _java_record_tail(relative: str, record: str) -> str:
+    """What follows one record's component list: `{` for almost every declaration in the backend, and
+    an `implements` clause for the two that do not."""
+    source = (JAVA_ROOT / "com" / "careeros" / relative).read_text(encoding="utf-8")
+    opener = re.search(JAVA_OPENER.format(name=record), source)
+    if opener is None:
+        raise AssertionError(f"record {record} has no declaration in {relative}")
+    block = _component_list(source, opener.end() - 1)
+    return source[opener.end() + len(block) + 1:].lstrip()
+
+
+def _stop_scan_components(relative: str, record: str) -> set[str]:
+    """The `") {"` cut `_java_record_body` used to stop on, kept as a foil for the rule below.
+
+    A rule that only checks a property has to show the property is what catches the bug, and the bug
+    here is invisible from the probe's own output: the old cut produced a set of names for
+    `SavedJobId` that looks like a record until you read it closely."""
+    source = (JAVA_ROOT / "com" / "careeros" / relative).read_text(encoding="utf-8")
+    opener = re.search(JAVA_OPENER.format(name=record), source)
+    head = source[opener.end():]
+    return set(_component_names(head[:head.index(") {")])) if ") {" in head else set()
+
+
+def _record_components_at(relative: str, record: str) -> set[str]:
+    return set(_component_names(_java_record_body(relative, record)))
 
 
 def test_the_dto_backed_readers_hit_a_field_the_record_has():
@@ -691,16 +792,13 @@ def _calls_in(scope) -> list:
     return found
 
 
-def _declaration_lookups(path: Path) -> list[tuple[str, str]]:
-    """Where a gate file looks one declaration up by hand: a lookup call whose first argument is a
-    string naming a `function` or a `record` beside the name slot.
+def _lookup_patterns(path: Path) -> list[tuple[str, str]]:
+    """Every (scope, pattern string) a gate file hands to a lookup method as a literal first argument.
 
-    The pattern is `\b(function|record)` followed by a name slot -- the interpolated `{name}` of a
-    fixed literal (`export function idOf(`) or the first letter of one -- which is what both hand-typed
-    forms write, and what the two canonical constants do not: their `.format(name=...)` arguments are
-    calls, not string literals. An enumeration like `^function (\\w+)[<(]` reads as `function (` and is
-    deliberately out of scope -- listing every declaration cannot miss one category the way locating one
-    can.
+    Both bans below read this one walk, because both are about the same act: writing out a shape a
+    probe already owns. A pattern built by `.format(...)` or by concatenating a shared constant is a
+    `Call`/`BinOp` node rather than a string literal, so the canonical forms fall out by construction
+    instead of by exemption.
     """
     tree = ast.parse(path.read_text(encoding="utf-8"))
     scopes = [("module", tree)] + [(node.name, node) for node in ast.walk(tree)
@@ -720,11 +818,56 @@ def _declaration_lookups(path: Path) -> list[tuple[str, str]]:
                                for value in first.values)
             else:
                 continue
-            if not isinstance(text, str):
-                continue
-            if re.search(r"\b(?:function|record)\s*[\w{]", text):
+            if isinstance(text, str):
                 found.append((scope, text))
     return found
+
+
+def _declaration_lookups(path: Path) -> list[tuple[str, str]]:
+    """Where a gate file looks one declaration up by hand: a lookup call whose first argument is a
+    string naming a `function` or a `record` beside the name slot.
+
+    The pattern is `\b(function|record)` followed by a name slot -- the interpolated `{name}` of a
+    fixed literal (`export function idOf(`) or the first letter of one -- which is what both hand-typed
+    forms write, and what the two canonical constants do not: their `.format(name=...)` arguments are
+    calls, not string literals. An enumeration like `^function (\\w+)[<(]` reads as `function (` and is
+    deliberately out of scope -- listing every declaration cannot miss one category the way locating one
+    can.
+    """
+    return [(scope, text) for scope, text in _lookup_patterns(path)
+            if re.search(r"\b(?:function|record)\s*[\w{]", text)]
+
+
+def _accessor_alternatives() -> set[str]:
+    """The accessor vocabulary, read out of the one constant that defines it -- including the helpers
+    whose own call sites a scanner folds into their caller's census."""
+    from tests import test_response_field_contract as field
+
+    group = re.search(r"\(\?:([^)]*)\)", field._ACCESSORS)
+    if group is None:
+        raise AssertionError("_ACCESSORS no longer holds an alternation to read: the ban that keeps "
+                             "this file from re-spelling it would pass on an empty vocabulary")
+    return set(group.group(1).split("|")) | set(field.FOLDED_ACCESSORS)
+
+
+def _accessor_list_lookups(path: Path, vocabulary: set[str]) -> list[tuple[str, str]]:
+    """Where a gate file writes its own list of accessor names into a pattern.
+
+    Three copies lived in this file, found by walking it rather than by reading it: `_browser_reads`
+    spelled `(?:str|num|pick|list)` with a generic slot, `_dto_reads` spelled five names without one,
+    and the copilot test spelled the four again over `actions.ts`. A copy is not a smaller version of
+    the scanner it duplicates -- it is a scanner that cannot see the calls the original was widened
+    for, which is how `list<string>(raw, "skills", "requiredSkills", ...)` and every name `idOf` tries
+    stayed out of the read sets these gates compare against a record.
+    """
+    found = []
+    for scope, text in _lookup_patterns(path):
+        for group in re.findall(r"\(\?:([^)]*)\)", text):
+            named = {token for token in group.split("|") if token in vocabulary}
+            if len(named) >= 3:
+                found.append((scope, group))
+    return found
+
 
 
 def test_no_gate_looks_a_declaration_up_by_hand():
@@ -762,4 +905,97 @@ def test_the_declaration_probes_reach_the_shapes_a_copy_would_miss():
     assert _record_components_at("common/PageDTO.java", "PageDTO") == {"items", "total", "page", "size"}
     assert _record_components_at("common/ApiResponse.java", "ApiResponse") == {
         "success", "data", "error"}, "the other generic record, which no reader is bound to yet"
+
+
+def test_the_java_probe_reads_every_record_the_backend_declares():
+    """#161's coverage rule: the probes are shared machinery, so their population is the repository,
+    not the dozen records a table happens to bind.
+
+    The reason is a defect the old cut had already committed. `SavedJob.SavedJobId(UUID userId, UUID
+    jobId) implements Serializable {` ends its component list with an `implements` clause, so scanning
+    for the text `\") {\"` ran on to the enclosing entity's `public UUID getUserId() {` and reported the
+    record's components as `getUserId(`, `false`, `\"created_at\"`, `\"job_id\"`, `\"user_id\"` -- with the
+    real `jobId` missing. Both directions wrong, and nothing downstream could tell, because a set of
+    plausible strings is exactly what the callers expect. The second such record, `ResumeSkillId(...)
+    implements Serializable {}`, refused outright instead, since `\") {}\"` never contains `\") {\"`.
+
+    So the rule checks properties a wrong cut cannot satisfy -- every derived name is a bare Java
+    identifier, no list comes back empty -- and pins the assumption the whole family rests on: a
+    component's name is its wire name, which holds only while no record renames or hides one.
+    """
+    declared = _declared_records()
+    assert len(declared) == 101, \
+        f"{len(declared)} records carry a declaration the shared opener reads, not the 101 measured"
+    problems, renamed = [], []
+    for relative, record in declared:
+        names = _record_components_at(relative, record)
+        junk = sorted(name for name in names if not re.fullmatch(r"[A-Za-z_$][\w$]*", name))
+        if junk:
+            problems.append(f"{relative}#{record} yields {junk}")
+        elif not names:
+            problems.append(f"{relative}#{record} yields no component at all from "
+                            f"{_java_record_body(relative, record)[:40]!r}")
+        if re.search(r"@(JsonProperty|JsonNaming|JsonIgnore)\b",
+                     _java_record_body(relative, record)):
+            renamed.append(f"{relative}#{record}")
+    assert problems == [], "\n".join(problems)
+    assert renamed == [], (f"a record renames or hides a component, so `_record_components_at` is no "
+                           f"longer reading the names that go on the wire: {renamed}")
+    # The foil, so the check above is known to be load-bearing rather than lucky: the records the old
+    # cut misread are exactly the ones whose list is followed by something other than a brace, and both
+    # ends of that claim are read out of the declarations.
+    hazard = {entry for entry in declared if not _java_record_tail(*entry).startswith("{")}
+    ran_past = {entry for entry in declared
+                if _stop_scan_components(*entry) != _record_components_at(*entry)}
+    assert ran_past == hazard, (f"the stop disagrees on {sorted(ran_past)}, which is not the set of "
+                                f"records with a clause after their list: {sorted(hazard)}")
+    assert len(hazard) == 2, f"measured two `implements Serializable` records: {sorted(hazard)}"
+    assert _record_components_at("job/entity/SavedJob.java", "SavedJobId") == {"userId", "jobId"}, \
+        "the foil's record, read through the balanced scan: the two real components and nothing from "\
+        "the entity's accessors"
+
+
+def test_no_gate_spells_an_accessor_list_by_hand():
+    """#161's ban, beside #160's: the accessor vocabulary is `_ACCESSORS`, written once in the field
+    gate, and nowhere else.
+
+    Three copies lived in this file, each spelling four or five of the ten names: `_dto_reads` could
+    not see a typed call, so `normalizeMatch`'s read set was 15 names where the scanner counts 25, and
+    none of the six spellings `idOf` tries -- the identifier every conversation and match row is keyed
+    by -- reached the record comparison at all. A copy of a scanner is not a redundant scanner; it is
+    one whose blind spots nobody has measured.
+    """
+    from tests import test_response_field_contract as field
+
+    vocabulary = _accessor_alternatives()
+    assert len(vocabulary) == 11, sorted(vocabulary)  # `_ACCESSORS`' 10 plus the folded `idOf`
+    offenders = {}
+    for path in (Path(__file__), Path(field.__file__)):
+        found = _accessor_list_lookups(path, vocabulary)
+        offenders[path.name] = sorted(f"{scope}: {group}" for scope, group in found)
+    assert offenders == {"test_response_shape_contract.py": [],
+                         "test_response_field_contract.py": []}, offenders
+
+
+def test_the_shared_read_scanners_see_the_calls_a_copy_missed():
+    """Positive control for the ban above, on the copy whose gap was measurable.
+
+    The other two (`_browser_reads` and the copilot block's scan) agree with the shared vocabulary on
+    every name today, by measurement, so delegating them buys only the zero-copies claim. This one was
+    strictly weaker, and the three causes are each named below."""
+    assert len(_dto_reads("normalizeMatch")) == 25, "15 through the copied list, 25 through the scanner"
+    assert "company" in _dto_reads("normalizeApplication"), \
+        "a typed accessor (`pick<Record<string, unknown>>(raw, ...)`) is invisible without the generic slot"
+    assert {"whyMatch", "matchedSkills", "interviewTopics"} <= _dto_reads("normalizeMatch"), \
+        "same cause, on `list<string>(m, ...)`"
+    assert {"id", "_id", "uuid", "event_id", "eventId", "key"} <= _dto_reads("normalizeMessages"), \
+        "these six arrive only through the `idOf` fold a spelled list of accessor names cannot reach"
+    # The three causes, measured on one reader: `normalizeJob` went from 66 names through the copied
+    # list to 75 through the scanner, and the nine new ones are the typed `list<string>` form and the
+    # fold -- no accessor *name* was missing there, which is why the claim below is about shapes.
+    assert len(_dto_reads("normalizeJob")) == 75, "66 through the copied list, 75 through the scanner"
+    assert {"skills", "tags", "requiredSkills", "required_skills"} <= _dto_reads("normalizeJob"), \
+        "read from `list<string>(raw, ...)`, which a pattern that stops at the accessor name cannot see"
+    assert {"_id", "uuid", "event_id", "key"} <= _dto_reads("normalizeJob"), \
+        "the identifier spellings arrive only through the `idOf` fold a spelled list cannot reach"
 
