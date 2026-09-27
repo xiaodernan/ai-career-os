@@ -117,7 +117,8 @@ def test_both_sides_of_the_comparison_are_actually_read():
     """Positive control: the gates above stay green on a doc that named nothing."""
     assert len(documented_paths()) >= 20, "the doc's internal table was not read"
     assert "/internal/ingest/documents/{}/text" in documented_paths()
-    assert response_claims() == {"/internal/agents/chat": ({"task_id", "run_id"}, False)}
+    assert response_claims() == {"/internal/agents/chat": ({"task_id", "run_id"}, False),
+                                 "/internal/rag/embeddings": ({"embedding"}, False)}
     shape = _returned(_routes()[("POST", "/internal/agents/chat")])
     assert set(shape) == {"task_id", "run_id"}
 
@@ -134,6 +135,8 @@ UNREACHED_BY_THE_APP = {
     "/internal/rag/retrieve": "retrieval happens in-process (agent tools -> pipeline.retrieve)",
     "/internal/rag/answer": "same, for the grounded-answer variant",
     "/internal/rag/chunks": "chunk inspection, kept for operators",
+    "/internal/rag/embeddings": "exposed for the backend's hybrid /jobs ranking; that call is not "
+                                 "wired yet, and the agent embeds in-process via registry.embed_text",
     "/internal/tasks/{}": "task state; the app follows /internal/stream/{taskId} instead",
     "/internal/tasks/{}/stream": "a second stream spelling, unused by the relay",
 }
@@ -152,7 +155,7 @@ def test_what_the_doc_lists_but_the_app_never_calls_stays_explained():
 
 def test_the_unreached_list_is_not_just_a_long_list_of_nothings():
     """Positive control: the comparison above also passes when both sides are empty."""
-    assert len(UNREACHED_BY_THE_APP) == 7
+    assert len(UNREACHED_BY_THE_APP) == 8
     assert all(reason.strip() for reason in UNREACHED_BY_THE_APP.values())
     assert "/internal/stream/{}" not in UNREACHED_BY_THE_APP, \
         "the relay reaches that one; treating it as unreached would hide a live dependency"
