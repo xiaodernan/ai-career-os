@@ -34,6 +34,22 @@ describe("hydrateState", () => {
     expect(got).toEqual({ q: "go", page: 5, size: 24 });
   });
 
+  it("adopts an optional key whose initial value is undefined", () => {
+    // `/knowledge?src=` is declared this way (`{ src: undefined }`, no numeric or boolean keys at all),
+    // so the parameter can only ever come from the URL: a reader that skipped a key because its default
+    // holds `undefined` would lose the citation's deep link on every reload, and nothing else here would
+    // notice, since every other fixture's keys carry a value.
+    const FOCUS = { src: undefined as string | undefined };
+    expect(hydrateState(FOCUS, "?src=6f1c0b3e-0000-4000-8000-000000000007")).toEqual({
+      src: "6f1c0b3e-0000-4000-8000-000000000007",
+    });
+    // A key nobody declared is still not adopted, or any query string would become state.
+    expect("other" in hydrateState(FOCUS, "?other=1")).toBe(false);
+    // And `?src=` with nothing after it comes back as the empty string: the hook does not invent a
+    // default, so it is the caller that turns a blank into "no filter" (`state.src || undefined`).
+    expect(hydrateState(FOCUS, "?src=")).toEqual({ src: "" });
+  });
+
   it("parses booleans from 1/true and treats anything else as false", () => {
     expect(hydrateState(INITIAL, "?remote=1", OPTS).remote).toBe(true);
     expect(hydrateState(INITIAL, "?remote=true", OPTS).remote).toBe(true);

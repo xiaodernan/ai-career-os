@@ -50,8 +50,12 @@ public class KnowledgeService {
     }
 
     @Transactional(readOnly = true)
-    public PageDTO<SourceItem> listSources(UUID userId, int page, int size) {
-        var result = sources.findByUserIdOrderByCreatedAtDesc(userId, Paging.of(page, size).pageable());
+    public PageDTO<SourceItem> listSources(UUID userId, int page, int size, UUID documentId) {
+        var paging = Paging.of(page, size);
+        var result = documentId == null
+                ? sources.findByUserIdOrderByCreatedAtDesc(userId, paging.pageable())
+                : sources.findByUserIdAndDocumentIdOrderByCreatedAtDesc(userId, documentId,
+                        paging.pageable());
         return PageDTO.from(result, SourceItem::from);
     }
 

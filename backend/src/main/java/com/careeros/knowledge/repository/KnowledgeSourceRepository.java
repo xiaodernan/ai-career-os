@@ -12,6 +12,10 @@ public interface KnowledgeSourceRepository extends JpaRepository<KnowledgeSource
 
     Page<KnowledgeSource> findByUserIdOrderByCreatedAtDesc(UUID userId, Pageable pageable);
 
+    /** The source a citation points at: a chunk's document_id is this column, not the row's own id. */
+    Page<KnowledgeSource> findByUserIdAndDocumentIdOrderByCreatedAtDesc(UUID userId, UUID documentId,
+                                                                        Pageable pageable);
+
     Optional<KnowledgeSource> findByIdAndUserId(UUID id, UUID userId);
 
     Optional<KnowledgeSource> findFirstByUserIdAndKindAndRefId(UUID userId, String kind, UUID refId);

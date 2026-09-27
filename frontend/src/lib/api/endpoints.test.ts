@@ -1110,13 +1110,14 @@ describe("endpoints ↔ backend route parity", () => {
     expect(new Set(handlers.map((h) => `${h.verb} ${h.pattern}`)).size).toBe(handlers.length);
     expect(handlers.flatMap((h) => h.unparsed)).toEqual([]);
     const bound = handlers.flatMap((h) => h.params);
-    expect(bound.length).toBeGreaterThanOrEqual(35);
-    // 35 parameters in 17 distinct names, measured: the reader's whole answer rather than a spot
+    expect(bound.length).toBe(36);
+    // 36 parameters in 18 distinct names, measured: the reader's whole answer rather than a spot
     // check, so a signature shape it stops understanding shrinks this set instead of passing quiet
+    // (the 18th is `documentId`, which #153 added so a citation link can be narrowed server-side)
     expect(new Set(bound.map((p) => p.name))).toEqual(
       new Set([
-        "agent", "company", "file", "kind", "limit", "location", "maxSalary", "minSalary", "page",
-        "q", "remote", "resumeId", "size", "skills", "sort", "status", "title",
+        "agent", "company", "documentId", "file", "kind", "limit", "location", "maxSalary",
+        "minSalary", "page", "q", "remote", "resumeId", "size", "skills", "sort", "status", "title",
       ])
     );
     // five of them spell the name Spring matches on inside the annotation, so the reader's attribute
@@ -1137,7 +1138,9 @@ describe("endpoints ↔ backend route parity", () => {
       .sort())
       .toEqual(["POST /knowledge/documents file", "POST /resumes/upload file"]);
     ["GET /activity/runs limit", "GET /applications status", "GET /applications page",
-      "GET /companies q", "GET /resume-versions resumeId"].forEach((p) => expect(pairs).toContain(p));
+      "GET /companies q", "GET /resume-versions resumeId",
+      // the citation deep link, named as a pair: the browser sends this key and this handler binds it
+      "GET /knowledge/sources documentId"].forEach((p) => expect(pairs).toContain(p));
     // the bookmark list is not paged by the server, so it must not arrive here carrying a page size
     expect([...pairs].some((p) => p.startsWith("GET /jobs/saved"))).toBe(false);
   });

@@ -39,8 +39,9 @@ public class KnowledgeController {
     @GetMapping("/sources")
     public PageDTO<SourceItem> sources(@CurrentUser AuthUser user,
                                        @RequestParam(defaultValue = "0") int page,
-                                       @RequestParam(defaultValue = "20") int size) {
-        return knowledge.listSources(user.id(), page, size);
+                                       @RequestParam(defaultValue = "20") int size,
+                                       @RequestParam(required = false) UUID documentId) {
+        return knowledge.listSources(user.id(), page, size, documentId);
     }
 
     @DeleteMapping("/sources/{id}")

@@ -133,7 +133,7 @@ back to `posted` for the same reason.
 
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/knowledge/sources` | registered sources + status |
+| GET | `/knowledge/sources` | registered sources + status (`?page=&size=&documentId=` — the last narrows to the document a citation points at) |
 | GET | `/knowledge/sources/{id}/status` | ingestion progress |
 | DELETE | `/knowledge/sources/{id}` | |
 | POST | `/knowledge/text` | ingest inline text (`{kind, title, refId?, text}`) |

@@ -312,11 +312,16 @@ function mapSource(raw: unknown): KnowledgeSource {
   };
 }
 
-export function useKnowledgeSources(live = false) {
+/**
+ * The knowledge list. `documentId` narrows it server-side, which is what makes `/knowledge?src=` a
+ * link rather than a hint: the page holds one page of sources, so filtering what arrived locally could
+ * not tell a deleted document from one that simply sits further down the list.
+ */
+export function useKnowledgeSources(live = false, documentId?: string) {
   return useQuery({
-    queryKey: ["knowledge", "sources", live ? "live" : "once"],
+    queryKey: ["knowledge", "sources", live ? "live" : "once", documentId ?? null],
     queryFn: async (): Promise<Page<KnowledgeSource>> =>
-      normalizePage(await api.get<unknown>(endpoints.knowledge, { size: 50 }), mapSource),
+      normalizePage(await api.get<unknown>(endpoints.knowledge, { size: 50, documentId }), mapSource),
     refetchInterval: (q) => {
       if (!live) return false;
       const items = q.state.data?.items ?? [];
