@@ -96,6 +96,7 @@ from tests.test_response_shape_contract import (
     JAVA_ROOT,
     NORMALIZE,
     ROOT_FRONTEND,
+    TS_OPENER,
     _java_record_body,
     _record_components_at,
     _shape_of,
@@ -2676,3 +2677,224 @@ def test_the_census_sees_every_read_the_mappers_hold():
         assert match is not None and _NAME.findall(match.group(2)) == [], \
             (f"the census now extracts {spelled!r} itself, so this spelling is no longer a divergence "
              "and the agreement above is one scanner reading itself")
+
+
+# ------------------------------------------ #165: the calls neither scanner can see at all
+
+_ACCESSOR_SPELLINGS = tuple(sorted(set(re.search(r"\(\?:([^)]*)\)", _ACCESSORS_HEAD).group(1).split("|"))
+                                   | FOLDED_ACCESSORS))
+_ACCESSOR_OPEN = re.compile(r"\b(?:" + "|".join(_ACCESSOR_SPELLINGS) + r")" + _GENERIC + r"\(\s*")
+
+
+def _ts_function_spans(source: str) -> list[tuple[str, int, int]]:
+    """Every function in a TypeScript file as (name, start, end), by walking braces off the opener.
+
+    `_body` reaches one reader at a time, so every per-reader floor can only speak about a read that
+    sits inside a reader the table names. Walking the whole file once is what lets a rule say *where*
+    a read lives -- inside an accessor, inside a reader, inside nothing -- instead of only reporting
+    that some reader lost one.
+    """
+    blanked = _blank_ts_noise(source)
+    spans = []
+    for opener in re.finditer(TS_OPENER.format(name=r"([A-Za-z_$][\w$]*)"), blanked):
+        brace = blanked.index("{", opener.end())
+        depth, at = 1, brace + 1
+        while depth and at < len(blanked):
+            depth += blanked[at] == "{"
+            depth -= blanked[at] == "}"
+            at += 1
+        if depth:
+            raise AssertionError(f"{opener.group(1)} has no closing brace: the walk off "
+                                 f"TS_OPENER lost the file shape, so no span here can be trusted")
+        spans.append((opener.group(1), opener.start(), at))
+    return spans
+
+
+def _key_position_calls(source: str) -> list[dict]:
+    """Every accessor call handed something in its key position, whether or not it is a literal.
+
+    One walk answers both halves of the count, because two scans over the same file drift the way the
+    two `_body` probes did before #160 merged them: the calls whose key position holds at least one
+    quoted name are the reads `_sites` and `_key_read_calls` both tally, and the calls whose key
+    position holds only a variable are reads neither scanner reports -- #163 found the census blind to
+    a name in single quotes, and this is the same shape one level up, where there is no name to find.
+    """
+    blanked = _blank_ts_noise(source)
+    spans = _ts_function_spans(source)
+    rows = []
+    for opener in _ACCESSOR_OPEN.finditer(blanked):
+        paren = blanked.index("(", opener.start())
+        _, close = _ts_args(blanked, paren)
+        parts = [part.strip() for part in _ts_top_level(blanked[paren + 1:close - 1])]
+        if len(parts) < 2:
+            continue
+        names = parts[1:]
+        owners = [name for name, lo, hi in spans if lo <= opener.start() < hi]
+        head = blanked[opener.start():paren].strip()
+        rows.append({"accessor": head,
+                     "spelling": head.split("<")[0],
+                     "receiver": parts[0],
+                     "names": " ".join(names),
+                     "literal": any(_QUOTED.fullmatch(name) for name in names),
+                     "line": source.count("\n", 0, opener.start()) + 1,
+                     "owner": owners[-1] if owners else None})
+    return rows
+
+
+def _accessor_params(accessor: str) -> list[str]:
+    """One accessor's declared parameters, read out of its own declaration."""
+    source = NORMALIZE.read_text(encoding="utf-8")
+    opener = re.search(TS_OPENER.format(name=accessor), source)
+    if opener is None:
+        raise AssertionError(f"{accessor} is in the accessor vocabulary but has no declaration in "
+                             "normalize.ts -- the vocabulary promises a spelling no accessor answers "
+                             "for, so a call written with it belongs to nothing")
+    paren = opener.end() - 1
+    _, close = _ts_args(source, paren)
+    return [part.strip() for part in _ts_top_level(source[paren + 1:close - 1])]
+
+
+def test_a_call_whose_key_is_a_variable_is_a_population_every_member_has_to_explain_itself():
+    """A read whose name arrives as a variable is invisible to both scanners, so it needs a census.
+
+    `str(row, col)` matches `CENSUS_SITE` and then yields no candidates to `_NAME`, so `_sites` drops
+    it at the `if not candidates` branch; `_key_read_calls` asks the same question of the same shape
+    and drops it too. Two scanners agreeing because both are blind is the failure #163 named, and the
+    blind spot is live in this file: normalize.ts holds 267 accessor calls with a key position, the
+    oracle names 252 of them, and 16 hand their key position to a variable. 252 + 16 - 1 = 267, the
+    one being `idOf(h, g.type)`, which the oracle counts as a read of `h` through the fold while the
+    variable it passes is not a name at all. Nothing in this file walked those 16 before now.
+
+    Measured, so this is durability and not a fix -- but the three mapper-level reads are each one
+    keystroke from being unattributed, and the fourth shows the population needs a *reason* per
+    member, not a count: an accessor's own signature decides whether the argument it receives names
+    a field. The strata are the argument: 7 of the 16 are the accessor definitions' own parameter
+    lists, 5 are the accessors handing their caller's names to `pick`, 4 sit in a mapper, and none
+    sits anywhere else -- in the 47 functions this walk finds.
+    """
+    source = NORMALIZE.read_text(encoding="utf-8")
+    calls = _key_position_calls(source)
+    named = _key_read_calls(source)
+    nameless = [row for row in calls if not row["literal"]]
+    assert len(calls) == 267, (f"{len(calls)} accessor calls hand something to a key position: "
+                               "recount the two halves below")
+    assert len(nameless) == 16, f"{len(nameless)} calls put a variable where a name is expected"
+    counted = {(row["line"], row["accessor"], row["receiver"]) for row in nameless} & \
+              {(site["line"], site["name"], site["receiver"]) for site in named}
+    assert len(calls) == len(named) + len(nameless) - len(counted), \
+        (f"252 + 16 stopped being 267: the oracle now counts {len(named)} and the census {len(nameless)} "
+         f"with {sorted(counted)} in common -- one of the three totals moved alone")
+    assert sorted(counted) == [(1243, "idOf", "h")], \
+        (f"the calls that are both nameless and counted are {sorted(counted)}, not one folded `idOf` "
+         "read: a second fold, or a lost one, means the two scans no longer describe the same file")
+
+    signature = [row for row in nameless if not _BARE.fullmatch(row["receiver"])]
+    mechanism = [row for row in nameless if _BARE.fullmatch(row["receiver"])
+                 and row["owner"] in _ACCESSOR_SPELLINGS]
+    reader = [row for row in nameless if _BARE.fullmatch(row["receiver"]) and row["owner"] in READERS]
+    unowned = [row for row in nameless
+               if row not in signature and row not in mechanism and row not in reader]
+    assert len(signature) + len(mechanism) + len(reader) + len(unowned) == len(nameless), \
+        "a nameless call landed in two strata, so the partition below is not a partition"
+    assert (len(signature), len(mechanism), len(reader)) == (7, 5, 4), \
+        (f"the strata are {len(signature)} accessor signatures, {len(mechanism)} delegations and "
+         f"{len(reader)} mapper reads: measured 7/5/4, and a fourth mapper read is a name no scanner "
+         "counts until the loop below explains it")
+    assert unowned == [], (f"nameless reads outside every accessor and every reader: "
+                           f"{[(r['line'], r['owner'], r['names']) for r in unowned]} -- no floor here "
+                           "walks that function, so nothing compares these names to a producer")
+
+    assert sorted(row["spelling"] for row in signature) == ["bool", "idOf", "list", "num", "pathOf",
+                                                            "pick", "str"], \
+        (f"the accessor definitions with a variable-typed key position moved: "
+         f"{sorted(row['spelling'] for row in signature)}")
+
+    for row in mechanism:
+        params = _accessor_params(row["owner"])
+        rest = {param.lstrip(".").split(":")[0].strip() for param in params if param.startswith("...")}
+        loops = {var for var, over in re.findall(r"for \(const (\w+) of (\w+)\)", _body(row["owner"]))
+                 if over in rest}
+        handed = {name.strip().lstrip(".").split(":")[0].strip() for name in _ts_top_level(row["names"])}
+        assert handed and handed <= (rest | loops), \
+            (f"{row['owner']} L{row['line']} hands {sorted(handed)} to `pick`, which is neither its "
+             f"rest parameter {sorted(rest)} nor a variable looped over it {sorted(loops)} -- so this "
+             "call reads a name of its own and belongs with the mapper reads below, not here")
+    assert sorted(row["accessor"] for row in mechanism) == ["pick"] * 5, \
+        (f"the delegation reads are {sorted(row['accessor'] for row in mechanism)}: `pick` is the one "
+         "place a name list is resolved, and a second resolver would be a second mechanism to audit")
+
+    for row in reader:
+        if row["spelling"] in FOLDED_ACCESSORS:
+            # A folded accessor brings its own key list, so the only thing a variable can be doing in
+            # its argument slot is naming something else. Which slot, and what it is called, come from
+            # the accessor's declaration; whether that parameter ever stands in a key position comes
+            # from the names its body puts there, literal or not.
+            position = len(_ts_top_level(row["names"])) - 1
+            params = _accessor_params(row["accessor"])
+            assert len(params) > position + 1, (f"{row['accessor']} is called with {row['names']} at "
+                                                f"L{row['line']} but declares {params}: the argument "
+                                                "slot this rule explains does not exist")
+            head = re.split(r"[=:]", params[position + 1])[0].strip()
+            in_key_position = {token for other in calls
+                               if other["owner"] == row["spelling"]
+                               and _BARE.fullmatch(other["receiver"])
+                               for token in re.findall(r"\w+", other["names"])}
+            assert head not in in_key_position, \
+                (f"{row['accessor']} reads keys off its own parameter {head!r}, so the variable "
+                 f"{row['names']!r} passed at L{row['line']} is a field name and this rule is "
+                 "explaining a read as if it were a label")
+            continue
+        why = READERS[row["owner"]]["dynamic"].get(row["receiver"])
+        assert why, (f"{row['owner']} L{row['line']} passes {row['names']!r} to "
+                     f"{row['receiver']!r}, a read no scanner counts and this reader never declares "
+                     f"dynamic -- its entries are {sorted(READERS[row['owner']]['dynamic'])}")
+        cited = list(dict.fromkeys(re.findall(r"`(_\w+)", why)))
+        live = []
+        for name in cited:
+            answer = globals().get(name)
+            if not callable(answer):
+                continue
+            try:
+                table = answer()
+            except TypeError:
+                continue  # a helper that needs an argument is not a name table
+            if isinstance(table, (list, tuple, set, dict)) and table:
+                live.append((name, len(table)))
+        assert live, (f"{row['owner']}.{row['receiver']} is excused by an entry that cites "
+                      f"{cited or 'no helper at all'}, none of which answers a non-empty name table, "
+                      f"so no rule compares the names arriving at L{row['line']} with a producer")
+
+    # Specificity: the case this census exists for, planted in-process. Both shipped scanners drop
+    # it, the per-reader floors never see it because `h` stays in `used` from its literal sites, and
+    # only the walk above can say it arrived.
+    plant = "export function plantedReader(h: unknown, col: string) {\n" \
+            "  return str(h, col);\n}\n"
+    assert _key_read_calls(plant) == (), \
+        "the oracle now names a read whose key is a variable, so the 252 above stopped being the whole story"
+    planted_match = CENSUS_SITE.search(plant)
+    assert planted_match is not None and _NAME.findall(planted_match.group(2)) == [], \
+        "the census extracts a name from a variable-tail call, so `_sites` and this walk are one scan"
+    planted_rows = _key_position_calls(plant)
+    assert [(r["owner"], r["names"], r["literal"]) for r in planted_rows] == \
+        [("plantedReader", "col", False)], \
+        (f"the census does not see the planted dynamic read: {planted_rows}")
+
+    spreadless = "export function plantedSpread(source: unknown) {\n" \
+                 "  return list(source, SOME_KEYS);\n}\n"
+    assert re.findall(_ACCESSORS + r"([A-Za-z_$][\w$.]*)\s*,[^)]*\.\.\.", spreadless) == [], \
+        ("`_spread_receivers` now catches a bare identifier, so #140's declaration rule covers what "
+         "this census covers and one of the two is redundant")
+
+    # The vocabulary itself, asked the same question the walk asks: a spelling is either an accessor
+    # this file defines, or a name no call uses. Measured: `int` and `strOr` are declared in neither
+    # service and appear zero times in normalize.ts, which is allowed for a finder that has to be
+    # ready before the read exists (#163's reason) -- but not allowed to go uncounted, because a
+    # vocabulary nobody can name the author of is how an invented spelling becomes a gate.
+    dead = sorted(name for name in _ACCESSOR_SPELLINGS
+                  if re.search(TS_OPENER.format(name=name), source) is None)
+    called = {row["accessor"].split("<")[0] for row in calls}
+    assert sorted(set(dead) & called) == [], \
+        (f"{sorted(set(dead) & called)} is called in normalize.ts but defined nowhere: a read is "
+         "being counted under a spelling no accessor answers for")
+    assert dead == ["int", "strOr"], (f"the vocabulary's undefined spellings are now {dead}, measured "
+                                      "at two -- recount before trusting either list")
