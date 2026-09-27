@@ -99,11 +99,6 @@ public final class JobDtos {
     public record TailorRequest(@JsonAlias("resume_version_id") UUID resumeVersionId) {
     }
 
-    public record TailorResponse(UUID versionId, Map<String, Object> tailored,
-                                 Map<String, Object> diff, List<Object> notes,
-                                 List<Object> evidence, Map<String, Object> stats) {
-    }
-
     public record CoverLetterRequest(@JsonAlias("resume_version_id") UUID resumeVersionId,
                                      String mode, String previous, String goal,
                                      String tone, String length) {

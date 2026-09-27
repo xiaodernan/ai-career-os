@@ -48,11 +48,6 @@ public final class InterviewDtos {
     public record AnswerRequest(@NotBlank String answer) {
     }
 
-    public record TurnPayload(int seq, String role, String content,
-                              @JsonAlias("question_meta") Map<String, Object> questionMeta,
-                              @JsonAlias("evaluation") Map<String, Object> evaluation) {
-    }
-
     public record OpeningResponse(TurnItem question, SessionItem session) {
     }
 
