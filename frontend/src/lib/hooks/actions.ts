@@ -281,7 +281,9 @@ export function useCoverLetter(jobId: string) {
           ...field("length", opts?.length),
         },
       });
-      return { text: coverLetterText(raw), evidence: raw, taskId: str(raw, "taskId", "task_id") };
+      // `letter` is the one name `generate` answers for the text; `taskId` is not among them, so the
+      // panel gets no stream affordance it could not open -- the same correction #98 made for tailor.
+      return { text: coverLetterText(raw), evidence: raw };
     },
     onError: fail("Cover letter generation failed."),
   });

@@ -442,14 +442,14 @@ BROWSER_READS = {
     "normalizeSuggestions": ("/internal/features/jd/suggestions", "raw"),
 }
 
-# Candidates the browser tries that no answer carries: tolerant alternates, each harmless only
-# because a sibling in the same list does exist -- `taskId` was once in this list by accident and
-# it silently killed a UI affordance, so a new name here has to mean something. #144 shrank this
-# table: `normalizeSuggestions` no longer probes `items`/`improvements`, because the one handler
-# that answers it writes the list under `suggestions` and nothing else.
-DEAD_ALTERNATES = {
-    "body", "coverLetter", "cover_letter", "markdown", "text", "content",
-}
+# Candidates the browser tries that no answer carries. #158 emptied this table: the cover letter's six
+# (`content`/`text`/`markdown`/`body` beside the real `letter`, plus the `coverLetter`/`cover_letter`
+# wrapper it drilled) were its last members, and `normalizeTailor`/`normalizeSuggestions` had already
+# lost theirs to #144/#145. So the table's job changed from inventory to ban -- an empty set here means
+# no read of a pass-through AI answer may ask for a name nothing writes, which is what the two tests
+# below now assert in both directions. `taskId` was once in this list by accident and it silently killed
+# a UI affordance; the cover letter's `taskId` read went the same way in the same commit.
+DEAD_ALTERNATES: set[str] = set()
 
 
 def _browser_reads(function_name: str, receiver: str) -> set[str]:
@@ -484,13 +484,19 @@ def test_the_alternate_spellings_with_no_producer_stay_declared():
 
 def test_the_browser_side_is_actually_read():
     """Positive control: the two gates above pass on an empty reading of either file."""
-    assert _browser_reads("coverLetterText", "raw") == {
-        "content", "text", "markdown", "body", "letter", "coverLetter", "cover_letter"}
+    assert _browser_reads("coverLetterText", "raw") == {"letter"}, \
+        "one name, and it is the producer's own"
     assert _answers_read_by_the_browser("/internal/features/cover-letter") == {
         "letter", "sources", "mode", "model"}, \
         "resolving `cover_generate` through its import alias is what makes this answer readable"
     assert _browser_reads("normalizeTailor", "raw") >= {"stats", "notes"}
-    assert len(DEAD_ALTERNATES) >= 6, DEAD_ALTERNATES  # #145 deleted the three tailor aliases
+    # The ban is only as strong as the machinery that computes it, and an empty table is the shape a
+    # broken scanner leaves behind too -- so the scanner's own reach is pinned here: the cover letter's
+    # answer and the browser's read differ by exactly the three names the reader no longer asks for.
+    assert _answers_read_by_the_browser("/internal/features/cover-letter") - _browser_reads(
+        "coverLetterText", "raw") == {"mode", "model", "sources"}
+    assert _browser_reads("coverLetterText", "raw") - _answers_read_by_the_browser(
+        "/internal/features/cover-letter") == set()
 
 
 # ------------------------------------- the same reading, against a Java record's fields

@@ -469,6 +469,18 @@ READERS: dict[str, dict] = {
         "blind": {},
         "dynamic": {},
     },
+    "coverLetterText": {
+        # Two callers, one dict: `useCoverLetter` relays POST /jobs/{id}/cover-letter untouched, and the
+        # copilot's `cover_letter` artifact carries `generate`'s answer as its payload. #158 deleted the
+        # seven names that had no author (`content`/`text`/`markdown`/`body` beside the real `letter`, and
+        # the whole nested `coverLetter`/`cover_letter` drill) -- an answer that never carried the letter
+        # used to be able to look like a letter that was empty.
+        "record_of": {"raw": "CoverLetterMap"},
+        "drilled": {},
+        "elements": {},
+        "blind": {},
+        "dynamic": {},
+    },
     "structuredResumeToMarkdown": {
         # The renderer of the tailor panel's document. Its one production caller is
         # `normalizeTailor`, which hands over `tailored` -- the parse answer with its bullets,
@@ -2027,6 +2039,18 @@ def test_the_reads_are_actually_found():
         (f"the badge branches on {sorted(_badge_kinds())} while the decision can ask for "
          f"{sorted(actions)}: a kind with no branch renders as the fallback, which is how #157's "
          "follow-ups all wore the opening badge")
+    # The cover letter, #158. One site, one name, against `generate`'s own four-key answer -- and the
+    # artifact path the same reader serves is enumerated from the orchestrator's switch, so a renamed
+    # artifact type would have to move this reader's producer with it.
+    letter = _sites("coverLetterText")
+    assert len(letter) == 1, letter
+    assert letter[0]["receiver"] == "raw"
+    assert [s["keys"] for s in letter] == [("letter",)]
+    assert _emitted("CoverLetterMap") == {"letter", "mode", "model", "sources"}
+    assert _emitted("CoverLetterMap") - {k for s in letter for k in s["keys"]} == {
+        "mode", "model", "sources"}
+    assert "cover_letter" in _artifact_switch(), \
+        f"the copilot no longer appends a cover_letter artifact: {sorted(_artifact_switch())}"
     # The citation mapper. 10 sites and 14 names, down from the 16 sites and 49 names #151 measured with
     # this same scanner -- and the 35 that went were mostly the nested `source` object (`pick(e,
     # "source", "doc", "document", "metadata")` plus the eighteen names tried on its result), a shape no

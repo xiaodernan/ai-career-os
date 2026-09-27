@@ -780,12 +780,13 @@ export function missingSkillGaps(suggestions: Suggestion[]): string[] {
     .filter(Boolean);
 }
 
+/* The cover letter the `/jobs/{id}/cover-letter` relay hands back, and the same dict the copilot's
+ * `cover_letter` artifact carries as its payload: `generate` answers {letter, sources, mode, model}.
+ * `content`/`text`/`markdown`/`body` had no author, and the nested `coverLetter`/`cover_letter` drill
+ * answered to a wrapper nothing produces -- both were ways for a reply that never arrived to look like
+ * an empty letter rather than a missing one. */
 export function coverLetterText(raw: unknown): string {
-  return (
-    str(raw, "content", "text", "markdown", "body", "letter") ??
-    str(pick(raw, "coverLetter", "cover_letter"), "content", "text", "markdown", "body") ??
-    ""
-  );
+  return str(raw, "letter") ?? "";
 }
 
 /* ------------------------------- dashboard -------------------------------- */

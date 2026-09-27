@@ -580,10 +580,26 @@ describe("normalizePipeline", () => {
 });
 
 describe("coverLetterText", () => {
-  it("unwraps nested cover_letter payloads", () => {
-    expect(coverLetterText({ content: "Dear" })).toBe("Dear");
-    expect(coverLetterText({ cover_letter: { text: "Hi" } })).toBe("Hi");
+  it("takes the letter from the one name the producer answers", () => {
+    // Field-for-field out of `generate`'s return in app/features/cover_letter.py, which is also what
+    // the relay passes through and what the copilot's `cover_letter` artifact carries as its payload.
+    expect(coverLetterText({ letter: "Dear", mode: "generate" })).toBe("Dear");
+  });
+
+  it("has no nested wrapper to unwrap and no borrowed spelling to fall back on", () => {
+    // Both fixtures answer "" now: `{content}`/`{cover_letter:{text}}` were shapes nothing produces,
+    // so accepting them let a reply that never carried `letter` look like a letter that was empty.
+    expect(coverLetterText({ content: "Dear" })).toBe("");
+    expect(coverLetterText({ cover_letter: { text: "Hi" } })).toBe("");
     expect(coverLetterText({})).toBe("");
+    expect(coverLetterText(null)).toBe("");
+  });
+
+  it("answers nothing for the tool's refusal, which has no letter at all", () => {
+    // `generate_cover_letter` returns {"error": …} before it can reach the model when the job or the
+    // resume is missing, and the artifact carries that dict unchanged -- the panel must read it as
+    // no text, not as a letter.
+    expect(coverLetterText({ error: "job not found" })).toBe("");
   });
 });
 
