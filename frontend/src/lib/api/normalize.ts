@@ -236,17 +236,32 @@ export function normalizeDimensions(raw: unknown): MatchDimension[] {
   return out;
 }
 
+/**
+ * The match under a job. Two envelopes hand it over (`MatchResponse` and `JobDetail`, both under the
+ * one key `match`) and two authors fill the map itself — `MatchResult` for a fresh compute,
+ * `MatchSummary` for the stored row — which is why every site below asks for one name: the #155
+ * measurement found 26 candidates that neither author, nor either envelope, writes on any path
+ * (`latestMatch`/`jobMatch` and their snake twins, `overallScore`/`score`/`matchScore`,
+ * `matched`/`strengths`, `missing`/`gaps`/`skillGap`, `why`/`reasons`, `summary`/`explanation`,
+ * `computedAt`, `recommendedPreparation`). A tolerant alias beside a live name is invisible to the
+ * per-site liveness rule, so each site is now pinned to its one spelling in the gate's census too.
+ *
+ * `idOf` keeps its shared table, and the two sites whose every name is unauthored — `jobId`,
+ * `resumeVersionId` — stay as they are, declared dead with their reasons at
+ * `DEAD_SITES` in `ai-service/tests/test_response_field_contract.py`: the columns exist on
+ * `job_matches`, the projection omits them, and every caller already knows which job it asked about.
+ */
 export function normalizeMatch(raw: unknown): JobMatch | null {
-  const m = pick(raw, "match", "latestMatch", "latest_match", "jobMatch", "job_match") ?? raw;
+  const m = pick(raw, "match") ?? raw;
   if (!rec(m) && !Array.isArray(m)) return null;
-  const overall = pct(num(m, "overall", "overallScore", "overall_score", "score", "matchScore", "match_score"));
-  const matched = list<string>(m, "matchedSkills", "matched_skills", "matched", "strengths");
-  const missing = list<string>(m, "missingSkills", "missing_skills", "missing", "gaps", "skillGap", "skill_gap");
+  const overall = pct(num(m, "overall"));
+  const matched = list<string>(m, "matchedSkills");
+  const missing = list<string>(m, "missingSkills");
   // One spelling. `citations` is what the RAG answer route calls this list, and the app never calls
   // that route (the copilot answers through `ChatResponse`, whose sources field is `sources`), so
   // tolerating it here bought nothing; the field-contract gate now refuses the name outright.
   const evidence = normalizeEvidence(pick(m, "evidence"));
-  const gaps = normalizeSkillGaps(pick(m, "skillGaps", "skill_gaps", "gaps"));
+  const gaps = normalizeSkillGaps(pick(m, "skillGaps"));
   if (overall == null && !matched.length && !missing.length && !evidence.length) return null;
   return {
     id: idOf(m, "match"),
@@ -264,13 +279,17 @@ export function normalizeMatch(raw: unknown): JobMatch | null {
     dimensions: normalizeDimensions(m),
     matchedSkills: matched.map(String),
     missingSkills: missing.map(String),
-    whyMatch: list<string>(m, "whyMatch", "why_match", "reasons", "why").map(String),
-    reasoning: str(m, "reasoning", "narrative", "summary", "explanation"),
+    whyMatch: list<string>(m, "whyMatch").map(String),
+    // `narrative` is what the matcher answers with; `reasoning` is this view's own field name, which
+    // is the distinction that made four aliases look plausible here.
+    reasoning: str(m, "narrative"),
     evidence: evidence.length ? evidence : undefined,
-    interviewTopics: list<string>(m, "interviewTopics", "interview_topics").map(String),
-    preparation: list(m, "preparation", "recommendedPreparation", "recommended_preparation"),
+    // Only the fresh compute carries these two: the stored row's projection leaves them out, which is
+    // why the interview card treats a missing topic list as "re-run the match" rather than as empty.
+    interviewTopics: list<string>(m, "interviewTopics").map(String),
+    preparation: list(m, "preparation"),
     skillGaps: gaps.length ? gaps : undefined,
-    createdAt: str(m, "createdAt", "created_at", "computedAt", "computed_at"),
+    createdAt: str(m, "createdAt"),
   };
 }
 

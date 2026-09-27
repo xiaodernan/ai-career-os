@@ -209,9 +209,17 @@ describe("normalizeMatch", () => {
   it("returns null when there is nothing signal-bearing", () => {
     expect(normalizeMatch({})).toBeNull();
   });
-  it("reads snake_case skills and normalizes overall", () => {
-    const m = normalizeMatch({ match_score: 0.82, matched_skills: ["Go", "K8s"], missing_skills: ["Rust"] });
-    expect(m).not.toBeNull();
+  it("reads nothing from the snake_case spelling no match author uses", () => {
+    // #155 measured that neither `MatchResult` (the fresh compute, relayed as a `model_dump()` copy)
+    // nor `MatchSummary` (the stored row) answers under any of these names: the matcher's own field
+    // names are camel-free and bare. The values are real, so the assertion says the reader stopped
+    // inventing them -- not that a key happened to be absent from a stub.
+    expect(normalizeMatch({ match_score: 0.82, matched_skills: ["Go", "K8s"],
+                            missing_skills: ["Rust"] })).toBeNull();
+    // The pair: with the same values under the names the matcher really answers with, the very same
+    // mapper reads all three. Without this line the `null` above would also be satisfied by a reader
+    // that had stopped working altogether.
+    const m = normalizeMatch({ overall: 0.82, matchedSkills: ["Go", "K8s"], missingSkills: ["Rust"] });
     expect(m!.overall).toBe(82);
     expect(m!.matchedSkills).toEqual(["Go", "K8s"]);
     expect(m!.missingSkills).toEqual(["Rust"]);
@@ -1455,7 +1463,7 @@ describe("normalizeMatch reasoning", () => {
   it("maps the backend `narrative` field into reasoning (the match panel's \"why\")", () => {
     const m = normalizeMatch({
       overall: 0.72,
-      matched_skills: ["Go"],
+      matchedSkills: ["Go"],
       narrative: "Strong systems background.",
     });
     expect(m?.reasoning).toBe("Strong systems background.");
@@ -1463,9 +1471,13 @@ describe("normalizeMatch reasoning", () => {
     expect(m?.matchedSkills).toEqual(["Go"]);
   });
 
-  it("prefers an explicit reasoning over narrative when both are present", () => {
+  it("reads no `reasoning` off the wire, whatever else the row carries", () => {
+    // `reasoning` is this view's field name, not a column: #155 measured that neither author emits it
+    // (nor `summary`/`explanation`), so the pair the old reader kept -- `reasoning` winning over
+    // `narrative` -- could only ever be built by a fixture. Both names carry values here, so the
+    // verdict is about which one the reader is allowed to look at.
     const m = normalizeMatch({ overall: 50, reasoning: "r", narrative: "n" });
-    expect(m?.reasoning).toBe("r");
+    expect(m?.reasoning).toBe("n");
   });
 });
 

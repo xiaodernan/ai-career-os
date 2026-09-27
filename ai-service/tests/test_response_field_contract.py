@@ -73,8 +73,16 @@ draw the same keys -- the match row adds `job_id` -- which `pyappend` refuses by
 guessing at. `pycons` answers with what every row draws and the census names the difference, because a
 union would let a read lean on `job_id` and stay green on the four cards that never carry it. The card's
 own vocabulary is bound the same way it binds the action routes and the dimension labels: the
-`case "…"`: labels of its switch are compared with the `type` values the orchestrator appends, which is
+`case "…"` labels of its switch are compared with the `type` values the orchestrator appends, which is
 how `skill_gap` -- a whole renderer no path through the producer can reach -- was found and deleted.
+
+#155 wrote the other half of that blindness into a census. `normalizeMatch` has been bound since #122 and
+its sites have been counted ever since, so its twenty-two *tolerant* aliases -- each beside a name an
+author really fills -- were invisible by construction, and #127's four deletions were only the ones that
+had no live sibling at all. Every one of its 18 sites is now pinned to the exact tuple it asks for, and
+the envelope drill is asserted **per author**: `raw` is bound to a union of two envelopes, and #155's own
+witness measured that renaming `match` on one of them leaves liveness and the declared-dead list green --
+the union is what the per-site rule has to work with, so the per-author assert is what replaces it.
 """
 
 import ast
@@ -1542,6 +1550,30 @@ def test_the_reads_are_actually_found():
     assert len(matches) == 18
     assert {s["receiver"] for s in matches} == {"raw", "m"}
     assert sum(1 for s in matches if s["receiver"] == "m") == 17  # every payload read, incl. idOf
+    # One name per site, in order -- the form #150 introduced for the dimension bars and #155 wrote
+    # for the whole match map. #127 deleted four *dead* aliases from this reader and left twenty-two
+    # *tolerant* ones, each beside a name an author really fills, so every site stayed live and the
+    # census could only count them: 56 candidates on 18 sites, 55 distinct, against the 25 that are
+    # answered somewhere. The two declared dead sites keep their pair, and `idOf` keeps the shared
+    # table its own equality line already bounds.
+    assert [s["keys"] for s in matches] == [
+        ("match",), ("overall",), ("matchedSkills",), ("missingSkills",), ("evidence",),
+        ("skillGaps",), ("jobId", "job_id"), ("resumeVersionId", "resume_version_id"),
+        ("technical",), ("experience",), ("projects",), ("education",), ("whyMatch",),
+        ("narrative",), ("interviewTopics",), ("preparation",), ("createdAt",),
+        tuple(sorted(_id_of_keys())),
+    ], [s["keys"] for s in matches]
+    # Which author answers which name, per row rather than through the union: the stored projection
+    # drops `interviewTopics` (so the interview card asks for a re-run instead of showing nothing) and
+    # the fresh compute carries no `createdAt`, which only the persisted row can replay.
+    assert "interviewTopics" in _emitted("MatchResult")
+    assert "interviewTopics" not in _emitted("MatchSummary")
+    assert "createdAt" in _emitted("MatchSummary")
+    assert "createdAt" not in _emitted("MatchResult")
+    # Both envelopes hand the map over under one key, and neither spells it any other way.
+    assert [s["keys"] for s in matches if s["receiver"] == "raw"] == [("match",)]
+    assert all("match" in _emitted(name) for name in READERS["normalizeMatch"]["record_of"]["raw"]), \
+        "an envelope stopped carrying `match`, so the drill at the top of the mapper is a dead read"
     dims = _sites("normalizeDimensions")
     assert len(dims) == 4, dims
     assert {s["receiver"] for s in dims} == {"raw"}
