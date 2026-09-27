@@ -249,8 +249,9 @@ export interface Evidence {
   chunkIds?: string[];
   quote: string;
   reasoning?: string;
+  // No wire row carries an `href`, so #151 deleted that field: a citation's destination comes from
+  // the surface rendering it (`EvidenceList`'s `hrefFor`), never from the payload.
   source?: { docTitle?: string; docId?: string; path?: string[]; kind?: string };
-  href?: string;
 }
 
 /* ------------------------------------------------------------------ */

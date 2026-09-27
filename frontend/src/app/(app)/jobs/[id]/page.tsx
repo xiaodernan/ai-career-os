@@ -50,7 +50,7 @@ import { useCreateApplication, useCreateInterviewSession, useRunJobMatch } from 
 import { list as listOf, pick, rec, str } from "@/lib/api/normalize";
 import { formatSalary, titleCase } from "@/lib/format";
 import type { Evidence, JdRequirement, PreparationItem, SkillGap } from "@/lib/api/types";
-import { normalizeEvidence, normalizeJdParsed } from "@/lib/api/normalize";
+import { normalizeJdParsed } from "@/lib/api/normalize";
 
 const INTERVIEW_MODES = [
   { value: "behavioral", label: "Behavioral" },
@@ -86,9 +86,11 @@ export default function JobDetailPage() {
   const preferred = jdParsed.preferredSkills;
   const responsibilities = jdParsed.responsibilities;
   // A gap belongs to the match, not to the JD: a required skill is only a gap for *this* resume,
-  // so there is no analysis-side list to fall back to and the card stays hidden before a match.
+  // so there is no analysis-side list to fall back to and the card stays hidden before a match. The
+  // citations under it work the same way — #151 measured that `JdItem.parsed` carries no evidence
+  // list on any path, so the `normalizeEvidence(jdBody)` fallback here could only ever answer [].
   const gaps: SkillGap[] = match?.skillGaps ?? [];
-  const evidence: Evidence[] = match?.evidence ?? normalizeEvidence(jdBody);
+  const evidence: Evidence[] = match?.evidence ?? [];
   const topics: string[] = match?.interviewTopics?.length ? match.interviewTopics : jdParsed.interviewTopics;
   const prep: PreparationItem[] = match?.preparation ?? [];
   const reqRow = (r: unknown, requiredFlag: boolean): JdRequirement => ({

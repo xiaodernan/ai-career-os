@@ -94,39 +94,114 @@ describe("normalizePage", () => {
 });
 
 describe("normalizeEvidence", () => {
-  it("maps snake_case citations with score and quote", () => {
-    const ev = normalizeEvidence({
-      citations: [{ skill: "Go", score: 0.9, quote: "wrote a service", doc_title: "Resume" }],
-    });
-    expect(ev[0]).toMatchObject({
-      criterion: "Go",
-      score: 90,
-      quote: "wrote a service",
-      source: { docTitle: "Resume" },
-    });
-  });
-
-  it("reads source_kind/document_id/doc_title from a flat ai-service to_evidence item", () => {
-    // Exact shape produced by ai-service app/rag/pipeline.py::to_evidence.
+  // Three row authors and two envelopes, which is every shape the six call sites can hand over. The
+  // fixtures below are copied from those producers rather than written to a guess: `EvidenceItem` as
+  // `compute_match` fills it, `app/rag/pipeline.py::to_evidence`'s row, and the literal
+  // `orchestrator._collect_artifacts` appends onto `out.sources`.
+  it("reads a match's own evidence row, including its document title", () => {
     const ev = normalizeEvidence([
       {
-        ref: 1,
-        chunk_id: "c-1",
-        document_id: "doc-9",
-        doc_title: "resume-v3",
-        source_kind: "resume",
-        section: "Experience › Acme",
-        quote: "shipped the API",
+        criterion: "skill:Go",
         score: 0.62,
+        chunk_ids: ["c-1"],
+        quote: "wrote a service in Go",
+        source: "resume-v3",
+        section: "Experience › Acme",
+        reasoning: "'Go' appears in your resume and is listed by this JD.",
       },
     ]);
-    expect(ev[0].source).toMatchObject({ kind: "resume", docId: "doc-9", docTitle: "resume-v3" });
-    expect(ev[0].source?.path).toEqual(["Experience", "Acme"]);
+    expect(ev).toEqual([
+      {
+        criterion: "skill:Go",
+        score: 62,
+        chunkIds: ["c-1"],
+        quote: "wrote a service in Go",
+        reasoning: "'Go' appears in your resume and is listed by this JD.",
+        source: { docTitle: "resume-v3", docId: undefined, kind: undefined, path: ["Experience", "Acme"] },
+      },
+    ]);
   });
 
-  it("prefers a nested source.kind over the flat fallback", () => {
-    const ev = normalizeEvidence([{ source_kind: "note", source: { kind: "jd" } }]);
-    expect(ev[0].source?.kind).toBe("jd");
+  it("reads a retrieved row off the flat shape to_evidence writes", () => {
+    const ev = normalizeEvidence({
+      evidence: [
+        {
+          ref: 1,
+          chunk_id: "c-1",
+          document_id: "doc-9",
+          doc_title: "resume-v3",
+          source_kind: "resume",
+          section: "Experience › Acme",
+          quote: "shipped the API",
+          score: 0.62,
+        },
+      ],
+    });
+    expect(ev[0].source).toEqual({
+      docTitle: "resume-v3",
+      docId: "doc-9",
+      kind: "resume",
+      path: ["Experience", "Acme"],
+    });
+    // A retrieved row names no criterion, which is the case the label default covers.
+    expect(ev[0].criterion).toBe("Evidence");
+    expect(ev[0].chunkIds).toEqual(["c-1"]);
+  });
+
+  it("reads a copilot source row, whose label is the only criterion it carries", () => {
+    const ev = normalizeEvidence({
+      sources: [
+        {
+          type: "source",
+          chunk_id: "c9",
+          document_id: "doc-7",
+          label: "resume-v3 › skills",
+          quote: "5y React",
+        },
+      ],
+    });
+    expect(ev[0].criterion).toBe("resume-v3 › skills");
+    expect(ev[0].source?.docId).toBe("doc-7");
+    expect(ev[0].chunkIds).toEqual(["c9"]);
+    // No score on the wire, so none on the card — the badge is hidden rather than drawn as zero.
+    expect(ev[0].score).toBeUndefined();
+  });
+
+  it("reads the list under no other envelope key", () => {
+    // #151 deleted `items`, `citations` and `chunks` from the envelope probe: no response on either
+    // service answers under any of those three names, so a payload shaped like this is a payload the
+    // mapper used to *invent* rows for.
+    for (const key of ["citations", "items", "chunks"]) {
+      expect(normalizeEvidence({ [key]: [{ quote: "q" }] })).toEqual([]);
+    }
+  });
+
+  it("reads nothing from the nested source object no producer writes", () => {
+    // The shape this mapper used to be built around, and the reason a match's document title went
+    // missing: `source` on the wire is a *string*, so every read through a nested object answered
+    // undefined while the live sibling beside it kept the site looking healthy.
+    const [row] = normalizeEvidence([
+      { source_kind: "note", source: { kind: "jd", docTitle: "note-1", title: "note-1" } },
+    ]);
+    expect(row.source).toEqual({
+      docTitle: undefined,
+      docId: undefined,
+      kind: "note",
+      path: undefined,
+    });
+    expect(row.criterion).toBe("Evidence");
+  });
+
+  it("reads no link, because a citation's destination is the surface's choice", () => {
+    const [row] = normalizeEvidence([{ href: "/knowledge?src=1", url: "/knowledge?src=1", quote: "q" }]);
+    expect(Object.keys(row)).toEqual([
+      "criterion",
+      "score",
+      "quote",
+      "reasoning",
+      "chunkIds",
+      "source",
+    ]);
   });
 });
 

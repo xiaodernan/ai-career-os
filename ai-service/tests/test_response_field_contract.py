@@ -46,6 +46,16 @@ the label table by the two dimension vocabularies that key it, each parsed from 
 declares it (`_overall`'s parameters on one side, ai-service's `DIMENSIONS` on the other). A
 variable-keyed lookup of browser-owned data is not outside the contract; it is the part of it a
 per-site rule cannot see.
+
+`normalizeEvidence`, bound in #151, is the first reader whose rows have three authors and no single
+envelope. A match's evidence is an `EvidenceItem` list, a retrieved-citation list is dicts
+`to_evidence` appends, and the copilot's sources are literals appended to `out.sources` -- so two
+machinery rules widened for it rather than the reader. `pyappend` now matches a dotted list receiver,
+because `out.sources.append({…})` is an attribute chain, not a name (a bare local unparses to its own
+identifier, so the older entries keep matching exactly as before); and `pathOf` joined `_ACCESSORS`,
+since it takes a payload plus a list of names and splits whatever it finds, which made the reader's
+`section` breadcrumb a real read instead of a blind spot. Measured the same pass: none of the other
+26 readers gained or lost a site from either widening.
 """
 
 import ast
@@ -171,6 +181,19 @@ PRODUCERS = {
     # insisting on one the way `pyappend` does.
     "ChatResponse": ("java", "conversation/dto/ConversationDtos.java"),
     "ChatActionItem": ("pyadd", ("_derive_actions", "add")),
+    # A citation row is the one item shape with three authors and no record for any of them, because
+    # all three are Python code and the backend relays each list as a free `List<Object>`: a match's
+    # own `EvidenceItem`, the retrieved rows `to_evidence` shapes for the tailor and cover-letter
+    # answers, and the copilot's `out.sources` row. #151 binds the mapper that reads all three, and
+    # the per-author sets its census pins are what keep the union from covering one author's rename
+    # with another's live sibling.
+    "EvidenceItem": ("pydantic",),
+    "RetrievedEvidenceItem": ("pyappend", ("to_evidence", "evidence")),
+    "CopilotSourceItem": ("pyappend", ("_collect_artifacts", "out.sources")),
+    # ...and the two envelopes that hand those rows over: the tailor answer carries its list under
+    # `evidence`, the cover-letter answer under `sources`, and the two key sets are disjoint, which is
+    # why the mapper's two-name probe is a binding rather than a guess.
+    "CoverLetterMap": ("pyfunc", "generate"),
 }
 
 # Readers whose producers are known per map. A reader with more producers than one is bound to their
@@ -534,6 +557,36 @@ READERS: dict[str, dict] = {
         "blind": {},
         "dynamic": {},
     },
+    "normalizeEvidence": {
+        # The citation list under an AI conclusion, and the widest fan-in of any reader here: six call
+        # sites, three row authors, two envelopes. `raw` is the envelope only for the two callers that
+        # hand the response over whole -- the tailor answer (`evidence`) and the cover-letter answer
+        # (`sources`) -- while `normalizeMatch`, `normalizeMessages` and `useCopilotChat` drill the
+        # list themselves first, which is what the `Array.isArray` branch is for. Those two envelopes
+        # share no component, so the union below cannot cover a rename on either side.
+        #
+        # 49 names on 16 sites at entry, measured with this gate's own scanner; 14 remain, 12 of them on
+        # the row. The deletion is not an alias diet but a shape: the reader drilled
+        # `pick(e, "source", "doc", "document", "metadata")` into a local and tried eighteen names on
+        # it (4 of its 16 sites), and **no producer on either service writes an object under any of
+        # those keys** -- `EvidenceItem.source` is the string `compute_match` fills from the chunk's own
+        # title. Every read through that local answered undefined, its `?? str(e, …)` fallbacks carried
+        # the site, and the match's document title reached the card as nothing. `href`/`url` went the
+        # same way: no row carries either, so `Evidence.href` was empty on every path and
+        # `EvidenceList` linked only through its caller's `hrefFor`.
+        "record_of": {"raw": ["TailorMap", "CoverLetterMap"],
+                      "e": ["EvidenceItem", "RetrievedEvidenceItem", "CopilotSourceItem"]},
+        "drilled": {},
+        "elements": {"e": "items"},
+        "blind": {},
+        # `items` is the list itself, not a map with keys: either the caller handed it over already
+        # drilled (so `Array.isArray` returns the argument) or `list(raw, "evidence", "sources")
+        # drilled it here. Either way there is no name left to read off it, which is the one thing
+        # `record_of` cannot express -- and the row it holds is bound above, where the reads are.
+        "dynamic": {"items": "the evidence list this reader either receives pre-drilled or drills out"
+                             " of its own argument: a list has no key to read, only the rows it holds, "
+                             "and those are bound as `e`"},
+    },
     "normalizeMatch": {
         # `raw` is the envelope `pick(raw, "match", "latestMatch", …)` drills; the payload is the
         # union, because the score has two authors: POST /jobs/{id}/match answers with
@@ -618,10 +671,15 @@ HOLLOW_DRILLS = {
         "name into `company` because the row renders `app.company?.name`",
 }
 
-_ACCESSORS = (r"\b(?:str|strOr|num|bool|list|pick|rec|int|pct)"
+_ACCESSORS = (r"\b(?:str|strOr|num|bool|list|pick|rec|int|pct|pathOf)"
               # A typed accessor reads like any other call once the annotation is skipped:
               # `pick<Record<string, unknown>>(raw, "company")` is a read of `company`, and
               # skipping only the generic -- not the call -- is what keeps that site visible.
+              # `pathOf` joined in #151 for the reason the list already carries `pick`: it takes a
+              # payload and a list of names (`pathOf(e, "section")`) and splits whatever it finds, so
+              # excluding it left the breadcrumb read out of the site count entirely -- invisible
+              # tolerance is still tolerance. Measured: adding it gives no other bound reader a single
+              # new site, because this reader is the only one that calls it.
               r"(?:<[^<>]*(?:<[^<>]*>[^<>]*)*>)?\(\s*")
 _ID_OF = r"\bidOf\(\s*"
 
@@ -817,6 +875,11 @@ def _appended_keys(func_name: str, list_name: str) -> set[str]:
     `suggest_resume_improvements` appends three cards, and three identical contracts are still one.
     A computed key, or two literals whose key sets differ, means the item contract is not one thing
     any more, which is a question for whoever reads it rather than for this gate to guess.
+
+    The list may be an attribute rather than a local: `orchestrator._collect_artifacts` fills the
+    copilot's citations with `out.sources.append({...})`, onto a field of its own argument, and
+    `ast.unparse` reads that as the name the table gives it. A bare local unparses to its own
+    identifier, so every entry written before #151 matches exactly what it matched before.
     """
     fn = _sole(func_name)
     if fn is None:
@@ -825,9 +888,9 @@ def _appended_keys(func_name: str, list_name: str) -> set[str]:
     found = []
     for node in ast.walk(fn):
         if (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
-                and node.func.attr == "append" and isinstance(node.func.value, ast.Name)
-                and node.func.value.id == list_name and node.args
-                and isinstance(node.args[0], ast.Dict)):
+                and node.func.attr == "append" and node.args
+                and isinstance(node.args[0], ast.Dict)
+                and ast.unparse(node.func.value) == list_name):
             item = node.args[0]
             if any(not isinstance(k, ast.Constant) or not isinstance(k.value, str)
                    for k in item.keys):
@@ -1782,6 +1845,64 @@ def test_the_reads_are_actually_found():
         ("kind", "label", "session_id"): 1,
     }
     assert _emitted("ChatActionItem") == {"kind", "label", "job_id", "session_id"}
+    # The citation mapper. 10 sites and 14 names, down from the 16 sites and 49 names #151 measured with
+    # this same scanner -- and the 35 that went were mostly the nested `source` object (`pick(e,
+    # "source", "doc", "document", "metadata")` plus the eighteen names tried on its result), a shape no
+    # author on either service writes: the only `source` any producer emits is `EvidenceItem`'s string
+    # title, which the reader therefore discarded on its way to a card rendering `source.docTitle`.
+    ev = _sites("normalizeEvidence")
+    assert len(ev) == 10, ev
+    assert {s["receiver"] for s in ev} == {"raw", "e"}
+    assert sum(1 for s in ev if s["receiver"] == "raw") == 1
+    assert sum(1 for s in ev if s["receiver"] == "e") == 9
+    # The tenth of those nine-plus-one is `pathOf(e, "section")`, visible only because #151 added
+    # `pathOf` to `_ACCESSORS`: a breadcrumb split is as much a read of `section` as a `str` is, and
+    # this floor is what notices if the accessor list shrinks back and the site quietly vanishes.
+    assert [s["keys"] for s in ev if s["receiver"] == "raw"] == [("evidence", "sources")]
+    read_off_ev = {k for s in ev if s["receiver"] == "e" for k in s["keys"]}
+    assert read_off_ev == {"criterion", "label", "score", "quote", "reasoning", "chunk_ids",
+                           "chunk_id", "doc_title", "source", "document_id", "source_kind",
+                           "section"}
+    # Per author rather than per union. A match row is read key for key, so its surplus set is empty;
+    # the retrieved row's `ref` numbers the prompt's citations and the card has no slot for it; the
+    # copilot row's `type` is the literal "source" on every append.
+    #
+    # These three lines are the block's own work, and #151's witness measured that by subtraction: a
+    # reader that probes `ref` reddens *only* CENSUS, because the name is authored, so neither the
+    # liveness rule nor the global dead-site floor below has anything to say about it -- delete this
+    # block and the surplus read is invisible to every rule in the gate. A fabricated name is the
+    # easier world: the `len(dead) == 3` floor catches it independently, which is why the drop-the-rule
+    # case had to be built on the surplus side to mean anything.
+    assert _emitted("EvidenceItem") - read_off_ev == set()
+    assert _emitted("RetrievedEvidenceItem") - read_off_ev == {"ref"}
+    assert _emitted("CopilotSourceItem") - read_off_ev == {"type"}
+    # Which of the three authors answers which read, in both directions -- the statement a union
+    # cannot make. `quote` is the one name all three carry, and it is the only read that a rename of
+    # any single author could hide behind: every other name here belongs to exactly one producer or
+    # to a named pair.
+    authors = ("EvidenceItem", "RetrievedEvidenceItem", "CopilotSourceItem")
+    assert {name: sorted(a for a in authors if name in _emitted(a))
+            for name in sorted(read_off_ev)} == {
+        "chunk_id": ["CopilotSourceItem", "RetrievedEvidenceItem"],
+        "chunk_ids": ["EvidenceItem"],
+        "criterion": ["EvidenceItem"],
+        "doc_title": ["RetrievedEvidenceItem"],
+        "document_id": ["CopilotSourceItem", "RetrievedEvidenceItem"],
+        "label": ["CopilotSourceItem"],
+        "quote": ["CopilotSourceItem", "EvidenceItem", "RetrievedEvidenceItem"],
+        "reasoning": ["EvidenceItem"],
+        "score": ["EvidenceItem", "RetrievedEvidenceItem"],
+        "section": ["EvidenceItem", "RetrievedEvidenceItem"],
+        "source": ["EvidenceItem"],
+        "source_kind": ["RetrievedEvidenceItem"],
+    }
+    # The same claim one level up, for the two envelopes: they share no component at all, which is
+    # what makes the reader's two-name probe a binding rather than the blanket a union usually is.
+    assert _emitted("TailorMap") & _emitted("CoverLetterMap") == set()
+    # Deleting this reader's table row could not pass unnoticed: four of its five producers belong to
+    # no other reader, so `_producer_bookkeeping` names them the moment the row goes (#150's silent
+    # case needed an asserted row for that reason; this one needs no such line, and says so).
+    assert READERS["normalizeEvidence"]["record_of"]["raw"] == ["TailorMap", "CoverLetterMap"]
     # Two different ways a read stops naming its key in the call: `normalizeTrajectory` spreads a
     # name table, which this rule covers, and `normalizeSearch` reaches `g.key`, a member of a group
     # object, which `_search_hits` covers. Telling them apart is what keeps each rule honest about

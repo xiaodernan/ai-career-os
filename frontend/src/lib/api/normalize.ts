@@ -141,36 +141,45 @@ function pathOf(obj: unknown, ...keys: string[]): string[] | undefined {
   return undefined;
 }
 
+/**
+ * The citation list under an AI conclusion. One mapper, three row authors and two envelopes, which is
+ * why both bound receivers are unions:
+ *
+ *   - `compute_match`'s `evidence` rows are `EvidenceItem`s — `criterion`, `score`, `chunk_ids`,
+ *     `quote`, `source`, `section`, `reasoning` — where **`source` is a string** holding the document
+ *     title ("Resume", "Job Description", the chunk's own title);
+ *   - `to_evidence`'s retrieved rows — `ref`, `chunk_id`, `document_id`, `doc_title`, `source_kind`,
+ *     `section`, `quote`, `score` — which is what the tailor response's `evidence` and the cover
+ *     letter response's `sources` both carry;
+ *   - the copilot's `out.sources` rows — `type`, `chunk_id`, `document_id`, `label`, `quote`.
+ *
+ * #151 measured this reader at 16 sites / 49 names with the contract gate's own scanner and deleted
+ * 35 of the names, the biggest group being a **nested source object**: `pick(e, "source", "doc",
+ * "document", "metadata")` and the eighteen names tried on whatever it returned. No author on either
+ * service writes an object under any of those four keys — the only `source` any producer emits is the
+ * string above — so every read through `src` answered undefined and the match's own document title
+ * was discarded on the way to a card that renders `source.docTitle`. The title is now read where it
+ * is written. `href`/`url` went with them: no row carries either, so `Evidence.href` was empty on
+ * every path and the card's link came from the caller's `hrefFor` all along.
+ *
+ * A retrieved row has no `criterion` and a copilot row has no `score`, which is what the two defaults
+ * below are for. Neither invents a number.
+ */
 export function normalizeEvidence(raw: unknown): Evidence[] {
-  const items = Array.isArray(raw) ? raw : list(raw, "evidence", "items", "citations", "sources", "chunks");
-  return items.map((e) => {
-    const src = pick(e, "source", "doc", "document", "metadata");
-    return {
-      criterion: str(e, "criterion", "name", "label", "requirement", "skill") ?? "Evidence",
-      score: pct(num(e, "score", "value")),
-      quote: str(e, "quote", "text", "excerpt", "snippet", "content") ?? "",
-      reasoning: str(e, "reasoning", "why", "explanation", "rationale"),
-      chunkIds: list<string>(e, "chunkIds", "chunk_ids", "chunk_id", "chunks").map(String),
-      source: {
-        docTitle:
-          str(src, "docTitle", "doc_title", "title", "name", "fileName", "file_name") ??
-          str(e, "docTitle", "doc_title"),
-        // Copilot/ai-service sources carry document_id at the TOP level (snake),
-        // not nested — read it or the /knowledge citation link is dead.
-        docId:
-          str(src, "docId", "doc_id", "documentId", "document_id") ??
-          str(e, "documentId", "document_id", "docId", "doc_id"),
-        kind:
-          str(src, "kind", "type", "sourceType", "source_type") ??
-          // ai-service `to_evidence` emits `source_kind` at the TOP level (flat
-          // evidence, no nested source object) — mirror the docTitle/docId
-          // fallbacks above or the citation's source type is silently dropped.
-          str(e, "sourceKind", "source_kind", "kind"),
-        path: pathOf(src, "path", "section", "sections", "breadcrumbs") ?? pathOf(e, "path", "section"),
-      },
-      href: str(e, "href", "url"),
-    };
-  });
+  const items = Array.isArray(raw) ? raw : list(raw, "evidence", "sources");
+  return items.map((e) => ({
+    criterion: str(e, "criterion", "label") ?? "Evidence",
+    score: pct(num(e, "score")),
+    quote: str(e, "quote") ?? "",
+    reasoning: str(e, "reasoning"),
+    chunkIds: list<string>(e, "chunk_ids", "chunk_id").map(String),
+    source: {
+      docTitle: str(e, "doc_title", "source"),
+      docId: str(e, "document_id"),
+      kind: str(e, "source_kind"),
+      path: pathOf(e, "section"),
+    },
+  }));
 }
 
 /** Breadcrumb path for an evidence entry (may arrive as "A > B" or ["A","B"]). */
