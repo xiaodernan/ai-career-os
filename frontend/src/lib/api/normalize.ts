@@ -591,7 +591,11 @@ export function normalizeStructuredResume(raw: unknown): StructuredResume | null
   if (!s) return null;
 
   const profile = rec(pick(s, "profile"));
-  const links = list<string>(profile ?? s, "links").map(String).filter(Boolean);
+  // `links` is a key of the profile map only -- the parse prompt draws `"profile": {… "links":{}}`
+  // and `ResumeProfile.links` types it, while the top-level skeleton has no such key -- so the
+  // `?? s` this read used to carry could only ever answer `[]`, and an expression receiver kept the
+  // one live read out of the per-site census (#162).
+  const links = list<string>(profile, "links").map(String).filter(Boolean);
   const viewProfile: ResumeProfileSummary = {
     name: str(profile, "name"),
     headline: str(profile, "headline"),
@@ -1093,8 +1097,9 @@ export function normalizeTrajectory(source: unknown): InterviewTrajectoryPoint[]
     // next question; a row already carrying its own score needs no look-ahead.
     let score = pct(num(row, "score", "value"));
     for (let j = i + 1; j < rows.length && score == null; j++) {
-      if (rows[j].role === "interviewer") break;
-      if (rows[j].role === "candidate") score = pct(num(rows[j], "score", "value"));
+      const next = rows[j];
+      if (next.role === "interviewer") break;
+      if (next.role === "candidate") score = pct(num(next, "score", "value"));
     }
     points.push({ question, score, depth: ladder });
   });

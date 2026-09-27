@@ -350,7 +350,10 @@ READERS: dict[str, dict] = {
         # `t`/`row` are deliberately not in `elements`: one is the parameter of an arrow assigned to
         # `plain`, the other of `rows.forEach`, and neither is a `.map` callback the link rule could
         # point at -- binding them to the row producer is what still checks every name they read.
-        "record_of": {"t": "TrajectoryRow", "row": "TrajectoryRow"},
+        # `next` joined them in #162: the look-ahead row used to be read as `num(rows[j], …)`, and an
+        # expression receiver reaches no binding at all, so the census held six sites while the file
+        # held seven reads. Naming the row is what made the seventh countable.
+        "record_of": {"t": "TrajectoryRow", "row": "TrajectoryRow", "next": "TrajectoryRow"},
         "drilled": {},
         "elements": {},
         "blind": {},
@@ -530,10 +533,12 @@ READERS: dict[str, dict] = {
         # no author and the 4 page renders they made unreachable, `6aab196` 8 view-side alias fields
         # and the 7 fallback reads that named them) left the 33 sites below, every one of them a key
         # the prompt draws. Nothing in the reader now probes a spelling nobody writes.
-        # The one name it consumes that `_sites` cannot attribute is `links`: the call reads
-        # `list(profile ?? s, "links")`, and a receiver that is an expression rather than an
-        # identifier has no binding to check, so the floors below list `links` beside
-        # `yearsExperience` as drawn-and-not-read off `profile` rather than pretending it is covered.
+        # The one name this entry used to leave unattributed is `links`: the call read
+        # `list(profile ?? s, "links")`, and a receiver that is an expression rather than an identifier
+        # has no binding to check. #162 measured the fallback as dead weight -- `links` is a key of the
+        # profile map, which the parse prompt always draws, and the top-level skeleton has no such key,
+        # so `?? s` could only ever answer `[]` -- and deleted it, which leaves the read on `profile`
+        # where the census can see it.
         "record_of": {"s": "ParsedResumeMap", "profile": "ParsedProfileMap",
                       "e": "ParsedExperienceItem", "p": "ParsedProjectItem",
                       "ed": "ParsedEducationItem"},
@@ -770,17 +775,28 @@ HOLLOW_DRILLS = {
         "name into `company` because the row renders `app.company?.name`",
 }
 
-_ACCESSORS = (r"\b(?:str|strOr|num|bool|list|pick|rec|int|pct|pathOf)"
-              # A typed accessor reads like any other call once the annotation is skipped:
-              # `pick<Record<string, unknown>>(raw, "company")` is a read of `company`, and
-              # skipping only the generic -- not the call -- is what keeps that site visible.
-              # `pathOf` joined in #151 for the reason the list already carries `pick`: it takes a
-              # payload and a list of names (`pathOf(e, "section")`) and splits whatever it finds, so
-              # excluding it left the breadcrumb read out of the site count entirely -- invisible
-              # tolerance is still tolerance. Measured: adding it gives no other bound reader a single
-              # new site, because this reader is the only one that calls it.
-              r"(?:<[^<>]*(?:<[^<>]*>[^<>]*)*>)?\(\s*")
+_ACCESSORS_HEAD = (r"\b(?:str|strOr|num|bool|list|pick|rec|int|pct|pathOf)"
+                   # A typed accessor reads like any other call once the annotation is skipped:
+                   # `pick<Record<string, unknown>>(raw, "company")` is a read of `company`, and
+                   # skipping only the generic -- not the call -- is what keeps that site visible.
+                   # `pathOf` joined in #151 for the reason the list already carries `pick`: it takes a
+                   # payload and a list of names (`pathOf(e, "section")`) and splits whatever it finds,
+                   # so excluding it left the breadcrumb read out of the site count entirely --
+                   # invisible tolerance is still tolerance. Measured: adding it gives no other bound
+                   # reader a single new site, because this reader is the only one that calls it.
+                   )
+# The generic in one constant instead of two copies: #162's oracle has to skip the same annotation the
+# census does, and the group that took `[^<>]*` once walked straight past `pick<Record<string, …>>`,
+# which is the miss #161 measured as ten names out of twenty-five.
+_GENERIC = r"(?:<[^<>]*(?:<[^<>]*>[^<>]*)*>)?"
+_ACCESSORS = _ACCESSORS_HEAD + _GENERIC + r"\(\s*"
 _ID_OF = r"\bidOf\(\s*"
+# The census's two finders, named so #162's agreement rule can audit the pattern the census actually
+# uses. Written inline, the composition `accessor + (identifier) , (to-the-next-paren)` was readable
+# only by re-typing it, and a re-typed copy is the thing this file bans (#160/#161).
+SITE_RECEIVER = r"([A-Za-z_$][\w$.]*)\s*,([^)]*)\)"
+CENSUS_SITE = re.compile(_ACCESSORS + SITE_RECEIVER)
+ID_SITE = re.compile(_ID_OF + r"([A-Za-z_$][\w$.]*)\s*,")
 # Helpers whose call sites the scanner above reads as part of their caller's census. `idOf` takes a
 # row and tries six spellings of its identifier, so binding it separately would describe the same
 # read twice -- and leaving it out of every census would be the blind spot #159's ban refuses.
@@ -810,9 +826,8 @@ def _sites(function_name: str) -> list[dict]:
     """Each accessor call: the variable it reads off, the names it tries, and where it sits."""
     body = _body(function_name)
     sites = []
-    for pattern, keys in ((_ACCESSORS + r"([A-Za-z_$][\w$.]*)\s*,([^)]*)\)", None),
-                          (_ID_OF + r"([A-Za-z_$][\w$.]*)\s*,", _id_of_keys())):
-        for match in re.finditer(pattern, body):
+    for finder, keys in ((CENSUS_SITE, None), (ID_SITE, _id_of_keys())):
+        for match in finder.finditer(body):
             receiver = match.group(1)
             candidates = sorted(keys) if keys else re.findall(r'"([^"]+)"', match.group(2))
             if not candidates:
@@ -821,6 +836,191 @@ def _sites(function_name: str) -> list[dict]:
             sites.append({"receiver": receiver, "keys": tuple(candidates), "line": line,
                           "text": match.group(0).replace("\n", " ")[:90]})
     return sites
+
+
+# The oracle's finder is the census's own head and generic, minus the `\s*` that follows the paren: two
+# patterns written by hand would drift apart, and the drift is the defect this rule is looking for.
+_CALL_OPEN = re.compile(_ACCESSORS_HEAD + _GENERIC + r"\(")
+_BARE = re.compile(r"[A-Za-z_$][\w$.]*")
+_LITERAL = re.compile(r'"[^"\n]*"')
+_NAME = re.compile(r'"([^"\n]*)"')
+_DECLARATION = re.compile(r"\bfunction\s+$")
+
+
+def _blank_ts_noise(source: str) -> str:
+    """Comments and string bodies as spaces, with length, line breaks and interpolations kept.
+
+    The oracle has to find calls, and a call *inside* a doc comment -- normalize.ts carries three, one
+    of them `list(e.g. a bare `List<TimelineEvent>`)`) -- is not a read of anything. Blank, do not
+    delete: every offset in the result still lines up with the source, so a call found here can be
+    reported with a real line number. A template literal's `${…}` is left alone because it is code, not
+    text: `push("###", title, str(p, "period") ? `(${str(p, "period")})` : "")` reads `period` twice,
+    and blanking the whole backtick string hid the second one from the oracle the first time it ran.
+    """
+    out, index, length = list(source), 0, len(source)
+    while index < length:
+        pair = source[index:index + 2]
+        if pair == "//":
+            end = source.index("\n", index)
+        elif pair == "/*":
+            end = source.index("*/", index) + 2
+        elif source[index] in "\"'":
+            end = _string_end(source, index)
+            _fill(out, index + 1, end - 1)
+            index = end
+            continue
+        elif source[index] == "`":
+            index = _blank_template(source, out, index)
+            continue
+        else:
+            end = index + 1
+        if pair in ("//", "/*"):
+            _fill(out, index, end)
+        index = end
+    return "".join(out)
+
+
+def _fill(out: list, start: int, end: int) -> None:
+    for position in range(start, end):
+        if out[position] != "\n":
+            out[position] = " "
+
+
+def _string_end(source: str, start: int) -> int:
+    """The index just past the quote that closes the literal opening at `start`."""
+    quote, index = source[start], start + 1
+    while index < len(source) and source[index] != quote:
+        index += 2 if source[index] == "\\" else 1
+    return index + 1
+
+
+def _blank_template(source: str, out: list, start: int) -> int:
+    """Blank one backtick string, skipping over every `${…}` it holds, and return the index past it."""
+    index = start + 1
+    while index < len(source):
+        char = source[index]
+        if char == "`":
+            return index + 1
+        if char == "\\":
+            _fill(out, index, index + 2)
+            index += 2
+            continue
+        if source.startswith("${", index):
+            index = _interpolation_end(source, index)
+            continue
+        if char != "\n":
+            out[index] = " "
+        index += 1
+    raise AssertionError("a template literal never closes: the file shape changed under this probe")
+
+
+def _interpolation_end(source: str, start: int) -> int:
+    """The index past the `}` that closes the `${` opening at `start`, literals and braces counted."""
+    depth, index = 1, start + 2
+    while index < len(source):
+        char = source[index]
+        if char in "\"'`":
+            index = _string_end(source, index)
+            continue
+        if char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                return index + 1
+        index += 1
+    raise AssertionError("an interpolation never closes: the file shape changed under this probe")
+
+
+def _ts_args(source: str, open_paren: int) -> tuple[str, int]:
+    """The text between one call's parentheses, and the index just past its closing paren."""
+    depth, index = 0, open_paren
+    while index < len(source):
+        char = source[index]
+        if char in "\"'`":
+            quote, index = char, index + 1
+            while index < len(source) and source[index] != quote:
+                index += 2 if source[index] == "\\" else 1
+        elif char == "(":
+            depth += 1
+        elif char == ")":
+            depth -= 1
+            if depth == 0:
+                return source[open_paren + 1:index], index + 1
+        index += 1
+    raise AssertionError("a call in normalize.ts never closes: the file shape changed under this probe")
+
+
+def _ts_top_level(text: str) -> list[str]:
+    """Split an argument list on the commas at this call's own depth, skipping nested brackets."""
+    parts, chunk, index, depth = [], "", 0, 0
+    while index < len(text):
+        char = text[index]
+        if char in "\"'`":
+            quote, start = char, index
+            index += 1
+            while index < len(text) and text[index] != quote:
+                index += 2 if text[index] == "\\" else 1
+            index += 1
+            chunk += text[start:index]
+            continue
+        if char in "([{":
+            depth += 1
+        elif char in ")]}":
+            depth -= 1
+        if char == "," and depth == 0:
+            parts.append(chunk.strip())
+            chunk = ""
+        else:
+            chunk += char
+        index += 1
+    parts.append(chunk.strip())
+    return [part for part in parts if part != ""]
+
+
+@lru_cache(maxsize=None)
+def _key_read_calls(source: str) -> tuple[dict, ...]:
+    """Every accessor call that tries a name, found by pairing parentheses instead of by a regex.
+
+    `_sites` is the census every other rule here reads through, and it finds a call by matching
+    `\\(\\s*(name)\\s*,([^)]*)\\)` -- so the shape of the *pattern* decides what counts as a read. Two
+    shapes escape it: a receiver that is an expression rather than an identifier (`list<string>(profile
+    ?? s, "links")`, `num(rows[j], "score", "value")`) never reaches the comma, and a name argument
+    sitting past an inner `)` is cut off. This oracle asks the same question without those assumptions:
+    find the call, pair its parentheses to get the whole argument list, and keep it as a key read
+    exactly when every argument after the first is a bare string literal -- which is what leaves
+    `pct(num(row, "score"))` out on the outside (one argument, and not a name) while the inner `num`
+    still counts, because the walk continues *into* a call rather than past it. `idOf` is folded here
+    the way `_sites` folds it: its own call sites carry a fallback prefix, not a name, so the names it
+    reaches for are the ones read out of its body.
+    """
+    clean = _blank_ts_noise(source)
+    folded = tuple(sorted(_id_of_keys()))
+    calls, index = [], 0
+    while True:
+        match = _CALL_OPEN.search(clean, index)
+        if match is None:
+            break
+        index = open_paren = match.end() - 1
+        if _DECLARATION.search(clean, 0, match.start()):
+            continue
+        _, end = _ts_args(clean, open_paren)
+        parts = _ts_top_level(source[open_paren + 1:end - 1])
+        names = parts[1:]
+        if names and all(_LITERAL.fullmatch(part) for part in names):
+            calls.append({"name": source[match.start():open_paren].strip(), "receiver": parts[0],
+                          "keys": tuple(_NAME.findall(part)[0] for part in names),
+                          "line": source.count("\n", 0, match.start()) + 1})
+    for match in re.finditer(r"\bidOf\s*\(", clean):
+        if _DECLARATION.search(clean, 0, match.start()):
+            continue
+        open_paren = clean.index("(", match.end() - 1)
+        _, end = _ts_args(clean, open_paren)
+        parts = _ts_top_level(source[open_paren + 1:end - 1])
+        if parts:
+            calls.append({"name": "idOf", "receiver": parts[0], "keys": folded,
+                          "line": source.count("\n", 0, match.start()) + 1})
+    return tuple(sorted(calls, key=lambda call: call["line"]))
 
 
 def _search_group_keys() -> list[str]:
@@ -1844,8 +2044,8 @@ def test_the_reads_are_actually_found():
     # branches were #141's deletions: six sites, only one of them authored.
     assert "dims" in _emitted("EvaluationItem") and "dims" in _emitted("FinalizeReport")
     traj = _sites("normalizeTrajectory")
-    assert len(traj) == 6
-    assert {s["receiver"] for s in traj} == {"t", "row"}
+    assert len(traj) == 7
+    assert {s["receiver"] for s in traj} == {"t", "row", "next"}
     carriers = ["EvaluationItem", "FinalizeReport", "FinalizeComputed"]
     assert _trajectory_keys() & _emitted_for(carriers) == {"trajectory", "trajectory_detail"}
     # The two list names that are real -- one a component of the DTO, one written by `finalize` --
@@ -2021,14 +2221,14 @@ def test_the_reads_are_actually_found():
     assert _emitted("MergedSkillItem") - {k for s in buckets if s["receiver"] == "g"
                                           for k in s["keys"]} == {"proficiency"}
     # The mapper the resume page and the skill-suggestion panel both build their view model from.
-    # 33 sites / 5 receivers, after #148 deleted the 6 sites and 40-odd probe names that had no
+    # 34 sites / 5 receivers, after #148 deleted the 6 sites and 40-odd probe names that had no
     # author; `s` is the jsonb itself, `profile` the one map drilled out of it, and `e`/`p`/`ed` the
     # three `.map` rows whose list-key links the entry has to keep honest.
     sr = _sites("normalizeStructuredResume")
-    assert len(sr) == 33, f"the structured mapper holds {len(sr)} sites, want the 33 that name a key"
+    assert len(sr) == 34, f"the structured mapper holds {len(sr)} sites, want the 34 that name a key"
     assert {s["receiver"] for s in sr} == {"s", "profile", "e", "p", "ed"}
     assert sum(1 for s in sr if s["receiver"] == "s") == 8
-    assert sum(1 for s in sr if s["receiver"] == "profile") == 6
+    assert sum(1 for s in sr if s["receiver"] == "profile") == 7
     assert sum(1 for s in sr if s["receiver"] == "e") == 6
     assert sum(1 for s in sr if s["receiver"] == "p") == 6
     assert sum(1 for s in sr if s["receiver"] == "ed") == 7
@@ -2036,7 +2236,7 @@ def test_the_reads_are_actually_found():
         {"profile", "experience", "projects", "education", "achievements", "careerGoals",
          "preferredRoles", "preferredLocations"}
     assert {k for s in sr if s["receiver"] == "profile" for k in s["keys"]} == \
-        {"name", "headline", "email", "phone", "location", "summary"}
+        {"name", "headline", "email", "phone", "location", "summary", "links"}
     assert {k for s in sr if s["receiver"] == "e" for k in s["keys"]} == \
         {"company", "title", "location", "start", "end", "bullets"}
     assert {k for s in sr if s["receiver"] == "ed" for k in s["keys"]} == \
@@ -2049,14 +2249,13 @@ def test_the_reads_are_actually_found():
         _emitted("ParsedEducationItem")
     # The sets it still leaves on the table, each named so a prompt that drops a key goes red here
     # rather than by shrinking a resume: an experience row's own `summary`; the profile's
-    # `yearsExperience` plus `links`, which the mapper does consume but through an expression
-    # receiver `_sites` cannot attribute (see the entry's comment); and four top-level lists, of
+    # `yearsExperience`, which no render asks for; and four top-level lists, of
     # which `skills` reaches the page through the bucket reader above and the other three are stored
     # and never rendered.
     assert _emitted("ParsedExperienceItem") - {k for s in sr if s["receiver"] == "e"
                                                for k in s["keys"]} == {"summary"}
     assert _emitted("ParsedProfileMap") - {k for s in sr if s["receiver"] == "profile"
-                                           for k in s["keys"]} == {"links", "yearsExperience"}
+                                           for k in s["keys"]} == {"yearsExperience"}
     assert _emitted("ParsedResumeMap") - {k for s in sr if s["receiver"] == "s"
                                           for k in s["keys"]} == {"skills", "languages",
                                                                   "missingSections", "warnings"}
@@ -2393,3 +2592,66 @@ def test_every_artifact_type_the_card_renders_is_one_the_orchestrator_appends():
     # this equality would be the only thing standing between a new type and a blank card.
     assert "default:" in body, ("the switch lost its default branch, so a kind this equality has "
                                 "not seen yet would fall through instead of rendering nothing")
+
+
+def test_the_census_sees_every_read_the_mappers_hold():
+    """#162: the scanner every rule above reads through is itself auditable, so it is audited.
+
+    `_sites` finds a call by matching `accessor + (identifier) + ',' + (up to the next ')')`, which
+    means the *pattern* decided what counted as a read for the whole gate. Two shapes escaped it, both
+    measured over the repository first: a receiver that is an expression instead of an identifier never
+    reaches the comma, and a name sitting past an inner `)` is cut off. `normalize.ts` held exactly two
+    of the first and none of the second -- `list<string>(profile ?? s, "links")` and
+    `num(rows[j], "score", "value")` -- so 250 of the 252 reads were attributed and one name, `links`,
+    was read by no rule at all. `ResumeProfile.links` is its producer and the profile card renders it,
+    which is why both were fixed in the mapper rather than tolerated here.
+
+    The oracle answers the same question without those assumptions (find the call, pair its
+    parentheses, keep it when every argument after the receiver is a bare literal), so agreement is
+    evidence about the file, not about one parser echoing another. The last block is the control that
+    keeps this from becoming an identity: on a planted expression receiver the census's own finder
+    still sees nothing while the oracle names the read. If that ever flips, the two scanners have
+    merged and this rule should be deleted rather than left proving equality with itself.
+    """
+    population = sorted(_mappers_that_read())
+    assert len(population) == 32, f"the census population moved: {population}"
+
+    diverged = []
+    for name in population:
+        oracle = collections.Counter(tuple(site["keys"])
+                                      for site in _key_read_calls(_body(name)))
+        census = collections.Counter(tuple(site["keys"]) for site in _sites(name))
+        if oracle != census:
+            diverged.append(f"{name}: oracle-only {sorted(oracle - census)} "
+                            f"| census-only {sorted(census - oracle)}")
+    assert diverged == [], (f"the census and the oracle disagree about {len(diverged)} of "
+                            f"{len(population)} mappers -- each line is a read some rule here "
+                            f"cannot see: {diverged}")
+
+    whole = _key_read_calls(NORMALIZE.read_text(encoding="utf-8"))
+    # Measured at this plane: the whole file and the sum over its mappers answer 252 each, which is
+    # what says no read lives outside a body -- in a module-level table or a top-level statement --
+    # where the per-reader floors would never be consulted. The number moves with every read added
+    # or removed, so it is a restatement of the two totals below it, not a separate claim.
+    assert len(whole) == 252, f"{len(whole)} reads by the oracle: recount both totals if this moved"
+    assert len(whole) == sum(len(_sites(name)) for name in population), \
+        "a named read lives outside every mapper the census walks"
+    expressions = [site for site in whole if not _BARE.fullmatch(site["receiver"])]
+    assert expressions == [], (f"reads taken off an expression, invisible to `SITE_RECEIVER`: "
+                               f"{[(s['line'], s['name'], s['receiver']) for s in expressions]} -- "
+                               "hoist the receiver into a local so a rule can bind it to a producer")
+
+    # The same blind spot measured in the other browser file, which no `_sites` census walks because
+    # its readers are bound by the shape gate instead. Counted loosely on purpose: `actions.ts` is
+    # owned by a concurrent run, and the claim that matters is the shape, not the total.
+    actions = _key_read_calls((ROOT_FRONTEND / "lib" / "hooks" / "actions.ts")
+                              .read_text(encoding="utf-8"))
+    assert len(actions) >= 20, f"the oracle found {len(actions)} reads in actions.ts: it stopped reading"
+    assert [s for s in actions if not _BARE.fullmatch(s["receiver"])] == [], \
+        "actions.ts took a read off an expression, which no rule here attributes to a producer"
+
+    plant = 'const links = list<string>(profile ?? s, "plantedName");'
+    assert [site["keys"] for site in _key_read_calls(plant)] == [("plantedName",)], \
+        "the oracle no longer sees an expression receiver, so the agreement above is self-consistency"
+    assert CENSUS_SITE.findall(plant) == [], \
+        "the census learned to match an expression receiver; this rule now audits one scanner twice"
