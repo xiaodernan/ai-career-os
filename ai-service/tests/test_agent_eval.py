@@ -1,7 +1,5 @@
 """Agent evaluation scoring + dataset integrity (no DB, no LLM)."""
 
-import pytest
-
 from app.agents.tools import TOOL_INDEX
 from app.eval.agent_dataset import AGENT_SCENARIOS
 from app.eval.agent_metrics import (

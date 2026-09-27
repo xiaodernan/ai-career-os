@@ -203,7 +203,7 @@ async def run(args: argparse.Namespace) -> dict:
             "llm_provider": s.llm_provider,
             "llm_model": s.llm_model,
             "anchor_job": job,
-            "max_steps": __import__("app.agents.orchestrator", fromlist=["MAX_STEPS"]).MAX_STEPS,
+            "max_steps": MAX_STEPS,
         },
         "n_scenarios": len(results),
         "skipped": skipped,
