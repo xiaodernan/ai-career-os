@@ -431,20 +431,14 @@ export interface Conversation {
   messageCount?: number;
 }
 
-export type ArtifactType =
-  | "match"
-  | "job_list"
-  | "tailored_resume"
-  | "cover_letter"
-  | "interview_session"
-  | "skill_gap"
-  | "evidence"
-  | "text"
-  | string;
-
+/**
+ * One card the copilot's answer carries. `type` is free-form on purpose: the row comes out of a jsonb
+ * column the agent orchestrator wrote, so the browser's vocabulary lives in `ArtifactCard`'s switch and
+ * the field-contract gate bounds that against the `type` values `_collect_artifacts` actually appends --
+ * a union here would be a second copy of a list the gate already reads from both ends.
+ */
 export interface CopilotArtifact {
-  type: ArtifactType;
-  title?: string;
+  type?: string;
   data?: unknown;
 }
 

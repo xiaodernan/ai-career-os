@@ -1208,11 +1208,19 @@ export function normalizeSearch(raw: unknown): SearchResults {
 
 /* --------------------------------- copilot -------------------------------- */
 
+/**
+ * The cards a copilot answer carries. One author: `orchestrator._collect_artifacts`, which appends
+ * five literals in **two** shapes — every row draws `{type, payload}`, and the match row alone also
+ * carries `job_id`. So this mapper reads the consensus and nothing else; `kind`, `title`/`name`/`label`
+ * and `data`/`value` had no author on any path, which made `type` fall through to a `"text"` no
+ * producer emits and let each renderer's own heading (which is what always showed) look configurable.
+ * Takes the whole reply because both of its callers held the list already, and the name only has an
+ * author on the record.
+ */
 export function normalizeArtifacts(raw: unknown): CopilotArtifact[] {
   return list(raw, "artifacts").map((a) => ({
-    type: str(a, "type", "kind") ?? "text",
-    title: str(a, "title", "name", "label"),
-    data: pick(a, "data", "payload", "value") ?? a,
+    type: str(a, "type"),
+    data: pick(a, "payload"),
   }));
 }
 
@@ -1256,7 +1264,7 @@ export function normalizeMessages(raw: unknown) {
     role: str(m, "role", "sender") ?? "assistant",
     content: str(m, "content", "text", "message", "body") ?? "",
     createdAt: str(m, "createdAt", "created_at", "timestamp"),
-    artifacts: normalizeArtifacts(pick(m, "artifacts")),
+    artifacts: normalizeArtifacts(m),
     sources: normalizeEvidence(pick(m, "sources")),
     actions: normalizeChatActions(m),
   }));

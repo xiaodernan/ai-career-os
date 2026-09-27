@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ArrowRight, Briefcase, CalendarClock, FileText, Layers, Sparkles } from "lucide-react";
+import { ArrowRight, Briefcase, CalendarClock, FileText, Sparkles } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { MatchRing } from "@/components/ai/match-ring";
@@ -13,7 +13,6 @@ import { StreamingText } from "@/components/ai/streaming-text";
 import { CopyButton } from "@/components/common/export-buttons";
 import { JobCard } from "@/components/jobs/job-card";
 import {
-  list as listOf,
   normalizeJob,
   normalizeMatch,
   normalizePage,
@@ -33,17 +32,15 @@ export function ArtifactCard({ artifact }: { artifact: CopilotArtifact }) {
   const data = artifact.data;
   switch (artifact.type) {
     case "match":
-      return <MatchArtifact data={data} title={artifact.title} />;
+      return <MatchArtifact data={data} />;
     case "job_list":
-      return <JobListArtifact data={data} title={artifact.title} />;
+      return <JobListArtifact data={data} />;
     case "tailored_resume":
-      return <TailorArtifact data={data} title={artifact.title} />;
+      return <TailorArtifact data={data} />;
     case "cover_letter":
-      return <CoverLetterArtifact data={data} title={artifact.title} />;
+      return <CoverLetterArtifact data={data} />;
     case "interview_session":
-      return <InterviewArtifact data={data} title={artifact.title} />;
-    case "skill_gap":
-      return <SkillGapArtifact data={data} title={artifact.title} />;
+      return <InterviewArtifact data={data} />;
     default:
       return null; // unknown types are ignored — never rendered as raw JSON
   }
@@ -51,7 +48,7 @@ export function ArtifactCard({ artifact }: { artifact: CopilotArtifact }) {
 
 /* --------------------------------- match --------------------------------- */
 
-function MatchArtifact({ data, title }: { data?: unknown; title?: string }) {
+function MatchArtifact({ data }: { data?: unknown }) {
   const match = normalizeMatch(pick(data, "match") ?? data);
   if (!match) return null;
   const evidence: Evidence[] = match.evidence ?? [];
@@ -71,7 +68,7 @@ function MatchArtifact({ data, title }: { data?: unknown; title?: string }) {
           <MatchRing value={match.overall} size={56} thickness={5} label="Match" />
           <div className="min-w-0">
             <p className="text-2xs font-medium tracking-wide text-muted-foreground uppercase">
-              {title ?? "Match analysis"}
+              Match analysis
             </p>
             {match.reasoning && <p className="mt-0.5 text-sm">{match.reasoning}</p>}
           </div>
@@ -101,7 +98,7 @@ function MatchArtifact({ data, title }: { data?: unknown; title?: string }) {
 
 /* -------------------------------- job_list -------------------------------- */
 
-function JobListArtifact({ data, title }: { data?: unknown; title?: string }) {
+function JobListArtifact({ data }: { data?: unknown }) {
   const page = normalizePage(data, normalizeJob);
   const jobs = page.items.length ? page.items : normalizePage(pick(data, "jobs") ?? data, normalizeJob).items;
   if (!jobs.length) return null;
@@ -110,7 +107,7 @@ function JobListArtifact({ data, title }: { data?: unknown; title?: string }) {
       <CardContent className="space-y-2.5">
         <p className="flex items-center gap-1.5 text-2xs font-medium tracking-wide text-muted-foreground uppercase">
           <Briefcase className="size-3.5" aria-hidden />
-          {title ?? `${jobs.length} matching roles`}
+          {jobs.length} matching roles
         </p>
         <ul className="space-y-2">
           {jobs.slice(0, 5).map((j) => (
@@ -126,7 +123,7 @@ function JobListArtifact({ data, title }: { data?: unknown; title?: string }) {
 
 /* ----------------------------- tailored_resume ----------------------------- */
 
-function TailorArtifact({ data, title }: { data?: unknown; title?: string }) {
+function TailorArtifact({ data }: { data?: unknown }) {
   const t = normalizeTailor(data);
   const diff = t.diff;
   const text = t.tailored?.markdown;
@@ -136,7 +133,7 @@ function TailorArtifact({ data, title }: { data?: unknown; title?: string }) {
       <CardContent className="space-y-3">
         <p className="flex items-center gap-1.5 text-2xs font-medium tracking-wide text-muted-foreground uppercase">
           <Sparkles className="size-3.5" aria-hidden />
-          {title ?? "Tailored resume draft"}
+          Tailored resume draft
         </p>
         {diff && (diff.accepted.length > 0 || diff.rejected.length > 0) ? (
           <DiffView accepted={diff.accepted} rejected={diff.rejected} notes={t.notes} />
@@ -154,7 +151,7 @@ function TailorArtifact({ data, title }: { data?: unknown; title?: string }) {
 
 /* ------------------------------- cover_letter ------------------------------ */
 
-function CoverLetterArtifact({ data, title }: { data?: unknown; title?: string }) {
+function CoverLetterArtifact({ data }: { data?: unknown }) {
   const text = coverLetterText(data);
   if (!text) return null;
   return (
@@ -162,7 +159,7 @@ function CoverLetterArtifact({ data, title }: { data?: unknown; title?: string }
       <CardContent className="space-y-3">
         <p className="flex items-center gap-1.5 text-2xs font-medium tracking-wide text-muted-foreground uppercase">
           <FileText className="size-3.5" aria-hidden />
-          {title ?? "Cover letter draft"}
+          Cover letter draft
         </p>
         <StreamingText content={text} className="max-h-80 overflow-y-auto" />
         <CopyButton text={text} label="Copy letter" />
@@ -173,7 +170,7 @@ function CoverLetterArtifact({ data, title }: { data?: unknown; title?: string }
 
 /* ----------------------------- interview_session ---------------------------- */
 
-function InterviewArtifact({ data, title }: { data?: unknown; title?: string }) {
+function InterviewArtifact({ data }: { data?: unknown }) {
   const id = str(data, "sessionId", "session_id", "id") ?? str(pick(data, "session"), "id");
   if (!id) return null;
   return (
@@ -183,7 +180,7 @@ function InterviewArtifact({ data, title }: { data?: unknown; title?: string }) 
           <CalendarClock className="size-4.5" aria-hidden />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium">{title ?? "Mock interview ready"}</p>
+          <p className="text-sm font-medium">Mock interview ready</p>
           <p className="text-xs text-muted-foreground">
             The agent prepared a session from this conversation.
           </p>
@@ -201,30 +198,9 @@ function InterviewArtifact({ data, title }: { data?: unknown; title?: string }) 
 
 /* --------------------------------- gaps ---------------------------------- */
 
-function SkillGapArtifact({ data, title }: { data?: unknown; title?: string }) {
-  const items = listOf(data, "gaps", "skillGaps", "skill_gaps", "items").map((g) => ({
-    skill: str(g, "skill", "name") ?? String(g),
-    importance: str(g, "importance", "priority"),
-    reason: str(g, "reason", "why"),
-  }));
-  if (!items.length) return null;
-  return (
-    <Card className="border-primary/25">
-      <CardContent className="space-y-2">
-        <p className="flex items-center gap-1.5 text-2xs font-medium tracking-wide text-muted-foreground uppercase">
-          <Layers className="size-3.5" aria-hidden />
-          {title ?? "Skill gaps"}
-        </p>
-        <SkillChips missing={items.map((i) => i.skill)} max={12} />
-        <ul className="space-y-1">
-          {items.slice(0, 4).map((g, i) => (
-            <li key={i} className="text-xs text-muted-foreground">
-              <span className="font-medium text-foreground">{g.skill}</span>
-              {g.reason ? ` — ${g.reason}` : ""}
-            </li>
-          ))}
-        </ul>
-      </CardContent>
-    </Card>
-  );
-}
+/* `skill_gap` was a case here, with this renderer under it, until #145a measured that no path through
+ * `_collect_artifacts` ever appends that type: the card could not be reached, while the job page's own
+ * gap panel -- fed by the persisted `skillGaps` column, which #126 gave a real producer -- is where
+ * gaps actually show. The gate that compares this switch with the types the orchestrator writes is
+ * what would catch its return. */
+

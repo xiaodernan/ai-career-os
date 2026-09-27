@@ -547,13 +547,16 @@ def test_the_copilot_reads_line_up_with_chat_response():
             for key in re.findall(r'"([^"]+)"', group)}
     emitted = _record_components("ChatResponse")
     assert read & emitted, f"the copilot reads {sorted(read)}, none of which is in {sorted(emitted)}"
-    assert emitted - read == {"actions", "assistantMessageId", "userMessageId"}, \
-        "the reply's own block reads three of its components; `actions` is the one it delegates"
-    # The delegation, resolved rather than excused: `actions` still reaches the page, through a mapper
-    # the per-site gate binds to this record and to `MessageItem` at once.
+    assert emitted - read == {"actions", "artifacts", "assistantMessageId", "userMessageId"}, \
+        "the reply's own block reads its scalar components; `actions` and `artifacts` are the two "\
+        "it delegates"
+    # The delegation, resolved rather than excused: both names still reach the page, through mappers
+    # the per-site gate binds to this record and to `MessageItem` at once. #145a moved `artifacts` into
+    # this group by making the card mapper pick the name itself -- before that the block here read a
+    # pre-picked list, so the probe had no author on either side of either contract.
     delegated = {helper: _picks_off_reply(helper)
                  for helper in re.findall(r"\b(normalize\w+)\(\s*raw\s*\)", block)}
-    assert delegated == {"normalizeChatActions": {"actions"}}, \
+    assert delegated == {"normalizeChatActions": {"actions"}, "normalizeArtifacts": {"artifacts"}}, \
         f"the reply now leans on {sorted(delegated)}, which this gate has to keep honest"
     read |= {key for names in delegated.values() for key in names}
     assert emitted - read == {"assistantMessageId", "userMessageId"}, \

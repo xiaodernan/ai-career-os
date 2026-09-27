@@ -66,6 +66,15 @@ code (the FastAPI route table, the handler's own `return`, the backend's call si
 source), so the ban cannot be satisfied by a table this file wrote for itself -- and it fails as a
 statement if the reason stops holding: a reachable route, a renamed key, or a browser read that came
 back each says which of the three it is.
+
+`normalizeArtifacts`, bound in #145a, is the first reader whose rows have **more than one shape**, so the
+gate learned a consensus kind for it. `_collect_artifacts` appends five artifact literals and they do not
+draw the same keys -- the match row adds `job_id` -- which `pyappend` refuses by design rather than
+guessing at. `pycons` answers with what every row draws and the census names the difference, because a
+union would let a read lean on `job_id` and stay green on the four cards that never carry it. The card's
+own vocabulary is bound the same way it binds the action routes and the dimension labels: the
+`case "…"`: labels of its switch are compared with the `type` values the orchestrator appends, which is
+how `skill_gap` -- a whole renderer no path through the producer can reach -- was found and deleted.
 """
 
 import ast
@@ -204,6 +213,11 @@ PRODUCERS = {
     # `evidence`, the cover-letter answer under `sources`, and the two key sets are disjoint, which is
     # why the mapper's two-name probe is a binding rather than a guess.
     "CoverLetterMap": ("pyfunc", "generate"),
+    # A list with more than one shape. `_collect_artifacts` appends five artifact rows and they do not
+    # draw the same keys: the match row carries `job_id` and the other four do not. `pycons` therefore
+    # answers with what *every* row draws, and #145a's census names the difference as its own fact --
+    # a union would let a read lean on `job_id` and stay green on four rows that never carry it.
+    "ArtifactItem": ("pycons", ("_collect_artifacts", "out.artifacts")),
 }
 
 # Readers whose producers are known per map. A reader with more producers than one is bound to their
@@ -551,6 +565,25 @@ READERS: dict[str, dict] = {
         "blind": {},
         "dynamic": {},
     },
+    "normalizeArtifacts": {
+        # The cards under a copilot answer, bound by #145a. `raw` has the same two authors as the
+        # action row above (the live reply and the persisted turn), and both carry `artifacts` -- which
+        # is why the mapper picks that name itself now instead of taking a list its caller had picked,
+        # the same correction #149 made for `actions`.
+        #
+        # `a` is where this entry differs from every other row here: its producer is a *consensus*.
+        # `_collect_artifacts` appends five literals in two shapes, so the keys the reader may use are
+        # the ones all five draw. The mapper used to ask for nine names on three sites -- `kind`,
+        # `title`/`name`/`label`, `data`/`value` -- none of which any row carries, and each one came
+        # with a fallback that turned the absence into a value (`?? "text"` for the type, `?? a` for
+        # the payload), so the card silently rendered a kind no producer writes and a heading the
+        # renderer had already decided on.
+        "record_of": {"raw": ["ChatResponse", "MessageItem"], "a": "ArtifactItem"},
+        "drilled": {},
+        "elements": {"a": ("raw", "artifacts")},
+        "blind": {},
+        "dynamic": {},
+    },
     "normalizeDimensions": {
         # The same map `normalizeMatch` drills, handed over by that mapper's own body
         # (`dimensions: normalizeDimensions(m)`), so it answers to the two authors of a match and to
@@ -876,15 +909,12 @@ def _route_problems() -> list[str]:
     return problems
 
 
-def _appended_keys(func_name: str, list_name: str) -> set[str]:
-    """The keys of the dict literal a function appends to one of its own lists.
+def _appended_shapes(func_name: str, list_name: str) -> list[set[str]]:
+    """Every dict literal a function appends to one of its lists, as its key set.
 
     A list item has no record and no model to name it -- `compute_resume_score` loops over
     `detail.append({...})` -- but its shape is stated exactly once in the source, and that is as
-    checkable as either. Repetition is allowed only while every literal draws the same key set:
-    `suggest_resume_improvements` appends three cards, and three identical contracts are still one.
-    A computed key, or two literals whose key sets differ, means the item contract is not one thing
-    any more, which is a question for whoever reads it rather than for this gate to guess.
+    checkable as either.
 
     The list may be an attribute rather than a local: `orchestrator._collect_artifacts` fills the
     copilot's citations with `out.sources.append({...})`, onto a field of its own argument, and
@@ -909,11 +939,51 @@ def _appended_keys(func_name: str, list_name: str) -> set[str]:
     if not found:
         raise AssertionError(f"{func_name}.{list_name} is never appended to from a dict literal: "
                              "the table names an item producer whose literal has stopped being one")
+    return found
+
+
+def _appended_keys(func_name: str, list_name: str) -> set[str]:
+    """The keys of the dict literal a function appends -- when every literal draws the same set.
+
+    Repetition is allowed only while the shape is one thing: `suggest_resume_improvements` appends
+    three cards, and three identical contracts are still one. A list whose literals differ is the
+    `pycons` case, whose reader may depend on the consensus only.
+    """
+    found = _appended_shapes(func_name, list_name)
     if any(shape != found[0] for shape in found[1:]):
         raise AssertionError(
             f"{func_name}.{list_name} appends {len(found)} different key sets "
             f"{sorted(tuple(sorted(s)) for s in found)}: the item has no single contract to check")
     return found[0]
+
+
+def _appended_field_values(func_name: str, list_name: str, key: str) -> list[str]:
+    """The string each appended literal puts under `key`, in source order.
+
+    A heterogeneous list's discriminator is the one thing every row must answer with a literal the
+    browser can switch on: `_collect_artifacts` writes `"type": "match"` and four siblings, and the
+    card's `switch (artifact.type)` has to be a read of that set rather than of a list someone keeps
+    next to it. A row that omits the key, or computes its value, is reported instead of guessed at.
+    """
+    fn = _sole(func_name)
+    values = []
+    for node in ast.walk(fn):
+        if (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+                and node.func.attr == "append" and node.args
+                and isinstance(node.args[0], ast.Dict)
+                and ast.unparse(node.func.value) == list_name):
+            item = node.args[0]
+            pairs = {k.value: v for k, v in zip(item.keys, item.values)
+                     if isinstance(k, ast.Constant) and isinstance(k.value, str)}
+            if key not in pairs:
+                raise AssertionError(f"{func_name}.{list_name} appends a row with no {key!r}: every "
+                                     "row of a switched list has to name its own kind")
+            if not (isinstance(pairs[key], ast.Constant) and isinstance(pairs[key].value, str)):
+                raise AssertionError(f"{func_name}.{list_name} computes {key!r}, so no reader can be "
+                                     "checked against a fixed set of values")
+            values.append(pairs[key].value)
+    assert values, f"{func_name}.{list_name} appends nothing"
+    return values
 
 
 def _helper_literals(func_name: str, helper_name: str) -> list:
@@ -1164,6 +1234,11 @@ def _emitted(alias: str) -> set[str]:
         return set(shape)
     if spec[0] == "pyappend":
         return _appended_keys(*spec[1])
+    if spec[0] == "pycons":
+        # The keys *every* literal of a heterogeneous list draws, which is the only contract a reader
+        # may lean on: `_collect_artifacts` appends five rows in two shapes, and a union would make
+        # `job_id` look like something four of the five carry. CENSUS names the difference.
+        return set.intersection(*_appended_shapes(*spec[1]))
     if spec[0] == "pyadd":
         # The union of the helper's literals, which is what a heterogeneous list really offers one
         # row: an action carries `job_id` or `session_id`, never both. CENSUS pins the per-literal
@@ -1457,10 +1532,11 @@ def test_the_reads_are_actually_found():
     assert {s["receiver"] for s in applications} == {"raw", "nested"}
     assert sum(1 for s in applications if s["receiver"] == "nested") == 3
     messages = _sites("normalizeMessages")
-    # 7, down from the 8 this reader had until #149: `pick(m, "actions")` moved into the action mapper
-    # that owns the read, so the name is tried once, against `MessageItem`, where the rows are actually
-    # consumed -- and `normalizeChatActions`' own census line is what says it still happens.
-    assert len(messages) == 7
+    # 6, down from the 7 #149 measured: `normalizeArtifacts(pick(m, "artifacts"))` became
+    # `normalizeArtifacts(m)`, so the name is tried once, inside the mapper that owns the read -- the
+    # same correction #149 made for `actions`, and for the same reason: as a pre-picked argument the
+    # probe was consulted by nobody, so binding it there would have declared a dead read live.
+    assert len(messages) == 6
     assert {s["receiver"] for s in messages} == {"m", "raw"}
     matches = _sites("normalizeMatch")
     assert len(matches) == 18
@@ -1913,6 +1989,30 @@ def test_the_reads_are_actually_found():
     # no other reader, so `_producer_bookkeeping` names them the moment the row goes (#150's silent
     # case needed an asserted row for that reason; this one needs no such line, and says so).
     assert READERS["normalizeEvidence"]["record_of"]["raw"] == ["TailorMap", "CoverLetterMap"]
+    # The artifact cards, and the one list here whose rows do not all have the same shape. Both sides
+    # are read out of `_collect_artifacts`: the five literals it appends, the keys every one of them
+    # draws, and the remainder that distinguishes the match row.
+    shapes = _appended_shapes("_collect_artifacts", "out.artifacts")
+    consensus = set.intersection(*shapes)
+    divergence = set.union(*shapes) - consensus
+    assert len(shapes) == 5, [sorted(s) for s in shapes]
+    assert consensus == {"type", "payload"}, [sorted(s) for s in shapes]
+    # The divergence is a fact about the producer, not a free slot: a sixth shape, or a second
+    # per-row key, has to be read here rather than absorbed into the union the reader was bound to.
+    assert divergence == {"job_id"}, sorted(tuple(sorted(s)) for s in shapes)
+    arts = _sites("normalizeArtifacts")
+    assert len(arts) == 3, arts
+    assert {s["receiver"] for s in arts} == {"raw", "a"}
+    assert [s["keys"] for s in arts if s["receiver"] == "raw"] == [("artifacts",)]
+    read_off_a = {k for s in arts if s["receiver"] == "a" for k in s["keys"]}
+    assert read_off_a == {"type", "payload"}
+    # The substantive claim, and the one the liveness rule cannot make: a reader of a heterogeneous
+    # list may only name what every row draws. `job_id` is emitted, so a read of it would be live --
+    # on one row out of five, and undefined on the four that follow it.
+    assert read_off_a & divergence == set()
+    assert read_off_a == consensus, (f"the artifact reader leans on {sorted(read_off_a)} while the rows "
+                                     f"agree on {sorted(consensus)}: a name outside the consensus is a "
+                                     "field four of the five cards cannot have")
     # Two different ways a read stops naming its key in the call: `normalizeTrajectory` spreads a
     # name table, which this rule covers, and `normalizeSearch` reaches `g.key`, a member of a group
     # object, which `_search_hits` covers. Telling them apart is what keeps each rule honest about
@@ -2061,3 +2161,40 @@ def test_a_key_only_an_unreached_route_answers_is_read_by_nobody():
 
 
 
+
+
+def _artifact_switch() -> str:
+    """The body of `ArtifactCard`'s `switch (artifact.type)`, read out of the component itself.
+
+    A card's vocabulary is browser-owned data keyed by a value from the wire, exactly like the action
+    routes and the dimension labels before it, so the names have to come from the source that uses
+    them rather than from a list kept here.
+    """
+    source = (ROOT_FRONTEND / "components" / "copilot" / "artifacts.tsx").read_text(encoding="utf-8")
+    body = re.search(r"switch \(artifact\.type\) \{(.*?)\n  \}", source, re.S)
+    assert body, "ArtifactCard no longer switches on artifact.type: the claim this rule checks moved"
+    return body.group(1)
+
+
+def test_every_artifact_type_the_card_renders_is_one_the_orchestrator_appends():
+    """#145a's other half: which kinds a copilot answer can carry is one list, not two.
+
+    The producer is `_collect_artifacts`, whose five literals each name their own `type`; the consumer
+    is the card's switch. Either side drifting is invisible to every per-site rule -- an unrendered
+    kind is a message with no card, and a case no producer writes is markup that reads like a feature.
+    The one #145a found and deleted was `skill_gap`: a whole renderer, unreachable from any path
+    through the orchestrator, while the gaps the product really shows ride the persisted `skillGaps`
+    column (#126) into the job page's own panel.
+    """
+    emitted = _appended_field_values("_collect_artifacts", "out.artifacts", "type")
+    body = _artifact_switch()
+    rendered = set(re.findall(r'case "([\w-]+)":', body))
+    assert emitted and rendered, "both sides have to answer with names for this to mean anything"
+    assert len(emitted) == len(set(emitted)), f"two rows append the same type: {sorted(emitted)}"
+    assert set(emitted) == rendered, (
+        f"the orchestrator appends {sorted(set(emitted) - rendered)}, which no case renders, and the "
+        f"card offers {sorted(rendered - set(emitted))}, which no row is ever written with")
+    # And an unknown kind is refused rather than rendered as raw JSON: without the default branch,
+    # this equality would be the only thing standing between a new type and a blank card.
+    assert "default:" in body, ("the switch lost its default branch, so a kind this equality has "
+                                "not seen yet would fall through instead of rendering nothing")

@@ -814,9 +814,21 @@ describe("copilot chat: live reply must normalize identically to history", () =>
   });
 
   it("normalizeArtifacts coerces type + payload", () => {
-    const arts = normalizeArtifacts(pick(aiServiceReply, "artifacts"));
+    const arts = normalizeArtifacts(aiServiceReply);
     expect(arts[0]).toMatchObject({ type: "match" });
     expect(arts[0].data).toEqual({ overall: 0.8 });
+  });
+
+  it("reads nothing from the artifact names no row carries", () => {
+    // #145a bound this mapper to `_collect_artifacts`, whose rows draw `{type, payload}` and nothing
+    // else. The row below carries the seven names the mapper used to probe, each with a value, so a
+    // re-added read shows up as a rendered field instead of matching an undefined that was always
+    // undefined. `?? "text"` and `?? a` went with them: they turned a missing kind into a kind no
+    // producer writes, and a missing payload into the row itself.
+    const [row] = normalizeArtifacts({
+      artifacts: [{ kind: "cover_letter", title: "T", name: "N", label: "L", data: 1, value: 2 }],
+    });
+    expect(row).toEqual({ type: undefined, data: undefined });
   });
 
   it("history path yields the same normalized sources/actions as the live path", () => {
