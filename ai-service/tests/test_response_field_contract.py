@@ -226,6 +226,11 @@ PRODUCERS = {
     # answers with what *every* row draws, and #145a's census names the difference as its own fact --
     # a union would let a read lean on `job_id` and stay green on four rows that never carry it.
     "ArtifactItem": ("pycons", ("_collect_artifacts", "out.artifacts")),
+    # The follow-up question the answer endpoint proposes. `InterviewService.answer` relays this map
+    # verbatim (`Json.obj(result.get("next"))`, declared as a free `Map`), so the only place its keys
+    # are stated is the literal `decide_next` returns -- which is also where the whitelisted `action`
+    # values come from, the ones the session page's badge branches on.
+    "NextQuestionMap": ("pyfunc", "decide_next"),
 }
 
 # Readers whose producers are known per map. A reader with more producers than one is bound to their
@@ -570,6 +575,18 @@ READERS: dict[str, dict] = {
         "record_of": {"raw": ["ChatResponse", "MessageItem"], "a": "ChatActionItem"},
         "drilled": {},
         "elements": {"a": ("raw", "actions")},
+        "blind": {},
+        "dynamic": {},
+    },
+    "normalizeNextQuestion": {
+        # The follow-up the answer endpoint proposes. #157 pulled this read out of `actions.ts`, where it
+        # lived beside ten aliases and had no author to check against, because the page's badge branches
+        # on the value: the wire calls it `action`, the reader asked for `kind`/`type`/`nextAction`/
+        # `next_action`, so every question after the first wore the "Opening" badge. `raw` is the map
+        # `InterviewService.answer` relays under `next`, whose keys only `decide_next` states.
+        "record_of": {"raw": "NextQuestionMap"},
+        "drilled": {},
+        "elements": {},
         "blind": {},
         "dynamic": {},
     },
@@ -947,6 +964,32 @@ def _appended_shapes(func_name: str, list_name: str) -> list[set[str]]:
     if not found:
         raise AssertionError(f"{func_name}.{list_name} is never appended to from a dict literal: "
                              "the table names an item producer whose literal has stopped being one")
+    return found
+
+
+def _action_whitelist() -> set[str]:
+    """The `action` values `decide_next` will pass through, read off its own membership test.
+
+    The function whitelists the LLM's answer with `out.get("action") in (…)` and coerces everything
+    else, so that tuple -- not a list kept here -- is what the browser can ever receive.
+    """
+    fn = _sole("decide_next")
+    assert fn is not None, "decide_next moved; the follow-up whitelist has no source to read"
+    for node in ast.walk(fn):
+        if (isinstance(node, ast.Compare) and any(isinstance(op, ast.In) for op in node.ops)
+                and isinstance(node.comparators[0], ast.Tuple)):
+            values = {e.value for e in node.comparators[0].elts}
+            assert values and all(isinstance(v, str) for v in values), values
+            return set(values)
+    raise AssertionError("decide_next no longer whitelists its action with a tuple of literals")
+
+
+def _badge_kinds() -> set[str]:
+    """The `question.kind === "…"` literals the interview session page branches its badge on."""
+    source = (ROOT_FRONTEND / "app" / "(app)" / "interviews" / "[id]" / "page.tsx").read_text(
+        encoding="utf-8")
+    found = set(re.findall(r'question\.kind === "([\w-]+)"', source))
+    assert found, "the session page no longer branches on question.kind; this rule has no consumer"
     return found
 
 
@@ -1963,6 +2006,27 @@ def test_the_reads_are_actually_found():
         ("kind", "label", "session_id"): 1,
     }
     assert _emitted("ChatActionItem") == {"kind", "label", "job_id", "session_id"}
+    # The follow-up question, #157. Four sites, one name each, against the map `decide_next` returns --
+    # and the name the page's badge needs is one of them, which is the whole point of the move.
+    nxt = _sites("normalizeNextQuestion")
+    assert len(nxt) == 4, nxt
+    assert {s["receiver"] for s in nxt} == {"raw"}
+    assert [s["keys"] for s in nxt] == [("difficulty",), ("question",), ("topic",), ("action",)]
+    assert _emitted("NextQuestionMap") - {k for s in nxt for k in s["keys"]} == {"reasoning"}
+    # What the runner may answer with, and what the page has a badge for. `finish` is the one value that
+    # never reaches a question at all: `InterviewService.answer` skips persisting a follow-up for it
+    # (`!"finish".equals(Json.str(next, "action"))`), so the badge set is the whitelist minus that.
+    actions = _action_whitelist()
+    assert "followup" in actions and "next_topic" in actions and "finish" in actions, actions
+    assert actions - {"finish"} <= _badge_kinds(), \
+        f"a question kind the agent can ask for has no badge: {sorted(actions - {'finish'} - _badge_kinds())}"
+    # Measured, not assumed: the page compares against exactly the two kinds that can reach a question.
+    # "opening" is not one of them -- it is the fallback badge the ternary chain ends with, for the
+    # first turn whose `questionMeta` carries a `phase` and no `action` at all.
+    assert _badge_kinds() == actions - {"finish"}, \
+        (f"the badge branches on {sorted(_badge_kinds())} while the decision can ask for "
+         f"{sorted(actions)}: a kind with no branch renders as the fallback, which is how #157's "
+         "follow-ups all wore the opening badge")
     # The citation mapper. 10 sites and 14 names, down from the 16 sites and 49 names #151 measured with
     # this same scanner -- and the 35 that went were mostly the nested `source` object (`pick(e,
     # "source", "doc", "document", "metadata")` plus the eighteen names tried on its result), a shape no

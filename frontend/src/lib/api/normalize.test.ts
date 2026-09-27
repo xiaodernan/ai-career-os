@@ -20,6 +20,7 @@ import {
   normalizeSuggestions,
   missingSkillGaps,
   normalizeMatch,
+  normalizeNextQuestion,
   normalizeMessages,
   normalizePage,
   normalizePipeline,
@@ -1194,6 +1195,39 @@ describe("normalizeQuestion", () => {
   it("answers null when the turn carries no question text", () => {
     expect(normalizeQuestion({ id: "t2", role: "candidate", content: "", questionMeta: null })).toBeNull();
     expect(normalizeQuestion(null)).toBeNull();
+  });
+});
+
+describe("normalizeNextQuestion", () => {
+  // The follow-up is not a turn: it is the advance decision (`decide_next`) relayed under
+  // `AnswerResponse.next`, so its keys are that function's -- `question`, `action`, `topic`,
+  // `difficulty`. #157 moved this read out of actions.ts and onto those names, because the badge the
+  // session page shows asked for `kind`/`type`/`nextAction`/`next_action` and the wire only ever
+  // writes `action`: every follow-up after the first rendered as "Opening".
+  it("reads the decision's `action` as the kind the page branches on", () => {
+    // Every wrong name carries a *different* value, so an alias list creeping back flips this verdict
+    // instead of matching an undefined that was always undefined.
+    expect(normalizeNextQuestion({
+      action: "followup", question: "Why did the planner choose a seq scan?", topic: "planning",
+      difficulty: 0.7, kind: "next_topic", type: "x", nextAction: "y", next_action: "z",
+    })).toEqual({
+      text: "Why did the planner choose a seq scan?", topic: "planning", kind: "followup",
+      difficulty: 0.7,
+    });
+  });
+
+  it("reads no turn field and no depth alias off the decision", () => {
+    // `id` and `content` belong to the persisted turn, `depth`/`level` to the trajectory row; none of
+    // them is on this map, and the old reader's `text`/`prompt`/`category` guesses are gone with them.
+    expect(normalizeNextQuestion({
+      question: "Q", id: "t9", content: "C", text: "T", prompt: "P", category: "cats",
+      difficulty: 0.4, depth: 3, level: 4,
+    })).toEqual({ text: "Q", topic: undefined, kind: undefined, difficulty: 0.4 });
+  });
+
+  it("answers null for anything that is not the decision's map", () => {
+    expect(normalizeNextQuestion(null)).toBeNull();
+    expect(normalizeNextQuestion("followup")).toBeNull();
   });
 });
 

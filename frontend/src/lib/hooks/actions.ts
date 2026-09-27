@@ -13,6 +13,8 @@ import {
   normalizeInterviewReport,
   normalizeJdParsed,
   normalizeMatch,
+  normalizeNextQuestion,
+  normalizeQuestion,
   normalizeSuggestions,
   normalizeTailor,
   normalizeTrajectory,
@@ -470,18 +472,15 @@ export function useInterviewOpening(sessionId: string) {
   return useMutation({
     mutationFn: async (): Promise<OpeningResponse> => {
       const raw = await api.request<unknown>(endpoints.interviewOpening(sessionId), { method: "POST" });
-      const question = (pick(raw, "question", "opening", "next", "data") ?? raw) as Record<
-        string,
-        unknown
-      >;
+      // The turn the opening POST persisted is an interviewer `TurnItem`, and the session page's other
+      // question path (`SessionDetail.turns`) is the same row -- so both go through `normalizeQuestion`,
+      // which the contract gate binds to that record and to its `questionMeta`. The twelve candidates this
+      // body used to try (`questionId`, `question`/`text`/`prompt`, `category`, `type`, `difficulty`,
+      // `depth`, `level`, plus an `"opening"` default for a kind the wire calls `action`) had no author;
+      // `difficulty` in particular has one table that owns it -- the session, not the turn.
+      const q = normalizeQuestion(pick(raw, "question"));
       return {
-        question: {
-          id: str(question, "id", "questionId", "question_id") ?? undefined,
-          question: str(question, "question", "text", "prompt", "content") ?? "",
-          topic: str(question, "topic", "category") ?? undefined,
-          kind: str(question, "kind", "type") ?? "opening",
-          difficulty: pick<number>(question, "difficulty", "depth", "level") ?? undefined,
-        },
+        question: q && { id: q.id, text: q.text, topic: q.topic, kind: q.kind },
         raw,
       };
     },
@@ -513,10 +512,9 @@ export interface AnswerResponse {
  */
 export function normalizeAnswerResponse(raw: unknown): AnswerResponse {
   const ev = (pick(raw, "evaluation", "result") ?? raw) as Record<string, unknown>;
-  const nx = (pick(raw, "next", "question", "nextQuestion", "next_question") ?? null) as Record<
-    string,
-    unknown
-  > | null;
+  // `next` is the only spelling: those five are `AnswerResponse`'s components, and the relay passes the
+  // advance decision through under that one name.
+  const nx = pick(raw, "next") as Record<string, unknown> | null;
   const arr = (...keys: string[]) => {
     for (const k of keys) {
       const v = pick(ev, k);
@@ -540,15 +538,9 @@ export function normalizeAnswerResponse(raw: unknown): AnswerResponse {
       // which key names carry the rows (this call used to miss "trajectory_detail").
       trajectory: normalizeTrajectory(ev),
     },
-    next: nx
-      ? {
-          id: str(nx, "id", "questionId", "question_id") ?? undefined,
-          question: str(nx, "question", "text", "prompt", "content") ?? "",
-          topic: str(nx, "topic", "category") ?? undefined,
-          kind: str(nx, "kind", "type", "nextAction", "next_action") ?? undefined,
-          difficulty: pick<number>(nx, "difficulty", "depth", "level") ?? undefined,
-        }
-      : null,
+    // The next question is read by the mapper the contract gate binds to `decide_next`, so the one
+    // name the page branches on -- `action` -> `kind` -- is the wire's and not a guess.
+    next: nx ? normalizeNextQuestion(nx) : null,
     raw,
   };
 }

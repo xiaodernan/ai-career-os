@@ -88,9 +88,14 @@ describe("normalizeAnswerResponse score scale", () => {
   });
 
   it("maps the next move and stays null when there is none", () => {
-    expect(normalizeAnswerResponse(payload({ score: 0.5 })).next).toMatchObject({
-      question: "How do you rebalance?",
+    // The fixture above is what `decide_next` answers with, `action` and all. This assertion used to
+    // name the reader's invented `question` field and never look at `kind`, which is how the page's
+    // follow-up badge stayed wrong while this file stayed green (#157).
+    expect(normalizeAnswerResponse(payload({ score: 0.5 })).next).toEqual({
+      text: "How do you rebalance?",
+      kind: "followup",
       topic: "storage",
+      difficulty: 0.6,
     });
     expect(normalizeAnswerResponse({ evaluation: { score: 0.5 } }).next).toBeNull();
   });

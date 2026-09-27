@@ -37,10 +37,6 @@ import { depthLabel, depthLevel, titleCase } from "@/lib/format";
 import type { AnswerResponse } from "@/lib/hooks/actions";
 import type { InterviewQuestion } from "@/lib/api/types";
 
-const qText = (q: InterviewQuestion | { text?: string } | null): string =>
-  ((q as { text?: string; question?: string } | null)?.text ??
-    (q as { question?: string } | null)?.question ??
-    "").trim();
 
 export default function InterviewRunnerPage() {
   const params = useParams<{ id: string }>();
@@ -83,7 +79,7 @@ export default function InterviewRunnerPage() {
         onSuccess: (res) => {
           if (res.question) {
             setQuestion({
-              text: qText(res.question),
+              text: res.question.text,
               topic: res.question.topic,
               kind: res.question.kind,
               difficulty: res.question.difficulty,
@@ -183,7 +179,7 @@ export default function InterviewRunnerPage() {
       return;
     }
     setQuestion({
-      text: qText(pendingNext),
+      text: pendingNext.text,
       topic: pendingNext.topic,
       kind: pendingNext.kind,
       difficulty: pendingNext.difficulty,
@@ -472,7 +468,7 @@ function EvaluationPanel({
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-xs text-muted-foreground">
             {pendingNext
-              ? qText(pendingNext)?.startsWith("You") || pendingNext.kind === "followup"
+              ? pendingNext.kind === "followup"
                 ? "The agent wants to go deeper."
                 : "The agent is moving to the next topic."
               : "The agent has no follow-up — it suggests closing out for the report."}

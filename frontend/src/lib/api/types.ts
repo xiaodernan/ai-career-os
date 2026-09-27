@@ -374,14 +374,20 @@ export interface InterviewDimension {
   score?: number;
 }
 
+/**
+ * A question the interviewer asked, from either of its two authors: the persisted `TurnItem` (whose
+ * text is `content`, with topic and action in its `questionMeta`) or the advance decision
+ * `AnswerResponse.next` (whose text is `question`, and whose action/difficulty are top level). The two
+ * readers are bound to those two shapes in `test_response_field_contract.py`; this is the fold the page
+ * renders. `question`/`hint` were dropped by #157 -- no path ever wrote them.
+ */
 export interface InterviewQuestion {
   id?: string;
-  question?: string;
-  text?: string;
+  text: string;
   topic?: string;
-  kind?: "opening" | "followup" | "next_topic" | string;
+  /** "opening" | "followup" | "next_topic" | "finish" -- the wire's `action`. */
+  kind?: string;
   difficulty?: number;
-  hint?: string;
 }
 
 export interface InterviewAnswerEvaluation {

@@ -1004,6 +1004,33 @@ export function normalizeQuestion(raw: unknown): {
   return { text, topic: str(meta, "topic"), kind: str(meta, "action"), id: str(raw, "id") };
 }
 
+/**
+ * The next question the agent proposes, which is a different payload from the turn above: the
+ * interview advance decision (`decide_next` in `app/features/interview.py`) is relayed verbatim as
+ * `AnswerResponse.next` by the backend, so its keys are that function's own -- `action`, `question`,
+ * `topic`, `difficulty`, and a `reasoning` no card shows.
+ *
+ * `kind` is this view's word for `action`, and reading the wire's name is what the follow-up sentence
+ * on the session page branches on: the alias list this read used to carry (`kind`/`type`/`nextAction`/
+ * `next_action`) never named `action`, so the branch was always the other one.
+ */
+export function normalizeNextQuestion(raw: unknown): {
+  text: string;
+  topic?: string;
+  kind?: string;
+  difficulty?: number;
+} | null {
+  const q = rec(raw);
+  if (!q) return null;
+  const difficulty = num(raw, "difficulty");
+  return {
+    text: str(raw, "question") ?? "",
+    topic: str(raw, "topic") || undefined,
+    kind: str(raw, "action"),
+    difficulty: difficulty == null ? undefined : difficulty,
+  };
+}
+
 /* --------------------------- interview report ---------------------------- */
 
 /**
