@@ -1322,8 +1322,9 @@ def test_the_step_classifier_reads_three_fields_no_frame_ever_carries():
     can never read `state`; progress = {step, done, total} (`ingestion/pipeline.py:82`). The component
     reads `evt.state ?? evt.status`, then `evt.progress === 100`, then `evt.label ?? … ?? evt.step`:
     `status`, `progress` and `label` are written by no producer at all, and the middle one reads like a
-    confusion between the frame's *name* and a field it would carry. Mirror image: `intent`, `count` and
-    `agent` are produced and never read.
+    confusion between the frame's *name* and a field it would carry. Mirror image: `count` and `intent` are produced and read by nobody, while `agent` and `step`
+    are produced and consumed by `lib/hooks/actions.ts` instead of by this panel -- the last three
+    assertions pin exactly that split, so the ledger cannot be misread as "`agent` goes nowhere".
 
     Pinned as two ledgers rather than fixed. Making the classifiers honest (drop the dead fallbacks, or
     send `label`/`state` for copilot steps) changes what a user sees on a live run, and the check that
@@ -1354,3 +1355,18 @@ def test_the_step_classifier_reads_three_fields_no_frame_ever_carries():
     assert produced - reads == {"agent", "count", "intent"}, \
         (f"{sorted(produced - reads)} are published and dropped by the panel, which is the mirror image "
          "of the hole above and is recorded rather than silently ignored")
+
+    # ... dropped by *this* panel, not by the app: the orchestrator's own status fields are consumed
+    # elsewhere, so the sentence above is scoped to the file it measured. Naming the second reader keeps
+    # the ledger from being read as "`agent` goes nowhere", which would be false.
+    actions = (ROOT_FRONTEND / "lib" / "hooks" / "actions.ts").read_text(encoding="utf-8")
+    forwarded = set(re.findall(r"\bdata\.(\w+)", actions))
+    assert forwarded == {"agent", "step"}, \
+        (f"{sorted(forwarded)} are what the copilot action hook reads off a status frame, which is where "
+         "`agent` actually lands -- if this drifts, the panel's dropped-field ledger above has to be "
+         "re-read, because the two together are what the app consumes")
+    assert forwarded <= published["status"], \
+        (f"{sorted(forwarded - published['status'])} would be read by the action hook with no producer")
+    assert published["status"] - reads - forwarded == {"count", "intent"}, \
+        (f"{sorted(published['status'] - reads - forwarded)} are the status fields no reader in the app "
+         "touches -- rag extras published and then dropped everywhere, not just in the panel")
