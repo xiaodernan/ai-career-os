@@ -38,14 +38,30 @@ public final class DashboardDtos {
     }
 
     /**
+     * One open application waiting on the user, and why it is listed.
+     *
+     * `reason` is the query's own classification rather than a second guess at the backend:
+     * `reminder_due` means the user asked to be told at this time, `stale` means nobody has
+     * logged a step on it for the window. The frontend renders the two differently, so a reason
+     * the backend stopped sending would show up as an unlabelled row rather than as a wrong one.
+     */
+    public record AttentionItem(UUID id, String title, String companyName, String status,
+                                String reason, OffsetDateTime reminderAt,
+                                OffsetDateTime updatedAt) {
+    }
+
+    /**
      * `avgMatch` is the mean of the newest match per scored job (0..1) and null when nothing has
-     * been scored; `needsAttention` counts open applications that are waiting on the user. The
-     * stat strip hides the match ring on a null average rather than drawing a zero-scored resume.
+     * been scored; `needsAttention` counts open applications that are waiting on the user, and
+     * `attention` is the rows behind that count -- same predicate, so the strip cannot say three
+     * while the card lists two. The stat strip hides the match ring on a null average rather than
+     * drawing a zero-scored resume.
      */
     public record DashboardResponse(Kanban kanban,
                                     long interviews,
                                     Float avgMatch,
                                     long needsAttention,
+                                    List<AttentionItem> attention,
                                     ResumeSummary currentResume,
                                     SkillGapDigest skillGaps,
                                     List<RecommendedJob> recommendedJobs,

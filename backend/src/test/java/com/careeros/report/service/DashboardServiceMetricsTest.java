@@ -11,9 +11,12 @@ import com.careeros.application.repository.ApplicationRepository;
 import com.careeros.interview.repository.InterviewSessionRepository;
 import com.careeros.job.repository.JobMatchRepository;
 import com.careeros.job.repository.JobRepository;
+import com.careeros.report.dto.DashboardDtos.AttentionItem;
 import com.careeros.report.dto.DashboardDtos.DashboardResponse;
 import com.careeros.report.repository.DashboardRepository;
 import com.careeros.resume.service.ResumeService;
+import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -59,6 +62,19 @@ class DashboardServiceMetricsTest {
         // zero into the payload.
         when(dashboard.averageMatch(userId)).thenReturn(null);
         assertThat(service.build(userId).avgMatch()).isNull();
+    }
+
+    @Test
+    void attentionRowsCarryTheSameWindowAsTheCountAndACap() {
+        UUID applicationId = UUID.randomUUID();
+        List<AttentionItem> items = List.of(new AttentionItem(applicationId, "Role", "Acme",
+                "applied", "reminder_due", OffsetDateTime.now(), OffsetDateTime.now()));
+        when(dashboard.attention(userId, 14, 5)).thenReturn(items);
+
+        // The same 14-day window the count above is asked for: two different windows would let the
+        // strip say "one needs attention" while the card lists something else.
+        assertThat(service.build(userId).attention()).isEqualTo(items);
+        verify(dashboard).attention(userId, 14, 5);
     }
 
     @Test

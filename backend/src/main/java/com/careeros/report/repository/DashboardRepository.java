@@ -1,6 +1,7 @@
 package com.careeros.report.repository;
 
 import com.careeros.common.Times;
+import com.careeros.report.dto.DashboardDtos.AttentionItem;
 import com.careeros.report.dto.DashboardDtos.RecommendedJob;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
@@ -71,22 +72,63 @@ public class DashboardRepository {
     }
 
     /**
+     * The one predicate behind "needs attention", shared by the count and the list below.
+     *
      * Open applications waiting on the user: nothing logged for {@code staleDays}, or a reminder
      * date that has arrived. `offer` and `rejected` are excluded because the stage taxonomy the
      * frontend freezes (`lib/pipeline.ts`) treats those as closed out — a decision already made is
      * not an outstanding item, and counting it would make the number grow as the user finishes work.
+     *
+     * It is one fragment rather than two copies because the dashboard shows both answers at once:
+     * a strip reading "3 need attention" above a card listing two rows is the panel arguing with
+     * itself, and no test that reads one statement at a time would see it.
      */
+    private static final String NEEDS_ATTENTION = """
+            a.status NOT IN ('offer', 'rejected')
+              AND (a.updated_at < now() - make_interval(days => :staleDays)
+                   OR (a.reminder_at IS NOT NULL AND a.reminder_at <= now()))
+            """;
+
+    /** How many open applications are waiting on the user. See {@link #NEEDS_ATTENTION}. */
     public long needsAttention(UUID userId, int staleDays) {
-        String sql = """
-                SELECT count(*) FROM applications a
-                 WHERE a.user_id = :userId
-                   AND a.status NOT IN ('offer', 'rejected')
-                   AND (a.updated_at < now() - make_interval(days => :staleDays)
-                        OR (a.reminder_at IS NOT NULL AND a.reminder_at <= now()))
-                """;
+        String sql = "SELECT count(*) FROM applications a WHERE a.user_id = :userId AND "
+                + NEEDS_ATTENTION;
         Query query = em.createNativeQuery(sql);
         query.setParameter("userId", userId);
         query.setParameter("staleDays", staleDays);
         return ((Number) query.getSingleResult()).longValue();
+    }
+
+    /**
+     * The rows behind {@link #needsAttention}, ordered the way they should be worked: a reminder
+     * that has come due first (someone is waiting on the user), then the longest-idle application.
+     *
+     * One query with the company joined and `COALESCE`d against the row's own typed-in name — an
+     * application added by hand has no `company_id`, and its card on the board shows the typed
+     * name, so this list has to show the same one or two screens name one row differently.
+     */
+    public List<AttentionItem> attention(UUID userId, int staleDays, int limit) {
+        String sql = """
+                SELECT a.id, a.title, COALESCE(c.name, a.company_name), a.status,
+                       CASE WHEN a.reminder_at IS NOT NULL AND a.reminder_at <= now()
+                            THEN 'reminder_due' ELSE 'stale' END,
+                       a.reminder_at, a.updated_at
+                  FROM applications a
+                  LEFT JOIN companies c ON c.id = a.company_id
+                 WHERE a.user_id = :userId
+                   AND """ + NEEDS_ATTENTION + """
+                 ORDER BY (a.reminder_at IS NOT NULL AND a.reminder_at <= now()) DESC,
+                          a.updated_at ASC
+                 LIMIT :limit
+                """;
+        Query query = em.createNativeQuery(sql);
+        query.setParameter("userId", userId);
+        query.setParameter("staleDays", staleDays);
+        query.setParameter("limit", limit);
+        return ((List<Object[]>) query.getResultList()).stream()
+                .map(row -> new AttentionItem(
+                        (UUID) row[0], (String) row[1], (String) row[2], (String) row[3],
+                        (String) row[4], Times.offset(row[5]), Times.offset(row[6])))
+                .toList();
     }
 }

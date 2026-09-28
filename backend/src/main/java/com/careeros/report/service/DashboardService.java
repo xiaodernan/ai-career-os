@@ -35,6 +35,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class DashboardService {
 
     private static final int RECOMMENDED_LIMIT = 5;
+    /** Rows behind the attention count: what one card can list before nobody reads it. */
+    private static final int ATTENTION_LIMIT = 5;
     private static final int RECENT_LIMIT = 5;
     /** An application nobody has logged a step on for this long is the user's to chase. */
     private static final int STALE_DAYS = 14;
@@ -68,6 +70,7 @@ public class DashboardService {
                 interviews.countByUserId(userId),
                 dashboard.averageMatch(userId),
                 dashboard.needsAttention(userId, STALE_DAYS),
+                dashboard.attention(userId, STALE_DAYS, ATTENTION_LIMIT),
                 currentResume(userId),
                 skillGaps(userId),
                 dashboard.recommendedJobs(userId, RECOMMENDED_LIMIT),

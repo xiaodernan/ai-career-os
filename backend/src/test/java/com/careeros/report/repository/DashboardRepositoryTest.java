@@ -8,6 +8,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.careeros.report.dto.DashboardDtos.AttentionItem;
 import com.careeros.report.dto.DashboardDtos.RecommendedJob;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
@@ -188,5 +189,76 @@ class DashboardRepositoryTest {
         // count(*) always returns a row, so the primitive long path holds: the stat card shows 0.
         single(0L);
         assertThat(repo.needsAttention(userId, 14)).isZero();
+    }
+
+    @Test
+    void attentionMapsTheRowAndItsReasonInColumnOrder() {
+        UUID applicationId = UUID.randomUUID();
+        Object[] row = new Object[]{applicationId, "Senior Backend Engineer", "Acme", "applied",
+                "reminder_due", Timestamp.from(Instant.parse("2026-09-01T09:00:00Z")),
+                Timestamp.from(Instant.parse("2026-08-01T09:00:00Z"))};
+        List<Object[]> data = new ArrayList<>();
+        data.add(row);
+        rows(data);
+
+        AttentionItem item = repo.attention(userId, 14, 5).get(0);
+        assertThat(item.id()).isEqualTo(applicationId);
+        assertThat(item.title()).isEqualTo("Senior Backend Engineer");
+        assertThat(item.companyName()).isEqualTo("Acme");
+        assertThat(item.status()).isEqualTo("applied");
+        assertThat(item.reason()).isEqualTo("reminder_due");
+        assertThat(item.reminderAt().toInstant()).isEqualTo(Instant.parse("2026-09-01T09:00:00Z"));
+        assertThat(item.updatedAt().toInstant()).isEqualTo(Instant.parse("2026-08-01T09:00:00Z"));
+    }
+
+    @Test
+    void attentionToleratesARowWithNoCompanyAndNoReminder() {
+        // An application added by hand has neither: no `company_id` to join, and no reminder until
+        // the user sets one. The card renders the typed-in name (COALESCE), and a `stale` row has
+        // no instant to show -- both have to survive the mapping.
+        Object[] row = new Object[]{UUID.randomUUID(), "Take-home", "Somewhere", "oa",
+                "stale", null, Timestamp.from(Instant.now())};
+        List<Object[]> data = new ArrayList<>();
+        data.add(row);
+        rows(data);
+
+        AttentionItem item = repo.attention(userId, 14, 5).get(0);
+        assertThat(item.reason()).isEqualTo("stale");
+        assertThat(item.reminderAt()).isNull();
+    }
+
+    @Test
+    void attentionAsksForTheDueRemindersFirstThenTheLongestIdle() {
+        rows(List.of());
+        repo.attention(userId, 14, 5);
+        assertThat(lastSql)
+                .contains("LEFT JOIN companies c ON c.id = a.company_id")
+                .contains("COALESCE(c.name, a.company_name)")
+                .contains("ORDER BY (a.reminder_at IS NOT NULL AND a.reminder_at <= now()) DESC")
+                .contains("a.updated_at ASC")
+                .contains("LIMIT :limit");
+        assertBindsExactly("userId", "staleDays", "limit");
+    }
+
+    @Test
+    void theListIsFilteredByExactlyTheClauseTheCountIs() {
+        rows(List.of());
+        repo.attention(userId, 14, 5);
+        String listSql = squeeze(lastSql);
+        single(0L);
+        repo.needsAttention(userId, 14);
+        String countSql = squeeze(lastSql);
+
+        // Not "both mention the rule" but "the count's whole predicate is inside the list's": the
+        // strip and the card are one question asked twice, and a second copy of the clause is how
+        // they stop agreeing.
+        String predicate = countSql.substring(countSql.indexOf("a.status NOT IN"));
+        assertThat(predicate).contains("a.reminder_at <= now()");
+        assertThat(listSql).contains(predicate);
+    }
+
+    /** Statement text with every run of whitespace collapsed, so the comparison is about SQL. */
+    private static String squeeze(String sql) {
+        return sql.replaceAll("\\s+", " ").trim();
     }
 }
