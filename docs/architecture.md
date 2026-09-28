@@ -89,6 +89,7 @@ frontend/backend/ai-service can also run natively for dev (`pnpm dev`, `mvn spri
 │       ├── agents/               # orchestrator + subagents + tools/ (15 tools) + memory
 │       ├── features/             # resume_parse, jd_analyze, match, tailor, cover_letter, interview
 │       ├── evals/                # dataset, metrics (recall/precision/MRR/faithfulness…), experiment runner
+│       ├── ops/                  # embed_jobs backfill (+ the service's periodic sweep of new jobs)
 │       ├── db/                   # asyncpg repositories for chunks/embeddings/agent_traces
 │       └── api/                  # /internal/* REST+SSE endpoints consumed by backend
 ├── frontend/                     # Next.js App Router
@@ -332,10 +333,15 @@ recall@k, precision@k, MRR, context relevance, answer relevance, faithfulness
   - ai-service task SSE is both `/internal/tasks/{id}/stream` and the alias
     `/internal/stream/{task_id}` that the backend relay proxies as
     `/api/v1/ai/stream/{taskId}`.
-  - Copilot chat is synchronous from the public API view:
+  - Copilot chat has two public shapes. `POST /api/v1/copilot/chat/stream`
+    answers `text/event-stream`: `status` (the agent's own step) and `token`
+    frames while the turn runs, then one `done` carrying the stored
+    `ChatResponse`, or `error` — this is what the copilot page reads, and the
+    backend stores both messages before `done` leaves the server. The blocking
     `POST /api/v1/copilot/chat` → ai-service `/internal/agents/chat/sync` →
-    `{answer, artifacts[], sources[], actions[], run_id, conversation_id}`;
-    both messages persisted by the backend.
+    `{answer, artifacts[], sources[], actions[], run_id, conversation_id}`
+    remains for scripts, the E2E suite and the eval harness, and the client
+    falls back to it when the stream route is not served.
   - Ownership exception to "backend is sole domain writer": ai-service may
     write `documents`, `document_chunks`, `knowledge_sources` (inline-text
     ingest only), `job_matches` (derived match rows), `user_memories`,

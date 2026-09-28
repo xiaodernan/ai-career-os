@@ -1,8 +1,9 @@
 "use client";
 
+import { useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { api, ApiError } from "@/lib/api/client";
+import { api, ApiError, postSSE } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
 import { field } from "@/lib/api/body";
 import {
@@ -624,22 +625,60 @@ export function useCreateConversation() {
   });
 }
 
-export function useCopilotChat() {
+/** What the copilot's stream reports while the agent is still working. */
+export interface CopilotStreamHandlers {
+  /** One model delta: append it and the reply grows on screen. */
+  onToken?: (token: string) => void;
+  /** `{agent, step}` from the turn itself — "Thinking", "Calling search_jobs". */
+  onStatus?: (status: { agent?: string; step?: string }) => void;
+}
+
+export function useCopilotChat(stream: CopilotStreamHandlers = {}) {
   const qc = useQueryClient();
+  // The mutation has to keep one identity across renders, so the handlers a page passes inline
+  // live in a ref and are read when a frame arrives, not when the hook is called.
+  const streamRef = useRef(stream);
+  streamRef.current = stream;
   return useMutation({
     mutationFn: async (body: {
       message: string;
       conversationId?: string | null;
       context?: Record<string, unknown>;
     }): Promise<CopilotReply> => {
-      const raw = await api.request<unknown>(endpoints.copilotChat, {
-        method: "POST",
-        body: {
-          message: body.message,
-          ...field("conversationId", body.conversationId),
-          context: body.context ?? {},
-        },
-      });
+      let raw: unknown;
+      try {
+        raw = await postSSE<unknown>(
+          endpoints.copilotChatStream,
+          {
+            method: "POST",
+            body: {
+              message: body.message,
+              ...field("conversationId", body.conversationId),
+              context: body.context ?? {},
+            },
+          },
+          {
+            onToken: (token) => streamRef.current.onToken?.(token),
+            onStatus: (data) => {
+              const agent = typeof data.agent === "string" ? data.agent : undefined;
+              const step = typeof data.step === "string" ? data.step : undefined;
+              if (agent || step) streamRef.current.onStatus?.({ agent, step });
+            },
+          },
+        );
+      } catch (err) {
+        // A backend that has not shipped the stream route still serves the blocking one, and the
+        // turn has to happen either way — a 404 is the only failure that means "not served here".
+        if (!(err instanceof ApiError && err.status === 404)) throw err;
+        raw = await api.request<unknown>(endpoints.copilotChat, {
+          method: "POST",
+          body: {
+            message: body.message,
+            ...field("conversationId", body.conversationId),
+            context: body.context ?? {},
+          },
+        });
+      }
       return {
         answer: str(raw, "answer", "content", "text", "message", "reply") ?? "",
         artifacts: normalizeArtifacts(raw),

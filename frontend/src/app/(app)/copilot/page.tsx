@@ -35,17 +35,12 @@ import { useCopilotChat, useCreateConversation } from "@/lib/hooks/actions";
 import { relativeTime } from "@/lib/format";
 import type { ChatMessage } from "@/lib/api/types";
 
-const PENDING_STAGES = [
-  "Reading the conversation",
-  "Retrieving from your knowledge base",
-  "Reasoning with citations",
-];
-
-function localStages(active: number): ProcessingStep[] {
-  return PENDING_STAGES.map((label, i) => ({
+/** The turn's own `status` frames, in arrival order — every step before the last one is done. */
+function stepsFromTrail(trail: string[]): ProcessingStep[] {
+  return trail.map((label, i) => ({
     id: `cstage-${i}`,
     label,
-    status: (i < active ? "done" : i === active ? "active" : "pending") as ProcessingStep["status"],
+    status: (i === trail.length - 1 ? "active" : "done") as ProcessingStep["status"],
   }));
 }
 
@@ -309,9 +304,19 @@ function ChatPanel({
   listTrigger: React.ReactNode;
 }) {
   const messages = useConversationMessages(conversationId);
-  const chat = useCopilotChat();
   const [draft, setDraft] = React.useState("");
   const [transcript, setTranscript] = React.useState<ChatMessage[]>([]);
+  // The reply while it is being written: deltas as they arrive, and the steps the agent reports
+  // between them. Both are cleared the moment the stored answer lands, so nothing shows twice.
+  const [streamText, setStreamText] = React.useState("");
+  const [streamSteps, setStreamSteps] = React.useState<string[]>([]);
+  const chat = useCopilotChat({
+    onToken: (token) => setStreamText((t) => t + token),
+    onStatus: ({ step }) => {
+      if (!step) return;
+      setStreamSteps((prev) => (prev[prev.length - 1] === step ? prev : [...prev, step]));
+    },
+  });
   const bottomRef = React.useRef<HTMLDivElement>(null);
   const hydratedRef = React.useRef(Boolean(autoSendMessage));
   const autoSentRef = React.useRef(false);
@@ -339,6 +344,8 @@ function ChatPanel({
       const trimmed = text.trim();
       if (!trimmed || chat.isPending) return;
       setDraft("");
+      setStreamText("");
+      setStreamSteps([]);
       setTranscript((prev) => [
         ...prev,
         { id: `local-${Date.now()}`, role: "user", content: trimmed, createdAt: new Date().toISOString() },
@@ -378,7 +385,7 @@ function ChatPanel({
 
   React.useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [transcript.length, chat.isPending]);
+  }, [transcript.length, streamText.length, chat.isPending]);
 
   const error = chat.error;
 
@@ -431,9 +438,16 @@ function ChatPanel({
           {chat.isPending && (
             <div className="flex animate-fade-up flex-col gap-2">
               <p className="flex items-center gap-1.5 text-2xs font-medium tracking-wide text-muted-foreground uppercase">
-                <AIBadge label="copilot" /> thinking
+                <AIBadge label="copilot" />{" "}
+                {streamSteps[streamSteps.length - 1] ?? (streamText ? "writing" : "thinking")}
               </p>
-              <ProcessingSteps steps={localStages(1)} />
+              {streamText ? (
+                <div className="max-w-[85%] rounded-2xl border border-border/70 bg-card px-4 py-2.5 text-sm">
+                  <StreamingText content={streamText} />
+                </div>
+              ) : (
+                streamSteps.length > 0 && <ProcessingSteps steps={stepsFromTrail(streamSteps)} />
+              )}
             </div>
           )}
 

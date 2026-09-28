@@ -74,6 +74,8 @@ export const endpoints = {
 
   /* ---------------- AI actions (thin proxies over ai-service) ------------ */
   copilotChat: "/copilot/chat",
+  /** The same turn as an SSE stream — `token` / `status` frames, then `done` with the reply. */
+  copilotChatStream: "/copilot/chat/stream",
   aiUsage: "/ai-usage/summary",
 
   /* ---------------- Activity / reports / search / chat history ----------- */

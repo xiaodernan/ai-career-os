@@ -138,9 +138,17 @@ endpoints above; the frontend renders them as a timeline
 PRD §47 Demo 6 — you can open any run and see agent → tools → retrieval → sources
 → LLM → final answer.
 
-**Streaming**: a turn *can* run as a background task (`POST /internal/agents/chat`)
-publishing `status` / `message` events plus the task bus's own `done` / `error` and its `ping`
-keep-alive, on the task bus — but nothing in the product calls it today: the copilot goes through
-`POST /internal/agents/chat/sync`, the blocking variant, and the SSE relay only carries ingest
-tasks. `token` deltas are produced only by `core/ai.py`'s per-call `emit` callback, which no
-caller wires to the stream, so the client's `token` branch waits for a publisher.
+**Streaming**: the copilot page posts to `POST /copilot/chat/stream` and reads the turn as an SSE
+stream — `status` frames carrying the agent's own `{agent, step}` ("Thinking", "Calling
+search_jobs"), `token` deltas (the chat task runs with `stream=True`, so `core/ai.py`'s per-call
+`emit` publishes them), the task bus's `ping` keep-alive, and one terminal frame. The backend
+half is `CopilotStreamService`: it starts the turn with `POST /internal/agents/chat`, consumes
+`GET /internal/stream/{task_id}` through `SseRelayService.consume`, intercepts `done` and stores
+both messages via `ConversationService.persistTurn` **on its own thread** — a tab closed mid-
+answer does not lose the reply — then answers the browser with the same `ChatResponse` that
+`POST /copilot/chat` returns. `error` frames pass through; a turn that ends without `done` is an
+`error`, never a hang. `POST /internal/agents/chat/sync` and `/copilot/chat` remain the blocking
+pair for scripts, the e2e suite and the eval harness, and the client falls back to them when the
+stream route answers 404. The browser half is `postSSE` (`lib/api/client.ts`): `request()`'s auth
+and one refresh-on-401, frames parsed and dispatched by `lib/sse/use-sse.ts`, resolving on `done`
+and rejecting with `errorText`'s first line.

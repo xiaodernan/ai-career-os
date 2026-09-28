@@ -78,6 +78,17 @@ step copilot-followup
 curl -s -X POST $B/copilot/chat -H "$AUTH" -H "Content-Type: application/json" \
   -d "{\"conversationId\":\"$CID\",\"message\":\"Great, now tailor my resume for the first one\"}" | head -c 500
 
+# The same turn as an event stream - what the copilot page calls. --max-time bounds a turn that
+# never closes; curl exits 18 when the connection ends without a terminating chunk (the relay does
+# the same), so the frame counts below, not curl's exit, are the check.
+step copilot-stream
+STREAM=$(curl -sN --max-time 60 -X POST $B/copilot/chat/stream -H "$AUTH" -H "Content-Type: application/json" \
+  -d '{"message":"Which skill gap should I close first?"}')
+echo "$STREAM" | head -c 400
+echo
+echo "frames=$(printf '%s' "$STREAM" | grep -c '^event:') tokens=$(printf '%s' "$STREAM" | grep -cE '^event: ?token') done=$(printf '%s' "$STREAM" | grep -cE '^event: ?done')"
+printf '%s' "$STREAM" | grep -qE '^event: ?done' || echo "!! the stream closed without a done frame"
+
 step interview-start
 IS=$(curl -s -X POST $B/interview/sessions -H "$AUTH" -H "Content-Type: application/json" -d '{"mode":"backend"}')
 echo "$IS" | head -c 400

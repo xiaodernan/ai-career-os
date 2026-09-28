@@ -1,6 +1,7 @@
 import { API_BASE_URL, endpoints } from "./endpoints";
 import { tokenStore } from "./token-store";
 import type { AuthResponse, AuthTokens, Page, User } from "./types";
+import { dispatchEvent, errorText, findFrameEnd, parseFrame, type SSEHandlers } from "../sse/use-sse";
 
 export interface ApiErrorDetails {
   code: string;
@@ -150,6 +151,119 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   }
 
   return (json?.data ?? (null as T)) as T;
+}
+
+/* ------------------------------------------------------------------ */
+/* Streaming POST — one request, many frames                           */
+/* ------------------------------------------------------------------ */
+
+/**
+ * POST a path that answers with `text/event-stream`.
+ *
+ * The verb, the bearer token and the one refresh-on-401 are {@link request}'s: a stream is the
+ * same request that simply does not finish. What differs is the answer. Instead of one envelope,
+ * the body is a sequence of SSE frames handed to `handlers` as they arrive, and the promise
+ * settles on the frame that ends the turn — `done` resolves with its payload, `error` rejects
+ * with the cause that frame carries. A stream that closes without either frame is a broken
+ * connection, not an empty answer, so it rejects too.
+ *
+ * `endpoints.copilot/chat/stream` is the caller today: the reply arrives token by token while
+ * the agent works, and the stored answer comes back on `done`.
+ */
+export async function postSSE<T>(
+  path: string,
+  options: Omit<RequestOptions, "params"> = {},
+  handlers: SSEHandlers = {},
+): Promise<T> {
+  const { body, auth = true, _retry = false, headers, ...rest } = options;
+
+  const finalHeaders = new Headers(headers);
+  finalHeaders.set("Accept", "text/event-stream");
+  if (body !== undefined) finalHeaders.set("Content-Type", "application/json");
+  const token = tokenStore.getAccess();
+  if (auth && token) finalHeaders.set("Authorization", `Bearer ${token}`);
+
+  const res = await fetch(buildUrl(path), {
+    ...rest,
+    method: rest.method ?? "POST",
+    headers: finalHeaders,
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+
+  if (res.status === 401 && auth && !_retry) {
+    const newToken = await refreshOnce();
+    if (newToken) return postSSE<T>(path, { ...options, _retry: true }, handlers);
+    onSessionExpired();
+    throw new ApiError("UNAUTHORIZED", "Your session has expired.", 401);
+  }
+
+  const stream = res.body;
+  if (!res.ok || !stream) {
+    let json: Envelope<T> | null = null;
+    try {
+      json = (await res.json()) as Envelope<T>;
+    } catch {
+      /* empty or non-JSON body */
+    }
+    const err = json?.error;
+    throw new ApiError(
+      err?.code ?? (res.status === 404 ? "NOT_FOUND" : "HTTP_ERROR"),
+      err?.message ?? `Request failed with status ${res.status}`,
+      res.status,
+      err?.details,
+    );
+  }
+
+  return await new Promise<T>((resolve, reject) => {
+    let settled = false;
+    const settle = (outcome: () => void) => {
+      if (settled) return;
+      settled = true;
+      outcome();
+    };
+    const streamHandlers: SSEHandlers = {
+      ...handlers,
+      onDone: (data) => {
+        handlers.onDone?.(data);
+        settle(() => resolve(data as T));
+      },
+      onError: (data) => {
+        handlers.onError?.(data);
+        settle(() =>
+          reject(new ApiError("STREAM_ERROR", errorText(data) ?? "The stream failed.", 502)),
+        );
+      },
+    };
+
+    void (async () => {
+      const reader = stream.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      try {
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          let sep: number;
+          while ((sep = findFrameEnd(buffer)) !== -1) {
+            const frame = buffer.slice(0, sep);
+            buffer = buffer.slice(sep).replace(/^\r?\n\r?\n/, "");
+            const parsed = parseFrame(frame);
+            if (parsed) dispatchEvent(parsed, streamHandlers);
+            if (settled) {
+              await reader.cancel();
+              return;
+            }
+          }
+        }
+        settle(() =>
+          reject(new ApiError("STREAM_ENDED", "The connection closed before the answer arrived.", 502)),
+        );
+      } catch (err) {
+        settle(() => reject(err));
+      }
+    })();
+  });
 }
 
 /* ------------------------------------------------------------------ */
