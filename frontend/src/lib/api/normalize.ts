@@ -301,7 +301,10 @@ export function normalizeMatch(raw: unknown): JobMatch | null {
  * where `importance` is the JD's own priority word and `reason` the phrase it used to ask. There is
  * deliberately no advice column — what to do about a gap is the preparation card's job. */
 export function normalizeSkillGaps(raw: unknown): SkillGap[] {
-  const arr = list(raw, "skillGaps", "skill_gaps", "gaps");
+  // Two names, two authors: `skillGaps` is what MatchResult and MatchSummary write, and `gaps` is the
+  // literal normalizeDashboard hands this call. `skill_gaps` was a third name only a test ever wrote,
+  // so #167 deleted it.
+  const arr = list(raw, "skillGaps", "gaps");
   return arr
     .map((g) => {
       const skill = str(g, "skill", "name", "title");
@@ -1309,7 +1312,12 @@ export function normalizeChatActions(raw: unknown): CopilotAction[] {
 }
 
 export function normalizeMessages(raw: unknown) {
-  return list(raw, "messages", "items", "content").map((m, i) => ({
+  // Bare, by contract: GET /conversations/{id}/messages answers `List<MessageItem>` and the client
+  // hands over the unwrapped `data`, so the payload *is* the array. `messages`/`items`/`content` were
+  // three names no path to this reader can fill -- `items` belongs to a PageDTO this route never
+  // returns and `content` to a message's body -- and the field-contract gate now derives this reader's
+  // rows from a nameless read instead of excusing them.
+  return list(raw).map((m, i) => ({
     id: idOf(m, `msg-${i}`),
     role: str(m, "role", "sender") ?? "assistant",
     content: str(m, "content", "text", "message", "body") ?? "",

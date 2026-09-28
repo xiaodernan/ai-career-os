@@ -89,6 +89,7 @@ import ast
 import collections
 import json
 import re
+import sys
 from functools import lru_cache
 from pathlib import Path
 
@@ -580,8 +581,15 @@ READERS: dict[str, dict] = {
         "record_of": {"m": "MessageItem"},
         "drilled": {},
         "elements": {"m": "raw"},
-        "blind": {"raw": "the list response envelope: `list(raw, \"messages\", …)` reads a page "
-                          "wrapper built by the controller, not a record's fields"},
+        # #167 deleted this reader's `blind` entry, which claimed `list(raw, "messages", "items",
+        # "content")` "reads a page wrapper built by the controller". The controller answers
+        # `List<MessageItem>` (`conversation/web/ConversationController.java:68`) and the client hands
+        # over the unwrapped `data`, so the payload *is* the array and none of the three names is ever
+        # consulted: `messages` and `skill_gaps` are written by no producer at all, `items` belongs to
+        # `PageDTO` -- a shape this route never returns -- and the `content` the census does find is a
+        # message's body, a row field, not a list name. The reader now says `list(raw)`, which
+        # `_array_holder` derives straight from the source: read bare, with its rows bound.
+        "blind": {},
         "dynamic": {},
     },
     "normalizeChatActions": {
@@ -731,9 +739,15 @@ READERS: dict[str, dict] = {
         "record_of": {"g": "SkillGap"},
         "drilled": {"arr": ("raw", "skillGaps")},
         "elements": {"g": "raw"},
-        "blind": {"raw": "the caller's payload, whatever shape it brings: `list(raw, \"skillGaps\", "
-                         "…)` returns `raw` untouched when the caller already drilled the list, so "
-                         "no single record owns the name"},
+        # #167: the two names this reader tries are each answered by somebody the gate can go ask.
+        # `skillGaps` is emitted by `MatchResult` (a fresh compute) and `MatchSummary` (the stored row),
+        # which are exactly the two authors normalizeMatch drills it out of; `gaps` is written nowhere on
+        # the wire and is answered instead by this file's own argument at normalize.ts:892, where the
+        # dashboard reader builds `{gaps: list(skillGapDigest, "missingSkills", …)}`. `skill_gaps` was
+        # the third name until #167 measured that the only place ever writing it is a test fixture.
+        "blind": {"raw": "`MatchResult`/`MatchSummary` emit `skillGaps` and this file authors `gaps` at "
+                         "the one literal argument, so the list arrives under a name no single record "
+                         "owns -- but every name tried here has an author"},
         "dynamic": {},
     },
     "normalizePage": {
@@ -1642,6 +1656,109 @@ def _derived_holder(reader: str, holder: str) -> tuple[bool, str]:
     return True, f"built by reading the declared receiver {name!r}"
 
 
+# Which spellings take a table of names is a property of their declarations, not a list to keep up to
+# date here: `list(obj, ...keys: string[])` can be called with the table empty and still read a list,
+# while `rec(obj)` has no name slot at all, so a nameless call of it is a shape guard.
+ACCESSOR_DECL = re.compile(r"\bfunction\s+(\w+)(?:<[^>]*>)?\s*\(([^)]*)\)")
+NAME_TABLE = re.compile(r"\.\.\.\w+\s*:\s*string\[\]")
+
+
+@lru_cache(maxsize=None)
+def _name_table_accessors() -> tuple[str, ...]:
+    """The accessor spellings that take `...names: string[]`, asked of their own declarations.
+
+    Derived rather than written, because the alternative is a second vocabulary that drifts from the
+    first -- the defect #160 and #161 both closed. Of the 11 spellings `_ACCESSOR_SPELLINGS` knows, 9
+    are declared in normalize.ts (`int` and `strOr` are pinned dead by #165) and 6 of those 9 spread a
+    name table.
+    """
+    source = _blank_ts_noise(NORMALIZE.read_text(encoding="utf-8"))
+    declared = {found.group(1): found.group(2) for found in ACCESSOR_DECL.finditer(source)}
+    return tuple(sorted(name for name, params in declared.items()
+                        if name in _ACCESSOR_SPELLINGS and NAME_TABLE.search(params)))
+
+
+@lru_cache(maxsize=None)
+def _bare_reads() -> tuple[dict, ...]:
+    """Every call that hands a name-table accessor a bare receiver and no names at all.
+
+    The complement of #165's census: that walk asks what stands in the key slot, and this one asks
+    what happens when the slot is empty -- which `_sites` skips by design (`an accessor with no name to
+    try is not a read of a key`), so a payload that *is* the list was invisible to every reader-side
+    rule until #167 needed it.
+    """
+    source = NORMALIZE.read_text(encoding="utf-8")
+    blanked = _blank_ts_noise(source)
+    pattern = re.compile(r"\b(?:" + "|".join(_name_table_accessors()) + r")" + _GENERIC
+                         + r"\(\s*(" + _BARE.pattern + r")\s*\)")
+    spans = _ts_function_spans(source)
+    rows = []
+    for found in pattern.finditer(blanked):
+        inside = [name for name, lo, hi in spans if lo <= found.start() < hi]
+        rows.append({"line": blanked.count("\n", 0, found.start()) + 1, "receiver": found.group(1),
+                     "owner": inside[-1] if inside else "", "text": found.group(0)})
+    return tuple(rows)
+
+
+def _nameless_reads(reader: str) -> set[str]:
+    """Receivers this reader hands a name-table accessor with *no* names, so nothing is being tried."""
+    return {row["receiver"] for row in _bare_reads() if row["owner"] == reader}
+
+
+def _array_holder(reader: str, holder: str) -> tuple[bool, str]:
+    """Can the source answer for a list holder the table binds nothing to?
+
+    The claim `list(holder)` makes, with no names after it, is that the payload *is* the list. That is
+    checkable without a record: the rows walked out of it have to be bound, or the bare read would be
+    excusing a list nobody has ever named. #167 made this the honest replacement for a `blind` entry on
+    a receiver with no names to excuse.
+    """
+    spec = READERS[reader]
+    if holder not in _nameless_reads(reader):
+        return False, ("nothing reads it bare (`list(x)` with no names) and nothing assigns it, so no "
+                       "rule can say what shape it holds")
+    rows = [local for local, parent in spec["elements"].items()
+            if (parent[0] if isinstance(parent, tuple) else parent) == holder]
+    if not rows:
+        return False, "it is read bare, but `elements` binds no row to it"
+    unbound = [row for row in rows if row not in spec["record_of"]]
+    if unbound:
+        return False, (f"its rows {unbound} are bound to no record, so a bare read of the list "
+                       "answers for nobody")
+    bound = {row: spec["record_of"][row] for row in rows}
+    return True, f"read bare by this reader's own `list({holder})`, with its rows bound to {bound}"
+
+
+ARG_LITERAL = re.compile(r"\b(\w+)\(\s*\{([^{}]*)\}")
+ARG_KEY = re.compile(r"(?:^|[{,])\s*([A-Za-z_$][\w$]*)\s*:")
+
+
+@lru_cache(maxsize=None)
+def _authored_argument_keys(reader: str) -> dict[str, int]:
+    """The keys this file writes into an object literal it hands to `reader`, with the line of each.
+
+    A name can be answered by a producer or by an author inside this same file -- normalizeDashboard
+    builds `{gaps: …}` for normalizeSkillGaps and no wire shape carries it. `_blank_ts_noise` erases
+    the inside of string literals, so a *quoted* key would be invisible here; measured on this plane
+    the one literal argument is unquoted, and the failure runs the safe way round: renaming it to
+    `"gaps":` makes the name look unanswered and the rule says so, instead of answering for it quietly.
+    """
+    source = _blank_ts_noise(NORMALIZE.read_text(encoding="utf-8"))
+    out: dict[str, int] = {}
+    for found in ARG_LITERAL.finditer(source):
+        if found.group(1) != reader:
+            continue
+        for key in ARG_KEY.findall(found.group(2)):
+            out.setdefault(key, source.count("\n", 0, found.start()) + 1)
+    return out
+
+
+def _cited_producers(why: str) -> tuple[str, ...]:
+    """The producer aliases a `blind` reason cites, kept only where the table really has a source."""
+    return tuple(sorted(name for name in dict.fromkeys(re.findall(r"`(\w+)`", why))
+                        if name in PRODUCERS))
+
+
 def _undeclared_receivers(reader: str) -> list[str]:
     """Receivers the reader reads from that no record answers for, and vice versa."""
     spec = READERS[reader]
@@ -1660,6 +1777,12 @@ def _undeclared_receivers(reader: str) -> list[str]:
                 problems.append(f"{reader}: {receiver!r} is declared dynamic and appears nowhere in "
                                 "the reader -- the entry excuses a name that moved")
             continue  # read under a name a variable supplies: no literal site can exist
+        if receiver in spec["blind"]:
+            # The two branches below speak of records, and a blind receiver is bound to none: #167
+            # measured this loop accusing `blind` entries of not being `record_of` entries.
+            problems.append(f"{reader}: {receiver!r} is declared blind and no site reads from it any "
+                            "more -- the exemption outlived the read it was written for")
+            continue
         if not re.search(rf"\b{re.escape(receiver)}\b", _body(reader)):
             problems.append(f"{reader}: {receiver!r} is bound to a record and appears nowhere in "
                             "the reader -- the table links a name that moved")
@@ -1708,11 +1831,14 @@ def _broken_links(reader: str) -> list[str]:
         holder = parent[0] if isinstance(parent, tuple) else parent
         if holder not in (set(spec["record_of"]) | set(spec["blind"]) | set(spec["dynamic"])):
             # #166: the declaration was the only way to satisfy this, so a list local was made to claim
-            # a `dynamic` read it does not have. Now the source may answer instead -- see `_derived_holder`.
-            if not _derived_holder(reader, holder)[0]:
+            # a `dynamic` read it does not have. Now the source may answer instead -- see
+            # `_derived_holder`, and #167's `_array_holder` for the list that arrives bare.
+            built = _derived_holder(reader, holder)
+            bare = _array_holder(reader, holder)
+            if not (built[0] or bare[0]):
                 problems.append(f"{reader}: {local!r} comes from {holder!r}, which the table neither "
                                 f"binds, declares blind, declares dynamic, nor demonstrably builds: "
-                                f"{_derived_holder(reader, holder)[1]}")
+                                f"{built[1]}; and not bare either: {bare[1]}")
         if isinstance(parent, tuple):
             # An element row: the row has no accessor of its own to point at, so the link is stated
             # as (map, key) and both halves have to be findable -- the list drilled out of that map
@@ -1832,6 +1958,49 @@ def _dynamic_problems() -> list[str]:
                     f"{reader}: {receiver!r} is owed by a measured read but cites no callable no-arg "
                     f"helper answering a non-empty name table, so nothing compares the names that "
                     f"arrive there with a producer: {why!r}")
+    return problems
+
+
+def _blind_problems() -> list[str]:
+    """Every name read off a `blind` receiver has to have an author somebody can go and ask.
+
+    `blind` is the vocabulary's other exemption, and #166's question applies to it unchanged: the two
+    rules that read it (`_undeclared_receivers`, `_broken_links`) only ask whether the *receiver* is
+    named, while `_dead_read_sites` skips any site whose receiver is not in `record_of` -- so declaring
+    one removed its reads from the key census and nothing took their place. Measured before #167: 2
+    entries, 1 site each, 3 names each, 6 names in total, and 4 of the 6 are written by nobody on any
+    reachable path. Like `_dynamic_problems`, deliberately not folded into `_structural_problems`: the
+    value is a red test named for the claim.
+    """
+    problems = []
+    for reader, spec in READERS.items():
+        for receiver, why in sorted(spec["blind"].items()):
+            # Whether the receiver is still read at all is the liveness loop's claim, and it now names
+            # `blind` entries for what they are; what only this rule can say is whether the names it
+            # excuses have authors.
+            keys = sorted({key for site in _sites(reader) if site["receiver"] == receiver
+                           for key in site["keys"]})
+            if not keys:
+                continue
+            cited = _cited_producers(why)
+            authored = _authored_argument_keys(reader)
+            for key in keys:
+                if any(key in _emitted(alias) for alias in cited):
+                    continue
+                if key in authored:
+                    continue
+                problems.append(
+                    f"{reader}: {receiver!r} is read under {key!r}, which no producer cited here "
+                    f"emits (the entry cites {list(cited) or 'no producer at all'}) and this file does "
+                    f"not author where it hands {reader} a literal "
+                    f"(it writes {sorted(authored) or 'no keys'}), so the tolerance is a name "
+                    "nothing on the wire can fill")
+            for alias in cited:
+                if not set(keys) & _emitted(alias):
+                    problems.append(
+                        f"{reader}: {receiver!r} cites {alias!r}, which emits none of the names read "
+                        f"off it {keys} -- a citation that answers for nothing is decoration, not "
+                        "an explanation")
     return problems
 
 
@@ -1978,8 +2147,12 @@ def test_the_reads_are_actually_found():
     # `normalizeArtifacts(m)`, so the name is tried once, inside the mapper that owns the read -- the
     # same correction #149 made for `actions`, and for the same reason: as a pre-picked argument the
     # probe was consulted by nobody, so binding it there would have declared a dead read live.
-    assert len(messages) == 6
-    assert {s["receiver"] for s in messages} == {"m", "raw"}
+    # 5 now, and one receiver instead of two: #167 narrowed the list read to `list(raw)`, because the
+    # route answers `List<MessageItem>` and the three names it tried belong to shapes this path never
+    # returns. A bare read has no key slot, so it is not a site -- which is exactly what makes the
+    # receiver need a derivation (`_array_holder`) rather than an exemption (`blind`).
+    assert len(messages) == 5
+    assert {s["receiver"] for s in messages} == {"m"}
     matches = _sites("normalizeMatch")
     assert len(matches) == 18
     assert {s["receiver"] for s in matches} == {"raw", "m"}
@@ -2744,11 +2917,11 @@ def test_the_census_sees_every_read_the_mappers_hold():
                             f"cannot see: {diverged}")
 
     whole = _key_read_calls(NORMALIZE.read_text(encoding="utf-8"))
-    # Measured at this plane: the whole file and the sum over its mappers answer 252 each, which is
+    # Measured at this plane: the whole file and the sum over its mappers answer 251 each, which is
     # what says no read lives outside a body -- in a module-level table or a top-level statement --
     # where the per-reader floors would never be consulted. The number moves with every read added
     # or removed, so it is a restatement of the two totals below it, not a separate claim.
-    assert len(whole) == 252, f"{len(whole)} reads by the oracle: recount both totals if this moved"
+    assert len(whole) == 251, f"{len(whole)} reads by the oracle: recount both totals if this moved"
     assert len(whole) == sum(len(_sites(name)) for name in population), \
         "a named read lives outside every mapper the census walks"
     expressions = [site for site in whole if not _BARE.fullmatch(site["receiver"])]
@@ -2865,8 +3038,8 @@ def test_a_call_whose_key_is_a_variable_is_a_population_every_member_has_to_expl
     `str(row, col)` matches `CENSUS_SITE` and then yields no candidates to `_NAME`, so `_sites` drops
     it at the `if not candidates` branch; `_key_read_calls` asks the same question of the same shape
     and drops it too. Two scanners agreeing because both are blind is the failure #163 named, and the
-    blind spot is live in this file: normalize.ts holds 267 accessor calls with a key position, the
-    oracle names 252 of them, and 16 hand their key position to a variable. 252 + 16 - 1 = 267, the
+    blind spot is live in this file: normalize.ts holds 266 accessor calls with a key position, the
+    oracle names 251 of them, and 16 hand their key position to a variable. 251 + 16 - 1 = 266, the
     one being `idOf(h, g.type)`, which the oracle counts as a read of `h` through the fold while the
     variable it passes is not a name at all. Nothing in this file walked those 16 before now.
 
@@ -2881,17 +3054,19 @@ def test_a_call_whose_key_is_a_variable_is_a_population_every_member_has_to_expl
     calls = _key_position_calls(source)
     named = _key_read_calls(source)
     nameless = [row for row in calls if not row["literal"]]
-    assert len(calls) == 267, (f"{len(calls)} accessor calls hand something to a key position: "
+    assert len(calls) == 266, (f"{len(calls)} accessor calls hand something to a key position: "
                                "recount the two halves below")
     assert len(nameless) == 16, f"{len(nameless)} calls put a variable where a name is expected"
     counted = {(row["line"], row["accessor"], row["receiver"]) for row in nameless} & \
               {(site["line"], site["name"], site["receiver"]) for site in named}
     assert len(calls) == len(named) + len(nameless) - len(counted), \
-        (f"252 + 16 stopped being 267: the oracle now counts {len(named)} and the census {len(nameless)} "
+        (f"251 + 16 stopped being 266: the oracle now counts {len(named)} and the census {len(nameless)} "
          f"with {sorted(counted)} in common -- one of the three totals moved alone")
-    assert sorted(counted) == [(1243, "idOf", "h")], \
+    assert [(row[1], row[2]) for row in sorted(counted)] == [("idOf", "h")], \
         (f"the calls that are both nameless and counted are {sorted(counted)}, not one folded `idOf` "
-         "read: a second fold, or a lost one, means the two scans no longer describe the same file")
+         "read of `h`: a second fold, or a lost one, means the two scans no longer describe the same "
+         "file. The line is not pinned, because the claim is about which call this is -- #167 moved it "
+         "by three when a comment went in above it, and a pin that red for a comment is not a check")
 
     signature = [row for row in nameless if not _BARE.fullmatch(row["receiver"])]
     mechanism = [row for row in nameless if _BARE.fullmatch(row["receiver"])
@@ -2964,8 +3139,9 @@ def test_a_call_whose_key_is_a_variable_is_a_population_every_member_has_to_expl
     # only the walk above can say it arrived.
     plant = "export function plantedReader(h: unknown, col: string) {\n" \
             "  return str(h, col);\n}\n"
-    assert _key_read_calls(plant) == (), \
-        "the oracle now names a read whose key is a variable, so the 252 above stopped being the whole story"
+    assert _key_read_calls(plant) == (), (
+        "the oracle now names a read whose key is a variable, so the split asserted above stopped "
+        "being the whole story")
     planted_match = CENSUS_SITE.search(plant)
     assert planted_match is not None and _NAME.findall(planted_match.group(2)) == [], \
         "the census extracts a name from a variable-tail call, so `_sites` and this walk are one scan"
@@ -3048,20 +3224,34 @@ def test_a_dynamic_entry_has_to_excuse_a_measured_read_and_cite_the_table_that_r
          "different size, means the entry no longer says which names stand in for the read")
 
     # The derived half: which `elements` parents are now declared by their builder rather than a name.
+    # #167 added the second way to be derived -- read bare, with the rows bound -- so the census splits
+    # by which rule answers, and each holder has to be answered by exactly one of them.
     derived = []
     for reader, table in READERS.items():
         for parent in table["elements"].values():
             holder = parent[0] if isinstance(parent, tuple) else parent
             if holder not in (set(table["record_of"]) | set(table["blind"]) | set(table["dynamic"])):
                 derived.append((reader, holder))
-    assert sorted(derived) == [("normalizeEvidence", "items"), ("normalizeSearch", "arr")], \
-        (f"{sorted(derived)} take the derived path, measured at two: a third is a list local no rule "
+    assert sorted(derived) == [("normalizeEvidence", "items"), ("normalizeMessages", "raw"),
+                               ("normalizeSearch", "arr")], \
+        (f"{sorted(derived)} take the derived path, measured at three: a fourth is a list local no rule "
          "walked, and a lost one means an entry came back to buy the holder past it")
-    assert [(reader, holder, _derived_holder(reader, holder)) for reader, holder in derived] == [
+    assert [(reader, holder, _derived_holder(reader, holder)) for reader, holder in sorted(derived)] == [
         ("normalizeEvidence", "items", (True, "built by reading the declared receiver 'raw'")),
+        ("normalizeMessages", "raw", (False, "nothing assigns 'raw' in the reader")),
         ("normalizeSearch", "arr", (True, "built by reading the declared receiver 'raw'"))], \
-        (f"the two derived holders do not both report the builder this rule reads: "
+        (f"the derived holders do not each report the builder this rule reads: "
          f"{[(r[0], r[1], r[2][1]) for r in ((a, b, _derived_holder(a, b)) for a, b in derived)]}")
+    bare = [(reader, holder) for reader, holder in derived if not _derived_holder(reader, holder)[0]]
+    assert bare == [("normalizeMessages", "raw")], \
+        (f"{bare} are derived by being read bare rather than by a builder, and each of those has to "
+         "satisfy `_array_holder`: a second one is a list whose rows no rule binds")
+    assert [(reader, holder, _array_holder(reader, holder)) for reader, holder in bare] == [
+        ("normalizeMessages", "raw",
+         (True, "read bare by this reader's own `list(raw)`, with its rows bound to "
+                "{'m': 'MessageItem'}"))], \
+        (f"the bare holders do not report the read this rule walks: "
+         f"{[(r[0], r[1], r[2][1]) for r in ((a, b, _array_holder(a, b)) for a, b in bare)]}")
 
     # Refusal end, measured in-process so the rule is tested at both sides before it is trusted.
     unearned = ("the evidence list this reader either receives pre-drilled or drills out of its own "
@@ -3103,4 +3293,128 @@ def test_a_dynamic_entry_has_to_excuse_a_measured_read_and_cite_the_table_that_r
     assert accepted == [] and _derived_holder("normalizeSearch", "raw")[0] is False, \
         (f"{accepted} / {_derived_holder('normalizeSearch', 'raw')}: a holder the table binds is "
          "refused, so the widened rule only ever reaches for the source when a name is missing -- and "
-         "derivation is not consulted for a declared holder, which is what keeps `derived` at two")
+         "derivation is not consulted for a declared holder, which is what keeps every member of the "
+         "census above on a name the table dropped")
+
+
+# ---------------------- #167: an exemption has to answer for the names it excuses
+
+OLD_MESSAGES_BLIND = ('the list response envelope: `list(raw, "messages", …)` reads a page wrapper '
+                      "built by the controller, not a record's fields")
+OLD_SKILLGAPS_BLIND = ("the caller's payload, whatever shape it brings: `list(raw, \"skillGaps\", "
+                       "…)` returns `raw` untouched when the caller already drilled the list, so no "
+                       "single record owns the name")
+
+
+def _restore_reads(monkeypatch, **subs):
+    """Hand a mapper body back the names a unit deleted, without writing to the tracked file.
+
+    `_sites` reaches normalize.ts through `_body` and nothing else, so replacing that one probe plants
+    a read the source no longer contains; editing the file itself would make the test a second writer
+    of production source. `real` is the cached original, so every other reader stays honest.
+    """
+    real = _body
+
+    def patched(name: str) -> str:
+        body = real(name)
+        for old, new in subs.items():
+            body = body.replace(old, new)
+        return body
+
+    monkeypatch.setattr(sys.modules[__name__], "_body", patched)
+
+
+def test_a_blind_receiver_has_to_answer_for_every_name_read_off_it(monkeypatch):
+    """A `blind` entry excuses names from the producer census, so each name owes an author.
+
+    `blind` is the vocabulary's other exemption and #166's question applies to it unchanged. Measured
+    before this unit: 2 entries, 1 read site each, 3 names each -- 6 names that no rule compared with
+    a producer, because `_dead_read_sites` skips any site whose receiver is not in `record_of` (its
+    own comment: "unbound or blind: the structural rule has already named it") while the two structural
+    rules ask only whether the *receiver* is named. So the table bought 6 names past the census and
+    4 of them have no author on any reachable path: `messages`, `items` and `content` are not fields
+    of what `/conversations/{id}/messages` answers -- `ConversationController.java:68` returns
+    `List<MessageItem>`, the client unwraps `data`, and `items` belongs to a `PageDTO` this route
+    never returns while `content` is a message's body -- and `skill_gaps` was written only by a test
+    fixture. That entry also asserted a controller-built page wrapper the handler contradicts.
+
+    Two names do have authors and are kept: `skillGaps`, emitted by `MatchResult`/`MatchSummary`, and
+    `gaps`, which this very file writes at the literal argument it hands `normalizeSkillGaps`. The
+    messages entry is deleted rather than answered, and its receiver is answered a different way: a
+    bare `list(raw)` gives `_sites` no candidates, so it is invisible to every name rule and
+    `_array_holder` was added to say what binds its rows. Which spellings can even be called bare is
+    asked of their declarations here, not copied: 6 of the 11 take `...keys: string[]`.
+    """
+    assert _name_table_accessors() == ("bool", "list", "num", "pathOf", "pick", "str"), \
+        (f"{_name_table_accessors()} are the spellings whose declarations take a name table: the "
+         "guard-shaped ones have no name slot, so treating them as bare reads invents a defect")
+    assert [(reader, receiver) for reader, table in READERS.items() for receiver in table["blind"]] \
+        == [("normalizeSkillGaps", "raw")], \
+        "the blind census moved: an entry re-added without names behind it is the tolerance this test exists for"
+
+    keys = sorted({key for site in _sites("normalizeSkillGaps") if site["receiver"] == "raw"
+                   for key in site["keys"]})
+    assert keys == ["gaps", "skillGaps"], (f"{keys} are the names excused at the one surviving entry")
+    why = READERS["normalizeSkillGaps"]["blind"]["raw"]
+    assert _cited_producers(why) == ("MatchResult", "MatchSummary"), \
+        (f"{_cited_producers(why)}: the entry has to name the records that answer for the names it "
+         "excuses, or the census has nothing to compare them with")
+    assert sorted(_authored_argument_keys("normalizeSkillGaps")) == ["gaps"], \
+        (f"{sorted(_authored_argument_keys('normalizeSkillGaps'))} are the keys this file writes where "
+         "it hands normalizeSkillGaps a literal -- the second author for `gaps`")
+    assert len(_bare_reads()) == 1 and _bare_reads()[0]["receiver"] == "raw" and \
+        _bare_reads()[0]["owner"] == "normalizeMessages", \
+        (f"{[(r['owner'], r['receiver']) for r in _bare_reads()]} are the bare name-table reads: a "
+         "second one is a list `_sites` never sees, so no rule answers for its rows")
+    assert _blind_problems() == [], f"{_blind_problems()}"
+
+    # An exemption whose read is gone is not this rule's business -- it has no names left to answer
+    # for -- but the liveness loop now calls it what it is instead of accusing it of not being bound.
+    monkeypatch.setitem(READERS["normalizeMessages"], "blind", {"raw": OLD_MESSAGES_BLIND})
+    assert _blind_problems() == [], (f"{_blind_problems()}: the deleted entry is refused by name, and "
+                                     "it has no names to refuse -- that case belongs to the other rule")
+    outlived = _undeclared_receivers("normalizeMessages")
+    assert len(outlived) == 1 and "declared blind" in outlived[0], \
+        (f"{outlived}: re-adding the entry must be caught somewhere, or deleting it was a loss")
+    monkeypatch.undo()
+
+    # With its three names back, the entry is answerable and this rule is the only one that says so.
+    monkeypatch.setitem(READERS["normalizeMessages"], "blind", {"raw": OLD_MESSAGES_BLIND})
+    _restore_reads(monkeypatch, **{"list(raw)": 'list(raw, "messages", "items", "content")'})
+    problems = _blind_problems()
+    assert sorted(p.split(" is read under ")[1].split(",")[0] for p in problems) == \
+        ["'content'", "'items'", "'messages'"], \
+        (f"{problems}: the three unauthored names have to be refused one by one, since an entry that "
+         "answers for the list as a whole answers for none of them")
+    assert _structural_problems() == [] and _dynamic_problems() == [], \
+        (f"structural {_structural_problems()} / dynamic {_dynamic_problems()}: an older rule sees "
+         "this plant too, so a red would not identify #167's rule as the one that caught it")
+    monkeypatch.undo()
+
+    _restore_reads(monkeypatch,
+                   **{'list(raw, "skillGaps", "gaps")': 'list(raw, "skillGaps", "skill_gaps", "gaps")'})
+    invented = _blind_problems()
+    assert len(invented) == 1 and "skill_gaps" in invented[0] and "MatchResult" in invented[0] \
+        and "gaps" in invented[0], \
+        (f"{invented}: the one name with no author is refused while the two answered ones pass, and "
+         "the message has to carry both authors' names for the next reader to check them")
+    monkeypatch.undo()
+
+    monkeypatch.setitem(READERS["normalizeSkillGaps"], "blind",
+                        {"raw": "the drilled list, wrapped in a `PageDTO` envelope by the caller"})
+    decorated = _blind_problems()
+    assert len(decorated) == 2 and sum("decoration" in problem for problem in decorated) == 1 \
+        and any("skillGaps" in problem for problem in decorated), \
+        (f"{decorated}: a citation to a record that emits neither name is refused as decoration, and "
+         "the key it was excusing is refused too -- 2 problems, not 1, because both halves are wrong")
+    monkeypatch.undo()
+
+    monkeypatch.setitem(READERS["normalizeSkillGaps"], "blind", {"raw": OLD_SKILLGAPS_BLIND})
+    uncited = _blind_problems()
+    assert len(uncited) == 1 and "no producer at all" in uncited[0] and "gaps" in uncited[0], \
+        (f"{uncited}: the old wording named no record, so `skillGaps` loses its author while the "
+         "in-file author still answers for `gaps`")
+    monkeypatch.undo()
+
+    assert _blind_problems() == [] and _bare_reads()[0]["owner"] == "normalizeMessages", \
+        "the plants did not roll back, so the control above measures a mutated plane"

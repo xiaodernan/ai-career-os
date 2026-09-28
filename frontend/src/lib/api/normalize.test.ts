@@ -426,10 +426,19 @@ describe("normalizeApplication", () => {
 });
 
 describe("normalizeSkillGaps", () => {
+  // The two shapes the app really hands this reader: the `{gaps: …}` literal normalizeDashboard builds
+  // from the digest's missingSkills, and the list normalizeMatch drills out of `skillGaps`. It used to
+  // be tested against `{skill_gaps: …}`, a spelling no producer on either service writes -- #167 deleted
+  // both the fixture and the name it was keeping alive.
   it("accepts bare strings and objects", () => {
-    const g = normalizeSkillGaps({ skill_gaps: ["Go", { skill: "Rust", importance: "high" }] });
+    const g = normalizeSkillGaps({ gaps: ["Go", { skill: "Rust", importance: "high" }] });
     expect(g[0]).toEqual({ skill: "Go" });
     expect(g[1]).toMatchObject({ skill: "Rust", importance: "high" });
+  });
+
+  it("takes the drilled list itself, which is what normalizeMatch passes", () => {
+    expect(normalizeSkillGaps([{ skill: "Kafka", importance: "high" }])).toEqual([{ skill: "Kafka", importance: "high" }]);
+    expect(normalizeSkillGaps(undefined)).toEqual([]);
   });
 });
 
