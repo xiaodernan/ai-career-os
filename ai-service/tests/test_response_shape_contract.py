@@ -1295,6 +1295,10 @@ def _published_payload_keys() -> dict[str, set[str]]:
     `{"event": "<name>", "data": {…}}` that `taskbus.subscribe` and `core/ai.py` use. Only the first was
     read when #176 pinned its ledgers, so `error` and `ping` had no row at all -- and `error` is the frame
     whose `{error}` key `errorText` exists to read (#179 pairs them).
+
+    #180 adds the third spelling, which is the *terminal* frame: `taskbus.finish` picks the event name and
+    the payload with the same condition, so neither walk above matches it and `done` had no payload row
+    while `error`'s row came only from `subscribe`'s "task not found" yield. See `_ternary_publish_rows`.
     """
     out: dict[str, set[str]] = {}
     for path in _app_root().rglob("*.py"):
@@ -1326,6 +1330,8 @@ def _published_payload_keys() -> dict[str, set[str]]:
                 if depth == 0:
                     break
             out.setdefault(found.group(1), set()).update(set(re.findall(r'"(\w+)":', text[start:index])))
+        for name, keys in _ternary_publish_rows(text):
+            out.setdefault(name, set()).update(keys)
     return out
 
 
@@ -1357,7 +1363,55 @@ def _function_body(text: str, name: str) -> str:
     return _balanced(text, brace, "{", "}")
 
 
-def _handler_sites(text: str, spans: list[tuple[int, int, str]] | None = None) -> list[dict]:
+TERNARY_PUBLISH = re.compile(
+    r'(?:taskbus\.)?(?:publish|_emit)\(\s*task_id\s*,\s*"(\w+)"\s+if\s+(\w+)\s+else\s+"(\w+)"\s*,\s*\{')
+PAYLOAD_GATE = re.compile(r"\s*if\s+(not\s+)?(\w+)\s+else\s*\{")
+
+
+def _literal_keys(text: str, at: int) -> tuple[set[str], int]:
+    """The quoted keys of the `{…}` literal at `at`, plus the offset just past it."""
+    group = _balanced(text, at, "{", "}")
+    return set(re.findall(r'"(\w+)":', group)), at + len(group)
+
+
+def _ternary_publish_rows(text: str) -> list[tuple[str, set[str]]]:
+    """(frame name, payload keys) for a publish call that picks the name *and* the payload by condition.
+
+    `taskbus.finish` (`core/taskbus.py:38`) is how every run ends, and neither walk in
+    `_published_payload_keys` describes it: the event is `"done" if ok else "error"` and the payload on the
+    same statement is `{"result": …, "error": …} if not ok else {"result": …}`. The consequence for #179's
+    table was asymmetric and silent -- `error` looked like it carried one key (from `subscribe`'s separate
+    "task not found" yield, which is a *different* publisher) while `done` carried no row at all, so
+    `table["done"]["reads"] == []` read as "nobody reads a payload" about a payload the scan had never
+    measured.
+
+    The two conditionals are aligned by their own conditions, not by which dict looks like the success
+    case: `X if C else Y` takes X when C holds, so a payload gated on `not <C>` puts its first branch with
+    the *second* name. A site whose conditions do not line up that way raises, because attributing a
+    payload to a frame by guesswork is the species of ledger this artifact exists to catch.
+    """
+    rows: list[tuple[str, set[str]]] = []
+    for found in TERNARY_PUBLISH.finditer(text):
+        true_name, condition, false_name = found.group(1), found.group(2), found.group(3)
+        first, after = _literal_keys(text, found.end() - 1)
+        gate = PAYLOAD_GATE.match(text, after)
+        if gate is None:
+            raise AssertionError(f"{true_name}/{false_name} are published on {condition!r} but the payload "
+                                 f"is not a readable ternary at offset {after}: {text[after:after + 40]!r} "
+                                 "-- without a gate the payload cannot be attributed to either name")
+        second, _ = _literal_keys(text, gate.end() - 1)
+        negated, gated = bool(gate.group(1)), gate.group(2)
+        if gated != condition:
+            raise AssertionError(f"{true_name}/{false_name} gate the name on {condition!r} but the payload "
+                                 f"on {gated!r}: the alignment rule has no way to say which dict the "
+                                 "success frame carries, so both rows below would be invented")
+        rows.append((true_name, second if negated else first))
+        rows.append((false_name, first if negated else second))
+    return rows
+
+
+def _handler_sites(text: str, spans: list[tuple[int, int, str]] | None = None,
+                   vocabulary: set[str] | None = None) -> list[dict]:
     """The `onKey: (…) => {…}` subscribe sites in one file, with the fields that body reads.
 
     A subscribe site is distinguished from a declaration by its own shape: an interface writes
@@ -1369,41 +1423,130 @@ def _handler_sites(text: str, spans: list[tuple[int, int, str]] | None = None) -
     `spans`, when given, is the second half of the same question: `onError:` is also react-query's option
     key, so a site only counts when it sits inside a call that hands handlers to a frame entry point.
     Without it the census reported three auth forms and twenty-odd mutation callbacks as stream readers.
+    #180 adds the JSX twin of that rule, because the same relationship is written `<Entry onDone={…} />`
+    when the entry point is a component: see `_jsx_entry_spans` and `_jsx_handler_sites`.
 
-    Inside the body, fields are read off the handler's own parameter, optionally chained (`data?.id`),
-    because `tokenText` reads `d?.text` and a `\\.()`-only pattern loses it.
+    `vocabulary` is the set of handler names a frame can reach; it defaults to the transport's own dispatch
+    rather than to a list written here, so a name no frame carries cannot be counted as a subscription.
     """
+    keys = sorted(_frame_handler_vocabulary() if vocabulary is None else vocabulary)
     rows: list[dict] = []
-    for found in re.finditer(r"\bon(Status|Token|Trace|Artifact|Done|Message|Error|Progress)\s*:\s*\(", text):
+    for found in re.finditer(rf"\b({'|'.join(keys)})\s*:\s*\(", text):
         via = ""
         if spans is not None:
             hits = [(stop - start, entry) for start, stop, entry in spans if start <= found.start() < stop]
             if not hits:
                 continue
             via = min(hits)[1]  # innermost enclosing call, when entry calls nest
-        key = found.group(1)
-        params = _balanced(text, found.end() - 1, "(", ")")
-        arrow = text[found.end() - 1 + len(params):]
-        body_start = arrow.find("{")
-        if body_start < 0:
-            body = arrow[:arrow.find(",")] if "," in arrow else arrow
-        else:
-            body = _balanced(arrow, body_start, "{", "}")
-        names: list[str] = []
-        destructured: list[str] = []
-        inner = params.strip()
-        if re.fullmatch(r"\(\s*\w+\s*\)", inner):
-            names = [re.sub(r"[() ]", "", inner)]
-        else:
-            dm = re.fullmatch(r"\(\s*\{([^}]*)\}\s*\)", inner)
-            if dm:
-                destructured = [n for n in re.split(r"[,\s]+", dm.group(1)) if re.fullmatch(r"\w+", n)]
-        reads: set[str] = set()
-        for var in names:
-            reads |= set(re.findall(rf"\b{var}(?:\.|\?\.)(\w+)", body))
-        rows.append({"handler": f"on{key}", "via": via, "params": tuple(names),
-                     "destructured": tuple(destructured), "reads": reads | set(destructured),
-                     "body": body})
+        rows.append(_arrow_site(text, found.group(1), found.end() - 1, via))
+    return rows
+
+
+def _expression_body(text: str) -> str:
+    """An arrow's expression body: up to the first `,`, `;` or closing bracket at depth zero.
+
+    #179's slice for a handler without a `{…}` block looked for a `{` and, finding the next one several
+    lines later, returned the *following* site's body -- `onArtifact: () => setReporting(true),` at
+    `task-stream.tsx:125` was read as owning `onDone`'s statements. The reads taken from it stayed correct
+    only because that handler has no parameter to read off. Bounding the expression at depth zero is what
+    makes the body mean the body for `onToken: (t) => setText(t)` as well.
+    """
+    depth = 0
+    for index, char in enumerate(text):
+        if char in "([{":
+            depth += 1
+        elif char in ")]}":
+            if depth == 0:
+                break
+            depth -= 1
+        elif char in ",;" and depth == 0:
+            break
+    else:
+        return text.strip()
+    return text[:index].strip()
+
+
+def _arrow_site(text: str, handler: str, params_at: int, via: str = "") -> dict:
+    """One subscribe site: its parameter list, its body, and the payload fields that body reads.
+
+    Shared by the two spellings a handler is written in -- `onDone: (data) => {…}` as an object member and
+    `onDone={(data) => {…}}` as a JSX attribute -- so a table row cannot describe one form while being
+    blind to the other. Fields are read off the handler's own parameter, optionally chained (`data?.id`),
+    because `tokenText` reads `d?.text` and a `\\.()`-only pattern loses it (#179).
+    """
+    params = _balanced(text, params_at, "(", ")")
+    tail = text[params_at + len(params):]
+    arrow = re.match(r"\s*(?:async\s*)?=>", tail)
+    rest = tail[arrow.end():] if arrow else tail
+    brace = rest.find("{")
+    if brace >= 0 and not rest[:brace].strip():
+        body = _balanced(rest, brace, "{", "}")
+    else:
+        body = _expression_body(rest)
+    names: list[str] = []
+    destructured: list[str] = []
+    inner = params.strip()
+    if re.fullmatch(r"\(\s*\w+\s*\)", inner):
+        names = [re.sub(r"[() ]", "", inner)]
+    else:
+        dm = re.fullmatch(r"\(\s*\{([^}]*)\}\s*\)", inner)
+        if dm:
+            destructured = [n for n in re.split(r"[,\s]+", dm.group(1)) if re.fullmatch(r"\w+", n)]
+    reads: set[str] = set()
+    for var in names:
+        reads |= set(re.findall(rf"\b{var}(?:\.|\?\.)(\w+)", body))
+    return {"handler": handler, "via": via, "params": tuple(names),
+            "destructured": tuple(destructured), "reads": reads | set(destructured), "body": body}
+
+
+def _jsx_entry_spans(text: str, entries: set[str]) -> list[tuple[int, int, str]]:
+    """Spans of `<Name …>` tags whose name is one of `entries`: the other spelling of an entry call.
+
+    #179 admitted subscribers through `Name(…)` alone, which is how a hook is called and so missed how a
+    component is used: `TaskProgress` takes a frame handler in its props, and two screens render it as
+    `<TaskProgress … onDone={…} />`. The tag runs to the first `>` at brace depth zero, since an attribute
+    expression may hold a comparison or another tag.
+    """
+    spans: list[tuple[int, int, str]] = []
+    for name in sorted(entries):
+        for tag in re.finditer(rf"<{re.escape(name)}(?=[\s/>])", text):
+            depth, index, closed = 0, tag.start(), False
+            while index < len(text):
+                char = text[index]
+                depth += char == "{"
+                depth -= char == "}"
+                if char == ">" and depth == 0:
+                    closed = True
+                    break
+                index += 1
+            if not closed:
+                raise AssertionError(f"<{name} at offset {tag.start()} never closes outside its attribute "
+                                     "expressions, so handler attributes taken from it would run to the end "
+                                     "of the file")
+            spans.append((tag.start(), index + 1, name))
+    return spans
+
+
+def _jsx_handler_sites(text: str, spans: list[tuple[int, int, str]],
+                       vocabulary: set[str] | None = None) -> list[dict]:
+    """The handler attributes inside `spans`, in the same site shape as `_handler_sites`.
+
+    A JSX attribute and an object member name the same relationship -- the value is the callback -- so one
+    table holds both spellings instead of reaching the same subscription twice by two rules. An attribute
+    whose value is not an arrow (`onDone={forwarded}`) still counts as an edge, with no parameter to read
+    off it; that is why it gets a row rather than being skipped.
+    """
+    keys = sorted(_frame_handler_vocabulary() if vocabulary is None else vocabulary)
+    rows: list[dict] = []
+    for start, stop, entry in spans:
+        tag = text[start:stop]
+        for found in re.finditer(rf"\b({'|'.join(keys)})\s*=\s*\{{", tag):
+            value = _balanced(tag, found.end() - 1, "{", "}")
+            if value.lstrip("{ \n\t").startswith("("):
+                rows.append(_arrow_site(tag, found.group(1), tag.index("(", found.end() - 1), entry))
+            else:
+                rows.append({"handler": found.group(1), "via": entry, "params": (),
+                             "destructured": (), "reads": set(), "body": value})
     return rows
 
 
@@ -1461,10 +1604,38 @@ def _client_case_routing() -> dict[str, set[str]]:
     return out
 
 
-HANDLER_KEY = r"(?:Status|Token|Trace|Artifact|Done|Message|Error|Progress)"
+HANDLER_MEMBER = re.compile(r"\b(on[A-Z]\w*)\s*\??\s*:")
 
 
-def _frame_handler_types() -> set[str]:
+@lru_cache(maxsize=1)
+def _frame_handler_vocabulary() -> frozenset[str]:
+    """The handler keys a frame can reach, read off the transport's own dispatch instead of my list.
+
+    #179 wrote this as a literal alternation of eight names, and one of them -- `Progress` -- is invoked by
+    no code in the app, because `status` and `progress` share `onStatus` (#176's fold). A hand-written
+    vocabulary can therefore carry a name no wire ever sends, and every rule downstream would then be
+    counting an affordance that does not exist. Deriving it from the two dispatch spellings the transport
+    uses -- `h.on*?.(` inside the switch, `handlers.on*?.(` in the relay -- makes the vocabulary the same
+    object as the routing table, and the test below compares it against the *type* that lists the frames a
+    subscriber may be handed, which is a second author over the same fact.
+
+    Deriving it also forces a distinction #179 never had to make: `handlersRef.current
+    .onTransportError?.(` (`use-sse.ts:100`, `:128`) is a third invocation spelling, outside the switch,
+    and `onTransportError` is absent from `SSEHandlers`' `Pick` list. It is live code that is *not* a frame
+    handler -- the connection dropping is a different question from which frame arrived.
+    """
+    out: set[str] = set()
+    out |= set(re.findall(r"\bh\.(on\w+)\s*\??\.\(",
+                          (ROOT_FRONTEND / "lib" / "sse" / "use-sse.ts").read_text(encoding="utf-8")))
+    out |= set(re.findall(r"\bhandlers\.(on\w+)\s*\??\.\(",
+                          (ROOT_FRONTEND / "lib" / "api" / "client.ts").read_text(encoding="utf-8")))
+    if not out:
+        raise AssertionError("the transport invokes no `on*` handler in either spelling, so every rule "
+                             "keyed on this vocabulary would be counting an empty set")
+    return frozenset(out)
+
+
+def _frame_handler_types(vocabulary: set[str] | None = None) -> set[str]:
     """Declared types that carry frame handlers, read off their own members or their `Pick` base.
 
     `UseSSEOptions` and `CopilotStreamHandlers` are interfaces with `onToken?:` members; `SSEHandlers` is
@@ -1472,6 +1643,7 @@ def _frame_handler_types() -> set[str]:
     listed it here. This is the discriminator #179 had to find: naming `onError:` says nothing on its own,
     because react-query uses the same key for mutation callbacks.
     """
+    keys = set(_frame_handler_vocabulary() if vocabulary is None else vocabulary)
     found: set[str] = set()
     picked: list[tuple[str, str]] = []
     for path in ROOT_FRONTEND.rglob("*.ts*"):
@@ -1480,7 +1652,7 @@ def _frame_handler_types() -> set[str]:
         text = path.read_text(encoding="utf-8")
         for decl in re.finditer(r"\b(?:export\s+)?(?:interface|type)\s+(\w+)[^;{]*\{", text):
             body = _balanced(text, decl.end() - 1, "{", "}")
-            if re.search(rf"\bon{HANDLER_KEY}\?\s*:", body):
+            if set(HANDLER_MEMBER.findall(body)) & keys:
                 found.add(decl.group(1))
         picked += re.findall(r"\b(?:export\s+)?type\s+(\w+)\s*=\s*Pick<\s*(\w+)\s*,", text)
     for name, base in picked:
@@ -1489,7 +1661,7 @@ def _frame_handler_types() -> set[str]:
     return found
 
 
-def _frame_entry_fns() -> set[str]:
+def _frame_entry_fns(vocabulary: set[str] | None = None) -> set[str]:
     """Functions taking a handler-carrying parameter: the call sites through which a frame can arrive.
 
     `useSSE(options: UseSSEOptions)`, `postSSE(path, options, handlers: SSEHandlers)` and the app's own
@@ -1499,7 +1671,7 @@ def _frame_entry_fns() -> set[str]:
     frame handler this scan can see. Only *named* parameter types count, so a handler typed inline at the
     declaration would be missed -- the subscriber census below would then lose a file and go red.
     """
-    types = _frame_handler_types()
+    types = _frame_handler_types(vocabulary)
     if not types:
         raise AssertionError("no declared type in the frontend carries a frame handler, so the entry set "
                              "below is empty by accident rather than by measurement")
@@ -1528,19 +1700,23 @@ def _entry_call_spans(text: str, entries: set[str]) -> list[tuple[int, int, str]
 TRANSPORT = ("lib/api/client.ts", "lib/sse/use-sse.ts")
 
 
-def _frame_reader_population() -> tuple[list[dict], list[dict], dict[str, str]]:
+def _frame_reader_population(vocabulary: set[str] | None = None
+                             ) -> tuple[list[dict], list[dict], dict[str, str]]:
     """(subscribers, second-hand readers, transport) for the run stream, each derived by its own rule.
 
-    A *subscriber* has at least one handler site inside a frame-entry call. A *second-hand* reader is a
-    file that walks a frame-shaped parameter but has no entry call of its own: `processing-steps.tsx`
-    classifies a `StatusEvent` someone else received, and `agent-timeline.tsx` renders
-    `AgentTraceEvent[]` rows that `task-stream.tsx` built out of a trace frame -- so its `evt.id` is a
-    field of a locally declared row type, not a field any producer sends, which is the conflation this
-    split exists to prevent. *Transport* is the two files that route frames without consuming them; a skip
-    list with no reach guard is a hiding place (#167), so each travels with the evidence that it only
-    forwards.
+    A *subscriber* has at least one handler site inside a frame-entry call, written either as an object
+    member inside `Name({onDone: …})` or as an attribute inside `<Name onDone={…} />` -- #179 read only the
+    first, which is how a hook is called, so the two screens that subscribe by *rendering* a component were
+    missing from the table. A *second-hand* reader is a file that walks a frame-shaped parameter but has no
+    entry call of its own: `processing-steps.tsx` classifies a `StatusEvent` someone else received, and
+    `agent-timeline.tsx` renders `AgentTraceEvent[]` rows that `task-stream.tsx` built out of a trace frame
+    -- so its `evt.id` is a field of a locally declared row type, not a field any producer sends, which is
+    the conflation this split exists to prevent. *Transport* is the two files that route frames without
+    consuming them; a skip list with no reach guard is a hiding place (#167), so each travels with the
+    evidence that it only forwards.
     """
-    entries = _frame_entry_fns()
+    keys = _frame_handler_vocabulary() if vocabulary is None else vocabulary
+    entries = _frame_entry_fns(keys)
     subscribers: list[dict] = []
     second_hand: list[dict] = []
     transport: dict[str, str] = {}
@@ -1552,10 +1728,12 @@ def _frame_reader_population() -> tuple[list[dict], list[dict], dict[str, str]]:
         if rel in TRANSPORT:
             transport[rel] = text
             continue
-        sites = _handler_sites(text, _entry_call_spans(text, entries))
+        jsx = _jsx_entry_spans(text, entries)
+        sites = (_handler_sites(text, _entry_call_spans(text, entries), keys)
+                 + _jsx_handler_sites(text, jsx, keys))
         evt_reads = set(re.findall(r"\bevt(?:\.|\?\.)(\w+)", text))
         if sites:
-            subscribers.append({"file": rel, "sites": sites, "evt_reads": evt_reads})
+            subscribers.append({"file": rel, "sites": sites, "evt_reads": evt_reads, "jsx_tags": len(jsx)})
         elif evt_reads:
             second_hand.append({"file": rel, "reads": evt_reads})
     return subscribers, second_hand, transport
@@ -1587,12 +1765,27 @@ def test_the_run_stream_contract_is_one_table_of_publishers_cases_and_subscriber
 
     The ledgers are pinned rather than fixed, as before: `state`/`count`/`intent` reach no handler body,
     `onMessage` is invoked by the client and subscribed to by nobody, `artifact`/`trace` carry reads no
-    producer can send, and `tokenText` falls back to a `token` key no frame carries. Each one shrinks only
-    when a producer or a reader changes, and the owner-blocked R1 stream is what would settle them.
+    producer can send, `tokenText` falls back to a `token` key no frame carries, and the terminal frames
+    publish a `result` no handler reads. Each one shrinks only when a producer or a reader changes, and the
+    owner-blocked R1 stream is what would settle them.
+
+    #180 then found four more blind spots in this same artifact, which is where their pins live. (1)
+    Admission understood `Name({onDone: …})` only -- the spelling a hook is called with -- so a component
+    used as `<TaskProgress … onDone={…} />` was invisible, and the two resume screens that show a run's
+    progress were missing from the table entirely. (2) The handler vocabulary was a hand-written list of key
+    names; it is now read off the transport's own dispatch (`h.on*?.(` and `handlers.on*?.(`) and
+    cross-checked against the `Pick<UseSSEOptions, …>` list that declares `SSEHandlers`, so a key only one
+    of those two authors knows about fails the gate instead of going unnoticed. (3) An expression-bodied
+    handler was sliced into the *next* site's body, because the scanner hunted for a `{` rather than
+    stopping at the comma that ends the member. (4) `taskbus.finish` publishes its terminal frame through a
+    `publish(id, "done" if ok else "error", {…} if not ok else {…})` ternary that the payload walk could not
+    pair, so `done` and `error` were recorded as carrying no keys at all -- a limit of the scanner reported
+    as a fact about the wire, which is exactly the species of lie this arc exists to catch.
     """
     published = _published_frame_names()
     emitted = _published_payload_keys()
     routing = _client_case_routing()
+    vocab = _frame_handler_vocabulary()
     subscribers, second_hand, transport = _frame_reader_population()
 
     assert _frame_handler_types() == {"CopilotStreamHandlers", "SSEHandlers", "TaskProgressProps",
@@ -1620,11 +1813,15 @@ def test_the_run_stream_contract_is_one_table_of_publishers_cases_and_subscriber
          "a frame, which would make it a reader and not transport")
 
     assert sorted(s["file"] for s in subscribers) == ["app/(app)/copilot/page.tsx",
+                                                      "app/(app)/resumes/[id]/page.tsx",
                                                       "components/ai/task-stream.tsx",
+                                                      "components/resumes/upload-dropzone.tsx",
                                                       "lib/hooks/actions.ts"], \
-        (f"{sorted(s['file'] for s in subscribers)}: the files with a frame handler inside an entry call "
-         "-- a new subscriber has to join the table below, and one that disappears means an affordance "
-         "was deleted rather than left wired to nothing")
+        (f"{sorted(s['file'] for s in subscribers)}: the files with a frame handler inside an entry call, "
+         "written either as an object member or as a JSX attribute -- a new subscriber has to join the "
+         "table below, and one that disappears means an affordance was deleted rather than left wired to "
+         "nothing. The two `resumes` files only appear because #180 taught the walk the second spelling; "
+         "under #179 they subscribed to a run's terminal frame and were counted as reading nothing")
     assert sorted(s["file"] for s in second_hand) == ["components/ai/agent-timeline.tsx",
                                                       "components/ai/processing-steps.tsx"], \
         ("second-hand readers walk a frame-shaped parameter without subscribing: `processing-steps.tsx` "
@@ -1633,7 +1830,12 @@ def test_the_run_stream_contract_is_one_table_of_publishers_cases_and_subscriber
     walked = [(str(p.relative_to(ROOT_FRONTEND)).replace("\\", "/"), p.read_text(encoding="utf-8"))
               for p in sorted(ROOT_FRONTEND.rglob("*.ts*"))
               if ".test." not in p.name and "node_modules" not in p.parts]
-    shaped = {rel: len(_handler_sites(text)) for rel, text in walked}
+    # the two spellings, counted by the two scanners and over one walk, so a floor cannot be satisfied by
+    # the half of the census that still works
+    unscoped = {rel: [(0, len(text), "")] for rel, text in walked}
+    object_shaped = {rel: len(_handler_sites(text)) for rel, text in walked}
+    jsx_shaped = {rel: len(_jsx_handler_sites(text, unscoped[rel])) for rel, text in walked}
+    shaped = {rel: object_shaped[rel] + jsx_shaped[rel] for rel in object_shaped}
     admitted = {s["file"]: len(s["sites"]) for s in subscribers}
     rejected_files = sorted(f for f, n in shaped.items() if n and f not in admitted and f not in transport)
     assert rejected_files == ["components/auth/credentials-form.tsx",
@@ -1642,13 +1844,54 @@ def test_the_run_stream_contract_is_one_table_of_publishers_cases_and_subscriber
         (f"{rejected_files} name handler-shaped callbacks the entry rule rejects: their `onError:` belongs "
          "to react-query, not to a stream. Under #177's shape-only census three of these were stream "
          "readers -- if this list empties, the walk stopped reading rather than the collision going away")
-    assert sum(shaped.values()) >= 15, \
-        (f"only {sum(shaped.values())} handler-shaped callbacks exist in the app, against the "
-         f"{shaped} counted per file: the shape scan is reading less than it did, so the rejection count "
-         "above would be measuring a narrowed scan")
-    assert sum(admitted.values()) == 10 and admitted["lib/hooks/actions.ts"] == 2, \
+    assert sum(shaped.values()) >= 20 and sum(jsx_shaped.values()) >= 2, \
+        (f"only {sum(shaped.values())} handler-shaped callbacks exist in the app "
+         f"({sum(jsx_shaped.values())} of them in the JSX spelling), against the {shaped} counted per file: "
+         "the shape scan is reading less than it did, so the rejection count above would be measuring a "
+         "narrowed scan -- and a JSX count of zero means the second spelling stopped being scanned at all")
+    assert admitted == {"app/(app)/copilot/page.tsx": 2,
+                        "app/(app)/resumes/[id]/page.tsx": 1,
+                        "components/ai/task-stream.tsx": 6,
+                        "components/resumes/upload-dropzone.tsx": 1,
+                        "lib/hooks/actions.ts": 2}, \
         (f"{admitted}: admitted handler sites per file. `actions.ts` names five, of which three are "
-         "mutation callbacks and two are the stream's own onToken/onStatus -- the whole point of the rule")
+         "mutation callbacks and two are the stream's own onToken/onStatus -- the whole point of the rule. "
+         "The two `resumes` rows are the single JSX `onDone={…}` attribute each screen renders on "
+         "`<TaskProgress>`, one per pair of tags because the other tag has no handler")
+
+    jsx_tags = {rel: len(_jsx_entry_spans(text, entries)) for rel, text in walked}
+    assert {rel: n for rel, n in jsx_tags.items() if n} == {"app/(app)/resumes/[id]/page.tsx": 2,
+                                                             "components/resumes/upload-dropzone.tsx": 2}, \
+        (f"{jsx_tags}: every `<Entry …>` tag rendered in the app. A tag appearing outside the subscriber "
+         "list above is a run whose frames no file handles, and a tag disappearing is a screen losing its "
+         "affordance -- either way the table has to be re-read, not re-numericled")
+    assert sum(jsx_tags.values()) == sum(s["jsx_tags"] for s in subscribers), \
+        ("a rendered frame entry was counted app-wide but charged to no subscriber: the reach guard on the "
+         "JSX spelling, so a component used outside an admitted file cannot hide from the table")
+
+    # The walk above skips `*.test.*`. A skip list with no reach guard is a hiding place (#167), so this
+    # proves both that nothing shipped reads through it and that the skipped set is a population, not an
+    # empty match: the app's own transport tests do call the entry points, and are excluded on purpose.
+    skipped = [(str(p.relative_to(ROOT_FRONTEND)).replace("\\", "/"), p.read_text(encoding="utf-8"))
+               for p in sorted(ROOT_FRONTEND.rglob("*.ts*"))
+               if ".test." in p.name and "node_modules" not in p.parts]
+    assert len(skipped) == 21 and all(rel.endswith((".test.ts", ".test.tsx")) for rel, _t in skipped), \
+        (f"{len(skipped)} files are skipped and not one ships: a name in that set that is not a test file "
+         "would be a subscriber hidden from the table by the pattern rather than by measurement")
+    skipped_names = {rel.rsplit("/", 1)[-1] for rel, _t in skipped}
+    imported = [spec for _rel, text in walked for spec in re.findall(r"""from\s+['"]([^'"]+)['"]""", text)
+                if spec.rsplit("/", 1)[-1] in skipped_names]
+    assert imported == [], \
+        (f"{imported}: shipped code importing a skipped file would make the skip list a reach hole, which "
+         "is the one thing a census may not do while claiming to have read the app")
+    entry_calls = {rel: len(_entry_call_spans(text, entries)) + len(_jsx_entry_spans(text, entries))
+                   for rel, text in skipped}
+    assert {rel: n for rel, n in entry_calls.items() if n} == {"lib/api/client.test.ts": 7,
+                                                               "lib/api/endpoints.test.ts": 1,
+                                                               "lib/sse/use-sse.test.ts": 9}, \
+        (f"{entry_calls}: the entry-point calls living in the skipped set. These tests are why the frames "
+         "have a client-side witness at all; the pin is here so that a zero means the walk stopped seeing "
+         "them, not that the app's stream tests were deleted")
 
     frames = published | {"artifact", "trace"}
     table = {}
@@ -1667,7 +1910,8 @@ def test_the_run_stream_contract_is_one_table_of_publishers_cases_and_subscriber
         "artifact": {"handlers": ["onArtifact"], "direct": ["components/ai/task-stream.tsx"],
                      "forwarded": [], "reads": []},
         "done": {"handlers": ["onDone"], "direct": ["components/ai/task-stream.tsx"],
-                 "forwarded": [], "reads": []},
+                 "forwarded": ["app/(app)/resumes/[id]/page.tsx", "components/resumes/upload-dropzone.tsx"],
+                 "reads": []},
         "error": {"handlers": ["onError"], "direct": ["components/ai/task-stream.tsx"],
                   "forwarded": [], "reads": []},
         "message": {"handlers": ["onMessage", "onStatus", "onToken", "onTrace"],
@@ -1713,10 +1957,63 @@ def test_the_run_stream_contract_is_one_table_of_publishers_cases_and_subscriber
         ("the client calls `onMessage` for every message frame and no file in the app subscribes to it: "
          "the answer a run reports lands in `done`, so this handler is a third unreachable case beside "
          "`artifact`/`trace` -- #173's dead re-dispatch has a reader-shaped twin")
-    assert emitted.get("error", set()) == {"error"}, \
-        (f"the `error` frame carries {sorted(emitted.get('error', set()))} keys, where an empty list means "
-         "the walk stopped seeing the `yield {event: error}` spelling -- that row existed in no ledger "
-         "before #179 added the second publish form to the scan")
+    assert emitted.get("error", set()) == {"error", "result"}, \
+        (f"the `error` frame carries {sorted(emitted.get('error', set()))} keys: `error` comes from the "
+         "`yield {event: error, data: {error}}` spelling #179 added to the scan, and `result` from the "
+         "`taskbus.finish` ternary #180 added -- an empty list here means one of the two publish forms "
+         "stopped being read, not that the frame went payload-free")
+    assert emitted.get("done", set()) == {"result"}, \
+        (f"the terminal `done` frame carries {sorted(emitted.get('done', set()))}: the ternary at "
+         "`core/taskbus.py:37` publishes `{result}` for a run that finished and `{result, error}` for one "
+         "that failed, on one line the earlier payload walk could not pair, so `done` looked keyless in "
+         "#179's own table")
+
+    # #180's ledger: that `result` is published and read by nobody. Scoped to what was measured -- no
+    # shipped file touches a `.result` member anywhere, and the handlers a terminal frame reaches read
+    # nothing off their payload at all. The answer a run reports therefore lands on the JSON plane (the
+    # screens refetch), not on the stream, which is why an `onDone` body looks like `resume.refetch()`.
+    terminal = [s for r in subscribers for s in r["sites"] if s["handler"] in ("onDone", "onError")]
+    assert len(terminal) == 4 and not any(s["reads"] for s in terminal), \
+        (f"{[(s['handler'], sorted(s['reads'])) for s in terminal]}: the app's terminal-frame handlers, four "
+         "of them across three files, and none reads a field off the payload. A read appearing here retires "
+         "this ledger and makes the stream the source of the answer instead of the JSON refetch; a count "
+         "shrinking means a screen stopped handling the run it renders")
+    member_reads = {rel for rel, text in walked if re.search(r"\b\w+\??\.result\b", text)}
+    assert member_reads == set(), \
+        (f"{sorted(member_reads)} read a `.result` member somewhere in the shipped app: the terminal frame "
+         "publishes that key and nothing consumed it, so a new reader either wires `done` up for real or "
+         "reads a `result` that came from another plane -- the claim above has to be re-read either way")
+
+    # #180's vocabulary is derived, and the derivation is cross-checked against its independent author: the
+    # `Pick<UseSSEOptions, …>` that types the handlers argument of `postSSE`.
+    sse_source = transport["lib/sse/use-sse.ts"]
+    pick = re.search(r"\bexport\s+type\s+SSEHandlers\s*=\s*Pick<\s*UseSSEOptions\s*,([^>]*)>", sse_source, re.S)
+    assert pick is not None, \
+        ("`SSEHandlers` is no longer a `Pick` of `UseSSEOptions`: that type is the second, independent "
+         "author of the frame-handler vocabulary, and without it the derived set below has one witness "
+         "instead of two")
+    picked = sorted(re.findall(r'"(\w+)"', pick.group(1)))
+    assert picked == sorted(vocab) and len(vocab) == 7, \
+        (f"the transport dispatches {sorted(vocab)} and `SSEHandlers` picks {picked}: two authors of one "
+         "fact, the hook's own switch and the type that lets callers hand handlers to the relay. They may "
+         "not drift, and a vocabulary that derived as the empty set would make every census below pass by "
+         "reading nothing")
+    declared: set[str] = set()
+    for type_name in _frame_handler_types():
+        for rel, text in walked:
+            decl = re.search(rf"\b(?:export\s+)?(?:interface|type)\s+{re.escape(type_name)}[^;{{]*\{{", text)
+            if decl:
+                declared |= set(HANDLER_MEMBER.findall(_balanced(text, decl.end() - 1, "{", "}")))
+    assert declared - set(vocab) == {"onTransportError"}, \
+        (f"{sorted(declared - set(vocab))} are handler names some type declares that no frame can reach: "
+         "`onTransportError` is live code -- see its two invocations below -- but it is not a frame "
+         "handler, so it must not be admitted by name shape. A new name here is either a frame the client "
+         "cannot route or a callback this gate is being asked to treat as a subscription")
+    assert re.findall(r"\bhandlersRef\.current\.(on\w+)\s*\??\.\(", sse_source) == \
+        ["onTransportError", "onTransportError"], \
+        ("`onTransportError` is invoked exactly twice, outside the frame switch, where the EventSource "
+         "itself fails: the vocabulary excludes it because it is a different kind of signal, not because "
+         "it is dead -- the count is what separates those two readings")
     error_body = _function_body(transport["lib/sse/use-sse.ts"], "errorText")
     assert re.search(r"\)\s*\?\.\s*error\b", error_body), \
         ("`errorText` no longer reads the `error` key off its argument, so the pairing between the "
@@ -1750,6 +2047,60 @@ def test_the_run_stream_contract_is_one_table_of_publishers_cases_and_subscriber
          "frames by `task-stream.tsx` -- if it starts reading a field nothing asks for, the hop is no "
          "longer what the docstring claims")
 
+
+def test_the_three_new_scanners_refuse_the_shapes_that_would_have_invented_a_row():
+    """#180: each new scanner is walked over a snippet whose shape the app does not contain yet.
+
+    The pins in the table above measure the app as it is written, which means they cannot witness the
+    branches that keep a *future* shape from being invented. Three rules are exactly that kind: a JSX tag
+    that never closes, a ternary publish whose name-gate and payload-gate disagree, and an
+    expression-bodied handler that is the last member of its object. None appears in the tree today --
+    `task-stream.tsx` closes every handler with a block, `taskbus.finish` aligns its two gates by
+    authorship rather than by construction, and the only unclosed-looking tag in the app is a multiline
+    component that does close. So the guards are walked over snippets that carry those shapes, and each
+    snippet is paired with the real spelling it imitates: the JSX entry from `resumes/[id]/page.tsx:155`,
+    the fall-through-free `onArtifact: () => setReporting(true),` from `task-stream.tsx:125`, and the
+    terminal publish from `core/taskbus.py:38`.
+    """
+    import pytest
+
+    # 1. A JSX tag that runs past its attribute expressions must refuse, not silently swallow the file.
+    closed = '<TaskProgress\n  taskId={id}\n  onDone={() => refetch()}\n/>\n'
+    spans = _jsx_entry_spans(closed, {"TaskProgress"})
+    assert len(spans) == 1 and _jsx_handler_sites(closed, spans)[0]["handler"] == "onDone", \
+        (f"{spans}: the render spelling of an entry call, read across its newlines -- the rule that "
+         "admits the two resume screens, so a scanner that only matched one-line tags finds no subscriber "
+         "and the table loses rows it never had")
+    unterminated = '<TaskProgress onDone={() => {\n  refetch();\n'
+    with pytest.raises(AssertionError, match="never closes"):
+        _jsx_entry_spans(unterminated, {"TaskProgress"})
+
+    # 2. The ternary publish pairs name-gate and payload-gate; a disagreement is a refusal, not a guess.
+    aligned = _ternary_publish_rows(
+        'publish(task_id, "done" if ok else "error",\n'
+        '        {"result": result, "error": error} if not ok else {"result": result})')
+    assert dict(aligned) == {"done": {"result"}, "error": {"result", "error"}}, \
+        (f"{dict(aligned)}: the negated payload gate puts its first branch with the *second* name; read it "
+         "the other way round and the table would attribute an error's `error` key to a successful run")
+    with pytest.raises(AssertionError, match="not a readable ternary"):
+        _ternary_publish_rows('publish(task_id, "done" if ok else "error", {"result": result})')
+    with pytest.raises(AssertionError, match="but the payload on"):
+        _ternary_publish_rows('publish(task_id, "done" if ok else "error",\n'
+                              '        {"a": 1} if failed else {"b": 2})')
+
+    # 3. An expression-bodied handler is the *last* member: no comma ends it, the closing brace does.
+    last_member = 'const h = {\n  onArtifact: () => setReporting(true)\n};\nconst x = 1;\n'
+    sites = _handler_sites(last_member, vocabulary={"onArtifact"})
+    assert len(sites) == 1 and sites[0]["body"] == "setReporting(true)", \
+        (f"{[s['body'] for s in sites]}: the expression body stops at the object's own brace, so the next "
+         "statement cannot be read as part of the handler -- #179's slice ran on and handed `onArtifact` "
+         "someone else's statements")
+    assert _expression_body("setReporting(true)") == "setReporting(true)", \
+        "an expression with no terminator is still the whole body"
+    swallowed = _expression_body("setReporting(true),\n onDone: (data) => { setText(data.text) }\n});")
+    assert swallowed == "setReporting(true)", \
+        (f"{swallowed!r}: the comma ends the member -- a body that reaches past it is how one handler "
+         "acquires another's payload reads, and those reads would then be charged to the wrong frame")
 
 
 def test_the_step_classifier_reads_three_fields_no_frame_ever_carries():
