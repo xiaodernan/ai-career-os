@@ -49,7 +49,7 @@ docker compose run --rm seed-jobs    # 12 companies / 41 roles, so search and ma
 
 # ai-service (Python 3.11+)
 cd ai-service && python -m venv .venv && .venv/Scripts/pip install -r requirements.txt -r requirements-dev.txt
-LLM_PROVIDER=mock EMBEDDING_PROVIDER=hash .venv/Scripts/python -m uvicorn app.main:app --port 8010   # offline dev
+LLM_PROVIDER=mock EMBEDDING_PROVIDER=hash .venv/Scripts/python -m uvicorn app.main:app --port 8000   # offline dev
 
 # backfill job vectors so vector search works, then type the column + build the index
 python -m app.ops.embed_jobs
@@ -66,12 +66,20 @@ cd frontend && npm install && npm run dev           # http://localhost:3000
 (the mock provider is refused when `APP_ENV=prod`). For the real product,
 configure any OpenAI-compatible / Anthropic / Ollama endpoint in `.env`.
 
+The backend's `*IT` classes do not use Testcontainers: docker-java's npipe
+strategy returns HTTP 400 from the Docker Desktop pipe on Windows, so they
+bootstrap against the local containers instead — the `careeros-postgres`
+container on `5432` (database `career_os_it`, dropped and re-migrated per run)
+and a `careeros-it-redis` container on `16399` that the suite starts itself. So
+`docker compose up -d postgres redis` is enough to run `mvn test`; the dev
+database is never touched.
+
 ## Tests
 
 ```bash
-cd frontend    && npm test             # vitest: API normalizers, formatters, SSE, nav, pipeline taxonomy
-cd ai-service  && python -m pytest     # unit + orchestrator + eval metrics (offline: LLM_PROVIDER=mock EMBEDDING_PROVIDER=hash)
-cd backend     && mvn test             # unit tests (offline); *IT integration tests need Docker/Testcontainers
+cd frontend    && npm test                     # vitest: normalizers, formatters, SSE, nav, pipeline taxonomy
+cd ai-service  && .venv/Scripts/python -m pytest # unit + orchestrator + contract gates (offline: mock/hash)
+cd backend     && mvn test                     # unit tests offline; *IT also need the infra below
 # RAG eval (needs the DB/infra running): cd ai-service && python -m app.eval.run_eval --user-id <uuid> [--answer]
 cd e2e && npm install && npx playwright test   # PRD §35 golden journey; needs all three services up (see e2e/README.md)
 ```

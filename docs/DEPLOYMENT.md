@@ -97,5 +97,6 @@ test.
 ## Tests
 
 See the [README](../README.md) Tests section: frontend `vitest`, ai-service
-`pytest` (offline mock/hash), backend `mvn test` (unit tests run offline;
-`*IT` integration tests need Docker/Testcontainers).
+`pytest` (offline mock/hash), backend `mvn test` — unit tests run offline, and
+the `*IT` classes need the local `postgres` and `redis` containers up (they use
+the dev infra directly rather than Testcontainers; see the README for why).

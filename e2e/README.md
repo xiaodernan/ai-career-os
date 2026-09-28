@@ -10,7 +10,7 @@ orchestrator, retrieval and persistence paths.
 
 | Spec | Flow |
 | --- | --- |
-| account and session | Register → land in the app → sign in again; wrong password refused |
+| account and session | Register → land in the app → sign in again; wrong password refused; the recovery pair (`/forgot-password` → `/reset-password`), including the pasted-token path and the API's refusal of an unknown token |
 | resume becomes a knowledge base | Upload file → parse → knowledge source listed → visible in `/resumes` |
 | find a role and understand the match | Search corpus → open role → evidence-backed match → tailor + cited cover letter |
 | track the application | Save role → create application → move stage → timeline → kanban agrees |
@@ -50,7 +50,8 @@ E2E_TRACE=on E2E_HTML=1 npx playwright test --headed
 npx playwright show-report
 ```
 
-Expected result: **9 passed**. Each run takes ~60s of actual testing.
+Expected result: **10 passed**. Each run takes ~60s of actual testing, plus the
+per-test teardown described below.
 
 ### The runner is slow to exit in this sandbox
 
