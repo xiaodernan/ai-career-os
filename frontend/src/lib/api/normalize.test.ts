@@ -821,16 +821,53 @@ describe("normalizeDashboard", () => {
     expect(d.metrics).toBeDefined();
   });
 
-  it("reports needsAttention as the metric, and never as rows it would have to invent", () => {
+  it("carries the attention rows the response sends, and drops the ones no card could link", () => {
+    // The reader used to build an `attention` list from a key this record had never carried, so
+    // it could only ever answer `[]`. The backend now sends the rows behind the count, and each
+    // of them links to its application -- a row that arrives without an id has no link to offer,
+    // so it is dropped rather than rendered as a dead line on the card.
+    const d = normalizeDashboard({
+      kanban: { statusCounts: { applied: 1 }, total: 1, offers: 0 },
+      avgMatch: 0.5,
+      needsAttention: 2,
+      attention: [
+        {
+          id: "a1",
+          title: "Staff Backend Engineer",
+          company_name: "Acme",
+          status: "applied",
+          reason: "reminder_due",
+          reminder_at: "2026-09-20T09:00:00Z",
+          updatedAt: "2026-09-18T09:00:00Z",
+        },
+        { title: "row with no id" },
+      ],
+    })!;
+    expect(d.metrics!.needsAttention).toBe(2);
+    expect(d.attention).toEqual([
+      {
+        id: "a1",
+        title: "Staff Backend Engineer",
+        companyName: "Acme",
+        status: "applied",
+        reason: "reminder_due",
+        reminderAt: "2026-09-20T09:00:00Z",
+        updatedAt: "2026-09-18T09:00:00Z",
+      },
+    ]);
+  });
+
+  it("keeps the count readable when the key that used to mean a number now holds rows", () => {
+    // `attention` was read as a numeric alias of `needsAttention`; on a response whose `attention`
+    // is a list that read yields NaN and the stat strip disappears. The count comes from the count
+    // field, and a response with no rows leaves the card off the page entirely.
     const d = normalizeDashboard({
       kanban: { statusCounts: {}, total: 0, offers: 0 },
-      avgMatch: 0.5,
-      needsAttention: 4,
+      needsAttention: 0,
+      attention: [],
     })!;
-    expect(d.metrics!.needsAttention).toBe(4);
-    // The reader used to also build an `attention` list from a key this record has never
-    // carried; it could only ever answer `[]`, so both the read and the empty list are gone.
-    expect("attention" in d).toBe(false);
+    expect(d.metrics!.needsAttention).toBe(0);
+    expect(d.attention).toBeUndefined();
   });
 });
 

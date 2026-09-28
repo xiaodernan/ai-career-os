@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   ArrowRight,
   Activity as ActivityIcon,
+  AlertTriangle,
   Briefcase,
   CheckCircle2,
   FileText,
@@ -28,6 +29,7 @@ import { MatchRing, scoreBand } from "@/components/ai/match-ring";
 import { SectionHeading } from "@/components/common/export-buttons";
 import { LoadingListSkeleton, LoadingMetricGridSkeleton } from "@/components/common/loading-skeletons";
 import { SectionBoundary, isEndpointMissing } from "@/components/common/query-boundary";
+import { missingEndpointMessage } from "@/lib/api/missing-endpoint";
 import { JobCard } from "@/components/jobs/job-card";
 import { APPLICATION_STAGES, stageMeta } from "@/lib/pipeline";
 import { useUser } from "@/lib/hooks/auth";
@@ -62,6 +64,10 @@ export default function DashboardPage() {
   const data = dashboard.data;
   const metrics = data?.metrics;
   const hasMetrics = metrics && Object.values(metrics).some((v) => v != null);
+  // The attention card and the "needs attention" stat read the same response field by field:
+  // `attention` carries the first few rows, `metrics.needsAttention` the full count.
+  const attention = data?.attention ?? [];
+  const attentionTotal = metrics?.needsAttention ?? attention.length;
 
   // The dashboard aggregate may omit sections; fall back to the real list
   // endpoints (never to invented data) so the Command Center stays useful.
@@ -172,7 +178,7 @@ export default function DashboardPage() {
                 <EmptyState
                   icon={<Gauge aria-hidden />}
                   title="Dashboard stats aren't connected yet"
-                  description="The /reports/dashboard endpoint isn't live — the rest of the page still reads the real APIs below and no numbers are invented."
+                  description={`${missingEndpointMessage("GET /reports/dashboard")} The rest of the page still reads the real APIs below.`}
                   action={
                     <Button variant="outline" size="sm" onClick={() => void dashboard.refetch()}>
                       Check again
@@ -277,6 +283,89 @@ export default function DashboardPage() {
                       );
                     }}
                   </SectionBoundary>
+                </CardContent>
+              </Card>
+
+              {/* The rows behind the "Needs attention" stat (§22) — same predicate, so the strip
+                  and this card can never disagree about how many applications are waiting. */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <SectionHeading
+                    eyebrow="Waiting on you"
+                    icon={<AlertTriangle className="size-4" aria-hidden />}
+                    title="Needs attention"
+                    description="Reminders that have come due, and applications with no step logged in two weeks."
+                    action={
+                      <Button variant="ghost" size="xs" asChild>
+                        <Link href="/applications">
+                          Open board
+                          <ArrowRight aria-hidden />
+                        </Link>
+                      </Button>
+                    }
+                  />
+                </CardHeader>
+                <CardContent>
+                  {dashboard.isPending ? (
+                    <LoadingListSkeleton rows={2} />
+                  ) : dashboard.isError ? (
+                    <p className="text-sm text-muted-foreground">
+                      The dashboard query failed, so this list can&apos;t be built right now — nothing is
+                      shown in its place.
+                    </p>
+                  ) : !attention.length ? (
+                    <EmptyState
+                      icon={<CheckCircle2 aria-hidden />}
+                      title="Nothing needs attention"
+                      description="Every application has a recent step logged."
+                    />
+                  ) : (
+                    <ul className="divide-y divide-border/60">
+                      {attention.map((row) => {
+                        const meta = stageMeta(row.status ?? "");
+                        const due = row.reason === "reminder_due";
+                        return (
+                          <li key={row.id}>
+                            <Link
+                              href="/applications"
+                              className="-mx-2.5 flex items-start gap-3 rounded-lg p-2.5 transition-colors duration-150 hover:bg-accent/40 focus-visible:ring-[3px] focus-visible:ring-primary/30"
+                            >
+                              <span
+                                className={cn(
+                                  "mt-1.5 size-1.5 shrink-0 rounded-full",
+                                  due ? "bg-warning" : "bg-muted-foreground/50"
+                                )}
+                                aria-hidden
+                              />
+                              <span className="min-w-0 flex-1">
+                                <span className="flex items-center gap-2">
+                                  <span className="truncate text-sm font-medium">{row.title}</span>
+                                  <Badge variant={meta.badgeVariant} className="shrink-0">
+                                    {meta.short}
+                                  </Badge>
+                                </span>
+                                <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+                                  {row.companyName ? `${row.companyName} · ` : ""}
+                                  {due && row.reminderAt
+                                    ? `Reminder due ${relativeTime(row.reminderAt)}`
+                                    : row.updatedAt
+                                      ? `Last step ${relativeTime(row.updatedAt)}`
+                                      : "No step logged"}
+                                </span>
+                              </span>
+                            </Link>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                  {/* Only when rows are shown: with none listed the empty state above already
+                      speaks, and a count line under it would read as a contradiction. */}
+                  {attention.length > 0 && attentionTotal > attention.length ? (
+                    <p className="mt-3 text-xs text-muted-foreground">
+                      {`${attentionTotal - attention.length} more need attention on the board.`}
+                    </p>
+                  ) : null}
                 </CardContent>
               </Card>
 

@@ -9,6 +9,7 @@ import type {
   ActivityRun,
   Application,
   ApplicationEvent,
+  AttentionItem,
   CopilotAction,
   CopilotArtifact,
   DashboardMetrics,
@@ -899,11 +900,36 @@ export function normalizeResumeScore(raw: unknown): ResumeScore | null {
     : out;
 }
 
+/**
+ * One row of the dashboard's attention list (`reports/dashboard` → `attention`).
+ *
+ * The backend picks both the rows and the reason (`reminder_due` / `stale`), so nothing here
+ * re-tests the reminder or stale window: a second implementation of "is this row due" is how the
+ * strip's count and the card's list end up arguing on screen. A row without an id is dropped
+ * rather than rendered as an unlinkable line, since every row links to its application.
+ */
+function normalizeAttention(raw: unknown): AttentionItem | null {
+  const item = rec(raw);
+  if (!item) return null;
+  const id = str(item, "id", "applicationId", "application_id");
+  if (!id) return null;
+  return {
+    id,
+    title: str(item, "title", "role", "name") ?? "Untitled role",
+    companyName: str(item, "companyName", "company_name", "company"),
+    status: str(item, "status"),
+    reason: str(item, "reason", "why"),
+    reminderAt: str(item, "reminderAt", "reminder_at") ?? null,
+    updatedAt: str(item, "updatedAt", "updated_at") ?? null,
+  };
+}
+
 export function normalizeDashboard(raw: unknown): DashboardPayload | null {
   // `api.get` already unwraps the {success,data} envelope, so what arrives here is
   // `DashboardResponse` and nothing else: { kanban{statusCounts,total,offers}, interviews,
-  // avgMatch(0..1 or null), needsAttention(long), currentResume{resumeId,versionId,title,
-  // status,score}, skillGaps(digest), recommendedJobs[], recentRuns[], recentActivity[] }.
+  // avgMatch(0..1 or null), needsAttention(long), attention[] (the rows behind that count),
+  // currentResume{resumeId,versionId,title,status,score}, skillGaps(digest), recommendedJobs[],
+  // recentRuns[], recentActivity[] }.
   // The `dashboard`/`data` pick, the `metrics`/`stats`/`summary` layer that hung off it, and the
   // flat-number aliases (`applicationCount`, `in_pipeline`, `offerCount`, …) each read names no
   // response of this route carries, so #129 deleted them: a fallback a producer cannot reach is
@@ -932,9 +958,14 @@ export function normalizeDashboard(raw: unknown): DashboardPayload | null {
     skillGaps: gaps.length || undefined,
     resumeScore: resumeScore?.overall,
     avgMatch: pct(num(d, "avgMatch", "avg_match", "averageMatch", "average_match")),
-    needsAttention: num(d, "needsAttention", "needs_attention", "attention"),
+    // No `attention` alias: that key is now the row list below, so reading it as a number would
+    // turn "3 applications are waiting on you" into `NaN` and hide the strip on a served payload.
+    needsAttention: num(d, "needsAttention", "needs_attention"),
   };
   const runs = list(d, "recentRuns", "recent_runs", "activity", "runs").map(normalizeRun);
+  const attention = list(d, "attention")
+    .map(normalizeAttention)
+    .filter((row): row is AttentionItem => row !== null);
   return {
     // `Kanban.total` is a primitive `long`, so `applications` is never missing on a served
     // payload and the old "hide the strip when every metric is null" guard had no reachable
@@ -945,6 +976,7 @@ export function normalizeDashboard(raw: unknown): DashboardPayload | null {
       normalizeJob
     ),
     skillGaps: gaps,
+    attention: attention.length ? attention : undefined,
     resume: rec(currentResume)
       ? {
           id: str(currentResume, "resumeId", "resume_id", "id") ?? "",

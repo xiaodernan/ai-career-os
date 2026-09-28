@@ -600,12 +600,29 @@ export interface DashboardMetrics {
   [key: string]: number | undefined;
 }
 
+/**
+ * One open application the dashboard says needs the user. `reason` is the backend's own
+ * classification (`reminder_due` when a reminder has come due, `stale` when nobody has logged a
+ * step for the window), so the row's action is read off the payload rather than re-derived here.
+ */
+export interface AttentionItem {
+  id: string;
+  title: string;
+  companyName?: string;
+  status?: string;
+  reason?: string;
+  reminderAt?: string | null;
+  updatedAt?: string | null;
+}
+
 export interface DashboardPayload {
   metrics?: DashboardMetrics;
   /** either {status: count} or [{status,count}] */
   pipeline?: Record<string, number> | { status: string; count: number }[];
   recommendedJobs?: Job[];
   skillGaps?: SkillGap[];
+  /** The rows behind `metrics.needsAttention`, most-due reminder first. */
+  attention?: AttentionItem[];
   resume?: (Pick<Resume, "id" | "title" | "status" | "currentVersionId"> & {
     score?: ResumeScore | number;
   }) | null;
