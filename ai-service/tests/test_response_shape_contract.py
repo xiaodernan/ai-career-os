@@ -895,8 +895,10 @@ def test_the_declaration_probes_reach_the_shapes_a_copy_would_miss():
     """Positive control for the ban above: it is only worth having while the shared probes really do
     what the hand-written copies did not, and each of these shapes is measured at this plane."""
     source = NORMALIZE.read_text(encoding="utf-8")
-    assert len(re.findall(TS_OPENER.format(name=r"(\w+)"), source)) == 48, \
-        "44 exported mappers and 4 module-private ones, all through one opener"
+    # 49 rather than 48 since `normalizeAttention` joined the module-private mappers: the dashboard's
+    # attention rows are the fifth non-exported reader, and the opener has to see it like the others.
+    assert len(re.findall(TS_OPENER.format(name=r"(\w+)"), source)) == 49, \
+        "44 exported mappers and 5 module-private ones, all through one opener"
     assert "export function normalizePage(" not in source, \
         "the generic really does sit between the name and the paren, so a literal opener finds nothing"
     assert _ts_function_body("normalizePage").startswith("export function normalizePage<T>(")
@@ -926,8 +928,10 @@ def test_the_java_probe_reads_every_record_the_backend_declares():
     component's name is its wire name, which holds only while no record renames or hides one.
     """
     declared = _declared_records()
-    assert len(declared) == 101, \
-        f"{len(declared)} records carry a declaration the shared opener reads, not the 101 measured"
+    # 102 rather than 101 since `DashboardDtos.AttentionItem`: the row the attention card renders, with
+    # every component a bare identifier and its name its wire name, exactly like the rest of the census.
+    assert len(declared) == 102, \
+        f"{len(declared)} records carry a declaration the shared opener reads, not the 102 measured"
     problems, renamed = [], []
     for relative, record in declared:
         names = _record_components_at(relative, record)
@@ -2057,7 +2061,9 @@ def test_the_run_stream_contract_is_one_table_of_publishers_cases_and_subscriber
     skipped = [(str(p.relative_to(ROOT_FRONTEND)).replace("\\", "/"), p.read_text(encoding="utf-8"))
                for p in sorted(ROOT_FRONTEND.rglob("*.ts*"))
                if ".test." in p.name and "node_modules" not in p.parts]
-    assert len(skipped) == 21 and all(rel.endswith((".test.ts", ".test.tsx")) for rel, _t in skipped), \
+    # 22 rather than 21 since `lib/api/missing-endpoint.test.ts`. The pin is a population, not a budget:
+    # a new test file belongs in it, and the guard below still has to prove none of them ships.
+    assert len(skipped) == 22 and all(rel.endswith((".test.ts", ".test.tsx")) for rel, _t in skipped), \
         (f"{len(skipped)} files are skipped and not one ships: a name in that set that is not a test file "
          "would be a subscriber hidden from the table by the pattern rather than by measurement")
     skipped_names = {rel.rsplit("/", 1)[-1] for rel, _t in skipped}
@@ -2345,3 +2351,260 @@ def test_the_step_classifier_reads_three_fields_no_frame_ever_carries():
     assert published["status"] - reads - forwarded == {"count", "intent"}, \
         (f"{sorted(published['status'] - reads - forwarded)} are the status fields no reader in the app "
          "touches -- rag extras published and then dropped everywhere, not just in the panel")
+
+
+ERROR_BODY_CALL = re.compile(r'(?:sink\.send|onFrame)\(\s*"error"\s*,\s*([^;]*?)\)\s*;')
+ERROR_BODY_SHAPES = (
+    ("json-authored", lambda body: "writeValueAsString(" in body),
+    ("json-literal", lambda body: body.startswith('"{')),
+    ("string-concat", lambda body: re.search(r'"\s*\+|\+\s*"', body) is not None),
+    ("verbatim", lambda body: re.fullmatch(r"\w+", body) is not None),
+)
+# How a Java body spelling reaches the browser's `data:` line once the sink writes it.
+WIRE_FROM_SHAPE = {"json-authored": "object", "json-literal": "object", "string-concat": "string",
+                   "verbatim": "object"}
+
+
+def _error_frame_bodies() -> dict[str, dict[str, list[str]]]:
+    """file -> shape -> the bodies written that way by a site that *names* the `error` frame.
+
+    #181 counted the frame names the backend writes itself. This is the payload half of the same sites:
+    what shape of body each of those `error` names carries. A body the classifier cannot name raises rather
+    than being skipped, because an unnamed third shape reaching the browser is exactly the event the ledger
+    below exists to make loud -- and the classifier is ordered, so `writeValueAsString` wins over the `+`
+    test instead of competing with it.
+    """
+    sites: dict[str, dict[str, list[str]]] = {}
+    unknown: list[str] = []
+    for path in sorted(JAVA_ROOT.rglob("*.java")):
+        for found in ERROR_BODY_CALL.finditer(path.read_text(encoding="utf-8")):
+            body = " ".join(found.group(1).split())
+            shape = next((label for label, test in ERROR_BODY_SHAPES if test(body)), None)
+            if shape is None:
+                unknown.append(f"{path.name}: {body!r}")
+                continue
+            sites.setdefault(path.name, {}).setdefault(shape, []).append(body)
+    if unknown:
+        raise AssertionError(f"{unknown} are `error`-named frame bodies this classifier has no name for. "
+                             "Either that is a shape no browser branch handles -- open the ledger and pay "
+                             "for it -- or the classifier needs the new spelling, which is a claim about "
+                             "the wire, not a detail of this file")
+    return sites
+
+
+def _string_type_checks(body: str) -> list[str]:
+    """The operands of every `typeof X === "string"` test in a body, in the order the reader tries them."""
+    return [operand.strip() for operand in re.findall(r'typeof\s+([^=]+?)\s*===\s*"string"', body)]
+
+
+METHOD_HEAD = re.compile(r"\b(?:private|public|protected)\s+(?:static\s+)?[\w<>[\], ?]+\s+(\w+)\s*\(([^)]*)\)"
+                         r"\s*(?:throws [\w, ]+)?\{")
+
+
+def _enclosing_method(text: str, at: int) -> tuple[str, str]:
+    """(name, parameter list) of the last method header written before `at`.
+
+    #182's first attempt at the type question searched the whole file for `String reason` and passed while
+    the parameter was retyped to `Object`, because the same file declares a *method* named `reason` that
+    returns `String`. A declaration search has to bind the declaration the site sits in, which is what the
+    nearest preceding header gives -- and a site whose header cannot be found raises instead of reporting a
+    silent None.
+    """
+    heads = [(start, name, params) for start, name, params in
+             ((m.start(), m.group(1), m.group(2)) for m in METHOD_HEAD.finditer(text)) if start < at]
+    if not heads:
+        raise AssertionError(f"no method header before offset {at}: the site's declaring method cannot be "
+                             "read, so its parameter types would be reported as missing rather than unknown")
+    _, name, params = max(heads)
+    return name, params
+
+
+def _authored_error_types() -> list[dict]:
+    """Per site that authors an `error` payload: the value written under the key and what declares it."""
+    rows: list[dict] = []
+    for path in sorted(JAVA_ROOT.rglob("*.java")):
+        text = path.read_text(encoding="utf-8")
+        for found in ERROR_BODY_CALL.finditer(text):
+            body = " ".join(found.group(1).split())
+            shape = next((label for label, test in ERROR_BODY_SHAPES if test(body)), None)
+            if shape not in ("json-authored", "json-literal"):
+                continue
+            method, params = _enclosing_method(text, found.start())
+            if shape == "json-authored":
+                value = re.search(r'Map\.of\("error",\s*(\w+)\)', body)
+                if value is None:
+                    raise AssertionError(f"{path.name} authors an `error` frame without a readable "
+                                         f"`Map.of(\"error\", …)`: {body!r}")
+                declared = re.search(rf"\b(\w+)\s+{value.group(1)}\b", params)
+                rows.append({"file": path.name, "method": method, "author": "parameter",
+                             "value": value.group(1),
+                             "declared": declared.group(1) if declared else None})
+            else:
+                rows.append({"file": path.name, "method": method, "author": "literal", "value": None,
+                             "declared": "quoted" if re.search(r'\\"error\\":\\"', body) else "not-a-string"})
+    return rows
+
+
+def _error_text_sites() -> dict[str, dict[str, int]]:
+    """file -> {definition, calls} for `errorText`, the one helper that turns an error frame into a sentence.
+
+    Counted over the same frontend population #179 walks (tests excluded), and split by whether the
+    occurrence follows the word `function`: a doc link (`{@link errorText}`) carries no paren and so costs
+    nothing here, while a renamed or duplicated helper would show up as two definitions.
+    """
+    rows: dict[str, dict[str, int]] = {}
+    for path in sorted(ROOT_FRONTEND.rglob("*.ts*")):
+        if ".test." in path.name:
+            continue
+        text = path.read_text(encoding="utf-8")
+        definition = calls = 0
+        for found in re.finditer(r"\berrorText\(", text):
+            if re.search(r"\bfunction\s*$", text[: found.start()]):
+                definition += 1
+            else:
+                calls += 1
+        if definition or calls:
+            rows[str(path.relative_to(ROOT_FRONTEND)).replace("\\", "/")] = {"definition": definition,
+                                                                            "calls": calls}
+    return rows
+
+
+def test_the_error_frame_reaches_the_browser_in_two_shapes_and_one_helper_names_both():
+    """#182: the payload side of the `error` frame, from the Java site that writes it to the branch that reads it.
+
+    #175 inventoried frame *names*, #179 tabulated per-name payloads and handler bodies, #181 proved the
+    backend names `error` as a literal and that the relay invents one frame whose data is not JSON. This
+    unit walks the remaining inch: one name carries two wire shapes, and the browser's answer to that is a
+    single helper. Measured on the backend, four sites name `error` and build their bodies three different
+    ways -- `CopilotStreamService.fail()` authors JSON, its own catch sends a JSON *literal*, and the
+    listener's `case "error"` forwards the relay's string untouched -- while `SseRelayService.consume` puts
+    `"upstream status " + statusCode()` on the frame it invents when the ai-service answers non-200. The
+    verbatim forward is what makes the browser's shape undecidable from any one sender: the same Java line
+    carries either our service's `{"result": …, "error": …}` dict or that bare string.
+
+    On the browser side the whole of that reaches exactly one reader. `use-sse.ts`'s dispatch calls
+    `h.onError?.(evt.data)` without naming a key; the only subscriber to `onError` in the app is
+    `task-stream.tsx`, whose body reads nothing off the payload and hands it to `errorText`; and `errorText`
+    tries two `typeof … === "string"` tests -- the payload itself, then `data.error` -- before returning
+    null. So the two branches and the two wire shapes are the same pair, seen from either end, and the key
+    the second branch names is a key the publisher really writes. Pinned as a reconciliation, not a fix:
+    both shapes have a live producer (the string one fires when ai-service answers 500 or times out), so
+    which of them a user has ever seen is R1's question, not this file's.
+    """
+    sites = _error_frame_bodies()
+    assert sites == {"CopilotStreamService.java": {
+                         "verbatim": ["data"],
+                         "json-authored": ['json.writeValueAsString(Map.of("error", reason))'],
+                         "json-literal": [r'"{\"error\":\"the turn failed\"}"'],
+                     },
+                     "SseRelayService.java": {"string-concat": [
+                         '"upstream status " + response.statusCode()']}}, \
+        (f"{sites}: every site that names the `error` frame, with the body it writes, per shape. The "
+         "`verbatim` row is the load-bearing one -- it is why the browser cannot know a shape from the "
+         "sender -- and a body this classifier cannot name raises instead of vanishing")
+    assert sum(len(bodies) for shapes in sites.values() for bodies in shapes.values()) == 4, \
+        ("four `error`-named sites: the floor is taken from the same walk above, so a narrowed classifier "
+         "or a skipped file cannot pass the rest of this test quietly")
+
+    wire = {WIRE_FROM_SHAPE[shape] for shapes in sites.values() for shape in shapes}
+    assert wire == {"object", "string"}, \
+        (f"{sorted(wire)} are the shapes the `error` name can reach the browser in. `object` because "
+         "`fail()` writes JSON and the listener forwards our own service's dict; `string` because the "
+         "relay's invented frame carries a concatenated status line, not JSON at all")
+
+    stream_text = (JAVA_ROOT / "com" / "careeros" / "conversation" / "service"
+                   / "CopilotStreamService.java").read_text(encoding="utf-8")
+    listener_at = re.search(r"relay\.consume\([^;]*?,\s*\(([^)]*)\)\s*->", stream_text, re.S)
+    assert listener_at is not None, \
+        ("the listener is no longer written inline on the `relay.consume` call, so the parameter names "
+         "below cannot be read off it -- re-derive where the forwarded body comes from rather than "
+         "letting an empty parameter set pass a subset test")
+    params = {name.strip() for name in listener_at.group(1).split(",")}
+    forwarded = {body for shapes in sites.values() for body in shapes.get("verbatim", [])}
+    assert forwarded and forwarded <= params, \
+        (f"{sorted(forwarded)} are the bodies the backend forwards instead of authoring, and "
+         f"{sorted(params)} are the listener's own parameters: a forwarded body must be the data the "
+         "relay handed in, because `WIRE_FROM_SHAPE` maps `verbatim` to the object our service publishes. "
+         "A locally built string at that call site would be a *third* shape wearing a known spelling")
+
+    published = _published_payload_keys()
+    assert published["error"] == {"result", "error"}, \
+        (f"{sorted(published['error'])} are the keys `taskbus.finish` writes into an `error` payload "
+         "(`core/taskbus.py:38`, through the ternary scanner #180 added): the body the `verbatim` site "
+         "forwards, so the object half of `wire` is this dict, not a guess")
+
+    authored = _authored_error_types()
+    assert authored == [{"file": "CopilotStreamService.java", "method": "fail", "author": "parameter",
+                         "value": "reason", "declared": "String"},
+                        {"file": "CopilotStreamService.java", "method": "fail", "author": "literal",
+                         "value": None, "declared": "quoted"}], \
+        (f"{authored}: each site that authors an `error` payload, the method that declares it, and what "
+         "type the value under `error` is written as. `declared` is read from that method's own parameter "
+         "list, not from anywhere in the file -- a `String` elsewhere proves nothing about this call. "
+         "`errorText`'s second branch is `typeof data.error === \"string\"`, so an author that retypes the "
+         "value (or writes an object inside the literal) is a *third* wire shape that the census above "
+         "would still count as two")
+    counted = sum(1 for shapes in sites.values() for shape, bodies in shapes.items()
+                  if shape in ("json-authored", "json-literal") for _ in bodies)
+    assert len(authored) == counted, \
+        (f"{len(authored)} authored rows against {counted} json-shaped bodies in the census above: the "
+         "two walks must agree about which files hold an `error` site at all, or a payload type check "
+         "silently covers a subset of the producers")
+
+    sse = (ROOT_FRONTEND / "lib" / "sse" / "use-sse.ts").read_text(encoding="utf-8")
+    helper = _function_body(sse, "errorText")
+    checks = _string_type_checks(helper)
+    assert checks == ["data", "(data as { error?: unknown } | null)?.error"], \
+        (f"{checks}: the two `typeof … === \"string\"` tests the reader tries, in the order it tries them. "
+         "The first names the payload itself (the relay's string), the second a key of it (every other "
+         "producer) -- a third test here means a new wire shape, and this file requires it to be produced")
+    handled = {"string" if operand == "data" else "object" for operand in checks}
+    assert handled == wire, \
+        (f"the reader names {sorted(handled)} and the wire carries {sorted(wire)}: unequal either way is "
+         "a real disagreement -- a branch no producer reaches, or a shape that arrives and is dropped to "
+         "null without anyone deciding that")
+    keys = {match.group(1) for operand in checks for match in [re.search(r"\.(\w+)$", operand)] if match}
+    assert keys <= published["error"], \
+        (f"{sorted(keys)} are the payload keys `errorText` reads by name, checked against the keys the "
+         "publisher writes: a branch on a key no `error` payload has is the #173 disease in the reader "
+         "rather than the dispatcher")
+    assert helper.count("return null") == 2, \
+        (f"{helper.count('return null')} `return null` exits in errorText: one for a payload whose shape "
+         "neither test names, one for a cause whose first line is blank. A shape that cannot be read is "
+         "reported as no message, which is what keeps `task-stream.tsx`'s own fallback sentence honest")
+
+    subscribers, _second, _transport = _frame_reader_population()
+    error_sites = [(row["file"], site) for row in subscribers
+                   for site in row["sites"] if site["handler"] == "onError"]
+    assert [file for file, _ in error_sites] == ["components/ai/task-stream.tsx"], \
+        (f"{[file for file, _ in error_sites]} are the admitted subscribers to the `error` frame -- one, "
+         "and it is inside a `useSSE(…)` call, which is why the react-query `onError` options in "
+         "`lib/hooks/actions.ts` and the three auth forms are not counted as stream readers (#179's "
+         "admission rule)")
+    assert all(site["reads"] == set() for _, site in error_sites), \
+        (f"{[sorted(site['reads']) for _, site in error_sites]} are the fields the subscriber reads off "
+         "the payload: none, because it hands the whole payload to `errorText` instead of naming a key -- "
+         "that is the shape-agnosticism the reconciliation above depends on")
+    assert all("errorText(" in site["body"] for _, site in error_sites), \
+        "the one subscriber funnels through the helper rather than re-implementing its branches"
+
+    rows = _error_text_sites()
+    assert rows == {"components/ai/task-stream.tsx": {"definition": 0, "calls": 1},
+                    "lib/api/client.ts": {"definition": 0, "calls": 1},
+                    "lib/sse/use-sse.ts": {"definition": 1, "calls": 0}}, \
+        (f"{rows}: one definition and exactly two calls app-wide. The pair is the whole readership of the "
+         "`error` frame's payload -- a component that renders the cause and the transport that rejects with it")
+    callers = {file for file, counts in rows.items() if counts["calls"]}
+    assert callers <= {file for file, _ in error_sites} | set(TRANSPORT), \
+        (f"{sorted(callers)} call the helper, and each is either an admitted `onError` subscriber or one of "
+         "the two transport files: a new caller outside both is a new reader of a frame nobody declared it "
+         "to")
+
+    error_block = dict(_case_blocks(sse))["error"].split("break;")[0]
+    assert re.findall(r"\bh\.(\w+)\?\.\((\w+\.\w+)\)", error_block) == [("onError", "evt.data")], \
+        (f"{error_block.strip()}: the dispatch forwards the parsed payload untouched and names no key, so "
+         "the two shapes survive routing intact -- `use-sse.ts` is a router here, and the only place a key "
+         "of an `error` payload is read is the helper above")
+    assert _client_case_routing()["error"] == {"onError"}, \
+        ("the client routes the name to exactly one handler, which is the join #179's table already "
+         "holds and this test re-reads rather than restates")
