@@ -1290,6 +1290,11 @@ def _published_payload_keys() -> dict[str, set[str]]:
     would silently lose the later keys -- the mistake #171 found in the TypeScript mirror of this rule.
     A payload that is a call rather than a literal is kept as a marker, because the census must not
     report "no keys" where the truth is "keys come from elsewhere".
+
+    Two spellings publish a frame: the call sites `PUBLISH_CALL` walks, and the yield spelling
+    `{"event": "<name>", "data": {…}}` that `taskbus.subscribe` and `core/ai.py` use. Only the first was
+    read when #176 pinned its ledgers, so `error` and `ping` had no row at all -- and `error` is the frame
+    whose `{error}` key `errorText` exists to read (#179 pairs them).
     """
     out: dict[str, set[str]] = {}
     for path in _app_root().rglob("*.py"):
@@ -1311,7 +1316,440 @@ def _published_payload_keys() -> dict[str, set[str]]:
             if not keys and "(" in payload:
                 keys = {f"<{payload.split('(')[0].strip()}>"}
             out.setdefault(found.group(1), set()).update(keys)
+        for found in YIELD_FRAME.finditer(text):
+            start = text.index("{", found.end() - 1)
+            depth, index = 0, start
+            while index < len(text):
+                depth += text[index] == "{"
+                depth -= text[index] == "}"
+                index += 1
+                if depth == 0:
+                    break
+            out.setdefault(found.group(1), set()).update(set(re.findall(r'"(\w+)":', text[start:index])))
     return out
+
+
+YIELD_FRAME = re.compile(r'\{\s*"event":\s*"(\w+)",\s*"data":\s*\{')
+
+
+def _balanced(text: str, start: int, opener: str, closer: str) -> str:
+    """The characters from `start` (an `opener`) through the `closer` that empties the depth."""
+    depth, index = 0, start
+    while index < len(text):
+        depth += text[index] == opener
+        depth -= text[index] == closer
+        index += 1
+        if depth == 0:
+            return text[start:index]
+    raise AssertionError(f"no closing {closer!r} after offset {start}: an unpaired body would be read "
+                         "as running to the end of the file")
+
+
+def _function_body(text: str, name: str) -> str:
+    """The body of `function <name>`, with its parameter list skipped rather than assumed empty."""
+    at = re.search(rf"\bfunction\s+{re.escape(name)}\s*(?:<[^<>]*>)?\s*\(", text)
+    if at is None:
+        raise AssertionError(f"{name} is no longer declared, so the reads taken from its body below "
+                             "would come from an empty string comparing nothing")
+    params_at = at.end() - 1
+    params = _balanced(text, params_at, "(", ")")
+    brace = text.index("{", params_at + len(params))
+    return _balanced(text, brace, "{", "}")
+
+
+def _handler_sites(text: str, spans: list[tuple[int, int, str]] | None = None) -> list[dict]:
+    """The `onKey: (…) => {…}` subscribe sites in one file, with the fields that body reads.
+
+    A subscribe site is distinguished from a declaration by its own shape: an interface writes
+    `onDone?: (data: unknown) => void;` (note the `?` before the colon, and no body), while a subscriber
+    writes `onDone: (data) => {`. Reading `task-stream.tsx` through the loose rule #177 first tried made
+    its two interface lines look like subscriptions, so the file appeared to subscribe to frames it only
+    offers to its own callers -- which is why this walks the colon-with-paren shape and pairs the body.
+
+    `spans`, when given, is the second half of the same question: `onError:` is also react-query's option
+    key, so a site only counts when it sits inside a call that hands handlers to a frame entry point.
+    Without it the census reported three auth forms and twenty-odd mutation callbacks as stream readers.
+
+    Inside the body, fields are read off the handler's own parameter, optionally chained (`data?.id`),
+    because `tokenText` reads `d?.text` and a `\\.()`-only pattern loses it.
+    """
+    rows: list[dict] = []
+    for found in re.finditer(r"\bon(Status|Token|Trace|Artifact|Done|Message|Error|Progress)\s*:\s*\(", text):
+        via = ""
+        if spans is not None:
+            hits = [(stop - start, entry) for start, stop, entry in spans if start <= found.start() < stop]
+            if not hits:
+                continue
+            via = min(hits)[1]  # innermost enclosing call, when entry calls nest
+        key = found.group(1)
+        params = _balanced(text, found.end() - 1, "(", ")")
+        arrow = text[found.end() - 1 + len(params):]
+        body_start = arrow.find("{")
+        if body_start < 0:
+            body = arrow[:arrow.find(",")] if "," in arrow else arrow
+        else:
+            body = _balanced(arrow, body_start, "{", "}")
+        names: list[str] = []
+        destructured: list[str] = []
+        inner = params.strip()
+        if re.fullmatch(r"\(\s*\w+\s*\)", inner):
+            names = [re.sub(r"[() ]", "", inner)]
+        else:
+            dm = re.fullmatch(r"\(\s*\{([^}]*)\}\s*\)", inner)
+            if dm:
+                destructured = [n for n in re.split(r"[,\s]+", dm.group(1)) if re.fullmatch(r"\w+", n)]
+        reads: set[str] = set()
+        for var in names:
+            reads |= set(re.findall(rf"\b{var}(?:\.|\?\.)(\w+)", body))
+        rows.append({"handler": f"on{key}", "via": via, "params": tuple(names),
+                     "destructured": tuple(destructured), "reads": reads | set(destructured),
+                     "body": body})
+    return rows
+
+
+def _case_blocks(text: str) -> list[tuple[str, str]]:
+    """Each `case "<frame>":` label paired with the statements it actually runs.
+
+    Two details are what make this a routing table rather than a slice of text. (1) The switch's own body
+    bounds every block: #179 first read to the next label and let the last block (`case "ping": break;`)
+    run on to the end of the file, which would have charged it any `h.on*?.(` call in the module.
+    (2) A case label with no statements falls through to the next one -- `case "status":` at
+    `use-sse.ts:191` is immediately followed by `case "progress":`, whose body calls `h.onStatus`. Read
+    label-by-label, `status` appeared to route to *nothing*, which is the opposite of the fold #176
+    depends on. So an empty block (comments stripped) borrows the next label's handlers.
+    """
+    switch = re.search(r"\bswitch\s*\(", text)
+    if switch is None:
+        raise AssertionError("use-sse.ts has no `switch`: the routing read here would be an empty dict "
+                             "comparing nothing")
+    body_at = text.index("{", switch.end())
+    body = _balanced(text, body_at, "{", "}")
+    cases = [(m.group(1), m.start(), m.end()) for m in re.finditer(r'\n\s*case "(\w+)":', body)]
+    if not cases:
+        raise AssertionError("the switch dispatches no `case` block, so no frame is routed by name")
+
+    def statements(index: int) -> str:
+        stop = cases[index + 1][1] if index + 1 < len(cases) else len(body)
+        return body[cases[index][2]:stop]
+
+    runs = {i for i in range(len(cases))
+            if re.sub(r"/\*[\s\S]*?\*/|//[^\n]*", "", statements(i)).strip()}
+    if not runs:
+        raise AssertionError("every case block is empty, so no handler is ever called -- the routing "
+                             "below would compare nothing against nothing")
+    out: list[tuple[str, str]] = []
+    for index in sorted(runs):
+        out.append((cases[index][0], statements(index)))
+        for skipped in range(index - 1, -1, -1):
+            if skipped in runs:
+                break
+            out.append((cases[skipped][0], statements(index)))
+    return out
+
+
+def _client_case_routing() -> dict[str, set[str]]:
+    """frame name -> the handler keys the client invokes inside that case's block.
+
+    This is the join the three #175/#176/#177a ledgers each held half of: `use-sse.ts` folds `status` and
+    `progress` into one handler, re-dispatches a wrapped token/status/trace out of `message`, and drops
+    `ping` on purpose, so a frame's readers are only findable from the case body that receives it.
+    """
+    text = (ROOT_FRONTEND / "lib" / "sse" / "use-sse.ts").read_text(encoding="utf-8")
+    out: dict[str, set[str]] = {}
+    for name, block in _case_blocks(text):
+        out.setdefault(name, set()).update(re.findall(r"\bh\.(on\w+)\?\.\(", block))
+    return out
+
+
+HANDLER_KEY = r"(?:Status|Token|Trace|Artifact|Done|Message|Error|Progress)"
+
+
+def _frame_handler_types() -> set[str]:
+    """Declared types that carry frame handlers, read off their own members or their `Pick` base.
+
+    `UseSSEOptions` and `CopilotStreamHandlers` are interfaces with `onToken?:` members; `SSEHandlers` is
+    `Pick<UseSSEOptions, …>`, so it joins through the type it picks from rather than because anything
+    listed it here. This is the discriminator #179 had to find: naming `onError:` says nothing on its own,
+    because react-query uses the same key for mutation callbacks.
+    """
+    found: set[str] = set()
+    picked: list[tuple[str, str]] = []
+    for path in ROOT_FRONTEND.rglob("*.ts*"):
+        if ".test." in path.name or "node_modules" in path.parts:
+            continue
+        text = path.read_text(encoding="utf-8")
+        for decl in re.finditer(r"\b(?:export\s+)?(?:interface|type)\s+(\w+)[^;{]*\{", text):
+            body = _balanced(text, decl.end() - 1, "{", "}")
+            if re.search(rf"\bon{HANDLER_KEY}\?\s*:", body):
+                found.add(decl.group(1))
+        picked += re.findall(r"\b(?:export\s+)?type\s+(\w+)\s*=\s*Pick<\s*(\w+)\s*,", text)
+    for name, base in picked:
+        if base in found:
+            found.add(name)
+    return found
+
+
+def _frame_entry_fns() -> set[str]:
+    """Functions taking a handler-carrying parameter: the call sites through which a frame can arrive.
+
+    `useSSE(options: UseSSEOptions)`, `postSSE(path, options, handlers: SSEHandlers)` and the app's own
+    `useCopilotChat(stream: CopilotStreamHandlers)` qualify, so a subscription is recognised one hop past
+    the hook -- which is how `app/(app)/copilot/page.tsx` is found even though it never imports the SSE
+    module. `useMutation` does not: its option type is declared outside this tree and no member of it is a
+    frame handler this scan can see. Only *named* parameter types count, so a handler typed inline at the
+    declaration would be missed -- the subscriber census below would then lose a file and go red.
+    """
+    types = _frame_handler_types()
+    if not types:
+        raise AssertionError("no declared type in the frontend carries a frame handler, so the entry set "
+                             "below is empty by accident rather than by measurement")
+    annotated = re.compile(rf":\s*(?:\w+\s*=\s*)?(?:{'|'.join(sorted(types))})\b")
+    out: set[str] = set()
+    for path in ROOT_FRONTEND.rglob("*.ts*"):
+        if ".test." in path.name or "node_modules" in path.parts:
+            continue
+        text = path.read_text(encoding="utf-8")
+        for decl in re.finditer(r"\b(?:export\s+)?(?:async\s+)?function\s+(\w+)\s*(?:<[^<>]*>)?\s*\(", text):
+            if annotated.search(_balanced(text, decl.end() - 1, "(", ")")):
+                out.add(decl.group(1))
+    return out
+
+
+def _entry_call_spans(text: str, entries: set[str]) -> list[tuple[int, int, str]]:
+    """Spans of calls that pass a handler object to one of `entries`, paren group paired."""
+    spans: list[tuple[int, int, str]] = []
+    for name in sorted(entries):
+        for call in re.finditer(rf"\b{re.escape(name)}\s*(?:<[^<>]*>)?\s*\(", text):
+            group = _balanced(text, call.end() - 1, "(", ")")
+            spans.append((call.end() - 1, call.end() - 1 + len(group), name))
+    return spans
+
+
+TRANSPORT = ("lib/api/client.ts", "lib/sse/use-sse.ts")
+
+
+def _frame_reader_population() -> tuple[list[dict], list[dict], dict[str, str]]:
+    """(subscribers, second-hand readers, transport) for the run stream, each derived by its own rule.
+
+    A *subscriber* has at least one handler site inside a frame-entry call. A *second-hand* reader is a
+    file that walks a frame-shaped parameter but has no entry call of its own: `processing-steps.tsx`
+    classifies a `StatusEvent` someone else received, and `agent-timeline.tsx` renders
+    `AgentTraceEvent[]` rows that `task-stream.tsx` built out of a trace frame -- so its `evt.id` is a
+    field of a locally declared row type, not a field any producer sends, which is the conflation this
+    split exists to prevent. *Transport* is the two files that route frames without consuming them; a skip
+    list with no reach guard is a hiding place (#167), so each travels with the evidence that it only
+    forwards.
+    """
+    entries = _frame_entry_fns()
+    subscribers: list[dict] = []
+    second_hand: list[dict] = []
+    transport: dict[str, str] = {}
+    for path in sorted(ROOT_FRONTEND.rglob("*.ts*")):
+        if ".test." in path.name or "node_modules" in path.parts:
+            continue
+        rel = str(path.relative_to(ROOT_FRONTEND)).replace("\\", "/")
+        text = path.read_text(encoding="utf-8")
+        if rel in TRANSPORT:
+            transport[rel] = text
+            continue
+        sites = _handler_sites(text, _entry_call_spans(text, entries))
+        evt_reads = set(re.findall(r"\bevt(?:\.|\?\.)(\w+)", text))
+        if sites:
+            subscribers.append({"file": rel, "sites": sites, "evt_reads": evt_reads})
+        elif evt_reads:
+            second_hand.append({"file": rel, "reads": evt_reads})
+    return subscribers, second_hand, transport
+
+
+def test_the_run_stream_contract_is_one_table_of_publishers_cases_and_subscribers():
+    """#179: the frame inventory, the client's routing and the subscribers' reads in one artifact.
+
+    Three earlier ledgers each held a slice of the same system: #173 pinned the `message` frame's invented
+    fields, #175 pinned two cases no service can send, #176/#177a pinned which `status` keys the step panel
+    drops and which the action hook consumes. This table joins them along the axis the app uses -- per frame
+    name, the keys its publishers write, the handler the client's own case body invokes, and the fields each
+    subscriber reads inside that handler, split by whether it subscribed at the transport (`useSSE`,
+    `postSSE`, `dispatchEvent`) or one hop past it at a forwarding hook (`useCopilotChat`). The distinction
+    matters because the forwarded reader does not see the frame: `app/(app)/copilot/page.tsx` destructures
+    `{step}` out of the `{agent, step}` object `lib/hooks/actions.ts` rebuilds, so its reads are a subset of
+    another file's by construction, and a table that merged the two would hide who is reading the wire.
+
+    Four measurements had to be corrected before anything here could be pinned; all four were found by this
+    unit instead of assumed. (1) `case "status":` and `case "progress":` at `use-sse.ts:191-193` are a
+    *fall-through* pair, so slicing per label made `status` route to nothing -- the opposite of the fold
+    #176 depends on; a now-empty block now borrows the next label's statements. (2) The last block's slice
+    ran to the end of the file, which would have charged `ping` any later `h.on*?.(` call; the switch body
+    now bounds it. (3) A reader scan matching only `x.field` loses `d?.text` in `tokenText`, so `text`
+    looked produced-and-dropped while the client in fact reads it. (4) A census that asks "does this file
+    name `onError:`" reports three auth forms and three react-query callbacks as stream readers, because
+    `useMutation` borrows the same key name; admission now requires the site to sit inside a call whose
+    callee takes a handler-carrying parameter, a rule read off the type declarations themselves.
+
+    The ledgers are pinned rather than fixed, as before: `state`/`count`/`intent` reach no handler body,
+    `onMessage` is invoked by the client and subscribed to by nobody, `artifact`/`trace` carry reads no
+    producer can send, and `tokenText` falls back to a `token` key no frame carries. Each one shrinks only
+    when a producer or a reader changes, and the owner-blocked R1 stream is what would settle them.
+    """
+    published = _published_frame_names()
+    emitted = _published_payload_keys()
+    routing = _client_case_routing()
+    subscribers, second_hand, transport = _frame_reader_population()
+
+    assert _frame_handler_types() == {"CopilotStreamHandlers", "SSEHandlers", "TaskProgressProps",
+                                      "UseSSEOptions", "UseTaskStreamOptions"}, \
+        ("the declared types that carry frame handlers changed: this is the vocabulary every subscribe "
+         "site below is admitted by, so a new member renames the whole population")
+    entries = _frame_entry_fns()
+    assert entries == {"TaskProgress", "dispatchEvent", "postSSE", "useCopilotChat", "useSSE",
+                       "useTaskStream"}, \
+        (f"{sorted(entries)} are the functions a handler object can be handed to: a new one is a new "
+         "route from a frame to a component and the table below has to grow a reader column for it")
+    assert sorted(transport) == ["lib/api/client.ts", "lib/sse/use-sse.ts"], \
+        "the transport pair changed, so the direct/forwarded split below is measuring something else"
+    transport_src = "\n".join(transport.values())
+    direct = {n for n in entries if re.search(rf"\bfunction\s+{re.escape(n)}\b", transport_src)}
+    assert direct == {"dispatchEvent", "postSSE", "useSSE"}, \
+        (f"{sorted(direct)} are the entries declared inside the transport: an entry that moves in or out "
+         "of this set silently reclassifies a reader as direct or forwarded")
+    assert set(re.findall(r"\bhandlers\.(on\w+)\s*\??\.\(", transport["lib/api/client.ts"])) == \
+        {"onDone", "onError"}, \
+        ("the relay invokes these handlers itself, beside `dispatchEvent`: two of the nine frames reach "
+         "the browser through a path the switch above does not describe, so the exemption is a forward")
+    assert set(re.findall(r"\bevt(?:\.|\?\.)(\w+)", transport["lib/sse/use-sse.ts"])) == {"data", "event"}, \
+        ("the hook reads only the relay envelope's own two fields -- anything more is the hook consuming "
+         "a frame, which would make it a reader and not transport")
+
+    assert sorted(s["file"] for s in subscribers) == ["app/(app)/copilot/page.tsx",
+                                                      "components/ai/task-stream.tsx",
+                                                      "lib/hooks/actions.ts"], \
+        (f"{sorted(s['file'] for s in subscribers)}: the files with a frame handler inside an entry call "
+         "-- a new subscriber has to join the table below, and one that disappears means an affordance "
+         "was deleted rather than left wired to nothing")
+    assert sorted(s["file"] for s in second_hand) == ["components/ai/agent-timeline.tsx",
+                                                      "components/ai/processing-steps.tsx"], \
+        ("second-hand readers walk a frame-shaped parameter without subscribing: `processing-steps.tsx` "
+         "is #176's panel, and `agent-timeline.tsx` renders rows another file built -- not frame readers, "
+         "and not invisible either")
+    walked = [(str(p.relative_to(ROOT_FRONTEND)).replace("\\", "/"), p.read_text(encoding="utf-8"))
+              for p in sorted(ROOT_FRONTEND.rglob("*.ts*"))
+              if ".test." not in p.name and "node_modules" not in p.parts]
+    shaped = {rel: len(_handler_sites(text)) for rel, text in walked}
+    admitted = {s["file"]: len(s["sites"]) for s in subscribers}
+    rejected_files = sorted(f for f, n in shaped.items() if n and f not in admitted and f not in transport)
+    assert rejected_files == ["components/auth/credentials-form.tsx",
+                              "components/auth/forgot-password-form.tsx",
+                              "components/auth/reset-password-form.tsx"], \
+        (f"{rejected_files} name handler-shaped callbacks the entry rule rejects: their `onError:` belongs "
+         "to react-query, not to a stream. Under #177's shape-only census three of these were stream "
+         "readers -- if this list empties, the walk stopped reading rather than the collision going away")
+    assert sum(shaped.values()) >= 15, \
+        (f"only {sum(shaped.values())} handler-shaped callbacks exist in the app, against the "
+         f"{shaped} counted per file: the shape scan is reading less than it did, so the rejection count "
+         "above would be measuring a narrowed scan")
+    assert sum(admitted.values()) == 10 and admitted["lib/hooks/actions.ts"] == 2, \
+        (f"{admitted}: admitted handler sites per file. `actions.ts` names five, of which three are "
+         "mutation callbacks and two are the stream's own onToken/onStatus -- the whole point of the rule")
+
+    frames = published | {"artifact", "trace"}
+    table = {}
+    for frame in sorted(frames):
+        handler = routing.get(frame) or set()
+        sites = [(r, s) for r in subscribers for s in r["sites"] if s["handler"] in handler]
+        read: set[str] = set()
+        for _row, site in sites:
+            read |= site["reads"]
+        table[frame] = {
+            "handlers": sorted(handler),
+            "direct": sorted({r["file"] for r, _s in sites if _s["via"] in direct}),
+            "forwarded": sorted({r["file"] for r, _s in sites if _s["via"] not in direct}),
+            "reads": sorted(read)}
+    assert table == {
+        "artifact": {"handlers": ["onArtifact"], "direct": ["components/ai/task-stream.tsx"],
+                     "forwarded": [], "reads": []},
+        "done": {"handlers": ["onDone"], "direct": ["components/ai/task-stream.tsx"],
+                 "forwarded": [], "reads": []},
+        "error": {"handlers": ["onError"], "direct": ["components/ai/task-stream.tsx"],
+                  "forwarded": [], "reads": []},
+        "message": {"handlers": ["onMessage", "onStatus", "onToken", "onTrace"],
+                    "direct": ["components/ai/task-stream.tsx", "lib/hooks/actions.ts"],
+                    "forwarded": ["app/(app)/copilot/page.tsx"],
+                    "reads": ["agent", "durationMs", "id", "kind", "label", "name", "payload", "status",
+                              "step", "type"]},
+        "ping": {"handlers": [], "direct": [], "forwarded": [], "reads": []},
+        "progress": {"handlers": ["onStatus"],
+                     "direct": ["components/ai/task-stream.tsx", "lib/hooks/actions.ts"],
+                     "forwarded": ["app/(app)/copilot/page.tsx"], "reads": ["agent", "step"]},
+        "status": {"handlers": ["onStatus"],
+                   "direct": ["components/ai/task-stream.tsx", "lib/hooks/actions.ts"],
+                   "forwarded": ["app/(app)/copilot/page.tsx"], "reads": ["agent", "step"]},
+        "token": {"handlers": ["onToken"],
+                  "direct": ["components/ai/task-stream.tsx", "lib/hooks/actions.ts"],
+                  "forwarded": ["app/(app)/copilot/page.tsx"], "reads": []},
+        "trace": {"handlers": ["onTrace"], "direct": ["components/ai/task-stream.tsx"],
+                  "forwarded": [],
+                  "reads": ["durationMs", "id", "kind", "label", "name", "payload", "status", "type"]},
+    }, (f"the run-stream table changed as a whole: {table}")
+
+    assert set(routing) == published | {"artifact", "trace"}, \
+        (f"{sorted(set(routing))} are the cases the client dispatches against the {sorted(published)} it "
+         "can receive: `artifact` and `trace` are the #175 ledger, counted here from the routing table "
+         "rather than the case list")
+    assert table["progress"] == table["status"], \
+        ("`status` and `progress` no longer land on one handler, which is the fold #176's panel and the "
+         "step list both depend on -- either they were split apart or the fall-through reading broke")
+    assert routing["ping"] == set() and table["ping"]["reads"] == [], \
+        (f"ping now reaches {table['ping']}: the heartbeat was dropped on purpose (no step, no text), so a "
+         "reader appearing means either the frame grew a payload or something started polling on it")
+    assert emitted.get("ping", set()) == set(), \
+        (f"the `ping` frame carries {sorted(emitted.get('ping', set()))} keys, where an empty list means it "
+         "has no payload row at all: the heartbeat was dropped because nothing writes it, so either change "
+         "is a change to what the client throws away")
+
+    assert emitted["status"] - set(table["status"]["reads"]) == {"count", "intent", "state"}, \
+        (f"{sorted(emitted['status'] - set(table['status']['reads']))} are published by a `status` payload "
+         "and not touched inside any handler body: `state` reaches the second-hand panel (#176) while "
+         "`count` and `intent` reach nothing in the app -- re-read from source if a row appears")
+    assert set(routing["message"]) - {s["handler"] for r in subscribers for s in r["sites"]} == {"onMessage"}, \
+        ("the client calls `onMessage` for every message frame and no file in the app subscribes to it: "
+         "the answer a run reports lands in `done`, so this handler is a third unreachable case beside "
+         "`artifact`/`trace` -- #173's dead re-dispatch has a reader-shaped twin")
+    assert emitted.get("error", set()) == {"error"}, \
+        (f"the `error` frame carries {sorted(emitted.get('error', set()))} keys, where an empty list means "
+         "the walk stopped seeing the `yield {event: error}` spelling -- that row existed in no ledger "
+         "before #179 added the second publish form to the scan")
+    error_body = _function_body(transport["lib/sse/use-sse.ts"], "errorText")
+    assert re.search(r"\)\s*\?\.\s*error\b", error_body), \
+        ("`errorText` no longer reads the `error` key off its argument, so the pairing between the "
+         "published error frame and the only function that turns it into a sentence is broken")
+    token_body = _function_body(transport["lib/sse/use-sse.ts"], "tokenText")
+    hook_token_reads = set(re.findall(r"\bd\??\.(\w+)", token_body))
+    assert hook_token_reads == {"text", "token"}, \
+        (f"{sorted(hook_token_reads)} are what the hook unwraps a token frame with: `text` is the only key "
+         "a producer sends, so losing it means the streamed delta stops reaching the screen and growing "
+         "means another invented fallback has joined `tokenText`")
+    assert {"text", "token"} - emitted["token"] == {"token"}, \
+        ("`tokenText` still falls back to a `token` key that no producer writes -- the same species of "
+         "invented field #176 counted in the step panel, now on the client's own hot path")
+    assert not set(table["token"]["reads"]), \
+        ("a subscriber started reading fields off a token frame: the hook already collapsed it to a "
+         "string, so dotted reads here would be reads of a `string`, not of a payload")
+
+    ghost = set(table["trace"]["reads"]) | set(table["artifact"]["reads"])
+    emitted_keys = set()
+    for keys in emitted.values():
+        emitted_keys |= keys
+    assert ghost == {"durationMs", "id", "kind", "label", "name", "payload", "status", "type"}, \
+        f"{sorted(ghost)}: the reads the timeline turns into rows"
+    assert ghost & emitted_keys == set(), \
+        (f"{sorted(ghost & emitted_keys)} would be trace fields a producer finally sends, which retires "
+         "part of #175's ledger and means the affordance is wired up rather than decorative")
+    timeline = next(r for r in second_hand if r["file"].endswith("agent-timeline.tsx"))
+    assert set(timeline["reads"]) <= set(table["trace"]["reads"]), \
+        (f"{sorted(timeline['reads'])} are what `{timeline['file']}` reads off its rows: they must stay a "
+         "subset of what a trace frame is asked for, because that component's rows are built from those "
+         "frames by `task-stream.tsx` -- if it starts reading a field nothing asks for, the hop is no "
+         "longer what the docstring claims")
+
 
 
 def test_the_step_classifier_reads_three_fields_no_frame_ever_carries():
