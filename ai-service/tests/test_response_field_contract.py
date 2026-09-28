@@ -3624,3 +3624,99 @@ def test_the_literal_argument_scanner_agrees_with_a_bracket_walk():
     assert [row[0] for row in _oracle_literal_sites(generic)] == ["normalizeSkillGaps"], \
         "the walk pairs angles, so a real generic call with a literal would show up as a disagreement " \
         "rather than as a missing author"
+
+
+# ---------------------- #169: census the bare-read scanner the other exemption rests on
+
+def _paired_accessor_calls(text: str) -> list[dict]:
+    """Every call to a name-table accessor in `text`, found by pairing its arguments, not by a pattern.
+
+    The oracle #162 ran on `_sites` and #164 on the Java reader scanner, pointed at `_bare_reads`. It
+    shares the gate's bracket helpers (`_ts_args`, `_ts_top_level`, `_ts_function_spans`) and differs in
+    the one decision that scanner was built on: it does not care what shape the receiver has. It reports
+    the callee, the owner, the argument count, the receiver text, and whether every name slot after the
+    first is a quoted literal -- which is the line #165 drew between a mechanism and a read.
+    """
+    clean = _blank_ts_noise(text)
+    finder = re.compile(r"\b(" + "|".join(_name_table_accessors()) + r")\b")
+    angles = re.compile(r"<[^<>]*(?:<[^<>]*>[^<>]*)*>")
+    rows = []
+    for found in finder.finditer(clean):
+        if _DECLARATION.search(clean, 0, found.start()):
+            continue
+        cursor = found.end()
+        while cursor < len(clean) and clean[cursor].isspace():
+            cursor += 1
+        generic = angles.match(clean, cursor)
+        if generic:
+            cursor = generic.end()
+            while cursor < len(clean) and clean[cursor].isspace():
+                cursor += 1
+        if cursor >= len(clean) or clean[cursor] != "(":
+            continue
+        args, _ = _ts_args(clean, cursor)
+        parts = [part.strip() for part in _ts_top_level(args)]
+        inside = [name for name, lo, hi in _ts_function_spans(text) if lo <= found.start() < hi]
+        rows.append({"name": found.group(1), "line": clean.count("\n", 0, found.start()) + 1,
+                     "owner": inside[-1] if inside else "", "argc": len(parts),
+                     "receiver": parts[0] if parts else "",
+                     "named": bool(parts[1:]) and all(_QUOTED.fullmatch(part) for part in parts[1:])})
+    return rows
+
+
+def test_the_bare_read_scanner_agrees_with_a_paired_call_census():
+    """#169: `_bare_reads` answers for a payload that *is* the list, so its own coverage has to be measured.
+
+    It is the scanner #167 added after finding that a bare `list(raw)` gives `_sites` no candidates and
+    so no name rule ever saw it, and `_array_holder` is the rule that leans on it. Its receiver group is
+    `_BARE.pattern` -- `[A-Za-z_$][\\w$.]*`, so `raw` and `rec.items` are both rows, while `rows[0]`,
+    `a ?? []` or `get()` are visible to neither it nor `_sites`, which would make them an exemption with
+    nobody asked. Measured over normalize.ts by pairing every accessor call instead: 254 calls after the
+    declaration skip, 245 of them with every name slot a quoted literal, 8 where a name arrives as a
+    variable or a spread (5 of those are the accessors delegating to `pick` from inside their own bodies),
+    and exactly 1 bare read -- `list(raw)` in normalizeMessages. Nothing is mis-censused today, so this is
+    the same shape as #168's generic-callee limit: stated, pinned, and turned into a red by the census
+    rather than left to be discovered by a future author.
+    """
+    text = NORMALIZE.read_text(encoding="utf-8")
+    paired = _paired_accessor_calls(text)
+    assert len(paired) == 254, (f"{len(paired)} accessor calls: the population the bare-read census is "
+                                "drawn from -- if this drops, the census below is comparing less")
+    assert sum(1 for row in paired if row["argc"] == 1) == 1, \
+        f"{[(row['owner'], row['receiver']) for row in paired if row['argc'] == 1]} are the bare reads"
+    assert [(row["owner"], row["receiver"]) for row in paired if row["argc"] == 1] \
+        == [(row["owner"], row["receiver"]) for row in _bare_reads()], \
+        ("the pattern scanner and the paired walk disagree about which calls hand a name-table accessor "
+         "no names at all, and `_array_holder` only ever sees the pattern scanner's answer")
+    assert [row["receiver"] for row in paired if row["argc"] == 1
+            and not _BARE.fullmatch(row["receiver"])] == [], \
+        "a bare read whose receiver `_BARE` cannot spell escapes both scanners: 0 today, and this pin is " \
+        "the one that says so when one appears"
+    assert sum(1 for row in paired if row["argc"] > 1 and row["named"]) == 245, \
+        f"{sum(1 for row in paired if row['argc'] > 1 and row['named'])}: every-name-quoted is what " \
+        "`_sites` reads, so this number is the size of the census every other rule here trusts"
+    loose = [row for row in paired if row["argc"] > 1 and not row["named"]]
+    assert len(loose) == 8 and sum(1 for row in loose if row["owner"] in _name_table_accessors()) == 5, \
+        (f"{[(row['name'], row['owner']) for row in loose]}: a name slot filled by something that is not "
+         "a quoted literal is #165's mechanism-versus-read line -- 5 of them are the accessors "
+         "themselves delegating, and the rest are the dynamic reads the `dynamic` table has to excuse")
+
+    # The limit, measured rather than assumed: `_BARE` is `[A-Za-z_$][\w$.]*`, so a dotted receiver IS a
+    # row -- `list(rec.items)` reaches `_array_holder`, which then refuses it by name because no `elements`
+    # entry calls a row `rec.items`. What escapes both scanners is a receiver with a bracket, a space or a
+    # call in it: `list(rows[0])`, `list(a ?? [])`, `list(get())`. None exists in normalize.ts today, and
+    # the assertion above is the one that goes red when one does.
+    snippet = 'const rowsOf = (rec: unknown) => [list(rec.items), list(rec.rows[0]), list(rec ?? [])];'
+    assert [(row["argc"], row["receiver"]) for row in _paired_accessor_calls(snippet)] == \
+        [(1, "rec.items"), (1, "rec.rows[0]"), (1, "rec ?? []")], \
+        f"{_paired_accessor_calls(snippet)}: the walk calls all three bare reads, whatever the spelling"
+    accepted = [bool(_BARE.fullmatch(row["receiver"])) for row in _paired_accessor_calls(snippet)]
+    assert accepted == [True, False, False], \
+        (f"{accepted}: `_BARE` is `[A-Za-z_$][\\w$.]*`, so a dotted receiver is a row the scanner reports "
+         "and `_array_holder` is asked about -- it refuses by name, because no `elements` entry calls a "
+         "row `rec.items`. A bracket, a space or a call in the receiver is no row for either side, which "
+         "is why the census above pins 0 of those: that pin is what has to be re-measured, not this text")
+    assert _array_holder("normalizeMessages", "rec.items") == (
+        False, "nothing reads it bare (`list(x)` with no names) and nothing assigns it, so no rule can "
+               "say what shape it holds"), \
+        "a receiver the pattern can spell is still asked about, so widening `_BARE` could not silence it"
