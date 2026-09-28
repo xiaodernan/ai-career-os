@@ -1729,8 +1729,60 @@ def _array_holder(reader: str, holder: str) -> tuple[bool, str]:
     return True, f"read bare by this reader's own `list({holder})`, with its rows bound to {bound}"
 
 
-ARG_LITERAL = re.compile(r"\b(\w+)\(\s*\{([^{}]*)\}")
-ARG_KEY = re.compile(r"(?:^|[{,])\s*([A-Za-z_$][\w$]*)\s*:")
+CALL_NAMED = re.compile(r"\b([A-Za-z_$][\w$]*)\(")
+LITERAL_KEY = re.compile(r"([A-Za-z_$][\w$]*)\s*:(?!=)")
+SHORTHAND_NAME = re.compile(r"[A-Za-z_$][\w$]*")
+
+
+def _literal_argument_keys(body: str) -> tuple[str, ...]:
+    """The keys an object literal writes at its OWN level, and nothing below it.
+
+    Two spellings name a key: `k: v` and the shorthand `{ k }`, which is the same property written
+    without a colon. A `...spread` and a computed `[k]: v` credit nothing, because the name they write
+    is not knowable from this text -- and a scanner that guessed an author for a name it cannot read is
+    the false green this whole family exists to refuse.
+    """
+    keys = []
+    for piece in _ts_top_level(body):
+        piece = piece.strip()
+        if not piece or piece.startswith("..."):
+            continue
+        head = LITERAL_KEY.match(piece)
+        if head:
+            keys.append(head.group(1))
+        elif SHORTHAND_NAME.fullmatch(piece):
+            keys.append(piece)
+    return tuple(keys)
+
+
+@lru_cache(maxsize=None)
+def _argument_literal_sites(source: str) -> tuple[dict, ...]:
+    """Every call in `source` that is handed an object literal, with that literal's own keys.
+
+    #167 read this question off `\\b(\\w+)\\(\\s*\\{([^{}]*)\\}` -- a regex doing bracket work. It stops
+    at the first inner `{`, and it demands `)` right after the `}` it lands on, so a call whose literal
+    nests another literal is not read at all. Measured over the 507 `name(` sites of normalize.ts: 5 are
+    handed an object literal, and the pattern found 4 of them -- it is blind at normalizeSearch's
+    `groups.push({label, items: arr.map(...) => {…}})`. Nothing was mis-answered that day, because the
+    one reader call with a literal argument is un-nested, which is why #168 fixed the scanner and not a
+    wire shape. Pairing the brackets the way the gate's other TS scanners do costs the same walk, sees
+    a literal in any argument position, and cannot lose an author on the shape of the value.
+    """
+    clean = _blank_ts_noise(source)
+    rows = []
+    for found in CALL_NAMED.finditer(clean):
+        if _DECLARATION.search(clean, 0, found.start()):
+            continue  # `function f({a})` is a parameter pattern, not a call handed a payload
+        args, _ = _ts_args(clean, found.end() - 1)
+        for position, part in enumerate(_ts_top_level(args)):
+            part = part.strip()
+            if not (part.startswith("{") and part.endswith("}")):
+                continue
+            body = part[1:-1]
+            rows.append({"name": found.group(1), "line": clean.count("\n", 0, found.start()) + 1,
+                         "position": position, "keys": _literal_argument_keys(body),
+                         "nested": "{" in body})
+    return tuple(rows)
 
 
 @lru_cache(maxsize=None)
@@ -1743,13 +1795,12 @@ def _authored_argument_keys(reader: str) -> dict[str, int]:
     the one literal argument is unquoted, and the failure runs the safe way round: renaming it to
     `"gaps":` makes the name look unanswered and the rule says so, instead of answering for it quietly.
     """
-    source = _blank_ts_noise(NORMALIZE.read_text(encoding="utf-8"))
     out: dict[str, int] = {}
-    for found in ARG_LITERAL.finditer(source):
-        if found.group(1) != reader:
+    for site in _argument_literal_sites(NORMALIZE.read_text(encoding="utf-8")):
+        if site["name"] != reader:
             continue
-        for key in ARG_KEY.findall(found.group(2)):
-            out.setdefault(key, source.count("\n", 0, found.start()) + 1)
+        for key in site["keys"]:
+            out.setdefault(key, site["line"])
     return out
 
 
@@ -3418,3 +3469,158 @@ def test_a_blind_receiver_has_to_answer_for_every_name_read_off_it(monkeypatch):
 
     assert _blind_problems() == [] and _bare_reads()[0]["owner"] == "normalizeMessages", \
         "the plants did not roll back, so the control above measures a mutated plane"
+
+
+# ---------------------- #168: audit the argument-literal scanner the way #162/#164 audited the readers
+
+def _callee_back(text: str, open_paren: int) -> tuple[str, int]:
+    """The name before one `(`, walked backwards over a generic argument list by counting angle depth."""
+    cursor = open_paren - 1
+    while cursor >= 0 and text[cursor].isspace():
+        cursor -= 1
+    if cursor >= 0 and text[cursor] == ">":
+        level = 0
+        while cursor >= 0:
+            level += text[cursor] == ">"
+            level -= text[cursor] == "<"
+            if level == 0:
+                break
+            cursor -= 1
+        cursor -= 1
+        while cursor >= 0 and text[cursor].isspace():
+            cursor -= 1
+    end = cursor + 1
+    while cursor >= 0 and (text[cursor].isalnum() or text[cursor] in "_$"):
+        cursor -= 1
+    return text[cursor + 1:end], cursor
+
+
+def _split_at_depth_zero(text: str) -> list[str]:
+    """Split on the commas that sit at this literal's own depth, brackets counted by hand."""
+    pieces, chunk, depth = [], "", 0
+    for char in text:
+        if char in "([{":
+            depth += 1
+        elif char in ")]}":
+            depth -= 1
+        if char == "," and depth == 0:
+            pieces.append(chunk)
+            chunk = ""
+        else:
+            chunk += char
+    pieces.append(chunk)
+    return pieces
+
+
+def _oracle_keys(body: str) -> tuple[str, ...]:
+    """The same two spellings `_literal_argument_keys` knows, with the splitting done by hand."""
+    keys = []
+    for piece in _split_at_depth_zero(body):
+        piece = piece.strip()
+        if not piece or piece.startswith("..."):
+            continue
+        head = LITERAL_KEY.match(piece)
+        if head:
+            keys.append(head.group(1))
+        elif SHORTHAND_NAME.fullmatch(piece):
+            keys.append(piece)
+    return tuple(keys)
+
+
+def _oracle_literal_sites(source: str) -> list[tuple]:
+    """Which calls are handed an object literal, and what keys that literal writes.
+
+    The audit #162 ran on `_sites` and #164 ran on the Java reader scanner, pointed at the scanner
+    #167 introduced for its own use. It answers the same question by a different mechanism: the shipped
+    one finds a call with `CALL_NAMED` and pairs its brackets with `_ts_args`/`_ts_top_level`, while
+    this walk starts from every `(` character in the file, pairs forward by counting, walks *backwards*
+    for the callee, and splits arguments with its own depth counter. Both start from the same blanked
+    text, so neither has to know about strings; they differ in everything that decides what counts as
+    a call and where its argument ends -- which is exactly the pair of decisions the regex got wrong.
+    """
+    clean = _blank_ts_noise(source)
+    rows = []
+    for open_paren, char in enumerate(clean):
+        if char != "(":
+            continue
+        name, ident_start = _callee_back(clean, open_paren)
+        if not name or _DECLARATION.search(clean, 0, ident_start):
+            continue
+        depth, cursor = 1, open_paren + 1
+        while cursor < len(clean) and depth:
+            depth += clean[cursor] == "("
+            depth -= clean[cursor] == ")"
+            cursor += 1
+        for position, part in enumerate(_split_at_depth_zero(clean[open_paren + 1:cursor - 1])):
+            part = part.strip()
+            if not (part.startswith("{") and part.endswith("}")):
+                continue
+            body = part[1:-1]
+            rows.append((name, position, _oracle_keys(body), "{" in body))
+    return sorted(rows)
+
+
+def test_the_literal_argument_scanner_agrees_with_a_bracket_walk():
+    """#168: `_authored_argument_keys` is a scanner too, and a scanner this family trusts must be censused.
+
+    It answers one question -- does this file itself write name K where it hands reader R an object
+    literal -- and #167 made that answer carry an exemption: a name with an in-file author is allowed
+    past the producer census. So a scanner that reads *less* than the file writes is not a miss, it is
+    a red the reader gets for a name they did author, and a scanner that reads *more* is a name excused
+    with no author at all. Measured on this plane before the fix: 5 of the 507 `name(` sites hand a
+    call an object literal, `[^{}]` reads 4 of them, and the 1 it loses is normalizeSearch's
+    `groups.push({label, items: arr.map(...)})` -- nested, so invisible. That site is not a reader call,
+    which is why the census today is a fix and not a wire defect, and why the arms below pin the nested
+    shape rather than trusting the file to keep it away.
+    """
+    source = NORMALIZE.read_text(encoding="utf-8")
+    projection = sorted((row["name"], row["position"], row["keys"], row["nested"])
+                        for row in _argument_literal_sites(source))
+    walk = _oracle_literal_sites(source)
+    assert projection == walk, \
+        (f"the shipped scanner reads {projection} and the depth walk reads {walk}: one side has lost or "
+         "invented a literal argument, and #167's exemption rests on this list")
+    assert projection == [
+        ("normalizeSkillGaps", 0, ("gaps",), False),
+        ("push", 0, ("key", "label", "score"), False),
+        ("push", 0, ("key", "label", "score"), False),
+        ("push", 0, ("label", "items"), True),
+        ("push", 0, ("question", "score", "depth"), False),
+    ], (f"{projection}: the keys each literal writes, measured -- a site that vanishes here is "
+        "the scanner going blind again, and a new one is an author nobody has answered for yet")
+    assert sum(1 for row in projection if row[3]) == 1, \
+        "the nesting this scanner was blind to is gone from the file, so the pairing path is unexercised"
+    assert [row[1] for row in projection if row[1]] == [], \
+        (f"{[row[1] for row in projection]}: a literal past the first argument is a shape measured 0 "
+         "times here -- if it appears, say which reader call it belongs to instead of letting the "
+         "census absorb it quietly")
+    assert sorted(_authored_argument_keys("normalizeSkillGaps")) == ["gaps"], \
+        "the one reader call with a literal argument is the whole reason this scanner exists"
+    assert [reader for reader in READERS if _authored_argument_keys(reader)] == ["normalizeSkillGaps"], \
+        "a second reader with an in-file author is a second exemption list, and #167's rule only " \
+        "answers for the names it can see"
+
+    # The shapes the file does not contain today, so the pairing is exercised by construction. Each one
+    # is what `[^{}]` lost: the first hides the author, the second hides a whole call.
+    nested = _argument_literal_sites('f({ gaps: { items: list(raw, "missing") } }, rec);')
+    assert [(row["position"], row["keys"], row["nested"]) for row in nested] == [(0, ("gaps",), True)], \
+        (f"{nested}: the outer key survives its nested value, and `items` belongs to the inner literal, "
+         "not to this call")
+    later = _argument_literal_sites('f(rec, { gaps: [] });')
+    assert [(row["position"], row["keys"]) for row in later] == [(1, ("gaps",))], \
+        f"{later}: a literal in a later argument is still this file authoring `gaps`"
+    spellings = _argument_literal_sites('f({ ...base, [k]: 1, gaps, count: 2 });')
+    assert spellings[0]["keys"] == ("gaps", "count"), \
+        (f"{spellings[0]['keys']}: shorthand names a key the same way `k: v` does, while a spread and a "
+         "computed key write a name this text cannot read -- crediting one would excuse a name nobody "
+         "authored")
+
+    # The one place the walk is wider than the finder, stated instead of discovered later: a generic
+    # callee is not a `name(`, so the scanner never looks at its arguments. The equality assertion
+    # above is what keeps that limit from mattering on this plane.
+    generic = 'normalizeSkillGaps<Record<string, unknown>>({ gaps: 1 });'
+    assert _argument_literal_sites(generic) == (), \
+        "the finder's limit is a claim now: if CALL_NAMED ever learns angles, this has to be re-measured"
+    assert [row[0] for row in _oracle_literal_sites(generic)] == ["normalizeSkillGaps"], \
+        "the walk pairs angles, so a real generic call with a literal would show up as a disagreement " \
+        "rather than as a missing author"
