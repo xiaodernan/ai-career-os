@@ -68,9 +68,9 @@ export default function ResumesPage() {
               "Drop a file above to get started. The ingestion pipeline extracts experience, projects and skills, then grades resume quality.",
           }}
           notLive={{
-            title: "Resume storage isn't connected yet",
+            title: "This API build has no resume list",
             description:
-              "The /resumes endpoint isn't served by the backend yet — uploads are wired and will work the moment it is. No placeholder data is shown.",
+              "GET /resumes answered 404, so this frontend and the backend it is talking to are different versions. Uploads are wired and appear as soon as they match — nothing is invented to fill the gap.",
           }}
           boxed={false}
         >

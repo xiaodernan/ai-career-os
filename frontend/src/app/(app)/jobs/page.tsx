@@ -226,7 +226,12 @@ export default function JobsPage() {
                     }
             }
             notLive={{
-              title: tab === "saved" ? "Saved jobs aren't connected yet" : "Job search isn't connected yet",
+              title:
+                tab === "saved"
+                  ? "This API build has no saved-jobs list"
+                  : "This API build has no job search",
+              description:
+                "The route answered 404, so this frontend and the backend it is talking to are different versions. Nothing is shown in place of the real rows.",
             }}
           >
             {(page) => (

@@ -83,9 +83,9 @@ export default function InterviewsPage() {
           ),
         }}
         notLive={{
-          title: "The interview agent isn't connected yet",
+          title: "This API build has no interview sessions",
           description:
-            "/interview/sessions isn't served by the backend yet — the runner is wired and activates automatically when it is.",
+            "GET /interview/sessions answered 404, so this frontend and the backend it is talking to are different versions. The runner is wired and activates as soon as they match.",
         }}
         boxed={false}
       >

@@ -409,8 +409,8 @@ function ChatPanel({
             isEndpointMissing(messages.error) ? (
               <EmptyState
                 icon={<MessageSquare aria-hidden />}
-                title="Chat history isn't connected yet"
-                description="The /conversations endpoint isn't live — the API will populate this transcript as soon as it is. Nothing here is pre-filled."
+                title="This API build has no conversation history"
+                description="GET /conversations answered 404, so this frontend and the backend it is talking to are different versions. Nothing here is pre-filled."
                 action={
                   <Button variant="outline" size="sm" onClick={() => void messages.refetch()}>
                     Check again
