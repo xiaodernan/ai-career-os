@@ -1211,3 +1211,68 @@ def test_a_message_frame_reader_names_only_keys_the_orchestrator_emits():
         ["onStatus", "onToken", "onTrace"], (
             "the three signals the unreachable branch forwards already have named-event handlers, which "
             "is what makes the branch dead code rather than a feature")
+
+
+def _published_frame_names() -> set[str]:
+    """Every SSE event name any service can put on the wire, read off the publishing call sites.
+
+    Three spellings cover them all on the Python side -- `publish(task_id, "<name>", …)`,
+    `_emit(task_id, "<name>", …)` (whose one body forwards to publish with the name as a variable, so the
+    literal call sites ARE the inventory), and `{"event": "<name>", …}` yields. Java only ever forwards
+    the name it received, which the second half of the rule checks by requiring zero hard-coded names.
+    """
+    names: set[str] = set()
+    for path in _app_root().rglob("*.py"):
+        text = path.read_text(encoding="utf-8")
+        names.update(re.findall(r'publish\(\s*task_id\s*,\s*"(\w+)"', text))
+        names.update(re.findall(r'_emit\(\s*task_id\s*,\s*"(\w+)"', text))
+        names.update(re.findall(r'\{\s*"event":\s*"(\w+)"', text))
+    return names
+
+
+def _java_frame_names() -> set[str]:
+    """Frame names the backend invents rather than relays -- measured zero, and that is the claim."""
+    names: set[str] = set()
+    for path in JAVA_ROOT.rglob("*.java"):
+        names.update(re.findall(r'\.name\(\s*"(\w+)"', path.read_text(encoding="utf-8")))
+    return names
+
+
+def test_the_client_dispatches_two_frame_kinds_no_service_can_send():
+    """#175: the frame inventory across three services, and the ledger of two cases that cannot fire.
+
+    `use-sse.ts` routes nine event names; the services publish seven of them -- status, progress, done,
+    error, token, message, ping. `artifact` and `trace` appear in no publishing call site anywhere: the
+    string `"artifact"` does not occur in `ai-service/app` at all, `trace` frames are never published
+    because `observability.trace()` writes to the database instead of the task bus, and the backend only
+    relays (`SseRelayService.java:109`, `CopilotStreamService.java:163` forward the name they read). Yet
+    `components/ai/task-stream.tsx:98` turns trace frames into timeline rows and :125 flips a reporting
+    state on an artifact frame, so the affordance is wired to a signal nothing sends -- and
+    `use-sse.test.ts:75-76` feeds both by hand, which is how it has stayed green.
+
+    Pinned as a ledger rather than fixed: the deletion or the publication both change what a user sees,
+    and the live check that would settle it is the owner-blocked R1. A row here shrinking means a producer
+    finally exists and the component is no longer decorative; a row appearing means the client grew another
+    unreachable case. Either way this test has to be re-read, not re-numericled.
+    """
+    published = _published_frame_names()
+    assert published == {"status", "progress", "done", "error", "token", "message", "ping"}, \
+        (f"{sorted(published)} are the frames any service can send, read off the publish/_emit/yield "
+         "call sites -- the inventory the client's cases are measured against")
+    assert _java_frame_names() == set(), \
+        ("the backend now hard-codes a frame name, so the inventory above is no longer the whole story "
+         "and a name could reach the browser without appearing in it")
+
+    use_sse = (ROOT_FRONTEND / "lib" / "sse" / "use-sse.ts").read_text(encoding="utf-8")
+    cases = set(re.findall(r'\n\s+case "(\w+)":', use_sse))
+    assert cases - published == {"artifact", "trace"}, \
+        (f"{sorted(cases - published)} are dispatched by the client but published by nobody: each one is "
+         "a UI affordance wired to a signal that cannot arrive. Add a producer and this ledger shrinks; "
+         "add another client-only case and it grows -- do not fix the expected set to match new drift")
+    assert published - cases == set(), \
+        (f"{sorted(published - cases)} are published but dropped by the client's switch, which is a "
+         "silent loss rather than a ledger entry")
+    consumers = (ROOT_FRONTEND / "components" / "ai" / "task-stream.tsx").read_text(encoding="utf-8")
+    assert "onTrace:" in consumers and "onArtifact:" in consumers, \
+        ("the ledger above is only about real readers: task-stream subscribes to both handlers, so this "
+         "is a visible affordance and not dead weight in the hook alone")
