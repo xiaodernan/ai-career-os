@@ -1,5 +1,6 @@
 "use client";
 
+import { missingEndpointMessage } from "@/lib/api/missing-endpoint";
 import { useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -51,7 +52,7 @@ import type {
 
 function describe(err: unknown, fallback: string): string {
   if (err instanceof ApiError) {
-    if (err.isNotFound) return "This endpoint isn't live on the backend yet.";
+    if (err.isNotFound) return missingEndpointMessage();
     return err.message || fallback;
   }
   if (err instanceof TypeError) return "Cannot reach the API — is the backend running?";

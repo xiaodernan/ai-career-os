@@ -15,6 +15,7 @@ import { localStages } from "@/components/ai/task-stream";
 import { useCoverLetter } from "@/lib/hooks/actions";
 import { normalizeEvidence } from "@/lib/api/normalize";
 import { ApiError } from "@/lib/api/client";
+import { missingEndpointMessage } from "@/lib/api/missing-endpoint";
 import type { Evidence } from "@/lib/api/types";
 
 const STAGES = ["Reading the JD", "Pulling company context", "Drafting", "Checking claims"];
@@ -107,7 +108,7 @@ export function CoverLetterPanel({ jobId, resumeVersionId }: { jobId: string; re
         {error != null && (
           <div role="alert" className="rounded-lg border border-destructive/25 bg-destructive/10 p-3 text-sm text-destructive">
             {error instanceof ApiError && error.isNotFound
-              ? "The cover-letter endpoint isn't live yet."
+              ? missingEndpointMessage("POST /jobs/{id}/cover-letter")
               : error instanceof Error
                 ? error.message
                 : "Generation failed."}

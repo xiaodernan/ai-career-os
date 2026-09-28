@@ -21,6 +21,7 @@ import { useAnalyzeJd, useResumeSuggestions, type JdAnalysis } from "@/lib/hooks
 import { missingSkillGaps } from "@/lib/api/normalize";
 import type { Suggestion } from "@/lib/api/types";
 import { ApiError } from "@/lib/api/client";
+import { missingEndpointMessage } from "@/lib/api/missing-endpoint";
 
 /**
  * JD intelligence (§9): paste raw text → required / preferred skills,
@@ -126,7 +127,7 @@ export function AnalyzeJdDialog({ onUseText }: { onUseText?: (text: string) => v
         {error != null && (
           <div role="alert" className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
             {error instanceof ApiError && error.isNotFound
-              ? "The JD endpoint isn't live on the backend yet."
+              ? missingEndpointMessage("POST /jds")
               : error instanceof Error
                 ? error.message
                 : "Analysis failed."}

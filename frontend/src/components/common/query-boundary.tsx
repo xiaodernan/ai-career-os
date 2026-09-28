@@ -10,6 +10,7 @@ import { EmptyState, type EmptyStateProps } from "@/components/common/empty-stat
 import { ErrorState } from "@/components/common/error-state";
 import { LoadingListSkeleton } from "@/components/common/loading-skeletons";
 import { ApiError } from "@/lib/api/client";
+import { missingEndpointMessage } from "@/lib/api/missing-endpoint";
 
 /**
  * QueryBoundary — the single async contract used by every surface:
@@ -79,10 +80,7 @@ export function QueryBoundary<T>({
             {...empty}
             icon={emptyIcon}
             {...notLive}
-            description={
-              notLive?.description ??
-              "This surface isn't wired to the backend yet — it renders automatically once the API serves it. No placeholder data is shown."
-            }
+            description={notLive?.description ?? missingEndpointMessage()}
             action={
               <Button variant="outline" size="sm" onClick={retry}>
                 <RotateCcw aria-hidden />
