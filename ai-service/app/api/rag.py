@@ -5,6 +5,7 @@ from app.core.ai import ask
 from app.core.deps import Ctx, require_internal
 from app.db import observability
 from app.providers.base import LLMMessage, LLMRequest
+from app.providers.registry import embed_text
 from app.rag.pipeline import retrieve
 from app.rag import store
 
@@ -30,6 +31,22 @@ class RetrieveReq(BaseModel):
 
 class AnswerReq(RetrieveReq):
     run_id: str | None = None
+
+
+class EmbedReq(BaseModel):
+    text: str = Field(min_length=1, max_length=4000)
+
+
+@router.post("/embeddings")
+async def rag_embeddings(req: EmbedReq, ctx: Ctx = Depends(require_internal)):
+    """Embed one text so a caller can rank by vector distance in its own SQL.
+
+    The backend's `GET /jobs` search fuses this with its tsvector pass. An empty list
+    means no provider could answer (unconfigured, erroring, or returning nothing) --
+    semantic recall is an enhancement, so the caller falls back to keyword-only rather
+    than failing a search the user typed into a text box.
+    """
+    return {"embedding": await embed_text(req.text) or []}
 
 
 @router.post("/retrieve")

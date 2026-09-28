@@ -51,7 +51,7 @@ public class JobController {
                                      @RequestParam(name = "minSalary", required = false) Integer minSalary,
                                      @RequestParam(name = "maxSalary", required = false) Integer maxSalary,
                                      @RequestParam(required = false) String status,
-                                     @RequestParam(defaultValue = "posted") String sort,
+                                     @RequestParam(defaultValue = "") String sort,
                                      @RequestParam(defaultValue = "0") int page,
                                      @RequestParam(defaultValue = "20") int size) {
         return jobs.list(user.id(), q, skills, location, remote, company, minSalary, maxSalary,

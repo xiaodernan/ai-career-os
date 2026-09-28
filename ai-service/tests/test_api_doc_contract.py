@@ -129,14 +129,14 @@ def test_both_sides_of_the_comparison_are_actually_read():
 # caller means retiring a line here rather than letting the table quietly advertise surfaces the
 # product never reaches. `/internal/stream/{}` and `/internal/agents/chat` are *not* in this list:
 # `SseRelayService` relays the first, and the copilot's streaming route starts the second.
+# `/internal/rag/embeddings` left this list when `HttpAiServiceClient.embedQuery` began feeding the
+# backend's hybrid /jobs ranking; the agent still embeds in-process via registry.embed_text.
 UNREACHED_BY_THE_APP = {
     "/internal/agents/runs": "the Activity panel reads agent_runs over the shared database instead",
     "/internal/agents/runs/{}": "same, for one run's detail",
     "/internal/rag/retrieve": "retrieval happens in-process (agent tools -> pipeline.retrieve)",
     "/internal/rag/answer": "same, for the grounded-answer variant",
     "/internal/rag/chunks": "chunk inspection, kept for operators",
-    "/internal/rag/embeddings": "exposed for the backend's hybrid /jobs ranking; that call is not "
-                                 "wired yet, and the agent embeds in-process via registry.embed_text",
     "/internal/tasks/{}": "task state; the app follows /internal/stream/{taskId} instead",
     "/internal/tasks/{}/stream": "a second stream spelling, unused by the relay",
 }
@@ -155,7 +155,7 @@ def test_what_the_doc_lists_but_the_app_never_calls_stays_explained():
 
 def test_the_unreached_list_is_not_just_a_long_list_of_nothings():
     """Positive control: the comparison above also passes when both sides are empty."""
-    assert len(UNREACHED_BY_THE_APP) == 8
+    assert len(UNREACHED_BY_THE_APP) == 7
     assert all(reason.strip() for reason in UNREACHED_BY_THE_APP.values())
     assert "/internal/stream/{}" not in UNREACHED_BY_THE_APP, \
         "the relay reaches that one; treating it as unreached would hide a live dependency"

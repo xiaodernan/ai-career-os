@@ -41,4 +41,11 @@ public interface AiServiceClient {
      * {@code {task_id, run_id}}, and the turn's frames are read off that task's stream. */
     Map<String, Object> copilotChatStart(String message, List<Map<String, Object>> history,
                                          UUID conversationId, Map<String, Object> context, UUID userId);
+
+    /**
+     * Embeds one search query so a caller can rank by vector distance in its own SQL.
+     * Answers {@code {embedding: [...]}}; an empty list means no provider could answer and the
+     * caller must keep its keyword-only ranking rather than fail the search.
+     */
+    Map<String, Object> embedQuery(String text, UUID userId);
 }

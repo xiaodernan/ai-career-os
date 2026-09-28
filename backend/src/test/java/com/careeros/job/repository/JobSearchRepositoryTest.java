@@ -76,12 +76,19 @@ class JobSearchRepositoryTest {
 
     private Filters fullFilters(String sort) {
         return new Filters(userId, "java", List.of("spring", "kafka"), "Remote", "remote",
-                "Acme", 100, 200, "open", sort, 2, 25);
+                "Acme", 100, 200, "open", sort, 2, 25, null);
     }
 
     /** Sparse filters, so the only bound parameters besides userId are the paging ones. */
     private Filters paged(int page, int size) {
-        return new Filters(userId, null, null, null, null, null, null, null, null, null, page, size);
+        return new Filters(userId, null, null, null, null, null, null, null, null, null,
+                page, size, null);
+    }
+
+    /** A relevance search that was handed a vector — the shape that switches on the hybrid SQL. */
+    private Filters hybrid(String sort) {
+        return new Filters(userId, "java", null, null, null, null, null, null, null,
+                sort, 0, 20, List.of(0.25, -0.5));
     }
 
     @Test
@@ -99,7 +106,7 @@ class JobSearchRepositoryTest {
     @Test
     void sparseFiltersBindNoUnusedParameters() {
         Filters f = new Filters(userId, null, null, null, null, null, null, null, null,
-                null, 0, 10);
+                null, 0, 10, null);
         repo.search(f);
         String sql = capturedSql();
         assertThat(placeholders(sql)).isEqualTo(bound);
@@ -206,5 +213,111 @@ class JobSearchRepositoryTest {
             n++;
         }
         return n;
+    }
+
+    // ------------------------------------------ hybrid ranking (relevance + query vector)
+
+    @Test
+    void hybridSearchRunsBothRankingPassesOverTheSameFilteredRows() {
+        repo.search(hybrid("relevance"));
+        String sql = capturedSql();
+        assertThat(sql).contains("WITH filtered AS (")
+                .contains(", keyword_rank AS (")
+                .contains(", semantic_rank AS (")
+                .contains(", scored AS (")
+                .contains("WHERE tsv @@ plainto_tsquery('simple', :q)")
+                .contains("vec <=> CAST(:vec AS vector)")
+                .contains("ORDER BY rrf DESC");
+        assertThat(placeholders(sql)).isEqualTo(bound);
+        assertThat(bound).containsExactlyInAnyOrder("userId", "q", "qLike", "vec", "limit", "offset");
+    }
+
+    @Test
+    void hybridCountsTheFusedSetItPagesOverAndNoWindow() {
+        repo.count(hybrid("relevance"));
+        String sql = capturedSql();
+        assertThat(sql).contains("SELECT COUNT(*) FROM (SELECT id FROM scored) candidates");
+        assertThat(sql).doesNotContain(":limit").doesNotContain(":offset");
+        assertThat(placeholders(sql)).isEqualTo(bound);
+        assertThat(bound).doesNotContain("limit", "offset");
+    }
+
+    @Test
+    void anExplicitSortNeverRunsTheVectorPass() {
+        // A caller who asks for an ordering is not asking for retrieval: sort=posted with a
+        // vector in hand must stay on the plain statement, or its ORDER BY semantics would change.
+        repo.search(hybrid("posted"));
+        String sql = capturedSql();
+        assertThat(sql).doesNotContain("<=>").doesNotContain("WITH filtered AS");
+        assertThat(placeholders(sql)).isEqualTo(bound);
+        assertThat(bound).doesNotContain("vec");
+    }
+
+    @Test
+    void relevanceWithoutAVectorIsStillAKeywordRelevanceSearch() {
+        repo.search(new Filters(userId, "java", null, null, null, null, null, null, null,
+                "relevance", 0, 20, null));
+        String sql = capturedSql();
+        assertThat(sql).contains("ORDER BY ts_rank(j.tsv, plainto_tsquery('simple', :q)) DESC");
+        assertThat(sql).doesNotContain("WITH filtered AS").doesNotContain(":vec");
+        assertThat(placeholders(sql)).isEqualTo(bound);
+    }
+
+    @Test
+    void relevanceOrderingWithoutAQueryRanksByRecencyAndBindsNoQ() {
+        // :q appears in the relevance fragment only; blank q must not leave it unbound.
+        repo.search(new Filters(userId, " ", null, null, null, null, null, null, null,
+                "relevance", 0, 20, List.of(0.25)));
+        String sql = capturedSql();
+        assertThat(sql).contains("ORDER BY j.posted_at DESC");
+        assertThat(sql).doesNotContain(":q");
+        assertThat(placeholders(sql)).isEqualTo(bound);
+        assertThat(bound).containsExactlyInAnyOrder("userId", "limit", "offset");
+    }
+
+    @Test
+    void theQueryVectorIsBoundAsTextAndNeverSplicedIntoTheStatement() {
+        repo.search(hybrid("relevance"));
+        String sql = capturedSql();
+        assertThat(sql).contains("CAST(:vec AS vector)");
+        assertThat(sql).doesNotContain("0.25").doesNotContain("[-0.5");
+        assertThat((String) params.get("vec")).isEqualTo("[0.25,-0.5]");
+    }
+
+    @Test
+    void theSemanticPassIsCappedFlooredAndFusedWithTheToolConstants() {
+        repo.search(hybrid("relevance"));
+        String sql = capturedSql();
+        assertThat(sql).contains("<= " + Double.toString(JobSearchRepository.SEMANTIC_DISTANCE_FLOOR))
+                .contains("\n LIMIT " + JobSearchRepository.SEMANTIC_CANDIDATES)
+                .contains("1.0 / (" + JobSearchRepository.RRF_K + " + k.rank)")
+                .contains("1.0 / (" + JobSearchRepository.RRF_K + " + s.rank)");
+    }
+
+    @Test
+    void theSemanticPassGuardsAgainstDimensionMismatchWithACaseExpression() {
+        // A provider switch or a row written by a different model must not 500 the search;
+        // the CASE guard makes the distance operator evaluate only on compatible rows,
+        // so incompatible rows are simply skipped (the keyword pass still finds them).
+        repo.search(hybrid("relevance"));
+        String sql = capturedSql();
+        assertThat(sql).contains("CASE")
+                .contains("vector_dims(vec) = vector_dims(CAST(:vec AS vector))")
+                .contains("THEN vec <=> CAST(:vec AS vector)")
+                .contains("END <=");
+    }
+
+    @Test
+    void hybridFacetsFilterTheSourceRowsWhileTheQueryPredicateStaysInItsPass() {
+        Filters f = new Filters(userId, "java", List.of("spring"), "Remote", "remote", "Acme",
+                100, 200, "open", "relevance", 0, 20, List.of(0.25, -0.5));
+        repo.search(f);
+        String sql = capturedSql();
+        String source = sql.substring(0, sql.indexOf(", keyword_rank"));
+        assertThat(source).doesNotContain(":q")
+                .contains(":userId").contains(":locationLike").contains(":remote")
+                .contains(":companyLike").contains(":minSalary").contains(":maxSalary")
+                .contains(":status").contains(":skills");
+        assertThat(placeholders(sql)).isEqualTo(bound);
     }
 }

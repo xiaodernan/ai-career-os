@@ -31,6 +31,7 @@ import com.careeros.job.repository.JobSearchRepository;
 import com.careeros.job.repository.SavedJobRepository;
 import com.careeros.resume.entity.Resume;
 import com.careeros.resume.service.ResumeService;
+import com.careeros.search.service.QueryEmbeddingService;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -53,10 +54,12 @@ public class JobService {
     private final JobSearchRepository search;
     private final ResumeService resumeService;
     private final AiServiceClient ai;
+    private final QueryEmbeddingService embeddingService;
 
     public JobService(JobRepository jobs, CompanyRepository companies, JobJdRepository jds,
                       SavedJobRepository savedJobs, JobMatchRepository matches,
-                      JobSearchRepository search, ResumeService resumeService, AiServiceClient ai) {
+                      JobSearchRepository search, ResumeService resumeService, AiServiceClient ai,
+                      QueryEmbeddingService embeddingService) {
         this.jobs = jobs;
         this.companies = companies;
         this.jds = jds;
@@ -65,6 +68,7 @@ public class JobService {
         this.search = search;
         this.resumeService = resumeService;
         this.ai = ai;
+        this.embeddingService = embeddingService;
     }
 
     @Transactional(readOnly = true)
@@ -75,10 +79,32 @@ public class JobService {
         // One clamped window, used for the query *and* for the page the client is told it
         // got: ?page=-1 is served as page 0, so the pager must not be handed -1 back.
         Paging.Window window = Paging.of(page, size);
+        // No sort on the wire means "the best order for what I asked": relevance for a query,
+        // recency for browsing. An explicit sort is always the caller's choice and is honoured
+        // as written.
+        boolean hasQuery = q != null && !q.isBlank();
+        String sortKey = sort == null || sort.isBlank() ? (hasQuery ? "relevance" : "posted") : sort;
+        List<Double> embedding = "relevance".equals(sortKey) ? queryEmbedding(q, userId) : null;
         var filters = new JobSearchRepository.Filters(userId, q, skills, location, remote, company,
-                minSalary, maxSalary, status, sort, window.page(), window.size());
+                minSalary, maxSalary, status, sortKey, window.page(), window.size(), embedding);
         List<JobListItem> items = search.search(filters);
         return PageDTO.of(items, search.count(filters), window.page(), window.size());
+    }
+
+    /**
+     * The vector the hybrid ranking needs, or null when the search has to answer keyword-only.
+     * Null is the normal answer for a browse (no query) and the safe answer for an outage: the
+     * repository then ranks by tsvector alone, which is what every search did before this existed.
+     * Results are cached by query text (12h TTL, 10k max) in QueryEmbeddingService so repeated
+     * searches don't re-embed. Empty/failed results are not cached so transient failures are retried.
+     */
+    private List<Double> queryEmbedding(String q, UUID userId) {
+        return embeddingService.embed(q, userId);
+    }
+
+    /** Clears the query embedding cache. Public for test access. */
+    public void clearEmbeddingCache() {
+        embeddingService.clearCache();
     }
 
     @Transactional(readOnly = true)

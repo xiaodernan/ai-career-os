@@ -60,7 +60,7 @@ Each row is a shipped capability, the route that exposes it, and the API behind 
 | Accounts, sessions, token rotation | `/login`, `/register` | `/auth/*` |
 | Resume upload, parse, versions, quality score | `/resumes`, `/resumes/[id]` | `/resumes/*`, `/resume-versions` |
 | Knowledge base (resume / projects / notes / JD / company) | `/knowledge` | `/knowledge/*` |
-| Job search with facets (skills, location, salary, remote) | `/jobs` | `/jobs` |
+| Job search with facets (skills, location, salary, remote) + hybrid relevance | `/jobs` | `/jobs` |
 | Job detail, save/bookmark, match, tailor, cover letter | `/jobs/[id]` | `/jobs/{id}/*` |
 | JD analysis + resume improvement suggestions | `/jobs` (dialog) | `/jds`, `/jds/suggestions` |
 | Company research | `/companies` | `/companies` |
@@ -123,7 +123,15 @@ Verified against the live stack, not just in unit tests:
   is built, so `search_jobs` now runs keyword and vector retrieval and fuses them
   by reciprocal rank. Keyword-only behaviour is preserved whenever embeddings are
   unavailable, which is what a provider outage or an un-backfilled database looks
-  like.
+  like. The service runs that same backfill as a background sweep, so a role
+  created mid-session becomes vector-searchable within a minute without re-running
+  the script.
+- **The board's own search is hybrid as well.** `GET /api/v1/jobs?q=…` ranks by
+  keyword/tsvector and pgvector cosine distance over one filtered row set, fused
+  the same way (the query vector comes from `POST /internal/rag/embeddings`), so a
+  paraphrase with no shared keyword is recallable. An explicit `sort=` still only
+  orders, no vector is fetched, and an outage or a noise query degrades to
+  keyword-only or zero rows.
 
 Remaining gaps, stated plainly rather than hidden:
 
@@ -131,8 +139,6 @@ Remaining gaps, stated plainly rather than hidden:
   default (`EMBEDDING_PROVIDER=hash`) exercises the whole path deterministically
   but carries no meaning, so retrieval quality must be judged against a real
   provider.
-- The backend's own `/jobs` search is still keyword/facet-based; only the agent's
-  `search_jobs` tool is hybrid today.
 
 A pass over the PRD §30 checklist is recorded in `docs/SECURITY.md`. It closed one
 real gap — the AI rate limit did not cover any of the blocking AI endpoints,

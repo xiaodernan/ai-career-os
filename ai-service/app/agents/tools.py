@@ -9,6 +9,7 @@ from typing import Any, Callable, Awaitable
 from app.core import db
 from app.db import domain
 from app.providers.base import ToolSpec
+from app.providers.registry import embed_text
 
 
 class Tool:
@@ -99,16 +100,11 @@ async def _embed_query(query: str) -> list[float] | None:
 
     Semantic search is an enhancement: if no embedding provider is configured, the
     provider errors, or `jobs.embedding` was never backfilled, the caller must still
-    answer with keyword results rather than fail the tool call.
+    answer with keyword results rather than fail the tool call. The rule itself lives
+    in `app.providers.registry.embed_text`, which is what the backend's `/internal/rag/embeddings`
+    route hands to the `/jobs` search -- one degradation policy for both callers.
     """
-    try:
-        from app.core.config import get_settings
-        from app.providers.registry import get_embeddings
-
-        vectors = await get_embeddings(get_settings()).embed([query])
-    except Exception:  # noqa: BLE001 — degrade to keyword-only, never break search
-        return None
-    return vectors[0] if vectors else None
+    return await embed_text(query)
 
 
 async def _semantic_jobs(query: str, fragments: list[tuple[str, Any]], limit: int) -> list:

@@ -1,10 +1,12 @@
-from contextlib import asynccontextmanager
+import asyncio
+from contextlib import asynccontextmanager, suppress
 
 from fastapi import FastAPI
 
 from app.core.config import get_settings
 from app.core.db import close_db, init_db
 from app.core.logging import setup_logging
+from app.ops.embed_jobs import embed_loop
 
 
 @asynccontextmanager
@@ -15,8 +17,17 @@ async def lifespan(app: FastAPI):
         raise RuntimeError("mock LLM provider forbidden in prod")
     pool = await init_db()
     app.state.pool = pool
-    yield
-    await close_db()
+    # Fresh vectors without an ops step: the loop sweeps jobs.embedding IS NULL, so a
+    # role created mid-session becomes vector-searchable within a minute (and the first
+    # pass doubles as the startup backfill). Failures inside the loop are its own.
+    embed_task = asyncio.create_task(embed_loop())
+    try:
+        yield
+    finally:
+        embed_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await embed_task
+        await close_db()
 
 
 app = FastAPI(title="AI Career OS — AI Service", version="0.1.0", lifespan=lifespan)

@@ -71,3 +71,17 @@ def get_embeddings(settings: Settings | None = None) -> EmbeddingProvider:
             OpenAICompatProvider(_http_client(), base, key, s.embedding_model),
             s.embedding_model, s.embedding_dim, "openai")
     raise ConfigError(f"unknown EMBEDDING_PROVIDER {s.embedding_provider}")
+
+
+async def embed_text(text: str) -> list[float] | None:
+    """Embed one text with the configured provider, or None when that is impossible.
+
+    Semantic recall is an enhancement, never a precondition: no provider configured,
+    a provider that errors, or one that answers with nothing must leave the caller
+    with keyword-only results instead of an exception.
+    """
+    try:
+        vectors = await get_embeddings(get_settings()).embed([text])
+    except Exception:  # noqa: BLE001 -- degrade to keyword-only, never break the caller
+        return None
+    return vectors[0] if vectors else None

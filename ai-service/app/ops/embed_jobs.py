@@ -25,14 +25,22 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import logging
 from collections.abc import Mapping
 from typing import Any
 
 from app.core import db
 from app.core.config import get_settings
 
+log = logging.getLogger("ops.embed_jobs")
+
 # Kept in one place so the CLI, the report and the tests agree on the batch size.
 DEFAULT_BATCH = 64
+
+# How often the service sweeps up jobs that landed without a vector. Polling rather
+# than a trigger because every writer -- the backend's create/import routes and the
+# agent's own inserts alike -- writes this one table, and only the table sees them all.
+EMBED_LOOP_INTERVAL = 60.0
 
 
 def _clean(value: Any) -> str:
@@ -136,6 +144,34 @@ async def embed_jobs(limit: int | None = None, force: bool = False, batch: int =
 
     report["candidates"] = len(usable)
     return report
+
+
+async def embed_loop(interval: float = EMBED_LOOP_INTERVAL,
+                     stop: asyncio.Event | None = None) -> None:
+    """Keep `jobs.embedding` fresh while the service runs.
+
+    A role created after the backfill used to stay invisible to vector recall until
+    someone re-ran the CLI, which is exactly the state this whole module was written
+    to end: so the first pass runs immediately (it *is* the startup backfill) and
+    repeats every `interval` seconds, touching only rows whose embedding is still
+    NULL. A pass that fails -- provider unset, provider down, a column typed by a
+    different provider -- is logged and retried on the next tick: a stuck embedder
+    costs recall, it must never take the service down. `stop` lets a test end the
+    loop cleanly; in the app it runs until the task is cancelled at shutdown.
+    """
+    while True:
+        try:
+            await embed_jobs()
+        except Exception:
+            log.warning("job embedding pass failed; retrying in %ss", interval, exc_info=True)
+        if stop is None:
+            await asyncio.sleep(interval)
+            continue
+        try:
+            await asyncio.wait_for(stop.wait(), timeout=interval)
+        except asyncio.TimeoutError:
+            continue
+        return
 
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:

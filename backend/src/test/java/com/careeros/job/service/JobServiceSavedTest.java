@@ -20,6 +20,7 @@ import com.careeros.job.repository.JobRepository;
 import com.careeros.job.repository.JobSearchRepository;
 import com.careeros.job.repository.SavedJobRepository;
 import com.careeros.resume.service.ResumeService;
+import com.careeros.search.service.QueryEmbeddingService;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -50,7 +51,8 @@ class JobServiceSavedTest {
         savedJobs = mock(SavedJobRepository.class);
         service = new JobService(jobs, companies, mock(JobJdRepository.class), savedJobs,
                 mock(JobMatchRepository.class), mock(JobSearchRepository.class),
-                mock(ResumeService.class), mock(AiServiceClient.class));
+                mock(ResumeService.class), mock(AiServiceClient.class),
+                mock(QueryEmbeddingService.class));
     }
 
     private static Job job(UUID id, String title, UUID companyId) {

@@ -64,7 +64,7 @@ class SearchRepositoryTest {
 
     @Test
     void everyGroupBindsExactlyTheParametersItsSqlReferences() {
-        repo.jobs(userId, "java", 5);
+        repo.jobs(userId, "java", 5, null);
         assertThat(placeholders(lastSql)).isEqualTo(bound);
 
         bound.clear();
@@ -95,7 +95,7 @@ class SearchRepositoryTest {
     @Test
     void jobsQueryTermIsBoundNotInterpolated() {
         String evil = "x'; DROP TABLE users; --";
-        repo.jobs(userId, evil, 5);
+        repo.jobs(userId, evil, 5, null);
         // the term must reach the DB only as a bound :q parameter
         assertThat(lastSql).contains(":q").doesNotContain("DROP TABLE").doesNotContain(evil);
         assertThat(bound).contains("q");
@@ -109,8 +109,34 @@ class SearchRepositoryTest {
         assertThat(boundOf(r -> r.conversations(userId, "q", 1))).contains("userId");
         assertThat(boundOf(r -> r.companies("q", 1))).doesNotContain("userId");
         // jobs are catalog rows: :userId is not in the statement even though the caller has one
-        assertThat(boundOf(r -> r.jobs(userId, "q", 1))).doesNotContain("userId");
+        assertThat(boundOf(r -> r.jobs(userId, "q", 1, null))).doesNotContain("userId");
     }
+
+    @Test
+    void theHybridJobsStatementProjectsWhatItSortsByAndBindsOnlyWhatItReferences() {
+        // Regression: the fused CTE projected every column the mapper reads but not posted_at,
+        // while the outer ORDER BY sorted by it. Text assertions cannot see that, so the statement
+        // compiled, passed review and then failed on the first real database with
+        // "column posted_at does not exist" -- i.e. every global search answered 500.
+        repo.jobs(userId, "java", 5, List.of(0.25, -0.5));
+        assertThat(lastSql).contains("WITH filtered AS (").contains("CAST(:vec AS vector)");
+        assertThat(lastSql).doesNotContain("0.25").doesNotContain("[-0.5");
+        assertThat(placeholders(lastSql)).isEqualTo(bound);
+        assertThat(bound).containsExactlyInAnyOrder("q", "qLike", "limit", "vec");
+        String scored = lastSql.substring(lastSql.indexOf("scored AS ("), lastSql.indexOf("SELECT id, title"));
+        assertThat(scored)
+                .as("the outer ORDER BY sorts by posted_at, so the CTE must project it")
+                .contains("f.posted_at");
+    }
+
+    @Test
+    void withoutAVectorTheJobsStatementStaysKeywordOnlyAndBindsNoVector() {
+        repo.jobs(userId, "java", 5, List.of());
+        assertThat(lastSql).doesNotContain("CAST(:vec AS vector)").doesNotContain("scored AS (");
+        assertThat(placeholders(lastSql)).isEqualTo(bound);
+        assertThat(bound).doesNotContain("vec");
+    }
+
 
     private Set<String> boundOf(java.util.function.Consumer<SearchRepository> call) {
         lastSql = "";
@@ -124,7 +150,7 @@ class SearchRepositoryTest {
         // '%'||:q||'%' hands user text to LIKE verbatim: "a_b" then matches "axb", "%"
         // matches every row, and a term with a backslash finds nothing at all.
         List<java.util.function.Consumer<SearchRepository>> calls = new java.util.ArrayList<>();
-        calls.add(r -> r.jobs(userId, "a_b", 1));
+        calls.add(r -> r.jobs(userId, "a_b", 1, null));
         calls.add(r -> r.companies("a_b", 1));
         calls.add(r -> r.resumes(userId, "a_b", 1));
         calls.add(r -> r.notes(userId, "a_b", 1));
@@ -140,7 +166,7 @@ class SearchRepositoryTest {
         }
         // ':q' survives only where a tsquery still consumes it, and the escaped value is a
         // separate bind — one parameter cannot serve both roles.
-        boundOf(r -> r.jobs(userId, "a_b", 1));
+        boundOf(r -> r.jobs(userId, "a_b", 1, null));
         assertThat(bound).contains("q", "qLike");
         boundOf(r -> r.notes(userId, "a_b", 1));
         assertThat(bound).doesNotContain("q");

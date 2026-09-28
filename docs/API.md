@@ -101,7 +101,7 @@ per-user budget on AI endpoints.
 
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/jobs` | search: `q, skills, location, remote, company, minSalary, maxSalary, status, sort=posted\|salary\|title\|match, page, size` |
+| GET | `/jobs` | search: `q, skills, location, remote, company, minSalary, maxSalary, status, sort=posted\|salary\|title\|match\|relevance, page, size` — blank `sort` = relevance for a query, recency for a browse |
 | GET | `/jobs/saved` | bookmarked jobs |
 | POST | `/jobs` | create a job (with inline `company`) |
 | POST | `/jobs/import` | pasted/imported posting |
@@ -119,7 +119,9 @@ per-user budget on AI endpoints.
 A query parameter binds by name, so one the endpoint does not declare is **ignored, not
 rejected**: `/jobs?remoteType=hybrid` answers 200 with the unfiltered board. `remote` takes a
 `remote_type` value (`onsite` / `hybrid` / `remote`), never `true`, and an unknown `sort` falls
-back to `posted` for the same reason.
+back to `posted` for the same reason. `sort=relevance` fuses keyword/tsvector rank with the
+query vector's cosine distance (the agent's `search_jobs` fusion) and answers keyword-only when
+no vector is available.
 
 ### JD intelligence (`/jds`)
 
@@ -165,7 +167,7 @@ stored verbatim on the session, so the same place takes the rest of the run's tu
 | GET | `/applications` | board (`?status=&page=&size=`) |
 | POST | `/applications` | create |
 | GET | `/applications/{id}` | detail |
-| PATCH | `/applications/{id}` | `{status, position, note, reminderAt}` — kanban drag & drop; `reminder_at` is accepted as an alias, `note` (singular) is the writable one |
+| PATCH | `/applications/{id}` | `{status, position, note, reminderAt, clearReminderAt}` — kanban drag & drop; `reminder_at` / `clear_reminder_at` are the accepted aliases, `note` (singular) is the writable one, and a null component means "leave it alone", so removing a reminder travels as `clearReminderAt: true` |
 | PUT | `/applications/{id}/reorder` | `{position, status?}` within column |
 | GET | `/applications/{id}/timeline` | status-transition audit events |
 | DELETE | `/applications/{id}` | |
@@ -212,6 +214,7 @@ tenant context via `core.deps.Ctx`.
 | POST | `/internal/ingest/document/{doc_id}` | ingest a stored document |
 | GET | `/internal/ingest/documents/{doc_id}/text` | extracted document text (used by backend resume parsing) |
 | POST | `/internal/ingest/text` | ingest inline text |
+| POST | `/internal/rag/embeddings` | `{text}` → `{embedding}`: one query vector for the backend's hybrid `/jobs` ranking; an empty list means no provider could answer, so the caller ranks keyword-only |
 | POST | `/internal/rag/retrieve` | hybrid retrieval + citations |
 | POST | `/internal/rag/answer` | retrieval + grounded answer |
 | POST | `/internal/rag/chunks` | chunk listing / inspection |

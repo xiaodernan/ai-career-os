@@ -33,10 +33,17 @@ public class FakeAiServiceClientConfig {
         /** When true, ingestion/document calls throw to simulate an ai-service outage. */
         public volatile boolean failIngest;
 
+        /**
+         * What {@link #embedQuery} answers with: empty means "no provider", so the job search
+         * keeps keyword ordering. Tests that exercise hybrid ranking point it at a vector.
+         */
+        public volatile List<?> queryEmbedding = List.of();
+
         public final List<String> calls = new ArrayList<>();
 
         public void reset() {
             failIngest = false;
+            queryEmbedding = List.of();
             calls.clear();
         }
 
@@ -219,6 +226,12 @@ public class FakeAiServiceClientConfig {
             record("copilotChatStart");
             return map("task_id", UUID.randomUUID().toString(),
                     "run_id", UUID.randomUUID().toString());
+        }
+
+        @Override
+        public Map<String, Object> embedQuery(String text, UUID userId) {
+            record("embedQuery");
+            return map("embedding", queryEmbedding);
         }
 
         private static Map<String, Object> map(Object... kv) {

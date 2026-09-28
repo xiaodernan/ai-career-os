@@ -143,6 +143,11 @@ public class HttpAiServiceClient implements AiServiceClient {
         return post("/internal/agents/chat", userId, chatBody(message, history, conversationId, context));
     }
 
+    @Override
+    public Map<String, Object> embedQuery(String text, UUID userId) {
+        return post("/internal/rag/embeddings", userId, Map.of("text", text));
+    }
+
     /** One request shape for both chat routes, so the two cannot drift on what the turn is given. */
     private static Map<String, Object> chatBody(String message, List<Map<String, Object>> history,
                                                 UUID conversationId, Map<String, Object> context) {

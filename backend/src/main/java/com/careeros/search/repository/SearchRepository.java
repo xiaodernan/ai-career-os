@@ -17,7 +17,9 @@ import org.springframework.stereotype.Repository;
 /**
  * Cross-entity global search. Every user-owned group is scoped by user id; jobs and companies are
  * shared catalog rows (no user_id in schema). ILIKE matching everywhere; jobs additionally use full
- * text search with ts_rank. Groups are capped by the caller.
+ * text search with ts_rank. Groups are capped by the caller. When a query vector is supplied, the
+ * jobs channel runs hybrid retrieval (keyword + pgvector) fused by reciprocal rank, matching the
+ * jobs board and the agent's {@code search_jobs} tool.
  */
 @Repository
 public class SearchRepository {
@@ -28,8 +30,26 @@ public class SearchRepository {
         this.em = em;
     }
 
-    public List<JobHit> jobs(UUID userId, String q, int limit) {
-        String sql = """
+    /** Fuses keyword/tsvector rank and pgvector cosine distance over one filtered row set, using
+     * the same reciprocal-rank formula as {@link com.careeros.job.repository.JobSearchRepository}. */
+    private static final int RRF_K = 60;
+    private static final int SEMANTIC_CANDIDATES = 50;
+    private static final double SEMANTIC_DISTANCE_FLOOR = 0.98;
+
+    public List<JobHit> jobs(UUID userId, String q, int limit, List<Double> embedding) {
+        String sql;
+        if (embedding != null && !embedding.isEmpty()) {
+            sql = hybridJobsSql();
+        } else {
+            sql = keywordJobsSql();
+        }
+        return rows(sql, params(userId, q).set("limit", limit).setEmbedding(embedding), (row) ->
+                new JobHit((UUID) row[0], (String) row[1], (String) row[2], (String) row[3],
+                        (String) row[4], (String) row[5]));
+    }
+
+    private static String keywordJobsSql() {
+        return """
                 SELECT j.id, j.title, c.name, j.location, j.remote_type, j.status
                   FROM jobs j
                   JOIN companies c ON c.id = j.company_id
@@ -39,9 +59,62 @@ public class SearchRepository {
                  ORDER BY ts_rank(j.tsv, plainto_tsquery('simple', :q)) DESC, j.posted_at DESC
                  LIMIT :limit
                 """;
-        return rows(sql, params(userId, q).set("limit", limit), (row) ->
-                new JobHit((UUID) row[0], (String) row[1], (String) row[2], (String) row[3],
-                        (String) row[4], (String) row[5]));
+    }
+
+    private static String hybridJobsSql() {
+        String sql = """
+                WITH filtered AS (
+                    SELECT j.id, j.title, c.name AS company_name, j.location, j.remote_type, j.status,
+                           j.posted_at, j.tsv, j.embedding AS vec
+                         FROM jobs j
+                         JOIN companies c ON c.id = j.company_id
+                        WHERE 1=1
+                ),
+                keyword_rank AS (
+                    SELECT id, ROW_NUMBER() OVER (ORDER BY ts_rank(tsv, plainto_tsquery('simple', :q)) DESC,
+                                                   posted_at DESC) - 1 AS rank
+                      FROM filtered
+                     WHERE tsv @@ plainto_tsquery('simple', :q)
+                        OR title ILIKE :qLike ESCAPE '!'
+                        OR company_name ILIKE :qLike ESCAPE '!'
+                ),
+                semantic_rank AS (
+                    SELECT id, ROW_NUMBER() OVER (ORDER BY vec <=> CAST(:vec AS vector), posted_at DESC) - 1 AS rank
+                      FROM filtered
+                     WHERE vec IS NOT NULL
+                       AND vec <=> CAST(:vec AS vector) <= {FLOOR}
+                     ORDER BY vec <=> CAST(:vec AS vector), posted_at DESC
+                     LIMIT {CANDIDATES}
+                ),
+                scored AS (
+                    SELECT f.id, f.title, f.company_name, f.location, f.remote_type, f.status,
+                           f.posted_at,
+                           COALESCE(1.0 / ({RRF_K} + k.rank), 0)
+                               + COALESCE(1.0 / ({RRF_K} + s.rank), 0) AS rrf
+                      FROM filtered f
+                      LEFT JOIN keyword_rank k ON k.id = f.id
+                      LEFT JOIN semantic_rank s ON s.id = f.id
+                     WHERE k.id IS NOT NULL OR s.id IS NOT NULL
+                )
+                SELECT id, title, company_name, location, remote_type, status
+                  FROM scored
+                 ORDER BY rrf DESC, posted_at DESC
+                 LIMIT :limit
+                """;
+        return sql.replace("{FLOOR}", Double.toString(SEMANTIC_DISTANCE_FLOOR))
+                .replace("{CANDIDATES}", Integer.toString(SEMANTIC_CANDIDATES))
+                .replace("{RRF_K}", Integer.toString(RRF_K));
+    }
+
+    private static String vectorLiteral(List<Double> embedding) {
+        StringBuilder literal = new StringBuilder("[");
+        for (int i = 0; i < embedding.size(); i++) {
+            if (i > 0) {
+                literal.append(',');
+            }
+            literal.append(Double.toString(embedding.get(i)));
+        }
+        return literal.append(']').toString();
     }
 
     public List<CompanyHit> companies(String q, int limit) {
@@ -137,6 +210,9 @@ public class SearchRepository {
         if (p.limit != null) {
             query.setParameter("limit", p.limit);
         }
+        if (p.embedding != null && references(sql, "vec")) {
+            query.setParameter("vec", vectorLiteral(p.embedding));
+        }
         return ((List<Object[]>) query.getResultList()).stream().map(mapper).toList();
     }
 
@@ -150,6 +226,7 @@ public class SearchRepository {
         private final UUID userId;
         private final String q;
         private Integer limit;
+        private List<Double> embedding;
 
         private Params(UUID userId, String q) {
             this.userId = userId;
@@ -160,6 +237,11 @@ public class SearchRepository {
             if ("limit".equals(key)) {
                 this.limit = value;
             }
+            return this;
+        }
+
+        private Params setEmbedding(List<Double> embedding) {
+            this.embedding = embedding;
             return this;
         }
     }

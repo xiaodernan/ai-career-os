@@ -384,7 +384,8 @@ def test_the_backend_readers_this_gate_walks_are_the_ones_that_exist():
     """A new consumer class must widen the corpus here, not go unmeasured."""
     assert sorted(p.name for p in _consumer_files()) == [
         "ConversationService.java", "CopilotStreamService.java", "FileIngestService.java",
-        "InterviewService.java", "JobService.java", "ResumeService.java",
+        "InterviewService.java", "JobService.java", "QueryEmbeddingService.java",
+        "ResumeService.java",
     ]
 
 
@@ -426,7 +427,8 @@ def test_the_files_that_hold_an_ai_answer_stay_declared():
     """
     holding = {flow.file.name for flow in _flows()}
     assert holding == {"ConversationService.java", "InterviewService.java",
-                       "JobService.java", "ResumeService.java"}
+                       "JobService.java", "QueryEmbeddingService.java",
+                       "ResumeService.java"}
     assert holding < {p.name for p in _consumer_files()}
 
 
