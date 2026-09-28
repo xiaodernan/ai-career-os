@@ -2608,3 +2608,264 @@ def test_the_error_frame_reaches_the_browser_in_two_shapes_and_one_helper_names_
     assert _client_case_routing()["error"] == {"onError"}, \
         ("the client routes the name to exactly one handler, which is the join #179's table already "
          "holds and this test re-reads rather than restates")
+
+
+# ---------------------------------------------------------------------------- the heartbeat's one definer
+
+TASKBUS_PATH = Path(__file__).resolve().parents[1] / "app" / "core" / "taskbus.py"
+AI_SERVICE_ROOT = Path(__file__).resolve().parents[1]
+DOCS_DIR = Path(__file__).resolve().parents[2] / "docs"
+KEEP_ALIVE_NOUN = re.compile(r"\b(ping|keep-?alive|heartbeat)\b", re.I)
+SECONDS_CLAIM = re.compile(r"\b(\d+(?:\.\d+)?)\s*(?:s\b|seconds?\b|sec\b)")
+
+
+def _comment_spans(text: str) -> list[tuple[int, str]]:
+    """(first line number, joined body) for each comment span in a file -- one per span, not per line.
+
+    The span, not the line, is the unit because the claim in `CopilotStreamService.java` is written
+    across two `//` lines: "the task bus's 15s keep-alive" on one and "every 15 seconds" on the next.
+    A line-scoped scan sees one number where the file states two, so it would also miss a comment
+    that drops the interval from the line carrying the noun and keeps it on the continuation.
+    """
+    out: list[tuple[int, str]] = []
+    lines = text.splitlines()
+    i = 0
+    while i < len(lines):
+        stripped = lines[i].strip()
+        if stripped.startswith("/*"):
+            start, buf = i + 1, []
+            while i < len(lines):
+                buf.append(lines[i].strip().strip("/*").strip(" *").strip())
+                closed = "*/" in lines[i]
+                i += 1
+                if closed:
+                    break
+            out.append((start, "\n".join(buf)))
+            continue
+        marker = "//" if stripped.startswith("//") else "#" if stripped.startswith("#") else None
+        if marker is None or (marker == "#" and stripped.startswith("#!")):
+            i += 1
+            continue
+        start, buf = i + 1, []
+        while i < len(lines):
+            s = lines[i].strip()
+            if not s.startswith(marker):
+                break
+            buf.append(s.lstrip(marker[0]).lstrip("/").strip())
+            i += 1
+        out.append((start, "\n".join(buf)))
+    return out
+
+
+def _walk_shipped_code():
+    """Yield (label, path, text) for every shipped source file in the three code trees."""
+    roots = (("ai-service/app", AI_SERVICE_ROOT / "app"),
+             ("backend/src/main/java", JAVA_ROOT),
+             ("frontend/src", ROOT_FRONTEND))
+    for label, root in roots:
+        for path in sorted(root.rglob("*")):
+            if path.suffix not in (".py", ".java", ".ts", ".tsx"):
+                continue
+            yield label, path, path.read_text(encoding="utf-8", errors="replace")
+
+
+def _keep_alive_prose() -> tuple[list[dict], list[dict]]:
+    """(claims, vocabulary) in `docs/*.md`, where a paragraph -- not a comment -- is the unit.
+
+    Prose has no comment marker, so each line is its own span here; that is the same shape as the
+    claim this population exists to catch, and a multi-sentence claim in one line still reads.
+    """
+    claims, vocabulary = [], []
+    for path in sorted(DOCS_DIR.rglob("*.md")):
+        text = path.read_text(encoding="utf-8", errors="replace")
+        for number, line in enumerate(text.splitlines(), 1):
+            if not KEEP_ALIVE_NOUN.search(line):
+                continue
+            row = {"file": path.name, "line": number, "seconds": SECONDS_CLAIM.findall(line),
+                   "text": line.strip()[:160]}
+            (claims if row["seconds"] else vocabulary).append(row)
+    return claims, vocabulary
+
+
+def _keep_alive_spans() -> dict[str, list[dict]]:
+    """Every shipped comment that names the run stream's keep-alive, in the three shapes one can write it.
+
+    A span that starts a line (`// ...`, `# ...`, `/* ... */`), and a trailing comment after code, are
+    different spellings and the second one is invisible to a span scan -- `SseRelayService.java` and
+    `use-sse.ts` both carry the word `keep-alive` that way. All three are censused, and each is split on
+    whether it states an interval, because a claim that loses its number is the shape this ledger would
+    otherwise stop seeing.
+    """
+    claims, vocabulary, in_tests, trailing = [], [], [], []
+    for _label, path, text in _walk_shipped_code():
+        rel = str(path.relative_to(AI_SERVICE_ROOT.parent)).replace("\\", "/")
+        is_test = ".test." in path.name or path.name.startswith("test_")
+        for start, body in _comment_spans(text):
+            if not KEEP_ALIVE_NOUN.search(body):
+                continue
+            row = {"file": rel, "line": start, "seconds": SECONDS_CLAIM.findall(body),
+                   "text": body.replace("\n", " ")[:200]}
+            if is_test:
+                in_tests.append(row)
+            elif row["seconds"]:
+                claims.append(row)
+            else:
+                vocabulary.append(row)
+        for number, line in enumerate(text.splitlines(), 1):
+            marker = re.search(r"(?://|#)\s*(\S.*)$", line)
+            if marker is None or line.strip().startswith(("//", "#")):
+                continue
+            note = marker.group(1)
+            if not KEEP_ALIVE_NOUN.search(note):
+                continue
+            row = {"file": rel, "line": number, "seconds": SECONDS_CLAIM.findall(note),
+                   "text": note.strip()[:160]}
+            if is_test:
+                in_tests.append(row)
+            elif row["seconds"]:
+                claims.append(row)
+            else:
+                trailing.append(row)
+    return {"claims": claims, "vocabulary": vocabulary, "in_tests": in_tests, "trailing": trailing}
+
+
+def _heartbeat_declaration() -> dict:
+    """What `subscribe` declares its heartbeat to be, read off the signature that carries the default.
+
+    The number a reader can find is the number the browser's comments can be checked against, so a
+    default that moves behind a name is reported as unreadable rather than guessed at.
+    """
+    tree = ast.parse(TASKBUS_PATH.read_text(encoding="utf-8"))
+    found = []
+    for node in ast.walk(tree):
+        if not isinstance(node, (ast.AsyncFunctionDef, ast.FunctionDef)) or node.name != "subscribe":
+            continue
+        names = [a.arg for a in node.args.args]
+        if "heartbeat_s" not in names:
+            found.append({"file": TASKBUS_PATH.name, "function": node.name, "lineno": node.lineno,
+                          "seconds": None, "note": "declares no heartbeat_s parameter"})
+            continue
+        at = names.index("heartbeat_s")
+        defaults = node.args.defaults
+        offset = at - (len(names) - len(defaults))
+        if offset < 0:
+            found.append({"file": TASKBUS_PATH.name, "function": node.name, "lineno": node.lineno,
+                          "seconds": None, "note": "heartbeat_s has no default to read"})
+            continue
+        node_default = defaults[offset]
+        found.append({"file": TASKBUS_PATH.name, "function": node.name, "lineno": node.lineno,
+                      "seconds": node_default.value if isinstance(node_default, ast.Constant)
+                      and isinstance(node_default.value, (int, float)) else None,
+                      "note": type(node_default).__name__})
+    assert len(found) == 1, \
+        (f"{found}: exactly one `subscribe` in `app/core/taskbus.py` is the definer of the run stream's "
+         "heartbeat -- two would mean the claims below have no single number to be checked against")
+    return found[0]
+
+
+def _heartbeat_arguments() -> dict[str, list[dict]]:
+    """Where `heartbeat_s` appears in Python source, split by what the occurrence *is*.
+
+    Declared / overridden / read are different facts and only the last two are calls: the ledger needs
+    to say which file passes a non-default interval, because an override in shipped code would make
+    every comment about the default true of a number that no longer runs.
+    """
+    kinds: dict[str, list[dict]] = {"declared": [], "overridden": [], "read": []}
+    for path in sorted(AI_SERVICE_ROOT.rglob("*.py")):
+        if any(part.startswith(".") or part == "__pycache__" for part in path.parts):
+            continue
+        text = path.read_text(encoding="utf-8", errors="replace")
+        rel = str(path.relative_to(AI_SERVICE_ROOT)).replace("\\", "/")
+        tree = ast.parse(text, filename=str(path))
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.AsyncFunctionDef, ast.FunctionDef)) and \
+                    any(a.arg == "heartbeat_s" for a in node.args.args):
+                kinds["declared"].append({"file": rel, "line": node.lineno, "function": node.name})
+            elif isinstance(node, ast.Call):
+                for kw in node.keywords:
+                    if kw.arg == "heartbeat_s":
+                        value = ast.get_source_segment(text, kw.value)
+                        kinds["overridden"].append({"file": rel, "line": node.lineno, "value": value})
+            elif isinstance(node, ast.Name) and node.id == "heartbeat_s" \
+                    and isinstance(node.ctx, ast.Load):
+                kinds["read"].append({"file": rel, "line": node.lineno})
+    return kinds
+
+
+def test_the_heartbeat_interval_has_one_definer_and_every_shipped_claim_names_it():
+    """`heartbeat_s` is defined once, in one language, and stated in comments in two others.
+
+    ai-service owns the number: `subscribe()` waits that long for the next event and answers a silent
+    run with `{"event": "ping"}`. The backend's stream router and the browser's router each carry a
+    comment saying "15s" -- one of them to justify *dropping* the frame, the other to explain why
+    nothing renders it.
+    Those comments are the only place a maintainer learns the interval without opening Python, and
+    nothing tied them to the default: retune `heartbeat_s` to 5 and the relay still promises a browser
+    a blank frame every fifteen seconds, which is the kind of sentence people quote.
+
+    So the rule asks the definer first, and reads the claims as spans for the same reason a reader
+    does -- the Java comment is two lines long and a line-scoped scan sees half of it.
+    """
+    declared = _heartbeat_declaration()
+    assert declared["seconds"] == 15.0 and declared["file"] == "taskbus.py", \
+        (f"{declared}: the heartbeat's definer, its number, and how it is spelled -- a default that is "
+         "no longer a readable literal cannot be checked against prose, so this is the failure to fix "
+         "first")
+
+    spans = _keep_alive_spans()
+    assert [(row["file"], row["line"]) for row in spans["claims"]] == [
+        ("backend/src/main/java/com/careeros/conversation/service/CopilotStreamService.java", 96),
+        ("frontend/src/lib/sse/use-sse.ts", 226),
+    ], ("which shipped comments state the keep-alive's interval: a new claim is a new sentence to hold "
+        "against the code and a vanished one is a reader losing the answer. The Java pair is one span "
+        "across two lines, which is why this reads spans rather than lines; what each says is checked "
+        "against the definer below, so an edit to a number lands there and an edit to the site list "
+        "lands here")
+    claimed = [float(s) for row in spans["claims"] for s in row["seconds"]]
+    assert len(claimed) == 3, \
+        (f"{claimed}: the floor comes from the same walk as the census above, so an empty or narrowed "
+         "scan cannot satisfy this by reading nothing")
+    assert all(s == declared["seconds"] for s in claimed), \
+        (f"{claimed} against the declared {declared['seconds']}: a comment naming a different interval "
+         "is the defect this test exists for -- the number the browser and the relay promise is the "
+         "number taskbus.subscribe does not use")
+
+    doc_claims, doc_vocabulary = _keep_alive_prose()
+    assert doc_claims == [], \
+        (f"{doc_claims}: `docs/` states the keep-alive without a number today, and a doc that quotes an "
+         "interval is a claim this gate has to be able to check rather than a second opinion")
+    assert [(row["file"], row["line"]) for row in doc_vocabulary] == [("AGENTS.md", 144)], \
+        (f"{doc_vocabulary}: the docs' own vocabulary is censused, so this pass is not reporting on an "
+         "empty set -- and a second file picking up the word is a signal the ledger has to grow")
+
+    assert [(row["file"], row["line"]) for row in spans["vocabulary"]] == [
+        ("frontend/src/components/ai/task-stream.tsx", 17),
+        ("frontend/src/lib/sse/use-sse.ts", 9),
+    ], ("spans that name the keep-alive and state no interval: the shape an edited claim leaves behind, "
+        "listed so a claim cannot escape the census above by losing its number")
+    assert [(row["file"], row["line"]) for row in spans["trailing"]] == [
+        ("backend/src/main/java/com/careeros/ai/SseRelayService.java", 116),
+        ("frontend/src/lib/sse/use-sse.ts", 247),
+    ], ("the other spelling -- a comment after code, which a span scan cannot see -- and neither states "
+        "an interval: both say a line beginning with `:` is a keep-alive the parser skips, so the "
+        "population this gate reports on is every shipped mention of the word, in both shapes")
+    assert all(not row["seconds"] for row in spans["vocabulary"] + spans["trailing"]) \
+        and all(row["seconds"] for row in spans["claims"]), \
+        ("the populations are disjoint by construction -- one walk per spelling, split on whether a "
+         "number is present -- so nothing can be filed in two of them and reconciled in neither")
+    assert spans["in_tests"] == [], \
+        (f"{spans['in_tests']}: the exclusion that keeps test files out of the claim ledger is measured "
+         "here rather than assumed -- a test that states an interval states a claim about production")
+
+    args = _heartbeat_arguments()
+    assert args["declared"] == [{"file": "app/core/taskbus.py", "line": 58, "function": "subscribe"}], \
+        (f"{args['declared']}: exactly one Python signature declares the parameter, which is what makes "
+         "it a definer rather than one caller among many")
+    assert args["read"] == [{"file": "app/core/taskbus.py", "line": 72}], \
+        (f"{args['read']}: the interval is consumed once, as the `wait_for` timeout that ends a quiet "
+         "wait with a `ping` -- the sentence the comments above repeat")
+    assert [row["file"] for row in args["overridden"]] == ["tests/test_core_modules.py"] * 3 \
+        and all(float(row["value"]) < declared["seconds"] for row in args["overridden"]), \
+        (f"{args['overridden']}: every override of the heartbeat lives in the offline tests and shortens "
+         "it, which is why the tests can run fast without proving a different interval -- an override in "
+         "shipped code would make every claim above true of a number nothing uses")
