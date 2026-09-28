@@ -3634,8 +3634,9 @@ def _paired_accessor_calls(text: str) -> list[dict]:
     The oracle #162 ran on `_sites` and #164 on the Java reader scanner, pointed at `_bare_reads`. It
     shares the gate's bracket helpers (`_ts_args`, `_ts_top_level`, `_ts_function_spans`) and differs in
     the one decision that scanner was built on: it does not care what shape the receiver has. It reports
-    the callee, the owner, the argument count, the receiver text, and whether every name slot after the
-    first is a quoted literal -- which is the line #165 drew between a mechanism and a read.
+    the callee, the owner, the argument count, the receiver text, which argument positions are spreads
+    (#170 added that field for `_spread_receivers`), and whether every name slot after the first is a
+    quoted literal -- which is the line #165 drew between a mechanism and a read.
     """
     clean = _blank_ts_noise(text)
     finder = re.compile(r"\b(" + "|".join(_name_table_accessors()) + r")\b")
@@ -3660,6 +3661,7 @@ def _paired_accessor_calls(text: str) -> list[dict]:
         rows.append({"name": found.group(1), "line": clean.count("\n", 0, found.start()) + 1,
                      "owner": inside[-1] if inside else "", "argc": len(parts),
                      "receiver": parts[0] if parts else "",
+                     "spread": tuple(i for i, part in enumerate(parts) if part.startswith("...")),
                      "named": bool(parts[1:]) and all(_QUOTED.fullmatch(part) for part in parts[1:])})
     return rows
 
@@ -3720,3 +3722,62 @@ def test_the_bare_read_scanner_agrees_with_a_paired_call_census():
         False, "nothing reads it bare (`list(x)` with no names) and nothing assigns it, so no rule can "
                "say what shape it holds"), \
         "a receiver the pattern can spell is still asked about, so widening `_BARE` could not silence it"
+
+
+# ---------------------- #170: census the spread-name-table scanner with the same walk
+
+def test_the_spread_receiver_scanner_agrees_with_the_paired_walk(monkeypatch):
+    """#170: #140 made a spread receiver a declaration, so the scanner that finds them is load-bearing.
+
+    `list(source, ...TRAJECTORY_KEYS)` hands the accessor a name table built somewhere else, so no
+    literal key sits at the site, `_sites` cannot see the read, and the only thing covering it is the
+    `dynamic` entry -- which is why #140 required that entry to name the receiver. `_spread_receivers`
+    is how that requirement is checked, and it is a regex over the reader's body:
+    `accessor` + `([\\w$.]*)\\s*,` + `[^)]*` + `...`, which cuts the search for the spread at the first
+    inner `)`. Measured by pairing instead: 254 accessor calls in normalize.ts, 5 of them handed a
+    spread name table -- 4 inside the accessor definitions' own bodies (`return pick(obj, ...keys)` in
+    str, num, bool and pathOf, which no reader rule ever asks about) and 1 at a real read site, in
+    normalizeTrajectory over receiver `source`. The shipped scanner's answer for every reader matches
+    that one, so nothing is mis-censused today; the plant below is the shape that would change that, and
+    it is the same class #140 closed -- a spread the scanner never saw is a dynamic entry nobody has to
+    declare.
+    """
+    text = NORMALIZE.read_text(encoding="utf-8")
+    walked = _paired_accessor_calls(text)
+    assert len(walked) == 254, (f"{len(walked)} accessor calls: the population both censuses are drawn "
+                                 "from")
+    spread = [row for row in walked if row["spread"]]
+    assert [(row["name"], row["owner"], row["receiver"]) for row in spread] == [
+        ("pick", "str", "obj"), ("pick", "num", "obj"), ("pick", "bool", "obj"),
+        ("pick", "pathOf", "obj"), ("list", "normalizeTrajectory", "source"),
+    ], (f"{[(row['name'], row['owner'], row['receiver']) for row in spread]}: four of these are the "
+        "accessors delegating from inside their own definitions, and the fifth is the read #140 made a "
+        "reader declare")
+    assert sorted(reader for reader in READERS if _spread_receivers(reader)) == ["normalizeTrajectory"], \
+        "a second reader with a spread name table is a second `dynamic` entry the census has to answer for"
+    assert sorted(_spread_receivers("normalizeTrajectory")) \
+        == sorted({row["receiver"] for row in spread if row["owner"] == "normalizeTrajectory"}), \
+        ("the pattern scanner and the paired walk disagree about which receivers a spread reaches, and "
+         "#140's declaration rule reads the pattern scanner's answer")
+
+    # The limit, shown through the shipped function rather than described: a spread that arrives past an
+    # intervening call sits behind the `)` the pattern refuses to cross. The scanner is memoised by
+    # reader name and the loop above already asked it about normalizeSearch, so the cache has to be
+    # cleared or this plant is unread -- that staleness is how a mutation crossing the parens survived.
+    planted = 'const arr = list(raw, pick(g, "key"), ...EXTRA_KEYS);'
+    _restore_reads(monkeypatch, **{"const arr = list(raw, g.key);": planted})
+    _spread_receivers.cache_clear()
+    try:
+        assert _paired_accessor_calls(planted)[0]["spread"] == (2,), \
+            f"{_paired_accessor_calls(planted)}: the paired walk sees the spread at argument index 2"
+        assert _spread_receivers("normalizeSearch") == set(), \
+            ("the pattern loses this site, which is the class #170 measured as 0 today -- if a reader ever "
+             "writes one, the fix is to pair the call, and this assertion is the note saying so")
+    finally:
+        monkeypatch.undo()
+        _spread_receivers.cache_clear()
+
+    # A spread is not a name, so the scanner must not hand it to the key census as if it were one.
+    assert all(row["spread"] and not row["named"] for row in spread), \
+        (f"{[(row['name'], row['spread'], row['named']) for row in spread]}: a call whose name slot is a "
+         "spread is exactly the read `_sites` drops, which is why `dynamic` has to answer for it")
