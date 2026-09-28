@@ -28,10 +28,11 @@ interface KanbanColumnProps {
   status: ApplicationStatus;
   apps: Application[];
   onReorder: (id: string, status: ApplicationStatus, order: number) => void;
+  onOpen: (app: Application) => void;
   isPending: boolean;
 }
 
-function KanbanColumn({ status, apps, onReorder, isPending }: KanbanColumnProps) {
+function KanbanColumn({ status, apps, onReorder, onOpen, isPending }: KanbanColumnProps) {
   const meta = stageMeta(status);
 
   return (
@@ -63,6 +64,7 @@ function KanbanColumn({ status, apps, onReorder, isPending }: KanbanColumnProps)
               status={status}
               isPending={isPending}
               onReorder={onReorder}
+              onOpen={onOpen}
             />
           ))}
           {apps.length === 0 && (
@@ -86,6 +88,7 @@ interface KanbanCardProps {
   status: ApplicationStatus;
   isPending: boolean;
   onReorder: (id: string, status: ApplicationStatus, order: number) => void;
+  onOpen: (app: Application) => void;
 }
 
 function KanbanCard({
@@ -94,6 +97,7 @@ function KanbanCard({
   status,
   isPending,
   onReorder,
+  onOpen,
 }: KanbanCardProps) {
   const meta = stageMeta(app.status);
   const { setNodeRef, setActivatorNodeRef, attributes, listeners, transform, transition, isDragging } =
@@ -143,7 +147,15 @@ function KanbanCard({
           <GripVertical className="size-4" aria-hidden />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium">{app.title}</p>
+          {/* The card's own fields open the editor; the drag handle beside it stays the only
+              drag activator, so a click here is never mistaken for a move. */}
+          <button
+            type="button"
+            onClick={() => onOpen(app)}
+            className="block max-w-full truncate text-left text-sm font-medium hover:text-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          >
+            {app.title}
+          </button>
           <p className="truncate text-xs text-muted-foreground">
             {app.company?.name ?? app.companyName}
             {app.reminderAt && (
@@ -184,10 +196,12 @@ function KanbanCard({
 interface KanbanBoardProps {
   applications: Application[];
   onReorder: (id: string, status: ApplicationStatus, order: number) => void;
+  /** Opens the editor for a card. The board itself only ever moves them. */
+  onOpen: (app: Application) => void;
   isPending: boolean;
 }
 
-export function KanbanBoard({ applications, onReorder, isPending }: KanbanBoardProps) {
+export function KanbanBoard({ applications, onReorder, onOpen, isPending }: KanbanBoardProps) {
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 8 },
@@ -250,6 +264,7 @@ export function KanbanBoard({ applications, onReorder, isPending }: KanbanBoardP
             status={status}
             apps={apps}
             onReorder={onReorder}
+            onOpen={onOpen}
             isPending={isPending}
           />
         ))}

@@ -311,10 +311,34 @@ export function useResumeSuggestions() {
 /* Applications                                                        */
 /* ------------------------------------------------------------------ */
 
+/**
+ * The create body, named the way `CreateApplicationRequest` binds it — the note is `notes`
+ * (plural) here and `note` on the update route. Jackson drops the spelling a record does not
+ * declare, silently, so the body is declared instead of spread from an `Application` row.
+ */
+export interface CreateApplicationBody {
+  title: string;
+  companyName?: string;
+  status?: ApplicationStatus;
+  notes?: string;
+  reminderAt?: string;
+  jobId?: string;
+  companyId?: string;
+}
+
+/** The PATCH body: `note` singular, and the reminder pair (a null component means "leave it"). */
+export interface UpdateApplicationBody {
+  status?: ApplicationStatus;
+  position?: number;
+  note?: string;
+  reminderAt?: string;
+  clearReminderAt?: boolean;
+}
+
 export function useCreateApplication() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: Partial<Application> & { title: string }) =>
+    mutationFn: (body: CreateApplicationBody) =>
       api.create<Application>(endpoints.applications, body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["applications"] });
@@ -329,7 +353,7 @@ export function useCreateApplication() {
 export function useUpdateApplication() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, patch }: { id: string; patch: { status?: ApplicationStatus; position?: number; note?: string } }) =>
+    mutationFn: ({ id, patch }: { id: string; patch: UpdateApplicationBody }) =>
       api.update<Application>(endpoints.application(id), patch),
     onMutate: async ({ id, patch }) => {
       await qc.cancelQueries({ queryKey: ["applications"] });
@@ -351,6 +375,8 @@ export function useUpdateApplication() {
     },
     onSuccess: (_d, { patch }) => {
       if (patch.note !== undefined) toast.success("Note saved.");
+      else if (patch.reminderAt !== undefined) toast.success("Reminder set.");
+      else if (patch.clearReminderAt) toast.success("Reminder cleared.");
     },
     onSettled: (_d, err, vars) => {
       qc.invalidateQueries({ queryKey: ["applications"] });

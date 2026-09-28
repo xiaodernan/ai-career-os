@@ -113,6 +113,12 @@ public class ApplicationService {
         if (request.reminderAt() != null) {
             app.setReminderAt(request.reminderAt());
             writeEvent(app, "reminder", Map.of("reminder_at", request.reminderAt().toString()));
+        } else if (Boolean.TRUE.equals(request.clearReminderAt()) && app.getReminderAt() != null) {
+            // A reminder nobody can delete is permanent dashboard noise: the attention query
+            // counts `reminder_at <= now()`, so a stale one nags forever. Only an actual change
+            // is audited, the same rule the status transition above follows.
+            app.setReminderAt(null);
+            writeEvent(app, "reminder", Map.of("cleared", true));
         }
         return toItem(applications.save(app));
     }

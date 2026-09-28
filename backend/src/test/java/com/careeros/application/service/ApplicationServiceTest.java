@@ -3,6 +3,7 @@ package com.careeros.application.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -62,7 +63,7 @@ class ApplicationServiceTest {
     void updateLogsTheRealPriorStatusNotTheOverwrittenOne() {
         Application app = existing("interview");
 
-        service.update(userId, appId, new UpdateApplicationRequest("offer", null, null, null));
+        service.update(userId, appId, new UpdateApplicationRequest("offer", null, null, null, null));
 
         ApplicationEvent evt = savedEvent();
         assertThat(evt.getKind()).isEqualTo("status");
@@ -77,7 +78,8 @@ class ApplicationServiceTest {
     void updateWithSameStatusEmitsNoTransitionEvent() {
         existing("offer");
 
-        service.update(userId, appId, new UpdateApplicationRequest("offer", null, "strong candidate", null));
+        service.update(userId, appId,
+                new UpdateApplicationRequest("offer", null, "strong candidate", null, null));
 
         // Only the note event is written; a same-status change must not fake a transition.
         assertThat(savedEvent().getKind()).isEqualTo("note");
@@ -119,5 +121,41 @@ class ApplicationServiceTest {
 
         assertThat(app.getStatus()).isEqualTo("applied");
         assertThat(app.getAppliedAt()).isEqualTo(first);
+    }
+
+    @Test
+    void clearingAReminderRemovesItAndAuditsTheChange() {
+        Application app = existing("interview");
+        app.setReminderAt(OffsetDateTime.parse("2026-06-01T09:00:00Z"));
+
+        // A null component means "leave it alone", so deleting the reminder travels as its
+        // own flag; before that existed the timestamp could only ever be set, never removed.
+        service.update(userId, appId, new UpdateApplicationRequest(null, null, null, null, true));
+
+        assertThat(app.getReminderAt()).isNull();
+        ApplicationEvent evt = savedEvent();
+        assertThat(evt.getKind()).isEqualTo("reminder");
+        assertThat(evt.getPayload()).containsEntry("cleared", true);
+    }
+
+    @Test
+    void clearingWhenThereWasNoReminderWritesNothing() {
+        Application app = existing("saved");
+
+        service.update(userId, appId, new UpdateApplicationRequest(null, null, null, null, true));
+
+        // The same no-op rule the status transition follows: nothing changed, so no audit row.
+        assertThat(app.getReminderAt()).isNull();
+        verify(events, never()).save(any(ApplicationEvent.class));
+    }
+
+    @Test
+    void aReminderAndAClearInTheSamePatchKeepTheNewReminder() {
+        Application app = existing("saved");
+        OffsetDateTime at = OffsetDateTime.parse("2026-07-01T09:00:00Z");
+
+        service.update(userId, appId, new UpdateApplicationRequest(null, null, null, at, true));
+
+        assertThat(app.getReminderAt()).isEqualTo(at);
     }
 }

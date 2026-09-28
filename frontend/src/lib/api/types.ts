@@ -315,6 +315,10 @@ export interface ApplicationEvent {
   status?: string;
   label?: string;
   note?: string;
+  /** Set on a `reminder` event: the instant the reminder was moved to. */
+  reminderAt?: string;
+  /** True when that `reminder` event is the removal of one rather than a new date. */
+  cleared?: boolean;
   createdAt?: string;
 }
 

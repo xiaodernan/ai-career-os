@@ -6,6 +6,7 @@ import { endpoints } from "@/lib/api/endpoints";
 import {
   list as listOf,
   normalizeApplication,
+  normalizeApplicationEvent,
   normalizeDashboard,
   normalizeJob,
   normalizeMatch,
@@ -234,15 +235,10 @@ export function useApplicationEvents(id: string | null) {
     enabled: Boolean(id),
     queryFn: async (): Promise<ApplicationEvent[]> => {
       const raw = await api.get<unknown>(endpoints.applicationTimeline(id!));
-      return listOf(raw, "items", "events", "content").map((e, i) => ({
-        id: idStr(e, `ev-${i}`),
-        applicationId: str(e, "applicationId", "application_id"),
-        type: str(e, "type", "kind", "event"),
-        status: str(e, "status", "to", "toStatus", "to_status"),
-        label: str(e, "label", "title", "summary", "description"),
-        note: str(e, "note", "notes", "comment") ?? undefined,
-        createdAt: str(e, "createdAt", "created_at", "timestamp"),
-      }));
+      // The mapping is a wire reader, so it lives with the others in normalize.ts where it can
+      // be tested; it used to be inline here, unread and untested, which is how the nested
+      // `payload` stayed invisible.
+      return listOf(raw, "items", "events", "content").map(normalizeApplicationEvent);
     },
   });
 }

@@ -31,10 +31,16 @@ public final class ApplicationDtos {
                                            @JsonAlias("reminder_at") OffsetDateTime reminderAt) {
     }
 
+    /**
+     * The PATCH body. A null component means "leave it alone", which is why clearing the
+     * reminder needs its own flag: Jackson cannot tell an absent field from an explicit null.
+     * {@code reminderAt} wins when a caller sends both.
+     */
     public record UpdateApplicationRequest(String status,
                                            Integer position,
                                            String note,
-                                           @JsonAlias("reminder_at") OffsetDateTime reminderAt) {
+                                           @JsonAlias("reminder_at") OffsetDateTime reminderAt,
+                                           @JsonAlias("clear_reminder_at") Boolean clearReminderAt) {
     }
 
     public record ReorderRequest(int position, String status) {

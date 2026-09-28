@@ -8,6 +8,7 @@ import {
   list,
   normalizeArtifacts,
   normalizeApplication,
+  normalizeApplicationEvent,
   normalizeChatActions,
   normalizeDashboard,
   normalizeDimensions,
@@ -422,6 +423,51 @@ describe("normalizeApplication", () => {
     // ApplicationItem has matchId but not matchScore, and no page renders it today. When the
     // list starts embedding the score, this assertion is the one to change deliberately.
     expect(normalizeApplication(ITEM).matchScore).toBeNull();
+  });
+});
+
+describe("normalizeApplicationEvent", () => {
+  // TimelineEvent is {id, kind, payload, createdAt}: the audit detail is one level down.
+  const STATUS = {
+    id: "ev-1",
+    kind: "status",
+    payload: { from: "saved", to: "interview" },
+    createdAt: "2026-09-20T02:00:00Z",
+  };
+
+  it("reads the detail the timeline nests under payload", () => {
+    expect(normalizeApplicationEvent(STATUS)).toMatchObject({
+      id: "ev-1",
+      type: "status",
+      status: "interview",
+      createdAt: "2026-09-20T02:00:00Z",
+    });
+  });
+
+  it("finds a note event's text where the DTO actually puts it", () => {
+    const note = normalizeApplicationEvent({ id: "ev-2", kind: "note", payload: { note: "recruiter called" } });
+    expect(note.type).toBe("note");
+    expect(note.note).toBe("recruiter called");
+  });
+
+  it("tells a reminder being set apart from one being cleared", () => {
+    const set = normalizeApplicationEvent({
+      id: "ev-3",
+      kind: "reminder",
+      payload: { reminder_at: "2026-10-01T09:00:00Z" },
+    });
+    expect(set.reminderAt).toBe("2026-10-01T09:00:00Z");
+    expect(set.cleared).toBeUndefined();
+
+    const cleared = normalizeApplicationEvent({ id: "ev-4", kind: "reminder", payload: { cleared: true } });
+    expect(cleared.cleared).toBe(true);
+    expect(cleared.reminderAt).toBeUndefined();
+  });
+
+  it("stays tolerant of a flat row and never hands back an empty id", () => {
+    // React keys and the events list both need one; a row without an id would collide.
+    expect(normalizeApplicationEvent({ type: "note", note: "flat" }, 4).note).toBe("flat");
+    expect(normalizeApplicationEvent({}, 4).id).toBe("ev-4");
   });
 });
 
