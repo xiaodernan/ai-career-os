@@ -670,13 +670,14 @@ READERS: dict[str, dict] = {
         "drilled": {},
         "elements": {"e": "items"},
         "blind": {},
-        # `items` is the list itself, not a map with keys: either the caller handed it over already
-        # drilled (so `Array.isArray` returns the argument) or `list(raw, "evidence", "sources")
-        # drilled it here. Either way there is no name left to read off it, which is the one thing
-        # `record_of` cannot express -- and the row it holds is bound above, where the reads are.
-        "dynamic": {"items": "the evidence list this reader either receives pre-drilled or drills out"
-                             " of its own argument: a list has no key to read, only the rows it holds, "
-                             "and those are bound as `e`"},
+        # #166: `items` used to sit here as a `dynamic` entry excusing "the evidence list has no key to
+        # read". Measured, it excused nothing -- no nameless key-position read and no spread call names
+        # `items`, and the only rule that consulted it is the one that asks what an `elements` parent is.
+        # A list local is what `record_of` cannot bind, so that rule now derives the builder from the
+        # source instead of demanding a declaration in the wrong vocabulary:
+        # `const items = Array.isArray(raw) ? raw : list(raw, "evidence", "sources")` reads `raw`, which
+        # is bound above, under two keys that record's producers both emit.
+        "dynamic": {},
     },
     "normalizeMatch": {
         # `raw` is the envelope `pick(raw, "match", "latestMatch", …)` drills; the payload is the
@@ -713,8 +714,10 @@ READERS: dict[str, dict] = {
             "raw": "`const arr = list(raw, g.key)` asks for whichever list the group being rendered "
                    "names, so no literal name appears at the site; `_search_hits` ties those keys to "
                    "SearchResponse's components in both directions",
-            "arr": "the per-group list itself, keyed by the same SEARCH_GROUPS variable -- it exists "
-                   "to be `h`'s parent rather than to be read by name",
+            # #166: `arr` was excused as dynamic too, and measured as excusing nothing. What it is, is
+            # the parent of `h` -- so `elements` already says it, and the parent rule now reads the
+            # builder (`const arr = list(raw, g.key)`, off the `raw` declared just above) rather than
+            # taking a second claim in the vocabulary that owes a name table.
         },
     },
     "normalizeSkillGaps": {
@@ -1573,6 +1576,72 @@ def _spread_receivers(reader: str) -> set[str]:
         _ACCESSORS + r"([A-Za-z_$][\w$.]*)\s*,[^)]*\.\.\.", _body(reader))}
 
 
+@lru_cache(maxsize=None)
+def _cited_name_tables(why: str) -> tuple[tuple[str, int], ...]:
+    """The no-arg helpers a `dynamic` reason cites, and how many names each answers.
+
+    One scanner for two rules: the key-position census (#165) asks it of the entry excusing a measured
+    nameless read, and #166 asks it of every entry in the table. Writing it twice would let the two
+    disagree about what "cites a live table" means, which is the disagreement that made five entries
+    look like three.
+    """
+    found = []
+    for name in dict.fromkeys(re.findall(r"`(_\w+)", why)):
+        answer = globals().get(name)
+        if not callable(answer):
+            continue
+        try:
+            table = answer()
+        except TypeError:
+            continue  # a helper that needs an argument is not a name table
+        if isinstance(table, (list, tuple, set, dict)) and table:
+            found.append((name, len(table)))
+    return tuple(found)
+
+
+def _declared_receivers(reader: str) -> set[str]:
+    """Every name this reader's table already says something about."""
+    spec = READERS[reader]
+    return (set(spec["record_of"]) | set(spec["blind"]) | set(spec["dynamic"])
+            | set(spec["drilled"]))
+
+
+def _derived_holder(reader: str, holder: str) -> tuple[bool, str]:
+    """Is `holder` demonstrably the list some declared receiver was read into?
+
+    A list local is the one shape `record_of` cannot bind -- there is no field to read off it, only
+    rows -- so the `elements` parent rule used to demand that such a holder appear in `record_of`,
+    `blind` or `dynamic` anyway. Measured, that demand is what put two entries into `dynamic` which
+    excused no read at all: `items` and `arr` name no variable-tailed accessor call, and the only rule
+    that consulted them was the one they were being fed to. Deriving the builder from the source says
+    the same thing with less tolerance: the assignment has to exist, the receiver it reads has to be
+    declared, and any literal key it drills has to be a field that receiver's producers emit.
+    """
+    spec = READERS[reader]
+    found = re.search(rf"(?:const|let)\s+{re.escape(holder)}\s*=\s*[^\n;]*", _body(reader))
+    if found is None:
+        return False, f"nothing assigns {holder!r} in the reader"
+    line = found.group(0)
+    opener = _ACCESSOR_OPEN.search(line)
+    if opener is None:
+        return False, f"{line.strip()} reads no accessor"
+    base = re.match(r"([A-Za-z_$][\w$.]*)\s*,", line[opener.end():])
+    if base is None:
+        return False, f"{line.strip()} hands its first argument something a rule cannot name"
+    name = base.group(1)
+    if name not in _declared_receivers(reader):
+        return False, (f"it is built by reading {name!r}, which this reader declares nothing about, "
+                       f"while {sorted(_declared_receivers(reader))} are the names it knows")
+    if name in spec["record_of"]:
+        emitted = _emitted_for(spec["record_of"][name])
+        missing = [key for key in _NAME.findall(line) if key not in emitted]
+        if missing:
+            return False, (f"it drills {missing} out of {name!r}, which its producers "
+                           f"{spec['record_of'][name]!r} never emit -- so the list can only ever be "
+                           "empty, and the rows below it render blank")
+    return True, f"built by reading the declared receiver {name!r}"
+
+
 def _undeclared_receivers(reader: str) -> list[str]:
     """Receivers the reader reads from that no record answers for, and vice versa."""
     spec = READERS[reader]
@@ -1638,8 +1707,12 @@ def _broken_links(reader: str) -> list[str]:
     for local, parent in spec["elements"].items():
         holder = parent[0] if isinstance(parent, tuple) else parent
         if holder not in (set(spec["record_of"]) | set(spec["blind"]) | set(spec["dynamic"])):
-            problems.append(f"{reader}: {local!r} comes from {holder!r}, which the table neither "
-                            "binds, declares blind, nor declares dynamic")
+            # #166: the declaration was the only way to satisfy this, so a list local was made to claim
+            # a `dynamic` read it does not have. Now the source may answer instead -- see `_derived_holder`.
+            if not _derived_holder(reader, holder)[0]:
+                problems.append(f"{reader}: {local!r} comes from {holder!r}, which the table neither "
+                                f"binds, declares blind, declares dynamic, nor demonstrably builds: "
+                                f"{_derived_holder(reader, holder)[1]}")
         if isinstance(parent, tuple):
             # An element row: the row has no accessor of its own to point at, so the link is stated
             # as (map, key) and both halves have to be findable -- the list drilled out of that map
@@ -1727,6 +1800,38 @@ def _spec_shape() -> list[str]:
             if len(why) <= 40:
                 problems.append(f"{reader}: {receiver!r} is excused by {why!r}, which is a label "
                                 "and not a reason the next reader can act on")
+    return problems
+
+
+def _dynamic_problems() -> list[str]:
+    """Every `dynamic` entry has to excuse a read that no name scanner can see, and cite what stands
+    in for the names.
+
+    Two ways exist, both measured by walking the source: the key-position census (#165) finds a call
+    whose key is a variable, and `_spread_receivers` (#140) finds a call whose key list is spread. An
+    entry outside both is excusing nothing -- which is not harmless, because the table is read by
+    `elements` as a list of names the gate knows, so a spare entry buys a holder past the rule that
+    should have derived it. Deliberately not folded into `_structural_problems`: its value is a red
+    test named for the claim, and folding it in would make the same plant red four tests at once.
+    """
+    source = NORMALIZE.read_text(encoding="utf-8")
+    nameless = {(row["owner"], row["receiver"]) for row in _key_position_calls(source)
+                if not row["literal"] and _BARE.fullmatch(row["receiver"])}
+    spread = {(reader, receiver) for reader in READERS for receiver in _spread_receivers(reader)}
+    problems = []
+    for reader, table in READERS.items():
+        for receiver, why in table["dynamic"].items():
+            if (reader, receiver) not in (nameless | spread):
+                problems.append(
+                    f"{reader}: {receiver!r} is declared dynamic, but no key-position read and no "
+                    "spread call names it -- the entry excuses a read that does not exist, and buys "
+                    "the name past the rules that would have derived it from the source")
+                continue
+            if not _cited_name_tables(why):
+                problems.append(
+                    f"{reader}: {receiver!r} is owed by a measured read but cites no callable no-arg "
+                    f"helper answering a non-empty name table, so nothing compares the names that "
+                    f"arrive there with a producer: {why!r}")
     return problems
 
 
@@ -2849,17 +2954,7 @@ def test_a_call_whose_key_is_a_variable_is_a_population_every_member_has_to_expl
                      f"{row['receiver']!r}, a read no scanner counts and this reader never declares "
                      f"dynamic -- its entries are {sorted(READERS[row['owner']]['dynamic'])}")
         cited = list(dict.fromkeys(re.findall(r"`(_\w+)", why)))
-        live = []
-        for name in cited:
-            answer = globals().get(name)
-            if not callable(answer):
-                continue
-            try:
-                table = answer()
-            except TypeError:
-                continue  # a helper that needs an argument is not a name table
-            if isinstance(table, (list, tuple, set, dict)) and table:
-                live.append((name, len(table)))
+        live = _cited_name_tables(why)
         assert live, (f"{row['owner']}.{row['receiver']} is excused by an entry that cites "
                       f"{cited or 'no helper at all'}, none of which answers a non-empty name table, "
                       f"so no rule compares the names arriving at L{row['line']} with a producer")
@@ -2898,3 +2993,114 @@ def test_a_call_whose_key_is_a_variable_is_a_population_every_member_has_to_expl
          "being counted under a spelling no accessor answers for")
     assert dead == ["int", "strOr"], (f"the vocabulary's undefined spellings are now {dead}, measured "
                                       "at two -- recount before trusting either list")
+
+
+# --------------------------- #166: an exemption has to be owed by a read, not bought by a table
+
+
+def test_a_dynamic_entry_has_to_excuse_a_measured_read_and_cite_the_table_that_replaces_the_names(
+        monkeypatch):
+    """`dynamic` says "a variable brings the name". Five entries claimed it; two excused no read.
+
+    #165 walked every accessor call with a key position and found 16 whose key is a variable, 4 of
+    them inside a reader. Three of those 4 are excused by an entry, and the fourth is the folded
+    `idOf(h, g.type)`, which #165 explains from `idOf`'s own signature. So three entries were owed.
+    The other two -- `normalizeEvidence.items` and `normalizeSearch.arr` -- name no key-position read
+    and no spread call, yet they were not free: `elements` asks what the parent of an element row is,
+    and accepted only a name from `record_of`/`blind`/`dynamic`. `blind` was measured out (it requires
+    a literal read site, and a list has none), so the entry was bought to satisfy that rule, and the
+    rule was the only thing consulting it. #165's record said "nothing consults them", which was
+    measured against `_undeclared_receivers` alone; `_broken_links` did consult them, and that is the
+    correction this unit lands -- the parent rule now derives the builder from the source
+    (`_derived_holder`) instead of taking a claim in the wrong vocabulary.
+
+    Measured: `items` is `const items = Array.isArray(raw) ? raw : list(raw, "evidence", "sources")`
+    and both keys are fields of the records `raw` is bound to; `arr` is `const arr = list(raw, g.key)`,
+    whose key is the very variable `raw`'s own entry cites `_search_hits` for. Neither needs a second
+    claim, and an entry that needs nothing is the tolerance that hides the next rename.
+    """
+    source = NORMALIZE.read_text(encoding="utf-8")
+    assert _dynamic_problems() == [], f"{_dynamic_problems()}"
+
+    entries = {(reader, receiver) for reader, table in READERS.items() for receiver in table["dynamic"]}
+    assert sorted(entries) == [("normalizeJdParsed", "body"), ("normalizeSearch", "raw"),
+                               ("normalizeTrajectory", "source")], \
+        (f"the dynamic entries are {sorted(entries)}: three, each owed by a measured read -- a fourth "
+         "has to say which nameless read or spread call it excuses, or it is buying a name")
+
+    mapper_rows = {(row["owner"], row["receiver"]) for row in _key_position_calls(source)
+                   if not row["literal"] and _BARE.fullmatch(row["receiver"]) and row["owner"] in READERS}
+    assert len(mapper_rows) == 4, (f"{len(mapper_rows)} nameless reads sit in a reader: the census and "
+                                   "the table are no longer the same 4-plus-1 story")
+    assert sorted(mapper_rows - entries) == [("normalizeSearch", "h")], \
+        (f"the nameless reader rows with no dynamic entry are {sorted(mapper_rows - entries)}: one "
+         "folded `idOf` read, explained by `idOf`'s signature -- a second means a read nobody excuses")
+    assert sorted(entries - mapper_rows) == [], \
+        (f"{sorted(entries - mapper_rows)} is declared dynamic and answers no nameless read in a "
+         "reader -- if it is a spread call, `_spread_receivers` has stopped seeing it")
+
+    cited = {(reader, receiver): _cited_name_tables(why)
+             for reader, table in READERS.items() for receiver, why in table["dynamic"].items()}
+    assert cited == {("normalizeJdParsed", "body"): (("_jd_arr_names", 5),),
+                     ("normalizeSearch", "raw"): (("_search_hits", 6),),
+                     ("normalizeTrajectory", "source"): (("_trajectory_keys", 4),)}, \
+        (f"each entry cites exactly one live no-arg name table, sized {cited}: a second table, or a "
+         "different size, means the entry no longer says which names stand in for the read")
+
+    # The derived half: which `elements` parents are now declared by their builder rather than a name.
+    derived = []
+    for reader, table in READERS.items():
+        for parent in table["elements"].values():
+            holder = parent[0] if isinstance(parent, tuple) else parent
+            if holder not in (set(table["record_of"]) | set(table["blind"]) | set(table["dynamic"])):
+                derived.append((reader, holder))
+    assert sorted(derived) == [("normalizeEvidence", "items"), ("normalizeSearch", "arr")], \
+        (f"{sorted(derived)} take the derived path, measured at two: a third is a list local no rule "
+         "walked, and a lost one means an entry came back to buy the holder past it")
+    assert [(reader, holder, _derived_holder(reader, holder)) for reader, holder in derived] == [
+        ("normalizeEvidence", "items", (True, "built by reading the declared receiver 'raw'")),
+        ("normalizeSearch", "arr", (True, "built by reading the declared receiver 'raw'"))], \
+        (f"the two derived holders do not both report the builder this rule reads: "
+         f"{[(r[0], r[1], r[2][1]) for r in ((a, b, _derived_holder(a, b)) for a, b in derived)]}")
+
+    # Refusal end, measured in-process so the rule is tested at both sides before it is trusted.
+    unearned = ("the evidence list this reader either receives pre-drilled or drills out of its own "
+                "argument: a list has no key to read, only the rows it holds, and those are bound as `e`")
+    monkeypatch.setitem(READERS["normalizeEvidence"], "dynamic", {"items": unearned})
+    problems = _dynamic_problems()
+    assert len(problems) == 1 and "normalizeEvidence" in problems[0] and "'items'" in problems[0], \
+        (f"re-adding the deleted entry is answered by {problems}: this rule exists to refuse it")
+    assert _undeclared_receivers("normalizeEvidence") == [] and \
+        _broken_links("normalizeEvidence") == [], \
+        ("the plant troubles an older table rule too, so a red here would not say which rule caught "
+         "it -- and the claim that only this rule sees an unearned entry would be false")
+    monkeypatch.undo()
+
+    monkeypatch.setitem(READERS["normalizeSearch"], "dynamic",
+                        {"raw": "`const arr = list(raw, g.key)` asks for whichever list the group "
+                                "being rendered names, so no literal name appears at the site"})
+    stripped = _dynamic_problems()
+    assert len(stripped) == 1 and "cites no callable no-arg helper" in stripped[0], \
+        (f"an owed entry with its name table removed answers {stripped}: the citation half of this "
+         "rule is not running, so #165 and #166 are auditing one scanner twice")
+
+    monkeypatch.undo()
+    monkeypatch.setitem(READERS["normalizeEvidence"], "record_of",
+                        {**READERS["normalizeEvidence"]["record_of"], "raw": "SearchResponse"})
+    refused = _derived_holder("normalizeEvidence", "items")
+    assert refused[0] is False and "evidence" in refused[1], \
+        (f"building `items` off a record that emits neither key is answered {refused}: the derived "
+         "path accepts any assignment, so a list nothing produces passes as declared")
+    monkeypatch.undo()
+    monkeypatch.setitem(READERS["normalizeSearch"], "elements", {"h": "notAList"})
+    unbuildable = _broken_links("normalizeSearch")
+    assert any("'h' comes from 'notAList'" in problem and "nor demonstrably builds" in problem
+               for problem in unbuildable), \
+        (f"a parent nothing builds is answered by {unbuildable}: the widened rule accepts a holder "
+         "name at random, which is the tolerance the two deleted entries were")
+    monkeypatch.setitem(READERS["normalizeSearch"], "elements", {"h": "raw"})
+    accepted = [problem for problem in _broken_links("normalizeSearch") if "comes from" in problem]
+    assert accepted == [] and _derived_holder("normalizeSearch", "raw")[0] is False, \
+        (f"{accepted} / {_derived_holder('normalizeSearch', 'raw')}: a holder the table binds is "
+         "refused, so the widened rule only ever reaches for the source when a name is missing -- and "
+         "derivation is not consulted for a declared holder, which is what keeps `derived` at two")
