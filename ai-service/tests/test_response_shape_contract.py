@@ -1101,3 +1101,73 @@ def test_the_java_census_binds_every_drill_and_names_the_level_it_stops_at():
     assert _ELEMENT_READ.search('o -> Json.str(Json.obj(o), "plantedElement")') is not None, \
         "the element probe stopped matching, and the population above would read as empty forever"
 
+
+# ------------------------------------------------------- the envelope: one wrapper, one unwrapper
+
+SUCCESS_READ = re.compile(r"\b(\w+)\.(success)\b")
+UNWRAP = re.compile(r"\b(\w+)\?\.data\b")
+
+
+def _envelope_readers() -> tuple[list[dict], list[dict]]:
+    """(Envelope reads, `toast.success` lines) over every non-test file under frontend/src.
+
+    Both lists come out of the SAME walk on purpose: the toast count is the floor that proves the walk
+    reached the pages and the hooks, not just the api directory. A second loop measuring the width would
+    stay green while the reader walk quietly narrowed itself -- which is what the first witness run of
+    this section caught.
+
+    `success` is the envelope's own field -- `common/ApiResponse.java:10` declares
+    `record ApiResponse<T>(boolean success, T data, ApiError error)` -- so a page that reads it has
+    started consuming the wrapper rather than the payload. `toast.success(...)` from sonner is the same
+    spelling in a different language, and it is separated by the receiver name rather than dropped.
+    """
+    rows, toasts = [], []
+    for path in sorted(ROOT_FRONTEND.rglob("*.ts")) + sorted(ROOT_FRONTEND.rglob("*.tsx")):
+        if ".test." in path.name:
+            continue
+        relative = str(path.relative_to(ROOT_FRONTEND)).replace("\\", "/")
+        for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+            if "toast.success" in line:
+                toasts.append({"file": relative, "line": number})
+            for found in SUCCESS_READ.finditer(line):
+                if found.group(1) == "toast":
+                    continue
+                rows.append({"file": relative, "line": number, "kind": "success", "text": line.strip()})
+            for found in UNWRAP.finditer(line):
+                rows.append({"file": relative, "line": number, "kind": "unwrap", "text": line.strip()})
+    return rows, toasts
+
+
+def test_the_response_envelope_has_exactly_one_wrapper_and_one_unwrapper():
+    """#172: the pair that makes "no reader binds ApiResponse" true instead of suspicious.
+
+    `EnvelopeAdvice.beforeBodyWrite` wraps every public body and the client unwraps once, which is why
+    the producer census can honestly say no browser reader names the envelope. That is a claim about two
+    files in two languages, and it is only safe while both halves stay where they are: widen the advice
+    and the unwrap returns `undefined` for responses that were never wrapped, add a second unwrap and the
+    one that is gated stops being the one that runs. Measured on this plane: two `success` reads and one
+    `?.data` unwrap, all of them in `lib/api/client.ts`, plus 23 `toast.success` lines the exclusion has
+    to keep out. `client.ts` belongs to a concurrent session's file list, so this gate reads it and never
+    edits it -- if a third reader appears, the test names it and a human decides where it belongs.
+    """
+    advice = (JAVA_ROOT / "com" / "careeros" / "common" / "EnvelopeAdvice.java").read_text(encoding="utf-8")
+    assert "return ApiResponse.ok(body);" in advice, \
+        "the advice no longer wraps every public body, so the client's single unwrap is a lie"
+    for skip in ("ApiResponse<?>", "SseEmitter", "Resource"):
+        assert skip in advice, (f"{skip} is no longer in the advice's own exclusion list: the envelope "
+                                "must not be applied twice, or to a stream or a file download")
+
+    rows, toasts = _envelope_readers()
+    assert sorted({row["file"] for row in rows}) == ["lib/api/client.ts"], \
+        (f"{sorted({row['file'] for row in rows})}: only the client may touch the envelope, or a page is "
+         "reading a wrapper field the shape gate binds to no record")
+    kinds = sorted(row["kind"] for row in rows)
+    assert kinds.count("success") == 2 and kinds.count("unwrap") == 1, \
+        f"{[(row['kind'], row['text']) for row in rows]}: two success checks and one unwrap is the pair"
+    assert [row["text"] for row in rows if row["kind"] == "success"] == [
+        'if (!res.ok || !json.success || !json.data) return null;',
+        'if (!res.ok || (json && json.success === false)) {',
+    ], f"{[row['text'] for row in rows if row['kind'] == 'success']}: the envelope's own guards, measured"
+    assert len(toasts) == 23, (f"{len(toasts)} `toast.success` lines came out of the same walk: that is "
+                               "the floor proving the scan reached the pages and the hooks, so a walk "
+                               "narrowed to the api directory cannot pass quietly")
