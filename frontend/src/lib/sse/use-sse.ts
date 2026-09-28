@@ -203,8 +203,12 @@ export function dispatchEvent(evt: SSEEvent, h: SSEHandlers): void {
     case "artifact": h.onArtifact?.(evt.data); break;
     case "done": h.onDone?.(evt.data); break;
     case "message": {
-      // The relay wraps payloads in `message` frames — unwrap the common
-      // {type, data} shape so callers still see status/token/trace events.
+      // DEFECT, pinned by the shape gate (#173): the only producer of a `message` frame is
+      // orchestrator.py:277, which publishes `Outcome.to_dict()` -- answer / artifacts / sources /
+      // actions / steps / tools_used / run_id. Nothing writes `type`, `token` or a wrapped `data`, so the
+      // re-dispatch below can never fire, and its vitest fixtures invented the shape instead of asking
+      // the producer. The three signals it claims to forward already arrive as named events. Deleting it
+      // needs one live stream check first (R1 is blocked on the owner), so the branch stays and is named.
       const payload = evt.data as { type?: string; data?: unknown; token?: string; content?: string };
       h.onMessage?.(evt.data);
       if (payload && typeof payload === "object") {

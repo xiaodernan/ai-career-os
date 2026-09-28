@@ -1171,3 +1171,43 @@ def test_the_response_envelope_has_exactly_one_wrapper_and_one_unwrapper():
     assert len(toasts) == 23, (f"{len(toasts)} `toast.success` lines came out of the same walk: that is "
                                "the floor proving the scan reached the pages and the hooks, so a walk "
                                "narrowed to the api directory cannot pass quietly")
+
+
+def test_a_message_frame_reader_names_only_keys_the_orchestrator_emits():
+    """#173: a `message` frame has one producer, and this test is the ledger of the reader's inventions.
+
+    `orchestrator.py:277` publishes `_emit(task_id, "message", out.to_dict())`, and the Java relay only
+    defaults a frame's name to `message` when the upstream had none (`SseRelayService.java:109`) while
+    every ai-service frame carries an event name (`api/tasks.py:30`, `core/taskbus.py:29`). So the keys of
+    `Outcome.to_dict` are the frame's shape. `use-sse.ts` re-dispatches inside the `message` case on
+    `payload.type`, `payload.token` and `payload.data` -- three fields no producer writes, under a cast
+    that made the invention look like a contract -- and its vitest fixtures fed exactly those shapes, so
+    the tests prove the branch runs, not that it is reachable. The branch is therefore pinned rather than
+    deleted: deleting it needs one live stream check, and runtime verification is blocked on the owner.
+    """
+    source = (_app_root() / "agents" / "orchestrator.py").read_text(encoding="utf-8")
+    builder = source[source.index("def to_dict"):]
+    emitted = set(re.findall(r'"([A-Za-z_]\w*)":', builder[:builder.index("\n\n")]))
+    assert emitted == {"answer", "artifacts", "sources", "actions", "steps", "tools_used", "run_id"}, \
+        (f"{sorted(emitted)} are the keys `Outcome.to_dict` writes: this frame's only producer, read off "
+         "its own source rather than copied into a cast")
+
+    use_sse = (ROOT_FRONTEND / "lib" / "sse" / "use-sse.ts").read_text(encoding="utf-8")
+    cases = set(re.findall(r'\n\s+case "(\w+)":', use_sse))
+    assert cases == {"status", "progress", "token", "trace", "artifact", "done", "message", "error",
+                    "ping"}, (f"{sorted(cases)}: the frame names the client routes -- every producer "
+                             "event is either handled or deliberately dropped")
+    block = use_sse[use_sse.index('case "message"'):use_sse.index('case "error"')]
+    named = set(re.findall(r"\bpayload\.(\w+)", block))
+    assert named - emitted == {"data", "token", "type"}, \
+        (f"{sorted(named)} are read off a `message` frame; {sorted(emitted)} are what the producer "
+         "emits. This ledger expects the hole to still be exactly these three fields: if a producer "
+         "starts writing `type`, the branch becomes live and the test has to be re-read; if the branch "
+         "is deleted, this assertion goes red on purpose and the test should be retired with it -- not "
+         "loosened")
+    assert named & emitted == set(), (f"{sorted(named & emitted)} would already be answered by the "
+                                     "producer, which would shrink the hole below the three fields pinned")
+    assert sorted({h for h in ("onToken", "onStatus", "onTrace") if f"{h}?." in use_sse}) == \
+        ["onStatus", "onToken", "onTrace"], (
+            "the three signals the unreachable branch forwards already have named-event handlers, which "
+            "is what makes the branch dead code rather than a feature")
