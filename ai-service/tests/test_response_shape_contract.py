@@ -15,6 +15,7 @@ including the maps drilled out of it, one level down.
 
 import ast
 import inspect
+import os
 import re
 from collections import namedtuple
 from functools import lru_cache
@@ -2869,3 +2870,329 @@ def test_the_heartbeat_interval_has_one_definer_and_every_shipped_claim_names_it
         (f"{args['overridden']}: every override of the heartbeat lives in the offline tests and shortens "
          "it, which is why the tests can run fast without proving a different interval -- an override in "
          "shipped code would make every claim above true of a number nothing uses")
+
+
+# ------------------------------------------------------------------- the nameless-frame default
+REPO_ROOT = Path(__file__).resolve().parents[2]
+RELAY_PATH = JAVA_ROOT / "com" / "careeros" / "ai" / "SseRelayService.java"
+CLIENT_PATH = ROOT_FRONTEND / "lib" / "sse" / "use-sse.ts"
+NAMELESS_TOKEN = re.compile(r'\?\s*"message"|=\s*"message"|\|\s*"message"|:\s*"message"')
+PRUNED_DIRS = {"node_modules", "__pycache__", "dist", "build", ".next", ".venv"}
+
+
+def _parser_body(text: str, header: str, label: str) -> tuple[str, int]:
+    """(body, offset of its opening brace) for the function or method whose header matches `header`.
+
+    Containment is the point: `#184`'s first census was a token scan for `"message"` and it counted the
+    browser's *trace step kind* list -- `"handoff" | "message" | "final"` -- as if it defaulted a frame
+    name. Reading the parser's own body admits a site by where it sits, not by what the word looks like.
+    """
+    at = re.search(header, text)
+    if at is None:
+        raise AssertionError(f"{label} is no longer declared where the frame parsers are read from, so "
+                             "the default taken out of its body would be missing rather than changed")
+    paren = text.index("(", at.start())
+    params = _balanced(text, paren, "(", ")")
+    brace = text.index("{", paren + len(params))
+    return _balanced(text, brace, "{", "}"), brace
+
+
+def _line_of(text: str, offset: int) -> int:
+    return text.count("\n", 0, offset) + 1
+
+
+def _nameless_frame_defaults() -> list[dict]:
+    """What each shipped SSE parser calls a frame that arrives with data and no `event:` line.
+
+    Two languages parse this stream: the Java relay between ai-service and the browser, and the
+    browser's own `parseFrame`. Each has to invent a name when the wire omits one (the SSE spec's answer
+    is `message`), and the two inventions have to agree -- a relay that re-sends a name the client's
+    router does not default to is a frame that silently goes nowhere.
+    """
+    relay_text = RELAY_PATH.read_text(encoding="utf-8")
+    client_text = CLIENT_PATH.read_text(encoding="utf-8")
+    relay, relay_at = _parser_body(relay_text, r"\bvoid\s+readFrames\s*\(", "SseRelayService.readFrames")
+    client, client_at = _parser_body(client_text, r"\bfunction\s+parseFrame\s*\(", "parseFrame")
+    rows = []
+    for m in re.finditer(r'(\w+)\s*==\s*null\s*\?\s*"(\w+)"', relay):
+        rows.append({"file": "SseRelayService.java", "language": "java", "enclosing": "readFrames",
+                     "line": _line_of(relay_text, relay_at + m.start()),
+                     "guard": m.group(1), "default": m.group(2)})
+    declared = re.findall(r'\blet\s+(\w+)\s*=\s*"(\w+)"', client)
+    if len(declared) != 1:
+        raise AssertionError(f"{len(declared)} defaulted event-name bindings in parseFrame, expected 1: "
+                             "with none the client's default cannot be read, and with two the frame's "
+                             "name would be decided twice in one parse")
+    name, value = declared[0]
+    at = client.index(f'{name} = "{value}"')
+    rows.append({"file": "use-sse.ts", "language": "ts", "enclosing": "parseFrame",
+                 "line": _line_of(client_text, client_at + at), "guard": None, "default": value})
+    return rows
+
+
+def _union_block(lines: list[str], index: int) -> tuple[str, set[str]]:
+    """(head line, every quoted name in the union) for the union carrying `lines[index]`.
+
+    Two spellings have to be read: `event: SSEEventName | "message" | …` is a union written on one line,
+    while `kind:` and `export type TraceKind =` continue theirs on the following `|`-led lines. Walking
+    out from the occurrence finds both, and the head names the declaration the union belongs to -- which
+    is what separates a frame-name union from a trace step kind that happens to share the spelling.
+    """
+    top = index
+    while top > 0 and lines[top - 1].strip().startswith("|"):
+        top -= 1
+    bottom = index
+    while bottom + 1 < len(lines) and lines[bottom + 1].strip().startswith("|"):
+        bottom += 1
+    if top == index and not lines[index].strip().startswith("|"):
+        head, body = lines[index].strip(), lines[index]
+    else:
+        head = lines[top - 1].strip() if top > 0 else ""
+        body = "\n".join(lines[top:bottom + 1])
+    return head, set(re.findall(r'"(\w+)"', body))
+
+
+def _message_token_census() -> list[dict]:
+    """Every shipped Java or browser-TS line where `"message"` sits in a value position, classified.
+
+    The classification is the deliverable, not the count. A scan for the token sweeps in three different
+    vocabularies -- a frame-name default, a frame-name type union, and a trace step kind that happens to
+    be spelled `message` -- and a ledger that reads them as one population would report on the wrong
+    system. Positions are found by matching against the whole file, so the parser-body containment below
+    does not depend on how the file ends its lines.
+    """
+    rows = []
+    defaults = {(row["file"], row["line"]) for row in _nameless_frame_defaults()}
+    relay_text = RELAY_PATH.read_text(encoding="utf-8")
+    client_text = CLIENT_PATH.read_text(encoding="utf-8")
+    relay, relay_at = _parser_body(relay_text, r"\bvoid\s+readFrames\s*\(", "SseRelayService.readFrames")
+    client, client_at = _parser_body(client_text, r"\bfunction\s+parseFrame\s*\(", "parseFrame")
+    bodies = {RELAY_PATH: (relay_at, relay_at + len(relay)),
+              CLIENT_PATH: (client_at, client_at + len(client))}
+    sources = [(path, path.read_text(encoding="utf-8"))
+               for path in sorted(list(JAVA_ROOT.rglob("*.java"))
+                                  + list(ROOT_FRONTEND.rglob("*.ts"))
+                                  + list(ROOT_FRONTEND.rglob("*.tsx")))]
+    for path, text in sources:
+        lines = text.splitlines()
+        span = bodies.get(path)
+        for match in NAMELESS_TOKEN.finditer(text):
+            number = text.count("\n", 0, match.start()) + 1
+            line = lines[number - 1]
+            inside = span is not None and span[0] <= match.start() < span[1]
+            if inside and (path.name, number) in defaults:
+                role = "frame-default"
+            elif inside and "return null" in line:
+                role = "frame-exit"
+            elif inside:
+                role = "unclassified"
+            elif ".test." in path.name:
+                role = "test-assertion"
+            elif line.strip().startswith("|") or re.search(r'\|\s*"message"', line):
+                role = "type-union-member"
+            else:
+                role = "unclassified"
+            head, names = _union_block(lines, number - 1) if role == "type-union-member" else ("", set())
+            rows.append({"file": path.name, "line": number, "role": role,
+                         "head": head, "union": sorted(names), "text": line.strip()[:150]})
+    return rows
+
+
+def _if_condition(line: str) -> str | None:
+    """The condition text of an `if (…) {` written on one line, or None when the line is not one.
+
+    Read by position rather than by searching the parser body for `data.length`: the claim is about the
+    guard attached to a specific `onFrame` call, and the line above that call is where that guard is.
+    """
+    stripped = line.strip()
+    match = re.match(r"(?:\} else )?if\s*\(", stripped)
+    if match is None or not stripped.endswith("{"):
+        return None
+    return _balanced(stripped, match.end() - 1, "(", ")")[1:-1].strip()
+
+
+def test_both_frame_parsers_default_a_nameless_frame_to_the_same_event_name():
+    """The relay and the browser invent the same name for a frame the wire left unnamed -- and only the
+    parsers' own bodies are allowed to say so.
+
+    `SseRelayService.readFrames` re-sends `eventName == null ? "message"` twice (once for a frame ended
+    by a blank line, once for the stream's tail), and the browser's `parseFrame` opens with
+    `let event = "message"` before it ever sees an `event:` line. Those two defaults are the same
+    decision made in two languages, and #181 pinned only the Java half.
+
+    The rest of this test is the belt on that claim: `"message"` in a value position is not a frame name,
+    so the census says what each of its 16 occurrences *is* -- 3 defaults, the parser's own empty-frame
+    exit, 9 vitest fixtures, and 3 type-union members, two of which are the trace step kinds
+    (`step_start … handoff | message | final`) that share the spelling and nothing else.
+    """
+    rows = _nameless_frame_defaults()
+    assert sorted({row["default"] for row in rows}) == ["message"], \
+        (f"{[(r['file'], r['default']) for r in rows]}: both parsers must hand a nameless frame the same "
+         "name -- the relay forwards to the browser, so a default that differs on one side is a frame "
+         "that reaches the client as an event its router has never heard of")
+    assert [(row["file"], row["line"], row["language"], row["default"]) for row in rows] == [
+        ("SseRelayService.java", 109, "java", "message"),
+        ("SseRelayService.java", 129, "java", "message"),
+        ("use-sse.ts", 244, "ts", "message"),
+    ], ("where each parser invents the name: the Java pair is the in-stream frame and the stream's tail, "
+        "and losing either half means one of the two exit paths stops defaulting")
+    assert [row["guard"] for row in rows] == ["eventName", "eventName", None], \
+        (f"{[row['guard'] for row in rows]}: the Java default is tested against the parsed `eventName` and "
+         "the browser's is an unguarded initializer -- the shapes differ on purpose (the relay keeps "
+         "`null` until the frame ends, the client keeps the spec's default) and an edit that makes them "
+         "the same would hide which side stopped defaulting")
+    assert all(row["enclosing"] in ("readFrames", "parseFrame") for row in rows), \
+        "every default site is inside one of the two frame parsers, which is what keeps a `" \
+        "kind: … | \"message\"` type union out of this census by position rather than by name"
+
+    census = _message_token_census()
+    by_role: dict[str, list[dict]] = {}
+    for row in census:
+        by_role.setdefault(row["role"], []).append(row)
+    assert len(census) == 16, \
+        (f"{sorted(by_role)} counts {[(r, len(v)) for r, v in by_role.items()]}: the floor comes from the "
+         "same walk as the roles below, so a narrowed scan cannot make the ledger tidy by reading nothing")
+    assert sorted(by_role) == ["frame-default", "frame-exit", "test-assertion", "type-union-member"], \
+        (f"{sorted(by_role)}: every occurrence of the token is accounted for by one of these four roles -- "
+         "an `unclassified` row is a new vocabulary that this gate has not been told about, and a census "
+         "that silently files it under a default would report on the wrong system")
+    assert [(row["file"], row["line"]) for row in by_role["frame-default"]] == \
+        [(row["file"], row["line"]) for row in rows], \
+        "the census's `frame-default` rows and the parser scan are the same sites, read two ways"
+    assert [(row["file"], row["line"]) for row in by_role["frame-exit"]] == [("use-sse.ts", 251)], \
+        (f"{[(r['file'], r['line'], r['text']) for r in by_role['frame-exit']]}: the one non-default use "
+         "inside a parser is the exit that drops a frame with neither data nor an explicit name")
+    assert sorted((row["file"], row["line"], row["head"]) for row in by_role["type-union-member"]) == [
+        ("agent-timeline.tsx", 33, "export type TraceKind ="),
+        ("types.ts", 709, "kind:"),
+        ('use-sse.ts', 15, 'event: SSEEventName | "message" | "progress" | "ping";'),
+    ], (f"{[(r['file'], r['line'], r['head']) for r in by_role['type-union-member']]}: three type unions "
+        "spell `message`, and only one of them names a frame -- the other two are the trace step kind "
+        "lists, so the head of each union is pinned with its position: the pair (`file`, `line`) says "
+        "where the census found it and the head says which declaration it belongs to")
+    assert [row["union"] for row in by_role["type-union-member"] if "handoff" in row["union"]] == [
+        sorted(row["union"]) for row in by_role["type-union-member"] if "handoff" in row["union"]
+    ] and len([row for row in by_role["type-union-member"] if "handoff" in row["union"]]) == 2, \
+        ("exactly two of the three unions carry `handoff`, which is the trace-step marker: the third is "
+         "the frame-name union, and the discriminator is the vocabulary around it, not the line")
+    assert {row["file"] for row in by_role["test-assertion"]} == {"use-sse.test.ts"} \
+        and len(by_role["test-assertion"]) == 9, \
+        (f"{[(r['file'], r['line']) for r in by_role['test-assertion']]}: the fixtures that hand a parser "
+         "a nameless frame are the only test-side uses -- they prove the branch runs, not that a "
+         "producer sends it, which is the reachability question the next test answers")
+
+
+def test_the_two_parsers_disagree_about_a_frame_that_carries_no_data():
+    """Java drops a frame for having no data; the browser drops it only when it also has no name.
+
+    The relay wraps both of its `onFrame` calls in `if (data.length() > 0)`, so a frame that ends with a
+    name and no data line never reaches the browser at all. `parseFrame` exits on
+    `dataLines.length === 0 && event === "message"` -- one clause, not two -- so the same frame, if it
+    got there, would be delivered with an empty-string payload. The disagreement is real but idle: every
+    frame the bus yields carries a `data` payload, `ping` included (`{}` is still a `data:` line), which
+    is the half that keeps this a ledger instead of a defect report.
+    """
+    relay_text = RELAY_PATH.read_text(encoding="utf-8")
+    client_text = CLIENT_PATH.read_text(encoding="utf-8")
+    client, client_at = _parser_body(client_text, r"\bfunction\s+parseFrame\s*\(", "parseFrame")
+
+    relay_lines = relay_text.splitlines()
+    java_rows = [row for row in _nameless_frame_defaults() if row["language"] == "java"]
+    emit_guards = [_if_condition(relay_lines[row["line"] - 2]) for row in java_rows]
+    assert emit_guards == ["data.length() > 0", "data.length() > 0"], \
+        (f"{emit_guards} above the relay's two `onFrame` calls "
+         f"{[(r['file'], r['line']) for r in java_rows]}: both emit points are guarded on data alone -- a "
+         "guard on the name as well would let an unnamed frame through, and a guard that disappeared "
+         "would deliver a nameless frame the browser has to invent a name for")
+    ts_exit = re.search(r"if\s*\(([^)]*)\)\s*return null;", client)
+    assert ts_exit is not None, "parseFrame has no `return null` guard, so its empty-frame exit cannot be read"
+    ts_clauses = [c.strip() for c in ts_exit.group(1).split("&&")]
+    assert ts_clauses == ["dataLines.length === 0", 'event === "message"'], \
+        (f"{ts_clauses}: the browser drops an empty frame only when the name is the one it synthesized, "
+         "which is the clause the relay does not have -- and the clause compares against the default "
+         "name, so this is the same `message` the first test pinned")
+    assert _line_of(client_text, client_at + ts_exit.start()) == 251, \
+        "the exit is the line the token census calls `frame-exit`, read the same way by both scans"
+    assert len(emit_guards) == 2 and len(ts_clauses) == 2 and \
+        all("==" not in g for g in emit_guards), \
+        (f"{emit_guards} vs {ts_clauses}: the relay's condition is one clause about data and the "
+         "browser's is two, one of them about the name -- that is the disagreement, stated as sets "
+         "rather than as a sentence about the code")
+
+    bus = TASKBUS_PATH.read_text(encoding="utf-8")
+    yielded = re.findall(r'yield\s+\{([^}]*)\}', bus)
+    assert all('"data"' in y for y in yielded) and len(yielded) == 2, \
+        (f"{yielded}: the frames the bus emits itself are exactly two and both carry a `data` key, so "
+         "today no producer can make the two guards disagree -- if a yield without data is ever added, "
+         "the relay swallows it and the browser forwards it as `\"\"`")
+
+
+def test_the_bus_ships_a_frame_formatter_that_the_wire_never_uses():
+    """`taskbus.sse()` formats SSE text that no shipped code writes, and the real writer is a library.
+
+    The bus carries its own `event:`/`data:` formatter, which looks like the thing the stream is made of
+    -- so it reads as the place to change the wire format, and a change there would be invisible: the
+    only caller in the entire Python population is an offline test, while `api/tasks.py` hands frames to
+    `sse-starlette`'s `EventSourceResponse`. Both facts are measured here, along with the one that keeps
+    the dead formatter harmless -- the prefixes it writes are prefixes both parsers read.
+    """
+    def python_files(root: Path) -> list[Path]:
+        found = []
+        for dirpath, dirnames, filenames in os.walk(root):
+            dirnames[:] = [d for d in dirnames if d not in PRUNED_DIRS and not d.startswith(".")]
+            found += [Path(dirpath) / f for f in filenames if f.endswith(".py")]
+        return sorted(found)
+
+    outside = [p for p in python_files(REPO_ROOT) if AI_SERVICE_ROOT not in p.parents and p != AI_SERVICE_ROOT]
+    assert outside == [], \
+        (f"{[str(p.relative_to(REPO_ROOT)) for p in outside][:6]}: Python outside `ai-service` would be "
+         "outside the caller census below, and a census that says `the only caller is a test` means "
+         "nothing if part of the population was never walked")
+
+    callers, shipped = [], []
+    for path in python_files(AI_SERVICE_ROOT):
+        text = path.read_text(encoding="utf-8", errors="replace")
+        try:
+            tree = ast.parse(text, filename=str(path))
+        except SyntaxError:
+            continue
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Call):
+                name = getattr(node.func, "id", None) or getattr(node.func, "attr", None)
+                if name == "sse":
+                    rel = str(path.relative_to(AI_SERVICE_ROOT)).replace("\\", "/")
+                    callers.append((rel, node.lineno))
+                    if not path.name.startswith("test_"):
+                        shipped.append((rel, node.lineno))
+    assert callers == [("tests/test_core_modules.py", 537)], \
+        (f"{callers}: `sse()` is production code whose only caller is one offline test -- the wire is "
+         "formatted elsewhere, so an edit here is tested but never shipped")
+    assert shipped == [], \
+        (f"{shipped}: a shipped caller would make the formatter real, and then its format has to be "
+         "reconciled with what the parsers read instead of noted as dead")
+
+    bus_text = TASKBUS_PATH.read_text(encoding="utf-8")
+    formatter = re.search(r'def sse\(event: dict\) -> str:\n\s+return (f"[^"]*")', bus_text)
+    assert formatter is not None, "`sse()` no longer returns a single f-string, so its wire prefixes " \
+                                  "cannot be read and the comparison below would compare nothing"
+    # The literal text between the interpolations is the format; the escape sequences are still written
+    # as source (`\n`, two characters), so they are turned back into line breaks before counting fields.
+    literal = "".join(re.split(r"\{[^{}]*\}", formatter.group(1))).replace("\\n", "\n")
+    written = set(re.findall(r"\b(\w+):", literal))
+    assert written == {"event", "data"}, \
+        (f"{sorted(written)} from {literal!r}: the dead formatter writes exactly the two fields the "
+         "parsers read; adding `id:` or `retry:` would make it a format the running stream does not have")
+    relay_text = RELAY_PATH.read_text(encoding="utf-8")
+    relay, _ = _parser_body(relay_text, r"\bvoid\s+readFrames\s*\(", "SseRelayService.readFrames")
+    client, _ = _parser_body(CLIENT_PATH.read_text(encoding="utf-8"),
+                             r"\bfunction\s+parseFrame\s*\(", "parseFrame")
+    java_reads = set(re.findall(r'startsWith\("(\w+):"\)', relay))
+    ts_reads = set(re.findall(r'startsWith\("(\w+):"\)', client))
+    assert java_reads == ts_reads == {"event", "data"}, \
+        (f"relay {sorted(java_reads)} / client {sorted(ts_reads)}: both parsers read the two prefixes "
+         "the formatter writes -- `:` (the comment line the keep-alive uses) is skipped by name, not "
+         "read as a field, so the formatter and the parsers still describe one wire")
+    assert len(re.findall(r"EventSourceResponse\s*\(",
+                          (AI_SERVICE_ROOT / "app" / "api" / "tasks.py").read_text(encoding="utf-8"))) == 1, \
+        "the live writer is sse-starlette's response, exactly one call site -- that is what formats the " \
+        "stream the relay parses, and it is why `sse()` can be dead without the stream being unformatted"
