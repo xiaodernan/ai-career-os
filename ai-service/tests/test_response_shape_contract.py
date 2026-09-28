@@ -1220,8 +1220,9 @@ def _published_frame_names() -> set[str]:
 
     Three spellings cover them all on the Python side -- `publish(task_id, "<name>", …)`,
     `_emit(task_id, "<name>", …)` (whose one body forwards to publish with the name as a variable, so the
-    literal call sites ARE the inventory), and `{"event": "<name>", …}` yields. Java only ever forwards
-    the name it received, which the second half of the rule checks by requiring zero hard-coded names.
+    literal call sites ARE the inventory), and `{"event": "<name>", …}` yields. The backend re-sends two of
+    these names as literals and invents no third, which `_backend_frame_name_sites` measures rather than
+    assumes (see #181: the first version of this rule counted one spelling and reported zero).
     """
     names: set[str] = set()
     for path in _app_root().rglob("*.py"):
@@ -1232,12 +1233,76 @@ def _published_frame_names() -> set[str]:
     return names
 
 
+BACKEND_NAME_SPELLINGS = (
+    ("event-builder", re.compile(r'\.name\(\s*"(\w+)"')),
+    ("sink-send", re.compile(r'\bsink\.send\(\s*"(\w+)"')),
+    ("listener-callback", re.compile(r'\bonFrame\(\s*"(\w+)"')),
+)
+
+
+def _backend_frame_name_sites() -> dict[str, dict[str, list[str]]]:
+    """file -> spelling -> the literal frame names written that way, over the whole backend tree.
+
+    #175 counted one spelling -- `.name("<literal>")`, the builder the relay uses with a *variable* -- and
+    concluded the backend hard-codes nothing. It does: `CopilotStreamService` answers `sink.send("done", …)`
+    and re-sends `sink.send("error", …)`, and `SseRelayService` invents `listener.onFrame("error", …)` when
+    the upstream answers a non-200. The spelling stays in the key so a census narrowed to one of them cannot
+    pass quietly, and the repeated `error` entries stay because they are four sites, not one.
+    """
+    sites: dict[str, dict[str, list[str]]] = {}
+    for path in sorted(JAVA_ROOT.rglob("*.java")):
+        text = path.read_text(encoding="utf-8")
+        found = {label: sorted(names) for label, pattern in BACKEND_NAME_SPELLINGS
+                 for names in [pattern.findall(text)] if names}
+        if found:
+            sites[path.name] = found
+    return sites
+
+
 def _java_frame_names() -> set[str]:
-    """Frame names the backend invents rather than relays -- measured zero, and that is the claim."""
-    names: set[str] = set()
-    for path in JAVA_ROOT.rglob("*.java"):
-        names.update(re.findall(r'\.name\(\s*"(\w+)"', path.read_text(encoding="utf-8")))
-    return names
+    """Frame names the backend puts on the wire itself rather than relaying -- measured two, not zero."""
+    return {name for by_spelling in _backend_frame_name_sites().values()
+            for names in by_spelling.values() for name in names}
+
+
+def _relay_synthesized_names() -> dict[str, list[str]]:
+    """The name the relay gives a frame that arrived with data but no `event:` line, per file.
+
+    Scoped to the `onFrame(` calls that carry a ternary, because a whole-tree `X == null ? "y"` scan also
+    matches unrelated defaults (`ResumeService.java` answers `category -> other`) and would then be a census
+    of Java's null-coalescing rather than of frame names.
+    """
+    out: dict[str, list[str]] = {}
+    for path in sorted(JAVA_ROOT.rglob("*.java")):
+        text = path.read_text(encoding="utf-8")
+        names = [m.group(1) for m in re.finditer(r'onFrame\([^?]*\?\s*"(\w+)"', text)]
+        if names:
+            out[path.name] = names
+    return out
+
+
+def _terminal_flag_cases(stream: str) -> tuple[set[str], set[str]]:
+    """(every name the relay listener's switch intercepts, the subset that marks the turn finished).
+
+    `boolean[] finished` is what makes `CopilotStreamService.run` answer `the turn ended before it produced
+    an answer` instead of closing an empty stream, so an arm that forwards or persists without setting the
+    flag is a hang-shaped defect, not a style choice.
+    """
+    arms = re.findall(r'case\s+"(\w+)"\s*->\s*\{([^{}]*)\}', stream)
+    if not arms:
+        raise AssertionError("the switch over relayed frames is gone, so its arms cannot be measured")
+    return {name for name, _body in arms}, {
+        name for name, body in arms if "finished[0] = true" in body}
+
+
+def _bus_terminal_names() -> set[str]:
+    """The event names `taskbus.subscribe` treats as the end of a run, read off the bus's own test."""
+    bus = (_app_root() / "core" / "taskbus.py").read_text(encoding="utf-8")
+    clause = re.findall(r'ev\.get\("event"\)\s+in\s+\(([^)]*)\)', bus)
+    if len(clause) != 1:
+        raise AssertionError(f"{len(clause)} terminal-name clauses on the bus, expected exactly 1: "
+                             "the subscription loop's stop condition must be a single readable tuple")
+    return set(re.findall(r'"(\w+)"', clause[0]))
 
 
 def test_the_client_dispatches_two_frame_kinds_no_service_can_send():
@@ -1246,9 +1311,9 @@ def test_the_client_dispatches_two_frame_kinds_no_service_can_send():
     `use-sse.ts` routes nine event names; the services publish seven of them -- status, progress, done,
     error, token, message, ping. `artifact` and `trace` appear in no publishing call site anywhere: the
     string `"artifact"` does not occur in `ai-service/app` at all, `trace` frames are never published
-    because `observability.trace()` writes to the database instead of the task bus, and the backend only
-    relays (`SseRelayService.java:109`, `CopilotStreamService.java:163` forward the name they read). Yet
-    `components/ai/task-stream.tsx:98` turns trace frames into timeline rows and :125 flips a reporting
+    because `observability.trace()` writes to the database instead of the task bus, and the backend adds no
+    name of its own beyond re-sending `done`/`error` (`SseRelayService.java:109`, `CopilotStreamService.java:126`).
+    Yet `components/ai/task-stream.tsx:98` turns trace frames into timeline rows and :125 flips a reporting
     state on an artifact frame, so the affordance is wired to a signal nothing sends -- and
     `use-sse.test.ts:75-76` feeds both by hand, which is how it has stayed green.
 
@@ -1261,9 +1326,12 @@ def test_the_client_dispatches_two_frame_kinds_no_service_can_send():
     assert published == {"status", "progress", "done", "error", "token", "message", "ping"}, \
         (f"{sorted(published)} are the frames any service can send, read off the publish/_emit/yield "
          "call sites -- the inventory the client's cases are measured against")
-    assert _java_frame_names() == set(), \
-        ("the backend now hard-codes a frame name, so the inventory above is no longer the whole story "
-         "and a name could reach the browser without appearing in it")
+    invented = _java_frame_names()
+    assert invented <= published, \
+        (f"{sorted(invented)} are named as literals by the backend itself, which re-sends two frames it "
+         "also relays. The claim this carries is not 'the backend invents nothing' (it does, see #181) but "
+         "'no name reaches the browser outside the inventory above' -- a new name here means the inventory "
+         "has to be re-read, not that this subset check should be widened")
 
     use_sse = (ROOT_FRONTEND / "lib" / "sse" / "use-sse.ts").read_text(encoding="utf-8")
     cases = set(re.findall(r'\n\s+case "(\w+)":', use_sse))
@@ -1278,6 +1346,120 @@ def test_the_client_dispatches_two_frame_kinds_no_service_can_send():
     assert "onTrace:" in consumers and "onArtifact:" in consumers, \
         ("the ledger above is only about real readers: task-stream subscribes to both handlers, so this "
          "is a visible affordance and not dead weight in the hook alone")
+
+
+def test_the_backend_is_the_only_reader_of_the_frame_key_the_browser_never_touches():
+    """#181: the run stream read from the server's side -- who consumes a frame besides the browser.
+
+    #175–#180 all measured one direction: what a service publishes, and what a `.tsx`/`.ts` file reads.
+    The frames have a second consumer on the way. `SseRelayService.consume` parses the event stream and
+    hands `(event, data)` to a `FrameListener`; `CopilotStreamService.run` implements that listener, and its
+    switch intercepts `done` (persist the turn, then re-send `done` with the *stored* reply), `error` (forward
+    it) and `ping` (drop it), leaving `default -> sink.send(event, data)` for everything else. So the backend
+    both *names* frames as literals and *reads keys* out of one -- and `result`, which #180 recorded as
+    published but unread, is unread only by the browser: `persist` asks the done payload for exactly
+    `result` and `error`.
+    """
+    sites = _backend_frame_name_sites()
+    assert sites == {"CopilotStreamService.java": {"sink-send": ["done", "error", "error", "error"]},
+                     "SseRelayService.java": {"listener-callback": ["error"]}}, \
+        (f"{sites}: the backend's own frame-name literals, per file and per spelling. The relay's "
+         "`upstream status <code>` error is a *third* producer of the error frame whose data is not JSON at "
+         "all, which is why the payload ledger below is read off the parsed holder rather than off every "
+         "error site; a new spelling here is a name the browser can be handed without appearing in #175's "
+         "inventory")
+    assert sum(len(names) for by_spelling in sites.values() for names in by_spelling.values()) == 5, \
+        ("five literal frame-name sites: the floor that proves the walk reached both relay paths, so a "
+         "census narrowed to the builder spelling cannot pass this file quietly")
+
+    intercepted, flag_sets = _terminal_flag_cases(
+        (JAVA_ROOT / "com" / "careeros" / "conversation" / "service" / "CopilotStreamService.java")
+        .read_text(encoding="utf-8"))
+    bus_text = (_app_root() / "core" / "taskbus.py").read_text(encoding="utf-8")
+    # `findall` with two groups yields pairs, so they are flattened rather than summed: `sum`
+    # over tuples raises instead of measuring, and a walk that cannot run proves nothing.
+    ternary_publishes = re.findall(
+        r'publish\(task_id,\s*"(\w+)"\s*if\s+\w+\s+else\s*"(\w+)"', bus_text)
+    assert len(ternary_publishes) == 1, \
+        (f"{len(ternary_publishes)} ternary `publish(task_id, ...)` sites on the bus, expected exactly 1: "
+         "`finish` is the only place the bus chooses a terminal frame, and a second spelling here would "
+         "be a name this census never reads")
+    can_publish = {name for pair in ternary_publishes for name in pair}
+    assert can_publish == _bus_terminal_names() == flag_sets == {"done", "error"}, \
+        (f"the bus publishes {sorted(can_publish)}, stops its own subscription on "
+         f"{sorted(_bus_terminal_names())}, and the backend marks a turn answered on "
+         f"{sorted(flag_sets)}: three planes must name the same two frames or a run streams forever. "
+         "The `ping` case is intercepted without setting the flag, which is the keep-alive's whole job")
+    assert intercepted - flag_sets == {"ping"}, \
+        (f"{sorted(intercepted - flag_sets)} are swallowed by the backend without marking the turn "
+         "finished: exactly the keep-alive, so nothing here ends the stream silently")
+
+    listener_files = sorted({path.name for path in JAVA_ROOT.rglob("*.java")
+                             if "FrameListener" in path.read_text(encoding="utf-8")
+                             or re.search(r'\.consume\(', path.read_text(encoding="utf-8"))})
+    assert listener_files == ["CopilotStreamService.java", "SseRelayService.java"], \
+        (f"{listener_files} are the files that declare, take or call the frame listener: this is the "
+         "population the key ledger below walks, derived rather than hand-picked")
+    parsed = {}
+    reads: set[str] = set()
+    for name in listener_files:
+        path = next(p for p in JAVA_ROOT.rglob("*.java") if p.name == name)
+        text = path.read_text(encoding="utf-8")
+        holders = re.findall(r'Map<String, Object>\s+(\w+)\s*=\s*[^;]*readValue\(', text)
+        parsed[name] = holders
+        for holder in holders:
+            reads.update(re.findall(rf'\b{re.escape(holder)}\.(?:containsKey|get|getOrDefault)\("(\w+)"',
+                                    text))
+            reads.update(re.findall(rf'Json\.\w+\(\s*{re.escape(holder)}\s*,\s*"(\w+)"', text))
+    assert parsed == {"CopilotStreamService.java": ["payload"],
+                      "SseRelayService.java": []}, \
+        (f"{parsed}: which listener file turns a frame's data into a parsed holder, because keys read off "
+         "any other receiver would be request JSON, not a frame")
+    emitted = _published_payload_keys()
+    frame_keys = emitted.get("done", set()) | emitted.get("error", set())
+    assert reads == {"error", "result"}, \
+        (f"{sorted(reads)} are the keys the backend reads off a frame payload: `result` is the run's "
+         "answer and `error` the reason it had none. The browser half of this claim is pinned separately "
+         "in the table test's `member_reads`, which finds no frontend file reading `.result` at all")
+    assert reads <= frame_keys, \
+        (f"{sorted(reads - frame_keys)} would be keys the only consumer of the terminal frames reads and "
+         "no producer writes -- a turn that can never be persisted, not a ledger row")
+
+    synthesized = _relay_synthesized_names()
+    assert synthesized == {"SseRelayService.java": ["message", "message"]}, \
+        (f"{synthesized}: a frame that arrives with data but no `event:` line is handed on as `message`, "
+         "so the one frame name the relay invents is a *default*, and #179 records that no shipped file "
+         "implements `onMessage`. Unreachable through our own ai-service (every frame it writes carries an "
+         "event name, `api/tasks.py:30`), live through any other upstream")
+    assert set(synthesized.get("SseRelayService.java", [])) <= _published_frame_names(), \
+        ("the defaulted name must still be in #175's inventory, or an unnamed frame reaches the browser "
+         "under a name nothing routes")
+    unscoped = {path.name for path in JAVA_ROOT.rglob("*.java")
+                if re.search(r'\w+\s*==\s*null\s*\?\s*"\w+"', path.read_text(encoding="utf-8"))}
+    assert len(unscoped) >= 2 and "ResumeService.java" in unscoped, \
+        (f"{sorted(unscoped)}: the null-default shape is common in this backend, which is why the census "
+         "above is scoped to `onFrame(` calls -- an unscoped scan would count unrelated defaults as frame "
+         "names and the ledger would look longer than the wire")
+
+    relay = (JAVA_ROOT / "com" / "careeros" / "ai" / "SseRelayService.java").read_text(encoding="utf-8")
+    invented = re.findall(r'onFrame\(\s*"(\w+)",\s*(.+?)\);', relay)
+    assert [name for name, _body in invented] == ["error"], \
+        (f"{invented}: the frame names the relay hands a listener with a literal, which is the one place "
+         "the backend adds a frame rather than forwarding one")
+    json_authored = {name for name, body in invented
+                     if "writeValueAsString" in body or "Map.of" in body}
+    assert json_authored == set(), \
+        (f"{json_authored} would be invented frames whose body the backend authors as JSON; measured none, "
+         "because `SseRelayService.java:76` hands on `\"upstream status \" + response.statusCode()`, a bare "
+         "string. So the name `error` reaches the browser in two shapes: an object with `error`/`result` "
+         "from ai-service, and this plain text. Harmless today only because #180 records that no `onError` "
+         "handler reads a key off its payload -- wire one up and this disagreement becomes the bug")
+    feeds = (JAVA_ROOT.parent.parent / "test" / "java" / "com" / "careeros" / "conversation" / "service" /
+             "CopilotStreamServiceTest.java").read_text(encoding="utf-8")
+    assert "upstream status" not in feeds, \
+        ("the Java suite drives the listener with done/status/token frames but never with the relay's own "
+         "non-JSON error, so the shape disagreement above has no test on either side; if a case appears "
+         "here, re-read this ledger rather than deleting the sentence")
 
 
 PUBLISH_CALL = re.compile(r'(?:taskbus\.)?(?:publish|_emit)\(\s*task_id\s*,\s*"(\w+)"\s*,\s*')
@@ -1980,9 +2162,11 @@ def test_the_run_stream_contract_is_one_table_of_publishers_cases_and_subscriber
          "shrinking means a screen stopped handling the run it renders")
     member_reads = {rel for rel, text in walked if re.search(r"\b\w+\??\.result\b", text)}
     assert member_reads == set(), \
-        (f"{sorted(member_reads)} read a `.result` member somewhere in the shipped app: the terminal frame "
-         "publishes that key and nothing consumed it, so a new reader either wires `done` up for real or "
-         "reads a `result` that came from another plane -- the claim above has to be re-read either way")
+        (f"{sorted(member_reads)} read a `.result` member somewhere in the shipped browser files: the "
+         "terminal frame publishes that key and no browser code consumes it, so a new reader here either "
+         "wires `done` up for real or reads a `result` that came from another plane -- the claim above has "
+         "to be re-read either way. This population is the frontend only: the backend does read "
+         "`done.result`, which #181 pins in `CopilotStreamService`")
 
     # #180's vocabulary is derived, and the derivation is cross-checked against its independent author: the
     # `Pick<UseSSEOptions, …>` that types the handlers argument of `postSSE`.
