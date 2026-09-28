@@ -3781,3 +3781,80 @@ def test_the_spread_receiver_scanner_agrees_with_the_paired_walk(monkeypatch):
     assert all(row["spread"] and not row["named"] for row in spread), \
         (f"{[(row['name'], row['spread'], row['named']) for row in spread]}: a call whose name slot is a "
          "spread is exactly the read `_sites` drops, which is why `dynamic` has to answer for it")
+
+
+# ---------------------- #171: census the derived-holder scanner against the assignments it reads
+
+def _assigned_accessor_locals(text: str) -> list[dict]:
+    """Every local the file builds with an accessor call, paired instead of line-grabbed.
+
+    `_derived_holder` answers whether a holder is demonstrably the list some declared receiver was read
+    into, and it reads the assignment as `[^\\n;]*` -- a line. This walk pairs the call with the very same
+    opener the rule searches for (`_ACCESSORS`), so the two answer one question and differ only in
+    whether they stop at a newline.
+    """
+    clean = _blank_ts_noise(text)
+    assign = re.compile(r"(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*")
+    opener = re.compile(_ACCESSORS)
+    rows = []
+    for found in assign.finditer(clean):
+        tail = clean[found.end():]
+        start = opener.match(tail)
+        if start is None:
+            continue
+        args, _ = _ts_args(clean, clean.rindex("(", found.end(), found.end() + start.end()))
+        parts = [part.strip() for part in _ts_top_level(args)]
+        receiver = parts[0] if parts else ""
+        rows.append({"holder": found.group(1), "line": clean.count("\n", 0, found.start()) + 1,
+                     "receiver": receiver, "wrap": "\n" in args,
+                     "nameable": bool(re.fullmatch(r"[A-Za-z_$][\w$.]*", receiver))})
+    return rows
+
+
+def test_the_derived_holder_scanner_answers_for_every_local_a_call_builds(monkeypatch):
+    """#171: `_derived_holder` replaced a tolerance with a derivation, so the derivation is censused.
+
+    #167 made it the honest answer for a list holder the vocabulary binds nothing to -- `elements` says
+    which rows a holder walks out, and this rule says the holder really is built by reading a declared
+    receiver. It reads assignments as lines: `[^\\n;]*` up to the end of the line, then demands the
+    accessor's first argument be an identifier followed by a comma inside that same line. Measured by
+    pairing instead: 83 locals in normalize.ts are built by an accessor call, none of them wrapped, and
+    7 of them hand the accessor something a rule cannot name because the first argument is itself a call
+    (`const overall = pct(num(m, "score"))`). Those seven are why the refusal text exists, and they are
+    not holders any table binds rows to. The three holders the rule answers True for are exactly the ones
+    the tables declare as element parents, and the plant below shows the one shape that would flip an
+    answer.
+    """
+    text = NORMALIZE.read_text(encoding="utf-8")
+    walked = _assigned_accessor_locals(text)
+    assert len(walked) == 83, (f"{len(walked)} locals are built by an accessor call: the population this "
+                               "rule's answers are drawn from")
+    assert [row["holder"] for row in walked if row["wrap"]] == [], \
+        (f"{[(row['holder'], row['line']) for row in walked if row['wrap']]}: a wrapped call is the "
+         "shape the line grab loses -- 0 today, and this pin is what says so when one appears")
+    unnameable = sorted(row["holder"] for row in walked if not row["nameable"])
+    assert unnameable == ["body", "flatOverall", "meta", "overall", "overall", "profile", "score"], \
+        (f"{unnameable}: a local whose accessor is handed another call is refused by name today, so none "
+         "of them can be a derived holder -- if one joins the tables, the refusal has to be answered")
+    parents = set()
+    for reader, spec in READERS.items():
+        for parent in spec["elements"].values():
+            parents.add((reader, parent[0] if isinstance(parent, tuple) else parent))
+    answered = sorted(pair for pair in parents if _derived_holder(*pair)[0])
+    assert answered == [("normalizeEvidence", "items"), ("normalizeResumeScore", "s"),
+                        ("normalizeSearch", "arr")], \
+        (f"{answered}: the derived holders the source actually builds -- a new one has to survive the "
+         "same derivation, and a lost one means the tables bind rows to a local nobody reads any more")
+
+    # The limit, shown through the shipped function: the same call written across two lines loses its
+    # answer, while the paired walk still names the receiver it reads.
+    wrapped = 'const arr = list(\n    raw, g.key,\n  );'
+    _restore_reads(monkeypatch, **{"const arr = list(raw, g.key);": wrapped})
+    ok, why = _derived_holder("normalizeSearch", "arr")
+    assert not ok and "cannot name" in why, \
+        f"{ok} / {why}: the line grab stops at the newline, so this is the shape that costs an answer"
+    assert [row["receiver"] for row in _assigned_accessor_locals(wrapped)] == ["raw"], \
+        (f"{_assigned_accessor_locals(wrapped)}: pairing keeps the receiver, which is why the fix for a "
+         "wrapped call is to pair this rule too, not to reformat the reader")
+    monkeypatch.undo()
+    assert _derived_holder("normalizeSearch", "arr")[0], "the plant did not roll back"
