@@ -96,6 +96,63 @@ test.describe("golden journey — account and session", () => {
     await expect(page).toHaveURL(/\/login/);
     await expect(page.locator("[data-sonner-toast]").first()).toBeVisible({ timeout: 20_000 });
   });
+
+  /**
+   * The recovery pair, driven through the screens that call it.
+   *
+   * The happy path needs the token from the reset email, which only the backend's dev
+   * transport can see, so the pass through the API lives in `AuthFlowIT`. What is left for a
+   * browser to prove is that the screens reach the endpoints at all, that the client refuses
+   * what it can refuse locally, and that `RESET_TOKEN_INVALID` arrives as advice rather than
+   * as a status code. No `user` fixture: this test wants no account.
+   */
+  test("the password-recovery screens reach their endpoints", async ({ page }) => {
+    const email = uniqueEmail("recover");
+
+    await page.goto("/login");
+    await page.getByRole("link", { name: "Forgot your password?" }).click();
+    await expect(page).toHaveURL(/\/forgot-password/);
+
+    // `/auth/password/forgot` answers 200 for an address with no account, so the screen can
+    // only promise conditionally — inventing a stronger confirmation would undo that.
+    await page.getByLabel("Email").fill(email);
+    await page.getByRole("button", { name: "Send reset token" }).click();
+    await expect(page.getByRole("heading", { name: "Check your email" })).toBeVisible({
+      timeout: 20_000,
+    });
+    await expect(page.getByText(email)).toBeVisible();
+
+    // A link that arrived without its token -- truncated by a mail client, or a token copied
+    // out of the message by hand -- still gets a way in rather than a dead end.
+    await page.goto("/reset-password");
+    await expect(page.getByLabel("Reset token")).toBeVisible();
+
+    // And that way in reaches the API: a token the server does not know comes back as advice.
+    await page.getByLabel("Reset token").fill("not-a-real-token");
+    await page.getByLabel("New password", { exact: true }).fill("Br4ndNewPassphrase");
+    await page.getByLabel("Confirm new password").fill("Br4ndNewPassphrase");
+    await page.getByRole("button", { name: "Save new password" }).click();
+    await expect(page.locator("[data-sonner-toast]").first()).toContainText("invalid or has expired", {
+      timeout: 20_000,
+    });
+
+    // A mismatch is refused locally, with no request spent on it.
+    await page.goto("/reset-password?token=not-a-real-token");
+    await page.getByLabel("New password", { exact: true }).fill("Br4ndNewPassphrase");
+    await page.getByLabel("Confirm new password").fill("Br4ndNewPassphras");
+    await page.getByRole("button", { name: "Save new password" }).click();
+    await expect(page.getByText("Passwords do not match")).toBeVisible();
+
+    // A token the API does not know comes back as what to do next, not as a code.
+    await expect(page.getByLabel("Reset token")).toHaveCount(0);
+    await page.getByLabel("Confirm new password").fill("Br4ndNewPassphrase");
+    await page.getByRole("button", { name: "Save new password" }).click();
+    await expect(page.locator("[data-sonner-toast]").first()).toContainText("invalid or has expired", {
+      timeout: 20_000,
+    });
+    // The form is still there to retype into — a rejected attempt must not look like a success.
+    await expect(page.getByRole("heading", { name: "Set a new password" })).toBeVisible();
+  });
 });
 
 test.describe("golden journey — resume becomes a knowledge base", () => {
@@ -267,6 +324,36 @@ test.describe("golden journey — track the application", () => {
     await authedPage.goto("/applications");
     await expect(authedPage.getByRole("heading", { level: 1 })).toBeVisible({ timeout: 20_000 });
     await expect(authedPage.getByText(job.title).first()).toBeVisible({ timeout: 20_000 });
+
+    // The card's fields are editable from the board: clicking its title opens the editor the
+    // drag handle deliberately is not. Notes and reminders had no writing surface at all
+    // before this, so the UI half is what this step is here to prove.
+    await authedPage.getByRole("button", { name: job.title }).first().click();
+    const editor = authedPage.getByRole("dialog");
+    await expect(editor).toBeVisible({ timeout: 20_000 });
+
+    await editor.getByLabel("Notes").fill("recruiter call booked");
+    await editor.getByLabel("Reminder").fill("2026-10-05T09:00");
+    await editor.getByRole("button", { name: "Save changes" }).click();
+    await expect(editor).toBeHidden({ timeout: 20_000 });
+
+    // The board re-reads the row, so what the dialog wrote is what the card now shows.
+    await expect(authedPage.getByText("recruiter call booked")).toBeVisible({ timeout: 20_000 });
+
+    // The row answers under `notes` while PATCH accepts `note` — the DTO names really do
+    // differ per verb, which is why this read is spelled out rather than inferred.
+    const persisted = await unwrap<{ notes: string; reminderAt: string | null }>(
+      await api.get(`/applications/${app.id}`)
+    );
+    expect(persisted.notes).toBe("recruiter call booked");
+    expect(persisted.reminderAt, "the reminder must survive the round trip").toBeTruthy();
+
+    // Clearing it is the half a set-only API could not express; the flag is what makes the
+    // reminder removable rather than permanent dashboard noise.
+    const cleared = await unwrap<{ reminderAt: string | null }>(
+      await api.patch(`/applications/${app.id}`, { clearReminderAt: true })
+    );
+    expect(cleared.reminderAt).toBeNull();
   });
 });
 

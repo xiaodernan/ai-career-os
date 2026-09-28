@@ -67,8 +67,8 @@ per-user budget on AI endpoints.
 | POST | `/auth/login` | `{email, password}` → tokens |
 | POST | `/auth/refresh` | `{refreshToken}` → new token pair (rotates; reuse revokes) |
 | POST | `/auth/logout` | `{refreshToken}` |
-| POST | `/auth/password/forgot` | `{email}` → always 200 (no account enumeration) |
-| POST | `/auth/password/reset` | `{token, newPassword}` |
+| POST | `/auth/password/forgot` | `{email}` → always 200 (no account enumeration); the mail carries `<app.web.base-url>/reset-password?token=…` (and prints the token), good for 30 minutes |
+| POST | `/auth/password/reset` | `{token, newPassword}` → single-use token; revokes every session the user had |
 
 ### Current user
 

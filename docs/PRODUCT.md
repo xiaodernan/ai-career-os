@@ -57,7 +57,7 @@ Each row is a shipped capability, the route that exposes it, and the API behind 
 
 | Capability | Route | API |
 | --- | --- | --- |
-| Accounts, sessions, token rotation | `/login`, `/register` | `/auth/*` |
+| Accounts, sessions, token rotation, password reset | `/login`, `/register`, `/forgot-password`, `/reset-password` | `/auth/*` |
 | Resume upload, parse, versions, quality score | `/resumes`, `/resumes/[id]` | `/resumes/*`, `/resume-versions` |
 | Knowledge base (resume / projects / notes / JD / company) | `/knowledge` | `/knowledge/*` |
 | Job search with facets (skills, location, salary, remote) + hybrid relevance | `/jobs` | `/jobs` |

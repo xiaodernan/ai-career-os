@@ -15,6 +15,7 @@ import java.time.Duration;
 import java.time.OffsetDateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,15 +33,24 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final EmailSender emailSender;
 
+    /**
+     * Where the browser app is served, so the reset mail can carry a link the user can click
+     * rather than an opaque token they would have to hand-carry to a screen that only reads it
+     * out of the URL. `app.web.base-url` defaults to the same origin CORS already trusts.
+     */
+    private final String webBaseUrl;
+
     public AuthService(UserRepository users, UserProfileRepository profiles,
                        PasswordResetTokenRepository resetTokens, TokenService tokenService,
-                       PasswordEncoder passwordEncoder, EmailSender emailSender) {
+                       PasswordEncoder passwordEncoder, EmailSender emailSender,
+                       @Value("${app.web.base-url:http://localhost:3000}") String webBaseUrl) {
         this.users = users;
         this.profiles = profiles;
         this.resetTokens = resetTokens;
         this.tokenService = tokenService;
         this.passwordEncoder = passwordEncoder;
         this.emailSender = emailSender;
+        this.webBaseUrl = webBaseUrl.endsWith("/") ? webBaseUrl.substring(0, webBaseUrl.length() - 1) : webBaseUrl;
     }
 
     @Transactional
@@ -81,8 +91,11 @@ public class AuthService {
             token.setTokenHash(TokenHasher.sha256Hex(rawToken));
             token.setExpiresAt(OffsetDateTime.now().plus(RESET_TOKEN_TTL));
             resetTokens.save(token);
+            String resetLink = webBaseUrl + "/reset-password?token=" + rawToken;
             emailSender.send(user.getEmail(), "Reset your AI Career OS password",
-                    "Use this token within 30 minutes to reset your password: " + rawToken);
+                    "Choose a new password within 30 minutes by opening this link:\n\n" + resetLink
+                            + "\n\nIf the link is unreadable, paste this token into the reset screen:\n"
+                            + rawToken);
         });
     }
 

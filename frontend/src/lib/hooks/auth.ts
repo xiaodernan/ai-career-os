@@ -53,3 +53,25 @@ export function useLogout() {
     },
   });
 }
+
+/** Ask for a reset token. It resolves for an unknown address too, by design. */
+export function useForgotPassword() {
+  return useMutation({ mutationFn: authApi.forgotPassword });
+}
+
+/**
+ * Spend a reset token.
+ *
+ * The API revokes every session the account had, so the local token pair is dropped here
+ * rather than left in storage to fail on the next request.
+ */
+export function useResetPassword() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: authApi.resetPassword,
+    onSuccess: () => {
+      tokenStore.clear();
+      qc.clear();
+    },
+  });
+}

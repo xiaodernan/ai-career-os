@@ -38,6 +38,8 @@ spring:
 app:
   cors:
     allowed-origins: ${APP_CORS_ORIGINS:http://localhost:3000}
+  web:
+    base-url: ${APP_WEB_BASE_URL:http://localhost:3000}
   jwt:
     secret: ${JWT_SECRET:dev-only-secret-please-change-me-0123456789abcdef0123456789abcdef}
     access-ttl-minutes: ${JWT_ACCESS_TTL_MINUTES:15}

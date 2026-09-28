@@ -94,7 +94,7 @@ frontend/backend/ai-service can also run natively for dev (`pnpm dev`, `mvn spri
 │       └── api/                  # /internal/* REST+SSE endpoints consumed by backend
 ├── frontend/                     # Next.js App Router
 │   └── src/
-│       ├── app/(auth)/           # login, register, reset
+│       ├── app/(auth)/           # login, register, forgot-password, reset-password
 │       ├── app/(app)/            # dashboard, resume, jobs, jobs/[id], companies/[id],
 │       │                         # applications, interviews, interviews/[id], copilot,
 │       │                         # knowledge, activity, settings, search

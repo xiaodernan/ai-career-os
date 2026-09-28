@@ -808,8 +808,6 @@ describe("endpoints ↔ backend route parity", () => {
    * purpose". `/jobs/import` sat in the hand-copied table for months while nothing built it.
    */
   const NEVER_REFERENCED: Record<string, string> = {
-    "/auth/password/forgot": "no password-reset flow in the UI; the endpoints exist for ops runbooks",
-    "/auth/password/reset": "same as the forgot pair: documented, served, not a browser screen",
     "/conversations/{}": "chats are created and read, never renamed or deleted from the app",
     "/health": "liveness for the container probe, not something a page calls",
     "/jobs/import": "jobs arrive through POST /jobs and POST /jds; no import screen exists",

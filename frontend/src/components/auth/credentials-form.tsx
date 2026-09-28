@@ -3,13 +3,11 @@
 import * as React from "react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { AuthField } from "@/components/auth/auth-field";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { ApiError } from "@/lib/api/client";
+import { emailIssue } from "@/lib/auth-recovery";
 import { useLogin, useRegister } from "@/lib/hooks/auth";
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export interface FieldConfig {
   name: "displayName" | "email" | "password" | "confirmPassword";
@@ -27,7 +25,7 @@ const baseFields: FieldConfig[] = [
     type: "email",
     autoComplete: "email",
     placeholder: "you@example.com",
-    validate: (v) => (!v ? "Email is required" : !EMAIL_RE.test(v) ? "Enter a valid email address" : undefined),
+    validate: emailIssue,
   },
   {
     name: "password",
@@ -128,37 +126,29 @@ export function CredentialsForm({ mode }: { mode: "login" | "register" }) {
 
       <form onSubmit={onSubmit} noValidate className="space-y-4">
         {fields.map((f) => {
-          const showError = touched[f.name] && errors[f.name];
           return (
-            <div key={f.name} className="space-y-1.5">
-              <Label htmlFor={f.name}>{f.label}</Label>
-              <Input
-                id={f.name}
-                name={f.name}
-                type={f.type}
-                autoComplete={f.autoComplete}
-                placeholder={f.placeholder}
-                value={values[f.name] ?? ""}
-                aria-invalid={showError ? true : undefined}
-                aria-describedby={showError ? `${f.name}-error` : undefined}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  setValues((prev) => ({ ...prev, [f.name]: v }));
-                  if (touched[f.name]) {
-                    setErrors((prev) => ({ ...prev, [f.name]: f.validate?.(v, { ...values, [f.name]: v }) }));
-                  }
-                }}
-                onBlur={() => {
-                  setTouched((prev) => ({ ...prev, [f.name]: true }));
-                  setErrors((prev) => ({ ...prev, [f.name]: f.validate?.(values[f.name] ?? "", values) }));
-                }}
-              />
-              {showError && (
-                <p id={`${f.name}-error`} className="text-xs text-destructive">
-                  {errors[f.name]}
-                </p>
-              )}
-            </div>
+            <AuthField
+              key={f.name}
+              id={f.name}
+              name={f.name}
+              label={f.label}
+              type={f.type}
+              autoComplete={f.autoComplete}
+              placeholder={f.placeholder}
+              value={values[f.name] ?? ""}
+              error={touched[f.name] ? errors[f.name] : undefined}
+              onChange={(e) => {
+                const v = e.target.value;
+                setValues((prev) => ({ ...prev, [f.name]: v }));
+                if (touched[f.name]) {
+                  setErrors((prev) => ({ ...prev, [f.name]: f.validate?.(v, { ...values, [f.name]: v }) }));
+                }
+              }}
+              onBlur={() => {
+                setTouched((prev) => ({ ...prev, [f.name]: true }));
+                setErrors((prev) => ({ ...prev, [f.name]: f.validate?.(values[f.name] ?? "", values) }));
+              }}
+            />
           );
         })}
 
@@ -166,6 +156,17 @@ export function CredentialsForm({ mode }: { mode: "login" | "register" }) {
           {isLogin ? "Sign in" : "Create account"}
         </Button>
       </form>
+
+      {isLogin && (
+        <p className="text-center text-sm">
+          <Link
+            href="/forgot-password"
+            className="font-medium text-primary underline-offset-4 hover:underline"
+          >
+            Forgot your password?
+          </Link>
+        </p>
+      )}
 
       <p className="text-center text-sm text-muted-foreground">
         {isLogin ? (

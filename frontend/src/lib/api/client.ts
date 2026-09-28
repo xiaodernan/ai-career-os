@@ -311,6 +311,30 @@ export const authApi = {
     }
   },
 
+  /**
+   * Ask for a reset token. Resolves even for an address with no account: the API answers
+   * `{accepted: true}` either way so the screen cannot be used to enumerate users.
+   */
+  async forgotPassword(payload: { email: string }): Promise<void> {
+    await request<{ accepted: boolean }>(endpoints.auth.forgotPassword, {
+      method: "POST",
+      body: { email: payload.email },
+      auth: false,
+    });
+  },
+
+  /**
+   * Spend a reset token. The API revokes every session for the user, so the caller has to
+   * send the user back to sign in rather than pretending they are still logged in.
+   */
+  async resetPassword(payload: { token: string; newPassword: string }): Promise<void> {
+    await request<{ reset: boolean }>(endpoints.auth.resetPassword, {
+      method: "POST",
+      body: { token: payload.token, newPassword: payload.newPassword },
+      auth: false,
+    });
+  },
+
   me(): Promise<User> {
     return request<User>(endpoints.auth.me);
   },
