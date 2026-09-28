@@ -160,6 +160,8 @@ export interface JobFilters {
   company?: string;
   min_salary?: number;
   max_salary?: number;
+  /** `ORDERINGS` key; absent/empty lets the server pick (relevance for `q`, recency for a browse). */
+  sort?: string;
   page?: number;
   size?: number;
 }

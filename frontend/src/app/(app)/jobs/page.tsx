@@ -9,6 +9,8 @@ import { QueryBoundary } from "@/components/common/query-boundary";
 import { LoadingJobCardSkeleton } from "@/components/common/loading-skeletons";
 import { Pagination } from "@/components/common/pagination";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { JobCard } from "@/components/jobs/job-card";
 import { JobFilterPanel } from "@/components/jobs/job-filters";
@@ -25,6 +27,7 @@ type FilterState = {
   remote?: boolean;
   min_salary?: number;
   max_salary?: number;
+  sort: string;
   page: number;
   size: number;
 };
@@ -34,9 +37,25 @@ const DEFAULTS: FilterState = {
   skills: "",
   location: "",
   company: "",
+  sort: "",
   page: 0,
   size: 12,
 };
+
+/**
+ * The board's orderings. `auto` is the one spelled by *omission*: with no `sort`
+ * parameter the server ranks a query by relevance and a browse by recency, which is
+ * what a person means by "best match". The rest are `JobSearchRepository.ORDERINGS`
+ *' own keys — a gate in job-filter.test.ts keeps the two lists identical, so an
+ * ordering the SQL gains appears here rather than staying a curl-only feature.
+ */
+const SORT_OPTIONS: { value: string; label: string }[] = [
+  { value: "auto", label: "Best match" },
+  { value: "posted", label: "Newest first" },
+  { value: "salary", label: "Highest salary" },
+  { value: "title", label: "Title A–Z" },
+  { value: "match", label: "Match score" },
+];
 
 export default function JobsPage() {
   const [filters, setFilters] = useUrlState(DEFAULTS, {
@@ -117,21 +136,48 @@ export default function JobsPage() {
         </aside>
 
         <div className="min-w-0 space-y-4">
-          <Tabs value={tab} onValueChange={(v) => { setTab(v as typeof tab); setFilters({ page: 0 }); }}>
-            <TabsList variant="line">
-              <TabsTrigger value="discover">
-                <Briefcase aria-hidden />
-                Discover
-              </TabsTrigger>
-              <TabsTrigger value="saved">
-                <Bookmark aria-hidden />
-                Saved
-                {saved.data?.total ? (
-                  <span className="ml-1 text-2xs text-muted-foreground tabular-nums">{saved.data.total}</span>
-                ) : null}
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+          <div className="flex items-center justify-between gap-3">
+            <Tabs value={tab} onValueChange={(v) => { setTab(v as typeof tab); setFilters({ page: 0 }); }}>
+              <TabsList variant="line">
+                <TabsTrigger value="discover">
+                  <Briefcase aria-hidden />
+                  Discover
+                </TabsTrigger>
+                <TabsTrigger value="saved">
+                  <Bookmark aria-hidden />
+                  Saved
+                  {saved.data?.total ? (
+                    <span className="ml-1 text-2xs text-muted-foreground tabular-nums">{saved.data.total}</span>
+                  ) : null}
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+
+            {/* Ordering is a Discover question: the Saved tab pages the bookmark set it
+                already has, so a sort there would move the URL and nothing else. */}
+            {tab === "discover" && (
+              <div className="flex items-center gap-2">
+                <Label htmlFor="jobs-sort" className="text-xs text-muted-foreground">
+                  Sort
+                </Label>
+                <Select
+                  value={filters.sort || "auto"}
+                  onValueChange={(v) => setFilters({ sort: v === "auto" ? "" : v, page: 0 })}
+                >
+                  <SelectTrigger id="jobs-sort" size="sm" className="w-40">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SORT_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
 
           <QueryBoundary
             query={listView}

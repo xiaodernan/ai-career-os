@@ -348,3 +348,48 @@ describe("every job filter the UI can send is a parameter the endpoint binds", (
     expect(emitted.filter((key) => !bound.includes(key))).toEqual([]);
   });
 });
+
+describe("the board's sort control", () => {
+  // React can't render in this environment, so the wiring is guarded the way the rest of
+  // this file guards it: the page is read as data and reconciled against the repository's
+  // own ORDERINGS map — the same source the server actually orders by, and the one
+  // docs/API.md's sort row is contract-tested against on the backend side.
+  const page = readFileSync(new URL("../app/(app)/jobs/page.tsx", import.meta.url), "utf8");
+  const repository = readFileSync(
+    new URL(
+      "../../../backend/src/main/java/com/careeros/job/repository/JobSearchRepository.java",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+
+  const orderings = new Set(
+    [...(repository.match(/ORDERINGS = Map\.of\(([\s\S]*?)\);/)?.[1].matchAll(/"([a-z_]+)",\s+"/g) ?? [])].map(
+      (m) => m[1],
+    ),
+  );
+  const options = page.match(/const SORT_OPTIONS[^=]*= (\[[\s\S]*?\]);/)?.[1] ?? "";
+  const offered = new Set([...options.matchAll(/value: "([a-z_]+)"/g)].map((m) => m[1]));
+
+  it("offers every ordering the repository maps and invents none", () => {
+    // The control reads the map, not a copy of it: a new ORDERINGS key that never
+    // reaches the UI is a feature only a curl invocation can use.
+    expect(orderings).toEqual(new Set(["posted", "salary", "title", "match", "relevance"]));
+    // `auto` is the spelling for *omitting* the parameter, which the server answers with
+    // relevance for a query and recency for a browse — relevance is therefore the one
+    // key the control reaches by absence rather than by name.
+    expect(offered).toEqual(new Set(["auto", ...[...orderings].filter((k) => k !== "relevance")]));
+  });
+
+  it("sends the repository's key, and nothing at all while left on auto", () => {
+    expect(page).toContain('setFilters({ sort: v === "auto" ? "" : v, page: 0 })');
+    expect(serializeJobFilters({ sort: "" })).toEqual({});
+    expect(serializeJobFilters({ sort: "salary" })).toEqual({ sort: "salary" });
+  });
+
+  it("is a Discover question — the Saved tab pages rows already in hand", () => {
+    const guard = page.indexOf('{tab === "discover" && (');
+    expect(guard).toBeGreaterThan(-1);
+    expect(page.indexOf("<Select")).toBeGreaterThan(guard);
+  });
+});
