@@ -3196,3 +3196,376 @@ def test_the_bus_ships_a_frame_formatter_that_the_wire_never_uses():
                           (AI_SERVICE_ROOT / "app" / "api" / "tasks.py").read_text(encoding="utf-8"))) == 1, \
         "the live writer is sse-starlette's response, exactly one call site -- that is what formats the " \
         "stream the relay parses, and it is why `sse()` can be dead without the stream being unformatted"
+
+# =====================================================================================
+# #185 -- every stream request is armed with `Accept`; is the answer ever asked what it is?
+# =====================================================================================
+
+API_CLIENT_PATH = ROOT_FRONTEND / "lib" / "api" / "client.ts"
+TASK_STREAM_PATH = ROOT_FRONTEND / "components" / "ai" / "task-stream.tsx"
+TASKS_ENDPOINT_PATH = AI_SERVICE_ROOT / "app" / "api" / "tasks.py"
+STREAM_MEDIA = "text/event-stream"
+MEDIA_LITERAL = re.compile(r"text/event-stream")
+JAVA_ANSWER_DECLARATION = re.compile(r"produces\s*=\s*MediaType\.(TEXT_EVENT_STREAM_VALUE)")
+JAVA_REQUEST_SENDER = re.compile(r"\.contentType\(\s*MediaType\.(\w+)")
+REQUEST_HEADER_READ = re.compile(r'getHeader\(\s*"([^"]+)"\s*\)')
+ANSWER_STATUS = re.compile(r"statusCode\(\)\s*!=\s*\d+|!\s*res\.ok|!\s*(?:stream|res\.body)\b")
+TERMINAL_CODE = re.compile(r'new ApiError\("([A-Z_]+)"')
+STATUS_FALLBACK = re.compile(r'\(res\.status === 404 \? "NOT_FOUND" : "HTTP_ERROR"\)')
+DONE_BREAK = re.compile(r"\bif\s*\(\s*done\s*\)\s*break\s*;")
+# Every way a reader could ask "what media type is this?", spelled as each language writes it.
+ANSWER_READ = re.compile(
+    r"\.getContentType\s*\("
+    r"|\.headers\.get\(\s*[\"'][Cc]ontent-[Tt]ype"
+    r"|\.headers\(\)\.firstValue\(\s*[\"'][Cc]ontent-[Tt]ype"
+    r"|getHeader\(\s*[\"'][Cc]ontent-[Tt]ype"
+    r"|MediaType\.(?:parseMediaType|valueOf|includes|isCompatibleWith)\s*\("
+    r"|contentType\s*(?:===?|!==?)"
+    r"|\bcontent_type\s*(?:==|!=|\bin\b|\.startswith)"
+    r"|[\"'][Mm]ime_?type[\"']")
+# Which bag the media type was taken out of: an HTTP answer's headers, or a value the code already holds.
+HTTP_HEADER_BAG = re.compile(r"\bheaders\b")
+STORED_VALUE_READ = re.compile(r"\.get(?:MediaType|ContentType|MimeType)\s*\(\)")
+CONTENT_TYPE_TOKEN = re.compile(r'[\"\'][Cc]ontent-[Tt]ype[\"\']')
+CONSUMERS = (
+    ("SseRelayService.consume", "java", RELAY_PATH, r"\bvoid\s+consume\s*\("),
+    ("postSSE", "ts", API_CLIENT_PATH, r"\basync function postSSE\s*(?:<[^<>]*>)?\("),
+    ("useSSE", "ts", CLIENT_PATH, r"\bfunction useSSE\s*\("),
+)
+TASK_STREAM_FIELDS = ("connection", "running", "reporting", "finished")
+
+
+def _media_rel(path: Path) -> str:
+    return str(path.relative_to(AI_SERVICE_ROOT.parent)).replace("\\", "/")
+
+
+def _stream_media_sites() -> list[dict]:
+    """Every shipped line that writes the stream media type down, classified by the line's shape.
+
+    Three planes arm a stream request and each spells the header its own way -- `finalHeaders.set(
+    "Accept", ...)` in the browser client, a plain `{ Accept: ... }` object in the hook, `.header(
+    "Accept", ...)` in the relay -- while Spring declares the answer with `MediaType.TEXT_EVENT_STREAM_VALUE`
+    and ai-service declares it by returning sse-starlette's response class. Two of those spellings are
+    invisible to a scan for the literal, which is why each gets its own walk below.
+    """
+    rows = []
+    for label, path, text in _walk_shipped_code():
+        for match in MEDIA_LITERAL.finditer(text):
+            number = _line_of(text, match.start())
+            line = text.splitlines()[number - 1]
+            if ".test." in path.name or path.name.startswith("test_"):
+                kind = "test-assertion"
+            elif re.search(r'\.(?:set|header)\(\s*"Accept"|\bAccept\s*:', line):
+                kind = "request-header"
+            elif re.match(r"\s*(//|\*|#)", line):
+                kind = "comment"
+            else:
+                kind = "unclassified"
+            rows.append({"file": _media_rel(path), "plane": label, "line": number, "kind": kind,
+                         "text": line.strip()[:150]})
+    return rows
+
+
+def _java_answer_declarations() -> list[dict]:
+    rows = []
+    for path in sorted(JAVA_ROOT.rglob("*.java")):
+        text = path.read_text(encoding="utf-8")
+        for match in JAVA_ANSWER_DECLARATION.finditer(text):
+            number = _line_of(text, match.start())
+            line = text.splitlines()[number - 1]
+            verb = re.search(r'@(Get|Post)Mapping\(\s*value\s*=\s*"([^"]+)"', line)
+            rows.append({"file": path.name, "line": number,
+                         "verb": verb.group(1) if verb else None,
+                         "route": verb.group(2) if verb else None})
+    return rows
+
+
+def _java_media_writers() -> list[dict]:
+    """Every media type Java names on a wire it controls -- proof the answer check below is a choice."""
+    rows = []
+    for path in sorted(JAVA_ROOT.rglob("*.java")):
+        text = path.read_text(encoding="utf-8")
+        for match in JAVA_REQUEST_SENDER.finditer(text):
+            rows.append({"file": path.name, "line": _line_of(text, match.start()),
+                         "media": match.group(1)})
+    return rows
+
+
+def _answer_type_reads() -> dict[str, list[dict]]:
+    """Media-type reads, split by where the value came from -- the answer's headers, or the code's own."""
+    buckets: dict[str, list[dict]] = {}
+    for _label, path, text in _walk_shipped_code():
+        for match in ANSWER_READ.finditer(text):
+            number = _line_of(text, match.start())
+            line = text.splitlines()[number - 1]
+            context = text[match.start():match.start() + 80]
+            if ".test." in path.name or path.name.startswith("test_"):
+                kind = "test-assertion"
+            elif HTTP_HEADER_BAG.search(line):
+                kind = "http-answer-headers"
+            elif STORED_VALUE_READ.search(context):
+                kind = "stored-value"
+            else:
+                kind = "unclassified"
+            buckets.setdefault(kind, []).append(
+                {"file": _media_rel(path), "line": number, "spelling": match.group(0).strip(),
+                 "text": line.strip()[:150]})
+    return buckets
+
+
+def _content_type_tokens() -> list[dict]:
+    """Every `"Content-Type"` written in shipped code, classified by what the line does with it."""
+    rows = []
+    for _label, path, text in _walk_shipped_code():
+        for match in CONTENT_TYPE_TOKEN.finditer(text):
+            number = _line_of(text, match.start())
+            line = text.splitlines()[number - 1]
+            if ".test." in path.name or path.name.startswith("test_"):
+                kind = "test-assertion"
+            elif "setAllowedHeaders" in line:
+                kind = "cors-allowlist"
+            elif re.search(r'\.(?:set|header|put)\(\s*[\"\'][Cc]ontent-[Tt]ype', line) \
+                    or re.search(r'[\"\'][Cc]ontent-[Tt]ype[\"\']\s*:\s*[\"\']', line):
+                kind = "request-sender"
+            else:
+                kind = "unclassified"
+            rows.append({"file": _media_rel(path), "line": number, "kind": kind,
+                         "text": line.strip()[:150]})
+    return rows
+
+
+def _request_header_reads() -> list[dict]:
+    """Which header names Java reads off a request -- a second floor under the absence below."""
+    rows = []
+    for _label, path, text in _walk_shipped_code():
+        for match in REQUEST_HEADER_READ.finditer(text):
+            rows.append({"file": _media_rel(path), "line": _line_of(text, match.start()),
+                         "header": match.group(1)})
+    return rows
+
+
+def _stream_consumers() -> dict[str, dict]:
+    """Each reader of a stream answer: its body and the guard that accepts the answer.
+
+    The frame-read loop exit (`if (done) break;`) is required of the two JavaScript readers and forbidden
+    of the relay: Java's loop lives in `readFrames`, whose exit `while ((line = reader.readLine()) != null)`
+    #184 already reads, so a `consume` that grew its own break would mean two loops deciding one stream.
+    """
+    out = {}
+    for label, language, path, header in CONSUMERS:
+        text = path.read_text(encoding="utf-8")
+        body, at = _parser_body(text, header, label)
+        breaks = [m.start() for m in DONE_BREAK.finditer(body)]
+        expected = 0 if language == "java" else 1
+        if len(breaks) != expected:
+            raise AssertionError(f"{len(breaks)} `if (done) break;` exits in {label}, expected {expected}: "
+                                 "the loop tail is where a stream that never got a terminal frame gets "
+                                 "decided, so the gate cannot say which tail it is reading")
+        lines = text.splitlines()
+        guard = None
+        for match in ANSWER_STATUS.finditer(body):
+            number = _line_of(text, at + match.start())
+            condition = _if_condition(lines[number - 1])
+            if condition is not None:
+                guard = {"file": _media_rel(path), "line": number, "condition": condition}
+                break
+        out[label] = {"language": language, "file": _media_rel(path), "text": text, "lines": lines,
+                      "body": body, "at": at, "break": breaks[0] if breaks else None, "guard": guard}
+    return out
+
+
+def _task_stream_field_reads() -> dict[str, list[dict]]:
+    """Where each field of the run panel's returned object is read, production and tests apart."""
+    out = {field: [] for field in TASK_STREAM_FIELDS}
+    for path in sorted(list(ROOT_FRONTEND.rglob("*.ts")) + list(ROOT_FRONTEND.rglob("*.tsx"))):
+        text = path.read_text(encoding="utf-8", errors="replace")
+        for field in TASK_STREAM_FIELDS:
+            for match in re.finditer(rf"\.{field}\b", text):
+                number = _line_of(text, match.start())
+                out[field].append({"file": _media_rel(path), "line": number,
+                                   "test": ".test." in path.name,
+                                   "text": text.splitlines()[number - 1].strip()[:140]})
+    return out
+
+
+def test_the_stream_media_type_is_written_in_four_spellings_and_read_in_none():
+    sites = _stream_media_sites()
+    by_kind: dict[str, list[dict]] = {}
+    for row in sites:
+        by_kind.setdefault(row["kind"], []).append(row)
+    assert sorted(by_kind) == ["comment", "request-header", "test-assertion"], \
+        (f"{sorted(by_kind)}: the literal `text/event-stream` is written by request senders, named by one "
+         "doc comment, and asserted by one test; a row that is none of those is a fifth spelling this "
+         "census would have no classification for")
+    senders = by_kind["request-header"]
+    assert [(row["file"], row["line"]) for row in senders] == [
+        ("backend/src/main/java/com/careeros/ai/SseRelayService.java", 71),
+        ("frontend/src/lib/api/client.ts", 181),
+        ("frontend/src/lib/sse/use-sse.ts", 92)], \
+        (f"{[(r['file'], r['line']) for r in senders]}: three senders arm the stream -- the relay, the "
+         "one-shot copilot client and the run panel's hook -- each in its own language's shape, so a "
+         "fourth sender or a vanished one changes who can receive a stream at all")
+    assert all(STREAM_MEDIA in row["text"] and "Accept" in row["text"] for row in senders), \
+        (f"{[r['text'] for r in senders]}: a row stays a sender only while its line puts that media type "
+         "under `Accept`; otherwise the census is counting a mention")
+
+    declared = _java_answer_declarations()
+    assert [(row["verb"], row["route"]) for row in declared] == [
+        ("Get", "/stream/{taskId}"), ("Post", "/chat/stream")], \
+        (f"{[(r['verb'], r['route']) for r in declared]}: Spring declares exactly these two answers as "
+         "streams, each on the annotation line that names its route -- a `produces` written somewhere else "
+         "would be read here as a route it is not")
+    assert [row for row in sites if row["plane"] == "ai-service/app"] == [], \
+        ("ai-service writes no stream media type at all: it returns sse-starlette's response and the "
+         "library spells the header. The service cannot be reconciled with these declarations by comparing "
+         "text, only by naming its writer -- the count below is what makes that 0 a delegate, not a gap")
+    assert len(re.findall(r"EventSourceResponse\s*\(",
+                          TASKS_ENDPOINT_PATH.read_text(encoding="utf-8"))) == 1, \
+        "the answer-side spelling in Python is that one writer call"
+
+    buckets = _answer_type_reads()
+    assert sorted(buckets) == ["stored-value", "test-assertion"], \
+        (f"{ {k: len(v) for k, v in buckets.items()} }: a media type is read out of a value the code "
+         "itself stores once, and out of an HTTP answer's headers only inside a test -- those are the two "
+         "buckets this census can hold. An `unclassified` row would be a read it cannot say anything about")
+    assert buckets.get("http-answer-headers", []) == [], \
+        (f"{buckets.get('http-answer-headers', [])}: no shipped reader asks an answer what its media type "
+         "is -- that is this unit's fact. A row here means the check exists and the status guards in the "
+         "third case are no longer the whole story")
+    stored = buckets["stored-value"]
+    assert len(stored) == 1 and "parseMediaType" in stored[0]["text"], \
+        (f"{stored}: the codebase's only non-test media-type read takes the type out of a stored record, "
+         "not out of an answer -- the platform can name a media type when it serves a file and never one "
+         "when it reads a stream")
+    assert len(buckets["test-assertion"]) == 1 and buckets["test-assertion"][0]["spelling"] == \
+        '.headers.get("Content-Type', \
+        (f"{buckets['test-assertion']}: the one test read asks a captured REQUEST what it sent, which is "
+         "a sender check wearing reader syntax")
+
+    kinds: dict[str, int] = {}
+    for row in _content_type_tokens():
+        kinds[row["kind"]] = kinds.get(row["kind"], 0) + 1
+    assert kinds == {"request-sender": 5, "cors-allowlist": 1, "test-assertion": 1}, \
+        (f"{kinds}: `Content-Type` is sent five times, allowed by CORS once, and asserted in a test once. "
+         "This is the population the absence above is drawn from -- an `unclassified` row would be a use "
+         "nobody has read")
+    assert [(row["file"], row["media"]) for row in _java_media_writers()] == [
+        ("HttpAiServiceClient.java", "APPLICATION_JSON"), ("InternalFileController.java", "parseMediaType")], \
+        (f"{_java_media_writers()}: Java names a media type on the JSON it sends and on the file it "
+         "serves, so the missing answer check is a choice at the read site, not a tool the language lacks")
+    assert sorted({row["header"] for row in _request_header_reads()}) == \
+        ["Authorization", "X-Forwarded-For", "X-Internal-Token"], \
+        (f"{sorted({r['header'] for r in _request_header_reads()})}: Java does read request headers by "
+         "name, and none of them is a media type -- a second floor proving the reader scan is not simply "
+         "blind to header reads")
+
+
+def test_the_two_browser_consumers_of_a_quietly_closed_stream_disagree():
+    consumers = _stream_consumers()
+    post, hook = consumers["postSSE"], consumers["useSSE"]
+
+    codes = [(m.group(1), post["at"] + m.start()) for m in TERMINAL_CODE.finditer(post["body"])]
+    assert [code for code, _ in codes] == ["UNAUTHORIZED", "STREAM_ERROR", "STREAM_ENDED"], \
+        (f"{[c for c, _ in codes]}: postSSE puts three error codes on the wire, in the order the failures "
+         "can be reached -- session, frame, tail. A fourth would be one no caller branches on yet")
+    brk = post["at"] + post["break"]
+    assert codes[0][1] < codes[1][1] < brk < codes[2][1], \
+        (f"{[(c, _line_of(post['text'], o)) for c, o in codes]} against the loop exit at line "
+         f"{_line_of(post['text'], brk)}: the error frame's code is wired before the read starts while "
+         "STREAM_ENDED can only be decided after it ends -- if that order flips, the terminal a stream "
+         "reaches by closing quietly comes from a different path than the one that reads it")
+    assert re.search(r'new ApiError\("STREAM_ENDED",\s*"([^"]+)"', post["body"]) is not None, \
+        "postSSE's quiet close has to name itself; the sentence is the only part of it a user can see"
+
+    assert TERMINAL_CODE.findall(hook["body"]) == [], \
+        (f"{TERMINAL_CODE.findall(hook['body'])}: the hook that feeds the run panel builds no ApiError, so "
+         "it has no code for a stream that ends without a terminal frame -- the difference the two "
+         "readers' tails make concrete")
+    closed = re.search(r'setState\(\(s\)\s*=>\s*\(s === "open" \? "closed" : s\)\)', hook["body"])
+    assert closed is not None, \
+        "the hook's own tail must be the state change this case compares against STREAM_ENDED; without it " \
+        "the disagreement would be my inference rather than the code's"
+    assert hook["break"] < closed.start(), \
+        (f"loop exit at {hook['break']}, closed-state at {closed.start()}: `closed` is what the hook "
+         "reports for a stream that never said `done`, so it must sit after the read loop")
+    transport = hook["body"].find("onTransportError?.(", hook["break"])
+    assert transport > closed.start(), \
+        (f"first `onTransportError?.(` after the loop at {transport}, closed-state at {closed.start()}: a "
+         "clean close reaches the state change before any transport hook, which is why nothing is told "
+         "that the stream stopped")
+
+    panel = TASK_STREAM_PATH.read_text(encoding="utf-8")
+    anchor = panel.index("connection: state")
+    returned = _balanced(panel, panel.index("{", panel.rindex("return {", 0, anchor)), "{", "}")
+    running = re.search(r"running: ([^,\n]+),", returned)
+    assert running is not None and "state" not in running.group(1) \
+        and "connection" not in running.group(1), \
+        (f"{running.group(1) if running else None}: `running` is derived from the answer's own flags and "
+         "not from the connection, which is why a closed stream can still look like a run in progress")
+
+    fields = _task_stream_field_reads()
+    reads = {field: [row for row in rows if not row["test"]] for field, rows in fields.items()}
+    assert reads["connection"] == [], \
+        (f"{reads['connection']}: `connection` is produced and never read, so the only signal that a "
+         "stream stopped is seen by nothing; a row here would mean the panel does answer a closed "
+         "connection")
+    assert reads["running"] == [], f"{reads['running']}: `running` is likewise produced and never read"
+    assert sorted({row["file"] for row in reads["reporting"]}) == \
+        ["frontend/src/components/ai/task-stream.tsx"] \
+        and len(reads["reporting"]) == 2 and len(reads["finished"]) == 1 \
+        and all("!stream." in row["text"] for row in reads["reporting"] + reads["finished"]), \
+        (f"{ {k: len(v) for k, v in reads.items()} }: the two fields the panel does read are exactly the "
+         "negated pair that holds the promise line on screen -- this floor proves the scan can see this "
+         "object's fields at all, so the 0 rows above are a finding rather than a blind scanner")
+    assert re.search(r"The run stream hasn(?:&apos;|['’])t reported progress yet", panel) is not None, \
+        ("that sentence is shown while `reporting` and `finished` are both false, which is the state a "
+         "quietly closed stream leaves the panel in")
+
+
+def test_a_stream_answer_is_judged_by_status_and_body_and_never_by_its_media_type():
+    consumers = _stream_consumers()
+    guards = {name: (row["guard"] or {}) for name, row in consumers.items()}
+    assert [(name, guards[name].get("condition")) for name in sorted(guards)] == [
+        ("SseRelayService.consume", "response.statusCode() != 200"),
+        ("postSSE", "!res.ok || !stream"),
+        ("useSSE", "!res.ok || !res.body")], \
+        (f"{ {k: v.get('condition') for k, v in guards.items()} }: three readers, three spellings of the "
+         "same question -- is the status fine, is there a body. A missing condition would be a consumer "
+         "whose answer check this walk can no longer read")
+    assert not [name for name, row in guards.items()
+                if "content" in row.get("condition", "").lower()
+                or STREAM_MEDIA in row.get("condition", "")], \
+        (f"{sorted(guards)}: none of the three guards mentions a media type, which is the whole claim -- "
+         "an answer is accepted as a stream on the strength of its status code alone")
+
+    relay = consumers["SseRelayService.consume"]
+    upstream = re.search(r'onFrame\(\s*"error"\s*,\s*"([^"]*)"\s*\+\s*\w+\.\w+\(\)\s*\)', relay["body"])
+    assert upstream is not None and upstream.group(1) == "upstream status ", \
+        (f"{upstream.group(1) if upstream else None}: the relay turns a non-200 answer into an `error` "
+         "frame that quotes the status number only, so a browser reading that frame cannot tell a refused "
+         "connection from a wrong-shaped answer")
+    pump_text = RELAY_PATH.read_text(encoding="utf-8")
+    pump, _ = _parser_body(pump_text, r"\bprivate void pump\s*\(", "SseRelayService.pump")
+    assert re.search(r"\bemitter\.complete\(\);", pump) is not None \
+        and TERMINAL_CODE.findall(pump) == [] and '"error"' not in pump[pump.index("emitter.complete"):], \
+        (f"{pump.strip()[:200]}: after `consume` returns -- which is what happens when the upstream closes "
+         "without a terminal frame -- the relay completes the emitter normally and synthesizes no error "
+         "frame, so the browser's `closed` is what a truncated run looks like from the server side too")
+
+    post, hook = consumers["postSSE"], consumers["useSSE"]
+    request_body = _function_body(API_CLIENT_PATH.read_text(encoding="utf-8"), "request")
+    post_fallback = STATUS_FALLBACK.findall(post["body"])
+    request_fallback = STATUS_FALLBACK.findall(request_body)
+    copies = {"postSSE": len(post_fallback), "request": len(request_fallback),
+              "useSSE": len(STATUS_FALLBACK.findall(hook["text"]))}
+    assert copies == {"postSSE": 1, "request": 1, "useSSE": 0} and post_fallback == request_fallback, \
+        (f"{copies} {post_fallback} {request_fallback}: the 404-or-HTTP_ERROR fallback is written twice in "
+         "client.ts -- once on the envelope path, once on the stream path -- as two copies of one "
+         "decision, and not at all in the hook, which answers a refused stream with a plain Error. Two "
+         "copies that no longer read alike would report the same 404 differently")
+    post_json = len(re.findall(r"await res\.json\(\)", post["body"]))
+    hook_json = len(re.findall(r"await res\.json\(\)", hook["body"]))
+    assert (post_json, hook_json) == (1, 0), \
+        (f"{post_json} envelope decode inside postSSE's guard branch, {hook_json} in the hook: only "
+         "postSSE tries to read an error envelope out of a failed stream, and it does that after having "
+         "already decided the answer is a stream -- the hook reports the status number and stops there")
