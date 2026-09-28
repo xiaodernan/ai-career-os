@@ -1276,3 +1276,81 @@ def test_the_client_dispatches_two_frame_kinds_no_service_can_send():
     assert "onTrace:" in consumers and "onArtifact:" in consumers, \
         ("the ledger above is only about real readers: task-stream subscribes to both handlers, so this "
          "is a visible affordance and not dead weight in the hook alone")
+
+
+PUBLISH_CALL = re.compile(r'(?:taskbus\.)?(?:publish|_emit)\(\s*task_id\s*,\s*"(\w+)"\s*,\s*')
+
+
+def _published_payload_keys() -> dict[str, set[str]]:
+    """event name -> the literal payload keys published with it, braces paired, not line-grabbed.
+
+    The payload is often written across several lines (`ingestion/pipeline.py:69`), so a `[^\n]*` grab
+    would silently lose the later keys -- the mistake #171 found in the TypeScript mirror of this rule.
+    A payload that is a call rather than a literal is kept as a marker, because the census must not
+    report "no keys" where the truth is "keys come from elsewhere".
+    """
+    out: dict[str, set[str]] = {}
+    for path in _app_root().rglob("*.py"):
+        text = path.read_text(encoding="utf-8")
+        for found in PUBLISH_CALL.finditer(text):
+            start = found.end()
+            if start < len(text) and text[start] == "{":
+                depth, index = 0, start
+                while index < len(text):
+                    depth += text[index] == "{"
+                    depth -= text[index] == "}"
+                    index += 1
+                    if depth == 0:
+                        break
+                payload = text[start:index]
+            else:
+                payload = text[start:text.index("\n", start)] if "\n" in text[start:] else text[start:]
+            keys = set(re.findall(r'"(\w+)":', payload))
+            if not keys and "(" in payload:
+                keys = {f"<{payload.split('(')[0].strip()}>"}
+            out.setdefault(found.group(1), set()).update(keys)
+    return out
+
+
+def test_the_step_classifier_reads_three_fields_no_frame_ever_carries():
+    """#176: what the run stream actually sends, and what the step panel pretends to receive.
+
+    `use-sse.ts` folds `status` and `progress` into one handler, so
+    `components/ai/processing-steps.tsx` sees both kinds. Paired off the publishing call sites, the
+    payloads are: status = {step, state} from the ingestion and rag pipelines, plus {intent} (rag:31) and
+    {count} (rag:70), and {agent, step} from the orchestrator's three sites -- which is why a copilot step
+    can never read `state`; progress = {step, done, total} (`ingestion/pipeline.py:82`). The component
+    reads `evt.state ?? evt.status`, then `evt.progress === 100`, then `evt.label ?? … ?? evt.step`:
+    `status`, `progress` and `label` are written by no producer at all, and the middle one reads like a
+    confusion between the frame's *name* and a field it would carry. Mirror image: `intent`, `count` and
+    `agent` are produced and never read.
+
+    Pinned as two ledgers rather than fixed. Making the classifiers honest (drop the dead fallbacks, or
+    send `label`/`state` for copilot steps) changes what a user sees on a live run, and the check that
+    would confirm the change is the owner-blocked R1 stream. A shrinking ledger means a field gained a
+    producer or a reader; growing means new drift. Either way the expected sets are re-read from source,
+    not re-numericled.
+    """
+    published = _published_payload_keys()
+    assert published["status"] == {"step", "state", "intent", "count", "agent"}, \
+        (f"{sorted(published['status'])} are the keys any `status` payload writes; the classifier's "
+         "reads are measured against exactly this list")
+    assert published["progress"] == {"step", "done", "total"}, \
+        f"{sorted(published['progress'])} -- `progress` is a frame name, and its fields are these"
+    assert published["token"] == {"text"} and published["message"] == {"<out.to_dict>"}, \
+        (f"{published} the remaining published payloads: a token carries text, and the message frame's "
+         "keys come from `Outcome.to_dict()`, which #173 pins elsewhere")
+
+    steps = (ROOT_FRONTEND / "components" / "ai" / "processing-steps.tsx").read_text(encoding="utf-8")
+    reads = set(re.findall(r"\bevt\.(\w+)", steps))
+    assert reads == {"state", "status", "progress", "done", "total", "step", "label"}, \
+        f"{sorted(reads)} are the fields the panel reads off a frame"
+    produced = published["status"] | published["progress"]
+    assert reads - produced == {"label", "progress", "status"}, \
+        (f"{sorted(reads - produced)} are read with no producer: `evt.state ?? evt.status` falls back to "
+         "a field no frame carries, `evt.progress === 100` tests for a field that exists only as an event "
+         "name, and `evt.label` is invented before falling through to `evt.step`. This ledger expects "
+         "exactly these three -- fix the producer or the reader, then re-read this from source")
+    assert produced - reads == {"agent", "count", "intent"}, \
+        (f"{sorted(produced - reads)} are published and dropped by the panel, which is the mirror image "
+         "of the hole above and is recorded rather than silently ignored")
