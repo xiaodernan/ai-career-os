@@ -120,6 +120,10 @@ class SearchRepositoryTest {
         // "column posted_at does not exist" -- i.e. every global search answered 500.
         repo.jobs(userId, "java", 5, List.of(0.25, -0.5));
         assertThat(lastSql).contains("WITH filtered AS (").contains("CAST(:vec AS vector)");
+        // The board's semantic pass guards the distance operator with this CASE; the palette's had
+        // the same operator on rows another provider may have written and no guard at all.
+        assertThat(lastSql)
+                .contains("vector_dims(vec) = vector_dims(CAST(:vec AS vector))");
         assertThat(lastSql).doesNotContain("0.25").doesNotContain("[-0.5");
         assertThat(placeholders(lastSql)).isEqualTo(bound);
         assertThat(bound).containsExactlyInAnyOrder("q", "qLike", "limit", "vec");

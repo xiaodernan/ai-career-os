@@ -99,6 +99,31 @@ class GlobalSearchHybridIT extends ApiIntegrationTest {
         assertThat(search(auth, "nosuchrole" + trio.token()).size()).isZero();
     }
 
+    @Test
+    @DisplayName("dimension mismatch: an incompatible row is skipped, not a 500 on the whole palette")
+    void aRowWithMismatchedEmbeddingDimsIsSkippedNotAnError() throws Exception {
+        String auth = register("gsearch-dim-" + UUID.randomUUID() + "@example.com");
+        jobService.clearEmbeddingCache();
+        // This case seeds no vector of its own: the query vector is what the pass must survive, and
+        // a row in a direction the other cases use would leak into their result sets.
+        String token = "gsh" + Long.toString(Math.abs(UUID.randomUUID().getMostSignificantBits()), 36);
+        String lexicalHit = createJob(auth, "Payments Platform Engineer " + token, "Delta" + token);
+        // pgvector raises "different vector dimensions" for the distance operator rather than
+        // skipping the row, so an unguarded pass fails the whole search -- every group the palette
+        // draws -- over one row a provider switch left behind.
+        String mismatched = createJob(auth, "Contract Engineer " + token, "Epsilon" + token);
+        vector(mismatched, "[0,0,1]");
+
+        ai.queryEmbedding = FUSE_QUERY;
+        JsonNode jobs = search(auth, "payments platform " + token);
+
+        // The search answers, and the unrankable row is simply absent -- the same trade the board's
+        // own pass makes. (Asserted by membership, not by size: the vector pass is catalogue-wide
+        // here, so the other cases' rows may legitimately share the page.)
+        List<String> ids = jobs.findValuesAsText("id");
+        assertThat(ids).contains(lexicalHit).doesNotContain(mismatched);
+    }
+
     /** Three recall paths: a lexical hit, a paraphrase no keyword pass sees, a vector-only sibling. */
     private Trio seedTrio(String auth, String paraphraseVector, String siblingVector)
             throws Exception {

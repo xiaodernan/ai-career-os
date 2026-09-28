@@ -121,7 +121,8 @@ rejected**: `/jobs?remoteType=hybrid` answers 200 with the unfiltered board. `re
 `remote_type` value (`onsite` / `hybrid` / `remote`), never `true`, and an unknown `sort` falls
 back to `posted` for the same reason. `sort=relevance` fuses keyword/tsvector rank with the
 query vector's cosine distance (the agent's `search_jobs` fusion) and answers keyword-only when
-no vector is available.
+no vector is available. `GET /search`'s jobs channel runs the same fusion over the whole
+catalogue, so the palette and the board rank one query the same way.
 
 ### JD intelligence (`/jds`)
 
@@ -191,7 +192,7 @@ stored verbatim on the session, so the same place takes the rest of the run's tu
 | GET | `/activity/runs` | agent runs (`?limit=&agent=`) |
 | GET | `/activity/runs/{id}` | run + ordered traces (AI Activity detail) |
 | GET | `/ai-usage/summary` | tokens, requests, cached tokens, estimated cost |
-| GET | `/search` | global ⌘K search (`?q=`, required) across jobs/companies/resumes/interviews/notes/KB/conversations |
+| GET | `/search` | global ⌘K search (`?q=`, required) across jobs/companies/resumes/interviews/notes/KB/conversations — the jobs channel is hybrid-ranked, like `/jobs?sort=relevance` |
 | GET | `/ai/stream/{taskId}` | SSE relay of an ai-service task |
 
 ## 3. Internal API — ai-service

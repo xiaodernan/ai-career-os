@@ -65,7 +65,7 @@ Each row is a shipped capability, the route that exposes it, and the API behind 
 | JD analysis + resume improvement suggestions | `/jobs` (dialog) | `/jds`, `/jds/suggestions` |
 | Company research | `/companies` | `/companies` |
 | Adaptive mock interviews + report | `/interviews`, `/interviews/[id]/report` | `/interview/sessions/*` |
-| Application tracking (stages, timeline, kanban) | `/applications`, `/dashboard` | `/applications`, `/reports/dashboard` |
+| Application tracking (stages, notes, reminders, timeline, kanban) | `/applications`, `/dashboard` | `/applications`, `/reports/dashboard` |
 | Copilot chat (agent, artifacts, suggested actions) | `/copilot` | `/copilot/chat` |
 | AI activity: every run, its steps and its cost | `/activity`, `/activity/[id]` | `/activity/runs`, `/ai-usage/summary` |
 | Cross-entity search | (global) | `/search` |
@@ -131,7 +131,10 @@ Verified against the live stack, not just in unit tests:
   the same way (the query vector comes from `POST /internal/rag/embeddings`), so a
   paraphrase with no shared keyword is recallable. An explicit `sort=` still only
   orders, no vector is fetched, and an outage or a noise query degrades to
-  keyword-only or zero rows.
+  keyword-only or zero rows. The ⌘K palette's channel (`GET /api/v1/search`) fuses the
+  same way — `JobSearchHybridIT` and `GlobalSearchHybridIT` pin both against a real
+  database, including the two degradations that matter (no vector at all, and a row whose
+  embedding carries another provider's dimensionality).
 
 Remaining gaps, stated plainly rather than hidden:
 

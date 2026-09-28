@@ -82,7 +82,14 @@ public class SearchRepository {
                     SELECT id, ROW_NUMBER() OVER (ORDER BY vec <=> CAST(:vec AS vector), posted_at DESC) - 1 AS rank
                       FROM filtered
                      WHERE vec IS NOT NULL
-                       AND vec <=> CAST(:vec AS vector) <= {FLOOR}
+                       -- The CASE forces ordered evaluation: the distance operator then runs only on
+                       -- rows whose embedding has the query's dimensionality, so a provider switch
+                       -- (or a row written by another model) degrades to keyword-only instead of
+                       -- erroring the whole palette. Same rule as JobSearchRepository's own pass.
+                       AND CASE
+                           WHEN vector_dims(vec) = vector_dims(CAST(:vec AS vector))
+                           THEN vec <=> CAST(:vec AS vector)
+                           END <= {FLOOR}
                      ORDER BY vec <=> CAST(:vec AS vector), posted_at DESC
                      LIMIT {CANDIDATES}
                 ),
