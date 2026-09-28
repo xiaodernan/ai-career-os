@@ -308,12 +308,19 @@ export interface Application {
   updatedAt?: string;
 }
 
+/**
+ * One audit row of an application's history, as `TimelineEvent` puts it on the wire:
+ * `{id, kind, payload, createdAt}`, with the detail nested under `payload`.
+ *
+ * `applicationId` and `label` used to sit here. No writer fills either — the row is written by
+ * `ApplicationService.writeEvent`, which sets a kind and a payload, and the DTO has no such
+ * components — so a reader for them could only ever render blank.
+ */
 export interface ApplicationEvent {
   id: string;
-  applicationId?: string;
+  /** The `kind` the event was written under: `status`, `note` or `reminder`. */
   type?: string;
   status?: string;
-  label?: string;
   note?: string;
   /** Set on a `reminder` event: the instant the reminder was moved to. */
   reminderAt?: string;

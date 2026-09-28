@@ -464,10 +464,12 @@ describe("normalizeApplicationEvent", () => {
     expect(cleared.reminderAt).toBeUndefined();
   });
 
-  it("stays tolerant of a flat row and never hands back an empty id", () => {
+  it("keys a row with no identifier, and invents no name the writers never fill", () => {
     // React keys and the events list both need one; a row without an id would collide.
-    expect(normalizeApplicationEvent({ type: "note", note: "flat" }, 4).note).toBe("flat");
     expect(normalizeApplicationEvent({}, 4).id).toBe("ev-4");
+    // `TimelineEvent` nests the detail under `payload`, so a flat `note` is a shape no endpoint
+    // produces: reading it would hide a rename behind tolerance instead of failing here.
+    expect(normalizeApplicationEvent({ kind: "note", note: "flat" }, 4).note).toBeUndefined();
   });
 });
 

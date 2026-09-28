@@ -457,21 +457,21 @@ export function normalizeApplication(raw: unknown): Application {
  * `TimelineEvent` is `{id, kind, payload, createdAt}` — the detail sits one level down, under
  * `payload`, and its keys differ per kind (`{from,to}` for a status change, `{note}`, and
  * `{reminder_at}` or `{cleared}` for a reminder). A reader that looks only at the top level
- * finds no status and no note at all, which renders the whole history as blank badges, so
- * `payload` is consulted first and the flat spellings stay accepted for tolerance.
+ * finds no status and no note at all, which renders the whole history as blank badges, so the
+ * detail is read where `ApplicationService.writeEvent` puts it -- and only there. Every name
+ * below is one a writer fills: an alias beside a name no writer fills is a field the history
+ * renders blank forever, which is a defect, not tolerance.
  */
 export function normalizeApplicationEvent(raw: unknown, index = 0): ApplicationEvent {
   const payload = rec(pick(raw, "payload")) ?? {};
   return {
     id: str(raw, "id") ?? `ev-${index}`,
-    applicationId: str(raw, "applicationId", "application_id"),
-    type: str(raw, "type", "kind", "event") ?? str(payload, "kind"),
-    status: str(payload, "status", "to", "toStatus", "to_status") ?? str(raw, "status", "to"),
-    label: str(raw, "label", "title", "summary", "description"),
-    note: str(payload, "note", "notes", "comment") ?? str(raw, "note", "notes", "comment"),
-    reminderAt: str(payload, "reminder_at", "reminderAt"),
+    type: str(raw, "kind"),
+    status: str(payload, "to"),
+    note: str(payload, "note"),
+    reminderAt: str(payload, "reminder_at"),
     cleared: bool(payload, "cleared"),
-    createdAt: str(raw, "createdAt", "created_at", "timestamp"),
+    createdAt: str(raw, "createdAt"),
   };
 }
 

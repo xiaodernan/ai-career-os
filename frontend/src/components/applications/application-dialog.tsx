@@ -66,7 +66,8 @@ function eventText(event: ApplicationEvent): string {
     if (event.cleared) return "Reminder cleared";
     return event.reminderAt ? `Reminder set for ${relativeTime(event.reminderAt)}` : "Reminder set";
   }
-  return event.label ?? event.type ?? "Update";
+  // The kinds above are the ones `writeEvent` writes; anything else is shown by its kind.
+  return event.type ?? "Update";
 }
 
 export function ApplicationDialog({ application, open, onOpenChange }: ApplicationDialogProps) {
