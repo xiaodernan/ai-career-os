@@ -110,6 +110,17 @@ from tests.test_response_shape_contract import (
 # annotated fields `model_dump()` emits verbatim.
 PRODUCERS = {
     "ApplicationItem": ("java", "application/dto/ApplicationDtos.java"),
+    # One row of `GET /applications/{id}/timeline`. Its audit detail is the `payload`
+    # map below, which is why the reader has to be declared at two levels at once.
+    "TimelineEvent": ("java", "application/dto/ApplicationDtos.java"),
+    # The event `payload` is a free `Map<String, Object>` with two writers, so each is read from the
+    # method that fills it rather than unioned into one: a status change is `applyStatusChange`
+    # (`{from,to}`, reached from both PATCH and the kanban reorder), and the note/reminder branches
+    # are `update` (`{note}`, `{reminder_at}`, `{cleared}`).
+    "ApplicationEventStatusPayload": ("jamapof", ("application/service/ApplicationService.java",
+                                                  "applyStatusChange")),
+    "ApplicationEventUpdatePayload": ("jamapof", ("application/service/ApplicationService.java",
+                                                  "update")),
     "CompanyItem": ("java", "job/dto/JobDtos.java"),
     "MessageItem": ("java", "conversation/dto/ConversationDtos.java"),
     "MatchResponse": ("java", "job/dto/JobDtos.java"),
@@ -386,6 +397,21 @@ READERS: dict[str, dict] = {
         "record_of": {"raw": "TurnItem",
                       "meta": ["QuestionMetaFollowup", "QuestionMetaOpening"]},
         "drilled": {"meta": ("raw", "questionMeta")},
+        "elements": {},
+        "blind": {},
+        "dynamic": {},
+    },
+    "normalizeApplicationEvent": {
+        # The timeline is `List<TimelineEvent>` -- `{id, kind, payload, createdAt}` -- and the audit
+        # detail sits one level down, inside `payload`, a free `Map<String, Object>` that no record
+        # models: `ApplicationService` fills it with `Map.of(...)` literals at the write site
+        # (`{to}`/`{from,to}` for a status change, `{note}`, `{reminder_at}` or `{cleared}`), which
+        # is why it is declared `blind` with that reason rather than bound to a shape that does not
+        # exist. `raw` is the only record in play, and it is the reason the old top-level read found
+        # no status and no note at all: every history row rendered as a blank badge.
+        "record_of": {"raw": "TimelineEvent",
+                      "payload": ["ApplicationEventStatusPayload", "ApplicationEventUpdatePayload"]},
+        "drilled": {"payload": ("raw", "payload")},
         "elements": {},
         "blind": {},
         "dynamic": {},
@@ -1393,6 +1419,67 @@ def _returned_item_keys(func_name: str) -> set[str]:
     return {k.value for k in items[0].keys}
 
 
+def _java_call_args(source: str, open_paren: int) -> list[str]:
+    """The arguments of the call whose `(` sits at `open_paren`, split on its own top-level commas.
+
+    Paired rather than regexed, because `Map.of("note", request.note())` is a shape a flat scan gets
+    wrong in a way that reads as a *smaller* producer: `[^()]*` stops at the nested call's own `)`,
+    so the key in front of it is never named -- which is how `update` came to look like a writer of
+    `{cleared}` alone, and how two live reads were reported dead.
+    """
+    depth, args, current = 0, [], ""
+    for ch in source[open_paren:]:
+        if ch in "([{":
+            depth += 1
+            if depth == 1:
+                continue
+        elif ch in ")]}":
+            depth -= 1
+            if depth == 0:
+                break
+        if ch == "," and depth == 1:
+            args.append(current)
+            current = ""
+        else:
+            current += ch
+    args.append(current)
+    return [arg.strip() for arg in args]
+
+
+def _java_mapof_keys(rel: str, method: str) -> set[str]:
+    """The keys one Java method hands to `Map.of(...)` at its write sites.
+
+    The sibling of `_java_put_keys`, for the same shape of column: `ApplicationService` fills an
+    audit event's `payload` jsonb with `Map.of("to", …)` / `Map.of("note", …)` instead of building a
+    record, so the literal at the call site is the only place those names exist. Arguments alternate
+    key/value, which is what makes every even one a key.
+    """
+    path = JAVA_ROOT / "com" / "careeros" / rel
+    if not path.exists():
+        raise AssertionError(f"{rel} is not where the contract table says: {method} compares nothing")
+    source = path.read_text(encoding="utf-8")
+    opener = re.search(rf"\n[^\n]*\b{re.escape(method)}\(\s*\)?\s*\{{", source) or \
+        re.search(rf"\n[^\n]*\b{re.escape(method)}\([^\n]*\)\s*\{{", source) or \
+        re.search(rf"\n[^\n]*\b{re.escape(method)}\(", source)
+    if opener is None:
+        raise AssertionError(f"{rel} declares no method named {method!r}: the table names a "
+                             "producer that moved, so the rule it feeds compares nothing")
+    body = source[opener.start():]
+    end = body.find("\n    }\n")
+    end = len(body) if end < 0 else end
+    keys = set()
+    for call in re.finditer(r"Map\.of\(", body[:end]):
+        args = _java_call_args(body[:end], call.end() - 1)
+        for i in range(0, len(args), 2):
+            m = re.fullmatch(r'"([^"]+)"', args[i])
+            if m:
+                keys.add(m.group(1))
+    if not keys:
+        raise AssertionError(f"{rel}::{method} hands no string keys to `Map.of`: the table binds a "
+                             "producer whose literal has stopped being one")
+    return keys
+
+
 def _java_put_keys(rel: str, method: str) -> set[str]:
     """The keys one Java method puts into its free `Map<String, Object>`.
 
@@ -1557,11 +1644,80 @@ def _emitted(alias: str) -> set[str]:
         return _returned_item_keys(spec[1])
     if spec[0] == "japut":
         return _java_put_keys(*spec[1])
+    if spec[0] == "jamapof":
+        return _java_mapof_keys(*spec[1])
     if spec[0] == "pyskel":
         return _prompt_item_keys(*spec[1])
     if spec[0] == "pyretsub":
         return _return_branch_keys(*spec[1])
-    return pydantic_fields(alias)
+    # `("pydantic",)` rows used to land on the function below without naming it: the fallback was a
+    # behaviour, not a branch, so any mistyped kind was read as a pydantic model too. Now the kind is
+    # compared like every other one, and an unmatched one is an error rather than a second opinion.
+    if spec[0] == "pydantic":
+        return pydantic_fields(alias)
+    raise AssertionError(f"{spec[0]!r} is not a kind `_emitted` has a branch for, so {alias!r} was "
+                         "about to be measured as a pydantic model: add the branch that parses this "
+                         "producer's own source")
+
+
+def test_a_producer_kind_is_dispatched_by_name_and_never_by_the_fallback():
+    """Every producer kind the table uses has its own branch in `_emitted`, and no row reaches the
+    end of that chain.
+
+    The chain answers for the shape of a producer: `java` reads a record, `japut` reads `map.put`
+    calls, `jamapof` reads `Map.of(...)` literals (bound in #178, for `TimelineEvent.payload`). A row
+    whose kind string matches no branch was not an error until now -- it fell through to
+    `pydantic_fields(alias)`, which served the three `("pydantic",)` rows by accident. That is the
+    failure #161 named: two readers agreeing because both are blind to the same thing, and here the
+    accident was load-bearing, because a mistyped kind would have been measured as a model and either
+    raised about a BaseModel that was never declared, or found one and answered the site with keys no
+    code writes.
+
+    Measured on this plane: 65 producer rows over 12 kinds -- `java` 31, `pyskel` 9, `pyappend` 6,
+    `pyfunc` 6, `pyconst` 3, `pydantic` 3, `jamapof` 2, `japut` 1, `pyadd` 1, `pycons` 1, `pyitem` 1,
+    `pyretsub` 1. Both ends come out of the same walk over this file, so a branch and a row cannot
+    drift apart quietly.
+    """
+    source = Path(__file__).read_text(encoding="utf-8")
+    chain_at = [m.start() for m in re.finditer(r"^def _emitted\(", source, re.M)]
+    for_at = [m.start() for m in re.finditer(r"^def _emitted_for\(", source, re.M)]
+    assert len(chain_at) == len(for_at) == 1, \
+        f"{len(chain_at)} definitions of `_emitted` and {len(for_at)} of `_emitted_for`: the slice " \
+        "below reads the one function it names, so a second definition of either means it does not"
+    chain = source[chain_at[0]:for_at[0]]
+    assert "raise AssertionError" in chain, "_emitted ends in a return again, so an unknown kind is a " \
+                                             "behaviour rather than a statement"
+    dispatched = set(re.findall(r'spec\[0\] == "(\w+)"', chain))
+    counts = collections.Counter(spec[0] for spec in PRODUCERS.values())
+    assert len(PRODUCERS) == 65, f"{len(PRODUCERS)} rows: the population the counts below are drawn from"
+    assert set(counts) == dispatched, \
+        (f"the table uses {sorted(set(counts) - dispatched)} with no branch and the chain compares "
+         f"{sorted(dispatched - set(counts))} with no rows: a kind that lost its branch has to gain "
+         "one, and a kind that lost its rows has to lose the branch or gain the rows back")
+    assert sorted(counts.items()) == [("jamapof", 2), ("japut", 1), ("java", 31), ("pyadd", 1),
+                                      ("pyappend", 6), ("pycons", 1), ("pyconst", 3),
+                                      ("pydantic", 3), ("pyfunc", 6), ("pyitem", 1), ("pyretsub", 1),
+                                      ("pyskel", 9)], \
+        f"{sorted(counts.items())}: which kind moved, not just how many rows did"
+
+    # The raise, shown through the shipped function: a row whose kind no branch compares has to fail as
+    # a statement about the kind, because the message is the only thing a reader of the red sees.
+    monkey = {"NoSuchKindProducer": ("nosuchkind",)}
+    PRODUCERS.update(monkey)
+    try:
+        _emitted("NoSuchKindProducer")
+        raised = None
+    except AssertionError as err:
+        raised = str(err)
+    finally:
+        for name in monkey:
+            PRODUCERS.pop(name, None)
+    assert raised is not None, "_emitted answered for a row whose kind no branch compares: the " \
+                               "fallback is back, and with it the misattribution"
+    assert "nosuchkind" in raised and "BaseModel" not in raised, \
+        (f"{raised}: an unknown kind must be named as itself -- pointing at a pydantic model is the "
+         "misattribution this branch exists to remove")
+    assert len(PRODUCERS) == 65, "the planted row is still in the table the census above measured"
 
 
 def _emitted_for(receiver: str | list[str]) -> set[str]:
@@ -2158,9 +2314,9 @@ def test_no_mapper_is_left_unbound():
     # reads its call sites into every caller's census, not because this table says so.
     assert all(f"\\b{name}\\(" in _ID_OF for name in FOLDED_ACCESSORS), \
         f"{sorted(FOLDED_ACCESSORS)} claims a fold the site scanner does not perform"
-    # Measured at this plane, so a new unbound reader cannot slip in under a stale count: the 30 the
+    # Measured at this plane, so a new unbound reader cannot slip in under a stale count: the 31 the
     # exported census counted, plus the two module-private mappers that carry reads of their own.
-    assert len(population) == 32, sorted(population)
+    assert len(population) == 33, sorted(population)
     private = sorted(name for name, exported in _mapper_declarations() if not exported)
     assert private == ["changeFrom", "groupSkillBuckets", "pathOf", "statusCountsToRows"]
     assert sorted(n for n in private if n in population) == ["changeFrom", "groupSkillBuckets"], \
@@ -2953,7 +3109,7 @@ def test_the_census_sees_every_read_the_mappers_hold():
     merged and this rule should be deleted rather than left proving equality with itself.
     """
     population = sorted(_mappers_that_read())
-    assert len(population) == 32, f"the census population moved: {population}"
+    assert len(population) == 33, f"the census population moved: {population}"
 
     diverged = []
     for name in population:
@@ -2968,11 +3124,11 @@ def test_the_census_sees_every_read_the_mappers_hold():
                             f"cannot see: {diverged}")
 
     whole = _key_read_calls(NORMALIZE.read_text(encoding="utf-8"))
-    # Measured at this plane: the whole file and the sum over its mappers answer 251 each, which is
+    # Measured at this plane: the whole file and the sum over its mappers answer 259 each, which is
     # what says no read lives outside a body -- in a module-level table or a top-level statement --
     # where the per-reader floors would never be consulted. The number moves with every read added
     # or removed, so it is a restatement of the two totals below it, not a separate claim.
-    assert len(whole) == 251, f"{len(whole)} reads by the oracle: recount both totals if this moved"
+    assert len(whole) == 259, f"{len(whole)} reads by the oracle: recount both totals if this moved"
     assert len(whole) == sum(len(_sites(name)) for name in population), \
         "a named read lives outside every mapper the census walks"
     expressions = [site for site in whole if not _BARE.fullmatch(site["receiver"])]
@@ -3089,8 +3245,8 @@ def test_a_call_whose_key_is_a_variable_is_a_population_every_member_has_to_expl
     `str(row, col)` matches `CENSUS_SITE` and then yields no candidates to `_NAME`, so `_sites` drops
     it at the `if not candidates` branch; `_key_read_calls` asks the same question of the same shape
     and drops it too. Two scanners agreeing because both are blind is the failure #163 named, and the
-    blind spot is live in this file: normalize.ts holds 266 accessor calls with a key position, the
-    oracle names 251 of them, and 16 hand their key position to a variable. 251 + 16 - 1 = 266, the
+    blind spot is live in this file: normalize.ts holds 274 accessor calls with a key position, the
+    oracle names 259 of them, and 16 hand their key position to a variable. 259 + 16 - 1 = 274, the
     one being `idOf(h, g.type)`, which the oracle counts as a read of `h` through the fold while the
     variable it passes is not a name at all. Nothing in this file walked those 16 before now.
 
@@ -3099,19 +3255,19 @@ def test_a_call_whose_key_is_a_variable_is_a_population_every_member_has_to_expl
     member, not a count: an accessor's own signature decides whether the argument it receives names
     a field. The strata are the argument: 7 of the 16 are the accessor definitions' own parameter
     lists, 5 are the accessors handing their caller's names to `pick`, 4 sit in a mapper, and none
-    sits anywhere else -- in the 47 functions this walk finds.
+    sits anywhere else -- in the 48 functions this walk finds.
     """
     source = NORMALIZE.read_text(encoding="utf-8")
     calls = _key_position_calls(source)
     named = _key_read_calls(source)
     nameless = [row for row in calls if not row["literal"]]
-    assert len(calls) == 266, (f"{len(calls)} accessor calls hand something to a key position: "
+    assert len(calls) == 274, (f"{len(calls)} accessor calls hand something to a key position: "
                                "recount the two halves below")
     assert len(nameless) == 16, f"{len(nameless)} calls put a variable where a name is expected"
     counted = {(row["line"], row["accessor"], row["receiver"]) for row in nameless} & \
               {(site["line"], site["name"], site["receiver"]) for site in named}
     assert len(calls) == len(named) + len(nameless) - len(counted), \
-        (f"251 + 16 stopped being 266: the oracle now counts {len(named)} and the census {len(nameless)} "
+        (f"259 + 16 stopped being 274: the oracle now counts {len(named)} and the census {len(nameless)} "
          f"with {sorted(counted)} in common -- one of the three totals moved alone")
     assert [(row[1], row[2]) for row in sorted(counted)] == [("idOf", "h")], \
         (f"the calls that are both nameless and counted are {sorted(counted)}, not one folded `idOf` "
@@ -3673,8 +3829,8 @@ def test_the_bare_read_scanner_agrees_with_a_paired_call_census():
     so no name rule ever saw it, and `_array_holder` is the rule that leans on it. Its receiver group is
     `_BARE.pattern` -- `[A-Za-z_$][\\w$.]*`, so `raw` and `rec.items` are both rows, while `rows[0]`,
     `a ?? []` or `get()` are visible to neither it nor `_sites`, which would make them an exemption with
-    nobody asked. Measured over normalize.ts by pairing every accessor call instead: 254 calls after the
-    declaration skip, 245 of them with every name slot a quoted literal, 8 where a name arrives as a
+    nobody asked. Measured over normalize.ts by pairing every accessor call instead: 262 calls after the
+    declaration skip, 253 of them with every name slot a quoted literal, 8 where a name arrives as a
     variable or a spread (5 of those are the accessors delegating to `pick` from inside their own bodies),
     and exactly 1 bare read -- `list(raw)` in normalizeMessages. Nothing is mis-censused today, so this is
     the same shape as #168's generic-callee limit: stated, pinned, and turned into a red by the census
@@ -3682,7 +3838,7 @@ def test_the_bare_read_scanner_agrees_with_a_paired_call_census():
     """
     text = NORMALIZE.read_text(encoding="utf-8")
     paired = _paired_accessor_calls(text)
-    assert len(paired) == 254, (f"{len(paired)} accessor calls: the population the bare-read census is "
+    assert len(paired) == 262, (f"{len(paired)} accessor calls: the population the bare-read census is "
                                 "drawn from -- if this drops, the census below is comparing less")
     assert sum(1 for row in paired if row["argc"] == 1) == 1, \
         f"{[(row['owner'], row['receiver']) for row in paired if row['argc'] == 1]} are the bare reads"
@@ -3694,7 +3850,7 @@ def test_the_bare_read_scanner_agrees_with_a_paired_call_census():
             and not _BARE.fullmatch(row["receiver"])] == [], \
         "a bare read whose receiver `_BARE` cannot spell escapes both scanners: 0 today, and this pin is " \
         "the one that says so when one appears"
-    assert sum(1 for row in paired if row["argc"] > 1 and row["named"]) == 245, \
+    assert sum(1 for row in paired if row["argc"] > 1 and row["named"]) == 253, \
         f"{sum(1 for row in paired if row['argc'] > 1 and row['named'])}: every-name-quoted is what " \
         "`_sites` reads, so this number is the size of the census every other rule here trusts"
     loose = [row for row in paired if row["argc"] > 1 and not row["named"]]
@@ -3734,7 +3890,7 @@ def test_the_spread_receiver_scanner_agrees_with_the_paired_walk(monkeypatch):
     `dynamic` entry -- which is why #140 required that entry to name the receiver. `_spread_receivers`
     is how that requirement is checked, and it is a regex over the reader's body:
     `accessor` + `([\\w$.]*)\\s*,` + `[^)]*` + `...`, which cuts the search for the spread at the first
-    inner `)`. Measured by pairing instead: 254 accessor calls in normalize.ts, 5 of them handed a
+    inner `)`. Measured by pairing instead: 262 accessor calls in normalize.ts, 5 of them handed a
     spread name table -- 4 inside the accessor definitions' own bodies (`return pick(obj, ...keys)` in
     str, num, bool and pathOf, which no reader rule ever asks about) and 1 at a real read site, in
     normalizeTrajectory over receiver `source`. The shipped scanner's answer for every reader matches
@@ -3744,7 +3900,7 @@ def test_the_spread_receiver_scanner_agrees_with_the_paired_walk(monkeypatch):
     """
     text = NORMALIZE.read_text(encoding="utf-8")
     walked = _paired_accessor_calls(text)
-    assert len(walked) == 254, (f"{len(walked)} accessor calls: the population both censuses are drawn "
+    assert len(walked) == 262, (f"{len(walked)} accessor calls: the population both censuses are drawn "
                                  "from")
     spread = [row for row in walked if row["spread"]]
     assert [(row["name"], row["owner"], row["receiver"]) for row in spread] == [
@@ -3818,22 +3974,23 @@ def test_the_derived_holder_scanner_answers_for_every_local_a_call_builds(monkey
     which rows a holder walks out, and this rule says the holder really is built by reading a declared
     receiver. It reads assignments as lines: `[^\\n;]*` up to the end of the line, then demands the
     accessor's first argument be an identifier followed by a comma inside that same line. Measured by
-    pairing instead: 83 locals in normalize.ts are built by an accessor call, none of them wrapped, and
-    7 of them hand the accessor something a rule cannot name because the first argument is itself a call
-    (`const overall = pct(num(m, "score"))`). Those seven are why the refusal text exists, and they are
+    pairing instead: 84 locals in normalize.ts are built by an accessor call, none of them wrapped, and
+    8 of them hand the accessor something a rule cannot name because the first argument is itself a call
+    (`const overall = pct(num(m, "score"))`). Those eight are why the refusal text exists, and they are
     not holders any table binds rows to. The three holders the rule answers True for are exactly the ones
     the tables declare as element parents, and the plant below shows the one shape that would flip an
     answer.
     """
     text = NORMALIZE.read_text(encoding="utf-8")
     walked = _assigned_accessor_locals(text)
-    assert len(walked) == 83, (f"{len(walked)} locals are built by an accessor call: the population this "
+    assert len(walked) == 84, (f"{len(walked)} locals are built by an accessor call: the population this "
                                "rule's answers are drawn from")
     assert [row["holder"] for row in walked if row["wrap"]] == [], \
         (f"{[(row['holder'], row['line']) for row in walked if row['wrap']]}: a wrapped call is the "
          "shape the line grab loses -- 0 today, and this pin is what says so when one appears")
     unnameable = sorted(row["holder"] for row in walked if not row["nameable"])
-    assert unnameable == ["body", "flatOverall", "meta", "overall", "overall", "profile", "score"], \
+    assert unnameable == ["body", "flatOverall", "meta", "overall", "overall", "payload",
+                          "profile", "score"], \
         (f"{unnameable}: a local whose accessor is handed another call is refused by name today, so none "
          "of them can be a derived holder -- if one joins the tables, the refusal has to be answered")
     parents = set()

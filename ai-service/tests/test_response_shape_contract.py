@@ -895,8 +895,8 @@ def test_the_declaration_probes_reach_the_shapes_a_copy_would_miss():
     """Positive control for the ban above: it is only worth having while the shared probes really do
     what the hand-written copies did not, and each of these shapes is measured at this plane."""
     source = NORMALIZE.read_text(encoding="utf-8")
-    assert len(re.findall(TS_OPENER.format(name=r"(\w+)"), source)) == 47, \
-        "43 exported mappers and 4 module-private ones, all through one opener"
+    assert len(re.findall(TS_OPENER.format(name=r"(\w+)"), source)) == 48, \
+        "44 exported mappers and 4 module-private ones, all through one opener"
     assert "export function normalizePage(" not in source, \
         "the generic really does sit between the name and the paren, so a literal opener finds nothing"
     assert _ts_function_body("normalizePage").startswith("export function normalizePage<T>(")
@@ -1148,7 +1148,7 @@ def test_the_response_envelope_has_exactly_one_wrapper_and_one_unwrapper():
     files in two languages, and it is only safe while both halves stay where they are: widen the advice
     and the unwrap returns `undefined` for responses that were never wrapped, add a second unwrap and the
     one that is gated stops being the one that runs. Measured on this plane: two `success` reads and one
-    `?.data` unwrap, all of them in `lib/api/client.ts`, plus 23 `toast.success` lines the exclusion has
+    `?.data` unwrap, all of them in `lib/api/client.ts`, plus 25 `toast.success` lines the exclusion has
     to keep out. `client.ts` belongs to a concurrent session's file list, so this gate reads it and never
     edits it -- if a third reader appears, the test names it and a human decides where it belongs.
     """
@@ -1170,7 +1170,7 @@ def test_the_response_envelope_has_exactly_one_wrapper_and_one_unwrapper():
         'if (!res.ok || !json.success || !json.data) return null;',
         'if (!res.ok || (json && json.success === false)) {',
     ], f"{[row['text'] for row in rows if row['kind'] == 'success']}: the envelope's own guards, measured"
-    assert len(toasts) == 23, (f"{len(toasts)} `toast.success` lines came out of the same walk: that is "
+    assert len(toasts) == 25, (f"{len(toasts)} `toast.success` lines came out of the same walk: that is "
                                "the floor proving the scan reached the pages and the hooks, so a walk "
                                "narrowed to the api directory cannot pass quietly")
 
