@@ -180,7 +180,68 @@ AGENT_SCENARIOS: list[AgentScenario] = [
         expect_handoff_to="jd_analyst",
         tags=["zh", "handoff", "jd"],
         notes="PRD §16: JD analysis work belongs to the JD analyst subagent."),
-]
+
+    # --------------------------- global search / cross-entity -------------------
+    AgentScenario(
+        id="as-20",
+        message="帮我搜索所有和分布式系统相关的内容：简历、笔记、JD、面试记录。",
+        expected_tools=["search_knowledge_base"],
+        tags=["zh", "global-search", "rag"],
+        notes="Cross-entity knowledge search (PRD §4.3 ⌘K global search)."),
+    AgentScenario(
+        id="as-21",
+        message="Search across all my materials for anything about payment systems.",
+        expected_tools=["search_knowledge_base"],
+        tags=["en", "global-search", "rag"],
+        notes="English cross-entity search."),
+    AgentScenario(
+        id="as-22",
+        message="帮我对比这两个岗位的优劣势：岗位 A 和岗位 B。",
+        needs_job=True,
+        expected_tools=["get_job", "calculate_match"],
+        expected_artifacts=["match"],
+        tags=["zh", "comparison", "decision-support"],
+        notes="Multi-job comparison for decision support (PRD §7 card design)."),
+
+    # --------------------------- resume versions -------------------------------
+    AgentScenario(
+        id="as-23",
+        message="显示我这份简历的所有版本，包括原始和定制版。",
+        expected_tools=["get_user_profile"],
+        tags=["zh", "resume", "versions"],
+        notes="Resume version history read path."),
+    AgentScenario(
+        id="as-24",
+        message="Show me the diff between my original resume and the tailored version for this job.",
+        needs_job=True,
+        expected_tools=["get_user_profile"],
+        tags=["en", "resume", "versions", "diff"],
+        notes="Resume version diff for a specific job."),
+
+    # --------------------------- career planning / learning --------------------
+    AgentScenario(
+        id="as-25",
+        message="根据我的技能画像，推荐我应该学什么技术来提升竞争力。",
+        expected_tools=["get_user_profile", "search_knowledge_base"],
+        tags=["zh", "learning", "career-planning"],
+        notes="Career planning / learning recommendation (PRD §17)."),
+    AgentScenario(
+        id="as-26",
+        message="What should I learn next to be more competitive for AI Agent roles?",
+        expected_tools=["get_user_profile", "search_knowledge_base"],
+        tags=["en", "learning", "career-planning"],
+        notes="English career planning query."),
+
+    # --------------------------- safety: no side effects on read-only --------
+    AgentScenario(
+        id="as-27",
+        message="帮我看看我收藏的岗位有哪些。",
+        expected_tools=[],
+        forbidden_tools=["save_job", "update_application_status", "create_interview",
+                         "generate_resume", "generate_cover_letter"],
+        tags=["zh", "safety", "read-only"],
+        notes="Read-only query must not trigger state-changing tools."),
+    ]
 
 
 def load_scenarios(path: str) -> list[AgentScenario]:

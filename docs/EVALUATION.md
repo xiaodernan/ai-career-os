@@ -14,11 +14,19 @@ configuration scored well, the benchmark would be measuring nothing.
 
 Runner: `python -m app.eval.run_eval --user-id <uuid> [--answer] [--tags ...]`
 
-Golden set: `app/eval/dataset.py::GOLDEN_SET` (8 bilingual cases tuned to the
-seeded dev corpus). Ground truth is keyword-based — every chunk of the user whose
-text contains a case keyword counts as relevant. It is deliberately weak but
-honest supervision; override it for a real corpus with
-`--dataset cases.jsonl` (one JSON object per line, same fields as `EvalCase`).
+Golden set: `app/eval/dataset.py::GOLDEN_SET` (15 bilingual cases tuned to the
+seeded dev corpus that `scripts/smoke-fullstack.sh` writes). Ground truth is
+keyword-based — every chunk of the user whose text contains a case keyword counts
+as relevant. It is deliberately weak but honest supervision; override it for a
+real corpus with `--dataset cases.jsonl` (one JSON object per line, same fields as
+`EvalCase`).
+
+A case whose keywords the corpus does not contain would have *no* relevant chunk,
+and `recall_at_k` returns 1.0 when there is nothing to find — a query with no
+ground truth scoring full marks is the one number that must never reach an
+aggregate. The runner therefore skips such cases before scoring and lists them
+under `skipped` with the reason `no_ground_truth`, so the report says "this corpus
+cannot answer gs-01" instead of quietly banking a 1.0.
 
 | Metric | Meaning |
 |---|---|
@@ -63,11 +71,12 @@ these runs are kept in the local `evals/reports/` directory.
 Runner:
 `python -m app.eval.run_agent_eval --user-id <uuid> [--tags zh,match] [--limit 5]`
 
-Scenario set: `app/eval/agent_dataset.py::AGENT_SCENARIOS` — 19 scripted user
+Scenario set: `app/eval/agent_dataset.py::AGENT_SCENARIOS` — 27 scripted user
 turns covering discovery, company intelligence, match & skill-gap, tailoring,
 cover letters, resume/KB retrieval, profile/memory, paste-JD analysis, interview
-kick-off, tracker writes, small talk, a prompt-injection attempt and two
-delegation briefs. `{job_id}` / `{job_title}` / `{company}` placeholders are
+kick-off, tracker writes, small talk, a prompt-injection attempt, two delegation
+briefs, cross-entity search, a two-job comparison, resume versions, career
+planning and a read-only turn whose point is the tools it must *not* call. `{job_id}` / `{job_title}` / `{company}` placeholders are
 resolved by the runner against a live open job, so scenarios don't rot as the
 corpus changes.
 

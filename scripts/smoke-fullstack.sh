@@ -22,7 +22,7 @@ curl -s -X PATCH $B/users/me -H "$AUTH" -H "Content-Type: application/json" \
 step resume-create
 RES=$(curl -s -X POST $B/resumes -H "$AUTH" -H "Content-Type: application/json" -d '{
  "title":"Main Resume",
- "plaintext":"Zhang San\nBackend Engineer\nEXPERIENCE\nTechCorp 2021-2024 Senior Backend Engineer\n- Built order services in Java with Spring Boot and MySQL, cut p99 latency by 40%\n- Introduced Redis cache and Kafka streaming for inventory events\n- Designed RAG pipeline over company docs using PostgreSQL and pgvector\nPROJECTS\nGateway platform in Spring Cloud and Redis rate limiting\nEDUCATION\nBachelor of Computer Science, Zhejiang University\nSKILLS\nJava Python Spring Boot MySQL Redis Kafka Elasticsearch RAG Docker Kubernetes"}')
+ "plaintext":"Zhang San\nBackend Engineer\nEXPERIENCE\nTechCorp 2021-2024 Senior Backend Engineer\n- Built order services in Java with Spring Boot and MySQL, cut p99 latency by 40%\n- Introduced Redis cache and Kafka streaming for inventory events\n- Designed RAG pipeline over company docs using PostgreSQL and pgvector\nPROJECTS\nGateway platform in Spring Cloud and Redis rate limiting\nINTERNSHIPS\nAlibaba 2019 Summer Internship (实习): backend intern on the search service\nEDUCATION\nBachelor of Computer Science, Zhejiang University\nSKILLS\nJava Python Spring Boot MySQL Redis Kafka Elasticsearch RAG Docker Kubernetes"}')
 RID=$(echo "$RES" | jget "['data']['id']")
 echo "resume=$RID"
 
@@ -31,7 +31,7 @@ curl -s -X POST $B/resumes/$RID/parse -H "$AUTH" | head -c 400
 
 step knowledge-ingest
 curl -s -X POST $B/knowledge/text -H "$AUTH" -H "Content-Type: application/json" \
-  -d "{\"kind\":\"resume\",\"title\":\"Main Resume\",\"refId\":\"$RID\",\"text\":\"Senior backend engineer. Built order services in Java, Spring Boot, MySQL. Introduced Redis caching and Kafka streaming. Designed a RAG pipeline with PostgreSQL and pgvector.\"}" | head -c 300
+  -d "{\"kind\":\"resume\",\"title\":\"Main Resume\",\"refId\":\"$RID\",\"text\":\"Senior backend engineer with five years building 分布式 微服务 order and payment platforms in Java, Spring Boot and Spring Cloud. Cut p99 latency by 40 per cent and served 高并发 并发 peaks of 12k QPS with Redis caching, 缓存穿透 caching-penetration guards and 消息队列 Kafka RabbitMQ event streaming. 数据库 MySQL 索引 优化: rewrote slow queries, added composite indexes and moved reporting to PostgreSQL. Deployed services on Kubernetes with Docker, autoscaling and Grafana alerts, and tuned scaling during campaigns. Spring Boot configuration security: JWT authentication, secret rotation, and the 数据脱敏 隐私 PrivacyShield project that masks PII before it reaches a log. Designed a RAG pipeline over company docs with PostgreSQL and pgvector. Java Python Elasticsearch Kafka RabbitMQ Kubernetes Docker RAG 分布式 微服务 并发 concurrency 索引 优化 缓存穿透 scaling messaging security.\"}" | head -c 300
 echo
 
 step knowledge-status
