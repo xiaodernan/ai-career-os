@@ -24,7 +24,9 @@ venv/
 .ruff_cache/
 
 # data & artifacts
-storage/
+# Root-anchored on purpose: a bare `storage/` matched the Java package
+# backend/src/main/java/com/careeros/storage/ and kept four shipped sources out of the repository.
+/storage/
 ai-service/evals/reports/
 playwright-report/
 test-results/
