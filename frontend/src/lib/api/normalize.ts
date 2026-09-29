@@ -447,6 +447,10 @@ export function normalizeApplication(raw: unknown): Application {
     note: str(raw, "note", "notes") ?? null,
     reminderAt: str(raw, "reminderAt", "reminder_at") ?? null,
     position: num(raw, "position", "orderIndex", "order_index", "sortOrder", "sort_order"),
+    resumeVersionId: str(raw, "resumeVersionId", "resume_version_id") ?? null,
+    jdId: str(raw, "jdId", "jd_id") ?? null,
+    matchId: str(raw, "matchId", "match_id") ?? null,
+    appliedAt: str(raw, "appliedAt", "applied_at") ?? null,
     createdAt: str(raw, "createdAt", "created_at"),
     updatedAt: str(raw, "updatedAt", "updated_at"),
   };
@@ -905,22 +909,22 @@ export function normalizeResumeScore(raw: unknown): ResumeScore | null {
  *
  * The backend picks both the rows and the reason (`reminder_due` / `stale`), so nothing here
  * re-tests the reminder or stale window: a second implementation of "is this row due" is how the
- * strip's count and the card's list end up arguing on screen. A row without an id is dropped
- * rather than rendered as an unlinkable line, since every row links to its application.
+ * strip's count and the card's list end up arguing on screen. The names are the record's own
+ * components and nothing else -- `AttentionItem` is the one producer, and an alias beside each
+ * live name would be a second shape this mapper silently reinterprets. A row without an id is
+ * dropped rather than rendered, because every row on the card links to its application.
  */
 function normalizeAttention(raw: unknown): AttentionItem | null {
-  const item = rec(raw);
-  if (!item) return null;
-  const id = str(item, "id", "applicationId", "application_id");
+  const id = str(raw, "id");
   if (!id) return null;
   return {
     id,
-    title: str(item, "title", "role", "name") ?? "Untitled role",
-    companyName: str(item, "companyName", "company_name", "company"),
-    status: str(item, "status"),
-    reason: str(item, "reason", "why"),
-    reminderAt: str(item, "reminderAt", "reminder_at") ?? null,
-    updatedAt: str(item, "updatedAt", "updated_at") ?? null,
+    title: str(raw, "title"),
+    companyName: str(raw, "companyName"),
+    status: str(raw, "status"),
+    reason: str(raw, "reason"),
+    reminderAt: str(raw, "reminderAt") ?? null,
+    updatedAt: str(raw, "updatedAt") ?? null,
   };
 }
 

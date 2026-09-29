@@ -2367,7 +2367,7 @@ def test_the_reads_are_actually_found():
     """Positive control: every rule above is satisfied by an empty reading, so the census itself is
     pinned -- real sites, at the receivers this gate claims to bind, against real components."""
     applications = _sites("normalizeApplication")
-    assert len(applications) == 16
+    assert len(applications) == 20
     assert {s["receiver"] for s in applications} == {"raw", "nested"}
     assert sum(1 for s in applications if s["receiver"] == "nested") == 3
     messages = _sites("normalizeMessages")
@@ -3147,11 +3147,11 @@ def test_the_census_sees_every_read_the_mappers_hold():
                             f"cannot see: {diverged}")
 
     whole = _key_read_calls(NORMALIZE.read_text(encoding="utf-8"))
-    # Measured at this plane: the whole file and the sum over its mappers answer 267 each, which is
+    # Measured at this plane: the whole file and the sum over its mappers answer 271 each, which is
     # what says no read lives outside a body -- in a module-level table or a top-level statement --
     # where the per-reader floors would never be consulted. The number moves with every read added
     # or removed, so it is a restatement of the two totals below it, not a separate claim.
-    assert len(whole) == 267, f"{len(whole)} reads by the oracle: recount both totals if this moved"
+    assert len(whole) == 271, f"{len(whole)} reads by the oracle: recount both totals if this moved"
     assert len(whole) == sum(len(_sites(name)) for name in population), \
         "a named read lives outside every mapper the census walks"
     expressions = [site for site in whole if not _BARE.fullmatch(site["receiver"])]
@@ -3284,7 +3284,7 @@ def test_a_call_whose_key_is_a_variable_is_a_population_every_member_has_to_expl
     calls = _key_position_calls(source)
     named = _key_read_calls(source)
     nameless = [row for row in calls if not row["literal"]]
-    assert len(calls) == 282, (f"{len(calls)} accessor calls hand something to a key position: "
+    assert len(calls) == 286, (f"{len(calls)} accessor calls hand something to a key position: "
                                "recount the two halves below")
     assert len(nameless) == 16, f"{len(nameless)} calls put a variable where a name is expected"
     counted = {(row["line"], row["accessor"], row["receiver"]) for row in nameless} & \
@@ -3861,7 +3861,7 @@ def test_the_bare_read_scanner_agrees_with_a_paired_call_census():
     """
     text = NORMALIZE.read_text(encoding="utf-8")
     paired = _paired_accessor_calls(text)
-    assert len(paired) == 270, (f"{len(paired)} accessor calls: the population the bare-read census is "
+    assert len(paired) == 274, (f"{len(paired)} accessor calls: the population the bare-read census is "
                                 "drawn from -- if this drops, the census below is comparing less")
     assert sum(1 for row in paired if row["argc"] == 1) == 1, \
         f"{[(row['owner'], row['receiver']) for row in paired if row['argc'] == 1]} are the bare reads"
@@ -3873,7 +3873,7 @@ def test_the_bare_read_scanner_agrees_with_a_paired_call_census():
             and not _BARE.fullmatch(row["receiver"])] == [], \
         "a bare read whose receiver `_BARE` cannot spell escapes both scanners: 0 today, and this pin is " \
         "the one that says so when one appears"
-    assert sum(1 for row in paired if row["argc"] > 1 and row["named"]) == 261, \
+    assert sum(1 for row in paired if row["argc"] > 1 and row["named"]) == 265, \
         f"{sum(1 for row in paired if row['argc'] > 1 and row['named'])}: every-name-quoted is what " \
         "`_sites` reads, so this number is the size of the census every other rule here trusts"
     loose = [row for row in paired if row["argc"] > 1 and not row["named"]]
@@ -3923,7 +3923,7 @@ def test_the_spread_receiver_scanner_agrees_with_the_paired_walk(monkeypatch):
     """
     text = NORMALIZE.read_text(encoding="utf-8")
     walked = _paired_accessor_calls(text)
-    assert len(walked) == 270, (f"{len(walked)} accessor calls: the population both censuses are drawn "
+    assert len(walked) == 274, (f"{len(walked)} accessor calls: the population both censuses are drawn "
                                  "from")
     spread = [row for row in walked if row["spread"]]
     assert [(row["name"], row["owner"], row["receiver"]) for row in spread] == [

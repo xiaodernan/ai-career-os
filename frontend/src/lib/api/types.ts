@@ -304,6 +304,14 @@ export interface Application {
   /** kanban order inside a stage — persisted via PATCH /applications/{id} {position} */
   position?: number | null;
   orderIndex?: number;
+  /** Linked resume version used for matching/tailoring this application */
+  resumeVersionId?: string | null;
+  /** Linked JD analysis used for this application */
+  jdId?: string | null;
+  /** Linked match analysis for this application */
+  matchId?: string | null;
+  /** When the application was moved to 'applied' stage */
+  appliedAt?: string | null;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -607,7 +615,7 @@ export interface DashboardMetrics {
  */
 export interface AttentionItem {
   id: string;
-  title: string;
+  title?: string;
   companyName?: string;
   status?: string;
   reason?: string;

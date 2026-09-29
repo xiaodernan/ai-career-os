@@ -834,10 +834,10 @@ describe("normalizeDashboard", () => {
         {
           id: "a1",
           title: "Staff Backend Engineer",
-          company_name: "Acme",
+          companyName: "Acme",
           status: "applied",
           reason: "reminder_due",
-          reminder_at: "2026-09-20T09:00:00Z",
+          reminderAt: "2026-09-20T09:00:00Z",
           updatedAt: "2026-09-18T09:00:00Z",
         },
         { title: "row with no id" },
