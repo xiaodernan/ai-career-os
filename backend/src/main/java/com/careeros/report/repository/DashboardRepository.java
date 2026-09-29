@@ -108,6 +108,10 @@ public class DashboardRepository {
      * name, so this list has to show the same one or two screens name one row differently.
      */
     public List<AttentionItem> attention(UUID userId, int staleDays, int limit) {
+        // The join onto the shared predicate has to be spelled in an ordinary string: a text
+        // block strips trailing whitespace from each line, so `AND ` written at the end of one
+        // becomes `AND`, and `AND a.status` reaches Postgres as `ANDa.status` — a syntax error
+        // that only appears when the dashboard actually asks for rows.
         String sql = """
                 SELECT a.id, a.title, COALESCE(c.name, a.company_name), a.status,
                        CASE WHEN a.reminder_at IS NOT NULL AND a.reminder_at <= now()
@@ -116,7 +120,7 @@ public class DashboardRepository {
                   FROM applications a
                   LEFT JOIN companies c ON c.id = a.company_id
                  WHERE a.user_id = :userId
-                   AND """ + NEEDS_ATTENTION + """
+                 """ + "AND " + NEEDS_ATTENTION + """
                  ORDER BY (a.reminder_at IS NOT NULL AND a.reminder_at <= now()) DESC,
                           a.updated_at ASC
                  LIMIT :limit

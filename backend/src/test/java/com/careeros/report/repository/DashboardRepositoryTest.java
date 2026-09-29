@@ -257,6 +257,21 @@ class DashboardRepositoryTest {
         assertThat(listSql).contains(predicate);
     }
 
+    @Test
+    void theListStatementKeepsTheSpaceThatJoinsTheSharedPredicate() {
+        // The predicate is concatenated onto a text block, and a text block strips trailing
+        // whitespace from every line: without this, `AND ` arrives as `AND` and Postgres rejects
+        // the statement with `syntax error at or near "ANDa"`. It is a runtime-only failure —
+        // the count query below spells the same join in an ordinary string, so the strip's
+        // number kept working while the card's rows 500'd the whole dashboard.
+        rows(List.of());
+        repo.attention(userId, 14, 5);
+
+        assertThat(squeeze(lastSql))
+                .contains("WHERE a.user_id = :userId AND a.status NOT IN ('offer', 'rejected')");
+        assertThat(lastSql).doesNotContain("ANDa");
+    }
+
     /** Statement text with every run of whitespace collapsed, so the comparison is about SQL. */
     private static String squeeze(String sql) {
         return sql.replaceAll("\\s+", " ").trim();
