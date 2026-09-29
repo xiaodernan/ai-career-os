@@ -36,7 +36,8 @@ Next.js 15 (design-system UI, SSE)  ──►  Spring Boot 3 (auth, domain owner
              PostgreSQL 16 + pgvector  ◄──────┴──────►  Redis · MinIO (private S3)
 ```
 
-Full design: [docs/architecture.md](docs/architecture.md) · product plan:
+Origin spec: [docs/MASTER_PROMPT.md](docs/MASTER_PROMPT.md) · full design:
+[docs/architecture.md](docs/architecture.md) · product plan:
 [docs/product-plan.md](docs/product-plan.md) · ops: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) ·
 security model: [docs/SECURITY.md](docs/SECURITY.md) · RAG design: [docs/RAG.md](docs/RAG.md)
 
@@ -90,7 +91,9 @@ cd e2e && npm install && npx playwright test   # PRD §35 golden journey; needs 
 backend/       Spring Boot — the only public API, owns all domain writes
 ai-service/    FastAPI — providers, ingestion, RAG, features, agents (internal only)
 frontend/      Next.js — app UI + AI activity views
-docs/          architecture, product plan, RAG, security, deployment
+e2e/           Playwright golden-journey suite (PRD §35), run against the live stack
+docs/          origin spec, architecture, product plan, API, RAG, agents, evaluation,
+               security, deployment
 docker-compose.yml   infra + `--profile app` full-stack containers
 ```
 
