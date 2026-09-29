@@ -113,6 +113,10 @@ PRODUCERS = {
     # One row of `GET /applications/{id}/timeline`. Its audit detail is the `payload`
     # map below, which is why the reader has to be declared at two levels at once.
     "TimelineEvent": ("java", "application/dto/ApplicationDtos.java"),
+    # One row of the dashboard's attention list, the `List<AttentionItem>` beside the
+    # `needsAttention` count. The record is declared in the same file as `DashboardResponse`,
+    # which is the envelope the reader drills it out of.
+    "AttentionItem": ("java", "report/dto/DashboardDtos.java"),
     # The event `payload` is a free `Map<String, Object>` with two writers, so each is read from the
     # method that fills it rather than unioned into one: a status change is `applyStatusChange`
     # (`{from,to}`, reached from both PATCH and the kanban reorder), and the note/reminder branches
@@ -785,6 +789,21 @@ READERS: dict[str, dict] = {
         # `records`/`list`/`doc`/`document`/`metadata`) no controller in this repo returns: a payload
         # carrying them was never tolerated, it was read as an empty page.
         "record_of": {"raw": "PageDTO"},
+        "drilled": {},
+        "elements": {},
+        "blind": {},
+        "dynamic": {},
+    },
+    "normalizeAttention": {
+        # The dashboard's attention card: one row of `DashboardResponse.attention`, the
+        # `List<AttentionItem>` that sits beside the `needsAttention` count and is built by the same
+        # predicate. `raw` is that row, and the seven names read here are exactly the record's seven
+        # components -- no snake_case twin for any of them, because the backend has no naming
+        # strategy on this direction and a twin beside a live name is a second shape the mapper
+        # silently reinterprets. `id` is the read that decides whether a row renders at all (the
+        # card links every row to its application), and it is live, so the `null` branch guards the
+        # array's element type rather than describing a shape the endpoint can produce.
+        "record_of": {"raw": "AttentionItem"},
         "drilled": {},
         "elements": {},
         "blind": {},
@@ -1673,7 +1692,7 @@ def test_a_producer_kind_is_dispatched_by_name_and_never_by_the_fallback():
     raised about a BaseModel that was never declared, or found one and answered the site with keys no
     code writes.
 
-    Measured on this plane: 65 producer rows over 12 kinds -- `java` 31, `pyskel` 9, `pyappend` 6,
+    Measured on this plane: 66 producer rows over 12 kinds -- `java` 32, `pyskel` 9, `pyappend` 6,
     `pyfunc` 6, `pyconst` 3, `pydantic` 3, `jamapof` 2, `japut` 1, `pyadd` 1, `pycons` 1, `pyitem` 1,
     `pyretsub` 1. Both ends come out of the same walk over this file, so a branch and a row cannot
     drift apart quietly.
@@ -1689,12 +1708,12 @@ def test_a_producer_kind_is_dispatched_by_name_and_never_by_the_fallback():
                                              "behaviour rather than a statement"
     dispatched = set(re.findall(r'spec\[0\] == "(\w+)"', chain))
     counts = collections.Counter(spec[0] for spec in PRODUCERS.values())
-    assert len(PRODUCERS) == 65, f"{len(PRODUCERS)} rows: the population the counts below are drawn from"
+    assert len(PRODUCERS) == 66, f"{len(PRODUCERS)} rows: the population the counts below are drawn from"
     assert set(counts) == dispatched, \
         (f"the table uses {sorted(set(counts) - dispatched)} with no branch and the chain compares "
          f"{sorted(dispatched - set(counts))} with no rows: a kind that lost its branch has to gain "
          "one, and a kind that lost its rows has to lose the branch or gain the rows back")
-    assert sorted(counts.items()) == [("jamapof", 2), ("japut", 1), ("java", 31), ("pyadd", 1),
+    assert sorted(counts.items()) == [("jamapof", 2), ("japut", 1), ("java", 32), ("pyadd", 1),
                                       ("pyappend", 6), ("pycons", 1), ("pyconst", 3),
                                       ("pydantic", 3), ("pyfunc", 6), ("pyitem", 1), ("pyretsub", 1),
                                       ("pyskel", 9)], \
@@ -1717,7 +1736,7 @@ def test_a_producer_kind_is_dispatched_by_name_and_never_by_the_fallback():
     assert "nosuchkind" in raised and "BaseModel" not in raised, \
         (f"{raised}: an unknown kind must be named as itself -- pointing at a pydantic model is the "
          "misattribution this branch exists to remove")
-    assert len(PRODUCERS) == 65, "the planted row is still in the table the census above measured"
+    assert len(PRODUCERS) == 66, "the planted row is still in the table the census above measured"
 
 
 def _emitted_for(receiver: str | list[str]) -> set[str]:
@@ -2315,11 +2334,13 @@ def test_no_mapper_is_left_unbound():
     assert all(f"\\b{name}\\(" in _ID_OF for name in FOLDED_ACCESSORS), \
         f"{sorted(FOLDED_ACCESSORS)} claims a fold the site scanner does not perform"
     # Measured at this plane, so a new unbound reader cannot slip in under a stale count: the 31 the
-    # exported census counted, plus the two module-private mappers that carry reads of their own.
-    assert len(population) == 33, sorted(population)
+    # exported census counted, plus the three module-private mappers that carry reads of their own
+    # (`changeFrom`, `groupSkillBuckets` and the attention card's row reader).
+    assert len(population) == 34, sorted(population)
     private = sorted(name for name, exported in _mapper_declarations() if not exported)
-    assert private == ["changeFrom", "groupSkillBuckets", "pathOf", "statusCountsToRows"]
-    assert sorted(n for n in private if n in population) == ["changeFrom", "groupSkillBuckets"], \
+    assert private == ["changeFrom", "groupSkillBuckets", "normalizeAttention", "pathOf", "statusCountsToRows"]
+    assert sorted(n for n in private if n in population) == \
+        ["changeFrom", "groupSkillBuckets", "normalizeAttention"], \
         "the private half of this census is what #160 added; if it reads empty, the ban is exported-only again"
 
 
@@ -2456,15 +2477,17 @@ def test_the_reads_are_actually_found():
         "applications": ["companyName", "status"],
     }
     dash = _sites("normalizeDashboard")
-    assert len(dash) == 16
+    assert len(dash) == 17
     assert {s["receiver"] for s in dash} == {"d", "kanban", "currentResume", "skillGapDigest"}
-    assert sum(1 for s in dash if s["receiver"] == "d") == 8
+    assert sum(1 for s in dash if s["receiver"] == "d") == 9
     assert sum(1 for s in dash if s["receiver"] == "kanban") == 3
     assert sum(1 for s in dash if s["receiver"] == "currentResume") == 4
-    # 16, down from the 41 this reader had when #129 measured it: 26 sites had no author on
+    # 17, down from the 41 this reader had when #129 measured it: 26 sites had no author on
     # DashboardResponse / Kanban / ResumeSummary / SkillGapDigest -- the envelope pick, the whole
     # `metrics`/`stats`/`summary` layer (10 sites), five returned fields nobody produced, the
-    # `normalizeResumeScore(d)` fallback and the flat numeric aliases.
+    # `normalizeResumeScore(d)` fallback and the flat numeric aliases. The seventeenth is the
+    # attention card's `list(d, "attention")`: the row list the backend now sends beside the count,
+    # and the one component of that record no site read before it.
     read_off_d = {k for s in dash if s["receiver"] == "d" for k in s["keys"]}
     assert _emitted("DashboardResponse") - read_off_d == {"recentActivity"}
     # The one component the mapper still never reads. `recentActivity` rows are an event log the
@@ -3109,7 +3132,7 @@ def test_the_census_sees_every_read_the_mappers_hold():
     merged and this rule should be deleted rather than left proving equality with itself.
     """
     population = sorted(_mappers_that_read())
-    assert len(population) == 33, f"the census population moved: {population}"
+    assert len(population) == 34, f"the census population moved: {population}"
 
     diverged = []
     for name in population:
@@ -3124,11 +3147,11 @@ def test_the_census_sees_every_read_the_mappers_hold():
                             f"cannot see: {diverged}")
 
     whole = _key_read_calls(NORMALIZE.read_text(encoding="utf-8"))
-    # Measured at this plane: the whole file and the sum over its mappers answer 259 each, which is
+    # Measured at this plane: the whole file and the sum over its mappers answer 267 each, which is
     # what says no read lives outside a body -- in a module-level table or a top-level statement --
     # where the per-reader floors would never be consulted. The number moves with every read added
     # or removed, so it is a restatement of the two totals below it, not a separate claim.
-    assert len(whole) == 259, f"{len(whole)} reads by the oracle: recount both totals if this moved"
+    assert len(whole) == 267, f"{len(whole)} reads by the oracle: recount both totals if this moved"
     assert len(whole) == sum(len(_sites(name)) for name in population), \
         "a named read lives outside every mapper the census walks"
     expressions = [site for site in whole if not _BARE.fullmatch(site["receiver"])]
@@ -3255,19 +3278,19 @@ def test_a_call_whose_key_is_a_variable_is_a_population_every_member_has_to_expl
     member, not a count: an accessor's own signature decides whether the argument it receives names
     a field. The strata are the argument: 7 of the 16 are the accessor definitions' own parameter
     lists, 5 are the accessors handing their caller's names to `pick`, 4 sit in a mapper, and none
-    sits anywhere else -- in the 48 functions this walk finds.
+    sits anywhere else -- in the 49 functions this walk finds.
     """
     source = NORMALIZE.read_text(encoding="utf-8")
     calls = _key_position_calls(source)
     named = _key_read_calls(source)
     nameless = [row for row in calls if not row["literal"]]
-    assert len(calls) == 274, (f"{len(calls)} accessor calls hand something to a key position: "
+    assert len(calls) == 282, (f"{len(calls)} accessor calls hand something to a key position: "
                                "recount the two halves below")
     assert len(nameless) == 16, f"{len(nameless)} calls put a variable where a name is expected"
     counted = {(row["line"], row["accessor"], row["receiver"]) for row in nameless} & \
               {(site["line"], site["name"], site["receiver"]) for site in named}
     assert len(calls) == len(named) + len(nameless) - len(counted), \
-        (f"259 + 16 stopped being 274: the oracle now counts {len(named)} and the census {len(nameless)} "
+        (f"267 + 16 stopped being 282: the oracle now counts {len(named)} and the census {len(nameless)} "
          f"with {sorted(counted)} in common -- one of the three totals moved alone")
     assert [(row[1], row[2]) for row in sorted(counted)] == [("idOf", "h")], \
         (f"the calls that are both nameless and counted are {sorted(counted)}, not one folded `idOf` "
@@ -3829,8 +3852,8 @@ def test_the_bare_read_scanner_agrees_with_a_paired_call_census():
     so no name rule ever saw it, and `_array_holder` is the rule that leans on it. Its receiver group is
     `_BARE.pattern` -- `[A-Za-z_$][\\w$.]*`, so `raw` and `rec.items` are both rows, while `rows[0]`,
     `a ?? []` or `get()` are visible to neither it nor `_sites`, which would make them an exemption with
-    nobody asked. Measured over normalize.ts by pairing every accessor call instead: 262 calls after the
-    declaration skip, 253 of them with every name slot a quoted literal, 8 where a name arrives as a
+    nobody asked. Measured over normalize.ts by pairing every accessor call instead: 270 calls after the
+    declaration skip, 261 of them with every name slot a quoted literal, 8 where a name arrives as a
     variable or a spread (5 of those are the accessors delegating to `pick` from inside their own bodies),
     and exactly 1 bare read -- `list(raw)` in normalizeMessages. Nothing is mis-censused today, so this is
     the same shape as #168's generic-callee limit: stated, pinned, and turned into a red by the census
@@ -3838,7 +3861,7 @@ def test_the_bare_read_scanner_agrees_with_a_paired_call_census():
     """
     text = NORMALIZE.read_text(encoding="utf-8")
     paired = _paired_accessor_calls(text)
-    assert len(paired) == 262, (f"{len(paired)} accessor calls: the population the bare-read census is "
+    assert len(paired) == 270, (f"{len(paired)} accessor calls: the population the bare-read census is "
                                 "drawn from -- if this drops, the census below is comparing less")
     assert sum(1 for row in paired if row["argc"] == 1) == 1, \
         f"{[(row['owner'], row['receiver']) for row in paired if row['argc'] == 1]} are the bare reads"
@@ -3850,7 +3873,7 @@ def test_the_bare_read_scanner_agrees_with_a_paired_call_census():
             and not _BARE.fullmatch(row["receiver"])] == [], \
         "a bare read whose receiver `_BARE` cannot spell escapes both scanners: 0 today, and this pin is " \
         "the one that says so when one appears"
-    assert sum(1 for row in paired if row["argc"] > 1 and row["named"]) == 253, \
+    assert sum(1 for row in paired if row["argc"] > 1 and row["named"]) == 261, \
         f"{sum(1 for row in paired if row['argc'] > 1 and row['named'])}: every-name-quoted is what " \
         "`_sites` reads, so this number is the size of the census every other rule here trusts"
     loose = [row for row in paired if row["argc"] > 1 and not row["named"]]
@@ -3890,7 +3913,7 @@ def test_the_spread_receiver_scanner_agrees_with_the_paired_walk(monkeypatch):
     `dynamic` entry -- which is why #140 required that entry to name the receiver. `_spread_receivers`
     is how that requirement is checked, and it is a regex over the reader's body:
     `accessor` + `([\\w$.]*)\\s*,` + `[^)]*` + `...`, which cuts the search for the spread at the first
-    inner `)`. Measured by pairing instead: 262 accessor calls in normalize.ts, 5 of them handed a
+    inner `)`. Measured by pairing instead: 270 accessor calls in normalize.ts, 5 of them handed a
     spread name table -- 4 inside the accessor definitions' own bodies (`return pick(obj, ...keys)` in
     str, num, bool and pathOf, which no reader rule ever asks about) and 1 at a real read site, in
     normalizeTrajectory over receiver `source`. The shipped scanner's answer for every reader matches
@@ -3900,7 +3923,7 @@ def test_the_spread_receiver_scanner_agrees_with_the_paired_walk(monkeypatch):
     """
     text = NORMALIZE.read_text(encoding="utf-8")
     walked = _paired_accessor_calls(text)
-    assert len(walked) == 262, (f"{len(walked)} accessor calls: the population both censuses are drawn "
+    assert len(walked) == 270, (f"{len(walked)} accessor calls: the population both censuses are drawn "
                                  "from")
     spread = [row for row in walked if row["spread"]]
     assert [(row["name"], row["owner"], row["receiver"]) for row in spread] == [
@@ -3974,7 +3997,7 @@ def test_the_derived_holder_scanner_answers_for_every_local_a_call_builds(monkey
     which rows a holder walks out, and this rule says the holder really is built by reading a declared
     receiver. It reads assignments as lines: `[^\\n;]*` up to the end of the line, then demands the
     accessor's first argument be an identifier followed by a comma inside that same line. Measured by
-    pairing instead: 84 locals in normalize.ts are built by an accessor call, none of them wrapped, and
+    pairing instead: 86 locals in normalize.ts are built by an accessor call, none of them wrapped, and
     8 of them hand the accessor something a rule cannot name because the first argument is itself a call
     (`const overall = pct(num(m, "score"))`). Those eight are why the refusal text exists, and they are
     not holders any table binds rows to. The three holders the rule answers True for are exactly the ones
@@ -3983,7 +4006,7 @@ def test_the_derived_holder_scanner_answers_for_every_local_a_call_builds(monkey
     """
     text = NORMALIZE.read_text(encoding="utf-8")
     walked = _assigned_accessor_locals(text)
-    assert len(walked) == 84, (f"{len(walked)} locals are built by an accessor call: the population this "
+    assert len(walked) == 86, (f"{len(walked)} locals are built by an accessor call: the population this "
                                "rule's answers are drawn from")
     assert [row["holder"] for row in walked if row["wrap"]] == [], \
         (f"{[(row['holder'], row['line']) for row in walked if row['wrap']]}: a wrapped call is the "
