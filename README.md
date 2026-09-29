@@ -81,6 +81,7 @@ database is never touched.
 cd frontend    && npm test                     # vitest: normalizers, formatters, SSE, nav, pipeline taxonomy
 cd ai-service  && .venv/Scripts/python -m pytest # unit + orchestrator + contract gates (offline: mock/hash)
 cd backend     && mvn test                     # unit tests offline; *IT also need the infra below
+cd backend     && mvn test -Dtest='*Test'      # skip the *IT suite when Docker is not running
 # RAG eval (needs the DB/infra running): cd ai-service && python -m app.eval.run_eval --user-id <uuid> [--answer]
 cd e2e && npm install && npx playwright test   # PRD §35 golden journey; needs all three services up (see e2e/README.md)
 ```
