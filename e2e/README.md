@@ -53,6 +53,40 @@ npx playwright show-report
 Expected result: **10 passed**. Each run takes ~60s of actual testing, plus the
 per-test teardown described below.
 
+### Running against the containerized stack
+
+The suite does not care whether the three services are local processes or containers,
+so it doubles as the acceptance test for the production images. This is the run that
+actually exercises `frontend/Dockerfile`'s standalone bundle and the built jars:
+
+```bash
+# whole stack in containers, offline providers, no API keys needed
+LLM_PROVIDER=mock EMBEDDING_PROVIDER=hash \
+  docker-compose --profile app up -d
+
+# the suite provisions one account per test, so the auth limit has to be raised;
+# see trap 3 for why, and the compose override below for how
+CODEBUDDY_SAFE_DELETE_BULK_THRESHOLD=100000 timeout 500 npx playwright test
+```
+
+Both providers have to be named on the command line: `.env` selects the hosted
+providers with empty keys, and the ai-service only reports that as a `ConfigError`
+on the first AI call — which surfaces here as a stalled upload, not a startup error.
+
+The auth limit needs an override file, because `environment:` beats `env_file:` and
+the base compose does not name `RATELIMIT_AUTH_PER_MINUTE`:
+
+```yaml
+# e2e-override.yml — pass with: docker-compose -f docker-compose.yml -f e2e-override.yml
+services:
+  backend:
+    environment:
+      RATELIMIT_AUTH_PER_MINUTE: "100"
+```
+
+Verified this way: **10/10 against the containerized images**, which is what closed
+the "production build" item in the Definition of Done.
+
 ### The runner is slow to exit in this sandbox
 
 After the summary prints, the node process can sit for another minute or more and
