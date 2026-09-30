@@ -1,7 +1,13 @@
 # env & secrets
-.env
-.env.local
-*.env !.env.example
+# `.env*` covers .env, .env.local and the .env.prod that docker-compose.prod.yml reads.
+# The negations keep the templates that ARE meant to be committed.
+#
+# This replaced `*.env !.env.example` on one line -- git reads a line as a single
+# pattern, so that rule excluded nothing and `.env.prod`, which holds the production
+# secrets, was committable.
+.env*
+!.env.example
+!.env.prod.example
 
 # node / next
 node_modules/
