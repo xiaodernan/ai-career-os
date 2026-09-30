@@ -1,18 +1,21 @@
 import type { NextConfig } from "next";
 
+/**
+ * `output: "standalone"` is opt-in, because it and `next start` are mutually exclusive.
+ *
+ * Next warns "next start does not work with output: standalone" and then never binds the
+ * port — so enabling it unconditionally silently breaks the local run *and* the E2E
+ * suite, both of which serve the app with `next start`. It fails quietly: the process
+ * prints "Ready" and listens on nothing. The Docker build opts in via NEXT_STANDALONE=1
+ * to get the traced bundle; every other build stays one `next start` can serve.
+ *
+ * Why the image wants it: the Dockerfile used to copy the whole `node_modules` from the
+ * build stage, which `npm ci` had filled with all 12 devDependencies — so the runtime
+ * image shipped its own test runner, linter and CSS toolchain. Standalone contains only
+ * what the server traces.
+ */
 const nextConfig: NextConfig = {
-  /**
-   * Emit a self-contained server bundle so the production image can ship only the
-   * files and dependencies it actually traces.
-   *
-   * Without this, `frontend/Dockerfile` copies the whole `node_modules` from the
-   * build stage — which `npm ci` populated with all 12 devDependencies (vitest,
-   * playwright, eslint, typescript, tailwind). The runtime image then carried its
-   * own test runner and linter: hundreds of megabytes, and a wider surface than the
-   * app needs. Standalone keeps the regular `.next` too, so `next start` and the
-   * local/E2E flow are unaffected.
-   */
-  output: "standalone",
+  ...(process.env.NEXT_STANDALONE === "1" ? { output: "standalone" as const } : {}),
 };
 
 export default nextConfig;

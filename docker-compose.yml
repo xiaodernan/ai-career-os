@@ -137,7 +137,13 @@ services:
 
   frontend:
     profiles: [app]
-    build: ./frontend
+    build:
+      context: ./frontend
+      args:
+        # The browser bundle inlines NEXT_PUBLIC_* at BUILD time, so the value has to be
+        # a build arg; the runtime `environment:` entry below only reaches server-side
+        # rendering. Both are set from one source so the two cannot disagree.
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8080/api/v1}
     container_name: careeros-frontend
     restart: unless-stopped
     environment:
