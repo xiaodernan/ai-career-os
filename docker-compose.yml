@@ -106,6 +106,16 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-career_os}:${POSTGRES_PASSWORD:-career_os_dev_password}@postgres:5432/${POSTGRES_DB:-career_os}
       BACKEND_BASE_URL: http://backend:8080
       APP_ENV: ${APP_ENV:-dev}
+      # Providers are named here so they can be overridden from the shell: an
+      # `environment:` entry beats `env_file:`, whereas the shell environment only
+      # feeds interpolation. Without these two lines, `.env` wins unconditionally and
+      # the stack starts healthy but every AI call 500s, because `.env` selects the
+      # hosted providers while leaving their keys empty:
+      #   ConfigError: LLM_PROVIDER=openai_compat requires LLM_API_KEY
+      # With them, the offline demo works with no keys at all:
+      #   LLM_PROVIDER=mock EMBEDDING_PROVIDER=hash docker-compose --profile app up -d
+      LLM_PROVIDER: ${LLM_PROVIDER:-}
+      EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-}
     ports:
       - "127.0.0.1:8000:8000"
     depends_on:
