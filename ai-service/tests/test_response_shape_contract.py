@@ -929,10 +929,11 @@ def test_the_java_probe_reads_every_record_the_backend_declares():
     component's name is its wire name, which holds only while no record renames or hides one.
     """
     declared = _declared_records()
-    # 102 rather than 101 since `DashboardDtos.AttentionItem`: the row the attention card renders, with
-    # every component a bare identifier and its name its wire name, exactly like the rest of the census.
-    assert len(declared) == 102, \
-        f"{len(declared)} records carry a declaration the shared opener reads, not the 102 measured"
+    # 103 rather than 102 since `JobDtos.CompanyDetail`: the company page's envelope -- the profile
+    # plus the roles it is hiring for -- which is a record like the rest, so the shared opener has to
+    # read it. Before it, `DashboardDtos.AttentionItem` was the last one to join (101 -> 102).
+    assert len(declared) == 103, \
+        f"{len(declared)} records carry a declaration the shared opener reads, not the 103 measured"
     problems, renamed = [], []
     for relative, record in declared:
         names = _record_components_at(relative, record)
@@ -3064,7 +3065,7 @@ def test_both_frame_parsers_default_a_nameless_frame_to_the_same_event_name():
          "inside a parser is the exit that drops a frame with neither data nor an explicit name")
     assert sorted((row["file"], row["line"], row["head"]) for row in by_role["type-union-member"]) == [
         ("agent-timeline.tsx", 33, "export type TraceKind ="),
-        ("types.ts", 717, "kind:"),
+        ("types.ts", 740, "kind:"),
         ('use-sse.ts', 15, 'event: SSEEventName | "message" | "progress" | "ping";'),
     ], (f"{[(r['file'], r['line'], r['head']) for r in by_role['type-union-member']]}: three type unions "
         "spell `message`, and only one of them names a frame -- the other two are the trace step kind "
@@ -3156,15 +3157,28 @@ def test_the_bus_ships_a_frame_formatter_that_the_wire_never_uses():
             tree = ast.parse(text, filename=str(path))
         except SyntaxError:
             continue
+        # Identify each call by the function that encloses it, not by its line number.
+        # The claim worth pinning is *which* offline test calls `sse()`; a line number
+        # also asserts "and nothing was inserted above it", which is not part of the
+        # claim -- it broke the moment an unrelated test was added to the file, and the
+        # failure message trains a reader to bump the number rather than re-read this.
+        funcs = [(n.name, n.lineno, n.end_lineno or n.lineno) for n in ast.walk(tree)
+                 if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))]
+
+        def enclosing(lineno: int) -> str:
+            inner = [(name, start) for name, start, end in funcs if start <= lineno <= end]
+            return max(inner, key=lambda t: t[1])[0] if inner else "<module>"
+
         for node in ast.walk(tree):
             if isinstance(node, ast.Call):
                 name = getattr(node.func, "id", None) or getattr(node.func, "attr", None)
                 if name == "sse":
                     rel = str(path.relative_to(AI_SERVICE_ROOT)).replace("\\", "/")
-                    callers.append((rel, node.lineno))
+                    where = (rel, enclosing(node.lineno))
+                    callers.append(where)
                     if not path.name.startswith("test_"):
-                        shipped.append((rel, node.lineno))
-    assert callers == [("tests/test_core_modules.py", 537)], \
+                        shipped.append(where)
+    assert callers == [("tests/test_core_modules.py", "test_sse_formats_event")], \
         (f"{callers}: `sse()` is production code whose only caller is one offline test -- the wire is "
          "formatted elsewhere, so an edit here is tested but never shipped")
     assert shipped == [], \
