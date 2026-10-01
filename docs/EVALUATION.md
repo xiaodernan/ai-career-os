@@ -81,14 +81,26 @@ retrieval quality: hash embeddings carry no semantic signal. What it does establ
 that chunking, indexing, fusion and ranking return the right evidence when the query
 shares vocabulary with the corpus.
 
-### Reranker decision (recorded result)
+### Reranker decision (design rationale, not a measured result)
 
-Measured on the seeded dev corpus with a real embedding provider: with a correct
-reranker the fused top-k holds the relevant chunks in the top positions; with
-`--rerank none` recall@5 is retained but MRR/nDCG drop, i.e. the right evidence is
-still fetched but ranked lower. That is the expected signature and the reason
-`RERANK_MODE=llm` is the default rather than an optional flourish. Reports from
-these runs are kept in the local `evals/reports/` directory.
+`rerank_mode=llm` is the default. The mechanism, in `app/rag/rerank.py`: ask the model
+to score each fused candidate, reorder by that score, and keep unscored candidates at
+the RRF tail. `--rerank none` returns the fused order directly.
+
+**The reranker's effect has not been measured in this repository.** The two runs kept
+under `evals/reports/` — `20260922-005323_smoke-baseline` (`rerank_mode=llm`) and
+`20260922-005343_no-rerank` (`none`) — report *identical* metrics: recall@5 1.00, MRR
+0.8055, nDCG 0.8656. Both were recorded with `llm_provider=mock`, and under the stub the
+reranker is a structural no-op: the rerank prompt is answered with
+`{"answer": ..., "confidence": 0.8}`, which carries no `scores` map, so every candidate
+is scored 0.0 and the stable sort preserves the fused order. Identical reports are the
+*expected* outcome there — they are not evidence that the reranker does nothing, and
+this section previously read them as the opposite, claiming a drop in MRR/nDCG that the
+files do not show.
+
+Making the comparison real needs a provider that returns scores; the harness is already
+wired for it (`--experiment baseline --answer` vs `--experiment no-rerank --rerank none
+--answer`). Until that run exists, `RERANK_MODE=llm` is a design choice.
 
 ## 2. Agent evaluation — behaviour, not text
 

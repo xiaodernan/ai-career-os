@@ -360,6 +360,26 @@ async def test_rerank_scores_out_of_range_key_are_ignored(monkeypatch):
     assert out[0]["rerank"] == 0.7
 
 
+async def test_the_stub_provider_makes_the_reranker_a_no_op(monkeypatch):
+    """Why the two recorded eval reports are identical, in executable form.
+
+    `evals/reports/20260922-005323_smoke-baseline` (`rerank_mode=llm`) and
+    `20260922-005343_no-rerank` (`none`) report the same recall, MRR and nDCG. That is
+    not the reranker turning out not to matter: the stub answers the rerank prompt with
+    the payload below, which has no `scores` map, so every candidate is scored 0.0 and
+    the stable sort leaves the fused order exactly as it was. The doc used to read those
+    two files as showing an MRR/nDCG drop, which they do not contain.
+    """
+    async def stub_answer(req, **k):
+        return {"answer": "mock structured answer", "confidence": 0.8}
+
+    _patch_mode(monkeypatch, "llm")
+    monkeypatch.setattr(rerank_mod, "ask_json", stub_answer)
+    out = await rerank("q", _chunks(30), top_n=8)
+    assert [c["id"] for c in out] == [f"c{i}" for i in range(8)]  # fused order, intact
+    assert all(c["rerank"] == 0.0 for c in out)
+
+
 # ---------------- understand (query-understanding sanitizer) ----------------
 
 
