@@ -21,10 +21,12 @@ class EvalCase:
 
 # Tuned for the seeded dev corpus, which `scripts/smoke-fullstack.sh` writes: a resume
 # covering PrivacyShield 脱敏, Java / Spring Boot, Redis caching and 缓存穿透, MySQL
-# 索引 / 优化, Kafka / RabbitMQ 消息队列, Kubernetes scaling, 分布式 微服务, 并发, RAG
-# and a security line. A case whose keywords that corpus does not contain is *skipped*
-# and listed by the runner (`no_ground_truth`) rather than scored -- see
-# `run_eval.run`. Add cases per real corpus via `--dataset file.jsonl`.
+# 索引 / 优化, Kafka / RabbitMQ 消息队列, Kubernetes scaling, 分布式 微服务, 并发, RAG,
+# a security line, and -- since gs-03/gs-05 were otherwise never scored -- an education
+# and an internship line. All fifteen cases score against it; a case whose keywords the
+# corpus does not contain is *skipped* and listed by the runner (`no_ground_truth`)
+# rather than scored -- see `run_eval.run`. Add cases per real corpus via
+# `--dataset file.jsonl`.
 GOLDEN_SET: list[EvalCase] = [
     EvalCase("gs-01", "隐私盾 数据脱敏 项目 用了什么技术", ["PrivacyShield", "脱敏"],
              tags=["zh", "projects"]),
