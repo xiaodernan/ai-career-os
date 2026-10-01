@@ -330,6 +330,7 @@ def test_the_record_and_the_list_are_named_by_a_pinned_set_of_sites():
         "backend/src/main/java/com/careeros/resume/service/ResumeService.java",
         "backend/src/main/java/com/careeros/resume/web/ResumeController.java",
         "ai-service/tests/test_resume_list_body_ships.py",
+        "ai-service/tests/test_resources_mapper_records_ship.py",
     }, f"the list record gained or lost a namer: {record_sites}"
 
     hook_sites = census(re.compile(r"\buseResumes\b"))
@@ -345,7 +346,9 @@ def test_the_record_and_the_list_are_named_by_a_pinned_set_of_sites():
     assert set(mapper_sites) == {
         "frontend/src/lib/hooks/resources.ts",
         "ai-service/tests/test_resume_list_body_ships.py",
-    }, f"mapResume is reached differently now, so the alias table above needs re-deriving: {mapper_sites}"
+        "ai-service/tests/test_resources_mapper_records_ship.py",
+    }, f"mapResume is now named by a new file: if it reaches the mapper differently, the alias " \
+        f"table above needs re-deriving, not this set extended: {mapper_sites}"
 
     # The name appearing in a file is not the declaration existing: arm A10 renamed
     # `function mapResume` and stayed green above, because two call sites still spell the name.

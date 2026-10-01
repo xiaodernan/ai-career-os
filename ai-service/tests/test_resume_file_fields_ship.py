@@ -242,15 +242,16 @@ def test_the_component_reaches_the_wire_under_its_java_name():
         ["@JsonProperty"], "the annotation scan cannot see a component annotation, so emptiness is blind"
 
 
-def test_only_the_schema_and_two_gates_name_the_key_that_ships():
+def test_only_the_schema_and_three_gates_name_the_key_that_ships():
     """Nobody downstream of the response reads it: not the client, not the driver, not the model."""
     sites = sorted({rel for rel, _, _ in scan("", KEY_RE,
                                               (".java", ".py", ".ts", ".tsx", ".sql", ".md",
                                                ".yml", ".yaml", ".mjs", ".json"))})
     assert sites == sorted([DTO_FILE, SERVICE_FILE, ENTITY_FILE, V1_FILE, "docs/architecture.md",
                           "ai-service/tests/test_file_key_composers.py",
-                          "ai-service/tests/test_resume_file_fields_ship.py"]), (
-        f"the key is now named in {sites}. Anything outside the schema, the two gates and the "
+                          "ai-service/tests/test_resume_file_fields_ship.py",
+                          "ai-service/tests/test_resources_mapper_records_ship.py"]), (
+        f"the key is now named in {sites}. Anything outside the schema, the three gates and the "
         f"ingestion path is either a reader (the affordance stopped being dead -- then this gate "
         f"must describe what it renders) or a second author")
     frontend = scan("frontend/src", KEY_RE, (".ts", ".tsx"))
