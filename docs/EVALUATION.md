@@ -57,6 +57,30 @@ python -m app.eval.run_eval --user-id $U --experiment no-rerank --rerank none --
 
 Comparing the two generated files answers "did the reranker earn its latency?".
 
+### RAG baseline (recorded result)
+
+On the seeded dev corpus, with `LLM_PROVIDER=mock` / `EMBEDDING_PROVIDER=hash`
+(`evals/reports/20261001-152253_golden-15.md`):
+
+| metric | value |
+|---|---|
+| cases scored | 15 of 15 |
+| recall_at_k | 1.00 |
+| precision_at_k | 1.00 |
+| mrr | 1.00 |
+| ndcg_at_k | 1.00 |
+| context_relevance | 0.93 |
+
+`answer_relevance` and `faithfulness` are absent from that report because `--answer` was
+not passed. A run that generates nothing has nothing to score, so the runner reports the
+gap instead of a number — an earlier version fed the retrieved context back in as the
+"answer" and duly published `faithfulness: 1.00` for a model it never called.
+
+Retrieval scoring 1.00 here is the **keyword / trigram path** working, not semantic
+retrieval quality: hash embeddings carry no semantic signal. What it does establish is
+that chunking, indexing, fusion and ranking return the right evidence when the query
+shares vocabulary with the corpus.
+
 ### Reranker decision (recorded result)
 
 Measured on the seeded dev corpus with a real embedding provider: with a correct
@@ -104,26 +128,30 @@ Scoring lives in `app/eval/agent_metrics.py` as pure functions, unit-tested in
 a run that correctly calls *no* tools must not be penalised for precision, and a
 forbidden call fails the scenario even if everything else is perfect.
 
-Baseline on the reference dev box (mock provider, hash embeddings) —
-`evals/reports/20260922-232427_smoke-agent.md`:
+Baseline on the reference dev box (mock provider, hash embeddings), 27 scenarios —
+`evals/reports/20261001-145644_agent-full.md`:
 
 | metric | value |
 |---|---|
-| tool_recall | 0.42 |
-| tool_precision | 0.47 |
-| tool_f1 | 0.26 |
-| artifact_rate | 0.74 |
+| tool_recall | 0.33 |
+| tool_precision | 0.44 |
+| tool_f1 | 0.19 |
+| artifact_rate | 0.78 |
 | grounding_rate | 1.00 |
-| completed | 0.32 |
+| completed | 0.26 |
 | forbidden_violations | 0 |
 | errors | 0 |
 
-Read this honestly: `grounding_rate` 1.00 is a mock artifact (the stub echoes tool
-output), and the low tool scores are exactly the three-keyword limitation of
+Read this honestly: the low tool scores are exactly the three-keyword limitation of
 `mock.py::TOOL_HINTS` — it routes on "job / resume / profile" and nothing else, so
-`calculate_match`, `generate_resume`, `analyze_jd`, `save_job` are never reached.
-Both the RAG and agent harnesses therefore require a **real provider** to report
-product quality; they require no provider to prove the system is wired correctly.
+`calculate_match`, `generate_resume`, `analyze_jd`, `save_job` are never reached, while
+the orchestrator offers 15 tools. What the run *does* establish is that all 27 scenarios
+execute, the loop terminates within its step budget, and 0 forbidden violations over 0
+errors is a real measurement rather than a vacuous one — `completed` requires a non-empty
+answer, so an empty one cannot pass by default.
+
+Both harnesses therefore require a **real provider** to report product quality; they
+require no provider to prove the system is wired correctly.
 
 ## 3. What is verified offline vs. with a real provider
 
@@ -132,9 +160,13 @@ product quality; they require no provider to prove the system is wired correctly
 | Harness runs end-to-end, writes reports | ✅ | ✅ |
 | Metrics have discriminating power | ✅ (low scores, no crashes) | ✅ |
 | Orchestrator tool loop, subagent handoff, traces, step-budget guard | ✅ | ✅ |
-| Retrieval quality (recall/MRR/nDCG) | ❌ meaningless | ✅ |
+| Retrieval ranking (recall/MRR/nDCG) | ⚠️ keyword/trigram path only | ✅ |
 | Answer faithfulness | ❌ lexical proxy | ✅ LLM judge |
 | Tool-selection accuracy of the model | ❌ heuristic only | ✅ |
+
+The retrieval row is a partial credit, not a pass: with hash embeddings the vector half
+of the fusion contributes noise, so a good score there means the keyword and trigram
+paths are healthy — worth knowing, and not the same claim as "semantic retrieval works".
 
 ## 4. Tests that guard the metrics themselves
 
