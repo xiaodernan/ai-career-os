@@ -22,6 +22,17 @@ from app.rag.pipeline import retrieve
 METRIC_KEYS = ["recall_at_k", "precision_at_k", "mrr", "ndcg_at_k", "hit_at_k",
                "context_relevance", "answer_relevance", "faithfulness"]
 
+# The metrics a retrieval-only run can honestly report: everything derived from the query
+# and the retrieved chunks. `answer_relevance` and `faithfulness` need an answer to score,
+# so without `--answer` they are absent rather than zero.
+RETRIEVAL_METRIC_KEYS = ["recall_at_k", "precision_at_k", "mrr", "ndcg_at_k", "hit_at_k",
+                         "context_relevance"]
+
+
+def measured_metric_keys(answer_requested: bool) -> list[str]:
+    """The metrics a run may average, given whether it asked for an answer at all."""
+    return [m for m in METRIC_KEYS if answer_requested or m in RETRIEVAL_METRIC_KEYS]
+
 ANSWER_SYSTEM = """You are a career assistant answering strictly from the provided
 evidence. Cite [n]. If evidence is missing, say so. Be concise."""
 
@@ -81,8 +92,13 @@ async def run(args: argparse.Namespace) -> dict:
                 judged = await llm_judge(case.query, contexts, answer,
                                          user_id=args.user_id)
             answer_ms = int((time.monotonic() - t1) * 1000)
+        # Pass the answer as generated -- never a stand-in. This used to be
+        # `answer or " ".join(contexts)[:1200]`, which fed the retrieved context back in
+        # as the "answer" whenever no answer was requested. Faithfulness then compared the
+        # context against itself and reported a tautological 1.0, so a retrieval-only run
+        # published a perfect groundedness score for a generator that was never called.
         row = score_case(case.query, retrieved_ids, relevant, contexts,
-                         answer or " ".join(contexts)[:1200], args.k, judged)
+                         answer, args.k, judged)
         row.update({"case": case.id, "query": case.query, "mode": "eval",
                     "retrieval_ms": retrieval_ms, "answer_ms": answer_ms,
                     "n_evidence": len(evidence),
@@ -90,8 +106,13 @@ async def run(args: argparse.Namespace) -> dict:
                     "judge": (judged or {}).get("judge", "lexical")})
         results.append(row)
 
+    # Aggregate only what this run measured. Without `--answer` no generation happened,
+    # so `answer_relevance` and `faithfulness` have no value to average -- reporting them
+    # as 0.0 would read as a failed generator, and reporting the old context-vs-itself
+    # numbers read as a perfect one. Neither is a measurement, so neither is published.
+    measured = measured_metric_keys(args.answer)
     aggregate = {m: round(statistics.mean(x[m] for x in results), 4)
-                 for m in METRIC_KEYS} if results else {}
+                 for m in measured} if results else {}
     config = {"k": args.k, "top_k": args.top_k, "answer": args.answer,
               "rerank_mode": s.rerank_mode, "llm_provider": s.llm_provider,
               "llm_model": s.llm_model,
@@ -133,22 +154,26 @@ def _provider_caveat(config: dict) -> list[str]:
     llm = str(config.get("llm_provider", ""))
     emb = str(config.get("embedding_provider", ""))
     offline = {"mock", "hash"}
-    if llm not in offline and emb not in offline:
-        return []
-    out = ["## What these numbers mean", ""]
+    notes: list[str] = []
+    if not config.get("answer", True):
+        notes.append(
+            "- **Generation was not run.** `--answer` was not passed, so `answer_relevance` "
+            "and `faithfulness` are absent from the table rather than zero — there was no "
+            "answer to score. The retrieval metrics are unaffected and complete.")
     if llm in offline:
-        out.append(
+        notes.append(
             f"- **Generation is unmeasured.** `llm_provider={llm}` answers from a stub that "
             "never reads the retrieved context, so `answer_relevance` and `faithfulness` "
             "describe the stub. Only the retrieval metrics above carry information.")
     if emb in offline:
-        out.append(
+        notes.append(
             f"- **Retrieval here is keyword-driven in effect.** `embedding_provider={emb}` "
             "produces no semantic signal, so the vector half of the hybrid ranking "
             "contributes noise and these scores reflect the keyword/trigram path. Re-run "
             "with a real embedding provider before reading them as semantic retrieval.")
-    out.append("")
-    return out
+    if not notes:
+        return []
+    return ["## What these numbers mean", ""] + notes + [""]
 
 
 def _markdown(report: dict) -> str:

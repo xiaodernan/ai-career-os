@@ -64,10 +64,18 @@ def answer_relevance(query: str, answer: str) -> float:
 def faithfulness(answer: str, contexts: list[str]) -> float:
     """Proxy for groundedness: share of sentence-level claims whose distinctive
     tokens appear in the provided context (cited sentences count when their
-    evidence is among contexts)."""
+    evidence is among contexts).
+
+    An answer with no checkable claim scores **0.0**, not 1.0. The tempting reading is
+    that "nothing unfaithful was said", but the metric's job is to certify an answer, and
+    it cannot certify one that does not exist. Returning 1.0 there is the failure mode
+    that matters: a generator which returns nothing — or nothing long enough to be a
+    sentence — reports perfect groundedness. `answer_relevance` already scores an absent
+    answer 0.0; the two must not disagree about the same absence.
+    """
     sentences = [s for s in re.split(r"[.!?\n。！？]", answer) if len(s.strip()) > 25]
     if not sentences:
-        return 1.0
+        return 0.0
     ctx_tokens: set[str] = set()
     for c in contexts:
         ctx_tokens |= _tokens(c)

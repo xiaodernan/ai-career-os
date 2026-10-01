@@ -7,7 +7,7 @@ product claim: `faithfulness: 0.0` looks like a broken generator and `recall_at_
 looks like semantic retrieval, when neither is being measured.
 """
 
-from app.eval.run_eval import _markdown, _provider_caveat
+from app.eval.run_eval import METRIC_KEYS, _markdown, _provider_caveat, measured_metric_keys
 from app.eval.run_agent_eval import (
     _markdown as agent_markdown,
     _provider_caveat as agent_caveat,
@@ -43,6 +43,36 @@ def test_both_offline_disclaims_both():
 
 def test_a_missing_config_does_not_crash_or_invent_a_caveat():
     assert _provider_caveat({}) == []
+
+
+# ------------------------------------------------- an absent answer is not a measurement
+
+def test_a_retrieval_only_run_reports_no_generation_metrics():
+    """`--answer` off means no answer was generated, so there is nothing to score."""
+    keys = measured_metric_keys(answer_requested=False)
+    assert "recall_at_k" in keys and "context_relevance" in keys
+    assert "answer_relevance" not in keys and "faithfulness" not in keys
+
+
+def test_a_generating_run_reports_all_of_them():
+    assert set(measured_metric_keys(answer_requested=True)) == set(METRIC_KEYS)
+
+
+def test_the_report_says_generation_was_not_run():
+    out = " ".join(_provider_caveat({"llm_provider": "openai_compat",
+                                     "embedding_provider": "openai",
+                                     "answer": False}))
+    assert "Generation was not run" in out
+    # Absent, not zero -- the distinction the report previously got wrong in both
+    # directions: it published a tautological 1.0 for faithfulness.
+    assert "absent from the table rather than zero" in out
+
+
+def test_the_answer_note_and_the_stub_note_can_coexist():
+    out = " ".join(_provider_caveat({"llm_provider": "mock",
+                                     "embedding_provider": "hash",
+                                     "answer": False}))
+    assert "Generation was not run" in out and "Generation is unmeasured" in out
 
 
 # ---------------------------------------------------------------- rendering

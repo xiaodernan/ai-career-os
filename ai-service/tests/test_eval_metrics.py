@@ -29,6 +29,19 @@ def test_generation_metric_proxies():
         == 0.5
 
 
+def test_an_absent_answer_is_not_perfectly_faithful():
+    """Returning 1.0 here was the flattering branch: a generator that produced nothing
+    reported perfect groundedness, and `answer_relevance` said 0.0 about the same
+    absence -- two metrics disagreeing about one non-answer."""
+    ctx = ["Built PrivacyShield data masking with Java Spring Boot and Redis"]
+    assert faithfulness("", ctx) == 0.0
+    assert faithfulness("   ", ctx) == 0.0
+    # Too short to be a checkable claim, so it cannot be certified either.
+    assert faithfulness("OK.", ctx) == 0.0
+    # ...and the two metrics now agree about the absence.
+    assert answer_relevance("java spring", "") == 0.0
+
+
 def test_score_case_shape():
     row = score_case("q", ["a"], {"a"}, ["a text"], "a text answer", 5)
     for key in ("recall_at_k", "precision_at_k", "mrr", "ndcg_at_k", "hit_at_k",
