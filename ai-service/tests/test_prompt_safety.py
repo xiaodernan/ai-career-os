@@ -70,3 +70,27 @@ def test_evidence_block_defends_fence_in_item_text():
 def test_evidence_block_on_empty_input_is_just_the_header():
     block = evidence_block([])
     assert block == UNTRUSTED_HEADER + "\n"
+
+
+# ------------------------------------------------ present-null, which `.get` does not catch
+
+def test_wrap_untrusted_fences_a_present_null_as_empty_text():
+    """A jsonb key that is present and null defeats `.get(key, "")`.
+
+    This is the cover-letter outage: `company.get("overview", "")` returned `None`
+    for every company without an overview, and the request died with
+    `'NoneType' object has no attribute 'replace'` — a 500 on a mainline flow
+    (paste a JD, generate a cover letter), not on an exotic one.
+    """
+    out = wrap_untrusted("COMPANY", None)
+    assert out == "<<<BEGIN UNTRUSTED COMPANY>>>\n\n<<<END UNTRUSTED COMPANY>>>"
+    assert out.count("<<<") == 2 and out.count(">>>") == 2
+
+
+def test_evidence_block_survives_a_present_null_quote():
+    items = [{"chunk_id": "c1", "source": "s", "section": "x", "text": None},
+             {"chunk_id": "c2", "source": "s", "section": "y", "text": "real"}]
+    block = evidence_block(items)
+    assert "[Evidence 1]" in block and "[Evidence 2]" in block
+    assert "real" in block
+    assert block.count("<<<") == 4

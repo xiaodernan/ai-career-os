@@ -19,7 +19,7 @@ UNTRUSTED_HEADER = (
 )
 
 
-def wrap_untrusted(label: str, content: str) -> str:
+def wrap_untrusted(label: str, content: str | None) -> str:
     """Fence external text so it cannot masquerade as instructions (prompt-injection).
 
     Triple-angle-bracket runs inside the content are defanged: without this a
@@ -28,8 +28,15 @@ def wrap_untrusted(label: str, content: str) -> str:
     attacker-controlled prose escape into the trusted instruction region —
     defeating the guarantee this wrapper exists to provide. Ordinary single ``<``
     or ``>`` characters (comparison operators, arrows) pass through untouched.
+
+    `None` is fenced as empty text rather than raising. Callers hand over values
+    read out of jsonb, where a key can be *present and null* — `.get(k, "")` returns
+    `None` for those, not the default. That is what crashed cover-letter generation:
+    `company.get("overview", "")` was null for any company without an overview, and
+    the whole request failed with `'NoneType' object has no attribute 'replace'`.
+    Fencing is a safety boundary; a missing field must not take the feature down.
     """
-    safe = content.replace("<<<", "«««").replace(">>>", "»»»")
+    safe = (content or "").replace("<<<", "«««").replace(">>>", "»»»")
     return f"<<<BEGIN UNTRUSTED {label}>>>\n{safe}\n<<<END UNTRUSTED {label}>>>"
 
 
@@ -38,7 +45,8 @@ def evidence_block(items: list[dict[str, Any]]) -> str:
     for i, it in enumerate(items, 1):
         parts.append(f"[Evidence {i}] (chunk_id={it.get('chunk_id','')} "
                      f"source={it.get('source','')} section={it.get('section','')})")
-        parts.append(wrap_untrusted("EVIDENCE", it.get("text", "")[:1800]))
+        # `or ""` and not a `.get` default: a present-null `text` slices as None.
+        parts.append(wrap_untrusted("EVIDENCE", (it.get("text") or "")[:1800]))
         parts.append("")
     return "\n".join(parts)
 
