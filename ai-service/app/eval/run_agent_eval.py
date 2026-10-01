@@ -119,6 +119,28 @@ async def _run_one(user_id: str, scenario: AgentScenario, subs: dict) -> dict:
     return row
 
 
+def _provider_caveat(config: dict) -> list[str]:
+    """Move the module's honest note to where the numbers are.
+
+    The docstring already says a stub provider scores low on tool selection and that this
+    is the correct result, proving the harness discriminates. The report said none of
+    that, so `tool_f1 0.19` read as a verdict on the agent. A reader who only ever sees
+    the artifact should not have to go find the docstring — the same reason the RAG report
+    now carries its own caveat.
+    """
+    if str(config.get("llm_provider", "")) != "mock":
+        return []
+    return ["## What these numbers mean", "",
+            "- **Tool selection is unmeasured.** `llm_provider=mock` picks from a "
+            "three-keyword heuristic (`providers/llm/mock.py: TOOL_HINTS`) while the "
+            "orchestrator offers 15 tools, and it emits at most one call per turn. "
+            "`tool_recall`, `tool_precision`, `tool_f1` and `completed` therefore describe "
+            "the stub, not the agent. What this run does establish is that the harness "
+            "discriminates — the scores move with the scenarios, `forbidden_violations` and "
+            "`errors` are measured, and 0 of each is a real result. Point it at a real "
+            "provider to measure model quality.", ""]
+
+
 def _markdown(report: dict) -> str:
     agg = report["aggregate"]
     lines = [
@@ -130,6 +152,9 @@ def _markdown(report: dict) -> str:
         "| metric | value |", "|---|---|",
     ]
     lines += [f"| {k} | {v} |" for k, v in agg.items()]
+    if report.get("caveat"):
+        # The blank line matters: without it the heading is absorbed into the table.
+        lines += [""] + report["caveat"]
     lines += ["", "## By tag", "", "| tag | completed | tool_f1 | artifact_rate |",
               "|---|---|---|---|"]
     for tag, a in report["by_tag"].items():
@@ -195,20 +220,22 @@ async def run(args: argparse.Namespace) -> dict:
             continue
         results.append(await _run_one(args.user_id, scenario, subs))
 
+    config = {
+        "user_id": args.user_id,
+        "llm_provider": s.llm_provider,
+        "llm_model": s.llm_model,
+        "anchor_job": job,
+        "max_steps": MAX_STEPS,
+    }
     report = {
         "experiment": args.experiment,
         "generated_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
-        "config": {
-            "user_id": args.user_id,
-            "llm_provider": s.llm_provider,
-            "llm_model": s.llm_model,
-            "anchor_job": job,
-            "max_steps": MAX_STEPS,
-        },
+        "config": config,
         "n_scenarios": len(results),
         "skipped": skipped,
         "aggregate": aggregate(results),
         "by_tag": aggregate_by_tag(results),
+        "caveat": _provider_caveat(config),
         "cases": results,
     }
     out_dir = Path(args.out)

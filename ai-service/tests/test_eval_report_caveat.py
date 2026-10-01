@@ -7,7 +7,11 @@ product claim: `faithfulness: 0.0` looks like a broken generator and `recall_at_
 looks like semantic retrieval, when neither is being measured.
 """
 
-from app.eval.run_eval import _provider_caveat
+from app.eval.run_eval import _markdown, _provider_caveat
+from app.eval.run_agent_eval import (
+    _markdown as agent_markdown,
+    _provider_caveat as agent_caveat,
+)
 
 
 def test_a_real_provider_pair_gets_no_caveat():
@@ -39,3 +43,54 @@ def test_both_offline_disclaims_both():
 
 def test_a_missing_config_does_not_crash_or_invent_a_caveat():
     assert _provider_caveat({}) == []
+
+
+# ---------------------------------------------------------------- rendering
+
+def _report(**over):
+    base = {
+        "experiment": "t", "n_cases": 1, "skipped": [], "avg_retrieval_ms": 1.0,
+        "config": {"llm_provider": "mock", "embedding_provider": "hash"},
+        "aggregate": {"recall_at_k": 1.0},
+        "cases": [{"case": "gs-01", "recall_at_k": 1.0, "precision_at_k": 1.0,
+                   "mrr": 1.0, "ndcg_at_k": 1.0, "faithfulness": 0.0, "judge": "lexical"}],
+    }
+    base.update(over)
+    base["caveat"] = _provider_caveat(base["config"])
+    return base
+
+
+def test_the_caveat_is_a_separate_block_not_absorbed_into_the_table():
+    """A heading with no blank line above it is swallowed by the table in Markdown."""
+    md = _markdown(_report())
+    assert "\n\n## What these numbers mean\n" in md
+
+
+def test_no_caveat_leaves_the_report_unchanged():
+    md = _markdown(_report(config={"llm_provider": "openai_compat",
+                                   "embedding_provider": "openai"}))
+    assert "What these numbers mean" not in md
+
+
+# ---------------------------------------------------------------- the agent report
+
+def test_the_agent_report_disclaims_tool_selection_under_a_stub():
+    """Same reasoning as the RAG caveat, different metric: `tool_f1` under `mock`
+    measures a three-keyword router against the 15 tools the orchestrator offers."""
+    out = " ".join(agent_caveat({"llm_provider": "mock"}))
+    assert "Tool selection is unmeasured" in out
+    assert "three-keyword" in out and "15 tools" in out
+    # What the run DOES establish has to be said too, or 0 violations reads as vacuous.
+    assert "forbidden_violations" in out
+
+
+def test_the_agent_report_is_silent_under_a_real_provider():
+    assert agent_caveat({"llm_provider": "openai_compat"}) == []
+
+
+def test_the_agent_caveat_is_a_separate_block_too():
+    report = {"experiment": "t", "n_scenarios": 1, "skipped": [],
+              "config": {"llm_provider": "mock", "llm_model": "m", "user_id": "u"},
+              "aggregate": {"tool_f1": 0.1}, "by_tag": {}, "cases": [],
+              "caveat": agent_caveat({"llm_provider": "mock"})}
+    assert "\n\n## What these numbers mean\n" in agent_markdown(report)

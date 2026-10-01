@@ -160,7 +160,9 @@ def _markdown(report: dict) -> str:
         lines += ["| metric | value |", "|---|---|"]
         lines += [f"| {m} | {v} |" for m, v in agg.items()]
         lines += [f"| avg_retrieval_ms | {report['avg_retrieval_ms']} |", ""]
-    lines += report.get("caveat") or []
+    if report.get("caveat"):
+        # Blank line first: without it the heading is absorbed into the table above.
+        lines += [""] + report["caveat"]
     lines += ["| case | recall@k | precision | MRR | nDCG | faithfulness | judge |",
               "|---|---|---|---|---|---|---|"]
     for c in report["cases"]:
