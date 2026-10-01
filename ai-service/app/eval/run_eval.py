@@ -92,17 +92,19 @@ async def run(args: argparse.Namespace) -> dict:
 
     aggregate = {m: round(statistics.mean(x[m] for x in results), 4)
                  for m in METRIC_KEYS} if results else {}
+    config = {"k": args.k, "top_k": args.top_k, "answer": args.answer,
+              "rerank_mode": s.rerank_mode, "llm_provider": s.llm_provider,
+              "llm_model": s.llm_model,
+              "embedding_provider": s.embedding_provider,
+              "embedding_model": s.embedding_model,
+              "chunk_target_tokens": s.chunk_target_tokens}
     report = {
         "experiment": args.experiment,
         "generated_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
-        "config": {"k": args.k, "top_k": args.top_k, "answer": args.answer,
-                   "rerank_mode": s.rerank_mode, "llm_provider": s.llm_provider,
-                   "llm_model": s.llm_model,
-                   "embedding_provider": s.embedding_provider,
-                   "embedding_model": s.embedding_model,
-                   "chunk_target_tokens": s.chunk_target_tokens},
+        "config": config,
         "n_cases": len(results), "skipped": skipped,
         "aggregate": aggregate,
+        "caveat": _provider_caveat(config),
         "tokens": {"input": total_in, "output": total_out},
         "avg_retrieval_ms": round(statistics.mean(x["retrieval_ms"] for x in results), 1)
         if results else 0,
@@ -119,6 +121,36 @@ async def run(args: argparse.Namespace) -> dict:
     return report
 
 
+def _provider_caveat(config: dict) -> list[str]:
+    """Say which numbers a reader may trust, when the providers cannot produce them.
+
+    This matters more than the metrics do. `faithfulness: 0.0` beside
+    `recall_at_k: 1.0` reads as "the generator is broken", when it means "no model was
+    asked"; and a perfect recall looks like a semantic claim even though the vector
+    half of the hybrid ranking was hash noise. Left unsaid, the report flatters the
+    retrieval path and libels the generation one — both wrong, in opposite directions.
+    """
+    llm = str(config.get("llm_provider", ""))
+    emb = str(config.get("embedding_provider", ""))
+    offline = {"mock", "hash"}
+    if llm not in offline and emb not in offline:
+        return []
+    out = ["## What these numbers mean", ""]
+    if llm in offline:
+        out.append(
+            f"- **Generation is unmeasured.** `llm_provider={llm}` answers from a stub that "
+            "never reads the retrieved context, so `answer_relevance` and `faithfulness` "
+            "describe the stub. Only the retrieval metrics above carry information.")
+    if emb in offline:
+        out.append(
+            f"- **Retrieval here is keyword-driven in effect.** `embedding_provider={emb}` "
+            "produces no semantic signal, so the vector half of the hybrid ranking "
+            "contributes noise and these scores reflect the keyword/trigram path. Re-run "
+            "with a real embedding provider before reading them as semantic retrieval.")
+    out.append("")
+    return out
+
+
 def _markdown(report: dict) -> str:
     lines = [f"# RAG evaluation — {report['experiment']}", "",
              f"- cases: {report['n_cases']} (skipped: {len(report['skipped'])})",
@@ -128,6 +160,7 @@ def _markdown(report: dict) -> str:
         lines += ["| metric | value |", "|---|---|"]
         lines += [f"| {m} | {v} |" for m, v in agg.items()]
         lines += [f"| avg_retrieval_ms | {report['avg_retrieval_ms']} |", ""]
+    lines += report.get("caveat") or []
     lines += ["| case | recall@k | precision | MRR | nDCG | faithfulness | judge |",
               "|---|---|---|---|---|---|---|"]
     for c in report["cases"]:
