@@ -446,9 +446,18 @@ def test_the_client_unwraps_the_envelope_before_any_mapper_sees_it():
 
 
 def test_jobs_saved_answers_a_bare_list_so_the_page_envelope_names_are_dead_there():
-    """The array branch of normalizePage is the only reachable one on this route."""
-    ret = ROUTES["savedJobs"][1]
+    """The array branch of normalizePage is the only reachable one on this route.
+
+    `ret` is read off the annotation by the same walk case 3 uses, not out of this file's own table:
+    the whole claim is about what the handler declares, and a table re-asserting itself would stay
+    green while the Java moved.
+    """
+    path = re.search(r'\s+savedJobs: "([^"]*)"', read(ENDPOINTS)).group(1)
+    gets = [entry for entry in spring_routes()[API_PREFIX + path] if entry[0] == "Get"]
+    assert len(gets) == 1, f"{path} resolves to {gets}, not one GET"
+    ret = gets[0][1]
     assert ret == "List<SavedJobItem>", f"/jobs/saved now answers {ret}"
+    assert ROUTES["savedJobs"][1] == ret, "this file's route table and the shipped annotation disagree"
     page = function_body(read(NORMALIZE), "export function normalizePage<T>(")
     assert re.search(r"if \(Array\.isArray\(raw\)\) \{\n\s*return \{ items: raw\.map\(map\)", page), (
         "normalizePage no longer short-circuits on an array, so a bare List is read as an object "
