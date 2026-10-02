@@ -151,8 +151,10 @@ real gap — the AI rate limit did not cover any of the blocking AI endpoints,
 including `/copilot/chat`, the most expensive call in the product — and documents
 two residual risks rather than papering over them: `X-Forwarded-For` is trusted
 for IP throttling (so the backend must sit behind a proxy that *sets* it, or
-login throttling can be spoofed away), and the limiter fails open when Redis is
-down.
+login throttling can be spoofed away), and a Redis outage takes the API down
+rather than merely lifting the limits — the limiter fails open as designed, but
+each request pays a Redis command timeout first, measured at over 40s to no
+response with Redis stopped.
 
 See `docs/product-plan.md` for the epic/task breakdown and
 `docs/architecture.md` for the system design.

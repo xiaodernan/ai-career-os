@@ -68,9 +68,17 @@ that rejects invented skills/numbers not present in the source evidence.
     `/jobs/{id}/(match|tailor|cover-letter)`. Cheap reads (search, listings,
     dashboards) are deliberately excluded so browsing is not throttled. Covered by
     `RateLimitFilterTest`.
-  - **Fails open** when Redis is unavailable (logged at WARN) so an outage cannot
-    lock every user out. The tradeoff: during a Redis outage the limits do not
-    apply. Accept this only if availability outranks abuse protection for you.
+  - **Fails open** when Redis is unavailable, logged at WARN — the limiter itself
+    never locks anyone out. Measured, though, the *API* still does: with Redis
+    stopped against the running stack, `GET /api/v1/health` and
+    `POST /api/v1/auth/login` both failed to answer within 40s (`http=000`), where
+    with Redis up they answer in 0.06s and 0.23s. Each request pays a Redis
+    command timeout before the fail-open path is reached, and the client is
+    unconfigured, so it inherits Lettuce's defaults. The tradeoff is therefore not
+    "the limits do not apply during an outage" but "the service is unavailable
+    during an outage" — the fail-open branch is correct and still cannot serve.
+    Fixing it means a short Redis command/connect timeout (and a health check that
+    does not gate the whole surface), not changing the fail-open policy.
 
 ## PRD §30 review
 
@@ -110,8 +118,14 @@ residual risk rather than as a clean bill of health.
    removing the header trust would break the documented proxy deployment; flagged
    here so the deployment posture is explicit.
 
-3. **Redis outage disables rate limiting (accepted tradeoff).** The limiter fails
-   open by design. Documented above rather than changed.
+3. **A Redis outage is an availability outage, not just a throttling one (measured).**
+   The limiter fails open by design and does so correctly, but requests do not
+   complete: with Redis stopped, `/api/v1/health` and `/api/v1/auth/login` both
+   still had not answered after 40s, against 0.06s and 0.23s with Redis up. So the
+   practical posture is worse than "limits are off during an outage" — the API is
+   down. Not changed in code: the fix is timeout configuration rather than policy,
+   and the deployment already treats Redis as required infrastructure. Recorded
+   because the previous wording read as benign, and the measured behaviour is not.
 
 ## Error envelope
 
