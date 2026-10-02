@@ -25,6 +25,13 @@ spring:
   data:
     redis:
       url: ${REDIS_URL:redis://localhost:6379/0}
+      # Redis backs exactly two things: the sliding-window rate limiter and the health
+      # ping. Nothing else depends on it, so failing fast is strictly better than
+      # waiting -- the limiter's documented fail-open path then serves the request
+      # instead of stalling on it. Unset, Lettuce's defaults applied and a Redis outage
+      # left every endpoint (including /health) unable to answer within 40s.
+      timeout: ${REDIS_TIMEOUT:500ms}
+      connect-timeout: ${REDIS_CONNECT_TIMEOUT:500ms}
   servlet:
     multipart:
       max-file-size: 20MB
