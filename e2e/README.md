@@ -84,6 +84,13 @@ services:
       RATELIMIT_AUTH_PER_MINUTE: "100"
 ```
 
+**Re-apply it on every backend restart.** A plain
+`docker-compose --profile app up -d backend` drops back to the default 10/min, and the
+failure is quiet and easy to misread as a hang: the suite provisions an account per
+test, so the first few pass and the rest stall, while the limiter writes **nothing to
+the log** — it only logs when Redis fails, not when it rejects. Confirm with
+`docker exec careeros-backend printenv RATELIMIT_AUTH_PER_MINUTE` (empty means 10).
+
 Verified this way: **10/10 against the containerized images**, which is what closed
 the "production build" item in the Definition of Done.
 
