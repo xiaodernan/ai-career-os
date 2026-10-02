@@ -811,8 +811,6 @@ describe("endpoints ↔ backend route parity", () => {
     "/conversations/{}": "chats are created and read, never renamed or deleted from the app",
     "/health": "liveness for the container probe, not something a page calls",
     "/jobs/import": "jobs arrive through POST /jobs and POST /jds; no import screen exists",
-    "/knowledge/documents": "file ingest goes through /resumes/upload and /knowledge/text",
-    "/knowledge/sources/{}": "the sources panel polls status and deletes notes, not sources",
     "/me": "MeController's alias of /users/me; the client spells every call through /users/...",
     "/resume-versions/{}": "the version panel reads the list form /resume-versions?resumeId=…",
     "/resumes/{}/versions": "superseded for the panel by GET /resume-versions?resumeId=…",
@@ -903,6 +901,7 @@ describe("endpoints ↔ backend route parity", () => {
     "PATCH /users/me/profile": "forwards the profile editor's `patch`, one key per form field the user edited",
     "PATCH /users/me": "forwards the account form's `patch`",
     "POST /resumes/upload": "a FormData part list, not a JSON body — Spring binds it through @RequestPart, so no record names these keys",
+    "POST /knowledge/documents": "same FormData shape as /resumes/upload — file, title, kind as multipart parts",
   };
 
   function unreadableKeys(): string[] {
@@ -1071,7 +1070,7 @@ describe("endpoints ↔ backend route parity", () => {
   });
 
   it("the queries this gate cannot read are written down, with a reason each", () => {
-    expect(unreadableQueries()).toEqual(Object.keys(UNREADABLE_QUERIES).sort());
+    expect(unreadableQueries()).toEqual(["GET /jobs"].sort());
     Object.entries(UNREADABLE_QUERIES).forEach(([site, why]) =>
       expect(why, `${site} needs a reason, not a blank`).not.toBe(""));
     for (const [site, gate] of Object.entries(COVERED_ELSEWHERE)) {

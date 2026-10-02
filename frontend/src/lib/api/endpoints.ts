@@ -73,6 +73,7 @@ export const endpoints = {
   knowledgeNotes: "/knowledge/notes",
   knowledgeNote: (id: string) => `/knowledge/notes/${seg(id)}`,
   knowledgeText: "/knowledge/text",
+  knowledgeDocuments: "/knowledge/documents",
 
   /* ---------------- AI actions (thin proxies over ai-service) ------------ */
   copilotChat: "/copilot/chat",

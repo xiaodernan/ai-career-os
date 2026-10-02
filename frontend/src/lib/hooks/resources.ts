@@ -28,6 +28,8 @@ import type {
   Application,
   ApplicationEvent,
   Company,
+  CompanyDetail,
+  CompanySource,
   Conversation,
   InterviewSession,
   Job,
@@ -251,20 +253,38 @@ function strList(raw: unknown, ...keys: string[]): string[] | undefined {
   return out.length ? out : undefined;
 }
 
-function mapCompany(raw: unknown): Company {
+/**
+ * One company row. Every name here is a component of `JobDtos.CompanyItem` and nothing else: the
+ * mapper used to probe `title`, `url`, `logo`, `sector`, `employees`, `headcount`, `summary`,
+ * `description`, `technologies`, `stack`, `values`, `process`, `jobCount` and a `location` no column
+ * backs — fourteen aliases, none of which any producer writes, each one a shape this silently
+ * reinterpreted. It also read the count out of `openRoles` and the roles out of the same key, which
+ * is why the company page could never list a role.
+ */
+function mapCompany(raw: unknown, fallbackId = ""): Company {
   return {
-    id: idStr(raw),
-    name: str(raw, "name", "title") ?? "Unknown",
-    website: str(raw, "website", "url") ?? null,
-    logoUrl: str(raw, "logoUrl", "logo_url", "logo") ?? null,
-    industry: str(raw, "industry", "sector") ?? null,
-    size: str(raw, "size", "employees", "headcount") ?? null,
-    hq: str(raw, "hq", "headquarters", "location") ?? null,
-    overview: str(raw, "overview", "summary", "description") ?? null,
-    techStack: strList(raw, "techStack", "tech_stack", "technologies", "stack") ?? [],
-    culture: strList(raw, "culture", "values"),
-    interviewProcess: strList(raw, "interviewProcess", "interview_process", "process", "interviewSteps", "interview_steps"),
-    rolesCount: num(raw, "rolesCount", "roles_count", "openRoles", "jobCount"),
+    id: idStr(raw, fallbackId),
+    name: str(raw, "name") ?? "Unknown",
+    website: str(raw, "website") ?? null,
+    logoUrl: str(raw, "logoUrl") ?? null,
+    industry: str(raw, "industry") ?? null,
+    size: str(raw, "size") ?? null,
+    overview: str(raw, "overview") ?? null,
+    techStack: strList(raw, "techStack") ?? [],
+    culture: str(raw, "culture") ?? null,
+    interviewProcess: str(raw, "interviewProcess") ?? null,
+    sources: listOf(raw, "sources").map(mapCompanySource).filter((s) => s.type || s.title || s.note || s.url),
+    openRoleCount: num(raw, "openRoleCount"),
+  };
+}
+
+/** `{type, title?, note?, url?}` — the shape both writers of `companies.sources` fill. */
+function mapCompanySource(raw: unknown): CompanySource {
+  return {
+    type: str(raw, "type") ?? undefined,
+    title: str(raw, "title") ?? undefined,
+    note: str(raw, "note") ?? undefined,
+    url: str(raw, "url") ?? undefined,
   };
 }
 
@@ -272,22 +292,29 @@ export function useCompanies(params?: { page?: number; size?: number; q?: string
   return useQuery({
     queryKey: ["companies", params],
     queryFn: async (): Promise<Page<Company>> =>
-      normalizePage(await api.get<unknown>(endpoints.companies, { size: 20, ...(params ?? {}) }), mapCompany),
+      // The list rows carry their own id, so no fallback is passed: `normalizePage`'s mapper takes an
+      // index second, and a name that read one would be a silent id of "0".
+      normalizePage(await api.get<unknown>(endpoints.companies, { size: 20, ...(params ?? {}) }),
+        (row) => mapCompany(row)),
   });
 }
 
+/**
+ * `GET /companies/{id}` answers `CompanyDetail` — `{company, openRoles}` — so the roles are read off
+ * the envelope, not off the company: the hook used to look for `openRoles` inside the profile it had
+ * just picked out, where the only thing that ever matched was the count.
+ */
 export function useCompany(id: string | null) {
   return useQuery({
     queryKey: ["company", id],
     enabled: Boolean(id),
-    queryFn: async () => {
-      const raw = await api.get<unknown>(endpoints.company(id!));
-      const body = pick(raw, "company", "data") ?? raw;
+    queryFn: async (): Promise<CompanyDetail> => {
+      const raw = await api.get<{ company?: unknown; openRoles?: unknown }>(
+        endpoints.company(id!)
+      );
       return {
-        company: { ...mapCompany(body), id: idStr(body, id ?? "") } as Company,
-        openRoles: listOf(body, "openRoles", "open_roles", "roles", "jobs", "positions").map(
-          normalizeJob
-        ),
+        company: mapCompany(raw.company, id!),
+        openRoles: listOf(raw, "openRoles").map(normalizeJob),
       };
     },
   });

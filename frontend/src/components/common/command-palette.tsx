@@ -24,6 +24,8 @@ import { FileText, Briefcase, Building2, MessageSquare, LayoutDashboard, CornerD
  * CommandPalette — global ⌘K shell (architecture.md §3 search module).
  * Navigation group is always available; content results call the real
  * /search endpoint (debounced) and degrade gracefully when it 404s.
+ * Hybrid search: gets query embedding from ai-service, then uses hybrid search
+ * on /search endpoint (keyword + vector fusion via RRF).
  */
 
 interface PaletteContextValue {

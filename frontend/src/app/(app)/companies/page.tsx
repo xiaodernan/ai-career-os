@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Building2, Globe } from "lucide-react";
 import { ModuleView } from "@/components/common/module-view";
 import { Card, CardContent } from "@/components/ui/card";
@@ -31,12 +32,24 @@ export default function CompaniesPage() {
               </span>
             )}
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium">{c.name}</p>
+              {/* The profile page is where the researched detail lives, so the name is the link —
+                  and it is a real one: `openRoleCount` says whether there is anything behind it. */}
+              <Link
+                href={`/companies/${c.id}`}
+                className="truncate text-sm font-medium hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/35 rounded-sm"
+              >
+                {c.name}
+              </Link>
               <p className="truncate text-xs text-muted-foreground">
                 {[c.industry, c.size].filter(Boolean).join(" · ") || "Profile pending"}
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-1.5">
+              {typeof c.openRoleCount === "number" && (
+                <Badge variant="secondary" className="text-2xs">
+                  {c.openRoleCount} {c.openRoleCount === 1 ? "role" : "roles"}
+                </Badge>
+              )}
               {(c.techStack ?? []).slice(0, 3).map((t) => (
                 <Badge key={t} variant="outline" className="text-2xs">
                   {t}

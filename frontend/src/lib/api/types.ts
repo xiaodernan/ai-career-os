@@ -258,6 +258,14 @@ export interface Evidence {
 /* Companies                                                          */
 /* ------------------------------------------------------------------ */
 
+/**
+ * One company, read under the names `JobDtos.CompanyItem` spells.
+ *
+ * `culture` and `interviewProcess` are single text columns on the `companies` row, so the wire
+ * carries one string each — not the arrays this interface used to allow. `openRoleCount` is the
+ * number of open roles; the rows themselves are `CompanyDetail.openRoles`, and the two used to share
+ * the name `openRoles`, which is how the browser came to read a number as a list.
+ */
 export interface Company {
   id: string;
   name: string;
@@ -265,16 +273,31 @@ export interface Company {
   logoUrl?: string | null;
   industry?: string | null;
   size?: string | null;
-  hq?: string | null;
-  location?: string | null;
-  techStack?: string[];
-  culture?: string[] | string;
-  interviewProcess?: string[] | string;
   overview?: string | null;
-  openRoles?: Job[];
-  rolesCount?: number;
-  sources?: Evidence[];
-  bestMatch?: JobMatch | null;
+  techStack?: string[];
+  culture?: string | null;
+  interviewProcess?: string | null;
+  /** External facts, each carrying where it came from. */
+  sources?: CompanySource[];
+  openRoleCount?: number;
+}
+
+/**
+ * One row of `companies.sources`, the jsonb column the schema comments "external data MUST carry
+ * source". Two writers exist — the seed and `JobService.upsertCompany` — and both write `type` plus a
+ * human-readable field, so those are what this names; anything else is not rendered.
+ */
+export interface CompanySource {
+  type?: string;
+  title?: string;
+  note?: string;
+  url?: string;
+}
+
+/** `GET /api/v1/companies/{id}`: the profile, plus the roles it is hiring for. */
+export interface CompanyDetail {
+  company: Company;
+  openRoles: Job[];
 }
 
 /* ------------------------------------------------------------------ */

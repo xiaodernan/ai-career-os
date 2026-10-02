@@ -5,6 +5,7 @@ import { ModuleView } from "@/components/common/module-view";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { SourceDeleteButton, SourceUploadCard } from "@/components/knowledge/source-actions";
 import { useKnowledgeSources } from "@/lib/hooks/resources";
 import { useUrlState } from "@/lib/hooks/use-url-state";
 import { knowledgeFocus } from "@/lib/knowledge-focus";
@@ -20,10 +21,14 @@ export default function KnowledgePage() {
   // the UUID binder has to reject. Blank means "the whole board", which is also what clearing does.
   const src = knowledgeFocus(state.src);
   const showAll = () => setUrl({ src: undefined });
-  const sources = useKnowledgeSources(false, src);
+  // Live while anything is still ingesting: the list polls every few seconds until
+  // every row reads ready/failed, so an upload visibly moves without a reload.
+  const sources = useKnowledgeSources(true, src);
 
   return (
-    <ModuleView
+    <div className="space-y-4">
+      {!src && <SourceUploadCard />}
+      <ModuleView
       title="Knowledge Base"
       description={
         src
@@ -78,9 +83,11 @@ export default function KnowledgePage() {
             >
               {s.status}
             </Badge>
+            <SourceDeleteButton id={s.id} title={s.title} />
           </CardContent>
         </Card>
       )}
     />
+    </div>
   );
 }

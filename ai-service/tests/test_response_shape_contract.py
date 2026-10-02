@@ -1154,7 +1154,7 @@ def test_the_response_envelope_has_exactly_one_wrapper_and_one_unwrapper():
     files in two languages, and it is only safe while both halves stay where they are: widen the advice
     and the unwrap returns `undefined` for responses that were never wrapped, add a second unwrap and the
     one that is gated stops being the one that runs. Measured on this plane: two `success` reads and one
-    `?.data` unwrap, all of them in `lib/api/client.ts`, plus 25 `toast.success` lines the exclusion has
+    `?.data` unwrap, all of them in `lib/api/client.ts`, plus 27 `toast.success` lines the exclusion has
     to keep out. `client.ts` belongs to a concurrent session's file list, so this gate reads it and never
     edits it -- if a third reader appears, the test names it and a human decides where it belongs.
     """
@@ -1176,7 +1176,7 @@ def test_the_response_envelope_has_exactly_one_wrapper_and_one_unwrapper():
         'if (!res.ok || !json.success || !json.data) return null;',
         'if (!res.ok || (json && json.success === false)) {',
     ], f"{[row['text'] for row in rows if row['kind'] == 'success']}: the envelope's own guards, measured"
-    assert len(toasts) == 25, (f"{len(toasts)} `toast.success` lines came out of the same walk: that is "
+    assert len(toasts) == 27, (f"{len(toasts)} `toast.success` lines came out of the same walk: that is "
                                "the floor proving the scan reached the pages and the hooks, so a walk "
                                "narrowed to the api directory cannot pass quietly")
 
@@ -2028,7 +2028,8 @@ def test_the_run_stream_contract_is_one_table_of_publishers_cases_and_subscriber
     rejected_files = sorted(f for f, n in shaped.items() if n and f not in admitted and f not in transport)
     assert rejected_files == ["components/auth/credentials-form.tsx",
                               "components/auth/forgot-password-form.tsx",
-                              "components/auth/reset-password-form.tsx"], \
+                              "components/auth/reset-password-form.tsx",
+                              "components/knowledge/source-actions.tsx"], \
         (f"{rejected_files} name handler-shaped callbacks the entry rule rejects: their `onError:` belongs "
          "to react-query, not to a stream. Under #177's shape-only census three of these were stream "
          "readers -- if this list empties, the walk stopped reading rather than the collision going away")
@@ -2836,9 +2837,10 @@ def test_the_heartbeat_interval_has_one_definer_and_every_shipped_claim_names_it
     assert doc_claims == [], \
         (f"{doc_claims}: `docs/` states the keep-alive without a number today, and a doc that quotes an "
          "interval is a claim this gate has to be able to check rather than a second opinion")
-    assert [(row["file"], row["line"]) for row in doc_vocabulary] == [("AGENTS.md", 144)], \
-        (f"{doc_vocabulary}: the docs' own vocabulary is censused, so this pass is not reporting on an "
-         "empty set -- and a second file picking up the word is a signal the ledger has to grow")
+    assert [(row["file"], row["line"]) for row in doc_vocabulary] == [
+        ("AGENTS.md", 144), ("DEPLOYMENT.md", 8), ("SECURITY.md", 125),
+    ], (f"{doc_vocabulary}: the docs' own vocabulary is censused, so this pass is not reporting on an "
+        "empty set -- and a second file picking up the word is a signal the ledger has to grow")
 
     assert [(row["file"], row["line"]) for row in spans["vocabulary"]] == [
         ("frontend/src/components/ai/task-stream.tsx", 17),

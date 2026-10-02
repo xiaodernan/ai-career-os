@@ -70,6 +70,23 @@ function eventText(event: ApplicationEvent): string {
   return event.type ?? "Update";
 }
 
+/**
+ * One pipeline link in the drawer: the id the match / tailor / JD-analysis route stored on this row.
+ *
+ * Renders nothing without an id, so a card that has never been matched does not carry three dashes,
+ * and the full uuid is shown rather than a prefix — it is the only handle the reader has on the
+ * artifact, and a truncated one cannot be copied into a query.
+ */
+function PipelineLink({ label, id }: { label: string; id?: string | null }) {
+  if (!id) return null;
+  return (
+    <div className="flex items-baseline gap-2">
+      <dt className="shrink-0 text-muted-foreground">{label}</dt>
+      <dd className="min-w-0 font-mono text-xs break-all">{id}</dd>
+    </div>
+  );
+}
+
 export function ApplicationDialog({ application, open, onOpenChange }: ApplicationDialogProps) {
   const editing = application !== null;
   const createApp = useCreateApplication();
@@ -121,6 +138,11 @@ export function ApplicationDialog({ application, open, onOpenChange }: Applicati
 
     // Only what actually changed travels: an untouched form closing with no request keeps the
     // audit log honest, and the reminder comparison is the reason reminderPatch exists.
+    //
+    // The three pipeline links are deliberately not here. They are written by the routes that mint
+    // them (match / tailor / JD analysis) through `ApplicationService.linkJobActivity`, and the PATCH
+    // record has no component for them -- a key this body sent would be dropped by Jackson without a
+    // word, which is a write the screen only pretends to make.
     const patch = {
       ...(status !== application.status ? { status: status as ApplicationStatus } : {}),
       ...(notes !== (application.note ?? "") ? { note: notes } : {}),
@@ -231,7 +253,8 @@ export function ApplicationDialog({ application, open, onOpenChange }: Applicati
             </p>
           </div>
 
-          {editing && (
+        {editing && (
+          <>
             <section className="space-y-2">
               <h4 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                 History
@@ -264,7 +287,27 @@ export function ApplicationDialog({ application, open, onOpenChange }: Applicati
                 ))}
               </ol>
             </section>
-          )}
+
+            {/* Read-only, and only when there is something to read: these three are written by the
+                match / tailor / JD-analysis routes, never here, so an empty row of UUID inputs would
+                be a form pretending to be editable. */}
+            {(application.resumeVersionId || application.jdId || application.matchId) && (
+              <section className="space-y-2">
+                <h4 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                  Pipeline links
+                </h4>
+                <dl className="space-y-1 text-sm">
+                  <PipelineLink label="Resume version" id={application.resumeVersionId} />
+                  <PipelineLink label="JD analysis" id={application.jdId} />
+                  <PipelineLink label="Match" id={application.matchId} />
+                </dl>
+                <p className="text-xs text-muted-foreground">
+                  Recorded by the route that produced each one — match, tailor, or JD analysis.
+                </p>
+              </section>
+            )}
+          </>
+        )}
 
           {error != null && (
             <div

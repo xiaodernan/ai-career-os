@@ -4,24 +4,18 @@
 big reader gate could not see it: `test_response_field_contract.py`'s unbound-mapper ban enumerates
 declarations in `normalize.ts` only (its own docstring says "every mapper in normalize.ts"), while
 `resources.ts` holds seven more named mappers. The seed for this unit claimed fifteen; the measured
-number is seven, and this file says which seven.
+number was seven, and this file said which seven.
 
-What the seven turn out to be, at this plane: fifty reader calls -- calls that hand a reader a
-receiver and a list of names -- carrying 131 names, of which 93 slots (80 distinct names) are names
-their row's record declares in no spelling at all. Thirty-seven calls ask their record's own
-component name first, one asks it third, and eleven ask names nothing authors, so those calls return
-`undefined` on every payload the routes can answer and the mapper's `??` fallback is the whole
-result. One more -- the versions envelope -- cannot be reached even when its names are missing,
-because both version routes answer a bare JSON array and `list()` returns early on an array.
-
-Eleven dead calls is not eleven bugs, and 80 dead names is not 80 bugs. Two of the calls sit in a
-chain whose next term is real (`v.isCurrent || v.id === r.currentVersionId`), and the screen still
-shows the right badge. Two more (`culture`, `interviewProcess`) are a pair the backend *stores and
-drops*: they are accepted by `CompanyRequest`, written by `upsertCompany` onto the `Company` entity,
-and left out of `toCompanyItem`, so they can never reach the browser. And `fileName`/`fileUrl` are
-read by the resume detail page off the detail body, which authors `sourceFileKey` instead -- the
-"Original file" affordance task #155 is holding. This file does not fix any of them; it pins which
-is which, per name, with the record that answers the route as the second end.
+At this plane now: eight named mappers -- `mapCompanySource` joined when the company page's detail
+screen needed the sources jsonb row-mapped -- and fifty reader calls carrying 109 names. The big
+change is mapCompany itself: its eleven calls used to ask thirty-three names of which eleven could
+never fire, because the backend stored `culture`, `interviewProcess` and `sources` and answered
+none of them. CompanyItem carries all three now and the alias lists are gone -- every name mapCompany
+asks is a component of its record, first-spelled -- so its row classifies to nothing and the dead
+census dropped from 80 asked names to 56. `fileName`/`fileUrl` are still read by the resume detail
+page off the detail body, which authors `sourceFileKey` instead -- the "Original file" affordance
+task #155 is holding; this file still does not fix that, it pins which is which, per name, with the
+record that answers the route as the second end.
 """
 
 import re
@@ -57,6 +51,7 @@ RECORD_FILES = {
     "ResumeDetail": "com/careeros/resume/dto/ResumeDtos.java",
     "ResumeVersionItem": "com/careeros/resume/dto/ResumeDtos.java",
     "CompanyItem": "com/careeros/job/dto/JobDtos.java",
+    "CompanyDetail": "com/careeros/job/dto/JobDtos.java",
     "CompanyRequest": "com/careeros/job/dto/JobDtos.java",
     "SourceItem": "com/careeros/knowledge/dto/KnowledgeDtos.java",
     "SessionItem": "com/careeros/interview/dto/InterviewDtos.java",
@@ -65,9 +60,11 @@ RECORD_FILES = {
 }
 
 # The population this file owns. `None` means the receiver is an element of a bare JSON array, so no
-# record sits behind the *envelope* names the call asks for.
-NAMED_MAPPERS = ["mapResume", "mapResumeVersions", "mapCompany", "mapSource", "mapSessionScalars",
-                 "mapInterviewSessionItem", "mapInterviewSessionDetail"]
+# record sits behind the *envelope* names the call asks for. `mapCompanySource` joined when the
+# company page gained the detail screen: the sources jsonb needed its own row mapper, and the
+# mapCompany alias lists went away with it -- its eleven calls now ask eleven authored names, first.
+NAMED_MAPPERS = ["mapResume", "mapResumeVersions", "mapCompany", "mapCompanySource", "mapSource",
+                 "mapSessionScalars", "mapInterviewSessionItem", "mapInterviewSessionDetail"]
 EXPORTED_MAPPERS = ["mapResumeVersions", "mapInterviewSessionItem", "mapInterviewSessionDetail"]
 
 ROWS = {
@@ -92,8 +89,8 @@ CALLED = {
     ("mapResumeVersions", "v"): {"resumeId": 0, "label": 0, "versionNo": None, "isCurrent": None,
                                  "kind": 0, "createdAt": 0, "structured": None, "diff": 0},
     ("mapCompany", "raw"): {"name": 0, "website": 0, "logoUrl": 0, "industry": 0, "size": 0,
-                            "hq": None, "overview": 0, "techStack": 0, "culture": None,
-                            "interviewProcess": None, "rolesCount": 2},
+                            "overview": 0, "techStack": 0, "culture": 0, "interviewProcess": 0,
+                            "sources": 0, "openRoleCount": 0},
     ("mapSource", "raw"): {"kind": 0, "title": 0, "status": 0, "error": 0, "chunkCount": None,
                            "createdAt": 0, "updatedAt": None, "taskId": None, "documentId": 0},
     ("mapSessionScalars", "s"): {"jobId": 0, "positionTitle": 0, "companyName": 0, "mode": 0,
@@ -113,7 +110,7 @@ SCANNER_SHAPE = {
     ("mapResume", "raw"): (5, 11),
     ("mapResumeVersions", "raw"): (1, 3),
     ("mapResumeVersions", "v"): (8, 23),
-    ("mapCompany", "raw"): (11, 33),
+    ("mapCompany", "raw"): (11, 11),
     ("mapSource", "raw"): (9, 21),
     ("mapSessionScalars", "s"): (8, 22),
     ("mapInterviewSessionItem", "s"): (2, 6),
@@ -129,11 +126,9 @@ UNAUTHORED = {
                                  "name", "number", "origin", "resume_id", "source", "structured",
                                  "structuredResume", "structured_resume", "tailorDiff",
                                  "tailor_diff", "title", "versionNo", "version_no"},
-    ("mapCompany", "raw"): {"culture", "description", "employees", "headcount", "headquarters",
-                            "hq", "interviewProcess", "interviewSteps", "interview_process",
-                            "interview_steps", "jobCount", "location", "logo", "logo_url",
-                            "process", "rolesCount", "roles_count", "sector", "stack", "summary",
-                            "tech_stack", "technologies", "title", "url", "values"},
+    # Empty since the alias lists went away: every name mapCompany asks is a component of
+    # CompanyItem in its own spelling, so there is nothing left to classify on this row.
+    ("mapCompany", "raw"): set(),
     ("mapSource", "raw"): {"chunkCount", "chunk_count", "chunks", "created_at", "document_id",
                            "errorMessage", "error_message", "fileName", "file_name", "name",
                            "taskId", "task_id", "type", "updatedAt", "updated_at"},
@@ -153,9 +148,7 @@ DECLARED_NOWHERE = {
     ("mapResumeVersions", "v"): {"current", "index", "isCurrent", "is_current", "number", "origin",
                                  "structuredResume", "structured_resume", "tailorDiff",
                                  "tailor_diff", "versionNo", "version_no"},
-    ("mapCompany", "raw"): {"employees", "headcount", "headquarters", "hq", "interviewSteps",
-                            "interview_steps", "jobCount", "logo", "process", "rolesCount",
-                            "roles_count", "sector", "stack", "technologies", "values"},
+    ("mapCompany", "raw"): set(),
     ("mapSource", "raw"): {"chunkCount", "chunk_count", "chunks", "errorMessage", "error_message",
                            "fileName", "file_name", "type"},
     ("mapSessionScalars", "s"): {"depth", "level", "type"},
@@ -172,7 +165,8 @@ DECLARED_NOWHERE = {
 VERSION_ROW_READS = {"createdAt", "diff", "id", "isCurrent", "label", "score", "source", "versionNo"}
 RESUME_DETAIL_READS = {"createdAt", "currentVersionId", "fileName", "fileUrl", "id", "score",
                        "status", "structured", "title"}
-COMPANY_PAGE_READS = {"id", "industry", "logoUrl", "name", "size", "techStack", "website"}
+COMPANY_PAGE_READS = {"id", "industry", "logoUrl", "name", "openRoleCount", "size", "techStack",
+                      "website"}
 KNOWLEDGE_PAGE_READS = {"error", "id", "kind", "status", "title"}
 INTERVIEWS_PAGE_READS = {"companyName", "finishedAt", "id", "jobTitle", "mode", "overall",
                          "questionCount", "startedAt", "status"}
@@ -184,35 +178,30 @@ READERS_BY_PAGE = {
 
 # carrier set -> the dead names whose only spelling lives in exactly those files. Measured by this
 # file's own census; a name joining or leaving a tier is a fact about the frontend, not about a pin.
+# mapCompany's alias names left the census when its asks became authored; `fileName` left the
+# screen tier for the wide tier when `source-actions.tsx` began spelling it as a React state name.
 DEAD_NAME_TIERS = {
-    ("lib/hooks/resources.ts",): {"chunk_count", "employees", "error_message", "file_name",
-                                  "headcount", "headquarters", "interviewSteps", "interview_process",
-                                  "interview_steps", "is_current", "jobCount", "job_title",
-                                  "position_title", "question_count", "roles_count", "sector",
-                                  "tailorDiff", "tailor_diff", "turnCount", "version_no"},
-    ("lib/api/types.ts", "lib/hooks/resources.ts"): {"chunkCount", "culture", "hq",
-                                                     "interviewProcess", "rolesCount"},
+    ("lib/hooks/resources.ts",): {"chunk_count", "error_message", "file_name", "is_current",
+                                  "job_title", "position_title", "question_count", "tailorDiff",
+                                  "tailor_diff", "turnCount", "version_no"},
+    ("lib/api/types.ts", "lib/hooks/resources.ts"): {"chunkCount"},
     ("lib/api/normalize.ts", "lib/hooks/resources.ts"): {"created_at", "current_version_id",
-                                                         "logo_url", "overallScore",
-                                                         "structuredResume", "structured_resume",
-                                                         "updated_at"},
+                                                         "overallScore", "structuredResume",
+                                                         "structured_resume", "updated_at"},
     ("lib/activity-trace.ts", "lib/hooks/resources.ts"): {"errorMessage", "finished_at",
                                                           "started_at"},
-    ("lib/api/endpoints.ts", "lib/hooks/resources.ts"): {"process", "resumeVersions"},
-    ("lib/api/normalize.test.ts", "lib/hooks/resources.ts"): {"tech_stack", "technologies"},
+    ("lib/api/endpoints.ts", "lib/hooks/resources.ts"): {"resumeVersions"},
     ("components/common/command-palette.tsx", "lib/api/normalize.ts",
      "lib/hooks/resources.ts"): {"company_name"},
     ("app/(app)/resumes/[id]/page.tsx", "lib/api/types.ts",
-     "lib/hooks/resources.ts"): {"fileName", "isCurrent", "versionNo"},
-    ("lib/api/normalize.test.ts", "lib/api/normalize.ts", "lib/hooks/resources.ts"): {"job_id",
-                                                                                      "logo"},
+     "lib/hooks/resources.ts"): {"isCurrent", "versionNo"},
+    ("lib/api/normalize.test.ts", "lib/api/normalize.ts", "lib/hooks/resources.ts"): {"job_id"},
     ("lib/api/normalize.ts", "lib/hooks/resources.ts", "lib/job-filter.ts"): {"resume_versions"},
-    ("lib/hooks/resources.ts", "lib/sse/use-sse.test.ts", "lib/sse/use-sse.ts"): {"stack"},
 }
 # Beyond three carriers a generic name (`name`, `score`, `title`, `kind`) means something else in the
 # file that spells it, so the census stops classifying rather than pretending to.
-WIDER_DEAD_NAMES = 33
-TYPES_MIRROR_NAMES = {"hq", "culture", "interviewProcess", "rolesCount", "chunkCount"}
+WIDER_DEAD_NAMES = 29
+TYPES_MIRROR_NAMES = {"chunkCount"}
 SCREEN_READ_NAMES = {"fileName", "isCurrent", "versionNo"}
 
 
@@ -370,12 +359,12 @@ def carriers_of(name: str) -> set[str]:
     return {rel for rel in frontend_files() if re.search(r"\b" + name + r"\b", read(FRONT / rel))}
 
 
-def test_the_named_mapper_population_is_seven_and_the_anonymous_half_is_pinned():
+def test_the_named_mapper_population_matches_the_ledger_and_the_anonymous_half_is_pinned():
     """The census this file owns, plus the half it does not reach.
 
-    `resources.ts` shapes wire bodies in two ways: seven named `function mapX` declarations, and
-    inline arrow mappers passed straight to `normalizePage`. Only the named ones get a row here, so
-    the anonymous count is pinned as a number that has to be reconciled rather than left out of the
+    `resources.ts` shapes wire bodies in two ways: named `function mapX` declarations, and inline
+    arrow mappers passed straight to `normalizePage`. Only the named ones get a row here, so the
+    anonymous count is pinned as a number that has to be reconciled rather than left out of the
     census in silence.
     """
     text = read(RESOURCES)
@@ -414,7 +403,7 @@ def test_the_unbound_mappers_ban_would_find_these_mappers_if_it_read_this_file()
     """The gap #191 exposed, pinned so it cannot be closed by accident in either direction.
 
     The ban's rule is applied here from its own shipped text: the regex it compiles, and the file it
-    feeds it to. The rule finds all seven mappers; the file it reads does not contain them.
+    feeds it to. The rule finds all eight mappers; the file it reads does not contain them.
     """
     gate = read(BIG_GATE)
     source = re.search(r'^MAPPER_DECL = re\.compile\(r"([^"]*)", re\.M\)$', gate, re.M)
@@ -422,7 +411,7 @@ def test_the_unbound_mappers_ban_would_find_these_mappers_if_it_read_this_file()
     pattern = re.compile(source.group(1), re.M)
     assert pattern.pattern == r"^(export )?function (\w+)[<(]", pattern.pattern
     seen = [name for _, name in pattern.findall(read(RESOURCES))]
-    assert len(seen) == 31, f"resources.ts now declares {len(seen)} functions for the ban's rule"
+    assert len(seen) == 32, f"resources.ts now declares {len(seen)} functions for the ban's rule"
     assert [n for n in seen if n.startswith("map")] == NAMED_MAPPERS, \
         "the ban's own rule no longer recognizes these declarations in file order: " \
         f"{[n for n in seen if n.startswith('map')]}"
@@ -446,7 +435,7 @@ def test_the_scanner_finds_the_calls_and_names_each_row_actually_makes():
             f"{mapper}/{receiver}: {sum(len(lit) for _, lit in found)} names, pinned {names}"
     assert sum(len(v) for v in CALLED.values()) == 49, "the call table and the scan disagree"
     assert sum(SCANNER_SHAPE[key][0] for key in SCANNER_SHAPE) == 50
-    assert sum(SCANNER_SHAPE[key][1] for key in SCANNER_SHAPE) == 131
+    assert sum(SCANNER_SHAPE[key][1] for key in SCANNER_SHAPE) == 109
     # The one call the table above does not key is the envelope's: its receiver has no record, so it
     # is classified by payload shape in its own case instead of by a first authored name here.
     envelope = calls_by_receiver("mapResumeVersions")[ENVELOPE_CALL[1]]
@@ -459,8 +448,9 @@ def test_the_scanner_finds_the_calls_and_names_each_row_actually_makes():
 def test_every_call_is_classified_against_the_record_behind_its_receiver():
     """The table is derived, not asserted: each row's calls, names and first-authored positions.
 
-    Eleven calls have no authored name at all -- `None` below, which is what makes the mapper's
-    fallback the entire result -- and one asks its record's name third.
+    Eight calls have no authored name at all -- `None` below, which is what makes the mapper's
+    fallback the entire result -- and since mapCompany's alias lists went away, no call asks its
+    record's name third any more.
     """
     for (mapper, receiver), record in ROWS.items():
         found = calls_by_receiver(mapper)[receiver]
@@ -472,10 +462,10 @@ def test_every_call_is_classified_against_the_record_behind_its_receiver():
         assert keyed == CALLED[(mapper, receiver)], \
             f"{mapper}/{receiver} no longer calls in the order the record answers: {keyed}"
     first_authored = [v for table in CALLED.values() for v in table.values()]
-    assert first_authored.count(0) == 37, first_authored.count(0)
-    assert first_authored.count(2) == 1, "rolesCount asked openRoles third; that moved"
-    assert first_authored.count(None) == 11, \
-        f"{first_authored.count(None)} calls can never return a value, pinned 11"
+    assert first_authored.count(0) == 41, first_authored.count(0)
+    assert first_authored.count(2) == 0, "a call asks its record's name third; re-measure which"
+    assert first_authored.count(None) == 8, \
+        f"{first_authored.count(None)} calls can never return a value, pinned 8"
 
 
 def test_an_unauthored_name_is_a_snake_twin_a_foreign_name_or_a_name_no_record_declares():
@@ -483,7 +473,7 @@ def test_an_unauthored_name_is_a_snake_twin_a_foreign_name_or_a_name_no_record_d
     everywhere = every_record_component()
     # The foreign-name lookup is only as good as this census, so its size is pinned from the scan
     # itself rather than left as a floor a narrowing walk could satisfy by reading nothing.
-    assert len(everywhere) == 210, f"the backend record census read {len(everywhere)} component names"
+    assert len(everywhere) == 211, f"the backend record census read {len(everywhere)} component names"
     assert {"id", "title", "status", "createdAt"} <= set(everywhere), sorted(list(everywhere)[:8])
     scanned_unauthored = scanned_nowhere = 0
     for (mapper, receiver), record in ROWS.items():
@@ -511,8 +501,8 @@ def test_an_unauthored_name_is_a_snake_twin_a_foreign_name_or_a_name_no_record_d
         scanned_nowhere += len(nowhere)
     # Both ledger numbers come out of the scan above, so a row that stops reading names narrows the
     # total and gets named, instead of a table quietly agreeing with itself.
-    assert scanned_unauthored == 93, scanned_unauthored
-    assert scanned_nowhere == 45, scanned_nowhere
+    assert scanned_unauthored == 68, scanned_unauthored
+    assert scanned_nowhere == 30, scanned_nowhere
 
 
 def test_no_naming_strategy_and_no_annotation_renames_an_answer_record():
@@ -577,7 +567,6 @@ def test_each_row_sits_behind_a_route_whose_signature_names_that_record():
         ("mapResumeVersions", "ResumeVersionController.java",
          "java.util.List<ResumeVersionItem> list(", "resumeVersions"),
         ("mapCompany", "CompanyController.java", "PageDTO<CompanyItem> list(", "companies"),
-        ("mapCompany", "CompanyController.java", "CompanyItem get(", None),
         ("mapSource", "KnowledgeController.java", "PageDTO<SourceItem> sources(", "knowledge"),
         ("mapSessionScalars", "InterviewController.java", "PageDTO<SessionItem> list(",
          "interviews"),
@@ -605,6 +594,13 @@ def test_each_row_sits_behind_a_route_whose_signature_names_that_record():
                 # method adds "/sources" below the class mapping.
                 assert f'@GetMapping("{tail}")' in text, \
                     f"{controller} mounts {mapping} but answers nothing at {tail}"
+    # The company page's detail route stopped answering the item record bare: it wraps the item and
+    # the open-role list in `CompanyDetail`, and `mapCompany` still binds the item that `.company`
+    # carries -- so the wrapper is pinned by its own components instead of a route row above.
+    company_controller = java(CONTROLLERS["CompanyController.java"])
+    assert "CompanyDetail get(" in company_controller, \
+        "the company page's route answers something else now"
+    assert set(record_components("CompanyDetail")) == {"company", "openRoles"}
     assert 'interviews: "/interview/sessions"' in read(ENDPOINTS)
     assert re.search(r'knowledge: "/knowledge/sources"', read(ENDPOINTS))
     assert "interview: (id: string) => `/interview/sessions/${seg(id)}`" in read(ENDPOINTS)
@@ -634,33 +630,42 @@ def test_the_session_mapper_asks_the_name_its_record_declares_first():
     assert "jobTitle" not in detail
 
 
-def test_the_company_write_path_persists_two_columns_the_read_record_drops():
-    """A stored value no route answers: accepted by the request, set on the entity, absent from the
-    item."""
+def test_the_company_research_columns_round_trip_through_every_layer():
+    """The researched profile is an answer now, not a write-only hole.
+
+    `culture`, `interviewProcess` and `sources` were accepted by the request, stored on the row, and
+    dropped by every read path -- a profile could be posted and never seen again. The read record
+    carries all three now, the item builder passes them, the mapper asks them first, and the detail
+    screen reads them, so the round trip is one pin across all four layers.
+    """
     request = set(record_components("CompanyRequest"))
     item = set(record_components("CompanyItem"))
-    both = {"culture", "interviewProcess"}
-    assert both <= request, sorted(request)
-    assert both & item == set(), "the read record grew the fields; re-measure mapCompany's calls"
+    researched = {"culture", "interviewProcess", "sources"}
+    assert researched <= request, sorted(request)
+    assert researched <= item, "the read record dropped a field it used to carry; re-measure"
     service = java("com/careeros/job/service/JobService.java")
     assert "company.setCulture(request.culture())" in service
     assert "company.setInterviewProcess(request.interviewProcess())" in service
     builder = function_body(service, "private static CompanyItem toCompanyItem(")
-    assert "getCulture" not in builder and "getInterviewProcess" not in builder, \
-        f"toCompanyItem now passes one of them: {builder}"
+    for getter in ("getCulture", "getInterviewProcess", "getSources"):
+        assert getter in builder, f"toCompanyItem stopped passing {getter}: {builder}"
     entity = java("com/careeros/job/entity/Company.java")
     assert '@Column(name = "culture")' in entity and '@Column(name = "interview_process")' in entity
     resources = read(RESOURCES)
+    assert "culture" in CALLED[("mapCompany", "raw")]
+    assert "interviewProcess" in CALLED[("mapCompany", "raw")]
+    assert "sources" in CALLED[("mapCompany", "raw")]
     assert resources.count("api.post<unknown>(endpoints.companies") == 0, \
-        "the app writes companies now; the dropped fields became a user-visible round trip"
+        "the app writes companies directly now; the write path this pins has a second front door"
 
 
 def test_the_screens_read_their_mapper_output_and_only_the_versions_row_asks_dead_names():
     """Blast radius, per screen: which mapper output fields a page actually touches.
 
     The versions row reads `isCurrent` and `versionNo`, and both calls can never fire; the screen
-    still works because each has a second term that is real. That is the shipped text this pins, and
-    the other three surfaces read nothing their record does not author.
+    still works because each has a second term that is real. The companies page reads
+    `openRoleCount`, which the item record has authored since the detail screen existed. The other
+    surfaces read nothing their record does not author.
     """
     page = read(VERSIONS_PAGE)
     assert page.count("(versionsQ.data ?? []).map((v) =>") == 1
@@ -706,33 +711,34 @@ def test_the_screens_read_their_mapper_output_and_only_the_versions_row_asks_dea
 def test_the_dead_names_spread_in_three_measured_tiers_and_three_reached_a_screen():
     """Blast radius of a name no record authors, spelled out over the whole frontend census.
 
-    The population is every `*.ts*` file under `frontend/src` (132 at this plane); the spellings
-    walked are the 80 names the seven mappers ask for that their record declares in no spelling, and
-    a camel name and its snake twin are separate entries. Forty-seven of them live in three files or
-    fewer, and those 47 are classified by exactly which files; beyond that a generic name (`name`,
+    The population is every `*.ts*` file under `frontend/src` (134 at this plane); the spellings
+    walked are the 56 names the eight mappers ask for that their record declares in no spelling, and
+    a camel name and its snake twin are separate entries. Twenty-seven of them live in three files
+    or fewer, and those 27 are classified by exactly which files; beyond that a generic name (`name`,
     `score`, `title`) means something else in the file that spells it, so the census stops rather
     than pretend. The tier worth a decision is the one a screen belongs to: `fileName` is asked by
     `mapResume`, authored by no resume record in either spelling, and still printed by the resume
-    detail page.
+    detail page -- but it stopped being classifiable when `source-actions.tsx` began spelling it as
+    a React state name, which pushed it past the three-carrier cutoff.
     """
     files = frontend_files()
-    assert len(files) == 132, f"the frontend census walked {len(files)} files"
+    assert len(files) == 134, f"the frontend census walked {len(files)} files"
     asked = {name for row in UNAUTHORED.values() for name in row}
-    assert len(asked) == 80, f"{len(asked)} dead names are asked, pinned 80"
+    assert len(asked) == 56, f"{len(asked)} dead names are asked, pinned 56"
     classified = set()
     for carriers, names in DEAD_NAME_TIERS.items():
         for name in sorted(names):
             found = carriers_of(name)
             assert found == set(carriers), f"{name} is now spelled in {sorted(found ^ set(carriers))}"
             classified.add(name)
-    assert len(classified) == 47, f"{len(classified)} names classified, pinned 47"
+    assert len(classified) == 27, f"{len(classified)} names classified, pinned 27"
     assert len(asked) - len(classified) == WIDER_DEAD_NAMES, \
         f"{len(asked) - len(classified)} names spread past three carriers, pinned {WIDER_DEAD_NAMES}"
     assert classified <= asked
 
     # The mapper-only tier is the alias-list bloat: no module other than the one asking has the name.
     assert DEAD_NAME_TIERS[("lib/hooks/resources.ts",)] > {"file_name", "version_no", "is_current",
-                                                            "interview_process", "roles_count"}, \
+                                                           "chunk_count", "job_title"}, \
         "a snake twin left the mapper, so it is a name in use somewhere"
     # The types.ts mirror is a type that copies the ask, not a reader of the answer.
     assert DEAD_NAME_TIERS[("lib/api/types.ts", "lib/hooks/resources.ts")] == TYPES_MIRROR_NAMES
@@ -740,9 +746,10 @@ def test_the_dead_names_spread_in_three_measured_tiers_and_three_reached_a_scree
                         | set().union(*READERS_BY_PAGE.values()))
     assert TYPES_MIRROR_NAMES & read_by_a_screen == set(), \
         sorted(TYPES_MIRROR_NAMES & read_by_a_screen)
-    # The screen tier is #155's affordance, and all three names sit on one page.
+    # The screen tier is the versions row's pair; `fileName` is still read by the same screen but is
+    # classified no longer -- source-actions.tsx spelled it as a state name and pushed it wide.
     screen_tier = DEAD_NAME_TIERS[("app/(app)/resumes/[id]/page.tsx", "lib/api/types.ts",
                                    "lib/hooks/resources.ts")]
-    assert screen_tier == SCREEN_READ_NAMES, sorted(screen_tier ^ SCREEN_READ_NAMES)
+    assert screen_tier == SCREEN_READ_NAMES - {"fileName"}, sorted(screen_tier ^ SCREEN_READ_NAMES)
     assert SCREEN_READ_NAMES <= read_by_a_screen
     assert VERSION_ROW_READS >= {"isCurrent", "versionNo"}
