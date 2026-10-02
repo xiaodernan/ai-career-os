@@ -134,6 +134,51 @@ public class ApplicationService {
         return toItem(applications.save(app));
     }
 
+    /**
+     * Records what the user produced for one job on the application rows they already track.
+     *
+     * <p>The three link columns are the reason a card can say which resume, JD analysis and match
+     * stand behind it, and they are minted by the match, tailor and JD-analysis routes — which run
+     * before the tracker row exists, or long after it, but never through it. Nothing else can fill
+     * them.
+     *
+     * <p>A null argument means "this action did not produce that id" and leaves the column alone:
+     * tailoring a job must not clear the match the same row already carries. Only a real change is
+     * written, so re-running a match is not a write per call, and the return value is the number of
+     * rows that moved.
+     *
+     * <p>No audit event. {@code ApplicationEvent} rows are the user-visible transitions the timeline
+     * renders — status, note, reminder — and an id appearing beside a row is not one of them; the
+     * dialog shows the links themselves.
+     */
+    @Transactional
+    public int linkJobActivity(UUID userId, UUID jobId, UUID resumeVersionId, UUID jdId, UUID matchId) {
+        if (jobId == null || (resumeVersionId == null && jdId == null && matchId == null)) {
+            return 0;
+        }
+        int changed = 0;
+        for (Application app : applications.findByUserIdAndJobId(userId, jobId)) {
+            boolean dirty = false;
+            if (resumeVersionId != null && !resumeVersionId.equals(app.getResumeVersionId())) {
+                app.setResumeVersionId(resumeVersionId);
+                dirty = true;
+            }
+            if (jdId != null && !jdId.equals(app.getJdId())) {
+                app.setJdId(jdId);
+                dirty = true;
+            }
+            if (matchId != null && !matchId.equals(app.getMatchId())) {
+                app.setMatchId(matchId);
+                dirty = true;
+            }
+            if (dirty) {
+                applications.save(app);
+                changed++;
+            }
+        }
+        return changed;
+    }
+
     @Transactional(readOnly = true)
     public List<TimelineEvent> timeline(UUID userId, UUID id) {
         require(userId, id);

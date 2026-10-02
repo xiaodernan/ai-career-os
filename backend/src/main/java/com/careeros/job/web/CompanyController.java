@@ -1,6 +1,9 @@
 package com.careeros.job.web;
 
+import com.careeros.common.AuthUser;
+import com.careeros.common.CurrentUser;
 import com.careeros.common.PageDTO;
+import com.careeros.job.dto.JobDtos.CompanyDetail;
 import com.careeros.job.dto.JobDtos.CompanyItem;
 import com.careeros.job.dto.JobDtos.CompanyRequest;
 import com.careeros.job.service.JobService;
@@ -35,9 +38,14 @@ public class CompanyController {
         return jobs.listCompanies(q, page, size);
     }
 
+    /**
+     * The company page reads through here. It takes the caller because the roles it answers with are
+     * the board's own rows, and every one of those carries that caller's latest cached match — a
+     * company profile is the same to everyone, the ordering beside it is not.
+     */
     @GetMapping("/{id}")
-    public CompanyItem get(@PathVariable UUID id) {
-        return jobs.getCompany(id);
+    public CompanyDetail get(@CurrentUser AuthUser user, @PathVariable UUID id) {
+        return jobs.companyDetail(user.id(), id);
     }
 
     @PostMapping

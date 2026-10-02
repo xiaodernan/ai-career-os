@@ -57,6 +57,9 @@ frontend/backend/ai-service can also run natively for dev (`pnpm dev`, `mvn spri
   LLM/RAG ecosystem.
 - Postgres + pgvector as one store keeps the vector/keyword/metadata layers
   transactional with the domain (no sync problems), and hybrid search is one SQL query.
+- Query vectors are fetched once per query text and shared: `QueryEmbeddingService`
+  (Caffeine, 12h TTL) serves both `/jobs?sort=relevance` and the `/search` jobs
+  channel, and a browse (no `q`) never calls the embedder at all.
 
 ## 3. Repository layout
 

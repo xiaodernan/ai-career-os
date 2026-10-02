@@ -1,11 +1,13 @@
 package com.careeros.job.service;
 
 import com.careeros.ai.AiServiceClient;
+import com.careeros.application.service.ApplicationService;
 import com.careeros.common.ApiErrorCode;
 import com.careeros.common.ApiException;
 import com.careeros.common.Json;
 import com.careeros.common.PageDTO;
 import com.careeros.common.Paging;
+import com.careeros.job.dto.JobDtos.CompanyDetail;
 import com.careeros.job.dto.JobDtos.CompanyItem;
 import com.careeros.job.dto.JobDtos.CompanyRequest;
 import com.careeros.job.dto.JobDtos.CreateJobRequest;
@@ -53,12 +55,14 @@ public class JobService {
     private final JobMatchRepository matches;
     private final JobSearchRepository search;
     private final ResumeService resumeService;
+    private final ApplicationService applicationService;
     private final AiServiceClient ai;
     private final QueryEmbeddingService embeddingService;
 
     public JobService(JobRepository jobs, CompanyRepository companies, JobJdRepository jds,
                       SavedJobRepository savedJobs, JobMatchRepository matches,
-                      JobSearchRepository search, ResumeService resumeService, AiServiceClient ai,
+                      JobSearchRepository search, ResumeService resumeService,
+                      ApplicationService applicationService, AiServiceClient ai,
                       QueryEmbeddingService embeddingService) {
         this.jobs = jobs;
         this.companies = companies;
@@ -67,6 +71,7 @@ public class JobService {
         this.matches = matches;
         this.search = search;
         this.resumeService = resumeService;
+        this.applicationService = applicationService;
         this.ai = ai;
         this.embeddingService = embeddingService;
     }
@@ -198,6 +203,11 @@ public class JobService {
         Map<String, Object> result = ai.matchJob(jobId, rvId, userId);
         Map<String, Object> match = Json.obj(result.get("match"));
         UUID matchId = Json.uuidOrNull(result, "match_id");
+        // The tracker row for this job — if the user has one — now says which resume was measured
+        // and which match answered. The AI call above is deliberately outside any transaction, so
+        // this is its own write; a failure here fails the response rather than returning a match
+        // the pipeline quietly did not record.
+        applicationService.linkJobActivity(userId, jobId, rvId, null, matchId);
         return new MatchResponse(match, matchId, Json.obj(result.get("jd")));
     }
 
@@ -268,7 +278,13 @@ public class JobService {
         jd.setJobId(jobId);
         jd.setRawText(rawText);
         jd.setParsed(Json.obj(result.get("parsed")));
-        return jds.save(jd);
+        JobJd saved = jds.save(jd);
+        if (jobId != null) {
+            // The analysis is now the JD the tracker row for this job points at. Without a job there
+            // is no row to point at it, which is the paste-only case.
+            applicationService.linkJobActivity(userId, jobId, null, saved.getId(), null);
+        }
+        return saved;
     }
 
     @Transactional(readOnly = true)
@@ -290,7 +306,12 @@ public class JobService {
                             "No resume available for tailoring"))
                     .getCurrentVersionId();
         }
-        return ai.tailorResume(jobId, rvId, userId);
+        Map<String, Object> result = ai.tailorResume(jobId, rvId, userId);
+        // Same rule as the match path: the row that tracks this job now names the resume the draft
+        // was written from. The request path takes the new version, but the link is the source it
+        // was tailored out of, which is what a later "regenerate" has to start from.
+        applicationService.linkJobActivity(userId, jobId, rvId, null, null);
+        return result;
     }
 
     /**
@@ -372,6 +393,28 @@ public class JobService {
         return toCompanyItem(c, companies.countOpenRoles(id));
     }
 
+    /**
+     * The company page: the profile and the roles it is hiring for, in the board's own row shape so
+     * each role carries the caller's latest cached match.
+     *
+     * <p>One filter set answers both halves: {@code openRoleCount} is {@code count} over the same
+     * predicate as the {@code search} that fills the list, which is what keeps the heading and the
+     * rows under it from disagreeing — the failure the dashboard's attention card was fixed for.
+     *
+     * <p>The list is capped at the paging ceiling ({@code Paging.MAX_PAGE_SIZE}). Past that the
+     * count is still the company's real total, so the page can say how many rows it is not showing
+     * rather than pretending the list is complete.
+     */
+    @Transactional(readOnly = true)
+    public CompanyDetail companyDetail(UUID userId, UUID companyId) {
+        Company company = companies.findById(companyId)
+                .orElseThrow(() -> new ApiException(ApiErrorCode.COMPANY_NOT_FOUND, "Company not found"));
+        var filters = new JobSearchRepository.Filters(userId, null, null, null, null, null, companyId,
+                null, null, "open", "match", 0, Paging.MAX_PAGE_SIZE, null);
+        List<JobListItem> openRoles = search.search(filters);
+        return new CompanyDetail(toCompanyItem(company, search.count(filters)), openRoles);
+    }
+
     @Transactional
     public void deleteCompany(UUID id) {
         Company c = companies.findById(id)
@@ -447,9 +490,10 @@ public class JobService {
                 job.getSkills(), null, null);
     }
 
-    private static CompanyItem toCompanyItem(Company c, long openRoles) {
+    private static CompanyItem toCompanyItem(Company c, long openRoleCount) {
         return new CompanyItem(c.getId(), c.getName(), c.getWebsite(), c.getLogoUrl(),
-                c.getIndustry(), c.getSize(), c.getOverview(), c.getTechStack(), openRoles);
+                c.getIndustry(), c.getSize(), c.getOverview(), c.getTechStack(), c.getCulture(),
+                c.getInterviewProcess(), c.getSources(), openRoleCount);
     }
 
     public Optional<JobMatch> latestMatch(UUID userId, UUID jobId) {

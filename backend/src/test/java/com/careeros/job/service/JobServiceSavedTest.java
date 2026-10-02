@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.careeros.ai.AiServiceClient;
+import com.careeros.application.service.ApplicationService;
 import com.careeros.job.dto.JobDtos.SavedJobItem;
 import com.careeros.job.entity.Company;
 import com.careeros.job.entity.Job;
@@ -51,8 +52,8 @@ class JobServiceSavedTest {
         savedJobs = mock(SavedJobRepository.class);
         service = new JobService(jobs, companies, mock(JobJdRepository.class), savedJobs,
                 mock(JobMatchRepository.class), mock(JobSearchRepository.class),
-                mock(ResumeService.class), mock(AiServiceClient.class),
-                mock(QueryEmbeddingService.class));
+                mock(ResumeService.class), mock(ApplicationService.class),
+                mock(AiServiceClient.class), mock(QueryEmbeddingService.class));
     }
 
     private static Job job(UUID id, String title, UUID companyId) {

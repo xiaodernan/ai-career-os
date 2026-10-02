@@ -182,4 +182,22 @@ class JobSearchHybridIT extends ApiIntegrationTest {
                 .isEqualTo(3);
         assertThat(ids(data)).containsExactlyInAnyOrder(board.lexicalHit, board.paraphrase, board.sibling);
     }
+
+    @Test
+    @DisplayName("browsing never pays for an embedding: no query means no vector fetch")
+    void browsingNeverFetchesAnEmbedding() throws Exception {
+        String auth = register("hybrid-browse-" + UUID.randomUUID() + "@example.com");
+        jobService.clearEmbeddingCache();
+        Board board = seedBoard(auth);
+        // Even with a provider ready to answer, a browse (no q) must not ask: the vector
+        // is only ever fetched for a relevance search, so scrolling the board stays free.
+        ai.calls.clear();
+        ai.queryEmbedding = QUERY;
+        JsonNode data = search(auth, board.token(), null, null);
+        assertThat(data.path("total").asInt()).isEqualTo(3);
+        assertThat(ids(data)).containsExactlyInAnyOrder(board.lexicalHit, board.paraphrase, board.sibling);
+        assertThat(ai.calls)
+                .as("a browse must not call the embedder at all")
+                .doesNotContain("embedQuery");
+    }
 }

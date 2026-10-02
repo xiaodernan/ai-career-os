@@ -42,9 +42,33 @@ public final class JobDtos {
                          OffsetDateTime createdAt) {
     }
 
+    /**
+     * One company as the list, the job detail and the company page send it.
+     *
+     * <p>{@code culture}, {@code interviewProcess} and {@code sources} were write-only until the
+     * company page needed them: {@code CompanyRequest} has accepted all three since the first
+     * migration, the {@code companies} row stores them, and no read path ever carried them back —
+     * so a researched profile could be posted and then never seen again.
+     *
+     * <p>The count is named {@code openRoleCount} rather than {@code openRoles} so it cannot be
+     * mistaken for the list of roles beside it on {@link CompanyDetail}: the two were one name, and
+     * the browser read the number as a list.
+     */
     public record CompanyItem(UUID id, String name, String website, String logoUrl,
                               String industry, String size, String overview,
-                              List<String> techStack, long openRoles) {
+                              List<String> techStack, String culture, String interviewProcess,
+                              List<Object> sources, long openRoleCount) {
+    }
+
+    /**
+     * {@code GET /api/v1/companies/{id}}: the profile, plus the roles the company is hiring for.
+     *
+     * <p>The roles are the board's own rows — same columns, same latest-match lateral join, same
+     * {@code match} ordering — scoped to this company and to {@code status = 'open'}, which is the
+     * predicate {@link CompanyItem#openRoleCount()} counts. Two definitions of "open" is how a count
+     * and the list under it end up disagreeing on screen.
+     */
+    public record CompanyDetail(CompanyItem company, List<JobListItem> openRoles) {
     }
 
     public record CompanyRequest(@NotBlank @Size(max = 200) String name, String website,

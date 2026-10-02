@@ -221,6 +221,76 @@ class DomainApiIT extends ApiIntegrationTest {
                 .andExpect(jsonPath("$.data.items").isEmpty());
     }
 
+    /**
+     * A job created through the nested-company path, with the researched fields the company page
+     * reads back. Returns the created {@code JobListItem}: its {@code id} is the job and its
+     * {@code companyId} the company the upsert produced.
+     */
+    private JsonNode createJobWithResearchedCompany(String token, String companyName, String title)
+            throws Exception {
+        Map<String, Object> body = Map.of(
+                "title", title,
+                "company", Map.of("name", companyName, "industry", "fintech",
+                        "culture", "Engineer-led, remote-first.",
+                        "interviewProcess", "Screen → Tech → HR",
+                        "sources", List.of(Map.of("type", "user_paste", "note", "Researched by hand."))),
+                "location", "Remote",
+                "description", "We are hiring for " + title + ".",
+                "skills", List.of("Java"));
+        MvcResult res = mvc.perform(post("/api/v1/jobs")
+                        .header(authHeader(), "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON).content(json(body)))
+                .andExpect(status().isCreated())
+                .andReturn();
+        return MAPPER.readTree(res.getResponse().getContentAsString()).path("data");
+    }
+
+    @Test
+    @DisplayName("a company page carries the researched profile and only its own open roles")
+    void companyDetailCarriesTheProfileAndOnlyItsOwnRoles() throws Exception {
+        String alice = register("co-" + UUID.randomUUID() + "@example.com");
+        String token = "co" + Long.toString(Math.abs(UUID.randomUUID().getMostSignificantBits()), 36);
+        String name = "Acme Research " + token;
+        // A sibling whose name *contains* the first one. The board's `?company=` facet is an ILIKE
+        // over the name and is right to include it; a profile page that listed a sibling's role would
+        // be a wrong answer wearing the same word, which is why the company scope is an id.
+        String siblingName = name + " Labs";
+
+        JsonNode mine = createJobWithResearchedCompany(alice, name, "Backend Engineer " + token);
+        JsonNode sibling = createJobWithResearchedCompany(alice, siblingName, "Data Engineer " + token);
+
+        mvc.perform(get("/api/v1/companies/" + mine.path("companyId").asText())
+                        .header(authHeader(), "Bearer " + alice))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.company.name").value(name))
+                // `culture`, `interviewProcess` and `sources` were accepted on write and carried by no
+                // read path at all, so a researched profile could be posted and never seen again.
+                .andExpect(jsonPath("$.data.company.industry").value("fintech"))
+                .andExpect(jsonPath("$.data.company.culture").value("Engineer-led, remote-first."))
+                .andExpect(jsonPath("$.data.company.interviewProcess").value("Screen → Tech → HR"))
+                .andExpect(jsonPath("$.data.company.sources[0].type").value("user_paste"))
+                .andExpect(jsonPath("$.data.company.openRoleCount").value(1))
+                .andExpect(jsonPath("$.data.openRoles.length()").value(1))
+                .andExpect(jsonPath("$.data.openRoles[0].id").value(mine.path("id").asText()));
+
+        // The positive control the pair needs: the sibling answers with its own single role, so the
+        // assertion above is about scoping rather than about a filter that returns nothing.
+        mvc.perform(get("/api/v1/companies/" + sibling.path("companyId").asText())
+                        .header(authHeader(), "Bearer " + alice))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.company.name").value(siblingName))
+                .andExpect(jsonPath("$.data.openRoles.length()").value(1))
+                .andExpect(jsonPath("$.data.openRoles[0].id").value(sibling.path("id").asText()));
+
+        // The route now takes the caller -- the roles it answers with carry that caller's match -- so
+        // an anonymous read is refused, and an id nobody owns is a 404 rather than an empty profile.
+        mvc.perform(get("/api/v1/companies/" + mine.path("companyId").asText()))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/v1/companies/" + UUID.randomUUID())
+                        .header(authHeader(), "Bearer " + alice))
+                .andExpect(status().isNotFound());
+    }
+
     @Test
     @DisplayName("applications are private and only accept known kanban statuses")
     void applicationsIsolationAndStatus() throws Exception {

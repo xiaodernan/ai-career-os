@@ -30,10 +30,27 @@ public class JobSearchRepository {
     /**
      * @param embedding query vector for the hybrid pass, or null to rank keyword-only. Supplied by
      *     the service only for {@code sort=relevance} with a non-blank {@code q}.
+     * @param companyId exact company scope, for the company page's role list. {@code company} beside
+     *     it is the board's free-text facet — an ILIKE over the name — so the two are different
+     *     questions and neither can answer the other: a facet search for "Acme" is right to include
+     *     Acme Labs, and a company page showing Acme Labs' roles would be wrong.
      */
     public record Filters(UUID userId, String q, List<String> skills, String location, String remote,
-                          String company, Integer minSalary, Integer maxSalary, String status,
-                          String sort, int page, int size, List<Double> embedding) {
+                          String company, UUID companyId, Integer minSalary, Integer maxSalary,
+                          String status, String sort, int page, int size, List<Double> embedding) {
+
+        /**
+         * The board's own filter set, which has no company scope. Every existing call site means
+         * exactly this, and the canonical form's extra component sits between two of the same type
+         * only at a position this one spells out — so this is a name for the old shape rather than a
+         * default anyone can forget.
+         */
+        public Filters(UUID userId, String q, List<String> skills, String location, String remote,
+                       String company, Integer minSalary, Integer maxSalary, String status,
+                       String sort, int page, int size, List<Double> embedding) {
+            this(userId, q, skills, location, remote, company, null, minSalary, maxSalary, status,
+                    sort, page, size, embedding);
+        }
     }
 
     /** Matches {@code _RRF_K} in ai-service's tools.py: one fusion constant, two callers. */
@@ -251,6 +268,9 @@ public class JobSearchRepository {
         if (f.company() != null && !f.company().isBlank()) {
             sql.append(" AND c.name ILIKE :companyLike ESCAPE '!'");
         }
+        if (f.companyId() != null) {
+            sql.append(" AND j.company_id = :companyId");
+        }
         if (f.minSalary() != null) {
             sql.append(" AND j.salary_max >= :minSalary");
         }
@@ -302,6 +322,9 @@ public class JobSearchRepository {
         }
         if (f.company() != null && !f.company().isBlank()) {
             query.setParameter("companyLike", LikePattern.contains(f.company()));
+        }
+        if (f.companyId() != null) {
+            query.setParameter("companyId", f.companyId());
         }
         if (f.minSalary() != null) {
             query.setParameter("minSalary", f.minSalary());

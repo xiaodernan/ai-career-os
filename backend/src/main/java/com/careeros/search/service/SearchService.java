@@ -24,10 +24,10 @@ public class SearchService {
     @Transactional(readOnly = true)
     public SearchResponse search(UUID userId, String q) {
         String term = q.trim();
-        List<Double> embedding = embeddingService.embed(term, userId);
+        List<Double> vec = embeddingService.embed(term, userId);
         return new SearchResponse(
                 term,
-                search.jobs(userId, term, GROUP_CAP, embedding),
+                search.jobs(userId, term, GROUP_CAP, vec),
                 search.companies(term, GROUP_CAP),
                 search.resumes(userId, term, GROUP_CAP),
                 search.notes(userId, term, GROUP_CAP),

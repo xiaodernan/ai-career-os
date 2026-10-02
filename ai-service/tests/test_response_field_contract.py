@@ -2946,7 +2946,10 @@ def test_the_reads_are_actually_found():
     assert len(_emitted("SearchResponse")) == 7
     assert len(_emitted("SkillGap")) == 3
     assert len(_emitted("ApplicationItem")) == 15
-    assert len(_emitted("CompanyItem")) == 9
+    # 12, up from 9: the company page needed `culture`, `interviewProcess` and `sources` back, which
+    # the `companies` row has stored and `CompanyRequest` has accepted since the first migration --
+    # write-only fields, so the profile a user posted could never be read again.
+    assert len(_emitted("CompanyItem")) == 12
     assert len(_emitted("MessageItem")) == 8
     assert len(_emitted("MatchResponse")) == 3
     assert len(_emitted("JobDetail")) == 23

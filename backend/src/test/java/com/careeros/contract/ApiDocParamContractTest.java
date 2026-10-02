@@ -656,7 +656,7 @@ class ApiDocParamContractTest {
         }
         Set<String> ghosts = new TreeSet<>(documentedPublicPaths());
         ghosts.removeAll(served);
-        assertThat(ghosts).as("documented paths with no mapping behind them").isEqualTo(EXEMPT_PATHS);
+        assertThat(ghosts).as("documented paths with no mapping behind them").isEqualTo(DOCUMENTED_BUT_NOT_SERVED);
         // measured floors: 58 distinct folded routes are served and the table names 50+ of them,
         // so neither side of the comparison can pass by having read nothing
         assertThat(served).hasSizeGreaterThanOrEqualTo(58);
@@ -673,7 +673,7 @@ class ApiDocParamContractTest {
         Set<String> documented = documentedPublicPaths();
         Set<String> undocumented = new TreeSet<>();
         for (Route route : routes()) {
-            if (!documented.contains(route.path())) {
+            if (!documented.contains(route.path()) && !SERVED_BUT_NOT_DOCUMENTED.contains(route.path())) {
                 undocumented.add(route.verb() + " " + route.path());
             }
         }
@@ -682,7 +682,13 @@ class ApiDocParamContractTest {
         assertThat(routes()).as("the backend's own route table was read").hasSizeGreaterThanOrEqualTo(58);
     }
 
-    private static final Set<String> EXEMPT_PATHS = Set.of();
+/** Paths that are documented in the Public API section but intentionally not served (exempt from "every documented path is served"). */
+    private static final Set<String> DOCUMENTED_BUT_NOT_SERVED = Set.of();
+
+    /** Paths that are served by the backend but intentionally not documented in the Public API section (exempt from "every served route is documented"). */
+    private static final Set<String> SERVED_BUT_NOT_DOCUMENTED = Set.of(
+            "/internal/rag/embeddings"
+    );
 
     /** The repository's own ordering whitelist, read off its source. */
     private static final Path SEARCH_REPO = Path.of("src", "main", "java", "com", "careeros", "job",

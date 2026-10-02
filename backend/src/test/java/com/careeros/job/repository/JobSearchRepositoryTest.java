@@ -167,6 +167,26 @@ class JobSearchRepositoryTest {
      * PostgreSQL error and an unbound parameter is a Hibernate one — both of which the HTTP
      * layer used to hand back to the browser as a 500.
      */
+    /**
+     * The company page's scope is an exact id, not the board's name facet. The two are different
+     * questions — {@code ?company=Acme} on the board is *meant* to include Acme Labs, while a profile
+     * page listing a sibling company's roles would be a wrong answer that shares its word with the
+     * right one. The predicate and its bind are asserted together: a filter whose parameter is never
+     * bound is a 500, not a wrong row.
+     */
+    @Test
+    void aCompanyScopeFiltersByExactIdAndBindsIt() {
+        UUID companyId = UUID.randomUUID();
+        repo.search(new Filters(userId, null, null, null, null, null, companyId, null, null, "open",
+                "match", 0, 100, null));
+
+        String sql = capturedSql();
+        assertThat(sql).contains("AND j.company_id = :companyId");
+        assertThat(sql).doesNotContain("c.name ILIKE :companyLike");
+        assertThat(params).containsEntry("companyId", companyId).containsEntry("status", "open");
+        assertThat(placeholders(sql)).isEqualTo(bound);
+    }
+
     @Test
     void aNegativePageBindsZeroOffsetNotANegativeOne() {
         repo.search(paged(-1, 12));
