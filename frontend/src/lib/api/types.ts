@@ -49,9 +49,8 @@ export interface Resume {
   score?: ResumeScore | null;
   /**
    * The detail route answers it when the resume was uploaded as a file, and the download route
-   * (`endpoints.resumeFile`) has bytes behind it exactly when this is set. The two names this
-   * used to read off the detail body were answered by no producer, which is why "Original file"
-   * could not render.
+   * (`endpoints.resumeFile`) has bytes behind it exactly when this is set. Produced by the
+   * `resume.source_file_key` column in the backend entity.
    */
   sourceFileKey?: string | null;
 }

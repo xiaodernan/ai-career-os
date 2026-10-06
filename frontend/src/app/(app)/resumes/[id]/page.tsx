@@ -137,8 +137,8 @@ export default function ResumeDetailPage() {
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              {/* Live only when the detail body carries the key the download route answers for:
-                  this affordance read two names no producer ever sent, and never lit up. */}
+              {/* Live when the detail body carries sourceFileKey, which the backend produces from
+                  the resume.source_file_key column and gates the download route. */}
               {r.sourceFileKey && (
                 <Button
                   variant="outline"
