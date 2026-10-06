@@ -2842,7 +2842,7 @@ def test_the_heartbeat_interval_has_one_definer_and_every_shipped_claim_names_it
         (f"{doc_claims}: `docs/` states the keep-alive without a number today, and a doc that quotes an "
          "interval is a claim this gate has to be able to check rather than a second opinion")
     assert [(row["file"], row["line"]) for row in doc_vocabulary] == [
-        ("AGENTS.md", 144), ("DEPLOYMENT.md", 8), ("SECURITY.md", 133),
+        ("AGENTS.md", 144), ("DEPLOYMENT.md", 8), ("SECURITY.md", 136),
     ], (f"{doc_vocabulary}: the docs' own vocabulary is censused, so this pass is not reporting on an "
         "empty set -- and a second file picking up the word is a signal the ledger has to grow")
 

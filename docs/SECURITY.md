@@ -20,7 +20,10 @@ reachable from a browser.
     rejected and rotates the whole family (see `TokenRotationReuseTest`).
 - Public (unauthenticated) routes: `/api/v1/auth/**`, `/api/v1/health`,
   OpenAPI/Swagger (`/v3/api-docs/**`, `/swagger-ui/**`), CORS preflight
-  (`OPTIONS /**`), and the internal surface `/api/internal/**` (guarded below).
+  (`OPTIONS /**`), the observability pair `/actuator/health` and
+  `/actuator/prometheus` (read-only Micrometer metrics; restrict the scrape at
+  the reverse proxy in production if metrics must not be public), and the
+  internal surface `/api/internal/**` (guarded below).
 
 ## Service-to-service authentication (ai-service)
 

@@ -50,6 +50,11 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers("/api-docs/**", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/api/v1/health").permitAll()
+                        // Observability surface, pinned to the two exposed endpoints rather
+                        // than /actuator/**: the scrape is read-only Micrometer metrics and
+                        // health is a liveness probe. Production can restrict
+                        // /actuator/prometheus at the reverse proxy (docs/SECURITY.md).
+                        .requestMatchers("/actuator/health", "/actuator/prometheus").permitAll()
                         // Service-to-service surface: authenticated by the shared internal token,
                         // not by a user JWT (see InternalApiFilter).
                         .requestMatchers("/api/internal/**").permitAll()

@@ -51,6 +51,7 @@ curl -f http://localhost:3000
   - Backend API: `http://backend:8080`
   - AI service: **not exposed** (internal only)
 - [ ] Reverse proxy sets `X-Forwarded-For` and `X-Forwarded-Proto` headers
+- [ ] `/actuator/prometheus` restricted at the proxy to the scraper's address (public by default)
 - [ ] DNS records point to the reverse proxy
 - [ ] TLS certificates configured and auto-renewing (Let's Encrypt recommended)
 - [ ] Database backups configured (pg_dump on schedule)
@@ -126,7 +127,7 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --no-deps 
 
 | Service    | Health Check                    | Metrics                    |
 |------------|---------------------------------|----------------------------|
-| Backend    | `GET /api/v1/health`            | None wired. The health endpoint itself reports the Redis state (`redis: true/false`); add `spring-boot-starter-actuator` + `micrometer-registry-prometheus` to the backend pom if you want a scrape endpoint — there is no `/actuator/*` today. |
+| Backend    | `GET /api/v1/health`            | Prometheus at `/actuator/prometheus` (Micrometer); orchestrator probe at `/actuator/health`. The custom `/api/v1/health` additionally reports the Redis state (`redis: true/false`) as degraded-but-up. |
 | AI Service | `GET /health`                   | None. The service is internal-only and logs to stdout; there is no `/metrics` route. |
 | Frontend   | `GET /` (200 OK)                | —                          |
 | Postgres   | `pg_isready`                    | `pg_stat_statements` (needs `shared_preload_libraries`, which the compose image does not enable) |

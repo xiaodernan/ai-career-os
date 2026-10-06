@@ -72,6 +72,23 @@ springdoc:
   api-docs.path: /api-docs
   swagger-ui.path: /api-docs/ui
 
+management:
+  endpoints:
+    web:
+      exposure:
+        # /actuator/health for orchestrators, /actuator/prometheus for the metrics
+        # scrape. Nothing else: the rest of the actuator (env, beans, heapdump)
+        # stays off the wire entirely.
+        include: health,prometheus
+  health:
+    # Redis liveness is already reported by /api/v1/health as a degraded-but-up
+    # state (fail-open, docs/SECURITY.md). Actuator's own redis indicator would
+    # flip /actuator/health to 503 on a rate-limiter outage, telling every
+    # orchestrator the backend is down when it is serving fine -- the same
+    # outage-shaped lie the 500ms redis client timeouts exist to avoid.
+    redis:
+      enabled: false
+
 logging:
   pattern:
     console: "%d{HH:mm:ss.SSS} %-5level [%thread] %logger{28} - %msg%n"
