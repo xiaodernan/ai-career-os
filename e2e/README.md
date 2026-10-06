@@ -92,6 +92,32 @@ test, so the first few pass and the rest stall, while the limiter writes **nothi
 the log** — it only logs when Redis fails, not when it rejects. Confirm with
 `docker exec careeros-backend printenv RATELIMIT_AUTH_PER_MINUTE` (empty means 10).
 
+### Rebuild the images before accepting
+
+`up -d` re-creates containers from whatever image already exists; it does not
+replay the `build:` sections. A suite run against last week's jar or bundle
+looks exactly like a regression — new endpoints 404, new cards are missing,
+while the local (non-container) stack passes everything — and nothing in the
+output points at the image. So rebuild is part of the acceptance run, not an
+optional step:
+
+```bash
+docker-compose build backend ai-service frontend
+LLM_PROVIDER=mock EMBEDDING_PROVIDER=hash docker-compose --profile app up -d
+```
+
+To tell whether an image is older than the code you mean to be testing,
+compare its creation time with the last commit:
+
+```bash
+docker images --format "{{.Repository}}  {{.CreatedAt}}" | findstr career-os
+git log -1 --format=%cd
+```
+
+(The `ai-service` image only copies `app/` and the `backend` image only its
+`src/`, so uncommitted scratch files elsewhere in the tree never reach an
+image — staleness, not dirt, is the only failure mode here.)
+
 Verified this way: **10/10 against the containerized images**, which is what closed
 the "production build" item in the Definition of Done.
 
