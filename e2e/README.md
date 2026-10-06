@@ -115,11 +115,15 @@ git log -1 --format=%cd
 ```
 
 (The `ai-service` image only copies `app/` and the `backend` image only its
-`src/`, so uncommitted scratch files elsewhere in the tree never reach an
-image — staleness, not dirt, is the only failure mode here.)
+`src/`, so uncommitted scratch files elsewhere in the tree never reach those
+two. The `frontend` image is the exception: its `COPY . .` lifts the whole
+frontend tree into the build stage, so uncommitted work there rides along —
+make sure `npx tsc --noEmit` passes before a frontend image build, or the
+stale-or-dirty question has two answers.)
 
-Verified this way: **10/10 against the containerized images**, which is what closed
-the "production build" item in the Definition of Done.
+Verified this way: most recently **15/15 against the containerized images**
+(one worker crash on Windows retried green), which is what closed the
+"production build" item in the Definition of Done.
 
 ### The runner is slow to exit in this sandbox
 
