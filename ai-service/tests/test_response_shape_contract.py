@@ -1154,7 +1154,7 @@ def test_the_response_envelope_has_exactly_one_wrapper_and_one_unwrapper():
     files in two languages, and it is only safe while both halves stay where they are: widen the advice
     and the unwrap returns `undefined` for responses that were never wrapped, add a second unwrap and the
     one that is gated stops being the one that runs. Measured on this plane: two `success` reads and one
-    `?.data` unwrap, all of them in `lib/api/client.ts`, plus 28 `toast.success` lines the exclusion has
+    `?.data` unwrap, all of them in `lib/api/client.ts`, plus 30 `toast.success` lines the exclusion has
     to keep out. `client.ts` belongs to a concurrent session's file list, so this gate reads it and never
     edits it -- if a third reader appears, the test names it and a human decides where it belongs.
     """
@@ -1176,7 +1176,9 @@ def test_the_response_envelope_has_exactly_one_wrapper_and_one_unwrapper():
         'if (!res.ok || !json.success || !json.data) return null;',
         'if (!res.ok || (json && json.success === false)) {',
     ], f"{[row['text'] for row in rows if row['kind'] == 'success']}: the envelope's own guards, measured"
-    assert len(toasts) == 28, (f"{len(toasts)} `toast.success` lines came out of the same walk: that is "
+    # 30 rather than 28 since the conversation list grew rename and delete, each with its own
+    # success toast in actions.ts.
+    assert len(toasts) == 30, (f"{len(toasts)} `toast.success` lines came out of the same walk: that is "
                                "the floor proving the scan reached the pages and the hooks, so a walk "
                                "narrowed to the api directory cannot pass quietly")
 

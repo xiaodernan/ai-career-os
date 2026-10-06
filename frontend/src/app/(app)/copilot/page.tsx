@@ -5,19 +5,23 @@ import Link from "next/link";
 import {
   ArrowRight,
   MessageSquare,
+  Pencil,
   Plus,
   Quote,
   Send,
   Sparkles,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { EmptyState } from "@/components/common/empty-state";
 import { ErrorState } from "@/components/common/error-state";
 import { LoadingChatSkeleton } from "@/components/common/loading-skeletons";
@@ -31,7 +35,12 @@ import {
   useConversations,
   useConversationMessages,
 } from "@/lib/hooks/resources";
-import { useCopilotChat, useCreateConversation } from "@/lib/hooks/actions";
+import {
+  useCopilotChat,
+  useCreateConversation,
+  useDeleteConversation,
+  useRenameConversation,
+} from "@/lib/hooks/actions";
 import { relativeTime } from "@/lib/format";
 import type { ChatMessage } from "@/lib/api/types";
 
@@ -95,6 +104,7 @@ export default function CopilotPage() {
       onSelect={selectConversation}
       onCreate={() => newConversation()}
       creating={createConversation.isPending}
+      onDeleted={selectConversation}
       className={className}
     />
   );
@@ -147,6 +157,7 @@ function ConversationList({
   onSelect,
   onCreate,
   creating,
+  onDeleted,
   className,
 }: {
   query: ReturnType<typeof useConversations>;
@@ -154,9 +165,37 @@ function ConversationList({
   onSelect: (id: string | null) => void;
   onCreate: () => void;
   creating: boolean;
+  /** Fired before the delete request settles, with the id going away — the page
+   * deselects it so the transcript of a chat that no longer exists never shows. */
+  onDeleted?: (id: string) => void;
   className?: string;
 }) {
+  const rename = useRenameConversation();
+  const remove = useDeleteConversation();
+  const [editingId, setEditingId] = React.useState<string | null>(null);
+  const [draft, setDraft] = React.useState("");
+  const [confirmId, setConfirmId] = React.useState<string | null>(null);
   const items = query.data?.items ?? [];
+
+  const commitRename = React.useCallback(() => {
+    const id = editingId;
+    if (!id) return;
+    setEditingId(null);
+    const title = draft.trim();
+    const current = items.find((c) => c.id === id);
+    // Blank would be ignored by the backend anyway (`!isBlank()`); sending it
+    // would only make a no-op look like a save.
+    if (!title || title === (current?.title ?? "")) return;
+    rename.mutate({ id, title });
+  }, [draft, editingId, items, rename]);
+
+  const confirmDelete = React.useCallback(() => {
+    if (!confirmId) return;
+    const id = confirmId;
+    if (id === activeId) onDeleted?.(id);
+    remove.mutate(id, { onSettled: () => setConfirmId(null) });
+  }, [activeId, confirmId, onDeleted, remove]);
+
   return (
     <aside className={cn("min-h-0 flex-col gap-2", className)} aria-label="Conversations">
       <Button variant="ai" size="sm" onClick={onCreate} loading={creating}>
@@ -183,31 +222,83 @@ function ConversationList({
         ) : (
           <ul className="space-y-1 pr-2">
             {items.map((c) => (
-              <li key={c.id}>
-                <button
-                  type="button"
-                  onClick={() => onSelect(c.id)}
-                  aria-current={activeId === c.id ? "true" : undefined}
-                  className={cn(
-                    "w-full rounded-lg border px-3 py-2 text-left transition-colors duration-150 focus-visible:ring-[3px] focus-visible:ring-primary/30",
-                    activeId === c.id
-                      ? "border-primary/40 bg-primary/5"
-                      : "border-transparent hover:bg-accent/50"
-                  )}
-                >
-                  <p className="truncate text-sm font-medium">{c.title || "Untitled chat"}</p>
-                  <p className="truncate text-xs text-muted-foreground">
-                    {c.lastMessagePreview ?? "—"}
-                  </p>
-                  <p className="mt-0.5 text-2xs text-muted-foreground/80">
-                    {relativeTime(c.updatedAt ?? c.createdAt)}
-                  </p>
-                </button>
+              <li key={c.id} className="group relative">
+                {editingId === c.id ? (
+                  <Input
+                    value={draft}
+                    onChange={(e) => setDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") commitRename();
+                      if (e.key === "Escape") setEditingId(null);
+                    }}
+                    onBlur={commitRename}
+                    autoFocus
+                    maxLength={200}
+                    aria-label="Conversation title"
+                    className="h-9"
+                    autoComplete="off"
+                  />
+                ) : (
+                  <div className="flex items-stretch gap-0.5">
+                    <button
+                      type="button"
+                      onClick={() => onSelect(c.id)}
+                      aria-current={activeId === c.id ? "true" : undefined}
+                      className={cn(
+                        "min-w-0 flex-1 rounded-lg border px-3 py-2 text-left transition-colors duration-150 focus-visible:ring-[3px] focus-visible:ring-primary/30",
+                        activeId === c.id
+                          ? "border-primary/40 bg-primary/5"
+                          : "border-transparent hover:bg-accent/50"
+                      )}
+                    >
+                      <p className="truncate text-sm font-medium">{c.title || "Untitled chat"}</p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {c.lastMessagePreview ?? "—"}
+                      </p>
+                      <p className="mt-0.5 text-2xs text-muted-foreground/80">
+                        {relativeTime(c.updatedAt ?? c.createdAt)}
+                      </p>
+                    </button>
+                    <div className="flex items-center opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label={`Rename "${c.title || "Untitled chat"}"`}
+                        onClick={() => {
+                          setEditingId(c.id);
+                          setDraft(c.title || "");
+                        }}
+                      >
+                        <Pencil aria-hidden />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label={`Delete "${c.title || "Untitled chat"}"`}
+                        onClick={() => setConfirmId(c.id)}
+                      >
+                        <Trash2 aria-hidden />
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </li>
             ))}
           </ul>
         )}
       </ScrollArea>
+      <ConfirmDialog
+        open={confirmId !== null}
+        onOpenChange={(open) => {
+          if (!open) setConfirmId(null);
+        }}
+        title="Delete this chat?"
+        description="The transcript and its citations go with it. This cannot be undone."
+        confirmLabel="Delete"
+        destructive
+        loading={remove.isPending}
+        onConfirm={confirmDelete}
+      />
     </aside>
   );
 }

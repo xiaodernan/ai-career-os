@@ -652,6 +652,35 @@ export function useCreateConversation() {
   });
 }
 
+/** The backend leaves a blank or absent title alone (`!isBlank()`), so an edit never blanks it. */
+export function useRenameConversation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, title }: { id: string; title: string }) =>
+      api.update<unknown>(endpoints.conversation(id), { title }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["conversations"] });
+      toast.success("Conversation renamed.");
+    },
+    onError: fail("Couldn't rename the conversation."),
+  });
+}
+
+export function useDeleteConversation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.remove(endpoints.conversation(id)),
+    onSuccess: (_data, id) => {
+      // The transcript of a deleted chat is unreachable — drop its cache rather than
+      // invalidating a query whose source row no longer exists.
+      qc.removeQueries({ queryKey: ["conversation", id] });
+      qc.invalidateQueries({ queryKey: ["conversations"] });
+      toast.success("Conversation deleted.");
+    },
+    onError: fail("Couldn't delete the conversation."),
+  });
+}
+
 /** What the copilot's stream reports while the agent is still working. */
 export interface CopilotStreamHandlers {
   /** One model delta: append it and the reply grows on screen. */

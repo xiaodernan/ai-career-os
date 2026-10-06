@@ -808,7 +808,6 @@ describe("endpoints ↔ backend route parity", () => {
    * purpose". `/jobs/import` sat in the hand-copied table for months while nothing built it.
    */
   const NEVER_REFERENCED: Record<string, string> = {
-    "/conversations/{}": "chats are created and read, never renamed or deleted from the app",
     "/health": "liveness for the container probe, not something a page calls",
     "/jobs/import": "jobs arrive through POST /jobs and POST /jds; no import screen exists",
     "/me": "MeController's alias of /users/me; the client spells every call through /users/...",
