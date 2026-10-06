@@ -166,7 +166,9 @@ def test_the_only_writer_of_note_rows_is_behind_the_post_the_client_calls() -> N
             if NOTE_ROUTE in text or "user_notes" in text:
                 service.append(path.relative_to(ROOT).as_posix())
     assert walked > 30, f"the writer census read {walked} files, so its silence proves nothing"
-    assert service == [], \
+    # The golden-journey spec polls `GET /knowledge/notes` to verify what the panel wrote through
+    # its own POST -- a reader riding behind the one writer, not a second one.
+    assert service == ["e2e/tests/golden-journey.spec.ts"], \
         f"a seed, script or e2e path now names the notes route or its table ({service}): the surface may have a second writer"
 
 
@@ -184,14 +186,18 @@ def test_the_files_that_speak_of_the_notes_route() -> None:
             sites.append(rel)
     # The page and the panel speak the route too now: the page imports the panel (the import path
     # contains the route as a substring), and the panel's docstring spells the four verbs it calls.
+    # The knowledge controller contract test joined when it pinned the request shapes of the four
+    # note verbs, and the golden-journey spec when it started driving the panel end to end.
     assert sites == [
         "ai-service/tests/test_anonymous_mappers_producers_ship.py",
+        "ai-service/tests/test_knowledge_controller_request_contract.py",
         f"ai-service/tests/{Path(__file__).name}",
         "ai-service/tests/test_window_sizes_whose_callers_decide_them_ship.py",
         "backend/src/test/java/com/careeros/DomainApiIT.java",
         "backend/src/test/java/com/careeros/PagingApiIT.java",
         "backend/src/test/java/com/careeros/ratelimit/RateLimitFilterTest.java",
         "docs/API.md",
+        "e2e/tests/golden-journey.spec.ts",
         "frontend/src/app/(app)/knowledge/page.tsx",
         NOTES_PANEL,
         "frontend/src/lib/api/endpoints.test.ts",

@@ -1,0 +1,9 @@
+feat(web): every app route names its browser tab
+
+The sixteen (app) screens are client components, which cannot export
+metadata, so each route segment got a small server layout that only
+names the tab title; the root template composes it into
+"Jobs - AI Career OS" and friends. The AI-usage and notes-route
+censuses follow the drift the concurrent alias-binding commits left
+behind (the hook now carries the backend spellings as fallbacks), and
+the frontend census counts the sixteen layouts.

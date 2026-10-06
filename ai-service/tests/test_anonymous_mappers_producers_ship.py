@@ -16,16 +16,18 @@ and `SavedJobItem` ships `note` and `savedAt`, which the row reaches through nob
 unwraps `job` and stops, and no file under `frontend/src` reads `.savedAt` at all.
 
 The fourth is the finding. `useAIUsage` targets `/ai-usage/summary`, whose handler builds a
-`Map<String, Object>` by hand and emits exactly eight keys; the hook asks twenty-six names of that
-object and two (`requests`, `costUsd`) are answered. The other twenty-four include the three
-breakdown lists
+`Map<String, Object>` by hand and emits exactly eight keys; the hook asks thirty names of that
+object and six are answered (`requests`, `costUsd`, plus the backend spellings `inputTokens`,
+`outputTokens`, `totalTokens` and `perModel` that the hook now carries as fallback aliases). The
+other twenty-four include the three breakdown lists
 -- `byAgent`, `byModel`, `daily` -- which the summary never emits, while the breakdown it *does*
-emit (`perModel`) is an object keyed by model name under a different spelling, never asked. The
-summary also computes and emits `inputTokens`, `outputTokens`, `cachedTokens` and `totalTokens`; the
-hook asks `tokensIn`/`tokensOut`/`tokensTotal` and so drops all four, including the cached-token
+emit (`perModel`) is an object keyed by model name, asked only as a fallback alias. The
+summary also computes and emits `inputTokens`, `outputTokens`, `cachedTokens` and `totalTokens`;
+the hook reads `tokensIn`/`tokensOut`/`tokensTotal` first and falls back to the backend names, so
+only `cachedTokens` is still dropped -- the cached-token
 column whose counting was the whole subject of #67. The hook has a caller now: the dashboard's
 "Agent spend" card mounts `useAIUsage` and reads `requests`, `tokensTotal` and `costUsd` off it --
-three of the twenty-six asks finally consumed -- and `useKnowledgeNotes` left the no-caller set too
+three of the thirty asks finally consumed -- and `useKnowledgeNotes` left the no-caller set too
 when the knowledge page's notes panel mounted it and `useNoteMutations`, so all four hooks reach a
 screen now. The `AIUsageSummary` interface that mirrors the mapper's shape is still named only
 in `types.ts`. This file does not delete the dead names; it pins which name is dead in which
@@ -113,11 +115,11 @@ ASKS = {
                                 ["messageCount", "message_count"]],
     ("useAIUsage", "raw"): [["summary", "data"]],
     ("useAIUsage", "u"): [["requests", "requestCount", "request_count", "total"],
-                          ["tokensTotal", "tokens_total", "tokens"],
-                          ["tokensIn", "tokens_in", "promptTokens"],
-                          ["tokensOut", "tokens_out", "completionTokens"],
+                          ["tokensTotal", "tokens_total", "tokens", "totalTokens"],
+                          ["tokensIn", "tokens_in", "promptTokens", "inputTokens"],
+                          ["tokensOut", "tokens_out", "completionTokens", "outputTokens"],
                           ["costUsd", "cost_usd", "cost", "totalCost"],
-                          ["byAgent", "by_agent"], ["byModel", "by_model"],
+                          ["byAgent", "by_agent"], ["byModel", "by_model", "perModel"],
                           ["daily", "byDay", "by_day"], ["updatedAt", "updated_at"]],
     ("useAIUsage", "a"): [["agent", "name", "key"], ["requests", "count"],
                           ["tokens", "tokensTotal"], ["costUsd", "cost"]],
@@ -171,9 +173,10 @@ UNAUTHORED = {
     ("useAIUsage", "d"): {"cost", "count", "date", "day", "tokensTotal"},
 }
 
-# What the summary emits that this hook never asks: the four token columns and the two maps.
-EMITTED_UNASKED = {"cachedTokens", "inputTokens", "outputTokens", "perModel", "runsByStatus",
-                   "totalTokens"}
+# What the summary emits that this hook never asks: the cached-token column #67 exists to count,
+# and the runs-by-status map. The other four columns and perModel left this set when the hook's
+# aliases were bound to the backend field names (3bb3d26, 9aed1f9).
+EMITTED_UNASKED = {"cachedTokens", "runsByStatus"}
 
 # (hook, receiver) -> (call count, name count). Derived by the scanner below and pinned so a
 # narrowed scan, a lost import alias or a moved call has to be reconciled, not absorbed.
@@ -182,7 +185,7 @@ SCANNER_SHAPE = {
     ("useKnowledgeNotes", "n"): (8, 16),
     ("useConversations", "c"): (6, 12),
     ("useAIUsage", "raw"): (1, 2),
-    ("useAIUsage", "u"): (9, 26),
+    ("useAIUsage", "u"): (9, 30),
     ("useAIUsage", "a"): (4, 9),
     ("useAIUsage", "m"): (4, 9),
     ("useAIUsage", "d"): (4, 8),
@@ -299,7 +302,7 @@ def calls_for(hook: str) -> dict[str, list[list[str]]]:
 
     Nested calls count: the three breakdown rows sit inside `.map((a) => ({...}))` in the same body
     as the top-level object, and a scanner that stopped at the first nesting level would classify
-    `useAIUsage` as one row of nine names instead of four rows of twenty-six-plus. `idStr` is walked
+    `useAIUsage` as one row of nine names instead of four rows of thirty-plus. `idStr` is walked
     with the readers because it is a reader -- it just takes its one name from its own declaration
     instead of from the call site.
     """
@@ -535,14 +538,15 @@ def test_the_conversation_row_asks_twelve_and_six_screen_names_reach_the_copilot
         "the digest count has a reader now -- it was asked-and-never-shown when this was measured")
 
 
-def test_ai_usage_summary_emits_eight_keys_and_the_hook_asks_two_of_them():
-    """The headline: a hand-built map with eight keys against a reader asking for twenty-six."""
+def test_ai_usage_summary_emits_eight_keys_and_the_hook_asks_six_of_them():
+    """The headline: a hand-built map with eight keys against a reader asking for thirty."""
     emitted = emitted_usage_keys()
     assert emitted == USAGE_KEYS, f"usageSummary now writes {emitted}"
     grouped = calls_for("useAIUsage")
     assert [g for g in grouped["u"]] == ASKS[("useAIUsage", "u")]
     asked = {name for call in grouped["u"] for name in call}
-    assert asked & set(emitted) == {"costUsd", "requests"}, (
+    assert asked & set(emitted) == {"costUsd", "inputTokens", "outputTokens", "perModel",
+                                    "requests", "totalTokens"}, (
         f"the usage hook now answers {sorted(asked & set(emitted))} off the summary")
     assert asked - set(emitted) == DEAD[("useAIUsage", "u")], (
         f"dead asks are now {sorted(asked - set(emitted))}")
@@ -622,7 +626,7 @@ def test_every_hook_is_named_by_the_screen_that_mounts_it():
 
 
 def test_the_scanner_sees_every_call_and_name_in_this_population():
-    """The census itself, pinned: 36 calls and 82 names across eight receivers, none absorbed."""
+    """The census itself, pinned: 36 calls and 86 names across eight receivers, none absorbed."""
     vocabulary = reader_vocabulary()
     assert vocabulary == READER_VOCABULARY, (
         f"the reader vocabulary resources.ts can reach is now {vocabulary}; this file's scan is "
@@ -638,7 +642,7 @@ def test_the_scanner_sees_every_call_and_name_in_this_population():
             f"{SCANNER_SHAPE[key][0]}/{SCANNER_SHAPE[key][1]}")
         totals["calls"] += shape[0]
         totals["names"] += shape[1]
-    assert (totals["calls"], totals["names"]) == (36, 82), (
+    assert (totals["calls"], totals["names"]) == (36, 86), (
         f"the census is {totals}; every dead-name claim above is measured over these calls, so "
         "re-derive the tables before changing this number")
 
