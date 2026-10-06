@@ -474,3 +474,126 @@ test.describe("golden journey — copilot and observability", () => {
     await expect(authedPage.getByRole("heading", { level: 1 })).toBeVisible({ timeout: 20_000 });
   });
 });
+
+test.describe("golden journey — profile and notes", () => {
+  /**
+   * Two writing surfaces that shipped without browser cover: the knowledge
+   * page's notes panel and the settings page's three cards. Every save there is
+   * fire-and-forget from the UI's point of view, so the assertions read the
+   * server back (expect.poll) instead of trusting the screen — and the final
+   * reload proves the read path too.
+   */
+
+  test("writes, edits and deletes a note from the knowledge page", async ({ api, authedPage }) => {
+    await authedPage.goto("/knowledge");
+
+    // The panel sits below the sources list on the unfocused page; the create
+    // card is its only writer, so one save has to land both the row and the API.
+    await authedPage.locator("#note-title").fill("Salary research");
+    await authedPage.locator("#note-content").fill("Senior backend band in Hangzhou: 40-60w total.");
+    await authedPage.getByRole("button", { name: "Save note" }).click();
+    await expect(authedPage.getByText("Salary research")).toBeVisible({ timeout: 20_000 });
+
+    // The save button is fire-and-forget: the row appears optimistically only
+    // once the mutation lands, so the API read is polled, not trusted to a
+    // single shot.
+    await expect
+      .poll(async () => {
+        const notes = await unwrap<{ items: Array<{ title: string; content: string }> }>(
+          await api.get("/knowledge/notes")
+        );
+        return notes.items.find((n) => n.title === "Salary research")?.content ?? "";
+      }, { timeout: 20_000 })
+      .toContain("40-60w");
+
+    // Editing happens inline on the row, behind the pencil button.
+    await authedPage.getByRole("button", { name: "Edit Salary research" }).click();
+    await authedPage.getByLabel("Note title").fill("Salary research 2026");
+    await authedPage.getByLabel("Note content").fill("Band moved: 45-65w total.");
+    await authedPage.getByRole("button", { name: "Save", exact: true }).click();
+    await expect(authedPage.getByText("Salary research 2026")).toBeVisible({ timeout: 20_000 });
+
+    // A fresh account holds no other notes, so the empty state returning is the
+    // strongest proof the delete actually removed the row.
+    await authedPage.getByRole("button", { name: "Delete Salary research 2026" }).click();
+    const dialog = authedPage.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole("button", { name: "Delete", exact: true }).click();
+    await expect(authedPage.getByText("No notes yet")).toBeVisible({ timeout: 20_000 });
+  });
+
+  test("edits the display name and the career profile from settings", async ({ api, authedPage }) => {
+    await authedPage.goto("/settings");
+
+    // The Account card writes /users/me. The Save button stays disabled until the
+    // name differs from the registered one, which is also what proves the gate.
+    const name = authedPage.getByLabel("Display name");
+    await expect(name).toBeVisible({ timeout: 20_000 });
+    await name.fill("Journey Renamed");
+    await authedPage.getByRole("button", { name: "Save", exact: true }).click();
+
+    // The profile card writes /users/me/profile: blank means "leave alone", so the
+    // fields filled here are exactly the ones asserted below.
+    // exact: true because "Location" is a prefix of the target-locations label.
+    await authedPage.getByLabel("Headline", { exact: true }).fill("Backend engineer moving into platform work");
+    await authedPage.getByLabel("Location", { exact: true }).fill("Hangzhou");
+    await authedPage.getByLabel(/Years of experience/).fill("8");
+    await authedPage.getByLabel("Target roles (comma separated)", { exact: true }).fill("Platform engineer, Staff engineer");
+    await authedPage.getByLabel("Summary", { exact: true }).fill("Eight years of Java and Spring behind payment rails.");
+    await authedPage.getByRole("button", { name: "Save profile" }).click();
+
+    // The maps card replaces all three maps wholesale; one Links row is enough.
+    await authedPage.getByRole("button", { name: "Add row" }).first().click();
+    await authedPage.getByLabel("Links key 1").fill("github");
+    await authedPage.getByLabel("Links value 1").fill("https://github.com/journey");
+    await authedPage.getByRole("button", { name: "Save maps" }).click();
+
+    // The server, not the screen, is the record. Each poll gates the next save's
+    // completion, so the final read below sees every write settled.
+    await expect
+      .poll(
+        async () => (await unwrap<{ displayName: string }>(await api.get("/users/me"))).displayName,
+        { timeout: 20_000 }
+      )
+      .toBe("Journey Renamed");
+    await expect
+      .poll(
+        async () =>
+          (await unwrap<{ headline: string }>(await api.get("/users/me/profile"))).headline,
+        { timeout: 20_000 }
+      )
+      .toBe("Backend engineer moving into platform work");
+    await expect
+      .poll(
+        async () =>
+          (await unwrap<{ links: Record<string, string> }>(await api.get("/users/me/profile")))
+            .links.github ?? null,
+        { timeout: 20_000 }
+      )
+      .toBe("https://github.com/journey");
+
+    // One read for the fields the polls did not name. The URL is not valid JSON,
+    // so the lenient parser keeping it a string is itself part of the contract.
+    const profile = await unwrap<{
+      location: string;
+      yearsExperience: number;
+      targetRoles: string[];
+      summary: string;
+      links: Record<string, string>;
+    }>(await api.get("/users/me/profile"));
+    expect(profile.location).toBe("Hangzhou");
+    expect(profile.yearsExperience).toBe(8);
+    expect(profile.targetRoles).toEqual(["Platform engineer", "Staff engineer"]);
+    expect(profile.summary).toContain("payment rails");
+    expect(profile.links.github).toBe("https://github.com/journey");
+
+    // A reload shows the persisted values, proving the read path too.
+    await authedPage.goto("/settings");
+    await expect(authedPage.getByLabel("Headline")).toHaveValue(
+      "Backend engineer moving into platform work",
+      { timeout: 20_000 }
+    );
+    await expect(authedPage.getByLabel("Links key 1")).toHaveValue("github");
+    await expect(authedPage.getByLabel("Display name")).toHaveValue("Journey Renamed");
+  });
+});

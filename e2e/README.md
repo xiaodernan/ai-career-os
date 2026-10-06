@@ -16,6 +16,7 @@ orchestrator, retrieval and persistence paths.
 | track the application | Save role → create application → move stage → timeline → kanban agrees |
 | interview practice | Create session → opening → answer → scored follow-up → finalize report |
 | copilot and observability | Copilot artifact → run recorded → trace shows the llm/tool loop → usage summary |
+| profile and notes | Note write → edit → delete on the knowledge page; display name + career profile + links map on settings, each save confirmed against the API and re-read after reload |
 
 ## Prerequisites
 
@@ -139,6 +140,18 @@ if that happens.
 Playwright wipes `test-results/` before each run. In this environment that is
 hundreds of files, which trips the bulk-delete guard and aborts the run before a
 single test starts — with a stack trace from the shim, not from Playwright.
+
+**6. Know who is behind port 3000 before blaming a test.**
+The containerized stack and a local `next start` both want 3000, and whichever
+binds `127.0.0.1` first wins — the other is left listening on `[::1]` or nowhere,
+with "Ready" in its log either way. When the container wins, the suite runs
+against whatever image the container was built from, so pages added since then
+render as the *old* UI (a missing panel or card that no amount of rebuilding the
+local `.next` will fix). `docker ps` settles it; comparing a served chunk name
+against `frontend/.next/static/chunks/` settles it when the listener is not
+obvious. Stop `careeros-frontend` to hand the port to the local build, or
+rebuild the image to test the container path — both are legitimate, but they
+must be a choice, not an accident.
 
 ## Env overrides
 
