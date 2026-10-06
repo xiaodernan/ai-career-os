@@ -103,15 +103,23 @@ residual risk rather than as a clean bill of health.
    `/resumes/{id}/parse`, `/knowledge/text`) were unthrottled. Coverage now
    includes them, with `RateLimitFilterTest` pinning the classification.
 
-2. **`X-Forwarded-For` is trusted unconditionally (residual, deployment-dependent).**
+2. **`X-Forwarded-For` is trusted unconditionally (residual, deployment-dependent) — verified.**
    `clientIp` reads the leftmost `X-Forwarded-For` entry. Behind a proxy that
    *overwrites* the header this is correct and is what `RateLimitIT` exercises. If
    the backend is ever exposed directly, a client can rotate a spoofed
    `X-Forwarded-For` to get a fresh auth bucket per request and defeat login
-   throttling entirely. **Requirement: the backend must sit behind a reverse proxy
-   that sets (not appends) `X-Forwarded-For`.** Not changed in code because
-   removing the header trust would break the documented proxy deployment; flagged
-   here so the deployment posture is explicit.
+   throttling entirely.
+
+   Measured against the running stack with `RATELIMIT_AUTH_PER_MINUTE=3`: with no
+   header the fourth and fifth requests returned **429**; six requests sent with
+   `X-Forwarded-For: 203.0.113.{1..6}` returned **401 six times**, and Redis then held
+   seven `ratelimit:auth:*` keys — one per spoofed address plus the real client. The
+   bypass is not theoretical, and it needs no tooling beyond `curl`.
+
+   **Requirement: the backend must sit behind a reverse proxy that sets (not appends)
+   `X-Forwarded-For`.** Not changed in code because removing the header trust would break
+   the documented proxy deployment; flagged here so the deployment posture is explicit.
+   If the service is ever run without that proxy, this becomes the first thing to fix.
 
 3. **A Redis outage used to be an availability outage — fixed by client timeouts.**
    The limiter fails open by design, but a request still has to *reach* that branch.
