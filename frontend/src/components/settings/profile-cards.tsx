@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Save } from "lucide-react";
+import { Plus, Save, X } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,8 +18,8 @@ import { useProfile, useUpdateProfileDetails } from "@/lib/hooks/actions";
  *
  * `UpdateProfileRequest` validates headline ≤ 240, summary ≤ 5000, location ≤ 120,
  * yearsExperience 0–60, and both target lists at 20 entries of 80/120 chars. The PATCH is
- * "null leaves the field alone", so the form sends the fields it edits and never the maps
- * (links, workAuthorization, preferences) it has no UI for.
+ * "null leaves the field alone", so each card sends only the fields it edits — the free-form
+ * maps get their own editor below (`CareerProfileMapsCard`), which replaces them wholesale.
  */
 
 const MAX_HEADLINE = 240;
@@ -181,6 +181,161 @@ function CareerProfileForm({ initial }: { initial: Record<string, unknown> | nul
         <Button variant="ai" size="sm" loading={update.isPending} disabled={!saveable || update.isPending} onClick={save}>
           <Save aria-hidden />
           Save profile
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/* --- the three free-form maps --------------------------------------------------- */
+
+/**
+ * `links`, `workAuthorization` and `preferences` are free-form `Map<String, Object>`s the
+ * backend replaces wholesale on PATCH, so the editor always sends all three complete — a map
+ * whose rows were all deleted goes out as `{}`, which is the clear. Values round-trip through
+ * a lenient JSON read: anything that already parses as JSON keeps its type, anything else
+ * stays a string, the way an env-var editor behaves.
+ */
+
+type MapName = "links" | "workAuthorization" | "preferences";
+
+const MAP_SECTIONS: { name: MapName; label: string; keyPlaceholder: string }[] = [
+  { name: "links", label: "Links", keyPlaceholder: "e.g. github" },
+  { name: "workAuthorization", label: "Work authorization", keyPlaceholder: "e.g. status" },
+  { name: "preferences", label: "Preferences", keyPlaceholder: "e.g. remote" },
+];
+
+interface MapRow {
+  key: string;
+  value: string;
+}
+
+function lenientJson(raw: string): unknown {
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return raw;
+  }
+}
+
+function valueText(value: unknown): string {
+  return typeof value === "string" ? value : JSON.stringify(value);
+}
+
+function rawMap(source: Record<string, unknown> | null, name: MapName): Record<string, unknown> {
+  const value = source?.[name];
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+function mapRows(source: Record<string, unknown> | null, name: MapName): MapRow[] {
+  return Object.entries(rawMap(source, name)).map(([key, v]) => ({ key, value: valueText(v) }));
+}
+
+function rowsToMap(rows: MapRow[]): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const row of rows) {
+    const key = row.key.trim();
+    if (key) out[key] = lenientJson(row.value);
+  }
+  return out;
+}
+
+export function CareerProfileMapsCard() {
+  const profile = useProfile();
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Links & extras</CardTitle>
+        <CardDescription>
+          Free-form maps the agents read — links, work authorization, preferences. Values that
+          parse as JSON keep their type; everything else is saved as a string.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {profile.isPending ? (
+          <Skeleton className="h-20 w-full" />
+        ) : profile.isError ? (
+          <p className="text-sm text-muted-foreground">Profile could not be loaded.</p>
+        ) : (
+          <CareerProfileMapsForm initial={(profile.data ?? null) as Record<string, unknown> | null} />
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function CareerProfileMapsForm({ initial }: { initial: Record<string, unknown> | null }) {
+  const update = useUpdateProfileDetails();
+  const [maps, setMaps] = React.useState<Record<MapName, MapRow[]>>(() => ({
+    links: mapRows(initial, "links"),
+    workAuthorization: mapRows(initial, "workAuthorization"),
+    preferences: mapRows(initial, "preferences"),
+  }));
+
+  const setRow = (name: MapName, index: number, row: MapRow) =>
+    setMaps((m) => ({ ...m, [name]: m[name].map((r, i) => (i === index ? row : r)) }));
+  const addRow = (name: MapName) =>
+    setMaps((m) => ({ ...m, [name]: [...m[name], { key: "", value: "" }] }));
+  const removeRow = (name: MapName, index: number) =>
+    setMaps((m) => ({ ...m, [name]: m[name].filter((_, i) => i !== index) }));
+
+  // Key order survives the round trip (Object.entries preserves insertion order), so a
+  // serialized comparison is enough to say whether anything changed.
+  const dirty = MAP_SECTIONS.some(
+    ({ name }) => JSON.stringify(rowsToMap(maps[name])) !== JSON.stringify(rawMap(initial, name))
+  );
+
+  const save = React.useCallback(() => {
+    if (!dirty || update.isPending) return;
+    update.mutate(
+      Object.fromEntries(MAP_SECTIONS.map(({ name }) => [name, rowsToMap(maps[name])]))
+    );
+  }, [dirty, maps, update]);
+
+  return (
+    <div className="space-y-5">
+      {MAP_SECTIONS.map(({ name, label, keyPlaceholder }) => (
+        <div key={name} className="space-y-2">
+          <Label>{label}</Label>
+          {maps[name].map((row, index) => (
+            <div key={index} className="flex items-center gap-2">
+              <Input
+                value={row.key}
+                placeholder={keyPlaceholder}
+                aria-label={`${label} key ${index + 1}`}
+                onChange={(e) => setRow(name, index, { ...row, key: e.target.value })}
+                autoComplete="off"
+              />
+              <Input
+                value={row.value}
+                placeholder="value — JSON or plain text"
+                aria-label={`${label} value ${index + 1}`}
+                onChange={(e) => setRow(name, index, { ...row, value: e.target.value })}
+                autoComplete="off"
+              />
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={`Remove ${label} row ${index + 1}`}
+                onClick={() => removeRow(name, index)}
+              >
+                <X aria-hidden />
+              </Button>
+            </div>
+          ))}
+          <Button variant="outline" size="sm" onClick={() => addRow(name)}>
+            <Plus aria-hidden />
+            Add row
+          </Button>
+        </div>
+      ))}
+      <div className="flex justify-end">
+        <Button variant="ai" size="sm" loading={update.isPending} disabled={!dirty || update.isPending} onClick={save}>
+          <Save aria-hidden />
+          Save maps
         </Button>
       </div>
     </div>

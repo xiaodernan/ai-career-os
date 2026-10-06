@@ -1,0 +1,12 @@
+feat(web): the settings page edits the three free-form profile maps, closing the career-profile surface end to end
+
+links, workAuthorization and preferences have ridden on GET/PATCH /users/me/profile
+since it shipped, validated server-side but with no screen to edit them. The settings
+page grows a "Links & extras" card: key-value rows per map, values round-tripping
+through a lenient JSON read so numbers and booleans keep their type while anything
+else saves as a string.
+
+The backend replaces each map wholesale on PATCH (null-means-untouched only guards
+fields that are absent), so the card always sends all three complete — deleting every
+row of a map is the clear. The save rides the same useUpdateProfileDetails request and
+its ["profile"] invalidation as the card above, one toast for the whole lot.

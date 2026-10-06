@@ -5,7 +5,7 @@ import { useTheme } from "next-themes";
 import { Keyboard, LogOut, Monitor, Moon, Save, Sun } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
-import { CareerProfileCard } from "@/components/settings/profile-cards";
+import { CareerProfileCard, CareerProfileMapsCard } from "@/components/settings/profile-cards";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -111,6 +111,7 @@ export default function SettingsPage() {
 
       {/* Career profile */}
       <CareerProfileCard />
+      <CareerProfileMapsCard />
 
       {/* Appearance */}
       <Card>
