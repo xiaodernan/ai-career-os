@@ -188,7 +188,7 @@ export function CommandPaletteProvider({
             {!debounced && (
               <div className="flex items-center gap-1.5 border-t border-border/60 px-4 py-2.5 text-xs text-muted-foreground">
                 <LayoutDashboard className="size-3.5" aria-hidden />
-                Search {searchGroupNames()} once the API is live.
+                Search {searchGroupNames()} — content results stream in as you type.
               </div>
             )}
           </CommandList>

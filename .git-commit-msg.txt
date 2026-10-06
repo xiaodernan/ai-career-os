@@ -1,0 +1,15 @@
+feat(web): the palette's footer stops promising a future the search already delivered, and the unmounted-query census binds all three
+
+GET /search has been live behind the palette for a while (SearchController answers it,
+the hybrid-ranked jobs channel included), but the idle footer still read "once the API
+is live" -- a promise with no future left in it. The sentence now describes what
+actually happens: content results stream in as you type. Both gates that pin the footer
+against the searchGroupNames table follow, plus a refusal to let the old future-tense
+phrase come back.
+
+The invalidation census grows cases 8b and 8c, so every one of the three declared-but-
+unmounted queries is now bound to the screen that answers the same route without it:
+the palette runs its own ["command-search", q] key against endpoints.search while
+useGlobalSearch asks again, and useSourceStatus's single-source window sits over fields
+the knowledge list already carries per row and polls while anything ingests. What
+remains an owner's choice is now exactly that -- and each move still costs a ledger edit.

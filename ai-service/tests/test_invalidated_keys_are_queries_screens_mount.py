@@ -28,7 +28,9 @@ What the walk records, and does not fix: 43 promises, every one of them naming a
 since the settings page grew its account and career-profile editors, every promise's matches include
 a query a screen mounts, so the dead-promise ledger this file used to pin is empty. Three declared
 queries are still unmounted (`useResumeScore`, `useSourceStatus`, `useGlobalSearch`), each a
-duplicate or a window onto data another hook already fetches. Closing those is an owner's choice
+duplicate or a window onto data another hook already fetches, and every one of the three is bound
+to the screen that answers the same routes without it (cases 8, 8b and 8c). Closing any of them
+is an owner's choice
 (mount a screen or delete the data layer), and the first cases make either move cost a ledger edit.
 What is *not* a choice is the live chain: the Versions
 panel on the resume detail screen refreshes after a parse only because the two mutations and the
@@ -51,8 +53,11 @@ AUTH_HOOKS = "frontend/src/lib/hooks/auth.ts"
 HOOK_FILES = (ACTIONS, RESOURCES, AUTH_HOOKS)
 DETAIL = "frontend/src/app/(app)/resumes/[id]/page.tsx"
 SETTINGS = "frontend/src/app/(app)/settings/page.tsx"
+PALETTE = "frontend/src/components/common/command-palette.tsx"
 ENDPOINTS = "frontend/src/lib/api/endpoints.ts"
 CONTROLLER = "backend/src/main/java/com/careeros/user/web/UserController.java"
+KNOWLEDGE_CONTROLLER = "backend/src/main/java/com/careeros/knowledge/web/KnowledgeController.java"
+KNOWLEDGE_PAGE = "frontend/src/app/(app)/knowledge/page.tsx"
 
 PROMISE = "invalidateQueries"
 QUERY_HOOKS = ("useQuery", "useInfiniteQuery", "useSuspenseQuery")
@@ -521,6 +526,56 @@ def test_the_score_the_screen_shows_comes_from_use_resume_while_use_resume_score
     assert "const r = resume.data;" in page, "the screen no longer unwraps it as r"
     assert "score={r.score ?? null}" in page, "the panel no longer renders r.score"
     assert "useResumeScore" not in page, "the screen now mounts the duplicate as well"
+
+
+# --- case 8b: the same duplicate shape, for the palette's search -------------------------------
+
+
+def test_the_search_results_the_palette_shows_come_from_its_own_query_while_use_global_search_asks_again():
+    search_body = hook_body(RESOURCES, "useGlobalSearch")
+    asked = re.search(r"api\.get<unknown>\(([^)]*\)?[^)]*)\)", search_body)
+    assert asked, "the duplicate's request is not readable"
+    assert asked.group(1).startswith("endpoints.search"), (
+        "the duplicate no longer asks the route the palette asks: %s" % asked.group(1)
+    )
+    palette = sources()[PALETTE]
+    assert "endpoints.search" in palette, "the palette stopped naming the route its results come from"
+    assert "useGlobalSearch" not in palette, "the screen now mounts the duplicate as well"
+    # The two stay disjoint in the cache as well: the palette's query is its own, keyed
+    # ["command-search", q], so nothing that ever refreshes ["search", ...] refetches the rows
+    # on screen -- the duplicate serves nobody through invalidation either.
+    keys = {d.segs for d in declarations() if d.rel == PALETTE}
+    assert ("command-search", "*") in keys, "the palette's own key moved: %s" % (sorted(keys),)
+    assert not any(k[:1] == ("search",) for k in keys), (
+        "the palette declares a key in the duplicate's space: %s" % (sorted(keys),)
+    )
+
+
+# --- case 8c: the remaining unmounted query is a window onto rows the list already carries -----
+
+
+def test_the_source_status_the_list_polls_covers_what_use_source_status_asks_again():
+    status_body = hook_body(RESOURCES, "useSourceStatus")
+    asked = re.search(r"api\.get<unknown>\(([^)]*\)?[^)]*)\)", status_body)
+    assert asked, "the window's request is not readable"
+    assert asked.group(1) == "endpoints.knowledgeSourceStatus(id!)", (
+        "the single-source window no longer asks the status route: %s" % asked.group(1)
+    )
+    # The controller still answers it, so the window is onto a live route, not a ghost.
+    controller = read(KNOWLEDGE_CONTROLLER)
+    assert '@GetMapping("/sources/{id}/status")' in controller, "the status route is gone"
+    # Every field the window returns, the list's mapper already carries per row, and the
+    # knowledge page polls that list while anything ingests -- which is how an upload visibly
+    # moves today, with no screen needing the single-source query.
+    list_body = hook_body(RESOURCES, "useKnowledgeSources")
+    assert "refetchInterval" in list_body and '"ingesting"' in list_body, \
+        "the list stopped polling while a row ingests"
+    mapper_body = hook_body(RESOURCES, "mapSource")
+    for field in ("status", "error", "chunkCount", "taskId"):
+        assert field in mapper_body, "the list row lost %s, so the window is no longer redundant" % field
+    page = sources()[KNOWLEDGE_PAGE]
+    assert "useKnowledgeSources(" in page, "the knowledge screen stopped mounting the list"
+    assert "useSourceStatus" not in page, "the screen now mounts the window as well"
 
 
 # --- cases 9-10: what the profile surface says now that a screen says it ----------------------

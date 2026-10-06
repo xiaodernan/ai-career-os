@@ -254,8 +254,10 @@ def test_the_palette_sentence_is_built_from_that_table_and_the_notes_group_is_ba
         f"searchGroupNames no longer builds the sentence from the table, so pinning the footer against the table proves nothing:\n{body}"
 
     footer = read(PALETTE)
-    assert "Search {searchGroupNames()} once the API is live." in footer, \
+    assert "Search {searchGroupNames()} — content results stream in as you type." in footer, \
         "the palette footer no longer interpolates the table, so its capability line is a typed string and this gate is stale"
+    assert "once the API is live" not in footer, \
+        "the footer went back to promising a future for an endpoint SearchController has answered for a while"
     assert "Content search isn't available yet" in footer.replace("&apos;", "'"), \
         "the palette lost its failure line, so the sentence is the only copy a user gets about content search"
 

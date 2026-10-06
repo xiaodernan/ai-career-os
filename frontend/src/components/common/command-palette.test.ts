@@ -31,8 +31,13 @@ describe("the command palette's result list", () => {
   });
 
   it("states the searchable groups from the table that decodes them", () => {
-    // The line used to hand-name four of the six groups the endpoint answers with.
-    expect(source).toContain("Search {searchGroupNames()} once the API is live.");
+    // The line used to hand-name four of the six groups the endpoint answers with, and then
+    // said "once the API is live" — it is live now (SearchController answers GET /search),
+    // so the sentence describes the streaming instead of promising a future.
+    expect(source).toContain(
+      "Search {searchGroupNames()} — content results stream in as you type."
+    );
+    expect(source).not.toContain("once the API is live");
     expect(source).not.toMatch(/resumes, jobs, companies and conversations/);
     expect(source).toContain('import { normalizeSearch, searchGroupNames } from "@/lib/api/normalize"');
   });
