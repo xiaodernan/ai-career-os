@@ -126,12 +126,12 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --no-deps 
 
 | Service    | Health Check                    | Metrics                    |
 |------------|---------------------------------|----------------------------|
-| Backend    | `GET /api/v1/health`            | Prometheus at `/actuator/prometheus` |
-| AI Service | `GET /health`                   | Built-in at `/metrics`     |
-| Frontend   | `GET /` (200 OK)                | Next.js built-in           |
-| Postgres   | `pg_isready`                    | `pg_stat_statements`       |
+| Backend    | `GET /api/v1/health`            | None wired. The health endpoint itself reports the Redis state (`redis: true/false`); add `spring-boot-starter-actuator` + `micrometer-registry-prometheus` to the backend pom if you want a scrape endpoint — there is no `/actuator/*` today. |
+| AI Service | `GET /health`                   | None. The service is internal-only and logs to stdout; there is no `/metrics` route. |
+| Frontend   | `GET /` (200 OK)                | —                          |
+| Postgres   | `pg_isready`                    | `pg_stat_statements` (needs `shared_preload_libraries`, which the compose image does not enable) |
 | Redis      | `redis-cli`                     | `INFO`                     |
-| MinIO      | `mc ready local`                | Prometheus exporter        |
+| MinIO      | `mc ready local`                | Prometheus exporter at `/minio/v2/metrics/cluster` (MinIO serves it by default) |
 
 ---
 
