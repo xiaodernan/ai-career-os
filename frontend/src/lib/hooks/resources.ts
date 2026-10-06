@@ -513,8 +513,8 @@ export function useAIUsage() {
       return {
         requests: num(u, "requests", "requestCount", "request_count", "total"),
         tokensTotal: num(u, "tokensTotal", "tokens_total", "tokens", "totalTokens"),
-        tokensIn: num(u, "tokensIn", "tokens_in", "promptTokens"),
-        tokensOut: num(u, "tokensOut", "tokens_out", "completionTokens"),
+        tokensIn: num(u, "tokensIn", "tokens_in", "promptTokens", "inputTokens"),
+        tokensOut: num(u, "tokensOut", "tokens_out", "completionTokens", "outputTokens"),
         costUsd: num(u, "costUsd", "cost_usd", "cost", "totalCost"),
         byAgent: listOf(u, "byAgent", "by_agent").map((a) => ({
           agent: str(a, "agent", "name", "key") ?? "unknown",
@@ -522,7 +522,7 @@ export function useAIUsage() {
           tokens: num(a, "tokens", "tokensTotal"),
           costUsd: num(a, "costUsd", "cost"),
         })),
-        byModel: listOf(u, "byModel", "by_model").map((m) => ({
+        byModel: listOf(u, "byModel", "by_model", "perModel").map((m) => ({
           model: str(m, "model", "name", "key") ?? "unknown",
           requests: num(m, "requests", "count"),
           tokens: num(m, "tokens", "tokensTotal"),
