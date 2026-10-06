@@ -17,7 +17,8 @@ board spreads its URL-backed `filters`, the dashboard passes `{ size: 3 }`), so 
 cannot be avoided by a bad URL, because `hydrateState` seeds `{...initial}` and only overwrites a
 numeric key when `asUrlNumber` yields an integer, so `filters.size` is 12 or an address-bar integer,
 never absent. `useApplications` has one caller, `{ size: 100 }`, which buries its `50`.
-`useKnowledgeNotes` has no caller at all, so its `50` never reaches a wire.
+`useKnowledgeNotes`'s one caller passes no arguments, so its `50` stands -- and reaches a wire now
+that the knowledge page's notes panel mounts the hook.
 
 The server's side of the same table: four of the eight literals agree with the route's own
 `defaultValue` (resumes 20/20, companies 20/20, jobs 20/20, applications 50/50) and four overstate
@@ -25,8 +26,9 @@ it (knowledge sources, notes, interviews and conversations all ask 50 where the 
 those four defaults are only ever spent by a request the app does not make. The two shadowed
 literals sit in the agreeing half -- jobs 20 against a 20 default, applications 50 against a 50 one
 -- which is why nothing on screen changes when they are unreachable: a redundant number cannot
-contradict anything, and cannot be noticed either. The uncalled third is in the other half (notes 50
-against a 20 default), so its window is wrong on a wire no one builds.
+contradict anything, and cannot be noticed either. The notes literal is in the other half (50
+against a 20 default), so the one wire it now builds carries a number the server would never
+have chosen.
 
 The reachable numbers have consequences the screens do not cover. The applications board asks for
 exactly `Paging.MAX_PAGE_SIZE` (100), which `Paging`'s own comment answers with "A caller wanting
@@ -36,8 +38,8 @@ applications screen renders no pager and reads no `total`: its 101st application
 undefined param rather than sending the word, and the handler defaults `limit` to 30 through
 `Paging.first`.
 
-Nothing here is fixed: which number should win, whether the notes hook should have a caller, and
-whether the applications board should page or raise its ceiling are owner decisions. What lands is
+Nothing here is fixed: which number should win, and whether the applications board should page or
+raise its ceiling are owner decisions. What lands is
 the measurement -- per hook, per call site, per route -- from one walk of each of the three tables.
 """
 
@@ -89,7 +91,7 @@ SITES = {
     "useApplications": [("app/(app)/applications/page.tsx", "{ size: 100 }")],
     "useCompanies": [("app/(app)/companies/page.tsx", "")],
     "useKnowledgeSources": [("app/(app)/knowledge/page.tsx", "true, src")],
-    "useKnowledgeNotes": [],
+    "useKnowledgeNotes": [("components/knowledge/notes-panel.tsx", "")],
     "useInterviewSessions": [("app/(app)/interviews/page.tsx", "")],
     "useActivityRuns": [("app/(app)/activity/page.tsx", ""),
                         ("app/(app)/dashboard/page.tsx", "{ limit: 5 }")],
@@ -310,7 +312,7 @@ def test_every_number_a_hook_offers_is_inside_the_ceiling_the_server_enforces():
         "Paging.of no longer clamps both ends, so this range claims nothing about it"
 
 
-def test_the_two_literals_no_caller_can_reach_and_the_hook_no_caller_calls():
+def test_the_two_literals_every_caller_shadows_and_none_without_a_caller():
     """Case 3: the call-site census, and the verdict it yields for each literal."""
     derived = {hook: call_sites(hook) for hook in WIRE}
     assert derived == SITES, f"the call sites moved: {derived}"
@@ -328,8 +330,10 @@ def test_the_two_literals_no_caller_can_reach_and_the_hook_no_caller_calls():
                       if derived[hook] and not any(offers_no_size(arg) for _, arg in derived[hook]))
     assert shadowed == ["useApplications", "useJobs"], \
         f"these literals are shadowed by every caller: {shadowed}"
+    # Empty since the notes panel: every size literal has a caller now, and the notes hook's one
+    # caller passes no arguments, so its own 50 stands and reaches the wire.
     uncalled = sorted(hook for hook in with_size if derived[hook] == [])
-    assert uncalled == ["useKnowledgeNotes"], \
+    assert uncalled == [], \
         f"these hooks have no caller at all, so their window is never spent: {uncalled}"
 
 

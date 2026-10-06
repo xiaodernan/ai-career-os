@@ -5,8 +5,9 @@ inline arrow mappers -- object literals passed straight to `normalizePage` (or t
 query hook -- which that file deliberately left out. This file binds those six, plus the four hooks
 that pass them, to the route each hook calls and the Java that answers it.
 
-What the six turn out to be is not the same shape as the named half. Two of the four hooks are live
-screens (`useSavedJobs` on /jobs, `useConversations` on /copilot) and their rows are mostly honest:
+What the six turn out to be is not the same shape as the named half. Three of the four hooks are live
+screens (`useSavedJobs` on /jobs, `useConversations` on /copilot, `useKnowledgeNotes` through the
+knowledge page's notes panel) and their rows are mostly honest:
 the note row asks sixteen names and `NoteItem` answers six of them, `ConversationItem` answers
 every *primary* ask and the copilot screen reads five of the seven authored names. One hook is a
 bare-list route: `GET /jobs/saved` answers `List<SavedJobItem>`, so `normalizePage` takes its array
@@ -24,9 +25,10 @@ summary also computes and emits `inputTokens`, `outputTokens`, `cachedTokens` an
 hook asks `tokensIn`/`tokensOut`/`tokensTotal` and so drops all four, including the cached-token
 column whose counting was the whole subject of #67. The hook has a caller now: the dashboard's
 "Agent spend" card mounts `useAIUsage` and reads `requests`, `tokensTotal` and `costUsd` off it --
-three of the twenty-six asks finally consumed -- while `useKnowledgeNotes` is still named only at
-its own definition, and the `AIUsageSummary` interface that mirrors the mapper's shape is named
-only in `types.ts`. This file does not delete the dead names; it pins which name is dead in which
+three of the twenty-six asks finally consumed -- and `useKnowledgeNotes` left the no-caller set too
+when the knowledge page's notes panel mounted it and `useNoteMutations`, so all four hooks reach a
+screen now. The `AIUsageSummary` interface that mirrors the mapper's shape is still named only
+in `types.ts`. This file does not delete the dead names; it pins which name is dead in which
 direction, so the next reader of this panel starts from the eight keys the handler actually writes.
 """
 
@@ -193,7 +195,7 @@ READER_VOCABULARY = {"list": "listOf", "pick": "pick", "str": "str", "num": "num
 CALLERS = {
     "useSavedJobs": ["app/(app)/jobs/page.tsx"],
     "useConversations": ["app/(app)/copilot/page.tsx"],
-    "useKnowledgeNotes": [],
+    "useKnowledgeNotes": ["components/knowledge/notes-panel.tsx"],
     "useAIUsage": ["app/(app)/dashboard/page.tsx"],
 }
 COPILOT_READS = {"createdAt", "id", "lastMessagePreview", "title", "updatedAt"}
@@ -597,11 +599,13 @@ def test_a_dead_name_here_is_either_another_records_author_or_no_ones_at_all():
             f"{key}: unauthored names are now {sorted(dead - names)}")
 
 
-def test_the_hook_with_no_caller_reaches_no_screen():
-    """Dead names on a live route cost a screen; dead names on an unreachable hook cost nothing.
+def test_every_hook_is_named_by_the_screen_that_mounts_it():
+    """No hook in `resources.ts` is named only at its own definition any more.
 
-    `useAIUsage` left this set when the dashboard's spend card started mounting it; its dead names
-    sit on a live route now, which is exactly the class this case exists to distinguish.
+    `useAIUsage` was the last one until the dashboard's spend card mounted it, and its dead names
+    sit on a live route now, which is exactly the class the old no-caller case existed to
+    distinguish; `useKnowledgeNotes` joined the mounted side when the knowledge page grew its notes
+    panel, so the no-caller class is empty and this case pins each hook's carrier set instead.
     """
     for hook, expected in CALLERS.items():
         found = [rel for rel in carriers(hook) if rel != "lib/hooks/resources.ts"]

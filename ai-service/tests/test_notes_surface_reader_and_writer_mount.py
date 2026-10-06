@@ -1,21 +1,21 @@
-"""The knowledge-notes surface: the app can neither write it nor read it, and the palette promises it.
+"""The knowledge-notes surface: the reader and the writer mount, and the palette promise predates them.
 
-Three shipped tables make the claim, and one walk reads each of them. `endpoints.knowledgeNotes` names
-the route, `KnowledgeController` binds it four ways, and `SEARCH_GROUPS` links a "Notes" hit to
-`/knowledge`. Walking the first two through the client gives two exported hooks -- `useKnowledgeNotes`
-and `useNoteMutations` -- and walking those gives no call site, so no screen can list a note, create
-one, edit one or delete one. Walking the entity gives one writer, `KnowledgeService.createNote`, which
-sits behind the POST no client calls, and no seed, migration or Python path writes the table: the only
-thing in this repository that ever posts a note is `DomainApiIT`.
+This file used to pin the surface as dead -- two exported hooks with no call site, a palette sentence
+naming a group no screen could fill. Both ends closed when the knowledge page grew a notes panel:
+`components/knowledge/notes-panel.tsx` mounts `useKnowledgeNotes` (the reader, `GET /knowledge/notes`
+through `normalizePage`) and `useNoteMutations` (the writer, POST/PATCH/DELETE through the same
+route), so the `["knowledge","notes"]` invalidation in `actions.ts` refreshes a query a screen
+subscribes to. The page itself still imports one data hook from `resources.ts` -- the sources list --
+because the notes reader lives in the panel component, not in the page.
 
-The promise is still on screen. `command-palette.tsx` renders `Search {searchGroupNames()} once the API
-is live.` -- a sentence built from that same table -- and the notes row's `href` is the constant
-`/knowledge`, the screen whose one data hook is the sources list. So a note hit would link to a board
-that cannot show it, and today the group is empty because nothing in the product can fill it.
+What did not move: the writer census. The only server-side author of a note row is still
+`KnowledgeService.createNote`, behind the POST the client now calls; no seed, migration or Python
+path writes the table. And the palette still builds its capability sentence from `SEARCH_GROUPS`, so
+the "Notes" hit links to a screen that can finally render one.
 
-Nothing here is a fix. These gates hold the shape still: closing the loop needs a notes reader in a
-screen, or a writer, or the group out of the table and its label out of the sentence -- and the last
-case prints which of the three has happened, because it re-derives all three from the walks.
+These gates hold the new shape still: a second caller for either hook, a notes reader outside the
+knowledge panel, a seed under the table, or the group leaving the table all have to cost an edit
+here, because every one of them is re-derived from the walks below.
 """
 
 from __future__ import annotations
@@ -34,6 +34,7 @@ NORMALIZE = "frontend/src/lib/api/normalize.ts"
 PALETTE = "frontend/src/components/common/command-palette.tsx"
 ENDPOINTS = "frontend/src/lib/api/endpoints.ts"
 NOTE_ROUTE = "/knowledge/notes"
+NOTES_PANEL = "frontend/src/components/knowledge/notes-panel.tsx"
 
 
 def read(rel: str) -> str:
@@ -119,41 +120,40 @@ def query_keys(rel: str) -> dict[str, list[tuple[str, str]]]:
     return out
 
 
-def test_the_notes_route_has_two_client_hooks_and_neither_has_a_call_site() -> None:
-    """`GET/POST/PATCH/DELETE /knowledge/notes` are served, and no screen reaches them."""
+def test_the_notes_route_has_two_client_hooks_and_a_screen_reaches_both() -> None:
+    """`GET/POST/PATCH/DELETE /knowledge/notes` are served, and the notes panel is the one caller."""
     routes = re.findall(r'@(Get|Post|Patch|Delete)Mapping\("(/notes[^"]*)"\)', read(CONTROLLER))
     assert sorted(v.upper() for v, _ in routes) == ["DELETE", "GET", "PATCH", "POST"], \
         f"the server no longer binds the four note verbs this gate assumes: {routes}"
 
     files = client_sources()
-    assert len(files) > 40, f"the client census read almost nothing ({len(files)} files): the gate would prove absence by reading no source"
+    assert len(files) > 40, f"the client census read almost nothing ({len(files)} files): the gate would prove reach by reading no source"
     hooks = hooks_using_note_route()
     assert set(hooks) == {"useKnowledgeNotes", "useNoteMutations"}, \
         f"the notes route now has a different set of client hooks: {hooks}"
 
-    unreachable = {name: hook_call_sites(name) for name in hooks}
-    assert all(not sites for sites in unreachable.values()), \
-        f"a note hook gained a caller, so this file's dead-surface claim must be re-measured, not edited: " \
-        f"{ {k: v for k, v in unreachable.items() if v} }"
+    callers = {name: hook_call_sites(name) for name in hooks}
+    assert all(sites == [NOTES_PANEL] for sites in callers.values()), \
+        f"the notes hooks gained or lost a caller, so this file's reach claim must be re-measured: {callers}"
     assert hooks["useKnowledgeNotes"] == RESOURCES and hooks["useNoteMutations"] == ACTIONS, \
         f"the two hooks moved off the files whose mappers the other cases read: {hooks}"
 
 
-def test_the_only_writer_of_note_rows_is_behind_the_post_no_client_calls() -> None:
+def test_the_only_writer_of_note_rows_is_behind_the_post_the_client_calls() -> None:
     """One `new UserNote(` in the shipped product, and no seed, migration or Python path writes the table."""
     writers = []
     for path in (ROOT / "backend" / "src" / "main").rglob("*.java"):
         if re.search(r"\bnew UserNote\(", path.read_text(encoding="utf-8", errors="replace")):
             writers.append(path.relative_to(ROOT).as_posix())
     assert writers == ["backend/src/main/java/com/careeros/knowledge/service/KnowledgeService.java"], \
-        f"note rows now have another Java author, so the unreachable-writer claim needs re-measuring: {writers}"
+        f"note rows now have another Java author, so the single-writer claim needs re-measuring: {writers}"
     assert re.search(r"public NoteItem createNote", read(
         "backend/src/main/java/com/careeros/knowledge/service/KnowledgeService.java")), \
-        "the one author is no longer reached through createNote, which is the route the client cannot call"
+        "the one author is no longer reached through createNote, which is the route the panel writes through"
 
     sql = read("backend/src/main/resources/db/migration/V1__init_schema.sql")
     assert not re.search(r"INSERT INTO user_notes", sql), \
-        "a migration now seeds note rows, so the palette's Notes group is no longer guaranteed empty"
+        "a migration now seeds note rows, so the client no longer authors everything on screen"
 
     service = []
     walked = 0
@@ -167,10 +167,10 @@ def test_the_only_writer_of_note_rows_is_behind_the_post_no_client_calls() -> No
                 service.append(path.relative_to(ROOT).as_posix())
     assert walked > 30, f"the writer census read {walked} files, so its silence proves nothing"
     assert service == [], \
-        f"a seed, script or e2e path now names the notes route or its table ({service}): the group may no longer be empty"
+        f"a seed, script or e2e path now names the notes route or its table ({service}): the surface may have a second writer"
 
 
-def test_the_only_thing_that_ever_posts_a_note_is_a_java_test() -> None:
+def test_the_files_that_speak_of_the_notes_route() -> None:
     """Every file in the repository naming the route, counted as one walk -- including this gate."""
     sites = []
     skip_parts = {"node_modules", "__pycache__", "dist", "build", "target"}
@@ -182,13 +182,18 @@ def test_the_only_thing_that_ever_posts_a_note_is_a_java_test() -> None:
             continue
         if NOTE_ROUTE in path.read_text(encoding="utf-8", errors="replace"):
             sites.append(rel)
+    # The page and the panel speak the route too now: the page imports the panel (the import path
+    # contains the route as a substring), and the panel's docstring spells the four verbs it calls.
     assert sites == [
+        "ai-service/tests/test_anonymous_mappers_producers_ship.py",
         f"ai-service/tests/{Path(__file__).name}",
         "ai-service/tests/test_window_sizes_whose_callers_decide_them_ship.py",
         "backend/src/test/java/com/careeros/DomainApiIT.java",
         "backend/src/test/java/com/careeros/PagingApiIT.java",
         "backend/src/test/java/com/careeros/ratelimit/RateLimitFilterTest.java",
         "docs/API.md",
+        "frontend/src/app/(app)/knowledge/page.tsx",
+        NOTES_PANEL,
         "frontend/src/lib/api/endpoints.test.ts",
         "frontend/src/lib/api/endpoints.ts",
     ], f"a new speaker about the notes route appeared, or one stopped: {sites}"
@@ -196,39 +201,45 @@ def test_the_only_thing_that_ever_posts_a_note_is_a_java_test() -> None:
         "the client's endpoint map no longer spells the route this census searched for, so its hits are not the client's"
 
 
-def test_the_knowledge_screen_has_one_data_hook_and_it_is_the_sources_list() -> None:
-    """`/knowledge` renders sources: the notes board it is linked to from the palette does not exist here."""
+def test_the_knowledge_screen_keeps_one_page_hook_and_the_notes_reader_lives_in_the_panel() -> None:
+    """`/knowledge` renders sources through the page and notes through the panel component."""
     text = read(KNOWLEDGE_PAGE)
     imported = re.findall(r'import \{([^}]*)\} from "@/lib/hooks/resources"', text)
     names = sorted(n.strip() for chunk in imported for n in chunk.split(",") if n.strip())
     assert names == ["useKnowledgeSources"], \
-        f"/knowledge now pulls a different set of data hooks, so the screen the Notes group links to changed: {names}"
-    assert "useKnowledgeNotes" not in text and NOTE_ROUTE not in text, \
-        "the knowledge screen gained a notes reader, so the palette's Notes link is no longer a dead end"
+        f"/knowledge now pulls a different set of data hooks into the page, so the screen's shape changed: {names}"
+    # The page's one note-route mention is the panel import itself -- "components/knowledge/notes-panel"
+    # contains "/knowledge/notes" as a substring -- so the route check runs on the page minus imports.
+    without_imports = "\n".join(line for line in text.splitlines() if not line.startswith("import "))
+    assert "useKnowledgeNotes" not in text and NOTE_ROUTE not in without_imports, \
+        "the knowledge page itself gained a notes reader; the split this file pins (page = sources, panel = notes) is gone"
+
     components = sorted(p.relative_to(ROOT).as_posix() for p in (ROOT / "frontend" / "src" / "components" / "knowledge").rglob("*.tsx")
                         if re.search(r"\bKnowledgeNote\b|endpoints\.knowledgeNotes\b",
                                      p.read_text(encoding="utf-8", errors="replace")))
-    assert components == [], f"a knowledge component reads notes, which this screen does not: {components}"
+    assert components == [NOTES_PANEL], \
+        f"the notes reader moved or gained a sibling knowledge component: {components}"
 
 
-def test_the_group_table_links_notes_to_a_screen_that_cannot_render_a_note() -> None:
-    """The notes row's `href` is a constant, so its destination is a screen, and that screen has one query."""
+def test_the_group_table_links_notes_to_the_screen_that_now_renders_them() -> None:
+    """The notes row's `href` is a constant, so its destination is a screen, and that screen renders notes."""
     rows = search_group_rows()
     assert [r["key"] for r in rows] == ["jobs", "companies", "resumes", "notes", "conversations", "applications"], \
         f"the group table's rows or order moved, so the palette's sentence names a different list: {[r['key'] for r in rows]}"
     notes = next(r for r in rows if r["key"] == "notes")
     assert notes["href_args"] == "" and notes["href_body"] == '"/knowledge"', \
         f"the notes row now links somewhere that carries an id ({notes['href_args']} => {notes['href_body']}): " \
-        "re-read the destination screen before trusting the dead-end claim"
+        "re-read the destination screen before trusting the reach claim"
     assert not any(r["href_args"] == "" and r["href_body"] == '"/knowledge"' for r in rows if r["key"] != "notes"), \
-        "another group also links to /knowledge, so the screen's single query now serves two kinds"
+        "another group also links to /knowledge, so the screen's sources query now serves two kinds"
 
     page = read(KNOWLEDGE_PAGE)
     assert re.findall(r'import \{([^}]*)\} from "@/lib/hooks/resources"', page), \
         "the destination screen stopped importing its data hook, so this gate can no longer say what it renders"
+    assert "NotesPanel" in page, "the destination screen stopped rendering the notes panel the link lands on"
 
 
-def test_the_palette_sentence_is_built_from_that_table_and_names_the_unreachable_group() -> None:
+def test_the_palette_sentence_is_built_from_that_table_and_the_notes_group_is_backed_now() -> None:
     """`searchGroupNames()` is the footer's subject: the sentence on screen is the table, not a typed string."""
     labels = [r["label"].lower() for r in search_group_rows()]
     sentence = ", ".join(labels[:-1]) + f" and {labels[-1]}"
@@ -249,12 +260,12 @@ def test_the_palette_sentence_is_built_from_that_table_and_names_the_unreachable
         "the palette lost its failure line, so the sentence is the only copy a user gets about content search"
 
     hooks = hooks_using_note_route()
-    assert all(not hook_call_sites(name) for name in hooks), \
-        "a notes hook became reachable, so the group the sentence names may no longer be the unreachable one"
+    assert all(hook_call_sites(name) for name in hooks), \
+        "a notes hook lost its caller, so the group the sentence names went back to being a promise"
 
 
-def test_the_note_mutations_invalidate_a_key_no_reachable_query_declares() -> None:
-    """`["knowledge","notes"]` is invalidated by a hook nobody calls, over a key nobody subscribes to."""
+def test_the_note_mutations_invalidate_a_key_the_mounted_query_subscribes_to() -> None:
+    """`["knowledge","notes"]` is invalidated by a hook the panel calls, over a key the panel reads."""
     keys = query_keys(ACTIONS)
     assert "useNoteMutations" in keys, f"the note actions are no longer an exported hook this walk reads: {sorted(keys)}"
     invalidated = [k for name, ks in keys.items() for k in ks if name == "useNoteMutations"]
@@ -267,9 +278,9 @@ def test_the_note_mutations_invalidate_a_key_no_reachable_query_declares() -> No
         f"no hook declares the notes key the mutations invalidate: {sorted(declared)}"
     subscriber = [name for name, ks in readers.items() if ("knowledge", "notes") in ks]
     assert subscriber == ["useKnowledgeNotes"], \
-        f"the notes key is now subscribed by {subscriber}: gate its screen before calling the invalidation pointless"
-    assert not hook_call_sites("useKnowledgeNotes"), \
-        "useKnowledgeNotes gained a caller, so the invalidation now refreshes something on screen"
+        f"the notes key is now subscribed by {subscriber}: re-read which query the invalidation refreshes"
+    assert hook_call_sites("useKnowledgeNotes"), \
+        "useKnowledgeNotes lost its caller, so the invalidation refreshes an empty set again"
 
     control = [name for name, ks in readers.items() if ("knowledge", "sources") in ks]
     assert control == ["useKnowledgeSources"] and hook_call_sites("useKnowledgeSources"), \
@@ -287,13 +298,13 @@ def test_the_word_notes_in_the_app_belongs_to_two_tables_and_only_one_is_the_gro
         "normalize.ts no longer reads a `notes` list from some other payload: if the second namespace went away, say so here"
 
 
-def test_the_surface_closes_one_of_three_ways_and_today_none_of_the_two_ends_exists() -> None:
-    """reader / writer / promise: exactly one of the three is true, and it is the promise."""
+def test_the_surface_closed_through_the_reader_and_the_writer() -> None:
+    """reader / writer / promise: the first two went true together; the promise was always there."""
     reader = bool(hook_call_sites("useKnowledgeNotes"))
     writer = bool(hook_call_sites("useNoteMutations"))
     promise = "notes" in [r["label"].lower() for r in search_group_rows()]
 
-    assert (reader, writer, promise) == (False, False, True), \
+    assert (reader, writer, promise) == (True, True, True), \
         f"the notes surface changed shape (reader={reader}, writer={writer}, promise={promise}). " \
-        "The three ways to close it are: give a screen a notes reader, give one a notes writer, or drop the " \
-        "row from SEARCH_GROUPS so the palette stops naming the group. Update this file to say which happened."
+        "The reader and the writer mounted together in the knowledge page's notes panel; if either went " \
+        "false, the palette's Notes group is a dead end again and this file has to say which end broke."

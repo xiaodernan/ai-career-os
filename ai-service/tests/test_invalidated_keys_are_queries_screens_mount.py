@@ -24,9 +24,11 @@ Four walks, none of which imports production code:
 4. the users controller, for the fact that the unmounted profile surface is real on the server.
 
 What the walk records, and does not fix: 43 promises, every one of them naming a declared key, and
-three of them (`["knowledge","notes"]` and `["profile"]` twice) whose every match belongs to a hook
-no screen mounts -- alongside six unmounted declarations in total. The career-profile surface is the
-larger half of that: one query, two mutations, three toasts, backed by a real
+two of them (`["profile"]` twice) whose every match belongs to a hook no screen mounts -- alongside
+four unmounted declarations in total. The knowledge-notes half of the original ledger closed when
+the knowledge page grew a notes panel that mounts `useKnowledgeNotes` and `useNoteMutations`, so the
+`["knowledge","notes"]` invalidation finally refreshes a mounted query. The career-profile surface
+is all that remains: one query, two mutations, three toasts, backed by a real
 `GET` + `PATCH /api/v1/users/me/profile`, with no screen anywhere in the app that names any of it.
 
 Closing those is an owner's choice (mount a screen or delete the data layer), and the first four
@@ -366,27 +368,28 @@ def test_every_invalidation_promise_names_a_key_some_query_declares():
 # --- cases 2-4: the promises that refresh nothing a user can see ------------------------------
 
 
-def test_three_promises_refresh_only_queries_no_screen_mounts():
+def test_two_promises_refresh_only_queries_no_screen_mounts():
     pairs = dead_promises()
     assert pairs, "the ledger of dead promises was satisfied by an empty walk"
     derived = {(p.rel.split("/")[-1], p.fn, p.segs) for p, _ in pairs}
+    # Two rather than three since the notes panel: `["knowledge","notes"]` now refreshes a
+    # query the knowledge page mounts, so it left this ledger.
     assert derived == {
-        ("actions.ts", "useNoteMutations", ("knowledge", "notes")),
         ("actions.ts", "useUpdateProfile", ("profile",)),
         ("actions.ts", "useUpdateProfileDetails", ("profile",)),
     }, "dead promises moved: %s (lines %s)" % (sorted(derived), sorted(p.where for p, _ in pairs))
 
 
-def test_five_queries_are_declared_by_hooks_no_screen_mounts():
+def test_four_queries_are_declared_by_hooks_no_screen_mounts():
     dead = unmounted_declarations()
-    assert len(dead) >= 5, "only %d unmounted declarations walked" % len(dead)
+    assert len(dead) >= 4, "only %d unmounted declarations walked" % len(dead)
     by_name = {d.fn: d.segs for d in dead}
-    # `useAIUsage` left this ledger when the dashboard's spend card started mounting it
+    # `useAIUsage` left this ledger when the dashboard's spend card started mounting it,
+    # `useKnowledgeNotes` when the knowledge page grew its notes panel.
     assert by_name == {
         "useProfile": ("profile",),
         "useResumeScore": ("resume", "*", "score"),
         "useSourceStatus": ("knowledge", "source", "*", "status"),
-        "useKnowledgeNotes": ("knowledge", "notes"),
         "useGlobalSearch": ("search", "*"),
     }, "unmounted queries moved: %s" % sorted(by_name)
     for d in dead:
@@ -396,7 +399,6 @@ def test_five_queries_are_declared_by_hooks_no_screen_mounts():
 def test_each_dead_promise_names_the_one_unmounted_query_it_wasted_on():
     owners = {(p.fn, p.segs): sorted({d.fn for d in matches(p)}) for p, _ in dead_promises()}
     assert owners == {
-        ("useNoteMutations", ("knowledge", "notes")): ["useKnowledgeNotes"],
         ("useUpdateProfile", ("profile",)): ["useProfile"],
         ("useUpdateProfileDetails", ("profile",)): ["useProfile"],
     }, "the promise-to-query pairing moved: %s" % owners

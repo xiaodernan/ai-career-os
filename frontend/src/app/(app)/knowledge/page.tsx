@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SourceDeleteButton, SourceUploadCard } from "@/components/knowledge/source-actions";
+import { NotesPanel } from "@/components/knowledge/notes-panel";
 import { useKnowledgeSources } from "@/lib/hooks/resources";
 import { useUrlState } from "@/lib/hooks/use-url-state";
 import { knowledgeFocus } from "@/lib/knowledge-focus";
@@ -88,6 +89,9 @@ export default function KnowledgePage() {
         </Card>
       )}
     />
+    {/* Notes live beside the sources, not inside them: a note is its own UserNote row, not an
+      ingested document, and the `?src=` citation focus narrows documents only. */}
+    {!src && <NotesPanel />}
     </div>
   );
 }
