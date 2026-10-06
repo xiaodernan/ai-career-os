@@ -512,7 +512,7 @@ export function useAIUsage() {
       const u = pick(raw, "summary", "data") ?? raw;
       return {
         requests: num(u, "requests", "requestCount", "request_count", "total"),
-        tokensTotal: num(u, "tokensTotal", "tokens_total", "tokens"),
+        tokensTotal: num(u, "tokensTotal", "tokens_total", "tokens", "totalTokens"),
         tokensIn: num(u, "tokensIn", "tokens_in", "promptTokens"),
         tokensOut: num(u, "tokensOut", "tokens_out", "completionTokens"),
         costUsd: num(u, "costUsd", "cost_usd", "cost", "totalCost"),
