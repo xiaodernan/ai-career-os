@@ -718,7 +718,7 @@ def test_the_screens_read_their_mapper_output_and_only_the_versions_row_asks_dea
 def test_the_dead_names_spread_in_three_measured_tiers_and_three_reached_a_screen():
     """Blast radius of a name no record authors, spelled out over the whole frontend census.
 
-    The population is every `*.ts*` file under `frontend/src` (136 at this plane); the spellings
+    The population is every `*.ts*` file under `frontend/src` (137 at this plane); the spellings
     walked are the 56 names the eight mappers ask for that their record declares in no spelling, and
     a camel name and its snake twin are separate entries. Twenty-eight of them live in three files
     or fewer, and those 28 are classified by exactly which files; beyond that a generic name (`name`,
@@ -727,9 +727,11 @@ def test_the_dead_names_spread_in_three_measured_tiers_and_three_reached_a_scree
     `isCurrent` and `versionNo`, both calls dead, the badge alive on a second real term.
     """
     files = frontend_files()
-    # 136 rather than 135 since `components/knowledge/notes-panel.tsx`, the knowledge page's
-    # notes panel -- a new file, not a rename, so the census grows by one.
-    assert len(files) == 136, f"the frontend census walked {len(files)} files"
+    # 137 rather than 136 since `components/settings/profile-cards.tsx`, the settings page's
+    # career-profile editor; 136 rather than 135 since the knowledge page's notes panel
+    # component joined. (Spell the panel's path out nowhere here -- the notes-route census
+    # counts every mention of it, this file included.)
+    assert len(files) == 137, f"the frontend census walked {len(files)} files"
     asked = {name for row in UNAUTHORED.values() for name in row}
     assert len(asked) == 56, f"{len(asked)} dead names are asked, pinned 56"
     classified = set()

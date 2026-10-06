@@ -21,18 +21,16 @@ Four walks, none of which imports production code:
    somewhere else in the non-test sources; a key declared inside a page or component file is mounted
    by the file that renders it;
 3. the resume detail screen, for the one chain where the prefix relation is the entire design;
-4. the users controller, for the fact that the unmounted profile surface is real on the server.
+4. the users controller, for the fact that the profile surface is real on the server and now has a
+   screen to answer.
 
-What the walk records, and does not fix: 43 promises, every one of them naming a declared key, and
-two of them (`["profile"]` twice) whose every match belongs to a hook no screen mounts -- alongside
-four unmounted declarations in total. The knowledge-notes half of the original ledger closed when
-the knowledge page grew a notes panel that mounts `useKnowledgeNotes` and `useNoteMutations`, so the
-`["knowledge","notes"]` invalidation finally refreshes a mounted query. The career-profile surface
-is all that remains: one query, two mutations, three toasts, backed by a real
-`GET` + `PATCH /api/v1/users/me/profile`, with no screen anywhere in the app that names any of it.
-
-Closing those is an owner's choice (mount a screen or delete the data layer), and the first four
-cases make either move cost a ledger edit. What is *not* a choice is the live chain: the Versions
+What the walk records, and does not fix: 43 promises, every one of them naming a declared key -- and
+since the settings page grew its account and career-profile editors, every promise's matches include
+a query a screen mounts, so the dead-promise ledger this file used to pin is empty. Three declared
+queries are still unmounted (`useResumeScore`, `useSourceStatus`, `useGlobalSearch`), each a
+duplicate or a window onto data another hook already fetches. Closing those is an owner's choice
+(mount a screen or delete the data layer), and the first cases make either move cost a ledger edit.
+What is *not* a choice is the live chain: the Versions
 panel on the resume detail screen refreshes after a parse only because the two mutations and the
 query share a key prefix and a route parameter on one screen, and the last cases bind that claim to
 the comment that states it.
@@ -368,26 +366,22 @@ def test_every_invalidation_promise_names_a_key_some_query_declares():
 # --- cases 2-4: the promises that refresh nothing a user can see ------------------------------
 
 
-def test_two_promises_refresh_only_queries_no_screen_mounts():
+def test_no_promise_refreshes_only_queries_no_screen_mounts():
     pairs = dead_promises()
-    assert pairs, "the ledger of dead promises was satisfied by an empty walk"
-    derived = {(p.rel.split("/")[-1], p.fn, p.segs) for p, _ in pairs}
-    # Two rather than three since the notes panel: `["knowledge","notes"]` now refreshes a
-    # query the knowledge page mounts, so it left this ledger.
-    assert derived == {
-        ("actions.ts", "useUpdateProfile", ("profile",)),
-        ("actions.ts", "useUpdateProfileDetails", ("profile",)),
-    }, "dead promises moved: %s (lines %s)" % (sorted(derived), sorted(p.where for p, _ in pairs))
+    # Empty since the settings page's account + career-profile editors mounted `useProfile`: the
+    # ["profile"] promises left the ledger the same way the notes one did, screen first.
+    assert pairs == [], "dead promises appeared: %s (lines %s)" % (
+        [(repr(p), repr(d)) for p, d in pairs], sorted(p.where for p, _ in pairs))
 
 
-def test_four_queries_are_declared_by_hooks_no_screen_mounts():
+def test_three_queries_are_declared_by_hooks_no_screen_mounts():
     dead = unmounted_declarations()
-    assert len(dead) >= 4, "only %d unmounted declarations walked" % len(dead)
+    assert len(dead) >= 3, "only %d unmounted declarations walked" % len(dead)
     by_name = {d.fn: d.segs for d in dead}
     # `useAIUsage` left this ledger when the dashboard's spend card started mounting it,
-    # `useKnowledgeNotes` when the knowledge page grew its notes panel.
+    # `useKnowledgeNotes` when the knowledge page grew its notes panel, `useProfile` when the
+    # settings page grew its account + career-profile editors.
     assert by_name == {
-        "useProfile": ("profile",),
         "useResumeScore": ("resume", "*", "score"),
         "useSourceStatus": ("knowledge", "source", "*", "status"),
         "useGlobalSearch": ("search", "*"),
@@ -396,15 +390,14 @@ def test_four_queries_are_declared_by_hooks_no_screen_mounts():
         assert mentions(d.fn) == [], "%s is named outside its own declaration: %s" % (d.where, mentions(d.fn))
 
 
-def test_each_dead_promise_names_the_one_unmounted_query_it_wasted_on():
-    owners = {(p.fn, p.segs): sorted({d.fn for d in matches(p)}) for p, _ in dead_promises()}
-    assert owners == {
-        ("useUpdateProfile", ("profile",)): ["useProfile"],
-        ("useUpdateProfileDetails", ("profile",)): ["useProfile"],
-    }, "the promise-to-query pairing moved: %s" % owners
-    for names in owners.values():
-        for name in names:
-            assert mentions(name) == [], "the paired query %s is mounted" % name
+def test_every_promise_pairs_with_a_query_a_screen_mounts():
+    owners = {(p.fn, p.segs): sorted({d.fn for d in matches(p)}) for p in promises()}
+    # The inverse of the dead ledger above: every promise's matches include at least one mounted
+    # declaration, so a regression prints which promise went dark instead of which screen starved.
+    unmounted = {d.fn for d in unmounted_declarations()}
+    for (fn, segs), names in sorted(owners.items()):
+        mounted = [n for n in names if n not in unmounted]
+        assert mounted, "the promise (%s, %s) only feeds unmounted queries: %s" % (fn, segs, names)
 
 
 # --- cases 5-6: the live chain, and the comment that states why it works ----------------------
@@ -485,10 +478,10 @@ def test_the_comment_that_explains_that_refresh_quotes_keys_the_code_ships():
     )
 
 
-# --- case 7: one handler, one live key and one dead one --------------------------------------
+# --- case 7: one handler, and both of its keys are live ---------------------------------------
 
 
-def test_the_profile_handler_writes_a_live_key_and_an_unmounted_one_in_the_same_callback():
+def test_the_profile_handler_writes_and_invalidates_live_keys_in_the_same_callback():
     live = [s for s in cache_reads_writes() if s.fn == "useUpdateProfile" and s.callee == "setQueryData"]
     assert [s.segs for s in live] == [("me",)], "the optimistic write is %s" % [repr(s) for s in live]
     assert any(mounted(d) for d in matches(live[0])), (
@@ -497,11 +490,14 @@ def test_the_profile_handler_writes_a_live_key_and_an_unmounted_one_in_the_same_
     sites = [p for p in promises() if p.fn == "useUpdateProfile"]
     keys = [p.segs for p in sites]
     assert keys == [("me",), ("profile",)], "onSuccess now invalidates %s" % (keys,)
+    # Both halves are live since the settings page mounted its editors: the optimistic write lands
+    # on ["me"] and the invalidation hits ["profile"] through `useProfile`. The live/dead split this
+    # file used to pin inside one handler is gone; the case stays to notice it coming back.
     live_keys = [p.segs for p in sites if any(mounted(d) for d in matches(p))]
     dead_keys = [p.segs for p in sites if not any(mounted(d) for d in matches(p))]
-    assert live_keys == [("me",)], "which half of the handler is live moved: %s" % (live_keys,)
-    assert dead_keys == [("profile",)], (
-        "the live/dead split inside one handler is gone; the handler is %s" % [repr(p) for p in sites]
+    assert live_keys == [("me",), ("profile",)], "which half of the handler is live moved: %s" % (live_keys,)
+    assert dead_keys == [], (
+        "a dead half appeared inside the handler; the handler is %s" % [repr(p) for p in sites]
     )
 
 
@@ -527,17 +523,19 @@ def test_the_score_the_screen_shows_comes_from_use_resume_while_use_resume_score
     assert "useResumeScore" not in page, "the screen now mounts the duplicate as well"
 
 
-# --- cases 9-10: what the unmounted surface costs, and what it never says ---------------------
+# --- cases 9-10: what the profile surface says now that a screen says it ----------------------
 
 
-def test_the_unmounted_profile_surface_is_real_on_the_server():
+def test_the_profile_surface_is_real_on_the_server_and_mounted_by_a_screen():
     controller = read(CONTROLLER)
     assert '@RequestMapping("/api/v1/users")' in controller
     for verb in ("GetMapping", "PatchMapping"):
         assert "@%s(\"/me/profile\")" % verb in controller, "%s /users/me/profile is gone" % verb
     assert 'profile: "/users/me/profile",' in read(ENDPOINTS), "the client stopped naming the route"
+    # The surface has a screen now: each hook is named outside its own declaration, so a rename
+    # breaks the settings page instead of silently orphaning a real route.
     for hook in ("useProfile", "useUpdateProfile", "useUpdateProfileDetails"):
-        assert mentions(hook) == [], "%s is named outside its own declaration: %s" % (hook, mentions(hook))
+        assert mentions(hook) != [], "%s is named nowhere outside its own declaration" % hook
 
 
 def test_the_profile_toasts_are_copy_no_user_can_hear():

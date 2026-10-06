@@ -1,0 +1,14 @@
+feat(web): the settings page grows its account and career-profile editors, closing the profile ledger
+
+The three profile hooks (useProfile, useUpdateProfile, useUpdateProfileDetails) had
+real server routes behind them and no screen mounting them -- the last dead pair in
+the invalidation ledger. The settings page now mounts all three: the Account card
+edits the display name in place (PATCH /users/me), and a career-profile card edits
+headline, location, years, summary, target roles and target locations against
+PATCH /users/me/profile. The three maps the profile carries but no UI edits yet
+(links, work authorization, preferences) are never sent, and the backend's
+null-means-untouched rule keeps them safe.
+
+The invalidation census follows the ledger to zero: every promise now pairs with a
+query some screen mounts, and the file census walks 137 files since
+profile-cards.tsx joined.

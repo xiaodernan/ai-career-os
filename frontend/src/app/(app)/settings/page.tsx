@@ -2,22 +2,31 @@
 
 import * as React from "react";
 import { useTheme } from "next-themes";
-import { Keyboard, LogOut, Monitor, Moon, Sun } from "lucide-react";
+import { Keyboard, LogOut, Monitor, Moon, Save, Sun } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
+import { CareerProfileCard } from "@/components/settings/profile-cards";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLogout, useUser } from "@/lib/hooks/auth";
+import { useUpdateProfile } from "@/lib/hooks/actions";
+
+/** Mirrors `UpdateMeRequest`'s `@Size(min = 1, max = 120)` on the display name. */
+const MAX_NAME = 120;
 
 export default function SettingsPage() {
   const { theme, setTheme, resolvedTheme } = useTheme();
   const { data: user, isPending } = useUser();
   const logout = useLogout();
+  const updateMe = useUpdateProfile();
+  // `null` mirrors the server value; once the user types, it holds the edit until saved.
+  const [name, setName] = React.useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = React.useState(false);
   const [isMac, setIsMac] = React.useState(false);
 
@@ -26,6 +35,15 @@ export default function SettingsPage() {
   }, []);
 
   const current = theme ?? "system";
+  const displayName = name ?? user?.displayName ?? "";
+  const nameSaveable = displayName.trim().length >= 1 && displayName !== user?.displayName;
+  const saveName = React.useCallback(() => {
+    if (!nameSaveable || updateMe.isPending) return;
+    updateMe.mutate(
+      { displayName: displayName.trim() },
+      { onSuccess: () => setName(null) }
+    );
+  }, [displayName, nameSaveable, updateMe]);
 
   return (
     <div className="mx-auto max-w-2xl space-y-8">
@@ -35,7 +53,9 @@ export default function SettingsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Account</CardTitle>
-          <CardDescription>Read live from /users/me</CardDescription>
+          <CardDescription>
+            Live from /users/me — the display name is editable, the email rides on your login.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           {isPending ? (
@@ -45,12 +65,31 @@ export default function SettingsPage() {
             </>
           ) : user ? (
             <>
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-sm font-medium">{user.displayName}</p>
-                  <p className="text-sm text-muted-foreground">{user.email}</p>
+              <div className="space-y-2">
+                <Label htmlFor="display-name">Display name</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="display-name"
+                    value={displayName}
+                    maxLength={MAX_NAME}
+                    onChange={(e) => setName(e.target.value)}
+                    autoComplete="off"
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    loading={updateMe.isPending}
+                    disabled={!nameSaveable || updateMe.isPending}
+                    onClick={saveName}
+                  >
+                    <Save aria-hidden />
+                    Save
+                  </Button>
                 </div>
-                <Badge variant="outline" className="capitalize">{user.role?.toLowerCase?.() ?? "user"}</Badge>
+                <div className="flex items-center gap-2 pt-1">
+                  <p className="text-sm text-muted-foreground">{user.email}</p>
+                  <Badge variant="outline" className="capitalize">{user.role?.toLowerCase?.() ?? "user"}</Badge>
+                </div>
               </div>
               <Separator />
               <div className="flex items-center justify-between gap-4 pt-1">
@@ -69,6 +108,9 @@ export default function SettingsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Career profile */}
+      <CareerProfileCard />
 
       {/* Appearance */}
       <Card>
