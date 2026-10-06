@@ -355,6 +355,31 @@ test.describe("golden journey — track the application", () => {
     );
     expect(cleared.reminderAt).toBeNull();
   });
+
+  test("pastes a posting into the tracker through the import dialog", async ({ api, authedPage }) => {
+    // The importer is the write half of JD intelligence: the dialog posts once, the backend
+    // runs the analyst and lands the job, and the user lands on the new detail page. The
+    // seeded corpus is irrelevant here -- the posting is whatever the user brings.
+    const posting = [
+      "Senior Backend Engineer - Agent Platform",
+      "We are hiring a senior backend engineer to build our agent platform.",
+      "Requirements: 5+ years of Java or Python, Spring Boot, PostgreSQL, Redis,",
+      "Kafka, Kubernetes. Experience with LLM applications is a strong plus.",
+      "Responsibilities: design and ship APIs, own the matching pipeline, mentor.",
+    ].join("\n");
+
+    await authedPage.goto("/jobs");
+    await authedPage.getByRole("button", { name: "Paste a posting" }).click();
+    const dialog = authedPage.getByRole("dialog");
+    await expect(dialog).toBeVisible({ timeout: 20_000 });
+
+    await dialog.getByLabel("Job posting text").fill(posting);
+    await dialog.getByRole("button", { name: "Import" }).click();
+
+    // Success is the navigation: the dialog closes and the app lands on the new job's page.
+    await expect(authedPage).toHaveURL(/\/jobs\/[0-9a-fA-F-]{8,}/, { timeout: 30_000 });
+    await expect(authedPage.getByRole("heading", { level: 1 })).toBeVisible({ timeout: 20_000 });
+  });
 });
 
 test.describe("golden journey — interview practice", () => {
