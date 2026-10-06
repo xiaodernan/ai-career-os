@@ -220,6 +220,28 @@ export function useAnalyzeJd() {
   });
 }
 
+/**
+ * Paste a posting in: the backend runs the JD analyst once and lands the job (company, skills,
+ * responsibilities, its own JD row) in the tracker. 201 answers a JobListItem - the id is what
+ * the caller needs to jump to the new detail page.
+ */
+export function useImportJob() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: { rawText: string; url?: string }): Promise<{ id?: string }> =>
+      api.create<unknown>(endpoints.jobsImport, {
+        rawText: body.rawText,
+        url: body.url,
+      }) as Promise<{ id?: string }>,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["jobs"] });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
+      toast.success("Job imported - the analyst filled in the details.");
+    },
+    onError: fail("Import failed."),
+  });
+}
+
 /* ------------------------------------------------------------------ */
 /* AI actions                                                          */
 /* ------------------------------------------------------------------ */

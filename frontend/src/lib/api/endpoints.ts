@@ -40,6 +40,7 @@ export const endpoints = {
 
   /* ---------------- Jobs / JD / matches ---------------- */
   jobs: "/jobs",
+  jobsImport: "/jobs/import",
   job: (id: string) => `/jobs/${seg(id)}`,
   jobSave: (id: string) => `/jobs/${seg(id)}/save`,
   jobMatch: (id: string) => `/jobs/${seg(id)}/match`,

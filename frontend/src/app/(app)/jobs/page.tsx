@@ -15,6 +15,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { JobCard } from "@/components/jobs/job-card";
 import { JobFilterPanel } from "@/components/jobs/job-filters";
 import { AnalyzeJdDialog } from "@/components/jobs/analyze-jd-dialog";
+import { ImportJobDialog } from "@/components/jobs/import-job-dialog";
 import { useJobs, useResumes, useResume, useSavedJobs } from "@/lib/hooks/resources";
 import { useUrlState } from "@/lib/hooks/use-url-state";
 import { filterAndPaginate, hasActiveJobFilters, profileSkillSuggestions } from "@/lib/job-filter";
@@ -100,6 +101,7 @@ export default function JobsPage() {
         description="Discovered and pasted roles, scored against your resume with evidence — the match ring leads, the metadata follows."
         actions={
           <>
+            <ImportJobDialog />
             <AnalyzeJdDialog />
             <Button variant="ai" size="sm" asChild>
               <Link href="/copilot">

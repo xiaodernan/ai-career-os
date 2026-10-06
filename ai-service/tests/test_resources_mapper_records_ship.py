@@ -727,11 +727,12 @@ def test_the_dead_names_spread_in_three_measured_tiers_and_three_reached_a_scree
     `isCurrent` and `versionNo`, both calls dead, the badge alive on a second real term.
     """
     files = frontend_files()
-    # 137 rather than 136 since `components/settings/profile-cards.tsx`, the settings page's
-    # career-profile editor; 136 rather than 135 since the knowledge page's notes panel
-    # component joined. (Spell the panel's path out nowhere here -- the notes-route census
-    # counts every mention of it, this file included.)
-    assert len(files) == 137, f"the frontend census walked {len(files)} files"
+    # 138 rather than 137 since `components/jobs/import-job-dialog.tsx`, the paste-a-posting
+    # importer on the jobs page; 137 rather than 136 since `components/settings/profile-cards.tsx`,
+    # the settings page's career-profile editor; 136 rather than 135 since the knowledge page's
+    # notes panel component joined. (Spell the panel's path out nowhere here -- the notes-route
+    # census counts every mention of it, this file included.)
+    assert len(files) == 138, f"the frontend census walked {len(files)} files"
     asked = {name for row in UNAUTHORED.values() for name in row}
     assert len(asked) == 56, f"{len(asked)} dead names are asked, pinned 56"
     classified = set()

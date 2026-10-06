@@ -805,11 +805,11 @@ describe("endpoints ↔ backend route parity", () => {
    * Routes Spring serves that no `endpoints.*` name in the app ever mentions. Measured, not
    * assumed: this is the working list of the backend's unwired surface, and it may only shrink --
    * adding to it means writing a reason, so a route nobody looked at cannot pass as "unused on
-   * purpose". `/jobs/import` sat in the hand-copied table for months while nothing built it.
+   * purpose". `/jobs/import` sat in the hand-copied table for months while nothing built it --
+   * the paste-a-posting dialog finally wired it, and its entry left.
    */
   const NEVER_REFERENCED: Record<string, string> = {
     "/health": "liveness for the container probe, not something a page calls",
-    "/jobs/import": "jobs arrive through POST /jobs and POST /jds; no import screen exists",
     "/me": "MeController's alias of /users/me; the client spells every call through /users/...",
     "/resume-versions/{}": "the version panel reads the list form /resume-versions?resumeId=…",
     "/resumes/{}/versions": "superseded for the panel by GET /resume-versions?resumeId=…",
@@ -842,7 +842,10 @@ describe("endpoints ↔ backend route parity", () => {
     const sent = new Set(keys);
     const clash: string[] = [];
     for (const [own, aliases] of twins) {
-      const hit = aliases.filter((a) => sent.has(a));
+      // An alias that restates the field's own name (ImportJobRequest lists "rawText" beside
+      // "raw_text") is one spelling, not two: posting the own name alone binds one value, so
+      // only an alias spelled differently counts as a second one.
+      const hit = aliases.filter((a) => a !== own && sent.has(a));
       if (sent.has(own) && hit.length) clash.push(`${own} + ${hit.join("/")}`);
     }
     return clash;

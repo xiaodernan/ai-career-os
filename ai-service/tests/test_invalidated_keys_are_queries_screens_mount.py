@@ -24,9 +24,10 @@ Four walks, none of which imports production code:
 4. the users controller, for the fact that the profile surface is real on the server and now has a
    screen to answer.
 
-What the walk records, and does not fix: 45 promises, every one of them naming a declared key -- and
-since the settings page grew its account and career-profile editors, every promise's matches include
-a query a screen mounts, so the dead-promise ledger this file used to pin is empty. Three declared
+What the walk records, and does not fix: 46 promises, every one of them naming a declared key --
+and since the settings page grew its account and career-profile editors, and the jobs page its
+paste-a-posting importer, every promise's matches include a query a screen mounts, so the
+dead-promise ledger this file used to pin is empty. Three declared
 queries are still unmounted (`useResumeScore`, `useSourceStatus`, `useGlobalSearch`), each a
 duplicate or a window onto data another hook already fetches, and every one of the three is bound
 to the screen that answers the same routes without it (cases 8, 8b and 8c). Closing any of them
