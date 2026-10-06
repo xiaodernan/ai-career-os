@@ -22,11 +22,12 @@ breakdown lists
 emit (`perModel`) is an object keyed by model name under a different spelling, never asked. The
 summary also computes and emits `inputTokens`, `outputTokens`, `cachedTokens` and `totalTokens`; the
 hook asks `tokensIn`/`tokensOut`/`tokensTotal` and so drops all four, including the cached-token
-column whose counting was the whole subject of #67. And the hook has no caller: `useAIUsage` and
-`useKnowledgeNotes` are named only at their own definitions, and the `AIUsageSummary` interface that
-mirrors the mapper's shape is named only in `types.ts`. None of it reaches a screen today. This file
-does not delete it; it pins which name is dead in which direction, so the next reader of this panel
-starts from the eight keys the handler actually writes.
+column whose counting was the whole subject of #67. The hook has a caller now: the dashboard's
+"Agent spend" card mounts `useAIUsage` and reads `requests`, `tokensTotal` and `costUsd` off it --
+three of the twenty-six asks finally consumed -- while `useKnowledgeNotes` is still named only at
+its own definition, and the `AIUsageSummary` interface that mirrors the mapper's shape is named
+only in `types.ts`. This file does not delete the dead names; it pins which name is dead in which
+direction, so the next reader of this panel starts from the eight keys the handler actually writes.
 """
 
 import re
@@ -193,7 +194,7 @@ CALLERS = {
     "useSavedJobs": ["app/(app)/jobs/page.tsx"],
     "useConversations": ["app/(app)/copilot/page.tsx"],
     "useKnowledgeNotes": [],
-    "useAIUsage": [],
+    "useAIUsage": ["app/(app)/dashboard/page.tsx"],
 }
 COPILOT_READS = {"createdAt", "id", "lastMessagePreview", "title", "updatedAt"}
 JOBS_SAVED_READS = {"items", "total"}
@@ -596,15 +597,19 @@ def test_a_dead_name_here_is_either_another_records_author_or_no_ones_at_all():
             f"{key}: unauthored names are now {sorted(dead - names)}")
 
 
-def test_the_two_hooks_with_no_caller_reach_no_screen():
-    """Dead names on a live route cost a screen; dead names on an unreachable hook cost nothing."""
+def test_the_hook_with_no_caller_reaches_no_screen():
+    """Dead names on a live route cost a screen; dead names on an unreachable hook cost nothing.
+
+    `useAIUsage` left this set when the dashboard's spend card started mounting it; its dead names
+    sit on a live route now, which is exactly the class this case exists to distinguish.
+    """
     for hook, expected in CALLERS.items():
         found = [rel for rel in carriers(hook) if rel != "lib/hooks/resources.ts"]
         assert found == expected, f"{hook} is now named by {found}, expected {expected}"
         assert "lib/hooks/resources.ts" in carriers(hook), f"{hook} left the file that defines it"
     assert carriers("AIUsageSummary") == ["lib/api/types.ts"], (
         f"AIUsageSummary is named by {carriers('AIUsageSummary')}; the interface stopped being an "
-        "unread mirror of an unread hook")
+        "unread mirror of the mapper the dashboard's card reads through")
     summary = function_body(read(TYPES), "export interface AIUsageSummary {")
     asked = {name for call in ASKS[("useAIUsage", "u")] for name in call[:1]}
     for name in sorted(asked):

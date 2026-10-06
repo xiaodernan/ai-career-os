@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 import com.careeros.ai.AiServiceClient;
 import com.careeros.common.ApiException;
 import com.careeros.knowledge.entity.KnowledgeSource;
+import com.careeros.knowledge.repository.DocumentRepository;
 import com.careeros.knowledge.repository.KnowledgeSourceRepository;
 import com.careeros.knowledge.service.FileIngestService;
 import com.careeros.knowledge.service.KnowledgeService;
@@ -63,7 +64,8 @@ class ResumeServiceParseTest {
                 mock(ProjectRepository.class), mock(EducationRepository.class),
                 mock(AchievementRepository.class), mock(SkillRepository.class),
                 mock(ResumeSkillRepository.class), sources, mock(KnowledgeService.class),
-                mock(FileIngestService.class), mock(StorageService.class), ai);
+                mock(DocumentRepository.class), mock(FileIngestService.class),
+                mock(StorageService.class), ai);
     }
 
     private void givenVersion(String plaintext) {

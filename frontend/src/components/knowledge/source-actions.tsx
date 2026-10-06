@@ -25,12 +25,15 @@ import { endpoints } from "@/lib/api/endpoints";
  * knowledge panel never has to grow the global hook surface to change.
  */
 
-/** The values `KnowledgeService.KINDS` binds server-side; anything else is a 400. */
+/**
+ * Exactly `KnowledgeService.KINDS` (validateKind rejects anything else with a 400 —
+ * there is no `document` value; a blank kind falls back to `note` server-side), so the
+ * selector offers the set verbatim and defaults to that fallback.
+ */
 export const SOURCE_KINDS = [
-  { value: "document", label: "Document" },
+  { value: "note", label: "Note" },
   { value: "resume", label: "Resume" },
   { value: "project", label: "Project" },
-  { value: "note", label: "Note" },
   { value: "jd", label: "Job description" },
   { value: "company", label: "Company" },
   { value: "interview_feedback", label: "Interview feedback" },
@@ -101,7 +104,7 @@ export function SourceUploadCard() {
   const inputRef = React.useRef<HTMLInputElement>(null);
   const [fileName, setFileName] = React.useState<string | null>(null);
   const [title, setTitle] = React.useState("");
-  const [kind, setKind] = React.useState<string>("document");
+  const [kind, setKind] = React.useState<string>("note");
   const [rejected, setRejected] = React.useState<string | null>(null);
   const upload = useUploadDocument();
 

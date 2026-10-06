@@ -66,6 +66,13 @@ function eventText(event: ApplicationEvent): string {
     if (event.cleared) return "Reminder cleared";
     return event.reminderAt ? `Reminder set for ${relativeTime(event.reminderAt)}` : "Reminder set";
   }
+  if (event.type === "outcome") {
+    return event.field === "offer_compensation"
+      ? "Offer compensation saved"
+      : event.field === "rejection_reason"
+        ? "Rejection reason saved"
+        : "Outcome recorded";
+  }
   // The kinds above are the ones `writeEvent` writes; anything else is shown by its kind.
   return event.type ?? "Update";
 }
@@ -99,6 +106,8 @@ export function ApplicationDialog({ application, open, onOpenChange }: Applicati
   const [status, setStatus] = React.useState<string>("saved");
   const [notes, setNotes] = React.useState("");
   const [reminder, setReminder] = React.useState("");
+  const [offerCompensation, setOfferCompensation] = React.useState("");
+  const [rejectionReason, setRejectionReason] = React.useState("");
   const [confirmingDelete, setConfirmingDelete] = React.useState(false);
 
   // The form is a copy of the row, so it is rebuilt whenever a different card opens — and on
@@ -110,6 +119,8 @@ export function ApplicationDialog({ application, open, onOpenChange }: Applicati
     setStatus(application?.status ?? "saved");
     setNotes(application?.note ?? "");
     setReminder(toReminderInput(application?.reminderAt));
+    setOfferCompensation(application?.offerCompensation ?? "");
+    setRejectionReason(application?.rejectionReason ?? "");
     setConfirmingDelete(false);
     createApp.reset();
     updateApp.reset();
@@ -147,6 +158,14 @@ export function ApplicationDialog({ application, open, onOpenChange }: Applicati
       ...(status !== application.status ? { status: status as ApplicationStatus } : {}),
       ...(notes !== (application.note ?? "") ? { note: notes } : {}),
       ...reminderPatch(application.reminderAt, reminder),
+      // Outcome fields follow the same only-what-changed rule; an emptied input sends an
+      // empty string, which the PATCH route reads as "clear it" (null means "leave alone").
+      ...(offerCompensation !== (application.offerCompensation ?? "")
+        ? { offerCompensation: offerCompensation.trim() }
+        : {}),
+      ...(rejectionReason !== (application.rejectionReason ?? "")
+        ? { rejectionReason: rejectionReason.trim() }
+        : {}),
     };
     if (Object.keys(patch).length === 0) {
       onOpenChange(false);
@@ -252,6 +271,37 @@ export function ApplicationDialog({ application, open, onOpenChange }: Applicati
               The dashboard counts a due reminder as needing your attention.
             </p>
           </div>
+          {editing && (status === "offer" || status === "rejected") && (
+            <section className="space-y-3 rounded-lg border border-border/60 bg-muted/30 p-3">
+              <h4 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                Outcome
+              </h4>
+              <div className="space-y-2">
+                <Label htmlFor="app-comp">Offer compensation</Label>
+                <Input
+                  id="app-comp"
+                  value={offerCompensation}
+                  onChange={(e) => setOfferCompensation(e.target.value)}
+                  placeholder="e.g. 40k/mo · 16 months, or 550k + equity"
+                  autoComplete="off"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="app-reject">Rejection / feedback reason</Label>
+                <Textarea
+                  id="app-reject"
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  placeholder="Why it didn't proceed — this is what feeds back into what to improve."
+                  rows={3}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Captured here, it closes the loop: a rejection reason tells you what to strengthen,
+                and an offer&apos;s number is what to compare and negotiate against.
+              </p>
+            </section>
+          )}
 
         {editing && (
           <>

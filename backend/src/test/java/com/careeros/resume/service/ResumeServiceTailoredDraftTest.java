@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 
 import com.careeros.ai.AiServiceClient;
 import com.careeros.common.ApiException;
+import com.careeros.knowledge.repository.DocumentRepository;
 import com.careeros.knowledge.repository.KnowledgeSourceRepository;
 import com.careeros.knowledge.service.FileIngestService;
 import com.careeros.knowledge.service.KnowledgeService;
@@ -60,8 +61,9 @@ class ResumeServiceTailoredDraftTest {
                 mock(ProjectRepository.class), mock(EducationRepository.class),
                 mock(AchievementRepository.class), mock(SkillRepository.class),
                 mock(ResumeSkillRepository.class), mock(KnowledgeSourceRepository.class),
-                mock(KnowledgeService.class), mock(FileIngestService.class),
-                mock(StorageService.class), mock(AiServiceClient.class));
+                mock(KnowledgeService.class), mock(DocumentRepository.class),
+                mock(FileIngestService.class), mock(StorageService.class),
+                mock(AiServiceClient.class));
         when(versions.save(any(ResumeVersion.class))).thenAnswer(i -> i.getArgument(0));
     }
 

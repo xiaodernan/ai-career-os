@@ -7,6 +7,7 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
+  useDroppable,
   DragEndEvent,
 } from "@dnd-kit/core";
 import {
@@ -20,7 +21,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { GripVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Application, ApplicationStatus } from "@/lib/api/types";
-import { STAGE_ORDER, stageMeta, pickerStages } from "@/lib/pipeline";
+import { STAGE_ORDER, stageMeta, pickerStages, isTerminal } from "@/lib/pipeline";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -34,6 +35,10 @@ interface KanbanColumnProps {
 
 function KanbanColumn({ status, apps, onReorder, onOpen, isPending }: KanbanColumnProps) {
   const meta = stageMeta(status);
+  // The column body is a droppable in its own right: without one, a card can only land where
+  // another card already is, so an empty column was a dead zone its own "Drop here" text promised
+  // out loud. `handleDragEnd` reads this id back to append the card.
+  const { setNodeRef } = useDroppable({ id: status });
 
   return (
     <div className="flex flex-col min-w-[280px] max-w-[320px] flex-1">
@@ -52,6 +57,7 @@ function KanbanColumn({ status, apps, onReorder, onOpen, isPending }: KanbanColu
         strategy={verticalListSortingStrategy}
       >
         <div
+          ref={setNodeRef}
           className="flex-1 flex flex-col gap-2 p-2 min-h-[400px]"
           role="list"
           aria-label={`${meta.label} applications`}
@@ -73,7 +79,7 @@ function KanbanColumn({ status, apps, onReorder, onOpen, isPending }: KanbanColu
               role="status"
             >
               <GripVertical className="size-8 mb-2 opacity-30" aria-hidden />
-              <p>Drop here or create new</p>
+              <p>Drop a card here</p>
             </div>
           )}
         </div>
@@ -100,6 +106,15 @@ function KanbanCard({
   onOpen,
 }: KanbanCardProps) {
   const meta = stageMeta(app.status);
+  // The dashboard's attention list runs its staleness predicate server-side (14 days without a
+  // step, or a reminder already due — DashboardRepository.NEEDS_ATTENTION). Mirrored here so a
+  // card in trouble says so on the board itself instead of only after a trip to the dashboard.
+  const now = Date.now();
+  const overdue = Boolean(app.reminderAt) && new Date(app.reminderAt as string).getTime() <= now;
+  const stale =
+    !isTerminal(app.status) &&
+    Boolean(app.updatedAt) &&
+    now - new Date(app.updatedAt as string).getTime() > 14 * 24 * 60 * 60 * 1000;
   const { setNodeRef, setActivatorNodeRef, attributes, listeners, transform, transition, isDragging } =
     useSortable({ id: app.id, data: { currentIndex: index } });
 
@@ -186,9 +201,21 @@ function KanbanCard({
           </SelectContent>
         </Select>
       </div>
-      <Badge variant={meta.badgeVariant} className="mt-1 w-fit">
-        {meta.short}
-      </Badge>
+      <div className="mt-1 flex flex-wrap items-center gap-1.5">
+        <Badge variant={meta.badgeVariant} className="w-fit">
+          {meta.short}
+        </Badge>
+        {overdue && (
+          <Badge variant="warning" className="w-fit">
+            reminder due
+          </Badge>
+        )}
+        {!overdue && stale && (
+          <Badge variant="outline" className="w-fit">
+            no step 14d+
+          </Badge>
+        )}
+      </div>
     </div>
   );
 }
@@ -229,8 +256,18 @@ export function KanbanBoard({ applications, onReorder, onOpen, isPending }: Kanb
 
     const activeApp = applications.find((a) => a.id === activeId);
     const overApp = applications.find((a) => a.id === overId);
+    if (!activeApp) return;
 
-    if (!activeApp || !overApp) return;
+    if (!overApp) {
+      // `over` names a column's own droppable (empty space, or an empty column) rather than a
+      // card: the card joins the end of that stage. Dropping onto the column it already sits
+      // in is a no-op — there is no index to re-sort to.
+      const target = columns.find((c) => c.status === overId);
+      if (target && overId !== activeApp.status) {
+        onReorder(activeId, overId as ApplicationStatus, target.apps.length);
+      }
+      return;
+    }
 
     const activeColumn = columns.find((c) => c.apps.some((a) => a.id === activeId));
     const overColumn = columns.find((c) => c.apps.some((a) => a.id === overId));

@@ -929,11 +929,11 @@ def test_the_java_probe_reads_every_record_the_backend_declares():
     component's name is its wire name, which holds only while no record renames or hides one.
     """
     declared = _declared_records()
-    # 103 rather than 102 since `JobDtos.CompanyDetail`: the company page's envelope -- the profile
-    # plus the roles it is hiring for -- which is a record like the rest, so the shared opener has to
-    # read it. Before it, `DashboardDtos.AttentionItem` was the last one to join (101 -> 102).
-    assert len(declared) == 103, \
-        f"{len(declared)} records carry a declaration the shared opener reads, not the 103 measured"
+    # 104 rather than 103 since `ResumeService.OriginalFile`: the download route's answer record --
+    # bytes, media type, save name -- which is a record like the rest, so the shared opener has to
+    # read it. Before it, `JobDtos.CompanyDetail` was the last one to join (102 -> 103).
+    assert len(declared) == 104, \
+        f"{len(declared)} records carry a declaration the shared opener reads, not the 104 measured"
     problems, renamed = [], []
     for relative, record in declared:
         names = _record_components_at(relative, record)
@@ -1154,7 +1154,7 @@ def test_the_response_envelope_has_exactly_one_wrapper_and_one_unwrapper():
     files in two languages, and it is only safe while both halves stay where they are: widen the advice
     and the unwrap returns `undefined` for responses that were never wrapped, add a second unwrap and the
     one that is gated stops being the one that runs. Measured on this plane: two `success` reads and one
-    `?.data` unwrap, all of them in `lib/api/client.ts`, plus 27 `toast.success` lines the exclusion has
+    `?.data` unwrap, all of them in `lib/api/client.ts`, plus 28 `toast.success` lines the exclusion has
     to keep out. `client.ts` belongs to a concurrent session's file list, so this gate reads it and never
     edits it -- if a third reader appears, the test names it and a human decides where it belongs.
     """
@@ -1176,7 +1176,7 @@ def test_the_response_envelope_has_exactly_one_wrapper_and_one_unwrapper():
         'if (!res.ok || !json.success || !json.data) return null;',
         'if (!res.ok || (json && json.success === false)) {',
     ], f"{[row['text'] for row in rows if row['kind'] == 'success']}: the envelope's own guards, measured"
-    assert len(toasts) == 27, (f"{len(toasts)} `toast.success` lines came out of the same walk: that is "
+    assert len(toasts) == 28, (f"{len(toasts)} `toast.success` lines came out of the same walk: that is "
                                "the floor proving the scan reached the pages and the hooks, so a walk "
                                "narrowed to the api directory cannot pass quietly")
 
@@ -2064,9 +2064,10 @@ def test_the_run_stream_contract_is_one_table_of_publishers_cases_and_subscriber
     skipped = [(str(p.relative_to(ROOT_FRONTEND)).replace("\\", "/"), p.read_text(encoding="utf-8"))
                for p in sorted(ROOT_FRONTEND.rglob("*.ts*"))
                if ".test." in p.name and "node_modules" not in p.parts]
-    # 22 rather than 21 since `lib/api/missing-endpoint.test.ts`. The pin is a population, not a budget:
-    # a new test file belongs in it, and the guard below still has to prove none of them ships.
-    assert len(skipped) == 22 and all(rel.endswith((".test.ts", ".test.tsx")) for rel, _t in skipped), \
+    # 23 rather than 22 since `components/knowledge/source-actions.test.ts`, 22 rather than 21 since
+    # `lib/api/missing-endpoint.test.ts`. The pin is a population, not a budget: a new test file belongs
+    # in it, and the guard below still has to prove none of them ships.
+    assert len(skipped) == 23 and all(rel.endswith((".test.ts", ".test.tsx")) for rel, _t in skipped), \
         (f"{len(skipped)} files are skipped and not one ships: a name in that set that is not a test file "
          "would be a subscriber hidden from the table by the pattern rather than by measurement")
     skipped_names = {rel.rsplit("/", 1)[-1] for rel, _t in skipped}
@@ -2838,7 +2839,7 @@ def test_the_heartbeat_interval_has_one_definer_and_every_shipped_claim_names_it
         (f"{doc_claims}: `docs/` states the keep-alive without a number today, and a doc that quotes an "
          "interval is a claim this gate has to be able to check rather than a second opinion")
     assert [(row["file"], row["line"]) for row in doc_vocabulary] == [
-        ("AGENTS.md", 144), ("DEPLOYMENT.md", 8), ("SECURITY.md", 125),
+        ("AGENTS.md", 144), ("DEPLOYMENT.md", 8), ("SECURITY.md", 133),
     ], (f"{doc_vocabulary}: the docs' own vocabulary is censused, so this pass is not reporting on an "
         "empty set -- and a second file picking up the word is a signal the ledger has to grow")
 
@@ -3067,7 +3068,7 @@ def test_both_frame_parsers_default_a_nameless_frame_to_the_same_event_name():
          "inside a parser is the exit that drops a frame with neither data nor an explicit name")
     assert sorted((row["file"], row["line"], row["head"]) for row in by_role["type-union-member"]) == [
         ("agent-timeline.tsx", 33, "export type TraceKind ="),
-        ("types.ts", 740, "kind:"),
+        ("types.ts", 751, "kind:"),
         ('use-sse.ts', 15, 'event: SSEEventName | "message" | "progress" | "ping";'),
     ], (f"{[(r['file'], r['line'], r['head']) for r in by_role['type-union-member']]}: three type unions "
         "spell `message`, and only one of them names a frame -- the other two are the trace step kind "
@@ -3241,7 +3242,7 @@ ANSWER_READ = re.compile(
     r"|[\"'][Mm]ime_?type[\"']")
 # Which bag the media type was taken out of: an HTTP answer's headers, or a value the code already holds.
 HTTP_HEADER_BAG = re.compile(r"\bheaders\b")
-STORED_VALUE_READ = re.compile(r"\.get(?:MediaType|ContentType|MimeType)\s*\(\)")
+STORED_VALUE_READ = re.compile(r"\.get(?:MediaType|ContentType|MimeType)\s*\(\)|\.mediaType\s*\(\)")
 CONTENT_TYPE_TOKEN = re.compile(r'[\"\'][Cc]ontent-[Tt]ype[\"\']')
 CONSUMERS = (
     ("SseRelayService.consume", "java", RELAY_PATH, r"\bvoid\s+consume\s*\("),
@@ -3416,7 +3417,7 @@ def test_the_stream_media_type_is_written_in_four_spellings_and_read_in_none():
     senders = by_kind["request-header"]
     assert [(row["file"], row["line"]) for row in senders] == [
         ("backend/src/main/java/com/careeros/ai/SseRelayService.java", 71),
-        ("frontend/src/lib/api/client.ts", 181),
+            ("frontend/src/lib/api/client.ts", 237),
         ("frontend/src/lib/sse/use-sse.ts", 92)], \
         (f"{[(r['file'], r['line']) for r in senders]}: three senders arm the stream -- the relay, the "
          "one-shot copilot client and the run panel's hook -- each in its own language's shape, so a "
@@ -3449,10 +3450,10 @@ def test_the_stream_media_type_is_written_in_four_spellings_and_read_in_none():
          "is -- that is this unit's fact. A row here means the check exists and the status guards in the "
          "third case are no longer the whole story")
     stored = buckets["stored-value"]
-    assert len(stored) == 1 and "parseMediaType" in stored[0]["text"], \
-        (f"{stored}: the codebase's only non-test media-type read takes the type out of a stored record, "
-         "not out of an answer -- the platform can name a media type when it serves a file and never one "
-         "when it reads a stream")
+    assert len(stored) == 2 and all("parseMediaType" in row["text"] for row in stored), \
+        (f"{stored}: the codebase's non-test media-type reads take the type out of a stored record -- "
+         "the document row behind the internal download, the answer record behind the resume download -- "
+         "never out of an answer the platform is reading a stream from")
     assert len(buckets["test-assertion"]) == 1 and buckets["test-assertion"][0]["spelling"] == \
         '.headers.get("Content-Type', \
         (f"{buckets['test-assertion']}: the one test read asks a captured REQUEST what it sent, which is "
@@ -3466,9 +3467,12 @@ def test_the_stream_media_type_is_written_in_four_spellings_and_read_in_none():
          "This is the population the absence above is drawn from -- an `unclassified` row would be a use "
          "nobody has read")
     assert [(row["file"], row["media"]) for row in _java_media_writers()] == [
-        ("HttpAiServiceClient.java", "APPLICATION_JSON"), ("InternalFileController.java", "parseMediaType")], \
-        (f"{_java_media_writers()}: Java names a media type on the JSON it sends and on the file it "
-         "serves, so the missing answer check is a choice at the read site, not a tool the language lacks")
+        ("HttpAiServiceClient.java", "APPLICATION_JSON"),
+        ("InternalFileController.java", "parseMediaType"),
+        ("ResumeController.java", "parseMediaType"),
+    ], (f"{_java_media_writers()}: Java names a media type on the JSON it sends and on the two files it "
+        "serves (the internal download and the resume download), so the missing answer check is a choice "
+        "at the read site, not a tool the language lacks")
     assert sorted({row["header"] for row in _request_header_reads()}) == \
         ["Authorization", "X-Forwarded-For", "X-Internal-Token"], \
         (f"{sorted({r['header'] for r in _request_header_reads()})}: Java does read request headers by "

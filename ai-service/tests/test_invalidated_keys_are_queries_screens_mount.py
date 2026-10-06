@@ -377,16 +377,16 @@ def test_three_promises_refresh_only_queries_no_screen_mounts():
     }, "dead promises moved: %s (lines %s)" % (sorted(derived), sorted(p.where for p, _ in pairs))
 
 
-def test_six_queries_are_declared_by_hooks_no_screen_mounts():
+def test_five_queries_are_declared_by_hooks_no_screen_mounts():
     dead = unmounted_declarations()
     assert len(dead) >= 5, "only %d unmounted declarations walked" % len(dead)
     by_name = {d.fn: d.segs for d in dead}
+    # `useAIUsage` left this ledger when the dashboard's spend card started mounting it
     assert by_name == {
         "useProfile": ("profile",),
         "useResumeScore": ("resume", "*", "score"),
         "useSourceStatus": ("knowledge", "source", "*", "status"),
         "useKnowledgeNotes": ("knowledge", "notes"),
-        "useAIUsage": ("ai-usage",),
         "useGlobalSearch": ("search", "*"),
     }, "unmounted queries moved: %s" % sorted(by_name)
     for d in dead:

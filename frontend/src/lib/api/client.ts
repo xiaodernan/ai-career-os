@@ -154,6 +154,62 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
 }
 
 /* ------------------------------------------------------------------ */
+/* File download — one request, raw bytes                              */
+/* ------------------------------------------------------------------ */
+
+/**
+ * GET a path that answers with the file itself, never the envelope.
+ *
+ * The verb, the bearer token and the one refresh-on-401 are {@link request}'s; what differs is the
+ * answer: raw bytes, which `EnvelopeAdvice` passes through unwrapped, so there is no envelope to
+ * unwrap here and an error body is the only JSON this fetch ever parses. The name comes back from
+ * the server's `Content-Disposition` (RFC 5987 spelling, which is the one the backend writes) —
+ * the route that read the document row is the one that knows what the file was called.
+ */
+export async function download(
+  path: string,
+  options: { _retry?: boolean } = {},
+): Promise<{ blob: Blob; name: string | null }> {
+  const { _retry = false } = options;
+  const finalHeaders = new Headers();
+  finalHeaders.set("Accept", "application/octet-stream");
+  const token = tokenStore.getAccess();
+  if (token) finalHeaders.set("Authorization", `Bearer ${token}`);
+
+  const res = await fetch(buildUrl(path), { headers: finalHeaders });
+
+  if (res.status === 401 && !_retry) {
+    const newToken = await refreshOnce();
+    if (newToken) return download(path, { _retry: true });
+    onSessionExpired();
+    throw new ApiError("UNAUTHORIZED", "Your session has expired.", 401);
+  }
+
+  if (!res.ok) {
+    let json: Envelope<never> | null = null;
+    try {
+      json = (await res.json()) as Envelope<never>;
+    } catch {
+      /* a body that is neither envelope nor bytes is not worth a second guess */
+    }
+    const err = json?.error;
+    throw new ApiError(
+      err?.code ?? (res.status === 404 ? "NOT_FOUND" : "HTTP_ERROR"),
+      err?.message ?? `Request failed with status ${res.status}`,
+      res.status,
+      err?.details,
+    );
+  }
+
+  const disposition = res.headers.get("Content-Disposition") ?? "";
+  const match = /filename\*=UTF-8''([^;]+)/i.exec(disposition);
+  return {
+    blob: await res.blob(),
+    name: match ? decodeURIComponent(match[1]) : null,
+  };
+}
+
+/* ------------------------------------------------------------------ */
 /* Streaming POST — one request, many frames                           */
 /* ------------------------------------------------------------------ */
 
@@ -368,6 +424,8 @@ export const api = {
 
   upload: <T>(path: string, formData: FormData) =>
     request<T>(path, { method: "POST", body: formData }),
+
+  download,
 
   request,
 };

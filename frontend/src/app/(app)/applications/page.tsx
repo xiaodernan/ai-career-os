@@ -6,6 +6,7 @@ import { ModuleView } from "@/components/common/module-view";
 import { Button } from "@/components/ui/button";
 import { useApplications } from "@/lib/hooks/resources";
 import { useReorderApplication } from "@/lib/hooks/actions";
+import { useUrlState } from "@/lib/hooks/use-url-state";
 import type { Application, ApplicationStatus } from "@/lib/api/types";
 import { KanbanBoard } from "@/components/common/kanban";
 import { ApplicationDialog } from "@/components/applications/application-dialog";
@@ -19,6 +20,18 @@ export default function ApplicationsPage() {
     open: false,
     app: null,
   });
+  // Deep link: the dashboard's attention rows land as `?application=<id>` and open that card's
+  // editor once the list carries it. The param is cleared on close, so a refetch can never
+  // pop the dialog again behind the user's back.
+  const [state, setUrl] = useUrlState<{ application?: string }>({ application: undefined });
+  React.useEffect(() => {
+    const id = state.application;
+    // Once the editor is up, later refetches must not re-set it — swapping `application`
+    // under an open form would reset whatever the user has typed.
+    if (!id || dialog.open) return;
+    const found = applications.data?.items.find((a) => a.id === id);
+    if (found) setDialog({ open: true, app: found });
+  }, [state.application, applications.data, dialog.open]);
 
   const handleReorder = (id: string, status: ApplicationStatus, order: number) => {
     reorderApp.mutate({ id, status, order });
@@ -26,6 +39,10 @@ export default function ApplicationsPage() {
 
   const openCreate = () => setDialog({ open: true, app: null });
   const openEdit = (app: Application) => setDialog({ open: true, app });
+  const handleDialogOpenChange = (open: boolean) => {
+    setDialog((cur) => ({ ...cur, open }));
+    if (!open && state.application) setUrl({ application: undefined });
+  };
 
   return (
     <ModuleView
@@ -57,7 +74,7 @@ export default function ApplicationsPage() {
       <ApplicationDialog
         application={dialog.app}
         open={dialog.open}
-        onOpenChange={(open) => setDialog((cur) => ({ ...cur, open }))}
+        onOpenChange={handleDialogOpenChange}
       />
     </ModuleView>
   );

@@ -63,7 +63,7 @@ class ApplicationServiceTest {
     void updateLogsTheRealPriorStatusNotTheOverwrittenOne() {
         Application app = existing("interview");
 
-        service.update(userId, appId, new UpdateApplicationRequest("offer", null, null, null, null));
+        service.update(userId, appId, new UpdateApplicationRequest("offer", null, null, null, null, null, null));
 
         ApplicationEvent evt = savedEvent();
         assertThat(evt.getKind()).isEqualTo("status");
@@ -79,7 +79,7 @@ class ApplicationServiceTest {
         existing("offer");
 
         service.update(userId, appId,
-                new UpdateApplicationRequest("offer", null, "strong candidate", null, null));
+                new UpdateApplicationRequest("offer", null, "strong candidate", null, null, null, null));
 
         // Only the note event is written; a same-status change must not fake a transition.
         assertThat(savedEvent().getKind()).isEqualTo("note");
@@ -130,7 +130,7 @@ class ApplicationServiceTest {
 
         // A null component means "leave it alone", so deleting the reminder travels as its
         // own flag; before that existed the timestamp could only ever be set, never removed.
-        service.update(userId, appId, new UpdateApplicationRequest(null, null, null, null, true));
+        service.update(userId, appId, new UpdateApplicationRequest(null, null, null, null, true, null, null));
 
         assertThat(app.getReminderAt()).isNull();
         ApplicationEvent evt = savedEvent();
@@ -142,7 +142,7 @@ class ApplicationServiceTest {
     void clearingWhenThereWasNoReminderWritesNothing() {
         Application app = existing("saved");
 
-        service.update(userId, appId, new UpdateApplicationRequest(null, null, null, null, true));
+        service.update(userId, appId, new UpdateApplicationRequest(null, null, null, null, true, null, null));
 
         // The same no-op rule the status transition follows: nothing changed, so no audit row.
         assertThat(app.getReminderAt()).isNull();
@@ -154,7 +154,7 @@ class ApplicationServiceTest {
         Application app = existing("saved");
         OffsetDateTime at = OffsetDateTime.parse("2026-07-01T09:00:00Z");
 
-        service.update(userId, appId, new UpdateApplicationRequest(null, null, null, at, true));
+        service.update(userId, appId, new UpdateApplicationRequest(null, null, null, at, true, null, null));
 
         assertThat(app.getReminderAt()).isEqualTo(at);
     }

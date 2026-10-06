@@ -31,6 +31,7 @@ export const endpoints = {
   /* ---------------- Resumes ---------------- */
   resumes: "/resumes",
   resume: (id: string) => `/resumes/${seg(id)}`,
+  resumeFile: (id: string) => `/resumes/${seg(id)}/file`,
   resumeUpload: "/resumes/upload",
   resumeParse: (id: string) => `/resumes/${seg(id)}/parse`,
   resumeSetCurrent: (id: string) => `/resumes/${seg(id)}/set-current`,

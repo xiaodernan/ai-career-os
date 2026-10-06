@@ -12,10 +12,12 @@ change is mapCompany itself: its eleven calls used to ask thirty-three names of 
 never fire, because the backend stored `culture`, `interviewProcess` and `sources` and answered
 none of them. CompanyItem carries all three now and the alias lists are gone -- every name mapCompany
 asks is a component of its record, first-spelled -- so its row classifies to nothing and the dead
-census dropped from 80 asked names to 56. `fileName`/`fileUrl` are still read by the resume detail
-page off the detail body, which authors `sourceFileKey` instead -- the "Original file" affordance
-task #155 is holding; this file still does not fix that, it pins which is which, per name, with the
-record that answers the route as the second end.
+census dropped from 80 asked names to 56. The resume detail page reads `sourceFileKey` now and the
+download route behind it is served -- #155's "Original file" affordance is live, and what is left
+of the file-name family is `fileName`/`file_name` asked as title aliases by `mapResume` (harmless
+fallbacks, pinned as bloat) and a React state name in source-actions.tsx, which is why those two
+share a tier. This file still pins which is which, per name, with the record that answers the route
+as the second end.
 """
 
 import re
@@ -163,8 +165,9 @@ DECLARED_NOWHERE = {
 # names the mappers ask for, and a camel name and its snake twin are separate entries because a twin
 # can be dead in one direction and read in the other.
 VERSION_ROW_READS = {"createdAt", "diff", "id", "isCurrent", "label", "score", "source", "versionNo"}
-RESUME_DETAIL_READS = {"createdAt", "currentVersionId", "fileName", "fileUrl", "id", "score",
-                       "status", "structured", "title"}
+# `sourceFileKey` replaced the two dead reads when the original-file download went live (#155).
+RESUME_DETAIL_READS = {"createdAt", "currentVersionId", "id", "score", "sourceFileKey", "status",
+                       "structured", "title"}
 COMPANY_PAGE_READS = {"id", "industry", "logoUrl", "name", "openRoleCount", "size", "techStack",
                       "website"}
 KNOWLEDGE_PAGE_READS = {"error", "id", "kind", "status", "title"}
@@ -197,12 +200,13 @@ DEAD_NAME_TIERS = {
      "lib/hooks/resources.ts"): {"isCurrent", "versionNo"},
     ("lib/api/normalize.test.ts", "lib/api/normalize.ts", "lib/hooks/resources.ts"): {"job_id"},
     ("lib/api/normalize.ts", "lib/hooks/resources.ts", "lib/job-filter.ts"): {"resume_versions"},
+    ("components/knowledge/source-actions.tsx", "lib/hooks/resources.ts"): {"fileName"},
 }
 # Beyond three carriers a generic name (`name`, `score`, `title`, `kind`) means something else in the
 # file that spells it, so the census stops classifying rather than pretending to.
-WIDER_DEAD_NAMES = 29
+WIDER_DEAD_NAMES = 28
 TYPES_MIRROR_NAMES = {"chunkCount"}
-SCREEN_READ_NAMES = {"fileName", "isCurrent", "versionNo"}
+SCREEN_READ_NAMES = {"isCurrent", "versionNo"}
 
 
 def read(path: Path) -> str:
@@ -473,7 +477,9 @@ def test_an_unauthored_name_is_a_snake_twin_a_foreign_name_or_a_name_no_record_d
     everywhere = every_record_component()
     # The foreign-name lookup is only as good as this census, so its size is pinned from the scan
     # itself rather than left as a floor a narrowing walk could satisfy by reading nothing.
-    assert len(everywhere) == 211, f"the backend record census read {len(everywhere)} component names"
+    # 215 rather than 213 since `offerCompensation`/`rejectionReason`: the outcome pair the tracker's
+    # ApplicationItem and UpdateApplicationRequest both carry.
+    assert len(everywhere) == 215, f"the backend record census read {len(everywhere)} component names"
     assert {"id", "title", "status", "createdAt"} <= set(everywhere), sorted(list(everywhere)[:8])
     scanned_unauthored = scanned_nowhere = 0
     for (mapper, receiver), record in ROWS.items():
@@ -696,14 +702,15 @@ def test_the_screens_read_their_mapper_output_and_only_the_versions_row_asks_dea
     assert INTERVIEWS_PAGE_READS - set(record_components("SessionItem")) == {"jobTitle"}, \
         sorted(INTERVIEWS_PAGE_READS - set(record_components("SessionItem")))
 
-    # The same page that hosts the versions list also reads the detail body, and two of those names
-    # are #155's affordance: `ResumeDetail` authors `sourceFileKey`, never a file name or a URL, so
-    # the conditional that prints the original file can never take its truthy branch.
+    # The same page that hosts the versions list also reads the detail body. The "Original file"
+    # affordance used to read two names no producer sent (#155's dead conditional); it reads the
+    # key the record actually authors now, and the route the key promises bytes from is served.
     detail_reads = dotted_reads(page, "r")
     assert detail_reads == RESUME_DETAIL_READS, sorted(detail_reads ^ RESUME_DETAIL_READS)
-    dead_on_the_detail = detail_reads - set(record_components("ResumeDetail"))
-    assert dead_on_the_detail == {"fileName", "fileUrl"}, sorted(dead_on_the_detail)
-    assert "{r.fileName ? `${r.fileName}" in page, "the affordance moved; re-measure this claim"
+    assert detail_reads - set(record_components("ResumeDetail")) == set(), \
+        "the detail screen reads a name its record does not declare"
+    assert "r.sourceFileKey && (" in page, "the affordance moved; re-measure this claim"
+    assert "downloadOriginal(r.id" in page, "the affordance is no longer wired to the download"
     assert "sourceFileKey" in set(record_components("ResumeDetail")), \
         "the name the detail record does author stopped being authored"
 
@@ -711,18 +718,16 @@ def test_the_screens_read_their_mapper_output_and_only_the_versions_row_asks_dea
 def test_the_dead_names_spread_in_three_measured_tiers_and_three_reached_a_screen():
     """Blast radius of a name no record authors, spelled out over the whole frontend census.
 
-    The population is every `*.ts*` file under `frontend/src` (134 at this plane); the spellings
+    The population is every `*.ts*` file under `frontend/src` (135 at this plane); the spellings
     walked are the 56 names the eight mappers ask for that their record declares in no spelling, and
-    a camel name and its snake twin are separate entries. Twenty-seven of them live in three files
-    or fewer, and those 27 are classified by exactly which files; beyond that a generic name (`name`,
+    a camel name and its snake twin are separate entries. Twenty-eight of them live in three files
+    or fewer, and those 28 are classified by exactly which files; beyond that a generic name (`name`,
     `score`, `title`) means something else in the file that spells it, so the census stops rather
-    than pretend. The tier worth a decision is the one a screen belongs to: `fileName` is asked by
-    `mapResume`, authored by no resume record in either spelling, and still printed by the resume
-    detail page -- but it stopped being classifiable when `source-actions.tsx` began spelling it as
-    a React state name, which pushed it past the three-carrier cutoff.
+    than pretend. The tier worth a decision is the one a screen belongs to: the versions row reads
+    `isCurrent` and `versionNo`, both calls dead, the badge alive on a second real term.
     """
     files = frontend_files()
-    assert len(files) == 134, f"the frontend census walked {len(files)} files"
+    assert len(files) == 135, f"the frontend census walked {len(files)} files"
     asked = {name for row in UNAUTHORED.values() for name in row}
     assert len(asked) == 56, f"{len(asked)} dead names are asked, pinned 56"
     classified = set()
@@ -731,7 +736,7 @@ def test_the_dead_names_spread_in_three_measured_tiers_and_three_reached_a_scree
             found = carriers_of(name)
             assert found == set(carriers), f"{name} is now spelled in {sorted(found ^ set(carriers))}"
             classified.add(name)
-    assert len(classified) == 27, f"{len(classified)} names classified, pinned 27"
+    assert len(classified) == 28, f"{len(classified)} names classified, pinned 28"
     assert len(asked) - len(classified) == WIDER_DEAD_NAMES, \
         f"{len(asked) - len(classified)} names spread past three carriers, pinned {WIDER_DEAD_NAMES}"
     assert classified <= asked
@@ -746,10 +751,11 @@ def test_the_dead_names_spread_in_three_measured_tiers_and_three_reached_a_scree
                         | set().union(*READERS_BY_PAGE.values()))
     assert TYPES_MIRROR_NAMES & read_by_a_screen == set(), \
         sorted(TYPES_MIRROR_NAMES & read_by_a_screen)
-    # The screen tier is the versions row's pair; `fileName` is still read by the same screen but is
-    # classified no longer -- source-actions.tsx spelled it as a state name and pushed it wide.
+    # The screen tier is the versions row's pair. `fileName` left this tier twice over: the detail
+    # screen stopped reading it when the download went live, and what remains spelled is the
+    # mapper's own title alias plus a React state name in source-actions.tsx -- a two-file tier.
     screen_tier = DEAD_NAME_TIERS[("app/(app)/resumes/[id]/page.tsx", "lib/api/types.ts",
                                    "lib/hooks/resources.ts")]
-    assert screen_tier == SCREEN_READ_NAMES - {"fileName"}, sorted(screen_tier ^ SCREEN_READ_NAMES)
+    assert screen_tier == SCREEN_READ_NAMES, sorted(screen_tier ^ SCREEN_READ_NAMES)
     assert SCREEN_READ_NAMES <= read_by_a_screen
     assert VERSION_ROW_READS >= {"isCurrent", "versionNo"}

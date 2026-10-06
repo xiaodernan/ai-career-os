@@ -35,6 +35,7 @@ import { APPLICATION_STAGES, stageMeta } from "@/lib/pipeline";
 import { useUser } from "@/lib/hooks/auth";
 import {
   useActivityRuns,
+  useAIUsage,
   useDashboard,
   useDashboardPipeline,
   useJobs,
@@ -60,6 +61,9 @@ export default function DashboardPage() {
   const dashboard = useDashboard();
   const pipeline = useDashboardPipeline();
   const resumes = useResumes();
+  // F8.2's spend line: the summary endpoint has existed with no consumer, so the numbers
+  // the activity log bills were nowhere the user could see them.
+  const aiUsage = useAIUsage();
 
   const data = dashboard.data;
   const metrics = data?.metrics;
@@ -130,7 +134,15 @@ export default function DashboardPage() {
           {dashboard.isPending ? (
             <LoadingMetricGridSkeleton />
           ) : hasMetrics ? (
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <div
+              className={cn(
+                "grid gap-4 sm:grid-cols-2",
+                // The attention count used to be evicted from the strip the moment an average
+                // match existed — two facts about the same search, never both on screen. With five
+                // slots the ring and the count coexist.
+                typeof metrics.avgMatch === "number" ? "xl:grid-cols-5" : "xl:grid-cols-4"
+              )}
+            >
               <StatCard
                 icon={<Briefcase className="size-4" aria-hidden />}
                 label="Applications"
@@ -150,7 +162,7 @@ export default function DashboardPage() {
                 hint="ready for decision"
               />
               {typeof metrics.avgMatch === "number" ? (
-                <Card className="sm:col-span-2 xl:col-span-1">
+                <Card>
                   <CardContent className="flex items-center gap-3">
                     <MatchRing value={metrics.avgMatch} size={56} thickness={5} label="Average match" />
                     <div>
@@ -163,14 +175,13 @@ export default function DashboardPage() {
                     </div>
                   </CardContent>
                 </Card>
-              ) : (
-                <StatCard
-                  icon={<Gauge className="size-4" aria-hidden />}
-                  label="Needs attention"
-                  value={metrics.needsAttention}
-                  hint="stale or weak spots"
-                />
-              )}
+              ) : null}
+              <StatCard
+                icon={<Gauge className="size-4" aria-hidden />}
+                label="Needs attention"
+                value={metrics.needsAttention}
+                hint="stale or due reminders"
+              />
             </div>
           ) : dashboard.isError && isEndpointMissing(dashboard.error) ? (
             <Card>
@@ -327,7 +338,7 @@ export default function DashboardPage() {
                         return (
                           <li key={row.id}>
                             <Link
-                              href="/applications"
+                              href={`/applications?application=${encodeURIComponent(row.id)}`}
                               className="-mx-2.5 flex items-start gap-3 rounded-lg p-2.5 transition-colors duration-150 hover:bg-accent/40 focus-visible:ring-[3px] focus-visible:ring-primary/30"
                             >
                               <span
@@ -541,19 +552,84 @@ export default function DashboardPage() {
                 </CardContent>
               </Card>
 
-              {/* Skill gaps summary */}
-              {(data?.skillGaps?.length ?? 0) > 0 && (
-                <Card>
-                  <CardHeader className="pb-3">
-                    <SectionHeading
-                      eyebrow="Gap analysis"
-                      icon={<TrendingUp className="size-4" aria-hidden />}
-                      title="Top skill gaps"
-                      description="Across your matched jobs."
+              {/* AI usage — what the agents have billed, read from /ai-usage/summary. */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <SectionHeading
+                    eyebrow="AI usage"
+                    icon={<Sparkles className="size-4" aria-hidden />}
+                    title="Agent spend"
+                    description="Requests and tokens the agents billed against your budget."
+                    action={
+                      <Button variant="ghost" size="xs" asChild>
+                        <Link href="/activity">
+                          Detail
+                          <ArrowRight aria-hidden />
+                        </Link>
+                      </Button>
+                    }
+                  />
+                </CardHeader>
+                <CardContent>
+                  {aiUsage.isPending ? (
+                    <LoadingListSkeleton rows={1} />
+                  ) : aiUsage.isError ? (
+                    <p className="text-sm text-muted-foreground">
+                      The usage summary isn&apos;t answering right now — the rest of the dashboard still
+                      reads live.
+                    </p>
+                  ) : (aiUsage.data?.requests ?? 0) > 0 ? (
+                    <dl className="grid grid-cols-3 gap-2 text-center">
+                      <div>
+                        <dt className="text-2xs font-medium tracking-wide text-muted-foreground uppercase">
+                          Requests
+                        </dt>
+                        <dd className="mt-0.5 text-lg font-semibold tabular-nums">
+                          {formatNumber(aiUsage.data!.requests)}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-2xs font-medium tracking-wide text-muted-foreground uppercase">
+                          Tokens
+                        </dt>
+                        <dd className="mt-0.5 text-lg font-semibold tabular-nums">
+                          {formatNumber(aiUsage.data!.tokensTotal)}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-2xs font-medium tracking-wide text-muted-foreground uppercase">
+                          Cost
+                        </dt>
+                        <dd className="mt-0.5 text-lg font-semibold tabular-nums">
+                          ${(aiUsage.data!.costUsd ?? 0).toFixed(2)}
+                        </dd>
+                      </div>
+                    </dl>
+                  ) : (
+                    <EmptyState
+                      icon={<Sparkles aria-hidden />}
+                      title="No AI spend yet"
+                      description="Match a job or tailor a resume and the token counts appear here."
                     />
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    {data!.skillGaps!.slice(0, 5).map((g, i) => (
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Skill gaps summary — rendered even when empty: a card that vanishes without a
+                  trace reads as "not built yet" rather than "nothing to fix", so the empty state
+                  says which action fills it. */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <SectionHeading
+                    eyebrow="Gap analysis"
+                    icon={<TrendingUp className="size-4" aria-hidden />}
+                    title="Top skill gaps"
+                    description="Across your matched jobs."
+                  />
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {(data?.skillGaps?.length ?? 0) > 0 ? (
+                    data!.skillGaps!.slice(0, 5).map((g, i) => (
                       <div key={`${g.skill}-${i}`} className="flex items-start gap-2 text-sm">
                         <Badge
                           variant={g.importance === "critical" || g.importance === "high" ? "warning" : "outline"}
@@ -566,10 +642,26 @@ export default function DashboardPage() {
                           {g.reason && <p className="text-xs text-muted-foreground">{g.reason}</p>}
                         </div>
                       </div>
-                    ))}
-                  </CardContent>
-                </Card>
-              )}
+                    ))
+                  ) : dashboard.isPending ? (
+                    <LoadingListSkeleton rows={3} />
+                  ) : (
+                    <EmptyState
+                      icon={<TrendingUp aria-hidden />}
+                      title="No gaps measured yet"
+                      description="Run a match against a job and its missing skills rank here by importance."
+                      action={
+                        <Button variant="outline" size="sm" asChild>
+                          <Link href="/jobs">
+                            Open Jobs
+                            <ArrowRight aria-hidden />
+                          </Link>
+                        </Button>
+                      }
+                    />
+                  )}
+                </CardContent>
+              </Card>
             </aside>
           </div>
         </>

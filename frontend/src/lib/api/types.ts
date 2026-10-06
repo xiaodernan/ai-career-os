@@ -47,8 +47,13 @@ export interface Resume {
   structured?: StructuredResume | null;
   versions?: ResumeVersion[];
   score?: ResumeScore | null;
-  fileUrl?: string | null;
-  fileName?: string | null;
+  /**
+   * The detail route answers it when the resume was uploaded as a file, and the download route
+   * (`endpoints.resumeFile`) has bytes behind it exactly when this is set. The two names this
+   * used to read off the detail body were answered by no producer, which is why "Original file"
+   * could not render.
+   */
+  sourceFileKey?: string | null;
 }
 
 export interface ResumeVersion {
@@ -333,6 +338,10 @@ export interface Application {
   jdId?: string | null;
   /** Linked match analysis for this application */
   matchId?: string | null;
+  /** Compensation written on the offer, when the terminal outcome is known. */
+  offerCompensation?: string | null;
+  /** Why the application did not proceed, when it was rejected. */
+  rejectionReason?: string | null;
   /** When the application was moved to 'applied' stage */
   appliedAt?: string | null;
   createdAt?: string;
@@ -351,6 +360,8 @@ export interface ApplicationEvent {
   id: string;
   /** The `kind` the event was written under: `status`, `note` or `reminder`. */
   type?: string;
+  /** Set on an `outcome` event: which terminal field was written (`offer_compensation` / `rejection_reason`). */
+  field?: string;
   status?: string;
   note?: string;
   /** Set on a `reminder` event: the instant the reminder was moved to. */

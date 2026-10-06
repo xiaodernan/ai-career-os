@@ -7,7 +7,9 @@ import com.careeros.common.Json;
 import com.careeros.common.PageDTO;
 import com.careeros.common.Paging;
 import com.careeros.common.Texts;
+import com.careeros.knowledge.entity.Document;
 import com.careeros.knowledge.entity.KnowledgeSource;
+import com.careeros.knowledge.repository.DocumentRepository;
 import com.careeros.knowledge.repository.KnowledgeSourceRepository;
 import com.careeros.knowledge.service.FileIngestService;
 import com.careeros.knowledge.service.KnowledgeService;
@@ -67,6 +69,7 @@ public class ResumeService {
     private final SkillRepository skills;
     private final ResumeSkillRepository resumeSkills;
     private final KnowledgeSourceRepository sources;
+    private final DocumentRepository documents;
     private final KnowledgeService knowledge;
     private final FileIngestService fileIngest;
     private final StorageService storage;
@@ -77,7 +80,7 @@ public class ResumeService {
                          EducationRepository educations, AchievementRepository achievements,
                          SkillRepository skills, ResumeSkillRepository resumeSkills,
                          KnowledgeSourceRepository sources, KnowledgeService knowledge,
-                         FileIngestService fileIngest,
+                         DocumentRepository documents, FileIngestService fileIngest,
                          StorageService storage, AiServiceClient ai) {
         this.resumes = resumes;
         this.versions = versions;
@@ -88,6 +91,7 @@ public class ResumeService {
         this.skills = skills;
         this.resumeSkills = resumeSkills;
         this.sources = sources;
+        this.documents = documents;
         this.knowledge = knowledge;
         this.fileIngest = fileIngest;
         this.storage = storage;
@@ -242,6 +246,39 @@ public class ResumeService {
             r.setStatus("failed");
             r.setParseError(reason == null ? "ingestion trigger failed" : reason);
         });
+    }
+
+    /**
+     * The bytes behind a resume's {@code sourceFileKey}, for the detail page's "Original file"
+     * affordance.
+     *
+     * <p>The document row is the ownership anchor, not the key: the key's first path segment embeds
+     * the uploading user's id, but a key is data, and a resume row pointing at another account's key
+     * would make the key check a formality. Both the resume (via {@link #requireResume}) and the
+     * document row must agree the caller owns this file before a byte leaves storage. A resume
+     * created by hand ({@code POST /resumes}) has no key and no row, and answers 404 rather than a
+     * guess at a file.
+     */
+    @Transactional(readOnly = true)
+    public OriginalFile originalFile(UUID userId, UUID resumeId) {
+        Resume resume = requireResume(userId, resumeId);
+        String key = resume.getSourceFileKey();
+        if (key == null || key.isBlank()) {
+            throw new ApiException(ApiErrorCode.RESUME_NOT_FOUND,
+                    "This resume has no original file behind it");
+        }
+        Document doc = documents.findByFileKey(key)
+                .filter(d -> userId.equals(d.getUserId()))
+                .orElseThrow(() -> new ApiException(ApiErrorCode.RESUME_NOT_FOUND,
+                        "No ingested document owns this resume's file"));
+        byte[] bytes = storage.getBytes(key);
+        String name = (doc.getTitle() == null || doc.getTitle().isBlank() ? "resume" : doc.getTitle())
+                + key.substring(key.lastIndexOf('.'));
+        return new OriginalFile(bytes, doc.getMediaType(), name);
+    }
+
+    /** One original file download: the bytes, the stored media type, and the name to save it under. */
+    public record OriginalFile(byte[] content, String mediaType, String saveName) {
     }
 
     public ParseResumeResponse parse(UUID userId, UUID resumeId) {

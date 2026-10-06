@@ -182,7 +182,14 @@ export async function copyText(text: string): Promise<boolean> {
 
 /** Client-side download for AI artifacts (tailored resume, cover letter, report). */
 export function downloadText(filename: string, text: string, mime = "text/plain;charset=utf-8") {
-  const blob = new Blob([text], { type: mime });
+  downloadBlob(filename, new Blob([text], { type: mime }));
+}
+
+/**
+ * Save a blob the browser would otherwise only preview: object URL, programmatic click, revoke.
+ * The caller names the file — usually the name the server's Content-Disposition carried.
+ */
+export function downloadBlob(filename: string, blob: Blob) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;

@@ -19,6 +19,7 @@ import com.careeros.job.repository.JobRepository;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import org.springframework.data.domain.PageRequest;
@@ -119,6 +120,24 @@ public class ApplicationService {
             // is audited, the same rule the status transition above follows.
             app.setReminderAt(null);
             writeEvent(app, "reminder", Map.of("cleared", true));
+        }
+        // Terminal outcomes are optional but, once set, clearable by an empty string:` the
+        // PATCH contract says a null component means "leave it alone", so an empty string is the
+        // only way a caller can say "set it back to nothing" for these two. Only an actual change
+        // is audited, and each keeps its own event so the timeline says what moved.
+        if (request.offerCompensation() != null) {
+            String next = request.offerCompensation().isBlank() ? null : request.offerCompensation();
+            if (!Objects.equals(next, app.getOfferCompensation())) {
+                app.setOfferCompensation(next);
+                writeEvent(app, "outcome", Map.of("field", "offer_compensation"));
+            }
+        }
+        if (request.rejectionReason() != null) {
+            String next = request.rejectionReason().isBlank() ? null : request.rejectionReason();
+            if (!Objects.equals(next, app.getRejectionReason())) {
+                app.setRejectionReason(next);
+                writeEvent(app, "outcome", Map.of("field", "rejection_reason"));
+            }
         }
         return toItem(applications.save(app));
     }
@@ -234,6 +253,7 @@ public class ApplicationService {
         return new ApplicationItem(a.getId(), a.getJobId(), a.getCompanyId(), a.getTitle(),
                 a.getCompanyName(), a.getStatus(), a.getPosition(), a.getNotes(), a.getReminderAt(),
                 a.getResumeVersionId(), a.getJdId(), a.getMatchId(), a.getAppliedAt(),
-                a.getCreatedAt(), a.getUpdatedAt());
+                a.getCreatedAt(), a.getUpdatedAt(), a.getOfferCompensation(),
+                a.getRejectionReason());
     }
 }

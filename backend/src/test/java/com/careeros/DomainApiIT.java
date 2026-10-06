@@ -1,5 +1,6 @@
 package com.careeros;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -9,6 +10,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -163,6 +166,52 @@ class DomainApiIT extends ApiIntegrationTest {
                         .header(authHeader(), "Bearer " + alice))
                 .andExpect(status().isBadGateway())
                 .andExpect(jsonPath("$.error.code").value("AI_SERVICE_ERROR"));
+    }
+
+    @Test
+    @DisplayName("the original file downloads back to its owner, and to nobody else")
+    void resumeOriginalFileDownloadsForItsOwnerOnly() throws Exception {
+        String alice = register("dl-" + UUID.randomUUID() + "@example.com");
+        String bob = register("dlx-" + UUID.randomUUID() + "@example.com");
+        byte[] pdf = ("%PDF-1.4\n% download me\n1 0 obj\ntrailer\n%%EOF\n")
+                .getBytes(StandardCharsets.UTF_8);
+
+        MvcResult up = mvc.perform(multipart("/api/v1/resumes/upload")
+                        .file(new MockMultipartFile("file", "resume.pdf", "application/pdf", pdf))
+                        .header(authHeader(), "Bearer " + alice))
+                .andExpect(status().isCreated())
+                .andReturn();
+        String resumeId = MAPPER.readTree(up.getResponse().getContentAsString())
+                .path("data").path("resumeId").asText();
+
+        // The owner gets the exact bytes back, typed as stored, named for saving.
+        MvcResult dl = mvc.perform(get("/api/v1/resumes/" + resumeId + "/file")
+                        .header(authHeader(), "Bearer " + alice))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_PDF))
+                .andExpect(header().string("Content-Disposition",
+                        org.hamcrest.Matchers.containsString("attachment")))
+                .andReturn();
+        assertArrayEquals(pdf, dl.getResponse().getContentAsByteArray(),
+                "the download must be the uploaded bytes, not a re-encode");
+
+        // Another account's resume id is not a file: the route is user-scoped like every read.
+        mvc.perform(get("/api/v1/resumes/" + resumeId + "/file")
+                        .header(authHeader(), "Bearer " + bob))
+                .andExpect(status().isNotFound());
+        mvc.perform(get("/api/v1/resumes/" + resumeId + "/file"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("a resume created by hand has no original file, and says so")
+    void handCreatedResumeHasNoFileToDownload() throws Exception {
+        String alice = register("dlnone-" + UUID.randomUUID() + "@example.com");
+        String resumeId = dataId(createResume(alice, "Pasted only"));
+
+        mvc.perform(get("/api/v1/resumes/" + resumeId + "/file")
+                        .header(authHeader(), "Bearer " + alice))
+                .andExpect(status().isNotFound());
     }
 
     @Test

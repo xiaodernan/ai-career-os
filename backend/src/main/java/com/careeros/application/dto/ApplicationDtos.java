@@ -16,7 +16,8 @@ public final class ApplicationDtos {
                                   String companyName, String status, int position, String notes,
                                   OffsetDateTime reminderAt, UUID resumeVersionId, UUID jdId,
                                   UUID matchId, OffsetDateTime appliedAt, OffsetDateTime createdAt,
-                                  OffsetDateTime updatedAt) {
+                                  OffsetDateTime updatedAt, String offerCompensation,
+                                  String rejectionReason) {
     }
 
     public record CreateApplicationRequest(@JsonAlias("job_id") UUID jobId,
@@ -40,7 +41,9 @@ public final class ApplicationDtos {
                                            Integer position,
                                            String note,
                                            @JsonAlias("reminder_at") OffsetDateTime reminderAt,
-                                           @JsonAlias("clear_reminder_at") Boolean clearReminderAt) {
+                                           @JsonAlias("clear_reminder_at") Boolean clearReminderAt,
+                                           @JsonAlias("offer_compensation") String offerCompensation,
+                                           @JsonAlias("rejection_reason") String rejectionReason) {
     }
 
     public record ReorderRequest(int position, String status) {

@@ -1,9 +1,11 @@
-"""The resume detail response ships `sourceFileKey`; the client reads `fileName` and `fileUrl`.
+"""The resume detail response ships `sourceFileKey`, and the browser reads it now.
 
-Two sides of one response that never meet. `ResumeDetail` carries an internal MinIO object key that
-no browser, driver or Python module names, while `useResume` fills the two fields the "Original
-file" button reads from aliases no record authors -- so the button's guard is never true, and
-`next build` cannot see it because the type marks both fields optional.
+The dead affordance this file used to document went live: `useResume` fills the key the record
+authors, the detail page gates "Original file" on it, and the route the key promises bytes from
+(`GET /resumes/{id}/file`) is served -- owner-scoped through the document row, named for saving
+from that row's title. What remains of the old dead pair is `fileName`/`file_name` asked as
+*title* fallbacks by the mappers and a React state name elsewhere -- bloat the mapper census
+pins, not this file.
 
 Both ends of every pin here are parsed from the shipped source. The file never rewrites a
 production file, and never imports one.
@@ -188,8 +190,10 @@ def test_the_shipped_key_has_one_writer_and_a_column_that_still_allows_none():
         f"the writer stores {local.group(1) if local else 'nothing'} rather than the composed local, "
         f"so the value reaching the DTO is no longer the one file_key_composers pins")
     readers = scan("backend/src/main", re.compile(r"getSourceFileKey\(\)"), (".java",))
-    assert [rel for rel, _, _ in readers if rel != ENTITY_FILE] == [SERVICE_FILE, SERVICE_FILE], (
-        f"the detail readers moved: {readers}")
+    # three reads, all in the service: the list projection, the detail projection, and the
+    # download route that turns the key into bytes
+    assert [rel for rel, _, _ in readers if rel != ENTITY_FILE] == [SERVICE_FILE] * 3, (
+        f"the key's readers moved: {readers}")
 
     sql = read(V1_FILE)
     rows = declarations(sql, SNAKE)
@@ -242,97 +246,94 @@ def test_the_component_reaches_the_wire_under_its_java_name():
         ["@JsonProperty"], "the annotation scan cannot see a component annotation, so emptiness is blind"
 
 
-def test_only_the_schema_and_three_gates_name_the_key_that_ships():
-    """Nobody downstream of the response reads it: not the client, not the driver, not the model."""
+def test_the_shipped_key_is_read_by_the_three_browser_files_that_render_it():
+    """The key is no longer unread: the type declares it, the fill asks it, the page gates on it."""
     sites = sorted({rel for rel, _, _ in scan("", KEY_RE,
                                               (".java", ".py", ".ts", ".tsx", ".sql", ".md",
                                                ".yml", ".yaml", ".mjs", ".json"))})
-    assert sites == sorted([DTO_FILE, SERVICE_FILE, ENTITY_FILE, V1_FILE, "docs/architecture.md",
-                          "ai-service/tests/test_file_key_composers.py",
-                          "ai-service/tests/test_resume_file_fields_ship.py",
-                          "ai-service/tests/test_resources_mapper_records_ship.py"]), (
-        f"the key is now named in {sites}. Anything outside the schema, the three gates and the "
-        f"ingestion path is either a reader (the affordance stopped being dead -- then this gate "
-        f"must describe what it renders) or a second author")
-    frontend = scan("frontend/src", KEY_RE, (".ts", ".tsx"))
-    assert frontend == [], (
-        f"the browser reads the internal object key at {frontend}; that is the fix, not the bug -- "
-        f"rewrite this file around the download flow instead of its absence")
+    assert sites == sorted([DTO_FILE, SERVICE_FILE, ENTITY_FILE, CONTROLLER_FILE, V1_FILE,
+                            "docs/API.md", "docs/architecture.md",
+                            TYPES_FILE, RESOURCES_FILE, PAGE_FILE,
+                            "ai-service/tests/test_file_key_composers.py",
+                            "ai-service/tests/test_resources_mapper_records_ship.py",
+                            "ai-service/tests/test_resume_file_fields_ship.py"]), (
+        f"the key is named in {sites}. The schema, the ingestion trail, the response record, the "
+        f"controller's route, the two docs and the three gates are the accounted spellers; a new "
+        f"name here is a new author or a new reader, and this census has to say which")
+
+    legs = {rel: [line for f, _n, line in scan("frontend/src", KEY_RE, (".ts", ".tsx"))
+                  if f == rel]
+            for rel in (TYPES_FILE, RESOURCES_FILE, PAGE_FILE)}
+    assert all(legs.values()), (
+        f"a leg of the render chain went quiet: { {k: len(v) for k, v in legs.items()} }")
+    assert any("sourceFileKey?" in line for line in legs[TYPES_FILE]), (
+        "the type no longer declares the key; a resume created by hand then has no honest shape")
+    assert any('sourceFileKey: str(body, "sourceFileKey")' in line for line in legs[RESOURCES_FILE]), (
+        "useResume stopped filling the key the page gates on")
+    assert any("r.sourceFileKey && (" in line for line in legs[PAGE_FILE]), (
+        "the affordance's gate moved; re-measure this claim")
+
     drivers = scan("e2e", KEY_RE, (".mjs", ".js", ".ts", ".json"))
     assert drivers == [], f"an acceptance driver names the key: {drivers}"
 
 
-def test_the_names_the_client_reads_are_authored_by_nothing_on_that_response():
-    """`fileName` / `fileUrl` are filled from aliases the response's records never declare."""
+def test_the_dead_pair_is_gone_from_the_detail_fill_and_only_title_fallbacks_remain():
+    """`fileUrl` / `originalName` are asked nowhere; `fileName` survives only as a title fallback."""
     hooks = read(RESOURCES_FILE)
-    requested: dict[str, set[str]] = {}
-    for target, inner in re.findall(r"\b(\w+):\s*str\(([^)]*)\)", hooks):
-        names = [n for n in re.findall(r'"([^"]+)"', inner) if n != "body"]
-        if names and "resume" in hooks[max(0, hooks.index(f"{target}:") - 400):hooks.index(f"{target}:")].lower():
-            requested.setdefault(target, set()).update(names)
-    assert {"fileName", "fileUrl"} <= set(requested), (
-        f"useResume no longer fills fileName/fileUrl through str(), got {sorted(requested)}; the "
-        f"affordance may have been rewired and the claim below is stale")
-    for field in ("fileName", "fileUrl"):
-        assert field in requested[field], (
-            f"the reader for `{field}` no longer asks for the name it exposes, so the pairing the "
-            f"gate below pins is not a same-name read")
+    assert "fileUrl" not in hooks and "originalName" not in hooks, (
+        "the detail fill asks again for a name no producer sends; the dead pair is back")
+    assert 'str(body, "sourceFileKey")' in hooks, (
+        "useResume stopped reading the key off the detail body")
+    remaining = [line.strip() for line in hooks.split("\n")
+                 if '"fileName"' in line or '"file_name"' in line]
+    assert len(remaining) == 2 and all(line.startswith("title:") for line in remaining), (
+        f"fileName survives as {remaining}; a read that is not a title fallback is the dead alias "
+        f"coming back through a different field")
 
-    detail = components_of("ResumeDetail")
-    overlap = sorted((requested["fileName"] | requested["fileUrl"]) & set(detail))
-    assert overlap == [], (
-        f"the detail record now authors {overlap}; the response could carry a real file name, so "
-        f"the button may work and this case must be replaced by the shape that makes it work")
-
-    # one alias does exist in the DTO file -- one level down, where a top-level str() never looks
+    # the only `url` any mapper asks for is the nested one a top-level read never reaches
     records = [m.group(1) for m in re.finditer(r"\brecord\s+(\w+)\s*\(", read(DTO_FILE))]
     assert records, "no records parsed out of ResumeDtos.java, so the nesting claim below is blind"
     holders = sorted(n for n in records if "url" in components_of(n, read(DTO_FILE)))
     assert holders == ["ProjectItem"], (
-        f"`url` is authored by {holders}; str(body, ...) reads the detail body's own keys, so a url "
-        f"that only exists inside projects[] still cannot fill fileUrl -- unless the client started "
-        f"descending, which this pin would then be wrong about")
+        f"`url` is authored by {holders}; a top-level url on the detail record would be a second "
+        f"way to fill the old fileUrl, and this pin would be wrong about it")
     header = balanced(read(DTO_FILE), re.search(r"\brecord\s+ResumeDetail\s*\(",
                                                 read(DTO_FILE)).end() - 1)
     assert re.search(r"List<ProjectItem>\s+projects", header), (
-        "ResumeDetail no longer carries projects as a List<ProjectItem>, so the `url` above is not "
-        "the nested one this case excludes")
-    assert KEY not in requested["fileName"] | requested["fileUrl"], (
-        "the client started asking for the internal key: the leak this file documents is closed, so "
-        "pin whatever replaced it")
-    # a name may exist deeper in the payload without ever reaching a top-level str() read
-    nested = sorted(n for n in ("fileName", "originalName", "file_name", "file_url")
-                    if n in read(DTO_FILE))
-    assert nested == [], f"an alias the client asks for appears in the DTO file as {nested}"
+        "ResumeDetail no longer carries projects as a List<ProjectItem>, so the `url` above is "
+        "not the nested one this case excludes")
 
 
-def test_the_affordance_that_cannot_render_is_gated_on_a_field_the_type_makes_optional():
-    """`Original file` renders only under `r.fileUrl`; the type hides that it is never set."""
+def test_the_live_affordance_gates_on_the_key_and_downloads_from_the_route_the_key_promises():
+    """`Original file` renders under `r.sourceFileKey`, saving what GET /resumes/{id}/file answers."""
     page = read(PAGE_FILE)
-    sites = scan("frontend/src", re.compile(r"\bfileUrl\b"), (".ts", ".tsx"))
-    assert sorted({rel for rel, _, _ in sites}) == sorted([TYPES_FILE, RESOURCES_FILE, PAGE_FILE]), (
-        f"fileUrl is named by {sorted({rel for rel, _, _ in sites})} -- one of the three (type, fill, "
-        f"render) moved, so the dead-affordance chain below is no longer the whole story")
-    guard = re.search(r"\{\s*r\.fileUrl\s*&&\s*\(", page)
-    assert guard, "there is no longer an `r.fileUrl &&` guard, so the button's condition changed"
-    start = guard.end()
-    copy = re.search(r"Original file", page[start:start + 600])
-    assert copy, (
-        "the guarded block no longer contains the 'Original file' copy, so this case points at a "
-        "different affordance")
-    assert re.search(r'href=\{r\.fileUrl\}', page[start:start + 600]), (
-        "the guarded block contains no anchor built from r.fileUrl")
+    guard = re.search(r"\{\s*r\.sourceFileKey\s*&&\s*\(", page)
+    assert guard, "the affordance's gate is no longer the key the detail response authors"
+    window = page[guard.end():guard.end() + 600]
+    assert "Original file" in window, (
+        "the guarded block no longer contains the affordance's copy")
+    assert "downloadOriginal(r.id" in window, (
+        "the affordance is no longer wired to the download call")
 
     types = read(TYPES_FILE)
     interface = balanced(types, types.index("interface Resume"), "{", "}")
     optional = {n: m for n, m in re.findall(r"^\s*(\w+)(\??):", interface, re.M)}
-    for field in ("fileName", "fileUrl"):
-        assert field in optional, (
-            f"the client's Resume type no longer declares {field}, so the fill in useResume has "
-            f"nowhere to land and the page read would be a type error")
-        assert optional[field] == "?", (
-            f"Resume.{field} is required now; tsc would then catch a response that never carries "
-            f"it, and this case's claim that only a gate can see the absence is wrong")
-    assert KEY not in interface, (
-        f"the client type declares {KEY}: the internal object key is now part of the browser's data "
-        f"model -- decide whether it is read, and if so replace this file with that flow")
+    assert optional.get("sourceFileKey") == "?", (
+        f"Resume.sourceFileKey is {optional.get('sourceFileKey', 'missing')!r}; a resume created by "
+        f"hand has no file, so the gate's field has to stay optional")
+    for gone in ("fileName", "fileUrl"):
+        assert gone not in optional, (
+            f"Resume.{gone} is declared again; the type is back to promising a member the "
+            f"response does not carry")
+
+    # the bytes behind the gate come from the route the endpoint composes for the controller
+    compose = re.search(r"resumeFile:\s*\(id: string\) =>\s*`(/[^`]*)`", read(ENDPOINTS_FILE))
+    assert compose, "the client's download endpoint moved"
+    controller = read(CONTROLLER_FILE)
+    root = re.search(r'@RequestMapping\("([^"]*)"\)', controller)
+    leaf = re.search(r'@GetMapping\("(/\{id\}/file)"\)', controller)
+    assert root and leaf, "the controller's download route moved"
+    client_path = re.sub(r"\$\{seg\(id\)\}", "{id}", compose.group(1))
+    assert client_path == root.group(1).removeprefix("/api/v1") + leaf.group(1), (
+        f"the client composes {compose.group(1)} while the controller serves "
+        f"{root.group(1) + leaf.group(1)}")

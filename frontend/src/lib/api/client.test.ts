@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ApiError, postSSE, request } from "./client";
+import { ApiError, api, postSSE, request } from "./client";
 import { tokenStore } from "./token-store";
 
 interface FakeResponse {
@@ -139,6 +139,61 @@ describe("request() — refresh-on-401", () => {
     await expect(request("/protected")).rejects.toBeInstanceOf(ApiError);
     // original + refresh + one retry, then stop (the retry carries _retry=true)
     expect(calls).toHaveLength(3);
+  });
+});
+
+describe("download() — the file arrives as bytes", () => {
+  interface FileResponse extends FakeResponse {
+    blob: () => Promise<Blob>;
+    headers: { get: (name: string) => string | null };
+  }
+  const fileResp = (status: number, body: Blob | unknown, disposition: string | null): FileResponse => ({
+    status,
+    ok: status >= 200 && status < 300,
+    json: async () => body,
+    blob: async () => body as Blob,
+    headers: {
+      get: (name) => (name.toLowerCase() === "content-disposition" ? disposition : null),
+    },
+  });
+
+  it("returns the bytes and the RFC 5987 name, carrying the bearer token", async () => {
+    tokenStore.set("ACC", "REFRESH");
+    const bytes = new Blob(["%PDF-1.4 fake bytes"]);
+    mockFetch(() => fileResp(200, bytes, "attachment; filename*=UTF-8''my%20resume.pdf"));
+    const out = await api.download("/resumes/1/file");
+    expect(out.blob).toBe(bytes);
+    expect(out.name).toBe("my resume.pdf");
+    expect(calls[0].init.headers.get("Authorization")).toBe("Bearer ACC");
+  });
+
+  it("falls back to a null name when the disposition is missing", async () => {
+    mockFetch(() => fileResp(200, new Blob(["x"]), null));
+    const out = await api.download("/resumes/1/file");
+    expect(out.name).toBeNull();
+  });
+
+  it("parses the envelope error body a file route answers with", async () => {
+    tokenStore.set("ACC", "REFRESH");
+    mockFetch(() => fileResp(404, errEnv("RESUME_NOT_FOUND", "no file behind it"), null));
+    await expect(api.download("/resumes/1/file")).rejects.toMatchObject({
+      name: "ApiError",
+      code: "RESUME_NOT_FOUND",
+      status: 404,
+    });
+  });
+
+  it("refreshes once on a 401, then retries the original download", async () => {
+    tokenStore.set("OLD", "REFRESH");
+    mockFetch((_url, i) => {
+      if (i === 0) return fileResp(401, errEnv("UNAUTHORIZED", "expired"), null);
+      if (i === 1) return resp(200, okEnv({ accessToken: "NEW", refreshToken: "REFRESH2" }));
+      return fileResp(200, new Blob(["bytes"]), "attachment; filename*=UTF-8''a.pdf");
+    });
+    const out = await api.download("/resumes/1/file");
+    expect(out.name).toBe("a.pdf");
+    expect(calls).toHaveLength(3);
+    expect(calls[2].init.headers.get("Authorization")).toBe("Bearer NEW");
   });
 });
 

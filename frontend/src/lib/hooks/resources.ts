@@ -134,8 +134,9 @@ export function useResume(id: string | null) {
       const body = pick(raw, "resume", "data") ?? raw;
       return {
         ...mapResume(body),
-        fileName: str(body, "fileName", "file_name", "originalName") ?? null,
-        fileUrl: str(body, "fileUrl", "file_url", "url") ?? null,
+        // The name ResumeDetail authors. The two names asked here before were answered by
+        // nothing — the wire has always carried the key, not a name or a URL.
+        sourceFileKey: str(body, "sourceFileKey") ?? null,
         structured: (pick(body, "structured", "structuredResume", "structured_resume") ??
           null) as Resume["structured"],
         score: normalizeResumeScore(body),

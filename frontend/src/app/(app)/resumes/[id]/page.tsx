@@ -35,8 +35,10 @@ import { MatchRing } from "@/components/ai/match-ring";
 import { TaskProgress } from "@/components/ai/task-stream";
 import { useParseResume, useSetCurrentResume } from "@/lib/hooks/actions";
 import { useResume, useResumeVersions } from "@/lib/hooks/resources";
+import { api } from "@/lib/api/client";
+import { endpoints } from "@/lib/api/endpoints";
 import { normalizeStructuredResume, normalizeTailorDiff, str } from "@/lib/api/normalize";
-import { formatDate, downloadText } from "@/lib/format";
+import { formatDate, downloadBlob, downloadText } from "@/lib/format";
 import type { ResumeProject, ResumeScore, StructuredResume } from "@/lib/api/types";
 
 const PARSE_STAGES = [
@@ -54,6 +56,21 @@ export default function ResumeDetailPage() {
   const parse = useParseResume(id ?? "");
   const setCurrent = useSetCurrentResume(id ?? "");
   const [parseTask, setParseTask] = React.useState<string | null>(null);
+  const [downloading, setDownloading] = React.useState(false);
+
+  // The original upload's bytes, saved the way the other artifacts are: blob, click, revoke.
+  // The name comes from the server — the route that read the document row knows it.
+  const downloadOriginal = React.useCallback((resumeId: string, done: () => void) => {
+    setDownloading(true);
+    api
+      .download(endpoints.resumeFile(resumeId))
+      .then(({ blob, name }) => {
+        downloadBlob(name ?? "original-file", blob);
+        done();
+      })
+      .catch((e) => toast.error(e instanceof Error ? e.message : "Download failed."))
+      .finally(() => setDownloading(false));
+  }, []);
 
   const r = resume.data;
 
@@ -115,18 +132,26 @@ export default function ResumeDetailPage() {
             <div className="min-w-0">
               <h1 className="font-serif text-display-sm font-medium text-balance">{r.title}</h1>
               <p className="mt-1 text-sm text-muted-foreground">
-                {r.fileName ? `${r.fileName} · ` : ""}
                 added {r.createdAt ? formatDate(r.createdAt) : "—"} ·{" "}
                 <StatusBadge status={r.status} />
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              {r.fileUrl && (
-                <Button variant="outline" size="sm" asChild>
-                  <a href={r.fileUrl} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink aria-hidden />
-                    Original file
-                  </a>
+              {/* Live only when the detail body carries the key the download route answers for:
+                  this affordance read two names no producer ever sent, and never lit up. */}
+              {r.sourceFileKey && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  loading={downloading}
+                  onClick={() =>
+                    downloadOriginal(r.id, () => {
+                      toast.success("Original file downloaded.");
+                    })
+                  }
+                >
+                  <Download aria-hidden />
+                  Original file
                 </Button>
               )}
               <Button

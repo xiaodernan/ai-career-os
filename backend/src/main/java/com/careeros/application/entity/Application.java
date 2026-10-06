@@ -54,6 +54,12 @@ public class Application {
     @Column(name = "match_id")
     private UUID matchId;
 
+    @Column(name = "offer_compensation")
+    private String offerCompensation;
+
+    @Column(name = "rejection_reason")
+    private String rejectionReason;
+
     @Column(name = "applied_at")
     private OffsetDateTime appliedAt;
 
@@ -162,6 +168,22 @@ public class Application {
 
     public void setMatchId(UUID matchId) {
         this.matchId = matchId;
+    }
+
+    public String getOfferCompensation() {
+        return offerCompensation;
+    }
+
+    public void setOfferCompensation(String offerCompensation) {
+        this.offerCompensation = offerCompensation;
+    }
+
+    public String getRejectionReason() {
+        return rejectionReason;
+    }
+
+    public void setRejectionReason(String rejectionReason) {
+        this.rejectionReason = rejectionReason;
     }
 
     public OffsetDateTime getAppliedAt() {

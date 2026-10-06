@@ -397,8 +397,9 @@ def test_exactly_two_statements_mint_a_file_key_and_three_write_one_to_storage()
     assert writes == [("FileIngestService.java", "key"), ("FileIngestService.java", "key"),
                       ("ResumeService.java", "key")], (
         f"the bucket is written under another variable, or a different number of times: {writes}")
-    assert reads_storage == [("InternalFileController.java", "fileKey")], (
-        f"the bucket is read by key somewhere other than the one download route: {reads_storage}")
+    assert reads_storage == [("InternalFileController.java", "fileKey"),
+                             ("ResumeService.java", "key")], (
+        f"the bucket is read by key somewhere other than the two download routes: {reads_storage}")
 
 
 def test_every_key_a_composer_can_build_is_accepted_by_the_pattern_that_validates_it():
@@ -589,8 +590,8 @@ def test_the_column_holds_a_composed_key_or_nothing_and_no_migration_constraints
 def test_the_only_reader_that_asks_whether_a_row_has_a_key_is_the_ingestion_branch():
     """A document may exist with no key at all, and exactly one `if` in ai-service knows that.
 
-    One Java lookup, one Python consumer, one NULL author: a reader that assumes a key exists has
-    nowhere to hide.
+    Two Java lookups (the internal file route's, and the resume download's row-anchor), one Python
+    consumer, one NULL author: a reader that assumes a key exists has nowhere to hide.
     """
     tree = ast.parse(reads(PY_PIPELINE))
     branch = [node for node in ast.walk(tree)
@@ -602,7 +603,10 @@ def test_the_only_reader_that_asks_whether_a_row_has_a_key_is_the_ingestion_bran
     assert readers == ["doc"], f"a file_key is read off something other than the fetched row: {readers}"
 
     lookups = sorted({path.name for path in JAVA.rglob("*.java") if "findByFileKey(" in reads(path)})
-    assert lookups == ["DocumentRepository.java", "InternalFileController.java"], (
+    # the resume download route joins: it resolves a resume's key back to its document row before a
+    # byte leaves storage, so ownership is anchored on the row, not on the key's text
+    assert lookups == ["DocumentRepository.java", "InternalFileController.java",
+                       "ResumeService.java"], (
         f"the key-to-row lookup spread: {lookups}")
 
     calls = [node for node in ast.walk(ast.parse(reads(PY_INGEST)))

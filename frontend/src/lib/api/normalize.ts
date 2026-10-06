@@ -450,6 +450,8 @@ export function normalizeApplication(raw: unknown): Application {
     resumeVersionId: str(raw, "resumeVersionId", "resume_version_id") ?? null,
     jdId: str(raw, "jdId", "jd_id") ?? null,
     matchId: str(raw, "matchId", "match_id") ?? null,
+    offerCompensation: str(raw, "offerCompensation", "offer_compensation") ?? null,
+    rejectionReason: str(raw, "rejectionReason", "rejection_reason") ?? null,
     appliedAt: str(raw, "appliedAt", "applied_at") ?? null,
     createdAt: str(raw, "createdAt", "created_at"),
     updatedAt: str(raw, "updatedAt", "updated_at"),
@@ -476,6 +478,7 @@ export function normalizeApplicationEvent(raw: unknown, index = 0): ApplicationE
     note: str(payload, "note"),
     reminderAt: str(payload, "reminder_at"),
     cleared: bool(payload, "cleared"),
+    field: str(payload, "field"),
     createdAt: str(raw, "createdAt"),
   };
 }

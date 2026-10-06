@@ -88,7 +88,8 @@ per-user budget on AI endpoints.
 | GET | `/resumes` | list |
 | POST | `/resumes` | create from `{title, plaintext}` |
 | POST | `/resumes/upload` | multipart file → MinIO → `documents` row (PDF/DOCX/TXT, magic-byte checked) |
-| GET | `/resumes/{id}` | detail + versions |
+| GET | `/resumes/{id}` | detail + versions; **sourceFileKey** says whether an original file exists |
+| GET | `/resumes/{id}/file` | the original upload's bytes, `Content-Disposition: attachment`, named from the document row — user-scoped, 404 when the resume has no file |
 | PATCH | `/resumes/{id}` | rename / relabel |
 | DELETE | `/resumes/{id}` | |
 | POST | `/resumes/{id}/parse` | run structured parse → profile + rows + score |
@@ -168,7 +169,7 @@ stored verbatim on the session, so the same place takes the rest of the run's tu
 | GET | `/applications` | board (`?status=&page=&size=`) |
 | POST | `/applications` | create |
 | GET | `/applications/{id}` | detail |
-| PATCH | `/applications/{id}` | `{status, position, note, reminderAt, clearReminderAt}` — kanban drag & drop; `reminder_at` / `clear_reminder_at` are the accepted aliases, `note` (singular) is the writable one, and a null component means "leave it alone", so removing a reminder travels as `clearReminderAt: true` |
+| PATCH | `/applications/{id}` | `{status, position, note, reminderAt, clearReminderAt, offerCompensation, rejectionReason}` — kanban drag & drop; `reminder_at` / `clear_reminder_at` are the accepted aliases, `note` (singular) is the writable one, a null component means "leave it alone" (so removing a reminder travels as `clearReminderAt: true`), and the outcome pair records the compensation on an offer or the reason on a rejection |
 | PUT | `/applications/{id}/reorder` | `{position, status?}` within column |
 | GET | `/applications/{id}/timeline` | status-transition audit events |
 | DELETE | `/applications/{id}` | |

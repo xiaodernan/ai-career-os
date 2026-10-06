@@ -14,10 +14,15 @@ import com.careeros.resume.dto.ResumeDtos.UpdateResumeRequest;
 import com.careeros.resume.dto.ResumeDtos.UploadResumeResponse;
 import com.careeros.resume.service.ResumeService;
 import jakarta.validation.Valid;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -64,6 +69,23 @@ public class ResumeController {
     @GetMapping("/{id}")
     public ResumeDetail detail(@CurrentUser AuthUser user, @PathVariable UUID id) {
         return resumes.detail(user.id(), id);
+    }
+
+    /**
+     * The original upload's bytes. The detail body's {@code sourceFileKey} tells the browser whether
+     * this route has anything to answer with; the file itself is served here, auth-required and
+     * user-scoped, rather than through a presigned URL the client could share.
+     */
+    @GetMapping("/{id}/file")
+    public ResponseEntity<byte[]> file(@CurrentUser AuthUser user, @PathVariable UUID id) {
+        ResumeService.OriginalFile file = resumes.originalFile(user.id(), id);
+        String encodedName = URLEncoder.encode(file.saveName(), StandardCharsets.UTF_8)
+                .replace("+", "%20");
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(file.mediaType()))
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename*=UTF-8''" + encodedName)
+                .body(file.content());
     }
 
     @PatchMapping("/{id}")
