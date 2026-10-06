@@ -1,0 +1,6 @@
+feat(web): styled not-found and error screens replace the Next defaults
+
+An unknown route now lands on a branded 404 that links back to the
+dashboard, and a render error lands on a client boundary that logs,
+shows the digest and retries without losing the session. The frontend
+census counts both files.
