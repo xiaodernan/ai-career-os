@@ -19,7 +19,7 @@ Test-name shorthand used in the predictions (gate order):
   T8  every literal body names only its record's fields
   T9  token record written at two sites sharing one store reader
   T10 public wrappers opt out of the bearer, session one does not
-  T11 screens mirror the minimum but not the ceiling
+  T11 credential screens guard through the shared password function
   T12 screens mutate through the hooks that reach the records
 """
 
@@ -52,7 +52,7 @@ T7 = "test_the_recovery_screens_send_the_records_own_keys"
 T8 = "test_every_literal_body_names_only_its_records_fields"
 T9 = "test_the_token_record_is_written_at_two_sites_that_share_one_reader"
 T10 = "test_the_public_wrappers_opt_out_of_the_bearer_and_the_session_ones_do_not"
-T11 = "test_the_credential_screens_mirror_the_minimum_but_not_the_ceiling"
+T11 = "test_the_credential_screens_guard_through_the_shared_password_function"
 T12 = "test_the_screens_mutate_through_the_auth_hooks_that_reach_the_records"
 
 
@@ -69,17 +69,6 @@ def write(rel: str, text: str) -> None:
 def _replace_once(rel: str, needle: str, replacement: str) -> None:
     old = read(rel)
     assert old.count(needle) == 1, "%r appears %d times in %s" % (needle, old.count(needle), rel)
-    write(rel, old.replace(needle, replacement))
-
-
-def _replace_n(rel: str, needle: str, replacement: str, n: int) -> None:
-    old = read(rel)
-    assert old.count(needle) == n, "%r appears %d times in %s, expected %d" % (
-        needle,
-        old.count(needle),
-        rel,
-        n,
-    )
     write(rel, old.replace(needle, replacement))
 
 
@@ -153,10 +142,11 @@ def arm_rename_register_password_field() -> dict:
     _replace_once(REGISTER_DTO, "String password", "String passcode")
     return {
         "name": "rename RegisterRequest.password to passcode",
-        "predicted_red": [T2, T3, T4, T11],
+        "predicted_red": [T2, T3, T4],
         "description": (
-            "T2 reads the field list; T3 loses the guard line; T4 and T11 call "
-            "password_bounds(REGISTER_DTO, 'password') whose regex now finds no @Size line"
+            "T2 reads the field list; T3 loses the guard line; T4 calls "
+            "password_bounds(REGISTER_DTO, 'password') whose regex now finds no @Size line. "
+            "T11 no longer reads the record, so it stays green"
         ),
     }
 
@@ -231,10 +221,10 @@ def arm_lower_register_minimum() -> dict:
     _replace_once(REGISTER_DTO, "@Size(min = 8, max = 72) String password", "@Size(min = 6, max = 72) String password")
     return {
         "name": "lower the register minimum to 6",
-        "predicted_red": [T3, T4, T11],
+        "predicted_red": [T3, T4],
         "description": (
-            "T3 guard line; T4 register (6,72); T11 compares the screens' inline 8 against "
-            "the record's parsed minimum"
+            "T3 guard line; T4 register (6,72) fails the (8,72) pin and reset==register. "
+            "T11 reads only the form, so the record drifting stays green there"
         ),
     }
 
@@ -397,15 +387,20 @@ def arm_change_the_recovery_ceiling_constant() -> dict:
     }
 
 
-def arm_raise_the_screen_thresholds() -> dict:
-    """Raise both inline v.length < 8 thresholds to 10."""
-    _replace_n(CREDENTIALS_FORM, "v.length < 8", "v.length < 10", 2)
+def arm_revert_the_shared_password_guard() -> dict:
+    """Revert baseFields' password to the old inline minimum -- the #214 undo."""
+    _replace_once(
+        CREDENTIALS_FORM,
+        "validate: passwordIssue,",
+        'validate: (v) => (!v ? "Password is required" : v.length < 8 ? "At least 8 characters" : undefined),',
+    )
     return {
-        "name": "raise both screen thresholds to 10",
+        "name": "revert the shared password guard to an inline threshold",
         "predicted_red": [T11],
         "description": (
-            "the parsed thresholds become ['10','10'], failing equality first and the "
-            "minimum-agreement second; the mutate keys are untouched (T6 green)"
+            "baseFields' entry leaves passwordIssue and register inherits the change, so the "
+            "screens' guard test fails on the inline v.length check and on the shared-validator "
+            "count; the mutate keys are untouched (T6 green)"
         ),
     }
 
@@ -434,5 +429,5 @@ ARMS = [
     arm_append_a_second_refresh_reference,
     arm_crosswire_the_reset_hook,
     arm_change_the_recovery_ceiling_constant,
-    arm_raise_the_screen_thresholds,
+    arm_revert_the_shared_password_guard,
 ]

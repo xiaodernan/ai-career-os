@@ -19,11 +19,14 @@ export function emailIssue(value: string): string | undefined {
 }
 
 /**
- * Mirrors `ResetPasswordRequest.newPassword` (`@Size(min = 8, max = 72)`).
+ * What to show under the password field, or `undefined` when the value is acceptable.
  *
- * The upper bound is not decoration. BCrypt reads at most 72 bytes, so the backend rejects
- * anything longer instead of silently truncating it; a screen that only checked the minimum
- * would turn a pasted passphrase into a 400 with no explanation the user could act on.
+ * Mirrors the bounds the three auth records carry: `(min = 8, max = 72)` on
+ * `RegisterRequest`/`ResetPasswordRequest`, and `max = 72` on `LoginRequest`; the sign-in
+ * screen keeps the register minimum as its own floor. The upper bound is not decoration:
+ * BCrypt reads at most 72 bytes, so the backend rejects anything longer instead of
+ * silently truncating it; a screen that only checked the minimum would turn a pasted
+ * passphrase into a 400 with no explanation the user could act on.
  */
 export const PASSWORD_MIN_LENGTH = 8;
 export const PASSWORD_MAX_LENGTH = 72;

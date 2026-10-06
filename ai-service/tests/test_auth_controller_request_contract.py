@@ -26,17 +26,19 @@ runRefresh's ``JSON.stringify``) as a subset rule -- every key sent must be acce
 record. This gate holds the complementary equality (a record field no writer sends reddens
 here only), the parked register/login pair, and what a name-oriented rule cannot see:
 ``@Valid`` on every body, the per-record guard lines, the shared recovery module's bounds
-constants against the records, the ``auth: false`` opt-out of the bearer, the token
-record's two writers and their shared store reader, and the screens' own payloads.
+constants against the records and the screens' use of that one guard function, the
+``auth: false`` opt-out of the bearer, the token record's two writers and their shared
+store reader, and the screens' own payloads.
 
-Measured divergence (pinned, not fixed): the register screen mirrors the record's minimum
-with a literal ``v.length < 8`` but checks no ceiling, while both password records carry
-``@Size(max = 72)`` (BCrypt reads no further). A longer passphrase therefore reaches the
-generic ``"Request validation failed"`` 400 -- with the per-field details dead (#201) the
-screen has nothing to act on. The recovery module already documents why the ceiling
-matters, and the reset form is the one screen that enforces it (via ``passwordIssue``).
-Adopting ``passwordIssue`` in credentials-form is the queued fix; this file pins today's
-shape so that fix reddens a statement instead of drifting.
+Closed divergence (it was pinned here; #214 fixed it): the register and sign-in screens
+used inline ``v.length < 8`` thresholds and checked no ceiling, while every password
+record carries ``@Size(max = 72)`` (BCrypt reads no further) -- a longer passphrase
+therefore reached the generic ``"Request validation failed"`` 400, with the per-field
+details dead (#201) the screen had nothing to act on. Both credential screens now guard
+through the recovery module's ``passwordIssue``. The join is held link by link: the
+screens' guard test pins the form's end (no inline threshold; one shared validator, with
+the register override touching only autoComplete), and the bounds-policy test pins the
+function's constants against the three records.
 
 What this gate deliberately does NOT re-pin: the hooks' optimistic cache writes (#198), the
 ``["me"]`` query ownership, the envelope's success flag (#202), or any response record.
@@ -471,24 +473,24 @@ def test_the_public_wrappers_opt_out_of_the_bearer_and_the_session_ones_do_not()
 
 # --------------------------------------------------------------------------- case 9: the screens' guard mirror
 
-def test_the_credential_screens_mirror_the_minimum_but_not_the_ceiling():
+def test_the_credential_screens_guard_through_the_shared_password_function():
+    # Was "mirror the minimum but not the ceiling"; #214 adopted passwordIssue here, so this
+    # now holds the form's end of the chain form -> passwordIssue -> records.
     form = read(CREDENTIALS_FORM)
-    thresholds = re.findall(r"v\.length < (\d+)", form)
-    register_min = password_bounds(REGISTER_DTO, "password")[0]
-    assert thresholds == ["8", "8"], (
-        "sign-in and register keep their own inline thresholds (%s); this test measures them, "
-        "so the shape has to be restated" % thresholds
+    assert "v.length" not in form, (
+        "credentials-form grew a screen-local length check back; the bounds live in the one "
+        "shared function (the bounds-policy test holds its far end against the records)"
     )
-    assert all(int(t) == register_min for t in thresholds), (
-        "an inline threshold (%s) no longer equals RegisterRequest.password's minimum (%s)"
-        % (thresholds, register_min)
+    assert form.count("validate: passwordIssue,") == 1, (
+        "expected exactly one password entry validating through passwordIssue (baseFields' "
+        "entry, shared by sign-in and register), found %d" % form.count("validate: passwordIssue,")
     )
-    assert "passwordIssue" not in form, (
-        "credentials-form adopted passwordIssue -- the divergence below just closed; re-home "
-        "this characterization into a mirror assertion instead of deleting it"
+    assert 'import { emailIssue, passwordIssue } from "@/lib/auth-recovery";' in form, (
+        "the shared import changed; the guard above would resolve a name this file cannot see"
     )
-    assert "PASSWORD_MAX_LENGTH" not in form, (
-        "credentials-form now knows the ceiling constant; re-measure the paragraph below"
+    assert '? { ...f, autoComplete: "new-password" } : f' in form, (
+        "the register override changed members beyond autoComplete -- a screen-local validator "
+        "is back or the field list diverged"
     )
 
 
