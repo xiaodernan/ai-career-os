@@ -1,8 +1,0 @@
-feat(web): the knowledge page grows a notes panel, closing the surface the palette promised
-
-The four verbs behind the notes route were served from the start and the two client hooks existed
-without a caller; the panel mounts the reader and the writer, so the ["knowledge","notes"]
-invalidation finally refreshes a mounted query and the palette's Notes group lands on a screen that
-can render one. The notes-surface gate is rewritten to say which of its three closures happened --
-reader and writer together -- and the ledgers that pinned the dead surface (invalidation promises,
-no-caller hooks, uncalled window literals, the frontend file census) move with it.
