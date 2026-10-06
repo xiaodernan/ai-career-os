@@ -14,11 +14,23 @@ parameter the list route binds:
    and a census over ``frontend/src`` shows it ships with **zero clients** -- the route is
    served but never fetched.
 
-This gate pins the join that no earlier gate reads: the Java ``@RequestParam`` literal and
-the JS object key are the same string, so a rename on either side alone fails here. It does
-NOT re-pin what earlier gates already hold: the ``/api/v1`` + member path join (#192's
-mapper-ship gate), the ``["resume", resumeId, "versions"]`` query key and the detail
-screen's ``useResumeVersions(id)`` call (#197), or the mapper's per-item reads (#122/#192).
+This gate holds the wire at both ends: the Java ``@RequestParam`` literal and the JS object
+key are read from their own files and joined, so a one-sided rename fails here. It is the
+pytest-plane per-controller mirror of ``frontend/src/lib/api/endpoints.test.ts`` (#120/#124),
+which already checks every query key a call site appends against the ``@RequestParam`` names
+the handlers bind -- a probe renaming this literal to ``resume_uuid`` reds that vitest gate
+in three places (the bound-names census and the two call-site rules), so this file does not
+claim the join as new ground.
+
+What only this gate holds: the binding *modifiers* the name-oriented vitest rules cannot see
+(``required = false``, a ``defaultValue``, the ``UUID`` type), the hook's ``enabled`` guard,
+the panel's failure affordance, the user-scoped forwarding calls with their argument order,
+the path-variable name join, and the census of the client-free singular member (the vitest
+registry records the *route* ``/resume-versions/{}`` as never fetched; this census counts
+references to the *member* and pins its template). It does NOT re-pin what earlier gates
+already hold: the ``/api/v1`` + member path join (#192's mapper-ship gate), the
+``["resume", resumeId, "versions"]`` query key and the detail screen's
+``useResumeVersions(id)`` call (#197), or the mapper's per-item reads (#122/#192).
 """
 
 from __future__ import annotations
