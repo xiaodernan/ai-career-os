@@ -30,8 +30,16 @@ step resume-parse
 curl -s -X POST $B/resumes/$RID/parse -H "$AUTH" | head -c 400
 
 step knowledge-ingest
-curl -s -X POST $B/knowledge/text -H "$AUTH" -H "Content-Type: application/json" \
-  -d "{\"kind\":\"resume\",\"title\":\"Main Resume\",\"refId\":\"$RID\",\"text\":\"Senior backend engineer with five years building 分布式 微服务 order and payment platforms in Java, Spring Boot and Spring Cloud. Cut p99 latency by 40 per cent and served 高并发 并发 peaks of 12k QPS with Redis caching, 缓存穿透 caching-penetration guards and 消息队列 Kafka RabbitMQ event streaming. 数据库 MySQL 索引 优化: rewrote slow queries, added composite indexes and moved reporting to PostgreSQL. Deployed services on Kubernetes with Docker, autoscaling and Grafana alerts, and tuned scaling during campaigns. Spring Boot configuration security: JWT authentication, secret rotation, and the 数据脱敏 隐私 PrivacyShield project that masks PII before it reaches a log. Designed a RAG pipeline over company docs with PostgreSQL and pgvector. 教育背景: Zhejiang University, Bachelor of Engineering in Computer Science, 2019. 实习经历: an Internship on the payments team before joining full time. Java Python Elasticsearch Kafka RabbitMQ Kubernetes Docker RAG 分布式 微服务 并发 concurrency 索引 优化 缓存穿透 scaling messaging security.\"}" | head -c 300
+# The body carries CJK text; passing it as a curl argument rides the Windows
+# console code page (cp936 here) and corrupts the bytes before jackson sees
+# them, so the JSON is written from this UTF-8 script file and posted with
+# --data-binary instead.
+cat > /tmp/ingest-payload.json <<'EOF'
+{"kind":"resume","title":"Main Resume","refId":"__RID__","text":"Senior backend engineer with five years building 分布式 微服务 order and payment platforms in Java, Spring Boot and Spring Cloud. Cut p99 latency by 40 per cent and served 高并发 并发 peaks of 12k QPS with Redis caching, 缓存穿透 caching-penetration guards and 消息队列 Kafka RabbitMQ event streaming. 数据库 MySQL 索引 优化: rewrote slow queries, added composite indexes and moved reporting to PostgreSQL. Deployed services on Kubernetes with Docker, autoscaling and Grafana alerts, and tuned scaling during campaigns. Spring Boot configuration security: JWT authentication, secret rotation, and the 数据脱敏 隐私 PrivacyShield project that masks PII before it reaches a log. Designed a RAG pipeline over company docs with PostgreSQL and pgvector. 教育背景: Zhejiang University, Bachelor of Engineering in Computer Science, 2019. 实习经历: an Internship on the payments team before joining full time. Java Python Elasticsearch Kafka RabbitMQ Kubernetes Docker RAG 分布式 微服务 并发 concurrency 索引 优化 缓存穿透 scaling messaging security."}
+EOF
+sed -i "s/__RID__/$RID/" /tmp/ingest-payload.json
+curl -s -X POST $B/knowledge/text -H "$AUTH" -H "Content-Type: application/json; charset=utf-8" \
+  --data-binary @/tmp/ingest-payload.json | head -c 300
 echo
 
 step knowledge-status
