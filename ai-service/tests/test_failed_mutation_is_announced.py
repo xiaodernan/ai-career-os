@@ -8,7 +8,7 @@ this request fails, does anyone say so?". This file answers it per mutation site
 the caller's options through the one indirection the app actually uses: a named object handed to two
 different mutations.
 
-What the shipped code says, measured rather than assumed: 34 mutation sites in three files. 29 declare
+What the shipped code says, measured rather than assumed: 37 mutation sites in three files. 32 declare
 their failure at the hook; the five that do not are all in ``auth.ts``. Four of those five are announced
 by their caller -- the password forms pass inline call options, and the credentials form passes one
 shared ``handlers`` object to both ``login.mutate`` and ``register.mutate``. The fifth, ``useLogout``, is
@@ -18,7 +18,7 @@ clears the cache and redirects regardless of what the server said. That is a des
 sign-out always happens -- so this file characterises it rather than changing it: it is the one place in
 the app where "you are signed out" is not a claim about the server.
 
-The same walk finds the failure helper's one soft spot: ``fail(...)`` has a single author, 26 uses and 25
+The same walk finds the failure helper's one soft spot: ``fail(...)`` has a single author, 29 uses and 28
 distinct messages, because two different deletes share the sentence "Delete failed." Nothing in that
 toast tells the user which record they just failed to remove.
 """
@@ -179,7 +179,12 @@ def stmt(body: str, needle: str) -> str:
 
 def test_every_mutation_the_app_declares_sits_in_a_function_the_walk_can_name():
     pop = sites()
-    assert len(pop) == 34, "the app declares %d mutations" % len(pop)
+    # 37 rather than 34 since `useRenameConversation`, `useDeleteConversation` (6a1c620) and
+    # `useImportJob` (bf2d91b): three features that each declare their failure at the hook, so
+    # the hook-level count moves with this one. Before them, `useParseResume` was the last to
+    # join. Those commits changed the population without this census, which is what this
+    # assertion is for -- it went red rather than quietly covering three fewer sites.
+    assert len(pop) == 37, "the app declares %d mutations" % len(pop)
     per_file = collections.Counter(s.rel for s in pop)
     assert per_file[AUTH_HOOKS] == 5 and per_file[ACTIONS] >= 25, "sites per hook file: %s" % dict(
         (k.split("/")[-1], v) for k, v in per_file.items()
@@ -196,7 +201,7 @@ def test_every_mutation_the_app_declares_sits_in_a_function_the_walk_can_name():
     )
 
 
-def test_the_hook_announces_twenty_nine_failures_and_the_five_that_stay_quiet_are_all_auth():
+def test_the_hook_announces_thirty_two_failures_and_the_five_that_stay_quiet_are_all_auth():
     quiet = [s for s in sites() if not s.hook_level]
     assert len(quiet) == 5, "%d mutations announce nothing at the hook: %s" % (
         len(quiet), [s.where for s in quiet]
@@ -205,7 +210,7 @@ def test_the_hook_announces_twenty_nine_failures_and_the_five_that_stay_quiet_ar
         "useForgotPassword", "useLogin", "useLogout", "useRegister", "useResetPassword",
     ], "the hook-level silent set moved: %s" % sorted(s.name for s in quiet)
     assert {s.rel for s in quiet} == {AUTH_HOOKS}
-    assert len([s for s in sites() if s.hook_level]) == 29
+    assert len([s for s in sites() if s.hook_level]) == 32
     untyped = [s.where for s in sites() if "mutationFn" not in s.keys]
     assert not untyped, "a mutation with no mutationFn is not a request: %s" % untyped
 
@@ -304,7 +309,7 @@ def test_the_failure_helper_has_one_author_and_two_deletes_share_one_message():
         "fail() no longer builds a toast from the caller's own fallback sentence"
     )
     messages = fail_messages()
-    assert sum(messages.values()) == 26 and len(messages) == 25, "fail() messages: %d uses, %d distinct" % (
+    assert sum(messages.values()) == 29 and len(messages) == 28, "fail() messages: %d uses, %d distinct" % (
         sum(messages.values()), len(messages)
     )
     reused = sorted(m for m, n in messages.items() if n > 1)
@@ -328,7 +333,7 @@ def test_the_failure_helper_has_one_author_and_two_deletes_share_one_message():
 
 def test_this_gate_reads_the_same_shipped_sources_as_the_gates_it_borrows():
     assert len(sources()) >= 100, "the shared source walk read %d files" % len(sources())
-    assert len(sites()) == 34 and len([s for s in sites() if s.hook_level]) == 29
+    assert len(sites()) == 37 and len([s for s in sites() if s.hook_level]) == 32
     assert callers("useLogout") and callers("useLogin") and callers("useForgotPassword")
     for rel in (ACTIONS, AUTH_HOOKS, SOURCE_ACTIONS, CREDENTIALS, FORGOT, RESET, TOPBAR):
         assert rel in sources(), "%s is not in the population this gate reads" % rel

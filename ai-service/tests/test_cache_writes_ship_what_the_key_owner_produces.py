@@ -380,7 +380,12 @@ def decls_for(segs: tuple[str, ...]) -> list:
 def test_the_cache_methods_the_app_calls_are_the_methods_the_key_walk_covers():
     census = qc_calls()
     assert clients() == ["qc"], "the app binds the query client under %s, so a qc-shaped census is blind" % clients()
-    assert len(census) == 7 and sum(census.values()) == 56, "the client walk read %s" % dict(sorted(census.items()))
+    # 8 methods and 61 sites rather than 7 and 56 since `useDeleteConversation` (6a1c620)
+    # reaches for `qc.removeQueries` -- a method the app had never called, so the vocabulary
+    # gains a kind, and the remaining four are `invalidateQueries` (43 -> 47) from the same
+    # run of features. Both halves of this assertion are the point: a new *kind* of call is
+    # not covered by the buckets until somebody adds one, and it would have gone unnoticed.
+    assert len(census) == 8 and sum(census.values()) == 61, "the client walk read %s" % dict(sorted(census.items()))
     mine = collections.Counter(c.callee for c in keyed_calls(KEYED))
     theirs = collections.Counter(s.callee for s in cache_reads() + opaque_key_sites() + promises())
     assert sorted(set(census) - set(KEYED)) == ["clear"], "no bucket exists for %s" % sorted(set(census) - set(KEYED))
@@ -389,7 +394,9 @@ def test_the_cache_methods_the_app_calls_are_the_methods_the_key_walk_covers():
             "%s: this walk reads %d sites, the invalidation walk %d, the client calls %d"
             % (name, mine[name], theirs[name], census[name])
         )
-    assert sum(mine.values()) == sum(theirs.values()) == 54
+    # 59, and the equality is the assertion: both walks must read the same keyed sites. The
+    # number moves with the app; what must not move is the two sides agreeing.
+    assert sum(mine.values()) == sum(theirs.values()) == 59
     assert census["clear"] == sum(census.values()) - sum(mine.values()) == 2, (
         "the only calls neither gate can key are the two that carry no key"
     )
@@ -693,8 +700,14 @@ def test_the_comment_that_explains_the_clear_quotes_the_key_the_function_emits()
 def test_this_gate_and_the_invalidation_gate_read_the_same_shipped_sources():
     assert len(sources()) >= 100, "the shared source walk read %d files" % len(sources())
     assert len(writes()) == 7 and len(reads()) == 2, "%s / %s" % (writes(), reads())
-    assert len(promises()) == 43, "the borrowed promise walk now reads %d" % len(promises())
-    assert len(keyed_calls(KEYED)) == 54, "the keyed population is %d" % len(keyed_calls(KEYED))
+    # 47 rather than 43: the same feature run as above, four more invalidations borrowed from
+    # the previous gate's walk. This assertion is here to notice exactly that -- the two gates
+    # are supposed to read one population, so a drift in either shows up as a mismatch.
+    assert len(promises()) == 47, "the borrowed promise walk now reads %d" % len(promises())
+    # 59 rather than 54: the census above is 61 sites and `clear` carries no key, so the keyed
+    # population is the other seven methods. Kept as a separate number so a site that loses its
+    # bucket shows up here even when the census total is unchanged.
+    assert len(keyed_calls(KEYED)) == 59, "the keyed population is %d" % len(keyed_calls(KEYED))
     assert len([c for c in all_calls() if c.callee in QUERY_HOOKS]) == len(declarations()), (
         "the walk's hook regions and the previous gate's declarations are different sets: %d vs %d"
         % (len([c for c in all_calls() if c.callee in QUERY_HOOKS]), len(declarations()))
