@@ -44,19 +44,38 @@ async def retrieve(query: str, *, user_id: str, run_id: str | None = None,
         vecs.extend(await embedder.embed([q]))
 
     filter_kinds = kinds or (u.get("filters") or {}).get("kinds") or None
+    # A caller-supplied `kinds` is a request; the understanding step's is a guess.
+    inferred_kinds = not kinds and bool(filter_kinds)
 
-    lists = []
-    for v in vecs:
-        lists.append(await store.vector_search(user_id, v, k=25, kinds=filter_kinds,
-                                               document_ids=document_ids))
-    for phrase in keyword_phrases(u):
-        lists.append(await store.keyword_search(user_id, phrase, k=25, kinds=filter_kinds,
+    async def retrieve(kinds_filter: list[str] | None) -> list[dict]:
+        lists = []
+        for v in vecs:
+            lists.append(await store.vector_search(user_id, v, k=25, kinds=kinds_filter,
+                                                   document_ids=document_ids))
+        for phrase in keyword_phrases(u):
+            lists.append(await store.keyword_search(user_id, phrase, k=25, kinds=kinds_filter,
+                                                    document_ids=document_ids))
+        lists.append(await store.trigram_search(user_id, u["rewritten"], k=10,
+                                                kinds=kinds_filter,
                                                 document_ids=document_ids))
-    lists.append(await store.trigram_search(user_id, u["rewritten"], k=10,
-                                            kinds=filter_kinds,
-                                            document_ids=document_ids))
+        return store.rrf_merge(lists)
 
-    merged = store.rrf_merge(lists)
+    merged = await retrieve(filter_kinds)
+    if not merged and inferred_kinds:
+        # The understanding step guesses a source-`kinds` filter, and a guess matching
+        # nothing empties retrieval silently. A real provider does this: asked "what
+        # backend frameworks does the candidate know?", qwen2.5:7b returned
+        # `kinds: ["project"]` for a user whose only source is a resume -- and 13 of 15
+        # golden cases came back with no evidence at all, which the mock never showed
+        # because its canned understanding emitted no filter. An empty result is never
+        # more useful than a broader one, so retry once without the guess. A
+        # caller-supplied `kinds` is left alone: that is a request, not a guess.
+        merged = await retrieve(None)
+        if run_id and merged:
+            await observability.trace(run_id, "retrieval", "rag", {
+                "stage": "kinds_filter_dropped", "guessed": filter_kinds,
+                "recovered": len(merged)})
+
     if run_id:
         await observability.trace(run_id, "retrieval", "rag", {
             "stage": "hybrid", "channels": len(lists), "merged": len(merged),
