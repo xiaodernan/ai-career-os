@@ -30,6 +30,9 @@ This gate holds the contract at both ends:
 - Every key a caller sends is one the bound DTO declares; the union of the two profile
   forms is exactly ``UpdateProfileRequest``'s field list.
 - The mutation failure paths are announced (the settings page's handler and ``fail()``).
+- Case 12 extends the same bounds join to the two target lists: each record's
+  ``@Size(max = 20) List<@Size(max = ...) String>`` pair has a ``profile-targets.ts``
+  constant, an enforcing branch, and a screen guard pinned against the form.
 """
 
 from __future__ import annotations
@@ -47,6 +50,7 @@ ACTIONS = "frontend/src/lib/hooks/actions.ts"
 ENDPOINTS = "frontend/src/lib/api/endpoints.ts"
 SETTINGS = "frontend/src/app/(app)/settings/page.tsx"
 CARDS = "frontend/src/components/settings/profile-cards.tsx"
+TARGETS = "frontend/src/lib/profile-targets.ts"
 
 
 def read(rel: str) -> str:
@@ -164,6 +168,18 @@ def guarded_line(body: str, field: str) -> str:
         if re.search(r"\b" + field + r"\b", line):
             return (lines[i - 1] + "\n" + line) if i > 0 else line
     return ""
+
+
+def list_size_bounds(record: str, field: str, source: str) -> tuple:
+    """``(count_max, item_max)`` from ``@Size(max = 20) List<@Size(max = 80) String> field``."""
+    body = record_body(record, source)
+    lines = [line for line in body.splitlines() if re.search(r"\b" + field + r"\b", line)]
+    assert len(lines) == 1, "%s.%s sits on %d lines" % (record, field, len(lines))
+    sizes = [int(n) for n in re.findall(r"@Size\(max = (\d+)\)", lines[0])]
+    assert len(sizes) == 2, (
+        "%s.%s carries %d @Size bounds, expected the list one and the item one" % (
+            record, field, len(sizes)))
+    return sizes[0], sizes[1]
 
 
 # --------------------------------------------------------------------------- case 1: UpdateMeRequest has ten fields
@@ -358,3 +374,53 @@ def test_the_profile_mutations_announce_their_failures():
     assert 'fail("Couldn\'t save your career profile.")' in details[0], (
         "useUpdateProfileDetails failure toast changed"
     )
+
+
+# --------------------------------------------------------------------------- case 12: the target lists are one policy
+
+def test_the_target_list_bounds_are_one_policy_across_records_and_screen():
+    # The #215 shape, extended to the profile editor: each list bound both records carry has
+    # a module constant, an enforcing branch, and a screen guard -- a single over-long role
+    # or a 21st comma-separated entry gets the field's own sentence instead of the generic
+    # "Request validation failed" 400 whose per-field details nobody opens (#201).
+    target_path = ROOT / TARGETS
+    assert target_path.exists(), "%s is not where this case reads it" % TARGETS
+    module = read(TARGETS)
+    for line in (
+        "export const TARGET_ROLES_MAX_COUNT = 20;",
+        "export const TARGET_ROLES_MAX_ITEM = 80;",
+        "export const TARGET_LOCATIONS_MAX_COUNT = 20;",
+        "export const TARGET_LOCATIONS_MAX_ITEM = 120;",
+    ):
+        assert line in module, (
+            "%s is gone -- the record guards checked below have no mirror to agree with" % line)
+    for record, source in (("UpdateProfileRequest", profile_dto_source()),
+                           ("UpdateMeRequest", me_dto_source())):
+        assert list_size_bounds(record, "targetRoles", source) == (20, 80), (
+            "%s.targetRoles bounds moved; re-read what the module mirrors" % record)
+        assert list_size_bounds(record, "targetLocations", source) == (20, 120), (
+            "%s.targetLocations bounds moved; re-read what the module mirrors" % record)
+    for line in (
+        "if (items.length > TARGET_ROLES_MAX_COUNT) {",
+        "if (items.some((item) => item.length > TARGET_ROLES_MAX_ITEM)) {",
+        "if (items.length > TARGET_LOCATIONS_MAX_COUNT) {",
+        "if (items.some((item) => item.length > TARGET_LOCATIONS_MAX_ITEM)) {",
+    ):
+        assert line in module, (
+            "the module lost %r, so the constant above is declared but not enforced" % line)
+    cards = cards_source()
+    assert 'import { splitList, targetLocationsIssue, targetRolesIssue } from "@/lib/profile-targets";' in cards, (
+        "the screen no longer imports the shared splitter and the two guards")
+    assert "function splitList(" not in cards, (
+        "splitList is defined in the component again; the guard would judge a different "
+        "string than the payload sends")
+    assert "const rolesProblem = targetRolesIssue(roleItems);" in cards, (
+        "the roles field no longer runs the shared guard")
+    assert "const locationsProblem = targetLocationsIssue(locationItems);" in cards, (
+        "the target-locations field no longer runs the shared guard")
+    assert "const saveable = yearsValid && !rolesProblem && !locationsProblem;" in cards, (
+        "the save gate no longer waits for the two list guards")
+    assert "targetRoles: roleItems," in cards and "targetLocations: locationItems," in cards, (
+        "the payload no longer sends the same items the guard judged")
+    assert cards.count("{rolesProblem && (") == 1 and cards.count("{locationsProblem && (") == 1, (
+        "a list guard no longer renders its sentence")

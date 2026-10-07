@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { useProfile, useUpdateProfileDetails } from "@/lib/hooks/actions";
+import { splitList, targetLocationsIssue, targetRolesIssue } from "@/lib/profile-targets";
 
 /**
  * The career-profile editor for the settings page. `GET/PATCH /users/me/profile` have been served
@@ -17,7 +18,8 @@ import { useProfile, useUpdateProfileDetails } from "@/lib/hooks/actions";
  * success path lands on a mounted query too.
  *
  * `UpdateProfileRequest` validates headline ≤ 240, summary ≤ 5000, location ≤ 120,
- * yearsExperience 0–60, and both target lists at 20 entries of 80/120 chars. The PATCH is
+ * yearsExperience 0–60, and both target lists at 20 entries of 80/120 chars — the lists are
+ * guarded on this screen through `profile-targets.ts`, not by clipping a paste. The PATCH is
  * "null leaves the field alone", so each card sends only the fields it edits — the free-form
  * maps get their own editor below (`CareerProfileMapsCard`), which replaces them wholesale.
  */
@@ -26,11 +28,6 @@ const MAX_HEADLINE = 240;
 const MAX_LOCATION = 120;
 const MAX_SUMMARY = 5000;
 const MAX_YEARS = 60;
-
-/** `"a, b, c"` -> `["a","b","c"]`, trimmed, blanks dropped — the shape `@Size(max = 20)` guards. */
-function splitList(raw: string): string[] {
-  return raw.split(",").map((part) => part.trim()).filter(Boolean);
-}
 
 function listText(value: unknown): string {
   return Array.isArray(value) ? value.map(String).join(", ") : "";
@@ -88,7 +85,12 @@ function CareerProfileForm({ initial }: { initial: Record<string, unknown> | nul
   const yearsValid =
     parsedYears === null ||
     (Number.isFinite(parsedYears) && parsedYears >= 0 && parsedYears <= MAX_YEARS);
-  const saveable = yearsValid;
+  // The two list guards judge exactly the items the payload below sends.
+  const roleItems = splitList(roles);
+  const locationItems = splitList(targetLocations);
+  const rolesProblem = targetRolesIssue(roleItems);
+  const locationsProblem = targetLocationsIssue(locationItems);
+  const saveable = yearsValid && !rolesProblem && !locationsProblem;
 
   const save = React.useCallback(() => {
     if (!saveable || update.isPending) return;
@@ -97,10 +99,10 @@ function CareerProfileForm({ initial }: { initial: Record<string, unknown> | nul
       location: location.trim(),
       summary,
       yearsExperience: parsedYears,
-      targetRoles: splitList(roles),
-      targetLocations: splitList(targetLocations),
+      targetRoles: roleItems,
+      targetLocations: locationItems,
     });
-  }, [headline, location, parsedYears, roles, saveable, summary, targetLocations, update]);
+  }, [headline, location, locationItems, parsedYears, roleItems, saveable, summary, update]);
 
   return (
     <div className="space-y-4">
@@ -150,6 +152,11 @@ function CareerProfileForm({ initial }: { initial: Record<string, unknown> | nul
             placeholder="e.g. Platform engineer, Staff engineer"
             autoComplete="off"
           />
+          {rolesProblem && (
+            <p role="alert" className="text-xs text-destructive">
+              {rolesProblem}
+            </p>
+          )}
         </div>
         <div className="space-y-2">
           <Label htmlFor="profile-target-locations">Target locations (comma separated)</Label>
@@ -160,6 +167,11 @@ function CareerProfileForm({ initial }: { initial: Record<string, unknown> | nul
             placeholder="e.g. Hangzhou, Remote"
             autoComplete="off"
           />
+          {locationsProblem && (
+            <p role="alert" className="text-xs text-destructive">
+              {locationsProblem}
+            </p>
+          )}
         </div>
       </div>
       <div className="space-y-2">

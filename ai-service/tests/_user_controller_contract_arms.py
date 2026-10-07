@@ -21,6 +21,7 @@ PROFILE_DTO = "backend/src/main/java/com/careeros/user/dto/UpdateProfileRequest.
 ACTIONS = "frontend/src/lib/hooks/actions.ts"
 SETTINGS = "frontend/src/app/(app)/settings/page.tsx"
 CARDS = "frontend/src/components/settings/profile-cards.tsx"
+TARGETS = "frontend/src/lib/profile-targets.ts"
 
 
 def read(rel: str) -> str:
@@ -218,6 +219,79 @@ def arm_change_me_profile_route() -> dict:
     }
 
 
+# --------------------------------------------------------- #216: the two target lists
+
+def arm_widen_profile_target_roles_item_to_160() -> dict:
+    """Widen UpdateProfileRequest's targetRoles item ceiling -- the one-policy test fails."""
+    write(PROFILE_DTO, _scoped_replace(
+        read(PROFILE_DTO), "UpdateProfileRequest",
+        "@Size(max = 80) String> targetRoles", "@Size(max = 160) String> targetRoles"))
+    return {
+        "name": "widen UpdateProfileRequest targetRoles item ceiling to 160",
+        "predicted_red": ["test_the_target_list_bounds_are_one_policy_across_records_and_screen"],
+        "description": "the module constant 80 and this record would disagree; no other case "
+        "reads this bound (the name census strips annotations)",
+    }
+
+
+def arm_widen_me_target_locations_count_to_30() -> dict:
+    """Widen UpdateMeRequest's targetLocations item-count ceiling -- the one-policy test fails."""
+    write(ME_DTO, _scoped_replace(
+        read(ME_DTO), "UpdateMeRequest",
+        "@Size(max = 20) List<@Size(max = 120) String> targetLocations",
+        "@Size(max = 30) List<@Size(max = 120) String> targetLocations"))
+    return {
+        "name": "widen UpdateMeRequest targetLocations count ceiling to 30",
+        "predicted_red": ["test_the_target_list_bounds_are_one_policy_across_records_and_screen"],
+        "description": "UpdateProfileRequest's copy stays 20, so only the me_record iteration fails",
+    }
+
+
+def arm_widen_module_roles_item_to_160() -> dict:
+    """Widen the module's TARGET_ROLES_MAX_ITEM declaration -- the one-policy test fails."""
+    _replace_once(TARGETS, "export const TARGET_ROLES_MAX_ITEM = 80;",
+                  "export const TARGET_ROLES_MAX_ITEM = 160;")
+    return {
+        "name": "widen profile-targets TARGET_ROLES_MAX_ITEM to 160",
+        "predicted_red": ["test_the_target_list_bounds_are_one_policy_across_records_and_screen"],
+        "description": "the pinned declaration line disappears; the branch line below it still "
+        "reads the (renamed-value) constant by name, so only the declaration assert fires",
+    }
+
+
+def arm_flip_module_roles_count_boundary() -> dict:
+    """Make the module refuse a list AT the count ceiling -- the one-policy test fails."""
+    _replace_once(TARGETS, "if (items.length > TARGET_ROLES_MAX_COUNT) {",
+                  "if (items.length >= TARGET_ROLES_MAX_COUNT) {")
+    return {
+        "name": "flip the module roles-count branch from > to >=",
+        "predicted_red": ["test_the_target_list_bounds_are_one_policy_across_records_and_screen"],
+        "description": "the exact branch line is pinned; the constants loop above is untouched",
+    }
+
+
+def arm_revert_saveable_to_years_only() -> dict:
+    """Drop the two list guards from the save gate -- the one-policy test fails."""
+    _replace_once(CARDS, "const saveable = yearsValid && !rolesProblem && !locationsProblem;",
+                  "const saveable = yearsValid;")
+    return {
+        "name": "revert the save gate to yearsValid alone",
+        "predicted_red": ["test_the_target_list_bounds_are_one_policy_across_records_and_screen"],
+        "description": "MAX_YEARS and the alerts stay, so only the save-gate assert fires",
+    }
+
+
+def arm_drop_roles_alert_render() -> dict:
+    """Stop rendering the roles guard's sentence -- the one-policy test fails."""
+    _replace_once(CARDS, "{rolesProblem && (", "{false && (")
+    return {
+        "name": "drop the roles problem alert render",
+        "predicted_red": ["test_the_target_list_bounds_are_one_policy_across_records_and_screen"],
+        "description": "rolesProblem is still wired into saveable, so only the render-count "
+        "assert (1) fails",
+    }
+
+
 ARMS = [
     arm_rename_display_name_to_name_in_update_me,
     arm_remove_min_from_display_name_guard,
@@ -234,4 +308,10 @@ ARMS = [
     arm_drop_email_from_hook_type,
     arm_add_email_to_update_me,
     arm_change_me_profile_route,
+    arm_widen_profile_target_roles_item_to_160,
+    arm_widen_me_target_locations_count_to_30,
+    arm_widen_module_roles_item_to_160,
+    arm_flip_module_roles_count_boundary,
+    arm_revert_saveable_to_years_only,
+    arm_drop_roles_alert_render,
 ]
