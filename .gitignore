@@ -36,6 +36,7 @@ venv/
 ai-service/evals/reports/
 playwright-report/
 test-results/
+frontend/.vitest-reports/
 
 # misc
 .DS_Store

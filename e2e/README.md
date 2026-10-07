@@ -51,7 +51,7 @@ E2E_TRACE=on E2E_HTML=1 npx playwright test --headed
 npx playwright show-report
 ```
 
-Expected result: **16 passed**. Each run takes ~60s of actual testing, plus the
+Expected result: **17 passed**. Each run takes ~60s of actual testing, plus the
 per-test teardown described below.
 
 ### Preflight
@@ -147,7 +147,7 @@ old layers verbatim, so the image keeps its original timestamp even though its
 content matches the current tree. In both cases the image is current — check
 what the build actually emitted before trusting the WARN.
 
-Verified this way: most recently **16/16 against the containerized images**,
+Verified this way: most recently **17/17 against the host-frontend stack**,
 with all three images rebuilt to the current tree first (the frontend image had
 been carrying a September build that predated the error, not-found, and loading
 boundaries), which is what closed the "production build" item in the Definition

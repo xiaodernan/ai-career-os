@@ -85,3 +85,17 @@ test("an unauthenticated visit to a bogus route gets the branded not-found", asy
   ).toBeVisible();
   await expect(page.getByRole("link", { name: "Back to the dashboard" })).toBeVisible();
 });
+
+/**
+ * The server ships the same shell for every (app) route regardless of session,
+ * so the guard that keeps anonymous visitors out is the client-side one in the
+ * (app) layout -- it runs after hydration and swaps the URL to /login. The
+ * assertion is the URL change itself; a status code would always be 200. The
+ * title check then proves the login screen actually mounted (its title comes
+ * from the route segment's metadata, not from anything the form renders).
+ */
+test("an unauthenticated visit to a protected route lands on the login screen", async ({ page }) => {
+  await page.goto("/dashboard");
+  await page.waitForURL(/\/login/, { timeout: 15_000 });
+  await expect(page).toHaveTitle(/Sign in/);
+});
