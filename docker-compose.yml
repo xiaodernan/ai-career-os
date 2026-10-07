@@ -135,6 +135,10 @@ services:
       MINIO_ENDPOINT: http://minio:9000
       AI_SERVICE_BASE_URL: http://ai-service:8000
       APP_CORS_ORIGINS: ${APP_CORS_ORIGINS:-http://localhost:3000}
+      # The console email transport withholds the message body (reset links carry
+      # a usable token) unless this is on; the dev stack wants the link in the log
+      # so the flow can be walked by hand. Stacks without this entry keep it off.
+      APP_EMAIL_CONSOLE_LOGBODY: "true"
     ports:
       - "127.0.0.1:8080:8080"
     depends_on:
