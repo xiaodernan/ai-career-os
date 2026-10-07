@@ -163,27 +163,33 @@ Scoring lives in `app/eval/agent_metrics.py` as pure functions, unit-tested in
 a run that correctly calls *no* tools must not be penalised for precision, and a
 forbidden call fails the scenario even if everything else is perfect.
 
-Baseline on the reference dev box (mock provider, hash embeddings), 27 scenarios —
-`evals/reports/20261001-145644_agent-full.md`:
+Baseline on the reference dev box, 27 scenarios. **With a real provider**
+(`qwen2.5:7b` on Ollama, CPU) — `evals/reports/20261008-010504_real-agent.md`:
 
-| metric | value |
-|---|---|
-| tool_recall | 0.33 |
-| tool_precision | 0.44 |
-| tool_f1 | 0.19 |
-| artifact_rate | 0.78 |
-| grounding_rate | 1.00 |
-| completed | 0.26 |
-| forbidden_violations | 0 |
-| errors | 0 |
+| metric | real | mock |
+|---|---|---|
+| tool_recall | 0.30 | 0.33 |
+| tool_precision | **0.93** | 0.44 |
+| tool_f1 | 0.26 | 0.19 |
+| artifact_rate | 0.70 | 0.78 |
+| grounding_rate | 1.00 | 1.00 |
+| completed | 0.22 | 0.26 |
+| forbidden_violations | 0 | 0 |
+| errors | 0 | 0 |
 
-Read this honestly: the low tool scores are exactly the three-keyword limitation of
-`mock.py::TOOL_HINTS` — it routes on "job / resume / profile" and nothing else, so
-`calculate_match`, `generate_resume`, `analyze_jd`, `save_job` are never reached, while
-the orchestrator offers 15 tools. What the run *does* establish is that all 27 scenarios
-execute, the loop terminates within its step budget, and 0 forbidden violations over 0
-errors is a real measurement rather than a vacuous one — `completed` requires a non-empty
-answer, so an empty one cannot pass by default.
+Read this honestly. **`tool_precision 0.93` is the number that matters**: given a real
+model the orchestrator almost never calls a *wrong* tool, so the mock's 0.44 was the
+keyword router's noise and nothing else. The remaining gap is the opposite failure — it
+*under*-acts. On `as-01` ("帮我找适合您的 AI Agent 岗位") and `as-02` ("有哪些远程的后端
+岗位？") it called no tool at all and asked the user for a resume instead, which is
+`CAREER_SYSTEM` rule 2 ("if required data is missing... tell the user the exact next step")
+being applied to a request where nothing is missing — `search_jobs` needs no resume and has
+defaults. That is why `tool_recall` sits at 0.30 and `avg_steps` at 1.19. Not yet changed:
+prompt edits need another full run to show they help rather than trade one behaviour for
+another.
+
+The mock column is the earlier run (`evals/reports/20261001-145644_agent-full.md`), kept
+for contrast.
 
 Both harnesses therefore require a **real provider** to report product quality; they
 require no provider to prove the system is wired correctly.
