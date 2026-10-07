@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { ProcessingSteps } from "@/components/ai/processing-steps";
 import { AIBadge } from "@/components/ai/ai-badge";
-import { StreamingText } from "@/components/ai/streaming-text";
+import dynamic from "next/dynamic";
 import { EvidenceList } from "@/components/ai/evidence-list";
 import { CopyButton, DownloadButton, SectionHeading } from "@/components/common/export-buttons";
 import { localStages } from "@/components/ai/task-stream";
@@ -17,6 +17,13 @@ import { normalizeEvidence } from "@/lib/api/normalize";
 import { ApiError } from "@/lib/api/client";
 import { missingEndpointMessage } from "@/lib/api/missing-endpoint";
 import type { Evidence } from "@/lib/api/types";
+
+/* Code-split, not a static import: StreamingText carries the react-markdown
+ * stack, and this panel only renders it after the user starts a generation —
+ * there is no reason for the job detail page's first load to pay for it. */
+const StreamingText = dynamic(() =>
+  import("@/components/ai/streaming-text").then((m) => m.StreamingText)
+);
 
 const STAGES = ["Reading the JD", "Pulling company context", "Drafting", "Checking claims"];
 

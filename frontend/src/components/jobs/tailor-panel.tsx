@@ -11,9 +11,16 @@ import { AIBadge } from "@/components/ai/ai-badge";
 import { EvidenceList } from "@/components/ai/evidence-list";
 import { DiffView } from "@/components/common/diff-view";
 import { CopyButton, DownloadButton, SectionHeading } from "@/components/common/export-buttons";
-import { StreamingText } from "@/components/ai/streaming-text";
+import dynamic from "next/dynamic";
 import { useSaveTailoredVersion, useTailorResume, type TailorRun } from "@/lib/hooks/actions";
 import { str } from "@/lib/api/normalize";
+
+/* Code-split, not a static import: StreamingText carries the react-markdown
+ * stack, and this panel only renders it after the user starts a tailor run —
+ * there is no reason for the job detail page's first load to pay for it. */
+const StreamingText = dynamic(() =>
+  import("@/components/ai/streaming-text").then((m) => m.StreamingText)
+);
 
 const STAGES = [
   "Reading your knowledge base",
