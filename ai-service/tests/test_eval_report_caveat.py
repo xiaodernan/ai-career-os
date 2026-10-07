@@ -7,10 +7,19 @@ product claim: `faithfulness: 0.0` looks like a broken generator and `recall_at_
 looks like semantic retrieval, when neither is being measured.
 """
 
-from app.eval.run_eval import METRIC_KEYS, _markdown, _provider_caveat, measured_metric_keys
+import pytest
+
+from app.eval.run_eval import (
+    METRIC_KEYS,
+    _markdown,
+    _provider_caveat,
+    assert_something_was_measured,
+    measured_metric_keys,
+)
 from app.eval.run_agent_eval import (
     _markdown as agent_markdown,
     _provider_caveat as agent_caveat,
+    assert_something_was_measured as agent_measured,
 )
 
 
@@ -43,6 +52,47 @@ def test_both_offline_disclaims_both():
 
 def test_a_missing_config_does_not_crash_or_invent_a_caveat():
     assert _provider_caveat({}) == []
+
+
+# ------------------------------------------- a run that measured nothing is not a result
+
+def test_a_run_that_scored_nothing_refuses_to_pass():
+    """The summary used to print `n_cases: 0, aggregate: {}` and exit 0, so a corpus that
+    never landed read exactly like a clean run — and an empty aggregate cannot be told
+    from a perfect one by anyone skimming."""
+    report = {"n_cases": 0, "skipped": [{"id": f"gs-{i:02d}"} for i in range(1, 16)]}
+    with pytest.raises(SystemExit) as exit_info:
+        assert_something_was_measured(report)
+    message = str(exit_info.value)
+    assert "0 of 15 cases scored" in message
+    assert "absence, not a score" in message
+    # It has to name the thing to check, or the reader is left with a number and no move.
+    assert "smoke-fullstack" in message and "no_ground_truth" in message
+
+
+def test_a_run_that_scored_something_passes():
+    assert assert_something_was_measured({"n_cases": 13, "skipped": []}) is None
+
+
+def test_partial_skips_are_normal_and_must_not_fail():
+    """Two of fifteen skipping is the documented behaviour (the seeded resume has no
+    internship section for those cases), so this guard must not fire on it."""
+    skipped = [{"id": "gs-03"}, {"id": "gs-05"}]
+    assert assert_something_was_measured({"n_cases": 13, "skipped": skipped}) is None
+
+
+def test_an_agent_run_that_ran_nothing_refuses_to_pass():
+    """`errors: 0` and `forbidden_violations: 0` are vacuously true of an empty run, which
+    makes an empty agent report read as a *good* one rather than an absent one."""
+    with pytest.raises(SystemExit) as exit_info:
+        agent_measured({"n_scenarios": 0})
+    message = str(exit_info.value)
+    assert "0 scenarios ran" in message
+    assert "vacuously true" in message and "nothing was asked" in message
+
+
+def test_an_agent_run_that_ran_scenarios_passes():
+    assert agent_measured({"n_scenarios": 3}) is None
 
 
 # ------------------------------------------------- an absent answer is not a measurement

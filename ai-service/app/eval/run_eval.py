@@ -214,6 +214,28 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return p.parse_args(argv)
 
 
+def assert_something_was_measured(report: dict) -> None:
+    """Refuse to let a run that measured nothing pass as a clean one.
+
+    The summary used to print `"n_cases": 0, "aggregate": {}` and exit 0, so a corpus that
+    never landed (the cp936 ingest bug, or a user with no knowledge chunks) read exactly
+    like a successful run -- and an empty aggregate cannot be told from a perfect one by
+    anyone skimming. Skipping *some* cases is normal and passes; skipping all of them means
+    the measurement did not happen.
+    """
+    if report["n_cases"]:
+        return
+    skipped = len(report["skipped"])
+    raise SystemExit(
+        f"\n0 of {skipped} cases scored -- nothing was measured.\n"
+        "  Every case skipped as `no_ground_truth`, which means the corpus holds no\n"
+        "  chunk matching any case keyword. The golden set is tuned to the corpus\n"
+        "  `scripts/smoke-fullstack.sh` writes, so check that its ingest step\n"
+        "  reported `ready` for this user before reading anything into this run.\n"
+        "  The empty aggregate in this run's summary is an absence, not a score.\n"
+    )
+
+
 async def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
     await db.init_db()
@@ -225,6 +247,7 @@ async def main(argv: list[str] | None = None) -> None:
                       "n_cases": report["n_cases"],
                       "aggregate": report["aggregate"],
                       "files": report["_files"]}, ensure_ascii=False, indent=2))
+    assert_something_was_measured(report)
 
 
 if __name__ == "__main__":

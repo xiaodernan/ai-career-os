@@ -262,6 +262,27 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return p.parse_args(argv)
 
 
+def assert_something_was_measured(report: dict) -> None:
+    """Refuse to let a run that ran no scenario pass as a clean one.
+
+    The RAG runner has the same guard for the same reason: a summary of
+    `"n_scenarios": 0, "aggregate": {}` exiting 0 is indistinguishable from a successful
+    run to anyone skimming, and "0 errors, 0 violations" reads as *good* when it actually
+    means *nothing ran*. An empty `--dataset`, or a `--tags` filter matching none of the
+    scenarios, is the way this happens.
+    """
+    if report["n_scenarios"]:
+        return
+    raise SystemExit(
+        "\n0 scenarios ran -- nothing was measured.\n"
+        "  Either the scenario set is empty or `--tags` matched none of it. The default\n"
+        "  set is `app/eval/agent_dataset.py`; `--tags` and `--limit` narrow it, and an\n"
+        "  override file is read from `--dataset`. Note that `errors: 0` and\n"
+        "  `forbidden_violations: 0` below are vacuously true of an empty run, not a\n"
+        "  result -- nothing was asked, so nothing could fail.\n"
+    )
+
+
 async def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
     await db.init_db()
@@ -273,6 +294,7 @@ async def main(argv: list[str] | None = None) -> None:
                       "n_scenarios": report["n_scenarios"],
                       "aggregate": report["aggregate"],
                       "files": report["_files"]}, ensure_ascii=False, indent=2))
+    assert_something_was_measured(report)
 
 
 if __name__ == "__main__":
