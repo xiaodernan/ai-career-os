@@ -121,9 +121,11 @@ frontend tree into the build stage, so uncommitted work there rides along —
 make sure `npx tsc --noEmit` passes before a frontend image build, or the
 stale-or-dirty question has two answers.)
 
-Verified this way: most recently **15/15 against the containerized images**
-(one worker crash on Windows retried green), which is what closed the
-"production build" item in the Definition of Done.
+Verified this way: most recently **16/16 against the containerized images**,
+with all three images rebuilt to the current tree first (the frontend image had
+been carrying a September build that predated the error, not-found, and loading
+boundaries), which is what closed the "production build" item in the Definition
+of Done.
 
 ### The runner is slow to exit in this sandbox
 
