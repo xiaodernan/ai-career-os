@@ -104,8 +104,10 @@ def arm_rename_headline_to_title_in_update_profile() -> dict:
             "test_the_update_profile_request_dto_declares_nine_names",
             "test_the_career_profile_form_sends_the_six_scalar_fields",
             "test_the_maps_form_sends_the_three_map_fields_by_name",
+            "test_the_scalar_text_caps_are_one_policy_across_records_and_screen",
         ],
-        "description": "form still sends headline; subset and partition assertions both lose it",
+        "description": "form still sends headline; subset and partition assertions both lose it, "
+        "and case 13's field lookup finds no headline line to read a bound from",
     }
 
 
@@ -292,6 +294,62 @@ def arm_drop_roles_alert_render() -> dict:
     }
 
 
+# --------------------------------------------------------- #217: the three scalar text caps
+
+def arm_lower_profile_headline_to_120() -> dict:
+    """Lower UpdateProfileRequest's headline cap -- the text-caps test fails."""
+    write(PROFILE_DTO, _scoped_replace(
+        read(PROFILE_DTO), "UpdateProfileRequest",
+        "@Size(max = 240) String headline", "@Size(max = 120) String headline"))
+    return {
+        "name": "lower UpdateProfileRequest headline cap to 120",
+        "predicted_red": ["test_the_scalar_text_caps_are_one_policy_across_records_and_screen"],
+        "description": "the card's MAX_HEADLINE = 240 and this record would disagree",
+    }
+
+
+def arm_lower_me_summary_to_4000() -> dict:
+    """Lower UpdateMeRequest's summary cap -- the text-caps test fails."""
+    write(ME_DTO, _scoped_replace(
+        read(ME_DTO), "UpdateMeRequest",
+        "@Size(max = 5000) String summary", "@Size(max = 4000) String summary"))
+    return {
+        "name": "lower UpdateMeRequest summary cap to 4000",
+        "predicted_red": ["test_the_scalar_text_caps_are_one_policy_across_records_and_screen"],
+        "description": "UpdateProfileRequest's copy stays 5000, so only the me_record iteration fails",
+    }
+
+
+def arm_widen_cards_max_location() -> dict:
+    """Widen the card's MAX_LOCATION -- the text-caps test fails."""
+    _replace_once(CARDS, "const MAX_LOCATION = 120;", "const MAX_LOCATION = 240;")
+    return {
+        "name": "widen the card's MAX_LOCATION to 240",
+        "predicted_red": ["test_the_scalar_text_caps_are_one_policy_across_records_and_screen"],
+        "description": "the pinned constant line disappears before either record is read",
+    }
+
+
+def arm_detach_summary_maxlength_from_constant() -> dict:
+    """Replace the summary input's maxLength with an inline number -- the text-caps test fails."""
+    _replace_once(CARDS, "maxLength={MAX_SUMMARY}", "maxLength={9000}")
+    return {
+        "name": "detach the summary maxLength from MAX_SUMMARY",
+        "predicted_red": ["test_the_scalar_text_caps_are_one_policy_across_records_and_screen"],
+        "description": "the attribute no longer names the constant the case holds to the records",
+    }
+
+
+def arm_point_headline_maxlength_at_location() -> dict:
+    """Point the headline input's maxLength at MAX_LOCATION -- the text-caps test fails."""
+    _replace_once(CARDS, "maxLength={MAX_HEADLINE}", "maxLength={MAX_LOCATION}")
+    return {
+        "name": "point the headline maxLength at MAX_LOCATION",
+        "predicted_red": ["test_the_scalar_text_caps_are_one_policy_across_records_and_screen"],
+        "description": "a maxLength attribute exists, but not the one naming MAX_HEADLINE",
+    }
+
+
 ARMS = [
     arm_rename_display_name_to_name_in_update_me,
     arm_remove_min_from_display_name_guard,
@@ -314,4 +372,9 @@ ARMS = [
     arm_flip_module_roles_count_boundary,
     arm_revert_saveable_to_years_only,
     arm_drop_roles_alert_render,
+    arm_lower_profile_headline_to_120,
+    arm_lower_me_summary_to_4000,
+    arm_widen_cards_max_location,
+    arm_detach_summary_maxlength_from_constant,
+    arm_point_headline_maxlength_at_location,
 ]

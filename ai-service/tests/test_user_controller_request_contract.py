@@ -19,8 +19,10 @@ UserController serves the frontend-facing /me surface. Two entry points carry JS
    fields: ``CareerProfileForm`` sends the six scalars, ``CareerProfileMapsCard`` sends the
    three free-form maps (by name, through ``MAP_SECTIONS``).
 
-The settings UI mirrors the server bounds (``MAX_NAME = 120``, ``MAX_YEARS = 60``), so this
-gate holds those constants to their Java guards.
+The settings UI mirrors the server bounds (``MAX_NAME = 120``, ``MAX_YEARS = 60``, and the
+three text caps ``MAX_HEADLINE = 240`` / ``MAX_LOCATION = 120`` / ``MAX_SUMMARY = 5000``
+enforced through ``maxLength`` attributes), so this gate holds those constants to their
+Java guards.
 
 This gate holds the contract at both ends:
 
@@ -33,6 +35,9 @@ This gate holds the contract at both ends:
 - Case 12 extends the same bounds join to the two target lists: each record's
   ``@Size(max = 20) List<@Size(max = ...) String>`` pair has a ``profile-targets.ts``
   constant, an enforcing branch, and a screen guard pinned against the form.
+- Case 13 closes the three scalar text caps the same way: both records' ``headline`` /
+  ``location`` / ``summary`` bounds against the card's constants and the three
+  ``maxLength={MAX_*}`` attributes that are the screen's enforcement point.
 """
 
 from __future__ import annotations
@@ -180,6 +185,18 @@ def list_size_bounds(record: str, field: str, source: str) -> tuple:
         "%s.%s carries %d @Size bounds, expected the list one and the item one" % (
             record, field, len(sizes)))
     return sizes[0], sizes[1]
+
+
+def single_size_max(record: str, field: str, source: str) -> int:
+    """The ``max`` from ``@Size(max = 240) String field`` -- exactly one @Size on the line."""
+    body = record_body(record, source)
+    lines = [line for line in body.splitlines() if re.search(r"\b" + field + r"\b", line)]
+    assert len(lines) == 1, "%s.%s sits on %d lines" % (record, field, len(lines))
+    sizes = re.findall(r"@Size\(max = (\d+)\)", lines[0])
+    assert len(sizes) == 1, (
+        "%s.%s carries %d @Size(max) bounds, expected exactly one scalar bound" % (
+            record, field, len(sizes)))
+    return int(sizes[0])
 
 
 # --------------------------------------------------------------------------- case 1: UpdateMeRequest has ten fields
@@ -424,3 +441,25 @@ def test_the_target_list_bounds_are_one_policy_across_records_and_screen():
         "the payload no longer sends the same items the guard judged")
     assert cards.count("{rolesProblem && (") == 1 and cards.count("{locationsProblem && (") == 1, (
         "a list guard no longer renders its sentence")
+
+
+# --------------------------------------------------------------------------- case 13: the three text caps
+
+def test_the_scalar_text_caps_are_one_policy_across_records_and_screen():
+    # Same one-policy shape as the lists (case 12), except the screen's enforcement point is
+    # the input's maxLength attribute: the browser clips typing and paste, so there is no
+    # issue-message branch to pin -- the attribute ties each input to its constant.
+    cards = cards_source()
+    for constant, name, field, cap in (
+        ("const MAX_HEADLINE = 240;", "MAX_HEADLINE", "headline", 240),
+        ("const MAX_LOCATION = 120;", "MAX_LOCATION", "location", 120),
+        ("const MAX_SUMMARY = 5000;", "MAX_SUMMARY", "summary", 5000),
+    ):
+        assert constant in cards, "the card lost %r" % constant
+        for record, source in (("UpdateProfileRequest", profile_dto_source()),
+                               ("UpdateMeRequest", me_dto_source())):
+            assert single_size_max(record, field, source) == cap, (
+                "%s.%s moved; re-read the card constant %r" % (record, field, constant))
+        attr = "maxLength={%s}" % name
+        assert attr in cards, (
+            "no input enforces %r, so the constant above governs nothing" % attr)
