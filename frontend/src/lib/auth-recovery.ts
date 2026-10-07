@@ -1,20 +1,28 @@
 /**
- * Password recovery, as arithmetic rather than as screens.
+ * Auth-screen validation, as arithmetic rather than as screens.
  *
  * The forgot/reset pair spent a while documented-but-unreachable: the API served it, the ops
  * runbook used it by hand, and no screen ever called it. The parts worth testing are not the
  * ones that render — they are the ones that decide whether a submit is allowed, where the
- * token comes from, and what a failure says — so they live here, out of the components. The
- * email rule is shared with the sign-in form rather than written twice.
+ * token comes from, and what a failure says — so they live here, out of the components.
+ * Every length ceiling below mirrors the bound its record carries (the auth-controller
+ * contract gate pins both ends), and the email rule is shared with the sign-in form rather
+ * than written twice.
  */
 
 import { ApiError } from "@/lib/api/client";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/** Mirrors `@Size(max = 255)` on the three records that carry a user-typed email. */
+export const EMAIL_MAX_LENGTH = 255;
+
 /** What to show under an email field, or `undefined` when it looks like an address. */
 export function emailIssue(value: string): string | undefined {
   if (!value) return "Email is required";
+  if (value.length > EMAIL_MAX_LENGTH) {
+    return `Use at most ${EMAIL_MAX_LENGTH} characters`;
+  }
   return EMAIL_RE.test(value) ? undefined : "Enter a valid email address";
 }
 
@@ -32,14 +40,23 @@ export const PASSWORD_MIN_LENGTH = 8;
 export const PASSWORD_MAX_LENGTH = 72;
 
 /**
- * What to show under the reset-token field, or `undefined` when it holds something.
+ * What to show under the reset-token field, or `undefined` when it holds something usable.
  *
  * The token has no local shape to check -- the API decides whether it is real, and folding a
  * guess about the alphabet into the screen would reject a token the server would have spent.
- * The screen only refuses to send an empty one.
+ * The screen refuses only emptiness and the record's own ceiling (`@Size(max = 512)`); the
+ * mailed tokens are 43 chars (32 random bytes, base64url), so the ceiling only catches a
+ * paste that swallowed the whole mail. Length is judged as typed; the screen trims before
+ * sending.
  */
+export const RESET_TOKEN_MAX_LENGTH = 512;
+
 export function tokenIssue(value: string): string | undefined {
-  return value.trim() ? undefined : "Paste the token from your email";
+  if (!value.trim()) return "Paste the token from your email";
+  if (value.length > RESET_TOKEN_MAX_LENGTH) {
+    return `Use at most ${RESET_TOKEN_MAX_LENGTH} characters`;
+  }
+  return undefined;
 }
 
 /** What to show under the password field, or `undefined` when the value is acceptable. */
@@ -50,6 +67,21 @@ export function passwordIssue(value: string): string | undefined {
   }
   if (value.length > PASSWORD_MAX_LENGTH) {
     return `Use at most ${PASSWORD_MAX_LENGTH} characters`;
+  }
+  return undefined;
+}
+
+/**
+ * Mirrors `@NotBlank @Size(max = 120)` on `RegisterRequest.displayName`. A longer paste
+ * would otherwise come back as the generic validation 400 with no field named (#201).
+ */
+export const DISPLAY_NAME_MAX_LENGTH = 120;
+
+/** What to show under the register screen's name field, or `undefined` when acceptable. */
+export function displayNameIssue(value: string): string | undefined {
+  if (!value.trim()) return "Name is required";
+  if (value.length > DISPLAY_NAME_MAX_LENGTH) {
+    return `Use at most ${DISPLAY_NAME_MAX_LENGTH} characters`;
   }
   return undefined;
 }

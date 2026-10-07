@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { AuthField } from "@/components/auth/auth-field";
 import { Button } from "@/components/ui/button";
 import { ApiError } from "@/lib/api/client";
-import { emailIssue, passwordIssue } from "@/lib/auth-recovery";
+import { displayNameIssue, emailIssue, passwordIssue } from "@/lib/auth-recovery";
 import { useLogin, useRegister } from "@/lib/hooks/auth";
 
 export interface FieldConfig {
@@ -44,7 +44,7 @@ const registerFields: FieldConfig[] = [
     type: "text",
     autoComplete: "name",
     placeholder: "Ada Zhang",
-    validate: (v) => (!v.trim() ? "Name is required" : undefined),
+    validate: displayNameIssue,
   },
   ...baseFields.map((f) =>
     f.name === "password" ? { ...f, autoComplete: "new-password" } : f

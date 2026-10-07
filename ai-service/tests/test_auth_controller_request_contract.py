@@ -26,7 +26,7 @@ runRefresh's ``JSON.stringify``) as a subset rule -- every key sent must be acce
 record. This gate holds the complementary equality (a record field no writer sends reddens
 here only), the parked register/login pair, and what a name-oriented rule cannot see:
 ``@Valid`` on every body, the per-record guard lines, the shared recovery module's bounds
-constants against the records and the screens' use of that one guard function, the
+constants against the records and the screens' use of the shared guard functions, the
 ``auth: false`` opt-out of the bearer, the token record's two writers and their shared
 store reader, and the screens' own payloads.
 
@@ -38,7 +38,10 @@ details dead (#201) the screen had nothing to act on. Both credential screens no
 through the recovery module's ``passwordIssue``. The join is held link by link: the
 screens' guard test pins the form's end (no inline threshold; one shared validator, with
 the register override touching only autoComplete), and the bounds-policy test pins the
-function's constants against the three records.
+function's constants against the three records. Case 13 extends the same join to the
+other user-typed ceilings -- email (255, on three records), display name (120) and the
+reset token (512): each one has a module constant, an enforcing branch, and a screen
+guard pinned against its record, so no reachable paste dies as the generic 400.
 
 What this gate deliberately does NOT re-pin: the hooks' optimistic cache writes (#198), the
 ``["me"]`` query ownership, the envelope's success flag (#202), or any response record.
@@ -221,8 +224,8 @@ def options_blob(member: str) -> str:
     return braced_arg_after(client_source(), "endpoints.auth.%s, " % member)
 
 
-def password_bounds(rel: str, field: str) -> tuple:
-    """``(min, max)`` parsed from the ``@Size(...)`` guard on a password-like field."""
+def size_bounds(rel: str, field: str) -> tuple:
+    """``(min, max)`` parsed from the ``@Size(...)`` guard on a field."""
     m = re.search(r"@Size\(([^)]*)\)\s+String\s+" + field + r"\b", read(rel))
     assert m, "no @Size guard on `String %s` in %s" % (field, rel)
     args = m.group(1)
@@ -283,9 +286,9 @@ def test_each_records_guards_spell_their_bounds():
 # --------------------------------------------------------------------------- case 3: bounds agreement
 
 def test_the_password_bounds_are_one_policy_across_the_three_records():
-    register = password_bounds(REGISTER_DTO, "password")
-    reset = password_bounds(RESET_DTO, "newPassword")
-    login = password_bounds(LOGIN_DTO, "password")
+    register = size_bounds(REGISTER_DTO, "password")
+    reset = size_bounds(RESET_DTO, "newPassword")
+    login = size_bounds(LOGIN_DTO, "password")
     module = read(RECOVERY)
     assert "export const PASSWORD_MIN_LENGTH = 8;" in module, (
         "PASSWORD_MIN_LENGTH is no longer declared as 8; it mirrors the two records below"
@@ -485,8 +488,8 @@ def test_the_credential_screens_guard_through_the_shared_password_function():
         "expected exactly one password entry validating through passwordIssue (baseFields' "
         "entry, shared by sign-in and register), found %d" % form.count("validate: passwordIssue,")
     )
-    assert 'import { emailIssue, passwordIssue } from "@/lib/auth-recovery";' in form, (
-        "the shared import changed; the guard above would resolve a name this file cannot see"
+    assert 'import { displayNameIssue, emailIssue, passwordIssue } from "@/lib/auth-recovery";' in form, (
+        "the shared import changed; the guards above would resolve names this file cannot see"
     )
     assert '? { ...f, autoComplete: "new-password" } : f' in form, (
         "the register override changed members beyond autoComplete -- a screen-local validator "
@@ -518,4 +521,61 @@ def test_the_screens_mutate_through_the_auth_hooks_that_reach_the_records():
     )
     assert "const reset = useResetPassword();" in read(RESET_FORM), (
         "the reset screen no longer mutates through useResetPassword"
+    )
+
+
+# --------------------------------------------------------------------------- case 13: the remaining ceilings
+
+def test_the_remaining_ceilings_are_one_policy_across_records_and_screens():
+    # The #214 class, completed: every ceiling a user-typed auth field carries has a screen
+    # mirror, so no reachable paste dies as the generic "Request validation failed" 400 whose
+    # per-field details nobody opens (#201).
+    module = read(RECOVERY)
+    for line in (
+        "export const EMAIL_MAX_LENGTH = 255;",
+        "export const DISPLAY_NAME_MAX_LENGTH = 120;",
+        "export const RESET_TOKEN_MAX_LENGTH = 512;",
+    ):
+        assert line in module, (
+            "%s is gone -- the record guards checked below have no mirror to agree with" % line
+        )
+    assert size_bounds(REGISTER_DTO, "email") == (None, 255), (
+        "RegisterRequest.email is now %s; EMAIL_MAX_LENGTH mirrors it" % (size_bounds(REGISTER_DTO, "email"),)
+    )
+    assert size_bounds(LOGIN_DTO, "email") == (None, 255), (
+        "LoginRequest.email is now %s; it shares the mail checks' 255" % (size_bounds(LOGIN_DTO, "email"),)
+    )
+    assert size_bounds(FORGOT_DTO, "email") == (None, 255), (
+        "ForgotPasswordRequest.email is now %s; it shares the mail checks' 255" % (size_bounds(FORGOT_DTO, "email"),)
+    )
+    assert size_bounds(REGISTER_DTO, "displayName") == (None, 120), (
+        "RegisterRequest.displayName is now %s; DISPLAY_NAME_MAX_LENGTH mirrors it"
+        % (size_bounds(REGISTER_DTO, "displayName"),)
+    )
+    assert size_bounds(RESET_DTO, "token") == (None, 512), (
+        "ResetPasswordRequest.token is now %s; RESET_TOKEN_MAX_LENGTH mirrors it"
+        % (size_bounds(RESET_DTO, "token"),)
+    )
+    for line in (
+        "if (value.length > EMAIL_MAX_LENGTH) {",
+        "if (value.length > DISPLAY_NAME_MAX_LENGTH) {",
+        "if (value.length > RESET_TOKEN_MAX_LENGTH) {",
+    ):
+        assert line in module, (
+            "the module lost %r, so the constant above is declared but not enforced" % line
+        )
+    form = read(CREDENTIALS_FORM)
+    assert form.count("validate: displayNameIssue,") == 1, (
+        "the register screen no longer guards its name through the shared mirror, found %d"
+        % form.count("validate: displayNameIssue,")
+    )
+    assert form.count("validate: emailIssue,") == 1, (
+        "the sign-in/register email entry no longer guards through the shared rule, found %d"
+        % form.count("validate: emailIssue,")
+    )
+    assert "emailIssue(email)" in read(FORGOT_FORM), (
+        "the forgot screen no longer guards its address with the shared email rule"
+    )
+    assert "tokenIssue(typedToken)" in read(RESET_FORM), (
+        "the reset screen no longer guards its typed token with the shared rule"
     )

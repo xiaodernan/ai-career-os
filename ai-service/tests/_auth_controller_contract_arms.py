@@ -21,6 +21,7 @@ Test-name shorthand used in the predictions (gate order):
   T10 public wrappers opt out of the bearer, session one does not
   T11 credential screens guard through the shared password function
   T12 screens mutate through the hooks that reach the records
+  T13 remaining ceilings mirror between records and module
 """
 
 from __future__ import annotations
@@ -54,6 +55,7 @@ T9 = "test_the_token_record_is_written_at_two_sites_that_share_one_reader"
 T10 = "test_the_public_wrappers_opt_out_of_the_bearer_and_the_session_ones_do_not"
 T11 = "test_the_credential_screens_guard_through_the_shared_password_function"
 T12 = "test_the_screens_mutate_through_the_auth_hooks_that_reach_the_records"
+T13 = "test_the_remaining_ceilings_are_one_policy_across_records_and_screens"
 
 
 def read(rel: str) -> str:
@@ -405,6 +407,69 @@ def arm_revert_the_shared_password_guard() -> dict:
     }
 
 
+# --------------------------------------------------------------------------- ceiling-mirror arms (#215)
+
+def arm_widen_register_display_name_ceiling() -> dict:
+    """Widen RegisterRequest.displayName's @Size max 120 -> 240."""
+    _replace_once(
+        REGISTER_DTO,
+        "@NotBlank @Size(max = 120) String displayName",
+        "@NotBlank @Size(max = 240) String displayName",
+    )
+    return {
+        "name": "widen the register displayName ceiling to 240",
+        "predicted_red": [T3, T13],
+        "description": (
+            "T3 loses the exact guard line; T13 reads displayName's bounds and compares them "
+            "to DISPLAY_NAME_MAX_LENGTH = 120"
+        ),
+    }
+
+
+def arm_drop_the_display_name_mirror_from_the_form() -> dict:
+    """Swap the register name field back to its old inline non-empty check."""
+    _replace_once(
+        CREDENTIALS_FORM,
+        "validate: displayNameIssue,",
+        'validate: (v) => (!v.trim() ? "Name is required" : undefined),',
+    )
+    return {
+        "name": "revert the register name field to an inline non-empty check",
+        "predicted_red": [T13],
+        "description": (
+            "T13 counts `validate: displayNameIssue,` (now 0); T11's pins survive: the revert "
+            "carries no `v.length`, and the password entry, import and override are untouched"
+        ),
+    }
+
+
+def arm_widen_the_email_ceiling_constant() -> dict:
+    """Widen EMAIL_MAX_LENGTH 255 -> 300 in the recovery module."""
+    _replace_once(RECOVERY, "export const EMAIL_MAX_LENGTH = 255;", "export const EMAIL_MAX_LENGTH = 300;")
+    return {
+        "name": "widen the shared email ceiling to 300",
+        "predicted_red": [T13],
+        "description": "only T13 pins the declared value against the three records' 255",
+    }
+
+
+def arm_widen_the_token_ceiling_constant() -> dict:
+    """Widen RESET_TOKEN_MAX_LENGTH 512 -> 1024 in the recovery module."""
+    _replace_once(
+        RECOVERY,
+        "export const RESET_TOKEN_MAX_LENGTH = 512;",
+        "export const RESET_TOKEN_MAX_LENGTH = 1024;",
+    )
+    return {
+        "name": "widen the shared token ceiling to 1024",
+        "predicted_red": [T13],
+        "description": (
+            "only T13 reads it; the enforcing branch is a variable read (EMAIL pattern) and "
+            "survives"
+        ),
+    }
+
+
 ARMS = [
     arm_drop_valid_from_login,
     arm_rename_the_logout_path,
@@ -430,4 +495,8 @@ ARMS = [
     arm_crosswire_the_reset_hook,
     arm_change_the_recovery_ceiling_constant,
     arm_revert_the_shared_password_guard,
+    arm_widen_register_display_name_ceiling,
+    arm_drop_the_display_name_mirror_from_the_form,
+    arm_widen_the_email_ceiling_constant,
+    arm_widen_the_token_ceiling_constant,
 ]
