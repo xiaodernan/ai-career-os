@@ -93,6 +93,19 @@ export default function JobsPage() {
   // have saved nothing": a filter can empty a list that still has rows behind it.
   const savedFilteredToEmpty =
     tab === "saved" && hasActiveJobFilters(filters) && (saved.data?.items.length ?? 0) > 0;
+  // The same correction as the applications board, over the window both tabs share: the
+  // answer's own window is the divisor (`data.size`, floored at 1 because a normalizer
+  // payload can report 0), so a past-the-end page lands on the last page that exists.
+  // On Saved the window is the client's and `filterAndPaginate` already clamps, so the
+  // write there only names the page the clamp already chose. A layout effect, because
+  // the stale commit paints its empty copy first -- React flushes this update before
+  // the browser paints, so the wrong screen is replaced, not seen.
+  const lastPage = listView.data
+    ? Math.max(0, Math.ceil(total / Math.max(1, listView.data.size)) - 1)
+    : 0;
+  React.useLayoutEffect(() => {
+    if (listView.data && filters.page > lastPage) setFilters({ page: lastPage });
+  }, [listView.data, filters.page, lastPage, setFilters]);
 
   return (
     <div className="space-y-6">

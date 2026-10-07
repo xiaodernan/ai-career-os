@@ -10,9 +10,9 @@ the deep link. Two claims, every end derived from shipped text -- the by-id read
 the by-id route, and the screen resolves the id through the page in hand *and* a direct fetch for
 every page it has not fetched.
 
-A past-the-end page (`?page=99` with two pages of rows) still lands on the shared shell's empty
-state with the pager unreachable until the URL is edited. That behaviour is the jobs board's too,
-measured here, and not this unit's to fix.
+A past-the-end page (`?page=99` with two pages of rows) used to land on the shared shell's empty
+state with the pager unreachable until the URL was edited -- the jobs board's too. #219's
+`test_a_past_the_end_page_corrects_itself.py` now pins the correction that follows on both boards.
 """
 
 import re

@@ -16,10 +16,13 @@ import { ApplicationDialog } from "@/components/applications/application-dialog"
 // anything larger. Past this many applications the board pages rather than asking for more.
 const PAGE_SIZE = 100;
 
+// Module-level so `setUrl` (a `useCallback` keyed on this object) is stable across renders.
+const PAGE_DEFAULTS: { application?: string; page: number } = { application: undefined, page: 0 };
+
 export default function ApplicationsPage() {
   // The page index lives in the URL, so a reload or a shared board link opens the same window.
   const [state, setUrl] = useUrlState<{ application?: string; page: number }>(
-    { application: undefined, page: 0 },
+    PAGE_DEFAULTS,
     { numericKeys: ["page"] }
   );
   const applications = useApplications({ page: state.page, size: PAGE_SIZE });
@@ -60,6 +63,17 @@ export default function ApplicationsPage() {
   };
 
   const total = applications.data?.total ?? 0;
+  // A past-the-end page is an empty window over a real total, not an empty board: the
+  // answer's own window is the divisor (`data.size`, floored at 1 because a normalizer
+  // payload can report 0), so the URL is corrected to the last page that exists. A
+  // layout effect, because the stale commit paints its empty copy first -- React flushes
+  // this update before the browser paints, so the wrong screen is replaced, not seen.
+  const lastPage = applications.data
+    ? Math.max(0, Math.ceil(total / Math.max(1, applications.data.size)) - 1)
+    : 0;
+  React.useLayoutEffect(() => {
+    if (applications.data && state.page > lastPage) setUrl({ page: lastPage });
+  }, [applications.data, state.page, lastPage, setUrl]);
 
   return (
     <ModuleView

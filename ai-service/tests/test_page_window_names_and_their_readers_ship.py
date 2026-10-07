@@ -10,12 +10,14 @@ Ten query hooks annotate `Promise<Page<X>>`. Two sit over a route that answers a
 get a real `PageDTO`. `PageDTO` declares `items`, `total`, `page`, `size`, and both branches of
 `normalizePage` fill all four. `Paging.of` floors the page at 0 and keeps the window inside
 1..`MAX_PAGE_SIZE` (100), and `JobService.list` reports that clamped `window.size()` rather than the
-number it was handed -- so the answer always carries the window that was really used. The browser
-never reads it. Walking every shipped file under `frontend/src` for a read of these four names off a
-query result finds readers for `items`, `total` and `page`, and exactly zero readers of `size`: the
-app's two pagers are both fed the client's own number -- the jobs board the address-bar integer
-`filters.size`, the applications board (#218) the `PAGE_SIZE` constant it asks with -- so the window
-the answer really carried still feeds nobody.
+number it was handed -- so the answer always carries the window that was really used. Walking every
+shipped file under `frontend/src` for a read of these four names off a query result finds readers for
+`items`, `total` and `page`, and -- since #219 -- exactly two readers of `size`: the two
+server-window boards, each correcting a past-the-end URL page from the answer's own window
+(`test_a_past_the_end_page_corrects_itself.py`). The app's two pagers are still both fed the client's
+own number -- the jobs board the address-bar integer `filters.size`, the applications board (#218)
+the `PAGE_SIZE` constant it asks with -- so the window the answer really carried feeds the
+correction, not the label.
 The activity screen goes further and reads nothing but `items` through `ModuleView`.
 
 That asymmetry is what the two clamps disagree about. `asUrlNumber` adopts any integer, and its own
@@ -30,9 +32,8 @@ rows show, while `<Pagination>` is handed `size={0}` and prints `from = 0 * 0 + 
 concedes the wire half ("a page size here would be a number the server never reads"); this file pins
 the client half, where the number is read -- just never the one that shipped.
 
-Nothing about `?size=` policy is fixed here: the two clamps, the jobs pager that `?size=5000`
-hides, and the dead `size` name stay owner decisions. What lands is the measurement, per name and
-per file, from one walk.
+Nothing about `?size=` policy is fixed here: the two clamps and the jobs pager that `?size=5000`
+hides stay owner decisions. What lands is the measurement, per name and per file, from one walk.
 """
 
 import re
@@ -87,7 +88,7 @@ READERS = {
               "components/common/module-view.tsx", "lib/hooks/resources.ts"],
     "total": ["app/(app)/applications/page.tsx", "app/(app)/jobs/page.tsx"],
     "page": ["app/(app)/applications/page.tsx", "app/(app)/jobs/page.tsx"],
-    "size": [],
+    "size": ["app/(app)/applications/page.tsx", "app/(app)/jobs/page.tsx"],
 }
 
 MAX_PAGE_SIZE = 100
@@ -251,8 +252,8 @@ def test_the_envelope_is_four_names_that_both_branches_and_the_record_all_agree_
         "PageDTO's components and the envelope this file walks are no longer the same four names")
 
 
-def test_the_window_the_server_used_is_the_one_envelope_name_no_screen_reads():
-    """Case 3: items, total and page have readers; size has none, from the same scan."""
+def test_the_window_the_server_used_is_read_only_where_a_page_corrects_itself():
+    """Case 3: items, total and page have readers; size's only two are the corrections."""
     reads = envelope_reads()
     assert reads == READERS, f"the envelope reader census moved: {reads}"
     assert "app/(app)/jobs/page.tsx" in reads["items"], (
@@ -263,7 +264,8 @@ def test_the_window_the_server_used_is_the_one_envelope_name_no_screen_reads():
     assert "app/(app)/applications/page.tsx" in reads["total"], (
         "the applications pager (#218) left the census, so the empty list under `size` below "
         "would be an unread population rather than an unread name")
-    assert reads["size"] == [], f"someone started reading the answer's window: {reads['size']}"
+    assert reads["size"] == ["app/(app)/applications/page.tsx", "app/(app)/jobs/page.tsx"], (
+        f"the answer's window has readers beyond the two corrections: {reads['size']}")
 
 
 def test_the_two_pagers_are_fed_client_numbers_and_the_answered_window_still_is_not_one():
