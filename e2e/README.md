@@ -54,6 +54,25 @@ npx playwright show-report
 Expected result: **16 passed**. Each run takes ~60s of actual testing, plus the
 per-test teardown described below.
 
+### Preflight
+
+`preflight.ps1` (Windows/PowerShell) runs the stack checks this README keeps
+having to re-teach, so a misconfigured stack costs one look instead of one
+debugging session: three services reachable, who owns port 3000 (trap 6), the
+backend container's auth rate limit (trap 3), the offline AI providers, image
+staleness against the last commit touching each service's source, a local
+`.next` build older than `frontend/src`, and a `test-results/` dir big enough
+to trip the bulk-delete guard (trap 5):
+
+```bash
+powershell -NoProfile -ExecutionPolicy Bypass -File preflight.ps1
+```
+
+It never mutates the stack and honors the `E2E_*` overrides below. A FAIL
+(exit 1) blocks the run; a WARN is context that is only sometimes the problem.
+Checks that need a container degrade to inconclusive WARNs when the service is
+a local process, which is the honest answer there.
+
 ### Running against the containerized stack
 
 The suite does not care whether the three services are local processes or containers,
