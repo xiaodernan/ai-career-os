@@ -27,7 +27,7 @@ import { ErrorState } from "@/components/common/error-state";
 import { LoadingChatSkeleton } from "@/components/common/loading-skeletons";
 import { isEndpointMissing } from "@/components/common/query-boundary";
 import { ProcessingSteps, type ProcessingStep } from "@/components/ai/processing-steps";
-import { StreamingText } from "@/components/ai/streaming-text";
+import dynamic from "next/dynamic";
 import { AIBadge } from "@/components/ai/ai-badge";
 import { EvidenceList } from "@/components/ai/evidence-list";
 import { ArtifactCard } from "@/components/copilot/artifacts";
@@ -43,6 +43,12 @@ import {
 } from "@/lib/hooks/actions";
 import { relativeTime } from "@/lib/format";
 import type { ChatMessage } from "@/lib/api/types";
+
+/* Code-split, not a static import: the react-markdown stack is only needed
+ * once a message actually renders, so it stays out of the copilot's first load. */
+const StreamingText = dynamic(() =>
+  import("@/components/ai/streaming-text").then((m) => m.StreamingText)
+);
 
 /** The turn's own `status` frames, in arrival order — every step before the last one is done. */
 function stepsFromTrail(trail: string[]): ProcessingStep[] {

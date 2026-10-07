@@ -9,7 +9,7 @@ import { MatchRing } from "@/components/ai/match-ring";
 import { SkillChips, DimensionBars } from "@/components/common/skill-chips";
 import { DiffView } from "@/components/common/diff-view";
 import { EvidenceList } from "@/components/ai/evidence-list";
-import { StreamingText } from "@/components/ai/streaming-text";
+import dynamic from "next/dynamic";
 import { CopyButton } from "@/components/common/export-buttons";
 import { JobCard } from "@/components/jobs/job-card";
 import {
@@ -22,6 +22,12 @@ import {
   coverLetterText,
 } from "@/lib/api/normalize";
 import type { CopilotArtifact, Evidence } from "@/lib/api/types";
+
+/* Code-split, not a static import: the react-markdown stack is only needed
+ * once an artifact with prose renders, so it stays out of the copilot's first load. */
+const StreamingText = dynamic(() =>
+  import("@/components/ai/streaming-text").then((m) => m.StreamingText)
+);
 
 /**
  * ArtifactCard — Copilot answers carry structured artifacts. Each type gets

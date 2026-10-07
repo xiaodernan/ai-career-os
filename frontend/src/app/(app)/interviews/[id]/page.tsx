@@ -28,7 +28,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/common/empty-state";
 import { ErrorState } from "@/components/common/error-state";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
-import { StreamingText } from "@/components/ai/streaming-text";
+import dynamic from "next/dynamic";
 import { AIBadge } from "@/components/ai/ai-badge";
 import { ProcessingSteps } from "@/components/ai/processing-steps";
 import { useInterviewOpening, useSubmitInterviewAnswer, useFinalizeInterview } from "@/lib/hooks/actions";
@@ -36,6 +36,12 @@ import { useInterviewSession } from "@/lib/hooks/resources";
 import { depthLabel, depthLevel, titleCase } from "@/lib/format";
 import type { AnswerResponse } from "@/lib/hooks/actions";
 import type { InterviewQuestion } from "@/lib/api/types";
+
+/* Code-split, not a static import: the react-markdown stack is only needed
+ * once an answer or transcript renders, so it stays out of the page's first load. */
+const StreamingText = dynamic(() =>
+  import("@/components/ai/streaming-text").then((m) => m.StreamingText)
+);
 
 
 export default function InterviewRunnerPage() {
