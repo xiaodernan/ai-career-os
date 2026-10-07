@@ -140,6 +140,13 @@ frontend tree into the build stage, so uncommitted work there rides along —
 make sure `npx tsc --noEmit` passes before a frontend image build, or the
 stale-or-dirty question has two answers.)
 
+Two timestamp artifacts can make a fresh image look stale. A build that
+finishes after its commit shows the build's start time, which can predate the
+commit's clock value; and a rebuild where every layer hits the cache reuses the
+old layers verbatim, so the image keeps its original timestamp even though its
+content matches the current tree. In both cases the image is current — check
+what the build actually emitted before trusting the WARN.
+
 Verified this way: most recently **16/16 against the containerized images**,
 with all three images rebuilt to the current tree first (the frontend image had
 been carrying a September build that predated the error, not-found, and loading

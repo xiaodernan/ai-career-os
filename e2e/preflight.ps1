@@ -139,7 +139,7 @@ if ($dockerOk) {
         if ($c) { try { $commitTime = [datetime]::Parse($c) } catch { } }
         if ($imgTime -and $commitTime) {
             if ($imgTime -lt $commitTime) {
-                Say 'WARN' "image $($t.image) ($($imgTime.ToString('s'))) is older than the last commit touching $($t.src) ($($commitTime.ToString('s'))) - rebuild before accepting"
+                Say 'WARN' "image $($t.image) ($($imgTime.ToString('s'))) is older than the last commit touching $($t.src) ($($commitTime.ToString('s'))) - rebuild before accepting (a full cache-hit rebuild reuses layers and keeps the old timestamp; if you just rebuilt, this is that artifact, not staleness)"
             } else {
                 Say 'PASS' "image $($t.image) is at least as new as the last commit touching $($t.src)"
             }
