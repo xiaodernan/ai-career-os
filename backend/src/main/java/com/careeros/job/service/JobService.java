@@ -386,13 +386,6 @@ public class JobService {
         return PageDTO.from(result, c -> toCompanyItem(c, counts.getOrDefault(c.getId(), 0L)));
     }
 
-    @Transactional(readOnly = true)
-    public CompanyItem getCompany(UUID id) {
-        Company c = companies.findById(id)
-                .orElseThrow(() -> new ApiException(ApiErrorCode.COMPANY_NOT_FOUND, "Company not found"));
-        return toCompanyItem(c, companies.countOpenRoles(id));
-    }
-
     /**
      * The company page: the profile and the roles it is hiring for, in the board's own row shape so
      * each role carries the caller's latest cached match.
@@ -413,13 +406,6 @@ public class JobService {
                 null, null, "open", "match", 0, Paging.MAX_PAGE_SIZE, null);
         List<JobListItem> openRoles = search.search(filters);
         return new CompanyDetail(toCompanyItem(company, search.count(filters)), openRoles);
-    }
-
-    @Transactional
-    public void deleteCompany(UUID id) {
-        Company c = companies.findById(id)
-                .orElseThrow(() -> new ApiException(ApiErrorCode.COMPANY_NOT_FOUND, "Company not found"));
-        companies.delete(c); // jobs cascade with the company per schema
     }
 
     public Job requireJob(UUID jobId) {

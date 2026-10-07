@@ -114,8 +114,7 @@ per-user budget on AI endpoints.
 | POST | `/jobs/{id}/tailored-version` | `{resumeVersionId, tailored, diff, plaintext}` → keeps a reviewed draft as a new version of that resume (201) |
 | POST | `/jobs/{id}/cover-letter` | `{resumeVersionId?, mode, tone, length, previous, goal}` |
 | GET | `/companies` | list (`?q=&page=&size=`); each row is a CompanyItem — profile fields plus openRoleCount |
-| GET | `/companies/{id}` | `{company, openRoles}` — the profile including culture, interviewProcess and sources (the three POST accepts and no read path used to carry), and the company's status='open' roles in the board's own row shape, best match first, capped at Paging.MAX_PAGE_SIZE while company.openRoleCount stays the real total. Scoped by id, not by the board's ?company= name facet |
-| POST / PUT / DELETE | `/companies`, `/companies/{id}` | maintained by the application |
+| GET | `/companies/{id}` | `{company, openRoles}` — the profile including culture, interviewProcess and sources (the three POST accepts and no read path used to carry), and the company's status='open' roles in the board's own row shape, best match first, capped at Paging.MAX_PAGE_SIZE while company.openRoleCount stays the real total. Scoped by id, not by the board's ?company= name facet. Company rows are maintained by the application (the inline company field on job create/import); there are no client-facing write endpoints |
 
 A query parameter binds by name, so one the endpoint does not declare is **ignored, not
 rejected**: `/jobs?remoteType=hybrid` answers 200 with the unfiltered board. `remote` takes a
