@@ -38,13 +38,30 @@ cat > /tmp/ingest-payload.json <<'EOF'
 {"kind":"resume","title":"Main Resume","refId":"__RID__","text":"Senior backend engineer with five years building 分布式 微服务 order and payment platforms in Java, Spring Boot and Spring Cloud. Cut p99 latency by 40 per cent and served 高并发 并发 peaks of 12k QPS with Redis caching, 缓存穿透 caching-penetration guards and 消息队列 Kafka RabbitMQ event streaming. 数据库 MySQL 索引 优化: rewrote slow queries, added composite indexes and moved reporting to PostgreSQL. Deployed services on Kubernetes with Docker, autoscaling and Grafana alerts, and tuned scaling during campaigns. Spring Boot configuration security: JWT authentication, secret rotation, and the 数据脱敏 隐私 PrivacyShield project that masks PII before it reaches a log. Designed a RAG pipeline over company docs with PostgreSQL and pgvector. 教育背景: Zhejiang University, Bachelor of Engineering in Computer Science, 2019. 实习经历: an Internship on the payments team before joining full time. Java Python Elasticsearch Kafka RabbitMQ Kubernetes Docker RAG 分布式 微服务 并发 concurrency 索引 优化 缓存穿透 scaling messaging security."}
 EOF
 sed -i "s/__RID__/$RID/" /tmp/ingest-payload.json
-curl -s -X POST $B/knowledge/text -H "$AUTH" -H "Content-Type: application/json; charset=utf-8" \
-  --data-binary @/tmp/ingest-payload.json | head -c 300
+ING=$(curl -s -X POST $B/knowledge/text -H "$AUTH" -H "Content-Type: application/json; charset=utf-8" \
+  --data-binary @/tmp/ingest-payload.json)
+echo "$ING" | head -c 300
 echo
+# This ingest is the one step whose failure is invisible downstream: the golden set is
+# tuned to this corpus, so an ingest that does not land makes every case skip as
+# `no_ground_truth` and the RAG eval reports nothing at all rather than failing. The
+# cp936 encoding bug above was exactly that -- the script printed a MALFORMED_REQUEST
+# body and exited 0. Assert it here so the next one cannot.
+if ! echo "$ING" | grep -q '"success":true'; then
+  echo "FAIL: knowledge ingest did not succeed, so the eval corpus is empty" >&2
+  echo "      the response above is the reason; re-run the eval and every case will skip" >&2
+  exit 1
+fi
 
 step knowledge-status
 sleep 2
-curl -s "$B/knowledge/sources" -H "$AUTH" | head -c 500
+SRC=$(curl -s "$B/knowledge/sources" -H "$AUTH")
+echo "$SRC" | head -c 500
+echo
+if ! echo "$SRC" | grep -q '"status":"ready"'; then
+  echo "FAIL: the seeded source is not ready -- the eval has no corpus to score" >&2
+  exit 1
+fi
 
 step job-create
 JOB=$(curl -s -X POST $B/jobs -H "$AUTH" -H "Content-Type: application/json" -d '{
