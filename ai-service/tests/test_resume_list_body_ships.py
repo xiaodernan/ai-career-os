@@ -18,6 +18,8 @@ Two facts make the list worth its own gate:
 import re
 from pathlib import Path
 
+from tests._repo_walk import walk_files
+
 TESTS = Path(__file__).resolve().parent
 AI = TESTS.parent
 ROOT = AI.parent
@@ -313,8 +315,12 @@ def test_the_record_and_the_list_are_named_by_a_pinned_set_of_sites():
 
     def census(rx: re.Pattern) -> list[str]:
         hits = []
-        for path in ROOT.rglob("*"):
-            if path.is_dir() or path.suffix not in text_suffixes:
+        # Pruning walk, not rglob: this census runs once per pattern and `rglob("*")` from
+        # the repo root traverses 107k entries -- 81k of them files under
+        # `frontend/node_modules` that the `skip_parts` guard below discards by name. The
+        # filters are unchanged; the walk just stops entering what it would throw away.
+        for path in walk_files(ROOT, skip_parts):
+            if path.suffix not in text_suffixes:
                 continue
             rel = path.relative_to(ROOT).as_posix()
             parts = set(rel.split("/"))

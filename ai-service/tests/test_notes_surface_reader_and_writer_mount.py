@@ -24,6 +24,8 @@ import re
 from functools import lru_cache
 from pathlib import Path
 
+from tests._repo_walk import walk_files
+
 ROOT = Path(__file__).resolve().parents[2]
 
 CONTROLLER = "backend/src/main/java/com/careeros/knowledge/web/KnowledgeController.java"
@@ -158,8 +160,9 @@ def test_the_only_writer_of_note_rows_is_behind_the_post_the_client_calls() -> N
     service = []
     walked = 0
     for sub in ("ai-service/app", "ai-service/ops", "scripts", "e2e"):
-        for path in (ROOT / sub).rglob("*"):
-            if path.is_dir() or path.suffix not in {".py", ".sql", ".yml", ".ts", ".mjs", ".sh"}:
+        # `e2e` carries its own `node_modules`; rglob would walk it to discard every file.
+        for path in walk_files(ROOT / sub):
+            if path.suffix not in {".py", ".sql", ".yml", ".ts", ".mjs", ".sh"}:
                 continue
             walked += 1
             text = path.read_text(encoding="utf-8", errors="replace")
@@ -176,8 +179,10 @@ def test_the_files_that_speak_of_the_notes_route() -> None:
     """Every file in the repository naming the route, counted as one walk -- including this gate."""
     sites = []
     skip_parts = {"node_modules", "__pycache__", "dist", "build", "target"}
-    for path in ROOT.rglob("*"):
-        if path.is_dir() or path.suffix not in {".java", ".py", ".ts", ".tsx", ".md", ".sql", ".yml"}:
+    # Pruning walk: `ROOT.rglob("*")` traverses 107k entries from here, 81k of them under
+    # `frontend/node_modules`, which the `skip_parts` guard below throws away by name.
+    for path in walk_files(ROOT, skip_parts):
+        if path.suffix not in {".java", ".py", ".ts", ".tsx", ".md", ".sql", ".yml"}:
             continue
         rel = path.relative_to(ROOT).as_posix()
         if set(rel.split("/")) & skip_parts or any(part.startswith(".") for part in rel.split("/")):

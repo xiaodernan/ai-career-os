@@ -16,6 +16,8 @@ from __future__ import annotations
 import pathlib
 import re
 
+from tests._repo_walk import walk_files
+
 TESTS = pathlib.Path(__file__).resolve().parent
 AI = TESTS.parent
 ROOT = AI.parent
@@ -47,14 +49,18 @@ def walk(prefix: str, suffixes: tuple[str, ...]) -> list[str]:
     base = ROOT / prefix
     assert base.is_dir(), f"{prefix} is not a directory under {ROOT}"
     out = []
-    for path in sorted(base.rglob("*")):
-        if not path.is_file() or path.suffix not in suffixes:
+    # Pruning walk. `scan("", ...)` walks the repo root, where `rglob("*")` traverses 107k
+    # entries -- 81k of them files under `frontend/node_modules` -- and `scan("e2e", ...)`
+    # walks e2e's own node_modules. `SKIP_PARTS` discards those by name; this stops the walk
+    # entering them, which is the difference between 150s and a fraction of a second.
+    for path in walk_files(base, SKIP_PARTS):
+        if path.suffix not in suffixes:
             continue
         rel = path.relative_to(ROOT).as_posix()
         if any(part.startswith(".") or part in SKIP_PARTS for part in rel.split("/")):
             continue
         out.append(rel)
-    return out
+    return sorted(out)
 
 
 def scan(prefix: str, pattern: re.Pattern, suffixes: tuple[str, ...]) -> list[tuple[str, int, str]]:
