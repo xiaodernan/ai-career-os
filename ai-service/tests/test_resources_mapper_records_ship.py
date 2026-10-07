@@ -727,6 +727,9 @@ def test_the_dead_names_spread_in_three_measured_tiers_and_three_reached_a_scree
     `isCurrent` and `versionNo`, both calls dead, the badge alive on a second real term.
     """
     files = frontend_files()
+    # 157 rather than 156 since the (app) route-segment loading fallback joined
+    # (app/(app)/loading.tsx: the skeleton the router shows while the next page's
+    # chunk is in flight, the one gap the pages' own react-query skeletons miss).
     # 156 rather than 154 since the global not-found and error boundaries joined (app/not-found.tsx
     # and app/error.tsx: the 404 page and the client error screen the app fell back to Next's
     # unstyled defaults without).
@@ -738,7 +741,7 @@ def test_the_dead_names_spread_in_three_measured_tiers_and_three_reached_a_scree
     # the settings page's career-profile editor; 136 rather than 135 since the knowledge page's
     # notes panel component joined. (Spell the panel's path out nowhere here -- the notes-route
     # census counts every mention of it, this file included.)
-    assert len(files) == 156, f"the frontend census walked {len(files)} files"
+    assert len(files) == 157, f"the frontend census walked {len(files)} files"
     asked = {name for row in UNAUTHORED.values() for name in row}
     assert len(asked) == 56, f"{len(asked)} dead names are asked, pinned 56"
     classified = set()
