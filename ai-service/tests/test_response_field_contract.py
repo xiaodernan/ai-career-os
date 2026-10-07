@@ -3829,6 +3829,10 @@ def _paired_accessor_calls(text: str) -> list[dict]:
     clean = _blank_ts_noise(text)
     finder = re.compile(r"\b(" + "|".join(_name_table_accessors()) + r")\b")
     angles = re.compile(r"<[^<>]*(?:<[^<>]*>[^<>]*)*>")
+    # Hoisted out of the match loop below. The argument never changes, but this walks the
+    # whole file and re-blanks it on every call -- with 277 matches it was 22s of the 22.5s
+    # this function cost, and two tests call it. Same input, same result, computed once.
+    spans = _ts_function_spans(text)
     rows = []
     for found in finder.finditer(clean):
         if _DECLARATION.search(clean, 0, found.start()):
@@ -3845,7 +3849,7 @@ def _paired_accessor_calls(text: str) -> list[dict]:
             continue
         args, _ = _ts_args(clean, cursor)
         parts = [part.strip() for part in _ts_top_level(args)]
-        inside = [name for name, lo, hi in _ts_function_spans(text) if lo <= found.start() < hi]
+        inside = [name for name, lo, hi in spans if lo <= found.start() < hi]
         rows.append({"name": found.group(1), "line": clean.count("\n", 0, found.start()) + 1,
                      "owner": inside[-1] if inside else "", "argc": len(parts),
                      "receiver": parts[0] if parts else "",
