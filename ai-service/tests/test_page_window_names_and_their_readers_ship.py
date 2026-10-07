@@ -13,7 +13,9 @@ get a real `PageDTO`. `PageDTO` declares `items`, `total`, `page`, `size`, and b
 number it was handed -- so the answer always carries the window that was really used. The browser
 never reads it. Walking every shipped file under `frontend/src` for a read of these four names off a
 query result finds readers for `items`, `total` and `page`, and exactly zero readers of `size`: the
-one `<Pagination>` in the app is fed `size={filters.size}`, the raw number from the address bar.
+app's two pagers are both fed the client's own number -- the jobs board the address-bar integer
+`filters.size`, the applications board (#218) the `PAGE_SIZE` constant it asks with -- so the window
+the answer really carried still feeds nobody.
 The activity screen goes further and reads nothing but `items` through `ModuleView`.
 
 That asymmetry is what the two clamps disagree about. `asUrlNumber` adopts any integer, and its own
@@ -28,8 +30,9 @@ rows show, while `<Pagination>` is handed `size={0}` and prints `from = 0 * 0 + 
 concedes the wire half ("a page size here would be a number the server never reads"); this file pins
 the client half, where the number is read -- just never the one that shipped.
 
-Nothing here is fixed: the two clamps, the unreachable pager and the dead name are owner decisions
-about `?size=` policy. What lands is the measurement, per name and per file, from one walk.
+Nothing about `?size=` policy is fixed here: the two clamps, the jobs pager that `?size=5000`
+hides, and the dead `size` name stay owner decisions. What lands is the measurement, per name and
+per file, from one walk.
 """
 
 import re
@@ -45,6 +48,7 @@ RESOURCES = FRONT / "lib" / "hooks" / "resources.ts"
 NORMALIZE = FRONT / "lib" / "api" / "normalize.ts"
 ENDPOINTS = FRONT / "lib" / "api" / "endpoints.ts"
 JOBS_PAGE = FRONT / "app" / "(app)" / "jobs" / "page.tsx"
+APPS_PAGE = FRONT / "app" / "(app)" / "applications" / "page.tsx"
 JOB_FILTER = FRONT / "lib" / "job-filter.ts"
 PAGINATION = FRONT / "components" / "common" / "pagination.tsx"
 URL_STATE = FRONT / "lib" / "hooks" / "use-url-state.ts"
@@ -81,8 +85,8 @@ READERS = {
     "items": ["app/(app)/applications/page.tsx", "app/(app)/copilot/page.tsx",
               "app/(app)/dashboard/page.tsx", "app/(app)/jobs/page.tsx",
               "components/common/module-view.tsx", "lib/hooks/resources.ts"],
-    "total": ["app/(app)/jobs/page.tsx"],
-    "page": ["app/(app)/jobs/page.tsx"],
+    "total": ["app/(app)/applications/page.tsx", "app/(app)/jobs/page.tsx"],
+    "page": ["app/(app)/applications/page.tsx", "app/(app)/jobs/page.tsx"],
     "size": [],
 }
 
@@ -256,15 +260,19 @@ def test_the_window_the_server_used_is_the_one_envelope_name_no_screen_reads():
         "be an unread population rather than an absent name")
     assert "components/common/module-view.tsx" in reads["items"], (
         "the scan no longer reaches the shared list renderer either")
+    assert "app/(app)/applications/page.tsx" in reads["total"], (
+        "the applications pager (#218) left the census, so the empty list under `size` below "
+        "would be an unread population rather than an unread name")
     assert reads["size"] == [], f"someone started reading the answer's window: {reads['size']}"
 
 
-def test_the_only_pager_in_the_app_is_fed_the_address_bar_number_not_the_answer():
-    """Case 4: `<Pagination>` exists once, and its size prop is `filters.size`."""
+def test_the_two_pagers_are_fed_client_numbers_and_the_answered_window_still_is_not_one():
+    """Case 4: both `<Pagination>`s take the window the caller asked with, never the answer's."""
     consumers = sorted(str(p.relative_to(FRONT)).replace("\\", "/")
                        for p in FRONT.rglob("*.tsx")
                        if 'from "@/components/common/pagination"' in read(p))
-    assert consumers == ["app/(app)/jobs/page.tsx"], f"pager consumers: {consumers}"
+    assert consumers == ["app/(app)/applications/page.tsx", "app/(app)/jobs/page.tsx"], \
+        f"pager consumers: {consumers}"
     jobs = read(JOBS_PAGE)
     block = jobs[jobs.index("<Pagination"):]
     block = block[:block.index("/>")]
@@ -278,6 +286,20 @@ def test_the_only_pager_in_the_app_is_fed_the_address_bar_number_not_the_answer(
     assert re.search(r"total=\{total\}", block) and re.search(
         r"const total = listView\.data\?\.total \?\? 0;", jobs), (
         "the pager's row count no longer comes off the envelope")
+
+    apps = read(APPS_PAGE)
+    ablock = apps[apps.index("<Pagination"):]
+    ablock = ablock[:ablock.index("/>")]
+    assert re.search(r"size=\{PAGE_SIZE\}", ablock), (
+        "the board's pager no longer takes the constant the board asks with, so its window "
+        "and the request's window could drift apart")
+    assert "data?.size" not in ablock and "data.size" not in ablock, (
+        f"the board's pager now reads the answer's window, so the dead `size` above has a reader: {ablock}")
+    assert re.search(r"page=\{applications\.data\?\.page \?\? state\.page\}", ablock), (
+        "the board's page index is no longer the answer's")
+    assert re.search(r"total=\{total\}", ablock) and re.search(
+        r"const total = applications\.data\?\.total \?\? 0;", apps), (
+        "the board's pager row count no longer comes off the envelope")
 
 
 def test_the_backend_reports_the_clamped_window_and_the_url_never_adopts_the_ceiling():

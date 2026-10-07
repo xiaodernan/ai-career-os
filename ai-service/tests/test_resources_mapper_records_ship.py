@@ -415,7 +415,8 @@ def test_the_unbound_mappers_ban_would_find_these_mappers_if_it_read_this_file()
     pattern = re.compile(source.group(1), re.M)
     assert pattern.pattern == r"^(export )?function (\w+)[<(]", pattern.pattern
     seen = [name for _, name in pattern.findall(read(RESOURCES))]
-    assert len(seen) == 32, f"resources.ts now declares {len(seen)} functions for the ban's rule"
+    # 33 since #218 added `useApplication`, the board's by-id fallback.
+    assert len(seen) == 33, f"resources.ts now declares {len(seen)} functions for the ban's rule"
     assert [n for n in seen if n.startswith("map")] == NAMED_MAPPERS, \
         "the ban's own rule no longer recognizes these declarations in file order: " \
         f"{[n for n in seen if n.startswith('map')]}"

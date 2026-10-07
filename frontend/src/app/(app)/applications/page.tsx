@@ -3,16 +3,26 @@
 import * as React from "react";
 import { Plus } from "lucide-react";
 import { ModuleView } from "@/components/common/module-view";
+import { Pagination } from "@/components/common/pagination";
 import { Button } from "@/components/ui/button";
-import { useApplications } from "@/lib/hooks/resources";
+import { useApplication, useApplications } from "@/lib/hooks/resources";
 import { useReorderApplication } from "@/lib/hooks/actions";
 import { useUrlState } from "@/lib/hooks/use-url-state";
 import type { Application, ApplicationStatus } from "@/lib/api/types";
 import { KanbanBoard } from "@/components/common/kanban";
 import { ApplicationDialog } from "@/components/applications/application-dialog";
 
+// The most rows one request may carry: `Paging.MAX_PAGE_SIZE` on the server, which clamps
+// anything larger. Past this many applications the board pages rather than asking for more.
+const PAGE_SIZE = 100;
+
 export default function ApplicationsPage() {
-  const applications = useApplications({ size: 100 });
+  // The page index lives in the URL, so a reload or a shared board link opens the same window.
+  const [state, setUrl] = useUrlState<{ application?: string; page: number }>(
+    { application: undefined, page: 0 },
+    { numericKeys: ["page"] }
+  );
+  const applications = useApplications({ page: state.page, size: PAGE_SIZE });
   const reorderApp = useReorderApplication();
   // null is the create form, a row is that row's editor — the dialog owns every write, so the
   // page only decides which of the two is open.
@@ -21,17 +31,22 @@ export default function ApplicationsPage() {
     app: null,
   });
   // Deep link: the dashboard's attention rows land as `?application=<id>` and open that card's
-  // editor once the list carries it. The param is cleared on close, so a refetch can never
-  // pop the dialog again behind the user's back.
-  const [state, setUrl] = useUrlState<{ application?: string }>({ application: undefined });
+  // editor. The rows that need attention are the old ones and the board sorts `updatedAt DESC`,
+  // so the linked card is exactly the kind the first window cuts off -- when the page in hand
+  // does not hold it, the id is fetched on its own instead of the link landing on nothing. The
+  // param is cleared on close, so a refetch can never pop the dialog again behind the user's back.
+  const deepLinkId = state.application;
+  const inPage = deepLinkId
+    ? applications.data?.items.find((a) => a.id === deepLinkId)
+    : undefined;
+  const outside = useApplication(deepLinkId && applications.data && !inPage ? deepLinkId : null);
   React.useEffect(() => {
-    const id = state.application;
     // Once the editor is up, later refetches must not re-set it — swapping `application`
     // under an open form would reset whatever the user has typed.
-    if (!id || dialog.open) return;
-    const found = applications.data?.items.find((a) => a.id === id);
+    if (!deepLinkId || dialog.open) return;
+    const found = inPage ?? outside.data;
     if (found) setDialog({ open: true, app: found });
-  }, [state.application, applications.data, dialog.open]);
+  }, [deepLinkId, inPage, outside.data, dialog.open]);
 
   const handleReorder = (id: string, status: ApplicationStatus, order: number) => {
     reorderApp.mutate({ id, status, order });
@@ -43,6 +58,8 @@ export default function ApplicationsPage() {
     setDialog((cur) => ({ ...cur, open }));
     if (!open && state.application) setUrl({ application: undefined });
   };
+
+  const total = applications.data?.total ?? 0;
 
   return (
     <ModuleView
@@ -71,6 +88,18 @@ export default function ApplicationsPage() {
         onOpen={openEdit}
         isPending={reorderApp.isPending}
       />
+      {total > PAGE_SIZE && (
+        <Pagination
+          page={applications.data?.page ?? state.page}
+          size={PAGE_SIZE}
+          total={total}
+          label="applications"
+          onPageChange={(page) => {
+            setUrl({ page });
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+        />
+      )}
       <ApplicationDialog
         application={dialog.app}
         open={dialog.open}

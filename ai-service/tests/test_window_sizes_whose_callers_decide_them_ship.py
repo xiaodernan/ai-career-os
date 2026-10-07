@@ -16,7 +16,9 @@ board spreads its URL-backed `filters`, the dashboard passes `{ size: 3 }`), so 
 `resources.ts:178` is shadowed on every path -- and the case over `useUrlState` shows the shadowing
 cannot be avoided by a bad URL, because `hydrateState` seeds `{...initial}` and only overwrites a
 numeric key when `asUrlNumber` yields an integer, so `filters.size` is 12 or an address-bar integer,
-never absent. `useApplications` has one caller, `{ size: 100 }`, which buries its `50`.
+never absent. `useApplications` has one caller, and since #218 it asks
+`{ page: state.page, size: PAGE_SIZE }` -- `PAGE_SIZE` is pinned to `MAX_PAGE_SIZE`, so the `50` is
+still buried, now by the ceiling's own number rather than a stray literal.
 `useKnowledgeNotes`'s one caller passes no arguments, so its `50` stands -- and reaches a wire now
 that the knowledge page's notes panel mounts the hook.
 
@@ -30,17 +32,20 @@ contradict anything, and cannot be noticed either. The notes literal is in the o
 against a 20 default), so the one wire it now builds carries a number the server would never
 have chosen.
 
-The reachable numbers have consequences the screens do not cover. The applications board asks for
+The reachable numbers have consequences the screens do not cover. The applications board asked for
 exactly `Paging.MAX_PAGE_SIZE` (100), which `Paging`'s own comment answers with "A caller wanting
-more pages pages." -- and `<Pagination>` is written in one file app-wide, the jobs page, so the
-applications screen renders no pager and reads no `total`: its 101st application is simply not there.
-`useActivityRuns` is the one hook where the server still decides, because `client.ts` omits an
-undefined param rather than sending the word, and the handler defaults `limit` to 30 through
-`Paging.first`.
+more pages pages." -- and `<Pagination>` was written in one file app-wide, the jobs page, so the
+applications screen rendered no pager and read no `total`: its 101st application was simply not
+there. #218 took the ceiling's own advice: the request is now `{ page: state.page, size: PAGE_SIZE }`
+with `PAGE_SIZE` pinned to `MAX_PAGE_SIZE`, and a pager under the canvas puts every row past the
+first window one page away. `useActivityRuns` is the one hook where the server still decides,
+because `client.ts` omits an undefined param rather than sending the word, and the handler defaults
+`limit` to 30 through `Paging.first`.
 
-Nothing here is fixed: which number should win, and whether the applications board should page or
-raise its ceiling are owner decisions. What lands is
-the measurement -- per hook, per call site, per route -- from one walk of each of the three tables.
+The page-or-raise decision is made: the board pages rather than raising its ceiling (#218, case 7
+pins the request and the pager's numbers). Still open: which number should win, and whether the
+other shadowed literal or the four overstated ones should move. What lands is the measurement --
+per hook, per call site, per route -- from one walk of each of the three tables.
 """
 
 import functools
@@ -88,7 +93,8 @@ SITES = {
                 ("app/(app)/jobs/page.tsx",
                  'tab === "discover" ? filters : { size: filters.size, page: filters.page }')],
     "useSavedJobs": [("app/(app)/jobs/page.tsx", "")],
-    "useApplications": [("app/(app)/applications/page.tsx", "{ size: 100 }")],
+    "useApplications": [("app/(app)/applications/page.tsx",
+                         "{ page: state.page, size: PAGE_SIZE }")],
     "useCompanies": [("app/(app)/companies/page.tsx", "")],
     "useKnowledgeSources": [("app/(app)/knowledge/page.tsx", "true, src")],
     "useKnowledgeNotes": [("components/knowledge/notes-panel.tsx", "")],
@@ -414,20 +420,28 @@ def test_the_number_the_server_would_use_if_the_app_sent_none():
         "four hooks no longer ask 50 where the handler says 20"
 
 
-def test_the_applications_board_asks_for_exactly_the_ceiling_and_has_no_way_to_page():
-    """Case 7: 100 is the whole answer, and paging it is not a thing this screen can do."""
+def test_the_applications_board_asks_for_exactly_the_ceiling_and_pages_the_rest():
+    """Case 7: 100 rows a request, and since #218 a pager that reaches the rows past the window."""
     (site, args), = call_sites("useApplications")
-    assert args == "{ size: 100 }" and site == "app/(app)/applications/page.tsx"
-    assert int(re.search(r"\d+", args).group(0)) == MAX_PAGE_SIZE
+    assert args == "{ page: state.page, size: PAGE_SIZE }" and site == "app/(app)/applications/page.tsx"
+    apps = read(APPS_PAGE)
+    pinned = re.search(r"const PAGE_SIZE = (\d+);", apps)
+    assert pinned and int(pinned.group(1)) == MAX_PAGE_SIZE, \
+        f"the window the board asks for is {pinned and pinned.group(1)}, not the ceiling's own number"
+    assert "useUrlState<{ application?: string; page: number }>(" in collapse(apps), \
+        "the page index no longer lives in the URL, so a shared board link always opens page 0"
+    assert re.search(r'numericKeys: \["page"\]', apps), \
+        "page is no longer the URL-bound integer the board adopts back"
+    assert "applications.data?.items ?? []" in collapse(apps), collapse(apps)[:200]
 
     renders = sorted(str(path.relative_to(FRONT)).replace("\\", "/")
                      for path in FRONT.rglob("*.tsx") if "<Pagination" in read(path))
-    assert renders == ["app/(app)/jobs/page.tsx"], \
-        f"a screen gained a pager, so the ceiling stops being the whole answer: {renders}"
-    apps = read(APPS_PAGE)
-    assert re.search(r"applications\.data\??\.(total|page)\b", apps) is None, \
-        "the applications screen now reads a window name, which case 3 of #194 did not count"
-    assert "applications.data?.items ?? []" in collapse(apps), collapse(apps)[:200]
+    assert renders == ["app/(app)/applications/page.tsx", "app/(app)/jobs/page.tsx"], \
+        f"the board's pager left the census, so the ceiling stops having a reader: {renders}"
+    assert re.search(r"\{total > PAGE_SIZE && \(", apps), \
+        "the pager is no longer gated by the window it serves, so a short board would render one"
+    assert re.search(r"page=\{applications\.data\?\.page \?\? state\.page\}", apps), \
+        "the pager's page index is no longer the answer's -- the half of #194's asymmetry that works"
     paging = read(JAVA / PAGING)
     assert "A caller wanting more pages pages." in paging, \
         "the ceiling's own comment no longer offers that advice, so this case's contradiction moved"

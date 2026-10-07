@@ -232,6 +232,21 @@ export function useApplications(params?: { page?: number; size?: number; status?
   });
 }
 
+/**
+ * One application by id. The board's deep link carries only the id, and the row it names can sit
+ * on a page the board has not fetched -- the attention rows are the oldest ones and sort last --
+ * so it is fetched directly rather than searched for page by page. `enabled` keeps a null id
+ * from ever spending `/applications/null`.
+ */
+export function useApplication(id: string | null) {
+  return useQuery({
+    queryKey: ["application", id],
+    enabled: Boolean(id),
+    queryFn: async (): Promise<Application> =>
+      normalizeApplication(await api.get<unknown>(endpoints.application(id!))),
+  });
+}
+
 export function useApplicationEvents(id: string | null) {
   return useQuery({
     queryKey: ["application", id, "events"],
