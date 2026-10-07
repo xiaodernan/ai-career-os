@@ -181,7 +181,9 @@ function ConversationList({
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [draft, setDraft] = React.useState("");
   const [confirmId, setConfirmId] = React.useState<string | null>(null);
-  const items = query.data?.items ?? [];
+  // Stable identity across renders keeps the rename callback below from being
+  // rebuilt every time; `?? []` alone would hand it a fresh array each render.
+  const items = React.useMemo(() => query.data?.items ?? [], [query.data]);
 
   const commitRename = React.useCallback(() => {
     const id = editingId;

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { AlertTriangle, BookOpen, CheckCircle2, Clock, Compass, ExternalLink, Lightbulb, Quote, Sparkles, Target, ThumbsDown, ThumbsUp } from "lucide-react";
+import { AlertTriangle, Compass, Lightbulb, Sparkles, Target } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,7 +9,7 @@ import { MatchRing, scoreBand } from "@/components/ai/match-ring";
 import { DimensionBars, SkillChips } from "@/components/common/skill-chips";
 import { SectionHeading } from "@/components/common/export-buttons";
 import { AIBadge } from "@/components/ai/ai-badge";
-import type { JobMatch, PreparationItem, SkillGap, Evidence } from "@/lib/api/types";
+import type { JobMatch, PreparationItem, SkillGap } from "@/lib/api/types";
 
 /**
  * Match breakdown (§10): every number here is traceable — the ring is the

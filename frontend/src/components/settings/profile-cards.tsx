@@ -100,7 +100,7 @@ function CareerProfileForm({ initial }: { initial: Record<string, unknown> | nul
       targetRoles: splitList(roles),
       targetLocations: splitList(targetLocations),
     });
-  }, [headline, location, parsedYears, roles, saveable, summary, targetLocations, update, yearsValid]);
+  }, [headline, location, parsedYears, roles, saveable, summary, targetLocations, update]);
 
   return (
     <div className="space-y-4">
