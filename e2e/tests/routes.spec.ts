@@ -70,3 +70,18 @@ test("an unknown route inside the app shell is a 404, not a crash", async ({ aut
   expect(res?.status()).toBe(404);
   expect(await authedPage.locator("body").innerText()).not.toContain(CRASH);
 });
+
+/**
+ * The branded boundary is server-rendered for any unmatched path, session or
+ * no session -- so an unauthenticated visit can prove it without provisioning
+ * an account (and without spending one of the auth rate-limit slots).
+ */
+test("an unauthenticated visit to a bogus route gets the branded not-found", async ({ page }) => {
+  const res = await page.goto("/definitely-not-a-route");
+  expect(res?.status()).toBe(404);
+  await expect(page).toHaveTitle(/Page not found/);
+  await expect(
+    page.getByRole("heading", { level: 1, name: "This page is not on the map." })
+  ).toBeVisible();
+  await expect(page.getByRole("link", { name: "Back to the dashboard" })).toBeVisible();
+});

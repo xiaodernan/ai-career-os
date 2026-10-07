@@ -51,7 +51,7 @@ E2E_TRACE=on E2E_HTML=1 npx playwright test --headed
 npx playwright show-report
 ```
 
-Expected result: **15 passed**. Each run takes ~60s of actual testing, plus the
+Expected result: **16 passed**. Each run takes ~60s of actual testing, plus the
 per-test teardown described below.
 
 ### Running against the containerized stack
