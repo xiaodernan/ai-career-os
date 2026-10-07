@@ -59,8 +59,31 @@ Comparing the two generated files answers "did the reranker earn its latency?".
 
 ### RAG baseline (recorded result)
 
-On the seeded dev corpus, with `LLM_PROVIDER=mock` / `EMBEDDING_PROVIDER=hash`
-(`evals/reports/20261001-152253_golden-15.md`):
+**With a real provider** (`qwen2.5:7b` on Ollama, CPU; `EMBEDDING_PROVIDER=hash` so
+retrieval is still the keyword/trigram path) — `evals/reports/20261008-003738_real-fixed.md`:
+
+| metric | value |
+|---|---|
+| cases scored | 15 of 15 |
+| recall_at_k / precision_at_k / mrr / ndcg_at_k / hit_at_k | 1.00 |
+| context_relevance | 0.67 |
+| answer_relevance | 0.83 |
+| faithfulness | 0.80 |
+
+Those last three are the project's first **real** generation measurements; the mock scores
+them 0.03 and 0.00 by construction.
+
+The first real-provider run scored **0.1333 on every metric** — and that number is worth
+keeping, because it is what found the bug: `understand()` infers a `filters.kinds`
+restriction, and asked "What backend frameworks does the candidate know?" the model
+answered `kinds: ["project"]` for a user whose only source is a resume. Zero rows, and 13
+of 15 cases returned no evidence at all. The mock never showed it because its canned
+understanding emits no filter, which is the clearest instance yet of why these runs need a
+real model. `retrieve()` now retries once without a *guessed* filter when the result is
+empty; a caller-supplied one is still honoured.
+
+**With the offline providers** (`LLM_PROVIDER=mock` / `EMBEDDING_PROVIDER=hash`) —
+`evals/reports/20261001-152253_golden-15.md`:
 
 | metric | value |
 |---|---|
@@ -76,7 +99,7 @@ not passed. A run that generates nothing has nothing to score, so the runner rep
 gap instead of a number — an earlier version fed the retrieved context back in as the
 "answer" and duly published `faithfulness: 1.00` for a model it never called.
 
-Retrieval scoring 1.00 here is the **keyword / trigram path** working, not semantic
+Retrieval scoring 1.00 there is the **keyword / trigram path** working, not semantic
 retrieval quality: hash embeddings carry no semantic signal. What it does establish is
 that chunking, indexing, fusion and ranking return the right evidence when the query
 shares vocabulary with the corpus.
