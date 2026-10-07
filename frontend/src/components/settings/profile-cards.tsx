@@ -169,6 +169,7 @@ function CareerProfileForm({ initial }: { initial: Record<string, unknown> | nul
           value={summary}
           onChange={(e) => setSummary(e.target.value)}
           rows={4}
+          maxLength={MAX_SUMMARY}
           placeholder="The short story a recruiter gets before the resume."
         />
       </div>

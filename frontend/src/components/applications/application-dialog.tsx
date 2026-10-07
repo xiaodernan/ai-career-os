@@ -201,6 +201,7 @@ export function ApplicationDialog({ application, open, onOpenChange }: Applicati
                   id="app-title"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
+                  maxLength={300}
                   placeholder="Senior Backend Engineer"
                   autoComplete="off"
                 />
