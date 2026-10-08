@@ -30,6 +30,7 @@ from pathlib import Path
 TESTS = Path(__file__).resolve().parent
 ROOT = TESTS.parent.parent
 DOC = ROOT / "docs" / "PRODUCT.md"
+E2E_README = ROOT / "e2e" / "README.md"
 README = ROOT / "README.md"
 E2E_README = ROOT / "e2e" / "README.md"
 APP = ROOT / "frontend" / "src" / "app"
@@ -209,16 +210,32 @@ def test_the_inventory_names_a_population_rather_than_a_short_list():
     )
 
 
+def stated_e2e_counts() -> dict[str, tuple[int, int]]:
+    """Every place a document states how many Playwright cases the suite holds.
+
+    Two documents carry the number, and they drift independently: PRODUCT.md says
+    "passes N/N" and e2e/README.md says "N passed". Both are the same claim about the
+    same files, so both are read here -- a gate over one of them just relocates the
+    drift instead of closing it.
+    """
+    product = re.search(r"passes (\d+)/(\d+)", read(DOC))
+    assert product, "PRODUCT.md no longer states how many Playwright cases pass"
+    runner = re.search(r"(\d+) passed", read(E2E_README))
+    assert runner, "e2e/README.md no longer states how many cases the suite runs"
+    return {
+        "PRODUCT.md": (int(product.group(1)), int(product.group(2))),
+        "e2e/README.md": (int(runner.group(1)), int(runner.group(1))),
+    }
+
+
 def test_the_e2e_count_is_the_suite_that_runs():
-    claimed = re.search(r"passes (\d+)/(\d+)", read(DOC))
-    assert claimed, "PRODUCT.md no longer states how many Playwright cases pass"
-    said, total = int(claimed.group(1)), int(claimed.group(2))
     actual = e2e_case_count()
-    assert said == total == actual, (
-        f"PRODUCT.md says the suite passes {said}/{total} but e2e/tests holds {actual} "
-        f"cases -- whoever adds a case updates the sentence, and a case that stops "
-        f"passing is not a documentation problem"
-    )
+    for name, (said, total) in stated_e2e_counts().items():
+        assert said == total == actual, (
+            f"{name} says the suite passes {said}/{total} but e2e/tests holds {actual} "
+            f"cases -- whoever adds a case updates the sentence, and a case that stops "
+            f"passing is not a documentation problem"
+        )
 
 
 def test_the_seeded_corpus_is_the_corpus_in_the_seed_script():
