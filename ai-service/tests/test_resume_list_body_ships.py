@@ -348,6 +348,9 @@ def test_the_record_and_the_list_are_named_by_a_pinned_set_of_sites():
         "frontend/src/app/(app)/resumes/page.tsx",
         "ai-service/tests/test_resume_list_body_ships.py",
         "ai-service/tests/test_page_window_names_and_their_readers_ship.py",
+        # Since #224 the copilot gate names the hook in prose: it is the last literal any
+        # caller spends as written, which is the one sentence that gate cannot say without it.
+        "ai-service/tests/test_the_copilot_sidebar_pages_its_own_window.py",
         "ai-service/tests/test_window_sizes_whose_callers_decide_them_ship.py",
         "ai-service/tests/test_the_resumes_list_pages_its_own_window.py",
     }, f"a new surface now reads the list body (gate its fields too), or one stopped: {hook_sites}"

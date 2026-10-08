@@ -22,6 +22,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
+import { Pagination } from "@/components/common/pagination";
 import { EmptyState } from "@/components/common/empty-state";
 import { ErrorState } from "@/components/common/error-state";
 import { LoadingChatSkeleton } from "@/components/common/loading-skeletons";
@@ -41,8 +42,14 @@ import {
   useDeleteConversation,
   useRenameConversation,
 } from "@/lib/hooks/actions";
+import { useUrlState } from "@/lib/hooks/use-url-state";
 import { relativeTime } from "@/lib/format";
 import type { ChatMessage } from "@/lib/api/types";
+
+// The route's own default window: `GET /conversations` binds `size` with
+// `defaultValue = "20"`, so this number asks for exactly what the server would have
+// chosen anyway -- the hook's own 50 literal never reaches the wire on this path.
+const PAGE_SIZE = 20;
 
 /* Code-split, not a static import: the react-markdown stack is only needed
  * once a message actually renders, so it stays out of the copilot's first load. */
@@ -60,8 +67,28 @@ function stepsFromTrail(trail: string[]): ProcessingStep[] {
 }
 
 export default function CopilotPage() {
-  const conversations = useConversations();
+  // The sidebar's page index lives in the URL beside `?c=`, so a reload or a shared link
+  // opens the same window of chats. `cpage`, not `page`: the page already spends `c` on the
+  // selected conversation, and two numbers under one letter would be a collision.
+  const [pageState, setPageUrl] = useUrlState<{ cpage: number }>(
+    { cpage: 0 },
+    { numericKeys: ["cpage"] }
+  );
+  const conversations = useConversations({ page: pageState.cpage, size: PAGE_SIZE });
   const createConversation = useCreateConversation();
+
+  const total = conversations.data?.total ?? 0;
+  // A past-the-end page is an empty window over a real total, not an empty list: the answer's
+  // own window is the divisor (`data.size`, floored at 1 because a normalizer payload can
+  // report 0), so the URL is corrected to the last page that exists. A layout effect, because
+  // the stale commit paints its empty copy first -- React flushes this update before the
+  // browser paints, so the wrong screen is replaced, not seen.
+  const lastPage = conversations.data
+    ? Math.max(0, Math.ceil(total / Math.max(1, conversations.data.size)) - 1)
+    : 0;
+  React.useLayoutEffect(() => {
+    if (conversations.data && pageState.cpage > lastPage) setPageUrl({ cpage: lastPage });
+  }, [conversations.data, pageState.cpage, lastPage, setPageUrl]);
 
   // Selected conversation lives in the URL (?c=id) so reloads and shared
   // links work; read/written via the history API to stay prerender-safe.
@@ -111,6 +138,12 @@ export default function CopilotPage() {
       onCreate={() => newConversation()}
       creating={createConversation.isPending}
       onDeleted={selectConversation}
+      page={conversations.data?.page ?? pageState.cpage}
+      total={total}
+      onPageChange={(page) => {
+        setPageUrl({ cpage: page });
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }}
       className={className}
     />
   );
@@ -164,6 +197,9 @@ function ConversationList({
   onCreate,
   creating,
   onDeleted,
+  page,
+  total,
+  onPageChange,
   className,
 }: {
   query: ReturnType<typeof useConversations>;
@@ -174,6 +210,10 @@ function ConversationList({
   /** Fired before the delete request settles, with the id going away — the page
    * deselects it so the transcript of a chat that no longer exists never shows. */
   onDeleted?: (id: string) => void;
+  /** The answer's page index, its row count, and the URL writer — the pager the rows earn. */
+  page: number;
+  total: number;
+  onPageChange: (page: number) => void;
   className?: string;
 }) {
   const rename = useRenameConversation();
@@ -295,6 +335,16 @@ function ConversationList({
           </ul>
         )}
       </ScrollArea>
+      {total > PAGE_SIZE && (
+        <Pagination
+          page={page}
+          size={PAGE_SIZE}
+          total={total}
+          label="conversations"
+          onPageChange={onPageChange}
+          className="px-1"
+        />
+      )}
       <ConfirmDialog
         open={confirmId !== null}
         onOpenChange={(open) => {

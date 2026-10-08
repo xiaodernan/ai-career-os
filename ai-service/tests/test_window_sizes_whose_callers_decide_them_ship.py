@@ -20,7 +20,10 @@ a bad URL, because `hydrateState` seeds `{...initial}` and only overwrites a num
 `PAGE_SIZE` is pinned to `MAX_PAGE_SIZE`, so the `50` is still buried, now by the ceiling's own
 number rather than a stray literal. `useInterviewSessions` is the same single-caller case since
 #221: the interviews board asks `{ page: state.page, size: PAGE_SIZE }` with `PAGE_SIZE` restating
-the route's own 20, so the `50` is shadowed on the only path it has. `useCompanies` is the
+the route's own 20, so the `50` is shadowed on the only path it has. #224 closes the set: the
+copilot sidebar asks `{ page: pageState.cpage, size: PAGE_SIZE }` -- its own URL key, because the
+page already spends `?c=` on the selected conversation -- and the last literal no longer reaches
+the wire as written. `useCompanies` is the
 single-caller case where hook and route already agreed (20/20), and #222 still gave its one
 caller an explicit window -- the `q` param it also carries is a search key, not a window, so the
 spread's shape is the same here as everywhere else. #223 gives the knowledge page's
@@ -58,12 +61,11 @@ because `client.ts` omits an undefined param rather than sending the word, and t
 
 The page-or-raise decision is made: the boards page rather than raising their ceilings (#218 for
 applications, #220 for resumes, #221 for interviews, #222 for companies, #223 for the knowledge
-page's two lists; case 7 pins the request and the pager's numbers). Still open: which number should
-win, and whether the two remaining unshadowed literals (resumes, whose two other callers pass no
-arguments; conversations, whose route the server never sees a size on) or the four overstated ones
-should move. #221 did not touch its hook's own `50` and #222 did not touch the `20` that already
-agreed -- those literals are buried on the only path that exists now, which is the same fate #218
-gave the applications literal, not a deletion.
+page's two lists, #224 for the copilot sidebar; case 7 pins the request and the pager's numbers).
+Still open: which number should win, and whether the one literal that still spends as written
+(useResumes' 20, on the two callers that pass no arguments) or the four overstated ones should
+move. None of the page units touched the hook literals -- each is buried on its only path, which
+is the same fate #218 gave the applications literal, not a deletion.
 What lands is the measurement -- per hook, per call site, per route -- from one walk of each of the
 three tables.
 """
@@ -102,7 +104,7 @@ WIRE = {
     "useKnowledgeNotes": ("knowledgeNotes", "{ size: 50, ...(params ?? {}) }"),
     "useInterviewSessions": ("interviews", "{ size: 50, ...(params ?? {}) }"),
     "useActivityRuns": ("activityRuns", "{ limit: params?.limit }"),
-    "useConversations": ("conversations", "{ size: 50 }"),
+    "useConversations": ("conversations", "{ size: 50, ...(params ?? {}) }"),
 }
 
 # Measured call sites, one walk; case 3 re-derives them. `""` is a call with no arguments.
@@ -125,7 +127,8 @@ SITES = {
                               "{ page: state.page, size: PAGE_SIZE }")],
     "useActivityRuns": [("app/(app)/activity/page.tsx", ""),
                         ("app/(app)/dashboard/page.tsx", "{ limit: 5 }")],
-    "useConversations": [("app/(app)/copilot/page.tsx", "")],
+    "useConversations": [("app/(app)/copilot/page.tsx",
+                         "{ page: pageState.cpage, size: PAGE_SIZE }")],
 }
 
 # route path -> the `defaultValue` on the handler's `int size` parameter, or None if it binds none.
@@ -358,12 +361,14 @@ def test_the_two_literals_every_caller_shadows_and_none_without_a_caller():
     with_size = sorted(h for h, value in shipped.items() if value is not None)
     shadowed = sorted(hook for hook in with_size
                       if derived[hook] and not any(offers_no_size(arg) for _, arg in derived[hook]))
-    assert shadowed == ["useApplications", "useCompanies", "useInterviewSessions", "useJobs",
-                        "useKnowledgeNotes", "useKnowledgeSources"], \
+    assert shadowed == ["useApplications", "useCompanies", "useConversations",
+                        "useInterviewSessions", "useJobs", "useKnowledgeNotes",
+                        "useKnowledgeSources"], \
         f"these literals are shadowed by every caller: {shadowed}"
     # Empty since the notes panel: every size literal has a caller now, and since #223 even the
-    # knowledge hooks' single callers name a window -- only `useResumes` (two no-argument callers)
-    # and `useConversations` still spend their literal as written.
+    # knowledge hooks' single callers name a window. #224 took the last one: the copilot sidebar
+    # asks `{ page, size: PAGE_SIZE }`, so the only literal still spent as written is
+    # `useResumes`'s 20 -- and only on the two callers that pass no arguments.
     uncalled = sorted(hook for hook in with_size if derived[hook] == [])
     assert uncalled == [], \
         f"these hooks have no caller at all, so their window is never spent: {uncalled}"
@@ -463,8 +468,9 @@ def test_the_applications_board_asks_for_exactly_the_ceiling_and_pages_the_rest(
     renders = sorted(str(path.relative_to(FRONT)).replace("\\", "/")
                      for path in FRONT.rglob("*.tsx") if "<Pagination" in read(path))
     assert renders == ["app/(app)/applications/page.tsx", "app/(app)/companies/page.tsx",
-                       "app/(app)/interviews/page.tsx", "app/(app)/jobs/page.tsx",
-                       "app/(app)/knowledge/page.tsx", "app/(app)/resumes/page.tsx",
+                       "app/(app)/copilot/page.tsx", "app/(app)/interviews/page.tsx",
+                       "app/(app)/jobs/page.tsx", "app/(app)/knowledge/page.tsx",
+                       "app/(app)/resumes/page.tsx",
                        "components/knowledge/notes-panel.tsx"], \
         f"the pager census moved: the boards that page give the ceiling its readers: {renders}"
     assert re.search(r"\{total > PAGE_SIZE && \(", apps), \

@@ -505,11 +505,13 @@ export function useActivityRuns(params?: { limit?: number }) {
 
 /* ------------------------------ conversations ------------------------------ */
 
-export function useConversations() {
+export function useConversations(params?: { page?: number; size?: number }) {
   return useQuery({
-    queryKey: ["conversations"],
+    queryKey: ["conversations", params],
     queryFn: async (): Promise<Page<Conversation>> =>
-      normalizePage(await api.get<unknown>(endpoints.conversations, { size: 50 }), (c) => ({
+      normalizePage(
+        await api.get<unknown>(endpoints.conversations, { size: 50, ...(params ?? {}) }),
+        (c) => ({
         id: idStr(c),
         title: str(c, "title", "name") ?? "Conversation",
         updatedAt: str(c, "updatedAt", "updated_at"),
