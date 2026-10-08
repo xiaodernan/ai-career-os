@@ -490,14 +490,12 @@ export function useInterviewSession(id: string | null) {
 /* -------------------------------- activity --------------------------------- */
 
 /** GET /activity/runs pages by "recent": it binds `limit`, and has no page index to send. */
-export function useActivityRuns(params?: { limit?: number }) {
+export function useActivityRuns(params?: { page?: number; size?: number }) {
   return useQuery({
     queryKey: ["activity", "runs", params],
     queryFn: async (): Promise<Page<ActivityRun>> =>
-      // An absent `limit` is left out of the URL rather than guessed at here, so the caller that
-      // wants the whole debug feed gets the window the handler itself defaults to.
       normalizePage(
-        await api.get<unknown>(endpoints.activityRuns, { limit: params?.limit }),
+        await api.get<unknown>(endpoints.activityRuns, { size: 30, ...(params ?? {}) }),
         (r) => normalizeRun(r)
       ),
   });

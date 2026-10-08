@@ -88,7 +88,7 @@ describe("normalizePage", () => {
     const p = normalizePage({ items: [{ id: "a" }], total: 41, page: 2, size: 20 }, (x) => x);
     expect(p).toEqual({ items: [{ id: "a" }], total: 41, page: 2, size: 20 });
   });
-  it("handles the bare array `GET /activity/runs` returns instead of an envelope", () => {
+  it("handles the bare array `GET /jobs/saved` returns instead of an envelope", () => {
     const p = normalizePage([1, 2, 3], (x) => x);
     expect(p).toEqual({ items: [1, 2, 3], total: 3, page: 0, size: 3 });
   });

@@ -6,69 +6,53 @@ there the one that arrives? Three numbers can decide a request window -- the lit
 query hook, the argument the screen passes to that hook, and the `defaultValue` on the controller's
 `@RequestParam`. Only two of the three ever get spent, and the shipped text decides which per route.
 
-Ten hooks hand `normalizePage` a request. Eight offer a `size` literal: resumes 20, jobs 20,
+Ten hooks hand `normalizePage` a request. Nine offer a `size` literal: resumes 20, jobs 20,
 applications 50, companies 20, knowledge sources 50, knowledge notes 50, interviews 50,
-conversations 50; `useSavedJobs` sends no window (its route binds none) and `useActivityRuns` sends
-`{ limit: params?.limit }`, a number that stays out of the URL when the caller omits it. Walking
-every shipped call site outside `resources.ts` finds the literal's own value decided elsewhere per
-call site rather than per hook: `useJobs`'s two callers both carry a size (the jobs board spreads
-its URL-backed `filters`, the dashboard passes `{ size: 3 }`), so the `20` at `resources.ts:182` is
-shadowed on every path -- and the case over `useUrlState` shows the shadowing cannot be avoided by
-a bad URL, because `hydrateState` seeds `{...initial}` and only overwrites a numeric key when
-`asUrlNumber` yields an integer, so `filters.size` is 12 or an address-bar integer, never absent.
-`useApplications` has one caller, and since #218 it asks `{ page: state.page, size: PAGE_SIZE }` --
-`PAGE_SIZE` is pinned to `MAX_PAGE_SIZE`, so the `50` is still buried, now by the ceiling's own
-number rather than a stray literal. `useInterviewSessions` is the same single-caller case since
-#221: the interviews board asks `{ page: state.page, size: PAGE_SIZE }` with `PAGE_SIZE` restating
-the route's own 20, so the `50` is shadowed on the only path it has. #224 closes the set: the
-copilot sidebar asks `{ page: pageState.cpage, size: PAGE_SIZE }` -- its own URL key, because the
-page already spends `?c=` on the selected conversation -- and the last literal no longer reaches
-the wire as written. `useCompanies` is the
-single-caller case where hook and route already agreed (20/20), and #222 still gave its one
-caller an explicit window -- the `q` param it also carries is a search key, not a window, so the
-spread's shape is the same here as everywhere else. #223 gives the knowledge page's
-two lists the same treatment: `useKnowledgeSources` gained a third parameter (after `live` and
-`documentId`) carrying the window, and `useKnowledgeNotes` gained `params?` -- so the two 50s are
-shadowed on their only paths, by two different parameter shapes. `useResumes` is the per-call-site case since #220: the resumes
-screen asks `{ page: state.page, size: PAGE_SIZE }` (its `PAGE_SIZE` restating the route's own
-default), while the dashboard and jobs callers pass no arguments -- so the literal is shadowed on
-that one path and stands on two, which is why the shadowed set below stays per hook with jobs,
-applications, companies, interviews and the two knowledge lists only -- every one of them a
-single caller or a unanimous set of them. `useKnowledgeNotes`'s one caller passes no arguments, so its `50` stands -- and
-reaches a wire now that the knowledge page's notes panel mounts the hook.
+conversations 50, activity runs 30 -- since #225 the feed's literal, replacing the
+`{ limit: params?.limit }` it sent while `/activity/runs` was the one window the server still
+decided. `useSavedJobs` is the only hook that sends no window at all, because its route binds none
+and answers a bare list. Walking every shipped call site outside `resources.ts` finds the literal's
+own value decided elsewhere per call site rather than per hook: `useJobs`'s two callers both carry a
+size (the jobs board spreads its URL-backed `filters`, the dashboard passes `{ size: 3 }`), so the
+`20` at `resources.ts:182` is shadowed on every path -- and the case over `useUrlState` shows the
+shadowing cannot be avoided by a bad URL, because `hydrateState` seeds `{...initial}` and only
+overwrites a numeric key when `asUrlNumber` yields an integer, so `filters.size` is 12 or an
+address-bar integer, never absent. Since #218 every other list has joined them: applications,
+companies and interviews each have one caller asking `{ page: state.page, size: PAGE_SIZE }`; the
+knowledge page's two lists do the same through two different parameter shapes
+(`useKnowledgeSources` takes the window third, after `live` and `documentId`; `useKnowledgeNotes`
+takes `params?`); the copilot sidebar asks `{ page: pageState.cpage, size: PAGE_SIZE }` under its own
+URL key, because the page already spends `?c=` on the selected conversation; and since #225 the
+activity board asks `{ page: state.page, size: PAGE_SIZE }` while the dashboard preview passes
+`{ size: 5 }`. `useResumes` is the last per-call-site case: its screen asks `PAGE_SIZE` (restating
+the route's own 20), while the dashboard and jobs callers pass no arguments -- so it is the only
+literal that still spends as written, on two of its three paths.
 
-The server's side of the same table: four of the eight literals agree with the route's own
-`defaultValue` (resumes 20/20, companies 20/20, jobs 20/20, applications 50/50) and four overstate
-it (knowledge sources, notes, interviews and conversations all ask 50 where the handler says 20), so
-those four defaults are only ever spent by a request the app does not make. The two shadowed
-literals sit in the agreeing half -- jobs 20 against a 20 default, applications 50 against a 50 one
--- which is why nothing on screen changes when they are unreachable: a redundant number cannot
-contradict anything, and cannot be noticed either. The notes literal is in the other half (50
-against a 20 default), so the one wire it now builds carries a number the server would never
-have chosen.
+The server's side of the same table: five of the nine literals agree with the route's own
+`defaultValue` (resumes 20/20, companies 20/20, jobs 20/20, applications 50/50, activity runs
+30/30) and four overstate it (knowledge sources, notes, interviews and conversations all ask 50
+where the handler says 20), so those four defaults are only ever spent by a request the app does not
+make. The shadowed literals sit in the agreeing half -- jobs 20 against a 20 default, applications
+50 against a 50 one, activity 30 against a 30 one -- which is why nothing on screen changes when
+they are unreachable: a redundant number cannot contradict anything, and cannot be noticed either.
+The knowledge and conversations literals are in the other half (50 against a 20 default), so the
+requests they would build carry numbers the server would never have chosen.
 
 The reachable numbers have consequences the screens do not cover. The applications board asked for
 exactly `Paging.MAX_PAGE_SIZE` (100), which `Paging`'s own comment answers with "A caller wanting
 more pages pages." -- and `<Pagination>` was written in one file app-wide, the jobs page, so the
 applications screen rendered no pager and read no `total`: its 101st application was simply not
-there. #218 took the ceiling's own advice: the request is now `{ page: state.page, size: PAGE_SIZE }`
-with `PAGE_SIZE` pinned to `MAX_PAGE_SIZE`, and a pager under the canvas puts every row past the
-first window one page away, and #220 gave the resumes list the same arithmetic (`PAGE_SIZE`
-restating the route's 20), so its 21st resume sits behind a pager instead of nowhere.
-`useActivityRuns` is the one hook where the server still decides,
-because `client.ts` omits an undefined param rather than sending the word, and the handler defaults
-`limit` to 30 through `Paging.first`.
+there. #218 took the ceiling's own advice, and the same arithmetic has since been given to every
+other list: #220 resumes, #221 interviews, #222 companies, #223 the knowledge page's two lists,
+#224 the copilot sidebar, #225 the activity feed. The page-or-raise decision is made; what stays
+open is which number should win, and whether the one literal still spent as written (resumes' 20)
+or the four overstated ones should move. None of the page units touched the hook literals -- each is
+buried on its only path, which is the same fate #218 gave the applications literal, not a deletion.
 
-The page-or-raise decision is made: the boards page rather than raising their ceilings (#218 for
-applications, #220 for resumes, #221 for interviews, #222 for companies, #223 for the knowledge
-page's two lists, #224 for the copilot sidebar; case 7 pins the request and the pager's numbers).
-Still open: which number should win, and whether the one literal that still spends as written
-(useResumes' 20, on the two callers that pass no arguments) or the four overstated ones should
-move. None of the page units touched the hook literals -- each is buried on its only path, which
-is the same fate #218 gave the applications literal, not a deletion.
 What lands is the measurement -- per hook, per call site, per route -- from one walk of each of the
 three tables.
 """
+
 
 import functools
 import re
@@ -103,7 +87,7 @@ WIRE = {
     "useKnowledgeSources": ("knowledge", "{ size: 50, documentId, ...(params ?? {}) }"),
     "useKnowledgeNotes": ("knowledgeNotes", "{ size: 50, ...(params ?? {}) }"),
     "useInterviewSessions": ("interviews", "{ size: 50, ...(params ?? {}) }"),
-    "useActivityRuns": ("activityRuns", "{ limit: params?.limit }"),
+    "useActivityRuns": ("activityRuns", "{ size: 30, ...(params ?? {}) }"),
     "useConversations": ("conversations", "{ size: 50, ...(params ?? {}) }"),
 }
 
@@ -125,8 +109,9 @@ SITES = {
                           "{ page: state.npage, size: PAGE_SIZE }")],
     "useInterviewSessions": [("app/(app)/interviews/page.tsx",
                               "{ page: state.page, size: PAGE_SIZE }")],
-    "useActivityRuns": [("app/(app)/activity/page.tsx", ""),
-                        ("app/(app)/dashboard/page.tsx", "{ limit: 5 }")],
+    "useActivityRuns": [("app/(app)/activity/page.tsx",
+                         "{ page: state.page, size: PAGE_SIZE }"),
+                        ("app/(app)/dashboard/page.tsx", "{ size: 5 }")],
     "useConversations": [("app/(app)/copilot/page.tsx",
                          "{ page: pageState.cpage, size: PAGE_SIZE }")],
 }
@@ -142,7 +127,7 @@ SERVER_SIZE = {
     "/api/v1/knowledge/notes": "20",
     "/api/v1/interview/sessions": "20",
     "/api/v1/conversations": "20",
-    "/api/v1/activity/runs": None,
+    "/api/v1/activity/runs": "30",
 }
 
 # The hooks whose params object spells a numeric `size`.
@@ -155,6 +140,7 @@ SIZE_LITERAL = {
     "useKnowledgeNotes": 50,
     "useInterviewSessions": 50,
     "useConversations": 50,
+    "useActivityRuns": 30,
 }
 
 
@@ -330,11 +316,11 @@ def test_the_ten_list_hooks_and_their_wire_literals_are_this_table():
 
 
 def test_every_number_a_hook_offers_is_inside_the_ceiling_the_server_enforces():
-    """Case 2: eight of the ten offer a `size`, and no client asks for a window the clamp would refuse."""
+    """Case 2: nine of the ten offer a `size`, and no client asks for a window the clamp would refuse."""
     sizes = wire_sizes()
-    assert sizes == {**SIZE_LITERAL, "useSavedJobs": None, "useActivityRuns": None}, sizes
+    assert sizes == {**SIZE_LITERAL, "useSavedJobs": None}, sizes
     asked = sorted(n for n in sizes.values() if n is not None)
-    assert len(asked) == 8, f"{sizes}"
+    assert len(asked) == 9, f"{sizes}"
     outside = [n for n in asked if not 1 <= n <= MAX_PAGE_SIZE]
     assert outside == [], f"a hook asks for a window Paging would clamp: {outside}"
     paging = java(PAGING)
@@ -345,7 +331,7 @@ def test_every_number_a_hook_offers_is_inside_the_ceiling_the_server_enforces():
         "Paging.of no longer clamps both ends, so this range claims nothing about it"
 
 
-def test_the_two_literals_every_caller_shadows_and_none_without_a_caller():
+def test_the_literals_every_caller_shadows_and_none_without_a_caller():
     """Case 3: the call-site census, and the verdict it yields for each literal."""
     derived = {hook: call_sites(hook) for hook in WIRE}
     assert derived == SITES, f"the call sites moved: {derived}"
@@ -361,14 +347,12 @@ def test_the_two_literals_every_caller_shadows_and_none_without_a_caller():
     with_size = sorted(h for h, value in shipped.items() if value is not None)
     shadowed = sorted(hook for hook in with_size
                       if derived[hook] and not any(offers_no_size(arg) for _, arg in derived[hook]))
-    assert shadowed == ["useApplications", "useCompanies", "useConversations",
+    assert shadowed == ["useActivityRuns", "useApplications", "useCompanies", "useConversations",
                         "useInterviewSessions", "useJobs", "useKnowledgeNotes",
                         "useKnowledgeSources"], \
         f"these literals are shadowed by every caller: {shadowed}"
-    # Empty since the notes panel: every size literal has a caller now, and since #223 even the
-    # knowledge hooks' single callers name a window. #224 took the last one: the copilot sidebar
-    # asks `{ page, size: PAGE_SIZE }`, so the only literal still spent as written is
-    # `useResumes`'s 20 -- and only on the two callers that pass no arguments.
+    # Empty since the notes panel: every size literal has a caller now. Only `useResumes` still
+    # spends its literal as written -- on the two callers (dashboard, jobs) that pass no arguments.
     uncalled = sorted(hook for hook in with_size if derived[hook] == [])
     assert uncalled == [], \
         f"these hooks have no caller at all, so their window is never spent: {uncalled}"
@@ -440,7 +424,8 @@ def test_the_number_the_server_would_use_if_the_app_sent_none():
         f"a list hook shipped without a row in WIRE, so its route is unregistered here: {unregistered}"
     agrees = sorted(hook for hook, value in shipped.items()
                     if value is not None and SERVER_SIZE[endpoint_path(WIRE[hook][0])] == str(value))
-    assert agrees == ["useApplications", "useCompanies", "useJobs", "useResumes"], \
+    assert agrees == ["useActivityRuns", "useApplications", "useCompanies", "useJobs",
+                     "useResumes"], \
         f"these literals still match their route's default: {agrees}"
     overstated = sorted(shipped[h] for h in
                         ("useKnowledgeSources", "useKnowledgeNotes", "useInterviewSessions",
@@ -467,10 +452,10 @@ def test_the_applications_board_asks_for_exactly_the_ceiling_and_pages_the_rest(
 
     renders = sorted(str(path.relative_to(FRONT)).replace("\\", "/")
                      for path in FRONT.rglob("*.tsx") if "<Pagination" in read(path))
-    assert renders == ["app/(app)/applications/page.tsx", "app/(app)/companies/page.tsx",
-                       "app/(app)/copilot/page.tsx", "app/(app)/interviews/page.tsx",
-                       "app/(app)/jobs/page.tsx", "app/(app)/knowledge/page.tsx",
-                       "app/(app)/resumes/page.tsx",
+    assert renders == ["app/(app)/activity/page.tsx", "app/(app)/applications/page.tsx",
+                       "app/(app)/companies/page.tsx", "app/(app)/copilot/page.tsx",
+                       "app/(app)/interviews/page.tsx", "app/(app)/jobs/page.tsx",
+                       "app/(app)/knowledge/page.tsx", "app/(app)/resumes/page.tsx",
                        "components/knowledge/notes-panel.tsx"], \
         f"the pager census moved: the boards that page give the ceiling its readers: {renders}"
     assert re.search(r"\{total > PAGE_SIZE && \(", apps), \
@@ -482,18 +467,28 @@ def test_the_applications_board_asks_for_exactly_the_ceiling_and_pages_the_rest(
         "the ceiling's own comment no longer offers that advice, so this case's contradiction moved"
 
 
-def test_the_one_window_the_server_still_decides_is_a_limit_the_client_leaves_out():
-    """Case 8: `/activity/runs` is the route where no client number arrives, so `defaultValue` governs."""
+def test_the_activity_feed_pages_like_every_other_list_since_225():
+    """Case 8: `/activity/runs` was the last window the server decided; it binds page/size now."""
     key, params = list_wires()["useActivityRuns"]
-    assert params == "{ limit: params?.limit }" and re.search(r"\d", params) is None, params
-    client = read(CLIENT)
-    builds = re.findall(r"searchParams\.set\(", client)
-    assert len(builds) == 1, f"{len(builds)} places build a query string, so this reads the wrong one"
-    guard = re.search(r"if \(v !== undefined\) url\.searchParams\.set\(k, String\(v\)\);", client)
-    assert guard, "an omitted param is no longer left out of the URL, so `limit` would arrive as text"
+    assert params == "{ size: 30, ...(params ?? {}) }", \
+        f"the feed's hook still leaves the window to the handler: {params}"
     ints = bound_ints(endpoint_path(key))
-    assert ints == {"limit": "30"}, f"the handler binds {ints}, not a defaulted limit"
-    assert "Paging.first(limit)" in collapse(java(ACTIVITY)), \
-        "the route stopped spending the ceiling, so 30 is not the same kind of number as before"
-    assert ("app/(app)/activity/page.tsx", "") in call_sites("useActivityRuns"), \
-        "the activity screen now sends its own window, so 30 is no longer the governing number"
+    assert ints == {"page": "0", "size": "30"}, \
+        f"the handler binds {ints}, not a defaulted page and window"
+    controller = collapse(java(ACTIVITY))
+    assert ("PageDTO<RunItem> listRuns" in controller
+            and "Paging.of(page, size).pageable()" in controller), (
+        "the route no longer answers a clamped Page envelope, so a `?size=` past the ceiling "
+        "would reach the query unbounded -- or the total would vanish with the bare array")
+    assert "Paging.first(" not in controller, (
+        "the feed is still clamped by the one-result helper, so a window is not a window here")
+    sites = call_sites("useActivityRuns")
+    assert ("app/(app)/activity/page.tsx", "{ page: state.page, size: PAGE_SIZE }") in sites, \
+        f"the activity screen no longer sends its own page: {sites}"
+    assert ("app/(app)/dashboard/page.tsx", "{ size: 5 }") in sites, \
+        f"the dashboard preview no longer names its own window: {sites}"
+    # `limit` is gone from every handler: the only route that bound it was this one.
+    limit_bindings = sorted(f.name for f in JAVA.rglob("*.java")
+                            if re.search(r"@RequestParam\([^)]*\)\s+int\s+limit\b",
+                                         collapse(read(f))))
+    assert limit_bindings == [], f"a handler still binds the retired parameter: {limit_bindings}"

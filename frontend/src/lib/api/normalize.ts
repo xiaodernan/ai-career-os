@@ -117,7 +117,8 @@ export interface NormalizedPage<T> {
 }
 
 /** The one list envelope this backend answers — `PageDTO`'s `{items,total,page,size}` — plus the bare
- *  array `GET /activity/runs` returns instead. The other sixteen names were Spring-`Page` folklore
+ *  array `GET /jobs/saved` returns instead (#225 moved `/activity/runs` onto the envelope). The other
+ *  sixteen names were Spring-`Page` folklore
  *  (`content`/`totalElements`/`number`/`sizePerPage`…) and generic wrapper guesses (`data`/`results`/
  *  `records`/`list`/`doc`/`document`/`metadata`): no controller in the repo returns a raw `Page`, so
  *  a payload carrying them was silently read as an empty page rather than a tolerated shape. */
@@ -1003,7 +1004,7 @@ export function normalizeDashboard(raw: unknown): DashboardPayload | null {
 
 export function normalizeRun(raw: unknown): ActivityRun {
   // A run arrives as one of two Java records, both camelCase: `RecentRun` in the dashboard payload
-  // and `RunItem` from `GET /activity/runs`, which answers a bare list. So every snake_case twin this
+  // and `RunItem` from `GET /activity/runs`, which answers a `PageDTO` since #225. So every snake_case twin this
   // reader tried (`agent_name`, `latency_ms`, `input_tokens`, `cost_usd`, …) is a name neither record
   // has ever had, and four fields had no author at all: `summary`, `createdAt` (a run row carries
   // `startedAt`/`finishedAt`, never a created column), `relatedHref` (nothing on either service emits

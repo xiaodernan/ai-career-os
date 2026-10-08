@@ -1109,13 +1109,14 @@ describe("endpoints ↔ backend route parity", () => {
     expect(new Set(handlers.map((h) => `${h.verb} ${h.pattern}`)).size).toBe(handlers.length);
     expect(handlers.flatMap((h) => h.unparsed)).toEqual([]);
     const bound = handlers.flatMap((h) => h.params);
-    expect(bound.length).toBe(36);
-    // 36 parameters in 18 distinct names, measured: the reader's whole answer rather than a spot
+    expect(bound.length).toBe(37);
+    // 37 parameters in 17 distinct names, measured: the reader's whole answer rather than a spot
     // check, so a signature shape it stops understanding shrinks this set instead of passing quiet
-    // (the 18th is `documentId`, which #153 added so a citation link can be narrowed server-side)
+    // (#225 retired `limit`: `/activity/runs` bound the only one, and now binds page/size like
+    // every other list route)
     expect(new Set(bound.map((p) => p.name))).toEqual(
       new Set([
-        "agent", "company", "documentId", "file", "kind", "limit", "location", "maxSalary",
+        "agent", "company", "documentId", "file", "kind", "location", "maxSalary",
         "minSalary", "page", "q", "remote", "resumeId", "size", "skills", "sort", "status", "title",
       ])
     );
@@ -1136,7 +1137,8 @@ describe("endpoints ↔ backend route parity", () => {
       .flatMap((h) => h.params.filter((p) => p.required && p.fromBody).map((p) => `${h.verb} ${h.pattern} ${p.name}`))
       .sort())
       .toEqual(["POST /knowledge/documents file", "POST /resumes/upload file"]);
-    ["GET /activity/runs limit", "GET /applications status", "GET /applications page",
+    ["GET /activity/runs page", "GET /activity/runs size",
+      "GET /applications status", "GET /applications page",
       "GET /companies q", "GET /resume-versions resumeId",
       // the citation deep link, named as a pair: the browser sends this key and this handler binds it
       "GET /knowledge/sources documentId"].forEach((p) => expect(pairs).toContain(p));

@@ -1,15 +1,26 @@
 "use client";
 
+import * as React from "react";
 import Link from "next/link";
 import { Waypoints } from "lucide-react";
 import { ModuleView } from "@/components/common/module-view";
+import { Pagination } from "@/components/common/pagination";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useActivityRuns } from "@/lib/hooks/resources";
+import { useUrlState } from "@/lib/hooks/use-url-state";
 import { runTotalTokens } from "@/lib/api/normalize";
 import { formatDateTime, formatDuration, formatNumber, formatUsd, titleCase } from "@/lib/format";
 import type { ActivityRun } from "@/lib/api/types";
+
+// The route's own default window: `GET /activity/runs` binds `size` with
+// `defaultValue = "30"`, so this number asks for exactly what the server would have
+// chosen anyway -- the hook's own 30 literal never reaches the wire on this path.
+const PAGE_SIZE = 30;
+
+// Module-level so `setUrl` (a `useCallback` keyed on this object) is stable across renders.
+const PAGE_DEFAULTS: { page: number } = { page: 0 };
 
 /**
  * AI activity log. Field names follow the backend `RunItem` contract as mapped
@@ -64,7 +75,26 @@ function RunRow({ run }: { run: ActivityRun }) {
 }
 
 export default function ActivityPage() {
-  const runs = useActivityRuns();
+  // The page index lives in the URL, so a reload or a shared list link opens the same window.
+  const [state, setUrl] = useUrlState<{ page: number }>(
+    PAGE_DEFAULTS,
+    { numericKeys: ["page"] }
+  );
+  const runs = useActivityRuns({ page: state.page, size: PAGE_SIZE });
+
+  const total = runs.data?.total ?? 0;
+  // A past-the-end page is an empty window over a real total, not an empty list: the answer's
+  // own window is the divisor (`data.size`, floored at 1 because a normalizer payload can
+  // report 0), so the URL is corrected to the last page that exists. A layout effect, because
+  // the stale commit paints its empty copy first -- React flushes this update before the
+  // browser paints, so the wrong screen is replaced, not seen.
+  const lastPage = runs.data
+    ? Math.max(0, Math.ceil(total / Math.max(1, runs.data.size)) - 1)
+    : 0;
+  React.useLayoutEffect(() => {
+    if (runs.data && state.page > lastPage) setUrl({ page: lastPage });
+  }, [runs.data, state.page, lastPage, setUrl]);
+
   return (
     <ModuleView<ActivityRun>
       title="AI Activity"
@@ -76,6 +106,20 @@ export default function ActivityPage() {
       }}
       ctaHref="/copilot"
       ctaLabel="Run something in Copilot"
+      footer={
+        total > PAGE_SIZE && (
+          <Pagination
+            page={runs.data?.page ?? state.page}
+            size={PAGE_SIZE}
+            total={total}
+            label="runs"
+            onPageChange={(page) => {
+              setUrl({ page });
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+          />
+        )
+      }
       renderItem={(run) => <RunRow key={run.id} run={run} />}
     />
   );

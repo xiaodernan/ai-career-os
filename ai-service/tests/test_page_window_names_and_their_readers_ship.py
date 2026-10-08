@@ -5,29 +5,30 @@
 there. Neither asked the other direction: what does a screen actually do with the four names the
 envelope carries, once the server has decided the window for itself?
 
-Ten query hooks annotate `Promise<Page<X>>`. Two sit over a route that answers a bare list --
-`GET /jobs/saved` and `GET /activity/runs` -- so their whole envelope is invented client-side; eight
-get a real `PageDTO`. `PageDTO` declares `items`, `total`, `page`, `size`, and both branches of
+Ten query hooks annotate `Promise<Page<X>>`. One sits over a route that answers a bare list --
+`GET /jobs/saved` -- so its whole envelope is invented client-side; nine get a real `PageDTO`
+(`GET /activity/runs` joined them in #225, when the feed stopped answering a bare array). `PageDTO` declares `items`, `total`, `page`, `size`, and both branches of
 `normalizePage` fill all four. `Paging.of` floors the page at 0 and keeps the window inside
 1..`MAX_PAGE_SIZE` (100), and `JobService.list` reports that clamped `window.size()` rather than the
 number it was handed -- so the answer always carries the window that was really used. Walking every
 shipped file under `frontend/src` for a read of these four names off a query result finds readers for
-`items`, `total` and `page`, and -- since #219/#220/#221/#222/#223/#224 -- eight readers of `size`:
-the eight server-window lists (jobs, applications, resumes, interviews, companies, knowledge
-sources, knowledge notes, conversations), each correcting a past-the-end URL page from the answer's
-own window (`test_a_past_the_end_page_corrects_itself.py`,
+`items`, `total` and `page`, and -- since #219/#220/#221/#222/#223/#224/#225 -- nine readers of
+`size`: the nine server-window lists (jobs, applications, resumes, interviews, companies, knowledge
+sources, knowledge notes, conversations, activity runs), each correcting a past-the-end URL page
+from the answer's own window (`test_a_past_the_end_page_corrects_itself.py`,
 `test_the_resumes_list_pages_its_own_window.py`,
 `test_the_interviews_board_pages_its_own_window.py`,
 `test_the_companies_board_pages_its_own_window.py`,
 `test_the_knowledge_page_pages_both_of_its_lists.py`,
-`test_the_copilot_sidebar_pages_its_own_window.py`). The app's eight pagers are still all fed the
+`test_the_copilot_sidebar_pages_its_own_window.py`,
+`test_the_activity_feed_pages_its_own_window.py`). The app's nine pagers are still all fed the
 client's own number -- the jobs board the address-bar integer `filters.size`, the applications board
 (#218) the `PAGE_SIZE` constant it asks with, the resumes list (#220) its `PAGE_SIZE` restating the
 route's own 20, the interviews board (#221) its `PAGE_SIZE` restating the route's own 20, the
 companies list (#222) the same, the knowledge page's two lists (#223) the same from their own
-`PAGE_SIZE`s, and the copilot sidebar (#224) the same -- so the window the answer really carried
-feeds the correction, not the label.
-The activity screen goes further and reads nothing but `items` through `ModuleView`.
+`PAGE_SIZE`s, the copilot sidebar (#224) the same, and the activity feed (#225) the same -- so the
+window the answer really carried feeds the correction, not the label.
+
 
 That asymmetry is what the two clamps disagree about. `asUrlNumber` adopts any integer, and its own
 docstring says a negative page is passed through because "the window it reports corrects the pager"
@@ -65,6 +66,7 @@ COMPANIES_PAGE = FRONT / "app" / "(app)" / "companies" / "page.tsx"
 KNOWLEDGE_PAGE = FRONT / "app" / "(app)" / "knowledge" / "page.tsx"
 NOTES_PANEL = FRONT / "components" / "knowledge" / "notes-panel.tsx"
 COPILOT_PAGE = FRONT / "app" / "(app)" / "copilot" / "page.tsx"
+ACTIVITY_PAGE = FRONT / "app" / "(app)" / "activity" / "page.tsx"
 JOB_FILTER = FRONT / "lib" / "job-filter.ts"
 PAGINATION = FRONT / "components" / "common" / "pagination.tsx"
 URL_STATE = FRONT / "lib" / "hooks" / "use-url-state.ts"
@@ -86,11 +88,11 @@ PAGE_HOOKS = {
     "useKnowledgeSources": ("knowledge", "PageDTO<SourceItem>"),
     "useKnowledgeNotes": ("knowledgeNotes", "PageDTO<NoteItem>"),
     "useInterviewSessions": ("interviews", "PageDTO<SessionItem>"),
-    "useActivityRuns": ("activityRuns", "List<RunItem>"),
+    "useActivityRuns": ("activityRuns", "PageDTO<RunItem>"),
     "useConversations": ("conversations", "PageDTO<ConversationItem>"),
 }
 
-BARE_LIST_HOOKS = ["useActivityRuns", "useSavedJobs"]
+BARE_LIST_HOOKS = ["useSavedJobs"]
 
 ENVELOPE = ["items", "total", "page", "size"]
 
@@ -101,18 +103,21 @@ READERS = {
     "items": ["app/(app)/applications/page.tsx", "app/(app)/copilot/page.tsx",
               "app/(app)/dashboard/page.tsx", "app/(app)/jobs/page.tsx",
               "components/common/module-view.tsx", "lib/hooks/resources.ts"],
-    "total": ["app/(app)/applications/page.tsx", "app/(app)/companies/page.tsx",
-              "app/(app)/copilot/page.tsx", "app/(app)/interviews/page.tsx",
-              "app/(app)/jobs/page.tsx", "app/(app)/knowledge/page.tsx",
-              "app/(app)/resumes/page.tsx", "components/knowledge/notes-panel.tsx"],
-    "page": ["app/(app)/applications/page.tsx", "app/(app)/companies/page.tsx",
-             "app/(app)/copilot/page.tsx", "app/(app)/interviews/page.tsx",
-             "app/(app)/jobs/page.tsx", "app/(app)/knowledge/page.tsx",
-             "app/(app)/resumes/page.tsx", "components/knowledge/notes-panel.tsx"],
-    "size": ["app/(app)/applications/page.tsx", "app/(app)/companies/page.tsx",
-             "app/(app)/copilot/page.tsx", "app/(app)/interviews/page.tsx",
-             "app/(app)/jobs/page.tsx", "app/(app)/knowledge/page.tsx",
-             "app/(app)/resumes/page.tsx", "components/knowledge/notes-panel.tsx"],
+    "total": ["app/(app)/activity/page.tsx", "app/(app)/applications/page.tsx",
+              "app/(app)/companies/page.tsx", "app/(app)/copilot/page.tsx",
+              "app/(app)/interviews/page.tsx", "app/(app)/jobs/page.tsx",
+              "app/(app)/knowledge/page.tsx", "app/(app)/resumes/page.tsx",
+              "components/knowledge/notes-panel.tsx"],
+    "page": ["app/(app)/activity/page.tsx", "app/(app)/applications/page.tsx",
+             "app/(app)/companies/page.tsx", "app/(app)/copilot/page.tsx",
+             "app/(app)/interviews/page.tsx", "app/(app)/jobs/page.tsx",
+             "app/(app)/knowledge/page.tsx", "app/(app)/resumes/page.tsx",
+             "components/knowledge/notes-panel.tsx"],
+    "size": ["app/(app)/activity/page.tsx", "app/(app)/applications/page.tsx",
+             "app/(app)/companies/page.tsx", "app/(app)/copilot/page.tsx",
+             "app/(app)/interviews/page.tsx", "app/(app)/jobs/page.tsx",
+             "app/(app)/knowledge/page.tsx", "app/(app)/resumes/page.tsx",
+             "components/knowledge/notes-panel.tsx"],
 }
 
 MAX_PAGE_SIZE = 100
@@ -245,14 +250,14 @@ def envelope_reads() -> dict[str, list[str]]:
     return found
 
 
-def test_the_page_typed_hooks_are_ten_and_two_sit_over_a_bare_list():
+def test_the_page_typed_hooks_are_ten_and_one_sits_over_a_bare_list():
     """Case 1: the population, derived from the annotations rather than from this table."""
     derived = page_typed_hooks()
     assert derived == PAGE_HOOKS, f"the page-typed hooks moved: {derived}"
     bare = sorted(name for name, (_, ret) in derived.items() if ret.startswith("List<"))
     assert bare == BARE_LIST_HOOKS, f"hooks that promise a page over a bare list: {bare}"
     paged = [ret for _, ret in derived.values() if ret.startswith("PageDTO<")]
-    assert len(paged) == len(derived) - len(bare) == 8, f"{paged}"
+    assert len(paged) == len(derived) - len(bare) == 9, f"{paged}"
 
 
 def test_the_envelope_is_four_names_that_both_branches_and_the_record_all_agree_on():
@@ -277,7 +282,7 @@ def test_the_envelope_is_four_names_that_both_branches_and_the_record_all_agree_
 
 
 def test_the_window_the_server_used_is_read_only_where_a_page_corrects_itself():
-    """Case 4: items, total and page have readers; size's only eight are the corrections."""
+    """Case 4: items, total and page have readers; size's only nine are the corrections."""
     reads = envelope_reads()
     assert reads == READERS, f"the envelope reader census moved: {reads}"
     assert "app/(app)/jobs/page.tsx" in reads["items"], (
@@ -304,23 +309,26 @@ def test_the_window_the_server_used_is_read_only_where_a_page_corrects_itself():
     assert "app/(app)/copilot/page.tsx" in reads["total"], (
         "the copilot sidebar's pager (#224) left the census, so a `size` read there would be "
         "invisible to the population this case measures")
-    assert reads["size"] == ["app/(app)/applications/page.tsx", "app/(app)/companies/page.tsx",
-                             "app/(app)/copilot/page.tsx", "app/(app)/interviews/page.tsx",
-                             "app/(app)/jobs/page.tsx", "app/(app)/knowledge/page.tsx",
-                             "app/(app)/resumes/page.tsx",
+    assert "app/(app)/activity/page.tsx" in reads["total"], (
+        "the activity feed's pager (#225) left the census, so a `size` read there would be "
+        "invisible to the population this case measures")
+    assert reads["size"] == ["app/(app)/activity/page.tsx", "app/(app)/applications/page.tsx",
+                             "app/(app)/companies/page.tsx", "app/(app)/copilot/page.tsx",
+                             "app/(app)/interviews/page.tsx", "app/(app)/jobs/page.tsx",
+                             "app/(app)/knowledge/page.tsx", "app/(app)/resumes/page.tsx",
                              "components/knowledge/notes-panel.tsx"], (
-        f"the answer's window has readers beyond the eight corrections: {reads['size']}")
+        f"the answer's window has readers beyond the nine corrections: {reads['size']}")
 
 
-def test_the_eight_pagers_are_fed_client_numbers_and_the_answered_window_still_is_not_one():
-    """Case 8: all eight `<Pagination>`s take the window the caller asked with, never the answer's."""
+def test_the_nine_pagers_are_fed_client_numbers_and_the_answered_window_still_is_not_one():
+    """Case 8: all nine `<Pagination>`s take the window the caller asked with, never the answer's."""
     consumers = sorted(str(p.relative_to(FRONT)).replace("\\", "/")
                        for p in FRONT.rglob("*.tsx")
                        if 'from "@/components/common/pagination"' in read(p))
-    assert consumers == ["app/(app)/applications/page.tsx", "app/(app)/companies/page.tsx",
-                         "app/(app)/copilot/page.tsx", "app/(app)/interviews/page.tsx",
-                         "app/(app)/jobs/page.tsx", "app/(app)/knowledge/page.tsx",
-                         "app/(app)/resumes/page.tsx",
+    assert consumers == ["app/(app)/activity/page.tsx", "app/(app)/applications/page.tsx",
+                         "app/(app)/companies/page.tsx", "app/(app)/copilot/page.tsx",
+                         "app/(app)/interviews/page.tsx", "app/(app)/jobs/page.tsx",
+                         "app/(app)/knowledge/page.tsx", "app/(app)/resumes/page.tsx",
                          "components/knowledge/notes-panel.tsx"], \
         f"pager consumers: {consumers}"
     jobs = read(JOBS_PAGE)
@@ -434,6 +442,20 @@ def test_the_eight_pagers_are_fed_client_numbers_and_the_answered_window_still_i
     assert re.search(r"total=\{total\}", coblock) and re.search(
         r"const total = conversations\.data\?\.total \?\? 0;", copilot), (
         "the conversations pager row count no longer comes off the envelope")
+
+    activity = read(ACTIVITY_PAGE)
+    ablock = activity[activity.index("<Pagination"):]
+    ablock = ablock[:ablock.index("/>")]
+    assert re.search(r"size=\{PAGE_SIZE\}", ablock), (
+        "the activity pager no longer takes the constant the feed asks with, so its window "
+        "and the request's window could drift apart")
+    assert "data?.size" not in ablock and "data.size" not in ablock, (
+        f"the activity pager now reads the answer's window: {ablock}")
+    assert re.search(r"page=\{runs\.data\?\.page \?\? state\.page\}", ablock), (
+        "the activity feed's page index is no longer the answer's")
+    assert re.search(r"total=\{total\}", ablock) and re.search(
+        r"const total = runs\.data\?\.total \?\? 0;", activity), (
+        "the activity pager row count no longer comes off the envelope")
 
 
 def test_the_backend_reports_the_clamped_window_and_the_url_never_adopts_the_ceiling():

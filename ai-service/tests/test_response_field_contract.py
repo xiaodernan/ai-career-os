@@ -327,8 +327,9 @@ READERS: dict[str, dict] = {
     },
     "normalizeRun": {
         # Two records, one reader: the dashboard's `recentRuns` are `RecentRun`s and
-        # `GET /activity/runs` answers a bare `List<RunItem>`. Neither is snake_case (the backend has
-        # no naming strategy on this direction), and neither carries `traces` -- those belong to
+        # `RunItem` from `GET /activity/runs` (a `PageDTO` envelope since #225). Neither is
+        # snake_case (the backend has no naming strategy on this direction), and neither carries
+        # `traces` -- those belong to
         # `RunDetail`, which the activity detail page hands to `activity-trace` after unwrapping
         # `run`. #133 deleted the four authorless reads that confusion left behind (`traces`,
         # `summary`, `createdAt`, `relatedHref`), the snake aliases beside every live name, and the
@@ -783,8 +784,9 @@ READERS: dict[str, dict] = {
     "normalizePage": {
         # The list envelope. `raw` is bound to the one record the backend answers for a paged route
         # (`common/PageDTO.java`, whose four components are the four names read here), and the mapper's
-        # other branch is `GET /activity/runs`, which answers a bare JSON array and therefore carries
-        # no name to bind. The sixteen names that went in #159 were Spring-`Page` spellings
+        # other branch is `GET /jobs/saved`, which answers a bare JSON array and therefore carries no
+        # name to bind (since #225 `/activity/runs` answers a `PageDTO` too). The sixteen names that
+        # went in #159 were Spring-`Page` spellings
         # (`content`/`totalElements`/`number`/`sizePerPage`…) and wrapper guesses (`data`/`results`/
         # `records`/`list`/`doc`/`document`/`metadata`) no controller in this repo returns: a payload
         # carrying them was never tolerated, it was read as an empty page.

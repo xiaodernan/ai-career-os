@@ -76,7 +76,7 @@ export default function DashboardPage() {
   // The dashboard aggregate may omit sections; fall back to the real list
   // endpoints (never to invented data) so the Command Center stays useful.
   const fallbackJobs = useJobs({ size: 3 });
-  const fallbackRuns = useActivityRuns({ limit: 5 });
+  const fallbackRuns = useActivityRuns({ size: 5 });
 
   const recommendedJobs: Job[] = data?.recommendedJobs?.length
     ? data.recommendedJobs

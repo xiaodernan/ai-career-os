@@ -10,6 +10,7 @@ import com.careeros.common.ApiException;
 import com.careeros.common.AuthUser;
 import com.careeros.common.CurrentUser;
 import com.careeros.common.Json;
+import com.careeros.common.PageDTO;
 import com.careeros.common.Paging;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -52,11 +53,12 @@ public class ActivityController {
 
     @GetMapping("/api/v1/activity/runs")
     @Transactional(readOnly = true)
-    public List<RunItem> listRuns(@CurrentUser AuthUser user,
-                                  @RequestParam(defaultValue = "30") int limit,
-                                  @RequestParam(required = false) String agent) {
-        return runs.findRecent(user.id(), agent, Paging.first(limit)).stream()
-                .map(ActivityController::toItem).toList();
+    public PageDTO<RunItem> listRuns(@CurrentUser AuthUser user,
+                                      @RequestParam(defaultValue = "0") int page,
+                                      @RequestParam(defaultValue = "30") int size,
+                                      @RequestParam(required = false) String agent) {
+        return PageDTO.from(runs.findRecent(user.id(), agent, Paging.of(page, size).pageable()),
+                ActivityController::toItem);
     }
 
     @GetMapping("/api/v1/activity/runs/{id}")

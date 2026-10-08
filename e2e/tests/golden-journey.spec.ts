@@ -449,11 +449,11 @@ test.describe("golden journey — copilot and observability", () => {
     expect(chat.artifacts.length, "a job search must yield an artifact").toBeGreaterThan(0);
 
     // Every AI turn is traced; the activity feed is the proof.
-    const runs = await unwrap<Array<{ id: string; agent: string; status: string }>>(
-      await api.get("/activity/runs", { limit: 5 })
+    const runs = await unwrap<{ items: Array<{ id: string; agent: string; status: string }> }>(
+      await api.get("/activity/runs", { page: 0, size: 5 })
     );
-    expect(runs.length, "the copilot turn must be recorded").toBeGreaterThan(0);
-    const copilotRun = runs.find((r) => r.agent === "career");
+    expect(runs.items.length, "the copilot turn must be recorded").toBeGreaterThan(0);
+    const copilotRun = runs.items.find((r) => r.agent === "career");
     expect(copilotRun, "a career-agent run should exist").toBeTruthy();
 
     // And the trace explains what the agent actually did.

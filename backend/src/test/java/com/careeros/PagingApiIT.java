@@ -69,14 +69,14 @@ class PagingApiIT extends ApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("the activity feed's limit is a window too")
+    @DisplayName("the activity feed's size is a window like every other list's")
     void theFeedCannotBeAskedForNothingOrEverything() throws Exception {
         String auth = bearer();
-        mvc.perform(get("/api/v1/activity/runs").header("Authorization", auth).param("limit", "0"))
+        mvc.perform(get("/api/v1/activity/runs").header("Authorization", auth).param("size", "0"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data").isArray());
+                .andExpect(jsonPath("$.data.size").value(1));
         mvc.perform(get("/api/v1/activity/runs").header("Authorization", auth)
-                        .param("limit", "-1").param("agent", "resume"))
+                        .param("size", "-1").param("agent", "resume"))
                 .andExpect(status().isOk());
     }
 

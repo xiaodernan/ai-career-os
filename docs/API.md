@@ -189,7 +189,7 @@ stored verbatim on the session, so the same place takes the rest of the run's tu
 | Method | Path | Notes |
 |---|---|---|
 | GET | `/reports/dashboard` | pipeline health, counts, recommended jobs, skill gaps, resume score, recent insights |
-| GET | `/activity/runs` | agent runs (`?limit=&agent=`) |
+| GET | `/activity/runs` | agent runs (`?page=&size=&agent=`) |
 | GET | `/activity/runs/{id}` | run + ordered traces (AI Activity detail) |
 | GET | `/ai-usage/summary` | tokens, requests, cached tokens, estimated cost |
 | GET | `/search` | global ⌘K search (`?q=`, required) across jobs/companies/resumes/interviews/notes/KB/conversations — the jobs channel is hybrid-ranked, like `/jobs?sort=relevance` |
@@ -251,7 +251,7 @@ curl -s -X POST $B/jobs/$JID/match -H "Authorization: Bearer $TOKEN" \
 curl -s -X POST $B/copilot/chat -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' \
   -d '{"message":"帮我找适合我的 AI Agent 岗位"}'
-curl -s "$B/activity/runs?limit=5" -H "Authorization: Bearer $TOKEN"
+curl -s "$B/activity/runs?page=0&size=5" -H "Authorization: Bearer $TOKEN"
 ```
 
 ## 5. OpenAPI
