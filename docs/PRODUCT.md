@@ -114,7 +114,7 @@ evaluation harnesses, and a seeded 12-company / 41-role corpus.
 
 Verified against the live stack, not just in unit tests:
 
-- The **Playwright golden-journey suite passes 17/17** (`e2e/`) against
+- The **Playwright golden-journey suite passes 20/20** (`e2e/`) against
   postgres+redis+minio, ai-service, backend and a production frontend build. It
   runs the PRD §35 flow for real: register → upload a resume → search → match →
   tailor → track → interview → report → copilot, plus the account-recovery pair
@@ -122,7 +122,7 @@ Verified against the live stack, not just in unit tests:
   screens, the local refusals, the pasted-token path and the API's own advice
   about a token it does not know.
 - **Job vectors are backfilled and indexed.** `python -m app.ops.embed_jobs`
-  embedded all 46 roles, `jobs.embedding` is `vector(1536)` and `idx_jobs_hnsw`
+  embedded all 41 roles, `jobs.embedding` is `vector(1536)` and `idx_jobs_hnsw`
   is built, so `search_jobs` now runs keyword and vector retrieval and fuses them
   by reciprocal rank. Keyword-only behaviour is preserved whenever embeddings are
   unavailable, which is what a provider outage or an un-backfilled database looks
