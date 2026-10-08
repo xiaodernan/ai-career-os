@@ -374,6 +374,27 @@ class JobSearchRepositoryTest {
         assertThat(orderByClause(capturedSql())).isEqualTo("rrf DESC, posted_at DESC, id ASC");
     }
 
+    /**
+     * The rank <em>is</em> the score, so a tie inside a ranked window is not cosmetic: two rows the
+     * keyword pass calls equal are numbered in whatever order the window visited them, which makes
+     * the fused score of either row a different number on the next identical query -- and a total
+     * outer ORDER BY then sorts by a number that is not the same number twice.
+     */
+    @Test
+    void everyRankedWindowNumbersItsTiesByTheRowsOwnId() {
+        repo.search(hybrid("relevance"));
+        String sql = capturedSql();
+        assertThat(sql).contains("ROW_NUMBER() OVER (ORDER BY ts_rank(tsv, plainto_tsquery('simple', :q)) DESC,\n"
+                + "                               posted_at DESC, id) - 1 AS rank");
+        assertThat(sql).contains("ROW_NUMBER() OVER (ORDER BY vec <=> CAST(:vec AS vector), posted_at DESC, id)"
+                + " - 1 AS rank");
+        // The semantic pass also cuts its own candidates at LIMIT, so a tie at that boundary would
+        // drop a row the ranking never got to see.
+        assertThat(sql).contains("END <= 0.98\n"
+                + " ORDER BY vec <=> CAST(:vec AS vector), posted_at DESC, id\n"
+                + " LIMIT " + JobSearchRepository.SEMANTIC_CANDIDATES);
+    }
+
     @Test
     void hybridFacetsFilterTheSourceRowsWhileTheQueryPredicateStaysInItsPass() {
         Filters f = new Filters(userId, "java", List.of("spring"), "Remote", "remote", "Acme",

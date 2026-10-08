@@ -198,10 +198,15 @@ public class JobSearchRepository {
      * Rank starts at 0 to match the tool's {@code enumerate(rows)} fusion term for term. Built from
      * plain strings, not a text block: a text block drops the space before a same-line closing
      * delimiter, which would glue {@code WHERE} to its predicate.
+     *
+     * <p>The window ends in {@code id} because the rank is the score: two rows that tie on rank and
+     * recency would otherwise be numbered in whatever order the window visited them, so the fused
+     * score of a row could change between two identical queries -- and the outer ORDER BY, however
+     * total, would then be sorting by a number that is not the same number twice.
      */
     private static final String KEYWORD_RANK_SELECT =
             "SELECT id, ROW_NUMBER() OVER (ORDER BY ts_rank(tsv, plainto_tsquery('simple', :q)) DESC,\n"
-            + "                               posted_at DESC) - 1 AS rank\n"
+            + "                               posted_at DESC, id) - 1 AS rank\n"
             + "  FROM filtered\n"
             + " WHERE " + LEXICAL_MATCH;
 
@@ -213,14 +218,14 @@ public class JobSearchRepository {
      * error. This mirrors the agent's in-process fallback in tools.py.
      */
     private static final String SEMANTIC_RANK_SELECT =
-            "SELECT id, ROW_NUMBER() OVER (ORDER BY vec <=> CAST(:vec AS vector), posted_at DESC) - 1 AS rank\n"
+            "SELECT id, ROW_NUMBER() OVER (ORDER BY vec <=> CAST(:vec AS vector), posted_at DESC, id) - 1 AS rank\n"
             + "  FROM filtered\n"
             + " WHERE vec IS NOT NULL\n"
             + "   AND CASE\n"
             + "       WHEN vector_dims(vec) = vector_dims(CAST(:vec AS vector))\n"
             + "       THEN vec <=> CAST(:vec AS vector)\n"
             + "       END <= " + Double.toString(SEMANTIC_DISTANCE_FLOOR) + "\n"
-            + " ORDER BY vec <=> CAST(:vec AS vector), posted_at DESC\n"
+            + " ORDER BY vec <=> CAST(:vec AS vector), posted_at DESC, id\n"
             + " LIMIT " + SEMANTIC_CANDIDATES;
 
     /** The fused rows: hydration columns plus the reciprocal-rank score they are ordered by. */

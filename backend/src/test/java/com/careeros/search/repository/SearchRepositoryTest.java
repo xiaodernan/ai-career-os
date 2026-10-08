@@ -133,6 +133,50 @@ class SearchRepositoryTest {
                 .contains("f.posted_at");
     }
 
+    /**
+     * The palette is a top-N list, not a paged one, but the boundary is still a decision: a tie on
+     * the last sort key lets PostgreSQL choose which of the tied rows the LIMIT keeps, so the same
+     * query can answer a different set on two visits. Every channel therefore ends its ORDER BY in
+     * the row's own id, except companies, whose name the schema declares unique -- there the order
+     * is already total and a second key would be noise.
+     */
+    @Test
+    void everyChannelsOrderingEndsInTheRowsOwnId() {
+        repo.jobs(userId, "java", 5, null);
+        assertThat(orderByClause(lastSql)).isEqualTo(
+                "ts_rank(j.tsv, plainto_tsquery('simple', :q)) DESC, j.posted_at DESC, j.id ASC");
+
+        repo.jobs(userId, "java", 5, List.of(0.25, -0.5));
+        assertThat(orderByClause(lastSql)).isEqualTo("rrf DESC, posted_at DESC, id ASC");
+        // The rank windows number the ties, so they need the same tie-break: a rank is a score.
+        assertThat(lastSql).contains("posted_at DESC, id) - 1 AS rank");
+        // Collapsed, because a text block strips its incidental indentation: the statement the
+        // database sees has five leading spaces where the source has twenty-one.
+        assertThat(lastSql.replaceAll("\\s+", " "))
+                .contains("ORDER BY vec <=> CAST(:vec AS vector), posted_at DESC, id LIMIT 50");
+
+        repo.companies("Acme", 5);
+        assertThat(orderByClause(lastSql)).isEqualTo("name ASC");
+
+        repo.resumes(userId, "java", 5);
+        assertThat(orderByClause(lastSql)).isEqualTo("updated_at DESC, id ASC");
+        repo.notes(userId, "java", 5);
+        assertThat(orderByClause(lastSql)).isEqualTo("updated_at DESC, id ASC");
+        repo.conversations(userId, "java", 5);
+        assertThat(orderByClause(lastSql)).isEqualTo("cv.updated_at DESC, cv.id ASC");
+        repo.applications(userId, "java", 5);
+        assertThat(orderByClause(lastSql)).isEqualTo("updated_at DESC, id ASC");
+    }
+
+    /** The outer ORDER BY of a captured statement, whitespace-collapsed, without its LIMIT. */
+    private static String orderByClause(String sql) {
+        int at = sql.lastIndexOf("ORDER BY ");
+        assertThat(at).isGreaterThanOrEqualTo(0);
+        String rest = sql.substring(at + "ORDER BY ".length());
+        int limit = rest.indexOf(" LIMIT");
+        return (limit < 0 ? rest : rest.substring(0, limit)).trim().replaceAll("\\s+", " ");
+    }
+
     @Test
     void withoutAVectorTheJobsStatementStaysKeywordOnlyAndBindsNoVector() {
         repo.jobs(userId, "java", 5, List.of());

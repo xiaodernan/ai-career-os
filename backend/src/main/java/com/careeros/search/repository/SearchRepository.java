@@ -20,6 +20,13 @@ import org.springframework.stereotype.Repository;
  * text search with ts_rank. Groups are capped by the caller. When a query vector is supplied, the
  * jobs channel runs hybrid retrieval (keyword + pgvector) fused by reciprocal rank, matching the
  * jobs board and the agent's {@code search_jobs} tool.
+ *
+ * <p>Every ORDER BY -- the outer ones and the two ranked windows -- ends in the row's own id, so a
+ * capped answer keeps the same rows on two identical queries. A tie on the last visible key is a
+ * decision PostgreSQL would otherwise make per query, and a rank window is worse than cosmetic:
+ * the rank <em>is</em> the fused score, so two rows it calls equal would be numbered differently on
+ * the next visit and could then outrank each other in turn. Companies is the one exception, because
+ * the schema declares {@code name} unique and the order is already total.
  */
 @Repository
 public class SearchRepository {
@@ -56,7 +63,8 @@ public class SearchRepository {
                  WHERE j.tsv @@ plainto_tsquery('simple', :q)
                     OR j.title ILIKE :qLike ESCAPE '!'
                     OR c.name ILIKE :qLike ESCAPE '!'
-                 ORDER BY ts_rank(j.tsv, plainto_tsquery('simple', :q)) DESC, j.posted_at DESC
+                 ORDER BY ts_rank(j.tsv, plainto_tsquery('simple', :q)) DESC, j.posted_at DESC,
+                          j.id ASC
                  LIMIT :limit
                 """;
     }
@@ -72,14 +80,14 @@ public class SearchRepository {
                 ),
                 keyword_rank AS (
                     SELECT id, ROW_NUMBER() OVER (ORDER BY ts_rank(tsv, plainto_tsquery('simple', :q)) DESC,
-                                                   posted_at DESC) - 1 AS rank
+                                                   posted_at DESC, id) - 1 AS rank
                       FROM filtered
                      WHERE tsv @@ plainto_tsquery('simple', :q)
                         OR title ILIKE :qLike ESCAPE '!'
                         OR company_name ILIKE :qLike ESCAPE '!'
                 ),
                 semantic_rank AS (
-                    SELECT id, ROW_NUMBER() OVER (ORDER BY vec <=> CAST(:vec AS vector), posted_at DESC) - 1 AS rank
+                    SELECT id, ROW_NUMBER() OVER (ORDER BY vec <=> CAST(:vec AS vector), posted_at DESC, id) - 1 AS rank
                       FROM filtered
                      WHERE vec IS NOT NULL
                        -- The CASE forces ordered evaluation: the distance operator then runs only on
@@ -90,7 +98,7 @@ public class SearchRepository {
                            WHEN vector_dims(vec) = vector_dims(CAST(:vec AS vector))
                            THEN vec <=> CAST(:vec AS vector)
                            END <= {FLOOR}
-                     ORDER BY vec <=> CAST(:vec AS vector), posted_at DESC
+                     ORDER BY vec <=> CAST(:vec AS vector), posted_at DESC, id
                      LIMIT {CANDIDATES}
                 ),
                 scored AS (
@@ -105,7 +113,7 @@ public class SearchRepository {
                 )
                 SELECT id, title, company_name, location, remote_type, status
                   FROM scored
-                 ORDER BY rrf DESC, posted_at DESC
+                 ORDER BY rrf DESC, posted_at DESC, id ASC
                  LIMIT :limit
                 """;
         return sql.replace("{FLOOR}", Double.toString(SEMANTIC_DISTANCE_FLOOR))
@@ -142,7 +150,7 @@ public class SearchRepository {
                 SELECT id, title, status, updated_at
                   FROM resumes
                  WHERE user_id = :userId AND title ILIKE :qLike ESCAPE '!'
-                 ORDER BY updated_at DESC
+                 ORDER BY updated_at DESC, id ASC
                  LIMIT :limit
                 """;
         return rows(sql, params(userId, q).set("limit", limit), (row) ->
@@ -155,7 +163,7 @@ public class SearchRepository {
                   FROM user_notes
                  WHERE user_id = :userId
                    AND (title ILIKE :qLike ESCAPE '!' OR content ILIKE :qLike ESCAPE '!')
-                 ORDER BY updated_at DESC
+                 ORDER BY updated_at DESC, id ASC
                  LIMIT :limit
                 """;
         return rows(sql, params(userId, q).set("limit", limit), (row) ->
@@ -174,7 +182,7 @@ public class SearchRepository {
                    AND (cv.title ILIKE :qLike ESCAPE '!'
                         OR EXISTS (SELECT 1 FROM messages m
                                     WHERE m.conversation_id = cv.id AND m.content ILIKE :qLike ESCAPE '!'))
-                 ORDER BY cv.updated_at DESC
+                 ORDER BY cv.updated_at DESC, cv.id ASC
                  LIMIT :limit
                 """;
         return rows(sql, params(userId, q).set("limit", limit), (row) ->
@@ -187,7 +195,7 @@ public class SearchRepository {
                   FROM applications
                  WHERE user_id = :userId
                    AND (title ILIKE :qLike ESCAPE '!' OR COALESCE(company_name, '') ILIKE :qLike ESCAPE '!')
-                 ORDER BY updated_at DESC
+                 ORDER BY updated_at DESC, id ASC
                  LIMIT :limit
                 """;
         return rows(sql, params(userId, q).set("limit", limit), (row) ->
