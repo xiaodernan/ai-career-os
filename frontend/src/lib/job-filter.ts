@@ -2,6 +2,7 @@ import type { Job } from "@/lib/api/types";
 import type { JobFilters } from "@/lib/hooks/resources";
 import type { NormalizedPage } from "@/lib/api/normalize";
 import { normalizeStructuredResume, serializeJobFilters } from "@/lib/api/normalize";
+import { lastPageOf } from "@/lib/page-window";
 
 /**
  * Local filtering for a set the server already handed over whole.
@@ -127,7 +128,7 @@ export function filterAndPaginate(
 ): NormalizedPage<Job> {
   const filtered = hasActiveJobFilters(filters) ? items.filter((j) => matchesJobFilters(j, filters)) : items;
   const size = filters.size && filters.size > 0 ? filters.size : filtered.length || 1;
-  const lastPage = Math.max(0, Math.ceil(filtered.length / size) - 1);
+  const lastPage = lastPageOf(filtered.length, size);
   const page = Math.min(Math.max(0, filters.page ?? 0), lastPage);
   return {
     items: filtered.slice(page * size, page * size + size),

@@ -3,10 +3,17 @@
 import * as React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { pageWindow } from "@/lib/page-window";
 import { Button } from "@/components/ui/button";
 
 /**
  * Pager — server-side page/size navigation with an honest row count.
+ *
+ * The window comes from `pageWindow`, which clamps an out-of-range page to the last page
+ * that exists. A URL the set has shrunk past (`?page=5` over 35 rows) used to print
+ * "101–30 of 35" -- `from` read the URL's page, `to` the total -- for the frame before the
+ * screen's own correction effect ran, and forever on a screen without one. The pager now
+ * says what the last real page holds, and Prev/Next step from there.
  */
 export function Pagination({
   page,
@@ -23,9 +30,7 @@ export function Pagination({
   className?: string;
   label?: string;
 }) {
-  const pageCount = size > 0 ? Math.max(1, Math.ceil(total / size)) : 1;
-  const from = total === 0 ? 0 : page * size + 1;
-  const to = Math.min(total, (page + 1) * size);
+  const view = pageWindow(page, size, total);
 
   return (
     <nav
@@ -36,7 +41,7 @@ export function Pagination({
         {total > 0 ? (
           <>
             <span className="font-medium text-foreground tabular-nums">
-              {from}–{to}
+              {view.from}–{view.to}
             </span>{" "}
             of <span className="tabular-nums">{total}</span> {label}
           </>
@@ -48,21 +53,21 @@ export function Pagination({
         <Button
           variant="outline"
           size="sm"
-          disabled={page <= 0}
-          onClick={() => onPageChange(page - 1)}
+          disabled={view.page <= 0}
+          onClick={() => onPageChange(view.page - 1)}
           aria-label="Previous page"
         >
           <ChevronLeft aria-hidden />
           Prev
         </Button>
         <span className="px-1 text-xs text-muted-foreground tabular-nums">
-          {page + 1} / {pageCount}
+          {view.page + 1} / {view.pageCount}
         </span>
         <Button
           variant="outline"
           size="sm"
-          disabled={page + 1 >= pageCount}
-          onClick={() => onPageChange(page + 1)}
+          disabled={view.page + 1 >= view.pageCount}
+          onClick={() => onPageChange(view.page + 1)}
           aria-label="Next page"
         >
           Next

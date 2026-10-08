@@ -4,6 +4,7 @@ import * as React from "react";
 import { Plus } from "lucide-react";
 import { ModuleView } from "@/components/common/module-view";
 import { Pagination } from "@/components/common/pagination";
+import { lastPageOf } from "@/lib/page-window";
 import { Button } from "@/components/ui/button";
 import { useApplication, useApplications } from "@/lib/hooks/resources";
 import { useReorderApplication } from "@/lib/hooks/actions";
@@ -64,13 +65,11 @@ export default function ApplicationsPage() {
 
   const total = applications.data?.total ?? 0;
   // A past-the-end page is an empty window over a real total, not an empty board: the
-  // answer's own window is the divisor (`data.size`, floored at 1 because a normalizer
-  // payload can report 0), so the URL is corrected to the last page that exists. A
+  // answer's own window is the divisor (`data.size`), so the URL is corrected to the last
+  // page that exists -- `lastPageOf` (lib/page-window.ts) is that rule in one place. A
   // layout effect, because the stale commit paints its empty copy first -- React flushes
   // this update before the browser paints, so the wrong screen is replaced, not seen.
-  const lastPage = applications.data
-    ? Math.max(0, Math.ceil(total / Math.max(1, applications.data.size)) - 1)
-    : 0;
+  const lastPage = applications.data ? lastPageOf(total, applications.data.size) : 0;
   React.useLayoutEffect(() => {
     if (applications.data && state.page > lastPage) setUrl({ page: lastPage });
   }, [applications.data, state.page, lastPage, setUrl]);

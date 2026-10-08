@@ -4,6 +4,7 @@ import * as React from "react";
 import { Check, Pencil, StickyNote, Trash2, X } from "lucide-react";
 import { ModuleView } from "@/components/common/module-view";
 import { Pagination } from "@/components/common/pagination";
+import { lastPageOf } from "@/lib/page-window";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -211,13 +212,11 @@ export function NotesPanel() {
 
   const total = notes.data?.total ?? 0;
   // A past-the-end page is an empty window over a real total, not an empty list: the answer's
-  // own window is the divisor (`data.size`, floored at 1 because a normalizer payload can
-  // report 0), so the URL is corrected to the last page that exists. A layout effect, because
-  // the stale commit paints its empty copy first -- React flushes this update before the
-  // browser paints, so the wrong screen is replaced, not seen.
-  const lastPage = notes.data
-    ? Math.max(0, Math.ceil(total / Math.max(1, notes.data.size)) - 1)
-    : 0;
+  // own window is the divisor (`data.size`), so the URL is corrected to the last page that
+  // exists -- `lastPageOf` (lib/page-window.ts) is that rule in one place. A layout effect,
+  // because the stale commit paints its empty copy first -- React flushes this update before
+  // the browser paints, so the wrong screen is replaced, not seen.
+  const lastPage = notes.data ? lastPageOf(total, notes.data.size) : 0;
   React.useLayoutEffect(() => {
     if (notes.data && state.npage > lastPage) setUrl({ npage: lastPage });
   }, [notes.data, state.npage, lastPage, setUrl]);

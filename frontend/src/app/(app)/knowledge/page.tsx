@@ -4,6 +4,7 @@ import * as React from "react";
 import { Library } from "lucide-react";
 import { ModuleView } from "@/components/common/module-view";
 import { Pagination } from "@/components/common/pagination";
+import { lastPageOf } from "@/lib/page-window";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -38,13 +39,11 @@ export default function KnowledgePage() {
 
   const total = sources.data?.total ?? 0;
   // A past-the-end page is an empty window over a real total, not an empty list: the answer's
-  // own window is the divisor (`data.size`, floored at 1 because a normalizer payload can
-  // report 0), so the URL is corrected to the last page that exists. A layout effect, because
-  // the stale commit paints its empty copy first -- React flushes this update before the
-  // browser paints, so the wrong screen is replaced, not seen.
-  const lastPage = sources.data
-    ? Math.max(0, Math.ceil(total / Math.max(1, sources.data.size)) - 1)
-    : 0;
+  // own window is the divisor (`data.size`), so the URL is corrected to the last page that
+  // exists -- `lastPageOf` (lib/page-window.ts) is that rule in one place. A layout effect,
+  // because the stale commit paints its empty copy first -- React flushes this update before
+  // the browser paints, so the wrong screen is replaced, not seen.
+  const lastPage = sources.data ? lastPageOf(total, sources.data.size) : 0;
   React.useLayoutEffect(() => {
     if (sources.data && state.page > lastPage) setUrl({ page: lastPage });
   }, [sources.data, state.page, lastPage, setUrl]);
