@@ -85,7 +85,7 @@ residual risk rather than as a clean bill of health.
 
 | Area | Result |
 | --- | --- |
-| SQL injection | **Clear.** Only four native queries exist (`JobSearchRepository`, `DashboardRepository`, `SearchRepository`); every value is bound as a parameter and only placeholder *indices* (`${len(args)}`) and an `int` limit are interpolated. `ORDER BY` cannot be parameterised, so it resolves through a whitelist map, not the request string. |
+| SQL injection | **Clear.** Five native-query classes exist (`JobSearchRepository`, `SearchRepository`, `DashboardRepository`, and the two digest repositories that replaced the copilot sidebar's and the interview list's per-row reads — `ConversationDigestRepository`, `InterviewDigestRepository`); every value is bound as a parameter and only placeholder *indices* (`${len(args)}`) and an `int` limit are interpolated, both in `JobSearchRepository` and both derived from the server's own paging window. `ORDER BY` cannot be parameterised, so it resolves through a whitelist map, not the request string. The census is held by `test_the_native_query_census_matches_the_security_doc.py`, which fails when a sixth class appears or when this row stops naming the five. |
 | XSS | **Clear.** No `dangerouslySetInnerHTML` / `innerHTML` anywhere in the frontend; React escapes all model- and user-derived text. |
 | CSRF | **Not applicable by design.** No cookie credentials — the access token travels in `Authorization`, which a cross-site form cannot set. Spring CSRF is disabled for that reason, not by omission. |
 | SSRF | **Clear.** `externalUrl` on a job is stored and displayed but never fetched. The only outbound HTTP is to the configured LLM/embedding provider, whose endpoint comes from env, not from user input. |
