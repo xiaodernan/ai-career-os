@@ -238,6 +238,24 @@ def test_the_e2e_count_is_the_suite_that_runs():
         )
 
 
+def test_the_suite_size_is_stated_exactly_once_in_the_readme():
+    """One number, one place.
+
+    The count used to appear twice in e2e/README.md -- "23 passed" under "Run" and
+    "17/17 against the host-frontend stack" in the verification note -- and the second
+    copy went stale the moment the suite grew, which is the failure mode this whole file
+    exists to stop. A reader who copies a number copies the one under "Run"; a
+    verification note records what a run proved, not how many cases it happened to hold.
+    """
+    text = read(E2E_README)
+    assert len(re.findall(r"\b\d+ passed\b", text)) == 1, (
+        "e2e/README.md states the suite's size more than once; the gated copy is the one "
+        "under \"Run\"")
+    assert re.findall(r"\b\d{1,3}\s*/\s*\d{1,3}\b", text) == [], (
+        "e2e/README.md carries a second N/N count; a verification note records what a run "
+        "proved, and the suite's size belongs to the one gated sentence alone")
+
+
 def test_the_seeded_corpus_is_the_corpus_in_the_seed_script():
     companies, roles = seed_population()
     text = read(DOC)
