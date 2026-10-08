@@ -141,7 +141,7 @@ export function useDeleteResume() {
       qc.invalidateQueries({ queryKey: ["resumes"] });
       toast.success("Resume deleted.");
     },
-    onError: fail("Delete failed."),
+    onError: fail("Couldn't delete the resume."),
   });
 }
 
@@ -434,7 +434,7 @@ export function useDeleteApplication() {
       qc.invalidateQueries({ queryKey: ["dashboard"] });
       toast.success("Removed from pipeline.");
     },
-    onError: fail("Delete failed."),
+    onError: fail("Couldn't delete that application."),
   });
 }
 

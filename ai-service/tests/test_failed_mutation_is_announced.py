@@ -18,9 +18,11 @@ clears the cache and redirects regardless of what the server said. That is a des
 sign-out always happens -- so this file characterises it rather than changing it: it is the one place in
 the app where "you are signed out" is not a claim about the server.
 
-The same walk finds the failure helper's one soft spot: ``fail(...)`` has a single author, 29 uses and 28
-distinct messages, because two different deletes share the sentence "Delete failed." Nothing in that
-toast tells the user which record they just failed to remove.
+The same walk covers the failure helper: ``fail(...)`` has a single author and 29 uses, and every use
+spends a distinct sentence -- when this file first walked it, 28 were distinct, because two different
+deletes shared "Delete failed." and the toast never said which record survived the failure. Each delete
+now names its own record, and the case below pins the spent state so a reused sentence goes red rather
+than quietly shipping.
 """
 
 import collections
@@ -301,7 +303,7 @@ def test_the_password_forms_announce_inline_while_the_signout_sites_announce_not
         )
 
 
-def test_the_failure_helper_has_one_author_and_two_deletes_share_one_message():
+def test_the_failure_helper_has_one_author_and_every_message_is_spent_once():
     authors = [rel for rel, text in sources().items() if re.search(r"^function fail\(", text, re.M)]
     assert authors == [ACTIONS], "fail() is authored in %s" % authors
     text = sources()[ACTIONS]
@@ -309,15 +311,27 @@ def test_the_failure_helper_has_one_author_and_two_deletes_share_one_message():
         "fail() no longer builds a toast from the caller's own fallback sentence"
     )
     messages = fail_messages()
-    assert sum(messages.values()) == 29 and len(messages) == 28, "fail() messages: %d uses, %d distinct" % (
-        sum(messages.values()), len(messages)
-    )
     reused = sorted(m for m, n in messages.items() if n > 1)
-    assert reused == ["Delete failed."], "the reused failure sentences are %s" % reused
-    holders = sorted(s.name for s in sites() if 'fail("Delete failed.")' in s.body)
-    assert len(holders) == 2, "%s is built by %d mutations: %s" % (reused, len(holders), holders)
-    for name in holders:
+    assert sum(messages.values()) == 29 and not reused, (
+        "fail() messages: %d uses, %d distinct, reused: %s" % (
+            sum(messages.values()), len(messages), reused
+        )
+    )
+    assert "Delete failed." not in text, (
+        "the collision this file spent is back: a toast again hides which record failed"
+    )
+    # The two deletes that used to share one sentence now each name their own record; each sentence
+    # is pinned beside its holder's request verb so neither can drift alone.
+    deletes = {
+        "useDeleteResume": 'fail("Couldn\'t delete the resume.")',
+        "useDeleteApplication": 'fail("Couldn\'t delete that application.")',
+    }
+    for name, sentence in deletes.items():
         body = hook_body(ACTIONS, name)
+        assert sentence in body, (
+            "%s no longer names its own delete; an operation-blind toast hides what failed: %s" % (
+                name, [line.strip() for line in body.splitlines() if "onError" in line])
+        )
         assert "api.remove(" in body, (
             "%s announces a delete failure but its request is not the client's remove verb: %s" % (
                 name, [line.strip() for line in body.splitlines() if "mutationFn" in line])
