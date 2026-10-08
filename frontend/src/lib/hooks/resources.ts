@@ -460,12 +460,13 @@ export function mapInterviewSessionDetail(raw: unknown, fallbackId?: string | nu
   };
 }
 
-export function useInterviewSessions() {
+export function useInterviewSessions(params?: { page?: number; size?: number }) {
   return useQuery({
-    queryKey: ["interview", "sessions"],
+    queryKey: ["interview", "sessions", params],
     queryFn: async (): Promise<Page<InterviewSession>> =>
-      normalizePage(await api.get<unknown>(endpoints.interviews, { size: 50 }), (s) =>
-        mapInterviewSessionItem(s)
+      normalizePage(
+        await api.get<unknown>(endpoints.interviews, { size: 50, ...(params ?? {}) }),
+        (s) => mapInterviewSessionItem(s)
       ),
   });
 }

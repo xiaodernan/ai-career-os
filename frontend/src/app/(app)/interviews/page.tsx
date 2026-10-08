@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight, CalendarClock, FileBarChart, MessagesSquare, Plus } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
+import { Pagination } from "@/components/common/pagination";
 import { QueryBoundary } from "@/components/common/query-boundary";
 import { LoadingListSkeleton } from "@/components/common/loading-skeletons";
 import { Card, CardContent } from "@/components/ui/card";
@@ -19,14 +20,41 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useCreateInterviewSession } from "@/lib/hooks/actions";
 import { useInterviewSessions } from "@/lib/hooks/resources";
+import { useUrlState } from "@/lib/hooks/use-url-state";
 import { str } from "@/lib/api/normalize";
 import { formatDateTime, relativeTime, titleCase } from "@/lib/format";
 import { INTERVIEW_MODES } from "@/lib/interview-modes";
 
+// The route's own default window: `GET /interview/sessions` binds `size` with
+// `defaultValue = "20"`, so this number asks for exactly what the server would have
+// chosen anyway -- the hook's own 50 literal never reaches the wire on this path.
+const PAGE_SIZE = 20;
+
+// Module-level so `setUrl` (a `useCallback` keyed on this object) is stable across renders.
+const PAGE_DEFAULTS: { page: number } = { page: 0 };
+
 export default function InterviewsPage() {
-  const sessions = useInterviewSessions();
+  // The page index lives in the URL, so a reload or a shared list link opens the same window.
+  const [state, setUrl] = useUrlState<{ page: number }>(
+    PAGE_DEFAULTS,
+    { numericKeys: ["page"] }
+  );
+  const sessions = useInterviewSessions({ page: state.page, size: PAGE_SIZE });
   const create = useCreateInterviewSession();
   const router = useRouter();
+
+  const total = sessions.data?.total ?? 0;
+  // A past-the-end page is an empty window over a real total, not an empty list: the answer's
+  // own window is the divisor (`data.size`, floored at 1 because a normalizer payload can
+  // report 0), so the URL is corrected to the last page that exists. A layout effect, because
+  // the stale commit paints its empty copy first -- React flushes this update before the
+  // browser paints, so the wrong screen is replaced, not seen.
+  const lastPage = sessions.data
+    ? Math.max(0, Math.ceil(total / Math.max(1, sessions.data.size)) - 1)
+    : 0;
+  React.useLayoutEffect(() => {
+    if (sessions.data && state.page > lastPage) setUrl({ page: lastPage });
+  }, [sessions.data, state.page, lastPage, setUrl]);
 
   const start = (mode: string) =>
     create.mutate(
@@ -140,6 +168,18 @@ export default function InterviewsPage() {
           </ul>
         )}
       </QueryBoundary>
+      {total > PAGE_SIZE && (
+        <Pagination
+          page={sessions.data?.page ?? state.page}
+          size={PAGE_SIZE}
+          total={total}
+          label="interview sessions"
+          onPageChange={(page) => {
+            setUrl({ page });
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+        />
+      )}
     </div>
   );
 }
