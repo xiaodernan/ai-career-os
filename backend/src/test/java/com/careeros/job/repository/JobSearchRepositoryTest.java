@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -31,7 +32,8 @@ import org.mockito.ArgumentCaptor;
  *     SQL does not reference. That binding symmetry is what keeps a future filter addition
  *     from silently 500-ing on "parameter not bound" — the only other coverage is the
  *     Docker-only integration test; (3) the paging window taken off the URL is made safe
- *     before it is spliced into {@code LIMIT}/{@code OFFSET}.
+ *     before it is spliced into {@code LIMIT}/{@code OFFSET}; (4) every ORDER BY ends in
+ *     the row's own id, so a page is a partition of the catalogue rather than of a plan's mood.
  */
 class JobSearchRepositoryTest {
 
@@ -72,6 +74,19 @@ class JobSearchRepositoryTest {
             names.add(m.group(1));
         }
         return names;
+    }
+
+    /**
+     * The outer ORDER BY of a captured statement, without the paging clause that may follow it.
+     * The statement also carries inner ones -- the LATERAL lateral join orders by {@code created_at
+     * DESC LIMIT 1} to pick the latest match -- so this is the last, not the first.
+     */
+    private static String orderByClause(String sql) {
+        int at = sql.lastIndexOf("ORDER BY ");
+        assertThat(at).isGreaterThanOrEqualTo(0);
+        String rest = sql.substring(at + "ORDER BY ".length());
+        int limit = rest.indexOf(" LIMIT");
+        return (limit < 0 ? rest : rest.substring(0, limit)).trim();
     }
 
     private Filters fullFilters(String sort) {
@@ -325,6 +340,38 @@ class JobSearchRepositoryTest {
                 .contains("vector_dims(vec) = vector_dims(CAST(:vec AS vector))")
                 .contains("THEN vec <=> CAST(:vec AS vector)")
                 .contains("END <=");
+    }
+
+    /**
+     * A paged list is a partition of its catalogue only if the ORDER BY is total, and every sort
+     * key on this board can tie: two postings share a {@code posted_at}, a salary band repeats, a
+     * title repeats, two matches score the same. Without a tie-break the row that falls between
+     * two pages is whichever one the plan felt like, so the same URL answers different rows on two
+     * visits. Each ordering ends in the id -- unique, and invisible to any reader who did not
+     * already call the previous key equal.
+     */
+    @Test
+    void everyOrderingEndsInTheRowsOwnIdSoPagesPartition() {
+        List<String> sorts = List.of("posted", "salary", "title", "match", "relevance");
+        for (String sort : sorts) {
+            repo.search(fullFilters(sort));
+        }
+        ArgumentCaptor<String> statements = ArgumentCaptor.forClass(String.class);
+        verify(em, times(sorts.size())).createNativeQuery(statements.capture());
+        List<String> clauses = statements.getAllValues().stream().map(JobSearchRepositoryTest::orderByClause).toList();
+        for (int i = 0; i < sorts.size(); i++) {
+            assertThat(clauses.get(i))
+                    .as("sort=%s must order by the row id last", sorts.get(i))
+                    .endsWith("j.id ASC");
+        }
+    }
+
+    @Test
+    void theFusedRankingEndsInTheRowsOwnIdToo() {
+        // The fused score is a sum of two reciprocal ranks, so a tie is the common case rather than
+        // the edge one: two rows a single retriever ranked the same fuse identically.
+        repo.search(hybrid("relevance"));
+        assertThat(orderByClause(capturedSql())).isEqualTo("rrf DESC, posted_at DESC, id ASC");
     }
 
     @Test

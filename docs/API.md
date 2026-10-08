@@ -102,7 +102,7 @@ per-user budget on AI endpoints.
 
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/jobs` | search: `q, skills, location, remote, company, minSalary, maxSalary, status, sort=posted\|salary\|title\|match\|relevance, page, size` — blank `sort` = relevance for a query, recency for a browse |
+| GET | `/jobs` | search: `q, skills, location, remote, company, minSalary, maxSalary, status, sort=posted\|salary\|title\|match\|relevance, page, size` — blank `sort` = relevance for a query, recency for a browse; every ordering ends in the job id, so a page is a partition of the board rather than of a plan's mood |
 | GET | `/jobs/saved` | bookmarked jobs |
 | POST | `/jobs` | create a job (with inline `company`) |
 | POST | `/jobs/import` | pasted/imported posting |

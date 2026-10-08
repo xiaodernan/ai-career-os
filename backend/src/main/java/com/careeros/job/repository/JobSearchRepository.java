@@ -71,12 +71,23 @@ public class JobSearchRepository {
      */
     static final double SEMANTIC_DISTANCE_FLOOR = 0.98;
 
+    /**
+     * The board's orderings, each ending in the row's own id.
+     *
+     * <p>Every sort key here can tie: two postings share a {@code posted_at} (the seed writes whole
+     * days, and a bulk import writes one transaction's clock), a salary band repeats, a title
+     * repeats, two matches score the same. A paged query over a non-total order is not a
+     * partition -- the row that falls between two pages is decided by whichever plan PostgreSQL
+     * felt like, and the same URL can answer different rows on two visits. The trailing {@code id}
+     * makes each order total without changing any visible one, because it only ever separates rows
+     * the previous key called equal.
+     */
     private static final Map<String, String> ORDERINGS = Map.of(
-            "posted", "j.posted_at DESC",
-            "salary", "j.salary_max DESC NULLS LAST, j.posted_at DESC",
-            "title", "lower(j.title) ASC",
-            "match", "COALESCE(m.overall, -1) DESC, j.posted_at DESC",
-            "relevance", "ts_rank(j.tsv, plainto_tsquery('simple', :q)) DESC, j.posted_at DESC");
+            "posted", "j.posted_at DESC, j.id ASC",
+            "salary", "j.salary_max DESC NULLS LAST, j.posted_at DESC, j.id ASC",
+            "title", "lower(j.title) ASC, j.id ASC",
+            "match", "COALESCE(m.overall, -1) DESC, j.posted_at DESC, j.id ASC",
+            "relevance", "ts_rank(j.tsv, plainto_tsquery('simple', :q)) DESC, j.posted_at DESC, j.id ASC");
 
     private final EntityManager em;
 
@@ -89,7 +100,9 @@ public class JobSearchRepository {
         if (hybrid(f)) {
             sql = hybridCtes(f) + SELECT_COLUMNS + "\n"
                     + " FROM scored\n"
-                    + " ORDER BY rrf DESC, posted_at DESC\n"
+                    // The fused score is a sum of two reciprocal ranks, so ties are common; the
+                    // trailing id keeps the paged answer a partition of the ranked set (#229).
+                    + " ORDER BY rrf DESC, posted_at DESC, id ASC\n"
                     + " LIMIT :limit OFFSET :offset\n";
         } else {
             StringBuilder statement = new StringBuilder(BASE_WHERE);
