@@ -170,8 +170,10 @@ def test_the_only_writer_of_note_rows_is_behind_the_post_the_client_calls() -> N
                 service.append(path.relative_to(ROOT).as_posix())
     assert walked > 30, f"the writer census read {walked} files, so its silence proves nothing"
     # The golden-journey spec polls `GET /knowledge/notes` to verify what the panel wrote through
-    # its own POST -- a reader riding behind the one writer, not a second one.
-    assert service == ["e2e/tests/golden-journey.spec.ts"], \
+    # its own POST -- a reader riding behind the one writer, not a second one. The pagination
+    # spec seeds twenty-five notes the same way, because a pager needs a board to page.
+    assert service == ["e2e/tests/golden-journey.spec.ts",
+                     "e2e/tests/pagination.spec.ts"], \
         f"a seed, script or e2e path now names the notes route or its table ({service}): the surface may have a second writer"
 
 
@@ -195,18 +197,24 @@ def test_the_files_that_speak_of_the_notes_route() -> None:
     # note verbs, and the golden-journey spec when it started driving the panel end to end.
     # Since #223 the reader census spells the panel's path (which contains the route as a
     # substring) and the knowledge gate pins the notes hook's body, so both speak it too.
+    # The architecture data model joined when section 4 gained the `user_notes` table (which
+    # is not a `knowledge_sources` row of `kind = note`), the gate that pins that table
+    # joined with it, and the pagination spec because a pager needs rows to page.
     assert sites == [
         "ai-service/tests/test_anonymous_mappers_producers_ship.py",
         "ai-service/tests/test_knowledge_controller_request_contract.py",
         f"ai-service/tests/{Path(__file__).name}",
         "ai-service/tests/test_page_window_names_and_their_readers_ship.py",
+        "ai-service/tests/test_the_data_model_names_columns_that_exist.py",
         "ai-service/tests/test_the_knowledge_page_pages_both_of_its_lists.py",
         "ai-service/tests/test_window_sizes_whose_callers_decide_them_ship.py",
         "backend/src/test/java/com/careeros/DomainApiIT.java",
         "backend/src/test/java/com/careeros/PagingApiIT.java",
         "backend/src/test/java/com/careeros/ratelimit/RateLimitFilterTest.java",
         "docs/API.md",
+        "docs/architecture.md",
         "e2e/tests/golden-journey.spec.ts",
+        "e2e/tests/pagination.spec.ts",
         "frontend/src/app/(app)/knowledge/page.tsx",
         NOTES_PANEL,
         "frontend/src/lib/api/endpoints.test.ts",

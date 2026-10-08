@@ -728,6 +728,9 @@ def test_the_dead_names_spread_in_three_measured_tiers_and_three_reached_a_scree
     `isCurrent` and `versionNo`, both calls dead, the badge alive on a second real term.
     """
     files = frontend_files()
+    # 162 rather than 160 since the pager's window arithmetic got one home (`lib/page-window.ts`,
+    # with `lib/page-window.test.ts` beside it): the rule every board's past-the-end correction
+    # and the pager itself now call, instead of the ten copies that had already drifted.
     # 160 rather than 158 since the profile editor's target-list guard joined with its own test
     # (`lib/profile-targets.ts` and `lib/profile-targets.test.ts`: the module the settings page
     # consults before it submits a target it is about to be told is not in the target list -- #216's
@@ -749,7 +752,7 @@ def test_the_dead_names_spread_in_three_measured_tiers_and_three_reached_a_scree
     # the settings page's career-profile editor; 136 rather than 135 since the knowledge page's
     # notes panel component joined. (Spell the panel's path out nowhere here -- the notes-route
     # census counts every mention of it, this file included.)
-    assert len(files) == 160, f"the frontend census walked {len(files)} files"
+    assert len(files) == 162, f"the frontend census walked {len(files)} files"
     asked = {name for row in UNAUTHORED.values() for name in row}
     assert len(asked) == 56, f"{len(asked)} dead names are asked, pinned 56"
     classified = set()
