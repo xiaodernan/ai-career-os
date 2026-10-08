@@ -12,8 +12,10 @@ the note row asks sixteen names and `NoteItem` answers six of them, `Conversatio
 every *primary* ask and the copilot screen reads five of the seven authored names. One hook is a
 bare-list route: `GET /jobs/saved` answers `List<SavedJobItem>`, so `normalizePage` takes its array
 branch and the four page-envelope names are dead there exactly as they are on the versions row --
-and `SavedJobItem` ships `note` and `savedAt`, which the row reaches through nobody: `normalizeJob`
-unwraps `job` and stops, and no file under `frontend/src` reads `.savedAt` at all.
+and `SavedJobItem` ships `note` and `savedAt` beside the job, which #230 gave their first reader:
+the arrow asks both where the wrapper names them (the spread hands only `job` to `normalizeJob`,
+whose unwrap stops there), and the Saved tab prints when the bookmark was made and, when one was
+written, its note.
 
 The fourth was the finding, and #226 fixed it. `useAIUsage` targets `/ai-usage/summary`, whose
 handler builds a `Map<String, Object>` by hand and emits exactly eight keys; the hook used to ask
@@ -61,7 +63,9 @@ RECORD_FILES = {
 ACTIVITY_FILE = "com/careeros/activity/web/ActivityController.java"
 
 # The population #192 counted and did not bind, in source order: (the hook that passes it, the
-# receiver the arrow names). `j` is a spread, not a reader census -- see SITES below.
+# receiver the arrow names). `j` reads the two names the SavedJobItem wrapper itself owns --
+# `note`/`savedAt` -- beside the spread into `normalizeJob`, whose unwrap stops at `job` (the named
+# gate below pins that it never grows these reads).
 # #226 deleted `useAIUsage`'s three breakdown arrows (`a`/`m`/`d`): two asked for lists no
 # producer authors, and the third rebuilt a keyed map's values through `list`, losing the names.
 SITES = [("useSavedJobs", "j"), ("useKnowledgeNotes", "n"), ("useConversations", "c")]
@@ -99,7 +103,7 @@ PRODUCER = {
 # Measured at this plane: one entry per reader call, in source order, keyed by the receiver it names.
 # `idStr(x)` counts as a call for the one name its own declaration parses.
 ASKS = {
-    ("useSavedJobs", "j"): [],
+    ("useSavedJobs", "j"): [["note"], ["savedAt"]],
     ("useKnowledgeNotes", "n"): [["id"], ["title", "name"], ["content", "body", "text"],
                                  ["kind", "type"], ["tags", "labels"],
                                  ["sourceId", "source_id"], ["createdAt", "created_at"],
@@ -149,7 +153,7 @@ EMITTED_UNASKED = {"cachedTokens", "inputTokens", "outputTokens", "perModel", "r
 # (hook, receiver) -> (call count, name count). Derived by the scanner below and pinned so a
 # narrowed scan, a lost import alias or a moved call has to be reconciled, not absorbed.
 SCANNER_SHAPE = {
-    ("useSavedJobs", "j"): (0, 0),
+    ("useSavedJobs", "j"): (2, 2),
     ("useKnowledgeNotes", "n"): (8, 16),
     ("useConversations", "c"): (6, 12),
     ("useAIUsage", "raw"): (3, 3),
@@ -445,25 +449,35 @@ def test_jobs_saved_answers_a_bare_list_so_the_page_envelope_names_are_dead_ther
         "the saved tab reads a different pair off the page object than this file describes")
 
 
-def test_savedjobitem_ships_three_names_and_the_row_reaches_one():
-    """The bookmark note and timestamp are authored, shipped and read by nobody."""
+def test_savedjobitem_ships_three_names_and_the_saved_row_asks_all_three():
+    """The bookmark note and timestamp: authored, shipped, and read since #230.
+
+    The wrapper owns `note`/`savedAt` beside `job`, so their reader is the arrow that spreads it --
+    inside `normalizeJob` they would be asked of the unwrapped job row, which never carries them.
+    The screen half of the claim is the Saved tab's own dotted reads: the old case existed because
+    *nothing* under `frontend/src` named `savedAt`, and a field whose only reader disappears is how
+    a shipped column becomes a lie in the docs.
+    """
     assert record_components("SavedJobItem") == SAVED_JOB_ITEM
-    assert calls_for("useSavedJobs").get("j", []) == []
+    assert calls_for("useSavedJobs").get("j", []) == [["note"], ["savedAt"]]
     normalize_job = function_body(read(NORMALIZE), "export function normalizeJob(")
     unwrap = re.findall(r'pick\(raw, "job", "data"\)', normalize_job)
     assert unwrap, "normalizeJob no longer unwraps the SavedJobItem wrapper, so every ask below " \
                    "would land on the wrapper instead of the job"
     for name in ("note", "savedAt"):
         assert f'"{name}"' not in normalize_job, (
-            f"normalizeJob now reads {name!r}; the saved row reaches it and this claim is stale")
-    assert sorted({m.group(0) for rel in frontend_files()
-                   for m in re.finditer(r"\w+\.savedAt\b", read(FRONT / rel))}) == [], (
-        "something reads `.savedAt` now; name the reader here before the field disappears again")
-    note_readers = sorted(rel for rel in frontend_files()
-                          if re.search(r"\.note\b", read(FRONT / rel)))
-    assert "app/(app)/jobs/page.tsx" not in note_readers, (
-        f"the saved tab reads a note now ({note_readers}); then the bookmark note is live and the "
-        "row has to ask for it")
+            f"normalizeJob now reads {name!r}; the wrapper's own names belong to the arrow, and "
+            "asked after the unwrap they would probe the job row, which lacks them")
+    saved_at = {rel: sorted({m.group(0) for m in re.finditer(r"\w+\.savedAt\b", read(FRONT / rel))})
+                for rel in frontend_files()}
+    saved_at = {rel: hits for rel, hits in saved_at.items() if hits}
+    assert saved_at == {"app/(app)/jobs/page.tsx": ["job.savedAt"]}, (
+        f"the `.savedAt` readers are now {saved_at}; this case names the one screen, so a moved or "
+        "multiplied read has to be reconciled here before the field changes hands again")
+    jobs = read(JOBS_PAGE)
+    note_reads = sorted({m.group(0) for m in re.finditer(r"\w+\.note\b", jobs)})
+    assert note_reads == ["job.note"], (
+        f"the Saved tab reads {note_reads} -- not the bookmark note off the row that asks for it")
 
 
 def test_noteitem_answers_six_names_and_the_note_row_asks_sixteen():
@@ -593,7 +607,10 @@ def test_every_hook_is_named_by_the_screen_that_mounts_it():
 
 
 def test_the_scanner_sees_every_call_and_name_in_this_population():
-    """The census itself, pinned: 17 calls and 31 names across four receivers, none absorbed."""
+    """The census itself, pinned: 19 calls and 33 names across four receivers, none absorbed.
+
+    19/33 rather than 17/31 since #230: `useSavedJobs`'s row went from a bare spread to two named
+    reads, the wrapper's own `note` and `savedAt`."""
     vocabulary = reader_vocabulary()
     assert vocabulary == READER_VOCABULARY, (
         f"the reader vocabulary resources.ts can reach is now {vocabulary}; this file's scan is "
@@ -609,7 +626,7 @@ def test_the_scanner_sees_every_call_and_name_in_this_population():
             f"{SCANNER_SHAPE[key][0]}/{SCANNER_SHAPE[key][1]}")
         totals["calls"] += shape[0]
         totals["names"] += shape[1]
-    assert (totals["calls"], totals["names"]) == (17, 31), (
+    assert (totals["calls"], totals["names"]) == (19, 33), (
         f"the census is {totals}; every dead-name claim above is measured over these calls, so "
         "re-derive the tables before changing this number")
 

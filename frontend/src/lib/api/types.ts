@@ -159,6 +159,9 @@ export interface Job {
   source?: "seed" | "user_paste" | "agent_research" | string;
   externalUrl?: string | null;
   saved?: boolean;
+  /** only saved rows carry these two (`SavedJobItem`): the note written at save time, and when */
+  note?: string | null;
+  savedAt?: string | null;
   /** joined from /jobs or /reports/dashboard */
   latestMatch?: JobMatch | null;
   /** detail payload */

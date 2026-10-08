@@ -17,6 +17,7 @@ import { JobCard } from "@/components/jobs/job-card";
 import { JobFilterPanel } from "@/components/jobs/job-filters";
 import { AnalyzeJdDialog } from "@/components/jobs/analyze-jd-dialog";
 import { ImportJobDialog } from "@/components/jobs/import-job-dialog";
+import { relativeTime } from "@/lib/format";
 import { useJobs, useResumes, useResume, useSavedJobs } from "@/lib/hooks/resources";
 import { useUrlState } from "@/lib/hooks/use-url-state";
 import { filterAndPaginate, hasActiveJobFilters, profileSkillSuggestions } from "@/lib/job-filter";
@@ -254,6 +255,17 @@ export default function JobsPage() {
                   {page.items.map((job) => (
                     <li key={job.id}>
                       <JobCard job={tab === "saved" ? { ...job, saved: true } : job} />
+                      {tab === "saved" && (job.note || job.savedAt) ? (
+                        <div className="mt-1.5 space-y-0.5 px-1 text-xs text-muted-foreground">
+                          {job.savedAt ? <p>Saved {relativeTime(job.savedAt)}</p> : null}
+                          {job.note ? (
+                            <p>
+                              <span className="font-medium text-foreground">Note: </span>
+                              {job.note}
+                            </p>
+                          ) : null}
+                        </div>
+                      ) : null}
                     </li>
                   ))}
                 </ul>

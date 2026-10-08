@@ -214,10 +214,14 @@ export function useSavedJobs() {
     queryKey: ["saved-jobs"],
     queryFn: async (): Promise<Page<Job>> =>
       // GET /jobs/saved binds no parameters and answers with the whole bookmark list, so a page
-      // size here would be a number the server never reads.
+      // size here would be a number the server never reads. Each row is a SavedJobItem: the spread
+      // hands `job` to `normalizeJob`, which stops at the unwrap, so the two names the wrapper
+      // itself owns -- the note written at save time and when that was -- are read here.
       normalizePage(await api.get<unknown>(endpoints.savedJobs), (j) => ({
         ...normalizeJob(j),
         saved: true,
+        note: str(j, "note"),
+        savedAt: str(j, "savedAt"),
       })),
   });
 }
