@@ -70,19 +70,23 @@ frontend/backend/ai-service can also run natively for dev (`pnpm dev`, `mvn spri
 ├── docs/                         # architecture, product-plan, api, rag, agents, evaluation, security, deployment
 ├── backend/                      # Spring Boot (Maven)
 │   └── src/main/java/com/careeros/
-│       ├── config/               # security, cors, sse, redis, storage, web envelope
-│       ├── common/               # ApiResponse envelope, exceptions, errors, pagination
-│       ├── auth/                 # register/login/refresh/logout/reset, JWT, roles
-│       ├── user/                 # users, profiles, preferences, memories
-│       ├── resume/               # resumes, versions, parsed entities (exp/proj/skill)
-│       ├── job/                  # jobs, companies, saved jobs, matches
+│       ├── activity/             # agent runs + traces, AI usage events, token-cost accounting
+│       ├── ai/                   # typed ai-service client + SSE relay
 │       ├── application/          # applications + kanban statuses + notes + reminders
-│       ├── interview/            # sessions, qa turns, evaluations
+│       ├── auth/                 # register/login/refresh/logout/reset, JWT, roles
+│       ├── common/               # ApiResponse envelope, exceptions, errors, pagination
+│       ├── config/               # security, cors, sse, redis, storage, web envelope
 │       ├── conversation/         # copilot chats, messages, artifacts, actions
+│       ├── health/               # liveness + dependency probe
+│       ├── interview/            # sessions, qa turns, evaluations
+│       ├── job/                  # jobs, companies, saved jobs, matches
 │       ├── knowledge/            # sources, documents, chunks (meta; vectors owned by ai-service)
-│       ├── agent/                # agent run/trace records, activity API
-│       ├── billing/             # ai usage / token cost accounting
-│       └── search/               # global search (⌘K) aggregation
+│       ├── ratelimit/            # Redis sliding-window filter
+│       ├── report/               # dashboard read model (aggregates over the other domains)
+│       ├── resume/               # resumes, versions, parsed entities (exp/proj/skill)
+│       ├── search/               # global search (⌘K) aggregation
+│       ├── storage/              # MinIO private bucket, magic-byte validation
+│       └── user/                 # users, profiles, preferences, memories
 ├── ai-service/                   # FastAPI
 │   └── app/
 │       ├── providers/            # llm/: openai_compat, anthropic, ollama, mock(测试专用)
@@ -91,16 +95,18 @@ frontend/backend/ai-service can also run natively for dev (`pnpm dev`, `mvn spri
 │       ├── rag/                  # rewrite → intent → hybrid retrieve → filter → rerank → compress → compose → cite
 │       ├── agents/               # orchestrator + subagents + tools/ (15 tools) + memory
 │       ├── features/             # resume_parse, jd_analyze, match, tailor, cover_letter, interview
-│       ├── evals/                # dataset, metrics (recall/precision/MRR/faithfulness…), experiment runner
+│       ├── eval/                 # dataset, metrics (recall/precision/MRR/faithfulness…), experiment runner
+│       ├── core/                 # config, db pool, request context, task bus, provider registry
 │       ├── ops/                  # embed_jobs backfill (+ the service's periodic sweep of new jobs)
 │       ├── db/                   # asyncpg repositories for chunks/embeddings/agent_traces
 │       └── api/                  # /internal/* REST+SSE endpoints consumed by backend
 ├── frontend/                     # Next.js App Router
 │   └── src/
 │       ├── app/(auth)/           # login, register, forgot-password, reset-password
-│       ├── app/(app)/            # dashboard, resume, jobs, jobs/[id], companies/[id],
+│       ├── app/(app)/            # dashboard, resumes, jobs, jobs/[id], companies/[id],
 │       │                         # applications, interviews, interviews/[id], copilot,
-│       │                         # knowledge, activity, settings, search
+│       │                         # knowledge, activity, settings (⌘K search is a component,
+│       │                         # not a route -- it overlays any screen)
 │       ├── components/ui/        # design-system primitives (custom shadcn)
 │       ├── components/ai/        # AI visual language: MatchRing, ProcessingSteps,
 │       │                         # EvidenceCard, StreamingText, SourceChip, AgentTraceView
@@ -296,7 +302,7 @@ hallucinated), tailor (reorder/reword only, verifier pass checks every claim map
 to a source chunk → reject fabrication), cover-letter (variants), interview
 (dynamic question state machine: ask → eval → follow-up decision → difficulty adapt).
 
-### 6.6 Evals (`app/evals`)
+### 6.6 Evals (`app/eval`)
 Curated dataset (jsonl) of query→expected chunk ids / expected claims; metrics:
 recall@k, precision@k, MRR, context relevance, answer relevance, faithfulness
 (claim-evidence NLI via LLM), latency, token cost; experiment configs comparable
