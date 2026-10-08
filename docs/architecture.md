@@ -121,24 +121,28 @@ soft-delete via `deleted_at` only where needed, `user_id` FK on **every**
 user-scoped table (ownership is enforced in backend layer + a single SQL predicate).
 
 ### 4.1 Identity & memory
-- `users(id, email uniq, password_hash, display_name, avatar_url, role, status, created_at)`
-- `refresh_tokens(id, user_id, token_hash, expires_at, revoked_at)`
-- `password_reset_tokens(id, user_id, token_hash, expires_at, used)`
+- `users(id, email uniq, password_hash, auth_provider, display_name, avatar_url, role,
+   status, created_at)`
+- `refresh_tokens(id, user_id, token_hash, family_id, expires_at, revoked_at)`
+  → a reused token revokes its whole family, so `family_id` is what rotation detects.
+- `password_reset_tokens(id, user_id, token_hash, expires_at, used_at)`
 - `user_profiles(id, user_id, headline, summary, location, years_experience, target_roles
-   jsonb, target_locations jsonb, work_authorization jsonb, links jsonb)`
+   jsonb, target_locations jsonb, work_authorization jsonb, links jsonb, preferences jsonb)`
 - `user_memories(id, user_id, kind enum[skill, preference, goal, interview_pattern,
    learning_progress, fact], key, content text, importance float, source enum
    [resume_parse, conversation, interview, manual], last_used_at, embedding vector)`
   → long-term agent memory; short-term memory = conversation messages.
 
 ### 4.2 Resume intelligence
-- `resumes(id, user_id, title, source_file_key, status enum[uploaded, parsing, parsed,
-   failed], current_version_id)`
+- `resumes(id, user_id, title, source_file_key, parse_error, status enum[uploaded,
+   parsing, parsed, failed], current_version_id)` — `parse_error` is the only place a
+  `failed` status says why.
 - `resume_versions(id, resume_id, user_id, label, kind enum[original, tailored],
    job_id nullable, structured jsonb (the canonical ResumeProfile JSON, §3 of PRD),
-   plaintext text, diff jsonb nullable /* before-after for tailoring */, created_at)`
-- `experiences(id, resume_version_id, user_id, company, title, start_date, end_date,
-   location, bullets text[], summary)` · `projects(id, resume_version_id, user_id,
+   plaintext text, score jsonb /* the parse's own numbers, what /parse answers with */,
+   diff jsonb nullable /* before-after for tailoring */, created_at)`
+- `experiences(id, resume_version_id, user_id, company, title, start_date, start_month,
+   end_month, location, bullets text[], summary)` · `projects(id, resume_version_id, user_id,
    name, role, period, bullets, tech text[], url)` · `educations(...)` ·
   `achievements(...)`: same pattern — queryable structured rows derived from parse.
 - `skills(id, user_id, name uniq-per-user, category enum, level self_reported|inferred,
@@ -150,7 +154,7 @@ user-scoped table (ownership is enforced in backend layer + a single SQL predica
    text, interview_process text, overview, sources jsonb /* external data must carry source */)`
 - `jobs(id, company_id, title, location, remote_type enum, employment_type, salary_min,
    salary_max, salary_currency, description text, requirements text[], nice_to_have
-   text[], responsibilities text[], skills text[], required_years numeric, status
+   text[], responsibilities text[], skills text[], experience_years numeric, status
    enum[open, closed], source enum[seed, user_paste, agent_research], external_url,
    embedding vector, tsv tsvector GENERATED)`
 
@@ -177,13 +181,22 @@ user-scoped table (ownership is enforced in backend layer + a single SQL predica
    required skills this resume cannot evidence, with the JD's OWN priority word so the badge never
    invents urgency, and its own phrase for asking (closing advice belongs to `preparation`) */,
    narrative, model, created_at, uniq(user,job,rv))`
-- `applications(id, user_id, job_id nullable, company_id, title, status enum[saved,
-   applied, oa, interview, final_round, offer, rejected], stage_order, notes,
-   reminder_at, resume_version_id, jd_id, match_id, applied_at, updated_by_user)`
-  → kanban board column = status; drag & drop = PATCH status.
+- `applications(id, user_id, job_id nullable, company_id, company_name, title, position,
+   status enum[saved, applied, oa, interview, final_round, offer, rejected], notes,
+   reminder_at, resume_version_id, jd_id, match_id, applied_at, offer_compensation,
+   rejection_reason)`
+  → kanban board column = status; the card's place inside it is `position`, and a drag
+  writes that (`PUT /applications/{id}/reorder`), not the status. `offer_compensation`
+  and `rejection_reason` are the outcome pair — what a card carries out of the board.
+- `application_events(id, application_id, user_id, kind enum[status, note, reminder,
+   outcome, interview_record, attachment], payload jsonb, created_at)`
+  → the timeline: one row per transition, append-only. `GET /applications/{id}/timeline`
+  replays it and the dashboard's recent activity reads it, so a card's history is a
+  query rather than a diff of two states.
 
 ### 4.4 Interview
-- `interview_sessions(id, user_id, job_id, jd_id, resume_version_id, mode enum
+- `interview_sessions(id, user_id, job_id, jd_id, resume_version_id, company_name,
+   position_title, mode enum
    [behavioral, technical, system_design, ai_llm, rag, agent, backend, mixed],
    status enum[active, paused, completed, abandoned], difficulty current float,
    config jsonb, started_at, finished_at)`
@@ -201,11 +214,17 @@ user-scoped table (ownership is enforced in backend layer + a single SQL predica
    outputs rendered by frontend: match cards, resume drafts… */, sources jsonb
    /* citations */, actions jsonb /* suggested follow-up actions */, agent_run_id,
    created_at)`
+- `user_notes(id, user_id, title, content, tags text[], created_at, updated_at)`
+  → the notes behind `GET /knowledge/notes`. Not the same thing as a `knowledge_sources`
+  row of `kind = note`: that one is an *ingested* note, chunked and embedded so it can be
+  cited, while this is the user's own scratch text — searchable by the ⌘K palette,
+  never a retrieval source.
 - `knowledge_sources(id, user_id, kind enum[resume, project, note, jd, company,
    interview_feedback, certificate, course, goal], ref_id, title, status enum
-   [pending, ingesting, ready, failed], error, doc_id)`
+   [pending, ingesting, ready, failed], error, document_id)`
 - `documents(id, user_id, source_id, file_key nullable, media_type, title, content_hash,
-   text_excerpt, meta jsonb)`
+   lang, status, error, text_excerpt, meta jsonb)` — `status`/`error` are the ingestion
+  state the sources list polls; `content_hash` is what makes a re-upload a no-op.
 - `document_chunks(id, document_id, user_id, ordinal, text, token_count, meta jsonb
    /* section path e.g. resume>experience>3rd-intern, skill tags */, embedding vector,
    tsv tsvector GENERATED, uniq(document_id, ordinal))`
@@ -213,11 +232,13 @@ user-scoped table (ownership is enforced in backend layer + a single SQL predica
 - `agent_runs(id, user_id, root_run_id nullable, agent enum[career, resume,
    job_research, jd_analyst, rag, interview, learning, tracker], trigger, model,
    status, input_tokens, output_tokens, cached_tokens, cost_usd, latency_ms, error)`
-- `agent_traces(id, run_id, seq, kind enum[step_start, tool_call, tool_result,
+- `agent_traces(id, run_id, seq, agent, kind enum[step_start, tool_call, tool_result,
    llm_call, retrieval, rerank, handoff, message, final], payload jsonb,
-   created_at)` → powers the **AI Activity / Debug view**.
-- `ai_usage_events(id, user_id, run_id, model, kind, input_tokens, output_tokens,
-   cached_tokens, cost_usd, latency_ms)` → dashboard cost tracking.
+   created_at)` → powers the **AI Activity / Debug view**; `agent` names whose step it
+  was, so a handoff is visible in the trace and not only in the run.
+- `ai_usage_events(id, user_id, run_id, model, provider, kind, input_tokens,
+   output_tokens, cached_tokens, cost_usd, latency_ms)` → dashboard cost tracking;
+  `provider` is what a per-model price is looked up against.
 - Indexes: HNSW on chunk.embedding; GIN on tsv; btree on all user_id; partial on
   applications(status); jsonb GIN where queried.
 
