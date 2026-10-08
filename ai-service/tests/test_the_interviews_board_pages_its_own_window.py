@@ -9,15 +9,16 @@ simply not on the screen. #218/#219/#220 already settled the shape on
 the other three boards; this file applies it to the fourth, and the difference the
 fourth brings: its hook's literal (50) does not agree with its route's default (20),
 so this is the case where the pager's constant *narrows* the window rather than
-restating what the hook already asked.
+restating what the hook already asked. (#228 has since moved that literal to 20, so
+the narrowing is gone and the constant restates the route again.)
 
 The board now asks `{ page: state.page, size: PAGE_SIZE }` with `PAGE_SIZE` restating
 the route's own 20, puts the page index in the URL, renders `<Pagination>` gated on
 `total > PAGE_SIZE`, and runs #219's past-the-end correction over the answer's own
 window. The hook takes `params?` and keys the cache `["interview", "sessions", params]`
-so each page is its own entry; the literal 50 stays in the hook body, now shadowed on
-the only path that exists -- what to do with the literal itself stays #195's open
-question and is not touched here.
+so each page is its own entry; #228 moved the hook's literal to the route's own 20, so
+the literal is no longer shadowed by anything and the window the wire sees is the one
+the board asked for.
 
 Nothing about `?size=` policy is fixed here either: `PAGE_SIZE` only ever restates
 the number the route would have used anyway.
@@ -94,11 +95,11 @@ def test_the_hook_takes_a_window_and_keys_each_page_as_its_own_cache_entry():
         f"the cache no longer separates pages, so page 1 would answer from page 0's entry: "
         f"{collapse(body)[:160]}")
     assert re.search(r"api\.get<unknown>\(endpoints\.interviews, "
-                     r"\{ size: 50, \.\.\.\(params \?\? \{\}\) \}\)", collapse(body)), (
+                     r"\{ size: 20, \.\.\.\(params \?\? \{\}\) \}\)", collapse(body)), (
         f"the caller's window is no longer spread over the literal, so an asked-for page "
         f"would never reach the wire: {collapse(body)}")
-    # The literal 50 overstates the route's 20 and stays in the body -- this gate pins that
-    # it is shadowed, not deleted: #195's open question about the literal is not this unit's.
+    # #228 moved the literal to the route's own 20, so the two now agree; what this gate
+    # still pins is that the caller's window is spread over it rather than spelled beside it.
     assert hook_calls("useInterviewSessions") == [
         ("app/(app)/interviews/page.tsx", "{ page: state.page, size: PAGE_SIZE }"),
     ], f"the call sites moved: {hook_calls('useInterviewSessions')}"
@@ -150,9 +151,8 @@ def test_the_board_corrects_a_past_the_end_page_from_the_answers_own_window():
     assert re.search(r"const total = sessions\.data\?\.total \?\? 0;", page), (
         "the formula's numerator is no longer the answer's total")
     assert re.search(
-        r"const lastPage = sessions\.data\n"
-        r"\s*\? Math\.max\(0, Math\.ceil\(total / Math\.max\(1, sessions\.data\.size\)\) - 1\)\n"
-        r"\s*: 0;", page), (
+        r"const lastPage = sessions\.data \? lastPageOf\(total, sessions\.data\.size\) : 0;",
+        page), (
         "the board no longer derives lastPage from the answer's own window and total, so a "
         "shared past-the-end page would stay empty")
     assert re.search(
@@ -176,7 +176,7 @@ def test_the_route_binds_the_page_the_board_sends_and_orders_the_rows_it_pages()
         "the handler no longer forwards the request's own page and size to the service, so "
         "the window the board asks for would be decided elsewhere")
     service = collapse(java(SERVICE))
-    assert ("findByUserIdOrderByStartedAtDesc(userId, Paging.of(page, size).pageable())"
+    assert ("findByUserIdOrderByStartedAtDescIdAsc(userId, Paging.of(page, size).pageable())"
             in service), (
         "the list no longer comes back clamped and in a deterministic order, so pages of it "
         "would repeat or skip rows -- or a `?size=` past the ceiling would reach the query "

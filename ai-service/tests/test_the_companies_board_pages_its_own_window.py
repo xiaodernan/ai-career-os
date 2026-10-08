@@ -127,9 +127,8 @@ def test_the_board_puts_its_page_in_the_url_and_asks_for_it():
     assert re.search(r"const total = companies\.data\?\.total \?\? 0;", page), (
         "the formula's numerator is no longer the answer's total")
     assert re.search(
-        r"const lastPage = companies\.data\n"
-        r"\s*\? Math\.max\(0, Math\.ceil\(total / Math\.max\(1, companies\.data\.size\)\) - 1\)\n"
-        r"\s*: 0;", page), (
+        r"const lastPage = companies\.data \? lastPageOf\(total, companies\.data\.size\) : 0;",
+        page), (
         "the board no longer derives lastPage from the answer's own window and total, so a "
         "shared past-the-end page would stay empty")
     assert re.search(

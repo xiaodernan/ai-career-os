@@ -30,7 +30,7 @@ companies list (#222) the same, the knowledge page's two lists (#223) the same f
 window the answer really carried feeds the correction, not the label.
 
 
-That asymmetry is what the two clamps disagree about. `asUrlNumber` adopts any integer, and its own
+That asymmetry is what the two clamps used to disagree about. `asUrlNumber` adopts any integer, and its own
 docstring says a negative page is passed through because "the window it reports corrects the pager"
 -- true for `page`, which the pager does read, and unimplemented for `size`, which nobody does. On
 the Discover tab the window is the server's (`num(raw, "page")`) and `?size=5000` asks for 5000 rows,
@@ -42,8 +42,13 @@ rows show, while `<Pagination>` is handed `size={0}` and prints `from = 0 * 0 + 
 concedes the wire half ("a page size here would be a number the server never reads"); this file pins
 the client half, where the number is read -- just never the one that shipped.
 
-Nothing about `?size=` policy is fixed here: the two clamps and the jobs pager that `?size=5000`
-hides stay owner decisions. What lands is the measurement, per name and per file, from one walk.
+Nothing about `?size=` policy is fixed here: the jobs pager that `?size=5000` hides stays an owner
+decision. What lands is the measurement, per name and per file, from one walk.
+
+Since that walk the pager has stopped deriving its own window: `pageWindow` (lib/page-window.ts)
+holds the arithmetic, and it floors the divisor `filterAndPaginate` refuses to floor -- so the
+disagreement this file measured is closed rather than merely described, by the same rule the nine
+past-the-end corrections call.
 """
 
 import re
@@ -69,6 +74,7 @@ COPILOT_PAGE = FRONT / "app" / "(app)" / "copilot" / "page.tsx"
 ACTIVITY_PAGE = FRONT / "app" / "(app)" / "activity" / "page.tsx"
 JOB_FILTER = FRONT / "lib" / "job-filter.ts"
 PAGINATION = FRONT / "components" / "common" / "pagination.tsx"
+PAGE_WINDOW = FRONT / "lib" / "page-window.ts"
 URL_STATE = FRONT / "lib" / "hooks" / "use-url-state.ts"
 PAGE_DTO = "com/careeros/common/PageDTO.java"
 PAGING = "com/careeros/common/Paging.java"
@@ -490,8 +496,8 @@ def test_the_url_number_that_reaches_the_pager_has_no_floor_and_no_ceiling():
         "from somewhere else now")
 
 
-def test_the_two_clamps_disagree_about_size_zero_because_only_one_of_them_sees_it():
-    """Case 11: filterAndPaginate refuses a non-positive window; the pager only guards it."""
+def test_the_size_zero_window_is_floored_in_the_one_place_both_clamps_read():
+    """Case 11: filterAndPaginate refuses a non-positive window; the shared rule floors it."""
     filtered = function_body(read(JOB_FILTER), "export function filterAndPaginate(")
     assert re.search(r"const size = filters\.size && filters\.size > 0 \? filters\.size : "
                      r"filtered\.length \|\| 1;", filtered), (
@@ -502,14 +508,19 @@ def test_the_two_clamps_disagree_about_size_zero_because_only_one_of_them_sees_i
         "filterAndPaginate no longer returns its own honest window in the envelope shape, which "
         "is the number the pager is not given")
     pgn = read(PAGINATION)
-    assert re.search(r"const pageCount = size > 0 \? Math\.max\(1, Math\.ceil\(total / size\)\)"
-                     r" : 1;", pgn), "the pager's own zero guard moved"
-    assert re.search(r"const from = total === 0 \? 0 : page \* size \+ 1;", pgn), (
+    assert "Math.ceil" not in pgn, (
+        "pagination.tsx derives its own page count again, so the floor and the clamp it shares "
+        "with the corrections can drift a second time")
+    helper = read(PAGE_WINDOW)
+    assert re.search(r"const pageCount = lastPageOf\(total, size\) \+ 1;", helper), (
+        f"the shared rule no longer counts the pages the pager prints: {helper[:300]}")
+    assert re.search(r"from: total === 0 \? 0 : shown \* size \+ 1,", helper), (
         "the row-count label no longer multiplies the number it was handed")
-    assert re.search(r"const to = Math\.min\(total, \(page \+ 1\) \* size\);", pgn), (
+    assert re.search(r"to: Math\.min\(total, \(shown \+ 1\) \* size\),", helper), (
         "the label's upper bound moved")
-    assert "size=0" not in pgn and "Math.max(1, size)" not in pgn, (
-        "the pager has grown its own floor, which is the fix this file is not making")
+    assert re.search(r"Math\.max\(1, size\)", helper), (
+        "the shared rule no longer floors the divisor, so the pager would divide by the very "
+        "size zero filterAndPaginate refuses")
 
 
 def test_the_bare_list_route_binds_no_window_at_all_so_its_hook_cannot_ask_for_one():

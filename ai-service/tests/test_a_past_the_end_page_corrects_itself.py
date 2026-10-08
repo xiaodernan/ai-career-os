@@ -9,9 +9,10 @@ builds the `Page` with the requested index whatever the offset; `Paging`'s docst
 the contract, "a page past the end is simply empty"). The answer is also what corrects it --
 `lastPage` divides the answer's own `total` by the answer's own `size` (the window that really
 produced the rows: `Paging.of` may have clamped it, and `normalizePage` can report 0 when its
-`size` field is absent from an empty window, hence the `Math.max(1, ...)` floor), and a layout
-effect rewrites the URL page when the requested one is past that end. A `useLayoutEffect` rather
-than a plain effect because the stale commit paints its empty copy first: React flushes a layout
+`size` field is absent from an empty window) through `lastPageOf`, whose divisor is floored
+at 1, and a layout effect rewrites the URL page when the requested one is past that end. A
+`useLayoutEffect` rather than a plain effect because the stale commit paints its empty copy
+first: React flushes a layout
 effect's state update before the browser paints, so the wrong screen is replaced, not seen.
 
 The Saved tab needs no second mechanism: its window is computed client-side
@@ -33,6 +34,7 @@ JOBS_PAGE = FRONT / "app" / "(app)" / "jobs" / "page.tsx"
 NORMALIZE = FRONT / "lib" / "api" / "normalize.ts"
 JOB_FILTER = FRONT / "lib" / "job-filter.ts"
 PAGING = JAVA / "com" / "careeros" / "common" / "Paging.java"
+PAGE_WINDOW = FRONT / "lib" / "page-window.ts"
 
 SIZE_ZERO_SOURCE = re.compile(r'size: num\(raw, "size"\) \?\? arr\.length,')
 PAGING_FLOOR = re.compile(r"Math\.min\(Math\.max\(size, 1\), MAX_PAGE_SIZE\)")
@@ -49,9 +51,8 @@ def test_the_applications_board_corrects_a_past_the_end_page_before_it_paints():
     assert re.search(r"const total = applications\.data\?\.total \?\? 0;", page), (
         "the formula's numerator is no longer the answer's total")
     assert re.search(
-        r"const lastPage = applications\.data\n"
-        r"\s*\? Math\.max\(0, Math\.ceil\(total / Math\.max\(1, applications\.data\.size\)\) - 1\)\n"
-        r"\s*: 0;", page), (
+        r"const lastPage = applications\.data \? lastPageOf\(total, applications\.data\.size\) : 0;",
+        page), (
         "the board no longer derives lastPage from the answer's own window and total")
     assert re.search(
         r"React\.useLayoutEffect\(\(\) => \{\n"
@@ -67,9 +68,8 @@ def test_the_jobs_board_corrects_the_same_way_over_the_window_both_tabs_share():
     assert re.search(r"const total = listView\.data\?\.total \?\? 0;", page), (
         "the formula's numerator is no longer the shared window's total")
     assert re.search(
-        r"const lastPage = listView\.data\n"
-        r"\s*\? Math\.max\(0, Math\.ceil\(total / Math\.max\(1, listView\.data\.size\)\) - 1\)\n"
-        r"\s*: 0;", page), (
+        r"const lastPage = listView\.data \? lastPageOf\(total, listView\.data\.size\) : 0;",
+        page), (
         "the board no longer derives lastPage from the answer's own window and total")
     assert re.search(
         r"React\.useLayoutEffect\(\(\) => \{\n"
@@ -92,12 +92,16 @@ def test_the_divisor_floors_at_one_because_the_empty_window_can_report_size_zero
     assert PAGING_FLOOR.search(paging), (
         "Paging.of no longer floors the window at 1, so a 0-size report is no longer a "
         "frontend-only story")
+    helper = read(PAGE_WINDOW)
+    assert re.search(r"Math\.max\(1, size\)", helper), (
+        "the shared rule no longer floors the divisor, so an empty window reporting 0 "
+        "turns lastPage into 0/0 and the correction dies silently on its own trigger")
     for page_file, divisor in ((APPS_PAGE, "applications.data.size"),
                                (JOBS_PAGE, "listView.data.size")):
         text = read(page_file)
-        assert f"Math.max(1, {divisor})" in text, (
-            f"{page_file.name} divides by the raw {divisor}: an empty window reporting 0 "
-            "turns lastPage into 0/0 and the correction dies silently on its own trigger")
+        assert f"lastPageOf(total, {divisor})" in text, (
+            f"{page_file.name} no longer hands the answer's own {divisor} to the shared "
+            "rule, so a clamped or absent window would divide something else")
 
 
 def test_the_saved_tabs_window_already_clamps_so_the_same_correction_is_idempotent_there():
@@ -106,7 +110,7 @@ def test_the_saved_tabs_window_already_clamps_so_the_same_correction_is_idempote
     names the page the clamp already chose (#194 case 7 pins the clamp itself; this binds
     it as the correction's Saved half, reachable through the `listView` swap)."""
     filtered = read(JOB_FILTER)
-    assert re.search(r"const lastPage = Math\.max\(0, Math\.ceil\(filtered\.length / size\) - 1\);",
+    assert re.search(r"const lastPage = lastPageOf\(filtered\.length, size\);",
                      filtered), "filterAndPaginate no longer derives its own last page"
     assert re.search(r"const page = Math\.min\(Math\.max\(0, filters\.page \?\? 0\), lastPage\);",
                      filtered), (

@@ -123,9 +123,8 @@ def test_the_feed_screen_puts_its_page_in_the_url_and_renders_the_pager_the_rows
     assert re.search(r"const total = runs\.data\?\.total \?\? 0;", page), (
         "the formula's numerator is no longer the answer's total")
     assert re.search(
-        r"const lastPage = runs\.data\n"
-        r"\s*\? Math\.max\(0, Math\.ceil\(total / Math\.max\(1, runs\.data\.size\)\) - 1\)\n"
-        r"\s*: 0;", page), (
+        r"const lastPage = runs\.data \? lastPageOf\(total, runs\.data\.size\) : 0;",
+        page), (
         "the screen no longer derives lastPage from the answer's own window and total, so a "
         "shared past-the-end page would stay empty")
     assert re.search(

@@ -157,9 +157,8 @@ def test_the_screen_corrects_a_past_the_end_page_from_the_answers_own_window():
     assert re.search(r"const total = resumes\.data\?\.total \?\? 0;", page), (
         "the formula's numerator is no longer the answer's total")
     assert re.search(
-        r"const lastPage = resumes\.data\n"
-        r"\s*\? Math\.max\(0, Math\.ceil\(total / Math\.max\(1, resumes\.data\.size\)\) - 1\)\n"
-        r"\s*: 0;", page), (
+        r"const lastPage = resumes\.data \? lastPageOf\(total, resumes\.data\.size\) : 0;",
+        page), (
         "the board no longer derives lastPage from the answer's own window and total, so a "
         "shared past-the-end page would stay empty")
     assert re.search(
@@ -183,6 +182,6 @@ def test_the_route_binds_the_page_the_screen_sends_and_orders_the_rows_it_pages(
         "the handler no longer passes the request through the clamp this screen's window was "
         "measured against")
     service = collapse(java(SERVICE))
-    assert "findByUserIdOrderByCreatedAtDesc(userId, pageable)" in service, (
+    assert "findByUserIdOrderByCreatedAtDescIdAsc(userId, pageable)" in service, (
         "the list no longer comes back in a deterministic order, so pages of it would repeat "
         "or skip rows")

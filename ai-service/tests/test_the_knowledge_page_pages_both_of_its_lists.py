@@ -22,8 +22,8 @@ citation focus the answer is one document, and a pager over a one-row focus is n
 The two hooks differ in how the window arrives, and that difference is pinned rather
 than smoothed over: `useKnowledgeSources` keeps `live` and `documentId` positional and
 takes the window as a third parameter; `useKnowledgeNotes` takes `params?` like every
-other list hook. Both still send `size: 50` in their bodies -- buried on their only
-paths, not deleted (#195's open question is the literals, not this unit).
+other list hook. #228 moved both literals to the route's own 20, so the window each
+hook sends on its only path is now the window its route defaults to.
 """
 
 import re
@@ -100,7 +100,7 @@ def test_the_sources_hook_takes_the_window_as_a_third_parameter():
         f"the cache no longer separates pages, so page 1 would answer from page 0's entry: "
         f"{collapse(body)[:170]}")
     assert re.search(r"api\.get<unknown>\(endpoints\.knowledge,\s*"
-                     r"\{ size: 50, documentId, \.\.\.\(params \?\? \{\}\) \}", collapse(body)), (
+                     r"\{ size: 20, documentId, \.\.\.\(params \?\? \{\}\) \}", collapse(body)), (
         f"the caller's window is no longer spread over the literal, so an asked-for page "
         f"would never reach the wire: {collapse(body)}")
     assert hook_calls("useKnowledgeSources") == [
@@ -119,7 +119,7 @@ def test_the_notes_hook_takes_the_window_the_way_every_other_list_hook_does():
         f"the cache no longer separates pages, so page 1 would answer from page 0's entry: "
         f"{collapse(body)[:160]}")
     assert re.search(r"api\.get<unknown>\(endpoints\.knowledgeNotes, "
-                     r"\{ size: 50, \.\.\.\(params \?\? \{\}\) \}\)", collapse(body)), (
+                     r"\{ size: 20, \.\.\.\(params \?\? \{\}\) \}\)", collapse(body)), (
         f"the caller's window is no longer spread over the literal, so an asked-for page "
         f"would never reach the wire: {collapse(body)}")
     assert hook_calls("useKnowledgeNotes") == [
@@ -145,9 +145,8 @@ def test_the_sources_pager_lives_on_the_page_url_and_hides_under_the_citation_fo
     assert re.search(r"const total = sources\.data\?\.total \?\? 0;", page), (
         "the formula's numerator is no longer the answer's total")
     assert re.search(
-        r"const lastPage = sources\.data\n"
-        r"\s*\? Math\.max\(0, Math\.ceil\(total / Math\.max\(1, sources\.data\.size\)\) - 1\)\n"
-        r"\s*: 0;", page), (
+        r"const lastPage = sources\.data \? lastPageOf\(total, sources\.data\.size\) : 0;",
+        page), (
         "the page no longer derives lastPage from the answer's own window and total, so a "
         "shared past-the-end page would stay empty")
     assert re.search(
@@ -191,9 +190,8 @@ def test_the_notes_pager_lives_on_its_own_url_key_and_its_own_answer():
     assert re.search(r"const total = notes\.data\?\.total \?\? 0;", panel), (
         "the formula's numerator is no longer the answer's total")
     assert re.search(
-        r"const lastPage = notes\.data\n"
-        r"\s*\? Math\.max\(0, Math\.ceil\(total / Math\.max\(1, notes\.data\.size\)\) - 1\)\n"
-        r"\s*: 0;", panel), (
+        r"const lastPage = notes\.data \? lastPageOf\(total, notes\.data\.size\) : 0;",
+        panel), (
         "the panel no longer derives lastPage from the answer's own window and total, so a "
         "shared past-the-end page would stay empty")
     assert re.search(
@@ -228,12 +226,12 @@ def test_both_routes_bind_the_window_the_two_lists_restate_and_order_their_rows(
                      r'@RequestParam\(defaultValue = "20"\) int size\)', controller, re.S), (
         "the notes route's own window moved, so the panel's PAGE_SIZE restates a different number")
     service = collapse(java(SERVICE))
-    assert ("sources.findByUserIdOrderByCreatedAtDesc(userId, paging.pageable())" in service
-            and "sources.findByUserIdAndDocumentIdOrderByCreatedAtDesc(userId, documentId, "
+    assert ("sources.findByUserIdOrderByCreatedAtDescIdAsc(userId, paging.pageable())" in service
+            and "sources.findByUserIdAndDocumentIdOrderByCreatedAtDescIdAsc(userId, documentId, "
                 "paging.pageable())" in service), (
         "the sources query no longer comes back clamped and ordered in both branches, so "
         "pages of it would repeat or skip rows")
-    assert "notes.findByUserIdOrderByUpdatedAtDesc(userId, Paging.of(page, size).pageable())" \
+    assert "notes.findByUserIdOrderByUpdatedAtDescIdAsc(userId, Paging.of(page, size).pageable())" \
         in service, (
         "the notes query no longer comes back clamped and ordered, so pages of it would "
         "repeat or skip rows")

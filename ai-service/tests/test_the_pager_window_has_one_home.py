@@ -19,7 +19,6 @@ wiring so the copies cannot quietly come back:
   eleventh copy.
 """
 
-import re
 from pathlib import Path
 
 TESTS = Path(__file__).resolve().parent

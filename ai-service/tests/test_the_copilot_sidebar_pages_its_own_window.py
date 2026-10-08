@@ -92,7 +92,7 @@ def test_the_hook_takes_a_window_and_keys_each_page_as_its_own_cache_entry():
         f"the cache no longer separates pages, so page 1 would answer from page 0's entry: "
         f"{collapse(body)[:160]}")
     assert re.search(r"api\.get<unknown>\(endpoints\.conversations, "
-                     r"\{ size: 50, \.\.\.\(params \?\? \{\}\) \}\)", collapse(body)), (
+                     r"\{ size: 20, \.\.\.\(params \?\? \{\}\) \}\)", collapse(body)), (
         f"the caller's window is no longer spread over the literal, so an asked-for page "
         f"would never reach the wire: {collapse(body)}")
     assert hook_calls("useConversations") == [
@@ -119,9 +119,8 @@ def test_the_page_puts_the_sidebar_index_in_the_url_and_asks_for_it():
     assert re.search(r"const total = conversations\.data\?\.total \?\? 0;", page), (
         "the formula's numerator is no longer the answer's total")
     assert re.search(
-        r"const lastPage = conversations\.data\n"
-        r"\s*\? Math\.max\(0, Math\.ceil\(total / Math\.max\(1, conversations\.data\.size\)\) - 1\)\n"
-        r"\s*: 0;", page), (
+        r"const lastPage = conversations\.data \? lastPageOf\(total, conversations\.data\.size\) : 0;",
+        page), (
         "the page no longer derives lastPage from the answer's own window and total, so a "
         "shared past-the-end page would stay empty")
     assert re.search(
