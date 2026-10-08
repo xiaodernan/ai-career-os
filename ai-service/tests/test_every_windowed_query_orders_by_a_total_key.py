@@ -14,10 +14,11 @@ unique and whose visible order is the alphabet (#227).
 
 The population is every repository method that takes a `Pageable`: a `Page<...>` return is a paged
 board, and a `List<...>` return with a `Pageable` parameter is a capped preview, which has the same
-boundary decision to make. One method is pinned as an exception rather than fixed --
-`ApplicationEventRepository.findByUserIdOrderByCreatedAtDesc`, the dashboard's five-row activity
-preview -- because its only caller lives in a file another unit is editing; the exception is a
-measurement, not a permission, and it names the reason.
+boundary decision to make. An explicit `@Query` outranks the method name:
+`AgentRunRepository.findRecent` spells its ORDER BY in JPQL, and so does the dashboard's
+five-row activity preview (`ApplicationEventRepository.findByUserIdOrderByCreatedAtDesc`),
+which kept its derived name and earned its tie-break in the statement instead -- its caller,
+which lives in a file another unit was editing, never had to change.
 """
 
 import re
@@ -33,11 +34,10 @@ UNIQUE_BY_METHOD = {
     "findByNameContainingIgnoreCaseOrderByNameAsc": "name",
 }
 
-# Windowed queries whose order still ties, with the reason each is still here.
-EXEMPT = {
-    "findByUserIdOrderByCreatedAtDesc":
-        "the dashboard's five-row activity preview; its only caller is being edited in another unit",
-}
+# Windowed queries whose order still ties, with the reason each is still here. Empty: the
+# dashboard's five-row activity preview was the one entry, and it now spells its tie-break in
+# an explicit @Query, so the statement -- not the name -- is what has to be believed.
+EXEMPT: dict[str, str] = {}
 
 MINIMUM = 11
 
@@ -90,11 +90,12 @@ def windowed(text: str) -> list[tuple[str, str, str]]:
 
 
 def ordering(name: str, query: str) -> list[str] | None:
-    """The sort keys of a windowed query, in order, or None when it declares no order at all."""
-    if "OrderBy" in name:
-        tail = name.split("OrderBy", 1)[1]
-        parts = [p for p in re.split(r"(Asc|Desc)", tail) if p and p not in ("Asc", "Desc")]
-        return [p.lower() for p in parts]
+    """The sort keys of a windowed query, in order, or None when it declares no order at all.
+
+    An explicit `@Query` is the statement that actually runs, so its ORDER BY outranks
+    whatever the method name spells: `findRecent` and the dashboard's activity preview both
+    order in JPQL, and judging them by their names would read an ordering nobody executes.
+    """
     if query:
         found = re.search(r"ORDER BY ([^\"\']+)", query)
         if found:
@@ -104,7 +105,12 @@ def ordering(name: str, query: str) -> list[str] | None:
                 column = re.sub(r"\s+(asc|desc)$", "", column)
                 if column:
                     keys.append(column)
-            return keys or None
+            if keys:
+                return keys
+    if "OrderBy" in name:
+        tail = name.split("OrderBy", 1)[1]
+        parts = [p for p in re.split(r"(Asc|Desc)", tail) if p and p not in ("Asc", "Desc")]
+        return [p.lower() for p in parts]
     return None
 
 def test_every_windowed_query_declares_an_order_at_all():
@@ -140,8 +146,13 @@ def test_every_ordering_ends_in_a_column_the_schema_declares_unique():
                 f"separated by the plan, and the same URL answers different rows on two visits")
 
 
-def test_the_one_known_tie_is_pinned_with_its_reason():
-    """Case 3: the exemption is a measurement with an owner, not a silent hole."""
+def test_an_exemption_is_a_measurement_with_an_owner():
+    """Case 3: an exemption is a measurement with an owner, not a silent hole.
+
+    The list is empty today -- the dashboard's activity preview was the one entry and now
+    carries its tie-break in the statement itself -- so this case guards the next one:
+    anything added must still exist and must still say who owns it.
+    """
     found = {name for path in repositories() for name, _p, _q in windowed(read(path))}
     for name, reason in EXEMPT.items():
         assert name in found, f"{name} is exempt but no repository declares it any more"
