@@ -27,6 +27,10 @@ import org.springframework.test.web.servlet.MvcResult;
  * <p>The vector space is partitioned by dimension on purpose: this suite's rows live in the last
  * two components, {@link JobSearchHybridIT}'s in the first two, so whichever order the two classes
  * run in, neither suite's rows can be recalled by the other's query.
+ *
+ * <p>The distance floor is pinned here as the cutoff it is rather than the relevance test its name
+ * invites: {@link #theFloorIsADistanceCutoffSoANoiseTailStillAnswers()} holds a row 0.97 away and
+ * drops the same shape 0.985 away, so a nonsense query still answers with noise.
  */
 class GlobalSearchHybridIT extends ApiIntegrationTest {
 
@@ -49,6 +53,31 @@ class GlobalSearchHybridIT extends ApiIntegrationTest {
      */
     private static final List<Double> ORTHOGONAL =
             List.of(0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+
+    /**
+     * A sixteen-dimensional space of this test's own. The dimension guard pinned by {@link
+     * #aRowWithMismatchedEmbeddingDimsIsSkippedNotAnError()} compares a query's width to each
+     * row's, so these rows are invisible to every eight-dimensional query the rest of the suite
+     * issues, and this query is invisible to every eight-dimensional row in the database. The
+     * shared partition has no direction left to spare, and this case needs a query and a row that
+     * are close without sharing a word.
+     */
+    private static final List<Double> NOISE_QUERY = List.of(
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0);
+    /**
+     * Cosine distance 0.97 from {@link #NOISE_QUERY}: the row's mass spread evenly over fifteen
+     * dimensions with a 0.03 sliver on the one the query occupies. That sliver is the noise tail.
+     * A dense row always parks a little mass wherever a sparse query points, and 0.03 of cosine
+     * distance is 0.97 -- under the floor, so it is recalled. Measured on the 66 seeded dev roles
+     * with the offline provider, a nonsense three-bucket query leaves 15 of them between 0.9614
+     * and 0.9736 for exactly this reason.
+     */
+    private static final String NOISE_TAIL = "[" + "0.258083,".repeat(15) + "0.03]";
+    /** The same shape 1.5 points further out, at cosine distance 0.985: past the floor, dropped. */
+    private static final String NOISE_EDGE = "[" + "0.258170,".repeat(15) + "0.015]";
+    /** The same dense shape with nothing at all on the query's dimension: cosine distance 1.0. */
+    private static final String NOISE_ORTHOGONAL = "[" + "0.258199,".repeat(15) + "0]";
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -122,6 +151,32 @@ class GlobalSearchHybridIT extends ApiIntegrationTest {
         // here, so the other cases' rows may legitimately share the page.)
         List<String> ids = jobs.findValuesAsText("id");
         assertThat(ids).contains(lexicalHit).doesNotContain(mismatched);
+    }
+
+    @Test
+    @DisplayName("the floor is a distance cutoff, not a relevance test: a noise tail still answers")
+    void theFloorIsADistanceCutoffSoANoiseTailStillAnswers() throws Exception {
+        String auth = register("gsearch-noise-" + UUID.randomUUID() + "@example.com");
+        jobService.clearEmbeddingCache();
+        String token = "gsn" + Long.toString(Math.abs(UUID.randomUUID().getMostSignificantBits()), 36);
+        String tail = createJob(auth, "Warehouse Operative " + token, "Zeta" + token);
+        String edge = createJob(auth, "Night Auditor " + token, "Eta" + token);
+        String orthogonal = createJob(auth, "Night Porter " + token, "Theta" + token);
+        vector(tail, NOISE_TAIL);
+        vector(edge, NOISE_EDGE);
+        vector(orthogonal, NOISE_ORTHOGONAL);
+
+        ai.queryEmbedding = NOISE_QUERY;
+        JsonNode jobs = search(auth, "qqqzzz" + token);
+
+        // Three rows, not one word in common with the query, spanning 1.5 points of cosine
+        // distance, and the only thing that separates them is which side of 0.98 they land on. The
+        // floor reads like a relevance test and is not one: it is a number on a dial, and a dense
+        // row's noise tail under a sparse query lands under it. That is what EVALUATION.md means
+        // by retrieval quality under the offline provider not being a measurement to act on.
+        assertThat(jobs.findValuesAsText("id"))
+                .as("0.97 is recalled as a match; 0.985 and exactly 1.0 are not")
+                .containsExactly(tail);
     }
 
     /** Three recall paths: a lexical hit, a paraphrase no keyword pass sees, a vector-only sibling. */

@@ -28,8 +28,9 @@ import org.springframework.test.web.servlet.MvcResult;
  * paraphrase (shares none, so only the vector pass can find it), and a sibling (vector near the
  * query but no keyword match). The fake ai-service answers whatever vector this test hands it, so
  * the suite needs no embedding provider: the degradation cases are an empty answer (provider down)
- * and a direction orthogonal to every row (the distance floor that keeps ranked noise from
- * masquerading as recall).
+ * and a direction orthogonal to every row (the distance floor, which drops what shares no
+ * dimension with the query and keeps the sliver that shares one -- {@link GlobalSearchHybridIT}
+ * pins both sides of that line).
  */
 class JobSearchHybridIT extends ApiIntegrationTest {
 

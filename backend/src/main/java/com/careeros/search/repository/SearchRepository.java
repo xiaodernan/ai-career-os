@@ -41,6 +41,15 @@ public class SearchRepository {
      * the same reciprocal-rank formula as {@link com.careeros.job.repository.JobSearchRepository}. */
     private static final int RRF_K = 60;
     private static final int SEMANTIC_CANDIDATES = 50;
+
+    /**
+     * Cosine-distance floor for the vector pass, shared with {@link
+     * com.careeros.job.repository.JobSearchRepository}. It drops exact orthogonality only: a row
+     * sharing no hash bucket with the query scores 1.0 and is filtered, but a noise tail still
+     * passes -- a sparse nonsense query (three hash buckets, nothing else) leaves 15 of the 66
+     * seeded dev roles between 0.9614 and 0.9736, all under this floor. That class's comment
+     * carries the measurement, and EVALUATION.md the stance.
+     */
     private static final double SEMANTIC_DISTANCE_FLOOR = 0.98;
 
     public List<JobHit> jobs(UUID userId, String q, int limit, List<Double> embedding) {

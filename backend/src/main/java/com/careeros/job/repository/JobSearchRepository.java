@@ -64,10 +64,16 @@ public class JobSearchRepository {
     static final int SEMANTIC_CANDIDATES = 50;
 
     /**
-     * Cosine-distance floor for the vector pass. Unrelated text scores near 1.0 (orthogonal
-     * vectors) and overlapping text well below it, so this excludes exactly "no measurable
-     * overlap": a typo or a nonsense query keeps answering 0 rows rather than the 50 nearest roles,
-     * which is what keyword search answered before recall existed.
+     * Cosine-distance floor for the vector pass. What it actually excludes is exact
+     * orthogonality, and nothing more: a row sharing no bucket with the query scores 1.0 and is
+     * dropped, but a noise tail still passes. Measured against the 66 seeded roles under the
+     * offline hash provider, the nonsense query "zzzzqqqnothing" hashes to three non-zero
+     * dimensions of +-0.577, so its distance to a role is one minus that role's mass on those
+     * three buckets: 51 rows land on exactly 1.0 and the other 15 land between 0.9614 and 0.9736,
+     * every one of them under the floor. A typo therefore does not answer 0 rows -- it answers the
+     * nearest few noise rows, which is what keyword search did before recall existed, only ranked
+     * by a signal that means nothing. EVALUATION.md states the same limit from the other side:
+     * retrieval quality under the offline provider is not a measurement anyone should act on.
      */
     static final double SEMANTIC_DISTANCE_FLOOR = 0.98;
 
