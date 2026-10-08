@@ -192,7 +192,7 @@ stored verbatim on the session, so the same place takes the rest of the run's tu
 | GET | `/activity/runs` | agent runs (`?page=&size=&agent=`) |
 | GET | `/activity/runs/{id}` | run + ordered traces (AI Activity detail) |
 | GET | `/ai-usage/summary` | tokens, requests, cached tokens, estimated cost |
-| GET | `/search` | global ⌘K search (`?q=`, required) across jobs/companies/resumes/interviews/notes/KB/conversations — the jobs channel is hybrid-ranked, like `/jobs?sort=relevance` |
+| GET | `/search` | global ⌘K search (`?q=`, required) across jobs/companies/resumes/notes/conversations/applications — the jobs channel is hybrid-ranked, like `/jobs?sort=relevance` |
 | GET | `/ai/stream/{taskId}` | SSE relay of an ai-service task |
 
 ## 3. Internal API — ai-service

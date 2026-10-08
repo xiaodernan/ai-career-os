@@ -59,11 +59,11 @@ core → ai core → features → frontend → quality → delivery.
 - F7.5 AI Activity / Debug view (agent run → tools → retrieval → llm → answer)
 
 ## Epic 8 — Application Tracker & Dashboard
-- F8.1 Kanban (saved→applied→oa→interview→final→offer→rejected) drag&drop, notes,
+- F8.1 Kanban (saved→applied→oa→interview→final_round→offer→rejected) drag&drop, notes,
   reminders, linked resume version/jd/match
 - F8.2 Dashboard: greeting, attention counts, progress, pipeline, recommended jobs,
   skill gaps, recent AI insights, resume score, AI usage/cost
-- F8.3 ⌘K global search across jobs/companies/resumes/interviews/notes/KB/conversations
+- F8.3 ⌘K global search across jobs/companies/resumes/notes/conversations/applications
 
 ## Epic 9 — Quality & Delivery
 - F9.1 Unit + integration tests all services; API tests with envelope/auth assertions
