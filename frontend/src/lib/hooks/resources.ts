@@ -81,11 +81,14 @@ function mapResume(raw: unknown): Resume {
   };
 }
 
-export function useResumes() {
+export function useResumes(params?: { page?: number; size?: number }) {
   return useQuery({
-    queryKey: ["resumes"],
+    queryKey: ["resumes", params],
     queryFn: async (): Promise<Page<Resume>> =>
-      normalizePage(await api.get<unknown>(endpoints.resumes, { size: 20 }), mapResume),
+      normalizePage(
+        await api.get<unknown>(endpoints.resumes, { size: 20, ...(params ?? {}) }),
+        mapResume
+      ),
   });
 }
 

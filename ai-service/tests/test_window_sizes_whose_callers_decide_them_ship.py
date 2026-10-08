@@ -10,17 +10,20 @@ Ten hooks hand `normalizePage` a request. Eight offer a `size` literal: resumes 
 applications 50, companies 20, knowledge sources 50, knowledge notes 50, interviews 50,
 conversations 50; `useSavedJobs` sends no window (its route binds none) and `useActivityRuns` sends
 `{ limit: params?.limit }`, a number that stays out of the URL when the caller omits it. Walking
-every shipped call site outside `resources.ts` finds the literal's own value decided elsewhere on
-two routes and on a third never spent at all: `useJobs`'s two callers both carry a size (the jobs
-board spreads its URL-backed `filters`, the dashboard passes `{ size: 3 }`), so the `20` at
-`resources.ts:178` is shadowed on every path -- and the case over `useUrlState` shows the shadowing
-cannot be avoided by a bad URL, because `hydrateState` seeds `{...initial}` and only overwrites a
-numeric key when `asUrlNumber` yields an integer, so `filters.size` is 12 or an address-bar integer,
-never absent. `useApplications` has one caller, and since #218 it asks
-`{ page: state.page, size: PAGE_SIZE }` -- `PAGE_SIZE` is pinned to `MAX_PAGE_SIZE`, so the `50` is
-still buried, now by the ceiling's own number rather than a stray literal.
-`useKnowledgeNotes`'s one caller passes no arguments, so its `50` stands -- and reaches a wire now
-that the knowledge page's notes panel mounts the hook.
+every shipped call site outside `resources.ts` finds the literal's own value decided elsewhere per
+call site rather than per hook: `useJobs`'s two callers both carry a size (the jobs board spreads
+its URL-backed `filters`, the dashboard passes `{ size: 3 }`), so the `20` at `resources.ts:182` is
+shadowed on every path -- and the case over `useUrlState` shows the shadowing cannot be avoided by
+a bad URL, because `hydrateState` seeds `{...initial}` and only overwrites a numeric key when
+`asUrlNumber` yields an integer, so `filters.size` is 12 or an address-bar integer, never absent.
+`useApplications` has one caller, and since #218 it asks `{ page: state.page, size: PAGE_SIZE }` --
+`PAGE_SIZE` is pinned to `MAX_PAGE_SIZE`, so the `50` is still buried, now by the ceiling's own
+number rather than a stray literal. `useResumes` is the per-call-site case since #220: the resumes
+screen asks `{ page: state.page, size: PAGE_SIZE }` (its `PAGE_SIZE` restating the route's own
+default), while the dashboard and jobs callers pass no arguments -- so the literal is shadowed on
+that one path and stands on two, which is why the shadowed set below stays per hook with jobs and
+applications only. `useKnowledgeNotes`'s one caller passes no arguments, so its `50` stands -- and
+reaches a wire now that the knowledge page's notes panel mounts the hook.
 
 The server's side of the same table: four of the eight literals agree with the route's own
 `defaultValue` (resumes 20/20, companies 20/20, jobs 20/20, applications 50/50) and four overstate
@@ -38,14 +41,17 @@ more pages pages." -- and `<Pagination>` was written in one file app-wide, the j
 applications screen rendered no pager and read no `total`: its 101st application was simply not
 there. #218 took the ceiling's own advice: the request is now `{ page: state.page, size: PAGE_SIZE }`
 with `PAGE_SIZE` pinned to `MAX_PAGE_SIZE`, and a pager under the canvas puts every row past the
-first window one page away. `useActivityRuns` is the one hook where the server still decides,
+first window one page away, and #220 gave the resumes list the same arithmetic (`PAGE_SIZE`
+restating the route's 20), so its 21st resume sits behind a pager instead of nowhere.
+`useActivityRuns` is the one hook where the server still decides,
 because `client.ts` omits an undefined param rather than sending the word, and the handler defaults
 `limit` to 30 through `Paging.first`.
 
-The page-or-raise decision is made: the board pages rather than raising its ceiling (#218, case 7
-pins the request and the pager's numbers). Still open: which number should win, and whether the
-other shadowed literal or the four overstated ones should move. What lands is the measurement --
-per hook, per call site, per route -- from one walk of each of the three tables.
+The page-or-raise decision is made: the boards page rather than raising their ceilings (#218 for
+applications, #220 for resumes; case 7 pins the request and the pager's numbers). Still open: which
+number should win, and whether the other shadowed literal or the four overstated ones should move.
+What lands is the measurement -- per hook, per call site, per route -- from one walk of each of the
+three tables.
 """
 
 import functools
@@ -73,7 +79,7 @@ MAX_PAGE_SIZE = 100
 
 # Measured off this plane; case 1 re-derives every row from the hooks' own bodies.
 WIRE = {
-    "useResumes": ("resumes", "{ size: 20 }"),
+    "useResumes": ("resumes", "{ size: 20, ...(params ?? {}) }"),
     "useJobs": ("jobs", "{ size: 20, ...clean }"),
     "useSavedJobs": ("savedJobs", None),
     "useApplications": ("applications", "{ size: 50, ...(params ?? {}) }"),
@@ -88,7 +94,7 @@ WIRE = {
 # Measured call sites, one walk; case 3 re-derives them. `""` is a call with no arguments.
 SITES = {
     "useResumes": [("app/(app)/dashboard/page.tsx", ""), ("app/(app)/jobs/page.tsx", ""),
-                   ("app/(app)/resumes/page.tsx", "")],
+                   ("app/(app)/resumes/page.tsx", "{ page: state.page, size: PAGE_SIZE }")],
     "useJobs": [("app/(app)/dashboard/page.tsx", "{ size: 3 }"),
                 ("app/(app)/jobs/page.tsx",
                  'tab === "discover" ? filters : { size: filters.size, page: filters.page }')],
@@ -436,8 +442,9 @@ def test_the_applications_board_asks_for_exactly_the_ceiling_and_pages_the_rest(
 
     renders = sorted(str(path.relative_to(FRONT)).replace("\\", "/")
                      for path in FRONT.rglob("*.tsx") if "<Pagination" in read(path))
-    assert renders == ["app/(app)/applications/page.tsx", "app/(app)/jobs/page.tsx"], \
-        f"the board's pager left the census, so the ceiling stops having a reader: {renders}"
+    assert renders == ["app/(app)/applications/page.tsx", "app/(app)/jobs/page.tsx",
+                       "app/(app)/resumes/page.tsx"], \
+        f"the pager census moved: the boards that page give the ceiling its readers: {renders}"
     assert re.search(r"\{total > PAGE_SIZE && \(", apps), \
         "the pager is no longer gated by the window it serves, so a short board would render one"
     assert re.search(r"page=\{applications\.data\?\.page \?\? state\.page\}", apps), \

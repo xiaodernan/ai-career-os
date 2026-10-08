@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FileText, FolderSearch, Sparkles, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
+import { Pagination } from "@/components/common/pagination";
 import { QueryBoundary } from "@/components/common/query-boundary";
 import { LoadingListSkeleton } from "@/components/common/loading-skeletons";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
@@ -14,9 +15,17 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useDeleteResume } from "@/lib/hooks/actions";
 import { useResumes } from "@/lib/hooks/resources";
+import { useUrlState } from "@/lib/hooks/use-url-state";
 import { formatDate } from "@/lib/format";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Resume } from "@/lib/api/types";
+
+// The route's own default window: `GET /resumes` binds `size` with `defaultValue = "20"`, so
+// this number asks for exactly what the server would have chosen anyway.
+const PAGE_SIZE = 20;
+
+// Module-level so `setUrl` (a `useCallback` keyed on this object) is stable across renders.
+const PAGE_DEFAULTS: { page: number } = { page: 0 };
 
 function statusBadge(status: string): { label: string; variant: "success" | "warning" | "destructive" | "secondary" | "ai" } {
   switch (status) {
@@ -34,11 +43,29 @@ function statusBadge(status: string): { label: string; variant: "success" | "war
 }
 
 export default function ResumesPage() {
-  const resumes = useResumes();
+  // The page index lives in the URL, so a reload or a shared list link opens the same window.
+  const [state, setUrl] = useUrlState<{ page: number }>(
+    PAGE_DEFAULTS,
+    { numericKeys: ["page"] }
+  );
+  const resumes = useResumes({ page: state.page, size: PAGE_SIZE });
   const qc = useQueryClient();
   const router = useRouter();
   const [pendingDelete, setPendingDelete] = React.useState<Resume | null>(null);
   const del = useDeleteResume();
+
+  const total = resumes.data?.total ?? 0;
+  // A past-the-end page is an empty window over a real total, not an empty list: the answer's
+  // own window is the divisor (`data.size`, floored at 1 because a normalizer payload can
+  // report 0), so the URL is corrected to the last page that exists. A layout effect, because
+  // the stale commit paints its empty copy first -- React flushes this update before the
+  // browser paints, so the wrong screen is replaced, not seen.
+  const lastPage = resumes.data
+    ? Math.max(0, Math.ceil(total / Math.max(1, resumes.data.size)) - 1)
+    : 0;
+  React.useLayoutEffect(() => {
+    if (resumes.data && state.page > lastPage) setUrl({ page: lastPage });
+  }, [resumes.data, state.page, lastPage, setUrl]);
 
   return (
     <div className="mx-auto max-w-4xl space-y-8">
@@ -128,6 +155,18 @@ export default function ResumesPage() {
             </ul>
           )}
         </QueryBoundary>
+        {total > PAGE_SIZE && (
+          <Pagination
+            page={resumes.data?.page ?? state.page}
+            size={PAGE_SIZE}
+            total={total}
+            label="resumes"
+            onPageChange={(page) => {
+              setUrl({ page });
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+          />
+        )}
       </section>
 
       <ConfirmDialog

@@ -366,7 +366,7 @@ def test_every_invalidation_promise_names_a_key_some_query_declares():
     unmatched = [p for p in sites if not matches(p)]
     assert not unmatched, "promises naming no declared key: %s" % [repr(p) for p in unmatched]
     # The walk that produced the verdict must be the one that could have failed it.
-    assert ("resumes",) in [d.segs for d in decls], "the walk lost the resumes list key"
+    assert ("resumes", "*") in [d.segs for d in decls], "the walk lost the resumes list key"
 
 
 # --- cases 2-4: the promises that refresh nothing a user can see ------------------------------
