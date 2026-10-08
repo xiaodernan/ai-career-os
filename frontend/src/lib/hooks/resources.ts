@@ -361,11 +361,16 @@ function mapSource(raw: unknown): KnowledgeSource {
  * link rather than a hint: the page holds one page of sources, so filtering what arrived locally could
  * not tell a deleted document from one that simply sits further down the list.
  */
-export function useKnowledgeSources(live = false, documentId?: string) {
+export function useKnowledgeSources(live = false, documentId?: string,
+                               params?: { page?: number; size?: number }) {
   return useQuery({
-    queryKey: ["knowledge", "sources", live ? "live" : "once", documentId ?? null],
+    queryKey: ["knowledge", "sources", live ? "live" : "once", documentId ?? null, params],
     queryFn: async (): Promise<Page<KnowledgeSource>> =>
-      normalizePage(await api.get<unknown>(endpoints.knowledge, { size: 50, documentId }), mapSource),
+      normalizePage(
+        await api.get<unknown>(endpoints.knowledge,
+                               { size: 50, documentId, ...(params ?? {}) }),
+        mapSource
+      ),
     refetchInterval: (q) => {
       if (!live) return false;
       const items = q.state.data?.items ?? [];
@@ -394,20 +399,22 @@ export function useSourceStatus(id: string | null) {
   });
 }
 
-export function useKnowledgeNotes() {
+export function useKnowledgeNotes(params?: { page?: number; size?: number }) {
   return useQuery({
-    queryKey: ["knowledge", "notes"],
+    queryKey: ["knowledge", "notes", params],
     queryFn: async (): Promise<Page<KnowledgeNote>> =>
-      normalizePage(await api.get<unknown>(endpoints.knowledgeNotes, { size: 50 }), (n) => ({
-        id: idStr(n),
-        title: str(n, "title", "name") ?? "Untitled note",
-        content: str(n, "content", "body", "text") ?? "",
-        kind: str(n, "kind", "type"),
-        tags: listOf<string>(n, "tags", "labels").map(String),
-        sourceId: str(n, "sourceId", "source_id") ?? null,
-        createdAt: str(n, "createdAt", "created_at"),
-        updatedAt: str(n, "updatedAt", "updated_at"),
-      })),
+      normalizePage(
+        await api.get<unknown>(endpoints.knowledgeNotes, { size: 50, ...(params ?? {}) }),
+        (n) => ({
+          id: idStr(n),
+          title: str(n, "title", "name") ?? "Untitled note",
+          content: str(n, "content", "body", "text") ?? "",
+          kind: str(n, "kind", "type"),
+          tags: listOf<string>(n, "tags", "labels").map(String),
+          sourceId: str(n, "sourceId", "source_id") ?? null,
+          createdAt: str(n, "createdAt", "created_at"),
+          updatedAt: str(n, "updatedAt", "updated_at"),
+        })),
   });
 }
 

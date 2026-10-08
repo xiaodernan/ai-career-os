@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Check, Pencil, StickyNote, Trash2, X } from "lucide-react";
 import { ModuleView } from "@/components/common/module-view";
+import { Pagination } from "@/components/common/pagination";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useNoteMutations } from "@/lib/hooks/actions";
 import { useKnowledgeNotes } from "@/lib/hooks/resources";
+import { useUrlState } from "@/lib/hooks/use-url-state";
 import type { KnowledgeNote } from "@/lib/api/types";
 
 /**
@@ -30,6 +32,14 @@ import type { KnowledgeNote } from "@/lib/api/types";
 
 /** Mirrors `NoteRequest`'s `@Size(max = 200)` on the title. */
 const MAX_TITLE = 200;
+
+// The route's own default window: `GET /knowledge/notes` binds `size` with
+// `defaultValue = "20"`, so this number asks for exactly what the server would have
+// chosen anyway -- the hook's own 50 literal never reaches the wire on this path.
+// `npage` rather than the page's own `page`: the sources list above keeps its index
+// under `?page=`, and two lists on one screen need two questions.
+const PAGE_SIZE = 20;
+const PAGE_DEFAULTS: { npage: number } = { npage: 0 };
 
 export function NoteCreateCard() {
   const [title, setTitle] = React.useState("");
@@ -192,7 +202,25 @@ function NoteRow({ note }: { note: KnowledgeNote }) {
 }
 
 export function NotesPanel() {
-  const notes = useKnowledgeNotes();
+  // The page index lives in the URL, so a reload or a shared list link opens the same window.
+  const [state, setUrl] = useUrlState<{ npage: number }>(
+    PAGE_DEFAULTS,
+    { numericKeys: ["npage"] }
+  );
+  const notes = useKnowledgeNotes({ page: state.npage, size: PAGE_SIZE });
+
+  const total = notes.data?.total ?? 0;
+  // A past-the-end page is an empty window over a real total, not an empty list: the answer's
+  // own window is the divisor (`data.size`, floored at 1 because a normalizer payload can
+  // report 0), so the URL is corrected to the last page that exists. A layout effect, because
+  // the stale commit paints its empty copy first -- React flushes this update before the
+  // browser paints, so the wrong screen is replaced, not seen.
+  const lastPage = notes.data
+    ? Math.max(0, Math.ceil(total / Math.max(1, notes.data.size)) - 1)
+    : 0;
+  React.useLayoutEffect(() => {
+    if (notes.data && state.npage > lastPage) setUrl({ npage: lastPage });
+  }, [notes.data, state.npage, lastPage, setUrl]);
 
   return (
     <section aria-label="Notes" className="space-y-4">
@@ -205,6 +233,20 @@ export function NotesPanel() {
           title: "No notes yet",
           description: "Write the first one above — it lands straight in the knowledge base the agents can cite.",
         }}
+        footer={
+          total > PAGE_SIZE && (
+            <Pagination
+              page={notes.data?.page ?? state.npage}
+              size={PAGE_SIZE}
+              total={total}
+              label="notes"
+              onPageChange={(page) => {
+                setUrl({ npage: page });
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+            />
+          )
+        }
         renderItem={(n) => <NoteRow key={n.id} note={n} />}
       />
     </section>

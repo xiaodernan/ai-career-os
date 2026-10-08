@@ -1,7 +1,9 @@
 "use client";
 
+import * as React from "react";
 import { Library } from "lucide-react";
 import { ModuleView } from "@/components/common/module-view";
+import { Pagination } from "@/components/common/pagination";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,20 +13,41 @@ import { useKnowledgeSources } from "@/lib/hooks/resources";
 import { useUrlState } from "@/lib/hooks/use-url-state";
 import { knowledgeFocus } from "@/lib/knowledge-focus";
 
+// The route's own default window: `GET /knowledge/sources` binds `size` with
+// `defaultValue = "20"`, so this number asks for exactly what the server would have
+// chosen anyway -- the hook's own 50 literal never reaches the wire on this path.
+const PAGE_SIZE = 20;
+
 export default function KnowledgePage() {
   // `src` is the document a citation points at: the match panel, the copilot's answer and its artifacts
   // all link `/knowledge?src=<documentId>`, which is `document_chunks.document_id` -- the `documents`
   // row the chunks came from, not this list's own `knowledge_sources` id. The narrowing is the
   // backend's, because this page holds one window of sources: filtering what arrived locally could not
   // tell a deleted document from one that simply sits past the window.
-  const [state, setUrl] = useUrlState<{ src?: string }>({ src: undefined });
+  const [state, setUrl] = useUrlState<{ src?: string; page: number }>(
+    { src: undefined, page: 0 },
+    { numericKeys: ["page"] }
+  );
   // A hand-edited `?src=` arrives as the empty string, which `buildUrl` would send as a real parameter
   // the UUID binder has to reject. Blank means "the whole board", which is also what clearing does.
   const src = knowledgeFocus(state.src);
   const showAll = () => setUrl({ src: undefined });
   // Live while anything is still ingesting: the list polls every few seconds until
   // every row reads ready/failed, so an upload visibly moves without a reload.
-  const sources = useKnowledgeSources(true, src);
+  const sources = useKnowledgeSources(true, src, { page: state.page, size: PAGE_SIZE });
+
+  const total = sources.data?.total ?? 0;
+  // A past-the-end page is an empty window over a real total, not an empty list: the answer's
+  // own window is the divisor (`data.size`, floored at 1 because a normalizer payload can
+  // report 0), so the URL is corrected to the last page that exists. A layout effect, because
+  // the stale commit paints its empty copy first -- React flushes this update before the
+  // browser paints, so the wrong screen is replaced, not seen.
+  const lastPage = sources.data
+    ? Math.max(0, Math.ceil(total / Math.max(1, sources.data.size)) - 1)
+    : 0;
+  React.useLayoutEffect(() => {
+    if (sources.data && state.page > lastPage) setUrl({ page: lastPage });
+  }, [sources.data, state.page, lastPage, setUrl]);
 
   return (
     <div className="space-y-4">
@@ -63,6 +86,20 @@ export default function KnowledgePage() {
       }
       ctaHref="/copilot"
       ctaLabel="Ask Copilot to ingest"
+      footer={
+        !src && total > PAGE_SIZE && (
+          <Pagination
+            page={sources.data?.page ?? state.page}
+            size={PAGE_SIZE}
+            total={total}
+            label="sources"
+            onPageChange={(page) => {
+              setUrl({ page });
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+          />
+        )
+      }
       renderItem={(s) => (
         <Card key={s.id}>
           <CardContent className="flex items-center gap-3">

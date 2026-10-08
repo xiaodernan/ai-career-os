@@ -193,10 +193,14 @@ def test_the_files_that_speak_of_the_notes_route() -> None:
     # contains the route as a substring), and the panel's docstring spells the four verbs it calls.
     # The knowledge controller contract test joined when it pinned the request shapes of the four
     # note verbs, and the golden-journey spec when it started driving the panel end to end.
+    # Since #223 the reader census spells the panel's path (which contains the route as a
+    # substring) and the knowledge gate pins the notes hook's body, so both speak it too.
     assert sites == [
         "ai-service/tests/test_anonymous_mappers_producers_ship.py",
         "ai-service/tests/test_knowledge_controller_request_contract.py",
         f"ai-service/tests/{Path(__file__).name}",
+        "ai-service/tests/test_page_window_names_and_their_readers_ship.py",
+        "ai-service/tests/test_the_knowledge_page_pages_both_of_its_lists.py",
         "ai-service/tests/test_window_sizes_whose_callers_decide_them_ship.py",
         "backend/src/test/java/com/careeros/DomainApiIT.java",
         "backend/src/test/java/com/careeros/PagingApiIT.java",

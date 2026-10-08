@@ -23,11 +23,15 @@ number rather than a stray literal. `useInterviewSessions` is the same single-ca
 the route's own 20, so the `50` is shadowed on the only path it has. `useCompanies` is the
 single-caller case where hook and route already agreed (20/20), and #222 still gave its one
 caller an explicit window -- the `q` param it also carries is a search key, not a window, so the
-spread's shape is the same here as everywhere else. `useResumes` is the per-call-site case since #220: the resumes
+spread's shape is the same here as everywhere else. #223 gives the knowledge page's
+two lists the same treatment: `useKnowledgeSources` gained a third parameter (after `live` and
+`documentId`) carrying the window, and `useKnowledgeNotes` gained `params?` -- so the two 50s are
+shadowed on their only paths, by two different parameter shapes. `useResumes` is the per-call-site case since #220: the resumes
 screen asks `{ page: state.page, size: PAGE_SIZE }` (its `PAGE_SIZE` restating the route's own
 default), while the dashboard and jobs callers pass no arguments -- so the literal is shadowed on
 that one path and stands on two, which is why the shadowed set below stays per hook with jobs,
-applications, companies and interviews only. `useKnowledgeNotes`'s one caller passes no arguments, so its `50` stands -- and
+applications, companies, interviews and the two knowledge lists only -- every one of them a
+single caller or a unanimous set of them. `useKnowledgeNotes`'s one caller passes no arguments, so its `50` stands -- and
 reaches a wire now that the knowledge page's notes panel mounts the hook.
 
 The server's side of the same table: four of the eight literals agree with the route's own
@@ -53,12 +57,13 @@ because `client.ts` omits an undefined param rather than sending the word, and t
 `limit` to 30 through `Paging.first`.
 
 The page-or-raise decision is made: the boards page rather than raising their ceilings (#218 for
-applications, #220 for resumes, #221 for interviews, #222 for companies; case 7 pins the request and
-the pager's numbers). Still open: which number should win, and whether the remaining shadowed
-literals (jobs, where every caller overrides; interviews and companies, where the single caller
-overrides) or the four overstated ones should move. #221 did not touch its hook's own `50` and #222
-did not touch the `20` that already agreed -- both literals are buried on the only path that
-exists now, which is the same fate #218 gave the applications literal, not a deletion.
+applications, #220 for resumes, #221 for interviews, #222 for companies, #223 for the knowledge
+page's two lists; case 7 pins the request and the pager's numbers). Still open: which number should
+win, and whether the two remaining unshadowed literals (resumes, whose two other callers pass no
+arguments; conversations, whose route the server never sees a size on) or the four overstated ones
+should move. #221 did not touch its hook's own `50` and #222 did not touch the `20` that already
+agreed -- those literals are buried on the only path that exists now, which is the same fate #218
+gave the applications literal, not a deletion.
 What lands is the measurement -- per hook, per call site, per route -- from one walk of each of the
 three tables.
 """
@@ -93,8 +98,8 @@ WIRE = {
     "useSavedJobs": ("savedJobs", None),
     "useApplications": ("applications", "{ size: 50, ...(params ?? {}) }"),
     "useCompanies": ("companies", "{ size: 20, ...(params ?? {}) }"),
-    "useKnowledgeSources": ("knowledge", "{ size: 50, documentId }"),
-    "useKnowledgeNotes": ("knowledgeNotes", "{ size: 50 }"),
+    "useKnowledgeSources": ("knowledge", "{ size: 50, documentId, ...(params ?? {}) }"),
+    "useKnowledgeNotes": ("knowledgeNotes", "{ size: 50, ...(params ?? {}) }"),
     "useInterviewSessions": ("interviews", "{ size: 50, ...(params ?? {}) }"),
     "useActivityRuns": ("activityRuns", "{ limit: params?.limit }"),
     "useConversations": ("conversations", "{ size: 50 }"),
@@ -112,8 +117,10 @@ SITES = {
                          "{ page: state.page, size: PAGE_SIZE }")],
     "useCompanies": [("app/(app)/companies/page.tsx",
                       "{ page: state.page, size: PAGE_SIZE }")],
-    "useKnowledgeSources": [("app/(app)/knowledge/page.tsx", "true, src")],
-    "useKnowledgeNotes": [("components/knowledge/notes-panel.tsx", "")],
+    "useKnowledgeSources": [("app/(app)/knowledge/page.tsx",
+                            "true, src, { page: state.page, size: PAGE_SIZE }")],
+    "useKnowledgeNotes": [("components/knowledge/notes-panel.tsx",
+                          "{ page: state.npage, size: PAGE_SIZE }")],
     "useInterviewSessions": [("app/(app)/interviews/page.tsx",
                               "{ page: state.page, size: PAGE_SIZE }")],
     "useActivityRuns": [("app/(app)/activity/page.tsx", ""),
@@ -351,10 +358,12 @@ def test_the_two_literals_every_caller_shadows_and_none_without_a_caller():
     with_size = sorted(h for h, value in shipped.items() if value is not None)
     shadowed = sorted(hook for hook in with_size
                       if derived[hook] and not any(offers_no_size(arg) for _, arg in derived[hook]))
-    assert shadowed == ["useApplications", "useCompanies", "useInterviewSessions", "useJobs"], \
+    assert shadowed == ["useApplications", "useCompanies", "useInterviewSessions", "useJobs",
+                        "useKnowledgeNotes", "useKnowledgeSources"], \
         f"these literals are shadowed by every caller: {shadowed}"
-    # Empty since the notes panel: every size literal has a caller now, and the notes hook's one
-    # caller passes no arguments, so its own 50 stands and reaches the wire.
+    # Empty since the notes panel: every size literal has a caller now, and since #223 even the
+    # knowledge hooks' single callers name a window -- only `useResumes` (two no-argument callers)
+    # and `useConversations` still spend their literal as written.
     uncalled = sorted(hook for hook in with_size if derived[hook] == [])
     assert uncalled == [], \
         f"these hooks have no caller at all, so their window is never spent: {uncalled}"
@@ -455,7 +464,8 @@ def test_the_applications_board_asks_for_exactly_the_ceiling_and_pages_the_rest(
                      for path in FRONT.rglob("*.tsx") if "<Pagination" in read(path))
     assert renders == ["app/(app)/applications/page.tsx", "app/(app)/companies/page.tsx",
                        "app/(app)/interviews/page.tsx", "app/(app)/jobs/page.tsx",
-                       "app/(app)/resumes/page.tsx"], \
+                       "app/(app)/knowledge/page.tsx", "app/(app)/resumes/page.tsx",
+                       "components/knowledge/notes-panel.tsx"], \
         f"the pager census moved: the boards that page give the ceiling its readers: {renders}"
     assert re.search(r"\{total > PAGE_SIZE && \(", apps), \
         "the pager is no longer gated by the window it serves, so a short board would render one"
