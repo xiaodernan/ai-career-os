@@ -244,7 +244,7 @@ user-scoped table (ownership is enforced in backend layer + a single SQL predica
 
 ## 5. Backend (Spring Boot) design
 
-- Java 25 / Spring Boot 3.5, Spring Security (JWT access 15m + refresh rotation),
+- Java 21 / Spring Boot 3.5, Spring Security (JWT access 15m + refresh rotation),
   Spring Data JPA + Flyway SQL migrations (schema is Flyway-owned, not ddl-auto).
 - Validation via Jakarta Bean Validation on DTOs; records everywhere.
 - **Unified envelope**: `ResponseBodyAdvice` wraps all controller returns into

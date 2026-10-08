@@ -163,11 +163,16 @@ variable list.
 
 ## Run with Docker (recommended)
 
-Infra only (Postgres, Redis, MinIO + one-shot bucket init):
+Infra only (Postgres, Redis, MinIO + one-shot bucket init + the demo job seed):
 
 ```bash
-docker compose up -d postgres redis minio minio-init
+docker compose up -d postgres redis minio minio-init seed-jobs
 ```
+
+`seed-jobs` is a one-shot job-market loader: it waits for Flyway to have created `jobs`,
+then loads `scripts/seed/01_jobs.sql`. It is idempotent and safe on every `up`, and it
+skips itself (after ~120s) rather than failing when the schema is not there yet — run
+`docker compose run --rm seed-jobs` to retry it on its own.
 
 Full application stack on top of the infra — the three app services live behind
 the `app` profile:
