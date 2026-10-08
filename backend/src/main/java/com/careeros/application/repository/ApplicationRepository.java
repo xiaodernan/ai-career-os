@@ -14,9 +14,9 @@ public interface ApplicationRepository extends JpaRepository<Application, UUID> 
 
     Optional<Application> findByIdAndUserId(UUID id, UUID userId);
 
-    Page<Application> findByUserIdAndStatusOrderByPositionAsc(UUID userId, String status, Pageable pageable);
+    Page<Application> findByUserIdAndStatusOrderByPositionAscIdAsc(UUID userId, String status, Pageable pageable);
 
-    Page<Application> findByUserIdOrderByUpdatedAtDesc(UUID userId, Pageable pageable);
+    Page<Application> findByUserIdOrderByUpdatedAtDescIdAsc(UUID userId, Pageable pageable);
 
     List<Application> findByUserIdAndJobId(UUID userId, UUID jobId);
 

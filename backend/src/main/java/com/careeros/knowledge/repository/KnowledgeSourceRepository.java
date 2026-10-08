@@ -10,10 +10,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface KnowledgeSourceRepository extends JpaRepository<KnowledgeSource, UUID> {
 
-    Page<KnowledgeSource> findByUserIdOrderByCreatedAtDesc(UUID userId, Pageable pageable);
+    Page<KnowledgeSource> findByUserIdOrderByCreatedAtDescIdAsc(UUID userId, Pageable pageable);
 
     /** The source a citation points at: a chunk's document_id is this column, not the row's own id. */
-    Page<KnowledgeSource> findByUserIdAndDocumentIdOrderByCreatedAtDesc(UUID userId, UUID documentId,
+    Page<KnowledgeSource> findByUserIdAndDocumentIdOrderByCreatedAtDescIdAsc(UUID userId, UUID documentId,
                                                                         Pageable pageable);
 
     Optional<KnowledgeSource> findByIdAndUserId(UUID id, UUID userId);

@@ -59,7 +59,7 @@ public class InterviewService {
 
     @Transactional(readOnly = true)
     public PageDTO<SessionItem> list(UUID userId, int page, int size) {
-        var result = sessions.findByUserIdOrderByStartedAtDesc(userId, Paging.of(page, size).pageable());
+        var result = sessions.findByUserIdOrderByStartedAtDescIdAsc(userId, Paging.of(page, size).pageable());
         // Two grouped reads for the whole page; a per-row query would scale with the board.
         Map<UUID, InterviewDigestRepository.Digest> rows = digests.forSessions(
                 result.getContent().stream().map(InterviewSession::getId).toList());

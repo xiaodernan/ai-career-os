@@ -62,24 +62,24 @@ class KnowledgeSourceListingTest {
 
     @Test
     void aNamedDocumentNarrowsTheListToItsSource() {
-        when(sources.findByUserIdAndDocumentIdOrderByCreatedAtDesc(any(), any(), any())).thenReturn(one());
+        when(sources.findByUserIdAndDocumentIdOrderByCreatedAtDescIdAsc(any(), any(), any())).thenReturn(one());
 
         PageDTO<SourceItem> page = service.listSources(userId, 0, 20, documentId);
 
-        verify(sources).findByUserIdAndDocumentIdOrderByCreatedAtDesc(
+        verify(sources).findByUserIdAndDocumentIdOrderByCreatedAtDescIdAsc(
                 eq(userId), eq(documentId), any(Pageable.class));
-        verify(sources, never()).findByUserIdOrderByCreatedAtDesc(any(), any());
+        verify(sources, never()).findByUserIdOrderByCreatedAtDescIdAsc(any(), any());
         assertThat(page.items()).extracting(SourceItem::documentId).containsExactly(documentId);
     }
 
     @Test
     void noDocumentNamedIsTheWholeBoard() {
-        when(sources.findByUserIdOrderByCreatedAtDesc(any(), any())).thenReturn(one());
+        when(sources.findByUserIdOrderByCreatedAtDescIdAsc(any(), any())).thenReturn(one());
 
         service.listSources(userId, 0, 20, null);
 
-        verify(sources).findByUserIdOrderByCreatedAtDesc(eq(userId), any(Pageable.class));
-        verify(sources, never()).findByUserIdAndDocumentIdOrderByCreatedAtDesc(any(), any(), any());
+        verify(sources).findByUserIdOrderByCreatedAtDescIdAsc(eq(userId), any(Pageable.class));
+        verify(sources, never()).findByUserIdAndDocumentIdOrderByCreatedAtDescIdAsc(any(), any(), any());
     }
 
     /**

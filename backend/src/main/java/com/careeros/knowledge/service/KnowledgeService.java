@@ -53,8 +53,8 @@ public class KnowledgeService {
     public PageDTO<SourceItem> listSources(UUID userId, int page, int size, UUID documentId) {
         var paging = Paging.of(page, size);
         var result = documentId == null
-                ? sources.findByUserIdOrderByCreatedAtDesc(userId, paging.pageable())
-                : sources.findByUserIdAndDocumentIdOrderByCreatedAtDesc(userId, documentId,
+                ? sources.findByUserIdOrderByCreatedAtDescIdAsc(userId, paging.pageable())
+                : sources.findByUserIdAndDocumentIdOrderByCreatedAtDescIdAsc(userId, documentId,
                         paging.pageable());
         return PageDTO.from(result, SourceItem::from);
     }
@@ -114,7 +114,7 @@ public class KnowledgeService {
 
     @Transactional(readOnly = true)
     public PageDTO<NoteItem> listNotes(UUID userId, int page, int size) {
-        var result = notes.findByUserIdOrderByUpdatedAtDesc(userId, Paging.of(page, size).pageable());
+        var result = notes.findByUserIdOrderByUpdatedAtDescIdAsc(userId, Paging.of(page, size).pageable());
         return PageDTO.from(result, KnowledgeService::toNoteItem);
     }
 

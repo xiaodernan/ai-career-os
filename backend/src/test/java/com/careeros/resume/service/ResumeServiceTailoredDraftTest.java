@@ -162,21 +162,21 @@ class ResumeServiceTailoredDraftTest {
         Resume current = mock(Resume.class);
         when(current.getId()).thenReturn(resumeId);
         when(current.getCurrentVersionId()).thenReturn(baseVersionId);
-        when(resumes.findByUserIdOrderByCreatedAtDesc(eq(userId), any()))
+        when(resumes.findByUserIdOrderByCreatedAtDescIdAsc(eq(userId), any()))
                 .thenReturn(new PageImpl<>(List.of(current)));
         when(resumes.findByIdAndUserId(any(), eq(userId))).thenReturn(Optional.of(new Resume()));
 
         service.saveTailoredDraft(userId, jobId,
                 new TailoredVersionRequest(null, Map.of("profile", Map.of()), null, null));
 
-        verify(resumes).findByUserIdOrderByCreatedAtDesc(eq(userId), any());
+        verify(resumes).findByUserIdOrderByCreatedAtDescIdAsc(eq(userId), any());
         verify(versions, never()).findByIdAndUserId(any(), any());
         verify(versions, atLeastOnce()).save(any(ResumeVersion.class));
     }
 
     @Test
     void noResumeAtAllIsANotFoundNotAnEmptyVersion() {
-        when(resumes.findByUserIdOrderByCreatedAtDesc(eq(userId), any()))
+        when(resumes.findByUserIdOrderByCreatedAtDescIdAsc(eq(userId), any()))
                 .thenReturn(new PageImpl<>(List.of()));
 
         assertThatThrownBy(() -> service.saveTailoredDraft(userId, jobId,

@@ -62,7 +62,7 @@ class InterviewServiceListDigestTest {
     }
 
     private void givenPage(InterviewSession... rows) {
-        when(sessions.findByUserIdOrderByStartedAtDesc(any(), any(Pageable.class)))
+        when(sessions.findByUserIdOrderByStartedAtDescIdAsc(any(), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(rows), PageRequest.of(0, 20), rows.length));
     }
 

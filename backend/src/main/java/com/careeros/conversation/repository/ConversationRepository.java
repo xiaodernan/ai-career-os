@@ -10,7 +10,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ConversationRepository extends JpaRepository<Conversation, UUID> {
 
-    Page<Conversation> findByUserIdOrderByUpdatedAtDesc(UUID userId, Pageable pageable);
+    Page<Conversation> findByUserIdOrderByUpdatedAtDescIdAsc(UUID userId, Pageable pageable);
 
     Optional<Conversation> findByIdAndUserId(UUID id, UUID userId);
 

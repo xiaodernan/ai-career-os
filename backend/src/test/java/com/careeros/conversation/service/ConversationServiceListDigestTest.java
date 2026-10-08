@@ -57,7 +57,7 @@ class ConversationServiceListDigestTest {
     }
 
     private void givenPage(Conversation... rows) {
-        when(conversations.findByUserIdOrderByUpdatedAtDesc(any(), any(Pageable.class)))
+        when(conversations.findByUserIdOrderByUpdatedAtDescIdAsc(any(), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(rows), PageRequest.of(0, 50), rows.length));
     }
 

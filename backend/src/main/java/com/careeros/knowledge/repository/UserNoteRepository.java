@@ -10,7 +10,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface UserNoteRepository extends JpaRepository<UserNote, UUID> {
 
-    Page<UserNote> findByUserIdOrderByUpdatedAtDesc(UUID userId, Pageable pageable);
+    Page<UserNote> findByUserIdOrderByUpdatedAtDescIdAsc(UUID userId, Pageable pageable);
 
     Optional<UserNote> findByIdAndUserId(UUID id, UUID userId);
 

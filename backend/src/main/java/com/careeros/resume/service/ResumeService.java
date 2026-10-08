@@ -100,7 +100,7 @@ public class ResumeService {
 
     @Transactional(readOnly = true)
     public PageDTO<ResumeListItem> list(UUID userId, Pageable pageable) {
-        var page = resumes.findByUserIdOrderByCreatedAtDesc(userId, pageable);
+        var page = resumes.findByUserIdOrderByCreatedAtDescIdAsc(userId, pageable);
         return PageDTO.from(page, ResumeListItem::from);
     }
 
@@ -412,7 +412,7 @@ public class ResumeService {
     /** Most recent resume that already has a current version (used for match/tailor defaults). */
     @Transactional(readOnly = true)
     public Optional<Resume> currentResumeWithVersion(UUID userId) {
-        return resumes.findByUserIdOrderByCreatedAtDesc(userId, Paging.first(20)).getContent()
+        return resumes.findByUserIdOrderByCreatedAtDescIdAsc(userId, Paging.first(20)).getContent()
                 .stream().filter(r -> r.getCurrentVersionId() != null).findFirst();
     }
 

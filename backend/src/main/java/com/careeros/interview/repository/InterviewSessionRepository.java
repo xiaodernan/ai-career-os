@@ -10,7 +10,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface InterviewSessionRepository extends JpaRepository<InterviewSession, UUID> {
 
-    Page<InterviewSession> findByUserIdOrderByStartedAtDesc(UUID userId, Pageable pageable);
+    Page<InterviewSession> findByUserIdOrderByStartedAtDescIdAsc(UUID userId, Pageable pageable);
 
     Optional<InterviewSession> findByIdAndUserId(UUID id, UUID userId);
 

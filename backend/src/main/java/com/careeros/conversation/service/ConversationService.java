@@ -53,7 +53,7 @@ public class ConversationService {
 
     @Transactional(readOnly = true)
     public PageDTO<ConversationItem> list(UUID userId, int page, int size) {
-        var result = conversations.findByUserIdOrderByUpdatedAtDesc(userId, Paging.of(page, size).pageable());
+        var result = conversations.findByUserIdOrderByUpdatedAtDescIdAsc(userId, Paging.of(page, size).pageable());
         Map<UUID, ConversationDigestRepository.Digest> rows = digests.forConversations(
                 result.getContent().stream().map(Conversation::getId).toList());
         return PageDTO.from(result,
@@ -173,7 +173,7 @@ public class ConversationService {
     }
 
     private List<Map<String, Object>> historyPayload(UUID conversationId) {
-        List<Message> recent = messages.findByConversationIdOrderByCreatedAtDesc(conversationId,
+        List<Message> recent = messages.findByConversationIdOrderByCreatedAtDescIdAsc(conversationId,
                 Paging.first(HISTORY_TURNS));
         List<Map<String, Object>> history = new ArrayList<>();
         for (int i = recent.size() - 1; i >= 0; i--) {

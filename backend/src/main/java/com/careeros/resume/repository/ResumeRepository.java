@@ -10,7 +10,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ResumeRepository extends JpaRepository<Resume, UUID> {
 
-    Page<Resume> findByUserIdOrderByCreatedAtDesc(UUID userId, Pageable pageable);
+    Page<Resume> findByUserIdOrderByCreatedAtDescIdAsc(UUID userId, Pageable pageable);
 
     Optional<Resume> findByIdAndUserId(UUID id, UUID userId);
 

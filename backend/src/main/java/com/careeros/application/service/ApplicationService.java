@@ -50,8 +50,8 @@ public class ApplicationService {
     @Transactional(readOnly = true)
     public PageDTO<ApplicationItem> list(UUID userId, String status, Pageable pageable) {
         var page = (status == null || status.isBlank())
-                ? applications.findByUserIdOrderByUpdatedAtDesc(userId, pageable)
-                : applications.findByUserIdAndStatusOrderByPositionAsc(userId, status, pageable);
+                ? applications.findByUserIdOrderByUpdatedAtDescIdAsc(userId, pageable)
+                : applications.findByUserIdAndStatusOrderByPositionAscIdAsc(userId, status, pageable);
         return PageDTO.from(page, ApplicationService::toItem);
     }
 
