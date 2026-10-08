@@ -6,6 +6,7 @@ import { Sparkles } from "lucide-react";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { CommandPaletteProvider } from "@/components/common/command-palette";
+import { SkipLink } from "@/components/layout/skip-link";
 import { tokenStore } from "@/lib/api/token-store";
 import { useUser } from "@/lib/hooks/auth";
 
@@ -49,11 +50,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <AuthGuard>
       <CommandPaletteProvider>
+        <SkipLink />
         <div className="flex min-h-dvh">
           <Sidebar />
           <div className="flex min-w-0 flex-1 flex-col">
             <Topbar />
-            <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+            <main
+              id="main"
+              tabIndex={-1}
+              className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8"
+            >
               <div className="animate-fade-up">{children}</div>
             </main>
           </div>
