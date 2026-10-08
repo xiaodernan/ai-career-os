@@ -729,6 +729,12 @@ def test_the_dead_names_spread_in_three_measured_tiers_and_three_reached_a_scree
     `isCurrent` and `versionNo`, both calls dead, the badge alive on a second real term.
     """
     files = frontend_files()
+    # 167 rather than 162 since five files joined in three commits: the skip link and its test
+    # (`components/layout/skip-link.tsx` + `.test.ts`: a keyboard traveller reaches the content
+    # without repeating the sidebar), the stylesheet's own test (`app/globals.test.ts`: a reader
+    # who asks for less motion gets the end state, not the animation), and session expiry with
+    # its test (`lib/session-expiry.ts` + `.test.ts`: the sentence the sign-in screen shows after
+    # a bounce).
     # 162 rather than 160 since the pager's window arithmetic got one home (`lib/page-window.ts`,
     # with `lib/page-window.test.ts` beside it): the rule every board's past-the-end correction
     # and the pager itself now call, instead of the ten copies that had already drifted.
@@ -753,7 +759,7 @@ def test_the_dead_names_spread_in_three_measured_tiers_and_three_reached_a_scree
     # the settings page's career-profile editor; 136 rather than 135 since the knowledge page's
     # notes panel component joined. (Spell the panel's path out nowhere here -- the notes-route
     # census counts every mention of it, this file included.)
-    assert len(files) == 162, f"the frontend census walked {len(files)} files"
+    assert len(files) == 167, f"the frontend census walked {len(files)} files"
     asked = {name for row in UNAUTHORED.values() for name in row}
     assert len(asked) == 56, f"{len(asked)} dead names are asked, pinned 56"
     classified = set()
