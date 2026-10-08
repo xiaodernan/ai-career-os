@@ -248,13 +248,16 @@ TOKEN=$(curl -s -X POST $B/auth/register -H 'Content-Type: application/json' \
   -d '{"email":"a@example.com","password":"Str0ngPassphrase!23","displayName":"A"}' \
   | python -c 'import sys,json;print(json.load(sys.stdin)["data"]["tokens"]["accessToken"])')
 
-# upload and parse a resume
-curl -s -X POST $B/resumes/upload -H "Authorization: Bearer $TOKEN" \
-  -F file=@resume.pdf -F title='Main resume'
+# upload and parse a resume -- the upload answers the ids the next two calls need, and it
+# binds one part: `file`. Anything else you send alongside it is ignored, not rejected.
+RID=$(curl -s -X POST $B/resumes/upload -H "Authorization: Bearer $TOKEN" \
+  -F file=@resume.pdf \
+  | python -c 'import sys,json;print(json.load(sys.stdin)["data"]["resumeId"])')
 curl -s -X POST $B/resumes/$RID/parse -H "Authorization: Bearer $TOKEN"
 
 # search jobs, then score one against the resume
-curl -s "$B/jobs?q=Agent&remote=hybrid&sort=match" -H "Authorization: Bearer $TOKEN"
+JID=$(curl -s "$B/jobs?q=Agent&remote=hybrid&sort=match" -H "Authorization: Bearer $TOKEN" \
+  | python -c 'import sys,json;print(json.load(sys.stdin)["data"]["items"][0]["id"])')
 curl -s -X POST $B/jobs/$JID/match -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' -d '{}'
 
