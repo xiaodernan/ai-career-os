@@ -377,8 +377,8 @@ public class JobService {
     public PageDTO<CompanyItem> listCompanies(String q, int page, int size) {
         var pageable = Paging.of(page, size).pageable();
         var result = (q == null || q.isBlank())
-                ? companies.findAll(pageable)
-                : companies.findByNameContainingIgnoreCase(q, pageable);
+                ? companies.findAllByOrderByNameAsc(pageable)
+                : companies.findByNameContainingIgnoreCaseOrderByNameAsc(q, pageable);
         Map<UUID, Long> counts = new java.util.HashMap<>();
         for (Object[] row : companies.openRoleCounts()) {
             counts.put((UUID) row[0], ((Number) row[1]).longValue());
