@@ -7,8 +7,8 @@ query hook, the argument the screen passes to that hook, and the `defaultValue` 
 `@RequestParam`. Only two of the three ever get spent, and the shipped text decides which per route.
 
 Ten hooks hand `normalizePage` a request. Nine offer a `size` literal: resumes 20, jobs 20,
-applications 50, companies 20, knowledge sources 50, knowledge notes 50, interviews 50,
-conversations 50, activity runs 30 -- since #225 the feed's literal, replacing the
+applications 50, companies 20, knowledge sources 20, knowledge notes 20, interviews 20,
+conversations 20, activity runs 30 -- since #225 the feed's literal, replacing the
 `{ limit: params?.limit }` it sent while `/activity/runs` was the one window the server still
 decided. `useSavedJobs` is the only hook that sends no window at all, because its route binds none
 and answers a bare list. Walking every shipped call site outside `resources.ts` finds the literal's
@@ -28,15 +28,21 @@ activity board asks `{ page: state.page, size: PAGE_SIZE }` while the dashboard 
 the route's own 20), while the dashboard and jobs callers pass no arguments -- so it is the only
 literal that still spends as written, on two of its three paths.
 
-The server's side of the same table: five of the nine literals agree with the route's own
-`defaultValue` (resumes 20/20, companies 20/20, jobs 20/20, applications 50/50, activity runs
-30/30) and four overstate it (knowledge sources, notes, interviews and conversations all ask 50
-where the handler says 20), so those four defaults are only ever spent by a request the app does not
-make. The shadowed literals sit in the agreeing half -- jobs 20 against a 20 default, applications
-50 against a 50 one, activity 30 against a 30 one -- which is why nothing on screen changes when
-they are unreachable: a redundant number cannot contradict anything, and cannot be noticed either.
-The knowledge and conversations literals are in the other half (50 against a 20 default), so the
-requests they would build carry numbers the server would never have chosen.
+The server's side of the same table: all nine literals now agree with the route's own
+`defaultValue` -- resumes 20/20, jobs 20/20, companies 20/20, applications 50/50, activity runs
+30/30, and, since #228, knowledge sources 20/20, notes 20/20, interviews 20/20 and conversations
+20/20. #195 measured the four of them asking 50 where the handler says 20 and left which number
+should win open; it is decided here, and the decision is the boring one: the literal that loses
+its only shadow is a number the app would send that the server would never have chosen, and the
+pager arithmetic every one of those screens now runs is written against the same 20 the route
+binds. A future caller that omits `size` on these hooks gets the server's number rather than a
+stale one, which is the whole of what the fix buys.
+
+The price of a number that only ever loses is that it cannot be seen to be wrong: an unreachable
+50 contradicts nothing on screen, because nothing reads it. That is why this gate keeps the
+three-way table rather than a single assertion per hook -- case 6 below is now a closed invariant
+(every literal is the route's own default) instead of a note about four disagreements it chose to
+record and tolerate.
 
 The reachable numbers have consequences the screens do not cover. The applications board asked for
 exactly `Paging.MAX_PAGE_SIZE` (100), which `Paging`'s own comment answers with "A caller wanting
@@ -44,10 +50,10 @@ more pages pages." -- and `<Pagination>` was written in one file app-wide, the j
 applications screen rendered no pager and read no `total`: its 101st application was simply not
 there. #218 took the ceiling's own advice, and the same arithmetic has since been given to every
 other list: #220 resumes, #221 interviews, #222 companies, #223 the knowledge page's two lists,
-#224 the copilot sidebar, #225 the activity feed. The page-or-raise decision is made; what stays
-open is which number should win, and whether the one literal still spent as written (resumes' 20)
-or the four overstated ones should move. None of the page units touched the hook literals -- each is
-buried on its only path, which is the same fate #218 gave the applications literal, not a deletion.
+#224 the copilot sidebar, #225 the activity feed. The page-or-raise decision is made, and #228
+closed the one question it left: every hook's window is now the number its own route would have
+chosen. None of the page units touched the hook literals -- each is buried on its only path, which
+is the same fate #218 gave the applications literal, not a deletion.
 
 What lands is the measurement -- per hook, per call site, per route -- from one walk of each of the
 three tables.
@@ -84,11 +90,11 @@ WIRE = {
     "useSavedJobs": ("savedJobs", None),
     "useApplications": ("applications", "{ size: 50, ...(params ?? {}) }"),
     "useCompanies": ("companies", "{ size: 20, ...(params ?? {}) }"),
-    "useKnowledgeSources": ("knowledge", "{ size: 50, documentId, ...(params ?? {}) }"),
-    "useKnowledgeNotes": ("knowledgeNotes", "{ size: 50, ...(params ?? {}) }"),
-    "useInterviewSessions": ("interviews", "{ size: 50, ...(params ?? {}) }"),
+    "useKnowledgeSources": ("knowledge", "{ size: 20, documentId, ...(params ?? {}) }"),
+    "useKnowledgeNotes": ("knowledgeNotes", "{ size: 20, ...(params ?? {}) }"),
+    "useInterviewSessions": ("interviews", "{ size: 20, ...(params ?? {}) }"),
     "useActivityRuns": ("activityRuns", "{ size: 30, ...(params ?? {}) }"),
-    "useConversations": ("conversations", "{ size: 50, ...(params ?? {}) }"),
+    "useConversations": ("conversations", "{ size: 20, ...(params ?? {}) }"),
 }
 
 # Measured call sites, one walk; case 3 re-derives them. `""` is a call with no arguments.
@@ -136,10 +142,10 @@ SIZE_LITERAL = {
     "useJobs": 20,
     "useApplications": 50,
     "useCompanies": 20,
-    "useKnowledgeSources": 50,
-    "useKnowledgeNotes": 50,
-    "useInterviewSessions": 50,
-    "useConversations": 50,
+    "useKnowledgeSources": 20,
+    "useKnowledgeNotes": 20,
+    "useInterviewSessions": 20,
+    "useConversations": 20,
     "useActivityRuns": 30,
 }
 
@@ -422,18 +428,14 @@ def test_the_number_the_server_would_use_if_the_app_sent_none():
     unregistered = sorted(h for h in shipped if h not in WIRE)
     assert not unregistered, \
         f"a list hook shipped without a row in WIRE, so its route is unregistered here: {unregistered}"
-    agrees = sorted(hook for hook, value in shipped.items()
-                    if value is not None and SERVER_SIZE[endpoint_path(WIRE[hook][0])] == str(value))
-    assert agrees == ["useActivityRuns", "useApplications", "useCompanies", "useJobs",
-                     "useResumes"], \
-        f"these literals still match their route's default: {agrees}"
-    overstated = sorted(shipped[h] for h in
-                        ("useKnowledgeSources", "useKnowledgeNotes", "useInterviewSessions",
-                         "useConversations"))
-    assert overstated == [50, 50, 50, 50] and \
-        all(SERVER_SIZE[endpoint_path(k)] == "20" for k in
-            ("knowledge", "knowledgeNotes", "interviews", "conversations")), \
-        "four hooks no longer ask 50 where the handler says 20"
+    # Since #228 this is closed rather than recorded: #195 asked which of the three numbers
+    # should win and left the four overstatements standing; the answer is the route's own
+    # default, so a caller that omits `size` asks for exactly what the handler would have asked.
+    drifted = sorted(hook for hook, value in shipped.items()
+                     if value is not None and SERVER_SIZE[endpoint_path(WIRE[hook][0])] != str(value))
+    assert drifted == [], (
+        f"these literals no longer match their route's own default, so the window a caller "
+        f"that omits size would ask for is one the server would never have chosen: {drifted}")
 
 
 def test_the_applications_board_asks_for_exactly_the_ceiling_and_pages_the_rest():

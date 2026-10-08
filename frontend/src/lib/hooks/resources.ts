@@ -368,7 +368,7 @@ export function useKnowledgeSources(live = false, documentId?: string,
     queryFn: async (): Promise<Page<KnowledgeSource>> =>
       normalizePage(
         await api.get<unknown>(endpoints.knowledge,
-                               { size: 50, documentId, ...(params ?? {}) }),
+                               { size: 20, documentId, ...(params ?? {}) }),
         mapSource
       ),
     refetchInterval: (q) => {
@@ -404,7 +404,7 @@ export function useKnowledgeNotes(params?: { page?: number; size?: number }) {
     queryKey: ["knowledge", "notes", params],
     queryFn: async (): Promise<Page<KnowledgeNote>> =>
       normalizePage(
-        await api.get<unknown>(endpoints.knowledgeNotes, { size: 50, ...(params ?? {}) }),
+        await api.get<unknown>(endpoints.knowledgeNotes, { size: 20, ...(params ?? {}) }),
         (n) => ({
           id: idStr(n),
           title: str(n, "title", "name") ?? "Untitled note",
@@ -472,7 +472,7 @@ export function useInterviewSessions(params?: { page?: number; size?: number }) 
     queryKey: ["interview", "sessions", params],
     queryFn: async (): Promise<Page<InterviewSession>> =>
       normalizePage(
-        await api.get<unknown>(endpoints.interviews, { size: 50, ...(params ?? {}) }),
+        await api.get<unknown>(endpoints.interviews, { size: 20, ...(params ?? {}) }),
         (s) => mapInterviewSessionItem(s)
       ),
   });
@@ -508,7 +508,7 @@ export function useConversations(params?: { page?: number; size?: number }) {
     queryKey: ["conversations", params],
     queryFn: async (): Promise<Page<Conversation>> =>
       normalizePage(
-        await api.get<unknown>(endpoints.conversations, { size: 50, ...(params ?? {}) }),
+        await api.get<unknown>(endpoints.conversations, { size: 20, ...(params ?? {}) }),
         (c) => ({
         id: idStr(c),
         title: str(c, "title", "name") ?? "Conversation",
