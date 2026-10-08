@@ -226,6 +226,16 @@ user-scoped table (ownership is enforced in backend layer + a single SQL predica
 - **Ownership**: every repository query takes `userId` from `SecurityContext`;
   service layer never accepts raw ids without checking ownership (IDOR-proof).
   AOP-level guard test asserts every entity access path carries user scoping.
+- **Windowed queries total by construction**: every repository method that takes a
+  `Pageable` (a paged board or a capped preview) ends its ORDER BY in a column the
+  schema declares unique -- in practice the primary key; the companies board is the one
+  exception, ordering by its unique `name` (#227). #227 shipped a board with no ORDER BY
+  at all and #229/#230 shipped orderings whose keys tie, so two rows the visible key
+  calls equal were separated by whichever plan PostgreSQL picked: the same URL answered
+  different rows on two visits. The census gate
+  `ai-service/tests/test_every_windowed_query_orders_by_a_total_key.py` walks every such
+  method and holds the line; an exemption on that list is a measurement with an owner,
+  never a permission.
 - **Rate limiting**: Redis sliding-window filter (per user + per IP on auth).
 - SSE passthrough: `GET /api/ai/stream/{taskId}` proxies ai-service internal SSE
   (auth verified at backend, task ownership checked) so tokens never bypass JWT layer.
@@ -330,8 +340,11 @@ recall@k, precision@k, MRR, context relevance, answer relevance, faithfulness
 - REST under `/api/v1/...`, OpenAPI generated (springdoc) → `docs/API.md` derives.
 - Envelope: `{"success":true,"data":…,"error":null}`; errors:
   `{"success":false,"data":null,"error":{"code":"JOB_NOT_FOUND","message":…,"details":[…]}}`.
-- Pagination `?page=&size=` → `{items,total,page,size}`; SSE endpoints set
-  `text/event-stream`, events: `status|token|trace|artifact|done|error`.
+- Pagination `?page=&size=` → `{items,total,page,size}`; the window is stable by
+  contract: the ORDER BY behind every paged query ends in a unique key (see §5), so the
+  same `?page=` answers the same rows on every visit and no row is served twice or
+  skipped. SSE endpoints set `text/event-stream`, events:
+  `status|token|trace|artifact|done|error`.
 - Implemented seams (binding for all three apps):
   - ai-service task SSE is both `/internal/tasks/{id}/stream` and the alias
     `/internal/stream/{task_id}` that the backend relay proxies as

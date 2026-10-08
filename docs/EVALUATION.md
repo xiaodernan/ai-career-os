@@ -184,9 +184,16 @@ keyword router's noise and nothing else. The remaining gap is the opposite failu
 岗位？") it called no tool at all and asked the user for a resume instead, which is
 `CAREER_SYSTEM` rule 2 ("if required data is missing... tell the user the exact next step")
 being applied to a request where nothing is missing — `search_jobs` needs no resume and has
-defaults. That is why `tool_recall` sits at 0.30 and `avg_steps` at 1.19. Not yet changed:
-prompt edits need another full run to show they help rather than trade one behaviour for
-another.
+defaults. That is why `tool_recall` sits at 0.30 and `avg_steps` at 1.19.
+
+The prompt has since been rewritten to act first (`067296b`): rule 2 now leads with
+act-first and names matching/tailoring as the only datum that may be asked for, and
+rule 3 puts `search_jobs` ahead of every other step for role requests, personalised
+ones included. `tests/test_the_orchestrator_acts_first.py` (4 cases) pins both rewritten
+rules, the properties the baseline scored well, and the 1..6 numbering -- red-first
+against the pre-fix prompt. **The table above is the pre-fix baseline and stays as
+recorded**: whether the words move `tool_recall` is the next real-provider run's
+verdict, and no test claims it.
 
 The mock column is the earlier run (`evals/reports/20261001-145644_agent-full.md`), kept
 for contrast.
