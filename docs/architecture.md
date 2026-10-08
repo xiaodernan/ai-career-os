@@ -67,7 +67,7 @@ frontend/backend/ai-service can also run natively for dev (`pnpm dev`, `mvn spri
 求职平台/
 ├── docker-compose.yml            # postgres(pgvector) redis minio (+ optional profile: apps)
 ├── .env.example
-├── docs/                         # architecture, product-plan, api, rag, agents, evaluation, security, deployment
+├── docs/                         # origin spec, architecture, product-plan, product, api, rag, agents, evaluation, security, deployment
 ├── backend/                      # Spring Boot (Maven)
 │   └── src/main/java/com/careeros/
 │       ├── activity/             # agent runs + traces, AI usage events, token-cost accounting
