@@ -12,15 +12,17 @@ get a real `PageDTO`. `PageDTO` declares `items`, `total`, `page`, `size`, and b
 1..`MAX_PAGE_SIZE` (100), and `JobService.list` reports that clamped `window.size()` rather than the
 number it was handed -- so the answer always carries the window that was really used. Walking every
 shipped file under `frontend/src` for a read of these four names off a query result finds readers for
-`items`, `total` and `page`, and -- since #219/#220/#221 -- exactly four readers of `size`: the four
-server-window boards (jobs, applications, resumes, interviews), each correcting a past-the-end URL
-page from the answer's own window (`test_a_past_the_end_page_corrects_itself.py`,
+`items`, `total` and `page`, and -- since #219/#220/#221/#222 -- exactly five readers of `size`: the
+five server-window boards (jobs, applications, resumes, interviews, companies), each correcting a
+past-the-end URL page from the answer's own window (`test_a_past_the_end_page_corrects_itself.py`,
 `test_the_resumes_list_pages_its_own_window.py`,
-`test_the_interviews_board_pages_its_own_window.py`). The app's four pagers are still all fed the
+`test_the_interviews_board_pages_its_own_window.py`,
+`test_the_companies_board_pages_its_own_window.py`). The app's five pagers are still all fed the
 client's own number -- the jobs board the address-bar integer `filters.size`, the applications board
 (#218) the `PAGE_SIZE` constant it asks with, the resumes list (#220) its `PAGE_SIZE` restating the
-route's own 20, the interviews board (#221) its `PAGE_SIZE` restating the route's own 20 -- so the
-window the answer really carried feeds the correction, not the label.
+route's own 20, the interviews board (#221) its `PAGE_SIZE` restating the route's own 20, the
+companies list (#222) the same -- so the window the answer really carried feeds the correction, not
+the label.
 The activity screen goes further and reads nothing but `items` through `ModuleView`.
 
 That asymmetry is what the two clamps disagree about. `asUrlNumber` adopts any integer, and its own
@@ -55,6 +57,7 @@ JOBS_PAGE = FRONT / "app" / "(app)" / "jobs" / "page.tsx"
 APPS_PAGE = FRONT / "app" / "(app)" / "applications" / "page.tsx"
 RESUMES_PAGE = FRONT / "app" / "(app)" / "resumes" / "page.tsx"
 INTERVIEWS_PAGE = FRONT / "app" / "(app)" / "interviews" / "page.tsx"
+COMPANIES_PAGE = FRONT / "app" / "(app)" / "companies" / "page.tsx"
 JOB_FILTER = FRONT / "lib" / "job-filter.ts"
 PAGINATION = FRONT / "components" / "common" / "pagination.tsx"
 URL_STATE = FRONT / "lib" / "hooks" / "use-url-state.ts"
@@ -91,12 +94,15 @@ READERS = {
     "items": ["app/(app)/applications/page.tsx", "app/(app)/copilot/page.tsx",
               "app/(app)/dashboard/page.tsx", "app/(app)/jobs/page.tsx",
               "components/common/module-view.tsx", "lib/hooks/resources.ts"],
-    "total": ["app/(app)/applications/page.tsx", "app/(app)/interviews/page.tsx",
-              "app/(app)/jobs/page.tsx", "app/(app)/resumes/page.tsx"],
-    "page": ["app/(app)/applications/page.tsx", "app/(app)/interviews/page.tsx",
-             "app/(app)/jobs/page.tsx", "app/(app)/resumes/page.tsx"],
-    "size": ["app/(app)/applications/page.tsx", "app/(app)/interviews/page.tsx",
-             "app/(app)/jobs/page.tsx", "app/(app)/resumes/page.tsx"],
+    "total": ["app/(app)/applications/page.tsx", "app/(app)/companies/page.tsx",
+              "app/(app)/interviews/page.tsx", "app/(app)/jobs/page.tsx",
+              "app/(app)/resumes/page.tsx"],
+    "page": ["app/(app)/applications/page.tsx", "app/(app)/companies/page.tsx",
+             "app/(app)/interviews/page.tsx", "app/(app)/jobs/page.tsx",
+             "app/(app)/resumes/page.tsx"],
+    "size": ["app/(app)/applications/page.tsx", "app/(app)/companies/page.tsx",
+             "app/(app)/interviews/page.tsx", "app/(app)/jobs/page.tsx",
+             "app/(app)/resumes/page.tsx"],
 }
 
 MAX_PAGE_SIZE = 100
@@ -261,7 +267,7 @@ def test_the_envelope_is_four_names_that_both_branches_and_the_record_all_agree_
 
 
 def test_the_window_the_server_used_is_read_only_where_a_page_corrects_itself():
-    """Case 4: items, total and page have readers; size's only four are the corrections."""
+    """Case 4: items, total and page have readers; size's only five are the corrections."""
     reads = envelope_reads()
     assert reads == READERS, f"the envelope reader census moved: {reads}"
     assert "app/(app)/jobs/page.tsx" in reads["items"], (
@@ -278,18 +284,23 @@ def test_the_window_the_server_used_is_read_only_where_a_page_corrects_itself():
     assert "app/(app)/interviews/page.tsx" in reads["total"], (
         "the interviews pager (#221) left the census, so a `size` read there would be invisible "
         "to the population this case measures")
-    assert reads["size"] == ["app/(app)/applications/page.tsx", "app/(app)/interviews/page.tsx",
-                             "app/(app)/jobs/page.tsx", "app/(app)/resumes/page.tsx"], (
-        f"the answer's window has readers beyond the four corrections: {reads['size']}")
+    assert "app/(app)/companies/page.tsx" in reads["total"], (
+        "the companies pager (#222) left the census, so a `size` read there would be invisible "
+        "to the population this case measures")
+    assert reads["size"] == ["app/(app)/applications/page.tsx", "app/(app)/companies/page.tsx",
+                             "app/(app)/interviews/page.tsx", "app/(app)/jobs/page.tsx",
+                             "app/(app)/resumes/page.tsx"], (
+        f"the answer's window has readers beyond the five corrections: {reads['size']}")
 
 
-def test_the_four_pagers_are_fed_client_numbers_and_the_answered_window_still_is_not_one():
-    """Case 5: all four `<Pagination>`s take the window the caller asked with, never the answer's."""
+def test_the_five_pagers_are_fed_client_numbers_and_the_answered_window_still_is_not_one():
+    """Case 6: all five `<Pagination>`s take the window the caller asked with, never the answer's."""
     consumers = sorted(str(p.relative_to(FRONT)).replace("\\", "/")
                        for p in FRONT.rglob("*.tsx")
                        if 'from "@/components/common/pagination"' in read(p))
-    assert consumers == ["app/(app)/applications/page.tsx", "app/(app)/interviews/page.tsx",
-                         "app/(app)/jobs/page.tsx", "app/(app)/resumes/page.tsx"], \
+    assert consumers == ["app/(app)/applications/page.tsx", "app/(app)/companies/page.tsx",
+                         "app/(app)/interviews/page.tsx", "app/(app)/jobs/page.tsx",
+                         "app/(app)/resumes/page.tsx"], \
         f"pager consumers: {consumers}"
     jobs = read(JOBS_PAGE)
     block = jobs[jobs.index("<Pagination"):]
@@ -347,9 +358,23 @@ def test_the_four_pagers_are_fed_client_numbers_and_the_answered_window_still_is
         r"const total = sessions\.data\?\.total \?\? 0;", interviews), (
         "the interviews pager row count no longer comes off the envelope")
 
+    companies = read(COMPANIES_PAGE)
+    cblock = companies[companies.index("<Pagination"):]
+    cblock = cblock[:cblock.index("/>")]
+    assert re.search(r"size=\{PAGE_SIZE\}", cblock), (
+        "the companies pager no longer takes the constant the board asks with, so its window "
+        "and the request's window could drift apart")
+    assert "data?.size" not in cblock and "data.size" not in cblock, (
+        f"the companies pager now reads the answer's window, so the dead `size` above has a reader: {cblock}")
+    assert re.search(r"page=\{companies\.data\?\.page \?\? state\.page\}", cblock), (
+        "the companies board's page index is no longer the answer's")
+    assert re.search(r"total=\{total\}", cblock) and re.search(
+        r"const total = companies\.data\?\.total \?\? 0;", companies), (
+        "the companies pager row count no longer comes off the envelope")
+
 
 def test_the_backend_reports_the_clamped_window_and_the_url_never_adopts_the_ceiling():
-    """Case 6: Paging bounds the window, JobService ships the bound, the client ignores it."""
+    """Case 7: Paging bounds the window, JobService ships the bound, the client ignores it."""
     paging = java(PAGING)
     assert re.search(r"public static final int MAX_PAGE_SIZE = (%d);" % MAX_PAGE_SIZE, paging), (
         "the window ceiling moved; this file's 5000-row scenario is measured against it")
@@ -364,7 +389,7 @@ def test_the_backend_reports_the_clamped_window_and_the_url_never_adopts_the_cei
 
 
 def test_the_url_number_that_reaches_the_pager_has_no_floor_and_no_ceiling():
-    """Case 7: asUrlNumber bounds integers only by being integers."""
+    """Case 8: asUrlNumber bounds integers only by being integers."""
     number = function_body(read(URL_STATE), "function asUrlNumber(")
     assert re.search(r"return Number\.isInteger\(n\) \? n : undefined;", number), (
         f"asUrlNumber now bounds the value it adopts: {number}")
@@ -381,7 +406,7 @@ def test_the_url_number_that_reaches_the_pager_has_no_floor_and_no_ceiling():
 
 
 def test_the_two_clamps_disagree_about_size_zero_because_only_one_of_them_sees_it():
-    """Case 8: filterAndPaginate refuses a non-positive window; the pager only guards it."""
+    """Case 9: filterAndPaginate refuses a non-positive window; the pager only guards it."""
     filtered = function_body(read(JOB_FILTER), "export function filterAndPaginate(")
     assert re.search(r"const size = filters\.size && filters\.size > 0 \? filters\.size : "
                      r"filtered\.length \|\| 1;", filtered), (
@@ -403,7 +428,7 @@ def test_the_two_clamps_disagree_about_size_zero_because_only_one_of_them_sees_i
 
 
 def test_the_bare_list_route_binds_no_window_at_all_so_its_hook_cannot_ask_for_one():
-    """Case 9: /jobs/saved takes only the caller, while /jobs binds page and size."""
+    """Case 10: /jobs/saved takes only the caller, while /jobs binds page and size."""
     gets = spring_gets()
     saved = gets[endpoint_path("savedJobs")]
     assert len(saved) == 1 and saved[0][0].startswith("List<"), saved

@@ -1,14 +1,43 @@
 "use client";
 
+import * as React from "react";
 import Link from "next/link";
 import { Building2, Globe } from "lucide-react";
 import { ModuleView } from "@/components/common/module-view";
+import { Pagination } from "@/components/common/pagination";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useCompanies } from "@/lib/hooks/resources";
+import { useUrlState } from "@/lib/hooks/use-url-state";
+
+// The route's own default window: `GET /companies` binds `size` with `defaultValue = "20"`, so
+// this number asks for exactly what the server would have chosen anyway.
+const PAGE_SIZE = 20;
+
+// Module-level so `setUrl` (a `useCallback` keyed on this object) is stable across renders.
+const PAGE_DEFAULTS: { page: number } = { page: 0 };
 
 export default function CompaniesPage() {
-  const companies = useCompanies();
+  // The page index lives in the URL, so a reload or a shared list link opens the same window.
+  const [state, setUrl] = useUrlState<{ page: number }>(
+    PAGE_DEFAULTS,
+    { numericKeys: ["page"] }
+  );
+  const companies = useCompanies({ page: state.page, size: PAGE_SIZE });
+
+  const total = companies.data?.total ?? 0;
+  // A past-the-end page is an empty window over a real total, not an empty list: the answer's
+  // own window is the divisor (`data.size`, floored at 1 because a normalizer payload can
+  // report 0), so the URL is corrected to the last page that exists. A layout effect, because
+  // the stale commit paints its empty copy first -- React flushes this update before the
+  // browser paints, so the wrong screen is replaced, not seen.
+  const lastPage = companies.data
+    ? Math.max(0, Math.ceil(total / Math.max(1, companies.data.size)) - 1)
+    : 0;
+  React.useLayoutEffect(() => {
+    if (companies.data && state.page > lastPage) setUrl({ page: lastPage });
+  }, [companies.data, state.page, lastPage, setUrl]);
+
   return (
     <ModuleView
       title="Companies"
@@ -20,6 +49,20 @@ export default function CompaniesPage() {
       }}
       ctaHref="/copilot"
       ctaLabel="Research a company"
+      footer={
+        total > PAGE_SIZE && (
+          <Pagination
+            page={companies.data?.page ?? state.page}
+            size={PAGE_SIZE}
+            total={total}
+            label="companies"
+            onPageChange={(page) => {
+              setUrl({ page });
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+          />
+        )
+      }
       renderItem={(c) => (
         <Card key={c.id}>
           <CardContent className="flex items-center gap-3">
