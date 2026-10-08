@@ -619,14 +619,8 @@ export interface ActivityRun {
 
 export interface AIUsageSummary {
   requests?: number;
-  tokensTotal?: number;
-  tokensIn?: number;
-  tokensOut?: number;
+  totalTokens?: number;
   costUsd?: number;
-  byAgent?: { agent: string; requests?: number; tokens?: number; costUsd?: number }[];
-  byModel?: { model: string; requests?: number; tokens?: number; costUsd?: number }[];
-  daily?: { date: string; requests?: number; tokens?: number; costUsd?: number }[];
-  updatedAt?: string;
 }
 
 export interface DashboardMetrics {

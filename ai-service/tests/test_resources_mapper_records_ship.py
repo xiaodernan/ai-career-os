@@ -384,7 +384,8 @@ def test_the_named_mapper_population_matches_the_ledger_and_the_anonymous_half_i
         assert sites == ["lib/hooks/resources.ts"], \
             f"{name} is no longer declared only where this file reads it: {sites}"
     anonymous = re.findall(r"\(\w+\) => \(\{", text)
-    assert len(anonymous) == 6, (f"{len(anonymous)} inline arrow mappers in resources.ts; this file "
+    # 3 since #226 deleted `useAIUsage`'s three breakdown arrows.
+    assert len(anonymous) == 3, (f"{len(anonymous)} inline arrow mappers in resources.ts; this file "
                                 "binds named declarations only, so a new one is an unbound reader "
                                 "that has to be added to the census or given a named mapper")
 

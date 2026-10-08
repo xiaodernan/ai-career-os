@@ -593,7 +593,7 @@ export default function DashboardPage() {
                           Tokens
                         </dt>
                         <dd className="mt-0.5 text-lg font-semibold tabular-nums">
-                          {formatNumber(aiUsage.data!.tokensTotal)}
+                          {formatNumber(aiUsage.data!.totalTokens)}
                         </dd>
                       </div>
                       <div>

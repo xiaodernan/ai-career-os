@@ -535,32 +535,12 @@ export function useAIUsage() {
     queryKey: ["ai-usage"],
     queryFn: async () => {
       const raw = await api.get<unknown>(endpoints.aiUsage);
-      const u = pick(raw, "summary", "data") ?? raw;
+      // The summary writes eight keys; this hook asks the three the spend card shows, in the
+      // handler's own spellings. The rest are declared unread by the anonymous-mappers gate.
       return {
-        requests: num(u, "requests", "requestCount", "request_count", "total"),
-        tokensTotal: num(u, "tokensTotal", "tokens_total", "tokens", "totalTokens"),
-        tokensIn: num(u, "tokensIn", "tokens_in", "promptTokens", "inputTokens"),
-        tokensOut: num(u, "tokensOut", "tokens_out", "completionTokens", "outputTokens"),
-        costUsd: num(u, "costUsd", "cost_usd", "cost", "totalCost"),
-        byAgent: listOf(u, "byAgent", "by_agent").map((a) => ({
-          agent: str(a, "agent", "name", "key") ?? "unknown",
-          requests: num(a, "requests", "count"),
-          tokens: num(a, "tokens", "tokensTotal"),
-          costUsd: num(a, "costUsd", "cost"),
-        })),
-        byModel: listOf(u, "byModel", "by_model", "perModel").map((m) => ({
-          model: str(m, "model", "name", "key") ?? "unknown",
-          requests: num(m, "requests", "count"),
-          tokens: num(m, "tokens", "tokensTotal"),
-          costUsd: num(m, "costUsd", "cost"),
-        })),
-        daily: listOf(u, "daily", "byDay", "by_day").map((d) => ({
-          date: str(d, "date", "day") ?? "",
-          requests: num(d, "requests", "count"),
-          tokens: num(d, "tokens", "tokensTotal"),
-          costUsd: num(d, "costUsd", "cost"),
-        })),
-        updatedAt: str(u, "updatedAt", "updated_at"),
+        requests: num(raw, "requests"),
+        totalTokens: num(raw, "totalTokens"),
+        costUsd: num(raw, "costUsd"),
       };
     },
   });
