@@ -19,7 +19,9 @@ reachable from a browser.
     leak does not expose usable tokens; reuse of a rotated refresh token is
     rejected and rotates the whole family (see `TokenRotationReuseTest`).
 - Public (unauthenticated) routes: `/api/v1/auth/**`, `/api/v1/health`,
-  OpenAPI/Swagger (`/v3/api-docs/**`, `/swagger-ui/**`), CORS preflight
+  OpenAPI/Swagger (`/api-docs/**`, `/v3/api-docs/**`, `/swagger-ui/**`,
+  `/swagger-ui.html` — `application.yml` serves them at `/api-docs` and
+  `/api-docs/ui`, and the filter admits both spellings), CORS preflight
   (`OPTIONS /**`), the observability pair `/actuator/health` and
   `/actuator/prometheus` (read-only Micrometer metrics; restrict the scrape at
   the reverse proxy in production if metrics must not be public), and the
@@ -68,9 +70,13 @@ that rejects invented skills/numbers not present in the source evidence.
     (`RateLimitFilter.isAiCost`), not a prefix sweep: it covers the `/ai` SSE
     routes **plus** `/copilot` (the agent turn, the single most expensive call),
     `/interview`, `/jds`, `/knowledge/text`, `/resumes/{id}/parse` and
-    `/jobs/{id}/(match|tailor|cover-letter)`. Cheap reads (search, listings,
-    dashboards) are deliberately excluded so browsing is not throttled. Covered by
-    `RateLimitFilterTest`.
+    `/jobs/{id}/(match|tailor|cover-letter)`. It also covers the three that spend
+    money without living under an "AI-looking" path: `/jobs/import` (importing a JD
+    runs the analyst) and `/knowledge/documents` and `/resumes/upload` (both embed
+    every chunk of the document into pgvector). Left out, a scripted client could
+    call those three without limit — the exact hole this list exists to close.
+    Cheap reads (search, listings, dashboards) are deliberately excluded so browsing
+    is not throttled. Covered by `RateLimitFilterTest`.
   - **Fails open** when Redis is unavailable, logged at WARN — the limiter never
     locks anyone out. The client timeout is pinned to 500ms so that branch is
     actually reached promptly: with the defaults in effect a Redis outage left
