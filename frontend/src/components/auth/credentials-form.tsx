@@ -69,7 +69,7 @@ function describeError(err: unknown): string {
   return "Something went wrong. Please try again.";
 }
 
-export function CredentialsForm({ mode }: { mode: "login" | "register" }) {
+export function CredentialsForm({ mode, notice }: { mode: "login" | "register"; notice?: string }) {
   const isLogin = mode === "login";
   const fields = isLogin ? baseFields : registerFields;
   const login = useLogin();
@@ -106,6 +106,14 @@ export function CredentialsForm({ mode }: { mode: "login" | "register" }) {
 
   return (
     <div className="space-y-6">
+      {notice ? (
+        <div
+          role="alert"
+          className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive"
+        >
+          {notice}
+        </div>
+      ) : null}
       <header className="space-y-1.5">
         <h2 className="font-serif text-display-sm font-medium">
           {isLogin ? "Sign in to your workspace" : "Create your account"}

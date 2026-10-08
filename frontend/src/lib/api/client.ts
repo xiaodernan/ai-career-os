@@ -1,8 +1,8 @@
 import { API_BASE_URL, endpoints } from "./endpoints";
 import { tokenStore } from "./token-store";
 import type { AuthResponse, AuthTokens, Page, User } from "./types";
+import { SESSION_EXPIRED_REASON } from "../session-expiry";
 import { dispatchEvent, errorText, findFrameEnd, parseFrame, type SSEHandlers } from "../sse/use-sse";
-
 export interface ApiErrorDetails {
   code: string;
   message: string;
@@ -98,7 +98,7 @@ function onSessionExpired() {
   tokenStore.clear();
   if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
     const next = encodeURIComponent(window.location.pathname + window.location.search);
-    window.location.href = `/login?next=${next}`;
+    window.location.href = `/login?next=${next}&reason=${SESSION_EXPIRED_REASON}`;
   }
 }
 
