@@ -227,6 +227,17 @@ tenant context via `core.deps.Ctx`.
 | GET | `/internal/stream/{task_id}` | SSE alias the backend relay proxies as `/api/v1/ai/stream/{taskId}` |
 | GET | `/health` | liveness + provider probe (no auth) |
 
+### 3.1 Backend internal surface — consumed by ai-service
+
+The same `X-Internal-Token` guards the backend's own service-to-service routes
+(`InternalApiFilter` watches the `/api/internal` prefix and compares the token in constant
+time). They are not reachable with a user JWT: no `Authorization` header is consulted on
+them, so the token *is* the credential.
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/api/internal/files/{fileKey}` | a stored upload's bytes, for ai-service ingestion — the key must match `{userId}/(resumes\|knowledge)/{id}.{pdf\|docx\|txt}` and belong to a `documents` row, otherwise 400 (malformed key) or 404 (no document owns it) |
+
 ## 4. Worked examples
 
 ```bash
