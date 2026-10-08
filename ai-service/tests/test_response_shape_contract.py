@@ -2067,10 +2067,12 @@ def test_the_run_stream_contract_is_one_table_of_publishers_cases_and_subscriber
     skipped = [(str(p.relative_to(ROOT_FRONTEND)).replace("\\", "/"), p.read_text(encoding="utf-8"))
                for p in sorted(ROOT_FRONTEND.rglob("*.ts*"))
                if ".test." in p.name and "node_modules" not in p.parts]
+    # 24 rather than 23 since `lib/profile-targets.test.ts` joined (the gate on the settings page's
+    # target-list guard, #216's front-end half).
     # 23 rather than 22 since `components/knowledge/source-actions.test.ts`, 22 rather than 21 since
     # `lib/api/missing-endpoint.test.ts`. The pin is a population, not a budget: a new test file belongs
     # in it, and the guard below still has to prove none of them ships.
-    assert len(skipped) == 23 and all(rel.endswith((".test.ts", ".test.tsx")) for rel, _t in skipped), \
+    assert len(skipped) == 24 and all(rel.endswith((".test.ts", ".test.tsx")) for rel, _t in skipped), \
         (f"{len(skipped)} files are skipped and not one ships: a name in that set that is not a test file "
          "would be a subscriber hidden from the table by the pattern rather than by measurement")
     skipped_names = {rel.rsplit("/", 1)[-1] for rel, _t in skipped}
