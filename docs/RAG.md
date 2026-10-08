@@ -30,6 +30,21 @@ understand → hybrid retrieve → RRF fuse → rerank → compress → cite
    - `trigram_search` — fuzzy trigram match to catch near-miss spellings (top 10).
    All channels accept `kinds` and optional `document_ids` filters.
 
+   The keyword channel is bounded: `KEYWORD_FANOUT` (`rag/pipeline.py`) caps the phrases
+   at the rewritten query plus four keywords, because each phrase is its own round trip.
+   One phrase per call, never one concatenation — `plainto_tsquery` ANDs every term it is
+   given, and a CJK run without spaces collapses to a single tsvector lexeme, so one
+   unmatchable term would veto the whole channel. RRF supplies the OR across the phrases.
+
+   **The `kinds` filter is a guess, and a guess that misses is dropped.** A caller's
+   `kinds` is a request and is never second-guessed. The rewrite step's `filters.kinds` is
+   a guess, and a guess matching nothing empties retrieval silently — which is how it
+   survived: asked "what backend frameworks does the candidate know?", a real provider
+   answered `kinds: ["project"]` for a user whose only source was a resume, and 13 of 15
+   golden cases came back with no evidence at all. The pipeline retries once without the
+   guess and traces the recovery as `kinds_filter_dropped`. An empty result is never more
+   useful than a broader one.
+
 3. **RRF fusion** (`store.rrf_merge`) — Reciprocal Rank Fusion merges the
    per-channel lists by chunk id (no score scale mismatch). Covered by
    `tests/test_core_modules.py::test_rrf_*`.
