@@ -32,6 +32,7 @@ from app.eval.agent_metrics import (
     RunObservation,
     aggregate,
     aggregate_by_tag,
+    classify_error,
     score_run,
 )
 
@@ -83,7 +84,8 @@ async def _usage(run_id: str) -> tuple[int, int, float]:
     return int(row["i"]), int(row["o"]), float(row["c"])
 
 
-async def _run_one(user_id: str, scenario: AgentScenario, subs: dict) -> dict:
+async def _run_one(user_id: str, scenario: AgentScenario, subs: dict,
+                  retries: int = 1) -> dict:
     from app.agents.orchestrator import career_turn
 
     message = _fill(scenario.message, subs)
@@ -93,29 +95,45 @@ async def _run_one(user_id: str, scenario: AgentScenario, subs: dict) -> dict:
         context.setdefault("job_title", subs.get("job_title"))
         context.setdefault("company", subs.get("company"))
 
-    run_id = await observability.create_run(user_id, "career", RUN_TRIGGER)
-    obs = RunObservation()
-    started = time.monotonic()
-    try:
-        out = await career_turn(user_id=user_id, message=message,
-                                history=scenario.history, context=context or None,
-                                run_id=run_id)
-        obs.answer = out.answer
-        obs.tools_used = list(out.tools_used)
-        obs.artifact_types = [a.get("type") for a in out.artifacts if a.get("type")]
-        obs.steps = out.steps
-    except Exception as e:  # a failed run is a data point, not a crash
-        obs.error = f"{type(e).__name__}: {e}"[:400]
-    obs.latency_ms = int((time.monotonic() - started) * 1000)
-    obs.handoffs = await _handoffs(run_id)
-    obs.input_tokens, obs.output_tokens, obs.cost_usd = await _usage(run_id)
-    await observability.finish_run(run_id, "failed" if obs.error else "completed",
-                                   obs.input_tokens, obs.output_tokens, 0,
-                                   obs.cost_usd, obs.latency_ms, obs.error)
-    observability.release_trace_seq(run_id)
+    attempts: list[dict] = []
+    for attempt in range(1, retries + 2):
+        run_id = await observability.create_run(user_id, "career", RUN_TRIGGER)
+        obs = RunObservation()
+        started = time.monotonic()
+        try:
+            out = await career_turn(user_id=user_id, message=message,
+                                    history=scenario.history, context=context or None,
+                                    run_id=run_id)
+            obs.answer = out.answer
+            obs.tools_used = list(out.tools_used)
+            obs.tool_calls = [
+                {"tool": (c.get("tool") or ""), "args": (c.get("args") or {})}
+                for c in (out.tool_calls or [])]
+            obs.artifact_types = [a.get("type") for a in out.artifacts if a.get("type")]
+            obs.steps = out.steps
+        except Exception as e:  # a failed run is a data point, not a crash
+            obs.error = f"{type(e).__name__}: {e}"[:400]
+            obs.error_kind = classify_error(e)
+        obs.latency_ms = int((time.monotonic() - started) * 1000)
+        obs.handoffs = await _handoffs(run_id)
+        obs.input_tokens, obs.output_tokens, obs.cost_usd = await _usage(run_id)
+        await observability.finish_run(run_id, "failed" if obs.error else "completed",
+                                       obs.input_tokens, obs.output_tokens, 0,
+                                       obs.cost_usd, obs.latency_ms, obs.error)
+        observability.release_trace_seq(run_id)
+        attempts.append({"run_id": str(run_id), "error": obs.error,
+                         "error_kind": obs.error_kind})
+        # An agent failure is deterministic: the same prompt and tools fail the same
+        # way, so a retry only burns budget. An infrastructure failure is transient
+        # and deserves another attempt before it counts against the agent.
+        if not obs.error or obs.error_kind != "infra" or attempt > retries:
+            break
 
     row = score_run(scenario, obs)
     row["run_id"] = run_id
+    row["attempts"] = len(attempts)
+    if len(attempts) > 1:
+        row["retried_from"] = attempts[:-1]
     return row
 
 
@@ -161,14 +179,15 @@ def _markdown(report: dict) -> str:
         lines.append(f"| {tag} | {a['completed']} | {a['tool_f1']} "
                      f"| {a['artifact_rate']} |")
     lines += ["", "## Scenarios", "",
-              "| id | tools used | expected | recall | art | ground | completed |",
-              "|---|---|---|---|---|---|---|"]
+              "| id | tools used | expected | recall | art | ground | args | completed | attempts |",
+              "|---|---|---|---|---|---|---|---|---|"]
     for c in report["cases"]:
         lines.append(
             f"| {c['scenario']} | {', '.join(c['tools_used']) or '—'} "
             f"| {', '.join(c['expected_tools']) or '—'} | {c['tool_recall']} "
             f"| {c['artifact_rate']} | {c['grounding_rate']} "
-            f"| {'yes' if c['completed'] else 'no'} |")
+            f"| {c.get('argument_score', '—')} "
+            f"| {'yes' if c['completed'] else 'no'} | {c.get('attempts', 1)} |")
     fails = [c for c in report["cases"] if not c["completed"]]
     if fails:
         lines += ["", "## Why the incomplete runs failed", ""]
@@ -189,7 +208,7 @@ def _markdown(report: dict) -> str:
                 reasons.append(f"expected handoff to {c['expected_handoff_to']}, "
                                f"got {c['handoffs'] or 'none'}")
             if c["error"]:
-                reasons.append(f"error: {c['error']}")
+                reasons.append(f"error ({c.get('error_kind', 'unknown')}): {c['error']}")
             if not c["answer_preview"]:
                 reasons.append("empty answer")
             lines.append(f"- **{c['scenario']}** — " + "; ".join(reasons or ["unknown"]))
@@ -218,7 +237,7 @@ async def run(args: argparse.Namespace) -> dict:
         if scenario.needs_job and not job:
             skipped.append({"id": scenario.id, "reason": "no_open_job_in_corpus"})
             continue
-        results.append(await _run_one(args.user_id, scenario, subs))
+        results.append(await _run_one(args.user_id, scenario, subs, args.retries))
 
     config = {
         "user_id": args.user_id,
@@ -258,29 +277,52 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--tags", default=None, help="comma-separated tag filter")
     p.add_argument("--dataset", default=None, help="JSON scenario override file")
     p.add_argument("--limit", type=int, default=0, help="run only the first N scenarios")
+    p.add_argument("--retries", type=int, default=1,
+                   help="extra attempts for infrastructure failures (timeouts, 5xx, CUDA OOM); "
+                        "agent failures are deterministic and never retried")
     p.add_argument("--out", default="evals/reports")
     return p.parse_args(argv)
 
 
 def assert_something_was_measured(report: dict) -> None:
-    """Refuse to let a run that ran no scenario pass as a clean one.
+    """Refuse to let a run that measured nothing pass as a clean one.
 
-    The RAG runner has the same guard for the same reason: a summary of
-    `"n_scenarios": 0, "aggregate": {}` exiting 0 is indistinguishable from a successful
-    run to anyone skimming, and "0 errors, 0 violations" reads as *good* when it actually
-    means *nothing ran*. An empty `--dataset`, or a `--tags` filter matching none of the
-    scenarios, is the way this happens.
+    Two ways a run measures nothing, and both used to exit 0:
+
+    1. no scenario ran -- an empty `--dataset`, or `--tags` matching none of them. The
+       summary is `"n_scenarios": 0, "aggregate": {}`, and "0 errors, 0 violations" reads
+       as *good* when it means *nothing was asked*.
+    2. **every** scenario errored -- the provider died mid-run. This one is worse, because
+       the report is *full*: it prints `tool_recall` and `tool_precision` computed off the
+       failure paths, and they look like scores. A real instance
+       (`20261008-203003_real-agent-after-prompt-fix.md`) shows `tool_precision: 1.0`
+       beside `errors: 27, avg_steps: 0, input_tokens: 0` -- every call failed, and the
+       report read as "the prompt change hurt recall".
+
+    A *few* errors among many is a real result and passes; the metrics are defined over
+    the runs that completed.
     """
-    if report["n_scenarios"]:
-        return
-    raise SystemExit(
-        "\n0 scenarios ran -- nothing was measured.\n"
-        "  Either the scenario set is empty or `--tags` matched none of it. The default\n"
-        "  set is `app/eval/agent_dataset.py`; `--tags` and `--limit` narrow it, and an\n"
-        "  override file is read from `--dataset`. Note that `errors: 0` and\n"
-        "  `forbidden_violations: 0` below are vacuously true of an empty run, not a\n"
-        "  result -- nothing was asked, so nothing could fail.\n"
-    )
+    if not report["n_scenarios"]:
+        raise SystemExit(
+            "\n0 scenarios ran -- nothing was measured.\n"
+            "  Either the scenario set is empty or `--tags` matched none of it. The default\n"
+            "  set is `app/eval/agent_dataset.py`; `--tags` and `--limit` narrow it, and an\n"
+            "  override file is read from `--dataset`. Note that `errors: 0` and\n"
+            "  `forbidden_violations: 0` below are vacuously true of an empty run, not a\n"
+            "  result -- nothing was asked, so nothing could fail.\n"
+        )
+    errored = (report.get("aggregate") or {}).get("errors", 0)
+    if errored and errored == report["n_scenarios"]:
+        raise SystemExit(
+            f"\nall {errored} scenarios errored -- nothing was measured.\n"
+            "  The aggregate in this report is computed off the failure paths, so\n"
+            "  `tool_recall` and `tool_precision` are artifacts rather than scores, and\n"
+            "  `avg_steps: 0` with zero input/output tokens says no model call succeeded.\n"
+            "  Check the provider before reading anything else: on this box the usual\n"
+            "  cause is the Ollama server crashing on every inference (`0xc0000409`,\n"
+            "  `device kernel image is invalid`), which the `qwen2.5-cpu` derived model\n"
+            "  avoids. The report has been written; delete it or re-run.\n"
+        )
 
 
 async def main(argv: list[str] | None = None) -> None:

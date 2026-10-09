@@ -95,6 +95,26 @@ def test_an_agent_run_that_ran_scenarios_passes():
     assert agent_measured({"n_scenarios": 3}) is None
 
 
+def test_an_agent_run_where_every_scenario_errored_refuses_to_pass():
+    """The provider dying mid-run is the worse case: the report is *full*, and prints
+    `tool_precision: 1.0` off the failure paths beside `errors: 27, avg_steps: 0`.
+    A real instance of this read as "the prompt change hurt recall"."""
+    with pytest.raises(SystemExit) as exit_info:
+        agent_measured({"n_scenarios": 27,
+                        "aggregate": {"errors": 27, "avg_steps": 0.0,
+                                      "tool_recall": 0.1852, "tool_precision": 1.0}})
+    message = str(exit_info.value)
+    assert "all 27 scenarios errored" in message
+    assert "artifacts rather than scores" in message
+    assert "0xc0000409" in message  # names the cause actually hit on this box
+
+
+def test_a_few_errors_among_many_is_a_real_result_and_must_pass():
+    """The metrics are defined over the runs that completed, so a partial failure is a
+    measurement -- refusing it would make the guard worse than none."""
+    assert agent_measured({"n_scenarios": 27, "aggregate": {"errors": 2}}) is None
+
+
 # ------------------------------------------------- an absent answer is not a measurement
 
 def test_a_retrieval_only_run_reports_no_generation_metrics():
