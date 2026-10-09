@@ -16,6 +16,28 @@ the "Notes" hit links to a screen that can finally render one.
 These gates hold the new shape still: a second caller for either hook, a notes reader outside the
 knowledge panel, a seed under the table, or the group leaving the table all have to cost an edit
 here, because every one of them is re-derived from the walks below.
+
+#231 re-aimed the two route censuses after two commits joined them without being explained --
+`2c2ba5e`'s palette spec (which POSTs a note so the palette's search has a real row) and `aba55e8`'s
+API-docs gate (which names the route to justify holding a combined-verb row to its paths). Reading
+why the list grows found the reason it grows at all: the search asked for the route's *characters*,
+and `/knowledge/notes` is also the first half of `components/knowledge/notes-panel.tsx`. Four of the
+twenty speakers never mention the route; they name the panel that lives under it. So the census now
+pins the character after the route, which keeps `/knowledge/notes`, `/knowledge/notes/{id}` and
+`/api/v1/knowledge/notes` and drops `notes-panel.tsx`, and the four path coincidences are declared in
+a ledger of their own. The writer census changed shape too: it used to answer "which files name the
+route?", while its own message asked "is there a second writer?" -- a question of *verbs*. It now
+counts each named file's operations, and separates a spec that POSTs to the collection (a second
+caller of `createNote`, which the Java clause above proved is the route's handler) from a path that
+names the `user_notes` table itself (a second author of the rows, which is the thing feared).
+
+The verb scan reads literal `api.<verb>("<path>")` calls and nothing else. Its limit is stated rather
+than re-checked: a note request whose path arrives from a variable or a shared helper disappears from
+`writes` or `reads`, which is the same red a second writer would cost, so the equalities are the
+warning and no separate clause is needed to say so.
+
+Measured on the shapes the ledgers now hold: sixteen speakers, four path coincidences, three non-Java
+speakers all in `e2e`, and four readable calls over them -- three POSTs to the collection and one GET.
 """
 
 from __future__ import annotations
@@ -38,9 +60,74 @@ ENDPOINTS = "frontend/src/lib/api/endpoints.ts"
 NOTE_ROUTE = "/knowledge/notes"
 NOTES_PANEL = "frontend/src/components/knowledge/notes-panel.tsx"
 
+# The route, with the character after it pinned: `/knowledge/notes` is also the first half of
+# `components/knowledge/notes-panel.tsx`, so a bare substring search reports a file naming the panel
+# as one naming the route. This accepts the route bare, its `{id}` child and the `/api/v1` spelling,
+# and rejects a hyphen or word character following it.
+MENTION = re.compile(r"/knowledge/notes(?![\w-])")
+# A literal `api.<verb>("<path>")` call. Deliberately narrow, and the writer census counts what it
+# finds so the narrowness is a stated limit rather than a silent one.
+NOTE_OP = re.compile(r"""\.(get|post|put|patch|delete)\(\s*["'`]([^"'`\n]*)["'`]""")
+
+# Each speaker of the notes route, with the reason it speaks. A new speaker has to join this ledger,
+# which is the point: the list is not a photograph of the repository, it is a claim about it.
+SPEAKERS: dict[str, str] = {
+    "ai-service/tests/test_knowledge_controller_request_contract.py":
+        "pins the two client path spellings and the POST/PATCH bodies the route takes",
+    f"ai-service/tests/{Path(__file__).name}":
+        "a census that searches for a route has to name it",
+    "ai-service/tests/test_the_api_docs_public_tables_are_the_controllers_own.py":
+        "explains why API.md's combined row over the four note verbs is held to its paths, not its verbs",
+    "ai-service/tests/test_the_data_model_names_columns_that_exist.py":
+        "prose: the user_notes table is what serves GET /knowledge/notes, not a knowledge_sources row",
+    "ai-service/tests/test_window_sizes_whose_callers_decide_them_ship.py":
+        "pins the route's default window (20) against the caller that decides it",
+    "backend/src/test/java/com/careeros/DomainApiIT.java":
+        "drives create, read and a cross-user forbidden delete over the route",
+    "backend/src/test/java/com/careeros/PagingApiIT.java":
+        "pages the notes collection through the route",
+    "backend/src/test/java/com/careeros/ratelimit/RateLimitFilterTest.java":
+        "asserts the route carries no rate-limit rule",
+    "docs/API.md":
+        "the row advertising GET / POST / PATCH / DELETE over the route and its {id} child",
+    "docs/architecture.md":
+        "prose: the notes the panel reads come from GET /knowledge/notes",
+    "e2e/tests/command-palette.spec.ts":
+        "POSTs one note so the palette's server search has a real row to find",
+    "e2e/tests/golden-journey.spec.ts":
+        "polls GET to verify what the panel wrote through its own POST -- a reader, not a second writer",
+    "e2e/tests/pagination.spec.ts":
+        "POSTs the twenty-five rows a pager needs",
+    NOTES_PANEL:
+        "the panel's docstring spells the four verbs it calls",
+    "frontend/src/lib/api/endpoints.test.ts":
+        "pins the body keys the POST takes",
+    "frontend/src/lib/api/endpoints.ts":
+        "the client's own map: knowledgeNotes and the knowledgeNote(id) child",
+}
+
+# Files whose text contains the route's characters without mentioning the route, because the panel
+# that renders notes lives at `components/knowledge/notes-panel.tsx`. Declared so the two ledgers
+# reconcile exactly against the loose search: a file may not move from one to the other unnoticed.
+PATH_COINCIDENCES: dict[str, str] = {
+    "ai-service/tests/test_anonymous_mappers_producers_ship.py":
+        "names the panel's path as useKnowledgeNotes' caller",
+    "ai-service/tests/test_page_window_names_and_their_readers_ship.py":
+        "names the panel's path in its caller table, six times",
+    "ai-service/tests/test_the_knowledge_page_pages_both_of_its_lists.py":
+        "names the panel's path as the caller of a page-window read",
+    "frontend/src/app/(app)/knowledge/page.tsx":
+        'imports the panel: "@/components/knowledge/notes-panel"',
+}
+
 
 def read(rel: str) -> str:
     return (ROOT / rel).read_text(encoding="utf-8").replace("\r\n", "\n")
+
+
+def mentions_route(text: str) -> bool:
+    """Whether the text speaks of the notes route itself, not of a path that merely starts with it."""
+    return bool(MENTION.search(text))
 
 
 @lru_cache(maxsize=1)
@@ -157,7 +244,9 @@ def test_the_only_writer_of_note_rows_is_behind_the_post_the_client_calls() -> N
     assert not re.search(r"INSERT INTO user_notes", sql), \
         "a migration now seeds note rows, so the client no longer authors everything on screen"
 
-    service = []
+    route_speakers: list[str] = []
+    table_speakers: list[str] = []
+    operations: dict[str, list[tuple[str, str]]] = {}
     walked = 0
     for sub in ("ai-service/app", "ai-service/ops", "scripts", "e2e"):
         # `e2e` carries its own `node_modules`; rglob would walk it to discard every file.
@@ -166,20 +255,51 @@ def test_the_only_writer_of_note_rows_is_behind_the_post_the_client_calls() -> N
                 continue
             walked += 1
             text = path.read_text(encoding="utf-8", errors="replace")
-            if NOTE_ROUTE in text or "user_notes" in text:
-                service.append(path.relative_to(ROOT).as_posix())
+            rel = path.relative_to(ROOT).as_posix()
+            if "user_notes" in text:
+                table_speakers.append(rel)
+            if mentions_route(text):
+                route_speakers.append(rel)
+                found = sorted((verb, target) for verb, target in NOTE_OP.findall(text)
+                               if NOTE_ROUTE in target)
+                if found:
+                    operations[rel] = found
     assert walked > 30, f"the writer census read {walked} files, so its silence proves nothing"
-    # The golden-journey spec polls `GET /knowledge/notes` to verify what the panel wrote through
-    # its own POST -- a reader riding behind the one writer, not a second one. The pagination
-    # spec seeds twenty-five notes the same way, because a pager needs a board to page.
-    assert service == ["e2e/tests/golden-journey.spec.ts",
-                     "e2e/tests/pagination.spec.ts"], \
-        f"a seed, script or e2e path now names the notes route or its table ({service}): the surface may have a second writer"
+
+    # Naming the TABLE from outside the Java service would write rows around the entity layer, which
+    # is the second author this test's title forbids. Nothing does: all three specs reach the route
+    # with a verb, so every row they create is made by the handler the clauses above pinned to
+    # `createNote` -- a spec that seeds is a second caller of one author, not a second author.
+    assert table_speakers == [], (
+        f"a path outside the Java service names the notes table itself ({table_speakers}): that is a second "
+        "author of note rows, not a caller of the one the route serves")
+    assert route_speakers == ["e2e/tests/command-palette.spec.ts",
+                              "e2e/tests/golden-journey.spec.ts",
+                              "e2e/tests/pagination.spec.ts"], (
+        f"the notes route now has a different set of non-Java speakers ({route_speakers}): read each one's "
+        "verbs before this gate claims again that one handler authors every row")
+
+    writes = {rel: [op for op in ops if op[0] != "get"] for rel, ops in operations.items()}
+    writes = {rel: ops for rel, ops in writes.items() if ops}
+    reads = {rel: [target for verb, target in ops if verb == "get"] for rel, ops in operations.items()}
+    reads = {rel: paths for rel, paths in reads.items() if paths}
+    assert writes == {
+        "e2e/tests/command-palette.spec.ts": [("post", NOTE_ROUTE)],
+        "e2e/tests/pagination.spec.ts": [("post", NOTE_ROUTE), ("post", NOTE_ROUTE)],
+    }, (f"a note row is now authored by a path that is not the collection POST ({writes}): the panel writes "
+        "through POST /knowledge/notes, and that is the only verb the Java clause above accounts for")
+    assert reads == {"e2e/tests/golden-journey.spec.ts": [NOTE_ROUTE]}, \
+        f"the route's readers changed shape: {reads}"
+    # No separate "a speaker the verb scan cannot see" clause: the two equalities above already hold
+    # every one of the three names, so a file that lost its only readable call has lost its entry in
+    # `writes` or `reads` and reddens there first. The scan's limit is real -- a path built from a
+    # variable is invisible -- but it lands as a vanished writer, which is the message to read.
 
 
 def test_the_files_that_speak_of_the_notes_route() -> None:
-    """Every file in the repository naming the route, counted as one walk -- including this gate."""
-    sites = []
+    """Every file naming the route, and every file naming only a path that starts with it -- one walk."""
+    sites: list[str] = []
+    loose_sites: list[str] = []
     skip_parts = {"node_modules", "__pycache__", "dist", "build", "target"}
     # Pruning walk: `ROOT.rglob("*")` traverses 107k entries from here, 81k of them under
     # `frontend/node_modules`, which the `skip_parts` guard below throws away by name.
@@ -189,37 +309,31 @@ def test_the_files_that_speak_of_the_notes_route() -> None:
         rel = path.relative_to(ROOT).as_posix()
         if set(rel.split("/")) & skip_parts or any(part.startswith(".") for part in rel.split("/")):
             continue
-        if NOTE_ROUTE in path.read_text(encoding="utf-8", errors="replace"):
+        text = path.read_text(encoding="utf-8", errors="replace")
+        if NOTE_ROUTE not in text:
+            continue
+        loose_sites.append(rel)
+        if mentions_route(text):
             sites.append(rel)
-    # The page and the panel speak the route too now: the page imports the panel (the import path
-    # contains the route as a substring), and the panel's docstring spells the four verbs it calls.
-    # The knowledge controller contract test joined when it pinned the request shapes of the four
-    # note verbs, and the golden-journey spec when it started driving the panel end to end.
-    # Since #223 the reader census spells the panel's path (which contains the route as a
-    # substring) and the knowledge gate pins the notes hook's body, so both speak it too.
-    # The architecture data model joined when section 4 gained the `user_notes` table (which
-    # is not a `knowledge_sources` row of `kind = note`), the gate that pins that table
-    # joined with it, and the pagination spec because a pager needs rows to page.
-    assert sites == [
-        "ai-service/tests/test_anonymous_mappers_producers_ship.py",
-        "ai-service/tests/test_knowledge_controller_request_contract.py",
-        f"ai-service/tests/{Path(__file__).name}",
-        "ai-service/tests/test_page_window_names_and_their_readers_ship.py",
-        "ai-service/tests/test_the_data_model_names_columns_that_exist.py",
-        "ai-service/tests/test_the_knowledge_page_pages_both_of_its_lists.py",
-        "ai-service/tests/test_window_sizes_whose_callers_decide_them_ship.py",
-        "backend/src/test/java/com/careeros/DomainApiIT.java",
-        "backend/src/test/java/com/careeros/PagingApiIT.java",
-        "backend/src/test/java/com/careeros/ratelimit/RateLimitFilterTest.java",
-        "docs/API.md",
-        "docs/architecture.md",
-        "e2e/tests/golden-journey.spec.ts",
-        "e2e/tests/pagination.spec.ts",
-        "frontend/src/app/(app)/knowledge/page.tsx",
-        NOTES_PANEL,
-        "frontend/src/lib/api/endpoints.test.ts",
-        "frontend/src/lib/api/endpoints.ts",
-    ], f"a new speaker about the notes route appeared, or one stopped: {sites}"
+    # The controller that SERVES the route is not among the speakers, because it spells the path in two
+    # pieces (`@RequestMapping("/api/v1/knowledge")` plus `@GetMapping("/notes")`); the first test in
+    # this file is what holds those four verbs, and a route rename there reddens it, not this list.
+    unexplained = sorted(set(sites) - set(SPEAKERS))
+    silent = sorted(set(SPEAKERS) - set(sites))
+    assert sites == sorted(SPEAKERS), (
+        f"speakers with no reason recorded: {unexplained}; reasons whose speaker went silent: {silent}. "
+        "A speaker is a claim about the route, so give it a reason in SPEAKERS or make it stop speaking")
+    extra = sorted(set(loose_sites) - set(sites) - set(PATH_COINCIDENCES))
+    stale = sorted(set(PATH_COINCIDENCES) - set(loose_sites))
+    assert sorted(set(SPEAKERS) | set(PATH_COINCIDENCES)) == loose_sites, (
+        f"the loose substring search and the two ledgers disagree: {extra} contain the route's characters "
+        f"without being declared a speaker or a path coincidence, and {stale} no longer contain them")
+    assert not set(SPEAKERS) & set(PATH_COINCIDENCES), (
+        f"a file cannot both speak of the route and only carry its characters in a path: "
+        f"{sorted(set(SPEAKERS) & set(PATH_COINCIDENCES))}")
+    assert len(PATH_COINCIDENCES) == 4, (
+        f"the panel-path coincidence ledger holds {len(PATH_COINCIDENCES)} files; it exists to prove the "
+        "boundary rule removes exactly the four that name notes-panel.tsx and nothing else")
     assert 'knowledgeNotes: "%s"' % NOTE_ROUTE in read(ENDPOINTS), \
         "the client's endpoint map no longer spells the route this census searched for, so its hits are not the client's"
 
