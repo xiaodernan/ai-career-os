@@ -22,6 +22,7 @@ import { missingSkillGaps } from "@/lib/api/normalize";
 import type { Suggestion } from "@/lib/api/types";
 import { ApiError } from "@/lib/api/client";
 import { missingEndpointMessage } from "@/lib/api/missing-endpoint";
+import { jdTextIssue } from "@/lib/jd-text";
 
 /**
  * JD intelligence (§9): paste raw text → required / preferred skills,
@@ -60,9 +61,11 @@ export function AnalyzeJdDialog({ onUseText }: { onUseText?: (text: string) => v
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
+  const issue = jdTextIssue(text);
+
   const run = () => {
+    if (issue) return;
     const value = text.trim();
-    if (value.length < 40) return;
     analyze.mutate(value, {
       onSuccess: (res) => {
         setResult(res);
@@ -102,7 +105,8 @@ export function AnalyzeJdDialog({ onUseText }: { onUseText?: (text: string) => v
             className="font-mono text-xs"
           />
           <p className="text-xs text-muted-foreground">
-            {text.trim().length} characters · nothing is sent until you run the analysis.
+            {text.trim().length} characters ·{" "}
+            {issue ?? "nothing is sent until you run the analysis."}
           </p>
         </div>
 
@@ -140,7 +144,7 @@ export function AnalyzeJdDialog({ onUseText }: { onUseText?: (text: string) => v
               Keep this text
             </Button>
           )}
-          <Button variant="ai" onClick={run} loading={analyze.isPending} disabled={text.trim().length < 40}>
+          <Button variant="ai" onClick={run} loading={analyze.isPending} disabled={issue !== undefined}>
             <Sparkles aria-hidden />
             Analyze
           </Button>

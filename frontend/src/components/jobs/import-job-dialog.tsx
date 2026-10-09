@@ -20,13 +20,15 @@ import { ProcessingSteps, type ProcessingStep } from "@/components/ai/processing
 import { useImportJob } from "@/lib/hooks/actions";
 import { ApiError } from "@/lib/api/client";
 import { missingEndpointMessage } from "@/lib/api/missing-endpoint";
+import { jdTextIssue } from "@/lib/jd-text";
 
 /**
  * Paste a posting into the tracker (vs. AnalyzeJdDialog, which only previews the
  * analysis): one POST runs the JD analyst on the backend and lands the job —
  * company, skills, responsibilities, its own JD row — so on success the caller
- * jumps straight to the new job's page. The same 40-character bar as the analyze
- * dialog: below it the analyst returns empty structure for any posting.
+ * jumps straight to the new job's page. The posting floor is the same one the
+ * analyze dialog asks `@/lib/jd-text` for: below it the analyst returns an empty
+ * structure for any posting, however the request was sent.
  */
 const STAGES: string[] = [
   "Reading the posting",
@@ -61,11 +63,12 @@ export function ImportJobDialog() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
+  const issue = jdTextIssue(text);
+
   const run = () => {
-    const value = text.trim();
-    if (value.length < 40) return;
+    if (issue) return;
     importJob.mutate(
-      { rawText: value, url: url.trim() || undefined },
+      { rawText: text.trim(), url: url.trim() || undefined },
       {
         onSuccess: (res) => {
           setDone(true);
@@ -108,7 +111,8 @@ export function ImportJobDialog() {
             className="font-mono text-xs"
           />
           <p className="text-xs text-muted-foreground">
-            {text.trim().length} characters · nothing is sent until you import.
+            {text.trim().length} characters ·{" "}
+            {issue ?? "nothing is sent until you import."}
           </p>
         </div>
 
@@ -140,7 +144,7 @@ export function ImportJobDialog() {
         )}
 
         <DialogFooter>
-          <Button variant="ai" onClick={run} loading={importJob.isPending} disabled={text.trim().length < 40}>
+          <Button variant="ai" onClick={run} loading={importJob.isPending} disabled={issue !== undefined}>
             <Sparkles aria-hidden />
             Import
           </Button>

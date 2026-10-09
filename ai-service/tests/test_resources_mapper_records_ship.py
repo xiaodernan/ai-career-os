@@ -729,6 +729,9 @@ def test_the_dead_names_spread_in_three_measured_tiers_and_three_reached_a_scree
     `isCurrent` and `versionNo`, both calls dead, the badge alive on a second real term.
     """
     files = frontend_files()
+    # 169 rather than 167 since the pasted-posting floor joined with its own test
+    # (`lib/jd-text.ts` + `lib/jd-text.test.ts`: the one number both paste-a-posting dialogs block
+    # on, which the two screens had each spelled twice as a bare literal -- #232).
     # 167 rather than 162 since five files joined in three commits: the skip link and its test
     # (`components/layout/skip-link.tsx` + `.test.ts`: a keyboard traveller reaches the content
     # without repeating the sidebar), the stylesheet's own test (`app/globals.test.ts`: a reader
@@ -759,7 +762,7 @@ def test_the_dead_names_spread_in_three_measured_tiers_and_three_reached_a_scree
     # the settings page's career-profile editor; 136 rather than 135 since the knowledge page's
     # notes panel component joined. (Spell the panel's path out nowhere here -- the notes-route
     # census counts every mention of it, this file included.)
-    assert len(files) == 167, f"the frontend census walked {len(files)} files"
+    assert len(files) == 169, f"the frontend census walked {len(files)} files"
     asked = {name for row in UNAUTHORED.values() for name in row}
     assert len(asked) == 56, f"{len(asked)} dead names are asked, pinned 56"
     classified = set()
