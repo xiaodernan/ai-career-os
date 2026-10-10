@@ -130,12 +130,13 @@ wired for it (`--experiment baseline --answer` vs `--experiment no-rerank --rera
 Runner:
 `python -m app.eval.run_agent_eval --user-id <uuid> [--tags zh,match] [--limit 5]`
 
-Scenario set: `app/eval/agent_dataset.py::AGENT_SCENARIOS` — 27 scripted user
+Scenario set: `app/eval/agent_dataset.py::AGENT_SCENARIOS` — 43 scripted user
 turns covering discovery, company intelligence, match & skill-gap, tailoring,
 cover letters, resume/KB retrieval, profile/memory, paste-JD analysis, interview
-kick-off, tracker writes, small talk, a prompt-injection attempt, two delegation
+kick-off and answer evaluation, tracker writes (ZH and EN), small talk, two
+prompt-injection attempts, two hallucination attempts, two delegation
 briefs, cross-entity search, a two-job comparison, resume versions, career
-planning and a read-only turn whose point is the tools it must *not* call. `{job_id}` / `{job_title}` / `{company}` placeholders are
+planning, a four-week learning plan and two multi-tool workflows. `{job_id}` / `{job_title}` / `{company}` placeholders are
 resolved by the runner against a live open job, so scenarios don't rot as the
 corpus changes.
 
@@ -159,7 +160,7 @@ a **"why the incomplete runs failed"** section listing, per scenario, the missin
 tools / artifacts / facts / handoff.
 
 Scoring lives in `app/eval/agent_metrics.py` as pure functions, unit-tested in
-`tests/test_agent_eval.py` (14 tests) — including the deliberately vacuous cases:
+`tests/test_agent_eval.py` (21 tests) — including the deliberately vacuous cases:
 a run that correctly calls *no* tools must not be penalised for precision, and a
 forbidden call fails the scenario even if everything else is perfect.
 
@@ -191,9 +192,40 @@ act-first and names matching/tailoring as the only datum that may be asked for, 
 rule 3 puts `search_jobs` ahead of every other step for role requests, personalised
 ones included. `tests/test_the_orchestrator_acts_first.py` (4 cases) pins both rewritten
 rules, the properties the baseline scored well, and the 1..6 numbering -- red-first
-against the pre-fix prompt. **The table above is the pre-fix baseline and stays as
-recorded**: whether the words move `tool_recall` is the next real-provider run's
-verdict, and no test claims it.
+against the pre-fix prompt.
+
+### After the rewrite, on the grown scenario set
+
+The set itself changed underneath the question: `31961b2` added scenarios for
+cross-entity search, comparison, versions, learning and safety, taking it from 27 to
+**43**. So this is a run on a *different* population, not a clean A/B, and it should be
+read that way — the direction is informative, the delta is not a measurement of the
+prompt alone.
+
+`evals/reports/20261010-000238_real-agent-promptfix3.md` (43 scenarios, `qwen2.5-cpu`,
+**0 errors**):
+
+| metric | value | pre-rewrite (27) |
+|---|---|---|
+| tool_recall | **0.61** | 0.30 |
+| tool_precision | 0.74 | 0.93 |
+| tool_f1 | **0.49** | 0.26 |
+| artifact_rate | 0.84 | 0.70 |
+| grounding_rate | 0.77 | 1.00 |
+| completed | 0.30 | 0.22 |
+| argument_score | 0.97 | — (added later) |
+| forbidden_violations / errors | 0 / 0 | 0 / 0 |
+
+Recall roughly doubled while precision gave some back, which is the trade the rewrite was
+aimed at and the risk it carried. `argument_score 0.97` is new with the metric: when the
+orchestrator *does* call a tool, its arguments are almost always right, so the remaining
+gap is selection rather than spelling.
+
+**What this does not establish**: that the prompt is worth +0.31 recall. The population
+changed, the run is a single sample at temperature > 0, and the pre-rewrite number was
+taken before the `kinds`-filter fix that also affects retrieval. The honest reading is
+"recall is no longer the binding constraint; precision is", and a same-population A/B is
+still the thing that would settle it.
 
 The mock column is the earlier run (`evals/reports/20261001-145644_agent-full.md`), kept
 for contrast.
@@ -201,7 +233,42 @@ for contrast.
 Both harnesses therefore require a **real provider** to report product quality; they
 require no provider to prove the system is wired correctly.
 
-## 3. What is verified offline vs. with a real provider
+## 3. Interview evaluation — does the report mean anything
+
+The interview path had the opposite problem to the agent path: a complete contract
+(§15 names eight dimensions and six report sections) and **no harness at all**, so
+"the interviewer reports depth 0.9" was never once checked against a transcript.
+
+Scoring lives in `app/eval/interview_metrics.py` as pure functions, unit-tested in
+`tests/test_interview_eval.py` (20 tests) against the scripted fixtures in
+`app/eval/interview_dataset.py`. No provider is needed to run it, because what it
+measures is *shape*, not judgement:
+
+| Metric | Meaning |
+|---|---|
+| `discrimination` | how far the eight dimensions are spread — eight identical scores means the evaluator declined to evaluate |
+| `follow_up_discipline` | share of `followup` moves that actually carried a question |
+| `difficulty_discipline` | share of the adaptive ladder inside the `[0.1, 0.95]` clamp band |
+| `report_completeness` | how many of the six §15 sections the report filled |
+| `grounding` | share of reported weaknesses supported by the transcript's own vocabulary |
+| `adapted` | did the ladder move at all, or was every question asked at the same difficulty |
+| `passed` | the AND of the above, minus the two that are diagnostic rather than blocking |
+
+The fixture set is built so the harness **must** discriminate: `iv-strong` and
+`iv-weak` are the same ladder scored for two different candidates, `iv-flat` is eight
+identical dimensions (the defect `discrimination` exists for), plus one fixture per
+named failure — a `followup` with no question, a ladder that left the clamp band, and
+a fabricated weakness that names a consensus mechanism the candidate never mentioned.
+`test_the_golden_set_discriminates` asserts that the set does *not* all pass, because a
+golden set where everything passes is a rubber stamp.
+
+Two measurement caveats the fixtures themselves encode: `discrimination` measures
+spread and not quality — a bad candidate also scores spread across the eight
+dimensions, so `overall` is what separates a strong report from a weak one; and
+`grounding` only counts *distinctive* tokens, because a weakness containing "the",
+"with" and "you" matches any transcript ever recorded.
+
+## 4. What is verified offline vs. with a real provider
 
 | Claim | Offline (mock/hash) | Real provider |
 |---|---|---|
