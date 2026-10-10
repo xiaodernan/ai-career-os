@@ -164,8 +164,10 @@ Scoring lives in `app/eval/agent_metrics.py` as pure functions, unit-tested in
 a run that correctly calls *no* tools must not be penalised for precision, and a
 forbidden call fails the scenario even if everything else is perfect.
 
-Baseline on the reference dev box, 27 scenarios. **With a real provider**
-(`qwen2.5:7b` on Ollama, CPU) — `evals/reports/20261008-010504_real-agent.md`:
+**Pre-rewrite baseline**, on the 27 scenarios that existed at the time — the set has since
+grown to 43, so read this table as the "before" in the trade described below, not as the
+current state. **With a real provider** (`qwen2.5:7b` on Ollama, CPU) —
+`evals/reports/20261008-010504_real-agent.md`:
 
 | metric | real | mock |
 |---|---|---|
