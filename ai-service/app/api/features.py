@@ -3,6 +3,7 @@ from pydantic import BaseModel, Field
 
 from app.core.deps import Ctx, require_internal
 from app.db import domain, observability
+from app.features import gap_analysis as gap_mod
 from app.features import jd_analyze as jd_an
 from app.features import match as match_mod
 from app.features import resume_parse as rp
@@ -159,3 +160,19 @@ async def suggestions_ep(req: SuggestReq, ctx: Ctx = Depends(require_internal)):
     suggestions = jd_an.suggest_resume_improvements(jd, structured)
     await observability.finish_run(run_id, "completed")
     return {"suggestions": suggestions, "jd": jd}
+
+
+class GapReq(BaseModel):
+    target_role: str = Field(min_length=10)
+    seniority: str | None = None
+    resume_version_id: str | None = None
+
+
+@router.post("/gap-analysis")
+async def gap_analysis_ep(req: GapReq, ctx: Ctx = Depends(require_internal)):
+    run_id = await _run(ctx, "learning", "gap_analysis")
+    structured, plaintext = await _resume_payload(ctx.user_id, req.resume_version_id)
+    result = await gap_mod.analyze_gap(req.target_role, req.seniority, structured,
+                                      plaintext, user_id=ctx.user_id, run_id=run_id)
+    await observability.finish_run(run_id, "completed")
+    return result
