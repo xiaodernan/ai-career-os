@@ -72,6 +72,15 @@ def test_rule_3_puts_search_jobs_first_for_role_requests_even_personalised_ones(
         f"rule 3 lost the ordering -- search first, refine after: {rule!r}")
     assert "suit me" in rule, (
         f"rule 3 dropped the personalised-request case the baseline failed on (as-01): {rule!r}")
+    # The first version of this rule had no upper bound, and the 43-scenario run showed
+    # what that costs: `search_jobs` was the extra tool in 7 of the 12 scenarios that
+    # lost precision -- company research (as-18/as-35, which expect a `job_research`
+    # handoff), a question about saved items (as-27), and a prompt-injection case
+    # (as-32) all started a search. The boundary is the fix; keep it in the rule.
+    assert "transfer_to" in rule and "not a role" in rule, (
+        f"rule 3 lost the boundary that costs precision when it is missing -- research "
+        f"belongs to a subagent, and a message that merely mentions jobs is not a "
+        f"request for them: {rule!r}")
 
 
 def test_the_rules_the_baseline_scored_well_survive_the_rewrite():

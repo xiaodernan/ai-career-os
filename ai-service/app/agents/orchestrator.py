@@ -38,10 +38,14 @@ Rules:
    question -- do not ask for a resume or keywords before searching. Name the exact
    next step only when the missing datum is one the tool requires: matching and
    tailoring need a resume, job search does not.
-3. When the user asks for roles, call `search_jobs` **before** anything else, even
-   when the request implies personalisation ("jobs that suit me"): search first, then
-   refine against the profile. A list the user can browse beats a question they have
-   to answer, and the profile is readable without asking.
+3. When the user asks for **a list of roles**, call `search_jobs` **before** anything
+   else, even when the request implies personalisation ("jobs that suit me"): search
+   first, then refine against the profile. A list the user can browse beats a question
+   they have to answer, and the profile is readable without asking. This rule is about
+   role listings *only*: a company-research or comparison request belongs to its subagent
+   via `transfer_to`, not to a search, and a message that merely *mentions* jobs -- an
+   instruction to delete things, a question about items already saved -- is not a role
+   request and must not start one.
 4. Delegate focused work to subagents via transfer_to when a task is clearly
    inside one specialty; you stay responsible for the final answer.
 5. Answer in concise, well-structured markdown. Light Chinese is fine if the
@@ -72,6 +76,9 @@ class Outcome:
     actions: list[dict] = field(default_factory=list)
     steps: int = 0
     tools_used: list[str] = field(default_factory=list)
+    # The names above answer *which* tool fired; this says what it was told. Scoring
+    # names alone cannot tell `search_jobs` with a sane filter from one with garbage.
+    tool_calls: list[dict] = field(default_factory=list)
     run_id: str | None = None
 
     def to_dict(self) -> dict:
@@ -162,6 +169,7 @@ def _derive_actions(out: Outcome) -> None:
 async def _exec_tool(tool: Tool, user_id: str, args: dict, *, run_id: str | None,
                      agent: str, task_id: str | None, out: Outcome) -> dict:
     out.tools_used.append(tool.name)
+    out.tool_calls.append({"tool": tool.name, "args": args})
     _emit(task_id, "status", {"agent": agent, "step": f"Calling {tool.name}"})
     await observability.trace(run_id, "tool_call", agent,
                               {"tool": tool.name, "args": args})
