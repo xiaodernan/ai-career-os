@@ -9,9 +9,10 @@ up. Difficulty adapts to answer quality; the question/answer tree becomes the
 from app.core.ai import ask, ask_json, wrap_untrusted
 from app.providers.base import LLMMessage, LLMRequest
 
-MODES = ["behavioral", "technical", "system_design", "ai_llm", "rag", "agent", "backend",
-          "mixed"]
-
+# These keys ARE the mode vocabulary: `opening_question` and `advance` fall back to the `mixed`
+# persona for a mode listed nowhere here, so a mode that exists in one author and not the other
+# silently changes which interview the candidate gets. `@/lib/interview-modes` is the client's
+# one list of them; `test_the_interview_mode_vocabulary_has_one_author.py` keeps the two together.
 _INTERVIEWER_PERSONA = {
     "behavioral": "an experienced hiring manager probing ownership, conflict and impact",
     "technical": "a senior engineer drilling into fundamentals and code-level decisions",

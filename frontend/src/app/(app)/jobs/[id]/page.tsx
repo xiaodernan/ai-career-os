@@ -51,16 +51,7 @@ import { list as listOf, pick, rec, str } from "@/lib/api/normalize";
 import { formatSalary, titleCase } from "@/lib/format";
 import type { Evidence, JdRequirement, PreparationItem, SkillGap } from "@/lib/api/types";
 import { normalizeJdParsed } from "@/lib/api/normalize";
-
-const INTERVIEW_MODES = [
-  { value: "behavioral", label: "Behavioral" },
-  { value: "technical", label: "Technical" },
-  { value: "system_design", label: "System design" },
-  { value: "ai_llm", label: "AI / LLM" },
-  { value: "rag", label: "RAG" },
-  { value: "agent", label: "Agent" },
-  { value: "backend", label: "Backend" },
-];
+import { INTERVIEW_MODES } from "@/lib/interview-modes";
 
 export default function JobDetailPage() {
   const params = useParams<{ id: string }>();
