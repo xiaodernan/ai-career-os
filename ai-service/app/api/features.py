@@ -8,6 +8,7 @@ from app.features import jd_analyze as jd_an
 from app.features import learning as learning_mod
 from app.features import match as match_mod
 from app.features import negotiation as negotiation_mod
+from app.features import offers as offers_mod
 from app.features import readiness as readiness_mod
 from app.features import resume_parse as rp
 from app.features import salary as salary_mod
@@ -262,3 +263,30 @@ async def learning_plan_ep(req: LearningReq, ctx: Ctx = Depends(require_internal
     plan = learning_mod.build_learning_plan(gap)
     await observability.finish_run(run_id, "completed")
     return {"plan": plan, "gap": gap}
+
+
+class OfferItem(BaseModel):
+    label: str = Field(min_length=1)
+    base: int = Field(gt=0)
+    bonus: int = Field(default=0, ge=0)
+
+
+class CompareOffersReq(BaseModel):
+    role: str = Field(min_length=2)
+    location: str | None = None
+    seniority: str | None = None
+    currency: str = "CNY"
+    match_score: float | None = Field(default=None, ge=0, le=1)
+    offers: list[OfferItem] = Field(min_length=1)
+
+
+@router.post("/compare-offers")
+async def compare_offers_ep(req: CompareOffersReq, ctx: Ctx = Depends(require_internal)):
+    run_id = await _run(ctx, "job_research", "compare_offers")
+    samples = await salary_mod.load_job_samples()
+    report = salary_mod.benchmark(samples, role=req.role, location=req.location,
+                                  seniority=req.seniority, currency=req.currency)
+    result = offers_mod.compare_offers([o.model_dump() for o in req.offers], report,
+                                       match_score=req.match_score)
+    await observability.finish_run(run_id, "completed")
+    return result
