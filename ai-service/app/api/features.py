@@ -7,6 +7,7 @@ from app.features import gap_analysis as gap_mod
 from app.features import jd_analyze as jd_an
 from app.features import match as match_mod
 from app.features import negotiation as negotiation_mod
+from app.features import readiness as readiness_mod
 from app.features import resume_parse as rp
 from app.features import salary as salary_mod
 from app.features import tailor as tailor_mod
@@ -219,3 +220,27 @@ async def negotiate_ep(req: NegotiateReq, ctx: Ctx = Depends(require_internal)):
                                             currency=req.currency)
     await observability.finish_run(run_id, "completed")
     return plan
+
+
+class ReadinessReq(BaseModel):
+    target_role: str = Field(min_length=10)
+    seniority: str | None = None
+    resume_version_id: str | None = None
+    location: str | None = None
+    currency: str = "CNY"
+    target_salary: int | None = None
+
+
+@router.post("/readiness")
+async def readiness_ep(req: ReadinessReq, ctx: Ctx = Depends(require_internal)):
+    run_id = await _run(ctx, "learning", "readiness")
+    structured, plaintext = await _resume_payload(ctx.user_id, req.resume_version_id)
+    gap = await gap_mod.analyze_gap(req.target_role, req.seniority, structured, plaintext,
+                                    user_id=ctx.user_id, run_id=run_id)
+    samples = await salary_mod.load_job_samples()
+    salary = salary_mod.benchmark(samples, role=req.target_role, location=req.location,
+                                  seniority=req.seniority, target_salary=req.target_salary,
+                                  currency=req.currency)
+    result = readiness_mod.compose(gap, salary)
+    await observability.finish_run(run_id, "completed")
+    return {"readiness": result, "gap": gap, "salary": salary}
