@@ -7,6 +7,7 @@ from app.features import gap_analysis as gap_mod
 from app.features import jd_analyze as jd_an
 from app.features import match as match_mod
 from app.features import resume_parse as rp
+from app.features import salary as salary_mod
 from app.features import tailor as tailor_mod
 from app.features.cover_letter import generate as cover_generate
 
@@ -176,3 +177,22 @@ async def gap_analysis_ep(req: GapReq, ctx: Ctx = Depends(require_internal)):
                                       plaintext, user_id=ctx.user_id, run_id=run_id)
     await observability.finish_run(run_id, "completed")
     return result
+
+
+class SalaryReq(BaseModel):
+    role: str = Field(min_length=2)
+    location: str | None = None
+    seniority: str | None = None
+    target_salary: int | None = None
+    currency: str = "CNY"
+
+
+@router.post("/salary-benchmark")
+async def salary_benchmark_ep(req: SalaryReq, ctx: Ctx = Depends(require_internal)):
+    run_id = await _run(ctx, "job_research", "salary_benchmark")
+    samples = await salary_mod.load_job_samples()
+    report = salary_mod.benchmark(samples, role=req.role, location=req.location,
+                                  seniority=req.seniority, target_salary=req.target_salary,
+                                  currency=req.currency)
+    await observability.finish_run(run_id, "completed")
+    return report
