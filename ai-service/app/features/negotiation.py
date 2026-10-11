@@ -38,7 +38,9 @@ def leverage(offer: float, stats: dict, match_score: float | None = None) -> str
     if not stats.get("count"):
         return "unknown"
     p25, p50, p75 = stats.get("p25"), stats.get("p50"), stats.get("p75")
-    if p75 is not None and offer >= p75:
+    # Strictly above p75 is weak: exactly p75 is still "within market" in assess(),
+    # and the two functions must agree on that boundary.
+    if p75 is not None and offer > p75:
         return "weak"                      # already above market; base-salary asks are weak
     if p50 is not None and offer >= p50:
         return "moderate"                  # room up to the upper quartile

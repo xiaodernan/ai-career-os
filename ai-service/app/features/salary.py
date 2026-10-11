@@ -35,18 +35,26 @@ SENIORITY_YEARS: dict[str, tuple[int, int]] = {
 }
 
 
-def percentile(sorted_vals: list[float], p: float) -> float | None:
-    """Linear-interpolation percentile (the numpy/tukey convention) over a sorted list."""
-    n = len(sorted_vals)
+def percentile(values: list[float], p: float) -> float | None:
+    """Linear-interpolation percentile (the numpy/tukey convention).
+
+    Sorts internally and clamps ``p`` to [0, 1], so a caller that hands over an
+    unsorted list or a stray ``p`` gets the right answer instead of a silently wrong
+    one or an ``IndexError``. The internal callers already pass sorted values and a
+    p in range, so this only closes the footgun for the next caller.
+    """
+    vals = sorted(v for v in values if v is not None)
+    n = len(vals)
     if n == 0:
         return None
     if n == 1:
-        return float(sorted_vals[0])
+        return float(vals[0])
+    p = min(1.0, max(0.0, p))
     rank = (n - 1) * p
     lo, hi = math.floor(rank), math.ceil(rank)
     if lo == hi:
-        return float(sorted_vals[lo])
-    return sorted_vals[lo] + (sorted_vals[hi] - sorted_vals[lo]) * (rank - lo)
+        return float(vals[lo])
+    return vals[lo] + (vals[hi] - vals[lo]) * (rank - lo)
 
 
 def representative(row: dict) -> float | None:

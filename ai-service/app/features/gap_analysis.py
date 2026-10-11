@@ -111,8 +111,15 @@ def build_evidence(resume_structured, plaintext: str) -> tuple[set[str], str]:
     return skills, corpus
 
 
+# Boundary class for a skill mention. Besides the usual word chars and ".", it
+# includes "+" and "#" so that "C" does not match inside "C++"/"C#" (and "C++" does
+# not match inside a bare "C") -- the vocabulary holds both "C" and "C++", so a
+# substring hit there would report the wrong skill as covered.
+_BOUNDARY = r"a-z0-9.+#"
+
+
 def _mentioned(name: str, low_corpus: str) -> bool:
-    pat = re.compile(rf"(?<![a-z0-9.])({re.escape(name.lower())})(?![a-z0-9.])")
+    pat = re.compile(rf"(?<![{_BOUNDARY}])({re.escape(name.lower())})(?![{_BOUNDARY}])")
     return bool(pat.search((low_corpus or "").lower()))
 
 
