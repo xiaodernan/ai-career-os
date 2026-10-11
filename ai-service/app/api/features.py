@@ -5,6 +5,7 @@ from app.core.deps import Ctx, require_internal
 from app.db import domain, observability
 from app.features import gap_analysis as gap_mod
 from app.features import jd_analyze as jd_an
+from app.features import learning as learning_mod
 from app.features import match as match_mod
 from app.features import negotiation as negotiation_mod
 from app.features import readiness as readiness_mod
@@ -244,3 +245,20 @@ async def readiness_ep(req: ReadinessReq, ctx: Ctx = Depends(require_internal)):
     result = readiness_mod.compose(gap, salary)
     await observability.finish_run(run_id, "completed")
     return {"readiness": result, "gap": gap, "salary": salary}
+
+
+class LearningReq(BaseModel):
+    target_role: str = Field(min_length=10)
+    seniority: str | None = None
+    resume_version_id: str | None = None
+
+
+@router.post("/learning-plan")
+async def learning_plan_ep(req: LearningReq, ctx: Ctx = Depends(require_internal)):
+    run_id = await _run(ctx, "learning", "learning_plan")
+    structured, plaintext = await _resume_payload(ctx.user_id, req.resume_version_id)
+    gap = await gap_mod.analyze_gap(req.target_role, req.seniority, structured, plaintext,
+                                    user_id=ctx.user_id, run_id=run_id)
+    plan = learning_mod.build_learning_plan(gap)
+    await observability.finish_run(run_id, "completed")
+    return {"plan": plan, "gap": gap}
