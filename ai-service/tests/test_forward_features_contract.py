@@ -21,7 +21,7 @@ from pydantic import BaseModel
 
 from app.core.deps import require_internal
 from app.features import (gap_analysis, learning, negotiation, offers, outreach,
-                          readiness, salary)
+                          progress, readiness, salary)
 from app.main import app
 
 # path -> (request model name, required field names)
@@ -33,6 +33,8 @@ FORWARD = {
     "/internal/features/learning-plan": ("LearningReq", {"target_role"}),
     "/internal/features/compare-offers": ("CompareOffersReq", {"role", "offers"}),
     "/internal/features/outreach": ("OutreachReq", {"name"}),
+    "/internal/features/progress": ("ProgressReq", {"target_role"}),
+    "/internal/features/growth-report": ("GrowthReportReq", {"target_role"}),
 }
 
 
@@ -144,3 +146,10 @@ def test_outreach_response_keys():
                            {"skills": [], "highlight": ""})
     assert set(out) == {"purpose", "contactName", "subject", "body", "evidenceUsed",
                         "allowedEvidence"}
+
+
+def test_progress_response_keys():
+    out = progress.diff_progress(None, {"coverage": 0.5, "gaps": []})
+    assert set(out) == {"targetRole", "baseline", "closed", "improved", "opened",
+                        "regressed", "stillOpen", "previousCoverage", "currentCoverage",
+                        "delta", "closedCount", "openCount"}

@@ -10,6 +10,7 @@ from app.features import match as match_mod
 from app.features import negotiation as negotiation_mod
 from app.features import offers as offers_mod
 from app.features import outreach as outreach_mod
+from app.features import progress as progress_mod
 from app.features import readiness as readiness_mod
 from app.features import resume_parse as rp
 from app.features import salary as salary_mod
@@ -313,5 +314,56 @@ async def outreach_ep(req: OutreachReq, ctx: Ctx = Depends(require_internal)):
     result = await outreach_mod.draft_message(contact, req.purpose, structured,
                                               context=req.context, user_id=ctx.user_id,
                                               run_id=run_id)
+    await observability.finish_run(run_id, "completed")
+    return result
+
+
+class ProgressReq(BaseModel):
+    target_role: str = Field(min_length=10)
+    seniority: str | None = None
+    resume_version_id: str | None = None
+    previous: dict | None = None
+
+
+@router.post("/progress")
+async def progress_ep(req: ProgressReq, ctx: Ctx = Depends(require_internal)):
+    run_id = await _run(ctx, "learning", "progress")
+    structured, plaintext = await _resume_payload(ctx.user_id, req.resume_version_id)
+    current = await gap_mod.analyze_gap(req.target_role, req.seniority, structured, plaintext,
+                                        user_id=ctx.user_id, run_id=run_id)
+    result = progress_mod.diff_progress(req.previous, current)
+    await observability.finish_run(run_id, "completed")
+    return result
+
+
+class GrowthReportReq(BaseModel):
+    target_role: str = Field(min_length=10)
+    seniority: str | None = None
+    resume_version_id: str | None = None
+    location: str | None = None
+    currency: str = "CNY"
+    target_salary: int | None = None
+    previous: dict | None = None
+
+
+@router.post("/growth-report")
+async def growth_report_ep(req: GrowthReportReq, ctx: Ctx = Depends(require_internal)):
+    """One call for the whole growth page: readiness + gap + salary + learning plan +
+    progress, so the bridge and the frontend need a single endpoint rather than seven."""
+    run_id = await _run(ctx, "learning", "growth_report")
+    structured, plaintext = await _resume_payload(ctx.user_id, req.resume_version_id)
+    gap = await gap_mod.analyze_gap(req.target_role, req.seniority, structured, plaintext,
+                                    user_id=ctx.user_id, run_id=run_id)
+    samples = await salary_mod.load_job_samples()
+    salary = salary_mod.benchmark(samples, role=req.target_role, location=req.location,
+                                  seniority=req.seniority, target_salary=req.target_salary,
+                                  currency=req.currency)
+    result = {
+        "readiness": readiness_mod.compose(gap, salary),
+        "gap": gap,
+        "salary": salary,
+        "learningPlan": learning_mod.build_learning_plan(gap),
+        "progress": progress_mod.diff_progress(req.previous, gap),
+    }
     await observability.finish_run(run_id, "completed")
     return result
