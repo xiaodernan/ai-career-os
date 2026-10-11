@@ -9,6 +9,7 @@ from app.features import learning as learning_mod
 from app.features import match as match_mod
 from app.features import negotiation as negotiation_mod
 from app.features import offers as offers_mod
+from app.features import outreach as outreach_mod
 from app.features import readiness as readiness_mod
 from app.features import resume_parse as rp
 from app.features import salary as salary_mod
@@ -288,5 +289,29 @@ async def compare_offers_ep(req: CompareOffersReq, ctx: Ctx = Depends(require_in
                                   seniority=req.seniority, currency=req.currency)
     result = offers_mod.compare_offers([o.model_dump() for o in req.offers], report,
                                        match_score=req.match_score)
+    await observability.finish_run(run_id, "completed")
+    return result
+
+
+class OutreachReq(BaseModel):
+    name: str = Field(min_length=1)
+    role: str = ""
+    company: str = ""
+    purpose: str = "referral"
+    context: str = ""
+    resume_version_id: str | None = None
+
+
+@router.post("/outreach")
+async def outreach_ep(req: OutreachReq, ctx: Ctx = Depends(require_internal)):
+    run_id = await _run(ctx, "outreach", "outreach_message")
+    try:
+        structured, _ = await _resume_payload(ctx.user_id, req.resume_version_id)
+    except HTTPException:
+        structured = {}          # outreach does not require a resume; it just cites less
+    contact = {"name": req.name, "role": req.role, "company": req.company}
+    result = await outreach_mod.draft_message(contact, req.purpose, structured,
+                                              context=req.context, user_id=ctx.user_id,
+                                              run_id=run_id)
     await observability.finish_run(run_id, "completed")
     return result
