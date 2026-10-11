@@ -6,6 +6,7 @@ from app.db import domain, observability
 from app.features import gap_analysis as gap_mod
 from app.features import jd_analyze as jd_an
 from app.features import match as match_mod
+from app.features import negotiation as negotiation_mod
 from app.features import resume_parse as rp
 from app.features import salary as salary_mod
 from app.features import tailor as tailor_mod
@@ -196,3 +197,25 @@ async def salary_benchmark_ep(req: SalaryReq, ctx: Ctx = Depends(require_interna
                                   currency=req.currency)
     await observability.finish_run(run_id, "completed")
     return report
+
+
+class NegotiateReq(BaseModel):
+    role: str = Field(min_length=2)
+    location: str | None = None
+    seniority: str | None = None
+    currency: str = "CNY"
+    offer_base: int = Field(gt=0)
+    match_score: float | None = Field(default=None, ge=0, le=1)
+
+
+@router.post("/negotiate")
+async def negotiate_ep(req: NegotiateReq, ctx: Ctx = Depends(require_internal)):
+    run_id = await _run(ctx, "job_research", "negotiate")
+    samples = await salary_mod.load_job_samples()
+    report = salary_mod.benchmark(samples, role=req.role, location=req.location,
+                                  seniority=req.seniority, currency=req.currency)
+    plan = negotiation_mod.negotiation_plan(req.offer_base, report,
+                                            match_score=req.match_score,
+                                            currency=req.currency)
+    await observability.finish_run(run_id, "completed")
+    return plan
