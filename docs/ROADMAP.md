@@ -16,12 +16,13 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   materials, interview coach, copilot/agents, tracker/dashboard, quality & delivery.
   Verified end-to-end: 24/24 Playwright golden journey, both eval harnesses, RAG
   eval 15/15 on the seeded corpus.
-- **Epics 10/11/12 (ai-service halves): DONE (2026-10-11 → 13).** Nine internal,
+- **Epics 10/11/12 (ai-service halves): DONE (2026-10-11 → 13).** Twelve internal,
   evidence-bound engines shipped in ai-service, all unit-tested offline:
   gap analysis (10.1), target-role readiness (10.7), learning plan (10.5),
-  skill-progress tracking (10.6), outreach drafting (11.2), salary benchmark (12.1),
-  negotiation coach (12.2), offer comparison (12.3), counter-offer drafting (12.4) —
-  plus an aggregate
+  skill-progress tracking (10.6), market skill demand (10.9), STAR story bank (6.5),
+  outreach drafting (11.2), salary benchmark (12.1), negotiation coach (12.2),
+  offer comparison (12.3), counter-offer drafting (12.4), equity annualization (12.5)
+  — plus an aggregate
   `POST /internal/features/growth-report` (10.8) that composes the growth page in one
   call, and `tests/test_forward_features_contract.py` holding all their shapes.
   **None are wired to the backend yet** (10.2/10.3 and the 12.x bridges are pending).
