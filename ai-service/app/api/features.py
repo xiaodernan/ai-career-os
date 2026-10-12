@@ -14,6 +14,7 @@ from app.features import outreach as outreach_mod
 from app.features import progress as progress_mod
 from app.features import readiness as readiness_mod
 from app.features import resume_parse as rp
+from app.features import roles as roles_mod
 from app.features import salary as salary_mod
 from app.features import stories as stories_mod
 from app.features import tailor as tailor_mod
@@ -422,5 +423,21 @@ async def story_bank_ep(req: StoryBankReq, ctx: Ctx = Depends(require_internal))
     run_id = await _run(ctx, "resume", "story_bank")
     structured, _ = await _resume_payload(ctx.user_id, req.resume_version_id)
     result = stories_mod.build_story_bank(structured)
+    await observability.finish_run(run_id, "completed")
+    return result
+
+
+class RoleSuggestReq(BaseModel):
+    resume_version_id: str | None = None
+    top: int = Field(default=8, ge=1, le=20)
+
+
+@router.post("/role-suggestions")
+async def role_suggestions_ep(req: RoleSuggestReq, ctx: Ctx = Depends(require_internal)):
+    run_id = await _run(ctx, "job_research", "role_suggestions")
+    structured, _ = await _resume_payload(ctx.user_id, req.resume_version_id)
+    samples = await demand_mod.load_job_skill_samples()
+    result = roles_mod.suggest_roles(samples, roles_mod.declared_skills(structured),
+                                     top=req.top)
     await observability.finish_run(run_id, "completed")
     return result
