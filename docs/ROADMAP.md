@@ -84,7 +84,7 @@ lint/build green + a census/contract gate updated where the population moved.
 ## Execution discipline
 - This repo is developed **concurrently**: read the file you are about to edit
   *immediately* before editing; `git add` only the files you created/changed so you
-  never commit another session's in-flight work. See `MEMORY.md`.
+  never commit another session's in-flight work.
 - Verify by running, not by reading. Offline harness: `LLM_PROVIDER=mock
   EMBEDDING_PROVIDER=hash`. Docker-dependent suites (backend `*IT`, RAG eval, E2E)
   are run by the user — don't fake them green.

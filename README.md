@@ -93,8 +93,8 @@ backend/       Spring Boot — the only public API, owns all domain writes
 ai-service/    FastAPI — providers, ingestion, RAG, features, agents (internal only)
 frontend/      Next.js — app UI + AI activity views
 e2e/           Playwright golden-journey suite (PRD §35), run against the live stack
-docs/          origin spec, architecture, product plan, product, API, RAG, agents,
-               evaluation, security, deployment
+docs/          origin spec, architecture, product plan, roadmap, product, API, RAG,
+               agents, evaluation, security, deployment
 docker-compose.yml   infra + `--profile app` full-stack containers
 ```
 
