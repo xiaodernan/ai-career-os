@@ -20,8 +20,8 @@ from fastapi.routing import APIRoute
 from pydantic import BaseModel
 
 from app.core.deps import require_internal
-from app.features import (counter_offer, gap_analysis, learning, negotiation, offers,
-                          outreach, progress, readiness, salary)
+from app.features import (counter_offer, gap_analysis, growth, learning, negotiation,
+                          offers, outreach, progress, readiness, salary)
 from app.main import app
 
 # path -> (request model name, required field names)
@@ -161,3 +161,8 @@ def test_counter_offer_response_keys():
                                 {"subject": "s", "body": "b"})
     assert set(out) == {"currency", "currentOffer", "askAmount", "increasePct",
                         "assessment", "rationale", "subject", "body"}
+
+
+def test_growth_report_response_keys():
+    out = growth.build_growth_report({"coverage": 0.5, "gaps": []}, None)
+    assert set(out) == {"readiness", "gap", "salary", "learningPlan", "progress"}

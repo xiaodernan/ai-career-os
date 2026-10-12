@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field
 from app.core.deps import Ctx, require_internal
 from app.db import domain, observability
 from app.features import gap_analysis as gap_mod
+from app.features import growth as growth_mod
 from app.features import jd_analyze as jd_an
 from app.features import learning as learning_mod
 from app.features import match as match_mod
@@ -359,13 +360,7 @@ async def growth_report_ep(req: GrowthReportReq, ctx: Ctx = Depends(require_inte
     salary = salary_mod.benchmark(samples, role=req.target_role, location=req.location,
                                   seniority=req.seniority, target_salary=req.target_salary,
                                   currency=req.currency)
-    result = {
-        "readiness": readiness_mod.compose(gap, salary),
-        "gap": gap,
-        "salary": salary,
-        "learningPlan": learning_mod.build_learning_plan(gap),
-        "progress": progress_mod.diff_progress(req.previous, gap),
-    }
+    result = growth_mod.build_growth_report(gap, salary, req.previous)
     await observability.finish_run(run_id, "completed")
     return result
 
