@@ -138,7 +138,9 @@ def test_learning_plan_response_keys():
 def test_compare_offers_response_keys():
     out = offers.compare_offers([{"label": "A", "base": 1}],
                                 {"sampleSize": 0, "percentiles": {}})
-    assert set(out) == {"currency", "sampleSize", "offers", "bestByCash", "notes"}
+    assert set(out) == {"currency", "sampleSize", "offers", "bestByComp", "notes"}
+    assert set(out["offers"][0]) == {"label", "base", "bonus", "firstYearCash",
+                                     "annualEquity", "totalComp", "assessment", "leverage"}
 
 
 def test_outreach_response_keys():

@@ -269,10 +269,18 @@ async def learning_plan_ep(req: LearningReq, ctx: Ctx = Depends(require_internal
     return {"plan": plan, "gap": gap}
 
 
+class EquityGrant(BaseModel):
+    shares: int = Field(ge=0)
+    strike_price: float = Field(ge=0)
+    current_price: float = Field(ge=0)
+    vest_years: int | None = Field(default=None, gt=0)
+
+
 class OfferItem(BaseModel):
     label: str = Field(min_length=1)
     base: int = Field(gt=0)
     bonus: int = Field(default=0, ge=0)
+    equity: EquityGrant | None = None
 
 
 class CompareOffersReq(BaseModel):
