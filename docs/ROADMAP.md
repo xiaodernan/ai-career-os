@@ -62,6 +62,8 @@ for "what to build next" across sessions; pick the top un-done task and execute.
 - [x] **12.3** Offer comparison (multiple offers, cash-only ranking). (`features/offers.py`)
 - [x] **12.4** Counter-offer drafting (deterministic anchor + reasons, model phrases).
   (`features/counter_offer.py`)
+- [x] **12.5** Equity annualization (intrinsic value over the vest), folded into offer
+  comparison so ranking is by total comp. (`features/equity.py`, `features/offers.py`)
 
 ## Epic 13 — Data Portability & Export
 - [ ] **13.1** One-click export bundle (resumes, knowledge, applications, interviews,
