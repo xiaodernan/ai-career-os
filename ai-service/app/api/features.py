@@ -15,6 +15,7 @@ from app.features import readiness as readiness_mod
 from app.features import resume_parse as rp
 from app.features import salary as salary_mod
 from app.features import tailor as tailor_mod
+from app.features import counter_offer as counter_offer_mod
 from app.features.cover_letter import generate as cover_generate
 
 router = APIRouter(prefix="/internal/features", tags=["features"])
@@ -365,5 +366,27 @@ async def growth_report_ep(req: GrowthReportReq, ctx: Ctx = Depends(require_inte
         "learningPlan": learning_mod.build_learning_plan(gap),
         "progress": progress_mod.diff_progress(req.previous, gap),
     }
+    await observability.finish_run(run_id, "completed")
+    return result
+
+
+class CounterOfferReq(BaseModel):
+    role: str = Field(min_length=2)
+    location: str | None = None
+    seniority: str | None = None
+    currency: str = "CNY"
+    offer_base: int = Field(gt=0)
+    match_score: float | None = Field(default=None, ge=0, le=1)
+
+
+@router.post("/counter-offer")
+async def counter_offer_ep(req: CounterOfferReq, ctx: Ctx = Depends(require_internal)):
+    run_id = await _run(ctx, "job_research", "counter_offer")
+    samples = await salary_mod.load_job_samples()
+    report = salary_mod.benchmark(samples, role=req.role, location=req.location,
+                                  seniority=req.seniority, currency=req.currency)
+    result = await counter_offer_mod.draft_counter_offer(
+        req.offer_base, report, match_score=req.match_score, currency=req.currency,
+        user_id=ctx.user_id, run_id=run_id)
     await observability.finish_run(run_id, "completed")
     return result

@@ -20,8 +20,8 @@ from fastapi.routing import APIRoute
 from pydantic import BaseModel
 
 from app.core.deps import require_internal
-from app.features import (gap_analysis, learning, negotiation, offers, outreach,
-                          progress, readiness, salary)
+from app.features import (counter_offer, gap_analysis, learning, negotiation, offers,
+                          outreach, progress, readiness, salary)
 from app.main import app
 
 # path -> (request model name, required field names)
@@ -35,6 +35,7 @@ FORWARD = {
     "/internal/features/outreach": ("OutreachReq", {"name"}),
     "/internal/features/progress": ("ProgressReq", {"target_role"}),
     "/internal/features/growth-report": ("GrowthReportReq", {"target_role"}),
+    "/internal/features/counter-offer": ("CounterOfferReq", {"role", "offer_base"}),
 }
 
 
@@ -153,3 +154,10 @@ def test_progress_response_keys():
     assert set(out) == {"targetRole", "baseline", "closed", "improved", "opened",
                         "regressed", "stillOpen", "previousCoverage", "currentCoverage",
                         "delta", "closedCount", "openCount"}
+
+
+def test_counter_offer_response_keys():
+    out = counter_offer.compose(100, {"sampleSize": 0, "percentiles": {}},
+                                {"subject": "s", "body": "b"})
+    assert set(out) == {"currency", "currentOffer", "askAmount", "increasePct",
+                        "assessment", "rationale", "subject", "body"}
