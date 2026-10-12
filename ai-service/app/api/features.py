@@ -3,6 +3,7 @@ from pydantic import BaseModel, Field
 
 from app.core.deps import Ctx, require_internal
 from app.db import domain, observability
+from app.features import company as company_mod
 from app.features import gap_analysis as gap_mod
 from app.features import growth as growth_mod
 from app.features import jd_analyze as jd_an
@@ -439,5 +440,19 @@ async def role_suggestions_ep(req: RoleSuggestReq, ctx: Ctx = Depends(require_in
     samples = await demand_mod.load_job_skill_samples()
     result = roles_mod.suggest_roles(samples, roles_mod.declared_skills(structured),
                                      top=req.top)
+    await observability.finish_run(run_id, "completed")
+    return result
+
+
+class CompanyBriefReq(BaseModel):
+    company: str = Field(min_length=2)
+    top: int = Field(default=10, ge=1, le=30)
+
+
+@router.post("/company-brief")
+async def company_brief_ep(req: CompanyBriefReq, ctx: Ctx = Depends(require_internal)):
+    run_id = await _run(ctx, "job_research", "company_brief")
+    samples = await company_mod.load_company_samples()
+    result = company_mod.company_brief(samples, req.company, top=req.top)
     await observability.finish_run(run_id, "completed")
     return result

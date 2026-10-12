@@ -20,9 +20,9 @@ from fastapi.routing import APIRoute
 from pydantic import BaseModel
 
 from app.core.deps import require_internal
-from app.features import (counter_offer, demand, gap_analysis, growth, learning,
-                          negotiation, offers, outreach, progress, readiness, roles,
-                          salary, stories)
+from app.features import (company, counter_offer, demand, gap_analysis, growth,
+                          learning, negotiation, offers, outreach, progress, readiness,
+                          roles, salary, stories)
 from app.main import app
 
 # path -> (request model name, required field names)
@@ -40,6 +40,7 @@ FORWARD = {
     "/internal/features/skill-demand": ("SkillDemandReq", {"role"}),
     "/internal/features/story-bank": ("StoryBankReq", set()),
     "/internal/features/role-suggestions": ("RoleSuggestReq", set()),
+    "/internal/features/company-brief": ("CompanyBriefReq", {"company"}),
 }
 
 
@@ -193,3 +194,8 @@ def test_role_suggestions_response_keys():
         [{"title": "Backend Engineer", "skills": ["Java", "Kubernetes"]}], ["Java"])
     assert set(out["families"][0]) == {"family", "postings", "coverage", "topDemands",
                                        "youHave", "missing"}
+
+
+def test_company_brief_response_keys():
+    out = company.company_brief([], "Acme")
+    assert set(out) == {"company", "postings", "roles", "topSkills", "salaryBand"}
