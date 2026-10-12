@@ -15,6 +15,7 @@ from app.features import progress as progress_mod
 from app.features import readiness as readiness_mod
 from app.features import resume_parse as rp
 from app.features import salary as salary_mod
+from app.features import stories as stories_mod
 from app.features import tailor as tailor_mod
 from app.features import counter_offer as counter_offer_mod
 from app.features import demand as demand_mod
@@ -408,5 +409,18 @@ async def skill_demand_ep(req: SkillDemandReq, ctx: Ctx = Depends(require_intern
     samples = await demand_mod.load_job_skill_samples()
     result = demand_mod.skill_demand(samples, role=req.role, location=req.location,
                                      top=req.top)
+    await observability.finish_run(run_id, "completed")
+    return result
+
+
+class StoryBankReq(BaseModel):
+    resume_version_id: str | None = None
+
+
+@router.post("/story-bank")
+async def story_bank_ep(req: StoryBankReq, ctx: Ctx = Depends(require_internal)):
+    run_id = await _run(ctx, "resume", "story_bank")
+    structured, _ = await _resume_payload(ctx.user_id, req.resume_version_id)
+    result = stories_mod.build_story_bank(structured)
     await observability.finish_run(run_id, "completed")
     return result
