@@ -16,34 +16,49 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   materials, interview coach, copilot/agents, tracker/dashboard, quality & delivery.
   Verified end-to-end: 24/24 Playwright golden journey, both eval harnesses, RAG
   eval 15/15 on the seeded corpus.
-- **Epic 10.1: DONE (2026-10-11).** Career Gap & Growth Analysis feature shipped in
-  ai-service (`app/features/gap_analysis.py` + `POST /internal/features/gap-analysis`)
-  with 17 passing unit tests. Backend wiring + UI are the remaining 10.x tasks.
+- **Epics 10/11/12 (ai-service halves): DONE (2026-10-11 → 13).** Eight internal,
+  evidence-bound engines shipped in ai-service, all unit-tested offline:
+  gap analysis (10.1), target-role readiness (10.7), learning plan (10.5),
+  skill-progress tracking (10.6), outreach drafting (11.2), salary benchmark (12.1),
+  negotiation coach (12.2), offer comparison (12.3) — plus an aggregate
+  `POST /internal/features/growth-report` (10.8) that composes the growth page in one
+  call, and `tests/test_forward_features_contract.py` holding all their shapes.
+  **None are wired to the backend yet** (10.2/10.3 and the 12.x bridges are pending).
+- **The backend bridge is the next real step** and is blocked only on files another
+  session has in flight (`HttpAiServiceClient.java`, `docs/API.md`,
+  `frontend/src/lib/api/endpoints.ts`). Do it when they are clean.
 
 ## Epic 10 — Growth Intelligence
 - [x] **10.1** Gap & growth analysis engine (evidence-bound coverage verdict).
 - [ ] **10.2** Backend bridge: `HttpAiServiceClient` method + controller endpoint
-  `/api/v1/gap-analysis` (X-Internal-Token). Extend `docs/API.md` + its gate.
-- [ ] **10.3** Frontend page/panel: target-role input, coverage bars (covered /
-  partial / gap), development plan list, link to learning resources.
-- [ ] **10.4** Persist a `growth_plan` per (user, target_role) so repeat runs diff.
-- [ ] **10.5** Learning plan generation: turn gaps into ordered study items with
-  resource hints, reusing the interview report's `recommended_study` shape.
-- [ ] **10.6** Skill-progress tracking: when a gap later appears in the resume /
-  knowledge base, mark it closed and surface the delta on the dashboard.
+  (`/api/v1/growth-report` first; granular endpoints after). Extend `docs/API.md` + gate.
+- [ ] **10.3** Frontend page/panel: target-role input, readiness verdict, coverage
+  bars (covered / partial / gap), learning plan, salary band, progress delta.
+- [ ] **10.4** Persist a `growth_plan` per (user, target_role) so repeat runs diff
+  (needs a migration + a knowledge-table write; backend-owned schema).
+- [x] **10.5** Learning plan: gaps → phased study items (foundation → core → applied)
+  with category-aware resource hints. (`features/learning.py`)
+- [x] **10.6** Skill-progress tracking: diff two gap reports → closed / improved /
+  regressed / opened + coverage delta. (`features/progress.py`)
+- [x] **10.7** Target-role readiness synthesis: skills (10.1) + market (12.1) → one
+  verdict, a must-gap capping a "ready". (`features/readiness.py`)
+- [x] **10.8** Aggregate `growth-report` endpoint (readiness + gap + salary + learning
+  plan + progress in one call) — the intended bridge target.
 
 ## Epic 11 — Outreach & Networking
 - [ ] **11.1** Contacts registry (name, role, company, relation, last touch).
-- [ ] **11.2** Referral / networking message generator (evidence-bound, per contact).
+- [x] **11.2** Referral / networking message generator (evidence-bound; validator
+  strips any skill the profile does not support). (`features/outreach.py`)
 - [ ] **11.3** Follow-up reminders + cadence; surface stale contacts on dashboard.
 - [ ] **11.4** Networking subagent wired into the orchestrator's whitelist.
 
 ## Epic 12 — Salary & Offer Intelligence
-- [ ] **12.1** Salary benchmarking against the seeded corpus (percentiles by role/
-  seniority/geo) — deterministic, no external data required.
-- [ ] **12.2** Negotiation coaching: given an offer, surface leverage points from the
-  candidate's match strength + market data.
-- [ ] **12.3** Offer comparison view (multiple offers side by side).
+- [x] **12.1** Salary benchmarking against the seeded corpus (percentiles by role /
+  seniority band / location) — deterministic, no external data required.
+  (`features/salary.py`)
+- [x] **12.2** Negotiation coaching: offer vs benchmark → leverage + talking points.
+  (`features/negotiation.py`)
+- [x] **12.3** Offer comparison (multiple offers, cash-only ranking). (`features/offers.py`)
 
 ## Epic 13 — Data Portability & Export
 - [ ] **13.1** One-click export bundle (resumes, knowledge, applications, interviews,
@@ -52,7 +67,7 @@ for "what to build next" across sessions; pick the top un-done task and execute.
 - [ ] **13.3** Per-user data deletion (right-to-be-forgotten) wired through backend.
 
 ## Epic 14 — Job Ingestion Connectors
-- ] **14.1** Pluggable connector interface (RSS / board API / paste) feeding `jobs`.
+- [ ] **14.1** Pluggable connector interface (RSS / board API / paste) feeding `jobs`.
 - [ ] **14.2** First real connector (e.g. RSS/Atom board) with the same hybrid
   index path as the seed import.
 - [ ] **14.3** De-duplication + freshness sweep against existing `jobs`.
@@ -92,3 +107,5 @@ lint/build green + a census/contract gate updated where the population moved.
   refused when `APP_ENV=prod`.
 - Keep `docs/PRODUCT.md`, `API.md`, `AGENTS.md` and their gates true to the code; a
   new endpoint/field updates the census in the same change.
+- **ai-service features shipped ahead of their bridge are internal-only** and pinned
+  by `tests/test_forward_features_contract.py` — add every new forward route there.
