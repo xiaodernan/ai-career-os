@@ -45,6 +45,8 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   verdict, a must-gap capping a "ready". (`features/readiness.py`)
 - [x] **10.8** Aggregate `growth-report` endpoint (readiness + gap + salary + learning
   plan + progress in one call) — the intended bridge target.
+- [x] **10.9** Market skill demand: which skills a role family's postings ask for, and
+  how often — the market-centric half of the gap view. (`features/demand.py`)
 
 ## Epic 11 — Outreach & Networking
 - [ ] **11.1** Contacts registry (name, role, company, relation, last touch).
