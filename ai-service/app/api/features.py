@@ -17,6 +17,7 @@ from app.features import resume_parse as rp
 from app.features import salary as salary_mod
 from app.features import tailor as tailor_mod
 from app.features import counter_offer as counter_offer_mod
+from app.features import demand as demand_mod
 from app.features.cover_letter import generate as cover_generate
 
 router = APIRouter(prefix="/internal/features", tags=["features"])
@@ -391,5 +392,21 @@ async def counter_offer_ep(req: CounterOfferReq, ctx: Ctx = Depends(require_inte
     result = await counter_offer_mod.draft_counter_offer(
         req.offer_base, report, match_score=req.match_score, currency=req.currency,
         user_id=ctx.user_id, run_id=run_id)
+    await observability.finish_run(run_id, "completed")
+    return result
+
+
+class SkillDemandReq(BaseModel):
+    role: str = Field(min_length=2)
+    location: str | None = None
+    top: int = Field(default=15, ge=1, le=50)
+
+
+@router.post("/skill-demand")
+async def skill_demand_ep(req: SkillDemandReq, ctx: Ctx = Depends(require_internal)):
+    run_id = await _run(ctx, "job_research", "skill_demand")
+    samples = await demand_mod.load_job_skill_samples()
+    result = demand_mod.skill_demand(samples, role=req.role, location=req.location,
+                                     top=req.top)
     await observability.finish_run(run_id, "completed")
     return result

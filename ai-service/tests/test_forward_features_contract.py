@@ -20,8 +20,8 @@ from fastapi.routing import APIRoute
 from pydantic import BaseModel
 
 from app.core.deps import require_internal
-from app.features import (counter_offer, gap_analysis, growth, learning, negotiation,
-                          offers, outreach, progress, readiness, salary)
+from app.features import (counter_offer, demand, gap_analysis, growth, learning,
+                          negotiation, offers, outreach, progress, readiness, salary)
 from app.main import app
 
 # path -> (request model name, required field names)
@@ -36,6 +36,7 @@ FORWARD = {
     "/internal/features/progress": ("ProgressReq", {"target_role"}),
     "/internal/features/growth-report": ("GrowthReportReq", {"target_role"}),
     "/internal/features/counter-offer": ("CounterOfferReq", {"role", "offer_base"}),
+    "/internal/features/skill-demand": ("SkillDemandReq", {"role"}),
 }
 
 
@@ -168,3 +169,10 @@ def test_counter_offer_response_keys():
 def test_growth_report_response_keys():
     out = growth.build_growth_report({"coverage": 0.5, "gaps": []}, None)
     assert set(out) == {"readiness", "gap", "salary", "learningPlan", "progress"}
+
+
+def test_skill_demand_response_keys():
+    out = demand.skill_demand([{"title": "Backend Engineer", "skills": ["Java"]}],
+                              role="Backend")
+    assert set(out) == {"role", "location", "postings", "skills"}
+    assert set(out["skills"][0]) == {"skill", "count", "share"}
