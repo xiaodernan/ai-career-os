@@ -59,6 +59,27 @@ curl -f http://localhost:3000
 - [ ] Log aggregation configured (Loki/ELK/Datadog)
 - [ ] Metrics/monitoring configured (Prometheus/Grafana)
 
+### Ports published by the production override
+
+`docker-compose.prod.yml` republishes the three app services, and an entry written as
+`HOST:CONTAINER` with no interface prefix is bound on every interface of the host. The
+override therefore opens two ports the development file keeps to the machine:
+
+| Service    | Host port | Reach           | Notes                                          |
+|------------|-----------|-----------------|------------------------------------------------|
+| ai-service | 8000      | `127.0.0.1`     | Internal-only by design; the override keeps it |
+| backend    | 8080      | every interface | Reachable from the network, not just the host  |
+| frontend   | 3000      | every interface | Reachable from the network, not just the host  |
+
+So in the stack the Quick Start brings up (`docker-compose.yml` together with
+`docker-compose.prod.yml`), `backend` on 8080 and `frontend` on 3000 answer to the
+network as well as through the reverse proxy — the proxy is not the only path in.
+Ports the override does not mention, `postgres` 5432, `redis` 16380 and `minio`
+19000/19001, keep the development file's binding. If the host should not answer on
+8080 and 3000 directly, bind them to `127.0.0.1` in your own override or firewall the
+ports; `ai-service` stays reachable for local debugging over loopback and from inside
+the compose network.
+
 ### Reverse Proxy Example (nginx)
 
 ```nginx
@@ -181,16 +202,20 @@ the `app` profile:
 docker compose --profile app up -d
 ```
 
-Service endpoints (all bound to `127.0.0.1` only):
+### Ports published by `docker-compose.yml` (development)
 
-| Service    | Host port | Notes                                             |
-|------------|-----------|---------------------------------------------------|
-| frontend   | 3000      | Next.js; `NEXT_PUBLIC_API_BASE_URL` → backend     |
-| backend    | 8080      | Public REST API under `/api/v1`                   |
-| ai-service | 8000      | Internal-only; not exposed to browsers            |
-| postgres   | 5432      | pgvector `pg16` image                             |
-| redis      | 16380     | host 16380 → container 6379 (avoids local clash)  |
-| minio      | 19000     | S3 API; console on 19001                          |
+`docker-compose.yml` publishes these host ports, and the Reach column is the interface
+each one is bound to, so the development stack answers on the machine that runs it:
+
+| Service    | Host port | Reach       | Notes                                            |
+|------------|-----------|-------------|--------------------------------------------------|
+| frontend   | 3000      | `127.0.0.1` | Next.js; `NEXT_PUBLIC_API_BASE_URL` → backend    |
+| backend    | 8080      | `127.0.0.1` | Public REST API under `/api/v1`                  |
+| ai-service | 8000      | `127.0.0.1` | Internal-only; not exposed to browsers           |
+| postgres   | 5432      | `127.0.0.1` | pgvector `pg16` image                            |
+| redis      | 16380     | `127.0.0.1` | host 16380 → container 6379 (avoids local clash) |
+| minio      | 19000     | `127.0.0.1` | S3 API; console on 19001                         |
+| minio      | 19001     | `127.0.0.1` | S3 web console                                   |
 
 Inside the compose network the services reach each other by name
 (`postgres`, `redis`, `minio`, `ai-service:8000`, `backend:8080`) — see the

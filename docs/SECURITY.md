@@ -60,9 +60,15 @@ that rejects invented skills/numbers not present in the source evidence.
 - CORS is allow-listed from `APP_CORS_ORIGINS` (default
   `http://localhost:3000`); methods `GET/POST/PUT/PATCH/DELETE/OPTIONS`; headers
   `Authorization`, `Content-Type`, `X-Internal-Token` only.
-- All Docker service ports bind `127.0.0.1` (see `docker-compose.yml`) so nothing
-  is exposed on the host network by default. Put TLS behind a reverse proxy in
-  production.
+- `docker-compose.yml` publishes the host ports in its `ports:` blocks on `127.0.0.1`,
+  so a development stack answers on the machine that runs it. The production override
+  `docker-compose.prod.yml` republishes `backend` as `8080:8080` and `frontend` as
+  `3000:3000` with no interface prefix, which Docker binds on every interface of the
+  host, so a deployed stack answers to the network and the reverse proxy is not the one
+  path in — `docs/DEPLOYMENT.md` carries the per-file reach tables. Close those two with
+  a host firewall or a loopback override of your own unless the exposure is intended.
+  `ai-service` stays reachable over loopback and inside the compose network. Put TLS
+  behind a reverse proxy in production.
 - `ratelimit/RateLimitFilter` applies a Redis-backed sliding-window limit; it
   runs after JWT so AI-heavy endpoints can key limits off the user id.
   - `/api/v1/auth/**` — 10/min per client IP.

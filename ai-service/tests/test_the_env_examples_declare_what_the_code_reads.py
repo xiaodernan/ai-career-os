@@ -21,8 +21,15 @@ honour them:
   pydantic-settings binds them), the compose files, the Dockerfiles, the frontend source
   and the scripts -- because a variable nothing reads is a knob that does not turn
   anything;
-* the port table in DEPLOYMENT.md is the port table docker-compose.yml publishes;
 * the container names DEPLOYMENT.md's own commands exec into exist in the prod compose.
+
+The port table is not measured here. It was, by a `compose_host_ports()` that matched the
+literal string `"127.0.0.1:` inside its own population regex and read only
+`docker-compose.yml`, so a binding written without that prefix was not in the census the
+doc was compared to and the production override was never in a census at all. The weaker
+copy is deleted rather than duplicated: one scan per claim, and the scan that reads both
+compose files and the interface each port is bound to lives in
+`test_the_deployment_doc_names_the_ports_the_compose_publishes.py`.
 
 The read-oracle is deliberately generous: any uppercase token of three or more characters
 appearing in a source file counts as read. A phantom is therefore one that appears in no
@@ -38,7 +45,6 @@ ROOT = TESTS.parent.parent
 ENV_EXAMPLE = ROOT / ".env.example"
 ENV_PROD_EXAMPLE = ROOT / ".env.prod.example"
 APPLICATION_YML = ROOT / "backend" / "src" / "main" / "resources" / "application.yml"
-COMPOSE = ROOT / "docker-compose.yml"
 COMPOSE_PROD = ROOT / "docker-compose.prod.yml"
 DEPLOYMENT = ROOT / "docs" / "DEPLOYMENT.md"
 AI_SETTINGS = ROOT / "ai-service" / "app" / "core" / "config.py"
@@ -99,32 +105,6 @@ def read_somewhere() -> set[str]:
     return tokens
 
 
-def compose_host_ports() -> dict[str, set[int]]:
-    """service -> the host ports docker-compose.yml publishes for it."""
-    out: dict[str, set[int]] = {}
-    service = None
-    for line in read(COMPOSE).split("\n"):
-        header = re.match(r"^  ([a-z0-9_-]+):", line)
-        if header:
-            service = header.group(1)
-            continue
-        published = re.match(r'\s*- "127\.0\.0\.1:(\d+):\d+"', line)
-        if published and service:
-            out.setdefault(service, set()).add(int(published.group(1)))
-    return out
-
-
-def documented_ports() -> dict[str, int]:
-    """service -> the host port DEPLOYMENT.md's table claims."""
-    out = {}
-    for line in read(DEPLOYMENT).split("\n"):
-        cells = [c.strip() for c in line.strip().strip("|").split("|")]
-        if len(cells) >= 2 and re.fullmatch(r"[a-z0-9_-]+", cells[0]) \
-                and cells[1].isdigit():
-            out[cells[0]] = int(cells[1])
-    return out
-
-
 def prod_containers() -> set[str]:
     return set(re.findall(r"container_name:\s*(\S+)", read(COMPOSE_PROD)))
 
@@ -158,19 +138,6 @@ def test_no_env_example_declares_a_variable_nothing_reads():
     assert problems == [], (
         "\n".join(problems) + "\n-- a knob that turns nothing is worse than a missing one: "
         "it reads as configurable and is not")
-
-
-def test_the_deployment_port_table_is_the_compose_files_own():
-    claimed, published = documented_ports(), compose_host_ports()
-    assert len(claimed) >= 6, f"only {len(claimed)} port rows parsed from DEPLOYMENT.md"
-    problems = []
-    for service, port in sorted(claimed.items()):
-        if service not in published:
-            problems.append(f"{service} is in the doc's table but publishes no host port")
-        elif port not in published[service]:
-            problems.append(f"{service}: the doc says {port}, compose publishes "
-                            f"{sorted(published[service])}")
-    assert problems == [], "\n".join(problems)
 
 
 def test_the_container_names_the_docs_commands_exec_into_exist():
