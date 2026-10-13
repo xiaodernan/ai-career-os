@@ -229,6 +229,48 @@ async def test_export_bundle_assembles_from_fetch_layer(monkeypatch):
     assert bundle["manifest"]["counts"]["memories"] == 1
 
 
+# ---------------- serialization / validation (13.1 JSON + 13.2 import) ----------------
+
+
+def test_serialize_parse_roundtrip():
+    bundle = ex.build_bundle("u1", _sample_raw())
+    text = ex.serialize_bundle(bundle)
+    assert isinstance(text, str)
+    parsed = ex.parse_bundle(text)
+    assert parsed["manifest"]["content_hash"] == bundle["manifest"]["content_hash"]
+    assert parsed["data"]["memories"][0]["content"] == "Prefers remote"
+
+
+def test_validate_bundle_passes_for_well_formed():
+    bundle = ex.build_bundle("u1", _sample_raw())
+    assert ex.validate_bundle(bundle) == []
+
+
+def test_validate_bundle_reports_missing_keys():
+    bundle = ex.build_bundle("u1", _sample_raw())
+    del bundle["manifest"]["content_hash"]
+    del bundle["data"]["memories"]
+    errs = ex.validate_bundle(bundle)
+    assert any("content_hash" in e for e in errs)
+    assert any("memories" in e for e in errs)
+
+
+def test_validate_bundle_catches_tampered_hash():
+    bundle = ex.build_bundle("u1", _sample_raw())
+    bundle["data"]["profile"]["headline"] = "Tampered"
+    # manifest hash no longer matches the mutated data
+    assert any("content_hash" in e for e in ex.validate_bundle(bundle))
+
+
+def test_write_read_bundle_roundtrip(tmp_path):
+    bundle = ex.build_bundle("u1", _sample_raw())
+    p = str(tmp_path / "export.json")
+    ex.write_bundle(bundle, p)
+    loaded = ex.read_bundle(p)
+    assert ex.validate_bundle(loaded) == []
+    assert loaded["data"]["resumes"][0]["id"] == "r1"
+
+
 async def test_gather_raw_is_the_async_preimage_of_build(monkeypatch):
     raw = _sample_raw()
 

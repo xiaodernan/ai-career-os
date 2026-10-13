@@ -378,6 +378,66 @@ def to_markdown(bundle: dict) -> str:
 
 
 # --------------------------------------------------------------------------- #
+# Serialization & validation (the JSON half of 13.1 + the import contract)
+# --------------------------------------------------------------------------- #
+
+
+def serialize_bundle(bundle: dict) -> str:
+    """Deterministic JSON text for the bundle (stable key order, UTF-8)."""
+    return canonical_json(bundle)
+
+
+def parse_bundle(text: str) -> dict:
+    """Parse bundle JSON back into a dict. Raises ``json.JSONDecodeError`` on bad input."""
+    return json.loads(text)
+
+
+def validate_bundle(bundle: dict) -> list[str]:
+    """Return a list of contract violations (empty list == valid).
+
+    Held so the import path (13.2) can reject a malformed or tampered bundle
+    before any upsert: every required top-level / manifest key must be present
+    and ``manifest.content_hash`` must still match the ``data`` payload.
+    """
+    errors: list[str] = []
+    for key in ("schema_version", "generator", "generated_at", "user", "manifest", "data"):
+        if key not in bundle:
+            errors.append(f"missing top-level key: {key}")
+    if "manifest" in bundle:
+        m = bundle["manifest"]
+        for k in ("schema_version", "generator", "counts", "content_hash", "anonymized"):
+            if k not in m:
+                errors.append(f"missing manifest key: {k}")
+    if "data" in bundle:
+        for s in SECTIONS:
+            if s not in bundle["data"]:
+                errors.append(f"missing data section: {s}")
+    if (
+        "manifest" in bundle
+        and "data" in bundle
+        and isinstance(bundle.get("manifest"), dict)
+        and "content_hash" in bundle["manifest"]
+    ):
+        if bundle["manifest"]["content_hash"] != content_hash(bundle["data"]):
+            errors.append("content_hash does not match data payload")
+    return errors
+
+
+def write_bundle(bundle: dict, path: str) -> None:
+    """Persist the bundle as a ``.json`` file (the one-click export target)."""
+    from pathlib import Path
+
+    Path(path).write_text(serialize_bundle(bundle), encoding="utf-8")
+
+
+def read_bundle(path: str) -> dict:
+    """Load a bundle previously written by :func:`write_bundle`."""
+    from pathlib import Path
+
+    return parse_bundle(Path(path).read_text(encoding="utf-8"))
+
+
+# --------------------------------------------------------------------------- #
 # Async driver
 # --------------------------------------------------------------------------- #
 
