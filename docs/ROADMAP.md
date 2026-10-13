@@ -24,8 +24,9 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   offer comparison (12.3), counter-offer drafting (12.4), equity annualization (12.5)
   — plus an aggregate
   `POST /internal/features/growth-report` (10.8) that composes the growth page in one
-  call, and the **progression planner** (10.11, stepping-stone roles toward a dream
-  role). Fifteen internal engines now, all unit-tested offline, all pinned by
+  call, the **progression planner** (10.11, stepping-stone roles toward a dream
+  role), and the **learning-priority** ranker (10.12, learn the most-demanded gap
+  first). Sixteen internal engines now, all unit-tested offline, all pinned by
   `tests/test_forward_features_contract.py`.
   **None are wired to the backend yet** (10.2/10.3 and the 12.x bridges are pending).
 - **The backend bridge is the next real step** and is blocked only on files another
@@ -54,6 +55,9 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   stepping-stone role families that are *reachable today* (current coverage) **and**
   build the dream role's missing skills. Composes gap-analysis + role-suggestions +
   demand; deterministic bridge score. (`features/progression.py`)
+- [x] **10.12** Learning priority: enrich each gap with its market demand (10.9) over
+  the role family and rank by importance × market pull, so the candidate learns the
+  most-asked-for missing skill first. Composes gap-analysis + demand. (`features/prioritize.py`)
 
 ## Epic 11 — Outreach & Networking
 - [ ] **11.1** Contacts registry (name, role, company, relation, last touch).

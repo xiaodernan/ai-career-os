@@ -22,6 +22,7 @@ from app.features import tailor as tailor_mod
 from app.features import counter_offer as counter_offer_mod
 from app.features import demand as demand_mod
 from app.features import progression as progression_mod
+from app.features import prioritize as prioritize_mod
 from app.features.cover_letter import generate as cover_generate
 
 router = APIRouter(prefix="/internal/features", tags=["features"])
@@ -465,6 +466,25 @@ async def progression_ep(req: ProgressionReq, ctx: Ctx = Depends(require_interna
     result = await progression_mod.plan_progression(
         aspirational_role=req.aspirational_role, resume_structured=structured,
         samples=samples, seniority=req.seniority, user_id=ctx.user_id, run_id=run_id)
+    await observability.finish_run(run_id, "completed")
+    return result
+
+
+class LearningPriorityReq(BaseModel):
+    target_role: str = Field(min_length=10)
+    seniority: str | None = None
+    resume_version_id: str | None = None
+
+
+@router.post("/learning-priority")
+async def learning_priority_ep(req: LearningPriorityReq, ctx: Ctx = Depends(require_internal)):
+    """Rank the target role's gaps by importance and market pull -- learn what first."""
+    run_id = await _run(ctx, "learning", "learning_priority")
+    structured, _ = await _resume_payload(ctx.user_id, req.resume_version_id)
+    samples = await demand_mod.load_job_skill_samples()
+    result = await prioritize_mod.plan_learning_priority(
+        target_role=req.target_role, resume_structured=structured, samples=samples,
+        seniority=req.seniority, user_id=ctx.user_id, run_id=run_id)
     await observability.finish_run(run_id, "completed")
     return result
 

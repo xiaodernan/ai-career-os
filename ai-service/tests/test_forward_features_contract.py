@@ -21,8 +21,8 @@ from pydantic import BaseModel
 
 from app.core.deps import require_internal
 from app.features import (company, counter_offer, demand, gap_analysis, growth,
-                          learning, negotiation, offers, outreach, progress, progression,
-                          readiness, roles, salary, stories)
+                          learning, negotiation, offers, outreach, prioritize, progress,
+                          progression, readiness, roles, salary, stories)
 from app.main import app
 
 # path -> (request model name, required field names)
@@ -42,6 +42,7 @@ FORWARD = {
     "/internal/features/role-suggestions": ("RoleSuggestReq", set()),
     "/internal/features/company-brief": ("CompanyBriefReq", {"company"}),
     "/internal/features/progression": ("ProgressionReq", {"aspirational_role"}),
+    "/internal/features/learning-priority": ("LearningPriorityReq", {"target_role"}),
 }
 
 
@@ -213,4 +214,20 @@ def test_progression_response_keys():
 
     plan = progression.build_advice(0.5, 1, ["Kubernetes"])
     assert isinstance(plan, list) and plan
+
+
+def test_learning_priority_response_keys():
+    gaps = [{"skill": "Kubernetes", "importance": "must", "category": "devops"},
+            {"skill": "Docker", "importance": "nice", "category": "devops"}]
+    demand_skills = [{"skill": "Kubernetes", "count": 68, "share": 0.68},
+                     {"skill": "Docker", "count": 31, "share": 0.31}]
+    ranked = prioritize.rank_gap_priorities(gaps, demand_skills, 100)
+    assert len(ranked) == 2
+    assert set(ranked[0]) == {"skill", "importance", "category", "marketShare",
+                              "marketPostings", "marketRank", "priority"}
+    # must + high share ranks before nice + lower share; a nice skill the market
+    # wants a lot (>=0.3) still tiers as high on market pull alone
+    assert ranked[0]["skill"] == "Kubernetes"
+    assert ranked[0]["priority"] == "critical"
+    assert ranked[1]["priority"] == "high"
 
