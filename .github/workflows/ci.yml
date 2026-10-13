@@ -1,0 +1,187 @@
+# AI Career OS — CI & scheduled verification
+#
+# Epic 16.3: run all three suites + both eval harnesses.
+#
+# - On every PR / push to main: the *offline* suites only. These need no Docker
+#   and no external API keys — ai-service runs with LLM_PROVIDER=mock /
+#   EMBEDDING_PROVIDER=hash, the backend runs unit tests (*Test, not *IT), and
+#   the frontend runs vitest + tsc. This is the fast gate a contributor waits on.
+# - On a nightly schedule (and manual dispatch): the Docker-backed run. It boots
+#   postgres/redis/minio, runs the backend integration tests (*IT) and BOTH eval
+#   harnesses (RAG + agent) against the seeded corpus. Everything here uses the
+#   offline mock/hash providers, so it verifies harness correctness and
+#   end-to-end wiring — not product quality against a real model (that run is
+#   done locally on the GPU box). The full app-stack e2e golden journey is run
+#   locally via `docker compose --profile app`; it is intentionally not booted
+#   in CI to avoid building the app images here.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # 03:17 UTC daily — an odd minute keeps it off the top-of-hour stampede.
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  LLM_PROVIDER: mock
+  EMBEDDING_PROVIDER: hash
+
+jobs:
+  # --------------------------------------------------------------------------- #
+  # Offline fast gate — runs on every PR / push.
+  # --------------------------------------------------------------------------- #
+  ai-service:
+    name: ai-service (pytest, offline)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ai-service
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: ai-service/requirements*.txt
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt -r requirements-dev.txt
+      - name: Test
+        run: python -m pytest -q
+
+  frontend:
+    name: frontend (vitest + tsc)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - name: Unit tests
+        run: npx vitest run
+      - name: Type check
+        run: npx tsc --noEmit
+
+  backend:
+    name: backend (maven unit tests, offline)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      # Unit tests only (*Test). The *IT suite needs Docker/Testcontainers and
+      # runs in the nightly job instead.
+      - name: Unit tests
+        run: ./mvnw -q -B test -Dtest='*Test' || mvn -q -B test -Dtest='*Test'
+
+  offline-gate:
+    name: offline suites green
+    needs: [ai-service, frontend, backend]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Fail if any offline job failed
+        run: |
+          if [ "${{ needs.ai-service.result }}" != "success" ] || \
+             [ "${{ needs.frontend.result }}" != "success" ] || \
+             [ "${{ needs.backend.result }}" != "success" ]; then
+            echo "One or more offline suites failed."; exit 1
+          fi
+
+  # --------------------------------------------------------------------------- #
+  # Nightly / manual — Docker-backed full stack + both eval harnesses.
+  # --------------------------------------------------------------------------- #
+  nightly:
+    name: nightly full-stack + evals
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: ai-service/requirements*.txt
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      # Infra only — the app servers (backend / ai-service / frontend) are NOT
+      # booted here. The backend *IT suite bootstraps its own IT containers, and
+      # the ai-service eval harness talks straight to postgres. This keeps the
+      # nightly runnable without building the app images; the full-stack e2e
+      # golden journey is run locally / via `docker compose --profile app`.
+      - name: Start infra (postgres / redis / minio)
+        run: docker compose up -d postgres redis minio
+
+      - name: Seed jobs (12 companies / 41 roles)
+        run: docker compose run --rm seed-jobs
+
+      - name: Backend integration tests (*IT)
+        working-directory: backend
+        run: ./mvnw -q -B test -Dtest='*IT' || mvn -q -B test -Dtest='*IT'
+
+      - name: ai-service install
+        working-directory: ai-service
+        env:
+          # Host-reachable (the compose ports are published to 127.0.0.1).
+          DATABASE_URL: postgresql://career_os:career_os_dev_password@127.0.0.1:5432/career_os
+          REDIS_URL: redis://127.0.0.1:16380/0
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Backfill job vectors
+        working-directory: ai-service
+        env:
+          DATABASE_URL: postgresql://career_os:career_os_dev_password@127.0.0.1:5432/career_os
+          REDIS_URL: redis://127.0.0.1:16380/0
+        run: python -m app.ops.embed_jobs --force
+
+      - name: Build vector index (types column + HNSW)
+        run: |
+          sudo apt-get update && sudo apt-get install -y postgresql-client
+          PGPASSWORD=career_os_dev_password psql -h 127.0.0.1 -p 5432 -U career_os -d career_os \
+            -v dim=1536 -f ai-service/ops/vector_index.sql
+
+      - name: RAG + agent eval harnesses (mock/hash, seeded corpus)
+        working-directory: ai-service
+        env:
+          LLM_PROVIDER: mock
+          EMBEDDING_PROVIDER: hash
+          DATABASE_URL: postgresql://career_os:career_os_dev_password@127.0.0.1:5432/career_os
+          REDIS_URL: redis://127.0.0.1:16380/0
+        run: python -m app.eval.run_eval --user-id 00000000-0000-0000-0000-000000000000 --answer
+
+      - name: Tear down infra
+        if: always()
+        run: docker compose down -v
