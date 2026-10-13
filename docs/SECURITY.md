@@ -75,7 +75,9 @@ that rejects invented skills/numbers not present in the source evidence.
   - AI-costing paths — 30/min per user. This is an explicit list
     (`RateLimitFilter.isAiCost`), not a prefix sweep: it covers the `/ai` SSE
     routes **plus** `/copilot` (the agent turn, the single most expensive call),
-    `/interview`, `/jds`, `/knowledge/text`, `/resumes/{id}/parse` and
+    `/interview`, `/jds`, `/growth` (the 10.2 bridge — the aggregate report and the
+    granular engines that will join under the prefix), `/knowledge/text`,
+    `/resumes/{id}/parse` and
     `/jobs/{id}/(match|tailor|cover-letter)`. It also covers the three that spend
     money without living under an "AI-looking" path: `/jobs/import` (importing a JD
     runs the analyst) and `/knowledge/documents` and `/resumes/upload` (both embed

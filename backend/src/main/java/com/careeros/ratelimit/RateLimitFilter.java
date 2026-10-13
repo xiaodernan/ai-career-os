@@ -89,6 +89,7 @@ public class RateLimitFilter extends org.springframework.web.filter.OncePerReque
                 || uri.startsWith("/api/v1/copilot")   // agent turn (most expensive)
                 || uri.startsWith("/api/v1/interview") // answer evaluation, finalize
                 || uri.startsWith("/api/v1/jds")       // JD analysis + suggestions
+                || uri.startsWith("/api/v1/growth")    // growth report + the granular engines behind it
                 || uri.startsWith("/api/v1/knowledge/text")) { // embedding ingest
             return true;
         }

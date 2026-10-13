@@ -151,6 +151,22 @@ public class HttpAiServiceClient implements AiServiceClient {
     }
 
     @Override
+    public Map<String, Object> growthReport(com.careeros.ai.dto.GrowthReportRequest request,
+                                            UUID userId) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("target_role", request.targetRole());
+        if (request.seniority() != null) body.put("seniority", request.seniority());
+        if (request.resumeVersionId() != null) {
+            body.put("resume_version_id", request.resumeVersionId().toString());
+        }
+        if (request.location() != null) body.put("location", request.location());
+        if (request.currency() != null) body.put("currency", request.currency());
+        if (request.targetSalary() != null) body.put("target_salary", request.targetSalary());
+        if (request.previous() != null) body.put("previous", request.previous());
+        return post("/internal/features/growth-report", userId, body);
+    }
+
+    @Override
     @SuppressWarnings("unchecked")
     public List<Map<String, Object>> listMemories(List<String> kinds, UUID userId) {
         String path = "/internal/memories"

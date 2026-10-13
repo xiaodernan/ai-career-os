@@ -94,6 +94,17 @@ record the caller does not own answers 404 rather than 403.
 | PATCH | `/memories/{id}` | `{content, importance}` — either or both; `content` ≤ 4000 chars, `importance` 0.0–1.0. A blank `content` is a 400, because "delete it" is what `DELETE` is for |
 | DELETE | `/memories/{id}` | forgets one memory; 204 |
 
+### Growth report
+
+The roadmap 10.2 bridge: one call composes readiness (10.7), gap analysis (10.1), salary
+benchmark (12.1), the learning plan (10.5) and progress-vs-previous (10.6) into the growth
+page's single answer. The report's schema is the AI service's — this route forwards the
+request and answers the engine's shape, and rate-limits as an AI-costing path.
+
+| Method | Path | Notes |
+|---|---|---|
+| POST | `/growth-report` | `{targetRole, seniority, resumeVersionId, location, currency, targetSalary, previous}` → the composed report. `targetRole` is required and floored at 10 characters (the engine's own floor); everything else is optional, `currency` a 3-letter code. `previous` is a prior report's own shape, for the progress diff; a report is computed, not stored, so there is nothing to GET |
+
 ### Resumes (`/resumes`)
 
 | Method | Path | Notes |

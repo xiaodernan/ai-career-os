@@ -493,9 +493,9 @@ def test_an_unauthored_name_is_a_snake_twin_a_foreign_name_or_a_name_no_record_d
     everywhere = every_record_component()
     # The foreign-name lookup is only as good as this census, so its size is pinned from the scan
     # itself rather than left as a floor a narrowing walk could satisfy by reading nothing.
-    # 218 rather than 215 since `offerCompensation`/`rejectionReason` (the outcome pair the
-    # tracker carries) and the memory row's `key`/`content`/`importance` trio.
-    assert len(everywhere) == 218, f"the backend record census read {len(everywhere)} component names"
+    # 222 rather than 218 since `GrowthReportRequest` — the 10.2 bridge's request record —
+    # carries `targetRole`/`targetSalary` and the growth-report family's own names.
+    assert len(everywhere) == 222, f"the backend record census read {len(everywhere)} component names"
     assert {"id", "title", "status", "createdAt"} <= set(everywhere), sorted(list(everywhere)[:8])
     scanned_unauthored = scanned_nowhere = 0
     for (mapper, receiver), record in ROWS.items():

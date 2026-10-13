@@ -50,6 +50,15 @@ public interface AiServiceClient {
     Map<String, Object> embedQuery(String text, UUID userId);
 
     /**
+     * The growth page in one call: readiness + gap + salary + learning plan + progress,
+     * composed by the ai-service's 10.8 aggregate so the bridge carries one request and one
+     * answer rather than seven round trips. The report's shape is the engine's — this bridge
+     * forwards it and owns none of it.
+     */
+    Map<String, Object> growthReport(
+            com.careeros.ai.dto.GrowthReportRequest request, UUID userId);
+
+    /**
      * What the model remembers about this user, newest update first, so a wrong sentence is
      * findable. Answers {@code {items: [...]}}; the rows carry their own id, which is what a
      * correction targets. Unlike the chat pages, this is read through the browser too.

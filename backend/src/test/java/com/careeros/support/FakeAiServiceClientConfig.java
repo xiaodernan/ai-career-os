@@ -235,6 +235,22 @@ public class FakeAiServiceClientConfig {
         }
 
         /**
+         * What the growth-report bridge answers with. The shape is the ai-service engine's —
+         * a readiness verdict, a coverage block and a salary band, the three the frontend's
+         * growth panel renders first — with enough of it for the controller tests to pin the
+         * pass-through and nothing else.
+         */
+        @Override
+        public Map<String, Object> growthReport(com.careeros.ai.dto.GrowthReportRequest request,
+                                                UUID userId) {
+            record("growthReport");
+            return map("readiness", map("verdict", "not_ready", "coverage", 0.42),
+                    "gap", map("coverage", 0.42, "gaps", List.of()),
+                    "salary", map("p25", 300000, "p50", 420000, "p75", 560000, "currency",
+                            request.currency() == null ? "CNY" : request.currency()));
+        }
+
+        /**
          * What the memory routes answer. Non-empty means the ai-service has some to correct;
          * empty is the honest "the extractor has written nothing yet".
          */

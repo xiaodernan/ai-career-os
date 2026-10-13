@@ -29,15 +29,16 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   first), and the **interview-prep** checklist (10.13, study the gaps, rehearse the
   strength stories). Seventeen internal engines now, all unit-tested offline, all
   pinned by `tests/test_forward_features_contract.py`.
-  **None are wired to the backend yet** (10.2/10.3 and the 12.x bridges are pending).
-- **The backend bridge is the next real step** and is blocked only on files another
-  session has in flight (`HttpAiServiceClient.java`, `docs/API.md`,
-  `frontend/src/lib/api/endpoints.ts`). Do it when they are clean.
+  **The aggregate bridge (10.2) is served (2026-10-14)** — `/api/v1/growth-report` carries
+  the whole growth page in one call. The granular engines (gap, salary, readiness, learning,
+  progress as their own routes) and the 12.x bridges are still unwired, and 10.3's frontend
+  panel is the next step: it can render from the aggregate today.
 
 ## Epic 10 — Growth Intelligence
 - [x] **10.1** Gap & growth analysis engine (evidence-bound coverage verdict).
-- [ ] **10.2** Backend bridge: `HttpAiServiceClient` method + controller endpoint
-  (`/api/v1/growth-report` first; granular endpoints after). Extend `docs/API.md` + gate.
+- [x] **10.2** Backend bridge: `HttpAiServiceClient.growthReport` + `GrowthController`
+  (`/api/v1/growth-report`, the 10.8 aggregate; granular endpoints after). `docs/API.md`
+  extended, the route rate-limited as AI-cost, controller pinned by `GrowthControllerTest`.
 - [ ] **10.3** Frontend page/panel: target-role input, readiness verdict, coverage
   bars (covered / partial / gap), learning plan, salary band, progress delta.
 - [ ] **10.4** Persist a `growth_plan` per (user, target_role) so repeat runs diff

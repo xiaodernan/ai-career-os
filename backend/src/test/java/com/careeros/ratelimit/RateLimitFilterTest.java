@@ -32,6 +32,9 @@ class RateLimitFilterTest {
         assertThat(RateLimitFilter.ruleFor("/api/v1/interview/sessions/xyz/answer")).isEqualTo("ai");
         assertThat(RateLimitFilter.ruleFor("/api/v1/jds")).isEqualTo("ai");
         assertThat(RateLimitFilter.ruleFor("/api/v1/jds/suggestions")).isEqualTo("ai");
+        // The 10.2 bridge: the aggregate report and the granular engines that will join
+        // under the same prefix are all engine calls, not reads.
+        assertThat(RateLimitFilter.ruleFor("/api/v1/growth-report")).isEqualTo("ai");
         assertThat(RateLimitFilter.ruleFor("/api/v1/knowledge/text")).isEqualTo("ai");
     }
 

@@ -385,8 +385,8 @@ def test_the_backend_readers_this_gate_walks_are_the_ones_that_exist():
     """A new consumer class must widen the corpus here, not go unmeasured."""
     assert sorted(p.name for p in _consumer_files()) == [
         "ConversationService.java", "CopilotStreamService.java", "FileIngestService.java",
-        "InterviewService.java", "JobService.java", "MemoryController.java",
-        "QueryEmbeddingService.java",
+        "GrowthController.java", "InterviewService.java", "JobService.java",
+        "MemoryController.java", "QueryEmbeddingService.java",
         "ResumeService.java",
     ]
 
@@ -940,9 +940,10 @@ def test_the_java_probe_reads_every_record_the_backend_declares():
     # bytes, media type, save name -- which is a record like the rest, so the shared opener has to
     # read it. Before it, `JobDtos.CompanyDetail` was the last one to join (102 -> 103).
     # `MemoryItem` / `UpdateMemoryRequest` (ai/dto/) took it to 106 for the memory-correction
-    # surface: the records the backend declares, whether or not a response carries them.
-    assert len(declared) == 106, \
-        f"{len(declared)} records carry a declaration the shared opener reads, not the 106 measured"
+    # surface; `GrowthReportRequest` to 107 as the 10.2 bridge's first request record: the
+    # records the backend declares, whether or not a response carries them.
+    assert len(declared) == 107, \
+        f"{len(declared)} records carry a declaration the shared opener reads, not the 107 measured"
     problems, renamed = [], []
     for relative, record in declared:
         names = _record_components_at(relative, record)
@@ -2874,9 +2875,9 @@ def test_the_heartbeat_interval_has_one_definer_and_every_shipped_claim_names_it
         (f"{doc_claims}: `docs/` states the keep-alive without a number today, and a doc that quotes an "
          "interval is a claim this gate has to be able to check rather than a second opinion")
     assert [(row["file"], row["line"]) for row in doc_vocabulary] == [
-        # SECURITY.md's keep-alive mention moved 142 -> 148: concurrent edits above it grew
-        # the file, the sentence itself unchanged.
-        ("AGENTS.md", 144), ("DEPLOYMENT.md", 8), ("SECURITY.md", 148),
+        # SECURITY.md's keep-alive mention moved again (148 -> 150): the 10.2 bridge's `/growth`
+        # joined the throttle list above it, the sentence itself unchanged.
+        ("AGENTS.md", 144), ("DEPLOYMENT.md", 8), ("SECURITY.md", 150),
     ], (f"{doc_vocabulary}: the docs' own vocabulary is censused, so this pass is not reporting on an "
         "empty set -- and a second file picking up the word is a signal the ledger has to grow")
 
