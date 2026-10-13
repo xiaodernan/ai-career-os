@@ -24,7 +24,9 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   offer comparison (12.3), counter-offer drafting (12.4), equity annualization (12.5)
   — plus an aggregate
   `POST /internal/features/growth-report` (10.8) that composes the growth page in one
-  call, and `tests/test_forward_features_contract.py` holding all their shapes.
+  call, and the **progression planner** (10.11, stepping-stone roles toward a dream
+  role). Fifteen internal engines now, all unit-tested offline, all pinned by
+  `tests/test_forward_features_contract.py`.
   **None are wired to the backend yet** (10.2/10.3 and the 12.x bridges are pending).
 - **The backend bridge is the next real step** and is blocked only on files another
   session has in flight (`HttpAiServiceClient.java`, `docs/API.md`,
@@ -48,6 +50,10 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   plan + progress in one call) — the intended bridge target.
 - [x] **10.9** Market skill demand: which skills a role family's postings ask for, and
   how often — the market-centric half of the gap view. (`features/demand.py`)
+- [x] **10.11** Career progression planner: given an aspirational role, rank
+  stepping-stone role families that are *reachable today* (current coverage) **and**
+  build the dream role's missing skills. Composes gap-analysis + role-suggestions +
+  demand; deterministic bridge score. (`features/progression.py`)
 
 ## Epic 11 — Outreach & Networking
 - [ ] **11.1** Contacts registry (name, role, company, relation, last touch).

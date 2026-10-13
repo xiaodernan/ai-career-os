@@ -21,6 +21,7 @@ from app.features import stories as stories_mod
 from app.features import tailor as tailor_mod
 from app.features import counter_offer as counter_offer_mod
 from app.features import demand as demand_mod
+from app.features import progression as progression_mod
 from app.features.cover_letter import generate as cover_generate
 
 router = APIRouter(prefix="/internal/features", tags=["features"])
@@ -447,6 +448,25 @@ async def role_suggestions_ep(req: RoleSuggestReq, ctx: Ctx = Depends(require_in
 class CompanyBriefReq(BaseModel):
     company: str = Field(min_length=2)
     top: int = Field(default=10, ge=1, le=30)
+
+
+class ProgressionReq(BaseModel):
+    aspirational_role: str = Field(min_length=10)
+    seniority: str | None = None
+    resume_version_id: str | None = None
+
+
+@router.post("/progression")
+async def progression_ep(req: ProgressionReq, ctx: Ctx = Depends(require_internal)):
+    """Stepping-stone roles toward a dream role: reachable *and* gap-closing."""
+    run_id = await _run(ctx, "learning", "progression")
+    structured, _ = await _resume_payload(ctx.user_id, req.resume_version_id)
+    samples = await demand_mod.load_job_skill_samples()
+    result = await progression_mod.plan_progression(
+        aspirational_role=req.aspirational_role, resume_structured=structured,
+        samples=samples, seniority=req.seniority, user_id=ctx.user_id, run_id=run_id)
+    await observability.finish_run(run_id, "completed")
+    return result
 
 
 @router.post("/company-brief")

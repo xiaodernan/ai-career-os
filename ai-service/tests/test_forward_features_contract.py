@@ -21,8 +21,8 @@ from pydantic import BaseModel
 
 from app.core.deps import require_internal
 from app.features import (company, counter_offer, demand, gap_analysis, growth,
-                          learning, negotiation, offers, outreach, progress, readiness,
-                          roles, salary, stories)
+                          learning, negotiation, offers, outreach, progress, progression,
+                          readiness, roles, salary, stories)
 from app.main import app
 
 # path -> (request model name, required field names)
@@ -41,6 +41,7 @@ FORWARD = {
     "/internal/features/story-bank": ("StoryBankReq", set()),
     "/internal/features/role-suggestions": ("RoleSuggestReq", set()),
     "/internal/features/company-brief": ("CompanyBriefReq", {"company"}),
+    "/internal/features/progression": ("ProgressionReq", {"aspirational_role"}),
 }
 
 
@@ -199,3 +200,17 @@ def test_role_suggestions_response_keys():
 def test_company_brief_response_keys():
     out = company.company_brief([], "Acme")
     assert set(out) == {"company", "postings", "roles", "topSkills", "salaryBand"}
+
+
+def test_progression_response_keys():
+    fams = [{"family": "backend", "postings": 10, "coverage": 0.6,
+             "topDemands": ["Java", "Kubernetes"], "youHave": ["Java"], "missing": ["Kubernetes"]}]
+    stones = progression.build_stepping_stones(fams, ["Kubernetes"], ["Kubernetes"])
+    assert set(stones[0]) == {"family", "currentCoverage", "postings", "buildsSkills",
+                              "buildsMustCount", "buildsCount", "bridgeScore", "reason"}
+    assert stones[0]["buildsSkills"] == ["Kubernetes"]
+    assert stones[0]["buildsMustCount"] == 1
+
+    plan = progression.build_advice(0.5, 1, ["Kubernetes"])
+    assert isinstance(plan, list) and plan
+
