@@ -242,9 +242,23 @@ The interview path had the opposite problem to the agent path: a complete contra
 "the interviewer reports depth 0.9" was never once checked against a transcript.
 
 Scoring lives in `app/eval/interview_metrics.py` as pure functions, unit-tested in
-`tests/test_interview_eval.py` (20 tests) against the scripted fixtures in
+`tests/test_interview_eval.py` (24 tests) against the scripted fixtures in
 `app/eval/interview_dataset.py`. No provider is needed to run it, because what it
 measures is *shape*, not judgement:
+
+Runner (still no provider — the fixtures are scripted, so this is the one harness
+that runs anywhere Python does):
+
+```bash
+cd ai-service
+python -m app.eval.run_interview_eval --experiment iv-baseline
+```
+
+It writes JSON and Markdown to `evals/reports/` like the other two harnesses, and
+refuses to exit 0 over a degenerate set: if every fixture receives the same
+verdict the scorer became a rubber stamp (all pass) or broke (all fail), and
+`assert_something_was_measured` says so instead of printing a `pass_rate` nobody
+can act on. `tests/test_interview_eval_runner.py` (11 tests) holds that contract.
 
 | Metric | Meaning |
 |---|---|
@@ -256,19 +270,24 @@ measures is *shape*, not judgement:
 | `adapted` | did the ladder move at all, or was every question asked at the same difficulty |
 | `passed` | the AND of the above, minus the two that are diagnostic rather than blocking |
 
-The fixture set is built so the harness **must** discriminate: `iv-strong` and
-`iv-weak` are the same ladder scored for two different candidates, `iv-flat` is eight
-identical dimensions (the defect `discrimination` exists for), plus one fixture per
-named failure — a `followup` with no question, a ladder that left the clamp band, and
-a fabricated weakness that names a consensus mechanism the candidate never mentioned.
-`test_the_golden_set_discriminates` asserts that the set does *not* all pass, because a
-golden set where everything passes is a rubber stamp.
+The fixture set is built so the harness **must** discriminate: `strong` and
+`weak` are the same ladder scored for two different candidates, `flat` is eight
+identical dimensions (the defect `discrimination` exists for), plus one fixture
+per named failure — a `followup` with no question, a ladder that left the clamp
+band, and a fabricated weakness that names a consensus mechanism the candidate
+never mentioned. The CJK pair (`zh_honest` / `zh_fabricated`) scores the same
+Chinese transcript with an honest and an invented weakness — what pinned
+`_tokens`' CJK bigramming, because before it an honest Chinese weakness shared
+no distinctive tokens with its own transcript and read as fabricated.
+`test_the_golden_set_discriminates` asserts that the set does *not* all pass,
+because a golden set where everything passes is a rubber stamp.
 
 Two measurement caveats the fixtures themselves encode: `discrimination` measures
 spread and not quality — a bad candidate also scores spread across the eight
 dimensions, so `overall` is what separates a strong report from a weak one; and
-`grounding` only counts *distinctive* tokens, because a weakness containing "the",
-"with" and "you" matches any transcript ever recorded.
+`grounding` only counts *distinctive* tokens (CJK bigrams; ASCII words ≥5
+characters), because a weakness containing "the", "with" and "you" matches any
+transcript ever recorded.
 
 ## 4. What is verified offline vs. with a real provider
 
@@ -289,11 +308,17 @@ paths are healthy — worth knowing, and not the same claim as "semantic retriev
 
 ```bash
 cd ai-service
-python -m pytest tests/test_eval_metrics.py tests/test_agent_eval.py -q
+python -m pytest tests/test_eval_metrics.py tests/test_agent_eval.py \
+ tests/test_interview_eval.py tests/test_interview_eval_runner.py -q
 ```
 
 `test_eval_metrics.py` covers recall/precision/MRR/nDCG on hand-computable
 rankings; `test_agent_eval.py` covers the scoring functions *and* the scenario
 dataset's integrity (unique ids, every referenced tool exists in the registry,
 safety scenarios forbid something and expect nothing, job-scoped scenarios
-declare their dependency). A drifting benchmark fails CI, not the product.
+declare their dependency); `test_interview_eval.py` covers the interview
+scorers including the CJK grounding pair and the schema-drift gate that pins
+the scorer's eight dimensions to the ones the product prompt emits;
+`test_interview_eval_runner.py` holds the runner's artifact shape and its
+refusal to exit 0 over a degenerate fixture set. A drifting benchmark fails CI,
+not the product.

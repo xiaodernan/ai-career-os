@@ -107,13 +107,18 @@ public class DashboardService {
             return null;
         }
         String jobTitle = jobs.findById(best.getJobId()).map(Job::getTitle).orElse(null);
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> gaps = best.getSkillGaps().stream()
+                .filter(g -> g instanceof Map)
+                .map(g -> (Map<String, Object>) g)
+                .toList();
         return new SkillGapDigest(best.getJobId(), jobTitle, best.getOverall(),
-                best.getMissingSkills(), best.getMatchedSkills());
+                best.getMissingSkills(), best.getMatchedSkills(), gaps);
     }
 
     private List<RecentRun> recentRuns(UUID userId) {
-        return runs.findRecent(userId, null, Paging.first(RECENT_LIMIT)).stream()
-                .map(DashboardService::toRun).toList();
+        var page = runs.findRecent(userId, null, Paging.first(RECENT_LIMIT));
+        return page != null ? page.stream().map(DashboardService::toRun).toList() : List.of();
     }
 
     private List<RecentActivity> recentActivity(UUID userId) {

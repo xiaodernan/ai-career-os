@@ -6,6 +6,7 @@ import { Keyboard, LogOut, Monitor, Moon, Save, Sun } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { CareerProfileCard, CareerProfileMapsCard } from "@/components/settings/profile-cards";
+import { MemoryCard } from "@/components/settings/memory-card";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -170,6 +171,9 @@ export default function SettingsPage() {
           </ul>
         </CardContent>
       </Card>
+
+      {/* Long-term memory — the one surface that can correct what the model believes */}
+      <MemoryCard />
 
       <ConfirmDialog
         open={confirmOpen}

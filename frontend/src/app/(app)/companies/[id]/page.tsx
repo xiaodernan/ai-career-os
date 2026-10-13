@@ -5,8 +5,11 @@ import Link from "next/link";
 import { Building2, Globe, Tag, Code, Users, MapPin, ExternalLink } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ErrorState } from "@/components/common/error-state";
 import { useCompany } from "@/lib/hooks/resources";
 import { formatSalary } from "@/lib/format";
+import { ApiError } from "@/lib/api/client";
 import type { CompanySource, Job } from "@/lib/api/types";
 
 /**
@@ -24,27 +27,45 @@ export default function CompanyDetailPage() {
   const id = params?.id ?? null;
   const company = useCompany(id);
 
-  if (company.isLoading) {
+  if (company.isPending) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center gap-3">
-          <div className="h-8 w-1/4 animate-pulse bg-muted rounded" />
-          <div className="h-4 w-1/2 animate-pulse bg-muted rounded" />
-        </div>
-        <div className="space-y-4">
-          <div className="h-20 animate-pulse bg-muted rounded-xl" />
-          <div className="h-8 w-1/2 animate-pulse bg-muted rounded" />
-          <div className="h-8 w-1/4 animate-pulse bg-muted rounded" />
-        </div>
+        <Skeleton className="h-8 w-1/4" />
+        <Skeleton className="h-4 w-1/2" />
+        <Skeleton className="h-20 rounded-xl" />
+        <Skeleton className="h-8 w-1/2" />
+        <Skeleton className="h-8 w-1/4" />
+        <span className="sr-only" role="status">
+          Loading company…
+        </span>
       </div>
     );
   }
 
-  // An id the API does not know is a 404 from the backend (isError), so this is the honest screen
-  // for it -- the guard used to test the shape of a response body, which the client had already
-  // unwrapped.
-  if (company.isError || !company.data) {
+  // Only a 404 is "this company isn't in the system". A 500 or a dropped connection is a
+  // failure with a retry, not a missing record -- rendering it as a 404 tells the user to
+  // go look for a company that does exist. (The local is named so it does not shadow the
+  // `notFound()` route component from next/navigation.)
+  const absent = company.error instanceof ApiError && company.error.isNotFound;
+  if (absent) {
     notFound();
+  }
+
+  if (company.isError || !company.data) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardContent>
+            <ErrorState
+              title="Couldn't load this company"
+              error={company.error}
+              onRetry={() => void company.refetch()}
+              retrying={company.isFetching}
+            />
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   const c = company.data.company;

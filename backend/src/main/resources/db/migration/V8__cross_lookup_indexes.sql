@@ -1,0 +1,37 @@
+-- An index for the one read path the existing indexes cannot serve, because it is led
+-- by a column no current index leads with.
+--
+-- `DashboardRepository.recommendedJobs` runs on every dashboard load. Its lateral reads
+-- `job_matches` by (job_id, user_id) once per open job, while every index on that table
+-- leads with user_id — UNIQUE (user_id, job_id, resume_version_id) and idx_match_user both
+-- do. A B-tree cannot narrow a predicate on its non-leading column, so the lateral was
+-- an index scan on user_id plus a *filter* on job_id, then a sort of the user's matches
+-- per open job.
+--
+-- Measured against the dev corpus (49 job_matches rows, 66 open jobs), before:
+--     Index Scan using idx_match_user on job_matches jm
+--         Index Cond: (user_id = $1)
+--         Filter: (job_id = j.id)
+-- after:
+--     Index Scan using idx_match_job_user on job_matches jm
+--         Index Cond: ((job_id = j.id) AND (user_id = $1))
+-- The filter becomes an index condition and the per-row sort disappears.
+--
+-- This table is also the one whose row count grows fastest: every match run writes one,
+-- so the scan it replaces lengthens as the user works. That is what makes it worth a
+-- migration rather than a note.
+CREATE INDEX IF NOT EXISTS idx_match_job_user ON job_matches(job_id, user_id);
+
+-- Deliberately NOT added, with the measurement, so it is not re-added for a guess:
+--
+--   CREATE INDEX idx_apps_user_job ON applications(user_id, job_id);
+--
+-- It reads like an obvious twin of the above — the same query's NOT EXISTS filters
+-- applications by (user_id, job_id), and idx_apps_user_status leads with (user_id,
+-- status). Measured, though, adding it did not improve the plan: the planner switched the
+-- anti join from `Index Scan using idx_apps_user_status, Index Cond: (user_id)` to a
+-- `Seq Scan on applications a, Filter: (user_id)`. At the dev corpus's 53 rows that is
+-- noise, but the point stands that nothing here demonstrates a win, and an index that
+-- changes the plan for the worse is not an improvement. Applications also grow far more
+-- slowly than matches — one per role the user tracks, not one per scoring run. Revisit
+-- with EXPLAIN (ANALYZE) on a corpus where the seq scan is actually expensive.

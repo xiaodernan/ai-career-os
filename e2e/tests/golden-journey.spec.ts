@@ -235,6 +235,68 @@ test.describe("golden journey — find a role and understand the match", () => {
     });
   });
 
+  /**
+   * The one PRD §34 step the golden journey never walked: paste a JD → JD
+   * intelligence. §9 requires required / preferred skills, responsibilities,
+   * interview topics and a skill gap -- and the point of driving it from the browser
+   * is that the dialog's disabled-Analyze button (it enables only at 40 characters)
+   * and its "comparing with your resume" second call are both behaviour the API
+   * tests cannot see.
+   */
+  test("analyzes a pasted JD into structured requirements", async ({ api, authedPage }) => {
+    await seedParsedResume(api, "JD Resume");
+
+    await authedPage.goto("/jobs");
+    await authedPage.getByRole("button", { name: /analyze a jd/i }).click();
+
+    const raw =
+      "Senior Backend Engineer. Responsibilities: design and operate services at scale, " +
+      "own data stores and their reliability. Required: 5+ years Java, Spring Boot, " +
+      "PostgreSQL, Kafka, Kubernetes. Preferred: AWS, Terraform, observability " +
+      "(Prometheus), distributed tracing. Nice to have: Go, ClickHouse.";
+
+    const box = authedPage.getByLabel("Job description text");
+    await expect(box).toBeVisible();
+    await box.fill(raw);
+
+    // The Analyze button is disabled until the paste is long enough to be a real
+    // posting, so asserting it becomes enabled is part of the contract.
+    const analyze = authedPage.getByRole("button", { name: "Analyze" });
+    await expect(analyze).toBeEnabled({ timeout: 5_000 });
+    await analyze.click();
+
+    // §9: the structured sections are the deliverable. Required skills is the field
+    // this posting is built to surface, so it is the one the run is held to. The
+    // headings are level-4 and the pasted text itself contains these words, so the
+    // locator has to say "heading" or it matches the textarea.
+    await expect(
+      authedPage.getByRole("heading", { name: "Required skills" })
+    ).toBeVisible({ timeout: 60_000 });
+    await expect(
+      authedPage.getByRole("heading", { name: "Responsibilities" })
+    ).toBeVisible({ timeout: 60_000 });
+
+    // §9 also names hidden requirements and interview topics. Both are conditional on
+    // the extraction finding any, so either one appearing is the proof that the
+    // analysis went past the two obvious skill lists.
+    await expect(
+      authedPage.getByRole("heading", { name: /interview topics|hidden requirements/i }).first()
+    ).toBeVisible({ timeout: 60_000 });
+
+    // The resume comparison is a second call to /jds/suggestions. It renders either
+    // the skill gap or the improvement suggestions, so seeing either proves the
+    // second request ran -- the gap is legitimately empty when the resume already
+    // covers the posting.
+    await expect(
+      authedPage.getByRole("heading", { name: /Your skill gap|Resume improvement suggestions/i }).first()
+    ).toBeVisible({ timeout: 60_000 });
+
+    // Everything shown must be a badge or a list item, never the raw JSON: the
+    // "no structured fields" copy is the fallback, and it means the run failed.
+    await expect(authedPage.getByText(/The analysis came back without structured fields/i))
+      .toHaveCount(0);
+  });
+
   test("computes an evidence-backed match and renders it in the UI", async ({ api, authedPage }) => {
     const resume = await seedParsedResume(api, "Match Resume");
     const job = await pickJob(api);
@@ -472,6 +534,50 @@ test.describe("golden journey — copilot and observability", () => {
 
     await authedPage.goto("/activity");
     await expect(authedPage.getByRole("heading", { level: 1 })).toBeVisible({ timeout: 20_000 });
+  });
+});
+
+test.describe("golden journey — dashboard skill gaps", () => {
+  /**
+   * The skill gaps panel now surfaces structured gaps (skill, importance, reason)
+   * instead of a flat string list. This test verifies the structured data renders
+   * with importance badges and reason text when available.
+   */
+  test("skill gaps panel renders and handles structured gaps", async ({
+    api,
+    authedPage,
+  }) => {
+    const resume = await seedParsedResume(api, "Skill Gaps Resume");
+    const job = await pickJob(api);
+
+    // Compute a match to generate skill gaps
+    await unwrap(
+      await api.post(`/jobs/${job.id}/match`, { resumeId: resume.id })
+    );
+
+    // Visit the dashboard and verify the skill gaps panel renders
+    await authedPage.goto("/dashboard");
+    await expect(
+      authedPage.getByRole("heading", { level: 1 })
+    ).toBeVisible({ timeout: 20_000 });
+
+    // Wait for the skill gaps section to be present
+    const gapSection = authedPage.getByRole("heading", { name: "Top skill gaps" });
+    await expect(gapSection).toBeVisible({ timeout: 20_000 });
+
+    // If gaps exist, they should have importance badges and reason text
+    const gapCards = authedPage.locator(
+      '[class*="badge"]:has-text("critical"), [class*="badge"]:has-text("high"), [class*="badge"]:has-text("medium"), [class*="badge"]:has-text("low")'
+    );
+    const count = await gapCards.count();
+    if (count > 0) {
+      await expect(gapCards.first()).toBeVisible({ timeout: 20_000 });
+      // Verify the skill text and reason text are present
+      const gapRows = authedPage.locator('[class*="flex"][class*="gap-2"]').filter({
+        has: authedPage.locator('.badge'),
+      });
+      await expect(gapRows.first()).toBeVisible({ timeout: 20_000 });
+}
   });
 });
 

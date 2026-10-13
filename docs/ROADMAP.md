@@ -25,9 +25,10 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   — plus an aggregate
   `POST /internal/features/growth-report` (10.8) that composes the growth page in one
   call, the **progression planner** (10.11, stepping-stone roles toward a dream
-  role), and the **learning-priority** ranker (10.12, learn the most-demanded gap
-  first). Sixteen internal engines now, all unit-tested offline, all pinned by
-  `tests/test_forward_features_contract.py`.
+  role), the **learning-priority** ranker (10.12, learn the most-demanded gap
+  first), and the **interview-prep** checklist (10.13, study the gaps, rehearse the
+  strength stories). Seventeen internal engines now, all unit-tested offline, all
+  pinned by `tests/test_forward_features_contract.py`.
   **None are wired to the backend yet** (10.2/10.3 and the 12.x bridges are pending).
 - **The backend bridge is the next real step** and is blocked only on files another
   session has in flight (`HttpAiServiceClient.java`, `docs/API.md`,
@@ -58,6 +59,10 @@ for "what to build next" across sessions; pick the top un-done task and execute.
 - [x] **10.12** Learning priority: enrich each gap with its market demand (10.9) over
   the role family and rank by importance × market pull, so the candidate learns the
   most-asked-for missing skill first. Composes gap-analysis + demand. (`features/prioritize.py`)
+- [x] **10.13** Interview prep plan: the pre-interview checklist -- weak areas to study
+  (gaps, by importance), strength stories to rehearse (covered skills mapped to the
+  candidate's own STAR stories), and likely topics (responsibilities + gap-address
+  lines). Complements the adaptive coach (interview.py). Composes gap-analysis + stories.
 
 ## Epic 11 — Outreach & Networking
 - [ ] **11.1** Contacts registry (name, role, company, relation, last touch).

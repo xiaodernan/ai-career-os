@@ -17,10 +17,12 @@ from app.core import db
 from app.core.config import get_settings
 from app.eval.dataset import GOLDEN_SET, EvalCase, load_dataset
 from app.eval.metrics import llm_judge, score_case
+from app.providers.pricing import estimate_cost
 from app.rag.pipeline import retrieve
 
 METRIC_KEYS = ["recall_at_k", "precision_at_k", "mrr", "ndcg_at_k", "hit_at_k",
-               "context_relevance", "answer_relevance", "faithfulness"]
+               "context_relevance", "answer_relevance", "faithfulness",
+               "citation_correctness"]
 
 # The metrics a retrieval-only run can honestly report: everything derived from the query
 # and the retrieved chunks. `answer_relevance` and `faithfulness` need an answer to score,
@@ -35,6 +37,12 @@ def measured_metric_keys(answer_requested: bool) -> list[str]:
 
 ANSWER_SYSTEM = """You are a career assistant answering strictly from the provided
 evidence. Cite [n]. If evidence is missing, say so. Be concise."""
+
+# A second answer voice for the prompt experiments (PRD §32), offered alongside the
+# fixed default so a run can ask whether the wording changes the groundedness score.
+ANSWER_SYSTEM_VARIANT = """You are a career assistant. Answer ONLY from the evidence
+below. Every claim must carry its citation as [n]; if the evidence does not cover the
+question, say the evidence does not cover it. Be concise."""
 
 
 async def _relevant_ids(user_id: str, case: EvalCase) -> set[str]:
@@ -55,6 +63,14 @@ async def run(args: argparse.Namespace) -> dict:
     s = get_settings()
     if args.rerank:
         s.rerank_mode = args.rerank
+    # `--chunk-target-tokens` only takes effect against a freshly ingested corpus; it
+    # is recorded in the report either way so a run that forgot to re-ingest is legible.
+    if args.chunk_target_tokens:
+        s.chunk_target_tokens = args.chunk_target_tokens
+    strategy = args.strategy or "hybrid"
+    max_expansions = args.max_expansions if args.max_expansions >= 0 else None
+    answer_prompt = {"default": ANSWER_SYSTEM, "variant": ANSWER_SYSTEM_VARIANT,
+                     "strict": ANSWER_SYSTEM_VARIANT}.get(args.prompt or "default", ANSWER_SYSTEM)
     cases = load_dataset(args.dataset) if args.dataset else GOLDEN_SET
     if args.tags:
         wanted = set(args.tags.split(","))
@@ -62,13 +78,15 @@ async def run(args: argparse.Namespace) -> dict:
 
     results, skipped = [], []
     total_in = total_out = 0
+    total_cost = 0.0
     for case in cases:
         relevant = await _relevant_ids(args.user_id, case)
         if not relevant:
             skipped.append({"id": case.id, "reason": "no_ground_truth"})
             continue
         t0 = time.monotonic()
-        r = await retrieve(case.query, user_id=args.user_id, top_k=args.top_k)
+        r = await retrieve(case.query, user_id=args.user_id, top_k=args.top_k,
+                           strategy=strategy, max_expansions=max_expansions)
         retrieval_ms = int((time.monotonic() - t0) * 1000)
         evidence = r.get("evidence") or []
         retrieved_ids = [e["chunk_id"] for e in evidence]
@@ -80,7 +98,7 @@ async def run(args: argparse.Namespace) -> dict:
         if args.answer and contexts:
             t1 = time.monotonic()
             resp = await ask(LLMRequest(
-                messages=[LLMMessage("system", ANSWER_SYSTEM),
+                messages=[LLMMessage("system", answer_prompt),
                           LLMMessage("user", f"Question: {case.query}\n\n"
                                              + r.get("context_block", ""))],
                 temperature=0.2, max_tokens=900),
@@ -88,6 +106,13 @@ async def run(args: argparse.Namespace) -> dict:
             answer = resp.text
             total_in += resp.usage.input_tokens
             total_out += resp.usage.output_tokens
+            # The answer call is the product's own cost; the judge below is harness
+            # overhead and is deliberately not billed to the product's number.
+            total_cost += estimate_cost(
+                resp.model or s.llm_model,
+                resp.usage.input_tokens,
+                resp.usage.output_tokens,
+                resp.usage.cached_tokens)
             if s.llm_provider != "mock":
                 judged = await llm_judge(case.query, contexts, answer,
                                          user_id=args.user_id)
@@ -118,7 +143,10 @@ async def run(args: argparse.Namespace) -> dict:
               "llm_model": s.llm_model,
               "embedding_provider": s.embedding_provider,
               "embedding_model": s.embedding_model,
-              "chunk_target_tokens": s.chunk_target_tokens}
+              "chunk_target_tokens": s.chunk_target_tokens,
+              "strategy": strategy,
+              "max_expansions": max_expansions if max_expansions is not None else -1,
+              "answer_prompt": args.prompt or "default"}
     report = {
         "experiment": args.experiment,
         "generated_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
@@ -127,6 +155,8 @@ async def run(args: argparse.Namespace) -> dict:
         "aggregate": aggregate,
         "caveat": _provider_caveat(config),
         "tokens": {"input": total_in, "output": total_out},
+        "cost": {"usd": round(total_cost, 4), "model": s.llm_model,
+                 "note": "answer generation only; the judge call is harness overhead"},
         "avg_retrieval_ms": round(statistics.mean(x["retrieval_ms"] for x in results), 1)
         if results else 0,
         "cases": results,
@@ -185,6 +215,12 @@ def _markdown(report: dict) -> str:
         lines += ["| metric | value |", "|---|---|"]
         lines += [f"| {m} | {v} |" for m, v in agg.items()]
         lines += [f"| avg_retrieval_ms | {report['avg_retrieval_ms']} |", ""]
+    tokens = report.get("tokens") or {}
+    if tokens:
+        lines += [f"- tokens: {tokens['input']} in / {tokens['output']} out", ""]
+    cost = report.get("cost") or {}
+    if cost:
+        lines += [f"- cost: ${cost['usd']:.4f} ({cost['model']})", ""]
     if report.get("caveat"):
         # Blank line first: without it the heading is absorbed into the table above.
         lines += [""] + report["caveat"]
@@ -210,6 +246,18 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--answer", action="store_true", help="also score generation")
     p.add_argument("--dataset", default=None, help="jsonl override for golden set")
     p.add_argument("--tags", default=None, help="comma-separated tag filter")
+    p.add_argument("--strategy", default=None,
+                   choices=["hybrid", "vector", "keyword", "trigram", "vector,keyword",
+                            "keyword,trigram"],
+                   help="retrieval channels to fuse (default: hybrid = all three)")
+    p.add_argument("--max-expansions", type=int, default=-1,
+                   help="cap query expansions; -1 leaves the pipeline default alone")
+    p.add_argument("--prompt", default=None, choices=["default", "variant", "strict"],
+                   help="answer prompt variant to test against the same evidence")
+    p.add_argument("--chunk-target-tokens", type=int, default=0,
+                   help="chunk size to record for this experiment (needs re-ingest)")
+    p.add_argument("--diff", default=None,
+                   help="compare this run's reported metrics against that JSON report")
     p.add_argument("--out", default="evals/reports")
     return p.parse_args(argv)
 
@@ -236,6 +284,32 @@ def assert_something_was_measured(report: dict) -> None:
     )
 
 
+def diff_reports(against_path: str, current: dict) -> list[str]:
+    """Compare this run's aggregate against an earlier report's, as markdown lines.
+
+    Every experiment had to be judged by opening two files side by side, so a question
+    like "does the reranker actually help?" stayed unanswered by the harness that asked
+    it. The diff only covers metrics both runs measured: comparing a retrieval-only run
+    against an `--answer` run would report generation metrics that never existed there.
+    """
+    try:
+        with open(against_path, encoding="utf-8") as f:
+            before = json.load(f)
+    except (OSError, json.JSONDecodeError) as e:
+        return [f"- **diff unavailable** — `{against_path}` could not be read: {e}"]
+
+    a, b = before.get("aggregate") or {}, current.get("aggregate") or {}
+    shared = [k for k in a if k in b]
+    lines = ["## Diff vs " + Path(against_path).name, "",
+             "| metric | before | now | delta |", "|---|---|---|---|"]
+    if not shared:
+        lines.append("| (no metrics measured by both runs) | — | — | — |")
+    for k in shared:
+        delta = round(b[k] - a[k], 4)
+        lines.append(f"| {k} | {a[k]} | {b[k]} | {delta:+} |")
+    return lines
+
+
 async def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
     await db.init_db()
@@ -243,6 +317,13 @@ async def main(argv: list[str] | None = None) -> None:
         report = await run(args)
     finally:
         await db.close_db()
+    if args.diff:
+        report["diff"] = diff_reports(args.diff, report)
+        # Append the comparison to the markdown report so the claim survives the run.
+        mpath = Path(report["_files"][1])
+        existing = mpath.read_text(encoding="utf-8") if mpath.exists() else ""
+        mpath.write_text(existing + "\n" + "\n".join(report["diff"]) + "\n",
+                         encoding="utf-8")
     print(json.dumps({"experiment": report["experiment"],
                       "n_cases": report["n_cases"],
                       "aggregate": report["aggregate"],

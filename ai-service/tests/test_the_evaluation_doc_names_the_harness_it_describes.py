@@ -31,7 +31,10 @@ METRICS = AI / "app" / "eval" / "metrics.py"
 AGENT_METRICS = AI / "app" / "eval" / "agent_metrics.py"
 RUN_EVAL = AI / "app" / "eval" / "run_eval.py"
 RUN_AGENT_EVAL = AI / "app" / "eval" / "run_agent_eval.py"
+RUN_INTERVIEW_EVAL = AI / "app" / "eval" / "run_interview_eval.py"
 AGENT_TESTS = TESTS / "test_agent_eval.py"
+INTERVIEW_TESTS = TESTS / "test_interview_eval.py"
+INTERVIEW_RUNNER_TESTS = TESTS / "test_interview_eval_runner.py"
 
 RAG_METRICS = [
     "recall_at_k",
@@ -84,6 +87,28 @@ def test_the_agent_eval_unit_count_is_the_one_the_doc_states():
     )
 
 
+def test_the_interview_unit_count_is_the_one_the_doc_states():
+    tests = len(re.findall(r"(?m)^\s*def test_", read(INTERVIEW_TESTS)))
+    assert tests >= 10, f"only {tests} tests parsed from test_interview_eval.py"
+    claimed = re.search(r"tests/test_interview_eval\.py` \((\d+) tests\)", read(DOC))
+    assert claimed, "EVALUATION.md no longer states how many tests cover the interview scorer"
+    assert int(claimed.group(1)) == tests, (
+        f"EVALUATION.md says the interview scorer is covered by {claimed.group(1)} "
+        f"tests and test_interview_eval.py holds {tests}"
+    )
+
+
+def test_the_interview_runner_test_count_is_the_one_the_doc_states():
+    tests = len(re.findall(r"(?m)^\s*def test_", read(INTERVIEW_RUNNER_TESTS)))
+    assert tests >= 5, f"only {tests} tests parsed from test_interview_eval_runner.py"
+    claimed = re.search(r"test_interview_eval_runner\.py` \((\d+) tests\)", read(DOC))
+    assert claimed, "EVALUATION.md no longer states how many tests cover the interview runner"
+    assert int(claimed.group(1)) == tests, (
+        f"EVALUATION.md says the interview runner is covered by {claimed.group(1)} "
+        f"tests and test_interview_eval_runner.py holds {tests}"
+    )
+
+
 def test_every_flag_the_doc_documents_is_a_flag_a_runner_accepts():
     documented = set()
     for runner in re.findall(
@@ -93,7 +118,7 @@ def test_every_flag_the_doc_documents_is_a_flag_a_runner_accepts():
     for block in re.findall(r"python -m app\.eval\.\w+[^\n]*", read(DOC)):
         documented |= set(re.findall(r"--[a-z-]+", block))
     accepted = set()
-    for runner in (RUN_EVAL, RUN_AGENT_EVAL):
+    for runner in (RUN_EVAL, RUN_AGENT_EVAL, RUN_INTERVIEW_EVAL):
         accepted |= set(re.findall(r'add_argument\("(--[a-z-]+)"', read(runner)))
     assert len(documented) >= 5, f"only {sorted(documented)} flags parsed from the doc"
     missing = sorted(documented - accepted)

@@ -395,8 +395,10 @@ def test_the_palette_sentence_is_built_from_that_table_and_the_notes_group_is_ba
         "the palette footer no longer interpolates the table, so its capability line is a typed string and this gate is stale"
     assert "once the API is live" not in footer, \
         "the footer went back to promising a future for an endpoint SearchController has answered for a while"
-    assert "Content search isn't available yet" in footer.replace("&apos;", "'"), \
+    assert "Content search failed — showing navigation only." in footer, \
         "the palette lost its failure line, so the sentence is the only copy a user gets about content search"
+    assert "results.refetch()" in footer, \
+        "the failure line no longer offers the retry the client's backoff hands every other reader"
 
     hooks = hooks_using_note_route()
     assert all(hook_call_sites(name) for name in hooks), \

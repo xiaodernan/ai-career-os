@@ -10,6 +10,7 @@ import {
   normalizeDashboard,
   normalizeJob,
   normalizeMatch,
+  normalizeMemory,
   normalizeMessages,
   normalizePage,
   normalizePipeline,
@@ -35,6 +36,7 @@ import type {
   Job,
   KnowledgeNote,
   KnowledgeSource,
+  MemoryItem,
   Page,
   Resume,
   ResumeScore,
@@ -559,5 +561,38 @@ export function useGlobalSearch(query: string) {
     },
     enabled: query.trim().length >= 2,
     staleTime: 15_000,
+  });
+}
+
+/**
+ * Reads the caller's memories, newest update first.
+ *
+ * The `kinds` filter is passed through as one comma-joined value, which is the spelling
+ * the handler binds (`List<String> kinds`). An empty list is no filter rather than a filter
+ * for nothing: an absent parameter is what "every kind" looks like on the wire, because
+ * `kinds=` would bind a list holding one empty string and match no row at all.
+ */
+export async function fetchMemories(kinds?: string[]): Promise<MemoryItem[]> {
+  const kindsParam = kinds?.length ? kinds.join(",") : undefined;
+  const raw = await api.get<unknown>(endpoints.memories, { kinds: kindsParam });
+  return mapMemories(raw);
+}
+
+/** A bare array (the backend controller's own shape) or the ai-service's `{items}`. */
+export function mapMemories(raw: unknown): MemoryItem[] {
+  return listOf(raw, "items").map(normalizeMemory);
+}
+
+/**
+ * Every memory the agents hold about the caller (AGENTS.md §6).
+ *
+ * A list, not a page: the point is to read what the model believes and correct it, and a
+ * windowed view would hide the sentence a user came to find. `kinds` is passed through
+ * verbatim, so the caller narrows without the client reimplementing the filter.
+ */
+export function useMemories(kinds?: string[]) {
+  return useQuery({
+    queryKey: ["memories", kinds ?? []],
+    queryFn: () => fetchMemories(kinds),
   });
 }

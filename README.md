@@ -94,7 +94,7 @@ ai-service/    FastAPI — providers, ingestion, RAG, features, agents (internal
 frontend/      Next.js — app UI + AI activity views
 e2e/           Playwright golden-journey suite (PRD §35), run against the live stack
 docs/          origin spec, architecture, product plan, roadmap, product, API, RAG,
-               agents, evaluation, security, deployment
+               agents, evaluation, security, deployment, export
 docker-compose.yml   infra + `--profile app` full-stack containers
 ```
 

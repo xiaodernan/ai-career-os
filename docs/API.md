@@ -81,6 +81,19 @@ per-user budget on AI endpoints.
 | GET | `/users/me/profile` | career profile |
 | PATCH | `/users/me/profile` | `{headline, summary, location, yearsExperience, targetRoles, targetLocations, links, workAuthorization, preferences}` |
 
+### Long-term memory
+
+What the agents remember about the caller (AGENTS.md §6). The write path runs at the end of
+every chat turn and at interview finalize; these three routes are how a user reads it back
+and corrects what the extractor got wrong. Ownership is enforced by the AI service, so a
+record the caller does not own answers 404 rather than 403.
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/memories` | every memory for the caller, newest update first; optional `kinds` filter (comma-separated, repeatable) |
+| PATCH | `/memories/{id}` | `{content, importance}` — either or both; `content` ≤ 4000 chars, `importance` 0.0–1.0. A blank `content` is a 400, because "delete it" is what `DELETE` is for |
+| DELETE | `/memories/{id}` | forgets one memory; 204 |
+
 ### Resumes (`/resumes`)
 
 | Method | Path | Notes |

@@ -140,7 +140,13 @@ function NoteRow({ note }: { note: KnowledgeNote }) {
               rows={5}
             />
             <div className="flex justify-end gap-2">
-              <Button variant="ghost" size="sm" onClick={() => setEditing(false)} disabled={update.isPending}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setEditing(false)}
+                disabled={update.isPending}
+                title={update.isPending ? "Saving…" : undefined}
+              >
                 <X aria-hidden />
                 Cancel
               </Button>

@@ -19,6 +19,7 @@ import type {
   Job,
   JobMatch,
   MatchDimension,
+  MemoryItem,
   ResumeScore,
   SearchResults,
   SkillGap,
@@ -135,6 +136,26 @@ export function normalizePage<T>(
     total: num(raw, "total") ?? arr.length,
     page: num(raw, "page") ?? 0,
     size: num(raw, "size") ?? arr.length,
+  };
+}
+
+/* ------------------------------ long-term memory ---------------------------- */
+
+/**
+ * One memory row. The wire is the ai-service's camelCase, so the reader asks for both
+ * spellings rather than mapping a record — and a row missing `importance` still renders,
+ * because "no weight" and "weight zero" are different claims.
+ */
+export function normalizeMemory(raw: unknown): MemoryItem {
+  return {
+    id: str(raw, "id") ?? "",
+    kind: str(raw, "kind") ?? "",
+    key: str(raw, "key") ?? "",
+    content: str(raw, "content") ?? "",
+    importance: num(raw, "importance") ?? 0,
+    source: str(raw, "source"),
+    createdAt: str(raw, "createdAt", "created_at"),
+    updatedAt: str(raw, "updatedAt", "updated_at"),
   };
 }
 

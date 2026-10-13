@@ -133,10 +133,17 @@ def test_the_three_validation_channels_author_two_different_detail_shapes():
 
 
 def envelope_throws() -> list[str]:
-    """Each `throw new ApiError(...)` in client.ts that reads the envelope's own code."""
+    """Each `new ApiError(...)` in client.ts that reads the envelope's own code.
+
+    The construction moved into `envelopeError` when the envelope's error half was
+    centralized: one site that forwards `err?.details` rather than four call sites that
+    could each forget to. The finder reads `new ApiError(` rather than `throw new
+    ApiError(` for the same reason -- the helper returns the error and the transports
+    throw or reject it a line later.
+    """
     client = read(CLIENT)
     sites: list[str] = []
-    for block in client.split("throw new ApiError(")[1:]:
+    for block in client.split("new ApiError(")[1:]:
         call = block.split(");")[0]
         if "err?.code" in call:
             sites.append(call)
@@ -146,7 +153,10 @@ def envelope_throws() -> list[str]:
 def test_the_browser_carries_details_in_and_never_opens_it():
     client = read(CLIENT)
     sites = envelope_throws()
-    assert len(sites) >= 2, "the client no longer builds an ApiError from an envelope (%d sites)" % len(sites)
+    # One rather than two: the construction is centralized in `envelopeError`, and the
+    # assertion below -- that the one site forwards `err?.details` -- is what keeps the
+    # details list traveling. A second site would be a copy the next refactor forgets.
+    assert len(sites) == 1, "the client no longer builds an ApiError from an envelope (%d sites)" % len(sites)
     dropped = [s.strip()[:60] for s in sites if "err?.details" not in s]
     assert dropped == [], "an envelope throw stopped forwarding details: %s" % dropped
     assert stmt(client, "this.details = details;") == "this.details = details;"

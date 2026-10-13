@@ -128,6 +128,18 @@ describe("fetchResumeVersions", () => {
         })
       )
     );
-    await expect(fetchResumeVersions("aaaaaaaa-0000-0000-0000-000000000001")).rejects.toThrow();
+    // A 500 is transient, so `request` retries it three times with an exponential backoff
+    // before giving up — 7-10s of real waiting. The timers are advanced by hand so the
+    // assertion is about the error propagating, not about how long it takes to arrive.
+    vi.useFakeTimers();
+    try {
+      const outcome = fetchResumeVersions(
+        "aaaaaaaa-0000-0000-0000-000000000001"
+      ).catch((e) => e);
+      await vi.runAllTimersAsync();
+      await expect(outcome).resolves.toBeInstanceOf(Error);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

@@ -35,6 +35,7 @@ import type {
   Job,
   JobMatch,
   KnowledgeNote,
+  MemoryItem,
   ParseResult,
   Resume,
   TailorResponse,
@@ -420,7 +421,26 @@ export function useReorderApplication() {
         // dropped by Jackson on every drag.
         body: { status: body.status, position: body.order },
       }),
-    onError: fail("Couldn't persist that move — the board was reverted."),
+    // Without this the card snapped back to its old column until the refetch landed, and the
+    // error copy below promised a rollback that never happened.
+    onMutate: async ({ id, status, order }) => {
+      await qc.cancelQueries({ queryKey: ["applications"] });
+      const previous = qc.getQueriesData<{ items: Application[] } | undefined>({
+        queryKey: ["applications"],
+      });
+      qc.setQueriesData<{ items: Application[] } | undefined>({ queryKey: ["applications"] }, (cur) => {
+        if (!cur?.items) return cur;
+        return {
+          ...cur,
+          items: cur.items.map((a) => (a.id === id ? { ...a, status, position: order } : a)),
+        };
+      });
+      return { previous };
+    },
+    onError: (err, _v, ctx) => {
+      ctx?.previous?.forEach(([key, data]) => qc.setQueryData(key, data));
+      fail("Couldn't persist that move — the board was reverted.")(err);
+    },
     onSettled: () => qc.invalidateQueries({ queryKey: ["applications"] }),
   });
 }
@@ -821,6 +841,49 @@ export function useProfile() {
   return useQuery({
     queryKey: ["profile"],
     queryFn: async () => (await api.get<unknown>(endpoints.auth.profile)) ?? null,
+  });
+}
+
+/* ------------------------------------------------------------------ */
+/* Long-term memory (AGENTS.md §6)                                     */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Correct one memory's text, or lower its weight.
+ *
+ * Either field, for the reason the endpoint allows either: a wrong fact needs its content
+ * fixed, a fact the user is tired of being told about only needs its importance lowered, and
+ * forcing both would make the second caller invent new content. The list is invalidated
+ * rather than optimistically patched, because the row it writes back is the ai-service's own
+ * answer and is the only authoritative copy there is.
+ */
+export function useUpdateMemory() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, content, importance }: { id: string; content?: string; importance?: number }) =>
+      // A literal rather than a built map: `JSON.stringify` drops an `undefined` value, so
+      // only the field the caller actually passed reaches the wire. The two are independent
+      // corrections — fix the text, or lower the weight — and this says so without a helper
+      // the endpoint-parity reader cannot follow.
+      api.update<MemoryItem>(endpoints.memory(id), { content, importance }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["memories"] });
+      toast.success("Memory updated.");
+    },
+    onError: fail("Couldn't update that memory."),
+  });
+}
+
+/** Forget one memory. This is the only exit from a fact the extractor got wrong. */
+export function useDeleteMemory() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => api.remove(endpoints.memory(id)),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["memories"] });
+      toast.success("Memory forgotten.");
+    },
+    onError: fail("Couldn't forget that memory."),
   });
 }
 

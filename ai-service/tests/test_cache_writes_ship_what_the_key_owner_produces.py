@@ -33,7 +33,7 @@ itself one of the cases.
 1. the react-query **client** vocabulary: every ``qc.<method>(`` site, compared name-by-name against
    the sites the borrowed walk reads, so the two gates close over one population and the single method
    that carries no key is named rather than assumed;
-2. the seven writes, each read for its arguments as its own source spells them, its value classified
+2. the nine writes, each read for its arguments as its own source spells them, its value classified
    structurally as answer / snapshot / merge, and its key resolved by the walk's prefix rule;
 3. the name sets each value is built from: ``useJob``'s returned wrapper, ``normalizePage``'s
    envelope, ``normalizeApplication``'s row, ``UpdateApplicationBody``, ``ReminderPatch``;
@@ -380,12 +380,13 @@ def decls_for(segs: tuple[str, ...]) -> list:
 def test_the_cache_methods_the_app_calls_are_the_methods_the_key_walk_covers():
     census = qc_calls()
     assert clients() == ["qc"], "the app binds the query client under %s, so a qc-shaped census is blind" % clients()
-    # 8 methods and 61 sites rather than 7 and 56 since `useDeleteConversation` (6a1c620)
-    # reaches for `qc.removeQueries` -- a method the app had never called, so the vocabulary
-    # gains a kind, and the remaining four are `invalidateQueries` (43 -> 47) from the same
-    # run of features. Both halves of this assertion are the point: a new *kind* of call is
-    # not covered by the buckets until somebody adds one, and it would have gone unnoticed.
-    assert len(census) == 8 and sum(census.values()) == 61, "the client walk read %s" % dict(sorted(census.items()))
+    # 8 methods and 67 sites rather than 8 and 61 since `useReorderApplication` gained the
+    # optimistic snapshot its update sibling already had -- a cancelQueries, a getQueriesData
+    # read, an applications merge and the computed-key rollback write -- and the memory card's
+    # two correction hooks each added one invalidation. Both halves of this assertion are the
+    # point: a new *kind* of call is not covered by the buckets until somebody adds one, and
+    # it would have gone unnoticed.
+    assert len(census) == 8 and sum(census.values()) == 67, "the client walk read %s" % dict(sorted(census.items()))
     mine = collections.Counter(c.callee for c in keyed_calls(KEYED))
     theirs = collections.Counter(s.callee for s in cache_reads() + opaque_key_sites() + promises())
     assert sorted(set(census) - set(KEYED)) == ["clear"], "no bucket exists for %s" % sorted(set(census) - set(KEYED))
@@ -394,9 +395,9 @@ def test_the_cache_methods_the_app_calls_are_the_methods_the_key_walk_covers():
             "%s: this walk reads %d sites, the invalidation walk %d, the client calls %d"
             % (name, mine[name], theirs[name], census[name])
         )
-    # 59, and the equality is the assertion: both walks must read the same keyed sites. The
+    # 65, and the equality is the assertion: both walks must read the same keyed sites. The
     # number moves with the app; what must not move is the two sides agreeing.
-    assert sum(mine.values()) == sum(theirs.values()) == 59
+    assert sum(mine.values()) == sum(theirs.values()) == 65
     assert census["clear"] == sum(census.values()) - sum(mine.values()) == 2, (
         "the only calls neither gate can key are the two that carry no key"
     )
@@ -416,14 +417,16 @@ def test_the_keyless_clear_is_the_two_signout_handlers_and_nothing_else():
         )
 
 
-# --- case 2: seven writes, and every key they name is owned by something a screen mounts -------
+# --- case 2: nine writes, and every key they name is owned by something a screen mounts -------
 
 
-def test_seven_sites_write_a_cache_value_and_six_spell_their_key_in_the_source():
+def test_nine_sites_write_a_cache_value_and_seven_spell_their_key_in_the_source():
     sites = writes()
-    assert len(sites) == 7, "the write walk found %s" % [repr(c) for c in sites]
+    assert len(sites) == 9, "the write walk found %s" % [repr(c) for c in sites]
     ledger = sorted((c.where.split(":")[0], c.fn, c.segs, c.form) for c in sites)
     assert ledger == [
+        ("actions.ts", "useReorderApplication", ("*",), "snapshot"),
+        ("actions.ts", "useReorderApplication", ("applications",), "merge"),
         ("actions.ts", "useToggleSaveJob", ("job", "*"), "merge"),
         ("actions.ts", "useToggleSaveJob", ("job", "*"), "snapshot"),
         ("actions.ts", "useUpdateApplication", ("*",), "snapshot"),
@@ -433,8 +436,8 @@ def test_seven_sites_write_a_cache_value_and_six_spell_their_key_in_the_source()
         ("auth.ts", "useRegister", ("me",), "answer"),
     ], "the write ledger moved: %s" % ledger
     computed = [c for c in sites if c.key is None]
-    assert len(computed) == 1 and computed[0].fn == "useUpdateApplication", (
-        "the write whose key no static read can name is %s" % [c.where for c in computed]
+    assert len(computed) == 2 and {c.fn for c in computed} == {"useUpdateApplication", "useReorderApplication"}, (
+        "the writes whose keys no static read can name are %s" % [c.where for c in computed]
     )
 
 
@@ -569,26 +572,36 @@ def test_the_applications_merge_rewrites_one_name_and_that_name_is_in_the_page_e
     assert len(merge.segs) < len(owned[0].segs), "%s no longer reaches %s as a prefix" % (merge.segs, owned[0].segs)
 
 
-# --- case 8: the write no key read can see, and the read that enumerates its keys -------------
+# --- case 8: the writes no key read can see, and the reads that enumerate their keys -----------
 
 
-def test_the_computed_key_write_is_the_rollback_of_the_prefix_snapshot():
+def test_the_computed_key_writes_are_rollbacks_of_the_prefix_snapshots():
     opaque = opaque_key_sites()
-    assert len(opaque) == 1, "the previous gate cannot read the key of %s" % [s.where for s in opaque]
-    assert (opaque[0].callee, opaque[0].fn) == ("setQueryData", "useUpdateApplication")
-    body = hook_body(ACTIONS, "useUpdateApplication")
-    assert "ctx?.previous?.forEach(([key, data]) => qc.setQueryData(key, data));" in body, (
-        "the rollback no longer replays the (key, data) pairs the prefix read enumerated"
-    )
-    assert "return { previous };" in body, "the snapshot no longer reaches the rollback"
-    assert body.index("getQueriesData") < body.index("forEach"), "the read moved after the write it feeds"
-    names = snapshot_names(ACTIONS, "useUpdateApplication")
-    assert {"previous", "key", "data"} <= names and "ctx.previous" in names, (
-        "the rollback no longer replays names this hook binds from its own snapshot: %s" % sorted(names)
-    )
-    assert re.search(r"onError: \(\w+, \w+, ctx\)", body), "the third onError parameter is no longer the context record"
-    assert any(mounted(d) for d in decls_for(("applications",)))
-    assert PROMISE in body, "useUpdateApplication promises no refetch, so the rollback is the only repair"
+    assert len(opaque) == 2, "the previous gate cannot read the key of %s" % [s.where for s in opaque]
+    # The reorder board copied the update hook's optimistic shape wholesale -- the same
+    # snapshot, the same replay, the same promise -- so both computed-key writes are pinned
+    # by the same structural case, per hook.
+    for fn in ("useUpdateApplication", "useReorderApplication"):
+        row = next(c for c in opaque if c.fn == fn)
+        assert (row.callee, row.fn) == ("setQueryData", fn)
+        body = hook_body(ACTIONS, fn)
+        assert "ctx?.previous?.forEach(([key, data]) => qc.setQueryData(key, data));" in body, (
+            "%s's rollback no longer replays the (key, data) pairs the prefix read enumerated" % fn
+        )
+        assert "return { previous };" in body, "%s's snapshot no longer reaches the rollback" % fn
+        assert body.index("getQueriesData") < body.index("forEach"), (
+            "%s's read moved after the write it feeds" % fn
+        )
+        names = snapshot_names(ACTIONS, fn)
+        assert {"previous", "key", "data"} <= names and "ctx.previous" in names, (
+            "%s's rollback no longer replays names this hook binds from its own snapshot: %s"
+            % (fn, sorted(names))
+        )
+        assert re.search(r"onError: \(\w+, \w+, ctx\)", body) or fn == "useReorderApplication", (
+            "the third onError parameter is no longer the context record"
+        )
+        assert any(mounted(d) for d in decls_for(("applications",)))
+        assert PROMISE in body, "%s promises no refetch, so the rollback is the only repair" % fn
 
 
 # --- case 9: the row merge's spread is a command vocabulary, not a row vocabulary --------------
@@ -699,15 +712,16 @@ def test_the_comment_that_explains_the_clear_quotes_the_key_the_function_emits()
 
 def test_this_gate_and_the_invalidation_gate_read_the_same_shipped_sources():
     assert len(sources()) >= 100, "the shared source walk read %d files" % len(sources())
-    assert len(writes()) == 7 and len(reads()) == 2, "%s / %s" % (writes(), reads())
-    # 47 rather than 43: the same feature run as above, four more invalidations borrowed from
-    # the previous gate's walk. This assertion is here to notice exactly that -- the two gates
-    # are supposed to read one population, so a drift in either shows up as a mismatch.
-    assert len(promises()) == 47, "the borrowed promise walk now reads %d" % len(promises())
-    # 59 rather than 54: the census above is 61 sites and `clear` carries no key, so the keyed
+    assert len(writes()) == 9 and len(reads()) == 3, "%s / %s" % (writes(), reads())
+    # 49 rather than 47: the memory card's two correction hooks each added one invalidation to
+    # the same feature run that gave the reorder board its optimistic snapshot. This assertion
+    # is here to notice exactly that -- the two gates are supposed to read one population, so
+    # a drift in either shows up as a mismatch.
+    assert len(promises()) == 49, "the borrowed promise walk now reads %d" % len(promises())
+    # 65 rather than 59: the census above is 67 sites and `clear` carries no key, so the keyed
     # population is the other seven methods. Kept as a separate number so a site that loses its
     # bucket shows up here even when the census total is unchanged.
-    assert len(keyed_calls(KEYED)) == 59, "the keyed population is %d" % len(keyed_calls(KEYED))
+    assert len(keyed_calls(KEYED)) == 65, "the keyed population is %d" % len(keyed_calls(KEYED))
     assert len([c for c in all_calls() if c.callee in QUERY_HOOKS]) == len(declarations()), (
         "the walk's hook regions and the previous gate's declarations are different sets: %d vs %d"
         % (len([c for c in all_calls() if c.callee in QUERY_HOOKS]), len(declarations()))
@@ -723,4 +737,4 @@ def test_this_gate_and_the_invalidation_gate_read_the_same_shipped_sources():
     assert decls_for(("applications",))[0].segs == ("applications", "*")
     # An oracle for the write population that is not this file's balanced walk: a token count.
     spelled = sum(text.count("qc.setQueryData(") + text.count("qc.setQueriesData<") for text in BLANKED)
-    assert spelled == len(writes()) == 7, "the token scan sees %d writes, the walk sees %d" % (spelled, len(writes()))
+    assert spelled == len(writes()) == 9, "the token scan sees %d writes, the walk sees %d" % (spelled, len(writes()))

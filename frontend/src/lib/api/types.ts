@@ -620,6 +620,24 @@ export interface ActivityRun {
   costUsd?: number;
 }
 
+/**
+ * One memory the agents hold about the user (AGENTS.md §6). Read through
+ * `GET /memories`, corrected through `PATCH /memories/{id}`.
+ *
+ * `importance` is the weight the prompt reader sorts by, so lowering it is how the user
+ * keeps a fact without being told it first every time.
+ */
+export interface MemoryItem {
+  id: string;
+  kind: string;
+  key: string;
+  content: string;
+  importance: number;
+  source?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface AIUsageSummary {
   requests?: number;
   totalTokens?: number;

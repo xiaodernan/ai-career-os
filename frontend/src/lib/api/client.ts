@@ -103,6 +103,46 @@ function onSessionExpired() {
 }
 
 /* ------------------------------------------------------------------ */
+/* Retry helpers                                                      */
+/* ------------------------------------------------------------------ */
+
+const RETRYABLE_STATUSES = new Set([408, 429, 500, 502, 502, 503, 504]);
+const MAX_RETRIES = 3;
+const BASE_DELAY_MS = 1000;
+const MAX_DELAY_MS = 10000;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function calculateBackoff(attempt: number): number {
+  const delay = Math.min(BASE_DELAY_MS * Math.pow(2, attempt), MAX_DELAY_MS);
+  // Add jitter to prevent thundering herd
+  return delay + Math.random() * 1000;
+}
+
+function isRetryable(error: unknown): boolean {
+  if (error instanceof ApiError) {
+    return RETRYABLE_STATUSES.has(error.status);
+  }
+  // A network failure surfaces as a rejection, not an answer: `fetch` throws for DNS,
+  // a refused connection and a dropped socket. Nothing about those is a verdict on the
+  // request, so they are as worth another attempt as a 503.
+  return error instanceof TypeError;
+}
+
+/**
+ * How long to wait before attempt `n` (0-based): doubling, capped, plus jitter.
+ *
+ * The jitter is the point of the shape, not decoration: without it every caller that
+ * failed against the same struggling service wakes at the same instant and hammers it
+ * in lockstep — the exact stampede a backoff exists to prevent.
+ */
+export function backoffFor(attempt: number): number {
+  return Math.min(BASE_DELAY_MS * Math.pow(2, attempt), MAX_DELAY_MS);
+}
+
+/* ------------------------------------------------------------------ */
 /* Core fetch wrapper                                                   */
 /* ------------------------------------------------------------------ */
 
@@ -117,40 +157,91 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   const token = tokenStore.getAccess();
   if (auth && token) finalHeaders.set("Authorization", `Bearer ${token}`);
 
-  const res = await fetch(buildUrl(path, params), {
-    ...rest,
-    headers: finalHeaders,
-    body:
-      body === undefined ? undefined : body instanceof FormData ? body : JSON.stringify(body),
-  });
-
-  let json: Envelope<T> | null = null;
-  try {
-    json = (await res.json()) as Envelope<T>;
-  } catch {
-    /* empty or non-JSON body */
-  }
-
-  if (res.status === 401 && auth && !_retry) {
-    const newToken = await refreshOnce();
-    if (newToken) {
-      return request<T>(path, { ...options, _retry: true });
+  const attemptRequest = async (attempt: number): Promise<T> => {
+    const finalHeaders = new Headers(headers);
+    finalHeaders.set("Accept", "application/json");
+    if (body !== undefined && !(body instanceof FormData)) {
+      finalHeaders.set("Content-Type", "application/json");
     }
-    onSessionExpired();
-    throw new ApiError("UNAUTHORIZED", "Your session has expired.", 401);
-  }
+    const token = tokenStore.getAccess();
+    if (auth && token) finalHeaders.set("Authorization", `Bearer ${token}`);
 
-  if (!res.ok || (json && json.success === false)) {
-    const err = json?.error;
-    throw new ApiError(
-      err?.code ?? (res.status === 404 ? "NOT_FOUND" : "HTTP_ERROR"),
-      err?.message ?? `Request failed with status ${res.status}`,
-      res.status,
-      err?.details,
-    );
-  }
+    let res: Response;
+    try {
+      res = await fetch(buildUrl(path, params), {
+        ...rest,
+        headers: finalHeaders,
+        body:
+          body === undefined ? undefined : body instanceof FormData ? body : JSON.stringify(body),
+      });
+    } catch (e) {
+      // A refused connection throws rather than answering, so the retry decision has to
+      // happen here: without this the TypeError escapes and the attempt never reaches the
+      // backoff below. `AbortError` from an explicit `signal` is the exception — that is
+      // the caller ending the request on purpose, and retrying it would be disobeying them.
+      if (e instanceof DOMException && e.name === "AbortError") throw e;
+      if (attempt < MAX_RETRIES) {
+        await sleep(backoffFor(attempt) + Math.random() * 1000);
+        return attemptRequest(attempt + 1);
+      }
+      throw e;
+    }
 
-  return (json?.data ?? (null as T)) as T;
+    let json: Envelope<T> | null = null;
+    try {
+      json = (await res.json()) as Envelope<T>;
+    } catch {
+      /* empty or non-JSON body */
+    }
+
+    if (res.status === 401 && auth && !_retry) {
+      const newToken = await refreshOnce();
+      if (newToken) {
+        return request<T>(path, { ...options, _retry: true });
+      }
+      onSessionExpired();
+      throw new ApiError("UNAUTHORIZED", "Your session has expired.", 401);
+    }
+
+    if (!res.ok || (json && json.success === false)) {
+      const error = envelopeError(json, res.status);
+
+      // Retry logic for transient errors (5xx, 429, 408)
+      if (isRetryable(error) && attempt < MAX_RETRIES) {
+        const delay = calculateBackoff(attempt);
+        await sleep(delay);
+        return attemptRequest(attempt + 1);
+      }
+
+      throw error;
+    }
+
+    return (json?.data ?? (null as T)) as T;
+  };
+
+  return attemptRequest(0);
+}
+
+/**
+ * The one place the envelope's error half is turned into an ApiError.
+ *
+ * `request`, `postSSE`, `download` and `uploadWithProgress` all need it, and the shape it reads —
+ * `{code, message, details}` behind `error`, with `NOT_FOUND` standing in for a bare 404
+ * — is the backend's to change, so four copies of these five lines would be four places
+ * to forget. Callers that already have the parsed body pass it; the ones that do not pass
+ * nothing and get the message derived from the status alone.
+ */
+export function envelopeError(
+  json: { error?: { code?: string; message?: string; details?: unknown } | null } | null,
+  status: number,
+): ApiError {
+  const err = json?.error ?? undefined;
+  return new ApiError(
+    err?.code ?? (status === 404 ? "NOT_FOUND" : "HTTP_ERROR"),
+    err?.message ?? `Request failed with status ${status}`,
+    status,
+    err?.details,
+  );
 }
 
 /* ------------------------------------------------------------------ */
@@ -192,13 +283,7 @@ export async function download(
     } catch {
       /* a body that is neither envelope nor bytes is not worth a second guess */
     }
-    const err = json?.error;
-    throw new ApiError(
-      err?.code ?? (res.status === 404 ? "NOT_FOUND" : "HTTP_ERROR"),
-      err?.message ?? `Request failed with status ${res.status}`,
-      res.status,
-      err?.details,
-    );
+    throw envelopeError(json, res.status);
   }
 
   const disposition = res.headers.get("Content-Disposition") ?? "";
@@ -261,13 +346,7 @@ export async function postSSE<T>(
     } catch {
       /* empty or non-JSON body */
     }
-    const err = json?.error;
-    throw new ApiError(
-      err?.code ?? (res.status === 404 ? "NOT_FOUND" : "HTTP_ERROR"),
-      err?.message ?? `Request failed with status ${res.status}`,
-      res.status,
-      err?.details,
-    );
+    throw envelopeError(json, res.status);
   }
 
   return await new Promise<T>((resolve, reject) => {
@@ -424,6 +503,63 @@ export const api = {
 
   upload: <T>(path: string, formData: FormData) =>
     request<T>(path, { method: "POST", body: formData }),
+
+  /**
+   * Upload with progress tracking using XMLHttpRequest.
+   * Supports progress callbacks for upload progress events.
+   */
+  uploadWithProgress: <T>(path: string, formData: FormData, onProgress?: (progress: number) => void): Promise<T> => {
+    return new Promise<T>((resolve, reject) => {
+      const token = tokenStore.getAccess();
+      const xhr = new XMLHttpRequest();
+      const url = buildUrl(path);
+
+      xhr.open("POST", url, true);
+
+      if (token) {
+        xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+      }
+
+      xhr.upload.addEventListener("progress", (event) => {
+        if (event.lengthComputable && onProgress) {
+          onProgress(event.loaded / event.total);
+        }
+      });
+
+      xhr.addEventListener("load", () => {
+        // The answer is gated on the status, exactly as `download` gates its bytes: the
+        // success bit is `request`'s and the refresh path's business, and a third copy of
+        // that read here would be a third place to forget when the envelope changes.
+        let json: { data?: T; error?: { code?: string; message?: string; details?: unknown } } | null = null;
+        try {
+          json = JSON.parse(xhr.responseText);
+        } catch {
+          /* no body, or not the envelope — the status alone decides */
+        }
+        if (xhr.status === 401) {
+          // Deliberately not refreshed the way `request` refreshes: the retry would have
+          // to re-send the bytes, which is what the refresh-then-retry dance cannot do.
+          reject(new ApiError("UNAUTHORIZED", "Your session has expired.", 401));
+          return;
+        }
+        if (xhr.status < 200 || xhr.status >= 300) {
+          reject(envelopeError(json, xhr.status));
+          return;
+        }
+        resolve((json?.data ?? null) as T);
+      });
+
+      xhr.addEventListener("error", () => {
+        reject(new ApiError("NETWORK_ERROR", "Network error during upload", 0));
+      });
+
+      xhr.addEventListener("abort", () => {
+        reject(new ApiError("ABORTED", "Upload aborted", 0));
+      });
+
+xhr.send(formData);
+    });
+  },
 
   download,
 

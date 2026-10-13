@@ -226,7 +226,7 @@ function ConversationList({
 
   const commitRename = React.useCallback(() => {
     const id = editingId;
-    if (!id) return;
+    if (!id || rename.isPending) return;
     setEditingId(null);
     const title = draft.trim();
     const current = items.find((c) => c.id === id);
@@ -251,21 +251,35 @@ function ConversationList({
       </Button>
       <ScrollArea className="min-h-0 flex-1">
         {query.isPending ? (
-          <div className="space-y-2 py-2 pr-3">
+          <div className="space-y-2 py-2 pr-3" role="status">
             {Array.from({ length: 3 }).map((_, i) => (
               <Skeleton key={i} className="h-14 rounded-lg" />
             ))}
+            <span className="sr-only">Loading conversations…</span>
           </div>
         ) : query.isError ? (
-          <p className="px-1 py-3 text-xs text-muted-foreground">
-            {isEndpointMissing(query.error)
-              ? "Conversations aren't served by the backend yet."
-              : "Couldn't load conversations."}
-          </p>
+          <div className="px-1 py-3">
+            <ErrorState
+              title={isEndpointMissing(query.error) ? "Conversations aren't served yet" : "Couldn't load conversations"}
+              error={isEndpointMissing(query.error) ? undefined : query.error}
+              onRetry={() => void query.refetch()}
+              retrying={query.isFetching}
+            />
+          </div>
         ) : !items.length ? (
-          <p className="px-1 py-3 text-xs text-muted-foreground">
-            No conversations yet — start one above.
-          </p>
+          <div className="px-1 py-3">
+            <EmptyState
+              icon={<MessageSquare aria-hidden />}
+              title="No conversations yet"
+              description="Start one above — every turn is traced and saved."
+              action={
+                <Button variant="ai" size="sm" onClick={onCreate} loading={creating}>
+                  <Plus aria-hidden />
+                  New chat
+                </Button>
+              }
+            />
+          </div>
         ) : (
           <ul className="space-y-1 pr-2">
             {items.map((c) => (
@@ -306,7 +320,9 @@ function ConversationList({
                         {relativeTime(c.updatedAt ?? c.createdAt)}
                       </p>
                     </button>
-                    <div className="flex items-center opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
+                    {/* Touch has no hover and no focus until tapped, so the actions stay
+                        visible below the lg breakpoint and reveal on hover above it. */}
+                    <div className="flex items-center opacity-100 transition-opacity duration-150 lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100">
                       <Button
                         variant="ghost"
                         size="icon"

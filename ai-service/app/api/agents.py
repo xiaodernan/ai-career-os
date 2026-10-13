@@ -79,6 +79,14 @@ async def chat_sync(req: ChatReq, ctx: Ctx = Depends(require_internal)):
         raise HTTPException(502, f"agent run failed: {str(e)[:300]}") from e
     await observability.finish_run(run_id, "completed",
                                    latency_ms=int((time.monotonic() - started) * 1000))
+    # The streaming path writes durable memory; this one is the pair the eval harness and
+    # the e2e suite drive, so a turn that only ever took that path learned nothing.
+    # Best-effort for the same reason the streaming path is: a failed extraction must
+    # never turn a answered turn into an error.
+    try:
+        await memory.extract_and_store(ctx.user_id, req.message, out.answer, run_id=run_id)
+    except Exception:
+        log.warning("memory extraction crashed", exc_info=True)
     return out.to_dict()
 
 

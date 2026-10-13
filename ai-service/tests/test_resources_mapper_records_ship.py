@@ -6,13 +6,14 @@ declarations in `normalize.ts` only (its own docstring says "every mapper in nor
 `resources.ts` holds seven more named mappers. The seed for this unit claimed fifteen; the measured
 number was seven, and this file said which seven.
 
-At this plane now: eight named mappers -- `mapCompanySource` joined when the company page's detail
-screen needed the sources jsonb row-mapped -- and fifty reader calls carrying 109 names. The big
-change is mapCompany itself: its eleven calls used to ask thirty-three names of which eleven could
-never fire, because the backend stored `culture`, `interviewProcess` and `sources` and answered
+At this plane now: nine named mappers -- `mapCompanySource` joined when the company page's detail
+screen needed the sources jsonb row-mapped, `mapMemories` as the second envelope row when the memory
+card needed the list route's `{items}` unwrapped -- and fifty-one reader calls carrying 110 names.
+The big change is mapCompany itself: its eleven calls used to ask thirty-three names of which eleven
+could never fire, because the backend stored `culture`, `interviewProcess` and `sources` and answered
 none of them. CompanyItem carries all three now and the alias lists are gone -- every name mapCompany
 asks is a component of its record, first-spelled -- so its row classifies to nothing and the dead
-census dropped from 80 asked names to 56. The resume detail page reads `sourceFileKey` now and the
+census dropped from 80 asked names to 57. The resume detail page reads `sourceFileKey` now and the
 download route behind it is served -- #155's "Original file" affordance is live, and what is left
 of the file-name family is `fileName`/`file_name` asked as title aliases by `mapResume` (harmless
 fallbacks, pinned as bloat) and a React state name in source-actions.tsx, which is why those two
@@ -65,9 +66,13 @@ RECORD_FILES = {
 # record sits behind the *envelope* names the call asks for. `mapCompanySource` joined when the
 # company page gained the detail screen: the sources jsonb needed its own row mapper, and the
 # mapCompany alias lists went away with it -- its eleven calls now ask eleven authored names, first.
+# `mapMemories` is the second envelope row: the memories list route answers `{items: [...]}`, and
+# the rows are shaped by normalizeMemory over in normalize.ts, not by a Java record this file binds.
 NAMED_MAPPERS = ["mapResume", "mapResumeVersions", "mapCompany", "mapCompanySource", "mapSource",
-                 "mapSessionScalars", "mapInterviewSessionItem", "mapInterviewSessionDetail"]
-EXPORTED_MAPPERS = ["mapResumeVersions", "mapInterviewSessionItem", "mapInterviewSessionDetail"]
+                 "mapSessionScalars", "mapInterviewSessionItem", "mapInterviewSessionDetail",
+                 "mapMemories"]
+EXPORTED_MAPPERS = ["mapResumeVersions", "mapInterviewSessionItem", "mapInterviewSessionDetail",
+                    "mapMemories"]
 
 ROWS = {
     ("mapResume", "raw"): "ResumeListItem",
@@ -80,6 +85,7 @@ ROWS = {
     ("mapInterviewSessionDetail", "raw"): "SessionDetail",
     ("mapInterviewSessionDetail", "sess"): "SessionItem",
     ("mapInterviewSessionDetail", "t"): "TurnItem",
+    ("mapMemories", "raw"): None,
 }
 
 # Measured at this plane: one entry per reader call, keyed by the name the call asks for FIRST. The
@@ -119,6 +125,7 @@ SCANNER_SHAPE = {
     ("mapInterviewSessionDetail", "raw"): (3, 7),
     ("mapInterviewSessionDetail", "sess"): (2, 4),
     ("mapInterviewSessionDetail", "t"): (1, 1),
+    ("mapMemories", "raw"): (1, 1),
 }
 UNAUTHORED = {
     ("mapResume", "raw"): {"created_at", "current_version_id", "fileName", "file_name", "name",
@@ -141,6 +148,9 @@ UNAUTHORED = {
     ("mapInterviewSessionDetail", "raw"): {"answers", "history", "questions", "report"},
     ("mapInterviewSessionDetail", "sess"): {"evaluation", "question_count", "report"},
     ("mapInterviewSessionDetail", "t"): set(),
+    # The memories list route answers `{items: [...]}`; the envelope name rides on a payload that
+    # has no keys, exactly as the versions envelope's three names do.
+    ("mapMemories", "raw"): {"items"},
 }
 
 # The strongest of the three classes: a name no record in the backend declares, in either spelling,
@@ -184,13 +194,12 @@ READERS_BY_PAGE = {
 # mapCompany's alias names left the census when its asks became authored; `fileName` left the
 # screen tier for the wide tier when `source-actions.tsx` began spelling it as a React state name.
 DEAD_NAME_TIERS = {
-    ("lib/hooks/resources.ts",): {"chunk_count", "error_message", "file_name", "is_current",
-                                  "job_title", "position_title", "question_count", "tailorDiff",
-                                  "tailor_diff", "turnCount", "version_no"},
+    ("lib/hooks/resources.ts",): {"chunk_count", "error_message", "file_name", "fileName",
+                                  "is_current", "job_title", "position_title", "question_count",
+                                  "tailorDiff", "tailor_diff", "turnCount", "version_no"},
     ("lib/api/types.ts", "lib/hooks/resources.ts"): {"chunkCount"},
-    ("lib/api/normalize.ts", "lib/hooks/resources.ts"): {"created_at", "current_version_id",
-                                                         "overallScore", "structuredResume",
-                                                         "structured_resume", "updated_at"},
+    ("lib/api/normalize.ts", "lib/hooks/resources.ts"): {"current_version_id", "overallScore",
+                                                         "structuredResume", "structured_resume"},
     ("lib/activity-trace.ts", "lib/hooks/resources.ts"): {"errorMessage", "finished_at",
                                                           "started_at"},
     ("lib/api/endpoints.ts", "lib/hooks/resources.ts"): {"resumeVersions"},
@@ -198,13 +207,14 @@ DEAD_NAME_TIERS = {
      "lib/hooks/resources.ts"): {"company_name"},
     ("app/(app)/resumes/[id]/page.tsx", "lib/api/types.ts",
      "lib/hooks/resources.ts"): {"isCurrent", "versionNo"},
-    ("lib/api/normalize.test.ts", "lib/api/normalize.ts", "lib/hooks/resources.ts"): {"job_id"},
+    ("lib/api/normalize.test.ts", "lib/api/normalize.ts", "lib/hooks/resources.ts"): {"created_at",
+                                                                                      "job_id",
+                                                                                      "updated_at"},
     ("lib/api/normalize.ts", "lib/hooks/resources.ts", "lib/job-filter.ts"): {"resume_versions"},
-    ("components/knowledge/source-actions.tsx", "lib/hooks/resources.ts"): {"fileName"},
 }
 # Beyond three carriers a generic name (`name`, `score`, `title`, `kind`) means something else in the
 # file that spells it, so the census stops classifying rather than pretending to.
-WIDER_DEAD_NAMES = 28
+WIDER_DEAD_NAMES = 29
 TYPES_MIRROR_NAMES = {"chunkCount"}
 SCREEN_READ_NAMES = {"isCurrent", "versionNo"}
 
@@ -417,7 +427,7 @@ def test_the_unbound_mappers_ban_would_find_these_mappers_if_it_read_this_file()
     assert pattern.pattern == r"^(export )?function (\w+)[<(]", pattern.pattern
     seen = [name for _, name in pattern.findall(read(RESOURCES))]
     # 33 since #218 added `useApplication`, the board's by-id fallback.
-    assert len(seen) == 33, f"resources.ts now declares {len(seen)} functions for the ban's rule"
+    assert len(seen) == 35, f"resources.ts now declares {len(seen)} functions for the ban's rule"
     assert [n for n in seen if n.startswith("map")] == NAMED_MAPPERS, \
         "the ban's own rule no longer recognizes these declarations in file order: " \
         f"{[n for n in seen if n.startswith('map')]}"
@@ -427,7 +437,7 @@ def test_the_unbound_mappers_ban_would_find_these_mappers_if_it_read_this_file()
     assert "RESOURCES" not in declarations and "resources" not in declarations, \
         "the ban now enumerates resources.ts too -- reconcile the two censuses instead of stacking"
     population = re.search(r"assert len\(population\) == (\d+)", gate)
-    assert population and population.group(1) == "34", \
+    assert population and population.group(1) == "35", \
         f"the ban's pinned normalize.ts population moved: {population and population.group(1)}"
 
 
@@ -440,15 +450,19 @@ def test_the_scanner_finds_the_calls_and_names_each_row_actually_makes():
         assert sum(len(lit) for _, lit in found) == names, \
             f"{mapper}/{receiver}: {sum(len(lit) for _, lit in found)} names, pinned {names}"
     assert sum(len(v) for v in CALLED.values()) == 49, "the call table and the scan disagree"
-    assert sum(SCANNER_SHAPE[key][0] for key in SCANNER_SHAPE) == 50
-    assert sum(SCANNER_SHAPE[key][1] for key in SCANNER_SHAPE) == 109
-    # The one call the table above does not key is the envelope's: its receiver has no record, so it
-    # is classified by payload shape in its own case instead of by a first authored name here.
+    assert sum(SCANNER_SHAPE[key][0] for key in SCANNER_SHAPE) == 51
+    assert sum(SCANNER_SHAPE[key][1] for key in SCANNER_SHAPE) == 110
+    # The calls the table above does not key are the envelopes': their receivers have no record, so
+    # they are classified by payload shape in their own cases instead of by a first authored name.
+    # Two rows now ride a bare list -- the versions history and the memories list.
     envelope = calls_by_receiver("mapResumeVersions")[ENVELOPE_CALL[1]]
     assert [reader for reader, _ in envelope] == ["listOf"], envelope
     assert set(envelope[0][1]) == ENVELOPE_NAMES, envelope
+    memories = calls_by_receiver("mapMemories")["raw"]
+    assert [reader for reader, _ in memories] == ["listOf"], memories
+    assert set(memories[0][1]) == {"items"}, memories
     assert sum(len(v) for v in CALLED.values()) == \
-        sum(SCANNER_SHAPE[key][0] for key in SCANNER_SHAPE) - len(envelope)
+        sum(SCANNER_SHAPE[key][0] for key in SCANNER_SHAPE) - len(envelope) - len(memories)
 
 
 def test_every_call_is_classified_against_the_record_behind_its_receiver():
@@ -479,15 +493,17 @@ def test_an_unauthored_name_is_a_snake_twin_a_foreign_name_or_a_name_no_record_d
     everywhere = every_record_component()
     # The foreign-name lookup is only as good as this census, so its size is pinned from the scan
     # itself rather than left as a floor a narrowing walk could satisfy by reading nothing.
-    # 215 rather than 213 since `offerCompensation`/`rejectionReason`: the outcome pair the tracker's
-    # ApplicationItem and UpdateApplicationRequest both carry.
-    assert len(everywhere) == 215, f"the backend record census read {len(everywhere)} component names"
+    # 218 rather than 215 since `offerCompensation`/`rejectionReason` (the outcome pair the
+    # tracker carries) and the memory row's `key`/`content`/`importance` trio.
+    assert len(everywhere) == 218, f"the backend record census read {len(everywhere)} component names"
     assert {"id", "title", "status", "createdAt"} <= set(everywhere), sorted(list(everywhere)[:8])
     scanned_unauthored = scanned_nowhere = 0
     for (mapper, receiver), record in ROWS.items():
         if record is None:
-            assert set(UNAUTHORED[(mapper, receiver)]) == ENVELOPE_NAMES
-            scanned_unauthored += len(ENVELOPE_NAMES)
+            # An envelope row asks its payload names of a bare list: unauthored by definition,
+            # and classified no further -- the versions envelope's three names are pinned by the
+            # bare-list case below, the memories `{items}` by the scanner case above.
+            scanned_unauthored += len(UNAUTHORED[(mapper, receiver)])
             continue
         asked = {n for _, literals in calls_by_receiver(mapper)[receiver] for n in literals}
         authored = set(record_components(record))
@@ -509,7 +525,7 @@ def test_an_unauthored_name_is_a_snake_twin_a_foreign_name_or_a_name_no_record_d
         scanned_nowhere += len(nowhere)
     # Both ledger numbers come out of the scan above, so a row that stops reading names narrows the
     # total and gets named, instead of a table quietly agreeing with itself.
-    assert scanned_unauthored == 68, scanned_unauthored
+    assert scanned_unauthored == 69, scanned_unauthored
     assert scanned_nowhere == 30, scanned_nowhere
 
 
@@ -765,9 +781,11 @@ def test_the_dead_names_spread_in_three_measured_tiers_and_three_reached_a_scree
     # the settings page's career-profile editor; 136 rather than 135 since the knowledge page's
     # notes panel component joined. (Spell the panel's path out nowhere here -- the notes-route
     # census counts every mention of it, this file included.)
-    assert len(files) == 170, f"the frontend census walked {len(files)} files"
+    # 172 rather than 170 since the memory card (`components/settings/memory-card.tsx`) and the
+    # memories hooks' own test joined the settings page's memory surface.
+    assert len(files) == 172, f"the frontend census walked {len(files)} files"
     asked = {name for row in UNAUTHORED.values() for name in row}
-    assert len(asked) == 56, f"{len(asked)} dead names are asked, pinned 56"
+    assert len(asked) == 57, f"{len(asked)} dead names are asked, pinned 57"
     classified = set()
     for carriers, names in DEAD_NAME_TIERS.items():
         for name in sorted(names):
@@ -789,9 +807,9 @@ def test_the_dead_names_spread_in_three_measured_tiers_and_three_reached_a_scree
                         | set().union(*READERS_BY_PAGE.values()))
     assert TYPES_MIRROR_NAMES & read_by_a_screen == set(), \
         sorted(TYPES_MIRROR_NAMES & read_by_a_screen)
-    # The screen tier is the versions row's pair. `fileName` left this tier twice over: the detail
-    # screen stopped reading it when the download went live, and what remains spelled is the
-    # mapper's own title alias plus a React state name in source-actions.tsx -- a two-file tier.
+    # The screen tier is the versions row's pair. `fileName` collapsed into the mapper-only tier:
+    # the detail screen stopped reading it when the download went live (#155), and the batch-upload
+    # rework took source-actions.tsx -- the last other speller -- with it.
     screen_tier = DEAD_NAME_TIERS[("app/(app)/resumes/[id]/page.tsx", "lib/api/types.ts",
                                    "lib/hooks/resources.ts")]
     assert screen_tier == SCREEN_READ_NAMES, sorted(screen_tier ^ SCREEN_READ_NAMES)

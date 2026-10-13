@@ -234,6 +234,41 @@ public class FakeAiServiceClientConfig {
             return map("embedding", queryEmbedding);
         }
 
+        /**
+         * What the memory routes answer. Non-empty means the ai-service has some to correct;
+         * empty is the honest "the extractor has written nothing yet".
+         */
+        public volatile List<Map<String, Object>> memories = new ArrayList<>();
+
+        @Override
+        public List<Map<String, Object>> listMemories(List<String> kinds, UUID userId) {
+            record("listMemories");
+            List<Map<String, Object>> rows = memories;
+            if (kinds == null || kinds.isEmpty()) {
+                return rows;
+            }
+            return rows.stream()
+                    .filter(r -> kinds.contains(r.get("kind")))
+                    .collect(java.util.stream.Collectors.toList());
+        }
+
+        @Override
+        public Map<String, Object> patchMemory(UUID memoryId, String content, Double importance,
+                                               UUID userId) {
+            record("patchMemory");
+            return map("id", memoryId == null ? null : memoryId.toString(),
+                    "kind", "skill", "key", "kafka",
+                    "content", content == null ? "unchanged" : content,
+                    "importance", importance == null ? 0.6 : importance,
+                    "source", "conversation",
+                    "createdAt", null, "updatedAt", null);
+        }
+
+        @Override
+        public void deleteMemory(UUID memoryId, UUID userId) {
+            record("deleteMemory");
+        }
+
         private static Map<String, Object> map(Object... kv) {
             Map<String, Object> m = new LinkedHashMap<>();
             for (int i = 0; i < kv.length; i += 2) {

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ApiError, api, postSSE, request } from "./client";
+import { ApiError, api, backoffFor, postSSE, request } from "./client";
 import { tokenStore } from "./token-store";
 
 interface FakeResponse {
@@ -139,6 +139,86 @@ describe("request() — refresh-on-401", () => {
     await expect(request("/protected")).rejects.toBeInstanceOf(ApiError);
     // original + refresh + one retry, then stop (the retry carries _retry=true)
     expect(calls).toHaveLength(3);
+  });
+});
+
+describe("request() — retry with backoff", () => {
+  /**
+   * The backoff is real sleeps, so the timers are advanced by hand rather than waited
+   * on: 1s + 2s + 4s plus jitter is ten seconds of a suite's life per test, and a test
+   * that costs ten seconds does not get run.
+   */
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  /** Settles the request promise while advancing every timer the retry schedules. */
+  function settle<T>(promise: Promise<T>): Promise<T> {
+    const guarded = promise.catch((e) => e);
+    return vi.runAllTimersAsync().then(() => guarded) as Promise<T>;
+  }
+
+  it("retries a 500 and succeeds when the next attempt answers", async () => {
+    mockFetch((_url, i) => (i === 0 ? resp(500, errEnv("BOOM", "database is on fire")) : resp(200, okEnv({ id: 1 }))));
+    const data = await settle(request<{ id: number }>("/things"));
+    expect(data).toEqual({ id: 1 });
+    // one retry, not the full budget: it stopped as soon as the answer arrived.
+    expect(calls).toHaveLength(2);
+  });
+
+  it("gives up after the budget and reports the last failure", async () => {
+    mockFetch(() => resp(503, errEnv("DOWN", "upstream is down")));
+    const err = await settle(request("/things").catch((e: unknown) => e));
+    expect(err).toBeInstanceOf(ApiError);
+    expect((err as ApiError).status).toBe(503);
+    // initial attempt + 3 retries = 4, then the error propagates rather than looping.
+    expect(calls).toHaveLength(4);
+  });
+
+  it("does not retry a 4xx, so a validation failure answers immediately", async () => {
+    mockFetch(() => resp(400, errEnv("VALIDATION", "title required")));
+    const err = await settle(request("/things").catch((e) => e));
+    expect((err as ApiError).status).toBe(400);
+    expect(calls).toHaveLength(1);
+  });
+
+  it("treats 429 as transient, because that is the one 4xx worth waiting on", async () => {
+    mockFetch((_url, i) => (i === 0 ? resp(429, errEnv("RATE_LIMITED", "slow down")) : resp(200, okEnv(null))));
+    await settle(request("/things"));
+    expect(calls).toHaveLength(2);
+  });
+
+  it("retries a network failure, since fetch rejects rather than answering", async () => {
+    mockFetch((_url, i) => {
+      if (i === 0) throw new TypeError("Failed to fetch");
+      return resp(200, okEnv({ ok: true }));
+    });
+    const data = await settle(request("/things"));
+    expect(data).toEqual({ ok: true });
+    expect(calls).toHaveLength(2);
+  });
+
+  it("does not retry an abort, because that is the caller ending the request", async () => {
+    // The exception to the network rule: a `signal` abort is the caller's decision, and
+    // re-sending it would be the client overriding them.
+    mockFetch(() => {
+      throw new DOMException("The operation was aborted.", "AbortError");
+    });
+    const err = (await settle(request("/things").catch((e: unknown) => e))) as DOMException;
+    expect(err).toBeInstanceOf(DOMException);
+    expect(err.name).toBe("AbortError");
+    expect(calls).toHaveLength(1);
+  });
+
+  it("doubles the wait between attempts and caps it, so a struggling service recovers", async () => {
+    // The doubling and the cap, asserted as arithmetic rather than measured through
+    // timers: the shipped delay adds up to 1s of jitter on top, so a timing assertion
+    // would only be able to say "somewhere over a second".
+    expect(backoffFor(0)).toBe(1_000);
+    expect(backoffFor(1)).toBe(2_000);
+    expect(backoffFor(2)).toBe(4_000);
+    // ...and it stops growing: 8s, 16s and beyond are all held at the ceiling.
+    expect(backoffFor(3)).toBe(8_000);
+    expect(backoffFor(10)).toBe(10_000);
   });
 });
 

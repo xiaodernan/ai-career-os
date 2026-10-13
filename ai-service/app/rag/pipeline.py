@@ -24,8 +24,18 @@ async def retrieve(query: str, *, user_id: str, run_id: str | None = None,
                    context_summary: str = "", top_k: int = 8,
                    kinds: list[str] | None = None,
                    document_ids: list[str] | None = None,
-                   task_id: str | None = None) -> dict[str, Any]:
-    """Retrieve evidence for a query. Returns understanding + evidence (citable)."""
+                   task_id: str | None = None,
+                   strategy: str = "hybrid",
+                   answer_prompt: str | None = None,
+                   max_expansions: int | None = None) -> dict[str, Any]:
+    """Retrieve evidence for a query. Returns understanding + evidence (citable).
+
+    `strategy` selects which retrieval channels contribute to the fusion: the full
+    `hybrid` default (vector ∪ keyword ∪ trigram), or a single channel on its own
+    (`vector`, `keyword`, `trigram`). It exists for the RAG experiments asked for by
+    PRD §32 — the reranker was the only switch the harness had, so "is the hybrid
+    actually better than keyword alone?" could not be answered by a run.
+    """
     if task_id:
         taskbus.publish(task_id, "status", {"step": "understanding_query", "state": "active"})
     u = await understand(query, context_summary, user_id=user_id, run_id=run_id)
@@ -38,7 +48,10 @@ async def retrieve(query: str, *, user_id: str, run_id: str | None = None,
     if task_id:
         taskbus.publish(task_id, "status", {"step": "hybrid_retrieval", "state": "active"})
     embedder = get_embeddings()
-    queries = [u["rewritten"]] + u["expansions"]
+    # `max_expansions` caps the multi-query fan-out for the retrieval experiments, so
+    # a run can ask what the expanded queries are actually worth.
+    expansions = u["expansions"] if max_expansions is None else u["expansions"][:max_expansions]
+    queries = [u["rewritten"]] + expansions
     vecs = []
     for q in queries:
         vecs.extend(await embedder.embed([q]))
@@ -47,17 +60,32 @@ async def retrieve(query: str, *, user_id: str, run_id: str | None = None,
     # A caller-supplied `kinds` is a request; the understanding step's is a guess.
     inferred_kinds = not kinds and bool(filter_kinds)
 
+    # Which channels contribute to the fusion. `hybrid` is the product default; the
+    # single-channel names exist so an experiment can ask whether the hybrid actually
+    # beats keyword alone (PRD §32).
+    # An unrecognised (or empty) name must not mean "no channels": it would retrieve
+    # nothing at all and report that emptiness as a result.
+    channels = [c.strip() for c in strategy.split(",") if c.strip()]
+    if not channels or not set(channels) & {"hybrid", "vector", "keyword", "trigram"}:
+        channels = ["hybrid"]
+    # `hybrid` is an alias for all three, including the fallback above.
+    if "hybrid" in channels:
+        channels = ["vector", "keyword", "trigram"]
+
     async def retrieve(kinds_filter: list[str] | None) -> list[dict]:
         lists = []
-        for v in vecs:
-            lists.append(await store.vector_search(user_id, v, k=25, kinds=kinds_filter,
-                                                   document_ids=document_ids))
-        for phrase in keyword_phrases(u):
-            lists.append(await store.keyword_search(user_id, phrase, k=25, kinds=kinds_filter,
+        if "vector" in channels:
+            for v in vecs:
+                lists.append(await store.vector_search(user_id, v, k=25, kinds=kinds_filter,
+                                                       document_ids=document_ids))
+        if "keyword" in channels:
+            for phrase in keyword_phrases(u):
+                lists.append(await store.keyword_search(user_id, phrase, k=25, kinds=kinds_filter,
+                                                        document_ids=document_ids))
+        if "trigram" in channels:
+            lists.append(await store.trigram_search(user_id, u["rewritten"], k=10,
+                                                    kinds=kinds_filter,
                                                     document_ids=document_ids))
-        lists.append(await store.trigram_search(user_id, u["rewritten"], k=10,
-                                                kinds=kinds_filter,
-                                                document_ids=document_ids))
         return store.rrf_merge(lists)
 
     merged = await retrieve(filter_kinds)
@@ -78,7 +106,7 @@ async def retrieve(query: str, *, user_id: str, run_id: str | None = None,
 
     if run_id:
         await observability.trace(run_id, "retrieval", "rag", {
-            "stage": "hybrid", "channels": len(lists), "merged": len(merged),
+            "stage": "hybrid", "channels": channels, "merged": len(merged),
             "top": [{"chunk_id": str(m["id"]), "rrf": round(m["rrf"], 5),
                      "source": m.get("doc_title"), "section": m.get("section_path")}
                     for m in merged[:10]]})

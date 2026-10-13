@@ -14,11 +14,12 @@ import {
   CommandSeparator,
 } from "@/components/ui/command";
 import { NAV_ITEMS } from "@/components/layout/nav";
+import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
 import { normalizeSearch, searchGroupNames } from "@/lib/api/normalize";
 import type { SearchResults } from "@/lib/api/types";
-import { FileText, Briefcase, Building2, MessageSquare, LayoutDashboard, CornerDownLeft, type LucideIcon } from "lucide-react";
+import { FileText, Briefcase, Building2, MessageSquare, LayoutDashboard, CornerDownLeft, Loader2, type LucideIcon } from "lucide-react";
 
 /**
  * CommandPalette — global ⌘K shell (architecture.md §3 search module).
@@ -137,7 +138,14 @@ export function CommandPaletteProvider({
             onValueChange={setQuery}
           />
           <CommandList>
-            <CommandEmpty>No results.</CommandEmpty>
+            {results.isPending && (
+              <div className="flex items-center gap-2 px-4 py-3 text-xs text-muted-foreground" role="status">
+                <Loader2 className="size-3.5 animate-spin" aria-hidden />
+                <span className="sr-only">Searching…</span>
+                Searching…
+              </div>
+            )}
+            {!results.isPending && !searchFailed && <CommandEmpty>No results.</CommandEmpty>}
 
             {apiGroups.map((group) => (
               <CommandGroup key={group.label} heading={group.label}>
@@ -181,9 +189,14 @@ export function CommandPaletteProvider({
             </CommandGroup>
 
             {searchFailed && (
-              <p className="px-4 py-2 text-xs text-muted-foreground">
-                Content search isn&apos;t available yet — showing navigation only.
-              </p>
+              <div className="flex items-center justify-between gap-2 px-4 py-2 text-xs">
+                <span className="text-muted-foreground">
+                  Content search failed — showing navigation only.
+                </span>
+                <Button variant="ghost" size="xs" onClick={() => void results.refetch()} loading={results.isFetching}>
+                  Retry
+                </Button>
+              </div>
             )}
             {!debounced && (
               <div className="flex items-center gap-1.5 border-t border-border/60 px-4 py-2.5 text-xs text-muted-foreground">

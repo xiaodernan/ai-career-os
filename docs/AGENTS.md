@@ -152,3 +152,29 @@ pair for scripts, the e2e suite and the eval harness, and the client falls back 
 stream route answers 404. The browser half is `postSSE` (`lib/api/client.ts`): `request()`'s auth
 and one refresh-on-401, frames parsed and dispatched by `lib/sse/use-sse.ts`, resolving on `done`
 and rejecting with `errorText`'s first line.
+
+## 6. Correcting what the model remembers
+
+Every memory in §3 was written by the model and read by the model, which left the user
+outside the loop: `memory.extract_and_store` only ever *adds*, so a sentence the extractor
+invented was quoted back as fact on every later turn with no way to say otherwise. `domain.list_memories`
+returns the row's own id (the prompt reader `get_memories` stops at 20 and returns no id),
+and three routes let a user act on it:
+
+| Route | Body | Effect |
+|---|---|---|
+| `GET /internal/memories?kinds=a,b` | — | every memory, newest update first, capped by the caller |
+| `PATCH /internal/memories/{id}` | `content` and/or `importance` | correct the text, or lower its weight |
+| `DELETE /internal/memories/{id}` | — | forget it outright |
+
+The two fields are patched independently because they are corrected independently: a wrong
+fact needs its text fixed, a fact the user is tired of being reminded about only needs its
+importance lowered. An empty `content` is a 400 — blank is what "forget this sentence" looks
+like to a model that would just as happily store the empty string — so `DELETE` is the route
+for that. All three scope `user_id` in the `WHERE`, so another user's id is a 404 rather than
+a 403: "not yours" and "not there" are the same answer. `domain.update_memory` reads the row
+back when nothing is being written, so a no-op patch is not a write.
+
+Two paths also write there directly: `POST /internal/agents/chat` and `/chat/sync` extract
+durable facts after a turn, and `/internal/interview/finalize` records the report's verdict
+as an `interview` memory — the one §17 listed as a kind that nothing could produce.

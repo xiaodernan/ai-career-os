@@ -23,6 +23,7 @@ from app.features import counter_offer as counter_offer_mod
 from app.features import demand as demand_mod
 from app.features import progression as progression_mod
 from app.features import prioritize as prioritize_mod
+from app.features import interview_prep as interview_prep_mod
 from app.features.cover_letter import generate as cover_generate
 
 router = APIRouter(prefix="/internal/features", tags=["features"])
@@ -484,6 +485,24 @@ async def learning_priority_ep(req: LearningPriorityReq, ctx: Ctx = Depends(requ
     samples = await demand_mod.load_job_skill_samples()
     result = await prioritize_mod.plan_learning_priority(
         target_role=req.target_role, resume_structured=structured, samples=samples,
+        seniority=req.seniority, user_id=ctx.user_id, run_id=run_id)
+    await observability.finish_run(run_id, "completed")
+    return result
+
+
+class InterviewPrepReq(BaseModel):
+    target_role: str = Field(min_length=10)
+    seniority: str | None = None
+    resume_version_id: str | None = None
+
+
+@router.post("/interview-prep")
+async def interview_prep_ep(req: InterviewPrepReq, ctx: Ctx = Depends(require_internal)):
+    """Pre-interview checklist: study the gaps, rehearse the strength stories."""
+    run_id = await _run(ctx, "interview", "interview_prep")
+    structured, _ = await _resume_payload(ctx.user_id, req.resume_version_id)
+    result = await interview_prep_mod.plan_interview_prep(
+        target_role=req.target_role, resume_structured=structured,
         seniority=req.seniority, user_id=ctx.user_id, run_id=run_id)
     await observability.finish_run(run_id, "completed")
     return result

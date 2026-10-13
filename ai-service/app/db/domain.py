@@ -73,6 +73,73 @@ async def get_memories(user_id: str, kinds: list[str] | None = None, limit: int 
     return [dict(r) for r in rows]
 
 
+async def list_memories(user_id: str, kinds: list[str] | None = None,
+                        limit: int = 100) -> list[dict]:
+    """Every memory the user carries, including the id needed to edit it.
+
+    `get_memories` reads what the prompt needs and stops at 20. This is the other job —
+    the surface a user reads to find the sentence the model got wrong — so it returns the
+    row's own id and carries a limit the default list is allowed to be bigger than.
+    """
+    rows = await db.fetch(
+        """SELECT id, kind, key, content, importance, source, created_at, updated_at
+             FROM user_memories
+            WHERE user_id=$1::uuid AND ($2::text[] IS NULL OR kind = ANY($2))
+            ORDER BY updated_at DESC, importance DESC LIMIT $3""",
+        user_id, kinds, limit)
+    return [dict(r) for r in rows]
+
+
+async def update_memory(user_id: str, memory_id: str, *, content: str | None = None,
+                        importance: float | None = None) -> dict | None:
+    """Re-write one memory's content and/or its weight. Returns the row, or None.
+
+    Both fields are optional because they are corrected independently: a wrong fact needs
+    the text fixed, while a fact the user is tired of being reminded about only needs its
+    importance lowered. An empty patch is a no-op that still returns the current row, so
+    the caller never has to tell "nothing changed" from "it is gone".
+
+    `user_id` in the WHERE is the whole ownership rule: an id belonging to somebody else
+    does not update, it returns None.
+    """
+    sets: list[str] = []
+    args: list = [memory_id, user_id]
+    if content is not None:
+        sets.append(f"content=${len(args) + 1}")
+        args.append(content)
+    if importance is not None:
+        sets.append(f"importance=${len(args) + 1}")
+        args.append(importance)
+    returning = ("SELECT id, kind, key, content, importance, source, "
+                 "created_at, updated_at FROM user_memories")
+    if not sets:
+        row = await db.fetchrow(returning + " WHERE id=$1::uuid AND user_id=$2::uuid",
+                                memory_id, user_id)
+        return dict(row) if row else None
+    sql = (f"UPDATE user_memories SET {', '.join(sets)} "
+           "WHERE id=$1::uuid AND user_id=$2::uuid "
+           "RETURNING id, kind, key, content, importance, source, "
+           "created_at, updated_at")
+    row = await db.fetchrow(sql, *args)
+    return dict(row) if row else None
+
+
+async def delete_memory(user_id: str, memory_id: str) -> bool:
+    """Forget one memory. Returns whether a row was actually the caller's.
+
+    The only way out of a wrong fact: the extraction path only ever adds, so a sentence
+    the model invented would otherwise be quoted back at the user on every later turn.
+
+    `RETURNING` rather than `db.execute`'s status string: asyncpg's `execute` answers
+    "DELETE 0" for a row that was not there, which is a non-empty string and therefore
+    truthy — an existence question answered by a truthiness check on prose.
+    """
+    row = await db.fetchrow(
+        "DELETE FROM user_memories WHERE id=$1::uuid AND user_id=$2::uuid RETURNING id",
+        memory_id, user_id)
+    return row is not None
+
+
 async def upsert_memory(user_id: str, kind: str, key: str, content: str, source: str,
                         importance: float = 0.6) -> None:
     await db.execute(

@@ -21,8 +21,9 @@ from pydantic import BaseModel
 
 from app.core.deps import require_internal
 from app.features import (company, counter_offer, demand, gap_analysis, growth,
-                          learning, negotiation, offers, outreach, prioritize, progress,
-                          progression, readiness, roles, salary, stories)
+                          interview_prep, learning, negotiation, offers, outreach,
+                          prioritize, progress, progression, readiness, roles, salary,
+                          stories)
 from app.main import app
 
 # path -> (request model name, required field names)
@@ -43,6 +44,7 @@ FORWARD = {
     "/internal/features/company-brief": ("CompanyBriefReq", {"company"}),
     "/internal/features/progression": ("ProgressionReq", {"aspirational_role"}),
     "/internal/features/learning-priority": ("LearningPriorityReq", {"target_role"}),
+    "/internal/features/interview-prep": ("InterviewPrepReq", {"target_role"}),
 }
 
 
@@ -230,4 +232,25 @@ def test_learning_priority_response_keys():
     assert ranked[0]["skill"] == "Kubernetes"
     assert ranked[0]["priority"] == "critical"
     assert ranked[1]["priority"] == "high"
+
+
+def test_interview_prep_response_keys():
+    gap = {"targetRole": "Backend Engineer", "coverage": 0.5,
+           "covered": [{"skill": "Java", "evidence": "Declared skill: Java"}],
+           "gaps": [{"skill": "Kubernetes", "importance": "must"},
+                    {"skill": "Go", "importance": "nice"}],
+           "responsibilities": ["Design APIs"]}
+    bank = {"count": 1, "stories": [
+        {"id": "exp-1", "title": "Java service", "skills": ["Java"], "quantified": True,
+         "bullets": ["Built a Java service"], "kind": "experience"}]}
+    out = interview_prep.build_prep_plan(gap, bank)
+    assert set(out) == {"targetRole", "coverage", "weakAreaCount", "strengthStoryCount",
+                        "weakAreas", "strengthStories", "likelyTopics", "storyBankSize"}
+    assert set(out["weakAreas"][0]) == {"skill", "importance", "action"}
+    # must-gap ranks before nice-gap
+    assert out["weakAreas"][0]["skill"] == "Kubernetes"
+    assert set(out["strengthStories"][0]) == {"skill", "evidence", "storyTitle",
+                                              "storyId", "quantified"}
+    assert out["strengthStories"][0]["storyId"] == "exp-1"
+    assert out["likelyTopics"][0] == "Design APIs"
 

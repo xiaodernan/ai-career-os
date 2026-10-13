@@ -34,11 +34,26 @@ def ndcg(retrieved_ids: list[str], relevant_ids: set[str], k: int) -> float:
     return dcg / idcg if idcg > 0 else 0.0
 
 
-_TOKEN = re.compile(r"[a-zA-Z0-9\u4e00-\u9fff]{2,}")
+_ASCII_TOKEN = re.compile(r"[a-z0-9]{2,}")
+_CJK_RUN = re.compile(r"[\u4e00-\u9fff]+")
 
 
 def _tokens(text: str) -> set[str]:
-    return set(_TOKEN.findall(text.lower()))
+    """Content tokens. CJK runs are emitted as overlapping bigrams.
+
+    A CJK run has no spaces, so matching it whole made one unmatchable lexeme: a
+    full clause like "\u7f13\u5b58\u7a7f\u900f\u7684\u5904\u7406" was a single
+    token, which made every lexical-overlap measure (faithfulness, grounding,
+    answer_relevance) treat an honest Chinese claim as unrelated unless the exact
+    same clause reappeared. Bigrams are the standard no-segmenter fallback, and
+    what the trigram retrieval channel already assumes about Chinese text.
+    """
+    lowered = text.lower()
+    out = set(_ASCII_TOKEN.findall(lowered))
+    for run in _CJK_RUN.findall(lowered):
+        if len(run) >= 2:
+            out.update(run[i:i + 2] for i in range(len(run) - 1))
+    return out
 
 
 def lexical_context_relevance(query: str, contexts: list[str]) -> float:
@@ -85,6 +100,26 @@ def faithfulness(answer: str, contexts: list[str]) -> float:
         if not st or len(st & ctx_tokens) / len(st) >= 0.3:
             grounded += 1
     return grounded / len(sentences)
+
+
+_CITATION = re.compile(r"\[(\d+)\]")
+
+
+def citation_correctness(answer: str, contexts: list[str]) -> float:
+    """Share of `[n]` citations that point at a block the retrieval actually returned.
+
+    The answer prompt asks for `[n]` and the pipeline numbers evidence 1-based, so a
+    citation is correct when it names a block that exists. A citation to a block that
+    was never retrieved is the failure this metric exists for: the answer *looks* sourced,
+    and a reader who does not count the evidence cannot tell a real [3] from an invented
+    one. An answer that cites nothing scores 0.0 -- the same rule `faithfulness` applies
+    to an answer with no checkable claim.
+    """
+    cites = [int(n) for n in _CITATION.findall(answer)]
+    if not cites or not contexts:
+        return 0.0
+    n_blocks = len(contexts)
+    return sum(1 for n in cites if 1 <= n <= n_blocks) / len(cites)
 
 
 JUDGE_SYSTEM = """You are a strict RAG evaluator. Score each dimension 0.0-1.0.
@@ -135,5 +170,6 @@ def score_case(query: str, retrieved_ids: list[str], relevant_ids: set[str],
         "mrr": round(mrr(retrieved_ids, relevant_ids), 4),
         "ndcg_at_k": round(ndcg(retrieved_ids, relevant_ids, k), 4),
         "hit_at_k": 1.0 if any(r in relevant_ids for r in retrieved_ids[:k]) else 0.0,
+        "citation_correctness": round(citation_correctness(answer, contexts), 4),
         **gen,
     }

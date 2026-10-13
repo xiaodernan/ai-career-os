@@ -36,6 +36,7 @@ export function SaveToggle({
       aria-pressed={Boolean(saved)}
       aria-label={saved ? "Remove from saved jobs" : "Save this job"}
       disabled={disabled || pending}
+      loading={pending}
       className={cn(!withLabel && "shrink-0", className)}
       onClick={(e) => {
         e.preventDefault();

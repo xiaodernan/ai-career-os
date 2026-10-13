@@ -48,4 +48,20 @@ public interface AiServiceClient {
      * caller must keep its keyword-only ranking rather than fail the search.
      */
     Map<String, Object> embedQuery(String text, UUID userId);
+
+    /**
+     * What the model remembers about this user, newest update first, so a wrong sentence is
+     * findable. Answers {@code {items: [...]}}; the rows carry their own id, which is what a
+     * correction targets. Unlike the chat pages, this is read through the browser too.
+     */
+    List<Map<String, Object>> listMemories(List<String> kinds, UUID userId);
+
+    /**
+     * Corrects one memory's text and/or its weight. Either may be null — they are corrected
+     * independently — and the ai-service answers with the row as it now stands.
+     */
+    Map<String, Object> patchMemory(UUID memoryId, String content, Double importance, UUID userId);
+
+    /** Forgets one memory. 404 means it was not the caller's, which is also "not there". */
+    void deleteMemory(UUID memoryId, UUID userId);
 }

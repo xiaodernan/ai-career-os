@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
+from app.agents import memory
 from app.core.deps import Ctx, require_internal
 from app.db import domain, observability
 from app.features import interview as iv
@@ -107,5 +108,9 @@ async def finalize(req: FinalizeReq, ctx: Ctx = Depends(require_internal)):
     turns = [t.model_dump() for t in req.turns]
     out = await iv.finalize(mode=s.get("mode") or "mixed", turns=turns,
                             resume_ctx=resume_ctx, user_id=ctx.user_id, run_id=run_id)
+    # The report is the one finding that should outlive the session (§17 lists
+    # `interview` as a long-term memory kind but nothing could write one). Best-effort:
+    # a failed write must not fail the finalize the user is waiting on.
+    await memory.record_interview_outcome(ctx.user_id, req.session_id, out, run_id=run_id)
     await observability.finish_run(run_id, "completed")
     return {"evaluation": out}

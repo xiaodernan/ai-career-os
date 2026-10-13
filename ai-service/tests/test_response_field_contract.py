@@ -145,6 +145,11 @@ PRODUCERS = {
     "ResumeSummary": ("java", "report/dto/DashboardDtos.java"),
     "SkillGapDigest": ("java", "report/dto/DashboardDtos.java"),
     "SkillGap": ("pydantic",),
+    # One row of `GET /memories`. The record is declared in `ai/dto/MemoryItem.java` and the
+    # controller is also what fills it — from the ai-service's own camelCase answer — so this
+    # is the one producer whose author the liveness rule compares against lives in the same
+    # file as the writer.
+    "MemoryItem": ("java", "ai/dto/MemoryItem.java"),
     "ResumeDetail": ("java", "resume/dto/ResumeDtos.java"),
     "ResumeVersionItem": ("java", "resume/dto/ResumeDtos.java"),
     # The resume score map has no model and no record: `compute_resume_score` answers with one
@@ -273,6 +278,21 @@ PRODUCERS = {
 #   dynamic    receiver -> why its names come from a variable rather than a call site, and which
 #              source-derived rule checks them instead (an unexplained entry is not allowed)
 READERS: dict[str, dict] = {
+    "normalizeMemory": {
+        # One endpoint and one record: `fetchMemories` GETs /memories, and the body arriving
+        # is the controller's own `List<MemoryItem>` — `MemoryController` forwards it straight
+        # through, so `raw` *is* the row. It is the one reader whose producer writes camelCase:
+        # the controller maps the ai-service's JSON (`id, kind, key, content, importance,
+        # source, createdAt, updatedAt`) into the record rather than passing a map on, so the
+        # casing the ai-service uses is the only spelling that reaches here. Both timestamps
+        # therefore read their own name, and the snake_case spelling is read *only* because
+        # the backend's own records use it — there is no producer of either on the wire.
+        "record_of": {"raw": "MemoryItem"},
+        "drilled": {},
+        "elements": {},
+        "blind": {},
+        "dynamic": {},
+    },
     "normalizeDashboard": {
         # One endpoint and one record: `useDashboard` calls `GET /reports/dashboard`, and `api.get`
         # unwraps the {success,data} envelope before the mapper sees the body, so `d` *is* the
@@ -1710,12 +1730,12 @@ def test_a_producer_kind_is_dispatched_by_name_and_never_by_the_fallback():
                                              "behaviour rather than a statement"
     dispatched = set(re.findall(r'spec\[0\] == "(\w+)"', chain))
     counts = collections.Counter(spec[0] for spec in PRODUCERS.values())
-    assert len(PRODUCERS) == 66, f"{len(PRODUCERS)} rows: the population the counts below are drawn from"
+    assert len(PRODUCERS) == 67, f"{len(PRODUCERS)} rows: the population the counts below are drawn from"
     assert set(counts) == dispatched, \
         (f"the table uses {sorted(set(counts) - dispatched)} with no branch and the chain compares "
          f"{sorted(dispatched - set(counts))} with no rows: a kind that lost its branch has to gain "
          "one, and a kind that lost its rows has to lose the branch or gain the rows back")
-    assert sorted(counts.items()) == [("jamapof", 2), ("japut", 1), ("java", 32), ("pyadd", 1),
+    assert sorted(counts.items()) == [("jamapof", 2), ("japut", 1), ("java", 33), ("pyadd", 1),
                                       ("pyappend", 6), ("pycons", 1), ("pyconst", 3),
                                       ("pydantic", 3), ("pyfunc", 6), ("pyitem", 1), ("pyretsub", 1),
                                       ("pyskel", 9)], \
@@ -1738,7 +1758,7 @@ def test_a_producer_kind_is_dispatched_by_name_and_never_by_the_fallback():
     assert "nosuchkind" in raised and "BaseModel" not in raised, \
         (f"{raised}: an unknown kind must be named as itself -- pointing at a pydantic model is the "
          "misattribution this branch exists to remove")
-    assert len(PRODUCERS) == 66, "the planted row is still in the table the census above measured"
+    assert len(PRODUCERS) == 67, "the planted row is still in the table the census above measured"
 
 
 def _emitted_for(receiver: str | list[str]) -> set[str]:
@@ -2338,7 +2358,9 @@ def test_no_mapper_is_left_unbound():
     # Measured at this plane, so a new unbound reader cannot slip in under a stale count: the 31 the
     # exported census counted, plus the three module-private mappers that carry reads of their own
     # (`changeFrom`, `groupSkillBuckets` and the attention card's row reader).
-    assert len(population) == 34, sorted(population)
+    # 35 with `normalizeMemory`: the memory-correction reader takes names, so it joins the
+    # population the same way the timeline reader did (#148).
+    assert len(population) == 35, sorted(population)
     private = sorted(name for name, exported in _mapper_declarations() if not exported)
     assert private == ["changeFrom", "groupSkillBuckets", "normalizeAttention", "pathOf", "statusCountsToRows"]
     assert sorted(n for n in private if n in population) == \
@@ -3141,7 +3163,8 @@ def test_the_census_sees_every_read_the_mappers_hold():
     merged and this rule should be deleted rather than left proving equality with itself.
     """
     population = sorted(_mappers_that_read())
-    assert len(population) == 34, f"the census population moved: {population}"
+    # 35 with `normalizeMemory`, the reader the memory-correction surface added.
+    assert len(population) == 35, f"the census population moved: {population}"
 
     diverged = []
     for name in population:
@@ -3161,8 +3184,9 @@ def test_the_census_sees_every_read_the_mappers_hold():
     # where the per-reader floors would never be consulted. The number moves with every read added
     # or removed, so it is a restatement of the two totals below it, not a separate claim.
     # 274 rather than 271 since the outcome pair in normalizeApplication and the `field` key in
-    # normalizeApplicationEvent.
-    assert len(whole) == 274, f"{len(whole)} reads by the oracle: recount both totals if this moved"
+    # normalizeApplicationEvent; 282 with normalizeMemory's nine reads (id, kind, key, content,
+    # importance, source, createdAt, createdAt's alias, updatedAt's alias).
+    assert len(whole) == 282, f"{len(whole)} reads by the oracle: recount both totals if this moved"
     assert len(whole) == sum(len(_sites(name)) for name in population), \
         "a named read lives outside every mapper the census walks"
     expressions = [site for site in whole if not _BARE.fullmatch(site["receiver"])]
@@ -3295,7 +3319,9 @@ def test_a_call_whose_key_is_a_variable_is_a_population_every_member_has_to_expl
     calls = _key_position_calls(source)
     named = _key_read_calls(source)
     nameless = [row for row in calls if not row["literal"]]
-    assert len(calls) == 289, (f"{len(calls)} accessor calls hand something to a key position: "
+    # 297 with normalizeMemory's eight accessor calls: four literal `str`/`num` reads, and the
+    # two timestamps asked for both spellings each.
+    assert len(calls) == 297, (f"{len(calls)} accessor calls hand something to a key position: "
                                "recount the two halves below")
     assert len(nameless) == 16, f"{len(nameless)} calls put a variable where a name is expected"
     counted = {(row["line"], row["accessor"], row["receiver"]) for row in nameless} & \
@@ -3876,8 +3902,10 @@ def test_the_bare_read_scanner_agrees_with_a_paired_call_census():
     """
     text = NORMALIZE.read_text(encoding="utf-8")
     paired = _paired_accessor_calls(text)
+    # 285 with normalizeMemory: eight more paired accessor calls (two timestamps × two
+    # spellings, plus id/kind/key/content/importance/source).
     # 277 rather than 274 since the outcome pair and the `field` key: three more str() reads.
-    assert len(paired) == 277, (f"{len(paired)} accessor calls: the population the bare-read census is "
+    assert len(paired) == 285, (f"{len(paired)} accessor calls: the population the bare-read census is "
                                 "drawn from -- if this drops, the census below is comparing less")
     assert sum(1 for row in paired if row["argc"] == 1) == 1, \
         f"{[(row['owner'], row['receiver']) for row in paired if row['argc'] == 1]} are the bare reads"
@@ -3889,7 +3917,9 @@ def test_the_bare_read_scanner_agrees_with_a_paired_call_census():
             and not _BARE.fullmatch(row["receiver"])] == [], \
         "a bare read whose receiver `_BARE` cannot spell escapes both scanners: 0 today, and this pin is " \
         "the one that says so when one appears"
-    assert sum(1 for row in paired if row["argc"] > 1 and row["named"]) == 268, \
+    # 276 with normalizeMemory: eight of its accessor calls quote every name, which is the
+    # only shape `_sites` reads.
+    assert sum(1 for row in paired if row["argc"] > 1 and row["named"]) == 276, \
         f"{sum(1 for row in paired if row['argc'] > 1 and row['named'])}: every-name-quoted is what " \
         "`_sites` reads, so this number is the size of the census every other rule here trusts"
     loose = [row for row in paired if row["argc"] > 1 and not row["named"]]
@@ -3939,8 +3969,8 @@ def test_the_spread_receiver_scanner_agrees_with_the_paired_walk(monkeypatch):
     """
     text = NORMALIZE.read_text(encoding="utf-8")
     walked = _paired_accessor_calls(text)
-    # 277 rather than 274: the same three new reads the paired-walk census counts above.
-    assert len(walked) == 277, (f"{len(walked)} accessor calls: the population both censuses are drawn "
+    # 285 with normalizeMemory: the same eight calls the paired-walk census counts above.
+    assert len(walked) == 285, (f"{len(walked)} accessor calls: the population both censuses are drawn "
                                  "from")
     spread = [row for row in walked if row["spread"]]
     assert [(row["name"], row["owner"], row["receiver"]) for row in spread] == [

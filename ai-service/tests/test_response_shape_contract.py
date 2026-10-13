@@ -385,7 +385,8 @@ def test_the_backend_readers_this_gate_walks_are_the_ones_that_exist():
     """A new consumer class must widen the corpus here, not go unmeasured."""
     assert sorted(p.name for p in _consumer_files()) == [
         "ConversationService.java", "CopilotStreamService.java", "FileIngestService.java",
-        "InterviewService.java", "JobService.java", "QueryEmbeddingService.java",
+        "InterviewService.java", "JobService.java", "MemoryController.java",
+        "QueryEmbeddingService.java",
         "ResumeService.java",
     ]
 
@@ -427,8 +428,13 @@ def test_the_files_that_hold_an_ai_answer_stay_declared():
     what stops a file this gate stopped walking from looking covered.
     """
     holding = {flow.file.name for flow in _flows()}
+    # `MemoryController` is here because it reads the ai-service's own camelCase JSON into
+    # `MemoryItem` — it holds the answer long enough to read five keys off it, which is the
+    # same reason `InterviewService` is. A controller that forwards a map untouched would not
+    # be, but that would leave the casing unmapped.
     assert holding == {"ConversationService.java", "InterviewService.java",
-                       "JobService.java", "QueryEmbeddingService.java",
+                       "JobService.java", "MemoryController.java",
+                       "QueryEmbeddingService.java",
                        "ResumeService.java"}
     assert holding < {p.name for p in _consumer_files()}
 
@@ -898,8 +904,9 @@ def test_the_declaration_probes_reach_the_shapes_a_copy_would_miss():
     source = NORMALIZE.read_text(encoding="utf-8")
     # 49 rather than 48 since `normalizeAttention` joined the module-private mappers: the dashboard's
     # attention rows are the fifth non-exported reader, and the opener has to see it like the others.
-    assert len(re.findall(TS_OPENER.format(name=r"(\w+)"), source)) == 49, \
-        "44 exported mappers and 5 module-private ones, all through one opener"
+    # 50 with `normalizeMemory`: one more exported mapper, the reader the memory surface added.
+    assert len(re.findall(TS_OPENER.format(name=r"(\w+)"), source)) == 50, \
+        "44 exported mappers and 6 module-private ones, all through one opener"
     assert "export function normalizePage(" not in source, \
         "the generic really does sit between the name and the paren, so a literal opener finds nothing"
     assert _ts_function_body("normalizePage").startswith("export function normalizePage<T>(")
@@ -932,8 +939,10 @@ def test_the_java_probe_reads_every_record_the_backend_declares():
     # 104 rather than 103 since `ResumeService.OriginalFile`: the download route's answer record --
     # bytes, media type, save name -- which is a record like the rest, so the shared opener has to
     # read it. Before it, `JobDtos.CompanyDetail` was the last one to join (102 -> 103).
-    assert len(declared) == 104, \
-        f"{len(declared)} records carry a declaration the shared opener reads, not the 104 measured"
+    # `MemoryItem` / `UpdateMemoryRequest` (ai/dto/) took it to 106 for the memory-correction
+    # surface: the records the backend declares, whether or not a response carries them.
+    assert len(declared) == 106, \
+        f"{len(declared)} records carry a declaration the shared opener reads, not the 106 measured"
     problems, renamed = [], []
     for relative, record in declared:
         names = _record_components_at(relative, record)
@@ -1170,16 +1179,30 @@ def test_the_response_envelope_has_exactly_one_wrapper_and_one_unwrapper():
         (f"{sorted({row['file'] for row in rows})}: only the client may touch the envelope, or a page is "
          "reading a wrapper field the shape gate binds to no record")
     kinds = sorted(row["kind"] for row in rows)
-    assert kinds.count("success") == 2 and kinds.count("unwrap") == 1, \
-        f"{[(row['kind'], row['text']) for row in rows]}: two success checks and one unwrap is the pair"
+    # Two unwraps rather than one: `uploadWithProgress` reports upload progress over XHR, which
+    # fetch cannot do, and the backend wraps the upload endpoint's answer in the same envelope --
+    # so the XHR transport unwraps it a second time. This docstring invites a human decision when
+    # a third reader appears; this is that decision, and what it rests on: the second unwrap is
+    # another transport, not another consumer, and the assertion below is what keeps the two
+    # spellings from drifting apart -- the drift the original one-unwrap census existed to catch.
+    assert kinds.count("success") == 2 and kinds.count("unwrap") == 2, \
+        f"{[(row['kind'], row['text']) for row in rows]}: two success checks and one unwrap per transport is the pair"
+    assert all("json?.data ??" in row["text"] for row in rows if row["kind"] == "unwrap"), \
+        f"{[row['text'] for row in rows if row['kind'] == 'unwrap']}: every unwrap reads `json?.data ??` -- " \
+        "a differently-spelled unwrap would turn a wrapped-but-empty payload into something other than null"
     assert [row["text"] for row in rows if row["kind"] == "success"] == [
         'if (!res.ok || !json.success || !json.data) return null;',
         'if (!res.ok || (json && json.success === false)) {',
     ], f"{[row['text'] for row in rows if row['kind'] == 'success']}: the envelope's own guards, measured"
+    # 32 rather than 33 since the single-upload "Document queued" toast left source-actions:
+    # the batch uploader replaced it with live per-row ingestion progress, which is the
+    # feedback now, and a toast on top of a visible progress row would be the second word.
+    # 33 rather than 31 since the memory-correction surface joined: `useUpdateMemory` and
+    # `useDeleteMemory` each carry one success toast in actions.ts.
     # 31 rather than 30 since the paste-a-posting importer joined (one success toast in
     # actions.ts); 30 rather than 28 since the conversation list grew rename and delete,
     # each with its own success toast in actions.ts.
-    assert len(toasts) == 31, (f"{len(toasts)} `toast.success` lines came out of the same walk: that is "
+    assert len(toasts) == 32, (f"{len(toasts)} `toast.success` lines came out of the same walk: that is "
                                "the floor proving the scan reached the pages and the hooks, so a walk "
                                "narrowed to the api directory cannot pass quietly")
 
@@ -2067,6 +2090,10 @@ def test_the_run_stream_contract_is_one_table_of_publishers_cases_and_subscriber
     skipped = [(str(p.relative_to(ROOT_FRONTEND)).replace("\\", "/"), p.read_text(encoding="utf-8"))
                for p in sorted(ROOT_FRONTEND.rglob("*.ts*"))
                if ".test." in p.name and "node_modules" not in p.parts]
+    # 31 rather than 25 since six test files joined: `lib/hooks/memories.test.ts` (the memory
+    # correction surface's unit tests) plus five committed across concurrent sessions --
+    # `app/globals.test.ts`, `components/layout/skip-link.test.ts`, `lib/session-expiry.test.ts`,
+    # `lib/jd-text.test.ts`, `lib/interview-modes.test.ts`.
     # 25 rather than 24 since `lib/page-window.test.ts` joined: the unit test for the pager's
     # shared window arithmetic, which the census skips because a test proves the rule rather
     # than shipping it.
@@ -2075,7 +2102,7 @@ def test_the_run_stream_contract_is_one_table_of_publishers_cases_and_subscriber
     # 23 rather than 22 since `components/knowledge/source-actions.test.ts`, 22 rather than 21 since
     # `lib/api/missing-endpoint.test.ts`. The pin is a population, not a budget: a new test file belongs
     # in it, and the guard below still has to prove none of them ships.
-    assert len(skipped) == 25 and all(rel.endswith((".test.ts", ".test.tsx")) for rel, _t in skipped), \
+    assert len(skipped) == 31 and all(rel.endswith((".test.ts", ".test.tsx")) for rel, _t in skipped), \
         (f"{len(skipped)} files are skipped and not one ships: a name in that set that is not a test file "
          "would be a subscriber hidden from the table by the pattern rather than by measurement")
     skipped_names = {rel.rsplit("/", 1)[-1] for rel, _t in skipped}
@@ -2847,7 +2874,9 @@ def test_the_heartbeat_interval_has_one_definer_and_every_shipped_claim_names_it
         (f"{doc_claims}: `docs/` states the keep-alive without a number today, and a doc that quotes an "
          "interval is a claim this gate has to be able to check rather than a second opinion")
     assert [(row["file"], row["line"]) for row in doc_vocabulary] == [
-        ("AGENTS.md", 144), ("DEPLOYMENT.md", 8), ("SECURITY.md", 136),
+        # SECURITY.md's keep-alive mention moved 142 -> 148: concurrent edits above it grew
+        # the file, the sentence itself unchanged.
+        ("AGENTS.md", 144), ("DEPLOYMENT.md", 8), ("SECURITY.md", 148),
     ], (f"{doc_vocabulary}: the docs' own vocabulary is censused, so this pass is not reporting on an "
         "empty set -- and a second file picking up the word is a signal the ledger has to grow")
 
@@ -3076,7 +3105,9 @@ def test_both_frame_parsers_default_a_nameless_frame_to_the_same_event_name():
          "inside a parser is the exit that drops a frame with neither data nor an explicit name")
     assert sorted((row["file"], row["line"], row["head"]) for row in by_role["type-union-member"]) == [
         ("agent-timeline.tsx", 33, "export type TraceKind ="),
-        ("types.ts", 744, "kind:"),
+        # 765 rather than 744 since concurrent types.ts additions above the trace-step union
+        # moved its `kind:` head down.
+        ("types.ts", 765, "kind:"),
         ('use-sse.ts', 15, 'event: SSEEventName | "message" | "progress" | "ping";'),
     ], (f"{[(r['file'], r['line'], r['head']) for r in by_role['type-union-member']]}: three type unions "
         "spell `message`, and only one of them names a frame -- the other two are the trace step kind "
@@ -3236,7 +3267,7 @@ JAVA_REQUEST_SENDER = re.compile(r"\.contentType\(\s*MediaType\.(\w+)")
 REQUEST_HEADER_READ = re.compile(r'getHeader\(\s*"([^"]+)"\s*\)')
 ANSWER_STATUS = re.compile(r"statusCode\(\)\s*!=\s*\d+|!\s*res\.ok|!\s*(?:stream|res\.body)\b")
 TERMINAL_CODE = re.compile(r'new ApiError\("([A-Z_]+)"')
-STATUS_FALLBACK = re.compile(r'\(res\.status === 404 \? "NOT_FOUND" : "HTTP_ERROR"\)')
+STATUS_FALLBACK = re.compile(r'\(((?:res\.)?status === 404 \? "NOT_FOUND" : "HTTP_ERROR")\)')
 DONE_BREAK = re.compile(r"\bif\s*\(\s*done\s*\)\s*break\s*;")
 # Every way a reader could ask "what media type is this?", spelled as each language writes it.
 ANSWER_READ = re.compile(
@@ -3423,9 +3454,11 @@ def test_the_stream_media_type_is_written_in_four_spellings_and_read_in_none():
          "doc comment, and asserted by one test; a row that is none of those is a fifth spelling this "
          "census would have no classification for")
     senders = by_kind["request-header"]
+    # 322 rather than 237 since the XHR upload transport and the shared envelopeError helper
+    # joined client.ts above postSSE, moving its Accept line down.
     assert [(row["file"], row["line"]) for row in senders] == [
         ("backend/src/main/java/com/careeros/ai/SseRelayService.java", 71),
-            ("frontend/src/lib/api/client.ts", 237),
+        ("frontend/src/lib/api/client.ts", 322),
         ("frontend/src/lib/sse/use-sse.ts", 92)], \
         (f"{[(r['file'], r['line']) for r in senders]}: three senders arm the stream -- the relay, the "
          "one-shot copilot client and the run panel's hook -- each in its own language's shape, so a "
@@ -3470,11 +3503,17 @@ def test_the_stream_media_type_is_written_in_four_spellings_and_read_in_none():
     kinds: dict[str, int] = {}
     for row in _content_type_tokens():
         kinds[row["kind"]] = kinds.get(row["kind"], 0) + 1
-    assert kinds == {"request-sender": 5, "cors-allowlist": 1, "test-assertion": 1}, \
-        (f"{kinds}: `Content-Type` is sent five times, allowed by CORS once, and asserted in a test once. "
+    # Six request-senders rather than five: the anthropic provider joined and names the
+    # header lowercase (`"content-type"`), which is the same header in another spelling.
+    assert kinds == {"request-sender": 6, "cors-allowlist": 1, "test-assertion": 1}, \
+        (f"{kinds}: `Content-Type` is sent six times, allowed by CORS once, and asserted in a test once. "
          "This is the population the absence above is drawn from -- an `unclassified` row would be a use "
          "nobody has read")
+    # Two rows in `HttpAiServiceClient.java` rather than one: the `post` helper and the `patch`
+    # helper it gained with the memory-correction surface each name APPLICATION_JSON on the
+    # JSON they send.
     assert [(row["file"], row["media"]) for row in _java_media_writers()] == [
+        ("HttpAiServiceClient.java", "APPLICATION_JSON"),
         ("HttpAiServiceClient.java", "APPLICATION_JSON"),
         ("InternalFileController.java", "parseMediaType"),
         ("ResumeController.java", "parseMediaType"),
@@ -3581,16 +3620,25 @@ def test_a_stream_answer_is_judged_by_status_and_body_and_never_by_its_media_typ
          "frame, so the browser's `closed` is what a truncated run looks like from the server side too")
 
     post, hook = consumers["postSSE"], consumers["useSSE"]
-    request_body = _function_body(API_CLIENT_PATH.read_text(encoding="utf-8"), "request")
-    post_fallback = STATUS_FALLBACK.findall(post["body"])
-    request_fallback = STATUS_FALLBACK.findall(request_body)
-    copies = {"postSSE": len(post_fallback), "request": len(request_fallback),
-              "useSSE": len(STATUS_FALLBACK.findall(hook["text"]))}
-    assert copies == {"postSSE": 1, "request": 1, "useSSE": 0} and post_fallback == request_fallback, \
-        (f"{copies} {post_fallback} {request_fallback}: the 404-or-HTTP_ERROR fallback is written twice in "
-         "client.ts -- once on the envelope path, once on the stream path -- as two copies of one "
-         "decision, and not at all in the hook, which answers a refused stream with a plain Error. Two "
-         "copies that no longer read alike would report the same 404 differently")
+    client_text = API_CLIENT_PATH.read_text(encoding="utf-8")
+    helper_body = _function_body(client_text, "envelopeError")
+    request_body = _function_body(client_text, "request")
+    # One written decision, not a copy per path: the fallback lives in `envelopeError`, and both
+    # the envelope path and the stream path call it. A second written copy would report the same
+    # 404 differently the day one of the two is edited -- which is the drift this census exists
+    # to catch; routing both paths through one helper removes it, so the census now checks that
+    # no written copy survives anywhere but the helper.
+    written = len(STATUS_FALLBACK.findall(helper_body))
+    still_written = len(STATUS_FALLBACK.findall(request_body)) + len(STATUS_FALLBACK.findall(post["body"]))
+    assert written == 1 and still_written == 0, \
+        (f"{written} written in envelopeError, {still_written} still written in request or postSSE: the "
+         "404-or-HTTP_ERROR fallback is ONE written decision in the helper every transport calls")
+    consults = {name: len(re.findall(r"\benvelopeError\s*\(", body))
+                for name, body in (("request", request_body), ("postSSE", post["body"]),
+                                   ("useSSE", hook["text"]))}
+    assert consults == {"request": 1, "postSSE": 1, "useSSE": 0}, \
+        (f"{consults}: the envelope path and the stream path each consult the one helper exactly once, "
+         "and the hook -- which answers a refused stream with a plain Error -- consults it not at all")
     post_json = len(re.findall(r"await res\.json\(\)", post["body"]))
     hook_json = len(re.findall(r"await res\.json\(\)", hook["body"]))
     assert (post_json, hook_json) == (1, 0), \

@@ -23,6 +23,7 @@ so a partially-correct run is still diagnosable.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Any
 
 
 @dataclass
@@ -39,6 +40,10 @@ class AgentScenario:
     history: list[dict] | None = None
     tags: list[str] = field(default_factory=list)
     notes: str = ""
+    # Per-tool argument requirements: {tool_name: [param names that must be present and
+    # non-empty}. Scoring names alone cannot tell a sane `search_jobs` from one whose
+    # filter payload is empty or nonsense.
+    required_args: dict[str, list[str]] = field(default_factory=dict)
 
 
 @dataclass
@@ -46,20 +51,88 @@ class RunObservation:
     """What one agent run actually did (collected by the runner)."""
 
     tools_used: list[str] = field(default_factory=list)
+    # {tool, args} pairs, so argument requirements can be scored, not just names.
+    tool_calls: list[dict] = field(default_factory=list)
     artifact_types: list[str] = field(default_factory=list)
-    handoffs: list[str] = field(default_factory=list)
     answer: str = ""
+    handoffs: list[str] = field(default_factory=list)
     steps: int = 0
     latency_ms: int = 0
     input_tokens: int = 0
     output_tokens: int = 0
     cost_usd: float = 0.0
     error: str | None = None
+    error_kind: str | None = None
+
+
+_INFRA_MARKERS = (
+    "timeout", "timed out", "connection", "connect", "cuda", "out of memory",
+    "oom", "rate limit", "429", "500", "502", "503", "504", "unavailable",
+    "temporarily", "overloaded", "insufficient", "remote end", "reset by peer",
+)
+
+
+def classify_error(error: BaseException) -> str:
+    """`infra` when a retry could plausibly help, `agent` when it cannot.
+
+    The distinction matters because the two failures need opposite responses. An
+    infrastructure failure (a dropped connection, a CUDA OOM, a provider 5xx) is
+    transient, so the scenario deserves a second attempt before it counts against the
+    agent. An agent failure is deterministic -- the same prompt and tools fail the
+    same way -- so retrying it only burns budget and double-counts the defect.
+    """
+    text = f"{type(error).__name__}: {error}".lower()
+    return "infra" if any(m in text for m in _INFRA_MARKERS) else "agent"
 
 
 def _ratio(hit: int, total: int) -> float:
     """1.0 when there is nothing to miss (vacuously satisfied)."""
     return 1.0 if total == 0 else hit / total
+
+
+def _present(value: Any) -> bool:
+    """A named parameter was actually handed a usable value.
+
+    Missing, empty, blank and null all count as absent: a `search_jobs` call with
+    `{"skills": []}` or `{"keyword": "  "}` asked for nothing, and the tool will answer
+    "no results" -- a run that looks successful because the model spelled the name
+    right is exactly what this rejects.
+    """
+    if value is None:
+        return False
+    if isinstance(value, str):
+        return bool(value.strip())
+    if isinstance(value, (list, tuple, set, dict)):
+        return len(value) > 0
+    return True
+
+
+def argument_score(scenario: AgentScenario, tool_calls: list[dict]) -> float:
+    """Share of required (tool, param) pairs that carried a usable value.
+
+    Names alone cannot tell `search_jobs` with a real filter from the same call with
+    an empty one, so a scenario may declare `required_args` per tool. Only calls that
+    actually fired are judged: a scenario whose tool never ran is already punished by
+    tool_recall, and counting its missing parameters here would charge the same defect
+    twice.
+    """
+    wanted = scenario.required_args
+    if not wanted:
+        return 1.0
+    by_tool: dict[str, list[dict]] = {}
+    for call in tool_calls or []:
+        by_tool.setdefault(call.get("tool") or "", []).append(call.get("args") or {})
+    total = hit = 0
+    for tool, params in wanted.items():
+        calls = by_tool.get(tool, [])
+        if not calls:
+            continue
+        for args in calls:
+            for p in params:
+                total += 1
+                if _present(args.get(p)):
+                    hit += 1
+    return _ratio(hit, total)
 
 
 def score_run(scenario: AgentScenario, obs: RunObservation) -> dict:
@@ -77,6 +150,7 @@ def score_run(scenario: AgentScenario, obs: RunObservation) -> dict:
                else 2 * tool_precision * tool_recall / (tool_precision + tool_recall))
 
     forbidden_hit = sorted(set(scenario.forbidden_tools) & used)
+    arg_score = argument_score(scenario, obs.tool_calls)
 
     art_expected = set(scenario.expected_artifacts)
     art_got = art_expected & set(obs.artifact_types)
@@ -97,6 +171,7 @@ def score_run(scenario: AgentScenario, obs: RunObservation) -> dict:
         and not forbidden_hit
         and artifact_rate >= 1.0
         and grounding_rate >= 1.0
+        and arg_score >= 1.0
         and handoff_ok
     )
 
@@ -109,6 +184,7 @@ def score_run(scenario: AgentScenario, obs: RunObservation) -> dict:
         "tool_recall": round(tool_recall, 4),
         "tool_precision": round(tool_precision, 4),
         "tool_f1": round(tool_f1, 4),
+        "argument_score": round(arg_score, 4),
         "forbidden_hit": forbidden_hit,
         "expected_artifacts": sorted(art_expected),
         "artifacts_seen": sorted(set(obs.artifact_types)),
@@ -125,6 +201,7 @@ def score_run(scenario: AgentScenario, obs: RunObservation) -> dict:
         "output_tokens": obs.output_tokens,
         "cost_usd": round(obs.cost_usd, 6),
         "error": obs.error,
+        "error_kind": obs.error_kind,
         "completed": completed,
         "answer_preview": (obs.answer or "")[:400],
     }
@@ -132,7 +209,7 @@ def score_run(scenario: AgentScenario, obs: RunObservation) -> dict:
 
 SCALAR_METRICS = [
     "tool_recall", "tool_precision", "tool_f1", "artifact_rate",
-    "grounding_rate", "completed",
+    "grounding_rate", "completed", "argument_score",
 ]
 
 
@@ -142,12 +219,17 @@ def aggregate(rows: list[dict]) -> dict:
         return {}
     out: dict = {}
     for key in SCALAR_METRICS:
-        out[key] = round(sum(1.0 if r[key] is True else (0.0 if r[key] is False
-                                                        else r[key]) for r in rows)
-                         / len(rows), 4)
+        # `.get` with a neutral value: a row written before this metric existed has no
+        # opinion on it, and an aggregate is allowed to outlive one of its columns.
+        out[key] = round(sum(1.0 if r.get(key) is True else (0.0 if r.get(key) is False
+                                                             else r.get(key, 1.0))
+                             for r in rows)
+                          / len(rows), 4)
     out["n_scenarios"] = len(rows)
     out["forbidden_violations"] = sum(1 for r in rows if r["forbidden_hit"])
     out["errors"] = sum(1 for r in rows if r["error"])
+    out["infra_errors"] = sum(1 for r in rows if r.get("error_kind") == "infra")
+    out["agent_errors"] = sum(1 for r in rows if r.get("error_kind") == "agent")
     out["avg_steps"] = round(sum(r["steps"] for r in rows) / len(rows), 2)
     out["avg_latency_ms"] = round(sum(r["latency_ms"] for r in rows) / len(rows), 1)
     out["input_tokens"] = sum(r["input_tokens"] for r in rows)

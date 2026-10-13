@@ -212,7 +212,7 @@ def _calls() -> list[dict]:
     methods = _java_methods(src)
     out: list[dict] = []
     unresolved: list[str] = []
-    for match in re.finditer(r"return (post|get)\(", src):
+    for match in re.finditer(r"return (post|get|patch)\(", src):
         method = next(m for m in methods if m.start <= match.start() < m.end)
         inner, _ = _argument_list(src, match.end() - 1)
         args = _top_level(inner, ",")

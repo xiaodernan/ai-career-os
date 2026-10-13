@@ -18,6 +18,7 @@ import {
   normalizeInterviewReport,
   normalizeJob,
   normalizeJdParsed,
+  normalizeMemory,
   normalizeSuggestions,
   missingSkillGaps,
   normalizeMatch,
@@ -1845,5 +1846,35 @@ describe("the technologies the resume view reads has no producer", () => {
       .not.toMatch(/["']technologies["']/);
     expect(readFileSync(new URL("../../app/(app)/resumes/[id]/page.tsx", import.meta.url), "utf8"))
       .not.toContain("Core technologies");
+  });
+});
+
+describe("normalizeMemory — one long-term memory row", () => {
+  it("reads both spellings of the two timestamps, because the ai-service writes camelCase", () => {
+    const row = normalizeMemory({
+      id: "m1", kind: "skill", key: "kafka", content: "Kafka at scale",
+      importance: 0.8, source: "conversation",
+      createdAt: "2026-10-01T00:00:00Z", updatedAt: "2026-10-02T00:00:00Z",
+    });
+    expect(row).toEqual({
+      id: "m1", kind: "skill", key: "kafka", content: "Kafka at scale",
+      importance: 0.8, source: "conversation",
+      createdAt: "2026-10-01T00:00:00Z", updatedAt: "2026-10-02T00:00:00Z",
+    });
+  });
+
+  it("accepts the snake_case spelling the backend's own records use", () => {
+    const row = normalizeMemory({ id: "m1", created_at: "a", updated_at: "b" });
+    expect(row.createdAt).toBe("a");
+    expect(row.updatedAt).toBe("b");
+  });
+
+  it("defaults importance to 0, because 'no weight' and 'weight zero' are different claims", () => {
+    expect(normalizeMemory({ id: "m" }).importance).toBe(0);
+  });
+
+  it("never throws on an absent row: the page has to say 'no memories' rather than crash", () => {
+    expect(() => normalizeMemory({})).not.toThrow();
+    expect(() => normalizeMemory(null)).not.toThrow();
   });
 });

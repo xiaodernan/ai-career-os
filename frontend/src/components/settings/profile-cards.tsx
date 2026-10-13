@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { ErrorState } from "@/components/common/error-state";
 import { useProfile, useUpdateProfileDetails } from "@/lib/hooks/actions";
 import { splitList, targetLocationsIssue, targetRolesIssue } from "@/lib/profile-targets";
 
@@ -56,13 +57,19 @@ export function CareerProfileCard() {
       </CardHeader>
       <CardContent>
         {profile.isPending ? (
-          <div className="space-y-3">
+          <div className="space-y-3" role="status">
             <Skeleton className="h-4 w-1/3" />
             <Skeleton className="h-4 w-1/2" />
             <Skeleton className="h-20 w-full" />
+            <span className="sr-only">Loading profile…</span>
           </div>
         ) : profile.isError ? (
-          <p className="text-sm text-muted-foreground">Profile could not be loaded.</p>
+          <ErrorState
+            title="Profile could not be loaded"
+            error={profile.error}
+            onRetry={() => void profile.refetch()}
+            retrying={profile.isFetching}
+          />
         ) : (
           <CareerProfileForm initial={(profile.data ?? null) as Record<string, unknown> | null} />
         )}
@@ -269,9 +276,17 @@ export function CareerProfileMapsCard() {
       </CardHeader>
       <CardContent>
         {profile.isPending ? (
-          <Skeleton className="h-20 w-full" />
+          <div role="status">
+            <Skeleton className="h-20 w-full" />
+            <span className="sr-only">Loading profile…</span>
+          </div>
         ) : profile.isError ? (
-          <p className="text-sm text-muted-foreground">Profile could not be loaded.</p>
+          <ErrorState
+            title="Profile could not be loaded"
+            error={profile.error}
+            onRetry={() => void profile.refetch()}
+            retrying={profile.isFetching}
+          />
         ) : (
           <CareerProfileMapsForm initial={(profile.data ?? null) as Record<string, unknown> | null} />
         )}

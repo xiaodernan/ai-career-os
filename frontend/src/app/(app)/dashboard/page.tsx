@@ -25,6 +25,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { PageHeader } from "@/components/common/page-header";
 import { EmptyState } from "@/components/common/empty-state";
+import { ErrorState } from "@/components/common/error-state";
 import { MatchRing, scoreBand } from "@/components/ai/match-ring";
 import { SectionHeading } from "@/components/common/export-buttons";
 import { LoadingListSkeleton, LoadingMetricGridSkeleton } from "@/components/common/loading-skeletons";
@@ -198,6 +199,17 @@ export default function DashboardPage() {
                 />
               </CardContent>
             </Card>
+          ) : dashboard.isError ? (
+            <Card>
+              <CardContent>
+                <ErrorState
+                  title="Dashboard stats failed to load"
+                  error={dashboard.error}
+                  onRetry={() => void dashboard.refetch()}
+                  retrying={dashboard.isFetching}
+                />
+              </CardContent>
+            </Card>
           ) : null}
 
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
@@ -320,10 +332,12 @@ export default function DashboardPage() {
                   {dashboard.isPending ? (
                     <LoadingListSkeleton rows={2} />
                   ) : dashboard.isError ? (
-                    <p className="text-sm text-muted-foreground">
-                      The dashboard query failed, so this list can&apos;t be built right now — nothing is
-                      shown in its place.
-                    </p>
+                    <ErrorState
+                      title="Attention list failed to load"
+                      error={dashboard.error}
+                      onRetry={() => void dashboard.refetch()}
+                      retrying={dashboard.isFetching}
+                    />
                   ) : !attention.length ? (
                     <EmptyState
                       icon={<CheckCircle2 aria-hidden />}
@@ -413,6 +427,13 @@ export default function DashboardPage() {
                     </ul>
                   ) : fallbackJobs.isPending || (!data?.recommendedJobs?.length && dashboard.isPending) ? (
                     <LoadingListSkeleton rows={3} />
+                  ) : fallbackJobs.isError && !data?.recommendedJobs?.length ? (
+                    <ErrorState
+                      title="Recommendations failed to load"
+                      error={fallbackJobs.error}
+                      onRetry={() => void fallbackJobs.refetch()}
+                      retrying={fallbackJobs.isFetching}
+                    />
                   ) : (
                     <EmptyState
                       icon={<Briefcase aria-hidden />}
@@ -454,6 +475,13 @@ export default function DashboardPage() {
                     <RunFeed runs={recentRuns} />
                   ) : fallbackRuns.isPending && !data?.recentRuns ? (
                     <LoadingListSkeleton rows={3} />
+                  ) : fallbackRuns.isError && !data?.recentRuns ? (
+                    <ErrorState
+                      title="Recent runs failed to load"
+                      error={fallbackRuns.error}
+                      onRetry={() => void fallbackRuns.refetch()}
+                      retrying={fallbackRuns.isFetching}
+                    />
                   ) : (
                     <EmptyState
                       icon={<ActivityIcon aria-hidden />}
@@ -574,10 +602,12 @@ export default function DashboardPage() {
                   {aiUsage.isPending ? (
                     <LoadingListSkeleton rows={1} />
                   ) : aiUsage.isError ? (
-                    <p className="text-sm text-muted-foreground">
-                      The usage summary isn&apos;t answering right now — the rest of the dashboard still
-                      reads live.
-                    </p>
+                    <ErrorState
+                      title="Agent spend failed to load"
+                      error={aiUsage.error}
+                      onRetry={() => void aiUsage.refetch()}
+                      retrying={aiUsage.isFetching}
+                    />
                   ) : (aiUsage.data?.requests ?? 0) > 0 ? (
                     <dl className="grid grid-cols-3 gap-2 text-center">
                       <div>
@@ -645,6 +675,13 @@ export default function DashboardPage() {
                     ))
                   ) : dashboard.isPending ? (
                     <LoadingListSkeleton rows={3} />
+                  ) : dashboard.isError ? (
+                    <ErrorState
+                      title="Skill gaps failed to load"
+                      error={dashboard.error}
+                      onRetry={() => void dashboard.refetch()}
+                      retrying={dashboard.isFetching}
+                    />
                   ) : (
                     <EmptyState
                       icon={<TrendingUp aria-hidden />}

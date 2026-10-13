@@ -111,8 +111,27 @@ PASTED_TEXT_FIELDS: dict[tuple[str, str, str], str] = {
 
 # Bounded `str` fields the walk finds that hold no paste. Being here costs a reason: the walk will
 # keep admitting this shape, and a row that stops describing a field the walk still finds goes stale.
+# The growth/salary/negotiate/outreach/readiness/progress/compare-offers family joined with Epic 10.x:
+# each bounds a role or a person's name typed into one box, at 1-10 characters, never a posting.
+# The Epic 10.10-10.12 and 4.8 waves extended the same shape: every new analysis endpoint takes a
+# role or company name in one box (min_length 2 or 10), and the interview-prep wave's prep endpoint
+# takes the target role the session drills toward.
 BOUNDED_NOT_PASTED: dict[tuple[str, str, str], str] = {
     ("GapReq", "target_role", "/gap-analysis"): "one role name typed into one box, never a paste",
+    ("SalaryReq", "role", "/salary-benchmark"): "one role name, the salary question's subject",
+    ("NegotiateReq", "role", "/negotiate"): "one role name, the negotiation's subject",
+    ("ReadinessReq", "target_role", "/readiness"): "one role name, the readiness question's subject",
+    ("LearningReq", "target_role", "/learning-plan"): "one role name, the plan's target",
+    ("CompareOffersReq", "role", "/compare-offers"): "one role name, the comparison's subject",
+    ("OutreachReq", "name", "/outreach"): "one person's name for the outreach draft's greeting",
+    ("ProgressReq", "target_role", "/progress"): "one role name, the progress question's subject",
+    ("GrowthReportReq", "target_role", "/growth-report"): "one role name, the report's subject",
+    ("CounterOfferReq", "role", "/counter-offer"): "one role name, the counter-offer's subject",
+    ("SkillDemandReq", "role", "/skill-demand"): "one role name, the demand question's subject",
+    ("CompanyBriefReq", "company", "/company-brief"): "one company name, the brief's subject",
+    ("ProgressionReq", "aspirational_role", "/progression"): "one role name, the stepping-stone plan's target",
+    ("LearningPriorityReq", "target_role", "/learning-priority"): "one role name, the priority ranking's subject",
+    ("InterviewPrepReq", "target_role", "/interview-prep"): "one role name, the prep session's target",
 }
 
 
@@ -167,10 +186,39 @@ def test_the_servers_bound_actually_bites_at_nineteen_characters() -> None:
     them: does the `min_length` this file compares numbers against actually refuse what it claims to.
     The models are looked up by the names the walk found, not a second hard-coded list: a rename
     belongs to the reconciliation case, and a name list here would hold the same claim twice.
+
+    A model whose request carries other required fields (`CompareOffersReq` needs its `offers`
+    list) is filled minimally -- one type-appropriate value per other required field -- so the
+    only thing varying between the nineteen- and twenty-character attempts is the field under
+    test. A filler that stops satisfying a future constraint fails loudly here, the same way a
+    ledger row does.
     """
     import pydantic
 
     from app.api import features
+
+    def fill(model) -> dict:
+        """Minimal kwargs satisfying every required field, so only the tested field varies."""
+        kwargs = {}
+        for name, info in model.model_fields.items():
+            if not info.is_required():
+                continue
+            ann = info.annotation
+            origin = getattr(ann, "__origin__", None)
+            if origin in (list, tuple):
+                args = getattr(ann, "__args__", ())
+                item = args[0] if args else str
+                kwargs[name] = [fill(item) if isinstance(item, type)
+                                and issubclass(item, pydantic.BaseModel) else "x"]
+            elif isinstance(ann, type) and issubclass(ann, pydantic.BaseModel):
+                kwargs[name] = fill(ann)
+            elif ann is int or ann is float:
+                kwargs[name] = 1
+            elif ann is bool:
+                kwargs[name] = True
+            else:
+                kwargs[name] = "x"
+        return kwargs
 
     bounds = walked_bounds()
     assert bounds, (
@@ -178,15 +226,16 @@ def test_the_servers_bound_actually_bites_at_nineteen_characters() -> None:
         "that an empty set has no counterexamples -- a narrowed walk is a red, not a pass")
     for (cls, field, route), bound in sorted(bounds.items()):
         model = getattr(features, cls)
+        base = fill(model)
         try:
-            model(**{field: "x" * (bound - 1)})
+            model(**{**base, field: "x" * (bound - 1)})
             refused = False
         except pydantic.ValidationError:
             refused = True
         assert refused, (f"{cls}.{field} on {route} accepted {bound - 1} characters: min_length does not "
                          f"bite, so the client floor is held above a bound that never fires")
         try:
-            model(**{field: "x" * bound})
+            model(**{**base, field: "x" * bound})
         except pydantic.ValidationError as exc:
             raise AssertionError(f"{cls}.{field} on {route} refused its own declared bound "
                                  f"({bound} characters): {exc}") from exc

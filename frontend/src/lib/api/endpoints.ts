@@ -94,6 +94,10 @@ export const endpoints = {
   conversationMessages: (id: string) => `/conversations/${seg(id)}/messages`,
   search: "/search",
 
+  /* ---------------- Long-term memory (what the agents remember) ----------- */
+  memories: "/memories",
+  memory: (id: string) => `/memories/${seg(id)}`,
+
   /** SSE stream for any async AI task (match, tailor, copilot turn, ingestion…) */
   aiStream: (taskId: string) => `/ai/stream/${seg(taskId)}`,
 } as const;

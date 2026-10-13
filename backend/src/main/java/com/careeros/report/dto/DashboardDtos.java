@@ -20,7 +20,8 @@ public final class DashboardDtos {
     }
 
     public record SkillGapDigest(UUID jobId, String jobTitle, Float overall,
-                                 List<Object> missingSkills, List<Object> matchedSkills) {
+                                 List<Object> missingSkills, List<Object> matchedSkills,
+                                 List<Map<String, Object>> gaps) {
     }
 
     public record RecommendedJob(UUID id, String title, String companyName, String location,

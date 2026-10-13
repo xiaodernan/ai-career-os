@@ -380,16 +380,17 @@ def test_no_promise_refreshes_only_queries_no_screen_mounts():
         [(repr(p), repr(d)) for p, d in pairs], sorted(p.where for p, _ in pairs))
 
 
-def test_three_queries_are_declared_by_hooks_no_screen_mounts():
+def test_two_queries_are_declared_by_hooks_no_screen_mounts():
     dead = unmounted_declarations()
-    assert len(dead) >= 3, "only %d unmounted declarations walked" % len(dead)
+    assert len(dead) >= 2, "only %d unmounted declarations walked" % len(dead)
     by_name = {d.fn: d.segs for d in dead}
     # `useAIUsage` left this ledger when the dashboard's spend card started mounting it,
     # `useKnowledgeNotes` when the knowledge page grew its notes panel, `useProfile` when the
-    # settings page grew its account + career-profile editors.
+    # settings page grew its account + career-profile editors, and `useSourceStatus` when the
+    # knowledge screen's batch uploader began polling a source's ingestion stage per row --
+    # each one left screen first, which is the only way a declared query should leave.
     assert by_name == {
         "useResumeScore": ("resume", "*", "score"),
-        "useSourceStatus": ("knowledge", "source", "*", "status"),
         "useGlobalSearch": ("search", "*"),
     }, "unmounted queries moved: %s" % sorted(by_name)
     for d in dead:
@@ -612,7 +613,13 @@ def test_the_profile_toasts_are_copy_no_user_can_hear():
 def test_the_walk_has_exactly_one_key_blind_spot_and_it_replays_a_mounted_snapshot():
     opaque = opaque_key_sites()
     derived = sorted((s.rel.split("/")[-1], s.callee, s.fn) for s in opaque)
-    assert derived == [("actions.ts", "setQueryData", "useUpdateApplication")], (
+    # Two, since the kanban reorder grew an optimistic rollback of its own: the same
+    # `setQueryData(key, data)` replay `useUpdateApplication` had, because a drag that
+    # snaps back on failure is only honest if the snapshot it restores is a real one.
+    assert derived == [
+        ("actions.ts", "setQueryData", "useReorderApplication"),
+        ("actions.ts", "setQueryData", "useUpdateApplication"),
+    ], (
         "cache calls with a key the walk cannot read moved: %s (lines %s)"
         % (derived, [s.where for s in opaque])
     )

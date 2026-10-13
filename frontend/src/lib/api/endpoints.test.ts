@@ -903,7 +903,6 @@ describe("endpoints ↔ backend route parity", () => {
     "PATCH /users/me/profile": "forwards the profile editor's `patch`, one key per form field the user edited",
     "PATCH /users/me": "forwards the account form's `patch`",
     "POST /resumes/upload": "a FormData part list, not a JSON body — Spring binds it through @RequestPart, so no record names these keys",
-    "POST /knowledge/documents": "same FormData shape as /resumes/upload — file, title, kind as multipart parts",
   };
 
   function unreadableKeys(): string[] {
@@ -1109,14 +1108,14 @@ describe("endpoints ↔ backend route parity", () => {
     expect(new Set(handlers.map((h) => `${h.verb} ${h.pattern}`)).size).toBe(handlers.length);
     expect(handlers.flatMap((h) => h.unparsed)).toEqual([]);
     const bound = handlers.flatMap((h) => h.params);
-    expect(bound.length).toBe(37);
-    // 37 parameters in 17 distinct names, measured: the reader's whole answer rather than a spot
+    expect(bound.length).toBe(38);
+    // 38 parameters in 18 distinct names, measured: the reader's whole answer rather than a spot
     // check, so a signature shape it stops understanding shrinks this set instead of passing quiet
     // (#225 retired `limit`: `/activity/runs` bound the only one, and now binds page/size like
     // every other list route)
     expect(new Set(bound.map((p) => p.name))).toEqual(
       new Set([
-        "agent", "company", "documentId", "file", "kind", "location", "maxSalary",
+        "agent", "company", "documentId", "file", "kind", "kinds", "location", "maxSalary",
         "minSalary", "page", "q", "remote", "resumeId", "size", "skills", "sort", "status", "title",
       ])
     );

@@ -294,7 +294,12 @@ export function KanbanBoard({ applications, onReorder, onOpen, isPending }: Kanb
       collisionDetection={closestCenter}
       onDragEnd={handleDragEnd}
     >
-      <div className="flex gap-4 overflow-x-auto pb-4">
+      <div className="flex gap-4 overflow-x-auto pb-4" aria-busy={isPending}>
+        {isPending && (
+          <span className="sr-only" role="status">
+            Saving move…
+          </span>
+        )}
         {columns.map(({ status, apps }) => (
           <KanbanColumn
             key={status}

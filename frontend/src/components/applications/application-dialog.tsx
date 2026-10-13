@@ -3,6 +3,7 @@
 import * as React from "react";
 import { CalendarClock, Trash2 } from "lucide-react";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
+import { ErrorState } from "@/components/common/error-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -310,8 +312,20 @@ export function ApplicationDialog({ application, open, onOpenChange }: Applicati
               <h4 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                 History
               </h4>
-              {events.isLoading && (
-                <p className="text-sm text-muted-foreground">Loading history…</p>
+              {events.isPending && (
+                <div className="space-y-2" role="status">
+                  <Skeleton className="h-5 w-3/4" />
+                  <Skeleton className="h-5 w-1/2" />
+                  <span className="sr-only">Loading history…</span>
+                </div>
+              )}
+              {events.isError && (
+                <ErrorState
+                  title="History failed to load"
+                  error={events.error}
+                  onRetry={() => void events.refetch()}
+                  retrying={events.isFetching}
+                />
               )}
               {events.data?.length === 0 && (
                 <p className="text-sm text-muted-foreground">

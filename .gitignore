@@ -47,3 +47,6 @@ frontend/.vitest-reports/
 # assistant workspace (local scratch, not project source)
 .workbuddy-ai/
 .scratch/
+
+# Local Python install manager cache (tool artifact, not project code)
+Python/
