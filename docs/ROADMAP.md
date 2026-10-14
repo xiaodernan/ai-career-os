@@ -27,12 +27,15 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   call, the **progression planner** (10.11, stepping-stone roles toward a dream
   role), the **learning-priority** ranker (10.12, learn the most-demanded gap
   first), and the **interview-prep** checklist (10.13, study the gaps, rehearse the
-  strength stories). Seventeen internal engines now, all unit-tested offline, all
-  pinned by `tests/test_forward_features_contract.py`.
-  **The aggregate bridge (10.2) is served (2026-10-14)** — `/api/v1/growth-report` carries
-  the whole growth page in one call. The granular engines (gap, salary, readiness, learning,
-  progress as their own routes) and the 12.x bridges are still unwired, and 10.3's frontend
-  panel is the next step: it can render from the aggregate today.
+  strength stories). Seventeen internal engines then; **Epic 13 (portability) and
+  Epic 15 (analytics) add more** — export/serialize/render/redact + import-plan, and
+  pipeline funnel / response-rate / insight-digest — all unit-tested offline and pinned by
+  `tests/test_forward_features_contract.py` where they are routed.
+  **The growth loop is now bridged end-to-end (2026-10-14)** — the 10.2 aggregate
+  (`/api/v1/growth-report`), the 10.3 `/growth` panel, and 10.4 plan persistence all ship.
+  The granular growth engines (gap, salary, readiness, learning, progress as their own
+  routes) and the 12.x bridges are still unwired; the 13.x and 15.x engines are internal-only
+  ahead of their backend bridges.
 
 ## Epic 10 — Growth Intelligence
 - [x] **10.1** Gap & growth analysis engine (evidence-bound coverage verdict).
@@ -89,10 +92,19 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   comparison so ranking is by total comp. (`features/equity.py`, `features/offers.py`)
 
 ## Epic 13 — Data Portability & Export
-- [ ] **13.1** One-click export bundle (resumes, knowledge, applications, interviews,
-  growth plans) as JSON + a human-readable PDF.
-- [ ] **13.2** Import / re-import with idempotent upsert; local backup snapshot.
-- [ ] **13.3** Per-user data deletion (right-to-be-forgotten) wired through backend.
+- [x] **13.1** Export bundle (resumes, knowledge, applications, interviews, growth
+  plans) as JSON + a human-readable PDF. (ai-service half: `features/export.py`
+  gather/serialize/validate/diff + content-hash idempotency; `features/export_render.py`
+  print-ready HTML + lazy weasyprint PDF. Internal-only, deliberately un-routed; the
+  backend export/download bridge is still pending.)
+- [x] **13.2** Import / re-import with idempotent upsert; local backup snapshot.
+  (ai-service half: `features/import_plan.py` validates a bundle, then emits per-item
+  create/update/delete ops with per-item content hashes so the backend can skip
+  unchanged rows. Internal-only; the backend apply/bridge is still pending.)
+- [x] **13.3** Per-user data deletion (right-to-be-forgotten). (ai-service half:
+  `features/export_redact.py` deep-copy section redaction + `anonymize`; recomputes the
+  content hash and records `redacted_sections`. Internal-only; the backend deletion
+  route is still pending.)
 
 ## Epic 14 — Job Ingestion Connectors
 - [ ] **14.1** Pluggable connector interface (RSS / board API / paste) feeding `jobs`.
@@ -101,10 +113,20 @@ for "what to build next" across sessions; pick the top un-done task and execute.
 - [ ] **14.3** De-duplication + freshness sweep against existing `jobs`.
 
 ## Epic 15 — Analytics & Insights
-- [ ] **15.1** Pipeline funnel: applied → OA → interview → offer, with conversion %.
-- [ ] **15.2** Response-rate and time-in-stage analytics from `applications`.
-- [ ] **15.3** Personal insight digest (weekly): strongest gaps closing, top matches,
-  stalled applications.
+- [x] **15.1** Pipeline funnel: applied → OA → interview → offer, with conversion %.
+  (`features/analytics.py::pipeline_funnel`, `POST /internal/features/pipeline-funnel`.
+  Reached-stage semantics are cumulative; `rejected` counts as reached `applied` only,
+  the honest bound of a schema that stores just the current status.)
+- [x] **15.2** Response-rate and time-in-stage analytics from `applications`.
+  (`features/analytics.py::response_rate`, `POST /internal/features/response-rate`.
+  A rejection is a response; per-stage avg/median durations skip apps missing timestamps
+  rather than inventing them.)
+- [x] **15.3** Personal insight digest (weekly): strongest gaps closing, top matches,
+  stalled applications. (`features/analytics.py::insight_digest`,
+  `POST /internal/features/insight-digest`. Surfaces stalled apps past a window and the
+  live stage mix; `growthDeltas` / `topMatches` are echoed through so the digest composes
+  the growth engines instead of inventing data. Internal-only; the backend bridge is
+  still pending.)
 
 ## Epic 16 — Production Hardening
 - [ ] **16.1** Monitoring/alerting on agent error rate, LLM cost, eval regressions.
