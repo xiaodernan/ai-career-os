@@ -107,10 +107,19 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   route is still pending.)
 
 ## Epic 14 — Job Ingestion Connectors
-- [ ] **14.1** Pluggable connector interface (RSS / board API / paste) feeding `jobs`.
-- [ ] **14.2** First real connector (e.g. RSS/Atom board) with the same hybrid
-  index path as the seed import.
-- [ ] **14.3** De-duplication + freshness sweep against existing `jobs`.
+- [x] **14.1** Pluggable connector interface (RSS / board API / paste) feeding `jobs`.
+  (ai-service half: `features/ingestion.py::Connector` protocol + `normalize_posting`
+  mapping a raw payload onto the canonical jobs fields. The HTTP fetch + `jobs` write
+  stay in the backend.)
+- [x] **14.2** First real connector (e.g. RSS/Atom board) with the same hybrid index path
+  as the seed import. (ai-service half: `features/ingestion.py::parse_feed` parses RSS
+  2.0 / Atom XML with the standard library only, offline and size-capped. The fetch half
+  and the hybrid-index write remain backend-side.)
+- [x] **14.3** De-duplication + freshness sweep against existing `jobs`.
+  (`features/ingestion.py::dedupe_postings` collapses exact-fingerprint duplicates to
+  the newest / most complete survivor; `freshness_sweep` partitions into fresh / stale /
+  expired / undated. Routed as `POST /internal/features/dedupe-jobs` and
+  `/freshness-sweep`; internal-only ahead of the backend sweep job.)
 
 ## Epic 15 — Analytics & Insights
 - [x] **15.1** Pipeline funnel: applied → OA → interview → offer, with conversion %.
