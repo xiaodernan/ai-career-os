@@ -118,8 +118,9 @@ for "what to build next" across sessions; pick the top un-done task and execute.
 - [x] **14.3** De-duplication + freshness sweep against existing `jobs`.
   (`features/ingestion.py::dedupe_postings` collapses exact-fingerprint duplicates to
   the newest / most complete survivor; `freshness_sweep` partitions into fresh / stale /
-  expired / undated. Routed as `POST /internal/features/dedupe-jobs` and
-  `/freshness-sweep`; internal-only ahead of the backend sweep job.)
+  expired / undated; `plan_ingest` composes parse/normalize/dedupe/freshness into one
+  create / update / close plan. Routed as `POST /internal/features/dedupe-jobs`,
+  `/freshness-sweep`, `/plan-ingest`; internal-only ahead of the backend sweep job.)
 
 ## Epic 15 — Analytics & Insights
 - [x] **15.1** Pipeline funnel: applied → OA → interview → offer, with conversion %.
