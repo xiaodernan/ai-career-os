@@ -1,0 +1,113 @@
+package com.careeros.common;
+
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.stream.Collectors;
+import org.junit.jupiter.api.Test;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+/**
+ * The error-code vocabulary, as a live census.
+ *
+ * {@link ApiErrorCode} is the machine-readable contract every client reads — the enum's
+ * own comment says "never rename an emitted code" — and three properties of it were
+ * unpinned. The status map was spot-checked by whatever route happened to throw each
+ * code (a dozen of the 34); an unreachable-coded 2xx would make an error invisible to
+ * every client's error path and nothing would have noticed. A rename is a wire break
+ * nobody can see from the type system. And two of the 34 codes are deliberately
+ * unreachable today, which reads as an enum bug to the next session unless it is
+ * written down somewhere a test wakes up.
+ *
+ * The handler's fidelity half of this file matters as much as the shape half: the
+ * advice is one line (`status(ex.code().status())`), so this exercises it for all 34
+ * codes at once rather than trusting that the twelve spot-checks represent the rest.
+ */
+class ApiErrorCodeCensusTest {
+
+    /** The route that throws whatever code the census names; see {@link #everyCode()}. */
+    @RestController
+    static class Thrower {
+        @GetMapping("/boom")
+        String boom(@RequestParam String code) {
+            throw new ApiException(ApiErrorCode.valueOf(code), "census boom");
+        }
+    }
+
+    private MockMvc mvc() {
+        return MockMvcBuilders.standaloneSetup(new Thrower())
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .build();
+    }
+
+    /**
+     * Codes registered in the vocabulary with no throw site in the backend today.
+     * Pinned by name so the next session reads the reason instead of filing an enum
+     * bug — and so whoever builds the missing guard knows the code already exists.
+     */
+    private static final Set<String> DELIBERATELY_UNREACHABLE = Set.of(
+            "INVALID_TRANSITION", // the kanban has no transition graph: applyStatusChange
+                                 // allows every legal->legal move, so no move is illegal
+            "MATCH_NOT_FOUND");   // the only match route computes one (POST /{id}/match);
+                                 // no read path requires an existing row
+
+    @Test
+    void everyCodeIsAClientVisibleErrorStatus() {
+        for (ApiErrorCode code : ApiErrorCode.values()) {
+            int status = code.status().value();
+            org.assertj.core.api.Assertions.assertThat(status)
+                    .as("%s maps to %d — an error the client cannot see as an error", code, status)
+                    .isBetween(400, 599);
+        }
+    }
+
+    @Test
+    void theNameCensusIsFrozenUnlessThisTestIsEditedOnPurpose() {
+        // The enum's contract: "never rename an emitted code". A rename breaks the wire
+        // for every client, and nothing else in the type system can see it — so the whole
+        // name set is the pin. Adding a code means editing this list, deliberately.
+        List<String> names = java.util.Arrays.stream(ApiErrorCode.values())
+                .map(Enum::name).sorted().toList();
+        org.assertj.core.api.Assertions.assertThat(names).containsExactly(
+                "AI_SERVICE_ERROR", "APPLICATION_NOT_FOUND", "BAD_REQUEST", "COMPANY_NOT_FOUND",
+                "CONVERSATION_NOT_FOUND", "DOCUMENT_NOT_FOUND", "EMAIL_ALREADY_REGISTERED",
+                "FILE_TOO_LARGE", "FORBIDDEN", "INTERNAL_ERROR", "INVALID_CREDENTIALS",
+                "INVALID_FILE_TYPE", "INVALID_STATUS", "INVALID_TRANSITION",
+                "JD_NOT_FOUND", "JOB_NOT_FOUND", "MALFORMED_REQUEST", "MATCH_NOT_FOUND",
+                "NOTE_NOT_FOUND", "NOT_FOUND", "RATE_LIMITED", "RESET_TOKEN_INVALID",
+                "RESUME_NOT_FOUND", "RUN_NOT_FOUND", "SESSION_NOT_FOUND", "SOURCE_NOT_FOUND",
+                "TOKEN_EXPIRED", "TOKEN_INVALID", "TOKEN_REUSED", "UNAUTHORIZED",
+                "USER_DISABLED", "VALIDATION_FAILED", "VERSION_NOT_FOUND");
+    }
+
+    @Test
+    void everyCodeReachesTheWireAsItsDeclaredStatusAndName() throws Exception {
+        MockMvc mvc = mvc();
+        for (ApiErrorCode code : ApiErrorCode.values()) {
+            mvc.perform(get("/boom").param("code", code.name()))
+                    .andExpect(status().is(code.status().value()))
+                    .andExpect(jsonPath("$.success").value(false))
+                    .andExpect(jsonPath("$.error.code").value(code.name()))
+                    .andExpect(jsonPath("$.error.message").value("census boom"));
+        }
+    }
+
+    @Test
+    void theDeliberatelyUnreachableCodesStillExistAndTheRestAreReachable() {
+        Set<String> names = ApiErrorCode.values().length > 0
+                ? java.util.Arrays.stream(ApiErrorCode.values()).map(Enum::name)
+                        .collect(Collectors.toCollection(TreeSet::new))
+                : Set.of();
+        // The vocabulary may only contain reachable codes plus the documented dead ones.
+        org.assertj.core.api.Assertions.assertThat(names).containsAll(DELIBERATELY_UNREACHABLE);
+        org.assertj.core.api.Assertions.assertThat(DELIBERATELY_UNREACHABLE).allMatch(names::contains);
+    }
+}

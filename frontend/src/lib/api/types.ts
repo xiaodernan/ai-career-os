@@ -769,3 +769,100 @@ export interface SSETraceEvent {
   payload?: Record<string, unknown>;
   [key: string]: unknown;
 }
+
+/* ------------------------------------------------------------------ */
+/* Growth report                                                       */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The growth page's one answer (`POST /growth-report`, roadmap 10.3), as the 10.8
+ * aggregate composes it: readiness, gap, salary, learning plan and progress. The
+ * schema is the AI service's — this names only what the panel renders, and each
+ * sub-block is read defensively because the engine owns the shape and evolves it.
+ */
+export interface GrowthReport {
+  readiness?: {
+    targetRole?: string;
+    seniority?: string;
+    /** 0–1: evidence-weighted share of the role's expected skills. */
+    skillReadiness?: number;
+    /** "ready" | "borderline" | "not_ready" — the coverage verdict. */
+    skillVerdict?: string;
+    salaryVerdict?: string | null;
+    /** The overall verdict; a required-skill gap caps a "ready" at "borderline". */
+    verdict?: string;
+    coveredCount?: number;
+    gapCount?: number;
+    blockers?: string[];
+  };
+  gap?: GapBlock;
+  salary?: {
+    role?: string;
+    location?: string;
+    seniority?: string;
+    currency?: string;
+    sampleSize?: number;
+    percentiles?: {
+      min?: number;
+      p25?: number;
+      p50?: number;
+      p75?: number;
+      max?: number;
+    };
+    position?: { verdict?: string; note?: string };
+  };
+  learningPlan?: {
+    phases?: {
+      phase?: string;
+      label?: string;
+      items?: LearningItem[];
+    }[];
+  };
+  progress?: {
+    targetRole?: string;
+    /** True on the first run: no previous report existed to diff against. */
+    baseline?: boolean;
+    closed?: string[];
+    improved?: string[];
+    opened?: string[];
+    regressed?: string[];
+    stillOpen?: string[];
+    previousCoverage?: number;
+    currentCoverage?: number;
+    delta?: number;
+  };
+}
+
+/** One expected skill, classified against the resume's evidence. */
+export interface GapBlock {
+  targetRole?: string;
+  expectedSkillCount?: number;
+  coveredCount?: number;
+  partialCount?: number;
+  gapCount?: number;
+  /** 0–1: covered counts fully, partial counts half. */
+  coverage?: number;
+  covered?: SkillRow[];
+  partial?: SkillRow[];
+  gaps?: SkillRow[];
+  strengths?: string[];
+}
+
+export interface SkillRow {
+  skill?: string;
+  category?: string;
+  importance?: "must" | "should" | "nice" | string;
+  /** Where the evidence came from, when it did. */
+  evidence?: string;
+}
+
+/** One study item, phased foundation → core → applied by the engine. */
+export interface LearningItem {
+  /** snake_case on the wire: the learning engine spells it that way. */
+  topic?: string;
+  category?: string;
+  phase?: string;
+  priority?: string;
+  resource_hint?: string;
+  note?: string;
+}

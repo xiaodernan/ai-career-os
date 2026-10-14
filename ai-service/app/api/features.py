@@ -24,6 +24,7 @@ from app.features import demand as demand_mod
 from app.features import progression as progression_mod
 from app.features import prioritize as prioritize_mod
 from app.features import interview_prep as interview_prep_mod
+from app.features import analytics as analytics_mod
 from app.features.cover_letter import generate as cover_generate
 
 router = APIRouter(prefix="/internal/features", tags=["features"])
@@ -513,5 +514,62 @@ async def company_brief_ep(req: CompanyBriefReq, ctx: Ctx = Depends(require_inte
     run_id = await _run(ctx, "job_research", "company_brief")
     samples = await company_mod.load_company_samples()
     result = company_mod.company_brief(samples, req.company, top=req.top)
+    await observability.finish_run(run_id, "completed")
+    return result
+
+
+class ApplicationInput(BaseModel):
+    id: str
+    status: str
+    title: str | None = None
+    company: str | None = None
+    applied_at: str | None = None
+    oa_at: str | None = None
+    interview_at: str | None = None
+    final_round_at: str | None = None
+    offer_at: str | None = None
+    created_at: str | None = None
+
+
+class PipelineFunnelReq(BaseModel):
+    applications: list[ApplicationInput] = Field(min_length=1)
+
+
+@router.post("/pipeline-funnel")
+async def pipeline_funnel_ep(req: PipelineFunnelReq, ctx: Ctx = Depends(require_internal)):
+    """15.1 -- how many applications reached each stage and where the leak is."""
+    run_id = await _run(ctx, "analytics", "pipeline_funnel")
+    result = analytics_mod.pipeline_funnel([a.model_dump() for a in req.applications])
+    await observability.finish_run(run_id, "completed")
+    return result
+
+
+class ResponseRateReq(BaseModel):
+    applications: list[ApplicationInput] = Field(min_length=1)
+
+
+@router.post("/response-rate")
+async def response_rate_ep(req: ResponseRateReq, ctx: Ctx = Depends(require_internal)):
+    """15.2 -- reply / interview / offer rates and per-stage durations."""
+    run_id = await _run(ctx, "analytics", "response_rate")
+    result = analytics_mod.response_rate([a.model_dump() for a in req.applications])
+    await observability.finish_run(run_id, "completed")
+    return result
+
+
+class InsightDigestReq(BaseModel):
+    applications: list[ApplicationInput] = Field(min_length=1)
+    stale_days: int = Field(default=14, ge=1, le=120)
+    growth_deltas: list[dict] | None = None
+    top_matches: list[dict] | None = None
+
+
+@router.post("/insight-digest")
+async def insight_digest_ep(req: InsightDigestReq, ctx: Ctx = Depends(require_internal)):
+    """15.3 -- weekly snapshot: stalled apps, live stage mix, headline rates."""
+    run_id = await _run(ctx, "analytics", "insight_digest")
+    result = analytics_mod.insight_digest(
+        [a.model_dump() for a in req.applications], stale_days=req.stale_days,
+        growth_deltas=req.growth_deltas, top_matches=req.top_matches)
     await observability.finish_run(run_id, "completed")
     return result

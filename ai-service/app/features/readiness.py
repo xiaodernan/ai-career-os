@@ -22,9 +22,19 @@ def skill_verdict(coverage: float) -> str:
 
 
 def must_gaps(gap_report: dict) -> list[str]:
-    """Required (importance == 'must') skills the candidate has no evidence for."""
+    """Required (importance == 'must') skills the candidate has no evidence for.
+
+    `gaps` from the gap report carries no evidence key by construction — the gap
+    engine only appends a skill there once it has found no trace of it in the
+    candidate's material (`gap_analysis.classify_coverage`). An entry that DOES
+    carry evidence is therefore not a no-evidence blocker, whoever composed the
+    report: the blocker sentence names "skills with no evidence", and reading the
+    field keeps that sentence true for every input rather than for the one this
+    producer happens to make.
+    """
     return [g.get("skill", "") for g in (gap_report.get("gaps") or [])
-            if g.get("importance") == "must" and g.get("skill")]
+            if g.get("importance") == "must" and g.get("skill")
+            and not g.get("evidence")]
 
 
 def compose(gap_report: dict, salary_report: dict | None = None) -> dict:

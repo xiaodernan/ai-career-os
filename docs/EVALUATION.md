@@ -300,9 +300,18 @@ transcript ever recorded.
 | Answer faithfulness | ❌ lexical proxy | ✅ LLM judge |
 | Tool-selection accuracy of the model | ❌ heuristic only | ✅ |
 
-The retrieval row is a partial credit, not a pass: with hash embeddings the vector half
-of the fusion contributes noise, so a good score there means the keyword and trigram
-paths are healthy — worth knowing, and not the same claim as "semantic retrieval works".
+The retrieval row is a partial credit, not a pass — and the live numbers say so more
+precisely than this table can. Measured against the seeded one-document corpus with
+`LLM_PROVIDER=mock EMBEDDING_PROVIDER=hash` (`evals/reports/20261014-*_strat-*.json`):
+the hybrid score (1.0 on every retrieval metric) is carried **entirely** by the
+hash-vector channel, because on a corpus whose relevant chunk literally contains the
+query terms, a hash embedding and a lexical overlap coincide. `--strategy keyword`
+scores **0.2** — the mock understanding emits no keywords, so the channel fans out
+to a single FTS query whose ANDed terms veto most cases — and `--strategy trigram`
+scores **0.0** — a short query's similarity against a long chunk sits below the
+default threshold. So a 1.0 here means *the corpus is searchable and the fusion
+plumbing is intact*, not that semantic retrieval works. The strategy flags exist
+for exactly this comparison; a report that only ever ran `hybrid` would hide it.
 
 ## 4. Tests that guard the metrics themselves
 

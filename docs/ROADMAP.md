@@ -39,8 +39,10 @@ for "what to build next" across sessions; pick the top un-done task and execute.
 - [x] **10.2** Backend bridge: `HttpAiServiceClient.growthReport` + `GrowthController`
   (`/api/v1/growth-report`, the 10.8 aggregate; granular endpoints after). `docs/API.md`
   extended, the route rate-limited as AI-cost, controller pinned by `GrowthControllerTest`.
-- [ ] **10.3** Frontend page/panel: target-role input, readiness verdict, coverage
+- [x] **10.3** Frontend page/panel: target-role input, readiness verdict, coverage
   bars (covered / partial / gap), learning plan, salary band, progress delta.
+  (`/growth`, rendered from the 10.2 aggregate; the panel hands its own gap block
+  back as `previous` until 10.4 persists the plan server-side).
 - [ ] **10.4** Persist a `growth_plan` per (user, target_role) so repeat runs diff
   (needs a migration + a knowledge-table write; backend-owned schema).
 - [x] **10.5** Learning plan: gaps → phased study items (foundation → core → applied)

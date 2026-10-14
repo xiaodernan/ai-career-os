@@ -31,6 +31,7 @@ import type {
   Application,
   ApplicationStatus,
   CopilotReply,
+  GrowthReport,
   InterviewQuestion,
   Job,
   JobMatch,
@@ -888,6 +889,32 @@ export function useDeleteMemory() {
 }
 
 /* ------------------------------------------------------------------ */
+/**
+ * The growth page's one call (roadmap 10.3): a target role in, the composed report
+ * out. Deliberately a mutation rather than a query — the request carries the caller's
+ * target and the prior report to diff against, so what comes back is an answer to a
+ * question the user just asked, not a view of state the server holds. The report is
+ * computed, not stored (10.4 will change that), so there is nothing to invalidate:
+ * the panel keeps the answer in its own state and hands it back as `previous`.
+ */
+export function useGrowthReport() {
+  return useMutation({
+    mutationFn: async (body: {
+      targetRole: string;
+      seniority?: string;
+      location?: string;
+      currency?: string;
+      targetSalary?: number;
+      previous?: unknown;
+    }): Promise<GrowthReport> =>
+      (await api.request<GrowthReport>(endpoints.growthReport, {
+        method: "POST",
+        body,
+      })) ?? {},
+    onError: fail("Couldn't build the growth report."),
+  });
+}
+
 /* Session helper                                                      */
 /* ------------------------------------------------------------------ */
 

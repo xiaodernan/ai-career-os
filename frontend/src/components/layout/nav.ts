@@ -9,6 +9,7 @@ import {
   Settings,
   Sparkles,
   Activity as ActivityIcon,
+  TrendingUp,
   type LucideIcon,
 } from "lucide-react";
 
@@ -28,6 +29,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/copilot", label: "Copilot", icon: MessageSquare, description: "Career agent conversation" },
   { href: "/knowledge", label: "Knowledge", icon: Library, description: "Career knowledge base sources" },
   { href: "/companies", label: "Companies", icon: Building2, description: "Company research profiles" },
+  { href: "/growth", label: "Growth", icon: TrendingUp, description: "Readiness, gaps and learning plan" },
   { href: "/activity", label: "Activity", icon: ActivityIcon, description: "AI agent runs and traces" },
   { href: "/settings", label: "Settings", icon: Settings, description: "Account and preferences" },
 ];

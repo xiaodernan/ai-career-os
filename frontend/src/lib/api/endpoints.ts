@@ -78,6 +78,7 @@ export const endpoints = {
   knowledgeDocuments: "/knowledge/documents",
 
   /* ---------------- AI actions (thin proxies over ai-service) ------------ */
+  growthReport: "/growth-report",
   copilotChat: "/copilot/chat",
   /** The same turn as an SSE stream — `token` / `status` frames, then `done` with the reply. */
   copilotChatStream: "/copilot/chat/stream",

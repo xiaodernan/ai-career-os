@@ -134,6 +134,11 @@ AUTH_LIMIT_DEFAULT = re.compile(r'E2E_AUTH_LIMIT \?\? "(?P<value>\d+)"')
 E2E_THRESHOLD = re.compile(r"\[int\]\$rl -ge (?P<value>\d+)")
 RAISED_ASSIGN = re.compile(rf"{AUTH_VAR}[=:]\s*\\?\"?(?P<value>\d+)")
 ANY_ASSIGN = re.compile(rf"(?P<var>{AUTH_VAR}|{AI_VAR})[=:]\s*\\?\"?(?P<value>\d+)")
+# `ANY_ASSIGN` reads the name bare, which is how a `.env`, a compose file and a Java literal all spell
+# it. A JSON document quotes the key instead, so the same figure in a notes file would slip past the
+# refusal witness; this spelling is deliberately not in `ANY_ASSIGN`, because widening the census shape
+# would re-classify rows in the scanned trees, and no shipped scanned format quotes a limiter key.
+QUOTED_ASSIGN = re.compile(rf"\"(?P<var>{AUTH_VAR}|{AI_VAR})\"\s*:\s*\"?(?P<value>\d+)")
 IT_BOUND = re.compile(r"for \(int i = 1; i <= (?P<value>\d+); i\+\+\)")
 WINDOW = re.compile(r"Duration\.of(?P<unit>Seconds|Minutes|Hours)\((?P<value>\d+)\)")
 RETRY_AFTER = re.compile(r'setHeader\("Retry-After", "(?P<value>\d+)"\)')
@@ -142,6 +147,9 @@ HTTP_429 = re.compile(r"\b429\b")
 CODE_NAME = re.compile(r"\bRATE_LIMITED\b")
 ENUM_DECL = re.compile(r"RATE_LIMITED\(HttpStatus\.(?P<name>[A-Z_]+)\)")
 PER_MINUTE_NAME = re.compile(r"\b(?:auth|ai)[-_][pP]er[-_][mM]inute\b|\b(?:auth|ai)PerMinute\b")
+# Directional on purpose: the AI branch must be the user id and the auth branch the client IP. A test
+# that only asked whether both names appear in the line is true with the two branches swapped.
+AI_THEN_IP = re.compile(r"ai\s*\?\s*userOrIp\(request\)\s*:\s*clientIp\(request\)")
 MS = re.compile(r"(?P<value>\d+)ms\b")
 UNIT_SECONDS = {"Seconds": 1, "Minutes": 60, "Hours": 3600}
 
@@ -230,6 +238,20 @@ def first_group(path: Path, pattern: re.Pattern, want: int = 1) -> list[re.Match
     return hits
 
 
+def fixture_value(pattern: re.Pattern, text: str, site: str) -> str:
+    """The value one fixture string carries, refused by name when the reader finds no shape.
+
+    These are the census's own proofs: each pattern is exercised against a spelling no shipped file uses.
+    Indexing `search()` directly would make a moved shape a `TypeError`, which names neither the reader nor
+    the fixture, so the absence is stated the way the shipped reads state it.
+    """
+    match = pattern.search(text)
+    assert match is not None, (
+        f"the {site} fixture no longer matches {pattern.pattern!r}: that string is this reader's only "
+        f"proof, and no shipped file writes the shape it stands for")
+    return match["value"]
+
+
 def walk(*roots: Path) -> list[tuple[Path, str]]:
     """Every admitted text file under `roots`, with directories pruned while descending.
 
@@ -272,7 +294,8 @@ def refused_claims() -> list[tuple[str, str]]:
             if path.suffix in SCAN_SUFFIXES or path == CENSUS:
                 continue
             text = read(path)
-            hit = (ANY_ASSIGN.search(text) or PROSE_PER_MIN.search(text)
+            hit = (ANY_ASSIGN.search(text) or QUOTED_ASSIGN.search(text)
+                   or PROSE_PER_MIN.search(text)
                    or DOC_IDENTITY.search(text) or E2E_THRESHOLD.search(text))
             if hit:
                 out.append((str(path.relative_to(ROOT)), hit.group(0)))
@@ -484,16 +507,22 @@ def test_the_number_readers_parse_shapes_this_repository_does_not_yet_hold():
     prose = "the limit is 12/min per client IP, and (empty means 12)"
     assert [m["value"] for m in DOC_IDENTITY.finditer(prose)] == ["12"], (
         "the doc reader is keyed on `N/min per <identity>`; a re-wrapped bullet is still a claim")
-    assert EMPTY_MEANS.search(prose)["value"] == "12", "the `(empty means N)` shape is a default claim"
-    assert RAISED_ASSIGN.search(f"{AUTH_VAR}=1000")["value"] == "1000", (
+    assert fixture_value(EMPTY_MEANS, prose, "`(empty means N)`") == "12", (
+        "the `(empty means N)` shape is a default claim")
+    assert fixture_value(RAISED_ASSIGN, f"{AUTH_VAR}=1000", "raised-ceiling") == "1000", (
         "a raised ceiling with four digits is still the raised ceiling")
-    assert AUTH_LIMIT_DEFAULT.search('`${process.env.E2E_AUTH_LIMIT ?? "12"}/min per IP.')["value"] == "12", (
+    assert fixture_value(AUTH_LIMIT_DEFAULT, '`${process.env.E2E_AUTH_LIMIT ?? "12"}/min per IP.',
+                         "`E2E_AUTH_LIMIT` fallback") == "12", (
         "the fixture's fallback is a claim about the default, and it can be re-typed")
-    assert IT_BOUND.search("for (int i = 1; i <= 7; i++) {")["value"] == "7", (
+    assert fixture_value(IT_BOUND, "for (int i = 1; i <= 7; i++) {", "warm-up bound") == "7", (
         "the integration test's warm-up bound is a number the limiter depends on")
 
     # the trap this reader exists for: AppProperties' first `private int` is not a limiter field.
     first = JAVA_INT.search(read(PROPS))
+    assert first is not None, (
+        f"AppProperties no longer holds a `{JAVA_INT.pattern!r}` initialiser, so the named-field "
+        f"reader's trap -- that the file's first integer default is a token lifetime, not a ceiling -- "
+        f"cannot be shown against it")
     assert first["field"] != "authPerMinute", (
         f"AppProperties' first integer default is now `{first['field']} = {first['value']}`; the "
         f"named-field reader was proved against a file whose first match was a token lifetime, so if "
@@ -615,7 +644,7 @@ def test_the_bucket_a_request_lands_in_is_chosen_by_the_predicate_that_names_it(
     assert identity_line is not None, (
         "RateLimitFilter no longer selects the bucket key's identity from the same `ai` flag, so the "
         "ceiling and the identity it is counted against can disagree without any name reading wrong")
-    assert "userOrIp" in identity_line and "clientIp" in identity_line, (
+    assert AI_THEN_IP.search(identity_line) is not None, (
         f"the identity is chosen by `{identity_line.strip()}`, which no longer pairs the AI flag with "
         f"the user id and the auth flag with the client IP")
     key_line = next((line for line in lines if 'String key = "ratelimit:"' in line), None)

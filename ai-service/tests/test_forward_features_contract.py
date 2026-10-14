@@ -20,10 +20,10 @@ from fastapi.routing import APIRoute
 from pydantic import BaseModel
 
 from app.core.deps import require_internal
-from app.features import (company, counter_offer, demand, gap_analysis, growth,
-                          interview_prep, learning, negotiation, offers, outreach,
-                          prioritize, progress, progression, readiness, roles, salary,
-                          stories)
+from app.features import (analytics, company, counter_offer, demand, gap_analysis,
+                          growth, interview_prep, learning, negotiation, offers,
+                          outreach, prioritize, progress, progression, readiness,
+                          roles, salary, stories)
 from app.main import app
 
 # path -> (request model name, required field names)
@@ -45,6 +45,9 @@ FORWARD = {
     "/internal/features/progression": ("ProgressionReq", {"aspirational_role"}),
     "/internal/features/learning-priority": ("LearningPriorityReq", {"target_role"}),
     "/internal/features/interview-prep": ("InterviewPrepReq", {"target_role"}),
+    "/internal/features/pipeline-funnel": ("PipelineFunnelReq", {"applications"}),
+    "/internal/features/response-rate": ("ResponseRateReq", {"applications"}),
+    "/internal/features/insight-digest": ("InsightDigestReq", {"applications"}),
 }
 
 
@@ -253,4 +256,42 @@ def test_interview_prep_response_keys():
                                               "storyId", "quantified"}
     assert out["strengthStories"][0]["storyId"] == "exp-1"
     assert out["likelyTopics"][0] == "Design APIs"
+
+
+def test_pipeline_funnel_response_keys():
+    out = analytics.pipeline_funnel([
+        {"id": "a1", "status": "applied"},
+        {"id": "a2", "status": "oa"},
+        {"id": "a3", "status": "offer"},
+        {"id": "a4", "status": "rejected"},
+        {"id": "a5", "status": "saved"},
+    ])
+    assert set(out) == {"pipeline", "appliedCount", "savedCount", "rejectedCount",
+                        "totalApplications"}
+    assert set(out["pipeline"][0]) == {"stage", "count", "conversionFromApplied",
+                                      "stepConversion"}
+
+
+def test_response_rate_response_keys():
+    out = analytics.response_rate([
+        {"id": "a1", "status": "applied"},
+        {"id": "a2", "status": "interview", "applied_at": "2026-01-01",
+         "interview_at": "2026-01-10"},
+        {"id": "a3", "status": "offer"},
+        {"id": "a4", "status": "rejected"},
+    ])
+    assert set(out) == {"appliedCount", "respondedCount", "responseRate",
+                        "offerCount", "offerRate", "interviewCount", "interviewRate",
+                        "timeInStage"}
+
+
+def test_insight_digest_response_keys():
+    out = analytics.insight_digest(
+        [{"id": "a1", "status": "applied", "applied_at": "2026-09-01"},
+         {"id": "a2", "status": "offer"}], stale_days=14,
+        growth_deltas=[{"closed": ["k8s"]}], top_matches=[{"title": "X", "score": 0.9}])
+    assert set(out) == {"generatedAt", "windowDays", "totalApplications",
+                        "activePipeline", "stageCounts", "responseRate", "offerRate",
+                        "stalledCount", "stalled", "signals", "growthDeltas",
+                        "topMatches"}
 

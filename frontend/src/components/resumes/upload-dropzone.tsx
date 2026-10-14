@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { TaskProgress } from "@/components/ai/task-stream";
-import { pick, str } from "@/lib/api/normalize";
+import { pickResumeId, pickTaskId } from "@/lib/resume-upload";
 import { RESUME_ACCEPT, validateResumeFile, useUploadResume } from "@/lib/hooks/actions";
 
 /**
@@ -34,17 +34,9 @@ export const INGEST_SEED = [
   { id: "indexing", label: "Indexing the document" },
 ];
 
-function pickTaskId(raw: unknown): string | null {
-  return str(raw, "taskId", "task_id") ?? str(pick(raw, "ingest"), "taskId", "task_id") ?? null;
-}
-
-function pickResumeId(raw: unknown): string | null {
-  return (
-    str(raw, "resumeId", "resume_id") ??
-    str(pick(raw, "resume"), "id") ??
-    null
-  );
-}
+// How the two ids are read out of the upload answer (top-level vs nested, camel
+// vs snake) lives in `@/lib/resume-upload` — a mis-spelled key there means the
+// progress panel silently never mounts.
 
 export function UploadDropzone({ onUploaded, className, compact = false, ...props }: UploadDropzoneProps) {
   const inputRef = React.useRef<HTMLInputElement>(null);
