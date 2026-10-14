@@ -62,6 +62,7 @@ MODULE_VIEW_SCREENS = [
     "frontend/src/app/(app)/applications/page.tsx",
     "frontend/src/app/(app)/companies/page.tsx",
     "frontend/src/app/(app)/knowledge/page.tsx",
+    "frontend/src/app/(app)/networking/page.tsx",
 ]
 # The remaining screens: neither shell, so they branch on their own query flags.
 # The growth page joined with 10.3: its report is a mutation's answer, so it branches
@@ -103,7 +104,7 @@ def ts_files() -> list:
 @lru_cache(maxsize=None)
 def app_screens() -> list:
     out = sorted(p.relative_to(ROOT).as_posix() for p in APP.rglob("page.tsx"))
-    assert len(out) == 22, "app/%s page.tsx files, not the 22 this file walks" % len(out)
+    assert len(out) == 23, "app/%s page.tsx files, not the 23 this file walks" % len(out)
     return [rel for rel in out if "/(app)/" in rel]
 
 
@@ -156,9 +157,9 @@ def status_of(status: str) -> list:
 # ------------------------------------------------------------------ cases
 
 
-def test_the_contract_called_single_is_used_by_five_of_the_seventeen_app_screens():
+def test_the_contract_called_single_is_used_by_five_of_the_eighteen_app_screens():
     screens = app_screens()
-    assert len(screens) == 17, "%d screens under app/(app), not 17" % len(screens)
+    assert len(screens) == 18, "%d screens under app/(app), not 18" % len(screens)
     users = boundary_users()
     assert users == BOUNDARY_SCREENS, "the boundary is used by %s" % [u.split("app/")[-1] for u in users]
     assert stmt(read(BOUNDARY), "single async contract used by every surface") == \
@@ -166,10 +167,10 @@ def test_the_contract_called_single_is_used_by_five_of_the_seventeen_app_screens
         "the file's own claim about its reach moved, so the set above needs re-measuring, not this pin"
     )
     non = [s for s in screens if s not in users]
-    assert len(non) == 12, "%d screens render without the contract this file calls single" % len(non)
+    assert len(non) == 13, "%d screens render without the contract this file calls single" % len(non)
 
 
-def test_twelve_of_the_seventeen_screens_decide_the_async_state_somewhere_else():
+def test_thirteen_of_the_eighteen_screens_decide_the_async_state_somewhere_else():
     screens = app_screens()
     b, mv = boundary_users(), module_view_users()
     assert mv == MODULE_VIEW_SCREENS, "ModuleView is spent by %s" % [u.split("app/")[-1] for u in mv]
@@ -179,7 +180,7 @@ def test_twelve_of_the_seventeen_screens_decide_the_async_state_somewhere_else()
     flags = set(own_flag_screens())
     bare = [s for s in neither if s not in flags]
     assert bare == [], "%s render a query with no failure branch at all -- this file used to claim so" % bare
-    assert len(b) + len(mv) + len(neither) == len(screens) == 17, "the three sets stopped covering the app"
+    assert len(b) + len(mv) + len(neither) == len(screens) == 18, "the three sets stopped covering the app"
     assert stmt(read(MODULE_VIEW), "shared async list shell for every") == \
         "* ModuleView \u2014 the shared async list shell for every (app) resource page.", (
         "the second shell's own universality claim moved, so the 5/4/7 split above needs re-measuring")
@@ -302,4 +303,4 @@ def test_this_gate_reads_the_envelope_and_the_branches_it_claims():
     for rel in (BOUNDARY, MODULE_VIEW, MISSING, CLIENT, NORMALIZE, CODES, HANDLER, RUN_DETAIL):
         assert (ROOT / rel).exists(), "%s is not where this file reads it" % rel
     assert len(not_found_codes()) == 14 and len(boundary_users()) == 5
-    assert len(module_view_users()) == 4 and len(OWN_FLAG_SCREENS) == 8
+    assert len(module_view_users()) == 5 and len(OWN_FLAG_SCREENS) == 8

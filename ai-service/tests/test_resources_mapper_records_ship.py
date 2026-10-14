@@ -56,6 +56,7 @@ RECORD_FILES = {
     "CompanyItem": "com/careeros/job/dto/JobDtos.java",
     "CompanyDetail": "com/careeros/job/dto/JobDtos.java",
     "CompanyRequest": "com/careeros/job/dto/JobDtos.java",
+    "ContactItem": "com/careeros/network/dto/ContactDtos.java",
     "SourceItem": "com/careeros/knowledge/dto/KnowledgeDtos.java",
     "SessionItem": "com/careeros/interview/dto/InterviewDtos.java",
     "SessionDetail": "com/careeros/interview/dto/InterviewDtos.java",
@@ -68,9 +69,9 @@ RECORD_FILES = {
 # mapCompany alias lists went away with it -- its eleven calls now ask eleven authored names, first.
 # `mapMemories` is the second envelope row: the memories list route answers `{items: [...]}`, and
 # the rows are shaped by normalizeMemory over in normalize.ts, not by a Java record this file binds.
-NAMED_MAPPERS = ["mapResume", "mapResumeVersions", "mapCompany", "mapCompanySource", "mapSource",
-                 "mapSessionScalars", "mapInterviewSessionItem", "mapInterviewSessionDetail",
-                 "mapMemories"]
+NAMED_MAPPERS = ["mapResume", "mapResumeVersions", "mapCompany", "mapCompanySource",
+                 "mapContact", "mapSource", "mapSessionScalars",
+                 "mapInterviewSessionItem", "mapInterviewSessionDetail", "mapMemories"]
 EXPORTED_MAPPERS = ["mapResumeVersions", "mapInterviewSessionItem", "mapInterviewSessionDetail",
                     "mapMemories"]
 
@@ -79,6 +80,7 @@ ROWS = {
     ("mapResumeVersions", "raw"): None,
     ("mapResumeVersions", "v"): "ResumeVersionItem",
     ("mapCompany", "raw"): "CompanyItem",
+    ("mapContact", "raw"): "ContactItem",
     ("mapSource", "raw"): "SourceItem",
     ("mapSessionScalars", "s"): "SessionItem",
     ("mapInterviewSessionItem", "s"): "SessionItem",
@@ -99,6 +101,11 @@ CALLED = {
     ("mapCompany", "raw"): {"name": 0, "website": 0, "logoUrl": 0, "industry": 0, "size": 0,
                             "overview": 0, "techStack": 0, "culture": 0, "interviewProcess": 0,
                             "sources": 0, "openRoleCount": 0},
+    # The id is read through idStr, which is not a reader call the census keys -- the
+    # nine str() asks below are the wire names this row reads.
+    ("mapContact", "raw"): {"name": 0, "role": 0, "company": 0, "relation": 0,
+                            "email": 0, "notes": 0, "lastTouchAt": 0, "createdAt": 0,
+                            "updatedAt": 0},
     ("mapSource", "raw"): {"kind": 0, "title": 0, "status": 0, "error": 0, "chunkCount": None,
                            "createdAt": 0, "updatedAt": None, "taskId": None, "documentId": 0},
     ("mapSessionScalars", "s"): {"jobId": 0, "positionTitle": 0, "companyName": 0, "mode": 0,
@@ -119,6 +126,7 @@ SCANNER_SHAPE = {
     ("mapResumeVersions", "raw"): (1, 3),
     ("mapResumeVersions", "v"): (8, 23),
     ("mapCompany", "raw"): (11, 11),
+    ("mapContact", "raw"): (9, 9),
     ("mapSource", "raw"): (9, 21),
     ("mapSessionScalars", "s"): (8, 22),
     ("mapInterviewSessionItem", "s"): (2, 6),
@@ -138,6 +146,7 @@ UNAUTHORED = {
     # Empty since the alias lists went away: every name mapCompany asks is a component of
     # CompanyItem in its own spelling, so there is nothing left to classify on this row.
     ("mapCompany", "raw"): set(),
+    ("mapContact", "raw"): set(),
     ("mapSource", "raw"): {"chunkCount", "chunk_count", "chunks", "created_at", "document_id",
                            "errorMessage", "error_message", "fileName", "file_name", "name",
                            "taskId", "task_id", "type", "updatedAt", "updated_at"},
@@ -161,6 +170,7 @@ DECLARED_NOWHERE = {
                                  "structuredResume", "structured_resume", "tailorDiff",
                                  "tailor_diff", "versionNo", "version_no"},
     ("mapCompany", "raw"): set(),
+    ("mapContact", "raw"): set(),
     ("mapSource", "raw"): {"chunkCount", "chunk_count", "chunks", "errorMessage", "error_message",
                            "fileName", "file_name", "type"},
     ("mapSessionScalars", "s"): {"depth", "level", "type"},
@@ -427,7 +437,9 @@ def test_the_unbound_mappers_ban_would_find_these_mappers_if_it_read_this_file()
     assert pattern.pattern == r"^(export )?function (\w+)[<(]", pattern.pattern
     seen = [name for _, name in pattern.findall(read(RESOURCES))]
     # 33 since #218 added `useApplication`, the board's by-id fallback.
-    assert len(seen) == 35, f"resources.ts now declares {len(seen)} functions for the ban's rule"
+    # 37 since the contacts registry (11.1): `mapContact` joined the named mappers and
+    # `useContacts` the query hooks.
+    assert len(seen) == 37, f"resources.ts now declares {len(seen)} functions for the ban's rule"
     assert [n for n in seen if n.startswith("map")] == NAMED_MAPPERS, \
         "the ban's own rule no longer recognizes these declarations in file order: " \
         f"{[n for n in seen if n.startswith('map')]}"
@@ -449,9 +461,9 @@ def test_the_scanner_finds_the_calls_and_names_each_row_actually_makes():
         assert len(found) == calls, f"{mapper}/{receiver}: {len(found)} calls, pinned {calls}"
         assert sum(len(lit) for _, lit in found) == names, \
             f"{mapper}/{receiver}: {sum(len(lit) for _, lit in found)} names, pinned {names}"
-    assert sum(len(v) for v in CALLED.values()) == 49, "the call table and the scan disagree"
-    assert sum(SCANNER_SHAPE[key][0] for key in SCANNER_SHAPE) == 51
-    assert sum(SCANNER_SHAPE[key][1] for key in SCANNER_SHAPE) == 110
+    assert sum(len(v) for v in CALLED.values()) == 58, "the call table and the scan disagree"
+    assert sum(SCANNER_SHAPE[key][0] for key in SCANNER_SHAPE) == 60
+    assert sum(SCANNER_SHAPE[key][1] for key in SCANNER_SHAPE) == 119
     # The calls the table above does not key are the envelopes': their receivers have no record, so
     # they are classified by payload shape in their own cases instead of by a first authored name.
     # Two rows now ride a bare list -- the versions history and the memories list.
@@ -482,7 +494,7 @@ def test_every_call_is_classified_against_the_record_behind_its_receiver():
         assert keyed == CALLED[(mapper, receiver)], \
             f"{mapper}/{receiver} no longer calls in the order the record answers: {keyed}"
     first_authored = [v for table in CALLED.values() for v in table.values()]
-    assert first_authored.count(0) == 41, first_authored.count(0)
+    assert first_authored.count(0) == 50, first_authored.count(0)
     assert first_authored.count(2) == 0, "a call asks its record's name third; re-measure which"
     assert first_authored.count(None) == 8, \
         f"{first_authored.count(None)} calls can never return a value, pinned 8"
@@ -495,7 +507,9 @@ def test_an_unauthored_name_is_a_snake_twin_a_foreign_name_or_a_name_no_record_d
     # itself rather than left as a floor a narrowing walk could satisfy by reading nothing.
     # 222 rather than 218 since `GrowthReportRequest` — the 10.2 bridge's request record —
     # carries `targetRole`/`targetSalary` and the growth-report family's own names.
-    assert len(everywhere) == 222, f"the backend record census read {len(everywhere)} component names"
+    # 224 rather than 222 since the contacts registry's request/item pair (11.1) carries
+    # `relation` and `lastTouchAt` — the registry's own names.
+    assert len(everywhere) == 224, f"the backend record census read {len(everywhere)} component names"
     assert {"id", "title", "status", "createdAt"} <= set(everywhere), sorted(list(everywhere)[:8])
     scanned_unauthored = scanned_nowhere = 0
     for (mapper, receiver), record in ROWS.items():
@@ -785,7 +799,8 @@ def test_the_dead_names_spread_in_three_measured_tiers_and_three_reached_a_scree
     # memories hooks' own test joined the settings page's memory surface.
     # 177 rather than 172 since the growth page and its layout (10.3), the resume-upload retry
     # module and its test, and the growth hooks' test joined.
-    assert len(files) == 177, f"the frontend census walked {len(files)} files"
+    # 179 rather than 177 since the networking page and its layout (11.1) joined.
+    assert len(files) == 179, f"the frontend census walked {len(files)} files"
     asked = {name for row in UNAUTHORED.values() for name in row}
     assert len(asked) == 57, f"{len(asked)} dead names are asked, pinned 57"
     classified = set()
