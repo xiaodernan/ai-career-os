@@ -139,9 +139,17 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   still pending.)
 
 ## Epic 16 — Production Hardening
-- [ ] **16.1** Monitoring/alerting on agent error rate, LLM cost, eval regressions.
+- [x] **16.1** Monitoring/alerting on agent error rate, LLM cost, eval regressions.
+  (ai-service half: `features/monitoring.py` -- `summarize_runs` (error rate, latency
+  percentiles, cost/token totals), `cost_by`, and a generic `detect_regressions` that
+  compares a metric set to a baseline with direction + severity; `health_report`
+  composes them into a healthy/warn/regressed verdict and also folds an eval harness's
+  current/baseline pair. Routed as `POST /internal/features/health-report`; the
+  dashboard/alert wiring is backend-side and still pending.)
 - [ ] **16.2** Rate-limit dashboard + the residual SECURITY.md risks closed.
-- [ ] **16.3** CI that runs all three suites + both eval harnesses on a schedule.
+- [x] **16.3** CI that runs all three suites + both eval harnesses on a schedule.
+  (`.github/workflows/ci.yml`: an offline gate for all three suites plus nightly
+  Docker-backed `*IT` and both eval harnesses.)
 
 ## Epic 17 — Internationalization & Accessibility
 - [ ] **17.1** CN/EN content parity (the product is CN-context but English content).
