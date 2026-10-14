@@ -215,6 +215,62 @@ class DomainApiIT extends ApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("contacts are private, fully editable, and blank fields are absence")
+    void contactsArePrivateAndFullyEditable() throws Exception {
+        String alice = register("ct-" + UUID.randomUUID() + "@example.com");
+        String bob = register("ctx-" + UUID.randomUUID() + "@example.com");
+
+        // Create: only the name is required; the optional fields the caller omitted stay absent.
+        MvcResult created = mvc.perform(post("/api/v1/contacts")
+                        .header(authHeader(), "Bearer " + alice)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\" 李雷 \"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.name").value("李雷"))
+                .andExpect(jsonPath("$.data.role").doesNotExist())
+                .andExpect(jsonPath("$.data.lastTouchAt").doesNotExist())
+                .andReturn();
+        String id = created.getResponse().getContentAsString();
+        id = MAPPER.readTree(id).path("data").path("id").asText();
+
+        // Another account's registry is empty, and its id cannot touch Alice's row.
+        mvc.perform(get("/api/v1/contacts").header(authHeader(), "Bearer " + bob))
+                .andExpect(jsonPath("$.data").isEmpty());
+        mvc.perform(patch("/api/v1/contacts/" + id)
+                        .header(authHeader(), "Bearer " + bob)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Hijacked\"}"))
+                .andExpect(status().isNotFound());
+
+        // A full update renames and fills the optionals, including the last-touch date.
+        mvc.perform(patch("/api/v1/contacts/" + id)
+                        .header(authHeader(), "Bearer " + alice)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"李雷\",\"role\":\"Staff Engineer\","
+                                + "\"company\":\"Acme\",\"relation\":\"referrer\","
+                                + "\"email\":\"lilei@acme.dev\","
+                                + "\"lastTouchAt\":\"2026-10-01T00:00:00Z\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.company").value("Acme"))
+                .andExpect(jsonPath("$.data.relation").value("referrer"))
+                .andExpect(jsonPath("$.data.lastTouchAt").isNotEmpty());
+
+        // A name-less row is refused before anything is stored.
+        mvc.perform(post("/api/v1/contacts")
+                        .header(authHeader(), "Bearer " + alice)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"role\":\"Staff Engineer\"}"))
+                .andExpect(status().isBadRequest());
+
+        mvc.perform(delete("/api/v1/contacts/" + id).header(authHeader(), "Bearer " + alice))
+                .andExpect(status().isNoContent());
+        mvc.perform(get("/api/v1/contacts").header(authHeader(), "Bearer " + alice))
+                .andExpect(jsonPath("$.data").isEmpty());
+        mvc.perform(get("/api/v1/contacts"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
     @DisplayName("a growth report's second run diffs against the stored one, per user")
     void growthReportSecondRunDiffsAgainstTheStoredOne() throws Exception {
         String alice = register("gr-" + UUID.randomUUID() + "@example.com");

@@ -73,7 +73,9 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   lines). Complements the adaptive coach (interview.py). Composes gap-analysis + stories.
 
 ## Epic 11 — Outreach & Networking
-- [ ] **11.1** Contacts registry (name, role, company, relation, last touch).
+- [x] **11.1** Contacts registry (name, role, company, relation, last touch).
+  (`/api/v1/contacts` CRUD, `V10__contacts`, user-scoped; the outreach generator's
+  `{name, role, company}` consumer shape came first and this registry feeds it.)
 - [x] **11.2** Referral / networking message generator (evidence-bound; validator
   strips any skill the profile does not support). (`features/outreach.py`)
 - [ ] **11.3** Follow-up reminders + cadence; surface stale contacts on dashboard.

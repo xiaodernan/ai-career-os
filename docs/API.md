@@ -185,6 +185,19 @@ dropped without a word. The question budget is a key inside `config`, in the sna
 interview engine reads it under — `{"config": {"max_questions": 12}}`, default 8. `config` is
 stored verbatim on the session, so the same place takes the rest of the run's tuning.
 
+### Contacts (`/contacts`)
+
+The networking registry (roadmap 11.1): the people a search actually touches. Every row is
+the caller's own; the optional fields a request omits are absent on the wire, not empty
+strings, and `lastTouchAt` is the user's claim about when contact last happened.
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/contacts` | this caller's people, most recently updated first |
+| POST | `/contacts` | `{name, role, company, relation, email, notes, lastTouchAt}` → the row (201). `name` is the only required field |
+| PATCH | `/contacts/{id}` | same shape, full replace (the form's current values); 404 when the row is not the caller's |
+| DELETE | `/contacts/{id}` | forgets one contact; 204 |
+
 ### Applications (`/applications`)
 
 | Method | Path | Notes |
