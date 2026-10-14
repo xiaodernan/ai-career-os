@@ -181,13 +181,12 @@ def stmt(body: str, needle: str) -> str:
 
 def test_every_mutation_the_app_declares_sits_in_a_function_the_walk_can_name():
     pop = sites()
-    # 38 rather than 37 since the memory card's `useUpdateMemory` and `useDeleteMemory` joined
-    # (each announcing its failure at the hook) while `useUploadDocument` was reworked into the
-    # batch uploader the knowledge page now mounts, so the walk's population moved by one net.
-    # Before them, `useRenameConversation`, `useDeleteConversation` (6a1c620) and `useImportJob`
-    # (bf2d91b) were the last to join. Those commits changed the population without this census,
-    # which is what this assertion is for -- it went red rather than quietly covering fewer sites.
-    assert len(pop) == 38, "the app declares %d mutations" % len(pop)
+    # 39 rather than 38 since `useGrowthReport` (10.3) joined, announcing its failure at the
+    # hook like the memory card's pair before it (38's own history is below). Before them,
+    # `useRenameConversation`, `useDeleteConversation` (6a1c620) and `useImportJob` (bf2d91b)
+    # were the last to join. Those commits changed the population without this census, which
+    # is what this assertion is for -- it went red rather than quietly covering fewer sites.
+    assert len(pop) == 39, "the app declares %d mutations" % len(pop)
     per_file = collections.Counter(s.rel for s in pop)
     assert per_file[AUTH_HOOKS] == 5 and per_file[ACTIONS] >= 25, "sites per hook file: %s" % dict(
         (k.split("/")[-1], v) for k, v in per_file.items()
@@ -204,7 +203,7 @@ def test_every_mutation_the_app_declares_sits_in_a_function_the_walk_can_name():
     )
 
 
-def test_the_hook_announces_thirty_three_failures_and_the_five_that_stay_quiet_are_all_auth():
+def test_the_hook_announces_thirty_four_failures_and_the_five_that_stay_quiet_are_all_auth():
     quiet = [s for s in sites() if not s.hook_level]
     assert len(quiet) == 5, "%d mutations announce nothing at the hook: %s" % (
         len(quiet), [s.where for s in quiet]
@@ -213,7 +212,7 @@ def test_the_hook_announces_thirty_three_failures_and_the_five_that_stay_quiet_a
         "useForgotPassword", "useLogin", "useLogout", "useRegister", "useResetPassword",
     ], "the hook-level silent set moved: %s" % sorted(s.name for s in quiet)
     assert {s.rel for s in quiet} == {AUTH_HOOKS}
-    assert len([s for s in sites() if s.hook_level]) == 33
+    assert len([s for s in sites() if s.hook_level]) == 34
     untyped = [s.where for s in sites() if "mutationFn" not in s.keys]
     assert not untyped, "a mutation with no mutationFn is not a request: %s" % untyped
 
@@ -313,9 +312,9 @@ def test_the_failure_helper_has_one_author_and_every_message_is_spent_once():
     )
     messages = fail_messages()
     reused = sorted(m for m, n in messages.items() if n > 1)
-    # 31 rather than 29: the memory card's two corrections each spent their own sentence
-    # ("Couldn't update that memory." / "Couldn't forget that memory.").
-    assert sum(messages.values()) == 31 and not reused, (
+    # 32 rather than 31: the growth page's report spent its own sentence
+    # ("Couldn't build the growth report.") on top of the memory card's pair.
+    assert sum(messages.values()) == 32 and not reused, (
         "fail() messages: %d uses, %d distinct, reused: %s" % (
             sum(messages.values()), len(messages), reused
         )
@@ -350,7 +349,7 @@ def test_the_failure_helper_has_one_author_and_every_message_is_spent_once():
 
 def test_this_gate_reads_the_same_shipped_sources_as_the_gates_it_borrows():
     assert len(sources()) >= 100, "the shared source walk read %d files" % len(sources())
-    assert len(sites()) == 38 and len([s for s in sites() if s.hook_level]) == 33
+    assert len(sites()) == 39 and len([s for s in sites() if s.hook_level]) == 34
     assert callers("useLogout") and callers("useLogin") and callers("useForgotPassword")
     for rel in (ACTIONS, AUTH_HOOKS, SOURCE_ACTIONS, CREDENTIALS, FORGOT, RESET, TOPBAR):
         assert rel in sources(), "%s is not in the population this gate reads" % rel

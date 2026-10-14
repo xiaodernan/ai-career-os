@@ -2103,7 +2103,8 @@ def test_the_run_stream_contract_is_one_table_of_publishers_cases_and_subscriber
     # 23 rather than 22 since `components/knowledge/source-actions.test.ts`, 22 rather than 21 since
     # `lib/api/missing-endpoint.test.ts`. The pin is a population, not a budget: a new test file belongs
     # in it, and the guard below still has to prove none of them ships.
-    assert len(skipped) == 31 and all(rel.endswith((".test.ts", ".test.tsx")) for rel, _t in skipped), \
+    # 33 rather than 31 since `lib/hooks/actions.test.ts` and `lib/resume-upload.test.ts` joined.
+    assert len(skipped) == 33 and all(rel.endswith((".test.ts", ".test.tsx")) for rel, _t in skipped), \
         (f"{len(skipped)} files are skipped and not one ships: a name in that set that is not a test file "
          "would be a subscriber hidden from the table by the pattern rather than by measurement")
     skipped_names = {rel.rsplit("/", 1)[-1] for rel, _t in skipped}

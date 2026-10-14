@@ -783,7 +783,9 @@ def test_the_dead_names_spread_in_three_measured_tiers_and_three_reached_a_scree
     # census counts every mention of it, this file included.)
     # 172 rather than 170 since the memory card (`components/settings/memory-card.tsx`) and the
     # memories hooks' own test joined the settings page's memory surface.
-    assert len(files) == 172, f"the frontend census walked {len(files)} files"
+    # 177 rather than 172 since the growth page and its layout (10.3), the resume-upload retry
+    # module and its test, and the growth hooks' test joined.
+    assert len(files) == 177, f"the frontend census walked {len(files)} files"
     asked = {name for row in UNAUTHORED.values() for name in row}
     assert len(asked) == 57, f"{len(asked)} dead names are asked, pinned 57"
     classified = set()
