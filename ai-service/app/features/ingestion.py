@@ -319,3 +319,65 @@ def parse_feed(xml_text: str, *, source: str = "rss") -> list[dict]:
             "source": source,
         })
     return out
+
+
+# ---------------- composition: one call a backend sweep can act on ----------------
+
+
+def plan_ingest(feed, *, source: str = "rss", existing: list[dict] | None = None,
+                now: datetime | None = None, max_age_days: int = 60,
+                stale_seen_days: int = 30) -> dict:
+    """Compose parse -> normalize -> dedupe -> freshness into one actionable plan.
+
+    ``feed`` is either raw RSS/Atom XML (a ``str``) or an already-parsed list of raw
+    postings. ``existing`` is the corpus already in ``jobs``. The result is the three
+    writes a backend sweep needs -- ``create`` (new), ``update`` (already known, carry
+    the ``existingId`` so the row is refreshed), ``close`` (known, expired, and *not*
+    re-seen this batch) -- plus the within-batch duplicates, never written twice.
+
+    Pure and deterministic, and honest about its limits: a close is only proposed for a
+    row that is expired *and* absent from this batch, so a still-live posting is never
+    closed just because it did not reappear today.
+    """
+    raw = parse_feed(feed, source=source) if isinstance(feed, str) else list(feed or [])
+    normalized = [normalize_posting(r, source=source) for r in raw]
+    deduped = dedupe_postings(normalized)
+    incoming = deduped["unique"]
+
+    existing = [e for e in (existing or []) if isinstance(e, dict)]
+    existing_by_fp: dict[str, dict] = {}
+    for e in existing:
+        existing_by_fp.setdefault(posting_fingerprint(e), e)
+
+    incoming_fps: set[str] = set()
+    create: list[dict] = []
+    update: list[dict] = []
+    for p in incoming:
+        fp = posting_fingerprint(p)
+        incoming_fps.add(fp)
+        if fp in existing_by_fp:
+            update.append({**p, "existingId": existing_by_fp[fp].get("id")})
+        else:
+            create.append(p)
+
+    sweep = freshness_sweep(existing, now=now, max_age_days=max_age_days,
+                            stale_seen_days=stale_seen_days)
+    expired_ids = {x["id"] for x in sweep["expired"]}
+    close = [{"id": e.get("id"), "title": e.get("title")} for e in existing
+             if e.get("id") in expired_ids
+             and posting_fingerprint(e) not in incoming_fps]
+
+    return {
+        "source": source,
+        "create": create,
+        "update": update,
+        "close": close,
+        "duplicates": deduped["duplicates"],
+        "counts": {
+            "incoming": len(incoming),
+            "create": len(create),
+            "update": len(update),
+            "close": len(close),
+            "duplicates": len(deduped["duplicates"]),
+        },
+    }

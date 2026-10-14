@@ -181,3 +181,55 @@ def test_parse_feed_then_normalize_roundtrip():
     norm = [I.normalize_posting(i, source="rss") for i in items]
     assert norm[0]["title"] == "Senior Backend Engineer"
     assert norm[0]["external_url"] == "https://jobs.example.com/1"
+
+
+# ---------------- composition: plan_ingest ----------------
+
+
+def test_plan_ingest_creates_from_feed_string():
+    plan = I.plan_ingest(RSS, source="rss")
+    assert plan["counts"]["create"] == 2
+    assert plan["counts"]["update"] == 0 and plan["counts"]["close"] == 0
+    assert plan["create"][0]["title"] == "Senior Backend Engineer"
+
+
+def test_plan_ingest_updates_known_by_fingerprint():
+    existing = [{"id": "job-1", "company": "Acme", "title": "Backend Engineer",
+                 "location": "Shanghai", "posted_at": (NOW - timedelta(days=5)).isoformat()}]
+    incoming = [{"title": "Backend Engineer", "company": "Acme", "location": "Shanghai"}]
+    plan = I.plan_ingest(incoming, source="rss", existing=existing, now=NOW)
+    assert plan["counts"]["create"] == 0 and plan["counts"]["update"] == 1
+    assert plan["update"][0]["existingId"] == "job-1"
+
+
+def test_plan_ingest_closes_expired_absent_row():
+    existing = [
+        {"id": "old", "company": "Acme", "title": "Old Role", "location": "SH",
+         "posted_at": (NOW - timedelta(days=120)).isoformat()},
+        {"id": "keep", "company": "Acme", "title": "Live Role", "location": "SH",
+         "posted_at": (NOW - timedelta(days=5)).isoformat()},
+    ]
+    plan = I.plan_ingest([], source="rss", existing=existing, now=NOW, max_age_days=60)
+    assert [c["id"] for c in plan["close"]] == ["old"]  # expired + not re-seen
+    assert plan["counts"]["create"] == 0
+
+
+def test_plan_ingest_expired_row_reseen_is_not_closed():
+    existing = [{"id": "old", "company": "Acme", "title": "Old Role", "location": "SH",
+                 "posted_at": (NOW - timedelta(days=120)).isoformat()}]
+    incoming = [{"title": "Old Role", "company": "Acme", "location": "SH",
+                 "posted_at": (NOW - timedelta(days=1)).isoformat()}]
+    plan = I.plan_ingest(incoming, source="rss", existing=existing, now=NOW)
+    assert plan["close"] == []          # re-seen this batch -> refreshed, not closed
+    assert plan["counts"]["update"] == 1
+
+
+def test_plan_ingest_reports_within_batch_duplicates():
+    incoming = [
+        {"title": "Dup", "company": "C", "location": "L", "posted_at": "2026-10-01"},
+        {"title": "dup", "company": "c", "location": "l", "posted_at": "2026-09-01"},
+    ]
+    plan = I.plan_ingest(incoming, source="rss", now=NOW)
+    assert plan["counts"]["create"] == 1 and plan["counts"]["duplicates"] == 1
+    # raw postings carry no id, so duplicateOf is None but the shared fingerprint is reported
+    assert plan["duplicates"][0]["fingerprint"] == "c|dup|l"

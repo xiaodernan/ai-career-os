@@ -603,3 +603,22 @@ async def freshness_sweep_ep(req: FreshnessSweepReq, ctx: Ctx = Depends(require_
                                            stale_seen_days=req.stale_seen_days)
     await observability.finish_run(run_id, "completed")
     return result
+
+
+class PlanIngestReq(BaseModel):
+    postings: list[dict] = Field(min_length=1)
+    existing: list[dict] | None = None
+    source: str = "rss"
+    max_age_days: int = Field(default=60, ge=1, le=365)
+    stale_seen_days: int = Field(default=30, ge=1, le=365)
+
+
+@router.post("/plan-ingest")
+async def plan_ingest_ep(req: PlanIngestReq, ctx: Ctx = Depends(require_internal)):
+    """14.3 -- one plan for a sweep: create / update / close + within-batch duplicates."""
+    run_id = await _run(ctx, "ingestion", "plan_ingest")
+    result = ingestion_mod.plan_ingest(
+        req.postings, source=req.source, existing=req.existing,
+        max_age_days=req.max_age_days, stale_seen_days=req.stale_seen_days)
+    await observability.finish_run(run_id, "completed")
+    return result

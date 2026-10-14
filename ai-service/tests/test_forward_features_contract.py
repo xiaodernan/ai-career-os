@@ -50,6 +50,7 @@ FORWARD = {
     "/internal/features/insight-digest": ("InsightDigestReq", {"applications"}),
     "/internal/features/dedupe-jobs": ("DedupeJobsReq", {"postings"}),
     "/internal/features/freshness-sweep": ("FreshnessSweepReq", {"postings"}),
+    "/internal/features/plan-ingest": ("PlanIngestReq", {"postings"}),
 }
 
 
@@ -311,4 +312,10 @@ def test_freshness_sweep_response_keys():
     out = ingestion.freshness_sweep([{"id": "a", "posted_at": "2026-01-01"}])
     assert set(out) == {"fresh", "stale", "expired", "undated", "counts"}
     assert set(out["counts"]) == {"fresh", "stale", "expired", "undated"}
+
+
+def test_plan_ingest_response_keys():
+    out = ingestion.plan_ingest([{"title": "T", "company": "C", "location": "L"}])
+    assert set(out) == {"source", "create", "update", "close", "duplicates", "counts"}
+    assert set(out["counts"]) == {"incoming", "create", "update", "close", "duplicates"}
 
