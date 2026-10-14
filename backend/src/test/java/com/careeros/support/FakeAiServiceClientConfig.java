@@ -244,10 +244,13 @@ public class FakeAiServiceClientConfig {
         public Map<String, Object> growthReport(com.careeros.ai.dto.GrowthReportRequest request,
                                                 UUID userId) {
             record("growthReport");
+            // The diff is the engine's own rule: a run with no previous in the request is a
+            // baseline, which is exactly how the service feeds the stored gap block through.
             return map("readiness", map("verdict", "not_ready", "coverage", 0.42),
                     "gap", map("coverage", 0.42, "gaps", List.of()),
                     "salary", map("p25", 300000, "p50", 420000, "p75", 560000, "currency",
-                            request.currency() == null ? "CNY" : request.currency()));
+                            request.currency() == null ? "CNY" : request.currency()),
+                    "progress", map("baseline", request.previous() == null));
         }
 
         /**

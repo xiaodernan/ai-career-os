@@ -43,8 +43,10 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   bars (covered / partial / gap), learning plan, salary band, progress delta.
   (`/growth`, rendered from the 10.2 aggregate; the panel hands its own gap block
   back as `previous` until 10.4 persists the plan server-side).
-- [ ] **10.4** Persist a `growth_plan` per (user, target_role) so repeat runs diff
-  (needs a migration + a knowledge-table write; backend-owned schema).
+- [x] **10.4** Persist a `growth_plan` per (user, target_role) so repeat runs diff.
+  (`V9__growth_plans` + `GrowthService`: every run stored, the stored gap block fed
+  back as the next run's `previous` unless the caller brought one; a failed store
+  degrades the next diff, never the answer.)
 - [x] **10.5** Learning plan: gaps → phased study items (foundation → core → applied)
   with category-aware resource hints. (`features/learning.py`)
 - [x] **10.6** Skill-progress tracking: diff two gap reports → closed / improved /

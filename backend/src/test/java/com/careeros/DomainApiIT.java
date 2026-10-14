@@ -215,6 +215,39 @@ class DomainApiIT extends ApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("a growth report's second run diffs against the stored one, per user")
+    void growthReportSecondRunDiffsAgainstTheStoredOne() throws Exception {
+        String alice = register("gr-" + UUID.randomUUID() + "@example.com");
+        String bob = register("grx-" + UUID.randomUUID() + "@example.com");
+        String body = "{\"targetRole\":\"Senior Backend Engineer (Java)\"}";
+
+        // First run: nothing stored yet, the progress block is a baseline.
+        mvc.perform(post("/api/v1/growth-report").header(authHeader(), "Bearer " + alice)
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.readiness.verdict").value("not_ready"))
+                .andExpect(jsonPath("$.data.progress.baseline").value(true));
+
+        // Second run, same role: the service fed the stored gap block to the engine, so
+        // the diff is against an observation, not a browser-held copy.
+        mvc.perform(post("/api/v1/growth-report").header(authHeader(), "Bearer " + alice)
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.progress.baseline").value(false));
+
+        // Another account, same role: its first run is its own baseline — the storage is
+        // user-scoped like every table in this schema.
+        mvc.perform(post("/api/v1/growth-report").header(authHeader(), "Bearer " + bob)
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.progress.baseline").value(true));
+
+        mvc.perform(post("/api/v1/growth-report")
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
     @DisplayName("job create with a nested company persists the company name (regression)")
     void jobCreateWithNestedCompany() throws Exception {
         String alice = register("job-" + UUID.randomUUID() + "@example.com");

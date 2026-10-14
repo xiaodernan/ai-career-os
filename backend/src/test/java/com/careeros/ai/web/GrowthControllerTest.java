@@ -10,8 +10,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.careeros.ai.AiServiceClient;
 import com.careeros.ai.dto.GrowthReportRequest;
+import com.careeros.ai.service.GrowthService;
 import com.careeros.common.AuthUser;
 import com.careeros.common.CurrentUserArgumentResolver;
 import com.careeros.common.EnvelopeAdvice;
@@ -40,13 +40,13 @@ class GrowthControllerTest {
 
     private static final String USER = "6b0178a0-d352-09c3-ea65-8f107bd28d01";
 
-    private AiServiceClient ai;
+    private GrowthService growth;
     private MockMvc mvc;
 
     @BeforeEach
     void setUp() {
-        ai = mock(AiServiceClient.class);
-        GrowthController controller = new GrowthController(ai);
+        growth = mock(GrowthService.class);
+        GrowthController controller = new GrowthController(growth);
         mvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new EnvelopeAdvice(), new GlobalExceptionHandler())
                 .setCustomArgumentResolvers(new CurrentUserArgumentResolver())
@@ -65,7 +65,7 @@ class GrowthControllerTest {
         Map<String, Object> report = Map.of(
                 "readiness", Map.of("verdict", "not_ready", "coverage", 0.42),
                 "salary", Map.of("p50", 420000));
-        when(ai.growthReport(any(GrowthReportRequest.class), eq(UUID.fromString(USER))))
+        when(growth.report(eq(UUID.fromString(USER)), any(GrowthReportRequest.class)))
                 .thenReturn(report);
 
         mvc.perform(post("/api/v1/growth-report")
@@ -80,7 +80,7 @@ class GrowthControllerTest {
                 .andExpect(jsonPath("$.data.salary.p50").value(420000));
 
         ArgumentCaptor<GrowthReportRequest> sent = ArgumentCaptor.forClass(GrowthReportRequest.class);
-        verify(ai).growthReport(sent.capture(), eq(UUID.fromString(USER)));
+        verify(growth).report(eq(UUID.fromString(USER)), sent.capture());
         assertThat(sent.getValue().targetRole()).isEqualTo("Senior Backend Engineer (Java)");
         assertThat(sent.getValue().seniority()).isEqualTo("senior");
         assertThat(sent.getValue().location()).isEqualTo("Shanghai");
@@ -98,7 +98,7 @@ class GrowthControllerTest {
                         .content("{\"targetRole\":\"Chef\"}"))
                 .andExpect(status().isBadRequest());
 
-        org.mockito.Mockito.verifyNoInteractions(ai);
+        org.mockito.Mockito.verifyNoInteractions(growth);
     }
 
     @Test
