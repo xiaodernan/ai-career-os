@@ -21,9 +21,9 @@ from pydantic import BaseModel
 
 from app.core.deps import require_internal
 from app.features import (analytics, company, counter_offer, demand, gap_analysis,
-                          growth, ingestion, interview_prep, learning, negotiation,
-                          offers, outreach, prioritize, progress, progression,
-                          readiness, roles, salary, stories)
+                          growth, ingestion, interview_prep, learning, monitoring,
+                          negotiation, offers, outreach, prioritize, progress,
+                          progression, readiness, roles, salary, stories)
 from app.main import app
 
 # path -> (request model name, required field names)
@@ -51,6 +51,7 @@ FORWARD = {
     "/internal/features/dedupe-jobs": ("DedupeJobsReq", {"postings"}),
     "/internal/features/freshness-sweep": ("FreshnessSweepReq", {"postings"}),
     "/internal/features/plan-ingest": ("PlanIngestReq", {"postings"}),
+    "/internal/features/health-report": ("HealthReportReq", {"runs"}),
 }
 
 
@@ -318,4 +319,12 @@ def test_plan_ingest_response_keys():
     out = ingestion.plan_ingest([{"title": "T", "company": "C", "location": "L"}])
     assert set(out) == {"source", "create", "update", "close", "duplicates", "counts"}
     assert set(out["counts"]) == {"incoming", "create", "update", "close", "duplicates"}
+
+
+def test_health_report_response_keys():
+    out = monitoring.health_report([{"status": "completed", "latency_ms": 10}])
+    assert set(out) == {"summary", "regressions", "alerts", "verdict"}
+    assert set(out["summary"]) == {
+        "totalRuns", "byStatus", "finished", "completed", "failed", "errorRate",
+        "successRate", "latencyMs", "totalCostUsd", "avgCostUsd", "totalTokens"}
 

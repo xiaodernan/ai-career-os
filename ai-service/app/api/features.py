@@ -26,6 +26,7 @@ from app.features import prioritize as prioritize_mod
 from app.features import interview_prep as interview_prep_mod
 from app.features import analytics as analytics_mod
 from app.features import ingestion as ingestion_mod
+from app.features import monitoring as monitoring_mod
 from app.features.cover_letter import generate as cover_generate
 
 router = APIRouter(prefix="/internal/features", tags=["features"])
@@ -620,5 +621,26 @@ async def plan_ingest_ep(req: PlanIngestReq, ctx: Ctx = Depends(require_internal
     result = ingestion_mod.plan_ingest(
         req.postings, source=req.source, existing=req.existing,
         max_age_days=req.max_age_days, stale_seen_days=req.stale_seen_days)
+    await observability.finish_run(run_id, "completed")
+    return result
+
+
+class HealthReportReq(BaseModel):
+    runs: list[dict] = Field(min_length=1)
+    baseline_summary: dict | None = None
+    usage_events: list[dict] | None = None
+    current_metrics: dict | None = None
+    baseline_metrics: dict | None = None
+    tolerance: float = Field(default=0.2, gt=0, le=1)
+
+
+@router.post("/health-report")
+async def health_report_ep(req: HealthReportReq, ctx: Ctx = Depends(require_internal)):
+    """16.1 -- agent health + cost + regression verdict over a window of runs."""
+    run_id = await _run(ctx, "monitoring", "health_report")
+    result = monitoring_mod.health_report(
+        req.runs, baseline_summary=req.baseline_summary, usage_events=req.usage_events,
+        current_metrics=req.current_metrics, baseline_metrics=req.baseline_metrics,
+        tolerance=req.tolerance)
     await observability.finish_run(run_id, "completed")
     return result
