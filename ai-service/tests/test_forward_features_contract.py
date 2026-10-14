@@ -21,9 +21,9 @@ from pydantic import BaseModel
 
 from app.core.deps import require_internal
 from app.features import (analytics, company, counter_offer, demand, gap_analysis,
-                          growth, interview_prep, learning, negotiation, offers,
-                          outreach, prioritize, progress, progression, readiness,
-                          roles, salary, stories)
+                          growth, ingestion, interview_prep, learning, negotiation,
+                          offers, outreach, prioritize, progress, progression,
+                          readiness, roles, salary, stories)
 from app.main import app
 
 # path -> (request model name, required field names)
@@ -48,6 +48,8 @@ FORWARD = {
     "/internal/features/pipeline-funnel": ("PipelineFunnelReq", {"applications"}),
     "/internal/features/response-rate": ("ResponseRateReq", {"applications"}),
     "/internal/features/insight-digest": ("InsightDigestReq", {"applications"}),
+    "/internal/features/dedupe-jobs": ("DedupeJobsReq", {"postings"}),
+    "/internal/features/freshness-sweep": ("FreshnessSweepReq", {"postings"}),
 }
 
 
@@ -294,4 +296,19 @@ def test_insight_digest_response_keys():
                         "activePipeline", "stageCounts", "responseRate", "offerRate",
                         "stalledCount", "stalled", "signals", "growthDeltas",
                         "topMatches"}
+
+
+def test_dedupe_jobs_response_keys():
+    out = ingestion.dedupe_postings([
+        {"id": "a", "company": "C", "title": "T", "location": "L"},
+        {"id": "b", "company": "C", "title": "T", "location": "L"},
+    ])
+    assert set(out) == {"unique", "duplicates", "inputCount", "uniqueCount",
+                        "duplicateCount"}
+
+
+def test_freshness_sweep_response_keys():
+    out = ingestion.freshness_sweep([{"id": "a", "posted_at": "2026-01-01"}])
+    assert set(out) == {"fresh", "stale", "expired", "undated", "counts"}
+    assert set(out["counts"]) == {"fresh", "stale", "expired", "undated"}
 

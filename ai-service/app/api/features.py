@@ -25,6 +25,7 @@ from app.features import progression as progression_mod
 from app.features import prioritize as prioritize_mod
 from app.features import interview_prep as interview_prep_mod
 from app.features import analytics as analytics_mod
+from app.features import ingestion as ingestion_mod
 from app.features.cover_letter import generate as cover_generate
 
 router = APIRouter(prefix="/internal/features", tags=["features"])
@@ -571,5 +572,34 @@ async def insight_digest_ep(req: InsightDigestReq, ctx: Ctx = Depends(require_in
     result = analytics_mod.insight_digest(
         [a.model_dump() for a in req.applications], stale_days=req.stale_days,
         growth_deltas=req.growth_deltas, top_matches=req.top_matches)
+    await observability.finish_run(run_id, "completed")
+    return result
+
+
+class DedupeJobsReq(BaseModel):
+    postings: list[dict] = Field(min_length=1)
+
+
+@router.post("/dedupe-jobs")
+async def dedupe_jobs_ep(req: DedupeJobsReq, ctx: Ctx = Depends(require_internal)):
+    """14.3 -- collapse the same posting seen from multiple sources to one survivor."""
+    run_id = await _run(ctx, "ingestion", "dedupe_jobs")
+    result = ingestion_mod.dedupe_postings(req.postings)
+    await observability.finish_run(run_id, "completed")
+    return result
+
+
+class FreshnessSweepReq(BaseModel):
+    postings: list[dict] = Field(min_length=1)
+    max_age_days: int = Field(default=60, ge=1, le=365)
+    stale_seen_days: int = Field(default=30, ge=1, le=365)
+
+
+@router.post("/freshness-sweep")
+async def freshness_sweep_ep(req: FreshnessSweepReq, ctx: Ctx = Depends(require_internal)):
+    """14.3 -- split the corpus into fresh / stale (re-check) / expired (close)."""
+    run_id = await _run(ctx, "ingestion", "freshness_sweep")
+    result = ingestion_mod.freshness_sweep(req.postings, max_age_days=req.max_age_days,
+                                           stale_seen_days=req.stale_seen_days)
     await observability.finish_run(run_id, "completed")
     return result
