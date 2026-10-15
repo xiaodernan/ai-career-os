@@ -23,6 +23,7 @@ so a sweep never merges two genuinely different roles.
 
 from __future__ import annotations
 
+import json
 import re
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
@@ -318,6 +319,46 @@ def parse_feed(xml_text: str, *, source: str = "rss") -> list[dict]:
             "company": company,
             "source": source,
         })
+    return out
+
+
+BOARD_ARRAY_KEYS = ("jobs", "data", "results", "items", "postings")
+
+
+def parse_json_board(text: str, *, source: str = "board") -> list[dict]:
+    """Parse a board-API JSON payload into raw postings (no network, stdlib only).
+
+    Accepts either a top-level array of posting objects or an object carrying the
+    array under one of ``jobs`` / ``data`` / ``results`` / ``items`` / ``postings``
+    -- the shapes real board APIs use. Non-JSON, an oversized payload, or an object
+    with no recognised array raises ``ValueError`` rather than returning an empty
+    success, so a broken board surfaces instead of silently ingesting nothing.
+    """
+    if text is None:
+        raise ValueError("board payload is empty")
+    if len(text.encode("utf-8", "ignore")) > MAX_FEED_BYTES:
+        raise ValueError("board payload exceeds the size cap")
+    try:
+        data = json.loads(text)
+    except (json.JSONDecodeError, TypeError) as e:
+        raise ValueError(f"invalid board json: {e}") from e
+
+    if isinstance(data, dict):
+        for key in BOARD_ARRAY_KEYS:
+            if isinstance(data.get(key), list):
+                data = data[key]
+                break
+        else:
+            raise ValueError(
+                f"no posting array found (looked for {', '.join(BOARD_ARRAY_KEYS)})")
+    if not isinstance(data, list):
+        raise ValueError("expected a JSON array of postings")
+
+    out: list[dict] = []
+    for item in data:
+        row = dict(item) if isinstance(item, dict) else {"title": str(item)}
+        row.setdefault("source", source)
+        out.append(row)
     return out
 
 

@@ -644,3 +644,17 @@ async def health_report_ep(req: HealthReportReq, ctx: Ctx = Depends(require_inte
         tolerance=req.tolerance)
     await observability.finish_run(run_id, "completed")
     return result
+
+
+class ParseBoardReq(BaseModel):
+    payload: str = Field(min_length=2)
+    source: str = "board"
+
+
+@router.post("/parse-board")
+async def parse_board_ep(req: ParseBoardReq, ctx: Ctx = Depends(require_internal)):
+    """14.2 -- parse a board-API JSON payload into raw postings."""
+    run_id = await _run(ctx, "ingestion", "parse_board")
+    postings = ingestion_mod.parse_json_board(req.payload, source=req.source)
+    await observability.finish_run(run_id, "completed")
+    return {"postings": postings, "count": len(postings)}

@@ -233,3 +233,50 @@ def test_plan_ingest_reports_within_batch_duplicates():
     assert plan["counts"]["create"] == 1 and plan["counts"]["duplicates"] == 1
     # raw postings carry no id, so duplicateOf is None but the shared fingerprint is reported
     assert plan["duplicates"][0]["fingerprint"] == "c|dup|l"
+
+
+# ---------------- 14.2 board-API JSON parsing ----------------
+
+
+def test_parse_json_board_array():
+    items = I.parse_json_board('[{"title": "Backend", "company": "Acme"}]')
+    assert len(items) == 1
+    assert items[0]["title"] == "Backend"
+    assert items[0]["source"] == "board"
+
+
+def test_parse_json_board_wrapped_object():
+    payload = '{"jobs": [{"title": "A"}, {"title": "B"}], "total": 2}'
+    items = I.parse_json_board(payload, source="greenhouse")
+    assert [i["title"] for i in items] == ["A", "B"]
+    assert items[0]["source"] == "greenhouse"
+
+
+def test_parse_json_board_accepts_data_key():
+    items = I.parse_json_board('{"data": [{"title": "C"}]}')
+    assert items[0]["title"] == "C"
+
+
+def test_parse_json_board_invalid_json_raises():
+    with pytest.raises(ValueError):
+        I.parse_json_board("{not json")
+
+
+def test_parse_json_board_no_array_raises():
+    with pytest.raises(ValueError):
+        I.parse_json_board('{"total": 0}')
+
+
+def test_parse_json_board_non_array_raises():
+    with pytest.raises(ValueError):
+        I.parse_json_board("42")
+
+
+def test_parse_json_board_size_cap():
+    with pytest.raises(ValueError):
+        I.parse_json_board("x" * (I.MAX_FEED_BYTES + 1))
+
+
+def test_parse_json_board_scalar_items_wrapped():
+    items = I.parse_json_board('["Just a title"]')
+    assert items[0]["title"] == "Just a title"
