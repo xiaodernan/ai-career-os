@@ -115,8 +115,10 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   stay in the backend.)
 - [x] **14.2** First real connector (e.g. RSS/Atom board) with the same hybrid index path
   as the seed import. (ai-service half: `features/ingestion.py::parse_feed` parses RSS
-  2.0 / Atom XML with the standard library only, offline and size-capped. The fetch half
-  and the hybrid-index write remain backend-side.)
+  2.0 / Atom XML, and `parse_json_board` parses a board-API JSON payload (top-level array
+  or jobs/data/results/items/postings) -- both stdlib-only, offline, size-capped, and
+  raising on bad input. Routed as `POST /internal/features/parse-board` for the JSON path.
+  The fetch half and the hybrid-index write remain backend-side.)
 - [x] **14.3** De-duplication + freshness sweep against existing `jobs`.
   (`features/ingestion.py::dedupe_postings` collapses exact-fingerprint duplicates to
   the newest / most complete survivor; `freshness_sweep` partitions into fresh / stale /
