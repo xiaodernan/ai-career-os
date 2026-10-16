@@ -79,7 +79,15 @@ for "what to build next" across sessions; pick the top un-done task and execute.
 - [x] **11.2** Referral / networking message generator (evidence-bound; validator
   strips any skill the profile does not support). (`features/outreach.py`)
 - [ ] **11.3** Follow-up reminders + cadence; surface stale contacts on dashboard.
-- [ ] **11.4** Networking subagent wired into the orchestrator's whitelist.
+  The engine and its agent-facing half shipped first: `features/reminders.py` ranks a
+  contact against its own relation's cadence (bucket before days, so a contact past due
+  outranks a merely-old one) and the `get_follow_ups` tool hands that list to the agent.
+  What is left is the dashboard tile that shows it without a conversation.
+- [x] **11.4** Networking subagent wired into the orchestrator's whitelist.
+  (`SUBAGENT_TOOLS["networking"]` = `search_contacts`, `get_follow_ups`, `draft_outreach`,
+  `log_contact_touch`, `get_user_profile` -- the contact reads plus one touch write, and
+  no job or application tool, which is the boundary AGENTS.md §2 documents and
+  `tests/test_networking_tools.py` enforces.)
 
 ## Epic 12 — Salary & Offer Intelligence
 - [x] **12.1** Salary benchmarking against the seeded corpus (percentiles by role /

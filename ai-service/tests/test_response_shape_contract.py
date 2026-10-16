@@ -2877,8 +2877,10 @@ def test_the_heartbeat_interval_has_one_definer_and_every_shipped_claim_names_it
          "interval is a claim this gate has to be able to check rather than a second opinion")
     assert [(row["file"], row["line"]) for row in doc_vocabulary] == [
         # SECURITY.md's keep-alive mention moved again (148 -> 150): the 10.2 bridge's `/growth`
-        # joined the throttle list above it, the sentence itself unchanged.
-        ("AGENTS.md", 144), ("DEPLOYMENT.md", 8), ("SECURITY.md", 150),
+        # joined the throttle list above it, the sentence itself unchanged. AGENTS.md's moved
+        # 144 -> 150 for the same reason: the networking subagent's §2 whitelist row and the four
+        # §4 tool rows joined the tables above it, and that sentence did not change either.
+        ("AGENTS.md", 150), ("DEPLOYMENT.md", 8), ("SECURITY.md", 150),
     ], (f"{doc_vocabulary}: the docs' own vocabulary is censused, so this pass is not reporting on an "
         "empty set -- and a second file picking up the word is a signal the ledger has to grow")
 

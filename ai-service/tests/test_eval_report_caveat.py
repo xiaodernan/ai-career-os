@@ -9,6 +9,7 @@ looks like semantic retrieval, when neither is being measured.
 
 import pytest
 
+from app.agents.tools import TOOL_INDEX
 from app.eval.run_eval import (
     METRIC_KEYS,
     _markdown,
@@ -176,10 +177,17 @@ def test_no_caveat_leaves_the_report_unchanged():
 
 def test_the_agent_report_disclaims_tool_selection_under_a_stub():
     """Same reasoning as the RAG caveat, different metric: `tool_f1` under `mock`
-    measures a three-keyword router against the 15 tools the orchestrator offers."""
+    measures a three-keyword router against the tools the orchestrator offers. The count
+    is read from `TOOL_INDEX`, not typed here — a hand-typed number in a caveat about
+    numbers is the first thing to go stale when a tool lands."""
     out = " ".join(agent_caveat({"llm_provider": "mock"}))
     assert "Tool selection is unmeasured" in out
-    assert "three-keyword" in out and "15 tools" in out
+    assert "three-keyword" in out
+    offered = f"{len(TOOL_INDEX)} tools"
+    assert offered in out, (
+        f"the caveat no longer states the {offered} the orchestrator actually offers -- "
+        f"it is the whole point of the note: the router picks among that many while the "
+        f"stub reads three keywords")
     # What the run DOES establish has to be said too, or 0 violations reads as vacuous.
     assert "forbidden_violations" in out
 

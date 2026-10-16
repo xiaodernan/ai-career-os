@@ -1,7 +1,7 @@
 """AGENTS.md's subagent whitelists and tool table are the ones `tools.py` ships.
 
 `docs/AGENTS.md` is the document a reader trusts to answer "what can this agent actually
-do". Its §2 table is the load-bearing one: seven subagents, each with an explicit tool
+do". Its §2 table is the load-bearing one: eight subagents, each with an explicit tool
 whitelist, and the whole security argument for the design is that the interview agent
 *physically cannot* save a job -- not that it is told not to. PRODUCT.md repeats that
 claim, so it is not a throwaway sentence.
@@ -9,7 +9,7 @@ claim, so it is not a throwaway sentence.
 A whitelist that only exists in prose is a whitelist nobody audits. Adding a tool to
 `rag` in `tools.py` is a one-line edit that grants every subagent sharing that entry a
 new capability, and nothing in the repo would notice that the document describing the
-boundary had stopped describing it. The same holds for §4's tool table: fifteen rows
+boundary had stopped describing it. The same holds for §4's tool table: nineteen rows
 naming each tool and the artifact it produces, which is what the UI renders.
 
 So both tables are read out of the code and reconciled with the doc, in both directions.
@@ -47,8 +47,8 @@ CONVERSATION = (
     / "ConversationService.java"
 )
 
-MINIMUM_TOOLS = 15
-MINIMUM_SUBAGENTS = 7
+MINIMUM_TOOLS = 19
+MINIMUM_SUBAGENTS = 8
 
 
 def read(path: Path) -> str:

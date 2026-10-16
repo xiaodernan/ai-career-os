@@ -14,7 +14,7 @@ NOW = datetime(2026, 10, 14, 12, 0, tzinfo=timezone.utc)
 
 def _contact(**kw) -> dict:
     base = {"name": "Ada Lovelace", "company": "Acme", "relation": "recruiter",
-            "last_touch": None}
+            "last_touch_at": None}
     base.update(kw)
     return base
 
@@ -53,22 +53,22 @@ def test_cadence_unknown_or_none_defaults():
 
 
 def test_priority_never_touched_is_overdue():
-    assert rm.priority_for({"last_touch": None}, NOW) == "overdue"
+    assert rm.priority_for({"last_touch_at": None}, NOW) == "overdue"
 
 
 def test_priority_past_cadence_is_overdue():
-    recruiter = {"relation": "recruiter", "last_touch": "2026-09-01"}  # 43d > 30
+    recruiter = {"relation": "recruiter", "last_touch_at": "2026-09-01"}  # 43d > 30
     assert rm.priority_for(recruiter, NOW) == "overdue"
 
 
 def test_priority_within_soon_window():
     # 22 days since, cadence 30 -> 22 >= 0.7*30 (21) -> soon
-    recruiter = {"relation": "recruiter", "last_touch": "2026-09-22"}
+    recruiter = {"relation": "recruiter", "last_touch_at": "2026-09-22"}
     assert rm.priority_for(recruiter, NOW) == "soon"
 
 
 def test_priority_fresh():
-    recruiter = {"relation": "recruiter", "last_touch": "2026-10-12"}  # 2d
+    recruiter = {"relation": "recruiter", "last_touch_at": "2026-10-12"}  # 2d
     assert rm.priority_for(recruiter, NOW) == "fresh"
 
 
@@ -77,10 +77,10 @@ def test_priority_fresh():
 
 def test_surface_stale_omits_fresh_and_ranks():
     contacts = [
-        _contact(name="Fresh", relation="peer", last_touch="2026-10-13"),       # 1d fresh
-        _contact(name="Old", relation="peer", last_touch="2026-01-01"),          # ~286d overdue
-        _contact(name="Soon", relation="peer", last_touch="2026-08-01"),         # ~74d soon
-        _contact(name="Never", relation="peer", last_touch=None),                # overdue
+        _contact(name="Fresh", relation="peer", last_touch_at="2026-10-13"),       # 1d fresh
+        _contact(name="Old", relation="peer", last_touch_at="2026-01-01"),          # ~286d overdue
+        _contact(name="Soon", relation="peer", last_touch_at="2026-08-01"),         # ~74d soon
+        _contact(name="Never", relation="peer", last_touch_at=None),                # overdue
     ]
     out = rm.surface_stale(contacts, NOW)
     names = [c["name"] for c in out]
@@ -90,14 +90,32 @@ def test_surface_stale_omits_fresh_and_ranks():
     assert names == ["Never", "Old", "Soon"]
 
 
+def test_an_overdue_contact_outranks_one_that_is_only_soon():
+    """The ranking answers "who do I write next", so the bucket decides before the days.
+
+    A 74-day peer is *soon* on its 90-day cadence; a 43-day recruiter is *overdue* on a
+    cadence one-third as long.
+    Sorting on raw days would put the peer first and tell the user to write the person
+    who still has 16 days left before the one who is 13 days late.
+    """
+    contacts = [_contact(name="Soon", relation="peer", last_touch_at="2026-08-01"),
+                _contact(name="Late", relation="recruiter", last_touch_at="2026-09-01")]
+    out = rm.surface_stale(contacts, NOW)
+
+    assert [c["name"] for c in out] == ["Late", "Soon"]
+    assert [c["priority"] for c in out] == ["overdue", "soon"]
+    assert [c["days_since"] for c in out] == [43, 74], (
+        "the days still ride along, they just no longer decide the order")
+
+
 def test_surface_stale_include_fresh():
-    contacts = [_contact(name="Fresh", relation="peer", last_touch="2026-10-13")]
+    contacts = [_contact(name="Fresh", relation="peer", last_touch_at="2026-10-13")]
     assert rm.surface_stale(contacts, NOW) == []
     assert len(rm.surface_stale(contacts, NOW, include_fresh=True)) == 1
 
 
 def test_surface_stale_annotates_each_row():
-    out = rm.surface_stale([_contact(last_touch=None, relation=None)], NOW)
+    out = rm.surface_stale([_contact(last_touch_at=None, relation=None)], NOW)
     row = out[0]
     assert row["priority"] == "overdue"
     assert row["cadence_days"] == 90

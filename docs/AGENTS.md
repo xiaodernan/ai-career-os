@@ -39,7 +39,7 @@ Returned `Outcome`: `answer`, `artifacts[]`, `sources[]`, `actions[]`, `steps`,
 
 ## 2. Subagents and handoff
 
-Seven subagents, each with its own system prompt, its **own whitelisted tool
+Eight subagents, each with its own system prompt, its **own whitelisted tool
 surface**, and no ability to delegate further (no recursive handoff):
 
 | Subagent | Tools |
@@ -51,6 +51,7 @@ surface**, and no ability to delegate further (no recursive handoff):
 | `interview` | `create_interview`, `evaluate_answer`, `get_job`, `search_resume` |
 | `learning` | `search_knowledge_base`, `get_user_profile`, `get_job` |
 | `tracker` | `save_job`, `update_application_status`, `search_jobs`, `get_job` |
+| `networking` | `search_contacts`, `get_follow_ups`, `draft_outreach`, `log_contact_touch`, `get_user_profile` |
 
 Handoff is an explicit tool, `transfer_to(agent, task)`, not a prompt trick. It is
 recorded as a `handoff` trace event and streamed as a `status` step, so the UI can
@@ -88,7 +89,7 @@ flowchart TD
 
 ## 4. Tool system (PRD §18)
 
-15 tools in `agents/tools.py`, each a `Tool(name, description, JSON-Schema
+19 tools in `agents/tools.py`, each a `Tool(name, description, JSON-Schema
 parameters, async handler, artifact_type?, agent?)`. The schema is converted to the
 provider's tool format via `Tool.spec()`, so one definition serves OpenAI-compatible
 APIs, Anthropic and Ollama.
@@ -110,11 +111,16 @@ APIs, Anthropic and Ollama.
 | `save_job` | bookmark + create a `saved` application | |
 | `update_application_status` | move an application through the pipeline | |
 | `get_user_profile` | profile, goals, memories, resume headline | |
+| `search_contacts` | the user's saved contacts by name/company/relation | |
+| `get_follow_ups` | contacts gone cold against their relation's cadence, with drafts | |
+| `draft_outreach` | referral/intro/coffee-chat/thank-you message for a saved contact | |
+| `log_contact_touch` | stamp a contact as touched now, optionally with a note | |
 
 Tools read domain data directly from Postgres, always user-scoped (`user_id` on
 every query) — the ownership exception documented in
 [architecture.md](architecture.md) §9. Writes are deliberately minimal: `save_job`,
-`update_application_status`, `create_interview` and the derived `job_matches` row.
+`update_application_status`, `create_interview`, `log_contact_touch` and the derived
+`job_matches` row.
 
 ## 5. Observability (PRD §31)
 

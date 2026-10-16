@@ -80,10 +80,10 @@ company name) and pure keyword search is bad at paraphrase. Fusing both is what 
 "find my Kubernetes work" and "find the payments rewrite" both work.
 
 **Agent.** A hand-written tool-calling loop, capped at 8 steps, with a Career
-orchestrator that delegates to seven scoped subagents — `resume`, `job_research`,
-`jd_analyst`, `rag`, `interview`, `learning`, `tracker`. Each subagent gets an
-explicit tool **whitelist**, so the interview agent physically cannot save a job.
-Delegation is a visible `transfer_to` handoff, not a hidden routing decision.
+orchestrator that delegates to eight scoped subagents — `resume`, `job_research`,
+`jd_analyst`, `rag`, `interview`, `learning`, `tracker`, `networking`. Each subagent
+gets an explicit tool **whitelist**, so the interview agent physically cannot save a
+job. Delegation is a visible `transfer_to` handoff, not a hidden routing decision.
 
 **Evidence binding.** Tailoring reorders and re-words; a verifier rejects claims the
 resume does not support. "Never fabricate experience — every claim maps to evidence"

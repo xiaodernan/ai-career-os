@@ -2,10 +2,11 @@
 
 Networking only pays off if stale contacts resurface before they go cold. This
 module is the *pure* half of 11.3: given a contact record (name / role / company
-/ relation / last_touch) it decides what is overdue, suggests a cadence by
-relation, ranks who to touch next, and drafts an evidence-bound follow-up. The
-backend bridge (once the contacts registry in 11.1 lands) supplies the contacts
-and surfaces the stale list on the dashboard.
+/ relation / last_touch_at) it decides what is overdue, suggests a cadence by
+relation, ranks who to touch next, and drafts an evidence-bound follow-up. Its first
+reader is the agent tool `get_follow_ups`, which hands it the rows the contacts
+registry (`11.1`) actually stores -- so the key it reads is that column's own name,
+`last_touch_at`, not a spelling invented here.
 
 Evidence-bound, like every other feature here: the follow-up draft uses ONLY the
 fields the contact record actually carries (name, company, relation). It never
@@ -31,6 +32,12 @@ RELATION_CADENCE_DAYS: dict[str, int] = {
 DEFAULT_CADENCE_DAYS = 90
 _SOON_RATIO = 0.7
 
+# Ranking weights used by `surface_stale`: the bucket decides first, days within it second.
+_PRIORITY_ORDER = {"overdue": 0, "soon": 1, "fresh": 2}
+# A contact with no recorded touch sorts at the head of its bucket: it is the most
+# neglected thing in the registry, not the least datable one.
+_NEVER_TOUCHED = 10 ** 9
+
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
@@ -51,7 +58,7 @@ def _parse(dt: str | None) -> datetime | None:
         # date-only "2026-01-02"
         return datetime.fromisoformat(s + "T00:00:00+00:00")
     except ValueError:
-        # Unparseable last_touch is treated as "never touched".
+        # Unparseable last_touch_at is treated as "never touched".
         return None
 
 
@@ -82,7 +89,7 @@ def priority_for(contact: dict, now: datetime | None = None) -> str:
     70% of it; fresh otherwise.
     """
     cadence = suggest_cadence(contact.get("relation"))
-    since = days_since(contact.get("last_touch"), now)
+    since = days_since(contact.get("last_touch_at"), now)
     if since is None:
         return "overdue"
     if since >= cadence:
@@ -97,13 +104,19 @@ def surface_stale(contacts: list[dict], now: datetime | None = None,
     """Rank contacts needing attention.
 
     Returns a list of dicts with the contact plus ``priority``, ``days_since`` and
-    ``cadence_days``, sorted by ``days_since`` descending (most neglected first).
-    ``include_fresh`` keeps everyone; otherwise only ``soon`` / ``overdue``.
+    ``cadence_days``, sorted overdue first, then soon, then fresh, and inside a bucket
+    by ``days_since`` descending (most neglected first). ``include_fresh`` keeps
+    everyone; otherwise only ``soon`` / ``overdue``.
+
+    The bucket comes first because cadence is per relation: a 74-day peer is only "soon"
+    on its 90-day cadence, while a 43-day recruiter is already "overdue" on a cadence
+    one-third as long. A sort on raw days would tell a user to write the contact who is
+    not yet due before the one who is.
     """
     ref = now or _now()
     out: list[dict] = []
     for c in contacts:
-        since = days_since(c.get("last_touch"), ref)
+        since = days_since(c.get("last_touch_at"), ref)
         cadence = suggest_cadence(c.get("relation"))
         priority = priority_for(c, ref)
         if not include_fresh and priority == "fresh":
@@ -114,8 +127,9 @@ def surface_stale(contacts: list[dict], now: datetime | None = None,
             "days_since": since,
             "cadence_days": cadence,
         })
-    out.sort(key=lambda x: (x["days_since"] if x["days_since"] is not None else 10 ** 9),
-             reverse=True)
+    out.sort(key=lambda x: (_PRIORITY_ORDER[x["priority"]],
+                            -(x["days_since"] if x["days_since"] is not None
+                              else _NEVER_TOUCHED)))
     return out
 
 

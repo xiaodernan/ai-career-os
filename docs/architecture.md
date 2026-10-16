@@ -94,7 +94,7 @@ frontend/backend/ai-service can also run natively for dev (`pnpm dev`, `mvn spri
 │       │                         # embeddings/: openai, ollama, hash(离线开发)
 │       ├── ingestion/            # parsers(pdf/docx/txt) → clean → chunk → metadata → embed → store
 │       ├── rag/                  # rewrite → intent → hybrid retrieve → filter → rerank → compress → compose → cite
-│       ├── agents/               # orchestrator + subagents + tools/ (15 tools) + memory
+│       ├── agents/               # orchestrator + subagents + tools/ (19 tools) + memory
 │       ├── features/             # resume_parse, jd_analyze, match, tailor, cover_letter, interview
 │       ├── eval/                 # dataset, metrics (recall/precision/MRR/faithfulness…), experiment runner
 │       ├── core/                 # config, db pool, request context, task bus, provider registry
@@ -406,6 +406,7 @@ recall@k, precision@k, MRR, context relevance, answer relevance, faithfulness
   - Ownership exception to "backend is sole domain writer": ai-service may
     write `documents`, `document_chunks`, `knowledge_sources` (inline-text
     ingest only), `job_matches` (derived match rows), `user_memories`,
+    `contacts` (a touch logged by the networking agent),
     `agent_runs`, `agent_traces`, `ai_usage_events`. Everything else stays
     backend-owned.
   - User routes exposed as `/api/v1/users/me` and `/api/v1/users/me/profile`.

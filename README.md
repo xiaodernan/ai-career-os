@@ -19,7 +19,7 @@ your own material; every agent step is recorded and inspectable.
 | JD Analysis & Matching | requirements/skills/interview topics extracted; deterministic match scores (tech/exp/proj/edu) bound to resume evidence |
 | Tailoring & Cover Letters | job-targeted resume versions with a hard **no-fabrication verifier** and accept/reject diff |
 | Adaptive Mock Interviews | interviewer agent that drills, follows up and scales difficulty (mechanism → alternative → failure → scale); 8-dimension report + depth trajectory |
-| Career Orchestrator | tool-calling agent over 15 domain tools with subagent handoff (resume / job research / JD analyst / RAG / interview / learning / tracker) |
+| Career Orchestrator | tool-calling agent over 19 domain tools with subagent handoff (resume / job research / JD analyst / RAG / interview / learning / tracker / networking) |
 | Application Tracker | Linear-style kanban with transition audit events |
 | Observability | every agent run: traces, tool calls, retrieval, tokens, cost — plus a built-in AI Activity view |
 | RAG evaluation | golden-set harness: recall@k, precision@k, MRR, nDCG, faithfulness; A/B experiment reports |

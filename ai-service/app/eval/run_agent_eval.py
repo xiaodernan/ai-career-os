@@ -23,6 +23,7 @@ import time
 import uuid
 from pathlib import Path
 
+from app.agents.tools import TOOL_INDEX
 from app.core import db
 from app.core.config import get_settings
 from app.db import observability
@@ -151,7 +152,8 @@ def _provider_caveat(config: dict) -> list[str]:
     return ["## What these numbers mean", "",
             "- **Tool selection is unmeasured.** `llm_provider=mock` picks from a "
             "three-keyword heuristic (`providers/llm/mock.py: TOOL_HINTS`) while the "
-            "orchestrator offers 15 tools, and it emits at most one call per turn. "
+            f"orchestrator offers {len(TOOL_INDEX)} tools, and it emits at most one call "
+            "per turn. "
             "`tool_recall`, `tool_precision`, `tool_f1` and `completed` therefore describe "
             "the stub, not the agent. What this run does establish is that the harness "
             "discriminates — the scores move with the scenarios, `forbidden_violations` and "
