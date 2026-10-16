@@ -81,6 +81,7 @@ frontend/backend/ai-service can also run natively for dev (`pnpm dev`, `mvn spri
 │       ├── interview/            # sessions, qa turns, evaluations
 │       ├── job/                  # jobs, companies, saved jobs, matches
 │       ├── knowledge/            # sources, documents, chunks (meta; vectors owned by ai-service)
+│       ├── network/              # contacts registry: the people a search touches (§4.3)
 │       ├── ratelimit/            # Redis sliding-window filter
 │       ├── report/               # dashboard read model (aggregates over the other domains)
 │       ├── resume/               # resumes, versions, parsed entities (exp/proj/skill)
@@ -193,6 +194,15 @@ user-scoped table (ownership is enforced in backend layer + a single SQL predica
   → the timeline: one row per transition, append-only. `GET /applications/{id}/timeline`
   replays it and the dashboard's recent activity reads it, so a card's history is a
   query rather than a diff of two states.
+- `contacts(id, user_id, name, role, company, relation, email, notes, last_touch_at,
+   created_at, updated_at)`
+  → the people a search actually touches (roadmap 11.1), kept so the outreach generator
+  (11.2) has a real name to draft for and the follow-up cadence (11.3) a last-touched
+  date to go stale against. `relation` is free text because the honest taxonomy belongs
+  to the user, and `last_touch_at` is the user's claim about when contact happened — not
+  a server-side guess from request arrival. Served by `network/` at `/api/v1/contacts`,
+  most-recently-updated first; blank optional fields are absence on the wire, never
+  empty strings.
 
 ### 4.4 Interview
 - `interview_sessions(id, user_id, job_id, jd_id, resume_version_id, company_name,
@@ -239,6 +249,14 @@ user-scoped table (ownership is enforced in backend layer + a single SQL predica
 - `ai_usage_events(id, user_id, run_id, model, provider, kind, input_tokens,
    output_tokens, cached_tokens, cost_usd, latency_ms)` → dashboard cost tracking;
   `provider` is what a per-model price is looked up against.
+- `growth_plans(id, user_id, target_role, coverage, report jsonb /* the 10.8 aggregate's
+   own schema, stored verbatim */, created_at)`
+  → one stored plan per `POST /growth-report` run, so the next run for the same
+  (user, target_role) pair diffs against the last answer server-side instead of the
+  browser carrying its own previous response around. Appended, never updated: a run's
+  report is an observation and the diff is between observations. `coverage` is the
+  headline number denormalized out of the jsonb so a scan of a user's history does not
+  have to open it.
 - Indexes: HNSW on chunk.embedding; GIN on tsv; btree on all user_id; partial on
   applications(status); jsonb GIN where queried.
 
