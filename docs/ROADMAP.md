@@ -110,7 +110,10 @@ for "what to build next" across sessions; pick the top un-done task and execute.
 - [x] **13.2** Import / re-import with idempotent upsert; local backup snapshot.
   (ai-service half: `features/import_plan.py` validates a bundle, then emits per-item
   create/update/delete ops with per-item content hashes so the backend can skip
-  unchanged rows. Internal-only; the backend apply/bridge is still pending.)
+  unchanged rows; `python -m app.ops.restore_plan backup.json [--existing current.json]`
+  dry-runs that plan from a backup file with no database, so an operator can preview a
+  restore or diff a backup before any write. Internal-only; the backend apply/bridge is
+  still pending.)
 - [x] **13.3** Per-user data deletion (right-to-be-forgotten). (ai-service half:
   `features/export_redact.py` deep-copy section redaction + `anonymize`; recomputes the
   content hash and records `redacted_sections`. Internal-only; the backend deletion
