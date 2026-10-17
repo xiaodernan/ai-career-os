@@ -280,3 +280,22 @@ def test_parse_json_board_size_cap():
 def test_parse_json_board_scalar_items_wrapped():
     items = I.parse_json_board('["Just a title"]')
     assert items[0]["title"] == "Just a title"
+
+
+def test_plan_ingest_is_idempotent_across_a_reingest():
+    """The same batch ingested twice must not create twice -- the claim plan_ingest makes."""
+    batch = [
+        {"id": "j1", "title": "Backend", "company": "Acme", "location": "SH",
+         "posted_at": (NOW - timedelta(days=2)).isoformat()},
+        {"id": "j2", "title": "Data", "company": "Beta", "location": "BJ",
+         "posted_at": (NOW - timedelta(days=2)).isoformat()},
+    ]
+    first = I.plan_ingest(batch, source="board", now=NOW)
+    assert first["counts"]["create"] == 2
+
+    # the created rows become the corpus; re-ingesting the same batch creates nothing
+    corpus = [{"id": f"new-{i}", **p} for i, p in enumerate(first["create"])]
+    second = I.plan_ingest(batch, source="board", existing=corpus, now=NOW)
+    assert second["counts"]["create"] == 0
+    assert second["counts"]["update"] == 2
+    assert second["close"] == []
