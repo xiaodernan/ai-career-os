@@ -241,26 +241,30 @@ tenant context via `core.deps.Ctx`.
 |---|---|---|
 | POST | `/internal/agents/chat` | run a copilot turn as a background task → `{task_id, run_id}` (started by the backend's `/copilot/chat/stream`, whose reader takes its frames off `/internal/stream/{task_id}`) |
 | POST | `/internal/agents/chat/sync` | blocking turn → `Outcome` (relay + E2E + eval harness) |
-| GET | `/internal/agents/runs` | runs list |
-| GET | `/internal/agents/runs/{run_id}` | run + traces |
+| GET | `/internal/agents/runs` | runs list (no backend caller: the Activity panel reads agent_runs over the shared database instead) |
+| GET | `/internal/agents/runs/{run_id}` | run + traces (no backend caller: same, for one run's detail) |
 | POST | `/internal/features/resume/parse` | structured resume parse + score |
 | POST | `/internal/features/jd/analyze` | JD intelligence |
 | POST | `/internal/features/match` | deterministic match |
 | POST | `/internal/features/tailor` | tailoring + diff (no fabrication) |
 | POST | `/internal/features/cover-letter` | cover letter |
 | POST | `/internal/features/jd/suggestions` | improvement suggestions |
+| POST | `/internal/features/growth-report` | one call for the whole growth page: readiness + gap + salary, composed by `features/growth.py` (backend `growthReport`) |
+| GET | `/internal/memories` | the copilot's own memories, `?kinds` filtered, for the settings panel (backend `listMemories`) |
+| PATCH | `/internal/memories/{memory_id}` | correct one memory's text, or lower the weight it is quoted at (backend `patchMemory`) |
+| DELETE | `/internal/memories/{memory_id}` | forget one memory; the row is gone, not hidden (backend `deleteMemory`) |
 | POST | `/internal/ingest/document/{doc_id}` | ingest a stored document |
 | GET | `/internal/ingest/documents/{doc_id}/text` | extracted document text (used by backend resume parsing) |
 | POST | `/internal/ingest/text` | ingest inline text |
 | POST | `/internal/rag/embeddings` | `{text}` → `{embedding}`: one query vector for the backend's hybrid `/jobs` ranking; an empty list means no provider could answer, so the caller ranks keyword-only |
-| POST | `/internal/rag/retrieve` | hybrid retrieval + citations |
-| POST | `/internal/rag/answer` | retrieval + grounded answer |
-| POST | `/internal/rag/chunks` | chunk listing / inspection |
+| POST | `/internal/rag/retrieve` | hybrid retrieval + citations (no backend caller: retrieval happens in-process, agent tools -> pipeline.retrieve) |
+| POST | `/internal/rag/answer` | retrieval + grounded answer (no backend caller: same, for the grounded-answer variant) |
+| POST | `/internal/rag/chunks` | chunk listing / inspection (no backend caller: kept for operators) |
 | POST | `/internal/interview/opening` | first question |
 | POST | `/internal/interview/answer` | evaluate + follow up |
 | POST | `/internal/interview/finalize` | final report |
-| GET | `/internal/tasks/{task_id}` | task state |
-| GET | `/internal/tasks/{task_id}/stream` | task SSE (canonical) |
+| GET | `/internal/tasks/{task_id}` | task state (no backend caller: the app follows /internal/stream/{taskId} instead) |
+| GET | `/internal/tasks/{task_id}/stream` | task SSE (canonical) (no backend caller: a second stream spelling, unused by the relay) |
 | GET | `/internal/stream/{task_id}` | SSE alias the backend relay proxies as `/api/v1/ai/stream/{taskId}` |
 | GET | `/health` | liveness + provider probe (no auth) |
 
@@ -274,6 +278,49 @@ them, so the token *is* the credential.
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `/api/internal/files/{fileKey}` | a stored upload's bytes, for ai-service ingestion — the key must match `{userId}/(resumes\|knowledge)/{id}.{pdf\|docx\|txt}` and belong to a `documents` row, otherwise 400 (malformed key) or 404 (no document owns it) |
+
+
+### 3.2 Forward internal surface -- registered, and not called by the backend
+
+Every route here answers under the same `X-Internal-Token` and the same `Ctx`, and every one
+has an engine in `app/features/` and a contract row in
+`ai-service/tests/test_forward_features_contract.py`. What none of them has yet is a caller in
+`HttpAiServiceClient`: the product reaches the same computation through the backend's own
+`/api/v1` routes, or has not built the screen yet. The split is measured, not remembered --
+`tests/test_api_doc_contract.py` derives this table from the live route table minus the
+requests the backend is seen building, so an engine that gains a backend caller has to move up
+into section 3, and a new route with no row anywhere reddens the completeness gate.
+Seven routes that no backend caller builds do sit in section 3, and each says so in its own
+Purpose cell; the gate that partitions the unreached surface charges those seven with
+carrying the marker and every other row with not carrying it.
+
+| Method | Path | Purpose |
+|---|---|---|
+| POST | `/internal/features/company-brief` | Epic 4.8 -- what the corpus says about one company |
+| POST | `/internal/features/compare-offers` | Epic 12.3 (with 12.5) -- several offers ranked by total comp, equity annualised |
+| POST | `/internal/features/counter-offer` | Epic 12.4 -- the deterministic anchor and reasons a counter-offer is built from |
+| POST | `/internal/features/dedupe-jobs` | Epic 14.3 -- the same posting seen from several sources, collapsed to one survivor |
+| POST | `/internal/features/follow-ups` | Epic 11.3 -- the contacts that have gone cold, ranked, each with a draft |
+| POST | `/internal/features/freshness-sweep` | Epic 14.3 -- the corpus split into fresh, stale (re-check) and expired (close) |
+| POST | `/internal/features/gap-analysis` | Epic 10.1 -- the distance between the profile and the target role |
+| POST | `/internal/features/health-report` | Epic 16.1 -- agent health, cost and regression verdict over a window |
+| POST | `/internal/features/insight-digest` | Epic 15.3 -- a weekly snapshot: stalled applications, live stage mix, headlines |
+| POST | `/internal/features/interview-prep` | Epic 10.13 -- the pre-interview checklist: study the gaps, rehearse the strengths |
+| POST | `/internal/features/learning-plan` | Epic 10.5 -- the plan that closes the gaps readiness named |
+| POST | `/internal/features/learning-priority` | Epic 10.12 -- gaps ranked by importance and by market pull |
+| POST | `/internal/features/negotiate` | Epic 12.2 -- an offer against the benchmark, with leverage and talking points |
+| POST | `/internal/features/outreach` | Epic 11.2 -- a referral or networking message, built only from saved evidence |
+| POST | `/internal/features/parse-board` | Epic 14.2 -- a board-API JSON payload parsed into raw postings |
+| POST | `/internal/features/pipeline-funnel` | Epic 15.1 -- how many applications reached each stage, and where they stall |
+| POST | `/internal/features/plan-ingest` | Epic 14.3 -- one plan for a sweep: create / update / close, with the diff |
+| POST | `/internal/features/progress` | Epic 10.6 -- skill progress tracked between two snapshots |
+| POST | `/internal/features/progression` | Epic 10.11 -- stepping-stone roles toward a dream role, reachable and gated |
+| POST | `/internal/features/readiness` | Epic 10.4 -- how ready that profile is for that role, as one score |
+| POST | `/internal/features/response-rate` | Epic 15.2 -- reply / interview / offer rates and per-stage durations |
+| POST | `/internal/features/role-suggestions` | Epic 10.10 -- the target roles this profile could plausibly aim at |
+| POST | `/internal/features/salary-benchmark` | Epic 12.1 -- percentiles by role, seniority band and location |
+| POST | `/internal/features/skill-demand` | Epic 10.9 -- which skills the market asks for, counted from the corpus |
+| POST | `/internal/features/story-bank` | Epic 6.5 -- STAR stories drawn from the profile's own evidence |
 
 ## 4. Worked examples
 
