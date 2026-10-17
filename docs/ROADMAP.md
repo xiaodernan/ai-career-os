@@ -169,7 +169,12 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   recent frontend commits already moved this forward; finish the long tail.
 
 ## Epic 18 — Delivery
-- [ ] **18.1** Production docker build + deployment runbook (existing DEPLOYMENT.md).
+- [x] **18.1** Production docker build + deployment runbook (existing DEPLOYMENT.md).
+  (`docker-compose.prod.yml` + `docs/DEPLOYMENT.md`; the runbook now opens with an
+  ai-service **preflight gate** (`app/ops/preflight.py`, `python -m app.ops.preflight`)
+  that blocks offline providers in prod, the published default `INTERNAL_API_TOKEN`, the
+  dev DB password, a missing API key, and an inverted pool — pure and offline-tested,
+  with a census pinning its default constants to `config.py`.)
 - [ ] **18.2** Public demo script + a short marketing/landing page.
 
 ## Definition of Done (per task)
