@@ -92,7 +92,9 @@ def normalize_posting(raw: dict, *, source: str = "seed") -> dict:
     caller decides whether to drop it). Company is read from ``company`` or
     ``company_name``. Nothing is inferred that the payload does not contain.
     """
-    raw = raw or {}
+    # a connector/paste may hand over a non-dict (a bare string, None); default rather
+    # than raise -- the caller decides whether a title-less posting is worth keeping
+    raw = raw if isinstance(raw, dict) else {}
     company = raw.get("company") or raw.get("company_name") or ""
     location = raw.get("location") or ""
     skills = raw.get("skills") or []
@@ -289,7 +291,7 @@ def parse_feed(xml_text: str, *, source: str = "rss") -> list[dict]:
     or oversized input raises ``ValueError`` -- a sweep should see a broken feed, not an
     empty success.
     """
-    if xml_text is None:
+    if not isinstance(xml_text, str) or not xml_text.strip():
         raise ValueError("feed is empty")
     if len(xml_text.encode("utf-8", "ignore")) > MAX_FEED_BYTES:
         raise ValueError("feed exceeds the size cap")
@@ -334,7 +336,7 @@ def parse_json_board(text: str, *, source: str = "board") -> list[dict]:
     with no recognised array raises ``ValueError`` rather than returning an empty
     success, so a broken board surfaces instead of silently ingesting nothing.
     """
-    if text is None:
+    if not isinstance(text, str) or not text.strip():
         raise ValueError("board payload is empty")
     if len(text.encode("utf-8", "ignore")) > MAX_FEED_BYTES:
         raise ValueError("board payload exceeds the size cap")
@@ -380,7 +382,15 @@ def plan_ingest(feed, *, source: str = "rss", existing: list[dict] | None = None
     row that is expired *and* absent from this batch, so a still-live posting is never
     closed just because it did not reappear today.
     """
-    raw = parse_feed(feed, source=source) if isinstance(feed, str) else list(feed or [])
+    if feed is None:
+        raw = []
+    elif isinstance(feed, str):
+        raw = parse_feed(feed, source=source)
+    elif isinstance(feed, (list, tuple)):
+        # ignore non-dict entries rather than letting one bad row abort the whole sweep
+        raw = [r for r in feed if isinstance(r, dict)]
+    else:
+        raise ValueError("feed must be raw XML text or a list of posting dicts")
     normalized = [normalize_posting(r, source=source) for r in raw]
     deduped = dedupe_postings(normalized)
     incoming = deduped["unique"]
