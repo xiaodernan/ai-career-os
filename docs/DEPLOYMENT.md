@@ -59,6 +59,29 @@ curl -f http://localhost:3000
 - [ ] Log aggregation configured (Loki/ELK/Datadog)
 - [ ] Metrics/monitoring configured (Prometheus/Grafana)
 
+### Preflight gate (ai-service)
+
+Before starting the stack, run the ai-service preflight against the production
+environment. It catches configurations that boot fine and then fail badly — offline
+providers in prod, the repo's published default `INTERNAL_API_TOKEN` (which would leave
+`/internal/*` effectively unauthenticated), the development database password, a missing
+API key, or an inverted DB pool. It is pure: no database or network is touched.
+
+```bash
+cd ai-service
+APP_ENV=prod \
+LLM_PROVIDER=openai_compat EMBEDDING_PROVIDER=openai \
+INTERNAL_API_TOKEN="$INTERNAL_API_TOKEN" DATABASE_URL="$DATABASE_URL" \
+LLM_API_KEY="$LLM_API_KEY" \
+.venv/Scripts/python -m app.ops.preflight        # exit 1 on any blocking failure
+```
+
+It prints `{ok, checks, failures, warnings}` as JSON. A `fail` (severity `fail`) blocks
+and exits 1; a `warn` (e.g. `APP_ENV` is not `prod`, or the backend URL still points at
+`localhost`) is reported but does not block. Make it the first step of the deploy script.
+The same logic is unit-tested offline (`tests/test_preflight.py`), including a guard that
+fails if `app/core/config.py`'s published defaults drift from the preflight's copy.
+
 ### Ports published by the production override
 
 `docker-compose.prod.yml` republishes the three app services, and an entry written as
