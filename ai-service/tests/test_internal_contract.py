@@ -9,7 +9,14 @@ failing -- `/internal/features/match` with a drifted `resume_version_id` answers
 
 So the client source is read as data and reconciled against the live route table: the path
 has to be one ai-service actually registered, and the body keys have to be fields the
-model declares.
+model declares. The reading has to be of *every* request site, which is a stronger claim
+than it sounds: the client spells its calls three ways -- `return post("/internal/...", ..)`,
+a `get(path, userId)` whose path was built on the line above, and a
+`restClient.delete().uri(..)` chain that never goes through the helpers at all. The first
+walk keyed on `return` saw 17 of the 19 sites, and the two it missed are live dependencies:
+`GET /internal/memories` (the memory panel's list) and `DELETE /internal/memories/{id}`
+(the route behind "forget this"). A call that is not walked is a call nobody checks, so the
+census of `/internal/` literals in the client is reconciled against the walk, not trusted.
 """
 
 import inspect
@@ -147,12 +154,55 @@ def _java_methods(src: str) -> list[Method]:
 
 
 def _path_of(expr: str) -> str:
-    """A Java concatenation of literals and values becomes a path with `{}` per value."""
+    """A Java concatenation of literals and values becomes a path with `{}` per value.
+
+    A conditional that opens a `?` is a query string appended to the path, not a segment of
+    it: `listMemories` adds `?kinds=` only when the caller has kinds to filter by, and a
+    reader that folds that into the path invents a `/internal/memories{}` no router serves.
+    """
     parts = []
     for token in _top_level(expr, "+"):
-        parts.append(token[1:token.rindex('"')] if token.startswith('"') else "{}")
+        if token.startswith('"'):
+            parts.append(token[1:token.rindex('"')])
+        elif '"?' in token:
+            break
+        else:
+            parts.append("{}")
     path = "".join(parts)
     return path[path.index("/internal/"):] if "/internal/" in path else path
+
+
+def _statement_end(text: str, start: int) -> int:
+    """Index just past the next top-level `;`, ignoring strings and brackets."""
+    depth, quote = 0, False
+    for i in range(start, len(text)):
+        ch = text[i]
+        if ch == '"':
+            quote = not quote
+        elif not quote:
+            if ch in "([{":
+                depth += 1
+            elif ch in ")]}":
+                depth -= 1
+            elif ch == ";" and depth == 0:
+                return i
+    raise AssertionError(f"unclosed statement from {text[start:start + 40]!r}")
+
+
+def _path_expression(body: str, arg: str) -> str | None:
+    """What a transport's first argument is built from, following one local binding.
+
+    `get(path, userId)` names a variable assigned on the line above; the request is still a
+    dependency on that literal path, so the binding is resolved rather than folded to `{}`.
+    An identifier with no `String <name> =` in the same body answers None, which the caller
+    records as unparsed -- guessing `{}` there would invent a path and check it against nothing.
+    """
+    arg = arg.strip()
+    if not re.fullmatch(r"\w+", arg):
+        return arg
+    for match in re.finditer(rf"\bString {re.escape(arg)} = ", body):
+        return body[match.end():_statement_end(body, match.end())]
+    return None
 
 
 def _keys_in(body: str, methods: list[Method], bindings: dict | None = None,
@@ -187,7 +237,11 @@ def _keys_in(body: str, methods: list[Method], bindings: dict | None = None,
     return keys, unresolved
 
 
-TRANSPORT = ("post", "get", "exchange")
+TRANSPORT_VERBS = {"post": "POST", "get": "GET", "patch": "PATCH"}
+# `exchange` and `translateStatus` are the machinery that carries a request, not a dependency
+# on a path: a site inside them would be every site at once. `_helper_calls` skips all of them
+# so a transport's own body is never mined for the caller's body keys.
+TRANSPORT = tuple(TRANSPORT_VERBS) + ("exchange", "translateStatus")
 
 
 def _helper_calls(body: str, methods: list[Method]) -> list[tuple[Method, dict]]:
@@ -206,22 +260,65 @@ def _helper_calls(body: str, methods: list[Method]) -> list[tuple[Method, dict]]
     return out
 
 
+def _call_sites(src: str, methods: list[Method]) -> tuple[list, list]:
+    """(sites, unparsed) -- every request a caller makes, plus every one the reader could not type.
+
+    Three spellings reach ai-service and a reader that follows one of them silently drops the
+    others -- which is how a `get` that is not on a `return` line and a `restClient.delete()`
+    chain that bypasses the helpers both went unseen while their endpoints were live.
+
+    An unreadable chain is *recorded* rather than raised, because `_calls()` is also evaluated at
+    import time for another gate's table: a raise here would take the collection of every file
+    that imports this walk down with it, turning fourteen named checks into one error message.
+    The census gate below is charged with refusing the list, so recording is not dropping.
+    """
+    sites: list[tuple[str, str, Method, str]] = []
+    unparsed: list[tuple[str, str]] = []
+    for method in methods:
+        if method.name in TRANSPORT:
+            continue
+        for match in re.finditer(r"(?<![\w.])(" + "|".join(TRANSPORT_VERBS) + r")\(", method.body):
+            inner, _ = _argument_list(method.body, match.end() - 1)
+            expr = _path_expression(method.body, _top_level(inner, ",")[0])
+            if expr is None:
+                unparsed.append((method.name, "a path this reader cannot resolve to a literal"))
+                continue
+            sites.append((TRANSPORT_VERBS[match.group(1)], expr, method, "helper"))
+        for match in re.finditer(r"restClient\.(get|post|put|patch|delete)\(\)", method.body):
+            after = method.body[match.end():]
+            uri = re.search(r"\.uri\(", after)
+            if not uri:
+                unparsed.append((method.name, f"{match.group(1)}() chain with no .uri() in reach"))
+                continue
+            inner, _ = _argument_list(after, uri.end() - 1)
+            sites.append((match.group(1).upper(), inner, method, "chain"))
+    return sites, unparsed
+
+
 def _calls() -> list[dict]:
     """Every internal request the client can make: verb, path pattern, keys, and the method."""
     src = CLIENT.read_text(encoding="utf-8")
     methods = _java_methods(src)
     out: list[dict] = []
     unresolved: list[str] = []
-    for match in re.finditer(r"return (post|get|patch)\(", src):
-        method = next(m for m in methods if m.start <= match.start() < m.end)
-        inner, _ = _argument_list(src, match.end() - 1)
-        args = _top_level(inner, ",")
+    for verb, expr, method, _spelling in _call_sites(src, methods)[0]:
         keys, bad = _keys_in(method.body, methods)
         unresolved.extend(f"{method.name}: {b}" for b in bad)
-        out.append({"verb": match.group(1).upper(), "path": _path_of(args[0]),
-                    "keys": keys, "via": method.name})
+        out.append({"verb": verb, "path": _path_of(expr), "keys": keys, "via": method.name})
     assert not unresolved, f"body shapes this reader cannot classify: {unresolved}"
     return out
+
+
+def _client_url_literals() -> list[tuple[str, str]]:
+    """(method, `/internal/...` literal) for every one held by a caller.
+
+    This is the reading the walk is checked against, and it is deliberately not built from the
+    walk: it asks what URLs the client knows about, not what the walker noticed about them.
+    """
+    src = CLIENT.read_text(encoding="utf-8")
+    return [(method.name, literal)
+            for method in _java_methods(src) if method.name not in TRANSPORT
+            for literal in re.findall(r'"(/internal/[^"]*)"', method.body)]
 
 
 def _relay_calls() -> list[dict]:
@@ -240,10 +337,35 @@ def _relay_calls() -> list[dict]:
 def test_every_internal_url_the_backend_builds_is_one_ai_service_has():
     routes = _routes()
     built = _calls()
-    assert len(built) >= 13, f"the reader lost client calls: {[c['via'] for c in built]}"
+    assert len(built) >= 19, f"the reader lost client calls: {[c['via'] for c in built]}"
     for call in built + _relay_calls():
         assert (call["verb"], call["path"]) in routes, \
             f"{call['via']} calls {call['verb']} {call['path']}, which ai-service never maps"
+
+
+def test_the_walk_claims_every_internal_url_the_client_holds():
+    """A literal path the client knows about must be claimed by a walked request site.
+
+    The floor is what makes this more than the assertion above re-read: a walker that found
+    nothing would claim nothing, and an empty census would agree with it. A site the reader
+    could not type lands in `unparsed`, which is refused here rather than raised in the walk --
+    a raise takes the collection of every importer down with it. `unparsed` is a claim of its
+    own: a method that makes two requests from one literal would leave the census satisfied by
+    the site that was read, while the second one is still lost.
+    """
+    census = _client_url_literals()
+    assert len(census) >= 19, f"the client stopped holding urls: {census}"
+    src = CLIENT.read_text(encoding="utf-8")
+    sites, unparsed = _call_sites(src, _java_methods(src))
+    assert unparsed == [], f"request sites this reader lost: {unparsed}"
+    claimed = set()
+    for verb, expr, method, _spelling in sites:
+        literal = re.search(r'"(/internal/[^"]*)"', expr)
+        assert literal, f"{method.name} {verb}: a call site whose path has no url literal in it"
+        claimed.add((method.name, literal.group(1)))
+    unclaimed = sorted(set(census) - claimed)
+    assert unclaimed == [], (f"the client builds requests from {unclaimed} that no walk site "
+                             f"reads -- an endpoint nobody checks")
 
 
 def test_the_reader_covers_every_file_in_the_backend_that_reaches_ai_service():
@@ -304,6 +426,16 @@ def test_the_extractor_reads_both_sides_for_real():
     assert _fields(_routes()[("POST", "/internal/features/match")]) == {
         "job_id", "resume_version_id"}
     assert _required(_routes()[("POST", "/internal/features/match")]) == {"job_id"}
+    # The two sites a reader keyed on `return` lost, named rather than counted: a walk that
+    # finds nineteen calls but not these two is not reading the client's three spellings.
+    by_method = {c["via"]: c for c in _calls()}
+    assert by_method["listMemories"]["verb"] == "GET"
+    assert by_method["listMemories"]["path"] == "/internal/memories", \
+        "the local binding was not followed, or the `?kinds=` conditional folded into the path"
+    assert by_method["deleteMemory"]["verb"] == "DELETE"
+    assert by_method["deleteMemory"]["path"] == "/internal/memories/{}"
+    assert {c["via"] for c in _calls()} <= {m.name for m in _java_methods(
+        CLIENT.read_text(encoding="utf-8"))}, "a call attributed to no method of the client"
 
 
 def test_only_the_legacy_text_ingest_still_sends_keys_to_an_untyped_body():
