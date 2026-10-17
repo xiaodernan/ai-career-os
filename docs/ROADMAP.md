@@ -82,7 +82,10 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   The engine and its agent-facing half shipped first: `features/reminders.py` ranks a
   contact against its own relation's cadence (bucket before days, so a contact past due
   outranks a merely-old one) and the `get_follow_ups` tool hands that list to the agent.
-  What is left is the dashboard tile that shows it without a conversation.
+  Both now read through one pair of definers -- `domain.list_contacts_for_follow_ups`
+  (the capped, oldest-touch-first read) and `reminders.follow_ups_for` (rank, then draft)
+  -- and that pair is routed as `POST /internal/features/follow-ups`, so the tile cannot
+  disagree with the copilot. What is left is the dashboard tile itself.
 - [x] **11.4** Networking subagent wired into the orchestrator's whitelist.
   (`SUBAGENT_TOOLS["networking"]` = `search_contacts`, `get_follow_ups`, `draft_outreach`,
   `log_contact_touch`, `get_user_profile` -- the contact reads plus one touch write, and

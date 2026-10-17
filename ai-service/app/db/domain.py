@@ -149,3 +149,47 @@ async def upsert_memory(user_id: str, kind: str, key: str, content: str, source:
              SET content = EXCLUDED.content, importance = GREATEST(user_memories.importance,
                  EXCLUDED.importance), source = EXCLUDED.source""",
         user_id, kind, key[:100], content[:4000], source, importance)
+
+
+# ---------------- contacts (Epic 11.1, written by the backend's /api/v1/contacts) ----------------
+
+# The fields every contact reader hands on. `id` is what links a row back to the registry
+# page and `name/company/relation` are the only three things a follow-up draft may cite, so
+# a narrower select answers with rows a caller can neither draft from nor address.
+#
+# `notes` is left out on purpose. It is the user's free text about a person, and a contact
+# read also feeds a model prompt -- where a stray "their brother works at X" becomes
+# something the agent may repeat back.
+CONTACT_COLUMNS = "id, name, role, company, relation, email, last_touch_at"
+
+
+def contact_row(row) -> dict:
+    """One contacts row in the shape its readers pass on: string id, ISO touch stamp.
+
+    asyncpg gives back a `uuid` and a `TIMESTAMPTZ`. The first is not JSON-serialisable and
+    the second is handed straight to `reminders._parse`, which reads text -- so a reader that
+    skips this normaliser either breaks the response or makes every contact look
+    never-touched, which the cadence engine then reports as overdue.
+    """
+    d = dict(row)
+    d["id"] = str(d["id"])
+    touched = d.get("last_touch_at")
+    d["last_touch_at"] = touched.isoformat() if hasattr(touched, "isoformat") else touched
+    return d
+
+
+async def list_contacts_for_follow_ups(user_id: str, limit: int) -> list[dict]:
+    """The caller's contacts, most-neglected first -- the order a *capped* read needs.
+
+    The registry page lists newest touch first, which is right when the whole list is shown
+    and wrong when it is cut: the neglected people sit at the far end of `last_touch_at`, so
+    copying the page's ordering would discard exactly the rows a follow-up surface exists to
+    return. `NULLS FIRST` because a contact with no recorded touch is the most neglected one
+    in the registry, not the least datable.
+    """
+    rows = await db.fetch(
+        f"""SELECT {CONTACT_COLUMNS} FROM contacts
+            WHERE user_id=$1::uuid
+            ORDER BY last_touch_at ASC NULLS FIRST, updated_at ASC LIMIT $2""",
+        user_id, max(1, min(int(limit), 50)))
+    return [contact_row(r) for r in rows]

@@ -371,18 +371,9 @@ async def update_application_status(user_id: str, *, job_id: str = "",
 
 # ---------------- networking (Epic 11.4) ----------------
 
-# The columns every contact read returns. `notes` is left out on purpose: it is the
-# user's free text about a person, and a tool result goes into a model prompt where a
-# stray "their brother works at X" would become something the agent may repeat.
-_CONTACT_COLS = "id, name, role, company, relation, email, last_touch_at"
-
-
-def _contact(row) -> dict:
-    d = dict(row)
-    d["id"] = str(d["id"])
-    touched = d.get("last_touch_at")
-    d["last_touch_at"] = touched.isoformat() if hasattr(touched, "isoformat") else touched
-    return d
+# The columns and the row shape are `domain.CONTACT_COLUMNS` / `domain.contact_row`: the
+# follow-up route (#241) reads the same rows for the dashboard tile, and a per-user note
+# column is deliberately absent from both -- see the comment on the constant.
 
 
 async def search_contacts(user_id: str, *, name: str = "", company: str = "",
@@ -401,34 +392,26 @@ async def search_contacts(user_id: str, *, name: str = "", company: str = "",
         where.append(f"relation ILIKE ${len(args)} ESCAPE '!'")
     args.append(max(1, min(int(limit), 25)))
     rows = await db.fetch(
-        f"""SELECT {_CONTACT_COLS} FROM contacts
+        f"""SELECT {domain.CONTACT_COLUMNS} FROM contacts
             WHERE {' AND '.join(where)}
             ORDER BY last_touch_at DESC NULLS LAST, updated_at DESC
             LIMIT ${len(args)}""", *args)
-    return {"contacts": [_contact(r) for r in rows]}
+    return {"contacts": [domain.contact_row(r) for r in rows]}
 
 
 async def get_follow_ups(user_id: str, *, include_fresh: bool = False,
                          limit: int = 15) -> dict:
     """The contacts that have gone cold, ranked most-neglected first, each with a draft.
 
-    `app/features/reminders.py` owns the cadence verdict; this supplies the rows it
-    needs and the drafts it can produce from a name, a company and a relation only.
-
-    The read is ordered oldest-touch-first *because* it is capped: the neglected
-    people are the ones at the far end of `last_touch_at`, so ordering the way the
-    registry page does (most recently touched first) and then cutting would drop
-    exactly the contacts this tool exists to surface.
+    `app/features/reminders.follow_ups_for` owns the ranking and the drafting and
+    `domain.list_contacts_for_follow_ups` owns the read -- including why it is ordered
+    oldest-touch-first, which is the part a capped follow-up list lives or dies by. This
+    handler only carries the agent's own limit through and says whether fresh contacts count.
     """
-    from app.features.reminders import draft_followup, surface_stale
+    from app.features.reminders import follow_ups_for
 
-    rows = await db.fetch(
-        f"""SELECT {_CONTACT_COLS} FROM contacts WHERE user_id=$1::uuid
-            ORDER BY last_touch_at ASC NULLS FIRST, updated_at ASC LIMIT $2""",
-        user_id, max(1, min(int(limit), 50)))
-    surfaced = surface_stale([_contact(r) for r in rows], include_fresh=include_fresh)
-    return {"follow_ups": [{**c, "suggested_message": draft_followup(c)}
-                           for c in surfaced]}
+    contacts = await domain.list_contacts_for_follow_ups(user_id, limit)
+    return {"follow_ups": follow_ups_for(contacts, include_fresh=include_fresh)}
 
 
 async def draft_outreach(user_id: str, *, contact_id: str, purpose: str = "referral",
@@ -471,7 +454,7 @@ async def log_contact_touch(user_id: str, *, contact_id: str, note: str = "") ->
            RETURNING id, name, last_touch_at""", contact_id, user_id, note)
     if not row:
         return {"error": "contact not found"}
-    return {"logged": True, "contact": _contact(row)}
+    return {"logged": True, "contact": domain.contact_row(row)}
 
 
 async def get_user_profile(user_id: str) -> dict:

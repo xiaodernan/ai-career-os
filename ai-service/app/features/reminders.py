@@ -3,8 +3,10 @@
 Networking only pays off if stale contacts resurface before they go cold. This
 module is the *pure* half of 11.3: given a contact record (name / role / company
 / relation / last_touch_at) it decides what is overdue, suggests a cadence by
-relation, ranks who to touch next, and drafts an evidence-bound follow-up. Its first
-reader is the agent tool `get_follow_ups`, which hands it the rows the contacts
+relation, ranks who to touch next, and drafts an evidence-bound follow-up. Its two
+readers are the agent tool `get_follow_ups` and `POST /internal/features/follow-ups`,
+and both go through `follow_ups_for` so the answer the model gives and the answer the
+dashboard tile gets are composed by one function. Both hand it the rows the contacts
 registry (`11.1`) actually stores -- so the key it reads is that column's own name,
 `last_touch_at`, not a spelling invented here.
 
@@ -163,3 +165,16 @@ def draft_followup(contact: dict, *, relation: str | None = None) -> str:
         body = "It's been a little while since we last spoke — wanted to reconnect."
 
     return f"{opener} {body}"
+
+
+def follow_ups_for(contacts: list[dict], *, include_fresh: bool = False,
+                   now: datetime | None = None) -> list[dict]:
+    """Rank the registry, then attach a draft to every row that survives it.
+
+    The two steps are always wanted together -- a ranked list the user cannot act on is a
+    chore, not a reminder -- so both readers call this instead of composing it themselves:
+    the agent tool and `POST /internal/features/follow-ups` hand back the same dicts, and a
+    fix to the ranking or to the draft reaches both surfaces at once.
+    """
+    return [{**c, "suggested_message": draft_followup(c)}
+            for c in surface_stale(contacts, now, include_fresh=include_fresh)]

@@ -53,6 +53,7 @@ FORWARD = {
     "/internal/features/plan-ingest": ("PlanIngestReq", {"postings"}),
     "/internal/features/health-report": ("HealthReportReq", {"runs"}),
     "/internal/features/parse-board": ("ParseBoardReq", {"payload"}),
+    "/internal/features/follow-ups": ("FollowUpsReq", set()),
 }
 
 

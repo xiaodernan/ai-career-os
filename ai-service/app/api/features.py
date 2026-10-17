@@ -14,6 +14,7 @@ from app.features import offers as offers_mod
 from app.features import outreach as outreach_mod
 from app.features import progress as progress_mod
 from app.features import readiness as readiness_mod
+from app.features import reminders as reminders_mod
 from app.features import resume_parse as rp
 from app.features import roles as roles_mod
 from app.features import salary as salary_mod
@@ -658,3 +659,26 @@ async def parse_board_ep(req: ParseBoardReq, ctx: Ctx = Depends(require_internal
     postings = ingestion_mod.parse_json_board(req.payload, source=req.source)
     await observability.finish_run(run_id, "completed")
     return {"postings": postings, "count": len(postings)}
+
+
+class FollowUpsReq(BaseModel):
+    include_fresh: bool = False
+    limit: int = Field(default=15, ge=1, le=50)
+
+
+@router.post("/follow-ups")
+async def follow_ups_ep(req: FollowUpsReq, ctx: Ctx = Depends(require_internal)):
+    """11.3 -- who in the caller's contacts has gone cold, ranked, each with a draft.
+
+    The dashboard tile this feeds is the last half of 11.3: the ranking and the drafting
+    are `features/reminders.follow_ups_for`, the read is
+    `domain.list_contacts_for_follow_ups`, and the agent's `get_follow_ups` tool goes
+    through the same two -- so the conversation and the tile cannot disagree about who is
+    overdue. Nothing here invents a message: each draft cites only the contact's own name,
+    company and relation.
+    """
+    run_id = await _run(ctx, "networking", "follow_ups")
+    contacts = await domain.list_contacts_for_follow_ups(ctx.user_id, req.limit)
+    ranked = reminders_mod.follow_ups_for(contacts, include_fresh=req.include_fresh)
+    await observability.finish_run(run_id, "completed")
+    return {"follow_ups": ranked, "count": len(ranked)}
