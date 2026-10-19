@@ -184,6 +184,9 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   dev DB password, a missing API key, and an inverted pool — pure and offline-tested,
   with a census pinning its default constants to `config.py`.)
 - [ ] **18.2** Public demo script + a short marketing/landing page.
+  (demo script: `docs/DEMO.md` — the eight-minute golden journey, UI-first, with the API
+  equivalents per step and the three offline dry-run CLIs. The marketing/landing page is
+  still pending; it is a frontend task.)
 
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
