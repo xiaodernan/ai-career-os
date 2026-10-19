@@ -56,12 +56,17 @@ def _item(skill: str, category: str, priority: str, resource_hint: str,
 
 
 def build_learning_plan(gap_report: dict) -> dict:
+    gap_report = gap_report or {}
     items: list[dict] = []
     for g in gap_report.get("gaps") or []:
+        if not isinstance(g, dict):
+            continue
         cat = g.get("category") or "other"
         items.append(_item(g.get("skill", ""), cat, g.get("importance", "should"),
                            RESOURCE_HINTS.get(cat, _DEFAULT_HINT)))
     for p in gap_report.get("partial") or []:
+        if not isinstance(p, dict):
+            continue
         cat = p.get("category") or "other"
         items.append(_item(
             p.get("skill", ""), cat, p.get("importance", "should"),

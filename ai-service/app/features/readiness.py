@@ -32,12 +32,13 @@ def must_gaps(gap_report: dict) -> list[str]:
     field keeps that sentence true for every input rather than for the one this
     producer happens to make.
     """
-    return [g.get("skill", "") for g in (gap_report.get("gaps") or [])
-            if g.get("importance") == "must" and g.get("skill")
-            and not g.get("evidence")]
+    return [g.get("skill", "") for g in ((gap_report or {}).get("gaps") or [])
+            if isinstance(g, dict) and g.get("importance") == "must"
+            and g.get("skill") and not g.get("evidence")]
 
 
 def compose(gap_report: dict, salary_report: dict | None = None) -> dict:
+    gap_report = gap_report or {}
     coverage = float(gap_report.get("coverage") or 0.0)
     required_gaps = must_gaps(gap_report)
     verdict = skill_verdict(coverage)

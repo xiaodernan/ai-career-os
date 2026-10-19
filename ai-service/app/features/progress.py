@@ -18,13 +18,13 @@ def skill_states(report: dict) -> dict[str, str]:
     """skill -> 'covered' | 'partial' | 'gap', from a gap report's own lists."""
     states: dict[str, str] = {}
     for c in (report or {}).get("covered") or []:
-        if c.get("skill"):
+        if isinstance(c, dict) and c.get("skill"):
             states[c["skill"]] = "covered"
     for p in (report or {}).get("partial") or []:
-        if p.get("skill") and p["skill"] not in states:
+        if isinstance(p, dict) and p.get("skill") and p["skill"] not in states:
             states[p["skill"]] = "partial"
     for g in (report or {}).get("gaps") or []:
-        if g.get("skill") and g["skill"] not in states:
+        if isinstance(g, dict) and g.get("skill") and g["skill"] not in states:
             states[g["skill"]] = "gap"
     return states
 

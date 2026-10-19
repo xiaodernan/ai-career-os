@@ -7,7 +7,7 @@ the ones the health check showed still raised ``TypeError`` / ``AttributeError``
 stale cached row must produce an empty/safe result, never crash the request path.
 """
 
-from app.features import interview_prep, prioritize, progression
+from app.features import interview_prep, learning, prioritize, progress, progression, readiness
 
 
 # --- progression.build_stepping_stones -------------------------------------
@@ -162,3 +162,49 @@ def test_rank_priorities_real_match_ranks_by_importance_then_share():
     ranked = prioritize.rank_gap_priorities(gaps, demand, 20)
     assert ranked[0]["skill"] == "k8s"  # must + high share ranks first
     assert ranked[0]["priority"] == "critical"
+
+
+# --- readiness / learning / progress: gap-report consumers ------------------
+
+def test_must_gaps_none_report_returns_empty():
+    assert readiness.must_gaps(None) == []
+
+
+def test_compose_none_report_is_safe():
+    out = readiness.compose(None)
+    assert out["verdict"] == "not_ready"
+    assert out["skillReadiness"] == 0.0
+    assert out["mustGaps"] == []
+
+
+def test_compose_present_none_keys_is_safe():
+    out = readiness.compose({"gaps": None, "developmentPlan": None})
+    assert out["targetRole"] == ""
+    assert out["gapCount"] == 0
+
+
+def test_build_learning_plan_none_report_is_safe():
+    out = learning.build_learning_plan(None)
+    assert out["totalItems"] == 0
+    assert out["phases"] == []
+
+
+def test_build_learning_plan_none_gap_entry_skipped():
+    report = {"gaps": [None, {"skill": "sql", "category": "data"}]}
+    out = learning.build_learning_plan(report)
+    assert out["totalItems"] == 1
+    assert out["phases"][0]["items"][0]["topic"] == "sql"
+
+
+def test_skill_states_none_entry_filtered():
+    report = {"gaps": [None, "not-a-dict", {"skill": "k8s", "importance": "must"}]}
+    states = progress.skill_states(report)
+    assert states == {"k8s": "gap"}
+
+
+def test_diff_progress_none_both_is_safe():
+    out = progress.diff_progress(None, None)
+    assert out["baseline"] is True
+    assert out["closed"] == []
+    assert out["currentCoverage"] == 0.0
+
