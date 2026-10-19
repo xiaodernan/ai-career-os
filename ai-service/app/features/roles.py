@@ -47,10 +47,12 @@ def declared_skills(resume_structured) -> list[str]:
 
 def suggest_roles(samples: list[dict], resume_skills: list[str], *, top: int = 8,
                   min_postings: int = 1) -> dict:
-    have = {normalize(s) for s in resume_skills}
+    have = {normalize(s) for s in (resume_skills or []) if isinstance(s, str)}
     demand: dict[str, Counter] = {}
     postings: Counter[str] = Counter()
-    for s in samples:
+    for s in (samples or []):
+        if not isinstance(s, dict):
+            continue
         fam = family_of(s.get("title") or "")
         postings[fam] += 1
         bucket = demand.setdefault(fam, Counter())

@@ -22,7 +22,9 @@ def skill_demand(samples: list[dict], *, role: str = "", location: str | None = 
     tokens = _role_tokens(role)
     counter: Counter[str] = Counter()
     postings = 0
-    for s in samples:
+    for s in (samples or []):
+        if not isinstance(s, dict):
+            continue
         title = (s.get("title") or "").lower()
         if tokens and not any(t in title for t in tokens):
             continue

@@ -7,8 +7,9 @@ the ones the health check showed still raised ``TypeError`` / ``AttributeError``
 stale cached row must produce an empty/safe result, never crash the request path.
 """
 
-from app.features import (counter_offer, equity, interview_prep, learning, negotiation,
-                             offers, prioritize, progress, progression, readiness, salary)
+from app.features import (counter_offer, demand, equity, interview_prep, learning,
+                             negotiation, offers, prioritize, progress, progression,
+                             readiness, roles, salary)
 
 
 # --- progression.build_stepping_stones -------------------------------------
@@ -300,4 +301,34 @@ def test_counter_offer_compose_none_report_and_out_is_safe():
     out = counter_offer.compose(100000, None, None)
     assert out["askAmount"] == 100000
     assert "subject" in out and "body" in out
+
+
+# --- corpus consumers: roles.suggest_roles / demand.skill_demand ------------
+
+def test_suggest_roles_none_samples_is_safe():
+    out = roles.suggest_roles(None, ["python"])
+    assert out["families"] == []
+
+
+def test_suggest_roles_none_entry_skipped():
+    out = roles.suggest_roles([None, {"title": "Backend Engineer", "skills": ["go"]}], None)
+    assert [f["family"] for f in out["families"]] == ["backend"]
+
+
+def test_suggest_roles_none_resume_skills_is_safe():
+    out = roles.suggest_roles([{"title": "Backend Engineer", "skills": ["go"]}], None)
+    assert out["families"][0]["youHave"] == []
+
+
+def test_skill_demand_none_samples_is_safe():
+    out = demand.skill_demand(None, role="backend")
+    assert out["postings"] == 0
+    assert out["skills"] == []
+
+
+def test_skill_demand_none_entry_skipped():
+    out = demand.skill_demand([None, {"title": "Backend Engineer", "skills": ["go"]}],
+                              role="backend")
+    assert out["postings"] == 1
+    assert out["skills"][0]["skill"] == "Go"
 
