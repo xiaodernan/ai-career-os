@@ -31,19 +31,19 @@ def _strongest_story_for(skill: str, story_list: list[dict]) -> dict | None:
 def build_prep_plan(gap_report: dict, story_bank: dict) -> dict:
     """Pure: assemble the pre-interview checklist from a gap report + story bank."""
     gaps = sorted(
-        gap_report.get("gaps", []),
+        (g for g in ((gap_report or {}).get("gaps") or []) if isinstance(g, dict)),
         key=lambda g: (_IMPORTANCE_ORDER.get(g.get("importance", "should"), 1),
                        (g.get("skill") or "").lower()))
     weak_areas = [{
-        "skill": g["skill"],
+        "skill": g.get("skill", "unknown"),
         "importance": g.get("importance", "should"),
-        "action": (f"Build evidence for {g['skill']}: add a project or a quantified "
-                   f"bullet demonstrating it before the interview."),
+        "action": (f"Build evidence for {g.get('skill', 'this skill')}: add a project "
+                   f"or a quantified bullet demonstrating it before the interview."),
     } for g in gaps]
 
-    stories_list = story_bank.get("stories", [])
+    stories_list = (story_bank or {}).get("stories") or []
     strength_stories: list[dict] = []
-    for c in gap_report.get("covered", []):
+    for c in (gap_report or {}).get("covered") or []:
         sk = c.get("skill", "")
         st = _strongest_story_for(sk, stories_list)
         strength_stories.append({
@@ -54,20 +54,20 @@ def build_prep_plan(gap_report: dict, story_bank: dict) -> dict:
             "quantified": bool((st or {}).get("quantified")) if st else False,
         })
 
-    topics = list(gap_report.get("responsibilities", []) or [])
+    topics = list((gap_report or {}).get("responsibilities") or [])
     for g in gaps:
-        topics.append(f"Be ready to address your gap in {g['skill']}")
+        topics.append(f"Be ready to address your gap in {g.get('skill', 'this skill')}")
     topics = topics[:12]
 
     return {
-        "targetRole": (gap_report.get("targetRole") or "")[:200],
-        "coverage": float(gap_report.get("coverage", 0.0) or 0.0),
+        "targetRole": ((gap_report or {}).get("targetRole") or "")[:200],
+        "coverage": float((gap_report or {}).get("coverage", 0.0) or 0.0),
         "weakAreaCount": len(weak_areas),
         "strengthStoryCount": sum(1 for s in strength_stories if s["storyId"]),
         "weakAreas": weak_areas,
         "strengthStories": strength_stories,
         "likelyTopics": topics,
-        "storyBankSize": int(story_bank.get("count", 0) or 0),
+        "storyBankSize": int((story_bank or {}).get("count", 0) or 0),
     }
 
 

@@ -31,10 +31,14 @@ def build_stepping_stones(families: list[dict], aspirational_gaps: list[str],
     at least one skill the dream role is missing; the score rewards building *must*
     gaps, and is biased by how reachable the family is today (current coverage).
     """
-    gap_set = {normalize(g) for g in aspirational_gaps}
-    must_set = {normalize(g) for g in aspirational_must_gaps}
+    gap_set = {normalize(g) for g in (aspirational_gaps or [])
+               if isinstance(g, str)}
+    must_set = {normalize(g) for g in (aspirational_must_gaps or [])
+                if isinstance(g, str)}
     stones: list[dict] = []
     for fam in families or []:
+        if not isinstance(fam, dict):
+            continue
         demands = [normalize(d) for d in (fam.get("topDemands") or []) if isinstance(d, str)]
         builds = [d for d in demands if d in gap_set]
         if not builds:
@@ -78,10 +82,11 @@ def build_advice(aspirational_coverage: float, stone_count: int,
     """Deterministic, honest advice lines -- no invented timelines or resources."""
     advice: list[dict] = []  # noqa: keep shape obvious; returned as list[str] below
     lines: list[str] = []
-    if aspirational_must_gaps:
+    must_gaps = list(aspirational_must_gaps or [])
+    if must_gaps:
         lines.append(
-            "Your dream role still has " + str(len(aspirational_must_gaps)) +
-            " hard-requirement gap(s): " + ", ".join(aspirational_must_gaps[:6]) +
+            "Your dream role still has " + str(len(must_gaps)) +
+            " hard-requirement gap(s): " + ", ".join(must_gaps[:6]) +
             ". Target a stepping stone that builds these first.")
     else:
         lines.append("You already cover the hard requirements for your dream role; "
@@ -92,8 +97,12 @@ def build_advice(aspirational_coverage: float, stone_count: int,
     else:
         lines.append("No role family in the corpus builds your dream-role gaps while "
                      "remaining reachable -- close a few gaps directly, then re-run.")
-    if aspirational_coverage >= 0.8:
-        lines.append("You are " + str(int(round(aspirational_coverage * 100))) +
+    try:
+        coverage_value = float(aspirational_coverage or 0.0)
+    except (TypeError, ValueError):
+        coverage_value = 0.0
+    if coverage_value >= 0.8:
+        lines.append("You are " + str(int(round(coverage_value * 100))) +
                      "% ready for the dream role; a stepping stone may be optional.")
     return lines
 
