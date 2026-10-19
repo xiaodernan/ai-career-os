@@ -16,14 +16,16 @@ from app.features.negotiation import assess, leverage
 
 
 def _stats(report: dict) -> dict:
-    return {"count": report.get("sampleSize", 0), **report.get("percentiles", {})}
+    return {"count": (report or {}).get("sampleSize", 0), **(report or {}).get("percentiles", {})}
 
 
 def compare_offers(offers: list[dict], report: dict, *,
                    match_score: float | None = None) -> dict:
     stats = _stats(report)
     rows: list[dict] = []
-    for o in offers:
+    for o in (offers or []):
+        if not isinstance(o, dict):
+            continue
         base = o.get("base") or 0
         bonus = o.get("bonus") or 0
         cash = base + bonus

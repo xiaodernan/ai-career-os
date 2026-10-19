@@ -7,7 +7,8 @@ the ones the health check showed still raised ``TypeError`` / ``AttributeError``
 stale cached row must produce an empty/safe result, never crash the request path.
 """
 
-from app.features import interview_prep, learning, prioritize, progress, progression, readiness
+from app.features import (counter_offer, equity, interview_prep, learning, negotiation,
+                             offers, prioritize, progress, progression, readiness, salary)
 
 
 # --- progression.build_stepping_stones -------------------------------------
@@ -207,4 +208,96 @@ def test_diff_progress_none_both_is_safe():
     assert out["baseline"] is True
     assert out["closed"] == []
     assert out["currentCoverage"] == 0.0
+
+
+# --- Epic 12 salary / offer / negotiation / equity / counter-offer ----------
+
+def test_salary_percentile_none_returns_none():
+    assert salary.percentile(None, 0.5) is None
+
+
+def test_salary_representative_none_row_returns_none():
+    assert salary.representative(None) is None
+
+
+def test_salary_summarize_none_is_empty():
+    assert salary.summarize(None) == {"count": 0}
+
+
+def test_salary_filter_samples_none_is_empty():
+    assert salary.filter_samples(None, role="backend") == []
+
+
+def test_salary_position_none_values_is_unknown():
+    assert salary.position(100000, None) == {"percentile": None, "verdict": "unknown"}
+
+
+def test_salary_benchmark_none_samples_is_safe():
+    out = salary.benchmark(None, role="backend engineer")
+    assert out["sampleSize"] == 0
+    assert "note" in out
+
+
+def test_negotiation_stats_none_is_zero():
+    assert negotiation._stats(None) == {"count": 0}
+
+
+def test_negotiation_assess_none_stats_is_unknown():
+    out = negotiation.assess(100000, None)
+    assert out["verdict"] == "unknown"
+
+
+def test_negotiation_leverage_none_stats_is_unknown():
+    assert negotiation.leverage(100000, None) == "unknown"
+
+
+def test_negotiation_talking_points_none_stats_safe():
+    pts = negotiation.talking_points(100000, None)
+    assert isinstance(pts, list) and pts
+
+
+def test_offers_stats_none_is_zero():
+    assert offers._stats(None) == {"count": 0}
+
+
+def test_compare_offers_none_list_is_safe():
+    out = offers.compare_offers(None, {})
+    assert out["offers"] == []
+    assert out["bestByComp"] is None
+
+
+def test_compare_offers_none_offer_entry_skipped():
+    out = offers.compare_offers([None, {"base": 100000}], {})
+    assert len(out["offers"]) == 1
+    assert out["bestByComp"] == ""
+
+
+def test_equity_annualized_none_grant_is_zero():
+    out = equity.annualized_value(None)
+    assert out["annualValue"] == 0
+    assert "perYear" in out
+
+
+def test_equity_annualized_bad_vest_years_falls_back():
+    out = equity.annualized_value({"vest_years": "abc"})
+    assert out["vestYears"] == equity.DEFAULT_VEST_YEARS
+
+
+def test_equity_annualized_bad_schedule_falls_back():
+    out = equity.annualized_value({"schedule": [None, 0.5]})
+    assert isinstance(out["perYear"], list)
+
+
+def test_counter_offer_stats_none_is_zero():
+    assert counter_offer._stats(None) == {"count": 0}
+
+
+def test_counter_offer_target_ask_none_report_returns_offer():
+    assert counter_offer.target_ask(100000, None) == 100000
+
+
+def test_counter_offer_compose_none_report_and_out_is_safe():
+    out = counter_offer.compose(100000, None, None)
+    assert out["askAmount"] == 100000
+    assert "subject" in out and "body" in out
 

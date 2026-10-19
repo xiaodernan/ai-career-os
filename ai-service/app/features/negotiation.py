@@ -11,11 +11,12 @@ a claim it says so instead of bluffing.
 
 def _stats(report: dict) -> dict:
     """Flatten a salary-benchmark report into {count, min, p25, p50, p75, max}."""
-    return {"count": report.get("sampleSize", 0), **report.get("percentiles", {})}
+    return {"count": (report or {}).get("sampleSize", 0), **(report or {}).get("percentiles", {})}
 
 
 def assess(offer: float, stats: dict) -> dict:
     """Where the offer sits inside the benchmark, and the distance to the medians."""
+    stats = stats or {}
     if not stats.get("count"):
         return {"verdict": "unknown", "vsP50Pct": None, "toP50": None, "toP75": None}
     p25, p50, p75 = stats.get("p25"), stats.get("p50"), stats.get("p75")
@@ -35,6 +36,7 @@ def assess(offer: float, stats: dict) -> dict:
 
 def leverage(offer: float, stats: dict, match_score: float | None = None) -> str:
     """How much room the offer leaves: strong / moderate / weak / unknown."""
+    stats = stats or {}
     if not stats.get("count"):
         return "unknown"
     p25, p50, p75 = stats.get("p25"), stats.get("p50"), stats.get("p75")
@@ -50,6 +52,7 @@ def leverage(offer: float, stats: dict, match_score: float | None = None) -> str
 
 def talking_points(offer: float, stats: dict, match_score: float | None = None) -> list[str]:
     """Deterministic, evidence-grounded points to raise -- no invented numbers."""
+    stats = stats or {}
     if not stats.get("count"):
         return ["Not enough comparable postings to benchmark this offer. Collect two or "
                 "three comparable postings (or the recruiter's stated range) before "

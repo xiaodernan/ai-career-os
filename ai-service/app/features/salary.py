@@ -43,7 +43,7 @@ def percentile(values: list[float], p: float) -> float | None:
     one or an ``IndexError``. The internal callers already pass sorted values and a
     p in range, so this only closes the footgun for the next caller.
     """
-    vals = sorted(v for v in values if v is not None)
+    vals = sorted(v for v in (values or []) if isinstance(v, (int, float)))
     n = len(vals)
     if n == 0:
         return None
@@ -60,6 +60,7 @@ def percentile(values: list[float], p: float) -> float | None:
 def representative(row: dict) -> float | None:
     """A posting's single comparable number: the midpoint of its range, or the one
     bound it has. None when the posting carries no salary at all."""
+    row = row or {}
     lo, hi = row.get("salary_min"), row.get("salary_max")
     if lo and hi:
         return (lo + hi) / 2
@@ -71,7 +72,7 @@ def representative(row: dict) -> float | None:
 
 
 def summarize(values: list[float]) -> dict:
-    vals = sorted(v for v in values if v is not None)
+    vals = sorted(v for v in (values or []) if isinstance(v, (int, float)))
     if not vals:
         return {"count": 0}
     return {
@@ -99,7 +100,9 @@ def filter_samples(samples: list[dict], *, role: str = "", location: str | None 
     tokens = _role_tokens(role)
     ymin, ymax = SENIORITY_YEARS.get((seniority or "").lower(), (None, None))
     out: list[dict] = []
-    for s in samples:
+    for s in (samples or []):
+        if not isinstance(s, dict):
+            continue
         if representative(s) is None:
             continue
         title = (s.get("title") or "").lower()
@@ -118,7 +121,7 @@ def filter_samples(samples: list[dict], *, role: str = "", location: str | None 
 
 def position(target: float, values: list[float]) -> dict:
     """Where `target` sits inside the sample: percentile rank + a plain verdict."""
-    vals = sorted(v for v in values if v is not None)
+    vals = sorted(v for v in (values or []) if isinstance(v, (int, float)))
     if not vals:
         return {"percentile": None, "verdict": "unknown"}
     below = sum(1 for v in vals if v < target)

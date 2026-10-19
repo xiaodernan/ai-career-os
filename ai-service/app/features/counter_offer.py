@@ -22,7 +22,7 @@ Rules:
 
 
 def _stats(report: dict) -> dict:
-    return {"count": report.get("sampleSize", 0), **report.get("percentiles", {})}
+    return {"count": (report or {}).get("sampleSize", 0), **(report or {}).get("percentiles", {})}
 
 
 def target_ask(offer: int, report: dict) -> int:
