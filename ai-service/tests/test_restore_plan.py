@@ -88,3 +88,17 @@ def test_main_invalid_bundle_exits_2(tmp_path, capsys):
     path.write_text(json.dumps({"schema_version": "1"}), encoding="utf-8")
     assert R.main([str(path)]) == 2
     assert "invalid bundle" in capsys.readouterr().err
+
+
+def test_plan_for_bundle_rejects_none():
+    # `null` is valid JSON, so a backup file can decode to None; it must be a clean
+    # ValueError (the CLI maps it to exit 2), never a TypeError from `key not in None`.
+    with pytest.raises(ValueError):
+        R.plan_for_bundle(None)
+
+
+def test_main_null_bundle_exits_2(tmp_path, capsys):
+    path = tmp_path / "null.json"
+    path.write_text("null", encoding="utf-8")
+    assert R.main([str(path)]) == 2
+    assert "not a JSON object" in capsys.readouterr().err

@@ -398,7 +398,13 @@ def validate_bundle(bundle: dict) -> list[str]:
     Held so the import path (13.2) can reject a malformed or tampered bundle
     before any upsert: every required top-level / manifest key must be present
     and ``manifest.content_hash`` must still match the ``data`` payload.
+
+    A non-object (``null`` is legal JSON, so a backup file can decode to ``None``) is a
+    contract violation, not an exception: returning it here lets the caller report a
+    clean "invalid bundle" instead of a ``TypeError`` traceback from ``key not in None``.
     """
+    if not isinstance(bundle, dict):
+        return ["bundle is not a JSON object"]
     errors: list[str] = []
     for key in ("schema_version", "generator", "generated_at", "user", "manifest", "data"):
         if key not in bundle:
