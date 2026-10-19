@@ -7,7 +7,7 @@ the ones the health check showed still raised ``TypeError`` / ``AttributeError``
 stale cached row must produce an empty/safe result, never crash the request path.
 """
 
-from app.features import interview_prep, progression
+from app.features import interview_prep, prioritize, progression
 
 
 # --- progression.build_stepping_stones -------------------------------------
@@ -113,3 +113,52 @@ def test_prep_plan_gap_missing_skill_uses_unknown():
     report = {"gaps": [{"importance": "should"}]}
     plan = interview_prep.build_prep_plan(report, {})
     assert plan["weakAreas"][0]["skill"] == "unknown"
+
+
+# --- prioritize.rank_gap_priorities ----------------------------------------
+
+def test_rank_priorities_none_inputs_returns_empty():
+    assert prioritize.rank_gap_priorities(None, None, None) == []
+
+
+def test_rank_priorities_none_gap_entry_skipped():
+    gaps = [None, {"skill": "k8s", "importance": "must"}]
+    ranked = prioritize.rank_gap_priorities(gaps, [], 0)
+    assert [r["skill"] for r in ranked] == ["k8s"]
+
+
+def test_rank_priorities_non_dict_demand_skipped():
+    # A demand entry that is None/non-dict must not break the demand map build.
+    demand = [None, "not-a-dict", {"skill": "k8s", "count": 3, "share": 0.5}]
+    gaps = [{"skill": "k8s", "importance": "must"}]
+    ranked = prioritize.rank_gap_priorities(gaps, demand, 10)
+    assert ranked[0]["marketRank"] == 3
+    assert ranked[0]["marketShare"] == 0.5
+
+
+def test_rank_priorities_gap_missing_skill_skipped():
+    gaps = [{"importance": "must"}, {"skill": "docker", "importance": "should"}]
+    ranked = prioritize.rank_gap_priorities(gaps, [], 0)
+    assert [r["skill"] for r in ranked] == ["docker"]
+
+
+def test_rank_priorities_demand_missing_share_defaults_zero():
+    demand = [{"skill": "k8s", "count": 2}]  # no "share" key
+    gaps = [{"skill": "k8s", "importance": "must"}]
+    ranked = prioritize.rank_gap_priorities(gaps, demand, 5)
+    assert ranked[0]["marketShare"] == 0.0
+    assert ranked[0]["marketRank"] == 2
+
+
+def test_rank_priorities_real_match_ranks_by_importance_then_share():
+    gaps = [
+        {"skill": "docker", "importance": "should"},
+        {"skill": "k8s", "importance": "must"},
+    ]
+    demand = [
+        {"skill": "k8s", "count": 10, "share": 0.6},
+        {"skill": "docker", "count": 4, "share": 0.3},
+    ]
+    ranked = prioritize.rank_gap_priorities(gaps, demand, 20)
+    assert ranked[0]["skill"] == "k8s"  # must + high share ranks first
+    assert ranked[0]["priority"] == "critical"

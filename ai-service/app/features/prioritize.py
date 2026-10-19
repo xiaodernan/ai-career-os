@@ -46,19 +46,26 @@ def rank_gap_priorities(gaps: list[dict], demand_skills: list[dict],
     absent from ``demand_skills`` is reported with ``marketShare: 0.0`` -- the corpus
     simply does not list it among the family's demanded skills.
     """
-    demand_map = {normalize(d["skill"]): d for d in (demand_skills or [])}
+    demand_map = {normalize(d["skill"]): d
+                  for d in (demand_skills or [])
+                  if isinstance(d, dict) and d.get("skill")}
     out: list[dict] = []
     for g in gaps or []:
-        key = normalize(g["skill"])
+        if not isinstance(g, dict):
+            continue
+        skill = g.get("skill")
+        if not skill:
+            continue
+        key = normalize(skill)
         d = demand_map.get(key)
-        share = float(d["share"]) if d else 0.0
+        share = float(d.get("share", 0.0)) if d else 0.0
         out.append({
-            "skill": g["skill"],
+            "skill": skill,
             "importance": g.get("importance", "should"),
             "category": g.get("category", "other"),
             "marketShare": round(share, 3),
             "marketPostings": int(postings or 0),
-            "marketRank": int(d["count"]) if d else 0,
+            "marketRank": int(d.get("count", 0)) if d else 0,
             "priority": _priority_label(g.get("importance", "should"), share),
         })
     out.sort(key=lambda x: (_IMPORTANCE_ORDER.get(x["importance"], 1),
