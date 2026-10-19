@@ -138,7 +138,9 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   the newest / most complete survivor; `freshness_sweep` partitions into fresh / stale /
   expired / undated; `plan_ingest` composes parse/normalize/dedupe/freshness into one
   create / update / close plan. Routed as `POST /internal/features/dedupe-jobs`,
-  `/freshness-sweep`, `/plan-ingest`; internal-only ahead of the backend sweep job.)
+  `/freshness-sweep`, `/plan-ingest`; `python -m app.ops.ingest_plan feed.xml|feed.json`
+  dry-runs that plan from a file with no database (`--existing`, `--now` for a
+  reproducible diff). Internal-only ahead of the backend sweep job.)
 
 ## Epic 15 — Analytics & Insights
 - [x] **15.1** Pipeline funnel: applied → OA → interview → offer, with conversion %.
