@@ -35,7 +35,8 @@ import {
   useUpdateApplication,
 } from "@/lib/hooks/actions";
 import { useApplicationEvents } from "@/lib/hooks/resources";
-import { pickerStages, stageMeta } from "@/lib/pipeline";
+import { pickerStages, stageBlurb, stageLabel, stageMeta } from "@/lib/pipeline";
+import { useLocale } from "@/lib/i18n/locale-context";
 import type { Application, ApplicationEvent, ApplicationStatus } from "@/lib/api/types";
 
 /**
@@ -58,25 +59,38 @@ export interface ApplicationDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-/** What one audit row says, given the kind it carries and the payload it was read from. */
-function eventText(event: ApplicationEvent): string {
+/**
+ * What one audit row says, given the kind it carries and the payload it was read from.
+ *
+ * The words come from the locale table, because an audit log is a sentence
+ * about the reader's own work -- "moved to offer" is theirs, not the product's.
+ * The stage inside that sentence is the reader's language too.
+ */
+function eventText(
+  event: ApplicationEvent,
+  t: (key: string, vars?: Record<string, string | number>) => string
+): string {
   if (event.type === "status") {
-    return event.status ? `Moved to ${stageMeta(event.status).label}` : "Stage changed";
+    return event.status
+      ? t("applications.dialog.movedTo", { stage: stageLabel(t, event.status) })
+      : t("applications.dialog.stageChanged");
   }
-  if (event.type === "note") return "Note saved";
+  if (event.type === "note") return t("applications.dialog.noteSaved");
   if (event.type === "reminder") {
-    if (event.cleared) return "Reminder cleared";
-    return event.reminderAt ? `Reminder set for ${relativeTime(event.reminderAt)}` : "Reminder set";
+    if (event.cleared) return t("applications.dialog.reminderCleared");
+    return event.reminderAt
+      ? t("applications.dialog.reminderSetFor", { when: relativeTime(event.reminderAt) })
+      : t("applications.dialog.reminderSet");
   }
   if (event.type === "outcome") {
     return event.field === "offer_compensation"
-      ? "Offer compensation saved"
+      ? t("applications.dialog.offerCompensationSaved")
       : event.field === "rejection_reason"
-        ? "Rejection reason saved"
-        : "Outcome recorded";
+        ? t("applications.dialog.rejectionReasonSaved")
+        : t("applications.dialog.outcomeRecorded");
   }
   // The kinds above are the ones `writeEvent` writes; anything else is shown by its kind.
-  return event.type ?? "Update";
+  return event.type ?? t("applications.dialog.update");
 }
 
 /**
@@ -97,6 +111,7 @@ function PipelineLink({ label, id }: { label: string; id?: string | null }) {
 }
 
 export function ApplicationDialog({ application, open, onOpenChange }: ApplicationDialogProps) {
+  const { t } = useLocale();
   const editing = application !== null;
   const createApp = useCreateApplication();
   const updateApp = useUpdateApplication();
@@ -184,37 +199,37 @@ export function ApplicationDialog({ application, open, onOpenChange }: Applicati
         <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="text-base">
-              {editing ? application.title : "Track an application"}
+              {editing ? application.title : t("applications.dialog.trackTitle")}
             </DialogTitle>
             <DialogDescription>
               {editing
-                ? [application.company?.name ?? application.companyName, meta.label]
+                ? [application.company?.name ?? application.companyName, stageLabel(t, status)]
                     .filter(Boolean)
                     .join(" · ")
-                : "Anything you add here starts in the stage you choose, no job link required."}
+                : t("applications.dialog.createDescription")}
             </DialogDescription>
           </DialogHeader>
 
           {!editing && (
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="app-title">Role</Label>
+                <Label htmlFor="app-title">{t("applications.dialog.role")}</Label>
                 <Input
                   id="app-title"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   maxLength={300}
-                  placeholder="Senior Backend Engineer"
+                  placeholder={t("applications.dialog.rolePlaceholder")}
                   autoComplete="off"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="app-company">Company</Label>
+                <Label htmlFor="app-company">{t("applications.dialog.company")}</Label>
                 <Input
                   id="app-company"
                   value={companyName}
                   onChange={(e) => setCompanyName(e.target.value)}
-                  placeholder="Optional"
+                  placeholder={t("applications.dialog.optional")}
                   autoComplete="off"
                 />
               </div>
@@ -222,35 +237,35 @@ export function ApplicationDialog({ application, open, onOpenChange }: Applicati
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="app-stage">Stage</Label>
+            <Label htmlFor="app-stage">{t("applications.dialog.stage")}</Label>
             <Select value={status} onValueChange={setStatus} disabled={pending}>
               <SelectTrigger id="app-stage" className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {pickerStages(status).map((s) => (
+                {pickerStages(status, t).map((s) => (
                   <SelectItem key={s.value} value={s.value}>
                     {s.label}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground">{meta.blurb}</p>
+            <p className="text-xs text-muted-foreground">{stageBlurb(t, status)}</p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="app-notes">Notes</Label>
+            <Label htmlFor="app-notes">{t("applications.dialog.notes")}</Label>
             <Textarea
               id="app-notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Recruiter name, take-home, salary range, anything you will want next week…"
+              placeholder={t("applications.dialog.notesPlaceholder")}
               rows={3}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="app-reminder">Reminder</Label>
+            <Label htmlFor="app-reminder">{t("applications.dialog.reminder")}</Label>
             <div className="flex items-center gap-2">
               <Input
                 id="app-reminder"
@@ -266,42 +281,41 @@ export function ApplicationDialog({ application, open, onOpenChange }: Applicati
                 onClick={() => setReminder("")}
                 disabled={!reminder}
               >
-                Clear
+                {t("applications.dialog.clear")}
               </Button>
             </div>
             <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <CalendarClock className="size-3.5" aria-hidden />
-              The dashboard counts a due reminder as needing your attention.
+              {t("applications.dialog.reminderHint")}
             </p>
           </div>
           {editing && (status === "offer" || status === "rejected") && (
             <section className="space-y-3 rounded-lg border border-border/60 bg-muted/30 p-3">
               <h4 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                Outcome
+                {t("applications.dialog.outcome")}
               </h4>
               <div className="space-y-2">
-                <Label htmlFor="app-comp">Offer compensation</Label>
+                <Label htmlFor="app-comp">{t("applications.dialog.offerCompensation")}</Label>
                 <Input
                   id="app-comp"
                   value={offerCompensation}
                   onChange={(e) => setOfferCompensation(e.target.value)}
-                  placeholder="e.g. 40k/mo · 16 months, or 550k + equity"
+                  placeholder={t("applications.dialog.offerCompensationPlaceholder")}
                   autoComplete="off"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="app-reject">Rejection / feedback reason</Label>
+                <Label htmlFor="app-reject">{t("applications.dialog.rejectionReason")}</Label>
                 <Textarea
                   id="app-reject"
                   value={rejectionReason}
                   onChange={(e) => setRejectionReason(e.target.value)}
-                  placeholder="Why it didn't proceed — this is what feeds back into what to improve."
+                  placeholder={t("applications.dialog.rejectionReasonPlaceholder")}
                   rows={3}
                 />
               </div>
               <p className="text-xs text-muted-foreground">
-                Captured here, it closes the loop: a rejection reason tells you what to strengthen,
-                and an offer&apos;s number is what to compare and negotiate against.
+                {t("applications.dialog.outcomeHint")}
               </p>
             </section>
           )}
@@ -310,18 +324,18 @@ export function ApplicationDialog({ application, open, onOpenChange }: Applicati
           <>
             <section className="space-y-2">
               <h4 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                History
+                {t("applications.dialog.history")}
               </h4>
               {events.isPending && (
                 <div className="space-y-2" role="status">
                   <Skeleton className="h-5 w-3/4" />
                   <Skeleton className="h-5 w-1/2" />
-                  <span className="sr-only">Loading history…</span>
+                  <span className="sr-only">{t("applications.dialog.loadingHistory")}</span>
                 </div>
               )}
               {events.isError && (
                 <ErrorState
-                  title="History failed to load"
+                  title={t("applications.dialog.historyFailed")}
                   error={events.error}
                   onRetry={() => void events.refetch()}
                   retrying={events.isFetching}
@@ -329,8 +343,7 @@ export function ApplicationDialog({ application, open, onOpenChange }: Applicati
               )}
               {events.data?.length === 0 && (
                 <p className="text-sm text-muted-foreground">
-                  Nothing recorded yet — stages you move, notes you save and reminders you set
-                  all land here.
+                  {t("applications.dialog.nothingRecorded")}
                 </p>
               )}
               <ol className="space-y-2">
@@ -340,7 +353,7 @@ export function ApplicationDialog({ application, open, onOpenChange }: Applicati
                       variant={event.type === "reminder" ? "warning" : "secondary"}
                       className="shrink-0 font-normal"
                     >
-                      {eventText(event)}
+                      {eventText(event, t)}
                     </Badge>
                     {event.note && event.type !== "note" && (
                       <span className="min-w-0 truncate text-muted-foreground">{event.note}</span>
@@ -359,15 +372,18 @@ export function ApplicationDialog({ application, open, onOpenChange }: Applicati
             {(application.resumeVersionId || application.jdId || application.matchId) && (
               <section className="space-y-2">
                 <h4 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                  Pipeline links
+                  {t("applications.dialog.pipelineLinks")}
                 </h4>
                 <dl className="space-y-1 text-sm">
-                  <PipelineLink label="Resume version" id={application.resumeVersionId} />
-                  <PipelineLink label="JD analysis" id={application.jdId} />
-                  <PipelineLink label="Match" id={application.matchId} />
+                  <PipelineLink
+                    label={t("applications.dialog.resumeVersionLink")}
+                    id={application.resumeVersionId}
+                  />
+                  <PipelineLink label={t("applications.dialog.jdAnalysis")} id={application.jdId} />
+                  <PipelineLink label={t("applications.dialog.match")} id={application.matchId} />
                 </dl>
                 <p className="text-xs text-muted-foreground">
-                  Recorded by the route that produced each one — match, tailor, or JD analysis.
+                  {t("applications.dialog.pipelineLinksHint")}
                 </p>
               </section>
             )}
@@ -380,10 +396,10 @@ export function ApplicationDialog({ application, open, onOpenChange }: Applicati
               className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive"
             >
               {error instanceof ApiError && error.isNotFound
-                ? "That application no longer exists."
+                ? t("applications.dialog.notFound")
                 : error instanceof Error
                   ? error.message
-                  : "Couldn't save the application."}
+                  : t("applications.dialog.saveFailed")}
             </div>
           )}
 
@@ -397,7 +413,7 @@ export function ApplicationDialog({ application, open, onOpenChange }: Applicati
                 disabled={pending}
               >
                 <Trash2 aria-hidden />
-                Delete
+                {t("applications.dialog.delete")}
               </Button>
             ) : (
               <span />
@@ -409,7 +425,7 @@ export function ApplicationDialog({ application, open, onOpenChange }: Applicati
                 onClick={() => onOpenChange(false)}
                 disabled={pending}
               >
-                Cancel
+                {t("applications.dialog.cancel")}
               </Button>
               <Button
                 type="button"
@@ -418,7 +434,7 @@ export function ApplicationDialog({ application, open, onOpenChange }: Applicati
                 loading={pending}
                 disabled={!editing && !title.trim()}
               >
-                {editing ? "Save changes" : "Add to pipeline"}
+                {editing ? t("applications.dialog.saveChanges") : t("applications.dialog.addToPipeline")}
               </Button>
             </div>
           </DialogFooter>
@@ -428,13 +444,13 @@ export function ApplicationDialog({ application, open, onOpenChange }: Applicati
       <ConfirmDialog
         open={confirmingDelete}
         onOpenChange={setConfirmingDelete}
-        title="Delete this application?"
+        title={t("applications.dialog.deleteTitle")}
         description={
           editing
-            ? `"${application.title}" and its history are removed from the board. This cannot be undone.`
+            ? t("applications.dialog.deleteDescription", { title: application.title })
             : undefined
         }
-        confirmLabel="Delete"
+        confirmLabel={t("applications.dialog.delete")}
         destructive
         loading={deleteApp.isPending}
         onConfirm={() => {

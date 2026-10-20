@@ -96,6 +96,57 @@ export function stageMeta(status: string): StageMeta {
   };
 }
 
+/**
+ * The translation function the pipeline's names are read through.
+ *
+ * The taxonomy lives in one table (`stages.*` in the locale file) so that the
+ * board, the drawer, the dashboard and every status picker say the same seven
+ * words in the reader's language. `pipeline.ts` itself stays free of the
+ * locale so it can be reasoned about -- and tested -- without one.
+ */
+export type TranslateFn = (key: string) => string;
+
+/**
+ * The stage's name in the reader's language.
+ *
+ * A stage the table does not know keeps its own name rather than losing it:
+ * `stageMeta` labels a stranger instead of hiding it, and so does this. The
+ * fallback is the English label, so a missing translation degrades to the
+ * product's original wording rather than to a raw key.
+ */
+export function stageLabel(t: TranslateFn, status: string): string {
+  const known = status as ApplicationStatus;
+  if (!(known in STAGE_META)) return stageMeta(status).label;
+  const key = `stages.${known}.label`;
+  const translated = t(key);
+  return translated === key ? STAGE_META[known].label : translated;
+}
+
+/** The stage's one-line explanation, in the reader's language. */
+export function stageBlurb(t: TranslateFn, status: string): string {
+  const known = status as ApplicationStatus;
+  if (!(known in STAGE_META)) return stageMeta(status).blurb;
+  const key = `stages.${known}.blurb`;
+  const translated = t(key);
+  return translated === key ? STAGE_META[known].blurb : translated;
+}
+
+/**
+ * The stage's abbreviated name -- what a badge and a closed select show.
+ *
+ * The abbreviation is the one place a stage is allowed to be a fragment
+ * ("OA", "Final"), so it is translated separately from the full name: a
+ * reader who sees "OA" on a badge should see "测评" there, not the word
+ * "Online assessment" repeated for the seventh time on the board.
+ */
+export function stageShort(t: TranslateFn, status: string): string {
+  const known = status as ApplicationStatus;
+  if (!(known in STAGE_META)) return stageMeta(status).short;
+  const key = `stages.${known}.short`;
+  const translated = t(key);
+  return translated === key ? STAGE_META[known].short : translated;
+}
+
 export const STAGE_ORDER: ApplicationStatus[] = APPLICATION_STAGES.map((s) => s.value);
 
 export function isTerminal(status: string): boolean {
@@ -110,10 +161,10 @@ export function isTerminal(status: string): boolean {
  * updated would show as an empty badge instead of the stage the row is really in.
  * `stageMeta` labels the stranger instead of hiding it; the rest follow board order.
  */
-export function pickerStages(current: string): { value: string; label: string }[] {
+export function pickerStages(current: string, t?: TranslateFn): { value: string; label: string }[] {
   const ladder: { value: string; label: string }[] = APPLICATION_STAGES.map((s) => ({
     value: s.value,
-    label: s.label,
+    label: t ? stageLabel(t, s.value) : s.label,
   }));
   if (STAGE_ORDER.includes(current as ApplicationStatus)) return ladder;
   return [{ value: current, label: stageMeta(current).label }, ...ladder];

@@ -34,7 +34,7 @@ import { ShareChart } from "@/components/common/bar-chart";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { missingEndpointMessage } from "@/lib/api/missing-endpoint";
 import { JobCard } from "@/components/jobs/job-card";
-import { APPLICATION_STAGES, stageMeta } from "@/lib/pipeline";
+import { APPLICATION_STAGES, stageLabel, stageMeta, stageShort } from "@/lib/pipeline";
 import { useUser } from "@/lib/hooks/auth";
 import {
   useActivityRuns,
@@ -284,7 +284,7 @@ export default function DashboardPage() {
                                         aria-hidden
                                       />
                                       <span className="truncate text-2xs font-medium text-muted-foreground">
-                                        {stage.label}
+                                        {stageLabel(t, stage.value)}
                                       </span>
                                     </span>
                                     <span className="text-lg font-semibold tabular-nums">{count}</span>
@@ -302,8 +302,11 @@ export default function DashboardPage() {
                             ))}
                           <p className="mt-2 text-xs text-muted-foreground" aria-live="polite">
                             {total === 0
-                              ? "The board is empty."
-                              : `${total} tracked application${total === 1 ? "" : "s"}.`}
+                              ? t("dashboard.boardIsEmpty")
+                              : t("dashboard.trackedApplications", {
+                                  count: total,
+                                  plural: total === 1 ? "" : "s",
+                                })}
                           </p>
                         </div>
                       );
@@ -369,16 +372,16 @@ export default function DashboardPage() {
                                 <span className="flex items-center gap-2">
                                   <span className="truncate text-sm font-medium">{row.title}</span>
                                   <Badge variant={meta.badgeVariant} className="shrink-0">
-                                    {meta.short}
+                                    {stageShort(t, row.status ?? "")}
                                   </Badge>
                                 </span>
                                 <span className="mt-0.5 block truncate text-xs text-muted-foreground">
                                   {row.companyName ? `${row.companyName} · ` : ""}
                                   {due && row.reminderAt
-                                    ? `Reminder due ${relativeTime(row.reminderAt)}`
+                                    ? t("dashboard.reminderDue", { when: relativeTime(row.reminderAt) })
                                     : row.updatedAt
-                                      ? `Last step ${relativeTime(row.updatedAt)}`
-                                      : "No step logged"}
+                                      ? t("dashboard.lastStep", { when: relativeTime(row.updatedAt) })
+                                      : t("dashboard.noStep")}
                                 </span>
                               </span>
                             </Link>
@@ -391,7 +394,9 @@ export default function DashboardPage() {
                       speaks, and a count line under it would read as a contradiction. */}
                   {attention.length > 0 && attentionTotal > attention.length ? (
                     <p className="mt-3 text-xs text-muted-foreground">
-                      {`${attentionTotal - attention.length} more need attention on the board.`}
+                      {t("dashboard.moreNeedAttention", {
+                        count: attentionTotal - attention.length,
+                      })}
                     </p>
                   ) : null}
                 </CardContent>

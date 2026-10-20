@@ -1,7 +1,17 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-import { APPLICATION_STAGES, isTerminal, pickerStages, STAGE_ORDER, stageMeta } from "./pipeline";
+import {
+  APPLICATION_STAGES,
+  isTerminal,
+  pickerStages,
+  STAGE_ORDER,
+  stageBlurb,
+  stageLabel,
+  stageMeta,
+  stageShort,
+} from "./pipeline";
+import { translations } from "./i18n/translations";
 
 describe("stageMeta", () => {
   it("returns known stage metadata", () => {
@@ -22,6 +32,80 @@ describe("STAGE_ORDER", () => {
     expect(STAGE_ORDER).toEqual(APPLICATION_STAGES.map((s) => s.value));
     expect(STAGE_ORDER[0]).toBe("saved");
     expect(STAGE_ORDER[STAGE_ORDER.length - 1]).toBe("rejected");
+  });
+});
+
+/**
+ * The pipeline's seven names are the product's central vocabulary -- they
+ * appear on the board, in the drawer, on the dashboard and in every status
+ * picker. They are translated once, in one table, and read back through the
+ * locale; these hold that there is one table, that it has both languages, and
+ * that a stage the table has never heard of still keeps its own name.
+ */
+describe("the stage names are read through the locale", () => {
+  /** The same lookup the locale provider does: the key back when it misses. */
+  const reader = (locale: "en" | "zh") => (key: string): string => {
+    let value: unknown = translations[locale];
+    for (const part of key.split(".")) {
+      if (value == null || typeof value !== "object") return key;
+      value = (value as Record<string, unknown>)[part];
+    }
+    return typeof value === "string" ? value : key;
+  };
+
+  it("has a label, a short name and a blurb for every stage, in both languages", () => {
+    for (const locale of ["en", "zh"] as const) {
+      for (const stage of APPLICATION_STAGES) {
+        const t = reader(locale);
+        for (const part of ["label", "short", "blurb"] as const) {
+          const value = t(`stages.${stage.value}.${part}`);
+          expect(value, `${locale}.${stage.value}.${part} is missing`).not.toBe(
+            `stages.${stage.value}.${part}`
+          );
+          expect(value.length).toBeGreaterThan(0);
+        }
+      }
+    }
+  });
+
+  it("says something different in each language", () => {
+    // A stage whose two names are the same string is a stage nobody translated.
+    const same = APPLICATION_STAGES.filter(
+      (stage) => reader("en")(`stages.${stage.value}.label`) === reader("zh")(`stages.${stage.value}.label`)
+    );
+    expect(same.map((s) => s.value)).toEqual([]);
+  });
+
+  it("reads the stage's name in the reader's language", () => {
+    expect(stageLabel(reader("en"), "offer")).toBe("Offer");
+    expect(stageLabel(reader("zh"), "offer")).toBe("录用");
+    expect(stageLabel(reader("zh"), "final_round")).toBe("终面");
+  });
+
+  it("keeps a stage the table has never heard of under its own name", () => {
+    // `stageMeta` labels a stranger instead of hiding it, and the locale
+    // reader must not swallow it: a stage the backend added before this
+    // ladder was updated should still say what it is.
+    expect(stageLabel(reader("zh"), "screening")).toBe("screening");
+    expect(stageShort(reader("zh"), "screening")).toBe("screening");
+  });
+
+  it("falls back to the English name when the table has no translation", () => {
+    // A reader that misses returns the key it was asked for -- which is what
+    // the real one does, and what the fallback is written against.
+    const empty = (key: string) => key;
+    expect(stageLabel(empty, "offer")).toBe("Offer");
+    expect(stageShort(empty, "offer")).toBe("Offer");
+    expect(stageBlurb(empty, "offer")).toBe("Offer extended — decide or negotiate.");
+  });
+
+  it("offers the picker's ladder in the reader's language", () => {
+    const options = pickerStages("oa", reader("zh"));
+    expect(options.map((o) => o.value)).toEqual([...STAGE_ORDER]);
+    expect(options.find((o) => o.value === "oa")!.label).toBe("在线测评");
+    // And a stage the ladder does not know keeps its own name at the front.
+    const stranger = pickerStages("screening", reader("zh"));
+    expect(stranger[0]).toEqual({ value: "screening", label: "screening" });
   });
 });
 
@@ -81,7 +165,9 @@ describe("the applications page", () => {
   });
 
   it("labels the drag handle for the row it belongs to", () => {
-    expect(kanbanSource).toContain("aria-label=\"Drag to reorder\"");
+    // The handle's label reads from the locale table now, so the gate asserts
+    // the key rather than the English copy.
+    expect(kanbanSource).toContain('t("applications.dragToReorder")');
   });
 
   it("takes its colours from pipeline metadata instead of a local map", () => {

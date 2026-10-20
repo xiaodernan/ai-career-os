@@ -21,7 +21,15 @@ import { CSS } from "@dnd-kit/utilities";
 import { GripVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Application, ApplicationStatus } from "@/lib/api/types";
-import { STAGE_ORDER, stageMeta, pickerStages, isTerminal } from "@/lib/pipeline";
+import {
+  STAGE_ORDER,
+  stageMeta,
+  stageLabel,
+  stageShort,
+  pickerStages,
+  isTerminal,
+} from "@/lib/pipeline";
+import { useLocale } from "@/lib/i18n/locale-context";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -34,7 +42,9 @@ interface KanbanColumnProps {
 }
 
 function KanbanColumn({ status, apps, onReorder, onOpen, isPending }: KanbanColumnProps) {
+  const { t } = useLocale();
   const meta = stageMeta(status);
+  const label = stageLabel(t, status);
   // The column body is a droppable in its own right: without one, a card can only land where
   // another card already is, so an empty column was a dead zone its own "Drop here" text promised
   // out loud. `handleDragEnd` reads this id back to append the card.
@@ -49,7 +59,7 @@ function KanbanColumn({ status, apps, onReorder, onOpen, isPending }: KanbanColu
         )}
       >
         <span className={cn("size-2 rounded-full", meta.dotClass)} aria-hidden />
-        <h3 className="font-semibold text-sm">{meta.label}</h3>
+        <h3 className="font-semibold text-sm">{label}</h3>
         <span className="ml-auto text-xs text-muted-foreground">{apps.length}</span>
       </div>
       <SortableContext
@@ -60,7 +70,7 @@ function KanbanColumn({ status, apps, onReorder, onOpen, isPending }: KanbanColu
           ref={setNodeRef}
           className="flex-1 flex flex-col gap-2 p-2 min-h-[400px]"
           role="list"
-          aria-label={`${meta.label} applications`}
+          aria-label={t("applications.boardColumn", { stage: label })}
         >
           {apps.map((app, index) => (
             <KanbanCard
@@ -106,6 +116,8 @@ function KanbanCard({
   onOpen,
 }: KanbanCardProps) {
   const meta = stageMeta(app.status);
+  const { t } = useLocale();
+  const short = stageShort(t, app.status);
   // The dashboard's attention list runs its staleness predicate server-side (14 days without a
   // step, or a reminder already due — DashboardRepository.NEEDS_ATTENTION). Mirrored here so a
   // card in trouble says so on the board itself instead of only after a trip to the dashboard.
@@ -157,7 +169,7 @@ function KanbanCard({
             "cursor-grab active:cursor-grabbing",
             isDragging && "bg-primary/10 text-primary"
           )}
-          aria-label="Drag to reorder"
+          aria-label={t("applications.dragToReorder")}
         >
           <GripVertical className="size-4" aria-hidden />
         </div>
@@ -174,7 +186,12 @@ function KanbanCard({
           <p className="truncate text-xs text-muted-foreground">
             {app.company?.name ?? app.companyName}
             {app.reminderAt && (
-              <> · reminder {new Date(app.reminderAt).toLocaleDateString()}</>
+              <>
+                {" · "}
+                {t("applications.reminderOn", {
+                  date: new Date(app.reminderAt).toLocaleDateString(),
+                })}
+              </>
             )}
           </p>
           {app.note && (
@@ -190,10 +207,10 @@ function KanbanCard({
             "w-fit min-w-0",
             "data-[placeholder]:text-muted-foreground"
           )}>
-            <SelectValue placeholder={meta.short} />
+            <SelectValue placeholder={short} />
           </SelectTrigger>
           <SelectContent position="popper">
-            {pickerStages(app.status).map((s) => (
+            {pickerStages(app.status, t).map((s) => (
               <SelectItem key={s.value} value={s.value}>
                 {s.label}
               </SelectItem>
@@ -203,16 +220,16 @@ function KanbanCard({
       </div>
       <div className="mt-1 flex flex-wrap items-center gap-1.5">
         <Badge variant={meta.badgeVariant} className="w-fit">
-          {meta.short}
+          {short}
         </Badge>
         {overdue && (
           <Badge variant="warning" className="w-fit">
-            reminder due
+            {t("applications.reminderDue")}
           </Badge>
         )}
         {!overdue && stale && (
           <Badge variant="outline" className="w-fit">
-            no step 14d+
+            {t("applications.noStep14d")}
           </Badge>
         )}
       </div>

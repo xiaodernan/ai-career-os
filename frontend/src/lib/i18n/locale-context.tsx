@@ -12,7 +12,15 @@ import { translations, type Locale, type TranslationKey } from "./translations";
 interface LocaleContextValue {
   locale: Locale;
   setLocale: (locale: Locale) => void;
-  t: (key: string) => string;
+  /**
+   * Read a string out of the table.
+   *
+   * `vars` fills `{name}` holes in the string, so a sentence that wraps a value
+   * can be written in one language's word order and not another. A hole with no
+   * value is left alone rather than blanked -- a missing value should read as
+   * missing, not as a sentence with a gap in it.
+   */
+  t: (key: string, vars?: Record<string, string | number>) => string;
 }
 
 const LocaleContext = React.createContext<LocaleContextValue | null>(null);
@@ -43,7 +51,7 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const t = React.useCallback(
-    (key: string): string => {
+    (key: string, vars?: Record<string, string | number>): string => {
       const parts = key.split(".");
       let value: unknown = translations[locale];
       for (const part of parts) {
@@ -53,7 +61,11 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
           return key;
         }
       }
-      return typeof value === "string" ? value : key;
+      if (typeof value !== "string") return key;
+      if (!vars) return value;
+      return value.replace(/\{(\w+)\}/g, (hole, name: string) =>
+        Object.prototype.hasOwnProperty.call(vars, name) ? String(vars[name]) : hole,
+      );
     },
     [locale]
   );

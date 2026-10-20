@@ -82,18 +82,18 @@ export default function ApplicationsPage() {
       description={t("applications.description")}
       query={applications}
       emptyHint={{
-        title: "Pipeline is empty",
-        description: "Track a job from its detail page and it appears here, starting in Saved.",
+        title: t("applications.pipelineIsEmpty"),
+        description: t("applications.pipelineIsEmptyDescription"),
         action: (
           <Button variant="ai" size="sm" onClick={openCreate}>
-            Add application
+            {t("applications.addApplication")}
           </Button>
         ),
       }}
       actions={
         <Button variant="outline" size="sm" onClick={openCreate}>
           <Plus className="size-4 mr-2" aria-hidden />
-          Add
+          {t("applications.add")}
         </Button>
       }
     >
