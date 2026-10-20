@@ -49,12 +49,14 @@ import { useJob } from "@/lib/hooks/resources";
 import { useCreateApplication, useCreateInterviewSession, useRunJobMatch } from "@/lib/hooks/actions";
 import { list as listOf, pick, rec, str } from "@/lib/api/normalize";
 import { formatSalary, titleCase } from "@/lib/format";
+import { useLocale } from "@/lib/i18n/locale-context";
 import type { Evidence, JdRequirement, PreparationItem, SkillGap } from "@/lib/api/types";
 import { normalizeJdParsed } from "@/lib/api/normalize";
 import { INTERVIEW_MODES } from "@/lib/interview-modes";
 
 export default function JobDetailPage() {
   const params = useParams<{ id: string }>();
+  const { t } = useLocale();
   const id = params?.id ?? null;
   const router = useRouter();
   const query = useJob(id);
@@ -129,8 +131,8 @@ export default function JobDetailPage() {
             {notFound ? (
               <EmptyState
                 icon={<Briefcase aria-hidden />}
-                title="This job isn't in the system"
-                description="Either it was removed or the backend hasn't stored it yet. Paste its JD in Jobs → Analyze a JD to work on it immediately."
+                title={t("jobs.detail.notInSystem")}
+                description={t("jobs.detail.notInSystemDescription")}
                 action={
                   <Button variant="ai" size="sm" asChild>
                     <Link href="/jobs">Back to jobs</Link>
@@ -139,7 +141,7 @@ export default function JobDetailPage() {
               />
             ) : (
               <ErrorState
-                title="Couldn't load this job"
+                title={t("jobs.detail.loadFailed")}
                 error={query.error}
                 onRetry={() => void query.refetch()}
                 retrying={query.isFetching}
@@ -347,8 +349,8 @@ export default function JobDetailPage() {
               <SectionHeading
                 eyebrow="Explainability"
                 icon={<Quote className="size-4" aria-hidden />}
-                title="Resume evidence"
-                description="The exact passages behind the score, with the document and section they came from."
+                title={t("jobs.detail.resumeEvidence")}
+                description={t("jobs.detail.resumeEvidenceDescription")}
               />
             </CardHeader>
             <CardContent>

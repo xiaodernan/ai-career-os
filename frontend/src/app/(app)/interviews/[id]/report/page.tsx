@@ -29,9 +29,11 @@ import { useFinalizeInterview } from "@/lib/hooks/actions";
 import { useInterviewSession } from "@/lib/hooks/resources";
 import { normalizeInterviewReport, type InterviewTrajectoryPoint } from "@/lib/api/normalize";
 import { depthLabel, depthLevel, formatDate, titleCase } from "@/lib/format";
+import { useLocale } from "@/lib/i18n/locale-context";
 
 export default function InterviewReportPage() {
   const params = useParams<{ id: string }>();
+  const { t } = useLocale();
   const id = params?.id ?? null;
   const session = useInterviewSession(id);
   const finalize = useFinalizeInterview(id ?? "");
@@ -56,7 +58,7 @@ export default function InterviewReportPage() {
         <Card>
           <CardContent>
             <ErrorState
-              title="Couldn't load the report"
+              title={t("interviews.report.loadFailed")}
               error={session.error}
               onRetry={() => void session.refetch()}
               retrying={session.isFetching}
@@ -90,8 +92,8 @@ export default function InterviewReportPage() {
             {data.status === "active" ? (
               <EmptyState
                 icon={<FileBarChart aria-hidden />}
-                title="The interview is still running"
-                description="Finish the session and the evaluator will score every answer into a full report."
+                title={t("interviews.report.stillRunning")}
+                description={t("interviews.report.stillRunningDescription")}
                 action={
                   <Button variant="ai" size="sm" asChild>
                     <Link href={`/interviews/${data.id}`}>
@@ -104,8 +106,8 @@ export default function InterviewReportPage() {
             ) : (
               <EmptyState
                 icon={<FileBarChart aria-hidden />}
-                title="No report stored yet"
-                description="The session is closed but the evaluator hasn't published a report. You can trigger finalization — it scores the answers that exist."
+                title={t("interviews.report.noReport")}
+                description={t("interviews.report.noReportDescription")}
                 action={
                   <Button
                     variant="ai"
@@ -147,7 +149,14 @@ export default function InterviewReportPage() {
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap items-center gap-5">
-            {overall != null && <MatchRing value={overall} size={84} thickness={7} label="Overall interview score" />}
+            {overall != null && (
+              <MatchRing
+                value={overall}
+                size={84}
+                thickness={7}
+                label={t("interviews.report.overallScore")}
+              />
+            )}
             <div className="min-w-48 flex-1">
               <p className="text-sm leading-relaxed">
                 {summary ??
@@ -181,8 +190,8 @@ export default function InterviewReportPage() {
             <SectionHeading
               eyebrow="Rubric"
               icon={<FileBarChart className="size-4" aria-hidden />}
-              title="Dimension scores"
-              description="The evaluator's fixed rubric — only dimensions it actually scored are shown."
+              title={t("interviews.report.dimensions")}
+              description={t("interviews.report.dimensionsDescription")}
             />
           </CardHeader>
           <CardContent>
@@ -239,8 +248,8 @@ export default function InterviewReportPage() {
             <SectionHeading
               eyebrow="Between sessions"
               icon={<BookOpen className="size-4" aria-hidden />}
-              title="Study material"
-              description="Targeted at the concepts this session exposed."
+              title={t("interviews.report.studyMaterial")}
+              description={t("interviews.report.studyMaterialDescription")}
             />
           </CardHeader>
           <CardContent>
@@ -312,6 +321,7 @@ function BackLink({ id }: { id: string | null }) {
  * absent on questions that were never answered, and the dotted line skips them.
  */
 function TrajectoryChart({ points }: { points: InterviewTrajectoryPoint[] }) {
+  const { t } = useLocale();
   const W = 560;
   const H = 150;
   const pad = { l: 8, r: 8, t: 10, b: 22 };
@@ -338,8 +348,8 @@ function TrajectoryChart({ points }: { points: InterviewTrajectoryPoint[] }) {
         <SectionHeading
           eyebrow="Adaptivity"
           icon={<TrendingUp className="size-4" aria-hidden />}
-          title="Depth trajectory"
-          description="How hard the agent pushed, question by question, and how you scored."
+          title={t("interviews.report.depthTrajectory")}
+          description={t("interviews.report.depthTrajectoryDescription")}
         />
       </CardHeader>
       <CardContent>

@@ -358,6 +358,7 @@ export const translations = {
         "Submit an application and the funnel starts measuring where it leaks.",
       noStalled: "No stalled applications",
       noStalledDescription: "Every application has recent activity.",
+      loadFailed: "Analysis failed to load",
     },
     // Monitoring
     monitoring: {
@@ -479,6 +480,38 @@ export const translations = {
         "The resume and its versions are removed from your workspace. Knowledge chunks ingested from it stop being cited.",
       deleteResume: "Delete resume",
       paginationLabel: "resumes",
+      detail: {
+        notInWorkspace: "This resume isn't in your workspace",
+        notInWorkspaceDescription:
+          "It may have been deleted. Upload it again from the Resumes page.",
+        loadFailed: "Couldn't load this resume",
+        parsing: "Parsing",
+        notParsedYet: "Not parsed yet",
+        quality: "Resume quality",
+        qualityDescription:
+          "Only shown when the reviewer has actually scored this document.",
+        versions: "Versions",
+        versionsDescription: "Original parses and tailored drafts.",
+        versionsLoadFailed: "Couldn't load versions",
+        whereFrom: "Where this comes from",
+        scoreRing: "Resume score",
+        profileEmpty: "Structured profile is empty",
+        profileEmptyDescription:
+          "The parse returned no sections. Re-run the parser or check the source document in Knowledge.",
+        schools: "Schools & degrees",
+        inventory: "Grouped inventory",
+        direction: "Direction & highlights",
+        targetRoles: "Target roles",
+        preferredLocations: "Preferred locations",
+        careerGoals: "Career goals",
+        submitting: "Submitting the parse request…",
+        stages: {
+          reading: "Reading the stored document",
+          extracting: "Extracting sections with the parser agent",
+          structuring: "Structuring experience, projects and skills",
+          grading: "Grading resume quality",
+        },
+      },
     },
     // Settings
     settings: {
@@ -591,6 +624,7 @@ export const translations = {
       startChat: "Start chat",
       writing: "writing",
       thinking: "thinking",
+      badge: "copilot",
       delete: "Delete",
       noHistory: "This API build has no conversation history",
       noHistoryDescription:
@@ -776,6 +810,12 @@ export const translations = {
       description: "Every agent run, tool call and retrieval — the debug view behind the answers.",
       ctaLabel: "Run something in Copilot",
       paginationLabel: "runs",
+      detail: {
+        steps: "Steps",
+        toolCalls: "Tool calls",
+        tokens: "Tokens",
+        latency: "Latency",
+      },
     },
     // Applications
     applications: {
@@ -792,6 +832,7 @@ export const translations = {
         "Track a job from its detail page and it appears here, starting in Saved.",
       addApplication: "Add application",
       add: "Add",
+      paginationLabel: "applications",
       dialog: {
         trackTitle: "Track an application",
         createDescription:
@@ -895,6 +936,40 @@ export const translations = {
       description:
         "Adaptive mock interviews: the agent follows up while your answers are strong, moves on when they're not, and pushes deeper as you prove depth. Every evaluation cites your own material.",
       paginationLabel: "interview sessions",
+      detail: {
+        missing: "This session doesn't exist (yet)",
+        missingDescription:
+          "The interview endpoint may not be live on the backend, or the session was removed. Start a new one from the Interviews page.",
+        loadFailed: "Couldn't load the interview",
+        answerPlaceholder:
+          "Answer as you would out loud — specifics, numbers, and what you personally did.",
+        answerLabel: "Your answer",
+        endTitle: "End the interview?",
+        endDescription:
+          "The evaluator will score all answered questions and build your report. Unanswered questions are skipped.",
+        finishAndScore: "Finish & score",
+        wentWell: "Went well",
+        wasWeak: "Was weak",
+        missingPoints: "Missing",
+      },
+      report: {
+        loadFailed: "Couldn't load the report",
+        stillRunning: "The interview is still running",
+        stillRunningDescription:
+          "Finish the session and the evaluator will score every answer into a full report.",
+        noReport: "No report stored yet",
+        noReportDescription:
+          "The session is closed but the evaluator hasn't published a report. You can trigger finalization — it scores the answers that exist.",
+        overallScore: "Overall interview score",
+        dimensions: "Dimension scores",
+        dimensionsDescription:
+          "The evaluator's fixed rubric — only dimensions it actually scored are shown.",
+        studyMaterial: "Study material",
+        studyMaterialDescription: "Targeted at the concepts this session exposed.",
+        depthTrajectory: "Depth trajectory",
+        depthTrajectoryDescription:
+          "How hard the agent pushed, question by question, and how you scored.",
+      },
     },
     // Jobs
     jobs: {
@@ -921,6 +996,15 @@ export const translations = {
         "No roles match these filters yet. Clear a filter, paste a JD for the analyst, or let Copilot research roles for your target.",
       askCopilot: "Ask Copilot",
       paginationLabel: "jobs",
+      detail: {
+        notInSystem: "This job isn't in the system",
+        notInSystemDescription:
+          "Either it was removed or the backend hasn't stored it yet. Paste its JD in Jobs → Analyze a JD to work on it immediately.",
+        loadFailed: "Couldn't load this job",
+        resumeEvidence: "Resume evidence",
+        resumeEvidenceDescription:
+          "The exact passages behind the score, with the document and section they came from.",
+      },
       filters: {
         searchPlaceholder: "Title, team, tech…",
         locationPlaceholder: "Shanghai / Remote / Berlin",
@@ -1272,6 +1356,7 @@ export const translations = {
       noFunnelDescription: "投出第一个申请，漏斗就会开始测量流失点。",
       noStalled: "没有停滞的申请",
       noStalledDescription: "每个申请都有近期动态。",
+      loadFailed: "分析数据加载失败",
     },
     // Monitoring
     monitoring: {
@@ -1381,6 +1466,36 @@ export const translations = {
       deleteDescription: "这份简历及其版本会从你的工作台移除。从它摄取的知识块也不再被引用。",
       deleteResume: "删除简历",
       paginationLabel: "简历",
+      detail: {
+        notInWorkspace: "这份简历不在你的工作区里",
+        notInWorkspaceDescription: "它可能已被删除。去简历页重新上传一次。",
+        loadFailed: "没能加载这份简历",
+        parsing: "解析中",
+        notParsedYet: "还没解析",
+        quality: "简历质量",
+        qualityDescription: "只有在评审代理真的给这份文档打过分时才会显示。",
+        versions: "版本",
+        versionsDescription: "原始解析结果和定制草稿。",
+        versionsLoadFailed: "没能加载版本列表",
+        whereFrom: "这份简历的来源",
+        scoreRing: "简历评分",
+        profileEmpty: "结构化档案是空的",
+        profileEmptyDescription:
+          "这次解析没有返回任何段落。重新跑一次解析，或者到知识库里检查源文档。",
+        schools: "学校与学位",
+        inventory: "归类清单",
+        direction: "方向与亮点",
+        targetRoles: "目标职位",
+        preferredLocations: "期望城市",
+        careerGoals: "职业目标",
+        submitting: "正在提交解析请求…",
+        stages: {
+          reading: "正在读取已存下的文档",
+          extracting: "正在用解析代理提取各段落",
+          structuring: "正在整理经历、项目和技能",
+          grading: "正在评估简历质量",
+        },
+      },
     },
     // Settings
     settings: {
@@ -1482,6 +1597,7 @@ export const translations = {
       startChat: "开始对话",
       writing: "正在写",
       thinking: "正在思考",
+      badge: "副驾驶",
       delete: "删除",
       noHistory: "这个 API 版本没有会话历史",
       noHistoryDescription:
@@ -1654,6 +1770,12 @@ export const translations = {
       description: "每一次代理运行、工具调用和检索——答案背后的调试视图。",
       ctaLabel: "在副驾驶里跑点什么",
       paginationLabel: "运行",
+      detail: {
+        steps: "步骤",
+        toolCalls: "工具调用",
+        tokens: "Token 数",
+        latency: "延迟",
+      },
     },
     // Applications
     applications: {
@@ -1669,6 +1791,7 @@ export const translations = {
       pipelineIsEmptyDescription: "在职位详情页记录一个职位，它就会出现在这里，从「已收藏」开始。",
       addApplication: "添加申请",
       add: "添加",
+      paginationLabel: "申请",
       dialog: {
         trackTitle: "记录一个申请",
         createDescription: "在这里添加的任何内容都会从你选择的阶段开始，不需要关联职位。",
@@ -1767,6 +1890,36 @@ export const translations = {
       description:
         "自适应模拟面试：你的回答有力时代理会追问，不够有力时它会往下走一层，你证明了自己的深度它就推得更深。每次评估都引用你自己的材料。",
       paginationLabel: "面试场次",
+      detail: {
+        missing: "这场面试还不存在",
+        missingDescription:
+          "面试接口可能还没在后端上线，或者这场面试已被删除。去面试页重新开一场。",
+        loadFailed: "没能加载这场面试",
+        answerPlaceholder: "像你真的开口回答那样写——具体的细节、数字，以及你自己做了什么。",
+        answerLabel: "你的回答",
+        endTitle: "结束这场面试？",
+        endDescription:
+          "评估代理会给所有已回答的问题打分，并生成你的报告。没有回答的问题会被跳过。",
+        finishAndScore: "结束并评分",
+        wentWell: "答得好的地方",
+        wasWeak: "薄弱的地方",
+        missingPoints: "没答到的",
+      },
+      report: {
+        loadFailed: "没能加载报告",
+        stillRunning: "面试还在进行中",
+        stillRunningDescription: "结束这场面试后，评估代理会把每个回答打分，生成完整报告。",
+        noReport: "还没有存下报告",
+        noReportDescription:
+          "这场面试已经结束，但评估代理还没有发布报告。你可以手动触发收尾——它会给已有的回答打分。",
+        overallScore: "面试总分",
+        dimensions: "各维度得分",
+        dimensionsDescription: "评估代理固定的评分表——只显示它真的打过分的维度。",
+        studyMaterial: "学习材料",
+        studyMaterialDescription: "针对这场面试暴露出来的概念。",
+        depthTrajectory: "深度曲线",
+        depthTrajectoryDescription: "代理一个问题一个问题推了多深，以及你答得怎么样。",
+      },
     },
     // Jobs
     jobs: {
@@ -1792,6 +1945,14 @@ export const translations = {
         "目前没有职位符合这些筛选。清掉一个筛选、粘贴一份 JD 给分析器，或者让副驾驶为你的目标职位做调研。",
       askCopilot: "问问副驾驶",
       paginationLabel: "职位",
+      detail: {
+        notInSystem: "系统里没有这个职位",
+        notInSystemDescription:
+          "它要么被删了，要么后端还没存下来。在职位页粘贴它的 JD →「分析 JD」，就能立刻开始处理。",
+        loadFailed: "没能加载这个职位",
+        resumeEvidence: "简历证据",
+        resumeEvidenceDescription: "分数背后是哪些原文段落，以及它们来自哪份文档的哪一节。",
+      },
       filters: {
         searchPlaceholder: "职位、团队、技术…",
         locationPlaceholder: "上海 / 远程 / 柏林",

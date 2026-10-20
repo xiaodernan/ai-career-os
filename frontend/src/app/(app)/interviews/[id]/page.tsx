@@ -34,6 +34,7 @@ import { ProcessingSteps } from "@/components/ai/processing-steps";
 import { useInterviewOpening, useSubmitInterviewAnswer, useFinalizeInterview } from "@/lib/hooks/actions";
 import { useInterviewSession } from "@/lib/hooks/resources";
 import { depthLabel, depthLevel, titleCase } from "@/lib/format";
+import { useLocale } from "@/lib/i18n/locale-context";
 import type { AnswerResponse } from "@/lib/hooks/actions";
 import type { InterviewQuestion } from "@/lib/api/types";
 
@@ -46,6 +47,7 @@ const StreamingText = dynamic(() =>
 
 export default function InterviewRunnerPage() {
   const params = useParams<{ id: string }>();
+  const { t } = useLocale();
   const id = params?.id ?? null;
   const router = useRouter();
 
@@ -116,8 +118,8 @@ export default function InterviewRunnerPage() {
             {session.isError && (session.error as { isNotFound?: boolean })?.isNotFound ? (
               <EmptyState
                 icon={<Sparkles aria-hidden />}
-                title="This session doesn't exist (yet)"
-                description="The interview endpoint may not be live on the backend, or the session was removed. Start a new one from the Interviews page."
+                title={t("interviews.detail.missing")}
+                description={t("interviews.detail.missingDescription")}
                 action={
                   <Button variant="ai" size="sm" asChild>
                     <Link href="/interviews">All interviews</Link>
@@ -126,7 +128,7 @@ export default function InterviewRunnerPage() {
               />
             ) : (
               <ErrorState
-                title="Couldn't load the interview"
+                title={t("interviews.detail.loadFailed")}
                 error={session.error}
                 onRetry={() => void session.refetch()}
                 retrying={session.isFetching}
@@ -251,9 +253,9 @@ export default function InterviewRunnerPage() {
             <Textarea
               value={answer}
               onChange={(e) => setAnswer(e.target.value)}
-              placeholder="Answer as you would out loud — specifics, numbers, and what you personally did."
+              placeholder={t("interviews.detail.answerPlaceholder")}
               rows={5}
-              aria-label="Your answer"
+              aria-label={t("interviews.detail.answerLabel")}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && answer.trim()) {
                   e.preventDefault();
@@ -349,9 +351,9 @@ export default function InterviewRunnerPage() {
       <ConfirmDialog
         open={confirmFinish}
         onOpenChange={setConfirmFinish}
-        title="End the interview?"
-        description="The evaluator will score all answered questions and build your report. Unanswered questions are skipped."
-        confirmLabel="Finish & score"
+        title={t("interviews.detail.endTitle")}
+        description={t("interviews.detail.endDescription")}
+        confirmLabel={t("interviews.detail.finishAndScore")}
         loading={finalize.isPending}
         onConfirm={() => {
           setConfirmFinish(false);
@@ -415,6 +417,7 @@ function EvaluationPanel({
   onFinish: () => void;
   finalizing: boolean;
 }) {
+  const { t } = useLocale();
   if (!evaluation) return null;
   const score = evaluation.score;
   return (
@@ -443,9 +446,24 @@ function EvaluationPanel({
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid gap-3 sm:grid-cols-3">
-          <PointList icon={<ThumbsUp className="size-3.5" aria-hidden />} title="Went well" items={evaluation.strengths} tone="success" />
-          <PointList icon={<ThumbsDown className="size-3.5" aria-hidden />} title="Was weak" items={evaluation.weaknesses} tone="warning" />
-          <PointList icon={<Quote className="size-3.5" aria-hidden />} title="Missing" items={evaluation.missing} tone="muted" />
+          <PointList
+            icon={<ThumbsUp className="size-3.5" aria-hidden />}
+            title={t("interviews.detail.wentWell")}
+            items={evaluation.strengths}
+            tone="success"
+          />
+          <PointList
+            icon={<ThumbsDown className="size-3.5" aria-hidden />}
+            title={t("interviews.detail.wasWeak")}
+            items={evaluation.weaknesses}
+            tone="warning"
+          />
+          <PointList
+            icon={<Quote className="size-3.5" aria-hidden />}
+            title={t("interviews.detail.missingPoints")}
+            items={evaluation.missing}
+            tone="muted"
+          />
         </div>
 
         {evaluation.dims.length > 0 && (

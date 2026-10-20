@@ -2137,7 +2137,9 @@ def test_the_run_stream_contract_is_one_table_of_publishers_cases_and_subscriber
     # `lib/api/normalize-actions.test.ts`.
     # 47 with the landing page's own:
     # `app/landing-page.test.ts`.
-    assert len(skipped) == 47 and all(rel.endswith((".test.ts", ".test.tsx")) for rel, _t in skipped), \
+    # 48 with the browser copy census' own:
+    # `lib/i18n/copy-census.test.ts`.
+    assert len(skipped) == 48 and all(rel.endswith((".test.ts", ".test.tsx")) for rel, _t in skipped), \
         (f"{len(skipped)} files are skipped and not one ships: a name in that set that is not a test file "
          "would be a subscriber hidden from the table by the pattern rather than by measurement")
     skipped_names = {rel.rsplit("/", 1)[-1] for rel, _t in skipped}

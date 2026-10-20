@@ -28,6 +28,7 @@ import { LoadingListSkeleton } from "@/components/common/loading-skeletons";
 import { normalizeRunTrace, traceTotals, type RunTrace } from "@/lib/activity-trace";
 import { cn } from "@/lib/utils";
 import { formatDateTime, formatDuration, formatNumber, formatUsd, relativeTime, titleCase } from "@/lib/format";
+import { useLocale } from "@/lib/i18n/locale-context";
 
 function statusVariant(status?: string) {
   if (status === "ok" || status === "completed" || status === "succeeded") return "success" as const;
@@ -58,6 +59,7 @@ function Stat({
 }
 
 function TracePanel({ trace }: { trace: RunTrace }) {
+  const { t } = useLocale();
   const totals = traceTotals(trace);
   const { run, steps } = trace;
 
@@ -67,22 +69,22 @@ function TracePanel({ trace }: { trace: RunTrace }) {
         <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           <Stat
             icon={<Waypoints className="size-4" aria-hidden />}
-            label="Steps"
+            label={t("activity.detail.steps")}
             value={`${steps.length}${totals.llmCalls ? ` · ${totals.llmCalls} LLM` : ""}`}
           />
           <Stat
             icon={<Wrench className="size-4" aria-hidden />}
-            label="Tool calls"
+            label={t("activity.detail.toolCalls")}
             value={totals.toolCalls}
           />
           <Stat
             icon={<Cpu className="size-4" aria-hidden />}
-            label="Tokens"
+            label={t("activity.detail.tokens")}
             value={totals.tokens ? formatNumber(totals.tokens) : "—"}
           />
           <Stat
             icon={<Timer className="size-4" aria-hidden />}
-            label="Latency"
+            label={t("activity.detail.latency")}
             value={run.latencyMs ? formatDuration(run.latencyMs) : "—"}
           />
         </CardContent>

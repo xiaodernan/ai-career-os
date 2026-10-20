@@ -39,17 +39,19 @@ import { api } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
 import { normalizeStructuredResume, normalizeTailorDiff, str } from "@/lib/api/normalize";
 import { formatDate, downloadBlob, downloadText } from "@/lib/format";
+import { useLocale } from "@/lib/i18n/locale-context";
 import type { ResumeProject, ResumeScore, StructuredResume } from "@/lib/api/types";
 
-const PARSE_STAGES = [
-  { id: "read", label: "Reading the stored document" },
-  { id: "extract", label: "Extracting sections with the parser agent" },
-  { id: "structure", label: "Structuring experience, projects and skills" },
-  { id: "review", label: "Grading resume quality" },
+const PARSE_STAGE_KEYS = [
+  "resumes.detail.stages.reading",
+  "resumes.detail.stages.extracting",
+  "resumes.detail.stages.structuring",
+  "resumes.detail.stages.grading",
 ];
 
 export default function ResumeDetailPage() {
   const params = useParams<{ id: string }>();
+  const { t } = useLocale();
   const id = params?.id ?? null;
   const resume = useResume(id);
   const versionsQ = useResumeVersions(id);
@@ -97,8 +99,8 @@ export default function ResumeDetailPage() {
             {resume.isError && (resume.error as { isNotFound?: boolean })?.isNotFound ? (
               <EmptyState
                 icon={<FolderGit2 aria-hidden />}
-                title="This resume isn't in your workspace"
-                description="It may have been deleted. Upload it again from the Resumes page."
+                title={t("resumes.detail.notInWorkspace")}
+                description={t("resumes.detail.notInWorkspaceDescription")}
                 action={
                   <Button variant="ai" size="sm" asChild>
                     <Link href="/resumes">Back to resumes</Link>
@@ -107,7 +109,7 @@ export default function ResumeDetailPage() {
               />
             ) : (
               <ErrorState
-                title="Couldn't load this resume"
+                title={t("resumes.detail.loadFailed")}
                 error={resume.error}
                 onRetry={() => void resume.refetch()}
                 retrying={resume.isFetching}
@@ -179,8 +181,8 @@ export default function ResumeDetailPage() {
               {parseTask ? (
                 <TaskProgress
                   taskId={parseTask}
-                  seed={PARSE_STAGES}
-                  title="Parsing"
+                  seed={PARSE_STAGE_KEYS.map((k) => ({ id: k, label: t(k) }))}
+                  title={t("resumes.detail.parsing")}
                   onDone={() => {
                     setParseTask(null);
                     void resume.refetch();
@@ -189,12 +191,13 @@ export default function ResumeDetailPage() {
               ) : (
                 <TaskProgress
                   pending
-                  title="Parsing"
-                  steps={PARSE_STAGES.map((s, i) => ({
-                    ...s,
+                  title={t("resumes.detail.parsing")}
+                  steps={PARSE_STAGE_KEYS.map((k, i) => ({
+                    id: k,
+                    label: t(k),
                     status: (i === 0 ? "active" : "pending") as "active" | "pending",
                   }))}
-                  pendingLabel="Submitting the parse request…"
+                  pendingLabel={t("resumes.detail.submitting")}
                 />
               )}
             </div>
@@ -220,7 +223,7 @@ export default function ResumeDetailPage() {
               <CardContent>
                 <EmptyState
                   icon={<ScanSearch aria-hidden />}
-                  title="Not parsed yet"
+                  title={t("resumes.detail.notParsedYet")}
                   description={
                     r.status === "parsing" || r.status === "ingesting"
                       ? "The extraction agent is working through this document — the structured profile appears automatically when it's done."
@@ -239,8 +242,8 @@ export default function ResumeDetailPage() {
               <SectionHeading
                 eyebrow="Reviewer agent"
                 icon={<Target className="size-4" aria-hidden />}
-                title="Resume quality"
-                description="Only shown when the reviewer has actually scored this document."
+                title={t("resumes.detail.quality")}
+                description={t("resumes.detail.qualityDescription")}
               />
             </CardHeader>
             <CardContent>
@@ -254,8 +257,8 @@ export default function ResumeDetailPage() {
               <SectionHeading
                 eyebrow="History"
                 icon={<FolderGit2 className="size-4" aria-hidden />}
-                title="Versions"
-                description="Original parses and tailored drafts."
+                title={t("resumes.detail.versions")}
+                description={t("resumes.detail.versionsDescription")}
               />
             </CardHeader>
             <CardContent className="space-y-3">
@@ -264,7 +267,7 @@ export default function ResumeDetailPage() {
               ) : versionsQ.isError ? (
                 <ErrorState
                   className="px-0 py-6"
-                  title="Couldn't load versions"
+                  title={t("resumes.detail.versionsLoadFailed")}
                   error={versionsQ.error}
                   onRetry={() => void versionsQ.refetch()}
                   retrying={versionsQ.isFetching}
@@ -330,7 +333,7 @@ export default function ResumeDetailPage() {
               <SectionHeading
                 eyebrow="Data sources"
                 icon={<Sparkles className="size-4" aria-hidden />}
-                title="Where this comes from"
+                title={t("resumes.detail.whereFrom")}
               />
             </CardHeader>
             <CardContent className="space-y-2 text-xs text-muted-foreground">
@@ -384,6 +387,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function ScorePanel({ score }: { score: ResumeScore | null }) {
+  const { t } = useLocale();
   if (!score || score.overall == null) {
     return (
       <p className="text-sm text-muted-foreground">
@@ -408,7 +412,12 @@ function ScorePanel({ score }: { score: ResumeScore | null }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-4">
-        <MatchRing value={score.overall} size={64} thickness={6} label="Resume score" />
+        <MatchRing
+          value={score.overall}
+          size={64}
+          thickness={6}
+          label={t("resumes.detail.scoreRing")}
+        />
         <div className="min-w-0 text-sm">
           <p className="font-medium">Overall {score.overall}/100</p>
         </div>
@@ -431,6 +440,7 @@ function ScorePanel({ score }: { score: ResumeScore | null }) {
 }
 
 function StructuredProfileView({ structured }: { structured: StructuredResume }) {
+  const { t } = useLocale();
   const profile = structured.profile;
   const hasAny =
     profile ||
@@ -447,8 +457,8 @@ function StructuredProfileView({ structured }: { structured: StructuredResume })
         <CardContent>
           <EmptyState
             icon={<ScanSearch aria-hidden />}
-            title="Structured profile is empty"
-            description="The parse returned no sections. Re-run the parser or check the source document in Knowledge."
+            title={t("resumes.detail.profileEmpty")}
+            description={t("resumes.detail.profileEmptyDescription")}
           />
         </CardContent>
       </Card>
@@ -586,7 +596,7 @@ function StructuredProfileView({ structured }: { structured: StructuredResume })
         <SectionCard
           icon={<GraduationCap className="size-4" aria-hidden />}
           eyebrow="Education"
-          title="Schools & degrees"
+          title={t("resumes.detail.schools")}
         >
           <ul className="space-y-3">
             {structured.education!.map((ed, i) => (
@@ -610,7 +620,7 @@ function StructuredProfileView({ structured }: { structured: StructuredResume })
         <SectionCard
           icon={<Wrench className="size-4" aria-hidden />}
           eyebrow="Skills"
-          title="Grouped inventory"
+          title={t("resumes.detail.inventory")}
         >
           <ul className="space-y-3">
             {structured.skills!.map((g, i) => (
@@ -641,12 +651,21 @@ function StructuredProfileView({ structured }: { structured: StructuredResume })
         <SectionCard
           icon={<Award className="size-4" aria-hidden />}
           eyebrow="Goals"
-          title="Direction & highlights"
+          title={t("resumes.detail.direction")}
         >
           <div className="space-y-3 text-sm">
-            {structured.preferredRoles && structured.preferredRoles.length > 0 && <Labelled label="Target roles" items={structured.preferredRoles} />}
-            {structured.preferredLocations && structured.preferredLocations.length > 0 && <Labelled label="Preferred locations" items={structured.preferredLocations} />}
-            {structured.careerGoals && structured.careerGoals.length > 0 && <Labelled label="Career goals" items={structured.careerGoals} />}
+            {structured.preferredRoles && structured.preferredRoles.length > 0 && (
+              <Labelled label={t("resumes.detail.targetRoles")} items={structured.preferredRoles} />
+            )}
+            {structured.preferredLocations && structured.preferredLocations.length > 0 && (
+              <Labelled
+                label={t("resumes.detail.preferredLocations")}
+                items={structured.preferredLocations}
+              />
+            )}
+            {structured.careerGoals && structured.careerGoals.length > 0 && (
+              <Labelled label={t("resumes.detail.careerGoals")} items={structured.careerGoals} />
+            )}
             {(structured.achievements?.length ?? 0) > 0 && (
               <div>
                 <p className="text-2xs font-medium tracking-wide text-muted-foreground uppercase">Achievements</p>
