@@ -75,12 +75,12 @@ describe("the translation table", () => {
                         "growth", "offers", "analysis", "monitoring",
                         "data", "ingestion", "networking", "copilot",
                         "dashboard"]) {
-      const block = (translations.en as Record<string, Record<string, string>>)[page];
+      const block = (translations.en as unknown as Record<string, { title?: string }>)[page];
       expect(block, `${page} has no translation block`).toBeTruthy();
-      expect(block.title, `${page}.title is missing`).toBeTruthy();
-      const zhBlock = (translations.zh as Record<string, Record<string, string>>)[page];
+      expect(block!.title, `${page}.title is missing`).toBeTruthy();
+      const zhBlock = (translations.zh as unknown as Record<string, { title?: string }>)[page];
       expect(zhBlock, `${page} has no Chinese block`).toBeTruthy();
-      expect(zhBlock.title, `${page}.title has no Chinese label`).toBeTruthy();
+      expect(zhBlock!.title, `${page}.title has no Chinese label`).toBeTruthy();
     }
   });
 });

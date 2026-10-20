@@ -419,6 +419,25 @@ export const translations = {
       title: "Jobs",
       description:
         "Discovered and pasted roles, scored against your resume with evidence — the match ring leads, the metadata follows.",
+      sort: {
+        auto: "Best match",
+        posted: "Newest first",
+        salary: "Highest salary",
+        title: "Title A–Z",
+        match: "Match score",
+      },
+      noSavedMatch: "No saved role matches these filters",
+      noSavedMatchDescription:
+        "You have bookmarks behind this filter set. Loosen one, or clear them all to see the whole saved list.",
+      clearFilters: "Clear filters",
+      nothingSaved: "Nothing saved yet",
+      nothingSavedDescription:
+        "Save a role from Discover and it appears in your pipeline, ready for a match run and a tailored resume.",
+      browseDiscover: "Browse discover",
+      boardIsQuiet: "The job board is quiet",
+      boardIsQuietDescription:
+        "No roles match these filters yet. Clear a filter, paste a JD for the analyst, or let Copilot research roles for your target.",
+      askCopilot: "Ask Copilot",
     },
   },
   zh: {
@@ -802,6 +821,25 @@ export const translations = {
     jobs: {
       title: "职位",
       description: "发现和粘贴的职位，带着证据和你的简历对过分——匹配度在前，元数据在后。",
+      sort: {
+        auto: "最佳匹配",
+        posted: "最新优先",
+        salary: "薪资最高",
+        title: "职位名 A–Z",
+        match: "匹配度",
+      },
+      noSavedMatch: "没有符合这些筛选的已收藏职位",
+      noSavedMatchDescription:
+        "这些筛选后面还压着一些收藏。放宽一个，或者全部清掉，就能看到完整的收藏列表。",
+      clearFilters: "清空筛选",
+      nothingSaved: "还没有收藏",
+      nothingSavedDescription:
+        "在「发现」里收藏一个职位，它就会出现在你的流水线里，随时可以跑匹配、定制简历。",
+      browseDiscover: "去发现页看看",
+      boardIsQuiet: "职位板很安静",
+      boardIsQuietDescription:
+        "目前没有职位符合这些筛选。清掉一个筛选、粘贴一份 JD 给分析器，或者让副驾驶为你的目标职位做调研。",
+      askCopilot: "问问副驾驶",
     },
   },
 } as const;

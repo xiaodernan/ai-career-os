@@ -211,10 +211,12 @@ describe("the saved tab's list screen", () => {
   });
 
   it("says which kind of empty the Saved tab is", () => {
-    expect(source).toContain("No saved role matches these filters");
+    // The two empty states are named in the translation table now, so the
+    // page reads them through keys rather than carrying the copy itself.
+    expect(source).toContain('t("jobs.noSavedMatch")');
     expect(source).toContain("hasActiveJobFilters(filters)");
     // A bookmark set that is genuinely empty must still get its own state.
-    expect(source).toContain("Nothing saved yet");
+    expect(source).toContain('t("jobs.nothingSaved")');
   });
 });
 

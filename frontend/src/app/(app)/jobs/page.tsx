@@ -53,12 +53,12 @@ const DEFAULTS: FilterState = {
  *' own keys — a gate in job-filter.test.ts keeps the two lists identical, so an
  * ordering the SQL gains appears here rather than staying a curl-only feature.
  */
-const SORT_OPTIONS: { value: string; label: string }[] = [
-  { value: "auto", label: "Best match" },
-  { value: "posted", label: "Newest first" },
-  { value: "salary", label: "Highest salary" },
-  { value: "title", label: "Title A–Z" },
-  { value: "match", label: "Match score" },
+const SORT_OPTIONS: { value: string; labelKey: string }[] = [
+  { value: "auto", labelKey: "jobs.sort.auto" },
+  { value: "posted", labelKey: "jobs.sort.posted" },
+  { value: "salary", labelKey: "jobs.sort.salary" },
+  { value: "title", labelKey: "jobs.sort.title" },
+  { value: "match", labelKey: "jobs.sort.match" },
 ];
 
 export default function JobsPage() {
@@ -187,7 +187,7 @@ export default function JobsPage() {
                   <SelectContent>
                     {SORT_OPTIONS.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
-                        {option.label}
+                        {t(option.labelKey)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -204,39 +204,36 @@ export default function JobsPage() {
               tab === "saved" && savedFilteredToEmpty
                 ? {
                     icon: <SlidersHorizontal aria-hidden />,
-                    title: "No saved role matches these filters",
-                    description:
-                      "You have bookmarks behind this filter set. Loosen one, or clear them all to see the whole saved list.",
+                    title: t("jobs.noSavedMatch"),
+                    description: t("jobs.noSavedMatchDescription"),
                     action: (
                       <Button variant="outline" size="sm" onClick={() => setFilters(DEFAULTS, { replaceAll: true })}>
-                        Clear filters
+                        {t("jobs.clearFilters")}
                       </Button>
                     ),
                   }
                 : tab === "saved"
                   ? {
                       icon: <Bookmark aria-hidden />,
-                      title: "Nothing saved yet",
-                      description:
-                        "Save a role from Discover and it appears in your pipeline, ready for a match run and a tailored resume.",
+                      title: t("jobs.nothingSaved"),
+                      description: t("jobs.nothingSavedDescription"),
                       action: (
                         <Button variant="outline" size="sm" onClick={() => setTab("discover")}>
-                          Browse discover
+                          {t("jobs.browseDiscover")}
                         </Button>
                       ),
                     }
                   : {
                       icon: <Briefcase aria-hidden />,
-                      title: "The job board is quiet",
-                      description:
-                        "No roles match these filters yet. Clear a filter, paste a JD for the analyst, or let Copilot research roles for your target.",
+                      title: t("jobs.boardIsQuiet"),
+                      description: t("jobs.boardIsQuietDescription"),
                       action: (
                         <>
                           <Button variant="outline" size="sm" onClick={() => setFilters(DEFAULTS, { replaceAll: true })}>
-                            Clear filters
+                            {t("jobs.clearFilters")}
                           </Button>
                           <Button variant="ai" size="sm" asChild>
-                            <Link href="/copilot">Ask Copilot</Link>
+                            <Link href="/copilot">{t("jobs.askCopilot")}</Link>
                           </Button>
                         </>
                       ),
