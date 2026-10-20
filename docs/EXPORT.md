@@ -24,12 +24,33 @@ The engines were internal-only until now; the routes that reach them are:
 |---|---|---|
 | `POST /api/v1/data-portability/export` | `{anonymized?}` | the bundle, with its content hash |
 | `POST /api/v1/data-portability/import-plan` | `{bundle, existing?}` | the per-item create/update/delete plan, with the counts |
+| `POST /api/v1/data-portability/import-apply` | `{bundle}` | what each section wrote, and which ones were left alone |
 | `POST /api/v1/data-portability/redact` | `{bundle, drop?}` | the bundle with the named sections removed and the hash recomputed |
 
-The frontend's `/data` page drives all three: export (plain or anonymized),
+The frontend's `/data` page drives all four: export (plain or anonymized),
 download the JSON, drop sections before sharing, and paste a bundle back to
-preview exactly what a re-import would write. The plan is *not* applied — the
-apply step is the backend's, and it is the only part of the loop that writes.
+preview what a re-import would write — then to run it.
+
+### The apply is real (2026-10-20)
+
+The plan was always only a plan. `import-apply` now executes it: the backend
+computes the plan, then runs the ops against the tables it owns, and the answer
+says what was written **and names every section it left alone with the
+reason**. A partial restore is visible rather than reported as a success.
+
+Two rules make it safe:
+
+- **Only the caller's own rows are touched.** Every read and every write is
+  scoped by the user id, so a bundle naming another user's rows finds nothing
+  to change rather than writing into someone else's account.
+- **A section is applied whole or not at all.** A section the backend cannot
+  write yet — the resumes, the knowledge base, the job descriptions, the
+  interviews — is reported as skipped rather than claimed.
+
+What applies today: the profile, the applications and the stored growth runs.
+What does not: the resumes and the knowledge base, because restoring a resume
+means re-ingesting a document into storage and the vector store — a pipeline of
+its own, not a row write.
 
 ### The bundle is complete (1.1.0)
 

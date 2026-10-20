@@ -148,7 +148,12 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   create/update/delete ops with per-item content hashes so the backend can skip
   unchanged rows; `python -m app.ops.restore_plan backup.json [--existing current.json]`
   dry-runs that plan from a backup file with no database, so an operator can preview a
-  restore or diff a backup before any write. Backend bridge: `POST /api/v1/data-portability/import-plan`.)
+  restore or diff a backup before any write. Backend bridge: `POST /api/v1/data-portability/import-plan`
+  and `POST /api/v1/data-portability/import-apply` — the second one executes the plan
+  and reports what it wrote **and which sections it left alone, with the reason**. Today
+  the profile, the applications and the stored growth runs apply; the resumes and the
+  knowledge base do not, because restoring a resume means re-ingesting a document into
+  storage and the vector store — a pipeline of its own, not a row write.)
 - [x] **13.3** Per-user data deletion (right-to-be-forgotten). (ai-service half:
   `features/export_redact.py` deep-copy section redaction + `anonymize`; recomputes the
   content hash and records `redacted_sections`. Backend bridge: `POST /api/v1/data-portability/redact`.)

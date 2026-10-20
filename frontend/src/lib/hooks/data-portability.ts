@@ -4,7 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
 import { fail } from "@/lib/hooks/failure";
-import type { ExportBundle, ImportPlan, RedactedBundle } from "@/lib/api/types";
+import type { ExportBundle, ImportApplied, ImportPlan, RedactedBundle } from "@/lib/api/types";
 
 /**
  * Data portability (13.1-13.3): export a bundle, plan an idempotent re-import,
@@ -45,6 +45,19 @@ export function useImportPlan() {
     mutationFn: async (input: { bundle: unknown; existing?: unknown }) =>
       (await api.create<unknown>(endpoints.dataImportPlan, importPlanBody(input.bundle, input.existing))) as ImportPlan,
     onError: fail("Couldn't build the import plan."),
+  });
+}
+
+/**
+ * 13.2 — apply a re-import. The answer says what each section wrote and which
+ * ones were left alone, so a partial restore is visible rather than reported as
+ * a success.
+ */
+export function useImportApply() {
+  return useMutation({
+    mutationFn: async (bundle: unknown) =>
+      (await api.create<unknown>(endpoints.dataImportApply, { bundle })) as ImportApplied,
+    onError: fail("Couldn't apply the import."),
   });
 }
 

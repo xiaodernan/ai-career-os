@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { useExportBundle, useImportPlan, useRedactBundle } from "@/lib/hooks/data-portability";
+import { useExportBundle, useImportApply, useImportPlan, useRedactBundle } from "@/lib/hooks/data-portability";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { downloadText } from "@/lib/format";
 import type { ExportBundle } from "@/lib/api/types";
@@ -41,6 +41,7 @@ export default function DataPortabilityPage() {
   const { t } = useLocale();
   const exportBundle = useExportBundle();
   const importPlan = useImportPlan();
+  const applyImport = useImportApply();
   const redactBundle = useRedactBundle();
 
   // The bundle the last export produced — the input the redaction and the
@@ -109,6 +110,27 @@ export default function DataPortabilityPage() {
       }
     );
   }, [importText, importPlan]);
+
+  const runApply = React.useCallback(() => {
+    if (!importText.trim()) return;
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(importText);
+    } catch {
+      toast.error(t("data.notJson"));
+      return;
+    }
+    applyImport.mutate(parsed, {
+      onSuccess: (out) => {
+        const skipped = (out.skipped ?? []).length;
+        toast.success(
+          skipped > 0
+            ? t("data.appliedWithSkipped")
+            : t("data.appliedClean")
+        );
+      },
+    });
+  }, [importText, applyImport, t]);
 
   const toggleDrop = (key: string) =>
     setDropped((prev) =>
@@ -288,6 +310,49 @@ export default function DataPortabilityPage() {
                   </dd>
                 </div>
               </dl>
+              {/* The plan is a preview; the apply is the write. They are two
+                  buttons because a restore that half-applied would be worse
+                  than one the user could read first. */}
+              <Button
+                variant="ai"
+                size="sm"
+                loading={applyImport.isPending}
+                disabled={!importText.trim()}
+                onClick={runApply}
+              >
+                <Upload aria-hidden />
+                {t("data.applyTheRestore")}
+              </Button>
+            </div>
+          )}
+
+          {applyImport.data && (
+            <div className="space-y-2 rounded-lg border border-border/60 p-3">
+              <p className="text-sm font-medium">{t("data.applied")}</p>
+              <ul className="space-y-1 text-sm">
+                {Object.entries(applyImport.data.applied ?? {}).map(([section, counts]) => (
+                  <li key={section} className="flex items-center justify-between gap-2">
+                    <span className="capitalize">{section.replace(/_/g, " ")}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {`${counts.created ?? 0} created · ${counts.updated ?? 0} updated · ${counts.deleted ?? 0} deleted`}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              {/* The skipped sections are named with their reason: a partial
+                  restore the user cannot see is a lie the user finds out about
+                  later. */}
+              {(applyImport.data.skipped ?? []).length > 0 && (
+                <ul className="space-y-1 border-t border-border/60 pt-2 text-xs text-muted-foreground">
+                  {(applyImport.data.skipped ?? []).map((s) => (
+                    <li key={s.section}>
+                      <span className="font-medium capitalize">{s.section.replace(/_/g, " ")}</span>
+                      {" — "}
+                      {s.reason}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           )}
         </CardContent>

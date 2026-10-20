@@ -4,9 +4,11 @@ import com.careeros.ai.AiServiceClient;
 import com.careeros.common.AuthUser;
 import com.careeros.common.CurrentUser;
 import com.careeros.report.dto.DataPortabilityDtos.ExportRequest;
+import com.careeros.report.dto.DataPortabilityDtos.ImportApplyRequest;
 import com.careeros.report.dto.DataPortabilityDtos.ImportPlanRequest;
 import com.careeros.report.dto.DataPortabilityDtos.RedactRequest;
 import com.careeros.report.service.ExportService;
+import com.careeros.report.service.ImportService;
 import jakarta.validation.Valid;
 import java.util.Map;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -27,10 +29,13 @@ public class DataPortabilityController {
 
     private final AiServiceClient aiService;
     private final ExportService exports;
+    private final ImportService imports;
 
-    public DataPortabilityController(AiServiceClient aiService, ExportService exports) {
+    public DataPortabilityController(AiServiceClient aiService, ExportService exports,
+                                     ImportService imports) {
         this.aiService = aiService;
         this.exports = exports;
+        this.imports = imports;
     }
 
     /**
@@ -52,7 +57,17 @@ public class DataPortabilityController {
     @PostMapping("/import-plan")
     public Map<String, Object> importPlan(@CurrentUser AuthUser user,
                                            @RequestBody @Valid ImportPlanRequest request) {
-        return aiService.importPlan(user.id(), request.bundle(), request.existing());
+        return imports.plan(user.id(), request.bundle(), request.existing());
+    }
+
+    /**
+     * 13.2 -- apply a re-import. The plan is computed and then executed, and
+     * the answer says what was written and which sections were left alone.
+     */
+    @PostMapping("/import-apply")
+    public Map<String, Object> importApply(@CurrentUser AuthUser user,
+                                           @RequestBody @Valid ImportApplyRequest request) {
+        return imports.apply(user.id(), request.bundle());
     }
 
     /**

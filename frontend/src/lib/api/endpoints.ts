@@ -109,6 +109,7 @@ export const endpoints = {
   /* ---------------- Data portability (13.1-13.3) ------------------------- */
   dataExport: "/data-portability/export",
   dataImportPlan: "/data-portability/import-plan",
+  dataImportApply: "/data-portability/import-apply",
   dataRedact: "/data-portability/redact",
 
   /* ---------------- Salary & offers (12.1-12.5) ------------------------ */

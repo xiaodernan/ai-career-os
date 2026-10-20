@@ -215,6 +215,11 @@ export const translations = {
       removedSoFar: "Removed so far:",
       exportReady: "Export ready.",
       planReady: "Plan ready.",
+      applyTheRestore: "Apply the restore",
+      applied: "What was written",
+      appliedClean: "The restore was applied.",
+      appliedWithSkipped: "The restore was applied, with sections left alone.",
+      notJson: "That is not valid JSON.",
     },
     // Ingestion
     ingestion: {
@@ -544,6 +549,11 @@ export const translations = {
       removedSoFar: "已删减：",
       exportReady: "导出已就绪。",
       planReady: "计划已就绪。",
+      applyTheRestore: "执行恢复",
+      applied: "写入了什么",
+      appliedClean: "恢复已执行。",
+      appliedWithSkipped: "恢复已执行，有部分段落未动。",
+      notJson: "这不是合法的 JSON。",
     },
     // Ingestion
     ingestion: {

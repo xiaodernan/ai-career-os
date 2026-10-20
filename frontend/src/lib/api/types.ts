@@ -1120,6 +1120,17 @@ export interface ImportPlan {
   op_counts?: { create: number; update: number; delete: number; total: number };
 }
 
+/**
+ * What an applied re-import wrote (13.2). `skipped` names every section the
+ * backend could not write **with the reason** — a partial restore is visible
+ * rather than reported as a success.
+ */
+export interface ImportApplied {
+  applied?: Record<string, { created?: number; updated?: number; deleted?: number }>;
+  skipped?: Array<{ section: string; reason: string }>;
+  op_counts?: { create: number; update: number; delete: number; total: number };
+}
+
 /** A bundle with sections dropped (13.3). */
 export type RedactedBundle = ExportBundle;
 

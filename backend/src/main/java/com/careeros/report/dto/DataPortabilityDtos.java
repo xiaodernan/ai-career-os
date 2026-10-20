@@ -35,6 +35,13 @@ public final class DataPortabilityDtos {
     }
 
     /**
+     * 13.2 -- apply a re-import. The bundle is the document being restored; the
+     * plan is computed from it and the current state, and the ops are executed.
+     */
+    public record ImportApplyRequest(Map<String, Object> bundle) {
+    }
+
+    /**
      * 13.3 -- redact sections. `drop` names the sections to remove; the
      * ai-service rejects a name it does not know rather than silently dropping
      * the wrong section.

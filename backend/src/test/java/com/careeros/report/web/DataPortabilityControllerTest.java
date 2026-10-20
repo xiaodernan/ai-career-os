@@ -16,6 +16,9 @@ import com.careeros.ai.AiServiceClient;
 import com.careeros.ai.repository.GrowthPlanRepository;
 import com.careeros.application.repository.ApplicationRepository;
 import com.careeros.report.service.ExportService;
+import com.careeros.report.service.ImportService;
+import com.careeros.auth.repository.UserProfileRepository;
+import com.careeros.knowledge.repository.UserNoteRepository;
 import com.careeros.common.AuthUser;
 import com.careeros.common.CurrentUserArgumentResolver;
 import com.careeros.common.EnvelopeAdvice;
@@ -51,6 +54,8 @@ class DataPortabilityControllerTest {
     private AiServiceClient ai;
     private ApplicationRepository applications;
     private GrowthPlanRepository growthPlans;
+    private UserProfileRepository profiles;
+    private UserNoteRepository notes;
     private MockMvc mvc;
 
     @BeforeEach
@@ -58,8 +63,11 @@ class DataPortabilityControllerTest {
         ai = mock(AiServiceClient.class);
         applications = mock(ApplicationRepository.class);
         growthPlans = mock(GrowthPlanRepository.class);
+        profiles = mock(UserProfileRepository.class);
+        notes = mock(UserNoteRepository.class);
         ExportService exports = new ExportService(ai, applications, growthPlans);
-        DataPortabilityController controller = new DataPortabilityController(ai, exports);
+        ImportService imports = new ImportService(ai, profiles, notes, applications, growthPlans);
+        DataPortabilityController controller = new DataPortabilityController(ai, exports, imports);
         mvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new EnvelopeAdvice(), new GlobalExceptionHandler())
                 .setCustomArgumentResolvers(new CurrentUserArgumentResolver())
@@ -189,5 +197,50 @@ class DataPortabilityControllerTest {
                 .andExpect(status().isOk());
 
         verify(ai).redactBundle(eq(UUID.fromString(USER)), any(), isNull());
+    }
+
+    /**
+     * The apply is the write half of the restore: it says what it wrote and
+     * which sections it left alone, so a partial restore is visible rather
+     * than reported as a success.
+     */
+    @Test
+    void the_apply_reports_what_it_wrote_and_what_it_skipped() throws Exception {
+        when(profiles.findByUserId(eq(UUID.fromString(USER)))).thenReturn(java.util.Optional.empty());
+        when(applications.findByUserIdOrderByUpdatedAtDescIdAsc(eq(UUID.fromString(USER)), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of()));
+        when(growthPlans.findByUserIdOrderByCreatedAtDesc(eq(UUID.fromString(USER))))
+                .thenReturn(List.of());
+        when(ai.importPlan(eq(UUID.fromString(USER)), any(), any()))
+                .thenReturn(Map.of(
+                        "op_counts", Map.of("create", 1, "update", 0, "delete", 0, "total", 1),
+                        "sections", Map.of(
+                                "profile", List.of(Map.of("op", "update", "id", "p1")),
+                                "resumes", List.of(Map.of("op", "create", "id", "r1")))));
+
+        mvc.perform(post("/api/v1/data-portability/import-apply")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"bundle":{"schema_version":"1.1.0","data":{
+                                  "profile":{"headline":"Backend engineer"},
+                                  "resumes":[{"id":"r1"}]}}}
+                                """))
+                .andExpect(status().isOk())
+                // The profile was written; the resumes were not, and the answer
+                // says so rather than claiming the whole bundle landed.
+                .andExpect(jsonPath("$.data.applied.profile.updated").value(1))
+                .andExpect(jsonPath("$.data.skipped[0].section").value("resumes"));
+    }
+
+    /**
+     * A bundle with no data section is not a bundle: the route refuses it
+     * before the plan runs.
+     */
+    @Test
+    void an_apply_without_a_data_section_is_refused() throws Exception {
+        mvc.perform(post("/api/v1/data-portability/import-apply")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"bundle\":{\"schema_version\":\"1.1.0\"}}"))
+                .andExpect(status().isBadRequest());
     }
 }
