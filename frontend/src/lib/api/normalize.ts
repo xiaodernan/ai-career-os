@@ -1404,6 +1404,11 @@ export const CHAT_ACTION_ROUTES: Record<string, string> = {
   cover_letter: "/jobs/{id}#cover-letter",
   interview: "/interviews",
   open_interview: "/interviews/{id}",
+  // The growth engines' answers: the gap report and the learning order live on
+  // the growth page, the market band and the offer comparison on the offers
+  // page. Neither needs a locator -- the page is the destination.
+  open_growth: "/growth",
+  open_offers: "/offers",
 };
 
 /** Follow-up action chips. Takes the whole reply — the live `ChatResponse` or a persisted

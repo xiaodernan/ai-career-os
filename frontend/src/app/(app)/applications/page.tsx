@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useApplication, useApplications } from "@/lib/hooks/resources";
 import { useReorderApplication } from "@/lib/hooks/actions";
 import { useUrlState } from "@/lib/hooks/use-url-state";
+import { useLocale } from "@/lib/i18n/locale-context";
 import type { Application, ApplicationStatus } from "@/lib/api/types";
 import { KanbanBoard } from "@/components/common/kanban";
 import { ApplicationDialog } from "@/components/applications/application-dialog";
@@ -21,6 +22,7 @@ const PAGE_SIZE = 100;
 const PAGE_DEFAULTS: { application?: string; page: number } = { application: undefined, page: 0 };
 
 export default function ApplicationsPage() {
+  const { t } = useLocale();
   // The page index lives in the URL, so a reload or a shared board link opens the same window.
   const [state, setUrl] = useUrlState<{ application?: string; page: number }>(
     PAGE_DEFAULTS,
@@ -76,8 +78,8 @@ export default function ApplicationsPage() {
 
   return (
     <ModuleView
-      title="Applications"
-      description="Every role in flight. Drag a card to move it through the pipeline, or open one to add notes and a reminder — the dashboard counts follow the same data."
+      title={t("applications.title")}
+      description={t("applications.description")}
       query={applications}
       emptyHint={{
         title: "Pipeline is empty",

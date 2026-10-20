@@ -2838,11 +2838,15 @@ def test_the_reads_are_actually_found():
     # agree on `actions`, so either one dropping the component would leave the other covering the
     # read -- and a chip row that vanishes after a refresh is exactly what this reader exists to stop.
     assert "actions" in _emitted("ChatResponse") and "actions" in _emitted("MessageItem")
-    # Per literal, for the same reason: four job-located rows and one session-located row, so a rename
-    # of `job_id` would have had `session_id` to cover for it inside the union `_emitted` answers with.
+    # Per literal, for the same reason: four job-located rows, one session-located row
+    # and two page-located rows (the growth engines' answers -- a gap report opens
+    # the growth page and an offer comparison the offers page, so neither needs a
+    # locator), so a rename of `job_id` would have had `session_id` to cover for it
+    # inside the union `_emitted` answers with.
     assert collections.Counter(_added_key_sets("_derive_actions", "add")) == {
         ("job_id", "kind", "label"): 4,
         ("kind", "label", "session_id"): 1,
+        ("kind", "label"): 2,
     }
     assert _emitted("ChatActionItem") == {"kind", "label", "job_id", "session_id"}
     # The follow-up question, #157. Four sites, one name each, against the map `decide_next` returns --
@@ -3033,10 +3037,11 @@ def test_every_action_kind_the_orchestrator_offers_lands_somewhere():
     """
     assert _route_problems() == []
     # Positive control on the rule itself, in the same shape as the census above: the table has the
-    # five entries the orchestrator writes, so a `kinds != routes` assertion that compared two empty
-    # sets would prove nothing.
+    # seven entries the orchestrator writes, so a `kinds != routes` assertion that compared two
+    # empty sets would prove nothing.
     assert sorted(_chat_routes()) == sorted(_added_values(*PRODUCERS["ChatActionItem"][1], "kind")) \
-        == ["cover_letter", "interview", "open_interview", "open_job", "tailor"]
+        == ["cover_letter", "interview", "open_growth", "open_interview", "open_job",
+            "open_offers", "tailor"]
     assert all(_page_file(route) is not None for route in _chat_routes().values())
 
 

@@ -20,6 +20,7 @@ import { ImportJobDialog } from "@/components/jobs/import-job-dialog";
 import { relativeTime } from "@/lib/format";
 import { useJobs, useResumes, useResume, useSavedJobs } from "@/lib/hooks/resources";
 import { useUrlState } from "@/lib/hooks/use-url-state";
+import { useLocale } from "@/lib/i18n/locale-context";
 import { filterAndPaginate, hasActiveJobFilters, profileSkillSuggestions } from "@/lib/job-filter";
 
 type FilterState = {
@@ -61,6 +62,7 @@ const SORT_OPTIONS: { value: string; label: string }[] = [
 ];
 
 export default function JobsPage() {
+  const { t } = useLocale();
   const [filters, setFilters] = useUrlState(DEFAULTS, {
     numericKeys: ["page", "min_salary", "max_salary", "size"],
     booleanKeys: ["remote"],
@@ -110,8 +112,8 @@ export default function JobsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Jobs"
-        description="Discovered and pasted roles, scored against your resume with evidence — the match ring leads, the metadata follows."
+        title={t("jobs.title")}
+        description={t("jobs.description")}
         actions={
           <>
             <ImportJobDialog />

@@ -167,7 +167,7 @@ export default function DashboardPage() {
               {typeof metrics.avgMatch === "number" ? (
                 <Card>
                   <CardContent className="flex items-center gap-3">
-                    <MatchRing value={metrics.avgMatch} size={56} thickness={5} label="Average match" />
+                    <MatchRing value={metrics.avgMatch} size={56} thickness={5} label={t("dashboard.averageMatch")} />
                     <div>
                       <p className="text-2xs font-medium tracking-wide text-muted-foreground uppercase">
                         Avg match
@@ -191,7 +191,7 @@ export default function DashboardPage() {
               <CardContent>
                 <EmptyState
                   icon={<Gauge aria-hidden />}
-                  title="Dashboard stats aren't connected yet"
+                  title={t("dashboard.statsNotConnected")}
                   description={`${missingEndpointMessage("GET /reports/dashboard")} The rest of the page still reads the real APIs below.`}
                   action={
                     <Button variant="outline" size="sm" onClick={() => void dashboard.refetch()}>
@@ -205,7 +205,7 @@ export default function DashboardPage() {
             <Card>
               <CardContent>
                 <ErrorState
-                  title="Dashboard stats failed to load"
+                  title={t("dashboard.statsFailed")}
                   error={dashboard.error}
                   onRetry={() => void dashboard.refetch()}
                   retrying={dashboard.isFetching}
@@ -335,7 +335,7 @@ export default function DashboardPage() {
                     <LoadingListSkeleton rows={2} />
                   ) : dashboard.isError ? (
                     <ErrorState
-                      title="Attention list failed to load"
+                      title={t("dashboard.attentionFailed")}
                       error={dashboard.error}
                       onRetry={() => void dashboard.refetch()}
                       retrying={dashboard.isFetching}
@@ -431,7 +431,7 @@ export default function DashboardPage() {
                     <LoadingListSkeleton rows={3} />
                   ) : fallbackJobs.isError && !data?.recommendedJobs?.length ? (
                     <ErrorState
-                      title="Recommendations failed to load"
+                      title={t("dashboard.recommendationsFailed")}
                       error={fallbackJobs.error}
                       onRetry={() => void fallbackJobs.refetch()}
                       retrying={fallbackJobs.isFetching}
@@ -439,8 +439,8 @@ export default function DashboardPage() {
                   ) : (
                     <EmptyState
                       icon={<Briefcase aria-hidden />}
-                      title="No jobs to recommend yet"
-                      description="Paste a JD or let the research agent fill the board — recommendations appear as soon as there's something to rank."
+                      title={t("dashboard.noRecommendations")}
+                      description={t("dashboard.noRecommendationsDescription")}
                       action={
                         <Button variant="ai" size="sm" asChild>
                           <Link href="/jobs">
@@ -479,7 +479,7 @@ export default function DashboardPage() {
                     <LoadingListSkeleton rows={3} />
                   ) : fallbackRuns.isError && !data?.recentRuns ? (
                     <ErrorState
-                      title="Recent runs failed to load"
+                      title={t("dashboard.runsFailed")}
                       error={fallbackRuns.error}
                       onRetry={() => void fallbackRuns.refetch()}
                       retrying={fallbackRuns.isFetching}
@@ -605,7 +605,7 @@ export default function DashboardPage() {
                     <LoadingListSkeleton rows={1} />
                   ) : aiUsage.isError ? (
                     <ErrorState
-                      title="Agent spend failed to load"
+                      title={t("dashboard.spendFailed")}
                       error={aiUsage.error}
                       onRetry={() => void aiUsage.refetch()}
                       retrying={aiUsage.isFetching}
@@ -679,7 +679,7 @@ export default function DashboardPage() {
                     <LoadingListSkeleton rows={3} />
                   ) : dashboard.isError ? (
                     <ErrorState
-                      title="Skill gaps failed to load"
+                      title={t("dashboard.gapsFailed")}
                       error={dashboard.error}
                       onRetry={() => void dashboard.refetch()}
                       retrying={dashboard.isFetching}
@@ -852,7 +852,7 @@ function ResumeScore({
         className="py-6"
         icon={<Gauge aria-hidden />}
         title={t("dashboard.noResumeScore")}
-        description="Upload and parse a resume — the reviewer agent grades bullets, structure, impact and keyword coverage."
+        description={t("dashboard.noResumeScoreDescription")}
         action={
           <Button variant="ai" size="sm" asChild>
             <Link href="/resumes">

@@ -22,6 +22,7 @@ import {
 import { useCreateInterviewSession } from "@/lib/hooks/actions";
 import { useInterviewSessions } from "@/lib/hooks/resources";
 import { useUrlState } from "@/lib/hooks/use-url-state";
+import { useLocale } from "@/lib/i18n/locale-context";
 import { str } from "@/lib/api/normalize";
 import { formatDateTime, relativeTime, titleCase } from "@/lib/format";
 import { INTERVIEW_MODES } from "@/lib/interview-modes";
@@ -35,6 +36,7 @@ const PAGE_SIZE = 20;
 const PAGE_DEFAULTS: { page: number } = { page: 0 };
 
 export default function InterviewsPage() {
+  const { t } = useLocale();
   // The page index lives in the URL, so a reload or a shared list link opens the same window.
   const [state, setUrl] = useUrlState<{ page: number }>(
     PAGE_DEFAULTS,
@@ -70,8 +72,8 @@ export default function InterviewsPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <PageHeader
-        title="Interviews"
-        description="Adaptive mock interviews: the agent follows up while your answers are strong, moves on when they're not, and pushes deeper as you prove depth. Every evaluation cites your own material."
+        title={t("interviews.title")}
+        description={t("interviews.description")}
         actions={
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
