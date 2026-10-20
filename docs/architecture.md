@@ -67,7 +67,7 @@ frontend/backend/ai-service can also run natively for dev (`pnpm dev`, `mvn spri
 求职平台/
 ├── docker-compose.yml            # postgres(pgvector) redis minio (+ optional profile: apps)
 ├── .env.example
-├── docs/                         # origin spec, architecture, product-plan, roadmap, product, api, rag, agents, evaluation, security, deployment, export
+├── docs/                         # origin spec, architecture, product-plan, roadmap, product, api, rag, agents, evaluation, security, deployment, export, demo
 ├── backend/                      # Spring Boot (Maven)
 │   └── src/main/java/com/careeros/
 │       ├── activity/             # agent runs + traces, AI usage events, token-cost accounting
@@ -94,7 +94,7 @@ frontend/backend/ai-service can also run natively for dev (`pnpm dev`, `mvn spri
 │       │                         # embeddings/: openai, ollama, hash(离线开发)
 │       ├── ingestion/            # parsers(pdf/docx/txt) → clean → chunk → metadata → embed → store
 │       ├── rag/                  # rewrite → intent → hybrid retrieve → filter → rerank → compress → compose → cite
-│       ├── agents/               # orchestrator + subagents + tools/ (19 tools) + memory
+│       ├── agents/               # orchestrator + subagents + tools/ (23 tools) + memory
 │       ├── features/             # resume_parse, jd_analyze, match, tailor, cover_letter, interview
 │       ├── eval/                 # dataset, metrics (recall/precision/MRR/faithfulness…), experiment runner
 │       ├── core/                 # config, db pool, request context, task bus, provider registry
@@ -330,9 +330,10 @@ Every stage emits `agent_traces` rows (retrieval results, rerank scores, tokens)
 ### 6.4 Agent system (`app/agents`)
 Home-grown orchestration loop: `CareerOrchestrator` runs a tool-calling loop;
 subagents are scoped (own prompt, own tool whitelist, own memory access); handoff is
-an explicit tool (`transfer_to`) recorded as trace `handoff` events. 15 domain tools
-per PRD §18 are typed pydantic functions calling backend-internal APIs or repos
-directly. Max-steps / token budget guard; short-term memory = conversation window
+an explicit tool (`transfer_to`) recorded as trace `handoff` events. Each tool is a typed
+pydantic function calling backend-internal APIs or repos directly; PRD §18 names 15 tools
+as its floor and `AGENTS.md` §4 is the shipping roster. Max-steps / token budget guard;
+short-term memory = conversation window
 summary; long-term = `user_memories` read (embedding+recency) / write (extractor).
 
 ### 6.5 Features (`app/features`) — structured-output services

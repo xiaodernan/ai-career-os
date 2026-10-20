@@ -20,7 +20,7 @@ your own material; every agent step is recorded and inspectable.
 | Tailoring & Cover Letters | job-targeted resume versions with a hard **no-fabrication verifier** and accept/reject diff |
 | Adaptive Mock Interviews | interviewer agent that drills, follows up and scales difficulty (mechanism → alternative → failure → scale); 8-dimension report + depth trajectory |
 | Growth Engine Panel | gap analysis, readiness, learning plan, skill demand, learning priority, progression, interview prep, story bank, role suggestions — each on its own |
-| Career Orchestrator | tool-calling agent over 19 domain tools with subagent handoff (resume / job research / JD analyst / RAG / interview / learning / tracker / networking) |
+| Career Orchestrator | tool-calling agent over 23 domain tools with subagent handoff (resume / job research / JD analyst / RAG / interview / learning / tracker / networking) |
 | Application Tracker | Linear-style kanban with transition audit events |
 | Analytics & Insights | pipeline funnel, response rates, stalled applications, weekly insight digest |
 | Salary & Offer Intelligence | market benchmarks, negotiation coaching, offer comparison by total comp, counter-offer drafts |
@@ -99,7 +99,7 @@ ai-service/    FastAPI — providers, ingestion, RAG, features, agents (internal
 frontend/      Next.js — app UI + AI activity views
 e2e/           Playwright golden-journey suite (PRD §35), run against the live stack
 docs/          origin spec, architecture, product plan, roadmap, product, API, RAG,
-               agents, evaluation, security, deployment, export
+               agents, evaluation, security, deployment, export, demo
 docker-compose.yml   infra + `--profile app` full-stack containers
 ```
 
