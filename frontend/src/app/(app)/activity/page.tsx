@@ -106,14 +106,14 @@ export default function ActivityPage() {
         description: "Once Copilot or a matching job runs, its full trace appears here.",
       }}
       ctaHref="/copilot"
-      ctaLabel="Run something in Copilot"
+      ctaLabel={t("activity.ctaLabel")}
       footer={
         total > PAGE_SIZE && (
           <Pagination
             page={runs.data?.page ?? state.page}
             size={PAGE_SIZE}
             total={total}
-            label="runs"
+            label={t("activity.paginationLabel")}
             onPageChange={(page) => {
               setUrl({ page });
               window.scrollTo({ top: 0, behavior: "smooth" });

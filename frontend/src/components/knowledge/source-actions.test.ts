@@ -215,7 +215,7 @@ describe("the ingestion settle wiring", () => {
     // Both terminal branches flip the guard before calling out.
     expect(text).toMatch(/settled\.current = true;\s*onSettled\(row\.key, \{ stage: "ready" \}\)/);
     expect(text).toMatch(
-      /settled\.current = true;\s*onSettled\(row\.key, \{ stage: "failed", message: failure \?\? "ingestion failed" \}\)/
+      /settled\.current = true;\s*onSettled\(row\.key, \{ stage: "failed", message: failure \?\? t\("knowledge\.sources\.ingestionFailed"\) \}\)/
     );
     // No other call site: a second `onSettled(` outside these two would be a path that
     // settles without flipping the guard.

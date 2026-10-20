@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ChevronRight, Quote } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AIBadge } from "./ai-badge";
+import { useLocale } from "@/lib/i18n/locale-context";
 
 /**
  * EvidenceCard — every AI conclusion must be traceable. Shows the supporting
@@ -31,6 +32,7 @@ function EvidenceCard({
   children,
   ...props
 }: EvidenceCardProps) {
+  const { t } = useLocale();
   return (
     <figure
       className={cn(
@@ -41,7 +43,7 @@ function EvidenceCard({
     >
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <Quote className="size-3.5 shrink-0 text-primary/60" aria-hidden />
-        <nav aria-label="Evidence source" className="min-w-0 flex-1">
+        <nav aria-label={t("evidence.source")} className="min-w-0 flex-1">
           {sourcePath && sourcePath.length > 0 ? (
             <ol className="flex flex-wrap items-center gap-0.5 text-xs text-muted-foreground">
               {sourcePath.map((crumb, i) => (

@@ -161,7 +161,7 @@ export default function ResumesPage() {
             page={resumes.data?.page ?? state.page}
             size={PAGE_SIZE}
             total={total}
-            label="resumes"
+            label={t("resumes.paginationLabel")}
             onPageChange={(page) => {
               setUrl({ page });
               window.scrollTo({ top: 0, behavior: "smooth" });
@@ -175,7 +175,7 @@ export default function ResumesPage() {
         onOpenChange={(o) => !o && setPendingDelete(null)}
         title={`Delete “${pendingDelete?.title ?? ""}”?`}
         description={t("resumes.deleteDescription")}
-        confirmLabel="Delete resume"
+        confirmLabel={t("resumes.deleteResume")}
         destructive
         loading={del.isPending}
         onConfirm={() =>

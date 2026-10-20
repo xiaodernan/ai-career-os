@@ -50,7 +50,7 @@ export default function MonitoringPage() {
 
       {report.isError && (
         <ErrorState
-          title="Monitoring failed to load"
+          title={t("monitoring.loadFailed")}
           error={report.error}
           onRetry={() => void report.refetch()}
           retrying={report.isFetching}

@@ -136,7 +136,9 @@ def test_the_board_puts_its_page_in_the_url_and_renders_the_pager_the_rows_earn(
         f"the pager now reads the answer's window: {collapse(block)}")
     assert re.search(r"total=\{total\}", block), (
         "the pager's row count no longer comes off the envelope")
-    assert re.search(r'label="interview sessions"', block), \
+    # The pager's label reads from the locale table now, so the gate accepts the
+    # key the page reads rather than the English copy it used to carry.
+    assert re.search(r'label=(\{t\("interviews\.paginationLabel"\)\}|"interview sessions")', block), \
         "the pager no longer names the rows it pages"
     assert re.search(r"\{total > PAGE_SIZE && \(", page), (
         "the pager is no longer gated by the window it serves, so a short board would render one")

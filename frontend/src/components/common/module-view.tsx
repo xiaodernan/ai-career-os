@@ -11,6 +11,7 @@ import { LoadingListSkeleton } from "@/components/common/loading-skeletons";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ApiError } from "@/lib/api/client";
+import { useLocale } from "@/lib/i18n/locale-context";
 import type { Page } from "@/lib/api/types";
 
 /**
@@ -47,6 +48,7 @@ export function ModuleView<T>({
    * so a board keeps the same "nothing here yet + call to action" contract. */
   children?: React.ReactNode;
 }) {
+  const { t } = useLocale();
   const notFound = query.error instanceof ApiError && query.error.isNotFound;
 
   return (
@@ -62,7 +64,7 @@ export function ModuleView<T>({
               size="sm"
               onClick={() => query.refetch()}
               loading={query.isFetching}
-              aria-label="Refresh list"
+              aria-label={t("chrome.refreshList")}
             >
               <RefreshCw aria-hidden />
               Refresh

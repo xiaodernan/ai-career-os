@@ -41,7 +41,7 @@ export default function RateLimitPage() {
 
       {status.isError && (
         <ErrorState
-          title="Rate-limit status failed to load"
+          title={t("rateLimit.loadFailed")}
           error={status.error}
           onRetry={() => void status.refetch()}
           retrying={status.isFetching}

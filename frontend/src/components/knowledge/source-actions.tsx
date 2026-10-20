@@ -19,6 +19,7 @@ import {
 import { api } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
 import { useSourceStatus } from "@/lib/hooks/resources";
+import { useLocale } from "@/lib/i18n/locale-context";
 
 /**
  * Upload + delete for knowledge sources. The mutations live here — next to the
@@ -294,6 +295,7 @@ export function useBatchUpload() {
  * `kb-kind`) are kept, because those names are the form's contract.
  */
 export function SourceUploadCard() {
+  const { t } = useLocale();
   const inputRef = React.useRef<HTMLInputElement>(null);
   const [title, setTitle] = React.useState("");
   const [kind, setKind] = React.useState<string>("note");
@@ -320,15 +322,19 @@ export function SourceUploadCard() {
   const summary = React.useMemo(() => {
     if (!rows.length) return null;
     const failed = rows.filter((r) => r.stage === "failed" || r.stage === "rejected").length;
-    return `${progress.done} of ${progress.total} done${failed ? `, ${failed} not ingested` : ""}.`;
-  }, [rows, progress]);
+    return t("knowledge.sources.batchSummary", {
+      done: progress.done,
+      total: progress.total,
+      failed: failed ? t("knowledge.sources.notIngested", { count: failed }) : "",
+    });
+  }, [rows, progress, t]);
 
   return (
     <Card>
       <CardContent className="space-y-3">
         <div className="flex flex-wrap items-end gap-3">
           <div className="min-w-0 flex-1 basis-56 space-y-2">
-            <Label htmlFor="kb-file">Documents</Label>
+            <Label htmlFor="kb-file">{t("knowledge.sources.documents")}</Label>
             <div className="flex items-center gap-2">
               <input
                 ref={inputRef}
@@ -337,7 +343,7 @@ export function SourceUploadCard() {
                 multiple
                 accept={ACCEPTED_EXTENSIONS.join(",")}
                 className="sr-only"
-                aria-label="Choose documents to ingest"
+                aria-label={t("knowledge.sources.chooseDocuments")}
                 onChange={(e) => submit(e.target.files)}
               />
               <Button
@@ -348,7 +354,7 @@ export function SourceUploadCard() {
                 loading={running}
               >
                 <FileUp aria-hidden />
-                {running ? "Uploading…" : "Choose files"}
+                {running ? t("knowledge.sources.uploading") : t("knowledge.sources.chooseFiles")}
               </Button>
               <span className="text-xs text-muted-foreground">
                 {MAX_DOCUMENT_BYTES / (1024 * 1024)} MB each, {ACCEPTED_EXTENSIONS.join(" / ")}
@@ -356,17 +362,17 @@ export function SourceUploadCard() {
             </div>
           </div>
           <div className="min-w-0 flex-1 basis-48 space-y-2">
-            <Label htmlFor="kb-title">Title (optional)</Label>
+            <Label htmlFor="kb-title">{t("knowledge.sources.titleLabel")}</Label>
             <Input
               id="kb-title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Applied to every file in the batch"
+              placeholder={t("knowledge.sources.appliedToBatch")}
               autoComplete="off"
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="kb-kind">Kind</Label>
+            <Label htmlFor="kb-kind">{t("knowledge.sources.kind")}</Label>
             <Select value={kind} onValueChange={setKind}>
               <SelectTrigger id="kb-kind" size="sm" className="w-44">
                 <SelectValue />
@@ -444,6 +450,7 @@ function IngestStageText({
   row: UploadRow;
   onSettled: (key: string, outcome: { stage: "ready" | "failed"; message?: string }) => void;
 }) {
+  const { t } = useLocale();
   const watch = useSourceStatus(row.stage === "ingesting" ? (row.sourceId ?? null) : null);
 
   // Report the terminal answer once, not on every poll tick: `useSourceStatus` keeps
@@ -459,9 +466,9 @@ function IngestStageText({
       onSettled(row.key, { stage: "ready" });
     } else if (status === "failed" || failure) {
       settled.current = true;
-      onSettled(row.key, { stage: "failed", message: failure ?? "ingestion failed" });
+      onSettled(row.key, { stage: "failed", message: failure ?? t("knowledge.sources.ingestionFailed") });
     }
-  }, [status, failure, onSettled, row.key]);
+  }, [status, failure, onSettled, row.key, t]);
 
   if (row.stage === "rejected" || row.stage === "failed") {
     return row.message ? (
@@ -473,21 +480,24 @@ function IngestStageText({
       // No id came back, so there is nothing to poll. Saying so is the honest answer; a
       // spinner that never resolves reads as a hung upload.
       return (
-        <span className="shrink-0 text-muted-foreground">ingesting — no source id returned</span>
+        <span className="shrink-0 text-muted-foreground">{t("knowledge.sources.noSourceId")}</span>
       );
     }
     return (
       <span className="min-w-0 shrink-0 truncate text-muted-foreground">
-        {failure ? `failed: ${failure}` : (status ?? "pending")}
+        {failure
+          ? t("knowledge.sources.failedPrefix", { reason: failure })
+          : (status ?? t("knowledge.sources.pending"))}
       </span>
     );
   }
   return row.stage === "ready" ? (
-    <span className="shrink-0 text-muted-foreground">ready</span>
+    <span className="shrink-0 text-muted-foreground">{t("knowledge.sources.ready")}</span>
   ) : null;
 }
 
 export function SourceDeleteButton({ id, title }: { id: string; title: string }) {
+  const { t } = useLocale();
   const [confirming, setConfirming] = React.useState(false);
   const remove = useDeleteSource();
   return (
@@ -495,7 +505,7 @@ export function SourceDeleteButton({ id, title }: { id: string; title: string })
       <Button
         variant="ghost"
         size="icon-sm"
-        aria-label={`Delete ${title}`}
+        aria-label={t("knowledge.sources.deleteLabel", { title })}
         onClick={() => setConfirming(true)}
       >
         <Trash2 aria-hidden />
@@ -503,9 +513,9 @@ export function SourceDeleteButton({ id, title }: { id: string; title: string })
       <ConfirmDialog
         open={confirming}
         onOpenChange={setConfirming}
-        title={`Delete “${title}”?`}
-        description="The source row is removed and its chunks stop being cited. This cannot be undone."
-        confirmLabel="Delete"
+        title={t("knowledge.sources.deleteTitle", { title })}
+        description={t("knowledge.sources.deleteDescription")}
+        confirmLabel={t("knowledge.sources.delete")}
         destructive
         loading={remove.isPending}
         onConfirm={() =>

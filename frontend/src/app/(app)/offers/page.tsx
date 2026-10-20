@@ -298,7 +298,7 @@ export default function OffersPage() {
                 readOnly
                 value={draft.script}
                 rows={4}
-                aria-label="Counter-offer script"
+                aria-label={t("offers.counterOfferScript")}
                 className="text-sm"
               />
             )}
@@ -363,7 +363,7 @@ export default function OffersPage() {
                 <EmptyState
                   icon={<Scale aria-hidden />}
                   title={t("offers.noComparison")}
-                  description="Name at least one offer above."
+                  description={t("offers.nameOneOffer")}
                 />
               )}
               {(comparison.notes ?? []).length > 0 && (

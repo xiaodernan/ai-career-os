@@ -83,8 +83,8 @@ export default function IngestionPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-8">
       <PageHeader
-        title="Job ingestion"
-        description="Bring postings in from a feed or a board API — parsed, deduplicated, and swept for freshness."
+        title={t("ingestion.title")}
+        description={t("ingestion.sweepDescription")}
       />
 
       {/* Feed */}

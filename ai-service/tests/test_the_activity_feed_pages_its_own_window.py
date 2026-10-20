@@ -140,7 +140,10 @@ def test_the_feed_screen_puts_its_page_in_the_url_and_renders_the_pager_the_rows
     assert re.search(r"size=\{PAGE_SIZE\}", block) and "data?.size" not in block \
         and "data.size" not in block, (
         f"the pager no longer takes the window the feed asks with: {collapse(block)}")
-    assert re.search(r"total=\{total\}", block) and re.search(r'label="runs"', block), (
+    # The pager's label reads from the locale table now, so the gate accepts the
+    # key the page reads rather than the English copy it used to carry.
+    assert re.search(r"total=\{total\}", block) \
+        and re.search(r'label=(\{t\("activity\.paginationLabel"\)\}|"runs")', block), (
         "the pager's row count or label moved off the envelope")
     assert re.search(r"footer=\{\s*total > PAGE_SIZE && \(", page), (
         "the pager is no longer gated by the window it serves, so a short feed would render one")

@@ -58,6 +58,7 @@ export const translations = {
       // would read as a reader of that list. The phrase it carries is the
       // plural one.
       detail: "Loading details",
+      page: "Loading page",
       table: "Loading table",
       inProgress: "Loading…",
     },
@@ -81,6 +82,7 @@ export const translations = {
       previousPage: "Previous page",
       nextPage: "Next page",
       page: "Page {page}",
+      refreshList: "Refresh list",
       pagination: "Pagination ({label})",
       ofTotal: "{from}–{to} of {total} {label}",
       noRowsYet: "No {label} yet",
@@ -115,6 +117,19 @@ export const translations = {
     jobCard: {
       noMatchYet: "No match computed yet",
       matchFor: "Match for {title}",
+    },
+    /**
+     * The diff the tailor panel shows: the numbers beside the change list,
+     * and the panel the list lives in.
+     */
+    diffView: {
+      statistics: "Tailoring statistics",
+    },
+    /**
+     * One piece of cited evidence, and the card it sits in.
+     */
+    evidence: {
+      source: "Evidence source",
     },
     /**
      * The recovery screens. The copy here is careful on purpose -- the
@@ -314,6 +329,7 @@ export const translations = {
       nameOneOffer: "Name at least one offer above.",
       planReady: "Plan ready.",
       comparisonDone: "Offers compared.",
+      counterOfferScript: "Counter-offer script",
     },
     // Analysis
     analysis: {
@@ -357,6 +373,7 @@ export const translations = {
       runsAnalyzed: "runs analyzed",
       alertsDescription: "Issues that need attention.",
       regressionsDescription: "Metrics that regressed against baseline.",
+      loadFailed: "Monitoring failed to load",
     },
     // Rate limit
     rateLimit: {
@@ -372,6 +389,7 @@ export const translations = {
         "Per-user limit for AI-costing endpoints (copilot, interview, JD analysis, etc.)",
       authDescription: "Per-IP limit for authentication endpoints (login, register, etc.)",
       quotaDescription: "Current token bucket usage for your account.",
+      loadFailed: "Rate-limit status failed to load",
     },
     // Data portability
     data: {
@@ -432,6 +450,8 @@ export const translations = {
       toUpdate: "to update",
       toClose: "to close",
       duplicates: "duplicates",
+      sweepDescription:
+        "Bring postings in from a feed or a board API — parsed, deduplicated, and swept for freshness.",
     },
     // Growth engines
     growthEngines: {
@@ -457,6 +477,8 @@ export const translations = {
       existingSection: "Existing resumes",
       deleteDescription:
         "The resume and its versions are removed from your workspace. Knowledge chunks ingested from it stop being cited.",
+      deleteResume: "Delete resume",
+      paginationLabel: "resumes",
     },
     // Settings
     settings: {
@@ -465,6 +487,7 @@ export const translations = {
       colorTheme: "Color theme",
       logOut: "Log out of Career OS?",
       logOutDescription: "Your data stays safe — this only ends the current session.",
+      logOutConfirm: "Log out",
     },
     // The public landing page (18.2) -- the first thing a visitor reads.
     landing: {
@@ -686,6 +709,27 @@ export const translations = {
           "Write the first one above — it lands straight in the knowledge base the agents can cite.",
         paginationLabel: "notes",
       },
+      sources: {
+        chooseDocuments: "Choose documents to ingest",
+        appliedToBatch: "Applied to every file in the batch",
+        deleteDescription:
+          "The source row is removed and its chunks stop being cited. This cannot be undone.",
+        delete: "Delete",
+        deleteLabel: "Delete {title}",
+        deleteTitle: "Delete “{title}”?",
+        documents: "Documents",
+        titleLabel: "Title (optional)",
+        kind: "Kind",
+        chooseFiles: "Choose files",
+        uploading: "Uploading…",
+        noSourceId: "ingesting — no source id returned",
+        ready: "ready",
+        pending: "pending",
+        failedPrefix: "failed: {reason}",
+        ingestionFailed: "ingestion failed",
+        batchSummary: "{done} of {total} done{failed}",
+        notIngested: ", {count} not ingested",
+      },
     },
     // Companies
     companies: {
@@ -730,6 +774,8 @@ export const translations = {
     activity: {
       title: "AI Activity",
       description: "Every agent run, tool call and retrieval — the debug view behind the answers.",
+      ctaLabel: "Run something in Copilot",
+      paginationLabel: "runs",
     },
     // Applications
     applications: {
@@ -848,6 +894,7 @@ export const translations = {
       title: "Interviews",
       description:
         "Adaptive mock interviews: the agent follows up while your answers are strong, moves on when they're not, and pushes deeper as you prove depth. Every evaluation cites your own material.",
+      paginationLabel: "interview sessions",
     },
     // Jobs
     jobs: {
@@ -873,6 +920,7 @@ export const translations = {
       boardIsQuietDescription:
         "No roles match these filters yet. Clear a filter, paste a JD for the analyst, or let Copilot research roles for your target.",
       askCopilot: "Ask Copilot",
+      paginationLabel: "jobs",
       filters: {
         searchPlaceholder: "Title, team, tech…",
         locationPlaceholder: "Shanghai / Remote / Berlin",
@@ -942,6 +990,7 @@ export const translations = {
       pipeline: "正在加载流水线",
       conversation: "正在加载对话",
       detail: "正在加载详情",
+      page: "正在加载页面",
       table: "正在加载表格",
       inProgress: "加载中…",
     },
@@ -965,6 +1014,7 @@ export const translations = {
       previousPage: "上一页",
       nextPage: "下一页",
       page: "第 {page} 页",
+      refreshList: "刷新列表",
       pagination: "分页（{label}）",
       ofTotal: "第 {from}–{to} 条，共 {total} {label}",
       noRowsYet: "还没有{label}",
@@ -998,6 +1048,19 @@ export const translations = {
     jobCard: {
       noMatchYet: "还没有算过匹配度",
       matchFor: "与「{title}」的匹配度",
+    },
+    /**
+     * The diff the tailor panel shows: the numbers beside the change list,
+     * and the panel the list lives in.
+     */
+    diffView: {
+      statistics: "定制统计",
+    },
+    /**
+     * One piece of cited evidence, and the card it sits in.
+     */
+    evidence: {
+      source: "证据来源",
     },
     /**
      * The recovery screens. The copy here is careful on purpose -- the
@@ -1183,6 +1246,7 @@ export const translations = {
       nameOneOffer: "请至少写一个录用名称。",
       planReady: "方案已就绪。",
       comparisonDone: "录用已比较。",
+      counterOfferScript: "还价话术",
     },
     // Analysis
     analysis: {
@@ -1223,6 +1287,7 @@ export const translations = {
       runsAnalyzed: "次运行已分析",
       alertsDescription: "需要关注的问题。",
       regressionsDescription: "相对基线退化的指标。",
+      loadFailed: "监控数据加载失败",
     },
     // Rate limit
     rateLimit: {
@@ -1237,6 +1302,7 @@ export const translations = {
       aiDescription: "AI 相关接口的每用户限速（副驾驶、面试、JD 分析等）。",
       authDescription: "认证接口的每 IP 限速（登录、注册等）。",
       quotaDescription: "你账户当前的令牌桶用量。",
+      loadFailed: "限流状态加载失败",
     },
     // Data portability
     data: {
@@ -1292,6 +1358,8 @@ export const translations = {
       toUpdate: "个待更新",
       toClose: "个待关闭",
       duplicates: "个重复",
+      sweepDescription:
+        "从信息源或招聘板 API 引入职位发布——解析、去重，并做一次新鲜度清扫。",
     },
     // Growth engines
     growthEngines: {
@@ -1311,6 +1379,8 @@ export const translations = {
       uploadSection: "上传简历",
       existingSection: "已有简历",
       deleteDescription: "这份简历及其版本会从你的工作台移除。从它摄取的知识块也不再被引用。",
+      deleteResume: "删除简历",
+      paginationLabel: "简历",
     },
     // Settings
     settings: {
@@ -1319,6 +1389,7 @@ export const translations = {
       colorTheme: "配色主题",
       logOut: "退出 Career OS？",
       logOutDescription: "你的数据是安全的——这只会结束当前会话。",
+      logOutConfirm: "退出登录",
     },
     // The public landing page (18.2) -- the first thing a visitor reads.
     landing: {
@@ -1519,6 +1590,26 @@ export const translations = {
         noNotesDescription: "在上面写第一条——它会直接进入代理可以引用的知识库。",
         paginationLabel: "笔记",
       },
+      sources: {
+        chooseDocuments: "选择要摄取的文档",
+        appliedToBatch: "应用于这批里的每个文件",
+        deleteDescription: "来源行会被移除，它的分块也不再被引用。且无法撤销。",
+        delete: "删除",
+        deleteLabel: "删除 {title}",
+        deleteTitle: "删除「{title}」？",
+        documents: "文档",
+        titleLabel: "标题（选填）",
+        kind: "类型",
+        chooseFiles: "选择文件",
+        uploading: "上传中…",
+        noSourceId: "摄取中——没有返回来源 ID",
+        ready: "就绪",
+        pending: "等待中",
+        failedPrefix: "失败：{reason}",
+        ingestionFailed: "摄取失败",
+        batchSummary: "已完成 {done}/{total}{failed}",
+        notIngested: "，{count} 个未摄取",
+      },
     },
     // Companies
     companies: {
@@ -1561,6 +1652,8 @@ export const translations = {
     activity: {
       title: "AI 活动",
       description: "每一次代理运行、工具调用和检索——答案背后的调试视图。",
+      ctaLabel: "在副驾驶里跑点什么",
+      paginationLabel: "运行",
     },
     // Applications
     applications: {
@@ -1673,6 +1766,7 @@ export const translations = {
       title: "面试",
       description:
         "自适应模拟面试：你的回答有力时代理会追问，不够有力时它会往下走一层，你证明了自己的深度它就推得更深。每次评估都引用你自己的材料。",
+      paginationLabel: "面试场次",
     },
     // Jobs
     jobs: {
@@ -1697,6 +1791,7 @@ export const translations = {
       boardIsQuietDescription:
         "目前没有职位符合这些筛选。清掉一个筛选、粘贴一份 JD 给分析器，或者让副驾驶为你的目标职位做调研。",
       askCopilot: "问问副驾驶",
+      paginationLabel: "职位",
       filters: {
         searchPlaceholder: "职位、团队、技术…",
         locationPlaceholder: "上海 / 远程 / 柏林",

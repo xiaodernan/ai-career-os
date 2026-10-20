@@ -5,6 +5,7 @@ import { ArrowRight, Check, Minus, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { AIBadge } from "@/components/ai/ai-badge";
+import { useLocale } from "@/lib/i18n/locale-context";
 import type { TailorChange } from "@/lib/api/types";
 
 /**
@@ -81,6 +82,7 @@ function ChangeRow({ change, kind }: { change: TailorChange; kind: "accepted" | 
 }
 
 function DiffView({ accepted, rejected = [], notes, stats, className, ...props }: DiffViewProps) {
+  const { t } = useLocale();
   const [showRejected, setShowRejected] = React.useState(false);
   if (!accepted.length && !rejected.length) return null;
   const statChips = stats
@@ -106,7 +108,7 @@ function DiffView({ accepted, rejected = [], notes, stats, className, ...props }
       )}
 
       {statChips.length > 0 && (
-        <ul className="flex flex-wrap gap-1.5" aria-label="Tailoring statistics">
+        <ul className="flex flex-wrap gap-1.5" aria-label={t("diffView.statistics")}>
           {statChips.map(([k, v]) => (
             <li key={k}>
               <Badge variant="outline" className="text-2xs tabular-nums">

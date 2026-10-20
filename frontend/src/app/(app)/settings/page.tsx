@@ -182,7 +182,7 @@ export default function SettingsPage() {
         onOpenChange={setConfirmOpen}
         title={t("settings.logOut")}
         description={t("settings.logOutDescription")}
-        confirmLabel="Log out"
+        confirmLabel={t("settings.logOutConfirm")}
         destructive
         loading={logout.isPending}
         onConfirm={() =>

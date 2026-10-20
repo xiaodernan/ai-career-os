@@ -174,7 +174,7 @@ export default function InterviewsPage() {
           page={sessions.data?.page ?? state.page}
           size={PAGE_SIZE}
           total={total}
-          label="interview sessions"
+          label={t("interviews.paginationLabel")}
           onPageChange={(page) => {
             setUrl({ page });
             window.scrollTo({ top: 0, behavior: "smooth" });

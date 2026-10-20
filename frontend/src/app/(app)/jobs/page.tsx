@@ -273,7 +273,7 @@ export default function JobsPage() {
                     page={listView.data?.page ?? filters.page}
                     size={filters.size}
                     total={total}
-                    label="jobs"
+                    label={t("jobs.paginationLabel")}
                     onPageChange={(page) => {
                       setFilters({ page });
                       window.scrollTo({ top: 0, behavior: "smooth" });
