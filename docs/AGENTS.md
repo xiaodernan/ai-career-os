@@ -49,7 +49,7 @@ surface**, and no ability to delegate further (no recursive handoff):
 | `jd_analyst` | `analyze_jd`, `calculate_match`, `get_job`, `search_resume` |
 | `rag` | `search_knowledge_base`, `search_resume` |
 | `interview` | `create_interview`, `evaluate_answer`, `get_job`, `search_resume` |
-| `learning` | `search_knowledge_base`, `get_user_profile`, `get_job` |
+| `learning` | `search_knowledge_base`, `get_user_profile`, `get_job`, `analyze_gap`, `benchmark_salary`, `compare_offers`, `learning_priority` |
 | `tracker` | `save_job`, `update_application_status`, `search_jobs`, `get_job` |
 | `networking` | `search_contacts`, `get_follow_ups`, `draft_outreach`, `log_contact_touch`, `get_user_profile` |
 
@@ -89,7 +89,7 @@ flowchart TD
 
 ## 4. Tool system (PRD §18)
 
-19 tools in `agents/tools.py`, each a `Tool(name, description, JSON-Schema
+23 tools in `agents/tools.py`, each a `Tool(name, description, JSON-Schema
 parameters, async handler, artifact_type?, agent?)`. The schema is converted to the
 provider's tool format via `Tool.spec()`, so one definition serves OpenAI-compatible
 APIs, Anthropic and Ollama.
@@ -115,6 +115,10 @@ APIs, Anthropic and Ollama.
 | `get_follow_ups` | contacts gone cold against their relation's cadence, with drafts | |
 | `draft_outreach` | referral/intro/coffee-chat/thank-you message for a saved contact | |
 | `log_contact_touch` | stamp a contact as touched now, optionally with a note | |
+| `analyze_gap` | the distance between the profile and a target role | `gap_report` |
+| `benchmark_salary` | what the job corpus pays for a role, by band and location | `salary_band` |
+| `compare_offers` | several offers ranked against the market by total compensation | `offer_comparison` |
+| `learning_priority` | the gaps ranked by importance and by market pull | `learning_priority` |
 
 Tools read domain data directly from Postgres, always user-scoped (`user_id` on
 every query) — the ownership exception documented in

@@ -2,25 +2,30 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ArrowRight, Briefcase, CalendarClock, FileText, Sparkles } from "lucide-react";
+import { ArrowRight, BadgeDollarSign, Briefcase, CalendarClock, FileText, ListOrdered, Scale, Sparkles, Target } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MatchRing } from "@/components/ai/match-ring";
 import { SkillChips, DimensionBars } from "@/components/common/skill-chips";
 import { DiffView } from "@/components/common/diff-view";
 import { EvidenceList } from "@/components/ai/evidence-list";
+import { BarChart } from "@/components/common/bar-chart";
 import dynamic from "next/dynamic";
 import { CopyButton } from "@/components/common/export-buttons";
 import { JobCard } from "@/components/jobs/job-card";
 import {
+  list,
   normalizeJob,
   normalizeMatch,
   normalizePage,
   normalizeTailor,
+  num,
   pick,
   str,
   coverLetterText,
 } from "@/lib/api/normalize";
+import { formatSalary } from "@/lib/format";
 import type { CopilotArtifact, Evidence } from "@/lib/api/types";
 
 /* Code-split, not a static import: the react-markdown stack is only needed
@@ -47,6 +52,14 @@ export function ArtifactCard({ artifact }: { artifact: CopilotArtifact }) {
       return <CoverLetterArtifact data={data} />;
     case "interview_session":
       return <InterviewArtifact data={data} />;
+    case "gap_report":
+      return <GapReportArtifact data={data} />;
+    case "salary_band":
+      return <SalaryBandArtifact data={data} />;
+    case "offer_comparison":
+      return <OfferComparisonArtifact data={data} />;
+    case "learning_priority":
+      return <LearningPriorityArtifact data={data} />;
     default:
       return null; // unknown types are ignored — never rendered as raw JSON
   }
@@ -209,4 +222,143 @@ function InterviewArtifact({ data }: { data?: unknown }) {
  * gap panel -- fed by the persisted `skillGaps` column, which #126 gave a real producer -- is where
  * gaps actually show. The gate that compares this switch with the types the orchestrator writes is
  * what would catch its return. */
+
+/* --------------------------- the growth engines --------------------------- */
+
+/*
+ * The four deterministic growth engines (Epics 10.x, 12.x) answer inside the
+ * conversation now, so the copilot can say "you are 42% ready for this role"
+ * and the user sees the same card the growth page would draw.
+ *
+ * Each renderer reads the engine's own shape and draws it with the same
+ * components the first-class pages use -- a bar chart for the numbers, a chip
+ * for a skill -- so an answer in chat looks like the page it came from.
+ */
+
+function GrowthArtifact({
+  title,
+  eyebrow,
+  icon,
+  children,
+}: {
+  title?: string;
+  eyebrow: string;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <Card className="border-primary/25">
+      <CardContent className="space-y-3">
+        <p className="flex items-center gap-1.5 text-2xs font-medium tracking-wide text-muted-foreground uppercase">
+          {icon}
+          {eyebrow}
+        </p>
+        {title && <p className="text-sm font-medium">{title}</p>}
+        {children}
+      </CardContent>
+    </Card>
+  );
+}
+
+function GapReportArtifact({ data }: { data?: unknown }) {
+  const report = pick(data, "gap") ?? data;
+  const targetRole = str(report, "targetRole", "target_role");
+  const coverage = num(report, "coverage");
+  const gaps = list(report, "gaps");
+  if (coverage == null && !gaps.length) return null;
+  return (
+    <GrowthArtifact
+      eyebrow="Gap analysis"
+      title={targetRole}
+      icon={<Target className="size-3.5" aria-hidden />}
+    >
+      {coverage != null && (
+        <BarChart
+          data={[{ label: "Coverage", value: Math.round(coverage * 100), tone: "primary" }]}
+          max={100}
+          valueFormat={(v) => `${v}%`}
+        />
+      )}
+      {gaps.length > 0 && (
+        <ul className="flex flex-wrap gap-1.5">
+          {gaps.map((g, i) => (
+            <li key={i}>
+              <Badge variant="outline">{str(g, "name") ?? String(g)}</Badge>
+            </li>
+          ))}
+        </ul>
+      )}
+    </GrowthArtifact>
+  );
+}
+
+function SalaryBandArtifact({ data }: { data?: unknown }) {
+  const report = pick(data, "salary") ?? data;
+  const percentiles = pick(report, "percentiles");
+  const rows = ["p25", "p50", "p75"]
+    .map((k) => ({ key: k, value: num(percentiles, k) }))
+    .filter((r): r is { key: string; value: number } => r.value != null);
+  if (!rows.length) return null;
+  const currency = str(report, "currency") ?? "CNY";
+  return (
+    <GrowthArtifact
+      eyebrow="Market band"
+      title={str(report, "role") ?? undefined}
+      icon={<BadgeDollarSign className="size-3.5" aria-hidden />}
+    >
+      <BarChart
+        data={rows.map((r) => ({
+          label: r.key,
+          value: r.value,
+          tone: r.key === "p50" ? ("primary" as const) : ("muted" as const),
+        }))}
+        valueFormat={(v) => formatSalary(v, v, currency) ?? "—"}
+      />
+    </GrowthArtifact>
+  );
+}
+
+function OfferComparisonArtifact({ data }: { data?: unknown }) {
+  const report = pick(data, "comparison") ?? data;
+  const rows = list(report, "rows");
+  if (!rows.length) return null;
+  return (
+    <GrowthArtifact
+      eyebrow="Offer comparison"
+      icon={<Scale className="size-3.5" aria-hidden />}
+    >
+      <BarChart
+        data={rows.map((row, i) => ({
+          label: str(row, "label") ?? `Offer ${i + 1}`,
+          value: num(row, "totalComp", "total_comp") ?? 0,
+          tone: "primary" as const,
+        }))}
+        valueFormat={(v) => formatSalary(v, v, str(report, "currency") ?? "CNY") ?? "—"}
+      />
+    </GrowthArtifact>
+  );
+}
+
+function LearningPriorityArtifact({ data }: { data?: unknown }) {
+  const report = pick(data, "priority") ?? data;
+  const rows = list(report, "priorities");
+  if (!rows.length) return null;
+  return (
+    <GrowthArtifact
+      eyebrow="Learning priority"
+      icon={<ListOrdered className="size-3.5" aria-hidden />}
+    >
+      <ol className="space-y-1.5">
+        {rows.map((row, i) => (
+          <li key={i} className="flex items-center justify-between gap-2 text-sm">
+            <span className="min-w-0 truncate">{str(row, "skill") ?? String(row)}</span>
+            <Badge variant="secondary" className="shrink-0 text-2xs">
+              {str(row, "priority") ?? "—"}
+            </Badge>
+          </li>
+        ))}
+      </ol>
+    </GrowthArtifact>
+  );
+}
 

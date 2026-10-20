@@ -2950,10 +2950,13 @@ def test_the_reads_are_actually_found():
     # The artifact cards, and the one list here whose rows do not all have the same shape. Both sides
     # are read out of `_collect_artifacts`: the five literals it appends, the keys every one of them
     # draws, and the remainder that distinguishes the match row.
+    # Nine since the growth engines (10.x, 12.x) joined the agent: the gap report, the market
+    # band, the offer comparison and the learning priority are four more cards, and they draw the
+    # same two keys the others do.
     shapes = _appended_shapes("_collect_artifacts", "out.artifacts")
     consensus = set.intersection(*shapes)
     divergence = set.union(*shapes) - consensus
-    assert len(shapes) == 5, [sorted(s) for s in shapes]
+    assert len(shapes) == 9, [sorted(s) for s in shapes]
     assert consensus == {"type", "payload"}, [sorted(s) for s in shapes]
     # The divergence is a fact about the producer, not a free slot: a sixth shape, or a second
     # per-row key, has to be read here rather than absorbed into the union the reader was bound to.
@@ -2966,11 +2969,11 @@ def test_the_reads_are_actually_found():
     assert read_off_a == {"type", "payload"}
     # The substantive claim, and the one the liveness rule cannot make: a reader of a heterogeneous
     # list may only name what every row draws. `job_id` is emitted, so a read of it would be live --
-    # on one row out of five, and undefined on the four that follow it.
+    # on one row out of nine, and undefined on the eight that follow it.
     assert read_off_a & divergence == set()
     assert read_off_a == consensus, (f"the artifact reader leans on {sorted(read_off_a)} while the rows "
                                      f"agree on {sorted(consensus)}: a name outside the consensus is a "
-                                     "field four of the five cards cannot have")
+                                     "field eight of the nine cards cannot have")
     # Two different ways a read stops naming its key in the call: `normalizeTrajectory` spreads a
     # name table, which this rule covers, and `normalizeSearch` reaches `g.key`, a member of a group
     # object, which `_search_hits` covers. Telling them apart is what keeps each rule honest about

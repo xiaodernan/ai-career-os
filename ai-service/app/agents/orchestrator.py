@@ -128,6 +128,18 @@ def _collect_artifacts(tool: Tool, result: dict, out: Outcome) -> None:
         out.artifacts.append({"type": "cover_letter", "payload": result})
     elif tool.artifact == "interview_session" and result.get("session_id"):
         out.artifacts.append({"type": "interview_session", "payload": result})
+    # The growth engines' own answers. Each is a card the UI can render: the gap
+    # the profile has, the market band, the ranked offers, the learning order.
+    # The four names are spelled out rather than read off `tool.artifact`, so
+    # the doc's table and this collector can be checked against each other.
+    elif tool.artifact == "gap_report":
+        out.artifacts.append({"type": "gap_report", "payload": result})
+    elif tool.artifact == "salary_band":
+        out.artifacts.append({"type": "salary_band", "payload": result})
+    elif tool.artifact == "offer_comparison":
+        out.artifacts.append({"type": "offer_comparison", "payload": result})
+    elif tool.artifact == "learning_priority":
+        out.artifacts.append({"type": "learning_priority", "payload": result})
     if tool.name == "search_jobs" and result.get("jobs"):
         out.artifacts.append({"type": "job_list",
                               "payload": {"jobs": result["jobs"][:10]}})

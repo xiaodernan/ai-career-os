@@ -457,6 +457,109 @@ async def log_contact_touch(user_id: str, *, contact_id: str, note: str = "") ->
     return {"logged": True, "contact": domain.contact_row(row)}
 
 
+async def analyze_gap(user_id: str, *, target_role: str, location: str = "",
+                     seniority: str | None = None,
+                     resume_version_id: str | None = None) -> dict:
+    """The distance between the user's profile and a target role.
+
+    The engine (`app/features/gap_analysis.py`) owns the comparison and the
+    verdict; this handler only carries the request through. The result is the
+    evidence the answer rests on: the coverage, the gaps and the skills the
+    profile already covers.
+    """
+    from app.features.gap_analysis import analyze_gap as _analyze
+
+    structured, plaintext = await _resume_payload(user_id, resume_version_id)
+    if structured is None:
+        return {"error": "no parsed resume yet -- upload and parse one first"}
+    return await _analyze(target_role, seniority, structured, plaintext,
+                           user_id=user_id)
+
+
+async def benchmark_salary(user_id: str, *, role: str, location: str = "",
+                           seniority: str | None = None,
+                           target_salary: int | None = None,
+                           currency: str = "CNY") -> dict:
+    """What the seeded corpus pays for a role, by band and location."""
+    from app.features.salary import benchmark
+
+    samples = await _job_samples()
+    return benchmark(samples, role=role, location=location, seniority=seniority,
+                     target_salary=target_salary, currency=currency)
+
+
+async def compare_offers(user_id: str, *, role: str, offers: list[dict],
+                         location: str = "", seniority: str | None = None,
+                         match_score: float | None = None,
+                         currency: str = "CNY") -> dict:
+    """Rank several offers against the market, by total compensation.
+
+    The engine owns the arithmetic: the ranking is by first-year cash plus the
+    grant annualized over its vest, while the market verdict compares base to
+    the benchmark -- mixing equity into that comparison would be comparing
+    unlike quantities.
+    """
+    from app.features.offers import compare_offers as _compare
+
+    if not offers:
+        return {"error": "no offers to compare"}
+    samples = await _job_samples()
+    report = benchmark(samples, role=role, location=location, seniority=seniority,
+                       currency=currency)
+    return _compare(offers, report, match_score=match_score)
+
+
+async def learning_priority(user_id: str, *, target_role: str,
+                            location: str = "", seniority: str | None = None,
+                            resume_version_id: str | None = None) -> dict:
+    """The gaps ranked by importance and by what the market asks for.
+
+    The learning order the engine produces is the one worth acting on: a gap
+ * that is both important and in demand comes first.
+    """
+    from app.features.prioritize import plan_learning_priority
+
+    structured, plaintext = await _resume_payload(user_id, resume_version_id)
+    if structured is None:
+        return {"error": "no parsed resume yet -- upload and parse one first"}
+    samples = await _job_skill_samples()
+    return await plan_learning_priority(
+        target_role=target_role, resume_structured=structured, samples=samples,
+        seniority=seniority, user_id=user_id)
+
+
+async def _resume_payload(user_id: str, resume_version_id: str | None) -> tuple[dict | None, str]:
+    """The user's structured resume and its plaintext, or (None, "") when there is none.
+
+    Shared by the growth tools, so every one of them answers the same way when
+    the user has not uploaded a resume: an error the model can read, not a crash.
+    """
+    import json as _j
+
+    rv = (await domain.get_resume_version(resume_version_id, user_id)
+          if resume_version_id else await domain.get_current_resume_version(user_id))
+    if not rv:
+        return None, ""
+    structured = rv.get("structured")
+    if isinstance(structured, str):
+        structured = _j.loads(structured)
+    return structured or {}, rv.get("plaintext") or ""
+
+
+async def _job_samples() -> list[dict]:
+    """The corpus rows the salary benchmark reads."""
+    from app.features.salary import load_job_samples
+
+    return await load_job_samples()
+
+
+async def _job_skill_samples() -> list[dict]:
+    """The corpus rows the market-demand engine reads."""
+    from app.features.demand import load_job_skill_samples
+
+    return await load_job_skill_samples()
+
+
 async def get_user_profile(user_id: str) -> dict:
     p = await domain.get_profile(user_id)
     u = await domain.get_user(user_id)
@@ -587,6 +690,50 @@ ALL_TOOLS: list[Tool] = [
                                          "note": {"type": "string"}},
         "required": ["contact_id"], "additionalProperties": False},
        log_contact_touch, agent="networking"),
+    _t("analyze_gap", "The distance between the user's profile and a target role: the "
+       "coverage, the gaps and the skills already covered.",
+       {"type": "object", "properties": {"target_role": {"type": "string"},
+                                         "location": {"type": "string"},
+                                         "seniority": {"type": "string"},
+                                         "resume_version_id": {"type": "string"}},
+        "required": ["target_role"], "additionalProperties": False},
+       analyze_gap, artifact="gap_report", agent="learning"),
+    _t("benchmark_salary", "What the job corpus pays for a role, by band and location.",
+       {"type": "object", "properties": {"role": {"type": "string"},
+                                         "location": {"type": "string"},
+                                         "seniority": {"type": "string"},
+                                         "target_salary": {"type": "integer"},
+                                         "currency": {"type": "string", "default": "CNY"}},
+        "required": ["role"], "additionalProperties": False},
+       benchmark_salary, artifact="salary_band", agent="learning"),
+    _t("compare_offers", "Rank several offers against the market by total compensation.",
+       {"type": "object", "properties": {
+           "role": {"type": "string"},
+           "location": {"type": "string"},
+           "seniority": {"type": "string"},
+           "match_score": {"type": "number"},
+           "currency": {"type": "string", "default": "CNY"},
+           "offers": {"type": "array", "items": {
+               "type": "object",
+               "properties": {
+                   "label": {"type": "string"},
+                   "base": {"type": "integer"},
+                   "bonus": {"type": "integer", "default": 0},
+                   "equity": {"type": "object", "properties": {
+                       "shares": {"type": "integer"},
+                       "strike_price": {"type": "number"},
+                       "current_price": {"type": "number"},
+                       "vest_years": {"type": "integer"}}}}}}},
+        "required": ["role", "offers"], "additionalProperties": False},
+       compare_offers, artifact="offer_comparison", agent="learning"),
+    _t("learning_priority", "The user's gaps ranked by importance and by what the "
+       "market asks for -- the order to learn them in.",
+       {"type": "object", "properties": {"target_role": {"type": "string"},
+                                         "location": {"type": "string"},
+                                         "seniority": {"type": "string"},
+                                         "resume_version_id": {"type": "string"}},
+        "required": ["target_role"], "additionalProperties": False},
+       learning_priority, artifact="learning_priority", agent="learning"),
 ]
 
 TOOL_INDEX = {t.name: t for t in ALL_TOOLS}
@@ -599,7 +746,13 @@ SUBAGENT_TOOLS: dict[str, list[str]] = {
     "jd_analyst": ["analyze_jd", "calculate_match", "get_job", "search_resume"],
     "rag": ["search_knowledge_base", "search_resume"],
     "interview": ["create_interview", "evaluate_answer", "get_job", "search_resume"],
-    "learning": ["search_knowledge_base", "get_user_profile", "get_job"],
+    # The learning subagent also holds the deterministic growth engines (Epics
+    # 10.x, 12.x): the gap the profile has, what the market pays, which offer
+    # leads, and the order to learn the gaps in. All four read the corpus and the
+    # user's own resume -- no writes, and no other surface's data.
+    "learning": ["search_knowledge_base", "get_user_profile", "get_job",
+                 "analyze_gap", "benchmark_salary", "compare_offers",
+                 "learning_priority"],
     "tracker": ["save_job", "update_application_status", "search_jobs", "get_job"],
     "networking": ["search_contacts", "get_follow_ups", "draft_outreach",
                    "log_contact_touch", "get_user_profile"],

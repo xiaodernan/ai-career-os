@@ -955,8 +955,10 @@ def test_the_java_probe_reads_every_record_the_backend_declares():
     # `RedactRequest` (13.1-13.3), `ParseFeedRequest`, `DedupeRequest`,
     # `FreshnessSweepRequest`, `PlanIngestRequest` (14.2-14.3) and `CompanyBriefRequest`
     # (4.8) — the five records those surfaces bind.
-    assert len(declared) == 128, \
-        f"{len(declared)} records carry a declaration the shared opener reads, not the 128 measured"
+    # 130 with the import-apply and render records: `ImportApplyRequest` and
+    # `RenderRequest` — the two the 13.2 apply and the 13.1 render bind.
+    assert len(declared) == 130, \
+        f"{len(declared)} records carry a declaration the shared opener reads, not the 130 measured"
     problems, renamed = [], []
     for relative, record in declared:
         names = _record_components_at(relative, record)
@@ -1219,7 +1221,7 @@ def test_the_response_envelope_has_exactly_one_wrapper_and_one_unwrapper():
     # 31 rather than 30 since the paste-a-posting importer joined (one success toast in
     # actions.ts); 30 rather than 28 since the conversation list grew rename and delete,
     # each with its own success toast in actions.ts.
-    assert len(toasts) == 46, (f"{len(toasts)} `toast.success` lines came out of the same walk: that is "
+    assert len(toasts) == 47, (f"{len(toasts)} `toast.success` lines came out of the same walk: that is "
                                "the floor proving the scan reached the pages and the hooks, so a walk "
                                "narrowed to the api directory cannot pass quietly")
 
@@ -2125,10 +2127,13 @@ def test_the_run_stream_contract_is_one_table_of_publishers_cases_and_subscriber
     # `lib/profile-maps.test.ts`. 41 with the four the forward bridges' own tests
     # added: `lib/api/normalize-followups.test.ts`, `lib/hooks/analytics.test.ts`,
     # `lib/i18n/translations.test.ts` and `components/common/bar-chart.test.tsx`.
-    # 42 with the locale provider's own: `lib/i18n/locale-context.test.tsx`.
     # 43 with the portability and ingestion bodies' own:
     # `lib/hooks/portability.test.ts`.
-    assert len(skipped) == 43 and all(rel.endswith((".test.ts", ".test.tsx")) for rel, _t in skipped), \
+    # 44 with the copilot artifact renderers' own:
+    # `components/copilot/artifacts.test.tsx`.
+    # 45 with the collapsed sidebar's own:
+    # `components/layout/collapsed-sidebar-tooltip.test.tsx`.
+    assert len(skipped) == 45 and all(rel.endswith((".test.ts", ".test.tsx")) for rel, _t in skipped), \
         (f"{len(skipped)} files are skipped and not one ships: a name in that set that is not a test file "
          "would be a subscriber hidden from the table by the pattern rather than by measurement")
     skipped_names = {rel.rsplit("/", 1)[-1] for rel, _t in skipped}
@@ -2904,9 +2909,10 @@ def test_the_heartbeat_interval_has_one_definer_and_every_shipped_claim_names_it
         # joined the throttle list above it, the sentence itself unchanged. AGENTS.md's moved
         # 144 -> 150 for the same reason: the networking subagent's §2 whitelist row and the four
         # §4 tool rows joined the tables above it, and that sentence did not change either. It
-        # moved once more to 155 when the deterministic-engines section (§7) joined the file
-        # below it -- again the sentence itself is untouched.
-        ("AGENTS.md", 155), ("DEPLOYMENT.md", 8), ("SECURITY.md", 150),
+        # moved once more to 159 when the deterministic-engines section (§7) and the
+        # tool table's growth rows joined the file below it -- again the sentence
+        # itself is untouched.
+        ("AGENTS.md", 159), ("DEPLOYMENT.md", 8), ("SECURITY.md", 150),
     ], (f"{doc_vocabulary}: the docs' own vocabulary is censused, so this pass is not reporting on an "
         "empty set -- and a second file picking up the word is a signal the ledger has to grow")
 
@@ -3139,7 +3145,7 @@ def test_both_frame_parsers_default_a_nameless_frame_to_the_same_event_name():
         # moved its `kind:` head down. The forward bridges' own types (the growth
         # engines, the offers, the portability and ingestion payloads) joined the file
         # above it, and the union itself did not change.
-        ("types.ts", 1180, "kind:"),
+        ("types.ts", 1203, "kind:"),
         ('use-sse.ts', 15, 'event: SSEEventName | "message" | "progress" | "ping";'),
     ], (f"{[(r['file'], r['line'], r['head']) for r in by_role['type-union-member']]}: three type unions "
         "spell `message`, and only one of them names a frame -- the other two are the trace step kind "
