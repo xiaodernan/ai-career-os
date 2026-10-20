@@ -438,6 +438,26 @@ export const translations = {
       boardIsQuietDescription:
         "No roles match these filters yet. Clear a filter, paste a JD for the analyst, or let Copilot research roles for your target.",
       askCopilot: "Ask Copilot",
+      filters: {
+        searchPlaceholder: "Title, team, tech…",
+        locationPlaceholder: "Shanghai / Remote / Berlin",
+        companyPlaceholder: "Startups, big tech…",
+        minSalary: "Min",
+        maxSalary: "Max",
+        minSalaryLabel: "Minimum salary",
+        maxSalaryLabel: "Maximum salary",
+      },
+      match: {
+        noMatch: "No match",
+        overall: "Overall match",
+        evidenceBacked: "Evidence-backed",
+        skillGaps: "Skill gaps",
+        skillGapsDescription: "What the JD asks for that your profile can't evidence yet.",
+        interviewTopics: "Likely interview topics",
+        interviewTopicsDescription: "Derived from the requirement extraction, ranked by weight.",
+        preparation: "Recommended preparation",
+        preparationDescription: "Ordered by how much match score each item is worth.",
+      },
     },
   },
   zh: {
@@ -840,6 +860,26 @@ export const translations = {
       boardIsQuietDescription:
         "目前没有职位符合这些筛选。清掉一个筛选、粘贴一份 JD 给分析器，或者让副驾驶为你的目标职位做调研。",
       askCopilot: "问问副驾驶",
+      filters: {
+        searchPlaceholder: "职位、团队、技术…",
+        locationPlaceholder: "上海 / 远程 / 柏林",
+        companyPlaceholder: "初创、大厂…",
+        minSalary: "最低",
+        maxSalary: "最高",
+        minSalaryLabel: "最低薪资",
+        maxSalaryLabel: "最高薪资",
+      },
+      match: {
+        noMatch: "无匹配",
+        overall: "总体匹配度",
+        evidenceBacked: "有证据支撑",
+        skillGaps: "技能差距",
+        skillGapsDescription: "JD 要求、但你的档案还拿不出证据的部分。",
+        interviewTopics: "可能的面试题",
+        interviewTopicsDescription: "从需求提取中推导，按权重排序。",
+        preparation: "推荐的准备",
+        preparationDescription: "按每项对匹配度的贡献排序。",
+      },
     },
   },
 } as const;

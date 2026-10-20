@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { salaryFromInput } from "@/lib/job-filter";
+import { useLocale } from "@/lib/i18n/locale-context";
 import type { JobFilters as Filters } from "@/lib/hooks/resources";
 
 /**
@@ -29,6 +30,7 @@ export interface JobFilterPanelProps extends React.ComponentProps<"div"> {
 const EMPTY: Filters = { q: "", skills: "", location: "", remote: undefined, company: "", min_salary: undefined, max_salary: undefined, page: 0 };
 
 function JobFilterPanel({ value, onApply, skillSuggestions, resultCount, loading, className, ...props }: JobFilterPanelProps) {
+  const { t } = useLocale();
   const [localQ, setLocalQ] = React.useState(value.q ?? "");
   const skills = React.useMemo(
     () => (value.skills ?? "").split(",").map((s) => s.trim()).filter(Boolean),
@@ -89,7 +91,7 @@ function JobFilterPanel({ value, onApply, skillSuggestions, resultCount, loading
             id="job-search"
             value={localQ}
             onChange={(e) => setLocalQ(e.target.value)}
-            placeholder="Title, team, tech…"
+            placeholder={t("jobs.filters.searchPlaceholder")}
             className="pl-8"
             autoComplete="off"
           />
@@ -102,7 +104,7 @@ function JobFilterPanel({ value, onApply, skillSuggestions, resultCount, loading
           id="job-location"
           value={value.location ?? ""}
           onChange={(e) => set({ location: e.target.value })}
-          placeholder="Shanghai / Remote / Berlin"
+          placeholder={t("jobs.filters.locationPlaceholder")}
           autoComplete="off"
         />
       </div>
@@ -113,7 +115,7 @@ function JobFilterPanel({ value, onApply, skillSuggestions, resultCount, loading
           id="job-company"
           value={value.company ?? ""}
           onChange={(e) => set({ company: e.target.value })}
-          placeholder="Startups, big tech…"
+          placeholder={t("jobs.filters.companyPlaceholder")}
           autoComplete="off"
         />
       </div>
@@ -172,8 +174,8 @@ function JobFilterPanel({ value, onApply, skillSuggestions, resultCount, loading
             min={0}
             value={value.min_salary ?? ""}
             onChange={(e) => set({ min_salary: salaryFromInput(e.target.value) })}
-            placeholder="Min"
-            aria-label="Minimum salary"
+            placeholder={t("jobs.filters.minSalary")}
+            aria-label={t("jobs.filters.minSalaryLabel")}
           />
           <span className="text-muted-foreground" aria-hidden>–</span>
           <Input
@@ -182,8 +184,8 @@ function JobFilterPanel({ value, onApply, skillSuggestions, resultCount, loading
             min={0}
             value={value.max_salary ?? ""}
             onChange={(e) => set({ max_salary: salaryFromInput(e.target.value) })}
-            placeholder="Max"
-            aria-label="Maximum salary"
+            placeholder={t("jobs.filters.maxSalary")}
+            aria-label={t("jobs.filters.maxSalaryLabel")}
           />
         </div>
       </div>

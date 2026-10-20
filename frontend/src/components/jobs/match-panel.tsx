@@ -3,6 +3,7 @@
 import * as React from "react";
 import { AlertTriangle, Compass, Lightbulb, Sparkles, Target } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLocale } from "@/lib/i18n/locale-context";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MatchRing, scoreBand } from "@/components/ai/match-ring";
@@ -28,6 +29,7 @@ export function MatchPanel({
   onAnalyze?: () => void;
   className?: string;
 }) {
+  const { t } = useLocale();
   const fallbackDims: { key: string; label: string; score?: number }[] = match
     ? match.dimensions?.length
       ? match.dimensions
@@ -69,7 +71,7 @@ export function MatchPanel({
       <CardContent className="space-y-4">
         {!match ? (
           <div className="flex items-center gap-3 rounded-lg border border-dashed border-border bg-muted/30 p-4">
-            <MatchRing value={0} size={56} thickness={5} animated={false} label="No match" />
+            <MatchRing value={0} size={56} thickness={5} animated={false} label={t("jobs.match.noMatch")} />
             <p className="text-sm text-muted-foreground">
               Nothing fabricated here: the moment <span className="font-medium text-foreground">/jobs/&#123;id&#125;/match</span>{" "}
               returns, the ring, the dimensions and the citations appear.
@@ -78,7 +80,7 @@ export function MatchPanel({
         ) : (
           <>
             <div className="flex flex-wrap items-center gap-4">
-              <MatchRing value={match.overall} size={84} thickness={7} label="Overall match" />
+              <MatchRing value={match.overall} size={84} thickness={7} label={t("jobs.match.overall")} />
               <div className="min-w-0 flex-1 space-y-1">
                 <p className="text-sm font-medium">
                   {match.overall >= 80
@@ -99,7 +101,7 @@ export function MatchPanel({
                   </p>
                 )}
               </div>
-              <AIBadge label="Evidence-backed" className="self-start" />
+              <AIBadge label={t("jobs.match.evidenceBacked")} className="self-start" />
             </div>
 
             <DimensionBars dimensions={fallbackDims} />
@@ -132,6 +134,7 @@ export function MatchPanel({
 /* ------------------------------------------------------------------ */
 
 export function SkillGapCard({ gaps, className }: { gaps: SkillGap[]; className?: string }) {
+  const { t } = useLocale();
   if (!gaps.length) return null;
   return (
     <Card className={className}>
@@ -139,8 +142,8 @@ export function SkillGapCard({ gaps, className }: { gaps: SkillGap[]; className?
         <SectionHeading
           eyebrow="Growth"
           icon={<AlertTriangle className="size-4" aria-hidden />}
-          title="Skill gaps"
-          description="What the JD asks for that your profile can't evidence yet."
+          title={t("jobs.match.skillGaps")}
+          description={t("jobs.match.skillGapsDescription")}
         />
       </CardHeader>
       <CardContent>
@@ -178,6 +181,7 @@ export function SkillGapCard({ gaps, className }: { gaps: SkillGap[]; className?
 }
 
 export function InterviewTopicsCard({ topics, className }: { topics: string[]; className?: string }) {
+  const { t } = useLocale();
   if (!topics.length) return null;
   return (
     <Card className={className}>
@@ -185,8 +189,8 @@ export function InterviewTopicsCard({ topics, className }: { topics: string[]; c
         <SectionHeading
           eyebrow="Prep"
           icon={<Compass className="size-4" aria-hidden />}
-          title="Likely interview topics"
-          description="Derived from the requirement extraction, ranked by weight."
+          title={t("jobs.match.interviewTopics")}
+          description={t("jobs.match.interviewTopicsDescription")}
         />
       </CardHeader>
       <CardContent>
@@ -206,6 +210,7 @@ export function InterviewTopicsCard({ topics, className }: { topics: string[]; c
 }
 
 export function PreparationCard({ items, className }: { items: PreparationItem[]; className?: string }) {
+  const { t } = useLocale();
   const list = items.filter((i) => i?.topic || i?.title || i?.reason);
   if (!list.length) return null;
   return (
@@ -214,8 +219,8 @@ export function PreparationCard({ items, className }: { items: PreparationItem[]
         <SectionHeading
           eyebrow="Prep"
           icon={<Lightbulb className="size-4" aria-hidden />}
-          title="Recommended preparation"
-          description="Ordered by how much match score each item is worth."
+          title={t("jobs.match.preparation")}
+          description={t("jobs.match.preparationDescription")}
         />
       </CardHeader>
       <CardContent>
