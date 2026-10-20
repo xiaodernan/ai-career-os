@@ -142,17 +142,17 @@ export function ResetPasswordForm() {
           onBlur={() => setErrors((prev) => ({ ...prev, confirm: confirmationIssue(confirm, password) }))}
         />
         <Button type="submit" variant="ai" size="lg" className="w-full" loading={reset.isPending}>
-          Save new password
+          {t("recovery.saveNewPassword")}
         </Button>
       </form>
 
       <p className="text-center text-sm text-muted-foreground">
-        Token expired?{" "}
+        {t("recovery.tokenExpired")}{" "}
         <Link
           href="/forgot-password"
           className="font-medium text-primary underline-offset-4 hover:underline"
         >
-          Request another
+          {t("recovery.requestAnother")}
         </Link>
       </p>
     </div>

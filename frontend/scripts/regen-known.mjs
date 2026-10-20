@@ -48,6 +48,8 @@ const add = (file, value) => {
 const attrPattern = new RegExp(`\\b(${COPY_ATTRIBUTES.join("|")})="([^"\\n]+)"`, "g");
 const textPattern = />([^<>{}]{3,80}?)</g;
 
+const NOT_COPY = new Set(["Career", "CareerOS", "OS"]);
+
 for (const rel of browserSources()) {
   const text = readFileSync(join(ROOT, rel), "utf-8");
   for (const m of text.matchAll(attrPattern)) {
@@ -61,6 +63,7 @@ for (const rel of browserSources()) {
     if (!/^[A-Z][a-z]/.test(value)) continue;
     if (/[(){};=<>|]/.test(value)) continue;
     if (/^&[a-z]+;/.test(value)) continue;
+    if (NOT_COPY.has(value)) continue;
     add(rel, value);
   }
 }

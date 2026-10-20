@@ -1,27 +1,30 @@
+"use client";
+
 import Link from "next/link";
 import { Sparkles } from "lucide-react";
 import { ThemeToggle } from "@/components/common/theme-toggle";
+import { useLocale } from "@/lib/i18n/locale-context";
 
-const PILLARS = [
-  {
-    title: "Career Knowledge Base",
-    text: "Your resume, projects and notes become a searchable, cited evidence layer.",
-  },
-  {
-    title: "Evidence-backed matching",
-    text: "Every match score is computed — then explained with quotes from your own material.",
-  },
-  {
-    title: "Tailoring without fabrication",
-    text: "Resumes reworded and reordered per job description; a verifier rejects invented claims.",
-  },
-  {
-    title: "Adaptive mock interviews",
-    text: "An AI interviewer that follows up, scores dimensions and adapts difficulty.",
-  },
+/**
+ * The four pillars the auth pages sell the product with.
+ *
+ * The keys are the copy; the table holds both languages. A visitor who
+ * cannot read English lands here first, and this panel is what they are
+ * asked to believe -- so it is the last panel that should be English-only.
+ */
+const PILLAR_KEYS = [
+  "auth.pillars.knowledge.title",
+  "auth.pillars.knowledge.text",
+  "auth.pillars.matching.title",
+  "auth.pillars.matching.text",
+  "auth.pillars.fabrication.title",
+  "auth.pillars.fabrication.text",
+  "auth.pillars.interviews.title",
+  "auth.pillars.interviews.text",
 ];
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
+  const { t } = useLocale();
   return (
     <div className="grid min-h-dvh lg:grid-cols-[1.05fr_1fr]">
       {/* Marketing panel */}
@@ -42,24 +45,23 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <div className="relative max-w-md space-y-10">
           <div>
             <p className="mb-3 text-xs font-medium tracking-widest text-primary uppercase">
-              The job-search operating system
+              {t("auth.eyebrow")}
             </p>
             <h1 className="font-serif text-display-lg leading-[1.08] font-medium text-balance">
-              Run your search like an engineer runs a system.
+              {t("auth.headline")}
             </h1>
             <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-              AI Career OS turns your career material into a knowledge base, then drives
-              the whole loop — discovery, matching, tailoring, interviews, pipeline.
+              {t("auth.description")}
             </p>
           </div>
 
           <ul className="space-y-5">
-            {PILLARS.map((p) => (
-              <li key={p.title} className="flex gap-3">
+            {PILLAR_KEYS.map((key, i) => (
+              <li key={key} className="flex gap-3">
                 <span aria-hidden className="mt-1.5 size-1.5 shrink-0 rounded-full bg-primary/70" />
                 <div>
-                  <p className="text-sm font-medium">{p.title}</p>
-                  <p className="text-sm text-muted-foreground">{p.text}</p>
+                  <p className="text-sm font-medium">{t(`${key}.title`)}</p>
+                  <p className="text-sm text-muted-foreground">{t(`${key}.text`)}</p>
                 </div>
               </li>
             ))}
@@ -67,7 +69,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         </div>
 
         <p className="relative text-xs text-muted-foreground">
-          “Never fabricate experience — every claim maps to evidence.”
+          {t("auth.quote")}
         </p>
       </section>
 

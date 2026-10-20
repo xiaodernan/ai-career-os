@@ -44,6 +44,16 @@ const COPY_ATTRIBUTES = [
 ];
 
 /**
+ * The words that are not copy.
+ *
+ * The brand is written as two tags -- `Career<span>OS</span>` -- so the
+ * scanner sees a text node that begins with a capital. It is a name, not a
+ * sentence, and it is the same name in every language, so it is excluded
+ * rather than listed as a hole to close.
+ */
+const NOT_COPY = new Set(["Career", "CareerOS", "OS"]);
+
+/**
  * The copy still hardcoded, by file.
  *
  * Each entry is a string the file carries today. The agent-timeline and
@@ -220,15 +230,6 @@ const KNOWN: Record<string, string[]> = {
     "Sign out",
     "The interface follows your system theme by default.",
   ],
-  "app/(auth)/layout.tsx": [
-    "Career",
-    "CareerOS",
-    "Run your search like an engineer runs a system.",
-    "The job-search operating system",
-  ],
-  "app/landing-page.tsx": [
-    "Career",
-  ],
   "components/ai/agent-timeline.tsx": [
     "Agent execution trace",
     "Completed",
@@ -246,10 +247,6 @@ const KNOWN: Record<string, string[]> = {
     "Create one",
     "Forgot your password?",
     "Sign in",
-  ],
-  "components/auth/reset-password-form.tsx": [
-    "Request another",
-    "Save new password",
   ],
   "components/common/command-palette.tsx": [
     "Promise",
@@ -307,9 +304,6 @@ const KNOWN: Record<string, string[]> = {
   ],
   "components/knowledge/source-actions.tsx": [
     "Clear list",
-  ],
-  "components/layout/sidebar.tsx": [
-    "Career",
   ],
   "components/layout/topbar.tsx": [
     "Settings",
@@ -401,6 +395,7 @@ function textNodeOffenders(): Offender[] {
       if (/[(){};=<>|]/.test(value)) continue;
       // An entity -- `&amp;` -- is punctuation the reader never sees.
       if (/^&[a-z]+;/.test(value)) continue;
+      if (NOT_COPY.has(value)) continue;
       found.push({ file: rel, attribute: "text", value });
     }
   }
@@ -481,10 +476,10 @@ describe("the browser's copy", () => {
   });
 
   it("knows how much is left", () => {
-    // 217: the copy-bearing attributes and the text between the tags. The
+    // 209: the copy-bearing attributes and the text between the tags. The
     // number is the census's own reading of the browser, and every one of
     // them is on the list above with a file and an owner. The pin moves when
     // a hole closes -- which is the point of pinning it.
-    expect(found.length).toBe(217);
+    expect(found.length).toBe(209);
   });
 });

@@ -176,6 +176,9 @@ export const translations = {
       resetTokenPlaceholder: "the token from the email",
       newPassword: "New password",
       confirmNewPassword: "Confirm new password",
+      saveNewPassword: "Save new password",
+      tokenExpired: "Token expired?",
+      requestAnother: "Request another",
     },
     tailor: {
       title: "Tailored resume for this role",
@@ -536,6 +539,35 @@ export const translations = {
       logOut: "Log out of Career OS?",
       logOutDescription: "Your data stays safe — this only ends the current session.",
       logOutConfirm: "Log out",
+    },
+    /**
+     * The auth pages' marketing panel. A visitor who cannot read English
+     * lands here first, and this panel is what they are asked to believe.
+     */
+    auth: {
+      eyebrow: "The job-search operating system",
+      headline: "Run your search like an engineer runs a system.",
+      description:
+        "AI Career OS turns your career material into a knowledge base, then drives the whole loop — discovery, matching, tailoring, interviews, pipeline.",
+      quote: "“Never fabricate experience — every claim maps to evidence.”",
+      pillars: {
+        knowledge: {
+          title: "Career Knowledge Base",
+          text: "Your resume, projects and notes become a searchable, cited evidence layer.",
+        },
+        matching: {
+          title: "Evidence-backed matching",
+          text: "Every match score is computed — then explained with quotes from your own material.",
+        },
+        fabrication: {
+          title: "Tailoring without fabrication",
+          text: "Resumes reworded and reordered per job description; a verifier rejects invented claims.",
+        },
+        interviews: {
+          title: "Adaptive mock interviews",
+          text: "An AI interviewer that follows up, scores dimensions and adapts difficulty.",
+        },
+      },
     },
     /**
      * The skill chips: the two labels that sit above the matched row and
@@ -1230,6 +1262,9 @@ export const translations = {
       resetTokenPlaceholder: "邮件里的那个令牌",
       newPassword: "新密码",
       confirmNewPassword: "确认新密码",
+      saveNewPassword: "保存新密码",
+      tokenExpired: "令牌过期了？",
+      requestAnother: "再要一个",
     },
     tailor: {
       title: "为这个职位定制的简历",
@@ -1560,6 +1595,35 @@ export const translations = {
       logOut: "退出 Career OS？",
       logOutDescription: "你的数据是安全的——这只会结束当前会话。",
       logOutConfirm: "退出登录",
+    },
+    /**
+     * The auth pages' marketing panel. A visitor who cannot read English
+     * lands here first, and this panel is what they are asked to believe.
+     */
+    auth: {
+      eyebrow: "求职操作系统",
+      headline: "像工程师跑系统一样跑你的求职。",
+      description:
+        "AI Career OS 把你的职业材料变成一个知识库，然后驱动整个闭环——发现、匹配、定制、面试、流水线。",
+      quote: "「绝不虚构经历——每一个说法都对应证据。」",
+      pillars: {
+        knowledge: {
+          title: "职业知识库",
+          text: "你的简历、项目和笔记变成一层可检索、带引用的证据。",
+        },
+        matching: {
+          title: "有证据支撑的匹配",
+          text: "每个匹配分都是算出来的——再用你自己材料里的原文解释。",
+        },
+        fabrication: {
+          title: "定制但不虚构",
+          text: "简历按每份职位发布重写重排；一个校验环节会驳回编造的说法。",
+        },
+        interviews: {
+          title: "自适应模拟面试",
+          text: "一个会追问、会按维度打分、会调整难度的 AI 面试官。",
+        },
+      },
     },
     /**
      * The skill chips: the two labels that sit above the matched row and
