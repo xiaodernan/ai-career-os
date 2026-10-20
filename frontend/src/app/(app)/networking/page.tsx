@@ -65,7 +65,7 @@ export default function NetworkingPage() {
         description={t("networking.description")}
         query={contacts}
         ctaHref="/copilot"
-        ctaLabel="Draft a message with Copilot"
+        ctaLabel={t("networking.draftWithCopilot")}
         actions={
           <Button variant="ai" size="sm" onClick={startCreate}>
             <Users aria-hidden />
@@ -203,14 +203,16 @@ function ContactDialog({ open, editing, onClose }: ContactDialogProps) {
       <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>{editing ? `Edit ${editing.name}` : "Add a contact"}</DialogTitle>
+            <DialogTitle>
+              {editing ? t("networking.editContactTitle", { name: editing.name }) : t("networking.addContactTitle")}
+            </DialogTitle>
             <DialogDescription>
-              Only the name is required — fill in what you know, leave the rest.
+              {t("networking.onlyNameRequired")}
             </DialogDescription>
           </DialogHeader>
           <form className="space-y-3" onSubmit={submitting}>
             <div className="space-y-2">
-              <Label htmlFor="ct-name">Name</Label>
+              <Label htmlFor="ct-name">{t("networking.name")}</Label>
               <Input
                 id="ct-name"
                 value={name}
@@ -221,34 +223,34 @@ function ContactDialog({ open, editing, onClose }: ContactDialogProps) {
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="ct-role">Role</Label>
+                <Label htmlFor="ct-role">{t("networking.role")}</Label>
                 <Input id="ct-role" value={role} onChange={(e) => setRole(e.target.value)} autoComplete="off" />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="ct-company">Company</Label>
+                <Label htmlFor="ct-company">{t("networking.company")}</Label>
                 <Input id="ct-company" value={company} onChange={(e) => setCompany(e.target.value)} autoComplete="off" />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="ct-relation">Relation</Label>
+                <Label htmlFor="ct-relation">{t("networking.relation")}</Label>
                 <Input
                   id="ct-relation"
                   value={relation}
                   onChange={(e) => setRelation(e.target.value)}
-                  placeholder="referrer, mentor, peer…"
+                  placeholder={t("networking.relationPlaceholder")}
                   autoComplete="off"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="ct-email">Email</Label>
+                <Label htmlFor="ct-email">{t("networking.email")}</Label>
                 <Input id="ct-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="off" />
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="ct-touch">Last touch</Label>
+              <Label htmlFor="ct-touch">{t("networking.lastTouch")}</Label>
               <Input id="ct-touch" type="date" value={lastTouch} onChange={(e) => setLastTouch(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="ct-notes">Notes</Label>
+              <Label htmlFor="ct-notes">{t("networking.notes")}</Label>
               <Textarea
                 id="ct-notes"
                 value={notes}
@@ -265,14 +267,14 @@ function ContactDialog({ open, editing, onClose }: ContactDialogProps) {
                   className="text-destructive mr-auto"
                   onClick={() => setConfirming(true)}
                 >
-                  Delete
+                  {t("networking.delete")}
                 </Button>
               )}
               <Button type="button" variant="outline" onClick={onClose}>
-                Cancel
+                {t("networking.cancel")}
               </Button>
               <Button type="submit" variant="ai" loading={pending} disabled={pending}>
-                {editing ? "Save" : "Add"}
+                {editing ? t("networking.save") : t("networking.add")}
               </Button>
             </DialogFooter>
           </form>
@@ -282,9 +284,9 @@ function ContactDialog({ open, editing, onClose }: ContactDialogProps) {
         <ConfirmDialog
           open={confirming}
           onOpenChange={setConfirming}
-          title={`Delete ${editing.name}?`}
+          title={t("networking.deleteContactTitle", { name: editing.name })}
           description={t("networking.deleteContact")}
-          confirmLabel="Delete"
+          confirmLabel={t("networking.delete")}
           destructive
           loading={remove.isPending}
           onConfirm={() => remove.mutate(editing.id, { onSuccess: onClose })}

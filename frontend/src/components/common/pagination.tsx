@@ -4,6 +4,7 @@ import * as React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { pageWindow } from "@/lib/page-window";
+import { useLocale } from "@/lib/i18n/locale-context";
 import { Button } from "@/components/ui/button";
 
 /**
@@ -31,22 +32,23 @@ export function Pagination({
   label?: string;
 }) {
   const view = pageWindow(page, size, total);
+  const { t } = useLocale();
 
   return (
     <nav
-      aria-label={`Pagination (${label})`}
+      aria-label={t("chrome.pagination", { label })}
       className={cn("flex items-center justify-between gap-3", className)}
     >
       <p className="text-xs text-muted-foreground" aria-live="polite">
         {total > 0 ? (
-          <>
-            <span className="font-medium text-foreground tabular-nums">
-              {view.from}–{view.to}
-            </span>{" "}
-            of <span className="tabular-nums">{total}</span> {label}
-          </>
+          t("chrome.ofTotal", {
+            from: view.from,
+            to: view.to,
+            total,
+            label,
+          })
         ) : (
-          <>No {label} yet</>
+          t("chrome.noRowsYet", { label })
         )}
       </p>
       <div className="flex items-center gap-1.5">
@@ -55,10 +57,10 @@ export function Pagination({
           size="sm"
           disabled={view.page <= 0}
           onClick={() => onPageChange(view.page - 1)}
-          aria-label="Previous page"
+          aria-label={t("chrome.previousPage")}
         >
           <ChevronLeft aria-hidden />
-          Prev
+          {t("chrome.prev")}
         </Button>
         <span className="px-1 text-xs text-muted-foreground tabular-nums">
           {view.page + 1} / {view.pageCount}
@@ -68,9 +70,9 @@ export function Pagination({
           size="sm"
           disabled={view.page + 1 >= view.pageCount}
           onClick={() => onPageChange(view.page + 1)}
-          aria-label="Next page"
+          aria-label={t("chrome.nextPage")}
         >
-          Next
+          {t("chrome.next")}
           <ChevronRight aria-hidden />
         </Button>
       </div>

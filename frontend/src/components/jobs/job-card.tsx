@@ -10,6 +10,7 @@ import { MatchRing } from "@/components/ai/match-ring";
 import { SkillChips } from "@/components/common/skill-chips";
 import { SaveToggle } from "@/components/jobs/save-toggle";
 import { formatSalary, relativeTime, titleCase } from "@/lib/format";
+import { useLocale } from "@/lib/i18n/locale-context";
 import type { Job } from "@/lib/api/types";
 
 /**
@@ -34,6 +35,7 @@ function JobCard({
   ...props
 }: JobCardProps) {
   const match = job.latestMatch ?? null;
+  const { t } = useLocale();
   const to = href ?? `/jobs/${job.id}`;
   const salary = formatSalary(job.salaryMin, job.salaryMax, job.salaryCurrency);
   const company = job.company?.name || job.companyName;
@@ -52,7 +54,7 @@ function JobCard({
             value={match.overall}
             size={dense ? 44 : 56}
             thickness={dense ? 4 : 5}
-            label={`Match for ${job.title}`}
+            label={t("jobCard.matchFor", { title: job.title })}
           />
         ) : (
           <span
@@ -60,8 +62,8 @@ function JobCard({
               "flex shrink-0 items-center justify-center rounded-full border border-dashed border-border text-muted-foreground",
               dense ? "size-11" : "size-14"
             )}
-            title="No match computed yet"
-            aria-label="No match computed yet"
+            title={t("jobCard.noMatchYet")}
+            aria-label={t("jobCard.noMatchYet")}
           >
             <Briefcase className="size-4" aria-hidden />
           </span>

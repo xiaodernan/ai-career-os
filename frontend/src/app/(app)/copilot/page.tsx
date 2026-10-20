@@ -168,12 +168,12 @@ export default function CopilotPage() {
                 <SheetTrigger asChild>
                   <Button variant="ghost" size="sm" className="lg:hidden">
                     <MessageSquare aria-hidden />
-                    Chats
+                    {t("copilot.chatsButton")}
                   </Button>
                 </SheetTrigger>
                 <SheetContent side="left" className="flex w-72 flex-col gap-0 p-0">
                   <SheetHeader className="border-b border-border/60 py-3">
-                    <SheetTitle className="text-sm">Conversations</SheetTitle>
+                    <SheetTitle className="text-sm">{t("copilot.conversationsSheet")}</SheetTitle>
                   </SheetHeader>
                   {listPanel("flex min-h-0 flex-1")}
                 </SheetContent>
@@ -259,12 +259,16 @@ function ConversationList({
             {Array.from({ length: 3 }).map((_, i) => (
               <Skeleton key={i} className="h-14 rounded-lg" />
             ))}
-            <span className="sr-only">Loading conversations…</span>
+            <span className="sr-only">{t("copilot.loadingConversations")}</span>
           </div>
         ) : query.isError ? (
           <div className="px-1 py-3">
             <ErrorState
-              title={isEndpointMissing(query.error) ? "Conversations aren't served yet" : "Couldn't load conversations"}
+              title={
+                isEndpointMissing(query.error)
+                  ? t("copilot.conversationsNotServed")
+                  : t("copilot.couldNotLoadConversations")
+              }
               error={isEndpointMissing(query.error) ? undefined : query.error}
               onRetry={() => void query.refetch()}
               retrying={query.isFetching}
@@ -279,7 +283,7 @@ function ConversationList({
               action={
                 <Button variant="ai" size="sm" onClick={onCreate} loading={creating}>
                   <Plus aria-hidden />
-                  New chat
+                  {t("copilot.newChat")}
                 </Button>
               }
             />
@@ -359,7 +363,7 @@ function ConversationList({
           page={page}
           size={PAGE_SIZE}
           total={total}
-          label="conversations"
+          label={t("copilot.paginationLabel")}
           onPageChange={onPageChange}
           className="px-1"
         />
@@ -371,7 +375,7 @@ function ConversationList({
         }}
         title={t("copilot.deleteChat")}
         description={t("copilot.deleteChatDescription")}
-        confirmLabel="Delete"
+        confirmLabel={t("copilot.delete")}
         destructive
         loading={remove.isPending}
         onConfirm={confirmDelete}
@@ -396,7 +400,7 @@ function NewChat({ onStart, pending }: { onStart: (message: string) => void; pen
           </span>
           <h1 className="font-serif text-display-md font-medium">{t("copilot.title")}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Grounded in your resumes, notes and saved jobs — every claim it makes is cited.
+            {t("copilot.groundedIn")}
           </p>
         </div>
         <Card>
@@ -404,7 +408,7 @@ function NewChat({ onStart, pending }: { onStart: (message: string) => void; pen
             <Textarea
               value={value}
               onChange={(e) => setValue(e.target.value)}
-              placeholder="e.g. Which of my projects should I lead with for an LLM-platform role?"
+              placeholder={t("copilot.firstMessagePlaceholder")}
               rows={3}
               className="resize-none"
               aria-label={t("copilot.firstMessage")}
@@ -416,7 +420,7 @@ function NewChat({ onStart, pending }: { onStart: (message: string) => void; pen
               }}
             />
             <div className="flex items-center justify-between gap-2">
-              <p className="text-2xs text-muted-foreground">Enter to send · Shift+Enter for a new line</p>
+              <p className="text-2xs text-muted-foreground">{t("copilot.enterToSend")}</p>
               <Button
                 variant="ai"
                 size="sm"
@@ -425,7 +429,7 @@ function NewChat({ onStart, pending }: { onStart: (message: string) => void; pen
                 onClick={() => onStart(value.trim())}
               >
                 <Send aria-hidden />
-                Start chat
+                {t("copilot.startChat")}
               </Button>
             </div>
           </CardContent>
@@ -609,7 +613,8 @@ function ChatPanel({
             <div className="flex animate-fade-up flex-col gap-2">
               <p className="flex items-center gap-1.5 text-2xs font-medium tracking-wide text-muted-foreground uppercase">
                 <AIBadge label="copilot" />{" "}
-                {streamSteps[streamSteps.length - 1] ?? (streamText ? "writing" : "thinking")}
+                {streamSteps[streamSteps.length - 1] ??
+                  (streamText ? t("copilot.writing") : t("copilot.thinking"))}
               </p>
               {streamText ? (
                 <div className="max-w-[85%] rounded-2xl border border-border/70 bg-card px-4 py-2.5 text-sm">

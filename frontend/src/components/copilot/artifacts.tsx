@@ -87,7 +87,7 @@ function MatchArtifact({ data }: { data?: unknown }) {
     <Card className="border-primary/25">
       <CardContent className="flex flex-col gap-3">
         <div className="flex items-center gap-3">
-          <MatchRing value={match.overall} size={56} thickness={5} label="Match" />
+          <MatchRing value={match.overall} size={56} thickness={5} label={t("artifacts.matchRing")} />
           <div className="min-w-0">
             <p className="text-2xs font-medium tracking-wide text-muted-foreground uppercase">
               {t("artifacts.match")}
@@ -121,6 +121,7 @@ function MatchArtifact({ data }: { data?: unknown }) {
 /* -------------------------------- job_list -------------------------------- */
 
 function JobListArtifact({ data }: { data?: unknown }) {
+  const { t } = useLocale();
   const page = normalizePage(data, normalizeJob);
   const jobs = page.items.length ? page.items : normalizePage(pick(data, "jobs") ?? data, normalizeJob).items;
   if (!jobs.length) return null;
@@ -129,7 +130,7 @@ function JobListArtifact({ data }: { data?: unknown }) {
       <CardContent className="space-y-2.5">
         <p className="flex items-center gap-1.5 text-2xs font-medium tracking-wide text-muted-foreground uppercase">
           <Briefcase className="size-3.5" aria-hidden />
-          {jobs.length} matching roles
+          {t("artifacts.matchingRoles", { count: jobs.length })}
         </p>
         <ul className="space-y-2">
           {jobs.slice(0, 5).map((j) => (
@@ -146,26 +147,27 @@ function JobListArtifact({ data }: { data?: unknown }) {
 /* ----------------------------- tailored_resume ----------------------------- */
 
 function TailorArtifact({ data }: { data?: unknown }) {
-  const t = normalizeTailor(data);
-  const diff = t.diff;
-  const text = t.tailored?.markdown;
+  const { t } = useLocale();
+  const tailor = normalizeTailor(data);
+  const diff = tailor.diff;
+  const text = tailor.tailored?.markdown;
   if (!diff && !text) return null;
   return (
     <Card className="border-primary/25">
       <CardContent className="space-y-3">
         <p className="flex items-center gap-1.5 text-2xs font-medium tracking-wide text-muted-foreground uppercase">
           <Sparkles className="size-3.5" aria-hidden />
-          Tailored resume draft
+          {t("artifacts.tailoredResume")}
         </p>
         {diff && (diff.accepted.length > 0 || diff.rejected.length > 0) ? (
-          <DiffView accepted={diff.accepted} rejected={diff.rejected} notes={t.notes} />
+          <DiffView accepted={diff.accepted} rejected={diff.rejected} notes={tailor.notes} />
         ) : text ? (
           <StreamingText content={text} className="max-h-72 overflow-y-auto text-xs" />
         ) : null}
-        {t.evidence && t.evidence.length > 0 && (
-          <EvidenceList items={t.evidence} limit={2} dense />
+        {tailor.evidence && tailor.evidence.length > 0 && (
+          <EvidenceList items={tailor.evidence} limit={2} dense />
         )}
-        {text && <CopyButton text={text} label="Copy draft" />}
+        {text && <CopyButton text={text} label={t("artifacts.copyDraft")} />}
       </CardContent>
     </Card>
   );
@@ -185,7 +187,7 @@ function CoverLetterArtifact({ data }: { data?: unknown }) {
           {t("artifacts.coverLetter")}
         </p>
         <StreamingText content={text} className="max-h-80 overflow-y-auto" />
-        <CopyButton text={text} label="Copy letter" />
+        <CopyButton text={text} label={t("artifacts.copyLetter")} />
       </CardContent>
     </Card>
   );

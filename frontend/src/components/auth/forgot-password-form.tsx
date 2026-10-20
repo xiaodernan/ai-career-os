@@ -7,6 +7,7 @@ import { AuthField } from "@/components/auth/auth-field";
 import { Button } from "@/components/ui/button";
 import { emailIssue, recoveryErrorMessage } from "@/lib/auth-recovery";
 import { useForgotPassword } from "@/lib/hooks/auth";
+import { useLocale } from "@/lib/i18n/locale-context";
 
 /**
  * Ask for a reset token.
@@ -17,6 +18,7 @@ import { useForgotPassword } from "@/lib/hooks/auth";
  */
 export function ForgotPasswordForm() {
   const forgot = useForgotPassword();
+  const { t } = useLocale();
   const [email, setEmail] = React.useState("");
   const [error, setError] = React.useState<string | undefined>();
   const [accepted, setAccepted] = React.useState<string | null>(null);
@@ -40,18 +42,17 @@ export function ForgotPasswordForm() {
     return (
       <div className="space-y-6">
         <header className="space-y-1.5">
-          <h2 className="font-serif text-display-sm font-medium">Check your email</h2>
+          <h2 className="font-serif text-display-sm font-medium">{t("recovery.checkEmail")}</h2>
           <p className="text-sm text-muted-foreground">
-            If {accepted} has an account, a reset token is on its way. The token is good for 30
-            minutes.
+            {t("recovery.checkEmailBody", { email: accepted })}
           </p>
         </header>
         <div className="space-y-2">
           <Button asChild variant="outline" size="lg" className="w-full">
-            <Link href="/reset-password">I already have a token</Link>
+            <Link href="/reset-password">{t("recovery.alreadyHaveToken")}</Link>
           </Button>
           <Button variant="ghost" size="lg" className="w-full" onClick={() => setAccepted(null)}>
-            Use a different address
+            {t("recovery.differentAddress")}
           </Button>
         </div>
       </div>
@@ -61,9 +62,9 @@ export function ForgotPasswordForm() {
   return (
     <div className="space-y-6">
       <header className="space-y-1.5">
-        <h2 className="font-serif text-display-sm font-medium">Reset your password</h2>
+        <h2 className="font-serif text-display-sm font-medium">{t("recovery.resetHeading")}</h2>
         <p className="text-sm text-muted-foreground">
-          Tell us the address on the account and we will send it a reset token.
+          {t("recovery.resetBody")}
         </p>
       </header>
 
@@ -71,10 +72,10 @@ export function ForgotPasswordForm() {
         <AuthField
           id="email"
           name="email"
-          label="Email"
+          label={t("recovery.email")}
           type="email"
           autoComplete="email"
-          placeholder="you@example.com"
+          placeholder={t("recovery.emailPlaceholder")}
           value={email}
           error={error}
           onChange={(event) => {
@@ -84,14 +85,14 @@ export function ForgotPasswordForm() {
           onBlur={() => setError(emailIssue(email))}
         />
         <Button type="submit" variant="ai" size="lg" className="w-full" loading={forgot.isPending}>
-          Send reset token
+          {t("recovery.sendToken")}
         </Button>
       </form>
 
       <p className="text-center text-sm text-muted-foreground">
-        Remembered it?{" "}
+        {t("recovery.remembered")}{" "}
         <Link href="/login" className="font-medium text-primary underline-offset-4 hover:underline">
-          Sign in
+          {t("recovery.signIn")}
         </Link>
       </p>
     </div>

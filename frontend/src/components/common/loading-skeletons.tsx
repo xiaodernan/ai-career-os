@@ -1,7 +1,10 @@
+﻿"use client";
+
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
+import { useLocale } from "@/lib/i18n/locale-context";
 
 /**
  * Loading skeletons composing the real dashboard shapes — the same
@@ -17,8 +20,9 @@ export function LoadingListSkeleton({
   className?: string;
   showAvatars?: boolean;
 }) {
+  const { t } = useLocale();
   return (
-    <div role="status" aria-label="Loading" className={cn("flex flex-col", className)}>
+    <div role="status" aria-label={t("loading.generic")} className={cn("flex flex-col", className)}>
       {Array.from({ length: rows }).map((_, i) => (
         <div key={i} className="flex items-center gap-3 border-b border-border/50 py-3 last:border-0">
           {showAvatars && <Skeleton className="size-9 rounded-lg" />}
@@ -29,7 +33,7 @@ export function LoadingListSkeleton({
           <Skeleton className="h-6 w-16 rounded-full" />
         </div>
       ))}
-      <span className="sr-only">Loading…</span>
+      <span className="sr-only">{t("loading.inProgress")}</span>
     </div>
   );
 }
@@ -58,8 +62,9 @@ export function LoadingMetricGridSkeleton({ count = 4 }: { count?: number }) {
 
 /** Ring + text row — job cards, match summaries. */
 export function LoadingJobCardSkeleton({ count = 3 }: { count?: number }) {
+  const { t } = useLocale();
   return (
-    <div className="flex flex-col gap-3" aria-label="Loading jobs" role="status">
+    <div className="flex flex-col gap-3" aria-label={t("loading.jobs")} role="status">
       {Array.from({ length: count }).map((_, i) => (
         <Card key={i} className="flex-row items-center gap-4 p-4">
           <Skeleton className="size-14 rounded-full" />
@@ -75,18 +80,19 @@ export function LoadingJobCardSkeleton({ count = 3 }: { count?: number }) {
           <Skeleton className="h-8 w-20 rounded-lg" />
         </Card>
       ))}
-      <span className="sr-only">Loading…</span>
+      <span className="sr-only">{t("loading.inProgress")}</span>
     </div>
   );
 }
 
 /** Kanban column skeleton for the applications board. */
 export function LoadingKanbanSkeleton({ columns = 4, rows = 2 }: { columns?: number; rows?: number }) {
+  const { t } = useLocale();
   return (
     <div
       className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
       role="status"
-      aria-label="Loading pipeline"
+      aria-label={t("loading.pipeline")}
     >
       {Array.from({ length: columns }).map((_, c) => (
         <div key={c} className="space-y-2 rounded-xl border border-border/60 bg-muted/30 p-3">
@@ -102,15 +108,16 @@ export function LoadingKanbanSkeleton({ columns = 4, rows = 2 }: { columns?: num
           ))}
         </div>
       ))}
-      <span className="sr-only">Loading…</span>
+      <span className="sr-only">{t("loading.inProgress")}</span>
     </div>
   );
 }
 
 /** Chat transcript skeleton: alternating bubbles. */
 export function LoadingChatSkeleton({ turns = 2 }: { turns?: number }) {
+  const { t } = useLocale();
   return (
-    <div className="flex flex-col gap-4" role="status" aria-label="Loading conversation">
+    <div className="flex flex-col gap-4" role="status" aria-label={t("loading.conversation")}>
       {Array.from({ length: turns }).map((_, i) => (
         <div key={i} className={cn("flex flex-col gap-2", i % 2 === 1 && "items-end")}>
           <Skeleton className={cn("h-3.5", i % 2 === 0 ? "w-2/3" : "w-1/3")} />
@@ -118,15 +125,16 @@ export function LoadingChatSkeleton({ turns = 2 }: { turns?: number }) {
           <Skeleton className={cn("h-3", i % 2 === 0 ? "w-3/5" : "w-1/5")} />
         </div>
       ))}
-      <span className="sr-only">Loading…</span>
+      <span className="sr-only">{t("loading.inProgress")}</span>
     </div>
   );
 }
 
 /** Two-column detail skeleton: header, ring, section blocks. */
 export function LoadingDetailSkeleton() {
+  const { t } = useLocale();
   return (
-    <div className="space-y-6" role="status" aria-label="Loading details">
+    <div className="space-y-6" role="status" aria-label={t("loading.detail")}>
       <div className="flex items-start gap-4">
         <Skeleton className="size-12 rounded-xl" />
         <div className="flex-1 space-y-2">
@@ -152,15 +160,16 @@ export function LoadingDetailSkeleton() {
           </CardContent>
         </Card>
       </div>
-      <span className="sr-only">Loading…</span>
+      <span className="sr-only">{t("loading.inProgress")}</span>
     </div>
   );
 }
 
 /** Table skeleton for sources / activity / companies. */
 export function LoadingTableSkeleton({ rows = 5, cols = 4 }: { rows?: number; cols?: number }) {
+  const { t } = useLocale();
   return (
-    <div className="flex flex-col" role="status" aria-label="Loading table">
+    <div className="flex flex-col" role="status" aria-label={t("loading.table")}>
       <div className="flex gap-4 border-b border-border/60 px-4 py-2.5">
         {Array.from({ length: cols }).map((_, i) => (
           <Skeleton key={i} className="h-3 w-20" />
@@ -173,7 +182,7 @@ export function LoadingTableSkeleton({ rows = 5, cols = 4 }: { rows?: number; co
           ))}
         </div>
       ))}
-      <span className="sr-only">Loading…</span>
+      <span className="sr-only">{t("loading.inProgress")}</span>
     </div>
   );
 }

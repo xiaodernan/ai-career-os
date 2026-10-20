@@ -67,7 +67,7 @@ export function NavLinks({
   return (
     <TooltipProvider delayDuration={200}>
       <nav
-        aria-label="Main navigation"
+        aria-label={t("chrome.mainNavigation")}
         className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-2 py-2"
       >
         {NAV_ITEMS.map((item) => {
@@ -111,11 +111,12 @@ export function NavLinks({
 }
 
 function Brand({ collapsed }: { collapsed?: boolean }) {
+  const { t } = useLocale();
   return (
     <Link
       href="/dashboard"
       className="flex h-14 shrink-0 items-center gap-2 border-b border-sidebar-border px-4 outline-none focus-visible:ring-[3px] focus-visible:ring-ring/35 rounded-lg"
-      aria-label="AI Career OS — go to dashboard"
+      aria-label={t("chrome.goToDashboard")}
     >
       <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-soft">
         <Sparkles className="size-4" aria-hidden />
@@ -131,7 +132,7 @@ function Brand({ collapsed }: { collapsed?: boolean }) {
 
 export function Sidebar() {
   const [collapsed, toggleCollapsed] = useCollapsed();
-  const { locale, setLocale } = useLocale();
+  const { locale, setLocale, t } = useLocale();
 
   return (
     <aside
@@ -149,7 +150,9 @@ export function Sidebar() {
           variant="ghost"
           size="sm"
           onClick={() => setLocale(locale === "en" ? "zh" : "en")}
-          aria-label={locale === "en" ? "Switch to Chinese" : "Switch to English"}
+          aria-label={
+            locale === "en" ? t("chrome.switchToChinese") : t("chrome.switchToEnglish")
+          }
           className={cn("w-full text-muted-foreground", collapsed && "px-0")}
         >
           <Globe aria-hidden />
@@ -159,11 +162,11 @@ export function Sidebar() {
           variant="ghost"
           size="sm"
           onClick={toggleCollapsed}
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-label={collapsed ? t("chrome.expandSidebar") : t("chrome.collapseSidebar")}
           className={cn("w-full text-muted-foreground", collapsed && "px-0")}
         >
           {collapsed ? <PanelLeftOpen aria-hidden /> : <PanelLeftClose aria-hidden />}
-          {!collapsed && <span>Collapse</span>}
+          {!collapsed && <span>{t("chrome.collapse")}</span>}
         </Button>
       </div>
     </aside>
@@ -171,18 +174,24 @@ export function Sidebar() {
 }
 
 export function MobileSidebar({ children }: { children: React.ReactNode }) {
+  const { t } = useLocale();
   const [open, setOpen] = React.useState(false);
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon-sm" aria-label="Open navigation menu" className="lg:hidden">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label={t("chrome.openNavigationMenu")}
+          className="lg:hidden"
+        >
           <Menu aria-hidden />
         </Button>
       </SheetTrigger>
       <SheetContent side="left" className="w-64 gap-0 bg-sidebar p-0 text-sidebar-foreground">
         <SheetHeader className="border-b border-sidebar-border px-0">
           <SheetTitle asChild>
-            <span className="sr-only">Navigation</span>
+            <span className="sr-only">{t("chrome.mainNavigation")}</span>
           </SheetTitle>
           <Brand />
         </SheetHeader>

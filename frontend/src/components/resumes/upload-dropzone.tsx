@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { TaskProgress } from "@/components/ai/task-stream";
 import { pickResumeId, pickTaskId } from "@/lib/resume-upload";
 import { RESUME_ACCEPT, validateResumeFile, useUploadResume } from "@/lib/hooks/actions";
+import { useLocale } from "@/lib/i18n/locale-context";
 
 /**
  * UploadDropzone — drag & drop resume intake with a *client-side* size/mime
@@ -39,6 +40,7 @@ export const INGEST_SEED = [
 // progress panel silently never mounts.
 
 export function UploadDropzone({ onUploaded, className, compact = false, ...props }: UploadDropzoneProps) {
+  const { t } = useLocale();
   const inputRef = React.useRef<HTMLInputElement>(null);
   const resumeIdRef = React.useRef<string | null>(null);
   const [dragging, setDragging] = React.useState(false);
@@ -75,7 +77,7 @@ export function UploadDropzone({ onUploaded, className, compact = false, ...prop
       <div
         role="button"
         tabIndex={0}
-        aria-label="Upload resume"
+        aria-label={t("upload.ariaLabel")}
         onClick={() => !upload.isPending && inputRef.current?.click()}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {
@@ -111,11 +113,10 @@ export function UploadDropzone({ onUploaded, className, compact = false, ...prop
           )}
         </span>
         <p className="text-sm font-medium">
-          {upload.isPending ? "Uploading…" : "Drop your resume here, or click to browse"}
+          {upload.isPending ? t("upload.uploading") : t("upload.dropHere")}
         </p>
         <p className="text-xs text-muted-foreground">
-          {RESUME_ACCEPT.join(" · ")} — up to 10 MB. Files stay in your workspace and feed the
-          knowledge base the agents cite from.
+          {t("upload.accepted", { formats: RESUME_ACCEPT.join(" · ") })}
         </p>
         <input
           ref={inputRef}
@@ -141,24 +142,27 @@ export function UploadDropzone({ onUploaded, className, compact = false, ...prop
           <CardContent className="space-y-2">
             <TaskProgress
               taskId={taskId}
-              title="Ingesting"
+              title={t("upload.ingesting")}
               seed={INGEST_SEED}
               onDone={() => {
                 setTaskId(null);
-                toast.success("Resume ingested — your knowledge base is updated.");
+                toast.success(t("upload.ingestedToast"));
                 onUploaded?.(resumeIdRef.current);
               }}
             />
             <p className="text-xs text-muted-foreground">
-              You can leave this page — the run continues server-side and the list below reflects
-              its real status.
+              {t("upload.canLeave")}
             </p>
           </CardContent>
         </Card>
       )}
 
       {upload.isPending && !taskId && (
-        <TaskProgress pending title="Uploading" steps={[{ id: "upload", label: "Sending the file…", status: "active" }]} />
+        <TaskProgress
+          pending
+          title={t("upload.uploading")}
+          steps={[{ id: "upload", label: t("upload.sending"), status: "active" }]}
+        />
       )}
     </div>
   );

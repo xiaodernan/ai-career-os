@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
 import { normalizeSearch, searchGroupNames } from "@/lib/api/normalize";
+import { useLocale } from "@/lib/i18n/locale-context";
 import type { SearchResults } from "@/lib/api/types";
 import { FileText, Briefcase, Building2, MessageSquare, LayoutDashboard, CornerDownLeft, Loader2, type LucideIcon } from "lucide-react";
 
@@ -66,6 +67,7 @@ export function CommandPaletteProvider({
   const [isOpen, setIsOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
   const router = useRouter();
+  const { t } = useLocale();
 
   React.useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -126,14 +128,14 @@ export function CommandPaletteProvider({
       <CommandDialog
         open={isOpen}
         onOpenChange={setIsOpen}
-        title="Command palette"
-        description="Search your career workspace and jump between sections"
+        title={t("chrome.commandPaletteTitle")}
+        description={t("chrome.commandPaletteDescription")}
         className="top-[20%] translate-y-0"
         showCloseButton={false}
       >
         <Command shouldFilter={false}>
           <CommandInput
-            placeholder="Type a command or search…"
+            placeholder={t("chrome.commandPalettePlaceholder")}
             value={query}
             onValueChange={setQuery}
           />
@@ -141,11 +143,13 @@ export function CommandPaletteProvider({
             {results.isPending && (
               <div className="flex items-center gap-2 px-4 py-3 text-xs text-muted-foreground" role="status">
                 <Loader2 className="size-3.5 animate-spin" aria-hidden />
-                <span className="sr-only">Searching…</span>
-                Searching…
+                <span className="sr-only">{t("chrome.searching")}</span>
+                {t("chrome.searching")}
               </div>
             )}
-            {!results.isPending && !searchFailed && <CommandEmpty>No results.</CommandEmpty>}
+            {!results.isPending && !searchFailed && (
+              <CommandEmpty>{t("chrome.noResults")}</CommandEmpty>
+            )}
 
             {apiGroups.map((group) => (
               <CommandGroup key={group.label} heading={group.label}>

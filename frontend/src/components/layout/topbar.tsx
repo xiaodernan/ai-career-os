@@ -18,6 +18,7 @@ import { ThemeToggle } from "@/components/common/theme-toggle";
 import { useCommandPalette } from "@/components/common/command-palette";
 import { MobileSidebar } from "./sidebar";
 import { useLogout, useUser } from "@/lib/hooks/auth";
+import { useLocale } from "@/lib/i18n/locale-context";
 import { titleForPath } from "./nav";
 import { usePathname } from "next/navigation";
 
@@ -31,6 +32,7 @@ function PlatformKeyHint() {
 
 export function Topbar() {
   const pathname = usePathname();
+  const { t } = useLocale();
   const { open } = useCommandPalette();
   const { data: user } = useUser();
   const logout = useLogout();
@@ -57,12 +59,12 @@ export function Topbar() {
         variant="outline"
         size="sm"
         onClick={open}
-        aria-label="Open command palette"
+        aria-label={t("chrome.openCommandPalette")}
         className="hidden h-8 w-52 items-center justify-between px-2.5 text-muted-foreground sm:flex lg:w-60"
       >
         <span className="flex items-center gap-2">
           <Search className="size-3.5" aria-hidden />
-          <span className="text-xs">Search…</span>
+          <span className="text-xs">{t("chrome.commandPalettePlaceholder")}</span>
         </span>
         <span className="rounded-md border border-border bg-muted px-1.5 text-2xs text-muted-foreground">
           <PlatformKeyHint />K
@@ -72,7 +74,7 @@ export function Topbar() {
         variant="ghost"
         size="icon-sm"
         onClick={open}
-        aria-label="Open command palette"
+        aria-label={t("chrome.openCommandPalette")}
         className="sm:hidden"
       >
         <Search aria-hidden />
@@ -83,7 +85,7 @@ export function Topbar() {
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button
-            aria-label="Account menu"
+            aria-label={t("chrome.accountMenu")}
             className="rounded-lg outline-none focus-visible:ring-[3px] focus-visible:ring-ring/35"
           >
             <Avatar className="size-8 ring-1 ring-border">

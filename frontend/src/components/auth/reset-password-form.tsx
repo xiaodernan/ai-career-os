@@ -13,6 +13,7 @@ import {
   tokenIssue,
 } from "@/lib/auth-recovery";
 import { useResetPassword } from "@/lib/hooks/auth";
+import { useLocale } from "@/lib/i18n/locale-context";
 
 /**
  * Spend a reset token and set a new password.
@@ -24,6 +25,7 @@ import { useResetPassword } from "@/lib/hooks/auth";
  */
 export function ResetPasswordForm() {
   const reset = useResetPassword();
+  const { t } = useLocale();
   const [linkToken, setLinkToken] = React.useState<string | null>(null);
   const [typedToken, setTypedToken] = React.useState("");
   const [checked, setChecked] = React.useState(false);
@@ -67,14 +69,13 @@ export function ResetPasswordForm() {
     return (
       <div className="space-y-6">
         <header className="space-y-1.5">
-          <h2 className="font-serif text-display-sm font-medium">Password updated</h2>
+          <h2 className="font-serif text-display-sm font-medium">{t("recovery.passwordUpdated")}</h2>
           <p className="text-sm text-muted-foreground">
-            Every device that was signed in has been signed out. Use the new password to get back
-            in.
+            {t("recovery.signedOutEverywhere")}
           </p>
         </header>
         <Button asChild variant="ai" size="lg" className="w-full">
-          <Link href="/login">Sign in</Link>
+          <Link href="/login">{t("recovery.signIn")}</Link>
         </Button>
       </div>
     );
@@ -83,11 +84,9 @@ export function ResetPasswordForm() {
   return (
     <div className="space-y-6">
       <header className="space-y-1.5">
-        <h2 className="font-serif text-display-sm font-medium">Set a new password</h2>
+        <h2 className="font-serif text-display-sm font-medium">{t("recovery.setNewPassword")}</h2>
         <p className="text-sm text-muted-foreground">
-          {needsToken
-            ? "Paste the token from your email, then pick a password. Signing in everywhere else stops as soon as you save."
-            : "Signing in everywhere else stops as soon as you save."}
+          {needsToken ? t("recovery.pasteToken") : t("recovery.stopsElsewhere")}
         </p>
       </header>
 
@@ -96,11 +95,11 @@ export function ResetPasswordForm() {
           <AuthField
             id="token"
             name="token"
-            label="Reset token"
+            label={t("recovery.resetToken")}
             type="text"
             autoComplete="one-time-code"
             spellCheck={false}
-            placeholder="the token from the email"
+            placeholder={t("recovery.resetTokenPlaceholder")}
             value={typedToken}
             error={errors.token}
             onChange={(event) => {
@@ -113,7 +112,7 @@ export function ResetPasswordForm() {
         <AuthField
           id="password"
           name="password"
-          label="New password"
+          label={t("recovery.newPassword")}
           type="password"
           autoComplete="new-password"
           placeholder="••••••••••"
@@ -128,7 +127,7 @@ export function ResetPasswordForm() {
         <AuthField
           id="confirmPassword"
           name="confirmPassword"
-          label="Confirm new password"
+          label={t("recovery.confirmNewPassword")}
           type="password"
           autoComplete="new-password"
           placeholder="••••••••••"

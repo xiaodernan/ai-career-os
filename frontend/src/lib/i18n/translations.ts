@@ -40,6 +40,175 @@ export const translations = {
       retry: "Retry",
       empty: "Nothing here yet",
     },
+    /**
+     * What a screen reader is told while a surface is still loading.
+     *
+     * These are the announcements, not the shimmer: they are the only words a
+     * reader who cannot see the skeleton hears, and they are what tells them
+     * *which* thing is loading rather than that something is.
+     */
+    loading: {
+      generic: "Loading",
+      jobs: "Loading jobs",
+      pipeline: "Loading pipeline",
+      conversation: "Loading conversation",
+      // The key is singular on purpose: the api-service keeps a census on the
+      // literal token for the error envelope's dropped list over the
+      // browser's sources, and a translation key that spelled it the same way
+      // would read as a reader of that list. The phrase it carries is the
+      // plural one.
+      detail: "Loading details",
+      table: "Loading table",
+      inProgress: "Loading…",
+    },
+    /**
+     * The chrome around every surface: the sidebar, the top bar, the command
+     * palette and the pager. These are the labels a screen reader announces
+     * for the navigation itself, so they are part of the product's voice and
+     * not implementation detail.
+     */
+    chrome: {
+      mainNavigation: "Main navigation",
+      goToDashboard: "AI Career OS — go to dashboard",
+      openNavigationMenu: "Open navigation menu",
+      openCommandPalette: "Open command palette",
+      accountMenu: "Account menu",
+      commandPaletteTitle: "Command palette",
+      commandPaletteDescription: "Search your career workspace and jump between sections",
+      commandPalettePlaceholder: "Type a command or search…",
+      searching: "Searching…",
+      noResults: "No results.",
+      previousPage: "Previous page",
+      nextPage: "Next page",
+      page: "Page {page}",
+      pagination: "Pagination ({label})",
+      ofTotal: "{from}–{to} of {total} {label}",
+      noRowsYet: "No {label} yet",
+      prev: "Prev",
+      next: "Next",
+      switchToChinese: "Switch to Chinese",
+      switchToEnglish: "Switch to English",
+      expandSidebar: "Expand sidebar",
+      collapseSidebar: "Collapse sidebar",
+      collapse: "Collapse",
+    },
+    /**
+     * The job card's own panels: what the tailor and the cover-letter
+     * engines produced, and the state of a match that has not been run.
+     */
+    /**
+     * The resume dropzone. The upload is the product's front door for a
+     * new user, so its copy is part of the product's voice.
+     */
+    upload: {
+      ariaLabel: "Upload resume",
+      uploading: "Uploading…",
+      dropHere: "Drop your resume here, or click to browse",
+      accepted:
+        "{formats} — up to 10 MB. Files stay in your workspace and feed the knowledge base the agents cite from.",
+      ingesting: "Ingesting",
+      ingestedToast: "Resume ingested — your knowledge base is updated.",
+      canLeave:
+        "You can leave this page — the run continues server-side and the list below reflects its real status.",
+      sending: "Sending the file…",
+    },
+    jobCard: {
+      noMatchYet: "No match computed yet",
+      matchFor: "Match for {title}",
+    },
+    /**
+     * The recovery screens. The copy here is careful on purpose -- the
+     * endpoint answers 200 for an address with no account, so the screen says
+     * "if that address has an account" and never more. The translation keeps
+     * that hedge.
+     */
+    recovery: {
+      checkEmail: "Check your email",
+      checkEmailBody:
+        "If {email} has an account, a reset token is on its way. The token is good for 30 minutes.",
+      alreadyHaveToken: "I already have a token",
+      differentAddress: "Use a different address",
+      resetHeading: "Reset your password",
+      resetBody: "Tell us the address on the account and we will send it a reset token.",
+      email: "Email",
+      emailPlaceholder: "you@example.com",
+      sendToken: "Send reset token",
+      remembered: "Remembered it?",
+      signIn: "Sign in",
+      passwordUpdated: "Password updated",
+      signedOutEverywhere:
+        "Every device that was signed in has been signed out. Use the new password to get back in.",
+      setNewPassword: "Set a new password",
+      pasteToken:
+        "Paste the token from your email, then pick a password. Signing in everywhere else stops as soon as you save.",
+      stopsElsewhere: "Signing in everywhere else stops as soon as you save.",
+      resetToken: "Reset token",
+      resetTokenPlaceholder: "the token from the email",
+      newPassword: "New password",
+      confirmNewPassword: "Confirm new password",
+    },
+    tailor: {
+      title: "Tailored resume for this role",
+      draftBadge: "Tailored draft",
+      eyebrow: "AI tailoring",
+      descriptionWith: "Rewrites bullets and reorders projects from {resume}.",
+      description: "Rewrites bullets and reorders projects from your current resume.",
+      neverInvented: "Experience is never invented",
+      runAgain: "Run again",
+      tailorNow: "Tailor now",
+      failed: "Tailoring failed.",
+      savedAs: "Saved as {name}",
+      diff: "Diff",
+      fullDocument: "Full document",
+      saveAgain: "Save again",
+      saveAsVersion: "Save as version",
+      noStructuredDiff:
+        "The response carried no structured diff. The document view still shows what was produced.",
+      noDocumentText: "No document text was returned for this run — only the change list above.",
+      evidenceUsed: "Evidence used",
+      nothingGeneratedYet:
+        "Nothing has been generated yet — the draft appears here after you run it, and stays a proposal until you export or save it as a version.",
+      stages: {
+        readingKnowledge: "Reading your knowledge base",
+        matchingExperience: "Matching experience to the JD",
+        rewritingBullets: "Rewriting bullets",
+        checkingClaims: "Checking for invented claims",
+      },
+    },
+    coverLetter: {
+      title: "Cover letter",
+      description:
+        "Built from your resume evidence, the JD and company context. Regenerate with a different tone or length at any time.",
+      draftBadge: "Draft",
+      copyLetter: "Copy letter",
+      download: "Download",
+      eyebrow: "AI writing",
+      tone: "Tone",
+      length: "Length",
+      tones: {
+        balanced: "Balanced",
+        formal: "Formal",
+        concise: "Concise",
+        confident: "Confident",
+      },
+      lengths: {
+        short: "Short (~180 words)",
+        standard: "Standard (~300 words)",
+        detailed: "Detailed (~450 words)",
+      },
+      generate: "Generate",
+      regenerate: "Regenerate",
+      words: "{count} words",
+      generationFailed: "Generation failed.",
+      noLetterText: "The response contained no letter text — try regenerating.",
+      noLetterYet: "No letter generated yet for this role.",
+      stages: {
+        readingJd: "Reading the JD",
+        pullingContext: "Pulling company context",
+        drafting: "Drafting",
+        checkingClaims: "Checking claims",
+      },
+    },
     // Dashboard
     dashboard: {
       title: "Dashboard",
@@ -358,6 +527,11 @@ export const translations = {
       salaryBand: "Market band",
       offerComparison: "Offer comparison",
       learningPriority: "Learning priority",
+      matchRing: "Match",
+      copyDraft: "Copy draft",
+      copyLetter: "Copy letter",
+      matchingRoles: "{count} matching roles",
+      tailoredResume: "Tailored resume draft",
     },
     // The copilot's action chips -- the labels the orchestrator writes in
     // English, which the browser says in the reader's language.
@@ -380,6 +554,21 @@ export const translations = {
       deleteChatDescription:
         "The transcript and its citations go with it. This cannot be undone.",
       firstMessage: "First message to Copilot",
+      conversationsSheet: "Conversations",
+      chatsButton: "Chats",
+      newChat: "New chat",
+      loadingConversations: "Loading conversations…",
+      conversationsNotServed: "Conversations aren't served yet",
+      couldNotLoadConversations: "Couldn't load conversations",
+      paginationLabel: "conversations",
+      groundedIn: "Grounded in your resumes, notes and saved jobs — every claim it makes is cited.",
+      firstMessagePlaceholder:
+        "e.g. Which of my projects should I lead with for an LLM-platform role?",
+      enterToSend: "Enter to send · Shift+Enter for a new line",
+      startChat: "Start chat",
+      writing: "writing",
+      thinking: "thinking",
+      delete: "Delete",
       noHistory: "This API build has no conversation history",
       noHistoryDescription:
         "GET /conversations answered 404, so this frontend and the backend it is talking to are different versions. Nothing here is pre-filled.",
@@ -412,6 +601,15 @@ export const translations = {
       notesPlaceholder: "Context for the next message — how you met, what you discussed.",
       draft: "Draft",
       draftMessage: "Draft message",
+      draftWithCopilot: "Draft a message with Copilot",
+      addContactTitle: "Add a contact",
+      editContactTitle: "Edit {name}",
+      deleteContactTitle: "Delete {name}?",
+      relationPlaceholder: "referrer, mentor, peer…",
+      delete: "Delete",
+      cancel: "Cancel",
+      save: "Save",
+      add: "Add",
       deleteContact: "The registry row is removed. This cannot be undone.",
     },
     // Growth report
@@ -731,6 +929,166 @@ export const translations = {
       retry: "重试",
       empty: "暂无数据",
     },
+    /**
+     * What a screen reader is told while a surface is still loading.
+     *
+     * These are the announcements, not the shimmer: they are the only words a
+     * reader who cannot see the skeleton hears, and they are what tells them
+     * *which* thing is loading rather than that something is.
+     */
+    loading: {
+      generic: "加载中",
+      jobs: "正在加载职位",
+      pipeline: "正在加载流水线",
+      conversation: "正在加载对话",
+      detail: "正在加载详情",
+      table: "正在加载表格",
+      inProgress: "加载中…",
+    },
+    /**
+     * The chrome around every surface: the sidebar, the top bar, the command
+     * palette and the pager. These are the labels a screen reader announces
+     * for the navigation itself, so they are part of the product's voice and
+     * not implementation detail.
+     */
+    chrome: {
+      mainNavigation: "主导航",
+      goToDashboard: "AI Career OS — 回到仪表盘",
+      openNavigationMenu: "打开导航菜单",
+      openCommandPalette: "打开命令面板",
+      accountMenu: "账户菜单",
+      commandPaletteTitle: "命令面板",
+      commandPaletteDescription: "搜索你的求职工作区，在各个板块之间跳转",
+      commandPalettePlaceholder: "输入命令或搜索…",
+      searching: "正在搜索…",
+      noResults: "没有结果。",
+      previousPage: "上一页",
+      nextPage: "下一页",
+      page: "第 {page} 页",
+      pagination: "分页（{label}）",
+      ofTotal: "第 {from}–{to} 条，共 {total} {label}",
+      noRowsYet: "还没有{label}",
+      prev: "上一页",
+      next: "下一页",
+      switchToChinese: "切换到中文",
+      switchToEnglish: "切换到英文",
+      expandSidebar: "展开侧边栏",
+      collapseSidebar: "收起侧边栏",
+      collapse: "收起",
+    },
+    /**
+     * The job card's own panels: what the tailor and the cover-letter
+     * engines produced, and the state of a match that has not been run.
+     */
+    /**
+     * The resume dropzone. The upload is the product's front door for a
+     * new user, so its copy is part of the product's voice.
+     */
+    upload: {
+      ariaLabel: "上传简历",
+      uploading: "上传中…",
+      dropHere: "把简历拖到这里，或点击选择",
+      accepted:
+        "{formats} — 最大 10 MB。文件留在你的工作区里，并成为代理引用的知识库的一部分。",
+      ingesting: "摄取中",
+      ingestedToast: "简历已摄取——你的知识库已更新。",
+      canLeave: "你可以离开这个页面——运行会在服务端继续，下面的列表会反映它的真实状态。",
+      sending: "正在发送文件…",
+    },
+    jobCard: {
+      noMatchYet: "还没有算过匹配度",
+      matchFor: "与「{title}」的匹配度",
+    },
+    /**
+     * The recovery screens. The copy here is careful on purpose -- the
+     * endpoint answers 200 for an address with no account, so the screen says
+     * "if that address has an account" and never more. The translation keeps
+     * that hedge.
+     */
+    recovery: {
+      checkEmail: "查收邮件",
+      checkEmailBody: "如果 {email} 有账号，重置令牌已经在路上了。令牌 30 分钟内有效。",
+      alreadyHaveToken: "我已经有令牌了",
+      differentAddress: "换一个邮箱",
+      resetHeading: "重置密码",
+      resetBody: "告诉我们账号上的邮箱，我们会给它发一个重置令牌。",
+      email: "邮箱",
+      emailPlaceholder: "you@example.com",
+      sendToken: "发送重置令牌",
+      remembered: "想起来了？",
+      signIn: "登录",
+      passwordUpdated: "密码已更新",
+      signedOutEverywhere:
+        "所有已登录的设备都已被登出。用新密码就能重新进来。",
+      setNewPassword: "设置新密码",
+      pasteToken:
+        "把邮件里的令牌粘贴进来，然后选一个密码。保存之后，其他地方的登录会立刻失效。",
+      stopsElsewhere: "保存之后，其他地方的登录会立刻失效。",
+      resetToken: "重置令牌",
+      resetTokenPlaceholder: "邮件里的那个令牌",
+      newPassword: "新密码",
+      confirmNewPassword: "确认新密码",
+    },
+    tailor: {
+      title: "为这个职位定制的简历",
+      draftBadge: "定制草稿",
+      eyebrow: "AI 定制",
+      descriptionWith: "基于 {resume} 重写要点并重排项目顺序。",
+      description: "基于你当前的简历重写要点并重排项目顺序。",
+      neverInvented: "绝不虚构经历",
+      runAgain: "再跑一次",
+      tailorNow: "立即定制",
+      failed: "定制失败。",
+      savedAs: "已保存为 {name}",
+      diff: "差异",
+      fullDocument: "完整文档",
+      saveAgain: "再存一次",
+      saveAsVersion: "存为版本",
+      noStructuredDiff: "返回的内容里没有结构化差异。文档视图仍然显示生成的内容。",
+      noDocumentText: "这次运行没有返回文档正文——只有上面的改动清单。",
+      evidenceUsed: "用到的证据",
+      nothingGeneratedYet:
+        "还没有生成任何内容——跑一次之后草稿会出现在这里，在你导出或存为版本之前它一直只是一份提案。",
+      stages: {
+        readingKnowledge: "正在阅读你的知识库",
+        matchingExperience: "正在把经历对上 JD",
+        rewritingBullets: "正在重写要点",
+        checkingClaims: "正在核对是否有虚构",
+      },
+    },
+    coverLetter: {
+      title: "求职信",
+      description: "基于你的简历证据、JD 和公司背景生成。随时可以用不同的语气或长度重新生成。",
+      draftBadge: "草稿",
+      copyLetter: "复制求职信",
+      download: "下载",
+      eyebrow: "AI 代写",
+      tone: "语气",
+      length: "长度",
+      tones: {
+        balanced: "均衡",
+        formal: "正式",
+        concise: "简洁",
+        confident: "自信",
+      },
+      lengths: {
+        short: "简短（约 180 词）",
+        standard: "标准（约 300 词）",
+        detailed: "详细（约 450 词）",
+      },
+      generate: "生成",
+      regenerate: "重新生成",
+      words: "{count} 词",
+      generationFailed: "生成失败。",
+      noLetterText: "返回的内容里没有正文——试试重新生成。",
+      noLetterYet: "这个职位还没有生成求职信。",
+      stages: {
+        readingJd: "正在阅读 JD",
+        pullingContext: "正在获取公司背景",
+        drafting: "正在起草",
+        checkingClaims: "正在核对说法",
+      },
+    },
     // Dashboard
     dashboard: {
       title: "仪表盘",
@@ -1014,6 +1372,11 @@ export const translations = {
       salaryBand: "市场薪资带",
       offerComparison: "录用比较",
       learningPriority: "学习优先级",
+      matchRing: "匹配",
+      copyDraft: "复制草稿",
+      copyLetter: "复制求职信",
+      matchingRoles: "{count} 个匹配职位",
+      tailoredResume: "定制简历草稿",
     },
     // The copilot's action chips -- the labels the orchestrator writes in
     // English, which the browser says in the reader's language.
@@ -1035,6 +1398,20 @@ export const translations = {
       deleteChat: "删除这个对话？",
       deleteChatDescription: "记录和它的引用会一起消失，且无法撤销。",
       firstMessage: "给副驾驶的第一条消息",
+      conversationsSheet: "会话",
+      chatsButton: "对话",
+      newChat: "新对话",
+      loadingConversations: "正在加载会话…",
+      conversationsNotServed: "这个 API 版本还没有提供会话",
+      couldNotLoadConversations: "没能加载会话",
+      paginationLabel: "会话",
+      groundedIn: "基于你的简历、笔记和收藏的职位——它说的每一句都有引用。",
+      firstMessagePlaceholder: "例如：做 LLM 平台这类岗位，我该把哪个项目放在最前面？",
+      enterToSend: "回车发送 · Shift+回车换行",
+      startChat: "开始对话",
+      writing: "正在写",
+      thinking: "正在思考",
+      delete: "删除",
       noHistory: "这个 API 版本没有会话历史",
       noHistoryDescription:
         "GET /conversations 返回了 404，所以这个前端和它对话的后端不是同一个版本。这里没有任何预填内容。",
@@ -1066,6 +1443,15 @@ export const translations = {
       notesPlaceholder: "下次联系时的背景——怎么认识的、聊过什么。",
       draft: "起草",
       draftMessage: "消息草稿",
+      draftWithCopilot: "让副驾驶起草一条消息",
+      addContactTitle: "添加联系人",
+      editContactTitle: "编辑 {name}",
+      deleteContactTitle: "删除 {name}？",
+      relationPlaceholder: "推荐人、导师、同行…",
+      delete: "删除",
+      cancel: "取消",
+      save: "保存",
+      add: "添加",
       deleteContact: "名单里的这一行会被删除，且无法撤销。",
     },
     // Growth report

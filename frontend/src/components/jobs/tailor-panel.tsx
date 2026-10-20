@@ -14,6 +14,7 @@ import { CopyButton, DownloadButton, SectionHeading } from "@/components/common/
 import dynamic from "next/dynamic";
 import { useSaveTailoredVersion, useTailorResume, type TailorRun } from "@/lib/hooks/actions";
 import { str } from "@/lib/api/normalize";
+import { useLocale } from "@/lib/i18n/locale-context";
 
 /* Code-split, not a static import: StreamingText carries the react-markdown
  * stack, and this panel only renders it after the user starts a tailor run —
@@ -22,11 +23,11 @@ const StreamingText = dynamic(() =>
   import("@/components/ai/streaming-text").then((m) => m.StreamingText)
 );
 
-const STAGES = [
-  "Reading your knowledge base",
-  "Matching experience to the JD",
-  "Rewriting bullets",
-  "Checking for invented claims",
+const STAGE_KEYS = [
+  "tailor.stages.readingKnowledge",
+  "tailor.stages.matchingExperience",
+  "tailor.stages.rewritingBullets",
+  "tailor.stages.checkingClaims",
 ];
 
 /**
@@ -45,6 +46,7 @@ export function TailorPanel({
 }) {
   const tailor = useTailorResume(jobId);
   const save = useSaveTailoredVersion(jobId);
+  const { t } = useLocale();
   const [result, setResult] = React.useState<TailorRun | null>(null);
   const [saved, setSaved] = React.useState<string | null>(null);
   const [view, setView] = React.useState<"diff" | "document">("diff");
@@ -61,42 +63,42 @@ export function TailorPanel({
     <Card>
       <CardContent className="space-y-4">
         <SectionHeading
-          eyebrow="AI tailoring"
+          eyebrow={t("tailor.eyebrow")}
           icon={<Sparkles className="size-4" aria-hidden />}
-          title="Tailored resume for this role"
+          title={t("tailor.title")}
           description={
             resumeLabel
-              ? `Rewrites bullets and reorders projects from ${resumeLabel}. Experience is never invented — unsupported claims are rejected and listed.`
-              : "Rewrites bullets and reorders projects from your current resume. Experience is never invented."
+              ? `${t("tailor.descriptionWith", { resume: resumeLabel })} ${t("tailor.neverInvented")} — unsupported claims are rejected and listed.`
+              : `${t("tailor.description")} ${t("tailor.neverInvented")}.`
           }
           action={
             <Button variant="ai" size="sm" onClick={run} loading={tailor.isPending}>
               {result ? <RefreshCw aria-hidden /> : <Sparkles aria-hidden />}
-              {result ? "Run again" : "Tailor now"}
+              {result ? t("tailor.runAgain") : t("tailor.tailorNow")}
             </Button>
           }
         />
 
         {tailor.isPending && !result && (
           <div className="rounded-lg border border-border/70 bg-muted/30 p-3">
-            <ProcessingSteps steps={localStages(STAGES, 1)} />
+            <ProcessingSteps steps={localStages(STAGE_KEYS.map((k) => t(k)), 1)} />
           </div>
         )}
 
         {error != null && (
           <div role="alert" className="rounded-lg border border-destructive/25 bg-destructive/10 p-3 text-sm text-destructive">
-            {error instanceof Error ? error.message : "Tailoring failed."}
+            {error instanceof Error ? error.message : t("tailor.failed")}
           </div>
         )}
 
         {result && (
           <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-2">
-              <AIBadge label="Tailored draft" />
+              <AIBadge label={t("tailor.draftBadge")} />
               {saved && (
                 <Badge variant="success" className="gap-1 text-2xs font-normal">
                   <Check className="size-3" aria-hidden />
-                  Saved as {saved}
+                  {t("tailor.savedAs", { name: saved })}
                 </Badge>
               )}
               <div className="ml-auto flex items-center gap-1.5">
@@ -108,7 +110,7 @@ export function TailorPanel({
                       onClick={() => setView("diff")}
                       aria-pressed={view === "diff"}
                     >
-                      Diff
+                      {t("tailor.diff")}
                     </Button>
                     <Button
                       variant={view === "document" ? "secondary" : "ghost"}
@@ -116,7 +118,7 @@ export function TailorPanel({
                       onClick={() => setView("document")}
                       aria-pressed={view === "document"}
                     >
-                      Full document
+                      {t("tailor.fullDocument")}
                     </Button>
                     <Button
                       variant="outline"
@@ -131,7 +133,7 @@ export function TailorPanel({
                       }
                     >
                       <Save aria-hidden />
-                      {saved ? "Save again" : "Save as version"}
+                      {saved ? t("tailor.saveAgain") : t("tailor.saveAsVersion")}
                     </Button>
                     <CopyButton text={document} />
                     <DownloadButton text={document} filename={`resume-${jobId.slice(0, 8)}.md`} mime="text/markdown;charset=utf-8" />
@@ -150,22 +152,21 @@ export function TailorPanel({
                 />
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  The response carried no structured diff. The document view still shows what was
-                  produced.
+                  {t("tailor.noStructuredDiff")}
                 </p>
               )
             ) : document ? (
               <StreamingText content={document} className="rounded-lg border border-border/70 bg-muted/20 p-4" />
             ) : (
               <p className="text-sm text-muted-foreground">
-                No document text was returned for this run — only the change list above.
+                {t("tailor.noDocumentText")}
               </p>
             )}
 
             {(result.evidence?.length ?? 0) > 0 && (
               <div className="space-y-2 pt-2">
                 <h4 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                  Evidence used
+                  {t("tailor.evidenceUsed")}
                 </h4>
                 <EvidenceList items={result.evidence ?? []} limit={3} />
               </div>
@@ -175,8 +176,7 @@ export function TailorPanel({
 
         {!result && !tailor.isPending && (
           <p className="text-xs text-muted-foreground">
-            Nothing has been generated yet — the draft appears here after you run it, and stays a
-            proposal until you export or save it as a version.
+            {t("tailor.nothingGeneratedYet")}
           </p>
         )}
       </CardContent>
