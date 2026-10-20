@@ -17,7 +17,11 @@ Runner: `python -m app.eval.run_eval --user-id <uuid> [--answer] [--tags ...]`
 Golden set: `app/eval/dataset.py::GOLDEN_SET` (15 bilingual cases tuned to the
 seeded dev corpus that `scripts/smoke-fullstack.sh` writes). Ground truth is
 keyword-based — every chunk of the user whose text contains a case keyword counts
-as relevant. It is deliberately weak but honest supervision; override it for a
+as relevant, on the same two restrictions retrieval is under: the chunk's document
+must be `ready`, and a case that declares `kinds` is scored only against sources of
+those kinds. Both sides of a ratio have to describe one corpus, or a chunk the
+system is forbidden to return counts against it in the denominator. It is
+deliberately weak but honest supervision; override it for a
 real corpus with `--dataset cases.jsonl` (one JSON object per line, same fields as
 `EvalCase`).
 

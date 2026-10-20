@@ -46,13 +46,38 @@ question, say the evidence does not cover it. Be concise."""
 
 
 async def _relevant_ids(user_id: str, case: EvalCase) -> set[str]:
+    """The chunks this case is scored against, read the way retrieval reads them.
+
+    Both sides of every retrieval metric have to agree on what the corpus is, or the
+    denominator counts chunks the system was never allowed to return. Production's
+    channels (`rag/store.py:_apply_scoping` and its callers) only ever serve a chunk of a
+    `ready` document, restricted by its source kind when the request names kinds; this
+    query used to read `document_chunks` bare, so a failed or still-indexing document kept
+    its chunks in the ground truth, and `EvalCase.kinds` -- whose own comment calls it
+    "the metadata filter under test" -- selected nothing.
+
+    Column names are qualified because `documents` has a `user_id` of its own: an
+    unqualified predicate over a join is an ambiguity error, not a filter.
+    """
     if not case.keywords:
         return set()
-    ors = " OR ".join(f"text ILIKE ${i + 2} ESCAPE '!'" for i in range(len(case.keywords)))
+    args: list[object] = [user_id]
+    where: list[str] = ["c.user_id = $1::uuid", "d.status = 'ready'"]
+    ors: list[str] = []
+    for keyword in case.keywords:
+        args.append(db.like_contains(keyword))
+        ors.append(f"c.text ILIKE ${len(args)} ESCAPE '!'")
+    where.append(f"({' OR '.join(ors)})")
+    if case.kinds:
+        args.append(case.kinds)
+        where.append(f"ks.kind = ANY(${len(args)}::text[])")
     rows = await db.fetch(
-        f"""SELECT id::text AS id FROM document_chunks
-            WHERE user_id = $1::uuid AND ({ors})""",
-        user_id, *[db.like_contains(k) for k in case.keywords])
+        f"""SELECT c.id::text AS id
+            FROM document_chunks c
+            JOIN documents d ON d.id = c.document_id
+            LEFT JOIN knowledge_sources ks ON ks.document_id = d.id
+            WHERE {" AND ".join(where)}""",
+        *args)
     return {r["id"] for r in rows}
 
 
@@ -86,6 +111,7 @@ async def run(args: argparse.Namespace) -> dict:
             continue
         t0 = time.monotonic()
         r = await retrieve(case.query, user_id=args.user_id, top_k=args.top_k,
+                           kinds=case.kinds,
                            strategy=strategy, max_expansions=max_expansions)
         retrieval_ms = int((time.monotonic() - t0) * 1000)
         evidence = r.get("evidence") or []

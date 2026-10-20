@@ -1,7 +1,9 @@
 """Evaluation golden set.
 
-Ground truth is defined by keyword sets: at eval time every chunk of the user
-whose text contains one of the keywords is marked relevant (weak but honest
+Ground truth is defined by keyword sets: at eval time every chunk of a *ready*
+source whose text contains one of the keywords is marked relevant, restricted to
+the source kinds when the case declares `kinds` -- the same scoping the retrieval
+channels apply, so the metric's two sides judge one corpus (weak but honest
 supervision — replace/augment with hand-labeled chunk ids when productizing).
 """
 
@@ -13,7 +15,8 @@ class EvalCase:
     id: str
     query: str
     keywords: list[str]                       # chunks containing these are relevant
-    kinds: list[str] | None = None            # metadata filter under test
+    kinds: list[str] | None = None            # source-kind filter; the runner applies it
+                                              # to the retrieval and to the ground truth
     expects_answer: bool = True
     notes: str = ""
     tags: list[str] = field(default_factory=list)
