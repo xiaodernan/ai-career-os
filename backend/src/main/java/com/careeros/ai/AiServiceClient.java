@@ -241,4 +241,12 @@ public interface AiServiceClient {
      * interview topics the postings name.
      */
     Map<String, Object> companyBrief(UUID userId, com.careeros.ai.dto.CompanyBriefRequest request);
+
+    /**
+     * Restore a bundle's long-term memories (13.2). The memories live in the
+     * ai-service's own table, so the restore goes through it: the rows are
+     * upserted on the same (kind, key) the extraction path uses, which makes
+     * the restore idempotent.
+     */
+    Map<String, Object> importMemories(UUID userId, List<Map<String, Object>> memories);
 }

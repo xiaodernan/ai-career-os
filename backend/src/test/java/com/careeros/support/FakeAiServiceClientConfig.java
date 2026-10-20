@@ -393,6 +393,16 @@ public class FakeAiServiceClientConfig {
                     "html", "<!doctype html><html lang=\"zh\"><body><h1>AI Career OS — 数据导出</h1></body></html>");
         }
 
+        /**
+         * What the memory restore answers with (13.2): the rows the ai-service
+         * upserted on (kind, key).
+         */
+        @Override
+        public Map<String, Object> importMemories(UUID userId, List<Map<String, Object>> memories) {
+            record("importMemories");
+            return map("imported", memories == null ? 0 : memories.size(), "skipped", 0);
+        }
+
         @Override
         public Map<String, Object> parseFeed(String feed, String source, UUID userId) {
             record("parseFeed");

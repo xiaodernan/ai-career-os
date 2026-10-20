@@ -491,6 +491,11 @@ public class HttpAiServiceClient implements AiServiceClient {
         return post("/internal/features/company-brief", userId, body);
     }
 
+    @Override
+    public Map<String, Object> importMemories(UUID userId, List<Map<String, Object>> memories) {
+        return post("/internal/memories/import", userId, Map.of("memories", memories));
+    }
+
     /** One request shape for both chat routes, so the two cannot drift on what the turn is given. */
     private static Map<String, Object> chatBody(String message, List<Map<String, Object>> history,
                                                 UUID conversationId, Map<String, Object> context) {

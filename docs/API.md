@@ -347,6 +347,7 @@ tenant context via `core.deps.Ctx`.
 | POST | `/internal/features/import-plan` | Epic 13.2 -- the idempotent write plan for a bundle, per-item content hashes and all (backend `importPlan`) |
 | POST | `/internal/features/redact-bundle` | Epic 13.3 -- the bundle with sections dropped and the hash recomputed over what is left (backend `redactBundle`) |
 | POST | `/internal/features/render-bundle` | Epic 13.1 -- the human-readable half: a print-ready document of the bundle, HTML or PDF (backend `renderBundle`) |
+| POST | `/internal/memories/import` | Epic 13.2 -- restore a bundle's long-term memories, upserted on the same (kind, key) the extraction path uses, so the restore is idempotent (backend `importMemories`) |
 | POST | `/internal/features/salary-benchmark` | Epic 12.1 -- percentiles by role, seniority band and location (backend `salaryBenchmark`) |
 | POST | `/internal/features/negotiate` | Epic 12.2 -- an offer against the benchmark, with leverage and talking points (backend `negotiate`) |
 | POST | `/internal/features/compare-offers` | Epic 12.3 (with 12.5) -- several offers ranked by total comp, equity annualised (backend `compareOffers`) |

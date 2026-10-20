@@ -59,32 +59,33 @@ Two rules make it safe:
   write yet — the resumes, the knowledge base, the job descriptions, the
   interviews — is reported as skipped rather than claimed.
 
-What applies today: every section except the memories. The profile, the
-applications, the stored growth runs, the resumes, the knowledge base, the job
-descriptions and the interviews all come back.
+What applies today: every section.
 
-Two of them are re-derived rather than copied, and the difference matters:
+- The profile, the applications, the stored growth runs, the job
+  descriptions and the interviews are row writes. The analyst does not run
+  again over a posting and the interviewer does not question the user a
+  second time: the bundle carries the parsed result and the whole
+  transcript, so the user's own reading of a posting and the answers they
+  gave come back as they were.
+- The resumes and the knowledge base are re-ingested. A restored resume is
+  a *new* resume with the same content, because its id is the key its
+  knowledge chunks and its versions hang off and the ingestion pipeline
+  mints those — reusing an old id would leave two documents' chunks
+  pointing at one row. A restored document is re-ingested as a note: the
+  bundle carries a document's metadata and its excerpt, not its whole
+  body (the body is in the object store).
+- The long-term memories come back too, upserted on the same (kind, key)
+  the extraction path uses — so the restore is idempotent, and a memory
+  the user has since corrected is overwritten with the correction rather
+  than duplicated. They are the user's own statements about their skills,
+  their goals and their preferences, the export carries them
+  deliberately, and the settings page lets the user correct or delete any
+  of them.
 
-- A restored resume is re-created and re-ingested. Its id is NOT carried
-  over: that id is the key its knowledge chunks and its versions hang off,
-  and the ingestion pipeline mints those -- reusing an old id would leave
-  two documents' chunks pointing at one row.
-- A restored document is re-ingested as a note. The bundle carries a
-  document's metadata and its excerpt, not its whole body (the body is in
-  the object store), so a note is what the ingestion accepts for a piece
-  of text -- and a restore that claimed to bring back a document it only
-  had an excerpt of would be overstating what it did.
-
-The rest are row writes, and that is the point: the analyst does not run
-again over a posting, and the interviewer does not question the user a
-second time. The bundle carries the parsed result and the whole
-transcript, so the user's own reading of a posting and the answers they
-gave come back as they were.
-
-What does not apply: the long-term memories. They are the model's own
-record of the user, written by the agents as they learn -- restoring them
-would put the AI's beliefs about someone back without the evidence that
-produced them. They are named in the answer with that reason.
+A section the plan names but the bundle does not carry the rows for is
+reported as skipped, with the reason. So is a section whose rows are
+malformed. A restore that quietly dropped something is the failure this
+exists to catch.
 
 ### The bundle is complete (1.1.0)
 

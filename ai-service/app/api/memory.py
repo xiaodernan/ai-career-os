@@ -82,3 +82,42 @@ async def delete_memory(memory_id: str, ctx: Ctx = Depends(require_internal)):
     gone = await domain.delete_memory(ctx.user_id, memory_id)
     if not gone:
         raise HTTPException(404, "memory not found")
+
+
+class MemoryImportItem(BaseModel):
+    """One memory as a bundle carries it.
+
+    The id is NOT part of it: the memories are keyed by (user, kind, key), and
+    that key is what the restore upserts on -- so a restore is idempotent and
+    two bundles of the same workspace land the same rows.
+    """
+    kind: str = Field(min_length=1, max_length=40)
+    key: str = Field(default="", max_length=100)
+    content: str = Field(min_length=1, max_length=4000)
+    importance: float = Field(default=0.6, ge=0.0, le=1.0)
+    source: str = Field(default="restore", max_length=80)
+
+
+class MemoryImportReq(BaseModel):
+    memories: list[MemoryImportItem] = Field(default_factory=list, max_length=500)
+
+
+@router.post("/import")
+async def import_memories(body: MemoryImportReq, ctx: Ctx = Depends(require_internal)):
+    """Restore a bundle's memories.
+
+    The memories are the user's own statements -- what they told the assistant
+    about their skills, their goals and their preferences -- and the export
+    carries them deliberately. So they come back, upserted on the same
+    (kind, key) the extraction path uses: running the restore twice lands the
+    same rows, and a memory the user has since corrected is overwritten with
+    the correction rather than duplicated.
+    """
+    imported = 0
+    for m in body.memories:
+        if not m.content.strip():
+            continue
+        await domain.upsert_memory(ctx.user_id, m.kind, m.key or m.kind, m.content,
+                                    m.source, m.importance)
+        imported += 1
+    return {"imported": imported, "skipped": len(body.memories) - imported}

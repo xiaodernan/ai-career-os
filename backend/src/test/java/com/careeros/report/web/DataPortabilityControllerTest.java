@@ -227,20 +227,22 @@ class DataPortabilityControllerTest {
                         "op_counts", Map.of("create", 1, "update", 0, "delete", 0, "total", 1),
                         "sections", Map.of(
                                 "profile", List.of(Map.of("op", "update", "id", "p1")),
-                                "memories", List.of(Map.of("op", "create", "id", "m1")))));
+                                // A section the plan names but the bundle does not
+                                // carry the rows for: the apply cannot write what
+                                // is not there, and it says so.
+                                "interviews", List.of(Map.of("op", "create", "id", "i1")))));
 
         mvc.perform(post("/api/v1/data-portability/import-apply")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"bundle":{"schema_version":"1.1.0","data":{
-                                  "profile":{"headline":"Backend engineer"},
-                                  "memories":[{"id":"m1"}]}}}
+                                  "profile":{"headline":"Backend engineer"}}}}
                                 """))
                 .andExpect(status().isOk())
-                // The profile was written; the memories were not, and the answer
+                // The profile was written; the interviews were not, and the answer
                 // says so rather than claiming the whole bundle landed.
                 .andExpect(jsonPath("$.data.applied.profile.updated").value(1))
-                .andExpect(jsonPath("$.data.skipped[0].section").value("memories"));
+                .andExpect(jsonPath("$.data.skipped[0].section").value("interviews"));
     }
 
     /**

@@ -122,7 +122,7 @@ public class ImportService {
         List<Map<String, String>> skipped = new ArrayList<>();
 
         applyProfile(userId, data, sections, applied, skipped);
-        applyNotes(userId, data, sections, applied, skipped);
+        applyMemories(userId, data, sections, applied, skipped);
         applyApplications(userId, data, sections, applied, skipped);
         applyGrowthPlans(userId, data, sections, applied, skipped);
         applyResumes(userId, data, sections, applied, skipped);
@@ -175,22 +175,6 @@ public class ImportService {
         target.setPreferences(map(profile, "preferences"));
         profiles.save(target);
         count(applied, "profile", existed ? 1 : 0, existed ? 0 : 1);
-    }
-
-    /** The notes: create what is new, update what changed, delete what is gone. */
-    private void applyNotes(UUID userId, Map<String, Object> data,
-                            Map<String, List<Map<String, Object>>> sections,
-                            Map<String, int[]> applied, List<Map<String, String>> skipped) {
-        List<Map<String, Object>> ops = sections.get("memories");
-        if (ops == null) {
-            return;
-        }
-        // The bundle's "memories" section is the long-term memory store; the
-        // user's own notes live in a different table and are not part of the
-        // bundle, so there is nothing to write here yet. The section is
-        // reported rather than claimed.
-        skipped.add(Map.of("section", "memories",
-                "reason", "The memory store is written by the agents, not restored from a bundle."));
     }
 
     /** The applications: the pipeline the candidate actually worked. */
@@ -312,6 +296,62 @@ public class ImportService {
             growthPlans.save(target);
         }
         count(applied, "growth_plans", created, updated, deleted);
+    }
+
+    /**
+     * The long-term memories: what the user told the assistant about their
+     * skills, their goals and their preferences.
+     *
+     * <p>They come back, and the reason is that they are the user's own
+     * statements rather than the model's inferences: the export carries them
+     * deliberately, the settings page lists them so the user can correct or
+     * delete any of them, and a workspace restored without them would leave
+     * the assistant a stranger to the person who restored it.
+     *
+     * <p>The rows live in the ai-service's table, so the restore goes through
+     * it — upserted on the same (kind, key) the extraction path uses, which
+     * makes running the restore twice land the same rows.
+     */
+    private void applyMemories(UUID userId, Map<String, Object> data,
+                               Map<String, List<Map<String, Object>>> sections,
+                               Map<String, int[]> applied, List<Map<String, String>> skipped) {
+        List<Map<String, Object>> ops = sections.get("memories");
+        if (ops == null || ops.isEmpty()) {
+            return;
+        }
+        Object rows = data.get("memories");
+        if (!(rows instanceof List<?> list)) {
+            skipped.add(Map.of("section", "memories", "reason", "The bundle carries no memories."));
+            return;
+        }
+        List<Map<String, Object>> payload = new ArrayList<>();
+        for (Map<String, Object> op : ops) {
+            if ("delete".equals(str(op, "op"))) {
+                continue;  // a memory the user forgot stays forgotten
+            }
+            Map<?, ?> row = findRow(list, str(op, "id"));
+            if (row == null) {
+                continue;
+            }
+            String content = str(row, "content");
+            if (content == null || content.isBlank()) {
+                continue;
+            }
+            Map<String, Object> memory = new LinkedHashMap<>();
+            memory.put("kind", str(row, "kind") == null ? "fact" : str(row, "kind"));
+            memory.put("key", str(row, "key") == null ? "" : str(row, "key"));
+            memory.put("content", content);
+            Object importance = row.get("importance");
+            memory.put("importance", importance instanceof Number n ? n.doubleValue() : 0.6);
+            memory.put("source", str(row, "source") == null ? "restore" : str(row, "source"));
+            payload.add(memory);
+        }
+        if (payload.isEmpty()) {
+            count(applied, "memories", 0, 0, 0);
+            return;
+        }
+        aiService.importMemories(userId, payload);
+        count(applied, "memories", payload.size(), 0, 0);
     }
 
     /**
