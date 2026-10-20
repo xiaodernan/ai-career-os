@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { toast } from "sonner";
-import { Download, FileJson, Shield, Upload } from "lucide-react";
+import { Download, FileJson, FileText, Shield, Upload } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { useExportBundle, useImportApply, useImportPlan, useRedactBundle } from "@/lib/hooks/data-portability";
+import { useExportBundle, useImportApply, useImportPlan, useRedactBundle, useRenderBundle } from "@/lib/hooks/data-portability";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { downloadText } from "@/lib/format";
 import type { ExportBundle } from "@/lib/api/types";
@@ -43,6 +43,7 @@ export default function DataPortabilityPage() {
   const importPlan = useImportPlan();
   const applyImport = useImportApply();
   const redactBundle = useRedactBundle();
+  const renderBundle = useRenderBundle();
 
   // The bundle the last export produced — the input the redaction and the
   // import preview both read. Never fetched from anywhere else.
@@ -132,6 +133,27 @@ export default function DataPortabilityPage() {
     });
   }, [importText, applyImport, t]);
 
+  const runRender = React.useCallback(() => {
+    if (!bundle) return;
+    renderBundle.mutate(
+      { bundle, format: "html" },
+      {
+        onSuccess: (out) => {
+          // The rendered document is self-contained, so a new window with it is
+          // a print-ready page: the browser's own "save as PDF" is the PDF.
+          const win = window.open("", "_blank");
+          if (!win) {
+            toast.error(t("data.popupBlocked"));
+            return;
+          }
+          win.document.write(out.html ?? "");
+          win.document.close();
+          win.focus();
+        },
+      }
+    );
+  }, [bundle, renderBundle, t]);
+
   const toggleDrop = (key: string) =>
     setDropped((prev) =>
       prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
@@ -174,6 +196,17 @@ export default function DataPortabilityPage() {
               <Button variant="outline" size="sm" onClick={download}>
                 <Download aria-hidden />
                 {t("data.downloadJson")}
+              </Button>
+            )}
+            {bundle && (
+              <Button
+                variant="outline"
+                size="sm"
+                loading={renderBundle.isPending}
+                onClick={runRender}
+              >
+                <FileText aria-hidden />
+                {t("data.printView")}
               </Button>
             )}
           </div>

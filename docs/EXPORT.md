@@ -26,10 +26,22 @@ The engines were internal-only until now; the routes that reach them are:
 | `POST /api/v1/data-portability/import-plan` | `{bundle, existing?}` | the per-item create/update/delete plan, with the counts |
 | `POST /api/v1/data-portability/import-apply` | `{bundle}` | what each section wrote, and which ones were left alone |
 | `POST /api/v1/data-portability/redact` | `{bundle, drop?}` | the bundle with the named sections removed and the hash recomputed |
+| `POST /api/v1/data-portability/render` | `{bundle, format?}` | the print-ready document — HTML, or PDF bytes |
 
-The frontend's `/data` page drives all four: export (plain or anonymized),
-download the JSON, drop sections before sharing, and paste a bundle back to
-preview what a re-import would write — then to run it.
+The frontend's `/data` page drives all five: export (plain or anonymized),
+download the JSON, drop sections before sharing, paste a bundle back to
+preview what a re-import would write — then to run it — and open the
+print-ready view of the whole thing.
+
+### The readable half (13.1, the PDF)
+
+`render` answers a self-contained, print-ready document: A4, monochrome,
+page-break-friendly, and every field HTML-escaped — the bundle is user data
+and is treated as untrusted on render, exactly like generated text is on
+display elsewhere in the product. The browser's own "save as PDF" is the PDF,
+so the optional `weasyprint` converter is a convenience rather than a
+requirement; a build without it answers the HTML and says why the PDF is not
+there.
 
 ### The apply is real (2026-10-20)
 

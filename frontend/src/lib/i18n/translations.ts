@@ -220,6 +220,8 @@ export const translations = {
       appliedClean: "The restore was applied.",
       appliedWithSkipped: "The restore was applied, with sections left alone.",
       notJson: "That is not valid JSON.",
+      printView: "Print view",
+      popupBlocked: "Your browser blocked the print window.",
     },
     // Ingestion
     ingestion: {
@@ -554,6 +556,8 @@ export const translations = {
       appliedClean: "恢复已执行。",
       appliedWithSkipped: "恢复已执行，有部分段落未动。",
       notJson: "这不是合法的 JSON。",
+      printView: "打印视图",
+      popupBlocked: "浏览器拦截了打印窗口。",
     },
     // Ingestion
     ingestion: {

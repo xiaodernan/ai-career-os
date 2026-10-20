@@ -4,7 +4,13 @@ import { useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
 import { fail } from "@/lib/hooks/failure";
-import type { ExportBundle, ImportApplied, ImportPlan, RedactedBundle } from "@/lib/api/types";
+import type {
+  ExportBundle,
+  ImportApplied,
+  ImportPlan,
+  RedactedBundle,
+  RenderedBundle,
+} from "@/lib/api/types";
 
 /**
  * Data portability (13.1-13.3): export a bundle, plan an idempotent re-import,
@@ -67,5 +73,20 @@ export function useRedactBundle() {
     mutationFn: async (input: { bundle: unknown; drop?: string[] }) =>
       (await api.create<unknown>(endpoints.dataRedact, redactBody(input.bundle, input.drop))) as RedactedBundle,
     onError: fail("Couldn't redact the bundle."),
+  });
+}
+
+/**
+ * 13.1 — the human-readable half: a print-ready document of the bundle. The
+ * HTML is self-contained, so the browser can print it straight to PDF.
+ */
+export function useRenderBundle() {
+  return useMutation({
+    mutationFn: async (input: { bundle: unknown; format?: "html" | "pdf" }) =>
+      (await api.create<unknown>(endpoints.dataRender, {
+        bundle: input.bundle,
+        format: input.format ?? "html",
+      })) as RenderedBundle,
+    onError: fail("Couldn't render the bundle."),
   });
 }

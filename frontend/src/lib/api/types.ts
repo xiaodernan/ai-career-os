@@ -1134,6 +1134,18 @@ export interface ImportApplied {
 /** A bundle with sections dropped (13.3). */
 export type RedactedBundle = ExportBundle;
 
+/**
+ * The human-readable rendering of a bundle (13.1): a self-contained,
+ * print-ready document. `bytes_base64` carries the PDF when the optional
+ * converter is installed; the HTML is always there and is already
+ * print-ready in a browser.
+ */
+export interface RenderedBundle {
+  format?: "html" | "pdf";
+  html?: string;
+  bytes_base64?: string;
+}
+
 /* ------------------------------------------------------------------ */
 /* Rate limiting                                                      */
 /* ------------------------------------------------------------------ */

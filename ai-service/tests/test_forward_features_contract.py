@@ -61,6 +61,7 @@ FORWARD = {
     "/internal/features/export-bundle": ("ExportBundleReq", set()),
     "/internal/features/import-plan": ("ImportPlanReq", {"bundle"}),
     "/internal/features/redact-bundle": ("RedactBundleReq", {"bundle"}),
+    "/internal/features/render-bundle": ("RenderBundleReq", {"bundle"}),
 }
 
 

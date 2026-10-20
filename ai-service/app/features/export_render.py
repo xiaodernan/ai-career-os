@@ -25,6 +25,11 @@ _SECTION_TITLES = {
     "job_descriptions": "职位描述",
     "interviews": "模拟面试",
     "memories": "长期记忆",
+    # The two the BACKEND owns (1.1.0) — the pipeline the candidate worked and
+    # the growth runs they built. A readable export that left them out would
+    # be a reading list, not a record of the search.
+    "applications": "申请记录",
+    "growth_plans": "成长报告",
 }
 
 
@@ -147,6 +152,30 @@ def to_html(bundle: dict) -> str:
             for m in memories
         )
         section(_SECTION_TITLES["memories"], f"<ul>{items}</ul>")
+
+    # Applications — the pipeline the candidate actually worked.
+    apps = data.get("applications") or []
+    if apps:
+        items = "".join(
+            f"<li>{_esc(a.get('title'))} · {_esc(a.get('company_name') or '')} · "
+            f"{_esc(a.get('status') or '')}"
+            + (f" · {_esc(a.get('applied_at'))}" if a.get("applied_at") else "")
+            + "</li>"
+            for a in apps
+        )
+        section(_SECTION_TITLES["applications"], f"<ul>{items}</ul>")
+
+    # Growth runs — one row per report the candidate built.
+    plans = data.get("growth_plans") or []
+    if plans:
+        items = "".join(
+            f"<li>{_esc(p.get('target_role'))} · 覆盖率 "
+            f"{_esc(round(float(p.get('coverage') or 0) * 100))}%"
+            + (f" · {_esc(p.get('created_at'))}" if p.get("created_at") else "")
+            + "</li>"
+            for p in plans
+        )
+        section(_SECTION_TITLES["growth_plans"], f"<ul>{items}</ul>")
 
     parts.append("<hr>")
     stat = " · ".join(f"{_esc(k)}={_esc(v)}" for k, v in counts.items())

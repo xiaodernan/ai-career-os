@@ -111,6 +111,7 @@ export const endpoints = {
   dataImportPlan: "/data-portability/import-plan",
   dataImportApply: "/data-portability/import-apply",
   dataRedact: "/data-portability/redact",
+  dataRender: "/data-portability/render",
 
   /* ---------------- Salary & offers (12.1-12.5) ------------------------ */
   offerSalaryBenchmark: "/offers/salary-benchmark",

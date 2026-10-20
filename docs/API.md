@@ -224,6 +224,7 @@ service's — this route forwards the request and answers the engine's shape.
 | POST | `/data-portability/import-plan` | `{bundle, existing?}` → `{schema_version, source_content_hash, sections, op_counts}`. The plan is idempotent by construction: every op carries a per-item `content_hash` so unchanged rows are skipped. `existing` is the caller's current state, exported the same way, so the plan can tell a create from an update and a delete from a row that was never there. A bundle written before 1.1.0 is still accepted — the required set is read off the bundle's own schema version |
 | POST | `/data-portability/import-apply` | `{bundle}` → `{applied, skipped, op_counts}`. The plan is computed and then executed: the `applied` map says what each section wrote, and `skipped` names every section the backend cannot write yet **with the reason**. A partial restore is visible rather than reported as a success. Only the caller's own rows are touched — a bundle naming another user's id finds nothing to change |
 | POST | `/data-portability/redact` | `{bundle, drop?}` → the bundle with the named sections removed, its content hash recomputed over what is left and `manifest.redacted_sections` recording what went. An unknown section name is rejected rather than silently dropping the wrong (or no) section |
+| POST | `/data-portability/render` | `{bundle, format?}` → `{format, html}` or `{format, bytes_base64}`. The human-readable half of 13.1: a self-contained, print-ready document (A4, monochrome, page-break-friendly) with every field HTML-escaped — the bundle is user data and is treated as untrusted on render. `format` is `html` (the default, and already print-ready in a browser) or `pdf`; the PDF converter is an optional dependency, so a build without it answers the HTML and says why the PDF is not there |
 
 A query parameter binds by name, so one the endpoint does not declare is **ignored, not
 rejected**: `/jobs?remoteType=hybrid` answers 200 with the unfiltered board. `remote` takes a
@@ -345,6 +346,7 @@ tenant context via `core.deps.Ctx`.
 | POST | `/internal/features/export-bundle` | Epic 13.1 -- the export bundle: every section, with a content hash over the data (backend `exportBundle`) |
 | POST | `/internal/features/import-plan` | Epic 13.2 -- the idempotent write plan for a bundle, per-item content hashes and all (backend `importPlan`) |
 | POST | `/internal/features/redact-bundle` | Epic 13.3 -- the bundle with sections dropped and the hash recomputed over what is left (backend `redactBundle`) |
+| POST | `/internal/features/render-bundle` | Epic 13.1 -- the human-readable half: a print-ready document of the bundle, HTML or PDF (backend `renderBundle`) |
 | POST | `/internal/features/salary-benchmark` | Epic 12.1 -- percentiles by role, seniority band and location (backend `salaryBenchmark`) |
 | POST | `/internal/features/negotiate` | Epic 12.2 -- an offer against the benchmark, with leverage and talking points (backend `negotiate`) |
 | POST | `/internal/features/compare-offers` | Epic 12.3 (with 12.5) -- several offers ranked by total comp, equity annualised (backend `compareOffers`) |

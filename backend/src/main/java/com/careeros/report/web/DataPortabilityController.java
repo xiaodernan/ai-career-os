@@ -7,6 +7,7 @@ import com.careeros.report.dto.DataPortabilityDtos.ExportRequest;
 import com.careeros.report.dto.DataPortabilityDtos.ImportApplyRequest;
 import com.careeros.report.dto.DataPortabilityDtos.ImportPlanRequest;
 import com.careeros.report.dto.DataPortabilityDtos.RedactRequest;
+import com.careeros.report.dto.DataPortabilityDtos.RenderRequest;
 import com.careeros.report.service.ExportService;
 import com.careeros.report.service.ImportService;
 import jakarta.validation.Valid;
@@ -78,5 +79,15 @@ public class DataPortabilityController {
     public Map<String, Object> redactBundle(@CurrentUser AuthUser user,
                                              @RequestBody @Valid RedactRequest request) {
         return aiService.redactBundle(user.id(), request.bundle(), request.drop());
+    }
+
+    /**
+     * 13.1 -- the human-readable half: a print-ready document of the bundle.
+     * The HTML is self-contained, so the browser can print it straight to PDF.
+     */
+    @PostMapping("/render")
+    public Map<String, Object> renderBundle(@CurrentUser AuthUser user,
+                                             @RequestBody @Valid RenderRequest request) {
+        return aiService.renderBundle(user.id(), request.bundle(), request.format());
     }
 }

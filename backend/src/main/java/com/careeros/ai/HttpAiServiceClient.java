@@ -255,6 +255,14 @@ public class HttpAiServiceClient implements AiServiceClient {
     }
 
     @Override
+    public Map<String, Object> renderBundle(UUID userId, Map<String, Object> bundle, String format) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("bundle", bundle);
+        body.put("format", format == null || format.isBlank() ? "html" : format);
+        return post("/internal/features/render-bundle", userId, body);
+    }
+
+    @Override
     public Map<String, Object> parseFeed(String feed, String source, UUID userId) {
         return post("/internal/features/parse-board", userId, Map.of("payload", feed, "source", source));
     }

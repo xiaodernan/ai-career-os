@@ -381,6 +381,18 @@ public class FakeAiServiceClientConfig {
                     "data", map("profile", map("id", userId.toString())));
         }
 
+        /**
+         * What the render answers with (13.1): a self-contained, print-ready
+         * document. The PDF half is the optional converter's, so the double
+         * answers the HTML.
+         */
+        @Override
+        public Map<String, Object> renderBundle(UUID userId, Map<String, Object> bundle, String format) {
+            record("renderBundle");
+            return map("format", format == null || format.isBlank() ? "html" : format,
+                    "html", "<!doctype html><html lang=\"zh\"><body><h1>AI Career OS — 数据导出</h1></body></html>");
+        }
+
         @Override
         public Map<String, Object> parseFeed(String feed, String source, UUID userId) {
             record("parseFeed");

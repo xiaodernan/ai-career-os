@@ -49,4 +49,13 @@ public final class DataPortabilityDtos {
     public record RedactRequest(Map<String, Object> bundle,
                                  @Size(max = 16) List<String> drop) {
     }
+
+    /**
+     * 13.1 -- render the bundle as a document. `format` is "html" or "pdf";
+     * the PDF converter is an optional dependency, so a build without it
+     * answers the HTML -- which is already print-ready -- and says why.
+     */
+    public record RenderRequest(Map<String, Object> bundle,
+                                @Size(max = 8) String format) {
+    }
 }

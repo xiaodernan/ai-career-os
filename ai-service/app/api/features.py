@@ -1,3 +1,5 @@
+import base64
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
@@ -753,3 +755,33 @@ async def redact_bundle_ep(req: RedactBundleReq, ctx: Ctx = Depends(require_inte
     result = export_redact_mod.redact_bundle(req.bundle, drop=req.drop)
     await observability.finish_run(run_id, "completed")
     return result
+
+
+class RenderBundleReq(BaseModel):
+    """The render request: a bundle, and whether the answer should be PDF bytes.
+
+    `format` is "html" or "pdf". The PDF converter is an optional dependency
+    (weasyprint), so a build without it answers the HTML — which is already
+    print-ready — and says why the PDF is not there.
+    """
+    bundle: dict
+    format: str = "html"
+
+
+@router.post("/render-bundle")
+async def render_bundle_ep(req: RenderBundleReq, ctx: Ctx = Depends(require_internal)):
+    """13.1 -- the human-readable half: a print-ready document of the bundle."""
+    run_id = await _run(ctx, "export", "render_bundle")
+    try:
+        if req.format == "pdf":
+            pdf = export_render_mod.to_pdf(req.bundle)
+            await observability.finish_run(run_id, "completed")
+            return {"format": "pdf", "bytes_base64": base64.b64encode(pdf).decode("ascii")}
+        html_text = export_render_mod.to_html(req.bundle)
+        await observability.finish_run(run_id, "completed")
+        return {"format": "html", "html": html_text}
+    except RuntimeError as exc:
+        # The PDF converter is optional, so its absence is a fact the caller
+        # acts on rather than a 500 it cannot read.
+        await observability.finish_run(run_id, "failed")
+        raise HTTPException(501, str(exc)) from exc

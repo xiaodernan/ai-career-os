@@ -107,6 +107,12 @@ public interface AiServiceClient {
     Map<String, Object> redactBundle(UUID userId, Map<String, Object> bundle, List<String> drop);
 
     /**
+     * 13.1 -- the human-readable half: a print-ready document of the bundle.
+     * The answer is `{format, html}` or `{format, bytes_base64}` for the PDF.
+     */
+    Map<String, Object> renderBundle(UUID userId, Map<String, Object> bundle, String format);
+
+    /**
      * Parse a feed (RSS/Atom XML or board-API JSON) into raw postings (14.2).
      * The user id is the caller's: the ingestion runs under their context, so
      * the ai-service can scope anything it writes back to them.
