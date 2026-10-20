@@ -12,6 +12,7 @@ import { SourceDeleteButton, SourceUploadCard } from "@/components/knowledge/sou
 import { NotesPanel } from "@/components/knowledge/notes-panel";
 import { useKnowledgeSources } from "@/lib/hooks/resources";
 import { useUrlState } from "@/lib/hooks/use-url-state";
+import { useLocale } from "@/lib/i18n/locale-context";
 import { knowledgeFocus } from "@/lib/knowledge-focus";
 
 // The route's own default window: `GET /knowledge/sources` binds `size` with
@@ -20,6 +21,7 @@ import { knowledgeFocus } from "@/lib/knowledge-focus";
 const PAGE_SIZE = 20;
 
 export default function KnowledgePage() {
+  const { t } = useLocale();
   // `src` is the document a citation points at: the match panel, the copilot's answer and its artifacts
   // all link `/knowledge?src=<documentId>`, which is `document_chunks.document_id` -- the `documents`
   // row the chunks came from, not this list's own `knowledge_sources` id. The narrowing is the
@@ -52,7 +54,7 @@ export default function KnowledgePage() {
     <div className="space-y-4">
       {!src && <SourceUploadCard />}
       <ModuleView
-      title="Knowledge Base"
+      title={t("knowledge.title")}
       description={
         src
           ? "Showing the source one of your citations points at."

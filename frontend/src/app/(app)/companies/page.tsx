@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useCompanies } from "@/lib/hooks/resources";
 import { useUrlState } from "@/lib/hooks/use-url-state";
+import { useLocale } from "@/lib/i18n/locale-context";
 
 // The route's own default window: `GET /companies` binds `size` with `defaultValue = "20"`, so
 // this number asks for exactly what the server would have chosen anyway.
@@ -19,6 +20,7 @@ const PAGE_SIZE = 20;
 const PAGE_DEFAULTS: { page: number } = { page: 0 };
 
 export default function CompaniesPage() {
+  const { t } = useLocale();
   // The page index lives in the URL, so a reload or a shared list link opens the same window.
   const [state, setUrl] = useUrlState<{ page: number }>(
     PAGE_DEFAULTS,
@@ -39,8 +41,8 @@ export default function CompaniesPage() {
 
   return (
     <ModuleView
-      title="Companies"
-      description="Research profiles built from job postings and web sources — external facts always carry their source."
+      title={t("companies.title")}
+      description={t("companies.description")}
       query={companies}
       emptyHint={{
         title: "No companies researched",

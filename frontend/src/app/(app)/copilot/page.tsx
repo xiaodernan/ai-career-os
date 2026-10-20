@@ -394,7 +394,7 @@ function NewChat({ onStart, pending }: { onStart: (message: string) => void; pen
           <span className="mx-auto mb-3 flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
             <Sparkles className="size-6" aria-hidden />
           </span>
-          <h1 className="font-serif text-display-md font-medium">Ask your career agent</h1>
+          <h1 className="font-serif text-display-md font-medium">{t("copilot.title")}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Grounded in your resumes, notes and saved jobs — every claim it makes is cited.
           </p>

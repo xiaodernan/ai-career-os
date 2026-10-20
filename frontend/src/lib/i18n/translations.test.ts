@@ -65,4 +65,22 @@ describe("the translation table", () => {
       expect(value.length).toBeGreaterThan(0);
     }
   });
+
+  it("has a label for every page that renders one", () => {
+    // The page-level blocks are what a page's own heading reads. A page whose
+    // block went missing renders the raw key -- "applications.title" -- which
+    // the type checker cannot see, because `t()` accepts any string.
+    for (const page of ["jobs", "applications", "interviews", "resumes",
+                        "settings", "companies", "knowledge", "activity",
+                        "growth", "offers", "analysis", "monitoring",
+                        "data", "ingestion", "networking", "copilot",
+                        "dashboard"]) {
+      const block = (translations.en as Record<string, Record<string, string>>)[page];
+      expect(block, `${page} has no translation block`).toBeTruthy();
+      expect(block.title, `${page}.title is missing`).toBeTruthy();
+      const zhBlock = (translations.zh as Record<string, Record<string, string>>)[page];
+      expect(zhBlock, `${page} has no Chinese block`).toBeTruthy();
+      expect(zhBlock.title, `${page}.title has no Chinese label`).toBeTruthy();
+    }
+  });
 });

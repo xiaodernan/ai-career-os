@@ -42,6 +42,7 @@ export const translations = {
     },
     // Dashboard
     dashboard: {
+      title: "Dashboard",
       greeting: "Good morning",
       description: "Your job search at a glance — every figure here is read live from the API.",
       applications: "Applications",
@@ -302,6 +303,7 @@ export const translations = {
     },
     // Copilot
     copilot: {
+      title: "Ask your career agent",
       conversations: "Conversations",
       noConversations: "No conversations yet",
       noConversationsDescription: "Start one above — every turn is traced and saved.",
@@ -375,6 +377,39 @@ export const translations = {
       noSkillChange: "No skill changed state since the last report",
       stillOpen: "still open.",
     },
+    // Knowledge
+    knowledge: {
+      title: "Knowledge Base",
+    },
+    // Companies
+    companies: {
+      title: "Companies",
+      description:
+        "Research profiles built from job postings and web sources — external facts always carry their source.",
+    },
+    // Activity
+    activity: {
+      title: "AI Activity",
+      description: "Every agent run, tool call and retrieval — the debug view behind the answers.",
+    },
+    // Applications
+    applications: {
+      title: "Applications",
+      description:
+        "Every role in flight. Drag a card to move it through the pipeline, or open one to add notes and a reminder — the dashboard counts follow the same data.",
+    },
+    // Interviews
+    interviews: {
+      title: "Interviews",
+      description:
+        "Adaptive mock interviews: the agent follows up while your answers are strong, moves on when they're not, and pushes deeper as you prove depth. Every evaluation cites your own material.",
+    },
+    // Jobs
+    jobs: {
+      title: "Jobs",
+      description:
+        "Discovered and pasted roles, scored against your resume with evidence — the match ring leads, the metadata follows.",
+    },
   },
   zh: {
     // Navigation
@@ -412,6 +447,7 @@ export const translations = {
     },
     // Dashboard
     dashboard: {
+      title: "仪表盘",
       greeting: "早上好",
       description: "求职全局一览——这里的每个数字都实时读自 API。",
       applications: "申请",
@@ -646,6 +682,7 @@ export const translations = {
     },
     // Copilot
     copilot: {
+      title: "问问你的求职代理",
       conversations: "会话",
       noConversations: "还没有会话",
       noConversationsDescription: "在上面开一个——每一轮对话都有追踪并会被保存。",
@@ -714,6 +751,37 @@ export const translations = {
       progressAgainstPrevious: "与你上次对该职位的报告对比。",
       noSkillChange: "自上次报告以来没有技能状态变化",
       stillOpen: "项仍未覆盖。",
+    },
+    // Knowledge
+    knowledge: {
+      title: "知识库",
+    },
+    // Companies
+    companies: {
+      title: "公司",
+      description: "从职位发布和网页来源构建的研究档案——外部事实总是带着它的来源。",
+    },
+    // Activity
+    activity: {
+      title: "AI 活动",
+      description: "每一次代理运行、工具调用和检索——答案背后的调试视图。",
+    },
+    // Applications
+    applications: {
+      title: "申请",
+      description:
+        "所有在飞的职位。拖动卡片就能在流水线里移动它，或打开一个加上备注和提醒——仪表盘的计数读的是同一份数据。",
+    },
+    // Interviews
+    interviews: {
+      title: "面试",
+      description:
+        "自适应模拟面试：你的回答有力时代理会追问，不够有力时它会往下走一层，你证明了自己的深度它就推得更深。每次评估都引用你自己的材料。",
+    },
+    // Jobs
+    jobs: {
+      title: "职位",
+      description: "发现和粘贴的职位，带着证据和你的简历对过分——匹配度在前，元数据在后。",
     },
   },
 } as const;

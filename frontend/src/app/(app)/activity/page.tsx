@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useActivityRuns } from "@/lib/hooks/resources";
 import { useUrlState } from "@/lib/hooks/use-url-state";
+import { useLocale } from "@/lib/i18n/locale-context";
 import { runTotalTokens } from "@/lib/api/normalize";
 import { formatDateTime, formatDuration, formatNumber, formatUsd, titleCase } from "@/lib/format";
 import type { ActivityRun } from "@/lib/api/types";
@@ -76,6 +77,7 @@ function RunRow({ run }: { run: ActivityRun }) {
 }
 
 export default function ActivityPage() {
+  const { t } = useLocale();
   // The page index lives in the URL, so a reload or a shared list link opens the same window.
   const [state, setUrl] = useUrlState<{ page: number }>(
     PAGE_DEFAULTS,
@@ -96,8 +98,8 @@ export default function ActivityPage() {
 
   return (
     <ModuleView<ActivityRun>
-      title="AI Activity"
-      description="Every agent run, tool call and retrieval — the debug view behind the answers."
+      title={t("activity.title")}
+      description={t("activity.description")}
       query={runs}
       emptyHint={{
         title: "No agent runs yet",
