@@ -57,43 +57,42 @@ export default function KnowledgePage() {
       title={t("knowledge.title")}
       description={
         src
-          ? "Showing the source one of your citations points at."
-          : "Everything the agents can cite: resumes, projects, notes, JDs, company research, feedback."
+          ? t("knowledge.showingCitedSource")
+          : t("knowledge.description")
       }
       query={sources}
       actions={
         src ? (
           <Button variant="outline" size="sm" onClick={showAll}>
-            Show all sources
+            {t("knowledge.showAllSources")}
           </Button>
         ) : undefined
       }
       emptyHint={
         src
           ? {
-              title: "No source matches that citation",
-              description: "The document may have been deleted, or its ingestion never finished.",
+              title: t("knowledge.noSourceMatches"),
+              description: t("knowledge.noSourceMatchesDescription"),
               action: (
                 <Button variant="outline" size="sm" onClick={showAll}>
-                  Show all sources
+                  {t("knowledge.showAllSources")}
                 </Button>
               ),
             }
           : {
-              title: "The knowledge base is empty",
-              description:
-                "Add sources and they'll be parsed, chunked and embedded for retrieval with citations.",
+              title: t("knowledge.baseIsEmpty"),
+              description: t("knowledge.baseIsEmptyDescription"),
             }
       }
       ctaHref="/copilot"
-      ctaLabel="Ask Copilot to ingest"
+      ctaLabel={t("knowledge.askCopilotToIngest")}
       footer={
         !src && total > PAGE_SIZE && (
           <Pagination
             page={sources.data?.page ?? state.page}
             size={PAGE_SIZE}
             total={total}
-            label="sources"
+            label={t("knowledge.paginationLabel")}
             onPageChange={(page) => {
               setUrl({ page });
               window.scrollTo({ top: 0, behavior: "smooth" });

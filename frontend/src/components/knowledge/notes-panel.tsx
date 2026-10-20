@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useNoteMutations } from "@/lib/hooks/actions";
 import { useKnowledgeNotes } from "@/lib/hooks/resources";
 import { useUrlState } from "@/lib/hooks/use-url-state";
+import { useLocale } from "@/lib/i18n/locale-context";
 import type { KnowledgeNote } from "@/lib/api/types";
 
 /**
@@ -43,6 +44,7 @@ const PAGE_SIZE = 20;
 const PAGE_DEFAULTS: { npage: number } = { npage: 0 };
 
 export function NoteCreateCard() {
+  const { t } = useLocale();
   const [title, setTitle] = React.useState("");
   const [content, setContent] = React.useState("");
   const { create } = useNoteMutations();
@@ -65,30 +67,30 @@ export function NoteCreateCard() {
     <Card>
       <CardContent className="space-y-3">
         <div className="space-y-2">
-          <Label htmlFor="note-title">Title (optional)</Label>
+          <Label htmlFor="note-title">{t("knowledge.notes.titleLabel")}</Label>
           <Input
             id="note-title"
             value={title}
             maxLength={MAX_TITLE}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="e.g. Answers for the “why us” question"
+            placeholder={t("knowledge.notes.titlePlaceholder")}
             autoComplete="off"
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="note-content">Content</Label>
+          <Label htmlFor="note-content">{t("knowledge.notes.content")}</Label>
           <Textarea
             id="note-content"
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder="Write it down — the agents can quote this back with a citation."
+            placeholder={t("knowledge.notes.contentPlaceholder")}
             rows={4}
           />
         </div>
         <div className="flex justify-end">
           <Button variant="ai" size="sm" loading={create.isPending} disabled={!saveable || create.isPending} onClick={submit}>
             <StickyNote aria-hidden />
-            Save note
+            {t("knowledge.notes.saveNote")}
           </Button>
         </div>
       </CardContent>
@@ -97,6 +99,7 @@ export function NoteCreateCard() {
 }
 
 function NoteRow({ note }: { note: KnowledgeNote }) {
+  const { t } = useLocale();
   const [editing, setEditing] = React.useState(false);
   const [title, setTitle] = React.useState(note.title);
   const [content, setContent] = React.useState(note.content ?? "");
@@ -111,7 +114,7 @@ function NoteRow({ note }: { note: KnowledgeNote }) {
   // The row mapper only falls back to "Untitled note" when the title is absent;
   // a note saved with a blank title arrives as the empty string, so the display
   // needs its own fallback.
-  const displayTitle = note.title || "Untitled note";
+  const displayTitle = note.title || t("knowledge.notes.untitled");
   const saveable = content.trim().length > 0;
   const save = () => {
     if (!saveable || update.isPending) return;
@@ -127,14 +130,14 @@ function NoteRow({ note }: { note: KnowledgeNote }) {
         {editing ? (
           <>
             <Input
-              aria-label="Note title"
+              aria-label={t("knowledge.notes.noteTitleLabel")}
               value={title}
               maxLength={MAX_TITLE}
               onChange={(e) => setTitle(e.target.value)}
               autoComplete="off"
             />
             <Textarea
-              aria-label="Note content"
+              aria-label={t("knowledge.notes.noteContentLabel")}
               value={content}
               onChange={(e) => setContent(e.target.value)}
               rows={5}
@@ -145,14 +148,14 @@ function NoteRow({ note }: { note: KnowledgeNote }) {
                 size="sm"
                 onClick={() => setEditing(false)}
                 disabled={update.isPending}
-                title={update.isPending ? "Saving…" : undefined}
+                title={update.isPending ? t("knowledge.notes.saving") : undefined}
               >
                 <X aria-hidden />
-                Cancel
+                {t("knowledge.notes.cancel")}
               </Button>
               <Button variant="ai" size="sm" loading={update.isPending} disabled={!saveable || update.isPending} onClick={save}>
                 <Check aria-hidden />
-                Save
+                {t("knowledge.notes.save")}
               </Button>
             </div>
           </>
@@ -165,13 +168,27 @@ function NoteRow({ note }: { note: KnowledgeNote }) {
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">{displayTitle}</p>
                 <p className="text-xs text-muted-foreground">
-                  {note.updatedAt ? `Updated ${new Date(note.updatedAt).toLocaleDateString()}` : null}
+                  {note.updatedAt
+                    ? t("knowledge.notes.updated", {
+                        date: new Date(note.updatedAt).toLocaleDateString(),
+                      })
+                    : null}
                 </p>
               </div>
-              <Button variant="ghost" size="icon-sm" aria-label={`Edit ${displayTitle}`} onClick={start}>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label={t("knowledge.notes.editNote", { title: displayTitle })}
+                onClick={start}
+              >
                 <Pencil aria-hidden />
               </Button>
-              <Button variant="ghost" size="icon-sm" aria-label={`Delete ${displayTitle}`} onClick={() => setConfirming(true)}>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label={t("knowledge.notes.deleteNote", { title: displayTitle })}
+                onClick={() => setConfirming(true)}
+              >
                 <Trash2 aria-hidden />
               </Button>
             </div>
@@ -192,9 +209,9 @@ function NoteRow({ note }: { note: KnowledgeNote }) {
         <ConfirmDialog
           open={confirming}
           onOpenChange={setConfirming}
-          title={`Delete “${displayTitle}”?`}
-          description="The note row is removed and its chunks stop being cited. This cannot be undone."
-          confirmLabel="Delete"
+          title={t("knowledge.notes.deleteTitle", { title: displayTitle })}
+          description={t("knowledge.notes.deleteDescription")}
+          confirmLabel={t("knowledge.notes.delete")}
           destructive
           loading={remove.isPending}
           onConfirm={() =>
@@ -209,6 +226,7 @@ function NoteRow({ note }: { note: KnowledgeNote }) {
 }
 
 export function NotesPanel() {
+  const { t } = useLocale();
   // The page index lives in the URL, so a reload or a shared list link opens the same window.
   const [state, setUrl] = useUrlState<{ npage: number }>(
     PAGE_DEFAULTS,
@@ -228,15 +246,15 @@ export function NotesPanel() {
   }, [notes.data, state.npage, lastPage, setUrl]);
 
   return (
-    <section aria-label="Notes" className="space-y-4">
+    <section aria-label={t("knowledge.notes.section")} className="space-y-4">
       <NoteCreateCard />
       <ModuleView
-        title="Notes"
-        description="Short reference notes the agents can quote back at you — talking points, salary research, follow-ups."
+        title={t("knowledge.notes.section")}
+        description={t("knowledge.notes.description")}
         query={notes}
         emptyHint={{
-          title: "No notes yet",
-          description: "Write the first one above — it lands straight in the knowledge base the agents can cite.",
+          title: t("knowledge.notes.noNotes"),
+          description: t("knowledge.notes.noNotesDescription"),
         }}
         footer={
           total > PAGE_SIZE && (
@@ -244,7 +262,7 @@ export function NotesPanel() {
               page={notes.data?.page ?? state.npage}
               size={PAGE_SIZE}
               total={total}
-              label="notes"
+              label={t("knowledge.notes.paginationLabel")}
               onPageChange={(page) => {
                 setUrl({ npage: page });
                 window.scrollTo({ top: 0, behavior: "smooth" });

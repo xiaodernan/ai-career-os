@@ -45,18 +45,18 @@ export default function CompaniesPage() {
       description={t("companies.description")}
       query={companies}
       emptyHint={{
-        title: "No companies researched",
-        description: "The research agent builds company profiles when you save a job or ask about one.",
+        title: t("companies.noneResearched"),
+        description: t("companies.noneResearchedDescription"),
       }}
       ctaHref="/copilot"
-      ctaLabel="Research a company"
+      ctaLabel={t("companies.researchOne")}
       footer={
         total > PAGE_SIZE && (
           <Pagination
             page={companies.data?.page ?? state.page}
             size={PAGE_SIZE}
             total={total}
-            label="companies"
+            label={t("companies.paginationLabel")}
             onPageChange={(page) => {
               setUrl({ page });
               window.scrollTo({ top: 0, behavior: "smooth" });
@@ -85,13 +85,16 @@ export default function CompaniesPage() {
                 {c.name}
               </Link>
               <p className="truncate text-xs text-muted-foreground">
-                {[c.industry, c.size].filter(Boolean).join(" · ") || "Profile pending"}
+                {[c.industry, c.size].filter(Boolean).join(" · ") || t("companies.profilePending")}
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-1.5">
               {typeof c.openRoleCount === "number" && (
                 <Badge variant="secondary" className="text-2xs">
-                  {c.openRoleCount} {c.openRoleCount === 1 ? "role" : "roles"}
+                  {c.openRoleCount}{" "}
+                  {c.openRoleCount === 1
+                    ? t("companies.role")
+                    : t("companies.roles")}
                 </Badge>
               )}
               {(c.techStack ?? []).slice(0, 3).map((t) => (
@@ -104,7 +107,7 @@ export default function CompaniesPage() {
                   href={c.website}
                   target="_blank"
                   rel="noopener noreferrer"
-                  aria-label={`${c.name} website`}
+                  aria-label={t("companies.websiteLabel", { name: c.name })}
                   className="rounded-md p-1 text-muted-foreground hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/35"
                 >
                   <Globe className="size-4" aria-hidden />

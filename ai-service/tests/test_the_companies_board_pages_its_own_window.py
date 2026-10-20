@@ -153,7 +153,10 @@ def test_the_pager_arrives_through_the_shared_shells_footer_slot():
         f"the pager now reads the answer's window: {collapse(block)}")
     assert re.search(r"total=\{total\}", block), (
         "the pager's row count no longer comes off the envelope")
-    assert re.search(r'label="companies"', block), \
+    # The pager's label reads from the locale table now, so the gate accepts the
+    # key the page reads rather than the English copy it used to carry. What
+    # this holds is that the pager still *names* the rows it pages.
+    assert re.search(r'label=(\{t\("companies\.paginationLabel"\)\}|"companies")', block), \
         "the pager no longer names the rows it pages"
     assert re.search(r"setUrl\(\{ page \}\);", block) and "window.scrollTo" in block, (
         "the pager's onPageChange no longer writes the URL page, or no longer scrolls the "

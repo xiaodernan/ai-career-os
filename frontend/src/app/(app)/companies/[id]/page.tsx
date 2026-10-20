@@ -11,6 +11,7 @@ import { ErrorState } from "@/components/common/error-state";
 import { useCompany } from "@/lib/hooks/resources";
 import { useCompanyBrief } from "@/lib/hooks/growth";
 import { formatSalary } from "@/lib/format";
+import { useLocale } from "@/lib/i18n/locale-context";
 import { ApiError } from "@/lib/api/client";
 import type { CompanySource, Job } from "@/lib/api/types";
 
@@ -26,6 +27,7 @@ import type { CompanySource, Job } from "@/lib/api/types";
  */
 export default function CompanyDetailPage() {
   const params = useParams<{ id: string }>();
+  const { t } = useLocale();
   const id = params?.id ?? null;
   const company = useCompany(id);
   // 4.8 — what the corpus says about this company. The engine reads the seeded
@@ -43,7 +45,7 @@ export default function CompanyDetailPage() {
         <Skeleton className="h-8 w-1/2" />
         <Skeleton className="h-8 w-1/4" />
         <span className="sr-only" role="status">
-          Loading company…
+          {t("companies.detail.loading")}
         </span>
       </div>
     );
@@ -64,7 +66,7 @@ export default function CompanyDetailPage() {
         <Card>
           <CardContent>
             <ErrorState
-              title="Couldn't load this company"
+              title={t("companies.detail.loadFailed")}
               error={company.error}
               onRetry={() => void company.refetch()}
               retrying={company.isFetching}
@@ -100,10 +102,10 @@ export default function CompanyDetailPage() {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1"
-                  aria-label={`${c.name} website`}
+                  aria-label={t("companies.websiteLabel", { name: c.name })}
                 >
                   <Globe className="size-3.5" aria-hidden />
-                  Website
+                  {t("companies.detail.website")}
                 </a>
               )}
             </div>
@@ -127,13 +129,13 @@ export default function CompanyDetailPage() {
 
       <Card className="col-span-full">
         <CardHeader>
-          <CardTitle>Overview</CardTitle>
+          <CardTitle>{t("companies.detail.overview")}</CardTitle>
         </CardHeader>
         <CardContent>
           {c.overview ? (
             <p className="text-sm text-muted-foreground whitespace-pre-wrap">{c.overview}</p>
           ) : (
-            <p className="text-sm text-muted-foreground">No overview available yet.</p>
+            <p className="text-sm text-muted-foreground">{t("companies.detail.noOverview")}</p>
           )}
         </CardContent>
       </Card>
@@ -141,7 +143,7 @@ export default function CompanyDetailPage() {
       {/* 4.8 — the corpus's own read of this company */}
       <Card className="col-span-full">
         <CardHeader>
-          <CardTitle>What the postings say</CardTitle>
+          <CardTitle>{t("companies.detail.postings")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           {brief.data ? (
@@ -149,7 +151,7 @@ export default function CompanyDetailPage() {
               {(brief.data.skills ?? []).length > 0 && (
                 <div>
                   <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                    Skills asked for
+                    {t("companies.detail.skillsAskedFor")}
                   </p>
                   <div className="mt-1.5 flex flex-wrap gap-1.5">
                     {(brief.data.skills ?? []).map((s) => (
@@ -166,17 +168,17 @@ export default function CompanyDetailPage() {
               {(brief.data.interviewTopics ?? []).length > 0 && (
                 <div>
                   <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                    Interview topics
+                    {t("companies.detail.interviewTopics")}
                   </p>
                   <p className="mt-1 text-sm">{brief.data.interviewTopics!.join(" · ")}</p>
                 </div>
               )}
             </>
           ) : brief.isPending ? (
-            <p className="text-sm text-muted-foreground">Reading the corpus…</p>
+            <p className="text-sm text-muted-foreground">{t("companies.detail.readingCorpus")}</p>
           ) : (
             <p className="text-sm text-muted-foreground">
-              No postings in the corpus for this company yet.
+              {t("companies.detail.noPostings")}
             </p>
           )}
           <Button
@@ -185,14 +187,14 @@ export default function CompanyDetailPage() {
             loading={brief.isPending}
             onClick={() => brief.mutate({ company: c.name })}
           >
-            Read the corpus
+            {t("companies.detail.readCorpus")}
           </Button>
         </CardContent>
       </Card>
 
       <Card className="col-span-full">
         <CardHeader>
-          <CardTitle>Tech Stack</CardTitle>
+          <CardTitle>{t("companies.detail.techStack")}</CardTitle>
         </CardHeader>
         <CardContent>
           {(c.techStack ?? []).length > 0 ? (
@@ -205,7 +207,7 @@ export default function CompanyDetailPage() {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">No tech stack reported yet.</p>
+            <p className="text-sm text-muted-foreground">{t("companies.detail.noTechStack")}</p>
           )}
         </CardContent>
       </Card>
@@ -213,13 +215,13 @@ export default function CompanyDetailPage() {
       {(c.culture || c.interviewProcess) && (
         <Card className="col-span-full">
           <CardHeader>
-            <CardTitle>Working here</CardTitle>
+            <CardTitle>{t("companies.detail.workingHere")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {c.culture && (
               <div className="space-y-1">
                 <h4 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                  Culture
+                  {t("companies.detail.culture")}
                 </h4>
                 <p className="text-sm text-muted-foreground whitespace-pre-wrap">{c.culture}</p>
               </div>
@@ -227,7 +229,7 @@ export default function CompanyDetailPage() {
             {c.interviewProcess && (
               <div className="space-y-1">
                 <h4 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                  Interview process
+                  {t("companies.detail.interviewProcess")}
                 </h4>
                 <p className="text-sm text-muted-foreground whitespace-pre-wrap">
                   {c.interviewProcess}
@@ -240,7 +242,7 @@ export default function CompanyDetailPage() {
 
       <Card className="col-span-full">
         <CardHeader>
-          <CardTitle>Open Roles ({total})</CardTitle>
+          <CardTitle>{t("companies.detail.openRoles", { count: total })}</CardTitle>
         </CardHeader>
         <CardContent>
           {openRoles.length > 0 ? (
@@ -252,19 +254,22 @@ export default function CompanyDetailPage() {
               </ul>
               {total > openRoles.length && (
                 <p className="mt-3 text-xs text-muted-foreground">
-                  Showing the {openRoles.length} best-matching of {total} open roles.
+                  {t("companies.detail.showingBestMatching", {
+                    shown: openRoles.length,
+                    total,
+                  })}
                 </p>
               )}
             </>
           ) : (
-            <p className="text-sm text-muted-foreground">No open roles at the moment.</p>
+            <p className="text-sm text-muted-foreground">{t("companies.detail.noOpenRoles")}</p>
           )}
         </CardContent>
       </Card>
 
       <Card className="col-span-full">
         <CardHeader>
-          <CardTitle>Sources</CardTitle>
+          <CardTitle>{t("companies.detail.sources")}</CardTitle>
         </CardHeader>
         <CardContent>
           {(c.sources ?? []).length > 0 ? (
@@ -275,7 +280,7 @@ export default function CompanyDetailPage() {
             </ul>
           ) : (
             <p className="text-sm text-muted-foreground">
-              Nothing recorded where this profile came from yet.
+              {t("companies.detail.noSourcesRecorded")}
             </p>
           )}
         </CardContent>
@@ -320,6 +325,7 @@ function RoleRow({ job }: { job: Job }) {
  * none of them still renders, as its type, rather than as raw JSON.
  */
 function SourceRow({ source }: { source: CompanySource }) {
+  const { t } = useLocale();
   const text = source.title ?? source.note;
   return (
     <li className="flex items-start gap-2 text-sm">
@@ -336,7 +342,7 @@ function SourceRow({ source }: { source: CompanySource }) {
           rel="noopener noreferrer"
           className="inline-flex shrink-0 items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
         >
-          Open
+          {t("companies.detail.open")}
           <ExternalLink className="size-3" aria-hidden />
         </a>
       )}

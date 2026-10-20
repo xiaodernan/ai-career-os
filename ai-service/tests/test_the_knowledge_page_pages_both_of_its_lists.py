@@ -162,7 +162,10 @@ def test_the_sources_pager_lives_on_the_page_url_and_hides_under_the_citation_fo
     assert re.search(r"size=\{PAGE_SIZE\}", block) and "data?.size" not in block \
         and "data.size" not in block, (
         f"the pager no longer takes the window the list asks with: {collapse(block)}")
-    assert re.search(r"total=\{total\}", block) and re.search(r'label="sources"', block), (
+    # The pager's label reads from the locale table now, so the gate accepts the
+    # key the page reads rather than the English copy it used to carry.
+    assert re.search(r"total=\{total\}", block) \
+        and re.search(r'label=(\{t\("knowledge\.paginationLabel"\)\}|"sources")', block), (
         "the pager's row count or label moved off the envelope")
     assert re.search(r"!src && total > PAGE_SIZE && \(", page), (
         "the pager is no longer gated by both the focus and the window it serves, so a "
@@ -207,7 +210,10 @@ def test_the_notes_pager_lives_on_its_own_url_key_and_its_own_answer():
     assert re.search(r"size=\{PAGE_SIZE\}", block) and "data?.size" not in block \
         and "data.size" not in block, (
         f"the pager no longer takes the window the list asks with: {collapse(block)}")
-    assert re.search(r"total=\{total\}", block) and re.search(r'label="notes"', block), (
+    # The pager's label reads from the locale table now, so the gate accepts the
+    # key the panel reads rather than the English copy it used to carry.
+    assert re.search(r"total=\{total\}", block) \
+        and re.search(r'label=(\{t\("knowledge\.notes\.paginationLabel"\)\}|"notes")', block), (
         "the pager's row count or label moved off the envelope")
     assert re.search(r"onPageChange=\{\(page\) => \{\n"
                      r"\s*setUrl\(\{ npage: page \}\);", block), (
