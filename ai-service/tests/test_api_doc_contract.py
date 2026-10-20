@@ -161,7 +161,12 @@ def test_the_forward_table_is_exactly_the_surface_the_backend_does_not_call():
     assert forward == unreached_pairs() - ledger_pairs(), (
         f"3.2 names {sorted(forward & reached_pairs())} the backend does call -- move those rows "
         f"up to section 3; it omits {sorted(unreached_pairs() - ledger_pairs() - forward)}")
-    assert len(forward) >= 25, f"the forward table cannot be read ({len(forward)} rows)"
+    # The table is empty now that every engine has a backend caller, so a count floor
+    # would only prove the doc was not reflowed. What still has to hold is that the SECTION
+    # was read: the heading has to be there for the reader to have found an empty table
+    # rather than no table at all.
+    assert FORWARD_HEADING in DOC.read_text(encoding="utf-8"), (
+        "3.2 is gone -- a new engine that ships ahead of its bridge needs the table back")
 
 
 def test_every_route_nobody_calls_is_explained_exactly_once():

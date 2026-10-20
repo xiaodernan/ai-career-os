@@ -16,6 +16,7 @@ remembered -- the same reason the other census gates exist.
 
 import inspect
 
+import pytest
 from fastapi.routing import APIRoute
 from pydantic import BaseModel
 
@@ -47,13 +48,19 @@ FORWARD = {
     "/internal/features/interview-prep": ("InterviewPrepReq", {"target_role"}),
     "/internal/features/pipeline-funnel": ("PipelineFunnelReq", {"applications"}),
     "/internal/features/response-rate": ("ResponseRateReq", {"applications"}),
-    "/internal/features/insight-digest": ("InsightDigestReq", {"applications"}),
+    "/internal/features/insight-digest": ("InsightDigestReq", set()),
     "/internal/features/dedupe-jobs": ("DedupeJobsReq", {"postings"}),
     "/internal/features/freshness-sweep": ("FreshnessSweepReq", {"postings"}),
-    "/internal/features/plan-ingest": ("PlanIngestReq", {"postings"}),
-    "/internal/features/health-report": ("HealthReportReq", {"runs"}),
+    # `plan_ingest` takes either an already-parsed list or the raw feed text, so
+    # neither field is required on its own -- the route refuses a body that carries
+    # both or neither. The required set is empty for that reason.
+    "/internal/features/plan-ingest": ("PlanIngestReq", set()),
+    "/internal/features/health-report": ("HealthReportReq", set()),
     "/internal/features/parse-board": ("ParseBoardReq", {"payload"}),
     "/internal/features/follow-ups": ("FollowUpsReq", set()),
+    "/internal/features/export-bundle": ("ExportBundleReq", set()),
+    "/internal/features/import-plan": ("ImportPlanReq", {"bundle"}),
+    "/internal/features/redact-bundle": ("RedactBundleReq", {"bundle"}),
 }
 
 
@@ -107,6 +114,35 @@ def test_forward_request_models_require_their_fields():
         assert model.__name__ == name, f"{path} model is {model.__name__}, expected {name}"
         got = {n for n, f in model.model_fields.items() if f.is_required()}
         assert got == required, f"{path} required fields drifted: {got} != {required}"
+
+
+async def test_the_ingest_plan_refuses_a_body_that_carries_neither_or_both():
+    """14.3 -- the sweep plan takes EITHER an already-parsed list OR the raw feed.
+
+    `plan_ingest` accepts both, so the route does too -- but exactly one. A body
+    with neither is a plan with nothing to plan from, and a body with both is a
+    request that says two different things about the same batch. Both are
+    refused, and refused before the engine runs.
+    """
+    from fastapi import HTTPException
+
+    route = _routes()["/internal/features/plan-ingest"]
+    model = _model(route)
+
+    with pytest.raises(HTTPException) as neither:
+        await route.endpoint(model(), _ctx())
+    assert neither.value.status_code == 400, "a body with neither is a 400"
+
+    with pytest.raises(HTTPException) as both:
+        await route.endpoint(
+            model(postings=[{"title": "A"}], feed="<rss></rss>"), _ctx())
+    assert both.value.status_code == 400, "a body with both is a 400"
+
+
+def _ctx():
+    from app.core.deps import Ctx
+
+    return Ctx(user_id="11111111-1111-1111-1111-111111111111", run_id=None)
 
 
 # ---------------- response shape (the contract the bridge will rely on) ----------------

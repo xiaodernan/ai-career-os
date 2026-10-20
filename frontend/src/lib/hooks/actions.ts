@@ -30,6 +30,7 @@ import { tokenStore } from "@/lib/api/token-store";
 import type {
   Application,
   ApplicationStatus,
+  Contact,
   CopilotReply,
   GrowthReport,
   InterviewQuestion,
@@ -52,18 +53,15 @@ import type {
  * moves) and are always rolled back on error.
  */
 
-function describe(err: unknown, fallback: string): string {
-  if (err instanceof ApiError) {
-    if (err.isNotFound) return missingEndpointMessage();
-    return err.message || fallback;
-  }
-  if (err instanceof TypeError) return "Cannot reach the API — is the backend running?";
-  return err instanceof Error && err.message ? err.message : fallback;
-}
+/**
+ * The failure handler lives in `lib/hooks/failure.ts` — one implementation of
+ * "what a failed write says to the user", shared by every mutation hook in the
+ * product. It is imported (not just re-exported) so this file's own callers
+ * keep the name they have always used.
+ */
+import { describe, fail } from "./failure";
 
-function fail(fallback: string) {
-  return (err: unknown) => toast.error(describe(err, fallback));
-}
+export { describe, fail };
 
 /* ------------------------------------------------------------------ */
 /* Resumes                                                             */
@@ -889,6 +887,68 @@ export function useDeleteMemory() {
 }
 
 /* ------------------------------------------------------------------ */
+/**
+ * The registry's three writes (roadmap 11.1). The PATCH is a full replace — the form
+ * posts its current values, so a field the caller blanked is cleared on purpose — and
+ * every one of them invalidates the single list key, because the list is the only
+ * reader of this surface.
+ */
+export function useCreateContact() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: ContactDraftBody) =>
+      api.create<unknown>(endpoints.contacts, contactBody(body)),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["contacts"] });
+      toast.success("Contact saved.");
+    },
+    onError: fail("Couldn't save that contact."),
+  });
+}
+
+export function useUpdateContact() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...body }: ContactDraftBody & { id: string }) =>
+      api.update<unknown>(endpoints.contact(id), contactBody(body)),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["contacts"] });
+      toast.success("Contact updated.");
+    },
+    onError: fail("Couldn't update that contact."),
+  });
+}
+
+export function useDeleteContact() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.remove(endpoints.contact(id)),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["contacts"] });
+      toast.success("Contact deleted.");
+    },
+    onError: fail("Couldn't delete that contact."),
+  });
+}
+
+/** What the registry's forms post: the editable fields, none of the row's own. */
+type ContactDraftBody = Omit<Contact, "id" | "createdAt" | "updatedAt">;
+
+/**
+ * The wire body: only the fields the form carries, with blanks as absence — a JSON
+ * null and a missing key are the same to the record, and an empty string would come
+ * back as an empty string.
+ */
+function contactBody(body: ContactDraftBody): Record<string, unknown> {
+  const out: Record<string, unknown> = { name: body.name.trim() };
+  for (const key of ["role", "company", "relation", "email", "notes"] as const) {
+    const v = body[key]?.trim();
+    if (v) out[key] = v;
+  }
+  if (body.lastTouchAt) out.lastTouchAt = body.lastTouchAt;
+  return out;
+}
+
 /**
  * The growth page's one call (roadmap 10.3): a target role in, the composed report
  * out. Deliberately a mutation rather than a query — the request carries the caller's

@@ -2,32 +2,62 @@
 
 A personal job-search OS is only as trustworthy as the user's ability to leave
 with their data. This document locks the export/import contract implemented in
-`ai-service/app/features/export.py` (internal-only; the backend bridge fills the
-two reserved sections).
+`ai-service/app/features/export.py` and bridged through
+`POST /api/v1/data-portability/*` (the backend owns the `applications` and
+`growth_plans` sections).
 
 ## Scope
 
 | Item | Status | Owner |
 |---|---|---|
-| 13.1 JSON + readable export of ai-service-readable data | **done (ai-service half)** | ai-service |
+| 13.1 JSON + readable export of ai-service-readable data | **done** | ai-service + backend bridge |
 | 13.1 PDF rendering of the readable export | pending | downstream generator |
-| 13.2 Idempotent re-import (upsert/delete plan) | **contract done** (pure diff + validate) | backend (writes) |
-| 13.3 Right-to-be-forgotten / anonymized export | **done (anonymize + validate)** | ai-service |
-| `applications` + `growth_plans` sections | reserved (absent) | backend bridge |
+| 13.2 Idempotent re-import (upsert/delete plan) | **done** (plan emitted; the apply step is the backend's) | backend (writes) |
+| 13.3 Right-to-be-forgotten / anonymized export | **done** (anonymize + validate + section redaction) | ai-service + backend bridge |
+| `applications` + `growth_plans` sections | **done** (shipped in the bundle since 1.1.0) | backend bridge |
+
+## The bridge (2026-10-20)
+
+The engines were internal-only until now; the routes that reach them are:
+
+| Route | Body | Answers |
+|---|---|---|
+| `POST /api/v1/data-portability/export` | `{anonymized?}` | the bundle, with its content hash |
+| `POST /api/v1/data-portability/import-plan` | `{bundle, existing?}` | the per-item create/update/delete plan, with the counts |
+| `POST /api/v1/data-portability/redact` | `{bundle, drop?}` | the bundle with the named sections removed and the hash recomputed |
+
+The frontend's `/data` page drives all three: export (plain or anonymized),
+download the JSON, drop sections before sharing, and paste a bundle back to
+preview exactly what a re-import would write. The plan is *not* applied — the
+apply step is the backend's, and it is the only part of the loop that writes.
+
+### The bundle is complete (1.1.0)
+
+Six of the eight sections are the ai-service's own. The other two —
+`applications` and `growth_plans` — are the **backend's**: it writes those rows,
+so the ai-service cannot read them. The bridge reads them and hands them over
+in the export request, and the ai-service hashes the whole document in one
+place. A bundle without them was a reading list and not a record of the search.
+
+The required set for validation is read off the bundle's **own** schema
+version: a 1.0.0 backup predates the two sections and is still a valid bundle,
+while a 1.1.0 one missing them was truncated. Rejecting the old backups would
+have cost every user their archive the day the format grew.
 
 ## Bundle schema
 
 ```jsonc
 {
-  "schema_version": "1.0.0",
+  "schema_version": "1.1.0",
   "generator": "ai-career-os",
-  "generated_at": "2026-10-14T00:00:00+00:00",
+  "generated_at": "2026-10-20T00:00:00+00:00",
   "user": { "id": "<uuid>", "anonymized": false },
   "manifest": {
-    "schema_version": "1.0.0",
+    "schema_version": "1.1.0",
     "generator": "ai-career-os",
     "counts": { "profile": 1, "resumes": 1, "knowledge": 1,
-                "job_descriptions": 1, "interviews": 1, "memories": 1 },
+                "job_descriptions": 1, "interviews": 1, "memories": 1,
+                "applications": 12, "growth_plans": 3 },
     "content_hash": "<sha256 over data>",
     "anonymized": false
   },
@@ -37,8 +67,11 @@ two reserved sections).
     "knowledge": [ { ...documents metadata + excerpt... } ],
     "job_descriptions": [ { ...job_jds row... } ],
     "interviews": [ { ...interview_sessions joined jobs/companies..., "turns": [...] } ],
-    "memories": [ { ...user_memories row... } ]
-    // "applications" and "growth_plans" are RESERVED — absent until the bridge.
+    "memories": [ { ...user_memories row... } ],
+    // The two the BACKEND owns — the bridge hands them over, and the hash
+    // covers them like every other section.
+    "applications": [ { ...applications row... } ],
+    "growth_plans": [ { ...growth_plans row... } ]
   }
 }
 ```
@@ -80,6 +113,8 @@ export and as the right-to-be-forgotten surface.
 | `write_bundle` / `read_bundle` | file I/O |
 
 The fetch functions are module-level and monkeypatched in tests, so the whole
-contract is held offline (20 tests in `tests/test_export.py`). **No route is
-registered** — this module stays internal-only until the backend bridge exposes
-the export endpoint and supplies `applications` / `growth_plans`.
+contract is held offline (20 tests in `tests/test_export.py`). The routes are
+registered in `app/api/features.py` behind `require_internal`, and the backend
+bridges them at `POST /api/v1/data-portability/*` — so the module is no longer
+internal-only, but the *engines* still are: nothing reaches them without the
+shared secret, and the browser only ever sees the backend's own routes.

@@ -211,6 +211,278 @@ public class HttpAiServiceClient implements AiServiceClient {
         }
     }
 
+    @Override
+    @SuppressWarnings("unchecked")
+    public List<Map<String, Object>> followUps(UUID userId) {
+        Object items = post("/internal/features/follow-ups", userId, Map.of()).get("items");
+        return items instanceof List<?> list ? (List<Map<String, Object>>) list : List.of();
+    }
+
+    @Override
+    public Map<String, Object> insightDigest(UUID userId, List<Map<String, Object>> applications) {
+        return post("/internal/features/insight-digest", userId, Map.of("applications", applications));
+    }
+
+    @Override
+    public Map<String, Object> exportBundle(UUID userId, boolean anonymized,
+                                           Map<String, Object> sections) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("anonymized", anonymized);
+        if (sections != null && !sections.isEmpty()) {
+            body.put("sections", sections);
+        }
+        return post("/internal/features/export-bundle", userId, body);
+    }
+
+    @Override
+    public Map<String, Object> importPlan(UUID userId, Map<String, Object> bundle, Map<String, Object> existing) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("bundle", bundle);
+        if (existing != null) {
+            body.put("existing", existing);
+        }
+        return post("/internal/features/import-plan", userId, body);
+    }
+
+    @Override
+    public Map<String, Object> redactBundle(UUID userId, Map<String, Object> bundle, List<String> drop) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("bundle", bundle);
+        if (drop != null) {
+            body.put("drop", drop);
+        }
+        return post("/internal/features/redact-bundle", userId, body);
+    }
+
+    @Override
+    public Map<String, Object> parseFeed(String feed, String source, UUID userId) {
+        return post("/internal/features/parse-board", userId, Map.of("payload", feed, "source", source));
+    }
+
+    @Override
+    public Map<String, Object> dedupeJobs(List<Map<String, Object>> postings, UUID userId) {
+        return post("/internal/features/dedupe-jobs", userId, Map.of("postings", postings));
+    }
+
+    @Override
+    public Map<String, Object> freshnessSweep(List<Map<String, Object>> postings, int maxAgeDays,
+                                               int staleSeenDays, UUID userId) {
+        return post("/internal/features/freshness-sweep", userId,
+                Map.of("postings", postings, "max_age_days", maxAgeDays, "stale_seen_days", staleSeenDays));
+    }
+
+    @Override
+    public Map<String, Object> planIngest(String feed, String source, List<Map<String, Object>> existing,
+                                           int maxAgeDays, int staleSeenDays, UUID userId) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("feed", feed);
+        body.put("source", source);
+        if (existing != null) {
+            body.put("existing", existing);
+        }
+        body.put("max_age_days", maxAgeDays);
+        body.put("stale_seen_days", staleSeenDays);
+        return post("/internal/features/plan-ingest", userId, body);
+    }
+
+    @Override
+    public Map<String, Object> healthReport(UUID userId, List<Map<String, Object>> runs) {
+        return post("/internal/features/health-report", userId, Map.of("runs", runs));
+    }
+
+    @Override
+    public Map<String, Object> salaryBenchmark(UUID userId, com.careeros.ai.dto.OfferDtos.SalaryRequest request) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("role", request.role());
+        if (request.location() != null) body.put("location", request.location());
+        if (request.seniority() != null) body.put("seniority", request.seniority());
+        if (request.targetSalary() != null) body.put("target_salary", request.targetSalary());
+        if (request.currency() != null) body.put("currency", request.currency());
+        return post("/internal/features/salary-benchmark", userId, body);
+    }
+
+    @Override
+    public Map<String, Object> negotiate(UUID userId, com.careeros.ai.dto.OfferDtos.NegotiationRequest request) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("role", request.role());
+        if (request.location() != null) body.put("location", request.location());
+        if (request.seniority() != null) body.put("seniority", request.seniority());
+        if (request.currency() != null) body.put("currency", request.currency());
+        body.put("offer_base", request.offerBase());
+        if (request.matchScore() != null) body.put("match_score", request.matchScore());
+        return post("/internal/features/negotiate", userId, body);
+    }
+
+    @Override
+    public Map<String, Object> compareOffers(UUID userId, com.careeros.ai.dto.OfferDtos.CompareOffersRequest request) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("role", request.role());
+        if (request.location() != null) body.put("location", request.location());
+        if (request.seniority() != null) body.put("seniority", request.seniority());
+        if (request.currency() != null) body.put("currency", request.currency());
+        if (request.matchScore() != null) body.put("match_score", request.matchScore());
+        List<Map<String, Object>> offers = request.offers().stream()
+                .map(HttpAiServiceClient::offerBody)
+                .toList();
+        body.put("offers", offers);
+        return post("/internal/features/compare-offers", userId, body);
+    }
+
+    @Override
+    public Map<String, Object> counterOffer(UUID userId, com.careeros.ai.dto.OfferDtos.CounterOfferRequest request) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("role", request.role());
+        if (request.location() != null) body.put("location", request.location());
+        if (request.seniority() != null) body.put("seniority", request.seniority());
+        if (request.currency() != null) body.put("currency", request.currency());
+        body.put("offer_base", request.offerBase());
+        if (request.matchScore() != null) body.put("match_score", request.matchScore());
+        return post("/internal/features/counter-offer", userId, body);
+    }
+
+    /** One offer, in the engine's own field names. The equity grant is nested. */
+    private static Map<String, Object> offerBody(com.careeros.ai.dto.OfferDtos.OfferItem offer) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("label", offer.label());
+        body.put("base", offer.base());
+        body.put("bonus", offer.bonus());
+        if (offer.equity() != null) {
+            Map<String, Object> equity = new HashMap<>();
+            equity.put("shares", offer.equity().shares());
+            equity.put("strike_price", offer.equity().strikePrice());
+            equity.put("current_price", offer.equity().currentPrice());
+            if (offer.equity().vestYears() != null) equity.put("vest_years", offer.equity().vestYears());
+            body.put("equity", equity);
+        }
+        return body;
+    }
+
+    @Override
+    public Map<String, Object> gapAnalysis(UUID userId, com.careeros.ai.dto.GrowthEngineRequest request) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("target_role", request.targetRole());
+        if (request.seniority() != null) body.put("seniority", request.seniority());
+        if (request.resumeVersionId() != null) body.put("resume_version_id", request.resumeVersionId());
+        return post("/internal/features/gap-analysis", userId, body);
+    }
+
+    @Override
+    public Map<String, Object> readiness(UUID userId, com.careeros.ai.dto.GrowthEngineRequest request) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("target_role", request.targetRole());
+        if (request.seniority() != null) body.put("seniority", request.seniority());
+        if (request.resumeVersionId() != null) body.put("resume_version_id", request.resumeVersionId());
+        if (request.location() != null) body.put("location", request.location());
+        if (request.currency() != null) body.put("currency", request.currency());
+        if (request.targetSalary() != null) body.put("target_salary", request.targetSalary());
+        return post("/internal/features/readiness", userId, body);
+    }
+
+    @Override
+    public Map<String, Object> learningPlan(UUID userId, com.careeros.ai.dto.GrowthEngineRequest request) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("target_role", request.targetRole());
+        if (request.seniority() != null) body.put("seniority", request.seniority());
+        if (request.resumeVersionId() != null) body.put("resume_version_id", request.resumeVersionId());
+        return post("/internal/features/learning-plan", userId, body);
+    }
+
+    @Override
+    public Map<String, Object> skillDemand(UUID userId, com.careeros.ai.dto.GrowthEngineRequest request) {
+        // The demand engine asks what the market wants for a role family, so it
+        // names the role as `role` rather than `target_role`, and it reads no
+        // seniority band of its own.
+        Map<String, Object> body = new HashMap<>();
+        body.put("role", request.targetRole());
+        if (request.location() != null) body.put("location", request.location());
+        if (request.top() != null) body.put("top", request.top());
+        return post("/internal/features/skill-demand", userId, body);
+    }
+
+    @Override
+    public Map<String, Object> learningPriority(UUID userId, com.careeros.ai.dto.GrowthEngineRequest request) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("target_role", request.targetRole());
+        if (request.seniority() != null) body.put("seniority", request.seniority());
+        if (request.resumeVersionId() != null) body.put("resume_version_id", request.resumeVersionId());
+        return post("/internal/features/learning-priority", userId, body);
+    }
+
+    @Override
+    public Map<String, Object> progression(UUID userId, com.careeros.ai.dto.GrowthEngineRequest request) {
+        // The progression engine names the role it is planning toward differently:
+        // it is the dream role, not the one the candidate holds.
+        Map<String, Object> body = new HashMap<>();
+        body.put("aspirational_role", request.targetRole());
+        if (request.seniority() != null) body.put("seniority", request.seniority());
+        if (request.resumeVersionId() != null) body.put("resume_version_id", request.resumeVersionId());
+        return post("/internal/features/progression", userId, body);
+    }
+
+    @Override
+    public Map<String, Object> interviewPrep(UUID userId, com.careeros.ai.dto.GrowthEngineRequest request) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("target_role", request.targetRole());
+        if (request.seniority() != null) body.put("seniority", request.seniority());
+        if (request.resumeVersionId() != null) body.put("resume_version_id", request.resumeVersionId());
+        return post("/internal/features/interview-prep", userId, body);
+    }
+
+    @Override
+    public Map<String, Object> storyBank(UUID userId, com.careeros.ai.dto.ProfileEngineRequest request) {
+        Map<String, Object> body = new HashMap<>();
+        if (request.resumeVersionId() != null) body.put("resume_version_id", request.resumeVersionId());
+        return post("/internal/features/story-bank", userId, body);
+    }
+
+    @Override
+    public Map<String, Object> roleSuggestions(UUID userId, com.careeros.ai.dto.ProfileEngineRequest request) {
+        Map<String, Object> body = new HashMap<>();
+        if (request.resumeVersionId() != null) body.put("resume_version_id", request.resumeVersionId());
+        if (request.top() != null) body.put("top", request.top());
+        return post("/internal/features/role-suggestions", userId, body);
+    }
+
+    @Override
+    public Map<String, Object> progress(UUID userId, com.careeros.ai.dto.ProgressRequest request) {
+        Map<String, Object> body = new HashMap<>();
+        if (request.targetRole() != null) body.put("target_role", request.targetRole());
+        if (request.seniority() != null) body.put("seniority", request.seniority());
+        if (request.resumeVersionId() != null) body.put("resume_version_id", request.resumeVersionId());
+        if (request.previous() != null) body.put("previous", request.previous());
+        return post("/internal/features/progress", userId, body);
+    }
+
+    @Override
+    public Map<String, Object> outreach(UUID userId, com.careeros.ai.dto.OutreachRequest request) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("name", request.name());
+        body.put("role", request.role() == null ? "" : request.role());
+        body.put("company", request.company() == null ? "" : request.company());
+        body.put("purpose", request.purpose() == null ? "referral" : request.purpose());
+        body.put("context", request.context() == null ? "" : request.context());
+        if (request.resumeVersionId() != null) body.put("resume_version_id", request.resumeVersionId());
+        return post("/internal/features/outreach", userId, body);
+    }
+
+    @Override
+    public Map<String, Object> pipelineFunnel(UUID userId, List<Map<String, Object>> applications) {
+        return post("/internal/features/pipeline-funnel", userId, Map.of("applications", applications));
+    }
+
+    @Override
+    public Map<String, Object> responseRate(UUID userId, List<Map<String, Object>> applications) {
+        return post("/internal/features/response-rate", userId, Map.of("applications", applications));
+    }
+
+    @Override
+    public Map<String, Object> companyBrief(UUID userId, com.careeros.ai.dto.CompanyBriefRequest request) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("company", request.company());
+        if (request.top() != null) body.put("top", request.top());
+        return post("/internal/features/company-brief", userId, body);
+    }
+
     /** One request shape for both chat routes, so the two cannot drift on what the turn is given. */
     private static Map<String, Object> chatBody(String message, List<Map<String, Object>> history,
                                                 UUID conversationId, Map<String, Object> context) {

@@ -374,6 +374,7 @@ def test_the_shapes_this_gate_cannot_see_stay_a_declared_list():
     a class, which is as static as a literal dict."""
     _problems, unseen = _findings()
     assert unseen == [
+        "/internal/features/growth-report#gap",
         "/internal/features/jd/analyze#parsed",
         "/internal/features/resume/parse#parsed",
         "/internal/interview/answer#evaluation",
@@ -385,8 +386,8 @@ def test_the_backend_readers_this_gate_walks_are_the_ones_that_exist():
     """A new consumer class must widen the corpus here, not go unmeasured."""
     assert sorted(p.name for p in _consumer_files()) == [
         "ConversationService.java", "CopilotStreamService.java", "FileIngestService.java",
-        "GrowthController.java", "InterviewService.java", "JobService.java",
-        "MemoryController.java", "QueryEmbeddingService.java",
+        "GrowthService.java", "InterviewService.java",
+        "JobService.java", "MemoryController.java", "QueryEmbeddingService.java",
         "ResumeService.java",
     ]
 
@@ -432,9 +433,9 @@ def test_the_files_that_hold_an_ai_answer_stay_declared():
     # `MemoryItem` — it holds the answer long enough to read five keys off it, which is the
     # same reason `InterviewService` is. A controller that forwards a map untouched would not
     # be, but that would leave the casing unmapped.
-    assert holding == {"ConversationService.java", "InterviewService.java",
-                       "JobService.java", "MemoryController.java",
-                       "QueryEmbeddingService.java",
+    assert holding == {"ConversationService.java", "GrowthService.java",
+                       "InterviewService.java", "JobService.java",
+                       "MemoryController.java", "QueryEmbeddingService.java",
                        "ResumeService.java"}
     assert holding < {p.name for p in _consumer_files()}
 
@@ -905,8 +906,9 @@ def test_the_declaration_probes_reach_the_shapes_a_copy_would_miss():
     # 49 rather than 48 since `normalizeAttention` joined the module-private mappers: the dashboard's
     # attention rows are the fifth non-exported reader, and the opener has to see it like the others.
     # 50 with `normalizeMemory`: one more exported mapper, the reader the memory surface added.
-    assert len(re.findall(TS_OPENER.format(name=r"(\w+)"), source)) == 50, \
-        "44 exported mappers and 6 module-private ones, all through one opener"
+    # 51 with `normalizeFollowUp`: the follow-up tile's row reader (11.3), the sixth non-exported one.
+    assert len(re.findall(TS_OPENER.format(name=r"(\w+)"), source)) == 51, \
+        "45 exported mappers and 6 module-private ones, all through one opener"
     assert "export function normalizePage(" not in source, \
         "the generic really does sit between the name and the paren, so a literal opener finds nothing"
     assert _ts_function_body("normalizePage").startswith("export function normalizePage<T>(")
@@ -940,10 +942,21 @@ def test_the_java_probe_reads_every_record_the_backend_declares():
     # bytes, media type, save name -- which is a record like the rest, so the shared opener has to
     # read it. Before it, `JobDtos.CompanyDetail` was the last one to join (102 -> 103).
     # `MemoryItem` / `UpdateMemoryRequest` (ai/dto/) took it to 106 for the memory-correction
-    # surface; `GrowthReportRequest` to 107 as the 10.2 bridge's first request record: the
-    # records the backend declares, whether or not a response carries them.
-    assert len(declared) == 107, \
-        f"{len(declared)} records carry a declaration the shared opener reads, not the 107 measured"
+    # surface; `GrowthReportRequest` to 107 as the 10.2 bridge's first request record; the
+    # contacts registry's `ContactRequest`/`ContactItem` (11.1) to 109: the records the
+    # backend declares, whether or not a response carries them.
+    # 117 with the 13.x/14.x/16.x bridges: `FollowUpItem` (the 11.3 follow-up tile's row),
+    # `ExportRequest`/`ImportPlanRequest`/`RedactRequest` (13.1-13.3), and
+    # `ParseFeedRequest`/`DedupeRequest`/`FreshnessSweepRequest`/`PlanIngestRequest` (14.2-14.3).
+    # 123 with the 12.x bridge: `SalaryRequest`, `NegotiationRequest`, `EquityGrant`,
+    # `OfferItem`, `CompareOffersRequest` and `CounterOfferRequest` — the six records the
+    # salary & offer surface binds.
+    # 128 with the 13.x/14.x/16.x bridges: `ExportRequest`, `ImportPlanRequest`,
+    # `RedactRequest` (13.1-13.3), `ParseFeedRequest`, `DedupeRequest`,
+    # `FreshnessSweepRequest`, `PlanIngestRequest` (14.2-14.3) and `CompanyBriefRequest`
+    # (4.8) — the five records those surfaces bind.
+    assert len(declared) == 128, \
+        f"{len(declared)} records carry a declaration the shared opener reads, not the 128 measured"
     problems, renamed = [], []
     for relative, record in declared:
         names = _record_components_at(relative, record)
@@ -1088,6 +1101,7 @@ def test_the_java_census_binds_every_drill_and_names_the_level_it_stops_at():
     assert unbound == [], (f"an AI answer is drilled into a local `_NESTED` does not bind, so every "
                            f"read below it is attributed to nothing: {unbound}")
     assert sorted({(row[0], row[1], row[2]) for row in drills}) == [
+        ("GrowthService.java", "coverageOf", "gap"),
         ("InterviewService.java", "answer", "evaluation"),
         ("InterviewService.java", "answer", "next"),
         ("InterviewService.java", "finalize", "evaluation"),
@@ -1195,6 +1209,8 @@ def test_the_response_envelope_has_exactly_one_wrapper_and_one_unwrapper():
         'if (!res.ok || !json.success || !json.data) return null;',
         'if (!res.ok || (json && json.success === false)) {',
     ], f"{[row['text'] for row in rows if row['kind'] == 'success']}: the envelope's own guards, measured"
+    # 35 rather than 32: the contacts registry's three writes each carry one success toast,
+    # after the growth report's one had joined in 10.3.
     # 32 rather than 33 since the single-upload "Document queued" toast left source-actions:
     # the batch uploader replaced it with live per-row ingestion progress, which is the
     # feedback now, and a toast on top of a visible progress row would be the second word.
@@ -1203,7 +1219,7 @@ def test_the_response_envelope_has_exactly_one_wrapper_and_one_unwrapper():
     # 31 rather than 30 since the paste-a-posting importer joined (one success toast in
     # actions.ts); 30 rather than 28 since the conversation list grew rename and delete,
     # each with its own success toast in actions.ts.
-    assert len(toasts) == 32, (f"{len(toasts)} `toast.success` lines came out of the same walk: that is "
+    assert len(toasts) == 46, (f"{len(toasts)} `toast.success` lines came out of the same walk: that is "
                                "the floor proving the scan reached the pages and the hooks, so a walk "
                                "narrowed to the api directory cannot pass quietly")
 
@@ -2104,7 +2120,15 @@ def test_the_run_stream_contract_is_one_table_of_publishers_cases_and_subscriber
     # `lib/api/missing-endpoint.test.ts`. The pin is a population, not a budget: a new test file belongs
     # in it, and the guard below still has to prove none of them ships.
     # 33 rather than 31 since `lib/hooks/actions.test.ts` and `lib/resume-upload.test.ts` joined.
-    assert len(skipped) == 33 and all(rel.endswith((".test.ts", ".test.tsx")) for rel, _t in skipped), \
+    # 37 with the four that joined after that: `components/ai/agent-timeline.test.ts`,
+    # `components/ai/task-stream.test.ts`, `lib/api/upload-limit-parity.test.ts` and
+    # `lib/profile-maps.test.ts`. 41 with the four the forward bridges' own tests
+    # added: `lib/api/normalize-followups.test.ts`, `lib/hooks/analytics.test.ts`,
+    # `lib/i18n/translations.test.ts` and `components/common/bar-chart.test.tsx`.
+    # 42 with the locale provider's own: `lib/i18n/locale-context.test.tsx`.
+    # 43 with the portability and ingestion bodies' own:
+    # `lib/hooks/portability.test.ts`.
+    assert len(skipped) == 43 and all(rel.endswith((".test.ts", ".test.tsx")) for rel, _t in skipped), \
         (f"{len(skipped)} files are skipped and not one ships: a name in that set that is not a test file "
          "would be a subscriber hidden from the table by the pattern rather than by measurement")
     skipped_names = {rel.rsplit("/", 1)[-1] for rel, _t in skipped}
@@ -2879,10 +2903,9 @@ def test_the_heartbeat_interval_has_one_definer_and_every_shipped_claim_names_it
         # SECURITY.md's keep-alive mention moved again (148 -> 150): the 10.2 bridge's `/growth`
         # joined the throttle list above it, the sentence itself unchanged. AGENTS.md's moved
         # 144 -> 150 for the same reason: the networking subagent's §2 whitelist row and the four
-        # §4 tool rows joined the tables above it, and that sentence did not change either; it sits
-        # at 155 now because the activity paragraph above it grew five lines -- still the
-        # same sentence, and a ledger keyed on a line number moves with whoever edits
-        # the text above it.
+        # §4 tool rows joined the tables above it, and that sentence did not change either. It
+        # moved once more to 155 when the deterministic-engines section (§7) joined the file
+        # below it -- again the sentence itself is untouched.
         ("AGENTS.md", 155), ("DEPLOYMENT.md", 8), ("SECURITY.md", 150),
     ], (f"{doc_vocabulary}: the docs' own vocabulary is censused, so this pass is not reporting on an "
         "empty set -- and a second file picking up the word is a signal the ledger has to grow")
@@ -3112,9 +3135,11 @@ def test_both_frame_parsers_default_a_nameless_frame_to_the_same_event_name():
          "inside a parser is the exit that drops a frame with neither data nor an explicit name")
     assert sorted((row["file"], row["line"], row["head"]) for row in by_role["type-union-member"]) == [
         ("agent-timeline.tsx", 33, "export type TraceKind ="),
-        # 765 rather than 744 since concurrent types.ts additions above the trace-step union
-        # moved its `kind:` head down.
-        ("types.ts", 765, "kind:"),
+        # 1180 rather than 744 since concurrent types.ts additions above the trace-step union
+        # moved its `kind:` head down. The forward bridges' own types (the growth
+        # engines, the offers, the portability and ingestion payloads) joined the file
+        # above it, and the union itself did not change.
+        ("types.ts", 1180, "kind:"),
         ('use-sse.ts', 15, 'event: SSEEventName | "message" | "progress" | "ping";'),
     ], (f"{[(r['file'], r['line'], r['head']) for r in by_role['type-union-member']]}: three type unions "
         "spell `message`, and only one of them names a frame -- the other two are the trace step kind "

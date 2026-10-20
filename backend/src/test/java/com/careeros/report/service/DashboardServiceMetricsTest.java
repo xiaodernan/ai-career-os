@@ -6,6 +6,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.careeros.activity.repository.AgentRunRepository;
+import com.careeros.ai.AiServiceClient;
 import com.careeros.application.repository.ApplicationEventRepository;
 import com.careeros.application.repository.ApplicationRepository;
 import com.careeros.interview.repository.InterviewSessionRepository;
@@ -46,7 +47,8 @@ class DashboardServiceMetricsTest {
                 mock(JobRepository.class),
                 mock(JobMatchRepository.class),
                 mock(AgentRunRepository.class),
-                dashboard);
+                dashboard,
+                mock(AiServiceClient.class));
     }
 
     @Test

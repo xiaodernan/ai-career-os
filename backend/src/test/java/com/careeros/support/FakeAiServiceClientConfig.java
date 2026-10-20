@@ -288,8 +288,357 @@ public class FakeAiServiceClientConfig {
             record("deleteMemory");
         }
 
-        private static Map<String, Object> map(Object... kv) {
-            Map<String, Object> m = new LinkedHashMap<>();
+        /**
+         * What the follow-up reminder bridge answers with (11.3): one contact past its
+         * relation's cadence, with the engine's own drafted message.
+         */
+        @Override
+        public List<Map<String, Object>> followUps(UUID userId) {
+            record("followUps");
+            return List.of(map("id", UUID.randomUUID().toString(),
+                    "name", "Alex Chen", "company", "FakeCorp", "relation", "recruiter",
+                    "priority", "overdue", "days_since", 45, "cadence_days", 30,
+                    "suggested_message", "Hi Alex, hope things are going well at FakeCorp."));
+        }
+
+        /**
+         * What the insight-digest bridge answers with (15.3): the engine's own stalled
+         * list, stage mix and headline rates.
+         */
+        @Override
+        public Map<String, Object> insightDigest(UUID userId, List<Map<String, Object>> applications) {
+            record("insightDigest");
+            return map("generatedAt", "2026-10-20T00:00:00+00:00",
+                    "windowDays", 14,
+                    "totalApplications", 3,
+                    "activePipeline", 2,
+                    "stageCounts", map("applied", 2, "oa", 1, "interview", 0,
+                            "final_round", 0, "offer", 0),
+                    "responseRate", 0.5,
+                    "offerRate", 0.0,
+                    "stalledCount", 1,
+                    "stalled", List.of(map("id", UUID.randomUUID().toString(),
+                            "title", "Backend Engineer", "company", "FakeCorp",
+                            "status", "applied", "daysSinceLastActivity", 30)),
+                    "signals", List.of("1 application(s) have gone quiet past 14 days."));
+        }
+
+        /**
+         * What the export bridge answers with (13.1): a bundle whose manifest carries
+         * the content hash the redaction path recomputes.
+         */
+        @Override
+        public Map<String, Object> exportBundle(UUID userId, boolean anonymized,
+                                                Map<String, Object> sections) {
+            record("exportBundle");
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put("profile", map("id", userId.toString()));
+            data.put("resumes", List.of());
+            data.put("knowledge", List.of());
+            data.put("job_descriptions", List.of());
+            data.put("interviews", List.of());
+            data.put("memories", List.of());
+            // The backend's own sections travel in the bundle too -- that is what
+            // makes an export complete rather than a reading list.
+            data.put("applications", sections == null ? List.of() : sections.get("applications"));
+            data.put("growth_plans", sections == null ? List.of() : sections.get("growth_plans"));
+            return map("schema_version", "1.1.0",
+                    "generator", "ai-career-os",
+                    "generated_at", "2026-10-20T00:00:00+00:00",
+                    "user", map("id", userId.toString(), "anonymized", anonymized),
+                    "manifest", map("schema_version", "1.1.0", "generator", "ai-career-os",
+                            "counts", map("profile", 1, "resumes", 0, "knowledge", 0,
+                                    "job_descriptions", 0, "interviews", 0, "memories", 0,
+                                    "applications", 0, "growth_plans", 0),
+                            "content_hash", "fake-hash", "anonymized", anonymized),
+                    "data", data);
+        }
+
+        @Override
+        public Map<String, Object> importPlan(UUID userId, Map<String, Object> bundle,
+                                               Map<String, Object> existing) {
+            record("importPlan");
+            return map("schema_version", "1.0.0",
+                    "source_content_hash", "fake-hash",
+                    "sections", map("profile", List.of(map("op", "update", "id", userId.toString(),
+                            "content_hash", "fake-hash"))),
+                    "op_counts", map("create", 0, "update", 1, "delete", 0, "total", 1));
+        }
+
+        @Override
+        public Map<String, Object> redactBundle(UUID userId, Map<String, Object> bundle,
+                                                 List<String> drop) {
+            record("redactBundle");
+            return map("schema_version", "1.0.0",
+                    "generator", "ai-career-os",
+                    "generated_at", "2026-10-20T00:00:00+00:00",
+                    "user", map("id", userId.toString(), "anonymized", false),
+                    "manifest", map("schema_version", "1.0.0", "generator", "ai-career-os",
+                            "counts", map("profile", 1, "resumes", 0, "knowledge", 0,
+                                    "job_descriptions", 0, "interviews", 0, "memories", 0),
+                            "content_hash", "fake-hash", "anonymized", false,
+                            "redacted_sections", drop == null ? List.of() : drop),
+                    "data", map("profile", map("id", userId.toString())));
+        }
+
+        @Override
+        public Map<String, Object> parseFeed(String feed, String source, UUID userId) {
+            record("parseFeed");
+            return map("postings", List.of(map("title", "Backend Engineer", "company", "FakeCorp",
+                    "location", "Shanghai", "source", source)), "count", 1);
+        }
+
+        @Override
+        public Map<String, Object> dedupeJobs(List<Map<String, Object>> postings, UUID userId) {
+            record("dedupeJobs");
+            return map("unique", postings == null ? List.of() : postings,
+                    "duplicates", List.of(),
+                    "inputCount", postings == null ? 0 : postings.size(),
+                    "uniqueCount", postings == null ? 0 : postings.size(),
+                    "duplicateCount", 0);
+        }
+
+        @Override
+        public Map<String, Object> freshnessSweep(List<Map<String, Object>> postings, int maxAgeDays,
+                                                   int staleSeenDays, UUID userId) {
+            record("freshnessSweep");
+            return map("fresh", postings == null ? List.of() : postings,
+                    "stale", List.of(), "expired", List.of(), "undated", List.of(),
+                    "counts", map("fresh", postings == null ? 0 : postings.size(),
+                            "stale", 0, "expired", 0, "undated", 0));
+        }
+
+        @Override
+        public Map<String, Object> planIngest(String feed, String source,
+                                               List<Map<String, Object>> existing,
+                                               int maxAgeDays, int staleSeenDays, UUID userId) {
+            record("planIngest");
+            return map("source", source,
+                    "create", List.of(), "update", List.of(), "close", List.of(),
+                    "duplicates", List.of(),
+                    "counts", map("incoming", 0, "create", 0, "update", 0, "close", 0, "duplicates", 0));
+        }
+
+        /**
+         * What the health-report bridge answers with (16.1): the engine's own verdict,
+         * error rate, cost and latency figures.
+         */
+        @Override
+        public Map<String, Object> healthReport(UUID userId, List<Map<String, Object>> runs) {
+            record("healthReport");
+            return map("verdict", "healthy",
+                    "errorRate", 0.0,
+                    "totalRuns", 12,
+                    "totalCostUsd", 0.42,
+                    "totalTokens", 8400,
+                    "p50LatencyMs", 1200,
+                    "p95LatencyMs", 3100,
+                    "alerts", List.of(),
+                    "regressions", List.of());
+        }
+
+        /**
+         * What the salary benchmark answers with (12.1): the engine's own percentiles
+         * and sample size.
+         */
+        @Override
+        public Map<String, Object> salaryBenchmark(UUID userId,
+                                                   com.careeros.ai.dto.OfferDtos.SalaryRequest request) {
+            record("salaryBenchmark");
+            return map("role", request.role(),
+                    "sampleSize", 8,
+                    "percentiles", map("p25", 300000, "p50", 420000, "p75", 560000),
+                    "currency", request.currency() == null ? "CNY" : request.currency());
+        }
+
+        /**
+         * What the negotiation coach answers with (12.2): the verdict, the leverage
+         * and the talking points.
+         */
+        @Override
+        public Map<String, Object> negotiate(UUID userId,
+                                             com.careeros.ai.dto.OfferDtos.NegotiationRequest request) {
+            record("negotiate");
+            return map("verdict", "below_market",
+                    "offerBase", request.offerBase(),
+                    "benchmark", map("p50", 420000),
+                    "leverage", "Your match score is strong; anchor above the median.",
+                    "talkingPoints", List.of("Lead with the projects that match the role."));
+        }
+
+        /**
+         * What the offer comparison answers with (12.3 / 12.5): the engine's own
+         * rows and its pick.
+         */
+        @Override
+        public Map<String, Object> compareOffers(UUID userId,
+                                                  com.careeros.ai.dto.OfferDtos.CompareOffersRequest request) {
+            record("compareOffers");
+            List<Map<String, Object>> rows = new ArrayList<>();
+            for (var offer : request.offers()) {
+                rows.add(map("label", offer.label(), "base", offer.base(), "bonus", offer.bonus(),
+                        "firstYearCash", offer.base() + offer.bonus(),
+                        "annualEquity", 0, "totalComp", offer.base() + offer.bonus()));
+            }
+            return map("rows", rows, "best", rows.isEmpty() ? null : rows.get(0),
+                    "notes", List.of());
+        }
+
+        /**
+         * What the counter-offer draft answers with (12.4): the anchor and the
+         * reasons behind it.
+         */
+        @Override
+        public Map<String, Object> counterOffer(UUID userId,
+                                                 com.careeros.ai.dto.OfferDtos.CounterOfferRequest request) {
+            record("counterOffer");
+            return map("anchor", 480000,
+                    "reasons", List.of("Your match score clears the bar for this band."),
+                    "script", "Based on the scope of the role and my experience, I would like to discuss a base of 480000.");
+        }
+
+        /**
+         * What the granular growth engines answer with. Each is the engine's own
+         * shape; the doubles carry enough for the controller tests to pin the
+         * pass-through and nothing else.
+         */
+        @Override
+        public Map<String, Object> gapAnalysis(UUID userId,
+                                               com.careeros.ai.dto.GrowthEngineRequest request) {
+            record("gapAnalysis");
+            return map("targetRole", request.targetRole(), "coverage", 0.42,
+                    "gaps", List.of(map("name", "Kubernetes", "importance", "must")));
+        }
+
+        @Override
+        public Map<String, Object> readiness(UUID userId,
+                                              com.careeros.ai.dto.GrowthEngineRequest request) {
+            record("readiness");
+            return map("verdict", "not_ready", "coverage", 0.42, "gapCount", 3,
+                    "coveredCount", 5, "blockers", List.of("Kubernetes"));
+        }
+
+        @Override
+        public Map<String, Object> learningPlan(UUID userId,
+                                                com.careeros.ai.dto.GrowthEngineRequest request) {
+            record("learningPlan");
+            return map("phases", List.of(map("phase", "foundation", "label", "Foundation",
+                    "items", List.of(map("topic", "Kubernetes basics", "priority", "must")))));
+        }
+
+        @Override
+        public Map<String, Object> skillDemand(UUID userId,
+                                                com.careeros.ai.dto.GrowthEngineRequest request) {
+            record("skillDemand");
+            return map("skills", List.of(map("name", "Kubernetes", "count", 12)));
+        }
+
+        @Override
+        public Map<String, Object> learningPriority(UUID userId,
+                                                     com.careeros.ai.dto.GrowthEngineRequest request) {
+            record("learningPriority");
+            return map("priorities", List.of(map("skill", "Kubernetes", "priority", "must",
+                    "marketDemand", 12)));
+        }
+
+        @Override
+        public Map<String, Object> progression(UUID userId,
+                                                com.careeros.ai.dto.GrowthEngineRequest request) {
+            record("progression");
+            return map("steps", List.of(map("role", "Platform Engineer", "reachable", true)),
+                    "missing", List.of("Kubernetes"));
+        }
+
+        @Override
+        public Map<String, Object> interviewPrep(UUID userId,
+                                                 com.careeros.ai.dto.GrowthEngineRequest request) {
+            record("interviewPrep");
+            return map("study", List.of(map("topic", "Kubernetes", "why", "It is a gap.")),
+                    "rehearse", List.of(map("topic", "Distributed systems")),
+                    "likelyTopics", List.of("Scaling"));
+        }
+
+        @Override
+        public Map<String, Object> storyBank(UUID userId,
+                                              com.careeros.ai.dto.ProfileEngineRequest request) {
+            record("storyBank");
+            return map("stories", List.of(map("title", "Payments rewrite",
+                    "evidence", "Led the payments rewrite")));
+        }
+
+        @Override
+        public Map<String, Object> roleSuggestions(UUID userId,
+                                                    com.careeros.ai.dto.ProfileEngineRequest request) {
+            record("roleSuggestions");
+            return map("roles", List.of(map("role", "Senior Backend Engineer", "score", 0.8)));
+        }
+
+        @Override
+        public Map<String, Object> progress(UUID userId,
+                                             com.careeros.ai.dto.ProgressRequest request) {
+            record("progress");
+            return map("baseline", request.previous() == null,
+                    "closed", List.of(), "improved", List.of(), "regressed", List.of(),
+                    "stillOpen", List.of(),
+                    "previousCoverage", 0.42, "currentCoverage", 0.5, "delta", 0.08);
+        }
+
+        /**
+         * What the outreach generator answers with (11.2): the message and the
+         * evidence it cited.
+         */
+        @Override
+        public Map<String, Object> outreach(UUID userId,
+                                             com.careeros.ai.dto.OutreachRequest request) {
+            record("outreach");
+            return map("message", "Hi " + request.name() + " — hope you've been well.",
+                    "purpose", request.purpose() == null ? "referral" : request.purpose(),
+                    "sources", List.of());
+        }
+
+        /**
+         * What the pipeline funnel answers with (15.1): the stage counts and the
+         * conversion at each step.
+         */
+        @Override
+        public Map<String, Object> pipelineFunnel(UUID userId,
+                                                    List<Map<String, Object>> applications) {
+            record("pipelineFunnel");
+            return map("pipeline", List.of(
+                    map("stage", "applied", "count", 2, "conversionFromApplied", 1.0),
+                    map("stage", "oa", "count", 1, "conversionFromApplied", 0.5)),
+                    "appliedCount", 2, "savedCount", 0, "rejectedCount", 0,
+                    "totalApplications", applications == null ? 0 : applications.size());
+        }
+
+        /**
+         * What the response rate answers with (15.2): the rates and the
+         * per-stage durations.
+         */
+        @Override
+        public Map<String, Object> responseRate(UUID userId,
+                                                 List<Map<String, Object>> applications) {
+            record("responseRate");
+            return map("appliedCount", 2, "respondedCount", 1, "responseRate", 0.5,
+                    "offerCount", 0, "offerRate", 0.0,
+                    "interviewCount", 0, "interviewRate", 0.0, "timeInStage", Map.of());
+        }
+
+        /**
+         * What the company brief answers with (4.8): the corpus's own rows for
+         * one company.
+         */
+        @Override
+        public Map<String, Object> companyBrief(UUID userId,
+                                                 com.careeros.ai.dto.CompanyBriefRequest request) {
+            record("companyBrief");
+            return map("company", request.company(),
+                    "roles", List.of(map("title", "Backend Engineer", "location", "Shanghai")),
+                    "skills", List.of(map("name", "Java", "count", 4)),
+                    "interviewTopics", List.of("System design"));
+        }
+
+        private static Map<String, Object> map(Object... kv) {            Map<String, Object> m = new LinkedHashMap<>();
             for (int i = 0; i < kv.length; i += 2) {
                 m.put(String.valueOf(kv[i]), kv[i + 1]);
             }

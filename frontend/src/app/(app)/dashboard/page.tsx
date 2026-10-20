@@ -30,6 +30,7 @@ import { MatchRing, scoreBand } from "@/components/ai/match-ring";
 import { SectionHeading } from "@/components/common/export-buttons";
 import { LoadingListSkeleton, LoadingMetricGridSkeleton } from "@/components/common/loading-skeletons";
 import { SectionBoundary, isEndpointMissing } from "@/components/common/query-boundary";
+import { useLocale } from "@/lib/i18n/locale-context";
 import { missingEndpointMessage } from "@/lib/api/missing-endpoint";
 import { JobCard } from "@/components/jobs/job-card";
 import { APPLICATION_STAGES, stageMeta } from "@/lib/pipeline";
@@ -57,6 +58,7 @@ function useGreeting(): string {
 }
 
 export default function DashboardPage() {
+  const { t } = useLocale();
   const greeting = useGreeting();
   const { data: user } = useUser();
   const dashboard = useDashboard();
@@ -107,7 +109,7 @@ export default function DashboardPage() {
             </span>
           </>
         }
-        description="Your job search at a glance — every figure here is read live from the API."
+        description={t("dashboard.description")}
         actions={
           <>
             <Button variant="ai" asChild>
@@ -146,21 +148,21 @@ export default function DashboardPage() {
             >
               <StatCard
                 icon={<Briefcase className="size-4" aria-hidden />}
-                label="Applications"
+                label={t("dashboard.applications")}
                 value={metrics.applications ?? metrics.inPipeline}
-                hint="roles in flight"
+                hint={t("dashboard.rolesInFlight")}
               />
               <StatCard
                 icon={<Target className="size-4" aria-hidden />}
-                label="Interviews"
+                label={t("dashboard.interviews")}
                 value={metrics.interviews}
-                hint="reached or practiced"
+                hint={t("dashboard.reachedOrPracticed")}
               />
               <StatCard
                 icon={<Trophy className="size-4" aria-hidden />}
-                label="Offers"
+                label={t("dashboard.offers")}
                 value={metrics.offers}
-                hint="ready for decision"
+                hint={t("dashboard.readyForDecision")}
               />
               {typeof metrics.avgMatch === "number" ? (
                 <Card>
@@ -179,9 +181,9 @@ export default function DashboardPage() {
               ) : null}
               <StatCard
                 icon={<Gauge className="size-4" aria-hidden />}
-                label="Needs attention"
+                label={t("dashboard.needsAttention")}
                 value={metrics.needsAttention}
-                hint="stale or due reminders"
+                hint={t("dashboard.staleOrDue")}
               />
             </div>
           ) : dashboard.isError && isEndpointMissing(dashboard.error) ? (
@@ -220,8 +222,8 @@ export default function DashboardPage() {
                   <SectionHeading
                     eyebrow="Applications"
                     icon={<ListChecks className="size-4" aria-hidden />}
-                    title="Pipeline"
-                    description="Counts per stage, live from the applications board."
+                    title={t("dashboard.pipeline")}
+                    description={t("dashboard.pipelineDescription")}
                     action={
                       <Button variant="ghost" size="xs" asChild>
                         <Link href="/applications">
@@ -316,8 +318,8 @@ export default function DashboardPage() {
                   <SectionHeading
                     eyebrow="Waiting on you"
                     icon={<AlertTriangle className="size-4" aria-hidden />}
-                    title="Needs attention"
-                    description="Reminders that have come due, and applications with no step logged in two weeks."
+                    title={t("dashboard.attention")}
+                    description={t("dashboard.attentionDescription")}
                     action={
                       <Button variant="ghost" size="xs" asChild>
                         <Link href="/applications">
@@ -341,8 +343,8 @@ export default function DashboardPage() {
                   ) : !attention.length ? (
                     <EmptyState
                       icon={<CheckCircle2 aria-hidden />}
-                      title="Nothing needs attention"
-                      description="Every application has a recent step logged."
+                      title={t("dashboard.noAttention")}
+                      description={t("dashboard.noAttentionDescription")}
                     />
                   ) : (
                     <ul className="divide-y divide-border/60">
@@ -400,7 +402,7 @@ export default function DashboardPage() {
                   <SectionHeading
                     eyebrow="Recommendations"
                     icon={<Sparkles className="size-4" aria-hidden />}
-                    title="Where to focus"
+                    title={t("dashboard.whereToFocus")}
                     description={
                       data?.recommendedJobs?.length
                         ? "Ranked by the matching agent against your resume."
@@ -458,8 +460,8 @@ export default function DashboardPage() {
                   <SectionHeading
                     eyebrow="Agent activity"
                     icon={<ActivityIcon className="size-4" aria-hidden />}
-                    title="Recent AI runs"
-                    description="Every match, tailor and ingestion the agents performed."
+                    title={t("dashboard.recentRuns")}
+                    description={t("dashboard.recentRunsDescription")}
                     action={
                       <Button variant="ghost" size="xs" asChild>
                         <Link href="/activity">
@@ -485,8 +487,8 @@ export default function DashboardPage() {
                   ) : (
                     <EmptyState
                       icon={<ActivityIcon aria-hidden />}
-                      title="No AI runs yet"
-                      description="Run a match or tailor a resume and the orchestrator will log every step here."
+                      title={t("dashboard.noRuns")}
+                      description={t("dashboard.noRunsDescription")}
                     />
                   )}
                 </CardContent>
@@ -527,8 +529,8 @@ export default function DashboardPage() {
                   <SectionHeading
                     eyebrow="Knowledge base"
                     icon={<Library className="size-4" aria-hidden />}
-                    title="What agents can cite"
-                    description="Sources ingestion feeds the retrieval layer."
+                    title={t("dashboard.knowledgeBase")}
+                    description={t("dashboard.knowledgeBaseDescription")}
                     action={
                       <Button variant="ghost" size="xs" asChild>
                         <Link href="/knowledge">
@@ -586,8 +588,8 @@ export default function DashboardPage() {
                   <SectionHeading
                     eyebrow="AI usage"
                     icon={<Sparkles className="size-4" aria-hidden />}
-                    title="Agent spend"
-                    description="Requests and tokens the agents billed against your budget."
+                    title={t("dashboard.aiUsage")}
+                    description={t("dashboard.aiUsageDescription")}
                     action={
                       <Button variant="ghost" size="xs" asChild>
                         <Link href="/activity">
@@ -638,8 +640,8 @@ export default function DashboardPage() {
                   ) : (
                     <EmptyState
                       icon={<Sparkles aria-hidden />}
-                      title="No AI spend yet"
-                      description="Match a job or tailor a resume and the token counts appear here."
+                      title={t("dashboard.noSpend")}
+                      description={t("dashboard.noSpendDescription")}
                     />
                   )}
                 </CardContent>
@@ -653,8 +655,8 @@ export default function DashboardPage() {
                   <SectionHeading
                     eyebrow="Gap analysis"
                     icon={<TrendingUp className="size-4" aria-hidden />}
-                    title="Top skill gaps"
-                    description="Across your matched jobs."
+                    title={t("dashboard.skillGaps")}
+                    description={t("dashboard.skillGapsDescription")}
                   />
                 </CardHeader>
                 <CardContent className="space-y-2">
@@ -685,12 +687,69 @@ export default function DashboardPage() {
                   ) : (
                     <EmptyState
                       icon={<TrendingUp aria-hidden />}
-                      title="No gaps measured yet"
-                      description="Run a match against a job and its missing skills rank here by importance."
+                      title={t("dashboard.noGaps")}
+                      description={t("dashboard.noGapsDescription")}
                       action={
                         <Button variant="outline" size="sm" asChild>
                           <Link href="/jobs">
                             Open Jobs
+                            <ArrowRight aria-hidden />
+                          </Link>
+                        </Button>
+                      }
+                    />
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Follow-up reminders — contacts ranked by their relation's cadence (11.3) */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <SectionHeading
+                    eyebrow="Networking"
+                    icon={<Users className="size-4" aria-hidden />}
+                    title={t("dashboard.followUps")}
+                    description={t("dashboard.followUpsDescription")}
+                    action={
+                      <Button variant="ghost" size="xs" asChild>
+                        <Link href="/networking">
+                          Open
+                          <ArrowRight aria-hidden />
+                        </Link>
+                      </Button>
+                    }
+                  />
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {(data?.followUps?.length ?? 0) > 0 ? (
+                    data!.followUps!.slice(0, 3).map((f) => (
+                      <div key={f.id} className="flex items-start gap-2 text-sm">
+                        <Badge
+                          variant={f.priority === "overdue" ? "destructive" : "warning"}
+                          className="mt-0.5 shrink-0 text-2xs font-normal capitalize"
+                        >
+                          {f.priority}
+                        </Badge>
+                        <div className="min-w-0">
+                          <p className="font-medium">{f.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {[f.company, f.relation].filter(Boolean).join(" · ") || "—"}
+                            {f.daysSince != null && ` · ${f.daysSince}d ago`}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  ) : dashboard.isPending ? (
+                    <LoadingListSkeleton rows={2} />
+                  ) : (
+                    <EmptyState
+                      icon={<Users aria-hidden />}
+                      title={t("dashboard.noFollowUps")}
+                      description={t("dashboard.noFollowUpsDescription")}
+                      action={
+                        <Button variant="outline" size="sm" asChild>
+                          <Link href="/networking">
+                            Open Networking
                             <ArrowRight aria-hidden />
                           </Link>
                         </Button>
@@ -781,6 +840,7 @@ function ResumeScore({
   data: DashboardPayload | null | undefined;
   resumes: { data?: NormalizedPage<Resume> };
 }) {
+  const { t } = useLocale();
   const score =
     (typeof data?.score === "number" ? data.score : data?.score?.overall) ??
     (typeof data?.resume?.score === "number" ? data.resume.score : data?.resume?.score?.overall) ??
@@ -791,7 +851,7 @@ function ResumeScore({
       <EmptyState
         className="py-6"
         icon={<Gauge aria-hidden />}
-        title="No resume score yet"
+        title={t("dashboard.noResumeScore")}
         description="Upload and parse a resume — the reviewer agent grades bullets, structure, impact and keyword coverage."
         action={
           <Button variant="ai" size="sm" asChild>
@@ -808,7 +868,7 @@ function ResumeScore({
   const band = scoreBand(score);
   return (
     <div className="flex items-center gap-4">
-      <MatchRing value={score} size={68} thickness={6} label="Resume score" />
+      <MatchRing value={score} size={68} thickness={6} label={t("dashboard.resumeScore")} />
       <div className="min-w-0 text-sm">
         <p className={cn("font-medium", band === "strong" && "text-success", band === "good" && "text-primary", band === "fair" && "text-warning", band === "weak" && "text-destructive")}>
           {band === "strong" ? "Interview-ready" : band === "good" ? "Solid baseline" : band === "fair" ? "Needs work" : "Weak — start here"}
@@ -838,36 +898,37 @@ function StatusPill({ status }: { status: string }) {
 }
 
 function OnboardingCard({ hasResume }: { hasResume: boolean }) {
+  const { t } = useLocale();
   const steps = [
     {
       done: hasResume,
       icon: <FileText className="size-4" aria-hidden />,
-      title: "Upload your resume",
-      description: "Parsing builds the structured profile and knowledge base every agent cites from.",
+      title: t("dashboard.stepUpload"),
+      description: t("dashboard.stepUploadDescription"),
       href: "/resumes",
       cta: "Upload",
     },
     {
       done: false,
       icon: <Briefcase className="size-4" aria-hidden />,
-      title: "Add a job description",
-      description: "Paste any JD in Jobs → Analyze a JD to extract requirements and hidden signals.",
+      title: t("dashboard.stepJd"),
+      description: t("dashboard.stepJdDescription"),
       href: "/jobs",
       cta: "Paste a JD",
     },
     {
       done: false,
       icon: <Target className="size-4" aria-hidden />,
-      title: "Run your first match",
-      description: "The matcher scores you per dimension and cites the resume lines behind every number.",
+      title: t("dashboard.stepMatch"),
+      description: t("dashboard.stepMatchDescription"),
       href: "/jobs",
       cta: "Match a job",
     },
     {
       done: false,
       icon: <Users className="size-4" aria-hidden />,
-      title: "Track the pipeline",
-      description: "Saved jobs flow through the kanban: saved → applied → OA → interview → offer.",
+      title: t("dashboard.stepTrack"),
+      description: t("dashboard.stepTrackDescription"),
       href: "/applications",
       cta: "Open board",
     },
@@ -878,10 +939,10 @@ function OnboardingCard({ hasResume }: { hasResume: boolean }) {
       <CardHeader>
         <CardTitle className="text-base flex items-center gap-2">
           <Sparkles className="size-4 text-primary" aria-hidden />
-          Let&apos;s build your workspace
+          {t("dashboard.onboardingTitle")}
         </CardTitle>
         <CardDescription>
-          Nothing here is pre-filled — these steps unlock every feature, in order.
+          {t("dashboard.onboardingDescription")}
         </CardDescription>
       </CardHeader>
       <CardContent>

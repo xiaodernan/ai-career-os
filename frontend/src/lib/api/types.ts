@@ -671,6 +671,22 @@ export interface AttentionItem {
   updatedAt?: string | null;
 }
 
+/**
+ * One contact needing a follow-up, ranked by its relation's cadence. The draft
+ * message is the ai-service's own, so the tile never invents text the engine did
+ * not produce.
+ */
+export interface FollowUpItem {
+  id: string;
+  name?: string;
+  company?: string | null;
+  relation?: string | null;
+  priority?: string | null;
+  daysSince?: number | null;
+  cadenceDays?: number | null;
+  suggestedMessage?: string | null;
+}
+
 export interface DashboardPayload {
   metrics?: DashboardMetrics;
   /** either {status: count} or [{status,count}] */
@@ -679,6 +695,8 @@ export interface DashboardPayload {
   skillGaps?: SkillGap[];
   /** The rows behind `metrics.needsAttention`, most-due reminder first. */
   attention?: AttentionItem[];
+  /** Contacts ranked by their relation's cadence, each with a drafted message. */
+  followUps?: FollowUpItem[];
   resume?: (Pick<Resume, "id" | "title" | "status" | "currentVersionId"> & {
     score?: ResumeScore | number;
   }) | null;
@@ -721,6 +739,403 @@ export interface TextIngestResult {
   documentId?: string;
   source_id?: string;
   sourceId?: string;
+}
+
+/* ------------------------------------------------------------------ */
+/* Analysis                                                           */
+/* ------------------------------------------------------------------ */
+
+/** One stalled application in the insight digest. */
+export interface StalledApplication {
+  id: string;
+  title?: string;
+  company?: string;
+  status?: string;
+  daysSinceLastActivity?: number;
+}
+
+/**
+ * The weekly insight digest (15.3): stalled applications, live stage mix, and
+ * headline rates, composed by the ai-service's analytics engine.
+ */
+export interface InsightDigest {
+  generatedAt?: string;
+  windowDays?: number;
+  totalApplications?: number;
+  activePipeline?: number;
+  stageCounts?: Record<string, number>;
+  responseRate?: number;
+  offerRate?: number;
+  stalledCount?: number;
+  stalled?: StalledApplication[];
+  signals?: string[];
+  growthDeltas?: unknown[];
+  topMatches?: unknown[];
+}
+
+/** One stage of the pipeline funnel (15.1). */
+export interface FunnelStage {
+  stage?: string;
+  count?: number;
+  conversionFromApplied?: number;
+  stepConversion?: number | null;
+}
+
+/** 15.1 — how many applications reached each stage, and where the leak is. */
+export interface PipelineFunnel {
+  pipeline?: FunnelStage[];
+  appliedCount?: number;
+  savedCount?: number;
+  rejectedCount?: number;
+  totalApplications?: number;
+}
+
+/** 15.2 — the reply / interview / offer rates and the per-stage durations. */
+export interface ResponseRate {
+  appliedCount?: number;
+  respondedCount?: number;
+  responseRate?: number;
+  offerCount?: number;
+  offerRate?: number;
+  interviewCount?: number;
+  interviewRate?: number;
+  timeInStage?: Record<string, { avgDays?: number | null; medianDays?: number | null; n?: number }>;
+}
+
+/* ------------------------------------------------------------------ */
+/* Monitoring                                                         */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Production monitoring (16.1): agent health, cost, and regression detection.
+ * The report is composed by the ai-service's monitoring engine.
+ */
+export interface HealthReport {
+  verdict?: string;
+  errorRate?: number;
+  totalRuns?: number;
+  totalCostUsd?: number;
+  totalTokens?: number;
+  p50LatencyMs?: number;
+  p95LatencyMs?: number;
+  alerts?: string[];
+  regressions?: Array<{ metric: string; direction: string; severity: string }>;
+}
+
+/* ------------------------------------------------------------------ */
+/* Job ingestion (14.2-14.3)                                         */
+/* ------------------------------------------------------------------ */
+
+/** One raw posting as a connector hands it over. */
+export interface RawPosting {
+  id?: string;
+  title?: string;
+  company?: string;
+  location?: string;
+  remote_type?: string;
+  employment_type?: string;
+  salary_min?: number | null;
+  salary_max?: number | null;
+  salary_currency?: string;
+  description?: string;
+  skills?: string[];
+  external_url?: string | null;
+  posted_at?: string | null;
+  source?: string;
+  [key: string]: unknown;
+}
+
+/** The parse result (14.2): the raw postings a feed carried. */
+export interface ParsedFeed {
+  postings?: RawPosting[];
+  count?: number;
+}
+
+/** The dedupe result (14.3): survivors, losers, and the counts. */
+export interface PostingCollection {
+  unique?: RawPosting[];
+  duplicates?: RawPosting[];
+  inputCount?: number;
+  uniqueCount?: number;
+  duplicateCount?: number;
+}
+
+/** The freshness sweep (14.3): the corpus partitioned by age. */
+export interface FreshnessSweep {
+  fresh?: Array<{ id?: string; title?: string }>;
+  stale?: Array<{ id?: string; title?: string; daysSinceSeen?: number }>;
+  expired?: Array<{ id?: string; title?: string; ageDays?: number }>;
+  undated?: Array<{ id?: string; title?: string }>;
+  counts?: { fresh: number; stale: number; expired: number; undated: number };
+}
+
+/** The ingestion plan (14.3): the three writes a sweep needs. */
+export interface IngestPlan {
+  source?: string;
+  create?: RawPosting[];
+  update?: RawPosting[];
+  close?: Array<{ id?: string; title?: string }>;
+  duplicates?: RawPosting[];
+  counts?: {
+    incoming: number;
+    create: number;
+    update: number;
+    close: number;
+    duplicates: number;
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/* Granular growth engines (10.1-10.13)                               */
+/* ------------------------------------------------------------------ */
+
+/** One skill the market asks for (10.9). */
+export interface DemandSkill {
+  name?: string;
+  count?: number;
+  share?: number;
+}
+
+/** 10.9 — which skills a role family's postings ask for, and how often. */
+export interface SkillDemand {
+  role?: string;
+  location?: string;
+  skills?: DemandSkill[];
+  sampleSize?: number;
+}
+
+/** One gap the candidate has against the target role (10.1). */
+export interface GrowthGap {
+  name?: string;
+  importance?: string;
+  reason?: string;
+}
+
+/** 10.1 — the distance between the profile and the target role. */
+export interface GapReport {
+  targetRole?: string;
+  coverage?: number;
+  expectedSkillCount?: number;
+  coveredCount?: number;
+  partialCount?: number;
+  gaps?: GrowthGap[];
+}
+
+/** 10.7 — target-role readiness, as one verdict. */
+export interface ReadinessVerdict {
+  targetRole?: string;
+  verdict?: string;
+  coverage?: number;
+  gapCount?: number;
+  coveredCount?: number;
+  blockers?: string[];
+}
+
+/** One study item in a learning phase (10.5). */
+export interface LearningItem {
+  topic?: string;
+  priority?: string;
+  note?: string;
+  resourceHint?: string;
+}
+
+/** 10.5 — the phased learning plan. */
+export interface LearningPlan {
+  phases?: Array<{ phase?: string; label?: string; items?: LearningItem[] }>;
+}
+
+/** 10.12 — a gap ranked by importance and market pull. */
+export interface LearningPriorityItem {
+  skill?: string;
+  priority?: string;
+  marketDemand?: number;
+  reason?: string;
+}
+
+/** 10.12 — the learning priority ranking. */
+export interface LearningPriority {
+  priorities?: LearningPriorityItem[];
+}
+
+/** One stepping-stone role (10.11). */
+export interface ProgressionStep {
+  role?: string;
+  reachable?: boolean;
+  score?: number;
+  reason?: string;
+}
+
+/** 10.11 — the progression plan toward a dream role. */
+export interface ProgressionPlan {
+  steps?: ProgressionStep[];
+  missing?: string[];
+}
+
+/** 10.13 — the pre-interview checklist. */
+export interface InterviewPrep {
+  study?: Array<{ topic?: string; why?: string }>;
+  rehearse?: Array<{ topic?: string; why?: string }>;
+  likelyTopics?: string[];
+}
+
+/** One STAR story (6.5). */
+export interface Story {
+  title?: string;
+  evidence?: string;
+  question?: string;
+  bullets?: string[];
+}
+
+/** 6.5 — the story bank. */
+export interface StoryBank {
+  stories?: Story[];
+}
+
+/** One suggested target role (10.10). */
+export interface SuggestedRole {
+  role?: string;
+  score?: number;
+  reason?: string;
+}
+
+/** 10.10 — the target roles this profile could plausibly aim at. */
+export interface RoleSuggestions {
+  roles?: SuggestedRole[];
+}
+
+/** 4.8 — what the corpus says about one company. */
+export interface CompanyBrief {
+  company?: string;
+  roles?: Array<{ title?: string; location?: string }>;
+  skills?: Array<{ name?: string; count?: number }>;
+  interviewTopics?: string[];
+}
+
+/** 10.6 — the skill progress between two snapshots. */
+export interface SkillProgress {
+  baseline?: boolean;
+  closed?: string[];
+  improved?: string[];
+  regressed?: string[];
+  stillOpen?: string[];
+  previousCoverage?: number;
+  currentCoverage?: number;
+  delta?: number;
+}
+
+/** 11.2 — the drafted outreach message and the evidence it cited. */
+export interface OutreachDraft {
+  message?: string;
+  purpose?: string;
+  sources?: unknown[];
+}
+
+/* ------------------------------------------------------------------ */
+/* Salary & offers (12.1-12.5)                                       */
+/* ------------------------------------------------------------------ */
+
+/** The salary percentiles the benchmark answers with (12.1). */
+export interface SalaryBenchmark {
+  role?: string;
+  location?: string;
+  sampleSize?: number;
+  percentiles?: { p25?: number; p50?: number; p75?: number };
+  currency?: string;
+  note?: string;
+}
+
+/** The negotiation coach's answer (12.2). */
+export interface NegotiationPlan {
+  verdict?: string;
+  offerBase?: number;
+  benchmark?: { p25?: number; p50?: number; p75?: number };
+  leverage?: string;
+  talkingPoints?: string[];
+  note?: string;
+}
+
+/** One offer in a comparison (12.3 / 12.5). */
+export interface OfferRow {
+  label?: string;
+  base?: number;
+  bonus?: number;
+  firstYearCash?: number;
+  annualEquity?: number;
+  totalComp?: number;
+  assessment?: { verdict?: string };
+}
+
+/** The offer comparison (12.3 / 12.5). */
+export interface OfferComparison {
+  rows?: OfferRow[];
+  best?: OfferRow | null;
+  notes?: string[];
+}
+
+/** The counter-offer draft (12.4). */
+export interface CounterOfferDraft {
+  anchor?: number;
+  reasons?: string[];
+  script?: string;
+  note?: string;
+}
+
+/* ------------------------------------------------------------------ */
+/* Data portability                                                   */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The export bundle (13.1): a versioned, content-hashed snapshot of everything
+ * the user owns. The hash covers only the data payload, so re-exporting
+ * unchanged data yields the same hash.
+ */
+export interface ExportBundle {
+  schema_version?: string;
+  generator?: string;
+  generated_at?: string;
+  user?: { id?: string; anonymized?: boolean };
+  manifest?: {
+    schema_version?: string;
+    generator?: string;
+    counts?: Record<string, number>;
+    content_hash?: string;
+    anonymized?: boolean;
+    redacted_sections?: string[];
+  };
+  data?: Record<string, unknown>;
+}
+
+/** One write operation in an import plan (13.2). */
+export interface ImportOp {
+  op: "create" | "update" | "delete";
+  id?: string;
+  content_hash?: string | null;
+}
+
+/** The idempotent write plan for a re-import (13.2). */
+export interface ImportPlan {
+  schema_version?: string;
+  source_content_hash?: string;
+  sections?: Record<string, ImportOp[]>;
+  op_counts?: { create: number; update: number; delete: number; total: number };
+}
+
+/** A bundle with sections dropped (13.3). */
+export type RedactedBundle = ExportBundle;
+
+/* ------------------------------------------------------------------ */
+/* Rate limiting                                                      */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Rate-limit status (16.2): the current rate-limit configuration and the caller's
+ * current bucket usage.
+ */
+export interface RateLimitStatus {
+  enabled?: boolean;
+  aiPerMinute?: number;
+  authPerMinute?: number;
+  aiRemaining?: number;
 }
 
 /* ------------------------------------------------------------------ */
@@ -768,6 +1183,28 @@ export interface SSETraceEvent {
   durationMs?: number;
   payload?: Record<string, unknown>;
   [key: string]: unknown;
+}
+
+/* ------------------------------------------------------------------ */
+/* Contacts                                                            */
+/* ------------------------------------------------------------------ */
+
+/**
+ * One person in the networking registry (`ContactDtos.ContactItem`), roadmap 11.1.
+ * The optionals are absence on the wire, never empty strings; `lastTouchAt` is the
+ * user's own claim about when contact last happened.
+ */
+export interface Contact {
+  id: string;
+  name: string;
+  role?: string | null;
+  company?: string | null;
+  relation?: string | null;
+  email?: string | null;
+  notes?: string | null;
+  lastTouchAt?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 /* ------------------------------------------------------------------ */

@@ -5,6 +5,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.careeros.activity.repository.AgentRunRepository;
+import com.careeros.ai.AiServiceClient;
 import com.careeros.application.repository.ApplicationEventRepository;
 import com.careeros.application.repository.ApplicationRepository;
 import com.careeros.application.service.ApplicationService;
@@ -47,7 +48,8 @@ class DashboardServiceKanbanTest {
                 mock(JobRepository.class),
                 mock(JobMatchRepository.class),
                 mock(AgentRunRepository.class),
-                mock(DashboardRepository.class));
+                mock(DashboardRepository.class),
+                mock(AiServiceClient.class));
     }
 
     private Kanban kanbanFor(List<Object[]> rows) {

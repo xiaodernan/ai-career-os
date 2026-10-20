@@ -78,6 +78,8 @@ export const endpoints = {
   knowledgeDocuments: "/knowledge/documents",
 
   /* ---------------- AI actions (thin proxies over ai-service) ------------ */
+  contacts: "/contacts",
+  contact: (id: string) => `/contacts/${seg(id)}`,
   growthReport: "/growth-report",
   copilotChat: "/copilot/chat",
   /** The same turn as an SSE stream — `token` / `status` frames, then `done` with the reply. */
@@ -90,6 +92,11 @@ export const endpoints = {
   reportsDashboard: "/reports/dashboard",
   /** legacy alias kept so existing hooks don't fork */
   dashboard: "/reports/dashboard",
+  analysisInsightDigest: "/analysis/insight-digest",
+  analysisPipelineFunnel: "/analysis/pipeline-funnel",
+  analysisResponseRate: "/analysis/response-rate",
+  monitoringHealthReport: "/monitoring/health-report",
+  rateLimitStatus: "/rate-limit/status",
   conversations: "/conversations",
   conversation: (id: string) => `/conversations/${seg(id)}`,
   conversationMessages: (id: string) => `/conversations/${seg(id)}/messages`,
@@ -98,6 +105,37 @@ export const endpoints = {
   /* ---------------- Long-term memory (what the agents remember) ----------- */
   memories: "/memories",
   memory: (id: string) => `/memories/${seg(id)}`,
+
+  /* ---------------- Data portability (13.1-13.3) ------------------------- */
+  dataExport: "/data-portability/export",
+  dataImportPlan: "/data-portability/import-plan",
+  dataRedact: "/data-portability/redact",
+
+  /* ---------------- Salary & offers (12.1-12.5) ------------------------ */
+  offerSalaryBenchmark: "/offers/salary-benchmark",
+  offerNegotiate: "/offers/negotiate",
+  offerCompare: "/offers/compare",
+  offerCounterOffer: "/offers/counter-offer",
+
+  /* ---------------- Granular growth engines (10.1-10.13) --------------- */
+  growthGapAnalysis: "/growth/gap-analysis",
+  growthReadiness: "/growth/readiness",
+  growthLearningPlan: "/growth/learning-plan",
+  growthSkillDemand: "/growth/skill-demand",
+  growthLearningPriority: "/growth/learning-priority",
+  growthProgression: "/growth/progression",
+  growthInterviewPrep: "/growth/interview-prep",
+  growthStoryBank: "/growth/story-bank",
+  growthRoleSuggestions: "/growth/role-suggestions",
+  growthProgress: "/growth/progress",
+  companyBrief: "/companies/brief",
+  outreachDraft: "/outreach/draft",
+
+  /* ---------------- Job ingestion (14.2-14.3) --------------------------- */
+  jobIngestParse: "/jobs/ingest/parse",
+  jobIngestDedupe: "/jobs/ingest/dedupe",
+  jobIngestFreshness: "/jobs/ingest/freshness-sweep",
+  jobIngestPlan: "/jobs/ingest/plan",
 
   /** SSE stream for any async AI task (match, tailor, copilot turn, ingestion…) */
   aiStream: (taskId: string) => `/ai/stream/${seg(taskId)}`,

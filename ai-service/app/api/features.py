@@ -28,6 +28,9 @@ from app.features import interview_prep as interview_prep_mod
 from app.features import analytics as analytics_mod
 from app.features import ingestion as ingestion_mod
 from app.features import monitoring as monitoring_mod
+from app.features import export as export_mod
+from app.features import import_plan as import_plan_mod
+from app.features import export_redact as export_redact_mod
 from app.features.cover_letter import generate as cover_generate
 
 router = APIRouter(prefix="/internal/features", tags=["features"])
@@ -561,7 +564,11 @@ async def response_rate_ep(req: ResponseRateReq, ctx: Ctx = Depends(require_inte
 
 
 class InsightDigestReq(BaseModel):
-    applications: list[ApplicationInput] = Field(min_length=1)
+    """The digest's input. `applications` is optional because an account with no
+    applications is a real state, not an error: the engine then answers "the
+    funnel is empty", which is the honest digest for a workspace that has not
+    started. A required list would make the first run a 422."""
+    applications: list[ApplicationInput] = Field(default_factory=list)
     stale_days: int = Field(default=14, ge=1, le=120)
     growth_deltas: list[dict] | None = None
     top_matches: list[dict] | None = None
@@ -608,7 +615,15 @@ async def freshness_sweep_ep(req: FreshnessSweepReq, ctx: Ctx = Depends(require_
 
 
 class PlanIngestReq(BaseModel):
-    postings: list[dict] = Field(min_length=1)
+    """The sweep plan's input. Exactly one of `postings` / `feed` carries the batch.
+
+    `postings` is an already-parsed list; `feed` is the raw RSS/Atom XML or
+    board-API JSON the caller got from a source, which the engine parses first.
+    `plan_ingest` accepts either, so the route does too -- but exactly one, so a
+    request cannot carry a batch and a feed that disagree.
+    """
+    postings: list[dict] | None = Field(default=None, min_length=1)
+    feed: str | None = Field(default=None, min_length=1)
     existing: list[dict] | None = None
     source: str = "rss"
     max_age_days: int = Field(default=60, ge=1, le=365)
@@ -618,16 +633,22 @@ class PlanIngestReq(BaseModel):
 @router.post("/plan-ingest")
 async def plan_ingest_ep(req: PlanIngestReq, ctx: Ctx = Depends(require_internal)):
     """14.3 -- one plan for a sweep: create / update / close + within-batch duplicates."""
+    if (req.postings is None) == (req.feed is None):
+        raise HTTPException(400, "send exactly one of postings / feed")
     run_id = await _run(ctx, "ingestion", "plan_ingest")
     result = ingestion_mod.plan_ingest(
-        req.postings, source=req.source, existing=req.existing,
+        req.postings if req.postings is not None else req.feed,
+        source=req.source, existing=req.existing,
         max_age_days=req.max_age_days, stale_seen_days=req.stale_seen_days)
     await observability.finish_run(run_id, "completed")
     return result
 
 
 class HealthReportReq(BaseModel):
-    runs: list[dict] = Field(min_length=1)
+    """The health report's input. `runs` is optional for the same reason the
+    digest's `applications` is: an account that has never run an agent is a real
+    state, and the engine's answer for it is "nothing to report", not a 422."""
+    runs: list[dict] = Field(default_factory=list)
     baseline_summary: dict | None = None
     usage_events: list[dict] | None = None
     current_metrics: dict | None = None
@@ -682,3 +703,53 @@ async def follow_ups_ep(req: FollowUpsReq, ctx: Ctx = Depends(require_internal))
     ranked = reminders_mod.follow_ups_for(contacts, include_fresh=req.include_fresh)
     await observability.finish_run(run_id, "completed")
     return {"follow_ups": ranked, "count": len(ranked)}
+
+
+class ExportBundleReq(BaseModel):
+    """The export request.
+
+    `sections` carries the rows the BACKEND owns -- `applications` and
+    `growth_plans`. The ai-service cannot read them (it does not write them),
+    so the bridge hands them over and the hash is computed here, over the whole
+    bundle, in one place. A section the bridge did not send stays absent.
+    """
+    anonymized: bool = False
+    sections: dict | None = None
+
+
+@router.post("/export-bundle")
+async def export_bundle_ep(req: ExportBundleReq, ctx: Ctx = Depends(require_internal)):
+    """13.1 -- export all user data as a versioned, hashed bundle."""
+    run_id = await _run(ctx, "export", "export_bundle")
+    bundle = await export_mod.export_bundle(ctx.user_id, anonymized=req.anonymized,
+                                            extra=req.sections)
+    await observability.finish_run(run_id, "completed")
+    return bundle
+
+
+class ImportPlanReq(BaseModel):
+    bundle: dict
+    existing: dict | None = None
+
+
+@router.post("/import-plan")
+async def import_plan_ep(req: ImportPlanReq, ctx: Ctx = Depends(require_internal)):
+    """13.2 -- plan an idempotent re-import from a bundle."""
+    run_id = await _run(ctx, "import", "import_plan")
+    plan = import_plan_mod.plan_import(req.bundle, existing=req.existing)
+    await observability.finish_run(run_id, "completed")
+    return plan
+
+
+class RedactBundleReq(BaseModel):
+    bundle: dict
+    drop: list[str] | None = None
+
+
+@router.post("/redact-bundle")
+async def redact_bundle_ep(req: RedactBundleReq, ctx: Ctx = Depends(require_internal)):
+    """13.3 -- redact sections from a bundle before sharing."""
+    run_id = await _run(ctx, "export", "redact_bundle")
+    result = export_redact_mod.redact_bundle(req.bundle, drop=req.drop)
+    await observability.finish_run(run_id, "completed")
+    return result

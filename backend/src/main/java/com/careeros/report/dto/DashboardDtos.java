@@ -52,6 +52,16 @@ public final class DashboardDtos {
     }
 
     /**
+     * One contact needing a follow-up, ranked by its relation's cadence. The draft
+     * message is the ai-service's own, so the tile never invents text the engine did
+     * not produce.
+     */
+    public record FollowUpItem(UUID id, String name, String company, String relation,
+                               String priority, Integer daysSince, Integer cadenceDays,
+                               String suggestedMessage) {
+    }
+
+    /**
      * `avgMatch` is the mean of the newest match per scored job (0..1) and null when nothing has
      * been scored; `needsAttention` counts open applications that are waiting on the user, and
      * `attention` is the rows behind that count -- same predicate, so the strip cannot say three
@@ -63,6 +73,7 @@ public final class DashboardDtos {
                                     Float avgMatch,
                                     long needsAttention,
                                     List<AttentionItem> attention,
+                                    List<FollowUpItem> followUps,
                                     ResumeSummary currentResume,
                                     SkillGapDigest skillGaps,
                                     List<RecommendedJob> recommendedJobs,

@@ -281,3 +281,72 @@
     animation-iteration-count: infinite !important;
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* Accessibility (17.2) — keyboard focus, skip links, screen reader  */
+/* ------------------------------------------------------------------ */
+
+/* Skip link: visible only on focus, lets keyboard users jump to main content */
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 0;
+  z-index: 9999;
+  padding: 0.75rem 1rem;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-weight: 500;
+  text-decoration: none;
+  border-radius: 0 0 var(--radius-md) 0;
+  transition: top 0.15s ease-out;
+}
+
+.skip-link:focus {
+  top: 0;
+}
+
+/* Consistent, visible focus indicator for all interactive elements */
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* Remove default outline only when :focus-visible is supported */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Screen-reader only content */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Ensure interactive elements have a minimum touch target size */
+button, a, [role="button"], input, select, textarea {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Respect user's contrast preferences */
+@media (prefers-contrast: more) {
+  :root {
+    --muted-foreground: oklch(0.4 0.02 265);
+    --border: oklch(0.85 0.005 265);
+  }
+}
+
+/* High contrast mode adjustments */
+@media (forced-colors: active) {
+  .card {
+    border: 1px solid CanvasText;
+  }
+}

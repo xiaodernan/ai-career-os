@@ -17,6 +17,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/common/empty-state";
+import { GrowthEnginesPanel } from "@/components/growth/growth-engines-panel";
+import { PageHeader } from "@/components/common/page-header";
+import { useLocale } from "@/lib/i18n/locale-context";
 import { useGrowthReport } from "@/lib/hooks/actions";
 import { formatSalary } from "@/lib/format";
 import type { GrowthReport } from "@/lib/api/types";
@@ -39,6 +42,7 @@ const VERDICT_VARIANT: Record<string, "success" | "ai" | "warning" | "destructiv
 };
 
 export default function GrowthPage() {
+  const { t } = useLocale();
   const [targetRole, setTargetRole] = React.useState("");
   const [location, setLocation] = React.useState("");
   // One report in state, doing two jobs: it is what renders, and its gap block is
@@ -72,18 +76,21 @@ export default function GrowthPage() {
 
   return (
     <div className="space-y-4">
+      <PageHeader
+        title={t("growth.title")}
+        description={t("growth.description")}
+      />
       <Card>
         <CardHeader>
-          <CardTitle>Growth report</CardTitle>
+          <CardTitle>{t("growth.buildReport")}</CardTitle>
           <CardDescription>
-            One call composes readiness, the gap behind it, the market&apos;s salary band, a
-            phased learning plan, and what moved since your last run.
+            {t("growth.buildReportDescription")}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form className="flex flex-wrap items-end gap-3" onSubmit={submit}>
             <div className="min-w-0 flex-1 basis-64 space-y-2">
-              <Label htmlFor="growth-role">Target role</Label>
+              <Label htmlFor="growth-role">{t("growth.targetRole")}</Label>
               <Input
                 id="growth-role"
                 value={targetRole}
@@ -93,7 +100,7 @@ export default function GrowthPage() {
               />
             </div>
             <div className="min-w-0 flex-1 basis-44 space-y-2">
-              <Label htmlFor="growth-location">Location (optional)</Label>
+              <Label htmlFor="growth-location">{t("growth.location")}</Label>
               <Input
                 id="growth-location"
                 value={location}
@@ -109,12 +116,12 @@ export default function GrowthPage() {
               disabled={targetRole.trim().length < 10}
             >
               <ScanSearch aria-hidden />
-              Analyze
+              {t("growth.analyze")}
             </Button>
           </form>
           {targetRole.trim().length > 0 && targetRole.trim().length < 10 && (
             <p className="mt-2 text-xs text-muted-foreground">
-              Name the role fully — the analyzer needs at least 10 characters to target it.
+              {t("growth.roleTooShort")}
             </p>
           )}
         </CardContent>
@@ -130,8 +137,8 @@ export default function GrowthPage() {
 
       {!build.isPending && !report && (
         <EmptyState
-          title="No report yet"
-          description="Name the role you're aiming at and run the analyzer — the report is built from your resume's evidence, not from a form you fill in."
+          title={t("growth.noReport")}
+          description={t("growth.noReportDescription")}
           icon={<Target aria-hidden />}
         />
       )}
@@ -157,9 +164,9 @@ export default function GrowthPage() {
             <CardContent className="space-y-3">
               <CoverageBar coverage={gap?.coverage ?? readiness.skillReadiness ?? 0} />
               <div className="grid grid-cols-3 gap-2 text-center text-sm">
-                <Count label="Covered" value={readiness.coveredCount ?? 0} />
-                <Count label="Partial" value={gap?.partialCount ?? 0} />
-                <Count label="Open" value={readiness.gapCount ?? 0} />
+                <Count label={t("growth.covered")} value={readiness.coveredCount ?? 0} />
+                <Count label={t("growth.partial")} value={gap?.partialCount ?? 0} />
+                <Count label={t("growth.open")} value={readiness.gapCount ?? 0} />
               </div>
               {(readiness.blockers ?? []).length > 0 && (
                 <ul className="space-y-1 text-sm text-destructive">
@@ -174,7 +181,7 @@ export default function GrowthPage() {
           {salary?.percentiles && (salary.percentiles.p50 ?? 0) > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle>Salary band</CardTitle>
+                <CardTitle>{t("growth.salaryBand")}</CardTitle>
                 <CardDescription>
                   {salary.sampleSize ?? 0} matched postings
                   {salary.location ? ` in ${salary.location}` : ""}
@@ -232,7 +239,7 @@ export default function GrowthPage() {
                 ))
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  Nothing to study — every expected skill has evidence behind it.
+                  {t("growth.nothingToStudy")}
                 </p>
               )}
             </CardContent>
@@ -240,11 +247,9 @@ export default function GrowthPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Progress</CardTitle>
+              <CardTitle>{t("growth.progress")}</CardTitle>
               <CardDescription>
-                {progress?.baseline
-                  ? "First report for this role — the next run diffs against this one."
-                  : "Against your previous report for this role."}
+                {progress?.baseline ? t("growth.progressBaseline") : t("growth.progressAgainstPrevious")}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -253,17 +258,22 @@ export default function GrowthPage() {
           </Card>
         </>
       )}
+
+      {/* The granular engines, each on its own (10.1-10.13) — the same ones the
+          report above composes, asked one question at a time. */}
+      <GrowthEnginesPanel />
     </div>
   );
 }
 
 /** One covered/partial/gap split, as one bar. */
 function CoverageBar({ coverage }: { coverage: number }) {
+  const { t } = useLocale();
   const pct = Math.round(Math.max(0, Math.min(1, coverage)) * 100);
   return (
     <div>
       <div className="flex items-baseline justify-between">
-        <span className="text-sm text-muted-foreground">Coverage</span>
+        <span className="text-sm text-muted-foreground">{t("growth.coverage")}</span>
         <span className="text-sm font-medium tabular-nums">{pct}%</span>
       </div>
       <div className="mt-1 h-2 overflow-hidden rounded-full bg-muted">

@@ -12,8 +12,9 @@ no database. The contract this file pins:
   of unchanged data (the primitive idempotent re-import needs);
 - ``anonymize`` strips the reserved PII fields and re-stamps the hash;
 - ``diff_bundles`` reports added / removed / changed per section;
-- backend-owned sections (``applications``, ``growth_plans``) are *reserved*
-  (absent) until the bridge fills them.
+- the backend-owned sections (``applications``, ``growth_plans``) travel in the
+  bundle since 1.1.0 -- the bridge hands them over, and the hash still covers
+  the whole document.
 """
 
 import json
@@ -69,15 +70,44 @@ def test_bundle_shape_and_manifest():
     assert m["generator"] == ex.GENERATOR
     assert m["counts"] == {
         "profile": 1, "resumes": 1, "knowledge": 1,
-        "job_descriptions": 1, "interviews": 1, "memories": 1}
+        "job_descriptions": 1, "interviews": 1, "memories": 1,
+        "applications": 0, "growth_plans": 0}
     assert m["anonymized"] is False
     assert isinstance(m["content_hash"], str) and len(m["content_hash"]) == 64
 
 
-def test_backend_sections_reserved_not_present():
+def test_the_backend_sections_come_from_the_bridge():
+    """Since 1.1.0 the backend's own sections travel in the bundle.
+
+    The ai-service cannot read them -- it does not write `applications` or
+    `growth_plans` -- so the bridge hands them over and the hash is computed
+    here, over the whole bundle. Without them an export is a reading list and
+    not a record of the search.
+    """
+    bundle = ex.build_bundle("u1", _sample_raw(), extra={
+        "applications": [{"id": "a1", "status": "applied"}],
+        "growth_plans": [{"id": "g1", "target_role": "Backend Engineer"}],
+    })
+    assert bundle["data"]["applications"] == [{"id": "a1", "status": "applied"}]
+    assert bundle["data"]["growth_plans"] == [
+        {"id": "g1", "target_role": "Backend Engineer"}]
+    assert bundle["manifest"]["counts"]["applications"] == 1
+    assert bundle["manifest"]["counts"]["growth_plans"] == 1
+    # And the hash covers them: the whole bundle is one hashed document.
+    assert bundle["manifest"]["content_hash"] == ex.content_hash(bundle["data"])
+
+
+def test_a_section_the_bridge_did_not_send_stays_absent():
+    """Absent and null are different facts.
+
+    "the user has no applications" and "the bridge did not ask" are not the
+    same claim, and the import path has to know which one it is looking at --
+    so a section that was not handed over is not filled with a null.
+    """
     bundle = ex.build_bundle("u1", _sample_raw())
-    assert "applications" not in bundle["data"]
-    assert "growth_plans" not in bundle["data"]
+    assert bundle["data"]["applications"] is None
+    assert bundle["data"]["growth_plans"] is None
+    assert bundle["manifest"]["counts"]["applications"] == 0
 
 
 def test_empty_bundle_counts_zero():
@@ -271,6 +301,40 @@ def test_write_read_bundle_roundtrip(tmp_path):
     assert loaded["data"]["resumes"][0]["id"] == "r1"
 
 
+def test_a_bundle_written_before_the_bridge_is_still_valid():
+    """A 1.0.0 backup predates the backend sections, and it is still a bundle.
+
+    The required set is read off the bundle's OWN schema version, so a user who
+    exports today and restores next year is not told their backup is broken
+    because the format grew two sections.
+    """
+    bundle = ex.build_bundle("u1", _sample_raw())
+    legacy = {
+        "schema_version": "1.0.0",
+        "generator": ex.GENERATOR,
+        "generated_at": bundle["generated_at"],
+        "user": bundle["user"],
+        "manifest": dict(bundle["manifest"], schema_version="1.0.0"),
+        "data": {s: bundle["data"][s] for s in ex.LEGACY_SECTIONS},
+    }
+    legacy["manifest"]["content_hash"] = ex.content_hash(legacy["data"])
+    assert ex.validate_bundle(legacy) == []
+
+
+def test_a_current_bundle_missing_a_backend_section_is_rejected():
+    """A 1.1.0 bundle without the backend sections was truncated.
+
+    The two facts -- "the user has no applications" (an empty list) and "the
+    section is missing" (a truncated export) -- are different, and the import
+    path has to be able to tell them apart.
+    """
+    bundle = ex.build_bundle("u1", _sample_raw())
+    del bundle["data"]["applications"]
+    bundle["manifest"]["content_hash"] = ex.content_hash(bundle["data"])
+    errs = ex.validate_bundle(bundle)
+    assert any("applications" in e for e in errs)
+
+
 async def test_gather_raw_is_the_async_preimage_of_build(monkeypatch):
     raw = _sample_raw()
 
@@ -304,6 +368,9 @@ async def test_gather_raw_is_the_async_preimage_of_build(monkeypatch):
     monkeypatch.setattr(ex, "fetch_memories", fake_memories)
 
     gathered = await ex.gather_raw("u1")
-    assert gathered.keys() == set(ex.SECTIONS)
+    # The gathered raw covers the sections the ai-service reads for itself; the
+    # backend's two are not among them (it cannot read them), so they arrive
+    # through `extra` instead.
+    assert gathered.keys() == set(ex.AI_SECTIONS)
     rebuilt = ex.build_bundle("u1", gathered)
     assert rebuilt["manifest"]["counts"]["interviews"] == 1

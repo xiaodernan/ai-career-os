@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter, Newsreader, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
+import { LocaleProvider } from "@/lib/i18n/locale-context";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -46,7 +47,9 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${newsreader.variable} ${jetbrains.variable} min-h-dvh bg-background text-foreground`}
       >
-        <Providers>{children}</Providers>
+        <LocaleProvider>
+          <Providers>{children}</Providers>
+        </LocaleProvider>
       </body>
     </html>
   );

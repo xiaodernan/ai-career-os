@@ -581,6 +581,71 @@ test.describe("golden journey — dashboard skill gaps", () => {
   });
 });
 
+test.describe("golden journey — the forward bridges", () => {
+  /**
+   * The 10.x/11.x/12.x/13.x/14.x/15.x/16.x bridges landed as backend routes with
+   * frontend surfaces of their own. This walks the ones that answer without a
+   * model — the growth report, the salary benchmark, the insight digest and the
+   * export bundle — because a route that 404s or binds the wrong field shows up
+   * here and nowhere else.
+   */
+  test("answers the growth, offer, analysis and export surfaces", async ({ api, authedPage }) => {
+    await seedParsedResume(api, "Bridge Resume");
+
+    // 10.2 — the growth report composes five engines in one call.
+    const report = await unwrap<{
+      readiness: { verdict: string; coverage: number };
+      gap: { targetRole: string };
+      salary: { percentiles: Record<string, number> };
+    }>(await api.post("/growth-report", { targetRole: "Senior Backend Engineer (Java)" }));
+    expect(report.readiness.verdict, "the report must carry a verdict").toBeTruthy();
+    expect(report.gap.targetRole).toContain("Senior Backend Engineer");
+    expect(report.salary.percentiles.p50, "the market band must be there").toBeGreaterThan(0);
+
+    // 10.1 — the gap engine on its own.
+    const gap = await unwrap<{ targetRole: string; coverage: number }>(
+      await api.post("/growth/gap-analysis", { targetRole: "Senior Backend Engineer (Java)" })
+    );
+    expect(gap.targetRole).toBe("Senior Backend Engineer (Java)");
+
+    // 12.1 — the salary benchmark reads the seeded corpus.
+    const benchmark = await unwrap<{ percentiles: Record<string, number>; sampleSize: number }>(
+      await api.post("/offers/salary-benchmark", { role: "Backend Engineer" })
+    );
+    expect(benchmark.percentiles.p50, "the benchmark must have a median").toBeGreaterThan(0);
+    expect(benchmark.sampleSize, "the benchmark must count its samples").toBeGreaterThan(0);
+
+    // 15.3 — the insight digest over the caller's own applications.
+    const digest = await unwrap<{ totalApplications: number; stageCounts: Record<string, number> }>(
+      await api.get("/analysis/insight-digest")
+    );
+    expect(digest.totalApplications).toBeGreaterThanOrEqual(0);
+    expect(digest.stageCounts).toBeTruthy();
+
+    // 15.1 / 15.2 — the funnel and the rates.
+    const funnel = await unwrap<{ pipeline: Array<{ stage: string; count: number }> }>(
+      await api.get("/analysis/pipeline-funnel")
+    );
+    expect(funnel.pipeline.length, "the funnel must have a stage per pipeline step").toBeGreaterThan(0);
+    const rates = await unwrap<{ appliedCount: number }>(await api.get("/analysis/response-rate"));
+    expect(rates.appliedCount).toBeGreaterThanOrEqual(0);
+
+    // 13.1 — the export bundle carries a content hash over the data.
+    const bundle = await unwrap<{
+      manifest: { content_hash: string; counts: Record<string, number> };
+      data: Record<string, unknown>;
+    }>(await api.post("/data-portability/export", {}));
+    expect(bundle.manifest.content_hash.length, "the bundle must be hashed").toBeGreaterThan(0);
+    expect(bundle.manifest.counts, "the bundle must count its sections").toBeTruthy();
+
+    // And the screens that render them all answer.
+    for (const path of ["/growth", "/offers", "/analysis", "/data", "/ingestion", "/monitoring"]) {
+      await authedPage.goto(path);
+      await expect(authedPage.getByRole("heading", { level: 1 })).toBeVisible({ timeout: 20_000 });
+    }
+  });
+});
+
 test.describe("golden journey — profile and notes", () => {
   /**
    * Two writing surfaces that shipped without browser cover: the knowledge

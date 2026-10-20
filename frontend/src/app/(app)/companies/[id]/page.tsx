@@ -5,9 +5,11 @@ import Link from "next/link";
 import { Building2, Globe, Tag, Code, Users, MapPin, ExternalLink } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/common/error-state";
 import { useCompany } from "@/lib/hooks/resources";
+import { useCompanyBrief } from "@/lib/hooks/growth";
 import { formatSalary } from "@/lib/format";
 import { ApiError } from "@/lib/api/client";
 import type { CompanySource, Job } from "@/lib/api/types";
@@ -26,6 +28,11 @@ export default function CompanyDetailPage() {
   const params = useParams<{ id: string }>();
   const id = params?.id ?? null;
   const company = useCompany(id);
+  // 4.8 — what the corpus says about this company. The engine reads the seeded
+  // postings, so this is a deterministic read, not a generated summary. The hook
+  // is called before the early returns below, because a hook after an early
+  // return is a hook that is sometimes not called at all.
+  const brief = useCompanyBrief();
 
   if (company.isPending) {
     return (
@@ -128,6 +135,58 @@ export default function CompanyDetailPage() {
           ) : (
             <p className="text-sm text-muted-foreground">No overview available yet.</p>
           )}
+        </CardContent>
+      </Card>
+
+      {/* 4.8 — the corpus's own read of this company */}
+      <Card className="col-span-full">
+        <CardHeader>
+          <CardTitle>What the postings say</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {brief.data ? (
+            <>
+              {(brief.data.skills ?? []).length > 0 && (
+                <div>
+                  <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                    Skills asked for
+                  </p>
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    {(brief.data.skills ?? []).map((s) => (
+                      <Badge key={s.name} variant="secondary">
+                        {s.name}
+                        {s.count != null && (
+                          <span className="ml-1 text-muted-foreground">×{s.count}</span>
+                        )}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {(brief.data.interviewTopics ?? []).length > 0 && (
+                <div>
+                  <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                    Interview topics
+                  </p>
+                  <p className="mt-1 text-sm">{brief.data.interviewTopics!.join(" · ")}</p>
+                </div>
+              )}
+            </>
+          ) : brief.isPending ? (
+            <p className="text-sm text-muted-foreground">Reading the corpus…</p>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              No postings in the corpus for this company yet.
+            </p>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            loading={brief.isPending}
+            onClick={() => brief.mutate({ company: c.name })}
+          >
+            Read the corpus
+          </Button>
         </CardContent>
       </Card>
 

@@ -39,6 +39,18 @@ from tests.test_invalidated_keys_are_queries_screens_mount import (  # noqa: F40
 )
 
 SOURCE_ACTIONS = "frontend/src/components/knowledge/source-actions.tsx"
+# The shared failure handler: one implementation of "what a failed write says",
+# imported by every mutation hook. See `lib/hooks/failure.ts`.
+FAILURE = "frontend/src/lib/hooks/failure.ts"
+# The forward bridges' own mutation hooks (11.2-11.3, 12.x, 13.x, 14.x, 10.x).
+# Each announces its failure through the shared handler, so a write that fails
+# says which write failed rather than failing silently.
+BRIDGE_HOOKS = {
+    "frontend/src/lib/hooks/data-portability.ts",
+    "frontend/src/lib/hooks/growth.ts",
+    "frontend/src/lib/hooks/ingestion.ts",
+    "frontend/src/lib/hooks/offers.ts",
+}
 CLIENT = "frontend/src/lib/api/client.ts"
 CREDENTIALS = "frontend/src/components/auth/credentials-form.tsx"
 FORGOT = "frontend/src/components/auth/forgot-password-form.tsx"
@@ -187,7 +199,7 @@ def test_every_mutation_the_app_declares_sits_in_a_function_the_walk_can_name():
     # `useRenameConversation`, `useDeleteConversation` (6a1c620) and `useImportJob` (bf2d91b)
     # were the last to join. Those commits changed the population without this census, which
     # is what this assertion is for -- it went red rather than quietly covering fewer sites.
-    assert len(pop) == 42, "the app declares %d mutations" % len(pop)
+    assert len(pop) == 65, "the app declares %d mutations" % len(pop)
     per_file = collections.Counter(s.rel for s in pop)
     assert per_file[AUTH_HOOKS] == 5 and per_file[ACTIONS] >= 25, "sites per hook file: %s" % dict(
         (k.split("/")[-1], v) for k, v in per_file.items()
@@ -213,7 +225,7 @@ def test_the_hook_announces_thirty_seven_failures_and_the_five_that_stay_quiet_a
         "useForgotPassword", "useLogin", "useLogout", "useRegister", "useResetPassword",
     ], "the hook-level silent set moved: %s" % sorted(s.name for s in quiet)
     assert {s.rel for s in quiet} == {AUTH_HOOKS}
-    assert len([s for s in sites() if s.hook_level]) == 37
+    assert len([s for s in sites() if s.hook_level]) == 60
     untyped = [s.where for s in sites() if "mutationFn" not in s.keys]
     assert not untyped, "a mutation with no mutationFn is not a request: %s" % untyped
 
@@ -305,9 +317,16 @@ def test_the_password_forms_announce_inline_while_the_signout_sites_announce_not
 
 
 def test_the_failure_helper_has_one_author_and_every_message_is_spent_once():
-    authors = [rel for rel, text in sources().items() if re.search(r"^function fail\(", text, re.M)]
-    assert authors == [ACTIONS], "fail() is authored in %s" % authors
-    text = sources()[ACTIONS]
+    # The helper lives in `lib/hooks/actions.ts` and every mutation hook imports it
+    # from there — one implementation of "what a failed write says to the user",
+    # so the message cannot drift between two files that each wrote their own.
+    authors = [
+        rel
+        for rel, text in sources().items()
+        if re.search(r"^(?:export\s+)?function fail\(", text, re.M)
+    ]
+    assert authors == [FAILURE], "fail() is authored in %s" % authors
+    text = sources()[FAILURE]
     assert "return (err: unknown) => toast.error(describe(err, fallback));" in text, (
         "fail() no longer builds a toast from the caller's own fallback sentence"
     )
@@ -315,7 +334,10 @@ def test_the_failure_helper_has_one_author_and_every_message_is_spent_once():
     reused = sorted(m for m, n in messages.items() if n > 1)
     # 35 rather than 32: the contacts registry's three writes each spent their own
     # sentence, on top of the growth report's one and the memory card's pair.
-    assert sum(messages.values()) == 35 and not reused, (
+    # 58 with the forward bridges' own writes: the export trio, the offer quartet,
+    # the ingestion quartet, the growth engines and the outreach draft each spend
+    # their own sentence, so a failure still says which write failed.
+    assert sum(messages.values()) == 58 and not reused, (
         "fail() messages: %d uses, %d distinct, reused: %s" % (
             sum(messages.values()), len(messages), reused
         )
@@ -350,12 +372,12 @@ def test_the_failure_helper_has_one_author_and_every_message_is_spent_once():
 
 def test_this_gate_reads_the_same_shipped_sources_as_the_gates_it_borrows():
     assert len(sources()) >= 100, "the shared source walk read %d files" % len(sources())
-    assert len(sites()) == 42 and len([s for s in sites() if s.hook_level]) == 37
+    assert len(sites()) == 65 and len([s for s in sites() if s.hook_level]) == 60
     assert callers("useLogout") and callers("useLogin") and callers("useForgotPassword")
     for rel in (ACTIONS, AUTH_HOOKS, SOURCE_ACTIONS, CREDENTIALS, FORGOT, RESET, TOPBAR):
         assert rel in sources(), "%s is not in the population this gate reads" % rel
     assert TOPBAR in {c.rel for c in callers("useLogout")}, (
         "the topbar no longer signs out, so this file's two sign-out sites are a different pair"
     )
-    outside = sorted({s.rel for s in sites()} - {ACTIONS, AUTH_HOOKS, SOURCE_ACTIONS})
+    outside = sorted({s.rel for s in sites()} - {ACTIONS, AUTH_HOOKS, SOURCE_ACTIONS} - BRIDGE_HOOKS)
     assert not outside, "a mutation appeared in a file this gate does not account for: %s" % outside

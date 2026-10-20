@@ -12,16 +12,21 @@ your own material; every agent step is recorded and inspectable.
 
 | Module | What it does |
 |---|---|
-| Career Command Center | pipeline health, resume score, skill gaps, recommended jobs, recent AI activity |
+| Career Command Center | pipeline health, resume score, skill gaps, recommended jobs, recent AI activity, follow-up reminders |
 | Resume Intelligence | upload PDF/DOCX/TXT → parse → structured profile + versioned resumes with live score |
 | Career Knowledge Base | everything you are (experience, projects, notes, JDs, interview feedback) chunked, embedded, hybrid-searchable |
 | RAG Copilot | query rewriting → vector + keyword + trigram retrieval → RRF fusion → rerank → compression → cited answers |
 | JD Analysis & Matching | requirements/skills/interview topics extracted; deterministic match scores (tech/exp/proj/edu) bound to resume evidence |
 | Tailoring & Cover Letters | job-targeted resume versions with a hard **no-fabrication verifier** and accept/reject diff |
 | Adaptive Mock Interviews | interviewer agent that drills, follows up and scales difficulty (mechanism → alternative → failure → scale); 8-dimension report + depth trajectory |
+| Growth Engine Panel | gap analysis, readiness, learning plan, skill demand, learning priority, progression, interview prep, story bank, role suggestions — each on its own |
 | Career Orchestrator | tool-calling agent over 19 domain tools with subagent handoff (resume / job research / JD analyst / RAG / interview / learning / tracker / networking) |
 | Application Tracker | Linear-style kanban with transition audit events |
-| Observability | every agent run: traces, tool calls, retrieval, tokens, cost — plus a built-in AI Activity view |
+| Analytics & Insights | pipeline funnel, response rates, stalled applications, weekly insight digest |
+| Salary & Offer Intelligence | market benchmarks, negotiation coaching, offer comparison by total comp, counter-offer drafts |
+| Job Ingestion | parse an RSS/Atom feed or a board API, de-duplicate it, sweep it for freshness, build one create/update/close plan |
+| Data Portability | export everything as a content-hashed bundle, preview an idempotent re-import, redact sections before sharing |
+| Observability | every agent run: traces, tool calls, retrieval, tokens, cost — plus a built-in AI Activity view and a health report |
 | RAG evaluation | golden-set harness: recall@k, precision@k, MRR, nDCG, faithfulness; A/B experiment reports |
 
 ## Architecture (summary)
@@ -78,7 +83,7 @@ database is never touched.
 ## Tests
 
 ```bash
-cd frontend    && npm test                     # vitest: normalizers, formatters, SSE, nav, pipeline taxonomy
+cd frontend    && npm test                     # vitest: normalizers, formatters, SSE, nav, i18n, pipeline taxonomy
 cd ai-service  && .venv/Scripts/python -m pytest # unit + orchestrator + contract gates (offline: mock/hash)
 cd backend     && mvn test                     # unit tests offline; *IT also need the infra below
 cd backend     && mvn test -Dtest='*Test'      # skip the *IT suite when Docker is not running

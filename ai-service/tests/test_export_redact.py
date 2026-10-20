@@ -49,9 +49,10 @@ def test_redact_invalid_section_raises():
 
 def test_redact_all_sections_yields_empty_data_new_hash():
     b = _bundle()
-    out = rd.redact_bundle(b, list(ex.VALID_SECTIONS) if hasattr(ex, "VALID_SECTIONS")
-                           else ["profile", "resumes", "knowledge",
-                                 "job_descriptions", "interviews", "memories"])
+    # The valid sections are the ones the export table declares, so a section
+    # the export gained (the backend's `applications` / `growth_plans`) can be
+    # dropped here too without a second list to keep in step.
+    out = rd.redact_bundle(b, list(rd.VALID_SECTIONS))
     assert out["data"] == {}
     assert out["manifest"]["redacted_sections"] == sorted(out["manifest"]["redacted_sections"])
 

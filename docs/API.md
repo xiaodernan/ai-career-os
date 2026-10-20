@@ -105,6 +105,21 @@ request and answers the engine's shape, and rate-limits as an AI-costing path.
 |---|---|---|
 | POST | `/growth-report` | `{targetRole, seniority, resumeVersionId, location, currency, targetSalary, previous}` → the composed report. `targetRole` is required and floored at 10 characters (the engine's own floor); everything else is optional, `currency` a 3-letter code. `previous` is a prior report's own shape, for the progress diff; a report is computed, not stored, so there is nothing to GET |
 
+### Analysis & monitoring
+
+The 15.x and 16.1 bridges. Both answers are computed by the AI service's own
+engines — the funnel, response rates and digest are deterministic reads over the
+caller's application history, and the health report is a deterministic read over
+the caller's agent runs. No model runs here.
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/analysis/insight-digest` | the weekly insight digest — the generated-at stamp, the staleness window, the total and active application counts, the live stage mix, the response and offer rates, the stalled count with its rows, and the engine's own signals. Reached-stage semantics are cumulative and a rejection counts as having reached the applied stage only — the honest bound of a schema that stores just the current status. No query parameters: the digest is computed for the caller |
+| GET | `/analysis/pipeline-funnel` | the pipeline funnel — one row per stage with the count that reached it and the conversion at each step, plus the applied / saved / rejected / total counts. Reached-stage semantics are cumulative: reaching the interview means the application also reached the applied stage |
+| GET | `/analysis/response-rate` | the response rates — of everything submitted, what fraction got any reply (a rejection included), what fraction reached an interview, what fraction reached an offer, and the average and median days per stage. Applications missing a timestamp are skipped for that stage's duration rather than counted as zero |
+| GET | `/monitoring/health-report` | agent health — the verdict (healthy / warn / regressed), the error rate, the run count, the cost and token totals, the latency percentiles, the alert list and the regression list. No query parameters: the window is the account's own |
+| GET | `/rate-limit/status` | the configured limits — whether limiting is on, the per-minute AI cap and the per-minute auth cap — plus the caller's remaining AI-bucket quota. Only the AI bucket is reported: it is keyed by the authenticated user id, so the number the page shows is the number the limiter enforces. The auth bucket is keyed by client IP, which the server cannot know from the principal alone — reporting a number for it would be a guess |
+
 ### Resumes (`/resumes`)
 
 | Method | Path | Notes |
@@ -139,6 +154,75 @@ request and answers the engine's shape, and rate-limits as an AI-costing path.
 | POST | `/jobs/{id}/cover-letter` | `{resumeVersionId?, mode, tone, length, previous, goal}` |
 | GET | `/companies` | list (`?q=&page=&size=`), name ascending — the order the pages partition by; each row is a CompanyItem — profile fields plus openRoleCount |
 | GET | `/companies/{id}` | `{company, openRoles}` — the profile including culture, interviewProcess and sources (the three POST accepts and no read path used to carry), and the company's status='open' roles in the board's own row shape, best match first, capped at Paging.MAX_PAGE_SIZE while company.openRoleCount stays the real total. Scoped by id, not by the board's ?company= name facet. Company rows are maintained by the application (the inline company field on job create/import); there are no client-facing write endpoints |
+| POST | `/companies/brief` | `{company, top?}` → what the corpus says about one company: its roles, the skills its postings ask for, and the interview topics they name. A deterministic read — a company the corpus does not carry answers with no rows rather than a plausible summary |
+
+### Job ingestion (`/jobs/ingest`)
+
+The 14.2-14.3 bridge. Every route is a deterministic read of the payload the
+caller brings: the parse is stdlib-only, the de-duplication is an exact
+fingerprint match, and the freshness sweep partitions by age. Nothing is fetched
+from the network here, and no model runs.
+
+| Method | Path | Notes |
+|---|---|---|
+| POST | `/jobs/ingest/parse` | `{feed, source}` → `{postings[], count}`. `feed` is RSS 2.0 / Atom XML or a board-API JSON payload; `source` names the connector. A broken or oversized feed raises rather than answering an empty success |
+| POST | `/jobs/ingest/dedupe` | `{postings[]}` → `{unique[], duplicates[], inputCount, uniqueCount, duplicateCount}`. Exact-fingerprint duplicates collapse to the newest / most complete survivor; the fingerprint is company + title + location, so the same title in two cities stays distinct |
+| POST | `/jobs/ingest/freshness-sweep` | `{postings, maxAgeDays?, staleSeenDays?}` → `{fresh[], stale[], expired[], undated[], counts}`. A posting with no usable date is reported under `undated` rather than silently bucketed as fresh |
+| POST | `/jobs/ingest/plan` | `{feed, source?, existing?, maxAgeDays?, staleSeenDays?}` → `{create[], update[], close[], duplicates[], counts}`. One plan for a sweep: `close` is proposed only for a posting that is expired *and* absent from this batch, so a still-live posting is never closed for not reappearing today |
+
+### Growth engines (`/growth`)
+
+The granular 10.x engines, each asked on its own. The 10.2 aggregate
+(`POST /growth-report`) composes the same engines for the growth page in one
+call; these routes are the same engines one at a time, so a caller that wants
+only the gap analysis does not have to run the whole report to get it.
+
+Every answer is the engine's own shape — the bridge forwards the request and
+owns none of it. All nine take the same request record, because they share a
+shape: a target role, optionally a resume version, and the specializations
+that narrow the question.
+
+| Method | Path | Notes |
+|---|---|---|
+| POST | `/growth/gap-analysis` | `{targetRole, seniority?, resumeVersionId?, location?, currency?, targetSalary?, top?}` → the coverage and the gaps. `targetRole` is required and floored at 10 characters (the engine's own floor) |
+| POST | `/growth/readiness` | the same request → one verdict (`ready` / `borderline` / `not_ready`), the coverage, the covered/partial/open counts, and the blockers. A must-gap caps a `ready` |
+| POST | `/growth/learning-plan` | the same request → the phased study items (foundation → core → applied) with category-aware resource hints |
+| POST | `/growth/skill-demand` | the same request → which skills a role family's postings ask for, and how often — the market-centric half of the gap view |
+| POST | `/growth/learning-priority` | the same request → the gaps enriched with their market demand and ranked by importance × market pull, so the candidate learns the most-asked-for missing skill first |
+| POST | `/growth/progression` | the same request → the stepping-stone role families that are reachable today and build the dream role's missing skills. `targetRole` is the role being aimed at |
+| POST | `/growth/interview-prep` | the same request → the pre-interview checklist: the weak areas to study, the strength stories to rehearse, and the likely topics |
+| POST | `/growth/story-bank` | `{resumeVersionId?, top?}` → the STAR stories drawn from the profile's own evidence |
+| POST | `/growth/role-suggestions` | `{resumeVersionId?, top?}` → the target roles this profile could plausibly aim at |
+| POST | `/growth/progress` | `{targetRole?, seniority?, resumeVersionId?, previous?}` → the skill progress: closed / improved / regressed / still open, and the coverage delta. `previous` is a prior gap report's own shape, for the diff; without it the answer is a baseline |
+
+### Outreach (`/outreach`)
+
+| Method | Path | Notes |
+|---|---|---|
+| POST | `/outreach/draft` | `{name, role?, company?, purpose?, context?, resumeVersionId?}` → the drafted message and the evidence it cited. `name` is required; `purpose` is the kind of message (referral / intro / coffee-chat / thank-you) and defaults to `referral`. The draft is **evidence-bound**: the validator strips any skill the profile does not support, so a message can only cite what the candidate can back up |
+
+### Offers (`/offers`)
+
+The 12.x bridges. Every answer is a deterministic read of the seeded corpus
+against the caller's own offer — no model invents a number here.
+
+| Method | Path | Notes |
+|---|---|---|
+| POST | `/offers/salary-benchmark` | `{role, location?, seniority?, targetSalary?, currency?}` → the percentiles (p25/p50/p75), the sample size and the currency. `role` is required and floored at two characters |
+| POST | `/offers/negotiate` | `{role, location?, seniority?, currency?, offerBase, matchScore?}` → the verdict, the benchmark it was measured against, the leverage and the talking points. `matchScore` is 0..1 and changes the leverage named |
+| POST | `/offers/compare` | `{role, location?, seniority?, currency?, matchScore?, offers}` → one row per offer (`label`, `base`, `bonus`, `firstYearCash`, `annualEquity`, `totalComp`, `assessment`), the `best` row, and the engine's notes. The ranking is by **total compensation** — first-year cash plus the grant annualized over its vest — while the market verdict compares **base** to the benchmark, because the benchmark is base salary. An offer with no grant ranks exactly as a cash-only one |
+| POST | `/offers/counter-offer` | `{role, location?, seniority?, currency?, offerBase, matchScore?}` → the deterministic anchor, the reasons behind it, and a script that phrases them. The anchor is computed, never guessed: no model writes a number here |
+
+### Data portability (`/data-portability`)
+
+The 13.1-13.3 bridge. The bundle's schema and its content hash are the AI
+service's — this route forwards the request and answers the engine's shape.
+
+| Method | Path | Notes |
+|---|---|---|
+| POST | `/data-portability/export` | `{anonymized?}` → the export bundle: `schema_version` (`1.1.0`), `generator`, `generated_at`, `user`, `manifest` (`counts`, `content_hash`, `anonymized`) and `data`. The hash covers only the data payload, so re-exporting unchanged data yields the same hash. `anonymized` strips the profile's PII fields before the bundle is built. Since 1.1.0 the bundle also carries the two sections the **backend** owns — `applications` and `growth_plans` — so an export is the candidate's pipeline and not only their reading list |
+| POST | `/data-portability/import-plan` | `{bundle, existing?}` → `{schema_version, source_content_hash, sections, op_counts}`. The plan is idempotent by construction: every op carries a per-item `content_hash` so unchanged rows are skipped. `existing` is the caller's current state, exported the same way, so the plan can tell a create from an update and a delete from a row that was never there. A bundle written before 1.1.0 is still accepted — the required set is read off the bundle's own schema version |
+| POST | `/data-portability/redact` | `{bundle, drop?}` → the bundle with the named sections removed, its content hash recomputed over what is left and `manifest.redacted_sections` recording what went. An unknown section name is rejected rather than silently dropping the wrong (or no) section |
 
 A query parameter binds by name, so one the endpoint does not declare is **ignored, not
 rejected**: `/jobs?remoteType=hybrid` answers 200 with the unfiltered board. `remote` takes a
@@ -250,6 +334,34 @@ tenant context via `core.deps.Ctx`.
 | POST | `/internal/features/cover-letter` | cover letter |
 | POST | `/internal/features/jd/suggestions` | improvement suggestions |
 | POST | `/internal/features/growth-report` | one call for the whole growth page: readiness + gap + salary, composed by `features/growth.py` (backend `growthReport`) |
+| POST | `/internal/features/insight-digest` | Epic 15.3 -- a weekly snapshot: stalled applications, live stage mix, headlines (backend `insightDigest`) |
+| POST | `/internal/features/health-report` | Epic 16.1 -- agent health, cost and regression verdict over a window (backend `healthReport`) |
+| POST | `/internal/features/follow-ups` | Epic 11.3 -- the contacts that have gone cold, ranked, each with a draft (backend `followUps`) |
+| POST | `/internal/features/parse-board` | Epic 14.2 -- a board-API JSON payload parsed into raw postings (backend `parseFeed`) |
+| POST | `/internal/features/dedupe-jobs` | Epic 14.3 -- the same posting seen from several sources, collapsed to one survivor (backend `dedupeJobs`) |
+| POST | `/internal/features/freshness-sweep` | Epic 14.3 -- the corpus split into fresh, stale (re-check) and expired (close) (backend `freshnessSweep`) |
+| POST | `/internal/features/plan-ingest` | Epic 14.3 -- one plan for a sweep: create / update / close, with the diff (backend `planIngest`) |
+| POST | `/internal/features/export-bundle` | Epic 13.1 -- the export bundle: every section, with a content hash over the data (backend `exportBundle`) |
+| POST | `/internal/features/import-plan` | Epic 13.2 -- the idempotent write plan for a bundle, per-item content hashes and all (backend `importPlan`) |
+| POST | `/internal/features/redact-bundle` | Epic 13.3 -- the bundle with sections dropped and the hash recomputed over what is left (backend `redactBundle`) |
+| POST | `/internal/features/salary-benchmark` | Epic 12.1 -- percentiles by role, seniority band and location (backend `salaryBenchmark`) |
+| POST | `/internal/features/negotiate` | Epic 12.2 -- an offer against the benchmark, with leverage and talking points (backend `negotiate`) |
+| POST | `/internal/features/compare-offers` | Epic 12.3 (with 12.5) -- several offers ranked by total comp, equity annualised (backend `compareOffers`) |
+| POST | `/internal/features/counter-offer` | Epic 12.4 -- the deterministic anchor and reasons a counter-offer is built from (backend `counterOffer`) |
+| POST | `/internal/features/gap-analysis` | Epic 10.1 -- the distance between the profile and the target role (backend `gapAnalysis`) |
+| POST | `/internal/features/readiness` | Epic 10.7 -- target-role readiness, as one verdict (backend `readiness`) |
+| POST | `/internal/features/learning-plan` | Epic 10.5 -- the plan that closes the gaps readiness named (backend `learningPlan`) |
+| POST | `/internal/features/skill-demand` | Epic 10.9 -- which skills the market asks for, counted from the corpus (backend `skillDemand`) |
+| POST | `/internal/features/learning-priority` | Epic 10.12 -- gaps ranked by importance and by market pull (backend `learningPriority`) |
+| POST | `/internal/features/progression` | Epic 10.11 -- stepping-stone roles toward a dream role, reachable and gated (backend `progression`) |
+| POST | `/internal/features/interview-prep` | Epic 10.13 -- the pre-interview checklist: study the gaps, rehearse the strengths (backend `interviewPrep`) |
+| POST | `/internal/features/story-bank` | Epic 6.5 -- STAR stories drawn from the profile's own evidence (backend `storyBank`) |
+| POST | `/internal/features/role-suggestions` | Epic 10.10 -- the target roles this profile could plausibly aim at (backend `roleSuggestions`) |
+| POST | `/internal/features/progress` | Epic 10.6 -- skill progress tracked between two snapshots (backend `progress`) |
+| POST | `/internal/features/outreach` | Epic 11.2 -- a referral or networking message, built only from saved evidence (backend `outreach`) |
+| POST | `/internal/features/pipeline-funnel` | Epic 15.1 -- how many applications reached each stage, and where they stall (backend `pipelineFunnel`) |
+| POST | `/internal/features/response-rate` | Epic 15.2 -- reply / interview / offer rates and per-stage durations (backend `responseRate`) |
+| POST | `/internal/features/company-brief` | Epic 4.8 -- what the corpus says about one company (backend `companyBrief`) |
 | GET | `/internal/memories` | the copilot's own memories, `?kinds` filtered, for the settings panel (backend `listMemories`) |
 | PATCH | `/internal/memories/{memory_id}` | correct one memory's text, or lower the weight it is quoted at (backend `patchMemory`) |
 | DELETE | `/internal/memories/{memory_id}` | forget one memory; the row is gone, not hidden (backend `deleteMemory`) |
@@ -294,33 +406,11 @@ Seven routes that no backend caller builds do sit in section 3, and each says so
 Purpose cell; the gate that partitions the unreached surface charges those seven with
 carrying the marker and every other row with not carrying it.
 
+Every engine now has a backend caller, so this table is empty — a new engine that ships
+ahead of its bridge joins it again, and the split is re-measured.
+
 | Method | Path | Purpose |
 |---|---|---|
-| POST | `/internal/features/company-brief` | Epic 4.8 -- what the corpus says about one company |
-| POST | `/internal/features/compare-offers` | Epic 12.3 (with 12.5) -- several offers ranked by total comp, equity annualised |
-| POST | `/internal/features/counter-offer` | Epic 12.4 -- the deterministic anchor and reasons a counter-offer is built from |
-| POST | `/internal/features/dedupe-jobs` | Epic 14.3 -- the same posting seen from several sources, collapsed to one survivor |
-| POST | `/internal/features/follow-ups` | Epic 11.3 -- the contacts that have gone cold, ranked, each with a draft |
-| POST | `/internal/features/freshness-sweep` | Epic 14.3 -- the corpus split into fresh, stale (re-check) and expired (close) |
-| POST | `/internal/features/gap-analysis` | Epic 10.1 -- the distance between the profile and the target role |
-| POST | `/internal/features/health-report` | Epic 16.1 -- agent health, cost and regression verdict over a window |
-| POST | `/internal/features/insight-digest` | Epic 15.3 -- a weekly snapshot: stalled applications, live stage mix, headlines |
-| POST | `/internal/features/interview-prep` | Epic 10.13 -- the pre-interview checklist: study the gaps, rehearse the strengths |
-| POST | `/internal/features/learning-plan` | Epic 10.5 -- the plan that closes the gaps readiness named |
-| POST | `/internal/features/learning-priority` | Epic 10.12 -- gaps ranked by importance and by market pull |
-| POST | `/internal/features/negotiate` | Epic 12.2 -- an offer against the benchmark, with leverage and talking points |
-| POST | `/internal/features/outreach` | Epic 11.2 -- a referral or networking message, built only from saved evidence |
-| POST | `/internal/features/parse-board` | Epic 14.2 -- a board-API JSON payload parsed into raw postings |
-| POST | `/internal/features/pipeline-funnel` | Epic 15.1 -- how many applications reached each stage, and where they stall |
-| POST | `/internal/features/plan-ingest` | Epic 14.3 -- one plan for a sweep: create / update / close, with the diff |
-| POST | `/internal/features/progress` | Epic 10.6 -- skill progress tracked between two snapshots |
-| POST | `/internal/features/progression` | Epic 10.11 -- stepping-stone roles toward a dream role, reachable and gated |
-| POST | `/internal/features/readiness` | Epic 10.4 -- how ready that profile is for that role, as one score |
-| POST | `/internal/features/response-rate` | Epic 15.2 -- reply / interview / offer rates and per-stage durations |
-| POST | `/internal/features/role-suggestions` | Epic 10.10 -- the target roles this profile could plausibly aim at |
-| POST | `/internal/features/salary-benchmark` | Epic 12.1 -- percentiles by role, seniority band and location |
-| POST | `/internal/features/skill-demand` | Epic 10.9 -- which skills the market asks for, counted from the corpus |
-| POST | `/internal/features/story-bank` | Epic 6.5 -- STAR stories drawn from the profile's own evidence |
 
 ## 4. Worked examples
 

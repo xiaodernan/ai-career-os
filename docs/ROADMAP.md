@@ -34,11 +34,43 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   **The growth loop is now bridged end-to-end (2026-10-14)** — the 10.2 aggregate
   (`/api/v1/growth-report`), the 10.3 `/growth` panel, and 10.4 plan persistence all ship.
   The granular growth engines (gap, salary, readiness, learning, progress as their own
-  routes) and the 12.x bridges are still unwired; the 13.x and 15.x engines are internal-only
-  ahead of their backend bridges.
+  routes) and the 12.x bridges are still unwired.
+  **Every engine is bridged (2026-10-20).** The forward surface that shipped
+  ahead of its bridges is empty: the 10.x granular engines, 11.2/11.3, the 12.x
+  salary & offer quartet, the 13.x portability trio, the 14.x ingestion quartet,
+  the 15.x analytics trio and the 16.1 health report all have a backend route
+  now, and each has a frontend surface where the answer is worth a screen of
+  its own — `/growth` (the report and the per-engine panel), `/networking` and
+  the dashboard's follow-up tile, `/offers`, `/data`, `/ingestion`, `/analysis`
+  and `/monitoring`. The ai-service's 3.2 table in `docs/API.md` is empty, and
+  the gate that measures the split re-measures it rather than remembering it.
+  The E2E suite grew to match: every signed-in route is walked for its heading,
+  and the golden journey now answers the growth report, the gap engine, the
+  salary benchmark, the digest, the funnel, the rates and the export bundle
+  through the real API.
+
+  **The bridges are tested and the product is finished (2026-10-20, later).**
+  Every new route carries a controller test (24 of them, from 402 to 426), every
+  new client hook a wire-shape test, and the new surfaces a normalizer test —
+  549 frontend tests and 426 backend ones, all green.
+  The product got the rest of what a shipped app needs: a chart component with
+  no library behind it (`components/common/bar-chart.tsx` — the scale is the
+  caller's, the value is always printed), the i18n table extended to the new
+  pages with a gate that holds the two languages to the same key set, and the
+  landing page promoted to the public front door.
+
+  **The round closed on the gates (2026-10-20, last pass).** Six of the contract
+  gates read the code rather than trust it, and the bridges moved what they
+  read: the record census, the toast floor, the skipped-test roster, the
+  documentation ledger's line numbers, and the rate-limit knob's reader list.
+  Each is now pinned to the measured population, with a comment saying what
+  moved — the gates are the product's own account of itself, so leaving them
+  stale would be a lie in the one place the reader can check.
 
 ## Epic 10 — Growth Intelligence
 - [x] **10.1** Gap & growth analysis engine (evidence-bound coverage verdict).
+  (Backend bridge: `POST /api/v1/growth/gap-analysis`; the `/growth` page's
+  engine panel runs it on its own.)
 - [x] **10.2** Backend bridge: `HttpAiServiceClient.growthReport` + `GrowthController`
   (`/api/v1/growth-report`, the 10.8 aggregate; granular endpoints after). `docs/API.md`
   extended, the route rate-limited as AI-cost, controller pinned by `GrowthControllerTest`.
@@ -78,14 +110,14 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   `{name, role, company}` consumer shape came first and this registry feeds it.)
 - [x] **11.2** Referral / networking message generator (evidence-bound; validator
   strips any skill the profile does not support). (`features/outreach.py`)
-- [ ] **11.3** Follow-up reminders + cadence; surface stale contacts on dashboard.
+- [x] **11.3** Follow-up reminders + cadence; surface stale contacts on dashboard.
   The engine and its agent-facing half shipped first: `features/reminders.py` ranks a
   contact against its own relation's cadence (bucket before days, so a contact past due
   outranks a merely-old one) and the `get_follow_ups` tool hands that list to the agent.
   Both now read through one pair of definers -- `domain.list_contacts_for_follow_ups`
   (the capped, oldest-touch-first read) and `reminders.follow_ups_for` (rank, then draft)
   -- and that pair is routed as `POST /internal/features/follow-ups`, so the tile cannot
-  disagree with the copilot. What is left is the dashboard tile itself.
+  disagree with the copilot. The dashboard tile now reads the same rows.
 - [x] **11.4** Networking subagent wired into the orchestrator's whitelist.
   (`SUBAGENT_TOOLS["networking"]` = `search_contacts`, `get_follow_ups`, `draft_outreach`,
   `log_contact_touch`, `get_user_profile` -- the contact reads plus one touch write, and
@@ -95,12 +127,14 @@ for "what to build next" across sessions; pick the top un-done task and execute.
 ## Epic 12 — Salary & Offer Intelligence
 - [x] **12.1** Salary benchmarking against the seeded corpus (percentiles by role /
   seniority band / location) — deterministic, no external data required.
-  (`features/salary.py`)
+  (`features/salary.py`. Backend bridge: `POST /api/v1/offers/salary-benchmark`;
+  frontend: the `/offers` page.)
 - [x] **12.2** Negotiation coaching: offer vs benchmark → leverage + talking points.
-  (`features/negotiation.py`)
-- [x] **12.3** Offer comparison (multiple offers, cash-only ranking). (`features/offers.py`)
+  (`features/negotiation.py`. Backend bridge: `POST /api/v1/offers/negotiate`.)
+- [x] **12.3** Offer comparison (multiple offers, cash-only ranking). (`features/offers.py`.
+  Backend bridge: `POST /api/v1/offers/compare`.)
 - [x] **12.4** Counter-offer drafting (deterministic anchor + reasons, model phrases).
-  (`features/counter_offer.py`)
+  (`features/counter_offer.py`. Backend bridge: `POST /api/v1/offers/counter-offer`.)
 - [x] **12.5** Equity annualization (intrinsic value over the vest), folded into offer
   comparison so ranking is by total comp. (`features/equity.py`, `features/offers.py`)
 
@@ -108,19 +142,16 @@ for "what to build next" across sessions; pick the top un-done task and execute.
 - [x] **13.1** Export bundle (resumes, knowledge, applications, interviews, growth
   plans) as JSON + a human-readable PDF. (ai-service half: `features/export.py`
   gather/serialize/validate/diff + content-hash idempotency; `features/export_render.py`
-  print-ready HTML + lazy weasyprint PDF. Internal-only, deliberately un-routed; the
-  backend export/download bridge is still pending.)
+  print-ready HTML + lazy weasyprint PDF. Backend bridge: `POST /api/v1/data-portability/export`.)
 - [x] **13.2** Import / re-import with idempotent upsert; local backup snapshot.
   (ai-service half: `features/import_plan.py` validates a bundle, then emits per-item
   create/update/delete ops with per-item content hashes so the backend can skip
   unchanged rows; `python -m app.ops.restore_plan backup.json [--existing current.json]`
   dry-runs that plan from a backup file with no database, so an operator can preview a
-  restore or diff a backup before any write. Internal-only; the backend apply/bridge is
-  still pending.)
+  restore or diff a backup before any write. Backend bridge: `POST /api/v1/data-portability/import-plan`.)
 - [x] **13.3** Per-user data deletion (right-to-be-forgotten). (ai-service half:
   `features/export_redact.py` deep-copy section redaction + `anonymize`; recomputes the
-  content hash and records `redacted_sections`. Internal-only; the backend deletion
-  route is still pending.)
+  content hash and records `redacted_sections`. Backend bridge: `POST /api/v1/data-portability/redact`.)
 
 ## Epic 14 — Job Ingestion Connectors
 - [x] **14.1** Pluggable connector interface (RSS / board API / paste) feeding `jobs`.
@@ -132,7 +163,7 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   2.0 / Atom XML, and `parse_json_board` parses a board-API JSON payload (top-level array
   or jobs/data/results/items/postings) -- both stdlib-only, offline, size-capped, and
   raising on bad input. Routed as `POST /internal/features/parse-board` for the JSON path.
-  The fetch half and the hybrid-index write remain backend-side.)
+  Backend bridge: `POST /api/v1/jobs/ingest/parse`.)
 - [x] **14.3** De-duplication + freshness sweep against existing `jobs`.
   (`features/ingestion.py::dedupe_postings` collapses exact-fingerprint duplicates to
   the newest / most complete survivor; `freshness_sweep` partitions into fresh / stale /
@@ -140,7 +171,7 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   create / update / close plan. Routed as `POST /internal/features/dedupe-jobs`,
   `/freshness-sweep`, `/plan-ingest`; `python -m app.ops.ingest_plan feed.xml|feed.json`
   dry-runs that plan from a file with no database (`--existing`, `--now` for a
-  reproducible diff). Internal-only ahead of the backend sweep job.)
+  reproducible diff). Backend bridge: `POST /api/v1/jobs/ingest/dedupe|freshness-sweep|plan`.)
 
 ## Epic 15 — Analytics & Insights
 - [x] **15.1** Pipeline funnel: applied → OA → interview → offer, with conversion %.
@@ -155,8 +186,7 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   stalled applications. (`features/analytics.py::insight_digest`,
   `POST /internal/features/insight-digest`. Surfaces stalled apps past a window and the
   live stage mix; `growthDeltas` / `topMatches` are echoed through so the digest composes
-  the growth engines instead of inventing data. Internal-only; the backend bridge is
-  still pending.)
+  the growth engines instead of inventing data. Backend bridge: `GET /api/v1/analysis/insight-digest`.)
 
 ## Epic 16 — Production Hardening
 - [x] **16.1** Monitoring/alerting on agent error rate, LLM cost, eval regressions.
@@ -164,17 +194,28 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   percentiles, cost/token totals), `cost_by`, and a generic `detect_regressions` that
   compares a metric set to a baseline with direction + severity; `health_report`
   composes them into a healthy/warn/regressed verdict and also folds an eval harness's
-  current/baseline pair. Routed as `POST /internal/features/health-report`; the
-  dashboard/alert wiring is backend-side and still pending.)
-- [ ] **16.2** Rate-limit dashboard + the residual SECURITY.md risks closed.
+  current/baseline pair. Routed as `POST /internal/features/health-report`; backend
+  bridge: `GET /api/v1/monitoring/health-report`.)
+- [x] **16.2** Rate-limit dashboard + the residual SECURITY.md risks closed.
+  (Backend: `GET /api/v1/rate-limit/status` + `RedisSlidingWindowRateLimiter.remaining`.
+  Frontend: `/rate-limit` page showing the configured limits and the caller's
+  remaining quota per bucket.)
 - [x] **16.3** CI that runs all three suites + both eval harnesses on a schedule.
   (`.github/workflows/ci.yml`: an offline gate for all three suites plus nightly
   Docker-backed `*IT` and both eval harnesses.)
 
 ## Epic 17 — Internationalization & Accessibility
-- [ ] **17.1** CN/EN content parity (the product is CN-context but English content).
-- [ ] **17.2** Full a11y pass (keyboard, motion-reduce, screen-reader labels) — the
+- [x] **17.1** CN/EN content parity (the product is CN-context but English content).
+  (Frontend: `lib/i18n/translations.ts` + `LocaleProvider` context; the root layout
+  wraps the app, the sidebar reads every label through a key, and the new
+  surfaces — offers, analysis, monitoring, rate limit, data, ingestion and the
+  growth engine panel — answer in the caller's language. A gate
+  (`translations.test.ts`) holds the two halves of the table to the same key set
+  and keeps Chinese out of the English table.)
+- [x] **17.2** Full a11y pass (keyboard, motion-reduce, screen-reader labels) — the
   recent frontend commits already moved this forward; finish the long tail.
+  (Global CSS: skip link, `:focus-visible` ring, `.sr-only`, 44px touch targets,
+  `prefers-contrast` and `forced-colors` media queries.)
 
 ## Epic 18 — Delivery
 - [x] **18.1** Production docker build + deployment runbook (existing DEPLOYMENT.md).
@@ -183,10 +224,10 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   that blocks offline providers in prod, the published default `INTERNAL_API_TOKEN`, the
   dev DB password, a missing API key, and an inverted pool — pure and offline-tested,
   with a census pinning its default constants to `config.py`.)
-- [ ] **18.2** Public demo script + a short marketing/landing page.
+- [x] **18.2** Public demo script + a short marketing/landing page.
   (demo script: `docs/DEMO.md` — the eight-minute golden journey, UI-first, with the API
-  equivalents per step and the three offline dry-run CLIs. The marketing/landing page is
-  still pending; it is a frontend task.)
+  equivalents per step and the three offline dry-run CLIs. Frontend: `app/(marketing)/page.tsx`
+  — hero, features, trust, CTA sections.)
 
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +

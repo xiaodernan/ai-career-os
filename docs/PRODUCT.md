@@ -70,6 +70,13 @@ Each row is a shipped capability, the route that exposes it, and the API behind 
 | AI activity: every run, its steps and its cost | `/activity`, `/activity/[id]` | `/activity/runs`, `/ai-usage/summary` |
 | Cross-entity search | (global) | `/search` |
 | Profile and preferences | `/settings` | `/users/me` |
+| Growth: readiness, gaps, learning plan, and each engine on its own | `/growth` | `/growth-report`, `/growth/*` |
+| Salary & offers: market band, negotiation coaching, offer comparison, counter-offer | `/offers` | `/offers/*` |
+| Analytics: the pipeline funnel, the response rates, the weekly digest | `/analysis` | `/analysis/*` |
+| Job ingestion: parse a feed, de-duplicate it, sweep it, plan the write | `/ingestion` | `/jobs/ingest/*` |
+| Data portability: export, preview a restore, redact before sharing | `/data` | `/data-portability/*` |
+| Networking: the contact registry and the follow-up drafts | `/networking` | `/contacts`, `/outreach/draft` |
+| Agent health and the rate-limit status | `/monitoring`, `/rate-limit` | `/monitoring/health-report`, `/rate-limit/status` |
 
 ## How the AI is actually wired
 
@@ -114,7 +121,7 @@ evaluation harnesses, and a seeded 12-company / 41-role corpus.
 
 Verified against the live stack, not just in unit tests:
 
-- The **Playwright golden-journey suite passes 26/26** (`e2e/`) against
+- The **Playwright golden-journey suite passes 28/28** (`e2e/`) against
   postgres+redis+minio, ai-service, backend and a production frontend build. It
   runs the PRD §35 flow for real: register → upload a resume → search → match →
   tailor → track → interview → report → copilot, plus the account-recovery pair

@@ -2,6 +2,7 @@ package com.careeros.report.service;
 
 import com.careeros.activity.entity.AgentRun;
 import com.careeros.activity.repository.AgentRunRepository;
+import com.careeros.ai.AiServiceClient;
 import com.careeros.application.entity.ApplicationEvent;
 import com.careeros.application.repository.ApplicationEventRepository;
 import com.careeros.application.repository.ApplicationRepository;
@@ -13,6 +14,7 @@ import com.careeros.job.entity.JobMatch;
 import com.careeros.job.repository.JobMatchRepository;
 import com.careeros.job.repository.JobRepository;
 import com.careeros.report.dto.DashboardDtos.DashboardResponse;
+import com.careeros.report.dto.DashboardDtos.FollowUpItem;
 import com.careeros.report.dto.DashboardDtos.Kanban;
 import com.careeros.report.dto.DashboardDtos.RecentActivity;
 import com.careeros.report.dto.DashboardDtos.RecentRun;
@@ -49,10 +51,12 @@ public class DashboardService {
     private final JobMatchRepository matches;
     private final AgentRunRepository runs;
     private final DashboardRepository dashboard;
+    private final AiServiceClient aiService;
 
     public DashboardService(ApplicationRepository applications, ApplicationEventRepository appEvents,
                             InterviewSessionRepository interviews, ResumeService resumes, JobRepository jobs,
-                            JobMatchRepository matches, AgentRunRepository runs, DashboardRepository dashboard) {
+                            JobMatchRepository matches, AgentRunRepository runs, DashboardRepository dashboard,
+                            AiServiceClient aiService) {
         this.applications = applications;
         this.appEvents = appEvents;
         this.interviews = interviews;
@@ -61,6 +65,7 @@ public class DashboardService {
         this.matches = matches;
         this.runs = runs;
         this.dashboard = dashboard;
+        this.aiService = aiService;
     }
 
     @Transactional(readOnly = true)
@@ -71,6 +76,7 @@ public class DashboardService {
                 dashboard.averageMatch(userId),
                 dashboard.needsAttention(userId, STALE_DAYS),
                 dashboard.attention(userId, STALE_DAYS, ATTENTION_LIMIT),
+                followUps(userId),
                 currentResume(userId),
                 skillGaps(userId),
                 dashboard.recommendedJobs(userId, RECOMMENDED_LIMIT),
@@ -124,6 +130,34 @@ public class DashboardService {
     private List<RecentActivity> recentActivity(UUID userId) {
         return appEvents.findByUserIdOrderByCreatedAtDesc(userId, Paging.first(RECENT_LIMIT)).stream()
                 .map(DashboardService::toActivity).toList();
+    }
+
+    /**
+     * Follow-up reminders for the dashboard tile (11.3). The ai-service ranks contacts
+     * by their relation's cadence and drafts a message for each; this method forwards
+     * the rows and owns none of the logic. A failure here degrades the tile to empty,
+     * never the whole dashboard.
+     */
+    private List<FollowUpItem> followUps(UUID userId) {
+        try {
+            return aiService.followUps(userId).stream()
+                    .map(DashboardService::toFollowUp)
+                    .toList();
+        } catch (Exception e) {
+            return List.of();
+        }
+    }
+
+    private static FollowUpItem toFollowUp(Map<String, Object> row) {
+        return new FollowUpItem(
+                UUID.fromString(String.valueOf(row.get("id"))),
+                String.valueOf(row.get("name")),
+                row.get("company") != null ? String.valueOf(row.get("company")) : null,
+                row.get("relation") != null ? String.valueOf(row.get("relation")) : null,
+                row.get("priority") != null ? String.valueOf(row.get("priority")) : null,
+                row.get("days_since") instanceof Number n ? n.intValue() : null,
+                row.get("cadence_days") instanceof Number n ? n.intValue() : null,
+                row.get("suggested_message") != null ? String.valueOf(row.get("suggested_message")) : null);
     }
 
     private static RecentRun toRun(AgentRun r) {

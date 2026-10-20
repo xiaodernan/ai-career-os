@@ -3,9 +3,10 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { PanelLeftClose, PanelLeftOpen, Sparkles } from "lucide-react";
+import { Globe, PanelLeftClose, PanelLeftOpen, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NAV_ITEMS } from "./nav";
+import { useLocale } from "@/lib/i18n/locale-context";
 import {
   Sheet,
   SheetContent,
@@ -16,6 +17,7 @@ import {
 import {
   Tooltip,
   TooltipContent,
+  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
@@ -45,7 +47,15 @@ function useCollapsed() {
   return [collapsed, toggle] as const;
 }
 
-function NavLinks({
+/**
+ * The navigation list. Exported so a test can render it outside the shell.
+ *
+ * The collapsed rail shows each label in a tooltip, and Radix throws when a
+ * tooltip is rendered outside a provider — so the provider lives here rather
+ * than somewhere up the tree. The list is then self-contained: rendered
+ * anywhere, it works.
+ */
+export function NavLinks({
   collapsed,
   onNavigate,
 }: {
@@ -53,41 +63,50 @@ function NavLinks({
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
+  const { t } = useLocale();
   return (
-    <nav aria-label="Main navigation" className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-2 py-2">
-      {NAV_ITEMS.map((item) => {
-        const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
-        const link = (
-          <Link
-            key={item.href}
-            href={item.href}
-            onClick={onNavigate}
-            aria-current={active ? "page" : undefined}
-            className={cn(
-              "group flex h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-sm font-medium transition-colors duration-150 focus-visible:ring-[3px] focus-visible:ring-ring/35",
-              collapsed && "justify-center px-0",
-              active
-                ? "bg-primary/10 text-primary dark:bg-primary/15"
-                : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-            )}
-          >
-            <item.icon className="size-4 shrink-0" aria-hidden />
-            {!collapsed && <span className="truncate">{item.label}</span>}
-            {!collapsed && active && (
-              <span aria-hidden className="ml-auto size-1.5 rounded-full bg-primary" />
-            )}
-          </Link>
-        );
-        return collapsed ? (
-          <Tooltip key={item.href}>
-            <TooltipTrigger asChild>{link}</TooltipTrigger>
-            <TooltipContent side="right">{item.label}</TooltipContent>
-          </Tooltip>
-        ) : (
-          link
-        );
-      })}
-    </nav>
+    <TooltipProvider delayDuration={200}>
+      <nav
+        aria-label="Main navigation"
+        className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-2 py-2"
+      >
+        {NAV_ITEMS.map((item) => {
+          const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+          // The English label is the fallback: a key the table does not carry
+          // answers the English name rather than the key itself.
+          const label = item.labelKey ? t(item.labelKey) : item.label;
+          const link = (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={onNavigate}
+              aria-current={active ? "page" : undefined}
+              className={cn(
+                "group flex h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-sm font-medium transition-colors duration-150 focus-visible:ring-[3px] focus-visible:ring-ring/35",
+                collapsed && "justify-center px-0",
+                active
+                  ? "bg-primary/10 text-primary dark:bg-primary/15"
+                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+              )}
+            >
+              <item.icon className="size-4 shrink-0" aria-hidden />
+              {!collapsed && <span className="truncate">{label}</span>}
+              {!collapsed && active && (
+                <span aria-hidden className="ml-auto size-1.5 rounded-full bg-primary" />
+              )}
+            </Link>
+          );
+          return collapsed ? (
+            <Tooltip key={item.href}>
+              <TooltipTrigger asChild>{link}</TooltipTrigger>
+              <TooltipContent side="right">{label}</TooltipContent>
+            </Tooltip>
+          ) : (
+            link
+          );
+        })}
+      </nav>
+    </TooltipProvider>
   );
 }
 
@@ -112,6 +131,7 @@ function Brand({ collapsed }: { collapsed?: boolean }) {
 
 export function Sidebar() {
   const [collapsed, toggleCollapsed] = useCollapsed();
+  const { locale, setLocale } = useLocale();
 
   return (
     <aside
@@ -124,7 +144,17 @@ export function Sidebar() {
         <div className="min-w-0 flex-1">{collapsed ? <Brand collapsed /> : <Brand />}</div>
       </div>
       <NavLinks collapsed={collapsed} />
-      <div className="border-t border-sidebar-border p-2">
+      <div className="border-t border-sidebar-border p-2 space-y-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setLocale(locale === "en" ? "zh" : "en")}
+          aria-label={locale === "en" ? "Switch to Chinese" : "Switch to English"}
+          className={cn("w-full text-muted-foreground", collapsed && "px-0")}
+        >
+          <Globe aria-hidden />
+          {!collapsed && <span>{locale === "en" ? "中文" : "EN"}</span>}
+        </Button>
         <Button
           variant="ghost"
           size="sm"

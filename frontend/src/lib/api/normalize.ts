@@ -15,6 +15,7 @@ import type {
   DashboardMetrics,
   DashboardPayload,
   Evidence,
+  FollowUpItem,
   InterviewDimension,
   Job,
   JobMatch,
@@ -953,6 +954,30 @@ function normalizeAttention(raw: unknown): AttentionItem | null {
   };
 }
 
+/**
+ * One contact needing a follow-up, ranked by its relation's cadence. The draft
+ * message is the ai-service's own, so the tile never invents text the engine did
+ * not produce.
+ *
+ * The names are the backend record's own components: `FollowUpItem` is the one
+ * producer, and it speaks camelCase (the ai-service's snake_case reaches it
+ * through the bridge, which maps it into the record's own field names). A
+ * snake_case twin beside each live name would be a second shape this mapper
+ * silently reinterprets.
+ */
+function normalizeFollowUp(raw: unknown): FollowUpItem {
+  return {
+    id: str(raw, "id") ?? "",
+    name: str(raw, "name"),
+    company: str(raw, "company") ?? null,
+    relation: str(raw, "relation") ?? null,
+    priority: str(raw, "priority") ?? null,
+    daysSince: num(raw, "daysSince") ?? null,
+    cadenceDays: num(raw, "cadenceDays") ?? null,
+    suggestedMessage: str(raw, "suggestedMessage") ?? null,
+  };
+}
+
 export function normalizeDashboard(raw: unknown): DashboardPayload | null {
   // `api.get` already unwraps the {success,data} envelope, so what arrives here is
   // `DashboardResponse` and nothing else: { kanban{statusCounts,total,offers}, interviews,
@@ -995,6 +1020,7 @@ export function normalizeDashboard(raw: unknown): DashboardPayload | null {
   const attention = list(d, "attention")
     .map(normalizeAttention)
     .filter((row): row is AttentionItem => row !== null);
+  const followUps = list(d, "followUps", "follow_ups").map(normalizeFollowUp);
   return {
     // `Kanban.total` is a primitive `long`, so `applications` is never missing on a served
     // payload and the old "hide the strip when every metric is null" guard had no reachable
@@ -1006,6 +1032,7 @@ export function normalizeDashboard(raw: unknown): DashboardPayload | null {
     ),
     skillGaps: gaps,
     attention: attention.length ? attention : undefined,
+    followUps: followUps.length ? followUps : undefined,
     resume: rec(currentResume)
       ? {
           id: str(currentResume, "resumeId", "resume_id", "id") ?? "",

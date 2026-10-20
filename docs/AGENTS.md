@@ -189,3 +189,40 @@ back when nothing is being written, so a no-op patch is not a write.
 Two paths also write there directly: `POST /internal/agents/chat` and `/chat/sync` extract
 durable facts after a turn, and `/internal/interview/finalize` records the report's verdict
 as an `interview` memory — the one §17 listed as a kind that nothing could produce.
+
+## 7. The deterministic engines (Epics 10-16)
+
+Everything in §1-§4 is a *model* call, and everything in §7 is not. The engines in
+`app/features/` are pure functions over the user's own data — the resume, the
+application rows, the seeded job corpus — so a question they answer has one right
+answer and no reason to spend a token on it.
+
+They reached the browser in two steps, and the second one is what this section is
+about. Each engine shipped first as an internal route with no caller (the forward
+surface), and each was later bridged: a `HttpAiServiceClient` method, a backend
+route, a frontend surface. The bridge owns none of the logic — it reads the caller's
+rows, forwards the request, and answers the engine's own shape. A second copy of the
+arithmetic on the backend side would be a second answer to the same question.
+
+| Epic | The engine answers | Backend route |
+|---|---|---|
+| 10.1-10.13 | gap, readiness, learning plan, skill demand, learning priority, progression, interview prep, story bank, role suggestions, progress | `POST /api/v1/growth/*` |
+| 11.2-11.3 | the outreach draft; the contacts gone cold | `POST /api/v1/outreach/draft`; the dashboard's `followUps` |
+| 12.1-12.5 | salary benchmark, negotiation coach, offer comparison, counter-offer | `POST /api/v1/offers/*` |
+| 13.1-13.3 | the export bundle, the import plan, section redaction | `POST /api/v1/data-portability/*` |
+| 14.2-14.3 | feed parsing, de-duplication, the freshness sweep, the ingest plan | `POST /api/v1/jobs/ingest/*` |
+| 15.1-15.3 | the pipeline funnel, the response rate, the insight digest | `GET /api/v1/analysis/*` |
+| 16.1-16.2 | the health report, the rate-limit status | `GET /api/v1/monitoring/health-report`; `GET /api/v1/rate-limit/status` |
+
+Three properties hold across every one of them, and the census gates
+(`test_internal_contract.py`, `test_api_doc_contract.py`) charge each:
+
+- **The user's rows travel under the engine's own field names.** The digest reads
+  `applied_at` and `created_at`; a row sent under a Java column name is a row the
+  engine sees as a title and nothing else.
+- **Only the fields the engine binds are sent.** A key the endpoint's model does
+  not declare is a key Jackson drops, and a dropped key is a request that says more
+  than it asks.
+- **The caller's id travels with the request.** The ingestion engines write rows;
+  a sweep that ran under a random id would put another user's jobs in this one's
+  board.

@@ -30,15 +30,14 @@ import json
 from datetime import datetime, timezone
 from typing import Any, Callable
 
-SCHEMA_VERSION = "1.0.0"
+SCHEMA_VERSION = "1.1.0"
 GENERATOR = "ai-career-os"
 
 # Top-level profile keys stripped by ``anonymize`` unless the caller overrides.
 DEFAULT_PII_FIELDS: tuple[str, ...] = ("email", "display_name", "phone", "address")
 
-# Sections the ai-service composes today. ``applications`` / ``growth_plans`` are
-# reserved for the backend bridge (it owns those writes) and stay absent until then.
-SECTIONS: tuple[str, ...] = (
+# The sections the ai-service reads for itself.
+AI_SECTIONS: tuple[str, ...] = (
     "profile",
     "resumes",
     "knowledge",
@@ -46,6 +45,36 @@ SECTIONS: tuple[str, ...] = (
     "interviews",
     "memories",
 )
+
+# The sections the BACKEND owns: it writes ``applications`` and ``growth_plans``,
+# so the ai-service cannot read them and the bridge hands them over. Since
+# 1.1.0 they travel in the bundle, which is what makes an export complete --
+# a bundle without the pipeline a candidate actually worked is a bundle of
+# their reading list and nothing else.
+BACKEND_SECTIONS: tuple[str, ...] = ("applications", "growth_plans")
+
+# Every section a 1.1.0 bundle carries.
+SECTIONS: tuple[str, ...] = AI_SECTIONS + BACKEND_SECTIONS
+
+# What a 1.0.0 bundle carried. A bundle written before the bridge has no
+# backend sections, and it is still a valid bundle -- so the required set is
+# read off the bundle's own schema version rather than assumed.
+LEGACY_SECTIONS: tuple[str, ...] = AI_SECTIONS
+
+# The schema version that introduced the backend sections.
+BACKEND_SECTIONS_VERSION = "1.1.0"
+
+
+def required_sections(schema_version: str) -> tuple[str, ...]:
+    """The sections a bundle of this schema version must carry.
+
+    A 1.0.0 bundle predates the backend sections and is still valid; a 1.1.0
+    one without them is a bundle that was truncated, and the import path has to
+    know the difference.
+    """
+    if schema_version >= BACKEND_SECTIONS_VERSION:
+        return SECTIONS
+    return LEGACY_SECTIONS
 
 
 # --------------------------------------------------------------------------- #
@@ -207,14 +236,26 @@ def _section_counts(data: dict) -> dict[str, int]:
     return counts
 
 
-def build_bundle(user_id: str, raw: dict, *, anonymized: bool = False) -> dict:
+def build_bundle(user_id: str, raw: dict, *, anonymized: bool = False,
+                 extra: dict | None = None) -> dict:
     """Assemble a versioned, hashed export bundle from already-fetched raw data.
 
     Pure: takes the dict ``gather_raw`` would have produced and returns the bundle.
     ``generated_at`` and the hash are computed here, but the hash covers only
     ``data`` so it stays content-stable.
+
+    ``extra`` carries the sections the BACKEND owns -- ``applications`` and
+    ``growth_plans``. The bridge reads those rows (it writes them) and hands
+    them over, and the hash is computed here so there is one hashing rule for
+    the whole bundle rather than one per producer. A section the bridge did not
+    send is absent rather than null: "the user has no applications" and "the
+    bridge did not ask" are different facts, and the import path has to know
+    which one it is looking at.
     """
     data = {section: raw.get(section) for section in SECTIONS}
+    for section, value in (extra or {}).items():
+        if section in BACKEND_SECTIONS:
+            data[section] = value
     digest = content_hash(data)
     bundle = {
         "schema_version": SCHEMA_VERSION,
@@ -415,7 +456,13 @@ def validate_bundle(bundle: dict) -> list[str]:
             if k not in m:
                 errors.append(f"missing manifest key: {k}")
     if "data" in bundle:
-        for s in SECTIONS:
+        # The required set is read off the bundle's OWN schema version: a 1.0.0
+        # bundle predates the backend sections and is still valid, while a
+        # 1.1.0 one without them was truncated. Assuming the current set for
+        # both would reject every backup the user already has.
+        version = bundle.get("schema_version")
+        wanted = required_sections(version) if isinstance(version, str) else SECTIONS
+        for s in wanted:
             if s not in bundle["data"]:
                 errors.append(f"missing data section: {s}")
     if (
@@ -448,7 +495,13 @@ def read_bundle(path: str) -> dict:
 # --------------------------------------------------------------------------- #
 
 
-async def export_bundle(user_id: str, *, anonymized: bool = False) -> dict:
-    """Fetch raw records and build the bundle in one call (the public entrypoint)."""
+async def export_bundle(user_id: str, *, anonymized: bool = False,
+                       extra: dict | None = None) -> dict:
+    """Fetch raw records and build the bundle in one call (the public entrypoint).
+
+    ``extra`` carries the sections the backend owns — it reads those rows itself
+    and hands them over, so the bundle is complete and the hash is still
+    computed in one place.
+    """
     raw = await gather_raw(user_id)
-    return build_bundle(user_id, raw, anonymized=anonymized)
+    return build_bundle(user_id, raw, anonymized=anonymized, extra=extra)

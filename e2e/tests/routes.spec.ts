@@ -27,6 +27,15 @@ const ROUTES: { path: string; heading: string }[] = [
   { path: "/activity", heading: "AI Activity" },
   { path: "/settings", heading: "Settings" },
   { path: "/copilot", heading: "Ask your career agent" },
+  // The surfaces the forward bridges (11.3, 12.x, 13.x, 14.x, 15.x, 16.1) built.
+  { path: "/growth", heading: "Growth report" },
+  { path: "/networking", heading: "Contacts" },
+  { path: "/analysis", heading: "Analysis" },
+  { path: "/offers", heading: "Offers" },
+  { path: "/ingestion", heading: "Job ingestion" },
+  { path: "/data", heading: "Your data" },
+  { path: "/monitoring", heading: "Monitoring" },
+  { path: "/rate-limit", heading: "Rate limiting" },
 ];
 
 /** Next's default boundary text — the signal that a client component threw. */
@@ -69,6 +78,18 @@ test("an unknown route inside the app shell is a 404, not a crash", async ({ aut
   const res = await authedPage.goto("/this-route-does-not-exist");
   expect(res?.status()).toBe(404);
   expect(await authedPage.locator("body").innerText()).not.toContain(CRASH);
+});
+
+/**
+ * The public front door: the marketing page (18.2). It is the one route an
+ * anonymous visitor can reach, so it is checked without an account — and the
+ * check is that it renders its pitch rather than bouncing to the login screen.
+ */
+test("the landing page is public and renders the pitch", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("link", { name: /get started/i }).first()).toBeVisible();
+  expect(await page.locator("body").innerText()).not.toContain(CRASH);
 });
 
 /**

@@ -40,4 +40,23 @@ public class RedisSlidingWindowRateLimiter {
             return true;
         }
     }
+
+    /**
+     * How many more acquisitions the key has left in the current window. Used by the
+     * rate-limit status endpoint (16.2). Returns the full limit when Redis is
+     * unavailable — the fail-open branch of {@link #tryAcquire} means every request
+     * would have been admitted, so "unknown remaining" is honestly "not throttled".
+     */
+    public long remaining(String key, int limit) {
+        try {
+            long now = System.currentTimeMillis();
+            var zset = redis.opsForZSet();
+            zset.removeRangeByScore(key, 0, now - 60_000 - 1);
+            Long live = zset.count(key, now - 60_000, now);
+            long used = live != null ? live : 0;
+            return Math.max(0, limit - used);
+        } catch (RuntimeException e) {
+            return limit;
+        }
+    }
 }

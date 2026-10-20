@@ -17,16 +17,13 @@ from __future__ import annotations
 
 from copy import deepcopy
 
-from app.features.export import content_hash
+from app.features.export import SECTIONS, content_hash
 
-VALID_SECTIONS = (
-    "profile",
-    "resumes",
-    "knowledge",
-    "job_descriptions",
-    "interviews",
-    "memories",
-)
+# The sections a bundle may carry, read off the one table that defines them --
+# so a section the export gained (the backend's `applications` /
+# `growth_plans`) can be dropped here too, without a second list to keep in
+# step with the first.
+VALID_SECTIONS = SECTIONS
 
 
 def redact_bundle(bundle: dict, drop: list[str] | None = None) -> dict:
