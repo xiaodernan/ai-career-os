@@ -26,6 +26,7 @@ import {
   coverLetterText,
 } from "@/lib/api/normalize";
 import { formatSalary } from "@/lib/format";
+import { useLocale } from "@/lib/i18n/locale-context";
 import type { CopilotArtifact, Evidence } from "@/lib/api/types";
 
 /* Code-split, not a static import: the react-markdown stack is only needed
@@ -40,6 +41,7 @@ const StreamingText = dynamic(() =>
  * like a match on the job page (ring + evidence, not a blob of JSON).
  */
 export function ArtifactCard({ artifact }: { artifact: CopilotArtifact }) {
+  const { t } = useLocale();
   const data = artifact.data;
   switch (artifact.type) {
     case "match":
@@ -68,6 +70,7 @@ export function ArtifactCard({ artifact }: { artifact: CopilotArtifact }) {
 /* --------------------------------- match --------------------------------- */
 
 function MatchArtifact({ data }: { data?: unknown }) {
+  const { t } = useLocale();
   const match = normalizeMatch(pick(data, "match") ?? data);
   if (!match) return null;
   const evidence: Evidence[] = match.evidence ?? [];
@@ -87,7 +90,7 @@ function MatchArtifact({ data }: { data?: unknown }) {
           <MatchRing value={match.overall} size={56} thickness={5} label="Match" />
           <div className="min-w-0">
             <p className="text-2xs font-medium tracking-wide text-muted-foreground uppercase">
-              Match analysis
+              {t("artifacts.match")}
             </p>
             {match.reasoning && <p className="mt-0.5 text-sm">{match.reasoning}</p>}
           </div>
@@ -171,6 +174,7 @@ function TailorArtifact({ data }: { data?: unknown }) {
 /* ------------------------------- cover_letter ------------------------------ */
 
 function CoverLetterArtifact({ data }: { data?: unknown }) {
+  const { t } = useLocale();
   const text = coverLetterText(data);
   if (!text) return null;
   return (
@@ -178,7 +182,7 @@ function CoverLetterArtifact({ data }: { data?: unknown }) {
       <CardContent className="space-y-3">
         <p className="flex items-center gap-1.5 text-2xs font-medium tracking-wide text-muted-foreground uppercase">
           <FileText className="size-3.5" aria-hidden />
-          Cover letter draft
+          {t("artifacts.coverLetter")}
         </p>
         <StreamingText content={text} className="max-h-80 overflow-y-auto" />
         <CopyButton text={text} label="Copy letter" />
@@ -190,6 +194,7 @@ function CoverLetterArtifact({ data }: { data?: unknown }) {
 /* ----------------------------- interview_session ---------------------------- */
 
 function InterviewArtifact({ data }: { data?: unknown }) {
+  const { t } = useLocale();
   const id = str(data, "sessionId", "session_id", "id") ?? str(pick(data, "session"), "id");
   if (!id) return null;
   return (
@@ -199,7 +204,7 @@ function InterviewArtifact({ data }: { data?: unknown }) {
           <CalendarClock className="size-4.5" aria-hidden />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium">Mock interview ready</p>
+          <p className="text-sm font-medium">{t("artifacts.interview")}</p>
           <p className="text-xs text-muted-foreground">
             The agent prepared a session from this conversation.
           </p>
@@ -237,21 +242,23 @@ function InterviewArtifact({ data }: { data?: unknown }) {
 
 function GrowthArtifact({
   title,
-  eyebrow,
+  eyebrowKey,
   icon,
   children,
 }: {
   title?: string;
-  eyebrow: string;
+  /** The translation key for the card's eyebrow -- the name of the answer. */
+  eyebrowKey: string;
   icon: React.ReactNode;
   children: React.ReactNode;
 }) {
+  const { t } = useLocale();
   return (
     <Card className="border-primary/25">
       <CardContent className="space-y-3">
         <p className="flex items-center gap-1.5 text-2xs font-medium tracking-wide text-muted-foreground uppercase">
           {icon}
-          {eyebrow}
+          {t(eyebrowKey)}
         </p>
         {title && <p className="text-sm font-medium">{title}</p>}
         {children}
@@ -268,7 +275,7 @@ function GapReportArtifact({ data }: { data?: unknown }) {
   if (coverage == null && !gaps.length) return null;
   return (
     <GrowthArtifact
-      eyebrow="Gap analysis"
+      eyebrowKey="artifacts.gapReport"
       title={targetRole}
       icon={<Target className="size-3.5" aria-hidden />}
     >
@@ -302,7 +309,7 @@ function SalaryBandArtifact({ data }: { data?: unknown }) {
   const currency = str(report, "currency") ?? "CNY";
   return (
     <GrowthArtifact
-      eyebrow="Market band"
+      eyebrowKey="artifacts.salaryBand"
       title={str(report, "role") ?? undefined}
       icon={<BadgeDollarSign className="size-3.5" aria-hidden />}
     >
@@ -324,7 +331,7 @@ function OfferComparisonArtifact({ data }: { data?: unknown }) {
   if (!rows.length) return null;
   return (
     <GrowthArtifact
-      eyebrow="Offer comparison"
+      eyebrowKey="artifacts.offerComparison"
       icon={<Scale className="size-3.5" aria-hidden />}
     >
       <BarChart
@@ -345,7 +352,7 @@ function LearningPriorityArtifact({ data }: { data?: unknown }) {
   if (!rows.length) return null;
   return (
     <GrowthArtifact
-      eyebrow="Learning priority"
+      eyebrowKey="artifacts.learningPriority"
       icon={<ListOrdered className="size-3.5" aria-hidden />}
     >
       <ol className="space-y-1.5">

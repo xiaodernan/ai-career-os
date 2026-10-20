@@ -291,6 +291,16 @@ export const translations = {
       logOut: "Log out of Career OS?",
       logOutDescription: "Your data stays safe — this only ends the current session.",
     },
+    // The copilot's artifact cards -- what each kind of answer is called.
+    artifacts: {
+      match: "Match analysis",
+      coverLetter: "Cover letter draft",
+      interview: "Mock interview ready",
+      gapReport: "Gap analysis",
+      salaryBand: "Market band",
+      offerComparison: "Offer comparison",
+      learningPriority: "Learning priority",
+    },
     // The copilot's action chips -- the labels the orchestrator writes in
     // English, which the browser says in the reader's language.
     actions: {
@@ -669,6 +679,16 @@ export const translations = {
       colorTheme: "配色主题",
       logOut: "退出 Career OS？",
       logOutDescription: "你的数据是安全的——这只会结束当前会话。",
+    },
+    // The copilot's artifact cards -- what each kind of answer is called.
+    artifacts: {
+      match: "匹配分析",
+      coverLetter: "求职信草稿",
+      interview: "模拟面试已就绪",
+      gapReport: "差距分析",
+      salaryBand: "市场薪资带",
+      offerComparison: "录用比较",
+      learningPriority: "学习优先级",
     },
     // The copilot's action chips -- the labels the orchestrator writes in
     // English, which the browser says in the reader's language.

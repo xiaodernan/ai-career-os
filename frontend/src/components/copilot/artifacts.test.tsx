@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import * as React from "react";
 
 import { ArtifactCard } from "./artifacts";
+import { LocaleProvider } from "@/lib/i18n/locale-context";
 
 /**
  * The four growth-engine artifact cards (Epics 10.x, 12.x).
@@ -12,10 +13,18 @@ import { ArtifactCard } from "./artifacts";
  * nothing is the failure this holds: the orchestrator's artifact made it to the
  * browser and the browser drew an empty panel, which reads as "the agent had
  * nothing to say".
+ *
+ * The cards are rendered inside the real locale provider, because that is how
+ * they render in the product: a card that needed a provider to draw is a card
+ * that throws on the screen.
  */
 
 function render(artifact: { type: string; data?: unknown }): string {
-  return renderToStaticMarkup(<ArtifactCard artifact={artifact} />);
+  return renderToStaticMarkup(
+    <LocaleProvider>
+      <ArtifactCard artifact={artifact} />
+    </LocaleProvider>
+  );
 }
 
 describe("the growth artifact cards", () => {

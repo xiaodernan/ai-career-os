@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/common/empty-state";
+import { BarChart, ShareChart } from "@/components/common/bar-chart";
 import { GrowthEnginesPanel } from "@/components/growth/growth-engines-panel";
 import { PageHeader } from "@/components/common/page-header";
 import { useLocale } from "@/lib/i18n/locale-context";
@@ -163,11 +164,29 @@ export default function GrowthPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               <CoverageBar coverage={gap?.coverage ?? readiness.skillReadiness ?? 0} />
-              <div className="grid grid-cols-3 gap-2 text-center text-sm">
-                <Count label={t("growth.covered")} value={readiness.coveredCount ?? 0} />
-                <Count label={t("growth.partial")} value={gap?.partialCount ?? 0} />
-                <Count label={t("growth.open")} value={readiness.gapCount ?? 0} />
-              </div>
+              {/* The same three numbers the cards below carried, drawn as a
+                  split: what the profile covers, what it half-covers and
+                  what is open is a shape, and a shape reads faster than
+                  three numbers side by side. */}
+              <ShareChart
+                data={[
+                  {
+                    label: t("growth.covered"),
+                    value: readiness.coveredCount ?? 0,
+                    tone: "success" as const,
+                  },
+                  {
+                    label: t("growth.partial"),
+                    value: gap?.partialCount ?? 0,
+                    tone: "warning" as const,
+                  },
+                  {
+                    label: t("growth.open"),
+                    value: readiness.gapCount ?? 0,
+                    tone: "destructive" as const,
+                  },
+                ]}
+              />
               {(readiness.blockers ?? []).length > 0 && (
                 <ul className="space-y-1 text-sm text-destructive">
                   {(readiness.blockers ?? []).map((b) => (
@@ -188,20 +207,16 @@ export default function GrowthPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-                  {(["p25", "p50", "p75"] as const).map((k) => (
-                    <div key={k}>
-                      <p className="text-xs text-muted-foreground uppercase">{k}</p>
-                      <p className="text-lg font-medium tabular-nums">
-                        {formatSalary(
-                          salary.percentiles?.[k],
-                          salary.percentiles?.[k],
-                          salary.currency,
-                        )}
-                      </p>
-                    </div>
-                  ))}
-                </div>
+                <BarChart
+                  data={(["p25", "p50", "p75"] as const).map((k) => ({
+                    label: k,
+                    value: salary.percentiles?.[k] ?? 0,
+                    // The median is the one the negotiation is measured against,
+                    // so it carries the accent; the tails are the range around it.
+                    tone: k === "p50" ? ("primary" as const) : ("muted" as const),
+                  }))}
+                  valueFormat={(v) => formatSalary(v, v, salary.currency) ?? "—"}
+                />
               </CardContent>
             </Card>
           )}
@@ -286,15 +301,6 @@ function CoverageBar({ coverage }: { coverage: number }) {
           aria-valuemax={100}
         />
       </div>
-    </div>
-  );
-}
-
-function Count({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="rounded-lg border border-border/50 p-2">
-      <p className="text-lg font-medium tabular-nums">{value}</p>
-      <p className="text-xs text-muted-foreground">{label}</p>
     </div>
   );
 }
