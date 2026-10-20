@@ -80,6 +80,16 @@ async def subscribe(task_id: str, heartbeat_s: float = 15.0) -> AsyncIterator[di
         t["waiters"].discard(queue)
 
 
+def owner(task_id: str) -> str | None:
+    """Whose task this is, as recorded when it was made -- or None if no task or no owner.
+
+    Deliberately not a field of `state()`: that projection is the body `GET /internal/tasks/{id}`
+    answers with, and an owner id belongs in a decision, not in a response.
+    """
+    t = _TASKS.get(task_id)
+    return None if t is None else t["user_id"]
+
+
 def gc_old_tasks(max_age_s: float = 3600) -> None:
     cutoff = time.time() - max_age_s
     for k in [k for k, v in _TASKS.items() if v["created"] < cutoff and v["done"]]:

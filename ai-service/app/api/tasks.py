@@ -14,22 +14,31 @@ router = APIRouter(prefix="/internal/tasks", tags=["tasks"])
 
 @router.get("/{task_id}")
 async def task_state(task_id: str, ctx: Ctx = Depends(require_internal)):
-    st = taskbus.state(task_id)
-    if not st:
-        raise HTTPException(404, "task not found or expired")
-    return st
+    _require_owner(task_id, ctx)
+    return taskbus.state(task_id)
 
 
 @router.get("/{task_id}/stream")
 async def task_stream(task_id: str, ctx: Ctx = Depends(require_internal)):
-    if not taskbus.state(task_id):
-        raise HTTPException(404, "task not found or expired")
+    _require_owner(task_id, ctx)
 
     async def gen():
         async for ev in taskbus.subscribe(task_id):
             yield {"event": ev["event"], "data": _json(ev["data"])}
 
     return EventSourceResponse(gen())
+
+
+def _require_owner(task_id: str, ctx: Ctx) -> None:
+    """Refuse a task the caller does not own with the same answer a missing task gets.
+
+    The relay hands over the id the browser put in the URL, so the only thing standing between one
+    user and another user's frames is this comparison. A task with no owner recorded is nobody's,
+    so the check fails closed: a call site that forgets to pass the user id breaks loudly here
+    rather than opening the stream.
+    """
+    if taskbus.owner(task_id) != ctx.user_id:
+        raise HTTPException(404, "task not found or expired")
 
 
 # alias the backend SSE relay calls (architecture.md §9)
