@@ -282,8 +282,9 @@ user-scoped table (ownership is enforced in backend layer + a single SQL predica
   method and holds the line; an exemption on that list is a measurement with an owner,
   never a permission.
 - **Rate limiting**: Redis sliding-window filter (per user + per IP on auth).
-- SSE passthrough: `GET /api/ai/stream/{taskId}` proxies ai-service internal SSE
-  (auth verified at backend, task ownership checked) so tokens never bypass JWT layer.
+- SSE passthrough: `GET /api/v1/ai/stream/{taskId}` proxies the ai-service stream
+  `GET /internal/stream/{task_id}` (auth verified at backend, task ownership checked)
+  so tokens never bypass JWT layer.
 - File uploads: backend receives multipart → size/mime magic-number check → MinIO
   (private bucket, presigned GET only) → registers `documents` row → async call to
   ai-service ingestion.

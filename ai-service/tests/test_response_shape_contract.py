@@ -2879,8 +2879,11 @@ def test_the_heartbeat_interval_has_one_definer_and_every_shipped_claim_names_it
         # SECURITY.md's keep-alive mention moved again (148 -> 150): the 10.2 bridge's `/growth`
         # joined the throttle list above it, the sentence itself unchanged. AGENTS.md's moved
         # 144 -> 150 for the same reason: the networking subagent's §2 whitelist row and the four
-        # §4 tool rows joined the tables above it, and that sentence did not change either.
-        ("AGENTS.md", 150), ("DEPLOYMENT.md", 8), ("SECURITY.md", 150),
+        # §4 tool rows joined the tables above it, and that sentence did not change either; it sits
+        # at 155 now because the activity paragraph above it grew five lines -- still the
+        # same sentence, and a ledger keyed on a line number moves with whoever edits
+        # the text above it.
+        ("AGENTS.md", 155), ("DEPLOYMENT.md", 8), ("SECURITY.md", 150),
     ], (f"{doc_vocabulary}: the docs' own vocabulary is censused, so this pass is not reporting on an "
         "empty set -- and a second file picking up the word is a signal the ledger has to grow")
 

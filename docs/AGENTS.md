@@ -138,11 +138,16 @@ brief, and the final step/tool/artifact summary. `ai_usage_events` records token
 and cost per call for the dashboard's AI-usage panel.
 
 **AI Activity UI**: `GET /api/v1/activity/runs` (list) and
-`/api/v1/activity/runs/{id}` (run + traces) are proxied from the ai-service
-endpoints above; the frontend renders them as a timeline
-(`components/ai/agent-timeline.tsx`, `/activity` and `/activity/[id]`). This is
-PRD §47 Demo 6 — you can open any run and see agent → tools → retrieval → sources
-→ LLM → final answer.
+`/api/v1/activity/runs/{id}` (run + traces) are not an ai-service call. ai-service
+writes `agent_runs`/`agent_traces` (`app/db/observability.py`); `ActivityController`
+reads those same rows back through `AgentRunRepository`/`AgentTraceRepository`, scoped
+by the caller's `user.id()`. There is no HTTP hop, so the panel keeps serving run
+history while ai-service is down — and the two ai-service reads of the same rows,
+`GET /internal/agents/runs` and `GET /internal/agents/runs/{run_id}`, are exactly the
+routes section 3 of [API.md](API.md) marks "no backend caller". The frontend renders
+them as a timeline (`components/ai/agent-timeline.tsx`, `/activity` and
+`/activity/[id]`). This is PRD §47 Demo 6 — you can open any run and see agent → tools
+→ retrieval → sources → LLM → final answer.
 
 **Streaming**: the copilot page posts to `POST /copilot/chat/stream` and reads the turn as an SSE
 stream — `status` frames carrying the agent's own `{agent, step}` ("Thinking", "Calling
