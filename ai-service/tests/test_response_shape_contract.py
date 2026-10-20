@@ -2135,7 +2135,9 @@ def test_the_run_stream_contract_is_one_table_of_publishers_cases_and_subscriber
     # `components/layout/collapsed-sidebar-tooltip.test.tsx`.
     # 46 with the action chips' own:
     # `lib/api/normalize-actions.test.ts`.
-    assert len(skipped) == 46 and all(rel.endswith((".test.ts", ".test.tsx")) for rel, _t in skipped), \
+    # 47 with the landing page's own:
+    # `app/landing-page.test.ts`.
+    assert len(skipped) == 47 and all(rel.endswith((".test.ts", ".test.tsx")) for rel, _t in skipped), \
         (f"{len(skipped)} files are skipped and not one ships: a name in that set that is not a test file "
          "would be a subscriber hidden from the table by the pattern rather than by measurement")
     skipped_names = {rel.rsplit("/", 1)[-1] for rel, _t in skipped}

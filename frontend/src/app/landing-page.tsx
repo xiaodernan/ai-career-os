@@ -1,3 +1,5 @@
+"use client";
+
 import * as React from "react";
 import Link from "next/link";
 import {
@@ -6,6 +8,7 @@ import {
   Briefcase,
   CheckCircle2,
   FileText,
+  Globe,
   MessageSquare,
   Shield,
   Sparkles,
@@ -15,12 +18,20 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { useLocale } from "@/lib/i18n/locale-context";
 
 /**
  * The marketing landing page (18.2): a public-facing page that introduces
  * AI Career OS and links to the app.
+ *
+ * It is a client component because the copy reads from the locale table -- the
+ * same table every signed-in surface reads. A public visitor who cannot switch
+ * the language has no way to read the product's front door in their own
+ * language, so the switch travels with the page.
  */
 export function LandingPage() {
+  const { t, locale, setLocale } = useLocale();
+
   return (
     <div className="min-h-dvh bg-background">
       {/* Header */}
@@ -35,12 +46,23 @@ export function LandingPage() {
             </span>
           </div>
           <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setLocale(locale === "en" ? "zh" : "en")}
+              aria-label={
+                locale === "en" ? t("landing.switchToChinese") : t("landing.switchToEnglish")
+              }
+            >
+              <Globe aria-hidden />
+              <span className="hidden sm:inline">{locale === "en" ? "中文" : "EN"}</span>
+            </Button>
             <Button variant="ghost" size="sm" asChild>
-              <Link href="/auth/login">Sign in</Link>
+              <Link href="/auth/login">{t("landing.signIn")}</Link>
             </Button>
             <Button variant="ai" size="sm" asChild>
               <Link href="/auth/register">
-                Get started
+                {t("landing.getStarted")}
                 <ArrowRight className="size-3.5" aria-hidden />
               </Link>
             </Button>
@@ -52,26 +74,21 @@ export function LandingPage() {
       <section className="mx-auto max-w-6xl px-4 py-20 text-center">
         <div className="mx-auto max-w-3xl">
           <h1 className="font-serif text-4xl font-semibold tracking-tight sm:text-5xl lg:text-6xl">
-            Your personal
-            <span className="text-primary"> job-search</span>
+            {t("landing.heroTitle")}
+            <span className="text-primary">{t("landing.heroTitleAccent")}</span>
             <br />
-            operating system
+            {t("landing.heroTitleTail")}
           </h1>
-          <p className="mt-6 text-lg text-muted-foreground">
-            AI Career OS turns your resume, the job market, and a fleet of AI agents
-            into one evidence-backed system — from resume → knowledge base → job
-            discovery → matching → tailored materials → mock interviews → application
-            tracking.
-          </p>
+          <p className="mt-6 text-lg text-muted-foreground">{t("landing.heroDescription")}</p>
           <div className="mt-8 flex items-center justify-center gap-3">
             <Button variant="ai" size="lg" asChild>
               <Link href="/auth/register">
-                Start free
+                {t("landing.startFree")}
                 <ArrowRight className="size-4" aria-hidden />
               </Link>
             </Button>
             <Button variant="outline" size="lg" asChild>
-              <Link href="/auth/login">Sign in</Link>
+              <Link href="/auth/login">{t("landing.signIn")}</Link>
             </Button>
           </div>
         </div>
@@ -81,42 +98,41 @@ export function LandingPage() {
       <section className="border-t border-border/50 bg-muted/30">
         <div className="mx-auto max-w-6xl px-4 py-20">
           <h2 className="text-center font-serif text-3xl font-semibold tracking-tight">
-            Everything you need
+            {t("landing.featuresTitle")}
           </h2>
           <p className="mx-auto mt-3 max-w-2xl text-center text-muted-foreground">
-            One system for your entire job search — every AI conclusion is traceable
-            to your own material.
+            {t("landing.featuresDescription")}
           </p>
           <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             <FeatureCard
               icon={<FileText className="size-5" aria-hidden />}
-              title="Resume Intelligence"
-              description="Upload PDF/DOCX/TXT → parse → structured profile + versioned resumes with live score."
+              title={t("landing.features.resume")}
+              description={t("landing.features.resumeDescription")}
             />
             <FeatureCard
               icon={<Target className="size-5" aria-hidden />}
-              title="JD Analysis & Matching"
-              description="Requirements/skills/interview topics extracted; deterministic match scores bound to resume evidence."
+              title={t("landing.features.matching")}
+              description={t("landing.features.matchingDescription")}
             />
             <FeatureCard
               icon={<MessageSquare className="size-5" aria-hidden />}
-              title="Adaptive Mock Interviews"
-              description="Interviewer agent that drills, follows up and scales difficulty; 8-dimension report + depth trajectory."
+              title={t("landing.features.interviews")}
+              description={t("landing.features.interviewsDescription")}
             />
             <FeatureCard
               icon={<Briefcase className="size-5" aria-hidden />}
-              title="Application Tracker"
-              description="Linear-style kanban with transition audit events — saved → applied → OA → interview → offer."
+              title={t("landing.features.tracker")}
+              description={t("landing.features.trackerDescription")}
             />
             <FeatureCard
               icon={<TrendingUp className="size-5" aria-hidden />}
-              title="Growth Intelligence"
-              description="Gap analysis, learning plans, salary benchmarks, and career progression planning."
+              title={t("landing.features.growth")}
+              description={t("landing.features.growthDescription")}
             />
             <FeatureCard
               icon={<BarChart3 className="size-5" aria-hidden />}
-              title="Analytics & Insights"
-              description="Pipeline funnel, response rates, stalled applications, and weekly insight digests."
+              title={t("landing.features.analytics")}
+              description={t("landing.features.analyticsDescription")}
             />
           </div>
         </div>
@@ -128,18 +144,18 @@ export function LandingPage() {
           <div className="grid gap-8 sm:grid-cols-3">
             <TrustItem
               icon={<Shield className="size-5" aria-hidden />}
-              title="Evidence-bound"
-              description="Every AI claim traces to your own material — no fabrication, no invented experience."
+              title={t("landing.trust.evidence")}
+              description={t("landing.trust.evidenceDescription")}
             />
             <TrustItem
               icon={<Users className="size-5" aria-hidden />}
-              title="User-scoped"
-              description="Your data is yours. Every query is scoped to your user id — no cross-user leakage."
+              title={t("landing.trust.scoped")}
+              description={t("landing.trust.scopedDescription")}
             />
             <TrustItem
               icon={<CheckCircle2 className="size-5" aria-hidden />}
-              title="Inspectable"
-              description="Every agent run is recorded: traces, tool calls, retrieval, tokens, cost."
+              title={t("landing.trust.inspectable")}
+              description={t("landing.trust.inspectableDescription")}
             />
           </div>
         </div>
@@ -149,16 +165,15 @@ export function LandingPage() {
       <section className="border-t border-border/50 bg-primary/5">
         <div className="mx-auto max-w-6xl px-4 py-20 text-center">
           <h2 className="font-serif text-3xl font-semibold tracking-tight">
-            Ready to build your career OS?
+            {t("landing.ctaTitle")}
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-muted-foreground">
-            Start with your resume — the system builds your knowledge base, finds
-            matching jobs, and prepares you for interviews.
+            {t("landing.ctaDescription")}
           </p>
           <div className="mt-8">
             <Button variant="ai" size="lg" asChild>
               <Link href="/auth/register">
-                Get started free
+                {t("landing.ctaButton")}
                 <ArrowRight className="size-4" aria-hidden />
               </Link>
             </Button>
@@ -170,7 +185,7 @@ export function LandingPage() {
       <footer className="border-t border-border/50">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 text-sm text-muted-foreground">
           <span>© 2026 AI Career OS</span>
-          <span>Personal project, active development</span>
+          <span>{t("landing.footerNote")}</span>
         </div>
       </footer>
     </div>

@@ -291,6 +291,58 @@ export const translations = {
       logOut: "Log out of Career OS?",
       logOutDescription: "Your data stays safe — this only ends the current session.",
     },
+    // The public landing page (18.2) -- the first thing a visitor reads.
+    landing: {
+      signIn: "Sign in",
+      getStarted: "Get started",
+      heroTitle: "Your personal",
+      heroTitleAccent: " job-search",
+      heroTitleTail: "operating system",
+      heroDescription:
+        "AI Career OS turns your resume, the job market, and a fleet of AI agents into one evidence-backed system — from resume → knowledge base → job discovery → matching → tailored materials → mock interviews → application tracking.",
+      startFree: "Start free",
+      featuresTitle: "Everything you need",
+      featuresDescription:
+        "One system for your entire job search — every AI conclusion is traceable to your own material.",
+      switchToChinese: "Switch to Chinese",
+      switchToEnglish: "Switch to English",
+      features: {
+        resume: "Resume Intelligence",
+        resumeDescription:
+          "Upload PDF/DOCX/TXT → parse → structured profile + versioned resumes with live score.",
+        matching: "JD Analysis & Matching",
+        matchingDescription:
+          "Requirements/skills/interview topics extracted; deterministic match scores bound to resume evidence.",
+        interviews: "Adaptive Mock Interviews",
+        interviewsDescription:
+          "Interviewer agent that drills, follows up and scales difficulty; 8-dimension report + depth trajectory.",
+        tracker: "Application Tracker",
+        trackerDescription:
+          "Linear-style kanban with transition audit events — saved → applied → OA → interview → offer.",
+        growth: "Growth Intelligence",
+        growthDescription:
+          "Gap analysis, learning plans, salary benchmarks, and career progression planning.",
+        analytics: "Analytics & Insights",
+        analyticsDescription:
+          "Pipeline funnel, response rates, stalled applications, and weekly insight digests.",
+      },
+      trust: {
+        evidence: "Evidence-bound",
+        evidenceDescription:
+          "Every AI claim traces to your own material — no fabrication, no invented experience.",
+        scoped: "User-scoped",
+        scopedDescription:
+          "Your data is yours. Every query is scoped to your user id — no cross-user leakage.",
+        inspectable: "Inspectable",
+        inspectableDescription:
+          "Every agent run is recorded: traces, tool calls, retrieval, tokens, cost.",
+      },
+      ctaTitle: "Ready to build your career OS?",
+      ctaDescription:
+        "Start with your resume — the system builds your knowledge base, finds matching jobs, and prepares you for interviews.",
+      ctaButton: "Get started free",
+      footerNote: "Personal project, active development",
+    },
     // The copilot's artifact cards -- what each kind of answer is called.
     artifacts: {
       match: "Match analysis",
@@ -718,6 +770,49 @@ export const translations = {
       colorTheme: "配色主题",
       logOut: "退出 Career OS？",
       logOutDescription: "你的数据是安全的——这只会结束当前会话。",
+    },
+    // The public landing page (18.2) -- the first thing a visitor reads.
+    landing: {
+      signIn: "登录",
+      getStarted: "开始使用",
+      heroTitle: "属于你的个人",
+      heroTitleAccent: "求职",
+      heroTitleTail: "操作系统",
+      heroDescription:
+        "AI Career OS 把你的简历、招聘市场和一支 AI 代理队伍变成一个证据支撑的系统——从简历 → 知识库 → 职位发现 → 匹配 → 定制材料 → 模拟面试 → 申请追踪。",
+      startFree: "免费开始",
+      featuresTitle: "你需要的一切",
+      featuresDescription:
+        "整个求职过程，一个系统完成——每一个 AI 结论都能追到你自己的材料。",
+      switchToChinese: "切换到中文",
+      switchToEnglish: "切换到英文",
+      features: {
+        resume: "简历智能",
+        resumeDescription: "上传 PDF/DOCX/TXT → 解析 → 结构化档案 + 带实时评分的版本化简历。",
+        matching: "JD 分析与匹配",
+        matchingDescription: "提取需求/技能/面试题；确定性匹配分绑定到简历证据。",
+        interviews: "自适应模拟面试",
+        interviewsDescription: "面试代理不断追问、调整难度；8 维报告 + 深度曲线。",
+        tracker: "申请追踪",
+        trackerDescription: "Linear 风格看板，带状态流转审计事件——收藏 → 已投递 → 笔试 → 面试 → 录用。",
+        growth: "成长智能",
+        growthDescription: "差距分析、学习计划、薪资基准与职业路径规划。",
+        analytics: "分析与洞察",
+        analyticsDescription: "流水线漏斗、回复率、停滞的申请，以及每周洞察摘要。",
+      },
+      trust: {
+        evidence: "证据支撑",
+        evidenceDescription: "每一个 AI 结论都能追到你自己的材料——不编造，不虚构经历。",
+        scoped: "按用户隔离",
+        scopedDescription: "你的数据就是你的。每一次查询都限定在你的用户 ID——不会串号。",
+        inspectable: "可检查",
+        inspectableDescription: "每一次代理运行都有记录：链路、工具调用、检索、token、成本。",
+      },
+      ctaTitle: "准备好搭建你的求职操作系统了吗？",
+      ctaDescription:
+        "从简历开始——系统会建立你的知识库、找到匹配的职位，并帮你准备面试。",
+      ctaButton: "免费开始",
+      footerNote: "个人项目，持续开发中",
     },
     // The copilot's artifact cards -- what each kind of answer is called.
     artifacts: {
