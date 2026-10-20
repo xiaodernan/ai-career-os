@@ -19,6 +19,8 @@ import com.careeros.report.service.ExportService;
 import com.careeros.report.service.ImportService;
 import com.careeros.auth.repository.UserProfileRepository;
 import com.careeros.knowledge.repository.UserNoteRepository;
+import com.careeros.knowledge.service.KnowledgeService;
+import com.careeros.resume.service.ResumeService;
 import com.careeros.common.AuthUser;
 import com.careeros.common.CurrentUserArgumentResolver;
 import com.careeros.common.EnvelopeAdvice;
@@ -66,7 +68,8 @@ class DataPortabilityControllerTest {
         profiles = mock(UserProfileRepository.class);
         notes = mock(UserNoteRepository.class);
         ExportService exports = new ExportService(ai, applications, growthPlans);
-        ImportService imports = new ImportService(ai, profiles, notes, applications, growthPlans);
+        ImportService imports = new ImportService(ai, profiles, notes, applications, growthPlans,
+                mock(ResumeService.class), mock(KnowledgeService.class));
         DataPortabilityController controller = new DataPortabilityController(ai, exports, imports);
         mvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new EnvelopeAdvice(), new GlobalExceptionHandler())
@@ -216,20 +219,20 @@ class DataPortabilityControllerTest {
                         "op_counts", Map.of("create", 1, "update", 0, "delete", 0, "total", 1),
                         "sections", Map.of(
                                 "profile", List.of(Map.of("op", "update", "id", "p1")),
-                                "resumes", List.of(Map.of("op", "create", "id", "r1")))));
+                                "interviews", List.of(Map.of("op", "create", "id", "i1")))));
 
         mvc.perform(post("/api/v1/data-portability/import-apply")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"bundle":{"schema_version":"1.1.0","data":{
                                   "profile":{"headline":"Backend engineer"},
-                                  "resumes":[{"id":"r1"}]}}}
+                                  "interviews":[{"id":"i1"}]}}}
                                 """))
                 .andExpect(status().isOk())
-                // The profile was written; the resumes were not, and the answer
+                // The profile was written; the interviews were not, and the answer
                 // says so rather than claiming the whole bundle landed.
                 .andExpect(jsonPath("$.data.applied.profile.updated").value(1))
-                .andExpect(jsonPath("$.data.skipped[0].section").value("resumes"));
+                .andExpect(jsonPath("$.data.skipped[0].section").value("interviews"));
     }
 
     /**

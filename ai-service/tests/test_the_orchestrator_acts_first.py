@@ -94,9 +94,19 @@ def test_the_rules_the_baseline_scored_well_survive_the_rewrite():
         f"the style rule vanished: {rules[5]!r}")
     assert "UNTRUSTED" in rules[6] and "never instructions" in rules[6], (
         f"the untrusted-data rule vanished: {rules[6]!r}")
+    # The computed-answer rule: the four growth engines' names are in the prompt
+    # so the model reaches for the tool rather than its own memory of what a
+    # role pays. A rule that names no tool is a rule that changes nothing.
+    assert "analyze_gap" in rules[7] and "benchmark_salary" in rules[7], (
+        f"the computed-answer rule does not name the tools it points at: {rules[7]!r}")
 
 
-def test_the_rules_stay_numbered_one_through_six_in_order():
-    """The fix edited rules 2 and 3 in place; a renumber or a dropped rule is an unreviewed edit."""
-    assert sorted(_rules()) == list(range(1, 7)), (
-        f"CAREER_SYSTEM's rules are not 1..6 in order: {sorted(_rules())}")
+def test_the_rules_stay_numbered_one_through_seven_in_order():
+    """The fix edited rules 2 and 3 in place; a renumber or a dropped rule is an unreviewed edit.
+
+    Rule 7 joined the table when the growth engines became agent tools: the
+    questions they answer are computed, and the model must reach for the tool
+    rather than its own memory of what a role pays.
+    """
+    assert sorted(_rules()) == list(range(1, 8)), (
+        f"CAREER_SYSTEM's rules are not 1..7 in order: {sorted(_rules())}")

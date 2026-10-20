@@ -59,10 +59,15 @@ Two rules make it safe:
   write yet — the resumes, the knowledge base, the job descriptions, the
   interviews — is reported as skipped rather than claimed.
 
-What applies today: the profile, the applications and the stored growth runs.
-What does not: the resumes and the knowledge base, because restoring a resume
-means re-ingesting a document into storage and the vector store — a pipeline of
-its own, not a row write.
+What applies today: the profile, the applications, the stored growth runs, the
+resumes and the knowledge base. The resumes and the documents are re-ingested
+rather than copied — a restored resume is a *new* resume with the same
+content, because its id is the key its chunks and versions hang off and the
+ingestion pipeline mints those. What does not apply: the job descriptions and
+the interviews, because restoring a job description means running the analyst
+over it again and restoring an interview means re-running the interviewer —
+both are pipelines, not row writes. They are named in the answer, not
+silently dropped.
 
 ### The bundle is complete (1.1.0)
 

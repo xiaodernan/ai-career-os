@@ -151,9 +151,10 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   restore or diff a backup before any write. Backend bridge: `POST /api/v1/data-portability/import-plan`
   and `POST /api/v1/data-portability/import-apply` — the second one executes the plan
   and reports what it wrote **and which sections it left alone, with the reason**. Today
-  the profile, the applications and the stored growth runs apply; the resumes and the
-  knowledge base do not, because restoring a resume means re-ingesting a document into
-  storage and the vector store — a pipeline of its own, not a row write.)
+  the profile, the applications, the stored growth runs, the resumes and the knowledge
+  base apply; the job descriptions and the interviews do not, because restoring a job
+  description means running the analyst over it again and restoring an interview means
+  re-running the interviewer — both are pipelines, not row writes.)
 - [x] **13.3** Per-user data deletion (right-to-be-forgotten). (ai-service half:
   `features/export_redact.py` deep-copy section redaction + `anonymize`; recomputes the
   content hash and records `redacted_sections`. Backend bridge: `POST /api/v1/data-portability/redact`.)

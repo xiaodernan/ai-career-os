@@ -11,6 +11,9 @@ import com.careeros.common.ApiException;
 import com.careeros.common.ApiErrorCode;
 import com.careeros.knowledge.entity.UserNote;
 import com.careeros.knowledge.repository.UserNoteRepository;
+import com.careeros.knowledge.service.KnowledgeService;
+import com.careeros.resume.dto.ResumeDtos.CreateResumeRequest;
+import com.careeros.resume.service.ResumeService;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -46,15 +49,20 @@ public class ImportService {
     private final UserNoteRepository notes;
     private final ApplicationRepository applications;
     private final GrowthPlanRepository growthPlans;
+    private final ResumeService resumes;
+    private final KnowledgeService knowledge;
 
     public ImportService(AiServiceClient aiService, UserProfileRepository profiles,
                           UserNoteRepository notes, ApplicationRepository applications,
-                          GrowthPlanRepository growthPlans) {
+                          GrowthPlanRepository growthPlans, ResumeService resumes,
+                          KnowledgeService knowledge) {
         this.aiService = aiService;
         this.profiles = profiles;
         this.notes = notes;
         this.applications = applications;
         this.growthPlans = growthPlans;
+        this.resumes = resumes;
+        this.knowledge = knowledge;
     }
 
     /**
@@ -95,11 +103,13 @@ public class ImportService {
         applyNotes(userId, data, sections, applied, skipped);
         applyApplications(userId, data, sections, applied, skipped);
         applyGrowthPlans(userId, data, sections, applied, skipped);
+        applyResumes(userId, data, sections, applied, skipped);
+        applyKnowledge(userId, data, sections, applied, skipped);
 
         // The sections the backend cannot write are reported rather than
         // silently ignored: a restore that says "done" while leaving half the
         // bundle behind is a lie the user finds out about later.
-        for (String section : List.of("resumes", "knowledge", "job_descriptions", "interviews")) {
+        for (String section : List.of("job_descriptions", "interviews")) {
             List<Map<String, Object>> ops = sections.get(section);
             if (ops != null && !ops.isEmpty()) {
                 skipped.add(Map.of("section", section,
@@ -291,10 +301,102 @@ public class ImportService {
         count(applied, "growth_plans", created, updated, deleted);
     }
 
+    /**
+     * The resumes: a restored resume goes through the same two steps a new one
+     * does — the row, then the ingestion that makes it citable.
+     *
+     * <p>The id is NOT carried over. A resume's id is the key its knowledge
+     * chunks and its versions hang off, and those are minted by the ingestion
+     * pipeline; reusing an old id would leave two documents' chunks pointing
+     * at one row. So a restored resume is a *new* resume with the same content,
+     * and the answer says so.
+     */
+    private void applyResumes(UUID userId, Map<String, Object> data,
+                              Map<String, List<Map<String, Object>>> sections,
+                              Map<String, int[]> applied, List<Map<String, String>> skipped) {
+        List<Map<String, Object>> ops = sections.get("resumes");
+        if (ops == null || ops.isEmpty()) {
+            return;
+        }
+        Object rows = data.get("resumes");
+        if (!(rows instanceof List<?> list)) {
+            skipped.add(Map.of("section", "resumes", "reason", "The bundle carries no resumes."));
+            return;
+        }
+        int created = 0;
+        for (Map<String, Object> op : ops) {
+            if ("delete".equals(str(op, "op"))) {
+                continue;  // a deleted resume is retired below, not resurrected
+            }
+            Map<?, ?> row = findRow(list, str(op, "id"));
+            if (row == null) {
+                continue;
+            }
+            String title = str(row, "resume_title");
+            if (title == null || title.isBlank()) {
+                title = str(row, "title");
+            }
+            String plaintext = str(row, "plaintext");
+            if (title == null || title.isBlank() || plaintext == null || plaintext.isBlank()) {
+                continue;
+            }
+            // The two steps a new resume takes, in the same order: the row, then
+            // the ingestion that chunks and embeds it so the agents can cite it.
+            resumes.create(userId, new CreateResumeRequest(title, plaintext));
+            knowledge.ingestText(userId, title, plaintext, "resume", null);
+            created++;
+        }
+        count(applied, "resumes", created, 0, 0);
+    }
+
+    /**
+     * The knowledge base: the documents the user's own material was ingested
+     * from. A restored document is re-ingested, so its chunks are embedded
+     * again and the agents can cite it.
+     */
+    private void applyKnowledge(UUID userId, Map<String, Object> data,
+                                Map<String, List<Map<String, Object>>> sections,
+                                Map<String, int[]> applied, List<Map<String, String>> skipped) {
+        List<Map<String, Object>> ops = sections.get("knowledge");
+        if (ops == null || ops.isEmpty()) {
+            return;
+        }
+        Object rows = data.get("knowledge");
+        if (!(rows instanceof List<?> list)) {
+            skipped.add(Map.of("section", "knowledge", "reason", "The bundle carries no documents."));
+            return;
+        }
+        int created = 0;
+        for (Map<String, Object> op : ops) {
+            if ("delete".equals(str(op, "op"))) {
+                continue;  // a retired document stays retired
+            }
+            Map<?, ?> row = findRow(list, str(op, "id"));
+            if (row == null) {
+                continue;
+            }
+            String title = str(row, "title");
+            String excerpt = str(row, "text_excerpt");
+            if (title == null || title.isBlank() || excerpt == null || excerpt.isBlank()) {
+                // The bundle carries a document's metadata and its excerpt, not
+                // its whole body -- the body is in the object store, and a
+                // restore that claims to bring back a document it only has an
+                // excerpt of would be overstating what it did.
+                continue;
+            }
+            // A restored document is re-ingested as a note: the bundle carries
+            // the document's metadata and its excerpt, not its whole body (the
+            // body is in the object store), and a note is what the ingestion
+            // pipeline accepts for a piece of text.
+            knowledge.ingestText(userId, title, excerpt, "note", null);
+            created++;
+        }
+        count(applied, "knowledge", created, 0, 0);
+    }
+
     /* ------------------------------------------------------------------ */
     /* Helpers                                                             */
     /* ------------------------------------------------------------------ */
-
     /** The caller's current state, exported the same way — the plan's other half. */
     private Map<String, Object> currentState(UUID userId) {
         Map<String, Object> data = new LinkedHashMap<>();
