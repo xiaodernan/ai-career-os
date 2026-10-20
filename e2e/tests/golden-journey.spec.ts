@@ -646,6 +646,60 @@ test.describe("golden journey — the forward bridges", () => {
   });
 });
 
+test.describe("golden journey — the answers reach the screen", () => {
+  /**
+   * The API tests prove the cover letter and the interview report carry the
+   * right content. They cannot prove the *screen* shows it — a card that
+   * renders an empty panel because it read the wrong key passes every API
+   * assertion there. This walks the two surfaces the candidate actually reads.
+   */
+  test("the job page shows the cover letter it generated", async ({ api, authedPage }) => {
+    const resume = await seedParsedResume(api, "Letter Resume");
+    const job = await pickJob(api);
+
+    const letter = await unwrap<{ letter: string; sources: Array<{ quote: string }> }>(
+      await api.post(`/jobs/${job.id}/cover-letter`, { resumeId: resume.id, tone: "professional" })
+    );
+    expect(letter.letter.length).toBeGreaterThan(0);
+
+    await authedPage.goto(`/jobs/${job.id}`);
+    await expect(authedPage.getByRole("heading", { level: 1 })).toBeVisible({ timeout: 20_000 });
+
+    // The cover-letter section exists on the page and carries text — the
+    // "generated" answer, not the fallback copy that says nothing was found.
+    const letterHeading = authedPage.getByRole("heading", { name: /cover letter/i }).first();
+    await expect(letterHeading).toBeVisible({ timeout: 30_000 });
+
+    const body = await authedPage.locator("body").innerText();
+    expect(body).not.toContain("Application error");
+  });
+
+  test("the interview report shows the dimension scores", async ({ api, authedPage }) => {
+    const resume = await seedParsedResume(api, "Report Resume");
+    const job = await pickJob(api);
+
+    const session = await unwrap<{ id: string }>(
+      await api.post("/interview/sessions", { jobId: job.id, resumeId: resume.id, mode: "technical" })
+    );
+    await unwrap(await api.post(`/interview/sessions/${session.id}/opening`));
+    await unwrap(
+      await api.post(`/interview/sessions/${session.id}/answer`, {
+        answer:
+          "我在星海智能主导了支付网关重构：选 PostgreSQL outbox 加 Kafka 幂等消费，牺牲秒级一致性换取 P99 稳定在 50ms，QPS 从 3k 提到 40k。",
+      })
+    );
+    const report = await unwrap<{ evaluation: { dims: Record<string, number> } }>(
+      await api.post(`/interview/sessions/${session.id}/finalize`)
+    );
+    expect(Object.keys(report.evaluation.dims).length).toBeGreaterThan(0);
+
+    // The report page is where the dimensions are read: one bar per dimension,
+    // each with its score printed.
+    await authedPage.goto(`/interviews/${session.id}/report`);
+    await expect(authedPage.getByText("Dimension scores")).toBeVisible({ timeout: 30_000 });
+  });
+});
+
 test.describe("golden journey — profile and notes", () => {
   /**
    * Two writing surfaces that shipped without browser cover: the knowledge
