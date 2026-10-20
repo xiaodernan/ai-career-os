@@ -11,6 +11,7 @@ import { ErrorState } from "@/components/common/error-state";
 import { LoadingListSkeleton } from "@/components/common/loading-skeletons";
 import { ApiError } from "@/lib/api/client";
 import { missingEndpointMessage } from "@/lib/api/missing-endpoint";
+import { useLocale } from "@/lib/i18n/locale-context";
 
 /**
  * QueryBoundary — the single async contract used by every surface:
@@ -68,6 +69,7 @@ export function QueryBoundary<T>({
   className,
   boxed = true,
 }: QueryBoundaryProps<T>) {
+  const { t } = useLocale();
   const retry = () => void query.refetch();
   const emptyIcon = empty.icon ?? <PlugZap aria-hidden />;
 
@@ -84,7 +86,7 @@ export function QueryBoundary<T>({
             action={
               <Button variant="outline" size="sm" onClick={retry}>
                 <RotateCcw aria-hidden />
-                Check again
+                {t("common.checkAgain")}
               </Button>
             }
           />

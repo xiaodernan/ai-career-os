@@ -5,6 +5,7 @@ import { TriangleAlert, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ApiError } from "@/lib/api/client";
+import { useLocale } from "@/lib/i18n/locale-context";
 
 /**
  * ErrorState — failure surface with a real retry affordance.
@@ -18,7 +19,7 @@ export interface ErrorStateProps extends React.ComponentProps<"div"> {
 }
 
 function ErrorState({
-  title = "Something went wrong",
+  title,
   error,
   message,
   onRetry,
@@ -26,6 +27,8 @@ function ErrorState({
   className,
   ...props
 }: ErrorStateProps) {
+  const { t } = useLocale();
+  const heading = title ?? t("common.somethingWentWrong");
   const detail =
     message ??
     (error instanceof ApiError
@@ -46,12 +49,12 @@ function ErrorState({
       <div className="mb-2 flex size-11 items-center justify-center rounded-xl border border-destructive/25 bg-destructive/10 text-destructive [&_svg]:size-5">
         <TriangleAlert aria-hidden />
       </div>
-      <h3 className="text-sm font-semibold">{title}</h3>
+      <h3 className="text-sm font-semibold">{heading}</h3>
       {detail && <p className="max-w-sm text-sm text-muted-foreground">{detail}</p>}
       {onRetry && (
         <Button variant="outline" size="sm" className="mt-3" onClick={onRetry} loading={retrying}>
           <RotateCcw aria-hidden />
-          Try again
+          {t("common.tryAgain")}
         </Button>
       )}
     </div>

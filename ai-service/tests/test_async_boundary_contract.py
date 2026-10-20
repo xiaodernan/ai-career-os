@@ -129,5 +129,7 @@ def test_retry_refetches_the_query():
 def test_empty_state_shows_next_action_on_missing_endpoint():
     """When isEndpointMissing, the empty state renders a 'Check again' button."""
     text = _read(BOUNDARY)
-    assert "Check again" in text
+    # The button's label reads from the locale table now, so the gate accepts
+    # the key the boundary reads rather than the English copy it used to carry.
+    assert 't("common.checkAgain")' in text or "Check again" in text
     assert '<Button variant="outline"' in text

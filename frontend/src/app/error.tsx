@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useLocale } from "@/lib/i18n/locale-context";
 
 export default function Error({
   error,
@@ -11,6 +12,7 @@ export default function Error({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const { t } = useLocale();
   useEffect(() => {
     console.error(error);
   }, [error]);
@@ -22,11 +24,10 @@ export default function Error({
       </span>
       <div className="max-w-md space-y-2">
         <h1 className="font-serif text-display-lg font-medium tracking-tight text-balance">
-          Something broke on this screen.
+          {t("errors.brokeOnThisScreen")}
         </h1>
         <p className="text-sm leading-relaxed text-muted-foreground">
-          The error was logged to the console. Retrying re-renders the page
-          without losing your session.
+          {t("errors.brokeOnThisScreenDescription")}
         </p>
         {error.digest ? (
           <p className="font-mono text-xs text-muted-foreground/70">
@@ -36,7 +37,7 @@ export default function Error({
       </div>
       <Button onClick={reset}>
         <RotateCcw className="size-4" aria-hidden />
-        Try again
+        {t("common.tryAgain")}
       </Button>
     </div>
   );

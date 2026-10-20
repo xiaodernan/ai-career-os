@@ -39,6 +39,11 @@ export const translations = {
       error: "Error",
       retry: "Retry",
       empty: "Nothing here yet",
+      tryAgain: "Try again",
+      checkAgain: "Check again",
+      somethingWentWrong: "Something went wrong",
+      skipToContent: "Skip to content",
+      backToDashboard: "Back to the dashboard",
     },
     /**
      * What a screen reader is told while a surface is still loading.
@@ -79,6 +84,8 @@ export const translations = {
       commandPalettePlaceholder: "Type a command or search…",
       searching: "Searching…",
       noResults: "No results.",
+      searchFailed: "Content search failed — showing navigation only.",
+      resultsStreamIn: "content results stream in as you type.",
       previousPage: "Previous page",
       nextPage: "Next page",
       page: "Page {page}",
@@ -124,12 +131,20 @@ export const translations = {
      */
     diffView: {
       statistics: "Tailoring statistics",
+      agentNotes: "Agent notes",
+      appliedChanges: "Applied changes",
+      rejectedProposals: "Rejected proposals",
+      noSafeEdits:
+        "The agent proposed no safe edits for this role — it will not rewrite experience it cannot evidence.",
+      hide: "Hide",
+      showReasons: "Show reasons",
     },
     /**
      * One piece of cited evidence, and the card it sits in.
      */
     evidence: {
       source: "Evidence source",
+      jumpToSource: "Jump to source",
     },
     /**
      * The recovery screens. The copy here is careful on purpose -- the
@@ -522,6 +537,30 @@ export const translations = {
       logOutDescription: "Your data stays safe — this only ends the current session.",
       logOutConfirm: "Log out",
     },
+    /**
+     * The skill chips: the two labels that sit above the matched row and
+     * the missing one.
+     */
+    skillChips: {
+      why: "Why",
+      missing: "Missing",
+    },
+    /**
+     * The error boundaries. The outermost one replaces the root layout --
+     * and with it the locale provider -- so it carries its own copy of the
+     * provider rather than reading a context that is not there.
+     */
+    errors: {
+      brokeOnThisScreen: "Something broke on this screen.",
+      brokeOnThisScreenDescription:
+        "The error was logged to the console. Retrying re-renders the page without losing your session.",
+      couldNotStart: "The app could not start.",
+      couldNotStartDescription:
+        "The error was logged to the console. Retrying rebuilds the whole shell from scratch.",
+      notOnTheMap: "This page is not on the map.",
+      notOnTheMapDescription:
+        "The route you followed does not exist. It may have moved, or the link was mistyped.",
+    },
     // The public landing page (18.2) -- the first thing a visitor reads.
     landing: {
       signIn: "Sign in",
@@ -828,6 +867,8 @@ export const translations = {
       noStep14d: "no step 14d+",
       reminderOn: "reminder {date}",
       pipelineIsEmpty: "Pipeline is empty",
+      dropCardHere: "Drop a card here",
+      savingMove: "Saving move…",
       pipelineIsEmptyDescription:
         "Track a job from its detail page and it appears here, starting in Saved.",
       addApplication: "Add application",
@@ -1060,6 +1101,11 @@ export const translations = {
       error: "错误",
       retry: "重试",
       empty: "暂无数据",
+      tryAgain: "再试一次",
+      checkAgain: "再检查一次",
+      somethingWentWrong: "出了点问题",
+      skipToContent: "跳到正文",
+      backToDashboard: "回到仪表盘",
     },
     /**
      * What a screen reader is told while a surface is still loading.
@@ -1095,6 +1141,8 @@ export const translations = {
       commandPalettePlaceholder: "输入命令或搜索…",
       searching: "正在搜索…",
       noResults: "没有结果。",
+      searchFailed: "内容搜索失败——只显示导航项。",
+      resultsStreamIn: "输入的同时内容结果会陆续出现。",
       previousPage: "上一页",
       nextPage: "下一页",
       page: "第 {page} 页",
@@ -1139,12 +1187,19 @@ export const translations = {
      */
     diffView: {
       statistics: "定制统计",
+      agentNotes: "代理备注",
+      appliedChanges: "已采纳的改动",
+      rejectedProposals: "被否决的提案",
+      noSafeEdits: "代理没有为这个职位提出安全的改动——它不会改写它无法举证的经历。",
+      hide: "收起",
+      showReasons: "看原因",
     },
     /**
      * One piece of cited evidence, and the card it sits in.
      */
     evidence: {
       source: "证据来源",
+      jumpToSource: "跳到来源",
     },
     /**
      * The recovery screens. The copy here is careful on purpose -- the
@@ -1506,7 +1561,27 @@ export const translations = {
       logOutDescription: "你的数据是安全的——这只会结束当前会话。",
       logOutConfirm: "退出登录",
     },
-    // The public landing page (18.2) -- the first thing a visitor reads.
+    /**
+     * The skill chips: the two labels that sit above the matched row and
+     * the missing one.
+     */
+    skillChips: {
+      why: "为什么匹配",
+      missing: "还缺",
+    },
+    /**
+     * The error boundaries. The outermost one replaces the root layout --
+     * and with it the locale provider -- so it carries its own copy of the
+     * provider rather than reading a context that is not there.
+     */
+    errors: {
+      brokeOnThisScreen: "这个页面出问题了。",
+      brokeOnThisScreenDescription: "错误已经记到控制台。再试一次会重新渲染这个页面，不会丢掉你的会话。",
+      couldNotStart: "应用没能启动。",
+      couldNotStartDescription: "错误已经记到控制台。再试一次会从头重建整个外壳。",
+      notOnTheMap: "这个页面不在地图上。",
+      notOnTheMapDescription: "你访问的路由不存在。它可能已经挪了地方，或者链接打错了。",
+    },
     landing: {
       signIn: "登录",
       getStarted: "开始使用",
@@ -1788,6 +1863,8 @@ export const translations = {
       noStep14d: "14 天以上没动静",
       reminderOn: "提醒 {date}",
       pipelineIsEmpty: "流水线还是空的",
+      dropCardHere: "把卡片拖到这里",
+      savingMove: "正在保存移动…",
       pipelineIsEmptyDescription: "在职位详情页记录一个职位，它就会出现在这里，从「已收藏」开始。",
       addApplication: "添加申请",
       add: "添加",

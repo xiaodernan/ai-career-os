@@ -67,7 +67,7 @@ export function ModuleView<T>({
               aria-label={t("chrome.refreshList")}
             >
               <RefreshCw aria-hidden />
-              Refresh
+              {t("common.refresh")}
             </Button>
           </>
         }
@@ -94,7 +94,7 @@ export function ModuleView<T>({
                     </Button>
                   ) : (
                     <Button variant="outline" size="sm" onClick={() => query.refetch()}>
-                      Try again
+                      {t("common.tryAgain")}
                     </Button>
                   )
                 }

@@ -75,7 +75,7 @@ function EvidenceCard({
             href={href}
             className="text-xs font-medium text-primary underline-offset-4 hover:underline focus-visible:ring-[3px] focus-visible:ring-primary/30 rounded-md px-1 -mx-1"
           >
-            Jump to source →
+            {t("evidence.jumpToSource")} →
           </Link>
         </div>
       )}

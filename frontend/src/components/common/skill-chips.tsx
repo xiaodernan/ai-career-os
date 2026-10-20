@@ -5,6 +5,7 @@ import { Check, Circle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { scoreBand } from "@/components/ai/match-ring";
+import { useLocale } from "@/lib/i18n/locale-context";
 
 /**
  * SkillChips — the PRD's job-card language: matched skills carry a check,
@@ -27,6 +28,7 @@ function SkillChips({
   className,
   ...props
 }: SkillChipsProps) {
+  const { t } = useLocale();
   const shownMatched = matched.slice(0, max);
   const shownMissing = missing.slice(0, max);
   if (!matched.length && !missing.length) return null;
@@ -34,7 +36,9 @@ function SkillChips({
   return (
     <ul className={cn("flex flex-wrap items-center gap-1.5", className)} {...props}>
       {showLabels && matched.length > 0 && (
-        <li className="text-2xs font-medium tracking-wide text-muted-foreground uppercase">Why</li>
+        <li className="text-2xs font-medium tracking-wide text-muted-foreground uppercase">
+          {t("skillChips.why")}
+        </li>
       )}
       {shownMatched.map((s) => (
         <li key={`m-${s}`}>
@@ -49,7 +53,7 @@ function SkillChips({
       )}
       {showLabels && missing.length > 0 && (
         <li className="ml-1 text-2xs font-medium tracking-wide text-muted-foreground uppercase">
-          Missing
+          {t("skillChips.missing")}
         </li>
       )}
       {shownMissing.map((s) => (

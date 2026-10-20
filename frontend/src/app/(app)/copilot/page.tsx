@@ -612,7 +612,7 @@ function ChatPanel({
           {chat.isPending && (
             <div className="flex animate-fade-up flex-col gap-2">
               <p className="flex items-center gap-1.5 text-2xs font-medium tracking-wide text-muted-foreground uppercase">
-                <AIBadge label="copilot" />{" "}
+                <AIBadge label={t("copilot.badge")} />{" "}
                 {streamSteps[streamSteps.length - 1] ??
                   (streamText ? t("copilot.writing") : t("copilot.thinking"))}
               </p>

@@ -56,7 +56,7 @@ export default function AnalysisPage() {
 
       {digest.isError && (
         <ErrorState
-          title="Analysis failed to load"
+          title={t("analysis.loadFailed")}
           error={digest.error}
           onRetry={() => void digest.refetch()}
           retrying={digest.isFetching}

@@ -108,7 +108,7 @@ export default function ApplicationsPage() {
           page={applications.data?.page ?? state.page}
           size={PAGE_SIZE}
           total={total}
-          label="applications"
+          label={t("applications.paginationLabel")}
           onPageChange={(page) => {
             setUrl({ page });
             window.scrollTo({ top: 0, behavior: "smooth" });

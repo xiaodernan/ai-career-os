@@ -97,7 +97,7 @@ function DiffView({ accepted, rejected = [], notes, stats, className, ...props }
         <div className="rounded-lg border border-warning/25 bg-warning/10 p-3">
           <p className="flex items-center gap-1.5 text-xs font-semibold text-warning">
             <Sparkles className="size-3.5" aria-hidden />
-            Agent notes
+            {t("diffView.agentNotes")}
           </p>
           <ul className="mt-1.5 ml-4 list-disc space-y-1 text-xs text-muted-foreground">
             {notes!.map((n, i) => (
@@ -121,7 +121,8 @@ function DiffView({ accepted, rejected = [], notes, stats, className, ...props }
 
       <section className="space-y-2">
         <h4 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-          Applied changes <span className="text-foreground tabular-nums">{accepted.length}</span>
+          {t("diffView.appliedChanges")}{" "}
+          <span className="text-foreground tabular-nums">{accepted.length}</span>
         </h4>
         {accepted.length ? (
           <ul className="space-y-2">
@@ -131,8 +132,7 @@ function DiffView({ accepted, rejected = [], notes, stats, className, ...props }
           </ul>
         ) : (
           <p className="text-sm text-muted-foreground">
-            The agent proposed no safe edits for this role — it will not rewrite experience it cannot
-            evidence.
+            {t("diffView.noSafeEdits")}
           </p>
         )}
       </section>
@@ -146,9 +146,11 @@ function DiffView({ accepted, rejected = [], notes, stats, className, ...props }
             className="flex w-full items-center gap-2 rounded-lg border border-border/70 bg-muted/40 px-3 py-2 text-left text-xs font-semibold text-muted-foreground hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-primary/30"
           >
             <Minus className="size-3.5" aria-hidden />
-            Rejected proposals
+            {t("diffView.rejectedProposals")}
             <span className="tabular-nums">{rejected.length}</span>
-            <span className="ml-auto text-2xs">{showRejected ? "Hide" : "Show reasons"}</span>
+            <span className="ml-auto text-2xs">
+              {showRejected ? t("diffView.hide") : t("diffView.showReasons")}
+            </span>
           </button>
           {showRejected && (
             <ul className="space-y-2">

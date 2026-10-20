@@ -263,7 +263,10 @@ def test_the_run_a_user_opens_by_url_id_gets_the_version_sentence():
         "the fallback's own wording moved")
     assert "different versions" in read(MISSING) and "Nothing is shown in place of the real data" in read(MISSING), (
         "the sentence this finding quotes is no longer the sentence the screen shows")
-    assert 'Check again' in boundary, "the retry button this finding names is spelled differently now"
+    # The retry button's label reads from the locale table now, so the gate
+    # accepts the key the boundary reads rather than the English copy.
+    assert 't("common.checkAgain")' in boundary or "Check again" in boundary, \
+        "the retry button this finding names is spelled differently now"
 
 
 def test_the_second_shell_answers_the_same_404_with_the_screen_s_own_empty_hint():

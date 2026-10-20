@@ -34,9 +34,11 @@ describe("the command palette's result list", () => {
     // The line used to hand-name four of the six groups the endpoint answers with, and then
     // said "once the API is live" — it is live now (SearchController answers GET /search),
     // so the sentence describes the streaming instead of promising a future.
-    expect(source).toContain(
-      "Search {searchGroupNames()} — content results stream in as you type."
-    );
+    //
+    // The tail of the sentence reads from the locale table now, so the gate
+    // asserts the key the palette reads rather than the English copy.
+    expect(source).toContain("Search {searchGroupNames()} — {t(\"chrome.resultsStreamIn\")}");
+    expect(source).toContain('t("chrome.resultsStreamIn")');
     expect(source).not.toContain("once the API is live");
     expect(source).not.toMatch(/resumes, jobs, companies and conversations/);
     expect(source).toContain('import { normalizeSearch, searchGroupNames } from "@/lib/api/normalize"');

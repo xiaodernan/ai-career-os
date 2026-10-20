@@ -195,17 +195,17 @@ export function CommandPaletteProvider({
             {searchFailed && (
               <div className="flex items-center justify-between gap-2 px-4 py-2 text-xs">
                 <span className="text-muted-foreground">
-                  Content search failed — showing navigation only.
+                  {t("chrome.searchFailed")}
                 </span>
                 <Button variant="ghost" size="xs" onClick={() => void results.refetch()} loading={results.isFetching}>
-                  Retry
+                  {t("common.retry")}
                 </Button>
               </div>
             )}
             {!debounced && (
               <div className="flex items-center gap-1.5 border-t border-border/60 px-4 py-2.5 text-xs text-muted-foreground">
                 <LayoutDashboard className="size-3.5" aria-hidden />
-                Search {searchGroupNames()} — content results stream in as you type.
+                Search {searchGroupNames()} — {t("chrome.resultsStreamIn")}
               </div>
             )}
           </CommandList>

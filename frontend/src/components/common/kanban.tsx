@@ -89,7 +89,7 @@ function KanbanColumn({ status, apps, onReorder, onOpen, isPending }: KanbanColu
               role="status"
             >
               <GripVertical className="size-8 mb-2 opacity-30" aria-hidden />
-              <p>Drop a card here</p>
+              <p>{t("applications.dropCardHere")}</p>
             </div>
           )}
         </div>
@@ -246,6 +246,7 @@ interface KanbanBoardProps {
 }
 
 export function KanbanBoard({ applications, onReorder, onOpen, isPending }: KanbanBoardProps) {
+  const { t } = useLocale();
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 8 },
@@ -314,7 +315,7 @@ export function KanbanBoard({ applications, onReorder, onOpen, isPending }: Kanb
       <div className="flex gap-4 overflow-x-auto pb-4" aria-busy={isPending}>
         {isPending && (
           <span className="sr-only" role="status">
-            Saving move…
+            {t("applications.savingMove")}
           </span>
         )}
         {columns.map(({ status, apps }) => (
