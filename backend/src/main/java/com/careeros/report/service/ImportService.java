@@ -12,6 +12,15 @@ import com.careeros.common.ApiErrorCode;
 import com.careeros.knowledge.entity.UserNote;
 import com.careeros.knowledge.repository.UserNoteRepository;
 import com.careeros.knowledge.service.KnowledgeService;
+import com.careeros.interview.entity.InterviewEvaluation;
+import com.careeros.interview.entity.InterviewSession;
+import com.careeros.interview.entity.InterviewTurn;
+import com.careeros.interview.repository.InterviewEvaluationRepository;
+import com.careeros.interview.repository.InterviewSessionRepository;
+import com.careeros.interview.repository.InterviewTurnRepository;
+import com.careeros.job.entity.JobJd;
+import com.careeros.job.repository.JobJdRepository;
+import com.careeros.job.repository.JobRepository;
 import com.careeros.resume.dto.ResumeDtos.CreateResumeRequest;
 import com.careeros.resume.service.ResumeService;
 import java.math.BigDecimal;
@@ -51,11 +60,19 @@ public class ImportService {
     private final GrowthPlanRepository growthPlans;
     private final ResumeService resumes;
     private final KnowledgeService knowledge;
+    private final JobJdRepository jds;
+    private final JobRepository jobRepository;
+    private final InterviewSessionRepository sessions;
+    private final InterviewTurnRepository turns;
+    private final InterviewEvaluationRepository evaluations;
 
     public ImportService(AiServiceClient aiService, UserProfileRepository profiles,
                           UserNoteRepository notes, ApplicationRepository applications,
                           GrowthPlanRepository growthPlans, ResumeService resumes,
-                          KnowledgeService knowledge) {
+                          KnowledgeService knowledge, JobJdRepository jds,
+                          JobRepository jobRepository, InterviewSessionRepository sessions,
+                          InterviewTurnRepository turns,
+                          InterviewEvaluationRepository evaluations) {
         this.aiService = aiService;
         this.profiles = profiles;
         this.notes = notes;
@@ -63,6 +80,11 @@ public class ImportService {
         this.growthPlans = growthPlans;
         this.resumes = resumes;
         this.knowledge = knowledge;
+        this.jds = jds;
+        this.jobRepository = jobRepository;
+        this.sessions = sessions;
+        this.turns = turns;
+        this.evaluations = evaluations;
     }
 
     /**
@@ -105,17 +127,8 @@ public class ImportService {
         applyGrowthPlans(userId, data, sections, applied, skipped);
         applyResumes(userId, data, sections, applied, skipped);
         applyKnowledge(userId, data, sections, applied, skipped);
-
-        // The sections the backend cannot write are reported rather than
-        // silently ignored: a restore that says "done" while leaving half the
-        // bundle behind is a lie the user finds out about later.
-        for (String section : List.of("job_descriptions", "interviews")) {
-            List<Map<String, Object>> ops = sections.get(section);
-            if (ops != null && !ops.isEmpty()) {
-                skipped.add(Map.of("section", section,
-                        "reason", "This section is not applied yet — it needs its own ingestion pipeline."));
-            }
-        }
+        applyJobDescriptions(userId, data, sections, applied, skipped);
+        applyInterviews(userId, data, sections, applied, skipped);
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("applied", applied.entrySet().stream()
@@ -392,6 +405,148 @@ public class ImportService {
             created++;
         }
         count(applied, "knowledge", created, 0, 0);
+    }
+
+    /**
+     * The job descriptions: the pasted postings and the analyst's reading of
+     * them.
+     *
+     * <p>The bundle carries the whole row, the raw text AND the parsed result,
+     * so the restore is a row write -- the analyst does not run again. That is
+     * the difference between a restore and a re-analysis: the user's own
+     * reading of a posting is preserved, not recomputed into something that
+     * might differ.
+     */
+    private void applyJobDescriptions(UUID userId, Map<String, Object> data,
+                                     Map<String, List<Map<String, Object>>> sections,
+                                     Map<String, int[]> applied, List<Map<String, String>> skipped) {
+        List<Map<String, Object>> ops = sections.get("job_descriptions");
+        if (ops == null || ops.isEmpty()) {
+            return;
+        }
+        Object rows = data.get("job_descriptions");
+        if (!(rows instanceof List<?> list)) {
+            skipped.add(Map.of("section", "job_descriptions",
+                    "reason", "The bundle carries no job descriptions."));
+            return;
+        }
+        int created = 0;
+        for (Map<String, Object> op : ops) {
+            if ("delete".equals(str(op, "op"))) {
+                continue;  // a deleted posting stays deleted
+            }
+            Map<?, ?> row = findRow(list, str(op, "id"));
+            if (row == null) {
+                continue;
+            }
+            String rawText = str(row, "raw_text");
+            if (rawText == null || rawText.isBlank()) {
+                continue;
+            }
+            JobJd jd = new JobJd();
+            jd.setUserId(userId);
+            jd.setRawText(rawText);
+            // A job is a shared entity -- the corpus belongs to nobody -- so
+            // the link to one is carried over as it is. The posting itself is
+            // the caller's, and that is what the user id on the row says.
+            UUID jobId = uuid(str(row, "job_id"));
+            if (jobId != null && jobRepository.existsById(jobId)) {
+                jd.setJobId(jobId);
+            }
+            jd.setParsed(map(row, "parsed"));
+            jds.save(jd);
+            created++;
+        }
+        count(applied, "job_descriptions", created, 0, 0);
+    }
+
+    /**
+     * The interviews: the session, its turns and its evaluation.
+     *
+     * <p>All three are in the bundle, so the restore is a row write too -- the
+     * interviewer does not run again, which matters because an interview is
+     * the one thing the user cannot repeat: the questions were asked of them
+     * once.
+     */
+    private void applyInterviews(UUID userId, Map<String, Object> data,
+                                Map<String, List<Map<String, Object>>> sections,
+                                Map<String, int[]> applied, List<Map<String, String>> skipped) {
+        List<Map<String, Object>> ops = sections.get("interviews");
+        if (ops == null || ops.isEmpty()) {
+            return;
+        }
+        Object rows = data.get("interviews");
+        if (!(rows instanceof List<?> sessionsList)) {
+            skipped.add(Map.of("section", "interviews", "reason", "The bundle carries no interviews."));
+            return;
+        }
+        int created = 0;
+        for (Map<String, Object> op : ops) {
+            if ("delete".equals(str(op, "op"))) {
+                continue;  // a deleted interview stays deleted
+            }
+            Map<?, ?> row = findRow(sessionsList, str(op, "id"));
+            if (row == null) {
+                continue;
+            }
+            InterviewSession session = new InterviewSession();
+            session.setUserId(userId);
+            session.setMode(str(row, "mode") == null ? "mixed" : str(row, "mode"));
+            session.setStatus(str(row, "status") == null ? "completed" : str(row, "status"));
+            session.setCompanyName(str(row, "company_name"));
+            session.setPositionTitle(str(row, "position_title"));
+            session.setConfig(map(row, "config"));
+            Object difficulty = row.get("difficulty");
+            if (difficulty instanceof Number n) {
+                session.setDifficulty(n.floatValue());
+            }
+            OffsetDateTime started = time(row, "started_at");
+            if (started != null) {
+                session.setStartedAt(started);
+            }
+            OffsetDateTime finished = time(row, "finished_at");
+            if (finished != null) {
+                session.setFinishedAt(finished);
+            }
+            session = sessions.save(session);
+
+            // The turns carry the questions and the evaluations, so the
+            // transcript comes back whole.
+            int seq = 0;
+            for (Object turn : (List<?>) (row.get("turns") == null ? List.of() : row.get("turns"))) {                if (!(turn instanceof Map<?, ?> t)) {
+                    continue;
+                }
+                InterviewTurn saved = new InterviewTurn();
+                saved.setUserId(userId);
+                saved.setSessionId(session.getId());
+                Object turnSeq = t.get("seq");
+                saved.setSeq(turnSeq instanceof Number n ? n.intValue() : seq);
+                seq = saved.getSeq() + 1;
+                saved.setRole(str(t, "role") == null ? "interviewer" : str(t, "role"));
+                saved.setContent(str(t, "content") == null ? "" : str(t, "content"));
+                saved.setQuestionMeta(map(t, "question_meta"));
+                saved.setEvaluation(map(t, "evaluation"));
+                turns.save(saved);
+            }
+
+            // The evaluation is the report the user reads: the dimensions, the
+            // summary and the trajectory.
+            Object evaluation = row.get("evaluation");
+            if (evaluation instanceof Map<?, ?> ev && !ev.isEmpty()) {
+                InterviewEvaluation saved = new InterviewEvaluation();
+                saved.setUserId(userId);
+                saved.setSessionId(session.getId());
+                saved.setDims(map(ev, "dims"));
+                saved.setSummary(map(ev, "summary"));
+                Object trajectory = ev.get("trajectory");
+                if (trajectory instanceof List<?> list) {
+                    saved.setTrajectory(List.copyOf(list));
+                }
+                evaluations.save(saved);
+            }
+            created++;
+        }
+        count(applied, "interviews", created, 0, 0);
     }
 
     /* ------------------------------------------------------------------ */

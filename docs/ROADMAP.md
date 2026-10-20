@@ -150,11 +150,15 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   dry-runs that plan from a backup file with no database, so an operator can preview a
   restore or diff a backup before any write. Backend bridge: `POST /api/v1/data-portability/import-plan`
   and `POST /api/v1/data-portability/import-apply` — the second one executes the plan
-  and reports what it wrote **and which sections it left alone, with the reason**. Today
-  the profile, the applications, the stored growth runs, the resumes and the knowledge
-  base apply; the job descriptions and the interviews do not, because restoring a job
-  description means running the analyst over it again and restoring an interview means
-  re-running the interviewer — both are pipelines, not row writes.)
+  and reports what it wrote **and which sections it left alone, with the reason**. Every
+  section applies except the long-term memories: the profile, the applications, the stored
+  growth runs, the resumes, the knowledge base, the job descriptions and the interviews all
+  come back. The resumes and the documents are re-ingested (their ids belong to the
+  ingestion pipeline, not to the row); the job descriptions and the interviews are row
+  writes, so the analyst does not run again and the interviewer does not question the user
+  a second time. The memories do not apply: they are the model's own beliefs about the
+  user, and restoring them would put those beliefs back without the evidence that
+  produced them.)
 - [x] **13.3** Per-user data deletion (right-to-be-forgotten). (ai-service half:
   `features/export_redact.py` deep-copy section redaction + `anonymize`; recomputes the
   content hash and records `redacted_sections`. Backend bridge: `POST /api/v1/data-portability/redact`.)

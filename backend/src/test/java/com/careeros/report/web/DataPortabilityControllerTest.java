@@ -20,6 +20,11 @@ import com.careeros.report.service.ImportService;
 import com.careeros.auth.repository.UserProfileRepository;
 import com.careeros.knowledge.repository.UserNoteRepository;
 import com.careeros.knowledge.service.KnowledgeService;
+import com.careeros.interview.repository.InterviewEvaluationRepository;
+import com.careeros.interview.repository.InterviewSessionRepository;
+import com.careeros.interview.repository.InterviewTurnRepository;
+import com.careeros.job.repository.JobJdRepository;
+import com.careeros.job.repository.JobRepository;
 import com.careeros.resume.service.ResumeService;
 import com.careeros.common.AuthUser;
 import com.careeros.common.CurrentUserArgumentResolver;
@@ -69,7 +74,10 @@ class DataPortabilityControllerTest {
         notes = mock(UserNoteRepository.class);
         ExportService exports = new ExportService(ai, applications, growthPlans);
         ImportService imports = new ImportService(ai, profiles, notes, applications, growthPlans,
-                mock(ResumeService.class), mock(KnowledgeService.class));
+                mock(ResumeService.class), mock(KnowledgeService.class),
+                mock(JobJdRepository.class), mock(JobRepository.class),
+                mock(InterviewSessionRepository.class), mock(InterviewTurnRepository.class),
+                mock(InterviewEvaluationRepository.class));
         DataPortabilityController controller = new DataPortabilityController(ai, exports, imports);
         mvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new EnvelopeAdvice(), new GlobalExceptionHandler())
@@ -219,20 +227,20 @@ class DataPortabilityControllerTest {
                         "op_counts", Map.of("create", 1, "update", 0, "delete", 0, "total", 1),
                         "sections", Map.of(
                                 "profile", List.of(Map.of("op", "update", "id", "p1")),
-                                "interviews", List.of(Map.of("op", "create", "id", "i1")))));
+                                "memories", List.of(Map.of("op", "create", "id", "m1")))));
 
         mvc.perform(post("/api/v1/data-portability/import-apply")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"bundle":{"schema_version":"1.1.0","data":{
                                   "profile":{"headline":"Backend engineer"},
-                                  "interviews":[{"id":"i1"}]}}}
+                                  "memories":[{"id":"m1"}]}}}
                                 """))
                 .andExpect(status().isOk())
-                // The profile was written; the interviews were not, and the answer
+                // The profile was written; the memories were not, and the answer
                 // says so rather than claiming the whole bundle landed.
                 .andExpect(jsonPath("$.data.applied.profile.updated").value(1))
-                .andExpect(jsonPath("$.data.skipped[0].section").value("interviews"));
+                .andExpect(jsonPath("$.data.skipped[0].section").value("memories"));
     }
 
     /**

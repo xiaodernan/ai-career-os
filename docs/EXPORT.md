@@ -59,15 +59,32 @@ Two rules make it safe:
   write yet — the resumes, the knowledge base, the job descriptions, the
   interviews — is reported as skipped rather than claimed.
 
-What applies today: the profile, the applications, the stored growth runs, the
-resumes and the knowledge base. The resumes and the documents are re-ingested
-rather than copied — a restored resume is a *new* resume with the same
-content, because its id is the key its chunks and versions hang off and the
-ingestion pipeline mints those. What does not apply: the job descriptions and
-the interviews, because restoring a job description means running the analyst
-over it again and restoring an interview means re-running the interviewer —
-both are pipelines, not row writes. They are named in the answer, not
-silently dropped.
+What applies today: every section except the memories. The profile, the
+applications, the stored growth runs, the resumes, the knowledge base, the job
+descriptions and the interviews all come back.
+
+Two of them are re-derived rather than copied, and the difference matters:
+
+- A restored resume is re-created and re-ingested. Its id is NOT carried
+  over: that id is the key its knowledge chunks and its versions hang off,
+  and the ingestion pipeline mints those -- reusing an old id would leave
+  two documents' chunks pointing at one row.
+- A restored document is re-ingested as a note. The bundle carries a
+  document's metadata and its excerpt, not its whole body (the body is in
+  the object store), so a note is what the ingestion accepts for a piece
+  of text -- and a restore that claimed to bring back a document it only
+  had an excerpt of would be overstating what it did.
+
+The rest are row writes, and that is the point: the analyst does not run
+again over a posting, and the interviewer does not question the user a
+second time. The bundle carries the parsed result and the whole
+transcript, so the user's own reading of a posting and the answers they
+gave come back as they were.
+
+What does not apply: the long-term memories. They are the model's own
+record of the user, written by the agents as they learn -- restoring them
+would put the AI's beliefs about someone back without the evidence that
+produced them. They are named in the answer with that reason.
 
 ### The bundle is complete (1.1.0)
 
