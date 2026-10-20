@@ -44,6 +44,7 @@ import {
   useRenameConversation,
 } from "@/lib/hooks/actions";
 import { useUrlState } from "@/lib/hooks/use-url-state";
+import { useLocale } from "@/lib/i18n/locale-context";
 import { relativeTime } from "@/lib/format";
 import type { ChatMessage } from "@/lib/api/types";
 
@@ -68,6 +69,7 @@ function stepsFromTrail(trail: string[]): ProcessingStep[] {
 }
 
 export default function CopilotPage() {
+  const { t } = useLocale();
   // The sidebar's page index lives in the URL beside `?c=`, so a reload or a shared link
   // opens the same window of chats. `cpage`, not `page`: the page already spends `c` on the
   // selected conversation, and two numbers under one letter would be a collision.
@@ -215,6 +217,7 @@ function ConversationList({
   onPageChange: (page: number) => void;
   className?: string;
 }) {
+  const { t } = useLocale();
   const rename = useRenameConversation();
   const remove = useDeleteConversation();
   const [editingId, setEditingId] = React.useState<string | null>(null);
@@ -244,7 +247,7 @@ function ConversationList({
   }, [activeId, confirmId, onDeleted, remove]);
 
   return (
-    <aside className={cn("min-h-0 flex-col gap-2", className)} aria-label="Conversations">
+    <aside className={cn("min-h-0 flex-col gap-2", className)} aria-label={t("copilot.conversations")}>
       <Button variant="ai" size="sm" onClick={onCreate} loading={creating}>
         <Plus aria-hidden />
         New chat
@@ -270,8 +273,8 @@ function ConversationList({
           <div className="px-1 py-3">
             <EmptyState
               icon={<MessageSquare aria-hidden />}
-              title="No conversations yet"
-              description="Start one above — every turn is traced and saved."
+              title={t("copilot.noConversations")}
+              description={t("copilot.noConversationsDescription")}
               action={
                 <Button variant="ai" size="sm" onClick={onCreate} loading={creating}>
                   <Plus aria-hidden />
@@ -295,7 +298,7 @@ function ConversationList({
                     onBlur={commitRename}
                     autoFocus
                     maxLength={200}
-                    aria-label="Conversation title"
+                    aria-label={t("copilot.conversationTitle")}
                     className="h-9"
                     autoComplete="off"
                   />
@@ -365,8 +368,8 @@ function ConversationList({
         onOpenChange={(open) => {
           if (!open) setConfirmId(null);
         }}
-        title="Delete this chat?"
-        description="The transcript and its citations go with it. This cannot be undone."
+        title={t("copilot.deleteChat")}
+        description={t("copilot.deleteChatDescription")}
         confirmLabel="Delete"
         destructive
         loading={remove.isPending}
@@ -381,6 +384,7 @@ function ConversationList({
 /* ------------------------------------------------------------------ */
 
 function NewChat({ onStart, pending }: { onStart: (message: string) => void; pending: boolean }) {
+  const { t } = useLocale();
   const [value, setValue] = React.useState("");
   return (
     <div className="flex flex-1 items-center justify-center">
@@ -402,7 +406,7 @@ function NewChat({ onStart, pending }: { onStart: (message: string) => void; pen
               placeholder="e.g. Which of my projects should I lead with for an LLM-platform role?"
               rows={3}
               className="resize-none"
-              aria-label="First message to Copilot"
+              aria-label={t("copilot.firstMessage")}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey && value.trim()) {
                   e.preventDefault();
@@ -467,6 +471,7 @@ function ChatPanel({
   creating: boolean;
   listTrigger: React.ReactNode;
 }) {
+  const { t } = useLocale();
   const messages = useConversationMessages(conversationId);
   const [draft, setDraft] = React.useState("");
   const [transcript, setTranscript] = React.useState<ChatMessage[]>([]);
@@ -573,8 +578,8 @@ function ChatPanel({
             isEndpointMissing(messages.error) ? (
               <EmptyState
                 icon={<MessageSquare aria-hidden />}
-                title="This API build has no conversation history"
-                description="GET /conversations answered 404, so this frontend and the backend it is talking to are different versions. Nothing here is pre-filled."
+                title={t("copilot.noHistory")}
+                description={t("copilot.noHistoryDescription")}
                 action={
                   <Button variant="outline" size="sm" onClick={() => void messages.refetch()}>
                     Check again
@@ -583,7 +588,7 @@ function ChatPanel({
               />
             ) : (
               <ErrorState
-                title="Couldn't load this conversation"
+                title={t("copilot.couldNotLoad")}
                 error={messages.error}
                 onRetry={() => void messages.refetch()}
                 retrying={messages.isFetching}
@@ -592,8 +597,8 @@ function ChatPanel({
           ) : transcript.length === 0 ? (
             <EmptyState
               icon={<Sparkles aria-hidden />}
-              title="Ask anything about your search"
-              description="Requests that mention experience, skills or jobs are answered from your knowledge base with citations — try “match my resume to my last saved job”."
+              title={t("copilot.askAnything")}
+              description={t("copilot.askAnythingDescription")}
             />
           ) : (
             transcript.map((m) => <MessageRow key={m.id} message={m} />)
@@ -646,10 +651,10 @@ function ChatPanel({
           <Textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            placeholder="Message Copilot…"
+            placeholder={t("copilot.messagePlaceholder")}
             rows={1}
             className="max-h-40 min-h-10 resize-none"
-            aria-label="Message Copilot"
+            aria-label={t("copilot.messageLabel")}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey && draft.trim()) {
                 e.preventDefault();
@@ -663,7 +668,7 @@ function ChatPanel({
             disabled={!draft.trim() || chat.isPending}
             loading={chat.isPending}
             onClick={() => send(draft)}
-            aria-label="Send message"
+            aria-label={t("copilot.send")}
           >
             <Send aria-hidden />
           </Button>

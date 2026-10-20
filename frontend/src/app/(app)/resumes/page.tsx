@@ -15,6 +15,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useDeleteResume } from "@/lib/hooks/actions";
+import { useLocale } from "@/lib/i18n/locale-context";
 import { useResumes } from "@/lib/hooks/resources";
 import { useUrlState } from "@/lib/hooks/use-url-state";
 import { formatDate } from "@/lib/format";
@@ -44,6 +45,7 @@ function statusBadge(status: string): { label: string; variant: "success" | "war
 }
 
 export default function ResumesPage() {
+  const { t } = useLocale();
   // The page index lives in the URL, so a reload or a shared list link opens the same window.
   const [state, setUrl] = useUrlState<{ page: number }>(
     PAGE_DEFAULTS,
@@ -69,11 +71,11 @@ export default function ResumesPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-8">
       <PageHeader
-        title="Resumes"
-        description="Every upload is parsed into a structured profile and chunked into the knowledge base the agents cite from. Nothing is scored that isn't in your documents."
+        title={t("resumes.title")}
+        description={t("resumes.description")}
       />
 
-      <section aria-label="Upload a resume">
+      <section aria-label={t("resumes.uploadSection")}>
         <UploadDropzone
           onUploaded={(id) => {
             void qc.invalidateQueries({ queryKey: ["resumes"] });
@@ -82,7 +84,7 @@ export default function ResumesPage() {
         />
       </section>
 
-      <section aria-label="Existing resumes" className="space-y-3">
+      <section aria-label={t("resumes.existingSection")} className="space-y-3">
         <h2 className="text-sm font-semibold text-muted-foreground">Your versions</h2>
         <QueryBoundary
           query={resumes}
@@ -172,7 +174,7 @@ export default function ResumesPage() {
         open={pendingDelete != null}
         onOpenChange={(o) => !o && setPendingDelete(null)}
         title={`Delete “${pendingDelete?.title ?? ""}”?`}
-        description="The resume and its versions are removed from your workspace. Knowledge chunks ingested from it stop being cited."
+        description={t("resumes.deleteDescription")}
         confirmLabel="Delete resume"
         destructive
         loading={del.isPending}

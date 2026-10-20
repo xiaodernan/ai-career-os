@@ -258,6 +258,45 @@ export const translations = {
       inFlight: "Running…",
       failed: "The engine failed. The backend logs the reason.",
     },
+    // Resumes
+    resumes: {
+      title: "Resumes",
+      description:
+        "Every upload is parsed into a structured profile and chunked into the knowledge base the agents cite from. Nothing is scored that isn't in your documents.",
+      uploadSection: "Upload a resume",
+      existingSection: "Existing resumes",
+      deleteDescription:
+        "The resume and its versions are removed from your workspace. Knowledge chunks ingested from it stop being cited.",
+    },
+    // Settings
+    settings: {
+      title: "Settings",
+      description: "Account, appearance and keyboard preferences.",
+      colorTheme: "Color theme",
+      logOut: "Log out of Career OS?",
+      logOutDescription: "Your data stays safe — this only ends the current session.",
+    },
+    // Copilot
+    copilot: {
+      conversations: "Conversations",
+      noConversations: "No conversations yet",
+      noConversationsDescription: "Start one above — every turn is traced and saved.",
+      conversationTitle: "Conversation title",
+      deleteChat: "Delete this chat?",
+      deleteChatDescription:
+        "The transcript and its citations go with it. This cannot be undone.",
+      firstMessage: "First message to Copilot",
+      noHistory: "This API build has no conversation history",
+      noHistoryDescription:
+        "GET /conversations answered 404, so this frontend and the backend it is talking to are different versions. Nothing here is pre-filled.",
+      couldNotLoad: "Couldn't load this conversation",
+      askAnything: "Ask anything about your search",
+      askAnythingDescription:
+        "Requests that mention experience, skills or jobs are answered from your knowledge base with citations — try “match my resume to my last saved job”.",
+      messagePlaceholder: "Message Copilot…",
+      messageLabel: "Message Copilot",
+      send: "Send message",
+    },
     // Networking
     networking: {
       title: "Contacts",
@@ -539,6 +578,43 @@ export const translations = {
       noAnswerDescription: "写下职位名并运行引擎。",
       inFlight: "运行中…",
       failed: "引擎失败。原因记录在后端日志里。",
+    },
+    // Resumes
+    resumes: {
+      title: "简历",
+      description:
+        "每次上传都会被解析成结构化档案，并切块进入代理取证的知识库。你的文档里没有的东西，不会被评分。",
+      uploadSection: "上传简历",
+      existingSection: "已有简历",
+      deleteDescription: "这份简历及其版本会从你的工作台移除。从它摄取的知识块也不再被引用。",
+    },
+    // Settings
+    settings: {
+      title: "设置",
+      description: "账户、外观与键盘偏好。",
+      colorTheme: "配色主题",
+      logOut: "退出 Career OS？",
+      logOutDescription: "你的数据是安全的——这只会结束当前会话。",
+    },
+    // Copilot
+    copilot: {
+      conversations: "会话",
+      noConversations: "还没有会话",
+      noConversationsDescription: "在上面开一个——每一轮对话都有追踪并会被保存。",
+      conversationTitle: "会话标题",
+      deleteChat: "删除这个对话？",
+      deleteChatDescription: "记录和它的引用会一起消失，且无法撤销。",
+      firstMessage: "给副驾驶的第一条消息",
+      noHistory: "这个 API 版本没有会话历史",
+      noHistoryDescription:
+        "GET /conversations 返回了 404，所以这个前端和它对话的后端不是同一个版本。这里没有任何预填内容。",
+      couldNotLoad: "加载这个会话失败",
+      askAnything: "关于你的求职，随便问",
+      askAnythingDescription:
+        "提到经历、技能或职位的问题会从你的知识库里带引用作答——试试「把我的简历匹配到最近收藏的职位」。",
+      messagePlaceholder: "给副驾驶发消息…",
+      messageLabel: "给副驾驶发消息",
+      send: "发送消息",
     },
     // Networking
     networking: {

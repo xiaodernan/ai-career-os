@@ -16,12 +16,14 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLogout, useUser } from "@/lib/hooks/auth";
+import { useLocale } from "@/lib/i18n/locale-context";
 import { useUpdateProfile } from "@/lib/hooks/actions";
 
 /** Mirrors `UpdateMeRequest`'s `@Size(min = 1, max = 120)` on the display name. */
 const MAX_NAME = 120;
 
 export default function SettingsPage() {
+  const { t } = useLocale();
   const { theme, setTheme, resolvedTheme } = useTheme();
   const { data: user, isPending } = useUser();
   const logout = useLogout();
@@ -48,7 +50,7 @@ export default function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-8">
-      <PageHeader title="Settings" description="Account, appearance and keyboard preferences." />
+      <PageHeader title={t("settings.title")} description={t("settings.description")} />
 
       {/* Account */}
       <Card>
@@ -125,7 +127,7 @@ export default function SettingsPage() {
             value={current}
             onValueChange={setTheme}
             className="grid max-w-md grid-cols-3 gap-3"
-            aria-label="Color theme"
+            aria-label={t("settings.colorTheme")}
           >
             {(
               [
@@ -178,8 +180,8 @@ export default function SettingsPage() {
       <ConfirmDialog
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
-        title="Log out of Career OS?"
-        description="Your data stays safe — this only ends the current session."
+        title={t("settings.logOut")}
+        description={t("settings.logOutDescription")}
         confirmLabel="Log out"
         destructive
         loading={logout.isPending}
