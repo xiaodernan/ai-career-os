@@ -648,6 +648,65 @@ test.describe("golden journey — the forward bridges", () => {
 
 test.describe("golden journey — the answers reach the screen", () => {
   /**
+   * The restore, run for real: export the bundle, apply it, and check that what
+   * came back is what went out.
+   *
+   * This is the one loop that has no read-back to trust — the export is a
+   * document, and the apply is a claim about a database. So the proof is a
+   * second export: after the apply, the bundle must carry the row that the
+   * first export had.
+   */
+  test("exports a bundle and applies it back", async ({ api, authedPage }) => {
+    const resume = await seedParsedResume(api, "Export Resume");
+
+    // Something of the user's own to restore: a saved application.
+    const job = await pickJob(api);
+    const app = await unwrap<{ id: string }>(
+      await api.post("/applications", {
+        jobId: job.id,
+        title: job.title,
+        status: "applied",
+        notes: "E2E export",
+      })
+    );
+    expect(app.id).toBeTruthy();
+
+    const bundle = await unwrap<{
+      manifest: { content_hash: string; counts: Record<string, number> };
+      data: { applications?: Array<{ id: string; title: string }> };
+    }>(await api.post("/data-portability/export", {}));
+    expect(bundle.manifest.content_hash.length).toBeGreaterThan(0);
+    expect((bundle.data.applications ?? []).some((a) => a.id === app.id)).toBe(true);
+
+    // The plan says what would change, and the apply says what did.
+    const plan = await unwrap<{ op_counts: { total: number } }>(
+      await api.post("/data-portability/import-plan", { bundle })
+    );
+    expect(plan.op_counts.total).toBeGreaterThan(0);
+
+    const applied = await unwrap<{
+      applied: Record<string, { created?: number; updated?: number }>;
+      skipped: Array<{ section: string; reason: string }>;
+    }>(await api.post("/data-portability/import-apply", { bundle }));
+    // The application is already there, so the apply updates rather than
+    // creates -- and it says so per section.
+    expect(Object.keys(applied.applied).length).toBeGreaterThan(0);
+    // Every skipped section names a reason: a restore that quietly dropped
+    // something is the failure this exists to catch.
+    for (const skip of applied.skipped) {
+      expect(skip.reason.length).toBeGreaterThan(0);
+    }
+
+    // The second export carries the same row: the restore is real.
+    const after = await unwrap<{
+      data: { applications?: Array<{ id: string }> };
+    }>(await api.post("/data-portability/export", {}));
+    expect((after.data.applications ?? []).some((a) => a.id === app.id)).toBe(true);
+
+    await authedPage.goto("/data");
+    await expect(authedPage.getByRole("heading", { level: 1 })).toBeVisible({ timeout: 20_000 });
+  });
+  /**
    * The API tests prove the cover letter and the interview report carry the
    * right content. They cannot prove the *screen* shows it — a card that
    * renders an empty panel because it read the wrong key passes every API

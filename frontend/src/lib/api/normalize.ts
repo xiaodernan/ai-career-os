@@ -1429,6 +1429,26 @@ export function normalizeChatActions(raw: unknown): CopilotAction[] {
   });
 }
 
+/**
+ * The translation key for an action's label, when the label is fixed by its kind.
+ *
+ * The orchestrator writes the label in English, and most of them are fixed
+ * phrases ("Draft cover letter"), so the browser can say them in the reader's
+ * language. `open_job` is not here: its label carries the job's own title and
+ * company, which are the user's data and not copy to translate.
+ */
+export function actionLabelKey(kind?: string): string | undefined {
+  const fixed: Record<string, string> = {
+    cover_letter: "actions.coverLetter",
+    interview: "actions.interview",
+    tailor: "actions.tailor",
+    open_growth: "actions.openGrowth",
+    open_offers: "actions.openOffers",
+    open_interview: "actions.openInterview",
+  };
+  return kind ? fixed[kind] : undefined;
+}
+
 export function normalizeMessages(raw: unknown) {
   // Bare, by contract: GET /conversations/{id}/messages answers `List<MessageItem>` and the client
   // hands over the unwrapped `data`, so the payload *is* the array. `messages`/`items`/`content` were

@@ -46,6 +46,7 @@ import {
 import { useUrlState } from "@/lib/hooks/use-url-state";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { relativeTime } from "@/lib/format";
+import { actionLabelKey } from "@/lib/api/normalize";
 import type { ChatMessage } from "@/lib/api/types";
 
 // The route's own default window: `GET /conversations` binds `size` with
@@ -683,6 +684,7 @@ function ChatPanel({
 /* ------------------------------------------------------------------ */
 
 function MessageRow({ message }: { message: ChatMessage }) {
+  const { t } = useLocale();
   const isUser = message.role === "user";
   const actions = (message.actions ?? []).filter((a) => a.href && a.label);
   const sources = message.sources ?? [];
@@ -722,14 +724,22 @@ function MessageRow({ message }: { message: ChatMessage }) {
 
       {!isUser && actions.length > 0 && (
         <div className="flex max-w-[85%] flex-wrap gap-1.5">
-          {actions.map((a, i) => (
-            <Button key={i} variant="outline" size="xs" asChild>
-              <Link href={a.href!}>
-                {a.label}
-                <ArrowRight aria-hidden />
-              </Link>
-            </Button>
-          ))}
+          {actions.map((a, i) => {
+            // The orchestrator writes the label in English; the browser says it
+            // in the reader's language when the kind fixes the phrase. An
+            // `open_job` chip keeps the backend's label, because it carries the
+            // job's own title and company -- data, not copy.
+            const key = actionLabelKey(a.kind);
+            const label = key ? t(key) : a.label;
+            return (
+              <Button key={i} variant="outline" size="xs" asChild>
+                <Link href={a.href!}>
+                  {label}
+                  <ArrowRight aria-hidden />
+                </Link>
+              </Button>
+            );
+          })}
         </div>
       )}
 

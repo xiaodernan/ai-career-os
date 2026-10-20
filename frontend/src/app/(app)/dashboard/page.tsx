@@ -30,6 +30,7 @@ import { MatchRing, scoreBand } from "@/components/ai/match-ring";
 import { SectionHeading } from "@/components/common/export-buttons";
 import { LoadingListSkeleton, LoadingMetricGridSkeleton } from "@/components/common/loading-skeletons";
 import { SectionBoundary, isEndpointMissing } from "@/components/common/query-boundary";
+import { ShareChart } from "@/components/common/bar-chart";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { missingEndpointMessage } from "@/lib/api/missing-endpoint";
 import { JobCard } from "@/components/jobs/job-card";
@@ -720,25 +721,49 @@ export default function DashboardPage() {
                     }
                   />
                 </CardHeader>
-                <CardContent className="space-y-2">
+                <CardContent className="space-y-3">
                   {(data?.followUps?.length ?? 0) > 0 ? (
-                    data!.followUps!.slice(0, 3).map((f) => (
-                      <div key={f.id} className="flex items-start gap-2 text-sm">
-                        <Badge
-                          variant={f.priority === "overdue" ? "destructive" : "warning"}
-                          className="mt-0.5 shrink-0 text-2xs font-normal capitalize"
-                        >
-                          {f.priority}
-                        </Badge>
-                        <div className="min-w-0">
-                          <p className="font-medium">{f.name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {[f.company, f.relation].filter(Boolean).join(" · ") || "—"}
-                            {f.daysSince != null && ` · ${f.daysSince}d ago`}
-                          </p>
+                    <>
+                      {/* The engine already ranked these rows, so the split is
+                          read off them rather than recomputed here: a second
+                          cadence rule on this side would be a second answer to
+                          the same question. */}
+                      <ShareChart
+                        data={Object.entries(
+                          (data!.followUps ?? []).reduce<Record<string, number>>((acc, f) => {
+                            const key = f.priority ?? "fresh";
+                            acc[key] = (acc[key] ?? 0) + 1;
+                            return acc;
+                          }, {})
+                        ).map(([priority, count]) => ({
+                          label: priority,
+                          value: count,
+                          tone:
+                            priority === "overdue"
+                              ? ("destructive" as const)
+                              : priority === "soon"
+                                ? ("warning" as const)
+                                : ("muted" as const),
+                        }))}
+                      />
+                      {data!.followUps!.slice(0, 3).map((f) => (
+                        <div key={f.id} className="flex items-start gap-2 text-sm">
+                          <Badge
+                            variant={f.priority === "overdue" ? "destructive" : "warning"}
+                            className="mt-0.5 shrink-0 text-2xs font-normal capitalize"
+                          >
+                            {f.priority}
+                          </Badge>
+                          <div className="min-w-0">
+                            <p className="font-medium">{f.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {[f.company, f.relation].filter(Boolean).join(" · ") || "—"}
+                              {f.daysSince != null && ` · ${f.daysSince}d ago`}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    ))
+                      ))}
+                    </>
                   ) : dashboard.isPending ? (
                     <LoadingListSkeleton rows={2} />
                   ) : (

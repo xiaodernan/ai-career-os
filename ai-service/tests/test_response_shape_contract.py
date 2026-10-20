@@ -907,8 +907,8 @@ def test_the_declaration_probes_reach_the_shapes_a_copy_would_miss():
     # attention rows are the fifth non-exported reader, and the opener has to see it like the others.
     # 50 with `normalizeMemory`: one more exported mapper, the reader the memory surface added.
     # 51 with `normalizeFollowUp`: the follow-up tile's row reader (11.3), the sixth non-exported one.
-    assert len(re.findall(TS_OPENER.format(name=r"(\w+)"), source)) == 51, \
-        "45 exported mappers and 6 module-private ones, all through one opener"
+    assert len(re.findall(TS_OPENER.format(name=r"(\w+)"), source)) == 52, \
+        "46 exported mappers and 6 module-private ones, all through one opener"
     assert "export function normalizePage(" not in source, \
         "the generic really does sit between the name and the paren, so a literal opener finds nothing"
     assert _ts_function_body("normalizePage").startswith("export function normalizePage<T>(")
@@ -2133,7 +2133,9 @@ def test_the_run_stream_contract_is_one_table_of_publishers_cases_and_subscriber
     # `components/copilot/artifacts.test.tsx`.
     # 45 with the collapsed sidebar's own:
     # `components/layout/collapsed-sidebar-tooltip.test.tsx`.
-    assert len(skipped) == 45 and all(rel.endswith((".test.ts", ".test.tsx")) for rel, _t in skipped), \
+    # 46 with the action chips' own:
+    # `lib/api/normalize-actions.test.ts`.
+    assert len(skipped) == 46 and all(rel.endswith((".test.ts", ".test.tsx")) for rel, _t in skipped), \
         (f"{len(skipped)} files are skipped and not one ships: a name in that set that is not a test file "
          "would be a subscriber hidden from the table by the pattern rather than by measurement")
     skipped_names = {rel.rsplit("/", 1)[-1] for rel, _t in skipped}

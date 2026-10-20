@@ -290,6 +290,16 @@ export const translations = {
       logOut: "Log out of Career OS?",
       logOutDescription: "Your data stays safe — this only ends the current session.",
     },
+    // The copilot's action chips -- the labels the orchestrator writes in
+    // English, which the browser says in the reader's language.
+    actions: {
+      coverLetter: "Draft cover letter",
+      interview: "Start mock interview",
+      tailor: "Tailor resume for this job",
+      openGrowth: "Open the growth report",
+      openOffers: "Open the offers workbench",
+      openInterview: "Continue interview",
+    },
     // Copilot
     copilot: {
       conversations: "Conversations",
@@ -623,6 +633,16 @@ export const translations = {
       colorTheme: "配色主题",
       logOut: "退出 Career OS？",
       logOutDescription: "你的数据是安全的——这只会结束当前会话。",
+    },
+    // The copilot's action chips -- the labels the orchestrator writes in
+    // English, which the browser says in the reader's language.
+    actions: {
+      coverLetter: "起草求职信",
+      interview: "开始模拟面试",
+      tailor: "为这个职位定制简历",
+      openGrowth: "打开成长报告",
+      openOffers: "打开录用工作台",
+      openInterview: "继续面试",
     },
     // Copilot
     copilot: {
