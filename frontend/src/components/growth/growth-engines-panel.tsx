@@ -152,7 +152,7 @@ export function GrowthEnginesPanel() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="engine-location">Location (optional)</Label>
+            <Label htmlFor="engine-location">{t("growthEngines.locationOptional")}</Label>
             <Input
               id="engine-location"
               value={location}
@@ -228,6 +228,7 @@ function EngineResult({
 
 /** Each engine's own answer, in its own shape. */
 function EngineAnswer({ engine, data }: { engine: EngineKey; data: Record<string, unknown> }) {
+  const { t } = useLocale();
   switch (engine) {
     case "gap":
       return (
@@ -301,7 +302,7 @@ function EngineAnswer({ engine, data }: { engine: EngineKey; data: Record<string
         <div className="space-y-3">
           <div>
             <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-              Study
+              {t("growthEngines.study")}
             </p>
             <ul className="mt-1 space-y-1">
               {((data.study ?? []) as Array<{ topic?: string }>).map((s, i) => (
@@ -313,7 +314,7 @@ function EngineAnswer({ engine, data }: { engine: EngineKey; data: Record<string
           </div>
           <div>
             <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-              Rehearse
+              {t("growthEngines.rehearse")}
             </p>
             <ul className="mt-1 space-y-1">
               {((data.rehearse ?? []) as Array<{ topic?: string }>).map((s, i) => (

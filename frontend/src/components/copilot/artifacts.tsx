@@ -108,7 +108,7 @@ function MatchArtifact({ data }: { data?: unknown }) {
         {match.jobId && (
           <Button variant="outline" size="sm" asChild className="self-start">
             <Link href={`/jobs/${match.jobId}`}>
-              Open job
+              {t("artifacts.openJob")}
               <ArrowRight aria-hidden />
             </Link>
           </Button>
@@ -208,12 +208,12 @@ function InterviewArtifact({ data }: { data?: unknown }) {
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium">{t("artifacts.interview")}</p>
           <p className="text-xs text-muted-foreground">
-            The agent prepared a session from this conversation.
+            {t("artifacts.interviewPrepared")}
           </p>
         </div>
         <Button variant="ai" size="sm" asChild>
           <Link href={`/interviews/${id}`}>
-            Start
+            {t("artifacts.start")}
             <ArrowRight aria-hidden />
           </Link>
         </Button>

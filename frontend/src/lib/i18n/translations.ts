@@ -100,6 +100,8 @@ export const translations = {
       expandSidebar: "Expand sidebar",
       collapseSidebar: "Collapse sidebar",
       collapse: "Collapse",
+      profileAndPreferences: "Profile & preferences",
+      settings: "Settings",
     },
     /**
      * The job card's own panels: what the tailor and the cover-letter
@@ -124,6 +126,9 @@ export const translations = {
     jobCard: {
       noMatchYet: "No match computed yet",
       matchFor: "Match for {title}",
+      whyThisJob: "Why this job:",
+      pastedJd: "Pasted JD",
+      foundByResearch: "Found by research agent",
     },
     /**
      * The diff the tailor panel shows: the numbers beside the change list,
@@ -522,6 +527,9 @@ export const translations = {
       // own `running` flag — a different thing in a different file.
       inFlight: "Running…",
       failed: "The engine failed. The backend logs the reason.",
+      study: "Study",
+      rehearse: "Rehearse",
+      locationOptional: "Location (optional)",
     },
     // Resumes
     resumes: {
@@ -695,6 +703,9 @@ export const translations = {
       copyLetter: "Copy letter",
       matchingRoles: "{count} matching roles",
       tailoredResume: "Tailored resume draft",
+      openJob: "Open job",
+      interviewPrepared: "The agent prepared a session from this conversation.",
+      start: "Start",
     },
     // The copilot's action chips -- the labels the orchestrator writes in
     // English, which the browser says in the reader's language.
@@ -853,6 +864,7 @@ export const translations = {
       sources: {
         chooseDocuments: "Choose documents to ingest",
         appliedToBatch: "Applied to every file in the batch",
+        clearList: "Clear list",
         deleteDescription:
           "The source row is removed and its chunks stop being cited. This cannot be undone.",
         delete: "Delete",
@@ -1148,6 +1160,14 @@ export const translations = {
         interviewTopicsDescription: "Derived from the requirement extraction, ranked by weight.",
         preparation: "Recommended preparation",
         preparationDescription: "Ordered by how much match score each item is worth.",
+        nothingFabricatedBefore: "Nothing fabricated here: the moment",
+        nothingFabricatedAfter:
+          "returns, the ring, the dimensions and the citations appear.",
+        resource: "Resource:",
+        jobDescription: "Job description",
+        jobDescriptionDescription: "Extracted requirements, straight from the posting.",
+        required: "Required",
+        niceToHave: "Nice to have",
       },
     },
   },
@@ -1240,6 +1260,8 @@ export const translations = {
       expandSidebar: "展开侧边栏",
       collapseSidebar: "收起侧边栏",
       collapse: "收起",
+      profileAndPreferences: "个人资料与偏好",
+      settings: "设置",
     },
     /**
      * The job card's own panels: what the tailor and the cover-letter
@@ -1263,6 +1285,9 @@ export const translations = {
     jobCard: {
       noMatchYet: "还没有算过匹配度",
       matchFor: "与「{title}」的匹配度",
+      whyThisJob: "为什么是这个职位：",
+      pastedJd: "粘贴的 JD",
+      foundByResearch: "调研代理找到的",
     },
     /**
      * The diff the tailor panel shows: the numbers beside the change list,
@@ -1631,6 +1656,9 @@ export const translations = {
       noAnswerDescription: "写下职位名并运行引擎。",
       inFlight: "运行中…",
       failed: "引擎失败。原因记录在后端日志里。",
+      study: "要学的",
+      rehearse: "要练的",
+      locationOptional: "地点（可选）",
     },
     // Resumes
     resumes: {
@@ -1788,6 +1816,9 @@ export const translations = {
       copyLetter: "复制求职信",
       matchingRoles: "{count} 个匹配职位",
       tailoredResume: "定制简历草稿",
+      openJob: "打开职位",
+      interviewPrepared: "代理根据这段对话准备好了一场面试。",
+      start: "开始",
     },
     // The copilot's action chips -- the labels the orchestrator writes in
     // English, which the browser says in the reader's language.
@@ -1934,6 +1965,7 @@ export const translations = {
       sources: {
         chooseDocuments: "选择要摄取的文档",
         appliedToBatch: "应用于这批里的每个文件",
+        clearList: "清空列表",
         deleteDescription: "来源行会被移除，它的分块也不再被引用。且无法撤销。",
         delete: "删除",
         deleteLabel: "删除 {title}",
@@ -2214,6 +2246,13 @@ export const translations = {
         interviewTopicsDescription: "从需求提取中推导，按权重排序。",
         preparation: "推荐的准备",
         preparationDescription: "按每项对匹配度的贡献排序。",
+        nothingFabricatedBefore: "这里不会凭空造数：一旦",
+        nothingFabricatedAfter: "返回，匹配环、各维度得分和引用就都会出现。",
+        resource: "来源：",
+        jobDescription: "职位描述",
+        jobDescriptionDescription: "直接从职位发布里提取出的要求。",
+        required: "必须",
+        niceToHave: "加分项",
       },
     },
   },

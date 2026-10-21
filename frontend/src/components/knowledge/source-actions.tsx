@@ -420,7 +420,7 @@ export function SourceUploadCard() {
             </ul>
             {!running && (
               <Button variant="ghost" size="xs" onClick={reset}>
-                Clear list
+                {t("knowledge.sources.clearList")}
               </Button>
             )}
           </div>

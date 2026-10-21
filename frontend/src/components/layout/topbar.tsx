@@ -105,13 +105,13 @@ export function Topbar() {
           <DropdownMenuItem asChild>
             <Link href="/settings" className="flex items-center gap-2">
               <UserIcon aria-hidden />
-              Profile &amp; preferences
+              {t("chrome.profileAndPreferences")}
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
             <Link href="/settings" className="flex items-center gap-2">
               <SettingsIcon aria-hidden />
-              Settings
+              {t("chrome.settings")}
             </Link>
           </DropdownMenuItem>
           <Separator className="my-1" />

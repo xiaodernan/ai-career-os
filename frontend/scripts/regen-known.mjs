@@ -61,8 +61,8 @@ for (const rel of browserSources()) {
     const value = m[1].trim();
     if (!value) continue;
     if (!/^[A-Z][a-z]/.test(value)) continue;
-    if (/[(){};=<>|]/.test(value)) continue;
-    if (/^&[a-z]+;/.test(value)) continue;
+    const decoded = value.replace(/&[a-z]+;/g, "x");
+    if (/[(){};=<>|]/.test(decoded)) continue;
     if (NOT_COPY.has(value)) continue;
     add(rel, value);
   }

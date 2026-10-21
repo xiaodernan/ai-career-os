@@ -172,6 +172,7 @@ const KNOWN: Record<string, string[]> = {
     "Parse failed:",
     "Profile from",
     "Repo",
+    "Score from the reviewer agent&apos;s parse step · chunks in",
     "Set current",
   ],
   "app/(app)/resumes/page.tsx": [
@@ -216,17 +217,10 @@ const KNOWN: Record<string, string[]> = {
     "Promise",
     "Search",
   ],
-  "components/copilot/artifacts.tsx": [
-    "Open job",
-    "Start",
-    "The agent prepared a session from this conversation.",
-  ],
   "components/growth/growth-engines-panel.tsx": [
     "Coverage",
     "Missing for the dream role:",
-    "Rehearse",
     "Run",
-    "Study",
   ],
   "components/jobs/analyze-jd-dialog.tsx": [
     "Analyze",
@@ -246,25 +240,6 @@ const KNOWN: Record<string, string[]> = {
     "Job posting text",
     "Paste a posting",
     "Paste the full posting — responsibilities, requirements, nice-to-haves…",
-  ],
-  "components/jobs/job-card.tsx": [
-    "Found by research agent",
-    "Pasted JD",
-    "Why this job:",
-  ],
-  "components/jobs/match-panel.tsx": [
-    "Extracted requirements, straight from the posting.",
-    "Job description",
-    "Nice to have",
-    "Nothing fabricated here: the moment",
-    "Required",
-    "Resource:",
-  ],
-  "components/knowledge/source-actions.tsx": [
-    "Clear list",
-  ],
-  "components/layout/topbar.tsx": [
-    "Settings",
   ],
   "components/settings/memory-card.tsx": [
     "Cancel",
@@ -363,10 +338,13 @@ function textNodeOffenders(): Offender[] {
       if (!value) continue;
       // A sentence starts with a capital and a lower-case letter after it.
       // "AI", "OS" and "JD" are names, not sentences.
-      if (!/^[A-Z][a-z]/.test(value)) continue;      // Code, not copy.
-      if (/[(){};=<>|]/.test(value)) continue;
-      // An entity -- `&amp;` -- is punctuation the reader never sees.
-      if (/^&[a-z]+;/.test(value)) continue;
+      if (!/^[A-Z][a-z]/.test(value)) continue;
+      // An HTML entity inside a phrase -- "Profile &amp; preferences" -- is
+      // punctuation the reader sees, not code. It is decoded before the
+      // code check so the semicolon in it does not hide the phrase.
+      const decoded = value.replace(/&[a-z]+;/g, "x");
+      // Code, not copy.
+      if (/[(){};=<>|]/.test(decoded)) continue;
       if (NOT_COPY.has(value)) continue;
       found.push({ file: rel, attribute: "text", value });
     }
@@ -448,11 +426,11 @@ describe("the browser's copy", () => {
   });
 
   it("knows how much is left", () => {
-    // 207: the copy-bearing attributes, the text between the tags, and the
+    // 166: the copy-bearing attributes, the text between the tags, and the
     // text that has an expression in it ("Clear {count}"). The number is the
     // census's own reading of the browser, and every one of them is on the
     // list above with a file and an owner. The pin moves when a hole closes
     // -- which is the point of pinning it.
-    expect(found.length).toBe(181);
+    expect(found.length).toBe(166);
   });
 });

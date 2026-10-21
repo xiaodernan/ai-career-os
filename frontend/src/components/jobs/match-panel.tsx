@@ -73,8 +73,9 @@ export function MatchPanel({
           <div className="flex items-center gap-3 rounded-lg border border-dashed border-border bg-muted/30 p-4">
             <MatchRing value={0} size={56} thickness={5} animated={false} label={t("jobs.match.noMatch")} />
             <p className="text-sm text-muted-foreground">
-              Nothing fabricated here: the moment <span className="font-medium text-foreground">/jobs/&#123;id&#125;/match</span>{" "}
-              returns, the ring, the dimensions and the citations appear.
+              {t("jobs.match.nothingFabricatedBefore")}{" "}
+              <span className="font-medium text-foreground">/jobs/&#123;id&#125;/match</span>{" "}
+              {t("jobs.match.nothingFabricatedAfter")}
             </p>
           </div>
         ) : (
@@ -243,7 +244,9 @@ export function PreparationCard({ items, className }: { items: PreparationItem[]
               {item.reason && <p className="mt-1 text-xs text-muted-foreground">{item.reason}</p>}
               {item.resource && (
                 <p className="mt-1 truncate text-xs text-muted-foreground">
-                  <span className="font-medium text-foreground">Resource: </span>
+                  <span className="font-medium text-foreground">
+                    {t("jobs.match.resource")}{" "}
+                  </span>
                   {item.resource}
                 </p>
               )}
@@ -270,27 +273,32 @@ export function JdCard({
   className?: string;
 }) {
   const [open, setOpen] = React.useState(false);
+  const { t } = useLocale();
   const hasStructured = Boolean(requiredSkills?.length || preferredSkills?.length || responsibilities?.length);
   if (!rawText && !hasStructured) return null;
 
   return (
     <Card className={className}>
       <CardHeader>
-        <CardTitle className="text-base">Job description</CardTitle>
+        <CardTitle className="text-base">{t("jobs.match.jobDescription")}</CardTitle>
         {hasStructured && (
-          <CardDescription>Extracted requirements, straight from the posting.</CardDescription>
+          <CardDescription>{t("jobs.match.jobDescriptionDescription")}</CardDescription>
         )}
       </CardHeader>
       <CardContent className="space-y-4">
         {requiredSkills && requiredSkills.length > 0 && (
           <div>
-            <p className="mb-1.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase">Required</p>
+            <p className="mb-1.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+              {t("jobs.match.required")}
+            </p>
             <SkillChips matched={requiredSkills} max={20} />
           </div>
         )}
         {preferredSkills && preferredSkills.length > 0 && (
           <div>
-            <p className="mb-1.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase">Nice to have</p>
+            <p className="mb-1.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+              {t("jobs.match.niceToHave")}
+            </p>
             <SkillChips missing={preferredSkills} max={20} />
           </div>
         )}

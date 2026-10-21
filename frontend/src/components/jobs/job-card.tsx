@@ -125,7 +125,9 @@ function JobCard({
 
           {!dense && match?.whyMatch?.length ? (
             <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">
-              <span className="font-medium text-foreground">Why this job: </span>
+              <span className="font-medium text-foreground">
+                {t("jobCard.whyThisJob")}{" "}
+              </span>
               {match.whyMatch[0]}
             </p>
           ) : null}
@@ -140,8 +142,8 @@ function JobCard({
             </Badge>
           )}
           {job.remoteType && <span className="capitalize">{titleCase(job.remoteType)}</span>}
-          {job.source === "user_paste" && <span>Pasted JD</span>}
-          {job.source === "agent_research" && <span>Found by research agent</span>}
+          {job.source === "user_paste" && <span>{t("jobCard.pastedJd")}</span>}
+          {job.source === "agent_research" && <span>{t("jobCard.foundByResearch")}</span>}
         </span>
         <span className="flex items-center gap-1">
           {job.postedAt && <span>{relativeTime(job.postedAt)}</span>}
