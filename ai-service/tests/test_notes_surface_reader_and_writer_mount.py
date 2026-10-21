@@ -100,6 +100,8 @@ SPEAKERS: dict[str, str] = {
         "polls GET to verify what the panel wrote through its own POST -- a reader, not a second writer",
     "e2e/tests/pagination.spec.ts":
         "POSTs the twenty-five rows a pager needs",
+    "e2e/tests/redaction.spec.ts":
+        "POSTs one note so the bundle the reader exports has the reader's own words in it",
     NOTES_PANEL:
         "the panel's docstring spells the four verbs it calls",
     "frontend/src/lib/api/endpoints.test.ts":
@@ -278,7 +280,8 @@ def test_the_only_writer_of_note_rows_is_behind_the_post_the_client_calls() -> N
     assert route_speakers == ["e2e/tests/command-palette.spec.ts",
                               "e2e/tests/forward-surfaces.spec.ts",
                               "e2e/tests/golden-journey.spec.ts",
-                              "e2e/tests/pagination.spec.ts"], (
+                              "e2e/tests/pagination.spec.ts",
+                              "e2e/tests/redaction.spec.ts"], (
         f"the notes route now has a different set of non-Java speakers ({route_speakers}): read each one's "
         "verbs before this gate claims again that one handler authors every row")
 
@@ -290,9 +293,11 @@ def test_the_only_writer_of_note_rows_is_behind_the_post_the_client_calls() -> N
         "e2e/tests/command-palette.spec.ts": [("post", NOTE_ROUTE)],
         "e2e/tests/forward-surfaces.spec.ts": [("post", NOTE_ROUTE)],
         "e2e/tests/pagination.spec.ts": [("post", NOTE_ROUTE), ("post", NOTE_ROUTE)],
+        "e2e/tests/redaction.spec.ts": [("post", NOTE_ROUTE)],
     }, (f"a note row is now authored by a path that is not the collection POST ({writes}): the panel writes "
         "through POST /knowledge/notes, and that is the only verb the Java clause above accounts for")
-    assert reads == {"e2e/tests/golden-journey.spec.ts": [NOTE_ROUTE]}, \
+    assert reads == {"e2e/tests/golden-journey.spec.ts": [NOTE_ROUTE],
+                     "e2e/tests/redaction.spec.ts": [NOTE_ROUTE]}, \
         f"the route's readers changed shape: {reads}"
     # No separate "a speaker the verb scan cannot see" clause: the two equalities above already hold
     # every one of the three names, so a file that lost its only readable call has lost its entry in
@@ -304,7 +309,13 @@ def test_the_files_that_speak_of_the_notes_route() -> None:
     """Every file naming the route, and every file naming only a path that starts with it -- one walk."""
     sites: list[str] = []
     loose_sites: list[str] = []
-    skip_parts = {"node_modules", "__pycache__", "dist", "build", "target"}
+    skip_parts = {"node_modules", "__pycache__", "dist", "build", "target",
+                  # The e2e's own artifacts: a failed run leaves the page's
+                  # snapshot in `test-results/`, and the snapshot quotes the
+                  # very route this gate is counting speakers of. A generated
+                  # directory is not a speaker, and a gate that reads one is
+                  # a gate that fails on whoever ran the suite last.
+                  "test-results", "playwright-report"}
     # Pruning walk: `ROOT.rglob("*")` traverses 107k entries from here, 81k of them under
     # `frontend/node_modules`, which the `skip_parts` guard below throws away by name.
     for path in walk_files(ROOT, skip_parts):
@@ -397,7 +408,7 @@ def test_the_palette_sentence_is_built_from_that_table_and_the_notes_group_is_ba
     footer = read(PALETTE)
     # The footer's tail reads from the locale table now, so the gate asserts
     # the key the palette reads rather than the English copy it carried.
-    assert "Search {searchGroupNames()} — {t(\"chrome.resultsStreamIn\")}" in footer, \
+    assert "{t(\"chrome.search\")} {searchGroupNames()} — {t(\"chrome.resultsStreamIn\")}" in footer, \
         "the palette footer no longer interpolates the table, so its capability line is a typed string and this gate is stale"
     assert "once the API is live" not in footer, \
         "the footer went back to promising a future for an endpoint SearchController has answered for a while"

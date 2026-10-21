@@ -9,8 +9,10 @@ import com.careeros.auth.entity.UserProfile;
 import com.careeros.auth.repository.UserProfileRepository;
 import com.careeros.common.ApiException;
 import com.careeros.common.ApiErrorCode;
+import com.careeros.common.Json;
 import com.careeros.knowledge.entity.UserNote;
 import com.careeros.knowledge.repository.UserNoteRepository;
+import com.careeros.knowledge.dto.KnowledgeDtos.NoteRequest;
 import com.careeros.knowledge.service.KnowledgeService;
 import com.careeros.interview.entity.InterviewEvaluation;
 import com.careeros.interview.entity.InterviewSession;
@@ -21,6 +23,10 @@ import com.careeros.interview.repository.InterviewTurnRepository;
 import com.careeros.job.entity.JobJd;
 import com.careeros.job.repository.JobJdRepository;
 import com.careeros.job.repository.JobRepository;
+import com.careeros.network.entity.Contact;
+import com.careeros.network.dto.ContactDtos.ContactRequest;
+import com.careeros.network.repository.ContactRepository;
+import com.careeros.network.service.ContactService;
 import com.careeros.resume.dto.ResumeDtos.CreateResumeRequest;
 import com.careeros.resume.service.ResumeService;
 import java.math.BigDecimal;
@@ -30,6 +36,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Predicate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -56,10 +63,12 @@ public class ImportService {
     private final AiServiceClient aiService;
     private final UserProfileRepository profiles;
     private final UserNoteRepository notes;
+    private final ContactRepository contacts;
     private final ApplicationRepository applications;
     private final GrowthPlanRepository growthPlans;
     private final ResumeService resumes;
     private final KnowledgeService knowledge;
+    private final ContactService contactService;
     private final JobJdRepository jds;
     private final JobRepository jobRepository;
     private final InterviewSessionRepository sessions;
@@ -67,19 +76,23 @@ public class ImportService {
     private final InterviewEvaluationRepository evaluations;
 
     public ImportService(AiServiceClient aiService, UserProfileRepository profiles,
-                          UserNoteRepository notes, ApplicationRepository applications,
+                          UserNoteRepository notes, ContactRepository contacts,
+                          ApplicationRepository applications,
                           GrowthPlanRepository growthPlans, ResumeService resumes,
-                          KnowledgeService knowledge, JobJdRepository jds,
+                          KnowledgeService knowledge, ContactService contactService,
+                          JobJdRepository jds,
                           JobRepository jobRepository, InterviewSessionRepository sessions,
                           InterviewTurnRepository turns,
                           InterviewEvaluationRepository evaluations) {
         this.aiService = aiService;
         this.profiles = profiles;
         this.notes = notes;
+        this.contacts = contacts;
         this.applications = applications;
         this.growthPlans = growthPlans;
         this.resumes = resumes;
         this.knowledge = knowledge;
+        this.contactService = contactService;
         this.jds = jds;
         this.jobRepository = jobRepository;
         this.sessions = sessions;
@@ -129,6 +142,8 @@ public class ImportService {
         applyKnowledge(userId, data, sections, applied, skipped);
         applyJobDescriptions(userId, data, sections, applied, skipped);
         applyInterviews(userId, data, sections, applied, skipped);
+        applyNotes(userId, data, sections, applied, skipped);
+        applyContacts(userId, data, sections, applied, skipped);
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("applied", applied.entrySet().stream()
@@ -220,9 +235,7 @@ public class ImportService {
             if (target == null) {
                 target = new Application();
                 target.setUserId(userId);
-                if (rowId != null) {
-                    setId(target, rowId);
-                }
+                setId(target, restorableId(rowId, applications::existsById));
                 created++;
             } else {
                 updated++;
@@ -238,6 +251,136 @@ public class ImportService {
             applications.save(target);
         }
         count(applied, "applications", created, updated, deleted);
+    }
+
+    /**
+     * The notes the reader typed into their knowledge base.
+     *
+     * <p>These are the reader's own words -- the salary band they wrote down, the
+     * company fact they wanted to remember -- and they were the first thing a
+     * reader lost when they left: the bundle carried every table the *engines*
+     * read and neither table the reader typed into.
+     *
+     * <p>The write goes through the knowledge service, the way the panel writes
+     * it: one author of note rows, and a new id minted by the database. An id
+     * from the bundle is only reused when the *caller* already has that row --
+     * the caller's own scope finds it first -- so a restore into another
+     * account can never land on top of somebody else's row.
+     */
+    private void applyNotes(UUID userId, Map<String, Object> data,
+                            Map<String, List<Map<String, Object>>> sections,
+                            Map<String, int[]> applied, List<Map<String, String>> skipped) {
+        List<Map<String, Object>> ops = sections.get("notes");
+        if (ops == null || ops.isEmpty()) {
+            return;
+        }
+        Object rows = data.get("notes");
+        if (!(rows instanceof List<?> list)) {
+            skipped.add(Map.of("section", "notes", "reason", "The bundle carries no notes."));
+            return;
+        }
+        int created = 0;
+        int updated = 0;
+        int deleted = 0;
+        for (Map<String, Object> op : ops) {
+            String id = str(op, "id");
+            String kind = str(op, "op");
+            UUID rowId = uuid(id);
+            if ("delete".equals(kind)) {
+                if (rowId == null) {
+                    continue;
+                }
+                // The service's own delete, so a retired note stops being
+                // cited the way a note deleted on the screen does.
+                if (notes.findByIdAndUserId(rowId, userId).isPresent()) {
+                    knowledge.deleteNote(userId, rowId);
+                    deleted++;
+                }
+                continue;
+            }
+            Map<?, ?> row = findRow(list, id);
+            if (row == null) {
+                continue;
+            }
+            String content = str(row, "content");
+            if (content == null || content.isBlank()) {
+                continue;
+            }
+            String title = str(row, "title");
+            List<String> tags = Json.strList(row.get("tags"));
+            NoteRequest request = new NoteRequest(title, content, tags);
+            if (rowId != null && notes.findByIdAndUserId(rowId, userId).isPresent()) {
+                knowledge.updateNote(userId, rowId, request);
+                updated++;
+            } else {
+                knowledge.createNote(userId, request);
+                created++;
+            }
+        }
+        count(applied, "notes", created, updated, deleted);
+    }
+
+    /**
+     * The people in the reader's networking circle.
+     *
+     * <p>The address book is the reader's own record of who they know -- and the
+     * note they wrote about the person travels with it. A restore that brought
+     * back the applications and left the people behind would be a strange half
+     * of a career.
+     *
+     * <p>As with the notes, the write goes through the service that owns the
+     * table, so a new row gets an id of its own and the restore cannot land on
+     * top of somebody else's row.
+     */
+    private void applyContacts(UUID userId, Map<String, Object> data,
+                                Map<String, List<Map<String, Object>>> sections,
+                                Map<String, int[]> applied, List<Map<String, String>> skipped) {
+        List<Map<String, Object>> ops = sections.get("contacts");
+        if (ops == null || ops.isEmpty()) {
+            return;
+        }
+        Object rows = data.get("contacts");
+        if (!(rows instanceof List<?> list)) {
+            skipped.add(Map.of("section", "contacts", "reason", "The bundle carries no contacts."));
+            return;
+        }
+        int created = 0;
+        int updated = 0;
+        int deleted = 0;
+        for (Map<String, Object> op : ops) {
+            String id = str(op, "id");
+            String kind = str(op, "op");
+            UUID rowId = uuid(id);
+            if ("delete".equals(kind)) {
+                if (rowId == null) {
+                    continue;
+                }
+                if (contacts.findByIdAndUserId(rowId, userId).isPresent()) {
+                    contactService.delete(userId, rowId);
+                    deleted++;
+                }
+                continue;
+            }
+            Map<?, ?> row = findRow(list, id);
+            if (row == null) {
+                continue;
+            }
+            String name = str(row, "name");
+            if (name == null || name.isBlank()) {
+                continue;
+            }
+            ContactRequest request = new ContactRequest(
+                    name, str(row, "role"), str(row, "company"), str(row, "relation"),
+                    str(row, "email"), str(row, "notes"), time(row, "last_touch_at"));
+            if (rowId != null && contacts.findByIdAndUserId(rowId, userId).isPresent()) {
+                contactService.update(userId, rowId, request);
+                updated++;
+            } else {
+                contactService.create(userId, request);
+                created++;
+            }
+        }
+        count(applied, "contacts", created, updated, deleted);
     }
 
     /** The stored growth runs: one row per report the candidate ever built. */
@@ -280,9 +423,7 @@ public class ImportService {
             if (target == null) {
                 target = new GrowthPlan();
                 target.setUserId(userId);
-                if (rowId != null) {
-                    setId(target, rowId);
-                }
+                setId(target, restorableId(rowId, growthPlans::existsById));
                 created++;
             } else {
                 updated++;
@@ -612,6 +753,25 @@ public class ImportService {
                     m.put("target_role", row.getTargetRole());
                     return m;
                 }).toList());
+        // The notes and the contacts are here for the same reason the
+        // applications are: the plan tells a create from an update by the id,
+        // so a section the current state does not carry is a section every
+        // row in the bundle is a *create* for. A restore that wrote a second
+        // copy of every note would be worse than one that left them alone.
+        data.put("notes", notes.findByUserId(userId).stream()
+                .map(row -> {
+                    Map<String, Object> m = new LinkedHashMap<>();
+                    m.put("id", row.getId() == null ? null : row.getId().toString());
+                    m.put("title", row.getTitle());
+                    return m;
+                }).toList());
+        data.put("contacts", contacts.findByUserIdOrderByUpdatedAtDesc(userId).stream()
+                .map(row -> {
+                    Map<String, Object> m = new LinkedHashMap<>();
+                    m.put("id", row.getId() == null ? null : row.getId().toString());
+                    m.put("name", row.getName());
+                    return m;
+                }).toList());
         return Map.of("data", data);
     }
 
@@ -694,6 +854,30 @@ public class ImportService {
             // correct restore — only the bundle's internal links would point
             // at the old ids.
         }
+    }
+
+    /**
+     * The id a restored row may keep.
+     *
+     * <p>The bundle's id is the row's id — so the links inside the bundle still
+     * point where they did — but only when nothing else holds it. An id that
+     * belongs to *another account's* row would make the save write into that
+     * row: the caller's restore would quietly change somebody else's data, and
+     * the caller would get nothing of their own. That is not a bundle to
+     * restore into another account; it is a bundle to restore into the
+     * account it came from.
+     *
+     * <p>So the id is kept when it is free and minted when it is not. The
+     * restore still lands the rows — they just do not land on top of
+     * somebody else's. And a row the caller already has is found by the
+     * caller's own scope before this is asked, so a same-account restore
+     * keeps every id and every link.
+     */
+    private static UUID restorableId(UUID rowId, Predicate<UUID> taken) {
+        if (rowId == null) {
+            return null;
+        }
+        return taken.test(rowId) ? null : rowId;
     }
 
     private static void count(Map<String, int[]> applied, String section, int created, int updated) {

@@ -15,6 +15,7 @@ with their data. This document locks the export/import contract implemented in
 | 13.2 Idempotent re-import (upsert/delete plan) | **done** (plan emitted; the apply step is the backend's) | backend (writes) |
 | 13.3 Right-to-be-forgotten / anonymized export | **done** (anonymize + validate + section redaction) | ai-service + backend bridge |
 | `applications` + `growth_plans` sections | **done** (shipped in the bundle since 1.1.0) | backend bridge |
+| `notes` + `contacts` sections | **done** (shipped in the bundle since 1.2.0) | backend bridge |
 
 ## The bridge (2026-10-20)
 
@@ -100,20 +101,50 @@ version: a 1.0.0 backup predates the two sections and is still a valid bundle,
 while a 1.1.0 one missing them was truncated. Rejecting the old backups would
 have cost every user their archive the day the format grew.
 
+### The reader's own words (1.2.0)
+
+The bundle carried every table the *engines* read and neither table the reader
+typed in. Their notes — the salary band they wrote down, the company fact they
+wanted to remember — lived in `user_notes`, and the people they know lived in
+`contacts`; no section of the bundle carried either. So a reader who kept
+their research in a note and then exported their data did not get that note
+back.
+
+Since **1.2.0** the bundle carries `notes` and `contacts` as well, and the
+browser offers to redact them like any other section. The required set is
+still read off the bundle's own version, and the version is compared as
+*numbers* now: `"1.10.0"` is after `"1.9.0"`, and a string comparison says
+otherwise. A 1.1.0 backup still validates with its eight sections; a 1.1.5
+one is held to the 1.1.0 sections rather than to the newest.
+
+### The restore does not write over somebody else's rows
+
+A bundle's ids are the source's, and the restore keeps them — so the links
+inside the bundle still point where they did, and a same-account restore
+updates its own rows in place.
+
+But an id that belongs to *another account's* row must not be written into.
+It was: restoring a colleague's export changed the colleague's data (a note
+they had edited since the export went back to the exported text) and gave the
+caller nothing of their own, while the answer said **created**. The id is now
+kept only when it is free and minted when it is not: the restore still lands
+the rows, and it no longer lands them on top of somebody else's.
+
 ## Bundle schema
 
 ```jsonc
 {
-  "schema_version": "1.1.0",
+  "schema_version": "1.2.0",
   "generator": "ai-career-os",
   "generated_at": "2026-10-20T00:00:00+00:00",
   "user": { "id": "<uuid>", "anonymized": false },
   "manifest": {
-    "schema_version": "1.1.0",
+    "schema_version": "1.2.0",
     "generator": "ai-career-os",
     "counts": { "profile": 1, "resumes": 1, "knowledge": 1,
                 "job_descriptions": 1, "interviews": 1, "memories": 1,
-                "applications": 12, "growth_plans": 3 },
+                "applications": 12, "growth_plans": 3, "notes": 4,
+                "contacts": 9 },
     "content_hash": "<sha256 over data>",
     "anonymized": false
   },
@@ -124,10 +155,14 @@ have cost every user their archive the day the format grew.
     "job_descriptions": [ { ...job_jds row... } ],
     "interviews": [ { ...interview_sessions joined jobs/companies..., "turns": [...] } ],
     "memories": [ { ...user_memories row... } ],
-    // The two the BACKEND owns — the bridge hands them over, and the hash
+    // The four the BACKEND owns — the bridge hands them over, and the hash
     // covers them like every other section.
     "applications": [ { ...applications row... } ],
-    "growth_plans": [ { ...growth_plans row... } ]
+    "growth_plans": [ { ...growth_plans row... } ],
+    // And the two the reader typed into: their own words, and the people
+    // they know. They are the first things a reader loses when they leave.
+    "notes": [ { ...user_notes row... } ],
+    "contacts": [ { ...contacts row... } ]
   }
 }
 ```

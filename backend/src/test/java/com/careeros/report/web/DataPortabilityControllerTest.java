@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -19,19 +20,26 @@ import com.careeros.report.service.ExportService;
 import com.careeros.report.service.ImportService;
 import com.careeros.auth.repository.UserProfileRepository;
 import com.careeros.knowledge.repository.UserNoteRepository;
+import com.careeros.knowledge.entity.UserNote;
+import com.careeros.knowledge.dto.KnowledgeDtos.NoteRequest;
 import com.careeros.knowledge.service.KnowledgeService;
 import com.careeros.interview.repository.InterviewEvaluationRepository;
 import com.careeros.interview.repository.InterviewSessionRepository;
 import com.careeros.interview.repository.InterviewTurnRepository;
 import com.careeros.job.repository.JobJdRepository;
 import com.careeros.job.repository.JobRepository;
+import com.careeros.network.repository.ContactRepository;
+import com.careeros.network.entity.Contact;
+import com.careeros.network.service.ContactService;
 import com.careeros.resume.service.ResumeService;
 import com.careeros.common.AuthUser;
 import com.careeros.common.CurrentUserArgumentResolver;
 import com.careeros.common.EnvelopeAdvice;
 import com.careeros.common.GlobalExceptionHandler;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -58,11 +66,15 @@ class DataPortabilityControllerTest {
 
     private static final String USER = "6b0178a0-d352-09c3-ea65-8f107bd28d01";
 
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
     private AiServiceClient ai;
     private ApplicationRepository applications;
     private GrowthPlanRepository growthPlans;
     private UserProfileRepository profiles;
     private UserNoteRepository notes;
+    private ContactRepository contacts;
+    private KnowledgeService knowledge;
     private MockMvc mvc;
 
     @BeforeEach
@@ -72,9 +84,13 @@ class DataPortabilityControllerTest {
         growthPlans = mock(GrowthPlanRepository.class);
         profiles = mock(UserProfileRepository.class);
         notes = mock(UserNoteRepository.class);
-        ExportService exports = new ExportService(ai, applications, growthPlans);
-        ImportService imports = new ImportService(ai, profiles, notes, applications, growthPlans,
-                mock(ResumeService.class), mock(KnowledgeService.class),
+        contacts = mock(ContactRepository.class);
+        knowledge = mock(KnowledgeService.class);
+        ExportService exports = new ExportService(ai, applications, growthPlans,
+                notes, contacts);
+        ImportService imports = new ImportService(ai, profiles, notes,
+                contacts, applications, growthPlans,
+                mock(ResumeService.class), knowledge, mock(ContactService.class),
                 mock(JobJdRepository.class), mock(JobRepository.class),
                 mock(InterviewSessionRepository.class), mock(InterviewTurnRepository.class),
                 mock(InterviewEvaluationRepository.class));
@@ -115,6 +131,11 @@ class DataPortabilityControllerTest {
     /**
      * The bundle is complete: the sections the BACKEND owns travel with it, so
      * an export is the candidate's pipeline and not only their reading list.
+     *
+     * <p>And the two the reader typed into travel too -- their notes and the
+     * people they know. They are the first things a reader loses when they
+     * leave, because the bundle used to carry every table the *engines* read
+     * and neither table the reader wrote in.
      */
     @Test
     void the_export_carries_the_sections_the_backend_owns() throws Exception {
@@ -122,8 +143,24 @@ class DataPortabilityControllerTest {
                 .thenReturn(new PageImpl<>(List.of()));
         when(growthPlans.findByUserIdOrderByCreatedAtDesc(eq(UUID.fromString(USER))))
                 .thenReturn(List.of());
+
+        UserNote note = new UserNote();
+        note.setUserId(UUID.fromString(USER));
+        note.setTitle("Salary research");
+        note.setContent("Hangzhou senior backend, 40-60w total.");
+        when(notes.findByUserId(eq(UUID.fromString(USER)))).thenReturn(List.of(note));
+
+        Contact contact = new Contact();
+        contact.setUserId(UUID.fromString(USER));
+        contact.setName("Li Ming");
+        contact.setCompany("Acme");
+        contact.setRelation("Mentor");
+        contact.setNotes("Met at the conference; happy to review my design.");
+        when(contacts.findByUserIdOrderByUpdatedAtDesc(eq(UUID.fromString(USER))))
+                .thenReturn(List.of(contact));
+
         when(ai.exportBundle(eq(UUID.fromString(USER)), anyBoolean(), any()))
-                .thenReturn(Map.of("schema_version", "1.1.0"));
+                .thenReturn(Map.of("schema_version", "1.2.0"));
 
         mvc.perform(post("/api/v1/data-portability/export")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -133,7 +170,74 @@ class DataPortabilityControllerTest {
         @SuppressWarnings("unchecked")
         ArgumentCaptor<Map<String, Object>> sections = ArgumentCaptor.forClass(Map.class);
         verify(ai).exportBundle(eq(UUID.fromString(USER)), eq(false), sections.capture());
-        assertThat(sections.getValue()).containsKeys("applications", "growth_plans");
+        assertThat(sections.getValue()).containsKeys(
+                "applications", "growth_plans", "notes", "contacts");
+
+        // And the reader's own words are in there, not just the section names.
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> exportedNotes =
+                (List<Map<String, Object>>) sections.getValue().get("notes");
+        assertThat(exportedNotes).hasSize(1);
+        assertThat(exportedNotes.get(0))
+                .containsEntry("title", "Salary research")
+                .containsEntry("content", "Hangzhou senior backend, 40-60w total.");
+
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> exportedContacts =
+                (List<Map<String, Object>>) sections.getValue().get("contacts");
+        assertThat(exportedContacts).hasSize(1);
+        assertThat(exportedContacts.get(0))
+                .containsEntry("name", "Li Ming")
+                .containsEntry("relation", "Mentor")
+                .containsEntry("notes", "Met at the conference; happy to review my design.");
+    }
+
+    /**
+     * A restore into another account does not write over the source's rows.
+     *
+     * <p>The bundle's ids are the source's, and the restore keeps them so the
+     * links inside the bundle still point where they did. But an id that
+     * belongs to <em>another</em> account's row must not be written into: the
+     * caller's restore would change somebody else's data, and the caller
+     * would get nothing of their own -- while the answer said "created".
+     *
+     * <p>So the id is kept when it is free and minted when it is not. This
+     * is the share case, and it is the one the export is advertised for.
+     */
+    @Test
+    void a_restore_into_another_account_does_not_write_over_the_source() throws Exception {
+        UUID sourceId = UUID.fromString("11111111-1111-1111-1111-111111111111");
+        when(ai.importPlan(eq(UUID.fromString(USER)), any(), any()))
+                .thenReturn(Map.of("sections", Map.of("notes", List.of(
+                        Map.of("op", "create", "id", sourceId.toString())))));
+        // The caller does not have that note ...
+        when(notes.findByIdAndUserId(eq(sourceId), eq(UUID.fromString(USER))))
+                .thenReturn(Optional.empty());
+        when(applications.findByUserIdOrderByUpdatedAtDescIdAsc(eq(UUID.fromString(USER)), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of()));
+        when(growthPlans.findByUserIdOrderByCreatedAtDesc(eq(UUID.fromString(USER))))
+                .thenReturn(List.of());
+
+        Map<String, Object> bundle = Map.of(
+                "schema_version", "1.2.0",
+                "data", Map.of("notes", List.of(
+                        Map.of("id", sourceId.toString(),
+                                "title", "Someone else's note",
+                                "content", "not the caller's to change"))));
+
+        mvc.perform(post("/api/v1/data-portability/import-apply")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("bundle", bundle))))
+                .andExpect(status().isOk());
+
+        // The row that was written is the caller's own: the knowledge service
+        // authored it, with an id of its own, and nobody else's row was
+        // touched.
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<NoteRequest> written = ArgumentCaptor.forClass(NoteRequest.class);
+        verify(knowledge).createNote(eq(UUID.fromString(USER)), written.capture());
+        assertThat(written.getValue().content()).isEqualTo("not the caller's to change");
+        verify(knowledge, never()).deleteNote(any(), any());
     }
 
     @Test

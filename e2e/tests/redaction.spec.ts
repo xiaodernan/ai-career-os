@@ -1,5 +1,5 @@
 import { expect, test } from "./fixtures";
-import { unwrap } from "./fixtures";
+import { apiFor, registerUser, unwrap } from "./fixtures";
 
 /**
  * The redaction, driven through the screen.
@@ -182,4 +182,78 @@ test("a withheld section does not delete the reader's own rows at the target", a
     deletes,
     "the plan deletes the target's own applications because the sharer withheld theirs"
   ).not.toContain("the-target-own-application");
+});
+
+/**
+ * The notes and the contacts the reader typed travel with them.
+ *
+ * The bundle used to carry every table the *engines* read and neither table
+ * the reader wrote in -- so their own notes and the people they know were
+ * the first things lost when they left. "Your data" that leaves out the two
+ * tables a reader typed into is not their data.
+ *
+ * So the round trip is run for real: a note and a contact are written, the
+ * bundle is exported, and the bundle is applied to a *different* account --
+ * because a bundle that carries a note and then cannot put it anywhere is
+ * a bundle that only carries it in the file.
+ */
+test("the notes and the contacts the reader typed travel in the bundle", async ({
+  api,
+  request,
+}) => {
+  // What the reader wrote down, in their own words.
+  await unwrap(
+    await api.post("/knowledge/notes", {
+      title: "Salary research",
+      content: "Hangzhou senior backend, 40-60w total.",
+    })
+  );
+  await unwrap(
+    await api.post("/contacts", {
+      name: "Li Ming",
+      company: "Acme",
+      relation: "Mentor",
+      notes: "Met at the conference; happy to review my design.",
+    })
+  );
+
+  // The bundle.
+  const bundle = await unwrap<{
+    schema_version?: string;
+    data?: { notes?: Array<Record<string, unknown>>; contacts?: Array<Record<string, unknown>> };
+  }>(await api.post("/data-portability/export", {}));
+
+  const notes = bundle.data?.notes ?? [];
+  const contacts = bundle.data?.contacts ?? [];
+  expect(notes.length, "the bundle carries no notes at all").toBeGreaterThan(0);
+  expect(contacts.length, "the bundle carries no contacts at all").toBeGreaterThan(0);
+  expect(
+    notes.map((n) => n.content),
+    "the bundle does not carry the note's own words"
+  ).toContain("Hangzhou senior backend, 40-60w total.");
+  expect(contacts.map((c) => c.name), "the bundle does not carry the contact").toContain(
+    "Li Ming"
+  );
+
+  // And the restore, into an account that has never seen either.
+  const other = await registerUser(request);
+  const otherApi = apiFor(request, other);
+
+  await unwrap(await otherApi.post("/data-portability/import-apply", { bundle }));
+
+  const restoredNotes = await unwrap<{ items: Array<{ title: string; content: string }> }>(
+    await otherApi.get("/knowledge/notes")
+  );
+  expect(
+    restoredNotes.items.map((n) => n.content),
+    "the note did not come back"
+  ).toContain("Hangzhou senior backend, 40-60w total.");
+
+  const restoredContacts = await unwrap<Array<{ name: string; relation: string }>>(
+    await otherApi.get("/contacts")
+  );
+  expect(
+    restoredContacts.map((c) => c.name),
+    "the contact did not come back"
+  ).toContain("Li Ming");
 });

@@ -121,7 +121,7 @@ evaluation harnesses, and a seeded 12-company / 41-role corpus.
 
 Verified against the live stack, not just in unit tests:
 
-- The **Playwright golden-journey suite passes 60/60** (`e2e/`) against
+- The **Playwright golden-journey suite passes 61/61** (`e2e/`) against
   postgres+redis+minio, ai-service, backend and a production frontend build. It
   runs the PRD §35 flow for real: register → upload a resume → search → match →
   tailor → track → interview → report → copilot, plus the account-recovery pair

@@ -31,7 +31,7 @@ from datetime import datetime, timezone
 from typing import Any, Callable
 from uuid import UUID
 
-SCHEMA_VERSION = "1.1.0"
+SCHEMA_VERSION = "1.2.0"
 GENERATOR = "ai-career-os"
 
 # Top-level profile keys stripped by ``anonymize`` unless the caller overrides.
@@ -52,9 +52,20 @@ AI_SECTIONS: tuple[str, ...] = (
 # 1.1.0 they travel in the bundle, which is what makes an export complete --
 # a bundle without the pipeline a candidate actually worked is a bundle of
 # their reading list and nothing else.
-BACKEND_SECTIONS: tuple[str, ...] = ("applications", "growth_plans")
+#
+# Since 1.2.0 the backend's own ``notes`` and ``contacts`` travel too, and
+# those are not a nicety: they are the reader's own words -- the notes they
+# typed into their knowledge base and the people they know. "Your data"
+# that leaves out the two tables the reader typed into is a bundle of
+# everything the *product* knows about them.
+BACKEND_SECTIONS: tuple[str, ...] = (
+    "applications",
+    "growth_plans",
+    "notes",
+    "contacts",
+)
 
-# Every section a 1.1.0 bundle carries.
+# Every section a 1.2.0 bundle carries.
 SECTIONS: tuple[str, ...] = AI_SECTIONS + BACKEND_SECTIONS
 
 # What a 1.0.0 bundle carried. A bundle written before the bridge has no
@@ -62,8 +73,31 @@ SECTIONS: tuple[str, ...] = AI_SECTIONS + BACKEND_SECTIONS
 # read off the bundle's own schema version rather than assumed.
 LEGACY_SECTIONS: tuple[str, ...] = AI_SECTIONS
 
-# The schema version that introduced the backend sections.
-BACKEND_SECTIONS_VERSION = "1.1.0"
+# The schema version that introduced the backend sections. It is a rung of
+# the ladder below rather than a constant of its own, because the ladder is
+# what the required set is read from.
+#
+# The sections each schema version carries, oldest first.
+#
+# A bundle's required set is read off its OWN version, so an older backup
+# stays a valid bundle: a 1.0.0 one predates the backend's sections, a
+# 1.1.0 one predates the notes and the contacts. The map is the record of
+# what grew when, and it is read by *parsed* version rather than by string
+# comparison -- "1.10.0" is after "1.9.0", and a string comparison says
+# otherwise.
+SECTIONS_BY_VERSION: dict[str, tuple[str, ...]] = {
+    "1.0.0": LEGACY_SECTIONS,
+    "1.1.0": AI_SECTIONS + ("applications", "growth_plans"),
+    "1.2.0": SECTIONS,
+}
+
+
+def _version_tuple(version: str) -> tuple[int, ...] | None:
+    """A schema version as numbers, or None when it is not one."""
+    parts = version.split(".")
+    if not parts or not all(part.isdigit() for part in parts):
+        return None
+    return tuple(int(part) for part in parts)
 
 
 def required_sections(schema_version: str) -> tuple[str, ...]:
@@ -71,11 +105,28 @@ def required_sections(schema_version: str) -> tuple[str, ...]:
 
     A 1.0.0 bundle predates the backend sections and is still valid; a 1.1.0
     one without them is a bundle that was truncated, and the import path has to
-    know the difference.
+    know the difference. The same holds for the notes and the contacts: a
+    1.1.0 bundle is not a bundle that was truncated for them, because it
+    never carried them.
+
+    An unknown version is held to the newest set. A bundle written by a
+    future version carries at least what this one does, and a file that is
+    not a version at all -- a typo, a hand-made file -- is held to the
+    strictest reading rather than the loosest.
     """
-    if schema_version >= BACKEND_SECTIONS_VERSION:
+    known = SECTIONS_BY_VERSION
+    if schema_version in known:
+        return known[schema_version]
+    parsed = _version_tuple(schema_version)
+    if parsed is None:
         return SECTIONS
-    return LEGACY_SECTIONS
+    # The newest known version that is not after this one: a 1.1.5 bundle is
+    # a 1.1.0 bundle as far as its sections go.
+    earlier = [v for v in known if (_version_tuple(v) or ()) <= parsed]
+    if not earlier:
+        return known["1.0.0"]
+    newest = max(earlier, key=lambda v: _version_tuple(v) or ())
+    return known[newest]
 
 
 # --------------------------------------------------------------------------- #

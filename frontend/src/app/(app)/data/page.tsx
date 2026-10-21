@@ -35,6 +35,12 @@ const SECTIONS = [
   // an export is a reading list and not a record of the search.
   { key: "applications", labelKey: "data.sections.applications" },
   { key: "growth_plans", labelKey: "data.sections.growthRuns" },
+  // The two the reader typed into: their own notes and the people they know.
+  // They were the first things a reader lost when they left, because the
+  // bundle used to carry every table the engines read and neither table the
+  // reader wrote in.
+  { key: "notes", labelKey: "data.sections.notes" },
+  { key: "contacts", labelKey: "data.sections.contacts" },
 ] as const;
 
 export default function DataPortabilityPage() {

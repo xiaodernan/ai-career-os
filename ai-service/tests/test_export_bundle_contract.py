@@ -109,10 +109,11 @@ def test_the_browser_offers_no_section_twice() -> None:
 
 def test_the_bundle_carries_the_pipeline_too() -> None:
     # The backend's sections are the ones the reader cannot get anywhere
-    # else: the applications and the growth runs. A bundle without them is
-    # a reading list, not a record of a search -- so they are in the
-    # bundle, and the browser offers to redact them.
-    assert BACKEND_SECTIONS == ("applications", "growth_plans")
+    # else: the applications and the growth runs, and -- since 1.2.0 -- the
+    # notes they typed and the people they know. A bundle without them is a
+    # reading list, not a record of a search -- so they are in the bundle,
+    # and the browser offers to redact them.
+    assert BACKEND_SECTIONS == ("applications", "growth_plans", "notes", "contacts")
     assert set(BACKEND_SECTIONS) <= set(SECTIONS)
     assert set(AI_SECTIONS) <= set(SECTIONS)
 
@@ -169,16 +170,36 @@ def test_the_backend_reads_no_section_twice() -> None:
 def test_the_required_sections_follow_the_schema_version() -> None:
     # A 1.0.0 bundle is still a valid bundle -- it just does not carry the
     # backend's sections -- so the required set is read off the version the
-    # bundle says it has, not assumed.
+    # bundle says it has, not assumed. And each version is a rung of a
+    # ladder: what grew when is written down, so a bundle written before a
+    # section existed is not a bundle that was truncated for it.
     assert required_sections(SCHEMA_VERSION) == SECTIONS
     assert required_sections("1.0.0") == AI_SECTIONS
+    assert required_sections("1.1.0") == AI_SECTIONS + ("applications", "growth_plans")
     assert set(AI_SECTIONS) < set(SECTIONS)
 
 
-@pytest.mark.parametrize("version", ["1.1.0", "2.0.0", "not-a-version"])
+@pytest.mark.parametrize("version", ["1.2.0", "2.0.0", "not-a-version"])
 def test_an_unknown_or_newer_version_carries_everything(version: str) -> None:
-    # The version comparison is a string comparison, so a future version
-    # ("1.2.0", "2.0.0") is read as newer and gets the full set -- and a
-    # version nobody wrote is read as older, which would silently drop the
-    # backend's sections from a bundle that is meant to have them.
+    # The version comparison is on parsed numbers rather than on strings, so
+    # a future version ("1.2.0", "2.0.0") is read as newer and gets the full
+    # set -- and a version nobody wrote is read as newer too, which would
+    # silently drop the backend's sections from a bundle that is meant to
+    # have them.
     assert required_sections(version) == SECTIONS
+
+
+def test_a_version_between_two_known_ones_keeps_the_older_set() -> None:
+    # A 1.1.5 bundle is a 1.1.0 bundle as far as its sections go: it predates
+    # the notes and the contacts, so holding it to the newest set would
+    # reject a perfectly good backup for the two sections it never had.
+    assert required_sections("1.1.5") == required_sections("1.1.0")
+    assert required_sections("1.1.5") != SECTIONS
+
+
+def test_the_versions_are_compared_as_numbers_and_not_as_strings() -> None:
+    # "1.10.0" is after "1.9.0", and a string comparison says otherwise --
+    # so a bundle written by a future 1.10 would be read as older than 1.9
+    # and held to the wrong set of sections.
+    assert required_sections("1.10.0") == SECTIONS
+    assert required_sections("1.9.0") == required_sections("1.2.0")

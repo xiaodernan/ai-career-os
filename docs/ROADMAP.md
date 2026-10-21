@@ -67,15 +67,25 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   moved — the gates are the product's own account of itself, so leaving them
   stale would be a lie in the one place the reader can check.
 
-- **One known portability gap (found 2026-10-21, not yet closed).** The export
-  bundle's `knowledge` section reads the `documents` table — the files the
-  reader uploaded. The notes they *typed* into the knowledge base live in
-  `user_notes`, and no section of the bundle carries them. So a reader who
-  kept their salary research in a note and then exported their data does not
-  get that note back: "your data" currently means "the data in the tables the
-  export reads". Closing it means a ninth section and a schema version, so it
-  is a decision rather than a patch — and until it is made, the honest thing
-  is for the gap to be written down rather than left for a reader to find.
+- **The portability gap is closed (2026-10-22).** The export bundle's `knowledge`
+  section read the `documents` table — the files the reader uploaded — while the
+  notes they *typed* lived in `user_notes` and in no section of the bundle at all.
+  So a reader who kept their salary research in a note and then exported their
+  data did not get that note back: "your data" meant "the data in the tables the
+  export reads". Since **1.2.0** the bundle carries the notes and the contacts
+  too — the reader's own words and the people they know — and the browser can
+  redact them like any other section. The schema version is read as *numbers*
+  now, so a 1.1.0 backup is still a valid bundle and a 1.1.5 one is held to the
+  1.1.0 sections rather than to the newest.
+- **And the restore stopped writing over somebody else's rows.** A bundle's ids
+  are the source's, and the restore kept them so the links inside the bundle
+  still pointed where they did — but an id that belongs to *another account's*
+  row was written into that row. So restoring a colleague's export changed the
+  colleague's data (a note they had edited since the export went back to the
+  exported text) and gave the caller nothing of their own, while the answer
+  said "created". The id is now kept only when it is free and minted when it is
+  not: the restore still lands the rows, and it no longer lands them on top of
+  somebody else's.
 
 ## Epic 10 — Growth Intelligence
 - [x] **10.1** Gap & growth analysis engine (evidence-bound coverage verdict).
