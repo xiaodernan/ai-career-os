@@ -90,7 +90,7 @@ export function ModuleView<T>({
                 action={
                   ctaHref ? (
                     <Button variant="ai" size="sm" asChild>
-                      <Link href={ctaHref}>{ctaLabel ?? "Open Copilot"}</Link>
+                      <Link href={ctaHref}>{ctaLabel ?? t("common.openCopilot")}</Link>
                     </Button>
                   ) : (
                     <Button variant="outline" size="sm" onClick={() => query.refetch()}>
@@ -115,7 +115,7 @@ export function ModuleView<T>({
                 emptyHint.action ??
                 (ctaHref ? (
                   <Button variant="ai" size="sm" asChild>
-                    <Link href={ctaHref}>{ctaLabel ?? "Open Copilot"}</Link>
+                    <Link href={ctaHref}>{ctaLabel ?? t("common.openCopilot")}</Link>
                   </Button>
                 ) : undefined)
               }

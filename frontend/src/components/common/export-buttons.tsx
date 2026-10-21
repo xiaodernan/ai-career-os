@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Button, type ButtonProps } from "@/components/ui/button";
 import { copyText, downloadText } from "@/lib/format";
+import { useLocale } from "@/lib/i18n/locale-context";
 
 /**
  * Copy / download affordances for AI artifacts. Both operate on real text the
@@ -25,6 +26,7 @@ export function CopyButton({
   variant?: ButtonProps["variant"];
   className?: string;
 }) {
+  const { t } = useLocale();
   const [copied, setCopied] = React.useState(false);
   if (!text) return null;
   return (
@@ -37,16 +39,16 @@ export function CopyButton({
         const ok = await copyText(text);
         if (ok) {
           setCopied(true);
-          toast.success("Copied to the clipboard.");
+          toast.success(t("common.copiedToClipboard"));
           setTimeout(() => setCopied(false), 1600);
         } else {
           toast.error("Your browser blocked clipboard access.");
         }
       }}
-      aria-label={copied ? "Copied" : label}
+      aria-label={copied ? t("common.copied") : label}
     >
       {copied ? <Check aria-hidden className="text-success" /> : <Copy aria-hidden />}
-      {copied ? "Copied" : label}
+      {copied ? t("common.copied") : label}
     </Button>
   );
 }

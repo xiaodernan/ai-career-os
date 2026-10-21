@@ -24,6 +24,7 @@ export interface DiffViewProps extends React.ComponentProps<"div"> {
 }
 
 function ChangeRow({ change, kind }: { change: TailorChange; kind: "accepted" | "rejected" }) {
+  const { t } = useLocale();
   const accepted = kind === "accepted";
   return (
     <li
@@ -43,9 +44,9 @@ function ChangeRow({ change, kind }: { change: TailorChange; kind: "accepted" | 
           {accepted ? <Check className="size-3" strokeWidth={3} /> : <Minus className="size-3" strokeWidth={3} />}
         </span>
         <p className="min-w-0 flex-1 truncate text-xs font-semibold">
-          {change.section ?? "Bullet"}
+          {change.section ?? t("diffView.bullet")}
         </p>
-        <AIBadge label={accepted ? "Applied" : "Skipped"} className={accepted ? undefined : "border-border bg-muted text-muted-foreground"} />
+        <AIBadge label={accepted ? t("diffView.applied") : t("diffView.skipped")} className={accepted ? undefined : "border-border bg-muted text-muted-foreground"} />
       </div>
 
       <div className="mt-2 space-y-1.5 text-sm">
@@ -72,7 +73,7 @@ function ChangeRow({ change, kind }: { change: TailorChange; kind: "accepted" | 
       {change.reason && (
         <p className="mt-2 border-t border-border/60 pt-2 text-xs text-muted-foreground">
           <span className={cn("font-medium", accepted ? "text-foreground" : "text-warning")}>
-            {accepted ? "Why: " : "Why it was not applied: "}
+            {accepted ? t("diffView.why") : t("diffView.whyNotApplied")}
           </span>
           {change.reason}
         </p>

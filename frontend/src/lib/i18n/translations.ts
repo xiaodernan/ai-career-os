@@ -26,8 +26,34 @@ export const translations = {
       activity: "Activity",
       settings: "Settings",
     },
+    /**
+     * The light/dark toggle.
+     *
+     * The button's own name, and what it will do when pressed. It is in
+     * the chrome rather than in the settings page because the toggle is in
+     * the chrome -- the top bar's, the sidebar's.
+     */
+    theme: {
+      switchToLight: "Switch to light theme",
+      switchToDark: "Switch to dark theme",
+    },
+    /**
+     * The saved-job button.
+     *
+     * The bookmark on a job card: what it does, and what it says when the
+     * job is already saved.
+     */
+    save: {
+      remove: "Remove from saved jobs",
+      save: "Save this job",
+      saved: "Saved",
+      saveShort: "Save",
+    },
     // Common actions
     common: {
+      openCopilot: "Open Copilot",
+      copiedToClipboard: "Copied to the clipboard.",
+      copied: "Copied",
       pageNotFound: "Page not found",
       /**
        * The site's own description.
@@ -94,6 +120,9 @@ export const translations = {
      * not implementation detail.
      */
     chrome: {
+      logOut: "Log out",
+      signingOut: "Signing out…",
+      signedIn: "Signed in",
       mainNavigation: "Main navigation",
       goToDashboard: "AI Career OS — go to dashboard",
       openNavigationMenu: "Open navigation menu",
@@ -171,6 +200,11 @@ export const translations = {
      * and the panel the list lives in.
      */
     diffView: {
+      whyNotApplied: "Why it was not applied:",
+      why: "Why:",
+      bullet: "Bullet",
+      skipped: "Skipped",
+      applied: "Applied",
       statistics: "Tailoring statistics",
       agentNotes: "Agent notes",
       appliedChanges: "Applied changes",
@@ -184,6 +218,8 @@ export const translations = {
      * One piece of cited evidence, and the card it sits in.
      */
     evidence: {
+      showAllCount: "Show all {count} evidence items",
+      showFewer: "Show fewer",
       source: "Evidence source",
       jumpToSource: "Jump to source",
     },
@@ -1515,6 +1551,19 @@ export const translations = {
         resultsLoad: "Results load from the live search endpoint.",
       },
       match: {
+        showOriginal: "Show original text",
+        hideOriginal: "Hide original text",
+        weak: "Weak fit for your current profile",
+        partial: "Partial fit — gaps need work",
+        good: "Good fit with a few gaps",
+        strong: "Strong fit — worth applying now",
+        analyze: "Analyze match",
+        rerun: "Re-run match",
+        analyzing: "Analyzing…",
+        runToScore: "Run the matcher to score this role against your parsed resume.",
+        evidenceNote: "Scores are derived from retrieved resume evidence, not a single LLM guess.",
+        noMatchYet: "No match computed yet",
+        whyTitle: "Why you are a match",
         noMatch: "No match",
         overall: "Overall match",
         evidenceBacked: "Evidence-backed",
@@ -1555,8 +1604,21 @@ export const translations = {
       activity: "活动",
       settings: "设置",
     },
+    theme: {
+      switchToLight: "切换到浅色主题",
+      switchToDark: "切换到深色主题",
+    },
+    save: {
+      remove: "从收藏里移除",
+      save: "收藏这个职位",
+      saved: "已收藏",
+      saveShort: "收藏",
+    },
     // Common actions
     common: {
+      openCopilot: "打开副驾",
+      copiedToClipboard: "已复制到剪贴板。",
+      copied: "已复制",
       pageNotFound: "页面不存在",
       metaDescription:
         "你的个人求职操作系统——有证据支撑的匹配、简历情报，以及 AI 引导的面试。",
@@ -1603,6 +1665,9 @@ export const translations = {
      * not implementation detail.
      */
     chrome: {
+      logOut: "退出登录",
+      signingOut: "正在退出…",
+      signedIn: "已登录",
       mainNavigation: "主导航",
       goToDashboard: "AI Career OS — 回到仪表盘",
       openNavigationMenu: "打开导航菜单",
@@ -1672,6 +1737,11 @@ export const translations = {
      * and the panel the list lives in.
      */
     diffView: {
+      whyNotApplied: "为什么没有采用：",
+      why: "为什么：",
+      bullet: "要点",
+      skipped: "已跳过",
+      applied: "已应用",
       statistics: "定制统计",
       agentNotes: "代理备注",
       appliedChanges: "已采纳的改动",
@@ -1684,6 +1754,8 @@ export const translations = {
      * One piece of cited evidence, and the card it sits in.
      */
     evidence: {
+      showAllCount: "显示全部 {count} 条证据",
+      showFewer: "收起一些",
       source: "证据来源",
       jumpToSource: "跳到来源",
     },
@@ -2887,6 +2959,19 @@ export const translations = {
         resultsLoad: "结果来自实时搜索接口。",
       },
       match: {
+        showOriginal: "显示原文",
+        hideOriginal: "隐藏原文",
+        weak: "以你现在的画像，契合度偏低",
+        partial: "部分契合——差距还要补",
+        good: "比较契合，还有一点差距",
+        strong: "非常契合——值得投了",
+        analyze: "分析匹配",
+        rerun: "重新匹配",
+        analyzing: "分析中…",
+        runToScore: "跑一次匹配器，用你解析好的简历给这个职位打分。",
+        evidenceNote: "分数来自检索到的简历证据，不是模型的一次猜测。",
+        noMatchYet: "还没有算过匹配",
+        whyTitle: "你为什么匹配",
         noMatch: "无匹配",
         overall: "总体匹配度",
         evidenceBacked: "有证据支撑",

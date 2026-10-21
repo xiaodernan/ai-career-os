@@ -98,7 +98,7 @@ export function Topbar() {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" sideOffset={8} className="w-60">
           <DropdownMenuLabel className="font-normal">
-            <p className="truncate text-sm font-medium">{user?.displayName ?? "Signed in"}</p>
+            <p className="truncate text-sm font-medium">{user?.displayName ?? t("chrome.signedIn")}</p>
             <p className="truncate text-xs text-muted-foreground">{user?.email}</p>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
@@ -122,7 +122,7 @@ export function Topbar() {
             className="gap-2"
           >
             <LogOut aria-hidden />
-            {logout.isPending ? "Signing out…" : "Log out"}
+            {logout.isPending ? t("chrome.signingOut") : t("chrome.logOut")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

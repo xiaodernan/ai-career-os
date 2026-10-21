@@ -30,6 +30,71 @@ import { everyOffender, browserSources } from "./copy-scan";
  * person to touch that file removes it.
  */
 const KNOWN: Record<string, string[]> = {
+  "app/(app)/activity/[id]/page.tsx": [
+    "Persisted by the orchestrator — expand a row for its raw payload.",
+  ],
+  "app/(app)/copilot/page.tsx": [
+    "Untitled chat",
+  ],
+  "app/(app)/dashboard/page.tsx": [
+    "Needs work",
+    "Overall grade from the resume reviewer. Open the resume for the per-dimension breakdown.",
+    "Ranked by the matching agent against your resume.",
+    "Straight from the job board — run a match to rank them.",
+    "Weak — start here",
+  ],
+  "app/(app)/ingestion/page.tsx": [
+    "Untitled role",
+  ],
+  "app/(app)/interviews/[id]/page.tsx": [
+    "Ctrl+Enter to submit · the agent evaluates before the next question",
+    "This interview is finished",
+    "This session was abandoned",
+  ],
+  "app/(app)/interviews/[id]/report/page.tsx": [
+    "Run the same mode again after studying — the agent adapts to your previous weak spots.",
+    "Solid practice — the weak dimensions below are the fastest wins.",
+    "Strong session — the loop pushed you deep and you held the altitude.",
+  ],
+  "app/(app)/interviews/page.tsx": [
+    "Continue",
+    "Report",
+  ],
+  "app/(app)/jobs/[id]/page.tsx": [
+    "Analyze match",
+    "Found by the research agent",
+    "No analysis yet, so there is nothing to cite. Run the matcher above.",
+    "Re-analyze match",
+    "Seeded board",
+    "This match came back without citations. Re-run the analysis — the matcher stores an\r\n                  evidence quote for each criterion it scores.",
+  ],
+  "app/(app)/jobs/page.tsx": [
+    "This API build has no job search",
+    "This API build has no saved-jobs list",
+  ],
+  "app/(app)/offers/page.tsx": [
+    "One offer per line. The engine ranks them by total compensation, with any\r\n            equity annualized over its vest.",
+    "One question drives all four answers: what is the role, and what is on the table.",
+  ],
+  "app/(app)/rate-limit/page.tsx": [
+    "No throttling is applied.",
+    "Requests are throttled per user.",
+  ],
+  "app/(app)/resumes/[id]/page.tsx": [
+    "No review score yet. It is produced by the parsing run — trigger a re-parse above to\r\n        generate one.",
+    "No stored versions yet — each parse of this resume stores a new one.",
+    "Parse now",
+    "Re-parse",
+    "Run the parse above to turn this file into a queryable profile: experience, projects, education and skills with citations back to the document.",
+    "The extraction agent is working through this document — the structured profile appears automatically when it's done.",
+  ],
+  "app/(app)/resumes/page.tsx": [
+    "Awaiting parsing",
+    "Parsed — open to set the current version",
+  ],
+  "app/(app)/settings/page.tsx": [
+    "Ctrl K",
+  ],
   "components/ai/agent-timeline.tsx": [
     "Agent execution trace",
     "Completed",
@@ -42,18 +107,26 @@ const KNOWN: Record<string, string[]> = {
   "components/ai/task-stream.tsx": [
     "Agent trace",
     "Stop following this run",
+    "The run stream hasn&apos;t reported progress yet — results appear as soon as it does.",
   ],
   "components/auth/credentials-form.tsx": [
+    "Account created — welcome to Career OS.",
     "Ada Zhang",
     "Already registered?",
     "Confirm password",
+    "Create account",
     "Create one",
+    "Create your account",
     "Email",
     "Forgot your password?",
     "Full name",
     "No account yet?",
     "Password",
+    "Pick up where the agents left off.",
     "Sign in",
+    "Sign in to your workspace",
+    "Welcome back.",
+    "Your resume becomes a knowledge base in minutes.",
   ],
   "components/jobs/analyze-jd-dialog.tsx": [
     "Analyze",
@@ -64,12 +137,14 @@ const KNOWN: Record<string, string[]> = {
     "JD analysis",
     "Job description text",
     "Keep this text",
+    "Paste a job description. The JD analyst extracts requirements, priorities and the gap\r\n            against your parsed resume.",
     "Paste the full posting — responsibilities, requirements, nice-to-haves…",
     "Preferred skills",
     "Required skills",
     "Responsibilities",
     "Resume improvement suggestions",
     "Structured output from /jds",
+    "The analysis came back without structured fields. That usually means the posting text was\r\n          too short — paste the full description and run it again.",
     "Your skill gap",
   ],
   "components/jobs/import-job-dialog.tsx": [
@@ -78,10 +153,15 @@ const KNOWN: Record<string, string[]> = {
     "Job posting text",
     "Paste a posting",
     "Paste the full posting — responsibilities, requirements, nice-to-haves…",
+    "Paste the full posting. The analyst fills in the company, skills and responsibilities\r\n            and the role lands in your tracker.",
+  ],
+  "components/jobs/job-card.tsx": [
+    "Company not researched yet",
   ],
   "components/settings/memory-card.tsx": [
     "Cancel",
     "Chat with the copilot or finish an interview and the facts it learns appear here.",
+    "Facts the model extracted from your conversations and interviews. Correct a wrong\r\n          one, or lower its weight — these shape every answer you get.",
     "Forget",
     "Forget this memory?",
     "High",
@@ -109,6 +189,7 @@ const KNOWN: Record<string, string[]> = {
     "Save profile",
     "Summary",
     "The short story a recruiter gets before the resume.",
+    "What the agents assume about you — headline, targets and the story they tell recruiters.",
     "Years of experience has to be a number between 0 and",
   ],
 
@@ -166,10 +247,27 @@ describe("the browser's copy", () => {
     // of them is on the list above with a file and an owner. The pin moves
     // when a hole closes -- which is the point of pinning it.
     //
-    // 67 with the object literals: the shapes the scan did not read before
-    // were a third of the product's copy, and the list above is the honest
-    // answer to "what have we not fixed yet". Eight files, all of them in
-    // a file another session is working in at the same time.
-    expect(found.length).toBe(67);
+    // 131: the attributes, the object literals, the text between the tags,
+    // the long sentences and the copy inside a JSX expression. The shapes
+    // the scan did not read before were a third of the product's copy, and
+    // the list above is the honest answer to "what have we not fixed yet".
+    expect(found.length).toBe(119);
+  });
+
+  it("finds a sentence, however long it is", () => {
+    // The scan's length bound was once short enough to hide most of the
+    // product's prose: a sentence longer than about sixty characters sat
+    // between the tags and the scan never read it. The long ones are the
+    // ones that read as prose rather than as a label, so they are the
+    // ones the gate is for.
+    //
+    // This is the gate for the bound: a long sentence must be found.
+    const long =
+      "Overall grade from the resume reviewer. Open the resume for the per-dimension breakdown.";
+    expect(long.length).toBeGreaterThan(80);
+    expect(
+      found.some((o) => o.value === long),
+      "a long sentence is invisible to the scan"
+    ).toBe(true);
   });
 });

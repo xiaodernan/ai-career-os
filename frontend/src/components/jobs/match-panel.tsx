@@ -53,11 +53,11 @@ export function MatchPanel({
         <SectionHeading
           eyebrow={t("eyebrows.aiMatch")}
           icon={<Target className="size-4" aria-hidden />}
-          title={match ? "Why you are a match" : "No match computed yet"}
+          title={match ? t("jobs.match.whyTitle") : t("jobs.match.noMatchYet")}
           description={
             match
-              ? "Scores are derived from retrieved resume evidence, not a single LLM guess."
-              : "Run the matcher to score this role against your parsed resume."
+              ? t("jobs.match.evidenceNote")
+              : t("jobs.match.runToScore")
           }
           action={
             onAnalyze ? (
@@ -68,7 +68,7 @@ export function MatchPanel({
                 className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-input bg-card px-3 text-sm font-medium shadow-[0_1px_0_0_var(--border)] transition-colors hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring/35 disabled:opacity-55"
               >
                 <Sparkles className={cn("size-4", analyzing && "animate-spin")} aria-hidden />
-                {analyzing ? "Analyzing…" : match ? "Re-run match" : "Analyze match"}
+                {analyzing ? t("jobs.match.analyzing") : match ? t("jobs.match.rerun") : t("jobs.match.analyze")}
               </button>
             ) : null
           }
@@ -91,12 +91,12 @@ export function MatchPanel({
               <div className="min-w-0 flex-1 space-y-1">
                 <p className="text-sm font-medium">
                   {match.overall >= 80
-                    ? "Strong fit — worth applying now"
+                    ? t("jobs.match.strong")
                     : match.overall >= 60
-                      ? "Good fit with a few gaps"
+                      ? t("jobs.match.good")
                       : match.overall >= 40
-                        ? "Partial fit — gaps need work"
-                        : "Weak fit for your current profile"}
+                        ? t("jobs.match.partial")
+                        : t("jobs.match.weak")}
                 </p>
                 <p className="text-xs text-muted-foreground">
                   {match.reasoning ??
@@ -323,7 +323,7 @@ export function JdCard({
               aria-expanded={open}
               className="rounded-md text-xs font-medium text-primary underline-offset-4 hover:underline focus-visible:ring-[3px] focus-visible:ring-primary/30"
             >
-              {open ? "Hide original text" : "Show original text"}
+              {open ? t("jobs.match.hideOriginal") : t("jobs.match.showOriginal")}
             </button>
             {open && (
               <pre className="animate-fade-in mt-2 max-h-80 overflow-auto rounded-lg border border-border/70 bg-muted/40 p-3 font-sans text-xs leading-relaxed whitespace-pre-wrap text-muted-foreground">

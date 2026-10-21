@@ -116,12 +116,22 @@ export function browserSources(): string[] {
  * sentence the reader reads -- a bracket, a brace, a semicolon, an equals,
  * a pipe, another angle bracket -- is code, not copy, and is skipped.
  *
+ * The length bound is generous, and it was not always. At eighty
+ * characters the scan missed every sentence longer than about sixty --
+ * which is most of them, and the long ones are the ones that read as
+ * prose rather than as a label. The bound was never what kept the scan
+ * honest: the lazy quantifier stops at the first `<` or `{` anyway, and
+ * a text node cannot span a nested element because the character class
+ * excludes the angle brackets and the braces. So the bound is only a
+ * backstop against a run of text with no markup in it at all, and a
+ * backstop that hides the copy is worse than no backstop.
+ *
  * What this does not catch is the lowercase fragments: `} matching{" "}` is
  * the tail of a sentence whose other pieces are elsewhere, and a lone
  * word like that is not a phrase a translation key can hold. Those are a
  * known limit of the scan, not an oversight.
  */
-const TEXT_NODE = /(?:(?<!=)>|\})([^<>{}]{1,80}?)(?=<|\{)/g;
+const TEXT_NODE = /(?:(?<!=)>|\})([^<>{}]{1,300}?)(?=<|\{)/g;
 
 /** A copy-bearing attribute: `title="Delete"`. */
 const ATTRIBUTE = new RegExp(`\\b(${COPY_ATTRIBUTES.join("|")})="([^"\\n]+)"`, "g");
@@ -190,7 +200,61 @@ function textNodeOffenders(): Offender[] {
   return found;
 }
 
-/** Every hardcoded string: the attributes, the object literals, the text between the tags. */
+/**
+ * The copy in a JSX expression.
+ *
+ * `{cond ? "Interview-ready" : "Needs work"}` is a word the reader sees,
+ * and the text-node scan never reads it: an expression is not text. This
+ * was the last shape the copy was written in that the gate could not see,
+ * and it held a good deal of the product's prose -- the words a card
+ * shows when one thing is true and another when it is not.
+ *
+ * The scan looks for a literal in a ternary or a logical fallback, which
+ * is where the copy in an expression lives. A ternary is read as a whole
+ * -- both of its branches -- because the second branch is exactly as
+ * much copy as the first, and reading only the first would leave half of
+ * them out.
+ *
+ * The filter is the one the other scans use: a word that starts
+ * lower-case is an identifier, and one that is entirely upper case is a
+ * code -- a variant name, a language tag, an initialism.
+ */
+const TERNARY = /\?\s*"([^"\\]{2,})"\s*:\s*"([^"\\]{2,})"/g;
+const FALLBACK = /\|\|\s*"([^"\\]{2,})"/g;
+
+function expressionOffenders(): Offender[] {
+  const found: Offender[] = [];
+  for (const rel of browserSources()) {
+    const text = readFileSync(join(ROOT, rel), "utf-8");
+    const seen = new Set<string>();
+    for (const m of text.matchAll(TERNARY)) {
+      seen.add(m[1]);
+      seen.add(m[2]);
+    }
+    for (const m of text.matchAll(FALLBACK)) {
+      seen.add(m[1]);
+    }
+    for (const value of seen) {
+      // A sentence starts with a capital and a lower-case letter after it.
+      if (!/^[A-Z][a-z]/.test(value)) continue;
+      // Entirely upper case is a code: a variant, a language tag, an
+      // initialism. "EN" is a language, not a word.
+      if (/^[A-Z\s]+$/.test(value)) continue;
+      // Code characters.
+      if (/[(){};=<>|]/.test(value)) continue;
+      if (NOT_COPY.has(value.trim())) continue;
+      found.push({ file: rel, attribute: "expression", value });
+    }
+  }
+  return found;
+}
+
+/** Every hardcoded string: the attributes, the object literals, the text, the expressions. */
 export function everyOffender(): Offender[] {
-  return [...attributeOffenders(), ...objectLiteralOffenders(), ...textNodeOffenders()];
+  return [
+    ...attributeOffenders(),
+    ...objectLiteralOffenders(),
+    ...textNodeOffenders(),
+    ...expressionOffenders(),
+  ];
 }

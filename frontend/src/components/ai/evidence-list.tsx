@@ -6,6 +6,7 @@ import { EvidenceCard } from "@/components/ai/evidence-card";
 import { Badge } from "@/components/ui/badge";
 import { evidencePath } from "@/lib/api/normalize";
 import type { Evidence } from "@/lib/api/types";
+import { useLocale } from "@/lib/i18n/locale-context";
 
 /**
  * EvidenceList — the RAG explainability surface (§6): every AI conclusion is
@@ -22,6 +23,7 @@ export interface EvidenceListProps extends React.ComponentProps<"ul"> {
 }
 
 function EvidenceList({ items, limit, hrefFor, dense = false, className, ...props }: EvidenceListProps) {
+  const { t } = useLocale();
   const [expanded, setExpanded] = React.useState(false);
   const visible = limit && !expanded ? items.slice(0, limit) : items;
   if (!items.length) return null;
@@ -63,7 +65,7 @@ function EvidenceList({ items, limit, hrefFor, dense = false, className, ...prop
             onClick={() => setExpanded((v) => !v)}
             className="rounded-md px-1 text-xs font-medium text-primary underline-offset-4 hover:underline focus-visible:ring-[3px] focus-visible:ring-primary/30"
           >
-            {expanded ? "Show fewer" : `Show all ${items.length} evidence items`}
+            {expanded ? t("evidence.showFewer") : t("evidence.showAllCount", { count: items.length })}
           </button>
         </li>
       )}

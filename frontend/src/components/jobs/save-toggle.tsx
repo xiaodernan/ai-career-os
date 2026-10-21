@@ -5,6 +5,7 @@ import { Bookmark } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useToggleSaveJob } from "@/lib/hooks/actions";
+import { useLocale } from "@/lib/i18n/locale-context";
 
 /**
  * SaveToggle — optimistic saved-job affordance. Reflects `saved` from the API
@@ -25,6 +26,7 @@ export function SaveToggle({
   className?: string;
   disabled?: boolean;
 }) {
+  const { t } = useLocale();
   const toggle = useToggleSaveJob();
   const [pending, setPending] = React.useState(false);
 
@@ -34,7 +36,7 @@ export function SaveToggle({
       variant={saved ? "ai" : "outline"}
       size={withLabel ? size : "icon-sm"}
       aria-pressed={Boolean(saved)}
-      aria-label={saved ? "Remove from saved jobs" : "Save this job"}
+      aria-label={saved ? t("save.remove") : t("save.save")}
       disabled={disabled || pending}
       loading={pending}
       className={cn(!withLabel && "shrink-0", className)}
@@ -49,7 +51,7 @@ export function SaveToggle({
       }}
     >
       <Bookmark aria-hidden className={saved ? "fill-current" : undefined} />
-      {withLabel && (saved ? "Saved" : "Save")}
+      {withLabel && (saved ? t("save.saved") : t("save.saveShort"))}
     </Button>
   );
 }
