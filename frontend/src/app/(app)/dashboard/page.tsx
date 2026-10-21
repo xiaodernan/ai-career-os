@@ -116,12 +116,12 @@ export default function DashboardPage() {
             <Button variant="ai" asChild>
               <Link href="/copilot">
                 <Sparkles aria-hidden />
-                Ask Copilot
+                {t("dashboard.askCopilot")}
               </Link>
             </Button>
             <Button variant="outline" asChild>
               <Link href="/applications">
-                Open pipeline
+                {t("dashboard.openPipeline")}
                 <ArrowRight aria-hidden />
               </Link>
             </Button>
@@ -171,10 +171,10 @@ export default function DashboardPage() {
                     <MatchRing value={metrics.avgMatch} size={56} thickness={5} label={t("dashboard.averageMatch")} />
                     <div>
                       <p className="text-2xs font-medium tracking-wide text-muted-foreground uppercase">
-                        Avg match
+                        {t("dashboard.avgMatchLabel")}
                       </p>
                       <p className="mt-0.5 text-xs text-muted-foreground">
-                        across scored jobs, from your resume evidence
+                        {t("dashboard.avgMatchBody")}
                       </p>
                     </div>
                   </CardContent>
@@ -196,7 +196,7 @@ export default function DashboardPage() {
                   description={`${missingEndpointMessage("GET /reports/dashboard")} The rest of the page still reads the real APIs below.`}
                   action={
                     <Button variant="outline" size="sm" onClick={() => void dashboard.refetch()}>
-                      Check again
+                      {t("common.checkAgain")}
                     </Button>
                   }
                 />
@@ -254,7 +254,7 @@ export default function DashboardPage() {
                         <Button variant="ai" size="sm" asChild>
                           <Link href="/jobs">
                             <Briefcase aria-hidden />
-                            Browse jobs
+                            {t("dashboard.browseJobs")}
                           </Link>
                         </Button>
                       ),
@@ -417,7 +417,7 @@ export default function DashboardPage() {
                     action={
                       <Button variant="ghost" size="xs" asChild>
                         <Link href="/jobs">
-                          All jobs
+                          {t("dashboard.allJobs")}
                           <ArrowRight aria-hidden />
                         </Link>
                       </Button>
@@ -451,7 +451,7 @@ export default function DashboardPage() {
                         <Button variant="ai" size="sm" asChild>
                           <Link href="/jobs">
                             <Target aria-hidden />
-                            Go to Jobs
+                            {t("dashboard.goToJobs")}
                           </Link>
                         </Button>
                       }
@@ -471,7 +471,7 @@ export default function DashboardPage() {
                     action={
                       <Button variant="ghost" size="xs" asChild>
                         <Link href="/activity">
-                          Full log
+                          {t("dashboard.fullLog")}
                           <ArrowRight aria-hidden />
                         </Link>
                       </Button>
@@ -517,7 +517,7 @@ export default function DashboardPage() {
                     action={
                       <Button variant="ghost" size="xs" asChild>
                         <Link href={resumeRow?.id ? `/resumes/${resumeRow.id}` : "/resumes"}>
-                          Open
+                          {t("dashboard.open")}
                           <ArrowRight aria-hidden />
                         </Link>
                       </Button>
@@ -540,7 +540,7 @@ export default function DashboardPage() {
                     action={
                       <Button variant="ghost" size="xs" asChild>
                         <Link href="/knowledge">
-                          Manage
+                          {t("dashboard.manage")}
                           <ArrowRight aria-hidden />
                         </Link>
                       </Button>
@@ -560,7 +560,7 @@ export default function DashboardPage() {
                         <Button variant="ai" size="sm" asChild>
                           <Link href="/resumes">
                             <FileText aria-hidden />
-                            Upload resume
+                            {t("dashboard.uploadResume")}
                           </Link>
                         </Button>
                       ),
@@ -599,7 +599,7 @@ export default function DashboardPage() {
                     action={
                       <Button variant="ghost" size="xs" asChild>
                         <Link href="/activity">
-                          Detail
+                          {t("dashboard.detail")}
                           <ArrowRight aria-hidden />
                         </Link>
                       </Button>
@@ -620,7 +620,7 @@ export default function DashboardPage() {
                     <dl className="grid grid-cols-3 gap-2 text-center">
                       <div>
                         <dt className="text-2xs font-medium tracking-wide text-muted-foreground uppercase">
-                          Requests
+                          {t("dashboard.requests")}
                         </dt>
                         <dd className="mt-0.5 text-lg font-semibold tabular-nums">
                           {formatNumber(aiUsage.data!.requests)}
@@ -628,7 +628,7 @@ export default function DashboardPage() {
                       </div>
                       <div>
                         <dt className="text-2xs font-medium tracking-wide text-muted-foreground uppercase">
-                          Tokens
+                          {t("dashboard.tokensLabel")}
                         </dt>
                         <dd className="mt-0.5 text-lg font-semibold tabular-nums">
                           {formatNumber(aiUsage.data!.totalTokens)}
@@ -636,7 +636,7 @@ export default function DashboardPage() {
                       </div>
                       <div>
                         <dt className="text-2xs font-medium tracking-wide text-muted-foreground uppercase">
-                          Cost
+                          {t("dashboard.costLabel")}
                         </dt>
                         <dd className="mt-0.5 text-lg font-semibold tabular-nums">
                           ${(aiUsage.data!.costUsd ?? 0).toFixed(2)}
@@ -698,7 +698,7 @@ export default function DashboardPage() {
                       action={
                         <Button variant="outline" size="sm" asChild>
                           <Link href="/jobs">
-                            Open Jobs
+                            {t("dashboard.openJobs")}
                             <ArrowRight aria-hidden />
                           </Link>
                         </Button>
@@ -719,7 +719,7 @@ export default function DashboardPage() {
                     action={
                       <Button variant="ghost" size="xs" asChild>
                         <Link href="/networking">
-                          Open
+                          {t("dashboard.open")}
                           <ArrowRight aria-hidden />
                         </Link>
                       </Button>
@@ -779,7 +779,7 @@ export default function DashboardPage() {
                       action={
                         <Button variant="outline" size="sm" asChild>
                           <Link href="/networking">
-                            Open Networking
+                            {t("dashboard.openNetworking")}
                             <ArrowRight aria-hidden />
                           </Link>
                         </Button>
@@ -826,6 +826,7 @@ function StatCard({
 }
 
 function RunFeed({ runs }: { runs: ActivityRun[] }) {
+  const { t } = useLocale();
   return (
     <ul className="divide-y divide-border/50">
       {runs.map((run) => {
@@ -852,7 +853,7 @@ function RunFeed({ runs }: { runs: ActivityRun[] }) {
             </div>
             <Button variant="link" size="xs" asChild className="shrink-0">
               <Link href={`/activity/${run.id}`}>
-                Trace
+                {t("dashboard.trace")}
                 <ArrowRight aria-hidden />
               </Link>
             </Button>
@@ -887,7 +888,7 @@ function ResumeScore({
           <Button variant="ai" size="sm" asChild>
             <Link href="/resumes">
               <FileText aria-hidden />
-              Upload resume
+              {t("dashboard.uploadResume")}
             </Link>
           </Button>
         }
@@ -1012,8 +1013,11 @@ function OnboardingCard({ hasResume }: { hasResume: boolean }) {
         </ol>
         <Separator className="my-4" />
         <p className="text-xs text-muted-foreground">
-          Prefer to talk it through? <Link href="/copilot" className="font-medium text-primary underline-offset-4 hover:underline">Open Copilot</Link> and describe
-          your target role — it will ask for what it needs.
+          {t("dashboard.preferToTalk")}{" "}
+          <Link href="/copilot" className="font-medium text-primary underline-offset-4 hover:underline">
+            {t("dashboard.openCopilot")}
+          </Link>{" "}
+          {t("dashboard.preferToTalkBody")}
         </p>
       </CardContent>
     </Card>

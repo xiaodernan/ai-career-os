@@ -92,27 +92,7 @@ const KNOWN: Record<string, string[]> = {
     "Retry last message",
   ],
   "app/(app)/dashboard/page.tsx": [
-    "All jobs",
-    "Ask Copilot",
-    "Avg match",
-    "Browse jobs",
-    "Check again",
-    "Cost",
-    "Detail",
-    "Full log",
-    "Go to Jobs",
-    "Manage",
-    "Open",
-    "Open Copilot",
-    "Open Jobs",
-    "Open Networking",
     "Open board",
-    "Open pipeline",
-    "Prefer to talk it through?",
-    "Requests",
-    "Tokens",
-    "Trace",
-    "Upload resume",
   ],
   "app/(app)/data/page.tsx": [
     "Create",
@@ -476,10 +456,10 @@ describe("the browser's copy", () => {
   });
 
   it("knows how much is left", () => {
-    // 209: the copy-bearing attributes and the text between the tags. The
+    // 187: the copy-bearing attributes and the text between the tags. The
     // number is the census's own reading of the browser, and every one of
     // them is on the list above with a file and an owner. The pin moves when
     // a hole closes -- which is the point of pinning it.
-    expect(found.length).toBe(209);
+    expect(found.length).toBe(187);
   });
 });
