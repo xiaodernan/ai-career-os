@@ -1,3 +1,4 @@
+import { sectionMetadata } from "@/lib/i18n/metadata";
 import { NotFoundBody } from "@/components/common/not-found-body";
 
 /**
@@ -8,6 +9,8 @@ import { NotFoundBody } from "@/components/common/not-found-body";
  * is what knows the route did not resolve, which is what the tab's title
  * says. The server cannot read the locale, so it cannot name the page.
  */
+export const generateMetadata = sectionMetadata("common.pageNotFound");
+
 export default function NotFound() {
   return <NotFoundBody />;
 }

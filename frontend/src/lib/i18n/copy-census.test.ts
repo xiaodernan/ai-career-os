@@ -93,7 +93,6 @@ const KNOWN: Record<string, string[]> = {
     "Your personal job-search operating system — evidence-backed matching, resume intelligence, and AI-guided interviews.",
   ],
   "app/page.tsx": [
-    "AI Career OS — your personal job-search operating system",
     "Evidence-backed matching, resume intelligence, growth planning and AI-guided interviews — every conclusion traced to your own material.",
   ],
   "components/ai/agent-timeline.tsx": [
@@ -223,14 +222,12 @@ describe("the browser's copy", () => {
     // The walk itself is the thing that can silently stop: a directory that
     // moves, a suffix that changes. A census of nothing is not a census.
     //
-    // 131 files. The pin is a population, not a budget: a new file belongs
+    // 130 files. The pin is a population, not a budget: a new file belongs
     // in it, and the count moves when one is added or removed. 129 with the
     // 404 body split out of `app/not-found.tsx` -- the page keeps its
     // `metadata` export and the localized body becomes a client component --
     // and 130 with the language switch, which the two public surfaces need.
-    // 131 with the document title, which sets the browser tab's title in
-    // the reader's language.
-    expect(browserSources().length).toBe(131);
+    expect(browserSources().length).toBe(130);
   });
 
   it("has a known list that names the files that still carry copy", () => {
@@ -260,9 +257,9 @@ describe("the browser's copy", () => {
     // of them is on the list above with a file and an owner. The pin moves
     // when a hole closes -- which is the point of pinning it.
     //
-    // 128 with the object literals: the shapes the scan did not read before
+    // 127 with the object literals: the shapes the scan did not read before
     // were a third of the product's copy, and the list above is the honest
     // answer to "what have we not fixed yet".
-    expect(found.length).toBe(128);
+    expect(found.length).toBe(127);
   });
 });

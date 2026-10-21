@@ -79,11 +79,11 @@ export function titleForPath(pathname: string, translate?: (key: string) => stri
  * sidebar -- but they are pages the reader can be on, and their title is
  * the same word in the same place as every other page's.
  *
- * The English label is the fallback, exactly as the navigation's own `label`
- * is: a locale that does not name a page degrades to the product's own
- * wording rather than to a raw key in a browser tab.
+ * The table is here rather than in a route file because the title is
+ * rendered by the server, and the server reads the locale out of the
+ * cookie the browser writes -- see `lib/i18n/metadata.ts`.
  */
-const PUBLIC_PAGE_TITLES: Record<string, { key: string; label: string }> = {
+export const PUBLIC_PAGE_TITLES: Record<string, { key: string; label: string }> = {
   "/": {
     key: "landing.pageTitle",
     label: "AI Career OS — your personal job-search operating system",
@@ -99,32 +99,3 @@ const PUBLIC_PAGE_TITLES: Record<string, { key: string; label: string }> = {
     label: "Set a new password",
   },
 };
-
-/**
- * The title of a path, in the reader's language -- or `null` when the
- * product does not name that path.
- *
- * The `null` matters: the browser tab's title belongs to the server's
- * `metadata` for a path the product does not name (a 404, a route that
- * does not exist yet), and the client must not overwrite the server's
- * answer with a guess.
- */
-export function routeTitle(
-  pathname: string,
-  translate: (key: string) => string
-): string | null {
-  const publicTitle = PUBLIC_PAGE_TITLES[pathname];
-  if (publicTitle) {
-    const translated = translate(publicTitle.key);
-    return translated === publicTitle.key ? publicTitle.label : translated;
-  }
-  const match = NAV_ITEMS.find(
-    (item) => pathname === item.href || pathname.startsWith(`${item.href}/`)
-  );
-  if (!match) return null;
-  if (match.labelKey) {
-    const translated = translate(match.labelKey);
-    if (translated && translated !== match.labelKey) return translated;
-  }
-  return match.label;
-}

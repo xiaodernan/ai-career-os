@@ -1,3 +1,4 @@
+import { absoluteMetadata } from "@/lib/i18n/metadata";
 import type { Metadata } from "next";
 import { LandingPage } from "./landing-page";
 
@@ -8,11 +9,10 @@ import { LandingPage } from "./landing-page";
  * guard — so the root is the one page an anonymous visitor can reach, and it
  * links into the product rather than pretending to be it.
  */
-export const metadata: Metadata = {
-  title: "AI Career OS — your personal job-search operating system",
-  description:
-    "Evidence-backed matching, resume intelligence, growth planning and AI-guided interviews — every conclusion traced to your own material.",
-};
+export const generateMetadata = absoluteMetadata(
+  "landing.pageTitle",
+  "Evidence-backed matching, resume intelligence, growth planning and AI-guided interviews — every conclusion traced to your own material."
+);
 
 export default function Home() {
   return <LandingPage />;

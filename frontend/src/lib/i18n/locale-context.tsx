@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { translations, type Locale, type TranslationKey } from "./translations";
+import { writeLocaleCookie } from "./locale-cookie";
 
 /**
  * Locale context (17.1): provides the current locale and a translation function.
@@ -48,7 +49,19 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
     } catch {
       /* ignore */
     }
+    // The server's copy of the same fact: the page's title is rendered
+    // into the head the browser paints, and the head the server sends is
+    // the only one that can be in the reader's language.
+    writeLocaleCookie(next);
   }, []);
+
+  // The cookie is written on the first render too, so a reader whose
+  // cookie was cleared but whose localStorage survived still gets a title
+  // in their language -- and so a reader who has never chosen sees the
+  // default, which is the default everywhere.
+  React.useEffect(() => {
+    writeLocaleCookie(locale);
+  }, [locale]);
 
   const t = React.useCallback(
     (key: string, vars?: Record<string, string | number>): string => {
