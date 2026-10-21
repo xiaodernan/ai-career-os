@@ -86,6 +86,8 @@ export const translations = {
       searching: "Searching…",
       noResults: "No results.",
       searchFailed: "Content search failed — showing navigation only.",
+      search: "Search",
+      goTo: "Go to",
       resultsStreamIn: "content results stream in as you type.",
       previousPage: "Previous page",
       nextPage: "Next page",
@@ -123,6 +125,20 @@ export const translations = {
       canLeave:
         "You can leave this page — the run continues server-side and the list below reflects its real status.",
       sending: "Sending the file…",
+      /**
+       * The five stages the ingestion pipeline reports.
+       *
+       * The keys are the step ids the pipeline publishes
+       * (`ai-service/app/ingestion/pipeline.py`), so a step the seed does
+       * not name still lines up with the frame that carries it.
+       */
+      ingest: {
+        extracting: "Extracting text from the file",
+        cleaning: "Cleaning and normalizing the text",
+        chunking: "Splitting into retrievable chunks",
+        embedding: "Generating embeddings for each chunk",
+        indexing: "Indexing the document",
+      },
     },
     jobCard: {
       noMatchYet: "No match computed yet",
@@ -454,6 +470,22 @@ export const translations = {
     data: {
       title: "Your data",
       description: "Export everything, preview a restore, and remove sections before you share.",
+      /**
+       * The eight sections a bundle holds, by name.
+       *
+       * The keys are the bundle's own -- the sections the exporter writes --
+       * and the names are the reader's.
+       */
+      sections: {
+        profile: "Profile",
+        resumes: "Resumes",
+        knowledge: "Knowledge base",
+        jobDescriptions: "Job descriptions",
+        interviews: "Interview sessions",
+        memories: "Long-term memories",
+        applications: "Applications",
+        growthRuns: "Growth runs",
+      },
       export: "Export",
       exportEverything: "Export everything",
       exportAnonymized: "Export anonymized",
@@ -538,6 +570,24 @@ export const translations = {
       partial: "partial",
       expected: "expected",
       missingForDreamRole: "Missing for the dream role:",
+      /**
+       * The nine engines, by name.
+       *
+       * A key the table does not know keeps the engine's own English name
+       * rather than losing it, which is the same rule `stageLabel` follows
+       * for the pipeline's seven stages.
+       */
+      engines: {
+        gap: "Gap analysis",
+        demand: "Market demand",
+        priority: "Learning priority",
+        plan: "Learning plan",
+        prep: "Interview prep",
+        progression: "Progression",
+        stories: "Story bank",
+        roles: "Role suggestions",
+        progress: "Progress",
+      },
     },
     // Resumes
     resumes: {
@@ -552,6 +602,19 @@ export const translations = {
       paginationLabel: "resumes",
       yourVersions: "Your versions",
       open: "Open",
+      /**
+       * The badge a resume's row wears, by the state the row is in.
+       *
+       * The states are the wire's -- the ingestion pipeline's own -- and the
+       * words are the reader's.
+       */
+      status: {
+        parsed: "Structured",
+        parsing: "Parsing…",
+        failed: "Failed",
+        ingesting: "Ingesting…",
+        uploaded: "Uploaded",
+      },
       detail: {
         notInWorkspace: "This resume isn't in your workspace",
         notInWorkspaceDescription:
@@ -594,11 +657,6 @@ export const translations = {
         current: "Current",
         overall: "Overall",
         repo: "Repo",
-        dimensionBullets: "Bullets & metric density",
-        dimensionStructure: "Structure & scannability",
-        dimensionImpact: "Impact wording",
-        dimensionClarity: "Clarity",
-        dimensionKeywords: "Keyword coverage",
         stages: {
           reading: "Reading the stored document",
           extracting: "Extracting sections with the parser agent",
@@ -612,6 +670,9 @@ export const translations = {
       title: "Settings",
       description: "Account, appearance and keyboard preferences.",
       colorTheme: "Color theme",
+      themeLight: "Light",
+      themeDark: "Dark",
+      themeSystem: "System",
       logOut: "Log out of Career OS?",
       logOutDescription: "Your data stays safe — this only ends the current session.",
       logOutConfirm: "Log out",
@@ -752,6 +813,7 @@ export const translations = {
       openJob: "Open job",
       interviewPrepared: "The agent prepared a session from this conversation.",
       start: "Start",
+      coverage: "Coverage",
     },
     // The copilot's action chips -- the labels the orchestrator writes in
     // English, which the browser says in the reader's language.
@@ -864,6 +926,10 @@ export const translations = {
         "First report for this role — the next run diffs against this one.",
       progressAgainstPrevious: "Against your previous report for this role.",
       noSkillChange: "No skill changed state since the last report",
+      skillsClosed: "Closed",
+      skillsImproved: "Improved",
+      skillsRegressed: "Regressed",
+      run: "Run",
       stillOpen: "{count} still open.",
     },
     // Knowledge
@@ -930,6 +996,24 @@ export const translations = {
         ingestionFailed: "ingestion failed",
         batchSummary: "{done} of {total} done{failed}",
         notIngested: ", {count} not ingested",
+        /**
+         * The nine kinds a source may have.
+         *
+         * The values are the wire's -- `KnowledgeService.KINDS`, which
+         * `validateKind` rejects anything else from -- and the names are the
+         * reader's.
+         */
+        kinds: {
+          note: "Note",
+          resume: "Resume",
+          project: "Project",
+          jd: "Job description",
+          company: "Company",
+          interview_feedback: "Interview feedback",
+          certificate: "Certificate",
+          course: "Course",
+          goal: "Goal",
+        },
       },
     },
     // Companies
@@ -1114,6 +1198,56 @@ export const translations = {
         blurb: "Closed out. Kept for retro analysis.",
       },
     },
+    /**
+     * The score dimensions, named in the reader's language.
+     *
+     * Four vocabularies, four namespaces, because they are four different
+     * sets of words: a match is scored on the four things a resume has, an
+     * interview on the eight things an answer has, a resume review on its own
+     * five, and the rubric's unmet criteria are a list of their own. Two of
+     * them share a key -- a *structure* in an answer is not a *structure* in a
+     * resume -- so they cannot share a namespace either.
+     *
+     * The keys inside are the wire's own, because that is what the services
+     * answer with; `lib/dimensions.ts` is the one place that maps them here.
+     */
+    dimensions: {
+      match: {
+        technical: { label: "Technical" },
+        experience: { label: "Experience" },
+        projects: { label: "Projects" },
+        education: { label: "Education" },
+      },
+      interview: {
+        technical_accuracy: { label: "Technical accuracy" },
+        communication: { label: "Communication" },
+        depth: { label: "Depth" },
+        structure: { label: "Structure" },
+        problem_solving: { label: "Problem solving" },
+        system_thinking: { label: "System thinking" },
+        ai_knowledge: { label: "AI knowledge" },
+        backend_knowledge: { label: "Backend knowledge" },
+      },
+      resume: {
+        bullets: { label: "Bullets & metric density" },
+        structure: { label: "Structure & scannability" },
+        impact: { label: "Impact wording" },
+        clarity: { label: "Clarity" },
+        keywords: { label: "Keyword coverage" },
+      },
+      criteria: {
+        has_contact: { label: "Contact info (email / phone)" },
+        has_summary: { label: "A summary section" },
+        has_experience: { label: "Work experience" },
+        experience_has_bullets: { label: "Bullets under your roles" },
+        quantified_impact: { label: "Quantified impact (numbers or %)" },
+        has_projects: { label: "Projects" },
+        has_education: { label: "Education" },
+        has_skills: { label: "Enough skills (5+)" },
+        years_experience_stated: { label: "Stated years of experience" },
+        dates_present: { label: "Start dates on all roles" },
+      },
+    },
     // Interviews
     interviews: {
       title: "Interviews",
@@ -1154,7 +1288,8 @@ export const translations = {
         noFollowUp: "The agent has no follow-up — it suggests closing out for the report.",
         finishEarly: "Finish early",
         nextQuestion: "Next question",
-        reportReady:
+      question: "Question {number}",
+      reportReady:
           "The evaluator produced a full report — dimension scores, what went well, weak spots, study material and the depth trajectory.",
         openReport: "Open report",
       },
@@ -1164,7 +1299,8 @@ export const translations = {
         stillRunningDescription:
           "Finish the session and the evaluator will score every answer into a full report.",
         noReport: "No report stored yet",
-        noReportDescription:
+      open: "Open",
+      noReportDescription:
           "The session is closed but the evaluator hasn't published a report. You can trigger finalization — it scores the answers that exist.",
         overallScore: "Overall interview score",
         dimensions: "Dimension scores",
@@ -1202,6 +1338,8 @@ export const translations = {
         "You have bookmarks behind this filter set. Loosen one, or clear them all to see the whole saved list.",
       clearFilters: "Clear filters",
       nothingSaved: "Nothing saved yet",
+      savedTab: "Saved",
+      savedAt: "Saved {date}",
       nothingSavedDescription:
         "Save a role from Discover and it appears in your pipeline, ready for a match run and a tailored resume.",
       browseDiscover: "Browse discover",
@@ -1214,7 +1352,6 @@ export const translations = {
       sortLabel: "Sort",
       noteLabel: "Note:",
       discoverTab: "Discover",
-      savedTab: "Saved",
       researchRoles: "Research roles",
       detail: {
         notInSystem: "This job isn't in the system",
@@ -1363,6 +1500,8 @@ export const translations = {
       noResults: "没有结果。",
       searchFailed: "内容搜索失败——只显示导航项。",
       resultsStreamIn: "输入的同时内容结果会陆续出现。",
+      search: "搜索",
+      goTo: "跳转到",
       previousPage: "上一页",
       nextPage: "下一页",
       page: "第 {page} 页",
@@ -1398,6 +1537,13 @@ export const translations = {
       ingestedToast: "简历已摄取——你的知识库已更新。",
       canLeave: "你可以离开这个页面——运行会在服务端继续，下面的列表会反映它的真实状态。",
       sending: "正在发送文件…",
+      ingest: {
+        extracting: "从文件里提取文本",
+        cleaning: "清洗并规范化文本",
+        chunking: "切成可检索的块",
+        embedding: "为每一块生成向量",
+        indexing: "建立文档索引",
+      },
     },
     jobCard: {
       noMatchYet: "还没有算过匹配度",
@@ -1709,6 +1855,16 @@ export const translations = {
     data: {
       title: "你的数据",
       description: "导出全部、预览恢复、分享前删减。",
+      sections: {
+        profile: "个人资料",
+        resumes: "简历",
+        knowledge: "知识库",
+        jobDescriptions: "职位描述",
+        interviews: "面试场次",
+        memories: "长期记忆",
+        applications: "申请",
+        growthRuns: "成长记录",
+      },
       export: "导出",
       exportEverything: "导出全部",
       exportAnonymized: "匿名导出",
@@ -1783,6 +1939,17 @@ export const translations = {
       partial: "部分覆盖",
       expected: "预期",
       missingForDreamRole: "目标职位还缺：",
+      engines: {
+        gap: "差距分析",
+        demand: "市场需求",
+        priority: "学习优先级",
+        plan: "学习计划",
+        prep: "面试准备",
+        progression: "成长轨迹",
+        stories: "故事库",
+        roles: "职位建议",
+        progress: "进展",
+      },
     },
     // Resumes
     resumes: {
@@ -1795,6 +1962,13 @@ export const translations = {
       deleteResume: "删除简历",
       paginationLabel: "简历",
       yourVersions: "你的各个版本",
+      status: {
+        parsed: "已结构化",
+        parsing: "解析中…",
+        failed: "失败",
+        ingesting: "摄取中…",
+        uploaded: "已上传",
+      },
       open: "打开",
       detail: {
         notInWorkspace: "这份简历不在你的工作区里",
@@ -1836,11 +2010,6 @@ export const translations = {
         current: "当前",
         overall: "总分",
         repo: "仓库",
-        dimensionBullets: "要点与数据密度",
-        dimensionStructure: "结构与可读性",
-        dimensionImpact: "成果表述",
-        dimensionClarity: "清晰度",
-        dimensionKeywords: "关键词覆盖",
         stages: {
           reading: "正在读取已存下的文档",
           extracting: "正在用解析代理提取各段落",
@@ -1854,6 +2023,9 @@ export const translations = {
       title: "设置",
       description: "账户、外观与键盘偏好。",
       colorTheme: "配色主题",
+      themeLight: "浅色",
+      themeDark: "深色",
+      themeSystem: "跟随系统",
       logOut: "退出 Career OS？",
       logOutDescription: "你的数据是安全的——这只会结束当前会话。",
       logOutConfirm: "退出登录",
@@ -1980,6 +2152,7 @@ export const translations = {
       openJob: "打开职位",
       interviewPrepared: "代理根据这段对话准备好了一场面试。",
       start: "开始",
+      coverage: "覆盖率",
     },
     // The copilot's action chips -- the labels the orchestrator writes in
     // English, which the browser says in the reader's language.
@@ -2087,7 +2260,11 @@ export const translations = {
       progressBaseline: "这是该职位的第一次报告——下次运行会与它对比。",
       progressAgainstPrevious: "与你上次对该职位的报告对比。",
       noSkillChange: "自上次报告以来没有技能状态变化",
+      skillsClosed: "已补齐",
+      skillsImproved: "有提升",
+      skillsRegressed: "有退步",
       stillOpen: "{count} 项仍未覆盖。",
+      run: "运行",
     },
     // Knowledge
     knowledge: {
@@ -2145,6 +2322,17 @@ export const translations = {
         ingestionFailed: "摄取失败",
         batchSummary: "已完成 {done}/{total}{failed}",
         notIngested: "，{count} 个未摄取",
+        kinds: {
+          note: "笔记",
+          resume: "简历",
+          project: "项目",
+          jd: "职位描述",
+          company: "公司",
+          interview_feedback: "面试反馈",
+          certificate: "证书",
+          course: "课程",
+          goal: "目标",
+        },
       },
     },
     // Companies
@@ -2320,6 +2508,50 @@ export const translations = {
         blurb: "已结束。留着做复盘分析。",
       },
     },
+    /**
+     * The score dimensions, named in the reader's language.
+     *
+     * Four vocabularies, four namespaces, because they are four different
+     * sets of words. The keys inside are the wire's own; `lib/dimensions.ts`
+     * is the one place that maps them here.
+     */
+    dimensions: {
+      match: {
+        technical: { label: "技术" },
+        experience: { label: "经验" },
+        projects: { label: "项目" },
+        education: { label: "教育" },
+      },
+      interview: {
+        technical_accuracy: { label: "技术准确度" },
+        communication: { label: "表达" },
+        depth: { label: "深度" },
+        structure: { label: "结构" },
+        problem_solving: { label: "问题解决" },
+        system_thinking: { label: "系统思维" },
+        ai_knowledge: { label: "AI 知识" },
+        backend_knowledge: { label: "后端知识" },
+      },
+      resume: {
+        bullets: { label: "要点与数据密度" },
+        structure: { label: "结构与可扫描性" },
+        impact: { label: "影响力措辞" },
+        clarity: { label: "清晰度" },
+        keywords: { label: "关键词覆盖" },
+      },
+      criteria: {
+        has_contact: { label: "联系方式（邮箱 / 电话）" },
+        has_summary: { label: "个人摘要" },
+        has_experience: { label: "工作经历" },
+        experience_has_bullets: { label: "每段经历下的要点" },
+        quantified_impact: { label: "量化的成果（数字或百分比）" },
+        has_projects: { label: "项目" },
+        has_education: { label: "教育背景" },
+        has_skills: { label: "足够的技能（5 项以上）" },
+        years_experience_stated: { label: "写明工作年限" },
+        dates_present: { label: "每段经历都有起始时间" },
+      },
+    },
     // Interviews
     interviews: {
       title: "面试",
@@ -2359,6 +2591,7 @@ export const translations = {
         noFollowUp: "代理没有追问——它建议就此收尾出报告。",
         finishEarly: "提前结束",
         nextQuestion: "下一个问题",
+        question: "第 {number} 题",
         reportReady:
           "评估代理已经产出了完整报告——各维度得分、哪些答得好、哪些薄弱、学习材料和深度曲线。",
         openReport: "打开报告",
@@ -2368,6 +2601,7 @@ export const translations = {
         stillRunning: "面试还在进行中",
         stillRunningDescription: "结束这场面试后，评估代理会把每个回答打分，生成完整报告。",
         noReport: "还没有存下报告",
+        open: "打开",
         noReportDescription:
           "这场面试已经结束，但评估代理还没有发布报告。你可以手动触发收尾——它会给已有的回答打分。",
         overallScore: "面试总分",
@@ -2403,6 +2637,7 @@ export const translations = {
         "这些筛选后面还压着一些收藏。放宽一个，或者全部清掉，就能看到完整的收藏列表。",
       clearFilters: "清空筛选",
       nothingSaved: "还没有收藏",
+      savedAt: "收藏于 {date}",
       nothingSavedDescription:
         "在「发现」里收藏一个职位，它就会出现在你的流水线里，随时可以跑匹配、定制简历。",
       browseDiscover: "去发现页看看",

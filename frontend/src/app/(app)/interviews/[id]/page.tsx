@@ -34,6 +34,7 @@ import { ProcessingSteps } from "@/components/ai/processing-steps";
 import { useInterviewOpening, useSubmitInterviewAnswer, useFinalizeInterview } from "@/lib/hooks/actions";
 import { useInterviewSession } from "@/lib/hooks/resources";
 import { depthLabel, depthLevel, titleCase } from "@/lib/format";
+import { interviewDimensionLabel } from "@/lib/dimensions";
 import { useLocale } from "@/lib/i18n/locale-context";
 import type { AnswerResponse } from "@/lib/hooks/actions";
 import type { InterviewQuestion } from "@/lib/api/types";
@@ -216,9 +217,11 @@ export default function InterviewRunnerPage() {
             · {data.companyName ?? ""} {data.jobTitle ? `— ${data.jobTitle}` : ""}
           </span>
         )}
-        >{t("interviews.detail.question", {
-              number: turns.length + (showingEvaluation ? 0 : 1),
-            })}</Badge>
+        <Badge variant="outline" className="ml-auto text-2xs font-normal tabular-nums">
+          {t("interviews.detail.question", {
+            number: turns.length + (showingEvaluation ? 0 : 1),
+          })}
+        </Badge>
         {typeof (question?.difficulty ?? data.difficulty) === "number" && (
           <DifficultyMeter value={question?.difficulty ?? data.difficulty!} />
         )}
@@ -473,7 +476,8 @@ function EvaluationPanel({
             {evaluation.dims.map((d) => (
               <li key={d.key}>
                 <Badge variant="outline" className="text-2xs font-normal">
-                  {d.label}: <span className="tabular-nums text-foreground">{Math.round(d.score)}</span>
+                  {interviewDimensionLabel(t, d.key)}:{" "}
+                  <span className="tabular-nums text-foreground">{Math.round(d.score)}</span>
                 </Badge>
               </li>
             ))}

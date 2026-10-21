@@ -27,6 +27,7 @@ import {
   useStoryBank,
 } from "@/lib/hooks/growth";
 import { useLocale } from "@/lib/i18n/locale-context";
+import { growthEngineLabel } from "@/lib/growth-engines";
 
 /**
  * The granular growth engines, one at a time (10.1-10.13).
@@ -40,15 +41,15 @@ import { useLocale } from "@/lib/i18n/locale-context";
  */
 
 const ENGINES = [
-  { key: "gap", label: "Gap analysis", icon: TrendingUp, epic: "10.1" },
-  { key: "demand", label: "Market demand", icon: Compass, epic: "10.9" },
-  { key: "priority", label: "Learning priority", icon: ListOrdered, epic: "10.12" },
-  { key: "plan", label: "Learning plan", icon: BookOpen, epic: "10.5" },
-  { key: "prep", label: "Interview prep", icon: MessagesSquare, epic: "10.13" },
-  { key: "progression", label: "Progression", icon: Route, epic: "10.11" },
-  { key: "stories", label: "Story bank", icon: BookOpen, epic: "6.5" },
-  { key: "roles", label: "Role suggestions", icon: Compass, epic: "10.10" },
-  { key: "progress", label: "Progress", icon: TrendingUp, epic: "10.6" },
+  { key: "gap", icon: TrendingUp },
+  { key: "demand", icon: Compass },
+  { key: "priority", icon: ListOrdered },
+  { key: "plan", icon: BookOpen },
+  { key: "prep", icon: MessagesSquare },
+  { key: "progression", icon: Route },
+  { key: "stories", icon: BookOpen },
+  { key: "roles", icon: Compass },
+  { key: "progress", icon: TrendingUp },
 ] as const;
 
 type EngineKey = (typeof ENGINES)[number]["key"];
@@ -135,7 +136,7 @@ export function GrowthEnginesPanel() {
               aria-pressed={engine === e.key}
             >
               <e.icon aria-hidden />
-              {e.label}
+              {growthEngineLabel(t, e.key)}
             </Button>
           ))}
         </div>
@@ -170,7 +171,7 @@ export function GrowthEnginesPanel() {
           disabled={!roleOk && engine !== "stories" && engine !== "roles"}
           onClick={run}
         >
-          {t("growthEngines.run")} {ENGINES.find((e) => e.key === engine)?.label}
+          {t("growthEngines.run")} {growthEngineLabel(t, engine)}
         </Button>
 
         <EngineResult engine={engine} state={resultFor(engine, {

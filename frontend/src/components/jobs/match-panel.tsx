@@ -11,6 +11,7 @@ import { DimensionBars, SkillChips } from "@/components/common/skill-chips";
 import { SectionHeading } from "@/components/common/export-buttons";
 import { AIBadge } from "@/components/ai/ai-badge";
 import type { JobMatch, PreparationItem, SkillGap } from "@/lib/api/types";
+import { matchDimensionLabel } from "@/lib/dimensions";
 
 /**
  * Match breakdown (§10): every number here is traceable — the ring is the
@@ -30,15 +31,20 @@ export function MatchPanel({
   className?: string;
 }) {
   const { t } = useLocale();
+  // The dimension names come from the shared vocabulary, so the bar the
+  // reader sees says the same thing the copilot's artifact says and the
+  // interview report says -- in the reader's language.
   const fallbackDims: { key: string; label: string; score?: number }[] = match
     ? match.dimensions?.length
       ? match.dimensions
       : [
-          { key: "technical", label: "Technical", score: match.technical },
-          { key: "experience", label: "Experience", score: match.experience },
-          { key: "projects", label: "Projects", score: match.projects },
-          { key: "education", label: "Education", score: match.education },
-        ].filter((d) => d.score != null)
+          { key: "technical", score: match.technical },
+          { key: "experience", score: match.experience },
+          { key: "projects", score: match.projects },
+          { key: "education", score: match.education },
+        ]
+          .filter((d) => d.score != null)
+          .map((d) => ({ ...d, label: matchDimensionLabel(t, d.key) }))
     : [];
 
   return (

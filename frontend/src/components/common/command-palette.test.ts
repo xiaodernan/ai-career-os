@@ -35,9 +35,9 @@ describe("the command palette's result list", () => {
     // said "once the API is live" — it is live now (SearchController answers GET /search),
     // so the sentence describes the streaming instead of promising a future.
     //
-    // The tail of the sentence reads from the locale table now, so the gate
-    // asserts the key the palette reads rather than the English copy.
-    expect(source).toContain("Search {searchGroupNames()} — {t(\"chrome.resultsStreamIn\")}");
+    // The whole sentence reads from the locale table now, so the gate
+    // asserts the keys the palette reads rather than the English copy.
+    expect(source).toContain('{t("chrome.search")} {searchGroupNames()} — {t("chrome.resultsStreamIn")}');
     expect(source).toContain('t("chrome.resultsStreamIn")');
     expect(source).not.toContain("once the API is live");
     expect(source).not.toMatch(/resumes, jobs, companies and conversations/);
@@ -45,6 +45,18 @@ describe("the command palette's result list", () => {
   });
 
   it("keeps navigation filtering locally, since that list never leaves the client", () => {
-    expect(source).toMatch(/NAV_ITEMS\.filter\(/);
+    expect(source).toMatch(/navItems\.filter\(/);
+    expect(source).toMatch(/NAV_ITEMS\.map\(/);
+  });
+
+  it("filters navigation on the names it shows, not the English ones", () => {
+    // The bug this pins: the palette filtered on `item.label` -- the English
+    // name -- while the list beside it read the same English. A Chinese
+    // reader typing "简历" matched nothing, because nothing on the page was
+    // called "简历" in the table the filter read.
+    //
+    // So the names are translated first, and the filter reads those.
+    expect(source).toContain("label: item.labelKey ? t(item.labelKey) : item.label");
+    expect(source).toMatch(/navItems\.filter\(\s*\(n\) => n\.label\.toLowerCase\(\)\.includes/);
   });
 });

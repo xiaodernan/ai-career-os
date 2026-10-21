@@ -531,7 +531,7 @@ describe("normalizeResumeScore", () => {
   // ResumeSummary, both of which name the rubric map `score`. The fixtures that passed the map bare
   // -- and the one that passed a bare 0.8 -- leaned on a `?? raw` fallback no producer ever
   // reached, so they went with it in #132.
-  it("derives labeled gaps from unmet rubric detail", () => {
+  it("derives gaps from unmet rubric detail", () => {
     const s = normalizeResumeScore({
       score: {
         total: 40,
@@ -542,9 +542,12 @@ describe("normalizeResumeScore", () => {
         ],
       },
     });
+    // The gaps carry the rubric's own codes, not the product's English names:
+    // a name is the page's business, and the page reads it from the locale
+    // (`lib/dimensions.ts`), so a Chinese reader sees it in Chinese.
     expect(s).toMatchObject({
       overall: 40,
-      gaps: ["Quantified impact (numbers or %)", "Enough skills (5+)"],
+      gaps: ["quantified_impact", "has_skills"],
     });
   });
 

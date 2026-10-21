@@ -133,11 +133,11 @@ export default function SettingsPage() {
           >
             {(
               [
-                { value: "light", label: "Light", icon: Sun },
-                { value: "dark", label: "Dark", icon: Moon },
-                { value: "system", label: "System", icon: Monitor },
+                { value: "light", labelKey: "settings.themeLight", icon: Sun },
+                { value: "dark", labelKey: "settings.themeDark", icon: Moon },
+                { value: "system", labelKey: "settings.themeSystem", icon: Monitor },
               ] as const
-            ).map(({ value, label, icon: Icon }) => (
+            ).map(({ value, labelKey, icon: Icon }) => (
               <Label
                 key={value}
                 htmlFor={`theme-${value}`}
@@ -146,7 +146,7 @@ export default function SettingsPage() {
                 }`}
               >
                 <Icon className="size-4 text-muted-foreground" aria-hidden />
-                {label}
+                {t(labelKey)}
                 <RadioGroupItem value={value} id={`theme-${value}`} className="sr-only" />
               </Label>
             ))}

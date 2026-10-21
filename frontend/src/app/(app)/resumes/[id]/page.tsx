@@ -32,6 +32,7 @@ import { SectionHeading } from "@/components/common/export-buttons";
 import { DiffView } from "@/components/common/diff-view";
 import { DimensionBars } from "@/components/common/skill-chips";
 import { MatchRing } from "@/components/ai/match-ring";
+import { resumeCriterionLabel, resumeDimensionLabel } from "@/lib/dimensions";
 import { TaskProgress } from "@/components/ai/task-stream";
 import { useParseResume, useSetCurrentResume } from "@/lib/hooks/actions";
 import { useResume, useResumeVersions } from "@/lib/hooks/resources";
@@ -402,14 +403,15 @@ function ScorePanel({ score }: { score: ResumeScore | null }) {
     );
   }
   const dims = [
-    { key: "bullets", label: t("resumes.detail.dimensionBullets") },
-    { key: "structure", label: t("resumes.detail.dimensionStructure") },
-    { key: "impact", label: t("resumes.detail.dimensionImpact") },
-    { key: "clarity", label: t("resumes.detail.dimensionClarity") },
-    { key: "keywords", label: t("resumes.detail.dimensionKeywords") },
+    { key: "bullets" },
+    { key: "structure" },
+    { key: "impact" },
+    { key: "clarity" },
+    { key: "keywords" },
   ]
     .map((d) => ({
       ...d,
+      label: resumeDimensionLabel(t, d.key),
       score: (score as unknown as Record<string, number | undefined>)[d.key],
     }))
     .filter((d): d is { key: string; label: string; score: number } => typeof d.score === "number");
@@ -437,7 +439,7 @@ function ScorePanel({ score }: { score: ResumeScore | null }) {
           </p>
           <ul className="ml-4 list-disc space-y-1 text-xs text-muted-foreground">
             {score.gaps.slice(0, 6).map((g, i) => (
-              <li key={i}>{g}</li>
+              <li key={i}>{resumeCriterionLabel(t, g)}</li>
             ))}
           </ul>
         </div>

@@ -92,7 +92,9 @@ describe("mapResumeVersions", () => {
     expect(got[1].score).toMatchObject({
       overall: 72,
       structure: 62,
-      gaps: ["Quantified impact (numbers or %)"],
+      // The rubric's own codes: the name the product gives a gap is the
+      // page's business, and it reads it from the locale.
+      gaps: ["quantified_impact"],
     });
   });
 

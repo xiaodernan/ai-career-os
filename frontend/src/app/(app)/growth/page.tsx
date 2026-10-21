@@ -314,9 +314,9 @@ function ProgressLines({ progress }: { progress?: GrowthReport["progress"] }) {
   const { t } = useLocale();
   if (!progress) return null;
   const groups = [
-    { label: "Closed", skills: progress.closed ?? [], icon: Check, tone: "text-success" },
-    { label: "Improved", skills: progress.improved ?? [], icon: ArrowUpRight, tone: "text-primary" },
-    { label: "Regressed", skills: progress.regressed ?? [], icon: ArrowDownRight, tone: "text-destructive" },
+    { labelKey: "growth.skillsClosed", skills: progress.closed ?? [], icon: Check, tone: "text-success" },
+    { labelKey: "growth.skillsImproved", skills: progress.improved ?? [], icon: ArrowUpRight, tone: "text-primary" },
+    { labelKey: "growth.skillsRegressed", skills: progress.regressed ?? [], icon: ArrowDownRight, tone: "text-destructive" },
   ];
   const any = groups.some((g) => g.skills.length > 0);
   return (
@@ -338,9 +338,9 @@ function ProgressLines({ progress }: { progress?: GrowthReport["progress"] }) {
       {any ? (
         groups.map((g) =>
           g.skills.length > 0 ? (
-            <div key={g.label}>
+            <div key={g.labelKey}>
               <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                {g.label}
+                {t(g.labelKey)}
               </p>
               <ul className="mt-1 space-y-1">
                 {g.skills.map((s) => (

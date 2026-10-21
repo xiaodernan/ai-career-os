@@ -24,17 +24,17 @@ import type { ExportBundle } from "@/lib/api/types";
  */
 
 const SECTIONS = [
-  { key: "profile", label: "Profile" },
-  { key: "resumes", label: "Resumes" },
-  { key: "knowledge", label: "Knowledge base" },
-  { key: "job_descriptions", label: "Job descriptions" },
-  { key: "interviews", label: "Interview sessions" },
-  { key: "memories", label: "Long-term memories" },
+  { key: "profile", labelKey: "data.sections.profile" },
+  { key: "resumes", labelKey: "data.sections.resumes" },
+  { key: "knowledge", labelKey: "data.sections.knowledge" },
+  { key: "job_descriptions", labelKey: "data.sections.jobDescriptions" },
+  { key: "interviews", labelKey: "data.sections.interviews" },
+  { key: "memories", labelKey: "data.sections.memories" },
   // The two the BACKEND owns: it writes the applications and the stored growth
   // runs, so the bridge reads them and hands them into the bundle. Without them
   // an export is a reading list and not a record of the search.
-  { key: "applications", label: "Applications" },
-  { key: "growth_plans", label: "Growth runs" },
+  { key: "applications", labelKey: "data.sections.applications" },
+  { key: "growth_plans", labelKey: "data.sections.growthRuns" },
 ] as const;
 
 export default function DataPortabilityPage() {
@@ -262,7 +262,7 @@ export default function DataPortabilityPage() {
                       onChange={() => toggleDrop(s.key)}
                       className="size-4 rounded border-border"
                     />
-                    {s.label}
+                    {t(s.labelKey)}
                   </label>
                 </li>
               ))}

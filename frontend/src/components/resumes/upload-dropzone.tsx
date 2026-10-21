@@ -35,6 +35,26 @@ export const INGEST_SEED = [
   { id: "indexing", label: "Indexing the document" },
 ];
 
+/**
+ * The seed, named in the reader's language.
+ *
+ * The seed above is the wire's contract -- the step ids the ingestion
+ * pipeline publishes, and the English names the product gave them -- so it
+ * stays as it is, and the *name* is translated where the seed is handed to
+ * the progress panel. A step the locale does not name keeps the seed's own
+ * English name rather than losing it.
+ */
+export function ingestSeed(
+  t: (key: string) => string,
+  seed: readonly { id: string; label: string }[] = INGEST_SEED
+): { id: string; label: string }[] {
+  return seed.map((s) => {
+    const key = `upload.ingest.${s.id}`;
+    const translated = t(key);
+    return { ...s, label: translated === key ? s.label : translated };
+  });
+}
+
 // How the two ids are read out of the upload answer (top-level vs nested, camel
 // vs snake) lives in `@/lib/resume-upload` — a mis-spelled key there means the
 // progress panel silently never mounts.
@@ -143,7 +163,7 @@ export function UploadDropzone({ onUploaded, className, compact = false, ...prop
             <TaskProgress
               taskId={taskId}
               title={t("upload.ingesting")}
-              seed={INGEST_SEED}
+              seed={ingestSeed(t)}
               onDone={() => {
                 setTaskId(null);
                 toast.success(t("upload.ingestedToast"));

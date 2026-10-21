@@ -52,7 +52,7 @@ export function Topbar() {
         </div>
       </MobileSidebar>
       <div className="min-w-0 flex-1">
-        <h2 className="truncate text-sm font-semibold">{titleForPath(pathname)}</h2>
+        <h2 className="truncate text-sm font-semibold">{titleForPath(pathname, t)}</h2>
       </div>
 
       <Button

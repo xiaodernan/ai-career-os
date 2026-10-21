@@ -1,71 +1,24 @@
 // One-off: regenerate the copy census's KNOWN map from the browser's sources.
-// Run with `node scripts/regen-known.mjs`; it rewrites the block in
-// `src/lib/i18n/copy-census.test.ts` in place.
-import { readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
-import { join, relative, dirname } from "node:path";
+// Run with `node --experimental-strip-types scripts/regen-known.mjs`; it
+// rewrites the block in `src/lib/i18n/copy-census.test.ts` in place.
+//
+// The scan is not written here. It lives in `src/lib/i18n/copy-scan.ts`,
+// next to the gate that uses it, because two copies of one rule is two
+// rules -- and the moment they drifted, this script regenerated the list
+// from a different population than the gate measured.
+import { readFileSync, writeFileSync } from "node:fs";
+import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { everyOffender } from "../src/lib/i18n/copy-scan.ts";
+
 const HERE = dirname(fileURLToPath(import.meta.url));
-const ROOT = join(HERE, "..", "src");
-const TEST = join(ROOT, "lib", "i18n", "copy-census.test.ts");
-
-const COPY_ATTRIBUTES = [
-  "title",
-  "description",
-  "label",
-  "placeholder",
-  "aria-label",
-  "confirmLabel",
-  "ctaLabel",
-  "alt",
-];
-
-function browserSources() {
-  const out = [];
-  const walk = (dir) => {
-    for (const entry of readdirSync(dir)) {
-      const full = join(dir, entry);
-      if (statSync(full).isDirectory()) {
-        walk(full);
-        continue;
-      }
-      if (!entry.endsWith(".tsx")) continue;
-      if (entry.includes(".test.")) continue;
-      out.push(relative(ROOT, full).replace(/\\/g, "/"));
-    }
-  };
-  walk(join(ROOT, "app"));
-  walk(join(ROOT, "components"));
-  return out.sort();
-}
+const TEST = join(HERE, "..", "src", "lib", "i18n", "copy-census.test.ts");
 
 const found = new Map();
-const add = (file, value) => {
-  if (!found.has(file)) found.set(file, new Set());
-  found.get(file).add(value);
-};
-
-const attrPattern = new RegExp(`\\b(${COPY_ATTRIBUTES.join("|")})="([^"\\n]+)"`, "g");
-const textPattern = /(?:>|\})([^<>{}]{1,80}?)(?=<|\{)/g;
-
-const NOT_COPY = new Set(["Career", "CareerOS", "OS"]);
-
-for (const rel of browserSources()) {
-  const text = readFileSync(join(ROOT, rel), "utf-8");
-  for (const m of text.matchAll(attrPattern)) {
-    const value = m[2];
-    if (!/^[A-Z]/.test(value)) continue;
-    add(rel, value);
-  }
-  for (const m of text.matchAll(textPattern)) {
-    const value = m[1].trim();
-    if (!value) continue;
-    if (!/^[A-Z][a-z]/.test(value)) continue;
-    const decoded = value.replace(/&[a-z]+;/g, "x");
-    if (/[(){};=<>|]/.test(decoded)) continue;
-    if (NOT_COPY.has(value)) continue;
-    add(rel, value);
-  }
+for (const o of everyOffender()) {
+  if (!found.has(o.file)) found.set(o.file, new Set());
+  found.get(o.file).add(o.value);
 }
 
 let out = "";
@@ -87,4 +40,3 @@ writeFileSync(TEST, rewritten, "utf-8");
 process.stderr.write(
   `files: ${found.size} entries: ${[...found.values()].reduce((n, s) => n + s.size, 0)}\n`
 );
-

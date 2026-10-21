@@ -14,6 +14,7 @@ import { BarChart } from "@/components/common/bar-chart";
 import dynamic from "next/dynamic";
 import { CopyButton } from "@/components/common/export-buttons";
 import { JobCard } from "@/components/jobs/job-card";
+import { matchDimensionLabel } from "@/lib/dimensions";
 import {
   list,
   normalizeJob,
@@ -78,11 +79,13 @@ function MatchArtifact({ data }: { data?: unknown }) {
     match.dimensions?.length
       ? match.dimensions
       : [
-          { key: "technical", label: "Technical", score: match.technical },
-          { key: "experience", label: "Experience", score: match.experience },
-          { key: "projects", label: "Projects", score: match.projects },
-          { key: "education", label: "Education", score: match.education },
-        ].filter((d) => d.score != null);
+          { key: "technical", score: match.technical },
+          { key: "experience", score: match.experience },
+          { key: "projects", score: match.projects },
+          { key: "education", score: match.education },
+        ]
+          .filter((d) => d.score != null)
+          .map((d) => ({ ...d, label: matchDimensionLabel(t, d.key) }));
   return (
     <Card className="border-primary/25">
       <CardContent className="flex flex-col gap-3">
@@ -270,6 +273,7 @@ function GrowthArtifact({
 }
 
 function GapReportArtifact({ data }: { data?: unknown }) {
+  const { t } = useLocale();
   const report = pick(data, "gap") ?? data;
   const targetRole = str(report, "targetRole", "target_role");
   const coverage = num(report, "coverage");
@@ -283,7 +287,7 @@ function GapReportArtifact({ data }: { data?: unknown }) {
     >
       {coverage != null && (
         <BarChart
-          data={[{ label: "Coverage", value: Math.round(coverage * 100), tone: "primary" }]}
+          data={[{ label: t("artifacts.coverage"), value: Math.round(coverage * 100), tone: "primary" }]}
           max={100}
           valueFormat={(v) => `${v}%`}
         />

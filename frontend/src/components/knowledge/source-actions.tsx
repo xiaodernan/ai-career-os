@@ -44,6 +44,27 @@ export const SOURCE_KINDS = [
   { value: "goal", label: "Goal" },
 ] as const;
 
+/**
+ * The kind's name, in the reader's language.
+ *
+ * The kinds are the wire's (`KnowledgeService.KINDS`, which `validateKind`
+ * rejects anything else from), and the names the product gives them are the
+ * reader's -- a Chinese reader was picking a document's kind from an English
+ * list. A kind the locale does not name keeps the product's own English
+ * name rather than losing it, which is the rule `stageLabel` follows for
+ * the pipeline's seven stages.
+ */
+export function sourceKindLabel(
+  t: (key: string) => string,
+  value: string
+): string {
+  const known = SOURCE_KINDS.find((k) => k.value === value);
+  if (!known) return value;
+  const key = `knowledge.sources.kinds.${value}`;
+  const translated = t(key);
+  return translated === key ? known.label : translated;
+}
+
 /** Mirrors `storage/FileValidator`: 20 MB cap, PDF/DOCX/TXT by magic bytes server-side. */
 export const MAX_DOCUMENT_BYTES = 20 * 1024 * 1024;
 export const ACCEPTED_EXTENSIONS = [".pdf", ".docx", ".txt"] as const;
@@ -380,7 +401,7 @@ export function SourceUploadCard() {
               <SelectContent>
                 {SOURCE_KINDS.map((k) => (
                   <SelectItem key={k.value} value={k.value}>
-                    {k.label}
+                    {sourceKindLabel(t, k.value)}
                   </SelectItem>
                 ))}
               </SelectContent>

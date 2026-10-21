@@ -29,18 +29,21 @@ const PAGE_SIZE = 20;
 // Module-level so `setUrl` (a `useCallback` keyed on this object) is stable across renders.
 const PAGE_DEFAULTS: { page: number } = { page: 0 };
 
-function statusBadge(status: string): { label: string; variant: "success" | "warning" | "destructive" | "secondary" | "ai" } {
+function statusBadge(
+  status: string,
+  t: (key: string) => string
+): { label: string; variant: "success" | "warning" | "destructive" | "secondary" | "ai" } {
   switch (status) {
     case "parsed":
-      return { label: "Structured", variant: "success" };
+      return { label: t("resumes.status.parsed"), variant: "success" };
     case "parsing":
-      return { label: "Parsing…", variant: "warning" };
+      return { label: t("resumes.status.parsing"), variant: "warning" };
     case "failed":
-      return { label: "Failed", variant: "destructive" };
+      return { label: t("resumes.status.failed"), variant: "destructive" };
     case "ingesting":
-      return { label: "Ingesting…", variant: "ai" };
+      return { label: t("resumes.status.ingesting"), variant: "ai" };
     default:
-      return { label: "Uploaded", variant: "secondary" };
+      return { label: t("resumes.status.uploaded"), variant: "secondary" };
   }
 }
 
@@ -107,7 +110,7 @@ export default function ResumesPage() {
           {(page) => (
             <ul className="space-y-3">
               {page.items.map((r) => {
-                const badge = statusBadge(r.status);
+                const badge = statusBadge(r.status, t);
                 return (
                   <li key={r.id}>
                     <Card className="transition-shadow duration-200 hover:shadow-pop">

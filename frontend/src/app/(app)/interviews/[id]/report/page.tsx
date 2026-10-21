@@ -29,6 +29,7 @@ import { useFinalizeInterview } from "@/lib/hooks/actions";
 import { useInterviewSession } from "@/lib/hooks/resources";
 import { normalizeInterviewReport, type InterviewTrajectoryPoint } from "@/lib/api/normalize";
 import { depthLabel, depthLevel, formatDate, titleCase } from "@/lib/format";
+import { interviewDimensionLabel } from "@/lib/dimensions";
 import { useLocale } from "@/lib/i18n/locale-context";
 
 export default function InterviewReportPage() {
@@ -70,7 +71,7 @@ export default function InterviewReportPage() {
   }
 
   const normalized = normalizeInterviewReport(data.report);
-  const { overall, dims, well, weak, summary, study, trajectory } =
+  const { overall, well, weak, summary, study, trajectory } =
     normalized ?? {
       overall: undefined,
       dims: [],
@@ -80,6 +81,13 @@ export default function InterviewReportPage() {
       study: [],
       trajectory: [],
     };
+  // The rubric's eight names are the product's, not the wire's: the report
+  // answers with `technical_accuracy` and the reader is shown "Technical
+  // accuracy" -- in their language.
+  const dims = (normalized?.dims ?? []).map((d) => ({
+    ...d,
+    label: interviewDimensionLabel(t, d.key),
+  }));
 
   const hasReport = normalized?.hasContent ?? false;
 

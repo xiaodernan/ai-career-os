@@ -107,13 +107,29 @@ export function CommandPaletteProvider({
   // server had actually returned.
   const apiGroups = results.data?.groups ?? [];
 
+  // The navigation group, named in the reader's language.
+  //
+  // The palette filters on what it *shows*, so the names it filters on have
+  // to be the names the reader sees: a Chinese reader typing "简历" was
+  // searching the English labels and finding nothing, because the filter
+  // read `item.label` while the list beside it read the same English. The
+  // description is matched too, for the same reason.
+  const navItems = React.useMemo(
+    () =>
+      NAV_ITEMS.map((item) => ({
+        ...item,
+        label: item.labelKey ? t(item.labelKey) : item.label,
+      })),
+    [t]
+  );
+
   const navMatches = React.useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return NAV_ITEMS;
-    return NAV_ITEMS.filter(
+    if (!q) return navItems;
+    return navItems.filter(
       (n) => n.label.toLowerCase().includes(q) || n.description.toLowerCase().includes(q)
     );
-  }, [query]);
+  }, [navItems, query]);
 
   const searchFailed = enabled && results.isError;
 
@@ -175,7 +191,7 @@ export function CommandPaletteProvider({
 
             {apiGroups.length > 0 && <CommandSeparator />}
 
-            <CommandGroup heading="Go to">
+            <CommandGroup heading={t("chrome.goTo")}>
               {navMatches.map((item) => (
                 <CommandItem
                   key={item.href}

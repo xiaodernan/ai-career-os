@@ -873,20 +873,16 @@ export function normalizePipeline(raw: unknown): { status: string; count: number
   return rec(fromKanban) ? statusCountsToRows(fromKanban) : [];
 }
 
-/** Human labels for the deterministic rubric criteria (ai-service resume_parse). */
-const RESUME_CRITERION_LABELS: Record<string, string> = {
-  has_contact: "Contact info (email / phone)",
-  has_summary: "A summary section",
-  has_experience: "Work experience",
-  experience_has_bullets: "Bullets under your roles",
-  quantified_impact: "Quantified impact (numbers or %)",
-  has_projects: "Projects",
-  has_education: "Education",
-  has_skills: "Enough skills (5+)",
-  years_experience_stated: "Stated years of experience",
-  dates_present: "Start dates on all roles",
-};
-
+/**
+ * The rubric's unmet criteria, as the criteria's own codes.
+ *
+ * The codes are the ai-service's (`resume_parse`'s rubric) and the names the
+ * product gives them live in `lib/dimensions.ts`, which reads them through the
+ * locale -- so a gap is named in the reader's language rather than in the
+ * English this mapper used to bake in. The mapper carries the code because a
+ * mapper's job is to say *which* rubric criterion was unmet, and the word for
+ * it is the page's business.
+ */
 export function normalizeResumeScore(raw: unknown): ResumeScore | null {
   // `raw` is a record that *carries* the rubric map, never the map itself: `ResumeDetail` and
   // `ResumeSummary` both have a `score` component, while the versions list hands over a
@@ -903,13 +899,11 @@ export function normalizeResumeScore(raw: unknown): ResumeScore | null {
   const total = num(s, "total");
   const overall = total == null ? undefined : Math.min(100, Math.round(total));
   // The rubric's unmet criteria ARE the gaps: `detail: [{criterion, met, points}]` is the only gap
-  // source there is, and RESUME_CRITERION_LABELS above is the human half of that same table.
+  // source there is, and the criterion's own code is what travels -- the name the product gives
+  // it is read from the locale by the page that shows it (`lib/dimensions.ts`).
   const gaps = list<Record<string, unknown>>(s, "detail")
     .filter((c) => bool(c, "met") === false)
-    .map((c) => {
-      const code = str(c, "criterion") ?? "";
-      return RESUME_CRITERION_LABELS[code] ?? code.replace(/_/g, " ");
-    })
+    .map((c) => str(c, "criterion") ?? "")
     .filter(Boolean);
   const out: ResumeScore = {
     overall,
