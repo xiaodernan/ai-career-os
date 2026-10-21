@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   dispatchEvent,
+  drainFrames,
   errorText,
   findFrameEnd,
   parseFrame,
@@ -50,6 +51,70 @@ describe("findFrameEnd", () => {
   });
   it("returns -1 when there is no frame terminator", () => {
     expect(findFrameEnd("partial data")).toBe(-1);
+  });
+});
+
+/**
+ * The frames a buffer holds.
+ *
+ * A network read does not land on a frame boundary -- a read can carry
+ * half a frame, or three and a half. So the buffer accumulates and the
+ * frames are taken out of it as they complete, and what is left is what
+ * the next read continues. This is the loop the stream reader runs, and
+ * it is the part that decides whether the reader sees the frames at all.
+ */
+describe("drainFrames", () => {
+  it("takes the whole frame out of the buffer", () => {
+    const { frames, rest } = drainFrames("event: token\ndata: hi\n\n");
+    expect(frames).toEqual(["event: token\ndata: hi"]);
+    expect(rest).toBe("");
+  });
+
+  it("keeps a partial frame for the next read", () => {
+    // The read landed in the middle of a frame. Nothing is dispatched and
+    // nothing is lost: the half-frame is what the next read continues.
+    const { frames, rest } = drainFrames("event: token\ndata: hi");
+    expect(frames).toEqual([]);
+    expect(rest).toBe("event: token\ndata: hi");
+  });
+
+  it("takes several frames out of one read", () => {
+    const { frames, rest } = drainFrames(
+      "event: token\ndata: a\n\nevent: token\ndata: b\n\n"
+    );
+    expect(frames).toEqual(["event: token\ndata: a", "event: token\ndata: b"]);
+    expect(rest).toBe("");
+  });
+
+  it("cuts on a CRLF boundary as readily as on an LF one", () => {
+    const { frames, rest } = drainFrames("event: token\r\ndata: hi\r\n\r\n");
+    expect(frames).toEqual(["event: token\r\ndata: hi"]);
+    expect(rest).toBe("");
+  });
+
+  it("cuts a mixed stream on both kinds of boundary", () => {
+    // A relay that mixes line endings is not a thing that should break the
+    // reader: the frames are what matter, not the line ending.
+    const { frames, rest } = drainFrames("data: a\n\ndata: b\r\n\r\ndata: c\n\n");
+    expect(frames).toEqual(["data: a", "data: b", "data: c"]);
+    expect(rest).toBe("");
+  });
+
+  it("joins the halves of a frame split across two reads", () => {
+    // The first read carries the head, the second the tail. The reader
+    // must see one frame, not two.
+    const first = drainFrames("event: token\nda");
+    expect(first.frames).toEqual([]);
+    const second = drainFrames(first.rest + "ta: hi\n\n");
+    expect(second.frames).toEqual(["event: token\ndata: hi"]);
+    expect(second.rest).toBe("");
+  });
+
+  it("leaves a keep-alive comment in the buffer rather than cutting a frame on it", () => {
+    // A comment is not a frame and does not end one, so the frame after it
+    // is still one frame.
+    const { frames } = drainFrames(": keep-alive\n\nevent: token\ndata: hi\n\n");
+    expect(frames).toEqual([": keep-alive", "event: token\ndata: hi"]);
   });
 });
 
@@ -221,5 +286,40 @@ describe("the run stream consumer", () => {
   it("asks errorText for the cause instead of naming a key itself", () => {
     expect(source).toContain("errorText(data)");
     expect(source).not.toMatch(/data\?\.message/);
+  });
+});
+
+/**
+ * The end of the stream.
+ *
+ * A frame is terminated by the blank line after it, and the reader takes
+ * it out of the buffer when it sees one. Whatever is still in the buffer
+ * when the stream ends is therefore a *partial* frame -- a server that
+ * closed the connection mid-frame left one behind. Dispatching it would
+ * append half a token to the answer, and a truncated delta reads as a
+ * truncated sentence.
+ *
+ * The hook cannot be rendered here, so the gate reads its source: the
+ * remainder must be dropped, not flushed.
+ */
+describe("the end of a stream", () => {
+  const source = readFileSync(
+    new URL("./use-sse.ts", import.meta.url),
+    "utf8"
+  );
+
+  it("discards the partial frame a cut connection leaves behind", () => {
+    // The relay's frames are terminated by Spring's SseEmitter, so the
+    // remainder is never a whole frame -- it is a fragment, and a
+    // fragment must not be dispatched.
+    expect(source).not.toContain("dispatchEvent(last, handlersRef.current)");
+    expect(source).not.toMatch(/parseFrame\(buffer\)/);
+  });
+
+  it("reads the buffer with the frame splitter, not with its own loop", () => {
+    // One rule for where a frame ends, in one place. A second copy of the
+    // splitting loop is a second answer to "where does a frame end".
+    expect(source).toContain("drainFrames(buffer)");
+    expect(source).not.toMatch(/while \(\(sep = findFrameEnd\(/);
   });
 });

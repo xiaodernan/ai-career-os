@@ -109,14 +109,20 @@ export function useSSE(options: UseSSEOptions) {
 
       for (;;) {
         const { done, value } = await reader.read();
+        // The end of the stream. Whatever is left in the buffer is
+        // discarded, and that is the spec's rule rather than an omission:
+        // a frame is terminated by the blank line after it, and a server
+        // that closed the connection mid-frame left a *partial* frame
+        // behind. Dispatching it would append half a token to the answer
+        // -- a truncated delta reads as a truncated sentence, which is
+        // worse than a turn that ends where it ended.
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
 
         // SSE frames are separated by a blank line.
-        let sep: number;
-        while ((sep = findFrameEnd(buffer)) !== -1) {
-          const frame = buffer.slice(0, sep);
-          buffer = buffer.slice(sep).replace(/^\r?\n\r?\n/, "");
+        const drained = drainFrames(buffer);
+        buffer = drained.rest;
+        for (const frame of drained.frames) {
           const parsed = parseFrame(frame);
           if (parsed) dispatchEvent(parsed, handlersRef.current);
         }
@@ -238,6 +244,30 @@ export function findFrameEnd(buffer: string): number {
   if (a === -1) return b;
   if (b === -1) return a;
   return Math.min(a, b);
+}
+
+/**
+ * The frames a buffer holds, and the part of it that is not a frame yet.
+ *
+ * A network read does not land on a frame boundary: a read can carry
+ * half a frame, or three and a half. So the buffer accumulates and the
+ * frames are taken out of it as they complete, and what is left is what
+ * the next read continues.
+ *
+ * This is the loop the stream reader runs, lifted out of the hook so it
+ * can be tested without one -- a hook that needs a renderer is a hook
+ * whose body nobody checks, and this is where the frames are cut.
+ */
+export function drainFrames(buffer: string): { frames: string[]; rest: string } {
+  const frames: string[] = [];
+  let rest = buffer;
+  for (;;) {
+    const sep = findFrameEnd(rest);
+    if (sep === -1) break;
+    frames.push(rest.slice(0, sep));
+    rest = rest.slice(sep).replace(/^\r?\n\r?\n/, "");
+  }
+  return { frames, rest };
 }
 
 export function parseFrame(frame: string): SSEEvent | null {
