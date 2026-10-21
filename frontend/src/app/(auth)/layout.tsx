@@ -13,15 +13,11 @@ import { useLocale } from "@/lib/i18n/locale-context";
  * cannot read English lands here first, and this panel is what they are
  * asked to believe -- so it is the last panel that should be English-only.
  */
-const PILLAR_KEYS = [
-  "auth.pillars.knowledge.title",
-  "auth.pillars.knowledge.text",
-  "auth.pillars.matching.title",
-  "auth.pillars.matching.text",
-  "auth.pillars.fabrication.title",
-  "auth.pillars.fabrication.text",
-  "auth.pillars.interviews.title",
-  "auth.pillars.interviews.text",
+const PILLARS: { title: string; text: string }[] = [
+  { title: "auth.pillars.knowledge.title", text: "auth.pillars.knowledge.text" },
+  { title: "auth.pillars.matching.title", text: "auth.pillars.matching.text" },
+  { title: "auth.pillars.fabrication.title", text: "auth.pillars.fabrication.text" },
+  { title: "auth.pillars.interviews.title", text: "auth.pillars.interviews.text" },
 ];
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
@@ -57,12 +53,12 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           </div>
 
           <ul className="space-y-5">
-            {PILLAR_KEYS.map((key, i) => (
-              <li key={key} className="flex gap-3">
+            {PILLARS.map((p) => (
+              <li key={p.title} className="flex gap-3">
                 <span aria-hidden className="mt-1.5 size-1.5 shrink-0 rounded-full bg-primary/70" />
                 <div>
-                  <p className="text-sm font-medium">{t(`${key}.title`)}</p>
-                  <p className="text-sm text-muted-foreground">{t(`${key}.text`)}</p>
+                  <p className="text-sm font-medium">{t(p.title)}</p>
+                  <p className="text-sm text-muted-foreground">{t(p.text)}</p>
                 </div>
               </li>
             ))}

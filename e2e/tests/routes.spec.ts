@@ -93,6 +93,50 @@ test("the landing page is public and renders the pitch", async ({ page }) => {
 });
 
 /**
+ * The public surfaces carry the language switch too.
+ *
+ * The signed-in app has one in the sidebar, but a visitor who arrives at
+ * the front door and cannot read the page is the reader least able to
+ * find a control for it. The landing page, the auth pages and the 404 are
+ * the three surfaces an anonymous visitor can reach, so all three carry
+ * the switch -- and this is the one place that can prove it, because it
+ * needs no account and no session.
+ */
+test("a visitor can switch the language on the public pages", async ({ page }) => {
+  // The landing page: the pitch is in the reader's language after the click.
+  await page.goto("/");
+  const toChinese = page.getByRole("button", { name: "Switch to Chinese" });
+  await expect(toChinese).toBeVisible();
+  await toChinese.click();
+  await expect(
+    page.getByRole("link", { name: "开始使用" }).first()
+  ).toBeVisible({ timeout: 20_000 });
+
+  // The login screen: the choice followed the visitor, and the button now
+  // offers to go back -- which is the honest label for a switch that is
+  // already in the other language.
+  await page.goto("/login");
+  const backToEnglish = page.getByRole("button", { name: "切换到英文" });
+  await expect(backToEnglish).toBeVisible();
+  // The panel beside the form is the layout's, and it is in Chinese too.
+  await expect(page.getByText("求职操作系统")).toBeVisible({ timeout: 20_000 });
+  await backToEnglish.click();
+  await expect(page.getByText("The job-search operating system")).toBeVisible({
+    timeout: 20_000,
+  });
+
+  // And the 404, which is where a broken link lands a reader who never
+  // reached a page at all.
+  await page.goto("/definitely-not-a-route");
+  const toChineseOn404 = page.getByRole("button", { name: "Switch to Chinese" });
+  await expect(toChineseOn404).toBeVisible();
+  await toChineseOn404.click();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "这个页面不在地图上。" })
+  ).toBeVisible({ timeout: 20_000 });
+});
+
+/**
  * The branded boundary is server-rendered for any unmatched path, session or
  * no session -- so an unauthenticated visit can prove it without provisioning
  * an account (and without spending one of the auth rate-limit slots).

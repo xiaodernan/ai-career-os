@@ -219,9 +219,15 @@ function textNodeOffenders(): Offender[] {
     for (const m of text.matchAll(TEXT_NODE)) {
       const value = m[1].trim();
       if (!value) continue;
-      // A sentence starts with a capital and a lower-case letter after it.
-      // "AI", "OS" and "JD" are names, not sentences.
-      if (!/^[A-Z][a-z]/.test(value)) continue;
+      // A translation key that was never resolved. The reader sees the key
+      // instead of the copy, and it is the one failure the prose rules below
+      // would miss -- so it is caught here rather than by them.
+      const unresolved = /^[a-z][a-zA-Z]*(\.[a-z][a-zA-Z]*)+$/.test(value);
+      if (!unresolved) {
+        // A sentence starts with a capital and a lower-case letter after it.
+        // "AI", "OS" and "JD" are names, not sentences.
+        if (!/^[A-Z][a-z]/.test(value)) continue;
+      }
       // An HTML entity inside a phrase -- "Profile &amp; preferences" -- is
       // punctuation the reader sees, not code. It is decoded before the
       // code check so the semicolon in it does not hide the phrase.
