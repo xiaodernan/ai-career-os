@@ -223,19 +223,41 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   (`translations.test.ts`) holds the two halves of the table to the same key set
   and keeps Chinese out of the English table.)
 - [x] **17.1b** The browser's copy census (the long tail of 17.1, measured).
-  (Frontend: `lib/i18n/copy-census.test.ts` walks the 129 `.tsx` files under
+  (Frontend: `lib/i18n/copy-scan.ts` walks the 130 `.tsx` files under
   `app/` and `components/` and finds the copy that is still a literal — a
   copy-bearing attribute (`title`, `label`, `placeholder`, `aria-label`,
-  …), the text between two tags, and the text with an expression in it
-  (`>Clear {count}<`). A string there is a word the reader cannot change, and
-  it is the shape the fix took every time. `KNOWN` is the honest list of what
-  is left, file by file and string by string, and the number is pinned: 62,
-  every one of them in a file another session is working in at the same time.
+  `eyebrow`, `heading`, …), the text between two tags, the text with an
+  expression in it (`>Clear {count}<`), and the same copy-bearing names
+  inside an object literal (`{ label: "Technical" }`). A string in any of
+  those is a word the reader cannot change, and it is the shape the fix
+  took every time. The object literal was the blind spot: half the
+  product's copy is written as one, and a bar labelled "Technical" on a
+  Chinese page was exactly as invisible to the gate as an attribute was.
+  `KNOWN` is the honest list of what is left, file by file and string by
+  string, and the number is pinned: 127, every one of them in a file
+  another session is working in at the same time.
   `scripts/regen-known.mjs` regenerates the list from the browser's own
-  sources, so the list is a measurement rather than a paragraph that drifts.)
+  sources — through the same scan the gate uses, so the two cannot drift
+  and leave the list measuring a different population than the gate.)
   The pipeline's seven stage names live in one table (`stages.*`) read
-  through `lib/pipeline.ts`'s three readers, and `t()` fills a `{hole}` so a
-  sentence can be written in one language's word order and not another's.)
+  through `lib/pipeline.ts`'s three readers, the score dimensions live in
+  one table (`dimensions.*`) read through `lib/dimensions.ts`, and `t()`
+  fills a `{hole}` so a sentence can be written in one language's word
+  order and not another's.)
+- [x] **17.1c** The page's title, in the reader's language.
+  (The title is rendered into the document's head, and the head is the
+  browser's first paint and the crawler's whole view — so it has to be
+  right in the HTML the *server* sends. The locale therefore travels in a
+  cookie as well as in `localStorage`, and the server reads it
+  (`lib/i18n/metadata.ts`): twenty-four routes name themselves through
+  `sectionMetadata` or `absoluteMetadata`, and the root's title template
+  still gives the suffix, so a section reads "Jobs · AI Career OS" in
+  English and "职位 · AI Career OS" in Chinese. A `useEffect` that writes
+  `document.title` does *not* work: React's own metadata reconciliation
+  resets it a moment later, because the `<title>` element is part of the
+  tree it just hydrated. The end-to-end suite holds the result — the
+  titles are read in both languages, and the 404 names itself in the
+  reader's language too.)
 - [x] **17.2** Full a11y pass (keyboard, motion-reduce, screen-reader labels) — the
   recent frontend commits already moved this forward; finish the long tail.
   (Global CSS: skip link, `:focus-visible` ring, `.sr-only`, 44px touch targets,
