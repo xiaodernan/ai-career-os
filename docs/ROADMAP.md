@@ -226,19 +226,20 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   (Frontend: `lib/i18n/copy-scan.ts` walks the 130 `.tsx` files under
   `app/` and `components/` and finds the copy that is still a literal — a
   copy-bearing attribute (`title`, `label`, `placeholder`, `aria-label`,
-  `eyebrow`, `heading`, …), the text between two tags at any length, and
-  the same copy-bearing names inside an object literal
-  (`{ label: "Technical" }`) or inside a JSX expression
-  (`{cond ? "Interview-ready" : "Needs work"}`). A string in any of those
-  is a word the reader cannot change, and it is the shape the fix took
-  every time. The three shapes the scan did not read before were the
-  blind spots: half the product's copy is written as an object literal,
-  most of the rest is prose longer than the scan's old length bound, and
-  the words a card shows when one thing is true and another when it is
-  not are inside an expression. A bar labelled "Technical" on a Chinese
+  `eyebrow`, `heading`, …), the text between two tags at any length, the
+  same copy-bearing names inside an object literal (`{ label: "Technical" }`)
+  or inside a JSX expression (`{cond ? "Interview-ready" : "Needs work"}`),
+  and a plain quoted literal (`toast.success("Export ready.")`). A string in
+  any of those is a word the reader cannot change, and it is the shape the
+  fix took every time. The four shapes the scan did not read before were
+  the blind spots: half the product's copy is written as an object literal,
+  most of the rest is prose longer than the scan's old length bound, the
+  words a card shows when one thing is true and another when it is not are
+  inside an expression, and a toast message is neither of those — it is a
+  string that is simply a *value*. A bar labelled "Technical" on a Chinese
   page was exactly as invisible to the gate as an attribute was.
   `KNOWN` is the honest list of what is left, file by file and string by
-  string, and the number is pinned: 81, every one of them in a file
+  string, and the number is pinned: 93, every one of them in a file
   another session is working in at the same time.
   `scripts/regen-known.mjs` regenerates the list from the browser's own
   sources — through the same scan the gate uses, so the two cannot drift
