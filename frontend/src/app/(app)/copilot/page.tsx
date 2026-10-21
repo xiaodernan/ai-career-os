@@ -320,7 +320,7 @@ function ConversationList({
                           : "border-transparent hover:bg-accent/50"
                       )}
                     >
-                      <p className="truncate text-sm font-medium">{c.title || "Untitled chat"}</p>
+                      <p className="truncate text-sm font-medium">{c.title || t("copilot.untitledChat")}</p>
                       <p className="truncate text-xs text-muted-foreground">
                         {c.lastMessagePreview ?? "—"}
                       </p>
@@ -334,7 +334,7 @@ function ConversationList({
                       <Button
                         variant="ghost"
                         size="icon"
-                        aria-label={`Rename "${c.title || "Untitled chat"}"`}
+                        aria-label={`Rename "${c.title || t("copilot.untitledChat")}"`}
                         onClick={() => {
                           setEditingId(c.id);
                           setDraft(c.title || "");
@@ -345,7 +345,7 @@ function ConversationList({
                       <Button
                         variant="ghost"
                         size="icon"
-                        aria-label={`Delete "${c.title || "Untitled chat"}"`}
+                        aria-label={`Delete "${c.title || t("copilot.untitledChat")}"`}
                         onClick={() => setConfirmId(c.id)}
                       >
                         <Trash2 aria-hidden />

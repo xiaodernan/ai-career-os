@@ -242,7 +242,7 @@ export default function JobsPage() {
             notLive={{
               title:
                 tab === "saved"
-                  ? "This API build has no saved-jobs list"
+                  ? t("jobs.notLiveSavedTitle")
                   : "This API build has no job search",
               description:
                 t("jobs.notLiveDescription"),

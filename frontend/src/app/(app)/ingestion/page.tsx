@@ -151,7 +151,7 @@ export default function IngestionPage() {
                 <li key={p.id ?? `${p.title}-${i}`} className="flex items-start gap-2 text-sm">
                   <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-primary" aria-hidden />
                   <span className="min-w-0">
-                    <span className="font-medium">{p.title || "Untitled role"}</span>
+                    <span className="font-medium">{p.title || t("ingestion.untitledRole")}</span>
                     {p.company && (
                       <span className="text-muted-foreground"> · {p.company}</span>
                     )}

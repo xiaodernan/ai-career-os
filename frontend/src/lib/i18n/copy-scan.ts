@@ -58,8 +58,13 @@ export const COPY_ATTRIBUTES = [
  * scanner sees a text node that begins with a capital. It is a name, not a
  * sentence, and it is the same name in every language, so it is excluded
  * rather than listed as a hole to close.
+ *
+ * A key name is the same kind of thing: "Ctrl K" is the name the platform
+ * gives a key, and it is that on a Chinese machine too. It is not a word
+ * the product writes, and translating it would name a key that does not
+ * exist.
  */
-export const NOT_COPY = new Set(["Career", "CareerOS", "OS"]);
+export const NOT_COPY = new Set(["Career", "CareerOS", "OS", "Ctrl K", "⌘K"]);
 
 /** One hardcoded copy string: the file it is in, and the string itself. */
 export interface Offender {
@@ -131,7 +136,28 @@ export function browserSources(): string[] {
  * word like that is not a phrase a translation key can hold. Those are a
  * known limit of the scan, not an oversight.
  */
-const TEXT_NODE = /(?:(?<!=)>|\})([^<>{}]{1,300}?)(?=<|\{)/g;
+/**
+ * The longest text node the scan will read.
+ *
+ * It was once eighty, which was short enough to hide most of the
+ * product's prose: a sentence longer than about sixty characters sat
+ * between the tags and the scan never read it. The long ones are the ones
+ * that read as prose rather than as a label, so they are the ones the
+ * gate is for.
+ *
+ * The bound was never what kept the scan honest: the lazy quantifier
+ * stops at the first `<` or `{` anyway, and a text node cannot span a
+ * nested element because the character class excludes the angle brackets
+ * and the braces. So the bound is only a backstop against a run of text
+ * with no markup in it at all, and a backstop that hides the copy is
+ * worse than no backstop.
+ */
+export const TEXT_NODE_LIMIT = 400;
+
+const TEXT_NODE = new RegExp(
+  `(?:(?<!=)>|\\})([^<>{}]{1,${TEXT_NODE_LIMIT}}?)(?=<|\\{)`,
+  "g"
+);
 
 /** A copy-bearing attribute: `title="Delete"`. */
 const ATTRIBUTE = new RegExp(`\\b(${COPY_ATTRIBUTES.join("|")})="([^"\\n]+)"`, "g");

@@ -127,9 +127,9 @@ export default function ResumesPage() {
                           </Link>
                           <p className="mt-0.5 text-xs text-muted-foreground">
                             {r.currentVersionId
-                              ? "Current version set · agents match against it"
+                              ? t("resumes.currentVersionSet")
                               : r.status === "parsed"
-                                ? "Parsed — open to set the current version"
+                                ? t("resumes.parsedOpenToSet")
                                 : "Awaiting parsing"}
                             {r.createdAt ? ` · added ${formatDate(r.createdAt)}` : ""}
                           </p>

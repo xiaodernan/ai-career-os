@@ -229,7 +229,7 @@ export default function JobDetailPage() {
               onClick={() => matchRun.mutate(resumeVersionId)}
             >
               <Target aria-hidden />
-              {match ? "Re-analyze match" : "Analyze match"}
+              {match ? t("jobs.detail.reAnalyze") : t("jobs.detail.analyze")}
             </Button>
 
             <Button variant="outline" size="sm" asChild>
@@ -361,12 +361,11 @@ export default function JobDetailPage() {
                 <EvidenceList items={evidence} limit={5} hrefFor={(e) => (e.source?.docId ? `/knowledge?src=${e.source.docId}` : undefined)} />
               ) : match ? (
                 <p className="text-sm text-muted-foreground">
-                  This match came back without citations. Re-run the analysis — the matcher stores an
-                  evidence quote for each criterion it scores.
+                  {t("jobs.detail.noCitations")}
                 </p>
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  No analysis yet, so there is nothing to cite. Run the matcher above.
+                  {t("jobs.detail.noAnalysis")}
                 </p>
               )}
             </CardContent>
@@ -398,7 +397,7 @@ export default function JobDetailPage() {
             <CardContent className="space-y-2 text-xs text-muted-foreground">
               <p className="flex items-center gap-2">
                 <AIBadge label="job" />
-                {job.source === "user_paste" ? "Pasted by you" : job.source === "agent_research" ? "Found by the research agent" : "Seeded board"}
+                {job.source === "user_paste" ? t("jobs.detail.pastedByYou") : job.source === "agent_research" ? t("jobs.detail.foundByResearch") : t("jobs.detail.seededBoard")}
               </p>
               <Separator className="my-1" />
               <p>

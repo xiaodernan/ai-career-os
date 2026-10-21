@@ -189,6 +189,7 @@ export const translations = {
       },
     },
     jobCard: {
+      companyNotResearched: "Company not researched yet",
       noMatchYet: "No match computed yet",
       matchFor: "Match for {title}",
       whyThisJob: "Why this job:",
@@ -321,6 +322,12 @@ export const translations = {
     },
     // Dashboard
     dashboard: {
+      skillGapsHint: "Ranked by the matching agent against your resume.",
+      gradeHint: "Overall grade from the resume reviewer. Open the resume for the per-dimension breakdown.",
+      gradeWeak: "Weak — start here",
+      gradeNeedsWork: "Needs work",
+      gradeSolid: "Solid baseline",
+      gradeInterviewReady: "Interview-ready",
       title: "Dashboard",
       greeting: "Good morning",
       /**
@@ -443,6 +450,8 @@ export const translations = {
     },
     // Offers
     offers: {
+      offerFormat: "One offer per line. The engine ranks them by total compensation, with any equity annualized over its vest.",
+      oneQuestion: "One question drives all four answers: what is the role, and what is on the table.",
       title: "Offers",
       description: "What the market pays, what to say back, and which offer leads.",
       roleAndOffer: "The role and the offer",
@@ -524,6 +533,7 @@ export const translations = {
     },
     // Rate limit
     rateLimit: {
+      throttledPerUser: "Requests are throttled per user.",
       title: "Rate limiting",
       description: "Current rate-limit configuration and your bucket usage.",
       rateLimiting: "Rate limiting",
@@ -594,6 +604,7 @@ export const translations = {
     },
     // Ingestion
     ingestion: {
+      untitledRole: "Untitled role",
       title: "Job ingestion",
       description: "Bring postings in from a feed or a board API.",
       sourceFeed: "Source feed",
@@ -664,6 +675,8 @@ export const translations = {
     },
     // Resumes
     resumes: {
+      parsedOpenToSet: "Parsed — open to set the current version",
+      currentVersionSet: "Current version set · agents match against it",
       title: "Resumes",
       description:
         "Every upload is parsed into a structured profile and chunked into the knowledge base the agents cite from. Nothing is scored that isn't in your documents.",
@@ -694,6 +707,13 @@ export const translations = {
         uploaded: "Uploaded",
       },
       detail: {
+        roleFallback: "Role",
+        profileFallback: "Profile",
+        noScore: "No review score yet. It is produced by the parsing run — trigger a re-parse above to generate one.",
+        noVersions: "No stored versions yet — each parse of this resume stores a new one.",
+        extracting: "The extraction agent is working through this document — the structured profile appears automatically when it's done.",
+        parseNow: "Parse now",
+        reParse: "Re-parse",
         notInWorkspace: "This resume isn't in your workspace",
         notInWorkspaceDescription:
           "It may have been deleted. Upload it again from the Resumes page.",
@@ -806,6 +826,8 @@ export const translations = {
           text: "Resumes reworded and reordered per job description; a verifier rejects invented claims.",
         },
         interviews: {
+          continueAction: "Continue",
+          reportAction: "Report",
           title: "Adaptive mock interviews",
           text: "An AI interviewer that follows up, scores dimensions and adapts difficulty.",
         },
@@ -919,6 +941,7 @@ export const translations = {
     },
     // Copilot
     copilot: {
+      untitledChat: "Untitled chat",
       title: "Ask your career agent",
       conversations: "Conversations",
       noConversations: "No conversations yet",
@@ -1158,6 +1181,7 @@ export const translations = {
         "Once Copilot or a matching job runs, its full trace appears here.",
       noRuns: "No agent runs yet",
       detail: {
+        traceHint: "Persisted by the orchestrator — expand a row for its raw payload.",
         steps: "Steps",
         toolCalls: "Tool calls",
         tokens: "Tokens",
@@ -1395,6 +1419,9 @@ export const translations = {
         "GET /interview/sessions answered 404, so this frontend and the backend it is talking to are different versions. The runner is wired and activates as soon as they match.",
       inProgress: "In progress",
       detail: {
+        submitHint: "Ctrl+Enter to submit · the agent evaluates before the next question",
+        abandoned: "This session was abandoned",
+        finished: "This interview is finished",
         missing: "This session doesn't exist (yet)",
         missingDescription:
           "The interview endpoint may not be live on the backend, or the session was removed. Start a new one from the Interviews page.",
@@ -1439,6 +1466,9 @@ export const translations = {
         openReport: "Open report",
       },
       report: {
+        practiceHint: "Run the same mode again after studying — the agent adapts to your previous weak spots.",
+        untitledResource: "Untitled resource",
+        strongSession: "Strong session — the loop pushed you deep and you held the altitude.",
         loadFailed: "Couldn't load the report",
         stillRunning: "The interview is still running",
         stillRunningDescription:
@@ -1468,6 +1498,7 @@ export const translations = {
     },
     // Jobs
     jobs: {
+      notLiveSavedTitle: "This API build has no saved-jobs list",
       title: "Jobs",
       description:
         "Discovered and pasted roles, scored against your resume with evidence — the match ring leads, the metadata follows.",
@@ -1501,6 +1532,13 @@ export const translations = {
       discoverTab: "Discover",
       researchRoles: "Research roles",
       detail: {
+        seededBoard: "Seeded board",
+        foundByResearch: "Found by the research agent",
+        pastedByYou: "Pasted by you",
+        noAnalysis: "No analysis yet, so there is nothing to cite. Run the matcher above.",
+        noCitations: "This match came back without citations. Re-run the analysis — the matcher stores an evidence quote for each criterion it scores.",
+        analyze: "Analyze match",
+        reAnalyze: "Re-analyze match",
         notInSystem: "This job isn't in the system",
         notInSystemDescription:
           "Either it was removed or the backend hasn't stored it yet. Paste its JD in Jobs → Analyze a JD to work on it immediately.",
@@ -1726,6 +1764,7 @@ export const translations = {
       },
     },
     jobCard: {
+      companyNotResearched: "这家公司还没调研过",
       noMatchYet: "还没有算过匹配度",
       matchFor: "与「{title}」的匹配度",
       whyThisJob: "为什么是这个职位：",
@@ -1854,6 +1893,12 @@ export const translations = {
     },
     // Dashboard
     dashboard: {
+      skillGapsHint: "由匹配代理对着你的简历排出来的。",
+      gradeHint: "来自简历评审代理的总评。打开简历可以看到每个维度的细分。",
+      gradeWeak: "偏弱——从这里开始",
+      gradeNeedsWork: "还要打磨",
+      gradeSolid: "基础扎实",
+      gradeInterviewReady: "可以面试了",
       title: "仪表盘",
       greeting: "早上好",
       greetingHello: "你好",
@@ -1956,6 +2001,8 @@ export const translations = {
     },
     // Offers
     offers: {
+      offerFormat: "一行一个录用。引擎按总薪酬排序，股权按归属期折算成年化。",
+      oneQuestion: "四个答案都由同一个问题驱动：职位是什么，桌上摆着什么。",
       title: "录用",
       description: "市场给多少、怎么回话、哪个录用最划算。",
       roleAndOffer: "职位与录用",
@@ -2034,6 +2081,7 @@ export const translations = {
     },
     // Rate limit
     rateLimit: {
+      throttledPerUser: "请求按用户分别限流。",
       title: "限流",
       description: "当前限流配置和你的配额使用。",
       rateLimiting: "限流",
@@ -2095,6 +2143,7 @@ export const translations = {
     },
     // Ingestion
     ingestion: {
+      untitledRole: "没有标题的职位",
       title: "职位导入",
       description: "从 RSS 或招聘板 API 导入职位。",
       sourceFeed: "来源",
@@ -2150,6 +2199,8 @@ export const translations = {
     },
     // Resumes
     resumes: {
+      parsedOpenToSet: "已解析——打开后可以设定当前版本",
+      currentVersionSet: "已设为当前版本——代理就按它来匹配",
       title: "简历",
       description:
         "每次上传都会被解析成结构化档案，并切块进入代理取证的知识库。你的文档里没有的东西，不会被评分。",
@@ -2173,6 +2224,13 @@ export const translations = {
       },
       open: "打开",
       detail: {
+        roleFallback: "职位",
+        profileFallback: "个人档案",
+        noScore: "还没有评审分数。它由解析那一步产出——在上面点一次重新解析就会生成。",
+        noVersions: "还没有存下任何版本——这份简历每解析一次就存一个。",
+        extracting: "抽取代理正在处理这份文档——做完之后结构化档案会自动出现。",
+        parseNow: "开始解析",
+        reParse: "重新解析",
         notInWorkspace: "这份简历不在你的工作区里",
         notInWorkspaceDescription: "它可能已被删除。去简历页重新上传一次。",
         loadFailed: "没能加载这份简历",
@@ -2275,6 +2333,8 @@ export const translations = {
           text: "简历按每份职位发布重写重排；一个校验环节会驳回编造的说法。",
         },
         interviews: {
+          continueAction: "继续",
+          reportAction: "看报告",
           title: "自适应模拟面试",
           text: "一个会追问、会按维度打分、会调整难度的 AI 面试官。",
         },
@@ -2375,6 +2435,7 @@ export const translations = {
     },
     // Copilot
     copilot: {
+      untitledChat: "没有标题的对话",
       title: "问问你的求职代理",
       conversations: "会话",
       noConversations: "还没有会话",
@@ -2591,6 +2652,7 @@ export const translations = {
       emptyDescription: "副驾驶或某个职位跑过之后，它的完整链路就会出现在这里。",
       noRuns: "还没有代理运行记录",
       detail: {
+        traceHint: "由编排器持久化——展开任意一行可以看到原始载荷。",
         steps: "步骤",
         toolCalls: "工具调用",
         tokens: "Token 数",
@@ -2816,6 +2878,9 @@ export const translations = {
         "GET /interview/sessions 回了 404，所以这个前端和它对话的后端不是同一个版本。面试器已经接好，版本对上就会自动启用。",
       inProgress: "进行中",
       detail: {
+        submitHint: "Ctrl+Enter 提交——代理会在下一个问题之前先评估",
+        abandoned: "这场面试中途放弃了",
+        finished: "这场面试已经结束",
         missing: "这场面试还不存在",
         missingDescription:
           "面试接口可能还没在后端上线，或者这场面试已被删除。去面试页重新开一场。",
@@ -2852,6 +2917,9 @@ export const translations = {
         openReport: "打开报告",
       },
       report: {
+        practiceHint: "学完再用同样的模式练一次——代理会针对你上次薄弱的地方调整。",
+        untitledResource: "没有标题的资料",
+        strongSession: "这场很稳——追问把你推到了深处，而你守住了高度。",
         loadFailed: "没能加载报告",
         stillRunning: "面试还在进行中",
         stillRunningDescription: "结束这场面试后，评估代理会把每个回答打分，生成完整报告。",
@@ -2878,6 +2946,7 @@ export const translations = {
     },
     // Jobs
     jobs: {
+      notLiveSavedTitle: "这个后端版本没有收藏列表",
       title: "职位",
       description: "发现和粘贴的职位，带着证据和你的简历对过分——匹配度在前，元数据在后。",
       sort: {
@@ -2910,6 +2979,13 @@ export const translations = {
       savedTab: "收藏",
       researchRoles: "调研职位",
       detail: {
+        seededBoard: "种子职位库",
+        foundByResearch: "调研代理找到的",
+        pastedByYou: "你自己粘贴的",
+        noAnalysis: "还没有分析，所以没有可引用的东西。在上面跑一次匹配器。",
+        noCitations: "这次匹配没有带回引用。重新跑一次分析——匹配器会为它打分的每一项存一句证据。",
+        analyze: "分析匹配",
+        reAnalyze: "重新分析匹配",
         notInSystem: "系统里没有这个职位",
         notInSystemDescription:
           "它要么被删了，要么后端还没存下来。在职位页粘贴它的 JD →「分析 JD」，就能立刻开始处理。",

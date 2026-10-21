@@ -128,7 +128,7 @@ export default function OffersPage() {
         <CardHeader>
           <CardTitle className="text-base">{t("offers.roleAndOffer")}</CardTitle>
           <CardDescription>
-            One question drives all four answers: what is the role, and what is on the table.
+            {t("offers.oneQuestion")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -311,8 +311,7 @@ export default function OffersPage() {
         <CardHeader>
           <CardTitle className="text-base">{t("offers.compareOffers")}</CardTitle>
           <CardDescription>
-            One offer per line. The engine ranks them by total compensation, with any
-            equity annualized over its vest.
+            {t("offers.offerFormat")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">

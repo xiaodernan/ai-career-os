@@ -172,7 +172,7 @@ export default function ResumeDetailPage() {
                 }
               >
                 <ScanSearch aria-hidden />
-                {structured ? "Re-parse" : "Parse now"}
+                {structured ? t("resumes.detail.reParse") : t("resumes.detail.parseNow")}
               </Button>
             </div>
           </div>
@@ -230,7 +230,7 @@ export default function ResumeDetailPage() {
                   title={t("resumes.detail.notParsedYet")}
                   description={
                     r.status === "parsing" || r.status === "ingesting"
-                      ? "The extraction agent is working through this document — the structured profile appears automatically when it's done."
+                      ? t("resumes.detail.extracting")
                       : "Run the parse above to turn this file into a queryable profile: experience, projects, education and skills with citations back to the document."
                   }
                 />
@@ -326,7 +326,7 @@ export default function ResumeDetailPage() {
                 })
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  No stored versions yet — each parse of this resume stores a new one.
+                  {t("resumes.detail.noVersions")}
                 </p>
               )}
             </CardContent>
@@ -397,8 +397,7 @@ function ScorePanel({ score }: { score: ResumeScore | null }) {
   if (!score || score.overall == null) {
     return (
       <p className="text-sm text-muted-foreground">
-        No review score yet. It is produced by the parsing run — trigger a re-parse above to
-        generate one.
+        {t("resumes.detail.noScore")}
       </p>
     );
   }
@@ -482,7 +481,7 @@ function StructuredProfileView({ structured }: { structured: StructuredResume })
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div className="min-w-0">
               <CardTitle className="font-serif text-lg">
-                {profile?.name ?? structured.profile?.headline ?? "Profile"}
+                {profile?.name ?? structured.profile?.headline ?? t("resumes.detail.profileFallback")}
               </CardTitle>
               {profile?.headline && (
                 <CardDescription className="mt-0.5">{profile.headline}</CardDescription>
@@ -550,7 +549,7 @@ function StructuredProfileView({ structured }: { structured: StructuredResume })
                   style={i === structured.experience!.length - 1 ? { display: "none" } : undefined}
                 />
                 <span className="absolute -left-[3px] top-1.5 size-1.5 rounded-full bg-primary" aria-hidden />
-                <p className="text-sm font-semibold">{exp.role ?? "Role"}</p>
+                <p className="text-sm font-semibold">{exp.role ?? t("resumes.detail.roleFallback")}</p>
                 <p className="text-xs text-muted-foreground">
                   {[exp.company, exp.location].filter(Boolean).join(" · ")}{" "}
                   {[

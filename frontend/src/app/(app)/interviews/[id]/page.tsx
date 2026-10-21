@@ -151,7 +151,7 @@ export default function InterviewRunnerPage() {
               <Check className="size-5" aria-hidden />
             </span>
             <h2 className="text-base font-semibold">
-              {data.status === "completed" ? "This interview is finished" : "This session was abandoned"}
+              {data.status === "completed" ? t("interviews.detail.finished") : t("interviews.detail.abandoned")}
             </h2>
             <p className="max-w-sm text-sm text-muted-foreground">
               {t("interviews.detail.reportReady")}
@@ -267,7 +267,7 @@ export default function InterviewRunnerPage() {
             />
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-2xs text-muted-foreground">
-                Ctrl+Enter to submit · the agent evaluates before the next question
+                {t("interviews.detail.submitHint")}
               </p>
               <div className="flex items-center gap-2">
                 <Button

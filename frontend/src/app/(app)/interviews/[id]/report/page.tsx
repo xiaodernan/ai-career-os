@@ -170,7 +170,7 @@ export default function InterviewReportPage() {
                 {summary ??
                   (overall != null
                     ? overall >= 75
-                      ? "Strong session — the loop pushed you deep and you held the altitude."
+                      ? t("interviews.report.strongSession")
                       : "Solid practice — the weak dimensions below are the fastest wins."
                     : "Per-dimension results below.")}
               </p>
@@ -265,7 +265,7 @@ export default function InterviewReportPage() {
               {study.map((s, i) => (
                 <li key={i} className="flex items-start gap-3 py-2.5 first:pt-0 last:pb-0">
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium">{s.title ?? "Untitled resource"}</p>
+                    <p className="text-sm font-medium">{s.title ?? t("interviews.report.untitledResource")}</p>
                     {s.why && <p className="text-xs text-muted-foreground">{s.why}</p>}
                   </div>
                   {s.url && (
@@ -289,7 +289,7 @@ export default function InterviewReportPage() {
       {/* Actions */}
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border/70 bg-muted/20 p-4">
         <p className="text-xs text-muted-foreground">
-          Run the same mode again after studying — the agent adapts to your previous weak spots.
+          {t("interviews.report.practiceHint")}
         </p>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" asChild>

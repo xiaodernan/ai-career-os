@@ -157,7 +157,7 @@ export default function InterviewsPage() {
                       )}
                       <Button variant="outline" size="sm" asChild className="shrink-0">
                         <Link href={done ? `/interviews/${s.id}/report` : `/interviews/${s.id}`}>
-                          {done ? "Report" : "Continue"}
+                          {done ? t("interviews.reportAction") : t("interviews.continueAction")}
                           <ArrowRight aria-hidden />
                         </Link>
                       </Button>

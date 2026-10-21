@@ -110,7 +110,7 @@ function TracePanel({ trace }: { trace: RunTrace }) {
               <h2 className="font-serif text-lg font-medium">{t("activity.detail.executionTrace")}</h2>
             </div>
             <p className="text-xs text-muted-foreground">
-              Persisted by the orchestrator — expand a row for its raw payload.
+              {t("activity.detail.traceHint")}
             </p>
           </div>
         </CardHeader>

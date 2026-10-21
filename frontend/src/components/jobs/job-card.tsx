@@ -81,7 +81,7 @@ function JobCard({
                 </Link>
               </h3>
               <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
-                <span className="truncate font-medium">{company || "Company not researched yet"}</span>
+                <span className="truncate font-medium">{company || t("jobCard.companyNotResearched")}</span>
                 {job.location && (
                   <span className="inline-flex items-center gap-1">
                     <span aria-hidden>·</span>

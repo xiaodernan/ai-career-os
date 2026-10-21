@@ -66,7 +66,7 @@ export default function RateLimitPage() {
                 </Badge>
                 <span className="text-sm text-muted-foreground">
                   {data.enabled
-                    ? "Requests are throttled per user."
+                    ? t("rateLimit.throttledPerUser")
                     : "No throttling is applied."}
                 </span>
               </div>

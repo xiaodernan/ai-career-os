@@ -420,7 +420,7 @@ export default function DashboardPage() {
                     title={t("dashboard.whereToFocus")}
                     description={
                       data?.recommendedJobs?.length
-                        ? "Ranked by the matching agent against your resume."
+                        ? t("dashboard.skillGapsHint")
                         : "Straight from the job board — run a match to rank them."
                     }
                     action={
@@ -911,10 +911,10 @@ function ResumeScore({
       <MatchRing value={score} size={68} thickness={6} label={t("dashboard.resumeScore")} />
       <div className="min-w-0 text-sm">
         <p className={cn("font-medium", band === "strong" && "text-success", band === "good" && "text-primary", band === "fair" && "text-warning", band === "weak" && "text-destructive")}>
-          {band === "strong" ? "Interview-ready" : band === "good" ? "Solid baseline" : band === "fair" ? "Needs work" : "Weak — start here"}
+          {band === "strong" ? t("dashboard.gradeInterviewReady") : band === "good" ? t("dashboard.gradeSolid") : band === "fair" ? t("dashboard.gradeNeedsWork") : t("dashboard.gradeWeak")}
         </p>
         <p className="mt-0.5 text-xs text-muted-foreground">
-          Overall grade from the resume reviewer. Open the resume for the per-dimension breakdown.
+          {t("dashboard.gradeHint")}
         </p>
       </div>
     </div>
