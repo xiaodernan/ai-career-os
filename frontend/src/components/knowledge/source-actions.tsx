@@ -328,14 +328,21 @@ export function SourceUploadCard() {
   const submit = React.useCallback(
     (files: FileList | null) => {
       if (!files || running) return;
-      // The input keeps its value after a run (the same element is reused for the next
-      // selection), so re-picking the *same* files has to start a fresh batch rather than
-      // appending to a finished one.
+      // The files are copied out *before* the input is cleared, and the order is the
+      // whole fix. A `FileList` is live: it is a view of the input's own selection,
+      // so clearing the input empties it. Clearing first and reading afterwards
+      // handed the batch an empty list -- and an empty list is not an error, it is
+      // a batch of nothing, so the panel showed no row, the request never went
+      // out, and the reader was told nothing at all.
+      //
+      // The input's value is cleared so that re-picking the *same* files starts a
+      // fresh batch rather than appending to a finished one.
+      const chosen = Array.from(files);
       if (inputRef.current) inputRef.current.value = "";
       // `batch.start` rather than the destructured name: the callback's dependency is the
       // function itself, and naming it through the object keeps the dep array honest
       // without `useCallback` inside the hook having to list every value it closes over.
-      void batch.start(Array.from(files), title, kind);
+      void batch.start(chosen, title, kind);
     },
     [batch, title, kind, running]
   );

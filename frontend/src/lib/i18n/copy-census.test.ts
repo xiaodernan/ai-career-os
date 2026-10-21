@@ -92,9 +92,6 @@ const KNOWN: Record<string, string[]> = {
   "app/layout.tsx": [
     "Your personal job-search operating system — evidence-backed matching, resume intelligence, and AI-guided interviews.",
   ],
-  "app/page.tsx": [
-    "Evidence-backed matching, resume intelligence, growth planning and AI-guided interviews — every conclusion traced to your own material.",
-  ],
   "components/ai/agent-timeline.tsx": [
     "Agent execution trace",
     "Completed",
@@ -257,9 +254,9 @@ describe("the browser's copy", () => {
     // of them is on the list above with a file and an owner. The pin moves
     // when a hole closes -- which is the point of pinning it.
     //
-    // 127 with the object literals: the shapes the scan did not read before
+    // 126 with the object literals: the shapes the scan did not read before
     // were a third of the product's copy, and the list above is the honest
     // answer to "what have we not fixed yet".
-    expect(found.length).toBe(127);
+    expect(found.length).toBe(126);
   });
 });

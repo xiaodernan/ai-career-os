@@ -146,11 +146,17 @@ Verified against the live stack, not just in unit tests:
   what its postings actually ask for -- comes from the company page, and
   the copilot's turn is *streamed*: the end-to-end suite reads the frames
   the browser received, because a turn that is answered and a turn that
-  is streamed look identical on the screen. The browser tab's title is
-  read in the reader's language too, on the public pages and on the 404,
-  because the title is rendered into the head the browser paints before
-  any script runs -- and a title that says "AI Career OS" on a Chinese
-  page is the one thing on the page that never changed.
+  is streamed look identical on the screen. The three surfaces that take a
+  *file* or an *answer* are driven the way a reader drives them: the
+  knowledge base's own uploader, the resume dropzone and the interview
+  runner. Driving the real file input found that the knowledge base's
+  uploader had never uploaded anything -- a `FileList` is live, so
+  clearing the input before reading it handed the batch an empty list,
+  and an empty list is not an error, it is a batch of nothing. The browser
+  tab's title is read in the reader's language too, on the public pages
+  and on the 404, because the title is rendered into the head the browser
+  paints before any script runs -- and a title that says "AI Career OS" on
+  a Chinese page is the one thing on the page that never changed.
 - **Job vectors are backfilled and indexed.** `python -m app.ops.embed_jobs`
   embedded all 41 roles, `jobs.embedding` is `vector(1536)` and `idx_jobs_hnsw`
   is built, so `search_jobs` now runs keyword and vector retrieval and fuses them

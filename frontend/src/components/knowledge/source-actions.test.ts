@@ -119,6 +119,41 @@ describe("planBatch", () => {
   });
 });
 
+describe("the upload card's file handling", () => {
+  /**
+   * The order the files are read in.
+   *
+   * A `FileList` is live: it is a view of the input's own selection, so
+   * clearing the input empties it. The card clears the input so that
+   * re-picking the same files starts a fresh batch -- and it did that
+   * before reading them, which handed the batch an empty list. An empty
+   * list is not an error, it is a batch of nothing: the panel showed no
+   * row, the request never went out, and the reader was told nothing at
+   * all. The knowledge base's own uploader had never uploaded anything.
+   *
+   * The end-to-end suite drives the real file input and found it; this
+   * holds the order, because the order is the whole bug and it is
+   * invisible to every other test.
+   */
+  it("copies the files out before it clears the input", () => {
+    const source = readFileSync(
+      new URL("./source-actions.tsx", import.meta.url),
+      "utf8"
+    );
+    // The copy has to come first. The order is the whole bug, and it is
+    // invisible to every other test: the batch was empty, so nothing was
+    // wrong enough to report.
+    const copy = source.indexOf("const chosen = Array.from(files);");
+    const clear = source.indexOf('inputRef.current.value = "";');
+    expect(copy, "the files are never copied out of the live FileList").toBeGreaterThan(-1);
+    expect(clear, "the input is never cleared").toBeGreaterThan(-1);
+    expect(
+      copy,
+      "the input is cleared before the files are read, so the batch is empty"
+    ).toBeLessThan(clear);
+  });
+});
+
 /**
  * The counter's rule, which is the whole point of it: the upload returning is not the
  * document being usable. A row still ingesting counts as *not* done, so "3 of 5" keeps
