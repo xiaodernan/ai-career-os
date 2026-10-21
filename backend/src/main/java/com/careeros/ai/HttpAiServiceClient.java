@@ -2,6 +2,7 @@ package com.careeros.ai;
 
 import com.careeros.common.ApiErrorCode;
 import com.careeros.common.ApiException;
+import com.careeros.common.EnvelopeJson;
 import com.careeros.config.AppProperties;
 import java.net.http.HttpClient;
 import java.time.Duration;
@@ -27,6 +28,9 @@ import org.springframework.web.client.RestClientResponseException;
 public class HttpAiServiceClient implements AiServiceClient {
 
     private static final Logger log = LoggerFactory.getLogger(HttpAiServiceClient.class);
+
+    /** How long an upstream sentence may be before the toast cuts it. */
+    private static final int MAX_UPSTREAM_DETAIL = 300;
 
     private final RestClient restClient;
     private final String internalToken;
@@ -587,6 +591,11 @@ public class HttpAiServiceClient implements AiServiceClient {
      * catch-all below — the MemoryController's documented "answers 404 rather than 403"
      * was unreachable from HTTP. Connection failures and timeouts stay 502: nothing
      * upstream answered, so nothing upstream can be quoted.
+     *
+     * A 400 also carries the upstream's own sentence, because a refused file is the
+     * caller's to fix: "invalid bundle: missing data section: knowledge" tells a reader
+     * which part of their file the product did not understand, and "AI service rejected
+     * the request" names the wrong party and tells them nothing.
      */
     private static ApiException translateStatus(RestClientResponseException e) {
         HttpStatus status = HttpStatus.resolve(e.getStatusCode().value());
@@ -594,9 +603,36 @@ public class HttpAiServiceClient implements AiServiceClient {
             return new ApiException(ApiErrorCode.NOT_FOUND, "Resource not found");
         }
         if (status == HttpStatus.BAD_REQUEST || status == HttpStatus.UNPROCESSABLE_ENTITY) {
-            return new ApiException(ApiErrorCode.BAD_REQUEST, "AI service rejected the request");
+            String detail = upstreamDetail(e);
+            return new ApiException(ApiErrorCode.BAD_REQUEST,
+                    detail != null ? detail : "AI service rejected the request");
         }
         log.error("AI service call failed with status {}", status);
         return new ApiException(ApiErrorCode.AI_SERVICE_ERROR, "AI service request failed");
+    }
+
+    /** The upstream's own sentence, when it sent one that is a sentence. */
+    private static String upstreamDetail(RestClientResponseException e) {
+        try {
+            String body = e.getResponseBodyAsString();
+            if (body == null || body.isBlank()) {
+                return null;
+            }
+            @SuppressWarnings("unchecked")
+            Map<String, Object> parsed = EnvelopeJson.MAPPER.readValue(body, Map.class);
+            Object detail = parsed.get("detail");
+            if (!(detail instanceof String sentence) || sentence.isBlank()) {
+                return null;
+            }
+            // A toast is not a document: a long sentence is cut rather than
+            // scrolled, and the reader still gets the part that names the
+            // problem.
+            return sentence.length() > MAX_UPSTREAM_DETAIL
+                    ? sentence.substring(0, MAX_UPSTREAM_DETAIL) + "…"
+                    : sentence;
+        } catch (Exception ignored) {
+            // A body we cannot read is a body we have no sentence in.
+            return null;
+        }
     }
 }

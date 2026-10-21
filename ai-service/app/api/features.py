@@ -785,8 +785,18 @@ class ImportPlanReq(BaseModel):
 @router.post("/import-plan")
 async def import_plan_ep(req: ImportPlanReq, ctx: Ctx = Depends(require_internal)):
     """13.2 -- plan an idempotent re-import from a bundle."""
+    # The bundle is refused before the run is recorded: a run row for a
+    # request the reader's own file got wrong is bookkeeping about a
+    # request that never happened. And the refusal is a 400, because the
+    # file is the input -- the sentence that says what is wrong with it is
+    # the only thing that can help. A 500 reaches the browser as "AI
+    # service request failed", which names the wrong party and tells the
+    # reader nothing about the file they are holding.
+    try:
+        plan = import_plan_mod.plan_import(req.bundle, existing=req.existing)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
     run_id = await _run(ctx, "import", "import_plan")
-    plan = import_plan_mod.plan_import(req.bundle, existing=req.existing)
     await observability.finish_run(run_id, "completed")
     return plan
 
@@ -799,8 +809,15 @@ class RedactBundleReq(BaseModel):
 @router.post("/redact-bundle")
 async def redact_bundle_ep(req: RedactBundleReq, ctx: Ctx = Depends(require_internal)):
     """13.3 -- redact sections from a bundle before sharing."""
+    # Same rule as the plan: the refusal is a 400, and it happens before
+    # the run is recorded. A section name that is not one of the bundle's
+    # is the caller's typo, and the sentence that says which names are real
+    # is the whole answer.
+    try:
+        result = export_redact_mod.redact_bundle(req.bundle, drop=req.drop)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
     run_id = await _run(ctx, "export", "redact_bundle")
-    result = export_redact_mod.redact_bundle(req.bundle, drop=req.drop)
     await observability.finish_run(run_id, "completed")
     return result
 

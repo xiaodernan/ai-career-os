@@ -297,6 +297,44 @@ test("a bundle exported by the screen is planned and applied by the screen", asy
 });
 
 /**
+ * A file the reader cannot use says what is wrong with the file.
+ *
+ * The reader pastes a bundle to restore from, and sometimes what they
+ * paste is not one. The answer used to name the service instead of the
+ * file: the upstream refused the bundle with a 500, the bridge turned
+ * every 5xx into "AI service request failed", and the reader was told
+ * nothing at all about the file they were holding -- which is the one
+ * thing they could have acted on.
+ *
+ * So the refusal is a 400, and a 400 carries the sentence that says which
+ * part of the file the product did not understand. The reader is told
+ * about the file, and never about the service.
+ */
+test("a bundle the reader cannot use says what is wrong with the file", async ({
+  authedPage,
+}) => {
+  await authedPage.goto("/data");
+
+  // A file that is not a bundle: the reader pasted something else.
+  await authedPage
+    .locator("#import-bundle")
+    .fill(JSON.stringify({ hello: "world" }));
+  await authedPage.getByRole("button", { name: "Build the plan" }).click();
+
+  // The toast names the file.
+  const toast = authedPage.locator("[data-sonner-toast]").first();
+  await expect(toast, "the reader is told nothing at all").toBeVisible({
+    timeout: 20_000,
+  });
+  await expect(toast, "the toast names the service instead of the file").not.toContainText(
+    "AI service"
+  );
+  await expect(toast, "the toast does not say what is wrong with the file").toContainText(
+    "bundle"
+  );
+});
+
+/**
  * The ingestion screen, fed a feed.
  *
  * The fourteen-x engines are the only ones a reader runs against their

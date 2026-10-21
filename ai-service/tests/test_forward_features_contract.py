@@ -146,6 +146,46 @@ async def test_the_ingest_plan_refuses_a_body_that_carries_neither_or_both():
     assert both.value.status_code == 400, "a body with both is a 400"
 
 
+async def test_a_bundle_the_reader_cannot_use_is_a_bad_request_not_a_broken_service():
+    """13.2/13.3 -- the portability routes answer 400 for a bundle they refuse.
+
+    The reader's own file is the input here, so a file that is not a bundle
+    -- or a section name that is not one of the bundle's -- is the reader's
+    mistake, and the sentence that says so is the whole answer. A 500
+    reaches the browser as "AI service request failed", which names the
+    wrong party and tells the reader nothing about the file they are
+    holding.
+
+    The backend already translates a 400 into its own bad-request envelope
+    (`HttpAiServiceClient.translateStatus`), so what was missing was the
+    400: the two ingestion routes beside these already answered it, and
+    these two did not.
+    """
+    from fastapi import HTTPException
+
+    routes = _routes()
+
+    plan = routes["/internal/features/import-plan"]
+    plan_model = _model(plan)
+    with pytest.raises(HTTPException) as bad:
+        await plan.endpoint(plan_model(bundle={"schema_version": "1.1.0"}), _ctx())
+    assert bad.value.status_code == 400, "a bundle the validator refuses is a 400"
+    assert "missing" in str(bad.value.detail).lower(), (
+        f"the answer must say what is wrong with the file: {bad.value.detail}"
+    )
+
+    redact = routes["/internal/features/redact-bundle"]
+    redact_model = _model(redact)
+    with pytest.raises(HTTPException) as bad:
+        await redact.endpoint(
+            redact_model(bundle={"schema_version": "1.1.0"}, drop=["not_a_section"]), _ctx()
+        )
+    assert bad.value.status_code == 400, "an unknown section name is a 400"
+    assert "not_a_section" in str(bad.value.detail), (
+        f"the answer must name the section that is not one: {bad.value.detail}"
+    )
+
+
 def _ctx():
     from app.core.deps import Ctx
 
