@@ -152,13 +152,25 @@ def pipeline_funnel(applications: list[dict]) -> dict:
 
 
 def _days_between(start: datetime | None, end: datetime | None, now: datetime) -> float | None:
+    """Elapsed days from ``start`` to ``end``, or ``None`` when the pair is not a duration.
+
+    Two bounds, each of which decides an input the other cannot. ``end`` may not lie past
+    ``now``: the elapsed time to a moment that has not happened is not a number, and the
+    caller posting these rows owns no clock the engine can trust. ``end`` may not precede
+    ``start`` either -- sorting the two instead reads an impossible history forwards, so a
+    stage entered before the application was submitted came back as a healthy seven-day
+    reply and a future ``applied_at`` (which the import path accepts verbatim) came back as
+    forty days of silence. Neither lie looks different from a real number. Such a pair is
+    omitted on the terms an unparseable timestamp already gets.
+    """
     if start is None or end is None:
         return None
     s = start if start.tzinfo else start.replace(tzinfo=timezone.utc)
     e = end if end.tzinfo else end.replace(tzinfo=timezone.utc)
-    ref = now if now.tzinfo else now.replace(tzinfo=timezone.utc)
-    lo, hi = sorted([s, e])
-    return max(0.0, (hi - lo).total_seconds() / 86400.0)
+    u = now if now.tzinfo else now.replace(tzinfo=timezone.utc)
+    if e > u or e < s:
+        return None
+    return (e - s).total_seconds() / 86400.0
 
 
 def _summarize_durations(values: list[float]) -> dict:
@@ -179,7 +191,10 @@ def response_rate(applications: list[dict], now: datetime | None = None) -> dict
     (reaching OA or later, or a rejection) -- a no is still a response. ``offerRate``
     and ``interviewRate`` are the fractions that reached those stages. ``timeInStage``
     reports avg/median days from submission to each reached stage; applications
-    missing the relevant timestamps are simply omitted from that stage's ``n``.
+    missing the relevant timestamps are simply omitted from that stage's ``n``, and so
+    are the pairs that cannot be a duration at all -- a stage stamped before the
+    submission, or either moment lying past the clock the answer is computed against.
+    An omitted pair lowers ``n``; it is never counted as a short reply.
     """
     apps = _norm(applications)
     ref = now or datetime.now(timezone.utc)
@@ -263,7 +278,12 @@ def insight_digest(applications: list[dict], *, now: datetime | None = None,
     ``created_at`` / ``last_seen`` -- the row's own timestamps plus the last moment
     anything was written to it, which is what the number is named for. Without any
     of them the application is treated as staleness-unknown and is excluded from the
-    stalled list (we do not fabricate "it's been 200 days").
+    stalled list (we do not fabricate "it's been 200 days"). A moment later than ``now``
+    is not activity yet, so it is dropped from the row's candidates rather than treated as
+    the most recent one -- the import path hands the engine an ``applied_at`` read straight
+    out of the caller's bundle, and a stamp from next month must not hide a row that has
+    been quiet since April. A row made up of nothing but future stamps has no honest moment
+    and is excluded on the staleness-unknown terms above.
     ``growthDeltas`` / ``topMatches`` are echoed through when supplied so the digest
     is a composition point for the growth engines, never a source of invented data.
     ``stageCounts`` is a mix, not a funnel: the applications add up to
@@ -283,8 +303,11 @@ def insight_digest(applications: list[dict], *, now: datetime | None = None,
         applied_at = _parse_dt(a.get("applied_at"))
         created_at = _parse_dt(a.get("created_at"))
         last_seen = _parse_dt(a.get("last_seen"))
-        last = max([d for d in (applied_at, created_at, last_seen) if d is not None],
-                   default=None)
+        # Only a moment that has passed can date a row. A bundle-imported ``applied_at``
+        # pointing at next month is not this row's most recent activity, and letting it win
+        # the max would hide a genuinely quiet application from the list it belongs on.
+        last = max([d for d in (applied_at, created_at, last_seen)
+                    if d is not None and d <= ref], default=None)
         if last is None:
             continue
         age = _days_between(last, ref, ref)
