@@ -7,9 +7,12 @@ the ones the health check showed still raised ``TypeError`` / ``AttributeError``
 stale cached row must produce an empty/safe result, never crash the request path.
 """
 
-from app.features import (company, counter_offer, demand, equity, interview_prep,
-                             learning, match, negotiation, offers, prioritize, progress,
-                             progression, readiness, roles, salary)
+import pytest
+
+from app.features import (company, counter_offer, demand, equity, export_redact,
+                             export_render, interview_prep, learning, match, negotiation,
+                             offers, prioritize, progress, progression, readiness,
+                             roles, salary)
 
 
 # --- progression.build_stepping_stones -------------------------------------
@@ -380,4 +383,39 @@ def test_skill_gaps_and_technical_score_skip_non_dict_requirements():
     assert [g["skill"] for g in gaps] == ["Kubernetes"]
     # the denominator counts only the one real must, so holding it is full coverage
     assert match._technical_score(req, [], {"Kubernetes"}) == 1.0
+
+
+# ---------------- export redact / render (Epic 13.1/13.3) ----------------
+# The bundle is user data and reaches these from the bridge; a null bundle, a
+# present-null data/manifest, or a junk entry inside a section must render/redact
+# to a safe result, never raise on the download path.
+
+def test_redact_bundle_none_and_wrong_typed_is_safe():
+    out = export_redact.redact_bundle(None, ["memories"])
+    assert out["manifest"]["redacted_sections"] == []
+    assert "content_hash" in out["manifest"]
+    bad = {"data": None, "manifest": None, "resumes": [1, 2]}
+    out2 = export_redact.redact_bundle(bad, ["resumes"])
+    assert out2["manifest"]["redacted_sections"] == []
+
+
+def test_redact_bundle_still_rejects_unknown_section():
+    # hardening the container must not blunt the typo guard
+    with pytest.raises(ValueError):
+        export_redact.redact_bundle({}, ["not-a-real-section"])
+
+
+def test_to_html_none_bundle_is_safe():
+    out = export_render.to_html(None)
+    assert out.startswith("<!doctype html>")
+    assert "数据导出" in out
+
+
+def test_to_html_null_and_junk_sections_do_not_crash():
+    bundle = {"data": {"profile": None, "resumes": None, "knowledge": [None, "junk"],
+                       "growth_plans": [None, {"target_role": "SE"}]},
+              "manifest": {"counts": None}, "user": None, "generated_at": None}
+    out = export_render.to_html(bundle)
+    assert out.startswith("<!doctype html>")
+    assert "SE" in out          # the one real growth_plans row still renders
 

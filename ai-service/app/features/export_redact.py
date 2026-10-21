@@ -41,15 +41,21 @@ def redact_bundle(bundle: dict, drop: list[str] | None = None) -> dict:
             f"Unknown sections to drop: {invalid}. Valid: {list(VALID_SECTIONS)}"
         )
 
-    out = deepcopy(bundle)
-    data = out.setdefault("data", {})
+    out = deepcopy(bundle) if isinstance(bundle, dict) else {}
+    data = out.get("data")
+    if not isinstance(data, dict):
+        data = {}
+        out["data"] = data
     removed: list[str] = []
     for section in drop:
         if section in data:
             data.pop(section)
             removed.append(section)
 
-    manifest = out.setdefault("manifest", {})
+    manifest = out.get("manifest")
+    if not isinstance(manifest, dict):
+        manifest = {}
+        out["manifest"] = manifest
     manifest["content_hash"] = content_hash(data)
     manifest["redacted_sections"] = sorted(removed)
     return out

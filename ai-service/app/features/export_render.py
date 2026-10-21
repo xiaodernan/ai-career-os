@@ -42,16 +42,31 @@ def _clip(text: Any, n: int = 280) -> str:
     return s if len(s) <= n else s[:n] + "…"
 
 
+def _dict_obj(value: Any) -> dict:
+    """A mapping value, else an empty dict -- a None or wrong-typed key can't crash."""
+    return value if isinstance(value, dict) else {}
+
+
+def _dicts(rows: Any) -> list:
+    """The dict rows of a list, tolerating None and non-dict / non-list input.
+
+    A section in an export bundle can be null or carry a junk entry; iterating
+    it raw would render (or crash on) a string key, so each section funnels
+    through here first."""
+    return [r for r in (rows or []) if isinstance(r, dict)]
+
+
 def _row(label: str, value: str) -> str:
     return f'<tr><th>{_esc(label)}</th><td>{value}</td></tr>'
 
 
 def to_html(bundle: dict) -> str:
     """Render the bundle as a self-contained, print-ready HTML document."""
-    data = bundle.get("data", {})
-    manifest = bundle.get("manifest", {})
-    user = bundle.get("user", {})
-    counts = manifest.get("counts", {})
+    bundle = bundle if isinstance(bundle, dict) else {}
+    data = _dict_obj(bundle.get("data"))
+    manifest = _dict_obj(bundle.get("manifest"))
+    user = _dict_obj(bundle.get("user"))
+    counts = _dict_obj(manifest.get("counts"))
 
     parts: list[str] = []
     parts.append("<!doctype html>")
@@ -95,7 +110,7 @@ def to_html(bundle: dict) -> str:
         parts.append(body)
 
     # Profile
-    profile = data.get("profile")
+    profile = _dict_obj(data.get("profile"))
     if profile:
         rows = "".join(
             _row(k, _clip(profile[k], 500))
@@ -105,7 +120,7 @@ def to_html(bundle: dict) -> str:
         section(_SECTION_TITLES["profile"], f"<table>{rows}</table>" if rows else "<p>—</p>")
 
     # Resumes
-    resumes = data.get("resumes") or []
+    resumes = _dicts(data.get("resumes"))
     if resumes:
         items = "".join(
             f"<li>{_esc(r.get('resume_title') or r.get('title'))} · "
@@ -115,7 +130,7 @@ def to_html(bundle: dict) -> str:
         section(_SECTION_TITLES["resumes"], f"<ul>{items}</ul>")
 
     # Knowledge
-    knowledge = data.get("knowledge") or []
+    knowledge = _dicts(data.get("knowledge"))
     if knowledge:
         items = "".join(
             f"<li>{_esc(d.get('title'))} · {_esc(d.get('media_type'))} · "
@@ -125,7 +140,7 @@ def to_html(bundle: dict) -> str:
         section(_SECTION_TITLES["knowledge"], f"<ul>{items}</ul>")
 
     # Job descriptions
-    jds = data.get("job_descriptions") or []
+    jds = _dicts(data.get("job_descriptions"))
     if jds:
         items = "".join(
             f"<li>{_esc(j.get('title') or j.get('role'))} @ {_esc(j.get('company') or '')} "
@@ -135,7 +150,7 @@ def to_html(bundle: dict) -> str:
         section(_SECTION_TITLES["job_descriptions"], f"<ul>{items}</ul>")
 
     # Interviews
-    interviews = data.get("interviews") or []
+    interviews = _dicts(data.get("interviews"))
     if interviews:
         items = "".join(
             f"<li>{_esc(s.get('job_title') or '面试')} · "
@@ -145,7 +160,7 @@ def to_html(bundle: dict) -> str:
         section(_SECTION_TITLES["interviews"], f"<ul>{items}</ul>")
 
     # Memories
-    memories = data.get("memories") or []
+    memories = _dicts(data.get("memories"))
     if memories:
         items = "".join(
             f"<li>[{_esc(m.get('kind'))}] {_clip(m.get('content'))}</li>"
@@ -154,7 +169,7 @@ def to_html(bundle: dict) -> str:
         section(_SECTION_TITLES["memories"], f"<ul>{items}</ul>")
 
     # Applications — the pipeline the candidate actually worked.
-    apps = data.get("applications") or []
+    apps = _dicts(data.get("applications"))
     if apps:
         items = "".join(
             f"<li>{_esc(a.get('title'))} · {_esc(a.get('company_name') or '')} · "
@@ -166,7 +181,7 @@ def to_html(bundle: dict) -> str:
         section(_SECTION_TITLES["applications"], f"<ul>{items}</ul>")
 
     # Growth runs — one row per report the candidate built.
-    plans = data.get("growth_plans") or []
+    plans = _dicts(data.get("growth_plans"))
     if plans:
         items = "".join(
             f"<li>{_esc(p.get('target_role'))} · 覆盖率 "
