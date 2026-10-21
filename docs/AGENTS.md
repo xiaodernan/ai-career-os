@@ -243,9 +243,9 @@ Three properties hold across every one of them, and the census gates
   a sweep that ran under a random id would put another user's jobs in this one's
   board.
 
-## 8. The six quiet failures
+## 8. The seven quiet failures
 
-Six bugs in this repository looked like working code and were not. They are
+Seven bugs in this repository looked like working code and were not. They are
 written down because each one is a *shape* of failure, not a one-off: the next
 one will have the same shape, and the gate that catches it is the thing to
 reach for.
@@ -334,7 +334,31 @@ Each of these has a gate now, and each gate is a *different kind* of
 check: an order (the copy before the clear), a population (the three
 shapes of copy), a mechanism (the server's answer, not the client's), the
 scan's own rule (an anchor that is not a type), a round trip (the
-redacted file, read back by the path it exists for), and a direction (the
-navigation *items*, not the table's keys). The general shape is the same in
-all six: **the bug was where nobody was looking, and the answer was to look
+redacted file, read back by the path it exists for), a direction (the
+navigation *items*, not the table's keys), and an ownership (the restore
+writes only the caller's rows). The general shape is the same in all
+seven: **the bug was where nobody was looking, and the answer was to look
 there, not to look harder.**
+
+**A rule that was written down and nothing checked.** The re-import's
+second rule says: "Only the caller's own rows are touched. Every read and
+every write is scoped by the user id, so a bundle naming another user's
+rows finds nothing to change rather than writing into someone else's
+account." It was in the code, in the class's own comment, and it was
+false.
+
+A bundle's ids are the source's, and the restore kept them — so the links
+inside the bundle still pointed where they did. But an id that belongs to
+*another account's* row was written into that row: restoring a colleague's
+export changed the colleague's data (a note they had edited since the
+export went went back to the exported text) and gave the caller nothing of
+their own, while the answer said **created**. The rule described the
+intent; the code did the opposite, and the two never met.
+
+The fix is one rule: the bundle's id is kept when it is free and minted
+when it is not. A row the caller already has is found by the caller's own
+scope first, so a same-account restore keeps every id and every link; a row
+the caller does not have gets an id of its own, so restoring into another
+account lands the rows and lands them nowhere else. **A rule in a comment
+is a claim about the code, and a claim has to be checked by something
+that reads the code.**
