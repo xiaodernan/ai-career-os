@@ -28,6 +28,7 @@ export const translations = {
     },
     // Common actions
     common: {
+      pageNotFound: "Page not found",
       refresh: "Refresh",
       open: "Open",
       close: "Close",
@@ -696,6 +697,19 @@ export const translations = {
      * lands here first, and this panel is what they are asked to believe.
      */
     auth: {
+      /**
+       * The public pages' own titles.
+       *
+       * The tab's title is the server's `metadata` before the browser takes
+       * it over, and the server cannot read the locale -- so the reader's
+       * language arrives with the client, and the title follows it.
+       */
+      pageTitles: {
+        signIn: "Sign in",
+        signUp: "Create account",
+        forgotPassword: "Reset your password",
+        resetPassword: "Set a new password",
+      },
       eyebrow: "The job-search operating system",
       headline: "Run your search like an engineer runs a system.",
       description:
@@ -746,6 +760,7 @@ export const translations = {
     },
     // The public landing page (18.2) -- the first thing a visitor reads.
     landing: {
+      pageTitle: "AI Career OS — your personal job-search operating system",
       signIn: "Sign in",
       getStarted: "Get started",
       heroTitle: "Your personal",
@@ -1446,6 +1461,7 @@ export const translations = {
     },
     // Common actions
     common: {
+      pageNotFound: "页面不存在",
       refresh: "刷新",
       open: "打开",
       close: "关闭",
@@ -2048,6 +2064,12 @@ export const translations = {
      * lands here first, and this panel is what they are asked to believe.
      */
     auth: {
+      pageTitles: {
+        signIn: "登录",
+        signUp: "注册账号",
+        forgotPassword: "重置密码",
+        resetPassword: "设置新密码",
+      },
       eyebrow: "求职操作系统",
       headline: "像工程师跑系统一样跑你的求职。",
       description:
@@ -2094,6 +2116,7 @@ export const translations = {
       notOnTheMapDescription: "你访问的路由不存在。它可能已经挪了地方，或者链接打错了。",
     },
     landing: {
+      pageTitle: "AI Career OS — 你的个人求职操作系统",
       signIn: "登录",
       getStarted: "开始使用",
       heroTitle: "属于你的个人",

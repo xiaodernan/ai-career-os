@@ -71,3 +71,60 @@ export function titleForPath(pathname: string, translate?: (key: string) => stri
   }
   return match.label;
 }
+
+/**
+ * The public routes' own titles.
+ *
+ * These are not in the navigation -- a visitor who has not signed in has no
+ * sidebar -- but they are pages the reader can be on, and their title is
+ * the same word in the same place as every other page's.
+ *
+ * The English label is the fallback, exactly as the navigation's own `label`
+ * is: a locale that does not name a page degrades to the product's own
+ * wording rather than to a raw key in a browser tab.
+ */
+const PUBLIC_PAGE_TITLES: Record<string, { key: string; label: string }> = {
+  "/": {
+    key: "landing.pageTitle",
+    label: "AI Career OS — your personal job-search operating system",
+  },
+  "/login": { key: "auth.pageTitles.signIn", label: "Sign in" },
+  "/register": { key: "auth.pageTitles.signUp", label: "Create account" },
+  "/forgot-password": {
+    key: "auth.pageTitles.forgotPassword",
+    label: "Reset your password",
+  },
+  "/reset-password": {
+    key: "auth.pageTitles.resetPassword",
+    label: "Set a new password",
+  },
+};
+
+/**
+ * The title of a path, in the reader's language -- or `null` when the
+ * product does not name that path.
+ *
+ * The `null` matters: the browser tab's title belongs to the server's
+ * `metadata` for a path the product does not name (a 404, a route that
+ * does not exist yet), and the client must not overwrite the server's
+ * answer with a guess.
+ */
+export function routeTitle(
+  pathname: string,
+  translate: (key: string) => string
+): string | null {
+  const publicTitle = PUBLIC_PAGE_TITLES[pathname];
+  if (publicTitle) {
+    const translated = translate(publicTitle.key);
+    return translated === publicTitle.key ? publicTitle.label : translated;
+  }
+  const match = NAV_ITEMS.find(
+    (item) => pathname === item.href || pathname.startsWith(`${item.href}/`)
+  );
+  if (!match) return null;
+  if (match.labelKey) {
+    const translated = translate(match.labelKey);
+    if (translated && translated !== match.labelKey) return translated;
+  }
+  return match.label;
+}

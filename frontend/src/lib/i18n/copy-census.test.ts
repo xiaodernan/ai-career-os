@@ -30,33 +30,12 @@ import { everyOffender, browserSources } from "./copy-scan";
  * person to touch that file removes it.
  */
 const KNOWN: Record<string, string[]> = {
-  "app/(app)/activity/[id]/layout.tsx": [
-    "Run",
-  ],
   "app/(app)/activity/[id]/page.tsx": [
     "Either it was never recorded or it belongs to another workspace. Runs are only ever listed to their owner.",
     "This run is gone",
   ],
-  "app/(app)/activity/layout.tsx": [
-    "Activity",
-  ],
   "app/(app)/activity/page.tsx": [
     "No agent runs yet",
-  ],
-  "app/(app)/applications/layout.tsx": [
-    "Applications",
-  ],
-  "app/(app)/companies/[id]/layout.tsx": [
-    "Company",
-  ],
-  "app/(app)/companies/layout.tsx": [
-    "Companies",
-  ],
-  "app/(app)/copilot/layout.tsx": [
-    "Copilot",
-  ],
-  "app/(app)/dashboard/layout.tsx": [
-    "Dashboard",
   ],
   "app/(app)/dashboard/page.tsx": [
     "AI usage",
@@ -73,26 +52,14 @@ const KNOWN: Record<string, string[]> = {
     "Upload your resume — parsing feeds the knowledge base so every AI answer cites real experience.",
     "Waiting on you",
   ],
-  "app/(app)/growth/layout.tsx": [
-    "Growth",
-  ],
-  "app/(app)/interviews/[id]/layout.tsx": [
-    "Interview",
-  ],
   "app/(app)/interviews/[id]/page.tsx": [
     "Deciding: follow deeper or move topics",
     "Evaluating your answer against your real experience",
-  ],
-  "app/(app)/interviews/[id]/report/layout.tsx": [
-    "Interview report",
   ],
   "app/(app)/interviews/[id]/report/page.tsx": [
     "Adaptivity",
     "Between sessions",
     "Rubric",
-  ],
-  "app/(app)/interviews/layout.tsx": [
-    "Interviews",
   ],
   "app/(app)/interviews/page.tsx": [
     "GET /interview/sessions answered 404, so this frontend and the backend it is talking to are different versions. The runner is wired and activates as soon as they match.",
@@ -100,26 +67,11 @@ const KNOWN: Record<string, string[]> = {
     "Pick a mode above — the session is built from your resume and the job you're targeting, so answers are graded against evidence, not trivia.",
     "This API build has no interview sessions",
   ],
-  "app/(app)/jobs/[id]/layout.tsx": [
-    "Job",
-  ],
   "app/(app)/jobs/[id]/page.tsx": [
     "Explainability",
   ],
-  "app/(app)/jobs/layout.tsx": [
-    "Jobs",
-  ],
   "app/(app)/jobs/page.tsx": [
     "The route answered 404, so this frontend and the backend it is talking to are different versions. Nothing is shown in place of the real rows.",
-  ],
-  "app/(app)/knowledge/layout.tsx": [
-    "Knowledge",
-  ],
-  "app/(app)/networking/layout.tsx": [
-    "Networking",
-  ],
-  "app/(app)/resumes/[id]/layout.tsx": [
-    "Resume",
   ],
   "app/(app)/resumes/[id]/page.tsx": [
     "Data sources",
@@ -131,35 +83,14 @@ const KNOWN: Record<string, string[]> = {
     "Skills",
     "Work history",
   ],
-  "app/(app)/resumes/layout.tsx": [
-    "Resumes",
-  ],
   "app/(app)/resumes/page.tsx": [
     "Drop a file above to get started. The ingestion pipeline extracts experience, projects and skills, then grades resume quality.",
     "GET /resumes answered 404, so this frontend and the backend it is talking to are different versions. Uploads are wired and appear as soon as they match — nothing is invented to fill the gap.",
     "No resumes yet",
     "This API build has no resume list",
   ],
-  "app/(app)/settings/layout.tsx": [
-    "Settings",
-  ],
-  "app/(auth)/forgot-password/page.tsx": [
-    "Reset your password",
-  ],
-  "app/(auth)/login/page.tsx": [
-    "Sign in",
-  ],
-  "app/(auth)/register/page.tsx": [
-    "Create account",
-  ],
-  "app/(auth)/reset-password/page.tsx": [
-    "Set a new password",
-  ],
   "app/layout.tsx": [
     "Your personal job-search operating system — evidence-backed matching, resume intelligence, and AI-guided interviews.",
-  ],
-  "app/not-found.tsx": [
-    "Page not found",
   ],
   "app/page.tsx": [
     "AI Career OS — your personal job-search operating system",
@@ -292,12 +223,14 @@ describe("the browser's copy", () => {
     // The walk itself is the thing that can silently stop: a directory that
     // moves, a suffix that changes. A census of nothing is not a census.
     //
-    // 130 files. The pin is a population, not a budget: a new file belongs
+    // 131 files. The pin is a population, not a budget: a new file belongs
     // in it, and the count moves when one is added or removed. 129 with the
     // 404 body split out of `app/not-found.tsx` -- the page keeps its
     // `metadata` export and the localized body becomes a client component --
     // and 130 with the language switch, which the two public surfaces need.
-    expect(browserSources().length).toBe(130);
+    // 131 with the document title, which sets the browser tab's title in
+    // the reader's language.
+    expect(browserSources().length).toBe(131);
   });
 
   it("has a known list that names the files that still carry copy", () => {
@@ -327,9 +260,9 @@ describe("the browser's copy", () => {
     // of them is on the list above with a file and an owner. The pin moves
     // when a hole closes -- which is the point of pinning it.
     //
-    // 151 with the object literals: the shapes the scan did not read before
+    // 128 with the object literals: the shapes the scan did not read before
     // were a third of the product's copy, and the list above is the honest
     // answer to "what have we not fixed yet".
-    expect(found.length).toBe(151);
+    expect(found.length).toBe(128);
   });
 });
