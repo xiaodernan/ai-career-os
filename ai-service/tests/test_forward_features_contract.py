@@ -46,8 +46,14 @@ FORWARD = {
     "/internal/features/progression": ("ProgressionReq", {"aspirational_role"}),
     "/internal/features/learning-priority": ("LearningPriorityReq", {"target_role"}),
     "/internal/features/interview-prep": ("InterviewPrepReq", {"target_role"}),
-    "/internal/features/pipeline-funnel": ("PipelineFunnelReq", {"applications"}),
-    "/internal/features/response-rate": ("ResponseRateReq", {"applications"}),
+    # The funnel and the response rate read the caller's own applications, and
+    # a workspace with none is a real state rather than a malformed request:
+    # the engine answers with an empty funnel and with zeroes, which is the
+    # honest answer for a search that has not started. A required list made
+    # the first run a 422 -- the same reasoning the digest's model already
+    # carries, and the reason its required set is empty below.
+    "/internal/features/pipeline-funnel": ("PipelineFunnelReq", set()),
+    "/internal/features/response-rate": ("ResponseRateReq", set()),
     "/internal/features/insight-digest": ("InsightDigestReq", set()),
     "/internal/features/dedupe-jobs": ("DedupeJobsReq", {"postings"}),
     "/internal/features/freshness-sweep": ("FreshnessSweepReq", {"postings"}),

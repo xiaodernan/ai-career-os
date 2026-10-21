@@ -18,6 +18,7 @@ no database. The contract this file pins:
 """
 
 import json
+from uuid import UUID
 
 import pytest
 
@@ -74,6 +75,42 @@ def test_bundle_shape_and_manifest():
         "applications": 0, "growth_plans": 0}
     assert m["anonymized"] is False
     assert isinstance(m["content_hash"], str) and len(m["content_hash"]) == 64
+
+
+def test_a_bundle_of_real_rows_serializes():
+    """The rows come out of Postgres, so their ids are `uuid.UUID` and not strings.
+
+    The fixture above uses `"r1"`, because a fixture is easier to read -- and
+    that is exactly why the real export failed: the canonical serializer
+    refused a UUID, so the first real workspace with a row in it could not
+    produce a bundle at all. The ids are the bundle's whole point, so they
+    have to survive the hash.
+
+    This is the case the mocked fetches cannot reach, and it is the one the
+    end-to-end suite reaches on every run.
+    """
+    raw = _sample_raw()
+    raw["resumes"][0]["id"] = UUID("11111111-1111-1111-1111-111111111111")
+    raw["knowledge"][0]["id"] = UUID("22222222-2222-2222-2222-222222222222")
+    raw["interviews"][0]["id"] = UUID("33333333-3333-3333-3333-333333333333")
+    raw["interviews"][0]["turns"][0]["session_id"] = UUID(
+        "33333333-3333-3333-3333-333333333333")
+    raw["profile"]["id"] = UUID("44444444-4444-4444-4444-444444444444")
+
+    bundle = ex.build_bundle("u1", raw)
+
+    # The canonical form is where the hash is computed, and it is where the
+    # UUID has to become a string: the bundle's whole point is to carry the
+    # ids, and a serializer that refused them could not hash a bundle at all.
+    canonical = ex.canonical_json(bundle["data"])
+    assert "11111111-1111-1111-1111-111111111111" in canonical
+    assert "33333333-3333-3333-3333-333333333333" in canonical
+    # And the hash is computed over exactly that.
+    assert bundle["manifest"]["content_hash"] == ex.content_hash(bundle["data"])
+    # The same rows hashed twice are the same hash: a UUID's string form is
+    # stable, which is what "unchanged data exports to the same hash" needs.
+    assert ex.build_bundle("u1", raw)["manifest"]["content_hash"] == \
+        bundle["manifest"]["content_hash"]
 
 
 def test_the_backend_sections_come_from_the_bridge():

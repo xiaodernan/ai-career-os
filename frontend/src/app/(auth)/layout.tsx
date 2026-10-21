@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Sparkles } from "lucide-react";
 import { ThemeToggle } from "@/components/common/theme-toggle";
+import { LocaleSwitcher } from "@/components/common/locale-switcher";
 import { useLocale } from "@/lib/i18n/locale-context";
 
 /**
@@ -83,14 +84,18 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             CareerOS
           </Link>
         </div>
-        <div className="absolute top-4 right-4 hidden lg:block">
+        <div className="absolute top-4 right-4 hidden items-center gap-1 lg:flex">
           <ThemeToggle />
+          <LocaleSwitcher />
         </div>
         <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center px-6 pb-16">
           <div className="animate-fade-up">{children}</div>
         </div>
         <div className="flex items-center justify-between px-6 pb-6 text-xs text-muted-foreground lg:px-12">
-          <ThemeToggle className="lg:hidden" />
+          <div className="flex items-center gap-1">
+            <ThemeToggle className="lg:hidden" />
+            <LocaleSwitcher className="lg:hidden" />
+          </div>
           <span className="ml-auto">© {new Date().getFullYear()} AI Career OS</span>
         </div>
       </section>

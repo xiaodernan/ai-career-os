@@ -279,11 +279,12 @@ describe("the browser's copy", () => {
     // The walk itself is the thing that can silently stop: a directory that
     // moves, a suffix that changes. A census of nothing is not a census.
     //
-    // 129 files. The pin is a population, not a budget: a new file belongs
+    // 130 files. The pin is a population, not a budget: a new file belongs
     // in it, and the count moves when one is added or removed. 129 with the
     // 404 body split out of `app/not-found.tsx` -- the page keeps its
-    // `metadata` export and the localized body becomes a client component.
-    expect(browserSources().length).toBe(129);
+    // `metadata` export and the localized body becomes a client component --
+    // and 130 with the language switch, which the two public surfaces need.
+    expect(browserSources().length).toBe(130);
   });
 
   it("has a known list that names the files that still carry copy", () => {

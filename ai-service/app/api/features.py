@@ -540,7 +540,13 @@ class ApplicationInput(BaseModel):
 
 
 class PipelineFunnelReq(BaseModel):
-    applications: list[ApplicationInput] = Field(min_length=1)
+    """The funnel's input. `applications` is optional because an account with no
+    applications is a real state, not an error: the engine then answers with an
+    empty funnel, which is the honest answer for a workspace that has not
+    started. A required list would make the first run a 422 -- the same
+    reasoning the digest's request already carries."""
+
+    applications: list[ApplicationInput] = Field(default_factory=list)
 
 
 @router.post("/pipeline-funnel")
@@ -553,7 +559,10 @@ async def pipeline_funnel_ep(req: PipelineFunnelReq, ctx: Ctx = Depends(require_
 
 
 class ResponseRateReq(BaseModel):
-    applications: list[ApplicationInput] = Field(min_length=1)
+    """The response rate's input, optional for the same reason as the funnel's:
+    a workspace with no applications answers with zeroes, not with a 422."""
+
+    applications: list[ApplicationInput] = Field(default_factory=list)
 
 
 @router.post("/response-rate")

@@ -29,6 +29,7 @@ import hashlib
 import json
 from datetime import datetime, timezone
 from typing import Any, Callable
+from uuid import UUID
 
 SCHEMA_VERSION = "1.1.0"
 GENERATOR = "ai-career-os"
@@ -133,7 +134,7 @@ async def fetch_interview_sessions(user_id: str) -> list[dict]:
              LEFT JOIN jobs j ON j.id = s.job_id
              LEFT JOIN companies c ON c.id = j.company_id
             WHERE s.user_id=$1::uuid
-            ORDER BY s.created_at""",
+            ORDER BY s.started_at""",
         user_id,
     )
     return [dict(r) for r in rows]
@@ -197,11 +198,18 @@ def _stable(value: Any) -> str:
     Datetimes become ISO strings; dict key order is sorted; sets/lists are sorted
     when their contents are comparable, otherwise left in order. The goal is
     stability across runs, not human prettiness.
+
+    A UUID becomes its string form, because the rows come straight out of
+    Postgres and asyncpg hands back a `uuid.UUID` for every id column -- the
+    bundle's whole point is to carry those ids, and a serializer that refused
+    them could not produce a bundle for any workspace with a row in it.
     """
 
     def default(o: Any) -> Any:
         if isinstance(o, datetime):
             return o.isoformat() if isinstance(o, datetime) else str(o)
+        if isinstance(o, UUID):
+            return str(o)
         if hasattr(o, "isoformat"):
             return o.isoformat()
         raise TypeError(f"not serializable: {type(o).__name__}")

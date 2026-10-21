@@ -57,7 +57,16 @@ def test_missing_user_header_is_400():
 
 
 def test_missing_required_field_is_422():
+    # A route whose request model requires a field answers 422 without it.
+    # The funnel's list is not one of those fields any more: a workspace with
+    # no applications is a real state, and the engine answers with an empty
+    # funnel rather than with a refusal. The route that still requires a
+    # field is the one below.
     r = _post("pipeline-funnel", {})
+    assert r.status_code == 200
+    assert r.json()["totalApplications"] == 0
+
+    r = _post("gap-analysis", {})
     assert r.status_code == 422
 
 

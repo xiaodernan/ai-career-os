@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Compass } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { LocaleSwitcher } from "@/components/common/locale-switcher";
 import { useLocale } from "@/lib/i18n/locale-context";
 
 /**
@@ -12,6 +13,10 @@ import { useLocale } from "@/lib/i18n/locale-context";
  * `metadata`, and Next does not allow a metadata export from a component
  * marked `"use client"` -- the page has to stay a server component, and
  * the part that reads the locale has to be a client one.
+ *
+ * The switch is here because this is a public page: a reader who arrived
+ * on a broken link and cannot read English is also the reader who cannot
+ * find the control that would fix it.
  */
 export function NotFoundBody() {
   const { t } = useLocale();
@@ -31,6 +36,7 @@ export function NotFoundBody() {
       <Button asChild>
         <Link href="/dashboard">{t("common.backToDashboard")}</Link>
       </Button>
+      <LocaleSwitcher className="absolute top-4 right-4" />
     </div>
   );
 }

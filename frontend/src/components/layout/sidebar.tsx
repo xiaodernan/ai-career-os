@@ -7,6 +7,7 @@ import { Globe, PanelLeftClose, PanelLeftOpen, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NAV_ITEMS } from "./nav";
 import { useLocale } from "@/lib/i18n/locale-context";
+import { LocaleSwitcher } from "@/components/common/locale-switcher";
 import {
   Sheet,
   SheetContent,
@@ -132,7 +133,7 @@ function Brand({ collapsed }: { collapsed?: boolean }) {
 
 export function Sidebar() {
   const [collapsed, toggleCollapsed] = useCollapsed();
-  const { locale, setLocale, t } = useLocale();
+  const { t } = useLocale();
 
   return (
     <aside
@@ -146,18 +147,10 @@ export function Sidebar() {
       </div>
       <NavLinks collapsed={collapsed} />
       <div className="border-t border-sidebar-border p-2 space-y-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setLocale(locale === "en" ? "zh" : "en")}
-          aria-label={
-            locale === "en" ? t("chrome.switchToChinese") : t("chrome.switchToEnglish")
-          }
-          className={cn("w-full text-muted-foreground", collapsed && "px-0")}
-        >
-          <Globe aria-hidden />
-          {!collapsed && <span>{locale === "en" ? "中文" : "EN"}</span>}
-        </Button>
+        <LocaleSwitcher
+          className={cn("w-full", collapsed && "px-0")}
+          showLabel={!collapsed}
+        />
         <Button
           variant="ghost"
           size="sm"
