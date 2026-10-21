@@ -28,6 +28,30 @@ const LocaleContext = React.createContext<LocaleContextValue | null>(null);
 
 const STORAGE_KEY = "careeros.locale";
 
+/**
+ * The string at a dotted key, or undefined when the table has none.
+ *
+ * Exported because the rule is worth having in one place: a reader that
+ * needs the string has to be able to tell "there is none" from "here is
+ * the key", and the provider's `t` shows the key itself.
+ */
+export function lookup(table: unknown, key: string): string | undefined {
+  let value: unknown = table;
+  for (const part of key.split(".")) {
+    if (value == null || typeof value !== "object") return undefined;
+    value = (value as Record<string, unknown>)[part];
+  }
+  return typeof value === "string" ? value : undefined;
+}
+
+/** Fill `{name}` holes in a sentence. */
+export function fill(value: string, vars?: Record<string, string | number>): string {
+  if (!vars) return value;
+  return value.replace(/\{(\w+)\}/g, (hole, name: string) =>
+    Object.prototype.hasOwnProperty.call(vars, name) ? String(vars[name]) : hole
+  );
+}
+
 function getInitialLocale(): Locale {
   if (typeof window === "undefined") return "en";
   try {
@@ -65,20 +89,9 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
 
   const t = React.useCallback(
     (key: string, vars?: Record<string, string | number>): string => {
-      const parts = key.split(".");
-      let value: unknown = translations[locale];
-      for (const part of parts) {
-        if (value != null && typeof value === "object") {
-          value = (value as Record<string, unknown>)[part];
-        } else {
-          return key;
-        }
-      }
-      if (typeof value !== "string") return key;
-      if (!vars) return value;
-      return value.replace(/\{(\w+)\}/g, (hole, name: string) =>
-        Object.prototype.hasOwnProperty.call(vars, name) ? String(vars[name]) : hole,
-      );
+      const value = lookup(translations[locale], key);
+      if (value === undefined) return key;
+      return fill(value, vars);
     },
     [locale]
   );

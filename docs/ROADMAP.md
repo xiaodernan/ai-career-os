@@ -87,6 +87,35 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   not: the restore still lands the rows, and it no longer lands them on top of
   somebody else's.
 
+- **The errors a reader sees are still English (measured 2026-10-22, not closed).**
+  A failed write answers with a toast, and the toast says what the server said — in
+  English. The obvious fix is to translate by the **code**, because the code is the
+  contract (`ApiErrorCode`'s own comment says "never rename an emitted code") and
+  the code is what crosses the wire. Measured: the codes are **coarser than the
+  messages**. `RESUME_NOT_FOUND` answers with six different sentences ("No parsed
+  resume available for matching", "This resume has no original file behind it",
+  "Resume not found", …), `BAD_REQUEST` with twelve, `TOKEN_INVALID` with five,
+  `INTERNAL_ERROR` with five, `NOT_FOUND` with four, `DOCUMENT_NOT_FOUND` with
+  three. One sentence per code would tell a reader whose resume exists but has no
+  parsed version that "that resume is no longer there" — so the fix is not a
+  translation, it is a *finer vocabulary*: roughly twenty-five more codes (one per
+  distinct wording), about sixty sentences in each language, and the throw sites
+  changed to name them. The ai-service's own rejections (the bundle's, the
+  ingestion's) would need the same treatment, since a 400 that crosses the bridge
+  arrives as one code whichever service said it. The rule the browser uses to read
+  a key is now in one place (`lib/i18n/locale-context.tsx`'s `lookup`/`fill`), and
+  the piece still missing is reading the reader's language *outside* a render — a
+  toast is raised from an event handler, long after the render that knew it.
+- **The restore's delete semantics for the sections the current state does not
+  cover.** The plan tells a delete from a create by comparing the bundle with the
+  caller's current state, and the backend's current state covers the profile, the
+  applications, the growth runs, the notes and the contacts. The resumes, the
+  knowledge base, the job descriptions, the interviews and the memories are not
+  in it, so a restore cannot remove a row the bundle no longer carries in those
+  sections — the plan never promises a delete it cannot keep. Closing it means
+  either the current state grows to cover them (and the sections whose ids the
+  restore remaps have to be thought about separately) or the restore is documented
+  as an upsert rather than a replacement.
 ## Epic 10 — Growth Intelligence
 - [x] **10.1** Gap & growth analysis engine (evidence-bound coverage verdict).
   (Backend bridge: `POST /api/v1/growth/gap-analysis`; the `/growth` page's
