@@ -37,7 +37,7 @@ export default function MonitoringPage() {
           <p className="text-sm text-muted-foreground">{t("monitoring.description")}</p>
         </div>
         <Button variant="outline" size="sm" onClick={() => void report.refetch()}>
-          Refresh
+          {t("common.refresh")}
         </Button>
       </div>
 
@@ -63,7 +63,7 @@ export default function MonitoringPage() {
           <Card>
             <CardHeader>
               <CardTitle>{t("monitoring.healthVerdict")}</CardTitle>
-              <CardDescription>Overall agent health assessment.</CardDescription>
+              <CardDescription>{t("monitoring.verdictDescription")}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-3">
@@ -111,16 +111,16 @@ export default function MonitoringPage() {
           {typeof data.p50LatencyMs === "number" && typeof data.p95LatencyMs === "number" && (
             <Card>
               <CardHeader>
-                <CardTitle>Latency</CardTitle>
+                <CardTitle>{t("monitoring.latency")}</CardTitle>
                 <CardDescription>
-                  The median call and the slow tail, on one scale.
+                  {t("monitoring.latencyDescription")}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <BarChart
                   data={[
-                    { label: "p50 (median)", value: data.p50LatencyMs!, tone: "primary" },
-                    { label: "p95 (tail)", value: data.p95LatencyMs!, tone: "warning" },
+                    { label: t("monitoring.p50"), value: data.p50LatencyMs!, tone: "primary" },
+                    { label: t("monitoring.p95"), value: data.p95LatencyMs!, tone: "warning" },
                   ]}
                   valueFormat={(v) => `${formatNumber(v)}ms`}
                 />

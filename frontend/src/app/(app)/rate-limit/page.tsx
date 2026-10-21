@@ -28,7 +28,7 @@ export default function RateLimitPage() {
           <p className="text-sm text-muted-foreground">{t("rateLimit.description")}</p>
         </div>
         <Button variant="outline" size="sm" onClick={() => void status.refetch()}>
-          Refresh
+          {t("common.refresh")}
         </Button>
       </div>
 
@@ -54,7 +54,7 @@ export default function RateLimitPage() {
           <Card>
             <CardHeader>
               <CardTitle>{t("rateLimit.rateLimiting")}</CardTitle>
-              <CardDescription>Whether rate limiting is enabled.</CardDescription>
+              <CardDescription>{t("rateLimit.enabledDescription")}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-3">

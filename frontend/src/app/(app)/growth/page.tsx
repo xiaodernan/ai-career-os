@@ -223,8 +223,8 @@ export default function GrowthPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Learning plan</CardTitle>
-              <CardDescription>Foundation first, then the role&apos;s core, then the applied.</CardDescription>
+              <CardTitle>{t("growth.learningPlan")}</CardTitle>
+              <CardDescription>{t("growth.learningPlanDescription")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {(plan?.phases ?? []).length > 0 ? (
@@ -311,6 +311,7 @@ function CoverageBar({ coverage }: { coverage: number }) {
  * say next time instead of rendering three empty groups.
  */
 function ProgressLines({ progress }: { progress?: GrowthReport["progress"] }) {
+  const { t } = useLocale();
   if (!progress) return null;
   const groups = [
     { label: "Closed", skills: progress.closed ?? [], icon: Check, tone: "text-success" },
@@ -321,7 +322,7 @@ function ProgressLines({ progress }: { progress?: GrowthReport["progress"] }) {
   return (
     <div className="space-y-3">
       <div className="flex items-baseline gap-2">
-        <span className="text-sm text-muted-foreground">Coverage</span>
+        <span className="text-sm text-muted-foreground">{t("growth.coverage")}</span>
         {progress.baseline ? (
           <span className="text-sm font-medium tabular-nums">
             {Math.round((progress.currentCoverage ?? 0) * 100)}%
@@ -355,9 +356,9 @@ function ProgressLines({ progress }: { progress?: GrowthReport["progress"] }) {
       ) : (
         !progress.baseline && (
           <p className="text-sm text-muted-foreground">
-            No skill changed state since the last report
+            {t("growth.noSkillChange")}
             {(progress.stillOpen ?? []).length > 0
-              ? ` — ${(progress.stillOpen ?? []).length} still open.`
+              ? ` — ${t("growth.stillOpen", { count: (progress.stillOpen ?? []).length })}`
               : "."}
           </p>
         )

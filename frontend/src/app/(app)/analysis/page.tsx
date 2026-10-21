@@ -42,7 +42,7 @@ export default function AnalysisPage() {
           <p className="text-sm text-muted-foreground">{t("analysis.description")}</p>
         </div>
         <Button variant="outline" size="sm" onClick={() => void digest.refetch()}>
-          Refresh
+          {t("common.refresh")}
         </Button>
       </div>
 
@@ -94,7 +94,7 @@ export default function AnalysisPage() {
           <Card>
             <CardHeader>
               <CardTitle>{t("analysis.stageMix")}</CardTitle>
-              <CardDescription>Applications at each pipeline stage.</CardDescription>
+              <CardDescription>{t("analysis.stageMixDescription")}</CardDescription>
             </CardHeader>
             <CardContent>
               {Object.keys(data.stageCounts ?? {}).length > 0 ? (
@@ -113,7 +113,7 @@ export default function AnalysisPage() {
                 />
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  No applications have reached a stage yet.
+                  {t("analysis.noStageYet")}
                 </p>
               )}
             </CardContent>
@@ -183,7 +183,7 @@ export default function AnalysisPage() {
             <CardHeader>
               <CardTitle>{t("analysis.stalledApplications")}</CardTitle>
               <CardDescription>
-                Applications with no movement past {data.windowDays ?? 14} days.
+                {t("analysis.stalledDescription", { days: data.windowDays ?? 14 })}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -221,7 +221,7 @@ export default function AnalysisPage() {
             <Card>
               <CardHeader>
                 <CardTitle>{t("analysis.insights")}</CardTitle>
-                <CardDescription>What the data says about your pipeline.</CardDescription>
+                <CardDescription>{t("analysis.insightsDescription")}</CardDescription>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2">

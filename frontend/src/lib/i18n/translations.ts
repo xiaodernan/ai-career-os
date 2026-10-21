@@ -399,6 +399,10 @@ export const translations = {
       noStalled: "No stalled applications",
       noStalledDescription: "Every application has recent activity.",
       loadFailed: "Analysis failed to load",
+      stageMixDescription: "Applications at each pipeline stage.",
+      noStageYet: "No applications have reached a stage yet.",
+      stalledDescription: "Applications with no movement past {days} days.",
+      insightsDescription: "What the data says about your pipeline.",
     },
     // Monitoring
     monitoring: {
@@ -415,6 +419,11 @@ export const translations = {
       alertsDescription: "Issues that need attention.",
       regressionsDescription: "Metrics that regressed against baseline.",
       loadFailed: "Monitoring failed to load",
+      latency: "Latency",
+      latencyDescription: "The median call and the slow tail, on one scale.",
+      p50: "p50 (median)",
+      p95: "p95 (tail)",
+      verdictDescription: "Overall agent health assessment.",
     },
     // Rate limit
     rateLimit: {
@@ -431,6 +440,7 @@ export const translations = {
       authDescription: "Per-IP limit for authentication endpoints (login, register, etc.)",
       quotaDescription: "Current token bucket usage for your account.",
       loadFailed: "Rate-limit status failed to load",
+      enabledDescription: "Whether rate limiting is enabled.",
     },
     // Data portability
     data: {
@@ -464,6 +474,10 @@ export const translations = {
       notJson: "That is not valid JSON.",
       printView: "Print view",
       popupBlocked: "Your browser blocked the print window.",
+      opCreate: "Create",
+      opUpdate: "Update",
+      opDelete: "Delete",
+      opTotal: "Total",
     },
     // Ingestion
     ingestion: {
@@ -791,7 +805,7 @@ export const translations = {
         "First report for this role — the next run diffs against this one.",
       progressAgainstPrevious: "Against your previous report for this role.",
       noSkillChange: "No skill changed state since the last report",
-      stillOpen: "still open.",
+      stillOpen: "{count} still open.",
     },
     // Knowledge
     knowledge: {
@@ -1505,6 +1519,10 @@ export const translations = {
       noStalled: "没有停滞的申请",
       noStalledDescription: "每个申请都有近期动态。",
       loadFailed: "分析数据加载失败",
+      stageMixDescription: "每个流水线阶段上的申请数。",
+      noStageYet: "还没有申请走到任何阶段。",
+      stalledDescription: "超过 {days} 天没有任何进展的申请。",
+      insightsDescription: "数据对你的流水线说了什么。",
     },
     // Monitoring
     monitoring: {
@@ -1521,6 +1539,11 @@ export const translations = {
       alertsDescription: "需要关注的问题。",
       regressionsDescription: "相对基线退化的指标。",
       loadFailed: "监控数据加载失败",
+      latency: "延迟",
+      latencyDescription: "中位调用和慢尾，画在同一把尺子上。",
+      p50: "p50（中位）",
+      p95: "p95（长尾）",
+      verdictDescription: "代理的整体健康评估。",
     },
     // Rate limit
     rateLimit: {
@@ -1536,6 +1559,7 @@ export const translations = {
       authDescription: "认证接口的每 IP 限速（登录、注册等）。",
       quotaDescription: "你账户当前的令牌桶用量。",
       loadFailed: "限流状态加载失败",
+      enabledDescription: "限流是否开启。",
     },
     // Data portability
     data: {
@@ -1567,6 +1591,10 @@ export const translations = {
       notJson: "这不是合法的 JSON。",
       printView: "打印视图",
       popupBlocked: "浏览器拦截了打印窗口。",
+      opCreate: "新增",
+      opUpdate: "更新",
+      opDelete: "删除",
+      opTotal: "合计",
     },
     // Ingestion
     ingestion: {
@@ -1865,7 +1893,7 @@ export const translations = {
       progressBaseline: "这是该职位的第一次报告——下次运行会与它对比。",
       progressAgainstPrevious: "与你上次对该职位的报告对比。",
       noSkillChange: "自上次报告以来没有技能状态变化",
-      stillOpen: "项仍未覆盖。",
+      stillOpen: "{count} 项仍未覆盖。",
     },
     // Knowledge
     knowledge: {

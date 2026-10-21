@@ -319,25 +319,33 @@ export default function DataPortabilityPage() {
               <p className="text-sm font-medium">{t("data.plan")}</p>
               <dl className="grid grid-cols-4 gap-2 text-center">
                 <div>
-                  <dt className="text-2xs text-muted-foreground uppercase">Create</dt>
+                  <dt className="text-2xs text-muted-foreground uppercase">
+                    {t("data.opCreate")}
+                  </dt>
                   <dd className="text-lg font-semibold tabular-nums">
                     {importPlan.data.op_counts?.create ?? 0}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-2xs text-muted-foreground uppercase">Update</dt>
+                  <dt className="text-2xs text-muted-foreground uppercase">
+                    {t("data.opUpdate")}
+                  </dt>
                   <dd className="text-lg font-semibold tabular-nums">
                     {importPlan.data.op_counts?.update ?? 0}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-2xs text-muted-foreground uppercase">Delete</dt>
+                  <dt className="text-2xs text-muted-foreground uppercase">
+                    {t("data.opDelete")}
+                  </dt>
                   <dd className="text-lg font-semibold tabular-nums">
                     {importPlan.data.op_counts?.delete ?? 0}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-2xs text-muted-foreground uppercase">Total</dt>
+                  <dt className="text-2xs text-muted-foreground uppercase">
+                    {t("data.opTotal")}
+                  </dt>
                   <dd className="text-lg font-semibold tabular-nums">
                     {importPlan.data.op_counts?.total ?? 0}
                   </dd>

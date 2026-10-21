@@ -80,13 +80,6 @@ const KNOWN: Record<string, string[]> = {
   "app/(app)/activity/page.tsx": [
     "Trace",
   ],
-  "app/(app)/analysis/page.tsx": [
-    "Applications at each pipeline stage.",
-    "Applications with no movement past",
-    "No applications have reached a stage yet.",
-    "Refresh",
-    "What the data says about your pipeline.",
-  ],
   "app/(app)/copilot/page.tsx": [
     "Check again",
     "New chat",
@@ -94,17 +87,6 @@ const KNOWN: Record<string, string[]> = {
   ],
   "app/(app)/dashboard/page.tsx": [
     "Open board",
-  ],
-  "app/(app)/data/page.tsx": [
-    "Create",
-    "Delete",
-    "Total",
-    "Update",
-  ],
-  "app/(app)/growth/page.tsx": [
-    "Coverage",
-    "Learning plan",
-    "No skill changed state since the last report",
   ],
   "app/(app)/ingestion/page.tsx": [
     "Feed content",
@@ -169,21 +151,12 @@ const KNOWN: Record<string, string[]> = {
   "app/(app)/layout.tsx": [
     "Loading your workspace…",
   ],
-  "app/(app)/monitoring/page.tsx": [
-    "Latency",
-    "Overall agent health assessment.",
-    "Refresh",
-  ],
   "app/(app)/networking/page.tsx": [
     "Draft",
     "Draft for",
   ],
   "app/(app)/offers/page.tsx": [
     "Your offer against the market, and what to say.",
-  ],
-  "app/(app)/rate-limit/page.tsx": [
-    "Refresh",
-    "Whether rate limiting is enabled.",
   ],
   "app/(app)/resumes/[id]/page.tsx": [
     "Achievements",
@@ -480,6 +453,6 @@ describe("the browser's copy", () => {
     // census's own reading of the browser, and every one of them is on the
     // list above with a file and an owner. The pin moves when a hole closes
     // -- which is the point of pinning it.
-    expect(found.length).toBe(198);
+    expect(found.length).toBe(181);
   });
 });
