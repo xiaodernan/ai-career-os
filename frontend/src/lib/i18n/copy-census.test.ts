@@ -63,24 +63,6 @@ const NOT_COPY = new Set(["Career", "CareerOS", "OS"]);
  * of pretending the work is finished.
  */
 const KNOWN: Record<string, string[]> = {
-  "app/(app)/activity/[id]/page.tsx": [
-    "Agent",
-    "All activity",
-    "Attribution",
-    "Back to activity",
-    "Cost",
-    "Execution trace",
-    "Finished",
-    "Model",
-    "Open the conversation that ran this",
-    "Run id",
-    "Started",
-    "This run failed",
-  ],
-  "app/(app)/ingestion/page.tsx": [
-    "Feed content",
-    "Source feed",
-  ],
   "app/(app)/interviews/[id]/page.tsx": [
     "Question",
   ],
@@ -94,18 +76,7 @@ const KNOWN: Record<string, string[]> = {
     "Current",
   ],
   "app/(app)/settings/page.tsx": [
-    "Account",
-    "Appearance",
-    "Command palette",
-    "Display name",
-    "Ends this session and revokes the refresh token.",
-    "Keyboard",
-    "Log out",
-    "Rendering in",
     "Save",
-    "Session could not be verified.",
-    "Sign out",
-    "The interface follows your system theme by default.",
   ],
   "components/ai/agent-timeline.tsx": [
     "Agent execution trace",
@@ -132,8 +103,6 @@ const KNOWN: Record<string, string[]> = {
     "Search",
   ],
   "components/growth/growth-engines-panel.tsx": [
-    "Coverage",
-    "Missing for the dream role:",
     "Run",
   ],
   "components/jobs/analyze-jd-dialog.tsx": [
@@ -345,6 +314,6 @@ describe("the browser's copy", () => {
     // census's own reading of the browser, and every one of them is on the
     // list above with a file and an owner. The pin moves when a hole closes
     // -- which is the point of pinning it.
-    expect(found.length).toBe(90);
+    expect(found.length).toBe(62);
   });
 });

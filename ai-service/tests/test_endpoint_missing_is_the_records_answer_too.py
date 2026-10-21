@@ -252,7 +252,10 @@ def test_the_run_a_user_opens_by_url_id_gets_the_version_sentence():
     assert "notLive" not in text, "the screen authors its own not-live copy now; the fallback is no longer what it shows"
     empty = text[text.index("empty={{"):]
     empty = empty[: empty.index("\n        }}")]
-    assert 'title: "This run is gone"' in empty and "Back to activity" in empty, (
+    # The screen's own record-gone copy reads from the locale table for the
+    # link, so the gate accepts the key it reads rather than the English copy.
+    assert 'title: "This run is gone"' in empty \
+        and ('t("activity.detail.backToActivity")' in empty or "Back to activity" in empty), (
         "the screen's own record-gone copy moved: %s" % " ".join(empty.split())[:200])
     boundary = read(BOUNDARY)
     assert stmt(boundary, "description={notLive?.description ??") == \

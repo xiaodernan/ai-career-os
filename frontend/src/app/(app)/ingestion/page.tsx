@@ -90,7 +90,7 @@ export default function IngestionPage() {
       {/* Feed */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Source feed</CardTitle>
+          <CardTitle className="text-base">{t("ingestion.sourceFeed")}</CardTitle>
           <CardDescription>
             RSS 2.0 / Atom XML, or a board-API JSON payload. Nothing is fetched
             from the network here — you paste what the source gave you.
@@ -98,7 +98,7 @@ export default function IngestionPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="feed">Feed content</Label>
+            <Label htmlFor="feed">{t("ingestion.feedContent")}</Label>
             <Textarea
               id="feed"
               value={feed}

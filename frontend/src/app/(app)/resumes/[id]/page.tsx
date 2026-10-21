@@ -402,11 +402,11 @@ function ScorePanel({ score }: { score: ResumeScore | null }) {
     );
   }
   const dims = [
-    { key: "bullets", label: "Bullets & metric density" },
-    { key: "structure", label: "Structure & scannability" },
-    { key: "impact", label: "Impact wording" },
-    { key: "clarity", label: "Clarity" },
-    { key: "keywords", label: "Keyword coverage" },
+    { key: "bullets", label: t("resumes.detail.dimensionBullets") },
+    { key: "structure", label: t("resumes.detail.dimensionStructure") },
+    { key: "impact", label: t("resumes.detail.dimensionImpact") },
+    { key: "clarity", label: t("resumes.detail.dimensionClarity") },
+    { key: "keywords", label: t("resumes.detail.dimensionKeywords") },
   ]
     .map((d) => ({
       ...d,

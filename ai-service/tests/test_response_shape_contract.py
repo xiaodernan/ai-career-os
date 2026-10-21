@@ -3474,13 +3474,50 @@ def _stream_consumers() -> dict[str, dict]:
     return out
 
 
+def _masked_strings(text: str) -> str:
+    """The source with every string literal's contents blanked out.
+
+    A field name inside a string is not a read of that field: a translation
+    key like `activity.detail.finished` is a word the browser shows, not the
+    run panel's `finished` flag being consulted. The mask keeps every
+    character offset and every newline, so a match's line number still points
+    at the line it came from.
+    """
+    out = list(text)
+    i = 0
+    n = len(text)
+    while i < n:
+        ch = text[i]
+        if ch in "\"'`":
+            quote = ch
+            i += 1
+            while i < n:
+                if text[i] == "\\":
+                    # The escape and the character it escapes are both content.
+                    out[i] = " "
+                    if i + 1 < n:
+                        out[i + 1] = " "
+                    i += 2
+                    continue
+                if text[i] == quote:
+                    i += 1
+                    break
+                if text[i] != "\n":
+                    out[i] = " "
+                i += 1
+            continue
+        i += 1
+    return "".join(out)
+
+
 def _task_stream_field_reads() -> dict[str, list[dict]]:
     """Where each field of the run panel's returned object is read, production and tests apart."""
     out = {field: [] for field in TASK_STREAM_FIELDS}
     for path in sorted(list(ROOT_FRONTEND.rglob("*.ts")) + list(ROOT_FRONTEND.rglob("*.tsx"))):
         text = path.read_text(encoding="utf-8", errors="replace")
+        masked = _masked_strings(text)
         for field in TASK_STREAM_FIELDS:
-            for match in re.finditer(rf"\.{field}\b", text):
+            for match in re.finditer(rf"\.{field}\b", masked):
                 number = _line_of(text, match.start())
                 out[field].append({"file": _media_rel(path), "line": number,
                                    "test": ".test." in path.name,

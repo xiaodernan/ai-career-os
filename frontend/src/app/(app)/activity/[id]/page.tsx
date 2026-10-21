@@ -94,7 +94,9 @@ function TracePanel({ trace }: { trace: RunTrace }) {
         <div className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-4">
           <XCircle className="mt-0.5 size-4 shrink-0 text-destructive" aria-hidden />
           <div className="min-w-0">
-            <p className="text-sm font-medium text-destructive">This run failed</p>
+            <p className="text-sm font-medium text-destructive">
+              {t("activity.detail.thisRunFailed")}
+            </p>
             <p className="mt-0.5 font-mono text-xs break-words text-muted-foreground">{run.error}</p>
           </div>
         </div>
@@ -105,7 +107,7 @@ function TracePanel({ trace }: { trace: RunTrace }) {
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <Braces className="size-4 text-muted-foreground" aria-hidden />
-              <h2 className="font-serif text-lg font-medium">Execution trace</h2>
+              <h2 className="font-serif text-lg font-medium">{t("activity.detail.executionTrace")}</h2>
             </div>
             <p className="text-xs text-muted-foreground">
               Persisted by the orchestrator — expand a row for its raw payload.
@@ -128,40 +130,40 @@ function TracePanel({ trace }: { trace: RunTrace }) {
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
             <Coins className="size-4 text-muted-foreground" aria-hidden />
-            <h2 className="font-serif text-lg font-medium">Attribution</h2>
+            <h2 className="font-serif text-lg font-medium">{t("activity.detail.attribution")}</h2>
           </div>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           <dl className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
             <div className="flex items-center justify-between gap-3 border-b border-border/60 pb-2">
-              <dt className="text-muted-foreground">Run id</dt>
+              <dt className="text-muted-foreground">{t("activity.detail.runId")}</dt>
               <dd className="truncate font-mono text-xs">{run.id}</dd>
             </div>
             <div className="flex items-center justify-between gap-3 border-b border-border/60 pb-2">
-              <dt className="text-muted-foreground">Cost</dt>
+              <dt className="text-muted-foreground">{t("activity.detail.cost")}</dt>
               <dd className="tabular-nums">{totals.costUsd ? formatUsd(totals.costUsd) : "—"}</dd>
             </div>
             <div className="flex items-center justify-between gap-3 border-b border-border/60 pb-2">
-              <dt className="text-muted-foreground">Started</dt>
+              <dt className="text-muted-foreground">{t("activity.detail.started")}</dt>
               <dd>{run.startedAt ? `${formatDateTime(run.startedAt)} · ${relativeTime(run.startedAt)}` : "—"}</dd>
             </div>
             <div className="flex items-center justify-between gap-3 border-b border-border/60 pb-2">
-              <dt className="text-muted-foreground">Finished</dt>
+              <dt className="text-muted-foreground">{t("activity.detail.finished")}</dt>
               <dd>{run.finishedAt ? relativeTime(run.finishedAt) : "still running"}</dd>
             </div>
             <div className="flex items-center justify-between gap-3 border-b border-border/60 pb-2">
-              <dt className="text-muted-foreground">Model</dt>
+              <dt className="text-muted-foreground">{t("activity.detail.model")}</dt>
               <dd className="truncate font-mono text-xs">{run.model || "—"}</dd>
             </div>
             <div className="flex items-center justify-between gap-3 border-b border-border/60 pb-2">
-              <dt className="text-muted-foreground">Agent</dt>
+              <dt className="text-muted-foreground">{t("activity.detail.agent")}</dt>
               <dd>{run.agent ?? "career"}</dd>
             </div>
           </dl>
           {run.conversationId && (
             <Button variant="outline" size="sm" asChild className="self-start">
               <Link href={`/copilot?c=${run.conversationId}`}>
-                Open the conversation that ran this
+                {t("activity.detail.openConversation")}
                 <ArrowLeft className="rotate-180" aria-hidden />
               </Link>
             </Button>
@@ -174,6 +176,7 @@ function TracePanel({ trace }: { trace: RunTrace }) {
 
 export default function ActivityRunPage() {
   const params = useParams<{ id: string }>();
+  const { t } = useLocale();
   const id = params?.id ?? null;
 
   const query = useQuery({
@@ -207,7 +210,7 @@ export default function ActivityRunPage() {
           <Button variant="outline" size="sm" asChild>
             <Link href="/activity">
               <ArrowLeft aria-hidden />
-              All activity
+              {t("activity.detail.allActivity")}
             </Link>
           </Button>
         }
@@ -237,7 +240,7 @@ export default function ActivityRunPage() {
             "Either it was never recorded or it belongs to another workspace. Runs are only ever listed to their owner.",
           action: (
             <Button variant="outline" size="sm" asChild>
-              <Link href="/activity">Back to activity</Link>
+              <Link href="/activity">{t("activity.detail.backToActivity")}</Link>
             </Button>
           ),
         }}

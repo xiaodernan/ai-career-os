@@ -234,9 +234,10 @@ function EngineAnswer({ engine, data }: { engine: EngineKey; data: Record<string
       return (
         <div className="space-y-2">
           <p className="text-sm">
-            Coverage {Math.round(Number(data.coverage ?? 0) * 100)}% ·{" "}
-            {String(data.coveredCount ?? 0)} covered, {String(data.partialCount ?? 0)} partial,{" "}
-            {String(data.expectedSkillCount ?? 0)} expected
+            {t("growthEngines.coverage")} {Math.round(Number(data.coverage ?? 0) * 100)}% ·{" "}
+            {String(data.coveredCount ?? 0)} {t("growthEngines.covered")},{" "}
+            {String(data.partialCount ?? 0)} {t("growthEngines.partial")},{" "}
+            {String(data.expectedSkillCount ?? 0)} {t("growthEngines.expected")}
           </p>
           <ul className="space-y-1">
             {((data.gaps ?? []) as Array<{ name?: string; importance?: string }>).map((g, i) => (
@@ -341,7 +342,8 @@ function EngineAnswer({ engine, data }: { engine: EngineKey; data: Record<string
           </ul>
           {((data.missing ?? []) as string[]).length > 0 && (
             <p className="text-xs text-muted-foreground">
-              Missing for the dream role: {((data.missing ?? []) as string[]).join(", ")}.
+              {t("growthEngines.missingForDreamRole")}{" "}
+              {((data.missing ?? []) as string[]).join(", ")}.
             </p>
           )}
         </div>
@@ -376,7 +378,7 @@ function EngineAnswer({ engine, data }: { engine: EngineKey; data: Record<string
       return (
         <div className="space-y-2">
           <p className="text-sm text-muted-foreground">
-            Coverage{" "}
+            {t("growthEngines.coverage")}{" "}
             {Math.round(Number(data.previousCoverage ?? 0) * 100)}% →{" "}
             {Math.round(Number(data.currentCoverage ?? 0) * 100)}%
           </p>

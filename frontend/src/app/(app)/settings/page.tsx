@@ -55,9 +55,9 @@ export default function SettingsPage() {
       {/* Account */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Account</CardTitle>
+          <CardTitle className="text-base">{t("settings.account")}</CardTitle>
           <CardDescription>
-            Live from /users/me — the display name is editable, the email rides on your login.
+            {t("settings.accountDescription")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -69,7 +69,7 @@ export default function SettingsPage() {
           ) : user ? (
             <>
               <div className="space-y-2">
-                <Label htmlFor="display-name">Display name</Label>
+                <Label htmlFor="display-name">{t("settings.displayName")}</Label>
                 <div className="flex items-center gap-2">
                   <Input
                     id="display-name"
@@ -97,17 +97,19 @@ export default function SettingsPage() {
               <Separator />
               <div className="flex items-center justify-between gap-4 pt-1">
                 <div>
-                  <p className="text-sm font-medium">Sign out</p>
-                  <p className="text-sm text-muted-foreground">Ends this session and revokes the refresh token.</p>
+                  <p className="text-sm font-medium">{t("settings.signOut")}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {t("settings.signOutDescription")}
+                  </p>
                 </div>
                 <Button variant="danger" size="sm" onClick={() => setConfirmOpen(true)}>
                   <LogOut aria-hidden />
-                  Log out
+                  {t("settings.logOutConfirm")}
                 </Button>
               </div>
             </>
           ) : (
-            <p className="text-sm text-muted-foreground">Session could not be verified.</p>
+            <p className="text-sm text-muted-foreground">{t("settings.sessionUnverified")}</p>
           )}
         </CardContent>
       </Card>
@@ -119,8 +121,8 @@ export default function SettingsPage() {
       {/* Appearance */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Appearance</CardTitle>
-          <CardDescription>The interface follows your system theme by default.</CardDescription>
+          <CardTitle className="text-base">{t("settings.appearance")}</CardTitle>
+          <CardDescription>{t("settings.appearanceDescription")}</CardDescription>
         </CardHeader>
         <CardContent>
           <RadioGroup
@@ -150,7 +152,10 @@ export default function SettingsPage() {
             ))}
           </RadioGroup>
           <p className="mt-3 text-xs text-muted-foreground" aria-live="polite">
-            Rendering in {resolvedTheme === "dark" ? "dark" : "light"} palette.
+            {t("settings.renderingIn", {
+              palette:
+                resolvedTheme === "dark" ? t("settings.paletteDark") : t("settings.paletteLight"),
+            })}
           </p>
         </CardContent>
       </Card>
@@ -158,13 +163,13 @@ export default function SettingsPage() {
       {/* Keyboard */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Keyboard</CardTitle>
+          <CardTitle className="text-base">{t("settings.keyboard")}</CardTitle>
         </CardHeader>
         <CardContent>
           <ul className="space-y-2 text-sm">
             <li className="flex items-center justify-between">
               <span className="flex items-center gap-2 text-muted-foreground">
-                <Keyboard className="size-4" aria-hidden /> Command palette
+                <Keyboard className="size-4" aria-hidden /> {t("settings.commandPalette")}
               </span>
               <kbd className="rounded-md border border-border bg-muted px-2 py-0.5 font-mono text-xs">
                 {isMac ? "⌘K" : "Ctrl K"}
