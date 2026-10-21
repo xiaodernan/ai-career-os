@@ -82,29 +82,10 @@ const KNOWN: Record<string, string[]> = {
     "Source feed",
   ],
   "app/(app)/interviews/[id]/page.tsx": [
-    "All interviews",
-    "Answer evaluation",
-    "Finish & get report",
-    "Finish early",
-    "Follow-up — go deeper",
-    "Loading interview…",
-    "New topic",
-    "Next question",
-    "Open report",
-    "Opening",
     "Question",
-    "Submit answer",
-    "This session so far",
   ],
   "app/(app)/interviews/[id]/report/page.tsx": [
-    "All interviews",
-    "Continue interview",
-    "Generate report",
-    "Loading report…",
     "Open",
-    "Practice again",
-    "What was weak",
-    "What went well",
   ],
   "app/(app)/jobs/page.tsx": [
     "Saved",
@@ -364,6 +345,6 @@ describe("the browser's copy", () => {
     // census's own reading of the browser, and every one of them is on the
     // list above with a file and an owner. The pin moves when a hole closes
     // -- which is the point of pinning it.
-    expect(found.length).toBe(112);
+    expect(found.length).toBe(90);
   });
 });

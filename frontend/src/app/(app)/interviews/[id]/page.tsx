@@ -104,7 +104,7 @@ export default function InterviewRunnerPage() {
         <Skeleton className="h-4 w-40" />
         <Skeleton className="h-40 rounded-xl" />
         <Skeleton className="h-24 rounded-xl" />
-        <span className="sr-only">Loading interview…</span>
+        <span className="sr-only">{t("interviews.detail.loading")}</span>
       </div>
     );
   }
@@ -122,7 +122,7 @@ export default function InterviewRunnerPage() {
                 description={t("interviews.detail.missingDescription")}
                 action={
                   <Button variant="ai" size="sm" asChild>
-                    <Link href="/interviews">All interviews</Link>
+                    <Link href="/interviews">{t("interviews.detail.allInterviews")}</Link>
                   </Button>
                 }
               />
@@ -153,12 +153,11 @@ export default function InterviewRunnerPage() {
               {data.status === "completed" ? "This interview is finished" : "This session was abandoned"}
             </h2>
             <p className="max-w-sm text-sm text-muted-foreground">
-              The evaluator produced a full report — dimension scores, what went well, weak spots,
-              study material and the depth trajectory.
+              {t("interviews.detail.reportReady")}
             </p>
             <Button variant="ai" size="sm" asChild>
               <Link href={`/interviews/${data.id}/report`}>
-                Open report
+                {t("interviews.detail.openReport")}
                 <ArrowRight aria-hidden />
               </Link>
             </Button>
@@ -232,15 +231,15 @@ export default function InterviewRunnerPage() {
             <div className="flex items-center gap-2">
               {question.kind === "followup" ? (
                 <Badge variant="ai" className="text-2xs font-normal">
-                  Follow-up — go deeper
+                  {t("interviews.detail.followUp")}
                 </Badge>
               ) : question.kind === "next_topic" ? (
                 <Badge variant="secondary" className="text-2xs font-normal">
-                  New topic
+                  {t("interviews.detail.newTopic")}
                 </Badge>
               ) : (
                 <Badge variant="outline" className="text-2xs font-normal">
-                  Opening
+                  {t("interviews.detail.opening")}
                 </Badge>
               )}
               {question.topic && (
@@ -275,7 +274,7 @@ export default function InterviewRunnerPage() {
                   disabled={submit.isPending}
                 >
                   <Flag aria-hidden />
-                  Finish & get report
+                  {t("interviews.detail.finishAndReport")}
                 </Button>
                 <Button
                   variant="ai"
@@ -285,7 +284,7 @@ export default function InterviewRunnerPage() {
                   onClick={sendAnswer}
                 >
                   <Send aria-hidden />
-                  Submit answer
+                  {t("interviews.detail.submitAnswer")}
                 </Button>
               </div>
             </div>
@@ -318,8 +317,10 @@ export default function InterviewRunnerPage() {
           <summary className="flex cursor-pointer items-center gap-2 px-4 py-3 text-sm font-medium text-muted-foreground hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-primary/30">
             <ChevronRight className="size-3.5 transition-transform duration-150 group-open:rotate-90" aria-hidden />
             <ListChecks className="size-4" aria-hidden />
-            This session so far
-            <span className="ml-auto text-xs tabular-nums">{turns.length} answered</span>
+            {t("interviews.detail.thisSessionSoFar")}
+            <span className="ml-auto text-xs tabular-nums">
+              {t("interviews.detail.answered", { count: turns.length })}
+            </span>
           </summary>
           <div className="px-4 pb-4">
             <Separator className="mb-3" />
@@ -367,13 +368,14 @@ export default function InterviewRunnerPage() {
 /* ------------------------------- fragments -------------------------------- */
 
 function BackLink() {
+  const { t } = useLocale();
   return (
     <Link
       href="/interviews"
       className="-ml-1 inline-flex w-fit items-center gap-1.5 rounded-md px-1 text-sm text-muted-foreground hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-primary/30"
     >
       <ArrowLeft className="size-4" aria-hidden />
-      All interviews
+      {t("interviews.detail.allInterviews")}
     </Link>
   );
 }
@@ -426,7 +428,7 @@ function EvaluationPanel({
         <div className="flex flex-wrap items-center justify-between gap-2">
           <CardTitle className="flex items-center gap-2 text-base">
             <AIBadge label="evaluator" />
-            Answer evaluation
+            {t("interviews.detail.answerEvaluation")}
           </CardTitle>
           {typeof score === "number" && (
             <span
@@ -493,24 +495,24 @@ function EvaluationPanel({
           <p className="text-xs text-muted-foreground">
             {pendingNext
               ? pendingNext.kind === "followup"
-                ? "The agent wants to go deeper."
-                : "The agent is moving to the next topic."
-              : "The agent has no follow-up — it suggests closing out for the report."}
+                ? t("interviews.detail.wantsDeeper")
+                : t("interviews.detail.movingToNextTopic")
+              : t("interviews.detail.noFollowUp")}
           </p>
           <div className="flex items-center gap-2">
             {!pendingNext && (
               <Button variant="outline" size="sm" loading={finalizing} onClick={onFinish}>
                 <Flag aria-hidden />
-                Finish & get report
+                {t("interviews.detail.finishAndReport")}
               </Button>
             )}
             {pendingNext && (
               <>
                 <Button variant="ghost" size="sm" onClick={onFinish} disabled={finalizing}>
-                  Finish early
+                  {t("interviews.detail.finishEarly")}
                 </Button>
                 <Button variant="ai" size="sm" onClick={onNext}>
-                  Next question
+                  {t("interviews.detail.nextQuestion")}
                   <ArrowRight aria-hidden />
                 </Button>
               </>

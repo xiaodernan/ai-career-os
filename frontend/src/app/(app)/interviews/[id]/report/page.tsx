@@ -46,7 +46,7 @@ export default function InterviewReportPage() {
         <Skeleton className="h-4 w-40" />
         <Skeleton className="h-32 rounded-xl" />
         <Skeleton className="h-64 rounded-xl" />
-        <span className="sr-only">Loading report…</span>
+        <span className="sr-only">{t("interviews.report.loading")}</span>
       </div>
     );
   }
@@ -97,7 +97,7 @@ export default function InterviewReportPage() {
                 action={
                   <Button variant="ai" size="sm" asChild>
                     <Link href={`/interviews/${data.id}`}>
-                      Continue interview
+                      {t("interviews.report.continueInterview")}
                       <ArrowRight aria-hidden />
                     </Link>
                   </Button>
@@ -115,7 +115,7 @@ export default function InterviewReportPage() {
                     loading={finalize.isPending}
                     onClick={() => finalize.mutate(undefined, { onSuccess: () => void session.refetch() })}
                   >
-                    Generate report
+                    {t("interviews.report.generateReport")}
                   </Button>
                 }
               />
@@ -207,7 +207,7 @@ export default function InterviewReportPage() {
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center gap-2 text-base text-success">
                 <ThumbsUp className="size-4" aria-hidden />
-                What went well
+                {t("interviews.report.whatWentWell")}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -224,7 +224,7 @@ export default function InterviewReportPage() {
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center gap-2 text-base text-warning">
                 <ThumbsDown className="size-4" aria-hidden />
-                What was weak
+                {t("interviews.report.whatWasWeak")}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -285,12 +285,12 @@ export default function InterviewReportPage() {
         </p>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" asChild>
-            <Link href="/interviews">All interviews</Link>
+            <Link href="/interviews">{t("interviews.report.allInterviews")}</Link>
           </Button>
           <Button variant="ai" size="sm" asChild>
             <Link href={`/interviews/${data.id}`}>
               <Play aria-hidden />
-              Practice again
+              {t("interviews.report.practiceAgain")}
             </Link>
           </Button>
         </div>
@@ -302,14 +302,15 @@ export default function InterviewReportPage() {
 /* ------------------------------- fragments -------------------------------- */
 
 function BackLink({ id }: { id: string | null }) {
+  const { t } = useLocale();
   return (
     <Link
       href="/interviews"
       className="-ml-1 inline-flex w-fit items-center gap-1.5 rounded-md px-1 text-sm text-muted-foreground hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-primary/30"
     >
       <ArrowLeft className="size-4" aria-hidden />
-      All interviews
-      {id ? <span className="sr-only">from report {id}</span> : null}
+      {t("interviews.report.allInterviews")}
+      {id ? <span className="sr-only">{t("interviews.report.fromReport", { id })}</span> : null}
     </Link>
   );
 }
