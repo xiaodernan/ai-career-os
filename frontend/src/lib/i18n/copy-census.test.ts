@@ -30,13 +30,6 @@ import { everyOffender, browserSources } from "./copy-scan";
  * person to touch that file removes it.
  */
 const KNOWN: Record<string, string[]> = {
-  "app/(app)/interviews/[id]/page.tsx": [
-    "Deciding: follow deeper or move topics",
-    "Evaluating your answer against your real experience",
-  ],
-  "app/layout.tsx": [
-    "Your personal job-search operating system — evidence-backed matching, resume intelligence, and AI-guided interviews.",
-  ],
   "components/ai/agent-timeline.tsx": [
     "Agent execution trace",
     "Completed",
@@ -173,10 +166,10 @@ describe("the browser's copy", () => {
     // of them is on the list above with a file and an owner. The pin moves
     // when a hole closes -- which is the point of pinning it.
     //
-    // 70 with the object literals: the shapes the scan did not read before
+    // 67 with the object literals: the shapes the scan did not read before
     // were a third of the product's copy, and the list above is the honest
-    // answer to "what have we not fixed yet". Ten files, all of them in a
-    // file another session is working in at the same time.
-    expect(found.length).toBe(70);
+    // answer to "what have we not fixed yet". Eight files, all of them in
+    // a file another session is working in at the same time.
+    expect(found.length).toBe(67);
   });
 });

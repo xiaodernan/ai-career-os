@@ -73,3 +73,26 @@ export function absoluteMetadata(
     return { title: { absolute: read(locale, key) }, description };
   };
 }
+
+/**
+ * The root's metadata: the product's name, the title template every
+ * section's title takes, and the site's own description.
+ *
+ * The name and the template are the brand's -- they are the same in
+ * every language -- but the description is a sentence, and a sentence
+ * the reader might not read is a sentence that should be in their
+ * language. So the description travels the same road the titles do.
+ */
+export function rootMetadata(): () => Promise<Metadata> {
+  return async function generateMetadata(): Promise<Metadata> {
+    const store = await cookies();
+    const locale = localeFromCookie(store.get(LOCALE_COOKIE)?.value);
+    return {
+      title: {
+        default: "AI Career OS",
+        template: "%s · AI Career OS",
+      },
+      description: read(locale, "common.metaDescription"),
+    };
+  };
+}

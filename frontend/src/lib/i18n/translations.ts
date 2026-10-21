@@ -30,6 +30,15 @@ export const translations = {
     common: {
       pageNotFound: "Page not found",
       /**
+       * The site's own description.
+       *
+       * It is read by a search engine rather than by the page, so it is
+       * a sentence in the reader's language -- and the server reads the
+       * locale out of the cookie to put it there.
+       */
+      metaDescription:
+        "Your personal job-search operating system — evidence-backed matching, resume intelligence, and AI-guided interviews.",
+      /**
        * The notice a page shows when the backend it is talking to is a
        * different version from the one it was written for.
        *
@@ -1379,8 +1388,17 @@ export const translations = {
         noFollowUp: "The agent has no follow-up — it suggests closing out for the report.",
         finishEarly: "Finish early",
         nextQuestion: "Next question",
-      question: "Question {number}",
-      reportReady:
+        question: "Question {number}",
+        /**
+         * The two steps the runner shows while it thinks.
+         *
+         * They are the only words on the screen for the seconds the
+         * evaluator takes, and they say what is happening -- so they are
+         * the reader's words.
+         */
+        evaluating: "Evaluating your answer against your real experience",
+        deciding: "Deciding: follow deeper or move topics",
+        reportReady:
           "The evaluator produced a full report — dimension scores, what went well, weak spots, study material and the depth trajectory.",
         openReport: "Open report",
       },
@@ -1540,6 +1558,8 @@ export const translations = {
     // Common actions
     common: {
       pageNotFound: "页面不存在",
+      metaDescription:
+        "你的个人求职操作系统——有证据支撑的匹配、简历情报，以及 AI 引导的面试。",
       notLiveTitle: "这个后端版本没有这一页的数据",
       refresh: "刷新",
       open: "打开",
@@ -2753,6 +2773,8 @@ export const translations = {
         finishEarly: "提前结束",
         nextQuestion: "下一个问题",
         question: "第 {number} 题",
+        evaluating: "正在拿你的真实经历评估这个回答",
+        deciding: "正在决定：再往深一层，还是换个话题",
         reportReady:
           "评估代理已经产出了完整报告——各维度得分、哪些答得好、哪些薄弱、学习材料和深度曲线。",
         openReport: "打开报告",

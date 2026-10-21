@@ -298,8 +298,8 @@ export default function InterviewRunnerPage() {
       {busy && !showingEvaluation && (
         <ProcessingSteps
           steps={[
-            { id: "eval", label: "Evaluating your answer against your real experience", status: "active" },
-            { id: "next", label: "Deciding: follow deeper or move topics", status: "pending" },
+            { id: "eval", label: t("interviews.detail.evaluating"), status: "active" },
+            { id: "next", label: t("interviews.detail.deciding"), status: "pending" },
           ]}
         />
       )}

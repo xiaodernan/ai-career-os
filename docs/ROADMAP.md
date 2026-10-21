@@ -234,16 +234,18 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   product's copy is written as one, and a bar labelled "Technical" on a
   Chinese page was exactly as invisible to the gate as an attribute was.
   `KNOWN` is the honest list of what is left, file by file and string by
-  string, and the number is pinned: 127, every one of them in a file
+  string, and the number is pinned: 67, every one of them in a file
   another session is working in at the same time.
   `scripts/regen-known.mjs` regenerates the list from the browser's own
   sources — through the same scan the gate uses, so the two cannot drift
   and leave the list measuring a different population than the gate.)
   The pipeline's seven stage names live in one table (`stages.*`) read
   through `lib/pipeline.ts`'s three readers, the score dimensions live in
-  one table (`dimensions.*`) read through `lib/dimensions.ts`, and `t()`
-  fills a `{hole}` so a sentence can be written in one language's word
-  order and not another's.)
+  one table (`dimensions.*`) read through `lib/dimensions.ts`, the
+  document kinds and the ingestion stages in tables of their own
+  (`lib/source-kinds.ts`, `lib/ingest-steps.ts`), the section overlines in
+  one (`eyebrows.*`), and `t()` fills a `{hole}` so a sentence can be
+  written in one language's word order and not another's.)
 - [x] **17.1c** The page's title, in the reader's language.
   (The title is rendered into the document's head, and the head is the
   browser's first paint and the crawler's whole view — so it has to be
