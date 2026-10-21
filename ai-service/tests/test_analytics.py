@@ -141,6 +141,53 @@ def test_insight_digest_no_activity_timestamp_excluded_from_stalled():
     assert d["stalled"] == []  # cannot claim staleness without a date
 
 
+def test_digest_reads_last_seen_as_the_rows_last_activity():
+    """The bridge sends `last_seen` (the row's own update stamp) and the digest must use it.
+
+    The number is called `daysSinceLastActivity`, so an application that was submitted in
+    April and annotated yesterday has had activity -- reporting it as stalled for forty days
+    is the digest contradicting its own field name while the row that says otherwise sits in
+    the very request.
+    """
+    old = {"applied_at": (NOW - timedelta(days=40)).isoformat(),
+           "created_at": (NOW - timedelta(days=45)).isoformat()}
+    fresh = dict(old, last_seen=(NOW - timedelta(days=2)).isoformat())
+
+    stalled = [s["id"] for s in A.insight_digest([_app(1, "applied", **old)], now=NOW,
+                                                 stale_days=14)["stalled"]]
+    touched = A.insight_digest([_app(2, "applied", **fresh)], now=NOW, stale_days=14)
+
+    assert stalled == ["a1"]  # no last_seen: the April date is all the row has
+    assert touched["stalled"] == []  # activity two days ago is not a stall
+    assert touched["stalledCount"] == 0
+
+
+def test_digest_ignores_an_unparseable_last_seen():
+    """A bad timestamp must not make the row look freshly touched -- or crash the digest."""
+    apps = [_app(1, "applied", applied_at=(NOW - timedelta(days=40)).isoformat(),
+                 last_seen="yesterday-ish")]
+    d = A.insight_digest(apps, now=NOW, stale_days=14)
+    assert [s["daysSinceLastActivity"] for s in d["stalled"]] == [40]
+
+
+def test_durations_time_a_stage_a_rejected_application_reached():
+    """The funnel and the durations answer different questions, on purpose.
+
+    A rejection credits `applied` only -- the row's current status is all the funnel can
+    vouch for. But the transition log says this candidate did reach an interview, and how
+    long that took is a fact about their pipeline whether or not it ended in a no.
+    """
+    apps = [_app(1, "rejected", applied_at="2026-10-01",
+                 interview_at="2026-10-08")]
+    rates = A.response_rate(apps, now=NOW)
+    funnel = A.pipeline_funnel(apps)
+
+    assert funnel["appliedCount"] == 1  # reached applied
+    assert {s["stage"]: s["count"] for s in funnel["pipeline"]}["interview"] == 0
+    assert rates["timeInStage"]["interview"]["n"] == 1
+    assert rates["timeInStage"]["interview"]["avgDays"] == 7.0
+
+
 def test_insight_digest_echoes_optional_composition():
     apps = [_app(1, "offer")]
     d = A.insight_digest(apps, now=NOW, growth_deltas=[{"closed": ["k8s"]}],

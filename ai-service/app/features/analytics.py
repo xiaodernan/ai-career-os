@@ -20,11 +20,20 @@ unparseable is simply ignored for the time-in-stage math rather than crashing th
 report. This is the same "compute it, don't narrate it" rule the rest of the
 product follows, and it keeps the whole suite offline-verifiable.
 
-Note on ``rejected``: the application row today stores only the *current* status,
-not a stage history. A rejected application is therefore counted as having reached
-``applied`` (it was submitted and got a no) but not any later stage. That is the
-honest bound of what the data can say; when a stage-history table lands, the funnel
-can credit rejections to the stage they actually reached.
+The stage timestamps -- ``oa_at``, ``interview_at``, ``final_round_at``,
+``offer_at`` -- are the moment each stage was first *entered*, which the sender reads
+out of the status-transition log, because an application row stores only the status it
+is at now. A row that never reached a stage carries no key for it, so that stage's
+sample simply does not include the row: the durations are measured from transitions the
+candidate's own history records, never from a date the engine guessed.
+
+Note on ``rejected``: the *funnel* still credits a rejected application to ``applied``
+only, because its current status is the only stage the row itself can vouch for as a
+position. The *durations* are not bound by that: a candidate who reached an interview
+and was turned down afterwards has an ``interview_at`` in the log, and the time it took
+is a fact about their pipeline whether or not it ended in a no. The two lenses answer
+different questions -- where a row stands, and how long each step took -- and are
+deliberately not forced to agree.
 """
 
 from __future__ import annotations
@@ -226,8 +235,10 @@ def insight_digest(applications: list[dict], *, now: datetime | None = None,
 
     ``stalled`` = applications still at ``applied`` or ``saved`` with no movement
     past ``stale_days``. Last activity is the most recent of ``applied_at`` /
-    ``created_at``; without it the application is treated as staleness-unknown and is
-    excluded from the stalled list (we do not fabricate "it's been 200 days").
+    ``created_at`` / ``last_seen`` -- the row's own timestamps plus the last moment
+    anything was written to it, which is what the number is named for. Without any
+    of them the application is treated as staleness-unknown and is excluded from the
+    stalled list (we do not fabricate "it's been 200 days").
     ``growthDeltas`` / ``topMatches`` are echoed through when supplied so the digest
     is a composition point for the growth engines, never a source of invented data.
     """
@@ -244,7 +255,8 @@ def insight_digest(applications: list[dict], *, now: datetime | None = None,
             continue
         applied_at = _parse_dt(a.get("applied_at"))
         created_at = _parse_dt(a.get("created_at"))
-        last = max([d for d in (applied_at, created_at) if d is not None],
+        last_seen = _parse_dt(a.get("last_seen"))
+        last = max([d for d in (applied_at, created_at, last_seen) if d is not None],
                    default=None)
         if last is None:
             continue

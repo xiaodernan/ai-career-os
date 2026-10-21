@@ -24,4 +24,14 @@ public interface ApplicationEventRepository extends JpaRepository<ApplicationEve
             + "ORDER BY e.createdAt DESC, e.id ASC")
     List<ApplicationEvent> findByUserIdOrderByCreatedAtDesc(@Param("userId") UUID userId,
             org.springframework.data.domain.Pageable pageable);
+
+    /**
+     * Every transition of one kind the caller's applications have been through, oldest
+     * first. This one has no {@code Pageable} on purpose: a duration is measured from the
+     * <em>first</em> time a stage was reached, so trimming an ascending window would cut
+     * away exactly the rows that carry the answer. {@code Id} is the last key so two
+     * transitions written in the same second cannot trade places -- the same total-order
+     * rule the activity preview above earns with an explicit {@code @Query}.
+     */
+    List<ApplicationEvent> findByUserIdAndKindOrderByCreatedAtAscIdAsc(UUID userId, String kind);
 }

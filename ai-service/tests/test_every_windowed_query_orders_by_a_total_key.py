@@ -41,6 +41,12 @@ EXEMPT: dict[str, str] = {}
 
 MINIMUM = 11
 
+# The annotation, admitted by its own line rather than by the word. Prose names it too --
+# the events finder's javadoc says the tie-break is earned "with an explicit {@code @Query}" --
+# and a scan that finds that instead of the statement loses the real ORDER BY and then looks
+# for a parenthesis that the sentence never had.
+ANNOTATION_RE = re.compile(r"^[ \t]*@Query[ \t]*\(", re.M)
+
 
 def read(path: Path) -> str:
     """Shipped text with LF endings; `git archive` hands out CRLF on this host."""
@@ -76,8 +82,9 @@ def methods(text: str) -> list[tuple[str, str, str]]:
         params = text[match.end():close]
         before = text[:match.start()]
         query = ""
-        at = before.rfind("@Query")
-        if at != -1 and ";" not in before[at:]:
+        annotation = [m.start() for m in ANNOTATION_RE.finditer(before)]
+        if annotation and ";" not in before[annotation[-1]:]:
+            at = annotation[-1]
             open_at = before.index("(", at)
             query = before[open_at:balanced(before, open_at, "(", ")") + 1]
         out.append((name, collapse(params), collapse(query)))
