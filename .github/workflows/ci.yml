@@ -182,6 +182,25 @@ jobs:
           REDIS_URL: redis://127.0.0.1:16380/0
         run: python -m app.eval.run_eval --user-id 00000000-0000-0000-0000-000000000000 --answer
 
+      # The portable export, against the schema this database actually has.
+      #
+      # The export's queries are the one part of the bundle no offline test
+      # can reach: the fetch functions are monkeypatched in the unit tests, so
+      # a column the schema does not have -- and a UUID the canonical
+      # serializer does not know -- are invisible there. Both were true at
+      # once, both shipped, and the only thing that found them was the
+      # end-to-end suite against a real database.
+      #
+      # This is the cheap version of that check: the database and nothing
+      # else. The app images are deliberately not built in this job, so this
+      # is how the nightly learns that the export stopped working.
+      - name: The portable export builds against the real schema
+        working-directory: ai-service
+        env:
+          DATABASE_URL: postgresql://career_os:career_os_dev_password@127.0.0.1:5432/career_os
+          REDIS_URL: redis://127.0.0.1:16380/0
+        run: python -m app.ops.check_export
+
       - name: Tear down infra
         if: always()
         run: docker compose down -v

@@ -71,6 +71,21 @@ python -m app.ops.ingest_plan feed.xml [--existing corpus.json] [--now 2026-10-1
 All three are pure: they read a file (or the settings) and print a plan. Use them to show
 that the write is previewable *before* it happens.
 
+There is a fourth that is not pure, and it earns its place for exactly that
+reason:
+
+```bash
+# does the portable export still build against the schema this database has? (DB, no app)
+cd ai-service && python -m app.ops.check_export [user-id]
+```
+
+The export's fetch functions are monkeypatched in the unit tests, so a query
+that names a column the schema does not have is invisible there — and it
+happened: the export read `interview_sessions.created_at`, a column that
+table has never had. `check_export` builds the bundle against the real
+schema and exits 1 with the reason when it cannot. The nightly CI job runs
+it, because the app images are deliberately not built there.
+
 ## If someone asks "is this just an LLM?"
 
 No. The scores, coverage, percentiles, funnel and freshness are deterministic functions

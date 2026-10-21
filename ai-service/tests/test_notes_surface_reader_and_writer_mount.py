@@ -94,6 +94,8 @@ SPEAKERS: dict[str, str] = {
         "prose: the notes the panel reads come from GET /knowledge/notes",
     "e2e/tests/command-palette.spec.ts":
         "POSTs one note so the palette's server search has a real row to find",
+    "e2e/tests/forward-surfaces.spec.ts":
+        "POSTs one note so the bundle the screen exports has a section with content in it",
     "e2e/tests/golden-journey.spec.ts":
         "polls GET to verify what the panel wrote through its own POST -- a reader, not a second writer",
     "e2e/tests/pagination.spec.ts":
@@ -274,6 +276,7 @@ def test_the_only_writer_of_note_rows_is_behind_the_post_the_client_calls() -> N
         f"a path outside the Java service names the notes table itself ({table_speakers}): that is a second "
         "author of note rows, not a caller of the one the route serves")
     assert route_speakers == ["e2e/tests/command-palette.spec.ts",
+                              "e2e/tests/forward-surfaces.spec.ts",
                               "e2e/tests/golden-journey.spec.ts",
                               "e2e/tests/pagination.spec.ts"], (
         f"the notes route now has a different set of non-Java speakers ({route_speakers}): read each one's "
@@ -285,6 +288,7 @@ def test_the_only_writer_of_note_rows_is_behind_the_post_the_client_calls() -> N
     reads = {rel: paths for rel, paths in reads.items() if paths}
     assert writes == {
         "e2e/tests/command-palette.spec.ts": [("post", NOTE_ROUTE)],
+        "e2e/tests/forward-surfaces.spec.ts": [("post", NOTE_ROUTE)],
         "e2e/tests/pagination.spec.ts": [("post", NOTE_ROUTE), ("post", NOTE_ROUTE)],
     }, (f"a note row is now authored by a path that is not the collection POST ({writes}): the panel writes "
         "through POST /knowledge/notes, and that is the only verb the Java clause above accounts for")
