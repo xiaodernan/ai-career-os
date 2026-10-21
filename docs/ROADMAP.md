@@ -67,6 +67,16 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   moved — the gates are the product's own account of itself, so leaving them
   stale would be a lie in the one place the reader can check.
 
+- **One known portability gap (found 2026-10-21, not yet closed).** The export
+  bundle's `knowledge` section reads the `documents` table — the files the
+  reader uploaded. The notes they *typed* into the knowledge base live in
+  `user_notes`, and no section of the bundle carries them. So a reader who
+  kept their salary research in a note and then exported their data does not
+  get that note back: "your data" currently means "the data in the tables the
+  export reads". Closing it means a ninth section and a schema version, so it
+  is a decision rather than a patch — and until it is made, the honest thing
+  is for the gap to be written down rather than left for a reader to find.
+
 ## Epic 10 — Growth Intelligence
 - [x] **10.1** Gap & growth analysis engine (evidence-bound coverage verdict).
   (Backend bridge: `POST /api/v1/growth/gap-analysis`; the `/growth` page's
@@ -160,6 +170,13 @@ for "what to build next" across sessions; pick the top un-done task and execute.
 - [x] **13.3** Per-user data deletion (right-to-be-forgotten). (ai-service half:
   `features/export_redact.py` deep-copy section redaction + `anonymize`; recomputes the
   content hash and records `redacted_sections`. Backend bridge: `POST /api/v1/data-portability/redact`.)
+  The redaction also has to leave a bundle the product can still use, which took three
+  rules of its own: the counts are recomputed over what is left (they are the badges the
+  reader sees and the last line of the printable document, and a stale count says their
+  data is still in the file); a section the manifest records as withheld is *not* a
+  missing section, so the redacted file still validates and still restores; and a
+  withheld section gets no import ops at all, so "I did not share this" never reads as
+  "delete yours".)
 
 ## Epic 14 — Job Ingestion Connectors
 - [x] **14.1** Pluggable connector interface (RSS / board API / paste) feeding `jobs`.

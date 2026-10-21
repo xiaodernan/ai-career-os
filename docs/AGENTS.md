@@ -243,9 +243,9 @@ Three properties hold across every one of them, and the census gates
   a sweep that ran under a random id would put another user's jobs in this one's
   board.
 
-## 8. The four quiet failures
+## 8. The five quiet failures
 
-Four bugs in this repository looked like working code and were not. They are
+Five bugs in this repository looked like working code and were not. They are
 written down because each one is a *shape* of failure, not a one-off: the next
 one will have the same shape, and the gate that catches it is the thing to
 reach for.
@@ -289,9 +289,25 @@ gate with a false positive trains people to ignore it, and a gate that
 ignores the difference between a *word* and a *type* stops being a census.
 The scan's anchor is now a `>` that is not an arrow's.
 
+**A file nobody could open.** The redaction removes a section from the export
+bundle; the validator requires every section; so the file the reader
+deliberately made shareable was rejected by the product's *own* restore path —
+"missing data section: knowledge". The screen's copy had promised "the bundle
+stays valid". And nothing was broken locally: the hash was recomputed over the
+new data, the section was gone, the manifest named what went. Three functions
+were each right about their own contract, and together they produced a file
+that failed the fourth check. The manifest made it worse — it kept counting
+the dropped rows, so the badge under the hash read "knowledge: 1" right after
+the reader asked for the knowledge to be gone. **A feature's output has to be
+checked against the thing that reads it**, and a summary is a claim about the
+thing it summarizes, so it is checked by being recomputed from it. The
+redaction's output is a bundle; the thing that reads a bundle is the import
+path — and the import path is what the reader redacted the bundle *for*.
+
 Each of these has a gate now, and each gate is a *different kind* of
 check: an order (the copy before the clear), a population (the three
-shapes of copy), a mechanism (the server's answer, not the client's), and
-the scan's own rule (an anchor that is not a type). The general shape is
-the same in all four: **the bug was where nobody was looking, and the
+shapes of copy), a mechanism (the server's answer, not the client's), the
+scan's own rule (an anchor that is not a type), and a round trip (the
+redacted file, read back by the path it exists for). The general shape is
+the same in all five: **the bug was where nobody was looking, and the
 answer was to look there, not to look harder.**

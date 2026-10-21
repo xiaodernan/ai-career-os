@@ -157,6 +157,35 @@ copy with those profile fields set to `null`, flips `anonymized` on `user` and
 `manifest`, and re-stamps the content hash. Useful both for a privacy-first
 export and as the right-to-be-forgotten surface.
 
+## Redaction (13.3)
+
+`redact_bundle(bundle, drop=[...])` removes whole sections from a bundle the
+reader is about to hand to somebody else. Four rules, and each one exists
+because the version without it broke the feature in a way nobody would have
+noticed until the file was already sent:
+
+- **The dropped section is absent, and the manifest says so.**
+  `manifest.redacted_sections` names it. A withheld section and a section that
+  was always empty are different facts, and only the manifest tells them apart.
+- **The counts are recomputed over what is left.** They are the badges under
+  the hash on the export screen and the last line of the printable document. A
+  count that still claims the dropped rows tells the reader their pipeline is
+  in the file they are about to share — the opposite of what they asked for.
+- **The bundle stays valid.** `validate_bundle` treats a section the manifest
+  records as withheld as *not missing*: it was removed on purpose, so it is not
+  a truncated bundle. Without this rule the redaction produced a file the
+  product's own restore path rejected — the reader redacted the bundle so
+  that somebody else could import it, and the import said the file was broken.
+- **A withheld section gets no plan.** The import plan reads "the bundle
+  carries no rows of this section" as "delete every row of this section at the
+  target". For a section the sharer *withheld* that reading destroys the
+  target's own data on the strength of a section the sharer chose not to
+  share. So the redacted sections get no ops at all — a section that was
+  genuinely empty still plans its deletes, and the difference is the
+  manifest's record rather than the emptiness.
+
+`docs/API.md` names the route; the browser drives it from `/data`.
+
 ## API surface (all pure, no I/O at import time)
 
 | Function | Purpose |

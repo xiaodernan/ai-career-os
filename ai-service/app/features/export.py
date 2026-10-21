@@ -231,7 +231,15 @@ def content_hash(data: Any) -> str:
     return hashlib.sha256(canonical_json(data).encode("utf-8")).hexdigest()
 
 
-def _section_counts(data: dict) -> dict[str, int]:
+def section_counts(data: dict) -> dict[str, int]:
+    """How many rows each section carries.
+
+    Public because the manifest's counts are a contract of their own: the
+    bundle says how much of itself it holds, and a section that is absent
+    counts as zero rather than as "unknown". The redaction recomputes this
+    over the data it left behind, because a count that still claims the
+    dropped rows is a count the bundle's own document contradicts.
+    """
     counts: dict[str, int] = {}
     for section in SECTIONS:
         item = data.get(section)
@@ -242,6 +250,25 @@ def _section_counts(data: dict) -> dict[str, int]:
         else:
             counts[section] = 1
     return counts
+
+
+def redacted_sections(bundle: dict) -> set[str]:
+    """The sections the bundle's manifest records as withheld.
+
+    A redacted section is one the reader asked to be gone before sharing.
+    It is absent from ``data`` -- that is the whole claim -- and the
+    manifest says so, so a reader of the bundle can tell the difference
+    between a section that was withheld and one that was always empty.
+    """
+    if not isinstance(bundle, dict):
+        return set()
+    manifest = bundle.get("manifest")
+    if not isinstance(manifest, dict):
+        return set()
+    recorded = manifest.get("redacted_sections")
+    if not isinstance(recorded, list):
+        return set()
+    return {s for s in recorded if isinstance(s, str) and s in SECTIONS}
 
 
 def _dict_obj(value: Any) -> dict:
@@ -287,7 +314,7 @@ def build_bundle(user_id: str, raw: dict, *, anonymized: bool = False,
         "manifest": {
             "schema_version": SCHEMA_VERSION,
             "generator": GENERATOR,
-            "counts": _section_counts(data),
+            "counts": section_counts(data),
             "content_hash": digest,
             "anonymized": anonymized,
         },
@@ -377,7 +404,7 @@ def to_markdown(bundle: dict) -> str:
     data = _dict_obj(bundle.get("data"))
     manifest = _dict_obj(bundle.get("manifest"))
     _counts = manifest.get("counts")
-    counts = _counts if isinstance(_counts, dict) else _section_counts(data)
+    counts = _counts if isinstance(_counts, dict) else section_counts(data)
     user = _dict_obj(bundle.get("user"))
     lines: list[str] = []
     lines.append("# AI Career OS — 数据导出")
@@ -495,7 +522,15 @@ def validate_bundle(bundle: dict) -> list[str]:
         # both would reject every backup the user already has.
         version = bundle.get("schema_version")
         wanted = required_sections(version) if isinstance(version, str) else SECTIONS
+        # A section the manifest records as redacted was withheld on purpose,
+        # and a withheld section is not a truncated one. Without this rule a
+        # redacted bundle -- the file a reader deliberately made shareable --
+        # is rejected by the very path that exists to restore it, and the
+        # redaction turns a backup into a document nobody can use.
+        withheld = redacted_sections(bundle)
         for s in wanted:
+            if s in withheld:
+                continue
             if s not in bundle["data"]:
                 errors.append(f"missing data section: {s}")
     if (

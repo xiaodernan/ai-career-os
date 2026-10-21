@@ -15,7 +15,7 @@ tampered bundle is rejected before any op is planned.
 
 from __future__ import annotations
 
-from app.features.export import SECTIONS, content_hash, validate_bundle
+from app.features.export import SECTIONS, content_hash, redacted_sections, validate_bundle
 
 # Sections that are lists of addressable items; ``profile`` is a single object.
 _LIST_SECTIONS = tuple(s for s in SECTIONS if s != "profile")
@@ -42,6 +42,13 @@ def plan_import(bundle: dict, existing: dict | None = None) -> dict:
     data = bundle.get("data", {})
     existing_data = (existing or {}).get("data", {}) if existing else {}
 
+    # A section the sharer redacted is withheld, not empty. The bundle makes
+    # no claim about it, so the plan must make none either -- and a plan
+    # that read "no rows here" as "delete every row there" would destroy
+    # the target's own data on the strength of a section the sharer chose
+    # not to share. So the redacted sections get no ops at all.
+    withheld = redacted_sections(bundle)
+
     plan: dict = {
         "schema_version": bundle["schema_version"],
         "source_content_hash": bundle["manifest"]["content_hash"],
@@ -49,6 +56,8 @@ def plan_import(bundle: dict, existing: dict | None = None) -> dict:
     }
 
     for section in _LIST_SECTIONS:
+        if section in withheld:
+            continue
         items = data.get(section) or []
         ex_ids = {it.get("id") for it in (existing_data.get(section) or [])}
         ops: list[dict] = []
@@ -66,7 +75,9 @@ def plan_import(bundle: dict, existing: dict | None = None) -> dict:
                 ops.append({"op": "delete", "id": it.get("id"), "content_hash": None})
         plan["sections"][section] = ops
 
-    # profile is a single object.
+    # profile is a single object. A redacted profile is absent, so there is
+    # nothing to plan for it -- the same rule as the list sections above,
+    # reached by a different road.
     profile = data.get("profile")
     if profile:
         ex_profile_present = bool(existing_data.get("profile"))
