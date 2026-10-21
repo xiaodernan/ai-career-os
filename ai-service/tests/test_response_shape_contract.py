@@ -2139,7 +2139,9 @@ def test_the_run_stream_contract_is_one_table_of_publishers_cases_and_subscriber
     # `app/landing-page.test.ts`.
     # 48 with the browser copy census' own:
     # `lib/i18n/copy-census.test.ts`.
-    assert len(skipped) == 48 and all(rel.endswith((".test.ts", ".test.tsx")) for rel, _t in skipped), \
+    # 49 with the outreach draft's field names' own:
+    # `lib/outreach-draft.test.ts`.
+    assert len(skipped) == 49 and all(rel.endswith((".test.ts", ".test.tsx")) for rel, _t in skipped), \
         (f"{len(skipped)} files are skipped and not one ships: a name in that set that is not a test file "
          "would be a subscriber hidden from the table by the pattern rather than by measurement")
     skipped_names = {rel.rsplit("/", 1)[-1] for rel, _t in skipped}
@@ -3151,7 +3153,12 @@ def test_both_frame_parsers_default_a_nameless_frame_to_the_same_event_name():
         # moved its `kind:` head down. The forward bridges' own types (the growth
         # engines, the offers, the portability and ingestion payloads) joined the file
         # above it, and the union itself did not change.
-        ("types.ts", 1203, "kind:"),
+        # 1212 rather than 1203 since the outreach draft's own type gained the
+        # names the engine actually answers with (`subject`, `body`, the
+        # evidence it cited) above the trace-step union, and the union itself
+        # did not change. The `kind:` head is the union's last member, so it
+        # moves by the whole length of what was added above it.
+        ("types.ts", 1212, "kind:"),
         ('use-sse.ts', 15, 'event: SSEEventName | "message" | "progress" | "ping";'),
     ], (f"{[(r['file'], r['line'], r['head']) for r in by_role['type-union-member']]}: three type unions "
         "spell `message`, and only one of them names a frame -- the other two are the trace step kind "

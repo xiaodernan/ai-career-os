@@ -1023,11 +1023,20 @@ export interface SkillProgress {
   delta?: number;
 }
 
-/** 11.2 — the drafted outreach message and the evidence it cited. */
+/** 11.2 — the drafted outreach message and the evidence it cited.
+ *
+ *  The field names are the engine's own: `body` is the message, `subject`
+ *  its subject line, and `evidenceUsed` the skills the validator let it
+ *  cite. The page used to read a `message` field the engine has never
+ *  sent, so the draft never appeared.
+ */
 export interface OutreachDraft {
-  message?: string;
+  subject?: string;
+  body?: string;
+  contactName?: string;
   purpose?: string;
-  sources?: unknown[];
+  evidenceUsed?: string[];
+  allowedEvidence?: string[];
 }
 
 /* ------------------------------------------------------------------ */

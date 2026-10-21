@@ -402,3 +402,54 @@ test("an RSS feed is parsed as readily as a board payload", async ({ api, authed
     "the parsed count is not on the screen"
   ).toBeVisible({ timeout: 30_000 });
 });
+
+/**
+ * The outreach draft, written by the screen.
+ *
+ * Eleven-two is the one engine on this page that is a model call rather
+ * than an arithmetic one, and it is the one a reader is most likely to be
+ * looking at: a message to a person. The screen is where it is asked for
+ * -- the contact's own fields are the request -- so the screen is where it
+ * has to be checked.
+ */
+test("a message to a contact is drafted by the screen", async ({ api, authedPage }) => {
+  // A contact to write to.
+  const contact = await unwrap<{ id: string; name: string }>(
+    await api.post("/contacts", {
+      name: "Ada Lovelace",
+      role: "Engineering Manager",
+      company: "Acme",
+      relation: "mentor",
+    })
+  );
+  expect(contact.id, "the contact must exist").toBeTruthy();
+
+  // The same draft, from the route, so the screen has something to be
+  // compared against.
+  const draft = await unwrap<{ subject?: string; body?: string }>(
+    await api.post("/outreach/draft", {
+      name: contact.name,
+      role: "Engineering Manager",
+      company: "Acme",
+      purpose: "referral",
+    })
+  );
+  expect(draft.body, "the outreach engine must write a message").toBeTruthy();
+  expect(draft.body!.length, "the drafted message is empty").toBeGreaterThan(0);
+
+  await authedPage.goto("/networking");
+  await expect(
+    authedPage.getByText(contact.name).first(),
+    "the contact is not on the screen"
+  ).toBeVisible({ timeout: 20_000 });
+  // The draft is the contact's own button -- the one that says "Draft".
+  // The name opens the editor, so the button is the thing to press.
+  await authedPage.getByRole("button", { name: "Draft" }).first().click();
+
+  // The draft the engine wrote is in the page's own box, for the reader
+  // to take or leave.
+  const drafted = await authedPage
+    .getByRole("textbox", { name: "Draft message" })
+    .inputValue();
+  expect(drafted.length, "the screen's draft is empty").toBeGreaterThan(0);
+});

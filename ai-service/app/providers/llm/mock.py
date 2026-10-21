@@ -14,6 +14,23 @@ from collections.abc import AsyncIterator
 from app.providers.base import LLMRequest, LLMResponse, StreamDelta, Usage
 
 
+def _prompt_skills(prompt: str) -> list[str]:
+    """The candidate's own skills, as the prompt lists them.
+
+    The mock cites what the prompt gave it, because the evidence validator
+    strips anything the profile does not support: a mock that invented a
+    skill would answer with an empty message, and the offline stack would
+    be exercising a path the product never takes.
+    """
+    match = re.search(r"CANDIDATE SKILLS:\s*(.+)", prompt)
+    if not match:
+        return []
+    line = match.group(1).strip()
+    if not line or line.startswith("("):
+        return []
+    return [s.strip() for s in line.split(",") if s.strip()]
+
+
 class MockProvider:
     name = "mock"
 
@@ -153,6 +170,28 @@ class MockProvider:
                 "recommended_study": [{"topic": "caching", "why": "gap",
                                        "resource_hint": "DDIA ch.1"}],
                 "trajectory_note": "depth rose from naming to failure modes"})
+        if "outreach" in low and "evidenceused" in low:
+            # The outreach engine's own shape: a subject, a body, and the
+            # evidence the message cites. The evidence the mock cites is the
+            # candidate's own skills from the prompt, because the validator
+            # strips anything else -- so a mock that cited something else
+            # would answer with an empty message and teach the wrong thing.
+            skills = _prompt_skills(prompt)
+            cite = skills[:2]
+            body = (
+                "Hi — I am a backend engineer working mostly in Java and Spring, "
+                "and I came across your work while looking at the team. "
+                "I am after a backend role and wondered whether you would be "
+                "open to pointing me at one, or to an introduction to the "
+                "person who hires for it. Happy to send a short write-up of "
+                "what I have built. And entirely fine if this is not "
+                "something you can help with."
+            )
+            return json.dumps({
+                "subject": "A quick question about a backend role",
+                "body": body,
+                "evidenceUsed": cite,
+            })
         if "relevance" in low or "rerank" in low:
             nums = re.findall(r"\[(\d+)\]", prompt)
             scores = {n: max(0.1, 1.0 - i * 0.1) for i, n in enumerate(nums)}

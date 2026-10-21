@@ -124,13 +124,13 @@ export default function NetworkingPage() {
           </Card>
         )}
       />
-      {draft.data?.message && (
+      {draft.data?.body && (
         <Card>
           <CardContent className="space-y-2">
             <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
               {t("networking.draftFor", { name: draftFor?.name ?? "" })}
             </p>
-            <Textarea readOnly value={draft.data.message} rows={4} aria-label={t("networking.draftMessage")} />
+            <Textarea readOnly value={draft.data.body} rows={4} aria-label={t("networking.draftMessage")} />
           </CardContent>
         </Card>
       )}
