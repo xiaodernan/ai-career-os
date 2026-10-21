@@ -73,7 +73,28 @@ export interface Offender {
   value: string;
 }
 
-/** Every `.tsx` under the browser's own source tree, tests aside. */
+/**
+ * Every `.tsx` under the browser's own *screen* tree, tests aside.
+ *
+ * The population is narrower than it looks, and the narrowness is worth
+ * knowing: this reads `app/` and `components/`, and only `.tsx`. So a
+ * `.ts` module is invisible to it, and so is the whole of `lib/`.
+ *
+ * That is not a small hole. Measured on 2026-10-21 by pointing this scan at
+ * the files it does not read: `.ts` files alone hold 41 more strings (the
+ * navigation table's own labels and descriptions, the hooks' failure
+ * messages, the auth-recovery form's validation text), and `lib/` holds
+ * about a thousand. Most of the `lib/` ones are vocabularies -- a table of
+ * English fallbacks beside the keys that translate them -- which is exactly
+ * why they live in a module the census does not reach: a fallback table is a
+ * vocabulary, not a hole to close.
+ *
+ * But not all of them are. The navigation table had two items with no
+ * translation key at all, so they rendered their English names on every
+ * language, and nothing here could see it. So the scan's population is
+ * stated here rather than left implicit: **a gate measures the population
+ * it can see, and a hole in the scan is a hole in the product.**
+ */
 export function browserSources(): string[] {
   const out: string[] = [];
   const walk = (dir: string) => {
@@ -298,7 +319,14 @@ function expressionOffenders(): Offender[] {
  * The stripper tracks the strings, so a `//` inside one is not mistaken for
  * a comment, and a `/*` inside one is not mistaken for a block.
  */
-function stripComments(source: string): string {
+/**
+ * The source with its comments removed.
+ *
+ * Exported because the other gate that reads the browser's sources needs the
+ * same rule: a `t("...")` in a comment is not a key the browser asks for, and
+ * a gate that counted it would ask for a key that does not exist.
+ */
+export function stripComments(source: string): string {
   let out = "";
   let i = 0;
   let quote: string | null = null;

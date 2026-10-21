@@ -2143,7 +2143,9 @@ def test_the_run_stream_contract_is_one_table_of_publishers_cases_and_subscriber
     # `lib/outreach-draft.test.ts`.
     # 51 with the score dimensions' own and the page title's own:
     # `lib/dimensions.test.ts` and `lib/i18n/metadata.test.ts`.
-    assert len(skipped) == 51 and all(rel.endswith((".test.ts", ".test.tsx")) for rel, _t in skipped), \
+    # 52 with the used keys' own:
+    # `lib/i18n/used-keys.test.ts`.
+    assert len(skipped) == 52 and all(rel.endswith((".test.ts", ".test.tsx")) for rel, _t in skipped), \
         (f"{len(skipped)} files are skipped and not one ships: a name in that set that is not a test file "
          "would be a subscriber hidden from the table by the pattern rather than by measurement")
     skipped_names = {rel.rsplit("/", 1)[-1] for rel, _t in skipped}

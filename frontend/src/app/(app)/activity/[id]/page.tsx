@@ -234,9 +234,9 @@ export default function ActivityRunPage() {
         }
         empty={{
           icon: <Gauge aria-hidden />,
-          title: t("activity.runGone"),
+          title: t("activity.detail.runGone"),
           description:
-            t("activity.runGoneDescription"),
+            t("activity.detail.runGoneDescription"),
           action: (
             <Button variant="outline" size="sm" asChild>
               <Link href="/activity">{t("activity.detail.backToActivity")}</Link>

@@ -664,6 +664,7 @@ export const translations = {
       description:
         "Each engine on its own — the same ones the growth report composes, asked one question at a time.",
       targetRole: "Target role",
+      run: "Run",
       noAnswer: "No answer yet",
       noAnswerDescription: "Name the role and run the engine.",
       // The key is `inFlight` rather than `running` on purpose: the frame
@@ -1082,6 +1083,7 @@ export const translations = {
       skillsClosed: "Closed",
       skillsImproved: "Improved",
       skillsRegressed: "Regressed",
+      run: "Run",
       stillOpen: "{count} still open.",
     },
     // Knowledge
@@ -1460,6 +1462,8 @@ export const translations = {
       notLiveDescription:
         "GET /interview/sessions answered 404, so this frontend and the backend it is talking to are different versions. The runner is wired and activates as soon as they match.",
       inProgress: "In progress",
+      reportAction: "View report",
+      continueAction: "Continue",
       detail: {
         submitHint: "Ctrl+Enter to submit · the agent evaluates before the next question",
         abandoned: "This session was abandoned",
@@ -2244,6 +2248,7 @@ export const translations = {
       title: "成长引擎",
       description: "每个引擎单独运行——和成长报告里组合的是同一批引擎，一次只问一个问题。",
       targetRole: "目标职位",
+      run: "运行",
       noAnswer: "还没有结果",
       noAnswerDescription: "写下职位名并运行引擎。",
       inFlight: "运行中…",
@@ -2617,6 +2622,7 @@ export const translations = {
       skillsImproved: "有提升",
       skillsRegressed: "有退步",
       stillOpen: "{count} 项仍未覆盖。",
+      run: "运行",
     },
     // Knowledge
     knowledge: {
@@ -2964,6 +2970,8 @@ export const translations = {
       notLiveDescription:
         "GET /interview/sessions 回了 404，所以这个前端和它对话的后端不是同一个版本。面试器已经接好，版本对上就会自动启用。",
       inProgress: "进行中",
+      reportAction: "查看报告",
+      continueAction: "继续",
       detail: {
         submitHint: "Ctrl+Enter 提交——代理会在下一个问题之前先评估",
         abandoned: "这场面试中途放弃了",
