@@ -187,10 +187,26 @@ so equal data hashes equally across runs and machines.
 
 ## Anonymize (13.3)
 
-`anonymize(bundle, drop=("email","display_name","phone","address"))` returns a
-copy with those profile fields set to `null`, flips `anonymized` on `user` and
-`manifest`, and re-stamps the content hash. Useful both for a privacy-first
-export and as the right-to-be-forgotten surface.
+There are two ways to leave with your data. The **redaction** drops whole
+sections; the **anonymized export** keeps the shape and takes the people out
+of it.
+
+It used to take nobody out. It blanked four field names on the profile —
+`email`, `display_name`, `phone`, `address` — and the profile has carried
+none of them for as long as the export has existed, so the button called
+"Export anonymized" exported the reader's own uuid, the links to their
+profiles, their resume's plaintext, every answer they gave an interviewer,
+and (since 1.2.0) the notes they typed and the people they know, with their
+email. Worse, the printable document *believed* the file was anonymized: it
+prints "（已匿名）" beside the reader's id whenever the manifest says so.
+
+So there is now one policy, per section, in `ANONYMIZED_FIELDS`: the fields
+that name a person — the reader, or somebody the reader knows — or that are
+the reader's own words. The strip happens where the bundle is **built**, so
+the flag and the file cannot disagree, and the hash is re-stamped over what
+is left. The shape stays: the counts still say what the file holds, and the
+substance of a job search — the posting, the headline, the years — is still
+in it, because an export that leaves nothing behind is not an export.
 
 ## Redaction (13.3)
 

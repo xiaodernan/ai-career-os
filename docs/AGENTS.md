@@ -243,9 +243,9 @@ Three properties hold across every one of them, and the census gates
   a sweep that ran under a random id would put another user's jobs in this one's
   board.
 
-## 8. The seven quiet failures
+## 8. The eight quiet failures
 
-Seven bugs in this repository looked like working code and were not. They are
+Eight bugs in this repository looked like working code and were not. They are
 written down because each one is a *shape* of failure, not a one-off: the next
 one will have the same shape, and the gate that catches it is the thing to
 reach for.
@@ -335,10 +335,38 @@ check: an order (the copy before the clear), a population (the three
 shapes of copy), a mechanism (the server's answer, not the client's), the
 scan's own rule (an anchor that is not a type), a round trip (the
 redacted file, read back by the path it exists for), a direction (the
-navigation *items*, not the table's keys), and an ownership (the restore
-writes only the caller's rows). The general shape is the same in all
-seven: **the bug was where nobody was looking, and the answer was to look
-there, not to look harder.**
+navigation *items*, not the table's keys), an ownership (the restore
+writes only the caller's rows), and a path (the anonymized export, built
+the way the button builds it). The general shape is the same in all eight:
+**the bug was where nobody was looking, and the answer was to look there,
+not to look harder.**
+
+**A flag that set a marker and nothing else.** "Export anonymized" is the
+button a reader presses when the file is going to somebody else, and the
+docs call the surface "the right-to-be-forgotten surface". The flag
+travelled the whole way — browser, bridge, ai-service — and set two
+markers: `user.anonymized` and `manifest.anonymized`. The printable
+document believes those markers and prints "（已匿名）" beside the reader's
+id. And nothing was stripped: the export carried the reader's uuid, the
+links to their profiles, their resume's plaintext, every answer they gave an
+interviewer, and (since 1.2.0) the notes they typed and the people they
+know, with their email.
+
+Two things were wrong at once, and they hid each other. The strip named
+four fields the profile has never carried — `email`, `display_name`,
+`phone`, `address` — so the policy was decoration. And the strip was
+never called: the function existed, it worked, and the *route* did not
+call it. The unit test passed because it called the function; nothing
+called the path.
+
+**A promise the file does not keep is worse than no promise.** A reader
+who hands over an "anonymized" export hands over everything, believing they
+did not. So the fix is not a better policy but the *path*: the strip
+happens where the bundle is built, so the flag and the file cannot
+disagree. And the gate holds the policy against the *entities* that own the
+columns, so the list of what is removed is measured rather than
+remembered — and the test builds a bundle shaped like the real one, because
+a fixture shaped like the old one is what let the first version pass.
 
 **A rule that was written down and nothing checked.** The re-import's
 second rule says: "Only the caller's own rows are touched. Every read and

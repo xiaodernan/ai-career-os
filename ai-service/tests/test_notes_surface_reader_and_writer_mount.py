@@ -293,7 +293,7 @@ def test_the_only_writer_of_note_rows_is_behind_the_post_the_client_calls() -> N
         "e2e/tests/command-palette.spec.ts": [("post", NOTE_ROUTE)],
         "e2e/tests/forward-surfaces.spec.ts": [("post", NOTE_ROUTE)],
         "e2e/tests/pagination.spec.ts": [("post", NOTE_ROUTE), ("post", NOTE_ROUTE)],
-        "e2e/tests/redaction.spec.ts": [("post", NOTE_ROUTE)],
+        "e2e/tests/redaction.spec.ts": [("post", NOTE_ROUTE), ("post", NOTE_ROUTE)],
     }, (f"a note row is now authored by a path that is not the collection POST ({writes}): the panel writes "
         "through POST /knowledge/notes, and that is the only verb the Java clause above accounts for")
     assert reads == {"e2e/tests/golden-journey.spec.ts": [NOTE_ROUTE],

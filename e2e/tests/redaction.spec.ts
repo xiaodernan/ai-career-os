@@ -257,3 +257,83 @@ test("the notes and the contacts the reader typed travel in the bundle", async (
     "the contact did not come back"
   ).toContain("Li Ming");
 });
+
+/**
+ * The anonymized export forgets the people.
+ *
+ * There are two ways to leave with your data. The **redaction** drops whole
+ * sections; the **anonymized export** keeps the shape and takes the people
+ * out of it, and the docs call it "the right-to-be-forgotten surface".
+ *
+ * It used to forget nobody. It blanked four field names on the profile --
+ * `email`, `display_name`, `phone`, `address` -- and the profile has
+ * carried none of them for as long as the export has existed. So the button
+ * called "Export anonymized" exported the reader's own uuid, the links to
+ * their profiles, their resume's plaintext, every answer they gave an
+ * interviewer, and (since 1.2.0) the notes they typed and the people they
+ * know, with their email.
+ *
+ * So the test writes a person -- a contact with a name and an address, a
+ * note with a salary in it, a resume with a phone number in it -- and asks
+ * for the anonymized export, and then looks for those words in the file.
+ */
+test("the anonymized export carries no people", async ({ api }) => {
+  await unwrap(
+    await api.post("/contacts", {
+      name: "Li Ming",
+      email: "liming@example.com",
+      company: "Acme",
+      relation: "Mentor",
+      notes: "My mentor, from the conference.",
+    })
+  );
+  await unwrap(
+    await api.post("/knowledge/notes", {
+      title: "My salary note",
+      content: "I make 50w a year.",
+    })
+  );
+  await unwrap(
+    await api.post("/resumes", {
+      title: "Li Ming's resume",
+      plaintext: "Li Ming, 13800000000, li.ming@example.com",
+    })
+  );
+
+  const plain = await unwrap<{ data?: Record<string, unknown> }>(
+    await api.post("/data-portability/export", {})
+  );
+  const anonymous = await unwrap<{
+    user?: { id?: string | null; anonymized?: boolean };
+    manifest?: { counts?: Record<string, number> };
+    data?: Record<string, unknown>;
+  }>(await api.post("/data-portability/export", { anonymized: true }));
+
+  // The file, as text: the words are what a person would recognise, and a
+  // reader looking at the file is the reader the feature is for.
+  const text = JSON.stringify(anonymous);
+  for (const word of [
+    "Li Ming",
+    "liming@example.com",
+    "13800000000",
+    "I make 50w a year.",
+    "My mentor, from the conference.",
+  ]) {
+    expect(text, `the anonymized export still carries "${word}"`).not.toContain(word);
+  }
+
+  // The reader's own id, which the profile carries and nobody thinks of as
+  // a name.
+  expect(anonymous.user?.id ?? null, "the anonymized export carries the reader's id").toBeNull();
+  expect(anonymous.user?.anonymized).toBe(true);
+
+  // And the shape is still there: the counts say what the file holds, so
+  // the reader can tell an anonymized file from an empty one.
+  const counts = anonymous.manifest?.counts;
+  expect(counts?.contacts ?? 0, "the anonymized export lost the contact's row").toBe(1);
+  expect(counts?.notes ?? 0, "the anonymized export lost the note's row").toBe(1);
+
+  // The plain export still carries the people -- the anonymized one is a
+  // choice, and the choice has to be the difference between the two.
+  expect(JSON.stringify(plain), "the plain export lost the contact").toContain("Li Ming");
+});

@@ -37,6 +37,35 @@ GENERATOR = "ai-career-os"
 # Top-level profile keys stripped by ``anonymize`` unless the caller overrides.
 DEFAULT_PII_FIELDS: tuple[str, ...] = ("email", "display_name", "phone", "address")
 
+# The fields each section carries that name a person -- the reader, or
+# somebody the reader knows -- or that are the reader's own words.
+#
+# The anonymized export blanks them: the shape of the bundle stays, the
+# people go. A field is on this list because it carries an identity or a
+# sentence the reader wrote; everything else is the substance of a job
+# search, and an export that leaves nothing behind is not an export.
+#
+# It is read by ``anonymize`` and by the gate that holds it against the
+# entities that own the columns, so the list cannot drift away from the
+# shape of the data without the gate saying so.
+ANONYMIZED_FIELDS: dict[str, tuple[str, ...]] = {
+    # The reader's own id, and the links to their profiles.
+    "profile": ("user_id", "links", "summary"),
+    # The people they know: a name, an address, a relation and what they
+    # wrote about the person.
+    "contacts": ("name", "role", "company", "relation", "email", "notes"),
+    # The notes they typed.
+    "notes": ("title", "content"),
+    # The resume's own text -- a name, a phone number, a history.
+    "resumes": ("user_id", "label", "resume_title", "plaintext", "structured"),
+    # What they wrote about each application.
+    "applications": ("notes",),
+    # The excerpt of their own material.
+    "knowledge": ("user_id", "text_excerpt"),
+    # The facts the assistant extracted about them.
+    "memories": ("key", "content"),
+}
+
 # The sections the ai-service reads for itself.
 AI_SECTIONS: tuple[str, ...] = (
     "profile",
@@ -371,15 +400,46 @@ def build_bundle(user_id: str, raw: dict, *, anonymized: bool = False,
         },
         "data": data,
     }
+    if anonymized:
+        # The flag has to *mean* something. It used to set the two
+        # ``anonymized`` markers and nothing else, so the file said it was
+        # anonymized -- in the manifest, and in the printable document, which
+        # prints "（已匿名）" beside the reader's id -- while carrying the
+        # reader's uuid, the links to their profiles, their resume's
+        # plaintext, every answer they gave an interviewer, and the notes
+        # they typed. The strip is here, so the flag and the file agree.
+        bundle = anonymize(bundle)
     return bundle
 
 
 def anonymize(bundle: dict, drop: tuple[str, ...] = DEFAULT_PII_FIELDS) -> dict:
-    """Return a copy of the bundle with PII fields stripped from the profile.
+    """Return a copy of the bundle with the people taken out of it.
 
-    Supports the right-to-be-forgotten / portability export (13.3). Matching is
-    case-insensitive and only touches the top-level ``profile`` object, because
-    that is the only section that carries direct identifiers today.
+    The reader has two ways to leave with their data: the **redaction** drops
+    whole sections, and the **anonymized export** keeps the shape and takes
+    the people out of it. This is the second one, and it is the surface the
+    docs call "the right-to-be-forgotten surface" -- so it has to actually
+    forget.
+
+    It used to forget nothing. It blanked four field names on the profile
+    (``email``, ``display_name``, ``phone``, ``address``) and the profile has
+    carried none of them for as long as the export has existed: its columns
+    are ``headline``, ``summary``, ``location``, ``links``,
+    ``work_authorization``, ``preferences`` and ``user_id``. So the button
+    called "Export anonymized" exported everything -- the reader's own uuid,
+    the links to their profiles, their resume's plaintext and every answer
+    they gave an interviewer. The unit test passed because its fixture was
+    shaped like the *old* profile rather than the real one.
+
+    Since 1.2.0 the bundle also carries the notes the reader typed and the
+    people they know, which is worse: an "anonymized" file that names every
+    contact in the reader's address book, with their email.
+
+    So the policy is one list, per section, read by the code that does the
+    stripping. A field is on it because it names a person -- the reader or
+    somebody the reader knows -- or because it is the reader's own words.
+    Everything else is the substance of a job search, and an export that
+    leaves nothing behind is not an export.
     """
     lowered = {d.lower() for d in drop if isinstance(d, str)}
     out = json.loads(_stable(bundle)) if isinstance(bundle, dict) else {}
@@ -394,9 +454,39 @@ def anonymize(bundle: dict, drop: tuple[str, ...] = DEFAULT_PII_FIELDS) -> dict:
         for key in list(profile.keys()):
             if key.lower() in lowered:
                 profile[key] = None
-    out["user"] = {**_dict_obj(out.get("user")), "anonymized": True}
+    for section, fields in ANONYMIZED_FIELDS.items():
+        rows = data.get(section)
+        if isinstance(rows, dict):
+            # The profile is the one section that is a single object.
+            rows = [rows]
+        elif not isinstance(rows, list):
+            continue
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            for field in fields:
+                if field in row:
+                    row[field] = None
+    # The interview transcripts are the reader's own answers, one level down.
+    for session in data.get("interviews") or []:
+        if not isinstance(session, dict):
+            continue
+        for field in ("user_id",):
+            if field in session:
+                session[field] = None
+        for turn in session.get("turns") or []:
+            if not isinstance(turn, dict):
+                continue
+            for field in ("content", "question"):
+                if field in turn:
+                    turn[field] = None
+    # The reader's own id, in the envelope and in the rows that carry it.
+    user = _dict_obj(out.get("user"))
+    if "id" in user:
+        user["id"] = None
+    out["user"] = {**user, "anonymized": True}
     out["manifest"] = {**_dict_obj(out.get("manifest")), "anonymized": True}
-    # Re-stamp the hash now the profile changed.
+    # Re-stamp the hash now the bundle changed.
     out["manifest"]["content_hash"] = content_hash(out["data"])
     return out
 
