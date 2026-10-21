@@ -85,7 +85,7 @@ export default function ResumeDetailPage() {
           <Skeleton className="h-96 rounded-xl" />
           <Skeleton className="h-96 rounded-xl" />
         </div>
-        <span className="sr-only">Loading resume…</span>
+        <span className="sr-only">{t("resumes.detail.loading")}</span>
       </div>
     );
   }
@@ -103,7 +103,7 @@ export default function ResumeDetailPage() {
                 description={t("resumes.detail.notInWorkspaceDescription")}
                 action={
                   <Button variant="ai" size="sm" asChild>
-                    <Link href="/resumes">Back to resumes</Link>
+                    <Link href="/resumes">{t("resumes.detail.backToResumes")}</Link>
                   </Button>
                 }
               />
@@ -148,12 +148,12 @@ export default function ResumeDetailPage() {
                   loading={downloading}
                   onClick={() =>
                     downloadOriginal(r.id, () => {
-                      toast.success("Original file downloaded.");
+                      toast.success(t("resumes.detail.originalDownloaded"));
                     })
                   }
                 >
                   <Download aria-hidden />
-                  Original file
+                  {t("resumes.detail.originalFile")}
                 </Button>
               )}
               <Button
@@ -207,7 +207,10 @@ export default function ResumeDetailPage() {
         <CardContent>
           {parse.error != null && (
             <p role="alert" className="text-xs text-destructive">
-              Parse failed: {parse.error instanceof Error ? parse.error.message : "unknown error"}
+              {t("resumes.detail.parseFailed")}{" "}
+              {parse.error instanceof Error
+                ? parse.error.message
+                : t("jobs.detail.unknownError")}
             </p>
           )}
         </CardContent>
@@ -300,7 +303,7 @@ export default function ResumeDetailPage() {
                             loading={setCurrent.isPending && setCurrent.variables === v.id}
                             onClick={() => setCurrent.mutate(v.id)}
                           >
-                            Set current
+                            {t("resumes.detail.setCurrent")}
                           </Button>
                         )}
                       </div>
@@ -312,7 +315,7 @@ export default function ResumeDetailPage() {
                       {diff && (diff.accepted.length > 0 || diff.rejected.length > 0) && (
                         <div className="mt-2 border-t border-border/60 pt-2">
                           <p className="mb-1.5 text-2xs font-medium tracking-wide text-muted-foreground uppercase">
-                            Diff vs previous
+                            {t("resumes.detail.diffVsPrevious")}
                           </p>
                           <DiffView accepted={diff.accepted} rejected={diff.rejected} />
                         </div>
@@ -338,13 +341,14 @@ export default function ResumeDetailPage() {
             </CardHeader>
             <CardContent className="space-y-2 text-xs text-muted-foreground">
               <p>
-                Profile from <span className="font-mono text-foreground">/resumes/{r.id}</span>{" "}
-                structured JSON.
+                {t("resumes.detail.profileFrom")}{" "}
+                <span className="font-mono text-foreground">/resumes/{r.id}</span>{" "}
+                {t("resumes.detail.structuredJson")}
               </p>
               <p>
-                Score from the reviewer agent&apos;s parse step · chunks in{" "}
+                {t("resumes.detail.scoreFrom")}{" "}
                 <Link href="/knowledge" className="font-medium text-primary underline-offset-4 hover:underline">
-                  Knowledge
+                  {t("resumes.detail.knowledge")}
                 </Link>
                 .
               </p>
@@ -359,13 +363,14 @@ export default function ResumeDetailPage() {
 /* ------------------------------- fragments -------------------------------- */
 
 function BackLink() {
+  const { t } = useLocale();
   return (
     <Link
       href="/resumes"
       className="-ml-1 inline-flex w-fit items-center gap-1.5 rounded-md px-1 text-sm text-muted-foreground hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-primary/30"
     >
       <ArrowLeft className="size-4" aria-hidden />
-      Back to resumes
+      {t("resumes.detail.backToResumes")}
     </Link>
   );
 }
@@ -419,14 +424,16 @@ function ScorePanel({ score }: { score: ResumeScore | null }) {
           label={t("resumes.detail.scoreRing")}
         />
         <div className="min-w-0 text-sm">
-          <p className="font-medium">Overall {score.overall}/100</p>
+          <p className="font-medium">
+            {t("resumes.detail.overall")} {score.overall}/100
+          </p>
         </div>
       </div>
       {dims.length > 0 && <DimensionBars dimensions={dims} dense />}
       {score.gaps && score.gaps.length > 0 && (
         <div>
           <p className="mb-1 text-2xs font-medium tracking-wide text-muted-foreground uppercase">
-            Gaps found
+            {t("resumes.detail.gapsFound")}
           </p>
           <ul className="ml-4 list-disc space-y-1 text-xs text-muted-foreground">
             {score.gaps.slice(0, 6).map((g, i) => (
@@ -514,7 +521,7 @@ function StructuredProfileView({ structured }: { structured: StructuredResume })
               }}
             >
               <Download aria-hidden />
-              Export JSON
+              {t("resumes.detail.exportJson")}
             </Button>
           </div>
         </CardHeader>
@@ -579,7 +586,7 @@ function StructuredProfileView({ structured }: { structured: StructuredResume })
                       className="flex items-center gap-1 text-xs font-medium text-primary underline-offset-4 hover:underline"
                     >
                       <ExternalLink className="size-3" aria-hidden />
-                      Repo
+                      {t("resumes.detail.repo")}
                     </a>
                   )}
                 </div>
@@ -668,7 +675,9 @@ function StructuredProfileView({ structured }: { structured: StructuredResume })
             )}
             {(structured.achievements?.length ?? 0) > 0 && (
               <div>
-                <p className="text-2xs font-medium tracking-wide text-muted-foreground uppercase">Achievements</p>
+                <p className="text-2xs font-medium tracking-wide text-muted-foreground uppercase">
+                  {t("resumes.detail.achievements")}
+                </p>
                 <BulletList items={structured.achievements!} />
               </div>
             )}

@@ -316,7 +316,9 @@ def test_the_live_affordance_gates_on_the_key_and_downloads_from_the_route_the_k
     guard = re.search(r"\{\s*r\.sourceFileKey\s*&&\s*\(", page)
     assert guard, "the affordance's gate is no longer the key the detail response authors"
     window = page[guard.end():guard.end() + 600]
-    assert "Original file" in window, (
+    # The affordance's label reads from the locale table now, so the gate
+    # accepts the key the page reads rather than the English copy.
+    assert 't("resumes.detail.originalFile")' in window or "Original file" in window, (
         "the guarded block no longer contains the affordance's copy")
     assert "downloadOriginal(r.id" in window, (
         "the affordance is no longer wired to the download call")

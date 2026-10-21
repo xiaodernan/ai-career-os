@@ -123,23 +123,6 @@ const KNOWN: Record<string, string[]> = {
     "Pick a target job first",
     "Start interview",
   ],
-  "app/(app)/jobs/[id]/page.tsx": [
-    "Add to pipeline",
-    "Back to jobs",
-    "Company not researched",
-    "Cover letter",
-    "Interview prep",
-    "Loading job…",
-    "Match run failed:",
-    "Mock interview mode",
-    "Original posting",
-    "Priority analysis from the JD extractor.",
-    "Requirements breakdown",
-    "Score from",
-    "Sources",
-    "Tailor resume",
-    "What this page is built from.",
-  ],
   "app/(app)/jobs/page.tsx": [
     "Discover",
     "Filters",
@@ -159,21 +142,7 @@ const KNOWN: Record<string, string[]> = {
     "Your offer against the market, and what to say.",
   ],
   "app/(app)/resumes/[id]/page.tsx": [
-    "Achievements",
-    "Back to resumes",
     "Current",
-    "Diff vs previous",
-    "Export JSON",
-    "Gaps found",
-    "Knowledge",
-    "Loading resume…",
-    "Original file",
-    "Overall",
-    "Parse failed:",
-    "Profile from",
-    "Repo",
-    "Score from the reviewer agent&apos;s parse step · chunks in",
-    "Set current",
   ],
   "app/(app)/resumes/page.tsx": [
     "Open",
@@ -431,6 +400,6 @@ describe("the browser's copy", () => {
     // census's own reading of the browser, and every one of them is on the
     // list above with a file and an owner. The pin moves when a hole closes
     // -- which is the point of pinning it.
-    expect(found.length).toBe(166);
+    expect(found.length).toBe(135);
   });
 });

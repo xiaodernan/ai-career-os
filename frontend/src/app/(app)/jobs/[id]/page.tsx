@@ -116,7 +116,7 @@ export default function JobDetailPage() {
           <Skeleton className="h-64 rounded-xl" />
           <Skeleton className="h-64 rounded-xl" />
         </div>
-        <span className="sr-only">Loading job…</span>
+        <span className="sr-only">{t("jobs.detail.loading")}</span>
       </div>
     );
   }
@@ -135,7 +135,7 @@ export default function JobDetailPage() {
                 description={t("jobs.detail.notInSystemDescription")}
                 action={
                   <Button variant="ai" size="sm" asChild>
-                    <Link href="/jobs">Back to jobs</Link>
+                    <Link href="/jobs">{t("jobs.detail.backToJobs")}</Link>
                   </Button>
                 }
               />
@@ -184,7 +184,7 @@ export default function JobDetailPage() {
                     <span>{job.company?.name || job.companyName}</span>
                   )
                 ) : (
-                  <span>Company not researched</span>
+                  <span>{t("jobs.detail.companyNotResearched")}</span>
                 )}
                 {job.location && (
                   <span className="flex items-center gap-1">
@@ -235,14 +235,14 @@ export default function JobDetailPage() {
             <Button variant="outline" size="sm" asChild>
               <a href="#tailor">
                 <Sparkles aria-hidden />
-                Tailor resume
+                {t("jobs.detail.tailorResume")}
               </a>
             </Button>
 
             <Button variant="outline" size="sm" asChild>
               <a href="#cover-letter">
                 <MessageSquare aria-hidden />
-                Cover letter
+                {t("jobs.detail.coverLetter")}
               </a>
             </Button>
 
@@ -252,11 +252,11 @@ export default function JobDetailPage() {
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" loading={startInterview.isPending}>
                   <CalendarClock aria-hidden />
-                  Interview prep
+                  {t("jobs.detail.interviewPrep")}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-48">
-                <DropdownMenuLabel>Mock interview mode</DropdownMenuLabel>
+                <DropdownMenuLabel>{t("jobs.detail.mockInterviewMode")}</DropdownMenuLabel>
                 {INTERVIEW_MODES.map((m) => (
                   <DropdownMenuItem
                     key={m.value}
@@ -293,13 +293,13 @@ export default function JobDetailPage() {
               }
             >
               <Plus aria-hidden />
-              Add to pipeline
+              {t("jobs.detail.addToPipeline")}
             </Button>
 
             {job.externalUrl && (
               <Button variant="link" size="sm" asChild className="ml-auto">
                 <a href={job.externalUrl} target="_blank" rel="noopener noreferrer nofollow">
-                  Original posting
+                  {t("jobs.detail.originalPosting")}
                   <ExternalLink aria-hidden />
                 </a>
               </Button>
@@ -308,7 +308,10 @@ export default function JobDetailPage() {
 
           {matchRun.error != null && (
             <p role="alert" className="mt-3 text-xs text-destructive">
-              Match run failed: {matchRun.error instanceof Error ? matchRun.error.message : "unknown error"}
+              {t("jobs.detail.matchRunFailed")}{" "}
+              {matchRun.error instanceof Error
+                ? matchRun.error.message
+                : t("jobs.detail.unknownError")}
             </p>
           )}
         </CardContent>
@@ -326,8 +329,8 @@ export default function JobDetailPage() {
           {requirementRows.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Requirements breakdown</CardTitle>
-                <CardDescription>Priority analysis from the JD extractor.</CardDescription>
+                <CardTitle className="text-base">{t("jobs.detail.requirementsBreakdown")}</CardTitle>
+                <CardDescription>{t("jobs.detail.requirementsBreakdownDescription")}</CardDescription>
               </CardHeader>
               <CardContent>
                 <ul className="divide-y divide-border/60">
@@ -389,8 +392,8 @@ export default function JobDetailPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Sources</CardTitle>
-              <CardDescription>What this page is built from.</CardDescription>
+              <CardTitle className="text-base">{t("jobs.detail.sources")}</CardTitle>
+              <CardDescription>{t("jobs.detail.sourcesDescription")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-2 text-xs text-muted-foreground">
               <p className="flex items-center gap-2">
@@ -399,8 +402,9 @@ export default function JobDetailPage() {
               </p>
               <Separator className="my-1" />
               <p>
-                Score from <span className="font-mono text-foreground">/jobs/{job.id}/match</span> ·
-                evidence from your knowledge base.
+                {t("jobs.detail.scoreFrom")}{" "}
+                <span className="font-mono text-foreground">/jobs/{job.id}/match</span> ·{" "}
+                {t("jobs.detail.evidenceFrom")}
               </p>
             </CardContent>
           </Card>
@@ -413,13 +417,14 @@ export default function JobDetailPage() {
 /* ------------------------------- fragments -------------------------------- */
 
 function BackLink() {
+  const { t } = useLocale();
   return (
     <Link
       href="/jobs"
       className="-ml-1 inline-flex w-fit items-center gap-1.5 rounded-md px-1 text-sm text-muted-foreground hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-primary/30"
     >
       <ArrowLeft className="size-4" aria-hidden />
-      Back to jobs
+      {t("jobs.detail.backToJobs")}
     </Link>
   );
 }
