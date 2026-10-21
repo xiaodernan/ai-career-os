@@ -29,6 +29,35 @@ export const translations = {
       yourData: "Your data",
     },
     /**
+     * The navigation's own descriptions -- the second line of the command
+     * palette's row.
+     *
+     * They are a separate block because they are a separate sentence: the
+     * name of a page and the sentence that says what the page is for are
+     * edited by different hands, and one reader changes the page's name far
+     * more often than the line under it.
+     */
+    navDescriptions: {
+      dashboard: "Career overview and priorities",
+      resumes: "Resume versions and structured profile",
+      jobs: "Discovered jobs and AI matches",
+      applications: "Pipeline kanban and reminders",
+      interviews: "Adaptive AI mock interviews",
+      copilot: "Career agent conversation",
+      knowledge: "Career knowledge base sources",
+      companies: "Company research profiles",
+      growth: "Readiness, gaps and learning plan",
+      networking: "Contacts and outreach",
+      analysis: "Pipeline analytics and insights",
+      offers: "Salary benchmarks and negotiation",
+      monitoring: "Agent health and cost",
+      rateLimit: "Rate-limit status and quotas",
+      ingestion: "Import jobs from feeds and boards",
+      yourData: "Export, restore and redact your data",
+      activity: "AI agent runs and traces",
+      settings: "Account and preferences",
+    },
+    /**
      * The light/dark toggle.
      *
      * The button's own name, and what it will do when pressed. It is in
@@ -1692,6 +1721,32 @@ export const translations = {
       settings: "设置",
       ingestion: "职位导入",
       yourData: "你的数据",
+    },
+    /**
+     * 导航自己的说明句——命令面板每行下面的第二行。
+     *
+     * 单独一个块，因为它们本来就是另一句话：页面的名字，和说明这个页面
+     * 是做什么的那句话，是两回事，改动它们的人也不一样。
+     */
+    navDescriptions: {
+      dashboard: "求职全局与优先事项",
+      resumes: "简历版本与结构化档案",
+      jobs: "发现的职位与 AI 匹配",
+      applications: "投递看板与提醒",
+      interviews: "自适应 AI 模拟面试",
+      copilot: "求职代理对话",
+      knowledge: "职业知识库资料",
+      companies: "公司调研档案",
+      growth: "准备度、差距与学习计划",
+      networking: "人脉与外联",
+      analysis: "投递分析与洞察",
+      offers: "薪资对标与谈判",
+      monitoring: "代理健康度与成本",
+      rateLimit: "限流状态与配额",
+      ingestion: "从订阅源和招聘板导入职位",
+      yourData: "导出、恢复与删减你的数据",
+      activity: "AI 代理运行与轨迹",
+      settings: "账号与偏好",
     },
     theme: {
       switchToLight: "切换到浅色主题",

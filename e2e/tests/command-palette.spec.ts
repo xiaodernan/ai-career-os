@@ -102,3 +102,86 @@ test("a note written through the API is found by the palette's real search", asy
   await hit.click();
   await expect(authedPage).toHaveURL(/\/knowledge$/);
 });
+
+/**
+ * The palette's rows are named in the reader's language.
+ *
+ * The palette is the reader's fastest way into the product -- one key, and
+ * every page is on the screen -- so it is the one place a half-translated
+ * product shows itself most clearly. A row whose *name* is translated and
+ * whose *second line* is not reads as two products sharing a window: the
+ * Chinese label and the English sentence that says what the page is for.
+ *
+ * The second line was a plain string in the navigation table, and the
+ * navigation table is a `.ts` module -- which the copy census does not
+ * read, and which is where a fallback table of English names belongs
+ * precisely because it is a vocabulary rather than a screen. So nothing saw
+ * it: the table was English on every language, and the search matched the
+ * English too, so a Chinese reader typing the Chinese sentence for a page
+ * found nothing.
+ *
+ * The names are measured off the screen rather than written into the test:
+ * the English palette is measured, the reader switches, and the Chinese
+ * palette must not show any of the English wording.
+ */
+test("the palette's rows are named in the reader's language", async ({ authedPage }) => {
+  /** Each row's label and its second line, in the order the palette lists them. */
+  async function readRows(): Promise<Array<{ label: string; description: string }>> {
+    const options = authedPage.locator("[cmdk-group]").last().getByRole("option");
+    const rows: Array<{ label: string; description: string }> = [];
+    for (let i = 0; i < (await options.count()); i++) {
+      const spans = options.nth(i).locator("span");
+      rows.push({
+        label: (await spans.nth(0).innerText()).trim(),
+        description: (await spans.nth(1).innerText()).trim(),
+      });
+    }
+    return rows;
+  }
+
+  await authedPage.goto("/dashboard");
+  await openPalette(authedPage);
+  const english = await readRows();
+  expect(english.length, "the palette listed no rows at all").toBeGreaterThan(0);
+  await authedPage.keyboard.press("Escape");
+
+  // The reader switches the language. The switch's own name says which
+  // language it switches *to*, so the button reading "back to English" is
+  // the proof that the page is in Chinese now.
+  await authedPage.getByRole("button", { name: "Switch to Chinese" }).click();
+  await expect(
+    authedPage.getByRole("button", { name: "切换到英文" })
+  ).toBeVisible({ timeout: 20_000 });
+
+  // The palette is opened by its shortcut again -- the placeholder and the
+  // button's own name are translated, so the test addresses the input by
+  // the attribute cmdk puts on it rather than by a word.
+  await authedPage.keyboard.press("ControlOrMeta+k");
+  await expect(authedPage.locator("[cmdk-input]")).toBeVisible();
+
+  const chinese = await readRows();
+  expect(chinese.length, "the palette listed no rows at all").toBeGreaterThan(0);
+
+  // The same rows, in the same order, each one in the reader's language.
+  expect(chinese.length, "the palette listed a different number of rows").toBe(
+    english.length
+  );
+  for (let i = 0; i < english.length; i++) {
+    expect(
+      chinese[i].label,
+      `the row "${english[i].label}" still reads "${english[i].label}" on a Chinese page`
+    ).not.toBe(english[i].label);
+    expect(
+      chinese[i].description,
+      `the row "${english[i].label}" still reads "${english[i].description}" on a Chinese page`
+    ).not.toBe(english[i].description);
+  }
+
+  await authedPage.keyboard.press("Escape");
+
+  // And back, so the next test gets the browser it expects.
+  await authedPage.getByRole("button", { name: "切换到英文" }).click();
+  await expect(
+    authedPage.getByRole("button", { name: "Switch to Chinese" })
+  ).toBeVisible({ timeout: 20_000 });
+});

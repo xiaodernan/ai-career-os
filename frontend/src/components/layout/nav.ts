@@ -38,27 +38,37 @@ export interface NavItem {
    * checker, where it cannot be forgotten.
    */
   labelKey: string;
+  /**
+   * The translation key for this item's description.
+   *
+   * The description is the second line of the command palette's row -- the
+   * sentence that says what the page is for -- and it was the English one on
+   * every language, because it was a plain string in a table nobody had
+   * given a key. Required for the same reason `labelKey` is: a word the
+   * reader cannot change is a word the reader cannot have.
+   */
+  descriptionKey: string;
 }
 
 export const NAV_ITEMS: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", labelKey: "nav.dashboard", icon: LayoutDashboard, description: "Career overview and priorities" },
-  { href: "/resumes", label: "Resumes", labelKey: "nav.resumes", icon: FileText, description: "Resume versions and structured profile" },
-  { href: "/jobs", label: "Jobs", labelKey: "nav.jobs", icon: Briefcase, description: "Discovered jobs and AI matches" },
-  { href: "/applications", label: "Applications", labelKey: "nav.applications", icon: CalendarClock, description: "Pipeline kanban and reminders" },
-  { href: "/interviews", label: "Interviews", labelKey: "nav.interviews", icon: Sparkles, description: "Adaptive AI mock interviews" },
-  { href: "/copilot", label: "Copilot", labelKey: "nav.copilot", icon: MessageSquare, description: "Career agent conversation" },
-  { href: "/knowledge", label: "Knowledge", labelKey: "nav.knowledge", icon: Library, description: "Career knowledge base sources" },
-  { href: "/companies", label: "Companies", labelKey: "nav.companies", icon: Building2, description: "Company research profiles" },
-  { href: "/growth", label: "Growth", labelKey: "nav.growth", icon: TrendingUp, description: "Readiness, gaps and learning plan" },
-  { href: "/networking", label: "Networking", labelKey: "nav.networking", icon: Users, description: "Contacts and outreach" },
-  { href: "/analysis", label: "Analysis", labelKey: "nav.analysis", icon: BarChart3, description: "Pipeline analytics and insights" },
-  { href: "/offers", label: "Offers", labelKey: "nav.offers", icon: Handshake, description: "Salary benchmarks and negotiation" },
-  { href: "/monitoring", label: "Monitoring", labelKey: "nav.monitoring", icon: ActivityIcon, description: "Agent health and cost" },
-  { href: "/rate-limit", label: "Rate limit", labelKey: "nav.rateLimit", icon: Gauge, description: "Rate-limit status and quotas" },
-  { href: "/ingestion", label: "Ingestion", labelKey: "nav.ingestion", icon: Layers, description: "Import jobs from feeds and boards" },
-  { href: "/data", label: "Your data", labelKey: "nav.yourData", icon: Database, description: "Export, restore and redact your data" },
-  { href: "/activity", label: "Activity", labelKey: "nav.activity", icon: ActivityIcon, description: "AI agent runs and traces" },
-  { href: "/settings", label: "Settings", labelKey: "nav.settings", icon: Settings, description: "Account and preferences" },
+  { href: "/dashboard", label: "Dashboard", labelKey: "nav.dashboard", descriptionKey: "navDescriptions.dashboard", icon: LayoutDashboard, description: "Career overview and priorities" },
+  { href: "/resumes", label: "Resumes", labelKey: "nav.resumes", descriptionKey: "navDescriptions.resumes", icon: FileText, description: "Resume versions and structured profile" },
+  { href: "/jobs", label: "Jobs", labelKey: "nav.jobs", descriptionKey: "navDescriptions.jobs", icon: Briefcase, description: "Discovered jobs and AI matches" },
+  { href: "/applications", label: "Applications", labelKey: "nav.applications", descriptionKey: "navDescriptions.applications", icon: CalendarClock, description: "Pipeline kanban and reminders" },
+  { href: "/interviews", label: "Interviews", labelKey: "nav.interviews", descriptionKey: "navDescriptions.interviews", icon: Sparkles, description: "Adaptive AI mock interviews" },
+  { href: "/copilot", label: "Copilot", labelKey: "nav.copilot", descriptionKey: "navDescriptions.copilot", icon: MessageSquare, description: "Career agent conversation" },
+  { href: "/knowledge", label: "Knowledge", labelKey: "nav.knowledge", descriptionKey: "navDescriptions.knowledge", icon: Library, description: "Career knowledge base sources" },
+  { href: "/companies", label: "Companies", labelKey: "nav.companies", descriptionKey: "navDescriptions.companies", icon: Building2, description: "Company research profiles" },
+  { href: "/growth", label: "Growth", labelKey: "nav.growth", descriptionKey: "navDescriptions.growth", icon: TrendingUp, description: "Readiness, gaps and learning plan" },
+  { href: "/networking", label: "Networking", labelKey: "nav.networking", descriptionKey: "navDescriptions.networking", icon: Users, description: "Contacts and outreach" },
+  { href: "/analysis", label: "Analysis", labelKey: "nav.analysis", descriptionKey: "navDescriptions.analysis", icon: BarChart3, description: "Pipeline analytics and insights" },
+  { href: "/offers", label: "Offers", labelKey: "nav.offers", descriptionKey: "navDescriptions.offers", icon: Handshake, description: "Salary benchmarks and negotiation" },
+  { href: "/monitoring", label: "Monitoring", labelKey: "nav.monitoring", descriptionKey: "navDescriptions.monitoring", icon: ActivityIcon, description: "Agent health and cost" },
+  { href: "/rate-limit", label: "Rate limit", labelKey: "nav.rateLimit", descriptionKey: "navDescriptions.rateLimit", icon: Gauge, description: "Rate-limit status and quotas" },
+  { href: "/ingestion", label: "Ingestion", labelKey: "nav.ingestion", descriptionKey: "navDescriptions.ingestion", icon: Layers, description: "Import jobs from feeds and boards" },
+  { href: "/data", label: "Your data", labelKey: "nav.yourData", descriptionKey: "navDescriptions.yourData", icon: Database, description: "Export, restore and redact your data" },
+  { href: "/activity", label: "Activity", labelKey: "nav.activity", descriptionKey: "navDescriptions.activity", icon: ActivityIcon, description: "AI agent runs and traces" },
+  { href: "/settings", label: "Settings", labelKey: "nav.settings", descriptionKey: "navDescriptions.settings", icon: Settings, description: "Account and preferences" },
 ];
 
 /**

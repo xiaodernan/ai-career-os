@@ -304,7 +304,7 @@ thing it summarizes, so it is checked by being recomputed from it. The
 redaction's output is a bundle; the thing that reads a bundle is the import
 path — and the import path is what the reader redacted the bundle *for*.
 
-**A table with two rows the reader never sees.** The navigation table pairs an
+**A vocabulary the reader never sees.** The navigation table pairs an
 English label with the key that translates it, and the key was *optional* — so
 two items had none, and rendered their English names on every language. There
 was a gate for it, and the gate's own comment said what it was for: "the
@@ -320,6 +320,15 @@ the type checker where it cannot be forgotten, and to turn the gate around to
 the direction it had always claimed. **A gate that says what it is for has to
 measure that thing, not the nearest thing it can measure** — and a fallback
 table is exactly where a required field earns its keep.
+
+The same table held the second line of the command palette's row — the
+sentence that says what a page is *for* — as a plain English string with no key
+at all, and the palette's own search matched that English, so a Chinese reader
+typing the Chinese sentence for a page found nothing. Eighteen rows, one
+vocabulary, and the same hole: a table of fallbacks is a vocabulary, and a
+vocabulary is a table the census does not reach, so nothing in the repository
+could see it until the palette's rows were measured off the screen and compared
+across the two languages.
 
 Each of these has a gate now, and each gate is a *different kind* of
 check: an order (the copy before the clear), a population (the three

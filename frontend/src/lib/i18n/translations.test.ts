@@ -95,7 +95,36 @@ describe("the translation table", () => {
         lookup(translations.zh, item.labelKey),
         `${item.labelKey} has no Chinese label`
       ).toBeTruthy();
+
+      // The description is the second line of the command palette's row,
+      // and it was a plain English string in the table for as long as the
+      // label was a key. It says what the page is *for*, so it is the line
+      // a reader is most likely to read.
+      expect(item.descriptionKey, `${item.href} names no description`).toBeTruthy();
+      expect(
+        lookup(translations.en, item.descriptionKey),
+        `${item.descriptionKey} has no English description`
+      ).toBeTruthy();
+      expect(
+        lookup(translations.zh, item.descriptionKey),
+        `${item.descriptionKey} has no Chinese description`
+      ).toBeTruthy();
     }
+  });
+
+  it("names the navigation's descriptions under the same words as its labels", () => {
+    // The two blocks are a pair: one names the pages, the other says what
+    // they are for. A key in one and not the other is an item whose second
+    // line falls back to English -- which is the same defect the label was,
+    // one line further down.
+    const labels = Object.keys(translations.en.nav as Record<string, string>).sort();
+    const descriptions = Object.keys(
+      translations.en.navDescriptions as Record<string, string>
+    ).sort();
+    expect(descriptions).toEqual(labels);
+    expect(Object.keys(translations.zh.navDescriptions as Record<string, string>).sort()).toEqual(
+      labels
+    );
   });
 
   it("has a label for every page that renders one", () => {

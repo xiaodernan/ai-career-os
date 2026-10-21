@@ -113,12 +113,15 @@ export function CommandPaletteProvider({
   // to be the names the reader sees: a Chinese reader typing "简历" was
   // searching the English labels and finding nothing, because the filter
   // read `item.label` while the list beside it read the same English. The
-  // description is matched too, for the same reason.
+  // description is matched too, for the same reason -- and it is the
+  // description that says what a page is *for*, so it is the line a reader
+  // is most likely to search for.
   const navItems = React.useMemo(
     () =>
       NAV_ITEMS.map((item) => ({
         ...item,
         label: item.labelKey ? t(item.labelKey) : item.label,
+        description: item.descriptionKey ? t(item.descriptionKey) : item.description,
       })),
     [t]
   );
