@@ -304,6 +304,10 @@ public class FakeAiServiceClientConfig {
         /**
          * What the insight-digest bridge answers with (15.3): the engine's own stalled
          * list, stage mix and headline rates.
+         *
+         * The mix is a distribution, not the funnel: three applications sit at three
+         * positions and the counts add up to {@code totalApplications}. Positions nobody
+         * is sitting at are absent rather than zeroed, which is what the engine emits.
          */
         @Override
         public Map<String, Object> insightDigest(UUID userId, List<Map<String, Object>> applications) {
@@ -312,8 +316,7 @@ public class FakeAiServiceClientConfig {
                     "windowDays", 14,
                     "totalApplications", 3,
                     "activePipeline", 2,
-                    "stageCounts", map("applied", 2, "oa", 1, "interview", 0,
-                            "final_round", 0, "offer", 0),
+                    "stageCounts", map("saved", 1, "applied", 1, "oa", 1),
                     "responseRate", 0.5,
                     "offerRate", 0.0,
                     "stalledCount", 1,

@@ -170,6 +170,103 @@ def test_digest_ignores_an_unparseable_last_seen():
     assert [s["daysSinceLastActivity"] for s in d["stalled"]] == [40]
 
 
+# ---------------- 15.3 the stage mix is a distribution ----------------
+
+
+def _mix_rows():
+    """Five applications, one sitting at each of five positions -- including the two the
+    funnel reports separately (``saved``, ``rejected``) and one that passed four stages."""
+    return [
+        _app(1, "applied", applied_at=(NOW - timedelta(days=30)).isoformat()),
+        _app(2, "saved", created_at=(NOW - timedelta(days=40)).isoformat()),
+        _app(3, "rejected", applied_at=(NOW - timedelta(days=20)).isoformat()),
+        _app(4, "offer", applied_at=(NOW - timedelta(days=20)).isoformat(),
+             offer_at=(NOW - timedelta(days=10)).isoformat()),
+        _app(5, "interview", applied_at=(NOW - timedelta(days=12)).isoformat(),
+             interview_at=(NOW - timedelta(days=5)).isoformat()),
+    ]
+
+
+def test_the_digest_stage_mix_counts_every_row_exactly_once():
+    """#250: the mix answered "where is each application", and must add up to the rows.
+
+    The analysis card feeds these numbers to ``ShareChart``, which divides each value by the
+    sum of the values. Hand it the funnel's reached-counts and five applications produce seven,
+    so every bar is drawn as a fraction of a total that no account has -- "applied" reads 20%
+    when three quarters of the pipeline is sitting there.
+    """
+    d = A.insight_digest(_mix_rows(), now=NOW, stale_days=14)
+    mix = d["stageCounts"]
+
+    assert mix == {"saved": 1, "applied": 1, "interview": 1, "offer": 1, "rejected": 1}
+    assert sum(mix.values()) == len(_mix_rows()) == d["totalApplications"]
+
+
+def test_the_stage_mix_is_not_the_funnels_reached_count():
+    """The two numbers answer different questions, and the digest may not borrow the funnel's.
+
+    The row at ``offer`` also passed applied, OA, interview and final round, so the funnel
+    credits it five times and deliberately does not add up. The mix counts it once, at the
+    position it holds now. Pinning both directions is what keeps the fix from being made the
+    wrong way round: converting the funnel into a partition would silently rewrite 15.1.
+    """
+    rows = _mix_rows()
+    mix = A.insight_digest(rows, now=NOW)["stageCounts"]
+    reached = {s["stage"]: s["count"] for s in A.pipeline_funnel(rows)["pipeline"]}
+
+    assert mix["applied"] == 1  # only the application that never got past it
+    assert reached["applied"] == 4  # + rejected, offer and interview, which all passed through
+    assert sum(mix.values()) == 5
+    assert sum(reached.values()) == 10  # cumulative on purpose
+    assert set(reached) == {"applied", "oa", "interview", "final_round", "offer"}
+    assert {"saved", "rejected"} <= set(mix)  # positions the funnel has no row for
+
+
+def test_a_status_outside_the_pipeline_vocabulary_is_counted_under_its_own_name():
+    """A row missing from a distribution is the same lie as a row counted twice.
+
+    ``withdrawn`` is what a candidate who withdrew has in the status column, and a row whose
+    status was never written is a row the reader still has. Neither may vanish from the chart:
+    the first is reported under its own spelling, the second under ``unset``, and the two land
+    after the known positions so the pipeline order survives.
+    """
+    rows = [*_mix_rows()[:2], _app(6, "withdrawn"), _app(7, "")]
+    d = A.insight_digest(rows, now=NOW)
+
+    assert d["stageCounts"]["withdrawn"] == 1
+    assert d["stageCounts"]["unset"] == 1
+    assert sum(d["stageCounts"].values()) == len(rows) == d["totalApplications"]
+    assert list(d["stageCounts"]) == ["saved", "applied", "unset", "withdrawn"]
+
+
+def test_the_mix_is_ordered_by_the_position_order_the_product_teaches():
+    """The chart draws rows in the order the dict gives them, so the order is a claim.
+
+    Alphabetical would put ``offer`` under ``final_round``'s neighbour and ``rejected`` between
+    ``oa`` and ``saved``; the board's own stage order is the one a reader follows.
+    """
+    rows = [_app(i, s) for i, s in enumerate(["offer", "rejected", "saved", "applied",
+                                              "final_round", "oa", "interview"], start=1)]
+    mix = A.insight_digest(rows, now=NOW)["stageCounts"]
+
+    assert list(mix) == A.STAGES
+    assert list(mix) != sorted(mix)
+
+
+def test_a_rejected_application_is_not_missing_from_the_mix():
+    """The count the rejection rate is made of used to be absent from the stage card.
+
+    ``rejectedCount`` exists on the funnel and ``responseRate`` counts a no as a reply, so a
+    digest that showed every stage except the one most applications end at contradicted its own
+    headline numbers -- and left the page's ``rejected`` colour branch with nothing to colour.
+    """
+    rows = [_app(1, "rejected"), _app(2, "rejected"), _app(3, "offer")]
+    mix = A.insight_digest(rows, now=NOW)["stageCounts"]
+
+    assert mix == {"offer": 1, "rejected": 2}
+    assert sum(mix.values()) == 3
+
+
 def test_durations_time_a_stage_a_rejected_application_reached():
     """The funnel and the durations answer different questions, on purpose.
 

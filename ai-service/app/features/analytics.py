@@ -45,6 +45,12 @@ from statistics import median
 # stage is X or any stage after it.
 PIPELINE = ["applied", "oa", "interview", "final_round", "offer"]
 
+# The positions an application can be sitting at, in the order the product teaches them.
+# This is not the pipeline: ``saved`` and ``rejected`` are places a candidate is, and a
+# stage mix that dropped them would leave rows outside the distribution the card draws.
+# The backend validates the same seven words and the board renders them in this order.
+STAGES = ["saved", "applied", "oa", "interview", "final_round", "offer", "rejected"]
+
 # Progressive status -> pipeline index. "reached stage X" means the application's
 # furthest stage is X or any earlier one (you cannot reach interview without first
 # reaching applied + OA). ``rejected`` is handled separately: it means the candidate
@@ -228,6 +234,25 @@ def response_rate(applications: list[dict], now: datetime | None = None) -> dict
 # ---------------- 15.3 weekly insight digest ----------------
 
 
+def _status_mix(apps: list[dict]) -> dict[str, int]:
+    """How many applications sit at each position right now, each row counted once.
+
+    The funnel answers "how many reached stage X", which credits one application to every
+    stage it passed; this answers "where is each application", so the counts add up to the
+    number of rows and a share chart can be drawn from them honestly. A status outside the
+    product's own vocabulary is counted under its own spelling instead of dropped -- a row
+    missing from a distribution is the same lie as a row counted twice, and the reader of
+    the chart cannot tell the two apart.
+    """
+    counts: dict[str, int] = {}
+    for a in apps:
+        status = (a.get("status") or "").lower() or "unset"
+        counts[status] = counts.get(status, 0) + 1
+    ordered = {s: counts[s] for s in STAGES if s in counts}
+    ordered.update({s: counts[s] for s in sorted(counts) if s not in ordered})
+    return ordered
+
+
 def insight_digest(applications: list[dict], *, now: datetime | None = None,
                    stale_days: int = 14, growth_deltas: list[dict] | None = None,
                    top_matches: list[dict] | None = None) -> dict:
@@ -241,6 +266,8 @@ def insight_digest(applications: list[dict], *, now: datetime | None = None,
     stalled list (we do not fabricate "it's been 200 days").
     ``growthDeltas`` / ``topMatches`` are echoed through when supplied so the digest
     is a composition point for the growth engines, never a source of invented data.
+    ``stageCounts`` is a mix, not a funnel: the applications add up to
+    ``totalApplications``, while ``/pipeline-funnel``'s reached-counts deliberately do not.
     """
     apps = _norm(applications)
     ref = now or datetime.now(timezone.utc)
@@ -290,7 +317,7 @@ def insight_digest(applications: list[dict], *, now: datetime | None = None,
         "windowDays": stale_days,
         "totalApplications": funnel["totalApplications"],
         "activePipeline": active,
-        "stageCounts": {s["stage"]: s["count"] for s in funnel["pipeline"]},
+        "stageCounts": _status_mix(apps),
         "responseRate": rates["responseRate"],
         "offerRate": rates["offerRate"],
         "stalledCount": len(stalled),
