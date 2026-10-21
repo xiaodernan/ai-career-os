@@ -244,6 +244,20 @@ def _section_counts(data: dict) -> dict[str, int]:
     return counts
 
 
+def _dict_obj(value: Any) -> dict:
+    """A mapping value, else an empty dict -- a None or wrong-typed key can't crash."""
+    return value if isinstance(value, dict) else {}
+
+
+def _dicts(rows: Any) -> list:
+    """The dict rows of a list, tolerating None and non-dict / non-list input.
+
+    A bundle section can be null or carry a junk entry; iterating it raw would
+    render (or crash on) a non-dict, so every consumer funnels its list through
+    here first."""
+    return [r for r in (rows or []) if isinstance(r, dict)]
+
+
 def build_bundle(user_id: str, raw: dict, *, anonymized: bool = False,
                  extra: dict | None = None) -> dict:
     """Assemble a versioned, hashed export bundle from already-fetched raw data.
@@ -289,15 +303,21 @@ def anonymize(bundle: dict, drop: tuple[str, ...] = DEFAULT_PII_FIELDS) -> dict:
     case-insensitive and only touches the top-level ``profile`` object, because
     that is the only section that carries direct identifiers today.
     """
-    lowered = {d.lower() for d in drop}
-    out = json.loads(_stable(bundle))  # deep copy via round-trip
-    profile = out.get("data", {}).get("profile")
+    lowered = {d.lower() for d in drop if isinstance(d, str)}
+    out = json.loads(_stable(bundle)) if isinstance(bundle, dict) else {}
+    if not isinstance(out, dict):
+        out = {}
+    data = out.get("data")
+    if not isinstance(data, dict):
+        data = {}
+        out["data"] = data
+    profile = data.get("profile")
     if isinstance(profile, dict):
         for key in list(profile.keys()):
             if key.lower() in lowered:
                 profile[key] = None
-    out["user"] = {**out.get("user", {}), "anonymized": True}
-    out["manifest"] = {**out.get("manifest", {}), "anonymized": True}
+    out["user"] = {**_dict_obj(out.get("user")), "anonymized": True}
+    out["manifest"] = {**_dict_obj(out.get("manifest")), "anonymized": True}
     # Re-stamp the hash now the profile changed.
     out["manifest"]["content_hash"] = content_hash(out["data"])
     return out
@@ -353,10 +373,12 @@ def to_markdown(bundle: dict) -> str:
     that the PDF generator would flow. Large free-text fields are clipped so the
     document stays scannable.
     """
-    data = bundle.get("data", {})
-    manifest = bundle.get("manifest", {})
-    counts = manifest.get("counts", _section_counts(data))
-    user = bundle.get("user", {})
+    bundle = bundle if isinstance(bundle, dict) else {}
+    data = _dict_obj(bundle.get("data"))
+    manifest = _dict_obj(bundle.get("manifest"))
+    _counts = manifest.get("counts")
+    counts = _counts if isinstance(_counts, dict) else _section_counts(data)
+    user = _dict_obj(bundle.get("user"))
     lines: list[str] = []
     lines.append("# AI Career OS — 数据导出")
     lines.append("")
@@ -374,6 +396,8 @@ def to_markdown(bundle: dict) -> str:
         return s if len(s) <= n else s[:n] + "…"
 
     profile = data.get("profile")
+    if not isinstance(profile, dict):
+        profile = None
     if profile:
         lines.append("## 个人档案")
         for k in ("display_name", "email", "headline", "summary"):
@@ -381,7 +405,7 @@ def to_markdown(bundle: dict) -> str:
                 lines.append(f"- **{k}**: {clip(profile[k], 400)}")
         lines.append("")
 
-    resumes = data.get("resumes") or []
+    resumes = _dicts(data.get("resumes"))
     if resumes:
         lines.append(f"## 简历版本（{len(resumes)}）")
         for r in resumes:
@@ -389,7 +413,7 @@ def to_markdown(bundle: dict) -> str:
                          f"· v{r.get('version', '?')} · {clip(r.get('plaintext'), 160)}")
         lines.append("")
 
-    knowledge = data.get("knowledge") or []
+    knowledge = _dicts(data.get("knowledge"))
     if knowledge:
         lines.append(f"## 知识库（{len(knowledge)} 篇）")
         for d in knowledge:
@@ -397,7 +421,7 @@ def to_markdown(bundle: dict) -> str:
                          f"· {d.get('status')}")
         lines.append("")
 
-    jds = data.get("job_descriptions") or []
+    jds = _dicts(data.get("job_descriptions"))
     if jds:
         lines.append(f"## 职位描述（{len(jds)}）")
         for j in jds:
@@ -405,16 +429,17 @@ def to_markdown(bundle: dict) -> str:
                          f"@ {j.get('company') or ''} · {clip(j.get('raw_text') or j.get('text'), 160)}")
         lines.append("")
 
-    interviews = data.get("interviews") or []
+    interviews = _dicts(data.get("interviews"))
     if interviews:
         lines.append(f"## 模拟面试（{len(interviews)} 场）")
         for s in interviews:
-            turns = s.get("turns") or []
+            _turns = s.get("turns")
+            turns = _turns if isinstance(_turns, list) else []
             lines.append(f"- {s.get('job_title') or '面试'} · {len(turns)} 轮 · "
                          f"{s.get('status') or ''}")
         lines.append("")
 
-    memories = data.get("memories") or []
+    memories = _dicts(data.get("memories"))
     if memories:
         lines.append(f"## 长期记忆（{len(memories)}）")
         for m in memories:

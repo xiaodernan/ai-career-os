@@ -9,7 +9,7 @@ stale cached row must produce an empty/safe result, never crash the request path
 
 import pytest
 
-from app.features import (company, counter_offer, demand, equity, export_redact,
+from app.features import (company, counter_offer, demand, equity, export, export_redact,
                              export_render, interview_prep, learning, match, negotiation,
                              offers, prioritize, progress, progression, readiness,
                              roles, salary)
@@ -418,4 +418,31 @@ def test_to_html_null_and_junk_sections_do_not_crash():
     out = export_render.to_html(bundle)
     assert out.startswith("<!doctype html>")
     assert "SE" in out          # the one real growth_plans row still renders
+
+
+# ---------------- export composition (Epic 13.1/13.3) ----------------
+
+def test_anonymize_none_and_null_sections_is_safe():
+    out = export.anonymize(None)                       # a None bundle -> empty, stamped
+    assert out["manifest"]["anonymized"] is True
+    nullish = {"data": {"profile": None, "resumes": None}, "user": None, "manifest": None}
+    out2 = export.anonymize(nullish)                   # {**None} used to raise TypeError
+    assert out2["manifest"]["anonymized"] is True
+
+
+def test_anonymize_still_strips_pii_and_leaves_non_pii():
+    bundle = {"data": {"profile": {"email": "a@b.com", "display_name": "Ann",
+                                   "headline": "SE"}}}
+    out = export.anonymize(bundle)
+    assert out["data"]["profile"]["email"] is None
+    assert out["data"]["profile"]["display_name"] is None
+    assert out["data"]["profile"]["headline"] == "SE"   # a non-PII field is left alone
+
+
+def test_to_markdown_none_and_junk_sections_is_safe():
+    assert export.to_markdown(None).startswith("# AI Career OS")
+    junk = {"data": {"profile": "not-a-dict", "resumes": None,
+                     "memories": [None, {"kind": "pref"}]},
+            "manifest": {"counts": None}, "user": None}
+    assert export.to_markdown(junk).startswith("# AI Career OS")
 
