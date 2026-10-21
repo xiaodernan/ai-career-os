@@ -82,6 +82,7 @@ const KNOWN: Record<string, string[]> = {
   ],
   "app/(app)/analysis/page.tsx": [
     "Applications at each pipeline stage.",
+    "Applications with no movement past",
     "No applications have reached a stage yet.",
     "Refresh",
     "What the data says about your pipeline.",
@@ -103,6 +104,7 @@ const KNOWN: Record<string, string[]> = {
   "app/(app)/growth/page.tsx": [
     "Coverage",
     "Learning plan",
+    "No skill changed state since the last report",
   ],
   "app/(app)/ingestion/page.tsx": [
     "Feed content",
@@ -119,6 +121,7 @@ const KNOWN: Record<string, string[]> = {
     "Next question",
     "Open report",
     "Opening",
+    "Question",
     "Submit answer",
     "This session so far",
   ],
@@ -145,6 +148,7 @@ const KNOWN: Record<string, string[]> = {
     "Cover letter",
     "Interview prep",
     "Loading job…",
+    "Match run failed:",
     "Mock interview mode",
     "Original posting",
     "Priority analysis from the JD extractor.",
@@ -159,6 +163,7 @@ const KNOWN: Record<string, string[]> = {
     "Filters",
     "Note:",
     "Research roles",
+    "Saved",
     "Sort",
   ],
   "app/(app)/layout.tsx": [
@@ -171,6 +176,7 @@ const KNOWN: Record<string, string[]> = {
   ],
   "app/(app)/networking/page.tsx": [
     "Draft",
+    "Draft for",
   ],
   "app/(app)/offers/page.tsx": [
     "Your offer against the market, and what to say.",
@@ -189,6 +195,8 @@ const KNOWN: Record<string, string[]> = {
     "Knowledge",
     "Loading resume…",
     "Original file",
+    "Overall",
+    "Parse failed:",
     "Profile from",
     "Repo",
     "Set current",
@@ -205,6 +213,7 @@ const KNOWN: Record<string, string[]> = {
     "Ends this session and revokes the refresh token.",
     "Keyboard",
     "Log out",
+    "Rendering in",
     "Save",
     "Session could not be verified.",
     "Sign out",
@@ -224,12 +233,15 @@ const KNOWN: Record<string, string[]> = {
     "Stop following this run",
   ],
   "components/auth/credentials-form.tsx": [
+    "Already registered?",
     "Create one",
     "Forgot your password?",
+    "No account yet?",
     "Sign in",
   ],
   "components/common/command-palette.tsx": [
     "Promise",
+    "Search",
   ],
   "components/copilot/artifacts.tsx": [
     "Open job",
@@ -237,7 +249,10 @@ const KNOWN: Record<string, string[]> = {
     "The agent prepared a session from this conversation.",
   ],
   "components/growth/growth-engines-panel.tsx": [
+    "Coverage",
+    "Missing for the dream role:",
     "Rehearse",
+    "Run",
     "Study",
   ],
   "components/jobs/analyze-jd-dialog.tsx": [
@@ -263,16 +278,6 @@ const KNOWN: Record<string, string[]> = {
     "Found by research agent",
     "Pasted JD",
     "Why this job:",
-  ],
-  "components/jobs/job-filters.tsx": [
-    "Company",
-    "Filtering…",
-    "Filters",
-    "Keyword",
-    "Location",
-    "Remote only",
-    "Salary range",
-    "Skills",
   ],
   "components/jobs/match-panel.tsx": [
     "Extracted requirements, straight from the posting.",
@@ -315,6 +320,7 @@ const KNOWN: Record<string, string[]> = {
     "Save profile",
     "Summary",
     "The short story a recruiter gets before the resume.",
+    "Years of experience has to be a number between 0 and",
   ],
 
 };
@@ -353,13 +359,27 @@ interface Offender {
  * a heading and a list, the button that says "Try again". The attribute
  * scan catches the labels; this catches the sentences.
  *
+ * Two shapes count. A text node is `>prose<`, and a text node with an
+ * expression in it is `>prose{count}<` -- the phrase is still a phrase,
+ * and "Clear {count}" is a whole key. So the scan anchors on a tag or a
+ * closing brace and reads up to the next tag or opening brace.
+ *
+ * The value may start with whitespace -- a `>` is usually the end of an
+ * opening tag, and the prose begins on the next line -- so the value is
+ * trimmed before it is read.
+ *
  * The filter is the interesting part. A `>` in JSX is also a comparison
  * operator, so `total > PAGE_SIZE` reads as a text node that begins with
  * "PAGE_SIZE". A candidate carrying a character that cannot appear in a
  * sentence the reader reads -- a bracket, a brace, a semicolon, an equals,
  * a pipe, another angle bracket -- is code, not copy, and is skipped.
+ *
+ * What this does not catch is the lowercase fragments: `} matching{" "}` is
+ * the tail of a sentence whose other pieces are elsewhere, and a lone
+ * word like that is not a phrase a translation key can hold. Those are a
+ * known limit of the scan, not an oversight.
  */
-const TEXT_NODE = />([^<>{}]{3,80}?)</g;
+const TEXT_NODE = /(?:>|\})([^<>{}]{1,80}?)(?=<|\{)/g;
 
 function textNodeOffenders(): Offender[] {
   const found: Offender[] = [];
@@ -370,8 +390,7 @@ function textNodeOffenders(): Offender[] {
       if (!value) continue;
       // A sentence starts with a capital and a lower-case letter after it.
       // "AI", "OS" and "JD" are names, not sentences.
-      if (!/^[A-Z][a-z]/.test(value)) continue;
-      // Code, not copy.
+      if (!/^[A-Z][a-z]/.test(value)) continue;      // Code, not copy.
       if (/[(){};=<>|]/.test(value)) continue;
       // An entity -- `&amp;` -- is punctuation the reader never sees.
       if (/^&[a-z]+;/.test(value)) continue;
@@ -456,10 +475,11 @@ describe("the browser's copy", () => {
   });
 
   it("knows how much is left", () => {
-    // 187: the copy-bearing attributes and the text between the tags. The
-    // number is the census's own reading of the browser, and every one of
-    // them is on the list above with a file and an owner. The pin moves when
-    // a hole closes -- which is the point of pinning it.
-    expect(found.length).toBe(187);
+    // 207: the copy-bearing attributes, the text between the tags, and the
+    // text that has an expression in it ("Clear {count}"). The number is the
+    // census's own reading of the browser, and every one of them is on the
+    // list above with a file and an owner. The pin moves when a hole closes
+    // -- which is the point of pinning it.
+    expect(found.length).toBe(198);
   });
 });

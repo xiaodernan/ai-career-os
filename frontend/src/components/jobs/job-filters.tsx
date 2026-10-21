@@ -65,7 +65,7 @@ function JobFilterPanel({ value, onApply, skillSuggestions, resultCount, loading
       <div className="flex items-center justify-between">
         <h2 className="flex items-center gap-2 text-sm font-semibold">
           <Filter className="size-3.5 text-muted-foreground" aria-hidden />
-          Filters
+          {t("jobs.filters.heading")}
         </h2>
         {activeCount > 0 && (
           <Button
@@ -74,17 +74,17 @@ function JobFilterPanel({ value, onApply, skillSuggestions, resultCount, loading
             onClick={() => {
               onApply(EMPTY);
               setLocalQ("");
-              toast.success("Filters cleared.");
+              toast.success(t("jobs.filters.clearedToast"));
             }}
           >
             <RotateCcw aria-hidden />
-            Clear {activeCount}
+            {t("jobs.filters.clear")} {activeCount}
           </Button>
         )}
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="job-search">Keyword</Label>
+        <Label htmlFor="job-search">{t("jobs.filters.keyword")}</Label>
         <div className="relative">
           <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" aria-hidden />
           <Input
@@ -99,7 +99,7 @@ function JobFilterPanel({ value, onApply, skillSuggestions, resultCount, loading
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="job-location">Location</Label>
+        <Label htmlFor="job-location">{t("jobs.filters.location")}</Label>
         <Input
           id="job-location"
           value={value.location ?? ""}
@@ -110,7 +110,7 @@ function JobFilterPanel({ value, onApply, skillSuggestions, resultCount, loading
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="job-company">Company</Label>
+        <Label htmlFor="job-company">{t("jobs.filters.company")}</Label>
         <Input
           id="job-company"
           value={value.company ?? ""}
@@ -121,7 +121,7 @@ function JobFilterPanel({ value, onApply, skillSuggestions, resultCount, loading
       </div>
 
       <div className="space-y-2">
-        <Label>Skills</Label>
+        <Label>{t("jobs.filters.skills")}</Label>
         {skills.length > 0 && (
           <ul className="flex flex-wrap gap-1.5">
             {skills.map((s) => (
@@ -160,13 +160,13 @@ function JobFilterPanel({ value, onApply, skillSuggestions, resultCount, loading
           </div>
         ) : (
           <p className="text-xs text-muted-foreground">
-            Skill suggestions appear once your resume profile is parsed.
+            {t("jobs.filters.skillSuggestions")}
           </p>
         )}
       </div>
 
       <div className="space-y-2">
-        <Label>Salary range</Label>
+        <Label>{t("jobs.filters.salaryRange")}</Label>
         <div className="flex items-center gap-2">
           <Input
             type="number"
@@ -192,7 +192,7 @@ function JobFilterPanel({ value, onApply, skillSuggestions, resultCount, loading
 
       <div className="flex items-center justify-between gap-3">
         <Label htmlFor="job-remote" className="cursor-pointer">
-          Remote only
+          {t("jobs.filters.remoteOnly")}
         </Label>
         <Switch
           id="job-remote"
@@ -205,14 +205,16 @@ function JobFilterPanel({ value, onApply, skillSuggestions, resultCount, loading
 
       <p className="text-xs text-muted-foreground" aria-live="polite">
         {loading ? (
-          <span className="shimmer-text">Filtering…</span>
+          <span className="shimmer-text">{t("jobs.filters.filtering")}</span>
         ) : resultCount != null ? (
-          <>
-            <span className="font-medium text-foreground tabular-nums">{resultCount}</span> matching{" "}
-            {resultCount === 1 ? "role" : "roles"}
-          </>
+          <span>
+            {t("jobs.filters.matchingRoles", {
+              count: resultCount,
+              noun: resultCount === 1 ? t("jobs.filters.role") : t("jobs.filters.roles"),
+            })}
+          </span>
         ) : (
-          "Results load from the live search endpoint."
+          t("jobs.filters.resultsLoad")
         )}
       </p>
     </div>

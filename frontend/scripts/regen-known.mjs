@@ -46,7 +46,7 @@ const add = (file, value) => {
 };
 
 const attrPattern = new RegExp(`\\b(${COPY_ATTRIBUTES.join("|")})="([^"\\n]+)"`, "g");
-const textPattern = />([^<>{}]{3,80}?)</g;
+const textPattern = /(?:>|\})([^<>{}]{1,80}?)(?=<|\{)/g;
 
 const NOT_COPY = new Set(["Career", "CareerOS", "OS"]);
 
