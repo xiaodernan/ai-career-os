@@ -269,6 +269,18 @@ export const translations = {
     dashboard: {
       title: "Dashboard",
       greeting: "Good morning",
+      /**
+       * The three times of day the greeting can name.
+       *
+       * The greeting is the one line on the dashboard that was written in
+       * English in the source, so a Chinese reader was greeted in English
+       * on a Chinese page. The keys are the hours' own -- the greeting is
+       * computed from the reader's clock, not from a form.
+       */
+      greetingHello: "Hello",
+      greetingMorning: "Good morning",
+      greetingAfternoon: "Good afternoon",
+      greetingEvening: "Good evening",
       description: "Your job search at a glance — every figure here is read live from the API.",
       applications: "Applications",
       interviews: "Interviews",
@@ -1685,6 +1697,10 @@ export const translations = {
     dashboard: {
       title: "仪表盘",
       greeting: "早上好",
+      greetingHello: "你好",
+      greetingMorning: "早上好",
+      greetingAfternoon: "下午好",
+      greetingEvening: "晚上好",
       description: "求职全局一览——这里的每个数字都实时读自 API。",
       applications: "申请",
       interviews: "面试",

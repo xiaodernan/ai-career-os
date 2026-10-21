@@ -157,6 +157,14 @@ Verified against the live stack, not just in unit tests:
   and on the 404, because the title is rendered into the head the browser
   paints before any script runs -- and a title that says "AI Career OS" on
   a Chinese page is the one thing on the page that never changed.
+- **The keyboard path is driven, not asserted.** The suite tabs through the
+  shell and checks three things a reader who cannot use a mouse depends on:
+  the skip link is the *first* thing the keyboard reaches and it moves the
+  focus to the content (a viewport jump without a focus move buys nothing),
+  every element the keyboard reaches has a visible focus indicator, and
+  every control in the shell has an accessible name. The suite also drives
+  the language switch and the command palette with the keyboard alone, and
+  reads the top bar's own heading to prove the page followed.
 - **Job vectors are backfilled and indexed.** `python -m app.ops.embed_jobs`
   embedded all 41 roles, `jobs.embedding` is `vector(1536)` and `idx_jobs_hnsw`
   is built, so `search_jobs` now runs keyword and vector retrieval and fuses them

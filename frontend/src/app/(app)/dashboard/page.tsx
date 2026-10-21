@@ -48,19 +48,28 @@ import { runTotalTokens, type NormalizedPage } from "@/lib/api/normalize";
 import { formatNumber, relativeTime, titleCase } from "@/lib/format";
 import type { ActivityRun, DashboardPayload, Job, Resume } from "@/lib/api/types";
 
-/** Time-of-day greeting, computed client-side only (no fake personalisation). */
-function useGreeting(): string {
-  const [greeting, setGreeting] = React.useState("Hello");
+/**
+ * Time-of-day greeting, computed client-side only (no fake personalisation).
+ *
+ * The three words are the product's, so they are read through the locale:
+ * a Chinese reader was greeted with "Good evening" on a Chinese page,
+ * because the greeting was the one piece of the screen that was written
+ * in English in the source.
+ */
+function useGreeting(t: (key: string) => string): string {
+  const [greeting, setGreeting] = React.useState("dashboard.greetingHello");
   React.useEffect(() => {
     const h = new Date().getHours();
-    setGreeting(h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening");
+    setGreeting(
+      h < 12 ? "dashboard.greetingMorning" : h < 18 ? "dashboard.greetingAfternoon" : "dashboard.greetingEvening"
+    );
   }, []);
-  return greeting;
+  return t(greeting);
 }
 
 export default function DashboardPage() {
   const { t } = useLocale();
-  const greeting = useGreeting();
+  const greeting = useGreeting(t);
   const { data: user } = useUser();
   const dashboard = useDashboard();
   const pipeline = useDashboardPipeline();
