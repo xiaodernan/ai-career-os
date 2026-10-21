@@ -215,6 +215,28 @@ obvious. Stop `careeros-frontend` to hand the port to the local build, or
 rebuild the image to test the container path — both are legitimate, but they
 must be a choice, not an accident.
 
+**7. The stack needs the mock provider, or the tests fail with a 502.**
+`LLM_PROVIDER` and `EMBEDDING_PROVIDER` are read from the environment
+(`docker-compose.yml` passes them through as `${LLM_PROVIDER:-}`), and an
+unset one means the *real* provider — `openai_compat` with no API key. The
+ai-service answers `/health` with 200 either way, so the stack looks fine,
+and then every test that asks the model something fails with
+`AI_SERVICE_ERROR: AI service request failed (status 502)`. The health
+answer names the provider, so `curl /health | grep llm_provider` settles it
+in one look. Start the stack with:
+
+```bash
+LLM_PROVIDER=mock EMBEDDING_PROVIDER=hash RATELIMIT_AUTH_PER_MINUTE=100 \
+  docker compose --profile app up -d
+```
+
+**8. A `useEffect` that sets `document.title` does not set the title.**
+React's own metadata reconciliation resets it a moment later, because the
+`<title>` element is part of the tree it just hydrated. The end-to-end
+suite reads the title after the page has settled, so a title that only
+*looks* right in the console fails the test — and the fix is the server's
+answer, not the client's (`lib/i18n/metadata.ts`).
+
 ## Env overrides
 
 | Var | Default | Meaning |

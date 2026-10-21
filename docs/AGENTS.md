@@ -242,3 +242,56 @@ Three properties hold across every one of them, and the census gates
 - **The caller's id travels with the request.** The ingestion engines write rows;
   a sweep that ran under a random id would put another user's jobs in this one's
   board.
+
+## 8. The four quiet failures
+
+Four bugs in this repository looked like working code and were not. They are
+written down because each one is a *shape* of failure, not a one-off: the next
+one will have the same shape, and the gate that catches it is the thing to
+reach for.
+
+**A live collection, read after it was cleared.** A `FileList` is a view of
+the input's own selection, so clearing the input empties it. The knowledge
+base's uploader cleared the input — so that re-picking the same files starts
+a fresh batch — and it did that *before* reading them, which handed the
+batch an empty list. An empty list is not an error: it is a batch of
+nothing. The panel showed no row, the request never went out, and the reader
+was told nothing at all. The uploader had never uploaded anything. The copy
+of the collection has to be taken **before** the thing that empties it, and
+the order is the whole bug.
+
+**A word the reader cannot change, written where the gate cannot look.** The
+copy census walked a `.tsx` file's copy-bearing attributes and the text
+between the tags. It did not read an object literal — and half the
+product's copy is written as one. A bar labelled "Technical" on a Chinese
+page was exactly as invisible to the gate as an attribute was, and it was
+exactly as wrong. A gate measures the population it can see; a hole in the
+scan is a hole in the product. `lib/i18n/copy-scan.ts` now reads the three
+shapes the copy is actually written in, and `scripts/regen-known.mjs` uses
+*that* scan, so the list the gate measures and the list the tool
+regenerates cannot drift apart.
+
+**A title set on the client, undone by the framework.** A `useEffect` that
+writes `document.title` runs, and the title does change, and then React's own
+metadata reconciliation resets it — the `<title>` element is part of the tree
+it just hydrated. The write is undone a moment after it happens. The title
+is rendered into the head the browser paints *before any script runs*, and
+that head is what a crawler reads, so the only place a title can be right is
+the server's answer. The locale therefore travels in a cookie as well as in
+`localStorage`, and the server reads it (`lib/i18n/metadata.ts`).
+
+**A gate that measures the wrong population.** The census's own rule caught
+a TypeScript type: `type SearchFn = (q: string) => Promise<SearchResults>`
+has a `>` in it, and the scan read the text after it as a text node. So
+`Promise` was in the list of words the reader cannot change — and no edit to
+the source could ever have removed it, because the source was correct. A
+gate with a false positive trains people to ignore it, and a gate that
+ignores the difference between a *word* and a *type* stops being a census.
+The scan's anchor is now a `>` that is not an arrow's.
+
+Each of these has a gate now, and each gate is a *different kind* of
+check: an order (the copy before the clear), a population (the three
+shapes of copy), a mechanism (the server's answer, not the client's), and
+the scan's own rule (an anchor that is not a type). The general shape is
+the same in all four: **the bug was where nobody was looking, and the
+answer was to look there, not to look harder.**
