@@ -243,9 +243,9 @@ Three properties hold across every one of them, and the census gates
   a sweep that ran under a random id would put another user's jobs in this one's
   board.
 
-## 8. The five quiet failures
+## 8. The six quiet failures
 
-Five bugs in this repository looked like working code and were not. They are
+Six bugs in this repository looked like working code and were not. They are
 written down because each one is a *shape* of failure, not a one-off: the next
 one will have the same shape, and the gate that catches it is the thing to
 reach for.
@@ -304,10 +304,28 @@ thing it summarizes, so it is checked by being recomputed from it. The
 redaction's output is a bundle; the thing that reads a bundle is the import
 path — and the import path is what the reader redacted the bundle *for*.
 
+**A table with two rows the reader never sees.** The navigation table pairs an
+English label with the key that translates it, and the key was *optional* — so
+two items had none, and rendered their English names on every language. There
+was a gate for it, and the gate's own comment said what it was for: "the
+sidebar reads the label through a key, so a nav item without one silently keeps
+its English name on a Chinese page." It checked the other direction. It walked
+the translation *table's* keys and asked whether each had a Chinese label; it
+never walked the *items* and asked whether each had a key at all. A table key
+nobody asks for is dead weight; a nav item that asks for nothing is a page the
+reader sees in English — and only the second one is a bug. The copy census
+could not see it either: the navigation is a `.ts` module, and the census reads
+`.tsx`. So the fix was to make the key **required**, which puts the check in
+the type checker where it cannot be forgotten, and to turn the gate around to
+the direction it had always claimed. **A gate that says what it is for has to
+measure that thing, not the nearest thing it can measure** — and a fallback
+table is exactly where a required field earns its keep.
+
 Each of these has a gate now, and each gate is a *different kind* of
 check: an order (the copy before the clear), a population (the three
 shapes of copy), a mechanism (the server's answer, not the client's), the
-scan's own rule (an anchor that is not a type), and a round trip (the
-redacted file, read back by the path it exists for). The general shape is
-the same in all five: **the bug was where nobody was looking, and the
-answer was to look there, not to look harder.**
+scan's own rule (an anchor that is not a type), a round trip (the
+redacted file, read back by the path it exists for), and a direction (the
+navigation *items*, not the table's keys). The general shape is the same in
+all six: **the bug was where nobody was looking, and the answer was to look
+there, not to look harder.**

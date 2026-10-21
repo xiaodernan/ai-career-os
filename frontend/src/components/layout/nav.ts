@@ -28,8 +28,16 @@ export interface NavItem {
    * The translation key for this item's label. The English `label` stays the
    * fallback so the table can be read without a provider mounted, and so a
    * route test can assert a name that does not change with the locale.
+   *
+   * It is *required*, and that is the point. An item without one renders its
+   * English name on every language, and the reader has no way to tell that
+   * is what happened -- it looks like an untranslated product. Two items were
+   * exactly that for a while, and the gate that claims to catch it was
+   * checking the table's keys rather than the table's items, so it never
+   * looked at them. Making the key required moves the check into the type
+   * checker, where it cannot be forgotten.
    */
-  labelKey?: string;
+  labelKey: string;
 }
 
 export const NAV_ITEMS: NavItem[] = [
@@ -47,8 +55,8 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/offers", label: "Offers", labelKey: "nav.offers", icon: Handshake, description: "Salary benchmarks and negotiation" },
   { href: "/monitoring", label: "Monitoring", labelKey: "nav.monitoring", icon: ActivityIcon, description: "Agent health and cost" },
   { href: "/rate-limit", label: "Rate limit", labelKey: "nav.rateLimit", icon: Gauge, description: "Rate-limit status and quotas" },
-  { href: "/ingestion", label: "Ingestion", icon: Layers, description: "Import jobs from feeds and boards" },
-  { href: "/data", label: "Your data", icon: Database, description: "Export, restore and redact your data" },
+  { href: "/ingestion", label: "Ingestion", labelKey: "nav.ingestion", icon: Layers, description: "Import jobs from feeds and boards" },
+  { href: "/data", label: "Your data", labelKey: "nav.yourData", icon: Database, description: "Export, restore and redact your data" },
   { href: "/activity", label: "Activity", labelKey: "nav.activity", icon: ActivityIcon, description: "AI agent runs and traces" },
   { href: "/settings", label: "Settings", labelKey: "nav.settings", icon: Settings, description: "Account and preferences" },
 ];

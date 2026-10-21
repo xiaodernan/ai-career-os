@@ -776,7 +776,15 @@ test.describe("golden journey — profile and notes", () => {
     await authedPage.locator("#note-title").fill("Salary research");
     await authedPage.locator("#note-content").fill("Senior backend band in Hangzhou: 40-60w total.");
     await authedPage.getByRole("button", { name: "Save note" }).click();
-    await expect(authedPage.getByText("Salary research")).toBeVisible({ timeout: 20_000 });
+    // The locator is exact, and it has to be: the notes panel's own
+    // description ends with "talking points, salary research, follow-ups",
+    // and a text match for the title's words finds that paragraph too. Both
+    // are leaves, so both match -- and whether the list had finished
+    // loading decided how many elements the locator resolved to. The
+    // exact match can only be the row's own title.
+    await expect(
+      authedPage.getByText("Salary research", { exact: true })
+    ).toBeVisible({ timeout: 20_000 });
 
     // The save button is fire-and-forget: the row appears optimistically only
     // once the mutation lands, so the API read is polled, not trusted to a
@@ -795,7 +803,9 @@ test.describe("golden journey — profile and notes", () => {
     await authedPage.getByLabel("Note title").fill("Salary research 2026");
     await authedPage.getByLabel("Note content").fill("Band moved: 45-65w total.");
     await authedPage.getByRole("button", { name: "Save", exact: true }).click();
-    await expect(authedPage.getByText("Salary research 2026")).toBeVisible({ timeout: 20_000 });
+    await expect(
+      authedPage.getByText("Salary research 2026", { exact: true })
+    ).toBeVisible({ timeout: 20_000 });
 
     // A fresh account holds no other notes, so the empty state returning is the
     // strongest proof the delete actually removed the row.

@@ -25,6 +25,8 @@ export const translations = {
       rateLimit: "Rate limit",
       activity: "Activity",
       settings: "Settings",
+      ingestion: "Ingestion",
+      yourData: "Your data",
     },
     /**
      * The light/dark toggle.
@@ -1080,7 +1082,6 @@ export const translations = {
       skillsClosed: "Closed",
       skillsImproved: "Improved",
       skillsRegressed: "Regressed",
-      run: "Run",
       stillOpen: "{count} still open.",
     },
     // Knowledge
@@ -1685,6 +1686,8 @@ export const translations = {
       rateLimit: "限流",
       activity: "活动",
       settings: "设置",
+      ingestion: "职位导入",
+      yourData: "你的数据",
     },
     theme: {
       switchToLight: "切换到浅色主题",
@@ -2614,7 +2617,6 @@ export const translations = {
       skillsImproved: "有提升",
       skillsRegressed: "有退步",
       stillOpen: "{count} 项仍未覆盖。",
-      run: "运行",
     },
     // Knowledge
     knowledge: {

@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { NAV_ITEMS } from "@/components/layout/nav";
+
 import { translations, type Locale } from "./translations";
 
 /**
@@ -20,6 +22,17 @@ function keysOf(value: unknown, prefix = ""): string[] {
 
 const en = keysOf(translations.en);
 const zh = keysOf(translations.zh);
+
+/** The string at a dotted key, or undefined. */
+function lookup(table: unknown, key: string): string | undefined {
+  const value = key
+    .split(".")
+    .reduce<unknown>(
+      (acc, part) => (acc as Record<string, unknown>)?.[part],
+      table as Record<string, unknown>
+    );
+  return typeof value === "string" ? value : undefined;
+}
 
 describe("the translation table", () => {
   it("has the same keys in both languages", () => {
@@ -58,11 +71,30 @@ describe("the translation table", () => {
   it("names every navigation item's label", () => {
     // The sidebar reads the label through a key, so a nav item without one
     // silently keeps its English name on a Chinese page.
+    //
+    // This walks the *items*, not the table. The other direction -- every key
+    // in the table has a Chinese label -- is the wrong half: a table key
+    // nobody asks for is dead weight, while a nav item that asks for
+    // nothing is a page the reader sees in English on every language. Two
+    // items were exactly that, and this test said nothing about them,
+    // because it only looked at the table.
     const nav = translations.en.nav as Record<string, string>;
     const navZh = translations.zh.nav as Record<string, string>;
     for (const [key, value] of Object.entries(nav)) {
       expect(navZh[key], `nav.${key} has no Chinese label`).toBeTruthy();
       expect(value.length).toBeGreaterThan(0);
+    }
+
+    for (const item of NAV_ITEMS) {
+      expect(item.labelKey, `${item.href} names no label`).toBeTruthy();
+      expect(
+        lookup(translations.en, item.labelKey),
+        `${item.labelKey} has no English label`
+      ).toBeTruthy();
+      expect(
+        lookup(translations.zh, item.labelKey),
+        `${item.labelKey} has no Chinese label`
+      ).toBeTruthy();
     }
   });
 
