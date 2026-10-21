@@ -165,6 +165,14 @@ Verified against the live stack, not just in unit tests:
   every control in the shell has an accessible name. The suite also drives
   the language switch and the command palette with the keyboard alone, and
   reads the top bar's own heading to prove the page followed.
+- **The run's trace is read on the screen.** The activity page is the debug
+  view behind the answers (PRD §31, §47 Demo 6), and the suite drives a
+  copilot turn, opens the list, and checks that the run the list carries is
+  the run the API recorded and that its steps -- the same number, and the
+  same kinds -- are the ones the page draws. It also closed a race in the
+  streaming case: the question is on the screen the moment it is sent, so a
+  transcript read straight after it was reading the page mid-answer, and
+  that case failed about one run in four.
 - **Job vectors are backfilled and indexed.** `python -m app.ops.embed_jobs`
   embedded all 41 roles, `jobs.embedding` is `vector(1536)` and `idx_jobs_hnsw`
   is built, so `search_jobs` now runs keyword and vector retrieval and fuses them

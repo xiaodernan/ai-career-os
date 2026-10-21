@@ -578,8 +578,19 @@ test("the copilot's answer arrives in the browser", async ({ api, authedPage }) 
 
   // The answer is longer than the question and is not the page's own
   // chrome, so a transcript that rendered only the question cannot pass.
-  const transcript = await authedPage.locator("main").first().innerText();
-  expect(transcript.length, "the transcript is empty").toBeGreaterThan(asked.length + 40);
+  //
+  // The wait is a poll, not a sleep, and it is the answer that is waited
+  // for. The question is on the screen the moment it is sent -- it is the
+  // conversation's title as well as the user's own message -- while the
+  // answer streams in afterwards. So reading the transcript as soon as the
+  // question is there reads it mid-answer, and the assertion below is
+  // looking at a half-written page. It failed about one run in four.
+  const transcript = await expect
+    .poll(
+      async () => (await authedPage.locator("main").first().innerText()).length,
+      { timeout: 60_000, message: "the answer never reached the transcript" }
+    )
+    .toBeGreaterThan(asked.length + 40);
 
   // And the turn was streamed, not answered by the fallback. This is the
   // claim the whole SSE architecture exists for: the browser gets the turn
