@@ -64,7 +64,7 @@ export const COPY_ATTRIBUTES = [
  * the product writes, and translating it would name a key that does not
  * exist.
  */
-export const NOT_COPY = new Set(["Career", "CareerOS", "OS", "Ctrl K", "⌘K"]);
+export const NOT_COPY = new Set(["Career", "CareerOS", "OS", "AI Career OS", "Ctrl K", "⌘K"]);
 
 /** One hardcoded copy string: the file it is in, and the string itself. */
 export interface Offender {
@@ -118,8 +118,7 @@ export function browserSources(): string[] {
  * The filter is the interesting part. A `>` in JSX is also a comparison
  * operator, so `total > PAGE_SIZE` reads as a text node that begins with
  * "PAGE_SIZE". A candidate carrying a character that cannot appear in a
- * sentence the reader reads -- a bracket, a brace, a semicolon, an equals,
- * a pipe, another angle bracket -- is code, not copy, and is skipped.
+ * sentence the reader reads is code, not copy, and is skipped.
  *
  * The length bound is generous, and it was not always. At eighty
  * characters the scan missed every sentence longer than about sixty --
@@ -164,6 +163,22 @@ const ATTRIBUTE = new RegExp(`\\b(${COPY_ATTRIBUTES.join("|")})="([^"\\n]+)"`, "
 
 /** A copy-bearing property in an object literal: `label: "Technical"`. */
 const OBJECT_LITERAL = new RegExp(`\\b(${COPY_ATTRIBUTES.join("|")}):\\s*"([^"\\n]+)"`, "g");
+
+/**
+ * The code characters that mean a candidate is code and not copy.
+ *
+ * A bracket, a brace, a semicolon, an equals, a pipe, an angle bracket, an
+ * ampersand, an underscore. A *parenthesis* is not on the list:
+ * "(single-call parses)" is ordinary punctuation in an English sentence, and
+ * rejecting a candidate for carrying one hid a sentence the reader would
+ * have seen.
+ */
+const CODE_CHARS = /[{};=<>|&_]/;
+
+/** A candidate is code if it carries one of the code characters. */
+function isCode(value: string): boolean {
+  return CODE_CHARS.test(value.replace(/&[a-z]+;/g, "x"));
+}
 
 function attributeOffenders(): Offender[] {
   const found: Offender[] = [];
@@ -213,12 +228,8 @@ function textNodeOffenders(): Offender[] {
         // "AI", "OS" and "JD" are names, not sentences.
         if (!/^[A-Z][a-z]/.test(value)) continue;
       }
-      // An HTML entity inside a phrase -- "Profile & preferences" -- is
-      // punctuation the reader sees, not code. It is decoded before the
-      // code check so the semicolon in it does not hide the phrase.
-      const decoded = value.replace(/&[a-z]+;/g, "x");
       // Code, not copy.
-      if (/[(){};=<>|]/.test(decoded)) continue;
+      if (isCode(value)) continue;
       if (NOT_COPY.has(value)) continue;
       found.push({ file: rel, attribute: "text", value });
     }
@@ -267,7 +278,7 @@ function expressionOffenders(): Offender[] {
       // initialism. "EN" is a language, not a word.
       if (/^[A-Z\s]+$/.test(value)) continue;
       // Code characters.
-      if (/[(){};=<>|]/.test(value)) continue;
+      if (isCode(value)) continue;
       if (NOT_COPY.has(value.trim())) continue;
       found.push({ file: rel, attribute: "expression", value });
     }
@@ -275,12 +286,77 @@ function expressionOffenders(): Offender[] {
   return found;
 }
 
-/** Every hardcoded string: the attributes, the object literals, the text, the expressions. */
+/**
+ * The copy in a string literal.
+ *
+ * The last shape. A toast message, an empty state's sentence, a
+ * placeholder, an `aria-label` -- all of them are quoted literals, and
+ * all of them are words the reader sees in a language they did not
+ * choose.
+ *
+ * The rule is the two things a sentence has and an identifier does not: it
+ * starts with a capital, and it has a space in it. A class name, a route,
+ * a colour, a key -- none of them are a capitalised phrase. The single
+ * word is left to the other scans, which read the positions a phrase is
+ * usually written in.
+ *
+ * The last character matters too. A phrase ends in a letter or in
+ * punctuation that closes a sentence -- a full stop, a question mark, an
+ * exclamation, a closing bracket -- and a candidate that ends in a comma
+ * or an open bracket is a fragment of an expression that the quote
+ * matching paired wrongly. The scanner reads quotes, and a JSX expression
+ * that contains one puts the pairs out of step: `{MAX_DOCUMENT_BYTES /
+ * (1024 * 1024)} MB each, {ACCEPTED_EXTENSIONS.join(" / ")}` pairs the
+ * quotes around `" / "` and reads the code on either side of it.
+ */
+const LITERAL = /"([^"\\\n]{2,})"/g;
+const SENTENCE_END = /[a-zA-Z.!?)\]…]$/;
+
+function literalOffenders(): Offender[] {
+  const found: Offender[] = [];
+  for (const rel of browserSources()) {
+    const text = readFileSync(join(ROOT, rel), "utf-8");
+    const seen = new Set<string>();
+    for (const m of text.matchAll(LITERAL)) {
+      const value = m[1];
+      // A capital, and a space: a phrase rather than an identifier.
+      if (!/^[A-Z][a-z]/.test(value)) continue;
+      if (!value.includes(" ")) continue;
+      if (!SENTENCE_END.test(value)) continue;
+      if (isCode(value)) continue;
+      if (NOT_COPY.has(value.trim())) continue;
+      seen.add(value);
+    }
+    for (const value of seen) {
+      found.push({ file: rel, attribute: "literal", value });
+    }
+  }
+  return found;
+}
+
+/**
+ * Every hardcoded string: the attributes, the object literals, the text,
+ * the expressions and the literals.
+ *
+ * The count is of *distinct* strings: the same sentence can be read by
+ * more than one scan -- a `title="Delete"` is an attribute and a literal
+ * -- and a population that counted it twice would not be a population.
+ */
 export function everyOffender(): Offender[] {
-  return [
+  const all = [
     ...attributeOffenders(),
     ...objectLiteralOffenders(),
     ...textNodeOffenders(),
     ...expressionOffenders(),
+    ...literalOffenders(),
   ];
+  const seen = new Set<string>();
+  const out: Offender[] = [];
+  for (const o of all) {
+    const key = `${o.file} ${o.value}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(o);
+  }
+  return out;
 }
