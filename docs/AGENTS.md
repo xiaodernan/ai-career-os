@@ -168,6 +168,18 @@ stream route answers 404. The browser half is `postSSE` (`lib/api/client.ts`): `
 and one refresh-on-401, frames parsed and dispatched by `lib/sse/use-sse.ts`, resolving on `done`
 and rejecting with `errorText`'s first line.
 
+**The async dispatch has to be permitted.** The security chain runs *again* when the emitter is
+written to, and the session is stateless, so the security context is gone by then and
+`anyRequest().authenticated()` denies the dispatch. The response headers have already gone out,
+so the browser sees a 200 and an event stream that never carries an event. Nothing looks broken:
+the client falls back to the blocking pair, the turn still happens, the answer still appears and
+the run is still recorded and billed — the screen is perfect and nothing is ever streamed.
+`SecurityConfig` therefore permits the `ASYNC` and `ERROR` dispatchers: an async dispatch is the
+continuation of a request that was already authorized, so the original dispatch is where the
+authorization belongs. The end-to-end suite holds it by wrapping the page's own `fetch` and
+reading the clone of the streaming response — the bytes the browser received — because a turn
+that is *answered* and a turn that is *streamed* look identical on the screen.
+
 ## 6. Correcting what the model remembers
 
 Every memory in §3 was written by the model and read by the model, which left the user
