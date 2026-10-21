@@ -493,3 +493,133 @@ test("the corpus's read of a company comes from the screen", async ({ api, authe
     ).toBeVisible({ timeout: 20_000 });
   }
 });
+
+/**
+ * A turn of the copilot's, in the browser.
+ *
+ * The golden journey asks the copilot through the API, which is the
+ * blocking pair: a request, an answer, a run recorded. The browser does
+ * something else -- it posts to the streaming route and reads the turn as
+ * SSE frames, with a fallback to the blocking pair if the stream route
+ * answers 404. That is the most intricate path in the product: the task
+ * bus, the relay, the frame parser on each side, and a client that has to
+ * notice a stream is not coming.
+ *
+ * So the composer is driven, the way a reader drives it, and the answer
+ * has to arrive on the screen.
+ */
+test("the copilot's answer arrives in the browser", async ({ api, authedPage }) => {
+  // The browser's own network log, so the claim is about the route and not
+  // about the fallback: the client falls back to the blocking pair when the
+  // stream cannot be had, and a fallback that always happens looks exactly
+  // like a stream that always works.
+  const streamed: { url: string; status: number }[] = [];
+  const frames: string[] = [];
+  // The frames the page itself received.
+  //
+  // The network log cannot show them: by the time a test reads a response
+  // body, the page's own fetch has consumed the stream. So the page's fetch
+  // is wrapped, and the clone of the streaming response is read here --
+  // which is the same bytes the page saw.
+  await authedPage.addInitScript(() => {
+    const w = window as unknown as { __sseBodies?: string[]; fetch: typeof fetch };
+    w.__sseBodies = [];
+    const original = w.fetch;
+    w.fetch = async (...args: Parameters<typeof fetch>) => {
+      const res = await original(...args);
+      const url = String(
+        typeof args[0] === "string" ? args[0] : (args[0] as Request | undefined)?.url ?? ""
+      );
+      if (url.includes("/copilot/chat/stream")) {
+        res
+          .clone()
+          .text()
+          .then((body) => w.__sseBodies?.push(body))
+          .catch(() => w.__sseBodies?.push(""));
+      }
+      return res;
+    };
+  });
+  authedPage.on("request", (request) => {
+    if (request.url().includes("/copilot/chat")) {
+      streamed.push({ url: request.url(), status: 0 });
+    }
+  });
+  authedPage.on("response", (response) => {
+    const row = streamed.find((r) => r.url === response.url() && r.status === 0);
+    if (row) row.status = response.status();
+  });
+
+  await authedPage.goto("/copilot");
+
+  // The composer, filled and sent the way a reader fills and sends it.
+  const composer = authedPage.getByRole("textbox", { name: "First message to Copilot" });
+  await expect(composer).toBeVisible({ timeout: 20_000 });
+  const asked = "Which of my projects best shows ownership?";
+  await composer.fill(asked);
+  await authedPage.getByRole("button", { name: "Start chat" }).click();
+
+  // The turn runs and finishes. There is no assertion on the pending
+  // line: a streamed turn can finish before a watcher looks, and the
+  // transcript below is the claim that matters.
+  //
+  // The wait is a poll, not a sleep: the conversation is created first and
+  // the question is its title, so the question is on the screen before the
+  // turn has been sent. Waiting for the request is what proves the turn
+  // went out the streaming way.
+  await expect
+    .poll(() => streamed.length, { timeout: 30_000, message: "the browser never asked for the stream" })
+    .toBeGreaterThan(0);
+
+  await expect(
+    authedPage.getByText(asked).first(),
+    "the question never reached the transcript"
+  ).toBeVisible({ timeout: 60_000 });
+
+  // The answer is longer than the question and is not the page's own
+  // chrome, so a transcript that rendered only the question cannot pass.
+  const transcript = await authedPage.locator("main").first().innerText();
+  expect(transcript.length, "the transcript is empty").toBeGreaterThan(asked.length + 40);
+
+  // And the turn was streamed, not answered by the fallback. This is the
+  // claim the whole SSE architecture exists for: the browser gets the turn
+  // as it happens. A 403 here means the async dispatch was denied by the
+  // security chain, and the screen still looked right because the client
+  // fell back.
+  expect(
+    streamed.some((r) => r.url.includes("/copilot/chat/stream")),
+    `the browser did not ask the streaming route: ${JSON.stringify(streamed)}`
+  ).toBe(true);
+  expect(
+    streamed.every((r) => r.status === 0 || r.status === 200),
+    `the stream route did not answer 2xx: ${JSON.stringify(streamed)}`
+  ).toBe(true);
+
+  // And the frames arrived. A 200 with an empty body is what a denied
+  // async dispatch looks like from here: the headers came, and then
+  // nothing did. The turn still finished -- the backend runs it and
+  // stores it either way -- so the transcript fills in from a refetch and
+  // the screen looks perfect. The frames are the only evidence that the
+  // answer was *streamed*, which is the thing the whole SSE path is for.
+  await expect
+    .poll(
+      () => authedPage.evaluate(() => (window as unknown as { __sseBodies?: string[] }).__sseBodies?.length ?? 0),
+      { timeout: 30_000, message: "the stream carried no frames" }
+    )
+    .toBeGreaterThan(0);
+  frames.push(
+    ...(await authedPage.evaluate(
+      () => (window as unknown as { __sseBodies?: string[] }).__sseBodies ?? []
+    ))
+  );
+  expect(
+    frames.join("\n"),
+    "the stream carried no frames: the turn was answered, but not streamed"
+  ).toContain("event:");
+
+  // The run is recorded either way, so the activity feed has it.
+  const runs = await unwrap<{ items: Array<{ id: string; agent?: string }> }>(
+    await api.get("/activity/runs", { size: 20 })
+  );
+  expect(runs.items.length, "the turn must be recorded").toBeGreaterThan(0);
+});

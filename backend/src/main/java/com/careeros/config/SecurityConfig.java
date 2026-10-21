@@ -9,6 +9,7 @@ import com.careeros.common.ApiResponse;
 import com.careeros.ratelimit.RateLimitFilter;
 import com.careeros.ratelimit.RedisSlidingWindowRateLimiter;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.DispatcherType;
 import java.util.List;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -47,6 +48,13 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource(props)))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        // An async dispatch is the continuation of a request that was already
+                        // authorized: the filter chain runs again when the emitter is written to,
+                        // and with a stateless session the security context is gone by then, so
+                        // `anyRequest().authenticated()` denies it. That killed the copilot's
+                        // streaming turn in the browser -- the client fell back to the blocking
+                        // pair, so the screen looked right and nothing was ever streamed.
+                        .dispatcherTypeMatchers(DispatcherType.ASYNC, DispatcherType.ERROR).permitAll()
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers("/api-docs/**", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/api/v1/health").permitAll()
