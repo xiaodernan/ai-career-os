@@ -120,7 +120,7 @@ export default function CopilotPage() {
         onSuccess: (c) => {
           const id = c?.id;
           if (!id) {
-            toast.error("The API didn't return a conversation id.");
+            toast.error(t("copilot.noConversationId"));
             return;
           }
           void conversations.refetch();
@@ -436,10 +436,10 @@ function NewChat({ onStart, pending }: { onStart: (message: string) => void; pen
         </Card>
         <ul className="grid gap-2 text-xs sm:grid-cols-2">
           {[
-            "Compare my resume against this JD",
-            "What should I prepare for a RAG-system design interview?",
-            "Draft a cover letter for the company I applied to",
-            "Which experience best demonstrates ownership?",
+            t("copilot.suggestionCompare"),
+            t("copilot.suggestionRag"),
+            t("copilot.suggestionCoverLetter"),
+            t("copilot.suggestionOwnership"),
           ].map((s) => (
             <li key={s}>
               <button
@@ -629,7 +629,7 @@ function ChatPanel({
           {error != null && (
             <div role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 p-3">
               <p className="text-sm text-destructive">
-                {error instanceof Error && error.message ? error.message : "Copilot couldn't answer."}
+                {error instanceof Error && error.message ? error.message : t("copilot.couldNotAnswer")}
               </p>
               <Button
                 variant="outline"

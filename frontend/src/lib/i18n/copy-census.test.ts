@@ -30,73 +30,6 @@ import { everyOffender, browserSources, TEXT_NODE_LIMIT } from "./copy-scan";
  * person to touch that file removes it.
  */
 const KNOWN: Record<string, string[]> = {
-  "app/(app)/activity/[id]/page.tsx": [
-    "Agent run",
-    "The debug view behind one agent answer.",
-    "This run recorded no trace steps. Tools that run without the orchestrator\r\n              (single-call parses) log only the run row.",
-  ],
-  "app/(app)/analysis/page.tsx": [
-    "No data",
-  ],
-  "app/(app)/copilot/page.tsx": [
-    "Compare my resume against this JD",
-    "Copilot couldn't answer.",
-    "Draft a cover letter for the company I applied to",
-    "New chat",
-    "The API didn't return a conversation id.",
-    "What should I prepare for a RAG-system design interview?",
-    "Which experience best demonstrates ownership?",
-  ],
-  "app/(app)/dashboard/page.tsx": [
-    "Good evening",
-    "Match a job",
-    "Needs attention",
-    "Paste a JD",
-    "Straight from the job board — run a match to rank them.",
-    "The version every agent scores against.",
-  ],
-  "app/(app)/data/page.tsx": [
-    "Export ready.",
-    "File saved to your downloads.",
-    "Plan ready.",
-    "Sections removed and the content hash recomputed.",
-    "That is not valid JSON.",
-  ],
-  "app/(app)/ingestion/page.tsx": [
-    "Plan ready.",
-    "Sweep done.",
-  ],
-  "app/(app)/interviews/[id]/report/page.tsx": [
-    "Per-dimension results below.",
-    "Solid practice — the weak dimensions below are the fastest wins.",
-  ],
-  "app/(app)/jobs/page.tsx": [
-    "This API build has no job search",
-  ],
-  "app/(app)/monitoring/page.tsx": [
-    "No data",
-  ],
-  "app/(app)/offers/page.tsx": [
-    "Counter-offer draft ready.",
-    "Negotiation plan ready.",
-    "Offers compared.",
-    "The anchor the engine computed.",
-  ],
-  "app/(app)/rate-limit/page.tsx": [
-    "No throttling is applied.",
-  ],
-  "app/(app)/resumes/[id]/page.tsx": [
-    "Download failed.",
-    "Parsed — structured profile updated.",
-    "Run the parse above to turn this file into a queryable profile: experience, projects, education and skills with citations back to the document.",
-    "Structured profile exported.",
-  ],
-  "app/(app)/resumes/page.tsx": [
-    "Awaiting parsing",
-  ],
-  "app/page.tsx": [
-    "Evidence-backed matching, resume intelligence, growth planning and AI-guided interviews — every conclusion traced to your own material.",
-  ],
   "components/ai/agent-timeline.tsx": [
     "Agent execution trace",
     "Completed",
@@ -108,7 +41,6 @@ const KNOWN: Record<string, string[]> = {
   ],
   "components/ai/task-stream.tsx": [
     "Agent trace",
-    "Skip / cancel the wait",
     "Stop following this run",
     "The run reported an error.",
     "The run stream hasn&apos;t reported progress yet — results appear as soon as it does.",
@@ -133,22 +65,6 @@ const KNOWN: Record<string, string[]> = {
     "Sign in to your workspace",
     "Welcome back.",
     "Your resume becomes a knowledge base in minutes.",
-  ],
-  "components/common/bar-chart.tsx": [
-    "Nothing to plot yet.",
-  ],
-  "components/common/command-palette.tsx": [
-    "No results.",
-  ],
-  "components/common/export-buttons.tsx": [
-    "File saved to your downloads.",
-    "Your browser blocked clipboard access.",
-  ],
-  "components/common/kanban.tsx": [
-    "Drop here",
-  ],
-  "components/common/query-boundary.tsx": [
-    "Nothing here yet → next action",
   ],
   "components/jobs/analyze-jd-dialog.tsx": [
     "Analysis failed.",
@@ -187,13 +103,6 @@ const KNOWN: Record<string, string[]> = {
     "Reading the posting",
     "Source URL (optional)",
   ],
-  "components/knowledge/notes-panel.tsx": [
-    "Untitled note",
-  ],
-  "components/knowledge/source-actions.tsx": [
-    "Couldn't delete the source.",
-    "Source deleted — its chunks stop being cited.",
-  ],
   "components/settings/memory-card.tsx": [
     "Cancel",
     "Chat with the copilot or finish an interview and the facts it learns appear here.",
@@ -229,10 +138,6 @@ const KNOWN: Record<string, string[]> = {
     "What the agents assume about you — headline, targets and the story they tell recruiters.",
     "Years of experience (0–",
     "Years of experience has to be a number between 0 and",
-  ],
-  "components/ui/command.tsx": [
-    "Command Palette",
-    "Search for a command to run...",
   ],
 
 };
@@ -293,7 +198,7 @@ describe("the browser's copy", () => {
     // the long sentences and the copy inside a JSX expression. The shapes
     // the scan did not read before were a third of the product's copy, and
     // the list above is the honest answer to "what have we not fixed yet".
-    expect(found.length).toBe(144);
+    expect(found.length).toBe(93);
   });
 
   it("finds a sentence, however long it is", () => {

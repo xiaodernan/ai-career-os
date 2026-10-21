@@ -421,7 +421,7 @@ export default function DashboardPage() {
                     description={
                       data?.recommendedJobs?.length
                         ? t("dashboard.skillGapsHint")
-                        : "Straight from the job board — run a match to rank them."
+                        : t("dashboard.straightFromTheBoard")
                     }
                     action={
                       <Button variant="ghost" size="xs" asChild>
@@ -521,7 +521,7 @@ export default function DashboardPage() {
                     description={
                       resumeRow
                         ? `${titleCase(resumeRow.status)} · ${resumeRow.currentVersionId ? "structured profile ready" : "awaiting parse"}`
-                        : "The version every agent scores against."
+                        : t("dashboard.theScoredVersion")
                     }
                     action={
                       <Button variant="ghost" size="xs" asChild>
@@ -954,7 +954,7 @@ function OnboardingCard({ hasResume }: { hasResume: boolean }) {
       title: t("dashboard.stepJd"),
       description: t("dashboard.stepJdDescription"),
       href: "/jobs",
-      cta: "Paste a JD",
+      cta: t("dashboard.ctaPasteJd"),
     },
     {
       done: false,
@@ -962,7 +962,7 @@ function OnboardingCard({ hasResume }: { hasResume: boolean }) {
       title: t("dashboard.stepMatch"),
       description: t("dashboard.stepMatchDescription"),
       href: "/jobs",
-      cta: "Match a job",
+      cta: t("dashboard.ctaMatch"),
     },
     {
       done: false,

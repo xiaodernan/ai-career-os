@@ -119,8 +119,7 @@ function TracePanel({ trace }: { trace: RunTrace }) {
             <AgentTimeline events={steps} className="gap-1" />
           ) : (
             <p className="text-sm text-muted-foreground">
-              This run recorded no trace steps. Tools that run without the orchestrator
-              (single-call parses) log only the run row.
+              {t("activity.detail.noTraceSteps")}
             </p>
           )}
         </CardContent>
@@ -204,7 +203,7 @@ export default function ActivityRunPage() {
         description={
           run
             ? `${run.agent ?? "career"} · ${run.trigger ?? "run"} — every step the orchestrator persisted for this run.`
-            : "The debug view behind one agent answer."
+            : t("activity.detail.debugView")
         }
         actions={
           <Button variant="outline" size="sm" asChild>
@@ -257,9 +256,10 @@ export default function ActivityRunPage() {
 }
 
 function AgentRunTitle({ run }: { run?: RunTrace["run"] }) {
+  const { t } = useLocale();
   return (
     <span className={cn("font-serif text-display-md")}>
-      {run?.trigger ? `${titleCase(run.trigger)} run` : "Agent run"}
+      {run?.trigger ? `${titleCase(run.trigger)} run` : t("activity.detail.agentRun")}
     </span>
   );
 }

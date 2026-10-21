@@ -11,7 +11,7 @@ import { LandingPage } from "./landing-page";
  */
 export const generateMetadata = absoluteMetadata(
   "landing.pageTitle",
-  "Evidence-backed matching, resume intelligence, growth planning and AI-guided interviews — every conclusion traced to your own material."
+  "landing.description"
 );
 
 export default function Home() {

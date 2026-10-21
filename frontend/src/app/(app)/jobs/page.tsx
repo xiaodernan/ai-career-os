@@ -243,7 +243,7 @@ export default function JobsPage() {
               title:
                 tab === "saved"
                   ? t("jobs.notLiveSavedTitle")
-                  : "This API build has no job search",
+                  : t("jobs.notLiveSearchTitle"),
               description:
                 t("jobs.notLiveDescription"),
             }}

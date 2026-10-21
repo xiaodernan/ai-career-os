@@ -171,8 +171,8 @@ export default function InterviewReportPage() {
                   (overall != null
                     ? overall >= 75
                       ? t("interviews.report.strongSession")
-                      : "Solid practice — the weak dimensions below are the fastest wins."
-                    : "Per-dimension results below.")}
+                      : t("interviews.report.solidPractice")
+                    : t("interviews.report.perDimension"))}
               </p>
               <div className="mt-2 flex flex-wrap gap-2">
                 {trajectory.length > 0 && (

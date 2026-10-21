@@ -130,7 +130,7 @@ export default function ResumesPage() {
                               ? t("resumes.currentVersionSet")
                               : r.status === "parsed"
                                 ? t("resumes.parsedOpenToSet")
-                                : "Awaiting parsing"}
+                                : t("resumes.awaitingParsing")}
                             {r.createdAt ? ` · added ${formatDate(r.createdAt)}` : ""}
                           </p>
                         </div>

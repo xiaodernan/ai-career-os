@@ -67,7 +67,7 @@ export default function RateLimitPage() {
                 <span className="text-sm text-muted-foreground">
                   {data.enabled
                     ? t("rateLimit.throttledPerUser")
-                    : "No throttling is applied."}
+                    : t("rateLimit.noThrottling")}
                 </span>
               </div>
             </CardContent>

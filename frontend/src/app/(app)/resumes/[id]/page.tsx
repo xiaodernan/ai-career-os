@@ -71,7 +71,7 @@ export default function ResumeDetailPage() {
         downloadBlob(name ?? "original-file", blob);
         done();
       })
-      .catch((e) => toast.error(e instanceof Error ? e.message : "Download failed."))
+      .catch((e) => toast.error(e instanceof Error ? e.message : t("resumes.detail.downloadFailed")))
       .finally(() => setDownloading(false));
   }, []);
 
@@ -166,7 +166,7 @@ export default function ResumeDetailPage() {
                     onSuccess: (res) => {
                       const task = str(res, "taskId", "task_id");
                       if (task) setParseTask(task);
-                      else toast.success("Parsed — structured profile updated.");
+                      else toast.success(t("resumes.detail.parsedToast"));
                     },
                   })
                 }
@@ -231,7 +231,7 @@ export default function ResumeDetailPage() {
                   description={
                     r.status === "parsing" || r.status === "ingesting"
                       ? t("resumes.detail.extracting")
-                      : "Run the parse above to turn this file into a queryable profile: experience, projects, education and skills with citations back to the document."
+                      : t("resumes.detail.runTheParse")
                   }
                 />
               </CardContent>
@@ -518,7 +518,7 @@ function StructuredProfileView({ structured }: { structured: StructuredResume })
                   JSON.stringify(structured, null, 2),
                   "application/json"
                 );
-                toast.success("Structured profile exported.");
+                toast.success(t("resumes.detail.profileExported"));
               }}
             >
               <Download aria-hidden />

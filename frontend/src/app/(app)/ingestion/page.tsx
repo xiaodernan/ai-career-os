@@ -65,7 +65,7 @@ export default function IngestionPage() {
       onSuccess: (out) => {
         const c = out.counts;
         toast.success(
-          c ? `${c.fresh} fresh, ${c.stale} stale, ${c.expired} expired, ${c.undated} undated.` : "Sweep done."
+          c ? `${c.fresh} fresh, ${c.stale} stale, ${c.expired} expired, ${c.undated} undated.` : t("ingestion.sweepDone")
         );
       },
     });
@@ -77,7 +77,7 @@ export default function IngestionPage() {
       onSuccess: (out) => {
         const c = out.counts;
         toast.success(
-          c ? `Plan: ${c.create} to create, ${c.update} to update, ${c.close} to close.` : "Plan ready."
+          c ? `Plan: ${c.create} to create, ${c.update} to update, ${c.close} to close.` : t("ingestion.planReady")
         );
       },
     });

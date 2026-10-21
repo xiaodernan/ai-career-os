@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { useLocale } from "@/lib/i18n/locale-context";
 
 /**
  * A minimal horizontal bar chart.
@@ -45,20 +46,25 @@ export function BarChart({
   data,
   max,
   className,
-  emptyHint = "Nothing to plot yet.",
+  emptyHint,
   valueFormat,
 }: {
   data: BarDatum[];
   /** The scale's top. Defaults to the largest value in the data. */
   max?: number;
   className?: string;
-  /** What to say when there is no data. */
+  /** What to say when there is no data. The caller's, or the product's own. */
   emptyHint?: string;
   /** How to print the value. Defaults to a plain number. */
   valueFormat?: (value: number) => string;
 }) {
+  const { t } = useLocale();
   if (!data.length) {
-    return <p className="text-sm text-muted-foreground">{emptyHint}</p>;
+    return (
+      <p className="text-sm text-muted-foreground">
+        {emptyHint ?? t("chart.nothingToPlot")}
+      </p>
+    );
   }
 
   // The scale is the caller's, or the largest value: a bar that always fills
@@ -109,14 +115,19 @@ export function BarChart({
 export function ShareChart({
   data,
   className,
-  emptyHint = "Nothing to plot yet.",
+  emptyHint,
 }: {
   data: BarDatum[];
   className?: string;
   emptyHint?: string;
 }) {
+  const { t } = useLocale();
   if (!data.length) {
-    return <p className="text-sm text-muted-foreground">{emptyHint}</p>;
+    return (
+      <p className="text-sm text-muted-foreground">
+        {emptyHint ?? t("chart.nothingToPlot")}
+      </p>
+    );
   }
   const total = data.reduce((sum, d) => sum + Math.max(0, d.value), 0);
   return (

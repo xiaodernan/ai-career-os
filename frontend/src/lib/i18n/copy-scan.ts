@@ -287,6 +287,60 @@ function expressionOffenders(): Offender[] {
 }
 
 /**
+ * The source with its comments removed.
+ *
+ * A comment is a note to the next reader, not a word the reader sees, and
+ * the scan reads strings -- so a sentence quoted inside a comment is
+ * copy-shaped but it is nobody's copy. The comments in this repository are
+ * full of them: "No data" is an em dash, not a zero", "the row mapper only
+ * falls back to 'Untitled note' when the title is absent".
+ *
+ * The stripper tracks the strings, so a `//` inside one is not mistaken for
+ * a comment, and a `/*` inside one is not mistaken for a block.
+ */
+function stripComments(source: string): string {
+  let out = "";
+  let i = 0;
+  let quote: string | null = null;
+  while (i < source.length) {
+    const ch = source[i];
+    const next = source[i + 1];
+    if (quote) {
+      out += ch;
+      if (ch === "\\") {
+        out += next ?? "";
+        i += 2;
+        continue;
+      }
+      if (ch === quote) quote = null;
+      i++;
+      continue;
+    }
+    if (ch === '"' || ch === "'" || ch === "`") {
+      quote = ch;
+      out += ch;
+      i++;
+      continue;
+    }
+    if (ch === "/" && next === "*") {
+      const end = source.indexOf("*/", i + 2);
+      i = end < 0 ? source.length : end + 2;
+      out += " ";
+      continue;
+    }
+    if (ch === "/" && next === "/") {
+      const end = source.indexOf("\n", i);
+      i = end < 0 ? source.length : end;
+      out += " ";
+      continue;
+    }
+    out += ch;
+    i++;
+  }
+  return out;
+}
+
+/**
  * The copy in a string literal.
  *
  * The last shape. A toast message, an empty state's sentence, a
@@ -315,7 +369,7 @@ const SENTENCE_END = /[a-zA-Z.!?)\]…]$/;
 function literalOffenders(): Offender[] {
   const found: Offender[] = [];
   for (const rel of browserSources()) {
-    const text = readFileSync(join(ROOT, rel), "utf-8");
+    const text = stripComments(readFileSync(join(ROOT, rel), "utf-8"));
     const seen = new Set<string>();
     for (const m of text.matchAll(LITERAL)) {
       const value = m[1];

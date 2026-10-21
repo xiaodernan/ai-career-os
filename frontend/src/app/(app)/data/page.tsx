@@ -57,7 +57,7 @@ export default function DataPortabilityPage() {
         onSuccess: (out) => {
           setBundle(out);
           setDropped([]);
-          toast.success("Export ready.");
+          toast.success(t("data.exportReady"));
         },
       });
     },
@@ -71,7 +71,7 @@ export default function DataPortabilityPage() {
       JSON.stringify(bundle, null, 2),
       "application/json;charset=utf-8"
     );
-    toast.success("File saved to your downloads.");
+    toast.success(t("data.fileSaved"));
   }, [bundle]);
 
   const runRedact = React.useCallback(() => {
@@ -82,7 +82,7 @@ export default function DataPortabilityPage() {
         onSuccess: (out) => {
           setBundle(out);
           setDropped([]);
-          toast.success("Sections removed and the content hash recomputed.");
+          toast.success(t("data.sectionsRemoved"));
         },
       }
     );
@@ -94,7 +94,7 @@ export default function DataPortabilityPage() {
     try {
       parsed = JSON.parse(importText);
     } catch {
-      toast.error("That is not valid JSON.");
+      toast.error(t("data.notValidJson"));
       return;
     }
     importPlan.mutate(
@@ -105,7 +105,7 @@ export default function DataPortabilityPage() {
           toast.success(
             counts
               ? `Plan ready: ${counts.create} to create, ${counts.update} to update, ${counts.delete} to delete.`
-              : "Plan ready."
+              : t("data.planReady")
           );
         },
       }

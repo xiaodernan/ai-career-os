@@ -65,12 +65,15 @@ export function sectionMetadata(key: string): () => Promise<Metadata> {
  */
 export function absoluteMetadata(
   key: string,
-  description?: string
+  descriptionKey?: string
 ): () => Promise<Metadata> {
   return async function generateMetadata(): Promise<Metadata> {
     const store = await cookies();
     const locale = localeFromCookie(store.get(LOCALE_COOKIE)?.value);
-    return { title: { absolute: read(locale, key) }, description };
+    return {
+      title: { absolute: read(locale, key) },
+      description: descriptionKey ? read(locale, descriptionKey) : undefined,
+    };
   };
 }
 

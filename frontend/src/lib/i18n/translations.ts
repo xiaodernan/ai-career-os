@@ -51,6 +51,8 @@ export const translations = {
     },
     // Common actions
     common: {
+      clipboardBlocked: "Your browser blocked clipboard access.",
+      fileSaved: "File saved to your downloads.",
       openCopilot: "Open Copilot",
       copiedToClipboard: "Copied to the clipboard.",
       copied: "Copied",
@@ -197,6 +199,14 @@ export const translations = {
       foundByResearch: "Found by research agent",
     },
     /**
+     * The charts the product draws.
+     *
+     * A chart with nothing to draw says so; the word is the reader's.
+     */
+    chart: {
+      nothingToPlot: "Nothing to plot yet.",
+    },
+    /**
      * The diff the tailor panel shows: the numbers beside the change list,
      * and the panel the list lives in.
      */
@@ -322,6 +332,10 @@ export const translations = {
     },
     // Dashboard
     dashboard: {
+      theScoredVersion: "The version every agent scores against.",
+      straightFromTheBoard: "Straight from the job board — run a match to rank them.",
+      ctaPasteJd: "Paste a JD",
+      ctaMatch: "Match a job",
       skillGapsHint: "Ranked by the matching agent against your resume.",
       gradeHint: "Overall grade from the resume reviewer. Open the resume for the per-dimension breakdown.",
       gradeWeak: "Weak — start here",
@@ -450,6 +464,10 @@ export const translations = {
     },
     // Offers
     offers: {
+      theAnchor: "The anchor the engine computed.",
+      compared: "Offers compared.",
+      negotiationPlanReady: "Negotiation plan ready.",
+      counterOfferReady: "Counter-offer draft ready.",
       offerFormat: "One offer per line. The engine ranks them by total compensation, with any equity annualized over its vest.",
       oneQuestion: "One question drives all four answers: what is the role, and what is on the table.",
       title: "Offers",
@@ -533,6 +551,7 @@ export const translations = {
     },
     // Rate limit
     rateLimit: {
+      noThrottling: "No throttling is applied.",
       throttledPerUser: "Requests are throttled per user.",
       title: "Rate limiting",
       description: "Current rate-limit configuration and your bucket usage.",
@@ -551,6 +570,11 @@ export const translations = {
     },
     // Data portability
     data: {
+      planReady: "Plan ready.",
+      notValidJson: "That is not valid JSON.",
+      sectionsRemoved: "Sections removed and the content hash recomputed.",
+      fileSaved: "File saved to your downloads.",
+      exportReady: "Export ready.",
       title: "Your data",
       description: "Export everything, preview a restore, and remove sections before you share.",
       /**
@@ -588,8 +612,6 @@ export const translations = {
       restoreDescription:
         "Paste a bundle and see exactly what a re-import would write — every row carries a content hash, so unchanged rows are skipped.",
       removedSoFar: "Removed so far:",
-      exportReady: "Export ready.",
-      planReady: "Plan ready.",
       applyTheRestore: "Apply the restore",
       applied: "What was written",
       appliedClean: "The restore was applied.",
@@ -604,6 +626,8 @@ export const translations = {
     },
     // Ingestion
     ingestion: {
+      sweepDone: "Sweep done.",
+      planReady: "Plan ready.",
       untitledRole: "Untitled role",
       title: "Job ingestion",
       description: "Bring postings in from a feed or a board API.",
@@ -675,6 +699,7 @@ export const translations = {
     },
     // Resumes
     resumes: {
+      awaitingParsing: "Awaiting parsing",
       parsedOpenToSet: "Parsed — open to set the current version",
       currentVersionSet: "Current version set · agents match against it",
       title: "Resumes",
@@ -707,6 +732,10 @@ export const translations = {
         uploaded: "Uploaded",
       },
       detail: {
+        profileExported: "Structured profile exported.",
+        runTheParse: "Run the parse above to turn this file into a queryable profile: experience, projects, education and skills with citations back to the document.",
+        parsedToast: "Parsed — structured profile updated.",
+        downloadFailed: "Download failed.",
         roleFallback: "Role",
         profileFallback: "Profile",
         noScore: "No review score yet. It is produced by the parsing run — trigger a re-parse above to generate one.",
@@ -859,6 +888,7 @@ export const translations = {
     },
     // The public landing page (18.2) -- the first thing a visitor reads.
     landing: {
+      description: "Evidence-backed matching, resume intelligence, growth planning and AI-guided interviews — every conclusion traced to your own material.",
       pageTitle: "AI Career OS — your personal job-search operating system",
       signIn: "Sign in",
       getStarted: "Get started",
@@ -941,6 +971,12 @@ export const translations = {
     },
     // Copilot
     copilot: {
+      noConversationId: "The API didn't return a conversation id.",
+      couldNotAnswer: "Copilot couldn't answer.",
+      suggestionOwnership: "Which experience best demonstrates ownership?",
+      suggestionCoverLetter: "Draft a cover letter for the company I applied to",
+      suggestionRag: "What should I prepare for a RAG-system design interview?",
+      suggestionCompare: "Compare my resume against this JD",
       untitledChat: "Untitled chat",
       title: "Ask your career agent",
       conversations: "Conversations",
@@ -1091,6 +1127,8 @@ export const translations = {
         paginationLabel: "notes",
       },
       sources: {
+        deleteFailed: "Couldn't delete the source.",
+        deleted: "Source deleted — its chunks stop being cited.",
         chooseDocuments: "Choose documents to ingest",
         appliedToBatch: "Applied to every file in the batch",
         clearList: "Clear list",
@@ -1181,6 +1219,9 @@ export const translations = {
         "Once Copilot or a matching job runs, its full trace appears here.",
       noRuns: "No agent runs yet",
       detail: {
+        noTraceSteps: "This run recorded no trace steps. Tools that run without the orchestrator (single-call parses) log only the run row.",
+        debugView: "The debug view behind one agent answer.",
+        agentRun: "Agent run",
         traceHint: "Persisted by the orchestrator — expand a row for its raw payload.",
         steps: "Steps",
         toolCalls: "Tool calls",
@@ -1466,6 +1507,8 @@ export const translations = {
         openReport: "Open report",
       },
       report: {
+        solidPractice: "Solid practice — the weak dimensions below are the fastest wins.",
+        perDimension: "Per-dimension results below.",
         practiceHint: "Run the same mode again after studying — the agent adapts to your previous weak spots.",
         untitledResource: "Untitled resource",
         strongSession: "Strong session — the loop pushed you deep and you held the altitude.",
@@ -1498,6 +1541,7 @@ export const translations = {
     },
     // Jobs
     jobs: {
+      notLiveSearchTitle: "This API build has no job search",
       notLiveSavedTitle: "This API build has no saved-jobs list",
       title: "Jobs",
       description:
@@ -1654,6 +1698,8 @@ export const translations = {
     },
     // Common actions
     common: {
+      clipboardBlocked: "浏览器拦截了剪贴板访问。",
+      fileSaved: "文件已保存到下载目录。",
       openCopilot: "打开副驾",
       copiedToClipboard: "已复制到剪贴板。",
       copied: "已复制",
@@ -1770,6 +1816,14 @@ export const translations = {
       whyThisJob: "为什么是这个职位：",
       pastedJd: "粘贴的 JD",
       foundByResearch: "调研代理找到的",
+    },
+    /**
+     * The charts the product draws.
+     *
+     * A chart with nothing to draw says so; the word is the reader's.
+     */
+    chart: {
+      nothingToPlot: "还没有可画的数据。",
     },
     /**
      * The diff the tailor panel shows: the numbers beside the change list,
@@ -1893,6 +1947,10 @@ export const translations = {
     },
     // Dashboard
     dashboard: {
+      theScoredVersion: "每个代理打分时对照的那一版。",
+      straightFromTheBoard: "直接来自职位板——跑一次匹配来给它们排序。",
+      ctaPasteJd: "粘贴一份 JD",
+      ctaMatch: "匹配一个职位",
       skillGapsHint: "由匹配代理对着你的简历排出来的。",
       gradeHint: "来自简历评审代理的总评。打开简历可以看到每个维度的细分。",
       gradeWeak: "偏弱——从这里开始",
@@ -2001,6 +2059,10 @@ export const translations = {
     },
     // Offers
     offers: {
+      theAnchor: "引擎算出来的锚点。",
+      compared: "录用已比较完毕。",
+      negotiationPlanReady: "谈判方案已就绪。",
+      counterOfferReady: "还价草稿已就绪。",
       offerFormat: "一行一个录用。引擎按总薪酬排序，股权按归属期折算成年化。",
       oneQuestion: "四个答案都由同一个问题驱动：职位是什么，桌上摆着什么。",
       title: "录用",
@@ -2081,6 +2143,7 @@ export const translations = {
     },
     // Rate limit
     rateLimit: {
+      noThrottling: "没有启用任何限流。",
       throttledPerUser: "请求按用户分别限流。",
       title: "限流",
       description: "当前限流配置和你的配额使用。",
@@ -2098,6 +2161,11 @@ export const translations = {
     },
     // Data portability
     data: {
+      planReady: "计划已就绪。",
+      notValidJson: "这不是合法的 JSON。",
+      sectionsRemoved: "已删减对应部分，并重新计算了内容哈希。",
+      fileSaved: "文件已保存到下载目录。",
+      exportReady: "导出已完成。",
       title: "你的数据",
       description: "导出全部、预览恢复、分享前删减。",
       sections: {
@@ -2127,8 +2195,6 @@ export const translations = {
       redactDescription: "删掉整块内容——数据包仍然有效，内容哈希会按剩下的内容重新计算。",
       restoreDescription: "粘贴一个数据包，看看重新导入到底会写什么——每行都带内容哈希，未变化的行会被跳过。",
       removedSoFar: "已删减：",
-      exportReady: "导出已就绪。",
-      planReady: "计划已就绪。",
       applyTheRestore: "执行恢复",
       applied: "写入了什么",
       appliedClean: "恢复已执行。",
@@ -2143,6 +2209,8 @@ export const translations = {
     },
     // Ingestion
     ingestion: {
+      sweepDone: "清扫完成。",
+      planReady: "计划已就绪。",
       untitledRole: "没有标题的职位",
       title: "职位导入",
       description: "从 RSS 或招聘板 API 导入职位。",
@@ -2199,6 +2267,7 @@ export const translations = {
     },
     // Resumes
     resumes: {
+      awaitingParsing: "等待解析",
       parsedOpenToSet: "已解析——打开后可以设定当前版本",
       currentVersionSet: "已设为当前版本——代理就按它来匹配",
       title: "简历",
@@ -2224,6 +2293,10 @@ export const translations = {
       },
       open: "打开",
       detail: {
+        profileExported: "结构化档案已导出。",
+        runTheParse: "在上面跑一次解析，把这份文件变成可查询的档案：经历、项目、教育和技能，每一条都能引回原文。",
+        parsedToast: "解析完成——结构化档案已更新。",
+        downloadFailed: "下载失败。",
         roleFallback: "职位",
         profileFallback: "个人档案",
         noScore: "还没有评审分数。它由解析那一步产出——在上面点一次重新解析就会生成。",
@@ -2362,6 +2435,7 @@ export const translations = {
       notOnTheMapDescription: "你访问的路由不存在。它可能已经挪了地方，或者链接打错了。",
     },
     landing: {
+      description: "有证据支撑的匹配、简历情报、成长规划，以及 AI 引导的面试——每一个结论都能追溯到你自己的材料。",
       pageTitle: "AI Career OS — 你的个人求职操作系统",
       signIn: "登录",
       getStarted: "开始使用",
@@ -2435,6 +2509,12 @@ export const translations = {
     },
     // Copilot
     copilot: {
+      noConversationId: "接口没有返回会话 id。",
+      couldNotAnswer: "副驾驶没能回答。",
+      suggestionOwnership: "哪段经历最能体现主导力？",
+      suggestionCoverLetter: "给投过的公司起草一封求职信",
+      suggestionRag: "RAG 系统设计面试我该准备什么？",
+      suggestionCompare: "拿我的简历对一下这份 JD",
       untitledChat: "没有标题的对话",
       title: "问问你的求职代理",
       conversations: "会话",
@@ -2573,6 +2653,8 @@ export const translations = {
         paginationLabel: "笔记",
       },
       sources: {
+        deleteFailed: "没能删除这个来源。",
+        deleted: "来源已删除——它的分块也不再被引用。",
         chooseDocuments: "选择要摄取的文档",
         appliedToBatch: "应用于这批里的每个文件",
         clearList: "清空列表",
@@ -2652,6 +2734,9 @@ export const translations = {
       emptyDescription: "副驾驶或某个职位跑过之后，它的完整链路就会出现在这里。",
       noRuns: "还没有代理运行记录",
       detail: {
+        noTraceSteps: "这次运行没有记录轨迹步骤。不经过编排器的工具（单次调用的解析）只记录运行本身。",
+        debugView: "一次代理回答背后的调试视图。",
+        agentRun: "代理运行",
         traceHint: "由编排器持久化——展开任意一行可以看到原始载荷。",
         steps: "步骤",
         toolCalls: "工具调用",
@@ -2917,6 +3002,8 @@ export const translations = {
         openReport: "打开报告",
       },
       report: {
+        solidPractice: "练习得不错——下面薄弱的维度就是最快的提升点。",
+        perDimension: "下面按维度给出结果。",
         practiceHint: "学完再用同样的模式练一次——代理会针对你上次薄弱的地方调整。",
         untitledResource: "没有标题的资料",
         strongSession: "这场很稳——追问把你推到了深处，而你守住了高度。",
@@ -2946,6 +3033,7 @@ export const translations = {
     },
     // Jobs
     jobs: {
+      notLiveSearchTitle: "这个后端版本没有职位搜索",
       notLiveSavedTitle: "这个后端版本没有收藏列表",
       title: "职位",
       description: "发现和粘贴的职位，带着证据和你的简历对过分——匹配度在前，元数据在后。",

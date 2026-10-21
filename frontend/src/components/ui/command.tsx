@@ -30,13 +30,21 @@ function Command({
 }
 
 function CommandDialog({
-  title = "Command Palette",
-  description = "Search for a command to run...",
+  title,
+  description,
   children,
   className,
   showCloseButton = true,
   ...props
 }: React.ComponentProps<typeof Dialog> & {
+  /**
+   * The dialog's own name and description.
+   *
+   * There is no default: the copy is the caller's, because the caller's is
+   * the copy the reader reads. A default here would be a sentence in a
+   * component that no screen uses it for, and it would be a sentence in
+   * one language while every other surface is in the reader's.
+   */
   title?: string
   description?: string
   className?: string

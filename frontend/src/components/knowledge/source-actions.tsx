@@ -79,14 +79,15 @@ function invalidateSources(qc: ReturnType<typeof useQueryClient>) {
 
 export function useDeleteSource() {
   const qc = useQueryClient();
+  const { t } = useLocale();
   return useMutation({
     mutationFn: (id: string) => api.remove(endpoints.knowledgeSource(id)),
     onSuccess: () => {
       invalidateSources(qc);
-      toast.success("Source deleted — its chunks stop being cited.");
+      toast.success(t("knowledge.sources.deleted"));
     },
     onError: (e) =>
-      toast.error(e instanceof Error ? e.message : "Couldn't delete the source."),
+      toast.error(e instanceof Error ? e.message : t("knowledge.sources.deleteFailed")),
   });
 }
 

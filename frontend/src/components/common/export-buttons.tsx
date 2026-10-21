@@ -42,7 +42,7 @@ export function CopyButton({
           toast.success(t("common.copiedToClipboard"));
           setTimeout(() => setCopied(false), 1600);
         } else {
-          toast.error("Your browser blocked clipboard access.");
+          toast.error(t("common.clipboardBlocked"));
         }
       }}
       aria-label={copied ? t("common.copied") : label}
@@ -70,6 +70,7 @@ export function DownloadButton({
   variant?: ButtonProps["variant"];
   className?: string;
 }) {
+  const { t } = useLocale();
   if (!text) return null;
   const isMarkdown = Boolean(mime?.includes("markdown")) || filename?.endsWith(".md");
   const name = filename ?? `careeros-${isMarkdown ? "document.md" : "document.txt"}`;
@@ -81,7 +82,7 @@ export function DownloadButton({
       className={className}
       onClick={() => {
         downloadText(name, text, mime ?? (isMarkdown ? "text/markdown;charset=utf-8" : "text/plain;charset=utf-8"));
-        toast.success("File saved to your downloads.");
+        toast.success(t("common.fileSaved"));
       }}
       aria-label={label}
     >

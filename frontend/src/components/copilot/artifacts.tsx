@@ -42,7 +42,6 @@ const StreamingText = dynamic(() =>
  * like a match on the job page (ring + evidence, not a blob of JSON).
  */
 export function ArtifactCard({ artifact }: { artifact: CopilotArtifact }) {
-  const { t } = useLocale();
   const data = artifact.data;
   switch (artifact.type) {
     case "match":

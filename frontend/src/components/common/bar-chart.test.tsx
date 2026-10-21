@@ -3,6 +3,7 @@ import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import { BarChart, ShareChart } from "./bar-chart";
+import { LocaleProvider } from "@/lib/i18n/locale-context";
 
 /**
  * The chart's contract.
@@ -11,14 +12,23 @@ import { BarChart, ShareChart } from "./bar-chart";
  * a bar nobody can read the value of is decoration. These tests hold three
  * things — the value is always printed, the scale is the caller's, and an empty
  * dataset says so rather than drawing an empty axis.
+ *
+ * The charts are rendered inside the real locale provider, because that is
+ * how they render in the product: the word a chart uses when it has nothing
+ * to draw is the reader's.
  */
 
 const STAGE = { label: "Applied", value: 12 };
 const OA = { label: "Offer", value: 3 };
 
+/** Render inside the provider, the way the product renders it. */
+function render(node: React.ReactElement): string {
+  return renderToStaticMarkup(<LocaleProvider>{node}</LocaleProvider>);
+}
+
 describe("BarChart", () => {
   it("prints every value beside its bar", () => {
-    const html = renderToStaticMarkup(<BarChart data={[STAGE, OA]} />);
+    const html = render(<BarChart data={[STAGE, OA]} />);
     expect(html).toContain("12");
     expect(html).toContain("3");
     // And the bar itself carries the same fact for a screen reader.
@@ -29,36 +39,43 @@ describe("BarChart", () => {
     // With a maximum of 100, a value of 25 is a quarter of the width -- and the
     // bar of 3 is narrower still. A chart that scaled to its own largest row
     // would draw both as full width.
-    const html = renderToStaticMarkup(<BarChart data={[{ label: "A", value: 25 }]} max={100} />);
+    const html = render(<BarChart data={[{ label: "A", value: 25 }]} max={100} />);
     expect(html).toContain("width:25%");
   });
 
   it("scales against the largest value when the caller names no maximum", () => {
-    const html = renderToStaticMarkup(<BarChart data={[STAGE, OA]} />);
+    const html = render(<BarChart data={[STAGE, OA]} />);
     // The 3 is a quarter of the 12.
     expect(html).toContain("width:25%");
   });
 
   it("draws an empty bar for a zero value rather than a negative one", () => {
-    const html = renderToStaticMarkup(<BarChart data={[{ label: "None", value: 0 }]} />);
+    const html = render(<BarChart data={[{ label: "None", value: 0 }]} />);
     expect(html).not.toContain("width:-");
     expect(html).toContain("width:0%");
   });
 
   it("says so when there is nothing to plot", () => {
-    const html = renderToStaticMarkup(<BarChart data={[]} emptyHint="No applications yet." />);
+    const html = render(<BarChart data={[]} emptyHint="No applications yet." />);
     expect(html).toContain("No applications yet.");
   });
 
+  it("has its own word for an empty chart when the caller names none", () => {
+    // The caller's hint is the caller's; the product's own is the fallback,
+    // and it is a sentence in the reader's language.
+    const html = render(<BarChart data={[]} />);
+    expect(html).toContain("Nothing to plot yet.");
+  });
+
   it("prints the value through the caller's formatter", () => {
-    const html = renderToStaticMarkup(
+    const html = render(
       <BarChart data={[{ label: "Cost", value: 1234 }]} valueFormat={(v) => `$${v.toFixed(2)}`} />
     );
     expect(html).toContain("$1234.00");
   });
 
   it("keeps the detail line under the label", () => {
-    const html = renderToStaticMarkup(
+    const html = render(
       <BarChart data={[{ label: "Applied", value: 12, detail: "3 last week" }]} />
     );
     expect(html).toContain("3 last week");
@@ -67,7 +84,7 @@ describe("BarChart", () => {
 
 describe("ShareChart", () => {
   it("draws one segment per row and names every share", () => {
-    const html = renderToStaticMarkup(
+    const html = render(
       <ShareChart data={[{ label: "Applied", value: 3 }, { label: "Rejected", value: 1 }]} />
     );
     // Three quarters and one quarter of the whole.
@@ -77,7 +94,7 @@ describe("ShareChart", () => {
   });
 
   it("skips a zero row's segment rather than drawing an empty one", () => {
-    const html = renderToStaticMarkup(
+    const html = render(
       <ShareChart data={[{ label: "Applied", value: 2 }, { label: "None", value: 0 }]} />
     );
     expect(html).toContain("width:100%");
@@ -85,7 +102,7 @@ describe("ShareChart", () => {
   });
 
   it("says so when there is nothing to plot", () => {
-    const html = renderToStaticMarkup(<ShareChart data={[]} emptyHint="No stages yet." />);
+    const html = render(<ShareChart data={[]} emptyHint="No stages yet." />);
     expect(html).toContain("No stages yet.");
   });
 });

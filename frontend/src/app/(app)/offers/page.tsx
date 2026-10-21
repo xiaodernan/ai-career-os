@@ -70,7 +70,7 @@ export default function OffersPage() {
         offerBase: baseNum,
         matchScore: matchNum,
       },
-      { onSuccess: () => toast.success("Negotiation plan ready.") }
+      { onSuccess: () => toast.success(t("offers.negotiationPlanReady")) }
     );
   }, [role, location, roleOk, baseOk, baseNum, matchNum, negotiate]);
 
@@ -84,7 +84,7 @@ export default function OffersPage() {
         offerBase: baseNum,
         matchScore: matchNum,
       },
-      { onSuccess: () => toast.success("Counter-offer draft ready.") }
+      { onSuccess: () => toast.success(t("offers.counterOfferReady")) }
     );
   }, [role, location, roleOk, baseOk, baseNum, matchNum, counter]);
 
@@ -107,7 +107,7 @@ export default function OffersPage() {
         matchScore: matchNum,
         offers,
       },
-      { onSuccess: () => toast.success("Offers compared.") }
+      { onSuccess: () => toast.success(t("offers.compared")) }
     );
   }, [role, location, roleOk, baseNum, matchNum, offerLabels, compare]);
 
@@ -279,7 +279,7 @@ export default function OffersPage() {
             <CardDescription>
               {draft.anchor
                 ? `Anchor at ${formatSalary(draft.anchor, draft.anchor, currency)}.`
-                : "The anchor the engine computed."}
+                : t("offers.theAnchor")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
