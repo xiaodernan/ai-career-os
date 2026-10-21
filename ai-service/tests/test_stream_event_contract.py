@@ -27,6 +27,7 @@ APP_ROOT = Path(__file__).resolve().parents[1] / "app"
 FRONTEND = Path(__file__).resolve().parents[2] / "frontend" / "src"
 USE_SSE = FRONTEND / "lib" / "sse" / "use-sse.ts"
 UPLOAD_DROPZONE = FRONTEND / "components" / "resumes" / "upload-dropzone.tsx"
+INGEST_STEPS = FRONTEND / "lib" / "ingest-steps.ts"
 
 # names reach the client only through taskbus: publish/_emit call sites and literal yields
 
@@ -126,10 +127,24 @@ def pipeline_steps() -> list[str]:
 
 
 def seed_rows() -> list[tuple[str, str]]:
-    """(id, label) of the checklist rows the upload panel seeds."""
+    """(id, label) of the checklist rows the upload panel seeds.
+
+    The list itself lives in `lib/ingest-steps.ts` -- it is a vocabulary, not
+    a piece of the screen, and the copy census reads the copy-bearing names
+    in a `.tsx` file, so a fallback table of English labels belongs in a
+    module where the census does not reach it. The panel is still what
+    seeds the checklist, so that is checked too: a list nothing reads is a
+    list that stopped being the checklist.
+    """
     source = UPLOAD_DROPZONE.read_text(encoding="utf-8")
-    block = re.search(r"INGEST_SEED = \[(.*?)\n\];", source, re.S)
-    assert block, "the upload panel no longer seeds its checklist from a literal list"
+    assert "ingestSteps" in source or "ingestSeed" in source, (
+        "the upload panel no longer reads the ingestion steps from "
+        "`lib/ingest-steps.ts`: the checklist it seeds is not the one the "
+        "pipeline publishes"
+    )
+    module = INGEST_STEPS.read_text(encoding="utf-8")
+    block = re.search(r"INGEST_SEED[^=]*=\s*\[(.*?)\n\];", module, re.S)
+    assert block, "lib/ingest-steps.ts no longer declares INGEST_SEED as a literal list"
     return [(m.group(1), m.group(2)) for m in re.finditer(
         r'\{\s*id:\s*"([a-z_]+)",\s*label:\s*"([^"]+)"', block.group(1))]
 

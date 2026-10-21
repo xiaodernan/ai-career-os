@@ -2141,7 +2141,9 @@ def test_the_run_stream_contract_is_one_table_of_publishers_cases_and_subscriber
     # `lib/i18n/copy-census.test.ts`.
     # 49 with the outreach draft's field names' own:
     # `lib/outreach-draft.test.ts`.
-    assert len(skipped) == 49 and all(rel.endswith((".test.ts", ".test.tsx")) for rel, _t in skipped), \
+    # 51 with the score dimensions' own and the page title's own:
+    # `lib/dimensions.test.ts` and `lib/i18n/metadata.test.ts`.
+    assert len(skipped) == 51 and all(rel.endswith((".test.ts", ".test.tsx")) for rel, _t in skipped), \
         (f"{len(skipped)} files are skipped and not one ships: a name in that set that is not a test file "
          "would be a subscriber hidden from the table by the pattern rather than by measurement")
     skipped_names = {rel.rsplit("/", 1)[-1] for rel, _t in skipped}
@@ -2893,7 +2895,7 @@ def test_the_heartbeat_interval_has_one_definer_and_every_shipped_claim_names_it
     spans = _keep_alive_spans()
     assert [(row["file"], row["line"]) for row in spans["claims"]] == [
         ("backend/src/main/java/com/careeros/conversation/service/CopilotStreamService.java", 96),
-        ("frontend/src/lib/sse/use-sse.ts", 226),
+        ("frontend/src/lib/sse/use-sse.ts", 232),
     ], ("which shipped comments state the keep-alive's interval: a new claim is a new sentence to hold "
         "against the code and a vanished one is a reader losing the answer. The Java pair is one span "
         "across two lines, which is why this reads spans rather than lines; what each says is checked "
@@ -2931,7 +2933,7 @@ def test_the_heartbeat_interval_has_one_definer_and_every_shipped_claim_names_it
         "listed so a claim cannot escape the census above by losing its number")
     assert [(row["file"], row["line"]) for row in spans["trailing"]] == [
         ("backend/src/main/java/com/careeros/ai/SseRelayService.java", 116),
-        ("frontend/src/lib/sse/use-sse.ts", 247),
+        ("frontend/src/lib/sse/use-sse.ts", 253),
     ], ("the other spelling -- a comment after code, which a span scan cannot see -- and neither states "
         "an interval: both say a line beginning with `:` is a keep-alive the parser skips, so the "
         "population this gate reports on is every shipped mention of the word, in both shapes")
@@ -3118,7 +3120,7 @@ def test_both_frame_parsers_default_a_nameless_frame_to_the_same_event_name():
     assert [(row["file"], row["line"], row["language"], row["default"]) for row in rows] == [
         ("SseRelayService.java", 109, "java", "message"),
         ("SseRelayService.java", 129, "java", "message"),
-        ("use-sse.ts", 244, "ts", "message"),
+        ("use-sse.ts", 250, "ts", "message"),
     ], ("where each parser invents the name: the Java pair is the in-stream frame and the stream's tail, "
         "and losing either half means one of the two exit paths stops defaulting")
     assert [row["guard"] for row in rows] == ["eventName", "eventName", None], \
@@ -3144,7 +3146,7 @@ def test_both_frame_parsers_default_a_nameless_frame_to_the_same_event_name():
     assert [(row["file"], row["line"]) for row in by_role["frame-default"]] == \
         [(row["file"], row["line"]) for row in rows], \
         "the census's `frame-default` rows and the parser scan are the same sites, read two ways"
-    assert [(row["file"], row["line"]) for row in by_role["frame-exit"]] == [("use-sse.ts", 251)], \
+    assert [(row["file"], row["line"]) for row in by_role["frame-exit"]] == [("use-sse.ts", 257)], \
         (f"{[(r['file'], r['line'], r['text']) for r in by_role['frame-exit']]}: the one non-default use "
          "inside a parser is the exit that drops a frame with neither data nor an explicit name")
     assert sorted((row["file"], row["line"], row["head"]) for row in by_role["type-union-member"]) == [
@@ -3205,7 +3207,7 @@ def test_the_two_parsers_disagree_about_a_frame_that_carries_no_data():
         (f"{ts_clauses}: the browser drops an empty frame only when the name is the one it synthesized, "
          "which is the clause the relay does not have -- and the clause compares against the default "
          "name, so this is the same `message` the first test pinned")
-    assert _line_of(client_text, client_at + ts_exit.start()) == 251, \
+    assert _line_of(client_text, client_at + ts_exit.start()) == 257, \
         "the exit is the line the token census calls `frame-exit`, read the same way by both scans"
     assert len(emit_guards) == 2 and len(ts_clauses) == 2 and \
         all("==" not in g for g in emit_guards), \

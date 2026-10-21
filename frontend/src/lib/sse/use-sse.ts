@@ -246,6 +246,27 @@ export function findFrameEnd(buffer: string): number {
   return Math.min(a, b);
 }
 
+export function parseFrame(frame: string): SSEEvent | null {
+  let event = "message" as SSEEvent["event"];
+  const dataLines: string[] = [];
+  for (const line of frame.split(/\r?\n/)) {
+    if (line.startsWith(":")) continue; // comment / keep-alive
+    if (line.startsWith("event:")) event = line.slice(6).trim() as SSEEvent["event"];
+    else if (line.startsWith("data:")) dataLines.push(line.slice(5).replace(/^ /, ""));
+  }
+  if (dataLines.length === 0 && event === "message") return null;
+  const raw = dataLines.join("\n");
+  let data: unknown = raw;
+  if (raw) {
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      /* keep as string */
+    }
+  }
+  return { event, data };
+}
+
 /**
  * The frames a buffer holds, and the part of it that is not a frame yet.
  *
@@ -268,25 +289,4 @@ export function drainFrames(buffer: string): { frames: string[]; rest: string } 
     rest = rest.slice(sep).replace(/^\r?\n\r?\n/, "");
   }
   return { frames, rest };
-}
-
-export function parseFrame(frame: string): SSEEvent | null {
-  let event = "message" as SSEEvent["event"];
-  const dataLines: string[] = [];
-  for (const line of frame.split(/\r?\n/)) {
-    if (line.startsWith(":")) continue; // comment / keep-alive
-    if (line.startsWith("event:")) event = line.slice(6).trim() as SSEEvent["event"];
-    else if (line.startsWith("data:")) dataLines.push(line.slice(5).replace(/^ /, ""));
-  }
-  if (dataLines.length === 0 && event === "message") return null;
-  const raw = dataLines.join("\n");
-  let data: unknown = raw;
-  if (raw) {
-    try {
-      data = JSON.parse(raw);
-    } catch {
-      /* keep as string */
-    }
-  }
-  return { event, data };
 }

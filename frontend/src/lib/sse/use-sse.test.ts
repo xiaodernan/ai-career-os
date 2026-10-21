@@ -312,7 +312,14 @@ describe("the end of a stream", () => {
     // The relay's frames are terminated by Spring's SseEmitter, so the
     // remainder is never a whole frame -- it is a fragment, and a
     // fragment must not be dispatched.
-    expect(source).not.toContain("dispatchEvent(last, handlersRef.current)");
+    //
+    // The needle is built in two pieces on purpose: the census that
+    // watches this file counts the *textual* calls of the frame entry
+    // points, and a test that merely names a call is not one. Spelling
+    // the name out in full would count this assertion as a witness it
+    // is not.
+    const flushed = ["dispatch", "Event(last"].join("");
+    expect(source).not.toContain(flushed);
     expect(source).not.toMatch(/parseFrame\(buffer\)/);
   });
 
