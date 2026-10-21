@@ -77,17 +77,6 @@ const KNOWN: Record<string, string[]> = {
     "Started",
     "This run failed",
   ],
-  "app/(app)/activity/page.tsx": [
-    "Trace",
-  ],
-  "app/(app)/copilot/page.tsx": [
-    "Check again",
-    "New chat",
-    "Retry last message",
-  ],
-  "app/(app)/dashboard/page.tsx": [
-    "Open board",
-  ],
   "app/(app)/ingestion/page.tsx": [
     "Feed content",
     "Source feed",
@@ -117,36 +106,11 @@ const KNOWN: Record<string, string[]> = {
     "What was weak",
     "What went well",
   ],
-  "app/(app)/interviews/page.tsx": [
-    "In progress",
-    "Mode",
-    "Pick a target job first",
-    "Start interview",
-  ],
   "app/(app)/jobs/page.tsx": [
-    "Discover",
-    "Filters",
-    "Note:",
-    "Research roles",
     "Saved",
-    "Sort",
-  ],
-  "app/(app)/layout.tsx": [
-    "Loading your workspace…",
-  ],
-  "app/(app)/networking/page.tsx": [
-    "Draft",
-    "Draft for",
-  ],
-  "app/(app)/offers/page.tsx": [
-    "Your offer against the market, and what to say.",
   ],
   "app/(app)/resumes/[id]/page.tsx": [
     "Current",
-  ],
-  "app/(app)/resumes/page.tsx": [
-    "Open",
-    "Your versions",
   ],
   "app/(app)/settings/page.tsx": [
     "Account",
@@ -400,6 +364,6 @@ describe("the browser's copy", () => {
     // census's own reading of the browser, and every one of them is on the
     // list above with a file and an owner. The pin moves when a hole closes
     // -- which is the point of pinning it.
-    expect(found.length).toBe(135);
+    expect(found.length).toBe(112);
   });
 });

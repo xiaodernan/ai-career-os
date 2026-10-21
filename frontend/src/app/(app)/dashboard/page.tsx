@@ -228,7 +228,7 @@ export default function DashboardPage() {
                     action={
                       <Button variant="ghost" size="xs" asChild>
                         <Link href="/applications">
-                          Open board
+                          {t("dashboard.openBoard")}
                           <ArrowRight aria-hidden />
                         </Link>
                       </Button>
@@ -327,7 +327,7 @@ export default function DashboardPage() {
                     action={
                       <Button variant="ghost" size="xs" asChild>
                         <Link href="/applications">
-                          Open board
+                          {t("dashboard.openBoard")}
                           <ArrowRight aria-hidden />
                         </Link>
                       </Button>
@@ -961,7 +961,7 @@ function OnboardingCard({ hasResume }: { hasResume: boolean }) {
       title: t("dashboard.stepTrack"),
       description: t("dashboard.stepTrackDescription"),
       href: "/applications",
-      cta: "Open board",
+      cta: t("dashboard.openBoard"),
     },
   ];
 

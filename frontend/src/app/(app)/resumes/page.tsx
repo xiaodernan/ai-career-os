@@ -85,7 +85,9 @@ export default function ResumesPage() {
       </section>
 
       <section aria-label={t("resumes.existingSection")} className="space-y-3">
-        <h2 className="text-sm font-semibold text-muted-foreground">Your versions</h2>
+        <h2 className="text-sm font-semibold text-muted-foreground">
+          {t("resumes.yourVersions")}
+        </h2>
         <QueryBoundary
           query={resumes}
           skeleton={<LoadingListSkeleton rows={3} />}
@@ -135,7 +137,7 @@ export default function ResumesPage() {
                         <div className="flex shrink-0 items-center gap-1.5">
                           <Button variant="outline" size="sm" asChild>
                             <Link href={`/resumes/${r.id}`}>
-                              Open
+                              {t("resumes.open")}
                               <Sparkles aria-hidden />
                             </Link>
                           </Button>

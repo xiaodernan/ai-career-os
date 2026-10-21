@@ -37,6 +37,7 @@ function statusVariant(status?: string) {
 }
 
 function RunRow({ run }: { run: ActivityRun }) {
+  const { t } = useLocale();
   const when = run.startedAt;
   const tokens = runTotalTokens(run);
 
@@ -68,7 +69,7 @@ function RunRow({ run }: { run: ActivityRun }) {
             </Badge>
           )}
           <Button variant="ghost" size="xs" asChild>
-            <Link href={`/activity/${run.id}`}>Trace</Link>
+            <Link href={`/activity/${run.id}`}>{t("activity.trace")}</Link>
           </Button>
         </div>
       </CardContent>
@@ -103,7 +104,7 @@ export default function ActivityPage() {
       query={runs}
       emptyHint={{
         title: "No agent runs yet",
-        description: "Once Copilot or a matching job runs, its full trace appears here.",
+        description: t("activity.emptyDescription"),
       }}
       ctaHref="/copilot"
       ctaLabel={t("activity.ctaLabel")}

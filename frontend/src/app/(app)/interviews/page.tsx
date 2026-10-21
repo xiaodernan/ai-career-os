@@ -79,11 +79,11 @@ export default function InterviewsPage() {
             <DropdownMenuTrigger asChild>
               <Button variant="ai" loading={create.isPending}>
                 <Plus aria-hidden />
-                Start interview
+                {t("interviews.startInterview")}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-72">
-              <DropdownMenuLabel>Mode</DropdownMenuLabel>
+              <DropdownMenuLabel>{t("interviews.mode")}</DropdownMenuLabel>
               {INTERVIEW_MODES.map((m) => (
                 <DropdownMenuItem key={m.value} onSelect={() => start(m.value)}>
                   <span className="flex min-w-0 flex-col">
@@ -107,7 +107,7 @@ export default function InterviewsPage() {
             "Pick a mode above — the session is built from your resume and the job you're targeting, so answers are graded against evidence, not trivia.",
           action: (
             <Button variant="outline" size="sm" asChild>
-              <Link href="/jobs">Pick a target job first</Link>
+              <Link href="/jobs">{t("interviews.pickATargetJob")}</Link>
             </Button>
           ),
         }}
@@ -147,7 +147,7 @@ export default function InterviewsPage() {
                       </div>
                       {!done && s.status === "active" && (
                         <Badge variant="ai" className="shrink-0 text-2xs font-normal">
-                          In progress
+                          {t("interviews.inProgress")}
                         </Badge>
                       )}
                       {done && typeof s.overall === "number" && (

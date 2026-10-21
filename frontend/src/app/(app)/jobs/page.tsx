@@ -121,7 +121,7 @@ export default function JobsPage() {
             <Button variant="ai" size="sm" asChild>
               <Link href="/copilot">
                 <Sparkles aria-hidden />
-                Research roles
+                {t("jobs.researchRoles")}
               </Link>
             </Button>
           </>
@@ -139,7 +139,7 @@ export default function JobsPage() {
             onClick={() => setMobileFilters((v) => !v)}
           >
             <SlidersHorizontal aria-hidden />
-            Filters
+            {t("jobs.filtersButton")}
           </Button>
           <div className={cn("mt-3 rounded-xl border border-border/70 bg-card p-4 lg:mt-0 lg:border-0 lg:bg-transparent lg:p-0", !mobileFilters && "hidden lg:block")}>
             <JobFilterPanel
@@ -158,11 +158,11 @@ export default function JobsPage() {
               <TabsList variant="line">
                 <TabsTrigger value="discover">
                   <Briefcase aria-hidden />
-                  Discover
+                  {t("jobs.discoverTab")}
                 </TabsTrigger>
                 <TabsTrigger value="saved">
                   <Bookmark aria-hidden />
-                  Saved
+                  {t("jobs.savedTab")}
                   {saved.data?.total ? (
                     <span className="ml-1 text-2xs text-muted-foreground tabular-nums">{saved.data.total}</span>
                   ) : null}
@@ -175,7 +175,7 @@ export default function JobsPage() {
             {tab === "discover" && (
               <div className="flex items-center gap-2">
                 <Label htmlFor="jobs-sort" className="text-xs text-muted-foreground">
-                  Sort
+                  {t("jobs.sortLabel")}
                 </Label>
                 <Select
                   value={filters.sort || "auto"}
@@ -259,7 +259,9 @@ export default function JobsPage() {
                           {job.savedAt ? <p>Saved {relativeTime(job.savedAt)}</p> : null}
                           {job.note ? (
                             <p>
-                              <span className="font-medium text-foreground">Note: </span>
+                              <span className="font-medium text-foreground">
+                                {t("jobs.noteLabel")}
+                              </span>
                               {job.note}
                             </p>
                           ) : null}

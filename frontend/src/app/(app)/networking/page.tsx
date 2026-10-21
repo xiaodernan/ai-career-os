@@ -118,7 +118,7 @@ export default function NetworkingPage() {
                   });
                 }}
               >
-                Draft
+                {t("networking.draft")}
               </Button>
             </CardContent>
           </Card>
@@ -128,7 +128,7 @@ export default function NetworkingPage() {
         <Card>
           <CardContent className="space-y-2">
             <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-              Draft for {draftFor?.name}
+              {t("networking.draftFor", { name: draftFor?.name ?? "" })}
             </p>
             <Textarea readOnly value={draft.data.message} rows={4} aria-label={t("networking.draftMessage")} />
           </CardContent>

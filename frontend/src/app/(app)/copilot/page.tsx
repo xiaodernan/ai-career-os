@@ -251,7 +251,7 @@ function ConversationList({
     <aside className={cn("min-h-0 flex-col gap-2", className)} aria-label={t("copilot.conversations")}>
       <Button variant="ai" size="sm" onClick={onCreate} loading={creating}>
         <Plus aria-hidden />
-        New chat
+        {t("copilot.newChat")}
       </Button>
       <ScrollArea className="min-h-0 flex-1">
         {query.isPending ? (
@@ -570,7 +570,7 @@ function ChatPanel({
         {listTrigger}
         <Button variant="ghost" size="sm" onClick={onNewConversation} loading={creating} className="ml-auto">
           <Plus aria-hidden />
-          New chat
+          {t("copilot.newChat")}
         </Button>
       </div>
 
@@ -587,7 +587,7 @@ function ChatPanel({
                 description={t("copilot.noHistoryDescription")}
                 action={
                   <Button variant="outline" size="sm" onClick={() => void messages.refetch()}>
-                    Check again
+                    {t("common.checkAgain")}
                   </Button>
                 }
               />
@@ -643,7 +643,7 @@ function ChatPanel({
                   }
                 }}
               >
-                Retry last message
+                {t("copilot.retryLastMessage")}
               </Button>
             </div>
           )}

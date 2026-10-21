@@ -242,7 +242,7 @@ export default function OffersPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">{t("offers.negotiationPlan")}</CardTitle>
-            <CardDescription>Your offer against the market, and what to say.</CardDescription>
+            <CardDescription>{t("offers.againstTheMarket")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex items-center gap-2">

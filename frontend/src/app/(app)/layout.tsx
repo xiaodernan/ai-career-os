@@ -9,14 +9,18 @@ import { CommandPaletteProvider } from "@/components/common/command-palette";
 import { SkipLink } from "@/components/layout/skip-link";
 import { tokenStore } from "@/lib/api/token-store";
 import { useUser } from "@/lib/hooks/auth";
+import { useLocale } from "@/lib/i18n/locale-context";
 
 function Splash() {
+  const { t } = useLocale();
   return (
     <div className="flex h-dvh flex-col items-center justify-center gap-4 bg-background">
       <span className="flex size-12 animate-pulse-dot items-center justify-center rounded-xl bg-primary text-primary-foreground">
         <Sparkles className="size-6" aria-hidden />
       </span>
-      <p className="font-serif text-display-sm text-muted-foreground italic">Loading your workspace…</p>
+      <p className="font-serif text-display-sm text-muted-foreground italic">
+        {t("loading.workspace")}
+      </p>
     </div>
   );
 }

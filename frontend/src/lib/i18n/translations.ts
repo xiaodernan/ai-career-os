@@ -64,6 +64,7 @@ export const translations = {
       // plural one.
       detail: "Loading details",
       page: "Loading page",
+      workspace: "Loading your workspace…",
       table: "Loading table",
       inProgress: "Loading…",
     },
@@ -291,6 +292,7 @@ export const translations = {
       askCopilot: "Ask Copilot",
       openCopilot: "Open Copilot",
       openPipeline: "Open pipeline",
+      openBoard: "Open board",
       openJobs: "Open Jobs",
       goToJobs: "Go to Jobs",
       allJobs: "All jobs",
@@ -375,6 +377,7 @@ export const translations = {
       planReady: "Plan ready.",
       comparisonDone: "Offers compared.",
       counterOfferScript: "Counter-offer script",
+      againstTheMarket: "Your offer against the market, and what to say.",
     },
     // Analysis
     analysis: {
@@ -542,6 +545,8 @@ export const translations = {
         "The resume and its versions are removed from your workspace. Knowledge chunks ingested from it stop being cited.",
       deleteResume: "Delete resume",
       paginationLabel: "resumes",
+      yourVersions: "Your versions",
+      open: "Open",
       detail: {
         notInWorkspace: "This resume isn't in your workspace",
         notInWorkspaceDescription:
@@ -760,6 +765,7 @@ export const translations = {
       writing: "writing",
       thinking: "thinking",
       badge: "copilot",
+      retryLastMessage: "Retry last message",
       delete: "Delete",
       noHistory: "This API build has no conversation history",
       noHistoryDescription:
@@ -792,6 +798,7 @@ export const translations = {
       notes: "Notes",
       notesPlaceholder: "Context for the next message — how you met, what you discussed.",
       draft: "Draft",
+      draftFor: "Draft for {name}",
       draftMessage: "Draft message",
       draftWithCopilot: "Draft a message with Copilot",
       addContactTitle: "Add a contact",
@@ -946,6 +953,9 @@ export const translations = {
       description: "Every agent run, tool call and retrieval — the debug view behind the answers.",
       ctaLabel: "Run something in Copilot",
       paginationLabel: "runs",
+      trace: "Trace",
+      emptyDescription:
+        "Once Copilot or a matching job runs, its full trace appears here.",
       detail: {
         steps: "Steps",
         toolCalls: "Tool calls",
@@ -1074,6 +1084,10 @@ export const translations = {
       description:
         "Adaptive mock interviews: the agent follows up while your answers are strong, moves on when they're not, and pushes deeper as you prove depth. Every evaluation cites your own material.",
       paginationLabel: "interview sessions",
+      startInterview: "Start interview",
+      mode: "Mode",
+      pickATargetJob: "Pick a target job first",
+      inProgress: "In progress",
       detail: {
         missing: "This session doesn't exist (yet)",
         missingDescription:
@@ -1134,6 +1148,12 @@ export const translations = {
         "No roles match these filters yet. Clear a filter, paste a JD for the analyst, or let Copilot research roles for your target.",
       askCopilot: "Ask Copilot",
       paginationLabel: "jobs",
+      filtersButton: "Filters",
+      sortLabel: "Sort",
+      noteLabel: "Note:",
+      discoverTab: "Discover",
+      savedTab: "Saved",
+      researchRoles: "Research roles",
       detail: {
         notInSystem: "This job isn't in the system",
         notInSystemDescription:
@@ -1258,6 +1278,7 @@ export const translations = {
       conversation: "正在加载对话",
       detail: "正在加载详情",
       page: "正在加载页面",
+      workspace: "正在加载你的工作区…",
       table: "正在加载表格",
       inProgress: "加载中…",
     },
@@ -1477,6 +1498,7 @@ export const translations = {
       askCopilot: "问问副驾驶",
       openCopilot: "打开副驾驶",
       openPipeline: "打开流水线",
+      openBoard: "打开看板",
       openJobs: "打开职位板",
       goToJobs: "去职位板",
       allJobs: "全部职位",
@@ -1552,6 +1574,7 @@ export const translations = {
       planReady: "方案已就绪。",
       comparisonDone: "录用已比较。",
       counterOfferScript: "还价话术",
+      againstTheMarket: "你的录用对着市场，以及该怎么说。",
     },
     // Analysis
     analysis: {
@@ -1704,6 +1727,8 @@ export const translations = {
       deleteDescription: "这份简历及其版本会从你的工作台移除。从它摄取的知识块也不再被引用。",
       deleteResume: "删除简历",
       paginationLabel: "简历",
+      yourVersions: "你的各个版本",
+      open: "打开",
       detail: {
         notInWorkspace: "这份简历不在你的工作区里",
         notInWorkspaceDescription: "它可能已被删除。去简历页重新上传一次。",
@@ -1905,6 +1930,7 @@ export const translations = {
       writing: "正在写",
       thinking: "正在思考",
       badge: "副驾驶",
+      retryLastMessage: "重发上一条消息",
       delete: "删除",
       noHistory: "这个 API 版本没有会话历史",
       noHistoryDescription:
@@ -1936,6 +1962,7 @@ export const translations = {
       notes: "备注",
       notesPlaceholder: "下次联系时的背景——怎么认识的、聊过什么。",
       draft: "起草",
+      draftFor: "为 {name} 起草",
       draftMessage: "消息草稿",
       draftWithCopilot: "让副驾驶起草一条消息",
       addContactTitle: "添加联系人",
@@ -2078,6 +2105,8 @@ export const translations = {
       description: "每一次代理运行、工具调用和检索——答案背后的调试视图。",
       ctaLabel: "在副驾驶里跑点什么",
       paginationLabel: "运行",
+      trace: "链路",
+      emptyDescription: "副驾驶或某个职位跑过之后，它的完整链路就会出现在这里。",
       detail: {
         steps: "步骤",
         toolCalls: "工具调用",
@@ -2200,6 +2229,10 @@ export const translations = {
       description:
         "自适应模拟面试：你的回答有力时代理会追问，不够有力时它会往下走一层，你证明了自己的深度它就推得更深。每次评估都引用你自己的材料。",
       paginationLabel: "面试场次",
+      startInterview: "开始面试",
+      mode: "模式",
+      pickATargetJob: "先挑一个目标职位",
+      inProgress: "进行中",
       detail: {
         missing: "这场面试还不存在",
         missingDescription:
@@ -2255,6 +2288,12 @@ export const translations = {
         "目前没有职位符合这些筛选。清掉一个筛选、粘贴一份 JD 给分析器，或者让副驾驶为你的目标职位做调研。",
       askCopilot: "问问副驾驶",
       paginationLabel: "职位",
+      filtersButton: "筛选",
+      sortLabel: "排序",
+      noteLabel: "备注：",
+      discoverTab: "发现",
+      savedTab: "收藏",
+      researchRoles: "调研职位",
       detail: {
         notInSystem: "系统里没有这个职位",
         notInSystemDescription:
