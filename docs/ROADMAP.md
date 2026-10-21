@@ -220,6 +220,20 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   growth engine panel — answer in the caller's language. A gate
   (`translations.test.ts`) holds the two halves of the table to the same key set
   and keeps Chinese out of the English table.)
+- [x] **17.1b** The browser's copy census (the long tail of 17.1, measured).
+  (Frontend: `lib/i18n/copy-census.test.ts` walks the 129 `.tsx` files under
+  `app/` and `components/` and finds the copy that is still a literal — a
+  copy-bearing attribute (`title`, `label`, `placeholder`, `aria-label`,
+  …), the text between two tags, and the text with an expression in it
+  (`>Clear {count}<`). A string there is a word the reader cannot change, and
+  it is the shape the fix took every time. `KNOWN` is the honest list of what
+  is left, file by file and string by string, and the number is pinned: 62,
+  every one of them in a file another session is working in at the same time.
+  `scripts/regen-known.mjs` regenerates the list from the browser's own
+  sources, so the list is a measurement rather than a paragraph that drifts.)
+  The pipeline's seven stage names live in one table (`stages.*`) read
+  through `lib/pipeline.ts`'s three readers, and `t()` fills a `{hole}` so a
+  sentence can be written in one language's word order and not another's.)
 - [x] **17.2** Full a11y pass (keyboard, motion-reduce, screen-reader labels) — the
   recent frontend commits already moved this forward; finish the long tail.
   (Global CSS: skip link, `:focus-visible` ring, `.sr-only`, 44px touch targets,
