@@ -453,3 +453,43 @@ test("a message to a contact is drafted by the screen", async ({ api, authedPage
     .inputValue();
   expect(drafted.length, "the screen's draft is empty").toBeGreaterThan(0);
 });
+
+/**
+ * The corpus's own read of a company.
+ *
+ * This one is not a model call and not an arithmetic engine either: it is
+ * a question about the seeded corpus -- "what do this company's postings
+ * actually ask for" -- and the answer is the company's own rows. The
+ * company page asks for it the way a reader does, by pressing the button,
+ * and the skills it names are the skills the postings carry.
+ */
+test("the corpus's read of a company comes from the screen", async ({ api, authedPage }) => {
+  // A company from the seeded corpus, so the brief has rows to read.
+  const companies = await unwrap<{ items: Array<{ id: string; name: string }> }>(
+    await api.get("/companies", { size: 1 })
+  );
+  expect(companies.items.length, "the seeded corpus must contain companies").toBeGreaterThan(0);
+  const company = companies.items[0];
+
+  // The same read, from the route.
+  const brief = await unwrap<{ skills?: Array<{ name: string; count: number }> }>(
+    await api.post("/companies/brief", { company: company.name })
+  );
+
+  await authedPage.goto(`/companies/${company.id}`);
+  await authedPage.getByRole("button", { name: "Read the corpus" }).click();
+
+  await expect(
+    authedPage.getByText("What the postings say").first(),
+    "the brief is not on the screen"
+  ).toBeVisible({ timeout: 30_000 });
+
+  // And the skills the engine named are on the screen, spelled the way it
+  // spelled them.
+  for (const skill of (brief.skills ?? []).slice(0, 3)) {
+    await expect(
+      authedPage.getByText(skill.name).first(),
+      `${skill.name} is on the brief's answer but not on the screen`
+    ).toBeVisible({ timeout: 20_000 });
+  }
+});

@@ -51,7 +51,7 @@ E2E_TRACE=on E2E_HTML=1 npx playwright test --headed
 npx playwright show-report
 ```
 
-Expected result: **43 passed** (19 golden journey, 6 routes, 2 memory, 2 locale, 9
+Expected result: **44 passed** (19 golden journey, 6 routes, 2 memory, 2 locale, 10
 forward surfaces, and the command-palette/pagination suites). Each run takes ~60s of
 actual testing, plus the per-test teardown described below.
 
