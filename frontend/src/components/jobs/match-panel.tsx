@@ -51,7 +51,7 @@ export function MatchPanel({
     <Card className={className}>
       <CardHeader>
         <SectionHeading
-          eyebrow="AI match"
+          eyebrow={t("eyebrows.aiMatch")}
           icon={<Target className="size-4" aria-hidden />}
           title={match ? "Why you are a match" : "No match computed yet"}
           description={
@@ -147,7 +147,7 @@ export function SkillGapCard({ gaps, className }: { gaps: SkillGap[]; className?
     <Card className={className}>
       <CardHeader>
         <SectionHeading
-          eyebrow="Growth"
+          eyebrow={t("eyebrows.growth")}
           icon={<AlertTriangle className="size-4" aria-hidden />}
           title={t("jobs.match.skillGaps")}
           description={t("jobs.match.skillGapsDescription")}
@@ -194,7 +194,7 @@ export function InterviewTopicsCard({ topics, className }: { topics: string[]; c
     <Card className={className}>
       <CardHeader>
         <SectionHeading
-          eyebrow="Prep"
+          eyebrow={t("eyebrows.prep")}
           icon={<Compass className="size-4" aria-hidden />}
           title={t("jobs.match.interviewTopics")}
           description={t("jobs.match.interviewTopicsDescription")}
@@ -224,7 +224,7 @@ export function PreparationCard({ items, className }: { items: PreparationItem[]
     <Card className={className}>
       <CardHeader>
         <SectionHeading
-          eyebrow="Prep"
+          eyebrow={t("eyebrows.prep")}
           icon={<Lightbulb className="size-4" aria-hidden />}
           title={t("jobs.match.preparation")}
           description={t("jobs.match.preparationDescription")}

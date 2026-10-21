@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { TaskProgress } from "@/components/ai/task-stream";
 import { pickResumeId, pickTaskId } from "@/lib/resume-upload";
+import { ingestSeed } from "@/lib/ingest-steps";
 import { RESUME_ACCEPT, validateResumeFile, useUploadResume } from "@/lib/hooks/actions";
 import { useLocale } from "@/lib/i18n/locale-context";
 
@@ -22,38 +23,14 @@ export interface UploadDropzoneProps extends React.ComponentProps<"div"> {
 }
 
 /**
- * The five stages the ingestion pipeline reports, in the order it reports them.
- * `id` must equal the `step` value published by ai-service/app/ingestion/pipeline.py
- * (the backend relay renames nothing) — a mismatched id leaves this row pending
- * forever while the real step is appended as a sixth, raw-named row.
- */
-export const INGEST_SEED = [
-  { id: "extracting", label: "Extracting text from the file" },
-  { id: "cleaning", label: "Cleaning and normalizing the text" },
-  { id: "chunking", label: "Splitting into retrievable chunks" },
-  { id: "embedding", label: "Generating embeddings for each chunk" },
-  { id: "indexing", label: "Indexing the document" },
-];
-
-/**
- * The seed, named in the reader's language.
+ * The five stages the ingestion pipeline reports.
  *
- * The seed above is the wire's contract -- the step ids the ingestion
- * pipeline publishes, and the English names the product gave them -- so it
- * stays as it is, and the *name* is translated where the seed is handed to
- * the progress panel. A step the locale does not name keeps the seed's own
- * English name rather than losing it.
+ * The vocabulary lives in `lib/ingest-steps.ts` -- it is a vocabulary,
+ * not a piece of this screen, and its English column is the fallback the
+ * reader sees when the locale does not name a stage. It is re-exported
+ * here because the dropzone is where the stages are shown.
  */
-export function ingestSeed(
-  t: (key: string) => string,
-  seed: readonly { id: string; label: string }[] = INGEST_SEED
-): { id: string; label: string }[] {
-  return seed.map((s) => {
-    const key = `upload.ingest.${s.id}`;
-    const translated = t(key);
-    return { ...s, label: translated === key ? s.label : translated };
-  });
-}
+export { INGEST_SEED, ingestSeed } from "@/lib/ingest-steps";
 
 // How the two ids are read out of the upload answer (top-level vs nested, camel
 // vs snake) lives in `@/lib/resume-upload` — a mis-spelled key there means the

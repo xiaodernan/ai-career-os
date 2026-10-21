@@ -104,6 +104,12 @@ export function browserSources(): string[] {
  * opening tag, and the prose begins on the next line -- so the value is
  * trimmed before it is read.
  *
+ * The anchor is a `>` that is not an arrow's. `type SearchFn = (q: string) =>
+ * Promise<SearchResults>` has a `>` in it, and the type after it read as a
+ * text node -- a word the reader never sees, named in the gate's list of
+ * things to fix, and not fixable by any edit to the source that made it
+ * true.
+ *
  * The filter is the interesting part. A `>` in JSX is also a comparison
  * operator, so `total > PAGE_SIZE` reads as a text node that begins with
  * "PAGE_SIZE". A candidate carrying a character that cannot appear in a
@@ -115,7 +121,7 @@ export function browserSources(): string[] {
  * word like that is not a phrase a translation key can hold. Those are a
  * known limit of the scan, not an oversight.
  */
-const TEXT_NODE = /(?:>|\})([^<>{}]{1,80}?)(?=<|\{)/g;
+const TEXT_NODE = /(?:(?<!=)>|\})([^<>{}]{1,80}?)(?=<|\{)/g;
 
 /** A copy-bearing attribute: `title="Delete"`. */
 const ATTRIBUTE = new RegExp(`\\b(${COPY_ATTRIBUTES.join("|")})="([^"\\n]+)"`, "g");

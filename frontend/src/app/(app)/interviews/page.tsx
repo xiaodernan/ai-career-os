@@ -102,9 +102,9 @@ export default function InterviewsPage() {
         skeleton={<LoadingListSkeleton rows={4} />}
         empty={{
           icon: <CalendarClock aria-hidden />,
-          title: "No mock interviews yet",
+          title: t("interviews.empty"),
           description:
-            "Pick a mode above — the session is built from your resume and the job you're targeting, so answers are graded against evidence, not trivia.",
+            t("interviews.emptyDescription"),
           action: (
             <Button variant="outline" size="sm" asChild>
               <Link href="/jobs">{t("interviews.pickATargetJob")}</Link>
@@ -112,9 +112,9 @@ export default function InterviewsPage() {
           ),
         }}
         notLive={{
-          title: "This API build has no interview sessions",
+          title: t("common.notLiveTitle"),
           description:
-            "GET /interview/sessions answered 404, so this frontend and the backend it is talking to are different versions. The runner is wired and activates as soon as they match.",
+            t("interviews.notLiveDescription"),
         }}
         boxed={false}
       >

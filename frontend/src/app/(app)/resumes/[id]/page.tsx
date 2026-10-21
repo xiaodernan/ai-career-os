@@ -244,7 +244,7 @@ export default function ResumeDetailPage() {
           <Card>
             <CardHeader className="pb-3">
               <SectionHeading
-                eyebrow="Reviewer agent"
+                eyebrow={t("eyebrows.reviewerAgent")}
                 icon={<Target className="size-4" aria-hidden />}
                 title={t("resumes.detail.quality")}
                 description={t("resumes.detail.qualityDescription")}
@@ -259,7 +259,7 @@ export default function ResumeDetailPage() {
           <Card>
             <CardHeader className="pb-3">
               <SectionHeading
-                eyebrow="History"
+                eyebrow={t("eyebrows.history")}
                 icon={<FolderGit2 className="size-4" aria-hidden />}
                 title={t("resumes.detail.versions")}
                 description={t("resumes.detail.versionsDescription")}
@@ -335,7 +335,7 @@ export default function ResumeDetailPage() {
           <Card>
             <CardHeader className="pb-3">
               <SectionHeading
-                eyebrow="Data sources"
+                eyebrow={t("eyebrows.dataSources")}
                 icon={<Sparkles className="size-4" aria-hidden />}
                 title={t("resumes.detail.whereFrom")}
               />
@@ -538,7 +538,7 @@ function StructuredProfileView({ structured }: { structured: StructuredResume })
       {(structured.experience?.length ?? 0) > 0 && (
         <SectionCard
           icon={<Briefcase className="size-4" aria-hidden />}
-          eyebrow="Work history"
+          eyebrow={t("eyebrows.workHistory")}
           title={`${structured.experience!.length} role${structured.experience!.length === 1 ? "" : "s"}`}
         >
           <ol className="space-y-5">
@@ -571,7 +571,7 @@ function StructuredProfileView({ structured }: { structured: StructuredResume })
       {(structured.projects?.length ?? 0) > 0 && (
         <SectionCard
           icon={<Hammer className="size-4" aria-hidden />}
-          eyebrow="Projects"
+          eyebrow={t("eyebrows.projects")}
           title={`${structured.projects!.length} project${structured.projects!.length === 1 ? "" : "s"}`}
         >
           <ul className="space-y-4">
@@ -604,7 +604,7 @@ function StructuredProfileView({ structured }: { structured: StructuredResume })
       {(structured.education?.length ?? 0) > 0 && (
         <SectionCard
           icon={<GraduationCap className="size-4" aria-hidden />}
-          eyebrow="Education"
+          eyebrow={t("eyebrows.education")}
           title={t("resumes.detail.schools")}
         >
           <ul className="space-y-3">
@@ -628,7 +628,7 @@ function StructuredProfileView({ structured }: { structured: StructuredResume })
       {(structured.skills?.length ?? 0) > 0 && (
         <SectionCard
           icon={<Wrench className="size-4" aria-hidden />}
-          eyebrow="Skills"
+          eyebrow={t("eyebrows.skills")}
           title={t("resumes.detail.inventory")}
         >
           <ul className="space-y-3">
@@ -659,7 +659,7 @@ function StructuredProfileView({ structured }: { structured: StructuredResume })
         (structured.achievements?.length ?? 0) > 0) && (
         <SectionCard
           icon={<Award className="size-4" aria-hidden />}
-          eyebrow="Goals"
+          eyebrow={t("eyebrows.goals")}
           title={t("resumes.detail.direction")}
         >
           <div className="space-y-3 text-sm">

@@ -96,14 +96,14 @@ export default function ResumesPage() {
           skeleton={<LoadingListSkeleton rows={3} />}
           empty={{
             icon: <FolderSearch aria-hidden />,
-            title: "No resumes yet",
+            title: t("resumes.empty"),
             description:
-              "Drop a file above to get started. The ingestion pipeline extracts experience, projects and skills, then grades resume quality.",
+              t("resumes.emptyDescription"),
           }}
           notLive={{
-            title: "This API build has no resume list",
+            title: t("common.notLiveTitle"),
             description:
-              "GET /resumes answered 404, so this frontend and the backend it is talking to are different versions. Uploads are wired and appear as soon as they match — nothing is invented to fill the gap.",
+              t("resumes.notLiveDescription"),
           }}
           boxed={false}
         >

@@ -196,7 +196,7 @@ export default function InterviewReportPage() {
         <Card>
           <CardHeader className="pb-3">
             <SectionHeading
-              eyebrow="Rubric"
+              eyebrow={t("eyebrows.rubric")}
               icon={<FileBarChart className="size-4" aria-hidden />}
               title={t("interviews.report.dimensions")}
               description={t("interviews.report.dimensionsDescription")}
@@ -254,7 +254,7 @@ export default function InterviewReportPage() {
         <Card>
           <CardHeader className="pb-3">
             <SectionHeading
-              eyebrow="Between sessions"
+              eyebrow={t("eyebrows.betweenSessions")}
               icon={<BookOpen className="size-4" aria-hidden />}
               title={t("interviews.report.studyMaterial")}
               description={t("interviews.report.studyMaterialDescription")}
@@ -355,7 +355,7 @@ function TrajectoryChart({ points }: { points: InterviewTrajectoryPoint[] }) {
     <Card>
       <CardHeader className="pb-3">
         <SectionHeading
-          eyebrow="Adaptivity"
+          eyebrow={t("eyebrows.adaptivity")}
           icon={<TrendingUp className="size-4" aria-hidden />}
           title={t("interviews.report.depthTrajectory")}
           description={t("interviews.report.depthTrajectoryDescription")}

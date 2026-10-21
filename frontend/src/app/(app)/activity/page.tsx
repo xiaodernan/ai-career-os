@@ -103,7 +103,7 @@ export default function ActivityPage() {
       description={t("activity.description")}
       query={runs}
       emptyHint={{
-        title: "No agent runs yet",
+        title: t("activity.noRuns"),
         description: t("activity.emptyDescription"),
       }}
       ctaHref="/copilot"

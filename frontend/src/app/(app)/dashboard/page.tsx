@@ -230,7 +230,7 @@ export default function DashboardPage() {
               <Card>
                 <CardHeader className="pb-3">
                   <SectionHeading
-                    eyebrow="Applications"
+                    eyebrow={t("eyebrows.applications")}
                     icon={<ListChecks className="size-4" aria-hidden />}
                     title={t("dashboard.pipeline")}
                     description={t("dashboard.pipelineDescription")}
@@ -256,9 +256,9 @@ export default function DashboardPage() {
                     }
                     empty={{
                       icon: <ListChecks aria-hidden />,
-                      title: "Nothing in the pipeline yet",
+                      title: t("dashboard.emptyPipeline"),
                       description:
-                        "Save a job and start tracking it — the board covers saved → applied → OA → interview → final round → offer.",
+                        t("dashboard.emptyPipelineDescription"),
                       action: (
                         <Button variant="ai" size="sm" asChild>
                           <Link href="/jobs">
@@ -329,7 +329,7 @@ export default function DashboardPage() {
               <Card>
                 <CardHeader className="pb-3">
                   <SectionHeading
-                    eyebrow="Waiting on you"
+                    eyebrow={t("eyebrows.waitingOnYou")}
                     icon={<AlertTriangle className="size-4" aria-hidden />}
                     title={t("dashboard.attention")}
                     description={t("dashboard.attentionDescription")}
@@ -415,7 +415,7 @@ export default function DashboardPage() {
               <Card>
                 <CardHeader className="pb-3">
                   <SectionHeading
-                    eyebrow="Recommendations"
+                    eyebrow={t("eyebrows.recommendations")}
                     icon={<Sparkles className="size-4" aria-hidden />}
                     title={t("dashboard.whereToFocus")}
                     description={
@@ -473,7 +473,7 @@ export default function DashboardPage() {
               <Card>
                 <CardHeader className="pb-3">
                   <SectionHeading
-                    eyebrow="Agent activity"
+                    eyebrow={t("eyebrows.agentActivity")}
                     icon={<ActivityIcon className="size-4" aria-hidden />}
                     title={t("dashboard.recentRuns")}
                     description={t("dashboard.recentRunsDescription")}
@@ -515,7 +515,7 @@ export default function DashboardPage() {
               <Card>
                 <CardHeader className="pb-3">
                   <SectionHeading
-                    eyebrow="Current resume"
+                    eyebrow={t("eyebrows.currentResume")}
                     icon={<FileText className="size-4" aria-hidden />}
                     title={resumeRow?.title ?? resumes.data?.items[0]?.title ?? "Resume"}
                     description={
@@ -542,7 +542,7 @@ export default function DashboardPage() {
               <Card>
                 <CardHeader className="pb-3">
                   <SectionHeading
-                    eyebrow="Knowledge base"
+                    eyebrow={t("eyebrows.knowledgeBase")}
                     icon={<Library className="size-4" aria-hidden />}
                     title={t("dashboard.knowledgeBase")}
                     description={t("dashboard.knowledgeBaseDescription")}
@@ -562,9 +562,9 @@ export default function DashboardPage() {
                     skeleton={<LoadingListSkeleton rows={2} />}
                     empty={{
                       icon: <Library aria-hidden />,
-                      title: "No resumes in the base yet",
+                      title: t("dashboard.emptyResumes"),
                       description:
-                        "Upload your resume — parsing feeds the knowledge base so every AI answer cites real experience.",
+                        t("dashboard.emptyResumesDescription"),
                       action: (
                         <Button variant="ai" size="sm" asChild>
                           <Link href="/resumes">
@@ -601,7 +601,7 @@ export default function DashboardPage() {
               <Card>
                 <CardHeader className="pb-3">
                   <SectionHeading
-                    eyebrow="AI usage"
+                    eyebrow={t("eyebrows.aiUsage")}
                     icon={<Sparkles className="size-4" aria-hidden />}
                     title={t("dashboard.aiUsage")}
                     description={t("dashboard.aiUsageDescription")}
@@ -668,7 +668,7 @@ export default function DashboardPage() {
               <Card>
                 <CardHeader className="pb-3">
                   <SectionHeading
-                    eyebrow="Gap analysis"
+                    eyebrow={t("eyebrows.gapAnalysis")}
                     icon={<TrendingUp className="size-4" aria-hidden />}
                     title={t("dashboard.skillGaps")}
                     description={t("dashboard.skillGapsDescription")}
@@ -721,7 +721,7 @@ export default function DashboardPage() {
               <Card>
                 <CardHeader className="pb-3">
                   <SectionHeading
-                    eyebrow="Networking"
+                    eyebrow={t("eyebrows.networking")}
                     icon={<Users className="size-4" aria-hidden />}
                     title={t("dashboard.followUps")}
                     description={t("dashboard.followUpsDescription")}

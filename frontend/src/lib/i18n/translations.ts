@@ -29,6 +29,15 @@ export const translations = {
     // Common actions
     common: {
       pageNotFound: "Page not found",
+      /**
+       * The notice a page shows when the backend it is talking to is a
+       * different version from the one it was written for.
+       *
+       * It is the same sentence on every page -- the route answered 404 --
+       * so it is one key, and the pages that have their own version of
+       * the explanation use their own.
+       */
+      notLiveTitle: "This API build has no records for this page",
       refresh: "Refresh",
       open: "Open",
       close: "Close",
@@ -313,6 +322,12 @@ export const translations = {
       noAttention: "Nothing needs attention",
       noAttentionDescription: "Every application has a recent step logged.",
       boardIsEmpty: "The board is empty.",
+      emptyPipeline: "Nothing in the pipeline yet",
+      emptyPipelineDescription:
+        "Save a job and start tracking it — the board covers saved → applied → OA → interview → final round → offer.",
+      emptyResumes: "No resumes in the base yet",
+      emptyResumesDescription:
+        "Upload your resume — parsing feeds the knowledge base so every AI answer cites real experience.",
       trackedApplications: "{count} tracked application{plural}.",
       reminderDue: "Reminder due {when}",
       lastStep: "Last step {when}",
@@ -612,6 +627,11 @@ export const translations = {
       deleteDescription:
         "The resume and its versions are removed from your workspace. Knowledge chunks ingested from it stop being cited.",
       deleteResume: "Delete resume",
+      empty: "No resumes yet",
+      emptyDescription:
+        "Drop a file above to get started. The ingestion pipeline extracts experience, projects and skills, then grades resume quality.",
+      notLiveDescription:
+        "GET /resumes answered 404, so this frontend and the backend it is talking to are different versions. Uploads are wired and appear as soon as they match — nothing is invented to fill the gap.",
       paginationLabel: "resumes",
       yourVersions: "Your versions",
       open: "Open",
@@ -1091,6 +1111,7 @@ export const translations = {
       trace: "Trace",
       emptyDescription:
         "Once Copilot or a matching job runs, its full trace appears here.",
+      noRuns: "No agent runs yet",
       detail: {
         steps: "Steps",
         toolCalls: "Tool calls",
@@ -1100,6 +1121,9 @@ export const translations = {
         executionTrace: "Execution trace",
         attribution: "Attribution",
         runId: "Run id",
+        runGone: "This run is gone",
+        runGoneDescription:
+          "Either it was never recorded or it belongs to another workspace. Runs are only ever listed to their owner.",
         cost: "Cost",
         started: "Started",
         finished: "Finished",
@@ -1188,6 +1212,41 @@ export const translations = {
      * dashboard and in every status picker, so they are translated once here
      * rather than once per surface.
      */
+    /**
+     * The section overlines.
+     *
+     * The small word above a card's title. There are two dozen of them
+     * across the product and they are the same kind of word -- a name for
+     * the section -- so they live in one table rather than in each
+     * screen's own copy. A section that says "Rubric" in English on a
+     * Chinese page is a section the reader has to guess at.
+     */
+    eyebrows: {
+      applications: "Applications",
+      waitingOnYou: "Waiting on you",
+      recommendations: "Recommendations",
+      agentActivity: "Agent activity",
+      currentResume: "Current resume",
+      knowledgeBase: "Knowledge base",
+      aiUsage: "AI usage",
+      gapAnalysis: "Gap analysis",
+      networking: "Networking",
+      rubric: "Rubric",
+      betweenSessions: "Between sessions",
+      adaptivity: "Adaptivity",
+      explainability: "Explainability",
+      reviewerAgent: "Reviewer agent",
+      history: "History",
+      dataSources: "Data sources",
+      workHistory: "Work history",
+      projects: "Projects",
+      education: "Education",
+      skills: "Skills",
+      goals: "Goals",
+      aiMatch: "AI match",
+      growth: "Growth",
+      prep: "Prep",
+    },
     stages: {
       saved: {
         label: "Saved",
@@ -1284,6 +1343,11 @@ export const translations = {
       startInterview: "Start interview",
       mode: "Mode",
       pickATargetJob: "Pick a target job first",
+      empty: "No mock interviews yet",
+      emptyDescription:
+        "Pick a mode above — the session is built from your resume and the job you're targeting, so answers are graded against evidence, not trivia.",
+      notLiveDescription:
+        "GET /interview/sessions answered 404, so this frontend and the backend it is talking to are different versions. The runner is wired and activates as soon as they match.",
       inProgress: "In progress",
       detail: {
         missing: "This session doesn't exist (yet)",
@@ -1375,6 +1439,8 @@ export const translations = {
         "No roles match these filters yet. Clear a filter, paste a JD for the analyst, or let Copilot research roles for your target.",
       askCopilot: "Ask Copilot",
       paginationLabel: "jobs",
+      notLiveDescription:
+        "The route answered 404, so this frontend and the backend it is talking to are different versions. Nothing is shown in place of the real rows.",
       filtersButton: "Filters",
       sortLabel: "Sort",
       noteLabel: "Note:",
@@ -1474,6 +1540,7 @@ export const translations = {
     // Common actions
     common: {
       pageNotFound: "页面不存在",
+      notLiveTitle: "这个后端版本没有这一页的数据",
       refresh: "刷新",
       open: "打开",
       close: "关闭",
@@ -1730,6 +1797,12 @@ export const translations = {
       noAttention: "没有需要关注的事项",
       noAttentionDescription: "每个申请都有近期的进展记录。",
       boardIsEmpty: "看板上还是空的。",
+      emptyPipeline: "流水线里还没有东西",
+      emptyPipelineDescription:
+        "收藏一个职位就开始跟踪它——看板覆盖了收藏 → 已投递 → 测评 → 面试 → 终面 → 录用。",
+      emptyResumes: "知识库里还没有简历",
+      emptyResumesDescription:
+        "上传你的简历——解析会把内容送进知识库，这样每个 AI 回答都能引用真实经历。",
       trackedApplications: "在跟 {count} 个申请。",
       reminderDue: "提醒于 {when} 到期",
       lastStep: "最近进展 {when}",
@@ -1992,6 +2065,11 @@ export const translations = {
       existingSection: "已有简历",
       deleteDescription: "这份简历及其版本会从你的工作台移除。从它摄取的知识块也不再被引用。",
       deleteResume: "删除简历",
+      empty: "还没有简历",
+      emptyDescription:
+        "把文件拖到上面就能开始。摄取流程会抽取经历、项目和技能，然后给简历质量打分。",
+      notLiveDescription:
+        "GET /resumes 回了 404，所以这个前端和它对话的后端不是同一个版本。上传已经接好，版本对上就会出现——不会拿编造的东西填坑。",
       paginationLabel: "简历",
       yourVersions: "你的各个版本",
       status: {
@@ -2419,6 +2497,7 @@ export const translations = {
       paginationLabel: "运行",
       trace: "链路",
       emptyDescription: "副驾驶或某个职位跑过之后，它的完整链路就会出现在这里。",
+      noRuns: "还没有代理运行记录",
       detail: {
         steps: "步骤",
         toolCalls: "工具调用",
@@ -2428,6 +2507,9 @@ export const translations = {
         executionTrace: "执行链路",
         attribution: "归因",
         runId: "运行 ID",
+        runGone: "这次运行已经不在了",
+        runGoneDescription:
+          "它可能从未被记录，或者属于另一个工作区。运行记录只对它们的主人可见。",
         cost: "成本",
         started: "开始于",
         finished: "结束于",
@@ -2510,6 +2592,41 @@ export const translations = {
      * dashboard and in every status picker, so they are translated once here
      * rather than once per surface.
      */
+    /**
+     * The section overlines.
+     *
+     * The small word above a card's title. There are two dozen of them
+     * across the product and they are the same kind of word -- a name for
+     * the section -- so they live in one table rather than in each
+     * screen's own copy. A section that says "Rubric" in English on a
+     * Chinese page is a section the reader has to guess at.
+     */
+    eyebrows: {
+      applications: "申请",
+      waitingOnYou: "等你处理",
+      recommendations: "推荐",
+      agentActivity: "代理活动",
+      currentResume: "当前简历",
+      knowledgeBase: "知识库",
+      aiUsage: "AI 用量",
+      gapAnalysis: "差距分析",
+      networking: "人脉",
+      rubric: "评分表",
+      betweenSessions: "两场之间",
+      adaptivity: "适应性",
+      explainability: "可解释性",
+      reviewerAgent: "评审代理",
+      history: "历史",
+      dataSources: "数据来源",
+      workHistory: "工作经历",
+      projects: "项目",
+      education: "教育",
+      skills: "技能",
+      goals: "目标",
+      aiMatch: "AI 匹配",
+      growth: "成长",
+      prep: "准备",
+    },
     stages: {
       saved: {
         label: "已收藏",
@@ -2600,6 +2717,11 @@ export const translations = {
       startInterview: "开始面试",
       mode: "模式",
       pickATargetJob: "先挑一个目标职位",
+      empty: "还没有模拟面试",
+      emptyDescription:
+        "在上面选一种模式——这场面试是用你的简历和目标职位搭建的，所以回答是拿证据来评的，不是拿常识。",
+      notLiveDescription:
+        "GET /interview/sessions 回了 404，所以这个前端和它对话的后端不是同一个版本。面试器已经接好，版本对上就会自动启用。",
       inProgress: "进行中",
       detail: {
         missing: "这场面试还不存在",
@@ -2685,6 +2807,8 @@ export const translations = {
         "目前没有职位符合这些筛选。清掉一个筛选、粘贴一份 JD 给分析器，或者让副驾驶为你的目标职位做调研。",
       askCopilot: "问问副驾驶",
       paginationLabel: "职位",
+      notLiveDescription:
+        "这个路由回了 404，所以这个前端和它对话的后端不是同一个版本。真实数据没有的地方，不会拿别的东西顶上。",
       filtersButton: "筛选",
       sortLabel: "排序",
       noteLabel: "备注：",

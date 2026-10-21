@@ -235,9 +235,9 @@ export default function ActivityRunPage() {
         }
         empty={{
           icon: <Gauge aria-hidden />,
-          title: "This run is gone",
+          title: t("activity.runGone"),
           description:
-            "Either it was never recorded or it belongs to another workspace. Runs are only ever listed to their owner.",
+            t("activity.runGoneDescription"),
           action: (
             <Button variant="outline" size="sm" asChild>
               <Link href="/activity">{t("activity.detail.backToActivity")}</Link>

@@ -30,64 +30,9 @@ import { everyOffender, browserSources } from "./copy-scan";
  * person to touch that file removes it.
  */
 const KNOWN: Record<string, string[]> = {
-  "app/(app)/activity/[id]/page.tsx": [
-    "Either it was never recorded or it belongs to another workspace. Runs are only ever listed to their owner.",
-    "This run is gone",
-  ],
-  "app/(app)/activity/page.tsx": [
-    "No agent runs yet",
-  ],
-  "app/(app)/dashboard/page.tsx": [
-    "AI usage",
-    "Agent activity",
-    "Applications",
-    "Current resume",
-    "Gap analysis",
-    "Knowledge base",
-    "Networking",
-    "No resumes in the base yet",
-    "Nothing in the pipeline yet",
-    "Recommendations",
-    "Save a job and start tracking it — the board covers saved → applied → OA → interview → final round → offer.",
-    "Upload your resume — parsing feeds the knowledge base so every AI answer cites real experience.",
-    "Waiting on you",
-  ],
   "app/(app)/interviews/[id]/page.tsx": [
     "Deciding: follow deeper or move topics",
     "Evaluating your answer against your real experience",
-  ],
-  "app/(app)/interviews/[id]/report/page.tsx": [
-    "Adaptivity",
-    "Between sessions",
-    "Rubric",
-  ],
-  "app/(app)/interviews/page.tsx": [
-    "GET /interview/sessions answered 404, so this frontend and the backend it is talking to are different versions. The runner is wired and activates as soon as they match.",
-    "No mock interviews yet",
-    "Pick a mode above — the session is built from your resume and the job you're targeting, so answers are graded against evidence, not trivia.",
-    "This API build has no interview sessions",
-  ],
-  "app/(app)/jobs/[id]/page.tsx": [
-    "Explainability",
-  ],
-  "app/(app)/jobs/page.tsx": [
-    "The route answered 404, so this frontend and the backend it is talking to are different versions. Nothing is shown in place of the real rows.",
-  ],
-  "app/(app)/resumes/[id]/page.tsx": [
-    "Data sources",
-    "Education",
-    "Goals",
-    "History",
-    "Projects",
-    "Reviewer agent",
-    "Skills",
-    "Work history",
-  ],
-  "app/(app)/resumes/page.tsx": [
-    "Drop a file above to get started. The ingestion pipeline extracts experience, projects and skills, then grades resume quality.",
-    "GET /resumes answered 404, so this frontend and the backend it is talking to are different versions. Uploads are wired and appear as soon as they match — nothing is invented to fill the gap.",
-    "No resumes yet",
-    "This API build has no resume list",
   ],
   "app/layout.tsx": [
     "Your personal job-search operating system — evidence-backed matching, resume intelligence, and AI-guided interviews.",
@@ -117,9 +62,6 @@ const KNOWN: Record<string, string[]> = {
     "Password",
     "Sign in",
   ],
-  "components/common/command-palette.tsx": [
-    "Promise",
-  ],
   "components/jobs/analyze-jd-dialog.tsx": [
     "Analyze",
     "Analyze a JD",
@@ -143,29 +85,6 @@ const KNOWN: Record<string, string[]> = {
     "Job posting text",
     "Paste a posting",
     "Paste the full posting — responsibilities, requirements, nice-to-haves…",
-  ],
-  "components/jobs/match-panel.tsx": [
-    "AI match",
-    "Growth",
-    "Prep",
-  ],
-  "components/knowledge/source-actions.tsx": [
-    "Certificate",
-    "Company",
-    "Course",
-    "Goal",
-    "Interview feedback",
-    "Job description",
-    "Note",
-    "Project",
-    "Resume",
-  ],
-  "components/resumes/upload-dropzone.tsx": [
-    "Cleaning and normalizing the text",
-    "Extracting text from the file",
-    "Generating embeddings for each chunk",
-    "Indexing the document",
-    "Splitting into retrievable chunks",
   ],
   "components/settings/memory-card.tsx": [
     "Cancel",
@@ -254,9 +173,10 @@ describe("the browser's copy", () => {
     // of them is on the list above with a file and an owner. The pin moves
     // when a hole closes -- which is the point of pinning it.
     //
-    // 126 with the object literals: the shapes the scan did not read before
+    // 70 with the object literals: the shapes the scan did not read before
     // were a third of the product's copy, and the list above is the honest
-    // answer to "what have we not fixed yet".
-    expect(found.length).toBe(126);
+    // answer to "what have we not fixed yet". Ten files, all of them in a
+    // file another session is working in at the same time.
+    expect(found.length).toBe(70);
   });
 });

@@ -350,7 +350,7 @@ export default function JobDetailPage() {
           <Card>
             <CardHeader>
               <SectionHeading
-                eyebrow="Explainability"
+                eyebrow={t("eyebrows.explainability")}
                 icon={<Quote className="size-4" aria-hidden />}
                 title={t("jobs.detail.resumeEvidence")}
                 description={t("jobs.detail.resumeEvidenceDescription")}

@@ -245,7 +245,7 @@ export default function JobsPage() {
                   ? "This API build has no saved-jobs list"
                   : "This API build has no job search",
               description:
-                "The route answered 404, so this frontend and the backend it is talking to are different versions. Nothing is shown in place of the real rows.",
+                t("jobs.notLiveDescription"),
             }}
           >
             {(page) => (

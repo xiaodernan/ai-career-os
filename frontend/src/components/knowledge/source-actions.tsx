@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select";
 import { api } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
+import { SOURCE_KINDS, sourceKindLabel } from "@/lib/source-kinds";
 import { useSourceStatus } from "@/lib/hooks/resources";
 import { useLocale } from "@/lib/i18n/locale-context";
 
@@ -28,42 +29,14 @@ import { useLocale } from "@/lib/i18n/locale-context";
  */
 
 /**
- * Exactly `KnowledgeService.KINDS` (validateKind rejects anything else with a 400 —
- * there is no `document` value; a blank kind falls back to `note` server-side), so the
- * selector offers the set verbatim and defaults to that fallback.
- */
-export const SOURCE_KINDS = [
-  { value: "note", label: "Note" },
-  { value: "resume", label: "Resume" },
-  { value: "project", label: "Project" },
-  { value: "jd", label: "Job description" },
-  { value: "company", label: "Company" },
-  { value: "interview_feedback", label: "Interview feedback" },
-  { value: "certificate", label: "Certificate" },
-  { value: "course", label: "Course" },
-  { value: "goal", label: "Goal" },
-] as const;
-
-/**
- * The kind's name, in the reader's language.
+ * The kinds a source may have, and the name each is given.
  *
- * The kinds are the wire's (`KnowledgeService.KINDS`, which `validateKind`
- * rejects anything else from), and the names the product gives them are the
- * reader's -- a Chinese reader was picking a document's kind from an English
- * list. A kind the locale does not name keeps the product's own English
- * name rather than losing it, which is the rule `stageLabel` follows for
- * the pipeline's seven stages.
+ * The vocabulary lives in `lib/source-kinds.ts` -- it is a vocabulary,
+ * not a piece of this screen, and its English column is the fallback the
+ * reader sees when the locale does not name a kind. It is re-exported
+ * here because the uploader is where the kinds are offered.
  */
-export function sourceKindLabel(
-  t: (key: string) => string,
-  value: string
-): string {
-  const known = SOURCE_KINDS.find((k) => k.value === value);
-  if (!known) return value;
-  const key = `knowledge.sources.kinds.${value}`;
-  const translated = t(key);
-  return translated === key ? known.label : translated;
-}
+export { SOURCE_KINDS, sourceKindLabel } from "@/lib/source-kinds";
 
 /** Mirrors `storage/FileValidator`: 20 MB cap, PDF/DOCX/TXT by magic bytes server-side. */
 export const MAX_DOCUMENT_BYTES = 20 * 1024 * 1024;
