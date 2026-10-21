@@ -110,3 +110,79 @@ test("the pipeline the board draws is the one the applications carry", async ({
     "the application is on the board"
   ).toBeVisible({ timeout: 20_000 });
 });
+
+/**
+ * The growth report, built by the screen.
+ *
+ * The report is the product's flagship answer -- five engines composed in
+ * one call -- and it is the one a reader reaches for by typing a role into
+ * a form. The golden journey never drives that form: it calls the route.
+ *
+ * So this does what a reader does. It names a role, presses the button,
+ * and checks that the report the engines answered with is the report on
+ * the screen: the role it was built for, the verdict, the coverage, and
+ * the salary band the corpus pays.
+ */
+test("the growth report is built by the screen, from a named role", async ({
+  api,
+  authedPage,
+}) => {
+  // A parsed resume is what the report is built from, so the engine has
+  // something to measure the role against.
+  const seeded = await unwrap<{ id: string }>(
+    await api.post("/resumes", {
+      title: "Growth Resume",
+      plaintext:
+        "Backend engineer with six years of Java and Spring. Built payment " +
+        "services at scale, cut p99 latency by 40%. Led a team of four.",
+    })
+  );
+  await unwrap(await api.post(`/resumes/${seeded.id}/parse`));
+
+  const role = "Senior Backend Engineer (Java)";
+  const report = await unwrap<{
+    readiness: { verdict: string; targetRole?: string };
+    gap: { targetRole: string; coverage: number };
+    salary: { percentiles: Record<string, number>; sampleSize: number };
+  }>(await api.post("/growth-report", { targetRole: role }));
+  expect(report.gap.targetRole, "the gap engine must name the role it was built for").toBeTruthy();
+
+  await authedPage.goto("/growth");
+  // The report's own field, not the per-engine panel's -- the page has two
+  // "Target role" inputs, and the report is the one that composes.
+  await authedPage.locator("#growth-role").fill(role);
+  await authedPage.getByRole("button", { name: "Analyze" }).click();
+
+  // The role the engines were given is the role on the screen.
+  await expect(
+    authedPage.getByText(report.gap.targetRole).first(),
+    "the role the engines answered with is not the role on the screen"
+  ).toBeVisible({ timeout: 30_000 });
+
+  // And the verdict and the coverage are there, as the numbers the engine
+  // computed rather than as a placeholder.
+  await expect(
+    authedPage.getByText((report.readiness.verdict ?? "").replace("_", " ")).first(),
+    "the verdict is not on the screen"
+  ).toBeVisible({ timeout: 30_000 });
+
+  const coverage = Math.round(report.gap.coverage * 100);
+  await expect(
+    authedPage.getByText(`${coverage}%`).first(),
+    `the coverage (${coverage}%) is not on the screen`
+  ).toBeVisible({ timeout: 30_000 });
+
+  // The salary band is the corpus's own answer, so it is a real figure --
+  // and the screen spells it as a salary, not as the raw number, so the
+  // count behind it is the figure that can be compared.
+  const sampleSize = report.salary.sampleSize ?? 0;
+  expect(sampleSize, "the market band must count its samples").toBeGreaterThan(0);
+  await expect(
+    authedPage.getByText("Salary band").first(),
+    "the market band is not on the screen"
+  ).toBeVisible({ timeout: 30_000 });
+  await expect(
+    authedPage.getByText(new RegExp(`${sampleSize}\\s+matched postings`)).first(),
+    `the market band's sample size (${sampleSize}) is not on the screen`
+  ).toBeVisible({ timeout: 30_000 });
+});
