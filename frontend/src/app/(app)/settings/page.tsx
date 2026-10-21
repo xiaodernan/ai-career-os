@@ -86,7 +86,7 @@ export default function SettingsPage() {
                     onClick={saveName}
                   >
                     <Save aria-hidden />
-                    Save
+                    {t("common.save")}
                   </Button>
                 </div>
                 <div className="flex items-center gap-2 pt-1">

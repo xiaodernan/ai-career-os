@@ -294,7 +294,7 @@ export default function ResumeDetailPage() {
                         {isCurrent ? (
                           <Badge variant="success" className="gap-1 text-2xs font-normal">
                             <Check className="size-3" aria-hidden />
-                            Current
+                            {t("resumes.detail.current")}
                           </Badge>
                         ) : (
                           <Button

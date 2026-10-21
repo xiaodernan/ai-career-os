@@ -216,9 +216,9 @@ export default function InterviewRunnerPage() {
             · {data.companyName ?? ""} {data.jobTitle ? `— ${data.jobTitle}` : ""}
           </span>
         )}
-        <Badge variant="outline" className="ml-auto text-2xs font-normal tabular-nums">
-          Question {turns.length + (showingEvaluation ? 0 : 1)}
-        </Badge>
+        >{t("interviews.detail.question", {
+              number: turns.length + (showingEvaluation ? 0 : 1),
+            })}</Badge>
         {typeof (question?.difficulty ?? data.difficulty) === "number" && (
           <DifficultyMeter value={question?.difficulty ?? data.difficulty!} />
         )}

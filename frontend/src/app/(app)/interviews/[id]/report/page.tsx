@@ -267,7 +267,7 @@ export default function InterviewReportPage() {
                       rel="noopener noreferrer nofollow"
                       className="mt-0.5 flex shrink-0 items-center gap-1 text-xs font-medium text-primary underline-offset-4 hover:underline"
                     >
-                      Open
+                      {t("interviews.report.open")}
                       <ExternalLink className="size-3" aria-hidden />
                     </a>
                   )}

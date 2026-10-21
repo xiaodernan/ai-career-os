@@ -170,7 +170,7 @@ export function GrowthEnginesPanel() {
           disabled={!roleOk && engine !== "stories" && engine !== "roles"}
           onClick={run}
         >
-          Run {ENGINES.find((e) => e.key === engine)?.label}
+          {t("growthEngines.run")} {ENGINES.find((e) => e.key === engine)?.label}
         </Button>
 
         <EngineResult engine={engine} state={resultFor(engine, {

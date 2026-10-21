@@ -7,9 +7,9 @@ the ones the health check showed still raised ``TypeError`` / ``AttributeError``
 stale cached row must produce an empty/safe result, never crash the request path.
 """
 
-from app.features import (counter_offer, demand, equity, interview_prep, learning,
-                             negotiation, offers, prioritize, progress, progression,
-                             readiness, roles, salary)
+from app.features import (company, counter_offer, demand, equity, interview_prep,
+                             learning, match, negotiation, offers, prioritize, progress,
+                             progression, readiness, roles, salary)
 
 
 # --- progression.build_stepping_stones -------------------------------------
@@ -331,4 +331,53 @@ def test_skill_demand_none_entry_skipped():
                               role="backend")
     assert out["postings"] == 1
     assert out["skills"][0]["skill"] == "Go"
+
+
+# ---------------- company brief (forward Epic 4.8) ----------------
+
+def test_company_brief_none_samples_is_safe():
+    out = company.company_brief(None, "Acme")
+    assert out == {"company": "Acme", "postings": 0, "roles": [],
+                   "topSkills": [], "salaryBand": None}
+
+
+def test_company_brief_none_and_non_dict_rows_skipped():
+    samples = [None, "junk", 42, {"company": "Acme", "title": "Dev", "skills": ["Go"]}]
+    out = company.company_brief(samples, "Acme")
+    assert out["postings"] == 1
+    assert out["roles"] == ["Dev"]
+    assert out["topSkills"] == [{"skill": "Go", "count": 1}]
+
+
+# ---------------- match scoring helpers (PRD §10) ----------------
+# The resume parser and peer JD payloads feed these helpers; a None resume, a
+# None JD, or a non-dict entry inside experience/education/projects/requirements
+# must degrade to the neutral score, never AttributeError/TypeError the flow.
+
+def test_match_helpers_survive_none_parsed_and_jd():
+    assert match._skill_set(None) == set()
+    assert match._user_years(None) == 0.0
+    assert match._edu_rank(None) == -1.0
+    assert match._min_degree(None) == ""
+    score, _note = match._experience_score(None, None)   # no stated years -> neutral
+    assert score == 0.75
+    assert isinstance(match._education_score(None, None), float)
+
+
+def test_user_years_skips_non_dict_experience_entries():
+    p = {"experience": [None, "junk", {"start": "2019", "end": "2022"}]}
+    assert match._user_years(p) == 3.9                     # only the real role counts
+
+
+def test_projects_score_skips_non_dict_project_entries():
+    p = {"projects": [None, "junk", {"tech": ["Go"]}], "experience": []}
+    assert match._projects_score(p, [], [], {}) == 0.25     # one real project, no overlap
+
+
+def test_skill_gaps_and_technical_score_skip_non_dict_requirements():
+    req = [None, "junk", {"name": "Kubernetes", "priority": "must"}]
+    gaps = match._skill_gaps(req, set())
+    assert [g["skill"] for g in gaps] == ["Kubernetes"]
+    # the denominator counts only the one real must, so holding it is full coverage
+    assert match._technical_score(req, [], {"Kubernetes"}) == 1.0
 

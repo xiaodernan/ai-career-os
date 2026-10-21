@@ -15,17 +15,19 @@ from app.features.salary import percentile, representative
 
 def company_brief(samples: list[dict], company: str, *, top: int = 10) -> dict:
     name = (company or "").strip().lower()
-    matched = [s for s in samples
+    rows = [s for s in (samples or []) if isinstance(s, dict)]
+    matched = [s for s in rows
                if (s.get("company") or "").strip().lower() == name]
     if not matched and name:
         # fall back to a substring so "Acme" still finds "Acme Corp"
-        matched = [s for s in samples if name in (s.get("company") or "").lower()]
+        matched = [s for s in rows if name in (s.get("company") or "").lower()]
 
     roles = sorted({(s.get("title") or "").strip() for s in matched
                     if (s.get("title") or "").strip()})
     counter: Counter[str] = Counter()
     for s in matched:
-        for sk in s.get("skills") or []:
+        skills = s.get("skills")
+        for sk in (skills if isinstance(skills, list) else []):
             if isinstance(sk, str) and sk.strip():
                 counter[normalize(sk)] += 1
 

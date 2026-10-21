@@ -17,7 +17,18 @@ _DEGREE_RANK = {"high school": 0, "associate": 1, "bachelor": 2, "master": 2.5,
 _WEIGHT = {"must": 3.0, "should": 2.0, "nice": 1.0}
 
 
+def _dicts(rows: object) -> list[dict]:
+    """The dict rows of a list, tolerating a None list or a non-dict entry.
+
+    Peer payloads, the resume parser's own null sections, and stale cache rows
+    hand these builders a list that can be None or carry a None / non-dict entry;
+    iterating it raw raises, so every consumer funnels its list through here
+    first. Order is preserved, so scoring and ranking are unaffected."""
+    return [r for r in (rows or []) if isinstance(r, dict)]
+
+
 def _skill_set(parsed: dict) -> set[str]:
+    parsed = parsed or {}
     out = {normalize(s.get("name", "")) for s in (parsed.get("skills") or [])
            if isinstance(s, dict) and s.get("name")}
     blob = " ".join(str(v) for v in ((parsed.get("experience") or []) +
@@ -48,13 +59,15 @@ def _year_month(s: object, default_month: int) -> tuple[int, int] | None:
 
 
 def _user_years(parsed: dict) -> float:
-    y = (parsed.get("profile") or {}).get("yearsExperience")
+    parsed = parsed or {}
+    profile = parsed.get("profile")
+    y = (profile or {}).get("yearsExperience") if isinstance(profile, dict) else None
     if isinstance(y, (int, float)):
         return float(y)
     from datetime import date
     total = 0.0
     today = date.today()
-    for e in parsed.get("experience") or []:
+    for e in _dicts(parsed.get("experience")):
         st = _year_month(e.get("start"), 1)
         if not st:
             continue
@@ -77,6 +90,8 @@ def _technical_denominator(req: list[dict], pref: list[dict]) -> float:
     Shared with `_preparation` on purpose. The worth of closing a gap is only honest if it is the
     same arithmetic that produced the score the gap is measured against; a second copy would drift
     the first time one of them changed."""
+    req = _dicts(req)
+    pref = _dicts(pref)
     req_total = sum(_WEIGHT.get(s.get("priority", "must"), 3.0) for s in req)
     pref_total = sum(_WEIGHT.get(s.get("priority", "nice"), 1.0) for s in pref)
     return req_total + 0.3 * pref_total
@@ -94,6 +109,8 @@ def _technical_score(req: list[dict], pref: list[dict], r_skills: set[str]) -> f
     under-counting coverage against a denominator that included a required skill
     the JD never listed. Both are fixed by guarding on the real total here.
     """
+    req = _dicts(req)
+    pref = _dicts(pref)
     denom = _technical_denominator(req, pref)
     if not denom:
         return 0.6
@@ -105,8 +122,9 @@ def _technical_score(req: list[dict], pref: list[dict], r_skills: set[str]) -> f
 
 
 def _edu_rank(parsed: dict) -> float:
+    parsed = parsed or {}
     best = -1.0
-    for e in parsed.get("education") or []:
+    for e in _dicts(parsed.get("education")):
         d = (e.get("degree") or "").lower()
         for k, v in _DEGREE_RANK.items():
             if k in d:
@@ -120,6 +138,7 @@ def _experience_score(parsed: dict, jd: dict) -> tuple[float, str]:
     Neutral 0.75 when the JD states no explicit years; capped credit for meeting
     the bar; a floor of 0.25 (never 0) when under so a junior candidate is not
     zeroed out. Returns (score, note)."""
+    jd = jd or {}
     need_years = jd.get("experienceYears")
     have_years = _user_years(parsed)
     if not isinstance(need_years, (int, float)) or need_years <= 0:
@@ -136,6 +155,7 @@ def _education_score(parsed: dict, jd: dict) -> float:
     Degree ranks are ordered (associate<bachelor<master<phd); a resume ranked at
     or above the bar scores 1.0, otherwise it decays 0.25 per rank below with a
     0.3 floor."""
+    jd = jd or {}
     need_edu = (jd.get("education") or {}).get("minDegree") if isinstance(
         jd.get("education"), dict) else None
     if not need_edu:
@@ -150,13 +170,17 @@ def _projects_score(parsed: dict, req: list[dict], pref: list[dict], jd: dict) -
 
     With no projects it falls back to 0.35 if the candidate has work experience,
     else 0.1, so a project-less resume is not zeroed out entirely."""
+    parsed = parsed or {}
+    jd = jd or {}
+    projects = _dicts(parsed.get("projects"))
     proj_terms = set(extract_skills(" ".join(
-        str((p.get("tech") or [])) + " ".join(p.get("bullets") or [])
-        for p in (parsed.get("projects") or []))))
-    jd_terms = {normalize(s.get("name", "")) for s in req + pref}
-    jd_terms |= {normalize(k) for k in jd.get("priorityOrder") or []}
+        str((p.get("tech") or [])) + " ".join(
+            b for b in (p.get("bullets") or []) if isinstance(b, str))
+        for p in projects)))
+    jd_terms = {normalize(s.get("name", "")) for s in _dicts(req) + _dicts(pref)}
+    jd_terms |= {normalize(k) for k in (jd.get("priorityOrder") or []) if isinstance(k, str)}
     proj_overlap = len(jd_terms & {normalize(x) for x in proj_terms})
-    n_proj = len(parsed.get("projects") or [])
+    n_proj = len(projects)
     return min(1.0, 0.25 * min(n_proj, 3) + 0.1 * min(proj_overlap, 5)) \
         if n_proj else (0.35 if parsed.get("experience") else 0.1)
 
@@ -170,6 +194,8 @@ def _matched_missing(req: list[dict], pref: list[dict],
     surfacing), while ``missing`` is only the *required* skills you lack (a gap you
     are not penalised for). Changing either set's source list shifts the user-visible
     skill-gap panel, so this is pinned by tests."""
+    req = _dicts(req)
+    pref = _dicts(pref)
     matched = sorted({normalize(s.get("name", "")) for s in req + pref
                       if normalize(s.get("name", "")) in r_skills})
     missing = sorted({normalize(s.get("name", "")) for s in req
@@ -187,6 +213,7 @@ def _skill_gaps(req: list[dict], r_skills: set[str]) -> list[dict]:
     what to do about a gap is the preparation card's job, and it already prices each one in
     overall-score points.
     """
+    req = _dicts(req)
     seen: set[str] = set()
     gaps: list[dict] = []
     for s in req:
@@ -213,6 +240,7 @@ def _overall(technical: float, experience: float, projects: float,
 
 def _min_degree(jd: dict) -> str:
     """The JD's stated minimum degree, or "" when it states none."""
+    jd = jd or {}
     edu = jd.get("education")
     return str(edu.get("minDegree") or "") if isinstance(edu, dict) else ""
 
@@ -234,6 +262,8 @@ def _preparation_worths(req: list[dict], pref: list[dict], r_skills: set[str],
     name normalises to "" is skipped — it cannot be titled or acted on — while the denominator still
     counts it, which is why that test's JD lists every skill by name.
     """
+    req = _dicts(req)
+    pref = _dicts(pref)
     if not denom:
         return []
     seen: set[str] = set()
@@ -291,6 +321,8 @@ def _why_match(matched: list[str], req: list[dict], pref: list[dict], experience
 
 async def compute_match(resume_parsed: dict, jd: dict, *, user_id: str,
                         job_id: str | None = None, run_id: str | None = None) -> dict:
+    resume_parsed = resume_parsed or {}
+    jd = jd or {}
     r_skills = _skill_set(resume_parsed)
     evidence: list[dict] = []
 

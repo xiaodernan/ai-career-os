@@ -28,7 +28,6 @@ import { fileURLToPath } from "node:url";
  * has since been fixed is harmless: the entry is stale, and the next
  * person to touch that file removes it.
  */
-
 const ROOT = fileURLToPath(new URL("../../", import.meta.url));
 
 /** The attributes that carry a word the reader sees or hears. */
@@ -63,21 +62,6 @@ const NOT_COPY = new Set(["Career", "CareerOS", "OS"]);
  * of pretending the work is finished.
  */
 const KNOWN: Record<string, string[]> = {
-  "app/(app)/interviews/[id]/page.tsx": [
-    "Question",
-  ],
-  "app/(app)/interviews/[id]/report/page.tsx": [
-    "Open",
-  ],
-  "app/(app)/jobs/page.tsx": [
-    "Saved",
-  ],
-  "app/(app)/resumes/[id]/page.tsx": [
-    "Current",
-  ],
-  "app/(app)/settings/page.tsx": [
-    "Save",
-  ],
   "components/ai/agent-timeline.tsx": [
     "Agent execution trace",
     "Completed",
@@ -97,13 +81,6 @@ const KNOWN: Record<string, string[]> = {
     "Forgot your password?",
     "No account yet?",
     "Sign in",
-  ],
-  "components/common/command-palette.tsx": [
-    "Promise",
-    "Search",
-  ],
-  "components/growth/growth-engines-panel.tsx": [
-    "Run",
   ],
   "components/jobs/analyze-jd-dialog.tsx": [
     "Analyze",
@@ -153,7 +130,9 @@ const KNOWN: Record<string, string[]> = {
     "The short story a recruiter gets before the resume.",
     "Years of experience has to be a number between 0 and",
   ],
-
+  "components/common/command-palette.tsx": [
+    "Promise",
+  ],
 };
 
 /** Every `.tsx` under the browser's own source tree, tests aside. */
@@ -228,7 +207,7 @@ function textNodeOffenders(): Offender[] {
         // "AI", "OS" and "JD" are names, not sentences.
         if (!/^[A-Z][a-z]/.test(value)) continue;
       }
-      // An HTML entity inside a phrase -- "Profile &amp; preferences" -- is
+      // An HTML entity inside a phrase -- "Profile & preferences" -- is
       // punctuation the reader sees, not code. It is decoded before the
       // code check so the semicolon in it does not hide the phrase.
       const decoded = value.replace(/&[a-z]+;/g, "x");
@@ -263,7 +242,7 @@ function offenders(): Offender[] {
   return found;
 }
 
-/** Every hardcoded string: the copy-bearing attributes and the text nodes. */
+/** Every hardcoded string: the copy-bearing attributes and the text between the tags. */
 function everyOffender(): Offender[] {
   return [...offenders(), ...textNodeOffenders()];
 }
@@ -321,6 +300,6 @@ describe("the browser's copy", () => {
     // census's own reading of the browser, and every one of them is on the
     // list above with a file and an owner. The pin moves when a hole closes
     // -- which is the point of pinning it.
-    expect(found.length).toBe(62);
+    expect(found.length).toBe(55);
   });
 });

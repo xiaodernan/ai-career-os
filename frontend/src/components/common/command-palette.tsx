@@ -205,7 +205,7 @@ export function CommandPaletteProvider({
             {!debounced && (
               <div className="flex items-center gap-1.5 border-t border-border/60 px-4 py-2.5 text-xs text-muted-foreground">
                 <LayoutDashboard className="size-3.5" aria-hidden />
-                Search {searchGroupNames()} — {t("chrome.resultsStreamIn")}
+                {t("chrome.search")} {searchGroupNames()} — {t("chrome.resultsStreamIn")}
               </div>
             )}
           </CommandList>
