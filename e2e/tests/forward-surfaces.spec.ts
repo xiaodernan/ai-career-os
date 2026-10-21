@@ -295,3 +295,110 @@ test("a bundle exported by the screen is planned and applied by the screen", asy
     "the restore's result is not on the screen"
   ).toBeVisible({ timeout: 30_000 });
 });
+
+/**
+ * The ingestion screen, fed a feed.
+ *
+ * The fourteen-x engines are the only ones a reader runs against their
+ * own material rather than the corpus -- a feed pasted from somewhere
+ * else, parsed, de-duplicated and swept for freshness before anything is
+ * written. The golden journey covers the import dialog (one posting, by
+ * hand); this covers the feed path, which is the one with the real
+ * arithmetic in it.
+ */
+test("a pasted feed is parsed and planned by the screen", async ({ api, authedPage }) => {
+  // A feed with two postings and one duplicate of the first, so the plan
+  // has something to say.
+  const feed = JSON.stringify({
+    jobs: [
+      {
+        id: "e2e-ingest-1",
+        title: "Platform Engineer",
+        company: "Acme",
+        location: "Shanghai",
+        description: "Build the platform. Kubernetes, Go, and a lot of YAML.",
+        postedAt: "2026-10-01T00:00:00Z",
+      },
+      {
+        id: "e2e-ingest-2",
+        title: "Data Engineer",
+        company: "Globex",
+        location: "Remote",
+        description: "Own the warehouse. Python, dbt, and patience.",
+        postedAt: "2026-10-02T00:00:00Z",
+      },
+      {
+        id: "e2e-ingest-1",
+        title: "Platform Engineer",
+        company: "Acme",
+        location: "Shanghai",
+        description: "Build the platform. Kubernetes, Go, and a lot of YAML.",
+        postedAt: "2026-10-01T00:00:00Z",
+      },
+    ],
+  });
+
+  // The same feed, parsed by the route, so the screen has something to be
+  // compared against.
+  const parsed = await unwrap<{ postings?: unknown[]; count?: number; format?: string }>(
+    await api.post("/jobs/ingest/parse", { feed, source: "board" })
+  );
+  const parsedCount = parsed.count ?? parsed.postings?.length ?? 0;
+  expect(parsedCount, "the feed must parse into postings").toBeGreaterThan(0);
+
+  await authedPage.goto("/ingestion");
+  await authedPage.locator("#feed").fill(feed);
+  await authedPage.getByRole("button", { name: "Parse" }).click();
+
+  // The parsed postings are on the screen, with the engine's own count.
+  await expect(
+    authedPage.getByText("Parsed postings").first(),
+    "the parsed postings are not on the screen"
+  ).toBeVisible({ timeout: 30_000 });
+  await expect(
+    authedPage.getByText(new RegExp(`${parsedCount}\\s+postings parsed from the feed`)).first(),
+    `the parsed count (${parsedCount}) is not on the screen`
+  ).toBeVisible({ timeout: 30_000 });
+
+  // And the plan, which is the sweep the ingestion would make.
+  await authedPage.getByRole("button", { name: "Build the plan" }).click();
+  await expect(
+    authedPage.getByText("Ingestion plan").first(),
+    "the ingestion plan is not on the screen"
+  ).toBeVisible({ timeout: 30_000 });
+});
+
+/**
+ * The other shape of feed.
+ *
+ * The ingestion page says it takes "RSS 2.0 / Atom XML, or a board-API
+ * JSON payload" and its own placeholder offers both. The XML half was
+ * broken: the bridge only ever reached the JSON parser, so an RSS feed --
+ * the first thing the copy offers -- failed with a parse error. The
+ * engine now detects the shape from the text, and this is the case that
+ * says so.
+ */
+test("an RSS feed is parsed as readily as a board payload", async ({ api, authedPage }) => {
+  const xml = `<?xml version="1.0"?><rss version="2.0"><channel><title>Jobs</title>
+    <item><title>Platform Engineer</title><link>https://acme.test/jobs/1</link>
+    <description>Kubernetes and Go.</description>
+    <pubDate>Mon, 01 Oct 2026 00:00:00 GMT</pubDate></item>
+    <item><title>Data Engineer</title><link>https://globex.test/jobs/2</link>
+    <description>The warehouse. Python and patience.</description>
+    <pubDate>Tue, 02 Oct 2026 00:00:00 GMT</pubDate></item>
+  </channel></rss>`;
+
+  const parsed = await unwrap<{ count?: number; format?: string }>(
+    await api.post("/jobs/ingest/parse", { feed: xml, source: "rss" })
+  );
+  expect(parsed.format, "the engine must see an RSS feed as one").toBe("rss");
+  expect(parsed.count, "the feed must parse into postings").toBe(2);
+
+  await authedPage.goto("/ingestion");
+  await authedPage.locator("#feed").fill(xml);
+  await authedPage.getByRole("button", { name: "Parse" }).click();
+  await expect(
+    authedPage.getByText(new RegExp(`${parsed.count}\\s+postings parsed from the feed`)).first(),
+    "the parsed count is not on the screen"
+  ).toBeVisible({ timeout: 30_000 });
+});

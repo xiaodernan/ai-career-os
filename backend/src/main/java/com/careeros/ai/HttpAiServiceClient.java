@@ -264,7 +264,18 @@ public class HttpAiServiceClient implements AiServiceClient {
 
     @Override
     public Map<String, Object> parseFeed(String feed, String source, UUID userId) {
-        return post("/internal/features/parse-board", userId, Map.of("payload", feed, "source", source));
+        // The feed's shape is detected by the engine, so an RSS 2.0 / Atom
+        // XML feed and a board-API JSON payload both come through this one
+        // route -- which is what the ingestion page promises.
+        //
+        // A `HashMap` and not `Map.of`, because `Map.of` rejects a null value
+        // and `source` is a caller's optional field: a client that omits it
+        // used to reach `Map.of` with a null and get a 500 out of the
+        // bridge, which is our bug and not the caller's.
+        Map<String, Object> body = new HashMap<>();
+        body.put("payload", feed);
+        body.put("source", source);
+        return post("/internal/features/parse-feed", userId, body);
     }
 
     @Override

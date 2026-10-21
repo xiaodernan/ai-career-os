@@ -339,7 +339,7 @@ tenant context via `core.deps.Ctx`.
 | POST | `/internal/features/insight-digest` | Epic 15.3 -- a weekly snapshot: stalled applications, live stage mix, headlines (backend `insightDigest`) |
 | POST | `/internal/features/health-report` | Epic 16.1 -- agent health, cost and regression verdict over a window (backend `healthReport`) |
 | POST | `/internal/features/follow-ups` | Epic 11.3 -- the contacts that have gone cold, ranked, each with a draft (backend `followUps`) |
-| POST | `/internal/features/parse-board` | Epic 14.2 -- a board-API JSON payload parsed into raw postings (backend `parseFeed`) |
+| POST | `/internal/features/parse-feed` | Epic 14.2 -- a feed parsed into raw postings: RSS 2.0 / Atom XML or a board-API JSON payload, the shape detected from the text (backend `parseFeed`) |
 | POST | `/internal/features/dedupe-jobs` | Epic 14.3 -- the same posting seen from several sources, collapsed to one survivor (backend `dedupeJobs`) |
 | POST | `/internal/features/freshness-sweep` | Epic 14.3 -- the corpus split into fresh, stale (re-check) and expired (close) (backend `freshnessSweep`) |
 | POST | `/internal/features/plan-ingest` | Epic 14.3 -- one plan for a sweep: create / update / close, with the diff (backend `planIngest`) |

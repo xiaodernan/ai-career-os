@@ -62,7 +62,7 @@ FORWARD = {
     # both or neither. The required set is empty for that reason.
     "/internal/features/plan-ingest": ("PlanIngestReq", set()),
     "/internal/features/health-report": ("HealthReportReq", set()),
-    "/internal/features/parse-board": ("ParseBoardReq", {"payload"}),
+    "/internal/features/parse-feed": ("ParseFeedReq", {"payload"}),
     "/internal/features/follow-ups": ("FollowUpsReq", set()),
     "/internal/features/export-bundle": ("ExportBundleReq", set()),
     "/internal/features/import-plan": ("ImportPlanReq", {"bundle"}),

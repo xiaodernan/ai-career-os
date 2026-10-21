@@ -139,10 +139,42 @@ def test_plan_ingest_roundtrip():
 
 
 def test_parse_board_roundtrip():
-    r = _post("parse-board", {"payload": '{"jobs": [{"title": "A"}, {"title": "B"}]}'})
+    r = _post("parse-feed", {"payload": '{"jobs": [{"title": "A"}, {"title": "B"}]}'})
     assert r.status_code == 200
     body = r.json()
     assert body["count"] == 2 and [p["title"] for p in body["postings"]] == ["A", "B"]
+    assert body["format"] == "board"
+
+
+def test_parse_feed_roundtrip_takes_an_rss_document_too():
+    """The ingestion page promises both shapes, so the route has to take both.
+
+    The shape is detected from the text: a payload that begins with ``<``
+    is XML, whatever the caller labelled it. Before this the bridge only
+    reached the JSON parser, so an RSS feed -- the first thing the page's
+    own copy offers -- failed with a parse error.
+    """
+    xml = (
+        '<?xml version="1.0"?><rss version="2.0"><channel><title>Jobs</title>'
+        "<item><title>Platform Engineer</title>"
+        "<link>https://acme.test/jobs/1</link>"
+        "<description>Kubernetes and Go.</description>"
+        "<pubDate>Mon, 01 Oct 2026 00:00:00 GMT</pubDate></item>"
+        "</channel></rss>"
+    )
+    r = _post("parse-feed", {"payload": xml, "source": "rss"})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["format"] == "rss"
+    assert body["count"] == 1
+    assert body["postings"][0]["title"] == "Platform Engineer"
+
+
+def test_a_broken_feed_is_refused_rather_than_parsed_into_nothing():
+    r = _post("parse-feed", {"payload": "<rss><channel><item>"})
+    assert r.status_code == 400, (
+        "a feed the parser cannot read has to be refused: a sweep that saw an "
+        "empty success would ingest nothing and say it had worked")
 
 
 # ---------------- 16.1 monitoring ----------------

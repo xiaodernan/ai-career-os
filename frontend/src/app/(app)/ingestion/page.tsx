@@ -34,7 +34,10 @@ export default function IngestionPage() {
   const runParse = React.useCallback(() => {
     if (!feed.trim()) return;
     parseFeed.mutate(
-      { feed, source: "rss" },
+      // The engine detects the shape from the text; the source is the
+      // label the postings carry, so it has to name the shape they came
+      // from rather than a fixed one.
+      { feed, source: feed.trim().startsWith("<") ? "rss" : "board" },
       {
         onSuccess: (out) => {
           const rows = out.postings ?? [];
@@ -70,7 +73,7 @@ export default function IngestionPage() {
 
   const runPlan = React.useCallback(() => {
     if (!feed.trim()) return;
-    plan.mutate({ feed, source: "rss" }, {
+    plan.mutate({ feed, source: feed.trim().startsWith("<") ? "rss" : "board" }, {
       onSuccess: (out) => {
         const c = out.counts;
         toast.success(

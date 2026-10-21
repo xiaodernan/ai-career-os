@@ -269,6 +269,31 @@ def freshness_sweep(postings: list[dict], *, now: datetime | None = None,
     }
 
 
+def detect_format(text: str) -> str:
+    """``"rss"`` for an XML feed, ``"board"`` for a board-API JSON payload.
+
+    The product's own page says it accepts both ("RSS 2.0 / Atom XML, or a
+    board-API JSON payload"), so the reader is not asked to say which one
+    they pasted -- and a feed that begins with ``<`` is XML whatever the
+    caller labelled it. This is the one place the decision is made, and the
+    operator-facing ``app.ops.ingest_plan`` reads it too.
+    """
+    if not isinstance(text, str):
+        return "board"
+    return "rss" if text.lstrip()[:1] == "<" else "board"
+
+
+def parse_any(text: str, *, source: str = "rss") -> list[dict]:
+    """Parse a feed of either shape into raw postings.
+
+    A broken feed raises ``ValueError`` -- from whichever parser the shape
+    selected -- so a sweep sees a broken feed, not an empty success.
+    """
+    if detect_format(text) == "rss":
+        return parse_feed(text, source=source)
+    return parse_json_board(text, source=source)
+
+
 # ---------------- 14.2 feed parsing (the first connector's deterministic half) ----------------
 
 
@@ -385,7 +410,9 @@ def plan_ingest(feed, *, source: str = "rss", existing: list[dict] | None = None
     if feed is None:
         raw = []
     elif isinstance(feed, str):
-        raw = parse_feed(feed, source=source)
+        # The same detection the parse route uses, so a plan over a
+        # board-API payload is not a plan over a broken XML document.
+        raw = parse_any(feed, source=source)
     elif isinstance(feed, (list, tuple)):
         # ignore non-dict entries rather than letting one bad row abort the whole sweep
         raw = [r for r in feed if isinstance(r, dict)]

@@ -27,8 +27,12 @@ from app.features import ingestion
 
 
 def detect_format(text: str) -> str:
-    """``board`` for a JSON payload, ``rss`` otherwise (XML feeds)."""
-    return "board" if text.lstrip()[:1] in ("[", "{") else "rss"
+    """``board`` for a JSON payload, ``rss`` otherwise (XML feeds).
+
+    The rule lives in :mod:`app.features.ingestion` -- the parsers own it,
+    and this script reads it rather than keeping a second copy of it.
+    """
+    return ingestion.detect_format(text)
 
 
 def parse_feed_text(text: str, fmt: str = "auto") -> list[dict]:

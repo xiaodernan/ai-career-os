@@ -121,7 +121,7 @@ evaluation harnesses, and a seeded 12-company / 41-role corpus.
 
 Verified against the live stack, not just in unit tests:
 
-- The **Playwright golden-journey suite passes 40/40** (`e2e/`) against
+- The **Playwright golden-journey suite passes 42/42** (`e2e/`) against
   postgres+redis+minio, ai-service, backend and a production frontend build. It
   runs the PRD §35 flow for real: register → upload a resume → search → match →
   tailor → track → interview → report → copilot, plus the account-recovery pair
@@ -136,9 +136,11 @@ Verified against the live stack, not just in unit tests:
   growth report is built by the screen the way a reader builds it -- a role
   typed into a form, and the report the engines answered with is the report
   on the page -- the market band and the negotiation plan come from the
-  offers form, and the portability round trip is driven through the screen:
+  offers form, the portability round trip is driven through the screen:
   the bundle the screen exports has the hash the API's bundle has, and
-  that bundle is planned and applied from the same page.
+  that bundle is planned and applied from the same page, and a feed is
+  parsed by the ingestion screen in either shape -- RSS 2.0 / Atom XML or a
+  board-API JSON payload, which is what the page has always promised.
 - **Job vectors are backfilled and indexed.** `python -m app.ops.embed_jobs`
   embedded all 41 roles, `jobs.embedding` is `vector(1536)` and `idx_jobs_hnsw`
   is built, so `search_jobs` now runs keyword and vector retrieval and fuses them

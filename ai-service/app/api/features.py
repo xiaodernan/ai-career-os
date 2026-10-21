@@ -527,6 +527,14 @@ async def company_brief_ep(req: CompanyBriefReq, ctx: Ctx = Depends(require_inte
 
 
 class ApplicationInput(BaseModel):
+    """One application row, in the field names `analytics.py` reads.
+
+    The keys are a contract with the sender, not a wish list: `AnalysisService.toInput`
+    builds these rows from the application table plus the status-transition log, and a
+    unit test walks both sides so a key declared here and never put there cannot sit on
+    reading a null forever, and a key put here and never declared cannot be dropped at
+    the boundary in silence.
+    """
     id: str
     status: str
     title: str | None = None
@@ -537,6 +545,7 @@ class ApplicationInput(BaseModel):
     final_round_at: str | None = None
     offer_at: str | None = None
     created_at: str | None = None
+    last_seen: str | None = None
 
 
 class PipelineFunnelReq(BaseModel):
@@ -636,7 +645,7 @@ class PlanIngestReq(BaseModel):
     postings: list[dict] | None = Field(default=None, min_length=1)
     feed: str | None = Field(default=None, min_length=1)
     existing: list[dict] | None = None
-    source: str = "rss"
+    source: str | None = None
     max_age_days: int = Field(default=60, ge=1, le=365)
     stale_seen_days: int = Field(default=30, ge=1, le=365)
 
@@ -647,10 +656,21 @@ async def plan_ingest_ep(req: PlanIngestReq, ctx: Ctx = Depends(require_internal
     if (req.postings is None) == (req.feed is None):
         raise HTTPException(400, "send exactly one of postings / feed")
     run_id = await _run(ctx, "ingestion", "plan_ingest")
-    result = ingestion_mod.plan_ingest(
-        req.postings if req.postings is not None else req.feed,
-        source=req.source, existing=req.existing,
-        max_age_days=req.max_age_days, stale_seen_days=req.stale_seen_days)
+    feed = req.feed
+    label = req.source
+    if feed is not None and label is None:
+        label = ingestion_mod.detect_format(feed)
+    try:
+        result = ingestion_mod.plan_ingest(
+            req.postings if req.postings is not None else feed,
+            source=label, existing=req.existing,
+            max_age_days=req.max_age_days, stale_seen_days=req.stale_seen_days)
+    except ValueError as exc:
+        # A feed the parser cannot read is a bad request, not a broken
+        # service: a sweep that saw a 500 would retry forever, and one that
+        # saw an empty success would ingest nothing and say it had worked.
+        await observability.finish_run(run_id, "failed")
+        raise HTTPException(400, str(exc)) from exc
     await observability.finish_run(run_id, "completed")
     return result
 
@@ -679,18 +699,37 @@ async def health_report_ep(req: HealthReportReq, ctx: Ctx = Depends(require_inte
     return result
 
 
-class ParseBoardReq(BaseModel):
+class ParseFeedReq(BaseModel):
+    """The feed to parse.
+
+    `payload` is the text the reader pasted: RSS 2.0 / Atom XML, or a
+    board-API JSON payload. The shape is detected from the text, so a
+    caller is not asked to say which one it has.
+
+    `source` is the label the postings carry, and it is optional: a
+    caller that does not name one gets the shape that was detected, which
+    is the truth about where the postings came from.
+    """
     payload: str = Field(min_length=2)
-    source: str = "board"
+    source: str | None = None
 
 
-@router.post("/parse-board")
-async def parse_board_ep(req: ParseBoardReq, ctx: Ctx = Depends(require_internal)):
-    """14.2 -- parse a board-API JSON payload into raw postings."""
-    run_id = await _run(ctx, "ingestion", "parse_board")
-    postings = ingestion_mod.parse_json_board(req.payload, source=req.source)
+@router.post("/parse-feed")
+async def parse_feed_ep(req: ParseFeedReq, ctx: Ctx = Depends(require_internal)):
+    """14.2 -- a feed of either shape parsed into raw postings."""
+    run_id = await _run(ctx, "ingestion", "parse_feed")
+    shape = ingestion_mod.detect_format(req.payload)
+    label = req.source or shape
+    try:
+        postings = ingestion_mod.parse_any(req.payload, source=label)
+    except ValueError as exc:
+        # A feed the parser cannot read is a bad request, not a broken
+        # service: a sweep that saw a 500 would retry forever, and one that
+        # saw an empty success would ingest nothing and say it had worked.
+        await observability.finish_run(run_id, "failed")
+        raise HTTPException(400, str(exc)) from exc
     await observability.finish_run(run_id, "completed")
-    return {"postings": postings, "count": len(postings)}
+    return {"postings": postings, "count": len(postings), "format": shape}
 
 
 class FollowUpsReq(BaseModel):
