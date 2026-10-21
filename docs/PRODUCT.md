@@ -154,6 +154,15 @@ Remaining gaps, stated plainly rather than hidden:
   default (`EMBEDDING_PROVIDER=hash`) exercises the whole path deterministically
   but carries no meaning, so retrieval quality must be judged against a real
   provider.
+- A mocked database hides a whole class of bug, and the portable export was
+  full of it: it read a column the schema does not have, and its canonical
+  serializer refused the `uuid.UUID` the rows actually arrive as. Every unit
+  test passed, because the export's fetch functions are monkeypatched and a
+  fixture row is a plain dict. It took the e2e suite, against a real database,
+  to find them. The gate that now holds the class is
+  `ai-service/tests/test_the_ai_service_sql_names_real_columns.py`: it reads the
+  schema of record -- the backend's migrations -- and checks that every column
+  the ai-service's SQL names is one the schema declares.
 
 A pass over the PRD §30 checklist is recorded in `docs/SECURITY.md`. It closed one
 real gap — the AI rate limit did not cover any of the blocking AI endpoints,
