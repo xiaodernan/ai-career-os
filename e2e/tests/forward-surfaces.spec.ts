@@ -186,3 +186,112 @@ test("the growth report is built by the screen, from a named role", async ({
     `the market band's sample size (${sampleSize}) is not on the screen`
   ).toBeVisible({ timeout: 30_000 });
 });
+
+/**
+ * The offers workbench, answered by the screen.
+ *
+ * The twelve-x engines are the ones a reader reaches at the worst moment
+ * of a search -- when there is an offer on the table and the question is
+ * what it is worth against the market and what to say back. The golden
+ * journey calls the routes; this drives the form.
+ *
+ * Two answers are checked, because they are two different engines: the
+ * market's band (what the corpus pays for the role) and the negotiation
+ * plan (what to say about the offer on the table).
+ */
+test("the market band and the negotiation plan come from the screen", async ({
+  api,
+  authedPage,
+}) => {
+  const role = "Backend Engineer";
+  const offerBase = 400000;
+
+  // The same two answers, from the API, so the screen has something to
+  // be compared against.
+  const benchmark = await unwrap<{
+    sampleSize: number;
+    percentiles: Record<string, number>;
+    currency?: string;
+  }>(await api.post("/offers/salary-benchmark", { role }));
+  expect(benchmark.sampleSize, "the market band must count its samples").toBeGreaterThan(0);
+
+  const plan = await unwrap<{ marketMedian?: number; notes?: string[] }>(
+    await api.post("/offers/negotiate", { role, offerBase })
+  );
+  expect(plan, "the negotiation plan must answer").toBeTruthy();
+
+  await authedPage.goto("/offers");
+  await authedPage.locator("#offer-role").fill(role);
+  await authedPage.locator("#offer-base").fill(String(offerBase));
+
+  // The market's band first.
+  await authedPage.getByRole("button", { name: "Benchmark" }).click();
+  await expect(
+    authedPage.getByText("What the market pays").first(),
+    "the market band is not on the screen"
+  ).toBeVisible({ timeout: 30_000 });
+  await expect(
+    authedPage.getByText(new RegExp(`${benchmark.sampleSize}\\s+matching postings`)).first(),
+    `the market band's sample size (${benchmark.sampleSize}) is not on the screen`
+  ).toBeVisible({ timeout: 30_000 });
+
+  // And then the plan, which is the answer the reader is here for.
+  await authedPage.getByRole("button", { name: "Coach me" }).click();
+  await expect(
+    authedPage.getByText("Negotiation plan").first(),
+    "the negotiation plan is not on the screen"
+  ).toBeVisible({ timeout: 30_000 });
+});
+
+/**
+ * The portability round trip, through the screen.
+ *
+ * Export, paste it back, and see what would change before anything is
+ * written -- then write it. The golden journey does the same round trip
+ * through the API, which proves the endpoints agree; this proves the
+ * screen does, and it is the screen a reader uses when they want to
+ * take their data somewhere else.
+ */
+test("a bundle exported by the screen is planned and applied by the screen", async ({
+  api,
+  authedPage,
+}) => {
+  // Something to carry: a note, so the bundle has a section with content.
+  await unwrap(
+    await api.post("/knowledge/notes", { title: "Portability note", content: "Kept." })
+  );
+
+  const bundle = await unwrap<{ manifest: { content_hash: string } }>(
+    await api.post("/data-portability/export", {})
+  );
+  expect(bundle.manifest.content_hash.length, "the bundle must be hashed").toBeGreaterThan(0);
+
+  await authedPage.goto("/data");
+
+  // The screen's own export answers with the same bundle the API did. The
+  // hash is the fingerprint -- it covers the data, not the moment -- so the
+  // two can be compared, and a screen that exported something else would
+  // show a different one.
+  await authedPage.getByRole("button", { name: "Export everything" }).click();
+  await expect(
+    authedPage.getByText(bundle.manifest.content_hash).first(),
+    "the screen exported a different bundle than the API did"
+  ).toBeVisible({ timeout: 30_000 });
+
+  // Paste the bundle into the restore box and ask what would change.
+  await authedPage
+    .locator("#import-bundle")
+    .fill(JSON.stringify(bundle));
+  await authedPage.getByRole("button", { name: "Build the plan" }).click();
+  await expect(
+    authedPage.getByText("Plan").first(),
+    "the import plan is not on the screen"
+  ).toBeVisible({ timeout: 30_000 });
+
+  // And then apply it, which is the write.
+  await authedPage.getByRole("button", { name: "Apply the restore" }).click();
+  await expect(
+    authedPage.getByText(/What was written|The restore was applied/).first(),
+    "the restore's result is not on the screen"
+  ).toBeVisible({ timeout: 30_000 });
+});
