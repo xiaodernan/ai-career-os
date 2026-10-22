@@ -240,17 +240,32 @@ def test_diff_empty_when_identical():
 
 
 def test_to_markdown_renders_every_section():
+    """The quick look at a bundle, in the language it was asked for.
+
+    The default is English, like the printable half and like the rest of the
+    product; the caller says which language it wants. Both are checked here,
+    because a view that only ever renders one language is the defect this
+    exists to prevent.
+    """
     bundle = ex.build_bundle("u1", _sample_raw())
-    md = ex.to_markdown(bundle)
+    english = ex.to_markdown(bundle, "en")
+    for header in ("AI Career OS", "Profile", "Resumes", "Knowledge base",
+                   "Job descriptions", "Mock interviews", "Long-term memories"):
+        assert header in english
+
+    chinese = ex.to_markdown(bundle, "zh")
     for header in ("AI Career OS", "个人档案", "简历版本", "知识库",
                    "职位描述", "模拟面试", "长期记忆"):
-        assert header in md
+        assert header in chinese
+
+    # And the default is the product's default.
+    assert ex.to_markdown(bundle) == english
 
 
 def test_to_markdown_marks_anonymized():
     bundle = ex.anonymize(ex.build_bundle("u1", _sample_raw()))
-    md = ex.to_markdown(bundle)
-    assert "已匿名" in md
+    assert "已匿名" in ex.to_markdown(bundle, "zh")
+    assert "anonymized" in ex.to_markdown(bundle, "en")
 
 
 # ---------------- async driver with monkeypatched I/O ----------------

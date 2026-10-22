@@ -31,6 +31,9 @@ from datetime import datetime, timezone
 from typing import Any, Callable
 from uuid import UUID
 
+# The words of the readable half, in every language it ships in.
+from app.features import export_words as words_mod
+
 SCHEMA_VERSION = "1.2.0"
 GENERATOR = "ai-career-os"
 
@@ -597,13 +600,21 @@ def diff_bundles(old: dict, new: dict) -> dict:
     return report
 
 
-def to_markdown(bundle: dict) -> str:
+def to_markdown(bundle: dict, locale: str | None = None) -> str:
     """Render the bundle as a human-readable Markdown document.
 
-    The PDF half of 13.1 is a downstream concern; this is the readable source
-    that the PDF generator would flow. Large free-text fields are clipped so the
-    document stays scannable.
+    ``locale`` is the reader's language. The view was Chinese-only, so an
+    English reader's quick look at a bundle was a Chinese document; the
+    words now come from the same table the print-ready HTML reads (see
+    ``export_words``), and the caller says which language it wants.
+
+    Large free-text fields are clipped so the document stays scannable, and
+    every section the bundle carries is here: a section the bundle holds
+    and the document does not is a section the reader cannot read.
     """
+    words = words_mod.words(locale)
+    titles = words_mod.section_titles(locale)
+
     bundle = bundle if isinstance(bundle, dict) else {}
     data = _dict_obj(bundle.get("data"))
     manifest = _dict_obj(bundle.get("manifest"))
@@ -611,13 +622,13 @@ def to_markdown(bundle: dict) -> str:
     counts = _counts if isinstance(_counts, dict) else section_counts(data)
     user = _dict_obj(bundle.get("user"))
     lines: list[str] = []
-    lines.append("# AI Career OS — 数据导出")
+    lines.append(f"# {words['title']}")
     lines.append("")
-    lines.append(f"- 生成时间: {bundle.get('generated_at', 'n/a')}")
-    lines.append(f"- 用户 ID: {user.get('id', 'n/a')}"
-                 + ("（已匿名）" if user.get("anonymized") else ""))
-    lines.append(f"- Schema: {manifest.get('schema_version', SCHEMA_VERSION)}")
-    lines.append(f"- 内容哈希: `{manifest.get('content_hash', 'n/a')}`")
+    lines.append(f"- {words['generated']}: {bundle.get('generated_at', 'n/a')}")
+    lines.append(f"- {words['userId']}: {user.get('id', 'n/a')}"
+                 + (f" {words['anonymized']}" if user.get("anonymized") else ""))
+    lines.append(f"- {words['schema']}: {manifest.get('schema_version', SCHEMA_VERSION)}")
+    lines.append(f"- {words['contentHash']}: `{manifest.get('content_hash', 'n/a')}`")
     lines.append("")
 
     def clip(text: Any, n: int = 240) -> str:
@@ -626,11 +637,17 @@ def to_markdown(bundle: dict) -> str:
         s = str(text).replace("\n", " ")
         return s if len(s) <= n else s[:n] + "…"
 
+    def percent(value: Any) -> str:
+        try:
+            return f"{round(float(value or 0) * 100)}%"
+        except (TypeError, ValueError):
+            return "0%"
+
     profile = data.get("profile")
     if not isinstance(profile, dict):
         profile = None
     if profile:
-        lines.append("## 个人档案")
+        lines.append(f"## {titles['profile']}")
         for k in ("display_name", "email", "headline", "summary"):
             if profile.get(k):
                 lines.append(f"- **{k}**: {clip(profile[k], 400)}")
@@ -638,7 +655,7 @@ def to_markdown(bundle: dict) -> str:
 
     resumes = _dicts(data.get("resumes"))
     if resumes:
-        lines.append(f"## 简历版本（{len(resumes)}）")
+        lines.append(f"## {titles['resumes']} ({len(resumes)})")
         for r in resumes:
             lines.append(f"- {r.get('resume_title') or r.get('title')} "
                          f"· v{r.get('version', '?')} · {clip(r.get('plaintext'), 160)}")
@@ -646,7 +663,7 @@ def to_markdown(bundle: dict) -> str:
 
     knowledge = _dicts(data.get("knowledge"))
     if knowledge:
-        lines.append(f"## 知识库（{len(knowledge)} 篇）")
+        lines.append(f"## {titles['knowledge']} ({len(knowledge)})")
         for d in knowledge:
             lines.append(f"- {d.get('title')} · {d.get('media_type')} "
                          f"· {d.get('status')}")
@@ -654,7 +671,7 @@ def to_markdown(bundle: dict) -> str:
 
     jds = _dicts(data.get("job_descriptions"))
     if jds:
-        lines.append(f"## 职位描述（{len(jds)}）")
+        lines.append(f"## {titles['job_descriptions']} ({len(jds)})")
         for j in jds:
             lines.append(f"- {j.get('title') or j.get('role')} "
                          f"@ {j.get('company') or ''} · {clip(j.get('raw_text') or j.get('text'), 160)}")
@@ -662,23 +679,60 @@ def to_markdown(bundle: dict) -> str:
 
     interviews = _dicts(data.get("interviews"))
     if interviews:
-        lines.append(f"## 模拟面试（{len(interviews)} 场）")
+        lines.append(f"## {titles['interviews']} ({len(interviews)})")
         for s in interviews:
             _turns = s.get("turns")
             turns = _turns if isinstance(_turns, list) else []
-            lines.append(f"- {s.get('job_title') or '面试'} · {len(turns)} 轮 · "
-                         f"{s.get('status') or ''}")
+            lines.append(f"- {s.get('job_title') or words['interview']} · "
+                         f"{len(turns)} {words['rounds']} · {s.get('status') or ''}")
         lines.append("")
 
     memories = _dicts(data.get("memories"))
     if memories:
-        lines.append(f"## 长期记忆（{len(memories)}）")
+        lines.append(f"## {titles['memories']} ({len(memories)})")
         for m in memories:
             lines.append(f"- [{m.get('kind')}] {clip(m.get('content'), 200)}")
         lines.append("")
 
+    # The pipeline the candidate worked, the runs they built, and the two
+    # tables they typed into. They were in the bundle from 1.1.0 and 1.2.0
+    # and missing from this document, so the quick look at a bundle left out
+    # everything after the reading list.
+    apps = _dicts(data.get("applications"))
+    if apps:
+        lines.append(f"## {titles['applications']} ({len(apps)})")
+        for a in apps:
+            lines.append(f"- {a.get('title')} · {a.get('company_name') or ''} · "
+                         f"{a.get('status') or ''}")
+        lines.append("")
+
+    plans = _dicts(data.get("growth_plans"))
+    if plans:
+        lines.append(f"## {titles['growth_plans']} ({len(plans)})")
+        for p in plans:
+            lines.append(f"- {p.get('target_role')} · {words['coverage']} "
+                         f"{percent(p.get('coverage'))}")
+        lines.append("")
+
+    notes = _dicts(data.get("notes"))
+    if notes:
+        lines.append(f"## {titles['notes']} ({len(notes)})")
+        for n in notes:
+            lines.append(f"- {n.get('title') or ''} · {clip(n.get('content'), 200)}")
+        lines.append("")
+
+    contacts = _dicts(data.get("contacts"))
+    if contacts:
+        lines.append(f"## {titles['contacts']} ({len(contacts)})")
+        for c in contacts:
+            lines.append(f"- {c.get('name') or ''}"
+                         + (f" · {c.get('company')}" if c.get("company") else "")
+                         + (f" · {c.get('relation')}" if c.get("relation") else "")
+                         + (f" · {clip(c.get('notes'), 160)}" if c.get("notes") else ""))
+        lines.append("")
+
     lines.append("---")
-    lines.append(f"统计: " + ", ".join(f"{k}={v}" for k, v in counts.items()))
+    lines.append(f"{words['stats']}: " + ", ".join(f"{k}={v}" for k, v in counts.items()))
     return "\n".join(lines)
 
 

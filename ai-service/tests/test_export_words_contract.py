@@ -20,6 +20,8 @@ This gate holds three things:
   tell an English document from a Chinese one.
 """
 
+import re
+
 from app.features import export as ex
 from app.features import export_render as render_mod
 from app.features import export_words as words_mod
@@ -125,3 +127,69 @@ async def test_the_render_route_answers(monkeypatch) -> None:
 
     answer = await features.render_bundle_ep(ZhReq(), ctx)
     assert words_mod.words("zh")["title"] in answer["html"]
+
+
+def _bundle_with_every_section() -> dict:
+    """A bundle carrying one row in every section the export knows."""
+    raw = {
+        "profile": {"headline": "Backend engineer", "summary": "Eight years of payments."},
+        "resumes": [{"id": "r1", "resume_title": "Main", "version": 1, "plaintext": "Li Ming"}],
+        "knowledge": [{"id": "d1", "title": "A note", "media_type": "text/plain",
+                       "status": "ready"}],
+        "job_descriptions": [{"id": "j1", "title": "Backend", "company": "Acme",
+                              "raw_text": "the posting"}],
+        "interviews": [{"id": "s1", "job_title": "Backend", "status": "done",
+                        "turns": [{"seq": 1, "content": "hello"}]}],
+        "memories": [{"id": "m1", "kind": "preference", "content": "50w"}],
+        "applications": [{"id": "a1", "title": "Backend", "company_name": "Acme",
+                          "status": "applied"}],
+        "growth_plans": [{"id": "g1", "target_role": "backend", "coverage": 0.5}],
+        "notes": [{"id": "n1", "title": "A note", "content": "Hello."}],
+        "contacts": [{"id": "c1", "name": "Li Ming", "company": "Acme",
+                      "relation": "Mentor"}],
+    }
+    return ex.build_bundle("11111111-1111-1111-1111-111111111111", raw)
+
+
+def test_the_markdown_view_is_in_the_readers_language() -> None:
+    """The quick look at a bundle is a document too, and it was Chinese-only.
+
+    The printable half was fixed and this was not: the Markdown is the
+    operator's quick look at a bundle, and it was written in Chinese and had
+    no other language -- so an English reader's quick look was a Chinese
+    document.
+
+    The check is a census, not a list of the words it may use: the English
+    document has no Chinese in it at all. A list would go green the moment
+    somebody added a sentence nobody had thought of.
+    """
+    bundle = _bundle_with_every_section()
+    english = ex.to_markdown(bundle, "en")
+    chinese = ex.to_markdown(bundle, "zh")
+
+    assert not re.search(r"[\u4e00-\u9fff]", english), (
+        "the English document still carries Chinese:\n" + english
+    )
+    assert english != chinese, "the two languages render the same document"
+    assert words_mod.words("en")["title"] in english
+    assert words_mod.words("zh")["title"] in chinese
+
+
+def test_the_markdown_view_carries_every_section_the_bundle_carries() -> None:
+    """A section the bundle holds and the document does not is a section the
+    reader cannot read.
+
+    The printable half had four of them and was fixed; this had four more:
+    the pipeline the candidate worked, the growth runs they built, the notes
+    they typed and the people they know. A quick look at a bundle that
+    stopped at the reading list was not a look at the search.
+    """
+    bundle = _bundle_with_every_section()
+    for locale in words_mod.LOCALES:
+        document = ex.to_markdown(bundle, locale)
+        titles = words_mod.section_titles(locale)
+        for section in ex.SECTIONS:
+            assert f"## {titles[section]}" in document, (
+                f"the {locale} document leaves out the {section} section, which "
+                "the bundle carries"
+            )

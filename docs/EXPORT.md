@@ -205,6 +205,20 @@ section the reader cannot read, and the counts still said it was there. The
 gate holds the table against **every section the bundle carries**, so a
 section added later cannot be left out of the document.
 
+The Markdown view was the second half of the same defect, twice over: it was
+Chinese-only, and it left out four sections the bundle carries — the pipeline
+the candidate worked, the growth runs they built, the notes they typed and
+the people they know. It reads the same table now, in every language, and it
+carries every section. The gate for it is a census rather than a list: **the
+English document has no Chinese in it at all**, so a sentence nobody thought
+of cannot slip through.
+
+One thing is still true of the Markdown: **nothing calls it.** The render
+route serves the HTML and the PDF; no route serves the Markdown and the
+browser has no Markdown affordance. So it is a library function — the
+operator's quick look at a bundle, called in Python — and giving it a
+surface is the next step of this thread.
+
 And the route that serves it never worked: the render module was never
 imported by the module that serves the route, so every call raised a
 `NameError` and the "Print view" button had never done anything but show an

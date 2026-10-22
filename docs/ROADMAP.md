@@ -114,21 +114,29 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   sentence in place of "Start the interview with an opening question first"
   would be a loss. Their words stay until the vocabulary is fine enough to
   carry them.
-- **The export's readable half had one language (closed 2026-10-22, except the
-  Markdown).** 13.1's *human-readable* export — the print-ready document — was
-  written in Chinese and had no other language, so an English reader's printable
-  document was a Chinese document. Measured: about 35 sentences across
-  `export.py`'s `to_markdown` and `export_render.py`, so the work was the
-  sentences plus a way to say which language a bundle should be rendered in.
-  The bundle already carries the reader's id and the `anonymized` marker, so
-  the locale could travel the same way; nothing carried it yet. An English
-  reader's "printable document" was a Chinese document, which is the same class
-  of defect as the rest of the i18n holes: a word the reader cannot change.
-  **The HTML document is done** — the words live in one table
-  (`export_words.py`), in every language the readable half ships in, and the
-  request says which one the reader wants. **The Markdown view is not**: it is
-  the operator's quick look at a bundle, so it still needs the same table
-  behind a `--locale` flag of its own.
+- **The export's readable half had one language (closed 2026-10-22).** 13.1's
+  *human-readable* export — the print-ready document — was written in Chinese
+  and had no other language, so an English reader's printable document was a
+  Chinese document. Measured: about 35 sentences across `export.py`'s
+  `to_markdown` and `export_render.py`, so the work was the sentences plus a
+  way to say which language a bundle should be rendered in. The bundle already
+  carries the reader's id and the `anonymized` marker, so the locale could
+  travel the same way; nothing carried it yet. An English reader's "printable
+  document" was a Chinese document, which is the same class of defect as the
+  rest of the i18n holes: a word the reader cannot change.
+  **Both halves are done** — the words live in one table (`export_words.py`), in
+  every language the readable half ships in, and the caller says which one it
+  wants. The Markdown view was the second half, and it had a second defect:
+  it left out four sections the bundle carries (the pipeline, the growth runs,
+  the notes and the people the reader knows), so the quick look at a bundle
+  stopped at the reading list.
+  **One thing is still true of the Markdown: nothing calls it.** It is a
+  library function — the render route serves the HTML and the PDF, and no
+  route serves the Markdown, and the browser has no Markdown affordance. So
+  the words are right and the document is complete, and the *operator's quick
+  look* is a function an operator calls in Python. Giving it a surface
+  (`format: "markdown"` on the render route, the bridge's field, the export
+  page's button) is the next step of this thread.
 - **The restore's delete semantics for the sections the current state does not
   cover.** The plan tells a delete from a create by comparing the bundle with the
   caller's current state, and the backend's current state covers the profile, the
