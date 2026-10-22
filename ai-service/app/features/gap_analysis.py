@@ -44,6 +44,7 @@ async def extract_expected_skills(target_role: str, *, user_id=None, run_id=None
     degenerate reply) we fall back to dictionary skill extraction over the role
     text, so the feature still produces a report instead of an empty one.
     """
+    target_role = target_role if isinstance(target_role, str) else ""
     req = LLMRequest(
         messages=[LLMMessage("system", SYSTEM),
                   LLMMessage("user", wrap_untrusted("TARGET_ROLE", target_role[:4000]))],
@@ -54,6 +55,7 @@ async def extract_expected_skills(target_role: str, *, user_id=None, run_id=None
 
 
 def _sanitize_expected(out: dict, target_role: str) -> dict:
+    target_role = target_role if isinstance(target_role, str) else ""
     skills: list[dict] = []
     seen: set[str] = set()
     for s in (out or {}).get("expectedSkills") or []:
@@ -78,7 +80,7 @@ def _sanitize_expected(out: dict, target_role: str) -> dict:
 
 
 def _norm_importance(v) -> str:
-    v = (v or "").lower()
+    v = (v if isinstance(v, str) else "").lower()
     return v if v in ("must", "should", "nice") else "should"
 
 
@@ -124,6 +126,9 @@ def _mentioned(name: str, low_corpus: str) -> bool:
 
 
 def _snippet(name: str, low_corpus: str, corpus: str) -> str:
+    name = name if isinstance(name, str) else ""
+    low_corpus = low_corpus if isinstance(low_corpus, str) else ""
+    corpus = corpus if isinstance(corpus, str) else ""
     idx = low_corpus.find(name.lower())
     if idx < 0:
         return f"Mentioned in your experience: {name}"
@@ -140,20 +145,27 @@ def classify_coverage(expected: list[dict], evidence_skills: set[str],
     partial  -- named in prose but never declared (weak evidence)
     gaps      -- no trace in the candidate's material
     """
+    evidence_skills = evidence_skills or set()
     covered, partial, gaps = [], [], []
-    low = (evidence_corpus or "").lower()
+    low = (evidence_corpus if isinstance(evidence_corpus, str) else "").lower()
     for s in expected:
-        name = s["name"]
+        if not isinstance(s, dict):
+            continue
+        name = s.get("name") or ""
+        if not name:
+            continue
         key = normalize(name)
+        importance = s.get("importance") or "should"
+        category = s.get("category") or "core"
         if key in evidence_skills:
             covered.append({"skill": name, "evidence": f"Declared skill: {name}",
-                            "importance": s["importance"], "category": s["category"]})
+                            "importance": importance, "category": category})
         elif _mentioned(name, low):
             partial.append({"skill": name, "evidence": _snippet(name, low, evidence_corpus),
-                            "importance": s["importance"], "category": s["category"]})
+                            "importance": importance, "category": category})
         else:
-            gaps.append({"skill": name, "importance": s["importance"],
-                         "category": s["category"]})
+            gaps.append({"skill": name, "importance": importance,
+                         "category": category})
     return covered, partial, gaps
 
 
@@ -166,28 +178,31 @@ def build_development_plan(gaps: list[dict], partial: list[dict]) -> list[dict]:
     """
     order = {"must": 0, "should": 1, "nice": 2}
     items: list[dict] = []
-    for g in gaps:
+    for g in [g for g in (gaps or []) if isinstance(g, dict) and g.get("skill")]:
+        skill = g["skill"]
         items.append({
-            "focus": f"Build evidence for {g['skill']}",
-            "skill": g["skill"],
-            "priority": g["importance"],
+            "focus": f"Build evidence for {skill}",
+            "skill": skill,
+            "priority": g.get("importance") or "should",
             "reason": "Not evidenced in your resume or knowledge base. Add a project, "
                       "course, or a quantified bullet before targeting this role.",
         })
-    for p in partial:
+    for p in [p for p in (partial or []) if isinstance(p, dict) and p.get("skill")]:
+        skill = p["skill"]
         items.append({
-            "focus": f"Promote your {p['skill']} experience to a declared skill",
-            "skill": p["skill"],
-            "priority": p["importance"],
+            "focus": f"Promote your {skill} experience to a declared skill",
+            "skill": skill,
+            "priority": p.get("importance") or "should",
             "reason": "Mentioned in your experience but not declared as a skill. Give it a "
                       "dedicated bullet and a project so matching treats it as real.",
         })
-    items.sort(key=lambda i: (order.get(i["priority"], 1), i["skill"].lower()))
+    items.sort(key=lambda i: (order.get(i["priority"], 1), str(i["skill"]).lower()))
     return items[:12]
 
 
 async def analyze_gap(target_role: str, seniority, resume_structured, plaintext: str,
                       *, user_id=None, run_id=None) -> dict:
+    target_role = target_role if isinstance(target_role, str) else ""
     expected = await extract_expected_skills(target_role, user_id=user_id, run_id=run_id)
     evidence_skills, evidence_corpus = build_evidence(resume_structured, plaintext)
     covered, partial, gaps = classify_coverage(
@@ -198,7 +213,7 @@ async def analyze_gap(target_role: str, seniority, resume_structured, plaintext:
     coverage = round((len(covered) + 0.5 * len(partial)) / total, 3) if total else 0.0
     return {
         "targetRole": target_role[:200],
-        "seniority": (seniority or expected.get("seniorityHint") or "")[:40],
+        "seniority": str(seniority or expected.get("seniorityHint") or "")[:40],
         "expectedSkillCount": total,
         "coveredCount": len(covered),
         "partialCount": len(partial),

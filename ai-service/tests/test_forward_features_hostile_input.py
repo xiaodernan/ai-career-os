@@ -10,10 +10,10 @@ stale cached row must produce an empty/safe result, never crash the request path
 import pytest
 
 from app.features import (company, cover_letter, counter_offer, demand, equity, export,
-                             export_redact, export_render, export_words, import_plan,
-                             interview_prep, jd_analyze, learning, match, negotiation,
-                             offers, prioritize, progress, progression, readiness,
-                             resume_parse, roles, salary, tailor)
+                             export_redact, export_render, export_words, gap_analysis,
+                             import_plan, interview_prep, jd_analyze, learning, match,
+                             negotiation, offers, prioritize, progress, progression,
+                             readiness, resume_parse, roles, salary, tailor)
 
 
 # --- progression.build_stepping_stones -------------------------------------
@@ -551,4 +551,33 @@ def test_plan_import_skips_non_dict_items_and_null_data():
         {"op": "create", "id": "r1",
          "content_hash": export.content_hash({"id": "r1"})}]
     assert "profile" not in plan["sections"]      # a null profile is nothing to plan
+
+
+# ---------------- career gap analysis (Epic 10.1) ----------------
+
+def test_classify_coverage_skips_non_dict_and_keyless_rows():
+    expected = [None, "junk", {"name": "Go", "importance": "must", "category": "core"},
+                {"importance": "should"}]                      # no name -> skipped
+    covered, partial, gaps = gap_analysis.classify_coverage(expected, set(), None)
+    assert covered == [] and partial == []
+    assert [g["skill"] for g in gaps] == ["Go"]
+    assert gaps[0]["importance"] == "must" and gaps[0]["category"] == "core"
+
+
+def test_build_development_plan_skips_non_dict_rows():
+    plan = gap_analysis.build_development_plan([None, {"skill": "Go", "importance": "must"}],
+                                               ["junk", {"skill": "Rust", "importance": "nice"}])
+    assert [i["skill"] for i in plan] == ["Go", "Rust"]       # must ranks before nice
+    assert plan[0]["priority"] == "must"
+
+
+def test_build_evidence_and_sanitize_survive_none():
+    skills, corpus = gap_analysis.build_evidence(None, None)
+    assert skills == set() and corpus == ""
+    out = gap_analysis._sanitize_expected(None, None)
+    assert out == {"expectedSkills": [], "responsibilities": [], "seniorityHint": ""}
+    # a non-str importance falls back to "should" rather than raising
+    out2 = gap_analysis._sanitize_expected({"expectedSkills": [{"name": "go",
+                                                               "importance": 7}]}, "go")
+    assert out2["expectedSkills"][0]["importance"] == "should"
 
