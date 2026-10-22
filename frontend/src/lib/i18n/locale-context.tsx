@@ -63,6 +63,35 @@ function getInitialLocale(): Locale {
   return "en";
 }
 
+/**
+ * The language the reader chose, read outside React.
+ *
+ * A toast is raised from an event handler, long after the render that knew
+ * the language -- so the sentence a failure shows cannot come from a hook.
+ * The language is global anyway (a cookie and a `localStorage` entry), and
+ * this reads the same `localStorage` the provider writes, so the two cannot
+ * disagree: the provider writes it the moment the reader switches, and this
+ * reads it the moment a toast is raised.
+ */
+export function currentLocale(): Locale {
+  return getInitialLocale();
+}
+
+/**
+ * Read a string out of the table, outside React.
+ *
+ * Unlike the provider's `t`, this returns undefined when the table has no
+ * such string -- the caller is outside a render, so it has to be able to
+ * fall back to something else rather than show a key.
+ */
+export function translate(
+  key: string,
+  vars?: Record<string, string | number>
+): string | undefined {
+  const value = lookup(translations[currentLocale()], key);
+  return value === undefined ? undefined : fill(value, vars);
+}
+
 export function LocaleProvider({ children }: { children: React.ReactNode }) {
   const [locale, setLocaleState] = React.useState<Locale>(getInitialLocale);
 

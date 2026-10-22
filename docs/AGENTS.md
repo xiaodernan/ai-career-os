@@ -243,9 +243,9 @@ Three properties hold across every one of them, and the census gates
   a sweep that ran under a random id would put another user's jobs in this one's
   board.
 
-## 8. The nine quiet failures
+## 8. The ten quiet failures
 
-Nine bugs in this repository looked like working code and were not. They are
+Ten bugs in this repository looked like working code and were not. They are
 written down because each one is a *shape* of failure, not a one-off: the next
 one will have the same shape, and the gate that catches it is the thing to
 reach for.
@@ -337,10 +337,31 @@ scan's own rule (an anchor that is not a type), a round trip (the
 redacted file, read back by the path it exists for), a direction (the
 navigation *items*, not the table's keys), an ownership (the restore
 writes only the caller's rows), a path (the anonymized export, built
-the way the button builds it), and a route (the render, called the way
-the bridge calls it). The general shape is the same in all nine: **the bug
+the way the button builds it), a route (the render, called the way
+the bridge calls it), and a place (the language, read where the
+sentence is raised). The general shape is the same in all ten: **the bug
 was where nobody was looking, and the answer was to look there, not to
 look harder.**
+
+**A sentence raised where the language is not.** A failure toast is raised
+from an event handler, long after the render that knew the reader's
+language — and the sentence in it was an English literal. Every other word
+in the product is read through the locale; this one could not be, because
+the place it is raised has no language to read. So the browser's own
+failures — the stream that ended early, the upload the reader cancelled,
+the session that expired — were English on every language, and the
+mechanism that would fix it did not exist.
+
+**A place that cannot hold a language needs one.** The locale is global
+anyway (a cookie and a `localStorage` entry), so reading it outside React
+is not a second source of truth: it is the same one, read at the moment
+the sentence is needed. The failures the *browser* raises now have
+sentences in both languages, and the failure helper shows the table's
+sentence rather than the English literal the code was raised with. The
+services' own codes are not in the table yet, and that is a decision
+rather than an oversight: their wording is more specific than one
+sentence per code can be, and a generic sentence in place of "Start the
+interview with an opening question first" would be a loss.
 
 **A route nothing ever called.** "Print view" on the export page has never
 worked. The render module was written, and the route that serves it was

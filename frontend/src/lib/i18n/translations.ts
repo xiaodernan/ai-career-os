@@ -920,6 +920,26 @@ export const translations = {
       notOnTheMapDescription:
         "The route you followed does not exist. It may have moved, or the link was mistyped.",
     },
+    /**
+     * The errors the browser raises itself, by the code it raises them with.
+     *
+     * These are the sentences for the failures the *product* has: the stream
+     * that ended early, the upload the reader cancelled, the session that
+     * expired. The services' own codes are not here -- their wording is more
+     * specific than one sentence per code can be, so the server's own words are
+     * kept until the vocabulary is fine enough to carry them.
+     *
+     * A toast is raised from an event handler, long after the render that knew
+     * the reader's language, so these are read through `translate` -- which reads
+     * the language outside React.
+     */
+    errorCodes: {
+      ABORTED: "The upload was cancelled.",
+      NETWORK_ERROR: "Cannot reach the API — is the backend running?",
+      STREAM_ENDED: "The connection closed before the answer arrived.",
+      STREAM_ERROR: "The answer stream failed. Please try again.",
+      UNAUTHORIZED: "Your session has expired. Please sign in again.",
+    },
     // The public landing page (18.2) -- the first thing a visitor reads.
     landing: {
       description: "Evidence-backed matching, resume intelligence, growth planning and AI-guided interviews — every conclusion traced to your own material.",
@@ -2500,6 +2520,23 @@ export const translations = {
       couldNotStartDescription: "错误已经记到控制台。再试一次会从头重建整个外壳。",
       notOnTheMap: "这个页面不在地图上。",
       notOnTheMapDescription: "你访问的路由不存在。它可能已经挪了地方，或者链接打错了。",
+    },
+    /**
+     * 浏览器自己抛出的错误，按它抛错时用的码。
+     *
+     * 这些是*产品*自己失败的句子：提前断开的流、读者取消的上传、过期的登录态。
+     * 服务端自己的码不在这里——它们的措辞比"一个码一句话"更具体，所以在词表细到
+     * 装得下之前，保留服务端自己的说法。
+     *
+     * toast 是在事件处理器里抛的，早于知道读者语言的那次渲染，所以这些句子走
+     * `translate`——它在 React 之外读语言。
+     */
+    errorCodes: {
+      ABORTED: "上传已取消。",
+      NETWORK_ERROR: "连不上接口——后端在跑吗？",
+      STREAM_ENDED: "连接在回答到达之前断开了。",
+      STREAM_ERROR: "回答的传输失败了，请再试一次。",
+      UNAUTHORIZED: "登录状态过期了，请重新登录。",
     },
     landing: {
       description: "有证据支撑的匹配、简历情报、成长规划，以及 AI 引导的面试——每一个结论都能追溯到你自己的材料。",

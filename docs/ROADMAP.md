@@ -87,25 +87,33 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   not: the restore still lands the rows, and it no longer lands them on top of
   somebody else's.
 
-- **The errors a reader sees are still English (measured 2026-10-22, not closed).**
-  A failed write answers with a toast, and the toast says what the server said — in
-  English. The obvious fix is to translate by the **code**, because the code is the
-  contract (`ApiErrorCode`'s own comment says "never rename an emitted code") and
-  the code is what crosses the wire. Measured: the codes are **coarser than the
-  messages**. `RESUME_NOT_FOUND` answers with six different sentences ("No parsed
-  resume available for matching", "This resume has no original file behind it",
-  "Resume not found", …), `BAD_REQUEST` with twelve, `TOKEN_INVALID` with five,
-  `INTERNAL_ERROR` with five, `NOT_FOUND` with four, `DOCUMENT_NOT_FOUND` with
-  three. One sentence per code would tell a reader whose resume exists but has no
-  parsed version that "that resume is no longer there" — so the fix is not a
-  translation, it is a *finer vocabulary*: roughly twenty-five more codes (one per
-  distinct wording), about sixty sentences in each language, and the throw sites
-  changed to name them. The ai-service's own rejections (the bundle's, the
-  ingestion's) would need the same treatment, since a 400 that crosses the bridge
-  arrives as one code whichever service said it. The rule the browser uses to read
-  a key is now in one place (`lib/i18n/locale-context.tsx`'s `lookup`/`fill`), and
-  the piece still missing is reading the reader's language *outside* a render — a
-  toast is raised from an event handler, long after the render that knew it.
+- **The errors a reader sees are still English in the server's own words (measured
+  2026-10-22; the mechanism is done, the services' codes are not).** A failed
+  write answers with a toast, and the toast says what the server said — in
+  English. The obvious fix is to translate by the **code**, because the code is
+  the contract ("never rename an emitted code") and the code is what crosses the
+  wire. Measured: the codes are **coarser than the messages**. `RESUME_NOT_FOUND`
+  answers with six different sentences ("No parsed resume available for
+  matching", "This resume has no original file behind it", "Resume not found", …),
+  `BAD_REQUEST` with twelve, `TOKEN_INVALID` with five, `NOT_FOUND` with four,
+  `DOCUMENT_NOT_FOUND` with three. One sentence per code would tell a reader
+  whose resume exists but has no parsed version that "that resume is no longer
+  there" — so the fix is not a translation, it is a *finer vocabulary*: roughly
+  twenty-five more codes (one per distinct wording), about sixty sentences in
+  each language, and the throw sites changed to name them.
+
+  **Done so far.** The browser's language is now readable *outside* a render
+  (`lib/i18n/locale-context.tsx`'s `translate`), which is what a toast needs — it
+  is raised from an event handler, long after the render that knew the language.
+  The codes the **browser itself** raises — the stream that ended early, the
+  upload the reader cancelled, the session that expired, the network that was
+  not there — have sentences in both languages, and the failure helper shows
+  the table's sentence rather than the English literal the code was raised
+  with. The **services'** codes are deliberately not in the table yet: their
+  wording is more specific than one sentence per code can be, and a generic
+  sentence in place of "Start the interview with an opening question first"
+  would be a loss. Their words stay until the vocabulary is fine enough to
+  carry them.
 - **The export's readable half had one language (closed 2026-10-22, except the
   Markdown).** 13.1's *human-readable* export — the print-ready document — was
   written in Chinese and had no other language, so an English reader's printable
