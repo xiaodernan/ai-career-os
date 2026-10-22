@@ -9,9 +9,9 @@ stale cached row must produce an empty/safe result, never crash the request path
 
 import pytest
 
-from app.features import (company, counter_offer, demand, equity, export, export_redact,
-                             export_render, export_words, interview_prep, learning, match,
-                             negotiation,
+from app.features import (company, cover_letter, counter_offer, demand, equity, export,
+                             export_redact, export_render, export_words, interview_prep,
+                             jd_analyze, learning, match, negotiation,
                              offers, prioritize, progress, progression, readiness,
                              roles, salary)
 
@@ -448,4 +448,37 @@ def test_to_markdown_none_and_junk_sections_is_safe():
                      "memories": [None, {"kind": "pref"}]},
             "manifest": {"counts": None}, "user": None}
     assert export.to_markdown(junk).startswith("# AI Career OS")
+
+
+# ---------------- cover-letter prompt builder + JD suggester ----------------
+
+def test_build_prompt_none_jd_and_null_profile_is_safe():
+    out = cover_letter._build_prompt({}, None, None, "staff eng", "evidence",
+                                      "", "", "generate", "")
+    assert "ROLE" in out and "CANDIDATE" in out
+
+
+def test_build_prompt_non_dict_required_skills_are_skipped():
+    jd = {"title": "SE", "company": "Acme",
+          "requiredSkills": [{"name": "Go"}, "junk", None, {"name": "Rust"}]}
+    out = cover_letter._build_prompt({"profile": {"name": "Ann"}}, jd, None,
+                                     "", "", "", "", "generate", "")
+    assert "Go" in out and "Rust" in out and "junk" not in out and "None" not in out
+
+
+def test_backfill_skills_none_out_is_safe():
+    text = "We use Go and PostgreSQL daily."
+    out = jd_analyze._backfill_skills(None, text)
+    assert out["rawTextLength"] == len(text)
+    assert isinstance(out.get("preferredSkills"), list)
+
+
+def test_suggest_resume_improvements_none_inputs_is_safe():
+    # a None JD + None resume still emits the structure/impact advice, no crash
+    assert [g["type"] for g in jd_analyze.suggest_resume_improvements(None, None)] == [
+        "structure", "impact"]
+    junk = {"requiredSkills": [None, "golang"]}
+    got = jd_analyze.suggest_resume_improvements(junk, {"experience": [None, "x"]})
+    # a None requirement used to surface as the literal string "None"
+    assert [g["skill"] for g in got if g["type"] == "missing_required"] == ["golang"]
 

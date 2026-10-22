@@ -36,7 +36,8 @@ async def analyze_jd(raw_text: str, *, user_id=None, run_id=None) -> dict:
 def _backfill_skills(out: dict, raw_text: str) -> dict:
     """Deterministic skill capture: append dictionary-extracted skills the model
     missed and normalize every skill name. Mutates and returns ``out``."""
-    dict_skills = extract_skills(raw_text)
+    out = out if isinstance(out, dict) else {}
+    dict_skills = extract_skills(raw_text or "")
     have = {normalize(s.get("name", "")) for s in (out.get("requiredSkills") or [])
             + (out.get("preferredSkills") or []) if isinstance(s, dict)}
     for sk in dict_skills:
@@ -56,25 +57,30 @@ def _backfill_skills(out: dict, raw_text: str) -> dict:
 
 def suggest_resume_improvements(jd: dict, resume_parsed: dict) -> list[dict]:
     """Rule-based, explainable suggestions: JD must-habs missing from resume."""
-    resume_skills = {normalize(s.get("name", "")) for s in
-                     ((resume_parsed or {}).get("skills") or []) if isinstance(s, dict)}
+    resume_parsed = resume_parsed if isinstance(resume_parsed, dict) else {}
+    jd = jd if isinstance(jd, dict) else {}
+    skills = [s for s in (resume_parsed.get("skills") or []) if isinstance(s, dict)]
+    resume_skills = {normalize(s.get("name", "")) for s in skills}
+    exp_rows = [e for e in (resume_parsed.get("experience") or []) if isinstance(e, dict)]
     exp_text = " ".join(
-        " ".join((e.get("bullets") or [])) for e in
-        ((resume_parsed or {}).get("experience") or [])).lower()
+        " ".join(b for b in (e.get("bullets") or []) if isinstance(b, str))
+        for e in exp_rows).lower()
     out = []
     for s in jd.get("requiredSkills") or []:
-        name = s.get("name") if isinstance(s, dict) else str(s)
+        name = (s.get("name") if isinstance(s, dict)
+                else (s if isinstance(s, str) else None))
         if not name:
             continue
         if normalize(name) not in resume_skills and name.lower() not in exp_text:
             out.append({"skill": name, "type": "missing_required",
                         "advice": f"JD requires {name}. If you have real experience with it, "
                                   f"add a bullet quantifying it; otherwise do not claim it."})
-    if not (resume_parsed or {}).get("projects"):
+    if not resume_parsed.get("projects"):
         out.append({"skill": "", "type": "structure",
                     "advice": "Add a projects section — this JD emphasizes hands-on delivery."})
-    quantified = sum(1 for e in ((resume_parsed or {}).get("experience") or [])
-                     for b in (e.get("bullets") or []) if any(c.isdigit() for c in b))
+    quantified = sum(1 for e in exp_rows
+                     for b in (e.get("bullets") or [])
+                     if isinstance(b, str) and any(c.isdigit() for c in b))
     if quantified < 2:
         out.append({"skill": "", "type": "impact",
                     "advice": "Most bullets lack numbers; quantify impact (latency, QPS, users, %)."})

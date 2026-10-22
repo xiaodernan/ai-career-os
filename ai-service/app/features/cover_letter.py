@@ -48,7 +48,8 @@ async def generate(resume_structured: dict, resume_text: str, jd: dict,
                    mode: str = "generate", previous: str = "",
                    tone: str = "", length: str = "",
                    run_id: str | None = None) -> dict:
-    query = " ".join([s.get("name", "") for s in (jd.get("requiredSkills") or [])][:10])
+    query = " ".join([s.get("name", "") for s in (jd.get("requiredSkills") or [])
+                      if isinstance(s, dict)][:10])
     r = await retrieve(query or jd.get("title", "top achievements"), user_id=user_id,
                        run_id=run_id, top_k=6, kinds=["resume", "project", "goal"])
     prompt = _build_prompt(resume_structured, jd, company, goal,
@@ -67,14 +68,17 @@ def _build_prompt(resume_structured: dict, jd: dict, company: dict | None, goal:
     """Assemble the cover-letter user prompt. Pure (no LLM/DB) so the conditional
     assembly — empty-fact dropping, company fallback, STYLE and previous-version gating —
     is unit-testable in isolation."""
+    jd = jd if isinstance(jd, dict) else {}
+    resume_structured = resume_structured if isinstance(resume_structured, dict) else {}
+    profile = resume_structured.get("profile")
+    profile = profile if isinstance(profile, dict) else {}
     facts = [
         f"ROLE: {jd.get('title','')}",
         f"COMPANY: {company.get('name') if company else jd.get('company','')}",
         (f"COMPANY OVERVIEW: {wrap_untrusted('COMPANY', company.get('overview',''))}"
          if company else ""),
-        f"JD TOP REQUIREMENTS: {[s.get('name') for s in (jd.get('requiredSkills') or [])][:10]}",
-        f"CANDIDATE: {resume_structured.get('profile',{}).get('name','')} - "
-        f"{resume_structured.get('profile',{}).get('headline','')}",
+        f"JD TOP REQUIREMENTS: {[s.get('name') for s in (jd.get('requiredSkills') or []) if isinstance(s, dict)][:10]}",
+        f"CANDIDATE: {profile.get('name','')} - {profile.get('headline','')}",
         f"CAREER GOAL: {goal}" if goal else "",
         f"EVIDENCE:\n{context_block}",
     ]
