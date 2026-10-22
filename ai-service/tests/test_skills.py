@@ -95,3 +95,30 @@ def test_extract_skills_outputs_only_normalize_fixed_points():
     # surface two entries for one concept
     assert extract_skills("deployed on k8s") == ["Kubernetes"]
     assert extract_skills("K8s and Kubernetes together") == ["Kubernetes"]
+
+
+# ---------------- hostile input (the shared primitives every engine calls) ----------------
+
+def test_normalize_survives_non_string_names():
+    # normalize is the primitive every engine funnels its skill names through, so a
+    # non-str row from a peer payload must degrade to "" rather than raise
+    assert normalize(None) == ""
+    assert normalize(123) == ""
+    assert normalize(["Go"]) == ""
+    assert normalize({"name": "Go"}) == ""
+    # a real name still resolves through the alias table
+    assert normalize("  k8s ") == "Kubernetes"
+
+
+def test_extract_skills_survives_non_string_text():
+    assert extract_skills(None) == []
+    assert extract_skills(123) == []
+    assert extract_skills(["Java"]) == []
+    # and a real corpus is unchanged
+    assert extract_skills("built a Go service") == ["Go"]
+
+
+def test_category_survives_non_string_names():
+    assert category(None) == "other"
+    assert category(7) == "other"
+    assert category("k8s") == "devops"

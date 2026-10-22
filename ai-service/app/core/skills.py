@@ -102,14 +102,16 @@ _ALIAS_PATTERNS: list[tuple[re.Pattern, str]] = [
 
 
 def normalize(name: str) -> str:
-    key = (name or "").strip().lower()
-    return CANONICAL.get(key, (name or "").strip())
+    text = name if isinstance(name, str) else ""
+    key = text.strip().lower()
+    return CANONICAL.get(key, text.strip())
 
 
 def extract_skills(text: str) -> list[str]:
     """Find canonical skills mentioned in free text."""
     found: set[str] = set()
     # sentence-final periods sit in the no-trailing-punctuation boundary; blank them
+    text = text if isinstance(text, str) else ""
     probe = re.sub(r"\.(?=\s|$)", " ", text)
     low = probe.lower()
     for pat, canon in _ALIAS_PATTERNS:
