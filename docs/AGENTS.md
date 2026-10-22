@@ -243,11 +243,11 @@ Three properties hold across every one of them, and the census gates
   a sweep that ran under a random id would put another user's jobs in this one's
   board.
 
-## 8. The ten quiet failures
+## 8. The eleven quiet failures
 
-Ten bugs in this repository looked like working code and were not. They are
-written down because each one is a *shape* of failure, not a one-off: the next
-one will have the same shape, and the gate that catches it is the thing to
+Eleven bugs in this repository looked like working code and were not. They
+are written down because each one is a *shape* of failure, not a one-off: the
+next one will have the same shape, and the gate that catches it is the thing to
 reach for.
 
 **A live collection, read after it was cleared.** A `FileList` is a view of
@@ -338,10 +338,36 @@ redacted file, read back by the path it exists for), a direction (the
 navigation *items*, not the table's keys), an ownership (the restore
 writes only the caller's rows), a path (the anonymized export, built
 the way the button builds it), a route (the render, called the way
-the bridge calls it), and a place (the language, read where the
-sentence is raised). The general shape is the same in all ten: **the bug
+the bridge calls it), a place (the language, read where the
+sentence is raised), and a promise (a note, quoted by the agents the copy
+says quotes it). The general shape is the same in all eleven: **the bug
 was where nobody was looking, and the answer was to look there, not to
 look harder.**
+
+**A promise the copy makes and the code does not keep.** The notes panel
+says it three times over: the content field says "the agents can quote
+this back with a citation", the section says "short reference notes the
+agents can quote back at you", and deleting a note says "the note row is
+removed and its chunks stop being cited".
+
+Two of the three were true and the first was not. A note was a row in
+`user_notes` and nothing else. Retrieval admits a chunk only while its
+document row reads 'ready', and a note that was never ingested has no
+document and no chunk -- so no agent could ever quote it. The delete path
+was written for a note that *had* an embedded copy: it retires the note's
+source by kind and reference, which is a retire of nothing.
+
+The feature was half-built, and the half that was missing was the half the
+copy is about. The note is ingested now, with the kind and the reference
+that make the copy quotable and retirable, and an edit retires the old
+copy before the new one lands -- the reader deleted a sentence and the
+assistant kept quoting it.
+
+**The shape is a promise nobody checked.** Three copies of copy, a delete
+path written for chunks that were never created, and a test named
+`deletingANoteRetiresItsEmbeddedCopy` that retired an embedded copy which
+did not exist. Everything read as working code, because every part of it
+was a part of the design -- just not the part that made the design true.
 
 **A sentence raised where the language is not.** A failure toast is raised
 from an event handler, long after the render that knew the reader's

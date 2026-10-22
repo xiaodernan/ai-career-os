@@ -22,6 +22,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.Map;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -35,6 +37,8 @@ public class KnowledgeService {
 
     /** Terminal, non-retrievable document status set when the owning row is deleted. */
     private static final String STATUS_RETIRED = "retired";
+
+    private static final Logger log = LoggerFactory.getLogger(KnowledgeService.class);
 
     private final KnowledgeSourceRepository sources;
     private final DocumentRepository documents;
@@ -125,7 +129,18 @@ public class KnowledgeService {
         note.setTitle(request.title() == null ? "" : request.title());
         note.setContent(request.content());
         note.setTags(request.tags());
-        notes.save(note);
+        // Flushed, not just saved: the id is the database's to mint, and the
+        // ingested copy has to carry it -- it is what the delete path
+        // retires, and a copy with no reference would be a copy nothing can
+        // take back.
+        notes.saveAndFlush(note);
+        // A note is a *citable* note: the panel promises the agents can quote it
+        // back, and retrieval admits a chunk only while its document row reads
+        // 'ready' -- so the text has to be ingested, or the promise is about a
+        // row the reader's own words never reach. The kind is "note" and the
+        // reference is the note's own id, which is what deleting the note
+        // retires (see deleteNote) and what un-linking a domain row retires.
+        ingestNote(userId, note);
         return toNoteItem(note);
     }
 
@@ -142,7 +157,35 @@ public class KnowledgeService {
             note.setTags(request.tags());
         }
         notes.save(note);
+        // The note's text changed, so the chunks that carry the old text have
+        // to go: the reader deleted a sentence and the assistant keeps
+        // quoting it. Retiring them is what leaves the *old* document
+        // unquotable, and the fresh ingest is what carries the new text.
+        retireRef(userId, "note", note.getId());
+        ingestNote(userId, note);
         return toNoteItem(note);
+    }
+
+    /**
+     * Ingest a note's text so the agents can quote it.
+     *
+     * <p>The note's own id is the reference, the way a resume's is: it is what
+     * ties the ingested copy to the row the reader wrote and edits, and what
+     * lets the delete path retire exactly this copy.
+     */
+    private void ingestNote(UUID userId, UserNote note) {
+        String text = note.getContent();
+        if (text == null || text.isBlank()) {
+            return;
+        }
+        try {
+            fileIngest.ingestText(userId, note.getTitle(), text, "note", note.getId());
+        } catch (RuntimeException e) {
+            // The note is written either way -- the reader asked for a note and
+            // the note is theirs. What failed is the copy the agents quote, and
+            // the next edit or delete will try again.
+            log.warn("Ingesting the note failed for user {}: {}", userId, e.getMessage());
+        }
     }
 
     @Transactional
