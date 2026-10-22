@@ -90,8 +90,9 @@ NF_CODES = [
     "CONVERSATION_NOT_FOUND", "DOCUMENT_KEY_NOT_OWNED", "DOCUMENT_NOT_FOUND", "JD_NOT_FOUND",
     "JOB_NOT_FOUND", "MATCH_NOT_FOUND", "NOTE_NOT_FOUND", "NOT_FOUND", "PROFILE_NOT_FOUND",
     "RESUME_FILE_MISSING", "RESUME_NOT_AVAILABLE", "RESUME_NOT_FOUND", "RESUME_NOT_INGESTED",
-    "RESUME_NOT_PARSED", "RESUME_NOT_TAILABLE", "RUN_NOT_FOUND", "SESSION_NOT_FOUND",
-    "SOURCE_NOT_FOUND", "USER_NOT_FOUND", "VERSION_NOT_FOUND",
+    "RESUME_NOT_PARSED", "RESUME_NOT_TAILABLE", "RESUME_VERSION_MISSING", "RUN_NOT_FOUND",
+    "SESSION_NOT_FOUND", "SOURCE_NOT_FOUND", "USER_NOT_FOUND", "VERSION_NOT_FOUND",
+    "VERSION_NOT_OWNED",
 ]
 
 
@@ -239,10 +240,10 @@ def test_the_missing_endpoint_rule_reads_the_code_and_the_client_keeps_it():
 def test_the_backend_answers_404_for_records_and_for_routes_in_the_same_status():
     codes = not_found_codes()
     assert sorted(codes) == NF_CODES, "%d codes answer 404: %s" % (len(codes), sorted(codes))
-    assert len(codes) == len(set(codes)) == 24, "the 404 table moved; this file reads 24 constants"
+    assert len(codes) == len(set(codes)) == 26, "the 404 table moved; this file reads 26 constants"
     assert status_of("BAD_REQUEST") and status_of("FORBIDDEN"), "the enum walk is blind -- it read no other status"
     record = [c for c in codes if c != "NOT_FOUND"]
-    assert len(record) == 23, "%d of the 404 codes name a record, not a route" % len(record)
+    assert len(record) == 25, "%d of the 404 codes name a record, not a route" % len(record)
     window = handler_404()
     assert "ApiErrorCode.NOT_FOUND" in window and "Resource not found" in window, (
         "the unmapped-route handler no longer answers the bare NOT_FOUND code: %s" % window)
@@ -351,5 +352,5 @@ def test_this_gate_reads_the_envelope_and_the_branches_it_claims():
     assert "items: arr.map(map)," in read(NORMALIZE), "the page builder no longer writes items"
     for rel in (BOUNDARY, MODULE_VIEW, MISSING, CLIENT, NORMALIZE, CODES, HANDLER, RUN_DETAIL):
         assert (ROOT / rel).exists(), "%s is not where this file reads it" % rel
-    assert len(not_found_codes()) == 24 and len(boundary_users()) == 5
+    assert len(not_found_codes()) == 26 and len(boundary_users()) == 5
     assert len(module_view_users()) == 5 and len(OWN_FLAG_SCREENS) == 14

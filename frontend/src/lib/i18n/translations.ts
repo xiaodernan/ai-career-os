@@ -951,16 +951,15 @@ export const translations = {
      */
 
     errorCodes: {
-
       ABORTED: "The upload was cancelled.",
 
       AI_SERVICE_NOT_FOUND: "That is no longer here.",
 
       APPLICATION_NOT_FOUND: "That application is no longer here.",
 
-      BUNDLE_NO_SECTION: "That file has no data section.",
-
       BUNDLE_NOT_PLANNABLE: "That file could not be turned into a restore plan.",
+
+      BUNDLE_NO_SECTION: "That file has no data section.",
 
       COMPANY_NOT_FOUND: "That company is no longer here.",
 
@@ -984,6 +983,16 @@ export const translations = {
 
       FORBIDDEN: "You do not have access to that.",
 
+      INTERNAL_ERROR: "An internal server error occurred.",
+
+      INTERVIEW_ALREADY_STARTED: "This interview has already started.",
+
+      INTERVIEW_NOTHING_TO_FINALIZE: "There is nothing to finish yet.",
+
+      INTERVIEW_NOT_STARTED: "Start the interview with the opening question first.",
+
+      INTERVIEW_NO_QUESTION: "No interviewer question was recorded.",
+
       INVALID_CREDENTIALS: "That email address or password is not right.",
 
       INVALID_FILE_TYPE: "That file type is not supported.",
@@ -991,15 +1000,6 @@ export const translations = {
       INVALID_STATUS: "That status is not one the tracker knows.",
 
       INVALID_TRANSITION: "That change is not allowed from here.",
-      INTERNAL_ERROR: "An internal server error occurred.",
-
-      INTERVIEW_ALREADY_STARTED: "This interview has already started.",
-
-      INTERVIEW_NO_QUESTION: "No interviewer question was recorded.",
-
-      INTERVIEW_NOT_STARTED: "Start the interview with the opening question first.",
-
-      INTERVIEW_NOTHING_TO_FINALIZE: "There is nothing to finish yet.",
 
       JD_NOT_FOUND: "That job description is no longer here.",
 
@@ -1021,24 +1021,39 @@ export const translations = {
 
       RATE_LIMITED: "Too many requests — please slow down.",
 
-      RESUME_FILE_MISSING: "That resume's original file is gone.",
-      RESUME_NOT_AVAILABLE: "You do not have a resume yet.",
-      RESUME_NOT_FOUND: "That resume is no longer here.",
-      RESUME_NOT_INGESTED: "That resume's file has not been added to the knowledge base yet.",
-      RESUME_NOT_PARSED: "Your resume has not been parsed yet.",
-      RESUME_NOT_TAILABLE: "There is no resume to tailor yet.",
-      RESUME_TEXT_NOT_READY: "That document's text is not available yet.",
-      STORAGE_DELETE_FAILED: "Object storage delete failed.",
-      STORAGE_PRESIGN_FAILED: "Object storage presign failed.",
-      STORAGE_READ_FAILED: "Object storage read failed.",
-      STORAGE_WRITE_FAILED: "Object storage write failed.",
       RESET_TOKEN_INVALID: "That reset link is invalid or has expired. Please request a new one.",
+
       RESET_TOKEN_OWNER_NOT_FOUND: "The account this reset link belonged to is no longer here.",
+
+      RESUME_FILE_MISSING: "That resume's original file is gone.",
+
+      RESUME_NOT_AVAILABLE: "You do not have a resume yet.",
+
+      RESUME_NOT_FOUND: "That resume is no longer here.",
+
+      RESUME_NOT_INGESTED: "That resume's file has not been added to the knowledge base yet.",
+
+      RESUME_NOT_PARSED: "Your resume has not been parsed yet.",
+
+      RESUME_NOT_TAILABLE: "There is no resume to tailor yet.",
+
+      RESUME_TEXT_NOT_READY: "That document's text is not available yet.",
+
+      RESUME_VERSION_MISSING: "That resume has no version yet.",
+
       RUN_NOT_FOUND: "That run is no longer here.",
 
       SESSION_NOT_FOUND: "That interview session is no longer here.",
 
       SOURCE_NOT_FOUND: "That source is no longer here.",
+
+      STORAGE_DELETE_FAILED: "Object storage delete failed.",
+
+      STORAGE_PRESIGN_FAILED: "Object storage presign failed.",
+
+      STORAGE_READ_FAILED: "Object storage read failed.",
+
+      STORAGE_WRITE_FAILED: "Object storage write failed.",
 
       STREAM_ENDED: "The connection closed before the answer arrived.",
 
@@ -1055,11 +1070,6 @@ export const translations = {
       TOKEN_REUSED: "For your safety every session in this family was signed out. Please sign in again.",
 
       UNAUTHORIZED: "Your session has expired. Please sign in again.",
-      VALIDATION_FAILED: "The request data is not valid.",
-      VALIDATION_FIELD_REQUIRED: "A required field is missing.",
-      VALIDATION_STRUCTURE_INVALID: "The request structure is invalid.",
-
-      VALIDATION_KIND_UNKNOWN: "That knowledge kind is not recognized.",
 
       UPLOAD_UNREADABLE: "That file could not be read.",
 
@@ -1067,6 +1077,17 @@ export const translations = {
 
       USER_NOT_FOUND: "That account is no longer here.",
 
+      VALIDATION_FAILED: "The request data is not valid.",
+
+      VALIDATION_FIELD_REQUIRED: "A required field is missing.",
+
+      VALIDATION_KIND_UNKNOWN: "That knowledge kind is not recognized.",
+
+      VALIDATION_STRUCTURE_INVALID: "The request structure is invalid.",
+
+      VERSION_NOT_FOUND: "That version is no longer here.",
+
+      VERSION_NOT_OWNED: "That version belongs to another resume.",
     },
     // The public landing page (18.2) -- the first thing a visitor reads.
     landing: {
@@ -2671,16 +2692,15 @@ export const translations = {
      */
 
     errorCodes: {
-
       ABORTED: "上传已取消。",
 
       AI_SERVICE_NOT_FOUND: "那个东西已经不在了。",
 
       APPLICATION_NOT_FOUND: "这条申请记录已经不在了。",
 
-      BUNDLE_NO_SECTION: "这个文件里没有数据段。",
-
       BUNDLE_NOT_PLANNABLE: "这个文件没法变成一份恢复计划。",
+
+      BUNDLE_NO_SECTION: "这个文件里没有数据段。",
 
       COMPANY_NOT_FOUND: "这家公司已经不在了。",
 
@@ -2704,6 +2724,16 @@ export const translations = {
 
       FORBIDDEN: "你没有权限访问它。",
 
+      INTERNAL_ERROR: "服务器内部错误。",
+
+      INTERVIEW_ALREADY_STARTED: "这次面试已经开始了。",
+
+      INTERVIEW_NOTHING_TO_FINALIZE: "现在还没有可以结束的内容。",
+
+      INTERVIEW_NOT_STARTED: "先问出开场问题，再开始回答。",
+
+      INTERVIEW_NO_QUESTION: "没有记录到面试官的问题。",
+
       INVALID_CREDENTIALS: "邮箱或密码不对。",
 
       INVALID_FILE_TYPE: "不支持这种文件格式。",
@@ -2711,15 +2741,6 @@ export const translations = {
       INVALID_STATUS: "这个状态不在流程里。",
 
       INVALID_TRANSITION: "这里不允许这样改。",
-      INTERNAL_ERROR: "服务器内部错误。",
-
-      INTERVIEW_ALREADY_STARTED: "这次面试已经开始了。",
-
-      INTERVIEW_NO_QUESTION: "没有记录到面试官的问题。",
-
-      INTERVIEW_NOT_STARTED: "先问出开场问题，再开始回答。",
-
-      INTERVIEW_NOTHING_TO_FINALIZE: "现在还没有可以结束的内容。",
 
       JD_NOT_FOUND: "这份职位描述已经不在了。",
 
@@ -2741,24 +2762,39 @@ export const translations = {
 
       RATE_LIMITED: "请求太频繁了，请慢一点。",
 
-      RESUME_FILE_MISSING: "这份简历的原始文件已经不在了。",
-      RESUME_NOT_AVAILABLE: "你还没有简历。",
-      RESUME_NOT_FOUND: "这份简历已经不在了。",
-      RESUME_NOT_INGESTED: "这份简历的文件还没有进入知识库。",
-      RESUME_NOT_PARSED: "你的简历还没有解析。",
-      RESUME_NOT_TAILABLE: "还没有可以定制的简历。",
-      RESUME_TEXT_NOT_READY: "这份文档的正文还读不出来。",
-      STORAGE_DELETE_FAILED: "对象存储删除失败。",
-      STORAGE_PRESIGN_FAILED: "对象存储预签名失败。",
-      STORAGE_READ_FAILED: "对象存储读取失败。",
-      STORAGE_WRITE_FAILED: "对象存储写入失败。",
       RESET_TOKEN_INVALID: "这个重置链接无效或已过期，请重新申请一个。",
+
       RESET_TOKEN_OWNER_NOT_FOUND: "这个重置链接所属的账号已经不在了。",
+
+      RESUME_FILE_MISSING: "这份简历的原始文件已经不在了。",
+
+      RESUME_NOT_AVAILABLE: "你还没有简历。",
+
+      RESUME_NOT_FOUND: "这份简历已经不在了。",
+
+      RESUME_NOT_INGESTED: "这份简历的文件还没有进入知识库。",
+
+      RESUME_NOT_PARSED: "你的简历还没有解析。",
+
+      RESUME_NOT_TAILABLE: "还没有可以定制的简历。",
+
+      RESUME_TEXT_NOT_READY: "这份文档的正文还读不出来。",
+
+      RESUME_VERSION_MISSING: "那份简历还没有版本。",
+
       RUN_NOT_FOUND: "这次运行记录已经不在了。",
 
       SESSION_NOT_FOUND: "这次面试已经不在了。",
 
       SOURCE_NOT_FOUND: "这份资料已经不在了。",
+
+      STORAGE_DELETE_FAILED: "对象存储删除失败。",
+
+      STORAGE_PRESIGN_FAILED: "对象存储预签名失败。",
+
+      STORAGE_READ_FAILED: "对象存储读取失败。",
+
+      STORAGE_WRITE_FAILED: "对象存储写入失败。",
 
       STREAM_ENDED: "连接在回答到达之前断开了。",
 
@@ -2775,11 +2811,6 @@ export const translations = {
       TOKEN_REUSED: "为了安全，这一组会话都已退出，请重新登录。",
 
       UNAUTHORIZED: "登录状态过期了，请重新登录。",
-      VALIDATION_FAILED: "请求数据不合法。",
-      VALIDATION_FIELD_REQUIRED: "缺少必填字段。",
-      VALIDATION_STRUCTURE_INVALID: "请求结构不合法。",
-
-      VALIDATION_KIND_UNKNOWN: "该知识类型不存在。",
 
       UPLOAD_UNREADABLE: "这个文件读不出来。",
 
@@ -2787,6 +2818,17 @@ export const translations = {
 
       USER_NOT_FOUND: "这个账号已经不在了。",
 
+      VALIDATION_FAILED: "请求数据不合法。",
+
+      VALIDATION_FIELD_REQUIRED: "缺少必填字段。",
+
+      VALIDATION_KIND_UNKNOWN: "该知识类型不存在。",
+
+      VALIDATION_STRUCTURE_INVALID: "请求结构不合法。",
+
+      VERSION_NOT_FOUND: "那个版本已经不在了。",
+
+      VERSION_NOT_OWNED: "那个版本属于另一份简历。",
     },
     landing: {
       description: "有证据支撑的匹配、简历情报、成长规划，以及 AI 引导的面试——每一个结论都能追溯到你自己的材料。",

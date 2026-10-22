@@ -180,6 +180,17 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   `VALIDATION_KIND_UNKNOWN` for the kind -- each with its own sentence in both
   languages.
 
+  **And the version code is three.** `VERSION_NOT_FOUND` answered with three
+  different sentences -- the resume has no version to parse yet, the version
+  id does not exist, and the version belongs to another resume -- and one
+  sentence for it would have been wrong about two of the three: a reader whose
+  version was never there and a reader whose version belongs to somebody else
+  need different answers. They are three codes now (`VERSION_NOT_FOUND` for
+  the version that is not there, `VERSION_NOT_OWNED` for the one that belongs
+  to another resume, `RESUME_VERSION_MISSING` for the resume that has no
+  version yet), each with its own sentence in both languages. The statuses
+  did not move: all three are still the 404 they were.
+
   **And the browser's 404 rule reads the code.** The backend answers a 404 in
   two different ways -- the route is not served, or the route is served and the
   record it reads is gone -- and both arrive as a 404, so a rule that reads the
@@ -212,14 +223,14 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   **And the services' codes are classified now.** Every code the services can
   send is either **translated** (the browser's table answers it, in both
   languages) or **named as a gap** — and the gap list is the queue for the finer
-  vocabulary: `AI_SERVICE_BAD_REQUEST`, `AI_SERVICE_ERROR`, `VERSION_NOT_FOUND`.
+  vocabulary: `AI_SERVICE_BAD_REQUEST`, `AI_SERVICE_ERROR`.
   The gate
   *measures* the split rather than remembering it: a code that is translated
   must carry one meaning (read off the throw sites), a code that is named as a
   gap must carry several, and a code nobody classified fails the gate. So the
-  sixty-two codes that mean one thing are bilingual today, and the three that
-  mean several carry five distinct sentences between them, so they keep
-  the server's words until the throw sites name them properly — five more codes, one per distinct wording, and then the
+  sixty-five codes that mean one thing are bilingual today, and the two that
+  mean several carry two distinct sentences between them, so they keep
+  the server's words until the throw sites name them properly — two more codes, one per distinct wording, and then the
   gap list empties.
 - **The export's readable half had one language (closed 2026-10-22).** 13.1's
   *human-readable* export — the print-ready document — was written in Chinese

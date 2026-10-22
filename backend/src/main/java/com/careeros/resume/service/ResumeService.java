@@ -325,7 +325,7 @@ public class ResumeService {
     public ParsedContext parseContext(UUID userId, UUID resumeId) {
         Resume resume = requireResume(userId, resumeId);
         ResumeVersion version = currentVersion(resume)
-                .orElseThrow(() -> new ApiException(ApiErrorCode.VERSION_NOT_FOUND,
+                .orElseThrow(() -> new ApiException(ApiErrorCode.RESUME_VERSION_MISSING,
                         "Resume has no version to parse"));
         String text = version.getPlaintext();
         if (text == null || text.isBlank()) {
@@ -382,7 +382,7 @@ public class ResumeService {
         Resume resume = requireResume(userId, resumeId);
         ResumeVersion version = requireVersion(userId, versionId);
         if (!version.getResumeId().equals(resumeId)) {
-            throw new ApiException(ApiErrorCode.VERSION_NOT_FOUND, "Version does not belong to resume");
+            throw new ApiException(ApiErrorCode.VERSION_NOT_OWNED, "Version does not belong to resume");
         }
         resume.setCurrentVersionId(versionId);
         resumes.save(resume);

@@ -421,8 +421,17 @@ and the *status* is what the client's error path reads, so the split is free
 where the split is needed. The request bucket that answered with twelve
 sentences is thirteen codes now too, the session codes are one meaning each,
 and the not-found code is five, and the storage errors are split, and the
-validation bucket is four -- with the buckets themselves gone, because a name
-that means nothing is not a contract.
+validation bucket is four, and the version code is three -- with the buckets
+themselves gone, because a name that means nothing is not a contract.
+
+**And a split that keeps the same sentence is not a split.** The code is the
+contract, and the contract is the thing the browser branches on -- so two
+codes that answer with one sentence tell the reader the same thing whichever
+happened, and the reader's experience is no finer than it was. The
+classifier allows that only where a person judged the two to be one thing
+(the same-meaning list), and the gate now says so: two codes may share a
+sentence only if both of them are on that list. A split that keeps the
+sentence would have been a new name for the same answer.
 
 **And a code that is fine enough to carry a sentence has to be *read* by the
 browser.** Splitting the vocabulary is half of it: the other half is the rule

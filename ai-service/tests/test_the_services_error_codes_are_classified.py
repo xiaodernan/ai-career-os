@@ -6,8 +6,8 @@ code is the contract ("never rename an emitted code") and the code is what
 crosses the wire.
 
 But the codes are **coarser than the messages**. Measured against the throw
-sites: `VERSION_NOT_FOUND` answers with three different sentences,
-`AI_SERVICE_ERROR` with two. One sentence per code would tell a reader
+sites: `AI_SERVICE_ERROR` answers with two different sentences. One
+sentence per code would tell a reader
 whose request was refused for one reason that it was refused for another --
 so the fix is not a translation, it is a finer vocabulary, and until the
 vocabulary is fine enough the codes that mean several things keep the
@@ -56,7 +56,6 @@ CLIENT = ROOT / "frontend" / "src" / "lib" / "api" / "client.ts"
 COARSE: frozenset[str] = frozenset({
     "AI_SERVICE_BAD_REQUEST",
     "AI_SERVICE_ERROR",
-    "VERSION_NOT_FOUND",
 })
 
 
@@ -139,8 +138,8 @@ def throw_sites() -> tuple[dict[str, set[str]], set[str]]:
     return wordings, unmeasured
 
 
-def error_tables() -> tuple[set[str], set[str]]:
-    """The codes the browser's table answers, per language."""
+def error_sentences() -> list[dict[str, str]]:
+    """The table's code -> sentence, one dict per language."""
     source = TRANSLATIONS.read_text(encoding="utf-8")
     blocks = []
     for match in re.finditer(r"errorCodes:\s*\{", source):
@@ -155,8 +154,13 @@ def error_tables() -> tuple[set[str], set[str]]:
             index += 1
         blocks.append(source[start:index])
     assert len(blocks) == 2, f"the table has {len(blocks)} error-code blocks, not two"
-    keys = [set(re.findall(r"^\s*([A-Z_]+):\s*\"", block, re.M)) for block in blocks]
-    return keys[0], keys[1]
+    return [dict(re.findall(r'^\s*([A-Z_]+):\s*"((?:[^"\\]|\\.)*)"', block, re.M)) for block in blocks]
+
+
+def error_tables() -> tuple[set[str], set[str]]:
+    """The codes the browser's table answers, per language."""
+    tables = error_sentences()
+    return set(tables[0]), set(tables[1])
 
 
 def browser_codes() -> set[str]:
@@ -180,6 +184,31 @@ def test_every_code_the_services_can_send_is_classified() -> None:
             "it: give it a sentence in the browser's table, or name it as a "
             "gap (the road map's queue)"
         )
+
+
+def test_two_codes_may_share_a_sentence_only_if_a_person_said_they_are_one_thing() -> None:
+    """A split that keeps the same sentence is not a split.
+
+    Two codes that answer with one sentence tell the reader the same thing
+    whichever happened: the code is finer, and the reader's experience is
+    not. That is allowed only where a person judged the two to be one
+    thing -- which is what the same-meaning list is for, and what a
+    measurement cannot decide.
+    """
+    for table in error_sentences():
+        by_sentence: dict[str, list[str]] = {}
+        for code, sentence in table.items():
+            by_sentence.setdefault(sentence, []).append(code)
+        for sentence, codes in sorted(by_sentence.items()):
+            if len(codes) < 2:
+                continue
+            for code in codes:
+                assert code in SAME_MEANING, (
+                    f"`{code}` and {sorted(set(codes) - {code})} answer with the same "
+                    f"sentence ({sentence!r}), so the reader is told the same thing "
+                    "whichever happened -- either the two mean one thing (the "
+                    "same-meaning list) or their sentences have to differ"
+                )
 
 
 def test_the_table_only_names_codes_that_exist() -> None:
