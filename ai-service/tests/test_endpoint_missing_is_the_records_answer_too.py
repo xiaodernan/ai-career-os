@@ -273,10 +273,15 @@ def test_the_501_half_of_the_predicate_has_one_producer_the_browser_never_sees()
         "the 501 no longer says what it is about: %s" % window[-200:])
     client = read("backend/src/main/java/com/careeros/ai/HttpAiServiceClient.java")
     assert "NOT_IMPLEMENTED" not in client, "the backend now forwards a 501, so the browser can see one"
-    assert client.count('new ApiException(ApiErrorCode.AI_SERVICE_ERROR, "AI service request failed")') == 3, (
+    # The upstream's two answers -- it did not answer, and it answered with
+    # nothing -- are two codes now, and both are the 502 the browser reads.
+    assert client.count('new ApiException(ApiErrorCode.AI_SERVICE_UNAVAILABLE, "AI service request failed")') == 3, (
         "the upstream's own status is no longer flattened into one 502 the browser can read")
-    assert stmt(read(CODES), "AI_SERVICE_ERROR(HttpStatus.") == "AI_SERVICE_ERROR(HttpStatus.BAD_GATEWAY),", (
-        "the code the upstream's 501 becomes is no longer a 502")
+    assert client.count('new ApiException(ApiErrorCode.AI_SERVICE_EMPTY_RESPONSE, "AI service returned empty body")') == 1, (
+        "the empty body is no longer the same answer as the upstream not answering")
+    assert stmt(read(CODES), "AI_SERVICE_UNAVAILABLE(HttpStatus.") == \
+        "AI_SERVICE_UNAVAILABLE(HttpStatus.BAD_GATEWAY),", (
+        "the code the upstream's 502 becomes is no longer a 502")
 
 
 def test_the_run_a_user_opens_by_url_id_gets_the_version_sentence():

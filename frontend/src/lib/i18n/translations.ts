@@ -953,7 +953,11 @@ export const translations = {
     errorCodes: {
       ABORTED: "The upload was cancelled.",
 
+      AI_SERVICE_EMPTY_RESPONSE: "The AI service answered with nothing.",
+
       AI_SERVICE_NOT_FOUND: "That is no longer here.",
+
+      AI_SERVICE_UNAVAILABLE: "The AI service is not answering.",
 
       APPLICATION_NOT_FOUND: "That application is no longer here.",
 
@@ -2694,7 +2698,11 @@ export const translations = {
     errorCodes: {
       ABORTED: "上传已取消。",
 
+      AI_SERVICE_EMPTY_RESPONSE: "AI 服务返回了空内容。",
+
       AI_SERVICE_NOT_FOUND: "那个东西已经不在了。",
+
+      AI_SERVICE_UNAVAILABLE: "AI 服务没有响应。",
 
       APPLICATION_NOT_FOUND: "这条申请记录已经不在了。",
 

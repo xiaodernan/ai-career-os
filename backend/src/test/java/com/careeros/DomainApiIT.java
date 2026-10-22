@@ -165,7 +165,7 @@ class DomainApiIT extends ApiIntegrationTest {
                         .file(new MockMultipartFile("file", "resume.pdf", "application/pdf", pdf))
                         .header(authHeader(), "Bearer " + alice))
                 .andExpect(status().isBadGateway())
-                .andExpect(jsonPath("$.error.code").value("AI_SERVICE_ERROR"));
+                .andExpect(jsonPath("$.error.code").value("AI_SERVICE_UNAVAILABLE"));
     }
 
     @Test

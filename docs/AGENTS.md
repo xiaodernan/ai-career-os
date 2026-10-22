@@ -421,8 +421,18 @@ and the *status* is what the client's error path reads, so the split is free
 where the split is needed. The request bucket that answered with twelve
 sentences is thirteen codes now too, the session codes are one meaning each,
 and the not-found code is five, and the storage errors are split, and the
-validation bucket is four, and the version code is three -- with the buckets
-themselves gone, because a name that means nothing is not a contract.
+validation bucket is four, and the version code is three, and the
+assistant's own errors are two -- with the buckets themselves gone, because a
+name that means nothing is not a contract.
+
+**And a gap is a decision, not a leftover.** Two reasons a code can be left
+untranslated, and they are different work: a code that means several things
+is waiting to be split into codes, and a code whose wording cannot be read at
+all is waiting for a vocabulary that does not exist yet. The gate reads the
+reason out of the source and the list has to agree, so the list of gaps
+cannot rot into a list of excuses -- and the last gap, the one whose wording
+is the upstream's own sentence, is a decision with a reason rather than a
+thing nobody got to.
 
 **And a split that keeps the same sentence is not a split.** The code is the
 contract, and the contract is the thing the browser branches on -- so two

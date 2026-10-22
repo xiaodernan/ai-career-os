@@ -170,7 +170,7 @@ class CopilotStreamServiceTest {
     @Test
     void anAiServiceThatCannotStartTheTurnLeavesAReadableError() {
         when(ai.copilotChatStart(anyString(), anyList(), any(), anyMap(), any()))
-                .thenThrow(new ApiException(ApiErrorCode.AI_SERVICE_ERROR, "AI service request failed"));
+                .thenThrow(new ApiException(ApiErrorCode.AI_SERVICE_UNAVAILABLE, "AI service request failed"));
 
         RecordingSink sink = run();
 

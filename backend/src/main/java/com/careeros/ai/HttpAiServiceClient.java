@@ -211,7 +211,7 @@ public class HttpAiServiceClient implements AiServiceClient {
             throw translateStatus(e);
         } catch (RestClientException e) {
             log.error("AI service call failed: {}", e.getMessage());
-            throw new ApiException(ApiErrorCode.AI_SERVICE_ERROR, "AI service request failed");
+            throw new ApiException(ApiErrorCode.AI_SERVICE_UNAVAILABLE, "AI service request failed");
         }
     }
 
@@ -581,14 +581,14 @@ public class HttpAiServiceClient implements AiServiceClient {
         try {
             Map raw = call.get();
             if (raw == null) {
-                throw new ApiException(ApiErrorCode.AI_SERVICE_ERROR, "AI service returned empty body");
+                throw new ApiException(ApiErrorCode.AI_SERVICE_EMPTY_RESPONSE, "AI service returned empty body");
             }
             return (Map<String, Object>) raw;
         } catch (RestClientResponseException e) {
             throw translateStatus(e);
         } catch (RestClientException e) {
             log.error("AI service call failed: {}", e.getMessage());
-            throw new ApiException(ApiErrorCode.AI_SERVICE_ERROR, "AI service request failed");
+            throw new ApiException(ApiErrorCode.AI_SERVICE_UNAVAILABLE, "AI service request failed");
         }
     }
 
@@ -617,7 +617,7 @@ public class HttpAiServiceClient implements AiServiceClient {
                     detail != null ? detail : "AI service rejected the request");
         }
         log.error("AI service call failed with status {}", status);
-        return new ApiException(ApiErrorCode.AI_SERVICE_ERROR, "AI service request failed");
+        return new ApiException(ApiErrorCode.AI_SERVICE_UNAVAILABLE, "AI service request failed");
     }
 
     /** The upstream's own sentence, when it sent one that is a sentence. */

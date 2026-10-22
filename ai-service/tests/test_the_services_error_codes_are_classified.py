@@ -6,18 +6,20 @@ code is the contract ("never rename an emitted code") and the code is what
 crosses the wire.
 
 But the codes are **coarser than the messages**. Measured against the throw
-sites: `AI_SERVICE_ERROR` answers with two different sentences. One
-sentence per code would tell a reader
-whose request was refused for one reason that it was refused for another --
-so the fix is not a translation, it is a finer vocabulary, and until the
-vocabulary is fine enough the codes that mean several things keep the
+sites, a code that answers with more than one sentence is a code that
+answers for more than one situation -- and one sentence for it would tell a
+reader whose request was refused for one reason that it was refused for
+another. So the fix is not a translation, it is a finer vocabulary, and until
+the vocabulary is fine enough the codes that mean several things keep the
 server's own words.
 
 The vocabulary is being made finer one code at a time. The resume's
 not-found code is six codes now, the request bucket that answered with twelve
 sentences is thirteen, the session codes are one meaning each, the not-found
-code is five, and the storage errors are split -- with the buckets
-themselves gone, because a name that means nothing is not a contract.
+code is five, the storage errors are split, the validation bucket is four, the
+version code is three and the assistant's own errors are two -- with the
+buckets themselves gone, because a name that means nothing is not a
+contract.
 
 This gate holds the classification, and it *measures* it rather than
 remembering it:
@@ -28,8 +30,9 @@ remembering it:
 * a code that is translated carries **one** meaning, read off the throw
   sites: a code that answers with several sentences cannot be given one
   sentence without the sentence being wrong about half of them;
-* a code that is named as a gap really does carry several meanings, so the
-  list of gaps cannot rot into a list of excuses;
+* a code that is named as a gap really is one: either it carries several
+  meanings, or its wording cannot be read at all -- and the gate measures
+  which, so the list of gaps cannot rot into a list of excuses;
 * the table's codes are real -- the services' own, or the browser's.
 
 The throw sites are read out of the backend's source and the table out of
@@ -53,10 +56,20 @@ CLIENT = ROOT / "frontend" / "src" / "lib" / "api" / "client.ts"
 # so it cannot be measured -- so one sentence would mislead. Every one of
 # them is on the road map's queue: one code per distinct wording, and the
 # throw sites changed to name them.
-COARSE: frozenset[str] = frozenset({
+# The codes that mean several things: one sentence would be wrong about
+# most of them, so they keep the server's own words until the throw sites
+# name them properly. This list is the road map's queue.
+SEVERAL_MEANINGS: frozenset[str] = frozenset()
+
+# The codes whose wording cannot be measured at all: the upstream's own
+# sentence, which varies with the request. A sentence for such a code would
+# be wrong about most of the requests, so it keeps the server's own words --
+# and the reason it is still here is written down rather than implied.
+UNMEASURABLE: frozenset[str] = frozenset({
     "AI_SERVICE_BAD_REQUEST",
-    "AI_SERVICE_ERROR",
 })
+
+COARSE: frozenset[str] = SEVERAL_MEANINGS | UNMEASURABLE
 
 
 # The codes whose several wordings are **one thing**, so one sentence covers
@@ -276,7 +289,14 @@ def test_the_same_meaning_list_is_honest() -> None:
 
 
 def test_a_named_gap_really_is_a_gap() -> None:
-    """The list of gaps cannot rot into a list of excuses."""
+    """The list of gaps cannot rot into a list of excuses.
+
+    There are two reasons a code can be a gap, and they are different work:
+    a code that means several things is waiting to be split into codes, and
+    a code whose wording cannot be read is waiting for a vocabulary that
+    does not exist yet. The gate measures which one it is -- the list says
+    the reason, and the source has to agree.
+    """
     wordings, unmeasured = throw_sites()
     known = enum_codes()
     for code in sorted(COARSE):
@@ -285,8 +305,14 @@ def test_a_named_gap_really_is_a_gap() -> None:
             "list is of codes that exist"
         )
         said = wordings.get(code, set())
-        assert len(said) > 1 or code in unmeasured, (
-            f"`{code}` is named as a gap, but it answers with "
-            f"{len(said)} sentence(s) ({sorted(said)}) -- it can be translated "
-            "now, so it should not be waiting"
-        )
+        if code in SEVERAL_MEANINGS:
+            assert len(said) > 1, (
+                f"`{code}` is named as a gap because it means several things, but it answers with "
+                f"{len(said)} sentence(s) ({sorted(said)}) -- it can be translated now, so it "
+                "should not be waiting"
+            )
+        else:
+            assert code in unmeasured, (
+                f"`{code}` is named as a gap because its wording cannot be read, but its wording "
+                "is a literal after all -- it can be translated now, so it should not be waiting"
+            )

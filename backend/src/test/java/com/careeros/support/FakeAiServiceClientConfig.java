@@ -53,7 +53,7 @@ public class FakeAiServiceClientConfig {
 
         private void maybeFailIngest() {
             if (failIngest) {
-                throw new ApiException(ApiErrorCode.AI_SERVICE_ERROR, "fake ai-service outage");
+                throw new ApiException(ApiErrorCode.AI_SERVICE_UNAVAILABLE, "fake ai-service outage");
             }
         }
 

@@ -191,6 +191,15 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   version yet), each with its own sentence in both languages. The statuses
   did not move: all three are still the 404 they were.
 
+  **And the assistant's own errors are two.** `AI_SERVICE_ERROR` answered
+  with two different sentences -- the upstream did not answer (a refused
+  connection, a timeout, or a status this service does not read) and the
+  upstream answered with nothing -- and one sentence for it would have been
+  wrong about one of the two. They are two codes now
+  (`AI_SERVICE_UNAVAILABLE`, `AI_SERVICE_EMPTY_RESPONSE`), each with its own
+  sentence in both languages, and the statuses did not move: both are still
+  the 502 they were.
+
   **And the browser's 404 rule reads the code.** The backend answers a 404 in
   two different ways -- the route is not served, or the route is served and the
   record it reads is gone -- and both arrive as a 404, so a rule that reads the
@@ -232,15 +241,24 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   **And the services' codes are classified now.** Every code the services can
   send is either **translated** (the browser's table answers it, in both
   languages) or **named as a gap** — and the gap list is the queue for the finer
-  vocabulary: `AI_SERVICE_BAD_REQUEST`, `AI_SERVICE_ERROR`.
+  vocabulary.
   The gate
   *measures* the split rather than remembering it: a code that is translated
   must carry one meaning (read off the throw sites), a code that is named as a
-  gap must carry several, and a code nobody classified fails the gate. So the
-  sixty-five codes that mean one thing are bilingual today, and the two that
-  mean several carry two distinct sentences between them, so they keep
-  the server's words until the throw sites name them properly — two more codes, one per distinct wording, and then the
-  gap list empties.
+  gap must be one for a stated reason, and a code nobody classified fails the
+  gate. So the sixty-seven codes that mean one thing are bilingual today, and
+  the one that is left keeps the server's own words for a reason that is now
+  written down rather than implied.
+
+  **And there are two reasons a code can be a gap.** A code that means
+  several things is waiting to be split into codes — that is a queue of work,
+  and it is empty. A code whose wording cannot be read at all is waiting for
+  a vocabulary that does not exist yet: `AI_SERVICE_BAD_REQUEST` carries the
+  upstream's own sentence, and that sentence varies with the request, so a
+  sentence of its own would be wrong about most of the requests it answers.
+  The gate reads the reason out of the source and the list has to agree, so a
+  gap cannot rot into an excuse — and so the last one is a decision, not a
+  leftover.
 - **The export's readable half had one language (closed 2026-10-22).** 13.1's
   *human-readable* export — the print-ready document — was written in Chinese
   and had no other language, so an English reader's printable document was a

@@ -215,7 +215,7 @@ class MemoryControllerTest {
         // The one claim the controller's docstring makes that only the transport can keep:
         // "not yours" and "not there" are the same answer. HttpAiServiceClient.translateStatus
         // turns the ai-service's 404 into ApiException(NOT_FOUND); before that translation
-        // existed every upstream status was flattened to AI_SERVICE_ERROR (502), so a
+        // existed every upstream status was flattened to one 502, so a
         // browser correcting someone else's id was told the AI service had failed.
         when(ai.patchMemory(eq(MEMORY), eq("x"), eq(null), eq(ALICE)))
                 .thenThrow(new ApiException(ApiErrorCode.NOT_FOUND, "Resource not found"));
