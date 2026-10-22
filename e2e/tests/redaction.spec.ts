@@ -259,6 +259,57 @@ test("the notes and the contacts the reader typed travel in the bundle", async (
 });
 
 /**
+ * The printable document is in the reader's language.
+ *
+ * The export has two faces: the JSON a machine reads and the document a
+ * person reads. The document was written in Chinese and had no other
+ * language, so an English reader's "printable document" was a Chinese
+ * document -- and the copy census could not see it, because those words are
+ * not on a screen at all: they are in a server-side module, in a document.
+ *
+ * It also left out two sections: the notes the reader typed and the people
+ * they know. A section the bundle carries and the document does not is a
+ * section the reader cannot read, and the counts still said it was there.
+ */
+test("the printable document is in the reader's language", async ({ api }) => {
+  await unwrap(
+    await api.post("/knowledge/notes", {
+      title: "Salary research",
+      content: "Hangzhou senior backend, 40-60w total.",
+    })
+  );
+  await unwrap(
+    await api.post("/contacts", { name: "Li Ming", company: "Acme", relation: "Mentor" })
+  );
+
+  const bundle = await unwrap<Record<string, unknown>>(
+    await api.post("/data-portability/export", {})
+  );
+
+  const english = await unwrap<{ html?: string }>(
+    await api.post("/data-portability/render", { bundle, format: "html", locale: "en" })
+  );
+  const chinese = await unwrap<{ html?: string }>(
+    await api.post("/data-portability/render", { bundle, format: "html", locale: "zh" })
+  );
+
+  // The document says which language it is in.
+  expect(english.html, "the document does not declare its language").toContain(
+    '<html lang="en">'
+  );
+  expect(chinese.html, "the document does not declare its language").toContain(
+    '<html lang="zh">'
+  );
+
+  // The two tables the reader wrote into are in the document -- in either
+  // language, because the sections are the reader's, not the language's.
+  for (const html of [english.html ?? "", chinese.html ?? ""]) {
+    expect(html, "the document left out the reader's notes").toContain("Salary research");
+    expect(html, "the document left out the people they know").toContain("Li Ming");
+  }
+});
+
+/**
  * The anonymized export forgets the people.
  *
  * There are two ways to leave with your data. The **redaction** drops whole

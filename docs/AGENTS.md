@@ -243,9 +243,9 @@ Three properties hold across every one of them, and the census gates
   a sweep that ran under a random id would put another user's jobs in this one's
   board.
 
-## 8. The eight quiet failures
+## 8. The nine quiet failures
 
-Eight bugs in this repository looked like working code and were not. They are
+Nine bugs in this repository looked like working code and were not. They are
 written down because each one is a *shape* of failure, not a one-off: the next
 one will have the same shape, and the gate that catches it is the thing to
 reach for.
@@ -336,10 +336,34 @@ shapes of copy), a mechanism (the server's answer, not the client's), the
 scan's own rule (an anchor that is not a type), a round trip (the
 redacted file, read back by the path it exists for), a direction (the
 navigation *items*, not the table's keys), an ownership (the restore
-writes only the caller's rows), and a path (the anonymized export, built
-the way the button builds it). The general shape is the same in all eight:
-**the bug was where nobody was looking, and the answer was to look there,
-not to look harder.**
+writes only the caller's rows), a path (the anonymized export, built
+the way the button builds it), and a route (the render, called the way
+the bridge calls it). The general shape is the same in all nine: **the bug
+was where nobody was looking, and the answer was to look there, not to
+look harder.**
+
+**A route nothing ever called.** "Print view" on the export page has never
+worked. The render module was written, and the route that serves it was
+written, and the route *referenced* the module — but nothing ever imported
+it, so every call raised a `NameError`, the bridge turned it into a 502,
+and the reader's only sign was an error toast. The unit tests called the
+*function*; nothing called the *route*.
+
+It is the same shape as the copy census: **the thing that was tested and the
+thing the reader touches are not the same thing.** A function can be perfect
+and the route that serves it can be broken, and only calling the route the
+way the bridge calls it says which of the two is true.
+
+**And the document was in one language, and missing two sections.** The
+readable half of the export — the print-ready document — was written in
+Chinese and had no other language, so an English reader's printable document
+was a Chinese document; and the words live in a server-side module, in a
+document, so the copy census could not see them either. The document also
+left out the notes the reader typed and the people they know, so a section
+the bundle carried was a section the reader could not read. The words now
+live in one table, in every language the readable half ships in, and the
+request says which one the reader wants — because the bundle carries the
+data and the view carries the words.
 
 **A flag that set a marker and nothing else.** "Export anonymized" is the
 button a reader presses when the file is going to somebody else, and the

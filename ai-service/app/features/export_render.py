@@ -17,20 +17,9 @@ from __future__ import annotations
 import html
 from typing import Any
 
-# Sections, in display order.
-_SECTION_TITLES = {
-    "profile": "个人档案",
-    "resumes": "简历版本",
-    "knowledge": "知识库",
-    "job_descriptions": "职位描述",
-    "interviews": "模拟面试",
-    "memories": "长期记忆",
-    # The two the BACKEND owns (1.1.0) — the pipeline the candidate worked and
-    # the growth runs they built. A readable export that left them out would
-    # be a reading list, not a record of the search.
-    "applications": "申请记录",
-    "growth_plans": "成长报告",
-}
+# The section names and the document's words live in one table, in every
+# language the readable half ships in -- see ``export_words``.
+from app.features import export_words as words_mod
 
 
 def _esc(value: Any) -> str:
@@ -60,8 +49,17 @@ def _row(label: str, value: str) -> str:
     return f'<tr><th>{_esc(label)}</th><td>{value}</td></tr>'
 
 
-def to_html(bundle: dict) -> str:
-    """Render the bundle as a self-contained, print-ready HTML document."""
+def to_html(bundle: dict, locale: str | None = None) -> str:
+    """Render the bundle as a self-contained, print-ready HTML document.
+
+    ``locale`` is the reader's language. The document was Chinese-only, so
+    an English reader's printable document was a Chinese document; the words
+    now come from the shared table, and the caller says which language it
+    wants. An unknown language is English rather than a guess.
+    """
+    words = words_mod.words(locale)
+    titles = words_mod.section_titles(locale)
+
     bundle = bundle if isinstance(bundle, dict) else {}
     data = _dict_obj(bundle.get("data"))
     manifest = _dict_obj(bundle.get("manifest"))
@@ -70,9 +68,9 @@ def to_html(bundle: dict) -> str:
 
     parts: list[str] = []
     parts.append("<!doctype html>")
-    parts.append('<html lang="zh"><head><meta charset="utf-8">'
+    parts.append(f'<html lang="{words_mod.normalize_locale(locale)}"><head><meta charset="utf-8">'
                  '<meta name="viewport" content="width=device-width, initial-scale=1">'
-                 "<title>AI Career OS — 数据导出</title>")
+                 f"<title>{_esc(words['title'])}</title>")
     parts.append("<style>")
     parts.append(
         "body{font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,"
@@ -94,16 +92,16 @@ def to_html(bundle: dict) -> str:
     )
     parts.append("</style></head><body>")
 
-    parts.append("<h1>AI Career OS — 数据导出</h1>")
-    parts.append(f'<p class="meta">生成时间：{_esc(bundle.get("generated_at","n/a"))}</p>')
+    parts.append(f"<h1>{_esc(words['title'])}</h1>")
+    parts.append(f'<p class="meta">{_esc(words["generated"])}: {_esc(bundle.get("generated_at","n/a"))}</p>')
     uid = _esc(user.get("id", "n/a"))
     anon = user.get("anonymized")
     if anon:
-        parts.append('<p class="note">⚠ 已匿名导出（个人标识字段已移除）</p>')
-    parts.append(f'<p class="meta">用户 ID：{uid}' +
-                 ('（已匿名）' if anon else '') + '</p>')
-    parts.append(f'<p class="meta">Schema：{_esc(manifest.get("schema_version","n/a"))}</p>')
-    parts.append(f'<p class="meta">内容哈希：<code>{_esc(manifest.get("content_hash","n/a"))}</code></p>')
+        parts.append(f'<p class="note">{_esc(words["anonymous"])}</p>')
+    parts.append(f'<p class="meta">{_esc(words["userId"])}: {uid}' +
+                 (f' {_esc(words["anonymized"])}' if anon else '') + '</p>')
+    parts.append(f'<p class="meta">{_esc(words["schema"])}: {_esc(manifest.get("schema_version","n/a"))}</p>')
+    parts.append(f'<p class="meta">{_esc(words["contentHash"])}: <code>{_esc(manifest.get("content_hash","n/a"))}</code></p>')
 
     def section(title: str, body: str) -> None:
         parts.append(f"<h2>{_esc(title)}</h2>")
@@ -117,7 +115,7 @@ def to_html(bundle: dict) -> str:
             for k in ("display_name", "email", "headline", "summary")
             if profile.get(k)
         )
-        section(_SECTION_TITLES["profile"], f"<table>{rows}</table>" if rows else "<p>—</p>")
+        section(titles["profile"], f"<table>{rows}</table>" if rows else "<p>—</p>")
 
     # Resumes
     resumes = _dicts(data.get("resumes"))
@@ -127,7 +125,7 @@ def to_html(bundle: dict) -> str:
             f"v{_esc(r.get('version','?'))} · {_clip(r.get('plaintext'))}</li>"
             for r in resumes
         )
-        section(_SECTION_TITLES["resumes"], f"<ul>{items}</ul>")
+        section(titles["resumes"], f"<ul>{items}</ul>")
 
     # Knowledge
     knowledge = _dicts(data.get("knowledge"))
@@ -137,7 +135,7 @@ def to_html(bundle: dict) -> str:
             f"{_esc(d.get('status'))}</li>"
             for d in knowledge
         )
-        section(_SECTION_TITLES["knowledge"], f"<ul>{items}</ul>")
+        section(titles["knowledge"], f"<ul>{items}</ul>")
 
     # Job descriptions
     jds = _dicts(data.get("job_descriptions"))
@@ -147,17 +145,17 @@ def to_html(bundle: dict) -> str:
             f"· {_clip(j.get('raw_text') or j.get('text'))}</li>"
             for j in jds
         )
-        section(_SECTION_TITLES["job_descriptions"], f"<ul>{items}</ul>")
+        section(titles["job_descriptions"], f"<ul>{items}</ul>")
 
     # Interviews
     interviews = _dicts(data.get("interviews"))
     if interviews:
         items = "".join(
-            f"<li>{_esc(s.get('job_title') or '面试')} · "
-            f"{len(s.get('turns') or [])} 轮 · {_esc(s.get('status') or '')}</li>"
+            f"<li>{_esc(s.get('job_title') or words['interview'])} · "
+            f"{len(s.get('turns') or [])} {words['rounds']} · {_esc(s.get('status') or '')}</li>"
             for s in interviews
         )
-        section(_SECTION_TITLES["interviews"], f"<ul>{items}</ul>")
+        section(titles["interviews"], f"<ul>{items}</ul>")
 
     # Memories
     memories = _dicts(data.get("memories"))
@@ -166,7 +164,7 @@ def to_html(bundle: dict) -> str:
             f"<li>[{_esc(m.get('kind'))}] {_clip(m.get('content'))}</li>"
             for m in memories
         )
-        section(_SECTION_TITLES["memories"], f"<ul>{items}</ul>")
+        section(titles["memories"], f"<ul>{items}</ul>")
 
     # Applications — the pipeline the candidate actually worked.
     apps = _dicts(data.get("applications"))
@@ -178,23 +176,46 @@ def to_html(bundle: dict) -> str:
             + "</li>"
             for a in apps
         )
-        section(_SECTION_TITLES["applications"], f"<ul>{items}</ul>")
+        section(titles["applications"], f"<ul>{items}</ul>")
 
     # Growth runs — one row per report the candidate built.
     plans = _dicts(data.get("growth_plans"))
     if plans:
         items = "".join(
-            f"<li>{_esc(p.get('target_role'))} · 覆盖率 "
+            f"<li>{_esc(p.get('target_role'))} · {words['coverage']} "
             f"{_esc(round(float(p.get('coverage') or 0) * 100))}%"
             + (f" · {_esc(p.get('created_at'))}" if p.get("created_at") else "")
             + "</li>"
             for p in plans
         )
-        section(_SECTION_TITLES["growth_plans"], f"<ul>{items}</ul>")
+        section(titles["growth_plans"], f"<ul>{items}</ul>")
+
+    # The notes the reader typed and the people they know. They were in the
+    # bundle from 1.2.0 and missing from the document, so the readable export
+    # left out the two tables the reader wrote into.
+    notes = _dicts(data.get("notes"))
+    if notes:
+        items = "".join(
+            f"<li>{_esc(n.get('title') or '')} · {_clip(n.get('content'))}</li>"
+            for n in notes
+        )
+        section(titles["notes"], f"<ul>{items}</ul>")
+
+    contacts = _dicts(data.get("contacts"))
+    if contacts:
+        items = "".join(
+            f"<li>{_esc(c.get('name') or '')}"
+            + (f" · {_esc(c.get('company'))}" if c.get("company") else "")
+            + (f" · {_esc(c.get('relation'))}" if c.get("relation") else "")
+            + (f" · {_clip(c.get('notes'))}" if c.get("notes") else "")
+            + "</li>"
+            for c in contacts
+        )
+        section(titles["contacts"], f"<ul>{items}</ul>")
 
     parts.append("<hr>")
     stat = " · ".join(f"{_esc(k)}={_esc(v)}" for k, v in counts.items())
-    parts.append(f'<p class="meta">统计：{stat}</p>')
+    parts.append(f'<p class="meta">{_esc(words["stats"])}: {stat}</p>')
 
     parts.append("</body></html>")
     return "\n".join(parts)

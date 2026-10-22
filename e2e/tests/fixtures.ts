@@ -1,4 +1,10 @@
-import { test as base, expect, type APIRequestContext, type Page } from "@playwright/test";
+import {
+  test as base,
+  expect,
+  type APIRequestContext,
+  type APIResponse,
+  type Page,
+} from "@playwright/test";
 
 /**
  * Shared fixtures for the golden-journey suite.
@@ -58,8 +64,10 @@ export async function registerUser(
 ): Promise<E2EUser> {
   const email = overrides.email ?? uniqueEmail();
   const displayName = overrides.displayName ?? "E2E Runner";
-  const res = await request.post(`${API_URL}/auth/register`, {
-    data: { email, password: TEST_PASSWORD, displayName },
+  const res = await postWithRetry(request, `${API_URL}/auth/register`, {
+    email,
+    password: TEST_PASSWORD,
+    displayName,
   });
 
   // Every test provisions its own account for isolation, so a full run issues one
@@ -88,6 +96,35 @@ export async function registerUser(
     accessToken: body.data.tokens.accessToken,
     refreshToken: body.data.tokens.refreshToken,
   };
+}
+
+/**
+ * POST a body, and try once more if the server was too slow to answer.
+ *
+ * The suite provisions an account per case, so the backend is asked for a
+ * registration every few seconds; one that is still warming up, or a token
+ * bucket that has just refilled, can take longer than a single request's
+ * budget. A timeout is the server being slow, not the request being wrong,
+ * and the retry is what keeps a slow run from failing on the first case it
+ * reaches. A 429 is *not* retried -- that is the rate limit saying "slow
+ * down", and the caller turns it into a message of its own.
+ */
+async function postWithRetry(
+  request: APIRequestContext,
+  url: string,
+  data: unknown
+): Promise<APIResponse> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      return await request.post(url, { data });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (!/timeout|ECONNRESET|socket hang up/i.test(message)) throw err;
+      lastError = err;
+    }
+  }
+  throw lastError;
 }
 
 /** An API client already authorised as `user`. */

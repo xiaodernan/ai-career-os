@@ -84,10 +84,13 @@ public class DataPortabilityController {
     /**
      * 13.1 -- the human-readable half: a print-ready document of the bundle.
      * The HTML is self-contained, so the browser can print it straight to PDF.
+     *
+     * The document is written in the reader's language, so the request says
+     * which one: the bundle carries the data and the view carries the words.
      */
     @PostMapping("/render")
     public Map<String, Object> renderBundle(@CurrentUser AuthUser user,
                                              @RequestBody @Valid RenderRequest request) {
-        return aiService.renderBundle(user.id(), request.bundle(), request.format());
+        return aiService.renderBundle(user.id(), request.bundle(), request.format(), request.locale());
     }
 }

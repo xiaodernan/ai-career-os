@@ -54,8 +54,14 @@ public final class DataPortabilityDtos {
      * 13.1 -- render the bundle as a document. `format` is "html" or "pdf";
      * the PDF converter is an optional dependency, so a build without it
      * answers the HTML -- which is already print-ready -- and says why.
+     *
+     * `locale` is the reader's language, because the document is the
+     * reader's: the bundle carries the data and the view carries the
+     * words. It travels with the request because the bundle does not know
+     * who is reading it.
      */
     public record RenderRequest(Map<String, Object> bundle,
-                                @Size(max = 8) String format) {
+                                @Size(max = 8) String format,
+                                @Size(max = 16) String locale) {
     }
 }

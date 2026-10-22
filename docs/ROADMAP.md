@@ -106,17 +106,21 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   a key is now in one place (`lib/i18n/locale-context.tsx`'s `lookup`/`fill`), and
   the piece still missing is reading the reader's language *outside* a render — a
   toast is raised from an event handler, long after the render that knew it.
-- **The export's readable half is Chinese-only (measured 2026-10-22, not closed).**
-  13.1's *human-readable* export — the Markdown document and the print-ready
-  HTML — is written in Chinese and has no other language: the section names, the
-  title, the headings, the labels, and the note that says the file is
-  anonymized. Measured: about 35 sentences across `export.py`'s `to_markdown`
-  and `export_render.py`, so the work is the sentences plus a way to say which
-  language a bundle should be rendered in. The bundle already carries the
-  reader's id and the `anonymized` marker, so the locale could travel the same
-  way; nothing carries it yet. An English reader's "printable document" is a
-  Chinese document, which is the same class of defect as the rest of the
-  i18n holes: a word the reader cannot change.
+- **The export's readable half had one language (closed 2026-10-22, except the
+  Markdown).** 13.1's *human-readable* export — the print-ready document — was
+  written in Chinese and had no other language, so an English reader's printable
+  document was a Chinese document. Measured: about 35 sentences across
+  `export.py`'s `to_markdown` and `export_render.py`, so the work was the
+  sentences plus a way to say which language a bundle should be rendered in.
+  The bundle already carries the reader's id and the `anonymized` marker, so
+  the locale could travel the same way; nothing carried it yet. An English
+  reader's "printable document" was a Chinese document, which is the same class
+  of defect as the rest of the i18n holes: a word the reader cannot change.
+  **The HTML document is done** — the words live in one table
+  (`export_words.py`), in every language the readable half ships in, and the
+  request says which one the reader wants. **The Markdown view is not**: it is
+  the operator's quick look at a bundle, so it still needs the same table
+  behind a `--locale` flag of its own.
 - **The restore's delete semantics for the sections the current state does not
   cover.** The plan tells a delete from a create by comparing the bundle with the
   caller's current state, and the backend's current state covers the profile, the

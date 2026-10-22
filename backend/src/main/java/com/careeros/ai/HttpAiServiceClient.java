@@ -260,9 +260,18 @@ public class HttpAiServiceClient implements AiServiceClient {
 
     @Override
     public Map<String, Object> renderBundle(UUID userId, Map<String, Object> bundle, String format) {
+        return renderBundle(userId, bundle, format, null);
+    }
+
+    @Override
+    public Map<String, Object> renderBundle(UUID userId, Map<String, Object> bundle, String format,
+                                            String locale) {
         Map<String, Object> body = new HashMap<>();
         body.put("bundle", bundle);
         body.put("format", format == null || format.isBlank() ? "html" : format);
+        if (locale != null && !locale.isBlank()) {
+            body.put("locale", locale);
+        }
         return post("/internal/features/render-bundle", userId, body);
     }
 

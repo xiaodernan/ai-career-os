@@ -113,6 +113,18 @@ public interface AiServiceClient {
     Map<String, Object> renderBundle(UUID userId, Map<String, Object> bundle, String format);
 
     /**
+     * The document's language.
+     *
+     * The default ignores it, so a client that does not render documents in
+     * the reader's language still works: the words are the document's, and a
+     * client that cannot say which language they are leaves the default.
+     */
+    default Map<String, Object> renderBundle(UUID userId, Map<String, Object> bundle, String format,
+                                              String locale) {
+        return renderBundle(userId, bundle, format);
+    }
+
+    /**
      * Parse a feed (RSS/Atom XML or board-API JSON) into raw postings (14.2).
      * The user id is the caller's: the ingestion runs under their context, so
      * the ai-service can scope anything it writes back to them.

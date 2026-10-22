@@ -10,7 +10,8 @@ stale cached row must produce an empty/safe result, never crash the request path
 import pytest
 
 from app.features import (company, counter_offer, demand, equity, export, export_redact,
-                             export_render, interview_prep, learning, match, negotiation,
+                             export_render, export_words, interview_prep, learning, match,
+                             negotiation,
                              offers, prioritize, progress, progression, readiness,
                              roles, salary)
 
@@ -408,7 +409,9 @@ def test_redact_bundle_still_rejects_unknown_section():
 def test_to_html_none_bundle_is_safe():
     out = export_render.to_html(None)
     assert out.startswith("<!doctype html>")
-    assert "数据导出" in out
+    # The document's own words, in the language it was asked for.
+    assert export_words.words("en")["title"] in out
+    assert export_words.words("zh")["title"] in export_render.to_html(None, "zh")
 
 
 def test_to_html_null_and_junk_sections_do_not_crash():

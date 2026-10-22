@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 from app.core.deps import Ctx, require_internal
 from app.db import domain, observability
 from app.features import company as company_mod
+from app.features import export_render as export_render_mod
 from app.features import gap_analysis as gap_mod
 from app.features import growth as growth_mod
 from app.features import jd_analyze as jd_an
@@ -828,9 +829,14 @@ class RenderBundleReq(BaseModel):
     `format` is "html" or "pdf". The PDF converter is an optional dependency
     (weasyprint), so a build without it answers the HTML — which is already
     print-ready — and says why the PDF is not there.
+
+    `locale` is the reader's language, because the document is the reader's:
+    the bundle carries the data and the view carries the words. It travels
+    with the request because the bundle does not know who is reading it.
     """
     bundle: dict
     format: str = "html"
+    locale: str | None = None
 
 
 @router.post("/render-bundle")
@@ -842,7 +848,7 @@ async def render_bundle_ep(req: RenderBundleReq, ctx: Ctx = Depends(require_inte
             pdf = export_render_mod.to_pdf(req.bundle)
             await observability.finish_run(run_id, "completed")
             return {"format": "pdf", "bytes_base64": base64.b64encode(pdf).decode("ascii")}
-        html_text = export_render_mod.to_html(req.bundle)
+        html_text = export_render_mod.to_html(req.bundle, req.locale)
         await observability.finish_run(run_id, "completed")
         return {"format": "html", "html": html_text}
     except RuntimeError as exc:

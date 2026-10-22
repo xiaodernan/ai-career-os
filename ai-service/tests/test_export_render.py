@@ -9,6 +9,7 @@ import pytest
 
 from app.features import export as ex
 from app.features import export_render as rnd
+from app.features import export_words as words_mod
 
 
 def _bundle(anonymized: bool = False) -> dict:
@@ -33,11 +34,21 @@ def _bundle(anonymized: bool = False) -> dict:
 
 
 def test_to_html_contains_title_and_all_sections():
-    html = rnd.to_html(_bundle())
+    bundle = _bundle()
+    html = rnd.to_html(bundle)
     assert "AI Career OS" in html
     assert html.startswith("<!doctype html>")
-    for title in ("个人档案", "简历版本", "知识库", "职位描述", "模拟面试", "长期记忆"):
-        assert title in html
+    # Every section the bundle carries has a heading in the document, and the
+    # names are asked for rather than written down -- the table has both
+    # languages, and the document is in one of them.
+    titles = words_mod.section_titles("en")
+    zh_html = rnd.to_html(bundle, "zh")
+    zh_titles = words_mod.section_titles("zh")
+    for section, rows in bundle["data"].items():
+        if not rows:
+            continue
+        assert titles[section] in html, f"the document has no heading for {section}"
+        assert zh_titles[section] in zh_html, f"the Chinese document has no heading for {section}"
 
 
 def test_to_html_escapes_user_content():
@@ -49,7 +60,8 @@ def test_to_html_escapes_user_content():
 
 def test_to_html_marks_anonymized():
     html = rnd.to_html(_bundle(anonymized=True))
-    assert "已匿名" in html
+    assert words_mod.words("en")["anonymized"] in html
+    assert words_mod.words("zh")["anonymized"] in rnd.to_html(_bundle(anonymized=True), "zh")
 
 
 def test_to_html_emits_profile_table_and_list_sections():

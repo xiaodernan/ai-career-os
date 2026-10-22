@@ -4,6 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
 import { fail } from "@/lib/hooks/failure";
+import { useLocale } from "@/lib/i18n/locale-context";
 import type {
   ExportBundle,
   ImportApplied,
@@ -79,13 +80,19 @@ export function useRedactBundle() {
 /**
  * 13.1 — the human-readable half: a print-ready document of the bundle. The
  * HTML is self-contained, so the browser can print it straight to PDF.
+ *
+ * The document is written in the reader's language, so the request carries
+ * it: the document is a view of the bundle, and the view is the reader's,
+ * not the server's.
  */
 export function useRenderBundle() {
+  const { locale } = useLocale();
   return useMutation({
     mutationFn: async (input: { bundle: unknown; format?: "html" | "pdf" }) =>
       (await api.create<unknown>(endpoints.dataRender, {
         bundle: input.bundle,
         format: input.format ?? "html",
+        locale,
       })) as RenderedBundle,
     onError: fail("Couldn't render the bundle."),
   });

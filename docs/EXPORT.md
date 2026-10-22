@@ -185,6 +185,32 @@ so equal data hashes equally across runs and machines.
   upserts `added` + `changed` and deletes `removed`. Because `content_hash` is
   stable, a no-op re-import produces empty diffs.
 
+## The readable half (13.1)
+
+The export has two faces: the JSON a machine reads and the document a person
+reads — the Markdown view and the print-ready HTML.
+
+The document was Chinese-only, so an English reader's printable document was a
+Chinese document; and the words live in a server-side module, in a document,
+so the copy census could not see them either — they are not on a screen. The
+words now live in one table (`app/features/export_words.py`), in every language
+the readable half ships in, and the request says which one the reader wants:
+the bundle carries the data and the view carries the words. An unknown
+language is English rather than a guess — the table is the product's account
+of itself, and a language it does not have is one it must not pretend to.
+
+The document also left out two sections: the notes the reader typed and the
+people they know. A section the bundle carries and the document does not is a
+section the reader cannot read, and the counts still said it was there. The
+gate holds the table against **every section the bundle carries**, so a
+section added later cannot be left out of the document.
+
+And the route that serves it never worked: the render module was never
+imported by the module that serves the route, so every call raised a
+`NameError` and the "Print view" button had never done anything but show an
+error toast. The unit tests called the *function*; nothing called the *route*.
+The gate now calls the route the way the bridge calls it.
+
 ## Anonymize (13.3)
 
 There are two ways to leave with your data. The **redaction** drops whole
