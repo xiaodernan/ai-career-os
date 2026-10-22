@@ -26,10 +26,11 @@ Return JSON only:
 
 async def understand(query: str, context_summary: str = "", *, user_id=None, run_id=None,
                      agent="rag") -> dict:
+    context = context_summary if isinstance(context_summary, str) else ""
     req = LLMRequest(
         messages=[
             LLMMessage("system", _SYSTEM),
-            LLMMessage("user", f"Conversation context:\n{context_summary[:1500] or '(none)'}\n\n"
+            LLMMessage("user", f"Conversation context:\n{context[:1500] or '(none)'}\n\n"
                                f"User query: {query}"),
         ],
         temperature=0.0, max_tokens=500)
@@ -39,7 +40,7 @@ async def understand(query: str, context_summary: str = "", *, user_id=None, run
     except Exception:
         out = {}
     return {
-        "rewritten": out.get("rewritten") or query,
+        "rewritten": out.get("rewritten") or (query if isinstance(query, str) else ""),
         "expansions": [e for e in (out.get("expansions") or []) if isinstance(e, str)][:3],
         "intent": out.get("intent") if out.get("intent") in _INTENTS else "other",
         "keywords": [k for k in (out.get("keywords") or []) if isinstance(k, str)][:8],

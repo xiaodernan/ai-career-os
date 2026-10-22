@@ -7,6 +7,8 @@ promises, because a knob that silently keeps the default on every code path make
 every experiment report the same experiment.
 """
 
+import asyncio
+
 import pytest
 
 from app.rag import pipeline
@@ -174,3 +176,26 @@ def test_compress_survives_none_and_junk_rows():
     assert "Go" in out[0]["text"]
     # non-str query terms are dropped rather than raising in the join
     assert compress([None, 7, "Go"], chunks)[0]["id"] == "c2"
+
+
+def test_rerank_survives_none_and_junk_rows(monkeypatch):
+    from app.rag import rerank as R
+    # a None list and non-dict rows must not crash the numbered-prompt build
+    out = asyncio.run(R.rerank("q", None))
+    assert out == []
+    chunks = [None, "junk", {"id": "c1", "text": None},
+              {"id": "c2", "text": "Built a Go service", "section_path": "exp"}]
+    got = asyncio.run(R.rerank("q", chunks, top_n=2))
+    assert [c["id"] for c in got] == ["c1", "c2"]
+
+
+def test_understand_survives_none_context(monkeypatch):
+    from app.rag import rewrite as W
+    async def fake_ask_json(req, **kw):
+        raise AssertionError("must not be reached -- context handling is upstream")
+
+    monkeypatch.setattr(W, "ask_json", fake_ask_json)
+    # a None context summary used to raise TypeError on the slice
+    out = asyncio.run(W.understand(None, None))
+    assert out["intent"] == "other"
+    assert out["rewritten"] == ""        # a None query degrades, not crashes

@@ -9,12 +9,13 @@ from app.providers.base import LLMMessage, LLMRequest
 async def rerank(query: str, chunks: list[dict], top_n: int = 8, *,
                  user_id=None, run_id=None, agent="rag") -> list[dict]:
     s = get_settings()
-    if s.rerank_mode == "none" or len(chunks) <= top_n:
-        return chunks[:top_n]
-    candidates = chunks[:25]
+    rows = [c for c in (chunks or []) if isinstance(c, dict)]
+    if s.rerank_mode == "none" or len(rows) <= top_n:
+        return rows[:top_n]
+    candidates = rows[:25]
     numbered = "\n\n".join(
         f"[{i}] ({c.get('source_kind') or c.get('kind')}/{c.get('section_path','')}) "
-        f"{c['text'][:600]}" for i, c in enumerate(candidates))
+        f"{str(c.get('text') or '')[:600]}" for i, c in enumerate(candidates))
     req = LLMRequest(
         messages=[
             LLMMessage("system",
@@ -37,6 +38,6 @@ async def rerank(query: str, chunks: list[dict], top_n: int = 8, *,
 
     if run_id:
         await observability.trace(run_id, "rerank", agent, {
-            "scores": [{"chunk_id": str(c["id"]), "rrf": round(c.get("rrf", 0), 5),
+            "scores": [{"chunk_id": str(c.get("id")), "rrf": round(c.get("rrf") or 0, 5),
                         "rerank": c.get("rerank")} for c in ordered[:top_n]]})
     return ordered[:top_n]
