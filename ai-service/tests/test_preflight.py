@@ -61,6 +61,29 @@ def test_insane_pool_fails():
     assert "db_pool_sane" in _failed_names(P.run_preflight(s))
 
 
+def test_string_pool_sizes_are_accepted_not_crashed():
+    # config loaded from the environment arrives as text: "8" is a usable size,
+    # and comparing it with `>=` against an int used to raise TypeError
+    s = {**PROD_GOOD, "db_pool_min": "2", "db_pool_max": "10"}
+    report = P.run_preflight(s)
+    assert report["ok"] is True
+    assert "db_pool_sane" not in _failed_names(report)
+
+
+def test_non_numeric_pool_size_fails_instead_of_crashing():
+    s = {**PROD_GOOD, "db_pool_min": "eight", "db_pool_max": "10"}
+    report = P.run_preflight(s)
+    assert "db_pool_sane" in _failed_names(report)
+    detail = next(c["detail"] for c in report["checks"] if c["name"] == "db_pool_sane")
+    assert "not numbers" in detail
+
+
+def test_absent_pool_sizes_default_to_sane():
+    # a caller that names no pool keys at all must not be failed for it
+    s = {k: v for k, v in PROD_GOOD.items() if not k.startswith("db_pool_")}
+    assert "db_pool_sane" not in _failed_names(P.run_preflight(s))
+
+
 # ---------------- allowed / warnings ----------------
 
 

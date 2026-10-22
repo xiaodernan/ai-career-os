@@ -61,6 +61,23 @@ def _check(name: str, ok: bool, severity: str, detail: str) -> Check:
     return Check(name=name, ok=ok, severity=severity, detail=detail)
 
 
+def _as_int(value, default: int = 0) -> tuple[int, bool]:
+    """A settings field as ``(int, was_a_number)``.
+
+    Configuration loaded from the environment arrives as text, so a pool size can
+    be ``"8"`` (usable) or ``"eight"`` (not). Coercing to a default keeps the
+    comparison total instead of raising ``TypeError`` on ``str >= int``, while the
+    flag lets the caller report the misconfiguration rather than silently read it
+    as zero.
+    """
+    if value is None or isinstance(value, bool):
+        return default, False
+    try:
+        return int(value), True
+    except (TypeError, ValueError):
+        return default, False
+
+
 def run_preflight(settings) -> dict:
     """Return ``{ok, checks, failures, warnings}`` for a settings object or dict."""
     prod = _is_prod(settings)
@@ -69,8 +86,6 @@ def run_preflight(settings) -> dict:
     token = str(_get(settings, "internal_api_token", ""))
     db_url = str(_get(settings, "database_url", ""))
     backend_url = str(_get(settings, "backend_base_url", ""))
-    pool_min = _get(settings, "db_pool_min", 0)
-    pool_max = _get(settings, "db_pool_max", 0)
 
     checks: list[Check] = []
 
@@ -116,10 +131,19 @@ def run_preflight(settings) -> dict:
         "backend URL still points at localhost"
         if (prod and "localhost" in backend_url) else "backend URL is routable"))
 
-    checks.append(_check(
-        "db_pool_sane", pool_max >= pool_min, "fail",
-        f"db_pool_max ({pool_max}) < db_pool_min ({pool_min})" if pool_max < pool_min
-        else f"pool {pool_min}..{pool_max}"))
+    raw_min = _get(settings, "db_pool_min", 0)
+    raw_max = _get(settings, "db_pool_max", 0)
+    pool_min, min_ok = _as_int(raw_min)
+    pool_max, max_ok = _as_int(raw_max)
+    if min_ok and max_ok:
+        pool_ok = pool_max >= pool_min
+        pool_detail = (f"db_pool_max ({pool_max}) < db_pool_min ({pool_min})"
+                       if not pool_ok else f"pool {pool_min}..{pool_max}")
+    else:
+        pool_ok = False
+        pool_detail = (f"db_pool_min/db_pool_max are not numbers "
+                       f"({raw_min!r}/{raw_max!r})")
+    checks.append(_check("db_pool_sane", pool_ok, "fail", pool_detail))
 
     failures = [c for c in checks if not c.ok and c.severity == "fail"]
     warnings = [c for c in checks if not c.ok and c.severity == "warn"]
