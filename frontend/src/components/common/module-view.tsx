@@ -3,7 +3,7 @@
 import * as React from "react";
 import type { UseQueryResult } from "@tanstack/react-query";
 import Link from "next/link";
-import { RefreshCw, Sparkles } from "lucide-react";
+import { PlugZap, RefreshCw, RotateCcw, Sparkles } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
 import { EmptyState } from "@/components/common/empty-state";
 import { ErrorState } from "@/components/common/error-state";
@@ -11,12 +11,22 @@ import { LoadingListSkeleton } from "@/components/common/loading-skeletons";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ApiError } from "@/lib/api/client";
+import { missingEndpointMessage } from "@/lib/api/missing-endpoint";
 import { useLocale } from "@/lib/i18n/locale-context";
 import type { Page } from "@/lib/api/types";
 
 /**
  * ModuleView — the shared async list shell for every (app) resource page.
- * Enforces: skeleton → content | 404 empty-state | error+retry. No fake data.
+ * Enforces: skeleton → content | 404 not-live-state | error+retry. No fake data.
+ *
+ * The 404 is read by its **code**, not by its status. A 404 is two different
+ * answers: the route is not served (`NOT_FOUND`), or the route is served and
+ * the record it reads is gone (one code per record). Reporting the first as
+ * an empty list is a false claim about the product, and so is reporting the
+ * second as one -- the record is gone, and the reader can do something about
+ * that. So the code decides: a route that is not served gets the not-live
+ * state, and everything else gets the error surface, which shows the code's
+ * own sentence.
  */
 export function ModuleView<T>({
   title,
@@ -49,7 +59,7 @@ export function ModuleView<T>({
   children?: React.ReactNode;
 }) {
   const { t } = useLocale();
-  const notFound = query.error instanceof ApiError && query.error.isNotFound;
+  const routeMissing = query.error instanceof ApiError && query.error.code === "NOT_FOUND";
 
   return (
     <div className="space-y-6">
@@ -82,21 +92,16 @@ export function ModuleView<T>({
       ) : query.isError ? (
         <Card>
           <CardContent>
-            {notFound ? (
+            {routeMissing ? (
               <EmptyState
-                icon={<Sparkles aria-hidden />}
-                title={emptyHint.title}
-                description={emptyHint.description}
+                icon={<PlugZap aria-hidden />}
+                title={t("common.notLiveTitle")}
+                description={missingEndpointMessage()}
                 action={
-                  ctaHref ? (
-                    <Button variant="ai" size="sm" asChild>
-                      <Link href={ctaHref}>{ctaLabel ?? t("common.openCopilot")}</Link>
-                    </Button>
-                  ) : (
-                    <Button variant="outline" size="sm" onClick={() => query.refetch()}>
-                      {t("common.tryAgain")}
-                    </Button>
-                  )
+                  <Button variant="outline" size="sm" onClick={() => query.refetch()}>
+                    <RotateCcw aria-hidden />
+                    {t("common.checkAgain")}
+                  </Button>
                 }
               />
             ) : (

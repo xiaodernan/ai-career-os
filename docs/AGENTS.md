@@ -445,6 +445,14 @@ so the boundary's rule reads the code, and the failure describer shows the
 code's own sentence before it falls back to the version sentence. A finer
 vocabulary with a rule that ignores it is a vocabulary nobody ever sees.
 
+And the two places a 404 is decided have to decide it the same way. The
+boundary and the list shell each answered the status alone, and each had
+its own wrong answer: a version skew the reader could do nothing about, or
+an empty list for a record that was gone. The code is the only part of the
+error that says which of the two happened, so both read it -- and a rule
+written down in one shell and not the other is a rule the reader meets in
+one place and not the other.
+
 **And the measurement had to learn the third road.** A code reaches the
 reader three ways: a throw, the envelope builder, and the framework's own
 edges — the 401, the 403, the 404, the 429. A measurement that read only

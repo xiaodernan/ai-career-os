@@ -200,8 +200,17 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   reads the code now, and the failure describer shows the code's own sentence
   *before* it falls back to the version sentence. A deleted record reads as
   "that job is no longer here", in the reader's language, and not as a version
-  mismatch. The second shell -- `module-view.tsx`, five screens -- still reads
-  the status alone, and that is the half that is still open.
+  mismatch.
+
+  **And the second shell reads it too.** `module-view.tsx` -- the list shell
+  five screens spend -- decided the same thing from the status, so a 404
+  landed on the screen's own "nothing here yet" hint: a list that is not
+  empty, and a route that is not served, both reported as an empty list,
+  with an action that sends the reader to the assistant to look for work
+  that is there. It reads the code now. A route that is not served gets the
+  not-live state (the version sentence and a "check again" button), and a
+  record that is gone gets the error surface, which shows the code's own
+  sentence.
 
   **And a code travels by three roads.** A throw (`new ApiException`), the
   envelope builder (`ApiError.of`), and the framework's own edges — the 401,

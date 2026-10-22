@@ -31,6 +31,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 BOUNDARY = ROOT / "frontend" / "src" / "components" / "common" / "query-boundary.tsx"
+MODULE_VIEW = ROOT / "frontend" / "src" / "components" / "common" / "module-view.tsx"
 FAILURE = ROOT / "frontend" / "src" / "lib" / "hooks" / "failure.ts"
 CLIENT = ROOT / "frontend" / "src" / "lib" / "api" / "client.ts"
 CODES = ROOT / "backend" / "src" /"main" / "java" / "com" / "careeros" / "common" / "ApiErrorCode.java"
@@ -68,6 +69,25 @@ def test_the_boundarys_missing_endpoint_rule_reads_the_code_and_not_the_status()
     assert "501" in body, (
         "a 501 still means the service does not implement the route, and the rule dropped it"
     )
+
+
+def test_the_second_shell_reads_the_code_and_not_the_status() -> None:
+    """A list shell that reports a gone record as an empty list is lying.
+
+    The boundary and the list shell are the two places a 404 is decided,
+    and they have to decide it the same way: a route that is not served is
+    a version skew, and a record that is gone is a record that is gone --
+    the reader can do something about the second one.
+    """
+    text = read(MODULE_VIEW)
+    assert "isNotFound" not in text, (
+        "the second shell decides 'the endpoint is missing' from the status alone, so a record "
+        "that is gone is reported as an empty list")
+    assert 'query.error.code === "NOT_FOUND"' in text, (
+        "the second shell no longer reads the code, so it cannot tell a route that is not served "
+        "from a record that is gone")
+    assert "missingEndpointMessage()" in text, (
+        "a route that is not served no longer says so: the reader is told the list is empty")
 
 
 def test_the_failure_describer_shows_the_tables_sentence_before_the_version_sentence() -> None:

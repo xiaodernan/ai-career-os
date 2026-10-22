@@ -316,27 +316,39 @@ def test_the_run_a_user_opens_by_url_id_gets_the_version_sentence():
         "the retry button this finding names is spelled differently now"
 
 
-def test_the_second_shell_answers_the_same_404_with_the_screen_s_own_empty_hint():
+def test_the_second_shell_reads_the_code_and_reports_a_gone_record_as_gone():
+    """The fold is closed on this side too.
+
+    The second shell used to read the status, so a 404 -- a route that is
+    not served *or* a record that is gone -- landed on the screen's own
+    "nothing here yet" hint. The code tells the two apart, and the shell
+    reads it now: a route that is not served gets the not-live state, and
+    a record that is gone gets the error surface, which shows the code's
+    own sentence.
+    """
     mv = read(MODULE_VIEW)
-    assert stmt(mv, "404 empty-state") == \
-        "* Enforces: skeleton \u2192 content | 404 empty-state | error+retry. No fake data.", (
+    assert stmt(mv, "404 not-live-state") == \
+        "* Enforces: skeleton \u2192 content | 404 not-live-state | error+retry. No fake data.", (
         "the second shell's own statement of what it does with a 404 moved")
-    assert stmt(mv, "const notFound =") == \
-        "const notFound = query.error instanceof ApiError && query.error.isNotFound;", (
+    assert stmt(mv, "const routeMissing =") == \
+        'const routeMissing = query.error instanceof ApiError && query.error.code === "NOT_FOUND";', (
         "ModuleView's 404 rule changed shape; re-read which fields it consults")
-    assert "code" not in stmt(mv, "const notFound ="), "the second shell reads a code now, so its fold is closing too"
-    assert mv.index("query.isError ? (") < mv.index("notFound ? ("), (
+    assert "isNotFound" not in mv, (
+        "the second shell reads the status alone again, so a record that is gone is reported as "
+        "an empty list")
+    assert mv.index("query.isError ? (") < mv.index("routeMissing ? ("), (
         "the 404 test no longer sits inside the error branch, so it is not a verdict on failures")
-    branch = mv[mv.index("notFound ? ("): mv.index("<ErrorState")]
-    assert "title={emptyHint.title}" in branch and "ctaHref" in branch, (
-        "a 404 no longer renders the screen's designed empty hint: %s" % " ".join(branch.split())[:200])
+    branch = mv[mv.index("routeMissing ? ("): mv.index("<ErrorState")]
+    assert "missingEndpointMessage()" in branch and "common.notLiveTitle" in branch, (
+        "a route that is not served no longer renders the not-live state: %s" % " ".join(branch.split())[:200])
+    assert "emptyHint.title" not in branch, (
+        "the not-live state shows the screen's own empty title again, so the reader is told the "
+        "list is empty when the route is not served")
     assert mv[: mv.index("<ErrorState")].rstrip().endswith(") : ("), (
         "ErrorState is no longer the else arm of the same 404 test, so the claim above is a different one")
     assert "isEmptyPage" not in mv, "the two shells now share one empty test; re-read the claim below"
     assert "!query.data?.items.length" in mv, (
         "ModuleView's second implementation of 'has no rows' moved")
-    assert "missingEndpointMessage" not in mv and "notLive" not in mv, (
-        "ModuleView gained a not-live path, so a route-absent 404 is no longer read as an empty list")
 
 
 def test_this_gate_reads_the_envelope_and_the_branches_it_claims():
