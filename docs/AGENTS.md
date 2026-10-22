@@ -370,6 +370,23 @@ path written for chunks that were never created, and a test named
 did not exist. Everything read as working code, because every part of it
 was a part of the design -- just not the part that made the design true.
 
+**And the same shape was true of the resume.** The knowledge page says "your
+resume, projects and notes become a searchable, cited evidence layer", and a
+resume the reader *uploaded* was in it -- there the file is the document, and
+the document is chunked and embedded. A resume the reader *typed* was a row
+in the resume list and nowhere else: no source, no chunk, nothing an agent
+could cite. The restore path said so in a comment -- "the two steps a new
+resume takes: the row, then the ingestion" -- and the API's own create path
+did the first one and stopped.
+
+So the ingestion moved into the create, where the restore's own comment said
+it belonged, and the copy follows the *current version*: a reader who
+switches versions has moved on from the text the copy carries, and an
+assistant that keeps quoting the old one quotes a resume the reader no
+longer has. The restore's own second step went away with it -- it made a
+copy with no reference, so a restored resume's copy outlived the row it was
+made from and kept being quoted after the resume was gone.
+
 **A sentence raised where the language is not.** A failure toast is raised
 from an event handler, long after the render that knew the reader's
 language — and the sentence in it was an English literal. Every other word

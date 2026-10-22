@@ -101,7 +101,8 @@ SPEAKERS: dict[str, str] = {
     "e2e/tests/pagination.spec.ts":
         "POSTs the twenty-five rows a pager needs",
     "e2e/tests/redaction.spec.ts":
-        "POSTs one note so the bundle the reader exports has the reader's own words in it",
+        "POSTs three notes: so the bundle the reader exports has the reader's own words in it, "
+        "so the anonymized export has to forget them, and so the printable document has to carry them",
     NOTES_PANEL:
         "the panel's docstring spells the four verbs it calls",
     "frontend/src/lib/api/endpoints.test.ts":
@@ -293,7 +294,10 @@ def test_the_only_writer_of_note_rows_is_behind_the_post_the_client_calls() -> N
         "e2e/tests/command-palette.spec.ts": [("post", NOTE_ROUTE)],
         "e2e/tests/forward-surfaces.spec.ts": [("post", NOTE_ROUTE)],
         "e2e/tests/pagination.spec.ts": [("post", NOTE_ROUTE), ("post", NOTE_ROUTE)],
-        "e2e/tests/redaction.spec.ts": [("post", NOTE_ROUTE), ("post", NOTE_ROUTE)],
+        # Three, not two: the bundle the reader exports carries the reader's own
+        # words, the anonymized export has to forget them, and the printable
+        # document has to carry them. One POST each.
+        "e2e/tests/redaction.spec.ts": [("post", NOTE_ROUTE), ("post", NOTE_ROUTE), ("post", NOTE_ROUTE)],
     }, (f"a note row is now authored by a path that is not the collection POST ({writes}): the panel writes "
         "through POST /knowledge/notes, and that is the only verb the Java clause above accounts for")
     assert reads == {"e2e/tests/golden-journey.spec.ts": [NOTE_ROUTE],

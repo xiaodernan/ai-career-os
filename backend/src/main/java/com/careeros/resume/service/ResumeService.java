@@ -51,6 +51,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -74,6 +76,8 @@ public class ResumeService {
     private final FileIngestService fileIngest;
     private final StorageService storage;
     private final AiServiceClient ai;
+
+    private static final Logger log = LoggerFactory.getLogger(ResumeService.class);
 
     public ResumeService(ResumeRepository resumes, ResumeVersionRepository versions,
                          ExperienceRepository experiences, ProjectRepository projects,
@@ -163,7 +167,34 @@ public class ResumeService {
         ResumeVersion version = newVersion(resume, "v1", "original", null, request.plaintext());
         resume.setCurrentVersionId(version.getId());
         resumes.save(resume);
+        // The second step of making a resume: the ingestion that chunks and
+        // embeds it, so the agents can cite it. The upload path has its own
+        // (there the file *is* the document), but a resume the reader typed
+        // is text like any other -- and without this it sits in the resume
+        // list and nowhere else, so the copy of the reader's own material
+        // the product promises does not exist. The kind is "resume" and the
+        // reference is the resume's own id: the two things deleting the
+        // resume retires.
+        ingestCopy(userId, resume, request.plaintext());
         return ResumeListItem.from(resume);
+    }
+
+    /**
+     * The copy the agents quote: the resume's text, ingested, with the
+     * resume's own id as the reference.
+     *
+     * <p>A failed ingestion does not cost the reader their resume: the
+     * resume is theirs, the copy is derived, and the next write tries again.
+     */
+    private void ingestCopy(UUID userId, Resume resume, String plaintext) {
+        if (plaintext == null || plaintext.isBlank()) {
+            return;
+        }
+        try {
+            knowledge.ingestText(userId, resume.getTitle(), plaintext, "resume", resume.getId());
+        } catch (RuntimeException e) {
+            log.warn("Ingesting the resume failed for user {}: {}", userId, e.getMessage());
+        }
     }
 
     @Transactional
@@ -354,7 +385,15 @@ public class ResumeService {
             throw new ApiException(ApiErrorCode.VERSION_NOT_FOUND, "Version does not belong to resume");
         }
         resume.setCurrentVersionId(versionId);
-        return ResumeListItem.from(resumes.save(resume));
+        resumes.save(resume);
+        // The copy follows the current version. A reader who switches
+        // versions has moved on from the text the copy carries, and an
+        // assistant that keeps quoting the old one quotes a resume the
+        // reader no longer has -- the same shape as a deleted note keeping
+        // its chunks.
+        knowledge.retireRef(userId, "resume", resumeId);
+        ingestCopy(userId, resume, version.getPlaintext());
+        return ResumeListItem.from(resume);
     }
 
     /**

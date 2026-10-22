@@ -536,8 +536,14 @@ public class ImportService {
             }
             // The two steps a new resume takes, in the same order: the row, then
             // the ingestion that chunks and embeds it so the agents can cite it.
+            //
+            // The ingestion is the create's own now, and that is not a
+            // refactor: the copy it makes carries the resume's id as its
+            // reference, and the reference is what lets a deleted resume take
+            // its copy back. An ingestion of its own had no reference at all,
+            // so the restored resume's copy outlived the row it was made from
+            // and kept being quoted after the resume was gone.
             resumes.create(userId, new CreateResumeRequest(title, plaintext));
-            knowledge.ingestText(userId, title, plaintext, "resume", null);
             created++;
         }
         count(applied, "resumes", created, 0, 0);

@@ -157,7 +157,10 @@ export async function unwrap<T>(res: { status: () => number; json: () => Promise
   try {
     parsed = JSON.parse(raw);
   } catch {
-    throw new Error(`Expected JSON envelope but got: ${raw.slice(0, 400)}`);
+    // The status belongs in the message: an empty body is a 401 from the
+    // security filter or a 429 from the rate limiter, and "Expected JSON
+    // envelope but got: " says neither.
+    throw new Error(`Expected JSON envelope but got: ${raw.slice(0, 400)} (status ${res.status()})`);
   }
   if (!parsed.success) {
     throw new Error(`API error ${parsed.error?.code}: ${parsed.error?.message} (status ${res.status()})`);

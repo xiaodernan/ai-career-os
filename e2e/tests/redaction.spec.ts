@@ -388,3 +388,84 @@ test("the anonymized export carries no people", async ({ api }) => {
   // choice, and the choice has to be the difference between the two.
   expect(JSON.stringify(plain), "the plain export lost the contact").toContain("Li Ming");
 });
+
+
+/** One row of the knowledge base's own listing. */
+interface SourceItem {
+  id: string;
+  kind: string;
+  refId?: string | null;
+  title: string;
+  status: string;
+}
+
+/**
+ * Wait for something the product does asynchronously.
+ *
+ * The ingester chunks and embeds in the background, so the copy of a resume
+ * the reader typed shows up a moment after the row does. Waiting for it is
+ * not politeness: a test that reads the list once is a test that will fail
+ * on a fast machine and pass on a slow one.
+ */
+async function waitFor<T>(
+  probe: () => Promise<T | undefined>,
+  what: string,
+  timeoutMs = 30_000
+): Promise<T> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const value = await probe();
+    if (value !== undefined) return value;
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+  throw new Error(`${what} (waited ${timeoutMs}ms)`);
+}
+
+/**
+ * A resume the reader typed is material the agents can quote.
+ *
+ * The product says it: "Your resume, projects and notes become a searchable,
+ * cited evidence layer". A resume the reader *uploaded* was always in it --
+ * there the file is the document, and the document is chunked and embedded.
+ * A resume the reader *typed* was a row in the resume list and nowhere else:
+ * the copy the product promises was never made, and the delete path was
+ * written for a copy that did not exist.
+ *
+ * So the claim here is not "the endpoint answers" but "the material is
+ * there": the knowledge base holds a source for the typed resume, the source
+ * points at the resume -- which is what lets a deleted resume take its copy
+ * back -- and deleting the resume takes the copy with it.
+ */
+test("a resume the reader typed becomes material the agents can quote", async ({ api }) => {
+  const resume = await unwrap<{ id?: string }>(
+    await api.post("/resumes", {
+      title: "My typed resume",
+      plaintext: "Li Ming, 13800000000. Led a payments team for eight years.",
+    })
+  );
+  expect(resume.id, "the resume was not created").toBeTruthy();
+
+  const source = await waitFor(
+    async () => {
+      const page = await unwrap<{ items?: SourceItem[] }>(
+        await api.get("/knowledge/sources", { size: 20 })
+      );
+      return (page.items ?? []).find((s) => s.kind === "resume" && s.refId === resume.id);
+    },
+    "the typed resume never became a source the agents can quote"
+  );
+
+  expect(source.title, "the source does not carry the resume's title").toBe("My typed resume");
+
+  // And deleting the resume takes the copy back: the copy is retired, so the
+  // assistant stops quoting a resume the reader can no longer see.
+  const deleted = await api.delete(`/resumes/${resume.id}`);
+  expect(deleted.status(), "the resume was not deleted").toBeLessThan(300);
+  const after = await unwrap<{ items?: SourceItem[] }>(
+    await api.get("/knowledge/sources", { size: 20 })
+  );
+  expect(
+    (after.items ?? []).some((s) => s.refId === resume.id),
+    "the deleted resume's copy is still in the knowledge base"
+  ).toBe(false);
+});
