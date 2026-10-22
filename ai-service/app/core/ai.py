@@ -36,17 +36,20 @@ def wrap_untrusted(label: str, content: str | None) -> str:
     the whole request failed with `'NoneType' object has no attribute 'replace'`.
     Fencing is a safety boundary; a missing field must not take the feature down.
     """
-    safe = (content or "").replace("<<<", "«««").replace(">>>", "»»»")
+    safe = (content if isinstance(content, str) else "").replace(
+        "<<<", "«««").replace(">>>", "»»»")
     return f"<<<BEGIN UNTRUSTED {label}>>>\n{safe}\n<<<END UNTRUSTED {label}>>>"
 
 
 def evidence_block(items: list[dict[str, Any]]) -> str:
     parts = [UNTRUSTED_HEADER, ""]
-    for i, it in enumerate(items, 1):
+    for i, it in enumerate([x for x in (items or []) if isinstance(x, dict)], 1):
         parts.append(f"[Evidence {i}] (chunk_id={it.get('chunk_id','')} "
                      f"source={it.get('source','')} section={it.get('section','')})")
         # `or ""` and not a `.get` default: a present-null `text` slices as None.
-        parts.append(wrap_untrusted("EVIDENCE", (it.get("text") or "")[:1800]))
+        text = it.get("text")
+        parts.append(wrap_untrusted("EVIDENCE",
+                                    (text if isinstance(text, str) else "")[:1800]))
         parts.append("")
     return "\n".join(parts)
 
@@ -85,15 +88,27 @@ def _coerce_json(text: str) -> dict:
     "Hope this helps!" after it. Taking the outermost {...} (first '{' to last '}')
     keeps it robust where a naive strip of backticks would leave trailing prose and
     raise. Only engaged after a plain json.loads fails, so clean replies parse identically.
+
+    A reply that parses to something other than an object -- a bare array, a number,
+    a quoted string -- is not a usable answer, and every caller immediately does
+    ``.get(...)`` on what this returns. Raising ``JSONDecodeError`` instead of handing
+    the non-dict back routes it through ``ask_json``'s self-repair retry, where an
+    ``AttributeError`` from the caller would never be caught.
     """
-    t = text.strip()
+    t = (text if isinstance(text, str) else "").strip()
+    candidate = t
     try:
-        return json.loads(t)
+        parsed = json.loads(candidate)
     except json.JSONDecodeError:
         start, end = t.find("{"), t.rfind("}")
-        if start != -1 and end > start:
-            return json.loads(t[start:end + 1])
-        raise
+        if start == -1 or end <= start:
+            raise
+        candidate = t[start:end + 1]
+        parsed = json.loads(candidate)
+    if not isinstance(parsed, dict):
+        raise json.JSONDecodeError(
+            "the reply is valid JSON but not a JSON object", candidate, 0)
+    return parsed
 
 
 async def ask_json(req: LLMRequest, **kw) -> dict:

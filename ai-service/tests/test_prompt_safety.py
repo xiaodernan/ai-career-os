@@ -7,6 +7,8 @@ regression here silently reopens an injection hole, so the fence contract is
 locked here rather than relying on an end-to-end prompt diff.
 """
 
+import json
+
 from app.core.ai import UNTRUSTED_HEADER, evidence_block, wrap_untrusted
 
 # The payload a hostile uploaded document would contain: it tries to close our
@@ -94,3 +96,38 @@ def test_evidence_block_survives_a_present_null_quote():
     assert "[Evidence 1]" in block and "[Evidence 2]" in block
     assert "real" in block
     assert block.count("<<<") == 4
+
+
+# ---------------- hostile input (the fence every engine hands user text to) ----------------
+
+def test_wrap_untrusted_survives_non_string_content():
+    # the docstring covers None; a non-str that is merely truthy hit .replace()
+    for bad in (123, ["a"], {"k": "v"}, 4.5):
+        assert wrap_untrusted("EVIDENCE", bad) == (
+            "<<<BEGIN UNTRUSTED EVIDENCE>>>\n\n<<<END UNTRUSTED EVIDENCE>>>")
+
+
+def test_evidence_block_survives_none_and_non_dict_items():
+    assert evidence_block(None) == UNTRUSTED_HEADER + "\n"
+    items = [None, "junk", {"chunk_id": "c1", "source": "s", "section": "x",
+                            "text": "real quote", "extra": 1},
+             {"chunk_id": "c2", "text": 12345}]        # a non-str quote is dropped
+    block2 = evidence_block(items)
+    assert "[Evidence 1]" in block2 and "real quote" in block2
+    assert "12345" not in block2
+    assert "[Evidence 2]" in block2                    # the row survives, its quote is empty
+    assert block2.count("<<<") == 4                    # two rows, two markers each
+
+
+def test_coerce_json_rejects_a_non_object_reply():
+    # a bare array/number/string parses fine but every caller does .get() on it,
+    # so it must raise (routing through ask_json's retry) rather than be returned
+    import pytest
+    from app.core.ai import _coerce_json
+    for reply in ('["a", "b"]', "42", '"hello"', "true", "null", None, ""):
+        with pytest.raises(json.JSONDecodeError):
+            _coerce_json(reply)
+    # an object still parses, fenced or not
+    assert _coerce_json('{"a": 1}') == {"a": 1}
+    assert _coerce_json('```json\n{"a": 1}\n```') == {"a": 1}
+    assert _coerce_json('sure!\n{"a": 1}\nhope this helps') == {"a": 1}
