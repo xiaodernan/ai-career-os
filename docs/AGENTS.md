@@ -420,9 +420,21 @@ both languages, and the statuses did not move: the *code* is the contract
 and the *status* is what the client's error path reads, so the split is free
 where the split is needed. The request bucket that answered with twelve
 sentences is thirteen codes now too, the session codes are one meaning each,
-and the not-found code is five, and the storage errors are split -- with
-the buckets themselves gone, because a name that means nothing is not a
-contract.
+and the not-found code is five, and the storage errors are split, and the
+validation bucket is four -- with the buckets themselves gone, because a name
+that means nothing is not a contract.
+
+**And a code that is fine enough to carry a sentence has to be *read* by the
+browser.** Splitting the vocabulary is half of it: the other half is the rule
+that decides which 404 the reader is looking at. The backend answers a 404 in
+two different ways -- the route is not served, or the route is served and the
+record it reads is gone -- and both arrive as a 404, so a rule that reads the
+status alone sends a reader whose job was deleted to the "your frontend and
+your backend are different versions" screen, next to a "Check again" button
+that cannot help. The code is the part of the error that says what happened,
+so the boundary's rule reads the code, and the failure describer shows the
+code's own sentence before it falls back to the version sentence. A finer
+vocabulary with a rule that ignores it is a vocabulary nobody ever sees.
 
 **And the measurement had to learn the third road.** A code reaches the
 reader three ways: a throw, the envelope builder, and the framework's own
@@ -432,6 +444,15 @@ the same as one meaning* — a code the measurement never saw is a code
 nothing knows what it says. A gate that measures a population has to
 measure the whole population, or it measures the part that was easy to
 reach.
+
+And the population had a fourth road in it. The exception handler's own
+helper names the code and the sentence at the call site and hands them to
+the envelope builder as variables, so a measurement that read the builder's
+call alone saw a variable and called the three validation channels silent.
+They are the codes that answer for a reader's own request: the body that
+failed its validation, the company that was not given, the tailored version
+that arrived without the body it was generated with. A gate that cannot see
+them cannot say whether the code means one thing.
 
 **A sentence raised where the language is not.** A failure toast is raised
 from an event handler, long after the render that knew the reader's

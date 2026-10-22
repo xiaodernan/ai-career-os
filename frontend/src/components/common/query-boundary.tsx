@@ -20,8 +20,23 @@ import { useLocale } from "@/lib/i18n/locale-context";
  * Nothing renders "Loading…" and nothing renders invented data.
  */
 
+/**
+ * Whether the *route* is missing, as opposed to the record it would have answered with.
+ *
+ * The backend answers a 404 in two very different ways: the route is not mapped at all
+ * (`NOT_FOUND`), or the route is served and the record it reads is gone (`JOB_NOT_FOUND`,
+ * `RESUME_NOT_FOUND`, and the rest -- one code per record). Both arrive as a 404, so a
+ * rule that reads the status alone cannot tell "this frontend and the backend are
+ * different versions" from "that job is not there any more", and the second answer is
+ * false: the route is served, and retrying cannot help.
+ *
+ * So the *code* decides -- the code is the contract, and it is the one part of an error
+ * that says what happened. A 501 still means the service does not implement the route.
+ */
 export function isEndpointMissing(error: unknown): boolean {
-  return error instanceof ApiError && (error.isNotFound || error.status === 501);
+  if (!(error instanceof ApiError)) return false;
+  if (error.status === 501) return true;
+  return error.code === "NOT_FOUND";
 }
 
 /**

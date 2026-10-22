@@ -28,17 +28,20 @@ import { translate } from "@/lib/i18n/locale-context";
  * with the wording. So the sentence comes from the code, out of the locale
  * table, and the reader sees it in the language they chose.
  *
- * The server's own wording is the fallback, for a code this build does not
- * know: a newer service, or one the table has not caught up with. The
- * services' codes are not in the table yet — their wording is more specific
- * than one sentence per code can be, and a generic sentence in place of
- * "Start the interview with an opening question first" would be a loss.
+ * The code is also the only part that says *which* thing is missing: the
+ * backend answers a 404 for a route that is not served and for a record
+ * that is gone, and only the first is a version mismatch. So the table's
+ * sentence comes first, and the version sentence is the fallback for a 404
+ * this build has no sentence for.
+ *
+ * The server's own wording is the last fallback, for a code this build does
+ * not know: a newer service, or one the table has not caught up with.
  */
 export function describe(err: unknown, fallback: string): string {
   if (err instanceof ApiError) {
-    if (err.isNotFound) return missingEndpointMessage();
     const sentence = translate(`errorCodes.${err.code}`);
     if (sentence) return sentence;
+    if (err.isNotFound) return missingEndpointMessage();
     return err.message || fallback;
   }
   if (err instanceof TypeError) {

@@ -10,13 +10,14 @@ writes it, is measured here from the shipped text of both planes:
 * ``client.ts`` copies ``error.details`` onto the ``ApiError`` it throws, at every
   request site it has — and then nothing in ``frontend/src`` reads it. The list is
   built, serialized, parsed and dropped;
-* every copy the user can see is read from ``error.message`` (``ErrorState``,
-  ``describeError``, ``recoveryErrorMessage``), so a validation failure is shown as
-  that one fixed sentence with no field named;
-* two of the browser's ``err.code`` comparisons claim to read the server's code.
-  One names ``RESET_TOKEN_INVALID``, which the enum declares; the other names
-  ``AUTH_INVALID_CREDENTIALS``, which it does not — so that branch is decided by
-  ``status === 401`` alone;
+* every copy the user can see is read from the **code's own sentence** — the
+  locale table's, keyed by the code the server sent — and falls back to the
+  server's wording only for a code this build does not know (``describe`` in
+  ``lib/hooks/failure.ts``). The per-field list is read by nobody;
+* every ``err.code`` the browser compares is a code the server declares. The
+  three it compares now are ``NOT_FOUND`` (the route that is not served),
+  ``INVALID_CREDENTIALS`` (the answer the credentials form reads) and
+  ``RESET_TOKEN_INVALID`` (the reset link);
 * ``auth-recovery.test.ts`` shows a field name inside ``message``, a shape no Java
   site composes: the shipped ``VALIDATION_FAILED`` answer never carries one.
 
@@ -38,6 +39,7 @@ API_RESPONSE = "backend/src/main/java/com/careeros/common/ApiResponse.java"
 CODES = "backend/src/main/java/com/careeros/common/ApiErrorCode.java"
 CLIENT = "frontend/src/lib/api/client.ts"
 ERROR_STATE = "frontend/src/components/common/error-state.tsx"
+FAILURE = "frontend/src/lib/hooks/failure.ts"
 CRED_FORM = "frontend/src/components/auth/credentials-form.tsx"
 RECOVERY = "frontend/src/lib/auth-recovery.ts"
 RECOVERY_TEST = "frontend/src/lib/auth-recovery.test.ts"
@@ -167,34 +169,62 @@ def test_the_browser_carries_details_in_and_never_opens_it():
         "must be re-measured: %s" % readers)
 
 
-def test_every_visible_copy_is_read_from_the_message_alone():
+def test_every_visible_copy_is_read_from_the_code_and_never_from_the_details_list():
+    """The reader sees the code's own sentence; the per-field list reaches nobody.
+
+    The sentence a reader gets comes from the *code* — the locale table has one
+    for that code, in the reader's language — and the server's own wording is
+    the fallback for a code this build does not know. What the reader must
+    never get is the per-field list: a field name inside the message tells the
+    reader about the server's own bookkeeping, not about what to do.
+    """
+    failure = read(FAILURE)
+    block = failure[failure.index("export function describe"): failure.index("export function fail")]
+    assert "translate(`errorCodes.${err.code}`)" in block, (
+        "the describer no longer reads the code's own sentence: %s" % " ".join(block.split()))
+    assert "err.message || fallback" in block, (
+        "the describer no longer falls back to the server's own wording")
+    assert ".details" not in block, "the describer opens the per-field list now"
+
     state = read(ERROR_STATE)
-    block = state[state.index("const detail ="): state.index("return (")]
-    assert "message ??" in block and block.count("error.message") == 2, (
-        "ErrorState now reads something other than the message: %s" % " ".join(block.split()))
+    sblock = state[state.index("const detail ="): state.index("return (")]
+    assert "describe(error, \"\")" in sblock, (
+        "ErrorState no longer shows the describer's sentence: %s" % " ".join(sblock.split()))
     assert "details" not in state and "status" not in state, (
         "ErrorState consults the status or the list now, so the generic-sentence claim is closing")
-    assert stmt(read(CRED_FORM), "return err.message;") == "return err.message;"
-    assert stmt(read(RECOVERY), "return err.message;") == "return err.message;"
     assert "role=\"alert\"" in state, "the failure surface is no longer announced as an alert"
 
+    recovery = read(RECOVERY)
+    assert "return err.message;" in recovery, "the recovery describer no longer falls back to the message"
+    assert ".details" not in recovery, "the recovery describer opens the per-field list now"
 
-def test_the_browser_compares_two_code_names_and_one_is_not_a_server_name():
+    # The credentials form's sentence is spelled once, in the module every
+    # describer shares, so a second copy cannot drift away from the first.
+    spellings = [rel.relative_to(ROOT).as_posix() for rel in ts_files()
+                  if not rel.name.endswith(".test.ts") and "Incorrect email or password." in read(rel)]
+    assert spellings == [RECOVERY], (
+        "the credentials sentence is spelled in %s -- one home, one spelling" % spellings)
+    assert "authFormErrorMessage" in read(CRED_FORM), (
+        "the credentials form no longer spends the shared describer, so it re-spells the sentence")
+
+
+def test_the_browser_only_compares_codes_the_server_declares():
+    """A branch the browser takes on a code has to be a code the server can send."""
     pairs = code_comparisons()
     names = sorted({name for _, name in pairs})
     declared = set(enum_names())
-    assert len(names) == 2, "the browser now compares %s against the code" % names
-    assert names == ["AUTH_INVALID_CREDENTIALS", "RESET_TOKEN_INVALID"], "the compared names moved: %s" % names
-    assert "RESET_TOKEN_INVALID" in declared, "the live comparison is no longer a declared code"
-    assert "AUTH_INVALID_CREDENTIALS" not in declared, (
-        "the enum gained AUTH_INVALID_CREDENTIALS, so credentials-form's first term is live now")
-    assert "INVALID_CREDENTIALS" in declared, "the name the form should have compared is gone"
-    assert stmt(read(CRED_FORM),
-                'if (err.code === "AUTH_INVALID_CREDENTIALS" || err.status === 401)') == \
-        'if (err.code === "AUTH_INVALID_CREDENTIALS" || err.status === 401)', (
-        "the credentials branch changed shape; re-read which half decides it")
+    assert len(names) >= 3, "the browser now compares %s against the code" % names
+    assert "AUTH_INVALID_CREDENTIALS" not in names, (
+        "the browser compares a code the enum does not declare, so that branch can never be taken "
+        "by the server's answer")
     for path, name in pairs:
-        assert name in declared or name == "AUTH_INVALID_CREDENTIALS", "%s compares %s" % (path, name)
+        assert name in declared, "%s compares %s, which the enum does not declare" % (path, name)
+    assert "NOT_FOUND" in names, "the browser no longer compares the route's own code"
+    assert "RESET_TOKEN_INVALID" in names, "the reset-link branch no longer compares the code"
+    assert "INVALID_CREDENTIALS" in names, "the credentials branch no longer compares the code"
+    assert stmt(read(CRED_FORM), "onError: (err: unknown) => toast.error(authFormErrorMessage(err)),") == \
+        "onError: (err: unknown) => toast.error(authFormErrorMessage(err)),", (
+        "the credentials branch changed shape; re-read which half decides it")
 
 
 def test_the_live_code_branch_answers_a_message_the_backend_actually_writes():
@@ -218,9 +248,14 @@ def test_the_field_name_in_the_message_is_a_fixture_shape_no_validation_author_w
         for line in text.split("\n"):
             if "ApiErrorCode.VALIDATION_FAILED" in line and "+" in line:
                 composed.append("%s:%s" % (path.name, line.strip()))
-    assert composed == [
-        'KnowledgeService.java:throw new ApiException(ApiErrorCode.VALIDATION_FAILED, "Unknown knowledge kind: " + kind);'
-    ], "VALIDATION_FAILED's message gained a second composing author; re-read which shapes exist: %s" % composed
+    assert composed == [], (
+        "VALIDATION_FAILED's message gained a composing author; re-read which shapes exist: %s" % composed)
+    # The one site that still composes a validation sentence has a code of its
+    # own, so that code means one thing and the reader gets a sentence for it.
+    knowledge = read("backend/src/main/java/com/careeros/knowledge/service/KnowledgeService.java")
+    assert stmt(knowledge, 'throw new ApiException(ApiErrorCode.VALIDATION_KIND_UNKNOWN, "Unknown knowledge kind: " + kind);') == \
+        'throw new ApiException(ApiErrorCode.VALIDATION_KIND_UNKNOWN, "Unknown knowledge kind: " + kind);', (
+        "the composing site moved, so the claim about which code carries it is stale")
     handler = read(HANDLER)
     assert handler.count(GENERIC_MESSAGE) == 3, (
         "the handler composes the validation message %d times, so the generic-half claim needs re-measuring"
@@ -231,10 +266,10 @@ def test_the_field_name_in_the_message_is_a_fixture_shape_no_validation_author_w
 
 
 def test_this_gate_reads_the_files_and_populations_it_claims():
-    for rel in (HANDLER, API_ERROR, API_RESPONSE, CODES, CLIENT, ERROR_STATE, CRED_FORM, RECOVERY, RECOVERY_TEST):
+    for rel in (HANDLER, API_ERROR, API_RESPONSE, CODES, CLIENT, ERROR_STATE, FAILURE, CRED_FORM, RECOVERY, RECOVERY_TEST):
         assert (ROOT / rel).exists(), "%s is not where this file reads it" % rel
     assert len(enum_names()) >= 30, "the enum walk found only %d names" % len(enum_names())
-    assert len(code_comparisons()) == 2, "the browser compares the code %d times" % len(code_comparisons())
+    assert len(code_comparisons()) >= 3, "the browser compares the code %d times" % len(code_comparisons())
     assert details_readers() == [], "the details census is no longer empty: %s" % details_readers()
     assert len(ts_files()) >= 100 and len(java_files()) >= 100
     assert (ROOT / "backend/src/main/java/com/careeros/auth/service/AuthService.java").exists()

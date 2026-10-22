@@ -167,12 +167,41 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   sentence in both languages. The statuses did not move: all five are still
   the 500 they were.
 
+  **And the validation bucket is four.** `VALIDATION_FAILED` answered with
+  three different sentences -- the request failed its own validation, a job
+  needs a company (by id or by name), and a tailored version needs the
+  structured body it was generated with -- plus a fourth that varies with the
+  request (the knowledge kind that was not recognized). One sentence for it
+  would have been wrong about two of the three, and the varying one cannot be
+  measured at all, so it can never be held to a sentence. They are four codes
+  now: `VALIDATION_FAILED` for the three validation channels that share one
+  sentence, `VALIDATION_FIELD_REQUIRED` for the missing company,
+  `VALIDATION_STRUCTURE_INVALID` for the tailored body, and
+  `VALIDATION_KIND_UNKNOWN` for the kind -- each with its own sentence in both
+  languages.
+
+  **And the browser's 404 rule reads the code.** The backend answers a 404 in
+  two different ways -- the route is not served, or the route is served and the
+  record it reads is gone -- and both arrive as a 404, so a rule that reads the
+  status alone tells a reader whose job was deleted that their frontend and
+  their backend are different versions, and offers a "Check again" button that
+  cannot help. The code is what tells the two apart, so the boundary's rule
+  reads the code now, and the failure describer shows the code's own sentence
+  *before* it falls back to the version sentence. A deleted record reads as
+  "that job is no longer here", in the reader's language, and not as a version
+  mismatch. The second shell -- `module-view.tsx`, five screens -- still reads
+  the status alone, and that is the half that is still open.
+
   **And a code travels by three roads.** A throw (`new ApiException`), the
   envelope builder (`ApiError.of`), and the framework's own edges — the 401,
   the 403, the 404, the 429. A measurement that read only the throws called
   `RATE_LIMITED` and `FORBIDDEN` silent, and "silent" is not the same as "one
   meaning". The gate reads all three now, so the split it measures is the
-  split the reader meets.
+  split the reader meets. The exception handler's own helper is a fourth road:
+  it names the code and the sentence at the call site and hands them to the
+  builder as variables, so a measurement that read only the builder's call
+  called the three validation channels silent — and the validation channels
+  are exactly the codes that answer for a reader's own request.
 
   **Done so far.** The browser's language is now readable *outside* a render
   (`lib/i18n/locale-context.tsx`'s `translate`), which is what a toast needs — it
@@ -183,14 +212,14 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   **And the services' codes are classified now.** Every code the services can
   send is either **translated** (the browser's table answers it, in both
   languages) or **named as a gap** — and the gap list is the queue for the finer
-  vocabulary: `AI_SERVICE_BAD_REQUEST`, `AI_SERVICE_ERROR`, `VALIDATION_FAILED`,
-  `VERSION_NOT_FOUND`. The gate
+  vocabulary: `AI_SERVICE_BAD_REQUEST`, `AI_SERVICE_ERROR`, `VERSION_NOT_FOUND`.
+  The gate
   *measures* the split rather than remembering it: a code that is translated
   must carry one meaning (read off the throw sites), a code that is named as a
   gap must carry several, and a code nobody classified fails the gate. So the
-  fifty-eight codes that mean one thing are bilingual today, and the four that
-  mean several carry eight distinct sentences between them, so they keep
-  the server's words until the throw sites name them properly — eight more codes, one per distinct wording, and then the
+  sixty-two codes that mean one thing are bilingual today, and the three that
+  mean several carry five distinct sentences between them, so they keep
+  the server's words until the throw sites name them properly — five more codes, one per distinct wording, and then the
   gap list empties.
 - **The export's readable half had one language (closed 2026-10-22).** 13.1's
   *human-readable* export — the print-ready document — was written in Chinese

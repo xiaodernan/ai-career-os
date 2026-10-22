@@ -238,7 +238,7 @@ public class KnowledgeService {
 
     private static void validateKind(String kind) {
         if (!KINDS.contains(kind)) {
-            throw new ApiException(ApiErrorCode.VALIDATION_FAILED, "Unknown knowledge kind: " + kind);
+            throw new ApiException(ApiErrorCode.VALIDATION_KIND_UNKNOWN, "Unknown knowledge kind: " + kind);
         }
     }
 

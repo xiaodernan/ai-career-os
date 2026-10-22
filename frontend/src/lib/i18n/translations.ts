@@ -1055,6 +1055,11 @@ export const translations = {
       TOKEN_REUSED: "For your safety every session in this family was signed out. Please sign in again.",
 
       UNAUTHORIZED: "Your session has expired. Please sign in again.",
+      VALIDATION_FAILED: "The request data is not valid.",
+      VALIDATION_FIELD_REQUIRED: "A required field is missing.",
+      VALIDATION_STRUCTURE_INVALID: "The request structure is invalid.",
+
+      VALIDATION_KIND_UNKNOWN: "That knowledge kind is not recognized.",
 
       UPLOAD_UNREADABLE: "That file could not be read.",
 
@@ -2770,6 +2775,11 @@ export const translations = {
       TOKEN_REUSED: "为了安全，这一组会话都已退出，请重新登录。",
 
       UNAUTHORIZED: "登录状态过期了，请重新登录。",
+      VALIDATION_FAILED: "请求数据不合法。",
+      VALIDATION_FIELD_REQUIRED: "缺少必填字段。",
+      VALIDATION_STRUCTURE_INVALID: "请求结构不合法。",
+
+      VALIDATION_KIND_UNKNOWN: "该知识类型不存在。",
 
       UPLOAD_UNREADABLE: "这个文件读不出来。",
 

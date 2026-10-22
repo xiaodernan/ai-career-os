@@ -140,7 +140,7 @@ public class JobService {
         if (companyId == null) {
             CompanyRequest cr = request.company();
             if (cr == null || cr.name() == null || cr.name().isBlank()) {
-                throw new ApiException(ApiErrorCode.VALIDATION_FAILED,
+                throw new ApiException(ApiErrorCode.VALIDATION_FIELD_REQUIRED,
                         "company_id or company.name is required");
             }
             companyId = upsertCompany(cr).id();

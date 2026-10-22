@@ -6,9 +6,8 @@ code is the contract ("never rename an emitted code") and the code is what
 crosses the wire.
 
 But the codes are **coarser than the messages**. Measured against the throw
-sites: `VALIDATION_FAILED` answers with three different sentences,
-`VERSION_NOT_FOUND` with three, `AI_SERVICE_ERROR` with two. One sentence
-per code would tell a reader
+sites: `VERSION_NOT_FOUND` answers with three different sentences,
+`AI_SERVICE_ERROR` with two. One sentence per code would tell a reader
 whose request was refused for one reason that it was refused for another --
 so the fix is not a translation, it is a finer vocabulary, and until the
 vocabulary is fine enough the codes that mean several things keep the
@@ -57,7 +56,6 @@ CLIENT = ROOT / "frontend" / "src" / "lib" / "api" / "client.ts"
 COARSE: frozenset[str] = frozenset({
     "AI_SERVICE_BAD_REQUEST",
     "AI_SERVICE_ERROR",
-    "VALIDATION_FAILED",
     "VERSION_NOT_FOUND",
 })
 
@@ -126,6 +124,8 @@ def throw_sites() -> tuple[dict[str, set[str]], set[str]]:
         patterns = (
             r"new ApiException\(\s*ApiErrorCode\.([A-Z_]+)\s*,\s*",
             r"ApiError\.of\(\s*ApiErrorCode\.([A-Z_]+)\s*,\s*",
+            # GlobalExceptionHandler.badRequest(code, message, details)
+            r"badRequest\(\s*ApiErrorCode\.([A-Z_]+)\s*,\s*",
         )
         for pattern in patterns:
             for match in re.finditer(pattern, text):

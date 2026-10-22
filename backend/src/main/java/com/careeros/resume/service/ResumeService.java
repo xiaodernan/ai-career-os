@@ -406,7 +406,7 @@ public class ResumeService {
                                                TailoredVersionRequest request) {
         Map<String, Object> tailored = request.tailored();
         if (tailored == null || tailored.isEmpty()) {
-            throw new ApiException(ApiErrorCode.VALIDATION_FAILED,
+            throw new ApiException(ApiErrorCode.VALIDATION_STRUCTURE_INVALID,
                     "A tailored version needs the structured body it was generated with");
         }
         UUID resumeId = request.resumeVersionId() != null

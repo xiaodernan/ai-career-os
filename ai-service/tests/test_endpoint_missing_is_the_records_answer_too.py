@@ -1,33 +1,35 @@
-"""What a 404 means on this app, and who is told the wrong version of it.
+"""What a 404 means on this app, and who is still told the wrong version of it.
 
 ``components/common/query-boundary.tsx`` states its own contract in its docstring: "the single async
 contract used by every surface". The same file decides, from one boolean, whether a user reads an
 error or a designed empty state with a sentence about version mismatch. Both halves of that promise
-are measurable, and both are false where they matter:
+are measurable, and this file pins them:
 
-* Only 5 of the 16 ``(app)`` screens route a query through the boundary. Four route the same
+* Only 5 of the 24 ``(app)`` screens route a query through the boundary. Five route the same
   pending/error/empty decision through ``components/common/module-view.tsx``, which re-implements it
-  in its own JSX, and seven decide it inline from their own ``isPending``/``error`` flags. Each of the
-  two shared shells claims universality in its own docstring -- "the single async contract used by
-  every surface" and "the shared async list shell for every (app) resource page" -- and they answer
+  in its own JSX, and fourteen decide it inline from their own ``isPending``/``error`` flags. Each of
+  the two shared shells claims universality in its own docstring -- "the single async contract used
+  by every surface" and "the shared async list shell for every (app) resource page" -- and they answer
   the same status with opposite states, so this file pins which screens spend which.
-* ``isEndpointMissing`` returns true for *any* 404 (and for a 501 no server in this repo produces),
-  and ``ModuleView``'s own rule is the same status test with the opposite verdict:
-  ``error.isNotFound`` sends it to the screen's "nothing here yet" hint.
-  The backend answers 404 from fifteen places -- fourteen ``ApiErrorCode`` constants that mean "this
-  record is not there" and one ``NoResourceFoundException`` handler that means "this route is not
-  served" -- and it puts the distinguishing name in ``error.code`` on the wire. ``ApiError`` keeps
-  that code; neither shell reads it. So a deleted agent run, opened at ``/activity/[id]``,
+* ``isEndpointMissing`` reads the *code* now: the route that is not served answers ``NOT_FOUND``,
+  and every record that is gone answers its own code, so the boundary no longer tells a reader
+  whose job was deleted that their build is the wrong version. ``ModuleView``'s own rule is still
+  the status test with the opposite verdict: ``error.isNotFound`` sends it to the screen's
+  "nothing here yet" hint.
+  The backend answers 404 from twenty-five places -- twenty-four ``ApiErrorCode`` constants (one
+  that means "this route is not served", twenty-three that name a record) and one
+  ``NoResourceFoundException`` handler that means "this route is not served" -- and it puts the
+  distinguishing name in ``error.code`` on the wire. ``ApiError`` keeps that code; the second shell
+  does not read it. So a deleted agent run, opened at ``/activity/[id]`` on a ``ModuleView`` screen,
   renders the screen's "This run is gone" title under "A route this screen needs answered 404, so
   this frontend and the backend it is talking to are different versions", next to a "Check again"
   button, replacing the description and the "Back to activity" action that screen authored for
-  exactly that case. Retrying cannot help: the route is served and the record is gone. And on the
-  four ``ModuleView`` screens the skew that sentence was written for is reported as an empty list.
+  exactly that case. Retrying cannot help: the route is served and the record is gone.
 
-This file characterises that -- the repair belongs to whoever owns the boundary's copy, and the
-screens are being edited concurrently -- and pins both ends so the fold cannot be reintroduced
-silently: the enum's status table read from the Java source, the client's ``isNotFound`` read from
-the TS source, and the branch order read from the boundary itself.
+This file characterises that -- the repair belongs to whoever owns the second shell's copy -- and
+pins both ends so the fold cannot be reintroduced silently: the enum's status table read from the
+Java source, the client's ``isNotFound`` read from the TS source, and the branch order read from
+the boundary itself.
 """
 
 import re
@@ -68,12 +70,18 @@ MODULE_VIEW_SCREENS = [
 # The growth page joined with 10.3: its report is a mutation's answer, so it branches
 # on its own `isPending` rather than either shell.
 OWN_FLAG_SCREENS = [
+    "frontend/src/app/(app)/analysis/page.tsx",
     "frontend/src/app/(app)/companies/[id]/page.tsx",
     "frontend/src/app/(app)/copilot/page.tsx",
+    "frontend/src/app/(app)/data/page.tsx",
     "frontend/src/app/(app)/growth/page.tsx",
+    "frontend/src/app/(app)/ingestion/page.tsx",
     "frontend/src/app/(app)/interviews/[id]/page.tsx",
     "frontend/src/app/(app)/interviews/[id]/report/page.tsx",
     "frontend/src/app/(app)/jobs/[id]/page.tsx",
+    "frontend/src/app/(app)/monitoring/page.tsx",
+    "frontend/src/app/(app)/offers/page.tsx",
+    "frontend/src/app/(app)/rate-limit/page.tsx",
     "frontend/src/app/(app)/resumes/[id]/page.tsx",
     "frontend/src/app/(app)/settings/page.tsx",
 ]
@@ -107,7 +115,7 @@ def ts_files() -> list:
 @lru_cache(maxsize=None)
 def app_screens() -> list:
     out = sorted(p.relative_to(ROOT).as_posix() for p in APP.rglob("page.tsx"))
-    assert len(out) == 23, "app/%s page.tsx files, not the 23 this file walks" % len(out)
+    assert len(out) == 29, "app/%s page.tsx files, not the 29 this file walks" % len(out)
     return [rel for rel in out if "/(app)/" in rel]
 
 
@@ -160,9 +168,9 @@ def status_of(status: str) -> list:
 # ------------------------------------------------------------------ cases
 
 
-def test_the_contract_called_single_is_used_by_five_of_the_eighteen_app_screens():
+def test_the_contract_called_single_is_used_by_five_of_the_twenty_four_app_screens():
     screens = app_screens()
-    assert len(screens) == 18, "%d screens under app/(app), not 18" % len(screens)
+    assert len(screens) == 24, "%d screens under app/(app), not 24" % len(screens)
     users = boundary_users()
     assert users == BOUNDARY_SCREENS, "the boundary is used by %s" % [u.split("app/")[-1] for u in users]
     assert stmt(read(BOUNDARY), "single async contract used by every surface") == \
@@ -170,10 +178,10 @@ def test_the_contract_called_single_is_used_by_five_of_the_eighteen_app_screens(
         "the file's own claim about its reach moved, so the set above needs re-measuring, not this pin"
     )
     non = [s for s in screens if s not in users]
-    assert len(non) == 13, "%d screens render without the contract this file calls single" % len(non)
+    assert len(non) == 19, "%d screens render without the contract this file calls single" % len(non)
 
 
-def test_thirteen_of_the_eighteen_screens_decide_the_async_state_somewhere_else():
+def test_nineteen_of_the_twenty_four_screens_decide_the_async_state_somewhere_else():
     screens = app_screens()
     b, mv = boundary_users(), module_view_users()
     assert mv == MODULE_VIEW_SCREENS, "ModuleView is spent by %s" % [u.split("app/")[-1] for u in mv]
@@ -183,7 +191,7 @@ def test_thirteen_of_the_eighteen_screens_decide_the_async_state_somewhere_else(
     flags = set(own_flag_screens())
     bare = [s for s in neither if s not in flags]
     assert bare == [], "%s render a query with no failure branch at all -- this file used to claim so" % bare
-    assert len(b) + len(mv) + len(neither) == len(screens) == 18, "the three sets stopped covering the app"
+    assert len(b) + len(mv) + len(neither) == len(screens) == 24, "the three sets stopped covering the app"
     assert stmt(read(MODULE_VIEW), "shared async list shell for every") == \
         "* ModuleView \u2014 the shared async list shell for every (app) resource page.", (
         "the second shell's own universality claim moved, so the 5/4/7 split above needs re-measuring")
@@ -203,13 +211,18 @@ def test_the_offline_affordance_has_been_rendered_by_nobody():
     assert "isn&apos;t connected yet" in text, "the dead hint's sentence changed; the claim about it is stale"
 
 
-def test_is_endpoint_missing_reads_status_only_and_the_client_keeps_the_code_it_ignores():
+def test_the_missing_endpoint_rule_reads_the_code_and_the_client_keeps_it():
     body = read(BOUNDARY)[read(BOUNDARY).index("export function isEndpointMissing"):]
     body = body[: body.index("\n}") + 2]
-    assert stmt(body, "return error instanceof ApiError") == \
-        "return error instanceof ApiError && (error.isNotFound || error.status === 501);", (
+    assert stmt(body, "if (!(error instanceof ApiError))") == \
+        "if (!(error instanceof ApiError)) return false;", (
         "the predicate that decides error-vs-empty changed shape; re-read which fields it consults")
-    assert "code" not in body, "the predicate reads a code now, so the fold this file records may be closed"
+    assert stmt(body, "return error.code === ") == 'return error.code === "NOT_FOUND";', (
+        "the predicate no longer names the route's own code, so a record that is gone reads as a "
+        "missing route again")
+    assert "error.isNotFound" not in body, (
+        "the predicate consults the status alone again, so a record that is gone is reported as a "
+        "version mismatch: %s" % " ".join(body.split()))
     client = read(CLIENT)
     cls = client[client.index("export class ApiError"):]
     cls = cls[: cls.index("\n}")]
@@ -235,13 +248,34 @@ def test_the_backend_answers_404_for_records_and_for_routes_in_the_same_status()
         "the unmapped-route handler no longer answers the bare NOT_FOUND code: %s" % window)
 
 
-def test_the_501_half_of_the_predicate_has_no_producer_in_either_service():
+def test_the_501_half_of_the_predicate_has_one_producer_the_browser_never_sees():
+    """The 501 exists now, and it does not mean what the boundary's 501 branch says.
+
+    The ai-service answers 501 for exactly one thing: the PDF converter is an
+    optional dependency and it is not installed. That is a fact about the
+    *deployment*, not about the route -- the route is served. The Java backend
+    -- the only thing the browser talks to -- translates the upstream's 501
+    into its own 502, so the browser never sees a 501 at all, and the
+    boundary's 501 branch is the defensive rule it was written as.
+    """
     java = sorted(p.relative_to(ROOT).as_posix() for p in JAVA.rglob("*.java"))
     py = sorted(p.relative_to(ROOT).as_posix() for p in PYSRC.rglob("*.py"))
     assert len(java) >= 150 and len(py) >= 60, "the server walks read %d java, %d python files" % (len(java), len(py))
     assert status_of("NOT_FOUND"), "control: the enum scan must be able to find a status before it claims an absence"
+    assert not status_of("NOT_IMPLEMENTED"), "the enum declares a 501 now, so the browser can be told one"
     hits = [rel for rel in java + py if "NOT_IMPLEMENTED" in read(rel) or re.search(r"\b501\b", read(rel))]
-    assert hits == [], "something answers 501 now: %s" % hits
+    assert hits == ["ai-service/app/api/features.py"], "the 501 producers moved: %s" % hits
+    producer = read("ai-service/app/api/features.py")
+    assert producer.count("HTTPException(501") == 1, "the producer answers 501 from more than one place"
+    window = " ".join(producer[max(0, producer.index("HTTPException(501") - 600): producer.index("HTTPException(501")].split())
+    assert "PDF converter is optional" in window, (
+        "the 501 no longer says what it is about: %s" % window[-200:])
+    client = read("backend/src/main/java/com/careeros/ai/HttpAiServiceClient.java")
+    assert "NOT_IMPLEMENTED" not in client, "the backend now forwards a 501, so the browser can see one"
+    assert client.count('new ApiException(ApiErrorCode.AI_SERVICE_ERROR, "AI service request failed")') == 3, (
+        "the upstream's own status is no longer flattened into one 502 the browser can read")
+    assert stmt(read(CODES), "AI_SERVICE_ERROR(HttpStatus.") == "AI_SERVICE_ERROR(HttpStatus.BAD_GATEWAY),", (
+        "the code the upstream's 501 becomes is no longer a 502")
 
 
 def test_the_run_a_user_opens_by_url_id_gets_the_version_sentence():
@@ -257,9 +291,15 @@ def test_the_run_a_user_opens_by_url_id_gets_the_version_sentence():
     empty = empty[: empty.index("\n        }}")]
     # The screen's own record-gone copy reads from the locale table for the
     # link, so the gate accepts the key it reads rather than the English copy.
-    assert 'title: "This run is gone"' in empty \
+    assert ('title: "This run is gone"' in empty or 'title: t("activity.detail.runGone")' in empty) \
         and ('t("activity.detail.backToActivity")' in empty or "Back to activity" in empty), (
         "the screen's own record-gone copy moved: %s" % " ".join(empty.split())[:200])
+    # The key it reads has to carry the sentence the reader needs, in the reader's language.
+    locale = read("frontend/src/lib/i18n/translations.ts")
+    assert 'runGone: "This run is gone"' in locale, (
+        "the screen's record-gone copy lost its sentence in the locale table")
+    assert 'runGone: "\u8fd9\u6b21\u8fd0\u884c\u5df2\u7ecf\u4e0d\u5728\u4e86"' in locale, (
+        "the record-gone copy has no Chinese sentence, so a Chinese reader is told nothing")
     boundary = read(BOUNDARY)
     assert stmt(boundary, "description={notLive?.description ??") == \
         "description={notLive?.description ?? missingEndpointMessage()}", (
@@ -311,5 +351,5 @@ def test_this_gate_reads_the_envelope_and_the_branches_it_claims():
     assert "items: arr.map(map)," in read(NORMALIZE), "the page builder no longer writes items"
     for rel in (BOUNDARY, MODULE_VIEW, MISSING, CLIENT, NORMALIZE, CODES, HANDLER, RUN_DETAIL):
         assert (ROOT / rel).exists(), "%s is not where this file reads it" % rel
-    assert len(not_found_codes()) == 14 and len(boundary_users()) == 5
-    assert len(module_view_users()) == 5 and len(OWN_FLAG_SCREENS) == 8
+    assert len(not_found_codes()) == 24 and len(boundary_users()) == 5
+    assert len(module_view_users()) == 5 and len(OWN_FLAG_SCREENS) == 14

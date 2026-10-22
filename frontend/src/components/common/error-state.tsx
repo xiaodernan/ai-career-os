@@ -5,6 +5,7 @@ import { TriangleAlert, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ApiError } from "@/lib/api/client";
+import { describe } from "@/lib/hooks/failure";
 import { useLocale } from "@/lib/i18n/locale-context";
 
 /**
@@ -29,10 +30,12 @@ function ErrorState({
 }: ErrorStateProps) {
   const { t } = useLocale();
   const heading = title ?? t("common.somethingWentWrong");
+  // The server's own English is not the sentence a reader should read: the code
+  // names what happened, and the table has that sentence in the reader's language.
   const detail =
     message ??
     (error instanceof ApiError
-      ? error.message
+      ? describe(error, "")
       : error instanceof Error
         ? error.message
         : undefined);
