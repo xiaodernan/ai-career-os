@@ -47,7 +47,7 @@ public class InternalFileController {
             throw new ApiException(ApiErrorCode.FILE_KEY_INVALID, "Invalid file key format");
         }
         Document doc = documents.findByFileKey(fileKey)
-                .orElseThrow(() -> new ApiException(ApiErrorCode.DOCUMENT_NOT_FOUND, "No document owns this key"));
+                .orElseThrow(() -> new ApiException(ApiErrorCode.DOCUMENT_KEY_NOT_OWNED, "No document owns this key"));
         byte[] bytes = storage.getBytes(fileKey);
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(doc.getMediaType()))

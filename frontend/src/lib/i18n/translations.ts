@@ -954,6 +954,8 @@ export const translations = {
 
       ABORTED: "The upload was cancelled.",
 
+      AI_SERVICE_NOT_FOUND: "That is no longer here.",
+
       APPLICATION_NOT_FOUND: "That application is no longer here.",
 
       BUNDLE_NO_SECTION: "That file has no data section.",
@@ -962,7 +964,13 @@ export const translations = {
 
       COMPANY_NOT_FOUND: "That company is no longer here.",
 
+      CONTACT_NOT_FOUND: "That contact is no longer here.",
+
       CONVERSATION_NOT_FOUND: "That conversation is no longer here.",
+
+      DOCUMENT_KEY_NOT_OWNED: "No document owns that file key.",
+
+      DOCUMENT_NOT_FOUND: "That document is no longer here.",
 
       EMAIL_ALREADY_REGISTERED: "That email address is already registered.",
 
@@ -1006,6 +1014,10 @@ export const translations = {
 
       NOTE_NOT_FOUND: "That note is no longer here.",
 
+      NOT_FOUND: "That address is not served here.",
+
+      PROFILE_NOT_FOUND: "Your profile is no longer here.",
+
       RATE_LIMITED: "Too many requests — please slow down.",
 
       RESUME_FILE_MISSING: "That resume's original file is gone.",
@@ -1042,6 +1054,8 @@ export const translations = {
       UPLOAD_UNREADABLE: "That file could not be read.",
 
       USER_DISABLED: "This account is disabled.",
+
+      USER_NOT_FOUND: "That account is no longer here.",
 
     },
     // The public landing page (18.2) -- the first thing a visitor reads.
@@ -2650,6 +2664,8 @@ export const translations = {
 
       ABORTED: "上传已取消。",
 
+      AI_SERVICE_NOT_FOUND: "那个东西已经不在了。",
+
       APPLICATION_NOT_FOUND: "这条申请记录已经不在了。",
 
       BUNDLE_NO_SECTION: "这个文件里没有数据段。",
@@ -2658,7 +2674,13 @@ export const translations = {
 
       COMPANY_NOT_FOUND: "这家公司已经不在了。",
 
+      CONTACT_NOT_FOUND: "这个联系人已经不在了。",
+
       CONVERSATION_NOT_FOUND: "这段对话已经不在了。",
+
+      DOCUMENT_KEY_NOT_OWNED: "没有文档拥有这个文件键。",
+
+      DOCUMENT_NOT_FOUND: "这份文档已经不在了。",
 
       EMAIL_ALREADY_REGISTERED: "这个邮箱已经注册过了。",
 
@@ -2702,6 +2724,10 @@ export const translations = {
 
       NOTE_NOT_FOUND: "这条笔记已经不在了。",
 
+      NOT_FOUND: "这个地址在这里没有提供。",
+
+      PROFILE_NOT_FOUND: "你的档案已经不在了。",
+
       RATE_LIMITED: "请求太频繁了，请慢一点。",
 
       RESUME_FILE_MISSING: "这份简历的原始文件已经不在了。",
@@ -2738,6 +2764,8 @@ export const translations = {
       UPLOAD_UNREADABLE: "这个文件读不出来。",
 
       USER_DISABLED: "这个账号已被停用。",
+
+      USER_NOT_FOUND: "这个账号已经不在了。",
 
     },
     landing: {

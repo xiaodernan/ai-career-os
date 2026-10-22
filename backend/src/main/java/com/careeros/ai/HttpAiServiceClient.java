@@ -609,7 +609,7 @@ public class HttpAiServiceClient implements AiServiceClient {
     private static ApiException translateStatus(RestClientResponseException e) {
         HttpStatus status = HttpStatus.resolve(e.getStatusCode().value());
         if (status == HttpStatus.NOT_FOUND) {
-            return new ApiException(ApiErrorCode.NOT_FOUND, "Resource not found");
+            return new ApiException(ApiErrorCode.AI_SERVICE_NOT_FOUND, "Resource not found");
         }
         if (status == HttpStatus.BAD_REQUEST || status == HttpStatus.UNPROCESSABLE_ENTITY) {
             String detail = upstreamDetail(e);

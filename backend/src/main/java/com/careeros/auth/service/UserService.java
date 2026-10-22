@@ -71,11 +71,11 @@ public class UserService {
 
     private User requireUser(UUID userId) {
         return users.findById(userId)
-                .orElseThrow(() -> new ApiException(ApiErrorCode.NOT_FOUND, "User not found"));
+                .orElseThrow(() -> new ApiException(ApiErrorCode.USER_NOT_FOUND, "User not found"));
     }
 
     private UserProfile requireProfile(UUID userId) {
         return profiles.findByUserId(userId)
-                .orElseThrow(() -> new ApiException(ApiErrorCode.NOT_FOUND, "Profile not found"));
+                .orElseThrow(() -> new ApiException(ApiErrorCode.PROFILE_NOT_FOUND, "Profile not found"));
     }
 }

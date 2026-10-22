@@ -32,7 +32,7 @@ public class UserProfileService {
     @Transactional
     public ProfileResponse update(UUID userId, UpdateProfileRequest request) {
         User user = users.findById(userId)
-                .orElseThrow(() -> new ApiException(ApiErrorCode.NOT_FOUND, "User not found"));
+                .orElseThrow(() -> new ApiException(ApiErrorCode.USER_NOT_FOUND, "User not found"));
         UserProfile profile = requireProfile(userId);
         if (request.headline() != null) {
             profile.setHeadline(request.headline().trim());
@@ -68,6 +68,6 @@ public class UserProfileService {
 
     private UserProfile requireProfile(UUID userId) {
         return profiles.findByUserId(userId)
-                .orElseThrow(() -> new ApiException(ApiErrorCode.NOT_FOUND, "Profile not found"));
+                .orElseThrow(() -> new ApiException(ApiErrorCode.PROFILE_NOT_FOUND, "Profile not found"));
     }
 }

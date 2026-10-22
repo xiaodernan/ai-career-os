@@ -54,7 +54,7 @@ public class ContactService {
 
     private Contact require(UUID userId, UUID id) {
         return contacts.findByIdAndUserId(id, userId)
-                .orElseThrow(() -> new ApiException(ApiErrorCode.NOT_FOUND, "Contact not found"));
+                .orElseThrow(() -> new ApiException(ApiErrorCode.CONTACT_NOT_FOUND, "Contact not found"));
     }
 
     private static void apply(Contact c, ContactRequest request) {

@@ -360,12 +360,12 @@ class InternalFileControllerTest {
     }
 
     @Test
-    void a_key_no_document_owns_answers_document_not_found_without_opening_the_bucket() throws Exception {
+    void a_key_no_document_owns_answers_document_key_not_owned_without_opening_the_bucket() throws Exception {
         when(documents.findByFileKey(KEY_PDF)).thenReturn(Optional.empty());
 
         mvc.perform(internal(ROUTE + KEY_PDF))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.error.code").value("DOCUMENT_NOT_FOUND"))
+                .andExpect(jsonPath("$.error.code").value("DOCUMENT_KEY_NOT_OWNED"))
                 .andExpect(jsonPath("$.error.message").value("No document owns this key"));
 
         // The row is consulted first, so an unknown key costs a query and not an object fetch.

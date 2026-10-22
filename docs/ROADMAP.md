@@ -99,7 +99,7 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   `VERSION_NOT_FOUND` with three. One sentence per code would tell a reader
   whose interview has not started that the interview is already under way
   — so the fix is not a translation, it is a *finer vocabulary*: roughly
-  nineteen more codes (one per distinct wording), about seventy sentences in
+  thirteen more codes (one per distinct wording), about seventy sentences in
   each language, and the throw sites changed to name them.
 
   **The first split is done.** The resume's not-found code answered with six
@@ -145,6 +145,19 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   thing to the reader are held there by the same-meaning list, which is a
   person's judgement the gate keeps honest.
 
+  **And the not-found code is five.** `NOT_FOUND` answered with four
+  sentences -- the route is not mapped, the assistant's own record is gone,
+  the account is gone, the profile is gone, the contact is gone -- and the
+  reader could not tell them apart: every one of them arrives as a 404, and
+  the browser answers a 404 with "your frontend and the backend are
+  different versions", which is false whenever the route is served and the
+  record is not. They are five codes now (`NOT_FOUND` for the route that is
+  not served, `AI_SERVICE_NOT_FOUND`, `USER_NOT_FOUND`, `PROFILE_NOT_FOUND`,
+  `CONTACT_NOT_FOUND`), and `DOCUMENT_NOT_FOUND` is two as well -- a
+  document that is gone, and a file key no document owns. The code is what
+  tells the reader which of them happened, and the browser's rule is next:
+  only the route that is not served may be reported as a version mismatch.
+
   **And a code travels by three roads.** A throw (`new ApiException`), the
   envelope builder (`ApiError.of`), and the framework's own edges — the 401,
   the 403, the 404, the 429. A measurement that read only the throws called
@@ -161,14 +174,14 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   **And the services' codes are classified now.** Every code the services can
   send is either **translated** (the browser's table answers it, in both
   languages) or **named as a gap** — and the gap list is the queue for the finer
-  vocabulary: `AI_SERVICE_BAD_REQUEST`, `AI_SERVICE_ERROR`, `DOCUMENT_NOT_FOUND`,
-  `INTERNAL_ERROR`, `NOT_FOUND`, `VALIDATION_FAILED`, `VERSION_NOT_FOUND`. The gate
+  vocabulary: `AI_SERVICE_BAD_REQUEST`, `AI_SERVICE_ERROR`, `INTERNAL_ERROR`,
+  `VALIDATION_FAILED`, `VERSION_NOT_FOUND`. The gate
   *measures* the split rather than remembering it: a code that is translated
   must carry one meaning (read off the throw sites), a code that is named as a
   gap must carry several, and a code nobody classified fails the gate. So the
-  forty-six codes that mean one thing are bilingual today, and the seven that
-  mean several carry nineteen distinct sentences between them, so they keep
-  the server's words until the throw sites name them properly — nineteen more codes, one per distinct wording, and then the
+  fifty-three codes that mean one thing are bilingual today, and the five that
+  mean several carry thirteen distinct sentences between them, so they keep
+  the server's words until the throw sites name them properly — thirteen more codes, one per distinct wording, and then the
   gap list empties.
 - **The export's readable half had one language (closed 2026-10-22).** 13.1's
   *human-readable* export — the print-ready document — was written in Chinese

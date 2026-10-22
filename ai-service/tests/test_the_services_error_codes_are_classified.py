@@ -6,8 +6,8 @@ code is the contract ("never rename an emitted code") and the code is what
 crosses the wire.
 
 But the codes are **coarser than the messages**. Measured against the throw
-sites: `INTERNAL_ERROR` answers with five different sentences, `NOT_FOUND` with
-four, `VALIDATION_FAILED` with three, `VERSION_NOT_FOUND` with three,
+sites: `INTERNAL_ERROR` answers with five different sentences,
+`VALIDATION_FAILED` with three, `VERSION_NOT_FOUND` with three,
 `AI_SERVICE_ERROR` with two. One sentence per code would tell a reader
 whose request was refused for one reason that it was refused for another --
 so the fix is not a translation, it is a finer vocabulary, and until the
@@ -16,8 +16,9 @@ server's own words.
 
 The vocabulary is being made finer one code at a time. The resume's
 not-found code is six codes now, the request bucket that answered with twelve
-sentences is thirteen, and the session codes are one meaning each -- with the
-buckets themselves gone, because a name that means nothing is not a contract.
+sentences is thirteen, the session codes are one meaning each, and the
+not-found code is five -- with the buckets themselves gone, because a name
+that means nothing is not a contract.
 
 This gate holds the classification, and it *measures* it rather than
 remembering it:
@@ -56,9 +57,7 @@ CLIENT = ROOT / "frontend" / "src" / "lib" / "api" / "client.ts"
 COARSE: frozenset[str] = frozenset({
     "AI_SERVICE_BAD_REQUEST",
     "AI_SERVICE_ERROR",
-    "DOCUMENT_NOT_FOUND",
     "INTERNAL_ERROR",
-    "NOT_FOUND",
     "VALIDATION_FAILED",
     "VERSION_NOT_FOUND",
 })

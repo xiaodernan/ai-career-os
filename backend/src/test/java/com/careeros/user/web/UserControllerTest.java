@@ -269,7 +269,7 @@ class UserControllerTest {
 
         mvc.perform(get("/api/v1/users/me/profile"))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.error.code").value("NOT_FOUND"))
+                .andExpect(jsonPath("$.error.code").value("PROFILE_NOT_FOUND"))
                 .andExpect(jsonPath("$.error.message").value("Profile not found"));
 
         mvc.perform(get("/api/v1/users/me"))
