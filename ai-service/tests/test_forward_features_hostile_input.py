@@ -10,8 +10,8 @@ stale cached row must produce an empty/safe result, never crash the request path
 import pytest
 
 from app.features import (company, cover_letter, counter_offer, demand, equity, export,
-                             export_redact, export_render, export_words, interview_prep,
-                             jd_analyze, learning, match, negotiation,
+                             export_redact, export_render, export_words, import_plan,
+                             interview_prep, jd_analyze, learning, match, negotiation,
                              offers, prioritize, progress, progression, readiness,
                              resume_parse, roles, salary, tailor)
 
@@ -524,4 +524,31 @@ def test_merge_skills_skips_rows_without_a_name():
     merged = resume_parse._merge_skills([{"category": "cloud"}, None, "junk",
                                          {"name": "react"}], ["Go", None])
     assert [s["name"] for s in merged] == ["React", "Go"]
+
+
+# ---------------- import planning + bundle validation (Epic 13.2) ----------------
+
+def test_validate_bundle_null_manifest_and_data_are_contract_errors():
+    # a present-null manifest/data used to raise TypeError inside validate_bundle
+    errs = export.validate_bundle({"schema_version": "1.1.0", "generator": "g",
+                                   "generated_at": "t", "user": {}, "manifest": None,
+                                   "data": None})
+    assert "manifest is not a JSON object" in errs
+    assert "data is not a JSON object" in errs
+
+
+def test_plan_import_skips_non_dict_items_and_null_data():
+    data = {"profile": None, "resumes": [None, "junk", {"id": "r1"}],
+            "knowledge": [], "job_descriptions": [], "interviews": [], "memories": []}
+    bundle = {"schema_version": "1.0.0", "generator": "g", "generated_at": "t",
+              "user": {"id": "u"},
+              "manifest": {"schema_version": "1.0.0", "generator": "g", "counts": {},
+                           "content_hash": export.content_hash(data),
+                           "anonymized": False},
+              "data": data}
+    plan = import_plan.plan_import(bundle)
+    assert plan["sections"]["resumes"] == [
+        {"op": "create", "id": "r1",
+         "content_hash": export.content_hash({"id": "r1"})}]
+    assert "profile" not in plan["sections"]      # a null profile is nothing to plan
 

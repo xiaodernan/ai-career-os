@@ -120,7 +120,7 @@ class JwtServiceTest {
         ApiException ex = org.assertj.core.api.Assertions.catchThrowableOfType(
                 () -> jwt().parseAccessToken(refreshShaped), ApiException.class);
 
-        assertThat(ex.code()).isEqualTo(ApiErrorCode.TOKEN_INVALID);
+        assertThat(ex.code()).isEqualTo(ApiErrorCode.TOKEN_MALFORMED);
     }
 
     @Test
@@ -136,7 +136,7 @@ class JwtServiceTest {
         ApiException ex = org.assertj.core.api.Assertions.catchThrowableOfType(
                 () -> jwt().parseAccessToken(untyped), ApiException.class);
 
-        assertThat(ex.code()).isEqualTo(ApiErrorCode.TOKEN_INVALID);
+        assertThat(ex.code()).isEqualTo(ApiErrorCode.TOKEN_MALFORMED);
     }
 
     @Test
@@ -153,7 +153,7 @@ class JwtServiceTest {
         ApiException ex = org.assertj.core.api.Assertions.catchThrowableOfType(
                 () -> jwt().parseAccessToken(badSubject), ApiException.class);
 
-        assertThat(ex.code()).isEqualTo(ApiErrorCode.TOKEN_INVALID);
+        assertThat(ex.code()).isEqualTo(ApiErrorCode.TOKEN_MALFORMED);
     }
 
     @Test

@@ -108,7 +108,7 @@ public class AuthService {
             throw new ApiException(ApiErrorCode.RESET_TOKEN_INVALID, "Reset token used or expired");
         }
         User user = users.findById(token.getUserId())
-                .orElseThrow(() -> new ApiException(ApiErrorCode.RESET_TOKEN_INVALID, "Invalid reset token"));
+                .orElseThrow(() -> new ApiException(ApiErrorCode.RESET_TOKEN_OWNER_NOT_FOUND, "Invalid reset token"));
         token.setUsedAt(now);
         resetTokens.save(token);
         user.setPasswordHash(passwordEncoder.encode(request.newPassword()));

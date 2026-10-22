@@ -39,8 +39,12 @@ def plan_import(bundle: dict, existing: dict | None = None) -> dict:
     if errors:
         raise ValueError("invalid bundle: " + "; ".join(errors))
 
-    data = bundle.get("data", {})
-    existing_data = (existing or {}).get("data", {}) if existing else {}
+    data = bundle.get("data")
+    data = data if isinstance(data, dict) else {}
+    existing_data = {}
+    if isinstance(existing, dict):
+        ed = existing.get("data")
+        existing_data = ed if isinstance(ed, dict) else {}
 
     # A section the sharer redacted is withheld, not empty. The bundle makes
     # no claim about it, so the plan must make none either -- and a plan
@@ -58,8 +62,10 @@ def plan_import(bundle: dict, existing: dict | None = None) -> dict:
     for section in _LIST_SECTIONS:
         if section in withheld:
             continue
-        items = data.get(section) or []
-        ex_ids = {it.get("id") for it in (existing_data.get(section) or [])}
+        items = [it for it in (data.get(section) or []) if isinstance(it, dict)]
+        existing_items = [it for it in (existing_data.get(section) or [])
+                          if isinstance(it, dict)]
+        ex_ids = {it.get("id") for it in existing_items}
         ops: list[dict] = []
         present_ids: set = set()
         for it in items:
@@ -70,7 +76,7 @@ def plan_import(bundle: dict, existing: dict | None = None) -> dict:
                 "id": iid,
                 "content_hash": content_hash(it),
             })
-        for it in (existing_data.get(section) or []):
+        for it in existing_items:
             if it.get("id") not in present_ids:
                 ops.append({"op": "delete", "id": it.get("id"), "content_hash": None})
         plan["sections"][section] = ops
@@ -79,7 +85,7 @@ def plan_import(bundle: dict, existing: dict | None = None) -> dict:
     # nothing to plan for it -- the same rule as the list sections above,
     # reached by a different road.
     profile = data.get("profile")
-    if profile:
+    if isinstance(profile, dict) and profile:
         ex_profile_present = bool(existing_data.get("profile"))
         plan["sections"]["profile"] = [{
             "op": "update" if ex_profile_present else "create",

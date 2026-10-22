@@ -6,18 +6,18 @@ code is the contract ("never rename an emitted code") and the code is what
 crosses the wire.
 
 But the codes are **coarser than the messages**. Measured against the throw
-sites: `TOKEN_INVALID` answers with five different sentences, `INTERNAL_ERROR`
-with five, `NOT_FOUND` with four, `VALIDATION_FAILED` with three,
-`VERSION_NOT_FOUND` with three. One sentence per code would tell a reader
+sites: `INTERNAL_ERROR` answers with five different sentences, `NOT_FOUND` with
+four, `VALIDATION_FAILED` with three, `VERSION_NOT_FOUND` with three,
+`AI_SERVICE_ERROR` with two. One sentence per code would tell a reader
 whose request was refused for one reason that it was refused for another --
 so the fix is not a translation, it is a finer vocabulary, and until the
 vocabulary is fine enough the codes that mean several things keep the
 server's own words.
 
 The vocabulary is being made finer one code at a time. The resume's
-not-found code is six codes now, and the request bucket that answered with
-twelve sentences is thirteen codes -- one per meaning, with the bucket
-itself gone, because a name that means nothing is not a contract.
+not-found code is six codes now, the request bucket that answered with twelve
+sentences is thirteen, and the session codes are one meaning each -- with the
+buckets themselves gone, because a name that means nothing is not a contract.
 
 This gate holds the classification, and it *measures* it rather than
 remembering it:
@@ -59,8 +59,6 @@ COARSE: frozenset[str] = frozenset({
     "DOCUMENT_NOT_FOUND",
     "INTERNAL_ERROR",
     "NOT_FOUND",
-    "RESET_TOKEN_INVALID",
-    "TOKEN_INVALID",
     "VALIDATION_FAILED",
     "VERSION_NOT_FOUND",
 })
@@ -88,6 +86,18 @@ SAME_MEANING: frozenset[str] = frozenset({
     # service-to-service error the reader never sees, and the sentence
     # names what the reader does.
     "UNAUTHORIZED",
+    # "Invalid access token" and "Unknown refresh token" are one thing to
+    # the reader: the session is not valid, and the answer is to sign in
+    # again. Which of the two tokens was the dead one changes nothing the
+    # reader can do.
+    "TOKEN_INVALID",
+    # "Not an access token" and "Malformed token subject" are one thing
+    # too: the token is not one of ours, so the session cannot be read.
+    "TOKEN_MALFORMED",
+    # "Invalid reset token" answers for a link that is unknown and for one
+    # that was already spent or has expired. The reader's answer is the
+    # same for both: ask for another link.
+    "RESET_TOKEN_INVALID",
 })
 
 

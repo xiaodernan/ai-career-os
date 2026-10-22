@@ -73,7 +73,7 @@ public class TokenService {
             throw new ApiException(ApiErrorCode.TOKEN_EXPIRED, "Refresh token expired");
         }
         User user = users.findById(stored.getUserId())
-                .orElseThrow(() -> new ApiException(ApiErrorCode.TOKEN_INVALID, "Token owner not found"));
+                .orElseThrow(() -> new ApiException(ApiErrorCode.TOKEN_OWNER_NOT_FOUND, "Token owner not found"));
         if (!user.isActive()) {
             throw new ApiException(ApiErrorCode.USER_DISABLED, "Account is disabled");
         }

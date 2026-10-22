@@ -1015,6 +1015,8 @@ export const translations = {
       RESUME_NOT_PARSED: "Your resume has not been parsed yet.",
       RESUME_NOT_TAILABLE: "There is no resume to tailor yet.",
       RESUME_TEXT_NOT_READY: "That document's text is not available yet.",
+      RESET_TOKEN_INVALID: "That reset link is invalid or has expired. Please request a new one.",
+      RESET_TOKEN_OWNER_NOT_FOUND: "The account this reset link belonged to is no longer here.",
       RUN_NOT_FOUND: "That run is no longer here.",
 
       SESSION_NOT_FOUND: "That interview session is no longer here.",
@@ -1026,6 +1028,12 @@ export const translations = {
       STREAM_ERROR: "The answer stream failed. Please try again.",
 
       TOKEN_EXPIRED: "Your session has expired. Please sign in again.",
+
+      TOKEN_INVALID: "Your session is not valid any more. Please sign in again.",
+
+      TOKEN_MALFORMED: "Your session could not be read. Please sign in again.",
+
+      TOKEN_OWNER_NOT_FOUND: "The account this session belonged to is no longer here.",
 
       TOKEN_REUSED: "For your safety every session in this family was signed out. Please sign in again.",
 
@@ -2703,6 +2711,8 @@ export const translations = {
       RESUME_NOT_PARSED: "你的简历还没有解析。",
       RESUME_NOT_TAILABLE: "还没有可以定制的简历。",
       RESUME_TEXT_NOT_READY: "这份文档的正文还读不出来。",
+      RESET_TOKEN_INVALID: "这个重置链接无效或已过期，请重新申请一个。",
+      RESET_TOKEN_OWNER_NOT_FOUND: "这个重置链接所属的账号已经不在了。",
       RUN_NOT_FOUND: "这次运行记录已经不在了。",
 
       SESSION_NOT_FOUND: "这次面试已经不在了。",
@@ -2714,6 +2724,12 @@ export const translations = {
       STREAM_ERROR: "回答的传输失败了，请再试一次。",
 
       TOKEN_EXPIRED: "登录状态过期了，请重新登录。",
+
+      TOKEN_INVALID: "你的登录状态已经无效了，请重新登录。",
+
+      TOKEN_MALFORMED: "你的登录状态读不出来，请重新登录。",
+
+      TOKEN_OWNER_NOT_FOUND: "这次登录所属的账号已经不在了。",
 
       TOKEN_REUSED: "为了安全，这一组会话都已退出，请重新登录。",
 

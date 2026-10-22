@@ -770,9 +770,12 @@ def validate_bundle(bundle: dict) -> list[str]:
             errors.append(f"missing top-level key: {key}")
     if "manifest" in bundle:
         m = bundle["manifest"]
-        for k in ("schema_version", "generator", "counts", "content_hash", "anonymized"):
-            if k not in m:
-                errors.append(f"missing manifest key: {k}")
+        if not isinstance(m, dict):
+            errors.append("manifest is not a JSON object")
+        else:
+            for k in ("schema_version", "generator", "counts", "content_hash", "anonymized"):
+                if k not in m:
+                    errors.append(f"missing manifest key: {k}")
     if "data" in bundle:
         # The required set is read off the bundle's OWN schema version: a 1.0.0
         # bundle predates the backend sections and is still valid, while a
@@ -786,11 +789,15 @@ def validate_bundle(bundle: dict) -> list[str]:
         # is rejected by the very path that exists to restore it, and the
         # redaction turns a backup into a document nobody can use.
         withheld = redacted_sections(bundle)
-        for s in wanted:
-            if s in withheld:
-                continue
-            if s not in bundle["data"]:
-                errors.append(f"missing data section: {s}")
+        data = bundle["data"]
+        if not isinstance(data, dict):
+            errors.append("data is not a JSON object")
+        else:
+            for s in wanted:
+                if s in withheld:
+                    continue
+                if s not in data:
+                    errors.append(f"missing data section: {s}")
     if (
         "manifest" in bundle
         and "data" in bundle

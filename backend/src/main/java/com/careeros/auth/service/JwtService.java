@@ -63,13 +63,13 @@ public class JwtService {
             throw new ApiException(ApiErrorCode.TOKEN_INVALID, "Invalid access token");
         }
         if (!"access".equals(claims.get("typ", String.class))) {
-            throw new ApiException(ApiErrorCode.TOKEN_INVALID, "Not an access token");
+            throw new ApiException(ApiErrorCode.TOKEN_MALFORMED, "Not an access token");
         }
         try {
             return new AuthUser(UUID.fromString(claims.getSubject()),
                     claims.get("email", String.class), claims.get("role", String.class));
         } catch (IllegalArgumentException e) {
-            throw new ApiException(ApiErrorCode.TOKEN_INVALID, "Malformed token subject");
+            throw new ApiException(ApiErrorCode.TOKEN_MALFORMED, "Malformed token subject");
         }
     }
 
