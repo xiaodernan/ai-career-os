@@ -56,6 +56,22 @@ forward surfaces, 3 ingest surfaces, 1 activity trace, 5 a11y keyboard, 1 title,
 redaction, 4 command palette, 1 networking, and the pagination suite). Each run takes
 ~60s of actual testing, plus the per-test teardown described below.
 
+### When the runner itself falls over
+
+Two failures are the *machine*, not the product, and they are worth telling
+apart before you go looking for a bug:
+
+- **`worker process exited unexpectedly (code=3221226505)`** — the Playwright
+  worker died, usually because the machine was already carrying a Maven build,
+  a Docker image build and the browser at the same time. The test it was
+  running is reported as failed, and the report says nothing about the
+  product. Re-run it on its own; if it passes, the run was the problem.
+- **`Timeout 20000ms exceeded` on `POST /api/v1/auth/register`** — the suite
+  provisions one account per test, so the registration is the first thing to
+  time out when the backend is still warming up. The registration is retried
+  once for exactly this reason (`tests/fixtures.ts`); a second timeout means
+  the backend was genuinely busy, not slow.
+
 ### Preflight
 
 `preflight.ps1` (Windows/PowerShell) runs the stack checks this README keeps

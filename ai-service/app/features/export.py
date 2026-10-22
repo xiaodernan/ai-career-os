@@ -54,16 +54,47 @@ ANONYMIZED_FIELDS: dict[str, tuple[str, ...]] = {
     # The people they know: a name, an address, a relation and what they
     # wrote about the person.
     "contacts": ("name", "role", "company", "relation", "email", "notes"),
-    # The notes they typed.
-    "notes": ("title", "content"),
-    # The resume's own text -- a name, a phone number, a history.
-    "resumes": ("user_id", "label", "resume_title", "plaintext", "structured"),
-    # What they wrote about each application.
-    "applications": ("notes",),
-    # The excerpt of their own material.
-    "knowledge": ("user_id", "text_excerpt"),
+    # The notes they typed -- and the tags they chose for them.
+    "notes": ("title", "content", "tags"),
+    # The resume's own text -- a name, a phone number, a history -- and the
+    # diff between two versions, which is made of the very same words.
+    "resumes": ("user_id", "label", "resume_title", "plaintext", "structured", "diff"),
+    # What they wrote about each application, why it was rejected, and what
+    # they were offered.
+    "applications": ("notes", "rejection_reason", "offer_compensation"),
+    # The growth report and its coverage, both of which are made of the
+    # reader's own material.
+    "growth_plans": ("coverage", "report"),
+    # The excerpt of their own material, its title, and the storage key --
+    # which is a path into the reader's own bucket and begins with their id.
+    "knowledge": ("user_id", "title", "text_excerpt", "file_key"),
+    # The pasted posting is not the reader's own words, but the row still
+    # says whose posting it is.
+    "job_descriptions": ("user_id",),
     # The facts the assistant extracted about them.
     "memories": ("key", "content"),
+    # The interview session's own id of the reader. The turns are a list
+    # inside the session, so they are handled by the bag policy below.
+    "interviews": ("user_id",),
+}
+
+# Fields that carry a **bag** -- a JSON object stored in one column -- whose
+# *inside* holds the reader's words.
+#
+# A bag cannot be handled by the field-name list above: the name says
+# nothing about what is in it. `meta` is the bag the ingester puts the
+# reader's own text into, and its shape is owned by whoever writes it --
+# so the keys that carry the text are named here, and the bag keeps the
+# rest, which is its shape ("this is a note", not "this is a resume").
+#
+# The gate holds this list against the writer that owns the shape, so a
+# bag that grows a new text-bearing key cannot be added quietly.
+ANONYMIZED_NESTED_FIELDS: dict[str, dict[str, tuple[str, ...]]] = {
+    "knowledge": {"meta": ("inline_text", "text_excerpt")},
+    # The interview turns: a list of rows inside the session's row, and the
+    # reader's own answers in it. The evaluation quotes the answer back, so
+    # it is the reader's words wearing the assistant's clothes.
+    "interviews": {"turns": ("user_id", "content", "evaluation")},
 }
 
 # The sections the ai-service reads for itself.
@@ -412,6 +443,38 @@ def build_bundle(user_id: str, raw: dict, *, anonymized: bool = False,
     return bundle
 
 
+def _redact_bag(value: Any, inner_keys: tuple[str, ...]) -> Any:
+    """Take the reader's words out of a bag, and keep the bag's shape.
+
+    A bag is a JSON object in one column. The field name says nothing about
+    what is inside it, so the keys that carry the reader's words are named
+    by the policy and only those go: the bag still says *what kind* of thing
+    it was, which is the shape of the export.
+
+    A bag that does not parse is not a bag we can read, and it might be
+    anything -- so it goes whole. Half of an anonymization is worse than
+    none: it looks like the file was cleaned.
+    """
+    if isinstance(value, dict):
+        return {k: (None if k in inner_keys else v) for k, v in value.items()}
+    if isinstance(value, list):
+        # A list of rows -- the interview turns are a list inside a row.
+        return [_redact_bag(item, inner_keys) for item in value]
+    if not isinstance(value, str):
+        return None
+    try:
+        parsed = json.loads(value)
+    except (ValueError, TypeError):
+        return None
+    if not isinstance(parsed, dict):
+        return None
+    return json.dumps(
+        {k: (None if k in inner_keys else v) for k, v in parsed.items()},
+        ensure_ascii=False,
+        sort_keys=True,
+    )
+
+
 def anonymize(bundle: dict, drop: tuple[str, ...] = DEFAULT_PII_FIELDS) -> dict:
     """Return a copy of the bundle with the people taken out of it.
 
@@ -467,19 +530,19 @@ def anonymize(bundle: dict, drop: tuple[str, ...] = DEFAULT_PII_FIELDS) -> dict:
             for field in fields:
                 if field in row:
                     row[field] = None
-    # The interview transcripts are the reader's own answers, one level down.
-    for session in data.get("interviews") or []:
-        if not isinstance(session, dict):
+    # The bags: the text inside them goes, the shape of them stays.
+    for section, fields in ANONYMIZED_NESTED_FIELDS.items():
+        rows = data.get(section)
+        if isinstance(rows, dict):
+            rows = [rows]
+        elif not isinstance(rows, list):
             continue
-        for field in ("user_id",):
-            if field in session:
-                session[field] = None
-        for turn in session.get("turns") or []:
-            if not isinstance(turn, dict):
+        for row in rows:
+            if not isinstance(row, dict):
                 continue
-            for field in ("content", "question"):
-                if field in turn:
-                    turn[field] = None
+            for field, inner in fields.items():
+                if field in row:
+                    row[field] = _redact_bag(row[field], inner)
     # The reader's own id, in the envelope and in the rows that carry it.
     user = _dict_obj(out.get("user"))
     if "id" in user:

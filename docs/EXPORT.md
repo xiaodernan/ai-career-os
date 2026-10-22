@@ -234,6 +234,39 @@ is left. The shape stays: the counts still say what the file holds, and the
 substance of a job search — the posting, the headline, the years — is still
 in it, because an export that leaves nothing behind is not an export.
 
+### The policy is a classification, not a list (2026-10-22)
+
+A list of field names is a list of the names somebody thought of, and
+everything else was the reader's by default. Proven against the running
+system: the note's full text travelled out inside the knowledge row's
+`meta` — a JSON bag whose *name* says nothing about what is in it — along
+with the note's title and its tags; the reader's own uuid sat in every
+job-description row and again inside the storage key of every uploaded
+document (the key is a path into their own bucket, and begins with their
+id); and every interview turn carried their uuid and the evaluation, which
+quotes their answer back.
+
+So the policy is a **classification** now, and it covers every column the
+export really carries:
+
+- **the reader's** — their identity, their own words, or a pointer into
+  their own storage (`ANONYMIZED_FIELDS`);
+- **the substance** — the posting, the title, the company, the status, the
+  counts, the timestamps, the ids;
+- **a bag** — a column whose *inside* holds the reader (`meta` on a
+  document, the turns inside an interview session). The bag keeps its
+  shape — the document still says it was a *note* — and loses its text.
+
+The gate holds that classification against the **real sources**: the real
+tables, the real queries the export runs, the real rows the backend writes.
+A fixture shaped like the old thing is what let the first version pass, so
+the fixture is now built out of the sources rather than written by hand. The
+last check is a census rather than a list: a marker goes into every column
+the classification calls the reader's, the anonymized file is searched for
+it, and **nothing survives** — not in a named field, not in a bag, not in a
+row inside a row. Half of an anonymization is worse than none: it looks like
+the file was cleaned.
+
 ## Redaction (13.3)
 
 `redact_bundle(bundle, drop=[...])` removes whole sections from a bundle the

@@ -243,9 +243,9 @@ Three properties hold across every one of them, and the census gates
   a sweep that ran under a random id would put another user's jobs in this one's
   board.
 
-## 8. The eleven quiet failures
+## 8. The twelve quiet failures
 
-Eleven bugs in this repository looked like working code and were not. They
+Twelve bugs in this repository looked like working code and were not. They
 are written down because each one is a *shape* of failure, not a one-off: the
 next one will have the same shape, and the gate that catches it is the thing to
 reach for.
@@ -340,9 +340,10 @@ writes only the caller's rows), a path (the anonymized export, built
 the way the button builds it), a route (the render, called the way
 the bridge calls it), a place (the language, read where the
 sentence is raised), and a promise (a note, quoted by the agents the copy
-says quotes it). The general shape is the same in all eleven: **the bug
-was where nobody was looking, and the answer was to look there, not to
-look harder.**
+says quotes it), and a classification (every exported column, the
+reader's or the substance). The general shape is the same in all twelve:
+**the bug was where nobody was looking, and the answer was to look there,
+not to look harder.**
 
 **A promise the copy makes and the code does not keep.** The notes panel
 says it three times over: the content field says "the agents can quote
@@ -438,6 +439,37 @@ disagree. And the gate holds the policy against the *entities* that own the
 columns, so the list of what is removed is measured rather than
 remembered — and the test builds a bundle shaped like the real one, because
 a fixture shaped like the old one is what let the first version pass.
+
+**A column nobody classified.** The anonymized export forgets the reader,
+and it forgot them by name: a list of field names, `ANONYMIZED_FIELDS`, saying
+which columns carry a person. A list of names is a list of the names somebody
+thought of. Everything else was the reader's by default.
+
+Proven against the running system, not against the code. The note's full text
+was in the knowledge row's `meta` -- a JSON bag whose *name* says nothing
+about what is in it -- so the note the reader typed travelled out in the file
+labelled "anonymized". The note's title travelled with it, and its tags. The
+reader's own uuid sat in every job-description row, and again inside the
+storage key of every uploaded document, because the key is a path into their
+own bucket and begins with their id. In every interview turn: their uuid, and
+the evaluation, which quotes their answer back to them.
+
+**The shape is a policy that is a list.** A list of names cannot say "every
+column is either the reader's or the substance of a job search", so a column
+nobody thought about had no answer at all. The policy is a classification now:
+every column the export really carries is the reader's, or the substance, or a
+bag whose inside is classified in turn. And the gate builds its bundle out of
+the **real sources** -- the real tables, the real queries, the real rows the
+backend writes -- because the fixture that hid this leak was shaped like a
+document row that has no `meta` in it. A gate is right about the columns it
+names and silent about the ones it does not, and silence is where the reader
+was.
+
+The last check is a census rather than a list: the anonymized file is searched
+for the reader's words -- a marker in every column the classification calls
+theirs -- and **nothing survives**. Not in a named field, not in a bag, not in
+a row inside a row. Half of an anonymization is worse than none: it looks
+like the file was cleaned.
 
 **A rule that was written down and nothing checked.** The re-import's
 second rule says: "Only the caller's own rows are touched. Every read and
