@@ -68,7 +68,17 @@ COARSE: frozenset[str] = frozenset({
 # an entry that no longer needs to be there (the code grew a second meaning,
 # and the sentence is now wrong about one of them) is removed rather than
 # left to rot.
-SAME_MEANING: frozenset[str] = frozenset({"TOKEN_EXPIRED"})
+SAME_MEANING: frozenset[str] = frozenset({
+    # The access token and the refresh token both expiring are the same
+    # event -- the session is gone.
+    "TOKEN_EXPIRED",
+    # The reader-facing "authentication required" and the services' own
+    # "invalid internal token" are one thing *to the reader*: they are the
+    # one thing the reader can do about either. The internal one is a
+    # service-to-service error the reader never sees, and the sentence
+    # names what the reader does.
+    "UNAUTHORIZED",
+})
 
 
 def enum_codes() -> set[str]:
@@ -80,22 +90,34 @@ def enum_codes() -> set[str]:
 def throw_sites() -> tuple[dict[str, set[str]], set[str]]:
     """The wording each code carries, and the codes whose wording is unknown.
 
-    A code thrown with a message that is not a literal cannot be measured
-    here -- and a code whose wording cannot be measured cannot be given one
-    sentence, so it is treated as a gap.
+    There are **three** ways a code reaches the reader, and the measurement
+    has to see all of them: a throw (`new ApiException`), the envelope
+    builder (`ApiError.of`), and the exception handler's own edges (the
+    401, the 403, the 404, the 429). A measurement that only read the
+    throws would have called `RATE_LIMITED` and `FORBIDDEN` silent, and
+    "silent" is not the same as "one meaning".
+
+    A code whose message is not a literal cannot be measured here -- and a
+    code whose wording cannot be measured cannot be given one sentence, so
+    it is treated as a gap.
     """
     wordings: dict[str, set[str]] = {}
     unmeasured: set[str] = set()
     for path in BACKEND_MAIN.rglob("*.java"):
         text = path.read_text(encoding="utf-8", errors="replace")
-        for match in re.finditer(r"new ApiException\(\s*ApiErrorCode\.([A-Z_]+)\s*,\s*", text):
-            code = match.group(1)
-            rest = text[match.end():].lstrip()
-            if rest.startswith('"'):
-                end = rest.find('"', 1)
-                wordings.setdefault(code, set()).add(rest[1:end])
-            else:
-                unmeasured.add(code)
+        patterns = (
+            r"new ApiException\(\s*ApiErrorCode\.([A-Z_]+)\s*,\s*",
+            r"ApiError\.of\(\s*ApiErrorCode\.([A-Z_]+)\s*,\s*",
+        )
+        for pattern in patterns:
+            for match in re.finditer(pattern, text):
+                code = match.group(1)
+                rest = text[match.end():].lstrip()
+                if rest.startswith('"'):
+                    end = rest.find('"', 1)
+                    wordings.setdefault(code, set()).add(rest[1:end])
+                else:
+                    unmeasured.add(code)
     return wordings, unmeasured
 
 

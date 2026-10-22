@@ -411,6 +411,15 @@ other, and the gap list is the queue rather than an excuse. The sentence
 comes from the code where the code is fine enough to carry it, and the
 server's own words stay where it is not.
 
+**And the measurement had to learn the third road.** A code reaches the
+reader three ways: a throw, the envelope builder, and the framework's own
+edges — the 401, the 403, the 404, the 429. A measurement that read only
+the throws called `RATE_LIMITED` and `FORBIDDEN` silent, and *silent is not
+the same as one meaning* — a code the measurement never saw is a code
+nothing knows what it says. A gate that measures a population has to
+measure the whole population, or it measures the part that was easy to
+reach.
+
 **A sentence raised where the language is not.** A failure toast is raised
 from an event handler, long after the render that knew the reader's
 language — and the sentence in it was an English literal. Every other word

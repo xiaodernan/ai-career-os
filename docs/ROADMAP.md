@@ -87,8 +87,9 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   not: the restore still lands the rows, and it no longer lands them on top of
   somebody else's.
 
-- **The errors a reader sees are still English in the server's own words (measured
-  2026-10-22; the mechanism is done, the services' codes are not).** A failed
+- **The errors a reader sees were the server's own English (measured 2026-10-22;
+  the codes that mean one thing are bilingual now, the ones that mean several
+  are the queue).** A failed
   write answers with a toast, and the toast says what the server said — in
   English. The obvious fix is to translate by the **code**, because the code is
   the contract ("never rename an emitted code") and the code is what crosses the
@@ -101,6 +102,13 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   there" — so the fix is not a translation, it is a *finer vocabulary*: roughly
   twenty-five more codes (one per distinct wording), about sixty sentences in
   each language, and the throw sites changed to name them.
+
+  **And a code travels by three roads.** A throw (`new ApiException`), the
+  envelope builder (`ApiError.of`), and the framework's own edges — the 401,
+  the 403, the 404, the 429. A measurement that read only the throws called
+  `RATE_LIMITED` and `FORBIDDEN` silent, and "silent" is not the same as "one
+  meaning". The gate reads all three now, so the split it measures is the
+  split the reader meets.
 
   **Done so far.** The browser's language is now readable *outside* a render
   (`lib/i18n/locale-context.tsx`'s `translate`), which is what a toast needs — it
