@@ -29,14 +29,20 @@ function render(artifact: { type: string; data?: unknown }): string {
 
 describe("the growth artifact cards", () => {
   it("draws the gap report with its coverage and the missing skills", () => {
+    // The card is handed the engine's own answer: `normalizeArtifacts` passes the
+    // orchestrator's `payload` through as `data`, and `analyze_gap` puts `gaps` at
+    // the top level with `{skill, importance, category}` rows. A fixture that
+    // invented its own keys would keep this suite green while the product painted
+    // empty badges.
     const html = render({
       type: "gap_report",
       data: {
-        gap: {
-          targetRole: "Senior Backend Engineer (Java)",
-          coverage: 0.42,
-          gaps: [{ name: "Kubernetes" }, { name: "Kafka" }],
-        },
+        targetRole: "Senior Backend Engineer (Java)",
+        coverage: 0.42,
+        gaps: [
+          { skill: "Kubernetes", importance: "must", category: "devops" },
+          { skill: "Kafka", importance: "should", category: "data" },
+        ],
       },
     });
     expect(html).toContain("Gap analysis");
@@ -44,6 +50,7 @@ describe("the growth artifact cards", () => {
     // The coverage is printed as a number, not only drawn as a bar.
     expect(html).toContain("42%");
     expect(html).toContain("Kubernetes");
+    expect(html).not.toContain("[object Object]");
   });
 
   it("draws the market band with its percentiles", () => {
@@ -73,12 +80,21 @@ describe("the growth artifact cards", () => {
   });
 
   it("draws the learning order", () => {
+    // `plan_learning_priority` answers `prioritizedGaps`, not `priorities` -- the
+    // card read the invented name and drew nothing at all.
     const html = render({
       type: "learning_priority",
-      data: { priority: { priorities: [{ skill: "Kubernetes", priority: "must" }] } },
+      data: {
+        targetRole: "Senior Backend Engineer (Java)",
+        prioritizedGaps: [
+          { skill: "Kubernetes", priority: "must", marketShare: 0.31 },
+        ],
+      },
     });
     expect(html).toContain("Learning priority");
     expect(html).toContain("Kubernetes");
+    expect(html).toContain("must");
+    expect(html).not.toContain("[object Object]");
   });
 
   it("draws nothing for an answer with no content in it", () => {

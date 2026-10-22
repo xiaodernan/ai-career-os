@@ -3164,7 +3164,10 @@ def test_both_frame_parsers_default_a_nameless_frame_to_the_same_event_name():
         # evidence it cited) above the trace-step union, and the union itself
         # did not change. The `kind:` head is the union's last member, so it
         # moves by the whole length of what was added above it.
-        ("types.ts", 1212, "kind:"),
+        # 1258 rather than 1212 since the growth engines' types were rewritten to
+        # the engines' own key spellings (#252) -- the block above the trace-step
+        # union grew by 46 lines and the union itself did not change.
+        ("types.ts", 1258, "kind:"),
         ('use-sse.ts', 15, 'event: SSEEventName | "message" | "progress" | "ping";'),
     ], (f"{[(r['file'], r['line'], r['head']) for r in by_role['type-union-member']]}: three type unions "
         "spell `message`, and only one of them names a frame -- the other two are the trace step kind "

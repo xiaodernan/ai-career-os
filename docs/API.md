@@ -189,7 +189,7 @@ that narrow the question.
 | POST | `/growth/learning-plan` | the same request → the phased study items (foundation → core → applied) with category-aware resource hints |
 | POST | `/growth/skill-demand` | the same request → which skills a role family's postings ask for, and how often — the market-centric half of the gap view |
 | POST | `/growth/learning-priority` | the same request → the gaps enriched with their market demand and ranked by importance × market pull, so the candidate learns the most-asked-for missing skill first |
-| POST | `/growth/progression` | the same request → the stepping-stone role families that are reachable today and build the dream role's missing skills. `targetRole` is the role being aimed at |
+| POST | `/growth/progression` | the same request → the stepping-stone role families that build the dream role's missing skills, each with the skills it builds, its current coverage and the bridge score that ranks it. `targetRole` is the role being aimed at |
 | POST | `/growth/interview-prep` | the same request → the pre-interview checklist: the weak areas to study, the strength stories to rehearse, and the likely topics |
 | POST | `/growth/story-bank` | `{resumeVersionId?, top?}` → the STAR stories drawn from the profile's own evidence |
 | POST | `/growth/role-suggestions` | `{resumeVersionId?, top?}` → the target roles this profile could plausibly aim at |
@@ -357,7 +357,7 @@ tenant context via `core.deps.Ctx`.
 | POST | `/internal/features/learning-plan` | Epic 10.5 -- the plan that closes the gaps readiness named (backend `learningPlan`) |
 | POST | `/internal/features/skill-demand` | Epic 10.9 -- which skills the market asks for, counted from the corpus (backend `skillDemand`) |
 | POST | `/internal/features/learning-priority` | Epic 10.12 -- gaps ranked by importance and by market pull (backend `learningPriority`) |
-| POST | `/internal/features/progression` | Epic 10.11 -- stepping-stone roles toward a dream role, reachable and gated (backend `progression`) |
+| POST | `/internal/features/progression` | Epic 10.11 -- stepping-stone roles toward a dream role, each with the bridge score that ranks it (backend `progression`) |
 | POST | `/internal/features/interview-prep` | Epic 10.13 -- the pre-interview checklist: study the gaps, rehearse the strengths (backend `interviewPrep`) |
 | POST | `/internal/features/story-bank` | Epic 6.5 -- STAR stories drawn from the profile's own evidence (backend `storyBank`) |
 | POST | `/internal/features/role-suggestions` | Epic 10.10 -- the target roles this profile could plausibly aim at (backend `roleSuggestions`) |

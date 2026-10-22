@@ -889,9 +889,19 @@ export interface IngestPlan {
 /* Granular growth engines (10.1-10.13)                               */
 /* ------------------------------------------------------------------ */
 
+/**
+ * The names below are the engines' own spellings, not a frontend dialect.
+ *
+ * Each route's answer crosses the bridge verbatim (no key is renamed), and no
+ * normalizer sits on these paths, so a field name invented here reads as an
+ * empty row on screen while the engine is answering it fine. `tests/
+ * test_the_growth_panel_reads_the_keys_the_engines_emit.py` grades every name
+ * in this block against the engine's own emitted shape.
+ */
+
 /** One skill the market asks for (10.9). */
 export interface DemandSkill {
-  name?: string;
+  skill?: string;
   count?: number;
   share?: number;
 }
@@ -900,26 +910,17 @@ export interface DemandSkill {
 export interface SkillDemand {
   role?: string;
   location?: string;
+  /** Postings the count came from -- the denominator behind every `share`. */
+  postings?: number;
   skills?: DemandSkill[];
-  sampleSize?: number;
 }
 
-/** One gap the candidate has against the target role (10.1). */
-export interface GrowthGap {
-  name?: string;
-  importance?: string;
-  reason?: string;
-}
-
-/** 10.1 — the distance between the profile and the target role. */
-export interface GapReport {
-  targetRole?: string;
-  coverage?: number;
-  expectedSkillCount?: number;
-  coveredCount?: number;
-  partialCount?: number;
-  gaps?: GrowthGap[];
-}
+/** 10.1 — the distance between the profile and the target role.
+ *
+ *  Same answer the aggregate report nests under `gap`, so it is one declaration
+ *  (`GapBlock`) rather than two that can drift apart.
+ */
+export type GapReport = GapBlock;
 
 /** 10.7 — target-role readiness, as one verdict. */
 export interface ReadinessVerdict {
@@ -931,76 +932,121 @@ export interface ReadinessVerdict {
   blockers?: string[];
 }
 
-/** One study item in a learning phase (10.5). */
-export interface LearningItem {
-  topic?: string;
-  priority?: string;
-  note?: string;
-  resourceHint?: string;
-}
-
-/** 10.5 — the phased learning plan. */
+/** 10.5 — the phased learning plan. The route nests the plan under `plan`. */
 export interface LearningPlan {
-  phases?: Array<{ phase?: string; label?: string; items?: LearningItem[] }>;
+  plan?: {
+    targetRole?: string;
+    totalItems?: number;
+    phases?: Array<{ phase?: string; label?: string; items?: LearningItem[] }>;
+  };
+  gap?: GapReport;
 }
 
 /** 10.12 — a gap ranked by importance and market pull. */
 export interface LearningPriorityItem {
   skill?: string;
+  importance?: string;
+  category?: string;
+  /** 0–1 share of the postings that ask for this skill. */
+  marketShare?: number;
+  marketPostings?: number;
+  marketRank?: number;
+  /** "critical" | "high" | … — the tier the engine assigned. */
   priority?: string;
-  marketDemand?: number;
-  reason?: string;
 }
 
 /** 10.12 — the learning priority ranking. */
 export interface LearningPriority {
-  priorities?: LearningPriorityItem[];
+  targetRole?: string;
+  coverage?: number;
+  gapCount?: number;
+  prioritizedGaps?: LearningPriorityItem[];
+  topPriority?: LearningPriorityItem | null;
 }
 
 /** One stepping-stone role (10.11). */
 export interface ProgressionStep {
-  role?: string;
-  reachable?: boolean;
-  score?: number;
+  /** The role family, named by the engine -- there is no per-step role title. */
+  family?: string;
+  currentCoverage?: number;
+  postings?: number;
+  buildsSkills?: string[];
+  buildsMustCount?: number;
+  buildsCount?: number;
+  bridgeScore?: number;
   reason?: string;
 }
 
 /** 10.11 — the progression plan toward a dream role. */
 export interface ProgressionPlan {
-  steps?: ProgressionStep[];
-  missing?: string[];
+  aspirationalRole?: string;
+  aspirationalCoverage?: number;
+  aspirationalMustGaps?: string[];
+  steppingStones?: ProgressionStep[];
+  advice?: unknown;
+}
+
+/** One gap to shore up before the interview (10.13). */
+export interface PrepWeakArea {
+  skill?: string;
+  importance?: string;
+  action?: string;
+}
+
+/** One strength story to rehearse, and the gap-report evidence behind it (10.13). */
+export interface PrepStrengthStory {
+  skill?: string;
+  evidence?: string;
+  storyTitle?: string | null;
+  storyId?: string | null;
+  quantified?: boolean;
 }
 
 /** 10.13 — the pre-interview checklist. */
 export interface InterviewPrep {
-  study?: Array<{ topic?: string; why?: string }>;
-  rehearse?: Array<{ topic?: string; why?: string }>;
+  targetRole?: string;
+  coverage?: number;
+  weakAreaCount?: number;
+  strengthStoryCount?: number;
+  /** Study these: the role's gaps. */
+  weakAreas?: PrepWeakArea[];
+  /** Rehearse these: the covered skills that already carry a story. */
+  strengthStories?: PrepStrengthStory[];
   likelyTopics?: string[];
 }
 
 /** One STAR story (6.5). */
 export interface Story {
+  id?: string;
+  kind?: string;
   title?: string;
-  evidence?: string;
-  question?: string;
   bullets?: string[];
+  skills?: string[];
+  quantified?: boolean;
 }
 
 /** 6.5 — the story bank. */
 export interface StoryBank {
   stories?: Story[];
+  count?: number;
+  quantifiedCount?: number;
+  skillsCovered?: string[];
 }
 
-/** One suggested target role (10.10). */
+/** One suggested target role family (10.10). */
 export interface SuggestedRole {
-  role?: string;
-  score?: number;
-  reason?: string;
+  family?: string;
+  postings?: number;
+  /** 0–1: how much of the family's demands the profile already has. */
+  coverage?: number;
+  topDemands?: string[];
+  youHave?: string[];
+  missing?: string[];
 }
 
 /** 10.10 — the target roles this profile could plausibly aim at. */
 export interface RoleSuggestions {
-  roles?: SuggestedRole[];
+  families?: SuggestedRole[];
 }
 
 /** 4.8 — what the corpus says about one company. */

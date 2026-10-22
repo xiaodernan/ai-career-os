@@ -295,7 +295,8 @@ function GapReportArtifact({ data }: { data?: unknown }) {
         <ul className="flex flex-wrap gap-1.5">
           {gaps.map((g, i) => (
             <li key={i}>
-              <Badge variant="outline">{str(g, "name") ?? String(g)}</Badge>
+              {/* Rows are `{skill, importance, category}` dicts: never stringify one. */}
+              <Badge variant="outline">{str(g, "skill") ?? "—"}</Badge>
             </li>
           ))}
         </ul>
@@ -353,7 +354,7 @@ function OfferComparisonArtifact({ data }: { data?: unknown }) {
 
 function LearningPriorityArtifact({ data }: { data?: unknown }) {
   const report = pick(data, "priority") ?? data;
-  const rows = list(report, "priorities");
+  const rows = list(report, "prioritizedGaps");
   if (!rows.length) return null;
   return (
     <GrowthArtifact
@@ -363,7 +364,7 @@ function LearningPriorityArtifact({ data }: { data?: unknown }) {
       <ol className="space-y-1.5">
         {rows.map((row, i) => (
           <li key={i} className="flex items-center justify-between gap-2 text-sm">
-            <span className="min-w-0 truncate">{str(row, "skill") ?? String(row)}</span>
+            <span className="min-w-0 truncate">{str(row, "skill") ?? "—"}</span>
             <Badge variant="secondary" className="shrink-0 text-2xs">
               {str(row, "priority") ?? "—"}
             </Badge>

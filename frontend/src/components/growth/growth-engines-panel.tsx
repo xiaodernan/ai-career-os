@@ -26,6 +26,17 @@ import {
   useSkillProgress,
   useStoryBank,
 } from "@/lib/hooks/growth";
+import type {
+  GapReport,
+  InterviewPrep,
+  LearningPlan,
+  LearningPriority,
+  ProgressionPlan,
+  RoleSuggestions,
+  SkillDemand,
+  SkillProgress,
+  StoryBank,
+} from "@/lib/api/types";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { growthEngineLabel } from "@/lib/growth-engines";
 
@@ -227,79 +238,95 @@ function EngineResult({
   return <EngineAnswer engine={engine} data={state.data as Record<string, unknown>} />;
 }
 
-/** Each engine's own answer, in its own shape. */
+/**
+ * Each engine's own answer, in its own shape.
+ *
+ * The names read here are the engines' -- the bridge passes their JSON through
+ * without renaming a key, and nothing normalizes it on this side, so a field
+ * spelled differently here is a row that silently renders empty while the
+ * engine answered it fine. `types.ts` declares these shapes once; the cases
+ * below read through those types so a rename trips the compiler and the gate.
+ */
 function EngineAnswer({ engine, data }: { engine: EngineKey; data: Record<string, unknown> }) {
   const { t } = useLocale();
   switch (engine) {
-    case "gap":
+    case "gap": {
+      const report = data as GapReport;
       return (
         <div className="space-y-2">
           <p className="text-sm">
-            {t("growthEngines.coverage")} {Math.round(Number(data.coverage ?? 0) * 100)}% ·{" "}
-            {String(data.coveredCount ?? 0)} {t("growthEngines.covered")},{" "}
-            {String(data.partialCount ?? 0)} {t("growthEngines.partial")},{" "}
-            {String(data.expectedSkillCount ?? 0)} {t("growthEngines.expected")}
+            {t("growthEngines.coverage")} {Math.round((report.coverage ?? 0) * 100)}% ·{" "}
+            {report.coveredCount ?? 0} {t("growthEngines.covered")},{" "}
+            {report.partialCount ?? 0} {t("growthEngines.partial")},{" "}
+            {report.expectedSkillCount ?? 0} {t("growthEngines.expected")}
           </p>
           <ul className="space-y-1">
-            {((data.gaps ?? []) as Array<{ name?: string; importance?: string }>).map((g, i) => (
-              <li key={`${g.name}-${i}`} className="flex items-center gap-2 text-sm">
+            {(report.gaps ?? []).map((g, i) => (
+              <li key={`${g.skill}-${i}`} className="flex items-center gap-2 text-sm">
                 <Badge variant={g.importance === "must" ? "warning" : "outline"} className="text-2xs">
                   {g.importance ?? "gap"}
                 </Badge>
-                {g.name}
+                {g.skill}
               </li>
             ))}
           </ul>
         </div>
       );
-    case "demand":
+    }
+    case "demand": {
+      const demand = data as SkillDemand;
       return (
         <ul className="space-y-1">
-          {((data.skills ?? []) as Array<{ name?: string; count?: number }>).map((s, i) => (
-            <li key={`${s.name}-${i}`} className="flex items-center justify-between text-sm">
-              <span>{s.name}</span>
+          {(demand.skills ?? []).map((s, i) => (
+            <li key={`${s.skill}-${i}`} className="flex items-center justify-between text-sm">
+              <span>{s.skill}</span>
               <span className="tabular-nums text-muted-foreground">{s.count ?? 0}</span>
             </li>
           ))}
         </ul>
       );
-    case "priority":
+    }
+    case "priority": {
+      const priority = data as LearningPriority;
       return (
         <ul className="space-y-1">
-          {((data.priorities ?? []) as Array<{ skill?: string; priority?: string; marketDemand?: number }>).map(
-            (p, i) => (
-              <li key={`${p.skill}-${i}`} className="flex items-center justify-between text-sm">
-                <span>{p.skill}</span>
-                <span className="text-xs text-muted-foreground">
-                  {p.priority} · demand {p.marketDemand ?? 0}
-                </span>
-              </li>
-            )
-          )}
+          {(priority.prioritizedGaps ?? []).map((p, i) => (
+            <li key={`${p.skill}-${i}`} className="flex items-center justify-between text-sm">
+              <span>{p.skill}</span>
+              <span className="text-xs text-muted-foreground">
+                {p.priority} · demand {Math.round((p.marketShare ?? 0) * 100)}%
+              </span>
+            </li>
+          ))}
         </ul>
       );
-    case "plan":
+    }
+    case "plan": {
+      // The route answers {plan, gap}: the phases live inside the plan block.
+      const plan = (data as LearningPlan).plan;
       return (
         <div className="space-y-3">
-          {((data.phases ?? []) as Array<{ label?: string; phase?: string; items?: Array<{ topic?: string; priority?: string }> }>).map(
-            (phase) => (
-              <div key={phase.phase ?? phase.label}>
-                <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                  {phase.label ?? phase.phase}
-                </p>
-                <ul className="mt-1 space-y-1">
-                  {(phase.items ?? []).map((item, i) => (
-                    <li key={`${item.topic}-${i}`} className="text-sm">
-                      {item.topic}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )
-          )}
+          {(plan?.phases ?? []).map((phase) => (
+            <div key={phase.phase ?? phase.label}>
+              <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                {phase.label ?? phase.phase}
+              </p>
+              <ul className="mt-1 space-y-1">
+                {(phase.items ?? []).map((item, i) => (
+                  <li key={`${item.topic}-${i}`} className="text-sm">
+                    {item.topic}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </div>
       );
-    case "prep":
+    }
+    case "prep": {
+      // "study" is the role's gaps, "rehearse" is the covered skills that already
+      // carry a story -- the two lists the engine splits the checklist into.
+      const prep = data as InterviewPrep;
       return (
         <div className="space-y-3">
           <div>
@@ -307,9 +334,10 @@ function EngineAnswer({ engine, data }: { engine: EngineKey; data: Record<string
               {t("growthEngines.study")}
             </p>
             <ul className="mt-1 space-y-1">
-              {((data.study ?? []) as Array<{ topic?: string }>).map((s, i) => (
-                <li key={`${s.topic}-${i}`} className="text-sm">
-                  {s.topic}
+              {(prep.weakAreas ?? []).map((a, i) => (
+                <li key={`${a.skill}-${i}`} className="text-sm">
+                  {a.skill}
+                  {a.action && <span className="text-xs text-muted-foreground"> — {a.action}</span>}
                 </li>
               ))}
             </ul>
@@ -319,79 +347,86 @@ function EngineAnswer({ engine, data }: { engine: EngineKey; data: Record<string
               {t("growthEngines.rehearse")}
             </p>
             <ul className="mt-1 space-y-1">
-              {((data.rehearse ?? []) as Array<{ topic?: string }>).map((s, i) => (
-                <li key={`${s.topic}-${i}`} className="text-sm">
-                  {s.topic}
+              {(prep.strengthStories ?? []).map((s, i) => (
+                <li key={`${s.skill}-${i}`} className="text-sm">
+                  {s.skill}
+                  {s.storyTitle && (
+                    <span className="text-xs text-muted-foreground"> — {s.storyTitle}</span>
+                  )}
                 </li>
               ))}
             </ul>
           </div>
         </div>
       );
-    case "progression":
+    }
+    case "progression": {
+      const plan = data as ProgressionPlan;
       return (
         <div className="space-y-2">
           <ul className="space-y-1">
-            {((data.steps ?? []) as Array<{ role?: string; reachable?: boolean }>).map((s, i) => (
-              <li key={`${s.role}-${i}`} className="flex items-center gap-2 text-sm">
-                <Badge variant={s.reachable ? "success" : "secondary"} className="text-2xs">
-                  {s.reachable ? "reachable" : "gated"}
-                </Badge>
-                {s.role}
+            {(plan.steppingStones ?? []).map((s, i) => (
+              <li key={`${s.family}-${i}`} className="text-sm">
+                {s.family}
+                {s.reason && <span className="text-xs text-muted-foreground"> — {s.reason}</span>}
               </li>
             ))}
           </ul>
-          {((data.missing ?? []) as string[]).length > 0 && (
+          {(plan.aspirationalMustGaps ?? []).length > 0 && (
             <p className="text-xs text-muted-foreground">
               {t("growthEngines.missingForDreamRole")}{" "}
-              {((data.missing ?? []) as string[]).join(", ")}.
+              {(plan.aspirationalMustGaps ?? []).join(", ")}.
             </p>
           )}
         </div>
       );
-    case "stories":
+    }
+    case "stories": {
+      const bank = data as StoryBank;
       return (
         <ul className="space-y-1">
-          {((data.stories ?? []) as Array<{ title?: string; evidence?: string }>).map((s, i) => (
+          {(bank.stories ?? []).map((s, i) => (
             <li key={`${s.title}-${i}`} className="text-sm">
               <span className="font-medium">{s.title}</span>
-              {s.evidence && (
-                <span className="text-muted-foreground"> — {s.evidence}</span>
+              {(s.bullets ?? [])[0] && (
+                <span className="text-muted-foreground"> — {(s.bullets ?? [])[0]}</span>
               )}
             </li>
           ))}
         </ul>
       );
-    case "roles":
+    }
+    case "roles": {
+      const suggestions = data as RoleSuggestions;
       return (
         <ul className="space-y-1">
-          {((data.roles ?? []) as Array<{ role?: string; score?: number }>).map((r, i) => (
-            <li key={`${r.role}-${i}`} className="flex items-center justify-between text-sm">
-              <span>{r.role}</span>
+          {(suggestions.families ?? []).map((r, i) => (
+            <li key={`${r.family}-${i}`} className="flex items-center justify-between text-sm">
+              <span>{r.family}</span>
               <span className="tabular-nums text-muted-foreground">
-                {Math.round(Number(r.score ?? 0) * 100)}%
+                {Math.round((r.coverage ?? 0) * 100)}%
               </span>
             </li>
           ))}
         </ul>
       );
-    case "progress":
+    }
+    case "progress": {
+      const progress = data as SkillProgress;
       return (
         <div className="space-y-2">
           <p className="text-sm text-muted-foreground">
-            {t("growthEngines.coverage")}{" "}
-            {Math.round(Number(data.previousCoverage ?? 0) * 100)}% →{" "}
-            {Math.round(Number(data.currentCoverage ?? 0) * 100)}%
+            {t("growthEngines.coverage")} {Math.round((progress.previousCoverage ?? 0) * 100)}% →{" "}
+            {Math.round((progress.currentCoverage ?? 0) * 100)}%
           </p>
           {(
             [
-              ["Closed", data.closed, "text-success"],
-              ["Improved", data.improved, "text-primary"],
-              ["Regressed", data.regressed, "text-destructive"],
-            ] as Array<[string, unknown, string]>
-          ).map(([label, list, tone]) => {
-            const skills = (list ?? []) as string[];
-            if (!skills.length) return null;
+              ["Closed", progress.closed, "text-success"],
+              ["Improved", progress.improved, "text-primary"],
+              ["Regressed", progress.regressed, "text-destructive"],
+            ] as Array<[string, string[] | undefined, string]>
+          ).map(([label, skills, tone]) => {
+            if (!skills?.length) return null;
             return (
               <div key={label}>
                 <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
@@ -409,5 +444,6 @@ function EngineAnswer({ engine, data }: { engine: EngineKey; data: Record<string
           })}
         </div>
       );
+    }
   }
 }
