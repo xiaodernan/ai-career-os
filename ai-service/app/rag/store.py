@@ -109,19 +109,45 @@ async def get_chunks(chunk_ids: list[str], user_id: str) -> list[dict]:
     return [dict(r) for r in rows]
 
 
-def rrf_merge(lists: list[list[dict]], k: int = 60, cap: int = 40) -> list[dict]:
+def _chunk_id(item: Any) -> str | None:
+    """The chunk id regardless of whether the row is a dict or a DB Record.
+
+    `db.fetch` returns asyncpg Records, which support ``item["id"]``; cached or
+    hand-built rows are dicts. A malformed (non-dict, non-record, None) entry has
+    no id and is skipped rather than raising ``TypeError``/``KeyError`` mid-fusion.
+    """
+    if isinstance(item, dict):
+        cid = item.get("id")
+    else:
+        cid = getattr(item, "id", None)
+    return str(cid) if cid is not None else None
+
+
+def rrf_merge(lists: list[list[dict]] | None, k: int = 60, cap: int = 40) -> list[dict]:
     """Reciprocal Rank Fusion across result lists keyed by chunk id."""
     scores: dict[str, float] = {}
     keep: dict[str, dict] = {}
-    for lst in lists:
+    # `None` (or any non-list) here means "no retrieval ran" -- fuse to empty
+    # rather than raising on iteration. A real provider/peer handing a wrong shape
+    # must degrade to "no evidence", never crash the answer path.
+    for lst in (lists or []):
         for rank, item in enumerate(lst):
-            cid = str(item["id"])
+            cid = _chunk_id(item)
+            if cid is None:
+                continue
             scores[cid] = scores.get(cid, 0) + 1.0 / (k + rank + 1)
             keep.setdefault(cid, item)
     ordered = sorted(scores.items(), key=lambda kv: kv[1], reverse=True)[:cap]
     out = []
     for cid, sc in ordered:
-        item = dict(keep[cid])
+        item = keep[cid]
+        # A real asyncpg Record converts via dict(); a hostile non-record,
+        # non-dict entry degrades to a minimal {id} row instead of raising on the
+        # dict() call -- it still carries the fusion score so ranking is intact.
+        try:
+            item = dict(item)
+        except (TypeError, ValueError):
+            item = {"id": cid}
         item["rrf"] = sc
         out.append(item)
     return out

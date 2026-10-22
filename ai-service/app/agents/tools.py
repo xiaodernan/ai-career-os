@@ -50,7 +50,10 @@ def _filter_fragments(*, skills: list[str] | None = None, location: str = "",
     which is how placeholder/value misalignment bugs start.
     """
     out: list[tuple[str, Any]] = []
-    if skills:
+    # Only iterate a real sequence; a scalar/None handed by a malformed tool call
+    # must not raise on `for s in skills` and must not leak a non-array into the
+    # `&& ::text[]` bind. The presence check already short-circuits None.
+    if isinstance(skills, (list, tuple, set)):
         out.append(("j.skills && ${n}::text[]", [s for s in skills if s]))
     if location:
         out.append(("j.location ILIKE ${n} ESCAPE '!'", db.like_contains(location)))
@@ -58,7 +61,9 @@ def _filter_fragments(*, skills: list[str] | None = None, location: str = "",
         out.append(("j.remote_type = ${n}", remote))
     if company:
         out.append(("c.name ILIKE ${n} ESCAPE '!'", db.like_contains(company)))
-    if min_salary:
+    # Only a numeric salary floors the query; a string/None stays out of the
+    # `>=` bind rather than producing a type-mismatch error at execution time.
+    if isinstance(min_salary, (int, float)):
         out.append(("j.salary_max >= ${n}", min_salary))
     return out
 
@@ -91,7 +96,14 @@ def _search_params(*, query: str = "", skills: list[str] | None = None,
     _apply_fragments(where, args, _filter_fragments(
         skills=skills, location=location, remote=remote, company=company,
         min_salary=min_salary))
-    args.append(max(1, min(int(limit), 25)))
+    # `limit` arrives from the model/peer as JSON and may be a string, None, or a
+    # float; coerce defensively and clamp so a bad value degrades to the default
+    # window instead of raising on `int(limit)` at request time.
+    try:
+        lim = int(limit)
+    except (TypeError, ValueError):
+        lim = 10
+    args.append(max(1, min(lim, 25)))
     return where, args
 
 
@@ -129,6 +141,19 @@ async def _semantic_jobs(query: str, fragments: list[tuple[str, Any]], limit: in
         *args)
 
 
+def _row_id(row: Any) -> str | None:
+    """The job id regardless of whether the row is a dict or a DB Record.
+
+    `db.fetch` returns asyncpg Records (support ``row["id"]``); cached rows are
+    dicts. A malformed entry with no id is skipped rather than raising mid-fuse.
+    """
+    if isinstance(row, dict):
+        rid = row.get("id")
+    else:
+        rid = getattr(row, "id", None)
+    return str(rid) if rid is not None else None
+
+
 def _fuse_rrf(keyword_rows: list, semantic_rows: list, limit: int) -> list:
     """Merge the two ranked lists by reciprocal rank, then cut to `limit`.
 
@@ -139,9 +164,11 @@ def _fuse_rrf(keyword_rows: list, semantic_rows: list, limit: int) -> list:
     """
     scores: dict[str, float] = {}
     rows_by_id: dict[str, Any] = {}
-    for rows in (keyword_rows, semantic_rows):
+    for rows in (keyword_rows or [], semantic_rows or []):
         for rank, row in enumerate(rows):
-            job_id = str(row["id"])
+            job_id = _row_id(row)
+            if job_id is None:
+                continue
             rows_by_id.setdefault(job_id, row)
             scores[job_id] = scores.get(job_id, 0.0) + 1.0 / (_RRF_K + rank)
     ordered = sorted(scores, key=lambda j: -scores[j])

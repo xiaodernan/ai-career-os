@@ -5,28 +5,38 @@ import re
 from typing import Any
 
 
-def recall_at_k(retrieved_ids: list[str], relevant_ids: set[str], k: int) -> float:
+def recall_at_k(retrieved_ids: list[str] | None, relevant_ids: set[str] | None, k: int) -> float:
+    relevant_ids = relevant_ids or set()
     if not relevant_ids:
         return 1.0  # nothing to find; retrieval can't be blamed
+    # A malformed `retrieved_ids` (None / wrong shape) must not crash the metric;
+    # it simply contributes no hits rather than poisoning the whole evaluation row.
+    retrieved_ids = retrieved_ids or []
     hits = {r for r in retrieved_ids[:k] if r in relevant_ids}
     return len(hits) / len(relevant_ids)
 
 
-def precision_at_k(retrieved_ids: list[str], relevant_ids: set[str], k: int) -> float:
+def precision_at_k(retrieved_ids: list[str] | None, relevant_ids: set[str] | None, k: int) -> float:
+    retrieved_ids = retrieved_ids or []
+    relevant_ids = relevant_ids or set()
     top = retrieved_ids[:k]
     if not top:
         return 0.0
     return sum(1 for r in top if r in relevant_ids) / len(top)
 
 
-def mrr(retrieved_ids: list[str], relevant_ids: set[str]) -> float:
+def mrr(retrieved_ids: list[str] | None, relevant_ids: set[str] | None) -> float:
+    retrieved_ids = retrieved_ids or []
+    relevant_ids = relevant_ids or set()
     for i, r in enumerate(retrieved_ids, 1):
         if r in relevant_ids:
             return 1.0 / i
     return 0.0
 
 
-def ndcg(retrieved_ids: list[str], relevant_ids: set[str], k: int) -> float:
+def ndcg(retrieved_ids: list[str] | None, relevant_ids: set[str] | None, k: int) -> float:
+    retrieved_ids = retrieved_ids or []
+    relevant_ids = relevant_ids or set()
     gains = [1.0 if r in relevant_ids else 0.0 for r in retrieved_ids[:k]]
     dcg = sum(g / math.log2(i + 2) for i, g in enumerate(gains))
     n = min(len(gains), len(relevant_ids))
@@ -38,7 +48,7 @@ _ASCII_TOKEN = re.compile(r"[a-z0-9]{2,}")
 _CJK_RUN = re.compile(r"[\u4e00-\u9fff]+")
 
 
-def _tokens(text: str) -> set[str]:
+def _tokens(text: Any) -> set[str]:
     """Content tokens. CJK runs are emitted as overlapping bigrams.
 
     A CJK run has no spaces, so matching it whole made one unmatchable lexeme: a
@@ -47,7 +57,13 @@ def _tokens(text: str) -> set[str]:
     answer_relevance) treat an honest Chinese claim as unrelated unless the exact
     same clause reappeared. Bigrams are the standard no-segmenter fallback, and
     what the trigram retrieval channel already assumes about Chinese text.
+
+    A non-string is treated as having no tokens rather than crashing: a malformed
+    `contexts` element or an answer/query that arrived as the wrong type must yield
+    a low score, not a traceback that aborts the whole evaluation row.
     """
+    if not isinstance(text, str):
+        return set()
     lowered = text.lower()
     out = set(_ASCII_TOKEN.findall(lowered))
     for run in _CJK_RUN.findall(lowered):
@@ -88,11 +104,13 @@ def faithfulness(answer: str, contexts: list[str]) -> float:
     sentence — reports perfect groundedness. `answer_relevance` already scores an absent
     answer 0.0; the two must not disagree about the same absence.
     """
+    if not isinstance(answer, str):
+        return 0.0
     sentences = [s for s in re.split(r"[.!?\n。！？]", answer) if len(s.strip()) > 25]
     if not sentences:
         return 0.0
     ctx_tokens: set[str] = set()
-    for c in contexts:
+    for c in (contexts or []):
         ctx_tokens |= _tokens(c)
     grounded = 0
     for s in sentences:
@@ -115,6 +133,8 @@ def citation_correctness(answer: str, contexts: list[str]) -> float:
     one. An answer that cites nothing scores 0.0 -- the same rule `faithfulness` applies
     to an answer with no checkable claim.
     """
+    if not isinstance(answer, str):
+        return 0.0
     cites = [int(n) for n in _CITATION.findall(answer)]
     if not cites or not contexts:
         return 0.0
