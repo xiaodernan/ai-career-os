@@ -238,9 +238,20 @@ async def _run_loop(*, user_id: str, messages: list[LLMMessage], tools: list[Too
             return resp.text
         messages.append(LLMMessage("assistant", resp.text, tool_calls=resp.tool_calls))
         for tc in resp.tool_calls:
+            # The model is asked for JSON arguments, but a malformed parse can land a
+            # list / string / None here. `**args` inside the handler would raise, and
+            # the transfer_to branch's `.get` would raise AttributeError -- either one
+            # kills the whole turn. Coerce to a dict so the tool's own argument checks
+            # (or the executor's TypeError handler) return a clean tool error instead.
+            if isinstance(tc.arguments, dict):
+                args = tc.arguments
+            else:
+                args = {}
+                log.warning("model returned non-dict arguments for tool %s: %r",
+                            tc.name, tc.arguments)
             if tc.name == "transfer_to" and allow_transfer:
-                sub_agent = tc.arguments.get("agent") or ""
-                task = tc.arguments.get("task") or ""
+                sub_agent = args.get("agent") or ""
+                task = args.get("task") or ""
                 if sub_agent not in SUBAGENT_TOOLS:
                     result: Any = {"error": f"unknown subagent {sub_agent}"}
                 else:
@@ -266,7 +277,7 @@ async def _run_loop(*, user_id: str, messages: list[LLMMessage], tools: list[Too
                 if not tool:
                     result = {"error": f"unknown tool {tc.name}"}
                 else:
-                    result = await _exec_tool(tool, user_id, tc.arguments,
+                    result = await _exec_tool(tool, user_id, args,
                                               run_id=run_id, agent=agent,
                                               task_id=task_id, out=out)
             messages.append(LLMMessage("tool", _tool_result_text(result),

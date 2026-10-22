@@ -166,6 +166,45 @@ async def test_tool_error_is_reported_not_raised(env, monkeypatch):
     assert result[2]["ok"] is False
 
 
+async def test_run_loop_survives_non_dict_tool_arguments(env, monkeypatch):
+    # A malformed JSON parse can hand the loop arguments that are a list/string/None
+    # rather than a dict. The loop must coerce to {} and let the tool's own argument
+    # checks (or the executor's TypeError handler) emit a clean tool error -- NOT
+    # raise AttributeError on `arguments.get(...)` and abort the whole turn.
+
+    async def script(req, **kw):
+        if not any(m.role == "tool" for m in req.messages):
+            return _resp(tool_calls=[ToolCall(id="c1", name="get_job",
+                                             arguments=["not", "a", "dict"])])
+        return _resp(text="recovered from bad arguments")
+
+    async def fake_get(user_id, **kw):
+        return {"job": {"id": "j1"}}
+
+    monkeypatch.setattr(orchestrator.ai, "ask", script)
+    monkeypatch.setattr(TOOL_INDEX["get_job"], "handler", fake_get)
+
+    out = await orchestrator.career_turn(user_id="u1", message="job?", run_id="r5")
+    assert isinstance(out.answer, str)
+    # The tool was attempted; with no usable args it fails as a tool error, not a crash.
+    assert out.tools_used == ["get_job"]
+
+
+async def test_run_loop_survives_non_dict_transfer_arguments(env, monkeypatch):
+    # Same malformed-arguments hazard on the transfer_to branch.
+
+    async def script(req, **kw):
+        if not any(m.role == "tool" for m in req.messages):
+            return _resp(tool_calls=[ToolCall(id="t1", name="transfer_to",
+                                             arguments=None)])
+        return _resp(text="recovered from bad handoff")
+
+    monkeypatch.setattr(orchestrator.ai, "ask", script)
+
+    out = await orchestrator.career_turn(user_id="u1", message="delegate", run_id="r6")
+    assert isinstance(out.answer, str)  # no AttributeError, turn still produces an answer
+
+
 # ---------------- search_jobs positional-binding symmetry + injection safety ----------------
 
 
