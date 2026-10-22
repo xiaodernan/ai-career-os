@@ -61,7 +61,7 @@ public class MinioStorageService implements StorageService {
                     .contentType(contentType)
                     .build());
         } catch (Exception e) {
-            throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "Object storage write failed: " + e.getMessage());
+            throw new ApiException(ApiErrorCode.STORAGE_WRITE_FAILED, "Object storage write failed");
         }
     }
 
@@ -75,7 +75,7 @@ public class MinioStorageService implements StorageService {
                     .expiry((int) ttl.toSeconds())
                     .build());
         } catch (Exception e) {
-            throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "Presign failed: " + e.getMessage());
+            throw new ApiException(ApiErrorCode.STORAGE_PRESIGN_FAILED, "Object storage presign failed");
         }
     }
 
@@ -84,7 +84,7 @@ public class MinioStorageService implements StorageService {
         try {
             client.removeObject(RemoveObjectArgs.builder().bucket(bucket).object(key).build());
         } catch (Exception e) {
-            throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "Object storage delete failed: " + e.getMessage());
+            throw new ApiException(ApiErrorCode.STORAGE_DELETE_FAILED, "Object storage delete failed");
         }
     }
 
@@ -93,7 +93,7 @@ public class MinioStorageService implements StorageService {
         try (var stream = client.getObject(GetObjectArgs.builder().bucket(bucket).object(key).build())) {
             return stream.readAllBytes();
         } catch (Exception e) {
-            throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "Object storage read failed: " + e.getMessage());
+            throw new ApiException(ApiErrorCode.STORAGE_READ_FAILED, "Object storage read failed");
         }
     }
 }

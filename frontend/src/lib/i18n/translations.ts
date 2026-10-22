@@ -991,6 +991,7 @@ export const translations = {
       INVALID_STATUS: "That status is not one the tracker knows.",
 
       INVALID_TRANSITION: "That change is not allowed from here.",
+      INTERNAL_ERROR: "An internal server error occurred.",
 
       INTERVIEW_ALREADY_STARTED: "This interview has already started.",
 
@@ -1027,6 +1028,10 @@ export const translations = {
       RESUME_NOT_PARSED: "Your resume has not been parsed yet.",
       RESUME_NOT_TAILABLE: "There is no resume to tailor yet.",
       RESUME_TEXT_NOT_READY: "That document's text is not available yet.",
+      STORAGE_DELETE_FAILED: "Object storage delete failed.",
+      STORAGE_PRESIGN_FAILED: "Object storage presign failed.",
+      STORAGE_READ_FAILED: "Object storage read failed.",
+      STORAGE_WRITE_FAILED: "Object storage write failed.",
       RESET_TOKEN_INVALID: "That reset link is invalid or has expired. Please request a new one.",
       RESET_TOKEN_OWNER_NOT_FOUND: "The account this reset link belonged to is no longer here.",
       RUN_NOT_FOUND: "That run is no longer here.",
@@ -2701,6 +2706,7 @@ export const translations = {
       INVALID_STATUS: "这个状态不在流程里。",
 
       INVALID_TRANSITION: "这里不允许这样改。",
+      INTERNAL_ERROR: "服务器内部错误。",
 
       INTERVIEW_ALREADY_STARTED: "这次面试已经开始了。",
 
@@ -2737,6 +2743,10 @@ export const translations = {
       RESUME_NOT_PARSED: "你的简历还没有解析。",
       RESUME_NOT_TAILABLE: "还没有可以定制的简历。",
       RESUME_TEXT_NOT_READY: "这份文档的正文还读不出来。",
+      STORAGE_DELETE_FAILED: "对象存储删除失败。",
+      STORAGE_PRESIGN_FAILED: "对象存储预签名失败。",
+      STORAGE_READ_FAILED: "对象存储读取失败。",
+      STORAGE_WRITE_FAILED: "对象存储写入失败。",
       RESET_TOKEN_INVALID: "这个重置链接无效或已过期，请重新申请一个。",
       RESET_TOKEN_OWNER_NOT_FOUND: "这个重置链接所属的账号已经不在了。",
       RUN_NOT_FOUND: "这次运行记录已经不在了。",

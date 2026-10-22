@@ -99,7 +99,7 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   `VERSION_NOT_FOUND` with three. One sentence per code would tell a reader
   whose interview has not started that the interview is already under way
   — so the fix is not a translation, it is a *finer vocabulary*: roughly
-  thirteen more codes (one per distinct wording), about seventy sentences in
+  eight more codes (one per distinct wording), about seventy sentences in
   each language, and the throw sites changed to name them.
 
   **The first split is done.** The resume's not-found code answered with six
@@ -158,6 +158,15 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   tells the reader which of them happened, and the browser's rule is next:
   only the route that is not served may be reported as a version mismatch.
 
+  **And the storage errors are split.** `INTERNAL_ERROR` answered with five
+  sentences -- the generic fallback, and the four MinIO operations (write,
+  presign, delete, read) -- and one sentence for it would have been wrong
+  about four of them. They are five codes now (`INTERNAL_ERROR` for the
+  fallback, `STORAGE_WRITE_FAILED`, `STORAGE_PRESIGN_FAILED`,
+  `STORAGE_DELETE_FAILED`, `STORAGE_READ_FAILED`), each with its own
+  sentence in both languages. The statuses did not move: all five are still
+  the 500 they were.
+
   **And a code travels by three roads.** A throw (`new ApiException`), the
   envelope builder (`ApiError.of`), and the framework's own edges — the 401,
   the 403, the 404, the 429. A measurement that read only the throws called
@@ -174,14 +183,14 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   **And the services' codes are classified now.** Every code the services can
   send is either **translated** (the browser's table answers it, in both
   languages) or **named as a gap** — and the gap list is the queue for the finer
-  vocabulary: `AI_SERVICE_BAD_REQUEST`, `AI_SERVICE_ERROR`, `INTERNAL_ERROR`,
-  `VALIDATION_FAILED`, `VERSION_NOT_FOUND`. The gate
+  vocabulary: `AI_SERVICE_BAD_REQUEST`, `AI_SERVICE_ERROR`, `VALIDATION_FAILED`,
+  `VERSION_NOT_FOUND`. The gate
   *measures* the split rather than remembering it: a code that is translated
   must carry one meaning (read off the throw sites), a code that is named as a
   gap must carry several, and a code nobody classified fails the gate. So the
-  fifty-two codes that mean one thing are bilingual today, and the five that
-  mean several carry thirteen distinct sentences between them, so they keep
-  the server's words until the throw sites name them properly — thirteen more codes, one per distinct wording, and then the
+  fifty-eight codes that mean one thing are bilingual today, and the four that
+  mean several carry eight distinct sentences between them, so they keep
+  the server's words until the throw sites name them properly — eight more codes, one per distinct wording, and then the
   gap list empties.
 - **The export's readable half had one language (closed 2026-10-22).** 13.1's
   *human-readable* export — the print-ready document — was written in Chinese
