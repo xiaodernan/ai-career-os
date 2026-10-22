@@ -616,6 +616,12 @@ public class HttpAiServiceClient implements AiServiceClient {
             return new ApiException(ApiErrorCode.AI_SERVICE_BAD_REQUEST,
                     detail != null ? detail : "AI service rejected the request");
         }
+        if (status == HttpStatus.CONFLICT) {
+            // The upstream has the record and it is not ready yet -- the
+            // document is still being read. A 502 would say the assistant
+            // failed, which is a different thing and a wrong one.
+            return new ApiException(ApiErrorCode.AI_SERVICE_CONFLICT, "AI service is not ready yet");
+        }
         log.error("AI service call failed with status {}", status);
         return new ApiException(ApiErrorCode.AI_SERVICE_UNAVAILABLE, "AI service request failed");
     }

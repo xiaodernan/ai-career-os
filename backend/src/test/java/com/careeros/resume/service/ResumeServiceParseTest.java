@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.careeros.ai.AiServiceClient;
+import com.careeros.common.ApiErrorCode;
 import com.careeros.common.ApiException;
 import com.careeros.knowledge.entity.KnowledgeSource;
 import com.careeros.knowledge.repository.DocumentRepository;
@@ -114,6 +115,29 @@ class ResumeServiceParseTest {
 
         verify(version, never()).setPlaintext(any());
         verify(ai, never()).documentText(any(), any());
+    }
+
+    @Test
+    void theUpstreamsNotReadyIsTheResumesNotReady() {
+        // The upstream answers 409 while the document is still being read.
+        // The boundary used to flatten that into a 502 -- "the assistant is
+        // not answering" -- and the code this service already had for it
+        // was unreachable, because the upstream's answer short-circuited the
+        // line that raises it. The reader is told what actually happened.
+        givenVersion(null);
+        KnowledgeSource source = new KnowledgeSource();
+        source.setDocumentId(documentId);
+        when(sources.findFirstByUserIdAndKindAndRefId(eq(userId), eq("resume"), eq(resumeId)))
+                .thenReturn(Optional.of(source));
+        when(ai.documentText(documentId, userId)).thenThrow(
+                new ApiException(ApiErrorCode.AI_SERVICE_CONFLICT, "AI service is not ready yet"));
+
+        assertThatThrownBy(() -> service.parse(userId, resumeId))
+                .isInstanceOf(ApiException.class)
+                .extracting(e -> ((ApiException) e).code())
+                .isEqualTo(ApiErrorCode.RESUME_TEXT_NOT_READY);
+
+        verify(ai, never()).parseResumeText(any(), any());
     }
 
     @Test

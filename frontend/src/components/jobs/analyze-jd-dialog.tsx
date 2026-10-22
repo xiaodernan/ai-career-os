@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { ProcessingSteps, type ProcessingStep } from "@/components/ai/processing-steps";
+import { ProcessingSteps, seedSteps, type ProcessingStep } from "@/components/ai/processing-steps";
 import { AIBadge } from "@/components/ai/ai-badge";
 import { useAnalyzeJd, useResumeSuggestions, type JdAnalysis } from "@/lib/hooks/actions";
 import { missingSkillGaps } from "@/lib/api/normalize";
@@ -27,7 +27,9 @@ import { jdTextIssue } from "@/lib/jd-text";
 /**
  * JD intelligence (§9): paste raw text → required / preferred skills,
  * responsibilities, interview topics, skill gap, resume suggestions.
- * Progress is described by the request lifecycle, not invented timings.
+ * The stage list is the lifecycle this request actually walks — progress is
+ * described by the request lifecycle, not invented timings — and the seeding
+ * itself is shared with the import dialog (`processing-steps.seedSteps`).
  */
 const STAGES: string[] = [
   "Reading the posting",
@@ -36,14 +38,8 @@ const STAGES: string[] = [
   "Comparing with your profile",
 ];
 
-/** Local stage hints: the request lifecycle is real, its internal position isn't observable here. */
-function stepsFor(pending: boolean, hasResult: boolean): ProcessingStep[] {
-  return STAGES.map((label, i) => ({
-    id: `jd-${i}`,
-    label,
-    status: hasResult ? "done" : pending ? (i === 0 ? "active" : "pending") : "pending",
-  }));
-}
+const stepsFor = (pending: boolean, hasResult: boolean): ProcessingStep[] =>
+  seedSteps(STAGES, hasResult ? "done" : pending ? "pending" : "idle", "jd");
 
 export function AnalyzeJdDialog({ onUseText }: { onUseText?: (text: string) => void }) {
   const [open, setOpen] = React.useState(false);

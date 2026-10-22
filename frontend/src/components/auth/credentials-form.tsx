@@ -5,8 +5,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { AuthField } from "@/components/auth/auth-field";
 import { Button } from "@/components/ui/button";
-import { ApiError } from "@/lib/api/client";
-import { displayNameIssue, emailIssue, passwordIssue } from "@/lib/auth-recovery";
+import { authFormErrorMessage, displayNameIssue, emailIssue, passwordIssue } from "@/lib/auth-recovery";
 import { useLogin, useRegister } from "@/lib/hooks/auth";
 
 export interface FieldConfig {
@@ -59,16 +58,6 @@ const registerFields: FieldConfig[] = [
   },
 ];
 
-function describeError(err: unknown): string {
-  if (err instanceof ApiError) {
-    if (err.code === "AUTH_INVALID_CREDENTIALS" || err.status === 401)
-      return "Incorrect email or password.";
-    return err.message;
-  }
-  if (err instanceof TypeError) return "Cannot reach the API — is the backend running on :8080?";
-  return "Something went wrong. Please try again.";
-}
-
 export function CredentialsForm({ mode, notice }: { mode: "login" | "register"; notice?: string }) {
   const isLogin = mode === "login";
   const fields = isLogin ? baseFields : registerFields;
@@ -92,7 +81,7 @@ export function CredentialsForm({ mode, notice }: { mode: "login" | "register"; 
     const handlers = {
       onSuccess: () =>
         toast.success(isLogin ? "Welcome back." : "Account created — welcome to Career OS."),
-      onError: (err: unknown) => toast.error(describeError(err)),
+        onError: (err: unknown) => toast.error(authFormErrorMessage(err)),
     };
     if (isLogin) {
       login.mutate({ email: values.email, password: values.password }, handlers);

@@ -29,6 +29,7 @@ import type {
   Application,
   ApplicationEvent,
   Company,
+  Contact,
   CompanyDetail,
   CompanySource,
   Conversation,
@@ -329,6 +330,38 @@ export function useCompanies(params?: { page?: number; size?: number; q?: string
  * the envelope, not off the company: the hook used to look for `openRoles` inside the profile it had
  * just picked out, where the only thing that ever matched was the count.
  */
+/**
+ * The registry list, most recently updated first — the order the backend orders by, so
+ * the page's ordering is a pass-through rather than a second opinion. The route answers
+ * a bare list (every row is this user's; there is nothing to page), which the hook wraps
+ * in the page envelope `ModuleView` renders, with total = items.
+ */
+export function useContacts() {
+  return useQuery({
+    queryKey: ["contacts"],
+    queryFn: async (): Promise<Page<Contact>> => {
+      const items = listOf(await api.get<unknown>(endpoints.contacts), "items").map(mapContact);
+      return { items, total: items.length, page: 0, size: items.length };
+    },
+  });
+}
+
+/** One registry row, read under the names `ContactDtos.ContactItem` spells. */
+function mapContact(raw: unknown): Contact {
+  return {
+    id: idStr(raw),
+    name: str(raw, "name") ?? "Unknown",
+    role: str(raw, "role"),
+    company: str(raw, "company"),
+    relation: str(raw, "relation"),
+    email: str(raw, "email"),
+    notes: str(raw, "notes"),
+    lastTouchAt: str(raw, "lastTouchAt"),
+    createdAt: str(raw, "createdAt"),
+    updatedAt: str(raw, "updatedAt"),
+  };
+}
+
 export function useCompany(id: string | null) {
   return useQuery({
     queryKey: ["company", id],

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   applyStatusEvent,
   progressDetail,
+  seedSteps,
   statusFromEvent,
   type ProcessingStep,
   type StatusEvent,
@@ -132,5 +133,38 @@ describe("the seed matches the producer", () => {
 
   it("names rows for people, not for the pipeline", () => {
     for (const row of INGEST_SEED) expect(row.label).not.toMatch(/_/);
+  });
+});
+
+describe("seedSteps — the lifecycle seeding the dialogs share", () => {
+  const STAGES = ["Reading the posting", "Extracting requirements", "Ranking priorities"];
+
+  it("an answered run shows every stage done", () => {
+    expect(seedSteps(STAGES, "done", "jd")).toEqual([
+      { id: "jd-0", label: "Reading the posting", status: "done" },
+      { id: "jd-1", label: "Extracting requirements", status: "done" },
+      { id: "jd-2", label: "Ranking priorities", status: "done" },
+    ]);
+  });
+
+  it("a run in flight shows its first stage active and the rest waiting", () => {
+    expect(seedSteps(STAGES, "pending", "jd").map((s) => s.status))
+        .toEqual(["active", "pending", "pending"]);
+  });
+
+  it("an untouched list waits rather than claiming work that has not started", () => {
+    // Calling row 0 active before the request is sent is the lie this state exists
+    // to prevent: the panel would animate while nothing is happening.
+    expect(seedSteps(STAGES, "idle", "import").every((s) => s.status === "pending")).toBe(true);
+  });
+
+  it("keeps the caller's stages verbatim, in order, under its own id namespace", () => {
+    const rows = seedSteps(STAGES, "idle", "import");
+    expect(rows.map((s) => s.label)).toEqual(STAGES);
+    expect(rows.map((s) => s.id)).toEqual(["import-0", "import-1", "import-2"]);
+  });
+
+  it("survives an empty stage list", () => {
+    expect(seedSteps([], "done", "x")).toEqual([]);
   });
 });

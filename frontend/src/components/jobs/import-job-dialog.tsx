@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ProcessingSteps, type ProcessingStep } from "@/components/ai/processing-steps";
+import { ProcessingSteps, seedSteps, type ProcessingStep } from "@/components/ai/processing-steps";
 import { useImportJob } from "@/lib/hooks/actions";
 import { ApiError } from "@/lib/api/client";
 import { missingEndpointMessage } from "@/lib/api/missing-endpoint";
@@ -37,13 +37,8 @@ const STAGES: string[] = [
 ];
 
 /** Local stage hints: the request lifecycle is real, its internal position isn't observable here. */
-function stepsFor(pending: boolean, done: boolean): ProcessingStep[] {
-  return STAGES.map((label, i) => ({
-    id: `import-${i}`,
-    label,
-    status: done ? "done" : pending ? (i === 0 ? "active" : "pending") : "pending",
-  }));
-}
+const stepsFor = (pending: boolean, done: boolean): ProcessingStep[] =>
+  seedSteps(STAGES, done ? "done" : pending ? "pending" : "idle", "import");
 
 export function ImportJobDialog() {
   const [open, setOpen] = React.useState(false);

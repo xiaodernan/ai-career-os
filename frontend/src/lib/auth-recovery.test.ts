@@ -7,6 +7,8 @@ import {
   PASSWORD_MAX_LENGTH,
   PASSWORD_MIN_LENGTH,
   RESET_TOKEN_MAX_LENGTH,
+  UNREACHABLE_MESSAGE,
+  authFormErrorMessage,
   confirmationIssue,
   displayNameIssue,
   emailIssue,
@@ -148,11 +150,37 @@ describe("recoveryErrorMessage", () => {
 
   it("names the network as the cause when fetch never reached a server", () => {
     expect(recoveryErrorMessage(new TypeError("Failed to fetch"))).toBe(
-      "Cannot reach the API — is the backend running?",
+      UNREACHABLE_MESSAGE,
     );
   });
 
   it("has something to say for anything else", () => {
     expect(recoveryErrorMessage(new Error("boom"))).toBe("Something went wrong. Please try again.");
+  });
+});
+
+describe("authFormErrorMessage", () => {
+  it("answers a 401 with the sentence that names neither field", () => {
+    // The API says "Invalid credentials"; telling the user which of the two fields
+    // was wrong would tell an attacker which one was right.
+    const api401 = new ApiError("INVALID_CREDENTIALS", "Invalid credentials", 401);
+    expect(authFormErrorMessage(api401)).toBe("Incorrect email or password.");
+    // ...and the status alone still triggers it, because the code spelling used to
+    // be AUTH_INVALID_CREDENTIALS — a name the backend never sends (the vocabulary
+    // has INVALID_CREDENTIALS), which is why the friendly sentence only ever
+    // fired through the status half and nobody noticed the dead check.
+    const bare401 = new ApiError("SOMETHING_ELSE", "no", 401);
+    expect(authFormErrorMessage(bare401)).toBe("Incorrect email or password.");
+  });
+
+  it("passes other API messages through, since validation messages are actionable", () => {
+    const err = new ApiError("VALIDATION_FAILED", "email: must be a well-formed address", 400);
+    expect(authFormErrorMessage(err)).toBe("email: must be a well-formed address");
+    expect(authFormErrorMessage(new ApiError("EMAIL_ALREADY_REGISTERED", "taken", 409))).toBe("taken");
+  });
+
+  it("composes the recovery describer for the network and the unknown", () => {
+    expect(authFormErrorMessage(new TypeError("Failed to fetch"))).toBe(UNREACHABLE_MESSAGE);
+    expect(authFormErrorMessage(new Error("boom"))).toBe("Something went wrong. Please try again.");
   });
 });

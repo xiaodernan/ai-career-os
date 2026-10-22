@@ -200,6 +200,16 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   sentence in both languages, and the statuses did not move: both are still
   the 502 they were.
 
+  **And the upstream's own answers are this service's own codes.** The
+  assistant's service answers 404, 400, 409 and 5xx, and the boundary
+  flattened every status that was not 404 or 400 into one 502. So a document
+  that was still being read was reported as the assistant failing -- and the
+  code this service already had for it ("that resume's text is not available
+  yet") was *unreachable*, because the upstream's answer short-circuited the
+  line that raises it. A 409 is a code of its own now
+  (`AI_SERVICE_CONFLICT`), and the resume path turns it into the resume's
+  own code, which is the sentence the reader should read.
+
   **And the browser's 404 rule reads the code.** The backend answers a 404 in
   two different ways -- the route is not served, or the route is served and the
   record it reads is gone -- and both arrive as a 404, so a rule that reads the

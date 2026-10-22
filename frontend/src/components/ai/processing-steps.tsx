@@ -131,6 +131,30 @@ export function progressDetail(evt: StatusEvent): string | undefined {
 }
 
 /**
+ * The one place a stage list becomes a seeded step list.
+ *
+ * The request lifecycle is observable (a request is in flight, or it answered);
+ * the internal position of a batch operation is not, so a run shows its first
+ * stage active and the rest pending, an answered run shows all done, and an
+ * untouched list WAITS — `"pending"` on an idle row would claim work that has
+ * not started, the same lie a fired-but-unsent progress bar tells.
+ *
+ * `prefix` namespaces the ids (React keys); the lifecycle seeds describe no wire
+ * step, so unlike the ingest seed these ids never match a frame.
+ */
+export function seedSteps(
+  stages: string[],
+  state: "idle" | "pending" | "done",
+  prefix: string,
+): ProcessingStep[] {
+  return stages.map((label, i) => ({
+    id: `${prefix}-${i}`,
+    label,
+    status: state === "done" ? "done" : state === "pending" && i === 0 ? "active" : "pending",
+  }));
+}
+
+/**
  * Small helper to fold SSE `status` events into a steps array.
  * Unknown incoming steps are appended automatically.
  */

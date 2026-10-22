@@ -123,6 +123,13 @@ export function depthLabel(value: number): string {
   return DEPTH_LABELS[depthLevel(value) - 1] ?? String(depthLevel(value));
 }
 
+/** Memory importance → label band for the memory card. */
+export function weightLabel(importance: number): string {
+  if (importance >= 0.85) return "High";
+  if (importance <= 0.35) return "Low";
+  return "Normal";
+}
+
 /** Beyond this the number is a parse artifact, not a requirement: no role asks for a
  *  40-year career. The JD importer stores whatever the model answered verbatim. */
 const MAX_EXPERIENCE_YEARS = 30;

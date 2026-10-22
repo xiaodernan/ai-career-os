@@ -899,8 +899,10 @@ describe("endpoints ↔ backend route parity", () => {
     "POST /applications": "mutationFn takes `body: Partial<Application> & { title }` and forwards it whole, so the key names are the caller's",
     "PATCH /applications/{}": "forwards the caller's `patch` object; the three names it documents are status/position/note",
     "POST /knowledge/notes": "forwards the note editor's `body`, which carries the whole note form",
+    "POST /contacts": "same registry form, same contactBody() — blanks stay absent",
     "POST /interview/sessions": "forwards the setup form's `body`",
     "PATCH /users/me/profile": "forwards the profile editor's `patch`, one key per form field the user edited",
+    "PATCH /contacts/{}": "the registry form posts its current values through contactBody(), which builds the record key by key — blanks stay absent",
     "PATCH /users/me": "forwards the account form's `patch`",
     "POST /resumes/upload": "a FormData part list, not a JSON body — Spring binds it through @RequestPart, so no record names these keys",
   };

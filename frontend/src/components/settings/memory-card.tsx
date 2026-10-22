@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/select";
 import { useMemories } from "@/lib/hooks/resources";
 import { useDeleteMemory, useUpdateMemory } from "@/lib/hooks/actions";
-import { relativeTime } from "@/lib/format";
+import { relativeTime, weightLabel } from "@/lib/format";
 
 /**
  * What the agents remember about the user, and the one surface that can correct it
@@ -43,12 +43,6 @@ const WEIGHTS = [
   { value: "0.6", label: "Normal" },
   { value: "0.9", label: "High" },
 ];
-
-function weightLabel(importance: number): string {
-  if (importance >= 0.85) return "High";
-  if (importance <= 0.35) return "Low";
-  return "Normal";
-}
 
 export function MemoryCard() {
   const memories = useMemories();

@@ -953,6 +953,8 @@ export const translations = {
     errorCodes: {
       ABORTED: "The upload was cancelled.",
 
+      AI_SERVICE_CONFLICT: "The AI service is not ready yet.",
+
       AI_SERVICE_EMPTY_RESPONSE: "The AI service answered with nothing.",
 
       AI_SERVICE_NOT_FOUND: "That is no longer here.",
@@ -1041,7 +1043,7 @@ export const translations = {
 
       RESUME_NOT_TAILABLE: "There is no resume to tailor yet.",
 
-      RESUME_TEXT_NOT_READY: "That document's text is not available yet.",
+      RESUME_TEXT_NOT_READY: "That resume's text is not available yet.",
 
       RESUME_VERSION_MISSING: "That resume has no version yet.",
 
@@ -2698,6 +2700,8 @@ export const translations = {
     errorCodes: {
       ABORTED: "上传已取消。",
 
+      AI_SERVICE_CONFLICT: "AI 服务还没准备好。",
+
       AI_SERVICE_EMPTY_RESPONSE: "AI 服务返回了空内容。",
 
       AI_SERVICE_NOT_FOUND: "那个东西已经不在了。",
@@ -2786,7 +2790,7 @@ export const translations = {
 
       RESUME_NOT_TAILABLE: "还没有可以定制的简历。",
 
-      RESUME_TEXT_NOT_READY: "这份文档的正文还读不出来。",
+      RESUME_TEXT_NOT_READY: "那份简历的正文还读不出来。",
 
       RESUME_VERSION_MISSING: "那份简历还没有版本。",
 

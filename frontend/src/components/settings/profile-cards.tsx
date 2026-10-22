@@ -11,6 +11,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { ErrorState } from "@/components/common/error-state";
 import { useProfile, useUpdateProfileDetails } from "@/lib/hooks/actions";
 import { splitList, targetLocationsIssue, targetRolesIssue } from "@/lib/profile-targets";
+import {
+  MAP_SECTIONS,
+  listText,
+  mapRows,
+  rawMap,
+  readString,
+  readYears,
+  rowsToMap,
+  type MapName,
+  type MapRow,
+} from "@/lib/profile-maps";
 
 /**
  * The career-profile editor for the settings page. `GET/PATCH /users/me/profile` have been served
@@ -29,20 +40,6 @@ const MAX_HEADLINE = 240;
 const MAX_LOCATION = 120;
 const MAX_SUMMARY = 5000;
 const MAX_YEARS = 60;
-
-function listText(value: unknown): string {
-  return Array.isArray(value) ? value.map(String).join(", ") : "";
-}
-
-function readString(source: Record<string, unknown> | null, key: string): string {
-  const v = source?.[key];
-  return typeof v === "string" ? v : "";
-}
-
-function readYears(source: Record<string, unknown> | null): string {
-  const v = source?.["yearsExperience"];
-  return typeof v === "number" ? String(v) : "";
-}
 
 export function CareerProfileCard() {
   const profile = useProfile();
@@ -215,52 +212,10 @@ function CareerProfileForm({ initial }: { initial: Record<string, unknown> | nul
  * whose rows were all deleted goes out as `{}`, which is the clear. Values round-trip through
  * a lenient JSON read: anything that already parses as JSON keeps its type, anything else
  * stays a string, the way an env-var editor behaves.
+ *
+ * The data contract lives in `@/lib/profile-maps` — a typed value that survived the
+ * render→edit→save cycle unmangled is invisible on screen, so only the tests hold it.
  */
-
-type MapName = "links" | "workAuthorization" | "preferences";
-
-const MAP_SECTIONS: { name: MapName; label: string; keyPlaceholder: string }[] = [
-  { name: "links", label: "Links", keyPlaceholder: "e.g. github" },
-  { name: "workAuthorization", label: "Work authorization", keyPlaceholder: "e.g. status" },
-  { name: "preferences", label: "Preferences", keyPlaceholder: "e.g. remote" },
-];
-
-interface MapRow {
-  key: string;
-  value: string;
-}
-
-function lenientJson(raw: string): unknown {
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return raw;
-  }
-}
-
-function valueText(value: unknown): string {
-  return typeof value === "string" ? value : JSON.stringify(value);
-}
-
-function rawMap(source: Record<string, unknown> | null, name: MapName): Record<string, unknown> {
-  const value = source?.[name];
-  return value && typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : {};
-}
-
-function mapRows(source: Record<string, unknown> | null, name: MapName): MapRow[] {
-  return Object.entries(rawMap(source, name)).map(([key, v]) => ({ key, value: valueText(v) }));
-}
-
-function rowsToMap(rows: MapRow[]): Record<string, unknown> {
-  const out: Record<string, unknown> = {};
-  for (const row of rows) {
-    const key = row.key.trim();
-    if (key) out[key] = lenientJson(row.value);
-  }
-  return out;
-}
 
 export function CareerProfileMapsCard() {
   const profile = useProfile();

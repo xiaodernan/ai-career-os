@@ -119,6 +119,27 @@ export function recoveryErrorMessage(err: unknown): string {
     }
     return err.message;
   }
-  if (err instanceof TypeError) return "Cannot reach the API — is the backend running?";
+  if (err instanceof TypeError) return UNREACHABLE_MESSAGE;
   return "Something went wrong. Please try again.";
+}
+
+/** The one spelling of the network-failure sentence, shared by every describer. */
+export const UNREACHABLE_MESSAGE = "Cannot reach the API — is the backend running?";
+
+/**
+ * The sign-in/sign-up form's sentence for a failed call.
+ *
+ * A 401 is the one API answer whose own message helps nobody: the form cannot say
+ * which of the two fields was wrong without telling an attacker which one was
+ * right, so the API's "Invalid credentials" and the form's "Incorrect email or
+ * password" are the same claim at different volumes — one friendly, one a leak.
+ * Everything else (validation messages, the network, the unknown) is the recovery
+ * describer's answer, composed rather than re-spelled.
+ */
+export function authFormErrorMessage(err: unknown): string {
+  if (err instanceof ApiError
+      && (err.code === "INVALID_CREDENTIALS" || err.status === 401)) {
+    return "Incorrect email or password.";
+  }
+  return recoveryErrorMessage(err);
 }

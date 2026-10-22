@@ -332,11 +332,27 @@ public class ResumeService {
             KnowledgeSource source = sources.findFirstByUserIdAndKindAndRefId(userId, "resume", resumeId)
                     .orElseThrow(() -> new ApiException(ApiErrorCode.RESUME_NOT_PARSED,
                             "No plaintext or ingested document for this resume"));
-            Map<String, Object> doc = ai.documentText(source.getDocumentId(), userId);
+            Map<String, Object> doc;
+            try {
+                doc = ai.documentText(source.getDocumentId(), userId);
+            } catch (ApiException e) {
+                // The upstream answers 409 while the document is still being
+                // read. That is not the assistant failing -- it is this
+                // resume's text not being ready yet, which is the code this
+                // service already had for it, and the sentence the reader
+                // should read. Without this the upstream's answer
+                // short-circuited the line below, and that code was
+                // unreachable.
+                if (e.code() == ApiErrorCode.AI_SERVICE_CONFLICT) {
+                    throw new ApiException(ApiErrorCode.RESUME_TEXT_NOT_READY,
+                            "Resume text is not available yet");
+                }
+                throw e;
+            }
             text = Json.str(doc, "text");
         }
         if (text == null || text.isBlank()) {
-            throw new ApiException(ApiErrorCode.RESUME_TEXT_NOT_READY, "Document text is not available yet");
+            throw new ApiException(ApiErrorCode.RESUME_TEXT_NOT_READY, "Resume text is not available yet");
         }
         return new ParsedContext(resumeId, version.getId(), text);
     }

@@ -25,7 +25,7 @@ import { ChevronRight } from "lucide-react";
  * says so.
  */
 
-const TRACE_KINDS: TraceKind[] = [
+export const TRACE_KINDS: TraceKind[] = [
   "step_start",
   "tool_call",
   "tool_result",
@@ -37,7 +37,7 @@ const TRACE_KINDS: TraceKind[] = [
   "final",
 ];
 
-function asTraceKind(v: unknown): TraceKind {
+export function asTraceKind(v: unknown): TraceKind {
   return (TRACE_KINDS as string[]).includes(String(v)) ? (v as TraceKind) : "step_start";
 }
 

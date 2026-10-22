@@ -56,7 +56,7 @@ const KIND_META: Record<TraceKind, { icon: React.ComponentType<{ className?: str
   final: { icon: Flag, text: "text-foreground" },
 };
 
-function formatDuration(ms?: number): string | null {
+export function formatDuration(ms?: number | null): string | null {
   if (ms == null) return null;
   return ms < 1000 ? `${Math.round(ms)}ms` : `${(ms / 1000).toFixed(1)}s`;
 }

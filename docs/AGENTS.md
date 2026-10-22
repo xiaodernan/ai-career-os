@@ -243,9 +243,9 @@ Three properties hold across every one of them, and the census gates
   a sweep that ran under a random id would put another user's jobs in this one's
   board.
 
-## 8. The thirteen quiet failures
+## 8. The fourteen quiet failures
 
-Thirteen bugs in this repository looked like working code and were not. They
+Fourteen bugs in this repository looked like working code and were not. They
 are written down because each one is a *shape* of failure, not a one-off: the
 next one will have the same shape, and the gate that catches it is the thing to
 reach for.
@@ -342,9 +342,29 @@ the bridge calls it), a place (the language, read where the
 sentence is raised), a promise (a note, quoted by the agents the copy
 says quotes it), a classification (every exported column, the
 reader's or the substance), and a meaning (every error code, one
-meaning or a named gap). The general shape is the same in all thirteen:
+meaning or a named gap), and a reach (the code that could not be
+reached). The general shape is the same in all fourteen:
 **the bug was where nobody was looking, and the answer was to look there,
 not to look harder.**
+
+**A code that could not be reached.** The resume's parse reads the
+plaintext out of the document the knowledge base ingested, and the upstream
+answers 409 while that document is still being read. The service had a
+code for exactly that case -- `RESUME_TEXT_NOT_READY`, "that resume's text
+is not available yet" -- and a sentence for it in both languages. It could
+not be reached: the boundary turned every upstream status that was not 404
+or 400 into one 502, and that 502 was thrown a line *before* the one that
+raises the code. So the reader was told the assistant had failed, in the
+one case where the assistant was doing its job, and the code that said
+what was really happening sat in the enum with a sentence and no path to
+it.
+
+**A code nobody has to be able to reach is a code that says nothing.** The
+upstream's 409 is a code of its own now, and the resume path turns it into
+the resume's own code -- and a test holds that, because the shape of this
+bug is that it is invisible from both ends: the code looks right, the
+sentence looks right, and the reader is told something that is not what
+happened.
 
 **A promise the copy makes and the code does not keep.** The notes panel
 says it three times over: the content field says "the agents can quote

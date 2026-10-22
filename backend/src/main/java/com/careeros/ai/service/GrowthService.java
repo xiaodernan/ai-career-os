@@ -77,14 +77,15 @@ public class GrowthService {
         }
     }
 
+    @SuppressWarnings("unchecked")
     private static double coverageOf(Map<String, Object> report) {
         if (report == null) {
             return 0;
         }
-        Object gap = report.get("gap");
-        if (gap instanceof Map<?, ?> gapMap && gapMap.get("coverage") instanceof Number n) {
-            return n.doubleValue();
+        Map<String, Object> gap = (Map<String, Object>) report.get("gap");
+        if (gap == null) {
+            return 0;
         }
-        return 0;
+        return gap.get("coverage") instanceof Number n ? n.doubleValue() : 0;
     }
 }
