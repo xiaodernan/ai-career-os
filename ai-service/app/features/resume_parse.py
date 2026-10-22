@@ -29,6 +29,7 @@ Rules:
 
 
 async def parse_resume(text: str, *, user_id=None, run_id=None) -> dict:
+    text = text if isinstance(text, str) else ""
     req = LLMRequest(
         messages=[
             LLMMessage("system", SYSTEM),
@@ -66,7 +67,9 @@ def _merge_skills(llm_skills: list[dict], text_skills: list[str]) -> list[dict]:
     canonical name so ``React`` and ``react.js`` collapse to one entry."""
     seen = set()
     merged = []
-    for s in llm_skills + [{"name": t} for t in text_skills]:
+    rows = [s for s in (llm_skills or []) if isinstance(s, dict) and s.get("name")]
+    rows += [{"name": t} for t in (text_skills or []) if isinstance(t, str) and t]
+    for s in rows:
         canon = normalize(s["name"])
         if canon.lower() in seen:
             continue
@@ -101,6 +104,7 @@ _DIMENSION_OF = {
 
 def compute_resume_score(parsed: dict) -> dict:
     """Deterministic rubric (0-100) — no LLM, fully explainable (Resume Score)."""
+    parsed = parsed if isinstance(parsed, dict) else {}
     score, detail = 0, []
     achieved = {dim: 0 for dim in DIMENSIONS}
     possible = {dim: 0 for dim in DIMENSIONS}
@@ -114,16 +118,18 @@ def compute_resume_score(parsed: dict) -> dict:
             achieved[dim] += pts
         detail.append({"criterion": why, "met": bool(ok), "points": pts})
 
-    p = parsed.get("profile") or {}
-    exp = parsed.get("experience") or []
+    p = parsed.get("profile")
+    p = p if isinstance(p, dict) else {}
+    exp = [e for e in (parsed.get("experience") or []) if isinstance(e, dict)]
     add(15, "has_contact", bool(p.get("email") or p.get("phone")))
     add(10, "has_summary", bool(p.get("summary")))
     add(20, "has_experience", len(exp) > 0)
-    bullets = sum(len((e.get("bullets") or [])) for e in exp)
+    bullets = sum(len([b for b in (e.get("bullets") or []) if isinstance(b, str)])
+                  for e in exp)
     add(15, "experience_has_bullets", bullets >= 3)
     add(10, "quantified_impact",
          any(any(ch in b for ch in ["%", "％"]) or any(c.isdigit() for c in b)
-             for e in exp for b in (e.get("bullets") or [])))
+             for e in exp for b in (e.get("bullets") or []) if isinstance(b, str)))
     add(10, "has_projects", bool(parsed.get("projects")))
     add(10, "has_education", bool(parsed.get("education")))
     add(10, "has_skills", len(parsed.get("skills") or []) >= 5)

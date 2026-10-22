@@ -33,6 +33,9 @@ def _numbers_in(s: str) -> set[str]:
 
 def verify_no_fabrication(original_text: str, before: str, after: str) -> str | None:
     """Return rejection reason if `after` introduces facts absent from the resume."""
+    original_text = original_text if isinstance(original_text, str) else ""
+    before = before if isinstance(before, str) else ""
+    after = after if isinstance(after, str) else ""
     src_skills = {normalize(s) for s in extract_skills(original_text)}
     after_skills = {normalize(s) for s in extract_skills(after)}
     invented = after_skills - src_skills
@@ -46,15 +49,17 @@ def verify_no_fabrication(original_text: str, before: str, after: str) -> str | 
 
 async def tailor(resume_structured: dict, resume_text: str, jd: dict, *, user_id: str,
                  job_title: str = "", run_id: str | None = None) -> dict:
+    jd = jd if isinstance(jd, dict) else {}
     matched_query = " ".join(
-        [s.get("name", "") for s in (jd.get("requiredSkills") or [])][:12]
+        [s.get("name", "") for s in (jd.get("requiredSkills") or [])
+         if isinstance(s, dict)][:12]
         + [jd.get("title", "")])
     r = await retrieve(matched_query or jd.get("title", "relevant experience"),
                        user_id=user_id, run_id=run_id, top_k=8, kinds=["resume", "project"])
     context = (
         f"JOB TARGET: {job_title or jd.get('title','')}\n"
-        f"JD REQUIRED: {[s.get('name') for s in (jd.get('requiredSkills') or [])]}\n"
-        f"JD PREFERRED: {[s.get('name') for s in (jd.get('preferredSkills') or [])]}\n\n"
+        f"JD REQUIRED: {[s.get('name') for s in (jd.get('requiredSkills') or []) if isinstance(s, dict)]}\n"
+        f"JD PREFERRED: {[s.get('name') for s in (jd.get('preferredSkills') or []) if isinstance(s, dict)]}\n\n"
         f"CAREER KNOWLEDGE (evidence you may foreground):\n{r.get('context_block','')}\n\n"
         f"ORIGINAL RESUME JSON:\n{wrap_untrusted('RESUME', str(resume_structured)[:16000])}"
     )
@@ -62,6 +67,7 @@ async def tailor(resume_structured: dict, resume_text: str, jd: dict, *, user_id
         messages=[LLMMessage("system", SYSTEM), LLMMessage("user", context)],
         temperature=0.2, max_tokens=4000)
     out = await ask_json(req, user_id=user_id, run_id=run_id, agent="resume", kind="tailor")
+    out = out if isinstance(out, dict) else {}
 
     accepted, rejected = [], []
     for ch in out.get("changes") or []:
@@ -86,33 +92,45 @@ def _apply_changes(structured: dict, changes: list[dict], out: dict,
                    resume_text: str) -> dict:
     import copy
 
+    structured = structured if isinstance(structured, dict) else {}
+    out = out if isinstance(out, dict) else {}
+    resume_text = resume_text if isinstance(resume_text, str) else ""
     t = copy.deepcopy(structured)
-    for ch in changes:
+    for ch in [c for c in (changes or []) if isinstance(c, dict)]:
         sec = ch.get("section")
         if sec not in ("experience", "projects"):
             continue
         idx = ch.get("index")
-        items = t.get(sec) or []
-        if isinstance(idx, int) and 0 <= idx < len(items):
+        items = t.get(sec)
+        items = items if isinstance(items, list) else []
+        if isinstance(idx, int) and not isinstance(idx, bool) and 0 <= idx < len(items):
             item = items[idx]
-            b_before, b_after = str(ch.get("before", "")), str(ch["after"])
-            bullets = item.get("bullets") or []
+            if not isinstance(item, dict):
+                continue
+            b_before = str(ch.get("before", ""))
+            b_after = str(ch.get("after", ""))
+            bullets = item.get("bullets")
+            bullets = bullets if isinstance(bullets, list) else []
             hit = False
             for i, b in enumerate(bullets):
-                if b.strip().lower()[:80] == b_before.strip().lower()[:80]:
+                if isinstance(b, str) and b.strip().lower()[:80] == b_before.strip().lower()[:80]:
                     bullets[i] = b_after
                     hit = True
             if not hit and idx < len(bullets):
                 bullets[idx] = b_after
             item["bullets"] = bullets
-    if out.get("summary") and verify_no_fabrication(resume_text, "", out["summary"]) is None:
-        t["profile"] = {**(t.get("profile") or {}), "summary": out["summary"]}
+    summary = out.get("summary")
+    if summary and verify_no_fabrication(resume_text, "", str(summary)) is None:
+        profile = t.get("profile")
+        t["profile"] = {**(profile if isinstance(profile, dict) else {}),
+                        "summary": summary}
+    skill_rows = [s for s in (t.get("skills") or []) if isinstance(s, dict)]
+    known = {normalize(x) for x in resume_text.split()}
+    known |= {normalize(s.get("name", "")) for s in skill_rows}
     skill_order = [s for s in (out.get("skillOrder") or [])
-                   if normalize(s) in {normalize(x) for x in resume_text.split()}
-                   or normalize(s) in {normalize(s2.get("name", ""))
-                                       for s2 in t.get("skills") or []}]
+                   if isinstance(s, str) and normalize(s) in known]
     if skill_order:
         rank = {normalize(s): i for i, s in enumerate(skill_order)}
-        t["skills"] = sorted(t.get("skills") or [],
+        t["skills"] = sorted(skill_rows,
                              key=lambda s: rank.get(normalize(s.get("name", "")), 999))
     return t

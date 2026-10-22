@@ -13,7 +13,7 @@ from app.features import (company, cover_letter, counter_offer, demand, equity, 
                              export_redact, export_render, export_words, interview_prep,
                              jd_analyze, learning, match, negotiation,
                              offers, prioritize, progress, progression, readiness,
-                             roles, salary)
+                             resume_parse, roles, salary, tailor)
 
 
 # --- progression.build_stepping_stones -------------------------------------
@@ -481,4 +481,47 @@ def test_suggest_resume_improvements_none_inputs_is_safe():
     got = jd_analyze.suggest_resume_improvements(junk, {"experience": [None, "x"]})
     # a None requirement used to surface as the literal string "None"
     assert [g["skill"] for g in got if g["type"] == "missing_required"] == ["golang"]
+
+
+# ---------------- tailoring verifier/applier (PRD §11) ----------------
+
+def test_verify_no_fabrication_none_texts_are_safe():
+    assert tailor.verify_no_fabrication(None, None, None) is None
+    # a fabricated skill is still rejected once the texts are real
+    reason = tailor.verify_no_fabrication("Built a Go service.", "",
+                                          "Built a Go and Kubernetes service.")
+    assert reason is not None and "Kubernetes" in reason
+
+
+def test_apply_changes_none_and_junk_rows_are_safe():
+    assert tailor._apply_changes(None, [None, "junk"], None, None) == {}
+    structured = {"experience": [None, {"bullets": [None, "Wrote a Go service"]}],
+                  "projects": "not-a-list", "profile": None, "skills": [None, {"name": "Go"}]}
+    t = tailor._apply_changes(structured, [
+        {"section": "experience", "index": 1, "before": "Wrote a Go service",
+         "after": "Wrote a Go service"},
+        {"section": "experience", "index": 0},          # a None row is skipped
+        {"section": "projects", "index": 0},            # a non-list section is skipped
+    ], {"summary": "Go engineer", "skillOrder": ["go", None]}, "Go")
+    assert t["experience"][1]["bullets"] == [None, "Wrote a Go service"]
+    assert t["profile"] == {"summary": "Go engineer"}
+    assert [s["name"] for s in t["skills"]] == ["Go"]
+
+
+# ---------------- resume parse / score (PRD §3) ----------------
+
+def test_compute_resume_score_none_and_junk_rows_are_safe():
+    assert resume_parse.compute_resume_score(None)["total"] == 0
+    junk = {"profile": None, "experience": [None, "x", {"bullets": [None, 3, "cut p95 by 40%"]}],
+            "projects": None, "education": None, "skills": None}
+    out = resume_parse.compute_resume_score(junk)
+    # 20 experience + 10 quantified; the bullets bar needs >=3 str bullets (only 1 here)
+    assert out["total"] == 30
+    assert out["impact"] == 100
+
+
+def test_merge_skills_skips_rows_without_a_name():
+    merged = resume_parse._merge_skills([{"category": "cloud"}, None, "junk",
+                                         {"name": "react"}], ["Go", None])
+    assert [s["name"] for s in merged] == ["React", "Go"]
 
