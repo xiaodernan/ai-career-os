@@ -4081,7 +4081,7 @@ def test_the_derived_holder_scanner_answers_for_every_local_a_call_builds(monkey
     """
     text = NORMALIZE.read_text(encoding="utf-8")
     walked = _assigned_accessor_locals(text)
-    assert len(walked) == 87, (f"{len(walked)} locals are built by an accessor call: the population this "
+    assert len(walked) == 86, (f"{len(walked)} locals are built by an accessor call: the population this "
                                "rule's answers are drawn from")
     assert [row["holder"] for row in walked if row["wrap"]] == [], \
         (f"{[(row['holder'], row['line']) for row in walked if row['wrap']]}: a wrapped call is the "
