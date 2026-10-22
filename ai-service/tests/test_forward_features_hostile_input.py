@@ -11,8 +11,8 @@ import pytest
 
 from app.features import (company, cover_letter, counter_offer, demand, equity, export,
                              export_redact, export_render, export_words, gap_analysis,
-                             import_plan, interview_prep, jd_analyze, learning, match,
-                             negotiation, offers, prioritize, progress, progression,
+                             import_plan, interview, interview_prep, jd_analyze, learning,
+                             match, negotiation, offers, prioritize, progress, progression,
                              readiness, resume_parse, roles, salary, tailor)
 
 
@@ -580,4 +580,32 @@ def test_build_evidence_and_sanitize_survive_none():
     out2 = gap_analysis._sanitize_expected({"expectedSkills": [{"name": "go",
                                                                "importance": 7}]}, "go")
     assert out2["expectedSkills"][0]["importance"] == "should"
+
+
+# ---------------- adaptive interview (PRD §13-15) ----------------
+
+def test_decide_next_none_out_and_junk_turns_are_safe():
+    got = interview.decide_next(None, difficulty=0.5, qnum=8, max_q=8,
+                                turns=[None, "junk", {"role": "candidate"}])
+    assert got["action"] == "finish"          # budget spent, last real turn is a candidate
+    assert got["question"] == ""
+    # a non-str question is coerced rather than crashing on .strip()
+    got2 = interview.decide_next({"action": "followup", "question": 7}, difficulty=0.5,
+                                 qnum=1, max_q=8, turns=[])
+    assert got2["question"] == "" and got2["action"] == "followup"
+
+
+def test_trajectory_detail_skips_non_dict_turns_and_meta():
+    rows = interview._trajectory_detail([None, "junk", {"seq": 1, "role": "interviewer"},
+                                         {"seq": 2, "role": "candidate",
+                                          "question_meta": "not-a-dict",
+                                          "evaluation": None}])
+    assert [r["seq"] for r in rows] == [1, 2]
+    assert rows[1]["topic"] is None and rows[1]["score"] is None
+
+
+def test_state_brief_none_turns_and_ctx_are_safe():
+    brief = interview._state_brief("persona", "mixed", [None, {"role": "interviewer"}],
+                                   0.5, 1, 8, None, ["systems"])
+    assert "CANDIDATE" in brief and "Question 1 asked so far" in brief
 

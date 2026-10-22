@@ -57,13 +57,17 @@ Rules:
 
 def _state_brief(persona: str, mode: str, turns: list[dict], difficulty: float,
                  qnum: int, max_q: int, resume_ctx: str, jd_topics: list[str]) -> str:
+    rows = [t for t in (turns or []) if isinstance(t, dict)]
     convo = "\n".join(
-        f"{'INTERVIEWER' if t['role']=='interviewer' else 'CANDIDATE'}: {t['content'][:350]}"
-        for t in turns[-10:])
+        f"{'INTERVIEWER' if t.get('role')=='interviewer' else 'CANDIDATE'}: "
+        f"{str(t.get('content') or '')[:350]}"
+        for t in rows[-10:])
+    ctx = resume_ctx if isinstance(resume_ctx, str) else ""
+    diff = float(difficulty) if isinstance(difficulty, (int, float)) else 0.0
     return (f"Persona: {persona}\nMode: {mode}\nQuestion {qnum} asked so far / target "
-            f"{max_q}. Difficulty now: {difficulty:.2f}.\n"
+            f"{max_q}. Difficulty now: {diff:.2f}.\n"
             f"Suggested topics: {jd_topics}\nCandidate context:\n"
-            f"{wrap_untrusted('CANDIDATE_CONTEXT', resume_ctx[:2500])}\n\nConversation:\n{convo}")
+            f"{wrap_untrusted('CANDIDATE_CONTEXT', ctx[:2500])}\n\nConversation:\n{convo}")
 
 
 def opening_meta(topic: str) -> dict:
@@ -97,10 +101,12 @@ async def opening_question(*, mode: str, company: str, position: str, resume_ctx
 
 async def evaluate_answer(*, mode: str, question: str, answer: str, resume_ctx: str,
                           user_id: str | None = None, run_id: str | None = None) -> dict:
+    ctx = resume_ctx if isinstance(resume_ctx, str) else ""
+    ans = answer if isinstance(answer, str) else ""
     prompt = (f"Interview context (candidate's real background, untrusted):\n"
-              f"{wrap_untrusted('CANDIDATE_CONTEXT', resume_ctx[:2500])}\n\n"
+              f"{wrap_untrusted('CANDIDATE_CONTEXT', ctx[:2500])}\n\n"
               f"QUESTION: {question}\n\nCANDIDATE ANSWER:\n"
-              f"{wrap_untrusted('ANSWER', answer[:4000])}")
+              f"{wrap_untrusted('ANSWER', ans[:4000])}")
     try:
         ev = await ask_json(LLMRequest(
             messages=[LLMMessage("system", EVAL_SYSTEM), LLMMessage("user", prompt)],
@@ -120,16 +126,20 @@ def decide_next(out: dict, *, difficulty: float, qnum: int, max_q: int,
     the band the adaptive ladder is designed for. Split out of ``advance`` so the
     decision rule is unit-testable without an LLM.
     """
+    out = out if isinstance(out, dict) else {}
     action = out.get("action") if out.get("action") in ("followup", "next_topic",
                                                         "finish") else "next_topic"
+    rows = [t for t in (turns or []) if isinstance(t, dict)]
     if qnum >= max_q and action != "finish":
-        action = "finish" if turns and turns[-1]["role"] == "candidate" else action
+        action = "finish" if rows and rows[-1].get("role") == "candidate" else action
     try:
         d = float(out.get("difficulty", difficulty))
     except (TypeError, ValueError):
         d = difficulty
     d = max(0.1, min(0.95, d))
-    return {"action": action, "question": (out.get("question") or "").strip(),
+    question = out.get("question")
+    return {"action": action,
+            "question": (question if isinstance(question, str) else "").strip(),
             "topic": out.get("topic") or "", "difficulty": d,
             "reasoning": out.get("reasoning", "")}
 
@@ -191,10 +201,14 @@ FINALIZE_COMPUTED_FIELDS = ("trajectory_detail",)
 
 async def finalize(*, mode: str, turns: list[dict], resume_ctx: str,
                    user_id: str | None = None, run_id: str | None = None) -> dict:
+    rows = [t for t in (turns or []) if isinstance(t, dict)]
     convo = "\n".join(
-        f"{'Q' if t['role']=='interviewer' else 'A'}: {t['content'][:600]}" for t in turns)
+        f"{'Q' if t.get('role')=='interviewer' else 'A'}: "
+        f"{str(t.get('content') or '')[:600]}"
+        for t in rows)
+    ctx = resume_ctx if isinstance(resume_ctx, str) else ""
     prompt = (f"Mode {mode}. Candidate context (untrusted):\n"
-              f"{wrap_untrusted('CTX', resume_ctx[:1500])}\n\nTRANSCRIPT:\n{convo}")
+              f"{wrap_untrusted('CTX', ctx[:1500])}\n\nTRANSCRIPT:\n{convo}")
     try:
         out = await ask_json(LLMRequest(
             messages=[LLMMessage("system", FINALIZE_SYSTEM), LLMMessage("user", prompt)],
@@ -202,6 +216,7 @@ async def finalize(*, mode: str, turns: list[dict], resume_ctx: str,
             user_id=user_id, run_id=run_id, agent="interview", kind="interview_finalize")
     except Exception:
         out = {}
+    out = out if isinstance(out, dict) else {}
     out["trajectory_detail"] = _trajectory_detail(turns)
     out.setdefault("dims", {})
     out.setdefault("overall", 0.5)
@@ -211,8 +226,16 @@ async def finalize(*, mode: str, turns: list[dict], resume_ctx: str,
 def _trajectory_detail(turns: list[dict]) -> list[dict]:
     """Per-turn trajectory the interview report renders (topic/depth/score may be absent
     for a turn that never got a question_meta or evaluation)."""
-    return [{"seq": t.get("seq"), "role": t["role"],
-             "topic": (t.get("question_meta") or {}).get("topic"),
-             "depth": (t.get("question_meta") or {}).get("depth_level"),
-             "score": (t.get("evaluation") or {}).get("score")}
-            for t in turns]
+    rows: list[dict] = []
+    for t in turns or []:
+        if not isinstance(t, dict):
+            continue
+        meta = t.get("question_meta")
+        meta = meta if isinstance(meta, dict) else {}
+        ev = t.get("evaluation")
+        ev = ev if isinstance(ev, dict) else {}
+        rows.append({"seq": t.get("seq"), "role": t.get("role"),
+                     "topic": meta.get("topic"),
+                     "depth": meta.get("depth_level"),
+                     "score": ev.get("score")})
+    return rows
