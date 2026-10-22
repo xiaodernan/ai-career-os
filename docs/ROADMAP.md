@@ -179,7 +179,7 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   *measures* the split rather than remembering it: a code that is translated
   must carry one meaning (read off the throw sites), a code that is named as a
   gap must carry several, and a code nobody classified fails the gate. So the
-  fifty-three codes that mean one thing are bilingual today, and the five that
+  fifty-two codes that mean one thing are bilingual today, and the five that
   mean several carry thirteen distinct sentences between them, so they keep
   the server's words until the throw sites name them properly — thirteen more codes, one per distinct wording, and then the
   gap list empties.
