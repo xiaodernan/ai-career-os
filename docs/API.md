@@ -335,7 +335,7 @@ tenant context via `core.deps.Ctx`.
 | POST | `/internal/features/tailor` | tailoring + diff (no fabrication) |
 | POST | `/internal/features/cover-letter` | cover letter |
 | POST | `/internal/features/jd/suggestions` | improvement suggestions |
-| POST | `/internal/features/growth-report` | one call for the whole growth page: readiness + gap + salary, composed by `features/growth.py` (backend `growthReport`) |
+| POST | `/internal/features/growth-report` | one call for the whole growth page: readiness + gap + salary + the learning plan + the progress diff, composed by `features/growth.py` (backend `growthReport`) |
 | POST | `/internal/features/insight-digest` | Epic 15.3 -- a weekly snapshot: stalled applications, live stage mix, headlines (backend `insightDigest`) |
 | POST | `/internal/features/health-report` | Epic 16.1 -- agent health, cost and regression verdict over a window (backend `healthReport`) |
 | POST | `/internal/features/follow-ups` | Epic 11.3 -- the contacts that have gone cold, ranked, each with a draft (backend `followUps`) |

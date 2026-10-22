@@ -7,6 +7,7 @@ import {
   Check,
   GraduationCap,
   Minus,
+  Plus,
   ScanSearch,
   Target,
 } from "lucide-react";
@@ -244,6 +245,11 @@ export default function GrowthPage() {
                           >
                             {item.priority}
                           </Badge>
+                          {item.resource_hint && (
+                            <span className="text-xs text-muted-foreground">
+                              {item.resource_hint}
+                            </span>
+                          )}
                           {item.note && (
                             <span className="text-xs text-muted-foreground">{item.note}</span>
                           )}
@@ -308,7 +314,9 @@ function CoverageBar({ coverage }: { coverage: number }) {
 /**
  * The progress block's rows. On the baseline run there is nothing to compare — the
  * engine still answers the shape, with empty lists — so the card says what it will
- * say next time instead of rendering three empty groups.
+ * say next time instead of rendering a stack of empty groups. Every list the engine
+ * answers is one of these groups: a state the diff can name is a state the user is
+ * shown, which is what `opened` means (a gap the previous report did not list).
  */
 function ProgressLines({ progress }: { progress?: GrowthReport["progress"] }) {
   const { t } = useLocale();
@@ -316,6 +324,10 @@ function ProgressLines({ progress }: { progress?: GrowthReport["progress"] }) {
   const groups = [
     { labelKey: "growth.skillsClosed", skills: progress.closed ?? [], icon: Check, tone: "text-success" },
     { labelKey: "growth.skillsImproved", skills: progress.improved ?? [], icon: ArrowUpRight, tone: "text-primary" },
+    // A skill the previous report did not list at all and the current one calls a
+    // gap: the expected set moved under the user, so it is neither closed nor a
+    // regression of something they used to cover.
+    { labelKey: "growth.skillsOpened", skills: progress.opened ?? [], icon: Plus, tone: "text-warning" },
     { labelKey: "growth.skillsRegressed", skills: progress.regressed ?? [], icon: ArrowDownRight, tone: "text-destructive" },
   ];
   const any = groups.some((g) => g.skills.length > 0);
