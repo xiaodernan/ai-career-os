@@ -921,24 +921,84 @@ export const translations = {
         "The route you followed does not exist. It may have moved, or the link was mistyped.",
     },
     /**
-     * The errors the browser raises itself, by the code it raises them with.
+     * The failures, by the code that names them.
      *
-     * These are the sentences for the failures the *product* has: the stream
-     * that ended early, the upload the reader cancelled, the session that
-     * expired. The services' own codes are not here -- their wording is more
-     * specific than one sentence per code can be, so the server's own words are
-     * kept until the vocabulary is fine enough to carry them.
+     * The **code** is the contract -- the enum's own comment says "never
+     * rename an emitted code" -- and the code is what crosses the wire, so
+     * the sentence comes from the code and the reader sees it in the
+     * language they chose.
      *
-     * A toast is raised from an event handler, long after the render that knew
-     * the reader's language, so these are read through `translate` -- which reads
-     * the language outside React.
+     * The browser raises some of these itself: the stream that ended early,
+     * the upload the reader cancelled, the network that was not there. The
+     * rest are the **services'** codes, and they are here only where the
+     * code means one thing: a code that answers with several different
+     * sentences -- `RESUME_NOT_FOUND` answers with six -- cannot be given
+     * one sentence without the sentence being wrong about half of them, so
+     * those keep the server's own words until the code is fine enough to
+     * carry them. The gate knows which is which, and it reads the throw
+     * sites to find out.
+     *
+     * A toast is raised from an event handler, long after the render that
+     * knew the reader's language, so these are read through `translate` --
+     * which reads the language outside React.
      */
+
     errorCodes: {
+
       ABORTED: "The upload was cancelled.",
+
+      APPLICATION_NOT_FOUND: "That application is no longer here.",
+
+      COMPANY_NOT_FOUND: "That company is no longer here.",
+
+      CONVERSATION_NOT_FOUND: "That conversation is no longer here.",
+
+      EMAIL_ALREADY_REGISTERED: "That email address is already registered.",
+
+      FILE_TOO_LARGE: "That file is larger than the limit allows.",
+
+      FORBIDDEN: "You do not have access to that.",
+
+      INVALID_CREDENTIALS: "That email address or password is not right.",
+
+      INVALID_FILE_TYPE: "That file type is not supported.",
+
+      INVALID_STATUS: "That status is not one the tracker knows.",
+
+      INVALID_TRANSITION: "That change is not allowed from here.",
+
+      JD_NOT_FOUND: "That job description is no longer here.",
+
+      JOB_NOT_FOUND: "That job is no longer here.",
+
+      MALFORMED_REQUEST: "The request could not be read.",
+
+      MATCH_NOT_FOUND: "There is no match for that yet.",
+
       NETWORK_ERROR: "Cannot reach the API — is the backend running?",
+
+      NOTE_NOT_FOUND: "That note is no longer here.",
+
+      RATE_LIMITED: "Too many requests — please slow down.",
+
+      RUN_NOT_FOUND: "That run is no longer here.",
+
+      SESSION_NOT_FOUND: "That interview session is no longer here.",
+
+      SOURCE_NOT_FOUND: "That source is no longer here.",
+
       STREAM_ENDED: "The connection closed before the answer arrived.",
+
       STREAM_ERROR: "The answer stream failed. Please try again.",
+
+      TOKEN_EXPIRED: "Your session has expired. Please sign in again.",
+
+      TOKEN_REUSED: "For your safety every session in this family was signed out. Please sign in again.",
+
       UNAUTHORIZED: "Your session has expired. Please sign in again.",
+
+      USER_DISABLED: "This account is disabled.",
+
     },
     // The public landing page (18.2) -- the first thing a visitor reads.
     landing: {
@@ -2522,21 +2582,77 @@ export const translations = {
       notOnTheMapDescription: "你访问的路由不存在。它可能已经挪了地方，或者链接打错了。",
     },
     /**
-     * 浏览器自己抛出的错误，按它抛错时用的码。
+     * 按码取的失败句子。
      *
-     * 这些是*产品*自己失败的句子：提前断开的流、读者取消的上传、过期的登录态。
-     * 服务端自己的码不在这里——它们的措辞比"一个码一句话"更具体，所以在词表细到
-     * 装得下之前，保留服务端自己的说法。
+     * **码**是契约——枚举自己的注释写着"绝不重命名已发出的码"——而码是过网的东西，
+     * 所以句子从码里取，读者看到的是他选的语言。
+     *
+     * 浏览器自己抛一部分：提前断开的流、读者取消的上传、不存在的网络。其余是
+     * **服务端**的码，而它们只在这里——只在这里——当这个码只表达一个意思时：一个
+     * 会给出好几种说法的码（`RESUME_NOT_FOUND` 有六种）不能配一句话，否则这句话有
+     * 一半是错的；那些码继续用服务端自己的话，直到码细到装得下为止。门禁知道哪
+     * 些是哪种，它去读抛出点才知道。
      *
      * toast 是在事件处理器里抛的，早于知道读者语言的那次渲染，所以这些句子走
      * `translate`——它在 React 之外读语言。
      */
+
     errorCodes: {
+
       ABORTED: "上传已取消。",
+
+      APPLICATION_NOT_FOUND: "这条申请记录已经不在了。",
+
+      COMPANY_NOT_FOUND: "这家公司已经不在了。",
+
+      CONVERSATION_NOT_FOUND: "这段对话已经不在了。",
+
+      EMAIL_ALREADY_REGISTERED: "这个邮箱已经注册过了。",
+
+      FILE_TOO_LARGE: "文件超出了允许的大小。",
+
+      FORBIDDEN: "你没有权限访问它。",
+
+      INVALID_CREDENTIALS: "邮箱或密码不对。",
+
+      INVALID_FILE_TYPE: "不支持这种文件格式。",
+
+      INVALID_STATUS: "这个状态不在流程里。",
+
+      INVALID_TRANSITION: "这里不允许这样改。",
+
+      JD_NOT_FOUND: "这份职位描述已经不在了。",
+
+      JOB_NOT_FOUND: "这个职位已经不在了。",
+
+      MALFORMED_REQUEST: "请求无法解析。",
+
+      MATCH_NOT_FOUND: "还没有匹配的结果。",
+
       NETWORK_ERROR: "连不上接口——后端在跑吗？",
+
+      NOTE_NOT_FOUND: "这条笔记已经不在了。",
+
+      RATE_LIMITED: "请求太频繁了，请慢一点。",
+
+      RUN_NOT_FOUND: "这次运行记录已经不在了。",
+
+      SESSION_NOT_FOUND: "这次面试已经不在了。",
+
+      SOURCE_NOT_FOUND: "这份资料已经不在了。",
+
       STREAM_ENDED: "连接在回答到达之前断开了。",
+
       STREAM_ERROR: "回答的传输失败了，请再试一次。",
+
+      TOKEN_EXPIRED: "登录状态过期了，请重新登录。",
+
+      TOKEN_REUSED: "为了安全，这一组会话都已退出，请重新登录。",
+
       UNAUTHORIZED: "登录状态过期了，请重新登录。",
+
+      USER_DISABLED: "这个账号已被停用。",
+
     },
     landing: {
       description: "有证据支撑的匹配、简历情报、成长规划，以及 AI 引导的面试——每一个结论都能追溯到你自己的材料。",

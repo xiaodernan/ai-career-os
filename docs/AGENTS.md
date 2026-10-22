@@ -243,9 +243,9 @@ Three properties hold across every one of them, and the census gates
   a sweep that ran under a random id would put another user's jobs in this one's
   board.
 
-## 8. The twelve quiet failures
+## 8. The thirteen quiet failures
 
-Twelve bugs in this repository looked like working code and were not. They
+Thirteen bugs in this repository looked like working code and were not. They
 are written down because each one is a *shape* of failure, not a one-off: the
 next one will have the same shape, and the gate that catches it is the thing to
 reach for.
@@ -339,9 +339,10 @@ navigation *items*, not the table's keys), an ownership (the restore
 writes only the caller's rows), a path (the anonymized export, built
 the way the button builds it), a route (the render, called the way
 the bridge calls it), a place (the language, read where the
-sentence is raised), and a promise (a note, quoted by the agents the copy
-says quotes it), and a classification (every exported column, the
-reader's or the substance). The general shape is the same in all twelve:
+sentence is raised), a promise (a note, quoted by the agents the copy
+says quotes it), a classification (every exported column, the
+reader's or the substance), and a meaning (every error code, one
+meaning or a named gap). The general shape is the same in all thirteen:
 **the bug was where nobody was looking, and the answer was to look there,
 not to look harder.**
 
@@ -386,6 +387,29 @@ assistant that keeps quoting the old one quotes a resume the reader no
 longer has. The restore's own second step went away with it -- it made a
 copy with no reference, so a restored resume's copy outlived the row it was
 made from and kept being quoted after the resume was gone.
+
+**A code that answers with several sentences.** The contract says "never
+rename an emitted code", and the code is what crosses the wire — so the
+sentence comes from the code, and the reader sees it in their language. That
+is only true if the code means one thing, and it does not: `RESUME_NOT_FOUND`
+answers with six different sentences, `BAD_REQUEST` with eleven,
+`TOKEN_INVALID` with five. One sentence per code would tell a reader whose
+resume exists but has no parsed version that "that resume is no longer there"
+— a sentence that is wrong about most of the cases it covers.
+
+Nothing measured that. The policy was a list of field names, and a list of
+names says nothing about how many meanings sit behind them. So the codes the
+browser raises itself were translated (the stream that ended early, the
+upload the reader cancelled, the session that expired), and the services'
+codes were left in English wholesale — including the twenty-three that mean
+exactly one thing and could have been bilingual all along.
+
+The gate now *measures* the split instead of remembering it: a translated
+code must carry one meaning, a code named as a gap must carry several, and a
+code nobody classified fails the gate — so a new code has to be one or the
+other, and the gap list is the queue rather than an excuse. The sentence
+comes from the code where the code is fine enough to carry it, and the
+server's own words stay where it is not.
 
 **A sentence raised where the language is not.** A failure toast is raised
 from an event handler, long after the render that knew the reader's

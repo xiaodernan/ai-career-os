@@ -105,15 +105,22 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   **Done so far.** The browser's language is now readable *outside* a render
   (`lib/i18n/locale-context.tsx`'s `translate`), which is what a toast needs — it
   is raised from an event handler, long after the render that knew the language.
-  The codes the **browser itself** raises — the stream that ended early, the
-  upload the reader cancelled, the session that expired, the network that was
-  not there — have sentences in both languages, and the failure helper shows
-  the table's sentence rather than the English literal the code was raised
-  with. The **services'** codes are deliberately not in the table yet: their
-  wording is more specific than one sentence per code can be, and a generic
-  sentence in place of "Start the interview with an opening question first"
-  would be a loss. Their words stay until the vocabulary is fine enough to
-  carry them.
+  The failure helper shows the table's sentence rather than the English literal
+  the code was raised with.
+
+  **And the services' codes are classified now.** Every code the services can
+  send is either **translated** (the browser's table answers it, in both
+  languages) or **named as a gap** — and the gap list is the queue for the finer
+  vocabulary: `AI_SERVICE_ERROR`, `BAD_REQUEST`, `DOCUMENT_NOT_FOUND`,
+  `INTERNAL_ERROR`, `NOT_FOUND`, `RESET_TOKEN_INVALID`, `RESUME_NOT_FOUND`,
+  `TOKEN_INVALID`, `VALIDATION_FAILED`, `VERSION_NOT_FOUND`. The gate
+  *measures* the split rather than remembering it: a code that is translated
+  must carry one meaning (read off the throw sites), a code that is named as a
+  gap must carry several, and a code nobody classified fails the gate. So the
+  twenty-three codes that mean one thing are bilingual today, and the ten that
+  mean several keep the server's words until the throw sites name them
+  properly — about fifteen more codes, one per distinct wording, and then the
+  gap list empties.
 - **The export's readable half had one language (closed 2026-10-22).** 13.1's
   *human-readable* export — the print-ready document — was written in Chinese
   and had no other language, so an English reader's printable document was a
