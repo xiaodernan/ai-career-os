@@ -158,3 +158,19 @@ async def test_max_expansions_caps_the_multi_query_fanout(monkeypatch):
     seen.clear()
     await pipeline.retrieve("kafka experience", user_id="u", top_k=5, max_expansions=1)
     assert sum(seen) == 2, "max_expansions did not cap the multi-query fan-out"
+
+
+# ---------------- hostile input (compress over retrieved rows) ----------------
+
+def test_compress_survives_none_and_junk_rows():
+    from app.rag.compress import compress
+    assert compress(None, None) == []
+    # a non-dict row and a present-null text are skipped, the real row survives
+    chunks = [None, "junk", {"text": None, "id": "c1"},
+              {"text": "Built a Go service. Scaled it to 10k QPS.", "id": "c2"}]
+    out = compress(["Go"], chunks)
+    assert [c["id"] for c in out] == ["c2"]
+    assert out[0]["text_original"] == "Built a Go service. Scaled it to 10k QPS."
+    assert "Go" in out[0]["text"]
+    # non-str query terms are dropped rather than raising in the join
+    assert compress([None, 7, "Go"], chunks)[0]["id"] == "c2"

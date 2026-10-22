@@ -182,3 +182,24 @@ async def test_relevant_ids_without_keywords_binds_nothing(monkeypatch):
 
     monkeypatch.setattr(db, "fetch", fetch)
     assert await _relevant_ids("u1", EvalCase(id="c", query="q", keywords=[])) == set()
+
+
+# ---------------- hostile input ----------------
+
+def test_like_contains_survives_non_string_terms():
+    # the term arrives from a user's search box or a peer payload. None is the
+    # empty term; anything else is searched as its text, because coercing it to
+    # "" would build "%%" and silently match every row instead.
+    assert db.like_contains(None) == "%%"
+    assert db.like_contains(123) == "%123%"
+    assert db.like_contains(["a"]) == "%['a']%"
+    # the escaping is unchanged for a real term
+    assert db.like_contains("a_b%c!d") == "%a!_b!%c!!d%"
+
+
+def test_decode_vec_survives_a_corrupt_vector_column():
+    # a column that is not "[a,b,c]" must not take the read down
+    assert db.decode_vec(None) == []
+    assert db.decode_vec("") == []
+    assert db.decode_vec("abc") == []
+    assert db.decode_vec("[1, 2.5]") == [1.0, 2.5]

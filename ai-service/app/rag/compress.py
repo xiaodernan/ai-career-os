@@ -12,14 +12,17 @@ _STOP = set("""the a an and or of to in for with on at is are was be this that y
 
 
 def _tokens(s: str) -> set[str]:
-    return {t for t in re.findall(r"[\w\u4e00-\u9fff+.#-]+", s.lower()) if t not in _STOP}
+    return {t for t in re.findall(r"[\w\u4e00-\u9fff+.#-]+", (s if isinstance(s, str) else "").lower())
+            if t not in _STOP}
 
 
 def compress(query_terms: list[str], chunks: list[dict], min_keep: float = 0.12) -> list[dict]:
-    q = _tokens(" ".join(query_terms))
+    q = _tokens(" ".join(t for t in (query_terms or []) if isinstance(t, str)))
     out = []
-    for c in chunks:
-        sents = [s for s in _SENT.split(c["text"]) if s.strip()]
+    for c in [x for x in (chunks or []) if isinstance(x, dict)]:
+        text = c.get("text")
+        text = text if isinstance(text, str) else ""
+        sents = [s for s in _SENT.split(text) if s.strip()]
         if not sents:
             continue
         scored = []
@@ -39,7 +42,7 @@ def compress(query_terms: list[str], chunks: list[dict], min_keep: float = 0.12)
         kept = " ".join(s for _, i, s in sorted((x for x in scored if x[1] in keep_idx),
                                                  key=lambda x: x[1]))
         c = dict(c)
-        c["text_original"] = c["text"]
+        c["text_original"] = text
         c["text"] = kept[:2400]
         out.append(c)
     return out

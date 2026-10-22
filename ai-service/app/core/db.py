@@ -17,7 +17,12 @@ def vec(values: Iterable[float]) -> str:
 def decode_vec(text: str | None) -> list[float]:
     if not text:
         return []
-    return [float(x) for x in text.strip()[1:-1].split(",")]
+    try:
+        return [float(x) for x in text.strip()[1:-1].split(",")]
+    except (TypeError, ValueError):
+        # a vector column that is not "[a,b,c]" is corrupt data, not a reason to
+        # take the read down: report no vector and let the caller decide
+        return []
 
 
 async def init_db() -> asyncpg.Pool:
@@ -71,5 +76,9 @@ def like_contains(term: str) -> str:
     character. "!" is used as an explicit escape instead, so the result does not depend
     on standard_conforming_strings — every call site must therefore emit ESCAPE '!'.
     """
-    escaped = term.replace("!", "!!").replace("%", "!%").replace("_", "!_")
+    # A term that is not a string is coerced to its text rather than to "": an
+    # empty pattern would be "%%", which silently matches every row instead of
+    # searching for what the caller asked. `None` is still the empty term.
+    text = term if isinstance(term, str) else ("" if term is None else str(term))
+    escaped = text.replace("!", "!!").replace("%", "!%").replace("_", "!_")
     return f"%{escaped}%"
