@@ -199,3 +199,21 @@ def test_understand_survives_none_context(monkeypatch):
     out = asyncio.run(W.understand(None, None))
     assert out["intent"] == "other"
     assert out["rewritten"] == ""        # a None query degrades, not crashes
+
+
+def test_keyword_phrases_and_to_evidence_survive_hostile_input():
+    assert pipeline.keyword_phrases(None) == []
+    assert pipeline.keyword_phrases({}) == []
+    assert pipeline.keyword_phrases({"rewritten": None, "keywords": None}) == []
+    # non-str rows in keywords are dropped, not joined into a crash
+    assert pipeline.keyword_phrases({"rewritten": "go jobs", "keywords": [None, 7, "kafka"]}) == [
+        "go jobs", "kafka"]
+
+    assert pipeline.to_evidence(None) == []
+    rows = pipeline.to_evidence([None, "junk", {"id": "c1", "document_id": "d1",
+                                                "text": None, "rerank": "high"},
+                                 {"id": "c2", "document_id": "d2", "text": "quote",
+                                  "rerank": 0.5, "rrf": 0.25}])
+    assert [r["chunk_id"] for r in rows] == ["c1", "c2"]
+    assert rows[0]["quote"] == "" and rows[0]["score"] == 0.0   # junk signal -> 0
+    assert rows[1]["score"] == 0.5                              # best of rerank/rrf

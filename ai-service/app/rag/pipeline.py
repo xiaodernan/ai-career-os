@@ -130,6 +130,16 @@ async def retrieve(query: str, *, user_id: str, run_id: str | None = None,
                                               "text": e["quote"]} for e in evidence])}
 
 
+def _num(value) -> float:
+    """A numeric signal, or 0.0 when it is absent or not a number."""
+    if isinstance(value, bool) or value is None:
+        return 0.0
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0
+
+
 def keyword_phrases(u: dict) -> list[str]:
     """Full-text queries to fan out over: the rewritten query plus each keyword.
 
@@ -141,7 +151,12 @@ def keyword_phrases(u: dict) -> list[str]:
     match.py relies on for 'Spring Boot' -- and RRF supplies the OR across them.
     """
     out: list[str] = []
-    for raw in [u["rewritten"], *u["keywords"]]:
+    u = u if isinstance(u, dict) else {}
+    rewritten = u.get("rewritten")
+    rewritten = rewritten if isinstance(rewritten, str) else ""
+    keywords = u.get("keywords")
+    for raw in [rewritten, *(keywords or [])]:
+        raw = raw if isinstance(raw, str) else ""
         phrase = " ".join((raw or "").split())
         if phrase and phrase.lower() not in {p.lower() for p in out}:
             out.append(phrase)
@@ -156,15 +171,16 @@ def to_evidence(compressed: list[dict]) -> list[dict]:
     downstream prompt citations stay stable.
     """
     evidence = []
-    for i, c in enumerate(compressed, 1):
+    for i, c in enumerate([x for x in (compressed or []) if isinstance(x, dict)], 1):
+        text = c.get("text")
         evidence.append({
             "ref": i,
-            "chunk_id": str(c["id"]),
-            "document_id": str(c["document_id"]),
+            "chunk_id": str(c.get("id")),
+            "document_id": str(c.get("document_id")),
             "doc_title": c.get("doc_title"),
             "source_kind": c.get("source_kind"),
             "section": c.get("section_path"),
-            "quote": (c.get("text") or "")[:600],
-            "score": round(max(c.get("rerank", 0) or 0, c.get("rrf", 0) or 0), 4),
+            "quote": (text if isinstance(text, str) else "")[:600],
+            "score": round(max(_num(c.get("rerank")), _num(c.get("rrf"))), 4),
         })
     return evidence

@@ -97,4 +97,8 @@ def gc_old_tasks(max_age_s: float = 3600) -> None:
 
 
 def sse(event: dict) -> str:
-    return f"event: {event['event']}\ndata: {json.dumps(event['data'], ensure_ascii=False, default=str)}\n\n"
+    # "message" is the SSE spec's own default event name, so a payload that
+    # carries no "event" key still emits a well-formed frame instead of raising
+    name = (event.get("event") if isinstance(event, dict) else None) or "message"
+    data = event.get("data") if isinstance(event, dict) else None
+    return f"event: {name}\ndata: {json.dumps(data, ensure_ascii=False, default=str)}\n\n"
