@@ -112,6 +112,19 @@ def java_method(path: Path, name: str) -> str:
     raise AssertionError(f"unbalanced braces reading {name} in {path.name}")
 
 
+def importer_verbatim_fields() -> set[str]:
+    """Bundle fields ``ImportService`` reads with ``time(row, "…")`` -- no clock in sight.
+
+    This is the list the digest row's origin claim is graded against: a field the importer does
+    not copy has no route from a caller's bundle into the stored row, so a row that blames one
+    for a next-month stamp explains nothing. Derived from the sender rather than retyped here,
+    so the day the importer gains or drops a timestamp field the doc has to move with it.
+    """
+    fields = set(re.findall(r'time\(row, "(\w+)"\)', read(IMPORT_SERVICE)))
+    assert fields, f"{IMPORT_SERVICE.name} copies no bundle timestamp through time(row, …)"
+    return fields
+
+
 def doc_row(route: str) -> str:
     """The API.md table row whose *route cell* is ``route``, verbatim.
 
@@ -399,6 +412,13 @@ def test_the_two_doc_rows_each_promise_the_refusal_they_own():
     than counted as zero, and has to promise the same for a pair that cannot be a duration. Each
     half is graded in its own row: the digest row may not borrow the rate row's sentence, and
     neither may claim the numbers are clamped.
+
+    The digest row also has to say *where* a next-month stamp comes from, because a reader who
+    cannot picture the input does not know the exclusion is deliberate -- and that sentence is a
+    claim about the sender, so it is graded as one: the field it names, inside the sentence that
+    refuses the stamp, has to be one ``ImportService`` copies out of the bundle through a parser
+    with no clock in it (case 4). A row that only says "a bundle" or blames a field the import
+    never writes keeps the reader holding a story the code does not tell.
     """
     digest = doc_row("/analysis/insight-digest")
     rate = doc_row("/analysis/response-rate")
@@ -407,9 +427,23 @@ def test_the_two_doc_rows_each_promise_the_refusal_they_own():
         f"the digest row no longer says which moment dates a stalled row: {digest[:220]!r}")
     assert "left out" in digest, (
         f"the digest row promises an age for a row with nothing but future stamps: {digest[:220]!r}")
-    assert "bundle" in digest, (
+    origin = re.search(r"a stamp from next month(?P<why>.*?)is not evidence of silence", digest)
+    assert origin, (
+        "the digest row no longer frames where the stamp comes from inside the sentence that "
+        f"refuses it, so the two claims are unbound: {digest[:220]!r}")
+    assert "bundle" in origin["why"], (
         "the digest row does not name where a next-month stamp comes from, so a reader cannot "
-        f"tell the exclusion is deliberate: {digest[:220]!r}")
+        f"tell the exclusion is deliberate: {origin[0]!r}")
+    blamed = set(re.findall(r"`(\w+)`", origin["why"]))
+    assert blamed, (
+        f"{origin[0]!r}: the row points at a bundle without naming the field, and there is no "
+        "claim for a reader to check against the sender")
+    verbatim = importer_verbatim_fields()
+    assert blamed <= verbatim, (
+        f"{sorted(blamed - verbatim)} is not a field the importer copies with an unbounded clock "
+        f"({sorted(verbatim)}): the next-month stamp the row explains away has no route from the "
+        "caller's bundle into the stored row, so the sentence promises a reachability the "
+        "sender does not have")
 
     assert "before the submission" in rate, (
         f"the response-rate row still counts an impossible history as a reply: {rate[:220]!r}")

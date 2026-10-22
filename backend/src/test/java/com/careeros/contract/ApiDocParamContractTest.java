@@ -48,7 +48,7 @@ class ApiDocParamContractTest {
 
     /** Rows that must keep spelling their parameters out, so the gate cannot be dodged by deleting the list. */
     private static final List<String> MUST_DOCUMENT = List.of("/jobs", "/applications", "/companies",
-            "/activity/runs", "/search");
+            "/activity/runs", "/search", "/memories", "/knowledge/sources");
 
     @Test
     void everyParameterTheDocAdvertisesIsOneTheEndpointBinds() {
@@ -75,6 +75,29 @@ class ApiDocParamContractTest {
         });
     }
 
+    /**
+     * A row that quotes a snake_case name without offering it is explaining where a value comes
+     * from, and the name has to be one the platform actually puts on a wire.
+     *
+     * Before this rule, every quoted name in a GET row was read as a filter claim, so the digest
+     * row's honest sentence -- that an impossible {@code applied_at} arrives through the caller's
+     * own import -- was reported as advertising a parameter no endpoint binds. The way that
+     * pressure gets resolved is the sentence disappearing from the doc, which is what happened.
+     * Declining to grade it as a parameter is not a licence to say anything: an invented key is a
+     * field an integrator will look for in the answer and never find.
+     */
+    @Test
+    void everyProseNameAGetRowQuotesIsAKeyTheBackendWrites() {
+        Set<String> keys = backendWireKeys();
+        List<String> invented = new ArrayList<>();
+        documentedProse().forEach((path, names) -> names.stream()
+                .filter(name -> !keys.contains(name))
+                .forEach(name -> invented.add(path + " quotes `" + name
+                        + "`, which no backend source writes")));
+        assertThat(invented).as("a GET row names a snake_case field the platform does not use")
+                .isEmpty();
+    }
+
     @Test
     void theRowsThatCarryTheContractStayWritten() {
         Map<String, Set<String>> documented = documentedRows();
@@ -95,6 +118,13 @@ class ApiDocParamContractTest {
         // unprefixed `arg0` here would mean the reflection is reading a build the doc cannot match.
         assertThat(bound.get("/jobs")).contains("q", "minSalary", "remote");
         assertThat(documentedRows().get("/jobs")).contains("minSalary");
+        // the classifier reads a filter named in prose ("optional `kinds` filter") as the claim it
+        // is, or the new prose branch would be quietly swallowing every parameter row in the table
+        assertThat(documentedRows().get("/memories")).contains("kinds");
+        assertThat(documentedProse()).as("no GET row quotes a name outside a filter clause -- "
+                + "the prose branch would be grading an empty population").isNotEmpty();
+        assertThat(backendWireKeys()).as("the literal walk over src/main/java found no wire key")
+                .contains("applied_at");
         assertThat(exampleQueries()).hasSizeGreaterThanOrEqualTo(2);
         assertThat(Files.readString(DOC)).contains("## 2. Public API");
     }
@@ -408,6 +438,35 @@ class ApiDocParamContractTest {
     /** Path in the doc (without the prefix) to the parameter names its Notes cell spells out. */
     private static Map<String, Set<String>> documentedRows() {
         Map<String, Set<String>> rows = new HashMap<>();
+        getRows().forEach((path, row) -> {
+            if (!row.parameters().isEmpty()) {
+                rows.put(path, row.parameters());
+            }
+        });
+        return rows;
+    }
+
+    /** Path in the doc to the snake_case names it quotes to describe a value, not to offer a filter. */
+    private static Map<String, Set<String>> documentedProse() {
+        Map<String, Set<String>> rows = new HashMap<>();
+        getRows().forEach((path, row) -> {
+            if (!row.prose().isEmpty()) {
+                rows.put(path, row.prose());
+            }
+        });
+        return rows;
+    }
+
+    /** A GET row's Notes cell, split by what each quoted name is claiming to be. */
+    private record GetRow(Set<String> parameters, Set<String> prose) {
+    }
+
+    /** How this doc says "here is something the caller sends". */
+    private static final Pattern PARAMETER_CLAUSE = Pattern.compile(
+            "(?i)\\b(query|queries|parameters?|filters?|search|sort|optional|pagination|repeatable)\\b");
+
+    private static Map<String, GetRow> getRows() {
+        Map<String, GetRow> rows = new TreeMap<>();
         boolean inPublicApi = false;
         for (String line : lines()) {
             if (line.startsWith("## ")) {
@@ -425,34 +484,88 @@ class ApiDocParamContractTest {
             if (!path.startsWith("/")) {
                 continue;
             }
-            Set<String> names = parameterNames(String.join(" ", Arrays.copyOfRange(cells, 3, cells.length)));
-            if (!names.isEmpty()) {
-                rows.put(documentedForm(path), names);
+            GetRow row = classify(String.join(" ", Arrays.copyOfRange(cells, 3, cells.length)));
+            if (!row.parameters().isEmpty() || !row.prose().isEmpty()) {
+                rows.put(documentedForm(path), row);
             }
         }
+        assertThat(rows).as("no GET row in the public API table quotes a name at all").isNotEmpty();
         return rows;
     }
 
     /**
-     * Reads either spelling, and only inside backticks: a backticked {@code a, b, c} list or a
-     * {@code ?a=&b=} query string. Prose is not a parameter, so "list" and "detail" must not
-     * become one — an unquoted word would otherwise pose as a documented filter and demand a
-     * real endpoint answer to it.
+     * Reads either spelling, and only inside backticks: a backticked {@code a, b, c} list, a
+     * {@code ?a=&b=} query string, or a name the sentence is describing.
+     *
+     * Two shapes still count as a filter claim, and they are the whole of what this scan used to
+     * grade: anything spelled as an assignment (a caller pasting it into a URL is pasting that),
+     * and every name that is not snake_case -- a bare {@code kinds} or {@code minSalary} in a GET
+     * row has only ever been a parameter here. A snake_case name outside a clause that introduces
+     * filters is the one case the old rule over-read, and it is graded by
+     * {@link #everyProseNameAGetRowQuotesIsAKeyTheBackendWrites} instead of dropped.
      */
-    private static Set<String> parameterNames(String notes) {
-        Set<String> names = new LinkedHashSet<>();
-        String[] chunks = notes.split("`");
-        for (int i = 1; i < chunks.length; i += 2) {
-            for (String token : chunks[i].split("[,&]")) {
+    private static GetRow classify(String notes) {
+        Set<String> parameters = new LinkedHashSet<>();
+        Set<String> prose = new LinkedHashSet<>();
+        Matcher quoted = Pattern.compile("`([^`]*)`").matcher(notes);
+        while (quoted.find()) {
+            String chunk = quoted.group(1);
+            boolean offered = chunk.contains("=")
+                    || PARAMETER_CLAUSE.matcher(clause(notes, quoted.start())).find();
+            for (String token : chunk.split("[,&]")) {
                 String candidate = token.trim().replaceAll("^[?]", "").split("[=|\\s]")[0];
                 if (candidate.matches("[A-Za-z][A-Za-z0-9_]*")) {
-                    // underscores are how a snake_case filter would be spelled;
-                    // dropping them here hid a documented parameter no endpoint binds
-                    names.add(candidate);
+                    // underscores stay in the graded population either way: dropping them here is
+                    // what once hid a documented filter no endpoint binds
+                    (offered || !candidate.contains("_") ? parameters : prose).add(candidate);
                 }
             }
         }
-        return names;
+        return new GetRow(parameters, prose);
+    }
+
+    /** The sentence a quote sits in, which is what says whether the row offers the name or describes it. */
+    private static String clause(String notes, int at) {
+        int from = 0;
+        for (int i = Math.min(at, notes.length()) - 1; i >= 0; i--) {
+            if (isStop(notes.charAt(i))) {
+                from = i + 1;
+                break;
+            }
+        }
+        int to = notes.length();
+        for (int i = at; i < notes.length(); i++) {
+            if (isStop(notes.charAt(i))) {
+                to = i;
+                break;
+            }
+        }
+        return notes.substring(from, to);
+    }
+
+    private static boolean isStop(char c) {
+        return c == '.' || c == ';' || c == '-' || c == '\u2014';
+    }
+
+    /**
+     * The snake_case string literals the backend itself writes -- the names it actually puts on a
+     * wire, whether into a bundle row, a bridge payload or a status map.
+     */
+    private static Set<String> backendWireKeys() {
+        Set<String> keys = new TreeSet<>();
+        Pattern literal = Pattern.compile("\"([a-z][a-z0-9]*(?:_[a-z0-9]+)+)\"");
+        try (Stream<Path> files = Files.walk(MAIN)) {
+            for (Path source : files.filter(p -> p.getFileName().toString().endsWith(".java")).toList()) {
+                Matcher m = literal.matcher(Files.readString(source));
+                while (m.find()) {
+                    keys.add(m.group(1));
+                }
+            }
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+        assertThat(keys).as("src/main/java writes no snake_case literal").isNotEmpty();
+        return keys;
     }
 
     private static List<String> lines() {
