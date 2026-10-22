@@ -932,11 +932,18 @@ export const translations = {
      * the upload the reader cancelled, the network that was not there. The
      * rest are the **services'** codes, and they are here only where the
      * code means one thing: a code that answers with several different
-     * sentences -- `RESUME_NOT_FOUND` answers with six -- cannot be given
+     * sentences -- `BAD_REQUEST` answers with twelve -- cannot be given
      * one sentence without the sentence being wrong about half of them, so
      * those keep the server's own words until the code is fine enough to
      * carry them. The gate knows which is which, and it reads the throw
      * sites to find out.
+     *
+     * The split is made code by code, and the resume's not-found code is
+     * already six codes -- `RESUME_NOT_AVAILABLE`, `RESUME_NOT_PARSED`,
+     * `RESUME_NOT_TAILABLE`, `RESUME_FILE_MISSING`, `RESUME_NOT_INGESTED`
+     * and `RESUME_NOT_FOUND` -- each with its own sentence. The status
+     * did not move: the code is the contract, and the status is what the
+     * client's error path reads.
      *
      * A toast is raised from an event handler, long after the render that
      * knew the reader's language, so these are read through `translate` --
@@ -981,6 +988,12 @@ export const translations = {
 
       RATE_LIMITED: "Too many requests — please slow down.",
 
+      RESUME_FILE_MISSING: "That resume's original file is gone.",
+      RESUME_NOT_AVAILABLE: "You do not have a resume yet.",
+      RESUME_NOT_FOUND: "That resume is no longer here.",
+      RESUME_NOT_INGESTED: "That resume's file has not been added to the knowledge base yet.",
+      RESUME_NOT_PARSED: "Your resume has not been parsed yet.",
+      RESUME_NOT_TAILABLE: "There is no resume to tailor yet.",
       RUN_NOT_FOUND: "That run is no longer here.",
 
       SESSION_NOT_FOUND: "That interview session is no longer here.",
@@ -2589,9 +2602,14 @@ export const translations = {
      *
      * 浏览器自己抛一部分：提前断开的流、读者取消的上传、不存在的网络。其余是
      * **服务端**的码，而它们只在这里——只在这里——当这个码只表达一个意思时：一个
-     * 会给出好几种说法的码（`RESUME_NOT_FOUND` 有六种）不能配一句话，否则这句话有
+     * 会给出好几种说法的码（`BAD_REQUEST` 有十二种）不能配一句话，否则这句话有
      * 一半是错的；那些码继续用服务端自己的话，直到码细到装得下为止。门禁知道哪
      * 些是哪种，它去读抛出点才知道。
+     *
+     * 拆分是一个码一个码做的，简历的"找不到"已经是六个码——`RESUME_NOT_AVAILABLE`、
+     * `RESUME_NOT_PARSED`、`RESUME_NOT_TAILABLE`、`RESUME_FILE_MISSING`、
+     * `RESUME_NOT_INGESTED` 和 `RESUME_NOT_FOUND`——每个都有自己的一句话。状态没有
+     * 变：码是契约，而状态是客户端的错误路径读的东西。
      *
      * toast 是在事件处理器里抛的，早于知道读者语言的那次渲染，所以这些句子走
      * `translate`——它在 React 之外读语言。
@@ -2635,6 +2653,12 @@ export const translations = {
 
       RATE_LIMITED: "请求太频繁了，请慢一点。",
 
+      RESUME_FILE_MISSING: "这份简历的原始文件已经不在了。",
+      RESUME_NOT_AVAILABLE: "你还没有简历。",
+      RESUME_NOT_FOUND: "这份简历已经不在了。",
+      RESUME_NOT_INGESTED: "这份简历的文件还没有进入知识库。",
+      RESUME_NOT_PARSED: "你的简历还没有解析。",
+      RESUME_NOT_TAILABLE: "还没有可以定制的简历。",
       RUN_NOT_FOUND: "这次运行记录已经不在了。",
 
       SESSION_NOT_FOUND: "这次面试已经不在了。",

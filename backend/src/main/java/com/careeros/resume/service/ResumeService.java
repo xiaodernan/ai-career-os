@@ -295,12 +295,12 @@ public class ResumeService {
         Resume resume = requireResume(userId, resumeId);
         String key = resume.getSourceFileKey();
         if (key == null || key.isBlank()) {
-            throw new ApiException(ApiErrorCode.RESUME_NOT_FOUND,
+            throw new ApiException(ApiErrorCode.RESUME_FILE_MISSING,
                     "This resume has no original file behind it");
         }
         Document doc = documents.findByFileKey(key)
                 .filter(d -> userId.equals(d.getUserId()))
-                .orElseThrow(() -> new ApiException(ApiErrorCode.RESUME_NOT_FOUND,
+                .orElseThrow(() -> new ApiException(ApiErrorCode.RESUME_NOT_INGESTED,
                         "No ingested document owns this resume's file"));
         byte[] bytes = storage.getBytes(key);
         String name = (doc.getTitle() == null || doc.getTitle().isBlank() ? "resume" : doc.getTitle())
@@ -330,7 +330,7 @@ public class ResumeService {
         String text = version.getPlaintext();
         if (text == null || text.isBlank()) {
             KnowledgeSource source = sources.findFirstByUserIdAndKindAndRefId(userId, "resume", resumeId)
-                    .orElseThrow(() -> new ApiException(ApiErrorCode.DOCUMENT_NOT_FOUND,
+                    .orElseThrow(() -> new ApiException(ApiErrorCode.RESUME_NOT_PARSED,
                             "No plaintext or ingested document for this resume"));
             Map<String, Object> doc = ai.documentText(source.getDocumentId(), userId);
             text = Json.str(doc, "text");
@@ -413,7 +413,7 @@ public class ResumeService {
                 ? requireVersion(userId, request.resumeVersionId()).getResumeId()
                 : currentResumeWithVersion(userId).map(Resume::getId).orElse(null);
         if (resumeId == null) {
-            throw new ApiException(ApiErrorCode.RESUME_NOT_FOUND, "No resume available");
+            throw new ApiException(ApiErrorCode.RESUME_NOT_AVAILABLE, "No resume available");
         }
         return saveTailoredVersion(userId, resumeId, jobId, tailored, request.diff(),
                 request.plaintext());

@@ -411,6 +411,15 @@ other, and the gap list is the queue rather than an excuse. The sentence
 comes from the code where the code is fine enough to carry it, and the
 server's own words stay where it is not.
 
+**And the vocabulary can be made finer, one code at a time.** The resume's
+not-found code answered with six sentences -- no resume at all, no parsed
+version, nothing to tailor, the original file gone, the file never ingested,
+and the resume not found -- and one sentence for it would have been wrong
+about five of the six. They are six codes now, each with its own sentence in
+both languages, and the statuses did not move: the *code* is the contract
+and the *status* is what the client's error path reads, so the split is free
+where the split is needed.
+
 **And the measurement had to learn the third road.** A code reaches the
 reader three ways: a throw, the envelope builder, and the framework's own
 edges — the 401, the 403, the 404, the 429. A measurement that read only

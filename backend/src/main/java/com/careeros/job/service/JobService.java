@@ -196,7 +196,7 @@ public class JobService {
         UUID rvId = resumeVersionId;
         if (rvId == null) {
             Resume resume = resumeService.currentResumeWithVersion(userId)
-                    .orElseThrow(() -> new ApiException(ApiErrorCode.RESUME_NOT_FOUND,
+                    .orElseThrow(() -> new ApiException(ApiErrorCode.RESUME_NOT_PARSED,
                             "No parsed resume available for matching"));
             rvId = resume.getCurrentVersionId();
         }
@@ -302,7 +302,7 @@ public class JobService {
         UUID rvId = resumeVersionId;
         if (rvId == null) {
             rvId = resumeService.currentResumeWithVersion(userId)
-                    .orElseThrow(() -> new ApiException(ApiErrorCode.RESUME_NOT_FOUND,
+                    .orElseThrow(() -> new ApiException(ApiErrorCode.RESUME_NOT_TAILABLE,
                             "No resume available for tailoring"))
                     .getCurrentVersionId();
         }
@@ -331,7 +331,7 @@ public class JobService {
         UUID rvId = resumeVersionId;
         if (rvId == null) {
             rvId = resumeService.currentResumeWithVersion(userId)
-                    .orElseThrow(() -> new ApiException(ApiErrorCode.RESUME_NOT_FOUND,
+                    .orElseThrow(() -> new ApiException(ApiErrorCode.RESUME_NOT_AVAILABLE,
                             "No resume available"))
                     .getCurrentVersionId();
         }

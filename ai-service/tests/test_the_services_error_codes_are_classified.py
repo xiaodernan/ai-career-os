@@ -53,7 +53,6 @@ COARSE: frozenset[str] = frozenset({
     "INTERNAL_ERROR",
     "NOT_FOUND",
     "RESET_TOKEN_INVALID",
-    "RESUME_NOT_FOUND",
     "TOKEN_INVALID",
     "VALIDATION_FAILED",
     "VERSION_NOT_FOUND",
@@ -72,6 +71,10 @@ SAME_MEANING: frozenset[str] = frozenset({
     # The access token and the refresh token both expiring are the same
     # event -- the session is gone.
     "TOKEN_EXPIRED",
+    # "No parsed resume available for matching" and "no plaintext or ingested
+    # document for this resume" are the same thing: the resume has no parsed
+    # version, and the reader's answer to both is to parse it.
+    "RESUME_NOT_PARSED",
     # The reader-facing "authentication required" and the services' own
     # "invalid internal token" are one thing *to the reader*: they are the
     # one thing the reader can do about either. The internal one is a

@@ -100,8 +100,18 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   `DOCUMENT_NOT_FOUND` with three. One sentence per code would tell a reader
   whose resume exists but has no parsed version that "that resume is no longer
   there" — so the fix is not a translation, it is a *finer vocabulary*: roughly
-  twenty-five more codes (one per distinct wording), about sixty sentences in
+  forty more codes (one per distinct wording), about seventy sentences in
   each language, and the throw sites changed to name them.
+
+  **The first split is done.** The resume's not-found code answered with six
+  sentences -- no resume at all, no parsed version, nothing to tailor, the
+  original file gone, the file never ingested, and the resume not found --
+  and one sentence for it would have been wrong about five of the six. They
+  are six codes now (`RESUME_NOT_AVAILABLE`, `RESUME_NOT_PARSED`,
+  `RESUME_NOT_TAILABLE`, `RESUME_FILE_MISSING`, `RESUME_NOT_INGESTED`,
+  `RESUME_NOT_FOUND`), each with its own sentence in both languages, and the
+  statuses did not move: the *code* is the contract and the *status* is what
+  the client's error path reads, so the split is free where it is needed.
 
   **And a code travels by three roads.** A throw (`new ApiException`), the
   envelope builder (`ApiError.of`), and the framework's own edges — the 401,
@@ -120,14 +130,14 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   send is either **translated** (the browser's table answers it, in both
   languages) or **named as a gap** — and the gap list is the queue for the finer
   vocabulary: `AI_SERVICE_ERROR`, `BAD_REQUEST`, `DOCUMENT_NOT_FOUND`,
-  `INTERNAL_ERROR`, `NOT_FOUND`, `RESET_TOKEN_INVALID`, `RESUME_NOT_FOUND`,
-  `TOKEN_INVALID`, `VALIDATION_FAILED`, `VERSION_NOT_FOUND`. The gate
+  `INTERNAL_ERROR`, `NOT_FOUND`, `RESET_TOKEN_INVALID`, `TOKEN_INVALID`,
+  `VALIDATION_FAILED`, `VERSION_NOT_FOUND`. The gate
   *measures* the split rather than remembering it: a code that is translated
   must carry one meaning (read off the throw sites), a code that is named as a
   gap must carry several, and a code nobody classified fails the gate. So the
-  twenty-three codes that mean one thing are bilingual today, and the ten that
-  mean several keep the server's words until the throw sites name them
-  properly — about fifteen more codes, one per distinct wording, and then the
+  twenty-nine codes that mean one thing are bilingual today, and the nine that
+  mean several carry thirty-eight distinct sentences between them, so they keep
+  the server's words until the throw sites name them properly — about fifteen more codes, one per distinct wording, and then the
   gap list empties.
 - **The export's readable half had one language (closed 2026-10-22).** 13.1's
   *human-readable* export — the print-ready document — was written in Chinese
