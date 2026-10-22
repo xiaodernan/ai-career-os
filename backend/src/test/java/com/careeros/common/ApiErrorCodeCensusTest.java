@@ -21,14 +21,14 @@ import org.springframework.web.bind.annotation.RestController;
  * {@link ApiErrorCode} is the machine-readable contract every client reads — the enum's
  * own comment says "never rename an emitted code" — and three properties of it were
  * unpinned. The status map was spot-checked by whatever route happened to throw each
- * code (a dozen of the 34); an unreachable-coded 2xx would make an error invisible to
+ * code (a dozen of the 50); an unreachable-coded 2xx would make an error invisible to
  * every client's error path and nothing would have noticed. A rename is a wire break
- * nobody can see from the type system. And two of the 34 codes are deliberately
+ * nobody can see from the type system. And two of the 50 codes are deliberately
  * unreachable today, which reads as an enum bug to the next session unless it is
  * written down somewhere a test wakes up.
  *
  * The handler's fidelity half of this file matters as much as the shape half: the
- * advice is one line (`status(ex.code().status())`), so this exercises it for all 34
+ * advice is one line (`status(ex.code().status())`), so this exercises it for all 50
  * codes at once rather than trusting that the twelve spot-checks represent the rest.
  */
 class ApiErrorCodeCensusTest {
@@ -77,17 +77,19 @@ class ApiErrorCodeCensusTest {
         List<String> names = java.util.Arrays.stream(ApiErrorCode.values())
                 .map(Enum::name).sorted().toList();
         org.assertj.core.api.Assertions.assertThat(names).containsExactly(
-                "AI_SERVICE_ERROR", "APPLICATION_NOT_FOUND", "BAD_REQUEST", "COMPANY_NOT_FOUND",
-                "CONVERSATION_NOT_FOUND", "DOCUMENT_NOT_FOUND", "EMAIL_ALREADY_REGISTERED",
-                "FILE_TOO_LARGE", "FORBIDDEN", "INTERNAL_ERROR", "INVALID_CREDENTIALS",
-                "INVALID_FILE_TYPE", "INVALID_STATUS", "INVALID_TRANSITION",
-                "JD_NOT_FOUND", "JOB_NOT_FOUND", "MALFORMED_REQUEST", "MATCH_NOT_FOUND",
+                "AI_SERVICE_BAD_REQUEST", "AI_SERVICE_ERROR", "APPLICATION_NOT_FOUND", "BUNDLE_NOT_PLANNABLE",
+                "BUNDLE_NO_SECTION", "COMPANY_NOT_FOUND", "CONVERSATION_NOT_FOUND", "DOCUMENT_NOT_FOUND",
+                "EMAIL_ALREADY_REGISTERED", "FILE_EMPTY", "FILE_KEY_INVALID", "FILE_KEY_MALFORMED",
+                "FILE_TOO_LARGE", "FORBIDDEN", "INTERNAL_ERROR", "INTERVIEW_ALREADY_STARTED",
+                "INTERVIEW_NOTHING_TO_FINALIZE", "INTERVIEW_NOT_STARTED", "INTERVIEW_NO_QUESTION", "INVALID_CREDENTIALS",
+                "INVALID_FILE_TYPE", "INVALID_STATUS", "INVALID_TRANSITION", "JD_NOT_FOUND",
+                "JOB_NOT_FOUND", "MALFORMED_REQUEST", "MATCH_NOT_FOUND", "METHOD_NOT_ALLOWED",
                 "NOTE_NOT_FOUND", "NOT_FOUND", "RATE_LIMITED", "RESET_TOKEN_INVALID",
-                "RESUME_FILE_MISSING", "RESUME_NOT_AVAILABLE", "RESUME_NOT_FOUND",
-                "RESUME_NOT_INGESTED", "RESUME_NOT_PARSED", "RESUME_NOT_TAILABLE",
-                "RUN_NOT_FOUND", "SESSION_NOT_FOUND", "SOURCE_NOT_FOUND",
-                "TOKEN_EXPIRED", "TOKEN_INVALID", "TOKEN_REUSED", "UNAUTHORIZED",
-                "USER_DISABLED", "VALIDATION_FAILED", "VERSION_NOT_FOUND");
+                "RESUME_FILE_MISSING", "RESUME_NOT_AVAILABLE", "RESUME_NOT_FOUND", "RESUME_NOT_INGESTED",
+                "RESUME_NOT_PARSED", "RESUME_NOT_TAILABLE", "RESUME_TEXT_NOT_READY", "RUN_NOT_FOUND",
+                "SESSION_NOT_FOUND", "SOURCE_NOT_FOUND", "TOKEN_EXPIRED", "TOKEN_INVALID",
+                "TOKEN_REUSED", "UNAUTHORIZED", "UPLOAD_UNREADABLE", "USER_DISABLED",
+                "VALIDATION_FAILED", "VERSION_NOT_FOUND");
     }
 
     @Test

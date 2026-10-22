@@ -6,12 +6,18 @@ code is the contract ("never rename an emitted code") and the code is what
 crosses the wire.
 
 But the codes are **coarser than the messages**. Measured against the throw
-sites: `RESUME_NOT_FOUND` answers with six different sentences, `BAD_REQUEST`
-with eleven, `TOKEN_INVALID` with five, `NOT_FOUND` with four. One sentence
-per code would tell a reader whose resume exists but has no parsed version
-that "that resume is no longer there" -- so the fix is not a translation, it
-is a finer vocabulary, and until the vocabulary is fine enough the codes that
-mean several things keep the server's own words.
+sites: `TOKEN_INVALID` answers with five different sentences, `INTERNAL_ERROR`
+with five, `NOT_FOUND` with four, `VALIDATION_FAILED` with three,
+`VERSION_NOT_FOUND` with three. One sentence per code would tell a reader
+whose request was refused for one reason that it was refused for another --
+so the fix is not a translation, it is a finer vocabulary, and until the
+vocabulary is fine enough the codes that mean several things keep the
+server's own words.
+
+The vocabulary is being made finer one code at a time. The resume's
+not-found code is six codes now, and the request bucket that answered with
+twelve sentences is thirteen codes -- one per meaning, with the bucket
+itself gone, because a name that means nothing is not a contract.
 
 This gate holds the classification, and it *measures* it rather than
 remembering it:
@@ -43,12 +49,13 @@ BACKEND_MAIN = ROOT / "backend" / "src" / "main"
 TRANSLATIONS = ROOT / "frontend" / "src" / "lib" / "i18n" / "translations.ts"
 CLIENT = ROOT / "frontend" / "src" / "lib" / "api" / "client.ts"
 
-# The codes that mean several things, so one sentence would mislead. Every
-# one of them is on the road map's queue: about twenty-five more codes, one
-# per distinct wording, and the throw sites changed to name them.
+# The codes that mean several things -- or whose wording is not a literal,
+# so it cannot be measured -- so one sentence would mislead. Every one of
+# them is on the road map's queue: one code per distinct wording, and the
+# throw sites changed to name them.
 COARSE: frozenset[str] = frozenset({
+    "AI_SERVICE_BAD_REQUEST",
     "AI_SERVICE_ERROR",
-    "BAD_REQUEST",
     "DOCUMENT_NOT_FOUND",
     "INTERNAL_ERROR",
     "NOT_FOUND",

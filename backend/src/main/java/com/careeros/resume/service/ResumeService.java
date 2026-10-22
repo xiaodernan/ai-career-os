@@ -221,7 +221,7 @@ public class ResumeService {
         try {
             content = file.getBytes();
         } catch (java.io.IOException e) {
-            throw new ApiException(ApiErrorCode.BAD_REQUEST, "Cannot read upload");
+            throw new ApiException(ApiErrorCode.UPLOAD_UNREADABLE, "Cannot read upload");
         }
         UploadContext ctx = persistUpload(userId, content, file.getOriginalFilename());
         Map<String, Object> result;
@@ -336,7 +336,7 @@ public class ResumeService {
             text = Json.str(doc, "text");
         }
         if (text == null || text.isBlank()) {
-            throw new ApiException(ApiErrorCode.BAD_REQUEST, "Document text is not available yet");
+            throw new ApiException(ApiErrorCode.RESUME_TEXT_NOT_READY, "Document text is not available yet");
         }
         return new ParsedContext(resumeId, version.getId(), text);
     }

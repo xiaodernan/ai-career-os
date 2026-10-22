@@ -117,7 +117,7 @@ public class ImportService {
     @Transactional
     public Map<String, Object> apply(UUID userId, Map<String, Object> bundle) {
         if (bundle == null || !(bundle.get("data") instanceof Map)) {
-            throw new ApiException(ApiErrorCode.BAD_REQUEST, "The bundle has no data section.");
+            throw new ApiException(ApiErrorCode.BUNDLE_NO_SECTION, "The bundle has no data section.");
         }
         // The plan is the engine's answer about what should change; the apply
         // executes exactly those ops and nothing else.
@@ -126,7 +126,7 @@ public class ImportService {
         Map<String, List<Map<String, Object>>> sections =
                 (Map<String, List<Map<String, Object>>>) plan.get("sections");
         if (sections == null) {
-            throw new ApiException(ApiErrorCode.BAD_REQUEST, "The bundle could not be planned.");
+            throw new ApiException(ApiErrorCode.BUNDLE_NOT_PLANNABLE, "The bundle could not be planned.");
         }
 
         @SuppressWarnings("unchecked")

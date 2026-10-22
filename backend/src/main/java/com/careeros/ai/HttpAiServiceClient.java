@@ -613,7 +613,7 @@ public class HttpAiServiceClient implements AiServiceClient {
         }
         if (status == HttpStatus.BAD_REQUEST || status == HttpStatus.UNPROCESSABLE_ENTITY) {
             String detail = upstreamDetail(e);
-            return new ApiException(ApiErrorCode.BAD_REQUEST,
+            return new ApiException(ApiErrorCode.AI_SERVICE_BAD_REQUEST,
                     detail != null ? detail : "AI service rejected the request");
         }
         log.error("AI service call failed with status {}", status);

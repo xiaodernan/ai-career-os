@@ -53,7 +53,7 @@ class FileValidatorTest {
     @Test
     void rejectsEmptyFile() {
         ApiException ex = assertThrows(ApiException.class, () -> FileValidator.validate(new byte[0]));
-        assertEquals(ApiErrorCode.BAD_REQUEST, ex.code());
+        assertEquals(ApiErrorCode.FILE_EMPTY, ex.code());
     }
 
     @Test

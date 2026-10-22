@@ -41,10 +41,10 @@ public class InternalFileController {
         try {
             fileKey = java.net.URLDecoder.decode(fileKey, java.nio.charset.StandardCharsets.UTF_8);
         } catch (IllegalArgumentException e) {
-            throw new ApiException(ApiErrorCode.BAD_REQUEST, "Malformed file key");
+            throw new ApiException(ApiErrorCode.FILE_KEY_MALFORMED, "Malformed file key");
         }
         if (fileKey.contains("..") || fileKey.contains("\\") || !FILE_KEY.matcher(fileKey).matches()) {
-            throw new ApiException(ApiErrorCode.BAD_REQUEST, "Invalid file key format");
+            throw new ApiException(ApiErrorCode.FILE_KEY_INVALID, "Invalid file key format");
         }
         Document doc = documents.findByFileKey(fileKey)
                 .orElseThrow(() -> new ApiException(ApiErrorCode.DOCUMENT_NOT_FOUND, "No document owns this key"));

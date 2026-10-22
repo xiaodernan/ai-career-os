@@ -956,11 +956,21 @@ export const translations = {
 
       APPLICATION_NOT_FOUND: "That application is no longer here.",
 
+      BUNDLE_NO_SECTION: "That file has no data section.",
+
+      BUNDLE_NOT_PLANNABLE: "That file could not be turned into a restore plan.",
+
       COMPANY_NOT_FOUND: "That company is no longer here.",
 
       CONVERSATION_NOT_FOUND: "That conversation is no longer here.",
 
       EMAIL_ALREADY_REGISTERED: "That email address is already registered.",
+
+      FILE_EMPTY: "That file is empty.",
+
+      FILE_KEY_INVALID: "That file key is not a valid one.",
+
+      FILE_KEY_MALFORMED: "That file key is malformed.",
 
       FILE_TOO_LARGE: "That file is larger than the limit allows.",
 
@@ -974,6 +984,14 @@ export const translations = {
 
       INVALID_TRANSITION: "That change is not allowed from here.",
 
+      INTERVIEW_ALREADY_STARTED: "This interview has already started.",
+
+      INTERVIEW_NO_QUESTION: "No interviewer question was recorded.",
+
+      INTERVIEW_NOT_STARTED: "Start the interview with the opening question first.",
+
+      INTERVIEW_NOTHING_TO_FINALIZE: "There is nothing to finish yet.",
+
       JD_NOT_FOUND: "That job description is no longer here.",
 
       JOB_NOT_FOUND: "That job is no longer here.",
@@ -981,6 +999,8 @@ export const translations = {
       MALFORMED_REQUEST: "The request could not be read.",
 
       MATCH_NOT_FOUND: "There is no match for that yet.",
+
+      METHOD_NOT_ALLOWED: "That request is not allowed here.",
 
       NETWORK_ERROR: "Cannot reach the API — is the backend running?",
 
@@ -994,6 +1014,7 @@ export const translations = {
       RESUME_NOT_INGESTED: "That resume's file has not been added to the knowledge base yet.",
       RESUME_NOT_PARSED: "Your resume has not been parsed yet.",
       RESUME_NOT_TAILABLE: "There is no resume to tailor yet.",
+      RESUME_TEXT_NOT_READY: "That document's text is not available yet.",
       RUN_NOT_FOUND: "That run is no longer here.",
 
       SESSION_NOT_FOUND: "That interview session is no longer here.",
@@ -1009,6 +1030,8 @@ export const translations = {
       TOKEN_REUSED: "For your safety every session in this family was signed out. Please sign in again.",
 
       UNAUTHORIZED: "Your session has expired. Please sign in again.",
+
+      UPLOAD_UNREADABLE: "That file could not be read.",
 
       USER_DISABLED: "This account is disabled.",
 
@@ -2621,11 +2644,21 @@ export const translations = {
 
       APPLICATION_NOT_FOUND: "这条申请记录已经不在了。",
 
+      BUNDLE_NO_SECTION: "这个文件里没有数据段。",
+
+      BUNDLE_NOT_PLANNABLE: "这个文件没法变成一份恢复计划。",
+
       COMPANY_NOT_FOUND: "这家公司已经不在了。",
 
       CONVERSATION_NOT_FOUND: "这段对话已经不在了。",
 
       EMAIL_ALREADY_REGISTERED: "这个邮箱已经注册过了。",
+
+      FILE_EMPTY: "这个文件是空的。",
+
+      FILE_KEY_INVALID: "这个文件键不合法。",
+
+      FILE_KEY_MALFORMED: "这个文件键的格式不对。",
 
       FILE_TOO_LARGE: "文件超出了允许的大小。",
 
@@ -2639,6 +2672,14 @@ export const translations = {
 
       INVALID_TRANSITION: "这里不允许这样改。",
 
+      INTERVIEW_ALREADY_STARTED: "这次面试已经开始了。",
+
+      INTERVIEW_NO_QUESTION: "没有记录到面试官的问题。",
+
+      INTERVIEW_NOT_STARTED: "先问出开场问题，再开始回答。",
+
+      INTERVIEW_NOTHING_TO_FINALIZE: "现在还没有可以结束的内容。",
+
       JD_NOT_FOUND: "这份职位描述已经不在了。",
 
       JOB_NOT_FOUND: "这个职位已经不在了。",
@@ -2646,6 +2687,8 @@ export const translations = {
       MALFORMED_REQUEST: "请求无法解析。",
 
       MATCH_NOT_FOUND: "还没有匹配的结果。",
+
+      METHOD_NOT_ALLOWED: "这个请求在这里不被允许。",
 
       NETWORK_ERROR: "连不上接口——后端在跑吗？",
 
@@ -2659,6 +2702,7 @@ export const translations = {
       RESUME_NOT_INGESTED: "这份简历的文件还没有进入知识库。",
       RESUME_NOT_PARSED: "你的简历还没有解析。",
       RESUME_NOT_TAILABLE: "还没有可以定制的简历。",
+      RESUME_TEXT_NOT_READY: "这份文档的正文还读不出来。",
       RUN_NOT_FOUND: "这次运行记录已经不在了。",
 
       SESSION_NOT_FOUND: "这次面试已经不在了。",
@@ -2674,6 +2718,8 @@ export const translations = {
       TOKEN_REUSED: "为了安全，这一组会话都已退出，请重新登录。",
 
       UNAUTHORIZED: "登录状态过期了，请重新登录。",
+
+      UPLOAD_UNREADABLE: "这个文件读不出来。",
 
       USER_DISABLED: "这个账号已被停用。",
 

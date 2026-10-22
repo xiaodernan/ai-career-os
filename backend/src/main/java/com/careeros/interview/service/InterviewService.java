@@ -139,7 +139,7 @@ public class InterviewService {
     public OpeningResponse opening(UUID userId, UUID sessionId) {
         InterviewSession session = requireReadOnly(userId, sessionId);
         if (!turns.findBySessionIdOrderBySeqAsc(sessionId).isEmpty()) {
-            throw new ApiException(ApiErrorCode.BAD_REQUEST, "Session already has turns");
+            throw new ApiException(ApiErrorCode.INTERVIEW_ALREADY_STARTED, "Session already has turns");
         }
         Map<String, Object> result = ai.interviewOpening(sessionId, userId);
         String question = Json.strOr(result, "question", "");
@@ -152,7 +152,7 @@ public class InterviewService {
         InterviewSession session = requireReadOnly(userId, sessionId);
         List<InterviewTurn> existing = turns.findBySessionIdOrderBySeqAsc(sessionId);
         if (existing.isEmpty()) {
-            throw new ApiException(ApiErrorCode.BAD_REQUEST, "Start the interview with an opening question first");
+            throw new ApiException(ApiErrorCode.INTERVIEW_NOT_STARTED, "Start the interview with an opening question first");
         }
         InterviewTurn lastQuestion = lastInterviewerTurn(existing);
         int nextSeq = existing.get(existing.size() - 1).getSeq() + 1;
@@ -187,7 +187,7 @@ public class InterviewService {
         InterviewSession session = requireReadOnly(userId, sessionId);
         List<InterviewTurn> existing = turns.findBySessionIdOrderBySeqAsc(sessionId);
         if (existing.isEmpty()) {
-            throw new ApiException(ApiErrorCode.BAD_REQUEST, "Nothing to finalize");
+            throw new ApiException(ApiErrorCode.INTERVIEW_NOTHING_TO_FINALIZE, "Nothing to finalize");
         }
         Map<String, Object> result = ai.interviewFinalize(sessionId,
                 existing.stream().map(InterviewService::toAiTurn).toList(), userId);
@@ -242,7 +242,7 @@ public class InterviewService {
                 return turns.get(i);
             }
         }
-        throw new ApiException(ApiErrorCode.BAD_REQUEST, "No interviewer question on record");
+        throw new ApiException(ApiErrorCode.INTERVIEW_NO_QUESTION, "No interviewer question on record");
     }
 
     private TurnItem persistTurn(UUID sessionId, UUID userId, int seq, String role, String content,

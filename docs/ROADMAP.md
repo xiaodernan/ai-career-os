@@ -93,14 +93,13 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   write answers with a toast, and the toast says what the server said — in
   English. The obvious fix is to translate by the **code**, because the code is
   the contract ("never rename an emitted code") and the code is what crosses the
-  wire. Measured: the codes are **coarser than the messages**. `RESUME_NOT_FOUND`
-  answers with six different sentences ("No parsed resume available for
-  matching", "This resume has no original file behind it", "Resume not found", …),
-  `BAD_REQUEST` with twelve, `TOKEN_INVALID` with five, `NOT_FOUND` with four,
-  `DOCUMENT_NOT_FOUND` with three. One sentence per code would tell a reader
-  whose resume exists but has no parsed version that "that resume is no longer
-  there" — so the fix is not a translation, it is a *finer vocabulary*: roughly
-  forty more codes (one per distinct wording), about seventy sentences in
+  wire. Measured: the codes are **coarser than the messages**. `TOKEN_INVALID`
+  answers with five different sentences, `INTERNAL_ERROR` with five,
+  `NOT_FOUND` with four, `VALIDATION_FAILED` with three,
+  `VERSION_NOT_FOUND` with three. One sentence per code would tell a reader
+  whose interview has not started that the interview is already under way
+  — so the fix is not a translation, it is a *finer vocabulary*: roughly
+  twenty-five more codes (one per distinct wording), about seventy sentences in
   each language, and the throw sites changed to name them.
 
   **The first split is done.** The resume's not-found code answered with six
@@ -112,6 +111,23 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   `RESUME_NOT_FOUND`), each with its own sentence in both languages, and the
   statuses did not move: the *code* is the contract and the *status* is what
   the client's error path reads, so the split is free where it is needed.
+
+  **And the request bucket is gone.** `BAD_REQUEST` answered with twelve
+  different sentences -- the interview's four situations, the upload that
+  could not be read, the empty file, the file key's two, the bundle's two,
+  the resume's text, the method the reader called, and the assistant's own
+  refusal -- and one sentence for it would have been wrong about most of
+  them. They are thirteen codes now (`INTERVIEW_ALREADY_STARTED`,
+  `INTERVIEW_NOT_STARTED`, `INTERVIEW_NOTHING_TO_FINALIZE`,
+  `INTERVIEW_NO_QUESTION`, `UPLOAD_UNREADABLE`, `FILE_EMPTY`,
+  `FILE_KEY_MALFORMED`, `FILE_KEY_INVALID`, `BUNDLE_NO_SECTION`,
+  `BUNDLE_NOT_PLANNABLE`, `RESUME_TEXT_NOT_READY`, `METHOD_NOT_ALLOWED`,
+  `AI_SERVICE_BAD_REQUEST`), each with its own sentence in both languages --
+  and the bucket itself is gone, because a name that means nothing is not a
+  contract. Twelve of the thirteen are translated; the assistant's own
+  refusal keeps the assistant's words, because its reason varies with the
+  request and a sentence that covered half of them would be wrong about the
+  rest.
 
   **And a code travels by three roads.** A throw (`new ApiException`), the
   envelope builder (`ApiError.of`), and the framework's own edges — the 401,
@@ -129,15 +145,15 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   **And the services' codes are classified now.** Every code the services can
   send is either **translated** (the browser's table answers it, in both
   languages) or **named as a gap** — and the gap list is the queue for the finer
-  vocabulary: `AI_SERVICE_ERROR`, `BAD_REQUEST`, `DOCUMENT_NOT_FOUND`,
+  vocabulary: `AI_SERVICE_BAD_REQUEST`, `AI_SERVICE_ERROR`, `DOCUMENT_NOT_FOUND`,
   `INTERNAL_ERROR`, `NOT_FOUND`, `RESET_TOKEN_INVALID`, `TOKEN_INVALID`,
   `VALIDATION_FAILED`, `VERSION_NOT_FOUND`. The gate
   *measures* the split rather than remembering it: a code that is translated
   must carry one meaning (read off the throw sites), a code that is named as a
   gap must carry several, and a code nobody classified fails the gate. So the
-  twenty-nine codes that mean one thing are bilingual today, and the nine that
-  mean several carry thirty-eight distinct sentences between them, so they keep
-  the server's words until the throw sites name them properly — about fifteen more codes, one per distinct wording, and then the
+  forty-one codes that mean one thing are bilingual today, and the nine that
+  mean several carry twenty-six distinct sentences between them, so they keep
+  the server's words until the throw sites name them properly — twenty-six more codes, one per distinct wording, and then the
   gap list empties.
 - **The export's readable half had one language (closed 2026-10-22).** 13.1's
   *human-readable* export — the print-ready document — was written in Chinese

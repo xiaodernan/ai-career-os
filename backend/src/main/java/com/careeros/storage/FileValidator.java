@@ -31,10 +31,10 @@ public final class FileValidator {
     private FileValidator() {
     }
 
-    /** @throws ApiException BAD_REQUEST/FILE_TOO_LARGE/INVALID_FILE_TYPE when the content is not acceptable. */
+    /** @throws ApiException FILE_EMPTY/FILE_TOO_LARGE/INVALID_FILE_TYPE when the content is not acceptable. */
     public static Type validate(byte[] content, long maxBytes) {
         if (content == null || content.length == 0) {
-            throw new ApiException(ApiErrorCode.BAD_REQUEST, "Empty file");
+            throw new ApiException(ApiErrorCode.FILE_EMPTY, "Empty file");
         }
         if (content.length > maxBytes) {
             throw new ApiException(ApiErrorCode.FILE_TOO_LARGE,

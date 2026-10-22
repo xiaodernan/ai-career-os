@@ -211,7 +211,7 @@ public class KnowledgeService {
         try {
             content = file.getBytes();
         } catch (java.io.IOException e) {
-            throw new ApiException(ApiErrorCode.BAD_REQUEST, "Cannot read upload");
+            throw new ApiException(ApiErrorCode.UPLOAD_UNREADABLE, "Cannot read upload");
         }
         String folder = "knowledge";
         FileIngestService.Persisted persisted =

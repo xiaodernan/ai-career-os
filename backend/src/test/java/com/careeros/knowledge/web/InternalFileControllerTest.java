@@ -264,7 +264,7 @@ class InternalFileControllerTest {
         for (String key : nearMisses) {
             mvc.perform(internal(ROUTE + key))
                     .andExpect(status().isBadRequest())
-                    .andExpect(jsonPath("$.error.code").value("BAD_REQUEST"))
+                    .andExpect(jsonPath("$.error.code").value("FILE_KEY_INVALID"))
                     .andExpect(jsonPath("$.error.message").value("Invalid file key format"));
         }
         // None of them reached the repository, so none of them could probe which keys exist.
@@ -309,7 +309,7 @@ class InternalFileControllerTest {
         // And the branch the framework outran does work when handed the request directly.
         ApiException ex = assertThrows(ApiException.class,
                 () -> new InternalFileController(documents, storage).get(request));
-        assertThat(ex.code()).isEqualTo(ApiErrorCode.BAD_REQUEST);
+        assertThat(ex.code()).isEqualTo(ApiErrorCode.FILE_KEY_MALFORMED);
         assertThat(ex).hasMessage("Malformed file key");
     }
 

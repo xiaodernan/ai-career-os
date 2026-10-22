@@ -418,7 +418,9 @@ and the resume not found -- and one sentence for it would have been wrong
 about five of the six. They are six codes now, each with its own sentence in
 both languages, and the statuses did not move: the *code* is the contract
 and the *status* is what the client's error path reads, so the split is free
-where the split is needed.
+where the split is needed. The request bucket that answered with twelve
+sentences is thirteen codes now too -- one per meaning, with the bucket
+itself gone, because a name that means nothing is not a contract.
 
 **And the measurement had to learn the third road.** A code reaches the
 reader three ways: a throw, the envelope builder, and the framework's own
