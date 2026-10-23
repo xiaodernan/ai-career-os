@@ -64,6 +64,15 @@ per-call latency baseline. It is the acceptance walk for a fresh stack and the
 §36 performance baseline in one run: every station under a second against the
 containerized stack (register's ~300ms is bcrypt doing its job).
 
+## Concurrency smoke
+
+`scripts/concurrency_smoke.py` is §36's last concern with a number on it: 16 workers
+-- half reading the job list, the dashboard and the knowledge sources, half writing
+profile patches and contact rows, four accounts shared so the same rows actually
+contend -- 128 calls in about a second and a half. The claims: no 5xx under load,
+p95 inside the interactive bar (measured 312ms, max 654ms), and the rate limiter as
+the only thing that may answer 429.
+
 ## Ops dry-runs worth showing
 
 ```bash
