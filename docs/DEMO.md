@@ -55,6 +55,15 @@ The UI above is a thin client over the backend's public API; shapes are in `docs
 | Contacts | `GET/POST /api/v1/contacts` |
 | Copilot | `POST /api/v1/copilot/chat` (or `/chat/stream` over SSE) |
 
+## The journey as one script
+
+`scripts/journey_api.py` walks every station above over the API in order — register
+through dashboard, including the growth report, the contacts registry, the copilot's
+search-backed artifact and the portability export/import round-trip — and prints a
+per-call latency baseline. It is the acceptance walk for a fresh stack and the
+§36 performance baseline in one run: every station under a second against the
+containerized stack (register's ~300ms is bcrypt doing its job).
+
 ## Ops dry-runs worth showing
 
 ```bash
