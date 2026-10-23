@@ -74,6 +74,7 @@ LLM_PROVIDER=openai_compat EMBEDDING_PROVIDER=openai \
 INTERNAL_API_TOKEN="$INTERNAL_API_TOKEN" DATABASE_URL="$DATABASE_URL" \
 LLM_API_KEY="$LLM_API_KEY" \
 .venv/Scripts/python -m app.ops.preflight        # exit 1 on any blocking failure
+.venv/Scripts/python -m app.ops.vector_index  # after the first ingestion: dimension-aware HNSW indexes
 ```
 
 It prints `{ok, checks, failures, warnings}` as JSON. A `fail` (severity `fail`) blocks
