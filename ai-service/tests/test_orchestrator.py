@@ -373,3 +373,35 @@ def test_emit_publishes_only_when_task_id_present(monkeypatch):
     assert calls == []  # no task → nothing to fan out to
     orchestrator._emit("t1", "status", {"step": "y"})
     assert calls == [("t1", "status", {"step": "y"})]
+
+
+def test_collect_artifacts_skips_malformed_evidence_rows():
+    """A non-dict evidence element (buggy engine / stale cached row) must not
+    raise -- `_collect_artifacts` runs outside `_exec_tool`'s try block, so an
+    unguarded `.get` there would abort the whole turn."""
+    out = Outcome()
+    tool = _tool("search_knowledge_base")
+    result = {"evidence": [
+        "a stray string",                 # non-dict → skipped
+        42,                               # non-dict → skipped
+        {"no_chunk_id": "x"},             # dict but no id → skipped
+        {"chunk_id": "c1", "doc_title": "D", "section": "S", "quote": "q"},
+    ]}
+    _collect_artifacts(tool, result, out)
+    assert len(out.sources) == 1
+    assert out.sources[0]["chunk_id"] == "c1"
+
+
+def test_collect_artifacts_missing_evidence_key_is_safe():
+    out = Outcome()
+    tool = _tool("search_knowledge_base")
+    _collect_artifacts(tool, {"jobs": []}, out)  # no "evidence" key at all
+    assert out.sources == []
+
+
+def test_collect_artifacts_match_branch_tolerates_non_dict_job():
+    out = Outcome()
+    tool = _tool("calculate_match", artifact="match")
+    # `job` present but not a dict: `result.get("job", {}).get("id")` must not raise.
+    _collect_artifacts(tool, {"match": {"score": 0.5}, "job": "not-a-dict"}, out)
+    assert out.artifacts == [{"type": "match", "job_id": None, "payload": {"score": 0.5}}]

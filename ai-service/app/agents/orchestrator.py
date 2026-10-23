@@ -126,7 +126,9 @@ def _collect_artifacts(tool: Tool, result: dict, out: Outcome) -> None:
     if not isinstance(result, dict) or result.get("error"):
         return
     if tool.artifact == "match" and result.get("match"):
-        out.artifacts.append({"type": "match", "job_id": result.get("job", {}).get("id"),
+        job = result.get("job")
+        job_id = job.get("id") if isinstance(job, dict) else None
+        out.artifacts.append({"type": "match", "job_id": job_id,
                               "payload": result["match"]})
     elif tool.artifact == "tailored_resume":
         out.artifacts.append({"type": "tailored_resume", "payload": {
@@ -150,7 +152,15 @@ def _collect_artifacts(tool: Tool, result: dict, out: Outcome) -> None:
     if tool.name == "search_jobs" and result.get("jobs"):
         out.artifacts.append({"type": "job_list",
                               "payload": {"jobs": result["jobs"][:10]}})
+    # Evidence rows come from RAG tools (`search_resume`, `search_knowledge_base`,
+    # `calculate_match`) and are therefore external-shaped: a buggy engine or a stale
+    # cached row can hand a string, a number, or a dict missing `chunk_id`. Iterating
+    # and calling `.get` on a non-dict is an uncaught TypeError/AttributeError because
+    # this loop runs OUTSIDE `_exec_tool`'s try block -- so one bad row would abort the
+    # whole turn. Skip non-dict rows rather than trusting the shape.
     for ev in result.get("evidence") or []:
+        if not isinstance(ev, dict):
+            continue
         cid = ev.get("chunk_id")
         if not cid or any(s.get("chunk_id") == cid for s in out.sources):
             continue
