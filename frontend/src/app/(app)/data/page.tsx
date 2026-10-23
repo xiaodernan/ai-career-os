@@ -80,6 +80,27 @@ export default function DataPortabilityPage() {
     toast.success(t("data.fileSaved"));
   }, [bundle]);
 
+  const downloadMarkdown = React.useCallback(() => {
+    if (!bundle) return;
+    // The quick look: the same sections and the same words as the print-ready
+    // document, in the form a diff tool reads. It was a library function
+    // nothing called -- the route serves the Markdown now, so the reader gets
+    // the affordance too.
+    renderBundle.mutate(
+      { bundle, format: "markdown" },
+      {
+        onSuccess: (out) => {
+          downloadText(
+            "career-os-export.md",
+            out.markdown ?? "",
+            "text/markdown;charset=utf-8"
+          );
+          toast.success(t("data.fileSaved"));
+        },
+      }
+    );
+  }, [bundle, renderBundle, t]);
+
   const runRedact = React.useCallback(() => {
     if (!bundle) return;
     redactBundle.mutate(
@@ -213,6 +234,17 @@ export default function DataPortabilityPage() {
               >
                 <FileText aria-hidden />
                 {t("data.printView")}
+              </Button>
+            )}
+            {bundle && (
+              <Button
+                variant="outline"
+                size="sm"
+                loading={renderBundle.isPending}
+                onClick={downloadMarkdown}
+              >
+                <FileText aria-hidden />
+                {t("data.downloadMarkdown")}
               </Button>
             )}
           </div>

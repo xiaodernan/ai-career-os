@@ -132,6 +132,10 @@ BOUNDED_NOT_PASTED: dict[tuple[str, str, str], str] = {
     ("ProgressionReq", "aspirational_role", "/progression"): "one role name, the stepping-stone plan's target",
     ("LearningPriorityReq", "target_role", "/learning-priority"): "one role name, the priority ranking's subject",
     ("InterviewPrepReq", "target_role", "/interview-prep"): "one role name, the prep session's target",
+    # The 14.2 connector's feed body: bounded at 2, structural (RSS/Atom XML or board-API
+    # JSON, shape detected server-side), and read by the ingestion path -- never by the
+    # posting analyst the floor protects. A paste of a *posting* it is not.
+    ("ParseFeedReq", "payload", "/parse-feed"): "a feed body pasted for the connector to parse, bounded at 2",
 }
 
 

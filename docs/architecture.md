@@ -82,6 +82,7 @@ frontend/backend/ai-service can also run natively for dev (`pnpm dev`, `mvn spri
 │       ├── job/                  # jobs, companies, saved jobs, matches
 │       ├── knowledge/            # sources, documents, chunks (meta; vectors owned by ai-service)
 │       ├── network/              # contacts registry: the people a search touches (§4.3)
+│       ├── network/              # contacts registry (11.1); outreach/follow-up live here
 │       ├── ratelimit/            # Redis sliding-window filter
 │       ├── report/               # dashboard read model (aggregates over the other domains)
 │       ├── resume/               # resumes, versions, parsed entities (exp/proj/skill)
@@ -218,7 +219,15 @@ user-scoped table (ownership is enforced in backend layer + a single SQL predica
    backend_knowledge */, summary jsonb /* well/weak/missing concepts/study materials */,
    trajectory jsonb /* depth path of follow-ups */, created_at)`
 
-### 4.5 Copilot, knowledge & observability
+### 4.5 Networking
+- `contacts(id, user_id, name, role, company, relation, email, notes,
+   last_touch_at nullable /* the user's own claim, not a server guess */,
+   created_at, updated_at)`
+- `growth_plans(id, user_id, target_role, coverage, report jsonb /* the engine's
+   own answer, stored verbatim */, created_at)` — appended per run, never updated;
+   the latest row for a (user, role) pair is what the next report diffs against.
+
+### 4.6 Copilot, knowledge & observability
 - `conversations(id, user_id, title, context jsonb /* pinned job/resume refs */)`
 - `messages(id, conversation_id, role, content, artifacts jsonb /* structured AI
    outputs rendered by frontend: match cards, resume drafts… */, sources jsonb

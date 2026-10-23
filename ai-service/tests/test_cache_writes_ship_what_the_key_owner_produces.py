@@ -380,13 +380,11 @@ def decls_for(segs: tuple[str, ...]) -> list:
 def test_the_cache_methods_the_app_calls_are_the_methods_the_key_walk_covers():
     census = qc_calls()
     assert clients() == ["qc"], "the app binds the query client under %s, so a qc-shaped census is blind" % clients()
-    # 8 methods and 67 sites rather than 8 and 61 since `useReorderApplication` gained the
-    # optimistic snapshot its update sibling already had -- a cancelQueries, a getQueriesData
-    # read, an applications merge and the computed-key rollback write -- and the memory card's
-    # two correction hooks each added one invalidation. Both halves of this assertion are the
-    # point: a new *kind* of call is not covered by the buckets until somebody adds one, and
-    # it would have gone unnoticed.
-    assert len(census) == 8 and sum(census.values()) == 67, "the client walk read %s" % dict(sorted(census.items()))
+    # 8 methods and 70 sites: the contacts registry's three writes (11.1) each added one
+    # invalidation, after the reorder snapshot and the memory card's pair had moved it to 67.
+    # Both halves of this assertion are the point: a new *kind* of call is not covered by the
+    # buckets until somebody adds one, and it would have gone unnoticed.
+    assert len(census) == 8 and sum(census.values()) == 70, "the client walk read %s" % dict(sorted(census.items()))
     mine = collections.Counter(c.callee for c in keyed_calls(KEYED))
     theirs = collections.Counter(s.callee for s in cache_reads() + opaque_key_sites() + promises())
     assert sorted(set(census) - set(KEYED)) == ["clear"], "no bucket exists for %s" % sorted(set(census) - set(KEYED))
@@ -397,7 +395,7 @@ def test_the_cache_methods_the_app_calls_are_the_methods_the_key_walk_covers():
         )
     # 65, and the equality is the assertion: both walks must read the same keyed sites. The
     # number moves with the app; what must not move is the two sides agreeing.
-    assert sum(mine.values()) == sum(theirs.values()) == 65
+    assert sum(mine.values()) == sum(theirs.values()) == 68
     assert census["clear"] == sum(census.values()) - sum(mine.values()) == 2, (
         "the only calls neither gate can key are the two that carry no key"
     )
@@ -717,11 +715,12 @@ def test_this_gate_and_the_invalidation_gate_read_the_same_shipped_sources():
     # the same feature run that gave the reorder board its optimistic snapshot. This assertion
     # is here to notice exactly that -- the two gates are supposed to read one population, so
     # a drift in either shows up as a mismatch.
-    assert len(promises()) == 49, "the borrowed promise walk now reads %d" % len(promises())
+    # 52: the registry's three invalidations join the 49.
+    assert len(promises()) == 52, "the borrowed promise walk now reads %d" % len(promises())
     # 65 rather than 59: the census above is 67 sites and `clear` carries no key, so the keyed
     # population is the other seven methods. Kept as a separate number so a site that loses its
     # bucket shows up here even when the census total is unchanged.
-    assert len(keyed_calls(KEYED)) == 65, "the keyed population is %d" % len(keyed_calls(KEYED))
+    assert len(keyed_calls(KEYED)) == 68, "the keyed population is %d" % len(keyed_calls(KEYED))
     assert len([c for c in all_calls() if c.callee in QUERY_HOOKS]) == len(declarations()), (
         "the walk's hook regions and the previous gate's declarations are different sets: %d vs %d"
         % (len([c for c in all_calls() if c.callee in QUERY_HOOKS]), len(declarations()))

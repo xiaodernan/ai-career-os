@@ -1221,7 +1221,7 @@ def test_the_response_envelope_has_exactly_one_wrapper_and_one_unwrapper():
     # 31 rather than 30 since the paste-a-posting importer joined (one success toast in
     # actions.ts); 30 rather than 28 since the conversation list grew rename and delete,
     # each with its own success toast in actions.ts.
-    assert len(toasts) == 47, (f"{len(toasts)} `toast.success` lines came out of the same walk: that is "
+    assert len(toasts) == 48, (f"{len(toasts)} `toast.success` lines came out of the same walk: that is "
                                "the floor proving the scan reached the pages and the hooks, so a walk "
                                "narrowed to the api directory cannot pass quietly")
 
@@ -3167,7 +3167,7 @@ def test_both_frame_parsers_default_a_nameless_frame_to_the_same_event_name():
         # 1258 rather than 1212 since the growth engines' types were rewritten to
         # the engines' own key spellings (#252) -- the block above the trace-step
         # union grew by 46 lines and the union itself did not change.
-        ("types.ts", 1258, "kind:"),
+        ("types.ts", 1259, "kind:"),
         ('use-sse.ts', 15, 'event: SSEEventName | "message" | "progress" | "ping";'),
     ], (f"{[(r['file'], r['line'], r['head']) for r in by_role['type-union-member']]}: three type unions "
         "spell `message`, and only one of them names a frame -- the other two are the trace step kind "

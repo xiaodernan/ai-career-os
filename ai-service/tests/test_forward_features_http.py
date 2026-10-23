@@ -177,6 +177,40 @@ def test_a_broken_feed_is_refused_rather_than_parsed_into_nothing():
         "empty success would ingest nothing and say it had worked")
 
 
+# ---------------- 13.1 render ----------------
+
+def test_the_markdown_half_of_the_bundle_is_served_by_the_route():
+    # The Markdown view was a library function nothing called: the route
+    # served the HTML and the PDF, so the operator's quick look existed only
+    # for someone already inside Python. It is a format of the route now.
+    r = _post("render-bundle", {
+        "bundle": {
+            "data": {"profile": {"display_name": "Reader"}},
+            "manifest": {"schema_version": "1.2.0", "counts": {"profile": 1}},
+        },
+        "format": "markdown",
+    })
+    assert r.status_code == 200
+    body = r.json()
+    assert body["format"] == "markdown"
+    assert body["markdown"].startswith("# ")
+    assert "## Profile" in body["markdown"]
+    assert "Reader" in body["markdown"]
+
+
+def test_the_markdown_is_in_the_readers_language():
+    r = _post("render-bundle", {
+        "bundle": {"data": {}, "manifest": {"schema_version": "1.2.0"}},
+        "format": "markdown",
+        "locale": "zh",
+    })
+    assert r.status_code == 200
+    # The words come from the same table the print-ready HTML reads, so the
+    # quick look is the reader's document too -- not a Chinese document an
+    # English reader cannot read, and not an English one a Chinese one can't.
+    assert any("一" <= ch <= "鿿" for ch in r.json()["markdown"])
+
+
 # ---------------- 16.1 monitoring ----------------
 
 def test_health_report_roundtrip():

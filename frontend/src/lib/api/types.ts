@@ -1196,8 +1196,9 @@ export type RedactedBundle = ExportBundle;
  * print-ready in a browser.
  */
 export interface RenderedBundle {
-  format?: "html" | "pdf";
+  format?: "html" | "pdf" | "markdown";
   html?: string;
+  markdown?: string;
   bytes_base64?: string;
 }
 

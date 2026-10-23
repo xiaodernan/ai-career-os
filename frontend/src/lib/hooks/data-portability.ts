@@ -88,7 +88,7 @@ export function useRedactBundle() {
 export function useRenderBundle() {
   const { locale } = useLocale();
   return useMutation({
-    mutationFn: async (input: { bundle: unknown; format?: "html" | "pdf" }) =>
+    mutationFn: async (input: { bundle: unknown; format?: "html" | "pdf" | "markdown" }) =>
       (await api.create<unknown>(endpoints.dataRender, {
         bundle: input.bundle,
         format: input.format ?? "html",

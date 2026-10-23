@@ -99,3 +99,25 @@ describe("the ingestion bodies", () => {
     expect(sent.existing).toHaveLength(1);
   });
 });
+
+describe("the render body", () => {
+  it("carries the markdown format like any other, so the route serves the quick look", async () => {
+    mockFetch({ format: "markdown", markdown: "# AI Career OS" });
+    const { api } = await import("@/lib/api/client");
+
+    await api.create(endpoints.dataRender, {
+      bundle: { schema_version: "1.2.0", data: {} },
+      format: "markdown",
+      locale: "en",
+    });
+
+    const sent = bodies[0] as { format: string; locale: string; bundle: unknown };
+    // The Markdown half of a bundle used to be a library function nothing
+    // called: the route served the HTML and the PDF only. The format travels
+    // the wire like the other two now, and the bridge does not get to decide
+    // which one the caller meant.
+    expect(sent.format).toBe("markdown");
+    expect(sent.locale).toBe("en");
+    expect(sent.bundle).toEqual({ schema_version: "1.2.0", data: {} });
+  });
+});

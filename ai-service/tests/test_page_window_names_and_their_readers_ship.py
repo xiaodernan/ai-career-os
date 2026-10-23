@@ -91,6 +91,7 @@ PAGE_HOOKS = {
     "useSavedJobs": ("savedJobs", "List<SavedJobItem>"),
     "useApplications": ("applications", "PageDTO<ApplicationItem>"),
     "useCompanies": ("companies", "PageDTO<CompanyItem>"),
+    "useContacts": ("contacts", "List<ContactItem>"),
     "useKnowledgeSources": ("knowledge", "PageDTO<SourceItem>"),
     "useKnowledgeNotes": ("knowledgeNotes", "PageDTO<NoteItem>"),
     "useInterviewSessions": ("interviews", "PageDTO<SessionItem>"),
@@ -98,7 +99,7 @@ PAGE_HOOKS = {
     "useConversations": ("conversations", "PageDTO<ConversationItem>"),
 }
 
-BARE_LIST_HOOKS = ["useSavedJobs"]
+BARE_LIST_HOOKS = ["useContacts", "useSavedJobs"]
 
 ENVELOPE = ["items", "total", "page", "size"]
 

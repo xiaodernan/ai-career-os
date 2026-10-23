@@ -409,7 +409,7 @@ def raised_sites() -> list[tuple[str, int]]:
     for path in (E2E_README, FIXTURES, PREFLIGHT):
         text = read(path)
         for match in first_group(path, RAISED_ASSIGN,
-                                 want={str(E2E_README): 3, str(FIXTURES): 1, str(PREFLIGHT): 1}[str(path)]):
+                                 want={str(E2E_README): 4, str(FIXTURES): 1, str(PREFLIGHT): 1}[str(path)]):
             out.append((f"{path.relative_to(ROOT)}:{_line_of(text, match.start())}", int(match["value"])))
     match = first_group(PREFLIGHT, E2E_THRESHOLD, want=1)[0]
     out.append((f"e2e/preflight.ps1:{_line_of(read(PREFLIGHT), match.start())} `-ge` threshold",
@@ -432,7 +432,7 @@ def status_sites() -> list[tuple[str, int, str]]:
     for path in (FILTER, API_DOC, SEC, E2E_README, FIXTURES):
         text = read(path)
         want = {str(FILTER): 2, str(API_DOC): 1, str(SEC): 1, str(E2E_README): 1,
-                str(FIXTURES): 2}[str(path)]
+                str(FIXTURES): 4}[str(path)]
         for match in first_group(path, HTTP_429, want=want):
             number = _line_of(text, match.start())
             if path == FILTER and number == setter_line:

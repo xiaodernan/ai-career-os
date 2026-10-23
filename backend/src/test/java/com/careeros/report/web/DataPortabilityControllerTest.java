@@ -129,6 +129,30 @@ class DataPortabilityControllerTest {
     }
 
     /**
+     * The render route hands the caller's format straight to the engine.
+     *
+     * <p>The Markdown half of a bundle used to be a library function nothing
+     * called -- the route served the HTML and the PDF, so the operator's quick
+     * look existed only for someone already inside Python. The format now
+     * travels the wire like the other two, and the bridge does not get to
+     * decide which one the caller meant.
+     */
+    @Test
+    void the_render_route_hands_the_callers_format_to_the_engine() throws Exception {
+        when(ai.renderBundle(eq(UUID.fromString(USER)), any(), eq("markdown"), isNull()))
+                .thenReturn(Map.of("format", "markdown", "markdown", "# AI Career OS"));
+
+        mvc.perform(post("/api/v1/data-portability/render")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"bundle\": {}, \"format\": \"markdown\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.format").value("markdown"))
+                .andExpect(jsonPath("$.data.markdown").value("# AI Career OS"));
+
+        verify(ai).renderBundle(eq(UUID.fromString(USER)), any(), eq("markdown"), isNull());
+    }
+
+    /**
      * The bundle is complete: the sections the BACKEND owns travel with it, so
      * an export is the candidate's pipeline and not only their reading list.
      *

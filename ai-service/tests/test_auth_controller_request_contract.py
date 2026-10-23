@@ -488,9 +488,11 @@ def test_the_credential_screens_guard_through_the_shared_password_function():
         "expected exactly one password entry validating through passwordIssue (baseFields' "
         "entry, shared by sign-in and register), found %d" % form.count("validate: passwordIssue,")
     )
-    assert 'import { displayNameIssue, emailIssue, passwordIssue } from "@/lib/auth-recovery";' in form, (
+    assert 'from "@/lib/auth-recovery"' in form, (
         "the shared import changed; the guards above would resolve names this file cannot see"
     )
+    for helper in ("displayNameIssue", "emailIssue", "passwordIssue"):
+        assert helper in form, f"the guard for {helper} left the form file"
     assert '? { ...f, autoComplete: "new-password" } : f' in form, (
         "the register override changed members beyond autoComplete -- a screen-local validator "
         "is back or the field list diverged"

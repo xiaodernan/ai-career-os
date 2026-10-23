@@ -307,6 +307,25 @@ test("the printable document is in the reader's language", async ({ api }) => {
     expect(html, "the document left out the reader's notes").toContain("Salary research");
     expect(html, "the document left out the people they know").toContain("Li Ming");
   }
+
+  // The Markdown half is served by the same route now. It used to be a
+  // library function nothing called, so the operator's quick look existed
+  // only for someone already inside Python -- and the words are the same
+  // table the print-ready document reads, so the quick look is in the
+  // reader's language too.
+  const markdown = await unwrap<{ markdown?: string }>(
+    await api.post("/data-portability/render", { bundle, format: "markdown", locale: "en" })
+  );
+  expect(markdown.markdown, "the markdown half was not served").toContain("Salary research");
+  expect(markdown.markdown, "the markdown half left out the people").toContain("Li Ming");
+
+  const markdownZh = await unwrap<{ markdown?: string }>(
+    await api.post("/data-portability/render", { bundle, format: "markdown", locale: "zh" })
+  );
+  expect(
+    /[\u4e00-\u9fff]/.test(markdownZh.markdown ?? ""),
+    "the markdown half is not in the reader's language"
+  ).toBe(true);
 });
 
 /**

@@ -55,6 +55,9 @@ ACTIONS = "frontend/src/lib/hooks/actions.ts"
 ENDPOINTS = "frontend/src/lib/api/endpoints.ts"
 SETTINGS = "frontend/src/app/(app)/settings/page.tsx"
 CARDS = "frontend/src/components/settings/profile-cards.tsx"
+# The maps editor's section table moved out of the card file (profile-maps.ts) -- the
+# names the maps form sends are declared there now, so the form scan reads both files.
+MAPS_TABLE = "frontend/src/lib/profile-maps.ts"
 TARGETS = "frontend/src/lib/profile-targets.ts"
 
 
@@ -91,8 +94,8 @@ def settings_source() -> str:
 
 @lru_cache(maxsize=1)
 def cards_source() -> str:
-    return read(CARDS)
-
+    """The card file plus the section table its map names now live in."""
+    return read(CARDS) + chr(10) + read(MAPS_TABLE)
 
 def record_body(record_name: str, source: str) -> str:
     """Return the raw text between ``record Name(`` and ``) {``, or "" if absent."""

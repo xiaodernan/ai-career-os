@@ -175,8 +175,8 @@ DECLARED_NOWHERE = {
                            "fileName", "file_name", "type"},
     ("mapSessionScalars", "s"): {"depth", "level", "type"},
     ("mapInterviewSessionItem", "s"): {"overallScore", "turnCount"},
-    ("mapInterviewSessionDetail", "raw"): {"answers", "report"},
-    ("mapInterviewSessionDetail", "sess"): {"report"},
+    ("mapInterviewSessionDetail", "raw"): {"answers"},
+    ("mapInterviewSessionDetail", "sess"): set(),
     ("mapInterviewSessionDetail", "t"): set(),
 }
 
@@ -208,7 +208,7 @@ DEAD_NAME_TIERS = {
                                   "is_current", "job_title", "position_title", "question_count",
                                   "tailorDiff", "tailor_diff", "turnCount", "version_no"},
     ("lib/api/types.ts", "lib/hooks/resources.ts"): {"chunkCount"},
-    ("lib/api/normalize.ts", "lib/hooks/resources.ts"): {"current_version_id", "overallScore",
+    ("lib/api/normalize.ts", "lib/hooks/resources.ts"): {"current_version_id",
                                                          "structuredResume", "structured_resume"},
     ("lib/activity-trace.ts", "lib/hooks/resources.ts"): {"errorMessage", "finished_at",
                                                           "started_at"},
@@ -217,14 +217,15 @@ DEAD_NAME_TIERS = {
      "lib/hooks/resources.ts"): {"company_name"},
     ("app/(app)/resumes/[id]/page.tsx", "lib/api/types.ts",
      "lib/hooks/resources.ts"): {"isCurrent", "versionNo"},
+    ("lib/api/normalize-actions.test.ts", "lib/api/normalize.test.ts", "lib/api/normalize.ts",
+     "lib/hooks/resources.ts"): {"job_id"},
     ("lib/api/normalize.test.ts", "lib/api/normalize.ts", "lib/hooks/resources.ts"): {"created_at",
-                                                                                      "job_id",
                                                                                       "updated_at"},
     ("lib/api/normalize.ts", "lib/hooks/resources.ts", "lib/job-filter.ts"): {"resume_versions"},
 }
 # Beyond three carriers a generic name (`name`, `score`, `title`, `kind`) means something else in the
 # file that spells it, so the census stops classifying rather than pretending to.
-WIDER_DEAD_NAMES = 29
+WIDER_DEAD_NAMES = 30
 TYPES_MIRROR_NAMES = {"chunkCount"}
 SCREEN_READ_NAMES = {"isCurrent", "versionNo"}
 
@@ -449,7 +450,7 @@ def test_the_unbound_mappers_ban_would_find_these_mappers_if_it_read_this_file()
     assert "RESOURCES" not in declarations and "resources" not in declarations, \
         "the ban now enumerates resources.ts too -- reconcile the two censuses instead of stacking"
     population = re.search(r"assert len\(population\) == (\d+)", gate)
-    assert population and population.group(1) == "35", \
+    assert population and population.group(1) == "36", \
         f"the ban's pinned normalize.ts population moved: {population and population.group(1)}"
 
 
@@ -509,7 +510,7 @@ def test_an_unauthored_name_is_a_snake_twin_a_foreign_name_or_a_name_no_record_d
     # carries `targetRole`/`targetSalary` and the growth-report family's own names.
     # 224 rather than 222 since the contacts registry's request/item pair (11.1) carries
     # `relation` and `lastTouchAt` — the registry's own names.
-    assert len(everywhere) == 224, f"the backend record census read {len(everywhere)} component names"
+    assert len(everywhere) == 251, f"the backend record census read {len(everywhere)} component names"
     assert {"id", "title", "status", "createdAt"} <= set(everywhere), sorted(list(everywhere)[:8])
     scanned_unauthored = scanned_nowhere = 0
     for (mapper, receiver), record in ROWS.items():
@@ -540,7 +541,7 @@ def test_an_unauthored_name_is_a_snake_twin_a_foreign_name_or_a_name_no_record_d
     # Both ledger numbers come out of the scan above, so a row that stops reading names narrows the
     # total and gets named, instead of a table quietly agreeing with itself.
     assert scanned_unauthored == 69, scanned_unauthored
-    assert scanned_nowhere == 30, scanned_nowhere
+    assert scanned_nowhere == 28, scanned_nowhere
 
 
 def test_no_naming_strategy_and_no_annotation_renames_an_answer_record():
@@ -800,7 +801,10 @@ def test_the_dead_names_spread_in_three_measured_tiers_and_three_reached_a_scree
     # 177 rather than 172 since the growth page and its layout (10.3), the resume-upload retry
     # module and its test, and the growth hooks' test joined.
     # 179 rather than 177 since the networking page and its layout (11.1) joined.
-    assert len(files) == 179, f"the frontend census walked {len(files)} files"
+    # 228 rather than 179: the analysis/dashboard expansion (Epic 15), the data
+    # portability surface (13.x), and the ingestion connectors (14.x) each brought
+    # screens, hooks and their tests.
+    assert len(files) == 228, f"the frontend census walked {len(files)} files"
     asked = {name for row in UNAUTHORED.values() for name in row}
     assert len(asked) == 57, f"{len(asked)} dead names are asked, pinned 57"
     classified = set()
@@ -809,7 +813,7 @@ def test_the_dead_names_spread_in_three_measured_tiers_and_three_reached_a_scree
             found = carriers_of(name)
             assert found == set(carriers), f"{name} is now spelled in {sorted(found ^ set(carriers))}"
             classified.add(name)
-    assert len(classified) == 28, f"{len(classified)} names classified, pinned 28"
+    assert len(classified) == 27, f"{len(classified)} names classified, pinned 28"
     assert len(asked) - len(classified) == WIDER_DEAD_NAMES, \
         f"{len(asked) - len(classified)} names spread past three carriers, pinned {WIDER_DEAD_NAMES}"
     assert classified <= asked

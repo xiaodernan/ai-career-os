@@ -140,7 +140,8 @@ def test_the_streaming_steps_the_doc_lists_are_the_ones_published():
 
 
 def test_the_quote_cap_the_doc_claims_is_the_one_to_evidence_applies():
-    assert '"quote": (c.get("text") or "")[:600]' in read(PIPELINE), (
+    body = read(PIPELINE)
+    assert '"quote": (text if isinstance(text, str) else "")[:600],' in body, (
         "to_evidence no longer caps its quote at 600 characters")
     assert "600-char" in read(DOC), "RAG.md no longer claims a 600-char quote"
 

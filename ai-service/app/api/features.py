@@ -7,6 +7,7 @@ from app.core.deps import Ctx, require_internal
 from ..core.errors import EXPORT_SEND_ONE, RefusalError
 from app.db import domain, observability
 from app.features import company as company_mod
+from app.features import export as export_mod
 from app.features import export_render as export_render_mod
 from app.features import gap_analysis as gap_mod
 from app.features import growth as growth_mod
@@ -819,11 +820,13 @@ async def redact_bundle_ep(req: RedactBundleReq, ctx: Ctx = Depends(require_inte
 
 
 class RenderBundleReq(BaseModel):
-    """The render request: a bundle, and whether the answer should be PDF bytes.
+    """The render request: a bundle, and which readable half of it to render.
 
-    `format` is "html" or "pdf". The PDF converter is an optional dependency
-    (weasyprint), so a build without it answers the HTML — which is already
-    print-ready — and says why the PDF is not there.
+    `format` is "html", "pdf" or "markdown". The PDF converter is an optional
+    dependency (weasyprint), so a build without it answers the HTML — which is
+    already print-ready — and says why the PDF is not there. The Markdown is
+    the operator's quick look: the same sections and the same words as the
+    print-ready document, in the form a diff tool reads.
 
     `locale` is the reader's language, because the document is the reader's:
     the bundle carries the data and the view carries the words. It travels
@@ -843,6 +846,15 @@ async def render_bundle_ep(req: RenderBundleReq, ctx: Ctx = Depends(require_inte
             pdf = export_render_mod.to_pdf(req.bundle)
             await observability.finish_run(run_id, "completed")
             return {"format": "pdf", "bytes_base64": base64.b64encode(pdf).decode("ascii")}
+        if req.format == "markdown":
+            # The quick look: same sections, same words, no print chrome. It
+            # was a library function nothing called -- the route served the
+            # HTML and the PDF, and the browser had no affordance for the
+            # Markdown, so the operator's one-glance view existed only for
+            # someone already inside Python.
+            markdown = export_mod.to_markdown(req.bundle, req.locale)
+            await observability.finish_run(run_id, "completed")
+            return {"format": "markdown", "markdown": markdown}
         html_text = export_render_mod.to_html(req.bundle, req.locale)
         await observability.finish_run(run_id, "completed")
         return {"format": "html", "html": html_text}
