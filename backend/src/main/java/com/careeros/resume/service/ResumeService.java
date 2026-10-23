@@ -495,10 +495,19 @@ public class ResumeService {
     }
 
     private List<SkillItem> skillItems(UUID versionId) {
-        List<SkillItem> out = new ArrayList<>();
-        for (ResumeSkill link : resumeSkills.findByResumeVersionId(versionId)) {
-            skills.findById(link.getSkillId()).ifPresent(s -> out.add(
-                    new SkillItem(s.getId(), s.getName(), s.getCategory(), link.getProficiency())));
+        // One batched read for every skill the version's links point at: a parsed resume
+        // carries dozens of skills, and a per-link findById turned the detail route into
+        // the N+1 the performance checklist names first.
+        List<ResumeSkill> links = resumeSkills.findByResumeVersionId(versionId);
+        Map<UUID, Skill> byId = skills.findAllById(
+                links.stream().map(ResumeSkill::getSkillId).toList()).stream()
+                .collect(java.util.stream.Collectors.toMap(Skill::getId, s -> s));
+        List<SkillItem> out = new ArrayList<>(links.size());
+        for (ResumeSkill link : links) {
+            Skill s = byId.get(link.getSkillId());
+            if (s != null) {
+                out.add(new SkillItem(s.getId(), s.getName(), s.getCategory(), link.getProficiency()));
+            }
         }
         return out;
     }
