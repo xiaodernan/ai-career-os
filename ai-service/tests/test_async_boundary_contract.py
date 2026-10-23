@@ -45,23 +45,24 @@ def _count_pages() -> tuple[int, int]:
     return total, using
 
 
-def _has_501_producer() -> bool:
-    """Scan backend + ai-service for any route that returns HTTP 501."""
+def _501_producer_sites() -> list[str]:
+    """Files that answer HTTP 501, as forward-slash repo paths."""
+    hits: list[str] = []
     # Backend: look for @ResponseStatus(HttpStatus.NOT_IMPLEMENTED) or explicit 501
     backend_root = REPO / "backend" / "src" / "main" / "java"
     if backend_root.exists():
-        for f in backend_root.rglob("*.java"):
+        for f in sorted(backend_root.rglob("*.java")):
             text = _read(f)
             if "501" in text or "NOT_IMPLEMENTED" in text:
-                return True
+                hits.append(f.relative_to(REPO).as_posix())
     # AI service: look for status_code=501
     ai_root = REPO / "ai-service" / "app"
     if ai_root.exists():
-        for f in ai_root.rglob("*.py"):
+        for f in sorted(ai_root.rglob("*.py")):
             text = _read(f)
             if "501" in text:
-                return True
-    return False
+                hits.append(f.relative_to(REPO).as_posix())
+    return hits
 
 
 def _empty_page_handles_renamed_items() -> bool:
@@ -82,10 +83,15 @@ def test_the_boundary_is_not_used_by_every_surface():
     # Document the gap: not all pages are covered
 
 
-def test_is_endpoint_missing_checks_a_status_no_producer_emits():
-    """isEndpointMissing checks 404 or 501, but no route produces 501."""
-    assert not _has_501_producer(), "A 501 producer exists — the clause is reachable"
-    # The 501 check is dead code unless a future route adds it
+def test_is_endpoint_missing_501_clause_has_exactly_one_producer():
+    """The 501 clause started as dead code and is reachable now: 6f2cd18 made the
+    render route answer 501 when the optional PDF converter is missing — a fact the
+    caller acts on, exactly what isEndpointMissing's 501 branch renders. The scan
+    pins the producer count so the clause's reach stays a measured claim."""
+    producers = _501_producer_sites()
+    assert producers == ["ai-service/app/api/features.py"], (
+        f"the 501 producers moved: {producers} — isEndpointMissing's branch is reachable "
+        "from these, so a second one changes what the boundary promises")
 
 
 def test_empty_page_only_recognises_one_items_key():

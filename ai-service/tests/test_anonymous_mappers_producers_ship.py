@@ -289,14 +289,28 @@ def calls_for(hook: str) -> dict[str, list[list[str]]]:
     return grouped
 
 
+# The portability bundle is a file the user downloads, not an API response: its rows are
+# spelled snake_case on purpose (13.x), the format a diff tool and a re-import read. Those
+# keys live in a different namespace from the wire's camelCase and are censused nowhere here.
+BUNDLE_KEY_FILES = {
+    "com/careeros/report/service/ExportService.java",
+    "com/careeros/report/service/ImportService.java",
+    "com/careeros/report/service/AnalysisService.java",
+}
+
+
 def response_names() -> set[str]:
     """Every name a backend response can carry: record components plus literal map keys.
 
     Deliberately not `@Column(name = ...)` -- those are database spellings, and they only reach the
     wire through a record component or a literal `put`, which is what this census looks for.
+    Also deliberately not the portability bundle's own keys (BUNDLE_KEY_FILES): a downloaded
+    file's spelling is a contract with the file, not with a response envelope.
     """
     names: set[str] = set()
     for path in JAVA.rglob("*.java"):
+        if path.relative_to(JAVA).as_posix() in BUNDLE_KEY_FILES:
+            continue
         text = read(path)
         for match in re.finditer(r"\brecord\s+(\w+)\s*(?:<[^>]*>)?\s*\(", text):
             for arg in top_level_args(text, match.end() - 1):
@@ -468,8 +482,14 @@ def test_savedjobitem_ships_three_names_and_the_saved_row_asks_all_three():
         assert f'"{name}"' not in normalize_job, (
             f"normalizeJob now reads {name!r}; the wrapper's own names belong to the arrow, and "
             "asked after the unwrap they would probe the job row, which lacks them")
-    saved_at = {rel: sorted({m.group(0) for m in re.finditer(r"\w+\.savedAt\b", read(FRONT / rel))})
-                for rel in frontend_files()}
+    # t("jobs.savedAt", ...) is the i18n key for the label, not a read of a field;
+    # the scan reads the page with that literal blanked so the label cannot count.
+    saved_at = {
+        rel: sorted({m.group(0) for m in re.finditer(
+            r"\w+\.savedAt",
+            read(FRONT / rel).replace('t("jobs.savedAt"', 't("")'))})
+        for rel in frontend_files()
+    }
     saved_at = {rel: hits for rel, hits in saved_at.items() if hits}
     assert saved_at == {"app/(app)/jobs/page.tsx": ["job.savedAt"]}, (
         f"the `.savedAt` readers are now {saved_at}; this case names the one screen, so a moved or "

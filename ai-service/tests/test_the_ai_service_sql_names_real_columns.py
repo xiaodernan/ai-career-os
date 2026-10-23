@@ -163,12 +163,17 @@ def test_the_migrations_are_readable_and_the_schema_is_not_empty():
     assert "created_at" not in tables["interview_sessions"]
 
 
+# Catalog relations the migrations do not create and no migration should: the server owns
+# these. A domain table named here is still a defect; a catalog read is a fact about the server.
+SYSTEM_TABLES = {"pg_indexes", "pg_catalog", "information_schema"}
+
+
 def test_every_table_the_ai_service_reads_is_one_the_schema_declares():
     tables = schema()
     unknown: list[str] = []
     for rel, statement in sql_statements():
         for alias, table in aliases(statement).items():
-            if table not in tables:
+            if table not in tables and table not in SYSTEM_TABLES:
                 unknown.append(f"{rel}: {table} (as {alias})")
     assert unknown == [], (
         f"{unknown}: the ai-service reads tables the migrations do not create; either the "
