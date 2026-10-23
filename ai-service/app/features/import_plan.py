@@ -15,6 +15,7 @@ tampered bundle is rejected before any op is planned.
 
 from __future__ import annotations
 
+from ..core.errors import IMPORT_BUNDLE_INVALID, raise_refusal
 from app.features.export import SECTIONS, content_hash, redacted_sections, validate_bundle
 
 # Sections that are lists of addressable items; ``profile`` is a single object.
@@ -37,7 +38,7 @@ def plan_import(bundle: dict, existing: dict | None = None) -> dict:
     """
     errors = validate_bundle(bundle)
     if errors:
-        raise ValueError("invalid bundle: " + "; ".join(errors))
+        raise raise_refusal(IMPORT_BUNDLE_INVALID.with_detail({"errors": errors}))
 
     data = bundle.get("data")
     data = data if isinstance(data, dict) else {}

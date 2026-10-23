@@ -17,6 +17,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 
+from ..core.errors import EXPORT_SECTIONS_UNKNOWN, raise_refusal
 from app.features.export import SECTIONS, content_hash, section_counts
 
 # The sections a bundle may carry, read off the one table that defines them --
@@ -48,9 +49,7 @@ def redact_bundle(bundle: dict, drop: list[str] | None = None) -> dict:
     drop = list(drop or [])
     invalid = [s for s in drop if s not in VALID_SECTIONS]
     if invalid:
-        raise ValueError(
-            f"Unknown sections to drop: {invalid}. Valid: {list(VALID_SECTIONS)}"
-        )
+        raise raise_refusal(EXPORT_SECTIONS_UNKNOWN.with_detail({"invalid": invalid}))
 
     out = deepcopy(bundle) if isinstance(bundle, dict) else {}
     data = out.get("data")

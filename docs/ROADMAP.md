@@ -269,6 +269,22 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   The gate reads the reason out of the source and the list has to agree, so a
   gap cannot rot into an excuse — and so the last one is a decision, not a
   leftover.
+- **And the ai-service learned to answer with codes (2026-10-23).** Its engines
+  refused with bare `ValueError`s, so the only thing that crossed the wire was a
+  sentence and the boundary had nothing stable to map. The refusals are typed
+  now (`ai-service/app/core/errors.py`): a stable code, the one sentence that
+  code means, and the status the route always answered with — the sweep plan's
+  both-or-neither, the unreadable feed, the invalid bundle, the unknown section,
+  the blank memory content and the missing ingest text. They answer as
+  `{"detail": {"code", "message"}}`, the boundary reads the sentence out of the
+  object (and the legacy string shape still crosses), and the backend keeps its
+  own vocabulary for now — the code is what travels, so the mapping can grow one
+  later without another visit to every throw site.
+  `tests/test_refusals.py` drives the real routes and pins each code, status and
+  extra. A committed red came with it: the SSE gate's reader expected `sse()`'s
+  return on the line after its `def`, and the frame hardening had put two guards
+  above it — the gate reads the function's body now, which is the claim it
+  always meant to make.
 - **The export's readable half had one language (closed 2026-10-22).** 13.1's
   *human-readable* export — the print-ready document — was written in Chinese
   and had no other language, so an English reader's printable document was a

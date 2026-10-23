@@ -16,6 +16,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from app.core.deps import Ctx, require_internal
+from ..core.errors import MEMORY_CONTENT_BLANK
 from app.db import domain
 
 log = logging.getLogger("memory.api")
@@ -68,7 +69,7 @@ async def patch_memory(memory_id: str, body: MemoryPatch,
     if body.content is not None and not body.content.strip():
         # A blank content is what "forget this sentence" sounds like to a model that
         # would happily store "" next turn.
-        raise HTTPException(400, "memory content cannot be blank — delete it instead")
+        raise MEMORY_CONTENT_BLANK.to_http_exception()
     row = await domain.update_memory(ctx.user_id, memory_id,
                                      content=body.content, importance=body.importance)
     if row is None:

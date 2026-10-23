@@ -32,6 +32,9 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="AI Career OS — AI Service", version="0.1.0", lifespan=lifespan)
 
+from app.core.errors import register_refusal_handlers
+register_refusal_handlers(app)
+
 
 @app.get("/health")
 async def health():

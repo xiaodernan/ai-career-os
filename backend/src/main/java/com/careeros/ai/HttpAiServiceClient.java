@@ -604,7 +604,11 @@ public class HttpAiServiceClient implements AiServiceClient {
      * A 400 also carries the upstream's own sentence, because a refused file is the
      * caller's to fix: "invalid bundle: missing data section: knowledge" tells a reader
      * which part of their file the product did not understand, and "AI service rejected
-     * the request" names the wrong party and tells them nothing.
+     * the request" names the wrong party and tells them nothing. The sentence arrives
+     * two ways now: as a bare string (the legacy shape) and inside the ai-service's
+     * typed refusals, which answer {"detail": {"code": ..., "message": ...}} so the
+     * upstream's own vocabulary survives the crossing. Both are read; the code stays
+     * upstream until this service learns to map it.
      */
     private static ApiException translateStatus(RestClientResponseException e) {
         HttpStatus status = HttpStatus.resolve(e.getStatusCode().value());
@@ -636,18 +640,34 @@ public class HttpAiServiceClient implements AiServiceClient {
             @SuppressWarnings("unchecked")
             Map<String, Object> parsed = EnvelopeJson.MAPPER.readValue(body, Map.class);
             Object detail = parsed.get("detail");
-            if (!(detail instanceof String sentence) || sentence.isBlank()) {
+            String sentence = null;
+            if (detail instanceof String text && !text.isBlank()) {
+                sentence = text;
+            } else if (detail instanceof Map<?, ?> refusal) {
+                // The ai-service's typed refusals answer with a structured
+                // detail: {"code": "INGEST_FEED_EMPTY", "message": "feed is
+                // empty"}. The sentence is still the reader's; the code is
+                // the upstream's own vocabulary, which this service does not
+                // speak yet.
+                Object message = refusal.get("message");
+                if (message instanceof String text && !text.isBlank()) {
+                    sentence = text;
+                }
+            }
+            if (sentence == null) {
                 return null;
             }
-            // A toast is not a document: a long sentence is cut rather than
-            // scrolled, and the reader still gets the part that names the
-            // problem.
-            return sentence.length() > MAX_UPSTREAM_DETAIL
-                    ? sentence.substring(0, MAX_UPSTREAM_DETAIL) + "…"
-                    : sentence;
+            return clip(sentence);
         } catch (Exception ignored) {
             // A body we cannot read is a body we have no sentence in.
             return null;
         }
+    }
+
+    /** A toast is not a document: a long sentence is cut rather than scrolled. */
+    private static String clip(String sentence) {
+        return sentence.length() > MAX_UPSTREAM_DETAIL
+                ? sentence.substring(0, MAX_UPSTREAM_DETAIL) + "…"
+                : sentence;
     }
 }

@@ -31,6 +31,19 @@ from typing import Protocol, runtime_checkable
 
 from app.ingestion.clean import clean
 
+from ..core.errors import (
+    INGEST_FEED_EMPTY,
+    INGEST_FEED_TOO_LARGE,
+    INGEST_FEED_INVALID,
+    INGEST_BOARD_EMPTY,
+    INGEST_BOARD_TOO_LARGE,
+    INGEST_BOARD_INVALID,
+    INGEST_BOARD_NO_ARRAY,
+    INGEST_BOARD_NOT_ARRAY,
+    INGEST_FORMAT_UNKNOWN,
+    raise_refusal,
+)
+
 # canonical defaults, mirroring the jobs table
 DEFAULT_REMOTE_TYPE = "onsite"
 DEFAULT_EMPLOYMENT_TYPE = "full_time"
@@ -317,13 +330,13 @@ def parse_feed(xml_text: str, *, source: str = "rss") -> list[dict]:
     empty success.
     """
     if not isinstance(xml_text, str) or not xml_text.strip():
-        raise ValueError("feed is empty")
+        raise raise_refusal(INGEST_FEED_EMPTY)
     if len(xml_text.encode("utf-8", "ignore")) > MAX_FEED_BYTES:
-        raise ValueError("feed exceeds the size cap")
+        raise raise_refusal(INGEST_FEED_TOO_LARGE)
     try:
         root = ET.fromstring(xml_text)
     except ET.ParseError as e:
-        raise ValueError(f"invalid feed xml: {e}") from e
+        raise raise_refusal(INGEST_FEED_INVALID) from e
 
     items = [n for n in root.iter() if _local(n.tag) in ("item", "entry")]
     out: list[dict] = []
@@ -362,13 +375,13 @@ def parse_json_board(text: str, *, source: str = "board") -> list[dict]:
     success, so a broken board surfaces instead of silently ingesting nothing.
     """
     if not isinstance(text, str) or not text.strip():
-        raise ValueError("board payload is empty")
+        raise raise_refusal(INGEST_BOARD_EMPTY)
     if len(text.encode("utf-8", "ignore")) > MAX_FEED_BYTES:
-        raise ValueError("board payload exceeds the size cap")
+        raise raise_refusal(INGEST_BOARD_TOO_LARGE)
     try:
         data = json.loads(text)
     except (json.JSONDecodeError, TypeError) as e:
-        raise ValueError(f"invalid board json: {e}") from e
+        raise raise_refusal(INGEST_BOARD_INVALID) from e
 
     if isinstance(data, dict):
         for key in BOARD_ARRAY_KEYS:
@@ -376,10 +389,9 @@ def parse_json_board(text: str, *, source: str = "board") -> list[dict]:
                 data = data[key]
                 break
         else:
-            raise ValueError(
-                f"no posting array found (looked for {', '.join(BOARD_ARRAY_KEYS)})")
+            raise raise_refusal(INGEST_BOARD_NO_ARRAY)
     if not isinstance(data, list):
-        raise ValueError("expected a JSON array of postings")
+        raise raise_refusal(INGEST_BOARD_NOT_ARRAY)
 
     out: list[dict] = []
     for item in data:
@@ -417,7 +429,7 @@ def plan_ingest(feed, *, source: str = "rss", existing: list[dict] | None = None
         # ignore non-dict entries rather than letting one bad row abort the whole sweep
         raw = [r for r in feed if isinstance(r, dict)]
     else:
-        raise ValueError("feed must be raw XML text or a list of posting dicts")
+        raise raise_refusal(INGEST_FORMAT_UNKNOWN)
     normalized = [normalize_posting(r, source=source) for r in raw]
     deduped = dedupe_postings(normalized)
     incoming = deduped["unique"]

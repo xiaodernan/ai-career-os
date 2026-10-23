@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from app.api.tasks import run_in_task
 from app.core import db, taskbus
 from app.core.deps import Ctx, require_internal
+from ..core.errors import TEXT_REQUIRED
 from app.db import documents as docs_repo
 from app.ingestion.pipeline import ingest_document
 
@@ -51,7 +52,7 @@ async def ingest_text(payload: dict, ctx: Ctx = Depends(require_internal)):
     s = get_settings()
     text = (payload.get("text") or "").strip()
     if not text:
-        raise HTTPException(422, "text required")
+        raise TEXT_REQUIRED.to_http_exception()
     kind = payload.get("kind", "note")
     src = await db.fetchrow(
         """INSERT INTO knowledge_sources(user_id, kind, ref_id, title, status)

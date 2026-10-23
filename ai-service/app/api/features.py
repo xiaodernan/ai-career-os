@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from app.core.deps import Ctx, require_internal
+from ..core.errors import EXPORT_SEND_ONE, RefusalError
 from app.db import domain, observability
 from app.features import company as company_mod
 from app.features import export_render as export_render_mod
@@ -655,7 +656,7 @@ class PlanIngestReq(BaseModel):
 async def plan_ingest_ep(req: PlanIngestReq, ctx: Ctx = Depends(require_internal)):
     """14.3 -- one plan for a sweep: create / update / close + within-batch duplicates."""
     if (req.postings is None) == (req.feed is None):
-        raise HTTPException(400, "send exactly one of postings / feed")
+        raise EXPORT_SEND_ONE.to_http_exception()
     run_id = await _run(ctx, "ingestion", "plan_ingest")
     feed = req.feed
     label = req.source
@@ -666,12 +667,9 @@ async def plan_ingest_ep(req: PlanIngestReq, ctx: Ctx = Depends(require_internal
             req.postings if req.postings is not None else feed,
             source=label, existing=req.existing,
             max_age_days=req.max_age_days, stale_seen_days=req.stale_seen_days)
-    except ValueError as exc:
-        # A feed the parser cannot read is a bad request, not a broken
-        # service: a sweep that saw a 500 would retry forever, and one that
-        # saw an empty success would ingest nothing and say it had worked.
+    except RefusalError as exc:
         await observability.finish_run(run_id, "failed")
-        raise HTTPException(400, str(exc)) from exc
+        raise exc.refusal.to_http_exception() from exc
     await observability.finish_run(run_id, "completed")
     return result
 
@@ -723,12 +721,9 @@ async def parse_feed_ep(req: ParseFeedReq, ctx: Ctx = Depends(require_internal))
     label = req.source or shape
     try:
         postings = ingestion_mod.parse_any(req.payload, source=label)
-    except ValueError as exc:
-        # A feed the parser cannot read is a bad request, not a broken
-        # service: a sweep that saw a 500 would retry forever, and one that
-        # saw an empty success would ingest nothing and say it had worked.
+    except RefusalError as exc:
         await observability.finish_run(run_id, "failed")
-        raise HTTPException(400, str(exc)) from exc
+        raise exc.refusal.to_http_exception() from exc
     await observability.finish_run(run_id, "completed")
     return {"postings": postings, "count": len(postings), "format": shape}
 
@@ -795,8 +790,8 @@ async def import_plan_ep(req: ImportPlanReq, ctx: Ctx = Depends(require_internal
     # reader nothing about the file they are holding.
     try:
         plan = import_plan_mod.plan_import(req.bundle, existing=req.existing)
-    except ValueError as exc:
-        raise HTTPException(400, str(exc)) from exc
+    except RefusalError as exc:
+        raise exc.refusal.to_http_exception() from exc
     run_id = await _run(ctx, "import", "import_plan")
     await observability.finish_run(run_id, "completed")
     return plan
@@ -816,8 +811,8 @@ async def redact_bundle_ep(req: RedactBundleReq, ctx: Ctx = Depends(require_inte
     # is the whole answer.
     try:
         result = export_redact_mod.redact_bundle(req.bundle, drop=req.drop)
-    except ValueError as exc:
-        raise HTTPException(400, str(exc)) from exc
+    except RefusalError as exc:
+        raise exc.refusal.to_http_exception() from exc
     run_id = await _run(ctx, "export", "redact_bundle")
     await observability.finish_run(run_id, "completed")
     return result

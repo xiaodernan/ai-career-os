@@ -3288,7 +3288,12 @@ def test_the_bus_ships_a_frame_formatter_that_the_wire_never_uses():
          "reconciled with what the parsers read instead of noted as dead")
 
     bus_text = TASKBUS_PATH.read_text(encoding="utf-8")
-    formatter = re.search(r'def sse\(event: dict\) -> str:\n\s+return (f"[^"]*")', bus_text)
+    # The return is no longer the first statement: `sse()` hardened against a
+    # non-dict event (a default name and a guarded read sit above the return),
+    # so the formatter is read off the function's whole body. The claim is
+    # unchanged -- one return, one f-string, the two prefixes the parsers read.
+    body = re.search(r"def sse\(event: dict\) -> str:\n(?:    .*\n)*", bus_text)
+    formatter = re.search(r'return (f"[^"]*")', body.group(0)) if body else None
     assert formatter is not None, "`sse()` no longer returns a single f-string, so its wire prefixes " \
                                   "cannot be read and the comparison below would compare nothing"
     # The literal text between the interpolations is the format; the escape sequences are still written
