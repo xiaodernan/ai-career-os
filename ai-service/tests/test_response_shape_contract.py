@@ -2969,6 +2969,73 @@ RELAY_PATH = JAVA_ROOT / "com" / "careeros" / "ai" / "SseRelayService.java"
 CLIENT_PATH = ROOT_FRONTEND / "lib" / "sse" / "use-sse.ts"
 NAMELESS_TOKEN = re.compile(r'\?\s*"message"|=\s*"message"|\|\s*"message"|:\s*"message"')
 PRUNED_DIRS = {"node_modules", "__pycache__", "dist", "build", ".next", ".venv"}
+# The floor `python_files(REPO_ROOT)` read off `git archive HEAD` at the ref this census was widened.
+# A floor and not an equality: the walk grows with the repository, and it only has to refuse the run
+# when part of the tree stopped being walked.
+MIN_PY_POPULATION = 260
+
+
+def python_files(root: Path) -> list[Path]:
+    found = []
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = [d for d in dirnames if d not in PRUNED_DIRS and not d.startswith(".")]
+        found += [Path(dirpath) / f for f in filenames if f.endswith(".py")]
+    return sorted(found)
+
+
+def rel_of(path: Path) -> str:
+    return str(path.relative_to(REPO_ROOT)).replace("\\", "/")
+
+
+def is_offline(rel: str) -> bool:
+    """Whether the running service can never reach this file: it lives in the tree pytest loads.
+
+    `tests` as a path segment, not `test_` as a name prefix -- thirteen helpers under `ai-service/tests/`
+    carry no `test_` name, and a caller census that called them shipped would report a shipped caller for
+    a file the service never imports.
+    """
+    return "tests" in rel.split("/")[:-1]
+
+
+def _event_source_writers() -> list[str]:
+    """Every shipped module that hands a stream to `sse-starlette`, named by path."""
+    return [rel for rel in (rel_of(p) for p in python_files(REPO_ROOT))
+            if not is_offline(rel)
+            and re.search(r"EventSourceResponse\s*\(",
+                          (REPO_ROOT / rel).read_text(encoding="utf-8", errors="replace"))]
+
+
+def _sse_call_sites() -> list[tuple[str, str, bool]]:
+    """(file, enclosing function, offline) for every call named `sse` in the repository's Python."""
+    rows: list[tuple[str, str, bool]] = []
+    for path in python_files(REPO_ROOT):
+        text = path.read_text(encoding="utf-8", errors="replace")
+        try:
+            tree = ast.parse(text, filename=str(path))
+        except SyntaxError:
+            # A file the census could not parse is a file it cannot clear, and an empty caller list
+            # reads as a statement about the whole population. Nothing shipped is unreadable today,
+            # so this is a refusal rather than a skip.
+            raise AssertionError(f"{rel_of(path)}: walked by the census but it does not parse")
+        # Identify each call by the function that encloses it, not by its line number.
+        # The claim worth pinning is *which* offline test calls `sse()`; a line number
+        # also asserts "and nothing was inserted above it", which is not part of the
+        # claim -- it broke the moment an unrelated test was added to the file, and the
+        # failure message trains a reader to bump the number rather than re-read this.
+        funcs = [(n.name, n.lineno, n.end_lineno or n.lineno) for n in ast.walk(tree)
+                 if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))]
+
+        def enclosing(lineno: int) -> str:
+            inner = [(name, start) for name, start, end in funcs if start <= lineno <= end]
+            return max(inner, key=lambda t: t[1])[0] if inner else "<module>"
+
+        rel = rel_of(path)
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Call):
+                name = getattr(node.func, "id", None) or getattr(node.func, "attr", None)
+                if name == "sse":
+                    rows.append((rel, enclosing(node.lineno), is_offline(rel)))
+    return rows
 
 
 def _parser_body(text: str, header: str, label: str) -> tuple[str, int]:
@@ -3238,49 +3305,29 @@ def test_the_bus_ships_a_frame_formatter_that_the_wire_never_uses():
     only caller in the entire Python population is an offline test, while `api/tasks.py` hands frames to
     `sse-starlette`'s `EventSourceResponse`. Both facts are measured here, along with the one that keeps
     the dead formatter harmless -- the prefixes it writes are prefixes both parsers read.
+
+    "Entire Python population" is the part that has to be walked, not announced. `ai-service` stopped
+    being the whole tree when the golden-journey wave shipped `scripts/journey_api.py` and
+    `scripts/concurrency_smoke.py`; the census answered new Python outside its root with a refusal, which
+    is a scope note -- it goes red when the repository grows and says nothing about whether the growth was
+    read. This walk starts at the repository root, so a file added anywhere is a file the census has
+    already looked at. Offline and shipped are told apart by where a file lives: thirteen helpers under
+    `tests/` are not named `test_*`, and one of them calling the formatter would otherwise be charged as
+    a shipped caller.
     """
-    def python_files(root: Path) -> list[Path]:
-        found = []
-        for dirpath, dirnames, filenames in os.walk(root):
-            dirnames[:] = [d for d in dirnames if d not in PRUNED_DIRS and not d.startswith(".")]
-            found += [Path(dirpath) / f for f in filenames if f.endswith(".py")]
-        return sorted(found)
+    population = python_files(REPO_ROOT)
+    homes = {rel_of(p).split("/")[0] for p in population}
+    assert len(population) >= MIN_PY_POPULATION and homes >= {"ai-service", "scripts"}, (
+        f"{len(population)} files, in {sorted(homes)}: the caller claim below is stated about the "
+        "repository's Python, so the walk has to be the repository's. It reached fewer than "
+        f"{MIN_PY_POPULATION} files or lost a tree the repository names, which is a pruned directory or a "
+        "root resolved somewhere smaller -- either way the census would clear a population smaller than "
+        "the one its own sentence describes")
 
-    outside = [p for p in python_files(REPO_ROOT) if AI_SERVICE_ROOT not in p.parents and p != AI_SERVICE_ROOT]
-    assert outside == [], \
-        (f"{[str(p.relative_to(REPO_ROOT)) for p in outside][:6]}: Python outside `ai-service` would be "
-         "outside the caller census below, and a census that says `the only caller is a test` means "
-         "nothing if part of the population was never walked")
-
-    callers, shipped = [], []
-    for path in python_files(AI_SERVICE_ROOT):
-        text = path.read_text(encoding="utf-8", errors="replace")
-        try:
-            tree = ast.parse(text, filename=str(path))
-        except SyntaxError:
-            continue
-        # Identify each call by the function that encloses it, not by its line number.
-        # The claim worth pinning is *which* offline test calls `sse()`; a line number
-        # also asserts "and nothing was inserted above it", which is not part of the
-        # claim -- it broke the moment an unrelated test was added to the file, and the
-        # failure message trains a reader to bump the number rather than re-read this.
-        funcs = [(n.name, n.lineno, n.end_lineno or n.lineno) for n in ast.walk(tree)
-                 if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))]
-
-        def enclosing(lineno: int) -> str:
-            inner = [(name, start) for name, start, end in funcs if start <= lineno <= end]
-            return max(inner, key=lambda t: t[1])[0] if inner else "<module>"
-
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Call):
-                name = getattr(node.func, "id", None) or getattr(node.func, "attr", None)
-                if name == "sse":
-                    rel = str(path.relative_to(AI_SERVICE_ROOT)).replace("\\", "/")
-                    where = (rel, enclosing(node.lineno))
-                    callers.append(where)
-                    if not path.name.startswith("test_"):
-                        shipped.append(where)
-    assert callers == [("tests/test_core_modules.py", "test_sse_formats_event")], \
+    rows = _sse_call_sites()
+    callers = [(rel, where) for rel, where, _ in rows]
+    shipped = [(rel, where) for rel, where, offline in rows if not offline]
+    assert callers == [("ai-service/tests/test_core_modules.py", "test_sse_formats_event")], \
         (f"{callers}: `sse()` is production code whose only caller is one offline test -- the wire is "
          "formatted elsewhere, so an edit here is tested but never shipped")
     assert shipped == [], \
@@ -3313,10 +3360,52 @@ def test_the_bus_ships_a_frame_formatter_that_the_wire_never_uses():
         (f"relay {sorted(java_reads)} / client {sorted(ts_reads)}: both parsers read the two prefixes "
          "the formatter writes -- `:` (the comment line the keep-alive uses) is skipped by name, not "
          "read as a field, so the formatter and the parsers still describe one wire")
-    assert len(re.findall(r"EventSourceResponse\s*\(",
-                          (AI_SERVICE_ROOT / "app" / "api" / "tasks.py").read_text(encoding="utf-8"))) == 1, \
-        "the live writer is sse-starlette's response, exactly one call site -- that is what formats the " \
-        "stream the relay parses, and it is why `sse()` can be dead without the stream being unformatted"
+    assert _event_source_writers() == ["ai-service/app/api/tasks.py"], \
+        (f"{_event_source_writers()}: the live writer is sse-starlette's response, in exactly one shipped "
+         "module of the whole Python population -- that is what formats the stream the relay parses, and "
+         "it is why `sse()` can be dead without the stream being unformatted")
+
+
+def test_the_offline_half_of_the_python_population_is_the_half_the_service_never_loads():
+    """The line the caller census draws between suite and service is the deployment's own, measured.
+
+    `is_offline()` keys on a `tests` path segment. Two facts make that a load-bearing rule instead of a
+    style preference: thirteen files under `ai-service/tests/` carry no `test_` name, so the segment rule
+    and the name rule are different sets and a call moved into one of them is charged differently by each
+    -- and no shipped module imports out of the tests tree, so the segment rule is the reach rule. A
+    census that drew the line by name would report a shipped caller for `_repo_walk.py`.
+    """
+    population = [rel_of(p) for p in python_files(REPO_ROOT)]
+    offline = [rel for rel in population if is_offline(rel)]
+    by_name = {rel for rel in population if rel.split("/")[-1].startswith("test_")}
+
+    helpers = sorted(set(offline) - by_name)
+    assert len(helpers) >= 1 and "ai-service/tests/_repo_walk.py" in helpers, (
+        f"{len(helpers)} files sit under a `tests` directory without a `test_` name: the segment rule "
+        "is only worth drawing if it covers ground the name rule does not, and `helpers` empty would "
+        "mean this file is asserting about two spellings of the same set")
+    assert set(offline) - by_name and by_name <= set(offline), (
+        f"{len(offline)} files sit in a `tests` directory, {len(by_name)} carry a `test_` name and "
+        f"{sorted(by_name - set(offline))[:3]} of those sit outside one: the two rules disagree in the "
+        "direction this census needs (a suite helper the name rule does not excuse) and must agree in the "
+        "other (nothing named like a test is shipped code)")
+    assert {rel.split("/")[0] for rel in offline} == {"ai-service"}, (
+        f"{sorted({rel.split('/')[0] for rel in offline})}: the offline half is supposed to be the tree "
+        "the service does not load -- a `tests` directory in another tree is a directory this census "
+        "would start excusing files in, and the reach of a suite directory outside `ai-service` is not "
+        "a fact this file has ever measured")
+
+    importers = []
+    for rel in population:
+        if is_offline(rel):
+            continue
+        text = (REPO_ROOT / rel).read_text(encoding="utf-8", errors="replace")
+        if re.search(r"^[ \t]*(?:from|import)[ \t]+\.?(?:\w+[.])?tests\b", text, re.M):
+            importers.append(rel)
+    assert importers == [], (
+        f"{importers}: a shipped module reaches into the tests tree, so `is_offline()` no longer "
+        "describes what the running service loads and the caller census would be excusing a file that "
+        "can be executed in production")
 
 # =====================================================================================
 # #185 -- every stream request is armed with `Accept`; is the answer ever asked what it is?
