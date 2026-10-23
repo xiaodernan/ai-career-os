@@ -152,6 +152,26 @@ residual risk rather than as a clean bill of health.
    `/api/v1/auth/login` answers `401` in **1.20s** — which is what "fails open" was
    always meant to mean. Restoring Redis returns `ok`/`redis:true` with no restart.
 
+### Dependency audits (2026-10-24)
+
+`npm audit --omit=dev` carried a critical and a high through PostCSS — both fixed
+(`f72eec5`): next to the 15.5.28 patch, plus an npm override pinning **every**
+transitive copy at `^8.5.31` (the deepest one ships inside next's own bundle, so
+no direct bump could reach it). Audit is now 0.
+
+`pip-audit` flags six starlette advisories (PYSEC-2026-161/248/249/1942/2280/2281,
+fixed across 0.49.1–1.3.1). **Assessed, not patched — deliberately.** Every one of
+those advisories rides a surface this service does not mount: no `FileResponse` /
+`StaticFiles` / `HTTPEndpoint`, no `request.form()` (multipart uploads land on the
+Spring backend, which caps file counts in `FileValidator`), no `request.url.path`
+trust. The pins exist because `fastapi==0.116.1` locks `starlette<0.42`, and the
+fix train crosses two major versions on both packages — an attempted upgrade
+(fastapi 0.161.1 / starlette 1.9) breaks the route-introspection the contract
+gates read (`app.routes` no longer flattens included routers), which was verified
+before reverting. The tracked path: land the fastapi migration on its own wave
+(route-scanner support for `_IncludedRouter` first), then take the starlette fix
+train. Until then, the exposure is theoretical for this deployment shape.
+
 ## Error envelope
 
 Auth failures and API errors share one shape so clients never parse stack
