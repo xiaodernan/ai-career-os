@@ -67,7 +67,7 @@ export default function DataPortabilityPage() {
         },
       });
     },
-    [exportBundle]
+    [exportBundle, t]
   );
 
   const download = React.useCallback(() => {
@@ -78,7 +78,7 @@ export default function DataPortabilityPage() {
       "application/json;charset=utf-8"
     );
     toast.success(t("data.fileSaved"));
-  }, [bundle]);
+  }, [bundle, t]);
 
   const downloadMarkdown = React.useCallback(() => {
     if (!bundle) return;
@@ -113,7 +113,7 @@ export default function DataPortabilityPage() {
         },
       }
     );
-  }, [bundle, dropped, redactBundle]);
+  }, [bundle, dropped, redactBundle, t]);
 
   const runPlan = React.useCallback(() => {
     if (!importText.trim()) return;
@@ -137,7 +137,7 @@ export default function DataPortabilityPage() {
         },
       }
     );
-  }, [importText, importPlan]);
+  }, [importText, importPlan, t]);
 
   const runApply = React.useCallback(() => {
     if (!importText.trim()) return;

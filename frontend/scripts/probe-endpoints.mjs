@@ -74,7 +74,7 @@ for (const path of [...paths].sort()) {
       headers: { ...auth, "Content-Type": "application/json" },
       body: method === "POST" ? "{}" : undefined,
     });
-    const text = await res.text();
+    await res.text();
     if (res.status === 404 || res.status === 405) {
       rows.push(`${method} ${path} -> ${res.status}`);
     }

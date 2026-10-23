@@ -1,5 +1,4 @@
 import { absoluteMetadata } from "@/lib/i18n/metadata";
-import type { Metadata } from "next";
 import { LandingPage } from "./landing-page";
 
 /**

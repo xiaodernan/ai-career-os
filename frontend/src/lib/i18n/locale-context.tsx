@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { translations, type Locale, type TranslationKey } from "./translations";
+import { translations, type Locale } from "./translations";
 import { writeLocaleCookie } from "./locale-cookie";
 
 /**

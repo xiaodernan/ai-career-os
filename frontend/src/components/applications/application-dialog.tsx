@@ -35,7 +35,7 @@ import {
   useUpdateApplication,
 } from "@/lib/hooks/actions";
 import { useApplicationEvents } from "@/lib/hooks/resources";
-import { pickerStages, stageBlurb, stageLabel, stageMeta } from "@/lib/pipeline";
+import { pickerStages, stageBlurb, stageLabel } from "@/lib/pipeline";
 import { useLocale } from "@/lib/i18n/locale-context";
 import type { Application, ApplicationEvent, ApplicationStatus } from "@/lib/api/types";
 
@@ -190,8 +190,6 @@ export function ApplicationDialog({ application, open, onOpenChange }: Applicati
     }
     updateApp.mutate({ id: application.id, patch }, { onSuccess: () => onOpenChange(false) });
   };
-
-  const meta = stageMeta(status);
 
   return (
     <>

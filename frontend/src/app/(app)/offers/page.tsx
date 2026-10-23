@@ -58,7 +58,7 @@ export default function OffersPage() {
         }
       } }
     );
-  }, [role, location, roleOk, benchmark]);
+  }, [role, location, roleOk, benchmark, t]);
 
   const runNegotiate = React.useCallback(() => {
     if (!roleOk || !baseOk) return;
@@ -72,7 +72,7 @@ export default function OffersPage() {
       },
       { onSuccess: () => toast.success(t("offers.negotiationPlanReady")) }
     );
-  }, [role, location, roleOk, baseOk, baseNum, matchNum, negotiate]);
+  }, [role, location, roleOk, baseOk, baseNum, matchNum, negotiate, t]);
 
   const runCounter = React.useCallback(() => {
     if (!roleOk || !baseOk) return;
@@ -86,7 +86,7 @@ export default function OffersPage() {
       },
       { onSuccess: () => toast.success(t("offers.counterOfferReady")) }
     );
-  }, [role, location, roleOk, baseOk, baseNum, matchNum, counter]);
+  }, [role, location, roleOk, baseOk, baseNum, matchNum, counter, t]);
 
   const runCompare = React.useCallback(() => {
     if (!roleOk) return;
@@ -94,7 +94,7 @@ export default function OffersPage() {
       .split("\n")
       .map((l) => l.trim())
       .filter(Boolean)
-      .map((label, i) => ({ label, base: baseNum || 0, bonus: 0 }));
+      .map((label) => ({ label, base: baseNum || 0, bonus: 0 }));
     if (!offers.length) {
       toast.error(t("offers.nameOneOffer"));
       return;
@@ -109,7 +109,7 @@ export default function OffersPage() {
       },
       { onSuccess: () => toast.success(t("offers.compared")) }
     );
-  }, [role, location, roleOk, baseNum, matchNum, offerLabels, compare]);
+  }, [role, location, roleOk, baseNum, matchNum, offerLabels, compare, t]);
 
   const bench = benchmark.data;
   const plan = negotiate.data;

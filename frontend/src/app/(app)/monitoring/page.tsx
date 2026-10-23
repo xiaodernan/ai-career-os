@@ -6,13 +6,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { EmptyState } from "@/components/common/empty-state";
 import { ErrorState } from "@/components/common/error-state";
 import { BarChart } from "@/components/common/bar-chart";
 import { useHealthReport } from "@/lib/hooks/monitoring";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { formatNumber } from "@/lib/format";
-import type { HealthReport } from "@/lib/api/types";
 
 /** A 0–1 rate as a percent string. "No data" is an em dash, not a zero. */
 function percent(value?: number): string {

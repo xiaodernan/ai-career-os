@@ -69,7 +69,7 @@ export default function IngestionPage() {
         );
       },
     });
-  }, [postings, sweep]);
+  }, [postings, sweep, t]);
 
   const runPlan = React.useCallback(() => {
     if (!feed.trim()) return;
@@ -81,7 +81,7 @@ export default function IngestionPage() {
         );
       },
     });
-  }, [feed, plan]);
+  }, [feed, plan, t]);
 
   return (
     <div className="mx-auto max-w-3xl space-y-8">

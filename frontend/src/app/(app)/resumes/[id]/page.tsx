@@ -73,7 +73,7 @@ export default function ResumeDetailPage() {
       })
       .catch((e) => toast.error(e instanceof Error ? e.message : t("resumes.detail.downloadFailed")))
       .finally(() => setDownloading(false));
-  }, []);
+  }, [t]);
 
   const r = resume.data;
 

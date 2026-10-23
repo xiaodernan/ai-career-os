@@ -129,7 +129,7 @@ export default function CopilotPage() {
         },
       });
     },
-    [createConversation, conversations, selectConversation]
+    [createConversation, conversations, selectConversation, t]
   );
 
   const listPanel = (className: string) => (

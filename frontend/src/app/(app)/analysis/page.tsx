@@ -10,11 +10,9 @@ import { EmptyState } from "@/components/common/empty-state";
 import { ErrorState } from "@/components/common/error-state";
 import { BarChart, ShareChart } from "@/components/common/bar-chart";
 import { LoadingListSkeleton } from "@/components/common/loading-skeletons";
-import { SectionBoundary } from "@/components/common/query-boundary";
 import { useInsightDigest, usePipelineFunnel, useResponseRate } from "@/lib/hooks/analytics";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { formatNumber } from "@/lib/format";
-import type { InsightDigest } from "@/lib/api/types";
 
 /** A 0–1 rate as a percent string. "No data" is an em dash, not a zero. */
 function percent(value?: number): string {
