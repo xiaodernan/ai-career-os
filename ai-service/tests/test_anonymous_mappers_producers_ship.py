@@ -486,7 +486,7 @@ def test_savedjobitem_ships_three_names_and_the_saved_row_asks_all_three():
     # the scan reads the page with that literal blanked so the label cannot count.
     saved_at = {
         rel: sorted({m.group(0) for m in re.finditer(
-            r"\w+\.savedAt",
+            r"\w+\.savedAt\b",
             read(FRONT / rel).replace('t("jobs.savedAt"', 't("")'))})
         for rel in frontend_files()
     }
