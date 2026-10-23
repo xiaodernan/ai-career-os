@@ -32,7 +32,6 @@ ROOT = TESTS.parent.parent
 DOC = ROOT / "docs" / "PRODUCT.md"
 E2E_README = ROOT / "e2e" / "README.md"
 README = ROOT / "README.md"
-E2E_README = ROOT / "e2e" / "README.md"
 APP = ROOT / "frontend" / "src" / "app"
 JAVA = ROOT / "backend" / "src" / "main" / "java"
 SEED = ROOT / "scripts" / "seed" / "01_jobs.sql"
@@ -41,6 +40,13 @@ PREFIX = "/api/v1"
 SPECS = ROOT / "e2e" / "tests"
 
 MINIMUM_ROWS = 12
+# a count written as a ratio, the spelling that can be either a claim about today's suite
+# ("passes 65/65") or a record of one run ("65/65 (2026-10-24, ...)"), and the size spelling
+# the gated sentence under "Run" owns.
+RATIO = re.compile(r"\b(?P<said>\d{1,3})\s*/\s*(?P<total>\d{1,3})\b")
+DATED = re.compile(r"\b\d{4}-\d{2}-\d{2}\b")
+PASSED = re.compile(r"\b\d+ passed\b")
+COUNT_DOCS = (DOC, E2E_README, README)
 
 
 def read(path: Path) -> str:
@@ -228,6 +234,18 @@ def stated_e2e_counts() -> dict[str, tuple[int, int]]:
     }
 
 
+def ratio_rows() -> list[tuple[str, int, str, int, int, bool]]:
+    """(document, line, the line as written, said, total, dated) for every `N/N` the docs carry."""
+    rows: list[tuple[str, int, str, int, int, bool]] = []
+    for doc in COUNT_DOCS:
+        for number, line in enumerate(read(doc).splitlines(), start=1):
+            for match in RATIO.finditer(line):
+                rows.append((str(doc.relative_to(ROOT)).replace("\\", "/"), number,
+                             line.strip(), int(match["said"]), int(match["total"]),
+                             bool(DATED.search(line))))
+    return rows
+
+
 def test_the_e2e_count_is_the_suite_that_runs():
     actual = e2e_case_count()
     for name, (said, total) in stated_e2e_counts().items():
@@ -238,22 +256,51 @@ def test_the_e2e_count_is_the_suite_that_runs():
         )
 
 
-def test_the_suite_size_is_stated_exactly_once_in_the_readme():
-    """One number, one place.
+def test_every_count_is_either_the_gated_size_or_a_dated_record():
+    """A number is graded when it claims today's suite; a run's own record only has to date itself.
 
-    The count used to appear twice in e2e/README.md -- "23 passed" under "Run" and
-    "17/17 against the host-frontend stack" in the verification note -- and the second
-    copy went stale the moment the suite grew, which is the failure mode this whole file
-    exists to stop. A reader who copies a number copies the one under "Run"; a
-    verification note records what a run proved, not how many cases it happened to hold.
+    This case used to forbid the `N/N` shape anywhere outside PRODUCT.md, because a second copy of
+    "17/17 against the host-frontend stack" sat in the README and went stale the moment the suite grew.
+    A shape ban cannot tell that stale copy from `65/65 (2026-10-24, all three images rebuilt ...)`,
+    which is a dated record of one verification run and true no matter how far the suite grows -- so
+    the README's verification note went red for naming the date it ran on.
+
+    The distinction worth gating is whether a reader can tell which run a number describes. Undated, it
+    is a claim about the current suite and it is graded against `e2e/tests` like the size sentence is.
+    Dated, it is a record, and what it owes the reader is internal honesty: a line that says it verified
+    cannot report 60 of 65. Either way the number has an author; nothing is excused by being unlookupable.
     """
-    text = read(E2E_README)
-    assert len(re.findall(r"\b\d+ passed\b", text)) == 1, (
-        "e2e/README.md states the suite's size more than once; the gated copy is the one "
-        "under \"Run\"")
-    assert re.findall(r"\b\d{1,3}\s*/\s*\d{1,3}\b", text) == [], (
-        "e2e/README.md carries a second N/N count; a verification note records what a run "
-        "proved, and the suite's size belongs to the one gated sentence alone")
+    actual = e2e_case_count()
+    rows = ratio_rows()
+    graded = [row for row in rows if not row[5]]
+    records = [row for row in rows if row[5]]
+    assert rows and graded and records, (
+        f"{len(rows)} counts, {len(graded)} undated, {len(records)} dated: the two directions this case "
+        "gates each need a carrier, or a green here means the documents stopped stating counts at all "
+        "and the rule has nothing left to decide")
+
+    for where, number, line, said, total, _ in graded:
+        assert (said, total) == (actual, actual), (
+            f"{where}:{number} states {said}/{total} with no date, so a reader cannot tell it apart from "
+            f"the suite's current size, which is {actual} -- update the sentence or put the run's date on "
+            f"it ({line[:70]}!)")
+    for where, number, line, said, total, _ in records:
+        assert said == total, (
+            f"{where}:{number} reports {said}/{total} as a dated record: a line that names the day it "
+            f"ran is telling the reader what that run proved, and a run that did not pass its whole "
+            f"suite is not a verification ({line[:70]}!)")
+
+    found = PASSED.findall(read(E2E_README))
+    assert len(found) == 1, (
+        f"e2e/README.md carries {found}: the suite's size is stated once, under \"Run\", and "
+        "`test_the_e2e_count_is_the_suite_that_runs` is what grades that one")
+    # `stated_e2e_counts()` reads the one PRODUCT.md sentence it can find, so a second undated
+    # count in that document is a claim nothing grades -- and a reader cannot tell which one the
+    # suite grew past.
+    product_claims = [row for row in ratio_rows() if row[0] == "docs/PRODUCT.md" and not row[5]]
+    assert len(product_claims) == 1, (
+        f"{[(r[1], r[2][:40]) for r in product_claims]}: PRODUCT.md's `passes N/N` is the claim "
+        "`stated_e2e_counts()` grades, and it grades the first one it finds")
 
 
 def test_the_seeded_corpus_is_the_corpus_in_the_seed_script():
