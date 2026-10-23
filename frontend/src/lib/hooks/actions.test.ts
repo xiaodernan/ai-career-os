@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { RESUME_MAX_BYTES, validateResumeFile } from "@/lib/hooks/actions";
+import type { Application } from "@/lib/api/types";
+import { RESUME_MAX_BYTES, optimisticApplicationRow, validateResumeFile } from "@/lib/hooks/actions";
 
 /**
  * The client-side size/mime guard, so an unsupported file never hits the network.
@@ -49,5 +50,59 @@ describe("validateResumeFile", () => {
     // An oversized .exe is first rejected as the wrong type of file.
     expect(validateResumeFile(file("a.exe", "", RESUME_MAX_BYTES * 2)))
         .toBe("Only PDF, DOCX or TXT files are supported.");
+  });
+});
+
+/**
+ * The optimistic row the board draws between the click and the refetch.
+ *
+ * The PATCH body is a command vocabulary and the cached row is an answer, so the merge that puts
+ * one onto the other has to translate the one command that names a field rather than a value:
+ * `clearReminderAt`. `reminderAt: null` cannot travel to the server (a null component there means
+ * "leave it alone"), so the removal only reaches the screen through this row — and `kanban.tsx`
+ * reads it twice, for the chip and for `overdue`.
+ */
+
+function row(over: Partial<Application> = {}): Application {
+  return {
+    id: "app-1",
+    title: "Backend engineer",
+    status: "interview",
+    note: "recruiter call booked",
+    reminderAt: "2026-11-01T09:00:00Z",
+    position: 3,
+    ...over,
+  } as Application;
+}
+
+describe("optimisticApplicationRow", () => {
+  it("drops the instant the command clears, so the card stops drawing a reminder that is gone", () => {
+    expect(optimisticApplicationRow(row(), { clearReminderAt: true }).reminderAt).toBeNull();
+  });
+
+  it("writes the instant the command sets", () => {
+    const next = "2026-12-24T10:30:00Z";
+    expect(optimisticApplicationRow(row(), { reminderAt: next }).reminderAt).toBe(next);
+  });
+
+  it("leaves the instant alone for a command that says nothing about reminders", () => {
+    // The board's drag and the note's save both land here; neither may blank the reminder.
+    expect(optimisticApplicationRow(row(), { status: "offer" }).reminderAt).toBe("2026-11-01T09:00:00Z");
+    expect(optimisticApplicationRow(row(), { note: "moved" }).reminderAt).toBe("2026-11-01T09:00:00Z");
+    expect(optimisticApplicationRow(row(), { position: 7 }).position).toBe(7);
+  });
+
+  it("keeps the row's own answer names, which no command carries", () => {
+    const merged = optimisticApplicationRow(row(), { clearReminderAt: true });
+    expect(merged.id).toBe("app-1");
+    expect(merged.title).toBe("Backend engineer");
+    expect(merged.note).toBe("recruiter call booked");
+  });
+
+  it("lets the clear win when one command carries both spellings", () => {
+    // The dialog never sends both, but the merge order is the whole mechanism: the nulling pair is
+    // spread last, so a contradictory body reads as removed rather than as the older instant.
+    const merged = optimisticApplicationRow(row(), { reminderAt: "2027-01-01T00:00:00Z", clearReminderAt: true });
+    expect(merged.reminderAt).toBeNull();
   });
 });

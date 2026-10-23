@@ -371,6 +371,19 @@ export function useCreateApplication() {
   });
 }
 
+/**
+ * The cached row as it reads once this command has been applied to it.
+ *
+ * `clearReminderAt` is a command, not a column: `UpdateApplicationRequest` has no `reminderAt`
+ * component that can be sent as null — a null component there means "leave it alone" — so the only
+ * way a removal can reach the cache is by naming the field it removes. Spreading the command alone
+ * leaves the old instant on the row, and the board card both draws its chip from `app.reminderAt`
+ * and decides `overdue` from it, so the cleared reminder stays on screen until the settled refetch.
+ */
+export function optimisticApplicationRow(row: Application, patch: UpdateApplicationBody): Application {
+  return { ...row, ...patch, ...(patch.clearReminderAt ? { reminderAt: null } : null) };
+}
+
 /** PATCH {status, position, note} — optimistic across every list cached for it. */
 export function useUpdateApplication() {
   const qc = useQueryClient();
@@ -386,7 +399,7 @@ export function useUpdateApplication() {
         if (!cur?.items) return cur;
         return {
           ...cur,
-          items: cur.items.map((a) => (a.id === id ? { ...a, ...patch } : a)),
+          items: cur.items.map((a) => (a.id === id ? optimisticApplicationRow(a, patch) : a)),
         };
       });
       return { previous };

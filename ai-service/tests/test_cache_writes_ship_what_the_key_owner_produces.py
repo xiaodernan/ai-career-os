@@ -10,35 +10,44 @@ of **answers** ("this row's reminder instant"). ``{...row, ...command}`` conflat
 and TypeScript cannot see the conflation, because the patch is an interface of optional keys and the
 row an interface of nullable ones.
 
-Seven sites in ``frontend/src`` write a cache value. Six spell their key in the source; the seventh
--- the rollback in ``useUpdateApplication`` -- writes back a key it enumerated at runtime, which no
-static read can name. Three put a route's answer into ``["me"]``; two roll a snapshot back into the
-key it was read from; and two *merge*: one preserves a wrapper object it had just read
-(``["job", id]``), the other rewrites one page's ``items`` in place (``["applications"]``). The one
-finding this file makes and deliberately does not fix: the merge ``{ ...a, ...patch }`` spreads
-``UpdateApplicationBody`` -- five command keys -- onto a row produced by ``normalizeApplication`` --
-seventeen answer names when this file was written -- and exactly one command key,
-``clearReminderAt``, is not an answer name. The
-server honors it (``ApplicationService`` nulls the column), the toast announces it ("Reminder
-cleared."), and the cached row keeps its old ``reminderAt`` until the ``onSettled`` refetch lands. The
-dialog that reopens in that window reads that field. A bounded lie the user can point at, and no type
-error anywhere: the repair is already in the same hook, which is why the honest reading is
-*characterise the window*, not *delete the spread*.
+Nine sites in ``frontend/src`` write a cache value. Seven spell their key in the source; the other
+two -- the rollbacks in ``useReorderApplication`` and ``useUpdateApplication`` -- write back a key
+each enumerated at runtime, which no static read can name. Three put a route's answer into
+``["me"]``; three put a snapshot back where it was read from; and three *merge*: one preserves a
+wrapper object it had just read (``["job", id]``), two rewrite one page's ``items`` in place
+(``["applications"]``). Case 12 rebuilds that sentence from the walk, because this header shipped
+"seven sites ... six spell their key ... two merge" for a run of commits after the reorder board
+copied the update hook's optimistic shape wholesale -- the numbers a reader trusts most are the ones
+nobody grades. Four files make the app's react-query calls, across eight methods, and case 1's roster
+is where a new one has to be filed.
+
+The other thing this header shipped was a finding it said it would not fix: the row merge spread
+``UpdateApplicationBody`` -- five command keys -- onto a row produced by ``normalizeApplication``, and
+exactly one command key, ``clearReminderAt``, is not an answer name. The server honors it
+(``ApplicationService`` nulls the column) and the toast announces it ("Reminder cleared."), but the
+spread could not express a removal, so the cached row kept its old ``reminderAt`` until the
+``onSettled`` refetch landed. That was not a bounded lie nobody sees: ``kanban.tsx`` both draws the
+reminder chip and decides ``overdue`` from ``app.reminderAt``, so the card on screen went on claiming
+a reminder the user had just deleted, and the dialog that reopened read it back into its input. The
+row is now built by ``optimisticApplicationRow``, which spreads the command and then nulls the field
+the command clears -- and cases 9-10 grade the call site, the spread order and the shipped vitest
+file that runs it, instead of characterising the window.
 
 Five walks, none of which imports production code -- and none of which rediscovers the cache either.
 This file borrows the previous gate's source walk, its comment blanking and its balanced scanner:
 a second parser of the same calls would be a second thing to drift, so the shared population is
 itself one of the cases.
 
-1. the react-query **client** vocabulary: every ``qc.<method>(`` site, compared name-by-name against
-   the sites the borrowed walk reads, so the two gates close over one population and the single method
-   that carries no key is named rather than assumed;
+1. the react-query **client** vocabulary: every ``qc.<method>(`` site, filed by the source that makes
+   it and compared method-by-method against the sites the borrowed walk reads there, so the two gates
+   close over one population and the single method that carries no key is named rather than assumed;
 2. the nine writes, each read for its arguments as its own source spells them, its value classified
    structurally as answer / snapshot / merge, and its key resolved by the walk's prefix rule;
 3. the name sets each value is built from: ``useJob``'s returned wrapper, ``normalizePage``'s
    envelope, ``normalizeApplication``'s row, ``UpdateApplicationBody``, ``ReminderPatch``;
 4. the prose: the docstring that enumerates the PATCH, the comment that states the clear's spelling,
-   and the freshness sentence the two un-invalidated writes rest on;
+   the freshness sentence the two un-invalidated writes rest on, and this header's own census of the
+   walk it is built from;
 5. the server: the two ``/me`` handlers' shared answer type, and the handler that acts on
    ``clearReminderAt``.
 """
@@ -76,9 +85,13 @@ CLIENT = "frontend/src/lib/api/client.ts"
 NORMALIZE = "frontend/src/lib/api/normalize.ts"
 EDIT = "frontend/src/lib/application-edit.ts"
 DIALOG = "frontend/src/components/applications/application-dialog.tsx"
+KANBAN = "frontend/src/components/common/kanban.tsx"
+ACTIONS_TEST = "frontend/src/lib/hooks/actions.test.ts"
 USER_JAVA = "backend/src/main/java/com/careeros/user/web/UserController.java"
 APP_SERVICE = "backend/src/main/java/com/careeros/application/service/ApplicationService.java"
 APP_DTOS = "backend/src/main/java/com/careeros/application/dto/ApplicationDtos.java"
+RESUMES_PAGE = "frontend/src/app/(app)/resumes/page.tsx"
+SOURCE_ACTIONS = "frontend/src/components/knowledge/source-actions.tsx"
 
 WRITERS = ("setQueryData", "setQueriesData")
 READERS = ("getQueryData", "getQueriesData")
@@ -89,6 +102,34 @@ BLANKED = tuple(sources().values())
 ANSWER = "answer"
 SNAPSHOT = "snapshot"
 MERGE = "merge"
+QC_CALL = re.compile(r"(?<![\w$])qc\.(\w+)\s*(?=<|\()")
+
+#: Every react-query client call the app makes, by the file that makes it and the method it calls.
+#: Three walks read this population -- the token scan below, this gate's balanced one, and the
+#: invalidation gate's -- and until now each was checked against a hand-copied *sum*, which can only
+#: ever report that a number moved. Filed by file, a spent call names the file that spent it, and the
+#: three walks can be made to agree per file rather than merely in total.
+CLIENT_CALLS = {
+    ACTIONS: {"cancelQueries": 3, "getQueriesData": 2, "getQueryData": 1,
+              "invalidateQueries": 50, "removeQueries": 1, "setQueriesData": 2, "setQueryData": 5},
+    AUTH_HOOKS: {"clear": 2, "setQueryData": 2},
+    RESUMES_PAGE: {"invalidateQueries": 1},
+    SOURCE_ACTIONS: {"invalidateQueries": 1},
+}
+SITES = sum(sum(m.values()) for m in CLIENT_CALLS.values())
+#: ``KEYED`` lists ``invalidateQueries`` twice (it is both the promise method and an options-key
+#: one), so the roster sums over the *set* of keyed names; summing the tuple counted 52 promises twice.
+KEYED_NAMES = set(KEYED)
+KEYED_SITES = sum(sum(c for n, c in m.items() if n in KEYED_NAMES) for m in CLIENT_CALLS.values())
+WRITE_SITES = sum(sum(m.get(n, 0) for n in WRITERS) for m in CLIENT_CALLS.values())
+READ_SITES = sum(sum(m.get(n, 0) for n in READERS) for m in CLIENT_CALLS.values())
+PROMISE_SITES = sum(m.get(PROMISE, 0) for m in CLIENT_CALLS.values())
+#: The card that made the window this file's finding described visible: its staleness predicate and
+#: its reminder chip both read the field the command was supposed to have emptied.
+CARD_READS = ("const overdue = Boolean(app.reminderAt)", "{app.reminderAt && (")
+#: The words the header's census sentence spells its counts with, so case 12 can rebuild it.
+NUM_WORDS = {1: "one", 2: "two", 3: "three", 4: "four", 5: "five", 6: "six", 7: "seven",
+             8: "eight", 9: "nine", 10: "ten", 11: "eleven", 12: "twelve"}
 
 
 def java(rel: str) -> str:
@@ -355,13 +396,30 @@ def stmt(rel: str, needle: str) -> str:
     return hits[0]
 
 
-def qc_calls() -> collections.Counter:
-    """Every ``qc.<method>(`` site, generic arguments included."""
-    rx = re.compile(r"(?<![\w$])qc\.(\w+)\s*(?=<|\()")
-    out: collections.Counter = collections.Counter()
-    for text in BLANKED:
-        out.update(m.group(1) for m in rx.finditer(text))
+def qc_calls_by_file() -> dict[str, collections.Counter]:
+    """Every ``qc.<method>(`` site, filed by the source that makes it, generic arguments included."""
+    out: dict[str, collections.Counter] = {}
+    for rel, text in sources().items():
+        counted = collections.Counter(m.group(1) for m in QC_CALL.finditer(text))
+        if counted:
+            out[rel] = counted
     return out
+
+
+def qc_calls() -> collections.Counter:
+    """The same census summed over files, which is the shape the header's census sentence counts."""
+    out: collections.Counter = collections.Counter()
+    for counted in qc_calls_by_file().values():
+        out.update(counted)
+    return out
+
+
+def by_file(items: list) -> dict[str, collections.Counter]:
+    """One walk's own sites, filed the same way, so two walks can be made to agree per file."""
+    out: dict[str, collections.Counter] = collections.defaultdict(collections.Counter)
+    for item in items:
+        out[item.rel][item.callee] += 1
+    return {rel: collections.Counter(counts) for rel, counts in sorted(out.items()) if counts}
 
 
 def clients() -> list[str]:
@@ -374,30 +432,34 @@ def decls_for(segs: tuple[str, ...]) -> list:
     return [d for d in declarations() if d.segs[: len(segs)] == segs]
 
 
-# --- case 1: the two gates audit one population, and exactly one method is keyless ------------
+# --- case 1: the two gates audit one population, filed by the file that calls ------------------
 
 
 def test_the_cache_methods_the_app_calls_are_the_methods_the_key_walk_covers():
-    census = qc_calls()
+    census = qc_calls_by_file()
     assert clients() == ["qc"], "the app binds the query client under %s, so a qc-shaped census is blind" % clients()
-    # 8 methods and 70 sites: the contacts registry's three writes (11.1) each added one
-    # invalidation, after the reorder snapshot and the memory card's pair had moved it to 67.
-    # Both halves of this assertion are the point: a new *kind* of call is not covered by the
-    # buckets until somebody adds one, and it would have gone unnoticed.
-    assert len(census) == 8 and sum(census.values()) == 70, "the client walk read %s" % dict(sorted(census.items()))
-    mine = collections.Counter(c.callee for c in keyed_calls(KEYED))
-    theirs = collections.Counter(s.callee for s in cache_reads() + opaque_key_sites() + promises())
-    assert sorted(set(census) - set(KEYED)) == ["clear"], "no bucket exists for %s" % sorted(set(census) - set(KEYED))
-    for name in set(KEYED):
-        assert mine[name] == theirs[name] == census[name], (
-            "%s: this walk reads %d sites, the invalidation walk %d, the client calls %d"
-            % (name, mine[name], theirs[name], census[name])
-        )
-    # 65, and the equality is the assertion: both walks must read the same keyed sites. The
-    # number moves with the app; what must not move is the two sides agreeing.
-    assert sum(mine.values()) == sum(theirs.values()) == 68
-    assert census["clear"] == sum(census.values()) - sum(mine.values()) == 2, (
-        "the only calls neither gate can key are the two that carry no key"
+    # The roster is the whole claim: both halves of a move matter, since a call added in one file and
+    # spent in another keeps the old total exactly. A new *kind* of call has to be filed here by
+    # whoever adds it, which is the point -- it would otherwise be covered by no bucket at all.
+    moved = []
+    for rel in sorted(set(census) | set(CLIENT_CALLS)):
+        got, want = census.get(rel, collections.Counter()), collections.Counter(CLIENT_CALLS.get(rel, {}))
+        if got != want:
+            moved.append((rel.split("/")[-1],
+                          {n: (want[n], got[n]) for n in sorted(set(got) | set(want)) if got[n] != want[n]}))
+    assert not moved, "client-call roster and the walk disagree (file: pinned, counted) %s" % moved
+    unkeyed = {rel: sorted(set(m) - set(KEYED)) for rel, m in CLIENT_CALLS.items() if set(m) - set(KEYED)}
+    assert unkeyed == {AUTH_HOOKS: ["clear"]}, "no bucket exists for %s" % unkeyed
+    # The two walks that key their sites must read what this file's token census reads, in the same
+    # file, the same number of times. Three dict sums agreeing is not three dict claims agreeing.
+    expected = {rel: collections.Counter({n: c for n, c in m.items() if n in KEYED})
+                for rel, m in CLIENT_CALLS.items() if any(n in KEYED for n in m)}
+    mine = by_file(keyed_calls(KEYED))
+    theirs = by_file(cache_reads() + opaque_key_sites() + promises())
+    assert mine == expected, "this gate's keyed walk reads %s, the roster files %s" % (mine, expected)
+    assert theirs == expected, "the invalidation gate's walks read %s, the roster files %s" % (theirs, expected)
+    assert sum(c["clear"] for c in census.values()) == SITES - KEYED_SITES == 2, (
+        "the only calls neither gate can key are the %d that carry no key" % (SITES - KEYED_SITES)
     )
 
 
@@ -418,9 +480,9 @@ def test_the_keyless_clear_is_the_two_signout_handlers_and_nothing_else():
 # --- case 2: nine writes, and every key they name is owned by something a screen mounts -------
 
 
-def test_nine_sites_write_a_cache_value_and_seven_spell_their_key_in_the_source():
+def test_the_write_ledger_names_every_site_and_the_key_and_form_each_one_has():
     sites = writes()
-    assert len(sites) == 9, "the write walk found %s" % [repr(c) for c in sites]
+    assert len(sites) == WRITE_SITES, "the write walk found %s" % [repr(c) for c in sites]
     ledger = sorted((c.where.split(":")[0], c.fn, c.segs, c.form) for c in sites)
     assert ledger == [
         ("actions.ts", "useReorderApplication", ("*",), "snapshot"),
@@ -602,12 +664,18 @@ def test_the_computed_key_writes_are_rollbacks_of_the_prefix_snapshots():
         assert PROMISE in body, "%s promises no refetch, so the rollback is the only repair" % fn
 
 
-# --- case 9: the row merge's spread is a command vocabulary, not a row vocabulary --------------
+# --- case 9: the row merge's spread is a command vocabulary, and one function owns it ----------
 
 
-def test_the_row_merge_spreads_a_body_whose_one_non_row_key_is_clearReminderAt():
+def test_the_row_the_cache_holds_is_built_by_one_named_merge_of_command_onto_row():
     merge = [c for c in writes() if c.fn == "useUpdateApplication" and c.segs == ("applications",)][0]
-    assert "{ ...a, ...patch }" in merge.value, "%s no longer spreads the patch onto the row" % merge.where
+    assert "optimisticApplicationRow(a, patch)" in merge.value, (
+        "%s no longer builds its row through the one named merge, so the command-to-row translation "
+        "this file exists to grade has moved somewhere it cannot point at: %r" % (merge.where, merge.value[:80])
+    )
+    assert "a.id === id ? optimisticApplicationRow(a, patch) : a" in merge.value, (
+        "the merge no longer rebuilds only the row the command names: %r" % merge.value[:80]
+    )
     commands = interface_keys(ACTIONS, "UpdateApplicationBody")
     assert commands == {"status", "position", "note", "reminderAt", "clearReminderAt"}, (
         "the PATCH body now says %s" % sorted(commands)
@@ -623,13 +691,75 @@ def test_the_row_merge_spreads_a_body_whose_one_non_row_key_is_clearReminderAt()
         % (sorted(commands), sorted(row), sorted(gap))
     )
     assert commands & row == {"status", "position", "note", "reminderAt"}
+    spreaders = sorted(rel.split("/")[-1] for rel, text in sources().items()
+                       if "{ ...row, ...patch," in text)
+    assert spreaders == ["actions.ts"], (
+        "the command-onto-row spread has authors %s, so a clear can be un-translated somewhere this "
+        "gate does not read" % spreaders
+    )
 
 
-def test_the_key_the_merge_invents_is_emitted_once_read_by_nobody_and_acted_on_by_the_server():
+# --- case 10: the one command that names a field rather than a value ---------------------------
+
+
+def test_the_clear_is_announced_and_the_row_the_card_draws_loses_the_instant():
+    """The window this file used to characterise: a removal is a command no row field can carry."""
+    body = fn_body(ACTIONS, "optimisticApplicationRow")
+    assert "export function optimisticApplicationRow(row: Application, patch: UpdateApplicationBody)" in body
+    spread, nulled = body.index("...patch,"), body.index("{ reminderAt: null }")
+    assert spread < nulled, (
+        "the nulling pair is spread before the command, so a clear re-writes the row's own instant "
+        "back over it"
+    )
+    assert "patch.clearReminderAt ?" in body[:nulled], (
+        "the null is no longer conditional on the command that asks for it, so every optimistic write "
+        "would drop the reminder"
+    )
+    assert ": null" in body[nulled:], "the else arm no longer contributes nothing: %r" % body[nulled : nulled + 40]
+    hook = hook_body(ACTIONS, "useUpdateApplication")
+    assert 'else if (patch.clearReminderAt) toast.success("Reminder cleared.");' in hook
+    assert hook.index("optimisticApplicationRow(a, patch)") < hook.index("Reminder cleared."), (
+        "the toast no longer follows the merge that removes the instant it announces"
+    )
+    tail = hook.split("onSettled:")[1]
+    assert 'qc.invalidateQueries({ queryKey: ["applications"] });' in tail, (
+        "nothing refetches the list once the response lands, so the row the merge built is the value "
+        "rather than the guess"
+    )
+    assert hook.split("onSuccess:")[0].count(PROMISE) == 0, (
+        "the optimistic hook now promises a refetch before the toast, so the repair is the refetch and "
+        "this case would be describing a different design"
+    )
+    # The reader that made the window visible without opening anything: the board card reads the
+    # field twice for its staleness predicate and twice more for the chip beside the date.
+    card = sources()[KANBAN]
+    for line in CARD_READS:
+        assert line in card, "the card no longer reads the instant the way this claim says it does: %r" % line
+    assert card.count("app.reminderAt") == 4, "the card reads app.reminderAt %d times" % card.count("app.reminderAt")
+    # The shipped seam that runs the merge, so the claim above is not only a reading of one line.
+    test = read(ACTIONS_TEST)
+    imports = [line for line in test.splitlines() if 'from "@/lib/hooks/actions"' in line]
+    assert len(imports) == 1 and "optimisticApplicationRow" in imports[0], (
+        "the vitest file no longer imports the merge it is the behavioural reader for: %s" % imports
+    )
+    block = test[test.index('describe("optimisticApplicationRow"') :] if 'describe("optimisticApplicationRow"' in test else ""
+    assert block, "actions.test.ts declares no describe block for the merge"
+    assert re.search(r"optimisticApplicationRow\(row\(\), \{ clearReminderAt: true \}\)\.reminderAt\)\.toBeNull", block), (
+        "the shipped test no longer runs a clear through the merge and expects the instant to be gone"
+    )
+    assert "reminderAt" in block and "optimisticApplicationRow(row(), { status:" in block, (
+        "the shipped test no longer pins the other half: a command that says nothing about reminders "
+        "must leave the instant alone"
+    )
+
+
+def test_the_key_the_merge_invents_is_emitted_once_translated_once_and_acted_on_by_the_server():
     authors = sorted(rel.split("/")[-1] for rel in sources() if re.search(r"^\s*clearReminderAt\?", sources()[rel], re.M))
     assert authors == ["actions.ts", "application-edit.ts"], "clearReminderAt is declared as a member by %s" % authors
     emitters = sorted(rel.split("/")[-1] for rel in sources() if "clearReminderAt: true" in sources()[rel])
     assert emitters == ["application-edit.ts"], "it is emitted as a value in %s" % emitters
+    readers = sorted(rel.split("/")[-1] for rel, text in sources().items() if "patch.clearReminderAt" in text)
+    assert readers == ["actions.ts"], "the command is read off a patch by %s, not only by the merge" % readers
     assert stmt(EDIT, "clearReminderAt: true") == "  return next ? { reminderAt: next } : { clearReminderAt: true };"
     assert len(interface_keys(EDIT, "ReminderPatch")) == 2, "ReminderPatch is the command's other author"
     assert sources()[DIALOG].count("reminderPatch(") == 1, "the dialog calls reminderPatch %d times" % sources()[DIALOG].count("reminderPatch(")
@@ -641,24 +771,6 @@ def test_the_key_the_merge_invents_is_emitted_once_read_by_nobody_and_acted_on_b
         "the server no longer acts on the key, so the command was never a command either"
     )
     assert "clearReminderAt" in java(APP_DTOS), "the DTO no longer binds it"
-
-
-def test_the_toast_announces_the_clear_while_the_row_it_describes_still_holds_the_old_instant():
-    """Characterisation, not a fix: the window is real, bounded, and closed by the settled refetch."""
-    body = hook_body(ACTIONS, "useUpdateApplication")
-    assert 'else if (patch.clearReminderAt) toast.success("Reminder cleared.");' in body
-    assert body.index("...patch }") < body.index("Reminder cleared."), (
-        "the toast no longer follows the merge that leaves reminderAt untouched"
-    )
-    tail = body.split("onSettled:")[1]
-    assert 'qc.invalidateQueries({ queryKey: ["applications"] });' in tail, (
-        "nothing refetches the list once the response lands, so the stale reminderAt the merge left "
-        "behind is the value rather than the window"
-    )
-    assert body.split("onSuccess:")[0].count(PROMISE) == 0, (
-        "the optimistic hook now promises a refetch before the toast, so the repair is the refetch and "
-        "this case would be describing a different design"
-    )
 
 
 # --- case 10: the prose, bound to the code it describes ---------------------------------------
@@ -710,23 +822,24 @@ def test_the_comment_that_explains_the_clear_quotes_the_key_the_function_emits()
 
 def test_this_gate_and_the_invalidation_gate_read_the_same_shipped_sources():
     assert len(sources()) >= 100, "the shared source walk read %d files" % len(sources())
-    assert len(writes()) == 9 and len(reads()) == 3, "%s / %s" % (writes(), reads())
-    # 49 rather than 47: the memory card's two correction hooks each added one invalidation to
-    # the same feature run that gave the reorder board its optimistic snapshot. This assertion
-    # is here to notice exactly that -- the two gates are supposed to read one population, so
-    # a drift in either shows up as a mismatch.
-    # 52: the registry's three invalidations join the 49.
-    assert len(promises()) == 52, "the borrowed promise walk now reads %d" % len(promises())
-    # 65 rather than 59: the census above is 67 sites and `clear` carries no key, so the keyed
-    # population is the other seven methods. Kept as a separate number so a site that loses its
-    # bucket shows up here even when the census total is unchanged.
-    assert len(keyed_calls(KEYED)) == 68, "the keyed population is %d" % len(keyed_calls(KEYED))
+    # Every one of these totals is now read off CLIENT_CALLS rather than typed in beside it, so the
+    # only hand-copied number left in this file is the roster itself -- and a roster row that drifts
+    # is case 1 naming the file, not a sum that lost a site.
+    assert len(writes()) == WRITE_SITES and len(reads()) == READ_SITES, (
+        "%s writes against a roster of %d, %s reads against %d"
+        % (len(writes()), WRITE_SITES, len(reads()), READ_SITES)
+    )
+    assert len(promises()) == PROMISE_SITES, "the borrowed promise walk reads %d" % len(promises())
+    assert len(keyed_calls(KEYED)) == KEYED_SITES, "the keyed population is %d" % len(keyed_calls(KEYED))
     assert len([c for c in all_calls() if c.callee in QUERY_HOOKS]) == len(declarations()), (
         "the walk's hook regions and the previous gate's declarations are different sets: %d vs %d"
         % (len([c for c in all_calls() if c.callee in QUERY_HOOKS]), len(declarations()))
     )
-    for rel in (ACTIONS, AUTH_HOOKS, RESOURCES, NORMALIZE, CLIENT, EDIT, DIALOG):
+    for rel in (ACTIONS, AUTH_HOOKS, RESOURCES, NORMALIZE, CLIENT, EDIT, DIALOG, KANBAN):
         assert rel in sources(), "%s is not in the population this gate reads" % rel
+    assert ACTIONS_TEST not in sources(), (
+        "the vitest file is read as a shipped test, not as if it were app source: the walk skips tests"
+    )
     assert USER_JAVA not in sources() and APP_SERVICE not in sources(), (
         "the Java plane is read through its own file, not as if it were TypeScript"
     )
@@ -736,4 +849,43 @@ def test_this_gate_and_the_invalidation_gate_read_the_same_shipped_sources():
     assert decls_for(("applications",))[0].segs == ("applications", "*")
     # An oracle for the write population that is not this file's balanced walk: a token count.
     spelled = sum(text.count("qc.setQueryData(") + text.count("qc.setQueriesData<") for text in BLANKED)
-    assert spelled == len(writes()) == 9, "the token scan sees %d writes, the walk sees %d" % (spelled, len(writes()))
+    assert spelled == len(writes()) == WRITE_SITES, (
+        "the token scan sees %d writes, the walk sees %d, the roster files %d"
+        % (spelled, len(writes()), WRITE_SITES)
+    )
+
+
+# --- case 12: this header's own census, rebuilt from the walk it describes ---------------------
+
+
+def word(n: int) -> str:
+    assert n in NUM_WORDS, "the header has no spelled word for %d; add it beside the census" % n
+    return NUM_WORDS[n]
+
+
+def test_the_headline_of_this_file_counts_the_writes_the_walk_finds():
+    prose = " ".join((__doc__ or "").split()).lower()
+    sites = writes()
+    computed = sorted({c.fn for c in sites if c.key is None})
+    forms = collections.Counter(c.form for c in sites)
+    merged = collections.Counter(c.segs for c in sites if c.form == MERGE)
+    claims = [
+        "%s sites in ``frontend/src`` write a cache value." % word(len(sites)),
+        "%s spell their key in the source; the other %s -- the rollbacks in %s --" % (
+            word(len(sites) - len(computed)), word(len(computed)),
+            " and ".join("``%s``" % f for f in computed)),
+        "%s put a route's answer into ``[\"me\"]``" % word(len([c for c in sites if c.segs == ("me",)])),
+        "%s put a snapshot back where it was read from" % word(forms[SNAPSHOT]),
+        "and %s *merge*: %s preserves a wrapper object it had just read (``[\"job\", id]``), %s rewrite "
+        "one page's ``items`` in place (``[\"applications\"]``)" % (
+            word(forms[MERGE]), word(merged[("job", "*")]), word(merged[("applications",)])),
+        # The population case 1 files: read off the walk, so a fifth calling file moves the header
+        # as well as the roster, and neither claim is a number typed beside the other.
+        "%s files make the app's react-query calls, across %s methods" % (
+            word(len(qc_calls_by_file())), word(len(qc_calls()))),
+    ]
+    spent = [claim for claim in claims if claim.lower() not in prose]
+    assert not spent, "the header census no longer says what the walk measures: %s" % spent
+    assert "deliberately does not fix" not in prose, (
+        "this file is back to characterising a user-visible defect instead of grading its repair"
+    )
