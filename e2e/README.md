@@ -165,8 +165,14 @@ old layers verbatim, so the image keeps its original timestamp even though its
 content matches the current tree. In both cases the image is current — check
 what the build actually emitted before trusting the WARN.
 
-Verified this way: the run that closed the "production build" item in the
-Definition of Done went against the host-frontend stack, with all three images
+Verified this way: **65/65** (2026-10-24, all three images rebuilt to the current
+tree first). That run earned its keep — it caught a real regression the unit
+suites missed: `44800a7`'s hostile-input guard replaced the fusion's `row["id"]`
+with `getattr(row, "id")`, which answers None for every asyncpg Record, so the
+copilot's job search had been returning empty against a full catalogue. The
+regression test (`test_a_record_row_survives_the_fusion`) pins the subscript
+read. An earlier run also closed the "production build" item in the
+Definition of Done against the host-frontend stack, with all three images
 rebuilt to the current tree first (the frontend image had been carrying a
 September build that predated the error, not-found, and loading boundaries). Its
 case count is deliberately not repeated here: the suite's size is stated once,

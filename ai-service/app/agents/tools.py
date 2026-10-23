@@ -144,13 +144,19 @@ async def _semantic_jobs(query: str, fragments: list[tuple[str, Any]], limit: in
 def _row_id(row: Any) -> str | None:
     """The job id regardless of whether the row is a dict or a DB Record.
 
-    `db.fetch` returns asyncpg Records (support ``row["id"]``); cached rows are
-    dicts. A malformed entry with no id is skipped rather than raising mid-fuse.
+    `db.fetch` returns asyncpg Records, which support ``row["id"]`` and *not*
+    attribute access -- ``getattr(row, "id")`` answers None for every real row,
+    which silently emptied the fusion and every search the copilot runs. Cached
+    rows are dicts. A malformed entry with no id is skipped rather than raising
+    mid-fuse.
     """
     if isinstance(row, dict):
         rid = row.get("id")
     else:
-        rid = getattr(row, "id", None)
+        try:
+            rid = row["id"]
+        except (KeyError, TypeError, IndexError):
+            rid = getattr(row, "id", None)
     return str(rid) if rid is not None else None
 
 

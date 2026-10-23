@@ -50,6 +50,46 @@ def test_a_job_found_by_both_retrievers_appears_once():
     assert str(out[0]["id"]) == "dup"
 
 
+class _RecordRow:
+    """Stand-in for an asyncpg Record: subscriptable, not attribute-accessible."""
+
+    def __init__(self, job_id: str, title: str = "Role"):
+        self._data = _row(job_id, title)
+
+    def __getitem__(self, key):
+        return self._data[key]
+
+    def keys(self):
+        return self._data.keys()
+
+    def __getattr__(self, name):
+        # asyncpg Records raise on attribute access; so does this stand-in.
+        raise AttributeError(name)
+
+
+def test_a_record_row_survives_the_fusion():
+    """`db.fetch` answers Records, which carry no attributes: `getattr(row, "id")`
+    answered None for every real row and the fusion dropped them all -- the copilot's
+    job search returned empty against a full catalogue. The id is read by subscript."""
+    keyword = [_RecordRow("r1"), _RecordRow("r2")]
+    semantic = [_RecordRow("r3")]
+
+    out = _fuse_rrf(keyword, semantic, 10)
+
+    assert len(out) == 3
+    assert {str(r["id"]) for r in out} == {"r1", "r2", "r3"}
+
+
+def test_a_row_with_no_id_is_skipped_not_fatal():
+    class _NoId:
+        def __getitem__(self, key):
+            raise KeyError(key)
+
+    out = _fuse_rrf([_NoId(), _row("real")], [], 10)
+
+    assert [str(r["id"]) for r in out] == ["real"]
+
+
 def test_the_merged_list_is_cut_to_the_limit():
     out = _fuse_rrf([_row(str(i)) for i in range(10)], [], 3)
 
