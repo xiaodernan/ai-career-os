@@ -8,21 +8,31 @@ this request fails, does anyone say so?". This file answers it per mutation site
 the caller's options through the one indirection the app actually uses: a named object handed to two
 different mutations.
 
-What the shipped code says, measured rather than assumed: 37 mutation sites in three files. 32 declare
-their failure at the hook; the five that do not are all in ``auth.ts``. Four of those five are announced
-by their caller -- the password forms pass inline call options, and the credentials form passes one
-shared ``handlers`` object to both ``login.mutate`` and ``register.mutate``. The fifth, ``useLogout``, is
-announced by nobody, and its ``mutationFn`` swallows the rejection (``.catch(() => undefined)``), so the
-mutation cannot even enter an error state for a screen to read; its ``onSettled`` clears the token,
-clears the cache and redirects regardless of what the server said. That is a design choice -- a local
-sign-out always happens -- so this file characterises it rather than changing it: it is the one place in
-the app where "you are signed out" is not a claim about the server.
+What the shipped code says, measured rather than assumed: 67 mutation sites in seven files
+(the hook libraries, plus the knowledge uploader's own actions). 62 declare their failure at
+the hook; the five that do not are all in ``auth.ts``. Four of those five are announced by
+their caller -- the password forms pass inline call options, and the credentials form passes
+one shared ``handlers`` object to both ``login.mutate`` and ``register.mutate``, whose
+``onError`` maps the failure through the recovery module's describer. The fifth,
+``useLogout``, is announced by nobody, and its ``mutationFn`` swallows the rejection
+(``.catch(() => undefined)``), so the mutation cannot even enter an error state for a screen
+to read; its ``onSettled`` clears the token, clears the cache and redirects regardless of what
+the server said. That is a design choice -- a local sign-out always happens -- so this file
+characterises it rather than changing it: it is the one place in the app where "you are signed
+out" is not a claim about the server.
 
-The same walk covers the failure helper: ``fail(...)`` has a single author and 29 uses, and every use
-spends a distinct sentence -- when this file first walked it, 28 were distinct, because two different
-deletes shared "Delete failed." and the toast never said which record survived the failure. Each delete
-now names its own record, and the case below pins the spent state so a reused sentence goes red rather
-than quietly shipping.
+The same walk covers the failure helper: ``fail(...)`` has a single author and 60 uses, and
+every use spends a distinct sentence -- when this file first walked it, 28 were distinct,
+because two different deletes shared "Delete failed." and the toast never said which record
+survived the failure. Each delete now names its own record, and the case below pins the spent
+state so a reused sentence goes red rather than quietly shipping.
+
+Both populations used to be pinned as totals copied into four assertions. Two feature
+commits (be6eea0's ``useImportApply``, c8d0a4b's ``useRenderBundle``) each added a site and
+a sentence without this census, and one honest change reddened five cases while telling the
+reader nothing about which file moved. The counts now come from the per-file roster below --
+so a move names its file -- and the paragraph above is graded against the walk too, in the
+last case, because prose that quotes a census is a claim about the app like any other.
 """
 
 import collections
@@ -58,6 +68,53 @@ RESET = "frontend/src/components/auth/reset-password-form.tsx"
 TOPBAR = "frontend/src/components/layout/topbar.tsx"
 
 DECL = re.compile(r"^(?:export\s+)?(?:default\s+)?(?:async\s+)?(?:function\s+(\w+)|const\s+(\w+)\s*=)", re.M)
+
+#: Every file that declares a mutation, and how many sites it declares, as measured off the
+#: shipped bytes. The totals the cases claim are derived from this roster, so a new write is a
+#: one-line edit that names the file that moved, instead of redening four cases that each
+#: hand-copied the same sum. Two feature commits did exactly that and left the sums behind --
+#: be6eea0 added ``useImportApply`` and c8d0a4b added ``useRenderBundle``, each announcing its
+#: failure at the hook with its own ``fail()`` sentence, so what went stale was the census, not
+#: the app. A mutation in a file outside this roster is still a red, and the red names that file.
+ROSTER = {
+    ACTIONS: 36,
+    AUTH_HOOKS: 5,
+    "frontend/src/lib/hooks/data-portability.ts": 5,
+    "frontend/src/lib/hooks/growth.ts": 12,
+    "frontend/src/lib/hooks/ingestion.ts": 4,
+    "frontend/src/lib/hooks/offers.ts": 4,
+    SOURCE_ACTIONS: 1,
+}
+SITES = sum(ROSTER.values())
+
+#: The hooks that state no ``onError`` of their own. They are the five auth signs, and the set
+#: being closed is the claim: a sixth quiet site is a write whose failure nobody says out loud,
+#: wherever it lives.
+QUIET_AUTH = ["useForgotPassword", "useLogin", "useLogout", "useRegister", "useResetPassword"]
+
+#: ``fail("...")`` calls per file -- the sentences a failed write is announced with. Pinned per
+#: file because the useful failure is "actions.ts spent one more sentence", not a total that
+#: moves whenever any hook is touched.
+SENTENCES = {
+    ACTIONS: 35,
+    "frontend/src/lib/hooks/data-portability.ts": 5,
+    "frontend/src/lib/hooks/growth.ts": 12,
+    "frontend/src/lib/hooks/ingestion.ts": 4,
+    "frontend/src/lib/hooks/offers.ts": 4,
+}
+FAIL_USES = sum(SENTENCES.values())
+
+#: The auth form's shared call options, declared inside the submit handler and passed to both
+#: ``login.mutate`` and ``register.mutate``. The failure is mapped through the recovery module's
+#: describer, which the form imports by name -- the describer's own name has moved once already
+#: (``describeError`` -> ``authFormErrorMessage``), so the claim below binds the mechanism
+#: (import + export + call) instead of a hand-copied line of another file's prose.
+RECOVERY = "frontend/src/lib/auth-recovery.ts"
+
+#: The docstring writes its census in words as well as digits; the last case re-reads the
+#: walk and looks for the sentence it would have to have written today.
+NUM_WORDS = {1: "one", 2: "two", 3: "three", 4: "four", 5: "five", 6: "six", 7: "seven",
+             8: "eight", 9: "nine", 10: "ten", 11: "eleven", 12: "twelve"}
 
 
 def object_literal(text: str, pos: int) -> str:
@@ -173,11 +230,23 @@ def callers(hook: str) -> list:
     return out
 
 
+FAIL_CALL = re.compile(r'fail\("([^"]*)"\)')
+
+
 def fail_messages() -> collections.Counter:
     """Every ``fail("...")`` message the app builds a handler from."""
     out: collections.Counter = collections.Counter()
     for text in sources().values():
-        out.update(m.group(1) for m in re.finditer(r'fail\("([^"]*)"\)', text))
+        out.update(FAIL_CALL.findall(text))
+    return out
+
+
+def fail_uses() -> collections.Counter:
+    """The same calls counted per file that makes them, so a move names its file."""
+    out: collections.Counter = collections.Counter()
+    for rel, text in sources().items():
+        if hits := len(FAIL_CALL.findall(text)):
+            out[rel] = hits
     return out
 
 
@@ -193,17 +262,18 @@ def stmt(body: str, needle: str) -> str:
 
 def test_every_mutation_the_app_declares_sits_in_a_function_the_walk_can_name():
     pop = sites()
-    # 42 rather than 39 since the contacts registry's three writes (11.1) joined -- create,
-    # update and delete, each announcing its failure at the hook -- after `useGrowthReport`
-    # (10.3) had joined the same way. Before them,
-    # `useRenameConversation`, `useDeleteConversation` (6a1c620) and `useImportJob` (bf2d91b)
-    # were the last to join. Those commits changed the population without this census, which
-    # is what this assertion is for -- it went red rather than quietly covering fewer sites.
-    assert len(pop) == 65, "the app declares %d mutations" % len(pop)
     per_file = collections.Counter(s.rel for s in pop)
-    assert per_file[AUTH_HOOKS] == 5 and per_file[ACTIONS] >= 25, "sites per hook file: %s" % dict(
-        (k.split("/")[-1], v) for k, v in per_file.items()
-    )
+    # The census is read as a roster, not as a number: a write added or removed anywhere in
+    # the app has to say which file it belongs to, because that file is where the next reader
+    # of this failure will look.
+    moved = {rel.split("/")[-1]: (want, per_file.get(rel, 0))
+             for rel, want in sorted(ROSTER.items(), key=lambda kv: kv[0])
+             if per_file.get(rel, 0) != want}
+    outside = sorted(rel.split("/")[-1] for rel in set(per_file) - set(ROSTER))
+    assert not moved and not outside, (
+        "the mutation roster moved (file: pinned, walked) %s; files outside the roster: %s" % (
+            moved, outside))
+    assert len(pop) == SITES, "the roster sums to %d but the walk found %d" % (SITES, len(pop))
     # The component-level population is the part a concurrent screen edit can move, so it is read as a
     # claim about every site found rather than as a pinned count.
     component = [s for s in pop if s.rel == SOURCE_ACTIONS]
@@ -216,16 +286,14 @@ def test_every_mutation_the_app_declares_sits_in_a_function_the_walk_can_name():
     )
 
 
-def test_the_hook_announces_thirty_seven_failures_and_the_five_that_stay_quiet_are_all_auth():
+def test_the_five_quiet_hooks_are_the_auth_signs_and_every_other_site_announces_at_its_hook():
     quiet = [s for s in sites() if not s.hook_level]
-    assert len(quiet) == 5, "%d mutations announce nothing at the hook: %s" % (
+    assert len(quiet) == len(QUIET_AUTH), "%d mutations announce nothing at the hook: %s" % (
         len(quiet), [s.where for s in quiet]
     )
-    assert sorted(s.name for s in quiet) == [
-        "useForgotPassword", "useLogin", "useLogout", "useRegister", "useResetPassword",
-    ], "the hook-level silent set moved: %s" % sorted(s.name for s in quiet)
-    assert {s.rel for s in quiet} == {AUTH_HOOKS}
-    assert len([s for s in sites() if s.hook_level]) == 60
+    assert sorted(s.name for s in quiet) == QUIET_AUTH, "the hook-level silent set moved: %s" % sorted(
+        s.name for s in quiet)
+    assert {s.rel for s in quiet} == {AUTH_HOOKS}, "the silent set left %s" % AUTH_HOOKS.split("/")[-1]
     untyped = [s.where for s in sites() if "mutationFn" not in s.keys]
     assert not untyped, "a mutation with no mutationFn is not a request: %s" % untyped
 
@@ -264,12 +332,31 @@ def test_the_credentials_form_announces_two_different_mutations_with_one_shared_
     assert decl, "%s is passed as call options but declared nowhere in the form" % name
     keys = object_keys(object_literal(text, decl.end()))
     assert "onError" in keys, "the shared handlers object states %s" % keys
-    assert stmt(text, "onError: (err: unknown) => toast.error(describeError(err)),") == (
-        'onError: (err: unknown) => toast.error(describeError(err)),'
-    )
-    assert re.search(r"function describeError\(", text), (
-        "the shared onError no longer maps the failure through the form's own describer"
-    )
+    # The announcer is read out of the object both calls pass, and the describer it hands the
+    # failure to is graded where it is authored. The form's own copy of this claim pinned one
+    # line of the form's prose, so a commit that moved the sign-in error copy into the recovery
+    # module -- the better change, with unit tests of its own -- read as a vanished announcer.
+    statement = stmt(object_literal(text, decl.end()), "onError:")
+    handler = re.fullmatch(r"onError: \((\w+): unknown\) => toast\.error\((\w+)\(\1\)\),", statement)
+    assert handler, (
+        "the shared onError is %s, which does not toast the failure it was handed through one "
+        "describer call: the sign-in form's announcer changed shape and the two mutations that "
+        "share it have to be re-read" % repr(statement))
+    _, describer = handler.groups()
+    assert describer not in re.findall(r"\bfunction (\w+)\(", text), (
+        "%s is called by the shared onError and declared in the form too, so the sign-in failure "
+        "copy has two authors" % describer)
+    imports = [line for line in text.splitlines()
+               if re.match(r"\s*import \{[^}]*\b%s\b" % re.escape(describer), line)]
+    assert len(imports) == 1, "%s is imported by %d statements, so the shared onError reads it " \
+        "from somewhere this gate cannot name" % (describer, len(imports))
+    module = re.search(r'from "(@/[^"]+)"', imports[0]).group(1)
+    base = module.replace("@/", "frontend/src/")
+    rel = next((p for p in (base + ".ts", base + ".tsx") if p in sources()), None)
+    assert rel, "the form imports %s, which the source walk never reads" % module
+    authors = [r for r, body in sources().items()
+               if re.search(r"^export function %s\(" % re.escape(describer), body, re.M)]
+    assert authors == [RECOVERY], "the sign-in describer %s is authored in %s" % (describer, authors)
 
 
 def test_logout_is_the_one_mutation_in_the_app_that_cannot_reach_an_error_state():
@@ -332,12 +419,17 @@ def test_the_failure_helper_has_one_author_and_every_message_is_spent_once():
     )
     messages = fail_messages()
     reused = sorted(m for m, n in messages.items() if n > 1)
-    # 35 rather than 32: the contacts registry's three writes each spent their own
-    # sentence, on top of the growth report's one and the memory card's pair.
-    # 58 with the forward bridges' own writes: the export trio, the offer quartet,
-    # the ingestion quartet, the growth engines and the outreach draft each spend
-    # their own sentence, so a failure still says which write failed.
-    assert sum(messages.values()) == 58 and not reused, (
+    # Where the sentences are spent, per file, and the one-per-file sums. The count that used
+    # to sit here -- a hand-copied total, refreshed each time a bridge grew a write -- could
+    # only ever say "some number moved"; this says which file spent or unspent a sentence.
+    uses = fail_uses()
+    moved = {rel.split("/")[-1]: (want, uses.get(rel, 0)) for rel, want in sorted(SENTENCES.items())
+             if uses.get(rel, 0) != want}
+    outside = sorted(rel.split("/")[-1] for rel in set(uses) - set(SENTENCES))
+    assert not moved and not outside, (
+        "fail() sentences per file moved (file: pinned, counted) %s; files outside the roster: %s"
+        % (moved, outside))
+    assert sum(uses.values()) == sum(messages.values()) == FAIL_USES and not reused, (
         "fail() messages: %d uses, %d distinct, reused: %s" % (
             sum(messages.values()), len(messages), reused
         )
@@ -372,12 +464,42 @@ def test_the_failure_helper_has_one_author_and_every_message_is_spent_once():
 
 def test_this_gate_reads_the_same_shipped_sources_as_the_gates_it_borrows():
     assert len(sources()) >= 100, "the shared source walk read %d files" % len(sources())
-    assert len(sites()) == 65 and len([s for s in sites() if s.hook_level]) == 60
+    assert len(sites()) == SITES, "the walk found %d sites against a roster of %d" % (len(sites()), SITES)
+    assert len([s for s in sites() if s.hook_level]) == SITES - len(QUIET_AUTH), (
+        "the hook-level count is not the roster less the named quiet set, so a site changed "
+        "announcer without changing the quiet set this file reads")
+    assert set(ROSTER) == {ACTIONS, AUTH_HOOKS, SOURCE_ACTIONS} | BRIDGE_HOOKS, (
+        "the roster and the files this gate set out to read are different sets: %s"
+        % sorted(set(ROSTER) ^ ({ACTIONS, AUTH_HOOKS, SOURCE_ACTIONS} | BRIDGE_HOOKS)))
     assert callers("useLogout") and callers("useLogin") and callers("useForgotPassword")
     for rel in (ACTIONS, AUTH_HOOKS, SOURCE_ACTIONS, CREDENTIALS, FORGOT, RESET, TOPBAR):
         assert rel in sources(), "%s is not in the population this gate reads" % rel
     assert TOPBAR in {c.rel for c in callers("useLogout")}, (
         "the topbar no longer signs out, so this file's two sign-out sites are a different pair"
     )
-    outside = sorted({s.rel for s in sites()} - {ACTIONS, AUTH_HOOKS, SOURCE_ACTIONS} - BRIDGE_HOOKS)
-    assert not outside, "a mutation appeared in a file this gate does not account for: %s" % outside
+
+
+def test_the_headline_of_this_file_states_the_census_the_walk_measures():
+    # The opening paragraph reads as a report on the app, so it is graded as one: every figure
+    # it prints is re-measured here, in the same words the prose uses. A census that moves will
+    # red this case beside the roster, which is the difference between a comment that rots and
+    # a claim that has an author.
+    prose = " ".join((__doc__ or "").split()).lower()
+    pop = sites()
+    quiet = [s for s in pop if not s.hook_level]
+    files, announced = len({s.rel for s in pop}), len([s for s in pop if s.hook_level])
+    spelled = {n: NUM_WORDS.get(n) for n in (files, len(quiet), len(quiet) - 1)}
+    assert all(spelled.values()), (
+        "the census grew past the words this case can read (%s): re-word the headline rather "
+        "than let it go silently stale" % spelled)
+    assert f"{len(pop)} mutation sites in {spelled[files]} files" in prose, (
+        "the walk sees %d sites in %d files, which the opening paragraph no longer says" % (len(pop), files))
+    assert f"{announced} declare their failure at the hook; the {spelled[len(quiet)]} that do " \
+        f"not are all in ``auth.ts``" in prose, (
+        "the announced/quiet split moved: %d hook-level, %d quiet at %s" % (
+            announced, len(quiet), sorted({s.rel.split("/")[-1] for s in quiet})))
+    assert f"{spelled[len(quiet) - 1]} of those {spelled[len(quiet)]} are announced by their caller" in prose, (
+        "the caller-announced count moved: %d of the %d quiet hooks have an announcer at the call" % (
+            len(quiet) - 1, len(quiet)))
+    assert f"has a single author and {sum(fail_uses().values())} uses" in prose, (
+        "fail() is now spent %d times, which the prose does not say" % sum(fail_uses().values()))
