@@ -181,7 +181,7 @@ public class JobService {
         Job job = buildJob(title, company.getId(), Json.str(parsed, "location"), null, null,
                 null, null, null, Json.integer(parsed, "experienceYears"), request.rawText(),
                 List.of(), List.of(), Json.strList(parsed.get("responsibilities")), skills,
-                null, null, "user_paste");
+                null, request.url(), "user_paste");
         JobJd jd = new JobJd();
         jd.setJobId(job.getId());
         jd.setUserId(userId);
