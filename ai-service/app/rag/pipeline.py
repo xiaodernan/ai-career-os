@@ -4,6 +4,7 @@ understand → hybrid retrieve (vector ∪ keyword ∪ trigram) → metadata fil
 RRF → rerank → compression → prompt construction with citations.
 """
 
+import logging
 from typing import Any
 
 from app.core import taskbus
@@ -14,6 +15,8 @@ from app.rag import store
 from app.rag.compress import compress
 from app.rag.rerank import rerank
 from app.rag.rewrite import understand
+
+log = logging.getLogger("rag.pipeline")
 
 # Extra full-text queries beyond the rewritten one. Each is a round trip, so the
 # multi-query expansion is bounded even though query understanding may return 8 keywords.
@@ -53,8 +56,20 @@ async def retrieve(query: str, *, user_id: str, run_id: str | None = None,
     expansions = u["expansions"] if max_expansions is None else u["expansions"][:max_expansions]
     queries = [u["rewritten"]] + expansions
     vecs = []
-    for q in queries:
-        vecs.extend(await embedder.embed([q]))
+    try:
+        for q in queries:
+            vecs.extend(await embedder.embed([q]))
+    except Exception as e:
+        # The embedder is an enhancement, not a requirement: with no vectors the
+        # vector channel simply contributes nothing and the lexical channels still
+        # answer -- which is what a pre-hybrid build would have returned. Failing the
+        # whole retrieval because the embedding provider is down is a strictly worse
+        # answer, so the failure degrades the channel and is traced, never swallowed.
+        log.warning("rag embedding failed; running lexical channels only: %s", e)
+        if run_id:
+            await observability.trace(run_id, "retrieval", "rag", {
+                "stage": "embedding_error", "error": str(e)[:200]})
+        vecs = []
 
     filter_kinds = kinds or (u.get("filters") or {}).get("kinds") or None
     # A caller-supplied `kinds` is a request; the understanding step's is a guess.
@@ -73,19 +88,45 @@ async def retrieve(query: str, *, user_id: str, run_id: str | None = None,
         channels = ["vector", "keyword", "trigram"]
 
     async def retrieve(kinds_filter: list[str] | None) -> list[dict]:
+        # One retrieval channel, isolated: a channel that raises contributes nothing
+        # instead of failing the whole retrieval. The vector and trigram channels are
+        # Postgres-dependent (`pgvector` / `pg_trgm`) and every channel is a round trip
+        # a transient connection error can take out, so before this a single bad
+        # channel aborted `retrieve` and took the healthy channels' results down with
+        # it. A degraded answer is still an answer: with the vector channel down the
+        # keyword results are exactly what a pre-hybrid build would have returned.
+        # The failure is never silent -- it is logged and traced, so a run that fell
+        # back is distinguishable from one that genuinely found nothing.
+        async def _channel(name: str, call) -> list[dict]:
+            try:
+                return await call()
+            except Exception as e:  # one channel must not sink the rest of retrieval
+                log.warning("rag channel %s failed: %s", name, e)
+                if run_id:
+                    await observability.trace(run_id, "retrieval", "rag", {
+                        "stage": "channel_error", "channel": name,
+                        "error": str(e)[:200]})
+                return []
+
         lists = []
         if "vector" in channels:
             for v in vecs:
-                lists.append(await store.vector_search(user_id, v, k=25, kinds=kinds_filter,
-                                                       document_ids=document_ids))
+                lists.append(await _channel(
+                    "vector",
+                    lambda v=v: store.vector_search(  # bind v per-iteration
+                        user_id, v, k=25, kinds=kinds_filter, document_ids=document_ids)))
         if "keyword" in channels:
             for phrase in keyword_phrases(u):
-                lists.append(await store.keyword_search(user_id, phrase, k=25, kinds=kinds_filter,
-                                                        document_ids=document_ids))
+                lists.append(await _channel(
+                    "keyword",
+                    lambda p=phrase: store.keyword_search(  # bind phrase per-iteration
+                        user_id, p, k=25, kinds=kinds_filter, document_ids=document_ids)))
         if "trigram" in channels:
-            lists.append(await store.trigram_search(user_id, u["rewritten"], k=10,
-                                                    kinds=kinds_filter,
-                                                    document_ids=document_ids))
+            lists.append(await _channel(
+                "trigram",
+                lambda: store.trigram_search(
+                    user_id, u["rewritten"], k=10, kinds=kinds_filter,
+                    document_ids=document_ids)))
         return store.rrf_merge(lists)
 
     merged = await retrieve(filter_kinds)
