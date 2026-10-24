@@ -45,6 +45,7 @@ import {
   useResumes,
 } from "@/lib/hooks/resources";
 import { runTotalTokens, type NormalizedPage } from "@/lib/api/normalize";
+import { rankingHintKey } from "@/lib/dashboard-ranking";
 import { formatNumber, relativeTime, titleCase } from "@/lib/format";
 import type { ActivityRun, DashboardPayload, Job, Resume } from "@/lib/api/types";
 
@@ -414,15 +415,13 @@ export default function DashboardPage() {
               {/* Recommended jobs with match rings */}
               <Card>
                 <CardHeader className="pb-3">
+                  {/* The band's sentence is about a ranking, so a score decides it -- not whether rows
+                      arrived. `lib/dashboard-ranking.ts` holds what the aggregate can actually send. */}
                   <SectionHeading
                     eyebrow={t("eyebrows.recommendations")}
                     icon={<Sparkles className="size-4" aria-hidden />}
                     title={t("dashboard.whereToFocus")}
-                    description={
-                      data?.recommendedJobs?.length
-                        ? t("dashboard.skillGapsHint")
-                        : t("dashboard.straightFromTheBoard")
-                    }
+                    description={t(rankingHintKey(data?.recommendedJobs))}
                     action={
                       <Button variant="ghost" size="xs" asChild>
                         <Link href="/jobs">

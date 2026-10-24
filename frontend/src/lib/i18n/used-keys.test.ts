@@ -91,6 +91,9 @@ describe("the keys the browser asks for", () => {
         else if (!zh.has(key)) missing.push(`${rel}: ${key} (not in the Chinese table)`);
       }
     }
-    expect(missing).toEqual([]);
+    // The offenders go in the message. Without them the red reads
+    // `expected [ Array(2) ] to deeply equal []`, which names neither the key nor the file,
+    // and the reader has to re-run the scan by hand to find out what the gate found.
+    expect(missing, `a key is asked for and the table does not answer it:\n${missing.join("\n")}`).toEqual([]);
   });
 });
