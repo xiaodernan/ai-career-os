@@ -1,5 +1,7 @@
 """JD Intelligence (PRD §9): parse requirements, skills, hidden asks, topics."""
 
+import re
+
 from app.core.ai import ask_json, wrap_untrusted
 from app.core.skills import extract_skills, normalize
 from app.providers.base import LLMMessage, LLMRequest
@@ -30,7 +32,67 @@ async def analyze_jd(raw_text: str, *, user_id=None, run_id=None) -> dict:
         temperature=0.0, max_tokens=3000)
     out = await ask_json(req, user_id=user_id, run_id=run_id, agent="jd_analyst",
                          kind="jd_analyze")
-    return _backfill_skills(out, raw_text)
+    return _backfill_identity(_backfill_skills(out, raw_text), raw_text)
+
+
+TITLE_MAX_CHARS = 80
+
+# What a pasted first line carries around it: markdown heading and bullet marks, and the quotes a
+# reader copied along with the text.
+_LINE_JUNK = re.compile(r"^[\s#>*\-–—•·.,:;\"'`]+")
+_TRAILING_JUNK = re.compile(r"[\s\-–—|:,.;]+$")
+
+
+def _title_from_text(raw_text: str) -> str:
+    """The first line of the paste that says something, cleaned and bounded.
+
+    A posting begins with its role: it is the heading a job board writes and the first thing a reader
+    selects. Lines before it are blank or decoration, so the scan skips those and stops at the first
+    line carrying a letter — in any script, because the product answers Chinese readers too.
+    """
+    for line in (raw_text or "").splitlines():
+        candidate = _TRAILING_JUNK.sub("", _LINE_JUNK.sub("", line.strip()))
+        candidate = " ".join(candidate.split())
+        # A line of punctuation, a rule, a bare count: decoration, not a role.
+        if len(candidate) < 3 or not re.search(r"[^\W\d_]", candidate, re.UNICODE):
+            continue
+        if len(candidate) > TITLE_MAX_CHARS:
+            cut = candidate.rfind(" ", 0, TITLE_MAX_CHARS)
+            candidate = candidate[:cut if cut >= TITLE_MAX_CHARS // 2 else TITLE_MAX_CHARS]
+            return _TRAILING_JUNK.sub("", candidate).strip()
+        return candidate
+    return ""
+
+
+def _backfill_identity(out: dict, raw_text: str) -> dict:
+    """Name the role from the text the reader pasted when the model did not name it.
+
+    The prompt's own skeleton and `JDAnalysis` both declare `"title":""`, so returning a blank title
+    is the schema-conformant answer to "I found no role here" — and `JobService.persistImport` turns
+    that conformant blank into a fabricated row name. Measured on the running stack 2026-10-25: every
+    one of the 171 stored analyst answers omitted the key entirely, and 80 jobs sit in the database
+    titled "Imported job" — one per user, all from pastes whose own first line was the role
+    ("Senior Backend Engineer - Agent Platform"). So this is the same deterministic capture
+    `_backfill_skills` performs beside it, and it is not a guess: it is the reader's own line.
+
+    It deliberately does **not** recover a company. Nothing in a paste's shape reliably names an
+    employer, and inventing one files a real person's application under a business that does not
+    exist — the placeholder `JobService` uses today is worse, but the recovery of it would be worse
+    than the placeholder. That half is a decision for the caller, not a heuristic here.
+
+    A title the model did name is never overwritten, and a paste with no usable line leaves the key
+    as it was, so the caller's floor still applies to it.
+
+    Mutates and returns ``out``.
+    """
+    out = out if isinstance(out, dict) else {}
+    current = out.get("title")
+    if isinstance(current, str) and current.strip():
+        return out
+    derived = _title_from_text(raw_text)
+    if derived:
+        out["title"] = derived
+    return out
 
 
 def _backfill_skills(out: dict, raw_text: str) -> dict:

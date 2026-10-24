@@ -125,7 +125,14 @@ class MockProvider:
                 "preferredRoles": ["Backend Engineer"], "preferredLocations": ["Remote"],
             })
         if "jd" in low or "job description" in low:
+            # The two names a tracker files a job under. `title` is left blank on purpose: reading a
+            # role out of a posting is the analyst's job, and `jd_analyze._backfill_identity` does it
+            # deterministically from the pasted text — a mock that invented one would speak for the
+            # reader's own words. `company` the mock does name, because nothing else on the offline
+            # stack can, and an unnamed paste otherwise lands under the fabricated business
+            # "Unknown company", which every user's failed import then shares.
             return json.dumps({
+                "title": "", "company": "Mock Corp",
                 "requiredSkills": [{"name": "Java", "priority": "must"}],
                 "preferredSkills": [{"name": "Kubernetes", "priority": "nice"}],
                 "responsibilities": ["Design backend services"],
