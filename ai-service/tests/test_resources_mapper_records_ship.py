@@ -804,7 +804,18 @@ def test_the_dead_names_spread_in_three_measured_tiers_and_three_reached_a_scree
     # 228 rather than 179: the analysis/dashboard expansion (Epic 15), the data
     # portability surface (13.x), and the ingestion connectors (14.x) each brought
     # screens, hooks and their tests.
-    assert len(files) == 228, f"the frontend census walked {len(files)} files"
+    # A FLOOR, not an equality. The population is the frontend's own source tree, which grows every
+    # time a screen or a test joins it, and `== 228` made each of those additions red two suites away:
+    # `components/jobs/job-card.test.tsx` (#264) tripped this pin and the skipped-population pin in
+    # `test_response_shape_contract.py` while falsifying nothing either file claims about a wire name.
+    # What the equality was for -- proving the walk reached the tree instead of a subdirectory of it --
+    # the floor keeps. What it was standing in for, "a carrier left the census", is graded by identity
+    # below: `carriers_of` reconciles every one of the 27 classified names against the exact set of
+    # files that spell it, so a file disappearing reds that table whether or not the total moved. The
+    # arm that proves this sentence is true deletes a carrier and watches the tier table go red while
+    # the floor stays green.
+    assert len(files) >= 228, (f"the frontend census walked {len(files)} files, below the 228 that "
+                               "ship: the walk stopped reaching part of the tree")
     asked = {name for row in UNAUTHORED.values() for name in row}
     assert len(asked) == 57, f"{len(asked)} dead names are asked, pinned 57"
     classified = set()

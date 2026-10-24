@@ -105,7 +105,9 @@ function JobCard({
             )}
           </div>
 
-          {(match?.matchedSkills?.length || match?.missingSkills?.length || job.skills?.length) && (
+          {/* Boolean() is load-bearing: an `&&` on a length short-circuits to the number 0, and React
+              renders that as the text "0" -- which is what every unscored dashboard row printed. */}
+          {Boolean(match?.matchedSkills?.length || match?.missingSkills?.length || job.skills?.length) && (
             <div className="mt-2.5">
               {match ? (
                 <SkillChips matched={match.matchedSkills} missing={match.missingSkills} max={dense ? 4 : 6} showLabels />

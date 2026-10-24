@@ -2147,9 +2147,18 @@ def test_the_run_stream_contract_is_one_table_of_publishers_cases_and_subscriber
     # `lib/i18n/used-keys.test.ts`.
     # 53 with the error codes' own:
     # `lib/i18n/error-codes.test.ts`.
-    assert len(skipped) == 53 and all(rel.endswith((".test.ts", ".test.tsx")) for rel, _t in skipped), \
-        (f"{len(skipped)} files are skipped and not one ships: a name in that set that is not a test file "
-         "would be a subscriber hidden from the table by the pattern rather than by measurement")
+    # 54 joined with `components/jobs/job-card.test.tsx` (#264), and the pin took it as a floor rather
+    # than a re-number. The sentence several lines above already calls this a population and not a
+    # budget, but `== 53` capped it, so a legitimate new test file could only land by editing a number
+    # in another service's suite -- which is how one gate can veto the other half of the repository.
+    # The floor still refuses a walk that stopped reaching, and the claim the number never carried is
+    # carried by the rule beside it: a non-test file inside this set is a subscriber hidden from the
+    # table by the pattern rather than by measurement, and no total can tell you whether one is there.
+    assert len(skipped) >= 53 and all(rel.endswith((".test.ts", ".test.tsx")) for rel, _t in skipped), \
+        (f"{len(skipped)} files are skipped: either below the 53 that ship, which means the walk "
+         "stopped reaching them, or one of them is not a test file -- and a name in that set that is "
+         "not a test file would be a subscriber hidden from the table by the pattern rather than by "
+         "measurement")
     skipped_names = {rel.rsplit("/", 1)[-1] for rel, _t in skipped}
     imported = [spec for _rel, text in walked for spec in re.findall(r"""from\s+['"]([^'"]+)['"]""", text)
                 if spec.rsplit("/", 1)[-1] in skipped_names]
