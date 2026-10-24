@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from app.agents import memory
-from app.agents.tools import SUBAGENT_TOOLS, TOOL_INDEX, Tool
+from app.agents.tools import SUBAGENT_TOOLS, TOOL_INDEX, Tool, validate_tool_args
 from app.core import ai, taskbus
 from app.db import observability
 from app.providers.base import LLMMessage, LLMRequest, LLMResponse, ToolSpec
@@ -211,7 +211,15 @@ async def _exec_tool(tool: Tool, user_id: str, args: dict, *, run_id: str | None
     await observability.trace(run_id, "tool_call", agent,
                               {"tool": tool.name, "args": args})
     try:
-        result = await tool.handler(user_id, **args)
+        # Validate against the tool's own schema before the handler runs: a missing
+        # required property or an unknown one gets a message that names it (and the
+        # allowed set), which the model can correct on the next step, where Python's
+        # TypeError leaves it guessing. Scalar coercions stay the handler's job.
+        problem = validate_tool_args(tool.name, tool.parameters, args)
+        if problem:
+            result = {"error": f"invalid arguments for {tool.name}: {problem}"}
+        else:
+            result = await tool.handler(user_id, **args)
     except TypeError as e:  # bad arguments from the model
         result = {"error": f"invalid arguments for {tool.name}: {e}"}
     except Exception as e:

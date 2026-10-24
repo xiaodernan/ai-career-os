@@ -162,6 +162,47 @@ async def test_tool_error_is_reported_not_raised(env, monkeypatch):
 
     out = await orchestrator.career_turn(user_id="u1", message="job?", run_id="r4")
     assert "db exploded" in out.answer
+
+
+async def test_a_call_missing_a_required_property_never_reaches_the_handler(env, monkeypatch):
+    traces, _ = env
+    reached: list[dict] = []
+
+    async def script(req, **kw):
+        if any(m.role == "tool" for m in req.messages):
+            return _resp(text=f"noted: {req.messages[-1].content}")
+        return _resp(tool_calls=[ToolCall(id="c1", name="get_job", arguments={})])
+
+    async def fake_get(user_id, **kw):
+        reached.append(kw)
+        return {"job": {}}
+
+    monkeypatch.setattr(orchestrator.ai, "ask", script)
+    monkeypatch.setattr(TOOL_INDEX["get_job"], "handler", fake_get)
+
+    out = await orchestrator.career_turn(user_id="u1", message="show me the job", run_id="r9")
+    assert reached == []  # schema check fired first -- no DB round trip wasted
+    assert "missing required property 'job_id'" in out.answer
+
+
+async def test_a_call_with_an_unknown_property_names_the_allowed_set(env, monkeypatch):
+    traces, _ = env
+
+    async def script(req, **kw):
+        if any(m.role == "tool" for m in req.messages):
+            return _resp(text=req.messages[-1].content)
+        return _resp(tool_calls=[ToolCall(id="c1", name="get_job",
+                                          arguments={"job_id": "j1", "verbose": True})])
+
+    async def must_not_run(user_id, **kw):
+        raise AssertionError("an invalid call reached the handler")
+
+    monkeypatch.setattr(orchestrator.ai, "ask", script)
+    monkeypatch.setattr(TOOL_INDEX["get_job"], "handler", must_not_run)
+
+    out = await orchestrator.career_turn(user_id="u1", message="job?", run_id="r10")
+    assert "unexpected property 'verbose'" in out.answer
+    assert "allowed: job_id" in out.answer
     result = [t for t in traces if t[0] == "tool_result"][0]
     assert result[2]["ok"] is False
 

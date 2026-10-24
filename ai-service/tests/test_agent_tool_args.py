@@ -94,3 +94,68 @@ async def test_search_resume_clamps_a_bad_top_k(monkeypatch):
     monkeypatch.setattr("app.rag.pipeline.retrieve", fake_retrieve)
     await tools.search_resume("u1", query="kafka", top_k=None)
     assert seen["top_k"] == 6  # the tool's own default, not a crash in rerank
+
+
+# ---------------- schema validation (before the handler runs) ----------------
+
+_GET_JOB_SCHEMA = {"type": "object", "properties": {"job_id": {"type": "string"}},
+                   "required": ["job_id"], "additionalProperties": False}
+
+
+def test_validate_tool_args_accepts_a_well_formed_call():
+    assert tools.validate_tool_args("get_job", _GET_JOB_SCHEMA, {"job_id": "j1"}) is None
+
+
+def test_validate_tool_args_names_the_missing_required_property():
+    # Python's own TypeError says "missing 1 required positional argument" and names
+    # no property the model can add back; this one does.
+    assert tools.validate_tool_args("get_job", _GET_JOB_SCHEMA, {}) == \
+        "missing required property 'job_id'"
+
+
+def test_validate_tool_args_names_the_unknown_property_and_the_allowed_set():
+    problem = tools.validate_tool_args(
+        "get_job", _GET_JOB_SCHEMA, {"job_id": "j1", "verbose": True})
+    assert problem == "unexpected property 'verbose' (allowed: job_id)"
+
+
+def test_validate_tool_args_rejects_a_container_of_the_wrong_shape():
+    schema = {"type": "object", "properties": {
+        "skills": {"type": "array", "items": {"type": "string"}},
+        "offers": {"type": "array", "items": {"type": "object"}},
+        "equity": {"type": "object"}},
+        "additionalProperties": False}
+    assert tools.validate_tool_args("search_jobs", schema, {"skills": "go"}) == \
+        "property 'skills' must be an array"
+    assert tools.validate_tool_args("search_jobs", schema, {"skills": ["go"]}) is None
+    # an array-of-objects given a bare string is an array violation, not an object one
+    assert tools.validate_tool_args("compare_offers", schema, {"offers": "one"}) == \
+        "property 'offers' must be an array"
+    assert tools.validate_tool_args("compare_offers", schema,
+                                    {"equity": "100 shares"}) == \
+        "property 'equity' must be an object"
+    assert tools.validate_tool_args("compare_offers", schema,
+                                    {"equity": {"shares": 100}}) is None
+
+
+def test_validate_tool_args_leaves_scalar_coercion_to_the_handler():
+    # `limit: "5"` and `top_k: null` are values the handlers normalise; rejecting
+    # them here would turn a usable call into an error.
+    schema = {"type": "object", "properties": {
+        "query": {"type": "string"}, "limit": {"type": "integer", "default": 10}},
+        "additionalProperties": False}
+    assert tools.validate_tool_args("search_jobs", schema,
+                                    {"query": "x", "limit": "5"}) is None
+    assert tools.validate_tool_args("search_jobs", schema,
+                                    {"query": "x", "limit": None}) is None
+    assert tools.validate_tool_args("search_jobs", schema, {"query": "x"}) is None
+
+
+def test_validate_tool_args_on_every_registered_tool_schema_is_self_consistent():
+    # A schema whose `required` names a property it does not define would make the
+    # validator reject a call the handler accepts -- so check every shipped schema.
+    for tool in tools.ALL_TOOLS:
+        schema = tool.parameters
+        props = set(schema.get("properties") or {})
+        assert set(schema.get("required") or []) <= props, tool.name
+        assert isinstance(schema.get("type"), str) and schema["type"] == "object", tool.name

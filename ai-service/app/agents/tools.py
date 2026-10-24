@@ -109,6 +109,45 @@ def _clean_kinds(kinds) -> list[str] | None:
     return cleaned or None
 
 
+def validate_tool_args(name: str, schema: dict, args: dict) -> str | None:
+    """A human-readable reason `args` violates the tool's schema, or None.
+
+    Only structural violations are rejected -- a missing required property, an
+    unknown property, or a container of the wrong shape. Scalar types are left to
+    the handler's own coercion: `limit: "5"` is a value the handler knows how to
+    read, and rejecting it would turn a usable call into an error.
+
+    The point is the message, not the rejection. Python's own TypeError for a
+    missing kwarg names no property the model can add back, and for an unknown one
+    it names no property the model may keep. Naming both turns a failed call into
+    one the model can correct on the next step instead of repeating.
+    """
+    if not isinstance(schema, dict):
+        return None
+    props = schema.get("properties") or {}
+    for key in schema.get("required") or []:
+        if key not in args:
+            return f"missing required property {key!r}"
+    if schema.get("additionalProperties") is False:
+        unknown = sorted(k for k in args if k not in props)
+        if unknown:
+            allowed = f" (allowed: {', '.join(sorted(props))})" if props else ""
+            return f"unexpected property {unknown[0]!r}{allowed}"
+    for key, spec in props.items():
+        if key not in args or not isinstance(spec, dict):
+            continue
+        value, want = args[key], spec.get("type")
+        if want == "array" and not isinstance(value, list):
+            return f"property {key!r} must be an array"
+        if want == "object" and not isinstance(value, dict):
+            return f"property {key!r} must be an object"
+        if want == "string" and isinstance(value, (list, dict)):
+            return f"property {key!r} must be a string"
+        if want == "boolean" and not isinstance(value, bool):
+            return f"property {key!r} must be a boolean"
+    return None
+
+
 def _search_params(*, query: str = "", skills: list[str] | None = None,
                    location: str = "", remote: str = "", company: str = "",
                    min_salary: int | None = None, limit: int = 10) -> tuple[list[str], list]:
