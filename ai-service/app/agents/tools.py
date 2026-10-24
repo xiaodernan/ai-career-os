@@ -75,6 +75,40 @@ def _apply_fragments(where: list[str], args: list, fragments: list[tuple[str, An
         where.append(sql.replace("{n}", str(len(args))))
 
 
+def _clamp_limit(value, default: int, cap: int = 25) -> int:
+    """A sane page size from a model-supplied value.
+
+    `limit` / `max_questions` arrive as JSON and the model sometimes sends a string,
+    a float, or null. `int(...)` on those raises inside the handler, which the
+    orchestrator turns into a tool error the model then has to retry; clamping here
+    degrades to the default window instead.
+    """
+    try:
+        n = int(value)
+    except (TypeError, ValueError):
+        return default
+    return max(1, min(n, cap))
+
+
+def _clean_kinds(kinds) -> list[str] | None:
+    """A usable source-`kinds` filter, or None.
+
+    The tool schema asks for an array of strings, but JSON can hand a bare string
+    ("resume"), a number, or a list with holes. Binding any of those to
+    `$N::text[]` fails at execution time and takes every retrieval channel down with
+    it, so the filter is normalised here: a lone string becomes a one-element list,
+    non-string entries are dropped, and an empty result means "no filter" rather
+    than "match nothing".
+    """
+    if not kinds:
+        return None
+    raw = [kinds] if isinstance(kinds, str) else kinds
+    if not isinstance(raw, (list, tuple, set)):
+        return None
+    cleaned = [k.strip() for k in raw if isinstance(k, str) and k.strip()]
+    return cleaned or None
+
+
 def _search_params(*, query: str = "", skills: list[str] | None = None,
                    location: str = "", remote: str = "", company: str = "",
                    min_salary: int | None = None, limit: int = 10) -> tuple[list[str], list]:
@@ -97,13 +131,8 @@ def _search_params(*, query: str = "", skills: list[str] | None = None,
         skills=skills, location=location, remote=remote, company=company,
         min_salary=min_salary))
     # `limit` arrives from the model/peer as JSON and may be a string, None, or a
-    # float; coerce defensively and clamp so a bad value degrades to the default
-    # window instead of raising on `int(limit)` at request time.
-    try:
-        lim = int(limit)
-    except (TypeError, ValueError):
-        lim = 10
-    args.append(max(1, min(lim, 25)))
+    # float; clamp so a bad value degrades to the default window instead of raising.
+    args.append(_clamp_limit(limit, 10))
     return where, args
 
 
@@ -193,7 +222,7 @@ async def search_jobs(user_id: str, *, query: str = "", skills: list[str] | None
     """
     fragments = _filter_fragments(skills=skills, location=location, remote=remote,
                                   company=company, min_salary=min_salary)
-    capped = max(1, min(int(limit), 25))
+    capped = _clamp_limit(limit, 10)
 
     where, args = _search_params(query=query, skills=skills, location=location,
                                  remote=remote, company=company, min_salary=min_salary,
@@ -255,7 +284,8 @@ async def parse_resume(user_id: str, *, text: str) -> dict:
 async def search_resume(user_id: str, *, query: str, top_k: int = 6) -> dict:
     from app.rag.pipeline import retrieve
 
-    r = await retrieve(query, user_id=user_id, top_k=top_k, kinds=["resume", "project"])
+    r = await retrieve(query, user_id=user_id, top_k=_clamp_limit(top_k, 6),
+                       kinds=["resume", "project"])
     return {"evidence": r["evidence"]}
 
 
@@ -263,7 +293,8 @@ async def search_knowledge_base(user_id: str, *, query: str, top_k: int = 8,
                                 kinds: list[str] | None = None) -> dict:
     from app.rag.pipeline import retrieve
 
-    r = await retrieve(query, user_id=user_id, top_k=top_k, kinds=kinds)
+    r = await retrieve(query, user_id=user_id, top_k=_clamp_limit(top_k, 8),
+                       kinds=_clean_kinds(kinds))
     return {"evidence": r["evidence"], "context": r.get("context_block", "")[:6000]}
 
 
@@ -354,7 +385,7 @@ async def create_interview(user_id: str, *, job_id: str, mode: str = "mixed",
                position_title, mode, config)
            VALUES ($1::uuid,$2::uuid,$3::uuid,$4,$5,$6,$7::jsonb) RETURNING id""",
         user_id, job_id, str(rv["id"]) if rv else None, job.get("company_name"),
-        job.get("title"), mode, db.jsonb({"max_questions": int(max_questions)}))
+        job.get("title"), mode, db.jsonb({"max_questions": _clamp_limit(max_questions, 6, 50)}))
     return {"session_id": str(row["id"]), "job": job["title"],
             "company": job.get("company_name")}
 
@@ -423,7 +454,7 @@ async def search_contacts(user_id: str, *, name: str = "", company: str = "",
     if relation.strip():
         args.append(db.like_contains(relation))
         where.append(f"relation ILIKE ${len(args)} ESCAPE '!'")
-    args.append(max(1, min(int(limit), 25)))
+    args.append(_clamp_limit(limit, 10))
     rows = await db.fetch(
         f"""SELECT {domain.CONTACT_COLUMNS} FROM contacts
             WHERE {' AND '.join(where)}
@@ -443,7 +474,8 @@ async def get_follow_ups(user_id: str, *, include_fresh: bool = False,
     """
     from app.features.reminders import follow_ups_for
 
-    contacts = await domain.list_contacts_for_follow_ups(user_id, limit)
+    contacts = await domain.list_contacts_for_follow_ups(
+        user_id, _clamp_limit(limit, 15, 50))
     return {"follow_ups": follow_ups_for(contacts, include_fresh=include_fresh)}
 
 
