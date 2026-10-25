@@ -18,6 +18,19 @@ from app.rag.rewrite import understand
 
 log = logging.getLogger("rag.pipeline")
 
+
+def _vectors(raw) -> list[list[float]]:
+    """A provider's reply as vectors, tolerating anything that is not one.
+
+    The embedder contract is `list[list[float]]`, but this value is produced before any
+    DB call and a provider answering with a dict or a scalar would otherwise reach the
+    vector channel as-is and bind garbage into `$1::vector`. Empty vectors are dropped
+    for the same reason: pgvector rejects a zero-length one.
+    """
+    if not isinstance(raw, list):
+        return []
+    return [v for v in raw if isinstance(v, list) and v]
+
 # Extra full-text queries beyond the rewritten one. Each is a round trip, so the
 # multi-query expansion is bounded even though query understanding may return 8 keywords.
 KEYWORD_FANOUT = 4
@@ -55,21 +68,24 @@ async def retrieve(query: str, *, user_id: str, run_id: str | None = None,
     # a run can ask what the expanded queries are actually worth.
     expansions = u["expansions"] if max_expansions is None else u["expansions"][:max_expansions]
     queries = [u["rewritten"]] + expansions
-    vecs = []
+    # One batched call, not one per query: every provider here takes a list and returns
+    # one vector per input in order (hash by comprehension, ollama by input order, the
+    # OpenAI-compatible one sorts by `index`), so four queries were four round trips --
+    # and four chances to time out -- where one does. On failure, retry with just the
+    # rewritten query: the expansions are an enhancement, the rewritten query is what
+    # the vector channel exists for. A total failure drops the channel, never the call.
     try:
-        for q in queries:
-            vecs.extend(await embedder.embed([q]))
+        vecs = _vectors(await embedder.embed(queries))
     except Exception as e:
-        # The embedder is an enhancement, not a requirement: with no vectors the
-        # vector channel simply contributes nothing and the lexical channels still
-        # answer -- which is what a pre-hybrid build would have returned. Failing the
-        # whole retrieval because the embedding provider is down is a strictly worse
-        # answer, so the failure degrades the channel and is traced, never swallowed.
-        log.warning("rag embedding failed; running lexical channels only: %s", e)
+        log.warning("rag embedding failed; retrying with the rewritten query only: %s", e)
         if run_id:
             await observability.trace(run_id, "retrieval", "rag", {
                 "stage": "embedding_error", "error": str(e)[:200]})
-        vecs = []
+        try:
+            vecs = _vectors(await embedder.embed([u["rewritten"]]))
+        except Exception as e2:
+            log.warning("rag embedding unavailable; running lexical channels only: %s", e2)
+            vecs = []
 
     filter_kinds = kinds or (u.get("filters") or {}).get("kinds") or None
     # A caller-supplied `kinds` is a request; the understanding step's is a guess.

@@ -159,3 +159,53 @@ async def test_a_channel_failure_without_a_run_id_still_answers(monkeypatch):
     out = await pipeline.retrieve("kafka experience", user_id="u", top_k=5)
     ids = {e["chunk_id"] for e in out["evidence"]}
     assert ids == {"k1", "t1"}
+
+
+class CountingEmbedder:
+    """Fails the batch, succeeds for a single input -- the shape a provider with a
+    per-request input limit has."""
+
+    def __init__(self):
+        self.batches: list[list[str]] = []
+
+    async def embed(self, texts):
+        self.batches.append(list(texts))
+        if len(texts) > 1:
+            raise ValueError("too many inputs")
+        return [[0.1, 0.2, 0.3] for _ in texts]
+
+
+@pytest.mark.asyncio
+async def test_every_query_is_embedded_in_one_batched_call(monkeypatch):
+    embedder = FakeEmbedder()
+    _patch(monkeypatch, embedder=embedder)
+    await pipeline.retrieve("kafka experience", user_id="u", top_k=5)
+    assert embedder.calls == 1, (
+        "the rewritten query plus each expansion is one list -- embedding them one at "
+        "a time is one round trip each, and one chance each to time out")
+
+
+@pytest.mark.asyncio
+async def test_a_failed_batch_retries_with_the_rewritten_query_alone(monkeypatch):
+    embedder = CountingEmbedder()
+    _vec, _kw, _tri, traces = _patch(monkeypatch, embedder=embedder)
+    out = await pipeline.retrieve("kafka experience", user_id="u", top_k=5, run_id="r1")
+
+    assert embedder.batches[0] == ["backend experience", "messaging"]  # the batch
+    assert embedder.batches[1] == ["backend experience"]              # the retry
+    ids = {e["chunk_id"] for e in out["evidence"]}
+    assert "v1" in ids, "the vector channel must still contribute after the retry"
+    assert any(p.get("stage") == "embedding_error" for k, p in traces if k == "retrieval")
+
+
+@pytest.mark.asyncio
+async def test_a_provider_that_answers_with_a_non_list_is_ignored(monkeypatch):
+    class Weird:
+        async def embed(self, texts):
+            return {"not": "a list"}
+
+    _vec, _kw, tri, _ = _patch(monkeypatch, embedder=Weird())
+    out = await pipeline.retrieve("kafka experience", user_id="u", top_k=5)
+    ids = {e["chunk_id"] for e in out["evidence"]}
+    assert ids == {"k1", "t1"}  # no vector channel, no crash
+    assert tri.calls == 1
