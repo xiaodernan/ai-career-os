@@ -1,5 +1,6 @@
 """Persistence helpers for observability: usage events, agent runs, trace steps."""
 
+import logging
 import uuid
 from typing import Any
 
@@ -7,17 +8,36 @@ import asyncpg
 
 from app.core import db
 
+log = logging.getLogger("db.observability")
+
+
+async def _best_effort(what: str, awaitable) -> None:
+    """Await a telemetry write, logging instead of raising.
+
+    Traces and usage rows *observe* a request; a failure to record one must never fail
+    the request itself. `trace()` is awaited on every step of every copilot turn --
+    including from `_exec_tool`, where a failed INSERT on `agent_traces` aborted a turn
+    that had already produced its answer -- and `finish_run` is called from `except`
+    handlers, where raising replaced the original exception with the telemetry error.
+    Both are the observer breaking the observed. Writes that are load-bearing
+    (`create_run` returns the id every later write needs) deliberately do not use this.
+    """
+    try:
+        await awaitable
+    except Exception as e:
+        log.warning("%s failed (telemetry, not raised): %s", what, e)
+
 
 async def record_usage(user_id: str | None, run_id: str | None, model: str, provider: str,
                        kind: str, in_tok: int, out_tok: int, cached: int, cost: float,
                        latency_ms: int) -> None:
     if not user_id:
         return
-    await db.execute(
+    await _best_effort("record_usage", db.execute(
         """INSERT INTO ai_usage_events(user_id, run_id, model, provider, kind,
                input_tokens, output_tokens, cached_tokens, cost_usd, latency_ms)
            VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6, $7, $8, $9, $10)""",
-        user_id, run_id, model, provider, kind, in_tok, out_tok, cached, cost, latency_ms)
+        user_id, run_id, model, provider, kind, in_tok, out_tok, cached, cost, latency_ms))
 
 
 async def create_run(user_id: str, agent: str, trigger: str, model: str = "",
@@ -60,14 +80,19 @@ async def finish_run(run_id: str, status: str, in_tok: int = 0, out_tok: int = 0
     # 'completed' inside a try and 'failed' in its except makes that reachable.
     # A caller that supplies any usage figure owns all of them; passing one and leaving the
     # rest to the ledger would double-count the one it named.
-    if not (in_tok or out_tok or cached or cost):
-        in_tok, out_tok, cached, cost = await _usage_of(run_id)
-    await db.execute(
-        """UPDATE agent_runs SET status=$2, input_tokens=input_tokens+$3,
-               output_tokens=output_tokens+$4, cached_tokens=cached_tokens+$5,
-               cost_usd=cost_usd+$6, latency_ms=latency_ms+$7, error=$8, finished_at=now()
-           WHERE id=$1::uuid AND status NOT IN ('completed','failed')""",
-        run_id, status, in_tok, out_tok, cached, cost, latency_ms, error)
+    try:
+        if not (in_tok or out_tok or cached or cost):
+            in_tok, out_tok, cached, cost = await _usage_of(run_id)
+        await db.execute(
+            """UPDATE agent_runs SET status=$2, input_tokens=input_tokens+$3,
+                   output_tokens=output_tokens+$4, cached_tokens=cached_tokens+$5,
+                   cost_usd=cost_usd+$6, latency_ms=latency_ms+$7, error=$8, finished_at=now()
+               WHERE id=$1::uuid AND status NOT IN ('completed','failed')""",
+            run_id, status, in_tok, out_tok, cached, cost, latency_ms, error)
+    except Exception as e:
+        # Finalising a run is telemetry, and this is called from `except` handlers:
+        # raising here would replace the error that actually failed the request.
+        log.warning("finish_run failed for %s (telemetry, not raised): %s", run_id, e)
 
 
 _trace_seq: dict[str, int] = {}
@@ -79,10 +104,10 @@ async def trace(run_id: str | None, kind: str, agent: str,
         return
     seq = _trace_seq.get(run_id, 0) + 1
     _trace_seq[run_id] = seq
-    await db.execute(
+    await _best_effort("trace", db.execute(
         """INSERT INTO agent_traces(run_id, seq, kind, agent, payload)
            VALUES ($1::uuid, $2, $3, $4, $5::jsonb)""",
-        run_id, seq, kind, agent, db.jsonb(payload))
+        run_id, seq, kind, agent, db.jsonb(payload)))
 
 
 async def get_run(run_id: str) -> asyncpg.Record | None:

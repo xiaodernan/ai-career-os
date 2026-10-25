@@ -70,24 +70,32 @@ async def chat_sync(req: ChatReq, ctx: Ctx = Depends(require_internal)):
         ctx.user_id, "career", "chat", model=s.llm_model,
         conversation_id=req.conversation_id)
     started = time.monotonic()
+    # `_trace_seq` is a module-level dict keyed by run id; without this release every
+    # synchronous turn -- the backend relay, the e2e suite and the eval harness all
+    # take this path -- leaves an entry behind for the life of the process. The
+    # streaming route already releases in its `finally`; this one must too.
     try:
-        out = await career_turn(user_id=ctx.user_id, message=req.message,
-                                history=req.history, context=req.context,
-                                run_id=run_id)
-    except Exception as e:
-        await observability.finish_run(run_id, "failed", error=str(e)[:500])
-        raise HTTPException(502, f"agent run failed: {str(e)[:300]}") from e
-    await observability.finish_run(run_id, "completed",
-                                   latency_ms=int((time.monotonic() - started) * 1000))
-    # The streaming path writes durable memory; this one is the pair the eval harness and
-    # the e2e suite drive, so a turn that only ever took that path learned nothing.
-    # Best-effort for the same reason the streaming path is: a failed extraction must
-    # never turn a answered turn into an error.
-    try:
-        await memory.extract_and_store(ctx.user_id, req.message, out.answer, run_id=run_id)
-    except Exception:
-        log.warning("memory extraction crashed", exc_info=True)
-    return out.to_dict()
+        try:
+            out = await career_turn(user_id=ctx.user_id, message=req.message,
+                                    history=req.history, context=req.context,
+                                    run_id=run_id)
+        except Exception as e:
+            await observability.finish_run(run_id, "failed", error=str(e)[:500])
+            raise HTTPException(502, f"agent run failed: {str(e)[:300]}") from e
+        await observability.finish_run(run_id, "completed",
+                                       latency_ms=int((time.monotonic() - started) * 1000))
+        # The streaming path writes durable memory; this one is the pair the eval harness and
+        # the e2e suite drive, so a turn that only ever took that path learned nothing.
+        # Best-effort for the same reason the streaming path is: a failed extraction must
+        # never turn a answered turn into an error.
+        try:
+            await memory.extract_and_store(ctx.user_id, req.message, out.answer,
+                                           run_id=run_id)
+        except Exception:
+            log.warning("memory extraction crashed", exc_info=True)
+        return out.to_dict()
+    finally:
+        observability.release_trace_seq(run_id)
 
 
 @router.get("/runs")
