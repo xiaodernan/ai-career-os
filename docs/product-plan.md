@@ -52,7 +52,7 @@ core → ai core → features → frontend → quality → delivery.
   study materials) + replay UI
 
 ## Epic 7 — Copilot & Agents
-- F7.1 Tool system (23 tools with schemas) + tool-calling loop
+- F7.1 Tool system (24 tools with schemas) + tool-calling loop
 - F7.2 Career Orchestrator + subagents + handoff with trace events
 - F7.3 Memory: short-term (conversation) + long-term (user_memories read/write)
 - F7.4 Chat UI with sources / artifacts / action buttons; streaming

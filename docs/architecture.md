@@ -95,7 +95,7 @@ frontend/backend/ai-service can also run natively for dev (`pnpm dev`, `mvn spri
 │       │                         # embeddings/: openai, ollama, hash(离线开发)
 │       ├── ingestion/            # parsers(pdf/docx/txt) → clean → chunk → metadata → embed → store
 │       ├── rag/                  # rewrite → intent → hybrid retrieve → filter → rerank → compress → compose → cite
-│       ├── agents/               # orchestrator + subagents + tools/ (23 tools) + memory
+│       ├── agents/               # orchestrator + subagents + tools/ (24 tools) + memory
 │       ├── features/             # resume_parse, jd_analyze, match, tailor, cover_letter, interview
 │       ├── eval/                 # dataset, metrics (recall/precision/MRR/faithfulness…), experiment runner
 │       ├── core/                 # config, db pool, request context, task bus, provider registry

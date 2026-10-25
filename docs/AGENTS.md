@@ -89,7 +89,7 @@ flowchart TD
 
 ## 4. Tool system (PRD §18)
 
-23 tools in `agents/tools.py`, each a `Tool(name, description, JSON-Schema
+24 tools in `agents/tools.py`, each a `Tool(name, description, JSON-Schema
 parameters, async handler, artifact_type?, agent?)`. The schema is converted to the
 provider's tool format via `Tool.spec()`, so one definition serves OpenAI-compatible
 APIs, Anthropic and Ollama.

@@ -2934,8 +2934,9 @@ def test_the_heartbeat_interval_has_one_definer_and_every_shipped_claim_names_it
         # §4 tool rows joined the tables above it, and that sentence did not change either. It
         # moved once more to 159 when the deterministic-engines section (§7) and the
         # tool table's growth rows joined the file below it -- again the sentence
-        # itself is untouched.
-        ("AGENTS.md", 159), ("DEPLOYMENT.md", 8), ("SECURITY.md", 150),
+        # itself is untouched. Now 160: the tracker's `list_applications` row joined
+        # the §4 tool table above it, and the sentence still says the same thing.
+        ("AGENTS.md", 160), ("DEPLOYMENT.md", 8), ("SECURITY.md", 150),
     ], (f"{doc_vocabulary}: the docs' own vocabulary is censused, so this pass is not reporting on an "
         "empty set -- and a second file picking up the word is a signal the ledger has to grow")
 
