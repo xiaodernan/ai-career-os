@@ -172,28 +172,47 @@ def _collect_artifacts(tool: Tool, result: dict, out: Outcome) -> None:
 
 
 def _derive_actions(out: Outcome) -> None:
+    """The UI affordances a turn's artifacts imply.
+
+    This runs *after* the answer is composed, so it must never raise: an artifact with
+    a missing or mistyped field would otherwise discard a reply the user already has.
+    Every field is read defensively and a malformed entry contributes nothing -- the
+    same rule `_collect_artifacts` follows for evidence rows, for the same reason.
+    """
     seen: set[str] = set()
 
     def add(a: dict) -> None:
-        key = json.dumps(a, sort_keys=True)
+        # `default=str` because a payload id can be a UUID rather than a str, and
+        # json.dumps would raise on it while computing the de-duplication key.
+        key = json.dumps(a, sort_keys=True, default=str)
         if key not in seen:
             seen.add(key)
             out.actions.append(a)
 
     for art in out.artifacts:
-        t, jid = art.get("type"), art.get("job_id") or (
-            art.get("payload", {}) or {}).get("job_id")
+        if not isinstance(art, dict):
+            continue
+        payload = art.get("payload")
+        payload = payload if isinstance(payload, dict) else {}
+        t = art.get("type")
+        jid = art.get("job_id") or payload.get("job_id")
         if t == "match" and jid:
             add({"kind": "tailor", "label": "Tailor resume for this job", "job_id": jid})
             add({"kind": "interview", "label": "Start mock interview", "job_id": jid})
             add({"kind": "cover_letter", "label": "Draft cover letter", "job_id": jid})
         elif t == "job_list":
-            for j in (art["payload"]["jobs"] or [])[:5]:
-                add({"kind": "open_job", "label": f"Open {j['title']} @ {j['company']}",
-                     "job_id": j["id"]})
+            jobs = payload.get("jobs")
+            for j in (jobs if isinstance(jobs, list) else [])[:5]:
+                if not isinstance(j, dict) or not j.get("id"):
+                    continue  # a row with no id cannot be opened
+                label = f"Open {j['title']}" if j.get("title") else "Open role"
+                if j.get("company"):
+                    label += f" @ {j['company']}"
+                add({"kind": "open_job", "label": label, "job_id": j["id"]})
         elif t == "interview_session":
-            add({"kind": "open_interview", "label": "Continue interview",
-                 "session_id": art["payload"].get("session_id")})
+            if payload.get("session_id"):
+                add({"kind": "open_interview", "label": "Continue interview",
+                     "session_id": payload["session_id"]})
         # The growth engines' answers open the surface that can go deeper: the
         # gap report and the learning order both live on the growth page, the
         # market band and the offer comparison on the offers page.
@@ -395,7 +414,13 @@ async def career_turn(*, user_id: str, message: str, history: list[dict] | None 
                              agent="career", task_id=task_id, out=out,
                              max_steps=MAX_STEPS, allow_transfer=True, stream=stream)
     out.answer = answer
-    _derive_actions(out)
+    # The answer is already composed; the affordances are derived from it. Losing a
+    # button is bad, losing the reply is worse, so this stays off the failure path --
+    # and logs, because a bug here should still be visible.
+    try:
+        _derive_actions(out)
+    except Exception:
+        log.exception("deriving actions failed; returning the answer without them")
     await observability.trace(run_id, "final", "career", {
         "steps": out.steps, "tools": out.tools_used,
         "artifacts": [a["type"] for a in out.artifacts],

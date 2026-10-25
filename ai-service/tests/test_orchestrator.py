@@ -512,3 +512,66 @@ def test_collect_artifacts_match_branch_tolerates_non_dict_job():
     # `job` present but not a dict: `result.get("job", {}).get("id")` must not raise.
     _collect_artifacts(tool, {"match": {"score": 0.5}, "job": "not-a-dict"}, out)
     assert out.artifacts == [{"type": "match", "job_id": None, "payload": {"score": 0.5}}]
+
+
+# ---------------- derived actions are bookkeeping, never the answer ----------------
+
+
+def test_derive_actions_skips_artifacts_that_are_not_dicts():
+    out = Outcome()
+    out.artifacts = ["not an artifact", None, 7]
+    _derive_actions(out)  # must not raise
+    assert out.actions == []
+
+
+def test_derive_actions_tolerates_a_non_dict_payload():
+    out = Outcome()
+    out.artifacts = [{"type": "job_list", "payload": "oops"},
+                     {"type": "interview_session", "payload": ["not", "a", "dict"]},
+                     {"type": "match", "payload": "oops"}]
+    _derive_actions(out)  # `.get` on a string would have raised
+    assert out.actions == []
+
+
+def test_derive_actions_skips_job_rows_it_cannot_open():
+    out = Outcome()
+    out.artifacts = [{"type": "job_list", "payload": {"jobs": [
+        "not a job",
+        {"title": "No id"},                 # cannot be opened without an id
+        {"id": "j1"},                        # no title/company, still openable
+        {"id": "j2", "title": "Backend", "company": "Acme"},
+    ]}}]
+    _derive_actions(out)
+    opens = [a for a in out.actions if a["kind"] == "open_job"]
+    assert [a["job_id"] for a in opens] == ["j1", "j2"]
+    assert opens[0]["label"] == "Open role"
+    assert opens[1]["label"] == "Open Backend @ Acme", \
+        "the shipped label format must not change for a well-formed row"
+
+
+def test_derive_actions_does_not_raise_on_a_non_string_session_id():
+    # A UUID here is plausible (a peer returning the raw column); json.dumps on the
+    # de-duplication key used to raise TypeError and take the whole turn with it.
+    import uuid
+
+    out = Outcome()
+    out.artifacts = [{"type": "interview_session",
+                      "payload": {"session_id": uuid.uuid4()}}]
+    _derive_actions(out)
+    assert out.actions[0]["kind"] == "open_interview"
+
+
+async def test_a_failure_deriving_actions_does_not_lose_the_answer(env, monkeypatch):
+    async def script(req, **kw):
+        return _resp(text="Here is your answer.")
+
+    monkeypatch.setattr(orchestrator.ai, "ask", script)
+
+    def boom(_out):
+        raise RuntimeError("derivation bug")
+
+    monkeypatch.setattr(orchestrator, "_derive_actions", boom)
+
+    out = await orchestrator.career_turn(user_id="u1", message="hi", run_id="r14")
+    assert out.answer == "Here is your answer."   # the reply survives
+    assert out.actions == []                      # the affordances do not
