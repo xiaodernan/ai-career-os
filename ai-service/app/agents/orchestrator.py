@@ -203,6 +203,43 @@ def _derive_actions(out: Outcome) -> None:
             add({"kind": "open_offers", "label": "Open the offers workbench"})
 
 
+def _fallback_answer(out: Outcome, error: Exception) -> str:
+    """A grounded reply assembled without the model, used when a call fails mid-turn.
+
+    By the time a step or the finalize call fails, the turn has already run tools and
+    collected artifacts. Throwing that away because the *composition* call failed
+    would discard a job list, a match score or a gap report the user can still act on.
+    The text says plainly that the model was unavailable, so a degraded turn is never
+    mistaken for a normal answer -- and the degradation is traced by the caller.
+    """
+    lines = ["The assistant could not finish composing a reply just now "
+             f"({type(error).__name__})."]
+    used = list(dict.fromkeys(out.tools_used))
+    if used:
+        lines.append("These steps did complete: " + ", ".join(used) + ".")
+    kinds = list(dict.fromkeys(a.get("type", "") for a in out.artifacts
+                               if isinstance(a, dict) and a.get("type")))
+    if kinds:
+        lines.append("Their results are attached (" + ", ".join(kinds) + ").")
+    lines.append("Please retry in a moment.")
+    return "\n\n".join(lines)
+
+
+async def _trace_degraded(run_id: str | None, agent: str, stage: str,
+                          error: Exception, out: Outcome) -> None:
+    """Record that a turn answered from tool results instead of the model.
+
+    Without this a degraded turn is indistinguishable from a normal one on the AI
+    Activity page: the answer is shorter, but nothing says why. `trace` is
+    best-effort, so this can never turn a degraded turn into a failed one.
+    """
+    if not run_id:
+        return
+    await observability.trace(run_id, "degraded", agent, {
+        "stage": stage, "error": str(error)[:200], "tools": out.tools_used,
+        "steps": out.steps})
+
+
 async def _exec_tool(tool: Tool, user_id: str, args: dict, *, run_id: str | None,
                      agent: str, task_id: str | None, out: Outcome) -> dict:
     out.tools_used.append(tool.name)
@@ -249,9 +286,20 @@ async def _run_loop(*, user_id: str, messages: list[LLMMessage], tools: list[Too
 
     for step in range(max_steps):
         out.steps += 1
-        resp = await _ask(LLMRequest(messages=messages, tools=specs, temperature=0.3,
-                                     max_tokens=1800),
-                          kind=f"step_{step + 1}")
+        try:
+            resp = await _ask(LLMRequest(messages=messages, tools=specs, temperature=0.3,
+                                         max_tokens=1800),
+                              kind=f"step_{step + 1}")
+        except Exception as e:
+            # A failed call is only recoverable once tools have produced something:
+            # with nothing gathered there is no answer to fall back on, and the
+            # caller's error path is the honest one.
+            if not out.tools_used:
+                raise
+            log.warning("model call failed after %d tool(s) for %s: %s",
+                        len(out.tools_used), agent, e)
+            await _trace_degraded(run_id, agent, "step_failed", e, out)
+            return _fallback_answer(out, e)
         if not resp.tool_calls:
             return resp.text
         messages.append(LLMMessage("assistant", resp.text, tool_calls=resp.tool_calls))
@@ -303,9 +351,16 @@ async def _run_loop(*, user_id: str, messages: list[LLMMessage], tools: list[Too
     # step budget exhausted — force a grounded summary
     messages.append(LLMMessage("user", "Step budget reached. Summarize what the "
                                        "tool results above already establish."))
-    resp = await _ask(LLMRequest(messages=messages, temperature=0.3, max_tokens=1200),
-                      kind="finalize")
-    return resp.text
+    try:
+        resp = await _ask(LLMRequest(messages=messages, temperature=0.3, max_tokens=1200),
+                          kind="finalize")
+        return resp.text
+    except Exception as e:
+        if not out.tools_used:
+            raise
+        log.warning("finalize call failed for %s: %s", agent, e)
+        await _trace_degraded(run_id, agent, "finalize_failed", e, out)
+        return _fallback_answer(out, e)
 
 
 async def career_turn(*, user_id: str, message: str, history: list[dict] | None = None,

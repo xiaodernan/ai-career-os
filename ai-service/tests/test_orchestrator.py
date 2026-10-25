@@ -162,6 +162,8 @@ async def test_tool_error_is_reported_not_raised(env, monkeypatch):
 
     out = await orchestrator.career_turn(user_id="u1", message="job?", run_id="r4")
     assert "db exploded" in out.answer
+    result = [t for t in traces if t[0] == "tool_result"][0]
+    assert result[2]["ok"] is False
 
 
 async def test_a_call_missing_a_required_property_never_reaches_the_handler(env, monkeypatch):
@@ -203,8 +205,72 @@ async def test_a_call_with_an_unknown_property_names_the_allowed_set(env, monkey
     out = await orchestrator.career_turn(user_id="u1", message="job?", run_id="r10")
     assert "unexpected property 'verbose'" in out.answer
     assert "allowed: job_id" in out.answer
-    result = [t for t in traces if t[0] == "tool_result"][0]
-    assert result[2]["ok"] is False
+
+
+async def test_a_model_failure_after_tools_ran_answers_from_what_they_returned(env, monkeypatch):
+    """The tool work is already done and collected; losing it because the next
+    composition call failed would discard a job list the user can still act on."""
+    traces, _ = env
+    state = {"n": 0}
+
+    async def script(req, **kw):
+        state["n"] += 1
+        if state["n"] == 1:
+            return _resp(tool_calls=[ToolCall(id="c1", name="search_jobs",
+                                              arguments={"query": "java"})])
+        raise ConnectionError("provider down")
+
+    async def fake_search(user_id, **kw):
+        return {"jobs": [{"id": "j1", "title": "Java dev", "company": "Acme"}]}
+
+    monkeypatch.setattr(orchestrator.ai, "ask", script)
+    monkeypatch.setattr(TOOL_INDEX["search_jobs"], "handler", fake_search)
+
+    out = await orchestrator.career_turn(user_id="u1", message="find java jobs", run_id="r11")
+    assert "search_jobs" in out.answer          # says what did complete
+    assert "ConnectionError" in out.answer      # says why it stopped, plainly
+    assert out.tools_used == ["search_jobs"]
+    assert any(a["type"] == "job_list" for a in out.artifacts), \
+        "the collected card must survive the failed call"
+    assert any(k == "degraded" for k, _a, _p in traces), \
+        "a degraded turn must be distinguishable from a normal one on the run record"
+
+
+async def test_a_model_failure_before_any_tool_still_raises(env, monkeypatch):
+    """With nothing gathered there is no answer to fall back on, and a silent
+    'please retry' would hide a provider that is down for every turn."""
+    async def script(req, **kw):
+        raise ConnectionError("provider down")
+
+    monkeypatch.setattr(orchestrator.ai, "ask", script)
+
+    with pytest.raises(ConnectionError):
+        await orchestrator.career_turn(user_id="u1", message="hi", run_id="r12")
+
+
+async def test_a_failed_finalize_answers_from_the_tool_results(env, monkeypatch):
+    traces, _ = env
+    state = {"n": 0}
+
+    async def script(req, **kw):
+        state["n"] += 1
+        if state["n"] <= 2:
+            return _resp(tool_calls=[ToolCall(id=f"c{state['n']}", name="search_jobs",
+                                              arguments={"query": "java"})])
+        raise TimeoutError("finalize timed out")
+
+    async def fake_search(user_id, **kw):
+        return {"jobs": []}
+
+    monkeypatch.setattr(orchestrator.ai, "ask", script)
+    monkeypatch.setattr(TOOL_INDEX["search_jobs"], "handler", fake_search)
+    monkeypatch.setattr(orchestrator, "MAX_STEPS", 2)
+
+    out = await orchestrator.career_turn(user_id="u1", message="find java jobs", run_id="r13")
+    assert "TimeoutError" in out.answer
+    assert out.steps == 2
+    assert any(p.get("stage") == "finalize_failed"
+               for k, _a, p in traces if k == "degraded")
 
 
 async def test_run_loop_survives_non_dict_tool_arguments(env, monkeypatch):
