@@ -728,6 +728,7 @@ async def compare_offers(user_id: str, *, role: str, offers: list[dict],
     unlike quantities.
     """
     from app.features.offers import compare_offers as _compare
+    from app.features.salary import benchmark
 
     if not offers:
         return {"error": "no offers to compare"}

@@ -80,7 +80,6 @@ def _reason(fam: dict, builds: list[str], builds_must: list[str],
 def build_advice(aspirational_coverage: float, stone_count: int,
                 aspirational_must_gaps: list[str]) -> list[str]:
     """Deterministic, honest advice lines -- no invented timelines or resources."""
-    advice: list[dict] = []  # noqa: keep shape obvious; returned as list[str] below
     lines: list[str] = []
     must_gaps = list(aspirational_must_gaps or [])
     if must_gaps:

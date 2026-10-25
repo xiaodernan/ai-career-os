@@ -159,3 +159,27 @@ def test_validate_tool_args_on_every_registered_tool_schema_is_self_consistent()
         props = set(schema.get("properties") or {})
         assert set(schema.get("required") or []) <= props, tool.name
         assert isinstance(schema.get("type"), str) and schema["type"] == "object", tool.name
+
+
+@pytest.mark.asyncio
+async def test_compare_offers_handler_actually_runs(monkeypatch):
+    """The handler, not just the engine.
+
+    `tools.compare_offers` called `benchmark(...)` without importing it, so every
+    "which offer leads?" call raised NameError and came back as a tool error -- the
+    engine tests all passed because none of them went through the tool. Importing
+    the module is not the same as calling it.
+    """
+    async def fake_samples():
+        return [{"salary_min": 300000, "salary_max": 500000, "location": "Shanghai",
+                 "seniority": "senior", "skills": ["Java"]}]
+
+    monkeypatch.setattr(tools, "_job_samples", fake_samples)
+
+    out = await tools.compare_offers(
+        "u1", role="Backend Engineer",
+        offers=[{"label": "A", "base": 400000},
+                {"label": "B", "base": 520000}])
+    assert "error" not in out, f"the handler raised: {out.get('error')}"
+    assert out.get("ranking") or out.get("offers") or out.get("ranked"), \
+        f"no ranking in the tool result: {sorted(out)}"
