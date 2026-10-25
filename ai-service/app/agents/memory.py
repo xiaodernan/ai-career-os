@@ -22,19 +22,37 @@ _KIND_LABEL = {
 
 
 async def build_memory_context(user_id: str) -> str:
-    memories = await domain.get_memories(user_id, limit=40)
+    """The user's durable memory as prompt text, or "" when it cannot be built.
+
+    Memory is a prompt enhancement, not the answer: the copilot can still answer a
+    turn without it. A failed read used to abort the turn *before any tool ran*, and a
+    row missing `kind`/`content` raised KeyError on the way to the prompt -- both made
+    a cosmetic input the reason the user got nothing. The write side
+    (`extract_and_store`) is documented as best-effort; this makes the read side match.
+    """
+    try:
+        memories = await domain.get_memories(user_id, limit=40)
+    except Exception as e:
+        log.warning("memory context unavailable, continuing without it: %s", e)
+        return ""
     if not memories:
         return ""
-    by_kind: dict[str, list[dict]] = {}
+    by_kind: dict[str, list[str]] = {}
     for m in memories:
-        by_kind.setdefault(m["kind"], []).append(m)
+        if not isinstance(m, dict):
+            continue
+        content = m.get("content")
+        if not isinstance(content, str) or not content.strip():
+            continue  # a row with no text has nothing to put in the prompt
+        kind = str(m.get("kind") or "fact")
+        key = m.get("key")
+        by_kind.setdefault(kind, []).append(f"{key}: {content}" if key else content)
     lines = ["## Long-term memory about this user"]
     for kind, items in by_kind.items():
         label = _KIND_LABEL.get(kind, kind)
-        for m in items:
-            key = f"{m['key']}: " if m.get("key") else ""
-            lines.append(f"- [{label}] {key}{m['content']}")
-    return "\n".join(lines)
+        for line in items:
+            lines.append(f"- [{label}] {line}")
+    return "\n".join(lines) if len(lines) > 1 else ""
 
 
 EXTRACT_SYSTEM = """You maintain long-term memory for a career assistant.
