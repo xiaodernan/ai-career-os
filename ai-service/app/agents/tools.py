@@ -6,6 +6,8 @@ modules; writes are minimal and always carry user_id (ownership).
 
 from typing import Any, Callable, Awaitable
 
+import json
+
 from app.core import db
 from app.db import domain
 from app.providers.base import ToolSpec
@@ -107,6 +109,24 @@ def _clean_kinds(kinds) -> list[str] | None:
         return None
     cleaned = [k.strip() for k in raw if isinstance(k, str) and k.strip()]
     return cleaned or None
+
+
+def _json_obj(value, default):
+    """A jsonb column as a Python value.
+
+    No JSON codec is registered on the pool, so asyncpg hands jsonb back as *text* --
+    which is why every reader in this repo does `if isinstance(x, str): json.loads(x)`.
+    A caller that forgot would iterate the characters of the JSON text. `default` is
+    returned for null and for anything unparseable, so a malformed row degrades.
+    """
+    if isinstance(value, (dict, list)):
+        return value
+    if isinstance(value, str) and value.strip():
+        try:
+            return json.loads(value)
+        except (ValueError, TypeError):
+            return default
+    return default
 
 
 def validate_tool_args(name: str, schema: dict, args: dict) -> str | None:
@@ -435,6 +455,70 @@ async def evaluate_answer(user_id: str, *, question: str, answer: str, mode: str
 
     return {"evaluation": await _e(mode=mode, question=question, answer=answer,
                                    resume_ctx="", user_id=user_id)}
+
+
+async def list_interviews(user_id: str, *, limit: int = 10) -> dict:
+    """The user's mock-interview sessions, most recent first.
+
+    The agent could start a session (`create_interview`) and grade one answer
+    (`evaluate_answer`) but had no way to read the history back, so "how did my last
+    mock interview go?" and "which companies have I practised for?" had no tool at
+    all. The dimension scores are attached when the session was finalised; an
+    unfinished session simply has none.
+    """
+    rows = await db.fetch(
+        """SELECT s.id, s.mode, s.status, s.difficulty, s.company_name,
+                  s.position_title, s.started_at, s.finished_at,
+                  (SELECT count(*) FROM interview_turns t WHERE t.session_id = s.id)
+                      AS turns,
+                  e.dims
+             FROM interview_sessions s
+             LEFT JOIN interview_evaluations e ON e.session_id = s.id
+            WHERE s.user_id = $1::uuid
+            ORDER BY s.started_at DESC LIMIT $2""",
+        user_id, _clamp_limit(limit, 10))
+    return {"interviews": [{
+        "session_id": str(r["id"]), "mode": r["mode"], "status": r["status"],
+        "company": r["company_name"], "position": r["position_title"],
+        "started_at": str(r["started_at"]) if r["started_at"] else None,
+        "finished_at": str(r["finished_at"]) if r["finished_at"] else None,
+        "turns": int(r["turns"] or 0),
+        "scores": _json_obj(r["dims"], None),
+    } for r in rows]}
+
+
+async def get_interview_session(user_id: str, *, session_id: str,
+                                turns: int = 8) -> dict:
+    """One session and its most recent turns, so a practice run can be reviewed.
+
+    The orchestrator already emits an `open_interview` action pointing at a session
+    id; without this tool the agent could not follow its own affordance. Turns are
+    capped per message because one answer can be long and the tool result is bounded
+    anyway -- `turns_total` says whether anything was left out.
+    """
+    session = await domain.get_interview_session(session_id, user_id)
+    if not session:
+        return {"error": "interview session not found"}
+    all_turns = [t for t in await domain.list_turns(session_id) if isinstance(t, dict)]
+    keep = _clamp_limit(turns, 8, 20)
+    return {
+        "session": {
+            "session_id": str(session["id"]), "mode": session.get("mode"),
+            "status": session.get("status"), "company": session.get("company_name"),
+            "position": session.get("position_title") or session.get("job_title"),
+            "difficulty": session.get("difficulty"),
+            "started_at": str(session["started_at"]) if session.get("started_at") else None,
+            "finished_at": (str(session["finished_at"])
+                            if session.get("finished_at") else None),
+        },
+        "turns_total": len(all_turns),
+        "turns": [{
+            "seq": t.get("seq"), "role": t.get("role"),
+            "content": (t.get("content") if isinstance(t.get("content"), str) else "")[:1200],
+            "question_meta": _json_obj(t.get("question_meta"), None),
+            "evaluation": _json_obj(t.get("evaluation"), None),
+        } for t in all_turns[-keep:]],
+    }
 
 
 # The pipeline's stages, in order. `update_application_status` validates against this
@@ -793,6 +877,17 @@ ALL_TOOLS: list[Tool] = [
                                          "mode": {"type": "string"}},
         "required": ["question", "answer"], "additionalProperties": False},
        evaluate_answer, agent="interview"),
+    _t("list_interviews", "The user's mock-interview sessions, most recent first, "
+       "with turn counts and dimension scores where the session was finalised.",
+       {"type": "object", "properties": {"limit": {"type": "integer", "default": 10}},
+        "additionalProperties": False},
+       list_interviews, agent="interview"),
+    _t("get_interview_session", "One mock-interview session with its most recent "
+       "turns -- what was asked, what was answered, how each was scored.",
+       {"type": "object", "properties": {"session_id": {"type": "string"},
+                                         "turns": {"type": "integer", "default": 8}},
+        "required": ["session_id"], "additionalProperties": False},
+       get_interview_session, agent="interview"),
     _t("save_job", "Bookmark a job and add to Applications(saved) pipeline.",
        {"type": "object", "properties": {"job_id": {"type": "string"},
                                          "note": {"type": "string"}},
@@ -894,7 +989,8 @@ SUBAGENT_TOOLS: dict[str, list[str]] = {
                      "get_user_profile"],
     "jd_analyst": ["analyze_jd", "calculate_match", "get_job", "search_resume"],
     "rag": ["search_knowledge_base", "search_resume"],
-    "interview": ["create_interview", "evaluate_answer", "get_job", "search_resume"],
+    "interview": ["create_interview", "evaluate_answer", "list_interviews",
+                  "get_interview_session", "get_job", "search_resume"],
     # The learning subagent also holds the deterministic growth engines (Epics
     # 10.x, 12.x): the gap the profile has, what the market pays, which offer
     # leads, and the order to learn the gaps in. All four read the corpus and the

@@ -48,7 +48,7 @@ surface**, and no ability to delegate further (no recursive handoff):
 | `job_research` | `search_jobs`, `get_job`, `get_company`, `search_knowledge_base`, `get_user_profile` |
 | `jd_analyst` | `analyze_jd`, `calculate_match`, `get_job`, `search_resume` |
 | `rag` | `search_knowledge_base`, `search_resume` |
-| `interview` | `create_interview`, `evaluate_answer`, `get_job`, `search_resume` |
+| `interview` | `create_interview`, `evaluate_answer`, `list_interviews`, `get_interview_session`, `get_job`, `search_resume` |
 | `learning` | `search_knowledge_base`, `get_user_profile`, `get_job`, `analyze_gap`, `benchmark_salary`, `compare_offers`, `learning_priority` |
 | `tracker` | `save_job`, `update_application_status`, `list_applications`, `search_jobs`, `get_job` |
 | `networking` | `search_contacts`, `get_follow_ups`, `draft_outreach`, `log_contact_touch`, `get_user_profile` |
@@ -89,7 +89,7 @@ flowchart TD
 
 ## 4. Tool system (PRD §18)
 
-24 tools in `agents/tools.py`, each a `Tool(name, description, JSON-Schema
+26 tools in `agents/tools.py`, each a `Tool(name, description, JSON-Schema
 parameters, async handler, artifact_type?, agent?)`. The schema is converted to the
 provider's tool format via `Tool.spec()`, so one definition serves OpenAI-compatible
 APIs, Anthropic and Ollama.
@@ -108,6 +108,8 @@ APIs, Anthropic and Ollama.
 | `generate_cover_letter` | personalized cover letter | `cover_letter` |
 | `create_interview` | start a mock interview session | `interview_session` |
 | `evaluate_answer` | grade one interview answer | |
+| `list_interviews` | the user's mock interviews, newest first, with scores when finalised | |
+| `get_interview_session` | one session's recent turns: asked, answered, scored | |
 | `save_job` | bookmark + create a `saved` application | |
 | `update_application_status` | move an application through the pipeline | |
 | `list_applications` | read the pipeline: each saved role's stage, newest first | |
