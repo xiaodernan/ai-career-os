@@ -34,8 +34,6 @@ from pathlib import Path
 
 from app.eval.interview_dataset import load_interviews
 from app.eval.interview_metrics import (
-    DIMENSIONS,
-    SCALAR_METRICS,
     aggregate,
     score_interview,
 )
@@ -84,7 +82,7 @@ def _markdown(report: dict) -> str:
     lines = [
         f"# Interview evaluation — {report['experiment']}", "",
         f"- fixtures: {report['n_interviews']} scripted transcripts",
-        f"- scorer: `app/eval/interview_metrics.py` (pure functions, no provider)",
+        "- scorer: `app/eval/interview_metrics.py` (pure functions, no provider)",
         f"- generated: {report['generated_at']}", "",
         "## Aggregate", "",
         "| metric | value |", "|---|---|",

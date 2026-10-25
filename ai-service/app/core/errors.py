@@ -10,7 +10,6 @@ RefusalError and extracts the Refusal to build the HTTP response.
 """
 
 from dataclasses import dataclass
-from typing import Any
 
 from fastapi import HTTPException
 from fastapi.responses import JSONResponse
