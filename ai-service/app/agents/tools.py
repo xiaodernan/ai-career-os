@@ -437,6 +437,13 @@ async def evaluate_answer(user_id: str, *, question: str, answer: str, mode: str
                                    resume_ctx="", user_id=user_id)}
 
 
+# The pipeline's stages, in order. `update_application_status` validates against this
+# tuple and `list_applications` filters by it, so a stage the write tool accepts can
+# always be read back -- one vocabulary for two tools, rather than two lists to drift.
+APPLICATION_STATUSES = ("saved", "applied", "oa", "interview", "final_round", "offer",
+                        "rejected")
+
+
 async def save_job(user_id: str, *, job_id: str, note: str = "") -> dict:
     await db.execute(
         """INSERT INTO saved_jobs(user_id, job_id, note) VALUES ($1::uuid,$2::uuid,$3)
@@ -451,10 +458,43 @@ async def save_job(user_id: str, *, job_id: str, note: str = "") -> dict:
     return {"saved": True, "job_id": job_id}
 
 
+async def list_applications(user_id: str, *, status: str = "", limit: int = 20) -> dict:
+    """The user's application pipeline, optionally narrowed to one stage.
+
+    The tracker could *write* the pipeline (`save_job`, `update_application_status`) but
+    had no way to read it back, so "what am I still waiting on?" -- the question the
+    tracker exists for -- had no tool to answer it. Rows are newest-updated first within
+    the filter, because the item a user is chasing is the one that moved last, and the
+    per-stage counts answer "how far along is this search?" without a second call.
+    """
+    where = ["user_id = $1::uuid"]
+    args: list[Any] = [user_id]
+    if status:
+        if status not in APPLICATION_STATUSES:
+            return {"error": f"unknown status {status!r}; use one of "
+                             f"{list(APPLICATION_STATUSES)}"}
+        args.append(status)
+        where.append(f"status = ${len(args)}")
+    args.append(_clamp_limit(limit, 20, 50))
+    rows = await db.fetch(
+        f"""SELECT id, job_id, title, company_name, status, applied_at, updated_at
+              FROM applications WHERE {' AND '.join(where)}
+             ORDER BY updated_at DESC LIMIT ${len(args)}""", *args)
+    applications = [{"id": str(r["id"]),
+                     "job_id": str(r["job_id"]) if r["job_id"] else None,
+                     "title": r["title"], "company": r["company_name"],
+                     "status": r["status"],
+                     "applied_at": str(r["applied_at"]) if r["applied_at"] else None}
+                    for r in rows]
+    counts: dict[str, int] = {}
+    for row in applications:
+        counts[row["status"]] = counts.get(row["status"], 0) + 1
+    return {"applications": applications, "counts_by_status": counts}
+
+
 async def update_application_status(user_id: str, *, job_id: str = "",
                                     application_id: str = "", status: str) -> dict:
-    if status not in ("saved", "applied", "oa", "interview", "final_round", "offer",
-                      "rejected"):
+    if status not in APPLICATION_STATUSES:
         return {"error": "invalid status"}
     if application_id:
         row = await db.fetchrow(
@@ -761,11 +801,16 @@ ALL_TOOLS: list[Tool] = [
        {"type": "object", "properties": {"job_id": {"type": "string"},
                                          "application_id": {"type": "string"},
                                          "status": {"type": "string", "enum":
-                                                    ["saved", "applied", "oa",
-                                                     "interview", "final_round",
-                                                     "offer", "rejected"]}},
+                                                    list(APPLICATION_STATUSES)}},
         "required": ["status"], "additionalProperties": False},
        update_application_status, agent="tracker"),
+    _t("list_applications", "Read the application pipeline: the user's saved roles and "
+       "where each one stands, newest-updated first.",
+       {"type": "object", "properties": {"status": {"type": "string", "enum":
+                                                    list(APPLICATION_STATUSES)},
+                                         "limit": {"type": "integer", "default": 20}},
+        "additionalProperties": False},
+       list_applications, agent="tracker"),
     _t("get_user_profile", "User's profile, goals, memories and resume headline.",
        {"type": "object", "properties": {}, "additionalProperties": False},
        get_user_profile),
@@ -857,7 +902,8 @@ SUBAGENT_TOOLS: dict[str, list[str]] = {
     "learning": ["search_knowledge_base", "get_user_profile", "get_job",
                  "analyze_gap", "benchmark_salary", "compare_offers",
                  "learning_priority"],
-    "tracker": ["save_job", "update_application_status", "search_jobs", "get_job"],
+    "tracker": ["save_job", "update_application_status", "list_applications",
+                "search_jobs", "get_job"],
     "networking": ["search_contacts", "get_follow_ups", "draft_outreach",
                    "log_contact_touch", "get_user_profile"],
 }

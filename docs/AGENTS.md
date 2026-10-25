@@ -50,7 +50,7 @@ surface**, and no ability to delegate further (no recursive handoff):
 | `rag` | `search_knowledge_base`, `search_resume` |
 | `interview` | `create_interview`, `evaluate_answer`, `get_job`, `search_resume` |
 | `learning` | `search_knowledge_base`, `get_user_profile`, `get_job`, `analyze_gap`, `benchmark_salary`, `compare_offers`, `learning_priority` |
-| `tracker` | `save_job`, `update_application_status`, `search_jobs`, `get_job` |
+| `tracker` | `save_job`, `update_application_status`, `list_applications`, `search_jobs`, `get_job` |
 | `networking` | `search_contacts`, `get_follow_ups`, `draft_outreach`, `log_contact_touch`, `get_user_profile` |
 
 Handoff is an explicit tool, `transfer_to(agent, task)`, not a prompt trick. It is
@@ -110,6 +110,7 @@ APIs, Anthropic and Ollama.
 | `evaluate_answer` | grade one interview answer | |
 | `save_job` | bookmark + create a `saved` application | |
 | `update_application_status` | move an application through the pipeline | |
+| `list_applications` | read the pipeline: each saved role's stage, newest first | |
 | `get_user_profile` | profile, goals, memories, resume headline | |
 | `search_contacts` | the user's saved contacts by name/company/relation | |
 | `get_follow_ups` | contacts gone cold against their relation's cadence, with drafts | |
