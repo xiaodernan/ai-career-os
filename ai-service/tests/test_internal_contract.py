@@ -39,10 +39,34 @@ Method = namedtuple("Method", "name params body start end")
 
 # ------------------------------------------------------------------ reading the routes
 
+def _flat_routes() -> list:
+    """Every APIRoute the app serves, flat, across fastapi generations.
+
+    fastapi <=0.1xx flattens included routers into `app.routes` directly. 0.161+
+    mounts them as `_IncludedRouter` proxies whose `original_router.routes` hold
+    the real routes (prefixes applied). Two traps measured on 0.161: the included
+    router's route list contains the proxy itself (self-reference -> recursion),
+    and `include_in_schema=False` routers still serve. Expand with a seen-set.
+    """
+    out, seen = [], set()
+    stack = list(app.routes)
+    while stack:
+        route = stack.pop(0)
+        if id(route) in seen:
+            continue
+        seen.add(id(route))
+        inner = getattr(route, "original_router", None)
+        if inner is not None and inner is not route:
+            stack.extend(inner.routes)
+        else:
+            out.append(route)
+    return out
+
+
 def _routes() -> dict[tuple[str, str], APIRoute]:
     """(VERB, path with each `{param}` folded to `{}`) -> route, for /internal only."""
     out = {}
-    for route in app.routes:
+    for route in _flat_routes():
         if not isinstance(route, APIRoute) or not route.path.startswith("/internal/"):
             continue
         folded = re.sub(r"\{[^}]*}", "{}", route.path)

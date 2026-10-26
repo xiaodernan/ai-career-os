@@ -71,8 +71,32 @@ FORWARD = {
 }
 
 
+def _flat_routes() -> list:
+    """Every APIRoute the app serves, flat, across fastapi generations.
+
+    fastapi <=0.1xx flattens included routers into `app.routes` directly. 0.161+
+    mounts them as `_IncludedRouter` proxies whose `original_router.routes` hold
+    the real routes (prefixes applied). Two traps measured on 0.161: the included
+    router's route list contains the proxy itself (self-reference -> recursion),
+    and `include_in_schema=False` routers still serve. Expand with a seen-set.
+    """
+    out, seen = [], set()
+    stack = list(app.routes)
+    while stack:
+        route = stack.pop(0)
+        if id(route) in seen:
+            continue
+        seen.add(id(route))
+        inner = getattr(route, "original_router", None)
+        if inner is not None and inner is not route:
+            stack.extend(inner.routes)
+        else:
+            out.append(route)
+    return out
+
+
 def _routes() -> dict[str, APIRoute]:
-    return {r.path: r for r in app.routes
+    return {r.path: r for r in _flat_routes()
             if isinstance(r, APIRoute) and r.path.startswith("/internal/features/")}
 
 
@@ -107,7 +131,7 @@ def test_forward_routes_require_internal_auth():
 
 
 def test_forward_routes_have_no_public_twin():
-    public = {r.path for r in app.routes if isinstance(r, APIRoute)
+    public = {r.path for r in _flat_routes() if isinstance(r, APIRoute)
               and not r.path.startswith("/internal/")}
     for path in FORWARD:
         assert path not in public, f"{path} is exposed as a public route"
