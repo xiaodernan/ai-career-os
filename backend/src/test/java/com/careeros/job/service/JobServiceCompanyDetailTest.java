@@ -22,6 +22,7 @@ import com.careeros.job.repository.JobSearchRepository;
 import com.careeros.job.repository.SavedJobRepository;
 import com.careeros.resume.service.ResumeService;
 import com.careeros.search.service.QueryEmbeddingService;
+import com.careeros.support.TestTransactions;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -59,7 +60,8 @@ class JobServiceCompanyDetailTest {
         service = new JobService(mock(JobRepository.class), companies, mock(JobJdRepository.class),
                 mock(SavedJobRepository.class), mock(JobMatchRepository.class), search,
                 mock(ResumeService.class), mock(ApplicationService.class),
-                mock(AiServiceClient.class), mock(QueryEmbeddingService.class));
+                mock(AiServiceClient.class), mock(QueryEmbeddingService.class),
+                TestTransactions.executing());
     }
 
     private Company researched() {

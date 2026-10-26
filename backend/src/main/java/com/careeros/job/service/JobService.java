@@ -43,6 +43,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /** Jobs, companies, saved jobs, JD import/analysis and AI match proxying. */
 @Service
@@ -58,12 +59,13 @@ public class JobService {
     private final ApplicationService applicationService;
     private final AiServiceClient ai;
     private final QueryEmbeddingService embeddingService;
+    private final TransactionTemplate tx;
 
     public JobService(JobRepository jobs, CompanyRepository companies, JobJdRepository jds,
                       SavedJobRepository savedJobs, JobMatchRepository matches,
                       JobSearchRepository search, ResumeService resumeService,
                       ApplicationService applicationService, AiServiceClient ai,
-                      QueryEmbeddingService embeddingService) {
+                      QueryEmbeddingService embeddingService, TransactionTemplate tx) {
         this.jobs = jobs;
         this.companies = companies;
         this.jds = jds;
@@ -74,6 +76,7 @@ public class JobService {
         this.applicationService = applicationService;
         this.ai = ai;
         this.embeddingService = embeddingService;
+        this.tx = tx;
     }
 
     @Transactional(readOnly = true)
@@ -158,7 +161,12 @@ public class JobService {
 
     public JobListItem importJob(UUID userId, ImportJobRequest request) {
         Map<String, Object> result = ai.analyzeJd(request.rawText(), userId);
-        return persistImport(userId, request, result);
+        // The analyst call stays outside the transaction so no pooled connection waits on it, and
+        // the three rows it produced commit together inside it. `persistImport`'s own
+        // @Transactional cannot arm a call the object makes on itself -- Spring's proxy is never
+        // consulted -- which is how a refused JD row used to leave a company and a job behind it
+        // (#268; JobImportAtomicityIT holds the behaviour).
+        return tx.execute(status -> persistImport(userId, request, result));
     }
 
     @Transactional

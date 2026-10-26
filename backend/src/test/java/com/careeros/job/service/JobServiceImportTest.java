@@ -24,6 +24,7 @@ import com.careeros.job.repository.JobSearchRepository;
 import com.careeros.job.repository.SavedJobRepository;
 import com.careeros.resume.service.ResumeService;
 import com.careeros.search.service.QueryEmbeddingService;
+import com.careeros.support.TestTransactions;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -62,7 +63,7 @@ class JobServiceImportTest {
         service = new JobService(jobs, companies, jds, mock(SavedJobRepository.class),
                 mock(JobMatchRepository.class), mock(JobSearchRepository.class),
                 mock(ResumeService.class), mock(ApplicationService.class), ai,
-                mock(QueryEmbeddingService.class));
+                mock(QueryEmbeddingService.class), TestTransactions.executing());
         // The write path reads the ids back off the saved rows, so the mocks have to act like
         // the database and hand one out on save.
         when(jobs.save(any())).thenAnswer(inv -> {

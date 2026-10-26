@@ -39,11 +39,19 @@ public class FakeAiServiceClientConfig {
          */
         public volatile List<?> queryEmbedding = List.of();
 
+        /**
+         * The company name {@link #analyzeJd} reports. Left at the shipped value it changes no
+         * test; an import test that has to tell "the analyst named a company the catalog already
+         * knew" from "the import created one" needs a name no earlier class filed.
+         */
+        public volatile String jdCompany = "FakeCorp";
+
         public final List<String> calls = new ArrayList<>();
 
         public void reset() {
             failIngest = false;
             queryEmbedding = List.of();
+            jdCompany = "FakeCorp";
             calls.clear();
         }
 
@@ -123,7 +131,7 @@ public class FakeAiServiceClientConfig {
         public Map<String, Object> analyzeJd(String rawText, UUID userId) {
             record("analyzeJd");
             Map<String, Object> parsed = map("title", "Senior Backend Engineer",
-                    "company", "FakeCorp",
+                    "company", jdCompany,
                     "location", "Remote",
                     "experienceYears", 5,
                     "requiredSkills", List.of(map("name", "Java"), map("name", "Kubernetes")),

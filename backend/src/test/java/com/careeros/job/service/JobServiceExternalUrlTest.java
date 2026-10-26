@@ -22,6 +22,7 @@ import com.careeros.job.repository.JobSearchRepository;
 import com.careeros.job.repository.SavedJobRepository;
 import com.careeros.resume.service.ResumeService;
 import com.careeros.search.service.QueryEmbeddingService;
+import com.careeros.support.TestTransactions;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -69,7 +70,8 @@ class JobServiceExternalUrlTest {
         service = new JobService(jobs, companies, mock(JobJdRepository.class),
                 mock(SavedJobRepository.class), mock(JobMatchRepository.class),
                 mock(JobSearchRepository.class), mock(ResumeService.class),
-                mock(ApplicationService.class), ai, mock(QueryEmbeddingService.class));
+                mock(ApplicationService.class), ai, mock(QueryEmbeddingService.class),
+                TestTransactions.executing());
         when(jobs.save(any())).thenAnswer(inv -> {
             Job j = inv.getArgument(0);
             if (ReflectionTestUtils.getField(j, "id") == null) {

@@ -23,6 +23,7 @@ import com.careeros.job.repository.SavedJobRepository;
 import com.careeros.resume.entity.Resume;
 import com.careeros.resume.service.ResumeService;
 import com.careeros.search.service.QueryEmbeddingService;
+import com.careeros.support.TestTransactions;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -60,7 +61,7 @@ class JobServiceLinkTest {
         service = new JobService(jobs, mock(CompanyRepository.class), jds,
                 mock(SavedJobRepository.class), mock(JobMatchRepository.class),
                 mock(JobSearchRepository.class), mock(ResumeService.class), applicationService,
-                ai, mock(QueryEmbeddingService.class));
+                ai, mock(QueryEmbeddingService.class), TestTransactions.executing());
         Job job = new Job();
         ReflectionTestUtils.setField(job, "id", jobId);
         when(jobs.findById(jobId)).thenReturn(Optional.of(job));
@@ -149,7 +150,7 @@ class JobServiceLinkTest {
         service = new JobService(jobs, mock(CompanyRepository.class), jds,
                 mock(SavedJobRepository.class), mock(JobMatchRepository.class),
                 mock(JobSearchRepository.class), resumes, applicationService, ai,
-                mock(QueryEmbeddingService.class));
+                mock(QueryEmbeddingService.class), TestTransactions.executing());
         when(resumes.currentResumeWithVersion(userId))
                 .thenReturn(Optional.of(currentResume(current)));
         when(ai.matchJob(eq(jobId), eq(current), eq(userId)))

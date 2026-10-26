@@ -30,6 +30,7 @@ import com.careeros.job.repository.SavedJobRepository;
 import com.careeros.job.service.JobService;
 import com.careeros.resume.service.ResumeService;
 import com.careeros.search.service.QueryEmbeddingService;
+import com.careeros.support.TestTransactions;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -79,7 +80,7 @@ class JdControllerTest {
         JobService service = new JobService(jobs, mock(CompanyRepository.class), jds,
                 mock(SavedJobRepository.class), mock(JobMatchRepository.class),
                 mock(JobSearchRepository.class), mock(ResumeService.class), applications,
-                ai, mock(QueryEmbeddingService.class));
+                ai, mock(QueryEmbeddingService.class), TestTransactions.executing());
         mvc = MockMvcBuilders.standaloneSetup(new JdController(service))
                 .setControllerAdvice(new EnvelopeAdvice(), new GlobalExceptionHandler())
                 .setCustomArgumentResolvers(new CurrentUserArgumentResolver())
