@@ -46,12 +46,25 @@ public class FakeAiServiceClientConfig {
          */
         public volatile String jdCompany = "FakeCorp";
 
+        /**
+         * The company {@link #parseResumeText} reports for the parse answer's one experience row.
+         * A test that has to prove a re-parse replaced the old rows needs a second value to look
+         * for, and a test that has to prove a failed re-parse kept them needs to know which row
+         * was the first one's.
+         */
+        public volatile String resumeExperienceCompany = "Acme Corp";
+
+        /** The project name {@link #parseResumeText} reports, for the same reason as above. */
+        public volatile String resumeProjectName = "OpenLedger";
+
         public final List<String> calls = new ArrayList<>();
 
         public void reset() {
             failIngest = false;
             queryEmbedding = List.of();
             jdCompany = "FakeCorp";
+            resumeExperienceCompany = "Acme Corp";
+            resumeProjectName = "OpenLedger";
             calls.clear();
         }
 
@@ -95,14 +108,14 @@ public class FakeAiServiceClientConfig {
         @Override
         public Map<String, Object> parseResumeText(String text, UUID userId) {
             record("parseResumeText");
-            Map<String, Object> experience = map("company", "Acme Corp",
+            Map<String, Object> experience = map("company", resumeExperienceCompany,
                     "title", "Backend Engineer",
                     "start", "2021-03",
                     "end", "2024-01",
                     "location", "Shanghai",
                     "bullets", List.of("Led the payments rewrite", "Cut p99 latency by 40%"),
                     "summary", "Distributed systems");
-            Map<String, Object> project = map("name", "OpenLedger",
+            Map<String, Object> project = map("name", resumeProjectName,
                     "role", "Author",
                     "period", "2022",
                     "bullets", List.of("Event-sourced ledger"),

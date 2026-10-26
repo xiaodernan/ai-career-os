@@ -29,6 +29,7 @@ import com.careeros.resume.repository.ResumeSkillRepository;
 import com.careeros.resume.repository.ResumeVersionRepository;
 import com.careeros.resume.repository.SkillRepository;
 import com.careeros.storage.StorageService;
+import com.careeros.support.TestTransactions;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -63,7 +64,7 @@ class ResumeServiceTailoredDraftTest {
                 mock(ResumeSkillRepository.class), mock(KnowledgeSourceRepository.class),
                 mock(KnowledgeService.class), mock(DocumentRepository.class),
                 mock(FileIngestService.class), mock(StorageService.class),
-                mock(AiServiceClient.class));
+                mock(AiServiceClient.class), TestTransactions.executing());
         when(versions.save(any(ResumeVersion.class))).thenAnswer(i -> i.getArgument(0));
     }
 

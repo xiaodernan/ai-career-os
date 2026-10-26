@@ -56,6 +56,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 /** Resume CRUD, upload, AI parse and structured child-table projection. */
@@ -76,6 +77,7 @@ public class ResumeService {
     private final FileIngestService fileIngest;
     private final StorageService storage;
     private final AiServiceClient ai;
+    private final TransactionTemplate tx;
 
     private static final Logger log = LoggerFactory.getLogger(ResumeService.class);
 
@@ -85,7 +87,8 @@ public class ResumeService {
                          SkillRepository skills, ResumeSkillRepository resumeSkills,
                          KnowledgeSourceRepository sources, KnowledgeService knowledge,
                          DocumentRepository documents, FileIngestService fileIngest,
-                         StorageService storage, AiServiceClient ai) {
+                         StorageService storage, AiServiceClient ai,
+                         TransactionTemplate tx) {
         this.resumes = resumes;
         this.versions = versions;
         this.experiences = experiences;
@@ -100,6 +103,7 @@ public class ResumeService {
         this.fileIngest = fileIngest;
         this.storage = storage;
         this.ai = ai;
+        this.tx = tx;
     }
 
     @Transactional(readOnly = true)
@@ -315,7 +319,15 @@ public class ResumeService {
     public ParseResumeResponse parse(UUID userId, UUID resumeId) {
         ParsedContext ctx = parseContext(userId, resumeId);
         Map<String, Object> result = ai.parseResumeText(ctx.text(), userId);
-        return persistParse(ctx.resumeId(), ctx.versionId(), userId, result, ctx.text());
+        // The parse's own writes are one batch: populateChildren deletes the version's five child
+        // sets before re-inserting them, and a derived delete calls EntityManager#remove, which
+        // refuses to run with no transaction in progress -- so a resume that already had children
+        // could not be re-parsed at all, and any later refusal used to leave those children
+        // deleted. `persistParse`'s own @Transactional cannot arm a call the object makes on
+        // itself; the AI call above stays outside the transaction so no pooled connection waits on
+        // it (ResumeParseAtomicityIT holds both behaviours).
+        return tx.execute(status -> persistParse(ctx.resumeId(), ctx.versionId(), userId, result,
+                ctx.text()));
     }
 
     private record ParsedContext(UUID resumeId, UUID versionId, String text) {

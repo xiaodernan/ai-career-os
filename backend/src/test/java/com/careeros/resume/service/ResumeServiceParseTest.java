@@ -27,6 +27,7 @@ import com.careeros.resume.repository.ResumeSkillRepository;
 import com.careeros.resume.repository.ResumeVersionRepository;
 import com.careeros.resume.repository.SkillRepository;
 import com.careeros.storage.StorageService;
+import com.careeros.support.TestTransactions;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -66,7 +67,7 @@ class ResumeServiceParseTest {
                 mock(AchievementRepository.class), mock(SkillRepository.class),
                 mock(ResumeSkillRepository.class), sources, mock(KnowledgeService.class),
                 mock(DocumentRepository.class), mock(FileIngestService.class),
-                mock(StorageService.class), ai);
+                mock(StorageService.class), ai, TestTransactions.executing());
     }
 
     private void givenVersion(String plaintext) {

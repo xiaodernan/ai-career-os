@@ -24,16 +24,25 @@ import org.junit.jupiter.api.Test;
  * {@code this.write(...)} from a method that carries no transaction of its own files its rows one
  * commit at a time, and a refusal halfway through leaves the earlier rows behind.
  * {@code JobService.importJob -> persistImport} shipped in exactly that shape (#268): a paste the
- * database refused still added a company and a job to the catalog. {@link
- * com.careeros.job.service.JobImportAtomicityIT} is the behaviour witness for the one site that is
- * now fixed, by running the writes inside a {@code TransactionTemplate}.
+ * database refused still added a company and a job to the catalog. {@code ResumeService.parse ->
+ * populateChildren} shipped worse: it deletes the version's five child sets before re-inserting
+ * them, and a derived delete is a {@code remove} call that refuses to run with no transaction, so
+ * re-parsing a resume that already had children was impossible. {@link
+ * com.careeros.job.service.JobImportAtomicityIT} and {@link
+ * com.careeros.resume.service.ResumeParseAtomicityIT} are the behaviour witnesses for the two sites
+ * that are now fixed, each running its writes inside a {@code TransactionTemplate}.
  *
  * <p>This gate is the census of the rest. In every service-layer class, a same-file call into a
  * method that writes two or more rows must be armed -- either the caller carries
- * {@code @Transactional}, or the call sits inside a transaction-template lambda. The un-armed sites
- * are named below with the number of rows at stake, and the list is compared in both directions: a
- * new site reddens the build, and a site fixed but left listed reddens it too. Clearing an entry
- * takes the behaviour witness first, not the deletion.
+ * {@code @Transactional}, or the call sits inside a transaction-template lambda. A writer reached
+ * from inside either of those is armed too, for everything it calls in line: the transaction is on
+ * the thread, not on the annotation, and a gate that credited only the immediate caller would
+ * charge {@code persistParse -> populateChildren} for a boundary that {@code parse}'s template
+ * already holds. The un-armed sites are named below with the number of rows at stake, and the list
+ * is compared in both directions: a new site reddens the build, and a site fixed but left listed
+ * reddens it too. Clearing an entry takes the behaviour witness first, not the deletion, and the
+ * second case below holds that: every cleared site names a test class that must still be filed and
+ * must still reach the IT schema.
  *
  * <p>"Rows" counts write statements one call can execute in sequence. A write inside a branch that
  * {@code return}s is left out, because that branch exits and never shares a path with the rows after
@@ -51,6 +60,9 @@ class SelfInvokedTransactionContractTest {
             "([A-Za-z_]\\w*)\\.\\s*(save|saveAll|saveAndFlush|delete|deleteAll|deleteById)\\s*\\(");
     /** A branch that hands a value back leaves the path the statements after it would take. */
     private static final Pattern RETURN_IN = Pattern.compile("\\breturn\\b");
+    /** The writer an armed caller reaches through its template: {@code tx.execute(s -> persist(}. */
+    private static final Pattern IN_TEMPLATE =
+            Pattern.compile("tx\\.execute\\(\\s*[^();]*->\\s*([A-Za-z_]\\w*)\\s*\\(");
     /** `delete` is not only a repository verb. */
     private static final Set<String> NOT_A_REPOSITORY = Set.of("sb", "builder", "buffer", "string");
     private static final Set<String> NOT_A_METHOD = Set.of(
@@ -65,8 +77,19 @@ class SelfInvokedTransactionContractTest {
             "FileIngestService.java#persistRowsOnly() -> persistRows() 3 rows",
             "FileIngestService.java#uploadAndIngest() -> persistRows() 3 rows",
             "InterviewService.java#finalize() -> persistFinalization() 2 rows",
-            "ResumeService.java#parse() -> persistParse() 7 rows",
             "ResumeService.java#upload() -> persistUpload() 4 rows");
+
+    /**
+     * The sites that left the list, each paired with the behaviour witness under {@code src/test
+     * /java} that earned the clearing. Deleting a witness without putting its site back is the
+     * regression this map exists to catch: the list's own equality check cannot see it, because a
+     * missing witness and a fixed site look identical from the main source.
+     */
+    private static final Map<String, String> CLEARED_BY_A_WITNESS = Map.of(
+            "JobService.java#importJob() -> persistImport() 3 rows",
+            "com/careeros/job/service/JobImportAtomicityIT.java",
+            "ResumeService.java#parse() -> persistParse() 7 rows",
+            "com/careeros/resume/service/ResumeParseAtomicityIT.java");
 
     @Test
     @DisplayName("the census of un-armed writers is exactly the list, in both directions")
@@ -107,6 +130,31 @@ class SelfInvokedTransactionContractTest {
                 .isEqualTo(1);
         assertThat(writesOf("persistTurn", bodiesOf("conversation", "service", "ConversationService.java")))
                 .isEqualTo(3);
+    }
+
+    @Test
+    @DisplayName("every site taken off the list is held by a witness that reaches the database")
+    void clearedSitesAreHeldByTheirWitnesses() throws IOException {
+        for (Map.Entry<String, String> cleared : CLEARED_BY_A_WITNESS.entrySet()) {
+            assertThat(NOT_YET_ATOMIC)
+                    .as(cleared.getKey() + " is both charged and cleared")
+                    .doesNotContain(cleared.getKey());
+            Path witness = Path.of("src", "test", "java").resolve(cleared.getValue());
+            assertThat(Files.isRegularFile(witness))
+                    .as(cleared.getKey() + " left the list on the strength of " + witness
+                            + ", which is not filed")
+                    .isTrue();
+            String source = Files.readString(witness);
+            String entryPoint = cleared.getKey().split("#")[1].split("\\(")[0];
+            // A witness over a stub proves the stub. The clearing is earned by running the entry
+            // point against the IT schema, where a refusal mid-chain can actually roll rows back.
+            assertThat(source)
+                    .as(witness + " does not run against the IT schema")
+                    .contains("extends ApiIntegrationTest");
+            assertThat(source)
+                    .as(witness + " never calls the entry point its site names")
+                    .contains(entryPoint + "(");
+        }
     }
 
     /** The method bodies of one main-source file, comments and literals already blanked. */
@@ -152,6 +200,49 @@ class SelfInvokedTransactionContractTest {
         // A writer named only in prose is not a call into it.
         assertThat(sites(blanke(planted("", "\"persist(\" + p.name()", "")), "PlantedService.java"))
                 .isEmpty();
+    }
+
+    @Test
+    @DisplayName("a transaction opened one frame up covers the writers below it")
+    void theTemplateCoversTheFramesBelowIt() {
+        // run() opens the transaction and reaches persist() inside it; persist() then calls
+        // deeper() in line. Both run on that thread, so neither edge is charged -- and persist()
+        // earns that with no annotation of its own, which is the credit ResumeService's
+        // persistParse has been carrying instead.
+        assertThat(sites(blanke(chained("", "tx.execute(s -> persist(p))", "deeper(p)")),
+                "PlantedService.java")).isEmpty();
+
+        // The same chain with no transaction anywhere above persist(): the census then owes both
+        // charges, the entry into persist and persist's own call down.
+        assertThat(sites(blanke(chained("", "persist(p)", "deeper(p)")), "PlantedService.java"))
+                .extracting(Site::label)
+                .containsExactlyInAnyOrder(
+                        "PlantedService.java#run() -> persist() 2 rows",
+                        "PlantedService.java#persist() -> deeper() 2 rows");
+
+        // The shipped shape: the template above, the annotation on the middle writer as well.
+        assertThat(sites(blanke(chained("@Transactional", "tx.execute(s -> persist(p))",
+                "deeper(p)")), "PlantedService.java")).isEmpty();
+    }
+
+    /** Three frames: an entry point, a writer it reaches, and a two-row writer that writer calls. */
+    private static String chained(String persistAnnotation, String runCall, String persistCall) {
+        return "public class PlantedService {\n"
+                + "    public Row run(Planner p) {\n"
+                + "        return " + runCall + ";\n"
+                + "    }\n"
+                + "\n"
+                + "    " + persistAnnotation + "\n"
+                + "    public Row persist(Planner p) {\n"
+                + "        return " + persistCall + ";\n"
+                + "    }\n"
+                + "\n"
+                + "    public Row deeper(Planner p) {\n"
+                + "        accounts.save(p.one());\n"
+                + "        accounts.save(p.two());\n"
+                + "        return p.row();\n"
+                + "    }\n"
+                + "}\n";
     }
 
     /** The shape the census charges: an un-armed caller, a writer of two rows. */
@@ -224,11 +315,20 @@ class SelfInvokedTransactionContractTest {
     private static List<Site> sites(String source, String fileName) {
         Map<String, String> bodies = bodies(source);
         Map<String, Boolean> transactional = transactions(source);
+        Set<String> covered = new LinkedHashSet<>();
+        for (Map.Entry<String, String> caller : bodies.entrySet()) {
+            if (!armed(transactional, caller)) {
+                continue;
+            }
+            // Whatever an armed caller reaches in line runs on its thread, inside its transaction.
+            Matcher inside = IN_TEMPLATE.matcher(caller.getValue());
+            while (inside.find()) {
+                covered.add(inside.group(1));
+            }
+        }
         List<Site> out = new ArrayList<>();
         for (Map.Entry<String, String> caller : bodies.entrySet()) {
-            boolean armed = Boolean.TRUE.equals(transactional.get(caller.getKey()))
-                    || caller.getValue().contains("tx.execute(");
-            if (armed) {
+            if (armed(transactional, caller) || covered.contains(caller.getKey())) {
                 continue;
             }
             for (String writer : bodies.keySet()) {
@@ -243,6 +343,13 @@ class SelfInvokedTransactionContractTest {
             }
         }
         return out;
+    }
+
+    /** Whether this caller puts its own thread inside a transaction before it calls on itself. */
+    private static boolean armed(Map<String, Boolean> transactional,
+                                 Map.Entry<String, String> caller) {
+        return Boolean.TRUE.equals(transactional.get(caller.getKey()))
+                || caller.getValue().contains("tx.execute(");
     }
 
     /** True when the body really invokes `name(`, spelled with or without `this.`. */
