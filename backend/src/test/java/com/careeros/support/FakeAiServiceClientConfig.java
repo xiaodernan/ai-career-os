@@ -57,6 +57,14 @@ public class FakeAiServiceClientConfig {
         /** The project name {@link #parseResumeText} reports, for the same reason as above. */
         public volatile String resumeProjectName = "OpenLedger";
 
+        /**
+         * The sentence {@link #copilotChatSync} answers with. A case that needs the answer row
+         * refused sets text the database will not take, so the question row is what is left of the
+         * turn; the shipped sentence keeps every other case reading the answer it files.
+         */
+        public volatile String copilotAnswer =
+                "Based on your resume, prioritise Kubernetes for this role.";
+
         public final List<String> calls = new ArrayList<>();
 
         public void reset() {
@@ -65,6 +73,7 @@ public class FakeAiServiceClientConfig {
             jdCompany = "FakeCorp";
             resumeExperienceCompany = "Acme Corp";
             resumeProjectName = "OpenLedger";
+            copilotAnswer = "Based on your resume, prioritise Kubernetes for this role.";
             calls.clear();
         }
 
@@ -234,7 +243,7 @@ public class FakeAiServiceClientConfig {
         public Map<String, Object> copilotChatSync(String message, List<Map<String, Object>> history,
                                                    UUID conversationId, Map<String, Object> context, UUID userId) {
             record("copilotChatSync");
-            return map("answer", "Based on your resume, prioritise Kubernetes for this role.",
+            return map("answer", copilotAnswer,
                     "artifacts", List.of(map("type", "checklist", "items", List.of("Add K8s project"))),
                     "sources", List.of(),
                     "actions", List.of(map("type", "open_job", "label", "View matched job")),

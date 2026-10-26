@@ -27,10 +27,13 @@ import org.junit.jupiter.api.Test;
  * database refused still added a company and a job to the catalog. {@code ResumeService.parse ->
  * populateChildren} shipped worse: it deletes the version's five child sets before re-inserting
  * them, and a derived delete is a {@code remove} call that refuses to run with no transaction, so
- * re-parsing a resume that already had children was impossible. {@link
- * com.careeros.job.service.JobImportAtomicityIT} and {@link
- * com.careeros.resume.service.ResumeParseAtomicityIT} are the behaviour witnesses for the two sites
- * that are now fixed, each running its writes inside a {@code TransactionTemplate}.
+ * re-parsing a resume that already had children was impossible. {@code ConversationService.chat ->
+ * persistTurn} shipped the same shape one row shorter: an answer the database refused left its
+ * question filed, and the page renders that as an empty bubble. {@link
+ * com.careeros.job.service.JobImportAtomicityIT}, {@link
+ * com.careeros.resume.service.ResumeParseAtomicityIT} and {@link
+ * com.careeros.conversation.service.ConversationTurnAtomicityIT} are the behaviour witnesses for
+ * the three sites that are now fixed, each running its writes inside a {@code TransactionTemplate}.
  *
  * <p>This gate is the census of the rest. In every service-layer class, a same-file call into a
  * method that writes two or more rows must be armed -- either the caller carries
@@ -73,7 +76,6 @@ class SelfInvokedTransactionContractTest {
      * class, the entering method, the writer it calls on itself, and how many rows are at stake.
      */
     private static final List<String> NOT_YET_ATOMIC = List.of(
-            "ConversationService.java#chat() -> persistTurn() 3 rows",
             "FileIngestService.java#persistRowsOnly() -> persistRows() 3 rows",
             "FileIngestService.java#uploadAndIngest() -> persistRows() 3 rows",
             "InterviewService.java#finalize() -> persistFinalization() 2 rows",
@@ -88,6 +90,8 @@ class SelfInvokedTransactionContractTest {
     private static final Map<String, String> CLEARED_BY_A_WITNESS = Map.of(
             "JobService.java#importJob() -> persistImport() 3 rows",
             "com/careeros/job/service/JobImportAtomicityIT.java",
+            "ConversationService.java#chat() -> persistTurn() 3 rows",
+            "com/careeros/conversation/service/ConversationTurnAtomicityIT.java",
             "ResumeService.java#parse() -> persistParse() 7 rows",
             "com/careeros/resume/service/ResumeParseAtomicityIT.java");
 

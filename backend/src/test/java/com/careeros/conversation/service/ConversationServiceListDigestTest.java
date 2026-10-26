@@ -14,6 +14,7 @@ import com.careeros.conversation.repository.ConversationDigestRepository;
 import com.careeros.conversation.repository.ConversationDigestRepository.Digest;
 import com.careeros.conversation.repository.ConversationRepository;
 import com.careeros.conversation.repository.MessageRepository;
+import com.careeros.support.TestTransactions;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -45,7 +46,7 @@ class ConversationServiceListDigestTest {
         conversations = mock(ConversationRepository.class);
         digests = mock(ConversationDigestRepository.class);
         service = new ConversationService(conversations, mock(MessageRepository.class), digests,
-                mock(AiServiceClient.class));
+                mock(AiServiceClient.class), TestTransactions.executing());
     }
 
     /** Ids come from the database, so the entity is mocked to carry one. */

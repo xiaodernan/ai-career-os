@@ -27,6 +27,7 @@ import com.careeros.conversation.repository.ConversationDigestRepository;
 import com.careeros.conversation.repository.ConversationRepository;
 import com.careeros.conversation.repository.MessageRepository;
 import com.careeros.conversation.service.ConversationService;
+import com.careeros.support.TestTransactions;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
@@ -76,7 +77,8 @@ class ConversationControllerTest {
         when(digests.forConversations(anyCollection())).thenReturn(Map.of());
         AiServiceClient ai = mock(AiServiceClient.class);
         ConversationService service =
-                new ConversationService(conversations, messages, digests, ai);
+                new ConversationService(conversations, messages, digests, ai,
+                        TestTransactions.executing());
         mvc = MockMvcBuilders.standaloneSetup(new ConversationController(service))
                 .setControllerAdvice(new EnvelopeAdvice(), new GlobalExceptionHandler())
                 .setCustomArgumentResolvers(new CurrentUserArgumentResolver())
@@ -153,7 +155,7 @@ class ConversationControllerTest {
                 new ConversationDigestRepository.Digest("Streams vs KSQL, folded to one line", 7)));
 
         ConversationService service = new ConversationService(conversations, messages, digests,
-                mock(AiServiceClient.class));
+                mock(AiServiceClient.class), TestTransactions.executing());
         MockMvc pageMvc = MockMvcBuilders.standaloneSetup(new ConversationController(service))
                 .setControllerAdvice(new EnvelopeAdvice(), new GlobalExceptionHandler())
                 .setCustomArgumentResolvers(new CurrentUserArgumentResolver())

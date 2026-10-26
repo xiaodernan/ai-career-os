@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Copilot conversations. Two routes reach the same turn: {@link #chat}, the blocking call, and
@@ -42,13 +43,16 @@ public class ConversationService {
     private final MessageRepository messages;
     private final ConversationDigestRepository digests;
     private final AiServiceClient ai;
+    private final TransactionTemplate tx;
 
     public ConversationService(ConversationRepository conversations, MessageRepository messages,
-                               ConversationDigestRepository digests, AiServiceClient ai) {
+                               ConversationDigestRepository digests, AiServiceClient ai,
+                               TransactionTemplate tx) {
         this.conversations = conversations;
         this.messages = messages;
         this.digests = digests;
         this.ai = ai;
+        this.tx = tx;
     }
 
     @Transactional(readOnly = true)
@@ -103,7 +107,13 @@ public class ConversationService {
         Map<String, Object> result = ai.copilotChatSync(message, turn.history(), turn.conversationId(),
                 context, userId);
 
-        return persistTurn(turn.conversationId(), userId, message, result);
+        // The turn's rows are one batch: a question filed without its answer is a bubble the copilot
+        // page cannot fill and a message the sidebar digest counts. `persistTurn`'s own
+        // @Transactional cannot arm a call the object makes on itself, and the model call above stays
+        // outside the transaction so no pooled connection waits on ai-service -- which is also why
+        // the conversation beginTurn filed survives the failed turn
+        // (ConversationTurnAtomicityIT holds both behaviours).
+        return tx.execute(status -> persistTurn(turn.conversationId(), userId, message, result));
     }
 
     /**

@@ -300,7 +300,7 @@ strings, and `lastTouchAt` is the user's claim about when contact last happened.
 
 | Method | Path | Notes |
 |---|---|---|
-| POST | `/copilot/chat` | `{message, conversationId?, context?}` → `{conversationId, userMessageId, assistantMessageId, answer, artifacts[], sources[], actions[], runId}` (synchronous; both messages persisted) |
+| POST | `/copilot/chat` | `{message, conversationId?, context?}` → `{conversationId, userMessageId, assistantMessageId, answer, artifacts[], sources[], actions[], runId}` (synchronous; the question and the answer are filed in one transaction, so a turn that cannot store its answer stores no question) |
 | POST | `/copilot/chat/stream` | `{message, conversationId?, context?}` → SSE: `status` / `token` frames as the agent works, then `done` carrying the same reply as `/copilot/chat` (both messages are stored before it closes), or `error`. This is the route the copilot page calls |
 | GET | `/conversations` | list |
 | POST | `/conversations` | create |
