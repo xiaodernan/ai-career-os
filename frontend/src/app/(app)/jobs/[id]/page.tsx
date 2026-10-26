@@ -154,6 +154,8 @@ export default function JobDetailPage() {
   }
 
   const salary = formatSalary(job.salaryMin, job.salaryMax, job.salaryCurrency);
+  // The reader pasted this link; it is only worth a button if it opens a page.
+  const postingHref = safeHref(job.externalUrl);
 
   return (
     <div className="space-y-6">
@@ -296,9 +298,9 @@ export default function JobDetailPage() {
               {t("jobs.detail.addToPipeline")}
             </Button>
 
-            {job.externalUrl && (
+            {postingHref && (
               <Button variant="link" size="sm" asChild className="ml-auto">
-                <a href={job.externalUrl} target="_blank" rel="noopener noreferrer nofollow">
+                <a href={postingHref} target="_blank" rel="noopener noreferrer nofollow">
                   {t("jobs.detail.originalPosting")}
                   <ExternalLink aria-hidden />
                 </a>

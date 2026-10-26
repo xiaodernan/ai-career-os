@@ -11,6 +11,7 @@ import { ErrorState } from "@/components/common/error-state";
 import { useCompany } from "@/lib/hooks/resources";
 import { useCompanyBrief } from "@/lib/hooks/growth";
 import { formatSalary } from "@/lib/format";
+import { safeHref } from "@/lib/safe-href";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { ApiError } from "@/lib/api/client";
 import type { CompanySource, Job } from "@/lib/api/types";
@@ -80,6 +81,9 @@ export default function CompanyDetailPage() {
   const c = company.data.company;
   const openRoles = company.data.openRoles;
   const total = c.openRoleCount ?? openRoles.length;
+  // A researched profile stores the site however the crawler wrote it, so the button
+  // only exists once the value is a page link rather than a bare host or another scheme.
+  const website = safeHref(c.website);
 
   return (
     <div className="space-y-6">
@@ -96,9 +100,9 @@ export default function CompanyDetailPage() {
           <div className="flex-1 min-w-0">
             <div className="flex items-baseline gap-3 flex-wrap">
               <CardTitle className="text-2xl">{c.name}</CardTitle>
-              {c.website && (
+              {website && (
                 <a
-                  href={c.website}
+                  href={website}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1"
@@ -327,6 +331,7 @@ function RoleRow({ job }: { job: Job }) {
 function SourceRow({ source }: { source: CompanySource }) {
   const { t } = useLocale();
   const text = source.title ?? source.note;
+  const url = safeHref(source.url);
   return (
     <li className="flex items-start gap-2 text-sm">
       {source.type && (
@@ -335,9 +340,9 @@ function SourceRow({ source }: { source: CompanySource }) {
         </Badge>
       )}
       <span className="min-w-0 flex-1 text-muted-foreground">{text}</span>
-      {source.url && (
+      {url && (
         <a
-          href={source.url}
+          href={url}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex shrink-0 items-center gap-1 text-xs text-muted-foreground hover:text-foreground"

@@ -6,6 +6,7 @@ import { Building2, Globe } from "lucide-react";
 import { ModuleView } from "@/components/common/module-view";
 import { Pagination } from "@/components/common/pagination";
 import { lastPageOf } from "@/lib/page-window";
+import { safeHref } from "@/lib/safe-href";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useCompanies } from "@/lib/hooks/resources";
@@ -102,9 +103,11 @@ export default function CompaniesPage() {
                   {t}
                 </Badge>
               ))}
-              {c.website && (
+              {/* Asked twice because a row renderer has no place to keep the answer: the
+                  button disappears when the stored value cannot open a page. */}
+              {safeHref(c.website) && (
                 <a
-                  href={c.website}
+                  href={safeHref(c.website)}
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label={t("companies.websiteLabel", { name: c.name })}

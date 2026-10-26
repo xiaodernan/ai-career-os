@@ -40,6 +40,7 @@ import { api } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
 import { normalizeStructuredResume, normalizeTailorDiff, str } from "@/lib/api/normalize";
 import { formatDate, downloadBlob, downloadText } from "@/lib/format";
+import { safeHref } from "@/lib/safe-href";
 import { useLocale } from "@/lib/i18n/locale-context";
 import type { ResumeProject, ResumeScore, StructuredResume } from "@/lib/api/types";
 
@@ -495,18 +496,22 @@ function StructuredProfileView({ structured }: { structured: StructuredResume })
                 )}
                 {profile?.email && <span>{profile.email}</span>}
                 {profile?.phone && <span>{profile.phone}</span>}
-                {profile?.links?.slice(0, 3).map((l, i) => (
-                  <a
-                    key={i}
-                    href={/^https?:/.test(l) ? l : `https://${l}`}
-                    target="_blank"
-                    rel="noopener noreferrer nofollow"
-                    className="flex items-center gap-1 font-medium text-primary underline-offset-4 hover:underline"
-                  >
-                    <Link2 className="size-3" aria-hidden />
-                    {l.replace(/^https?:\/\//, "").slice(0, 28)}
-                  </a>
-                ))}
+                {profile?.links?.slice(0, 3).map((l, i) => {
+                  const href = safeHref(l);
+                  if (href === undefined) return null;
+                  return (
+                    <a
+                      key={i}
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer nofollow"
+                      className="flex items-center gap-1 font-medium text-primary underline-offset-4 hover:underline"
+                    >
+                      <Link2 className="size-3" aria-hidden />
+                      {l.replace(/^https?:\/\//, "").slice(0, 28)}
+                    </a>
+                  );
+                })}
               </p>
             </div>
             <Button
@@ -579,9 +584,9 @@ function StructuredProfileView({ structured }: { structured: StructuredResume })
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="min-w-0 flex-1 text-sm font-semibold">{p.name}</p>
                   {p.period && <span className="text-xs text-muted-foreground">{p.period}</span>}
-                  {p.url && (
+                  {safeHref(p.url) && (
                     <a
-                      href={p.url}
+                      href={safeHref(p.url)}
                       target="_blank"
                       rel="noopener noreferrer nofollow"
                       className="flex items-center gap-1 text-xs font-medium text-primary underline-offset-4 hover:underline"

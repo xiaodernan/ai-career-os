@@ -40,7 +40,8 @@ import org.springframework.test.util.ReflectionTestUtils;
  * {@code url}, but {@code JobService.persistImport} filled {@code buildJob}'s external-url slot with a
  * literal {@code null} while {@code create} passes {@code request.externalUrl()}. So a reader who typed
  * the link to the job they pasted found nothing on the job's own page: the "original posting" link at
- * {@code frontend/src/app/(app)/jobs/[id]/page.tsx} renders only when {@code externalUrl} is set, and
+ * {@code frontend/src/app/(app)/jobs/[id]/page.tsx} renders only when {@code externalUrl} is set and
+ * reads as a page link (that surface guards every href it did not build itself), and
  * {@code docs/SECURITY.md} records the field as "stored and displayed". Both job-creation paths are
  * asserted here because the slot is one parameter of one private builder, and a pass-through fixed on
  * one side only is the bug that is already here.

@@ -1497,6 +1497,17 @@ describe("normalizeInterviewReport", () => {
     expect(name?.study[0].why).toBe("The Art of Concurrency");
   });
 
+  it("gives a scheme-less host the link the reader meant", () => {
+    // Models write "ddia.gg/ch9" far more often than "https://ddia.gg/ch9", and the old
+    // `^https?://` test threw the whole hint away: the card lost its Open button and the
+    // topic name landed in the why line as prose.
+    const report = normalizeInterviewReport({
+      summary: { recommended_study: [{ topic: "DDIA", why: "partitioning", resource_hint: "ddia.gg/ch9" }] },
+    });
+    expect(report?.study[0].url).toBe("https://ddia.gg/ch9");
+    expect(report?.study[0].why).toBe("partitioning");
+  });
+
   it("keeps a bare-string recommended_study (the backend test fixture) from vanishing", () => {
     // FakeAiServiceClientConfig returns recommended_study as List.of("Designing
     // Data-Intensive Applications") — a string, not an object.

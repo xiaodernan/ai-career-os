@@ -29,6 +29,7 @@ import { useFinalizeInterview } from "@/lib/hooks/actions";
 import { useInterviewSession } from "@/lib/hooks/resources";
 import { normalizeInterviewReport, type InterviewTrajectoryPoint } from "@/lib/api/normalize";
 import { depthLabel, depthLevel, formatDate, titleCase } from "@/lib/format";
+import { safeHref } from "@/lib/safe-href";
 import { interviewDimensionLabel } from "@/lib/dimensions";
 import { useLocale } from "@/lib/i18n/locale-context";
 
@@ -268,9 +269,9 @@ export default function InterviewReportPage() {
                     <p className="text-sm font-medium">{s.title ?? t("interviews.report.untitledResource")}</p>
                     {s.why && <p className="text-xs text-muted-foreground">{s.why}</p>}
                   </div>
-                  {s.url && (
+                  {safeHref(s.url) && (
                     <a
-                      href={s.url}
+                      href={safeHref(s.url)}
                       target="_blank"
                       rel="noopener noreferrer nofollow"
                       className="mt-0.5 flex shrink-0 items-center gap-1 text-xs font-medium text-primary underline-offset-4 hover:underline"

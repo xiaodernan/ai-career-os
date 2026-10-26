@@ -38,6 +38,7 @@ import type {
 } from "./types";
 import { field } from "./body";
 import { seniorityLabel } from "../format";
+import { safeHref } from "../safe-href";
 
 /* ------------------------------- primitives ------------------------------ */
 
@@ -1247,18 +1248,20 @@ export function normalizeInterviewReport(raw: unknown): InterviewReport | null {
   // ai-service FINALIZE emits recommended_study as {topic, why, resource_hint}, and
   // the backend copies that dict verbatim into summary.recommended_study
   // (InterviewService.persistFinalization); the mock and some models use a bare
-  // resource string. A non-URL `resource_hint` is a resource NAME, so it folds into the why
-  // line rather than being dropped; there is no separate url/kind field in the contract, which is
-  // why the card's "Open" link appears only when the hint really is a link.
+  // resource string. `safeHref` is what decides it: a hint that cannot open a page is a
+  // resource NAME and folds into the why line, and a bare host (`ddia.gg/ch9`, the
+  // spelling models write) becomes the link the reader meant rather than losing its
+  // "Open" button. There is no separate url/kind field in the contract, which is why the
+  // card's link appears only when the hint reads as one.
   const study = list<unknown>(merged, "recommended_study").map((s): InterviewStudyItem => {
     if (typeof s === "string") return { title: s.trim() || undefined };
     const hint = str(s, "resource_hint");
-    const hintIsLink = !!hint && /^https?:\/\//i.test(hint);
-    const nameHint = hintIsLink ? undefined : hint;
+    const hintHref = safeHref(hint);
+    const nameHint = hintHref === undefined ? hint : undefined;
     const reason = str(s, "why");
     return {
       title: str(s, "topic"),
-      url: hintIsLink ? hint : undefined,
+      url: hintHref,
       why: reason && nameHint ? `${reason} · ${nameHint}` : reason ?? nameHint,
     };
   });

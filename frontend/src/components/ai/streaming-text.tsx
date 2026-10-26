@@ -5,6 +5,7 @@ import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import { cn } from "@/lib/utils";
+import { safeHref } from "@/lib/safe-href";
 
 /**
  * StreamingText — renders AI token streams as sanitized markdown.
@@ -28,16 +29,22 @@ const COMPONENTS: Components = {
       {children}
     </blockquote>
   ),
-  a: ({ href, children }) => (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer nofollow"
-      className="font-medium text-primary underline-offset-4 hover:underline"
-    >
-      {children}
-    </a>
-  ),
+  a: ({ href, children }) => {
+    // react-markdown already drops `javascript:` and friends here, but it leaves a
+    // scheme-less link alone, and that one resolves under this app's own route.
+    const url = safeHref(href);
+    if (url === undefined) return <span>{children}</span>;
+    return (
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer nofollow"
+        className="font-medium text-primary underline-offset-4 hover:underline"
+      >
+        {children}
+      </a>
+    );
+  },
   code: ({ className, children, ...props }) => {
     const isBlock = /language-/.test(className ?? "");
     if (isBlock) return <code {...props} className={className}>{children}</code>;
