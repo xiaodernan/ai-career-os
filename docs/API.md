@@ -250,7 +250,7 @@ catalogue, so the palette and the board rank one query the same way.
 | GET | `/knowledge/sources/{id}/status` | ingestion progress |
 | DELETE | `/knowledge/sources/{id}` | |
 | POST | `/knowledge/text` | ingest inline text (`{kind, title, refId?, text}`) |
-| POST | `/knowledge/documents` | ingest an uploaded document |
+| POST | `/knowledge/documents` | ingest an uploaded document: multipart `file`, optional `kind` and `title`; the source row and its document row are filed in one transaction, so an upload that cannot store its document stores neither |
 | GET / POST / PATCH / DELETE | `/knowledge/notes`, `/knowledge/notes/{id}` | user notes |
 
 ### Interviews (`/interview/sessions`)

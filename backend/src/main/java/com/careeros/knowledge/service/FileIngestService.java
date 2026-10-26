@@ -19,6 +19,7 @@ import java.util.Map;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Registers uploads: validates bytes, stores in object storage, inserts knowledge_sources +
@@ -35,13 +36,15 @@ public class FileIngestService {
     private final DocumentRepository documents;
     private final StorageService storage;
     private final AiServiceClient ai;
+    private final TransactionTemplate tx;
 
     public FileIngestService(KnowledgeSourceRepository sources, DocumentRepository documents,
-                             StorageService storage, AiServiceClient ai) {
+                             StorageService storage, AiServiceClient ai, TransactionTemplate tx) {
         this.sources = sources;
         this.documents = documents;
         this.storage = storage;
         this.ai = ai;
+        this.tx = tx;
     }
 
     public Persisted uploadAndIngest(UUID userId, byte[] content, String filename, String kind,
@@ -50,8 +53,13 @@ public class FileIngestService {
         String key = keyFor(userId, folder, type);
         storage.put(key, content, type.mediaType());
         String title = titleFrom(filename);
-        Persisted persisted = persistRows(userId, key, type.mediaType(), title, kind, refId,
-                sha256(content), excerptFor(type, content));
+        // The three rows are one batch: a source titled like a finished upload with no document
+        // behind it never leaves "ingesting", never becomes citable, and is counted by the list.
+        // The annotation on persistRows cannot arm a call this object makes on itself, so this
+        // method opens the transaction instead and leaves the model call below outside it -- which
+        // is what the class javadoc has always promised. FileIngestAtomicityIT holds both halves.
+        Persisted persisted = tx.execute(status -> persistRows(userId, key, type.mediaType(), title,
+                kind, refId, sha256(content), excerptFor(type, content)));
         try {
             ai.ingestDocument(persisted.documentId(), userId);
         } catch (ApiException e) {
@@ -67,8 +75,9 @@ public class FileIngestService {
         String key = keyFor(userId, folder, type);
         storage.put(key, content, type.mediaType());
         String effectiveTitle = title == null || title.isBlank() ? titleFrom(null) : title;
-        return persistRows(userId, key, type.mediaType(), effectiveTitle, kind, null,
-                sha256(content), excerptFor(type, content));
+        // The live upload route's batch, armed the same way: see uploadAndIngest.
+        return tx.execute(status -> persistRows(userId, key, type.mediaType(), effectiveTitle, kind,
+                null, sha256(content), excerptFor(type, content)));
     }
 
     public Map<String, Object> triggerIngest(Persisted persisted, UUID userId) {

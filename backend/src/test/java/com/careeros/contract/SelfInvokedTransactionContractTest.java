@@ -29,11 +29,15 @@ import org.junit.jupiter.api.Test;
  * them, and a derived delete is a {@code remove} call that refuses to run with no transaction, so
  * re-parsing a resume that already had children was impossible. {@code ConversationService.chat ->
  * persistTurn} shipped the same shape one row shorter: an answer the database refused left its
- * question filed, and the page renders that as an empty bubble. {@link
+ * question filed, and the page renders that as an empty bubble. {@code FileIngestService.persistRowsOnly
+ * -> persistRows} shipped it for an upload's two rows, which only mean something together: the
+ * source row committed alone is a list entry titled like a finished upload that never stops saying
+ * {@code ingesting}. {@link
  * com.careeros.job.service.JobImportAtomicityIT}, {@link
- * com.careeros.resume.service.ResumeParseAtomicityIT} and {@link
- * com.careeros.conversation.service.ConversationTurnAtomicityIT} are the behaviour witnesses for
- * the three sites that are now fixed, each running its writes inside a {@code TransactionTemplate}.
+ * com.careeros.resume.service.ResumeParseAtomicityIT}, {@link
+ * com.careeros.conversation.service.ConversationTurnAtomicityIT} and {@link
+ * com.careeros.knowledge.service.FileIngestAtomicityIT} are the behaviour witnesses for
+ * the four sites that are now fixed, each running its writes inside a {@code TransactionTemplate}.
  *
  * <p>This gate is the census of the rest. In every service-layer class, a same-file call into a
  * method that writes two or more rows must be armed -- either the caller carries
@@ -76,8 +80,6 @@ class SelfInvokedTransactionContractTest {
      * class, the entering method, the writer it calls on itself, and how many rows are at stake.
      */
     private static final List<String> NOT_YET_ATOMIC = List.of(
-            "FileIngestService.java#persistRowsOnly() -> persistRows() 3 rows",
-            "FileIngestService.java#uploadAndIngest() -> persistRows() 3 rows",
             "InterviewService.java#finalize() -> persistFinalization() 2 rows",
             "ResumeService.java#upload() -> persistUpload() 4 rows");
 
@@ -92,6 +94,10 @@ class SelfInvokedTransactionContractTest {
             "com/careeros/job/service/JobImportAtomicityIT.java",
             "ConversationService.java#chat() -> persistTurn() 3 rows",
             "com/careeros/conversation/service/ConversationTurnAtomicityIT.java",
+            "FileIngestService.java#persistRowsOnly() -> persistRows() 3 rows",
+            "com/careeros/knowledge/service/FileIngestAtomicityIT.java",
+            "FileIngestService.java#uploadAndIngest() -> persistRows() 3 rows",
+            "com/careeros/knowledge/service/FileIngestAtomicityIT.java",
             "ResumeService.java#parse() -> persistParse() 7 rows",
             "com/careeros/resume/service/ResumeParseAtomicityIT.java");
 
@@ -133,6 +139,12 @@ class SelfInvokedTransactionContractTest {
         assertThat(writesOf("upsertSkill", bodiesOf("resume", "service", "ResumeService.java")))
                 .isEqualTo(1);
         assertThat(writesOf("persistTurn", bodiesOf("conversation", "service", "ConversationService.java")))
+                .isEqualTo(3);
+
+        // A cleared site's count is prose no equality check re-derives, so this reads it back from
+        // the body: persistRows saves the source, saves the document, then saves the source again --
+        // two writes to one repository are two rows, which a set keyed on `sources.save` would fold.
+        assertThat(writesOf("persistRows", bodiesOf("knowledge", "service", "FileIngestService.java")))
                 .isEqualTo(3);
     }
 
