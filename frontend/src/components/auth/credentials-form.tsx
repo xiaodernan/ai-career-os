@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useLocale } from "@/lib/i18n/locale-context";
 import Link from "next/link";
 import { toast } from "sonner";
 import { AuthField } from "@/components/auth/auth-field";
@@ -50,15 +51,16 @@ const registerFields: FieldConfig[] = [
   ),
   {
     name: "confirmPassword",
-    label: "Confirm password",
+    label: "t("auth.confirmPassword")",
     type: "password",
     autoComplete: "new-password",
     placeholder: "••••••••••",
-    validate: (v, all) => (v !== all.password ? "Passwords do not match" : undefined),
+    validate: (v, all) => (v !== all.password ? "t("auth.passwordsDoNotMatch")" : undefined),
   },
 ];
 
 export function CredentialsForm({ mode, notice }: { mode: "login" | "register"; notice?: string }) {
+  const { t } = useLocale();
   const isLogin = mode === "login";
   const fields = isLogin ? baseFields : registerFields;
   const login = useLogin();
@@ -80,7 +82,7 @@ export function CredentialsForm({ mode, notice }: { mode: "login" | "register"; 
     if (mutation.isPending) return;
     const handlers = {
       onSuccess: () =>
-        toast.success(isLogin ? "Welcome back." : "Account created — welcome to Career OS."),
+        toast.success(isLogin ? t("auth.welcomeBack") : t("auth.accountCreated")),
         onError: (err: unknown) => toast.error(authFormErrorMessage(err)),
     };
     if (isLogin) {
@@ -105,7 +107,7 @@ export function CredentialsForm({ mode, notice }: { mode: "login" | "register"; 
       ) : null}
       <header className="space-y-1.5">
         <h2 className="font-serif text-display-sm font-medium">
-          {isLogin ? "Sign in to your workspace" : "Create your account"}
+          {isLogin ? "t("auth.signInToWorkspace") : t("auth.createYourAccount")"}
         </h2>
         <p className="text-sm text-muted-foreground">
           {isLogin
@@ -143,7 +145,7 @@ export function CredentialsForm({ mode, notice }: { mode: "login" | "register"; 
         })}
 
         <Button type="submit" variant="ai" size="lg" className="w-full" loading={mutation.isPending}>
-          {isLogin ? "Sign in" : "Create account"}
+          {isLogin ? "t("auth.signIn") : t("auth.createAccount")"}
         </Button>
       </form>
 
@@ -153,7 +155,7 @@ export function CredentialsForm({ mode, notice }: { mode: "login" | "register"; 
             href="/forgot-password"
             className="font-medium text-primary underline-offset-4 hover:underline"
           >
-            Forgot your password?
+            t("auth.forgotPassword")
           </Link>
         </p>
       )}

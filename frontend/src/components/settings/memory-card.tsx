@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useLocale } from "@/lib/i18n/locale-context";
 import { Brain, Pencil, Trash2 } from "lucide-react";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { EmptyState } from "@/components/common/empty-state";
@@ -23,7 +24,7 @@ import { useDeleteMemory, useUpdateMemory } from "@/lib/hooks/actions";
 import { relativeTime, weightLabel } from "@/lib/format";
 
 /**
- * What the agents remember about the user, and the one surface that can correct it
+ * t("memory.whatAgentsRemember") about the user, and the one surface that can correct it
  * (AGENTS.md §6).
  *
  * Every memory here was written by the model: the extraction path runs at the end of each
@@ -45,6 +46,7 @@ const WEIGHTS = [
 ];
 
 export function MemoryCard() {
+  const { t } = useLocale();
   const memories = useMemories();
   const remove = useDeleteMemory();
   const [editing, setEditing] = React.useState<string | null>(null);
@@ -61,7 +63,7 @@ export function MemoryCard() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">What the agents remember</CardTitle>
+        <CardTitle className="text-base">t("memory.whatAgentsRemember")</CardTitle>
         <CardDescription>
           Facts the model extracted from your conversations and interviews. Correct a wrong
           one, or lower its weight — these shape every answer you get.
@@ -72,11 +74,11 @@ export function MemoryCard() {
           <div className="space-y-2" role="status">
             <Skeleton className="h-12 w-full" />
             <Skeleton className="h-12 w-3/4" />
-            <span className="sr-only">Loading memories…</span>
+            <span className="sr-only">t("memory.loading")</span>
           </div>
         ) : memories.isError ? (
           <ErrorState
-            title="Memories could not be loaded"
+            title="t("memory.loadFailed")"
             error={memories.error}
             onRetry={() => void memories.refetch()}
             retrying={memories.isFetching}
@@ -138,8 +140,8 @@ export function MemoryCard() {
         ) : (
           <EmptyState
             icon={<Brain aria-hidden />}
-            title="Nothing remembered yet"
-            description="Chat with the copilot or finish an interview and the facts it learns appear here."
+            title="t("memory.empty")"
+            description="t("memory.empty")"
           />
         )}
       </CardContent>
@@ -147,8 +149,8 @@ export function MemoryCard() {
       <ConfirmDialog
         open={confirmId !== null}
         onOpenChange={(open) => !open && setConfirmId(null)}
-        title="Forget this memory?"
-        description="It will stop shaping the answers the agents give you. This cannot be undone."
+        title="t("memory.forgetConfirm")"
+        description="t("memory.forgetDescription")"
         confirmLabel="Forget"
         destructive
         onConfirm={() => {
@@ -197,7 +199,7 @@ function MemoryEditor({
   return (
     <div className="space-y-3">
       <div className="space-y-1.5">
-        <Label htmlFor={`memory-${id}`}>What the agent remembers</Label>
+        <Label htmlFor={`memory-${id}`}>t("memory.whatAgentRemembers")</Label>
         <Textarea
           id={`memory-${id}`}
           value={draft}
@@ -225,7 +227,7 @@ function MemoryEditor({
           </SelectContent>
         </Select>
         <p className="text-2xs text-muted-foreground">
-          Higher-weight memories come first in every answer.
+          t("memory.weightHigherFirst")
         </p>
       </div>
       <div className="flex justify-end gap-2">

@@ -2942,7 +2942,7 @@ def test_the_heartbeat_interval_has_one_definer_and_every_shipped_claim_names_it
         "empty set -- and a second file picking up the word is a signal the ledger has to grow")
 
     assert [(row["file"], row["line"]) for row in spans["vocabulary"]] == [
-        ("frontend/src/components/ai/task-stream.tsx", 17),
+        ("frontend/src/components/ai/task-stream.tsx", 18),
         ("frontend/src/lib/sse/use-sse.ts", 9),
     ], ("spans that name the keep-alive and state no interval: the shape an edited claim leaves behind, "
         "listed so a claim cannot escape the census above by losing its number")
@@ -3232,7 +3232,7 @@ def test_both_frame_parsers_default_a_nameless_frame_to_the_same_event_name():
         (f"{[(r['file'], r['line'], r['text']) for r in by_role['frame-exit']]}: the one non-default use "
          "inside a parser is the exit that drops a frame with neither data nor an explicit name")
     assert sorted((row["file"], row["line"], row["head"]) for row in by_role["type-union-member"]) == [
-        ("agent-timeline.tsx", 33, "export type TraceKind ="),
+        ("agent-timeline.tsx", 34, "export type TraceKind ="),
         # 1180 rather than 744 since concurrent types.ts additions above the trace-step union
         # moved its `kind:` head down. The forward bridges' own types (the growth
         # engines, the offers, the portability and ingestion payloads) joined the file
@@ -3786,7 +3786,7 @@ def test_the_two_browser_consumers_of_a_quietly_closed_stream_disagree():
         (f"{ {k: len(v) for k, v in reads.items()} }: the two fields the panel does read are exactly the "
          "negated pair that holds the promise line on screen -- this floor proves the scan can see this "
          "object's fields at all, so the 0 rows above are a finding rather than a blind scanner")
-    assert re.search(r"The run stream hasn(?:&apos;|['’])t reported progress yet", panel) is not None, \
+    assert re.search(r't\("ai.taskStream.streamNotReported"\)', panel) is not None, \
         ("that sentence is shown while `reporting` and `finished` are both false, which is the state a "
          "quietly closed stream leaves the panel in")
 

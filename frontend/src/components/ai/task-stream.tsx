@@ -3,6 +3,7 @@
 import * as React from "react";
 import { endpoints } from "@/lib/api/endpoints";
 import { useSSE, errorText, type SSEState } from "@/lib/sse/use-sse";
+import { useLocale } from "@/lib/i18n/locale-context";
 import {
   applyStatusEvent,
   type ProcessingStep,
@@ -168,6 +169,8 @@ export interface TaskProgressProps extends React.ComponentProps<"div"> {
   /** Fallback: request is pending but no task id has been returned yet. */
   pending?: boolean;
   pendingLabel?: string;
+  /** Translation key for pendingLabel (overrides pendingLabel if provided). */
+  pendingLabelKey?: string;
   /** Step labels to show before the first SSE status frame arrives. */
   seed?: { id: string; label: string }[];
   title?: string;
@@ -180,7 +183,8 @@ function TaskProgress({
   steps: externalSteps,
   traces: externalTraces,
   pending = false,
-  pendingLabel = "Waiting for the agent…",
+  pendingLabel,
+  pendingLabelKey = "ai.taskStream.waitingForAgent",
   seed,
   title,
   showTimeline = true,
@@ -189,10 +193,12 @@ function TaskProgress({
   ...props
 }: TaskProgressProps) {
   const stream = useTaskStream(taskId, { seed, onDone });
+  const { t } = useLocale();
   const steps = externalSteps ?? stream.steps;
   const traces = externalTraces ?? stream.traces;
   const live = Boolean(taskId) || pending;
   const [timelineOpen, setTimelineOpen] = React.useState(false);
+  const effectivePendingLabel = pendingLabel ?? t(pendingLabelKey);
 
   if (!live) return null;
 
@@ -202,14 +208,14 @@ function TaskProgress({
         <p className="text-2xs font-medium tracking-wide text-muted-foreground uppercase">{title}</p>
       )}
       {steps.length > 0 ? (
-        <ProcessingSteps steps={pending && !stream.reporting ? [{ id: "wait", label: pendingLabel, status: "active" }, ...steps] : steps} />
+        <ProcessingSteps steps={pending && !stream.reporting ? [{ id: "wait", label: effectivePendingLabel, status: "active" }, ...steps] : steps} />
       ) : (
-        <ProcessingSteps steps={[{ id: "wait", label: pendingLabel, status: "active" }]} />
+        <ProcessingSteps steps={[{ id: "wait", label: effectivePendingLabel, status: "active" }]} />
       )}
 
       {Boolean(taskId) && !stream.reporting && !stream.finished && (
         <p className="text-xs text-muted-foreground">
-          The run stream hasn&apos;t reported progress yet — results appear as soon as it does.
+          {t("ai.taskStream.streamNotReported")}
         </p>
       )}
 
@@ -224,7 +230,7 @@ function TaskProgress({
             className="flex w-full items-center gap-1.5 px-3 py-2 text-left text-xs font-medium text-muted-foreground hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-primary/30 rounded-md"
           >
             <ChevronRight className={cn("size-3 transition-transform duration-150", timelineOpen && "rotate-90")} aria-hidden />
-            Agent trace
+            {t("ai.taskStream.agentTrace")}
             <span className="ml-auto tabular-nums">{traces.length} steps</span>
           </button>
           {timelineOpen && (
@@ -249,11 +255,11 @@ export function localStages(labels: string[], index: number): ProcessingStep[] {
   }));
 }
 
-/** "Skip / cancel the wait" affordance used next to long-running progress. */
+/** "t("ai.taskStream.skipWait")" affordance used next to long-running progress. */
 export function StopStreamButton({ onStop, className }: { onStop: () => void; className?: string }) {
   return (
     <Button variant="ghost" size="xs" className={className} onClick={onStop}>
-      Stop following this run
+      t("ai.taskStream.stopFollowing")
     </Button>
   );
 }

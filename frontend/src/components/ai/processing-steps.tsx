@@ -3,6 +3,7 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { Check, Circle, TriangleAlert } from "lucide-react";
+import { useLocale } from "@/lib/i18n/locale-context";
 
 /**
  * ProcessingSteps — the vertical checklist driven by SSE `status` events.
@@ -22,9 +23,10 @@ export interface ProcessingStepsProps extends React.ComponentProps<"ol"> {
 }
 
 function ProcessingSteps({ steps, className, ...props }: ProcessingStepsProps) {
+  const { t } = useLocale();
   return (
     <ol
-      aria-label="AI processing progress"
+      aria-label={t("ai.processing.ariaLabel")}
       className={cn("flex flex-col gap-0.5", className)}
       {...props}
     >

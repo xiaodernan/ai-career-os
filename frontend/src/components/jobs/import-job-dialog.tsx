@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useLocale } from "@/lib/i18n/locale-context";
 import { useRouter } from "next/navigation";
 import { FilePlus2, Sparkles } from "lucide-react";
 import {
@@ -31,9 +32,9 @@ import { jdTextIssue } from "@/lib/jd-text";
  * structure for any posting, however the request was sent.
  */
 const STAGES: string[] = [
-  "Reading the posting",
-  "Extracting the company and role",
-  "Filing it in your tracker",
+  "t("import.readingPosting")",
+  "t("import.extractingCompanyRole")",
+  "t("import.filingTracker")",
 ];
 
 /** Local stage hints: the request lifecycle is real, its internal position isn't observable here. */
@@ -41,6 +42,7 @@ const stepsFor = (pending: boolean, done: boolean): ProcessingStep[] =>
   seedSteps(STAGES, done ? "done" : pending ? "pending" : "idle", "import");
 
 export function ImportJobDialog() {
+  const { t } = useLocale();
   const [open, setOpen] = React.useState(false);
   const [text, setText] = React.useState("");
   const [url, setUrl] = React.useState("");
@@ -88,7 +90,7 @@ export function ImportJobDialog() {
       </DialogTrigger>
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle className="text-base">Import a job posting</DialogTitle>
+          <DialogTitle className="text-base">t("import.title")</DialogTitle>
           <DialogDescription>
             Paste the full posting. The analyst fills in the company, skills and responsibilities
             and the role lands in your tracker.
@@ -96,12 +98,12 @@ export function ImportJobDialog() {
         </DialogHeader>
 
         <div className="space-y-2">
-          <Label htmlFor="import-raw">Job posting text</Label>
+          <Label htmlFor="import-raw">t("import.jobPostingText")</Label>
           <Textarea
             id="import-raw"
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder="Paste the full posting — responsibilities, requirements, nice-to-haves…"
+            placeholder="t("import.pasteFullPosting")"
             rows={8}
             className="font-mono text-xs"
           />
@@ -112,7 +114,7 @@ export function ImportJobDialog() {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="import-url">Source URL (optional)</Label>
+          <Label htmlFor="import-url">t("import.sourceUrl")</Label>
           <Input
             id="import-url"
             type="url"

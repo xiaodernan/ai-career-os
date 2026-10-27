@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useLocale } from "@/lib/i18n/locale-context";
 import {
   ArrowRightLeft,
   ChevronRight,
@@ -68,9 +69,10 @@ export interface AgentTimelineProps extends React.ComponentProps<"ul"> {
 }
 
 function AgentTimeline({ events, className, defaultExpanded = false, ...props }: AgentTimelineProps) {
+  const { t } = useLocale();
   return (
     <ul
-      aria-label="Agent execution trace"
+      aria-label="t("ai.agentTimeline.trace")"
       className={cn("flex flex-col text-sm", className)}
       {...props}
     >

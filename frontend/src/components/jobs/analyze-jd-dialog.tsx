@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useLocale } from "@/lib/i18n/locale-context";
 import { ClipboardPaste, Sparkles } from "lucide-react";
 import {
   Dialog,
@@ -25,23 +26,24 @@ import { missingEndpointMessage } from "@/lib/api/missing-endpoint";
 import { jdTextIssue } from "@/lib/jd-text";
 
 /**
- * JD intelligence (§9): paste raw text → required / preferred skills,
+ * t("jd.title") (§9): paste raw text → required / preferred skills,
  * responsibilities, interview topics, skill gap, resume suggestions.
  * The stage list is the lifecycle this request actually walks — progress is
  * described by the request lifecycle, not invented timings — and the seeding
  * itself is shared with the import dialog (`processing-steps.seedSteps`).
  */
 const STAGES: string[] = [
-  "Reading the posting",
-  "Extracting requirements",
-  "Ranking priorities",
-  "Comparing with your profile",
+  t("jd.readingPosting"),
+  t("jd.extractingRequirements"),
+  t("jd.rankingPriorities"),
+  t("jd.comparingProfile"),
 ];
 
 const stepsFor = (pending: boolean, hasResult: boolean): ProcessingStep[] =>
   seedSteps(STAGES, hasResult ? "done" : pending ? "pending" : "idle", "jd");
 
 export function AnalyzeJdDialog({ onUseText }: { onUseText?: (text: string) => void }) {
+  const { t } = useLocale();
   const [open, setOpen] = React.useState(false);
   const [text, setText] = React.useState("");
   const [result, setResult] = React.useState<JdAnalysis | null>(null);
@@ -83,7 +85,7 @@ export function AnalyzeJdDialog({ onUseText }: { onUseText?: (text: string) => v
       </DialogTrigger>
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle className="text-base">JD intelligence</DialogTitle>
+          <DialogTitle className="text-base">t("jd.title")</DialogTitle>
           <DialogDescription>
             Paste a job description. The JD analyst extracts requirements, priorities and the gap
             against your parsed resume.
@@ -91,12 +93,12 @@ export function AnalyzeJdDialog({ onUseText }: { onUseText?: (text: string) => v
         </DialogHeader>
 
         <div className="space-y-2">
-          <Label htmlFor="jd-raw">Job description text</Label>
+          <Label htmlFor="jd-raw">t("jd.jobDescriptionText")</Label>
           <Textarea
             id="jd-raw"
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder="Paste the full posting — responsibilities, requirements, nice-to-haves…"
+            placeholder="t("jd.pasteFullPosting")"
             rows={8}
             className="font-mono text-xs"
           />
@@ -159,15 +161,16 @@ function JdResult({
   suggestions: Suggestion[];
   loading?: boolean;
 }) {
+  const { t } = useLocale();
   // A gap is a comparison against this resume, so the analysis itself never carries one: the card is
   // built from the missing-required items /jds/suggestions derived (the contract gate checks that).
   const gap = missingSkillGaps(suggestions);
   const groups: { title: string; items: string[]; variant?: "ai" | "outline" | "warning" }[] = [
-    { title: "Required skills", items: result.requiredSkills, variant: "ai" },
-    { title: "Preferred skills", items: result.preferredSkills },
-    { title: "Hidden requirements", items: result.hiddenRequirements, variant: "warning" },
-    { title: "Interview topics", items: result.interviewTopics },
-    { title: "Your skill gap", items: gap, variant: "warning" },
+    { title: "t("jd.requiredSkills")", items: result.requiredSkills, variant: "ai" },
+    { title: "t("jd.preferredSkills")", items: result.preferredSkills },
+    { title: "t("jd.hiddenRequirements")", items: result.hiddenRequirements, variant: "warning" },
+    { title: "t("jd.interviewTopics")", items: result.interviewTopics },
+    { title: "t("jd.skillGap")", items: gap, variant: "warning" },
   ];
   const visible = groups.filter((g) => g.items.length > 0);
   const nothing =
@@ -177,13 +180,13 @@ function JdResult({
     <div className="space-y-4">
       <div className="flex items-center gap-2">
         <AIBadge label="JD analysis" />
-        <span className="text-xs text-muted-foreground">Structured output from /jds</span>
+        <span className="text-xs text-muted-foreground">t("jd.structuredOutput")</span>
       </div>
 
       {result.responsibilities.length > 0 && (
         <section className="space-y-1.5">
           <h4 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-            Responsibilities
+            t("jd.responsibilities")
           </h4>
           <ul className="ml-4 list-disc space-y-1 text-sm">
             {result.responsibilities.map((r, i) => (
@@ -211,10 +214,10 @@ function JdResult({
       {(suggestions.length > 0 || loading) && (
         <section className="space-y-2">
           <h4 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-            Resume improvement suggestions
+            t("jd.resumeImprovementSuggestions")
           </h4>
           {loading && !suggestions.length && (
-            <p className="text-sm text-muted-foreground">Comparing with your resume…</p>
+            <p className="text-sm text-muted-foreground">t("jd.comparingResume")</p>
           )}
           <ul className="space-y-2">
             {suggestions.slice(0, 8).map((s, i) => (

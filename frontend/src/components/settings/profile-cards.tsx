@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useLocale } from "@/lib/i18n/locale-context";
 import { Plus, Save, X } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,7 @@ const MAX_SUMMARY = 5000;
 const MAX_YEARS = 60;
 
 export function CareerProfileCard() {
+  const { t } = useLocale();
   const profile = useProfile();
 
   return (
@@ -49,7 +51,7 @@ export function CareerProfileCard() {
       <CardHeader>
         <CardTitle className="text-base">Career profile</CardTitle>
         <CardDescription>
-          What the agents assume about you — headline, targets and the story they tell recruiters.
+          t("profile.description")
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -58,11 +60,11 @@ export function CareerProfileCard() {
             <Skeleton className="h-4 w-1/3" />
             <Skeleton className="h-4 w-1/2" />
             <Skeleton className="h-20 w-full" />
-            <span className="sr-only">Loading profile…</span>
+            <span className="sr-only">t("profile.loading")</span>
           </div>
         ) : profile.isError ? (
           <ErrorState
-            title="Profile could not be loaded"
+            title="t("profile.loadFailed")"
             error={profile.error}
             onRetry={() => void profile.refetch()}
             retrying={profile.isFetching}
@@ -77,10 +79,10 @@ export function CareerProfileCard() {
 
 function CareerProfileForm({ initial }: { initial: Record<string, unknown> | null }) {
   const update = useUpdateProfileDetails();
-  const [headline, setHeadline] = React.useState(readString(initial, "headline"));
+  const [headline, sett("profile.headline")] = React.useState(readString(initial, "headline"));
   const [location, setLocation] = React.useState(readString(initial, "location"));
   const [years, setYears] = React.useState(readYears(initial));
-  const [summary, setSummary] = React.useState(readString(initial, "summary"));
+  const [summary, sett("profile.summary")] = React.useState(readString(initial, "summary"));
   const [roles, setRoles] = React.useState(listText(initial?.["targetRoles"]));
   const [targetLocations, setTargetLocations] = React.useState(listText(initial?.["targetLocations"]));
 
@@ -111,12 +113,12 @@ function CareerProfileForm({ initial }: { initial: Record<string, unknown> | nul
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="profile-headline">Headline</Label>
+        <Label htmlFor="profile-headline">t("profile.headline")</Label>
         <Input
           id="profile-headline"
           value={headline}
           maxLength={MAX_HEADLINE}
-          onChange={(e) => setHeadline(e.target.value)}
+          onChange={(e) => sett("profile.headline")(e.target.value)}
           placeholder="e.g. Backend engineer moving into platform work"
           autoComplete="off"
         />
@@ -148,7 +150,7 @@ function CareerProfileForm({ initial }: { initial: Record<string, unknown> | nul
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="profile-roles">Target roles (comma separated)</Label>
+          <Label htmlFor="profile-roles">t("profile.targetRoles")</Label>
           <Input
             id="profile-roles"
             value={roles}
@@ -163,7 +165,7 @@ function CareerProfileForm({ initial }: { initial: Record<string, unknown> | nul
           )}
         </div>
         <div className="space-y-2">
-          <Label htmlFor="profile-target-locations">Target locations (comma separated)</Label>
+          <Label htmlFor="profile-target-locations">t("profile.targetLocations")</Label>
           <Input
             id="profile-target-locations"
             value={targetLocations}
@@ -179,11 +181,11 @@ function CareerProfileForm({ initial }: { initial: Record<string, unknown> | nul
         </div>
       </div>
       <div className="space-y-2">
-        <Label htmlFor="profile-summary">Summary</Label>
+        <Label htmlFor="profile-summary">t("profile.summary")</Label>
         <Textarea
           id="profile-summary"
           value={summary}
-          onChange={(e) => setSummary(e.target.value)}
+          onChange={(e) => sett("profile.summary")(e.target.value)}
           rows={4}
           maxLength={MAX_SUMMARY}
           placeholder="The short story a recruiter gets before the resume."
@@ -197,7 +199,7 @@ function CareerProfileForm({ initial }: { initial: Record<string, unknown> | nul
       <div className="flex justify-end">
         <Button variant="ai" size="sm" loading={update.isPending} disabled={!saveable || update.isPending} onClick={save}>
           <Save aria-hidden />
-          Save profile
+          t("profile.saveProfile")
         </Button>
       </div>
     </div>
@@ -223,7 +225,7 @@ export function CareerProfileMapsCard() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Links & extras</CardTitle>
+        <CardTitle className="text-base">t("profile.linksExtras")</CardTitle>
         <CardDescription>
           Free-form maps the agents read — links, work authorization, preferences. Values that
           parse as JSON keep their type; everything else is saved as a string.
@@ -233,11 +235,11 @@ export function CareerProfileMapsCard() {
         {profile.isPending ? (
           <div role="status">
             <Skeleton className="h-20 w-full" />
-            <span className="sr-only">Loading profile…</span>
+            <span className="sr-only">t("profile.loading")</span>
           </div>
         ) : profile.isError ? (
           <ErrorState
-            title="Profile could not be loaded"
+            title="t("profile.loadFailed")"
             error={profile.error}
             onRetry={() => void profile.refetch()}
             retrying={profile.isFetching}
@@ -318,7 +320,7 @@ function CareerProfileMapsForm({ initial }: { initial: Record<string, unknown> |
       <div className="flex justify-end">
         <Button variant="ai" size="sm" loading={update.isPending} disabled={!dirty || update.isPending} onClick={save}>
           <Save aria-hidden />
-          Save maps
+          t("profile.saveMaps")
         </Button>
       </div>
     </div>
