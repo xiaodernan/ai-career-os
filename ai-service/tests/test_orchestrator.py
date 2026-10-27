@@ -465,12 +465,39 @@ def test_tool_result_text_falls_back_to_str_on_unserialisable_structure():
     assert isinstance(out, str) and out  # fell through to str(result), non-empty
 
 
-def test_tool_result_text_truncates_to_result_chars():
-    big = {"blob": "x" * (orchestrator.RESULT_CHARS + 500)}
-    full = json.dumps(big, ensure_ascii=False, default=str)
+def test_a_large_tool_result_is_shrunk_not_cut_mid_json():
+    """A truncated JSON document is not JSON.
+
+    `search_knowledge_base` returns a context block capped at 6000 chars, so its
+    result routinely exceeded RESULT_CHARS and was cut mid-token -- the model then
+    read a broken document instead of data. The result must stay parseable.
+    """
+    big = {"evidence": [{"chunk_id": f"c{i}", "quote": "q" * 200} for i in range(40)],
+           "context": "x" * (orchestrator.RESULT_CHARS + 500)}
     out = orchestrator._tool_result_text(big)
-    assert len(out) == orchestrator.RESULT_CHARS
-    assert full.startswith(out)
+    assert len(out) <= orchestrator.RESULT_CHARS
+    parsed = json.loads(out)                       # the whole point
+    assert "evidence" in parsed and "context" in parsed
+    assert parsed["context"].endswith(f"({len(big['context'])} chars total)")
+
+
+def test_shrinking_keeps_the_small_keys_exactly_as_they_were():
+    big = {"total": 3, "note": "ok", "blob": "y" * (orchestrator.RESULT_CHARS + 200)}
+    parsed = json.loads(orchestrator._tool_result_text(big))
+    assert parsed["total"] == 3 and parsed["note"] == "ok"
+    assert parsed["blob"].startswith("y" * 300)
+
+
+def test_a_long_list_keeps_a_head_and_says_how_many_were_dropped():
+    big = {"jobs": [{"id": f"j{i}", "title": "t" * 100} for i in range(60)]}
+    parsed = json.loads(orchestrator._tool_result_text(big))
+    assert len(parsed["jobs"]) == 4                       # three rows plus the marker
+    assert parsed["jobs"][-1] == "...(60 items total)"
+
+
+def test_a_result_that_already_fits_is_returned_untouched():
+    small = {"jobs": [{"id": "j1"}]}
+    assert json.loads(orchestrator._tool_result_text(small)) == small
 
 
 def test_emit_publishes_only_when_task_id_present(monkeypatch):

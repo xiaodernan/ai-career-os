@@ -114,11 +114,41 @@ def _token_emitter(task_id: str | None):
     return emit
 
 
+def _shrink_result(result: dict, cap: int) -> str:
+    """A result that fits `cap` while staying parseable.
+
+    Cutting the JSON text mid-token hands the model a document it cannot read as
+    data, and that is what `search_knowledge_base` did whenever its 6000-char context
+    block was full. Shrinking the largest values instead keeps every small key intact
+    and records, inside the value, how much was dropped -- so the model still sees a
+    complete structure and knows what it is missing.
+    """
+    trimmed = dict(result)
+    for key in sorted(trimmed, key=lambda k: len(str(trimmed[k])), reverse=True):
+        value = trimmed[key]
+        if isinstance(value, str) and len(value) > 300:
+            trimmed[key] = f"{value[:300]}...({len(value)} chars total)"
+        elif isinstance(value, list) and len(value) > 3:
+            trimmed[key] = [*value[:3], f"...({len(value)} items total)"]
+        elif isinstance(value, dict) and len(str(value)) > 600:
+            trimmed[key] = {"...": f"{len(value)} keys, {len(str(value))} chars total"}
+        out = json.dumps(trimmed, ensure_ascii=False, default=str)
+        if len(out) <= cap:
+            return out
+    # Last resort: the caller still needs *a* string, and this one is at least a
+    # complete JSON document even if it is over the cap.
+    return json.dumps(trimmed, ensure_ascii=False, default=str)
+
+
 def _tool_result_text(result: Any) -> str:
     try:
         s = json.dumps(result, ensure_ascii=False, default=str)
     except (TypeError, ValueError):
-        s = str(result)
+        return str(result)[:RESULT_CHARS]  # unserialisable: a repr is all there is
+    if len(s) <= RESULT_CHARS:
+        return s
+    if isinstance(result, dict):
+        return _shrink_result(result, RESULT_CHARS)
     return s[:RESULT_CHARS]
 
 
