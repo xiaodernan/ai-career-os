@@ -474,6 +474,14 @@ async def _run_loop(*, user_id: str, messages: list[LLMMessage], tools: list[Too
                                                   run_id=run_id, agent=agent,
                                                   task_id=task_id, out=out)
                         if isinstance(result, dict) and not result.get("error"):
+                            if tool.write:
+                                # The cache is only valid while the world stands
+                                # still: this call just changed it, so a read
+                                # re-issued afterwards must run again and see the
+                                # new state instead of the pre-write answer. The
+                                # write's own result is still cached, which is
+                                # what keeps a re-issued write from running twice.
+                                answered.clear()
                             answered[key] = result
             messages.append(LLMMessage("tool", _tool_result_text(result),
                                        tool_call_id=tc.id, name=tc.name))

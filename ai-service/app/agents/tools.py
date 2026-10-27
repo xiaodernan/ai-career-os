@@ -17,13 +17,19 @@ from app.providers.registry import embed_text
 class Tool:
     def __init__(self, name: str, description: str, parameters: dict,
                  handler: Callable[..., Awaitable[Any]],
-                 artifact: str | None = None, agent: str = "career"):
+                 artifact: str | None = None, agent: str = "career",
+                 write: bool = False):
         self.name = name
         self.description = description
         self.parameters = parameters
         self.handler = handler
         self.artifact = artifact  # artifact type emitted from result, if any
         self.agent = agent
+        # The handler persists domain state (INSERT/UPDATE through db or a feature
+        # module). The orchestrator's answered-cache is only valid while the world
+        # stands still, so a successful write clears it -- a read re-issued after a
+        # write must run again and see the new state, not the pre-write answer.
+        self.write = write
 
     def spec(self) -> ToolSpec:
         return ToolSpec(name=self.name, description=self.description,
@@ -860,8 +866,8 @@ async def get_user_profile(user_id: str) -> dict:
 from app.features.outreach import PURPOSES as _OUTREACH_PURPOSES
 
 
-def _t(name, desc, params, fn, artifact=None, agent="career"):
-    return Tool(name, desc, params, fn, artifact, agent)
+def _t(name, desc, params, fn, artifact=None, agent="career", write=False):
+    return Tool(name, desc, params, fn, artifact, agent, write)
 
 
 ALL_TOOLS: list[Tool] = [
@@ -900,7 +906,7 @@ ALL_TOOLS: list[Tool] = [
        {"type": "object", "properties": {"job_id": {"type": "string"},
                                          "resume_version_id": {"type": "string"}},
         "required": ["job_id"], "additionalProperties": False},
-       calculate_match, artifact="match"),
+       calculate_match, artifact="match", write=True),
     _t("generate_resume", "Tailor resume for a job (no fabrication; returns diff).",
        {"type": "object", "properties": {"job_id": {"type": "string"}},
         "required": ["job_id"], "additionalProperties": False},
@@ -918,7 +924,7 @@ ALL_TOOLS: list[Tool] = [
                                          "max_questions": {"type": "integer",
                                                            "default": 6}},
         "required": ["job_id"], "additionalProperties": False}, create_interview,
-       artifact="interview_session"),
+       artifact="interview_session", write=True),
     _t("evaluate_answer", "Evaluate one interview answer against a question.",
        {"type": "object", "properties": {"question": {"type": "string"},
                                          "answer": {"type": "string"},
@@ -939,14 +945,15 @@ ALL_TOOLS: list[Tool] = [
     _t("save_job", "Bookmark a job and add to Applications(saved) pipeline.",
        {"type": "object", "properties": {"job_id": {"type": "string"},
                                          "note": {"type": "string"}},
-        "required": ["job_id"], "additionalProperties": False}, save_job),
+        "required": ["job_id"], "additionalProperties": False}, save_job,
+       write=True),
     _t("update_application_status", "Move an application between pipeline stages.",
        {"type": "object", "properties": {"job_id": {"type": "string"},
                                          "application_id": {"type": "string"},
                                          "status": {"type": "string", "enum":
                                                     list(APPLICATION_STATUSES)}},
         "required": ["status"], "additionalProperties": False},
-       update_application_status, agent="tracker"),
+       update_application_status, agent="tracker", write=True),
     _t("list_applications", "Read the application pipeline: the user's saved roles and "
        "where each one stands, newest-updated first.",
        {"type": "object", "properties": {"status": {"type": "string", "enum":
@@ -981,7 +988,7 @@ ALL_TOOLS: list[Tool] = [
        {"type": "object", "properties": {"contact_id": {"type": "string"},
                                          "note": {"type": "string"}},
         "required": ["contact_id"], "additionalProperties": False},
-       log_contact_touch, agent="networking"),
+       log_contact_touch, agent="networking", write=True),
     _t("analyze_gap", "The distance between the user's profile and a target role: the "
        "coverage, the gaps and the skills already covered.",
        {"type": "object", "properties": {"target_role": {"type": "string"},

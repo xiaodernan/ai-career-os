@@ -643,6 +643,95 @@ async def test_a_repeated_failing_call_is_retried_not_cached(env, monkeypatch):
     assert len(calls) == 2
 
 
+async def test_a_read_reissued_after_a_write_runs_again_and_sees_the_new_world(env, monkeypatch):
+    """The answered-cache is only valid while the world stands still.
+
+    A model that lists the pipeline, saves a role, and lists again is not losing the
+    thread -- the second list is the point. Serving it from the cache would answer
+    from the pre-write world while the write's own success message sits right above
+    it, so the user is told the save happened and shown a list that says it didn't.
+    """
+    traces, _ = env
+    seen: list[str] = []
+    state = {"step": 0, "rows": 0}
+
+    async def script(req, **kw):
+        state["step"] += 1
+        if state["step"] == 4:
+            seen.extend(m.content for m in req.messages if m.role == "tool")
+            return _resp(text="done")
+        if state["step"] == 1:
+            return _resp(tool_calls=[ToolCall(id="c1", name="search_jobs",
+                                              arguments={"query": "java"})])
+        if state["step"] == 2:
+            return _resp(tool_calls=[ToolCall(id="c2", name="save_job",
+                                              arguments={"job_id": "j1"})])
+        if state["step"] == 3:
+            return _resp(tool_calls=[ToolCall(id="c3", name="search_jobs",
+                                              arguments={"query": "java"})])
+        return _resp(text="done")
+
+    async def fake_search(user_id, **kw):
+        state["rows"] += 1
+        return {"jobs": [{"id": f"j{state['rows']}", "title": "Java dev"}]}
+
+    async def fake_save(user_id, **kw):
+        return {"saved": True, "job_id": kw.get("job_id")}
+
+    monkeypatch.setattr(orchestrator.ai, "ask", script)
+    monkeypatch.setattr(TOOL_INDEX["search_jobs"], "handler", fake_search)
+    monkeypatch.setattr(TOOL_INDEX["save_job"], "handler", fake_save)
+
+    out = await orchestrator.career_turn(user_id="u1", message="save and recheck",
+                                         run_id="r18")
+
+    assert out.tools_used == ["search_jobs", "save_job", "search_jobs"], \
+        "all three calls executed: the write ran, and the read after it ran again"
+    search_msgs = [m for m in seen if "jobs" in m]
+    assert len(search_msgs) == 2
+    assert json.loads(search_msgs[0])["jobs"][0]["id"] == "j1", \
+        "the first read answers with the pre-write rows"
+    assert json.loads(search_msgs[1])["jobs"][0]["id"] == "j2", \
+        "the re-issued read must run again and see the world the write changed"
+    assert "_note" not in search_msgs[1], "fresh data needs no repetition note"
+
+
+async def test_a_reissued_write_still_runs_once_after_the_cache_clears(env, monkeypatch):
+    """The clear must not resurrect the double-write the cache exists to prevent.
+
+    save_job inserts on every run; the write's own result stays cached (the clear
+    happens before the cache write), so losing the thread right after saving still
+    cannot insert twice.
+    """
+    traces, _ = env
+    seen: list[str] = []
+    state = {"step": 0}
+
+    async def script(req, **kw):
+        state["step"] += 1
+        if state["step"] == 3:
+            seen.extend(m.content for m in req.messages if m.role == "tool")
+            return _resp(text="done")
+        if state["step"] <= 2:
+            return _resp(tool_calls=[ToolCall(id=f"c{state['step']}", name="save_job",
+                                              arguments={"job_id": "j1"})])
+        return _resp(text="done")
+
+    writes: list = []
+
+    async def fake_save(user_id, **kw):
+        writes.append(kw)
+        return {"saved": True, "job_id": kw.get("job_id")}
+
+    monkeypatch.setattr(orchestrator.ai, "ask", script)
+    monkeypatch.setattr(TOOL_INDEX["save_job"], "handler", fake_save)
+
+    await orchestrator.career_turn(user_id="u1", message="save it", run_id="r19")
+
+    assert len(writes) == 1, "the re-issued write must not insert twice"
+    assert "_note" in seen[1], "the model is told the save already happened"
+
+
 def test_trace_args_shorten_a_long_document_but_keep_short_values():
     out = orchestrator._trace_args({"text": "r" * 5000, "job_id": "j1", "n": 3})
     assert out["job_id"] == "j1" and out["n"] == 3
