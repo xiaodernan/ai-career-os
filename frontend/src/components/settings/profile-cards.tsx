@@ -51,7 +51,7 @@ export function CareerProfileCard() {
       <CardHeader>
         <CardTitle className="text-base">Career profile</CardTitle>
         <CardDescription>
-          t("profile.description")
+          {t("profile.description")}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -60,11 +60,11 @@ export function CareerProfileCard() {
             <Skeleton className="h-4 w-1/3" />
             <Skeleton className="h-4 w-1/2" />
             <Skeleton className="h-20 w-full" />
-            <span className="sr-only">t("profile.loading")</span>
+            <span className="sr-only">{t("profile.loading")}</span>
           </div>
         ) : profile.isError ? (
           <ErrorState
-            title="t("profile.loadFailed")"
+            title={t("profile.loadFailed")}
             error={profile.error}
             onRetry={() => void profile.refetch()}
             retrying={profile.isFetching}
@@ -79,10 +79,11 @@ export function CareerProfileCard() {
 
 function CareerProfileForm({ initial }: { initial: Record<string, unknown> | null }) {
   const update = useUpdateProfileDetails();
-  const [headline, sett("profile.headline")] = React.useState(readString(initial, "headline"));
+  const { t } = useLocale();
+  const [headline, setHeadline] = React.useState(readString(initial, "headline"));
   const [location, setLocation] = React.useState(readString(initial, "location"));
   const [years, setYears] = React.useState(readYears(initial));
-  const [summary, sett("profile.summary")] = React.useState(readString(initial, "summary"));
+  const [summary, setSummary] = React.useState(readString(initial, "summary"));
   const [roles, setRoles] = React.useState(listText(initial?.["targetRoles"]));
   const [targetLocations, setTargetLocations] = React.useState(listText(initial?.["targetLocations"]));
 
@@ -113,12 +114,12 @@ function CareerProfileForm({ initial }: { initial: Record<string, unknown> | nul
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="profile-headline">t("profile.headline")</Label>
+        <Label htmlFor="profile-headline">{t("profile.headline")}</Label>
         <Input
           id="profile-headline"
           value={headline}
           maxLength={MAX_HEADLINE}
-          onChange={(e) => sett("profile.headline")(e.target.value)}
+          onChange={(e) => setHeadline(e.target.value)}
           placeholder="e.g. Backend engineer moving into platform work"
           autoComplete="off"
         />
@@ -150,7 +151,7 @@ function CareerProfileForm({ initial }: { initial: Record<string, unknown> | nul
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="profile-roles">t("profile.targetRoles")</Label>
+          <Label htmlFor="profile-roles">{t("profile.targetRoles")}</Label>
           <Input
             id="profile-roles"
             value={roles}
@@ -165,7 +166,7 @@ function CareerProfileForm({ initial }: { initial: Record<string, unknown> | nul
           )}
         </div>
         <div className="space-y-2">
-          <Label htmlFor="profile-target-locations">t("profile.targetLocations")</Label>
+          <Label htmlFor="profile-target-locations">{t("profile.targetLocations")}</Label>
           <Input
             id="profile-target-locations"
             value={targetLocations}
@@ -181,11 +182,11 @@ function CareerProfileForm({ initial }: { initial: Record<string, unknown> | nul
         </div>
       </div>
       <div className="space-y-2">
-        <Label htmlFor="profile-summary">t("profile.summary")</Label>
+        <Label htmlFor="profile-summary">{t("profile.summary")}</Label>
         <Textarea
           id="profile-summary"
           value={summary}
-          onChange={(e) => sett("profile.summary")(e.target.value)}
+          onChange={(e) => setSummary(e.target.value)}
           rows={4}
           maxLength={MAX_SUMMARY}
           placeholder="The short story a recruiter gets before the resume."
@@ -199,7 +200,7 @@ function CareerProfileForm({ initial }: { initial: Record<string, unknown> | nul
       <div className="flex justify-end">
         <Button variant="ai" size="sm" loading={update.isPending} disabled={!saveable || update.isPending} onClick={save}>
           <Save aria-hidden />
-          t("profile.saveProfile")
+          {t("profile.saveProfile")}
         </Button>
       </div>
     </div>
@@ -220,12 +221,13 @@ function CareerProfileForm({ initial }: { initial: Record<string, unknown> | nul
  */
 
 export function CareerProfileMapsCard() {
+  const { t } = useLocale();
   const profile = useProfile();
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">t("profile.linksExtras")</CardTitle>
+        <CardTitle className="text-base">{t("profile.linksExtras")}</CardTitle>
         <CardDescription>
           Free-form maps the agents read — links, work authorization, preferences. Values that
           parse as JSON keep their type; everything else is saved as a string.
@@ -235,11 +237,11 @@ export function CareerProfileMapsCard() {
         {profile.isPending ? (
           <div role="status">
             <Skeleton className="h-20 w-full" />
-            <span className="sr-only">t("profile.loading")</span>
+            <span className="sr-only">{t("profile.loading")}</span>
           </div>
         ) : profile.isError ? (
           <ErrorState
-            title="t("profile.loadFailed")"
+            title={t("profile.loadFailed")}
             error={profile.error}
             onRetry={() => void profile.refetch()}
             retrying={profile.isFetching}
@@ -254,6 +256,7 @@ export function CareerProfileMapsCard() {
 
 function CareerProfileMapsForm({ initial }: { initial: Record<string, unknown> | null }) {
   const update = useUpdateProfileDetails();
+  const { t } = useLocale();
   const [maps, setMaps] = React.useState<Record<MapName, MapRow[]>>(() => ({
     links: mapRows(initial, "links"),
     workAuthorization: mapRows(initial, "workAuthorization"),
@@ -320,7 +323,7 @@ function CareerProfileMapsForm({ initial }: { initial: Record<string, unknown> |
       <div className="flex justify-end">
         <Button variant="ai" size="sm" loading={update.isPending} disabled={!dirty || update.isPending} onClick={save}>
           <Save aria-hidden />
-          t("profile.saveMaps")
+          {t("profile.saveMaps")}
         </Button>
       </div>
     </div>

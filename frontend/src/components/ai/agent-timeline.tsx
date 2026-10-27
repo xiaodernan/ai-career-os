@@ -72,7 +72,7 @@ function AgentTimeline({ events, className, defaultExpanded = false, ...props }:
   const { t } = useLocale();
   return (
     <ul
-      aria-label="t("ai.agentTimeline.trace")"
+      aria-label={t("ai.agentTimeline.trace")}
       className={cn("flex flex-col text-sm", className)}
       {...props}
     >

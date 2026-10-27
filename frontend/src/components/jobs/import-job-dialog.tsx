@@ -32,14 +32,17 @@ import { jdTextIssue } from "@/lib/jd-text";
  * structure for any posting, however the request was sent.
  */
 const STAGES: string[] = [
-  "t("import.readingPosting")",
-  "t("import.extractingCompanyRole")",
-  "t("import.filingTracker")",
+  "import.readingPosting",
+  "import.extractingCompanyRole",
+  "import.filingTracker",
 ];
 
 /** Local stage hints: the request lifecycle is real, its internal position isn't observable here. */
-const stepsFor = (pending: boolean, done: boolean): ProcessingStep[] =>
-  seedSteps(STAGES, done ? "done" : pending ? "pending" : "idle", "import");
+const stepsFor = (
+  t: (key: string) => string,
+  pending: boolean,
+  done: boolean
+): ProcessingStep[] => seedSteps(STAGES.map((key) => t(key)), done ? "done" : pending ? "pending" : "idle", "import");
 
 export function ImportJobDialog() {
   const { t } = useLocale();
@@ -90,7 +93,7 @@ export function ImportJobDialog() {
       </DialogTrigger>
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle className="text-base">t("import.title")</DialogTitle>
+          <DialogTitle className="text-base">{t("import.title")}</DialogTitle>
           <DialogDescription>
             Paste the full posting. The analyst fills in the company, skills and responsibilities
             and the role lands in your tracker.
@@ -98,12 +101,12 @@ export function ImportJobDialog() {
         </DialogHeader>
 
         <div className="space-y-2">
-          <Label htmlFor="import-raw">t("import.jobPostingText")</Label>
+          <Label htmlFor="import-raw">{t("import.jobPostingText")}</Label>
           <Textarea
             id="import-raw"
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder="t("import.pasteFullPosting")"
+            placeholder={t("import.pasteFullPosting")}
             rows={8}
             className="font-mono text-xs"
           />
@@ -114,7 +117,7 @@ export function ImportJobDialog() {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="import-url">t("import.sourceUrl")</Label>
+          <Label htmlFor="import-url">{t("import.sourceUrl")}</Label>
           <Input
             id="import-url"
             type="url"
@@ -126,7 +129,7 @@ export function ImportJobDialog() {
 
         {(importJob.isPending || done) && (
           <div className="rounded-lg border border-border/70 bg-muted/30 p-3">
-            <ProcessingSteps steps={stepsFor(importJob.isPending, done)} />
+            <ProcessingSteps steps={stepsFor(t, importJob.isPending, done)} />
           </div>
         )}
 

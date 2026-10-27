@@ -51,11 +51,11 @@ const registerFields: FieldConfig[] = [
   ),
   {
     name: "confirmPassword",
-    label: "t("auth.confirmPassword")",
+    label: "Confirm password",
     type: "password",
     autoComplete: "new-password",
     placeholder: "••••••••••",
-    validate: (v, all) => (v !== all.password ? "t("auth.passwordsDoNotMatch")" : undefined),
+    validate: (v, all) => (v !== all.password ? "Passwords do not match" : undefined),
   },
 ];
 
@@ -107,7 +107,7 @@ export function CredentialsForm({ mode, notice }: { mode: "login" | "register"; 
       ) : null}
       <header className="space-y-1.5">
         <h2 className="font-serif text-display-sm font-medium">
-          {isLogin ? "t("auth.signInToWorkspace") : t("auth.createYourAccount")"}
+          {isLogin ? t("auth.signInToWorkspace") : t("auth.createYourAccount")}
         </h2>
         <p className="text-sm text-muted-foreground">
           {isLogin
@@ -145,7 +145,7 @@ export function CredentialsForm({ mode, notice }: { mode: "login" | "register"; 
         })}
 
         <Button type="submit" variant="ai" size="lg" className="w-full" loading={mutation.isPending}>
-          {isLogin ? "t("auth.signIn") : t("auth.createAccount")"}
+          {isLogin ? t("auth.signIn") : t("auth.createAccount")}
         </Button>
       </form>
 
@@ -155,7 +155,7 @@ export function CredentialsForm({ mode, notice }: { mode: "login" | "register"; 
             href="/forgot-password"
             className="font-medium text-primary underline-offset-4 hover:underline"
           >
-            t("auth.forgotPassword")
+            {t("auth.forgotPassword")}
           </Link>
         </p>
       )}

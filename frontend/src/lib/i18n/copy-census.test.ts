@@ -31,115 +31,60 @@ import { everyOffender, browserSources, TEXT_NODE_LIMIT } from "./copy-scan";
  */
 const KNOWN: Record<string, string[]> = {
   "components/ai/agent-timeline.tsx": [
-    "Agent execution trace",
     "Completed",
     "Failed",
     "Running",
   ],
-  "components/ai/processing-steps.tsx": [
-    "AI processing progress",
-  ],
   "components/ai/task-stream.tsx": [
-    "Agent trace",
-    "Stop following this run",
     "The run reported an error.",
-    "The run stream hasn&apos;t reported progress yet — results appear as soon as it does.",
-    "Waiting for the agent…",
   ],
   "components/auth/credentials-form.tsx": [
-    "Account created — welcome to Career OS.",
     "Ada Zhang",
     "Already registered?",
     "Confirm password",
-    "Create account",
     "Create one",
-    "Create your account",
     "Email",
-    "Forgot your password?",
     "Full name",
     "No account yet?",
     "Password",
     "Passwords do not match",
     "Pick up where the agents left off.",
     "Sign in",
-    "Sign in to your workspace",
-    "Welcome back.",
     "Your resume becomes a knowledge base in minutes.",
   ],
   "components/jobs/analyze-jd-dialog.tsx": [
     "Analysis failed.",
     "Analyze",
     "Analyze a JD",
-    "Comparing with your profile",
-    "Comparing with your resume…",
-    "Extracting requirements",
-    "Hidden requirements",
-    "Interview topics",
     "JD analysis",
-    "Job description text",
     "Keep this text",
-    "Paste a job description. The JD analyst extracts requirements, priorities and the gap\r\n            against your parsed resume.",
-    "Paste the full posting — responsibilities, requirements, nice-to-haves…",
-    "Preferred skills",
-    "Ranking priorities",
-    "Reading the posting",
-    "Required skills",
-    "Responsibilities",
-    "Resume improvement suggestions",
-    "Structured output from /jds",
-    "The analysis came back without structured fields. That usually means the posting text was\r\n          too short — paste the full description and run it again.",
-    "Your skill gap",
+    "Paste a job description. The JD analyst extracts requirements, priorities and the gap\n            against your parsed resume.",
+    "The analysis came back without structured fields. That usually means the posting text was\n          too short — paste the full description and run it again.",
   ],
   "components/jobs/import-job-dialog.tsx": [
-    "Extracting the company and role",
-    "Filing it in your tracker",
     "Import",
-    "Import a job posting",
     "Import failed.",
-    "Job posting text",
     "Paste a posting",
-    "Paste the full posting — responsibilities, requirements, nice-to-haves…",
     "Paste the full posting. The analyst fills in the company, skills and responsibilities\r\n            and the role lands in your tracker.",
-    "Reading the posting",
-    "Source URL (optional)",
   ],
   "components/settings/memory-card.tsx": [
     "Cancel",
-    "Chat with the copilot or finish an interview and the facts it learns appear here.",
     "Facts the model extracted from your conversations and interviews. Correct a wrong\r\n          one, or lower its weight — these shape every answer you get.",
     "Forget",
-    "Forget this memory?",
     "High",
-    "Higher-weight memories come first in every answer.",
-    "It will stop shaping the answers the agents give you. This cannot be undone.",
-    "Loading memories…",
     "Low",
-    "Memories could not be loaded",
     "Normal",
-    "Nothing remembered yet",
     "Save",
     "Weight",
-    "What the agent remembers",
-    "What the agents remember",
   ],
   "components/settings/profile-cards.tsx": [
     "Add row",
     "Career profile",
-    "Headline",
-    "Loading profile…",
     "Location",
-    "Profile could not be loaded",
-    "Save maps",
-    "Save profile",
-    "Summary",
-    "Target locations (comma separated)",
-    "Target roles (comma separated)",
     "The short story a recruiter gets before the resume.",
-    "What the agents assume about you — headline, targets and the story they tell recruiters.",
     "Years of experience (0–",
     "Years of experience has to be a number between 0 and",
   ],
-
 };
 
 describe("the browser's copy", () => {
@@ -194,11 +139,10 @@ describe("the browser's copy", () => {
     // of them is on the list above with a file and an owner. The pin moves
     // when a hole closes -- which is the point of pinning it.
     //
-    // 131: the attributes, the object literals, the text between the tags,
-    // the long sentences and the copy inside a JSX expression. The shapes
-    // the scan did not read before were a third of the product's copy, and
-    // the list above is the honest answer to "what have we not fixed yet".
-    expect(found.length).toBe(93);
+    // 41: the i18n migration's dialogs and cards read their wording from
+    // the table again, and the copy-fix commits took most of the rest. The
+    // list above is the honest answer to "what have we not fixed yet".
+    expect(found.length).toBe(41);
   });
 
   it("finds a sentence, however long it is", () => {

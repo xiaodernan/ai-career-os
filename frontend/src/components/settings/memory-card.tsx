@@ -63,7 +63,7 @@ export function MemoryCard() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">t("memory.whatAgentsRemember")</CardTitle>
+        <CardTitle className="text-base">{t("memory.whatAgentsRemember")}</CardTitle>
         <CardDescription>
           Facts the model extracted from your conversations and interviews. Correct a wrong
           one, or lower its weight — these shape every answer you get.
@@ -74,11 +74,11 @@ export function MemoryCard() {
           <div className="space-y-2" role="status">
             <Skeleton className="h-12 w-full" />
             <Skeleton className="h-12 w-3/4" />
-            <span className="sr-only">t("memory.loading")</span>
+            <span className="sr-only">{t("memory.loading")}</span>
           </div>
         ) : memories.isError ? (
           <ErrorState
-            title="t("memory.loadFailed")"
+            title={t("memory.loadFailed")}
             error={memories.error}
             onRetry={() => void memories.refetch()}
             retrying={memories.isFetching}
@@ -140,8 +140,8 @@ export function MemoryCard() {
         ) : (
           <EmptyState
             icon={<Brain aria-hidden />}
-            title="t("memory.empty")"
-            description="t("memory.empty")"
+            title={t("memory.emptyTitle")}
+            description={t("memory.empty")}
           />
         )}
       </CardContent>
@@ -149,8 +149,8 @@ export function MemoryCard() {
       <ConfirmDialog
         open={confirmId !== null}
         onOpenChange={(open) => !open && setConfirmId(null)}
-        title="t("memory.forgetConfirm")"
-        description="t("memory.forgetDescription")"
+        title={t("memory.forgetConfirm")}
+        description={t("memory.forgetDescription")}
         confirmLabel="Forget"
         destructive
         onConfirm={() => {
@@ -186,6 +186,7 @@ function MemoryEditor({
   onSaved: () => void;
 }) {
   const update = useUpdateMemory();
+  const { t } = useLocale();
   const [weight, setWeight] = React.useState(weightLabel(importance).toLowerCase());
 
   const save = () => {
@@ -199,7 +200,7 @@ function MemoryEditor({
   return (
     <div className="space-y-3">
       <div className="space-y-1.5">
-        <Label htmlFor={`memory-${id}`}>t("memory.whatAgentRemembers")</Label>
+        <Label htmlFor={`memory-${id}`}>{t("memory.whatAgentRemembers")}</Label>
         <Textarea
           id={`memory-${id}`}
           value={draft}
@@ -227,7 +228,7 @@ function MemoryEditor({
           </SelectContent>
         </Select>
         <p className="text-2xs text-muted-foreground">
-          t("memory.weightHigherFirst")
+          {t("memory.weightHigherFirst")}
         </p>
       </div>
       <div className="flex justify-end gap-2">
