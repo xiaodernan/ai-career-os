@@ -335,6 +335,9 @@ def test_the_record_and_the_list_are_named_by_a_pinned_set_of_sites():
         "backend/src/main/java/com/careeros/resume/dto/ResumeDtos.java",
         "backend/src/main/java/com/careeros/resume/service/ResumeService.java",
         "backend/src/main/java/com/careeros/resume/web/ResumeController.java",
+        # The parse-atomicity IT names the same record to prove the write it guards
+        # lands on it -- a fourth backend site, added with that test.
+        "backend/src/test/java/com/careeros/resume/service/ResumeParseAtomicityIT.java",
         "ai-service/tests/test_resume_list_body_ships.py",
         "ai-service/tests/test_resources_mapper_records_ship.py",
         "ai-service/tests/test_page_window_names_and_their_readers_ship.py",
