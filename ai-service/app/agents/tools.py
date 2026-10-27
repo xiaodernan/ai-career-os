@@ -129,6 +129,18 @@ def _json_obj(value, default):
     return default
 
 
+def _json_dict(value) -> dict:
+    """A jsonb column as an object, or {} when it is anything else.
+
+    Two shapes have to survive here. asyncpg returns jsonb as *text* (no codec on the
+    pool), and a column can hold valid JSON that is not an object -- a list, a number,
+    a truncated string. Reading `.get` on either raised AttributeError inside the tool,
+    which the orchestrator reported as a tool error rather than a missing resume.
+    """
+    parsed = _json_obj(value, {})
+    return parsed if isinstance(parsed, dict) else {}
+
+
 def drop_absent_optionals(schema: dict, args: dict) -> dict:
     """Optional properties sent as JSON null are "not provided", not "set to null".
 
@@ -391,11 +403,7 @@ async def calculate_match(user_id: str, *, job_id: str, resume_version_id: str =
     rv = (await domain.get_resume_version(resume_version_id, user_id)
           if resume_version_id
           else await domain.get_current_resume_version(user_id))
-    structured = (rv or {}).get("structured")
-    import json as _j
-
-    if isinstance(structured, str):
-        structured = _j.loads(structured)
+    structured = _json_dict((rv or {}).get("structured"))
     if not rv or not structured:
         return {"error": "no parsed resume; ask the user to upload one"}
     jd = await analyze_jd(job["description"], user_id=user_id)
@@ -414,11 +422,8 @@ async def generate_resume(user_id: str, *, job_id: str) -> dict:
     rv = await domain.get_current_resume_version(user_id)
     if not rv:
         return {"error": "no resume"}
-    import json as _j
 
-    structured = rv["structured"]
-    if isinstance(structured, str):
-        structured = _j.loads(structured)
+    structured = _json_dict(rv["structured"])
     from app.features.jd_analyze import analyze_jd
 
     jd = await analyze_jd(job["description"], user_id=user_id)
@@ -437,11 +442,8 @@ async def generate_cover_letter(user_id: str, *, job_id: str) -> dict:
     rv = await domain.get_current_resume_version(user_id)
     if not rv:
         return {"error": "no resume"}
-    import json as _j
 
-    structured = rv["structured"]
-    if isinstance(structured, str):
-        structured = _j.loads(structured)
+    structured = _json_dict(rv["structured"])
     from app.features.jd_analyze import analyze_jd
 
     jd = await analyze_jd(job["description"], user_id=user_id)
@@ -663,7 +665,6 @@ async def get_follow_ups(user_id: str, *, include_fresh: bool = False,
 async def draft_outreach(user_id: str, *, contact_id: str, purpose: str = "referral",
                          context: str = "") -> dict:
     """Draft an outreach message for a saved contact, citing only the user's own evidence."""
-    import json as _j
 
     from app.features.outreach import PURPOSES, draft_message
 
@@ -675,9 +676,7 @@ async def draft_outreach(user_id: str, *, contact_id: str, purpose: str = "refer
     if not row:
         return {"error": "contact not found"}
     rv = await domain.get_current_resume_version(user_id)
-    structured = (rv or {}).get("structured")
-    if isinstance(structured, str):
-        structured = _j.loads(structured)
+    structured = _json_dict((rv or {}).get("structured"))
     message = await draft_message(dict(row), purpose, structured or {},
                                   context=context, user_id=user_id)
     return {"contact": dict(row), "message": message}
@@ -781,16 +780,15 @@ async def _resume_payload(user_id: str, resume_version_id: str | None) -> tuple[
     Shared by the growth tools, so every one of them answers the same way when
     the user has not uploaded a resume: an error the model can read, not a crash.
     """
-    import json as _j
 
     rv = (await domain.get_resume_version(resume_version_id, user_id)
           if resume_version_id else await domain.get_current_resume_version(user_id))
     if not rv:
         return None, ""
-    structured = rv.get("structured")
-    if isinstance(structured, str):
-        structured = _j.loads(structured)
-    return structured or {}, rv.get("plaintext") or ""
+    # A column that is valid JSON but not an object (a list, a number, a truncated
+    # string) is not a resume structure: treat it as "no parsed resume" so the caller
+    # answers with the error it already has, rather than crashing on `.get`.
+    return _json_dict(rv.get("structured")) or None, rv.get("plaintext") or ""
 
 
 async def _job_samples() -> list[dict]:
@@ -812,14 +810,12 @@ async def get_user_profile(user_id: str) -> dict:
     u = await domain.get_user(user_id)
     memories = await domain.get_memories(user_id, limit=15)
     rv = await domain.get_current_resume_version(user_id)
-    import json as _j
-
-    structured = (rv or {}).get("structured")
-    if isinstance(structured, str):
-        structured = _j.loads(structured)
+    structured = _json_dict((rv or {}).get("structured"))
+    headline = structured.get("profile")
     return {"user": u, "profile": p, "memories": memories,
-            "resume_headline": ((structured or {}).get("profile") or {}).get("headline"),
-            "skills": [s.get("name") for s in ((structured or {}).get("skills") or [])
+            "resume_headline": (headline.get("headline")
+                                if isinstance(headline, dict) else None),
+            "skills": [s.get("name") for s in (structured.get("skills") or [])
                        if isinstance(s, dict)][:30]}
 
 
