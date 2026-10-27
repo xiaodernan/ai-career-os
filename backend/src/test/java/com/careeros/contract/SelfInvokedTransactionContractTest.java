@@ -32,12 +32,17 @@ import org.junit.jupiter.api.Test;
  * question filed, and the page renders that as an empty bubble. {@code FileIngestService.persistRowsOnly
  * -> persistRows} shipped it for an upload's two rows, which only mean something together: the
  * source row committed alone is a list entry titled like a finished upload that never stops saying
- * {@code ingesting}. {@link
+ * {@code ingesting}. {@code InterviewService.finalize -> persistFinalization} shipped it for a
+ * report and the completion that owns it: the evaluation filed alone leaves the interview scored but
+ * still running, and nothing on the answering path stops it taking another turn after the report
+ * closed it. {@link
  * com.careeros.job.service.JobImportAtomicityIT}, {@link
  * com.careeros.resume.service.ResumeParseAtomicityIT}, {@link
- * com.careeros.conversation.service.ConversationTurnAtomicityIT} and {@link
- * com.careeros.knowledge.service.FileIngestAtomicityIT} are the behaviour witnesses for
- * the four sites that are now fixed, each running its writes inside a {@code TransactionTemplate}.
+ * com.careeros.conversation.service.ConversationTurnAtomicityIT}, {@link
+ * com.careeros.knowledge.service.FileIngestAtomicityIT} and {@link
+ * com.careeros.interview.service.InterviewFinalizeAtomicityIT} are the behaviour witnesses for the
+ * sites that have left the list, each of which now runs its writes inside a
+ * {@code TransactionTemplate}.
  *
  * <p>This gate is the census of the rest. In every service-layer class, a same-file call into a
  * method that writes two or more rows must be armed -- either the caller carries
@@ -80,7 +85,6 @@ class SelfInvokedTransactionContractTest {
      * class, the entering method, the writer it calls on itself, and how many rows are at stake.
      */
     private static final List<String> NOT_YET_ATOMIC = List.of(
-            "InterviewService.java#finalize() -> persistFinalization() 2 rows",
             "ResumeService.java#upload() -> persistUpload() 4 rows");
 
     /**
@@ -99,7 +103,9 @@ class SelfInvokedTransactionContractTest {
             "FileIngestService.java#uploadAndIngest() -> persistRows() 3 rows",
             "com/careeros/knowledge/service/FileIngestAtomicityIT.java",
             "ResumeService.java#parse() -> persistParse() 7 rows",
-            "com/careeros/resume/service/ResumeParseAtomicityIT.java");
+            "com/careeros/resume/service/ResumeParseAtomicityIT.java",
+            "InterviewService.java#finalize() -> persistFinalization() 2 rows",
+            "com/careeros/interview/service/InterviewFinalizeAtomicityIT.java");
 
     @Test
     @DisplayName("the census of un-armed writers is exactly the list, in both directions")
@@ -146,6 +152,13 @@ class SelfInvokedTransactionContractTest {
         // two writes to one repository are two rows, which a set keyed on `sources.save` would fold.
         assertThat(writesOf("persistRows", bodiesOf("knowledge", "service", "FileIngestService.java")))
                 .isEqualTo(3);
+
+        // The same read-back for the finalization: a report insert or update plus the session's own
+        // UPDATE. Whichever branch the report came from -- the entity is new or the one found for the
+        // session -- is a question the count does not ask, because both branches save once.
+        assertThat(writesOf("persistFinalization",
+                bodiesOf("interview", "service", "InterviewService.java")))
+                .isEqualTo(2);
     }
 
     @Test

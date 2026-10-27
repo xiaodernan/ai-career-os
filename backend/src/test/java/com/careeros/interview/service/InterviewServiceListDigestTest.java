@@ -17,6 +17,7 @@ import com.careeros.interview.repository.InterviewSessionRepository;
 import com.careeros.interview.repository.InterviewTurnRepository;
 import com.careeros.job.repository.CompanyRepository;
 import com.careeros.job.repository.JobRepository;
+import com.careeros.support.TestTransactions;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -48,7 +49,8 @@ class InterviewServiceListDigestTest {
         digests = mock(InterviewDigestRepository.class);
         service = new InterviewService(sessions, mock(InterviewTurnRepository.class),
                 mock(InterviewEvaluationRepository.class), mock(JobRepository.class),
-                mock(CompanyRepository.class), digests, mock(AiServiceClient.class));
+                mock(CompanyRepository.class), digests, mock(AiServiceClient.class),
+                TestTransactions.executing());
     }
 
     /** Ids come from the database (@UuidGenerator), so the entity is mocked to carry one. */

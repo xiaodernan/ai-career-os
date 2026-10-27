@@ -18,6 +18,7 @@ import com.careeros.job.entity.Company;
 import com.careeros.job.entity.Job;
 import com.careeros.job.repository.CompanyRepository;
 import com.careeros.job.repository.JobRepository;
+import com.careeros.support.TestTransactions;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -47,7 +48,8 @@ class InterviewServiceCreateTest {
         companies = mock(CompanyRepository.class);
         service = new InterviewService(sessions, mock(InterviewTurnRepository.class),
                 mock(InterviewEvaluationRepository.class), jobs, companies,
-                mock(InterviewDigestRepository.class), mock(AiServiceClient.class));
+                mock(InterviewDigestRepository.class), mock(AiServiceClient.class),
+                TestTransactions.executing());
         when(sessions.save(any(InterviewSession.class))).thenAnswer(i -> i.getArgument(0));
     }
 

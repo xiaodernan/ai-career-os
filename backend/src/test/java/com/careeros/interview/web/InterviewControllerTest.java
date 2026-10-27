@@ -33,6 +33,7 @@ import com.careeros.interview.service.InterviewService;
 import com.careeros.job.entity.Job;
 import com.careeros.job.repository.CompanyRepository;
 import com.careeros.job.repository.JobRepository;
+import com.careeros.support.TestTransactions;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -85,7 +86,7 @@ class InterviewControllerTest {
         when(evaluations.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         InterviewService service = new InterviewService(sessions, turns, evaluations, jobs,
-                companies, digests, ai);
+                companies, digests, ai, TestTransactions.executing());
         mvc = MockMvcBuilders.standaloneSetup(new InterviewController(service))
                 .setControllerAdvice(new EnvelopeAdvice(), new GlobalExceptionHandler())
                 .setCustomArgumentResolvers(new CurrentUserArgumentResolver())

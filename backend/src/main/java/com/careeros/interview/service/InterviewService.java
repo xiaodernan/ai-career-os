@@ -31,6 +31,7 @@ import java.util.Map;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /** Mock-interview orchestration: backend owns session/turn rows, ai-service answers. */
 @Service
@@ -43,11 +44,12 @@ public class InterviewService {
     private final CompanyRepository companies;
     private final InterviewDigestRepository digests;
     private final AiServiceClient ai;
+    private final TransactionTemplate tx;
 
     public InterviewService(InterviewSessionRepository sessions, InterviewTurnRepository turns,
                             InterviewEvaluationRepository evaluations, JobRepository jobs,
                             CompanyRepository companies, InterviewDigestRepository digests,
-                            AiServiceClient ai) {
+                            AiServiceClient ai, TransactionTemplate tx) {
         this.sessions = sessions;
         this.turns = turns;
         this.evaluations = evaluations;
@@ -55,6 +57,7 @@ public class InterviewService {
         this.companies = companies;
         this.digests = digests;
         this.ai = ai;
+        this.tx = tx;
     }
 
     @Transactional(readOnly = true)
@@ -192,7 +195,14 @@ public class InterviewService {
         Map<String, Object> result = ai.interviewFinalize(sessionId,
                 existing.stream().map(InterviewService::toAiTurn).toList(), userId);
         Map<String, Object> evaluation = Json.obj(result.get("evaluation"));
-        return persistFinalization(sessionId, userId, session, evaluation);
+        // The report and the completion are one batch. An evaluation filed against a session still
+        // marked active reads as finished to the panel that looks the report up by row and as
+        // runnable to every screen that reads status, and the answering path checks no status at all,
+        // so such a session keeps taking turns after the report that closed it. The annotation on
+        // persistFinalization cannot arm a call this object makes on itself, so this method opens the
+        // transaction and leaves the model call above outside it. InterviewFinalizeAtomicityIT holds
+        // both halves.
+        return tx.execute(status -> persistFinalization(sessionId, userId, session, evaluation));
     }
 
     @Transactional

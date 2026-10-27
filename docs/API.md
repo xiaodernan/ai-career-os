@@ -264,7 +264,7 @@ catalogue, so the palette and the board rank one query the same way.
 | DELETE | `/interview/sessions/{id}` | |
 | POST | `/interview/sessions/{id}/opening` | first question |
 | POST | `/interview/sessions/{id}/answer` | `{answer}` → evaluation + follow-up + difficulty step |
-| POST | `/interview/sessions/{id}/finalize` | 8-dimension report + trajectory |
+| POST | `/interview/sessions/{id}/finalize` | 8-dimension report + trajectory; the report row and the session's completion are filed in one transaction, so a finalize that cannot close the session files neither |
 
 There is no `maxQuestions` field: the body binds by name, so one sent at the top level is
 dropped without a word. The question budget is a key inside `config`, in the snake_case the
