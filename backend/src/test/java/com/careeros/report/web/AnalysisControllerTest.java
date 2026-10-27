@@ -3,6 +3,7 @@ package com.careeros.report.web;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -95,7 +96,7 @@ class AnalysisControllerTest {
     void the_digest_is_the_engines_answer_wrapped_once() throws Exception {
         when(applications.findByUserIdOrderByUpdatedAtDescIdAsc(eq(UUID.fromString(USER)), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(application())));
-        when(ai.insightDigest(eq(UUID.fromString(USER)), any()))
+        when(ai.insightDigest(eq(UUID.fromString(USER)), any(), any()))
                 .thenReturn(Map.of("totalApplications", 1, "stalledCount", 0));
 
         mvc.perform(get("/api/v1/analysis/insight-digest"))
@@ -104,7 +105,7 @@ class AnalysisControllerTest {
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<List<Map<String, Object>>> rows = ArgumentCaptor.forClass(List.class);
-        verify(ai).insightDigest(eq(UUID.fromString(USER)), rows.capture());
+        verify(ai).insightDigest(eq(UUID.fromString(USER)), rows.capture(), any());
         Map<String, Object> row = rows.getValue().get(0);
         // The engine's own field names: it reads `applied_at` and `created_at`,
         // not the Java column names. A field the row does not carry is left out
@@ -155,12 +156,35 @@ class AnalysisControllerTest {
     void an_account_with_no_applications_answers_empty_rather_than_failing() throws Exception {
         when(applications.findByUserIdOrderByUpdatedAtDescIdAsc(eq(UUID.fromString(USER)), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of()));
-        when(ai.insightDigest(eq(UUID.fromString(USER)), any()))
+        when(ai.insightDigest(eq(UUID.fromString(USER)), any(), any()))
                 .thenReturn(Map.of("totalApplications", 0));
 
         mvc.perform(get("/api/v1/analysis/insight-digest"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.totalApplications").value(0));
+    }
+
+    /**
+     * The reader's language travels with the request. The digest's sentences are the
+     * only words in the answer, so the page's locale has to reach the engine; a page
+     * that asked in Chinese and got English back would be the same defect U49 fixed,
+     * with the languages swapped. Absent means the product default, which the engine
+     * owns — the route forwards null rather than inventing a language.
+     */
+    @Test
+    void the_readers_language_travels_to_the_engine() throws Exception {
+        when(applications.findByUserIdOrderByUpdatedAtDescIdAsc(eq(UUID.fromString(USER)), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of()));
+        when(ai.insightDigest(eq(UUID.fromString(USER)), any(), any()))
+                .thenReturn(Map.of("totalApplications", 0));
+
+        mvc.perform(get("/api/v1/analysis/insight-digest").param("locale", "zh"))
+                .andExpect(status().isOk());
+        verify(ai).insightDigest(eq(UUID.fromString(USER)), any(), eq("zh"));
+
+        mvc.perform(get("/api/v1/analysis/insight-digest"))
+                .andExpect(status().isOk());
+        verify(ai).insightDigest(eq(UUID.fromString(USER)), any(), isNull());
     }
 
     private static final String APP = "2b1c3c4e-1111-2222-3333-444444444444";
@@ -197,14 +221,14 @@ class AnalysisControllerTest {
                 .thenReturn(new PageImpl<>(List.of(app)));
         when(events.findByUserIdAndKindOrderByCreatedAtAscIdAsc(UUID.fromString(USER), "status"))
                 .thenReturn(log);
-        when(ai.insightDigest(eq(UUID.fromString(USER)), any()))
+        when(ai.insightDigest(eq(UUID.fromString(USER)), any(), any()))
                 .thenReturn(Map.of("totalApplications", 1));
 
         mvc.perform(get("/api/v1/analysis/insight-digest")).andExpect(status().isOk());
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<List<Map<String, Object>>> rows = ArgumentCaptor.forClass(List.class);
-        verify(ai).insightDigest(eq(UUID.fromString(USER)), rows.capture());
+        verify(ai).insightDigest(eq(UUID.fromString(USER)), rows.capture(), any());
         return rows.getValue().get(0);
     }
 

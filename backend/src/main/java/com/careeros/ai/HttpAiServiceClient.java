@@ -223,8 +223,14 @@ public class HttpAiServiceClient implements AiServiceClient {
     }
 
     @Override
-    public Map<String, Object> insightDigest(UUID userId, List<Map<String, Object>> applications) {
-        return post("/internal/features/insight-digest", userId, Map.of("applications", applications));
+    public Map<String, Object> insightDigest(UUID userId, List<Map<String, Object>> applications,
+                                             String locale) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("applications", applications);
+        if (locale != null && !locale.isBlank()) {
+            body.put("locale", locale);
+        }
+        return post("/internal/features/insight-digest", userId, body);
     }
 
     @Override

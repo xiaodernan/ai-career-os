@@ -296,7 +296,63 @@ def test_insight_digest_echoes_optional_composition():
 def test_insight_digest_empty_signals():
     d = A.insight_digest([], now=NOW)
     assert d["totalApplications"] == 0
-    assert any("漏斗是空的" in s for s in d["signals"])
+    assert any("funnel is empty" in s for s in d["signals"])
+
+
+def test_the_signals_speak_the_readers_language():
+    """The four sentences are the only words in the answer, so they follow `locale`.
+
+    The product's default screen is English (the locale context answers "en" until the
+    reader picks another), and the analysis page renders `signals` verbatim -- a Chinese
+    sentence there is a word the English reader cannot change. The zh reader is the
+    other half: the same digest, said in Chinese.
+    """
+    rows = [_app(1, "applied", applied_at=(NOW - timedelta(days=40)).isoformat())]
+
+    en = A.insight_digest(rows, now=NOW, stale_days=14)
+    zh = A.insight_digest(rows, now=NOW, stale_days=14, locale="zh")
+
+    assert any("No replies yet" in s for s in en["signals"])
+    assert any("gone quiet past 14 days" in s for s in en["signals"])
+    assert any("还没有回复记录" in s for s in zh["signals"])
+    assert any("已超过 14 天没有动静" in s for s in zh["signals"])
+
+
+def test_every_language_says_the_same_thing_about_the_same_digest():
+    """Parity, branch by branch: four worlds, two tables, the same sentence count.
+
+    A table that grew a sentence only one language has would pass the case above (it
+    reads two branches) while an English reader saw four lines where the Chinese reader
+    saw three. Each world here is a different branch of the builder: the empty funnel,
+    no replies, a stall, and an offer rate.
+    """
+    worlds = {
+        "empty": [],
+        "silent": [_app(1, "applied")],
+        "stalled": [_app(2, "applied", applied_at=(NOW - timedelta(days=40)).isoformat())],
+        "offer": [_app(3, "offer")],
+    }
+    han = lambda s: any("\u4e00" <= ch <= "\u9fff" for ch in s)  # noqa: E731
+    for name, rows in worlds.items():
+        en = A.insight_digest(rows, now=NOW, stale_days=14)["signals"]
+        zh = A.insight_digest(rows, now=NOW, stale_days=14, locale="zh")["signals"]
+        assert len(en) == len(zh), (name, en, zh)
+        assert en and zh, name
+        assert not any(han(s) for s in en), (name, en)
+        assert all(han(s) for s in zh), (name, zh)
+
+
+def test_an_unknown_language_answers_in_the_product_default():
+    """`fr` is not a language the product has; it answers in English rather than guessing.
+
+    The same rule the export's readable half reads: a language the table does not have
+    is one the product must not pretend to.
+    """
+    rows = [_app(1, "offer")]
+    default = A.insight_digest(rows, now=NOW)
+    unknown = A.insight_digest(rows, now=NOW, locale="fr-FR")
+    assert unknown["signals"] == default["signals"]
+    assert any("Offer rate is 100%" in s for s in default["signals"])
 
 
 # ---------------- 15.3 the stall clock only counts time that has passed ----------------
@@ -315,7 +371,7 @@ def test_a_row_stamped_only_in_the_future_is_not_aged_as_silence():
 
     assert d["stalled"] == []
     assert d["stalledCount"] == 0
-    assert not any("没有动静" in s for s in d["signals"])
+    assert not any("gone quiet" in s for s in d["signals"])
 
 
 def test_a_future_stamp_does_not_hide_a_row_that_really_did_go_quiet():

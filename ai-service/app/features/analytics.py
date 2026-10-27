@@ -41,6 +41,11 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from statistics import median
 
+# The product's one definition of which language a caller means. The export's
+# readable half ships it; the digest reads the same fact rather than spelling
+# the locale rules a second time.
+from app.features.export_words import normalize_locale
+
 # Canonical, ordered pipeline. "reached stage X" means the application's furthest
 # stage is X or any stage after it.
 PIPELINE = ["applied", "oa", "interview", "final_round", "offer"]
@@ -268,9 +273,30 @@ def _status_mix(apps: list[dict]) -> dict[str, int]:
     return ordered
 
 
+# The digest's four sentences, in every language the product ships. One entry per
+# sentence in each table, so no language can grow a sentence the others lack --
+# the parity is what a test charges. The keys are named for the fact, not the
+# wording, so the two tables cannot drift into saying different things.
+_SIGNAL_WORDS: dict[str, dict[str, str]] = {
+    "en": {
+        "emptyFunnel": "No applications yet — the funnel is empty.",
+        "noReplies": "No replies yet; check that application statuses are kept up to date.",
+        "stalled": "{n} application(s) have gone quiet past {days} days.",
+        "offerRate": "Offer rate is {pct}% of applications.",
+    },
+    "zh": {
+        "emptyFunnel": "还没有投递记录——漏斗是空的。",
+        "noReplies": "还没有回复记录；请检查投递状态是否及时更新。",
+        "stalled": "{n} 个投递已超过 {days} 天没有动静。",
+        "offerRate": "录取率为投递量的 {pct}%。",
+    },
+}
+
+
 def insight_digest(applications: list[dict], *, now: datetime | None = None,
                    stale_days: int = 14, growth_deltas: list[dict] | None = None,
-                   top_matches: list[dict] | None = None) -> dict:
+                   top_matches: list[dict] | None = None,
+                   locale: str | None = None) -> dict:
     """A single weekly snapshot: what is stuck, what is live, and the headline rates.
 
     ``stalled`` = applications still at ``applied`` or ``saved`` with no movement
@@ -288,6 +314,11 @@ def insight_digest(applications: list[dict], *, now: datetime | None = None,
     is a composition point for the growth engines, never a source of invented data.
     ``stageCounts`` is a mix, not a funnel: the applications add up to
     ``totalApplications``, while ``/pipeline-funnel``'s reached-counts deliberately do not.
+
+    ``locale`` is the reader's language: the sentences in ``signals`` are the only
+    words in this answer, and the reader's screen is not necessarily Chinese. An
+    absent or unknown language answers in the product's default, English -- the
+    same rule the export's readable half reads (see ``export_words``).
     """
     apps = _norm(applications)
     ref = now or datetime.now(timezone.utc)
@@ -325,15 +356,16 @@ def insight_digest(applications: list[dict], *, now: datetime | None = None,
     active = sum(1 for a in apps if (a.get("status") or "").lower()
                  not in ("saved", "rejected"))
 
+    words = _SIGNAL_WORDS[normalize_locale(locale)]
     signals: list[str] = []
     if funnel["appliedCount"] == 0:
-        signals.append("还没有投递记录——漏斗是空的。")
+        signals.append(words["emptyFunnel"])
     elif rates["responseRate"] == 0.0:
-        signals.append("还没有回复记录；请检查投递状态是否及时更新。")
+        signals.append(words["noReplies"])
     if stalled:
-        signals.append(f"{len(stalled)} 个投递已超过 {stale_days} 天没有动静。")
+        signals.append(words["stalled"].format(n=len(stalled), days=stale_days))
     if rates["offerRate"] and rates["offerRate"] > 0:
-        signals.append(f"录取率为投递量的 {round(rates['offerRate'] * 100)}%。")
+        signals.append(words["offerRate"].format(pct=round(rates["offerRate"] * 100)))
 
     out: dict = {
         "generatedAt": ref.isoformat(),

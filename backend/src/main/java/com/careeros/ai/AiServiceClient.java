@@ -84,9 +84,12 @@ public interface AiServiceClient {
      * The weekly insight digest (15.3): stalled applications, live stage mix, and
      * headline rates, composed by the ai-service's analytics engine. The engine is
      * a pure function over the caller's application rows, so the backend supplies
-     * them — the engine never reads the domain tables itself.
+     * them — the engine never reads the domain tables itself. `locale` is the
+     * reader's language: the digest's sentences are the only words in the answer,
+     * and an absent language answers in the engine's default.
      */
-    Map<String, Object> insightDigest(UUID userId, List<Map<String, Object>> applications);
+    Map<String, Object> insightDigest(UUID userId, List<Map<String, Object>> applications,
+            String locale);
 
     /**
      * Export all user data as a versioned, hashed bundle (13.1).

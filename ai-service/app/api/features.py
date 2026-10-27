@@ -587,13 +587,19 @@ async def response_rate_ep(req: ResponseRateReq, ctx: Ctx = Depends(require_inte
 
 class InsightDigestReq(BaseModel):
     """The digest's input. `applications` is optional because an account with no
-    applications is a real state, not an error: the engine then answers
-    "还没有投递记录——漏斗是空的。", which is the honest digest for a workspace that
-    has not started. A required list would make the first run a 422."""
+    applications is a real state, not an error: the engine then answers "No
+    applications yet — the funnel is empty.", which is the honest digest for a
+    workspace that has not started. A required list would make the first run a 422.
+
+    `locale` is the reader's language, and the engine owns its vocabulary: the
+    digest's sentences follow it, and an absent or unknown language answers in
+    the product's default, English (the same rule the export's readable half
+    reads). Optional, so a caller with no opinion still gets an answer."""
     applications: list[ApplicationInput] = Field(default_factory=list)
     stale_days: int = Field(default=14, ge=1, le=120)
     growth_deltas: list[dict] | None = None
     top_matches: list[dict] | None = None
+    locale: str | None = None
 
 
 @router.post("/insight-digest")
@@ -602,7 +608,8 @@ async def insight_digest_ep(req: InsightDigestReq, ctx: Ctx = Depends(require_in
     run_id = await _run(ctx, "analytics", "insight_digest")
     result = analytics_mod.insight_digest(
         [a.model_dump() for a in req.applications], stale_days=req.stale_days,
-        growth_deltas=req.growth_deltas, top_matches=req.top_matches)
+        growth_deltas=req.growth_deltas, top_matches=req.top_matches,
+        locale=req.locale)
     await observability.finish_run(run_id, "completed")
     return result
 

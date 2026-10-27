@@ -1089,7 +1089,7 @@ describe("endpoints ↔ backend route parity", () => {
 
   it("reads the queries it claims to read", () => {
     const rows = queryRows();
-    // 12 call sites append a query and 14 distinct (route, parameter) pairs ride on them, measured.
+    // 13 call sites append a query and 15 distinct (route, parameter) pairs ride on them, measured.
     // A reader that stopped understanding `api.get`'s second argument would satisfy every rule
     // above by finding no queries at all, so the inventory itself has to be non-trivial.
     expect(rows.length).toBeGreaterThanOrEqual(12);
@@ -1112,21 +1112,22 @@ describe("endpoints ↔ backend route parity", () => {
     expect(new Set(handlers.map((h) => `${h.verb} ${h.pattern}`)).size).toBe(handlers.length);
     expect(handlers.flatMap((h) => h.unparsed)).toEqual([]);
     const bound = handlers.flatMap((h) => h.params);
-    expect(bound.length).toBe(38);
-    // 38 parameters in 18 distinct names, measured: the reader's whole answer rather than a spot
+    expect(bound.length).toBe(39);
+    // 39 parameters in 19 distinct names, measured: the reader's whole answer rather than a spot
     // check, so a signature shape it stops understanding shrinks this set instead of passing quiet
     // (#225 retired `limit`: `/activity/runs` bound the only one, and now binds page/size like
     // every other list route)
     expect(new Set(bound.map((p) => p.name))).toEqual(
       new Set([
-        "agent", "company", "documentId", "file", "kind", "kinds", "location", "maxSalary",
-        "minSalary", "page", "q", "remote", "resumeId", "size", "skills", "sort", "status", "title",
+        "agent", "company", "documentId", "file", "kind", "kinds", "locale", "location",
+        "maxSalary", "minSalary", "page", "q", "remote", "resumeId", "size", "skills", "sort",
+        "status", "title",
       ])
     );
-    // five of them spell the name Spring matches on inside the annotation, so the reader's attribute
+    // six of them spell the name Spring matches on inside the annotation, so the reader's attribute
     // path is exercised by real source rather than by the variable name that happens to agree
     expect(bound.filter((p) => p.spelledInAttribute).map((p) => p.name).sort()).toEqual([
-      "file", "file", "maxSalary", "minSalary", "resumeId",
+      "file", "file", "locale", "maxSalary", "minSalary", "resumeId",
     ]);
     // The whole answer of the helper the required-parameter rule consumes, route-qualified. Without
     // this the rule would be green because it found nothing to ask for — and the multipart

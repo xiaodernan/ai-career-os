@@ -340,7 +340,8 @@ public class FakeAiServiceClientConfig {
          * is sitting at are absent rather than zeroed, which is what the engine emits.
          */
         @Override
-        public Map<String, Object> insightDigest(UUID userId, List<Map<String, Object>> applications) {
+        public Map<String, Object> insightDigest(UUID userId, List<Map<String, Object>> applications,
+                                                 String locale) {
             record("insightDigest");
             return map("generatedAt", "2026-10-20T00:00:00+00:00",
                     "windowDays", 14,

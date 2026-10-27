@@ -58,11 +58,12 @@ public class AnalysisService {
     /**
      * The insight digest for the dashboard. The ai-service ranks stalled
      * applications, computes the stage mix, and derives headline rates; this
-     * method supplies the rows and forwards the call.
+     * method supplies the rows and forwards the call, with the reader's
+     * language ({@code locale}) when the page has one.
      */
     @Transactional(readOnly = true)
-    public Map<String, Object> insightDigest(UUID userId) {
-        return aiService.insightDigest(userId, applicationRows(userId));
+    public Map<String, Object> insightDigest(UUID userId, String locale) {
+        return aiService.insightDigest(userId, applicationRows(userId), locale);
     }
 
     /**

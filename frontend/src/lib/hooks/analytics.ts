@@ -4,15 +4,22 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
 import type { InsightDigest, PipelineFunnel, ResponseRate } from "@/lib/api/types";
+import type { Locale } from "@/lib/i18n/translations";
 
 /**
  * The weekly insight digest (15.3): stalled applications, live stage mix, and
  * headline rates, composed by the ai-service's analytics engine.
+ *
+ * `locale` is the reader's language. The digest's signals are the only words the
+ * engine writes into this answer, so the page says which language it is showing;
+ * and the locale is part of the query key, because switching the language must
+ * refetch rather than reuse the other language's sentences.
  */
-export function useInsightDigest() {
+export function useInsightDigest(locale: Locale) {
   return useQuery({
-    queryKey: ["analysis", "insight-digest"],
-    queryFn: async () => (await api.get<unknown>(endpoints.analysisInsightDigest)) as InsightDigest,
+    queryKey: ["analysis", "insight-digest", locale],
+    queryFn: async () =>
+      (await api.get<unknown>(endpoints.analysisInsightDigest, { locale })) as InsightDigest,
   });
 }
 

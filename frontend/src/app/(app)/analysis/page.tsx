@@ -26,8 +26,10 @@ function percent(value?: number): string {
  * rates — all deterministic, evidence-bound metrics over the user's own data.
  */
 export default function AnalysisPage() {
-  const { t } = useLocale();
-  const digest = useInsightDigest();
+  const { t, locale } = useLocale();
+  // The engine's signals are sentences, so the request carries the reader's
+  // language -- the page renders them verbatim.
+  const digest = useInsightDigest(locale);
   const funnel = usePipelineFunnel();
   const rates = useResponseRate();
   const data = digest.data;

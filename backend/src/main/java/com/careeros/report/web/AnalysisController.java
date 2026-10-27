@@ -6,6 +6,7 @@ import com.careeros.report.service.AnalysisService;
 import java.util.Map;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -26,9 +27,15 @@ public class AnalysisController {
         this.analysis = analysis;
     }
 
+    /**
+     * The reader's language travels as {@code locale}: the digest's sentences are
+     * the only words in the answer, so the page's locale has to reach the engine.
+     * Absent means the product default, which the engine owns.
+     */
     @GetMapping("/insight-digest")
-    public Map<String, Object> insightDigest(@CurrentUser AuthUser user) {
-        return analysis.insightDigest(user.id());
+    public Map<String, Object> insightDigest(@CurrentUser AuthUser user,
+            @RequestParam(name = "locale", required = false) String locale) {
+        return analysis.insightDigest(user.id(), locale);
     }
 
     /**

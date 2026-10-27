@@ -105,6 +105,21 @@ def test_insight_digest_roundtrip():
                          "activePipeline", "stageCounts", "responseRate", "offerRate",
                          "stalledCount", "stalled", "signals"}
     assert body["windowDays"] == 7
+    # The reader's language is a request field; absent means the product default.
+    assert any("No replies yet" in s for s in body["signals"])
+
+
+def test_insight_digest_answers_in_the_language_the_request_names():
+    """The route binds `locale`, so the reader's screen decides the sentences.
+
+    The engine's default is English; a zh reader's page asks for zh and the same
+    digest comes back said in Chinese. Before the field existed, posting it was
+    silently dropped and the answer stayed English for everyone.
+    """
+    r = _post("insight-digest", {"applications": [{"id": "a1", "status": "applied"}],
+                                 "locale": "zh"})
+    assert r.status_code == 200
+    assert any("还没有回复记录" in s for s in r.json()["signals"])
 
 
 # ---------------- 14.x ingestion ----------------
