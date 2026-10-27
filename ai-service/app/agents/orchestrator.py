@@ -361,6 +361,13 @@ async def _run_loop(*, user_id: str, messages: list[LLMMessage], tools: list[Too
         return await ai.ask_stream(req, user_id=user_id, run_id=run_id, agent=agent,
                                    kind=kind, emit=_token_emitter(task_id))
 
+    # Identical calls made again in the same turn, keyed by (tool, arguments). A model
+    # that loses the thread re-issues the call it just made; running it again costs a
+    # database round trip and, for the write tools, performs the write twice. The
+    # *successful* result is reused and the model is told, so the loop can move on.
+    # Failures are deliberately not cached: a transient error deserves the retry.
+    answered: dict[str, dict] = {}
+
     for step in range(max_steps):
         out.steps += 1
         try:
@@ -420,9 +427,17 @@ async def _run_loop(*, user_id: str, messages: list[LLMMessage], tools: list[Too
                 if not tool:
                     result = {"error": f"unknown tool {tc.name}"}
                 else:
-                    result = await _exec_tool(tool, user_id, args,
-                                              run_id=run_id, agent=agent,
-                                              task_id=task_id, out=out)
+                    key = json.dumps([tc.name, args], sort_keys=True, default=str)
+                    if key in answered:
+                        result = {**answered[key],
+                                  "_note": "identical to an earlier call this turn; "
+                                           "not run again"}
+                    else:
+                        result = await _exec_tool(tool, user_id, args,
+                                                  run_id=run_id, agent=agent,
+                                                  task_id=task_id, out=out)
+                        if isinstance(result, dict) and not result.get("error"):
+                            answered[key] = result
             messages.append(LLMMessage("tool", _tool_result_text(result),
                                        tool_call_id=tc.id, name=tc.name))
     # step budget exhausted — force a grounded summary

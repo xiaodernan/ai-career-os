@@ -550,6 +550,64 @@ async def test_get_company_with_a_null_name_answers_instead_of_raising(env):
     assert result == {"error": "company lookup needs company_id or name"}
 
 
+async def test_an_identical_repeated_call_runs_once_and_says_so(env, monkeypatch):
+    """A model that loses the thread re-issues the call it just made.
+
+    Running it again costs a database round trip and, for the write tools, performs
+    the write twice; the artifact would also be collected twice, so the UI would draw
+    two cards for one search.
+    """
+    traces, _ = env
+    calls: list = []
+    state = {"n": 0}
+    tool_messages: list[str] = []
+
+    async def script(req, **kw):
+        state["n"] += 1
+        if state["n"] <= 2:
+            return _resp(tool_calls=[ToolCall(id=f"c{state['n']}", name="search_jobs",
+                                              arguments={"query": "java"})])
+        tool_messages.extend(m.content for m in req.messages if m.role == "tool")
+        return _resp(text="done")
+
+    async def fake_search(user_id, **kw):
+        calls.append(kw)
+        return {"jobs": [{"id": "j1", "title": "Java dev", "company": "Acme"}]}
+
+    monkeypatch.setattr(orchestrator.ai, "ask", script)
+    monkeypatch.setattr(TOOL_INDEX["search_jobs"], "handler", fake_search)
+
+    out = await orchestrator.career_turn(user_id="u1", message="find java", run_id="r16")
+
+    assert len(calls) == 1, "the identical second call must not reach the handler"
+    assert out.tools_used == ["search_jobs"], "it ran once, so it is recorded once"
+    assert sum(1 for a in out.artifacts if a["type"] == "job_list") == 1
+    assert "_note" in tool_messages[1], "the model must be told why the result repeated"
+
+
+async def test_a_repeated_failing_call_is_retried_not_cached(env, monkeypatch):
+    """A failure is not an answer: a transient one deserves the retry."""
+    calls: list = []
+    state = {"n": 0}
+
+    async def script(req, **kw):
+        state["n"] += 1
+        if state["n"] <= 2:
+            return _resp(tool_calls=[ToolCall(id=f"c{state['n']}", name="get_job",
+                                              arguments={"job_id": "j1"})])
+        return _resp(text="done")
+
+    async def flaky(user_id, **kw):
+        calls.append(kw)
+        raise RuntimeError("transient")
+
+    monkeypatch.setattr(orchestrator.ai, "ask", script)
+    monkeypatch.setattr(TOOL_INDEX["get_job"], "handler", flaky)
+
+    await orchestrator.career_turn(user_id="u1", message="job", run_id="r17")
+    assert len(calls) == 2
+
+
 def test_trace_args_shorten_a_long_document_but_keep_short_values():
     out = orchestrator._trace_args({"text": "r" * 5000, "job_id": "j1", "n": 3})
     assert out["job_id"] == "j1" and out["n"] == 3
