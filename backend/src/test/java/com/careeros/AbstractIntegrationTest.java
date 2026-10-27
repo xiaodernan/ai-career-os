@@ -76,13 +76,31 @@ public abstract class AbstractIntegrationTest {
         }
     }
 
+    /**
+     * A method, not a constant: static fields initialize in textual order, and this class's
+     * bootstrap runs from a static block above the declarations it would otherwise sit beside.
+     */
+    private static ItInfrastructure.DockerCli dockerCli() {
+        return new ItInfrastructure.DockerCli() {
+            @Override
+            public boolean exists(String container) throws Exception {
+                return dockerInspectExists(container);
+            }
+
+            @Override
+            public void run(int timeoutSeconds, String... args) throws Exception {
+                String[] cmd = new String[args.length + 1];
+                cmd[0] = "docker";
+                System.arraycopy(args, 0, cmd, 1, args.length);
+                runDocker(timeoutSeconds, cmd);
+            }
+        };
+    }
+
     private static void ensureItRedis() throws Exception {
-        if (dockerInspectExists(REDIS_CONTAINER)) {
-            runDocker(15, "docker", "start", REDIS_CONTAINER);
-        } else {
-            runDocker(60, "docker", "run", "-d", "--name", REDIS_CONTAINER,
-                    "-p", "127.0.0.1:" + REDIS_PORT + ":6379", "redis:7.4-alpine");
-        }
+        ItInfrastructure.ensureContainer(dockerCli(), REDIS_CONTAINER,
+                "run", "-d", "--name", REDIS_CONTAINER,
+                "-p", "127.0.0.1:" + REDIS_PORT + ":6379", "redis:7.4-alpine");
         LettuceConnectionFactory factory = new LettuceConnectionFactory("127.0.0.1", REDIS_PORT);
         factory.afterPropertiesSet();
         factory.getConnection().serverCommands().flushAll();
@@ -92,8 +110,11 @@ public abstract class AbstractIntegrationTest {
     private static boolean dockerInspectExists(String name) throws Exception {
         Process p = new ProcessBuilder("docker", "inspect", "-f", "{{.Id}}", name)
                 .redirectErrorStream(true).start();
-        boolean done = p.waitFor(15, TimeUnit.SECONDS);
-        return done && p.exitValue() == 0;
+        if (!p.waitFor(15, TimeUnit.SECONDS)) {
+            p.destroyForcibly();
+            return false;
+        }
+        return p.exitValue() == 0;
     }
 
     private static void runDocker(int timeoutSeconds, String... cmd) throws Exception {
