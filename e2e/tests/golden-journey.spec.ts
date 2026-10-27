@@ -440,7 +440,13 @@ test.describe("golden journey — track the application", () => {
 
     // Success is the navigation: the dialog closes and the app lands on the new job's page.
     await expect(authedPage).toHaveURL(/\/jobs\/[0-9a-fA-F-]{8,}/, { timeout: 30_000 });
-    await expect(authedPage.getByRole("heading", { level: 1 })).toBeVisible({ timeout: 20_000 });
+    // The row files under the name the reader pasted (#262): the analyst titles
+    // the posting from its first line, and the detail page prints that title —
+    // navigation alone was the only thing this step ever looked at.
+    await expect(authedPage.getByRole("heading", { level: 1 })).toContainText(
+      "Senior Backend Engineer - Agent Platform",
+      { timeout: 20_000 }
+    );
   });
 });
 
