@@ -129,6 +129,21 @@ def _json_obj(value, default):
     return default
 
 
+def drop_absent_optionals(schema: dict, args: dict) -> dict:
+    """Optional properties sent as JSON null are "not provided", not "set to null".
+
+    The model writes `{"name": null}` when it has no name to give, and the handler's
+    own default (`name: str = ""`) is exactly that intent -- but the null reached
+    `name.strip()` and raised AttributeError, which the orchestrator turned into a
+    confusing tool error. Required properties are left alone: a null there is a real
+    mistake, and the validator names it.
+    """
+    if not isinstance(schema, dict) or not isinstance(args, dict):
+        return args
+    required = set(schema.get("required") or [])
+    return {k: v for k, v in args.items() if not (v is None and k not in required)}
+
+
 def validate_tool_args(name: str, schema: dict, args: dict) -> str | None:
     """A human-readable reason `args` violates the tool's schema, or None.
 
@@ -161,7 +176,10 @@ def validate_tool_args(name: str, schema: dict, args: dict) -> str | None:
             return f"property {key!r} must be an array"
         if want == "object" and not isinstance(value, dict):
             return f"property {key!r} must be an object"
-        if want == "string" and isinstance(value, (list, dict)):
+        # A required string sent as null/number/list is a mistake the model can correct
+        # from the message; letting it through made the handler fail obscurely (a
+        # `text: null` reached the parser as None and blew up on a slice).
+        if want == "string" and not isinstance(value, str):
             return f"property {key!r} must be a string"
         if want == "boolean" and not isinstance(value, bool):
             return f"property {key!r} must be a boolean"

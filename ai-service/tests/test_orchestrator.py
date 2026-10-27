@@ -500,6 +500,56 @@ def test_a_result_that_already_fits_is_returned_untouched():
     assert json.loads(orchestrator._tool_result_text(small)) == small
 
 
+async def test_an_optional_null_argument_is_treated_as_absent(env):
+    """`{"name": null}` means "I have no name", which is the handler's own default.
+
+    Before this it reached `name.strip()` and raised AttributeError, which surfaced to
+    the model as a tool error it could not act on.
+    """
+    seen: dict = {}
+
+    async def handler(user_id, *, name=""):
+        seen["name"] = name
+        return {"ok": True}
+
+    tool = Tool("get_company", "",
+                {"type": "object", "properties": {"name": {"type": "string"}},
+                 "additionalProperties": False}, handler)
+    result = await orchestrator._exec_tool(tool, "u1", {"name": None}, run_id=None,
+                                           agent="career", task_id=None, out=Outcome())
+    assert result == {"ok": True}
+    assert seen["name"] == ""
+
+
+async def test_a_required_null_argument_is_named_by_the_validator(env):
+    called: list = []
+
+    async def handler(user_id, *, text):
+        called.append(text)
+        return {}
+
+    tool = Tool("parse_resume", "",
+                {"type": "object", "properties": {"text": {"type": "string"}},
+                 "required": ["text"], "additionalProperties": False}, handler)
+    result = await orchestrator._exec_tool(tool, "u1", {"text": None}, run_id=None,
+                                           agent="career", task_id=None, out=Outcome())
+    assert "property 'text' must be a string" in result["error"]
+    assert called == []
+
+
+async def test_get_company_with_a_null_name_answers_instead_of_raising(env):
+    """The real handler, with the payload the model actually sends.
+
+    `{"name": null}` used to reach `name.strip()`; the turn then reported
+    "'NoneType' object has no attribute 'strip'" instead of the one thing the model
+    could act on: it needs an id or a name.
+    """
+    result = await orchestrator._exec_tool(
+        TOOL_INDEX["get_company"], "u1", {"name": None}, run_id=None,
+        agent="career", task_id=None, out=Outcome())
+    assert result == {"error": "company lookup needs company_id or name"}
+
+
 def test_trace_args_shorten_a_long_document_but_keep_short_values():
     out = orchestrator._trace_args({"text": "r" * 5000, "job_id": "j1", "n": 3})
     assert out["job_id"] == "j1" and out["n"] == 3

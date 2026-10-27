@@ -12,7 +12,8 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from app.agents import memory
-from app.agents.tools import SUBAGENT_TOOLS, TOOL_INDEX, Tool, validate_tool_args
+from app.agents.tools import (SUBAGENT_TOOLS, TOOL_INDEX, Tool, drop_absent_optionals,
+                              validate_tool_args)
 from app.core import ai, taskbus
 from app.db import observability
 from app.providers.base import LLMMessage, LLMRequest, LLMResponse, ToolSpec
@@ -313,6 +314,11 @@ async def _trace_degraded(run_id: str | None, agent: str, stage: str,
 
 async def _exec_tool(tool: Tool, user_id: str, args: dict, *, run_id: str | None,
                      agent: str, task_id: str | None, out: Outcome) -> dict:
+    # An optional property sent as JSON null means "not provided", which is what the
+    # handler's own default expresses -- `{"name": null}` on get_company reached
+    # `name.strip()` and raised AttributeError instead. Required properties keep their
+    # null so the validator can name the mistake.
+    args = drop_absent_optionals(tool.parameters, args)
     out.tools_used.append(tool.name)
     out.tool_calls.append({"tool": tool.name, "args": args})
     _emit(task_id, "status", {"agent": agent, "step": f"Calling {tool.name}"})

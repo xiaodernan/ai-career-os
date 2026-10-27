@@ -113,6 +113,24 @@ def test_validate_tool_args_names_the_missing_required_property():
         "missing required property 'job_id'"
 
 
+def test_validate_tool_args_rejects_a_required_string_sent_as_null():
+    assert tools.validate_tool_args("get_job", _GET_JOB_SCHEMA, {"job_id": None}) == \
+        "property 'job_id' must be a string"
+
+
+def test_drop_absent_optionals_drops_null_but_keeps_required_nulls():
+    schema = {"type": "object",
+              "properties": {"name": {"type": "string"},
+                             "text": {"type": "string"}},
+              "required": ["text"]}
+    out = tools.drop_absent_optionals(schema, {"name": None, "text": None, "n": 0})
+    assert out == {"text": None, "n": 0}, \
+        "a required null must survive so the validator can name it"
+    # falsy-but-present values are not absent
+    assert tools.drop_absent_optionals(schema, {"name": "", "text": "x"}) == \
+        {"name": "", "text": "x"}
+
+
 def test_validate_tool_args_names_the_unknown_property_and_the_allowed_set():
     problem = tools.validate_tool_args(
         "get_job", _GET_JOB_SCHEMA, {"job_id": "j1", "verbose": True})
