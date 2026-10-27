@@ -30,9 +30,13 @@ const SAMPLE_ID = "11111111-1111-1111-1111-111111111111";
 function javaFiles(dir: URL): string[] {
   const found: string[] = [];
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    const child = new URL(`${entry.name}/`, dir);
-    if (entry.isDirectory()) found.push(...javaFiles(child));
-    else if (entry.name.endsWith("Controller.java")) found.push(fileURLToPath(child));
+    if (entry.isDirectory()) {
+      found.push(...javaFiles(new URL(`${entry.name}/`, dir)));
+    } else if (entry.name.endsWith("Controller.java")) {
+      // No trailing slash on file entries: fileURLToPath keeps it, Windows' open
+      // strips it, and Linux answers ENOTDIR — the suite never collected there.
+      found.push(fileURLToPath(new URL(entry.name, dir)));
+    }
   }
   return found.sort();
 }
@@ -289,10 +293,9 @@ function sourceFiles(): string[] {
   const found: string[] = [];
   const walk = (dir: URL) => {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      const child = new URL(`${entry.name}/`, dir);
-      if (entry.isDirectory() && entry.name !== "node_modules") walk(child);
+      if (entry.isDirectory() && entry.name !== "node_modules") walk(new URL(`${entry.name}/`, dir));
       else if (/\.tsx?$/.test(entry.name) && !/\.(test|spec)\.tsx?$/.test(entry.name)) {
-        found.push(fileURLToPath(child));
+        found.push(fileURLToPath(new URL(entry.name, dir)));
       }
     }
   };
@@ -591,9 +594,8 @@ const DTO_SOURCES = new URL("../../../../backend/src/main/java/", import.meta.ur
 function allJava(dir: URL): string[] {
   const found: string[] = [];
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    const child = new URL(`${entry.name}/`, dir);
-    if (entry.isDirectory()) found.push(...allJava(child));
-    else if (entry.name.endsWith(".java")) found.push(fileURLToPath(child));
+    if (entry.isDirectory()) found.push(...allJava(new URL(`${entry.name}/`, dir)));
+    else if (entry.name.endsWith(".java")) found.push(fileURLToPath(new URL(entry.name, dir)));
   }
   return found;
 }
