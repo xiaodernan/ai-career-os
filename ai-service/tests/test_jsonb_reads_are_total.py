@@ -111,3 +111,123 @@ async def test_get_user_profile_reads_a_well_formed_structure(monkeypatch):
     out = await tools.get_user_profile("u1")
     assert out["resume_headline"] == "Backend engineer"
     assert out["skills"] == ["Kafka", "Java"]       # the non-dict entry is skipped
+
+
+@pytest.mark.asyncio
+async def test_get_user_profile_hands_the_model_real_lists_not_json_text(monkeypatch):
+    """The profile's jsonb columns are text on the wire, JSON in meaning.
+
+    The model was given `"target_roles": "[\\"Backend Engineer\\"]"` and had to parse
+    JSON inside JSON to read it -- so a model that answered "what am I targeting?"
+    had to do the parsing itself, and a weaker one simply quoted the escaped text.
+    """
+    async def get_profile(user_id):
+        return {"headline": "x", "target_roles": '["Backend Engineer"]',
+                "links": '{"github": "https://gh/u"}', "preferences": None,
+                "target_locations": ["Shanghai"]}      # already parsed stays as-is
+
+    async def get_user(user_id):
+        return {}
+
+    async def get_memories(user_id, limit=15):
+        return []
+
+    async def get_resume(user_id):
+        return None
+
+    monkeypatch.setattr(tools.domain, "get_profile", get_profile)
+    monkeypatch.setattr(tools.domain, "get_user", get_user)
+    monkeypatch.setattr(tools.domain, "get_memories", get_memories)
+    monkeypatch.setattr(tools.domain, "get_current_resume_version", get_resume)
+
+    profile = (await tools.get_user_profile("u1"))["profile"]
+    assert profile["target_roles"] == ["Backend Engineer"]
+    assert profile["links"] == {"github": "https://gh/u"}
+    assert profile["preferences"] == {}          # null -> the column's own default
+    assert profile["target_locations"] == ["Shanghai"]
+    assert profile["headline"] == "x"            # non-jsonb columns pass through
+
+
+@pytest.mark.asyncio
+async def test_get_user_profile_with_no_profile_row_does_not_invent_one(monkeypatch):
+    async def get_profile(user_id):
+        return None
+
+    async def get_user(user_id):
+        return {"id": user_id}
+
+    async def get_memories(user_id, limit=15):
+        return []
+
+    async def get_resume(user_id):
+        return None
+
+    monkeypatch.setattr(tools.domain, "get_profile", get_profile)
+    monkeypatch.setattr(tools.domain, "get_user", get_user)
+    monkeypatch.setattr(tools.domain, "get_memories", get_memories)
+    monkeypatch.setattr(tools.domain, "get_current_resume_version", get_resume)
+
+    out = await tools.get_user_profile("u1")
+    assert out["profile"] is None, "no row is not the same as an empty profile"
+
+
+@pytest.mark.asyncio
+async def test_get_job_does_not_hand_the_model_the_embedding_or_the_index(monkeypatch):
+    """`embedding` is thousands of floats of pgvector text and `tsv` the full-text index.
+
+    Both exist for the database. Sent to the model they fill the prompt with numbers it
+    cannot use -- and then trip the result-shrinking path, pushing out the fields that
+    answer the question.
+    """
+    async def get_job(job_id):
+        return {"id": "j1", "title": "Backend Engineer", "description": "Kafka",
+                "embedding": "[0.1,0.2," + "0.3," * 1500 + "]", "tsv": "'backend':1"}
+
+    async def fetchrow(query, *args):
+        return None
+
+    monkeypatch.setattr(tools.domain, "get_job", get_job)
+    monkeypatch.setattr(tools.db, "fetchrow", fetchrow)
+
+    out = await tools.get_job("u1", job_id="j1")
+    assert "embedding" not in out["job"] and "tsv" not in out["job"]
+    assert out["job"]["title"] == "Backend Engineer"
+    assert out["job"]["id"] == "j1"
+
+
+@pytest.mark.asyncio
+async def test_get_job_parses_the_cached_match_jsonb(monkeypatch):
+    async def get_job(job_id):
+        return {"id": "j1", "title": "Backend Engineer"}
+
+    async def fetchrow(query, *args):
+        return {"id": "m1", "job_id": "j1", "resume_version_id": "rv1", "overall": 0.7,
+                "matched_skills": '["Kafka"]', "missing_skills": '["Flink"]',
+                "evidence": '[{"criterion": "streaming"}]'}
+
+    monkeypatch.setattr(tools.domain, "get_job", get_job)
+    monkeypatch.setattr(tools.db, "fetchrow", fetchrow)
+
+    match = (await tools.get_job("u1", job_id="j1"))["cached_match"]
+    assert match["matched_skills"] == ["Kafka"]
+    assert match["missing_skills"] == ["Flink"]
+    assert match["evidence"] == [{"criterion": "streaming"}]
+    assert match["overall"] == 0.7
+
+
+@pytest.mark.asyncio
+async def test_get_company_parses_its_sources(monkeypatch):
+    async def fetchrow(query, *args):
+        return {"id": "c1", "name": "Acme", "tech_stack": ["Java"],
+                "sources": '[{"url": "https://acme.test"}]'}
+
+    async def fetch(query, *args):
+        return [{"id": "j1", "title": "Backend Engineer"}]
+
+    monkeypatch.setattr(tools.db, "fetchrow", fetchrow)
+    monkeypatch.setattr(tools.db, "fetch", fetch)
+
+    out = await tools.get_company("u1", name="Acme")
+    assert out["company"]["sources"] == [{"url": "https://acme.test"}]
+    assert out["company"]["id"] == "c1"
+    assert out["open_roles"] == [{"id": "j1", "title": "Backend Engineer"}]

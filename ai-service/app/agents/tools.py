@@ -332,6 +332,13 @@ async def search_jobs(user_id: str, *, query: str = "", skills: list[str] | None
                      for r in rows]}
 
 
+# Columns that exist for the database's benefit, not the model's: `embedding` is
+# thousands of floats of pgvector text and `tsv` is the full-text index. Handing them
+# to the model bloats the prompt and answers nothing.
+_JOB_INTERNAL = ("embedding", "tsv")
+_MATCH_JSONB = (("matched_skills", []), ("missing_skills", []), ("evidence", []))
+
+
 async def get_job(user_id: str, *, job_id: str) -> dict:
     job = await domain.get_job(job_id)
     if not job:
@@ -339,8 +346,18 @@ async def get_job(user_id: str, *, job_id: str) -> dict:
     match = await db.fetchrow(
         """SELECT * FROM job_matches WHERE user_id=$1::uuid AND job_id=$2::uuid
            ORDER BY created_at DESC LIMIT 1""", user_id, job_id)
-    return {"job": {k: (str(v) if k == "id" else v) for k, v in dict(job).items()},
-            "cached_match": dict(match) if match else None}
+    cached = None
+    if match:
+        cached = dict(match)
+        for key, default in _MATCH_JSONB:
+            if key in cached:
+                cached[key] = _json_obj(cached[key], default)
+        for key in ("id", "job_id", "resume_version_id"):
+            if cached.get(key) is not None:
+                cached[key] = str(cached[key])
+    return {"job": {k: (str(v) if k == "id" else v)
+                    for k, v in dict(job).items() if k not in _JOB_INTERNAL},
+            "cached_match": cached}
 
 
 async def get_company(user_id: str, *, company_id: str = "", name: str = "") -> dict:
@@ -360,7 +377,11 @@ async def get_company(user_id: str, *, company_id: str = "", name: str = "") -> 
         row["id"])
     d = dict(row)
     d["id"] = str(d["id"])
-    return {"company": d, "open_roles": [dict(r) for r in open_roles]}
+    # `sources` is jsonb, which asyncpg hands back as text -- the model would read
+    # JSON inside JSON, and could not cite a source it had to parse first.
+    d["sources"] = _json_obj(d.get("sources"), [])
+    return {"company": d,
+            "open_roles": [{**dict(r), "id": str(r["id"])} for r in open_roles]}
 
 
 async def parse_resume(user_id: str, *, text: str) -> dict:
@@ -805,14 +826,26 @@ async def _job_skill_samples() -> list[dict]:
     return await load_job_skill_samples()
 
 
+# The profile columns that are jsonb, with the shape each should reach the model as.
+# Parsed in `get_user_profile` because the model otherwise reads
+# `"target_roles": "[\"Backend Engineer\"]"` -- JSON inside JSON.
+_PROFILE_JSONB = (("target_roles", []), ("target_locations", []), ("links", {}),
+                  ("work_authorization", {}), ("preferences", {}))
+
+
 async def get_user_profile(user_id: str) -> dict:
     p = await domain.get_profile(user_id)
     u = await domain.get_user(user_id)
     memories = await domain.get_memories(user_id, limit=15)
     rv = await domain.get_current_resume_version(user_id)
     structured = _json_dict((rv or {}).get("structured"))
+    profile = dict(p) if isinstance(p, dict) else p
+    if isinstance(profile, dict):
+        for key, default in _PROFILE_JSONB:
+            if key in profile:
+                profile[key] = _json_obj(profile[key], default)
     headline = structured.get("profile")
-    return {"user": u, "profile": p, "memories": memories,
+    return {"user": u, "profile": profile, "memories": memories,
             "resume_headline": (headline.get("headline")
                                 if isinstance(headline, dict) else None),
             "skills": [s.get("name") for s in (structured.get("skills") or [])
