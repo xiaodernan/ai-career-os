@@ -34,7 +34,13 @@ services:
       retries: 20
 
   minio:
-    image: quay.io/minio/minio:latest
+    # MinIO pulled their images from Docker Hub and quay in 2026-09; quay now
+    # answers 401 to anonymous pulls, which is what killed the nightly's
+    # `compose up`. pgsty/silo is the repackaged MinIO RELEASE build: runs as
+    # root like this image did (the existing miniodata volume keeps its
+    # ownership), ships mc+curl+sh so one image serves the server and the
+    # minio-init client, and `mc ready local` works as the healthcheck.
+    image: pgsty/silo:RELEASE.2026-09-16T00-00-00Z
     container_name: careeros-minio
     restart: unless-stopped
     command: server /data --console-address ":9001"
@@ -53,7 +59,7 @@ services:
       retries: 20
 
   minio-init:
-    image: quay.io/minio/mc:latest
+    image: pgsty/silo:RELEASE.2026-09-16T00-00-00Z
     depends_on:
       minio:
         condition: service_healthy

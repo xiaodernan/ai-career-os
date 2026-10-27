@@ -52,7 +52,9 @@ services:
           memory: 128M
 
   minio:
-    image: quay.io/minio/minio:latest
+    # Same story as docker-compose.yml: MinIO pulled their images from the
+    # registries in 2026-09; pgsty/silo is the repackaged RELEASE build.
+    image: pgsty/silo:RELEASE.2026-09-16T00-00-00Z
     container_name: careeros-minio-prod
     restart: unless-stopped
     command: server /data --console-address ":9001"
