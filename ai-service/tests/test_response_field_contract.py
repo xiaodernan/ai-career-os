@@ -188,7 +188,9 @@ PRODUCERS = {
     # stores verbatim -- so each is read from its own source and bound separately: a union of the
     # two would let either rename `topic` in silence (#133, #141).
     "TurnItem": ("java", "interview/dto/InterviewDtos.java"),
-    "QuestionMetaFollowup": ("japut", ("interview/service/InterviewService.java", "answer")),
+    # #275 filed the answer exchange's three rows behind one transaction, so the puts live in
+    # persistAnswer now -- bind the producer that holds the keys, not the endpoint that relays them.
+    "QuestionMetaFollowup": ("japut", ("interview/service/InterviewService.java", "persistAnswer")),
     "QuestionMetaOpening": ("pyfunc", "opening_meta"),
     # The JD analysis is one record wrapped around no record at all: `JdItem.parsed` is a `Map` the
     # backend fills verbatim from ai-service's answer (`JobService:244 jd.setParsed(...)`), and that
@@ -1542,15 +1544,19 @@ def _java_mapof_keys(rel: str, method: str) -> set[str]:
 def _java_put_keys(rel: str, method: str) -> set[str]:
     """The keys one Java method puts into its free `Map<String, Object>`.
 
-    A jsonb column projected through a `Map` has no record and no model: `InterviewService.answer`
+    A jsonb column projected through a `Map` has no record and no model: `InterviewService.persistAnswer`
     states its question meta with `meta.put("topic", …)` calls, and that method body is the only
     place those names exist. Read from the source, so a rename there moves the contract here.
+    The opener anchors to a modifier line because a call site can precede the declaration
+    (`answer`'s `tx.execute(status -> persistAnswer(...))` sits above it) and the body window
+    closes at the first 4-space brace -- a call-site opener reads an empty window.
     """
     path = JAVA_ROOT / "com" / "careeros" / rel
     if not path.exists():
         raise AssertionError(f"{rel} is not where the contract table says: {method} compares nothing")
     source = path.read_text(encoding="utf-8")
-    opener = re.search(rf"\n[^\n]*\b{re.escape(method)}\(", source)
+    opener = re.search(rf"\n    (?:public|private|protected)[^\n(]*\b{re.escape(method)}\(", source) or \
+        re.search(rf"\n[^\n]*\b{re.escape(method)}\(", source)
     if opener is None:
         raise AssertionError(f"{rel} declares no method named {method!r}: the table names a "
                              "producer that moved, so the rule it feeds compares nothing")
