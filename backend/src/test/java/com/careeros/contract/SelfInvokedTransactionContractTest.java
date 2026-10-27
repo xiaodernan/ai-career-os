@@ -5,8 +5,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Deque;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -37,12 +39,17 @@ import org.junit.jupiter.api.Test;
  * still running, and nothing on the answering path stops it taking another turn after the report
  * closed it. {@code ResumeService.upload -> persistUpload} shipped it for an upload's four
  * resume-side rows: the document pair committed in a transaction of its own while the resume's rows
- * committed with none, and a refusal partway left one side behind the other. {@link
+ * committed with none, and a refusal partway left one side behind the other. {@code
+ * InterviewService.answer} shipped the shape the per-writer count could not even see: three rows --
+ * the candidate turn, the follow-up it earns and the difficulty step -- spread across one-row
+ * helpers, so no writer held two and the gate's charge found nothing to name. The census now counts
+ * the rows a caller can reach, not only the rows one writer holds. {@link
  * com.careeros.job.service.JobImportAtomicityIT}, {@link
  * com.careeros.resume.service.ResumeParseAtomicityIT}, {@link
  * com.careeros.conversation.service.ConversationTurnAtomicityIT}, {@link
  * com.careeros.knowledge.service.FileIngestAtomicityIT}, {@link
- * com.careeros.interview.service.InterviewFinalizeAtomicityIT} and {@link
+ * com.careeros.interview.service.InterviewFinalizeAtomicityIT}, {@link
+ * com.careeros.interview.service.InterviewAnswerAtomicityIT} and {@link
  * com.careeros.resume.service.ResumeUploadAtomicityIT} are the behaviour witnesses for the
  * sites that have left the list, each of which now runs its writes inside a
  * {@code TransactionTemplate}.
@@ -53,7 +60,9 @@ import org.junit.jupiter.api.Test;
  * from inside either of those is armed too, for everything it calls in line: the transaction is on
  * the thread, not on the annotation, and a gate that credited only the immediate caller would
  * charge {@code persistParse -> populateChildren} for a boundary that {@code parse}'s template
- * already holds. The un-armed sites are named below with the number of rows at stake, and the list
+ * already holds. And the charge reads rows per caller as well as per writer: a caller with no
+ * transaction that reaches two or more rows through one-row writers is charged as a spread, even
+ * though no single writer holds two. The un-armed sites are named below with the number of rows at stake, and the list
  * is compared in both directions: a new site reddens the build, and a site fixed but left listed
  * reddens it too. Clearing an entry takes the behaviour witness first, not the deletion, and the
  * second case below holds that: every cleared site names a test class that must still be filed and
@@ -111,7 +120,9 @@ class SelfInvokedTransactionContractTest {
             "InterviewService.java#finalize() -> persistFinalization() 2 rows",
             "com/careeros/interview/service/InterviewFinalizeAtomicityIT.java",
             "ResumeService.java#upload() -> persistUpload() 4 rows",
-            "com/careeros/resume/service/ResumeUploadAtomicityIT.java");
+            "com/careeros/resume/service/ResumeUploadAtomicityIT.java",
+            "InterviewService.java#answer() 3 rows spread over persistTurnAnswer() 1 + persistTurn() 1",
+            "com/careeros/interview/service/InterviewAnswerAtomicityIT.java");
 
     @Test
     @DisplayName("the census of un-armed writers is exactly the list, in both directions")
@@ -178,6 +189,17 @@ class SelfInvokedTransactionContractTest {
         // holds it -- this number is the four rows this service adds on top.
         assertThat(writesOf("persistUpload", bodiesOf("resume", "service", "ResumeService.java")))
                 .isEqualTo(4);
+
+        // And for the answer exchange: the census's one-frame horizon reads the wrapper through
+        // the writer the template names, so answer's aggregate is that writer's own save alone,
+        // while the exchange's three rows -- the candidate turn, the follow-up, the difficulty
+        // step -- sit at persistAnswer. A write in answer's own skin, outside the template,
+        // would lift the first count and stop the build here.
+        assertThat(writesOf("answer", bodiesOf("interview", "service", "InterviewService.java")))
+                .isEqualTo(1);
+        assertThat(writesOf("persistAnswer",
+                bodiesOf("interview", "service", "InterviewService.java")))
+                .isEqualTo(3);
     }
 
     @Test
@@ -248,6 +270,105 @@ class SelfInvokedTransactionContractTest {
         // A writer named only in prose is not a call into it.
         assertThat(sites(blanke(planted("", "\"persist(\" + p.name()", "")), "PlantedService.java"))
                 .isEmpty();
+    }
+
+    @Test
+    @DisplayName("a caller spreading its rows across one-row writers is charged once, as a spread")
+    void theSpreadIsChargedWhereNoSingleWriterHoldsTwo() {
+        // The answer shape: two one-row helpers and a write of the caller's own -- three rows on
+        // one path, none of them two at any single writer, which the per-writer count read as
+        // three harmless singles.
+        assertThat(sites(blanke(spreadAcrossHelpers("")), "PlantedService.java"))
+                .extracting(Site::label)
+                .containsExactly("PlantedService.java#run() 3 rows spread over "
+                        + "persistA() 1 + persistB() 1");
+
+        // The same spread with the caller armed.
+        assertThat(sites(blanke(spreadAcrossHelpers("@Transactional")), "PlantedService.java"))
+                .isEmpty();
+
+        // A writer whose rows are all its own is not a spread: whoever calls it is charged by
+        // the pair, and the census's frame is a call between frames, not a bare body. The same
+        // chain the template test uses, un-armed, owes exactly its two pair charges -- a spread
+        // verdict on deeper, whose two rows are two saves in its own skin, would show here.
+        assertThat(sites(blanke(chained("", "persist(p)", "deeper(p)")), "PlantedService.java"))
+                .extracting(Site::label)
+                .containsExactlyInAnyOrder(
+                        "PlantedService.java#run() -> persist() 2 rows",
+                        "PlantedService.java#persist() -> deeper() 2 rows");
+    }
+
+    @Test
+    @DisplayName("a transaction opened two frames up still covers the spread below it")
+    void theFramesBelowTheTemplateAreCoveredToo() {
+        // parse's template arms persistParse; populate and its two-row replace writers earn
+        // their coverage in line from it -- the re-parse chain the one-frame read would have
+        // charged the moment the census learned to count past a single writer.
+        assertThat(sites(blanke(replaceChain("@Transactional",
+                "tx.execute(s -> persistParse(p))")), "PlantedService.java")).isEmpty();
+
+        // The same chain with no transaction anywhere: the census owes each frame whose rows it
+        // can see its charge -- run's own horizon stops at persistParse, whose body holds no
+        // write of its own, so the chain's charges begin one frame down.
+        assertThat(sites(blanke(replaceChain("", "persistParse(p)")), "PlantedService.java"))
+                .extracting(Site::label)
+                .containsExactlyInAnyOrder(
+                        "PlantedService.java#persistParse() -> populate() 4 rows",
+                        "PlantedService.java#populate() -> replaceA() 2 rows",
+                        "PlantedService.java#populate() -> replaceB() 2 rows");
+    }
+
+    /** The spread shape: a caller, two one-row helpers, and a write of the caller's own. */
+    private static String spreadAcrossHelpers(String annotation) {
+        return "public class PlantedService {\n"
+                + "    " + annotation + "\n"
+                + "    public Row run(Planted p) {\n"
+                + "        persistA(p);\n"
+                + "        accounts.save(p.summary());\n"
+                + "        return persistB(p);\n"
+                + "    }\n"
+                + "\n"
+                + "    private Row persistA(Planted p) {\n"
+                + "        accounts.save(p.one());\n"
+                + "        return p.rowA();\n"
+                + "    }\n"
+                + "\n"
+                + "    private Row persistB(Planted p) {\n"
+                + "        accounts.save(p.two());\n"
+                + "        return p.rowB();\n"
+                + "    }\n"
+                + "}\n";
+    }
+
+    /** parse -> persistParse -> populate -> two two-row replace writers: the re-parse chain. */
+    private static String replaceChain(String annotation, String runCall) {
+        return "public class PlantedService {\n"
+                + "    " + annotation + "\n"
+                + "    public Row run(Planted p) {\n"
+                + "        return " + runCall + ";\n"
+                + "    }\n"
+                + "\n"
+                + "    public Row persistParse(Planted p) {\n"
+                + "        return populate(p);\n"
+                + "    }\n"
+                + "\n"
+                + "    public Row populate(Planted p) {\n"
+                + "        replaceA(p);\n"
+                + "        return replaceB(p);\n"
+                + "    }\n"
+                + "\n"
+                + "    private Row replaceA(Planted p) {\n"
+                + "        accounts.deleteAll(p.old());\n"
+                + "        accounts.saveAll(p.fresh());\n"
+                + "        return p.rowA();\n"
+                + "    }\n"
+                + "\n"
+                + "    private Row replaceB(Planted p) {\n"
+                + "        accounts.deleteAll(p.stale());\n"
+                + "        accounts.saveAll(p.next());\n"
+                + "        return p.rowB();\n"
+                + "    }\n"
+                + "}\n";
     }
 
     @Test
@@ -364,14 +485,36 @@ class SelfInvokedTransactionContractTest {
         Map<String, String> bodies = bodies(source);
         Map<String, Boolean> transactional = transactions(source);
         Set<String> covered = new LinkedHashSet<>();
+        Deque<String> frontier = new ArrayDeque<>();
         for (Map.Entry<String, String> caller : bodies.entrySet()) {
-            if (!armed(transactional, caller)) {
-                continue;
+            if (armed(transactional, caller)) {
+                frontier.add(caller.getKey());
             }
-            // Whatever an armed caller reaches in line runs on its thread, inside its transaction.
+            // Whatever an armed caller reaches through its template runs on its thread, inside
+            // its transaction.
             Matcher inside = IN_TEMPLATE.matcher(caller.getValue());
             while (inside.find()) {
-                covered.add(inside.group(1));
+                if (covered.add(inside.group(1))) {
+                    frontier.push(inside.group(1));
+                }
+            }
+        }
+        // The transaction is on the thread, not on the annotation: everything an armed body
+        // reaches in line runs inside it too, one frame at a time -- persistParse earns its
+        // coverage from parse's template, populateChildren from persistParse, the replace
+        // writers from populateChildren. Covering a name without walking its body would stop
+        // the walk exactly where the template named it, so every name covered here is walked:
+        // covered doubles as the visited set, and add() pushes only on first coverage.
+        while (!frontier.isEmpty()) {
+            String from = frontier.pop();
+            String body = bodies.get(from);
+            if (body == null) {
+                continue;
+            }
+            for (String other : bodies.keySet()) {
+                if (calls(body, other) && covered.add(other)) {
+                    frontier.push(other);
+                }
             }
         }
         List<Site> out = new ArrayList<>();
@@ -389,8 +532,38 @@ class SelfInvokedTransactionContractTest {
                             + writes + " rows"));
                 }
             }
+            out.addAll(spread(caller, bodies, fileName));
         }
         return out;
+    }
+
+    /**
+     * The spread verdict: a caller with no transaction that can file two or more rows without any
+     * single writer holding two of them -- the answer exchange files the candidate turn, the
+     * follow-up and the difficulty step through one-row helpers, and a per-writer count reads
+     * three harmless singles where the exchange is three rows on one path. A caller whose rows
+     * are all in its own body is not a spread: the pair charge on whoever calls it holds that
+     * shape, and the census's frame is a call between frames, not a bare body.
+     */
+    private static List<Site> spread(Map.Entry<String, String> caller, Map<String, String> bodies,
+                                     String fileName) {
+        String callerName = caller.getKey();
+        int total = writesOf(callerName, bodies);
+        List<String> writers = new ArrayList<>();
+        boolean aWriterHoldsTwo = false;
+        for (String writer : bodies.keySet()) {
+            if (writer.equals(callerName) || !calls(caller.getValue(), writer)) {
+                continue;
+            }
+            int writes = writesOf(writer, bodies);
+            writers.add(writer + "() " + writes);
+            aWriterHoldsTwo = aWriterHoldsTwo || writes >= 2;
+        }
+        if (total < 2 || writers.isEmpty() || aWriterHoldsTwo) {
+            return List.of();
+        }
+        return List.of(new Site(fileName + "#" + callerName + "() " + total
+                + " rows spread over " + String.join(" + ", writers)));
     }
 
     /** Whether this caller puts its own thread inside a transaction before it calls on itself. */

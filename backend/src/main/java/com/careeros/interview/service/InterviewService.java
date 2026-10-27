@@ -166,6 +166,20 @@ public class InterviewService {
         Map<String, Object> evaluation = Json.obj(result.get("evaluation"));
         Map<String, Object> next = Json.obj(result.get("next"));
 
+        // The candidate's turn, the follow-up it earns and the difficulty step are one exchange:
+        // filed apart, a refusal at the follow-up or the session's own row leaves a transcript
+        // showing a turn the exchange never completed. No helper here holds two rows, so the
+        // census counted past it until it learned the spread; the annotation on persistTurnAnswer
+        // cannot arm a call this object makes on itself, so this method opens the transaction and
+        // leaves the model call above outside it. InterviewAnswerAtomicityIT holds the refusal
+        // points.
+        return tx.execute(status -> persistAnswer(sessionId, userId, nextSeq, answer, evaluation,
+                next, session));
+    }
+
+    private AnswerResponse persistAnswer(UUID sessionId, UUID userId, int nextSeq, String answer,
+                                         Map<String, Object> evaluation, Map<String, Object> next,
+                                         InterviewSession session) {
         TurnItem candidateTurn = persistTurnAnswer(sessionId, userId, nextSeq, answer, evaluation);
         TurnItem followup = null;
         String question = Json.str(next, "question");

@@ -59,10 +59,11 @@ import org.springframework.beans.factory.annotation.Autowired;
  * <p>Two things this file does not measure, and says so rather than implying otherwise. The model
  * call's exclusion from the transaction has no observable here: {@code finalize} writes no row
  * before it, so an implementation that wrapped the call too would pass every case below -- the shape
- * is held by the reading of the code, not by an assertion. And {@code answer}, three lines away in
- * the same class, files three rows in sequence (the candidate turn, the follow-up, the difficulty
- * step) with no transaction open anywhere; the census does not charge it, because each of its
- * helpers writes one row and the gate counts writes per writer, not per caller.
+ * is held by the reading of the code, not by an assertion. And the answering path beside it is not
+ * measured here at all: {@code answer}, three lines away in the same class, filed its three rows --
+ * the candidate turn, the follow-up, the difficulty step -- with no transaction open anywhere, the
+ * blind spot this file's first version named and {@link
+ * com.careeros.interview.service.InterviewAnswerAtomicityIT} now holds.
  */
 class InterviewFinalizeAtomicityIT extends ApiIntegrationTest {
 

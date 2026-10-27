@@ -263,7 +263,7 @@ catalogue, so the palette and the board rank one query the same way.
 | PATCH | `/interview/sessions/{id}` | `{status, mode, difficulty, config}` — pause / resume / abandon |
 | DELETE | `/interview/sessions/{id}` | |
 | POST | `/interview/sessions/{id}/opening` | first question |
-| POST | `/interview/sessions/{id}/answer` | `{answer}` → evaluation + follow-up + difficulty step |
+| POST | `/interview/sessions/{id}/answer` | `{answer}` → evaluation + follow-up + difficulty step; the candidate's turn, the follow-up and the difficulty step are filed in one transaction, so an answer that cannot file its follow-up files no turn at all |
 | POST | `/interview/sessions/{id}/finalize` | 8-dimension report + trajectory; the report row and the session's completion are filed in one transaction, so a finalize that cannot close the session files neither |
 
 There is no `maxQuestions` field: the body binds by name, so one sent at the top level is
