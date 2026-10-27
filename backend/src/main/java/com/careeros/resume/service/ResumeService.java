@@ -227,7 +227,15 @@ public class ResumeService {
         } catch (java.io.IOException e) {
             throw new ApiException(ApiErrorCode.UPLOAD_UNREADABLE, "Cannot read upload");
         }
-        UploadContext ctx = persistUpload(userId, content, file.getOriginalFilename());
+        // The upload's rows are one unit: the document pair fileIngest files and the four this
+        // service files after it -- the resume, its v1 version, the current-version pointer and
+        // the source's ref_id back-link. A refusal partway previously left the earlier rows
+        // committed with no transaction over them: a knowledge entry titled like a finished
+        // upload, or a resume with no version under it. The annotation on persistUpload cannot
+        // arm a call this object makes on itself, so this method opens the transaction and leaves
+        // the model call below outside it. ResumeUploadAtomicityIT holds all three refusal points.
+        UploadContext ctx = tx.execute(status ->
+                persistUpload(userId, content, file.getOriginalFilename()));
         Map<String, Object> result;
         try {
             result = ai.ingestDocument(ctx.documentId(), userId);

@@ -126,7 +126,7 @@ the caller's agent runs. No model runs here.
 |---|---|---|
 | GET | `/resumes` | list |
 | POST | `/resumes` | create from `{title, plaintext}` |
-| POST | `/resumes/upload` | multipart file → MinIO → `documents` row (PDF/DOCX/TXT, magic-byte checked) |
+| POST | `/resumes/upload` | multipart file → MinIO → `documents` row (PDF/DOCX/TXT, magic-byte checked); the document pair and the resume's own rows are filed in one transaction, so an upload that cannot file its resume files neither |
 | GET | `/resumes/{id}` | detail + versions; **sourceFileKey** says whether an original file exists |
 | GET | `/resumes/{id}/file` | the original upload's bytes, `Content-Disposition: attachment`, named from the document row — user-scoped, 404 when the resume has no file |
 | PATCH | `/resumes/{id}` | rename / relabel |

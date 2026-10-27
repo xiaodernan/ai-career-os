@@ -35,12 +35,15 @@ import org.junit.jupiter.api.Test;
  * {@code ingesting}. {@code InterviewService.finalize -> persistFinalization} shipped it for a
  * report and the completion that owns it: the evaluation filed alone leaves the interview scored but
  * still running, and nothing on the answering path stops it taking another turn after the report
- * closed it. {@link
+ * closed it. {@code ResumeService.upload -> persistUpload} shipped it for an upload's four
+ * resume-side rows: the document pair committed in a transaction of its own while the resume's rows
+ * committed with none, and a refusal partway left one side behind the other. {@link
  * com.careeros.job.service.JobImportAtomicityIT}, {@link
  * com.careeros.resume.service.ResumeParseAtomicityIT}, {@link
  * com.careeros.conversation.service.ConversationTurnAtomicityIT}, {@link
- * com.careeros.knowledge.service.FileIngestAtomicityIT} and {@link
- * com.careeros.interview.service.InterviewFinalizeAtomicityIT} are the behaviour witnesses for the
+ * com.careeros.knowledge.service.FileIngestAtomicityIT}, {@link
+ * com.careeros.interview.service.InterviewFinalizeAtomicityIT} and {@link
+ * com.careeros.resume.service.ResumeUploadAtomicityIT} are the behaviour witnesses for the
  * sites that have left the list, each of which now runs its writes inside a
  * {@code TransactionTemplate}.
  *
@@ -83,9 +86,10 @@ class SelfInvokedTransactionContractTest {
     /**
      * One entry per self-invocation that still commits its rows one transaction at a time: the
      * class, the entering method, the writer it calls on itself, and how many rows are at stake.
+     * The list is empty now -- every site it once held is below, held by a witness -- and it stays
+     * a list rather than a bare {@code List.of()} so the next site has somewhere to land.
      */
-    private static final List<String> NOT_YET_ATOMIC = List.of(
-            "ResumeService.java#upload() -> persistUpload() 4 rows");
+    private static final List<String> NOT_YET_ATOMIC = List.of();
 
     /**
      * The sites that left the list, each paired with the behaviour witness under {@code src/test
@@ -105,7 +109,9 @@ class SelfInvokedTransactionContractTest {
             "ResumeService.java#parse() -> persistParse() 7 rows",
             "com/careeros/resume/service/ResumeParseAtomicityIT.java",
             "InterviewService.java#finalize() -> persistFinalization() 2 rows",
-            "com/careeros/interview/service/InterviewFinalizeAtomicityIT.java");
+            "com/careeros/interview/service/InterviewFinalizeAtomicityIT.java",
+            "ResumeService.java#upload() -> persistUpload() 4 rows",
+            "com/careeros/resume/service/ResumeUploadAtomicityIT.java");
 
     @Test
     @DisplayName("the census of un-armed writers is exactly the list, in both directions")
@@ -114,18 +120,24 @@ class SelfInvokedTransactionContractTest {
                 .as(MAIN + " is not under the run directory " + Path.of("").toAbsolutePath())
                 .isTrue();
         List<String> found = new ArrayList<>();
-        try (Stream<Path> files = Files.walk(MAIN)) {
-            for (Path path : files.filter(p -> p.toString().endsWith(".java"))
+        int files = 0;
+        try (Stream<Path> walked = Files.walk(MAIN)) {
+            List<Path> paths = walked.filter(p -> p.toString().endsWith(".java"))
                     .filter(p -> List.of(p.toString().split("[/\\\\]")).contains("service"))
-                    .toList()) {
+                    .toList();
+            files = paths.size();
+            for (Path path : paths) {
                 found.addAll(sites(blanke(Files.readString(path)), path.getFileName().toString())
                         .stream().map(Site::label).toList());
             }
         }
-        // An absence claim needs a population: an empty walk would agree with an empty list.
-        assertThat(found)
-                .as("the walk reached no multi-write self-invocation, so it read no source")
-                .isNotEmpty();
+        // An absence claim needs a population, and once the last site is armed the census's honest
+        // answer is an empty list -- what has to be non-empty is the set of files the walk really
+        // read, not the offences it found. The floor is computed by this same walk, so a walk that
+        // somehow matched nothing fails here rather than agreeing with an empty charge list.
+        assertThat(files)
+                .as("the walk read no service classes, so the census compared nothing")
+                .isGreaterThan(5);
         assertThat(found.stream().sorted().toList()).isEqualTo(NOT_YET_ATOMIC);
     }
 
@@ -159,6 +171,13 @@ class SelfInvokedTransactionContractTest {
         assertThat(writesOf("persistFinalization",
                 bodiesOf("interview", "service", "InterviewService.java")))
                 .isEqualTo(2);
+
+        // And for the upload, the last entry the list ever held: the resume row, the version row
+        // its newVersion helper files, the current-version pointer and the ref_id back-link. The
+        // document pair persistRows files is charged at that writer's own site, where its witness
+        // holds it -- this number is the four rows this service adds on top.
+        assertThat(writesOf("persistUpload", bodiesOf("resume", "service", "ResumeService.java")))
+                .isEqualTo(4);
     }
 
     @Test
