@@ -143,8 +143,28 @@ jobs:
       - name: Start infra (postgres / redis / minio)
         run: docker compose up -d postgres redis minio
 
+      - name: Apply the schema (the Flyway migrations) to career_os
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
+          # Nothing in this job boots the backend against career_os: the *IT step
+          # migrates its own career_os_it, and the seed service below waits for
+          # public.jobs and silently skips (exit 0) when it never appears. So the
+          # migration files -- the same ones Flyway runs at app startup -- are
+          # applied here: version order, one transaction per migration.
+          for f in $(find backend/src/main/resources/db/migration -name 'V*.sql' | sort -V); do
+            echo "applying $f"
+            PGPASSWORD=career_os_dev_password psql -h 127.0.0.1 -p 5432 -U career_os -d career_os \
+              -1 -v ON_ERROR_STOP=1 -q -f "$f"
+          done
+
       - name: Seed jobs (12 companies / 41 roles)
-        run: docker compose run --rm seed-jobs
+        run: |
+          docker compose run --rm seed-jobs
+          # The seed service skips with exit 0 when the schema is not ready -- a
+          # green step that seeded nothing. Assert the rows actually landed.
+          n=$(PGPASSWORD=career_os_dev_password psql -h 127.0.0.1 -p 5432 -U career_os -d career_os -tAc "SELECT count(*) FROM jobs")
+          echo "seeded jobs: $n"
+          [ "$n" -gt 0 ] || { echo "the seed landed 0 jobs -- the schema or the seed silently skipped"; exit 1; }
 
       - name: Backend integration tests (*IT)
         working-directory: backend
