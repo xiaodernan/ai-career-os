@@ -37,7 +37,7 @@ function statusVariant(status?: string) {
 }
 
 function RunRow({ run }: { run: ActivityRun }) {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const when = run.startedAt;
   const tokens = runTotalTokens(run);
 
@@ -52,7 +52,7 @@ function RunRow({ run }: { run: ActivityRun }) {
             {`${run.agent ?? "career"} · ${run.kind ?? "run"}`}
           </p>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            {when ? formatDateTime(when) : "—"}
+            {when ? formatDateTime(when, locale) : "—"}
             {run.durationMs ? ` · ${formatDuration(run.durationMs)}` : ""}
             {run.model && ` · ${run.model}`}
             {tokens ? ` · ${formatNumber(tokens)} tok` : ""}

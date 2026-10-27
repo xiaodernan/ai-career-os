@@ -35,7 +35,7 @@ import { useLocale } from "@/lib/i18n/locale-context";
 
 export default function InterviewReportPage() {
   const params = useParams<{ id: string }>();
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const id = params?.id ?? null;
   const session = useInterviewSession(id);
   const finalize = useFinalizeInterview(id ?? "");
@@ -150,7 +150,7 @@ export default function InterviewReportPage() {
               <CardDescription>
                 {data.companyName ? `${data.companyName} · ` : ""}
                 {data.jobTitle ? `${data.jobTitle} · ` : ""}
-                {data.finishedAt ? formatDate(data.finishedAt) : formatDate(data.startedAt)}
+                {data.finishedAt ? formatDate(data.finishedAt, locale) : formatDate(data.startedAt, locale)}
               </CardDescription>
             </div>
             <AIBadge label="evaluator output" />

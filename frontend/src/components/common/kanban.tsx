@@ -29,6 +29,7 @@ import {
   pickerStages,
   isTerminal,
 } from "@/lib/pipeline";
+import { formatDate } from "@/lib/format";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -116,7 +117,7 @@ function KanbanCard({
   onOpen,
 }: KanbanCardProps) {
   const meta = stageMeta(app.status);
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const short = stageShort(t, app.status);
   // The dashboard's attention list runs its staleness predicate server-side (14 days without a
   // step, or a reminder already due — DashboardRepository.NEEDS_ATTENTION). Mirrored here so a
@@ -189,7 +190,7 @@ function KanbanCard({
               <>
                 {" · "}
                 {t("applications.reminderOn", {
-                  date: new Date(app.reminderAt).toLocaleDateString(),
+                  date: formatDate(app.reminderAt, locale),
                 })}
               </>
             )}

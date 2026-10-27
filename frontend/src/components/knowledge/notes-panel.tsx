@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useNoteMutations } from "@/lib/hooks/actions";
 import { useKnowledgeNotes } from "@/lib/hooks/resources";
 import { useUrlState } from "@/lib/hooks/use-url-state";
+import { formatDate } from "@/lib/format";
 import { useLocale } from "@/lib/i18n/locale-context";
 import type { KnowledgeNote } from "@/lib/api/types";
 
@@ -99,7 +100,7 @@ export function NoteCreateCard() {
 }
 
 function NoteRow({ note }: { note: KnowledgeNote }) {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const [editing, setEditing] = React.useState(false);
   const [title, setTitle] = React.useState(note.title);
   const [content, setContent] = React.useState(note.content ?? "");
@@ -170,7 +171,7 @@ function NoteRow({ note }: { note: KnowledgeNote }) {
                 <p className="text-xs text-muted-foreground">
                   {note.updatedAt
                     ? t("knowledge.notes.updated", {
-                        date: new Date(note.updatedAt).toLocaleDateString(),
+                        date: formatDate(note.updatedAt, locale),
                       })
                     : null}
                 </p>

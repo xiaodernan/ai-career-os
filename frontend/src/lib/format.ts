@@ -2,18 +2,27 @@
 
 import type { Locale } from "@/lib/i18n/translations";
 
-export function formatDate(value?: string | null, opts?: Intl.DateTimeFormatOptions): string {
+/**
+ * "Oct 28, 2026" / "2026年10月28日" — the reader's language, not the machine's.
+ *
+ * `toLocaleDateString(undefined, ...)` reads the *browser's* locale, so an English reader on a
+ * zh-CN machine read "2026年10月28日" inside English sentences, and a Chinese reader on an en-US
+ * machine read the mirror image. `locale` is required, like `relativeTime`'s, so no surface can
+ * quietly fall back to the machine.
+ */
+export function formatDate(value: string | null | undefined, locale: Locale): string {
   if (!value) return "";
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return value;
-  return d.toLocaleDateString(undefined, opts ?? { month: "short", day: "numeric", year: "numeric" });
+  return d.toLocaleDateString(locale, { month: "short", day: "numeric", year: "numeric" });
 }
 
-export function formatDateTime(value?: string | null): string {
+/** "Oct 28, 02:05 PM" / "10月28日 14:05" — the same rule as formatDate, with the clock. */
+export function formatDateTime(value: string | null | undefined, locale: Locale): string {
   if (!value) return "";
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return value;
-  return d.toLocaleString(undefined, {
+  return d.toLocaleString(locale, {
     month: "short",
     day: "numeric",
     hour: "2-digit",

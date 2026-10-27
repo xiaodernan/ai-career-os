@@ -144,7 +144,7 @@ function TracePanel({ trace }: { trace: RunTrace }) {
             </div>
             <div className="flex items-center justify-between gap-3 border-b border-border/60 pb-2">
               <dt className="text-muted-foreground">{t("activity.detail.started")}</dt>
-              <dd>{run.startedAt ? `${formatDateTime(run.startedAt)} · ${relativeTime(run.startedAt, locale)}` : "—"}</dd>
+              <dd>{run.startedAt ? `${formatDateTime(run.startedAt, locale)} · ${relativeTime(run.startedAt, locale)}` : "—"}</dd>
             </div>
             <div className="flex items-center justify-between gap-3 border-b border-border/60 pb-2">
               <dt className="text-muted-foreground">{t("activity.detail.finished")}</dt>

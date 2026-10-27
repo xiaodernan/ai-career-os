@@ -48,7 +48,7 @@ function statusBadge(
 }
 
 export default function ResumesPage() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   // The page index lives in the URL, so a reload or a shared list link opens the same window.
   const [state, setUrl] = useUrlState<{ page: number }>(
     PAGE_DEFAULTS,
@@ -131,7 +131,7 @@ export default function ResumesPage() {
                               : r.status === "parsed"
                                 ? t("resumes.parsedOpenToSet")
                                 : t("resumes.awaitingParsing")}
-                            {r.createdAt ? ` · added ${formatDate(r.createdAt)}` : ""}
+                            {r.createdAt ? ` · added ${formatDate(r.createdAt, locale)}` : ""}
                           </p>
                         </div>
                         <Badge variant={badge.variant} className="shrink-0 text-2xs font-normal">

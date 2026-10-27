@@ -53,7 +53,7 @@ const PARSE_STAGE_KEYS = [
 
 export default function ResumeDetailPage() {
   const params = useParams<{ id: string }>();
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const id = params?.id ?? null;
   const resume = useResume(id);
   const versionsQ = useResumeVersions(id);
@@ -136,7 +136,7 @@ export default function ResumeDetailPage() {
             <div className="min-w-0">
               <h1 className="font-serif text-display-sm font-medium text-balance">{r.title}</h1>
               <p className="mt-1 text-sm text-muted-foreground">
-                added {r.createdAt ? formatDate(r.createdAt) : "—"} ·{" "}
+                added {r.createdAt ? formatDate(r.createdAt, locale) : "—"} ·{" "}
                 <StatusBadge status={r.status} />
               </p>
             </div>
@@ -311,7 +311,7 @@ export default function ResumeDetailPage() {
                       </div>
                       <p className="mt-1 text-xs text-muted-foreground">
                         {v.source ? `${v.source.replace(/_/g, " ")} · ` : ""}
-                        {v.createdAt ? formatDate(v.createdAt) : "date unavailable"}
+                        {v.createdAt ? formatDate(v.createdAt, locale) : "date unavailable"}
                         {typeof v.score?.overall === "number" ? ` · score ${v.score.overall}` : ""}
                       </p>
                       {diff && (diff.accepted.length > 0 || diff.rejected.length > 0) && (

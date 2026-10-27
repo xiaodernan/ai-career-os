@@ -40,7 +40,7 @@ import type { Contact } from "@/lib/api/types";
  * day's midnight; the server does not guess it from request arrival.
  */
 export default function NetworkingPage() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const contacts = useContacts();
   const [editing, setEditing] = React.useState<Contact | null>(null);
   const [open, setOpen] = React.useState(false);
@@ -95,7 +95,7 @@ export default function NetworkingPage() {
                 </p>
                 <p className="truncate text-xs text-muted-foreground">
                   {[c.role, c.relation].filter(Boolean).join(" · ") || "—"}
-                  {c.lastTouchAt && ` · last touch ${formatDate(c.lastTouchAt)}`}
+                  {c.lastTouchAt && ` · last touch ${formatDate(c.lastTouchAt, locale)}`}
                 </p>
               </button>
               {c.relation && (

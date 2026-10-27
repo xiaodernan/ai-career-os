@@ -3,6 +3,7 @@
 import * as React from "react";
 import { AlertTriangle, Compass, Lightbulb, Sparkles, Target } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatDateTime } from "@/lib/format";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -30,7 +31,7 @@ export function MatchPanel({
   onAnalyze?: () => void;
   className?: string;
 }) {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   // The dimension names come from the shared vocabulary, so the bar the
   // reader sees says the same thing the copilot's artifact says and the
   // interview report says -- in the reader's language.
@@ -104,7 +105,7 @@ export function MatchPanel({
                 </p>
                 {match.createdAt && (
                   <p className="text-2xs text-muted-foreground">
-                    computed {new Date(match.createdAt).toLocaleString()}
+                    computed {formatDateTime(match.createdAt, locale)}
                   </p>
                 )}
               </div>

@@ -142,7 +142,7 @@ export default function InterviewsPage() {
                           {s.questionCount ? `${s.questionCount} questions · ` : ""}
                           {done
                             ? `finished ${relativeTime(s.finishedAt, locale)}`
-                            : `started ${formatDateTime(s.startedAt)}`}
+                            : `started ${formatDateTime(s.startedAt, locale)}`}
                         </p>
                       </div>
                       {!done && s.status === "active" && (

@@ -4,6 +4,8 @@ import {
   depthLabel,
   depthLevel,
   weightLabel,
+  formatDate,
+  formatDateTime,
   formatDuration,
   formatSalary,
   formatUsd,
@@ -143,6 +145,40 @@ describe("slugify", () => {
   it("kebab-cases and guards the empty string", () => {
     expect(slugify("Hello World!")).toBe("hello-world");
     expect(slugify("   ")).toBe("document");
+  });
+});
+
+describe("formatDate", () => {
+  // Built from local components, so the rendered day is the same in every time zone.
+  const local = (y: number, m: number, d: number, h = 0, min = 0) =>
+    new Date(y, m - 1, d, h, min).toISOString();
+
+  it("draws the date in the reader's language, not the machine's", () => {
+    // `undefined` used to mean "whatever the browser's locale is": on a zh-CN machine an English
+    // reader saw "2026年10月28日" inside English sentences, and on an en-US machine a Chinese
+    // reader saw "Oct 28, 2026" inside Chinese ones.
+    expect(formatDate(local(2026, 10, 28), "en")).toBe("Oct 28, 2026");
+    expect(formatDate(local(2026, 10, 28), "zh")).toBe("2026年10月28日");
+  });
+
+  it("keeps the empty and unparseable answers", () => {
+    expect(formatDate(null, "zh")).toBe("");
+    expect(formatDate("not a date", "en")).toBe("not a date");
+  });
+});
+
+describe("formatDateTime", () => {
+  const local = (y: number, m: number, d: number, h = 0, min = 0) =>
+    new Date(y, m - 1, d, h, min).toISOString();
+
+  it("draws the day and the clock in the reader's language", () => {
+    expect(formatDateTime(local(2026, 10, 28, 14, 5), "en")).toMatch(/^Oct 28, 02:05\sPM$/);
+    expect(formatDateTime(local(2026, 10, 28, 14, 5), "zh")).toBe("10月28日 14:05");
+  });
+
+  it("keeps the empty and unparseable answers", () => {
+    expect(formatDateTime(undefined, "en")).toBe("");
+    expect(formatDateTime("not a date", "zh")).toBe("not a date");
   });
 });
 
