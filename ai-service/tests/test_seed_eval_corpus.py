@@ -57,6 +57,15 @@ def test_an_ingest_refusal_is_reported_as_a_contract_error(corpus_file, capsys, 
         return False
     async def no_rows(query, *args):
         return None
+    async def broken_pool():
+        return None
+    async def closed_pool():
+        return None
+    # The pool must never be real: on a machine without a database init_db
+    # raises before the ingest is ever reached, and the refusal this test
+    # charges never prints (that exact red shipped once -- CI has no postgres).
+    monkeypatch.setattr(mod.db, "init_db", broken_pool)
+    monkeypatch.setattr(mod.db, "close_db", closed_pool)
     monkeypatch.setattr(mod.db, "fetchrow", no_rows)
     monkeypatch.setattr(mod, "_ensure_eval_user", no_user)
     monkeypatch.setattr("app.api.ingest.ingest_text", refuse)
