@@ -58,7 +58,16 @@ async def _check(user_id: str) -> int:
     if not canonical:
         print("the export built but its data is empty", file=sys.stderr)
         return 1
-    if json.loads(canonical) != json.loads(json.dumps(bundle["data"], default=str)):
+    # The hash has to be over the data, and the data has to survive the
+    # round trip the bundle promises: what ships IS the canonical form, so
+    # the data inside the shipped bytes must parse back to exactly what was
+    # hashed. Comparing the canonical form against a DIFFERENT encoder
+    # (json.dumps default=str) is not that check -- that encoder spells
+    # datetimes with a space where the canonical form uses ISO's T, so every
+    # healthy bundle carrying a timestamp failed, and the check had only
+    # ever passed on bundles with no rows in them.
+    shipped = json.loads(ex.serialize_bundle(bundle))
+    if shipped.get("data") != json.loads(canonical):
         print(
             "the bundle's data does not survive the canonical form it is hashed over",
             file=sys.stderr,
