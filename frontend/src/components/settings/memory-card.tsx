@@ -46,7 +46,7 @@ const WEIGHTS = [
 ];
 
 export function MemoryCard() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const memories = useMemories();
   const remove = useDeleteMemory();
   const [editing, setEditing] = React.useState<string | null>(null);
@@ -108,7 +108,7 @@ export function MemoryCard() {
                         </Badge>
                         {m.updatedAt && (
                           <span className="text-2xs text-muted-foreground">
-                            {relativeTime(m.updatedAt)}
+                            {relativeTime(m.updatedAt, locale)}
                           </span>
                         )}
                       </div>

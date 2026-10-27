@@ -29,6 +29,7 @@ import { field } from "@/lib/api/body";
 import { ApiError } from "@/lib/api/client";
 import { fromReminderInput, reminderPatch, toReminderInput } from "@/lib/application-edit";
 import { relativeTime } from "@/lib/format";
+import type { Locale } from "@/lib/i18n/translations";
 import {
   useCreateApplication,
   useDeleteApplication,
@@ -68,7 +69,8 @@ export interface ApplicationDialogProps {
  */
 function eventText(
   event: ApplicationEvent,
-  t: (key: string, vars?: Record<string, string | number>) => string
+  t: (key: string, vars?: Record<string, string | number>) => string,
+  locale: Locale
 ): string {
   if (event.type === "status") {
     return event.status
@@ -79,7 +81,7 @@ function eventText(
   if (event.type === "reminder") {
     if (event.cleared) return t("applications.dialog.reminderCleared");
     return event.reminderAt
-      ? t("applications.dialog.reminderSetFor", { when: relativeTime(event.reminderAt) })
+      ? t("applications.dialog.reminderSetFor", { when: relativeTime(event.reminderAt, locale) })
       : t("applications.dialog.reminderSet");
   }
   if (event.type === "outcome") {
@@ -111,7 +113,7 @@ function PipelineLink({ label, id }: { label: string; id?: string | null }) {
 }
 
 export function ApplicationDialog({ application, open, onOpenChange }: ApplicationDialogProps) {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const editing = application !== null;
   const createApp = useCreateApplication();
   const updateApp = useUpdateApplication();
@@ -351,13 +353,13 @@ export function ApplicationDialog({ application, open, onOpenChange }: Applicati
                       variant={event.type === "reminder" ? "warning" : "secondary"}
                       className="shrink-0 font-normal"
                     >
-                      {eventText(event, t)}
+                      {eventText(event, t, locale)}
                     </Badge>
                     {event.note && event.type !== "note" && (
                       <span className="min-w-0 truncate text-muted-foreground">{event.note}</span>
                     )}
                     <span className="ml-auto shrink-0 text-xs text-muted-foreground">
-                      {relativeTime(event.createdAt)}
+                      {relativeTime(event.createdAt, locale)}
                     </span>
                   </li>
                 ))}

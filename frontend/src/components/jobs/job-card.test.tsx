@@ -4,10 +4,14 @@ import { readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { renderToStaticMarkup } from "react-dom/server";
 
+// Mutable through `vi.hoisted` so one describe below can render the same card as a zh reader;
+// a factory that closed over a plain `let` would read it before the test file's body runs.
+const reader = vi.hoisted(() => ({ locale: "en" as "en" | "zh" }));
+
 vi.mock("@/lib/i18n/locale-context", () => ({
   // The identity translator keeps the card's own text visible: a key the component asks for renders
   // as that key, so a copy change cannot hide a structural one.
-  useLocale: () => ({ locale: "en", t: (key: string) => key, setLocale: () => {} }),
+  useLocale: () => ({ locale: reader.locale, t: (key: string) => key, setLocale: () => {} }),
 }));
 
 import { JobCard } from "./job-card";
@@ -195,5 +199,40 @@ describe("JSX conditionals across the frontend", () => {
     const here = readFileSync(fileURLToPath(import.meta.url), "utf8").replace(/\r\n/g, "\n");
     expect(numericGuards(here).length, "this file's own fixture no longer reads as a numeric guard, " +
       "so the skip below the walk excuses a population the scanner was never shown").toBeGreaterThan(0);
+  });
+});
+
+describe("the job card's age stamp", () => {
+  const postedAgo = (ms: number) => new Date(Date.now() - ms).toISOString();
+  const threeDaysAgo = () => postedAgo(3 * 86_400_000);
+
+  it("follows the reader into Chinese", () => {
+    // Every other word on this card comes from the locale table; the age was the one unit that did
+    // not, so a zh reader read "3d ago" in the middle of a Chinese card -- and on the saved-jobs
+    // page the same token sits inside "收藏于 {date}".
+    reader.locale = "zh";
+    try {
+      const read = visible(
+        renderToStaticMarkup(
+          <JobCard job={{ ...unscored, postedAt: threeDaysAgo() }} dense showSave={false} />
+        )
+      );
+      expect(read, `a Chinese card stamped the job's age as "${read}" -- the relative time is the ` +
+        "one unit on this card that still speaks English").toContain("3天前");
+      expect(read).not.toContain("3d ago");
+    } finally {
+      reader.locale = "en";
+    }
+  });
+
+  it("keeps the compact English stamp for an English reader (control)", () => {
+    const read = visible(
+      renderToStaticMarkup(
+        <JobCard job={{ ...unscored, postedAt: threeDaysAgo() }} dense showSave={false} />
+      )
+    );
+    // The same reading in the default locale: proves the case above measures the locale and not a
+    // differently-shaped fixture.
+    expect(read).toContain("3d ago");
   });
 });

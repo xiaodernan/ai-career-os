@@ -59,7 +59,7 @@ function Stat({
 }
 
 function TracePanel({ trace }: { trace: RunTrace }) {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const totals = traceTotals(trace);
   const { run, steps } = trace;
 
@@ -144,11 +144,11 @@ function TracePanel({ trace }: { trace: RunTrace }) {
             </div>
             <div className="flex items-center justify-between gap-3 border-b border-border/60 pb-2">
               <dt className="text-muted-foreground">{t("activity.detail.started")}</dt>
-              <dd>{run.startedAt ? `${formatDateTime(run.startedAt)} · ${relativeTime(run.startedAt)}` : "—"}</dd>
+              <dd>{run.startedAt ? `${formatDateTime(run.startedAt)} · ${relativeTime(run.startedAt, locale)}` : "—"}</dd>
             </div>
             <div className="flex items-center justify-between gap-3 border-b border-border/60 pb-2">
               <dt className="text-muted-foreground">{t("activity.detail.finished")}</dt>
-              <dd>{run.finishedAt ? relativeTime(run.finishedAt) : "still running"}</dd>
+              <dd>{run.finishedAt ? relativeTime(run.finishedAt, locale) : "still running"}</dd>
             </div>
             <div className="flex items-center justify-between gap-3 border-b border-border/60 pb-2">
               <dt className="text-muted-foreground">{t("activity.detail.model")}</dt>

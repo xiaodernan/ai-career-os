@@ -148,12 +148,38 @@ describe("slugify", () => {
 
 describe("relativeTime", () => {
   const ago = (ms: number) => new Date(Date.now() - ms).toISOString();
-  it("buckets into minutes/hours/days", () => {
-    expect(relativeTime(ago(1_000))).toBe("just now");
-    expect(relativeTime(ago(5 * 60_000))).toBe("5m ago");
-    expect(relativeTime(ago(3 * 3_600_000))).toBe("3h ago");
-    expect(relativeTime(ago(5 * 86_400_000))).toBe("5d ago");
-    expect(relativeTime(null)).toBe("");
+  const ahead = (ms: number) => new Date(Date.now() + ms).toISOString();
+
+  it("keeps the compact English buckets it shipped", () => {
+    expect(relativeTime(ago(1_000), "en")).toBe("now");
+    expect(relativeTime(ago(5 * 60_000), "en")).toBe("5m ago");
+    expect(relativeTime(ago(3 * 3_600_000), "en")).toBe("3h ago");
+    expect(relativeTime(ago(5 * 86_400_000), "en")).toBe("5d ago");
+    expect(relativeTime(ago(40 * 86_400_000), "en")).toBe("1mo ago");
+    expect(relativeTime(ago(400 * 86_400_000), "en")).toBe("1y ago");
+    expect(relativeTime(null, "en")).toBe("");
+  });
+
+  it("speaks the reader's language when the reader chose Chinese", () => {
+    // The stamp sits inside translated sentences -- "收藏于 {date}", "最近一步：{when}" -- so an
+    // English unit read as "收藏于 5d ago": one language per screen, on every list that dates a row.
+    expect(relativeTime(ago(1_000), "zh")).toBe("现在");
+    expect(relativeTime(ago(5 * 60_000), "zh")).toBe("5分钟前");
+    expect(relativeTime(ago(3 * 3_600_000), "zh")).toBe("3小时前");
+    expect(relativeTime(ago(5 * 86_400_000), "zh")).toBe("5天前");
+    expect(relativeTime(ago(40 * 86_400_000), "zh")).toBe("1个月前");
+    expect(relativeTime(ago(400 * 86_400_000), "zh")).toBe("1年前");
+  });
+
+  it("reads a future timestamp forward, not as a negative age", () => {
+    // reminderAt is ahead of now by definition. The old subtract-and-divide kept the sign in the
+    // divisor and printed "-1440m ago" on a reminder set for tomorrow.
+    expect(relativeTime(ahead(3 * 3_600_000), "en")).toBe("in 3h");
+    expect(relativeTime(ahead(3 * 3_600_000), "zh")).toBe("3小时后");
+  });
+
+  it("hands back an unparseable value rather than inventing an age", () => {
+    expect(relativeTime("not a date", "zh")).toBe("not a date");
   });
 });
 

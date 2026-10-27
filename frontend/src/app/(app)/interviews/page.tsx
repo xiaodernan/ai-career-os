@@ -36,7 +36,7 @@ const PAGE_SIZE = 20;
 const PAGE_DEFAULTS: { page: number } = { page: 0 };
 
 export default function InterviewsPage() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   // The page index lives in the URL, so a reload or a shared list link opens the same window.
   const [state, setUrl] = useUrlState<{ page: number }>(
     PAGE_DEFAULTS,
@@ -141,7 +141,7 @@ export default function InterviewsPage() {
                         <p className="mt-0.5 truncate text-xs text-muted-foreground">
                           {s.questionCount ? `${s.questionCount} questions · ` : ""}
                           {done
-                            ? `finished ${relativeTime(s.finishedAt)}`
+                            ? `finished ${relativeTime(s.finishedAt, locale)}`
                             : `started ${formatDateTime(s.startedAt)}`}
                         </p>
                       </div>

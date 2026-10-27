@@ -69,7 +69,7 @@ function useGreeting(t: (key: string) => string): string {
 }
 
 export default function DashboardPage() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const greeting = useGreeting(t);
   const { data: user } = useUser();
   const dashboard = useDashboard();
@@ -388,9 +388,9 @@ export default function DashboardPage() {
                                 <span className="mt-0.5 block truncate text-xs text-muted-foreground">
                                   {row.companyName ? `${row.companyName} · ` : ""}
                                   {due && row.reminderAt
-                                    ? t("dashboard.reminderDue", { when: relativeTime(row.reminderAt) })
+                                    ? t("dashboard.reminderDue", { when: relativeTime(row.reminderAt, locale) })
                                     : row.updatedAt
-                                      ? t("dashboard.lastStep", { when: relativeTime(row.updatedAt) })
+                                      ? t("dashboard.lastStep", { when: relativeTime(row.updatedAt, locale) })
                                       : t("dashboard.noStep")}
                                 </span>
                               </span>
@@ -834,7 +834,7 @@ function StatCard({
 }
 
 function RunFeed({ runs }: { runs: ActivityRun[] }) {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   return (
     <ul className="divide-y divide-border/50">
       {runs.map((run) => {
@@ -855,7 +855,7 @@ function RunFeed({ runs }: { runs: ActivityRun[] }) {
                 {`${run.agent ?? "agent"} · ${run.kind ?? "run"}`}
               </p>
               <p className="truncate text-xs text-muted-foreground">
-                {relativeTime(run.startedAt)}
+                {relativeTime(run.startedAt, locale)}
                 {tokens ? ` · ${formatNumber(tokens)} tokens` : ""}
               </p>
             </div>

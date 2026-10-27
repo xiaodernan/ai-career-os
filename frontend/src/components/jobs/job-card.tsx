@@ -35,7 +35,7 @@ function JobCard({
   ...props
 }: JobCardProps) {
   const match = job.latestMatch ?? null;
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const to = href ?? `/jobs/${job.id}`;
   const salary = formatSalary(job.salaryMin, job.salaryMax, job.salaryCurrency);
   const company = job.company?.name || job.companyName;
@@ -148,7 +148,7 @@ function JobCard({
           {job.source === "agent_research" && <span>{t("jobCard.foundByResearch")}</span>}
         </span>
         <span className="flex items-center gap-1">
-          {job.postedAt && <span>{relativeTime(job.postedAt)}</span>}
+          {job.postedAt && <span>{relativeTime(job.postedAt, locale)}</span>}
           <ArrowUpRight className="size-3 opacity-0 transition-opacity duration-150 group-hover:opacity-100" aria-hidden />
         </span>
       </div>

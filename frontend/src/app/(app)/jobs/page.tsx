@@ -62,7 +62,7 @@ const SORT_OPTIONS: { value: string; labelKey: string }[] = [
 ];
 
 export default function JobsPage() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const [filters, setFilters] = useUrlState(DEFAULTS, {
     numericKeys: ["page", "min_salary", "max_salary", "size"],
     booleanKeys: ["remote"],
@@ -256,7 +256,7 @@ export default function JobsPage() {
                       <JobCard job={tab === "saved" ? { ...job, saved: true } : job} />
                       {tab === "saved" && (job.note || job.savedAt) ? (
                         <div className="mt-1.5 space-y-0.5 px-1 text-xs text-muted-foreground">
-                          {job.savedAt ? <p>{t("jobs.savedAt", { date: relativeTime(job.savedAt) })}</p> : null}
+                          {job.savedAt ? <p>{t("jobs.savedAt", { date: relativeTime(job.savedAt, locale) })}</p> : null}
                           {job.note ? (
                             <p>
                               <span className="font-medium text-foreground">

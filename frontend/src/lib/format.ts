@@ -1,5 +1,7 @@
 /** Formatting helpers shared by every surface — no per-page date/currency code. */
 
+import type { Locale } from "@/lib/i18n/translations";
+
 export function formatDate(value?: string | null, opts?: Intl.DateTimeFormatOptions): string {
   if (!value) return "";
   const d = new Date(value);
@@ -19,21 +21,48 @@ export function formatDateTime(value?: string | null): string {
   });
 }
 
-export function relativeTime(value?: string | null): string {
+const narrowFormatters = new Map<string, Intl.RelativeTimeFormat>();
+
+function narrow(locale: Locale, numeric: "auto" | "always"): Intl.RelativeTimeFormat {
+  const key = `${locale}:${numeric}`;
+  let formatter = narrowFormatters.get(key);
+  if (!formatter) {
+    formatter = new Intl.RelativeTimeFormat(locale, { numeric, style: "narrow" });
+    narrowFormatters.set(key, formatter);
+  }
+  return formatter;
+}
+
+/**
+ * "3m ago" / "3分钟前" — the reader's language, and the right direction.
+ *
+ * The stamp sits inside translated sentences ("收藏于 {date}", "最近一步：{when}"), so an
+ * English unit read as "收藏于 3d ago"; `locale` is required rather than defaulted so every
+ * call site has to say whose language it is speaking. `narrow` + `always` reproduces the
+ * compact English the hand-rolled formatter shipped ("5m ago", "1d ago", "1y ago"); `auto`
+ * is used only for the under-a-minute bucket, where ICU's word is "now"/"现在" and the
+ * rounded "0s ago" would read as a mis-signed value.
+ *
+ * A future value — `reminderAt` usually is one — formats forward ("in 3h"/"3小时后"); the
+ * old subtract-and-divide kept the sign in the divisor and printed "-1440m ago" for a
+ * reminder set for tomorrow.
+ */
+export function relativeTime(value: string | null | undefined, locale: Locale): string {
   if (!value) return "";
   const then = new Date(value).getTime();
   if (Number.isNaN(then)) return value;
   const diff = Date.now() - then;
-  const min = Math.round(diff / 60_000);
-  if (Math.abs(diff) < 60_000) return "just now";
-  if (min < 60) return `${min}m ago`;
-  const hours = Math.round(min / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (Math.abs(diff) < 60_000) return narrow(locale, "auto").format(0, "second");
+  const sign = diff > 0 ? -1 : 1;
+  const minutes = Math.round(Math.abs(diff) / 60_000);
+  if (minutes < 60) return narrow(locale, "always").format(sign * minutes, "minute");
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return narrow(locale, "always").format(sign * hours, "hour");
   const days = Math.round(hours / 24);
-  if (days < 30) return `${days}d ago`;
+  if (days < 30) return narrow(locale, "always").format(sign * days, "day");
   const months = Math.round(days / 30);
-  if (months < 12) return `${months}mo ago`;
-  return `${Math.round(months / 12)}y ago`;
+  if (months < 12) return narrow(locale, "always").format(sign * months, "month");
+  return narrow(locale, "always").format(sign * Math.round(months / 12), "year");
 }
 
 const CURRENCY_SYMBOL: Record<string, string> = {

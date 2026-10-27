@@ -218,7 +218,7 @@ function ConversationList({
   onPageChange: (page: number) => void;
   className?: string;
 }) {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const rename = useRenameConversation();
   const remove = useDeleteConversation();
   const [editingId, setEditingId] = React.useState<string | null>(null);
@@ -325,7 +325,7 @@ function ConversationList({
                         {c.lastMessagePreview ?? "—"}
                       </p>
                       <p className="mt-0.5 text-2xs text-muted-foreground/80">
-                        {relativeTime(c.updatedAt ?? c.createdAt)}
+                        {relativeTime(c.updatedAt ?? c.createdAt, locale)}
                       </p>
                     </button>
                     {/* Touch has no hover and no focus until tapped, so the actions stay
@@ -689,7 +689,7 @@ function ChatPanel({
 /* ------------------------------------------------------------------ */
 
 function MessageRow({ message }: { message: ChatMessage }) {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const isUser = message.role === "user";
   const actions = (message.actions ?? []).filter((a) => a.href && a.label);
   const sources = message.sources ?? [];
@@ -750,7 +750,7 @@ function MessageRow({ message }: { message: ChatMessage }) {
 
       {message.createdAt && (
         <p className={cn("text-2xs text-muted-foreground/70", isUser ? "pr-1" : "pl-1")}>
-          {relativeTime(message.createdAt)}
+          {relativeTime(message.createdAt, locale)}
         </p>
       )}
       {!isUser && (
