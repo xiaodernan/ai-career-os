@@ -236,6 +236,41 @@ async def test_a_model_failure_after_tools_ran_answers_from_what_they_returned(e
         "a degraded turn must be distinguishable from a normal one on the run record"
 
 
+async def test_a_degraded_reply_follows_the_language_the_user_wrote_in(env, monkeypatch):
+    """No model is left to mirror the user's language, so the one assembled reply
+    has to pick it. The step-budget instruction the finalize path appends is
+    English, which is why the fallback reads the *first* user message: taking the
+    last one would answer a Chinese request in English."""
+    state = {"n": 0}
+
+    async def script(req, **kw):
+        state["n"] += 1
+        if state["n"] == 1:
+            return _resp(tool_calls=[ToolCall(id="c1", name="search_jobs",
+                                              arguments={"query": "java"})])
+        raise TimeoutError("finalize timed out")
+
+    async def fake_search(user_id, **kw):
+        return {"jobs": []}
+
+    monkeypatch.setattr(orchestrator.ai, "ask", script)
+    monkeypatch.setattr(TOOL_INDEX["search_jobs"], "handler", fake_search)
+    monkeypatch.setattr(orchestrator, "MAX_STEPS", 1)
+
+    out = await orchestrator.career_turn(
+        user_id="u1",
+        message="帮我找 Java 岗位",
+        # A previous English turn: reading the list forwards would answer this
+        # Chinese request in English.
+        history=[{"role": "user", "content": "find me english jobs"},
+                 {"role": "assistant", "content": "Here are three."}],
+        run_id="r14")
+
+    assert "助手" in out.answer and "请稍后重试" in out.answer
+    assert "The assistant could not finish" not in out.answer
+    assert "search_jobs" in out.answer, "the completed steps still have to be named"
+
+
 async def test_a_model_failure_before_any_tool_still_raises(env, monkeypatch):
     """With nothing gathered there is no answer to fall back on, and a silent
     'please retry' would hide a provider that is down for every turn."""

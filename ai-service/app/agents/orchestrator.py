@@ -275,7 +275,34 @@ def _derive_actions(out: Outcome) -> None:
             add({"kind": "open_offers", "label": "Open the offers workbench"})
 
 
-def _fallback_answer(out: Outcome, error: Exception) -> str:
+_STEP_BUDGET_INSTRUCTION = "Step budget reached."
+
+
+def _user_text(messages: list[LLMMessage]) -> str:
+    """The turn's own request, for a fallback that has no model to translate it.
+
+    Read backwards and skip the instruction the finalize path appends: it is
+    English regardless of the user, and it is always the last user message in
+    the list. Forward from the start would find a *previous* turn's message
+    whenever the request carried history, which is not what the user just wrote.
+    """
+    for message in reversed(messages):
+        if message.role == "user" and not (message.content or "").startswith(
+                _STEP_BUDGET_INSTRUCTION):
+            return message.content or ""
+    return ""
+
+
+def _speaks_chinese(text: str) -> bool:
+    """Whether a message is written in Chinese, for the one reply no model composes.
+
+    Every other user-facing string in a turn is composed by the model, which mirrors
+    the user's language on its own. This fallback is the exception, so it has to pick.
+    """
+    return any("\u4e00" <= ch <= "\u9fff" for ch in (text or ""))
+
+
+def _fallback_answer(out: Outcome, error: Exception, user_text: str = "") -> str:
     """A grounded reply assembled without the model, used when a call fails mid-turn.
 
     By the time a step or the finalize call fails, the turn has already run tools and
@@ -283,14 +310,24 @@ def _fallback_answer(out: Outcome, error: Exception) -> str:
     would discard a job list, a match score or a gap report the user can still act on.
     The text says plainly that the model was unavailable, so a degraded turn is never
     mistaken for a normal answer -- and the degradation is traced by the caller.
+
+    It follows the user's language because no model is left to translate it.
     """
-    lines = ["The assistant could not finish composing a reply just now "
-             f"({type(error).__name__})."]
     used = list(dict.fromkeys(out.tools_used))
-    if used:
-        lines.append("These steps did complete: " + ", ".join(used) + ".")
     kinds = list(dict.fromkeys(a.get("type", "") for a in out.artifacts
                                if isinstance(a, dict) and a.get("type")))
+    name = type(error).__name__
+    if _speaks_chinese(user_text):
+        lines = [f"助手刚才没能把回答写完（{name}）。"]
+        if used:
+            lines.append("以下步骤已经完成：" + "、".join(used) + "。")
+        if kinds:
+            lines.append("结果已附在下方（" + "、".join(kinds) + "）。")
+        lines.append("请稍后重试。")
+        return "\n\n".join(lines)
+    lines = [f"The assistant could not finish composing a reply just now ({name})."]
+    if used:
+        lines.append("These steps did complete: " + ", ".join(used) + ".")
     if kinds:
         lines.append("Their results are attached (" + ", ".join(kinds) + ").")
     lines.append("Please retry in a moment.")
@@ -383,7 +420,7 @@ async def _run_loop(*, user_id: str, messages: list[LLMMessage], tools: list[Too
             log.warning("model call failed after %d tool(s) for %s: %s",
                         len(out.tools_used), agent, e)
             await _trace_degraded(run_id, agent, "step_failed", e, out)
-            return _fallback_answer(out, e)
+            return _fallback_answer(out, e, _user_text(messages))
         if not resp.tool_calls:
             return resp.text
         messages.append(LLMMessage("assistant", resp.text, tool_calls=resp.tool_calls))
@@ -441,7 +478,7 @@ async def _run_loop(*, user_id: str, messages: list[LLMMessage], tools: list[Too
             messages.append(LLMMessage("tool", _tool_result_text(result),
                                        tool_call_id=tc.id, name=tc.name))
     # step budget exhausted — force a grounded summary
-    messages.append(LLMMessage("user", "Step budget reached. Summarize what the "
+    messages.append(LLMMessage("user", _STEP_BUDGET_INSTRUCTION + " Summarize what the "
                                        "tool results above already establish."))
     try:
         resp = await _ask(LLMRequest(messages=messages, temperature=0.3, max_tokens=1200),
@@ -452,7 +489,7 @@ async def _run_loop(*, user_id: str, messages: list[LLMMessage], tools: list[Too
             raise
         log.warning("finalize call failed for %s: %s", agent, e)
         await _trace_degraded(run_id, agent, "finalize_failed", e, out)
-        return _fallback_answer(out, e)
+        return _fallback_answer(out, e, _user_text(messages))
 
 
 async def career_turn(*, user_id: str, message: str, history: list[dict] | None = None,
