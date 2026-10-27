@@ -12,6 +12,7 @@ import { BarChart, ShareChart } from "@/components/common/bar-chart";
 import { LoadingListSkeleton } from "@/components/common/loading-skeletons";
 import { useInsightDigest, usePipelineFunnel, useResponseRate } from "@/lib/hooks/analytics";
 import { useLocale } from "@/lib/i18n/locale-context";
+import { stageLabel } from "@/lib/pipeline";
 import { formatNumber } from "@/lib/format";
 
 /** A 0–1 rate as a percent string. "No data" is an em dash, not a zero. */
@@ -100,7 +101,7 @@ export default function AnalysisPage() {
               {Object.keys(data.stageCounts ?? {}).length > 0 ? (
                 <ShareChart
                   data={Object.entries(data.stageCounts ?? {}).map(([stage, count]) => ({
-                    label: stage.replace(/_/g, " "),
+                    label: stageLabel(t, stage),
                     value: count,
                     detail: `${count}`,
                     tone:
@@ -128,10 +129,10 @@ export default function AnalysisPage() {
             <CardContent>
               {(funnel.data?.pipeline?.length ?? 0) > 0 ? (
                 <BarChart
-                  data={funnel.data!.pipeline!.map((stage, i) => ({
-                    label: stage.stage?.replace(/_/g, " ") ?? `Stage ${i + 1}`,
+                  data={funnel.data!.pipeline!.map((stage) => ({
+                    label: stageLabel(t, stage.stage ?? ""),
                     value: stage.count ?? 0,
-                    detail: `${percent(stage.conversionFromApplied)} of applied`,
+                    detail: `${percent(stage.conversionFromApplied)} ${t("analysis.ofApplied")}`,
                     // The last stage is the one the search is for, so it reads
                     // green; the ones before it are the funnel's own colour.
                     tone:
@@ -197,7 +198,7 @@ export default function AnalysisPage() {
                       <div className="min-w-0">
                         <p className="truncate text-sm font-medium">{s.title}</p>
                         <p className="text-xs text-muted-foreground">
-                          {s.company ?? "—"} · {s.status}
+                          {s.company ?? "—"} · {s.status ? stageLabel(t, s.status) : "—"}
                         </p>
                       </div>
                       <Badge variant="warning" className="shrink-0">
