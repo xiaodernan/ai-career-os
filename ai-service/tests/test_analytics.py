@@ -296,7 +296,7 @@ def test_insight_digest_echoes_optional_composition():
 def test_insight_digest_empty_signals():
     d = A.insight_digest([], now=NOW)
     assert d["totalApplications"] == 0
-    assert any("empty" in s.lower() for s in d["signals"])
+    assert any("漏斗是空的" in s for s in d["signals"])
 
 
 # ---------------- 15.3 the stall clock only counts time that has passed ----------------
@@ -315,7 +315,7 @@ def test_a_row_stamped_only_in_the_future_is_not_aged_as_silence():
 
     assert d["stalled"] == []
     assert d["stalledCount"] == 0
-    assert not any("gone quiet" in s for s in d["signals"])
+    assert not any("没有动静" in s for s in d["signals"])
 
 
 def test_a_future_stamp_does_not_hide_a_row_that_really_did_go_quiet():

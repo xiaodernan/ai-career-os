@@ -327,13 +327,13 @@ def insight_digest(applications: list[dict], *, now: datetime | None = None,
 
     signals: list[str] = []
     if funnel["appliedCount"] == 0:
-        signals.append("No submitted applications yet -- the funnel is empty.")
+        signals.append("还没有投递记录——漏斗是空的。")
     elif rates["responseRate"] == 0.0:
-        signals.append("No replies recorded; check that application statuses are kept current.")
+        signals.append("还没有回复记录；请检查投递状态是否及时更新。")
     if stalled:
-        signals.append(f"{len(stalled)} application(s) have gone quiet past {stale_days} days.")
+        signals.append(f"{len(stalled)} 个投递已超过 {stale_days} 天没有动静。")
     if rates["offerRate"] and rates["offerRate"] > 0:
-        signals.append(f"Offer rate is {round(rates['offerRate'] * 100)}% of submitted applications.")
+        signals.append(f"录取率为投递量的 {round(rates['offerRate'] * 100)}%。")
 
     out: dict = {
         "generatedAt": ref.isoformat(),

@@ -587,9 +587,9 @@ async def response_rate_ep(req: ResponseRateReq, ctx: Ctx = Depends(require_inte
 
 class InsightDigestReq(BaseModel):
     """The digest's input. `applications` is optional because an account with no
-    applications is a real state, not an error: the engine then answers "the
-    funnel is empty", which is the honest digest for a workspace that has not
-    started. A required list would make the first run a 422."""
+    applications is a real state, not an error: the engine then answers
+    "还没有投递记录——漏斗是空的。", which is the honest digest for a workspace that
+    has not started. A required list would make the first run a 422."""
     applications: list[ApplicationInput] = Field(default_factory=list)
     stale_days: int = Field(default=14, ge=1, le=120)
     growth_deltas: list[dict] | None = None

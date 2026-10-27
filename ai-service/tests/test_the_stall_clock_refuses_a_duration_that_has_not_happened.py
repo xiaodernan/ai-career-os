@@ -341,7 +341,7 @@ def test_the_route_answers_a_future_row_without_an_age():
              stale_days=14)
     assert d["stalled"] == [] and d["stalledCount"] == 0, (
         f"the route aged a submission that has not happened yet: {d['stalled']}")
-    assert not any("gone quiet" in s for s in d["signals"]), d["signals"]
+    assert not any("没有动静" in s for s in d["signals"]), d["signals"]
     # the row is still an application; only its age is refused
     assert d["totalApplications"] == 1 and d["stageCounts"].get("applied") == 1
 
