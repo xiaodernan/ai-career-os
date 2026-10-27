@@ -36,7 +36,15 @@ public abstract class AbstractIntegrationTest {
     private static final String PG_ADMIN_URL = "jdbc:postgresql://localhost:5432/postgres";
     private static final String PG_IT_URL = "jdbc:postgresql://localhost:5432/career_os_it";
     private static final String PG_USER = "career_os";
-    private static final String PG_PASS = "dev_pg_pass_9f3k";
+    /**
+     * The careeros-postgres containers carry different passwords per machine: this
+     * machine's was initialized before the compose default settled, while the
+     * nightly's comes up fresh with the compose default (`career_os_dev_password`).
+     * CAREEROS_IT_PG_PASS follows the machine -- ci.yml's IT step sets it -- and the
+     * fallback is this machine's original contract.
+     */
+    private static final String PG_PASS =
+            System.getenv().getOrDefault("CAREEROS_IT_PG_PASS", "dev_pg_pass_9f3k");
     private static final String REDIS_CONTAINER = "careeros-it-redis";
     private static final int REDIS_PORT = 16399;
 

@@ -148,6 +148,11 @@ jobs:
 
       - name: Backend integration tests (*IT)
         working-directory: backend
+        env:
+          # The nightly's postgres initializes fresh with the compose default; the
+          # IT bootstrap follows the machine's container through this override (its
+          # fallback is the dev machine's older contract).
+          CAREEROS_IT_PG_PASS: career_os_dev_password
         run: ./mvnw -q -B test -Dtest='*IT' || mvn -q -B test -Dtest='*IT'
 
       - name: ai-service install
