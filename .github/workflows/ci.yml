@@ -198,6 +198,19 @@ jobs:
           PGPASSWORD=career_os_dev_password psql -h 127.0.0.1 -p 5432 -U career_os -d career_os \
             -v dim=1536 -f ai-service/ops/vector_index.sql
 
+      - name: Seed the eval corpus (the golden document)
+        working-directory: ai-service
+        env:
+          # The golden set is tuned to scripts/eval-corpus.json and filters
+          # kinds=["resume"]; no backend boots here to register the eval user,
+          # so the seeding script owns that persona too. Without this step the
+          # eval runner refuses the run with "0 of N cases scored".
+          LLM_PROVIDER: mock
+          EMBEDDING_PROVIDER: hash
+          DATABASE_URL: postgresql://career_os:career_os_dev_password@127.0.0.1:5432/career_os
+          REDIS_URL: redis://127.0.0.1:16380/0
+        run: python -m app.ops.seed_eval_corpus --user-id 00000000-0000-0000-0000-000000000000 --corpus ../scripts/eval-corpus.json
+
       - name: RAG + agent eval harnesses (mock/hash, seeded corpus)
         working-directory: ai-service
         env:

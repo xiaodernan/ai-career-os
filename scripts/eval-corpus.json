@@ -1,0 +1,13 @@
+{
+  "_comment": [
+    "The RAG eval's golden set (app/eval/dataset.py) is tuned to this document: every",
+    "case filters kinds=[\"resume\"], so the corpus must be ingested with kind=resume,",
+    "and every case's keywords must match a chunk of this text. scripts/smoke-fullstack.sh",
+    "carries its own copy of the same wording (it adds refId, which binds the source to",
+    "the journey's resume row) -- if the two drift, the nightly's eval reds loudly with",
+    "\"0 of N cases scored\" rather than passing on an absent corpus."
+  ],
+  "kind": "resume",
+  "title": "Main Resume",
+  "text": "Senior backend engineer with five years building 分布式 微服务 order and payment platforms in Java, Spring Boot and Spring Cloud. Cut p99 latency by 40 per cent and served 高并发 并发 peaks of 12k QPS with Redis caching, 缓存穿透 caching-penetration guards and 消息队列 Kafka RabbitMQ event streaming. 数据库 MySQL 索引 优化: rewrote slow queries, added composite indexes and moved reporting to PostgreSQL. Deployed services on Kubernetes with Docker, autoscaling and Grafana alerts, and tuned scaling during campaigns. Spring Boot configuration security: JWT authentication, secret rotation, and the 数据脱敏 隐私 PrivacyShield project that masks PII before it reaches a log. Designed a RAG pipeline over company docs with PostgreSQL and pgvector. 教育背景: Zhejiang University, Bachelor of Engineering in Computer Science, 2019. 实习经历: an Internship on the payments team before joining full time. Java Python Elasticsearch Kafka RabbitMQ Kubernetes Docker RAG 分布式 微服务 并发 concurrency 索引 优化 缓存穿透 scaling messaging security."
+}
