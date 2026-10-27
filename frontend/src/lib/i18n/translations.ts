@@ -1007,6 +1007,7 @@ export const translations = {
     errorCodes: {
       ABORTED: "The upload was cancelled.",
 
+      AI_SERVICE_BAD_REQUEST: "The AI service returned a bad request.",
       AI_SERVICE_CONFLICT: "The AI service is not ready yet.",
 
       AI_SERVICE_EMPTY_RESPONSE: "The AI service answered with nothing.",
@@ -2834,6 +2835,8 @@ export const translations = {
       ABORTED: "上传已取消。",
 
       AI_SERVICE_CONFLICT: "AI 服务还没准备好。",
+
+      AI_SERVICE_BAD_REQUEST: "AI 服务请求错误",
 
       AI_SERVICE_EMPTY_RESPONSE: "AI 服务返回了空内容。",
 
