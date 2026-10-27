@@ -140,6 +140,28 @@ def _shrink_result(result: dict, cap: int) -> str:
     return json.dumps(trimmed, ensure_ascii=False, default=str)
 
 
+TRACE_ARG_CHARS = 400
+
+
+def _trace_args(args: dict) -> dict:
+    """Tool arguments as they should be *recorded*, not as they were passed.
+
+    A resume or a pasted JD runs to thousands of characters, and `agent_traces.payload`
+    is jsonb: every such call stored the whole document again, once per step, for every
+    run -- and a resume is personal content that does not need a second home. The trace
+    answers "what was this tool told", which the first few hundred characters answer;
+    the rest is bulk. Only the *record* is shortened: the handler still receives `args`
+    exactly as the model sent it.
+    """
+    out: dict[str, Any] = {}
+    for key, value in (args or {}).items():
+        if isinstance(value, str) and len(value) > TRACE_ARG_CHARS:
+            out[key] = f"{value[:TRACE_ARG_CHARS]}...({len(value)} chars)"
+        else:
+            out[key] = value
+    return out
+
+
 def _tool_result_text(result: Any) -> str:
     try:
         s = json.dumps(result, ensure_ascii=False, default=str)
@@ -295,7 +317,7 @@ async def _exec_tool(tool: Tool, user_id: str, args: dict, *, run_id: str | None
     out.tool_calls.append({"tool": tool.name, "args": args})
     _emit(task_id, "status", {"agent": agent, "step": f"Calling {tool.name}"})
     await observability.trace(run_id, "tool_call", agent,
-                              {"tool": tool.name, "args": args})
+                              {"tool": tool.name, "args": _trace_args(args)})
     try:
         # Validate against the tool's own schema before the handler runs: a missing
         # required property or an unknown one gets a message that names it (and the

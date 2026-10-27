@@ -500,6 +500,45 @@ def test_a_result_that_already_fits_is_returned_untouched():
     assert json.loads(orchestrator._tool_result_text(small)) == small
 
 
+def test_trace_args_shorten_a_long_document_but_keep_short_values():
+    out = orchestrator._trace_args({"text": "r" * 5000, "job_id": "j1", "n": 3})
+    assert out["job_id"] == "j1" and out["n"] == 3
+    assert out["text"].endswith("(5000 chars)")
+    assert len(out["text"]) < 500
+
+
+async def test_the_handler_receives_the_full_argument_even_though_the_trace_does_not(
+        env, monkeypatch):
+    """Shortening the record must not shorten the call.
+
+    A resume is personal content that should not be duplicated into `agent_traces`,
+    but the parser needs every character of it -- so the cut belongs to the trace only.
+    """
+    traces, _ = env
+    full = "resume line\n" * 800
+    seen: list[str] = []
+
+    async def script(req, **kw):
+        if any(m.role == "tool" for m in req.messages):
+            return _resp(text="done")
+        return _resp(tool_calls=[ToolCall(id="c1", name="parse_resume",
+                                          arguments={"text": full})])
+
+    async def fake_parse(user_id, *, text):
+        seen.append(text)
+        return {"parsed": {}, "score": {}}
+
+    monkeypatch.setattr(orchestrator.ai, "ask", script)
+    monkeypatch.setattr(TOOL_INDEX["parse_resume"], "handler", fake_parse)
+
+    await orchestrator.career_turn(user_id="u1", message="parse this", run_id="r15")
+
+    assert seen == [full], "the handler must get every character"
+    traced = [p for k, _a, p in traces if k == "tool_call"][0]
+    assert traced["args"]["text"].endswith(f"({len(full)} chars)")
+    assert len(traced["args"]["text"]) < 500
+
+
 def test_emit_publishes_only_when_task_id_present(monkeypatch):
     calls: list[tuple] = []
     monkeypatch.setattr(orchestrator.taskbus, "publish", lambda *a: calls.append(a))
