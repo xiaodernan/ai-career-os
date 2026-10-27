@@ -3245,10 +3245,14 @@ def test_both_frame_parsers_default_a_nameless_frame_to_the_same_event_name():
         # 1258 rather than 1212 since the growth engines' types were rewritten to
         # the engines' own key spellings (#252) -- the block above the trace-step
         # union grew by 46 lines and the union itself did not change.
-        # 1251 is c9d5947's own committed position: the pin it wrote (1259) never
-        # matched the types.ts the same commit shipped. The worktree's export edit
-        # moves the union again; re-aim lands with that edit.
-        ("types.ts", 1251, "kind:"),
+        # 1259 is c9d5947's committed position and types.ts has not moved since.
+        # The line here is the census's token-match line -- the `| "message"` arm --
+        # not the `kind:` head's line (1251); the head travels in the `head` column.
+        # 129c5a7 briefly re-aimed to 1251 after a red read off the worktree, where a
+        # concurrent types.ts edit had moved the union: a red on the shared worktree
+        # is that edit, not this pin. When a types.ts edit lands above the union,
+        # the re-aim lands with that edit.
+        ("types.ts", 1259, "kind:"),
         ('use-sse.ts', 15, 'event: SSEEventName | "message" | "progress" | "ping";'),
     ], (f"{[(r['file'], r['line'], r['head']) for r in by_role['type-union-member']]}: three type unions "
         "spell `message`, and only one of them names a frame -- the other two are the trace step kind "
