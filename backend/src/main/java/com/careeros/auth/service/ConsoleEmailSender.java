@@ -2,26 +2,23 @@ package com.careeros.auth.service;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
 
 /**
- * Dev-only email transport: logs the message instead of sending it. Replace per
- * EmailSender contract.
+ * Dev-only email transport: logs the message instead of sending it. `EmailConfig`
+ * builds it when {@code app.email.provider} is `console`, the shipped default.
  *
  * <p>The body is withheld unless {@code app.email.console.log-body} is on: a
  * reset mail carries a link with a usable token, and a token belongs in a log
  * file nobody meant to trust only while someone is actively walking the flow.
  * The dev compose turns the flag on; every other stack keeps the default off.
  */
-@Component
 public class ConsoleEmailSender implements EmailSender {
 
     private static final Logger log = LoggerFactory.getLogger(ConsoleEmailSender.class);
 
     private final boolean logBody;
 
-    public ConsoleEmailSender(@Value("${app.email.console.log-body:false}") boolean logBody) {
+    public ConsoleEmailSender(boolean logBody) {
         this.logBody = logBody;
     }
 

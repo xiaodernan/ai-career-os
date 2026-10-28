@@ -47,6 +47,18 @@ app:
     allowed-origins: ${APP_CORS_ORIGINS:http://localhost:3000}
   web:
     base-url: ${APP_WEB_BASE_URL:http://localhost:3000}
+  # console logs each letter instead of sending it; smtp hands it to a relay and
+  # refuses to start without a host and a from address the relay accepts.
+  email:
+    provider: ${APP_EMAIL_PROVIDER:console}
+    from: ${APP_EMAIL_FROM:}
+    smtp:
+      host: ${APP_EMAIL_SMTP_HOST:}
+      port: ${APP_EMAIL_SMTP_PORT:587}
+      username: ${APP_EMAIL_SMTP_USERNAME:}
+      password: ${APP_EMAIL_SMTP_PASSWORD:}
+      starttls: ${APP_EMAIL_SMTP_STARTTLS:true}
+      ssl: ${APP_EMAIL_SMTP_SSL:false}
   jwt:
     secret: ${JWT_SECRET:dev-only-secret-please-change-me-0123456789abcdef0123456789abcdef}
     access-ttl-minutes: ${JWT_ACCESS_TTL_MINUTES:15}

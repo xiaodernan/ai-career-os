@@ -46,6 +46,9 @@ curl -f http://localhost:3000
 - [ ] `JWT_SECRET` is >= 64 random characters
 - [ ] `APP_ENV=prod` (blocks mock LLM provider)
 - [ ] Real LLM/embedding provider keys configured (not `mock`/`hash`)
+- [ ] `APP_EMAIL_PROVIDER=smtp` with a reachable relay and a from address it
+  accepts — the console transport logs resets instead of mailing them (see
+  [Email](#email))
 - [ ] Reverse proxy (nginx/Traefik/Caddy) terminates TLS and forwards to:
   - Frontend: `http://frontend:3000`
   - Backend API: `http://backend:8080`
@@ -339,6 +342,27 @@ Two offline-only escape hatches for tests and first-run dev: `mock` LLM and
 `APP_ENV=prod`** (see `app/main.py`), and `hash` embeddings give limited
 retrieval quality — use a real embedding provider for anything beyond a smoke
 test.
+
+## Email
+
+Outbound mail (password resets, and the weekly letter once it is wired) leaves
+through the transport `APP_EMAIL_PROVIDER` names:
+
+- `console` (the default) logs each letter instead of sending it. The body — a
+  reset link carrying a usable token — is withheld unless
+  `APP_EMAIL_CONSOLE_LOGBODY=true`; the development compose sets it so the flow
+  can be walked by hand.
+- `smtp` hands the letter to the relay at `APP_EMAIL_SMTP_HOST` /
+  `APP_EMAIL_SMTP_PORT` (587 by default), authenticating with
+  `APP_EMAIL_SMTP_USERNAME` / `APP_EMAIL_SMTP_PASSWORD` when a username is set.
+  On 587 set `APP_EMAIL_SMTP_STARTTLS=true` (the default); on 465 set
+  `APP_EMAIL_SMTP_SSL=true` instead — exactly one of the two, and the boot
+  refuses both. `APP_EMAIL_FROM` is the address the relay sends as.
+
+`smtp` refuses to boot without a host and a from address, and every SMTP call is
+capped at 5 seconds, so a relay that is down fails the request that needed the
+mail instead of holding it open. A refused letter is an error the caller sees: a
+reset mail silently dropped is worse than a retry.
 
 ## Health & first data
 

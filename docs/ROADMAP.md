@@ -889,8 +889,40 @@ keeps the answers, and then starts asking the OS to act on them.
   writer is the one job, whose retries are sequential. 2 backend tests (the retry
   answered with the stored id and no save; a later end from the same start is
   another night and moves the gauge), the nightly service at 17 tests, the backend
-  unit suite at 701, `API.md` and the deployment guide stating the retry answer, no
+  unit suite at 632, `API.md` and the deployment guide stating the retry answer, no
   frontend or census movement.)
+
+## Epic 21 — The Letters Leave the Building
+
+Epic 20 taught the install to keep its own verdict and hand it to a pager. The
+user-facing half of "proactive" still ended at a screen: the weekly letter was
+composed and stored with an email-ready payload, and the password-reset mail was
+printed by the only transport that shipped. This epic gives the mail port a relay
+that can leave the machine, and then lets the letter ride it.
+
+- [x] **21.1** The mail port gains a transport that can leave the machine, and the
+  configuration that proves which one is armed.
+  (The `EmailSender` port shipped with a console implementation and a javadoc asking
+  production to write an SMTP one; every reset mail in a real deployment went to a
+  log line. `app.email.provider` now chooses the transport in one `EmailConfig`
+  bean: `console` stays the default and keeps the reset link out of the logs unless
+  the dev toggle is on, and `smtp` hands the plain-text letter to the relay named by
+  `app.email.smtp.*` — host, port (587), an optional username/password pair that
+  also arms `mail.smtp.auth`, STARTTLS on 587 or SSL from the first byte on 465,
+  and `app.email.from` as the sender. The relay is built with 5-second connect,
+  read and write ceilings, so a dead relay fails the request that needed the mail
+  instead of holding it open; `smtp` refuses to boot without a host or a from
+  address, and refuses STARTTLS and SSL together rather than guessing. A refused
+  letter is thrown, not logged away, because the reset flow believes a send that
+  returns. An unknown provider names itself instead of leaving the context with no
+  mail bean. The eight new leaves join the `app:` block's census, re-pinned at 24
+  leaves and 21 interpolated, with both env examples declaring the variables and
+  the deployment guide explaining the console/SMTP split. The knob gate's
+  client-cap reader follows the upload refusal into the English catalogue, where
+  the i18n sweep moved it, so the gate is green on main again. 10 backend tests (2
+  sender, 8 configuration), the backend unit suite at 642 (unit classes only; the
+  ITs need Docker and are not counted here), no frontend or copy-census
+  movement.)
 
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
