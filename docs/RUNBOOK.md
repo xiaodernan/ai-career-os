@@ -405,3 +405,44 @@ profile that excludes it would never fire).
 owns that), not a slow sweep (the pass is bounded by the transport's five-second cap per
 account), and not an empty inbox (a pass with no letters still heartbeats). It means the
 promise "every morning the inbox can leave" stopped being kept.
+
+## The Monday letter was never written
+
+**What the alert looks like.** `CareerOSDigestSweepStale` fires when
+`time() - careeros_digest_last_sweep_timestamp > 691200`: no completed Monday compose in
+eight days. The gauge is the weekly clock's heartbeat, moved by
+`WeeklyDigestScheduler.publish()` after the compose pass returns — with or without
+letters — and written by
+`backend/src/main/java/com/careeros/report/service/WeeklyDigestDeliveryMetrics.java`.
+Eight days is the seven between Mondays plus one day of grace, so a Monday that ran a
+little late does not page, and a Monday that never ran pages the next day. The delivered
+marker cannot stand in for it: a week with no applications writes no letter, and that is
+healthy. The 09:05 retry clock is a different promise and does not move this gauge. A
+fresh process starts the heartbeat at boot.
+
+**What to read.** The backend log always prints a compose line when the clock fires:
+"weekly digest composed N letter(s) for the week of YYYY-MM-DD", N may be zero. If the
+line is missing for the last Monday, the clock did not fire. Then check
+`careeros.digest.cron` (default `0 0 8 * * MON`) in the deployment's environment, whether
+the backend was running at that hour, and whether scheduling is enabled at all. If the
+line is there but the alert is up, the pass wrote a heartbeat and the gauge you are
+reading is older than the log — re-read the scrape. The rows in `weekly_digests` are the
+evidence of what was written for each week.
+
+**What to do, in order.**
+
+1. Fix what stopped the clock: correct `careeros.digest.cron` and restart the backend so
+   the schedule is re-read, or bring the backend up for the hour. The next Monday
+   composes the week that just ended; the log line is the confirmation.
+2. Accept that the missed week is lost. No route composes an arbitrary past week: the
+   Monday clock always composes the week that just ended, and `POST /digests/run` files
+   the current week for the signed-in account without mailing it. The missed week's
+   numbers are still on the analysis page; its letter will not arrive. Do not try to
+   compose it by editing rows or calling internal endpoints.
+3. Leave the gauge alone. Nothing writes it except a completed compose; moving it by
+   hand would only hide the next missed Monday.
+
+**Why it is not the relay alert.** `CareerOSDigestDeliveryFailing` fires when a letter
+was composed and the transport refused it. This alert fires when no compose finished at
+all. Fix the clock here; fix the relay there. A week that fails both is two separate
+promises, and both sections apply.

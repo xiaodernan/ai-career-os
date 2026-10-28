@@ -1071,6 +1071,27 @@ settled, and the letter is only a pointer to it.
   685 and the integration suite at 69, the alarms/docs gates passing, no frontend or
   copy-census movement.)
 
+- [x] **22.4** The Monday letter has a heartbeat, so a compose clock that stopped is not
+  mistaken for a week where nobody applied.
+  (22.3 gives the morning signal sweep a heartbeat, but the weekly letter's own clock --
+  Monday 08:00 UTC, `careeros.digest.cron` -- had none. Its two meters answer what the
+  transport did with a letter; a compose that never ran writes no letter, so the
+  delivered marker sits still and every dashboard reads "no mail" rather than "no
+  Monday". `WeeklyDigestDeliveryMetrics` now publishes
+  `careeros.digest.last.sweep.timestamp`, moved by `WeeklyDigestScheduler.publish()`
+  only after `composeWeek` returns -- a sweep that threw never advances it, and a quiet
+  Monday with nothing to write still does. The 09:05 retry deliberately does not move it:
+  the heartbeat answers whether the week was written, and a retry that delivered an old
+  letter must not mask two missed Mondays. The marker starts at boot. `alerts.yml` gains
+  `CareerOSDigestSweepStale` at 691200 seconds (eight days: one weekly period plus a day
+  of grace, so a missed Monday pages the following Tuesday and a merely late run does
+  not), warning; the alarms gate pins the gauge and the rule, and `RUNBOOK.md` gains "The
+  Monday letter was never written", which separates a stopped cron from a delivery
+  failure and records that a missed week cannot be recomposed through any route -- the
+  sweep always writes the week before last. 2 backend tests (1 metrics, 1 scheduler) plus
+  heartbeat assertions, the backend unit suite at 686 and the integration suite at 69,
+  the alarms/docs gates passing, no frontend or copy-census movement.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

@@ -181,3 +181,25 @@ groups:
             enough that its boot time is the only reading. The in-app inbox is unaffected;
             only the mail lags.
           runbook: "docs/RUNBOOK.md#the-morning-sweep-stopped"
+
+      # The weekly letter's own clock, with a window that respects its cadence: the Monday
+      # compose runs once a week, so a silence has to be read in weeks, not hours. 691200 is
+      # eight days -- the seven between Mondays plus a day of grace -- and fires the day after
+      # a Monday that never ran. The delivered marker cannot answer this: a week with no
+      # applications writes no letter and that is healthy; only the compose heartbeat moves on
+      # a quiet Monday. The morning retry is a different promise and does not move it.
+      - alert: CareerOSDigestSweepStale
+        expr: time() - careeros_digest_last_sweep_timestamp > 691200
+        for: 10m
+        labels:
+          service: career-os-backend
+          severity: warning
+        annotations:
+          summary: "No Monday digest compose has finished in over eight days"
+          description: >-
+            The last completed Monday compose was {{ $value | humanizeDuration }} ago, so at
+            least one week's letter was never written. Check `careeros.digest.cron` and the
+            backend log for "the weekly digest could not run" or for the compose line that
+            should follow each Monday; a missed week cannot be recomposed through any route,
+            so the job is to make the next Monday happen.
+          runbook: "docs/RUNBOOK.md#the-monday-letter-was-never-written"

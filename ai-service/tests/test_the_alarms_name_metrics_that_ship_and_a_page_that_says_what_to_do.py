@@ -65,6 +65,7 @@ METRICS = {
     "careeros_nightly_last_finished_timestamp": (NIGHTLY_VERDICT_METRICS, "careeros.nightly.last.finished.timestamp"),
     "careeros_nightly_consecutive_failures": (NIGHTLY_VERDICT_METRICS, "careeros.nightly.consecutive.failures"),
     "careeros_digest_delivery_total": (DIGEST_METRICS, "careeros.digest.delivery"),
+    "careeros_digest_last_sweep_timestamp": (DIGEST_METRICS, "careeros.digest.last.sweep.timestamp"),
     "careeros_signals_delivery_total": (SIGNAL_METRICS, "careeros.signals.delivery"),
     "careeros_signals_last_sweep_timestamp": (SIGNAL_METRICS, "careeros.signals.last.sweep.timestamp"),
 }
@@ -76,6 +77,7 @@ ALERT_NAMES = frozenset({
     "CareerOSNightlyVerificationFailing",
     "CareerOSAiBudgetBurn",
     "CareerOSDigestDeliveryFailing",
+    "CareerOSDigestSweepStale",
     "CareerOSSignalMailFailing",
     "CareerOSSignalSweepStale",
 })

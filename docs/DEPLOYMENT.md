@@ -383,7 +383,11 @@ development machine. A letter is written in the account's own language
 browser, so the cookie cannot speak for the reader, and a letter freezes its
 language with its payload — a retry re-sends the stored week as it was written
 rather than re-composing it in whatever the account speaks today. Nothing has to
-be configured for this; both languages ship in the image.
+be configured for this; both languages ship in the image. The Monday clock has its own
+heartbeat (22.4): `careeros.digest.last.sweep.timestamp` moves after every completed
+compose, with or without letters, and `CareerOSDigestSweepStale` pages at eight days — so
+a wrong `careeros.digest.cron` cannot pass for a quiet week
+(`docs/RUNBOOK.md#the-monday-letter-was-never-written`).
 
 The inbox's signals ride the same transport (22.1). Every morning at 07:30 UTC a
 sweep asks each account what is waiting — unread in the app and never mailed — and
