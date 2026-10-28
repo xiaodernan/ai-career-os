@@ -556,6 +556,44 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   equivalents per step and the three offline dry-run CLIs. Frontend: `app/(marketing)/page.tsx`
   — hero, features, trust, CTA sections.)
 
+## Epic 19 — Proactive Career OS (the next horizon)
+
+The product today answers when asked. The OS that the README promises works
+while the user sleeps: it watches the market, remembers what the user is
+looking for, and says so before they ask. These tasks are the first layer of
+that; each ships wired to the real API and UI, like every epic before it.
+
+- [ ] **19.1** Saved searches: a named criterion set (role, location, remote,
+  salary floor, skills) the user can keep, list and delete — the thing an alert
+  is about. Backend CRUD + `V__saved_searches` + the `/jobs` surface's "save
+  this search" affordance.
+- [ ] **19.2** Scheduled ingestion: a nightly per-source pull that reuses
+  `plan-ingest` (14.3) and writes the create/update/close plan, so a feed is
+  swept without the user pasting it. The scheduler is the backend's, the plan
+  is the engine's, and a failed pull is a recorded run rather than a silent
+  night.
+- [ ] **19.3** Notification center: an in-app inbox for the events the product
+  already computes — a saved search's new high-match jobs, follow-ups due
+  (11.3), stalled applications (15.3), a finished nightly, an eval regression
+  (16.1). Read/unread, dismiss, deep link to the row.
+- [ ] **19.4** Weekly digest delivery: the 15.3 digest delivered on a cadence
+  (in-app, with an email-ready payload), so the week's signals do not require
+  opening the app.
+- [ ] **19.5** Tailored-resume print view: a single version rendered through
+  the export renderer's print layout and locale words, reachable from the
+  tailoring surface — "tailor → print/PDF" without exporting the whole bundle.
+- [ ] **19.6** Voice mock interview: an STT/TTS provider seam plus record/play
+  on the interview page. The scoring, difficulty ladder and depth trajectory
+  stay the text interview's; only the input and output become voice.
+- [ ] **19.7** Mobile/PWA: an installable shell, an offline shell page, and a
+  responsive audit of the sidebar, the kanban drag and the wide tables.
+- [ ] **19.8** Real board connectors: Greenhouse / Lever public board APIs
+  behind the existing `Connector` protocol, with the RSS/JSON paste path kept
+  as the offline fallback.
+- [ ] **19.9** Delivery hardening: nightly backups plus a restore drill,
+  metrics/alerts for the scheduler and the AI budget, and a runbook that says
+  what a failed night looks like.
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
