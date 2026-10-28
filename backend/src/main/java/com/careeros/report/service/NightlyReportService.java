@@ -13,6 +13,7 @@ import com.careeros.report.repository.NightlyReportRepository;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -56,6 +57,13 @@ public class NightlyReportService {
         this.metrics = metrics;
     }
 
+    /**
+     * One night, recorded once. A retried POST carries the same span -- the workflow's retry
+     * repeats every field -- and is answered with the row the first attempt wrote, so a flaky
+     * connection cannot turn one failed night into two rows and a two-night streak. A re-run is
+     * another attempt with its own timestamps, so it is another row: "the same night" is the
+     * span, not the commit.
+     */
     @Transactional
     public NightlyReportItem record(NightlyReportRequest request) {
         String status = request.status().trim().toLowerCase(Locale.ROOT);
@@ -72,8 +80,15 @@ public class NightlyReportService {
                     "A nightly report summarises at most " + NightlyReportDtos.MAX_SUMMARY_KEYS
                             + " top-level entries");
         }
+        String source = request.sourceOrDefault();
+        Optional<NightlyReport> already = reports.findBySourceAndStartedAtAndFinishedAt(
+                source, request.startedAt(), request.finishedAt());
+        if (already.isPresent()) {
+            metrics.publish(verdict());
+            return NightlyReportItem.of(already.get());
+        }
         NightlyReport row = new NightlyReport();
-        row.setSource(request.sourceOrDefault());
+        row.setSource(source);
         row.setStatus(status);
         row.setCommitSha(request.commitSha());
         row.setRunUrl(request.runUrl());

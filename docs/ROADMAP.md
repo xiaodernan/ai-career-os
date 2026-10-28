@@ -873,6 +873,25 @@ keeps the answers, and then starts asking the OS to act on them.
   (3 service, 4 gauges), the alarm gate at 5 rules and 7 metrics, the runbook at 5
   alarm sections, the copy census still at 135 sources.)
 
+- [x] **20.4** One night is one row: a retried post is answered with the record it
+  already wrote, and the streak cannot count a timeout twice.
+  (20.3's failure alarm counts nightly rows in a row, which made the writer's
+  weakest point matter: the recorder runs under `if: always()` and posts over the
+  network, and a post that times out after the row was saved is answered by a retry
+  with a second row for the same night. The night's identity is its span, not its
+  commit: a re-run starts and finishes at new times and is a distinct attempt, while
+  a retry carries the same source and the same start and finish. `record()` looks
+  that up before it inserts and, when it finds the row, answers it unchanged — same
+  id, no second write — and republishes the verdict so the gauges still reflect what
+  is stored. The dedupe lives in the service rather than behind a unique index on
+  purpose: adding a constraint to a table that may already hold a duplicate would
+  either fail the migration or tempt a delete of history, and the table's only
+  writer is the one job, whose retries are sequential. 2 backend tests (the retry
+  answered with the stored id and no save; a later end from the same start is
+  another night and moves the gauge), the nightly service at 17 tests, the backend
+  unit suite at 701, `API.md` and the deployment guide stating the retry answer, no
+  frontend or census movement.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

@@ -231,6 +231,12 @@ Left unset (forks, dry runs), the recorder builds the record and prints it but p
 nothing, so the job stays green and says the night was not recorded. A set URL whose
 post fails is a red step: keeping the record is the step's whole purpose.
 
+Posting is idempotent on the night, not on the attempt: a retry carries the same
+source and the same start/finish span, and the backend answers it with the row the
+first attempt wrote instead of inserting a second. A night retried after a timeout is
+still one night, so the history does not grow a duplicate that the failure-streak
+alarm would count twice.
+
 ---
 
 How to bring AI Career OS up locally and what each knob controls. The stack is

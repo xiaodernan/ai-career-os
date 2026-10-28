@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.within;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -24,6 +25,7 @@ import java.time.OffsetDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -122,6 +124,36 @@ class NightlyReportServiceTest {
         NightlyReportItem item = service.record(request("passed", START, END, null, Map.of()));
 
         assertThat(item.steps()).isEmpty();
+    }
+
+    @Test
+    void a_retried_post_is_answered_with_the_row_the_first_attempt_wrote() {
+        NightlyReport stored = night(NightlyReport.STATUS_FAILED, END);
+        when(reports.findBySourceAndStartedAtAndFinishedAt("nightly", START, END))
+                .thenReturn(Optional.of(stored));
+        newestNights(stored);
+
+        NightlyReportItem item = service.record(request("failed", START, END, null, Map.of()));
+
+        assertThat(item.id())
+                .as("the retry answers the stored row, so one failed night cannot become two")
+                .isEqualTo(stored.getId());
+        verify(reports, never()).save(any(NightlyReport.class));
+    }
+
+    @Test
+    void a_span_that_ends_later_is_another_night_even_from_the_same_start() {
+        OffsetDateTime laterEnd = END.plusMinutes(3);
+        when(reports.findBySourceAndStartedAtAndFinishedAt("nightly", START, laterEnd))
+                .thenReturn(Optional.empty());
+        newestNights(night(NightlyReport.STATUS_PASSED, laterEnd));
+
+        NightlyReportItem item = service.record(request("passed", START, laterEnd, null, Map.of()));
+
+        verify(reports).findBySourceAndStartedAtAndFinishedAt("nightly", START, laterEnd);
+        verify(reports).save(any(NightlyReport.class));
+        assertThat(item.finishedAt()).isEqualTo(laterEnd);
+        assertThat(lastFinished()).isEqualTo((double) laterEnd.toEpochSecond());
     }
 
     @Test
