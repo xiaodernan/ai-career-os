@@ -72,7 +72,7 @@ export function useGapAnalysis() {
   return useMutation({
     mutationFn: async (input: Parameters<typeof roleBody>[0]) =>
       (await api.create<unknown>(endpoints.growthGapAnalysis, roleBody(input))) as GapReport,
-    onError: fail("Couldn't analyze the gap."),
+    onError: fail("failures.gapAnalyze"),
   });
 }
 
@@ -81,7 +81,7 @@ export function useReadiness() {
   return useMutation({
     mutationFn: async (input: Parameters<typeof roleBody>[0]) =>
       (await api.create<unknown>(endpoints.growthReadiness, roleBody(input))) as ReadinessVerdict,
-    onError: fail("Couldn't read that role's readiness."),
+    onError: fail("failures.roleReadiness"),
   });
 }
 
@@ -90,7 +90,7 @@ export function useLearningPlan() {
   return useMutation({
     mutationFn: async (input: Parameters<typeof roleBody>[0]) =>
       (await api.create<unknown>(endpoints.growthLearningPlan, roleBody(input))) as LearningPlan,
-    onError: fail("Couldn't build the learning plan."),
+    onError: fail("failures.learningPlan"),
   });
 }
 
@@ -99,7 +99,7 @@ export function useSkillDemand() {
   return useMutation({
     mutationFn: async (input: Parameters<typeof roleBody>[0]) =>
       (await api.create<unknown>(endpoints.growthSkillDemand, roleBody(input))) as SkillDemand,
-    onError: fail("Couldn't read the market demand."),
+    onError: fail("failures.marketDemand"),
   });
 }
 
@@ -108,7 +108,7 @@ export function useLearningPriority() {
   return useMutation({
     mutationFn: async (input: Parameters<typeof roleBody>[0]) =>
       (await api.create<unknown>(endpoints.growthLearningPriority, roleBody(input))) as LearningPriority,
-    onError: fail("Couldn't rank the learning priorities."),
+    onError: fail("failures.priorityRank"),
   });
 }
 
@@ -117,7 +117,7 @@ export function useProgression() {
   return useMutation({
     mutationFn: async (input: Parameters<typeof roleBody>[0]) =>
       (await api.create<unknown>(endpoints.growthProgression, roleBody(input))) as ProgressionPlan,
-    onError: fail("Couldn't plan the progression."),
+    onError: fail("failures.progressionPlan"),
   });
 }
 
@@ -126,7 +126,7 @@ export function useInterviewPrep() {
   return useMutation({
     mutationFn: async (input: Parameters<typeof roleBody>[0]) =>
       (await api.create<unknown>(endpoints.growthInterviewPrep, roleBody(input))) as InterviewPrep,
-    onError: fail("Couldn't build the interview prep."),
+    onError: fail("failures.interviewPrep"),
   });
 }
 
@@ -135,7 +135,7 @@ export function useStoryBank() {
   return useMutation({
     mutationFn: async (input: Parameters<typeof profileBody>[0]) =>
       (await api.create<unknown>(endpoints.growthStoryBank, profileBody(input))) as StoryBank,
-    onError: fail("Couldn't read the story bank."),
+    onError: fail("failures.storyBank"),
   });
 }
 
@@ -144,7 +144,7 @@ export function useRoleSuggestions() {
   return useMutation({
     mutationFn: async (input: Parameters<typeof profileBody>[0]) =>
       (await api.create<unknown>(endpoints.growthRoleSuggestions, profileBody(input))) as RoleSuggestions,
-    onError: fail("Couldn't suggest any roles."),
+    onError: fail("failures.roleSuggest"),
   });
 }
 
@@ -156,7 +156,7 @@ export function useCompanyBrief() {
         company: input.company,
         top: input.top,
       })) as CompanyBrief,
-    onError: fail("Couldn't read the corpus for that company."),
+    onError: fail("failures.companyCorpus"),
   });
 }
 
@@ -178,7 +178,7 @@ export function useSkillProgress() {
         resumeVersionId: input.resumeVersionId,
         previous: input.previous,
       })) as SkillProgress,
-    onError: fail("Couldn't read the skill progress."),
+    onError: fail("failures.skillProgress"),
   });
 }
 
@@ -204,6 +204,6 @@ export function useOutreachDraft() {
         context: input.context,
         resumeVersionId: input.resumeVersionId,
       })) as OutreachDraft,
-    onError: fail("Couldn't draft that message."),
+    onError: fail("failures.messageDraft"),
   });
 }

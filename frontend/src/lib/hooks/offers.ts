@@ -162,7 +162,7 @@ export function useSalaryBenchmark() {
       currency?: string;
     }) =>
       (await api.create<unknown>(endpoints.offerSalaryBenchmark, salaryBody(input))) as SalaryBenchmark,
-    onError: fail("Couldn't benchmark that role."),
+    onError: fail("failures.offerBenchmark"),
   });
 }
 
@@ -177,7 +177,7 @@ export function useNegotiate() {
       offerBase: number;
       matchScore?: number;
     }) => (await api.create<unknown>(endpoints.offerNegotiate, negotiateBody(input))) as NegotiationPlan,
-    onError: fail("Couldn't build the negotiation plan."),
+    onError: fail("failures.negotiationPlan"),
   });
 }
 
@@ -197,7 +197,7 @@ export function useCompareOffers() {
         equity?: { shares: number; strikePrice: number; currentPrice: number; vestYears?: number };
       }>;
     }) => (await api.create<unknown>(endpoints.offerCompare, compareBody(input))) as OfferComparison,
-    onError: fail("Couldn't compare those offers."),
+    onError: fail("failures.offerCompare"),
   });
 }
 
@@ -212,6 +212,6 @@ export function useCounterOffer() {
       offerBase: number;
       matchScore?: number;
     }) => (await api.create<unknown>(endpoints.offerCounterOffer, counterBody(input))) as CounterOfferDraft,
-    onError: fail("Couldn't draft the counter-offer."),
+    onError: fail("failures.counterOffer"),
   });
 }

@@ -96,7 +96,7 @@ export function useTranscribeAnswer(sessionId: string) {
       });
       return { text: str(raw, "text") ?? "", provider: str(raw, "provider") ?? "" };
     },
-    onError: fail("Couldn't transcribe that recording."),
+    onError: fail("failures.transcribe"),
   });
 }
 
@@ -110,7 +110,7 @@ export function useSpeakQuestion(sessionId: string) {
       });
       return { audio: str(raw, "audio") ?? "", mime: str(raw, "mime") ?? "audio/wav" };
     },
-    onError: fail("Couldn't speak that question."),
+    onError: fail("failures.speak"),
   });
 }
 

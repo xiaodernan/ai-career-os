@@ -6,7 +6,6 @@ import { endpoints } from "@/lib/api/endpoints";
 import { list as listOf, normalizeWeeklyDigest } from "@/lib/api/normalize";
 import type { InsightDigest, PipelineFunnel, ResponseRate, WeeklyDigest } from "@/lib/api/types";
 import { fail } from "@/lib/hooks/failure";
-import { translate } from "@/lib/i18n/locale-context";
 import type { Locale } from "@/lib/i18n/translations";
 
 /**
@@ -73,6 +72,6 @@ export function useComposeWeeklyDigest() {
         await api.request<unknown>(endpoints.digestsRun, { method: "POST" })
       ),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ["analysis", "weekly-digests"] }),
-    onError: fail(translate("analysis.weeklyActionFailed") ?? "Couldn't compose the letter."),
+    onError: fail("analysis.weeklyActionFailed"),
   });
 }

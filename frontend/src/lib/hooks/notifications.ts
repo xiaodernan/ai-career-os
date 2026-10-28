@@ -5,7 +5,6 @@ import { api } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
 import { normalizeNotificationInbox } from "@/lib/api/normalize";
 import { fail } from "@/lib/hooks/failure";
-import { translate } from "@/lib/i18n/locale-context";
 import type { NotificationInbox } from "@/lib/api/types";
 
 /**
@@ -36,7 +35,7 @@ export function useMarkNotificationsRead() {
         await api.create<unknown>(endpoints.notificationsRead, markReadBody(keys))
       ),
     onSuccess: (inbox) => qc.setQueryData(["notifications"], inbox),
-    onError: fail(translate("notifications.actionFailed") ?? "Couldn't update the inbox."),
+    onError: fail("notifications.actionFailed"),
   });
 }
 
@@ -48,7 +47,7 @@ export function useMarkAllNotificationsRead() {
         await api.request<unknown>(endpoints.notificationsReadAll, { method: "POST" })
       ),
     onSuccess: (inbox) => qc.setQueryData(["notifications"], inbox),
-    onError: fail(translate("notifications.actionFailed") ?? "Couldn't update the inbox."),
+    onError: fail("notifications.actionFailed"),
   });
 }
 
@@ -60,6 +59,6 @@ export function useDismissNotification() {
         await api.create<unknown>(endpoints.notificationsDismiss, dismissBody(key))
       ),
     onSuccess: (inbox) => qc.setQueryData(["notifications"], inbox),
-    onError: fail(translate("notifications.actionFailed") ?? "Couldn't update the inbox."),
+    onError: fail("notifications.actionFailed"),
   });
 }

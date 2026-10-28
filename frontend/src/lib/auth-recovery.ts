@@ -128,7 +128,7 @@ export function recoveryErrorMessage(err: unknown): string {
 
 /** The one spelling of the network-failure sentence, in the reader's language. */
 export function networkFailure(): string {
-  return translate("errorCodes.NETWORK_ERROR") ?? "Cannot reach the API — is the backend running?";
+  return translate("errorCodes.NETWORK_ERROR") ?? "errorCodes.NETWORK_ERROR";
 }
 
 function genericFailure(): string {

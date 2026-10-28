@@ -35,7 +35,7 @@ function ErrorState({
   const detail =
     message ??
     (error instanceof ApiError
-      ? describe(error, "")
+      ? describe(error)
       : error instanceof Error
         ? error.message
         : undefined);

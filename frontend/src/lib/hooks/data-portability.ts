@@ -42,7 +42,7 @@ export function useExportBundle() {
   return useMutation({
     mutationFn: async (anonymized: boolean) =>
       (await api.create<unknown>(endpoints.dataExport, exportBody(anonymized))) as ExportBundle,
-    onError: fail("Couldn't export your data."),
+    onError: fail("failures.dataExport"),
   });
 }
 
@@ -51,7 +51,7 @@ export function useImportPlan() {
   return useMutation({
     mutationFn: async (input: { bundle: unknown; existing?: unknown }) =>
       (await api.create<unknown>(endpoints.dataImportPlan, importPlanBody(input.bundle, input.existing))) as ImportPlan,
-    onError: fail("Couldn't build the import plan."),
+    onError: fail("failures.importPlan"),
   });
 }
 
@@ -64,7 +64,7 @@ export function useImportApply() {
   return useMutation({
     mutationFn: async (bundle: unknown) =>
       (await api.create<unknown>(endpoints.dataImportApply, { bundle })) as ImportApplied,
-    onError: fail("Couldn't apply the import."),
+    onError: fail("failures.importApply"),
   });
 }
 
@@ -73,7 +73,7 @@ export function useRedactBundle() {
   return useMutation({
     mutationFn: async (input: { bundle: unknown; drop?: string[] }) =>
       (await api.create<unknown>(endpoints.dataRedact, redactBody(input.bundle, input.drop))) as RedactedBundle,
-    onError: fail("Couldn't redact the bundle."),
+    onError: fail("failures.bundleRedact"),
   });
 }
 
@@ -94,6 +94,6 @@ export function useRenderBundle() {
         format: input.format ?? "html",
         locale,
       })) as RenderedBundle,
-    onError: fail("Couldn't render the bundle."),
+    onError: fail("failures.bundleRender"),
   });
 }

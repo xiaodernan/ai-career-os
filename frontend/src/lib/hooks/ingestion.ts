@@ -64,7 +64,7 @@ export function useParseFeed() {
   return useMutation({
     mutationFn: async (input: { feed: string; source?: string }) =>
       (await api.create<unknown>(endpoints.jobIngestParse, parseBody(input.feed, input.source))) as ParsedFeed,
-    onError: fail("Couldn't parse that feed."),
+    onError: fail("failures.feedParse"),
   });
 }
 
@@ -73,7 +73,7 @@ export function useDedupeJobs() {
   return useMutation({
     mutationFn: async (postings: unknown[]) =>
       (await api.create<unknown>(endpoints.jobIngestDedupe, dedupeBody(postings))) as PostingCollection,
-    onError: fail("Couldn't de-duplicate those postings."),
+    onError: fail("failures.postingsDedup"),
   });
 }
 
@@ -89,7 +89,7 @@ export function useFreshnessSweep() {
         endpoints.jobIngestFreshness,
         sweepBody(input.postings, input.maxAgeDays, input.staleSeenDays)
       )) as FreshnessSweep,
-    onError: fail("Couldn't sweep that corpus."),
+    onError: fail("failures.corpusSweep"),
   });
 }
 
@@ -107,7 +107,7 @@ export function useIngestPlan() {
         endpoints.jobIngestPlan,
         planBody(input.feed, input.source, input.existing, input.maxAgeDays, input.staleSeenDays)
       )) as IngestPlan,
-    onError: fail("Couldn't build the ingestion plan."),
+    onError: fail("failures.ingestionPlan"),
   });
 }
 
@@ -137,7 +137,7 @@ export function useCreateIngestionFeed() {
       qc.invalidateQueries({ queryKey: ["ingestion", "feeds"] });
       toast.success(translate("ingestion.feedAdded"));
     },
-    onError: fail(translate("ingestion.feedAddFailed") ?? "Couldn't add that feed."),
+    onError: fail("ingestion.feedAddFailed"),
   });
 }
 
@@ -150,7 +150,7 @@ export function useToggleIngestionFeed() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["ingestion", "feeds"] });
     },
-    onError: fail(translate("ingestion.feedUpdateFailed") ?? "Couldn't update that feed."),
+    onError: fail("ingestion.feedUpdateFailed"),
   });
 }
 
@@ -164,7 +164,7 @@ export function useDeleteIngestionFeed() {
       qc.invalidateQueries({ queryKey: ["ingestion", "runs"] });
       toast.success(translate("ingestion.feedRemoved"));
     },
-    onError: fail(translate("ingestion.feedRemoveFailed") ?? "Couldn't remove that feed."),
+    onError: fail("ingestion.feedRemoveFailed"),
   });
 }
 
@@ -189,6 +189,6 @@ export function useRunIngestionFeed() {
         toast.success(translate("ingestion.runRecordedToast"));
       }
     },
-    onError: fail(translate("ingestion.runNowFailed") ?? "Couldn't pull that feed."),
+    onError: fail("ingestion.runNowFailed"),
   });
 }
