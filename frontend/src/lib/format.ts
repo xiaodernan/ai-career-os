@@ -161,11 +161,14 @@ export function depthLabel(value: number): string {
   return DEPTH_LABELS[depthLevel(value) - 1] ?? String(depthLevel(value));
 }
 
-/** Memory importance → label band for the memory card. */
-export function weightLabel(importance: number): string {
-  if (importance >= 0.85) return "High";
-  if (importance <= 0.35) return "Low";
-  return "Normal";
+/** Memory importance → the band the editor offers; the words come from the locale table. */
+export type WeightBand = "low" | "normal" | "high";
+
+/** Memory importance → band for the memory card. */
+export function weightBand(importance: number): WeightBand {
+  if (importance >= 0.85) return "high";
+  if (importance <= 0.35) return "low";
+  return "normal";
 }
 
 /** Beyond this the number is a parse artifact, not a requirement: no role asks for a

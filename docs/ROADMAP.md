@@ -552,13 +552,15 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   inside an expression, and a toast message is neither of those — it is a
   string that is simply a *value*. A bar labelled "Technical" on a Chinese
   page was exactly as invisible to the gate as an attribute was.
-  `KNOWN` is the honest list of what is left, file by file and string by
-  string, and its size is pinned by the gate rather than typed here: the
-  count moves whenever a hole closes, and a figure written into this
-  paragraph would be stale the next day.
-  `scripts/regen-known.mjs` regenerates the list from the browser's own
-  sources — through the same scan the gate uses, so the two cannot drift
-  and leave the list measuring a different population than the gate.)
+  The census now reads **zero**: every string the scan can see is a key in
+  both languages, so the gate asserts an empty offender list instead of
+  pinning a list of tolerated holes, and the generator that used to
+  regenerate that list is gone with it. An empty list can also mean a scan
+  that stopped seeing anything, so the gate keeps its own eyes: the
+  population of `.tsx` files is pinned, and a synthetic probe — a sentence
+  longer than any in the product, fed through the same reader — proves the
+  text-node scan still finds a long sentence after the old length bound
+  that used to hide them was raised.)
   The pipeline's seven stage names live in one table (`stages.*`) read
   through `lib/pipeline.ts`'s three readers, the score dimensions live in
   one table (`dimensions.*`) read through `lib/dimensions.ts`, the

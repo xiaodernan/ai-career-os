@@ -24,6 +24,7 @@ import type { Suggestion } from "@/lib/api/types";
 import { ApiError } from "@/lib/api/client";
 import { missingEndpointMessage } from "@/lib/api/missing-endpoint";
 import { jdTextIssue } from "@/lib/jd-text";
+import { issueText } from "@/lib/i18n/issue";
 
 /**
  * JD intelligence (§9): paste raw text → required / preferred skills,
@@ -62,7 +63,7 @@ export function AnalyzeJdDialog({ onUseText }: { onUseText?: (text: string) => v
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  const issue = jdTextIssue(text);
+  const issue = issueText(jdTextIssue(text), t);
 
   const run = () => {
     if (issue) return;
@@ -83,15 +84,14 @@ export function AnalyzeJdDialog({ onUseText }: { onUseText?: (text: string) => v
       <DialogTrigger asChild>
         <Button variant="outline" size="sm">
           <ClipboardPaste aria-hidden />
-          Analyze a JD
+          {t("jd.openAction")}
         </Button>
       </DialogTrigger>
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="text-base">{t("jd.title")}</DialogTitle>
           <DialogDescription>
-            Paste a job description. The JD analyst extracts requirements, priorities and the gap
-            against your parsed resume.
+            {t("jd.description")}
           </DialogDescription>
         </DialogHeader>
 
@@ -106,8 +106,8 @@ export function AnalyzeJdDialog({ onUseText }: { onUseText?: (text: string) => v
             className="font-mono text-xs"
           />
           <p className="text-xs text-muted-foreground">
-            {text.trim().length} characters ·{" "}
-            {issue ?? "nothing is sent until you run the analysis."}
+            {t("jd.characterCount", { count: text.trim().length })} ·{" "}
+            {issue ?? t("jd.nothingSent")}
           </p>
         </div>
 
@@ -135,19 +135,19 @@ export function AnalyzeJdDialog({ onUseText }: { onUseText?: (text: string) => v
               ? missingEndpointMessage("POST /jds")
               : error instanceof Error
                 ? error.message
-                : "Analysis failed."}
+                : t("jd.runFailed")}
           </div>
         )}
 
         <DialogFooter className="gap-2">
           {onUseText && result && (
             <Button variant="ghost" size="sm" onClick={() => onUseText(text)}>
-              Keep this text
+              {t("jd.keepText")}
             </Button>
           )}
           <Button variant="ai" onClick={run} loading={analyze.isPending} disabled={issue !== undefined}>
             <Sparkles aria-hidden />
-            Analyze
+            {t("jd.analyzeAction")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -182,7 +182,7 @@ function JdResult({
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <AIBadge label="JD analysis" />
+        <AIBadge label={t("jd.badge")} />
         <span className="text-xs text-muted-foreground">{t("jd.structuredOutput")}</span>
       </div>
 
@@ -235,8 +235,7 @@ function JdResult({
 
       {nothing && (
         <p className="text-sm text-muted-foreground">
-          The analysis came back without structured fields. That usually means the posting text was
-          too short — paste the full description and run it again.
+          {t("jd.analysisFailed")}
         </p>
       )}
     </div>

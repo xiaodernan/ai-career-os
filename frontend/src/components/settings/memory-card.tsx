@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/select";
 import { useMemories } from "@/lib/hooks/resources";
 import { useDeleteMemory, useUpdateMemory } from "@/lib/hooks/actions";
-import { relativeTime, weightLabel } from "@/lib/format";
+import { relativeTime, weightBand, type WeightBand } from "@/lib/format";
 import { MEMORY_WEIGHTS, memoryPatch, shownWeight } from "@/lib/memory-edit";
 
 /**
@@ -38,14 +38,14 @@ import { MEMORY_WEIGHTS, memoryPatch, shownWeight } from "@/lib/memory-edit";
 
 const LENGTH_LIMIT = 4000;
 
-/** The three weights a user can set, labelled. The prompt reader sorts by `importance`, so
- *  "low" keeps a fact without being told it first every time. The values are the ladder
- *  `lib/memory-edit.ts` maps a stored weight onto -- a test holds the two lists together --
- *  and the labels are what the select shows. */
-export const WEIGHTS = [
-  { value: "0.3", label: "Low" },
-  { value: "0.6", label: "Normal" },
-  { value: "0.9", label: "High" },
+/** The three weights a user can set. The prompt reader sorts by `importance`, so "low" keeps
+ *  a fact without being told it first every time. The values are the ladder `lib/memory-edit.ts`
+ *  maps a stored weight onto -- a test holds the two lists together -- and the bands are the
+ *  labels the select shows, in the reader's language. */
+export const WEIGHTS: { value: string; band: WeightBand }[] = [
+  { value: "0.3", band: "low" },
+  { value: "0.6", band: "normal" },
+  { value: "0.9", band: "high" },
 ];
 
 export function MemoryCard() {
@@ -67,10 +67,7 @@ export function MemoryCard() {
     <Card>
       <CardHeader>
         <CardTitle className="text-base">{t("memory.whatAgentsRemember")}</CardTitle>
-        <CardDescription>
-          Facts the model extracted from your conversations and interviews. Correct a wrong
-          one, or lower its weight — these shape every answer you get.
-        </CardDescription>
+        <CardDescription>{t("memory.description")}</CardDescription>
       </CardHeader>
       <CardContent>
         {memories.isPending ? (
@@ -107,7 +104,7 @@ export function MemoryCard() {
                           {m.kind}
                         </Badge>
                         <Badge variant="secondary" className="shrink-0 text-2xs font-normal">
-                          {weightLabel(m.importance)}
+                          {t(`memory.weightBands.${weightBand(m.importance)}`)}
                         </Badge>
                         {m.updatedAt && (
                           <span className="text-2xs text-muted-foreground">
@@ -121,7 +118,7 @@ export function MemoryCard() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        aria-label={`Edit memory: ${m.content.slice(0, 40)}`}
+                        aria-label={t("memory.editAria", { preview: m.content.slice(0, 40) })}
                         onClick={() => startEdit(m.id, m.content)}
                       >
                         <Pencil aria-hidden />
@@ -129,7 +126,7 @@ export function MemoryCard() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        aria-label={`Forget memory: ${m.content.slice(0, 40)}`}
+                        aria-label={t("memory.forgetAria", { preview: m.content.slice(0, 40) })}
                         onClick={() => setConfirmId(m.id)}
                       >
                         <Trash2 aria-hidden />
@@ -154,7 +151,7 @@ export function MemoryCard() {
         onOpenChange={(open) => !open && setConfirmId(null)}
         title={t("memory.forgetConfirm")}
         description={t("memory.forgetDescription")}
-        confirmLabel="Forget"
+        confirmLabel={t("memory.forget")}
         destructive
         onConfirm={() => {
           if (confirmId) {
@@ -209,11 +206,11 @@ function MemoryEditor({
           className="font-mono text-xs"
         />
         <p className="text-2xs text-muted-foreground">
-          {draft.length} / {LENGTH_LIMIT} characters
+          {t("memory.characters", { count: draft.length, limit: LENGTH_LIMIT })}
         </p>
       </div>
       <div className="space-y-1.5">
-        <Label>Weight</Label>
+        <Label>{t("memory.weight")}</Label>
         <Select value={shownWeight(importance, weight)} onValueChange={setWeight}>
           <SelectTrigger className="w-40">
             <SelectValue />
@@ -221,7 +218,7 @@ function MemoryEditor({
           <SelectContent>
             {WEIGHTS.map((w) => (
               <SelectItem key={w.value} value={w.value}>
-                {w.label}
+                {t(`memory.weightBands.${w.band}`)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -232,7 +229,7 @@ function MemoryEditor({
       </div>
       <div className="flex justify-end gap-2">
         <Button variant="ghost" size="sm" onClick={onCancel} disabled={update.isPending}>
-          Cancel
+          {t("common.cancel")}
         </Button>
         <Button
           variant="ai"
@@ -241,7 +238,7 @@ function MemoryEditor({
           loading={update.isPending}
           disabled={!draft.trim()}
         >
-          Save
+          {t("common.save")}
         </Button>
       </div>
     </div>

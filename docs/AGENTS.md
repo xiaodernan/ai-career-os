@@ -269,10 +269,12 @@ between the tags. It did not read an object literal — and half the
 product's copy is written as one. A bar labelled "Technical" on a Chinese
 page was exactly as invisible to the gate as an attribute was, and it was
 exactly as wrong. A gate measures the population it can see; a hole in the
-scan is a hole in the product. `lib/i18n/copy-scan.ts` now reads the three
-shapes the copy is actually written in, and `scripts/regen-known.mjs` uses
-*that* scan, so the list the gate measures and the list the tool
-regenerates cannot drift apart.
+scan is a hole in the product. `lib/i18n/copy-scan.ts` now reads the five
+shapes the copy is actually written in — attributes, object literals, text
+nodes, JSX expressions and bare string literals — and the census reads
+zero, so the gate asserts an empty list rather than a list of tolerated
+holes. A gate that tolerates a hole is a gate that has stopped measuring
+the population it names.
 
 **A title set on the client, undone by the framework.** A `useEffect` that
 writes `document.title` runs, and the title does change, and then React's own

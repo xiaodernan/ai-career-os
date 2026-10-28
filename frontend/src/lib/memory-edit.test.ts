@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import { WEIGHTS } from "@/components/settings/memory-card";
+import { lookup } from "./i18n/locale-context";
+import { translations } from "./i18n/translations";
 import { MEMORY_WEIGHTS, memoryPatch, shownWeight, weightValueFor } from "./memory-edit";
 
 /**
@@ -62,5 +64,19 @@ describe("the weight select's value", () => {
     // and the save must still send *nothing* about the weight.
     expect(shownWeight(0.7, null)).toBe("0.6");
     expect(memoryPatch("m1", "a corrected sentence", null)).not.toHaveProperty("importance");
+  });
+});
+
+describe("the band labels", () => {
+  it("has a word for every band in both languages", () => {
+    // The select asks for the key at paint time, so no scan can see whether the
+    // table holds it. A missing one would render "memory.weightBands.low" in the
+    // editor, in every language at once.
+    for (const { band } of WEIGHTS) {
+      for (const [locale, table] of Object.entries(translations)) {
+        const key = `memory.weightBands.${band}`;
+        expect(lookup(table, key), `${locale} has no ${key}`).toBeTypeOf("string");
+      }
+    }
   });
 });

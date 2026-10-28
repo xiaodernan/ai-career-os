@@ -9,6 +9,8 @@
  * splitter lives here too, so the guard judges exactly the list the payload sends.
  */
 
+import type { TextIssue } from "@/lib/i18n/issue";
+
 export const TARGET_ROLES_MAX_COUNT = 20;
 export const TARGET_ROLES_MAX_ITEM = 80;
 export const TARGET_LOCATIONS_MAX_COUNT = 20;
@@ -20,23 +22,23 @@ export function splitList(raw: string): string[] {
 }
 
 /** What to show under the target-roles field, or `undefined` when the list lands in bounds. */
-export function targetRolesIssue(items: string[]): string | undefined {
+export function targetRolesIssue(items: string[]): TextIssue | undefined {
   if (items.length > TARGET_ROLES_MAX_COUNT) {
-    return `Use at most ${TARGET_ROLES_MAX_COUNT} target roles`;
+    return { key: "profile.issues.tooManyRoles", params: { max: TARGET_ROLES_MAX_COUNT } };
   }
   if (items.some((item) => item.length > TARGET_ROLES_MAX_ITEM)) {
-    return `Each role can be at most ${TARGET_ROLES_MAX_ITEM} characters`;
+    return { key: "profile.issues.roleTooLong", params: { max: TARGET_ROLES_MAX_ITEM } };
   }
   return undefined;
 }
 
 /** What to show under the target-locations field, or `undefined` when the list lands in bounds. */
-export function targetLocationsIssue(items: string[]): string | undefined {
+export function targetLocationsIssue(items: string[]): TextIssue | undefined {
   if (items.length > TARGET_LOCATIONS_MAX_COUNT) {
-    return `Use at most ${TARGET_LOCATIONS_MAX_COUNT} target locations`;
+    return { key: "profile.issues.tooManyLocations", params: { max: TARGET_LOCATIONS_MAX_COUNT } };
   }
   if (items.some((item) => item.length > TARGET_LOCATIONS_MAX_ITEM)) {
-    return `Each location can be at most ${TARGET_LOCATIONS_MAX_ITEM} characters`;
+    return { key: "profile.issues.locationTooLong", params: { max: TARGET_LOCATIONS_MAX_ITEM } };
   }
   return undefined;
 }

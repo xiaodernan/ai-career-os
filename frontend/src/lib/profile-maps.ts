@@ -14,10 +14,18 @@
 
 export type MapName = "links" | "workAuthorization" | "preferences";
 
-export const MAP_SECTIONS: { name: MapName; label: string; keyPlaceholder: string }[] = [
-  { name: "links", label: "Links", keyPlaceholder: "e.g. github" },
-  { name: "workAuthorization", label: "Work authorization", keyPlaceholder: "e.g. status" },
-  { name: "preferences", label: "Preferences", keyPlaceholder: "e.g. remote" },
+export const MAP_SECTIONS: { name: MapName; labelKey: string; keyPlaceholderKey: string }[] = [
+  { name: "links", labelKey: "profile.maps.links", keyPlaceholderKey: "profile.maps.linksPlaceholder" },
+  {
+    name: "workAuthorization",
+    labelKey: "profile.maps.workAuthorization",
+    keyPlaceholderKey: "profile.maps.workAuthorizationPlaceholder",
+  },
+  {
+    name: "preferences",
+    labelKey: "profile.maps.preferences",
+    keyPlaceholderKey: "profile.maps.preferencesPlaceholder",
+  },
 ];
 
 export interface MapRow {

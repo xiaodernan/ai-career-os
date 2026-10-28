@@ -11,14 +11,13 @@ import {
   confirmationIssue,
   displayNameIssue,
   emailIssue,
-  issueText,
   networkFailure,
   passwordIssue,
   recoveryErrorMessage,
   resetTokenFrom,
   tokenIssue,
-  type AuthIssue,
 } from "./auth-recovery";
+import { issueText, type TextIssue } from "./i18n/issue";
 import { fill, lookup } from "./i18n/locale-context";
 import { translations } from "./i18n/translations";
 
@@ -41,7 +40,7 @@ const en = reader(translations.en);
 const zh = reader(translations.zh);
 
 /** A check's answer is the sentence's identity, not a sentence. */
-function expectIssue(issue: AuthIssue | undefined, key: string, params?: Record<string, string | number>) {
+function expectIssue(issue: TextIssue | undefined, key: string, params?: Record<string, string | number>) {
   expect(issue).toEqual(params === undefined ? { key } : { key, params });
 }
 

@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { lookup } from "@/lib/i18n/locale-context";
+import { translations } from "@/lib/i18n/translations";
 import {
   MAP_SECTIONS,
   lenientJson,
@@ -85,6 +87,20 @@ describe("rawMap: only an object reads as a map", () => {
 describe("the three sections", () => {
   it("are exactly the three maps the PATCH replaces", () => {
     expect(MAP_SECTIONS.map((s) => s.name)).toEqual(["links", "workAuthorization", "preferences"]);
+  });
+
+  it("name their label and placeholder through a key both languages hold", () => {
+    // The card resolves these keys at paint time, so the literal-key scan cannot
+    // see them. A typo would show the key itself in the editor.
+    for (const section of MAP_SECTIONS) {
+      for (const key of [section.labelKey, section.keyPlaceholderKey]) {
+        for (const [locale, table] of Object.entries(translations)) {
+          expect(lookup(table, key), `${locale} has no ${key} (${section.name})`).toBeTypeOf(
+            "string",
+          );
+        }
+      }
+    }
   });
 });
 

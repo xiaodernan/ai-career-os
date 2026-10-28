@@ -11,13 +11,15 @@
  * the server's bounds out of `features.py` rather than restating them.
  */
 
+import type { TextIssue } from "@/lib/i18n/issue";
+
 /** The least pasted posting text either dialog will send. */
 export const JD_TEXT_MIN_CHARS = 40;
 
 /** Why a paste cannot be analysed yet, or `undefined` once it clears the floor. */
-export function jdTextIssue(value: string): string | undefined {
+export function jdTextIssue(value: string): TextIssue | undefined {
   if (value.trim().length < JD_TEXT_MIN_CHARS) {
-    return `Paste at least ${JD_TEXT_MIN_CHARS} characters of the posting`;
+    return { key: "jd.pasteAtLeast", params: { min: JD_TEXT_MIN_CHARS } };
   }
   return undefined;
 }

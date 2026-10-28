@@ -233,29 +233,38 @@ function objectLiteralOffenders(): Offender[] {
   return found;
 }
 
-function textNodeOffenders(): Offender[] {
+/**
+ * The text nodes of one source. Exported so the gate can feed the scan a
+ * sentence longer than anything in the tree and see it come back: once the
+ * known list is empty there is no real long string left to measure the
+ * bound against, and a bound nothing tests is a bound that can shrink.
+ */
+export function textOffendersIn(file: string, text: string): Offender[] {
   const found: Offender[] = [];
-  for (const rel of browserSources()) {
-    const text = readFileSync(join(ROOT, rel), "utf-8");
-    for (const m of text.matchAll(TEXT_NODE)) {
-      const value = m[1].trim();
-      if (!value) continue;
-      // A translation key that was never resolved. The reader sees the key
-      // instead of the copy, and it is the one failure the prose rules below
-      // would miss -- so it is caught here rather than by them.
-      const unresolved = /^[a-z][a-zA-Z]*(\.[a-z][a-zA-Z]*)+$/.test(value);
-      if (!unresolved) {
-        // A sentence starts with a capital and a lower-case letter after it.
-        // "AI", "OS" and "JD" are names, not sentences.
-        if (!/^[A-Z][a-z]/.test(value)) continue;
-      }
-      // Code, not copy.
-      if (isCode(value)) continue;
-      if (NOT_COPY.has(value)) continue;
-      found.push({ file: rel, attribute: "text", value });
+  for (const m of text.matchAll(TEXT_NODE)) {
+    const value = m[1].trim();
+    if (!value) continue;
+    // A translation key that was never resolved. The reader sees the key
+    // instead of the copy, and it is the one failure the prose rules below
+    // would miss -- so it is caught here rather than by them.
+    const unresolved = /^[a-z][a-zA-Z]*(\.[a-z][a-zA-Z]*)+$/.test(value);
+    if (!unresolved) {
+      // A sentence starts with a capital and a lower-case letter after it.
+      // "AI", "OS" and "JD" are names, not sentences.
+      if (!/^[A-Z][a-z]/.test(value)) continue;
     }
+    // Code, not copy.
+    if (isCode(value)) continue;
+    if (NOT_COPY.has(value)) continue;
+    found.push({ file, attribute: "text", value });
   }
   return found;
+}
+
+function textNodeOffenders(): Offender[] {
+  return browserSources().flatMap((rel) =>
+    textOffendersIn(rel, readFileSync(join(ROOT, rel), "utf-8"))
+  );
 }
 
 /**

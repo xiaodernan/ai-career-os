@@ -5,7 +5,8 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { AuthField } from "@/components/auth/auth-field";
 import { Button } from "@/components/ui/button";
-import { emailIssue, issueText, recoveryErrorMessage } from "@/lib/auth-recovery";
+import { emailIssue, recoveryErrorMessage } from "@/lib/auth-recovery";
+import { issueText } from "@/lib/i18n/issue";
 import { useForgotPassword } from "@/lib/hooks/auth";
 import { useLocale } from "@/lib/i18n/locale-context";
 

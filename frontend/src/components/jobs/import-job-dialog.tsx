@@ -22,6 +22,7 @@ import { useImportJob } from "@/lib/hooks/actions";
 import { ApiError } from "@/lib/api/client";
 import { missingEndpointMessage } from "@/lib/api/missing-endpoint";
 import { jdTextIssue } from "@/lib/jd-text";
+import { issueText } from "@/lib/i18n/issue";
 
 /**
  * Paste a posting into the tracker (vs. AnalyzeJdDialog, which only previews the
@@ -63,7 +64,7 @@ export function ImportJobDialog() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  const issue = jdTextIssue(text);
+  const issue = issueText(jdTextIssue(text), t);
 
   const run = () => {
     if (issue) return;
@@ -88,15 +89,14 @@ export function ImportJobDialog() {
       <DialogTrigger asChild>
         <Button variant="outline" size="sm">
           <FilePlus2 aria-hidden />
-          Paste a posting
+          {t("import.openAction")}
         </Button>
       </DialogTrigger>
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
           <DialogTitle className="text-base">{t("import.title")}</DialogTitle>
           <DialogDescription>
-            Paste the full posting. The analyst fills in the company, skills and responsibilities
-            and the role lands in your tracker.
+            {t("import.description")}
           </DialogDescription>
         </DialogHeader>
 
@@ -111,8 +111,8 @@ export function ImportJobDialog() {
             className="font-mono text-xs"
           />
           <p className="text-xs text-muted-foreground">
-            {text.trim().length} characters ·{" "}
-            {issue ?? "nothing is sent until you import."}
+            {t("import.characterCount", { count: text.trim().length })} ·{" "}
+            {issue ?? t("import.nothingSent")}
           </p>
         </div>
 
@@ -139,14 +139,14 @@ export function ImportJobDialog() {
               ? missingEndpointMessage("POST /jobs/import")
               : error instanceof Error
                 ? error.message
-                : "Import failed."}
+                : t("import.runFailed")}
           </div>
         )}
 
         <DialogFooter>
           <Button variant="ai" onClick={run} loading={importJob.isPending} disabled={issue !== undefined}>
             <Sparkles aria-hidden />
-            Import
+            {t("import.importAction")}
           </Button>
         </DialogFooter>
       </DialogContent>

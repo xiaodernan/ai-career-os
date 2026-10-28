@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { ErrorState } from "@/components/common/error-state";
+import { issueText } from "@/lib/i18n/issue";
 import { useProfile, useUpdateProfileDetails } from "@/lib/hooks/actions";
 import { splitList, targetLocationsIssue, targetRolesIssue } from "@/lib/profile-targets";
 import {
@@ -49,7 +50,7 @@ export function CareerProfileCard() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Career profile</CardTitle>
+        <CardTitle className="text-base">{t("profile.careerProfile")}</CardTitle>
         <CardDescription>
           {t("profile.description")}
         </CardDescription>
@@ -95,8 +96,8 @@ function CareerProfileForm({ initial }: { initial: Record<string, unknown> | nul
   // The two list guards judge exactly the items the payload below sends.
   const roleItems = splitList(roles);
   const locationItems = splitList(targetLocations);
-  const rolesProblem = targetRolesIssue(roleItems);
-  const locationsProblem = targetLocationsIssue(locationItems);
+  const rolesProblem = issueText(targetRolesIssue(roleItems), t);
+  const locationsProblem = issueText(targetLocationsIssue(locationItems), t);
   const saveable = yearsValid && !rolesProblem && !locationsProblem;
 
   const save = React.useCallback(() => {
@@ -120,30 +121,30 @@ function CareerProfileForm({ initial }: { initial: Record<string, unknown> | nul
           value={headline}
           maxLength={MAX_HEADLINE}
           onChange={(e) => setHeadline(e.target.value)}
-          placeholder="e.g. Backend engineer moving into platform work"
+          placeholder={t("profile.headlinePlaceholder")}
           autoComplete="off"
         />
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="profile-location">Location</Label>
+          <Label htmlFor="profile-location">{t("profile.location")}</Label>
           <Input
             id="profile-location"
             value={location}
             maxLength={MAX_LOCATION}
             onChange={(e) => setLocation(e.target.value)}
-            placeholder="e.g. Hangzhou"
+            placeholder={t("profile.locationPlaceholder")}
             autoComplete="off"
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="profile-years">Years of experience (0–{MAX_YEARS})</Label>
+          <Label htmlFor="profile-years">{t("profile.yearsExperience", { max: MAX_YEARS })}</Label>
           <Input
             id="profile-years"
             value={years}
             inputMode="decimal"
             onChange={(e) => setYears(e.target.value)}
-            placeholder="e.g. 6"
+            placeholder={t("profile.yearsPlaceholder")}
             autoComplete="off"
             aria-invalid={!yearsValid}
           />
@@ -156,7 +157,7 @@ function CareerProfileForm({ initial }: { initial: Record<string, unknown> | nul
             id="profile-roles"
             value={roles}
             onChange={(e) => setRoles(e.target.value)}
-            placeholder="e.g. Platform engineer, Staff engineer"
+            placeholder={t("profile.rolesPlaceholder")}
             autoComplete="off"
           />
           {rolesProblem && (
@@ -171,7 +172,7 @@ function CareerProfileForm({ initial }: { initial: Record<string, unknown> | nul
             id="profile-target-locations"
             value={targetLocations}
             onChange={(e) => setTargetLocations(e.target.value)}
-            placeholder="e.g. Hangzhou, Remote"
+            placeholder={t("profile.locationsPlaceholder")}
             autoComplete="off"
           />
           {locationsProblem && (
@@ -189,12 +190,12 @@ function CareerProfileForm({ initial }: { initial: Record<string, unknown> | nul
           onChange={(e) => setSummary(e.target.value)}
           rows={4}
           maxLength={MAX_SUMMARY}
-          placeholder="The short story a recruiter gets before the resume."
+          placeholder={t("profile.summaryPlaceholder")}
         />
       </div>
       {!yearsValid && (
         <p role="alert" className="text-xs text-destructive">
-          Years of experience has to be a number between 0 and {MAX_YEARS}, or left blank.
+          {t("profile.yearsIssue", { max: MAX_YEARS })}
         </p>
       )}
       <div className="flex justify-end">
@@ -228,10 +229,7 @@ export function CareerProfileMapsCard() {
     <Card>
       <CardHeader>
         <CardTitle className="text-base">{t("profile.linksExtras")}</CardTitle>
-        <CardDescription>
-          Free-form maps the agents read — links, work authorization, preferences. Values that
-          parse as JSON keep their type; everything else is saved as a string.
-        </CardDescription>
+        <CardDescription>{t("profile.mapsDescription")}</CardDescription>
       </CardHeader>
       <CardContent>
         {profile.isPending ? (
@@ -285,41 +283,44 @@ function CareerProfileMapsForm({ initial }: { initial: Record<string, unknown> |
 
   return (
     <div className="space-y-5">
-      {MAP_SECTIONS.map(({ name, label, keyPlaceholder }) => (
-        <div key={name} className="space-y-2">
-          <Label>{label}</Label>
-          {maps[name].map((row, index) => (
-            <div key={index} className="flex items-center gap-2">
-              <Input
-                value={row.key}
-                placeholder={keyPlaceholder}
-                aria-label={`${label} key ${index + 1}`}
-                onChange={(e) => setRow(name, index, { ...row, key: e.target.value })}
-                autoComplete="off"
-              />
-              <Input
-                value={row.value}
-                placeholder="value — JSON or plain text"
-                aria-label={`${label} value ${index + 1}`}
-                onChange={(e) => setRow(name, index, { ...row, value: e.target.value })}
-                autoComplete="off"
-              />
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label={`Remove ${label} row ${index + 1}`}
-                onClick={() => removeRow(name, index)}
-              >
-                <X aria-hidden />
-              </Button>
-            </div>
-          ))}
-          <Button variant="outline" size="sm" onClick={() => addRow(name)}>
-            <Plus aria-hidden />
-            Add row
-          </Button>
-        </div>
-      ))}
+      {MAP_SECTIONS.map(({ name, labelKey, keyPlaceholderKey }) => {
+        const label = t(labelKey);
+        return (
+          <div key={name} className="space-y-2">
+            <Label>{label}</Label>
+            {maps[name].map((row, index) => (
+              <div key={index} className="flex items-center gap-2">
+                <Input
+                  value={row.key}
+                  placeholder={t(keyPlaceholderKey)}
+                  aria-label={t("profile.mapKeyAria", { label, index: index + 1 })}
+                  onChange={(e) => setRow(name, index, { ...row, key: e.target.value })}
+                  autoComplete="off"
+                />
+                <Input
+                  value={row.value}
+                  placeholder={t("profile.mapValuePlaceholder")}
+                  aria-label={t("profile.mapValueAria", { label, index: index + 1 })}
+                  onChange={(e) => setRow(name, index, { ...row, value: e.target.value })}
+                  autoComplete="off"
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label={t("profile.mapRemoveAria", { label, index: index + 1 })}
+                  onClick={() => removeRow(name, index)}
+                >
+                  <X aria-hidden />
+                </Button>
+              </div>
+            ))}
+            <Button variant="outline" size="sm" onClick={() => addRow(name)}>
+              <Plus aria-hidden />
+              {t("profile.addRow")}
+            </Button>
+          </div>
+        );
+      })}
       <div className="flex justify-end">
         <Button variant="ai" size="sm" loading={update.isPending} disabled={!dirty || update.isPending} onClick={save}>
           <Save aria-hidden />

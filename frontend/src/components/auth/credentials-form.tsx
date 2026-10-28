@@ -6,14 +6,13 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { AuthField } from "@/components/auth/auth-field";
 import { Button } from "@/components/ui/button";
+import { issueText, type Translate } from "@/lib/i18n/issue";
 import {
   authFormErrorMessage,
   confirmationIssue,
   displayNameIssue,
   emailIssue,
-  issueText,
   passwordIssue,
-  type Translate,
 } from "@/lib/auth-recovery";
 import { useLogin, useRegister } from "@/lib/hooks/auth";
 

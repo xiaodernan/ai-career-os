@@ -7,12 +7,12 @@ import { AuthField } from "@/components/auth/auth-field";
 import { Button } from "@/components/ui/button";
 import {
   confirmationIssue,
-  issueText,
   passwordIssue,
   recoveryErrorMessage,
   resetTokenFrom,
   tokenIssue,
 } from "@/lib/auth-recovery";
+import { issueText } from "@/lib/i18n/issue";
 import { useResetPassword } from "@/lib/hooks/auth";
 import { useLocale } from "@/lib/i18n/locale-context";
 

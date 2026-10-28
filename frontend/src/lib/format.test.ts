@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   depthLabel,
   depthLevel,
-  weightLabel,
+  weightBand,
   formatDate,
   formatDateTime,
   formatDuration,
@@ -219,20 +219,20 @@ describe("relativeTime", () => {
   });
 });
 
-describe("weightLabel", () => {
+describe("weightBand", () => {
   it("maps the two bands and the middle", () => {
-    expect(weightLabel(1.0)).toBe("High");
-    expect(weightLabel(0.9)).toBe("High");
-    expect(weightLabel(0.85)).toBe("High"); // boundary inclusive
-    expect(weightLabel(0.6)).toBe("Normal");
-    expect(weightLabel(0.5)).toBe("Normal");
-    expect(weightLabel(0.36)).toBe("Normal");
-    expect(weightLabel(0.35)).toBe("Low"); // boundary inclusive
-    expect(weightLabel(0.3)).toBe("Low");
-    expect(weightLabel(0)).toBe("Low");
+    expect(weightBand(1.0)).toBe("high");
+    expect(weightBand(0.9)).toBe("high");
+    expect(weightBand(0.85)).toBe("high"); // boundary inclusive
+    expect(weightBand(0.6)).toBe("normal");
+    expect(weightBand(0.5)).toBe("normal");
+    expect(weightBand(0.36)).toBe("normal");
+    expect(weightBand(0.35)).toBe("low"); // boundary inclusive
+    expect(weightBand(0.3)).toBe("low");
+    expect(weightBand(0)).toBe("low");
   });
 
   it("treats a non-number as normal rather than high or low", () => {
-    expect(weightLabel(Number.NaN)).toBe("Normal");
+    expect(weightBand(Number.NaN)).toBe("normal");
   });
 });

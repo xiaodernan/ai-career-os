@@ -9,12 +9,13 @@
 
 ## 当前状态 (2026-10-28)
 
-- **前端**: 682 个 vitest 通过；`tsc --noEmit` 干净。
+- **前端**: 687 个 vitest 通过；`tsc --noEmit` 干净。
 - **后端**: 468 个单元测试通过 (`mvn test -Dtest='*Test'`)；`*IT` 需 Docker。
 - **ai-service**: 1833 passed, 1 skipped (offline: mock/hash)。
 - **E2E**: 24/24 golden journey（最近一次真实栈验证）。
-- **分支**: main 与 origin 同步；最近提交 `993c792`
-  (`fix(portability): a re-import of unchanged rows writes nothing`)。
+- **分支**: main 与 origin 同步；最近提交 `ba4715f`
+  (`fix(i18n): the sign-in form's errors speak the reader's language`)，
+  其后的文案 census 归零提交见 git log。
 - **已完成**: Epic 0–18 全部勾选；13.2 的不变行跳过、导出序列化统一、
   i18n 表按段落重组并删除死代码。
 
@@ -32,10 +33,10 @@
    到全 section（并处理重新摄取 section 的 id 重映射），或者把 restore 明确
    记录为 upsert 并用测试钉住这个承诺。
 
-3. **17.1b 收尾 — 41 条文案 census**
-   `node scripts/regen-known.mjs` 报 41 条 / 7 文件。`/growth`、`/offers` 的
-   placeholder 仍是中文页面上的英文（`e.g. Senior Backend Engineer (Java)`）。
-   逐文件迁到 `translations.ts` 双语键，把 `KNOWN` 缩到 0 或只剩有理由的条目。
+3. ~~**17.1b 收尾 — 41 条文案 census**~~ 已完成：census 归零
+   （`everyOffender()` 为空，`KNOWN` 与 `regen-known.mjs` 一并删除；
+   `/growth`、`/offers`、auth 表单、JD 对话框、设置卡片的文案全部走
+   `translations.ts` 双语键，字段校验改为返回 `TextIssue`）。
 
 4. **Epic 19 — Proactive Career OS**
    19.1 保存的搜索与提醒规则 → 19.2 定时摄取（复用 plan-ingest）→

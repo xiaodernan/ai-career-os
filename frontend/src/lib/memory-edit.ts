@@ -1,4 +1,4 @@
-import { weightLabel } from "@/lib/format";
+import { weightBand } from "@/lib/format";
 
 /**
  * The memory editor's two corrections, kept apart.
@@ -19,11 +19,11 @@ export const MEMORY_WEIGHTS = ["0.3", "0.6", "0.9"] as const;
 
 /** The select's value for a stored weight: the canonical number of the band that holds it. */
 export function weightValueFor(importance: number): string {
-  // weightLabel's ladder is exactly low / normal / high; anything not at an edge is normal.
-  switch (weightLabel(importance)) {
-    case "Low":
+  // weightBand's ladder is exactly low / normal / high; anything not at an edge is normal.
+  switch (weightBand(importance)) {
+    case "low":
       return "0.3";
-    case "High":
+    case "high":
       return "0.9";
     default:
       return "0.6";

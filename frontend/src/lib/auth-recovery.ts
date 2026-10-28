@@ -11,37 +11,16 @@
  */
 
 import { ApiError } from "@/lib/api/client";
+import type { TextIssue } from "@/lib/i18n/issue";
 import { translate } from "@/lib/i18n/locale-context";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-/**
- * What to show under a field, as a *key* rather than a sentence.
- *
- * The checks below used to answer with English, and the screens put that
- * answer on the page -- so a Chinese reader's sign-in form was Chinese
- * labels around "Enter a valid email address". The issue is now the
- * sentence's identity: the key in the locale table and the values its
- * holes take. The screen turns it into words through `issueText`, at the
- * moment it renders, in the reader's language.
- */
-export interface AuthIssue {
-  key: string;
-  params?: Record<string, string | number>;
-}
-
-export type Translate = (key: string, vars?: Record<string, string | number>) => string;
-
-/** The sentence for an issue, in the reader's language, or undefined when there is none. */
-export function issueText(issue: AuthIssue | undefined, t: Translate): string | undefined {
-  return issue === undefined ? undefined : t(issue.key, issue.params);
-}
 
 /** Mirrors `@Size(max = 255)` on the three records that carry a user-typed email. */
 export const EMAIL_MAX_LENGTH = 255;
 
 /** What to show under an email field, or `undefined` when it looks like an address. */
-export function emailIssue(value: string): AuthIssue | undefined {
+export function emailIssue(value: string): TextIssue | undefined {
   if (!value) return { key: "auth.issues.emailRequired" };
   if (value.length > EMAIL_MAX_LENGTH) {
     return { key: "auth.issues.tooLong", params: { max: EMAIL_MAX_LENGTH } };
@@ -74,7 +53,7 @@ export const PASSWORD_MAX_LENGTH = 72;
  */
 export const RESET_TOKEN_MAX_LENGTH = 512;
 
-export function tokenIssue(value: string): AuthIssue | undefined {
+export function tokenIssue(value: string): TextIssue | undefined {
   if (!value.trim()) return { key: "auth.issues.tokenRequired" };
   if (value.length > RESET_TOKEN_MAX_LENGTH) {
     return { key: "auth.issues.tooLong", params: { max: RESET_TOKEN_MAX_LENGTH } };
@@ -83,7 +62,7 @@ export function tokenIssue(value: string): AuthIssue | undefined {
 }
 
 /** What to show under the password field, or `undefined` when the value is acceptable. */
-export function passwordIssue(value: string): AuthIssue | undefined {
+export function passwordIssue(value: string): TextIssue | undefined {
   if (!value) return { key: "auth.issues.passwordRequired" };
   if (value.length < PASSWORD_MIN_LENGTH) {
     return { key: "auth.issues.tooShort", params: { min: PASSWORD_MIN_LENGTH } };
@@ -101,7 +80,7 @@ export function passwordIssue(value: string): AuthIssue | undefined {
 export const DISPLAY_NAME_MAX_LENGTH = 120;
 
 /** What to show under the register screen's name field, or `undefined` when acceptable. */
-export function displayNameIssue(value: string): AuthIssue | undefined {
+export function displayNameIssue(value: string): TextIssue | undefined {
   if (!value.trim()) return { key: "auth.issues.nameRequired" };
   if (value.length > DISPLAY_NAME_MAX_LENGTH) {
     return { key: "auth.issues.tooLong", params: { max: DISPLAY_NAME_MAX_LENGTH } };
@@ -110,7 +89,7 @@ export function displayNameIssue(value: string): AuthIssue | undefined {
 }
 
 /** What to show under the confirmation field, or `undefined` when the two agree. */
-export function confirmationIssue(value: string, password: string): AuthIssue | undefined {
+export function confirmationIssue(value: string, password: string): TextIssue | undefined {
   if (!value) return { key: "auth.issues.confirmRequired" };
   return value === password ? undefined : { key: "auth.passwordsDoNotMatch" };
 }

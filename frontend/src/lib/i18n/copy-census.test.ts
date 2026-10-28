@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { everyOffender, browserSources, TEXT_NODE_LIMIT } from "./copy-scan";
+import {
+  browserSources,
+  everyOffender,
+  textOffendersIn,
+  TEXT_NODE_LIMIT,
+} from "./copy-scan";
 
 /**
  * The browser's copy census.
@@ -11,71 +16,32 @@ import { everyOffender, browserSources, TEXT_NODE_LIMIT } from "./copy-scan";
  * one edit: it was about two hundred strings across thirty files, and it
  * took the discipline of a gate to keep it.
  *
- * This is that gate. The scan itself lives in `copy-scan.ts`, next to the
- * script that regenerates the list below, so the gate and the tool that
- * feeds it cannot drift apart. It finds the copy-bearing attributes that
- * still hold an English literal, the same words inside object literals, and
- * the prose between the tags. A string in any of those is a word the reader
- * cannot change, and it is the shape the fix took every time.
+ * This is that gate. The scan itself lives in `copy-scan.ts`, and it finds
+ * the copy-bearing attributes that still hold an English literal, the same
+ * words inside object literals, the prose between the tags, the words in a
+ * ternary or a `||` fallback, and a quoted sentence that is simply a value.
+ * A string in any of those is a word the reader cannot change, and it is
+ * the shape the fix took every time.
  *
  * The failure it catches is quiet in the worst way. A hardcoded string
  * compiles, renders, looks right in English and wrong in every other
  * language, and nothing goes red. The gate makes it red.
  *
- * `KNOWN` is the list of what is still out there, file by file, string by
- * string. It is not a budget and not a target -- it is the honest answer
- * to "what have we not fixed yet", and it shrinks as the holes close. A
- * string that is not in it is a hole the gate refuses. A string in it that
- * has since been fixed is harmless: the entry is stale, and the next
- * person to touch that file removes it.
+ * The known list that used to live here is gone, and zero is the pin. The
+ * list was a record of what was left; what is left is nothing. It stays
+ * gone rather than becoming a budget: a new literal is a hole the gate
+ * refuses, and the failure names the file and the string.
  */
-const KNOWN: Record<string, string[]> = {
-  "components/jobs/analyze-jd-dialog.tsx": [
-    "Analysis failed.",
-    "Analyze",
-    "Analyze a JD",
-    "JD analysis",
-    "Keep this text",
-    "Paste a job description. The JD analyst extracts requirements, priorities and the gap\n            against your parsed resume.",
-    "The analysis came back without structured fields. That usually means the posting text was\n          too short — paste the full description and run it again.",
-  ],
-  "components/jobs/import-job-dialog.tsx": [
-    "Import",
-    "Import failed.",
-    "Paste a posting",
-    "Paste the full posting. The analyst fills in the company, skills and responsibilities\r\n            and the role lands in your tracker.",
-  ],
-  "components/settings/memory-card.tsx": [
-    "Cancel",
-    "Facts the model extracted from your conversations and interviews. Correct a wrong\r\n          one, or lower its weight — these shape every answer you get.",
-    "Forget",
-    "High",
-    "Low",
-    "Normal",
-    "Save",
-    "Weight",
-  ],
-  "components/settings/profile-cards.tsx": [
-    "Add row",
-    "Career profile",
-    "Location",
-    "The short story a recruiter gets before the resume.",
-    "Years of experience (0–",
-    "Years of experience has to be a number between 0 and",
-  ],
-};
-
 describe("the browser's copy", () => {
   const found = everyOffender();
 
   it("reads its wording from the locale table, not from a literal", () => {
-    // Every hardcoded string must be on the known list. A new one is a hole
-    // the gate refuses -- and the message names the file and the string, so
-    // the fix is obvious.
-    const unlisted = found
-      .filter((o) => !(KNOWN[o.file] ?? []).includes(o.value))
-      .map((o) => `${o.file} ${o.attribute}="${o.value}"`);
-    expect(unlisted).toEqual([]);
+    // An empty answer is the whole gate now. The message names every
+    // offender, so a regression reads as the file and the string.
+    const offenders = found.map((o) => `${o.file} ${o.attribute}="${o.value}"`);
+    expect(offenders, `copy is written into the browser's sources:\n${offenders.join("\n")}`).toEqual(
+      [],
+    );
   });
 
   it("has read the whole browser by now", () => {
@@ -92,41 +58,6 @@ describe("the browser's copy", () => {
     expect(browserSources().length).toBe(131);
   });
 
-  it("has a known list that names the files that still carry copy", () => {
-    // The list is a population, not a wish: every file it names must still
-    // be a file the walk reads, or the list has drifted out of the tree.
-    for (const file of Object.keys(KNOWN)) {
-      expect(browserSources(), `${file} is on the known list but not in the walk`).toContain(file);
-    }
-  });
-
-  it("carries a known list that shrinks rather than grows", () => {
-    // The list is a record of what is left. A file that no longer carries
-    // any of its listed strings has been fixed, and the entry should go --
-    // so this asserts the list is not hiding a file that is already clean.
-    //
-    // It is deliberately not "every listed string still exists": a string
-    // that has been fixed leaves a stale entry, which is harmless, while a
-    // file that has been fixed entirely should have its entry removed.
-    const stale = Object.keys(KNOWN).filter(
-      (file) => !found.some((o) => o.file === file)
-    );
-    expect(stale).toEqual([]);
-  });
-
-  it("knows how much is left", () => {
-    // The number is the census's own reading of the browser, and every one
-    // of them is on the list above with a file and an owner. The pin moves
-    // when a hole closes -- which is the point of pinning it.
-    //
-    // 25: the auth stack (the sign-in form, its field checks and the AI
-    // timeline's labels) now reads the table too -- including the field
-    // errors, which the checks answer as keys rather than sentences. What
-    // is left is four surfaces: the JD dialogs, the memory card and the
-    // profile cards.
-    expect(found.length).toBe(25);
-  });
-
   it("finds a sentence, however long it is", () => {
     // The scan's length bound was once short enough to hide most of the
     // product's prose: a sentence longer than about sixty characters sat
@@ -134,17 +65,21 @@ describe("the browser's copy", () => {
     // ones that read as prose rather than as a label, so they are the
     // ones the gate is for.
     //
-    // The gate is the bound itself, and the population it has to cover:
-    // the longest string the census knows about has to be inside the
-    // bound, or the scan would have missed it. Lowering the bound below
-    // that is what let the prose hide in the first place.
-    const longest = Math.max(
-      ...Object.values(KNOWN).flat().map((s) => s.length)
-    );
-    expect(longest, "the census knows no long string, so the bound is untested").toBeGreaterThan(80);
-    expect(
-      TEXT_NODE_LIMIT,
-      "the scan's bound is shorter than the longest string it has to read"
-    ).toBeGreaterThan(longest);
+    // The known list used to hold the longest sentence the scan had to
+    // read, and this test measured the bound against it. The list is empty
+    // now, so the probe is synthetic: a sentence longer than any label,
+    // between two tags, has to come back. A bound small enough to miss it
+    // fails here, which is what keeps the gate's reach from shrinking
+    // quietly.
+    const sentence =
+      "The pasted posting is judged by its trimmed length, so padding the field with spaces " +
+      "cannot clear the floor, and the sentence that explains this is deliberately long enough " +
+      "to be prose rather than a label.";
+    expect(sentence.length).toBeGreaterThan(180);
+    const probe = `export const x = <p>${sentence}</p>;`;
+    expect(textOffendersIn("probe.tsx", probe)).toEqual([
+      { file: "probe.tsx", attribute: "text", value: sentence },
+    ]);
+    expect(TEXT_NODE_LIMIT).toBeGreaterThan(sentence.length);
   });
 });
