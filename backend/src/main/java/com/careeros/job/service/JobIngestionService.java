@@ -58,6 +58,10 @@ public class JobIngestionService {
 
     /**
      * One plan for a sweep: create / update / close + within-batch duplicates (14.3).
+     *
+     * <p>The paste path names no board, so it carries no company: a row pasted from a
+     * board keeps whatever company it names itself, and the sweep's own board feeds
+     * (19.8) are the ones that supply their board's name.
      */
     @Transactional(readOnly = true)
     public Map<String, Object> planIngest(UUID userId, String feed, String source,
@@ -65,6 +69,6 @@ public class JobIngestionService {
                                           Integer maxAgeDays, Integer staleSeenDays) {
         return aiService.planIngest(feed, source == null || source.isBlank() ? "rss" : source, existing,
                 maxAgeDays == null ? DEFAULT_MAX_AGE_DAYS : maxAgeDays,
-                staleSeenDays == null ? DEFAULT_STALE_SEEN_DAYS : staleSeenDays, userId);
+                staleSeenDays == null ? DEFAULT_STALE_SEEN_DAYS : staleSeenDays, userId, null);
     }
 }

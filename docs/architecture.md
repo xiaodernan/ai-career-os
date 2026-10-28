@@ -67,7 +67,7 @@ frontend/backend/ai-service can also run natively for dev (`pnpm dev`, `mvn spri
 求职平台/
 ├── docker-compose.yml            # postgres(pgvector) redis minio (+ optional profile: apps)
 ├── .env.example
-├── docs/                         # origin spec, architecture, product-plan, roadmap, product, api, rag, agents, evaluation, security, deployment, export, demo
+├── docs/                         # origin spec, architecture, product-plan, roadmap, product, api, rag, agents, evaluation, security, deployment, export, demo, runbook
 ├── backend/                      # Spring Boot (Maven)
 │   └── src/main/java/com/careeros/
 │       ├── activity/             # agent runs + traces, AI usage events, token-cost accounting
@@ -288,6 +288,17 @@ user-scoped table (ownership is enforced in backend layer + a single SQL predica
 - `weekly_digests(id, user_id, week_start date, window_days smallint, payload jsonb,
    generated_at)` → one letter per user per week, the engine's answer stored verbatim;
   re-composing the same week refreshes the row rather than appending a second one.
+
+Feeds whose `source` names a board (19.8) go through the backend's `BoardConnector`
+seam: the reader gives a token, a board page or the API URL, and the connector
+stores the API URL it derives (`boards-api.greenhouse.io` for Greenhouse,
+`api.lever.co` — `api.eu.lever.co` for EU pages — for Lever). A board payload
+names no company, so the run tells the engine `company = feed.name`; a row that
+names its own company still wins. The engine's normalizer maps both payloads
+(HTML `content`/`description` to plain text, epoch-millisecond `createdAt`,
+`categories.commitment`/`workplaceType` onto the canonical fields) so the nightly
+sweep and a hand paste take the same road; a commitment word outside the
+canonical four keeps the default rather than inventing a value.
 
 ## 5. Backend (Spring Boot) design
 

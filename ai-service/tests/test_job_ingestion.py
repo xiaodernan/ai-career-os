@@ -299,3 +299,127 @@ def test_plan_ingest_is_idempotent_across_a_reingest():
     assert second["counts"]["create"] == 0
     assert second["counts"]["update"] == 2
     assert second["close"] == []
+
+
+# ---------------- 19.8 real board payloads ----------------
+
+# The shapes the two public board APIs answer with, as the docs show them: Greenhouse
+# wraps its rows under `jobs`, escapes the HTML `content` once, sends the location as an
+# object, and dates a row with `first_published` beside a later `updated_at`. Lever sends
+# a bare array whose title is `text`, whose HTML `description` has a plain twin, whose
+# location and commitment sit under `categories`, and whose `createdAt` is epoch
+# milliseconds.
+
+GREENHOUSE = """{
+  "jobs": [
+    {
+      "id": 4001,
+      "title": "Senior Backend Engineer",
+      "updated_at": "2026-10-10T12:00:00-04:00",
+      "first_published": "2026-09-01T09:30:00-04:00",
+      "location": {"name": "Berlin, Germany"},
+      "absolute_url": "https://boards.greenhouse.io/acme/jobs/4001",
+      "content": "&lt;p&gt;Build &amp; ship the API.&lt;/p&gt;&lt;p&gt;Postgres.&lt;/p&gt;",
+      "metadata": []
+    }
+  ],
+  "meta": {"total": 1}
+}"""
+
+LEVER = """[
+  {
+    "id": "abc-123",
+    "text": "Staff Frontend Engineer",
+    "hostedUrl": "https://jobs.lever.co/acme/abc-123",
+    "createdAt": 1759349400000,
+    "description": "<div>React and TypeScript</div>",
+    "descriptionPlain": "React and TypeScript",
+    "categories": {"location": "Remote - US", "team": "Engineering", "commitment": "Full-time"},
+    "workplaceType": "remote"
+  },
+  {
+    "id": "def-456",
+    "text": "Data Contractor",
+    "hostedUrl": "https://jobs.lever.co/acme/def-456",
+    "createdAt": 1759349400000,
+    "descriptionPlain": "SQL and dashboards",
+    "categories": {"location": "Shanghai", "commitment": "Contract"},
+    "workplaceType": "on-site"
+  },
+  {
+    "id": "ghi-789",
+    "text": "Part-time Analyst",
+    "hostedUrl": "https://jobs.lever.co/acme/ghi-789",
+    "categories": {"location": "Paris", "commitment": "Part-time"},
+    "workplaceType": "hybrid"
+  }
+]"""
+
+
+def test_a_greenhouse_board_maps_onto_the_canonical_fields():
+    plan = I.plan_ingest(GREENHOUSE, source="greenhouse", default_company="Acme")
+
+    assert plan["counts"]["create"] == 1
+    row = plan["create"][0]
+    assert row["title"] == "Senior Backend Engineer"
+    # the row never names a company; the board's own name is the only truthful source
+    assert row["company"] == "Acme"
+    assert row["location"] == "Berlin, Germany"           # {"name": ...} location
+    assert row["external_url"] == "https://boards.greenhouse.io/acme/jobs/4001"
+    assert row["posted_at"] == "2026-09-01T09:30:00-04:00"  # first_published, not updated_at
+    assert "Build & ship" in row["description"]           # escaped HTML decoded once
+    assert "<" not in row["description"] and "&lt;" not in row["description"]
+    assert row["source"] == "greenhouse"
+    assert row["remote_type"] == "onsite"                 # the payload names none
+    assert row["employment_type"] == "full_time"
+
+
+def test_a_row_that_names_its_own_company_wins_over_the_boards_name():
+    plan = I.plan_ingest([{"title": "Backend", "company_name": "Acme Labs"}],
+                         source="greenhouse", default_company="Acme")
+    assert plan["create"][0]["company"] == "Acme Labs"
+
+
+def test_a_lever_board_maps_its_own_names_onto_the_canonical_fields():
+    plan = I.plan_ingest(LEVER, source="lever", default_company="Acme")
+
+    assert plan["counts"]["create"] == 3
+    rows = {row["title"]: row for row in plan["create"]}
+
+    staff = rows["Staff Frontend Engineer"]
+    assert staff["company"] == "Acme"
+    assert staff["location"] == "Remote - US"             # categories.location
+    assert staff["external_url"] == "https://jobs.lever.co/acme/abc-123"
+    assert staff["posted_at"] == "2025-10-01T20:10:00+00:00"  # createdAt, epoch millis
+    assert staff["description"] == "React and TypeScript"  # descriptionPlain over HTML
+    assert staff["remote_type"] == "remote"               # workplaceType
+    assert staff["employment_type"] == "full_time"        # categories.commitment
+
+    contractor = rows["Data Contractor"]
+    assert contractor["employment_type"] == "contract"
+    assert contractor["remote_type"] == "onsite"
+
+    analyst = rows["Part-time Analyst"]
+    # the product has no word for part-time, so the row keeps the canonical default
+    # rather than being given a word the payload did not use
+    assert analyst["employment_type"] == "full_time"
+    assert analyst["remote_type"] == "hybrid"
+    assert analyst["posted_at"] is None                   # no date in the payload
+
+
+def test_an_epoch_stamp_in_seconds_is_read_as_seconds_not_as_1970():
+    plan = I.plan_ingest([{"title": "Backend", "createdAt": 1759349400}], source="lever")
+    assert plan["create"][0]["posted_at"] == "2025-10-01T20:10:00+00:00"
+
+
+def test_a_board_stamp_that_is_not_a_number_is_no_date():
+    plan = I.plan_ingest([{"title": "Backend", "createdAt": "yesterday"}], source="lever")
+    assert plan["create"][0]["posted_at"] is None
+
+
+def test_the_parsed_and_raw_forms_of_one_payload_plan_identically():
+    """`postings` and `feed` are two doors to one plan, not two mappings."""
+    parsed = I.plan_ingest(I.parse_json_board(LEVER, source="lever"),
+                           source="lever", default_company="Acme")
+    raw = I.plan_ingest(LEVER, source="lever", default_company="Acme")
+    assert parsed["create"] == raw["create"]

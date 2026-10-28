@@ -505,7 +505,8 @@ public class FakeAiServiceClientConfig {
         @Override
         public Map<String, Object> planIngest(String feed, String source,
                                                List<Map<String, Object>> existing,
-                                               int maxAgeDays, int staleSeenDays, UUID userId) {
+                                               int maxAgeDays, int staleSeenDays, UUID userId,
+                                               String company) {
             record("planIngest");
             return map("source", source,
                     "create", List.of(), "update", List.of(), "close", List.of(),

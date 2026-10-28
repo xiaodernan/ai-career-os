@@ -69,6 +69,8 @@ public enum ApiErrorCode {
     INGESTION_RUN_NOT_FOUND(HttpStatus.NOT_FOUND),
     RUN_NOT_FOUND(HttpStatus.NOT_FOUND),
     FEED_URL_INVALID(HttpStatus.BAD_REQUEST),
+    /** A board address the connector could not read: token, page address or API URL. */
+    FEED_BOARD_INVALID(HttpStatus.BAD_REQUEST),
     FEED_LIMIT_REACHED(HttpStatus.BAD_REQUEST),
     SAVED_SEARCH_EMPTY(HttpStatus.BAD_REQUEST),
     SALARY_RANGE_INVALID(HttpStatus.BAD_REQUEST),

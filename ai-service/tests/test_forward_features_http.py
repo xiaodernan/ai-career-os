@@ -153,6 +153,18 @@ def test_plan_ingest_roundtrip():
     assert body["counts"]["create"] == 1
 
 
+def test_plan_ingest_carries_the_boards_company_through_the_route():
+    """`company` is the board's name (19.8), and the route has to forward it."""
+    r = _post("plan-ingest", {
+        "feed": '[{"text": "Backend Engineer", "categories": {"location": "Berlin"}}]',
+        "source": "lever", "company": "Acme"})
+    assert r.status_code == 200
+    row = r.json()["create"][0]
+    assert row["title"] == "Backend Engineer"
+    assert row["company"] == "Acme"
+    assert row["location"] == "Berlin"
+
+
 def test_parse_board_roundtrip():
     r = _post("parse-feed", {"payload": '{"jobs": [{"title": "A"}, {"title": "B"}]}'})
     assert r.status_code == 200

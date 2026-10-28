@@ -103,11 +103,25 @@
    图标；worker 只预缓存离线页与图标，导航走网络、断网落离线页，构建产物
    `_next/static` 缓存优先并后台刷新，`lib/pwa.ts` 只在生产构建注册；看板
    拖拽手柄补齐 `touch-none`；`pwa.test.ts` 钉住三份文件与四个 PNG。
-   下一步：19.8 真实板卡连接器。
+   下一步：19.8 真实板卡连接器（已完成，见下）。
 
-8. **Epic 23 — 真实板卡连接器**
-   Greenhouse / Lever 公开 board API 接入既有 `Connector` 协议；
-   RSS/JSON 粘贴路径保持为离线后备。
+8. ~~**Epic 23 — 真实板卡连接器**~~
+   ~~Greenhouse / Lever 公开 board API 接入既有 `Connector` 协议；
+   RSS/JSON 粘贴路径保持为离线后备。~~
+   已完成（19.8，见 ROADMAP）：backend 新增 `BoardConnector` 接缝
+   （`source()` + `apiUrl()`）与 `BoardConnectors` 选择器——读者给板卡令牌、
+   招聘板页面地址或 API 地址，connector 一律落成抓取器要打开的 API URL
+   （Greenhouse 补 `content=true`，Lever 补 `mode=json`，EU 页面落
+   `api.eu.lever.co`）；认不出的地址回 `FEED_BOARD_INVALID`，所有板共用一句
+   读者能照做的说明。跑订阅时把订阅名作为 `company` 传给引擎（板卡负载不带
+   公司名，职位自带的公司名仍优先）；engine 的规范化器学会两种负载
+   （Greenhouse 的 `jobs` 包装、转义 HTML `content`、`first_published`、字典
+   位置；Lever 的裸数组、`text`、`hostedUrl`、毫秒 `createdAt`、
+   `categories`、`workplaceType`），按秒读秒级时间戳，规范四值之外的
+   commitment 词保留默认值而不是硬造。面板的来源改为三选一，URL 占位与命名
+   提示随选择变化。7 个 ai-service 测试、12 个 connector 测试、3 个 service
+   测试、1 个前端 helper 测试，658 后端测试，740 vitest。
+   下一步：19.9 交付硬化。
 
 9. **Epic 24 — 交付硬化**
    夜间备份 + 恢复演练、指标与告警、运行手册更新；把 nightly 的

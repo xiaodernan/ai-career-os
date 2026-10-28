@@ -365,12 +365,15 @@ public class HttpAiServiceClient implements AiServiceClient {
 
     @Override
     public Map<String, Object> planIngest(String feed, String source, List<Map<String, Object>> existing,
-                                           int maxAgeDays, int staleSeenDays, UUID userId) {
+                                           int maxAgeDays, int staleSeenDays, UUID userId, String company) {
         Map<String, Object> body = new HashMap<>();
         body.put("feed", feed);
         body.put("source", source);
         if (existing != null) {
             body.put("existing", existing);
+        }
+        if (company != null && !company.isBlank()) {
+            body.put("company", company);
         }
         body.put("max_age_days", maxAgeDays);
         body.put("stale_seen_days", staleSeenDays);

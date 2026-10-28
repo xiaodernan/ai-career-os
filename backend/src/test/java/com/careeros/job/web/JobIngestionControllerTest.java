@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -115,7 +116,7 @@ class JobIngestionControllerTest {
 
     @Test
     void the_plan_carries_the_feed_and_the_existing_corpus() throws Exception {
-        when(ai.planIngest(anyString(), anyString(), any(), anyInt(), anyInt(), any()))
+        when(ai.planIngest(anyString(), anyString(), any(), anyInt(), anyInt(), any(), any()))
                 .thenReturn(Map.of("counts", Map.of("incoming", 1, "create", 1, "update", 0,
                         "close", 0, "duplicates", 0)));
 
@@ -131,7 +132,7 @@ class JobIngestionControllerTest {
         @SuppressWarnings("unchecked")
         ArgumentCaptor<List<Map<String, Object>>> existing = ArgumentCaptor.forClass(List.class);
         verify(ai).planIngest(eq("<rss></rss>"), eq("rss"), existing.capture(),
-                eq(60), eq(30), eq(UUID.fromString(USER)));
+                eq(60), eq(30), eq(UUID.fromString(USER)), isNull());
         assertThat(existing.getValue()).hasSize(1);
     }
 
@@ -141,7 +142,7 @@ class JobIngestionControllerTest {
      */
     @Test
     void a_plan_with_no_source_names_the_default_connector() throws Exception {
-        when(ai.planIngest(anyString(), anyString(), any(), anyInt(), anyInt(), any()))
+        when(ai.planIngest(anyString(), anyString(), any(), anyInt(), anyInt(), any(), any()))
                 .thenReturn(Map.of("counts", Map.of("incoming", 0, "create", 0, "update", 0,
                         "close", 0, "duplicates", 0)));
 
@@ -151,6 +152,6 @@ class JobIngestionControllerTest {
                 .andExpect(status().isOk());
 
         verify(ai).planIngest(eq("<rss></rss>"), eq("rss"), any(), eq(60), eq(30),
-                eq(UUID.fromString(USER)));
+                eq(UUID.fromString(USER)), isNull());
     }
 }

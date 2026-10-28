@@ -5,6 +5,8 @@ import com.careeros.common.ApiErrorCode;
 import com.careeros.common.ApiException;
 import com.careeros.common.PageDTO;
 import com.careeros.common.Paging;
+import com.careeros.job.connector.BoardConnector;
+import com.careeros.job.connector.BoardConnectors;
 import com.careeros.job.dto.IngestionFeedDtos.FeedItem;
 import com.careeros.job.dto.IngestionFeedDtos.FeedRequest;
 import com.careeros.job.dto.IngestionFeedDtos.RunDetail;
@@ -31,12 +33,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * The nightly sweep and the feeds it sweeps (roadmap 19.2).
+ * The nightly sweep and the feeds it sweeps (roadmap 19.2, board connectors 19.8).
  *
  * <p>One pull is: fetch the feed over HTTP, hand the body and the open corpus to the
  * plan engine (14.3), and file the plan as a run. The engine's answer is the record;
  * applying a plan to the corpus is a separate, reviewable step, so a night can never
- * rewrite the board as a side effect of reading a feed.
+ * rewrite the board as a side effect of reading a feed. A feed whose {@code source}
+ * names a board connector (Greenhouse, Lever) is addressed by the connector -- a token
+ * or a board page becomes the API URL -- and its name becomes the company its rows
+ * carry, something neither board's payload says in a posting.
  *
  * <p>A failed pull is a run with {@code status: "failed"} and the sentence that says
  * why -- the night is not silent, and one dead feed does not stop the others. Runs are
@@ -61,16 +66,19 @@ public class ScheduledIngestionService {
     private final JobRepository jobs;
     private final CompanyRepository companies;
     private final FeedFetcher fetcher;
+    private final BoardConnectors connectors;
     private final AiServiceClient ai;
 
     public ScheduledIngestionService(IngestionFeedRepository feeds, IngestionRunRepository runs,
                                      JobRepository jobs, CompanyRepository companies,
-                                     FeedFetcher fetcher, AiServiceClient ai) {
+                                     FeedFetcher fetcher, BoardConnectors connectors,
+                                     AiServiceClient ai) {
         this.feeds = feeds;
         this.runs = runs;
         this.jobs = jobs;
         this.companies = companies;
         this.fetcher = fetcher;
+        this.connectors = connectors;
         this.ai = ai;
     }
 
@@ -83,10 +91,22 @@ public class ScheduledIngestionService {
 
     @Transactional
     public FeedItem createFeed(UUID userId, FeedRequest request) {
-        String url = request.url().trim();
-        if (!FeedUrls.isHttpUrl(url)) {
-            throw new ApiException(ApiErrorCode.FEED_URL_INVALID,
-                    "A feed URL must be an absolute http(s) address");
+        String input = request.url().trim();
+        BoardConnector connector = connectors.forSource(request.source()).orElse(null);
+        String url;
+        String source;
+        if (connector == null) {
+            if (!FeedUrls.isHttpUrl(input)) {
+                throw new ApiException(ApiErrorCode.FEED_URL_INVALID,
+                        "A feed URL must be an absolute http(s) address");
+            }
+            url = input;
+            source = sourceLabel(request.source());
+        } else {
+            // the connector is what knows a board address when it sees one, so its
+            // refusal -- the sentence naming what would work -- is the registration's
+            url = boardUrl(connector, input);
+            source = connector.source();
         }
         if (feeds.countByUserId(userId) >= MAX_FEEDS_PER_USER) {
             throw new ApiException(ApiErrorCode.FEED_LIMIT_REACHED,
@@ -96,9 +116,21 @@ public class ScheduledIngestionService {
         feed.setUserId(userId);
         feed.setName(request.name().trim());
         feed.setUrl(url);
-        feed.setSource(sourceLabel(request.source()));
+        feed.setSource(source);
         feed.setEnabled(true);
         return FeedItem.of(feeds.save(feed), null);
+    }
+
+    private static String boardUrl(BoardConnector connector, String input) {
+        try {
+            return connector.apiUrl(input);
+        } catch (IllegalArgumentException e) {
+            // the connector's own sentence is the precise one, but a board is one
+            // meaning to the reader -- the wire carries the sentence the browser can
+            // translate for every board instead
+            throw new ApiException(ApiErrorCode.FEED_BOARD_INVALID,
+                    "A board feed takes the board's token, its page address, or the board's API URL");
+        }
     }
 
     @Transactional
@@ -174,8 +206,12 @@ public class ScheduledIngestionService {
         Map<String, Object> plan = null;
         try {
             String body = fetcher.fetch(feed.getUrl());
+            // a board's rows never name their company (19.8); the feed's name is the
+            // board's, and the engine lets a row that does name one win over it
+            String company = connectors.forSource(feed.getSource()).isPresent()
+                    ? feed.getName() : null;
             plan = ai.planIngest(body, feed.getSource(), openCorpus(), MAX_AGE_DAYS,
-                    STALE_SEEN_DAYS, feed.getUserId());
+                    STALE_SEEN_DAYS, feed.getUserId(), company);
             run.setStatus(IngestionRun.STATUS_COMPLETED);
             run.setPlan(plan);
             run.setCounts(countsOf(plan));

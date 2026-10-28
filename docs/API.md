@@ -196,11 +196,16 @@ pull is a run with `status: "failed"` and the reason, not a 5xx: the feed being
 down is the outcome the caller asked to see. The URL is checked at fetch time
 against private, loopback, link-local and carrier-grade addresses, and again on
 every redirect hop, so a feed cannot make the server read its own network.
+Board sources (19.8) are the one exception to the absolute-URL rule: with
+`source=greenhouse` or `source=lever`, `url` may also be the board's bare token
+or its human page address, and the connector turns it into the API URL it
+stores; a name the connector cannot read is refused with the sentence that
+says what would work.
 
 | Method | Path | Notes |
 |---|---|---|
 | GET | `/ingestion/feeds` | this caller's feeds, newest first, each with its last run (or null) |
-| POST | `/ingestion/feeds` | `{name, url, source}` → the feed (201). `url` must be absolute http(s) and is re-checked at fetch time; `source` defaults to `feed` and only labels the postings; at most 20 feeds per user |
+| POST | `/ingestion/feeds` | `{name, url, source}` → the feed (201). `source` defaults to `feed`, a generic RSS/Atom or board-JSON address re-checked at fetch time; `greenhouse` / `lever` name a board whose `url` may be a token, page address or API URL, stored as the API URL the connector derives. For a board, `name` is also the company its postings belong to. At most 20 feeds per user |
 | PATCH | `/ingestion/feeds/{id}` | `{enabled}` — the one switch: whether the night's sweep includes this feed |
 | DELETE | `/ingestion/feeds/{id}` | forgets the feed and the runs it filed; 204 |
 | POST | `/ingestion/feeds/{id}/run` | pulls one feed now and answers the run plus the engine's plan — create / update / close / duplicates and their counts. A failed pull answers 200 with `status: "failed"` and `error` |
@@ -412,7 +417,7 @@ crosses the wire now so the mapping can grow a vocabulary later.
 | POST | `/internal/features/parse-feed` | Epic 14.2 -- a feed parsed into raw postings: RSS 2.0 / Atom XML or a board-API JSON payload, the shape detected from the text (backend `parseFeed`) |
 | POST | `/internal/features/dedupe-jobs` | Epic 14.3 -- the same posting seen from several sources, collapsed to one survivor (backend `dedupeJobs`) |
 | POST | `/internal/features/freshness-sweep` | Epic 14.3 -- the corpus split into fresh, stale (re-check) and expired (close) (backend `freshnessSweep`) |
-| POST | `/internal/features/plan-ingest` | Epic 14.3 -- one plan for a sweep: create / update / close, with the diff (backend `planIngest`) |
+| POST | `/internal/features/plan-ingest` | Epic 14.3 -- one plan for a sweep: create / update / close, with the diff (backend `planIngest`). 19.8: optional `company` names the board every row without a company of its own belongs to |
 | POST | `/internal/features/export-bundle` | Epic 13.1 -- the export bundle: every section, with a content hash over the data (backend `exportBundle`) |
 | POST | `/internal/features/import-plan` | Epic 13.2 -- the idempotent write plan for a bundle, per-item content hashes and all (backend `importPlan`); the reader's own six sections are read here when the request carries none |
 | POST | `/internal/features/redact-bundle` | Epic 13.3 -- the bundle with sections dropped and the hash recomputed over what is left (backend `redactBundle`) |

@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -15,6 +16,9 @@ import static org.mockito.Mockito.when;
 import com.careeros.ai.AiServiceClient;
 import com.careeros.common.ApiErrorCode;
 import com.careeros.common.ApiException;
+import com.careeros.job.connector.BoardConnectors;
+import com.careeros.job.connector.GreenhouseConnector;
+import com.careeros.job.connector.LeverConnector;
 import com.careeros.job.dto.IngestionFeedDtos.FeedItem;
 import com.careeros.job.dto.IngestionFeedDtos.FeedRequest;
 import com.careeros.job.dto.IngestionFeedDtos.RunDetail;
@@ -61,6 +65,7 @@ class ScheduledIngestionServiceTest {
     private JobRepository jobs;
     private CompanyRepository companies;
     private FeedFetcher fetcher;
+    private BoardConnectors connectors;
     private AiServiceClient ai;
     private ScheduledIngestionService service;
 
@@ -71,8 +76,11 @@ class ScheduledIngestionServiceTest {
         jobs = mock(JobRepository.class);
         companies = mock(CompanyRepository.class);
         fetcher = mock(FeedFetcher.class);
+        connectors = new BoardConnectors(
+                List.of(new GreenhouseConnector(), new LeverConnector()));
         ai = mock(AiServiceClient.class);
-        service = new ScheduledIngestionService(feeds, runs, jobs, companies, fetcher, ai);
+        service = new ScheduledIngestionService(feeds, runs, jobs, companies, fetcher,
+                connectors, ai);
         when(runs.save(any(IngestionRun.class))).thenAnswer(i -> i.getArgument(0));
     }
 
@@ -126,7 +134,7 @@ class ScheduledIngestionServiceTest {
         when(jobs.findByStatusOrderByPostedAtDescIdDesc(eq("open"), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(openJob())));
         when(companies.findAllById(any())).thenReturn(List.of(company()));
-        when(ai.planIngest(any(), any(), anyList(), anyInt(), anyInt(), any()))
+        when(ai.planIngest(any(), any(), anyList(), anyInt(), anyInt(), any(), any()))
                 .thenReturn(plan);
 
         RunDetail detail = service.runNow(userId, feedId);
@@ -141,7 +149,7 @@ class ScheduledIngestionServiceTest {
 
         ArgumentCaptor<List<Map<String, Object>>> corpus = ArgumentCaptor.forClass(List.class);
         verify(ai).planIngest(eq("<rss><item/></rss>"), eq("rss"), corpus.capture(),
-                eq(60), eq(30), eq(userId));
+                eq(60), eq(30), eq(userId), isNull());
         Map<String, Object> row = corpus.getValue().get(0);
         assertThat(row).containsEntry("id", jobId.toString())
                 .containsEntry("company", "Acme")
@@ -162,7 +170,7 @@ class ScheduledIngestionServiceTest {
         assertThat(detail.run().error()).isEqualTo("Feed answered HTTP 503");
         assertThat(detail.plan()).isNull();
         assertThat(detail.run().counts()).isNull();
-        verify(ai, never()).planIngest(any(), any(), anyList(), anyInt(), anyInt(), any());
+        verify(ai, never()).planIngest(any(), any(), anyList(), anyInt(), anyInt(), any(), any());
         assertThat(savedRun().getStatus()).isEqualTo(IngestionRun.STATUS_FAILED);
     }
 
@@ -223,6 +231,47 @@ class ScheduledIngestionServiceTest {
                 .isInstanceOfSatisfying(ApiException.class,
                         e -> assertThat(e.code()).isEqualTo(ApiErrorCode.FEED_URL_INVALID));
         verify(feeds, never()).save(any(IngestionFeed.class));
+    }
+
+    @Test
+    void a_board_token_is_stored_as_the_api_url_it_names() {
+        when(feeds.countByUserId(userId)).thenReturn(0L);
+        when(feeds.save(any(IngestionFeed.class))).thenAnswer(i -> i.getArgument(0));
+
+        FeedItem item = service.createFeed(userId,
+                new FeedRequest("Acme", " acme ", "Greenhouse"));
+
+        assertThat(item.name()).isEqualTo("Acme");
+        assertThat(item.url())
+                .isEqualTo("https://boards-api.greenhouse.io/v1/boards/acme/jobs?content=true");
+        assertThat(item.source()).isEqualTo("greenhouse");  // the connector's own label
+    }
+
+    @Test
+    void a_board_address_the_connector_cannot_read_is_refused_with_its_sentence() {
+        assertThatThrownBy(() -> service.createFeed(userId,
+                new FeedRequest("Acme", "https://example.com/acme", "lever")))
+                .isInstanceOfSatisfying(ApiException.class, e -> {
+                    assertThat(e.code()).isEqualTo(ApiErrorCode.FEED_BOARD_INVALID);
+                    assertThat(e.getMessage()).startsWith("A board feed takes");
+                });
+        verify(feeds, never()).save(any(IngestionFeed.class));
+    }
+
+    @Test
+    void a_board_run_tells_the_engine_which_company_its_rows_belong_to() {
+        IngestionFeed feed = feed("Acme", "https://api.lever.co/v0/postings/acme?mode=json", "lever");
+        when(feeds.findByIdAndUserId(feedId, userId)).thenReturn(Optional.of(feed));
+        when(fetcher.fetch(feed.getUrl())).thenReturn("[]");
+        when(jobs.findByStatusOrderByPostedAtDescIdDesc(eq("open"), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of()));
+        when(ai.planIngest(any(), any(), anyList(), anyInt(), anyInt(), any(), any()))
+                .thenReturn(Map.of("counts", Map.of()));
+
+        service.runNow(userId, feedId);
+
+        verify(ai).planIngest(eq("[]"), eq("lever"), anyList(), eq(60), eq(30),
+                eq(userId), eq("Acme"));
     }
 
     @Test
@@ -333,7 +382,7 @@ class ScheduledIngestionServiceTest {
         when(fetcher.fetch(any())).thenReturn("<rss/>");
         when(jobs.findByStatusOrderByPostedAtDescIdDesc(eq("open"), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of()));
-        when(ai.planIngest(any(), any(), anyList(), anyInt(), anyInt(), any()))
+        when(ai.planIngest(any(), any(), anyList(), anyInt(), anyInt(), any(), any()))
                 .thenReturn(Map.of("counts", Map.of()));
         when(runs.save(any(IngestionRun.class)))
                 .thenThrow(new IllegalStateException("db down"))

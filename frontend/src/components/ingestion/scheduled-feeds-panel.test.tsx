@@ -38,7 +38,7 @@ vi.mock("@/lib/hooks/ingestion", () => ({
   useRunIngestionFeed: () => ({ mutate: () => {}, isPending: false, variables: undefined }),
 }));
 
-import { ScheduledFeedsPanel, planTitles } from "./scheduled-feeds-panel";
+import { ScheduledFeedsPanel, feedSourceRequest, planTitles } from "./scheduled-feeds-panel";
 
 /**
  * The scheduled-feeds panel is the browser's half of the nightly sweep
@@ -90,6 +90,16 @@ describe("planTitles", () => {
     ).toEqual(["Backend engineer"]);
     expect(planTitles(null)).toEqual([]);
     expect(planTitles({ create: "not a list" })).toEqual([]);
+  });
+});
+
+describe("feedSourceRequest", () => {
+  it("names a board on the wire and leaves the generic feed unnamed", () => {
+    expect(feedSourceRequest("greenhouse")).toBe("greenhouse");
+    expect(feedSourceRequest("lever")).toBe("lever");
+    // Unnamed, so the backend's own default label stands instead of one
+    // the browser invented for a source the reader never named.
+    expect(feedSourceRequest("feed")).toBeUndefined();
   });
 });
 

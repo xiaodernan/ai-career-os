@@ -180,9 +180,12 @@ public interface AiServiceClient {
 
     /**
      * One plan for a sweep: create / update / close + within-batch duplicates (14.3).
+     *
+     * <p>{@code company} is the board's own name for the sources whose rows never carry
+     * one (19.8), or null for a generic feed; a row that names its own company wins.
      */
     Map<String, Object> planIngest(String feed, String source, List<Map<String, Object>> existing,
-                                   int maxAgeDays, int staleSeenDays, UUID userId);
+                                   int maxAgeDays, int staleSeenDays, UUID userId, String company);
 
     /**
      * Production monitoring (16.1): agent health, cost, and regression detection.

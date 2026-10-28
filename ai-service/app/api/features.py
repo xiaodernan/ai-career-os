@@ -650,11 +650,17 @@ class PlanIngestReq(BaseModel):
     board-API JSON the caller got from a source, which the engine parses first.
     `plan_ingest` accepts either, so the route does too -- but exactly one, so a
     request cannot carry a batch and a feed that disagree.
+
+    `company` is the company a *board* belongs to (19.8): Greenhouse and Lever
+    postings never name it in a row, so the caller that owns the board -- the
+    backend feed, whose name is the board's -- supplies it, and a row that does
+    name its own company still wins over it.
     """
     postings: list[dict] | None = Field(default=None, min_length=1)
     feed: str | None = Field(default=None, min_length=1)
     existing: list[dict] | None = None
     source: str | None = None
+    company: str | None = Field(default=None, max_length=120)
     max_age_days: int = Field(default=60, ge=1, le=365)
     stale_seen_days: int = Field(default=30, ge=1, le=365)
 
@@ -673,7 +679,8 @@ async def plan_ingest_ep(req: PlanIngestReq, ctx: Ctx = Depends(require_internal
         result = ingestion_mod.plan_ingest(
             req.postings if req.postings is not None else feed,
             source=label, existing=req.existing,
-            max_age_days=req.max_age_days, stale_seen_days=req.stale_seen_days)
+            max_age_days=req.max_age_days, stale_seen_days=req.stale_seen_days,
+            default_company=req.company)
     except RefusalError as exc:
         await observability.finish_run(run_id, "failed")
         raise exc.refusal.to_http_exception() from exc

@@ -9,6 +9,13 @@ import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { Pagination } from "@/components/common/pagination";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { relativeTime } from "@/lib/format";
 import { lastPageOf } from "@/lib/page-window";
@@ -48,6 +55,34 @@ const PAGE_SIZE = 20;
 // `rpage` rather than the page's own `page`: the panel is one list on a screen that
 // may grow another, and two lists on one screen need two questions.
 const PAGE_DEFAULTS: { rpage: number } = { rpage: 0 };
+
+/**
+ * The sources a feed may name (19.8). `feed` is the generic reader — RSS/Atom or a
+ * board's own JSON — and the two boards are the ones whose API the backend knows,
+ * so it can turn a board token or page address into the API URL for the reader.
+ */
+const FEED_SOURCES = ["feed", "greenhouse", "lever"] as const;
+type FeedSource = (typeof FEED_SOURCES)[number];
+
+const SOURCE_LABEL_KEY: Record<FeedSource, string> = {
+  feed: "ingestion.sourceKindFeed",
+  greenhouse: "ingestion.sourceKindGreenhouse",
+  lever: "ingestion.sourceKindLever",
+};
+
+const SOURCE_PLACEHOLDER_KEY: Record<FeedSource, string> = {
+  feed: "ingestion.feedUrlPlaceholder",
+  greenhouse: "ingestion.greenhouseUrlPlaceholder",
+  lever: "ingestion.leverUrlPlaceholder",
+};
+
+/**
+ * The `source` a create request carries. The generic feed names nothing, so the
+ * backend keeps its own default label instead of one the browser invented.
+ */
+export function feedSourceRequest(source: FeedSource): string | undefined {
+  return source === "feed" ? undefined : source;
+}
 
 /** The titles a stored plan proposes to create, read defensively from the engine's map. */
 export function planTitles(plan: Record<string, unknown> | null | undefined): string[] {
@@ -101,7 +136,7 @@ export function ScheduledFeedsPanel() {
 
   const [name, setName] = React.useState("");
   const [url, setUrl] = React.useState("");
-  const [source, setSource] = React.useState("");
+  const [source, setSource] = React.useState<FeedSource>("feed");
   const [pendingDelete, setPendingDelete] = React.useState<IngestionFeed | null>(null);
   const [openRun, setOpenRun] = React.useState<string | null>(null);
   const detail = useIngestionRunDetail(openRun);
@@ -112,12 +147,12 @@ export function ScheduledFeedsPanel() {
     const trimmedUrl = url.trim();
     if (!trimmedName || !trimmedUrl || create.isPending) return;
     create.mutate(
-      { name: trimmedName, url: trimmedUrl, source: source.trim() || undefined },
+      { name: trimmedName, url: trimmedUrl, source: feedSourceRequest(source) },
       {
         onSuccess: () => {
           setName("");
           setUrl("");
-          setSource("");
+          setSource("feed");
         },
       }
     );
@@ -164,22 +199,29 @@ export function ScheduledFeedsPanel() {
                   value={url}
                   maxLength={2048}
                   onChange={(e) => setUrl(e.target.value)}
-                  placeholder={t("ingestion.feedUrlPlaceholder")}
+                  placeholder={t(SOURCE_PLACEHOLDER_KEY[source])}
                   autoComplete="off"
                 />
               </div>
             </div>
             <div className="flex items-end gap-3">
-              <div className="w-40 space-y-1.5">
+              <div className="w-44 space-y-1.5">
                 <Label htmlFor="feed-source">{t("ingestion.feedSource")}</Label>
-                <Input
-                  id="feed-source"
+                <Select
                   value={source}
-                  maxLength={40}
-                  onChange={(e) => setSource(e.target.value)}
-                  placeholder={t("ingestion.feedSourcePlaceholder")}
-                  autoComplete="off"
-                />
+                  onValueChange={(value) => setSource(value as FeedSource)}
+                >
+                  <SelectTrigger id="feed-source" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {FEED_SOURCES.map((value) => (
+                      <SelectItem key={value} value={value}>
+                        {t(SOURCE_LABEL_KEY[value])}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <Button
                 type="submit"
@@ -191,6 +233,9 @@ export function ScheduledFeedsPanel() {
                 {t("ingestion.addFeed")}
               </Button>
             </div>
+            {source !== "feed" && (
+              <p className="text-xs text-muted-foreground">{t("ingestion.boardNameNote")}</p>
+            )}
           </form>
 
           {feedRows.length > 0 ? (

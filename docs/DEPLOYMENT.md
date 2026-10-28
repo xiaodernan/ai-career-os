@@ -104,6 +104,15 @@ Ports the override does not mention, `postgres` 5432, `redis` 16380 and `minio`
 ports; `ai-service` stays reachable for local debugging over loopback and from inside
 the compose network.
 
+### Outbound network (egress)
+
+The backend fetches whatever the reader subscribed to, so the host needs outbound
+HTTPS to those feeds. Feeds whose source is a board (19.8) call the boards' public
+APIs: allow `boards-api.greenhouse.io` and `api.lever.co` — EU Lever boards use
+`api.eu.lever.co`. Every fetch, and every redirect hop, is checked against private,
+loopback, link-local and carrier-grade addresses, so a feed cannot make the server
+read its own network.
+
 ### Reverse Proxy Example (nginx)
 
 ```nginx

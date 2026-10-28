@@ -749,7 +749,13 @@ export const translations = {
       feedUrl: "Feed URL",
       feedUrlPlaceholder: "https://boards.example.com/jobs.rss",
       feedSource: "Source",
-      feedSourcePlaceholder: "e.g. rss",
+      sourceKindFeed: "RSS / Atom feed",
+      sourceKindGreenhouse: "Greenhouse board",
+      sourceKindLever: "Lever board",
+      greenhouseUrlPlaceholder: "acme or https://boards.greenhouse.io/acme",
+      leverUrlPlaceholder: "acme or https://jobs.lever.co/acme",
+      boardNameNote:
+        "For a board, the name is the company its postings belong to; a posting that names its own company still wins.",
       addFeed: "Add feed",
       feedAdded: "Feed added.",
       feedAddFailed: "Couldn't add that feed.",
@@ -1219,6 +1225,8 @@ export const translations = {
       DOCUMENT_NOT_FOUND: "That document is no longer here.",
 
       EMAIL_ALREADY_REGISTERED: "That email address is already registered.",
+
+      FEED_BOARD_INVALID: "A board feed takes the board's token, its page address, or the board's API URL.",
 
       FEED_LIMIT_REACHED: "You already keep as many feeds as this account allows.",
 
@@ -2859,8 +2867,13 @@ export const translations = {
       feedNamePlaceholder: "例如：Hacker News — 招聘",
       feedUrl: "订阅地址",
       feedUrlPlaceholder: "https://boards.example.com/jobs.rss",
-      feedSource: "来源标记",
-      feedSourcePlaceholder: "例如 rss",
+      feedSource: "来源",
+      sourceKindFeed: "RSS / Atom 订阅",
+      sourceKindGreenhouse: "Greenhouse 招聘板",
+      sourceKindLever: "Lever 招聘板",
+      greenhouseUrlPlaceholder: "acme 或 https://boards.greenhouse.io/acme",
+      leverUrlPlaceholder: "acme 或 https://jobs.lever.co/acme",
+      boardNameNote: "对招聘板订阅，名称即这些职位所属的公司；职位自带公司名时以职位为准。",
       addFeed: "添加订阅",
       feedAdded: "订阅已添加。",
       feedAddFailed: "添加不了这个订阅。",
@@ -3283,6 +3296,8 @@ export const translations = {
       DOCUMENT_NOT_FOUND: "这份文档已经不在了。",
 
       EMAIL_ALREADY_REGISTERED: "这个邮箱已经注册过了。",
+
+      FEED_BOARD_INVALID: "招聘板订阅需要板卡令牌、招聘板页面地址或该板的 API 地址。",
 
       FEED_LIMIT_REACHED: "这个账号能保留的抓取任务已经到上限了。",
 

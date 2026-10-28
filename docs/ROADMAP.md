@@ -736,9 +736,30 @@ that; each ships wired to the real API and UI, like every epic before it.
   the drag handle, where `touch-none` is what lets dnd-kit's pointer sensor see
   the gesture instead of the browser scrolling the column. `pwa.test.ts` holds
   the three files and the four PNGs to their promises; 739 vitest.)
-- [ ] **19.8** Real board connectors: Greenhouse / Lever public board APIs
+- [x] **19.8** Real board connectors: Greenhouse / Lever public board APIs
   behind the existing `Connector` protocol, with the RSS/JSON paste path kept
   as the offline fallback.
+  (The backend owns the network, the engine owns the meaning: a
+  `BoardConnector` seam (`source()` + `apiUrl()`) turns what the reader knows —
+  the board token, the public board page, or the API URL — into the one URL
+  the fetcher opens, and `BoardConnectors` picks it by the feed's `source`.
+  Greenhouse boards become `boards-api.greenhouse.io/v1/boards/{token}/jobs`,
+  with `content=true` added when the reader's own URL omitted it; Lever boards
+  become `api.lever.co/v0/postings/{token}?mode=json`, and an EU page maps to
+  `api.eu.lever.co`. A foreign host or a path that names no board is refused
+  with `FEED_BOARD_INVALID` — one sentence for every board, because the
+  reader's next step is the same — and the panel's source is a three-way
+  select whose URL placeholder and name note follow the choice. A board
+  payload names no company, so the run passes the feed's name as `company`;
+  the engine's normalizer learned both payload shapes (Greenhouse's wrapped
+  `jobs`, escaped HTML `content`, `first_published`, dict locations; Lever's
+  bare array, `text`, `hostedUrl`, epoch-millisecond `createdAt`,
+  `categories`, `workplaceType`), reads epoch seconds as seconds, and leaves a
+  commitment word outside the canonical four at the default rather than
+  inventing a value. The paste path takes the same road: a parsed payload and
+  its raw text plan to the same answer. 7 ai-service tests, 12 connector
+  tests, 3 service tests, 1 frontend helper test, the error-code and wire
+  gates green, 658 backend tests, 740 vitest.)
 - [ ] **19.9** Delivery hardening: nightly backups plus a restore drill,
   metrics/alerts for the scheduler and the AI budget, and a runbook that says
   what a failed night looks like.

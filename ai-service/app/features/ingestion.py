@@ -14,6 +14,13 @@ computed without a model:
   seen from multiple sources (or re-fetched) down to one survivor with the losers
   reported, and ``freshness_sweep`` partitions the corpus into still-fresh / stale
   (needs a re-check) / expired (past its age cap) so a sweep can close or refresh rows.
+* 19.8 **real board payloads** -- the two public board APIs carry the same facts under
+  their own names: Greenhouse's ``absolute_url`` / ``first_published`` / HTML
+  ``content`` and a ``{"name": ...}`` location, Lever's ``text`` / ``hostedUrl`` /
+  ``createdAt`` (epoch milliseconds) / ``categories`` and HTML ``description`` next to
+  its plain twin. ``normalize_posting`` reads those aliases, so the sweep and a hand
+  paste of the same JSON take the identical road, and a board that never names its
+  company in a row gets the board's own name from the caller.
 
 Everything here is pure and deterministic: the same input yields the same output, and
 nothing is invented about a posting a source did not carry. A duplicate is an *exact*
@@ -23,6 +30,7 @@ so a sweep never merges two genuinely different roles.
 
 from __future__ import annotations
 
+import html
 import json
 import re
 import xml.etree.ElementTree as ET
@@ -54,6 +62,18 @@ MAX_FEED_BYTES = 5_000_000
 
 _WS = re.compile(r"\s+")
 _PUNCT = re.compile(r"[^\w\u4e00-\u9fff]+")
+_TAG = re.compile(r"<[^>]+>")
+# Epoch stamps at or above this are milliseconds; below it they are seconds.
+_EPOCH_MS = 100_000_000_000
+# Lever's `categories.commitment` in the product's own four employment types.
+_COMMITMENTS = {
+    "full-time": "full_time", "full time": "full_time", "fulltime": "full_time",
+    "full_time": "full_time", "internship": "internship", "contract": "contract",
+    "contractor": "contract", "new grad": "new_grad", "new_grad": "new_grad",
+}
+# Lever's `workplaceType` in the jobs table's three remote types.
+_WORKPLACES = {"remote": "remote", "hybrid": "hybrid", "on-site": "onsite",
+               "onsite": "onsite"}
 
 
 def _norm_text(value) -> str:
@@ -62,6 +82,50 @@ def _norm_text(value) -> str:
 
 def _strip_punct(value: str) -> str:
     return _PUNCT.sub(" ", value).strip()
+
+
+# ---------------- 19.8 board payload shapes ----------------
+
+
+def _board_text(value) -> str | None:
+    """A board field that carries HTML, as text. Greenhouse escapes its HTML once more."""
+    if value is None or value == "":
+        return None
+    return clean(_TAG.sub("\n", html.unescape(str(value))))
+
+
+def _board_location(value) -> str:
+    """A board's location is a name string (Lever) or ``{"name": ...}`` (Greenhouse)."""
+    if isinstance(value, dict):
+        return value.get("name") or value.get("city") or ""
+    return value if isinstance(value, str) else ""
+
+
+def _board_date(value) -> str | None:
+    """An epoch stamp (Lever's ``createdAt``) as ISO 8601, or None when it is not one.
+
+    Lever sends milliseconds; a seconds-scale stamp is read as seconds rather than as a
+    date in 1970. A boolean or a non-number is not a date at all.
+    """
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or value <= 0:
+        return None
+    seconds = value / 1000.0 if value >= _EPOCH_MS else float(value)
+    try:
+        return datetime.fromtimestamp(seconds, tz=timezone.utc).isoformat()
+    except (OverflowError, OSError, ValueError):
+        return None
+
+
+def _board_employment(value) -> str | None:
+    if not isinstance(value, str):
+        return None
+    return _COMMITMENTS.get(_WS.sub(" ", value).strip().lower())
+
+
+def _board_remote(value) -> str | None:
+    if not isinstance(value, str):
+        return None
+    return _WORKPLACES.get(value.strip().lower())
 
 
 # ---------------- 14.1 connector contract ----------------
@@ -97,35 +161,55 @@ def _to_int(value) -> int | None:
         return None
 
 
-def normalize_posting(raw: dict, *, source: str = "seed") -> dict:
+def normalize_posting(raw: dict, *, source: str = "seed",
+                      default_company: str | None = None) -> dict:
     """Map a raw connector payload onto the canonical ``jobs`` fields.
 
     Missing optional fields default rather than fail; ``title`` is the only field a
     posting cannot do without, so it is coerced to a string and may be empty (the
     caller decides whether to drop it). Company is read from ``company`` or
-    ``company_name``. Nothing is inferred that the payload does not contain.
+    ``company_name``, then from ``default_company`` -- the board's own name, the one
+    place a Greenhouse or Lever row could get it, since neither names the company in a
+    posting. Nothing is inferred that the payload does not contain.
+
+    The remaining aliases are the public board APIs' own field names (19.8): Lever's
+    ``text`` / ``hostedUrl`` / ``categories`` / ``createdAt`` and Greenhouse's
+    ``absolute_url`` / ``first_published`` / HTML ``content``. A field the payload does
+    not carry -- an unlisted commitment, a missing date -- keeps the canonical default
+    rather than being guessed from another field.
     """
     # a connector/paste may hand over a non-dict (a bare string, None); default rather
     # than raise -- the caller decides whether a title-less posting is worth keeping
     raw = raw if isinstance(raw, dict) else {}
-    company = raw.get("company") or raw.get("company_name") or ""
-    location = raw.get("location") or ""
+    categories = raw.get("categories")
+    categories = categories if isinstance(categories, dict) else {}
+    company = raw.get("company") or raw.get("company_name") or default_company or ""
+    location = _board_location(raw.get("location")) or categories.get("location") or ""
     skills = raw.get("skills") or []
     if isinstance(skills, str):
         skills = [s for s in re.split(r"[,\u3001;]+", skills) if s.strip()]
+    title = raw.get("title") or raw.get("text") or ""  # Lever names the title `text`
+    description = (raw.get("descriptionPlain") or raw.get("description")
+                   or _board_text(raw.get("content")) or "")
     return {
-        "title": _WS.sub(" ", clean(str(raw.get("title") or ""))).strip(),
+        "title": _WS.sub(" ", clean(str(title))).strip(),
         "company": _WS.sub(" ", clean(str(company))).strip(),
         "location": _WS.sub(" ", clean(str(location))).strip(),
-        "remote_type": (raw.get("remote_type") or DEFAULT_REMOTE_TYPE),
-        "employment_type": (raw.get("employment_type") or DEFAULT_EMPLOYMENT_TYPE),
+        "remote_type": (raw.get("remote_type") or _board_remote(raw.get("workplaceType"))
+                        or DEFAULT_REMOTE_TYPE),
+        "employment_type": (raw.get("employment_type")
+                            or _board_employment(categories.get("commitment"))
+                            or DEFAULT_EMPLOYMENT_TYPE),
         "salary_min": _to_int(raw.get("salary_min")),
         "salary_max": _to_int(raw.get("salary_max")),
         "salary_currency": (raw.get("salary_currency") or DEFAULT_CURRENCY).upper(),
-        "description": clean(str(raw.get("description") or "")),
+        "description": clean(str(description)),
         "skills": [str(s).strip() for s in skills if str(s).strip()],
-        "external_url": raw.get("external_url") or raw.get("link") or None,
-        "posted_at": raw.get("posted_at") or raw.get("pubDate") or None,
+        "external_url": (raw.get("external_url") or raw.get("link")
+                         or raw.get("absolute_url") or raw.get("hostedUrl") or None),
+        "posted_at": (raw.get("posted_at") or raw.get("pubDate")
+                      or raw.get("first_published") or _board_date(raw.get("createdAt"))
+                      or None),
         "source": raw.get("source") or source,
     }
 
@@ -406,14 +490,16 @@ def parse_json_board(text: str, *, source: str = "board") -> list[dict]:
 
 def plan_ingest(feed, *, source: str = "rss", existing: list[dict] | None = None,
                 now: datetime | None = None, max_age_days: int = 60,
-                stale_seen_days: int = 30) -> dict:
+                stale_seen_days: int = 30, default_company: str | None = None) -> dict:
     """Compose parse -> normalize -> dedupe -> freshness into one actionable plan.
 
     ``feed`` is either raw RSS/Atom XML (a ``str``) or an already-parsed list of raw
-    postings. ``existing`` is the corpus already in ``jobs``. The result is the three
-    writes a backend sweep needs -- ``create`` (new), ``update`` (already known, carry
-    the ``existingId`` so the row is refreshed), ``close`` (known, expired, and *not*
-    re-seen this batch) -- plus the within-batch duplicates, never written twice.
+    postings. ``existing`` is the corpus already in ``jobs``. ``default_company`` is
+    the company a board's rows belong to, for the sources whose payload never names
+    it. The result is the three writes a backend sweep needs -- ``create`` (new),
+    ``update`` (already known, carry the ``existingId`` so the row is refreshed),
+    ``close`` (known, expired, and *not* re-seen this batch) -- plus the within-batch
+    duplicates, never written twice.
 
     Pure and deterministic, and honest about its limits: a close is only proposed for a
     row that is expired *and* absent from this batch, so a still-live posting is never
@@ -430,7 +516,8 @@ def plan_ingest(feed, *, source: str = "rss", existing: list[dict] | None = None
         raw = [r for r in feed if isinstance(r, dict)]
     else:
         raise raise_refusal(INGEST_FORMAT_UNKNOWN)
-    normalized = [normalize_posting(r, source=source) for r in raw]
+    normalized = [normalize_posting(r, source=source, default_company=default_company)
+                  for r in raw]
     deduped = dedupe_postings(normalized)
     incoming = deduped["unique"]
 
