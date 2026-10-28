@@ -48,6 +48,8 @@ export const endpoints = {
   jobTailoredVersion: (id: string) => `/jobs/${seg(id)}/tailored-version`,
   jobCoverLetter: (id: string) => `/jobs/${seg(id)}/cover-letter`,
   savedJobs: "/jobs/saved",
+  savedSearches: "/saved-searches",
+  savedSearch: (id: string) => `/saved-searches/${seg(id)}`,
   jdAnalyze: "/jds",
   jdSuggestions: "/jds/suggestions",
 

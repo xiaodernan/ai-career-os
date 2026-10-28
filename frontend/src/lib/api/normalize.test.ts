@@ -28,6 +28,7 @@ import {
   normalizePipeline,
   normalizeRun,
   normalizeResumeScore,
+  normalizeSavedSearch,
   normalizeSearch,
   serializeJobFilters,
   normalizeSkillGaps,
@@ -349,6 +350,51 @@ describe("normalizeJob", () => {
     const j = normalizeJob({ id: "job-8", title: "T", experienceYears: null });
     expect(j.experienceLevel).toBeUndefined();
     expect(normalizeJob({ id: "job-9", experienceYears: 2024 }).experienceLevel).toBeUndefined();
+  });
+});
+
+describe("normalizeSavedSearch", () => {
+  it("reads the stored criteria under the board's own names", () => {
+    // The column is JSONB written by the service in camelCase; the wire may echo
+    // snake_case from an older row, and both spellings must reach the panel whole.
+    const s = normalizeSavedSearch({
+      id: "ss-1",
+      name: "Java in Shanghai",
+      criteria: {
+        q: "java",
+        skills: ["Java", "Spring"],
+        location: "Shanghai",
+        remote: true,
+        minSalary: 30,
+        max_salary: 60,
+      },
+      createdAt: "2026-10-01T09:00:00Z",
+    });
+    expect(s.id).toBe("ss-1");
+    expect(s.name).toBe("Java in Shanghai");
+    expect(s.criteria).toEqual({
+      q: "java",
+      location: "Shanghai",
+      remote: true,
+      minSalary: 30,
+      maxSalary: 60,
+      skills: ["Java", "Spring"],
+    });
+    expect(s.createdAt).toBe("2026-10-01T09:00:00Z");
+  });
+
+  it("drops a skill list that is only blanks and survives a row without criteria", () => {
+    const s = normalizeSavedSearch({
+      id: "ss-2",
+      name: "Remote only",
+      criteria: { remote: true, skills: ["", "  "] },
+    });
+    expect(s.criteria.skills).toBeUndefined();
+    expect(s.criteria.q).toBeUndefined();
+
+    const bare = normalizeSavedSearch({});
+    expect(bare.name).toBe("");
+    expect(bare.criteria).toEqual({});
   });
 });
 

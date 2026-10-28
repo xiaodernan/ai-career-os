@@ -605,10 +605,20 @@ while the user sleeps: it watches the market, remembers what the user is
 looking for, and says so before they ask. These tasks are the first layer of
 that; each ships wired to the real API and UI, like every epic before it.
 
-- [ ] **19.1** Saved searches: a named criterion set (role, location, remote,
+- [x] **19.1** Saved searches: a named criterion set (role, location, remote,
   salary floor, skills) the user can keep, list and delete — the thing an alert
   is about. Backend CRUD + `V__saved_searches` + the `/jobs` surface's "save
   this search" affordance.
+  (`V11__saved_searches.sql` + `SavedSearchController`: GET/POST/DELETE under
+  `/api/v1/saved-searches`, scoped to the caller. Criteria are stored as
+  canonical JSONB under the board's own filter names, so the alert engine can
+  hand them to `JobSearchRepository` unchanged; an exactly repeated skill folds
+  to one but its case is kept — the board's SQL matches skills exactly — and
+  `remote=false` is not stored, because the switch means "remote only". An
+  empty board is not a saved search on either side of the wire. The panel
+  beside the filters saves the live search under a suggested name, applies one
+  back in a click through the URL's `replaceAll`, and forgets one behind a
+  confirmation. 702 vitest, 29 backend tests green.)
 - [ ] **19.2** Scheduled ingestion: a nightly per-source pull that reuses
   `plan-ingest` (14.3) and writes the create/update/close plan, so a feed is
   swept without the user pasting it. The scheduler is the backend's, the plan

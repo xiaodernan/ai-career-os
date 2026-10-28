@@ -22,6 +22,7 @@ import type {
   MatchDimension,
   MemoryItem,
   ResumeScore,
+  SavedSearch,
   SearchResults,
   SkillGap,
   ResumeExperience,
@@ -449,6 +450,28 @@ export function normalizeJdParsed(raw: unknown): JdParsed {
  * reader which column the backend happened to use; an application with no company keeps
  * `company` absent rather than getting an object with an empty name.
  */
+/** A saved search (roadmap 19.1): the criteria carry the board's own filter names. */
+export function normalizeSavedSearch(raw: unknown): SavedSearch {
+  const criteria = rec(pick(raw, "criteria")) ?? {};
+  const skills = list<string>(criteria, "skills").filter(
+    (skill): skill is string => typeof skill === "string" && skill.trim() !== ""
+  );
+  return {
+    id: idOf(raw),
+    name: str(raw, "name") ?? "",
+    criteria: {
+      q: str(criteria, "q"),
+      location: str(criteria, "location"),
+      company: str(criteria, "company"),
+      remote: bool(criteria, "remote"),
+      minSalary: num(criteria, "minSalary", "min_salary"),
+      maxSalary: num(criteria, "maxSalary", "max_salary"),
+      skills: skills.length > 0 ? skills : undefined,
+    },
+    createdAt: str(raw, "createdAt", "created_at"),
+  };
+}
+
 export function normalizeApplication(raw: unknown): Application {
   const nested = pick<Record<string, unknown>>(raw, "company");
   const name = str(raw, "companyName", "company_name") ?? str(nested, "name") ?? null;

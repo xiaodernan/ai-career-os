@@ -17,6 +17,7 @@ import {
   normalizeQuestion,
   normalizeResumeScore,
   normalizeRun,
+  normalizeSavedSearch,
   normalizeSearch,
   pct,
   serializeJobFilters,
@@ -42,6 +43,7 @@ import type {
   Resume,
   ResumeScore,
   ResumeVersion,
+  SavedSearch,
   SearchResults,
 } from "@/lib/api/types";
 
@@ -226,6 +228,15 @@ export function useSavedJobs() {
         note: str(j, "note"),
         savedAt: str(j, "savedAt"),
       })),
+  });
+}
+
+/** The caller's saved searches, newest first (roadmap 19.1). */
+export function useSavedSearches() {
+  return useQuery({
+    queryKey: ["saved-searches"],
+    queryFn: async (): Promise<SavedSearch[]> =>
+      listOf<unknown>(await api.get<unknown>(endpoints.savedSearches)).map(normalizeSavedSearch),
   });
 }
 

@@ -9,15 +9,15 @@
 
 ## 当前状态 (2026-10-28)
 
-- **前端**: 687 个 vitest 通过；`tsc --noEmit` 干净。
-- **后端**: 468 个单元测试通过 (`mvn test -Dtest='*Test'`)；`*IT` 需 Docker。
+- **前端**: 702 个 vitest 通过；`tsc --noEmit` 干净。
+- **后端**: 486 个单元测试通过 (`mvn test -Dtest='*Test'`)；`*IT` 需 Docker。
 - **ai-service**: 1833 passed, 1 skipped (offline: mock/hash)。
 - **E2E**: 24/24 golden journey（最近一次真实栈验证）。
-- **分支**: main 与 origin 同步；最近提交 `ba4715f`
-  (`fix(i18n): the sign-in form's errors speak the reader's language`)，
-  其后的文案 census 归零提交见 git log。
+- **分支**: main 与 origin 同步；最近提交 `0345a5f`
+  (`feat(i18n): the copy census reads zero and its list is gone`)。
 - **已完成**: Epic 0–18 全部勾选；13.2 的不变行跳过、导出序列化统一、
-  i18n 表按段落重组并删除死代码。
+  i18n 表按段落重组并删除死代码；19.1 保存的搜索（后端 CRUD + `/jobs`
+  侧栏面板）。
 
 ## 主线队列（按顺序执行）
 
@@ -39,8 +39,12 @@
    `translations.ts` 双语键，字段校验改为返回 `TextIssue`）。
 
 4. **Epic 19 — Proactive Career OS**
-   19.1 保存的搜索与提醒规则 → 19.2 定时摄取（复用 plan-ingest）→
-   19.3 通知中心 → 19.4 每周摘要投递。这是"OS 替你先做"的第一层。
+   ~~19.1 保存的搜索~~ 已完成：`/saved-searches` GET/POST/DELETE（`V11` +
+   服务/控制器，11 个后端测试），criteria 以看板自己的筛选名存成规范 JSONB；
+   前端 `lib/saved-search.ts` 负责 URL 状态 ↔ criteria 的双向翻译，`/jobs`
+   侧栏的 `SavedSearchPanel` 保存/应用/删除（删除走确认对话框）。
+   接下来：19.2 定时摄取（复用 plan-ingest）→ 19.3 通知中心 →
+   19.4 每周摘要投递。这是"OS 替你先做"的第一层。
 
 5. **Epic 20 — 单版本打印**
    定制简历的独立打印视图（复用 export_render 的排版与语言机制），

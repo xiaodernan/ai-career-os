@@ -54,8 +54,9 @@ describe("the browser's copy", () => {
     // `metadata` export and the localized body becomes a client component --
     // 130 with the language switch, which the two public surfaces need, and
     // 131 with `components/root-document.tsx`, the shell the layout renders so
-    // `<html lang>` and the first paint carry the reader's language.
-    expect(browserSources().length).toBe(131);
+    // `<html lang>` and the first paint carry the reader's language, and 132
+    // with the saved-search panel beside the board's filters.
+    expect(browserSources().length).toBe(132);
   });
 
   it("finds a sentence, however long it is", () => {

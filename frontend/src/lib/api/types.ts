@@ -169,6 +169,24 @@ export interface Job {
   description?: string | null;
 }
 
+/** The board's own filter names, under a name the reader chose (roadmap 19.1). */
+export interface SavedSearchCriteria {
+  q?: string;
+  location?: string;
+  company?: string;
+  remote?: boolean;
+  minSalary?: number;
+  maxSalary?: number;
+  skills?: string[];
+}
+
+export interface SavedSearch {
+  id: string;
+  name: string;
+  criteria: SavedSearchCriteria;
+  createdAt?: string;
+}
+
 export interface JobDescription {
   id?: string;
   jobId?: string;

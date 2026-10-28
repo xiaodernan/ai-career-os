@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { JobCard } from "@/components/jobs/job-card";
 import { JobFilterPanel } from "@/components/jobs/job-filters";
+import { SavedSearchPanel } from "@/components/jobs/saved-search-panel";
 import { AnalyzeJdDialog } from "@/components/jobs/analyze-jd-dialog";
 import { ImportJobDialog } from "@/components/jobs/import-job-dialog";
 import { relativeTime } from "@/lib/format";
@@ -142,6 +143,10 @@ export default function JobsPage() {
             {t("jobs.filtersButton")}
           </Button>
           <div className={cn("mt-3 rounded-xl border border-border/70 bg-card p-4 lg:mt-0 lg:border-0 lg:bg-transparent lg:p-0", !mobileFilters && "hidden lg:block")}>
+            <SavedSearchPanel
+              value={filters}
+              onApply={(next) => setFilters(next, { replaceAll: true })}
+            />
             <JobFilterPanel
               value={filters}
               onApply={(next) => setFilters(next, { replaceAll: true })}

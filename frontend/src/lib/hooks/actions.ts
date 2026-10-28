@@ -26,6 +26,7 @@ import {
   str,
 } from "@/lib/api/normalize";
 import { tokenStore } from "@/lib/api/token-store";
+import { translate } from "@/lib/i18n/locale-context";
 import type {
   Application,
   ApplicationStatus,
@@ -39,6 +40,7 @@ import type {
   MemoryItem,
   ParseResult,
   Resume,
+  SavedSearchCriteria,
   TailorResponse,
   TextIngestResult,
   UploadResult,
@@ -238,6 +240,39 @@ export function useImportJob() {
       toast.success("Job imported - the analyst filled in the details.");
     },
     onError: fail("Import failed."),
+  });
+}
+
+/* ------------------------------------------------------------------ */
+/* Saved searches                                                      */
+/* ------------------------------------------------------------------ */
+
+/** Keep the board's current question under a name (roadmap 19.1). */
+export function useCreateSavedSearch() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { name: string; criteria: SavedSearchCriteria }) =>
+      api.create<unknown>(endpoints.savedSearches, {
+        name: body.name,
+        criteria: body.criteria,
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["saved-searches"] });
+      toast.success(translate("savedSearches.savedToast"));
+    },
+    onError: fail(translate("savedSearches.saveFailed") ?? "Couldn't save that search."),
+  });
+}
+
+export function useDeleteSavedSearch() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.remove(endpoints.savedSearch(id)),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["saved-searches"] });
+      toast.success(translate("savedSearches.deletedToast"));
+    },
+    onError: fail(translate("savedSearches.deleteFailed") ?? "Couldn't delete that search."),
   });
 }
 

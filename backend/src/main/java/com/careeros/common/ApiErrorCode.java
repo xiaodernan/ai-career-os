@@ -51,6 +51,7 @@ public enum ApiErrorCode {
     VERSION_NOT_OWNED(HttpStatus.NOT_FOUND),
     RESUME_VERSION_MISSING(HttpStatus.NOT_FOUND),
     JOB_NOT_FOUND(HttpStatus.NOT_FOUND),
+    SAVED_SEARCH_NOT_FOUND(HttpStatus.NOT_FOUND),
     COMPANY_NOT_FOUND(HttpStatus.NOT_FOUND),
     JD_NOT_FOUND(HttpStatus.NOT_FOUND),
     MATCH_NOT_FOUND(HttpStatus.NOT_FOUND),
