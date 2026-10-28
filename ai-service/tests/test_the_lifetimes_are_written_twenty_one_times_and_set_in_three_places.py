@@ -162,6 +162,14 @@ CLAIM_SHAPES = (
     ("compact-h", COMPACT_H, "hours"),
     ("duration-of", DURATION_OF, None),
 )
+# Two shapes in 19.9's ops plane are durations a reader cannot act on as a credential: a
+# metrics window (`careeros.ai.tokens.24h`, "spent in the trailing 24 hours") says how far a
+# gauge looks back, and a Prometheus rule's dwell (`for: 15m`) says how long a condition must
+# hold before it pages. Neither promises how long a token lives, and neither sentence can be
+# misread as one -- the `for:` line names its own field. The `coincident` clause applies this
+# same regex, so a row excluded here is still held to the shipped pairs.
+NOT_A_LIFETIME = re.compile(
+    r"(?i)[._]24h\b|\btrailing\s+\d+\s+(?:hours?|days?|minutes?)\b|^\s*for:\s*\d+[smhd]\b")
 # `422s` and `500s` are HTTP status codes written as English plurals, so this spelling is refused;
 # `refused_seconds_claims()` below is what makes the refusal a decision rather than a hiding place.
 COMPACT_S = re.compile(r"\b(?P<v>\d+)s\b")
@@ -461,7 +469,7 @@ def census_rows() -> list[dict]:
                     "value": value,
                     "unit": row_unit,
                     "seconds": value * UNIT_SECONDS[row_unit],
-                    "vocabulary": bool(VOCAB.search(line)),
+                    "vocabulary": bool(VOCAB.search(line)) and not NOT_A_LIFETIME.search(line),
                     "credential": credential,
                     "nearest": nearest,
                     "shipped": value * UNIT_SECONDS[row_unit] in shipped,
@@ -927,7 +935,9 @@ def test_the_open_census_charges_a_lifetime_to_the_credential_sitting_beside_it(
     assert not problems, (
         "a lifetime statement contradicts the authority for the credential its own sentence names, or "
         f"sits between two of them: {'; '.join(problems)}")
-    coincident = [row for row in rows if not row["vocabulary"] and row["shipped"]]
+    coincident = [row for row in rows
+                  if not row["vocabulary"] and row["shipped"]
+                  and not NOT_A_LIFETIME.search(row["text"])]
     assert not coincident, (
         f"{[(r['file'], r['line'], r['value'], r['unit']) for r in coincident]} write a shipped lifetime "
         f"without naming a credential on their line: the numeral 30 alone already means two different "

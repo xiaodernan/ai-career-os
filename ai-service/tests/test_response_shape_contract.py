@@ -974,8 +974,11 @@ def test_the_java_probe_reads_every_record_the_backend_declares():
     # 151 with 19.6's voice quintet in `InterviewDtos`: `VoiceAnswerRequest` and
     # `VoiceLineRequest` (the two bodies), `VoiceTranscript` and `VoiceClip` (the two
     # answers) and `VoiceState` (whether the deployment can hear and speak).
-    assert len(declared) == 151, \
-        f"{len(declared)} records carry a declaration the shared opener reads, not the 151 measured"
+    # 152 with 19.9's `AiUsageMetrics.Usage`: the ops bean reads its gauges off a private
+    # record, and the probe walks records by their declaration rather than by visibility,
+    # so the shape it records from is held to the same opener as every public DTO.
+    assert len(declared) == 152, \
+        f"{len(declared)} records carry a declaration the shared opener reads, not the 152 measured"
     problems, renamed = [], []
     for relative, record in declared:
         names = _record_components_at(relative, record)
@@ -2957,7 +2960,10 @@ def test_the_heartbeat_interval_has_one_definer_and_every_shipped_claim_names_it
         # itself is untouched. Now 162: the tracker's `list_applications` row and the
         # interview surface's two read rows joined the §4 tool table above it, and the
         # sentence still says the same thing.
-        ("AGENTS.md", 162), ("DEPLOYMENT.md", 8), ("SECURITY.md", 150),
+        # RUNBOOK.md joins with 19.9: its "what this runbook does not cover" list says
+        # Redis backs "the health ping" -- the same keep-alive by name, introduced by the
+        # ops page that also owns the interval's shipped comment.
+        ("AGENTS.md", 162), ("DEPLOYMENT.md", 8), ("RUNBOOK.md", 224), ("SECURITY.md", 150),
     ], (f"{doc_vocabulary}: the docs' own vocabulary is censused, so this pass is not reporting on an "
         "empty set -- and a second file picking up the word is a signal the ledger has to grow")
 

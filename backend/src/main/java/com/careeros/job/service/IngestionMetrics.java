@@ -17,7 +17,7 @@ import org.springframework.stereotype.Component;
  * a new outcome would be a tag value instead of a new metric. The gauge is the epoch second
  * of the last run that <em>completed</em>: a night of failures moves the counter and leaves
  * the gauge where it was, which is what lets a rule ask "no successful sweep for 26 hours"
- * as {@code time() - careers_ingestion_last_success_timestamp}.
+ * as {@code time() - careeros_ingestion_last_success_timestamp}.
  *
  * <p>The gauge starts at the process's own boot time, not at zero. Zero would read as a
  * success in 1970 and page on every fresh deploy, before the first night has had a chance

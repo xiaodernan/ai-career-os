@@ -23,7 +23,7 @@ The three surfaces this document is about:
 
 ## A night that never succeeded
 
-**What the alert looks like.** `time() - careers_ingestion_last_success_timestamp`
+**What the alert looks like.** `time() - careeros_ingestion_last_success_timestamp`
 stays above 93600 (26 hours). The gauge was last moved by a run that ended
 `completed`; a night of failures leaves it exactly where it was, which is the point.
 

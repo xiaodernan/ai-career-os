@@ -111,7 +111,20 @@ def test_the_three_alarms_are_pinned_and_each_carries_an_audience_and_a_page():
 
 
 def test_every_metric_an_alarm_reads_is_a_name_java_registers():
-    used = set(re.findall(r"\bcareeros_[a-z0-9_]+", read(ALERTS)))
+    # Scan each rule's expression, not the whole file: a name that appears only in prose is not
+    # read by Prometheus, and -- the reason this test exists -- a misspelled name is read by it
+    # forever and never matches. The token pattern deliberately starts at `career`, so a typo
+    # like `careers_ai_cost_usd_24h` (one letter off) is still caught rather than skipped by a
+    # scan that only looked for `careeros_`: the first version of this gate pinned no rule's
+    # spelling at all, and both shipped expressions were one `s` short of their gauges.
+    used = set()
+    for name, rule in rules().items():
+        tokens = set(re.findall(r"\bcareer\w*", rule["expr"]))
+        assert tokens, (
+            f"{name} reads no metric from this project's namespace: an alert whose numbers come "
+            f"from nowhere either fires on nothing or fires on another stack's metric"
+        )
+        used |= tokens
 
     assert used, "no metric is read by any rule; the alerts cannot ever fire"
     unknown = used - set(METRICS)

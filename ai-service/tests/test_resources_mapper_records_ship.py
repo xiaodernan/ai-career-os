@@ -525,7 +525,10 @@ def test_an_unauthored_name_is_a_snake_twin_a_foreign_name_or_a_name_no_record_d
     # those records introduced that no earlier record declared.
     # 274 with 19.6's voice quintet: the two request records and three answers introduce
     # `audio`, `mime`, `provider`, `stt` and `tts` -- five names no earlier record declared.
-    assert len(everywhere) == 274, f"the backend record census read {len(everywhere)} component names"
+    # 275 with 19.9's `AiUsageMetrics.Usage`: the ops bean's three-field record names
+    # `costUsd` and `tokens`, both of which some earlier record already declared, plus
+    # `calls` -- the one name this record is the first to say.
+    assert len(everywhere) == 275, f"the backend record census read {len(everywhere)} component names"
     assert {"id", "title", "status", "createdAt"} <= set(everywhere), sorted(list(everywhere)[:8])
     scanned_unauthored = scanned_nowhere = 0
     for (mapper, receiver), record in ROWS.items():

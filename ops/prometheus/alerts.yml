@@ -23,7 +23,7 @@ groups:
       # hours of slack for a slow host or a late deploy, and it is the same number in
       # docs/RUNBOOK.md -- change both or neither.
       - alert: CareerOSIngestionNightMissed
-        expr: time() - careers_ingestion_last_success_timestamp > 93600
+        expr: time() - careeros_ingestion_last_success_timestamp > 93600
         for: 10m
         labels:
           service: career-os-backend
@@ -64,7 +64,7 @@ groups:
       # in its own copy of this file, and docs/RUNBOOK.md says where the spend is
       # reported before it is raised.
       - alert: CareerOSAiBudgetBurn
-        expr: careers_ai_cost_usd_24h > 5
+        expr: careeros_ai_cost_usd_24h > 5
         for: 15m
         labels:
           service: career-os-backend
