@@ -28,7 +28,7 @@ import { AIBadge } from "@/components/ai/ai-badge";
 import { useFinalizeInterview } from "@/lib/hooks/actions";
 import { useInterviewSession } from "@/lib/hooks/resources";
 import { normalizeInterviewReport, type InterviewTrajectoryPoint } from "@/lib/api/normalize";
-import { depthLabel, depthLevel, formatDate, titleCase } from "@/lib/format";
+import { depthBand, depthLevel, formatDate, titleCase } from "@/lib/format";
 import { safeHref } from "@/lib/safe-href";
 import { interviewDimensionLabel } from "@/lib/dimensions";
 import { useLocale } from "@/lib/i18n/locale-context";
@@ -178,12 +178,15 @@ export default function InterviewReportPage() {
               <div className="mt-2 flex flex-wrap gap-2">
                 {trajectory.length > 0 && (
                   <Badge variant="outline" className="text-2xs font-normal tabular-nums">
-                    {trajectory.length} questions
+                    {t("interviews.report.questionsCount", { count: trajectory.length })}
                   </Badge>
                 )}
                 {data.difficulty != null && (
                   <Badge variant="outline" className="text-2xs font-normal tabular-nums">
-                    reached depth {depthLevel(data.difficulty)} / 5 · {depthLabel(data.difficulty)}
+                    {t("interviews.report.depthReached", {
+                      level: depthLevel(data.difficulty),
+                      band: t(`interviews.depthBands.${depthBand(data.difficulty)}`),
+                    })}
                   </Badge>
                 )}
               </div>
@@ -411,14 +414,15 @@ function TrajectoryChart({ points }: { points: InterviewTrajectoryPoint[] }) {
           </svg>
           <figcaption className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-2xs text-muted-foreground">
             <span className="flex items-center gap-1.5">
-              <span className="size-2 rounded-full bg-primary" aria-hidden /> how many questions in a row the agent
-              followed up on
+              <span className="size-2 rounded-full bg-primary" aria-hidden />{" "}
+              {t("interviews.report.legendDepth")}
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="size-2 rounded-full bg-success" aria-hidden /> your score
+              <span className="size-2 rounded-full bg-success" aria-hidden />{" "}
+              {t("interviews.report.legendScore")}
             </span>
             {points.some((p) => p.question) && (
-              <span>hover the dots for each question</span>
+              <span>{t("interviews.report.hoverDots")}</span>
             )}
           </figcaption>
         </figure>

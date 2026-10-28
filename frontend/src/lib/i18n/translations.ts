@@ -1548,6 +1548,7 @@ export const translations = {
       couldNotLoadConversations: "Couldn't load conversations",
       paginationLabel: "conversations",
       groundedIn: "Grounded in your resumes, notes and saved jobs — every claim it makes is cited.",
+      answersCiteKnowledge: "answers cite your knowledge base",
       firstMessagePlaceholder:
         "e.g. Which of my projects should I lead with for an LLM-platform role?",
       enterToSend: "Enter to send · Shift+Enter for a new line",
@@ -2007,6 +2008,13 @@ export const translations = {
     // Interviews
     interviews: {
       title: "Interviews",
+      depthBands: {
+        warmup: "Warm-up",
+        standard: "Standard",
+        solid: "Solid",
+        deep: "Deep",
+        expert: "Expert",
+      },
       description:
         "Adaptive mock interviews: the agent follows up while your answers are strong, moves on when they're not, and pushes deeper as you prove depth. Every evaluation cites your own material.",
       paginationLabel: "interview sessions",
@@ -2113,6 +2121,11 @@ export const translations = {
         practiceAgain: "Practice again",
         fromReport: "from report {id}",
         depthTrajectoryAria: "Depth trajectory across {count} questions",
+        questionsCount: "{count} questions",
+        depthReached: "Reached depth {level} / 5 · {band}",
+        legendDepth: "how many questions in a row the agent followed up on",
+        legendScore: "your score",
+        hoverDots: "hover the dots for each question",
       },
     },
     // Jobs
@@ -3764,6 +3777,7 @@ export const translations = {
       couldNotLoadConversations: "没能加载会话",
       paginationLabel: "会话",
       groundedIn: "基于你的简历、笔记和收藏的职位——它说的每一句都有引用。",
+      answersCiteKnowledge: "回答引用你的知识库",
       firstMessagePlaceholder: "例如：做 LLM 平台这类岗位，我该把哪个项目放在最前面？",
       enterToSend: "回车发送 · Shift+回车换行",
       startChat: "开始对话",
@@ -4188,6 +4202,13 @@ export const translations = {
     // Interviews
     interviews: {
       title: "面试",
+      depthBands: {
+        warmup: "热身",
+        standard: "标准",
+        solid: "扎实",
+        deep: "深入",
+        expert: "专家",
+      },
       description:
         "自适应模拟面试：你的回答有力时代理会追问，不够有力时它会往下走一层，你证明了自己的深度它就推得更深。每次评估都引用你自己的材料。",
       paginationLabel: "面试场次",
@@ -4283,6 +4304,11 @@ export const translations = {
         practiceAgain: "再练一次",
         fromReport: "来自报告 {id}",
         depthTrajectoryAria: "横跨 {count} 个问题的深度轨迹",
+        questionsCount: "{count} 个问题",
+        depthReached: "达到深度 {level} / 5 · {band}",
+        legendDepth: "代理连续追问了多少个问题",
+        legendScore: "你的得分",
+        hoverDots: "悬停圆点查看每道题",
       },
     },
     // Jobs

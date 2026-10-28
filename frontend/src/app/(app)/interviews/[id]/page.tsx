@@ -38,7 +38,7 @@ import { ProcessingSteps } from "@/components/ai/processing-steps";
 import { useInterviewOpening, useSubmitInterviewAnswer, useFinalizeInterview } from "@/lib/hooks/actions";
 import { useAnswerVoice } from "@/lib/hooks/voice";
 import { useInterviewSession } from "@/lib/hooks/resources";
-import { depthLabel, depthLevel, titleCase } from "@/lib/format";
+import { depthBand, depthLevel, titleCase } from "@/lib/format";
 import { interviewDimensionLabel } from "@/lib/dimensions";
 import { useLocale } from "@/lib/i18n/locale-context";
 import type { AnswerResponse } from "@/lib/hooks/actions";
@@ -461,10 +461,12 @@ function DifficultyMeter({ value }: { value: number }) {
   const { t } = useLocale();
   // depthLevel owns the 0–1 ↔ 1–5 projection; every depth surface shares it.
   const level = depthLevel(value);
+  // The rung is a token here; the word is the reader's.
+  const word = t(`interviews.depthBands.${depthBand(value)}`);
   return (
     <span
       className="flex items-center gap-1.5"
-      title={t("interviews.detail.depthTitle", { depth: depthLabel(value) })}
+      title={t("interviews.detail.depthTitle", { depth: word })}
       aria-label={t("interviews.detail.difficultyAria", { level })}
     >
       <Gauge className="size-3.5 text-muted-foreground" aria-hidden />
@@ -479,7 +481,7 @@ function DifficultyMeter({ value }: { value: number }) {
           />
         ))}
       </span>
-      <span className="text-2xs text-muted-foreground">{depthLabel(value)}</span>
+      <span className="text-2xs text-muted-foreground">{word}</span>
     </span>
   );
 }

@@ -256,7 +256,13 @@ export function textOffendersIn(file: string, text: string): Offender[] {
     // instead of the copy, and it is the one failure the prose rules below
     // would miss -- so it is caught here rather than by them.
     const unresolved = /^[a-z][a-zA-Z]*(\.[a-z][a-zA-Z]*)+$/.test(value);
-    if (!unresolved && !sentenceHead(value) && !sentenceTail(value)) continue;
+    if (
+      !unresolved &&
+      !sentenceHead(value) &&
+      !sentenceTail(value) &&
+      !sentenceLead(value, m[0][0])
+    )
+      continue;
     // Code, not copy.
     if (isCode(value)) continue;
     if (NOT_COPY.has(value)) continue;
@@ -299,6 +305,28 @@ function sentenceHead(value: string): boolean {
 function sentenceTail(value: string): boolean {
   const head = bare(value);
   return /^[a-z]/.test(head) && /\s/.test(head) && /[.!?…]$/.test(head);
+}
+
+/** A JS statement's opening word: a chunk that starts with one is code the
+ *  text-node regex caught out of alignment, not a sentence the reader sees. */
+const CODE_HEAD =
+  /^(export|import|return|if|else|case|catch|function|const|let|var|await|from|type|interface|declare|throw|new|typeof|default)\b/;
+
+/**
+ * The head of a sentence that was split around a value.
+ *
+ * `reached depth {level} / 5 · {band}` reads as one sentence and is cut into
+ * a text node and an expression; the first node begins lower-case and carries
+ * no closing mark, so the capital rule and the tail rule both skipped it and
+ * the report printed that line in English on a Chinese page. A chunk that
+ * opens right after a tag and is a multi-word lower-case phrase is that head.
+ * Code is excluded by shape: a statement keyword at the start, or a quote or
+ * parenthesis a sentence does not sit inside of.
+ */
+function sentenceLead(value: string, opened: string): boolean {
+  if (opened !== ">") return false;
+  const head = bare(value);
+  return /^[a-z]/.test(head) && /\s/.test(head) && !/["()]/.test(head) && !CODE_HEAD.test(head);
 }
 
 function textNodeOffenders(): Offender[] {

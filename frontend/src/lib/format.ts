@@ -176,10 +176,13 @@ export function depthLevel(value: number): number {
   return Math.min(5, Math.max(1, level));
 }
 
-const DEPTH_LABELS = ["Warm-up", "Standard", "Solid", "Deep", "Expert"];
+/** The five rungs `depthLevel` draws, as band tokens; the words come from the locale table. */
+export const DEPTH_BANDS = ["warmup", "standard", "solid", "deep", "expert"] as const;
 
-export function depthLabel(value: number): string {
-  return DEPTH_LABELS[depthLevel(value) - 1] ?? String(depthLevel(value));
+export type DepthBand = (typeof DEPTH_BANDS)[number];
+
+export function depthBand(value: number): DepthBand {
+  return DEPTH_BANDS[depthLevel(value) - 1] ?? "standard";
 }
 
 /** Memory importance → the band the editor offers; the words come from the locale table. */

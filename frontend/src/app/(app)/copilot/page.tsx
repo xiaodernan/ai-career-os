@@ -759,7 +759,7 @@ function MessageRow({ message }: { message: ChatMessage }) {
       )}
       {!isUser && (
         <p className="sr-only">
-          <Quote className="inline size-3" aria-hidden /> answers cite your knowledge base
+          <Quote className="inline size-3" aria-hidden /> {t("copilot.answersCiteKnowledge")}
         </p>
       )}
     </div>

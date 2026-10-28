@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  depthLabel,
+  DEPTH_BANDS,
+  depthBand,
   depthLevel,
   weightBand,
   formatDate,
@@ -17,6 +18,8 @@ import {
   slugify,
   titleCase,
 } from "./format";
+import { fill, lookup } from "./i18n/locale-context";
+import { translations } from "./i18n/translations";
 
 describe("formatSalary", () => {
   it("renders a USD compact range with an en dash", () => {
@@ -77,7 +80,7 @@ describe("titleCase", () => {
   });
 });
 
-describe("depthLevel / depthLabel", () => {
+describe("depthLevel / depthBand", () => {
   it("projects the pipeline's 0–1 difficulty onto the 1–5 ladder it is drawn as", () => {
     // interview_sessions.difficulty in the live DB sits in [0.5, 0.65]; decide_next
     // clamps to [0.1, 0.95]. Printing that float on a badge reading "depth N / 5" made
@@ -97,12 +100,43 @@ describe("depthLevel / depthLabel", () => {
     expect(depthLevel(7)).toBe(5);
   });
 
-  it("names each rung, and never a rung that has no name", () => {
-    expect(depthLabel(0)).toBe("Warm-up");
-    expect(depthLabel(0.6)).toBe("Solid");
-    expect(depthLabel(5)).toBe("Expert");
-    expect(depthLabel(9)).toBe("Expert");
-    expect(depthLabel(2)).toBe("Standard");
+  it("names each rung with a band token, and never a rung that has no name", () => {
+    expect(depthBand(0)).toBe("warmup");
+    expect(depthBand(0.6)).toBe("solid");
+    expect(depthBand(5)).toBe("expert");
+    expect(depthBand(9)).toBe("expert");
+    expect(depthBand(2)).toBe("standard");
+    expect(new Set(DEPTH_BANDS).size).toBe(DEPTH_BANDS.length);
+  });
+});
+
+describe("the depth bands", () => {
+  it("has a word for every band in both languages", () => {
+    // The meter asks for the key at paint time (`interviews.depthBands.${band}`),
+    // so no scan can see whether the table holds it. A missing one would render
+    // the dot-path on the badge, in every language at once.
+    for (const band of DEPTH_BANDS) {
+      for (const [locale, table] of Object.entries(translations)) {
+        const key = `interviews.depthBands.${band}`;
+        expect(lookup(table, key), `${locale} has no ${key}`).toBeTypeOf("string");
+      }
+    }
+  });
+
+  it("renders the report's depth badge in the reader's language", () => {
+    // The badge read `reached depth 3 / 5 · Solid` under every locale: the
+    // sentence was two JSX text nodes and the last word was a table of five
+    // English strings in format.ts. Compose it the way the page does.
+    const compose = (locale: "en" | "zh") => {
+      const table = translations[locale];
+      const word = lookup(table, `interviews.depthBands.${depthBand(0.6)}`);
+      expect(word, `${locale} has no word for solid`).toBeTypeOf("string");
+      const sentence = lookup(table, "interviews.report.depthReached");
+      expect(sentence, `${locale} has no depthReached`).toBeTypeOf("string");
+      return fill(sentence as string, { level: 3, band: word as string });
+    };
+    expect(compose("zh")).toBe("达到深度 3 / 5 · 扎实");
+    expect(compose("en")).toBe("Reached depth 3 / 5 · Solid");
   });
 });
 

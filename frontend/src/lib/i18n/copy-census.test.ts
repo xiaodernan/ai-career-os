@@ -107,6 +107,35 @@ describe("the browser's copy", () => {
     // elsewhere, and no key can hold it.
     const probe = "export const x = <p>{count} matching {noun}</p>;";
     expect(textOffendersIn("probe.tsx", probe)).toEqual([]);
+    // The head rule needs a phrase for the same reason: `ms` is a unit the
+    // reader reads in either language, not a word a key can hold.
+    const unit = "export const x = <p>ms</p>;";
+    expect(textOffendersIn("probe.tsx", unit)).toEqual([]);
+  });
+
+  it("reads the head of a sentence split around a value", () => {
+    // The depth badge read `reached depth 3 / 5 · Solid` on a Chinese page:
+    // the first chunk begins lower-case and carries no closing mark, so the
+    // capital rule and the tail rule both skipped it. A chunk that opens a
+    // tag as a multi-word lower-case phrase is that head.
+    const probe = "export const x = <p>reached depth {level} / 5 · {band}</p>;";
+    expect(textOffendersIn("probe.tsx", probe).map((o) => o.value)).toEqual(["reached depth"]);
+    const whole = "export const x = <span>hover the dots for each question</span>;";
+    expect(textOffendersIn("probe.tsx", whole).map((o) => o.value)).toEqual([
+      "hover the dots for each question",
+    ]);
+  });
+
+  it("does not read code the text-node regex caught out of alignment", () => {
+    // A regex that reads between `>` and `{` also reads code that happens to
+    // sit in those characters. A statement's opening word, or the punctuation
+    // of an expression, is not a sentence the reader sees.
+    const probes = [
+      "export const x = () => {\n  if (!ready) return;\n};",
+      "const y = a > b ? c : d;",
+      "const z = list.map((v) => v.name).join(\", \");",
+    ];
+    for (const probe of probes) expect(textOffendersIn("probe.tsx", probe)).toEqual([]);
   });
 
   it("reads the prose a template literal carries between its values", () => {
