@@ -20,6 +20,7 @@ import type {
   IngestionFeed,
   IngestionRun,
   IngestionRunDetail,
+  IngestCounts,
   InsightDigest,
   Job,
   JobMatch,
@@ -480,9 +481,10 @@ export function normalizeSavedSearch(raw: unknown): SavedSearch {
 }
 
 /**
- * One pull of one feed (roadmap 19.2). The counts are read off the engine's own
- * `counts` map rather than re-counted here, so the run list and the stored plan
- * cannot disagree; a run with no counts answers null rather than zeros.
+ * One pull of one feed (roadmap 19.2). The counts are the engine's own `counts` map,
+ * passed through whole rather than re-projected: it is built by the one function that
+ * decided the plan, so re-reading its five names here could disagree with it, and a run
+ * with no counts answers null rather than zeros.
  */
 export function normalizeIngestionRun(raw: unknown): IngestionRun {
   const counts = rec(pick(raw, "counts"));
@@ -493,15 +495,7 @@ export function normalizeIngestionRun(raw: unknown): IngestionRun {
     feedName: str(raw, "feedName", "feed_name") ?? "",
     status: str(raw, "status") ?? "",
     error: str(raw, "error") ?? null,
-    counts: hasCounts
-      ? {
-          incoming: num(counts, "incoming"),
-          create: num(counts, "create"),
-          update: num(counts, "update"),
-          close: num(counts, "close"),
-          duplicates: num(counts, "duplicates"),
-        }
-      : null,
+    counts: hasCounts ? (counts as IngestCounts) : null,
     startedAt: str(raw, "startedAt", "started_at"),
     finishedAt: str(raw, "finishedAt", "finished_at"),
   };

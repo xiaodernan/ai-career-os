@@ -147,7 +147,8 @@ assembled from.
 | POST | `/resumes/{id}/set-current` | mark current version |
 | GET | `/resumes/{id}/versions` | version history (original + tailored) |
 | GET | `/resume-versions` | all versions for the user |
-| GET | `/resume-versions/{id}` | one version (structured JSON, diff, plaintext) |
+| GET | `/resume-versions/{id}` | one version's metadata — label, kind, job, score, diff; the body is not in this shape, and the print route below is the read that renders it |
+| POST | `/resume-versions/{id}/print` | `{locale}` → `{html}` — one version as a self-contained, print-ready document in the reader's language: its structured body section by section, or its stored text when it was never parsed. The browser's own print dialog is the PDF. Scoped to the caller: a version that is not the caller's is a 404, not someone's resume |
 
 ### Jobs & companies
 
@@ -203,7 +204,7 @@ every redirect hop, so a feed cannot make the server read its own network.
 | PATCH | `/ingestion/feeds/{id}` | `{enabled}` — the one switch: whether the night's sweep includes this feed |
 | DELETE | `/ingestion/feeds/{id}` | forgets the feed and the runs it filed; 204 |
 | POST | `/ingestion/feeds/{id}/run` | pulls one feed now and answers the run plus the engine's plan — create / update / close / duplicates and their counts. A failed pull answers 200 with `status: "failed"` and `error` |
-| GET | `/ingestion/runs` | the caller's runs, newest first; the `limit` parameter defaults to 20 and is clamped to 50 |
+| GET | `/ingestion/runs` | the caller's runs, newest first, one page at a time — `page` (default 0) and `size` (default 20, clamped to 100) → {items, total, page, size} |
 | GET | `/ingestion/runs/{id}` | one run plus its stored plan |
 
 ### Notification center (`/notifications`)
@@ -413,6 +414,7 @@ crosses the wire now so the mapping can grow a vocabulary later.
 | POST | `/internal/features/import-plan` | Epic 13.2 -- the idempotent write plan for a bundle, per-item content hashes and all (backend `importPlan`); the reader's own six sections are read here when the request carries none |
 | POST | `/internal/features/redact-bundle` | Epic 13.3 -- the bundle with sections dropped and the hash recomputed over what is left (backend `redactBundle`) |
 | POST | `/internal/features/render-bundle` | Epic 13.1 -- the human-readable half: a print-ready document of the bundle, HTML or PDF (backend `renderBundle`) |
+| POST | `/internal/features/render-resume` | Epic 19.5 -- one resume version as a print-ready document: the structured body in the export's print chrome and section words, or the version's plaintext when it was never parsed (backend `renderResume`) |
 | POST | `/internal/memories/import` | Epic 13.2 -- restore a bundle's long-term memories, upserted on the same (kind, key) the extraction path uses, so the restore is idempotent (backend `importMemories`) |
 | POST | `/internal/features/salary-benchmark` | Epic 12.1 -- percentiles by role, seniority band and location (backend `salaryBenchmark`) |
 | POST | `/internal/features/negotiate` | Epic 12.2 -- an offer against the benchmark, with leverage and talking points (backend `negotiate`) |

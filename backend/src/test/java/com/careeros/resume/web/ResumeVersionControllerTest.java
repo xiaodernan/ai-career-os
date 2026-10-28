@@ -7,6 +7,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -181,6 +182,53 @@ class ResumeVersionControllerTest {
                 .andExpect(status().isUnauthorized());
 
         verifyNoInteractions(resumes);
+    }
+
+    // ------------------------------------------------------------ the print read
+
+    @Test
+    void a_version_prints_as_a_document_in_the_readers_language() throws Exception {
+        when(resumes.printHtml(ALICE, VERSION, "zh"))
+                .thenReturn("<!doctype html><html lang=\"zh\"><body><h1>Ada</h1></body></html>");
+
+        mvc.perform(post("/api/v1/resume-versions/" + VERSION + "/print")
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content("{\"locale\":\"zh\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.html")
+                        .value("<!doctype html><html lang=\"zh\"><body><h1>Ada</h1></body></html>"));
+
+        ArgumentCaptor<UUID> user = ArgumentCaptor.forClass(UUID.class);
+        verify(resumes).printHtml(user.capture(), eq(VERSION), eq("zh"));
+        assertThat(user.getValue()).isEqualTo(ALICE);
+    }
+
+    @Test
+    void a_print_without_a_locale_leaves_the_language_to_the_renderer() throws Exception {
+        // The words are the renderer's table; a browser that names no language gets
+        // its default rather than a language the controller invented.
+        when(resumes.printHtml(ALICE, VERSION, null)).thenReturn("<html></html>");
+
+        mvc.perform(post("/api/v1/resume-versions/" + VERSION + "/print")
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.html").value("<html></html>"));
+
+        verify(resumes).printHtml(ALICE, VERSION, null);
+    }
+
+    @Test
+    void printing_someone_elses_version_is_the_same_404() throws Exception {
+        when(resumes.printHtml(ALICE, VERSION, "en"))
+                .thenThrow(new ApiException(ApiErrorCode.NOT_FOUND, "Resume version not found"));
+
+        mvc.perform(post("/api/v1/resume-versions/" + VERSION + "/print")
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content("{\"locale\":\"en\"}"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error.code").value("NOT_FOUND"));
     }
 
     @Test

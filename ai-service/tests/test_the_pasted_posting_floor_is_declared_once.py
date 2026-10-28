@@ -15,6 +15,12 @@ number would start sending postings the analyst answers with noise. The floor th
 home, `frontend/src/lib/jd-text.ts`, and the relationship to the server's bound is read from the
 server's own file rather than typed in here.
 
+The refusal itself is an i18n issue, not an English string: `jdTextIssue` answers a `TextIssue`
+(``key: "jd.pasteAtLeast"``) whose ``params`` carry the declared floor, and both screens render it
+through the reader's `t` beside a translated fallback. So the number reaches the screen by
+reference in every language -- this file pins the param that carries it and the fallback each
+screen shows when the paste clears the floor, rather than a template literal.
+
 The server's bound had no witness at all: no test in this repository built one of those three models
 with a short value, so nothing proved `min_length` was really 20 rather than absent. The second case
 asks the models themselves -- nineteen characters raise, twenty pass -- which is also what makes the
@@ -262,10 +268,12 @@ def test_the_client_declares_its_floor_once_and_uses_it_by_name() -> None:
     assert not re.search(r"\d", body), (
         f"jdTextIssue carries a digit of its own, so the exported constant is not the only floor it "
         f"speaks:\n{body}")
-    assert "${JD_TEXT_MIN_CHARS}" in body, (
-        f"the sentence no longer interpolates the constant, so a changed floor would print an old "
-        f"number on screen:\n{body}")
-    literals = re.findall(r"\d+", strip_comments(module))
+    assert "params: { min: JD_TEXT_MIN_CHARS }" in body, (
+        f"the issue no longer carries the declared floor as its sentence's `min` param, so a changed "
+        f"floor would print an old number in every language:\n{body}")
+    # A numeric token, not a digit anywhere: the module names `@/lib/i18n/issue`, and the `18` in
+    # that specifier is part of a word rather than a number the code computes with.
+    literals = re.findall(r"(?<![\w$])\d+(?![\w$])", strip_comments(module))
     assert literals == [str(CLIENT_FLOOR)], (
         f"the module's code carries a second number besides its own floor (it spells {literals}): a "
         "literal in this module that is not the declared floor is a floor someone can change alone")
@@ -280,7 +288,10 @@ def test_no_screen_keeps_a_posting_floor_of_its_own() -> None:
             "drift this file exists to stop")
         assert not re.search(r"length < \d+", text), \
             f"{rel} spells a length floor again beside the helper's own: two numbers, one rule"
-        assert "const issue = jdTextIssue(text);" in text, \
+        assert 'import { issueText } from "@/lib/i18n/issue";' in text, (
+            f"{rel} no longer renders the issue through the shared translator, so the hint would "
+            "print an i18n key instead of the reader's language")
+        assert "const issue = issueText(jdTextIssue(text), t);" in text, \
             f"{rel} stopped computing the issue once for both its guard and its button"
         assert "if (issue) return;" in text, \
             f"{rel}'s run() no longer defers to the shared issue, so the guard and the button can disagree"
@@ -315,13 +326,21 @@ def test_the_client_floor_stays_above_the_apis_own_bound() -> None:
 
 
 def test_the_floors_sentence_has_a_reader_on_both_screens() -> None:
-    """A message no screen renders is a dead string: both hints print the issue when there is one."""
-    for rel, tail in ((ANALYZE, "nothing is sent until you run the analysis."),
-                      (IMPORT, "nothing is sent until you import.")):
+    """A sentence no screen renders is a dead string: both hints print the issue when there is one.
+
+    The fallback is a key, not prose: the floor's sentence and the "nothing is sent" line beside it
+    are both rendered through `t`, so a reader sees them in their own language and this gate joins
+    each screen to the key it promises.
+    """
+    for rel, key in ((ANALYZE, "jd.nothingSent"), (IMPORT, "import.nothingSent")):
         text = read(rel)
-        assert f'{{issue ?? "{tail}"}}' in text, (
-            f"{rel} no longer falls back to {tail!r} when the paste clears the floor, so "
-            "`jdTextIssue`'s sentence became a string nothing renders")
+        assert f'{{issue ?? t("{key}")}}' in text, (
+            f"{rel} no longer falls back to {key!r} when the paste clears the floor, so the hint "
+            "beside its textarea is blank whenever the paste is long enough")
+    table = read("frontend/src/lib/i18n/translations.ts")
+    assert table.count('pasteAtLeast: "') >= 2, (
+        "the sentence `jdTextIssue` names is no longer in the translation table for every locale, "
+        "so the refusal would render as its key")
 
 
 def test_the_helper_ships_with_a_test_that_reads_the_constant_it_checks() -> None:

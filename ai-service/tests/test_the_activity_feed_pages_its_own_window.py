@@ -19,6 +19,11 @@ five-run preview sends `{ size: 5 }`, the shape the jobs preview already used.
 branch of `normalizePage` survives on `GET /jobs/saved`, which is the case it was always gated
 for. The API doc row and the golden journey move to the envelope in the same unit -- a wire change
 that only half a stack made is the kind that 404s in e2e.
+
+19.2 briefly brought the name back: `GET /ingestion/runs` was a newest-N history whose N the hook
+named. 19.5 retired it again -- the runs panel earned a pager, the route answered a `PageDTO`, and
+the handler-bound `limit` this file used to admit with a reason has no binder left, so the census
+below is asserted against the empty set it started from.
 """
 
 import re
@@ -29,6 +34,7 @@ ROOT = TESTS.parent.parent
 
 FRONT = ROOT / "frontend" / "src"
 JAVA = ROOT / "backend" / "src" / "main" / "java"
+
 RESOURCES = FRONT / "lib" / "hooks" / "resources.ts"
 ACTIVITY_PAGE = FRONT / "app" / "(app)" / "activity" / "page.tsx"
 DASHBOARD_PAGE = FRONT / "app" / "(app)" / "dashboard" / "page.tsx"
@@ -171,9 +177,12 @@ def test_the_route_answers_a_real_envelope_and_no_handler_binds_limit_anymore():
         "window and the repository's total")
     assert "Paging.first(" not in controller, (
         "the route still spends the one-result helper, so a window is not a window here")
+    # The retirement was about *board* handlers: a list the screen pages answers `page`/`size`.
+    # 19.2's `GET /ingestion/runs` named its newest N through `limit` and this file admitted it
+    # with a reason; 19.5's runs pager made it a board too, so no handler binds the name at all.
     limit_bindings = sorted(f.name for f in sorted(JAVA.rglob("*.java"))
                             if re.search(r"@RequestParam\([^)]*\)\s+int\s+limit\b",
                                          collapse(read(f))))
     assert limit_bindings == [], (
-        f"a handler still binds the retired parameter, so the doc/test contract would drift: "
-        f"{limit_bindings}")
+        f"the handlers binding `limit` are {limit_bindings}, not none: a list route is paged, "
+        f"and the newest-N history that used to earn the exception pages now as well")

@@ -110,6 +110,17 @@ READERS = {
                                  ("ratelimit/RateLimitFilter.java", "ratelimit/RateLimitController.java")),
 }
 
+# A shared accessor name belongs to more than the knob. `isEnabled()` is the
+# ratelimit switch and also `IngestionFeed`'s own per-feed toggle, and the
+# feed DTO reads the latter. A call site that names no holder getter is not a
+# read of an `app.*` key, so it is pinned here rather than charged to a knob --
+# and the pin is exact, so a bare two-statement knob read (`Ratelimit rl =
+# app.getRatelimit(); ... rl.isEnabled()`) cannot hide among these by being
+# added.
+NON_KNOB_SHARED = {
+    ("job/dto/IngestionFeedDtos.java", "isEnabled"),
+}
+
 # the bound-but-unread leaves, each stated with the authority that decides the value instead and with what an
 # operator who edits the key would then see.
 DEAD_KNOBS = {
@@ -407,17 +418,6 @@ def test_a_live_knob_is_one_whose_name_a_reader_calls_and_the_reader_resolves_to
         f"the thirteen read keys together produced {total} accessor call sites, below {MIN_ACCESSOR_SITES}: the "
         f"scanner is not finding calls that exist, so a 'no reader' verdict anywhere else is a scanner failure")
 
-    for key, (holder, field, accessor, files) in sorted(READERS.items()):
-        rows = sites(accessor, sources)
-        assert rows, (
-            f"`app.{key}` binds AppProperties.{holder}.{field} and nothing outside AppProperties calls "
-            f".{accessor}() any more -- that is the bound-but-unread class this gate names in DEAD_KNOBS, so "
-            f"the key has to move there instead of staying listed as read")
-        found = tuple(sorted({rel(p).split("/careeros/")[-1] for p, _, _ in rows}))
-        assert found == tuple(sorted(files)), (
-            f"the files reading `app.{key}` through .{accessor}() are {found}, not the pinned {sorted(files)} -- "
-            f"a caller added or moved changes which file an operator has to edit for this knob to matter")
-
     _, fields = prop_structure()
     owners_by_accessor = {}
     for name, (java_type, _init) in fields.items():
@@ -428,14 +428,36 @@ def test_a_live_knob_is_one_whose_name_a_reader_calls_and_the_reader_resolves_to
         f"AppProperties no longer declares `isEnabled` in two holders (Storage, Ratelimit); the accessor names "
         f"that repeat are {sorted(shared)} -- a name that stopped being shared makes the attribution clause "
         f"below vacuous, and the census would then be counting calls it cannot resolve")
-    unattributed = [(rel(p), n, a, owners) for a, owners in sorted(shared.items())
+
+    for key, (holder, field, accessor, files) in sorted(READERS.items()):
+        rows = sites(accessor, sources)
+        assert rows, (
+            f"`app.{key}` binds AppProperties.{holder}.{field} and nothing outside AppProperties calls "
+            f".{accessor}() any more -- that is the bound-but-unread class this gate names in DEAD_KNOBS, so "
+            f"the key has to move there instead of staying listed as read")
+        # A name only one holder declares resolves to that key wherever it is
+        # called. A shared name (`isEnabled` is Storage's and Ratelimit's, and
+        # also an entity's own toggle) does not, so for those the line has to
+        # name the holder getter that produced the object the call is on.
+        found = tuple(sorted({rel(p).split("/careeros/")[-1] for p, _, line in rows
+                              if accessor not in shared or f".get{holder}(" in line}))
+        assert found == tuple(sorted(files)), (
+            f"the files reading `app.{key}` through .{accessor}() are {found}, not the pinned {sorted(files)} -- "
+            f"a caller added or moved changes which file an operator has to edit for this knob to matter")
+
+    unattributed = [(rel(p).split("/careeros/")[-1], n, a, owners) for a, owners in sorted(shared.items())
                     for p, n, line in sites(a, sources)
                     if not any(f".get{holder}(" in line for holder in owners)]
-    assert not unattributed, (
+    unknown = [row for row in unattributed if (row[0], row[2]) not in NON_KNOB_SHARED]
+    assert not unknown, (
         f"these call sites of a shared accessor name no holder getter on the same line, so the census cannot "
-        f"say which key arms them: {unattributed} -- a two-statement read (holder into a local, then accessor) "
+        f"say which key arms them: {unknown} -- a two-statement read (holder into a local, then accessor) "
         f"is legal Java and this scan is line-scoped, so the site has to name its holder for the count to mean "
         f"anything")
+    assert {(f, a) for f, _n, a, _owners in unattributed} == set(NON_KNOB_SHARED), (
+        f"the pinned non-knob sites of shared accessor names are no longer the measured ones: "
+        f"{sorted({(f, a) for f, _n, a, _owners in unattributed})} -- a pinned site that moved or a new bare "
+        f"site that is not a knob read has to be re-measured, not excused")
 
     secret = [rel(p) for p, _, _ in sites("getSecret", sources)]
     secret_key = [rel(p) for p, _, _ in sites("getSecretKey", sources)]

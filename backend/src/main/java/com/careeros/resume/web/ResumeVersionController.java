@@ -2,11 +2,16 @@ package com.careeros.resume.web;
 
 import com.careeros.common.AuthUser;
 import com.careeros.common.CurrentUser;
+import com.careeros.resume.dto.ResumeDtos.PrintResumeRequest;
+import com.careeros.resume.dto.ResumeDtos.ResumePrint;
 import com.careeros.resume.dto.ResumeDtos.ResumeVersionItem;
 import com.careeros.resume.service.ResumeService;
+import jakarta.validation.Valid;
 import java.util.UUID;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -30,5 +35,12 @@ public class ResumeVersionController {
     @GetMapping("/{id}")
     public ResumeVersionItem get(@CurrentUser AuthUser user, @PathVariable UUID id) {
         return resumes.versionMeta(user.id(), id);
+    }
+
+    /** 19.5 -- the version as a print-ready document, in the reader's language. */
+    @PostMapping("/{id}/print")
+    public ResumePrint print(@CurrentUser AuthUser user, @PathVariable UUID id,
+                             @RequestBody @Valid PrintResumeRequest request) {
+        return new ResumePrint(resumes.printHtml(user.id(), id, request.locale()));
     }
 }

@@ -1,8 +1,7 @@
-"""The resume-version controller's request contract: one query parameter, two readers.
+"""The resume-version controller's wire: one query parameter, two reads, one print write.
 
-``ResumeVersionController`` is the first controller in this gate family with **no request
-bodies at all** -- both routes are reads, and the whole request contract is the query
-parameter the list route binds:
+``ResumeVersionController`` serves three routes. Two are reads and their whole request
+contract is the query parameter the list route binds:
 
 1. ``GET /resume-versions`` -- ``@RequestParam("resumeId") UUID resumeId``, explicitly
    named and required (no ``required = false``, no ``defaultValue``). The frontend reaches
@@ -13,6 +12,14 @@ parameter the list route binds:
    stay the template's variable name. ``endpoints.resumeVersion`` (singular) maps the path,
    and a census over ``frontend/src`` shows it ships with **zero clients** -- the route is
    served but never fetched.
+
+3. ``POST /resume-versions/{id}/print`` (19.5) -- the one write. The version is the path,
+   and the request body is exactly one field, ``locale``, which the renderer needs because
+   the document is written in the reader's language; the answer is ``{html}``, the whole
+   self-contained document, and the hook opens the window before the request so a popup
+   blocker cannot eat the click. ``usePrintResumeVersion`` in ``actions.ts`` is its sole
+   client; this gate joins the body key to the DTO's component so a rename on either side
+   fails here rather than at runtime.
 
 This gate holds the wire at both ends: the Java ``@RequestParam`` literal and the JS object
 key are read from their own files and joined, so a one-sided rename fails here. It is the
@@ -42,7 +49,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 
 CONTROLLER = "backend/src/main/java/com/careeros/resume/web/ResumeVersionController.java"
+DTOS = "backend/src/main/java/com/careeros/resume/dto/ResumeDtos.java"
 RESOURCES = "frontend/src/lib/hooks/resources.ts"
+ACTIONS = "frontend/src/lib/hooks/actions.ts"
 ENDPOINTS = "frontend/src/lib/api/endpoints.ts"
 PAGE = "frontend/src/app/(app)/resumes/[id]/page.tsx"
 
@@ -61,6 +70,11 @@ def controller_source() -> str:
 @lru_cache(maxsize=1)
 def resources_source() -> str:
     return read(RESOURCES)
+
+
+@lru_cache(maxsize=1)
+def actions_source() -> str:
+    return read(ACTIONS)
 
 
 def ts_call_bodies(fn_name: str, source: str) -> list[str]:
@@ -115,20 +129,23 @@ def object_literal_keys(block: str) -> list[str]:
 
 # --------------------------------------------------------------------------- case 1: two reads, no bodies
 
-def test_the_versions_controller_carries_two_reads_and_no_request_bodies():
+def test_the_versions_controller_carries_two_reads_and_the_one_print_write():
     src = controller_source()
-    assert src.count("@RequestBody") == 0, (
-        "ResumeVersionController grew a request body; the rest of this gate only covers "
-        "the query-parameter wire"
+    assert src.count("@RequestBody") == 1, (
+        "expected exactly the print route's @RequestBody, found %d" % src.count("@RequestBody")
     )
     assert src.count("@RequestParam") == 1, (
         "expected exactly one @RequestParam binding, found %d" % src.count("@RequestParam")
     )
-    assert src.count("@PathVariable") == 1, (
-        "expected exactly one @PathVariable binding, found %d" % src.count("@PathVariable")
+    assert src.count("@PathVariable") == 2, (
+        "expected one @PathVariable per route that names a version, found %d"
+        % src.count("@PathVariable")
     )
     assert src.count("@GetMapping") == 2, (
-        "expected both routes to be GETs, found %d @GetMapping" % src.count("@GetMapping")
+        "expected the two read routes to be GETs, found %d @GetMapping" % src.count("@GetMapping")
+    )
+    assert src.count("@PostMapping") == 1, (
+        "expected the print route to be the one POST, found %d @PostMapping" % src.count("@PostMapping")
     )
 
 
@@ -267,4 +284,54 @@ def test_the_single_version_route_ships_with_no_client():
     )
     assert "resumeVersion: (id: string) => `/resume-versions/${seg(id)}`," in read(ENDPOINTS), (
         "the member's own template changed; if it gained a client, re-home this census"
+    )
+
+
+# --------------------------------------------------------------------------- case 10: the print write
+
+def test_the_print_route_takes_the_version_from_the_path_and_the_language_from_the_body():
+    src = controller_source()
+    assert src.count('@PostMapping("/{id}/print")') == 1, (
+        "the print route no longer maps exactly POST /resume-versions/{id}/print"
+    )
+    assert "@RequestBody @Valid PrintResumeRequest request" in src, (
+        "the print route stopped binding its body through the validated DTO"
+    )
+    assert "return new ResumePrint(resumes.printHtml(user.id(), id, request.locale()));" in src, (
+        "print no longer forwards (user.id(), id, request.locale()); the auth scope, the path "
+        "id or the body field moved"
+    )
+    dto = read(DTOS)
+    assert "public record PrintResumeRequest(@Size(max = 16) String locale)" in dto, (
+        "PrintResumeRequest's one component is no longer the bounded locale the body carries"
+    )
+    assert "public record ResumePrint(String html)" in dto, (
+        "ResumePrint no longer answers the one component the hook reads"
+    )
+
+
+def test_the_print_hook_sends_the_key_the_dto_declares_and_reads_the_answer_it_names():
+    bodies = ts_call_bodies("usePrintResumeVersion", actions_source())
+    assert len(bodies) == 1, "expected exactly one usePrintResumeVersion, found %d" % len(bodies)
+    body = bodies[0]
+    assert "api.request<unknown>(endpoints.resumeVersionPrint(versionId), {" in body, (
+        "the hook stopped calling the print member with the version id"
+    )
+    assert 'method: "POST"' in body, "the print route is a GET now, but the controller maps a POST"
+    sent = object_literal_keys(braced_arg_after(body, "body: "))
+    dto = read(DTOS)
+    record = re.search(r"record PrintResumeRequest\((.*?)\)\s*\{", dto)
+    assert record, "PrintResumeRequest is no longer a record"
+    components = re.findall(r"([A-Za-z_$][\w$]*)\s*(?:,|$)", record.group(1))
+    assert sent == components == ["locale"], (
+        "the hook sends %s, the DTO declares %s; a one-sided rename would 400 as a missing "
+        "language rather than fail here" % (sent, components)
+    )
+    assert body.index("window.open") < body.index("await api.request"), (
+        "the hook no longer opens the print window before the request: a window opened after "
+        "the await is the popup blocker's to refuse"
+    )
+    assert 'str(raw, "html")' in body, (
+        "the hook no longer reads the component ResumePrint names; the answer would render as "
+        "an empty print window"
     )

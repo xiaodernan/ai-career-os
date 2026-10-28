@@ -46,7 +46,7 @@ public class SavedSearchService {
     public SavedSearchItem create(UUID userId, SavedSearchRequest request) {
         Map<String, Object> criteria = canonical(request.criteria());
         if (criteria.isEmpty()) {
-            throw new ApiException(ApiErrorCode.VALIDATION_STRUCTURE_INVALID,
+            throw new ApiException(ApiErrorCode.SAVED_SEARCH_EMPTY,
                     "A saved search needs at least one criterion");
         }
         SavedSearch saved = new SavedSearch();
@@ -74,7 +74,7 @@ public class SavedSearchService {
         Integer min = criteria.minSalary();
         Integer max = criteria.maxSalary();
         if (min != null && max != null && min > max) {
-            throw new ApiException(ApiErrorCode.VALIDATION_STRUCTURE_INVALID,
+            throw new ApiException(ApiErrorCode.SALARY_RANGE_INVALID,
                     "The salary floor is above the salary ceiling");
         }
         if (min != null) {

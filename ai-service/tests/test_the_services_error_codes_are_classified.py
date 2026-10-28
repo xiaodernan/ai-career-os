@@ -106,6 +106,12 @@ SAME_MEANING: frozenset[str] = frozenset({
     # that was already spent or has expired. The reader's answer is the
     # same for both: ask for another link.
     "RESET_TOKEN_INVALID",
+    # "AI service returned empty body" and "The renderer answered no
+    # document" are the same event at two call sites: the upstream answered,
+    # and the answer carried no payload. The sentence -- "The AI service
+    # answered with nothing." -- is true of both, and the reader's next step
+    # is the same either way: try again.
+    "AI_SERVICE_EMPTY_RESPONSE",
 })
 
 

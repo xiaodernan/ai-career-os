@@ -59,7 +59,7 @@ public class WeeklyDigestService {
     /** A user's letters, newest week first. */
     @Transactional(readOnly = true)
     public List<WeeklyDigestDto> recent(UUID userId) {
-        return digests.findByUserIdOrderByWeekStartDesc(userId, Paging.first(HISTORY_LIMIT))
+        return digests.findByUserIdOrderByWeekStartDescIdDesc(userId, Paging.first(HISTORY_LIMIT))
                 .stream().map(WeeklyDigestDto::of).toList();
     }
 

@@ -161,6 +161,26 @@ public class ResumeService {
                 v.getJobId(), v.getCreatedAt(), v.getDiff(), v.getScore());
     }
 
+    /**
+     * 19.5 -- one version as a print-ready document. The body travels from the
+     * version row (its structured jsonb, else its stored plaintext), because no
+     * client-facing read returns a version's content; the document itself is
+     * the renderer's, in the reader's words. Scoped to the caller like every
+     * other version read, so a guessed id is a 404 rather than someone's resume.
+     */
+    @Transactional(readOnly = true)
+    public String printHtml(UUID userId, UUID versionId, String locale) {
+        ResumeVersion version = requireVersion(userId, versionId);
+        Resume resume = requireResume(userId, version.getResumeId());
+        Map<String, Object> answer = ai.renderResume(userId, version.getStructured(),
+                version.getPlaintext(), resume.getTitle(), version.getLabel(), locale);
+        if (!(answer.get("html") instanceof String document) || document.isBlank()) {
+            throw new ApiException(ApiErrorCode.AI_SERVICE_EMPTY_RESPONSE,
+                    "The renderer answered no document");
+        }
+        return document;
+    }
+
     @Transactional
     public ResumeListItem create(UUID userId, CreateResumeRequest request) {
         Resume resume = new Resume();
@@ -442,7 +462,7 @@ public class ResumeService {
                                                TailoredVersionRequest request) {
         Map<String, Object> tailored = request.tailored();
         if (tailored == null || tailored.isEmpty()) {
-            throw new ApiException(ApiErrorCode.VALIDATION_STRUCTURE_INVALID,
+            throw new ApiException(ApiErrorCode.TAILORED_BODY_MISSING,
                     "A tailored version needs the structured body it was generated with");
         }
         UUID resumeId = request.resumeVersionId() != null

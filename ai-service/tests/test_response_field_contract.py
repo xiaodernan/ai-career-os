@@ -254,6 +254,17 @@ PRODUCERS = {
     # `evidence`, the cover-letter answer under `sources`, and the two key sets are disjoint, which is
     # why the mapper's two-name probe is a binding rather than a guess.
     "CoverLetterMap": ("pyfunc", "generate"),
+    # The proactive layer's wire shapes (roadmap 19.1-19.4). Two `RunItem`s exist in the backend --
+    # the activity feed's and the ingestion feed's -- so the aliases here are distinct while the
+    # tuple names the record the file really declares; a bare path would have had to guess.
+    "SavedSearchItem": ("java", "job/dto/SavedSearchDtos.java"),
+    "Criteria": ("java", "job/dto/SavedSearchDtos.java"),
+    "IngestionRunItem": ("java", ("job/dto/IngestionFeedDtos.java", "RunItem")),
+    "IngestionFeedItem": ("java", ("job/dto/IngestionFeedDtos.java", "FeedItem")),
+    "IngestionRunDetail": ("java", ("job/dto/IngestionFeedDtos.java", "RunDetail")),
+    "NotificationItem": ("java", "notification/dto/NotificationDtos.java"),
+    "NotificationInbox": ("java", ("notification/dto/NotificationDtos.java", "Inbox")),
+    "WeeklyDigestDto": ("java", "report/dto/WeeklyDigestDtos.java"),
     # A list with more than one shape. `_collect_artifacts` appends five artifact rows and they do not
     # draw the same keys: the match row carries `job_id` and the other four do not. `pycons` therefore
     # answers with what *every* row draws, and #145a's census names the difference as its own fact --
@@ -851,6 +862,81 @@ READERS: dict[str, dict] = {
         "blind": {},
         "dynamic": {},
     },
+    "normalizeSavedSearch": {
+        # The saved-search list (roadmap 19.1). `raw` is one `SavedSearchItem`, whose `criteria`
+        # is the `Criteria` record the request body also binds -- so the board's filter names
+        # (`q`, `skills`, `location`, `remote`, `minSalary`, `maxSalary`, `company`) are read one
+        # level down, against the record that declares them. The snake_case twin beside the two
+        # salary integers is live only because `Criteria` spells them camelCase; there is no
+        # producer of `min_salary` anywhere.
+        "record_of": {"raw": "SavedSearchItem", "criteria": "Criteria"},
+        "drilled": {"criteria": ("raw", "criteria")},
+        "elements": {},
+        "blind": {},
+        "dynamic": {},
+    },
+    "normalizeIngestionRun": {
+        # One row of the ingestion feed's history (roadmap 19.2). `raw` is `IngestionRunItem` --
+        # the job package's `RunItem`, whose simple name the activity feed's own row also uses, so
+        # the producer alias differs from the record name. `counts` is passed through whole: it is
+        # the engine's plan-count map, authored by `plan_ingest`'s return literal, and this reader
+        # deliberately states no name of its own over it (a re-projection could disagree with the
+        # plan the same run stores).
+        "record_of": {"raw": "IngestionRunItem"},
+        "drilled": {},
+        "elements": {},
+        "blind": {},
+        "dynamic": {},
+    },
+    "normalizeIngestionFeed": {
+        # A subscribed feed (roadmap 19.2): `raw` is `IngestionFeedItem`, and `lastRun` is that
+        # record's own `RunItem` -- handed to `normalizeIngestionRun`, whose reads are checked
+        # against its own binding rather than this reader's.
+        "record_of": {"raw": "IngestionFeedItem"},
+        "drilled": {},
+        "elements": {},
+        "blind": {},
+        "dynamic": {},
+    },
+    "normalizeIngestionRunDetail": {
+        # A run plus its plan (roadmap 19.2). `raw` is `IngestionRunDetail`; `plan` is a free map
+        # the detail screen shows rather than parses, so no name is read off it here and the record
+        # is enough.
+        "record_of": {"raw": "IngestionRunDetail"},
+        "drilled": {},
+        "elements": {},
+        "blind": {},
+        "dynamic": {},
+    },
+    "normalizeNotificationItem": {
+        # One synthesized inbox signal (roadmap 19.3). The record is exactly the page's input:
+        # the kind and its holes, never a sentence.
+        "record_of": {"raw": "NotificationItem"},
+        "drilled": {},
+        "elements": {},
+        "blind": {},
+        "dynamic": {},
+    },
+    "normalizeNotificationInbox": {
+        # The inbox envelope (roadmap 19.3): the `items` list and its `unread` count are computed
+        # together by the one record, so the badge cannot disagree with the rows. The items
+        # themselves are mapped by `normalizeNotificationItem`, whose binding checks their reads.
+        "record_of": {"raw": "NotificationInbox"},
+        "drilled": {},
+        "elements": {},
+        "blind": {},
+        "dynamic": {},
+    },
+    "normalizeWeeklyDigest": {
+        # One week's letter (roadmap 19.4). `raw` is `WeeklyDigestDto`; `payload` is the engine's
+        # digest map, passed through as the object it arrived as -- the dashboard reads the same
+        # shape through the same `InsightDigest` type, and this reader states no name over it.
+        "record_of": {"raw": "WeeklyDigestDto"},
+        "drilled": {},
+        "elements": {},
+        "blind": {},
+        "dynamic": {},
+    },
 }
 
 # Sites that answer from their fallback on every response, declared rather than denied. The key is
@@ -901,7 +987,7 @@ _ID_OF = r"\bidOf\(\s*"
 # only by re-typing it, and a re-typed copy is the thing this file bans (#160/#161).
 SITE_RECEIVER = r"([A-Za-z_$][\w$.]*)\s*,([^)]*)\)"
 CENSUS_SITE = re.compile(_ACCESSORS + SITE_RECEIVER)
-ID_SITE = re.compile(_ID_OF + r"([A-Za-z_$][\w$.]*)\s*,")
+ID_SITE = re.compile(_ID_OF + r"([A-Za-z_$][\w$.]*)\s*(?:,|\))")
 # Helpers whose call sites the scanner above reads as part of their caller's census. `idOf` takes a
 # row and tries six spellings of its identifier, so binding it separately would describe the same
 # read twice -- and leaving it out of every census would be the blind spot #159's ban refuses.
@@ -1683,7 +1769,12 @@ def _emitted(alias: str) -> set[str]:
                              "the rule would compare its reads against nothing")
     spec = PRODUCERS[alias]
     if spec[0] == "java":
-        return _record_components_at(spec[1], alias)
+        # A bare path means the record carries the alias's own name; a pair names a record whose
+        # name the table deliberately does not share, because another file declares one of the same
+        # name (`RunItem` is both the activity feed's row and the ingestion run's row).
+        where = spec[1]
+        path, record = where if isinstance(where, tuple) else (where, alias)
+        return _record_components_at(path, record)
     if spec[0] == "pyfunc":
         fn = _sole(spec[1])
         shape = _shape_of(fn) if fn is not None else None
@@ -1738,7 +1829,7 @@ def test_a_producer_kind_is_dispatched_by_name_and_never_by_the_fallback():
     raised about a BaseModel that was never declared, or found one and answered the site with keys no
     code writes.
 
-    Measured on this plane: 66 producer rows over 12 kinds -- `java` 32, `pyskel` 9, `pyappend` 6,
+    Measured on this plane: 76 producer rows over 12 kinds -- `java` 42, `pyskel` 9, `pyappend` 6,
     `pyfunc` 6, `pyconst` 3, `pydantic` 3, `jamapof` 2, `japut` 1, `pyadd` 1, `pycons` 1, `pyitem` 1,
     `pyretsub` 1. Both ends come out of the same walk over this file, so a branch and a row cannot
     drift apart quietly.
@@ -1754,12 +1845,12 @@ def test_a_producer_kind_is_dispatched_by_name_and_never_by_the_fallback():
                                              "behaviour rather than a statement"
     dispatched = set(re.findall(r'spec\[0\] == "(\w+)"', chain))
     counts = collections.Counter(spec[0] for spec in PRODUCERS.values())
-    assert len(PRODUCERS) == 68, f"{len(PRODUCERS)} rows: the population the counts below are drawn from"
+    assert len(PRODUCERS) == 76, f"{len(PRODUCERS)} rows: the population the counts below are drawn from"
     assert set(counts) == dispatched, \
         (f"the table uses {sorted(set(counts) - dispatched)} with no branch and the chain compares "
          f"{sorted(dispatched - set(counts))} with no rows: a kind that lost its branch has to gain "
          "one, and a kind that lost its rows has to lose the branch or gain the rows back")
-    assert sorted(counts.items()) == [("jamapof", 2), ("japut", 1), ("java", 34), ("pyadd", 1),
+    assert sorted(counts.items()) == [("jamapof", 2), ("japut", 1), ("java", 42), ("pyadd", 1),
                                       ("pyappend", 6), ("pycons", 1), ("pyconst", 3),
                                       ("pydantic", 3), ("pyfunc", 6), ("pyitem", 1), ("pyretsub", 1),
                                       ("pyskel", 9)], \
@@ -1782,7 +1873,7 @@ def test_a_producer_kind_is_dispatched_by_name_and_never_by_the_fallback():
     assert "nosuchkind" in raised and "BaseModel" not in raised, \
         (f"{raised}: an unknown kind must be named as itself -- pointing at a pydantic model is the "
          "misattribution this branch exists to remove")
-    assert len(PRODUCERS) == 68, "the planted row is still in the table the census above measured"
+    assert len(PRODUCERS) == 76, "the planted row is still in the table the census above measured"
 
 
 def _emitted_for(receiver: str | list[str]) -> set[str]:
@@ -2384,7 +2475,9 @@ def test_no_mapper_is_left_unbound():
     # (`changeFrom`, `groupSkillBuckets` and the attention card's row reader).
     # 35 with `normalizeMemory`: the memory-correction reader takes names, so it joins the
     # population the same way the timeline reader did (#148).
-    assert len(population) == 36, sorted(population)
+    # 43 with the proactive layer's seven: saved searches, the three ingestion readers and the
+    # three notification/digest readers all take literal names off their own records.
+    assert len(population) == 43, sorted(population)
     private = sorted(name for name, exported in _mapper_declarations() if not exported)
     assert private == ["changeFrom", "groupSkillBuckets", "normalizeAttention", "normalizeFollowUp",
                        "pathOf", "statusCountsToRows"]
@@ -3197,8 +3290,9 @@ def test_the_census_sees_every_read_the_mappers_hold():
     merged and this rule should be deleted rather than left proving equality with itself.
     """
     population = sorted(_mappers_that_read())
-    # 35 with `normalizeMemory`, the reader the memory-correction surface added.
-    assert len(population) == 36, f"the census population moved: {population}"
+    # 35 with `normalizeMemory`, the reader the memory-correction surface added; 43 with the
+    # proactive layer's seven.
+    assert len(population) == 43, f"the census population moved: {population}"
 
     diverged = []
     for name in population:
@@ -3220,7 +3314,7 @@ def test_the_census_sees_every_read_the_mappers_hold():
     # 274 rather than 271 since the outcome pair in normalizeApplication and the `field` key in
     # normalizeApplicationEvent; 282 with normalizeMemory's nine reads (id, kind, key, content,
     # importance, source, createdAt, createdAt's alias, updatedAt's alias).
-    assert len(whole) == 291, f"{len(whole)} reads by the oracle: recount both totals if this moved"
+    assert len(whole) == 337, f"{len(whole)} reads by the oracle: recount both totals if this moved"
     assert len(whole) == sum(len(_sites(name)) for name in population), \
         "a named read lives outside every mapper the census walks"
     expressions = [site for site in whole if not _BARE.fullmatch(site["receiver"])]
@@ -3315,6 +3409,27 @@ def _key_position_calls(source: str) -> list[dict]:
                      "literal": any(_QUOTED.fullmatch(name) for name in names),
                      "line": source.count("\n", 0, opener.start()) + 1,
                      "owner": owners[-1] if owners else None})
+    # `idOf` is folded: its call site writes no name, but the six spellings it tries are literal
+    # reads of its receiver, so a call with the fallback prefix omitted (`idOf(raw)`) has one
+    # argument and is skipped above, while the oracle counts it. Adding it here keeps the two
+    # populations the same size, and marks it literal because its names are stated -- one table
+    # over, in `idOf`'s own body.
+    for match in re.finditer(r"\bidOf\s*\(", blanked):
+        if _DECLARATION.search(blanked, 0, match.start()):
+            continue
+        paren = blanked.index("(", match.end() - 1)
+        _, close = _ts_args(blanked, paren)
+        parts = [part.strip() for part in _ts_top_level(blanked[paren + 1:close - 1])]
+        if len(parts) != 1:
+            continue
+        owners = [name for name, lo, hi in spans if lo <= match.start() < hi]
+        rows.append({"accessor": "idOf",
+                     "spelling": "idOf",
+                     "receiver": parts[0],
+                     "names": " ".join(sorted(_id_of_keys())),
+                     "literal": True,
+                     "line": source.count("\n", 0, match.start()) + 1,
+                     "owner": owners[-1] if owners else None})
     return rows
 
 
@@ -3353,15 +3468,15 @@ def test_a_call_whose_key_is_a_variable_is_a_population_every_member_has_to_expl
     calls = _key_position_calls(source)
     named = _key_read_calls(source)
     nameless = [row for row in calls if not row["literal"]]
-    # 297 with normalizeMemory's eight accessor calls: four literal `str`/`num` reads, and the
-    # two timestamps asked for both spellings each.
-    assert len(calls) == 306, (f"{len(calls)} accessor calls hand something to a key position: "
+    # 306 with normalizeMemory's eight accessor calls; 352 with the proactive layer's readers,
+    # including the four one-argument `idOf(raw)` calls the key-position walk now counts.
+    assert len(calls) == 352, (f"{len(calls)} accessor calls hand something to a key position: "
                                "recount the two halves below")
     assert len(nameless) == 16, f"{len(nameless)} calls put a variable where a name is expected"
     counted = {(row["line"], row["accessor"], row["receiver"]) for row in nameless} & \
               {(site["line"], site["name"], site["receiver"]) for site in named}
     assert len(calls) == len(named) + len(nameless) - len(counted), \
-        (f"274 + 16 stopped being 289: the oracle now counts {len(named)} and the census {len(nameless)} "
+        (f"337 + 16 stopped being 352: the oracle now counts {len(named)} and the census {len(nameless)} "
          f"with {sorted(counted)} in common -- one of the three totals moved alone")
     assert [(row[1], row[2]) for row in sorted(counted)] == [("idOf", "h")], \
         (f"the calls that are both nameless and counted are {sorted(counted)}, not one folded `idOf` "
@@ -3939,7 +4054,7 @@ def test_the_bare_read_scanner_agrees_with_a_paired_call_census():
     # 285 with normalizeMemory: eight more paired accessor calls (two timestamps × two
     # spellings, plus id/kind/key/content/importance/source).
     # 277 rather than 274 since the outcome pair and the `field` key: three more str() reads.
-    assert len(paired) == 294, (f"{len(paired)} accessor calls: the population the bare-read census is "
+    assert len(paired) == 336, (f"{len(paired)} accessor calls: the population the bare-read census is "
                                 "drawn from -- if this drops, the census below is comparing less")
     assert sum(1 for row in paired if row["argc"] == 1) == 1, \
         f"{[(row['owner'], row['receiver']) for row in paired if row['argc'] == 1]} are the bare reads"
@@ -3953,7 +4068,7 @@ def test_the_bare_read_scanner_agrees_with_a_paired_call_census():
         "the one that says so when one appears"
     # 276 with normalizeMemory: eight of its accessor calls quote every name, which is the
     # only shape `_sites` reads.
-    assert sum(1 for row in paired if row["argc"] > 1 and row["named"]) == 285, \
+    assert sum(1 for row in paired if row["argc"] > 1 and row["named"]) == 327, \
         f"{sum(1 for row in paired if row['argc'] > 1 and row['named'])}: every-name-quoted is what " \
         "`_sites` reads, so this number is the size of the census every other rule here trusts"
     loose = [row for row in paired if row["argc"] > 1 and not row["named"]]
@@ -4004,7 +4119,7 @@ def test_the_spread_receiver_scanner_agrees_with_the_paired_walk(monkeypatch):
     text = NORMALIZE.read_text(encoding="utf-8")
     walked = _paired_accessor_calls(text)
     # 285 with normalizeMemory: the same eight calls the paired-walk census counts above.
-    assert len(walked) == 294, (f"{len(walked)} accessor calls: the population both censuses are drawn "
+    assert len(walked) == 336, (f"{len(walked)} accessor calls: the population both censuses are drawn "
                                  "from")
     spread = [row for row in walked if row["spread"]]
     assert [(row["name"], row["owner"], row["receiver"]) for row in spread] == [
@@ -4087,14 +4202,14 @@ def test_the_derived_holder_scanner_answers_for_every_local_a_call_builds(monkey
     """
     text = NORMALIZE.read_text(encoding="utf-8")
     walked = _assigned_accessor_locals(text)
-    assert len(walked) == 86, (f"{len(walked)} locals are built by an accessor call: the population this "
+    assert len(walked) == 92, (f"{len(walked)} locals are built by an accessor call: the population this "
                                "rule's answers are drawn from")
     assert [row["holder"] for row in walked if row["wrap"]] == [], \
         (f"{[(row['holder'], row['line']) for row in walked if row['wrap']]}: a wrapped call is the "
          "shape the line grab loses -- 0 today, and this pin is what says so when one appears")
     unnameable = sorted(row["holder"] for row in walked if not row["nameable"])
-    assert unnameable == ["body", "flatOverall", "meta", "overall", "overall", "payload",
-                          "profile", "score"], \
+    assert unnameable == ["body", "counts", "criteria", "flatOverall", "meta", "overall", "overall",
+                          "payload", "payload", "profile", "score"], \
         (f"{unnameable}: a local whose accessor is handed another call is refused by name today, so none "
          "of them can be a derived holder -- if one joins the tables, the refusal has to be answered")
     parents = set()

@@ -388,7 +388,7 @@ def test_the_backend_readers_this_gate_walks_are_the_ones_that_exist():
         "ConversationService.java", "CopilotStreamService.java", "FileIngestService.java",
         "GrowthService.java", "InterviewService.java",
         "JobService.java", "MemoryController.java", "QueryEmbeddingService.java",
-        "ResumeService.java",
+        "ResumeService.java", "ScheduledIngestionService.java",
     ]
 
 
@@ -907,8 +907,11 @@ def test_the_declaration_probes_reach_the_shapes_a_copy_would_miss():
     # attention rows are the fifth non-exported reader, and the opener has to see it like the others.
     # 50 with `normalizeMemory`: one more exported mapper, the reader the memory surface added.
     # 51 with `normalizeFollowUp`: the follow-up tile's row reader (11.3), the sixth non-exported one.
-    assert len(re.findall(TS_OPENER.format(name=r"(\w+)"), source)) == 52, \
-        "46 exported mappers and 6 module-private ones, all through one opener"
+    # 59 with the proactive layer's seven readers: the saved-search row, the ingestion
+    # dashboard's run/feed/run-detail trio, and the notification inbox's item, inbox and
+    # weekly letter -- each an exported mapper on the same opener.
+    assert len(re.findall(TS_OPENER.format(name=r"(\w+)"), source)) == 59, \
+        "53 exported mappers and 6 module-private ones, all through one opener"
     assert "export function normalizePage(" not in source, \
         "the generic really does sit between the name and the paren, so a literal opener finds nothing"
     assert _ts_function_body("normalizePage").startswith("export function normalizePage<T>(")
@@ -957,8 +960,14 @@ def test_the_java_probe_reads_every_record_the_backend_declares():
     # (4.8) — the five records those surfaces bind.
     # 130 with the import-apply and render records: `ImportApplyRequest` and
     # `RenderRequest` — the two the 13.2 apply and the 13.1 render bind.
-    assert len(declared) == 130, \
-        f"{len(declared)} records carry a declaration the shared opener reads, not the 130 measured"
+    # 146 with the proactive layer's fourteen: the ingestion dashboard's five
+    # (`FeedRequest`, `FeedPatch`, `RunItem`, `FeedItem`, `RunDetail`), the saved-search
+    # pair with its `Criteria`, the notification inbox's four (`NotificationItem`,
+    # `Inbox`, `KeysRequest`, `KeyRequest`), the service's private `Candidate` row and
+    # the weekly letter's `WeeklyDigestDto` -- then 19.5's `PrintResumeRequest` and
+    # `ResumePrint`, the request and the self-contained document its route binds.
+    assert len(declared) == 146, \
+        f"{len(declared)} records carry a declaration the shared opener reads, not the 146 measured"
     problems, renamed = [], []
     for relative, record in declared:
         names = _record_components_at(relative, record)
@@ -1221,7 +1230,10 @@ def test_the_response_envelope_has_exactly_one_wrapper_and_one_unwrapper():
     # 31 rather than 30 since the paste-a-posting importer joined (one success toast in
     # actions.ts); 30 rather than 28 since the conversation list grew rename and delete,
     # each with its own success toast in actions.ts.
-    assert len(toasts) == 48, (f"{len(toasts)} `toast.success` lines came out of the same walk: that is "
+    # 53 since the proactive layer's five confirmations joined: a saved search saved and
+    # deleted, a feed added and removed, and an ingestion run recorded -- each written
+    # through the same shared handler, so none can drift into a silent success.
+    assert len(toasts) == 53, (f"{len(toasts)} `toast.success` lines came out of the same walk: that is "
                                "the floor proving the scan reached the pages and the hooks, so a walk "
                                "narrowed to the api directory cannot pass quietly")
 
@@ -3254,7 +3266,11 @@ def test_both_frame_parsers_default_a_nameless_frame_to_the_same_event_name():
         # the re-aim lands with that edit.
         # 1278 rather than 129c5a7's 1259 since the import plan's own types gained the
         # skip op and its count (+19 lines above the union); the union itself did not change.
-        ("types.ts", 1278, "kind:"),
+        # 1382 rather than 993c792's 1278 since the proactive layer's nine interfaces joined
+        # above the union (saved-search criteria and row, the weekly letter, the ingestion
+        # dashboard's counts/run/feed/run-detail, the notification item and inbox: +104 lines);
+        # the union itself did not change.
+        ("types.ts", 1382, "kind:"),
         ('use-sse.ts', 15, 'event: SSEEventName | "message" | "progress" | "ping";'),
     ], (f"{[(r['file'], r['line'], r['head']) for r in by_role['type-union-member']]}: three type unions "
         "spell `message`, and only one of them names a frame -- the other two are the trace step kind "

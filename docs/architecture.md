@@ -81,8 +81,8 @@ frontend/backend/ai-service can also run natively for dev (`pnpm dev`, `mvn spri
 │       ├── interview/            # sessions, qa turns, evaluations
 │       ├── job/                  # jobs, companies, saved jobs, matches
 │       ├── knowledge/            # sources, documents, chunks (meta; vectors owned by ai-service)
-│       ├── network/              # contacts registry: the people a search touches (§4.3)
 │       ├── network/              # contacts registry (11.1); outreach/follow-up live here
+│       ├── notification/         # the inbox: read/dismiss state over synthesized signals (19.3)
 │       ├── ratelimit/            # Redis sliding-window filter
 │       ├── report/               # dashboard read model (aggregates over the other domains)
 │       ├── resume/               # resumes, versions, parsed entities (exp/proj/skill)
@@ -268,6 +268,25 @@ user-scoped table (ownership is enforced in backend layer + a single SQL predica
   have to open it.
 - Indexes: HNSW on chunk.embedding; GIN on tsv; btree on all user_id; partial on
   applications(status); jsonb GIN where queried.
+
+### 4.7 Alerts, scheduled ingestion & the inbox (19.x)
+- `saved_searches(id, user_id, name, criteria jsonb /* the board's own filter names, made
+   canonical by the service so the sweep and the alert matcher read one shape */,
+   created_at, updated_at)` → the question a board was asked, kept under a name.
+- `ingestion_feeds(id, user_id, name, url, source, enabled, created_at, updated_at)`
+  → a job source the user subscribed to; the server fetches the URL on its own clock,
+  so the fetcher refuses non-HTTP schemes and private addresses.
+- `ingestion_runs(id, user_id, feed_id, status, error, plan jsonb, counts jsonb,
+   started_at, finished_at)` → one pull of one feed: completed with the plan the engine
+  proposed, or failed with the sentence that says why. The row is written when the pull
+  ends, so there is no `running` status to go stale if the process dies mid-fetch.
+- `notification_states(user_id, signal_key, read_at, dismissed_at, updated_at)` → the
+  inbox is synthesized from signals already written down; what persists is what the
+  reader did with one, keyed by the episode (`reminder:<id>:<at>`, `stale:<id>:<at>`,
+  `ingestion:<runId>`), so a dismissal silences one episode rather than the next.
+- `weekly_digests(id, user_id, week_start date, window_days smallint, payload jsonb,
+   generated_at)` → one letter per user per week, the engine's answer stored verbatim;
+  re-composing the same week refreshes the row rather than appending a second one.
 
 ## 5. Backend (Spring Boot) design
 

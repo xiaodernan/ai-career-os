@@ -123,7 +123,7 @@ class ScheduledIngestionServiceTest {
                 "create", List.of(Map.of("title", "Backend Engineer"))));
         when(feeds.findByIdAndUserId(feedId, userId)).thenReturn(Optional.of(feed));
         when(fetcher.fetch(feed.getUrl())).thenReturn("<rss><item/></rss>");
-        when(jobs.findByStatus(eq("open"), any(Pageable.class)))
+        when(jobs.findByStatusOrderByPostedAtDescIdDesc(eq("open"), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(openJob())));
         when(companies.findAllById(any())).thenReturn(List.of(company()));
         when(ai.planIngest(any(), any(), anyList(), anyInt(), anyInt(), any()))
@@ -217,11 +217,11 @@ class ScheduledIngestionServiceTest {
         assertThatThrownBy(() -> service.createFeed(userId,
                 new FeedRequest("Board", "boards.example.com/rss", null)))
                 .isInstanceOfSatisfying(ApiException.class,
-                        e -> assertThat(e.code()).isEqualTo(ApiErrorCode.VALIDATION_STRUCTURE_INVALID));
+                        e -> assertThat(e.code()).isEqualTo(ApiErrorCode.FEED_URL_INVALID));
         assertThatThrownBy(() -> service.createFeed(userId,
                 new FeedRequest("Board", "ftp://boards.example.com/rss", null)))
                 .isInstanceOfSatisfying(ApiException.class,
-                        e -> assertThat(e.code()).isEqualTo(ApiErrorCode.VALIDATION_STRUCTURE_INVALID));
+                        e -> assertThat(e.code()).isEqualTo(ApiErrorCode.FEED_URL_INVALID));
         verify(feeds, never()).save(any(IngestionFeed.class));
     }
 
@@ -232,7 +232,7 @@ class ScheduledIngestionServiceTest {
         assertThatThrownBy(() -> service.createFeed(userId,
                 new FeedRequest("One more", "https://boards.example.com/rss", null)))
                 .isInstanceOfSatisfying(ApiException.class,
-                        e -> assertThat(e.code()).isEqualTo(ApiErrorCode.VALIDATION_STRUCTURE_INVALID));
+                        e -> assertThat(e.code()).isEqualTo(ApiErrorCode.FEED_LIMIT_REACHED));
     }
 
     @Test
@@ -264,19 +264,20 @@ class ScheduledIngestionServiceTest {
     }
 
     @Test
-    void the_run_list_is_clamped_to_a_sane_page() {
+    void the_run_list_is_a_page_clamped_like_every_other_board() {
         when(feeds.findByUserIdOrderByCreatedAtDesc(userId)).thenReturn(List.of());
-        when(runs.findByUserIdOrderByStartedAtDesc(eq(userId), any(Pageable.class)))
-                .thenReturn(List.of());
+        when(runs.findByUserIdOrderByStartedAtDescIdDesc(eq(userId), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of()));
 
-        service.listRuns(userId, 0);
-        service.listRuns(userId, 999);
+        service.listRuns(userId, -3, 0);
+        service.listRuns(userId, 2, 999);
 
         ArgumentCaptor<Pageable> cap = ArgumentCaptor.forClass(Pageable.class);
-        verify(runs, times(2)).findByUserIdOrderByStartedAtDesc(eq(userId), cap.capture());
+        verify(runs, times(2)).findByUserIdOrderByStartedAtDescIdDesc(eq(userId), cap.capture());
+        assertThat(cap.getAllValues().get(0).getPageNumber()).isZero();
         assertThat(cap.getAllValues().get(0).getPageSize()).isEqualTo(1);
-        assertThat(cap.getAllValues().get(1).getPageSize())
-                .isEqualTo(ScheduledIngestionService.RUN_LIMIT_MAX);
+        assertThat(cap.getAllValues().get(1).getPageNumber()).isEqualTo(2);
+        assertThat(cap.getAllValues().get(1).getPageSize()).isEqualTo(100);
     }
 
     @Test
@@ -287,10 +288,11 @@ class ScheduledIngestionServiceTest {
         run.setStatus(IngestionRun.STATUS_COMPLETED);
         run.setStartedAt(OffsetDateTime.now());
         when(feeds.findByUserIdOrderByCreatedAtDesc(userId)).thenReturn(List.of(feed));
-        when(runs.findByUserIdOrderByStartedAtDesc(eq(userId), any(Pageable.class)))
-                .thenReturn(List.of(run));
+        when(runs.findByUserIdOrderByStartedAtDescIdDesc(eq(userId), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(run)));
 
-        assertThat(service.listRuns(userId, 20).get(0).feedName()).isEqualTo("Hiring board");
+        assertThat(service.listRuns(userId, 0, 20).items().get(0).feedName())
+                .isEqualTo("Hiring board");
     }
 
     @Test
@@ -329,7 +331,7 @@ class ScheduledIngestionServiceTest {
         ReflectionTestUtils.setField(second, "id", UUID.randomUUID());
         when(feeds.findByEnabledTrueOrderByCreatedAtAsc()).thenReturn(List.of(first, second));
         when(fetcher.fetch(any())).thenReturn("<rss/>");
-        when(jobs.findByStatus(eq("open"), any(Pageable.class)))
+        when(jobs.findByStatusOrderByPostedAtDescIdDesc(eq("open"), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of()));
         when(ai.planIngest(any(), any(), anyList(), anyInt(), anyInt(), any()))
                 .thenReturn(Map.of("counts", Map.of()));

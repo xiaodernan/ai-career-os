@@ -26,7 +26,7 @@ import {
   str,
 } from "@/lib/api/normalize";
 import { tokenStore } from "@/lib/api/token-store";
-import { translate } from "@/lib/i18n/locale-context";
+import { translate, useLocale } from "@/lib/i18n/locale-context";
 import type {
   Application,
   ApplicationStatus,
@@ -325,6 +325,47 @@ export function useSaveTailoredVersion(jobId: string) {
       qc.invalidateQueries({ queryKey: ["resumes"] });
     },
     onError: fail("Couldn't save this draft as a version."),
+  });
+}
+
+/**
+ * 19.5 — one saved version as a print-ready document. The HTML is built by the
+ * renderer (the export's print chrome, the reader's section words), so the
+ * window it opens is the same document the bundle export prints and the
+ * browser's own "save as PDF" is the PDF. The version's content is read on the
+ * server: no client-facing read returns a version's body.
+ */
+export function usePrintResumeVersion() {
+  const { locale } = useLocale();
+  return useMutation({
+    mutationFn: async (versionId: string): Promise<string> => {
+      // Opened before the request, while the click is still the gesture: a
+      // window opened after the await is the popup blocker's to refuse.
+      const win = window.open("", "_blank");
+      try {
+        const raw = await api.request<unknown>(endpoints.resumeVersionPrint(versionId), {
+          method: "POST",
+          body: { locale },
+        });
+        const html = str(raw, "html") ?? "";
+        if (!html) throw new Error("The renderer answered no document");
+        if (!win) {
+          toast.error(
+            translate("resumes.printBlocked") ??
+              "The print window was blocked — allow pop-ups and try again."
+          );
+          return html;
+        }
+        win.document.write(html);
+        win.document.close();
+        win.focus();
+        return html;
+      } catch (error) {
+        win?.close();
+        throw error;
+      }
+    },
+    onError: fail("Couldn't prepare the print view."),
   });
 }
 

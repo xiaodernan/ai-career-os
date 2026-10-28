@@ -8,8 +8,8 @@ this request fails, does anyone say so?". This file answers it per mutation site
 the caller's options through the one indirection the app actually uses: a named object handed to two
 different mutations.
 
-What the shipped code says, measured rather than assumed: 67 mutation sites in seven files
-(the hook libraries, plus the knowledge uploader's own actions). 62 declare their failure at
+What the shipped code says, measured rather than assumed: 78 mutation sites in nine files
+(the hook libraries, plus the knowledge uploader's own actions). 73 declare their failure at
 the hook; the five that do not are all in ``auth.ts``. Four of those five are announced by
 their caller -- the password forms pass inline call options, and the credentials form passes
 one shared ``handlers`` object to both ``login.mutate`` and ``register.mutate``, whose
@@ -21,7 +21,7 @@ the server said. That is a design choice -- a local sign-out always happens -- s
 characterises it rather than changing it: it is the one place in the app where "you are signed
 out" is not a claim about the server.
 
-The same walk covers the failure helper: ``fail(...)`` has a single author and 60 uses, and
+The same walk covers the failure helper: ``fail(...)`` has a single author and 61 uses, and
 every use spends a distinct sentence -- when this file first walked it, 28 were distinct,
 because two different deletes shared "Delete failed." and the toast never said which record
 survived the failure. Each delete now names its own record, and the case below pins the spent
@@ -56,9 +56,11 @@ FAILURE = "frontend/src/lib/hooks/failure.ts"
 # Each announces its failure through the shared handler, so a write that fails
 # says which write failed rather than failing silently.
 BRIDGE_HOOKS = {
+    "frontend/src/lib/hooks/analytics.ts",
     "frontend/src/lib/hooks/data-portability.ts",
     "frontend/src/lib/hooks/growth.ts",
     "frontend/src/lib/hooks/ingestion.ts",
+    "frontend/src/lib/hooks/notifications.ts",
     "frontend/src/lib/hooks/offers.ts",
 }
 CLIENT = "frontend/src/lib/api/client.ts"
@@ -77,11 +79,13 @@ DECL = re.compile(r"^(?:export\s+)?(?:default\s+)?(?:async\s+)?(?:function\s+(\w
 #: failure at the hook with its own ``fail()`` sentence, so what went stale was the census, not
 #: the app. A mutation in a file outside this roster is still a red, and the red names that file.
 ROSTER = {
-    ACTIONS: 36,
+    ACTIONS: 39,
     AUTH_HOOKS: 5,
+    "frontend/src/lib/hooks/analytics.ts": 1,
     "frontend/src/lib/hooks/data-portability.ts": 5,
     "frontend/src/lib/hooks/growth.ts": 12,
-    "frontend/src/lib/hooks/ingestion.ts": 4,
+    "frontend/src/lib/hooks/ingestion.ts": 8,
+    "frontend/src/lib/hooks/notifications.ts": 3,
     "frontend/src/lib/hooks/offers.ts": 4,
     SOURCE_ACTIONS: 1,
 }
@@ -96,7 +100,7 @@ QUIET_AUTH = ["useForgotPassword", "useLogin", "useLogout", "useRegister", "useR
 #: file because the useful failure is "actions.ts spent one more sentence", not a total that
 #: moves whenever any hook is touched.
 SENTENCES = {
-    ACTIONS: 35,
+    ACTIONS: 36,
     "frontend/src/lib/hooks/data-portability.ts": 5,
     "frontend/src/lib/hooks/growth.ts": 12,
     "frontend/src/lib/hooks/ingestion.ts": 4,
@@ -346,11 +350,13 @@ def test_the_credentials_form_announces_two_different_mutations_with_one_shared_
     assert describer not in re.findall(r"\bfunction (\w+)\(", text), (
         "%s is called by the shared onError and declared in the form too, so the sign-in failure "
         "copy has two authors" % describer)
-    imports = [line for line in text.splitlines()
-               if re.match(r"\s*import \{[^}]*\b%s\b" % re.escape(describer), line)]
+    # Read as a statement rather than a line: prettier wrapped this import across six lines,
+    # and a per-line scan then reported a describer that is right there in the header.
+    imports = re.findall(
+        r"import \{[^}]*\b%s\b[^}]*\} from \"(@/[^\"]+)\"" % re.escape(describer), text)
     assert len(imports) == 1, "%s is imported by %d statements, so the shared onError reads it " \
         "from somewhere this gate cannot name" % (describer, len(imports))
-    module = re.search(r'from "(@/[^"]+)"', imports[0]).group(1)
+    module = imports[0]
     base = module.replace("@/", "frontend/src/")
     rel = next((p for p in (base + ".ts", base + ".tsx") if p in sources()), None)
     assert rel, "the form imports %s, which the source walk never reads" % module

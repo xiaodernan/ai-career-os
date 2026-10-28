@@ -195,7 +195,7 @@ def test_every_visible_copy_is_read_from_the_code_and_never_from_the_details_lis
     assert "role=\"alert\"" in state, "the failure surface is no longer announced as an alert"
 
     recovery = read(RECOVERY)
-    assert "return err.message;" in recovery, "the recovery describer no longer falls back to the message"
+    assert "err.message || genericFailure()" in recovery, "the recovery describer no longer falls back to the message"
     assert ".details" not in recovery, "the recovery describer opens the per-field list now"
 
     # The credentials form's sentence is spelled once, in the module every

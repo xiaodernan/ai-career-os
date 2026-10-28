@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Check, RefreshCw, Save, Sparkles } from "lucide-react";
+import { Check, Printer, RefreshCw, Save, Sparkles } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,7 +12,7 @@ import { EvidenceList } from "@/components/ai/evidence-list";
 import { DiffView } from "@/components/common/diff-view";
 import { CopyButton, DownloadButton, SectionHeading } from "@/components/common/export-buttons";
 import dynamic from "next/dynamic";
-import { useSaveTailoredVersion, useTailorResume, type TailorRun } from "@/lib/hooks/actions";
+import { usePrintResumeVersion, useSaveTailoredVersion, useTailorResume, type TailorRun } from "@/lib/hooks/actions";
 import { str } from "@/lib/api/normalize";
 import { useLocale } from "@/lib/i18n/locale-context";
 
@@ -46,13 +46,16 @@ export function TailorPanel({
 }) {
   const tailor = useTailorResume(jobId);
   const save = useSaveTailoredVersion(jobId);
+  const print = usePrintResumeVersion();
   const { t } = useLocale();
   const [result, setResult] = React.useState<TailorRun | null>(null);
   const [saved, setSaved] = React.useState<string | null>(null);
+  const [savedId, setSavedId] = React.useState<string | null>(null);
   const [view, setView] = React.useState<"diff" | "document">("diff");
 
   const run = () => {
     setSaved(null);
+    setSavedId(null);
     tailor.mutate(resumeVersionId ?? null, { onSuccess: setResult });
   };
   const tailored = result?.tailored;
@@ -128,13 +131,29 @@ export function TailorPanel({
                       onClick={() =>
                         save.mutate(
                           { raw: result?.raw, plaintext: document, resumeVersionId },
-                          { onSuccess: (item) => setSaved(str(item, "label") ?? "version") }
+                          {
+                            onSuccess: (item) => {
+                              setSaved(str(item, "label") ?? "version");
+                              setSavedId(str(item, "id") ?? null);
+                            },
+                          }
                         )
                       }
                     >
                       <Save aria-hidden />
                       {saved ? t("tailor.saveAgain") : t("tailor.saveAsVersion")}
                     </Button>
+                    {savedId && (
+                      <Button
+                        variant="outline"
+                        size="xs"
+                        loading={print.isPending}
+                        onClick={() => print.mutate(savedId)}
+                      >
+                        <Printer aria-hidden />
+                        {t("tailor.printVersion")}
+                      </Button>
+                    )}
                     <CopyButton text={document} />
                     <DownloadButton text={document} filename={`resume-${jobId.slice(0, 8)}.md`} mime="text/markdown;charset=utf-8" />
                   </>

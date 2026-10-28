@@ -95,7 +95,7 @@ class SavedSearchServiceTest {
         assertThatThrownBy(() -> service.create(userId,
                 new SavedSearchRequest("Everything", new Criteria(null, null, null, false, null, null, null))))
                 .isInstanceOfSatisfying(ApiException.class,
-                        e -> assertThat(e.code()).isEqualTo(ApiErrorCode.VALIDATION_STRUCTURE_INVALID));
+                        e -> assertThat(e.code()).isEqualTo(ApiErrorCode.SAVED_SEARCH_EMPTY));
     }
 
     @Test
@@ -103,7 +103,7 @@ class SavedSearchServiceTest {
         assertThatThrownBy(() -> service.create(userId,
                 new SavedSearchRequest("Inverted", new Criteria(null, null, null, null, 60000, 30000, null))))
                 .isInstanceOfSatisfying(ApiException.class,
-                        e -> assertThat(e.code()).isEqualTo(ApiErrorCode.VALIDATION_STRUCTURE_INVALID));
+                        e -> assertThat(e.code()).isEqualTo(ApiErrorCode.SALARY_RANGE_INVALID));
     }
 
     @Test

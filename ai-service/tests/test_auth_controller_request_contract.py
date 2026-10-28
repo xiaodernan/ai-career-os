@@ -484,9 +484,12 @@ def test_the_credential_screens_guard_through_the_shared_password_function():
         "credentials-form grew a screen-local length check back; the bounds live in the one "
         "shared function (the bounds-policy test holds its far end against the records)"
     )
-    assert form.count("validate: passwordIssue,") == 1, (
+    # The entry is an arrow now: the shared function still makes the decision, and `issueText`
+    # turns its key into the reader's words at paint time.
+    assert form.count("issueText(passwordIssue(v), t)") == 1, (
         "expected exactly one password entry validating through passwordIssue (baseFields' "
-        "entry, shared by sign-in and register), found %d" % form.count("validate: passwordIssue,")
+        "entry, shared by sign-in and register), found %d"
+        % form.count("issueText(passwordIssue(v), t)")
     )
     assert 'from "@/lib/auth-recovery"' in form, (
         "the shared import changed; the guards above would resolve names this file cannot see"
@@ -567,13 +570,13 @@ def test_the_remaining_ceilings_are_one_policy_across_records_and_screens():
             "the module lost %r, so the constant above is declared but not enforced" % line
         )
     form = read(CREDENTIALS_FORM)
-    assert form.count("validate: displayNameIssue,") == 1, (
+    assert form.count("issueText(displayNameIssue(v), t)") == 1, (
         "the register screen no longer guards its name through the shared mirror, found %d"
-        % form.count("validate: displayNameIssue,")
+        % form.count("issueText(displayNameIssue(v), t)")
     )
-    assert form.count("validate: emailIssue,") == 1, (
+    assert form.count("issueText(emailIssue(v), t)") == 1, (
         "the sign-in/register email entry no longer guards through the shared rule, found %d"
-        % form.count("validate: emailIssue,")
+        % form.count("issueText(emailIssue(v), t)")
     )
     assert "emailIssue(email)" in read(FORGOT_FORM), (
         "the forgot screen no longer guards its address with the shared email rule"

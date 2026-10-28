@@ -144,7 +144,7 @@ class SavedSearchControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"Everything\",\"criteria\":{}}"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error.code").value("VALIDATION_STRUCTURE_INVALID"));
+                .andExpect(jsonPath("$.error.code").value("SAVED_SEARCH_EMPTY"));
     }
 
     @Test

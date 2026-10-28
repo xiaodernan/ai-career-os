@@ -101,6 +101,32 @@ SECTION_ORDER: tuple[str, ...] = (
     "contacts",
 )
 
+# The headings of the single-version print view (19.5). Same rule as the
+# bundle's section names: the document is the reader's, so the words come from
+# a table rather than from the resume body -- a Chinese reader's printable
+# resume must not carry English headings because the tailoring prompt wrote
+# them that way.
+_RESUME_SECTIONS: dict[str, dict[str, str]] = {
+    "en": {
+        "summary": "Summary",
+        "experience": "Experience",
+        "projects": "Projects",
+        "education": "Education",
+        "skills": "Skills",
+        "achievements": "Achievements",
+        "gpa": "GPA",
+    },
+    "zh": {
+        "summary": "摘要",
+        "experience": "工作经历",
+        "projects": "项目经历",
+        "education": "教育背景",
+        "skills": "技能",
+        "achievements": "成就",
+        "gpa": "GPA",
+    },
+}
+
 
 def normalize_locale(locale: Any) -> str:
     """The language to render in, from whatever the caller had.
@@ -124,3 +150,8 @@ def words(locale: Any = None) -> dict[str, str]:
 def section_titles(locale: Any = None) -> dict[str, str]:
     """The section names, in the language asked for."""
     return _SECTIONS[normalize_locale(locale)]
+
+
+def resume_titles(locale: Any = None) -> dict[str, str]:
+    """The single-version print view's headings, in the language asked for."""
+    return _RESUME_SECTIONS[normalize_locale(locale)]

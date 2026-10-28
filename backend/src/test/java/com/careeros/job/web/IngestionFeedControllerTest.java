@@ -19,6 +19,7 @@ import com.careeros.common.AuthUser;
 import com.careeros.common.CurrentUserArgumentResolver;
 import com.careeros.common.EnvelopeAdvice;
 import com.careeros.common.GlobalExceptionHandler;
+import com.careeros.common.PageDTO;
 import com.careeros.job.dto.IngestionFeedDtos.FeedItem;
 import com.careeros.job.dto.IngestionFeedDtos.FeedRequest;
 import com.careeros.job.dto.IngestionFeedDtos.RunDetail;
@@ -165,18 +166,22 @@ class IngestionFeedControllerTest {
     }
 
     @Test
-    void the_run_list_reads_the_callers_limit_and_defaults_to_twenty() throws Exception {
-        when(ingestion.listRuns(ALICE, 5)).thenReturn(List.of(run("completed", null)));
-        when(ingestion.listRuns(ALICE, 20)).thenReturn(List.of());
+    void the_run_list_is_a_page_whose_window_defaults_to_twenty() throws Exception {
+        when(ingestion.listRuns(ALICE, 1, 5))
+                .thenReturn(PageDTO.of(List.of(run("completed", null)), 6, 1, 5));
+        when(ingestion.listRuns(ALICE, 0, 20)).thenReturn(PageDTO.of(List.of(), 0, 0, 20));
 
-        mvc.perform(get("/api/v1/ingestion/runs").param("limit", "5"))
+        mvc.perform(get("/api/v1/ingestion/runs").param("page", "1").param("size", "5"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data[0].counts.create").value(2));
+                .andExpect(jsonPath("$.data.items[0].counts.create").value(2))
+                .andExpect(jsonPath("$.data.total").value(6))
+                .andExpect(jsonPath("$.data.page").value(1))
+                .andExpect(jsonPath("$.data.size").value(5));
         mvc.perform(get("/api/v1/ingestion/runs"))
                 .andExpect(status().isOk());
 
-        verify(ingestion).listRuns(ALICE, 5);
-        verify(ingestion).listRuns(ALICE, 20);
+        verify(ingestion).listRuns(ALICE, 1, 5);
+        verify(ingestion).listRuns(ALICE, 0, 20);
     }
 
     @Test
@@ -213,12 +218,12 @@ class IngestionFeedControllerTest {
     @Test
     void every_route_is_scoped_to_the_caller() throws Exception {
         when(ingestion.listFeeds(ALICE)).thenReturn(List.of());
-        when(ingestion.listRuns(ALICE, 20)).thenReturn(List.of());
+        when(ingestion.listRuns(ALICE, 0, 20)).thenReturn(PageDTO.of(List.of(), 0, 0, 20));
 
         mvc.perform(get("/api/v1/ingestion/feeds")).andExpect(status().isOk());
         mvc.perform(get("/api/v1/ingestion/runs")).andExpect(status().isOk());
 
         verify(ingestion).listFeeds(ALICE);
-        verify(ingestion).listRuns(ALICE, 20);
+        verify(ingestion).listRuns(ALICE, 0, 20);
     }
 }

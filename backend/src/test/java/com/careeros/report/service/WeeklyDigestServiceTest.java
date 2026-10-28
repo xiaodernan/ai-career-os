@@ -125,7 +125,7 @@ class WeeklyDigestServiceTest {
         newest.setWindowDays(7);
         newest.setPayload(Map.of("totalApplications", 4));
         ReflectionTestUtils.setField(newest, "id", LETTER);
-        when(digests.findByUserIdOrderByWeekStartDesc(eq(ALICE), any(Pageable.class)))
+        when(digests.findByUserIdOrderByWeekStartDescIdDesc(eq(ALICE), any(Pageable.class)))
                 .thenReturn(List.of(newest));
 
         List<WeeklyDigestDto> history = service.recent(ALICE);
@@ -134,7 +134,7 @@ class WeeklyDigestServiceTest {
         assertThat(history.get(0).weekStart()).isEqualTo(WEEK);
         assertThat(history.get(0).payload()).containsEntry("totalApplications", 4);
         ArgumentCaptor<Pageable> window = ArgumentCaptor.forClass(Pageable.class);
-        verify(digests).findByUserIdOrderByWeekStartDesc(eq(ALICE), window.capture());
+        verify(digests).findByUserIdOrderByWeekStartDescIdDesc(eq(ALICE), window.capture());
         assertThat(window.getValue().getPageNumber()).isZero();
         assertThat(window.getValue().getPageSize()).isEqualTo(12);
     }

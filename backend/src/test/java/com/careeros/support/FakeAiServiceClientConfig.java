@@ -427,6 +427,15 @@ public class FakeAiServiceClientConfig {
                     "html", "<!doctype html><html lang=\"zh\"><body><h1>AI Career OS — 数据导出</h1></body></html>");
         }
 
+        /** 19.5 -- one version's print-ready document, answered as the renderer would. */
+        @Override
+        public Map<String, Object> renderResume(UUID userId, Map<String, Object> resume, String text,
+                                                String title, String subtitle, String locale) {
+            record("renderResume");
+            return map("format", "html",
+                    "html", "<!doctype html><html lang=\"en\"><body><h1>" + title + "</h1></body></html>");
+        }
+
         /**
          * What the memory restore answers with (13.2): the rows the ai-service
          * upserted on (kind, key).

@@ -1112,15 +1112,15 @@ describe("endpoints ↔ backend route parity", () => {
     expect(new Set(handlers.map((h) => `${h.verb} ${h.pattern}`)).size).toBe(handlers.length);
     expect(handlers.flatMap((h) => h.unparsed)).toEqual([]);
     const bound = handlers.flatMap((h) => h.params);
-    expect(bound.length).toBe(40);
-    // 40 parameters in 20 distinct names, measured: the reader's whole answer rather than a spot
+    expect(bound.length).toBe(41);
+    // 41 parameters in 19 distinct names, measured: the reader's whole answer rather than a spot
     // check, so a signature shape it stops understanding shrinks this set instead of passing quiet
     // (#225 retired `limit` from `/activity/runs`, which now pages like every other list route;
-    // 19.2 brought the name back for `GET /ingestion/runs`, where the run history asks for its
-    // newest N)
+    // 19.2 brought the name back for `GET /ingestion/runs` as a newest-N history, and 19.5 retired
+    // it again -- the runs panel pages, so the route binds page/size like every other list)
     expect(new Set(bound.map((p) => p.name))).toEqual(
       new Set([
-        "agent", "company", "documentId", "file", "kind", "kinds", "limit", "locale",
+        "agent", "company", "documentId", "file", "kind", "kinds", "locale",
         "location", "maxSalary", "minSalary", "page", "q", "remote", "resumeId", "size",
         "skills", "sort", "status", "title",
       ])

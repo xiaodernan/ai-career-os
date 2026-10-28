@@ -15,6 +15,7 @@ import {
   Hammer,
   Link2,
   MapPin,
+  Printer,
   ScanSearch,
   Sparkles,
   Target,
@@ -34,7 +35,7 @@ import { DimensionBars } from "@/components/common/skill-chips";
 import { MatchRing } from "@/components/ai/match-ring";
 import { resumeCriterionLabel, resumeDimensionLabel } from "@/lib/dimensions";
 import { TaskProgress } from "@/components/ai/task-stream";
-import { useParseResume, useSetCurrentResume } from "@/lib/hooks/actions";
+import { useParseResume, usePrintResumeVersion, useSetCurrentResume } from "@/lib/hooks/actions";
 import { useResume, useResumeVersions } from "@/lib/hooks/resources";
 import { api } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
@@ -59,6 +60,7 @@ export default function ResumeDetailPage() {
   const versionsQ = useResumeVersions(id);
   const parse = useParseResume(id ?? "");
   const setCurrent = useSetCurrentResume(id ?? "");
+  const print = usePrintResumeVersion();
   const [parseTask, setParseTask] = React.useState<string | null>(null);
   const [downloading, setDownloading] = React.useState(false);
 
@@ -293,12 +295,25 @@ export default function ResumeDetailPage() {
                         <p className="min-w-0 flex-1 truncate text-sm font-medium">
                           {v.label ?? `Version ${v.versionNo ?? v.id.slice(0, 8)}`}
                         </p>
-                        {isCurrent ? (
+                        {isCurrent && (
                           <Badge variant="success" className="gap-1 text-2xs font-normal">
                             <Check className="size-3" aria-hidden />
                             {t("resumes.detail.current")}
                           </Badge>
-                        ) : (
+                        )}
+                        {/* Every version is printable, current or not: the reader picks the
+                            version and the print layout is the same one the export uses. */}
+                        <Button
+                          variant="ghost"
+                          size="icon-xs"
+                          aria-label={t("resumes.detail.print")}
+                          title={t("resumes.detail.print")}
+                          loading={print.isPending && print.variables === v.id}
+                          onClick={() => print.mutate(v.id)}
+                        >
+                          <Printer className="size-3.5" aria-hidden />
+                        </Button>
+                        {!isCurrent && (
                           <Button
                             variant="ghost"
                             size="xs"

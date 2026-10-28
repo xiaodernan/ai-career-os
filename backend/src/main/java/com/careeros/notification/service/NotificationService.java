@@ -198,7 +198,8 @@ public class NotificationService {
                 .collect(Collectors.toMap(IngestionFeed::getId, IngestionFeed::getName));
         OffsetDateTime cutoff = OffsetDateTime.now().minusDays(LOOKBACK_DAYS);
         List<Candidate> out = new ArrayList<>();
-        for (IngestionRun run : runs.findByUserIdOrderByStartedAtDesc(userId, Paging.first(RUN_WINDOW))) {
+        for (IngestionRun run : runs.findByUserIdOrderByStartedAtDescIdDesc(
+                userId, Paging.first(RUN_WINDOW)).getContent()) {
             OffsetDateTime started = run.getStartedAt();
             if (started == null || started.isBefore(cutoff)) {
                 break;

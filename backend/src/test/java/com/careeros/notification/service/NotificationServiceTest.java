@@ -25,6 +25,7 @@ import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 
 /**
@@ -67,8 +68,8 @@ class NotificationServiceTest {
             return state;
         });
         when(feeds.findByUserIdOrderByCreatedAtDesc(ALICE)).thenReturn(List.of());
-        when(runs.findByUserIdOrderByStartedAtDesc(eq(ALICE), any(Pageable.class)))
-                .thenReturn(List.of());
+        when(runs.findByUserIdOrderByStartedAtDescIdDesc(eq(ALICE), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of()));
 
         service = new NotificationService(dashboard, runs, feeds, states);
     }
@@ -108,8 +109,8 @@ class NotificationServiceTest {
         // reads as unfinished stubbing to Mockito.
         IngestionFeed feed = named("Hiring board");
         when(feeds.findByUserIdOrderByCreatedAtDesc(ALICE)).thenReturn(List.of(feed));
-        when(runs.findByUserIdOrderByStartedAtDesc(eq(ALICE), any(Pageable.class)))
-                .thenReturn(List.of(items));
+        when(runs.findByUserIdOrderByStartedAtDescIdDesc(eq(ALICE), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(items)));
     }
 
     @Test

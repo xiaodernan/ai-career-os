@@ -2,6 +2,7 @@ package com.careeros.job.web;
 
 import com.careeros.common.AuthUser;
 import com.careeros.common.CurrentUser;
+import com.careeros.common.PageDTO;
 import com.careeros.job.dto.IngestionFeedDtos.FeedItem;
 import com.careeros.job.dto.IngestionFeedDtos.FeedPatch;
 import com.careeros.job.dto.IngestionFeedDtos.FeedRequest;
@@ -72,9 +73,10 @@ public class IngestionFeedController {
     }
 
     @GetMapping("/runs")
-    public List<RunItem> listRuns(@CurrentUser AuthUser user,
-                                  @RequestParam(defaultValue = "20") int limit) {
-        return ingestion.listRuns(user.id(), limit);
+    public PageDTO<RunItem> listRuns(@CurrentUser AuthUser user,
+                                     @RequestParam(defaultValue = "0") int page,
+                                     @RequestParam(defaultValue = "20") int size) {
+        return ingestion.listRuns(user.id(), page, size);
     }
 
     @GetMapping("/runs/{id}")

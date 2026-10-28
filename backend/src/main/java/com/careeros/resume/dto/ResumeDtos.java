@@ -39,6 +39,22 @@ public final class ResumeDtos {
                                     Map<String, Object> score) {
     }
 
+    /**
+     * 19.5 -- the print view's request. The document is written in the reader's
+     * language, so the request carries it; the version is in the path, and
+     * everything else the renderer needs is the version's own.
+     */
+    public record PrintResumeRequest(@Size(max = 16) String locale) {
+    }
+
+    /**
+     * The print-ready document for one version: self-contained HTML, so the
+     * browser's own print dialog is the PDF. It is a record rather than a raw
+     * string because the envelope carries a `data` object, not a document.
+     */
+    public record ResumePrint(String html) {
+    }
+
     public record ExperienceItem(UUID id, String company, String title, String startDate,
                                  String endDate, String location, List<String> bullets,
                                  String summary, int ordinal) {

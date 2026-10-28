@@ -107,6 +107,29 @@ class HttpAiServiceClientTest {
     }
 
     @Test
+    void thePrintViewCarriesTheRowBodyAndTheReadersLanguage() {
+        client.renderResume(UUID.randomUUID(), Map.of("profile", Map.of("name", "Ada")),
+                "plain body", "Main", "v2", "zh");
+        assertThat(bodies).hasSize(1);
+        assertThat(bodies.get(0))
+                .contains("\"resume\":{\"profile\":{\"name\":\"Ada\"}}")
+                .contains("\"text\":\"plain body\"")
+                .contains("\"title\":\"Main\"")
+                .contains("\"subtitle\":\"v2\"")
+                .contains("\"locale\":\"zh\"");
+    }
+
+    @Test
+    void aPrintWithNothingToSaySendsAnEmptyBodyRatherThanNulls() {
+        // A version can be nullable through and through -- an upload that was never
+        // parsed has no structured body and no plaintext. Map.of would refuse the
+        // null before the request left, which is the same defect this class exists for.
+        assertThatCode(() -> client.renderResume(UUID.randomUUID(), null, null, null, null, null))
+                .doesNotThrowAnyException();
+        assertThat(bodies.get(0)).contains("\"resume\":{}").doesNotContain("null");
+    }
+
+    @Test
     void theEngineDecidesTheShapeSoTheBridgeDoesNot() {
         // One route for both shapes: the engine detects the feed's format
         // from the text, which is what the ingestion page promises.

@@ -138,6 +138,15 @@ public interface AiServiceClient {
     }
 
     /**
+     * 19.5 -- one resume version as a print-ready document. The structured body
+     * and the stored plaintext travel together because the version's content
+     * lives on this side: no client-facing read returns a version's body, and
+     * the renderer picks the body it can lay out. The answer is `{format, html}`.
+     */
+    Map<String, Object> renderResume(UUID userId, Map<String, Object> resume, String text,
+                                     String title, String subtitle, String locale);
+
+    /**
      * Parse a feed (RSS/Atom XML or board-API JSON) into raw postings (14.2).
      * The user id is the caller's: the ingestion runs under their context, so
      * the ai-service can scope anything it writes back to them.

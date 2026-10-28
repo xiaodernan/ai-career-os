@@ -208,7 +208,13 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   sentence, `VALIDATION_FIELD_REQUIRED` for the missing company,
   `VALIDATION_STRUCTURE_INVALID` for the tailored body, and
   `VALIDATION_KIND_UNKNOWN` for the kind -- each with its own sentence in both
-  languages.
+  languages. That tail code went the way of `BAD_REQUEST` once the proactive
+  layer arrived: it had picked up a feed address, a saved search with no
+  criteria, an inverted salary range and the per-user feed cap, so the split
+  left it naming nothing. It is five codes now (`TAILORED_BODY_MISSING`,
+  `FEED_URL_INVALID`, `SAVED_SEARCH_EMPTY`, `SALARY_RANGE_INVALID`,
+  `FEED_LIMIT_REACHED`), `VALIDATION_STRUCTURE_INVALID` is removed from the
+  enum and from both tables, and every status is still the 400 it was.
 
   **And the version code is three.** `VERSION_NOT_FOUND` answered with three
   different sentences -- the resume has no version to parse yet, the version
@@ -676,9 +682,22 @@ that; each ships wired to the real API and UI, like every epic before it.
   `formatDateOnly` pins a date-only value to UTC so the label is the Monday it
   names. 13 backend tests for the slice, the doc/wire/DTO/paging gates green,
   617 backend tests, 724 vitest, census 134 files.)
-- [ ] **19.5** Tailored-resume print view: a single version rendered through
+- [x] **19.5** Tailored-resume print view: a single version rendered through
   the export renderer's print layout and locale words, reachable from the
   tailoring surface — "tailor → print/PDF" without exporting the whole bundle.
+  The ai-service's `POST /internal/features/render-resume` renders one
+  version: its structured body section by section through the export's own
+  print chrome and section words, or its stored text when it was never
+  parsed, with the request's `locale` choosing the words. The backend's
+  `printHtml` forwards (a blank document is `AI_SERVICE_EMPTY_RESPONSE`,
+  "The renderer answered no document"), and `POST /resume-versions/{id}/print`
+  answers `{html}` scoped to the caller — a version that is not the caller's
+  is a 404. The browser opens the window inside the click gesture and fills
+  it when the answer arrives, so the popup blocker sees a click rather than
+  an await; the tailor panel prints a just-saved version and every version
+  row on the resume detail page prints. 10 ai-service render tests, 3 service
+  tests, 11 controller tests, the doc-parameter and error-vocabulary gates
+  green, 625 backend tests, 724 vitest.)
 - [ ] **19.6** Voice mock interview: an STT/TTS provider seam plus record/play
   on the interview page. The scoring, difficulty ladder and depth trajectory
   stay the text interview's; only the input and output become voice.

@@ -37,6 +37,7 @@ export const endpoints = {
   resumeSetCurrent: (id: string) => `/resumes/${seg(id)}/set-current`,
   resumeVersions: "/resume-versions",
   resumeVersion: (id: string) => `/resume-versions/${seg(id)}`,
+  resumeVersionPrint: (id: string) => `/resume-versions/${seg(id)}/print`,
 
   /* ---------------- Jobs / JD / matches ---------------- */
   jobs: "/jobs",

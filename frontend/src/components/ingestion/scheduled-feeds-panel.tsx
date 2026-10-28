@@ -6,11 +6,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
+import { Pagination } from "@/components/common/pagination";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { relativeTime } from "@/lib/format";
+import { lastPageOf } from "@/lib/page-window";
 import { useLocale } from "@/lib/i18n/locale-context";
+import { useUrlState } from "@/lib/hooks/use-url-state";
 import {
   useCreateIngestionFeed,
   useDeleteIngestionFeed,
@@ -36,6 +39,15 @@ import type { IngestionFeed, IngestionRun } from "@/lib/api/types";
  * Applying a plan is deliberately absent: a run is a proposal, and the board
  * is only written through the reviewable ingestion path above.
  */
+
+// The route's own default window: `GET /ingestion/runs` binds `size` with
+// `defaultValue = "20"`, so this number asks for exactly what the server would have
+// chosen anyway -- the hook's own 20 literal never reaches the wire on this path.
+const PAGE_SIZE = 20;
+
+// `rpage` rather than the page's own `page`: the panel is one list on a screen that
+// may grow another, and two lists on one screen need two questions.
+const PAGE_DEFAULTS: { rpage: number } = { rpage: 0 };
 
 /** The titles a stored plan proposes to create, read defensively from the engine's map. */
 export function planTitles(plan: Record<string, unknown> | null | undefined): string[] {
@@ -76,7 +88,12 @@ function RunCounts({ run }: { run: IngestionRun }) {
 export function ScheduledFeedsPanel() {
   const { t, locale } = useLocale();
   const feeds = useIngestionFeeds();
-  const runs = useIngestionRuns();
+  // The run index lives in the URL, so a reload or a shared link opens the same window.
+  const [runPage, setRunPage] = useUrlState<{ rpage: number }>(
+    PAGE_DEFAULTS,
+    { numericKeys: ["rpage"] }
+  );
+  const runs = useIngestionRuns({ page: runPage.rpage, size: PAGE_SIZE });
   const create = useCreateIngestionFeed();
   const toggle = useToggleIngestionFeed();
   const remove = useDeleteIngestionFeed();
@@ -107,7 +124,16 @@ export function ScheduledFeedsPanel() {
   };
 
   const feedRows = feeds.data ?? [];
-  const runRows = runs.data ?? [];
+  const runRows = runs.data?.items ?? [];
+  const total = runs.data?.total ?? 0;
+  // A past-the-end page is an empty window over a real total, not an empty list: the answer's
+  // own window is the divisor (`data.size`), so the URL is corrected to the last page that
+  // exists -- `lastPageOf` (lib/page-window.ts) is that rule in one place. A layout effect,
+  // because the stale commit paints its empty copy first.
+  const lastPage = runs.data ? lastPageOf(total, runs.data.size) : 0;
+  React.useLayoutEffect(() => {
+    if (runs.data && runPage.rpage > lastPage) setRunPage({ rpage: lastPage });
+  }, [runs.data, runPage.rpage, lastPage, setRunPage]);
   const titles = planTitles(detail.data?.plan);
 
   return (
@@ -284,6 +310,20 @@ export function ScheduledFeedsPanel() {
           ) : runs.isError ? (
             <p className="text-sm text-muted-foreground">{t("ingestion.runsUnavailable")}</p>
           ) : null}
+          {total > PAGE_SIZE && (
+            <div className="mt-4 flex justify-end">
+              <Pagination
+                page={runs.data?.page ?? runPage.rpage}
+                size={PAGE_SIZE}
+                total={total}
+                label={t("ingestion.runsPaginationLabel")}
+                onPageChange={(next) => {
+                  setRunPage({ rpage: next });
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+              />
+            </div>
+          )}
         </CardContent>
       </Card>
 

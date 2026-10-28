@@ -3,6 +3,7 @@ package com.careeros.job.service;
 import com.careeros.ai.AiServiceClient;
 import com.careeros.common.ApiErrorCode;
 import com.careeros.common.ApiException;
+import com.careeros.common.PageDTO;
 import com.careeros.common.Paging;
 import com.careeros.job.dto.IngestionFeedDtos.FeedItem;
 import com.careeros.job.dto.IngestionFeedDtos.FeedRequest;
@@ -26,7 +27,6 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -52,8 +52,6 @@ public class ScheduledIngestionService {
     static final int MAX_FEEDS_PER_USER = 20;
     /** How much of the open corpus the planner gets to compare against. */
     static final int CORPUS_LIMIT = 500;
-    static final int RUN_LIMIT = 20;
-    static final int RUN_LIMIT_MAX = 50;
     private static final int MAX_AGE_DAYS = 60;
     private static final int STALE_SEEN_DAYS = 30;
     private static final int ERROR_LIMIT = 2000;
@@ -87,11 +85,11 @@ public class ScheduledIngestionService {
     public FeedItem createFeed(UUID userId, FeedRequest request) {
         String url = request.url().trim();
         if (!FeedUrls.isHttpUrl(url)) {
-            throw new ApiException(ApiErrorCode.VALIDATION_STRUCTURE_INVALID,
+            throw new ApiException(ApiErrorCode.FEED_URL_INVALID,
                     "A feed URL must be an absolute http(s) address");
         }
         if (feeds.countByUserId(userId) >= MAX_FEEDS_PER_USER) {
-            throw new ApiException(ApiErrorCode.VALIDATION_STRUCTURE_INVALID,
+            throw new ApiException(ApiErrorCode.FEED_LIMIT_REACHED,
                     "A user can keep at most " + MAX_FEEDS_PER_USER + " feeds");
         }
         IngestionFeed feed = new IngestionFeed();
@@ -139,14 +137,18 @@ public class ScheduledIngestionService {
         return due.size();
     }
 
+    /**
+     * The run history as a page, like every other list board: the window is the
+     * caller's page/size (clamped by {@link Paging}), and the answer carries the
+     * total so the screen can page past the first window.
+     */
     @Transactional(readOnly = true)
-    public List<RunItem> listRuns(UUID userId, int limit) {
-        int size = Math.max(1, Math.min(limit, RUN_LIMIT_MAX));
+    public PageDTO<RunItem> listRuns(UUID userId, int page, int size) {
         Map<UUID, String> names = feeds.findByUserIdOrderByCreatedAtDesc(userId).stream()
                 .collect(Collectors.toMap(IngestionFeed::getId, IngestionFeed::getName));
-        return runs.findByUserIdOrderByStartedAtDesc(userId, Paging.first(size)).stream()
-                .map(run -> RunItem.of(run, names.getOrDefault(run.getFeedId(), "")))
-                .toList();
+        return PageDTO.from(
+                runs.findByUserIdOrderByStartedAtDescIdDesc(userId, Paging.of(page, size).pageable()),
+                run -> RunItem.of(run, names.getOrDefault(run.getFeedId(), "")));
     }
 
     @Transactional(readOnly = true)
@@ -214,11 +216,10 @@ public class ScheduledIngestionService {
      */
     private List<Job> newestOpenJobs() {
         List<Job> open = new ArrayList<>();
-        Sort newestFirst = Sort.by(Sort.Direction.DESC, "postedAt");
         for (int page = 0; open.size() < CORPUS_LIMIT; page += 1) {
             int size = Math.min(Paging.MAX_PAGE_SIZE, CORPUS_LIMIT - open.size());
-            Page<Job> window = jobs.findByStatus("open",
-                    Paging.of(page, size).pageable().withSort(newestFirst));
+            Page<Job> window = jobs.findByStatusOrderByPostedAtDescIdDesc("open",
+                    Paging.of(page, size).pageable());
             open.addAll(window.getContent());
             if (!window.hasNext() || window.getContent().isEmpty()) break;
         }

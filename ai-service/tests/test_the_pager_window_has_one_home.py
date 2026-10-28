@@ -14,7 +14,7 @@ wiring so the copies cannot quietly come back:
 * no other file under `frontend/src` derives a page count from a total (the census that would
   have caught the ten copies);
 * every board that runs the past-the-end correction names the shared helper, and the count is
-  pinned (the nine server-window screens plus `job-filter.ts`, whose Saved tab clamps the
+  pinned (the ten server-window screens plus `job-filter.ts`, whose Saved tab clamps the
   same rule over a client-side set), so a new board means a new call site rather than an
   eleventh copy.
 """
@@ -28,7 +28,7 @@ COMPONENT = FRONT / "components" / "common" / "pagination.tsx"
 HELPER = FRONT / "lib" / "page-window.ts"
 HELPER_TEST = FRONT / "lib" / "page-window.test.ts"
 
-CORRECTION_SITES = 10
+CORRECTION_SITES = 11
 
 
 def read(path: Path) -> str:

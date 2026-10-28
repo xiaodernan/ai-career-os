@@ -14,7 +14,11 @@ vi.mock("@/lib/i18n/locale-context", () => ({
 
 const state = vi.hoisted(() => ({
   feeds: { data: undefined as unknown[] | undefined, isSuccess: false, isError: false },
-  runs: { data: undefined as unknown[] | undefined, isSuccess: false, isError: false },
+  runs: {
+    data: undefined as { items: unknown[]; total: number; page: number; size: number } | undefined,
+    isSuccess: false,
+    isError: false,
+  },
   detail: {
     data: undefined as { run: unknown; plan: unknown } | undefined,
     isPending: false,
@@ -92,7 +96,11 @@ describe("planTitles", () => {
 describe("ScheduledFeedsPanel", () => {
   it("lists a feed with its switch, its last run and its counts", () => {
     state.feeds = { data: [FEED], isSuccess: true, isError: false };
-    state.runs = { data: [FEED.lastRun], isSuccess: true, isError: false };
+    state.runs = {
+      data: { items: [FEED.lastRun], total: 1, page: 0, size: 20 },
+      isSuccess: true,
+      isError: false,
+    };
     const html = render();
     expect(html).toContain("HN hiring");
     expect(html).toContain("https://hn.example/rss");
@@ -116,7 +124,11 @@ describe("ScheduledFeedsPanel", () => {
       isSuccess: true,
       isError: false,
     };
-    state.runs = { data: [], isSuccess: true, isError: false };
+    state.runs = {
+      data: { items: [], total: 0, page: 0, size: 20 },
+      isSuccess: true,
+      isError: false,
+    };
     const html = render();
     expect(html).toContain("ingestion.neverRun");
     expect(html).toContain("ingestion.noRuns");
@@ -132,7 +144,11 @@ describe("ScheduledFeedsPanel", () => {
       startedAt: "2026-10-27T03:20:00Z",
     };
     state.feeds = { data: [FEED], isSuccess: true, isError: false };
-    state.runs = { data: [failed], isSuccess: true, isError: false };
+    state.runs = {
+      data: { items: [failed], total: 1, page: 0, size: 20 },
+      isSuccess: true,
+      isError: false,
+    };
     const html = render();
     expect(html).toContain("ingestion.statusFailed");
     expect(html).toContain("Feed answered HTTP 503");
@@ -146,7 +162,11 @@ describe("ScheduledFeedsPanel", () => {
     expect(pending).not.toContain("ingestion.noRuns");
 
     state.feeds = { data: [], isSuccess: true, isError: false };
-    state.runs = { data: [], isSuccess: true, isError: false };
+    state.runs = {
+      data: { items: [], total: 0, page: 0, size: 20 },
+      isSuccess: true,
+      isError: false,
+    };
     const empty = render();
     expect(empty).toContain("ingestion.noFeeds");
     expect(empty).toContain("ingestion.noRuns");

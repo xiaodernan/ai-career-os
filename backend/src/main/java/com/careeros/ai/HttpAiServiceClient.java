@@ -290,6 +290,26 @@ public class HttpAiServiceClient implements AiServiceClient {
     }
 
     @Override
+    public Map<String, Object> renderResume(UUID userId, Map<String, Object> resume, String text,
+                                            String title, String subtitle, String locale) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("resume", resume == null ? Map.of() : resume);
+        if (text != null && !text.isBlank()) {
+            body.put("text", text);
+        }
+        if (title != null && !title.isBlank()) {
+            body.put("title", title);
+        }
+        if (subtitle != null && !subtitle.isBlank()) {
+            body.put("subtitle", subtitle);
+        }
+        if (locale != null && !locale.isBlank()) {
+            body.put("locale", locale);
+        }
+        return post("/internal/features/render-resume", userId, body);
+    }
+
+    @Override
     public Map<String, Object> parseFeed(String feed, String source, UUID userId) {
         // The feed's shape is detected by the engine, so an RSS 2.0 / Atom
         // XML feed and a board-API JSON payload both come through this one

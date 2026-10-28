@@ -875,3 +875,31 @@ async def render_bundle_ep(req: RenderBundleReq, ctx: Ctx = Depends(require_inte
         # acts on rather than a 500 it cannot read.
         await observability.finish_run(run_id, "failed")
         raise HTTPException(501, str(exc)) from exc
+
+
+class ResumeRenderReq(BaseModel):
+    """19.5 -- one resume version rendered as a print-ready document.
+
+    `resume` is the version's structured body (the jsonb the parse or tailor
+    run persisted), rendered section by section in the export's print layout.
+    `text` is the same version's plaintext, printed instead when the body is
+    empty -- an upload that was never parsed is still a version the reader can
+    print. `title` names the resume when the body carries no name of its own,
+    `subtitle` names the version, and `locale` is the reader's language, like
+    the export render's: the document is the reader's, not the server's.
+    """
+    resume: dict = Field(default_factory=dict)
+    text: str = ""
+    title: str = ""
+    subtitle: str = ""
+    locale: str | None = None
+
+
+@router.post("/render-resume")
+async def render_resume_ep(req: ResumeRenderReq, ctx: Ctx = Depends(require_internal)):
+    """19.5 -- a single version in the export's print chrome and the reader's words."""
+    run_id = await _run(ctx, "resume", "render_resume")
+    html_text = export_render_mod.resume_to_html(
+        req.resume, req.locale, title=req.title, subtitle=req.subtitle, text=req.text)
+    await observability.finish_run(run_id, "completed")
+    return {"format": "html", "html": html_text}

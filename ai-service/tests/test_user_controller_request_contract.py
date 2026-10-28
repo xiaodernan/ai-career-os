@@ -434,9 +434,10 @@ def test_the_target_list_bounds_are_one_policy_across_records_and_screen():
     assert "function splitList(" not in cards, (
         "splitList is defined in the component again; the guard would judge a different "
         "string than the payload sends")
-    assert "const rolesProblem = targetRolesIssue(roleItems);" in cards, (
+    # Both guards still decide, and `issueText` turns each decision into the reader's words.
+    assert "const rolesProblem = issueText(targetRolesIssue(roleItems), t);" in cards, (
         "the roles field no longer runs the shared guard")
-    assert "const locationsProblem = targetLocationsIssue(locationItems);" in cards, (
+    assert "const locationsProblem = issueText(targetLocationsIssue(locationItems), t);" in cards, (
         "the target-locations field no longer runs the shared guard")
     assert "const saveable = yearsValid && !rolesProblem && !locationsProblem;" in cards, (
         "the save gate no longer waits for the two list guards")

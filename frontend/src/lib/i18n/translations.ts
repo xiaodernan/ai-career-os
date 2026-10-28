@@ -339,6 +339,7 @@ export const translations = {
       fullDocument: "Full document",
       saveAgain: "Save again",
       saveAsVersion: "Save as version",
+      printVersion: "Print this version",
       noStructuredDiff:
         "The response carried no structured diff. The document view still shows what was produced.",
       noDocumentText: "No document text was returned for this run — only the change list above.",
@@ -772,6 +773,7 @@ export const translations = {
         "Every pull the clock made, newest first — including the ones that failed, with the reason the server wrote down.",
       noRuns: "No runs yet. A feed's first pull happens at the next sweep, or when you run it now.",
       runsUnavailable: "The run history couldn't be loaded.",
+      runsPaginationLabel: "sweep runs",
       feedsUnavailable: "The feed list couldn't be loaded.",
       unnamedFeed: "Unnamed feed",
       statusCompleted: "Completed",
@@ -891,6 +893,8 @@ export const translations = {
       notLiveDescription:
         "GET /resumes answered 404, so this frontend and the backend it is talking to are different versions. Uploads are wired and appear as soon as they match — nothing is invented to fill the gap.",
       paginationLabel: "resumes",
+      printBlocked:
+        "The print window was blocked — allow pop-ups for this site and try again.",
       yourVersions: "Your versions",
       open: "Open",
       /**
@@ -948,6 +952,7 @@ export const translations = {
         originalFile: "Original file",
         parseFailed: "Parse failed:",
         setCurrent: "Set current",
+        print: "Print",
         diffVsPrevious: "Diff vs previous",
         profileFrom: "Profile from",
         structuredJson: "structured JSON.",
@@ -1215,6 +1220,10 @@ export const translations = {
 
       EMAIL_ALREADY_REGISTERED: "That email address is already registered.",
 
+      FEED_LIMIT_REACHED: "You already keep as many feeds as this account allows.",
+
+      FEED_URL_INVALID: "A feed address must start with http:// or https://.",
+
       FILE_EMPTY: "That file is empty.",
 
       FILE_KEY_INVALID: "That file key is not a valid one.",
@@ -1224,6 +1233,10 @@ export const translations = {
       FILE_TOO_LARGE: "That file is larger than the limit allows.",
 
       FORBIDDEN: "You do not have access to that.",
+
+      INGESTION_FEED_NOT_FOUND: "That scheduled feed is no longer here.",
+
+      INGESTION_RUN_NOT_FOUND: "That sweep run is no longer here.",
 
       INTERNAL_ERROR: "An internal server error occurred.",
 
@@ -1285,6 +1298,12 @@ export const translations = {
 
       RUN_NOT_FOUND: "That run is no longer here.",
 
+      SAVED_SEARCH_EMPTY: "A saved search needs at least one criterion.",
+
+      SAVED_SEARCH_NOT_FOUND: "That saved search is no longer here.",
+
+      SALARY_RANGE_INVALID: "The salary floor cannot be above the salary ceiling.",
+
       SESSION_NOT_FOUND: "That interview session is no longer here.",
 
       SOURCE_NOT_FOUND: "That source is no longer here.",
@@ -1298,6 +1317,8 @@ export const translations = {
       STORAGE_WRITE_FAILED: "Object storage write failed.",
 
       STREAM_ENDED: "The connection closed before the answer arrived.",
+
+      TAILORED_BODY_MISSING: "This tailored version arrived without its body.",
 
       STREAM_ERROR: "The answer stream failed. Please try again.",
 
@@ -1324,8 +1345,6 @@ export const translations = {
       VALIDATION_FIELD_REQUIRED: "A required field is missing.",
 
       VALIDATION_KIND_UNKNOWN: "That knowledge kind is not recognized.",
-
-      VALIDATION_STRUCTURE_INVALID: "The request structure is invalid.",
 
       VERSION_NOT_FOUND: "That version is no longer here.",
 
@@ -2463,6 +2482,7 @@ export const translations = {
       fullDocument: "完整文档",
       saveAgain: "再存一次",
       saveAsVersion: "存为版本",
+      printVersion: "打印此版本",
       noStructuredDiff: "返回的内容里没有结构化差异。文档视图仍然显示生成的内容。",
       noDocumentText: "这次运行没有返回文档正文——只有上面的改动清单。",
       evidenceUsed: "用到的证据",
@@ -2851,6 +2871,7 @@ export const translations = {
       runsDescription: "时钟做过的每次拉取，最新在前——包括失败的，连同服务器写下的原因。",
       noRuns: "还没有运行记录。下一次清扫或你点“立即运行”时会有第一次拉取。",
       runsUnavailable: "运行记录加载失败。",
+      runsPaginationLabel: "清扫记录",
       feedsUnavailable: "订阅列表加载失败。",
       unnamedFeed: "未命名订阅",
       statusCompleted: "完成",
@@ -2955,6 +2976,7 @@ export const translations = {
       notLiveDescription:
         "GET /resumes 回了 404，所以这个前端和它对话的后端不是同一个版本。上传已经接好，版本对上就会出现——不会拿编造的东西填坑。",
       paginationLabel: "简历",
+      printBlocked: "打印窗口被拦截了——请允许本站弹出窗口后重试。",
       yourVersions: "你的各个版本",
       status: {
         parsed: "已结构化",
@@ -3004,6 +3026,7 @@ export const translations = {
         originalFile: "原始文件",
         parseFailed: "解析失败：",
         setCurrent: "设为当前",
+        print: "打印",
         diffVsPrevious: "与上一版的差异",
         profileFrom: "档案来自",
         structuredJson: "结构化 JSON。",
@@ -3250,6 +3273,10 @@ export const translations = {
 
       EMAIL_ALREADY_REGISTERED: "这个邮箱已经注册过了。",
 
+      FEED_LIMIT_REACHED: "这个账号能保留的抓取任务已经到上限了。",
+
+      FEED_URL_INVALID: "抓取地址必须以 http:// 或 https:// 开头。",
+
       FILE_EMPTY: "这个文件是空的。",
 
       FILE_KEY_INVALID: "这个文件键不合法。",
@@ -3259,6 +3286,10 @@ export const translations = {
       FILE_TOO_LARGE: "文件超出了允许的大小。",
 
       FORBIDDEN: "你没有权限访问它。",
+
+      INGESTION_FEED_NOT_FOUND: "这个定时抓取任务已经不在了。",
+
+      INGESTION_RUN_NOT_FOUND: "这次清扫运行已经不在了。",
 
       INTERNAL_ERROR: "服务器内部错误。",
 
@@ -3320,6 +3351,12 @@ export const translations = {
 
       RUN_NOT_FOUND: "这次运行记录已经不在了。",
 
+      SAVED_SEARCH_EMPTY: "保存的搜索至少要有一个条件。",
+
+      SAVED_SEARCH_NOT_FOUND: "这个保存的搜索已经不在了。",
+
+      SALARY_RANGE_INVALID: "薪资下限不能高于上限。",
+
       SESSION_NOT_FOUND: "这次面试已经不在了。",
 
       SOURCE_NOT_FOUND: "这份资料已经不在了。",
@@ -3333,6 +3370,8 @@ export const translations = {
       STORAGE_WRITE_FAILED: "对象存储写入失败。",
 
       STREAM_ENDED: "连接在回答到达之前断开了。",
+
+      TAILORED_BODY_MISSING: "这份定制版本没有带上它的正文。",
 
       STREAM_ERROR: "回答的传输失败了，请再试一次。",
 
@@ -3359,8 +3398,6 @@ export const translations = {
       VALIDATION_FIELD_REQUIRED: "缺少必填字段。",
 
       VALIDATION_KIND_UNKNOWN: "该知识类型不存在。",
-
-      VALIDATION_STRUCTURE_INVALID: "请求结构不合法。",
 
       VERSION_NOT_FOUND: "那个版本已经不在了。",
 

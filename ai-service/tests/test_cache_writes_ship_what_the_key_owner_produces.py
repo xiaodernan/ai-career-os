@@ -10,15 +10,16 @@ of **answers** ("this row's reminder instant"). ``{...row, ...command}`` conflat
 and TypeScript cannot see the conflation, because the patch is an interface of optional keys and the
 row an interface of nullable ones.
 
-Nine sites in ``frontend/src`` write a cache value. Seven spell their key in the source; the other
+Twelve sites in ``frontend/src`` write a cache value. Ten spell their key in the source; the other
 two -- the rollbacks in ``useReorderApplication`` and ``useUpdateApplication`` -- write back a key
 each enumerated at runtime, which no static read can name. Three put a route's answer into
-``["me"]``; three put a snapshot back where it was read from; and three *merge*: one preserves a
-wrapper object it had just read (``["job", id]``), two rewrite one page's ``items`` in place
-(``["applications"]``). Case 12 rebuilds that sentence from the walk, because this header shipped
+``["me"]``, and three put the inbox write's answer into ``["notifications"]``; three put a snapshot
+back where it was read from; and three *merge*: one preserves a wrapper object it had just read
+(``["job", id]``), two rewrite one page's ``items`` in place (``["applications"]``). Case 12 rebuilds
+that sentence from the walk, because this header shipped
 "seven sites ... six spell their key ... two merge" for a run of commits after the reorder board
 copied the update hook's optimistic shape wholesale -- the numbers a reader trusts most are the ones
-nobody grades. Four files make the app's react-query calls, across eight methods, and case 1's roster
+nobody grades. Seven files make the app's react-query calls, across eight methods, and case 1's roster
 is where a new one has to be filed.
 
 The other thing this header shipped was a finding it said it would not fix: the row merge spread
@@ -41,7 +42,7 @@ itself one of the cases.
 1. the react-query **client** vocabulary: every ``qc.<method>(`` site, filed by the source that makes
    it and compared method-by-method against the sites the borrowed walk reads there, so the two gates
    close over one population and the single method that carries no key is named rather than assumed;
-2. the nine writes, each read for its arguments as its own source spells them, its value classified
+2. the twelve writes, each read for its arguments as its own source spells them, its value classified
    structurally as answer / snapshot / merge, and its key resolved by the walk's prefix rule;
 3. the name sets each value is built from: ``useJob``'s returned wrapper, ``normalizePage``'s
    envelope, ``normalizeApplication``'s row, ``UpdateApplicationBody``, ``ReminderPatch``;
@@ -92,6 +93,9 @@ APP_SERVICE = "backend/src/main/java/com/careeros/application/service/Applicatio
 APP_DTOS = "backend/src/main/java/com/careeros/application/dto/ApplicationDtos.java"
 RESUMES_PAGE = "frontend/src/app/(app)/resumes/page.tsx"
 SOURCE_ACTIONS = "frontend/src/components/knowledge/source-actions.tsx"
+INGESTION_HOOKS = "frontend/src/lib/hooks/ingestion.ts"
+ANALYTICS_HOOKS = "frontend/src/lib/hooks/analytics.ts"
+NOTIFICATION_HOOKS = "frontend/src/lib/hooks/notifications.ts"
 
 WRITERS = ("setQueryData", "setQueriesData")
 READERS = ("getQueryData", "getQueriesData")
@@ -111,8 +115,11 @@ QC_CALL = re.compile(r"(?<![\w$])qc\.(\w+)\s*(?=<|\()")
 #: three walks can be made to agree per file rather than merely in total.
 CLIENT_CALLS = {
     ACTIONS: {"cancelQueries": 3, "getQueriesData": 2, "getQueryData": 1,
-              "invalidateQueries": 50, "removeQueries": 1, "setQueriesData": 2, "setQueryData": 5},
+              "invalidateQueries": 52, "removeQueries": 1, "setQueriesData": 2, "setQueryData": 5},
+    ANALYTICS_HOOKS: {"invalidateQueries": 1},
     AUTH_HOOKS: {"clear": 2, "setQueryData": 2},
+    INGESTION_HOOKS: {"invalidateQueries": 7},
+    NOTIFICATION_HOOKS: {"setQueryData": 3},
     RESUMES_PAGE: {"invalidateQueries": 1},
     SOURCE_ACTIONS: {"invalidateQueries": 1},
 }
@@ -477,7 +484,7 @@ def test_the_keyless_clear_is_the_two_signout_handlers_and_nothing_else():
         )
 
 
-# --- case 2: nine writes, and every key they name is owned by something a screen mounts -------
+# --- case 2: twelve writes, and every key they name is owned by something a screen mounts ------
 
 
 def test_the_write_ledger_names_every_site_and_the_key_and_form_each_one_has():
@@ -494,6 +501,9 @@ def test_the_write_ledger_names_every_site_and_the_key_and_form_each_one_has():
         ("actions.ts", "useUpdateProfile", ("me",), "answer"),
         ("auth.ts", "useLogin", ("me",), "answer"),
         ("auth.ts", "useRegister", ("me",), "answer"),
+        ("notifications.ts", "useDismissNotification", ("notifications",), "answer"),
+        ("notifications.ts", "useMarkAllNotificationsRead", ("notifications",), "answer"),
+        ("notifications.ts", "useMarkNotificationsRead", ("notifications",), "answer"),
     ], "the write ledger moved: %s" % ledger
     computed = [c for c in sites if c.key is None]
     assert len(computed) == 2 and {c.fn for c in computed} == {"useUpdateApplication", "useReorderApplication"}, (
@@ -510,7 +520,8 @@ def test_every_key_a_write_names_is_owned_by_a_query_a_screen_mounts():
         assert hit, "write %s puts a value under %s, which no query declares" % (c.where, c.segs)
         assert any(mounted(d) for d in hit), "write %s overwrites only queries no screen mounts" % c.where
         owned[c.segs] = sorted({d.fn for d in hit})
-    assert owned == {("me",): ["useUser"], ("job", "*"): ["useJob"], ("applications",): ["useApplications"]}, (
+    assert owned == {("me",): ["useUser"], ("job", "*"): ["useJob"], ("applications",): ["useApplications"],
+                     ("notifications",): ["useNotifications"]}, (
         "the key-to-owner map moved: %s" % owned
     )
 

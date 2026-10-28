@@ -68,12 +68,20 @@
    分析页开头的来信卡展示四个数字、最久未动的停滞行与更早来信历史，并可
    手动"生成本周"；`formatDateOnly` 把纯日期按 UTC 呈现。13 个后端测试，
    doc/wire/DTO/paging 门禁全绿，617 后端测试，724 vitest。
-   接下来：19.5 单版本打印视图 → 19.6 语音模拟面试。
+   ~~19.5 单版本打印~~ 已完成：ai-service `POST /internal/features/render-resume`
+   + `export_render.resume_to_html`（结构化正文按 export 的节序与读者语言排版，
+   未解析的版本退回其纯文本），backend `ResumeService.printHtml` 只读该用户
+   的版本行、`ResumeVersionController` `POST /resume-versions/{id}/print`
+   返回 `{html}`，前端 `usePrintResumeVersion` 在点击手势内先开窗口再写文档
+   （弹窗拦截只影响提示，不影响结果），入口在定制面板"打印此版本"与简历
+   详情页每个版本的打印按钮。10 个 ai-service 渲染测试、3 个 service 测试、
+   11 个 controller 测试，doc/contract/paging 门禁全绿。
    这是"OS 替你先做"的第一层。
 
-5. **Epic 20 — 单版本打印**
-   定制简历的独立打印视图（复用 export_render 的排版与语言机制），
-   让"tailor → 下载 PDF"成为一条完整路径，而不是只打整个数据包。
+5. ~~**Epic 20 — 单版本打印**~~
+   ~~定制简历的独立打印视图（复用 export_render 的排版与语言机制），
+   让"tailor → 下载 PDF"成为一条完整路径，而不是只打整个数据包。~~
+   已完成（19.5，见上）。下一步：19.6 语音模拟面试。
 
 6. **Epic 21 — 语音模拟面试**
    STT/TTS 的 provider 接缝 + 面试页的录音/播放；文本面试已有的评分与轨迹

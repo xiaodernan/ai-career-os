@@ -210,8 +210,12 @@ DEAD_NAME_TIERS = {
     ("lib/api/types.ts", "lib/hooks/resources.ts"): {"chunkCount"},
     ("lib/api/normalize.ts", "lib/hooks/resources.ts"): {"current_version_id",
                                                          "structuredResume", "structured_resume"},
-    ("lib/activity-trace.ts", "lib/hooks/resources.ts"): {"errorMessage", "finished_at",
-                                                          "started_at"},
+    ("lib/activity-trace.ts", "lib/hooks/resources.ts"): {"errorMessage"},
+    # The ingestion run's normalizer now tolerates the snake twin of both instants and its own test
+    # pins that reading, so the two names are spelled in four files while the session mapper's
+    # terms stay dead: `RunItem` authors camelCase only, on exactly the argument above.
+    ("lib/activity-trace.ts", "lib/api/normalize.test.ts", "lib/api/normalize.ts",
+     "lib/hooks/resources.ts"): {"finished_at", "started_at"},
     ("lib/api/endpoints.ts", "lib/hooks/resources.ts"): {"resumeVersions"},
     ("components/common/command-palette.tsx", "lib/api/normalize.ts",
      "lib/hooks/resources.ts"): {"company_name"},
@@ -440,7 +444,9 @@ def test_the_unbound_mappers_ban_would_find_these_mappers_if_it_read_this_file()
     # 33 since #218 added `useApplication`, the board's by-id fallback.
     # 37 since the contacts registry (11.1): `mapContact` joined the named mappers and
     # `useContacts` the query hooks.
-    assert len(seen) == 37, f"resources.ts now declares {len(seen)} functions for the ban's rule"
+    # 42 since the proactive layer (19.1-19.3): saved searches, the feed and run readers, and the
+    # notification inbox each brought one query hook.
+    assert len(seen) == 42, f"resources.ts now declares {len(seen)} functions for the ban's rule"
     assert [n for n in seen if n.startswith("map")] == NAMED_MAPPERS, \
         "the ban's own rule no longer recognizes these declarations in file order: " \
         f"{[n for n in seen if n.startswith('map')]}"
@@ -450,7 +456,7 @@ def test_the_unbound_mappers_ban_would_find_these_mappers_if_it_read_this_file()
     assert "RESOURCES" not in declarations and "resources" not in declarations, \
         "the ban now enumerates resources.ts too -- reconcile the two censuses instead of stacking"
     population = re.search(r"assert len\(population\) == (\d+)", gate)
-    assert population and population.group(1) == "36", \
+    assert population and population.group(1) == "43", \
         f"the ban's pinned normalize.ts population moved: {population and population.group(1)}"
 
 
@@ -510,7 +516,12 @@ def test_an_unauthored_name_is_a_snake_twin_a_foreign_name_or_a_name_no_record_d
     # carries `targetRole`/`targetSalary` and the growth-report family's own names.
     # 224 rather than 222 since the contacts registry's request/item pair (11.1) carries
     # `relation` and `lastTouchAt` — the registry's own names.
-    assert len(everywhere) == 251, f"the backend record census read {len(everywhere)} component names"
+    # 269 rather than 251 since the 19.x wave's records: saved searches (`SavedSearchItem`,
+    # `Criteria`, their request), ingestion (`FeedItem`, `RunItem`, `RunDetail`, and the request
+    # pair), the inbox (`NotificationItem`, `Inbox`, and its two key bodies), the weekly digest,
+    # and the print pair (`PrintResumeRequest`, `ResumePrint`). The set grew by the 18 names
+    # those records introduced that no earlier record declared.
+    assert len(everywhere) == 269, f"the backend record census read {len(everywhere)} component names"
     assert {"id", "title", "status", "createdAt"} <= set(everywhere), sorted(list(everywhere)[:8])
     scanned_unauthored = scanned_nowhere = 0
     for (mapper, receiver), record in ROWS.items():

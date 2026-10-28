@@ -259,13 +259,20 @@ export function useIngestionFeeds() {
   });
 }
 
-/** What the sweep did with those feeds, newest first. */
-export function useIngestionRuns(limit = 20) {
+/**
+ * What the sweep did with those feeds, newest first, one window at a time.
+ *
+ * 19.2 shipped this as the one newest-N history: a `limit` the hook named and the
+ * route clamped. The panel pages now, so the run that fell off the end is reachable:
+ * the route answers a `PageDTO` and the hook asks with the same 20 the handler would.
+ */
+export function useIngestionRuns(params?: { page?: number; size?: number }) {
   return useQuery({
-    queryKey: ["ingestion", "runs", limit],
-    queryFn: async (): Promise<IngestionRun[]> =>
-      listOf<unknown>(await api.get<unknown>(endpoints.ingestionRuns, { limit })).map(
-        normalizeIngestionRun
+    queryKey: ["ingestion", "runs", params],
+    queryFn: async (): Promise<Page<IngestionRun>> =>
+      normalizePage(
+        await api.get<unknown>(endpoints.ingestionRuns, { size: 20, ...(params ?? {}) }),
+        (row) => normalizeIngestionRun(row)
       ),
   });
 }

@@ -28,10 +28,6 @@ function dismissBody(key: string): { key: string } {
   return { key };
 }
 
-function replaceInbox(qc: ReturnType<typeof useQueryClient>, inbox: NotificationInbox) {
-  qc.setQueryData(["notifications"], inbox);
-}
-
 export function useMarkNotificationsRead() {
   const qc = useQueryClient();
   return useMutation({
@@ -39,7 +35,7 @@ export function useMarkNotificationsRead() {
       normalizeNotificationInbox(
         await api.create<unknown>(endpoints.notificationsRead, markReadBody(keys))
       ),
-    onSuccess: (inbox) => replaceInbox(qc, inbox),
+    onSuccess: (inbox) => qc.setQueryData(["notifications"], inbox),
     onError: fail(translate("notifications.actionFailed") ?? "Couldn't update the inbox."),
   });
 }
@@ -51,7 +47,7 @@ export function useMarkAllNotificationsRead() {
       normalizeNotificationInbox(
         await api.request<unknown>(endpoints.notificationsReadAll, { method: "POST" })
       ),
-    onSuccess: (inbox) => replaceInbox(qc, inbox),
+    onSuccess: (inbox) => qc.setQueryData(["notifications"], inbox),
     onError: fail(translate("notifications.actionFailed") ?? "Couldn't update the inbox."),
   });
 }
@@ -63,7 +59,7 @@ export function useDismissNotification() {
       normalizeNotificationInbox(
         await api.create<unknown>(endpoints.notificationsDismiss, dismissBody(key))
       ),
-    onSuccess: (inbox) => replaceInbox(qc, inbox),
+    onSuccess: (inbox) => qc.setQueryData(["notifications"], inbox),
     onError: fail(translate("notifications.actionFailed") ?? "Couldn't update the inbox."),
   });
 }
