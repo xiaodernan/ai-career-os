@@ -67,6 +67,17 @@ public class AnalysisService {
     }
 
     /**
+     * The same digest with the staleness window spelled out, for the weekly letter (19.4): the
+     * dashboard's window is a fortnight, but a letter about one week must call an application
+     * quiet on the letter's own terms, or its stalled list would disagree with the week it
+     * describes.
+     */
+    @Transactional(readOnly = true)
+    public Map<String, Object> insightDigest(UUID userId, String locale, int staleDays) {
+        return aiService.insightDigest(userId, applicationRows(userId), locale, staleDays);
+    }
+
+    /**
      * 15.1 — the pipeline funnel: how many applications reached each stage, and
      * where the leak is. The same rows the digest reads, one lens on them.
      */

@@ -657,9 +657,25 @@ that; each ships wired to the real API and UI, like every epic before it.
   to the board, the run history or the application. 15 backend tests for the
   slice, the doc/self-invocation/DTO/paging gates green, 604 backend tests, 718
   vitest, census 134 files.)
-- [ ] **19.4** Weekly digest delivery: the 15.3 digest delivered on a cadence
+- [x] **19.4** Weekly digest delivery: the 15.3 digest delivered on a cadence
   (in-app, with an email-ready payload), so the week's signals do not require
   opening the app.
+  (`V14__weekly_digests.sql` + `WeeklyDigestController`: GET `/digests` and
+  POST `/digests/run`, and a Monday 08:00 `WeeklyDigestScheduler` writes the
+  week that just ended for every user who has applications. Each row freezes
+  the engine's answer — the payload is a snapshot, so re-reading a letter never
+  re-renders it from data that has since moved; recomposing the same week
+  replaces it in place under the `(user_id, week_start)` unique key.
+  `week_start` is a date with a Monday check, never a timestamp, so no reader
+  can convert it and land on the Sunday before. The letter asks the engine for
+  its own 7-day window through a new 4-arg `insightDigest` (the dashboard keeps
+  the engine's 14), and one user's failure is logged and skipped rather than
+  costing the other letters. The analysis page opens with the letter card: the
+  week's four numbers, the quietest stalled rows, earlier letters as history,
+  and a compose-this-week action for the morning before the schedule runs;
+  `formatDateOnly` pins a date-only value to UTC so the label is the Monday it
+  names. 13 backend tests for the slice, the doc/wire/DTO/paging gates green,
+  617 backend tests, 724 vitest, census 134 files.)
 - [ ] **19.5** Tailored-resume print view: a single version rendered through
   the export renderer's print layout and locale words, reachable from the
   tailoring surface — "tailor → print/PDF" without exporting the whole bundle.

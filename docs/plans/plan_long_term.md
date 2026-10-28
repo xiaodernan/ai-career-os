@@ -9,8 +9,8 @@
 
 ## 当前状态 (2026-10-28)
 
-- **前端**: 718 个 vitest 通过（66 个文件）；`tsc --noEmit` 干净。
-- **后端**: 604 个测试通过 (`mvn test`，含无需 Docker 的 MockMvc 切片)。
+- **前端**: 724 个 vitest 通过（66 个文件）；`tsc --noEmit` 干净。
+- **后端**: 617 个测试通过 (`mvn test`，含无需 Docker 的 MockMvc 切片)。
 - **ai-service**: 1833 passed, 1 skipped (offline: mock/hash)。
 - **E2E**: 24/24 golden journey（最近一次真实栈验证）。
 - **分支**: main 与 origin 同步。
@@ -58,7 +58,17 @@
    当前列表之外的键一律忽略，每次写入返回全新的收件箱。`/notifications`
    页按 kind + 空洞在读者语言里组句，可标记已读、忽略、全部已读并深链回
    申请板 / 运行历史 / 导入页。
-   接下来：19.4 每周摘要投递 → 19.5 单版本打印视图。
+   ~~19.4 每周摘要投递~~ 已完成：`V14__weekly_digests.sql` +
+   `WeeklyDigestController`（`/digests` GET + `/digests/run` POST），周一
+   08:00 的 `WeeklyDigestScheduler` 为每位有申请的用户写下刚结束的一周。
+   payload 是冻结快照，重读不会按已变化的数据重算；同一周重写按
+   `(user_id, week_start)` 唯一键原地替换；`week_start` 存日期并约束周一，
+   读者无从把时间戳换算回周日。来信通过新的 4 参 `insightDigest` 向引擎要
+   自己的 7 天窗口（仪表盘保持 14），单个用户失败只记日志、不拖累他人。
+   分析页开头的来信卡展示四个数字、最久未动的停滞行与更早来信历史，并可
+   手动"生成本周"；`formatDateOnly` 把纯日期按 UTC 呈现。13 个后端测试，
+   doc/wire/DTO/paging 门禁全绿，617 后端测试，724 vitest。
+   接下来：19.5 单版本打印视图 → 19.6 语音模拟面试。
    这是"OS 替你先做"的第一层。
 
 5. **Epic 20 — 单版本打印**

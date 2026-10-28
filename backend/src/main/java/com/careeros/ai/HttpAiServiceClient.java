@@ -225,8 +225,16 @@ public class HttpAiServiceClient implements AiServiceClient {
     @Override
     public Map<String, Object> insightDigest(UUID userId, List<Map<String, Object>> applications,
                                              String locale) {
+        // The engine's own default window, spelled out so both entry points build one body.
+        return insightDigest(userId, applications, locale, 14);
+    }
+
+    @Override
+    public Map<String, Object> insightDigest(UUID userId, List<Map<String, Object>> applications,
+                                             String locale, int staleDays) {
         Map<String, Object> body = new HashMap<>();
         body.put("applications", applications);
+        body.put("stale_days", staleDays);
         if (locale != null && !locale.isBlank()) {
             body.put("locale", locale);
         }

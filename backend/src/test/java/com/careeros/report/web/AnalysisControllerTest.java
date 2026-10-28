@@ -58,6 +58,7 @@ class AnalysisControllerTest {
     private com.careeros.ai.AiServiceClient ai;
     private ApplicationRepository applications;
     private com.careeros.application.repository.ApplicationEventRepository events;
+    private AnalysisService service;
     private MockMvc mvc;
 
     @BeforeEach
@@ -65,7 +66,7 @@ class AnalysisControllerTest {
         ai = mock(com.careeros.ai.AiServiceClient.class);
         applications = mock(ApplicationRepository.class);
         events = mock(com.careeros.application.repository.ApplicationEventRepository.class);
-        AnalysisService service = new AnalysisService(ai, applications, events);
+        service = new AnalysisService(ai, applications, events);
         AnalysisController controller = new AnalysisController(service);
         mvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new EnvelopeAdvice(), new GlobalExceptionHandler())
@@ -117,6 +118,24 @@ class AnalysisControllerTest {
         assertThat(row).containsKey("applied_at");
         assertThat(row).containsKey("id");
         assertThat(row).doesNotContainKey("created_at");
+    }
+
+    /**
+     * The weekly letter (19.4) asks the engine for its own window. The dashboard's route keeps
+     * the engine default; the letter must hand the seven days it is about through the bridge,
+     * or its stalled list would be a fortnight's silence inside a letter titled "week".
+     */
+    @Test
+    void the_weekly_letters_window_reaches_the_engine() {
+        when(applications.findByUserIdOrderByUpdatedAtDescIdAsc(eq(UUID.fromString(USER)), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of()));
+        when(ai.insightDigest(eq(UUID.fromString(USER)), any(), any(), eq(7)))
+                .thenReturn(Map.of("windowDays", 7));
+
+        Map<String, Object> answer = service.insightDigest(UUID.fromString(USER), null, 7);
+
+        assertThat(answer).containsEntry("windowDays", 7);
+        verify(ai).insightDigest(eq(UUID.fromString(USER)), any(), isNull(), eq(7));
     }
 
     @Test

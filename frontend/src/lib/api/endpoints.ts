@@ -97,6 +97,8 @@ export const endpoints = {
   analysisInsightDigest: "/analysis/insight-digest",
   analysisPipelineFunnel: "/analysis/pipeline-funnel",
   analysisResponseRate: "/analysis/response-rate",
+  digests: "/digests",
+  digestsRun: "/digests/run",
   monitoringHealthReport: "/monitoring/health-report",
   rateLimitStatus: "/rate-limit/status",
   conversations: "/conversations",

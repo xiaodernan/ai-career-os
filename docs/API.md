@@ -120,6 +120,18 @@ the caller's agent runs. No model runs here.
 | GET | `/monitoring/health-report` | agent health — the verdict (healthy / warn / regressed), the error rate, the run count, the cost and token totals, the latency percentiles, the alert list and the regression list. No query parameters: the window is the account's own |
 | GET | `/rate-limit/status` | the configured limits — whether limiting is on, the per-minute AI cap and the per-minute auth cap — plus the caller's remaining AI-bucket quota. Only the AI bucket is reported: it is keyed by the authenticated user id, so the number the page shows is the number the limiter enforces. The auth bucket is keyed by client IP, which the server cannot know from the principal alone — reporting a number for it would be a guess |
 
+### Weekly digest (`/digests`)
+
+The 19.4 letter: the 15.3 digest composed on the backend's clock and kept, so a week's
+signals outlive the week. One letter per account per week, refreshed in place; the payload
+is the engine's own answer, stored as it came back, and is the material an email would be
+assembled from.
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/digests` | the caller's letters, newest week first, at most twelve — each one the Monday its week starts on, the window it was composed with, when it was written, and the frozen digest payload the engine answered. No query parameters: the list is the caller's own and the cap is the server's |
+| POST | `/digests/run` | composes the current week's letter now and files it, refreshing it if it already exists; answers the filed letter as the list answers one row. No request body and no query parameters — the week is now and the window is the letter's own. The Monday schedule writes the week that just ended, when it can no longer change |
+
 ### Resumes (`/resumes`)
 
 | Method | Path | Notes |

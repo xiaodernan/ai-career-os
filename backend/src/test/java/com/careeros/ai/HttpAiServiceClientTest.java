@@ -92,6 +92,21 @@ class HttpAiServiceClientTest {
     }
 
     @Test
+    void theWeeklyLetterAsksForItsOwnWindow() {
+        // The dashboard's digest keeps the engine's default; the weekly letter (19.4) is about
+        // seven days, so it says so instead of inheriting a fortnight and calling a week quiet.
+        client.insightDigest(UUID.randomUUID(), List.of(), null, 7);
+        assertThat(bodies).hasSize(1);
+        assertThat(bodies.get(0)).contains("\"stale_days\":7").doesNotContain("\"locale\"");
+    }
+
+    @Test
+    void theDashboardDigestKeepsTheEnginesDefaultWindow() {
+        client.insightDigest(UUID.randomUUID(), List.of(), null);
+        assertThat(bodies.get(0)).contains("\"stale_days\":14");
+    }
+
+    @Test
     void theEngineDecidesTheShapeSoTheBridgeDoesNot() {
         // One route for both shapes: the engine detects the feed's format
         // from the text, which is what the ingestion page promises.

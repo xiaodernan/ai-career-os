@@ -20,6 +20,7 @@ import type {
   IngestionFeed,
   IngestionRun,
   IngestionRunDetail,
+  InsightDigest,
   Job,
   JobMatch,
   MatchDimension,
@@ -41,6 +42,7 @@ import type {
   TailorDiff,
   TailorResponse,
   TailoredResult,
+  WeeklyDigest,
 } from "./types";
 import { field } from "./body";
 import { seniorityLabel } from "../format";
@@ -559,6 +561,22 @@ export function normalizeNotificationInbox(raw: unknown): NotificationInbox {
     items,
     unread: num(raw, "unread") ?? items.filter((item) => !item.read).length,
     generatedAt: str(raw, "generatedAt", "generated_at"),
+  };
+}
+
+/**
+ * One week's letter (roadmap 19.4). The payload is the engine's digest, passed through as
+ * the object it arrived as -- the same shape the dashboard reads -- and an absent payload
+ * becomes an empty one, so the page can draw the week without inventing numbers.
+ */
+export function normalizeWeeklyDigest(raw: unknown): WeeklyDigest {
+  const payload = rec(pick(raw, "payload"));
+  return {
+    id: idOf(raw),
+    weekStart: str(raw, "weekStart", "week_start") ?? "",
+    windowDays: num(raw, "windowDays", "window_days") ?? 7,
+    generatedAt: str(raw, "generatedAt", "generated_at"),
+    payload: payload ? (payload as InsightDigest) : {},
   };
 }
 

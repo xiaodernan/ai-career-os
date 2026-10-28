@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Activity, AlertTriangle, BarChart3, Clock, TrendingUp } from "lucide-react";
+import { Activity, AlertTriangle, BarChart3, CalendarDays, Clock, TrendingUp } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,10 +10,17 @@ import { EmptyState } from "@/components/common/empty-state";
 import { ErrorState } from "@/components/common/error-state";
 import { BarChart, ShareChart } from "@/components/common/bar-chart";
 import { LoadingListSkeleton } from "@/components/common/loading-skeletons";
-import { useInsightDigest, usePipelineFunnel, useResponseRate } from "@/lib/hooks/analytics";
+import {
+  useComposeWeeklyDigest,
+  useInsightDigest,
+  usePipelineFunnel,
+  useResponseRate,
+  useWeeklyDigests,
+} from "@/lib/hooks/analytics";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { stageLabel } from "@/lib/pipeline";
-import { formatNumber } from "@/lib/format";
+import { formatDateOnly, formatNumber, relativeTime } from "@/lib/format";
+import type { WeeklyDigest } from "@/lib/api/types";
 
 /** A 0–1 rate as a percent string. "No data" is an em dash, not a zero. */
 function percent(value?: number): string {
@@ -33,6 +40,9 @@ export default function AnalysisPage() {
   const digest = useInsightDigest(locale);
   const funnel = usePipelineFunnel();
   const rates = useResponseRate();
+  // The kept letters (19.4): the digest as the night composed it, week by week.
+  const letters = useWeeklyDigests();
+  const compose = useComposeWeeklyDigest();
   const data = digest.data;
 
   return (
@@ -217,6 +227,15 @@ export default function AnalysisPage() {
             </CardContent>
           </Card>
 
+          {/* 19.4 — the letters the night filed, week by week */}
+          <WeeklyLetterCard
+            letters={letters.data}
+            pending={letters.isPending}
+            failed={letters.isError}
+            composing={compose.isPending}
+            onCompose={() => compose.mutate()}
+          />
+
           {/* Signals */}
           {(data.signals?.length ?? 0) > 0 && (
             <Card>
@@ -267,6 +286,143 @@ function MetricCard({
         </CardTitle>
       </CardHeader>
     </Card>
+  );
+}
+
+/**
+ * The weekly letter (19.4): the digest as it was composed that week, plus the weeks before.
+ *
+ * The numbers and the stalled rows are drawn here with the page's own translated words; the
+ * payload's engine sentences stay in the record for the email half, because the letter is
+ * composed when no reader is present and cannot know whose language to speak.
+ */
+function WeeklyLetterCard({
+  letters,
+  pending,
+  failed,
+  composing,
+  onCompose,
+}: {
+  letters?: WeeklyDigest[];
+  pending: boolean;
+  failed: boolean;
+  composing: boolean;
+  onCompose: () => void;
+}) {
+  const { t, locale } = useLocale();
+  const latest = letters?.[0];
+  const payload = latest?.payload;
+  const stalled = payload?.stalled?.slice(0, 3) ?? [];
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-start justify-between gap-3">
+        <div>
+          <CardTitle>{t("analysis.weeklyTitle")}</CardTitle>
+          <CardDescription>{t("analysis.weeklyDescription")}</CardDescription>
+        </div>
+        <Button variant="outline" size="sm" onClick={onCompose} disabled={composing}>
+          {composing ? t("analysis.weeklyComposing") : t("analysis.weeklyCompose")}
+        </Button>
+      </CardHeader>
+      <CardContent>
+        {pending ? (
+          <LoadingListSkeleton rows={2} />
+        ) : failed ? (
+          <p className="text-sm text-muted-foreground">{t("analysis.weeklyUnavailable")}</p>
+        ) : latest ? (
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <CalendarDays className="size-4 text-muted-foreground" aria-hidden />
+              <p className="text-sm font-medium">
+                {t("analysis.weeklyWeek", {
+                  date: formatDateOnly(latest.weekStart, locale),
+                })}
+              </p>
+              {latest.generatedAt && (
+                <span className="text-xs text-muted-foreground">
+                  {relativeTime(latest.generatedAt, locale)}
+                </span>
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <LetterCell
+                label={t("analysis.weeklyApplications")}
+                value={formatNumber(payload?.totalApplications)}
+              />
+              <LetterCell
+                label={t("analysis.weeklyQuietCount")}
+                value={formatNumber(payload?.stalledCount)}
+              />
+              <LetterCell
+                label={t("analysis.weeklyReply")}
+                value={percent(payload?.responseRate)}
+              />
+              <LetterCell
+                label={t("analysis.weeklyOffer")}
+                value={percent(payload?.offerRate)}
+              />
+            </div>
+            {stalled.length > 0 && (
+              <ul className="space-y-2">
+                {stalled.map((s) => (
+                  <li
+                    key={s.id}
+                    className="flex items-center justify-between rounded-lg border border-border/50 p-3"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">
+                        {s.title || t("analysis.weeklyUntitled")}
+                      </p>
+                      <p className="text-xs text-muted-foreground">{s.company ?? "—"}</p>
+                    </div>
+                    <Badge variant="warning" className="shrink-0">
+                      {t("analysis.weeklyQuietDays", { days: s.daysSinceLastActivity ?? 0 })}
+                    </Badge>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {(letters?.length ?? 0) > 1 && (
+              <div>
+                <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  {t("analysis.weeklyHistory")}
+                </p>
+                <ul className="space-y-1">
+                  {letters!.slice(1, 7).map((letter) => (
+                    <li key={letter.id} className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">
+                        {formatDateOnly(letter.weekStart, locale)}
+                      </span>
+                      <span className="tabular-nums text-muted-foreground">
+                        {formatNumber(letter.payload?.totalApplications)} ·{" "}
+                        {formatNumber(letter.payload?.stalledCount)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        ) : (
+          <EmptyState
+            icon={<CalendarDays aria-hidden />}
+            title={t("analysis.weeklyEmpty")}
+            description={t("analysis.weeklyEmptyDescription")}
+          />
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+/** One number in the weekly letter, labelled in the reader's language. */
+function LetterCell({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-border/50 p-3">
+      <p className="text-lg font-semibold tabular-nums">{value}</p>
+      <p className="text-xs text-muted-foreground">{label}</p>
+    </div>
   );
 }
 

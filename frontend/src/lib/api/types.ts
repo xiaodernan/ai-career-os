@@ -791,6 +791,21 @@ export interface InsightDigest {
   topMatches?: unknown[];
 }
 
+/**
+ * One week's letter (19.4): the insight digest composed on the backend's clock and kept.
+ *
+ * `weekStart` is a calendar date (yyyy-mm-dd), not a moment: the letter is about a week, and
+ * converting a timestamp would land some readers on the Sunday before. The payload is the
+ * frozen digest as the engine answered it -- the same shape the dashboard's digest reads.
+ */
+export interface WeeklyDigest {
+  id: string;
+  weekStart: string;
+  windowDays: number;
+  generatedAt?: string;
+  payload: InsightDigest;
+}
+
 /** One stage of the pipeline funnel (15.1). */
 export interface FunnelStage {
   stage?: string;

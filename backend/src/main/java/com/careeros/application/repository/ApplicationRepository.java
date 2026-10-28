@@ -26,4 +26,12 @@ public interface ApplicationRepository extends JpaRepository<Application, UUID> 
 
     @Query("SELECT a.status, COUNT(a) FROM Application a WHERE a.userId = :userId GROUP BY a.status")
     List<Object[]> statusCounts(@Param("userId") UUID userId);
+
+    /**
+     * Every account with at least one application -- the weekly letter's audience (19.4). A
+     * user with no applications has nothing a week can say; their first letter arrives once
+     * they have something to report.
+     */
+    @Query("SELECT DISTINCT a.userId FROM Application a")
+    List<UUID> distinctUserIds();
 }

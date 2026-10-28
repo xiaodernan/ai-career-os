@@ -49,6 +49,40 @@ vi.mock("@/lib/hooks/analytics", () => ({
       respondedCount: 2,
     },
   }),
+  useWeeklyDigests: () => ({
+    data: [
+      {
+        id: "w1",
+        weekStart: "2026-10-26",
+        windowDays: 7,
+        generatedAt: "2026-10-27T08:00:00Z",
+        payload: {
+          totalApplications: 4,
+          stalledCount: 1,
+          responseRate: 0.5,
+          offerRate: 0.25,
+          stalled: [
+            {
+              id: "s1",
+              title: "Backend engineer",
+              company: "Acme",
+              daysSinceLastActivity: 9,
+            },
+          ],
+        },
+      },
+      {
+        id: "w2",
+        weekStart: "2026-10-19",
+        windowDays: 7,
+        generatedAt: "2026-10-20T08:00:00Z",
+        payload: { totalApplications: 2, stalledCount: 0 },
+      },
+    ],
+    isPending: false,
+    isError: false,
+  }),
+  useComposeWeeklyDigest: () => ({ mutate: () => {}, isPending: false }),
 }));
 
 import AnalysisPage from "./page";
@@ -108,5 +142,30 @@ describe("the analysis page speaks the reader's language", () => {
     expect(en).toContain("Final round");
     expect(en).toContain("· Saved");
     expect(en).not.toContain("占已投递比例");
+  });
+});
+
+/**
+ * The kept letters (19.4), drawn beside the live digest. The week is a calendar date:
+ * formatting it through a timezone would print the Sunday before for some readers, so the
+ * assertion is on the date the backend sent, not on a locally shifted one.
+ */
+describe("the weekly letter", () => {
+  it("names the week as a date and counts it", () => {
+    const en = render("en");
+    expect(en).toContain("Week of Oct 26, 2026");
+    expect(en).toContain("9d quiet");
+    expect(en).toContain("Earlier letters");
+    expect(en).toContain("Compose this week");
+  });
+
+  it("speaks the reader's language", () => {
+    const zh = render("zh");
+    expect(zh).toContain("每周来信");
+    expect(zh).toContain("2026年10月26日 当周");
+    expect(zh).toContain("已 9 天");
+    expect(zh).toContain("更早的来信");
+    expect(zh).toContain("生成本周");
+    expect(zh).not.toContain("Week of");
   });
 });

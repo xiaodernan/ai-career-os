@@ -5,6 +5,7 @@ import {
   depthLevel,
   weightBand,
   formatDate,
+  formatDateOnly,
   formatDateTime,
   formatDuration,
   formatSalary,
@@ -164,6 +165,21 @@ describe("formatDate", () => {
   it("keeps the empty and unparseable answers", () => {
     expect(formatDate(null, "zh")).toBe("");
     expect(formatDate("not a date", "en")).toBe("not a date");
+  });
+});
+
+describe("formatDateOnly", () => {
+  it("keeps the calendar date the backend sent, in the reader's language", () => {
+    // "2026-10-26" parsed as a moment is UTC midnight; a reader in Los Angeles would have
+    // been shown Oct 25. A week starts on a date, so the date is what is drawn, whatever
+    // zone the machine is in.
+    expect(formatDateOnly("2026-10-26", "en")).toBe("Oct 26, 2026");
+    expect(formatDateOnly("2026-10-26", "zh")).toBe("2026年10月26日");
+  });
+
+  it("keeps the empty answer and falls back for a moment-shaped value", () => {
+    expect(formatDateOnly("", "en")).toBe("");
+    expect(formatDateOnly("2026-10-26T08:00:00Z", "en")).toBe(formatDate("2026-10-26T08:00:00Z", "en"));
   });
 });
 

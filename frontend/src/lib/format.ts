@@ -17,6 +17,27 @@ export function formatDate(value: string | null | undefined, locale: Locale): st
   return d.toLocaleDateString(locale, { month: "short", day: "numeric", year: "numeric" });
 }
 
+/**
+ * A calendar date, formatted in the reader's language without touching a timezone.
+ *
+ * `formatDate` converts through the reader's zone, which is right for a moment and wrong
+ * for a date: "2026-10-26" parsed as UTC midnight is Oct 25 for a reader in Los Angeles. A
+ * week starts on a date, so it is formatted as one. A value that is not date-shaped falls
+ * back to `formatDate`, which is what a moment-shaped value deserves.
+ */
+export function formatDateOnly(value: string | null | undefined, locale: Locale): string {
+  if (!value) return "";
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return formatDate(value, locale);
+  const d = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+  return d.toLocaleDateString(locale, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
 /** "Oct 28, 02:05 PM" / "10月28日 14:05" — the same rule as formatDate, with the clock. */
 export function formatDateTime(value: string | null | undefined, locale: Locale): string {
   if (!value) return "";

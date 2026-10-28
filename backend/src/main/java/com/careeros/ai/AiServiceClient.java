@@ -92,6 +92,16 @@ public interface AiServiceClient {
             String locale);
 
     /**
+     * The same digest with its staleness window spelled out. The engine defaults to a
+     * fortnight; the weekly letter (19.4) asks for seven days, so "quiet" means a week quiet.
+     * A client that does not know about the window keeps the default above.
+     */
+    default Map<String, Object> insightDigest(UUID userId, List<Map<String, Object>> applications,
+            String locale, int staleDays) {
+        return insightDigest(userId, applications, locale);
+    }
+
+    /**
      * Export all user data as a versioned, hashed bundle (13.1).
      * `sections` carries the rows the BACKEND owns (`applications` and
      * `growth_plans`): the ai-service cannot read them, so the bridge hands

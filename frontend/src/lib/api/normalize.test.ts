@@ -23,6 +23,7 @@ import {
   normalizeIngestionRunDetail,
   normalizeMemory,
   normalizeNotificationInbox,
+  normalizeWeeklyDigest,
   normalizeNotificationItem,
   normalizeSuggestions,
   missingSkillGaps,
@@ -2066,5 +2067,29 @@ describe("normalizeMemory — one long-term memory row", () => {
   it("never throws on an absent row: the page has to say 'no memories' rather than crash", () => {
     expect(() => normalizeMemory({})).not.toThrow();
     expect(() => normalizeMemory(null)).not.toThrow();
+  });
+});
+
+describe("normalizeWeeklyDigest (19.4)", () => {
+  it("keeps the week a date and the payload the engine's answer", () => {
+    const letter = normalizeWeeklyDigest({
+      id: "w1",
+      weekStart: "2026-10-26",
+      windowDays: 7,
+      generatedAt: "2026-10-27T08:00:00Z",
+      payload: { totalApplications: 4, stalledCount: 1, signals: ["quiet"] },
+    });
+    expect(letter.weekStart).toBe("2026-10-26");
+    expect(letter.windowDays).toBe(7);
+    expect(letter.payload.totalApplications).toBe(4);
+    expect(letter.payload.stalledCount).toBe(1);
+  });
+
+  it("reads the snake_case spelling and an absent payload without inventing numbers", () => {
+    const letter = normalizeWeeklyDigest({ week_start: "2026-10-19", window_days: 7 });
+    expect(letter.weekStart).toBe("2026-10-19");
+    expect(letter.windowDays).toBe(7);
+    expect(letter.payload).toEqual({});
+    expect(letter.generatedAt).toBeUndefined();
   });
 });
