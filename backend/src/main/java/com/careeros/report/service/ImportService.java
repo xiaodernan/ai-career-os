@@ -9,7 +9,9 @@ import com.careeros.auth.entity.UserProfile;
 import com.careeros.auth.repository.UserProfileRepository;
 import com.careeros.common.ApiException;
 import com.careeros.common.ApiErrorCode;
+import com.careeros.common.EnvelopeJson;
 import com.careeros.common.Json;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.careeros.knowledge.entity.UserNote;
 import com.careeros.knowledge.repository.UserNoteRepository;
 import com.careeros.knowledge.dto.KnowledgeDtos.NoteRequest;
@@ -836,16 +838,46 @@ public class ImportService {
 
     private static List<String> strings(Map<?, ?> row, String key) {
         Object value = row.get(key);
+        if (value instanceof String text) {
+            value = jsonValue(text, List.class);
+        }
         if (value instanceof List<?> list) {
             return list.stream().map(String::valueOf).toList();
         }
         return List.of();
     }
 
+    /**
+     * A JSON column as the value it holds.
+     *
+     * <p>A bundle written by the current export carries a {@code jsonb} column
+     * as the object it holds, and one written before that carries the column
+     * as its text -- asyncpg's own return shape, which the export used to pass
+     * straight through. Both are the same value, so both restore the same way:
+     * a restore that dropped the text would lose the analyst's reading of a
+     * posting, a session's config, or an answer's evaluation because of which
+     * version of the product wrote the file.
+     */
     @SuppressWarnings("unchecked")
     private static Map<String, Object> map(Map<?, ?> row, String key) {
         Object value = row.get(key);
+        if (value instanceof String text) {
+            value = jsonValue(text, Map.class);
+        }
         return value instanceof Map<?, ?> m ? (Map<String, Object>) m : Map.of();
+    }
+
+    private static Object jsonValue(String text, Class<?> type) {
+        if (text.isBlank()) {
+            return null;
+        }
+        try {
+            return EnvelopeJson.MAPPER.readValue(text, type);
+        } catch (JsonProcessingException e) {
+            // Text that is not JSON is not a value this column can hold; the
+            // row restores without it rather than with something invented.
+            return null;
+        }
     }
 
     private static OffsetDateTime time(Map<?, ?> row, String key) {

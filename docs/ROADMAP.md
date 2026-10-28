@@ -102,6 +102,21 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   the resumes, the knowledge base, the job descriptions, the interviews and the
   memories, so a restore still cannot promise a delete for them.
 
+- **The bundle carries what the restore writes (2026-10-28).** The restore
+  writes a `jsonb` column through a map, and the bundle carried those columns
+  as the text asyncpg returns: a restored posting came back with its raw text
+  and none of the analyst's reading, a session with no config, every answer
+  with no evaluation. The export decodes the columns the schema calls `jsonb`
+  (the backend still parses a string, so bundles written before this restore
+  too), and the session's report — `interview_evaluations`, which the export
+  never read — now travels on the session as `evaluation`, the three fields
+  the restore writes and the anonymized export blanks. The joined company's
+  name no longer shadows the session's own `company_name` column.
+  The same visit found the plan preview answering counts for a different
+  question than the apply: the browser's plan sends no `existing`, so every
+  row was a `create`. That is fixed with the thread below, which makes the
+  preview and the apply read the same current state.
+
 - **The errors a reader sees were the server's own English (measured 2026-10-22;
   the codes that mean one thing are bilingual now, the ones that mean several
   are the queue).** A failed

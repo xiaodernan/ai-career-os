@@ -2942,7 +2942,7 @@ def test_the_heartbeat_interval_has_one_definer_and_every_shipped_claim_names_it
         "empty set -- and a second file picking up the word is a signal the ledger has to grow")
 
     assert [(row["file"], row["line"]) for row in spans["vocabulary"]] == [
-        ("frontend/src/components/ai/task-stream.tsx", 18),
+        ("frontend/src/components/ai/task-stream.tsx", 17),
         ("frontend/src/lib/sse/use-sse.ts", 9),
     ], ("spans that name the keep-alive and state no interval: the shape an edited claim leaves behind, "
         "listed so a claim cannot escape the census above by losing its number")

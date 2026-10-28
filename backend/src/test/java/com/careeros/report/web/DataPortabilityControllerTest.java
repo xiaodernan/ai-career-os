@@ -28,6 +28,7 @@ import com.careeros.knowledge.service.KnowledgeService;
 import com.careeros.interview.repository.InterviewEvaluationRepository;
 import com.careeros.interview.repository.InterviewSessionRepository;
 import com.careeros.interview.repository.InterviewTurnRepository;
+import com.careeros.job.entity.JobJd;
 import com.careeros.job.repository.JobJdRepository;
 import com.careeros.job.repository.JobRepository;
 import com.careeros.network.repository.ContactRepository;
@@ -78,6 +79,10 @@ class DataPortabilityControllerTest {
     private ContactRepository contacts;
     private KnowledgeService knowledge;
     private ContactService contactService;
+    private JobJdRepository jds;
+    private InterviewSessionRepository sessions;
+    private InterviewTurnRepository turns;
+    private InterviewEvaluationRepository evaluations;
     private MockMvc mvc;
 
     @BeforeEach
@@ -90,14 +95,17 @@ class DataPortabilityControllerTest {
         contacts = mock(ContactRepository.class);
         knowledge = mock(KnowledgeService.class);
         contactService = mock(ContactService.class);
+        jds = mock(JobJdRepository.class);
+        sessions = mock(InterviewSessionRepository.class);
+        turns = mock(InterviewTurnRepository.class);
+        evaluations = mock(InterviewEvaluationRepository.class);
         ExportService exports = new ExportService(ai, applications, growthPlans,
                 notes, contacts);
         ImportService imports = new ImportService(ai, exports, profiles, notes,
                 contacts, applications, growthPlans,
                 mock(ResumeService.class), knowledge, contactService,
-                mock(JobJdRepository.class), mock(JobRepository.class),
-                mock(InterviewSessionRepository.class), mock(InterviewTurnRepository.class),
-                mock(InterviewEvaluationRepository.class));
+                jds, mock(JobRepository.class),
+                sessions, turns, evaluations);
         DataPortabilityController controller = new DataPortabilityController(ai, exports, imports);
         mvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new EnvelopeAdvice(), new GlobalExceptionHandler())
@@ -496,5 +504,48 @@ class DataPortabilityControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"bundle\":{\"schema_version\":\"1.1.0\"}}"))
                 .andExpect(status().isBadRequest());
+    }
+
+    /**
+     * A bundle written before the export decoded its JSON columns still
+     * restores them.
+     *
+     * <p>The bundle carries a {@code jsonb} column as the object it holds now;
+     * before that it carried the column as its text, which is asyncpg's own
+     * return shape passed straight through. Both are the same value written by
+     * two versions of the product, and a restore that kept the text as a value
+     * would look like it worked while the analyst's reading of the posting was
+     * gone -- the row would come back with the raw text and nothing read out
+     * of it.
+     */
+    @Test
+    void a_bundle_from_an_older_export_restores_its_json_columns() throws Exception {
+        when(profiles.findByUserId(eq(UUID.fromString(USER)))).thenReturn(Optional.empty());
+        when(applications.findByUserIdOrderByUpdatedAtDescIdAsc(eq(UUID.fromString(USER)), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of()));
+        when(growthPlans.findByUserIdOrderByCreatedAtDesc(eq(UUID.fromString(USER))))
+                .thenReturn(List.of());
+        when(ai.importPlan(eq(UUID.fromString(USER)), any(), any()))
+                .thenReturn(Map.of("sections", Map.of("job_descriptions", List.of(
+                                Map.of("op", "create", "id", "22222222-2222-2222-2222-222222222222"))),
+                        "op_counts", Map.of("create", 1, "update", 0, "delete", 0, "skip", 0, "total", 1)));
+
+        Map<String, Object> bundle = Map.of(
+                "schema_version", "1.2.0",
+                "data", Map.of("job_descriptions", List.of(Map.of(
+                        "id", "22222222-2222-2222-2222-222222222222",
+                        "raw_text", "We are hiring backend engineers.",
+                        "parsed", "{\"title\": \"Backend Engineer\", \"skills\": [\"java\"]}"))));
+
+        mvc.perform(post("/api/v1/data-portability/import-apply")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("bundle", bundle))))
+                .andExpect(status().isOk());
+
+        ArgumentCaptor<JobJd> written = ArgumentCaptor.forClass(JobJd.class);
+        verify(jds).save(written.capture());
+        assertThat(written.getValue().getParsed())
+                .containsEntry("title", "Backend Engineer")
+                .containsKey("skills");
     }
 }

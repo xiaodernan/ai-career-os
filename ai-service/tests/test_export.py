@@ -293,6 +293,10 @@ async def test_export_bundle_assembles_from_fetch_layer(monkeypatch):
         return {sid: s.get("turns", []) for sid, s in
                 zip([str(s["id"]) for s in raw["interviews"]], raw["interviews"])}
 
+    async def fake_evaluations(ids):  # noqa: ANN001
+        return {str(s["id"]): s["evaluation"] for s in raw["interviews"]
+                if s.get("evaluation")}
+
     async def fake_memories(uid):  # noqa: ANN001
         return raw["memories"]
 
@@ -302,6 +306,7 @@ async def test_export_bundle_assembles_from_fetch_layer(monkeypatch):
     monkeypatch.setattr(ex, "fetch_jds", fake_jds)
     monkeypatch.setattr(ex, "fetch_interview_sessions", fake_sessions)
     monkeypatch.setattr(ex, "fetch_interview_turns", fake_turns)
+    monkeypatch.setattr(ex, "fetch_interview_evaluations", fake_evaluations)
     monkeypatch.setattr(ex, "fetch_memories", fake_memories)
 
     bundle = await ex.export_bundle("u1")
@@ -408,6 +413,10 @@ async def test_gather_raw_is_the_async_preimage_of_build(monkeypatch):
     async def fake_turns(ids):  # noqa: ANN001
         return {str(s["id"]): s["turns"] for s in raw["interviews"]}
 
+    async def fake_evaluations(ids):  # noqa: ANN001
+        return {str(s["id"]): s["evaluation"] for s in raw["interviews"]
+                if s.get("evaluation")}
+
     async def fake_memories(uid):  # noqa: ANN001
         return raw["memories"]
 
@@ -417,6 +426,7 @@ async def test_gather_raw_is_the_async_preimage_of_build(monkeypatch):
     monkeypatch.setattr(ex, "fetch_jds", fake_jds)
     monkeypatch.setattr(ex, "fetch_interview_sessions", fake_sessions)
     monkeypatch.setattr(ex, "fetch_interview_turns", fake_turns)
+    monkeypatch.setattr(ex, "fetch_interview_evaluations", fake_evaluations)
     monkeypatch.setattr(ex, "fetch_memories", fake_memories)
 
     gathered = await ex.gather_raw("u1")
@@ -426,3 +436,115 @@ async def test_gather_raw_is_the_async_preimage_of_build(monkeypatch):
     assert gathered.keys() == set(ex.AI_SECTIONS)
     rebuilt = ex.build_bundle("u1", gathered)
     assert rebuilt["manifest"]["counts"]["interviews"] == 1
+
+
+async def test_gather_raw_decodes_the_json_columns_and_carries_the_report(monkeypatch):
+    """A jsonb column is an object in the bundle, and the report travels.
+
+    This is the defect the unit fixtures could not see: asyncpg hands a
+    ``jsonb`` column back as its text, and a fixture that writes the shape
+    the bundle *should* have hides that. The restore writes the bundle back
+    through a map, so a parsed posting, a session's config, an answer's
+    evaluation and the interview report all arrived as strings and were
+    dropped. The bundle is a document: the columns the schema calls ``jsonb``
+    are objects in it.
+
+    So this test starts at the database boundary -- the fake returns the
+    rows the way asyncpg would, strings and all -- rather than at the
+    fetchers, which are where the decoding lives.
+    """
+    from app.core import db as core_db
+    from app.db import domain
+
+    async def fake_profile(uid):  # noqa: ANN001
+        return {"id": "u1", "headline": "BE",
+                "links": '{"github": "https://github.com/ada"}',
+                "target_roles": '["Backend Engineer"]'}
+
+    async def fake_fetch(query, *args):  # noqa: ANN001
+        if "resume_versions" in query:
+            return [{"id": "r1", "resume_title": "Main", "plaintext": "Exp",
+                     "structured": '{"skills": ["java"]}', "diff": None,
+                     "score": '{"total": 9}'}]
+        if "FROM documents" in query:
+            return [{"id": "d1", "title": "Notes", "text_excerpt": "x",
+                     "meta": '{"kind": "note"}'}]
+        if "job_jds" in query:
+            return [{"id": "j1", "raw_text": "JD", "parsed": '{"title": "BE"}'}]
+        if "FROM interview_sessions" in query:
+            return [{"id": "s1", "status": "completed",
+                     "config": '{"style": "deep"}'}]
+        if "FROM interview_turns" in query:
+            return [{"id": "t1", "session_id": "s1", "seq": 1, "content": "q",
+                     "question_meta": '{"topic": "db"}',
+                     "evaluation": '{"score": 3}'}]
+        if "FROM interview_evaluations" in query:
+            return [{"session_id": "s1",
+                     "dims": '{"technical_accuracy": 0.8}',
+                     "summary": '{"well": ["indexes"]}',
+                     "trajectory": '["q1", "q2"]'}]
+        if "user_memories" in query:
+            return []
+        raise AssertionError(f"unexpected query: {query}")
+
+    async def fake_list_memories(uid, limit=1000):  # noqa: ANN001
+        return []
+
+    monkeypatch.setattr(domain, "get_profile", fake_profile)
+    monkeypatch.setattr(core_db, "fetch", fake_fetch)
+    monkeypatch.setattr(ex, "fetch_memories", fake_list_memories)
+
+    raw = await ex.gather_raw("u1")
+
+    assert raw["profile"]["links"] == {"github": "https://github.com/ada"}
+    assert raw["profile"]["target_roles"] == ["Backend Engineer"]
+    assert raw["resumes"][0]["structured"] == {"skills": ["java"]}
+    assert raw["resumes"][0]["diff"] is None
+    assert raw["knowledge"][0]["meta"] == {"kind": "note"}
+    assert raw["job_descriptions"][0]["parsed"] == {"title": "BE"}
+    session = raw["interviews"][0]
+    assert session["config"] == {"style": "deep"}
+    assert session["turns"][0]["question_meta"] == {"topic": "db"}
+    assert session["turns"][0]["evaluation"] == {"score": 3}
+    # The session's report, which the restore reads off the session -- and
+    # which the export did not carry at all before: a restored interview had
+    # a transcript and no verdict.
+    assert session["evaluation"]["dims"] == {"technical_accuracy": 0.8}
+    assert session["evaluation"]["summary"] == {"well": ["indexes"]}
+    assert session["evaluation"]["trajectory"] == ["q1", "q2"]
+
+
+async def test_a_session_without_a_report_carries_no_evaluation(monkeypatch):
+    """An interview that was never graded has no report -- not an empty one.
+
+    The restore writes an evaluation only when the bundle carries one, and
+    the report is the one table that is written after the session ends. An
+    empty object would make "no report yet" and "a report of nothing" the
+    same row.
+    """
+    from app.core import db as core_db
+    from app.db import domain
+
+    async def no_profile(uid):  # noqa: ANN001
+        return None
+
+    async def fake_fetch(query, *args):  # noqa: ANN001
+        if "FROM interview_sessions" in query:
+            return [{"id": "s1", "status": "active", "config": "{}"}]
+        if "FROM interview_turns" in query or "FROM interview_evaluations" in query:
+            return []
+        if "job_jds" in query or "FROM documents" in query or "resume_versions" in query:
+            return []
+        if "user_memories" in query:
+            return []
+        raise AssertionError(f"unexpected query: {query}")
+
+    async def empty_memories(uid, limit=1000):  # noqa: ANN001
+        return []
+
+    monkeypatch.setattr(domain, "get_profile", no_profile)
+    monkeypatch.setattr(core_db, "fetch", fake_fetch)
+    monkeypatch.setattr(ex, "fetch_memories", empty_memories)
+
+    raw = await ex.gather_raw("u1")
+    assert "evaluation" not in raw["interviews"][0]

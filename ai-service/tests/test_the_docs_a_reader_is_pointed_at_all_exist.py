@@ -206,6 +206,16 @@ def spellings(stem: str) -> set[tuple[str, ...]]:
     return {plain, tuple(alias.split())} if alias else {plain}
 
 
+# Files the *product* hands the reader, written down where the reader sees
+# them. The docs name them because the reader finds them on disk -- the
+# export page saves `career-os-export.json` and its Markdown half as
+# `career-os-export.md`. A gate that sent the reader to look for them in the
+# repository would be asking about the wrong file; and unlike the run
+# reports, these are named by the product's own writers, so the set is two
+# names and stays two.
+PRODUCT_OUTPUTS = frozenset({"career-os-export.json", "career-os-export.md"})
+
+
 def test_every_document_the_docs_name_is_a_document_that_exists():
     known = known_documents()
     missing = {}
@@ -215,6 +225,7 @@ def test_every_document_the_docs_name_is_a_document_that_exists():
             for token in references(path)
             if token not in known
             and Path(token).name not in known
+            and Path(token).name not in PRODUCT_OUTPUTS
             and not is_run_artifact(token)
         )
         if gone:

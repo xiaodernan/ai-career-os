@@ -263,7 +263,7 @@ PEOPLE: dict[str, frozenset[str]] = {
     "knowledge": frozenset({"user_id", "title", "text_excerpt", "file_key"}),
     "job_descriptions": frozenset({"user_id"}),
     "memories": frozenset({"key", "content"}),
-    "interviews": frozenset({"user_id"}),
+    "interviews": frozenset({"user_id", "evaluation"}),
     "notes": frozenset({"title", "content", "tags"}),
     "contacts": frozenset({"name", "role", "company", "relation", "email", "notes"}),
     "applications": frozenset({"notes", "rejection_reason", "offer_compensation"}),
@@ -352,8 +352,9 @@ def _real_columns() -> dict[str, list[str]]:
         real[section] = _unique(columns + aliases)
     # The turns are a list of rows inside the session's row -- the export
     # puts them there, so the session's row carries a key the table does
-    # not have.
-    real["interviews"] = real["interviews"] + ["turns"]
+    # not have. The report is one too: it lives in its own table, and the
+    # restore reads it off the session.
+    real["interviews"] = real["interviews"] + ["turns", "evaluation"]
     for section in ("notes", "contacts", "applications", "growth_plans"):
         real[section] = _backend_rows(section)
     return real
@@ -435,6 +436,10 @@ def _realistic_bundle() -> dict:
             for column in _turn_columns()
         }
     ]
+    # And the report the restore reads off the session: it quotes the
+    # answers back, so it is the reader's in the same way the growth
+    # report is.
+    session["evaluation"] = _marker("interviews", "evaluation")
 
     for section in ("notes", "contacts", "applications", "growth_plans"):
         columns = _backend_rows(section)

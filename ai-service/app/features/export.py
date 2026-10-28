@@ -76,9 +76,10 @@ ANONYMIZED_FIELDS: dict[str, tuple[str, ...]] = {
     "job_descriptions": ("user_id",),
     # The facts the assistant extracted about them.
     "memories": ("key", "content"),
-    # The interview session's own id of the reader. The turns are a list
-    # inside the session, so they are handled by the bag policy below.
-    "interviews": ("user_id",),
+    # The interview session's own id of the reader, and the report written
+    # about their answers -- the summary quotes them back, the way the
+    # growth report quotes the material it was built from.
+    "interviews": ("user_id", "evaluation"),
 }
 
 # Fields that carry a **bag** -- a JSON object stored in one column -- whose
@@ -198,10 +199,41 @@ def required_sections(schema_version: str) -> tuple[str, ...]:
 # --------------------------------------------------------------------------- #
 
 
+def _json_value(value: Any) -> Any:
+    """A jsonb column as the value it holds.
+
+    asyncpg hands a ``jsonb`` column back as its text, so the bundle used to
+    carry the reader's parsed posting, the session's config, every answer's
+    evaluation and the interview report as escaped strings -- and a restore
+    writing the bundle back through a map kept none of them. A bundle is a
+    document, not a wire capture: a JSON column is an object in it.
+
+    A string that is not JSON is left alone: only the columns the schema
+    calls ``jsonb`` are handed here, and reading a plain text column that
+    happens to start with a brace as an object would be a different bug.
+    """
+    if not isinstance(value, str):
+        return value
+    try:
+        return json.loads(value)
+    except (TypeError, ValueError):
+        return value
+
+
+def _json_fields(row: dict, *names: str) -> dict:
+    for name in names:
+        if name in row:
+            row[name] = _json_value(row[name])
+    return row
+
+
 async def fetch_profile(user_id: str) -> dict | None:
     from app.db import domain
 
-    return await domain.get_profile(user_id)
+    profile = await domain.get_profile(user_id)
+    return None if profile is None else _json_fields(
+        dict(profile),
+        "target_roles", "target_locations", "links", "work_authorization", "preferences")
 
 
 async def fetch_resume_versions(user_id: str) -> list[dict]:
@@ -215,7 +247,7 @@ async def fetch_resume_versions(user_id: str) -> list[dict]:
             ORDER BY rv.created_at""",
         user_id,
     )
-    return [dict(r) for r in rows]
+    return [_json_fields(dict(r), "structured", "score", "diff") for r in rows]
 
 
 async def fetch_documents(user_id: str) -> list[dict]:
@@ -227,7 +259,7 @@ async def fetch_documents(user_id: str) -> list[dict]:
              FROM documents WHERE user_id=$1::uuid ORDER BY created_at""",
         user_id,
     )
-    return [dict(r) for r in rows]
+    return [_json_fields(dict(r), "meta") for r in rows]
 
 
 async def fetch_jds(user_id: str) -> list[dict]:
@@ -236,22 +268,26 @@ async def fetch_jds(user_id: str) -> list[dict]:
     rows = await db.fetch(
         "SELECT * FROM job_jds WHERE user_id=$1::uuid ORDER BY created_at", user_id
     )
-    return [dict(r) for r in rows]
+    return [_json_fields(dict(r), "parsed") for r in rows]
 
 
 async def fetch_interview_sessions(user_id: str) -> list[dict]:
     from app.core import db
 
+    # The session's own ``company_name`` column is carried as it is: the
+    # join used to alias the company's name over it, so a row's own value
+    # was shadowed by a decoration, and a restore wrote the decoration into
+    # the column. The company is still reachable through ``job_id``; the
+    # document shows the job's title, which is the only decoration it needs.
     rows = await db.fetch(
-        """SELECT s.*, j.title AS job_title, c.name AS company_name
+        """SELECT s.*, j.title AS job_title
              FROM interview_sessions s
              LEFT JOIN jobs j ON j.id = s.job_id
-             LEFT JOIN companies c ON c.id = j.company_id
             WHERE s.user_id=$1::uuid
             ORDER BY s.started_at""",
         user_id,
     )
-    return [dict(r) for r in rows]
+    return [_json_fields(dict(r), "config") for r in rows]
 
 
 async def fetch_interview_turns(session_ids: list[str]) -> dict[str, list[dict]]:
@@ -265,8 +301,38 @@ async def fetch_interview_turns(session_ids: list[str]) -> dict[str, list[dict]]
     )
     out: dict[str, list[dict]] = {}
     for r in rows:
-        d = dict(r)
+        d = _json_fields(dict(r), "question_meta", "evaluation")
         out.setdefault(str(d["session_id"]), []).append(d)
+    return out
+
+
+async def fetch_interview_evaluations(session_ids: list[str]) -> dict[str, dict]:
+    """The report written about each session's answers, by session id.
+
+    It lives in its own table and the restore reads it from the session's
+    row, so the bundle carries it there -- as ``evaluation``, the three
+    fields that make the report: the dimensions, the summary and the
+    trajectory. Without it a restored interview is a transcript with no
+    verdict: the one document the candidate earned from the questions they
+    cannot sit again.
+    """
+    from app.core import db
+
+    if not session_ids:
+        return {}
+    rows = await db.fetch(
+        """SELECT session_id, dims, summary, trajectory
+             FROM interview_evaluations WHERE session_id = ANY($1::uuid[])""",
+        session_ids,
+    )
+    out: dict[str, dict] = {}
+    for r in rows:
+        d = _json_fields(dict(r), "dims", "summary", "trajectory")
+        out[str(d["session_id"])] = {
+            "dims": d.get("dims"),
+            "summary": d.get("summary"),
+            "trajectory": d.get("trajectory"),
+        }
     return out
 
 
@@ -283,10 +349,16 @@ async def gather_raw(user_id: str) -> dict:
     pure transform — the part worth unit-testing without a database.
     """
     sessions = await fetch_interview_sessions(user_id)
-    turns_by_session = await fetch_interview_turns([str(s["id"]) for s in sessions])
-    interviews = [
-        {**s, "turns": turns_by_session.get(str(s["id"]), [])} for s in sessions
-    ]
+    session_ids = [str(s["id"]) for s in sessions]
+    turns_by_session = await fetch_interview_turns(session_ids)
+    evaluations = await fetch_interview_evaluations(session_ids)
+    interviews = []
+    for s in sessions:
+        row = {**s, "turns": turns_by_session.get(str(s["id"]), [])}
+        evaluation = evaluations.get(str(s["id"]))
+        if evaluation:
+            row["evaluation"] = evaluation
+        interviews.append(row)
     return {
         "profile": await fetch_profile(user_id),
         "resumes": await fetch_resume_versions(user_id),

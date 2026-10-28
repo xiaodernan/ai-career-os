@@ -181,7 +181,8 @@ the rows, and it no longer lands them on top of somebody else's.
     "resumes": [ { ...resume_versions joined resumes... } ],
     "knowledge": [ { ...documents metadata + excerpt... } ],
     "job_descriptions": [ { ...job_jds row... } ],
-    "interviews": [ { ...interview_sessions joined jobs/companies..., "turns": [...] } ],
+    "interviews": [ { ...interview_sessions joined jobs..., "turns": [...],
+                      "evaluation": { dims, summary, trajectory } } ],
     "memories": [ { ...user_memories row... } ],
     // The four the BACKEND owns — the bridge hands them over, and the hash
     // covers them like every other section.
@@ -202,6 +203,33 @@ the hash itself — so re-exporting unchanged data yields the same hash. That is
 what makes the re-import idempotent and the backup snapshot detectable as
 "nothing changed". `canonical_json` sorts keys and serializes datetimes to ISO,
 so equal data hashes equally across runs and machines.
+
+## A JSON column is an object in the bundle (2026-10-28)
+
+The export read its rows with `asyncpg`, which hands a `jsonb` column back as
+the text it holds. The bundle passed that text straight through, so the file
+carried the parsed posting, a session's config, every answer's evaluation and
+the interview report as escaped strings. The printable documents did not
+notice — they read the columns that are text anyway — but the **restore**
+did: it writes those columns back through a map, and a map is not a string.
+A restored job description came back with its raw text and none of the
+analyst's reading; a restored interview came back as turns with the config
+and the per-answer evaluations dropped.
+
+The fix is at the boundary: the export decodes the columns the schema calls
+`jsonb` (`app/features/export.py`'s `_json_value`) and the backend parses a
+JSON string as a fallback, so a bundle written by an older build restores
+with its objects intact. Passing the string through was never a format
+decision — it was a driver's return shape leaking into a document.
+
+The session's report was missing for a second reason: it lives in
+`interview_evaluations`, which the export never read. Each session now
+carries `evaluation` (`dims`, `summary`, `trajectory`) — the same three
+fields the restore writes — and the anonymized export blanks it, because the
+summary quotes the reader's answers back the way the growth report quotes
+their material. The session's own `company_name` column is no longer
+shadowed by the joined company's name: the join was a decoration for the
+document, and a restore that read it wrote the decoration into the column.
 
 ## Import contract (13.2)
 
