@@ -10,7 +10,7 @@
 ## 当前状态 (2026-10-28)
 
 - **前端**: 724 个 vitest 通过（66 个文件）；`tsc --noEmit` 干净。
-- **后端**: 617 个测试通过 (`mvn test`，含无需 Docker 的 MockMvc 切片)。
+- **后端**: 660 个测试通过 (`mvn test`，含无需 Docker 的 MockMvc 切片)。
 - **ai-service**: 1833 passed, 1 skipped (offline: mock/hash)。
 - **E2E**: 24/24 golden journey（最近一次真实栈验证）。
 - **分支**: main 与 origin 同步。
@@ -123,9 +123,32 @@
    测试、1 个前端 helper 测试，658 后端测试，740 vitest。
    下一步：19.9 交付硬化。
 
-9. **Epic 24 — 交付硬化**
-   夜间备份 + 恢复演练、指标与告警、运行手册更新；把 nightly 的
-   eval/IT 结果变成可查的历史而不是日志。
+9. ~~**Epic 24 — 交付硬化**~~
+   ~~夜间备份 + 恢复演练、指标与告警、运行手册更新；把 nightly 的
+   eval/IT 结果变成可查的历史而不是日志。~~
+   备份与恢复演练、指标/告警、RUNBOOK 已完成并提交（19.9，见 ROADMAP）；
+   nightly 结果的可查历史（`nightly_reports` + `/monitoring/nightly-reports`）
+   由并发会话在制（V15 与监控页），提交后本项收尾。
+   下一步：下面的 Epic — 夜晚的计划落到板上。
+
+10. **Epic — 夜晚的计划落到板上（ingestion apply）**
+    19.2 起的每次 pull 都把引擎的 create/update/close 计划存进 run，却从未
+    写过职位板：backend 至今没有任何创建 `jobs` 的代码路径，职位只来自 seed。
+    "替你先做"因此停在"它看见了"。本 Epic 补上最后一段：
+    - `POST /api/v1/ingestion/runs/{id}/apply`：只接受本人、`completed`、
+      且未应用过的 run；在一个事务里按计划建公司/职位、刷新已存在的行、
+      把计划里 close 的职位置为 closed，并把 `applied_at` / `applied_counts`
+      写在 run 上（`V16`）。重复应用是 `409`，不是第二次写入。
+    - 计划里的行没有 `posted_at`：职位板的 age 一直是"在板上待了多久"，
+      apply 让 `@CreationTimestamp` 继续承担这个定义。
+    - 前端运行历史每一行显示"应用此计划"（已应用则显示时间），应用后
+      就地更新三个计数；API.md 记路由与两个新错误码。
+    - 测试：apply 的建/更/关、公司按名复用、重复应用拒绝、非 completed
+      拒绝、跨用户 404；两个前端 helper 测试。
+    - 进度：backend 主体已写（V16、`applied_at`/`applied_counts`、悲观锁读取、
+      `ApplyResult`、两个错误码与 census pin、9 个 service 测试 + 4 个路由测试）。
+      编译被并发会话的 `MonitoringControllerTest` 暂时挡住；前端、API.md、
+      ROADMAP 与 ai-service pin 等对方落定后一起收。
 
 ## 开发协议（每个任务）
 

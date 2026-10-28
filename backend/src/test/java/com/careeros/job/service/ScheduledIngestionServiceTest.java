@@ -3,6 +3,7 @@ package com.careeros.job.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
@@ -19,6 +20,7 @@ import com.careeros.common.ApiException;
 import com.careeros.job.connector.BoardConnectors;
 import com.careeros.job.connector.GreenhouseConnector;
 import com.careeros.job.connector.LeverConnector;
+import com.careeros.job.dto.IngestionFeedDtos.ApplyResult;
 import com.careeros.job.dto.IngestionFeedDtos.FeedItem;
 import com.careeros.job.dto.IngestionFeedDtos.FeedRequest;
 import com.careeros.job.dto.IngestionFeedDtos.RunDetail;
@@ -442,6 +444,246 @@ class ScheduledIngestionServiceTest {
         assertThat(successMarker())
                 .as("a failed pull must not read as a success, or the alarm above it cannot fire")
                 .isEqualTo(before);
+    }
+
+    @Test
+    void applying_a_plan_creates_the_company_and_the_job_it_names() {
+        IngestionFeed feed = feed();
+        Map<String, Object> plan = plan(
+                List.of(row("title", "Backend Engineer", "company", "Acme",
+                        "location", "Hangzhou", "remote_type", "remote",
+                        "employment_type", "full_time", "salary_min", 30000,
+                        "salary_max", 45000, "salary_currency", "CNY",
+                        "description", "Build things", "skills", List.of("Java", "SQL"),
+                        "external_url", "https://acme.example/jobs/1")),
+                List.of(), List.of());
+        IngestionRun run = runWithPlan(plan);
+        when(runs.findWithLockByIdAndUserId(run.getId(), userId)).thenReturn(Optional.of(run));
+        when(feeds.findById(feedId)).thenReturn(Optional.of(feed));
+        when(companies.findByName("Acme")).thenReturn(Optional.empty());
+        when(companies.save(any(Company.class))).thenAnswer(i -> {
+            Company company = i.getArgument(0);
+            ReflectionTestUtils.setField(company, "id", companyId);
+            return company;
+        });
+        when(jobs.save(any(Job.class))).thenAnswer(i -> i.getArgument(0));
+
+        ApplyResult result = service.applyRun(userId, run.getId());
+
+        assertThat(result.created()).isEqualTo(1);
+        assertThat(result.updated()).isZero();
+        assertThat(result.closed()).isZero();
+        ArgumentCaptor<Job> saved = ArgumentCaptor.forClass(Job.class);
+        verify(jobs).save(saved.capture());
+        Job job = saved.getValue();
+        assertThat(job.getCompanyId()).isEqualTo(companyId);
+        assertThat(job.getTitle()).isEqualTo("Backend Engineer");
+        assertThat(job.getLocation()).isEqualTo("Hangzhou");
+        assertThat(job.getRemoteType()).isEqualTo("remote");
+        assertThat(job.getSalaryMin()).isEqualTo(30000);
+        assertThat(job.getSkills()).containsExactly("Java", "SQL");
+        assertThat(job.getExternalUrl()).isEqualTo("https://acme.example/jobs/1");
+        assertThat(job.getStatus()).isEqualTo("open");
+        assertThat(job.getSource()).isEqualTo("rss");
+        assertThat(run.getAppliedAt()).isNotNull();
+        assertThat(run.getAppliedCounts()).containsEntry("created", 1);
+    }
+
+    @Test
+    void a_known_company_is_reused_and_a_nameless_row_belongs_to_the_feed() {
+        IngestionFeed feed = feed();
+        Map<String, Object> plan = plan(
+                List.of(row("title", "Backend Engineer", "company", "Acme"),
+                        row("title", "Unnamed posting")),
+                List.of(), List.of());
+        IngestionRun run = runWithPlan(plan);
+        when(runs.findWithLockByIdAndUserId(run.getId(), userId)).thenReturn(Optional.of(run));
+        when(feeds.findById(feedId)).thenReturn(Optional.of(feed));
+        when(companies.findByName("Acme")).thenReturn(Optional.of(company()));
+        when(companies.findByName("Hiring board")).thenReturn(Optional.empty());
+        when(companies.save(any(Company.class))).thenAnswer(i -> {
+            Company created = i.getArgument(0);
+            ReflectionTestUtils.setField(created, "id", UUID.randomUUID());
+            return created;
+        });
+        when(jobs.save(any(Job.class))).thenAnswer(i -> i.getArgument(0));
+
+        ApplyResult result = service.applyRun(userId, run.getId());
+
+        assertThat(result.created()).isEqualTo(2);
+        verify(companies, never()).save(argThat(c -> "Acme".equals(c.getName())));
+        verify(companies).save(argThat(c -> "Hiring board".equals(c.getName())));
+        assertThat(savedJobs()).extracting(Job::getCompanyId)
+                .containsExactly(companyId, savedCompanyId());
+    }
+
+    @Test
+    void an_update_refreshes_the_row_the_engine_matched_and_reopens_it() {
+        IngestionFeed feed = feed();
+        Job existing = openJob();
+        existing.setStatus("closed");
+        Map<String, Object> plan = plan(List.of(),
+                List.of(row("existingId", jobId.toString(), "title", "Backend Engineer II",
+                        "location", "Shanghai", "remote_type", "hybrid",
+                        "employment_type", "full_time", "salary_min", 32000,
+                        "salary_max", 48000, "salary_currency", "CNY",
+                        "description", "Build more", "skills", List.of("Kotlin"),
+                        "external_url", "https://acme.example/jobs/1")),
+                List.of());
+        IngestionRun run = runWithPlan(plan);
+        when(runs.findWithLockByIdAndUserId(run.getId(), userId)).thenReturn(Optional.of(run));
+        when(feeds.findById(feedId)).thenReturn(Optional.of(feed));
+        when(jobs.findById(jobId)).thenReturn(Optional.of(existing));
+        when(jobs.save(any(Job.class))).thenAnswer(i -> i.getArgument(0));
+
+        ApplyResult result = service.applyRun(userId, run.getId());
+
+        assertThat(result.created()).isZero();
+        assertThat(result.updated()).isEqualTo(1);
+        assertThat(existing.getTitle()).isEqualTo("Backend Engineer II");
+        assertThat(existing.getLocation()).isEqualTo("Shanghai");
+        assertThat(existing.getStatus()).isEqualTo("open");
+        assertThat(existing.getSkills()).containsExactly("Kotlin");
+        assertThat(existing.getSalaryMax()).isEqualTo(48000);
+    }
+
+    @Test
+    void an_update_whose_row_vanished_is_created_from_tonights_reading() {
+        IngestionFeed feed = feed();
+        Map<String, Object> plan = plan(List.of(),
+                List.of(row("existingId", jobId.toString(), "title", "Backend Engineer",
+                        "company", "Acme")),
+                List.of());
+        IngestionRun run = runWithPlan(plan);
+        when(runs.findWithLockByIdAndUserId(run.getId(), userId)).thenReturn(Optional.of(run));
+        when(feeds.findById(feedId)).thenReturn(Optional.of(feed));
+        when(jobs.findById(jobId)).thenReturn(Optional.empty());
+        when(companies.findByName("Acme")).thenReturn(Optional.of(company()));
+        when(jobs.save(any(Job.class))).thenAnswer(i -> i.getArgument(0));
+
+        ApplyResult result = service.applyRun(userId, run.getId());
+
+        assertThat(result.created()).isEqualTo(1);
+        assertThat(result.updated()).isZero();
+        assertThat(savedJob().getCompanyId()).isEqualTo(companyId);
+    }
+
+    @Test
+    void a_close_row_closes_the_job_it_names_once() {
+        IngestionFeed feed = feed();
+        Job existing = openJob();
+        IngestionRun first = runWithPlan(plan(List.of(), List.of(),
+                List.of(Map.of("id", jobId.toString(), "title", "Backend Engineer"))));
+        when(runs.findWithLockByIdAndUserId(first.getId(), userId)).thenReturn(Optional.of(first));
+        when(feeds.findById(feedId)).thenReturn(Optional.of(feed));
+        when(jobs.findById(jobId)).thenReturn(Optional.of(existing));
+        when(jobs.save(any(Job.class))).thenAnswer(i -> i.getArgument(0));
+
+        ApplyResult result = service.applyRun(userId, first.getId());
+
+        assertThat(result.closed()).isEqualTo(1);
+        assertThat(existing.getStatus()).isEqualTo("closed");
+    }
+
+    @Test
+    void a_second_apply_is_refused_rather_than_writing_the_plan_twice() {
+        IngestionRun run = runWithPlan(plan(List.of(row("title", "Backend Engineer")),
+                List.of(), List.of()));
+        run.setAppliedAt(OffsetDateTime.now());
+        when(runs.findWithLockByIdAndUserId(run.getId(), userId)).thenReturn(Optional.of(run));
+
+        assertThatThrownBy(() -> service.applyRun(userId, run.getId()))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.code())
+                                .isEqualTo(ApiErrorCode.INGESTION_RUN_ALREADY_APPLIED));
+        verify(jobs, never()).save(any(Job.class));
+    }
+
+    @Test
+    void a_failed_run_has_no_plan_to_apply() {
+        IngestionRun run = runWithPlan(null);
+        run.setStatus(IngestionRun.STATUS_FAILED);
+        when(runs.findWithLockByIdAndUserId(run.getId(), userId)).thenReturn(Optional.of(run));
+
+        assertThatThrownBy(() -> service.applyRun(userId, run.getId()))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.code())
+                                .isEqualTo(ApiErrorCode.INGESTION_RUN_NOT_APPLICABLE));
+    }
+
+    @Test
+    void another_users_run_is_not_the_callers_to_apply() {
+        UUID runId = UUID.randomUUID();
+        when(runs.findWithLockByIdAndUserId(runId, userId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.applyRun(userId, runId))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.code()).isEqualTo(ApiErrorCode.INGESTION_RUN_NOT_FOUND));
+    }
+
+    @Test
+    void a_create_row_with_no_title_is_not_a_posting() {
+        IngestionFeed feed = feed();
+        IngestionRun run = runWithPlan(plan(List.of(row("title", "  ", "company", "Acme")),
+                List.of(), List.of()));
+        when(runs.findWithLockByIdAndUserId(run.getId(), userId)).thenReturn(Optional.of(run));
+        when(feeds.findById(feedId)).thenReturn(Optional.of(feed));
+
+        ApplyResult result = service.applyRun(userId, run.getId());
+
+        assertThat(result.created()).isZero();
+        verify(jobs, never()).save(any(Job.class));
+        verify(companies, never()).save(any(Company.class));
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> plan(List<Map<String, Object>> create,
+                                            List<Map<String, Object>> update,
+                                            List<Map<String, Object>> close) {
+        Map<String, Object> plan = new LinkedHashMap<>();
+        plan.put("create", create);
+        plan.put("update", update);
+        plan.put("close", close);
+        return plan;
+    }
+
+    private static Map<String, Object> row(Object... pairs) {
+        Map<String, Object> row = new LinkedHashMap<>();
+        for (int i = 0; i < pairs.length; i += 2) {
+            row.put(String.valueOf(pairs[i]), pairs[i + 1]);
+        }
+        return row;
+    }
+
+    private IngestionRun runWithPlan(Map<String, Object> plan) {
+        IngestionRun run = new IngestionRun();
+        ReflectionTestUtils.setField(run, "id", UUID.randomUUID());
+        run.setUserId(userId);
+        run.setFeedId(feedId);
+        run.setStatus(IngestionRun.STATUS_COMPLETED);
+        run.setStartedAt(OffsetDateTime.now());
+        run.setFinishedAt(OffsetDateTime.now());
+        run.setPlan(plan);
+        return run;
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<Job> savedJobs() {
+        ArgumentCaptor<Job> saved = ArgumentCaptor.forClass(Job.class);
+        verify(jobs, times(2)).save(saved.capture());
+        return saved.getAllValues();
+    }
+
+    private Job savedJob() {
+        ArgumentCaptor<Job> saved = ArgumentCaptor.forClass(Job.class);
+        verify(jobs).save(saved.capture());
+        return saved.getValue();
+    }
+
+    private UUID savedCompanyId() {
+        ArgumentCaptor<Company> saved = ArgumentCaptor.forClass(Company.class);
+        verify(companies).save(saved.capture());
+        return (UUID) ReflectionTestUtils.getField(saved.getValue(), "id");
     }
 
     private double counter(String status) {

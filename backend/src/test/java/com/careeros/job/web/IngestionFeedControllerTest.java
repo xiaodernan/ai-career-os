@@ -20,6 +20,7 @@ import com.careeros.common.CurrentUserArgumentResolver;
 import com.careeros.common.EnvelopeAdvice;
 import com.careeros.common.GlobalExceptionHandler;
 import com.careeros.common.PageDTO;
+import com.careeros.job.dto.IngestionFeedDtos.ApplyResult;
 import com.careeros.job.dto.IngestionFeedDtos.FeedItem;
 import com.careeros.job.dto.IngestionFeedDtos.FeedRequest;
 import com.careeros.job.dto.IngestionFeedDtos.RunDetail;
@@ -76,7 +77,7 @@ class IngestionFeedControllerTest {
     private static RunItem run(String status, String error) {
         return new RunItem(RUN, FEED, "Hiring board", status, error,
                 Map.of("incoming", 4, "create", 2), OffsetDateTime.now().minusMinutes(1),
-                OffsetDateTime.now());
+                OffsetDateTime.now(), null, null);
     }
 
     private static FeedItem feed(boolean enabled) {
@@ -225,5 +226,50 @@ class IngestionFeedControllerTest {
 
         verify(ingestion).listFeeds(ALICE);
         verify(ingestion).listRuns(ALICE, 0, 20);
+    }
+
+    @Test
+    void apply_writes_the_plan_and_answers_with_the_three_counts() throws Exception {
+        OffsetDateTime at = OffsetDateTime.now();
+        when(ingestion.applyRun(ALICE, RUN)).thenReturn(new ApplyResult(2, 1, 3, at));
+
+        mvc.perform(post("/api/v1/ingestion/runs/{id}/apply", RUN))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.created").value(2))
+                .andExpect(jsonPath("$.data.updated").value(1))
+                .andExpect(jsonPath("$.data.closed").value(3))
+                .andExpect(jsonPath("$.data.appliedAt").exists());
+
+        verify(ingestion).applyRun(ALICE, RUN);
+    }
+
+    @Test
+    void applying_twice_is_a_409_naming_the_code() throws Exception {
+        when(ingestion.applyRun(ALICE, RUN)).thenThrow(
+                new ApiException(ApiErrorCode.INGESTION_RUN_ALREADY_APPLIED, "Already applied"));
+
+        mvc.perform(post("/api/v1/ingestion/runs/{id}/apply", RUN))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.code").value("INGESTION_RUN_ALREADY_APPLIED"));
+    }
+
+    @Test
+    void a_failed_run_is_not_applicable_and_the_route_says_so() throws Exception {
+        when(ingestion.applyRun(ALICE, RUN)).thenThrow(
+                new ApiException(ApiErrorCode.INGESTION_RUN_NOT_APPLICABLE, "Run has no plan"));
+
+        mvc.perform(post("/api/v1/ingestion/runs/{id}/apply", RUN))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.code").value("INGESTION_RUN_NOT_APPLICABLE"));
+    }
+
+    @Test
+    void another_users_run_cannot_be_applied() throws Exception {
+        when(ingestion.applyRun(ALICE, RUN)).thenThrow(
+                new ApiException(ApiErrorCode.INGESTION_RUN_NOT_FOUND, "Ingestion run not found"));
+
+        mvc.perform(post("/api/v1/ingestion/runs/{id}/apply", RUN))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error.code").value("INGESTION_RUN_NOT_FOUND"));
     }
 }

@@ -67,6 +67,10 @@ public enum ApiErrorCode {
     DOCUMENT_KEY_NOT_OWNED(HttpStatus.NOT_FOUND),
     INGESTION_FEED_NOT_FOUND(HttpStatus.NOT_FOUND),
     INGESTION_RUN_NOT_FOUND(HttpStatus.NOT_FOUND),
+    /** The run's plan was already written to the board; a second write would duplicate it. */
+    INGESTION_RUN_ALREADY_APPLIED(HttpStatus.CONFLICT),
+    /** A failed run has no plan, so there is nothing to apply. */
+    INGESTION_RUN_NOT_APPLICABLE(HttpStatus.CONFLICT),
     RUN_NOT_FOUND(HttpStatus.NOT_FOUND),
     FEED_URL_INVALID(HttpStatus.BAD_REQUEST),
     /** A board address the connector could not read: token, page address or API URL. */

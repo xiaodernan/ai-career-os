@@ -58,6 +58,14 @@ public class IngestionRun {
     @Column(name = "finished_at")
     private OffsetDateTime finishedAt;
 
+    /** When a reader applied the plan, and what the apply wrote. Null = never applied. */
+    @Column(name = "applied_at")
+    private OffsetDateTime appliedAt;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "applied_counts", columnDefinition = "jsonb")
+    private Map<String, Object> appliedCounts;
+
     public UUID getId() {
         return id;
     }
@@ -124,5 +132,21 @@ public class IngestionRun {
 
     public void setFinishedAt(OffsetDateTime finishedAt) {
         this.finishedAt = finishedAt;
+    }
+
+    public OffsetDateTime getAppliedAt() {
+        return appliedAt;
+    }
+
+    public void setAppliedAt(OffsetDateTime appliedAt) {
+        this.appliedAt = appliedAt;
+    }
+
+    public Map<String, Object> getAppliedCounts() {
+        return appliedCounts;
+    }
+
+    public void setAppliedCounts(Map<String, Object> appliedCounts) {
+        this.appliedCounts = appliedCounts;
     }
 }

@@ -7,6 +7,7 @@ import com.careeros.common.PageDTO;
 import com.careeros.common.Paging;
 import com.careeros.job.connector.BoardConnector;
 import com.careeros.job.connector.BoardConnectors;
+import com.careeros.job.dto.IngestionFeedDtos.ApplyResult;
 import com.careeros.job.dto.IngestionFeedDtos.FeedItem;
 import com.careeros.job.dto.IngestionFeedDtos.FeedRequest;
 import com.careeros.job.dto.IngestionFeedDtos.RunDetail;
@@ -50,6 +51,12 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * <p>Each run that ends is also a reading: {@link IngestionMetrics} takes the outcome and
  * the moment it finished, so "did the night succeed" is a scrape rather than a log search.
+ *
+ * <p>A plan is still only a proposal until someone applies it ({@link #applyRun}). The
+ * write is the reader's step, not the sweep's: the night may have misread a feed, and a
+ * board that rewrote itself every morning would have no moment for that judgment. The
+ * apply is once per run and counted on the run itself, so pressing the button twice is a
+ * refusal rather than a second copy of every posting.
  */
 @Service
 public class ScheduledIngestionService {
@@ -195,6 +202,211 @@ public class ScheduledIngestionService {
                         "Ingestion run not found"));
         String name = feeds.findById(run.getFeedId()).map(IngestionFeed::getName).orElse("");
         return new RunDetail(RunItem.of(run, name), run.getPlan());
+    }
+
+    /**
+     * Writes a completed run's plan to the board, once.
+     *
+     * <p>The board is global, and an apply writes the rows the plan named: a create becomes
+     * a company (by name, reused when it exists) and an open job, an update refreshes the
+     * row the engine matched, and a close closes the job the freshness sweep named. The
+     * plan's rows carry no posting date -- the board's age has always meant "how long this
+     * row has been here", so the job's own creation timestamp keeps that meaning. A row
+     * whose title is empty is not a posting and is not counted.
+     *
+     * <p>The run is locked for the transaction and stamped with {@code applied_at} and the
+     * counts actually written, so two presses cannot write the plan twice. A failed run
+     * has no plan and is refused; the receipt is read back through the run list.
+     */
+    @Transactional
+    public ApplyResult applyRun(UUID userId, UUID runId) {
+        IngestionRun run = runs.findWithLockByIdAndUserId(runId, userId)
+                .orElseThrow(() -> new ApiException(ApiErrorCode.INGESTION_RUN_NOT_FOUND,
+                        "Ingestion run not found"));
+        if (run.getAppliedAt() != null) {
+            throw new ApiException(ApiErrorCode.INGESTION_RUN_ALREADY_APPLIED,
+                    "This run's plan was already applied");
+        }
+        if (!IngestionRun.STATUS_COMPLETED.equals(run.getStatus()) || run.getPlan() == null) {
+            throw new ApiException(ApiErrorCode.INGESTION_RUN_NOT_APPLICABLE,
+                    "A failed run has no plan to apply");
+        }
+        IngestionFeed feed = feeds.findById(run.getFeedId())
+                .orElseThrow(() -> new IllegalStateException("run " + runId + " outlived its feed"));
+
+        int created = 0;
+        int updated = 0;
+        int closed = 0;
+        for (Map<String, Object> row : rowsOf(run.getPlan(), "create")) {
+            if (createJob(row, feed) != null) {
+                created += 1;
+            }
+        }
+        for (Map<String, Object> row : rowsOf(run.getPlan(), "update")) {
+            int outcome = refreshJob(row, feed);
+            if (outcome == CREATED) {
+                created += 1;
+            } else if (outcome == UPDATED) {
+                updated += 1;
+            }
+        }
+        for (Map<String, Object> row : rowsOf(run.getPlan(), "close")) {
+            if (closeJob(row)) {
+                closed += 1;
+            }
+        }
+        OffsetDateTime appliedAt = OffsetDateTime.now();
+        Map<String, Object> appliedCounts = new LinkedHashMap<>();
+        appliedCounts.put("created", created);
+        appliedCounts.put("updated", updated);
+        appliedCounts.put("closed", closed);
+        run.setAppliedAt(appliedAt);
+        run.setAppliedCounts(appliedCounts);
+        runs.save(run);
+        return new ApplyResult(created, updated, closed, appliedAt);
+    }
+
+    /** What a refresh wrote: nothing (the row or its id is gone), an update, or a create. */
+    private static final int NOT_WRITTEN = 0;
+    private static final int UPDATED = 1;
+    private static final int CREATED = 2;
+
+    private Job createJob(Map<String, Object> row, IngestionFeed feed) {
+        String title = text(row, "title");
+        if (title == null || title.isBlank()) {
+            return null;
+        }
+        Job job = new Job();
+        job.setCompanyId(companyId(text(row, "company"), feed.getName()));
+        job.setTitle(title);
+        job.setLocation(text(row, "location"));
+        job.setRemoteType(orDefault(text(row, "remote_type"), "onsite"));
+        job.setEmploymentType(orDefault(text(row, "employment_type"), "full_time"));
+        job.setSalaryMin(intOrNull(row.get("salary_min")));
+        job.setSalaryMax(intOrNull(row.get("salary_max")));
+        job.setSalaryCurrency(orDefault(text(row, "salary_currency"), "CNY"));
+        job.setDescription(orDefault(text(row, "description"), ""));
+        job.setSkills(strings(row.get("skills")));
+        job.setExternalUrl(text(row, "external_url"));
+        job.setSource(feed.getSource());
+        job.setStatus("open");
+        return jobs.save(job);
+    }
+
+    /**
+     * The engine matches an update by fingerprint and carries the row's id as
+     * {@code existingId}. A row deleted since the pull is created from tonight's reading
+     * instead: the plan saw the posting live, and dropping it would lose a real opening.
+     */
+    private int refreshJob(Map<String, Object> row, IngestionFeed feed) {
+        UUID id = uuidOrNull(row.get("existingId"));
+        if (id == null) {
+            return NOT_WRITTEN;
+        }
+        Job job = jobs.findById(id).orElse(null);
+        if (job == null) {
+            return createJob(row, feed) == null ? NOT_WRITTEN : CREATED;
+        }
+        job.setTitle(text(row, "title"));
+        job.setLocation(text(row, "location"));
+        job.setRemoteType(orDefault(text(row, "remote_type"), job.getRemoteType()));
+        job.setEmploymentType(orDefault(text(row, "employment_type"), job.getEmploymentType()));
+        job.setSalaryMin(intOrNull(row.get("salary_min")));
+        job.setSalaryMax(intOrNull(row.get("salary_max")));
+        job.setSalaryCurrency(orDefault(text(row, "salary_currency"), job.getSalaryCurrency()));
+        job.setDescription(orDefault(text(row, "description"), job.getDescription()));
+        job.setSkills(strings(row.get("skills")));
+        job.setExternalUrl(text(row, "external_url"));
+        // the posting was in tonight's pull, so it is live again even if it closed earlier
+        job.setStatus("open");
+        jobs.save(job);
+        return UPDATED;
+    }
+
+    private boolean closeJob(Map<String, Object> row) {
+        UUID id = uuidOrNull(row.get("id"));
+        if (id == null) {
+            return false;
+        }
+        Job job = jobs.findById(id).orElse(null);
+        if (job == null || "closed".equals(job.getStatus())) {
+            return false;
+        }
+        job.setStatus("closed");
+        jobs.save(job);
+        return true;
+    }
+
+    /** The row's company, by name; a posting that names none belongs to the feed's board. */
+    private UUID companyId(String name, String fallbackName) {
+        String company = name == null || name.isBlank() ? fallbackName : name;
+        return companies.findByName(company)
+                .map(Company::getId)
+                .orElseGet(() -> {
+                    Company created = new Company();
+                    created.setName(company);
+                    return companies.save(created).getId();
+                });
+    }
+
+    /** The plan's list under one key, as maps -- a section the plan never carried is empty. */
+    private static List<Map<String, Object>> rowsOf(Map<String, Object> plan, String key) {
+        Object value = plan.get(key);
+        List<Map<String, Object>> rows = new ArrayList<>();
+        if (value instanceof List<?> list) {
+            for (Object item : list) {
+                if (item instanceof Map<?, ?> map) {
+                    Map<String, Object> row = new LinkedHashMap<>();
+                    map.forEach((k, v) -> row.put(String.valueOf(k), v));
+                    rows.add(row);
+                }
+            }
+        }
+        return rows;
+    }
+
+    private static String text(Map<String, Object> row, String key) {
+        Object value = row.get(key);
+        return value == null ? null : String.valueOf(value);
+    }
+
+    private static String orDefault(String value, String fallback) {
+        return value == null || value.isBlank() ? fallback : value;
+    }
+
+    private static Integer intOrNull(Object value) {
+        if (value instanceof Number number) {
+            return number.intValue();
+        }
+        if (value instanceof String string && !string.isBlank()) {
+            try {
+                return Integer.valueOf(string.trim());
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+        return null;
+    }
+
+    private static List<String> strings(Object value) {
+        if (!(value instanceof List<?> list)) {
+            return List.of();
+        }
+        return list.stream().map(String::valueOf).filter(item -> !item.isBlank()).toList();
+    }
+
+    private static UUID uuidOrNull(Object value) {
+        if (value instanceof UUID id) {
+            return id;
+        }
+        if (value instanceof String string && !string.isBlank()) {
+            try {
+                return UUID.fromString(string);
+            } catch (IllegalArgumentException e) {
+                return null;
+            }
+        }
+        return null;
     }
 
     /**

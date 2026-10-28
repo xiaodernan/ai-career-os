@@ -3,6 +3,7 @@ package com.careeros.job.web;
 import com.careeros.common.AuthUser;
 import com.careeros.common.CurrentUser;
 import com.careeros.common.PageDTO;
+import com.careeros.job.dto.IngestionFeedDtos.ApplyResult;
 import com.careeros.job.dto.IngestionFeedDtos.FeedItem;
 import com.careeros.job.dto.IngestionFeedDtos.FeedPatch;
 import com.careeros.job.dto.IngestionFeedDtos.FeedRequest;
@@ -82,5 +83,14 @@ public class IngestionFeedController {
     @GetMapping("/runs/{id}")
     public RunDetail runDetail(@CurrentUser AuthUser user, @PathVariable UUID id) {
         return ingestion.runDetail(user.id(), id);
+    }
+
+    /**
+     * Writes a completed run's plan to the board (once). A failed run is a 409: it has no
+     * plan, and "the feed was down" is not something an apply can repair.
+     */
+    @PostMapping("/runs/{id}/apply")
+    public ApplyResult applyRun(@CurrentUser AuthUser user, @PathVariable UUID id) {
+        return ingestion.applyRun(user.id(), id);
     }
 }

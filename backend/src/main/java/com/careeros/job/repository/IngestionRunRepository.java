@@ -5,7 +5,9 @@ import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 
 public interface IngestionRunRepository extends JpaRepository<IngestionRun, UUID> {
 
@@ -19,4 +21,12 @@ public interface IngestionRunRepository extends JpaRepository<IngestionRun, UUID
     Optional<IngestionRun> findFirstByFeedIdOrderByStartedAtDesc(UUID feedId);
 
     Optional<IngestionRun> findByIdAndUserId(UUID id, UUID userId);
+
+    /**
+     * The apply's read: the owner's run, locked for the whole transaction. Two presses of
+     * the button arrive as two transactions; the second waits on this row and then sees
+     * the receipt the first wrote, so the plan cannot be written to the board twice.
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    Optional<IngestionRun> findWithLockByIdAndUserId(UUID id, UUID userId);
 }

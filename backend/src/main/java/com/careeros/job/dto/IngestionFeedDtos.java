@@ -36,12 +36,24 @@ public final class IngestionFeedDtos {
             String error,
             Map<String, Object> counts,
             OffsetDateTime startedAt,
-            OffsetDateTime finishedAt) {
+            OffsetDateTime finishedAt,
+            OffsetDateTime appliedAt,
+            Map<String, Object> appliedCounts) {
 
         public static RunItem of(IngestionRun run, String feedName) {
             return new RunItem(run.getId(), run.getFeedId(), feedName, run.getStatus(),
-                    run.getError(), run.getCounts(), run.getStartedAt(), run.getFinishedAt());
+                    run.getError(), run.getCounts(), run.getStartedAt(), run.getFinishedAt(),
+                    run.getAppliedAt(), run.getAppliedCounts());
         }
+    }
+
+    /**
+     * What an apply wrote, counted by outcome. The run's {@code counts} say what the engine
+     * proposed; these say what the board received, and a posting the plan proposed as a
+     * create that the board already had is not one of them.
+     */
+    public record ApplyResult(
+            int created, int updated, int closed, OffsetDateTime appliedAt) {
     }
 
     public record FeedItem(
