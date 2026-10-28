@@ -7,6 +7,7 @@ import { AuthField } from "@/components/auth/auth-field";
 import { Button } from "@/components/ui/button";
 import {
   confirmationIssue,
+  issueText,
   passwordIssue,
   recoveryErrorMessage,
   resetTokenFrom,
@@ -50,9 +51,9 @@ export function ResetPasswordForm() {
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
     const next = {
-      token: needsToken ? tokenIssue(typedToken) : undefined,
-      password: passwordIssue(password),
-      confirm: confirmationIssue(confirm, password),
+      token: needsToken ? issueText(tokenIssue(typedToken), t) : undefined,
+      password: issueText(passwordIssue(password), t),
+      confirm: issueText(confirmationIssue(confirm, password), t),
     };
     setErrors(next);
     if (next.token || next.password || next.confirm || reset.isPending || !token) return;
@@ -104,9 +105,9 @@ export function ResetPasswordForm() {
             error={errors.token}
             onChange={(event) => {
               setTypedToken(event.target.value);
-              if (errors.token) setErrors((prev) => ({ ...prev, token: tokenIssue(event.target.value) }));
+              if (errors.token) setErrors((prev) => ({ ...prev, token: issueText(tokenIssue(event.target.value), t) }));
             }}
-            onBlur={() => setErrors((prev) => ({ ...prev, token: tokenIssue(typedToken) }))}
+            onBlur={() => setErrors((prev) => ({ ...prev, token: issueText(tokenIssue(typedToken), t) }))}
           />
         )}
         <AuthField
@@ -120,9 +121,9 @@ export function ResetPasswordForm() {
           error={errors.password}
           onChange={(event) => {
             setPassword(event.target.value);
-            if (errors.password) setErrors((prev) => ({ ...prev, password: passwordIssue(event.target.value) }));
+            if (errors.password) setErrors((prev) => ({ ...prev, password: issueText(passwordIssue(event.target.value), t) }));
           }}
-          onBlur={() => setErrors((prev) => ({ ...prev, password: passwordIssue(password) }))}
+          onBlur={() => setErrors((prev) => ({ ...prev, password: issueText(passwordIssue(password), t) }))}
         />
         <AuthField
           id="confirmPassword"
@@ -136,10 +137,18 @@ export function ResetPasswordForm() {
           onChange={(event) => {
             setConfirm(event.target.value);
             if (errors.confirm) {
-              setErrors((prev) => ({ ...prev, confirm: confirmationIssue(event.target.value, password) }));
+              setErrors((prev) => ({
+                ...prev,
+                confirm: issueText(confirmationIssue(event.target.value, password), t),
+              }));
             }
           }}
-          onBlur={() => setErrors((prev) => ({ ...prev, confirm: confirmationIssue(confirm, password) }))}
+          onBlur={() =>
+            setErrors((prev) => ({
+              ...prev,
+              confirm: issueText(confirmationIssue(confirm, password), t),
+            }))
+          }
         />
         <Button type="submit" variant="ai" size="lg" className="w-full" loading={reset.isPending}>
           {t("recovery.saveNewPassword")}

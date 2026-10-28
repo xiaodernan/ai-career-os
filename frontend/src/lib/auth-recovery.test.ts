@@ -7,20 +7,47 @@ import {
   PASSWORD_MAX_LENGTH,
   PASSWORD_MIN_LENGTH,
   RESET_TOKEN_MAX_LENGTH,
-  UNREACHABLE_MESSAGE,
   authFormErrorMessage,
   confirmationIssue,
   displayNameIssue,
   emailIssue,
+  issueText,
+  networkFailure,
   passwordIssue,
   recoveryErrorMessage,
   resetTokenFrom,
   tokenIssue,
+  type AuthIssue,
 } from "./auth-recovery";
+import { fill, lookup } from "./i18n/locale-context";
+import { translations } from "./i18n/translations";
+
+/**
+ * A translator that reads a real table, the way the provider's `t` does.
+ *
+ * The tests below hold the checks to *keys*, because that is what the screens
+ * consume; the sentences are pinned only where the wiring is the point --
+ * which key answers, and whether the holes in it get their values.
+ */
+function reader(table: unknown) {
+  return (key: string, vars?: Record<string, string | number>) => {
+    const value = lookup(table, key);
+    if (value === undefined) throw new Error(`the table has no ${key}`);
+    return fill(value, vars);
+  };
+}
+
+const en = reader(translations.en);
+const zh = reader(translations.zh);
+
+/** A check's answer is the sentence's identity, not a sentence. */
+function expectIssue(issue: AuthIssue | undefined, key: string, params?: Record<string, string | number>) {
+  expect(issue).toEqual(params === undefined ? { key } : { key, params });
+}
 
 describe("emailIssue", () => {
   it("asks for an address when the field is empty", () => {
-    expect(emailIssue("")).toBe("Email is required");
+    expectIssue(emailIssue(""), "auth.issues.emailRequired");
   });
 
   it("accepts the shapes the API's @Email accepts", () => {
@@ -29,26 +56,28 @@ describe("emailIssue", () => {
   });
 
   it("catches the shapes it does not", () => {
-    expect(emailIssue("ada@example")).toBe("Enter a valid email address");
-    expect(emailIssue("ada example.com")).toBe("Enter a valid email address");
-    expect(emailIssue("@example.com")).toBe("Enter a valid email address");
+    expectIssue(emailIssue("ada@example"), "auth.issues.emailInvalid");
+    expectIssue(emailIssue("ada example.com"), "auth.issues.emailInvalid");
+    expectIssue(emailIssue("@example.com"), "auth.issues.emailInvalid");
   });
 
   it("mirrors the size all three email records carry", () => {
     const longest = "a".repeat(EMAIL_MAX_LENGTH - "@example.com".length) + "@example.com";
     expect(longest).toHaveLength(EMAIL_MAX_LENGTH);
     expect(emailIssue(longest)).toBeUndefined();
-    expect(emailIssue("a" + longest)).toBe("Use at most 255 characters");
+    expectIssue(emailIssue("a" + longest), "auth.issues.tooLong", { max: EMAIL_MAX_LENGTH });
   });
 });
 
 describe("passwordIssue", () => {
   it("asks for a password when the field is empty", () => {
-    expect(passwordIssue("")).toBe("Password is required");
+    expectIssue(passwordIssue(""), "auth.issues.passwordRequired");
   });
 
   it("rejects the shortest value the backend would reject", () => {
-    expect(passwordIssue("a".repeat(PASSWORD_MIN_LENGTH - 1))).toBe("Use at least 8 characters");
+    expectIssue(passwordIssue("a".repeat(PASSWORD_MIN_LENGTH - 1)), "auth.issues.tooShort", {
+      min: PASSWORD_MIN_LENGTH,
+    });
   });
 
   it("accepts the boundaries the backend accepts", () => {
@@ -57,7 +86,9 @@ describe("passwordIssue", () => {
   });
 
   it("rejects what BCrypt would have to truncate", () => {
-    expect(passwordIssue("a".repeat(PASSWORD_MAX_LENGTH + 1))).toBe("Use at most 72 characters");
+    expectIssue(passwordIssue("a".repeat(PASSWORD_MAX_LENGTH + 1)), "auth.issues.tooLong", {
+      max: PASSWORD_MAX_LENGTH,
+    });
   });
 
   it("counts characters, not bytes, so a CJK passphrase is judged as typed", () => {
@@ -67,25 +98,25 @@ describe("passwordIssue", () => {
 
 describe("displayNameIssue", () => {
   it("asks for a name when the field is empty or only whitespace", () => {
-    expect(displayNameIssue("")).toBe("Name is required");
-    expect(displayNameIssue("   ")).toBe("Name is required");
+    expectIssue(displayNameIssue(""), "auth.issues.nameRequired");
+    expectIssue(displayNameIssue("   "), "auth.issues.nameRequired");
   });
 
   it("accepts the register record's ceiling and refuses one character more", () => {
     expect(displayNameIssue("A".repeat(DISPLAY_NAME_MAX_LENGTH))).toBeUndefined();
-    expect(displayNameIssue("A".repeat(DISPLAY_NAME_MAX_LENGTH + 1))).toBe(
-      "Use at most 120 characters",
-    );
+    expectIssue(displayNameIssue("A".repeat(DISPLAY_NAME_MAX_LENGTH + 1)), "auth.issues.tooLong", {
+      max: DISPLAY_NAME_MAX_LENGTH,
+    });
   });
 });
 
 describe("confirmationIssue", () => {
   it("asks for the confirmation when the field is empty", () => {
-    expect(confirmationIssue("", "correct horse")).toBe("Confirm your new password");
+    expectIssue(confirmationIssue("", "correct horse"), "auth.issues.confirmRequired");
   });
 
   it("reports a mismatch", () => {
-    expect(confirmationIssue("correct hors", "correct horse")).toBe("Passwords do not match");
+    expectIssue(confirmationIssue("correct hors", "correct horse"), "auth.passwordsDoNotMatch");
   });
 
   it("is quiet once the two agree", () => {
@@ -95,8 +126,8 @@ describe("confirmationIssue", () => {
 
 describe("tokenIssue", () => {
   it("asks for the token when the field is empty or only whitespace", () => {
-    expect(tokenIssue("")).toBe("Paste the token from your email");
-    expect(tokenIssue("   ")).toBe("Paste the token from your email");
+    expectIssue(tokenIssue(""), "auth.issues.tokenRequired");
+    expectIssue(tokenIssue("   "), "auth.issues.tokenRequired");
   });
 
   it("does not second-guess the shape, since only the API can judge a token", () => {
@@ -108,9 +139,61 @@ describe("tokenIssue", () => {
 
   it("refuses a paste longer than the reset record accepts", () => {
     expect(tokenIssue("x".repeat(RESET_TOKEN_MAX_LENGTH))).toBeUndefined();
-    expect(tokenIssue("x".repeat(RESET_TOKEN_MAX_LENGTH + 1))).toBe(
-      "Use at most 512 characters",
+    expectIssue(
+      tokenIssue("x".repeat(RESET_TOKEN_MAX_LENGTH + 1)),
+      "auth.issues.tooLong",
+      { max: RESET_TOKEN_MAX_LENGTH },
     );
+  });
+});
+
+describe("issueText", () => {
+  it("has nothing to say about no issue", () => {
+    expect(issueText(undefined, en)).toBeUndefined();
+  });
+
+  it("fills the holes with the bound the check used", () => {
+    expect(issueText(emailIssue("a".repeat(EMAIL_MAX_LENGTH + 1)), en)).toBe(
+      `Use at most ${EMAIL_MAX_LENGTH} characters`,
+    );
+    expect(issueText(passwordIssue("a"), zh)).toContain(String(PASSWORD_MIN_LENGTH));
+  });
+
+  it("has a sentence in both languages for every issue a check can answer", () => {
+    // These keys live in object literals, so the literal-key gate cannot
+    // see them: it scans for `t("...")`, and the checks answer with
+    // `{ key: "..." }`. This is the gate for that shape.
+    const issues = [
+      emailIssue(""),
+      emailIssue("nope"),
+      emailIssue("a".repeat(EMAIL_MAX_LENGTH + 1)),
+      passwordIssue(""),
+      passwordIssue("a"),
+      passwordIssue("a".repeat(PASSWORD_MAX_LENGTH + 1)),
+      displayNameIssue(""),
+      displayNameIssue("A".repeat(DISPLAY_NAME_MAX_LENGTH + 1)),
+      tokenIssue(""),
+      tokenIssue("x".repeat(RESET_TOKEN_MAX_LENGTH + 1)),
+      confirmationIssue("", "correct horse"),
+      confirmationIssue("correct hors", "correct horse"),
+    ];
+    for (const issue of issues) {
+      expect(issue).toBeDefined();
+      if (issue === undefined) continue;
+      for (const [language, t] of [
+        ["en", en],
+        ["zh", zh],
+      ] as const) {
+        const sentence = issueText(issue, t);
+        expect(sentence, `${issue.key} has no ${language} sentence`).toBeTruthy();
+        // A hole the sentence names and the check does not fill would reach
+        // the reader as "{max}"; the values are the check's own params, so
+        // any brace left over is a mismatch between the two spellings.
+        expect(sentence, `${issue.key}'s ${language} sentence has an unfilled hole`).not.toMatch(
+          /\{\w+\}/,
+        );
+      }
+    }
   });
 });
 
@@ -139,7 +222,7 @@ describe("recoveryErrorMessage", () => {
   it("turns the API's token complaint into what to do next", () => {
     const err = new ApiError("RESET_TOKEN_INVALID", "Invalid reset token", 400);
     expect(recoveryErrorMessage(err)).toBe(
-      "That reset link is invalid or has expired. Request a new one.",
+      "That reset link is invalid or has expired. Please request a new one.",
     );
   });
 
@@ -149,13 +232,29 @@ describe("recoveryErrorMessage", () => {
   });
 
   it("names the network as the cause when fetch never reached a server", () => {
-    expect(recoveryErrorMessage(new TypeError("Failed to fetch"))).toBe(
-      UNREACHABLE_MESSAGE,
-    );
+    expect(recoveryErrorMessage(new TypeError("Failed to fetch"))).toBe(networkFailure());
+    expect(networkFailure()).toBe("Cannot reach the API — is the backend running?");
   });
 
   it("has something to say for anything else", () => {
     expect(recoveryErrorMessage(new Error("boom"))).toBe("Something went wrong. Please try again.");
+  });
+
+  it("speaks the language the reader chose", () => {
+    const scope = globalThis as { window?: unknown };
+    const previous = scope.window;
+    scope.window = { localStorage: { getItem: () => "zh" } };
+    try {
+      expect(
+        recoveryErrorMessage(new ApiError("RESET_TOKEN_INVALID", "Invalid reset token", 400)),
+      ).toBe(zh("errorCodes.RESET_TOKEN_INVALID"));
+      expect(recoveryErrorMessage(new TypeError("Failed to fetch"))).toBe(
+        zh("errorCodes.NETWORK_ERROR"),
+      );
+    } finally {
+      if (previous === undefined) delete scope.window;
+      else scope.window = previous;
+    }
   });
 });
 
@@ -164,13 +263,13 @@ describe("authFormErrorMessage", () => {
     // The API says "Invalid credentials"; telling the user which of the two fields
     // was wrong would tell an attacker which one was right.
     const api401 = new ApiError("INVALID_CREDENTIALS", "Invalid credentials", 401);
-    expect(authFormErrorMessage(api401)).toBe("Incorrect email or password.");
+    expect(authFormErrorMessage(api401)).toBe("That email address or password is not right.");
     // ...and the status alone still triggers it, because the code spelling used to
     // be AUTH_INVALID_CREDENTIALS — a name the backend never sends (the vocabulary
     // has INVALID_CREDENTIALS), which is why the friendly sentence only ever
     // fired through the status half and nobody noticed the dead check.
     const bare401 = new ApiError("SOMETHING_ELSE", "no", 401);
-    expect(authFormErrorMessage(bare401)).toBe("Incorrect email or password.");
+    expect(authFormErrorMessage(bare401)).toBe("That email address or password is not right.");
   });
 
   it("passes other API messages through, since validation messages are actionable", () => {
@@ -180,7 +279,7 @@ describe("authFormErrorMessage", () => {
   });
 
   it("composes the recovery describer for the network and the unknown", () => {
-    expect(authFormErrorMessage(new TypeError("Failed to fetch"))).toBe(UNREACHABLE_MESSAGE);
+    expect(authFormErrorMessage(new TypeError("Failed to fetch"))).toBe(networkFailure());
     expect(authFormErrorMessage(new Error("boom"))).toBe("Something went wrong. Please try again.");
   });
 });

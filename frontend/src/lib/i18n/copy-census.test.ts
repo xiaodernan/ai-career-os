@@ -30,28 +30,6 @@ import { everyOffender, browserSources, TEXT_NODE_LIMIT } from "./copy-scan";
  * person to touch that file removes it.
  */
 const KNOWN: Record<string, string[]> = {
-  "components/ai/agent-timeline.tsx": [
-    "Completed",
-    "Failed",
-    "Running",
-  ],
-  "components/ai/task-stream.tsx": [
-    "The run reported an error.",
-  ],
-  "components/auth/credentials-form.tsx": [
-    "Ada Zhang",
-    "Already registered?",
-    "Confirm password",
-    "Create one",
-    "Email",
-    "Full name",
-    "No account yet?",
-    "Password",
-    "Passwords do not match",
-    "Pick up where the agents left off.",
-    "Sign in",
-    "Your resume becomes a knowledge base in minutes.",
-  ],
   "components/jobs/analyze-jd-dialog.tsx": [
     "Analysis failed.",
     "Analyze",
@@ -141,10 +119,12 @@ describe("the browser's copy", () => {
     // of them is on the list above with a file and an owner. The pin moves
     // when a hole closes -- which is the point of pinning it.
     //
-    // 41: the i18n migration's dialogs and cards read their wording from
-    // the table again, and the copy-fix commits took most of the rest. The
-    // list above is the honest answer to "what have we not fixed yet".
-    expect(found.length).toBe(41);
+    // 25: the auth stack (the sign-in form, its field checks and the AI
+    // timeline's labels) now reads the table too -- including the field
+    // errors, which the checks answer as keys rather than sentences. What
+    // is left is four surfaces: the JD dialogs, the memory card and the
+    // profile cards.
+    expect(found.length).toBe(25);
   });
 
   it("finds a sentence, however long it is", () => {

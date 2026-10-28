@@ -6,56 +6,67 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { AuthField } from "@/components/auth/auth-field";
 import { Button } from "@/components/ui/button";
-import { authFormErrorMessage, displayNameIssue, emailIssue, passwordIssue } from "@/lib/auth-recovery";
+import {
+  authFormErrorMessage,
+  confirmationIssue,
+  displayNameIssue,
+  emailIssue,
+  issueText,
+  passwordIssue,
+  type Translate,
+} from "@/lib/auth-recovery";
 import { useLogin, useRegister } from "@/lib/hooks/auth";
 
 export interface FieldConfig {
   name: "displayName" | "email" | "password" | "confirmPassword";
-  label: string;
+  labelKey: string;
   type: string;
   autoComplete: string;
-  placeholder: string;
-  validate?: (v: string, all: Record<string, string>) => string | undefined;
+  /** A placeholder that is the same in every language -- an address, bullets. */
+  placeholder?: string;
+  /** A placeholder that is a word, so it follows the reader's language. */
+  placeholderKey?: string;
+  validate?: (v: string, all: Record<string, string>, t: Translate) => string | undefined;
 }
 
 const baseFields: FieldConfig[] = [
   {
     name: "email",
-    label: "Email",
+    labelKey: "auth.email",
     type: "email",
     autoComplete: "email",
     placeholder: "you@example.com",
-    validate: emailIssue,
+    validate: (v, _all, t) => issueText(emailIssue(v), t),
   },
   {
     name: "password",
-    label: "Password",
+    labelKey: "auth.password",
     type: "password",
     autoComplete: "current-password",
     placeholder: "••••••••••",
-    validate: passwordIssue,
+    validate: (v, _all, t) => issueText(passwordIssue(v), t),
   },
 ];
 
 const registerFields: FieldConfig[] = [
   {
     name: "displayName",
-    label: "Full name",
+    labelKey: "auth.fullName",
     type: "text",
     autoComplete: "name",
-    placeholder: "Ada Zhang",
-    validate: displayNameIssue,
+    placeholderKey: "auth.fullNamePlaceholder",
+    validate: (v, _all, t) => issueText(displayNameIssue(v), t),
   },
   ...baseFields.map((f) =>
     f.name === "password" ? { ...f, autoComplete: "new-password" } : f
   ),
   {
     name: "confirmPassword",
-    label: "Confirm password",
+    labelKey: "auth.confirmPassword",
     type: "password",
     autoComplete: "new-password",
     placeholder: "••••••••••",
-    validate: (v, all) => (v !== all.password ? "Passwords do not match" : undefined),
+    validate: (v, all, t) => issueText(confirmationIssue(v, all.password ?? ""), t),
   },
 ];
 
@@ -74,7 +85,7 @@ export function CredentialsForm({ mode, notice }: { mode: "login" | "register"; 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const nextErrors: Record<string, string | undefined> = {};
-    for (const f of fields) nextErrors[f.name] = f.validate?.(values[f.name] ?? "", values);
+    for (const f of fields) nextErrors[f.name] = f.validate?.(values[f.name] ?? "", values, t);
     setErrors(nextErrors);
     setTouched(Object.fromEntries(fields.map((f) => [f.name, true])));
     if (Object.values(nextErrors).some(Boolean)) return;
@@ -110,9 +121,7 @@ export function CredentialsForm({ mode, notice }: { mode: "login" | "register"; 
           {isLogin ? t("auth.signInToWorkspace") : t("auth.createYourAccount")}
         </h2>
         <p className="text-sm text-muted-foreground">
-          {isLogin
-            ? "Pick up where the agents left off."
-            : "Your resume becomes a knowledge base in minutes."}
+          {isLogin ? t("auth.loginBlurb") : t("auth.registerBlurb")}
         </p>
       </header>
 
@@ -123,22 +132,22 @@ export function CredentialsForm({ mode, notice }: { mode: "login" | "register"; 
               key={f.name}
               id={f.name}
               name={f.name}
-              label={f.label}
+              label={t(f.labelKey)}
               type={f.type}
               autoComplete={f.autoComplete}
-              placeholder={f.placeholder}
+              placeholder={f.placeholderKey ? t(f.placeholderKey) : f.placeholder}
               value={values[f.name] ?? ""}
               error={touched[f.name] ? errors[f.name] : undefined}
               onChange={(e) => {
                 const v = e.target.value;
                 setValues((prev) => ({ ...prev, [f.name]: v }));
                 if (touched[f.name]) {
-                  setErrors((prev) => ({ ...prev, [f.name]: f.validate?.(v, { ...values, [f.name]: v }) }));
+                  setErrors((prev) => ({ ...prev, [f.name]: f.validate?.(v, { ...values, [f.name]: v }, t) }));
                 }
               }}
               onBlur={() => {
                 setTouched((prev) => ({ ...prev, [f.name]: true }));
-                setErrors((prev) => ({ ...prev, [f.name]: f.validate?.(values[f.name] ?? "", values) }));
+                setErrors((prev) => ({ ...prev, [f.name]: f.validate?.(values[f.name] ?? "", values, t) }));
               }}
             />
           );
@@ -163,16 +172,16 @@ export function CredentialsForm({ mode, notice }: { mode: "login" | "register"; 
       <p className="text-center text-sm text-muted-foreground">
         {isLogin ? (
           <>
-            No account yet?{" "}
+            {t("auth.noAccount")}{" "}
             <Link href="/register" className="font-medium text-primary underline-offset-4 hover:underline">
-              Create one
+              {t("auth.createOne")}
             </Link>
           </>
         ) : (
           <>
-            Already registered?{" "}
+            {t("auth.alreadyRegistered")}{" "}
             <Link href="/login" className="font-medium text-primary underline-offset-4 hover:underline">
-              Sign in
+              {t("auth.signIn")}
             </Link>
           </>
         )}

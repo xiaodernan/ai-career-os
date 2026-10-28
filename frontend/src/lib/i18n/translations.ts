@@ -227,6 +227,8 @@ export const translations = {
         waitingForAgent: "Waiting for the agent...",
         streamNotReported: "The run stream hasn't reported progress yet -- results appear as soon as it does.",
         agentTrace: "Agent trace",
+        runError: "The run reported an error.",
+        steps: "{count} steps",
       },
       processing: {
         active: "Active",
@@ -235,6 +237,9 @@ export const translations = {
       },
       agentTimeline: {
         trace: "Agent execution trace",
+        running: "Running",
+        completed: "Completed",
+        failed: "Failed",
       },
     },
     jobCard: {
@@ -314,6 +319,7 @@ export const translations = {
       saveNewPassword: "Save new password",
       tokenExpired: "Token expired?",
       requestAnother: "Request another",
+      genericFailure: "Something went wrong. Please try again.",
     },
     tailor: {
       title: "Tailored resume for this role",
@@ -954,6 +960,27 @@ export const translations = {
       confirmPassword: "Confirm password",
       passwordsDoNotMatch: "Passwords do not match",
       forgotPassword: "Forgot your password?",
+      email: "Email",
+      password: "Password",
+      fullName: "Full name",
+      fullNamePlaceholder: "Ada Zhang",
+      noAccount: "No account yet?",
+      createOne: "Create one",
+      alreadyRegistered: "Already registered?",
+      loginBlurb: "Pick up where the agents left off.",
+      registerBlurb: "Your resume becomes a knowledge base in minutes.",
+      // The field checks answer with these keys; the sentence is built where
+      // it is shown, so the error under a Chinese field is Chinese.
+      issues: {
+        emailRequired: "Email is required",
+        emailInvalid: "Enter a valid email address",
+        passwordRequired: "Password is required",
+        nameRequired: "Name is required",
+        tokenRequired: "Paste the token from your email",
+        confirmRequired: "Confirm your new password",
+        tooShort: "Use at least {min} characters",
+        tooLong: "Use at most {max} characters",
+      },
     },
     /**
      * The skill chips: the two labels that sit above the matched row and
@@ -2146,6 +2173,8 @@ export const translations = {
         waitingForAgent: "等待代理中…",
         streamNotReported: "运行流未报呎进度 —— 一有结果立即显示。",
         agentTrace: "代理连踪",
+        runError: "这次运行报告了一个错误。",
+        steps: "{count} 步",
       },
       processing: {
         active: "进行中",
@@ -2154,6 +2183,9 @@ export const translations = {
       },
       agentTimeline: {
         trace: "代理执行轨迹",
+        running: "进行中",
+        completed: "已完成",
+        failed: "失败",
       },
     },
     jobCard: {
@@ -2231,6 +2263,7 @@ export const translations = {
       saveNewPassword: "保存新密码",
       tokenExpired: "令牌过期了？",
       requestAnother: "再要一个",
+      genericFailure: "出错了，请再试一次。",
     },
     tailor: {
       title: "为这个职位定制的简历",
@@ -2801,6 +2834,25 @@ export const translations = {
       confirmPassword: "确认密码",
       passwordsDoNotMatch: "密码不匹配",
       forgotPassword: "忘记密码？",
+      email: "邮箱",
+      password: "密码",
+      fullName: "姓名",
+      fullNamePlaceholder: "张艾达",
+      noAccount: "还没有账号？",
+      createOne: "创建一个",
+      alreadyRegistered: "已经注册过？",
+      loginBlurb: "从代理停下的地方继续。",
+      registerBlurb: "你的简历几分钟内就变成一个知识库。",
+      issues: {
+        emailRequired: "请输入邮箱",
+        emailInvalid: "请输入有效的邮箱地址",
+        passwordRequired: "请输入密码",
+        nameRequired: "请输入姓名",
+        tokenRequired: "粘贴邮件里的重置令牌",
+        confirmRequired: "请再次输入新密码",
+        tooShort: "至少需要 {min} 个字符",
+        tooLong: "最多 {max} 个字符",
+      },
     },
     /**
      * The skill chips: the two labels that sit above the matched row and

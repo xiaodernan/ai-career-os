@@ -93,6 +93,7 @@ function TimelineRow({
   defaultExpanded: boolean;
 }) {
   const [open, setOpen] = React.useState(defaultExpanded && event.payload != null);
+  const { t } = useLocale();
   const meta = KIND_META[event.kind] ?? KIND_META.step_start;
   const Icon = meta.icon;
   const duration = formatDuration(event.durationMs);
@@ -129,9 +130,9 @@ function TimelineRow({
             {event.kind.replace("_", " ")}
           </span>
           <span className="ml-auto flex shrink-0 items-center gap-1.5 pr-1">
-            {event.status === "running" && <CircleDashed className="size-3.5 animate-spin text-muted-foreground" aria-label="Running" />}
-            {event.status === "ok" && <CheckCircle2 className="size-3.5 text-success" aria-label="Completed" />}
-            {event.status === "error" && <XCircle className="size-3.5 text-destructive" aria-label="Failed" />}
+            {event.status === "running" && <CircleDashed className="size-3.5 animate-spin text-muted-foreground" aria-label={t("ai.agentTimeline.running")} />}
+            {event.status === "ok" && <CheckCircle2 className="size-3.5 text-success" aria-label={t("ai.agentTimeline.completed")} />}
+            {event.status === "error" && <XCircle className="size-3.5 text-destructive" aria-label={t("ai.agentTimeline.failed")} />}
             {duration && <span className="font-mono text-2xs text-muted-foreground tabular-nums">{duration}</span>}
           </span>
         </button>

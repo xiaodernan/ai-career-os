@@ -5,7 +5,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { AuthField } from "@/components/auth/auth-field";
 import { Button } from "@/components/ui/button";
-import { emailIssue, recoveryErrorMessage } from "@/lib/auth-recovery";
+import { emailIssue, issueText, recoveryErrorMessage } from "@/lib/auth-recovery";
 import { useForgotPassword } from "@/lib/hooks/auth";
 import { useLocale } from "@/lib/i18n/locale-context";
 
@@ -25,7 +25,7 @@ export function ForgotPasswordForm() {
 
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
-    const issue = emailIssue(email);
+    const issue = issueText(emailIssue(email), t);
     setError(issue);
     if (issue || forgot.isPending) return;
     const address = email.trim();
@@ -80,9 +80,9 @@ export function ForgotPasswordForm() {
           error={error}
           onChange={(event) => {
             setEmail(event.target.value);
-            if (error) setError(emailIssue(event.target.value));
+            if (error) setError(issueText(emailIssue(event.target.value), t));
           }}
-          onBlur={() => setError(emailIssue(email))}
+          onBlur={() => setError(issueText(emailIssue(email), t))}
         />
         <Button type="submit" variant="ai" size="lg" className="w-full" loading={forgot.isPending}>
           {t("recovery.sendToken")}

@@ -66,6 +66,7 @@ export interface TaskStreamState {
 
 export function useTaskStream(taskId: string | null | undefined, options: UseTaskStreamOptions = {}): TaskStreamState {
   const { seed = [], onDone, onError, enabled = true } = options;
+  const { t } = useLocale();
   const [steps, setSteps] = React.useState<ProcessingStep[]>(() =>
     seed.map((s, i) => ({ ...s, status: (i === 0 ? "active" : "pending") as StepStatus }))
   );
@@ -133,7 +134,7 @@ export function useTaskStream(taskId: string | null | undefined, options: UseTas
       onDone?.(data);
     },
     onError: (data) => {
-      const message = errorText(data) ?? "The run reported an error.";
+      const message = errorText(data) ?? t("ai.taskStream.runError");
       setError(message);
       setFinished(true);
       setSteps((prev) => prev.map((s) => (s.status === "active" ? { ...s, status: "error" } : s)));
@@ -230,7 +231,7 @@ function TaskProgress({
           >
             <ChevronRight className={cn("size-3 transition-transform duration-150", timelineOpen && "rotate-90")} aria-hidden />
             {t("ai.taskStream.agentTrace")}
-            <span className="ml-auto tabular-nums">{traces.length} steps</span>
+            <span className="ml-auto tabular-nums">{t("ai.taskStream.steps", { count: traces.length })}</span>
           </button>
           {timelineOpen && (
             <div className="px-3 pb-3">
