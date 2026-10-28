@@ -27,7 +27,7 @@ import { translations, type Locale } from "./translations";
  */
 
 /** Read a key out of the table, in the reader's language. */
-function read(locale: Locale, key: string): string {
+export function readKey(locale: Locale, key: string): string {
   let value: unknown = translations[locale];
   for (const part of key.split(".")) {
     if (value != null && typeof value === "object") {
@@ -51,7 +51,7 @@ export function sectionMetadata(key: string): () => Promise<Metadata> {
   return async function generateMetadata(): Promise<Metadata> {
     const store = await cookies();
     const locale = localeFromCookie(store.get(LOCALE_COOKIE)?.value);
-    return { title: read(locale, key) };
+    return { title: readKey(locale, key) };
   };
 }
 
@@ -71,8 +71,8 @@ export function absoluteMetadata(
     const store = await cookies();
     const locale = localeFromCookie(store.get(LOCALE_COOKIE)?.value);
     return {
-      title: { absolute: read(locale, key) },
-      description: descriptionKey ? read(locale, descriptionKey) : undefined,
+      title: { absolute: readKey(locale, key) },
+      description: descriptionKey ? readKey(locale, descriptionKey) : undefined,
     };
   };
 }
@@ -95,7 +95,23 @@ export function rootMetadata(): () => Promise<Metadata> {
         default: "AI Career OS",
         template: "%s · AI Career OS",
       },
-      description: read(locale, "common.metaDescription"),
+      description: readKey(locale, "common.metaDescription"),
+      applicationName: "AI Career OS",
+      // The installable shell's icon set (19.7). `app/manifest.ts` carries the same files for a
+      // browser that installs from the manifest; iOS reads these tags instead, so both roads
+      // name the same PNGs rather than one road silently falling back to a screenshot.
+      icons: {
+        icon: [
+          { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+          { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+        ],
+        apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+      },
+      appleWebApp: {
+        capable: true,
+        title: "CareerOS",
+        statusBarStyle: "default",
+      },
     };
   };
 }

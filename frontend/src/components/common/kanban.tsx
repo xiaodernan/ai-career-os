@@ -168,6 +168,11 @@ function KanbanCard({
             "flex size-8 shrink-0 items-center justify-center rounded bg-muted text-muted-foreground",
             "hover:bg-muted-foreground/20 active:bg-muted-foreground/30",
             "cursor-grab active:cursor-grabbing",
+            // `touch-none` is what makes the board draggable on a phone: without it the
+            // browser claims a touch-drag as a scroll and dnd-kit's pointer sensor only ever
+            // sees a cancelled gesture. It is on the handle, not the card, so the column still
+            // scrolls when the reader drags anywhere else.
+            "touch-none",
             isDragging && "bg-primary/10 text-primary"
           )}
           aria-label={t("applications.dragToReorder")}

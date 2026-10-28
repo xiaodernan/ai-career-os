@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#fcfcfd" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#141518" media="(prefers-color-scheme: dark)" />
+    <title>Offline · AI Career OS</title>
+    <link rel="icon" href="/icons/icon-192.png" />
+    <style>
+      /* Self-contained on purpose: this page is read when nothing else can be fetched, so it
+         cannot depend on the app's CSS bundle, its web fonts, or any other URL. */
+      :root {
+        --paper: #fcfcfd;
+        --ink: #1b1b22;
+        --muted: #61616f;
+        --brand: #4f46e5;
+        --line: #e6e6ec;
+        --wash: #f2f2f7;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --paper: #141518;
+          --ink: #edecf3;
+          --muted: #a1a1b3;
+          --brand: #818cf8;
+          --line: #2a2a33;
+          --wash: #1d1d25;
+        }
+      }
+      * { box-sizing: border-box; }
+      html, body { height: 100%; }
+      body {
+        margin: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", "PingFang SC",
+          "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      main {
+        width: 100%;
+        max-width: 420px;
+        text-align: center;
+      }
+      .mark {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 56px;
+        height: 56px;
+        border-radius: 14px;
+        background: var(--brand);
+        box-shadow: 0 6px 20px rgb(79 70 229 / 0.25);
+      }
+      .mark svg { width: 28px; height: 28px; }
+      h1 {
+        margin: 20px 0 8px;
+        font-family: "Iowan Old Style", "Newsreader", Georgia, "Songti SC", "SimSun", serif;
+        font-size: 26px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+      }
+      p {
+        margin: 0 auto;
+        max-width: 34ch;
+        color: var(--muted);
+        font-size: 15px;
+        line-height: 1.6;
+      }
+      .actions { margin-top: 24px; display: flex; gap: 10px; justify-content: center; }
+      button, a.secondary {
+        border-radius: 10px;
+        font: inherit;
+        font-size: 14px;
+        font-weight: 500;
+        padding: 10px 18px;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+      }
+      button {
+        border: 0;
+        background: var(--brand);
+        color: #fff;
+      }
+      button:focus-visible, a.secondary:focus-visible {
+        outline: 2px solid var(--brand);
+        outline-offset: 3px;
+      }
+      a.secondary {
+        border: 1px solid var(--line);
+        background: var(--wash);
+        color: var(--ink);
+      }
+      .status {
+        margin-top: 28px;
+        padding-top: 16px;
+        border-top: 1px solid var(--line);
+        font-size: 12px;
+        color: var(--muted);
+        letter-spacing: 0.02em;
+      }
+      [hidden] { display: none !important; }
+    </style>
+  </head>
+  <body>
+    <!-- Two sentences, both in the file, one shown: the worker serves this page before the app's
+         locale table can be loaded, so the reader's language comes from the browser itself. -->
+    <main data-offline-shell>
+      <span class="mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round">
+          <path d="M12 3v18M3 12h18" transform="rotate(45 12 12)" opacity="0" />
+          <path d="M12 2.5c.6 4.9 4.6 8.9 9.5 9.5-4.9.6-8.9 4.6-9.5 9.5-.6-4.9-4.6-8.9-9.5-9.5 4.9-.6 8.9-4.6 9.5-9.5Z" />
+        </svg>
+      </span>
+      <section data-lang="en">
+        <h1>You're offline</h1>
+        <p>
+          This page needs the network. Anything you had already saved is still yours — the app
+          picks up where you left off once the connection is back.
+        </p>
+      </section>
+      <section data-lang="zh" hidden>
+        <h1>当前离线</h1>
+        <p>
+          这个页面需要网络。你已经保存的内容不会丢——网络恢复后，应用会从你离开的地方继续。
+        </p>
+      </section>
+      <div class="actions">
+        <button type="button" data-retry>Try again</button>
+        <a class="secondary" href="/dashboard" data-home>Back to the app</a>
+      </div>
+      <p class="status" data-status>AI Career OS · offline shell</p>
+    </main>
+    <script>
+      (function () {
+        var zh = /^zh/i.test(navigator.language || "");
+        if (!zh) return;
+        document.documentElement.lang = "zh-CN";
+        document.querySelector('[data-lang="en"]').hidden = true;
+        document.querySelector('[data-lang="zh"]').hidden = false;
+        document.querySelector("[data-retry]").textContent = "重试";
+        document.querySelector("[data-home]").textContent = "返回应用";
+      })();
+      document.querySelector("[data-retry]").addEventListener("click", function () {
+        location.reload();
+      });
+    </script>
+  </body>
+</html>

@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/sonner";
+import { registerServiceWorker } from "@/lib/pwa";
 
 function makeQueryClient() {
   return new QueryClient({
@@ -25,6 +26,13 @@ function makeQueryClient() {
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(makeQueryClient);
+
+  // The offline shell (19.7), registered once for the whole app. `registerServiceWorker` is a
+  // no-op on the dev server and in browsers without one, and swallows a failed install: a
+  // worker is a shell for the shipped product, never a requirement for it to open.
+  useEffect(() => {
+    void registerServiceWorker();
+  }, []);
 
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>

@@ -701,8 +701,26 @@ that; each ships wired to the real API and UI, like every epic before it.
 - [ ] **19.6** Voice mock interview: an STT/TTS provider seam plus record/play
   on the interview page. The scoring, difficulty ladder and depth trajectory
   stay the text interview's; only the input and output become voice.
-- [ ] **19.7** Mobile/PWA: an installable shell, an offline shell page, and a
+- [x] **19.7** Mobile/PWA: an installable shell, an offline shell page, and a
   responsive audit of the sidebar, the kanban drag and the wide tables.
+  (`app/manifest.ts` + `public/sw.js` + `public/offline.html` + four PNGs under
+  `public/icons/`. The manifest names the brand, starts an install on
+  `/dashboard` with `scope:"/"`, and reads its description from the same locale
+  cookie the document's metadata does, so the install dialog speaks the
+  reader's language; iOS reads the document's `icons`/`appleWebApp` tags, and
+  both roads name the same files. The worker precaches only the offline page
+  and the install icons -- never a page or an `/api` answer, because a cached
+  board would show yesterday's postings as today's -- answers a navigation with
+  the network or, with none, the offline page, and serves the build's
+  content-hashed `_next/static` chunks cache-first with a background refresh.
+  `lib/pwa.ts` registers it from `Providers`, only in a production build (a
+  worker beside the dev server serves HMR's own stale chunks and hides the
+  edit), and swallows a refused install because the app opens without one.
+  The audit found the sidebar already a drawer under `lg` and the table
+  primitive already wrapped in `overflow-x-auto`; the board's one real gap was
+  the drag handle, where `touch-none` is what lets dnd-kit's pointer sensor see
+  the gesture instead of the browser scrolling the column. `pwa.test.ts` holds
+  the three files and the four PNGs to their promises; 739 vitest.)
 - [ ] **19.8** Real board connectors: Greenhouse / Lever public board APIs
   behind the existing `Connector` protocol, with the RSS/JSON paste path kept
   as the offline fallback.
