@@ -130,7 +130,7 @@ function JobFilterPanel({ value, onApply, skillSuggestions, resultCount, loading
                   type="button"
                   onClick={() => toggleSkill(s)}
                   className="inline-flex items-center gap-1 rounded-full border border-primary/25 bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary hover:bg-primary/20 focus-visible:ring-[3px] focus-visible:ring-primary/30"
-                  aria-label={`Remove skill filter ${s}`}
+                  aria-label={t("jobs.filters.removeSkillAria", { skill: s })}
                 >
                   {s}
                   <X className="size-3" aria-hidden />

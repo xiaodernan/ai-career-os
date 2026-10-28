@@ -368,7 +368,7 @@ function TrajectoryChart({ points }: { points: InterviewTrajectoryPoint[] }) {
             viewBox={`0 0 ${W} ${H}`}
             className="h-auto w-full"
             role="img"
-            aria-label={`Depth trajectory across ${points.length} questions`}
+            aria-label={t("interviews.report.depthTrajectoryAria", { count: points.length })}
           >
             {/* gridlines at depth levels */}
             {[1, 2, 3, 4, 5].map((lvl) => (

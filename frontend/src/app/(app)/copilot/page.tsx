@@ -334,7 +334,9 @@ function ConversationList({
                       <Button
                         variant="ghost"
                         size="icon"
-                        aria-label={`Rename "${c.title || t("copilot.untitledChat")}"`}
+                        aria-label={t("copilot.renameChatAria", {
+                          title: c.title || t("copilot.untitledChat"),
+                        })}
                         onClick={() => {
                           setEditingId(c.id);
                           setDraft(c.title || "");
@@ -345,7 +347,9 @@ function ConversationList({
                       <Button
                         variant="ghost"
                         size="icon"
-                        aria-label={`Delete "${c.title || t("copilot.untitledChat")}"`}
+                        aria-label={t("copilot.deleteChatAria", {
+                          title: c.title || t("copilot.untitledChat"),
+                        })}
                         onClick={() => setConfirmId(c.id)}
                       >
                         <Trash2 aria-hidden />

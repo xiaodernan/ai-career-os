@@ -127,6 +127,15 @@ export const translations = {
       somethingWentWrong: "Something went wrong",
       skipToContent: "Skip to content",
       backToDashboard: "Back to the dashboard",
+      /**
+       * The sentence a page shows when the route it called answered 404 --
+       * the frontend and the API are different builds. `{route}` is the
+       * route's own name, so the mismatch is diagnosable from a screenshot.
+       */
+      missingEndpoint:
+        "A route this screen needs answered 404, so this frontend and the backend it is talking to are different versions. Nothing is shown in place of the real data.",
+      missingEndpointRoute:
+        "{route} answered 404, so this frontend and the backend it is talking to are different versions. Nothing is shown in place of the real data.",
     },
     /**
      * What a successful write says.
@@ -328,6 +337,8 @@ export const translations = {
       showFewer: "Show fewer",
       source: "Evidence source",
       jumpToSource: "Jump to source",
+      citationAria: "Citation {index}: {title}",
+      citationAriaSection: "Citation {index}: {title} — {section}",
     },
     /**
      * The recovery screens. The copy here is careful on purpose -- the
@@ -541,6 +552,7 @@ export const translations = {
       spendFailed: "Agent spend failed to load",
       gapsFailed: "Skill gaps failed to load",
       rolesInFlight: "roles in flight",
+      restBelow: "The rest of the page still reads the real APIs below.",
       reachedOrPracticed: "reached or practiced",
       readyForDecision: "ready for decision",
       staleOrDue: "stale or due reminders",
@@ -592,6 +604,7 @@ export const translations = {
       counterOfferScript: "Counter-offer script",
       againstTheMarket: "Your offer against the market, and what to say.",
       leadsOnTotal: "{label} leads on total compensation.",
+      anchorAt: "Anchor at {amount}.",
     },
     // Analysis
     analysis: {
@@ -945,6 +958,8 @@ export const translations = {
       deleteDescription:
         "The resume and its versions are removed from your workspace. Knowledge chunks ingested from it stop being cited.",
       deleteResume: "Delete resume",
+      deleteAria: "Delete {title}",
+      deleteTitle: "Delete “{title}”?",
       empty: "No resumes yet",
       emptyDescription:
         "Drop a file above to get started. The ingestion pipeline extracts experience, projects and skills, then grades resume quality.",
@@ -1022,6 +1037,8 @@ export const translations = {
         current: "Current",
         overall: "Overall",
         repo: "Repo",
+        versionFallback: "Version {version}",
+        groupFallback: "Group {number}",
         stages: {
           reading: "Reading the stored document",
           extracting: "Extracting sections with the parser agent",
@@ -1491,6 +1508,7 @@ export const translations = {
       tailoredResume: "Tailored resume draft",
       openJob: "Open job",
       interviewPrepared: "The agent prepared a session from this conversation.",
+      offerFallback: "Offer {number}",
       start: "Start",
       coverage: "Coverage",
     },
@@ -1549,6 +1567,8 @@ export const translations = {
       messagePlaceholder: "Message Copilot…",
       messageLabel: "Message Copilot",
       send: "Send message",
+      renameChatAria: "Rename “{title}”",
+      deleteChatAria: "Delete “{title}”",
     },
     // Networking
     networking: {
@@ -1685,6 +1705,10 @@ export const translations = {
         ingestionFailed: "ingestion failed",
         batchSummary: "{done} of {total} done{failed}",
         notIngested: ", {count} not ingested",
+        typeRejected:
+          "Only {extensions} files can be ingested — “{name}” would be rejected by the server.",
+        tooLarge: "“{name}” is over the 20 MB ingestion cap.",
+        emptyFile: "“{name}” is empty — nothing to ingest.",
         /**
          * The nine kinds a source may have.
          *
@@ -2054,6 +2078,8 @@ export const translations = {
         reportReady:
           "The evaluator produced a full report — dimension scores, what went well, weak spots, study material and the depth trajectory.",
         openReport: "Open report",
+        depthTitle: "Depth: {depth}/5",
+        difficultyAria: "Difficulty level {level} of 5",
       },
       report: {
         solidPractice: "Solid practice — the weak dimensions below are the fastest wins.",
@@ -2086,6 +2112,7 @@ export const translations = {
         allInterviews: "All interviews",
         practiceAgain: "Practice again",
         fromReport: "from report {id}",
+        depthTrajectoryAria: "Depth trajectory across {count} questions",
       },
     },
     // Jobs
@@ -2180,6 +2207,7 @@ export const translations = {
         role: "role",
         roles: "roles",
         resultsLoad: "Results load from the live search endpoint.",
+        removeSkillAria: "Remove skill filter {skill}",
       },
       match: {
         showOriginal: "Show original text",
@@ -2210,6 +2238,7 @@ export const translations = {
         resource: "Resource:",
         jobDescription: "Job description",
         jobDescriptionDescription: "Extracted requirements, straight from the posting.",
+        scoreAria: "Match score {score} percent",
         required: "Required",
         niceToHave: "Nice to have",
       },
@@ -2364,6 +2393,10 @@ export const translations = {
       somethingWentWrong: "出了点问题",
       skipToContent: "跳到正文",
       backToDashboard: "回到仪表盘",
+      missingEndpoint:
+        "此页面需要的接口返回了 404，说明这个前端和它正在通信的后端版本不一致。这里没有任何内容替代真实数据。",
+      missingEndpointRoute:
+        "{route} 返回了 404，说明这个前端和它正在通信的后端版本不一致。这里没有任何内容替代真实数据。",
     },
     /**
      * What a successful write says.
@@ -2551,6 +2584,8 @@ export const translations = {
       showFewer: "收起一些",
       source: "证据来源",
       jumpToSource: "跳到来源",
+      citationAria: "引用 {index}：{title}",
+      citationAriaSection: "引用 {index}：{title} — {section}",
     },
     /**
      * The recovery screens. The copy here is careful on purpose -- the
@@ -2745,6 +2780,7 @@ export const translations = {
       spendFailed: "AI 消耗加载失败",
       gapsFailed: "技能差距加载失败",
       rolesInFlight: "个进行中的申请",
+      restBelow: "页面其余部分仍会在下方读取真实接口的数据。",
       reachedOrPracticed: "个已到达或已练习",
       readyForDecision: "个待决策",
       staleOrDue: "个停滞或到期的提醒",
@@ -2792,6 +2828,7 @@ export const translations = {
       counterOfferScript: "还价话术",
       againstTheMarket: "你的录用对着市场，以及该怎么说。",
       leadsOnTotal: "{label} 的总薪酬最高。",
+      anchorAt: "锚定在 {amount}。",
     },
     // Analysis
     analysis: {
@@ -3105,6 +3142,8 @@ export const translations = {
       existingSection: "已有简历",
       deleteDescription: "这份简历及其版本会从你的工作台移除。从它摄取的知识块也不再被引用。",
       deleteResume: "删除简历",
+      deleteAria: "删除 {title}",
+      deleteTitle: "删除“{title}”？",
       empty: "还没有简历",
       emptyDescription:
         "把文件拖到上面就能开始。摄取流程会抽取经历、项目和技能，然后给简历质量打分。",
@@ -3173,6 +3212,8 @@ export const translations = {
         current: "当前",
         overall: "总分",
         repo: "仓库",
+        versionFallback: "版本 {version}",
+        groupFallback: "分组 {number}",
         stages: {
           reading: "正在读取已存下的文档",
           extracting: "正在用解析代理提取各段落",
@@ -3610,6 +3651,7 @@ export const translations = {
       tailoredResume: "定制简历草稿",
       openJob: "打开职位",
       interviewPrepared: "代理根据这段对话准备好了一场面试。",
+      offerFallback: "报价 {number}",
       start: "开始",
       coverage: "覆盖率",
     },
@@ -3666,6 +3708,8 @@ export const translations = {
       messagePlaceholder: "给副驾驶发消息…",
       messageLabel: "给副驾驶发消息",
       send: "发送消息",
+      renameChatAria: "重命名对话“{title}”",
+      deleteChatAria: "删除对话“{title}”",
     },
     // Networking
     networking: {
@@ -3791,6 +3835,9 @@ export const translations = {
         ingestionFailed: "摄取失败",
         batchSummary: "已完成 {done}/{total}{failed}",
         notIngested: "，{count} 个未摄取",
+        typeRejected: "只能摄取 {extensions} 文件——“{name}”会被服务器拒绝。",
+        tooLarge: "“{name}”超过了 20 MB 的摄取上限。",
+        emptyFile: "“{name}”是空文件——没有可摄取的内容。",
         kinds: {
           note: "笔记",
           resume: "简历",
@@ -4130,6 +4177,8 @@ export const translations = {
         reportReady:
           "评估代理已经产出了完整报告——各维度得分、哪些答得好、哪些薄弱、学习材料和深度曲线。",
         openReport: "打开报告",
+        depthTitle: "深度：{depth}/5",
+        difficultyAria: "难度等级 {level}（满分 5 级）",
       },
       report: {
         solidPractice: "练习得不错——下面薄弱的维度就是最快的提升点。",
@@ -4159,6 +4208,7 @@ export const translations = {
         allInterviews: "全部面试",
         practiceAgain: "再练一次",
         fromReport: "来自报告 {id}",
+        depthTrajectoryAria: "横跨 {count} 个问题的深度轨迹",
       },
     },
     // Jobs
@@ -4251,6 +4301,7 @@ export const translations = {
         role: "职位",
         roles: "职位",
         resultsLoad: "结果来自实时搜索接口。",
+        removeSkillAria: "移除技能筛选 {skill}",
       },
       match: {
         showOriginal: "显示原文",
@@ -4280,6 +4331,7 @@ export const translations = {
         resource: "来源：",
         jobDescription: "职位描述",
         jobDescriptionDescription: "直接从职位发布里提取出的要求。",
+        scoreAria: "匹配分 {score} 分",
         required: "必须",
         niceToHave: "加分项",
       },

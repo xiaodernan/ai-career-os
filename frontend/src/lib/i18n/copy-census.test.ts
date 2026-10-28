@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   browserSources,
   everyOffender,
+  templateOffendersIn,
   textOffendersIn,
   TEXT_NODE_LIMIT,
 } from "./copy-scan";
@@ -106,5 +107,44 @@ describe("the browser's copy", () => {
     // elsewhere, and no key can hold it.
     const probe = "export const x = <p>{count} matching {noun}</p>;";
     expect(textOffendersIn("probe.tsx", probe)).toEqual([]);
+  });
+
+  it("reads the prose a template literal carries between its values", () => {
+    // The five scanners above all read a double-quoted string; a backtick
+    // was not a quote to any of them. Fourteen templates across twelve
+    // screens carried a label or a sentence -- an `aria-label` around a
+    // row's title, a version row's fallback name -- and no gate read one.
+    //
+    // The second probe puts an object literal and an arrow inside the
+    // interpolation: the reader has to count braces to find the `}` that
+    // ends the expression, or the rest of the template is read as one chunk.
+    const probe = [
+      'export const a = <span aria-label={`Version ${v.versionNo ?? v.id.slice(0, 8)}`} />;',
+      'export const b = <span title={`Group ${rows.map((r) => ({ id: r.id })).length}`} />;',
+    ].join("\n");
+    expect(templateOffendersIn("probe.tsx", probe).map((o) => o.value)).toEqual([
+      "Version",
+      "Group",
+    ]);
+  });
+
+  it("leaves a template that is a value or a class name alone", () => {
+    const probe = [
+      "export const a = <span className={`px-${n} py-2`} />;",
+      "export const b = <a href={`/jobs/${id}`} />;",
+      "export const c = <span>{`${done}/${total}`}</span>;",
+    ].join("\n");
+    expect(templateOffendersIn("probe.tsx", probe)).toEqual([]);
+  });
+
+  it("reads the chunk a value left behind, mark and all", () => {
+    // `“${file.name}” is over the cap.` cuts the literal at `” is over the
+    // cap.` -- the first character is the mark that closed around the value,
+    // so the sentence's first *word* is behind a space and a quotation mark.
+    // A head rule that reads only the first character skips it.
+    const probe = "export const x = `“${file.name}” is over the 20 MB ingestion cap.`;";
+    expect(templateOffendersIn("probe.tsx", probe).map((o) => o.value)).toEqual([
+      "is over the 20 MB ingestion cap.",
+    ]);
   });
 });

@@ -293,7 +293,10 @@ export default function ResumeDetailPage() {
                     >
                       <div className="flex items-center gap-2">
                         <p className="min-w-0 flex-1 truncate text-sm font-medium">
-                          {v.label ?? `Version ${v.versionNo ?? v.id.slice(0, 8)}`}
+                          {v.label ??
+                            t("resumes.detail.versionFallback", {
+                              version: v.versionNo ?? v.id.slice(0, 8),
+                            })}
                         </p>
                         {isCurrent && (
                           <Badge variant="success" className="gap-1 text-2xs font-normal">
@@ -654,7 +657,7 @@ function StructuredProfileView({ structured }: { structured: StructuredResume })
             {structured.skills!.map((g, i) => (
               <li key={i}>
                 <p className="text-2xs font-medium tracking-wide text-muted-foreground uppercase">
-                  {g.group ?? `Group ${i + 1}`}
+                  {g.group ?? t("resumes.detail.groupFallback", { number: i + 1 })}
                 </p>
                 <ul className="mt-1 flex flex-wrap gap-1.5">
                   {(g.skills ?? []).map((s) => (

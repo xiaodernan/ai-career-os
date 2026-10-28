@@ -20,7 +20,7 @@ import { api } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
 import { SOURCE_KINDS, sourceKindLabel } from "@/lib/source-kinds";
 import { useSourceStatus } from "@/lib/hooks/resources";
-import { useLocale } from "@/lib/i18n/locale-context";
+import { translate, useLocale } from "@/lib/i18n/locale-context";
 
 /**
  * Upload + delete for knowledge sources. The mutations live here — next to the
@@ -47,13 +47,18 @@ export function validateDocumentFile(file: { name: string; size: number }): stri
   const dot = lower.lastIndexOf(".");
   const ext = dot >= 0 ? lower.slice(dot) : "";
   if (!(ACCEPTED_EXTENSIONS as readonly string[]).includes(ext)) {
-    return `Only ${ACCEPTED_EXTENSIONS.join(", ")} files can be ingested — “${file.name}” would be rejected by the server.`;
+    return (
+      translate("knowledge.sources.typeRejected", {
+        extensions: ACCEPTED_EXTENSIONS.join(", "),
+        name: file.name,
+      }) ?? "knowledge.sources.typeRejected"
+    );
   }
   if (file.size > MAX_DOCUMENT_BYTES) {
-    return `“${file.name}” is over the 20 MB ingestion cap.`;
+    return translate("knowledge.sources.tooLarge", { name: file.name }) ?? "knowledge.sources.tooLarge";
   }
   if (file.size <= 0) {
-    return `“${file.name}” is empty — nothing to ingest.`;
+    return translate("knowledge.sources.emptyFile", { name: file.name }) ?? "knowledge.sources.emptyFile";
   }
   return null;
 }

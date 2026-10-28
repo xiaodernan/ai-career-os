@@ -458,13 +458,14 @@ function BackLink() {
 }
 
 function DifficultyMeter({ value }: { value: number }) {
+  const { t } = useLocale();
   // depthLevel owns the 0–1 ↔ 1–5 projection; every depth surface shares it.
   const level = depthLevel(value);
   return (
     <span
       className="flex items-center gap-1.5"
-      title={`Depth: ${depthLabel(value)}/5`}
-      aria-label={`Difficulty level ${level} of 5`}
+      title={t("interviews.detail.depthTitle", { depth: depthLabel(value) })}
+      aria-label={t("interviews.detail.difficultyAria", { level })}
     >
       <Gauge className="size-3.5 text-muted-foreground" aria-hidden />
       <span className="flex gap-0.5" aria-hidden>

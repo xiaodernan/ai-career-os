@@ -278,7 +278,9 @@ export default function OffersPage() {
             <CardTitle className="text-base">{t("offers.counterOfferDraft")}</CardTitle>
             <CardDescription>
               {draft.anchor
-                ? `Anchor at ${formatSalary(draft.anchor, draft.anchor, currency)}.`
+                ? t("offers.anchorAt", {
+                    amount: formatSalary(draft.anchor, draft.anchor, currency) ?? "—",
+                  })
                 : t("offers.theAnchor")}
             </CardDescription>
           </CardHeader>

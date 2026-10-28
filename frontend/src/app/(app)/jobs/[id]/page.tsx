@@ -432,6 +432,7 @@ function BackLink() {
 }
 
 function MatchMini({ value }: { value: number }) {
+  const { t } = useLocale();
   return (
     <span
       className={cn(
@@ -444,7 +445,7 @@ function MatchMini({ value }: { value: number }) {
               ? "border-warning/40 text-warning"
               : "border-destructive/40 text-destructive"
       )}
-      aria-label={`Match score ${value} percent`}
+      aria-label={t("jobs.match.scoreAria", { score: value })}
     >
       {Math.round(value)}
     </span>

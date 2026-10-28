@@ -1,3 +1,5 @@
+import { translate } from "@/lib/i18n/locale-context";
+
 /**
  * What a 404 from a route this app calls actually means.
  *
@@ -6,8 +8,13 @@
  * was false as a statement about the product, and it left a user staring at a small version
  * mismatch with nothing to do about it: the frontend and the API are different builds. The
  * path is named so the mismatch is diagnosable from a screenshot or a support thread.
+ *
+ * The sentence is the reader's, read through `translate` rather than a hook: the same
+ * function answers a render (a card's description) and an event handler (a failure toast),
+ * and only the first has a provider above it. The key names the path as a hole so the
+ * route sits in the reader's own word order.
  */
 export function missingEndpointMessage(path?: string): string {
-  const route = path ? `${path} answered 404` : "A route this screen needs answered 404";
-  return `${route}, so this frontend and the backend it is talking to are different versions. Nothing is shown in place of the real data.`;
+  const key = path ? "common.missingEndpointRoute" : "common.missingEndpoint";
+  return translate(key, path ? { route: path } : undefined) ?? key;
 }

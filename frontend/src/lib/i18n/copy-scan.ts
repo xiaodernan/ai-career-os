@@ -266,11 +266,25 @@ export function textOffendersIn(file: string, text: string): Offender[] {
 }
 
 /**
+ * The value with the punctuation a sentence may open with stripped.
+ *
+ * A template chunk does not have to start at the sentence's first word: the
+ * chunk after a value is the sentence's tail, and it may open with the
+ * quotation mark that closed around the value -- `“${file.name}” is over the
+ * cap.` cuts the chunk at `” is over the cap.`, whose first character is
+ * punctuation and whose first *word* is lower-case. Reading the head without
+ * stripping the mark hid the sentence, so both rules read the bare form.
+ */
+function bare(value: string): string {
+  return value.replace(/^[\s"“”'(\[]+/, "");
+}
+
+/**
  * The start of a sentence: a capital and a lower-case letter after it.
  * "AI", "OS" and "JD" are names, not sentences.
  */
 function sentenceHead(value: string): boolean {
-  return /^[A-Z][a-z]/.test(value);
+  return /^[A-Z][a-z]/.test(bare(value));
 }
 
 /**
@@ -283,7 +297,8 @@ function sentenceHead(value: string): boolean {
  * than the identifier the capital rule was written to skip.
  */
 function sentenceTail(value: string): boolean {
-  return /^[a-z]/.test(value) && /\s/.test(value) && /[.!?…]$/.test(value);
+  const head = bare(value);
+  return /^[a-z]/.test(head) && /\s/.test(head) && /[.!?…]$/.test(head);
 }
 
 function textNodeOffenders(): Offender[] {
@@ -451,8 +466,156 @@ function literalOffenders(): Offender[] {
 }
 
 /**
+ * The copy in a template literal.
+ *
+ * The last shape, and the one every other scan was blind to. The five
+ * scanners above all read a double-quoted string; a backtick was not a quote
+ * to any of them. So `` `Delete ${r.title}` `` in an `aria-label`,
+ * `` `Version ${v.versionNo}` `` beside a version row, and the three
+ * sentences a document upload is refused with were English on a Chinese
+ * page and no gate read them -- fourteen sites across twelve screens.
+ *
+ * A template's copy is in the parts *between* its expressions: the text of
+ * `` `Only ${exts} files can be ingested.` `` is "Only " and
+ * " files can be ingested." -- the expressions are values, and a value is
+ * whatever the table fills in. So the reader cuts the literal at every
+ * `${...}` and reads each remaining chunk, with the same rules the text-node
+ * scan uses: a capitalised phrase, or the lower-case tail of a sentence that
+ * was cut around a value. The chunk after an interpolation often opens with
+ * the punctuation that closed around the value -- see {@link bare}.
+ *
+ * The expression reader tracks braces, so a nested template or an object
+ * literal inside `${...}` does not end the outer literal early, and a nested
+ * template is read too: its prose is as visible as the outer one's.
+ *
+ * The rules are deliberately the text-node rules, not the literal scan's.
+ * A template is where a *label with a value in it* lives, so a single word
+ * followed by a value -- `Group ${i + 1}` -- has to be read, and it is: the
+ * trailing space is what makes it a phrase. A template that is entirely a
+ * value -- `px-${n}` -- begins lower-case and is not prose.
+ */
+function readQuoted(source: string, i: number, quote: string): number {
+  i++;
+  while (i < source.length) {
+    if (source[i] === "\\") {
+      i += 2;
+      continue;
+    }
+    if (source[i] === quote) return i + 1;
+    i++;
+  }
+  return i;
+}
+
+function readTemplate(source: string, i: number, chunks: string[]): number {
+  let chunk = "";
+  while (i < source.length) {
+    const ch = source[i];
+    if (ch === "\\") {
+      chunk += ch + (source[i + 1] ?? "");
+      i += 2;
+      continue;
+    }
+    if (ch === "`") {
+      chunks.push(chunk);
+      return i + 1;
+    }
+    if (ch === "$" && source[i + 1] === "{") {
+      chunks.push(chunk);
+      chunk = "";
+      i = readTemplateExpression(source, i + 2, chunks);
+      continue;
+    }
+    chunk += ch;
+    i++;
+  }
+  chunks.push(chunk);
+  return i;
+}
+
+function readTemplateExpression(source: string, i: number, chunks: string[]): number {
+  let depth = 1;
+  while (i < source.length) {
+    const ch = source[i];
+    if (ch === '"' || ch === "'") {
+      i = readQuoted(source, i, ch);
+      continue;
+    }
+    if (ch === "`") {
+      i = readTemplate(source, i + 1, chunks);
+      continue;
+    }
+    if (ch === "{") {
+      depth++;
+      i++;
+      continue;
+    }
+    if (ch === "}") {
+      depth--;
+      i++;
+      if (depth === 0) return i;
+      continue;
+    }
+    i++;
+  }
+  return i;
+}
+
+/** The text between the expressions of every template literal in a source. */
+export function templateChunksIn(source: string): string[] {
+  const chunks: string[] = [];
+  let i = 0;
+  while (i < source.length) {
+    const ch = source[i];
+    if (ch === '"' || ch === "'") {
+      i = readQuoted(source, i, ch);
+      continue;
+    }
+    if (ch === "`") {
+      i = readTemplate(source, i + 1, chunks);
+      continue;
+    }
+    i++;
+  }
+  return chunks;
+}
+
+/**
+ * The chunk of a template that reads as copy, in the form the gate reports
+ * it -- or null when the chunk is a value, a class name or code.
+ */
+function proseChunk(chunk: string): string | null {
+  const head = bare(chunk);
+  if (!head) return null;
+  // A phrase: it has a second word, or it ends a sentence. `Only ` is a
+  // phrase because of its space; `Delete` alone is left to the scans that
+  // read the positions a lone label is written in.
+  if (!/\s/.test(head) && !/[.!?…]$/.test(head)) return null;
+  if (!sentenceHead(head) && !sentenceTail(head)) return null;
+  if (isCode(head)) return null;
+  if (NOT_COPY.has(head.trim())) return null;
+  return head.trim();
+}
+
+/** The prose in the template literals of one source, for the gate's probes. */
+export function templateOffendersIn(file: string, source: string): Offender[] {
+  const found: Offender[] = [];
+  for (const chunk of templateChunksIn(stripComments(source))) {
+    const value = proseChunk(chunk);
+    if (value) found.push({ file, attribute: "template", value });
+  }
+  return found;
+}
+
+function templateOffenders(): Offender[] {
+  return browserSources().flatMap((rel) =>
+    templateOffendersIn(rel, readFileSync(join(ROOT, rel), "utf-8"))
+  );
+}
+
+/**
  * Every hardcoded string: the attributes, the object literals, the text,
- * the expressions and the literals.
+ * the expressions, the literals and the templates.
  *
  * The count is of *distinct* strings: the same sentence can be read by
  * more than one scan -- a `title="Delete"` is an attribute and a literal
@@ -465,6 +628,7 @@ export function everyOffender(): Offender[] {
     ...textNodeOffenders(),
     ...expressionOffenders(),
     ...literalOffenders(),
+    ...templateOffenders(),
   ];
   const seen = new Set<string>();
   const out: Offender[] = [];

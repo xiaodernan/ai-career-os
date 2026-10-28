@@ -203,7 +203,7 @@ export default function DashboardPage() {
                 <EmptyState
                   icon={<Gauge aria-hidden />}
                   title={t("dashboard.statsNotConnected")}
-                  description={`${missingEndpointMessage("GET /reports/dashboard")} The rest of the page still reads the real APIs below.`}
+                  description={`${missingEndpointMessage("GET /reports/dashboard")} ${t("dashboard.restBelow")}`}
                   action={
                     <Button variant="outline" size="sm" onClick={() => void dashboard.refetch()}>
                       {t("common.checkAgain")}

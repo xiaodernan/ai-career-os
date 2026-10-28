@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { translate } from "@/lib/i18n/locale-context";
 import { cn } from "@/lib/utils";
 import {
   Tooltip,
@@ -25,7 +26,15 @@ function SourceChip({ index, docTitle, section, className, ...props }: SourceChi
       <TooltipTrigger asChild>
         <button
           type="button"
-          aria-label={`Citation ${index}: ${docTitle}${section ? ` — ${section}` : ""}`}
+          aria-label={
+            section
+              ? translate("evidence.citationAriaSection", {
+                  index,
+                  title: docTitle,
+                  section,
+                })
+              : translate("evidence.citationAria", { index, title: docTitle })
+          }
           className={cn(
             "mx-0.5 -mt-2 inline-flex h-fit items-center rounded-md border border-primary/25 bg-primary/10 px-1 align-top font-mono text-2xs leading-4 font-medium text-primary transition-colors duration-150 hover:bg-primary/20 focus-visible:ring-[3px] focus-visible:ring-primary/30 focus-visible:outline-none",
             className

@@ -147,7 +147,7 @@ export default function ResumesPage() {
                           <Button
                             variant="ghost"
                             size="icon-sm"
-                            aria-label={`Delete ${r.title}`}
+                            aria-label={t("resumes.deleteAria", { title: r.title })}
                             onClick={() => setPendingDelete(r)}
                           >
                             <Trash2 aria-hidden />
@@ -178,7 +178,7 @@ export default function ResumesPage() {
       <ConfirmDialog
         open={pendingDelete != null}
         onOpenChange={(o) => !o && setPendingDelete(null)}
-        title={`Delete “${pendingDelete?.title ?? ""}”?`}
+        title={t("resumes.deleteTitle", { title: pendingDelete?.title ?? "" })}
         description={t("resumes.deleteDescription")}
         confirmLabel={t("resumes.deleteResume")}
         destructive

@@ -332,6 +332,7 @@ function SalaryBandArtifact({ data }: { data?: unknown }) {
 }
 
 function OfferComparisonArtifact({ data }: { data?: unknown }) {
+  const { t } = useLocale();
   const report = pick(data, "comparison") ?? data;
   const rows = list(report, "rows");
   if (!rows.length) return null;
@@ -342,7 +343,7 @@ function OfferComparisonArtifact({ data }: { data?: unknown }) {
     >
       <BarChart
         data={rows.map((row, i) => ({
-          label: str(row, "label") ?? `Offer ${i + 1}`,
+          label: str(row, "label") ?? t("artifacts.offerFallback", { number: i + 1 }),
           value: num(row, "totalComp", "total_comp") ?? 0,
           tone: "primary" as const,
         }))}
