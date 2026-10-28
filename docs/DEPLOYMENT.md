@@ -404,7 +404,11 @@ alarmed). The shipped rules raise `CareerOSSignalMailFailing` at three refusals 
 six hours, so one undeliverable address — which refuses once a morning while its
 episode stays visible — is a log line rather than a daily page, while a relay outage
 refusing a whole morning is a page; `docs/RUNBOOK.md#the-morning-mail-is-refused` is
-what the responder reads.
+what the responder reads. `careeros.signals.last.sweep.timestamp` is the sweep's own
+heartbeat (22.3), moved at the end of every completed pass even when no account has a
+letter, and `CareerOSSignalSweepStale` pages at 36 hours without one — that is how a
+misconfigured `careeros.signals.cron` or a scheduler that never started is caught
+(`docs/RUNBOOK.md#the-morning-sweep-stopped`).
 
 ## Health & first data
 

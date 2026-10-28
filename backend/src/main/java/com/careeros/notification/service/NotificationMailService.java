@@ -33,7 +33,9 @@ import org.springframework.stereotype.Service;
  * <p>One account in a bad state is a warn line, never the rest of the morning: the other
  * accounts still get their letters. Every attempt that reached the transport is metered
  * (roadmap 22.2), so a relay that refuses the morning is visible to the scrape and the alarm
- * can tell it apart from an install whose inboxes are simply quiet.
+ * can tell it apart from an install whose inboxes are simply quiet. A finished pass moves the
+ * sweep heartbeat (roadmap 22.3) even when no account had a letter, so a clock that stopped is
+ * visible too; a pass that could not read its audience never reaches it.
  */
 @Service
 public class NotificationMailService {
@@ -70,6 +72,7 @@ public class NotificationMailService {
                 log.warn("the signal mail for {} could not be prepared", userId, e);
             }
         }
+        metrics.recordSweep(OffsetDateTime.now(ZoneOffset.UTC));
         return mailed;
     }
 

@@ -1,6 +1,7 @@
 package com.careeros.notification.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -30,7 +31,8 @@ import org.springframework.mail.MailSendException;
  * <p>What is pinned: the audience is the union of the two kinds of account, so an account in
  * both halves gets one letter; an account with nothing waiting gets no letter at all; the latch
  * is written only after the transport accepts, so a refusal is retried tomorrow rather than
- * recorded as delivered; and one account's bad state does not cost the others their morning.
+ * recorded as delivered; one account's bad state does not cost the others their morning; and a
+ * finished pass moves the heartbeat while a pass that could not read its audience does not.
  */
 class NotificationMailServiceTest {
 
@@ -84,6 +86,8 @@ class NotificationMailServiceTest {
         verify(notifications).awaitingDelivery(ALICE);
         verify(notifications).awaitingDelivery(BOB);
         verify(mailer, never()).send(anyString(), any(), any());
+        verify(metrics).recordSweep(any());
+        verify(metrics, never()).recordSent(any());
     }
 
     @Test
@@ -147,5 +151,14 @@ class NotificationMailServiceTest {
         assertThat(service.mailPending()).isEqualTo(1);
 
         verify(mailer).send(eq("bob@example.com"), any(), anyString());
+    }
+
+    @Test
+    void a_sweep_that_cannot_read_its_audience_writes_no_heartbeat() {
+        when(applications.distinctUserIds()).thenThrow(new IllegalStateException("db down"));
+
+        assertThatThrownBy(() -> service.mailPending()).isInstanceOf(IllegalStateException.class);
+
+        verify(metrics, never()).recordSweep(any());
     }
 }

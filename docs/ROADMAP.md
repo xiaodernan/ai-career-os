@@ -1053,6 +1053,24 @@ settled, and the letter is only a pointer to it.
   the sweep's metric assertions, the backend unit suite at 683 and the integration suite
   at 69, the alarms/docs gates passing, no frontend or copy-census movement.)
 
+- [x] **22.3** The morning has a heartbeat, so a clock that stopped is not mistaken for a
+  quiet inbox.
+  (22.2 metered letters, but its delivered marker moves only when a letter leaves: an
+  install with nothing waiting never moves it, so a scheduler that stopped -- a bad
+  `careeros.signals.cron`, a bean that never started -- was invisible. The same metrics
+  class now publishes `careeros.signals.last.sweep.timestamp`, moved by
+  `NotificationMailService.mailPending()` at the end of every completed pass, with or
+  without letters; a pass that could not even read its audience never reaches it, so a
+  database outage that blocks the sweep still goes stale. The marker starts at boot, so a
+  fresh deploy is not read as stale before it has had a morning. `ops/prometheus/alerts.yml`
+  gains `CareerOSSignalSweepStale` at 36 hours (twice the daily cadence and the same
+  129600 seconds the nightly stale rule uses, warning); the alarms gate pins the gauge and
+  the rule, and `RUNBOOK.md` gains "The morning sweep stopped", separating a failed firing
+  from a silent clock and warning against writing the gauge by hand. 2 backend tests (1
+  metrics, 1 sweep) plus the quiet-pass heartbeat assertion, the backend unit suite at
+  685 and the integration suite at 69, the alarms/docs gates passing, no frontend or
+  copy-census movement.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

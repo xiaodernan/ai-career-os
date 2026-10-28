@@ -158,3 +158,26 @@ groups:
             docs/RUNBOOK.md before touching the mailbox, because one address is usually
             the culprit.
           runbook: "docs/RUNBOOK.md#the-morning-mail-is-refused"
+
+      # The delivered marker cannot answer "did the clock still run?" -- an install with
+      # nothing waiting never moves it -- so the sweep has its own heartbeat, moved at the
+      # end of every completed pass. This rule catches the failure the delivery rules
+      # cannot see: a scheduler that stopped (a bad careeros.signals.cron, a bean that
+      # never started, a backend that stays down). 129600 is 36 hours, twice the daily
+      # cadence and the same window the nightly stale rule uses; change the number and the
+      # runbook together.
+      - alert: CareerOSSignalSweepStale
+        expr: time() - careeros_signals_last_sweep_timestamp > 129600
+        for: 10m
+        labels:
+          service: career-os-backend
+          severity: warning
+        annotations:
+          summary: "No signal-mail sweep has finished in over 36 hours"
+          description: >-
+            The last completed morning mail sweep was {{ $value | humanizeDuration }} ago.
+            Either the scheduler stopped (check `careeros.signals.cron` and the backend log
+            for "the signal mail sweep could not run") or the backend has been down long
+            enough that its boot time is the only reading. The in-app inbox is unaffected;
+            only the mail lags.
+          runbook: "docs/RUNBOOK.md#the-morning-sweep-stopped"

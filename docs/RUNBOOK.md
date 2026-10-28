@@ -361,3 +361,47 @@ a fleet with one dead mailbox must not page daily. The three-refusal floor keeps
 case a warn line while a relay outage — which refuses every account in one pass — pages
 on the first morning. An install with fewer than three mail-bearing accounts is below
 the floor by construction: its relay outage is read from the warn lines instead.
+
+## The morning sweep stopped
+
+**What the alert looks like.** `CareerOSSignalSweepStale` fires when
+`time() - careeros_signals_last_sweep_timestamp > 129600`: no completed morning mail
+sweep in 36 hours. The gauge is the sweep's heartbeat — moved at the end of every
+completed pass, with or without letters, by
+`backend/src/main/java/com/careeros/notification/service/NotificationDeliveryMetrics.java`.
+It cannot be inferred from the delivered marker: an install whose inboxes are quiet
+sends no letter for weeks, and that is healthy. 36 hours is twice the daily cadence,
+which tolerates one late or skipped morning without paging and still catches a clock
+that has actually stopped; it is the same 129600 seconds the nightly stale rule uses.
+A fresh process starts the heartbeat at boot, so a deploy is not read as stale before
+it has had a morning.
+
+**What to read.** First, the scrape: `careeros_signals_last_sweep_timestamp` in
+`/actuator/prometheus` tells you when the last pass finished — a missing series means the
+metrics bean never started, and the backend log has the reason. Then the backend log:
+every scheduled firing that reached the service logs "signal mail delivered to N
+account(s)" when N > 0 and is otherwise silent, so an ordinary quiet morning looks like
+nothing at all; a firing that threw before the audience was readable logs "the signal
+mail sweep could not run" with the stack trace. Check that the scheduler is firing at
+all: `careeros.signals.cron` (default `0 30 7 * * *`) in the deployment's environment,
+and whether the scheduler thread started (`@EnableScheduling` is part of the app; a
+profile that excludes it would never fire).
+
+**What to do, in order.**
+
+1. If the log shows failed firings, fix what the stack trace names. A database outage
+   during the audience query is the common one; the next scheduled firing recovers on
+   its own once the database answers.
+2. If the log shows no firings at all, the clock is wrong or missing. Correct
+   `careeros.signals.cron`, restart the backend so the schedule is re-read, and confirm
+   the next morning's line. A backend that has been down counts: its boot time is the
+   only reading until a pass completes.
+3. Do not "fix" the gauge by hand or by an internal call; nothing writes it except a
+   completed sweep. The inbox is unaffected either way — every signal is still in the
+   app, and `notified_at` is untouched, so the next completed pass mails the waiting
+   episodes once.
+
+**What this alert does not mean.** It is not a relay fault (`CareerOSSignalMailFailing`
+owns that), not a slow sweep (the pass is bounded by the transport's five-second cap per
+account), and not an empty inbox (a pass with no letters still heartbeats). It means the
+promise "every morning the inbox can leave" stopped being kept.
