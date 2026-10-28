@@ -43,6 +43,7 @@ class NotificationServiceTest {
     private static final UUID APP = UUID.fromString("22222222-2222-4222-8222-222222222222");
     private static final UUID FEED = UUID.fromString("33333333-3333-4333-8333-333333333333");
     private static final UUID RUN = UUID.fromString("44444444-4444-4444-8444-444444444444");
+    private static final UUID RUN2 = UUID.fromString("55555555-5555-4555-8555-555555555555");
 
     private DashboardRepository dashboard;
     private IngestionRunRepository runs;
@@ -273,6 +274,64 @@ class NotificationServiceTest {
 
         assertThat(after.items()).hasSize(1);
         assertThat(store).isEmpty();
+    }
+
+    @Test
+    void the_morning_mail_carries_only_what_is_unread_undismissed_and_unmailed() {
+        OffsetDateTime now = OffsetDateTime.now();
+        OffsetDateTime due = now.minusHours(1);
+        OffsetDateTime updated = now.minusDays(20);
+        withAttention(attention("reminder_due", due, null), attention("stale", null, updated));
+        withRuns(run(RUN, IngestionRun.STATUS_FAILED, "Feed answered HTTP 503", null,
+                        now.minusHours(2)),
+                run(RUN2, IngestionRun.STATUS_FAILED, "Feed answered HTTP 502", null,
+                        now.minusHours(3)));
+        String reminderKey = "reminder:" + APP + ":" + due.toInstant().getEpochSecond();
+        String staleKey = "stale:" + APP + ":" + updated.toInstant().getEpochSecond();
+        NotificationState alreadyMailed = state(reminderKey, null, null);
+        alreadyMailed.setNotifiedAt(now.minusMinutes(30));
+        store.put(reminderKey, alreadyMailed);
+        store.put(staleKey, state(staleKey, now.minusMinutes(10), null));
+        store.put("ingestion:" + RUN, state("ingestion:" + RUN, null, now.minusMinutes(5)));
+
+        List<NotificationItem> waiting = service.awaitingDelivery(ALICE);
+
+        assertThat(waiting).extracting(NotificationItem::kind)
+                .containsExactly(NotificationService.KIND_INGESTION_FAILED);
+        assertThat(waiting.get(0).note()).isEqualTo("Feed answered HTTP 502");
+    }
+
+    @Test
+    void a_mailed_episode_is_not_mailed_twice_and_a_new_episode_is_unmailed_again() {
+        OffsetDateTime now = OffsetDateTime.now();
+        withAttention(attention("stale", null, now.minusDays(20)));
+        List<NotificationItem> first = service.awaitingDelivery(ALICE);
+        assertThat(first).hasSize(1);
+
+        service.markNotified(ALICE, first.stream().map(NotificationItem::key).toList(), now);
+
+        assertThat(service.awaitingDelivery(ALICE)).isEmpty();
+        assertThat(service.inbox(ALICE).items()).hasSize(1);
+        assertThat(service.inbox(ALICE).unread()).isEqualTo(1);
+
+        withAttention(attention("stale", null, now.minusDays(19)));
+
+        assertThat(service.awaitingDelivery(ALICE)).extracting(NotificationItem::key)
+                .containsExactly("stale:" + APP + ":"
+                        + now.minusDays(19).toInstant().getEpochSecond());
+    }
+
+    @Test
+    void a_read_after_the_letter_was_composed_still_gets_its_latch() {
+        OffsetDateTime now = OffsetDateTime.now();
+        withAttention(attention("stale", null, now.minusDays(20)));
+        String key = service.awaitingDelivery(ALICE).get(0).key();
+
+        service.markRead(ALICE, List.of(key));
+        service.markNotified(ALICE, List.of(key), now);
+
+        assertThat(store.get(key).getReadAt()).isNotNull();
+        assertThat(store.get(key).getNotifiedAt()).isEqualTo(now);
     }
 
     private static NotificationState state(String key, OffsetDateTime readAt,

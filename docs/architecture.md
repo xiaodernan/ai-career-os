@@ -281,9 +281,10 @@ user-scoped table (ownership is enforced in backend layer + a single SQL predica
    started_at, finished_at)` → one pull of one feed: completed with the plan the engine
   proposed, or failed with the sentence that says why. The row is written when the pull
   ends, so there is no `running` status to go stale if the process dies mid-fetch.
-- `notification_states(user_id, signal_key, read_at, dismissed_at, updated_at)` → the
-  inbox is synthesized from signals already written down; what persists is what the
-  reader did with one, keyed by the episode (`reminder:<id>:<at>`, `stale:<id>:<at>`,
+- `notification_states(user_id, signal_key, read_at, dismissed_at, notified_at,
+  updated_at)` → the inbox is synthesized from signals already written down; what
+  persists is what the reader did with one — read it, dismissed it, or received it by
+  the morning mail — keyed by the episode (`reminder:<id>:<at>`, `stale:<id>:<at>`,
   `ingestion:<runId>`), so a dismissal silences one episode rather than the next.
 - `weekly_digests(id, user_id, week_start date, window_days smallint, payload jsonb,
    generated_at)` → one letter per user per week, the engine's answer stored verbatim;

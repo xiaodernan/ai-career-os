@@ -235,6 +235,14 @@ episode (`reminder:<applicationId>:<reminderAt>`, `stale:<applicationId>:<update
 a new update arrives unread. A read or dismissed key the inbox is not currently
 showing is ignored, and every write answers with the fresh inbox.
 
+The inbox also leaves the app by mail (roadmap 22.1). A daily sweep at 07:30 UTC
+mails each account the items it is showing unread that no letter has carried yet:
+an in-app read or a dismissal settles an item, and an accepted letter latches the
+episode (`notification_states.notified_at`) so the same signal is not mailed twice.
+The letter is a pointer, not a second inbox — up to ten items with absolute links
+back to the screen, the rest counted — and it speaks the account's language.
+Nothing has to be enabled; `careeros.signals.cron` moves the clock.
+
 | Method | Path | Notes |
 |---|---|---|
 | GET | `/notifications` | the synthesized inbox, newest first, with the unread count → {items[], unread, generatedAt} |

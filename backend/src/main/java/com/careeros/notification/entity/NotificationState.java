@@ -16,10 +16,10 @@ import org.hibernate.annotations.UpdateTimestamp;
  *
  * <p>The notification itself is not a row -- it is read off the signals the platform already
  * keeps (an application waiting on the user, a pull the sweep recorded), so it cannot go stale
- * against its source. This row is only the state that has nowhere else to live: read, or
- * dismissed. The key identifies the episode rather than the underlying row, so a new episode of
- * the same kind arrives unread, and a row for an episode that ended simply stops being asked
- * about.
+ * against its source. This row is only the state that has nowhere else to live: read,
+ * dismissed, or carried out of the app by mail (roadmap 22.1). The key identifies the episode
+ * rather than the underlying row, so a new episode of the same kind arrives unread, and a row
+ * for an episode that ended simply stops being asked about.
  */
 @Entity
 @Table(name = "notification_states")
@@ -39,6 +39,10 @@ public class NotificationState {
 
     @Column(name = "dismissed_at")
     private OffsetDateTime dismissedAt;
+
+    /** When a mail carrying this episode was accepted; null means it has only lived in the app. */
+    @Column(name = "notified_at")
+    private OffsetDateTime notifiedAt;
 
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
@@ -74,6 +78,14 @@ public class NotificationState {
 
     public void setDismissedAt(OffsetDateTime dismissedAt) {
         this.dismissedAt = dismissedAt;
+    }
+
+    public OffsetDateTime getNotifiedAt() {
+        return notifiedAt;
+    }
+
+    public void setNotifiedAt(OffsetDateTime notifiedAt) {
+        this.notifiedAt = notifiedAt;
     }
 
     public OffsetDateTime getUpdatedAt() {

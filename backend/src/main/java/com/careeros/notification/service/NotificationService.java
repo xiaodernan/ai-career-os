@@ -36,6 +36,12 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>Acting on the inbox is scoped to what it is showing. A read or dismissed key that is not
  * among the current items is ignored, which keeps a stale browser tab from filing state for a
  * signal that already ended, and keeps the table from growing with keys nobody was ever shown.
+ *
+ * <p>The screen is not the only surface a signal reaches (roadmap 22.1). The morning sweep asks
+ * this service which items are still waiting -- unread in the app and never carried out by mail
+ * -- so the letter and the inbox cannot describe different mornings, and records the mail's
+ * acceptance on the same episode row that remembers the read. A signal that was read or
+ * dismissed in the app is not mailed; a signal that was mailed is not mailed twice.
  */
 @Service
 public class NotificationService {
@@ -72,24 +78,40 @@ public class NotificationService {
 
     @Transactional(readOnly = true)
     public Inbox inbox(UUID userId) {
-        Map<String, NotificationState> byKey = states.findByUserId(userId).stream()
-                .collect(Collectors.toMap(NotificationState::getSignalKey, state -> state,
-                        (first, second) -> first));
-        List<NotificationItem> visible = new ArrayList<>();
-        for (Candidate candidate : candidates(userId)) {
-            NotificationState state = byKey.get(candidate.key());
-            if (state != null && state.getDismissedAt() != null) {
-                continue;
-            }
-            visible.add(candidate.item(state != null && state.getReadAt() != null));
-        }
-        visible.sort(Comparator.comparing(NotificationItem::at,
-                Comparator.nullsLast(Comparator.<OffsetDateTime>reverseOrder())));
-        List<NotificationItem> items = visible.size() <= INBOX_LIMIT
-                ? List.copyOf(visible)
-                : List.copyOf(visible.subList(0, INBOX_LIMIT));
+        List<NotificationItem> items = shown(userId).stream().map(Shown::item).toList();
         int unread = (int) items.stream().filter(item -> !item.read()).count();
         return new Inbox(items, unread, OffsetDateTime.now());
+    }
+
+    /**
+     * What the morning mail may carry (roadmap 22.1): the items the inbox is showing that the
+     * reader has neither read in the app nor already received by mail. Dismissed items are not
+     * here because the reader said they did not want them; read items are not here because the
+     * mailbox would be telling the reader something they already saw. The list is the screen's
+     * own, same order and same cap, so the letter and the inbox describe the same morning.
+     */
+    @Transactional(readOnly = true)
+    public List<NotificationItem> awaitingDelivery(UUID userId) {
+        return shown(userId).stream()
+                .filter(entry -> !entry.item().read())
+                .filter(entry -> entry.state() == null || entry.state().getNotifiedAt() == null)
+                .map(Shown::item)
+                .toList();
+    }
+
+    /**
+     * Latches the moment a mail carrying these episodes was accepted by the transport. A failed
+     * send latches nothing, so the next sweep will try again; a latch never clears, so a second
+     * sweep over the same morning cannot put a second copy in the mailbox. The keys come from
+     * {@link #awaitingDelivery}, which is what makes them episodes the reader was shown.
+     */
+    @Transactional
+    public void markNotified(UUID userId, List<String> keys, OffsetDateTime at) {
+        for (String key : keys) {
+            NotificationState state = stateFor(userId, key);
+            state.setNotifiedAt(at);
+            states.save(state);
+        }
     }
 
     /** Marks the named items read; keys the inbox is not showing are ignored. */
@@ -137,6 +159,30 @@ public class NotificationService {
             out.putIfAbsent(item.key(), item);
         }
         return out;
+    }
+
+    /**
+     * The one walk both surfaces share: every candidate the reader has not dismissed, newest
+     * first, capped at what a screen can show, each paired with the state that was read for it
+     * so the mail can tell an episode it has already carried from one it has not.
+     */
+    private List<Shown> shown(UUID userId) {
+        Map<String, NotificationState> byKey = states.findByUserId(userId).stream()
+                .collect(Collectors.toMap(NotificationState::getSignalKey, state -> state,
+                        (first, second) -> first));
+        List<Shown> visible = new ArrayList<>();
+        for (Candidate candidate : candidates(userId)) {
+            NotificationState state = byKey.get(candidate.key());
+            if (state != null && state.getDismissedAt() != null) {
+                continue;
+            }
+            visible.add(new Shown(candidate.item(state != null && state.getReadAt() != null), state));
+        }
+        visible.sort(Comparator.comparing(shown -> shown.item().at(),
+                Comparator.nullsLast(Comparator.<OffsetDateTime>reverseOrder())));
+        return visible.size() <= INBOX_LIMIT
+                ? List.copyOf(visible)
+                : List.copyOf(visible.subList(0, INBOX_LIMIT));
     }
 
     private void setRead(UUID userId, String key, OffsetDateTime now) {
@@ -239,5 +285,9 @@ public class NotificationService {
         NotificationItem item(boolean read) {
             return new NotificationItem(key, kind, title, subject, status, count, note, link, at, read);
         }
+    }
+
+    /** A visible item and the state row it was rendered from; null when the reader has no row. */
+    private record Shown(NotificationItem item, NotificationState state) {
     }
 }

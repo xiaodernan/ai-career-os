@@ -385,6 +385,17 @@ language with its payload — a retry re-sends the stored week as it was written
 rather than re-composing it in whatever the account speaks today. Nothing has to
 be configured for this; both languages ship in the image.
 
+The inbox's signals ride the same transport (22.1). Every morning at 07:30 UTC a
+sweep asks each account what is waiting — unread in the app and never mailed — and
+sends one plain-text letter naming up to ten items, counting the rest, with links
+back to the app. The latch is `notification_states.notified_at`, written only after
+the transport accepts: a refused morning is a warn line and tomorrow's sweep tries
+again, while an accepted letter is never repeated, and an item read or dismissed in
+the app is not mailed at all. `careeros.signals.cron` moves the clock, and on
+`console` each morning's letter is a log line. The letter's links are absolute and
+built from `APP_WEB_BASE_URL` — point it at the deployment's public URL, or every
+link in a real mailbox points at localhost.
+
 ## Health & first data
 
 - Backend liveness: `GET /api/v1/health` (no auth).

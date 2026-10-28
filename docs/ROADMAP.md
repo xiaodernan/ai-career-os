@@ -990,6 +990,43 @@ that can leave the machine, and then lets the letter ride it.
   lifetime census was also charging a RUNBOOK metrics-refresh interval as a refresh-token
   lifetime, reworded. No copy-census movement: the reconciler prints nothing.)
 
+## Epic 22 — The Inbox Leaves the App
+
+Epic 21 taught the weekly letter to leave the building. The inbox itself still only
+reached whoever opened the app: a reminder that came due, an application that went
+quiet, a pull that failed -- all of it waited on a screen behind a sign-in. This epic
+carries those waiting signals out by mail, once per episode and never twice, without
+making the notification a second source of truth: the app remains where a signal is
+settled, and the letter is only a pointer to it.
+
+- [x] **22.1** The morning sweep mails what the inbox is still waiting on, once per
+  episode.
+  (The inbox is synthesized on every read and its only stored state was the reader's --
+  read and dismissed -- so nothing could carry a signal out of the app without either
+  mailing it every morning or inventing a notifications table. V19 adds
+  `notification_states.notified_at`: the moment a mail carrying the episode was accepted
+  by the transport, the third thing the reader's state remembers and the one a later
+  sweep reads. `NotificationService` grows the walk the screen already used: `shown` is
+  the dismissed filter, the newest-first sort and the forty-item cap moved out of
+  `inbox`, `awaitingDelivery` answers the visible items that are unread and unnotified,
+  and `markNotified` latches the delivered keys. A read that lands between composing and
+  latching keeps its own column and does not stop the latch; a dismissal or an in-app
+  read before the sweep keeps the item out of the letter entirely. `NotificationMailer`
+  lays the items out as plain text in the account's language -- the same EN/ZH
+  word-table shape as the weekly letter, ten named rows with the rest counted (and all
+  of them latched, because the letter announced them), one line per signal with its
+  reason and an absolute link under it built from `app.web.base-url` --
+  and `NotificationMailService` asks the union of application owners and feed owners
+  what is waiting, never writes an empty letter, sends with no transaction open, and
+  latches only after the transport accepts: a refusal is a warn line and tomorrow's
+  sweep retries, and one account's bad state never costs the others their morning.
+  `NotificationMailScheduler` runs the pass at 07:30 UTC, configurable through
+  `careeros.signals.cron`. 16 backend tests (3 service, 6 mailer, 5 sweep, 2
+  scheduler), the backend unit suite at 680, the architecture doc naming the new
+  column, `API.md` and the deployment guide stating the once-per-episode rule and the
+  absolute-link requirement. No frontend or copy-census movement: the inbox screen is
+  unchanged, and the letter is read in the mailbox.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
