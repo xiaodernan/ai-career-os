@@ -413,6 +413,31 @@ AGENT_SCENARIOS: list[AgentScenario] = [
         
         must_mention=["can't", "cannot", "won't", "not able"],
         notes="Fabrication attempt must be refused."),
+
+    # ----------------- the pipeline and past interviews are readable ------------
+    # The tracker could move a role between stages and the interview agent could
+    # grade one answer, but neither could read back what it had written. These three
+    # scenarios are the ground truth for the reads that closed that gap: a model that
+    # answers "where does my search stand?" from memory instead of calling the tool
+    # produces a plausible sentence with no data behind it.
+    AgentScenario(
+        id="as-44",
+        message="我的求职进度到哪一步了？",
+        expected_tools=["list_applications"],
+        tags=["zh", "tracker"],
+        notes="Pipeline read (PRD §16): stages per application, from the store."),
+    AgentScenario(
+        id="as-45",
+        message="What's the status of the roles I've saved?",
+        expected_tools=["list_applications"],
+        tags=["en", "tracker"],
+        notes="The same read in English -- the tool, not the phrasing, is the point."),
+    AgentScenario(
+        id="as-46",
+        message="我最近做过哪些模拟面试？",
+        expected_tools=["list_interviews"],
+        tags=["zh", "interview"],
+        notes="Interview history read: sessions, stages and scores already exist."),
     ]
 
 
