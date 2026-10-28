@@ -56,6 +56,11 @@ public class SecurityConfig {
                         // pair, so the screen looked right and nothing was ever streamed.
                         .dispatcherTypeMatchers(DispatcherType.ASYNC, DispatcherType.ERROR).permitAll()
                         .requestMatchers("/api/v1/auth/**").permitAll()
+                        // The mail-settings page and its one-click POST (roadmap 23.1): a mail
+                        // client cannot carry a bearer token, so the account id plus an HMAC in
+                        // the path is the credential. This prefix serves nothing else; a route
+                        // added under it is public until it is moved.
+                        .requestMatchers("/api/v1/mail/**").permitAll()
                         .requestMatchers("/api-docs/**", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/api/v1/health").permitAll()
                         // Observability surface, pinned to the two exposed endpoints rather

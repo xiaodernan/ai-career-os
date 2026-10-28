@@ -4,6 +4,8 @@ import com.careeros.application.repository.ApplicationRepository;
 import com.careeros.auth.entity.User;
 import com.careeros.auth.repository.UserRepository;
 import com.careeros.job.repository.IngestionFeedRepository;
+import com.careeros.mail.service.MailList;
+import com.careeros.mail.service.MailPreferenceService;
 import com.careeros.notification.dto.NotificationDtos.NotificationItem;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -20,9 +22,12 @@ import org.springframework.stereotype.Service;
  * The morning sweep that carries the inbox out of the app (roadmap 22.1).
  *
  * <p>The audience is everyone the inbox could have something for: accounts with an application
- * on the board and accounts subscribing to a feed, unioned so one account is one letter. Each
- * account is asked what is still waiting -- unread in the app and never mailed -- and an empty
- * answer is the common case, which is why the sweep never writes an empty letter.
+ * on the board and accounts subscribing to a feed, unioned so one account is one letter, minus
+ * the accounts that turned this letter off (roadmap 23.1). An opt-out is read once per pass
+ * rather than per account, and it is silent by design -- a reader who asked for quiet is not a
+ * warn line. Each remaining account is asked what is still waiting -- unread in the app and
+ * never mailed -- and an empty answer is the common case, which is why the sweep never writes
+ * an empty letter.
  *
  * <p>The latch is written only after the transport accepts: a refused or missing account is a
  * warn line and the next morning tries again, while an accepted letter is remembered on the
@@ -48,22 +53,29 @@ public class NotificationMailService {
     private final IngestionFeedRepository feeds;
     private final UserRepository users;
     private final NotificationDeliveryMetrics metrics;
+    private final MailPreferenceService preferences;
 
     public NotificationMailService(NotificationService notifications, NotificationMailer mailer,
             ApplicationRepository applications, IngestionFeedRepository feeds,
-            UserRepository users, NotificationDeliveryMetrics metrics) {
+            UserRepository users, NotificationDeliveryMetrics metrics,
+            MailPreferenceService preferences) {
         this.notifications = notifications;
         this.mailer = mailer;
         this.applications = applications;
         this.feeds = feeds;
         this.users = users;
         this.metrics = metrics;
+        this.preferences = preferences;
     }
 
     /** One morning's pass; returns how many mailboxes received a letter. */
     public int mailPending() {
         int mailed = 0;
+        Set<UUID> stopped = preferences.optedOut(MailList.SIGNALS);
         for (UUID userId : audience()) {
+            if (stopped.contains(userId)) {
+                continue;
+            }
             try {
                 if (deliver(userId)) {
                     mailed++;
@@ -92,7 +104,7 @@ public class NotificationMailService {
             return false;
         }
         try {
-            mailer.send(to, waiting, account.get().getLocale());
+            mailer.send(userId, to, waiting, account.get().getLocale());
         } catch (RuntimeException e) {
             metrics.recordRefused();
             log.warn("the signal mail to {} was refused", userId, e);

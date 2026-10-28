@@ -1,6 +1,8 @@
 package com.careeros.report.service;
 
 import com.careeros.auth.service.EmailSender;
+import com.careeros.mail.service.MailLinks;
+import com.careeros.mail.service.MailList;
 import com.careeros.report.entity.WeeklyDigest;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -9,6 +11,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 import org.springframework.stereotype.Component;
 
 /**
@@ -69,7 +72,8 @@ public class WeeklyDigestMailer {
             "{title} at {company}",
             Map.of(),
             EN_WEEK,
-            EN_SHORT_WEEK);
+            EN_SHORT_WEEK,
+            "Stop these letters: {url}\n");
 
     private static final Words ZH = new Words(
             "你的求职周报（{date}）",
@@ -93,17 +97,23 @@ public class WeeklyDigestMailer {
             "{company} 的 {title}",
             ZH_STAGES,
             ZH_WEEK,
-            ZH_WEEK);
+            ZH_WEEK,
+            "不想再收到这些信：{url}\n");
 
     private final EmailSender email;
+    private final MailLinks links;
 
-    public WeeklyDigestMailer(EmailSender email) {
+    public WeeklyDigestMailer(EmailSender email, MailLinks links) {
         this.email = email;
+        this.links = links;
     }
 
     public void send(String to, WeeklyDigest letter) {
+        UUID userId = letter.getUserId();
         email.send(to, subject(letter.getWeekStart(), letter.getLocale()),
-                letterBody(letter.getWeekStart(), letter.getPayload(), letter.getLocale()));
+                letterBody(letter.getWeekStart(), letter.getPayload(), letter.getLocale(),
+                        links.page(userId)),
+                links.oneClick(userId, MailList.WEEKLY));
     }
 
     /** The subject names the week, so a mailbox sorted by subject still reads as a series. */
@@ -114,9 +124,10 @@ public class WeeklyDigestMailer {
 
     /**
      * The letter's body: the payload laid out, one line per reading it carries, in the
-     * language the letter was written in.
+     * language the letter was written in, with the way out at the end.
      */
-    static String letterBody(LocalDate weekStart, Map<String, Object> payload, String locale) {
+    static String letterBody(LocalDate weekStart, Map<String, Object> payload, String locale,
+                             String settingsUrl) {
         Words words = wordsFor(locale);
         StringBuilder body = new StringBuilder();
         body.append(fill(words.weekOf(), "date", weekStart.format(words.week()))).append('\n');
@@ -187,6 +198,7 @@ public class WeeklyDigestMailer {
             }
         }
 
+        body.append(fill(words.unsubscribe(), "url", settingsUrl));
         return body.toString();
     }
 
@@ -272,6 +284,7 @@ public class WeeklyDigestMailer {
             String titleAtCompany,
             Map<String, String> stages,
             DateTimeFormatter week,
-            DateTimeFormatter shortWeek) {
+            DateTimeFormatter shortWeek,
+            String unsubscribe) {
     }
 }

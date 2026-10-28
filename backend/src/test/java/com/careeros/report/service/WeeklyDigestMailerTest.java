@@ -1,17 +1,23 @@
 package com.careeros.report.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 import com.careeros.auth.service.EmailSender;
+import com.careeros.mail.service.MailLinks;
+import com.careeros.mail.service.MailList;
 import com.careeros.report.entity.WeeklyDigest;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 /**
  * The letter's readable half (roadmap 21.2).
@@ -24,6 +30,9 @@ import org.junit.jupiter.api.Test;
 class WeeklyDigestMailerTest {
 
     private static final LocalDate WEEK = LocalDate.of(2026, 10, 26);
+    private static final UUID READER = UUID.fromString("11111111-1111-4111-8111-111111111111");
+    private static final String SETTINGS = "https://careeros.example/settings/1/signature";
+    private static final MailLinks LINKS = new MailLinks("test-secret", "https://careeros.example");
 
     @Test
     void theLetterIsThePayloadLaidOutForAMailbox() {
@@ -43,7 +52,7 @@ class WeeklyDigestMailerTest {
                 Map.of("title", "Data Analyst", "daysSinceLastActivity", 12)));
         payload.put("signals", List.of("2 application(s) have gone quiet past 7 days."));
 
-        String letter = WeeklyDigestMailer.letterBody(WEEK, payload, "en");
+        String letter = WeeklyDigestMailer.letterBody(WEEK, payload, "en", SETTINGS);
 
         assertThat(WeeklyDigestMailer.subject(WEEK, "en"))
                 .isEqualTo("Your week in applications (26 Oct 2026)");
@@ -61,7 +70,7 @@ class WeeklyDigestMailerTest {
 
     @Test
     void aKeyThePayloadDoesNotCarryDropsItsLineInsteadOfPrintingAZero() {
-        String letter = WeeklyDigestMailer.letterBody(WEEK, Map.of("totalApplications", 4), "en");
+        String letter = WeeklyDigestMailer.letterBody(WEEK, Map.of("totalApplications", 4), "en", SETTINGS);
 
         assertThat(letter).contains("Applications on the board: 4");
         assertThat(letter).doesNotContain("active)");
@@ -80,7 +89,7 @@ class WeeklyDigestMailerTest {
         payload.put("stalledCount", 13);
         payload.put("stalled", stalled);
 
-        String letter = WeeklyDigestMailer.letterBody(WEEK, payload, "en");
+        String letter = WeeklyDigestMailer.letterBody(WEEK, payload, "en", SETTINGS);
 
         assertThat(letter).contains("  - Role 10 (10 days)", "  ... and 3 more");
         assertThat(letter).doesNotContain("Role 11");
@@ -91,14 +100,40 @@ class WeeklyDigestMailerTest {
     void theTransportReceivesTheRenderedLetterForTheAccount() {
         EmailSender email = mock(EmailSender.class);
         WeeklyDigest letter = new WeeklyDigest();
+        letter.setUserId(READER);
         letter.setWeekStart(WEEK);
         letter.setPayload(Map.of("totalApplications", 2));
 
-        new WeeklyDigestMailer(email).send("alice@example.com", letter);
+        new WeeklyDigestMailer(email, LINKS).send("alice@example.com", letter);
 
         verify(email).send("alice@example.com",
                 "Your week in applications (26 Oct 2026)",
-                "Week of 26 October 2026.\n\nApplications on the board: 2\n");
+                "Week of 26 October 2026.\n\nApplications on the board: 2\n"
+                        + "Stop these letters: " + LINKS.page(READER) + "\n",
+                LINKS.oneClick(READER, MailList.WEEKLY));
+    }
+
+    /**
+     * The Monday letter's way out names its own list (roadmap 23.1): a one-click from this
+     * letter must not also silence the morning signals, so the header carries the POST for
+     * the weekly list and nothing else.
+     */
+    @Test
+    void theMondayLetterCarriesTheOneClickForTheWeeklyListOnly() {
+        EmailSender email = mock(EmailSender.class);
+        WeeklyDigest letter = new WeeklyDigest();
+        letter.setUserId(READER);
+        letter.setWeekStart(WEEK);
+        letter.setPayload(Map.of("totalApplications", 2));
+
+        new WeeklyDigestMailer(email, LINKS).send("alice@example.com", letter);
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Map<String, String>> headers = ArgumentCaptor.forClass(Map.class);
+        verify(email).send(eq("alice@example.com"), anyString(), anyString(), headers.capture());
+        assertThat(headers.getValue()).containsEntry("List-Unsubscribe",
+                "<https://careeros.example/api/v1/mail/preferences/" + READER + "/"
+                        + LINKS.token(READER) + "/stop/weekly>");
     }
 
     @Test
@@ -119,7 +154,7 @@ class WeeklyDigestMailerTest {
                 Map.of("title", "Data Analyst", "daysSinceLastActivity", 12)));
         payload.put("signals", List.of("2 application(s) have gone quiet past 7 days."));
 
-        String letter = WeeklyDigestMailer.letterBody(WEEK, payload, "zh");
+        String letter = WeeklyDigestMailer.letterBody(WEEK, payload, "zh", SETTINGS);
 
         assertThat(WeeklyDigestMailer.subject(WEEK, "zh"))
                 .isEqualTo("你的求职周报（2026年10月26日）");
@@ -139,13 +174,16 @@ class WeeklyDigestMailerTest {
     void theTransportReceivesTheLettersOwnLanguage() {
         EmailSender email = mock(EmailSender.class);
         WeeklyDigest letter = new WeeklyDigest();
+        letter.setUserId(READER);
         letter.setWeekStart(WEEK);
         letter.setLocale("zh");
         letter.setPayload(Map.of("totalApplications", 2));
 
-        new WeeklyDigestMailer(email).send("alice@example.com", letter);
+        new WeeklyDigestMailer(email, LINKS).send("alice@example.com", letter);
 
         verify(email).send("alice@example.com", "你的求职周报（2026年10月26日）",
-                "2026年10月26日 这一周。\n\n板上投递：2\n");
+                "2026年10月26日 这一周。\n\n板上投递：2\n"
+                        + "不想再收到这些信：" + LINKS.page(READER) + "\n",
+                LINKS.oneClick(READER, MailList.WEEKLY));
     }
 }

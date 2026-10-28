@@ -17,6 +17,8 @@ import static org.mockito.Mockito.when;
 import com.careeros.application.repository.ApplicationRepository;
 import com.careeros.auth.entity.User;
 import com.careeros.auth.repository.UserRepository;
+import com.careeros.mail.service.MailList;
+import com.careeros.mail.service.MailPreferenceService;
 import com.careeros.report.dto.WeeklyDigestDtos.WeeklyDigestDto;
 import com.careeros.report.entity.WeeklyDigest;
 import com.careeros.report.repository.WeeklyDigestRepository;
@@ -60,6 +62,7 @@ class WeeklyDigestServiceTest {
     private UserRepository users;
     private WeeklyDigestMailer mailer;
     private WeeklyDigestDeliveryMetrics metrics;
+    private MailPreferenceService preferences;
     private WeeklyDigestService service;
 
     @BeforeEach
@@ -70,7 +73,10 @@ class WeeklyDigestServiceTest {
         users = mock(UserRepository.class);
         mailer = mock(WeeklyDigestMailer.class);
         metrics = mock(WeeklyDigestDeliveryMetrics.class);
-        service = new WeeklyDigestService(digests, applications, analysis, users, mailer, metrics);
+        preferences = mock(MailPreferenceService.class);
+        service = new WeeklyDigestService(digests, applications, analysis, users, mailer, metrics,
+                preferences);
+        when(preferences.receives(any(), eq(MailList.WEEKLY))).thenReturn(true);
         when(digests.save(any(WeeklyDigest.class))).thenAnswer(invocation -> {
             WeeklyDigest letter = invocation.getArgument(0);
             if (letter.getId() == null) {
@@ -330,6 +336,29 @@ class WeeklyDigestServiceTest {
 
         assertThat(sent).isZero();
         verify(mailer, never()).send(anyString(), any(WeeklyDigest.class));
+        verifyNoInteractions(metrics);
+    }
+
+    /**
+     * A reader who turned the Monday letter off (roadmap 23.1) still gets the week on the
+     * dashboard, but the transport is never asked and the row is not touched: no attempt is
+     * counted, because asking a relay that was forbidden is not an attempt.
+     */
+    @Test
+    void anAccountThatTurnedTheMondayLetterOffIsNotHandedToTheTransport() {
+        WeeklyDigest refused = letter(ALICE, WEEK, 1, "relay said 550");
+        when(preferences.receives(ALICE, MailList.WEEKLY)).thenReturn(false);
+        when(digests
+                .findByDeliveredAtIsNullAndDeliveryAttemptsGreaterThanAndDeliveryAttemptsLessThanOrderByWeekStartAscIdAsc(
+                        anyInt(), anyInt(), any(Pageable.class)))
+                .thenReturn(List.of(refused));
+
+        int sent = service.retryUndelivered();
+
+        assertThat(sent).isZero();
+        verify(mailer, never()).send(anyString(), any(WeeklyDigest.class));
+        verify(digests, never()).save(any(WeeklyDigest.class));
+        assertThat(refused.getDeliveryAttempts()).isEqualTo(1);
         verifyNoInteractions(metrics);
     }
 

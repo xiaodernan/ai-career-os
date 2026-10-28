@@ -1,8 +1,9 @@
-"""A knob no code reads is a knob that does nothing: twenty-four `app.*` keys ship, two are read by nobody.
+"""A knob no code reads is a knob that does nothing: twenty-five `app.*` keys ship, two are read by nobody.
 
-`application.yml`'s `app:` block writes twenty-four leaves. Twenty-two of them reach a reader that some
-service calls: thirteen through a Java getter, one (`app.web.base-url`) through a `@Value` placeholder in
-`AuthService`'s constructor that never appears in `AppProperties`, and eight `app.email.*` leaves through
+`application.yml`'s `app:` block writes twenty-five leaves. Twenty-three of them reach a reader that some
+service calls: thirteen through a Java getter, two (`app.web.base-url` through a `@Value` placeholder in
+`AuthService`'s constructor and `app.mail.link-secret` in `MailLinks`'s) that never appear in
+`AppProperties`, and eight `app.email.*` leaves through
 `EmailConfig`'s one transport bean. One (`app.storage.enabled`) is not written by the shipped file but
 is armed by `@ConditionalOnProperty` on the MinIO bean, whose `matchIfMissing = true` makes silence mean "on".
 The last two -- `app.upload.max-file-size-bytes` and `app.upload.presigned-url-ttl-seconds` -- bind fields in
@@ -31,7 +32,7 @@ not in the prod one, because the prod compose re-arms them from the MinIO root p
 the backend would sign in to production with the dev defaults the yml interpolates), and the **env-only key**
 (`app.email.console.log-body` is reachable from the environment, is stated in `docs/API.md`, is named in no
 env example and written in no yml). What this gate reports is a population, not a bug list: 13 accessor
-readers, 9 `@Value` leaf binders (the web base-url and the eight mail knobs) plus the env-only mail switch,
+readers, 10 `@Value` leaf binders (the web base-url, the mail link secret and the eight mail knobs) plus the env-only mail switch,
 1 condition, 2 bound-but-unread leaves, 1 field that is the shadow of a live key.
 Two of those readings are each taken twice on purpose, because each pair was found by turning one of them off:
 `AppProperties`'s nested classes are enumerated from the class declarations *and* from the `private final`
@@ -86,10 +87,10 @@ APP_LEAVES = frozenset({
     "ai-service.base-url", "ratelimit.enabled", "ratelimit.auth-per-minute", "ratelimit.ai-per-minute",
     "upload.max-file-size-bytes", "upload.presigned-url-ttl-seconds",
     "email.provider", "email.from", "email.smtp.host", "email.smtp.port", "email.smtp.username",
-    "email.smtp.password", "email.smtp.starttls", "email.smtp.ssl",
+    "email.smtp.password", "email.smtp.starttls", "email.smtp.ssl", "mail.link-secret",
 })
 HOLDERS = frozenset({"Cors", "Jwt", "Internal", "Storage", "AiService", "Ratelimit", "Upload"})
-HOLDER_KEYS = frozenset({"cors", "web", "jwt", "internal", "storage", "ai-service", "ratelimit", "upload", "email"})
+HOLDER_KEYS = frozenset({"cors", "web", "jwt", "internal", "storage", "ai-service", "ratelimit", "upload", "email", "mail"})
 
 # leaf -> (holder, field, accessor, the files that call it), measured at the ref this gate lands on.
 READERS = {
@@ -361,13 +362,13 @@ def armed_bytes() -> int:
 
 # ---------------------------------------------------------------- the cases
 
-def test_the_app_block_writes_twenty_four_leaves_and_each_binds_by_one_of_three_mechanisms():
+def test_the_app_block_writes_twenty_five_leaves_and_each_binds_by_one_of_three_mechanisms():
     leaves = app_leaves()
     assert len(leaves) >= 15, (
         f"the `app:` block parsed to {len(leaves)} leaves, below the 15 the shipped file writes -- the parser "
         f"stopped following the indentation, so every number below is a reading of nothing")
     assert frozenset(leaves) == APP_LEAVES, (
-        f"`app:`'s leaves are not the twenty-four pinned here: extra={sorted(frozenset(leaves) - APP_LEAVES)} "
+        f"`app:`'s leaves are not the twenty-five pinned here: extra={sorted(frozenset(leaves) - APP_LEAVES)} "
         f"missing={sorted(APP_LEAVES - frozenset(leaves))} -- a new key needs a binder and a reader before it "
         f"is a configuration rather than a comment")
 
@@ -650,14 +651,14 @@ def test_the_cap_the_dead_knob_would_set_is_a_compile_time_constant_and_the_cont
         "quotes it")
 
 
-def test_twenty_one_leaves_reach_the_environment_and_the_three_that_do_not_are_literals_in_a_file():
+def test_twenty_two_leaves_reach_the_environment_and_the_three_that_do_not_are_literals_in_a_file():
     leaves = app_leaves()
     interpolated, literal = {}, {}
     for key, value in leaves.items():
         match = ENV_INTERP.match(value)
         (interpolated if match else literal)[key] = (match["var"] if match else value)
-    assert len(interpolated) == 21 and len(literal) == 3, (
-        f"{len(interpolated)} of the twenty-four leaves interpolate an `${{ENV}}` and {len(literal)} are literals; "
+    assert len(interpolated) == 22 and len(literal) == 3, (
+        f"{len(interpolated)} of the twenty-five leaves interpolate an `${{ENV}}` and {len(literal)} are literals; "
         f"the split is what makes a knob deployable, so a pair that moved needs this carrier list rewritten")
     assert frozenset(literal) == FILE_ONLY_LEAVES, (
         f"the file-only leaves are {sorted(literal)}: ratelimit.enabled is a shipped default an operator edits in "
@@ -721,7 +722,7 @@ def test_the_open_scan_charges_an_app_dot_mention_to_the_config_namespace_only_w
     keys = {r[2] for r in admitted}
     allowed = frozenset(APP_LEAVES) | {EMAIL_KEY, "email.console", "email.smtp", "storage.enabled"}
     assert keys <= allowed, (
-        f"admitted rows name keys outside the twenty-four leaves plus the env-only email key, the mail holder's "
+        f"admitted rows name keys outside the twenty-five leaves plus the env-only email key, the mail holder's "
         f"segment and the condition's storage.enabled: {sorted(keys - allowed)} -- either a new key needs a "
         f"binder above, or the holder rule let a module path through")
     # charged against the LEDGER, not against the rule's own predicate: comparing a refusal to the same

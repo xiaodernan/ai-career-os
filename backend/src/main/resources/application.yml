@@ -59,6 +59,11 @@ app:
       password: ${APP_EMAIL_SMTP_PASSWORD:}
       starttls: ${APP_EMAIL_SMTP_STARTTLS:true}
       ssl: ${APP_EMAIL_SMTP_SSL:false}
+  # The key that signs the unsubscribe links the letters carry (roadmap 23.1). It never
+  # leaves the server; rotating it retires every link ever mailed at once, which is the
+  # answer to a forwarded letter or a leaked mailbox.
+  mail:
+    link-secret: ${APP_MAIL_LINK_SECRET:dev-only-mail-link-secret-please-change-me-0123456789abcdef}
   jwt:
     secret: ${JWT_SECRET:dev-only-secret-please-change-me-0123456789abcdef0123456789abcdef}
     access-ttl-minutes: ${JWT_ACCESS_TTL_MINUTES:15}

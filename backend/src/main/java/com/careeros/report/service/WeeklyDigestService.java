@@ -4,6 +4,8 @@ import com.careeros.application.repository.ApplicationRepository;
 import com.careeros.auth.entity.User;
 import com.careeros.auth.repository.UserRepository;
 import com.careeros.common.Paging;
+import com.careeros.mail.service.MailList;
+import com.careeros.mail.service.MailPreferenceService;
 import com.careeros.report.dto.WeeklyDigestDtos.WeeklyDigestDto;
 import com.careeros.report.entity.WeeklyDigest;
 import com.careeros.report.repository.WeeklyDigestRepository;
@@ -73,16 +75,18 @@ public class WeeklyDigestService {
     private final UserRepository users;
     private final WeeklyDigestMailer mailer;
     private final WeeklyDigestDeliveryMetrics metrics;
+    private final MailPreferenceService preferences;
 
     public WeeklyDigestService(WeeklyDigestRepository digests, ApplicationRepository applications,
             AnalysisService analysis, UserRepository users, WeeklyDigestMailer mailer,
-            WeeklyDigestDeliveryMetrics metrics) {
+            WeeklyDigestDeliveryMetrics metrics, MailPreferenceService preferences) {
         this.digests = digests;
         this.applications = applications;
         this.analysis = analysis;
         this.users = users;
         this.mailer = mailer;
         this.metrics = metrics;
+        this.preferences = preferences;
     }
 
     /** A user's letters, newest week first. */
@@ -192,11 +196,21 @@ public class WeeklyDigestService {
      * attempt, and the last-delivered marker moves only on an acceptance. A refusal therefore
      * cannot make the marker claim a delivery the mailbox never received.
      *
-     * @return whether this call put the letter in a mailbox; a latch hit or an account row
-     *     that is gone is {@code false}, because nothing was sent
+     * <p>An account that turned the Monday letter off (23.1) is not handed to the transport at
+     * all -- not by the compose sweep that just wrote its letter, and not by the retry clock
+     * that would otherwise keep asking. That is not an attempt, so the attempt counter stays
+     * where it was and the letter keeps its place on the reader's dashboard, which was never
+     * part of the mail consent. A manual compose is likewise untouched: the reader pressed the
+     * button in the app, and composing is not sending.
+     *
+     * @return whether this call put the letter in a mailbox; a latch hit, an opted-out account
+     *     or an account row that is gone is {@code false}, because nothing was sent
      */
     boolean deliver(UUID userId, WeeklyDigest letter) {
         if (letter.getDeliveredAt() != null) {
+            return false;
+        }
+        if (!preferences.receives(userId, MailList.WEEKLY)) {
             return false;
         }
         Optional<User> owner = users.findById(userId);

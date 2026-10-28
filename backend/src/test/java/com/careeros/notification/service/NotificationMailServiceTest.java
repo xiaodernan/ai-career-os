@@ -16,10 +16,13 @@ import com.careeros.application.repository.ApplicationRepository;
 import com.careeros.auth.entity.User;
 import com.careeros.auth.repository.UserRepository;
 import com.careeros.job.repository.IngestionFeedRepository;
+import com.careeros.mail.service.MailList;
+import com.careeros.mail.service.MailPreferenceService;
 import com.careeros.notification.dto.NotificationDtos.NotificationItem;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -46,6 +49,7 @@ class NotificationMailServiceTest {
     private IngestionFeedRepository feeds;
     private UserRepository users;
     private NotificationDeliveryMetrics metrics;
+    private MailPreferenceService preferences;
     private NotificationMailService service;
 
     @BeforeEach
@@ -56,10 +60,12 @@ class NotificationMailServiceTest {
         feeds = mock(IngestionFeedRepository.class);
         users = mock(UserRepository.class);
         metrics = mock(NotificationDeliveryMetrics.class);
+        preferences = mock(MailPreferenceService.class);
         service = new NotificationMailService(notifications, mailer, applications, feeds, users,
-                metrics);
+                metrics, preferences);
         when(applications.distinctUserIds()).thenReturn(List.of());
         when(feeds.distinctUserIds()).thenReturn(List.of());
+        when(preferences.optedOut(MailList.SIGNALS)).thenReturn(Set.of());
     }
 
     private static NotificationItem item(String key) {
@@ -85,7 +91,7 @@ class NotificationMailServiceTest {
 
         verify(notifications).awaitingDelivery(ALICE);
         verify(notifications).awaitingDelivery(BOB);
-        verify(mailer, never()).send(anyString(), any(), any());
+        verify(mailer, never()).send(any(), anyString(), any(), any());
         verify(metrics).recordSweep(any());
         verify(metrics, never()).recordSent(any());
     }
@@ -99,7 +105,7 @@ class NotificationMailServiceTest {
 
         assertThat(service.mailPending()).isEqualTo(1);
 
-        verify(mailer).send("alice@example.com", waiting, "zh");
+        verify(mailer).send(ALICE, "alice@example.com", waiting, "zh");
         verify(notifications).markNotified(eq(ALICE), eq(List.of("a", "b")), any());
         verify(metrics).recordSent(any());
     }
@@ -112,11 +118,11 @@ class NotificationMailServiceTest {
         when(users.findById(ALICE)).thenReturn(Optional.of(account(ALICE, "alice@example.com", "en")));
         when(users.findById(BOB)).thenReturn(Optional.of(account(BOB, "bob@example.com", "en")));
         doThrow(new MailSendException("relay said 550")).when(mailer)
-                .send(eq("alice@example.com"), any(), anyString());
+                .send(eq(ALICE), eq("alice@example.com"), any(), anyString());
 
         assertThat(service.mailPending()).isEqualTo(1);
 
-        verify(mailer).send(eq("bob@example.com"), any(), anyString());
+        verify(mailer).send(eq(BOB), eq("bob@example.com"), any(), anyString());
         verify(notifications, never()).markNotified(eq(ALICE), any(), any());
         verify(notifications).markNotified(eq(BOB), any(), any());
         verify(metrics).recordRefused();
@@ -133,7 +139,7 @@ class NotificationMailServiceTest {
 
         assertThat(service.mailPending()).isEqualTo(1);
 
-        verify(mailer, times(1)).send(eq("carol@example.com"), any(), anyString());
+        verify(mailer, times(1)).send(eq(CAROL), eq("carol@example.com"), any(), anyString());
         verify(notifications, never()).markNotified(eq(ALICE), any(), any());
         verify(notifications, never()).markNotified(eq(BOB), any(), any());
         verify(notifications).markNotified(eq(CAROL), any(), any());
@@ -150,7 +156,22 @@ class NotificationMailServiceTest {
 
         assertThat(service.mailPending()).isEqualTo(1);
 
-        verify(mailer).send(eq("bob@example.com"), any(), anyString());
+        verify(mailer).send(eq(BOB), eq("bob@example.com"), any(), anyString());
+    }
+
+    @Test
+    void an_account_that_turned_the_letter_off_is_not_even_asked_what_is_waiting() {
+        when(applications.distinctUserIds()).thenReturn(List.of(ALICE, BOB));
+        when(preferences.optedOut(MailList.SIGNALS)).thenReturn(Set.of(ALICE));
+        when(notifications.awaitingDelivery(BOB)).thenReturn(List.of(item("b")));
+        when(users.findById(BOB)).thenReturn(Optional.of(account(BOB, "bob@example.com", "en")));
+
+        assertThat(service.mailPending()).isEqualTo(1);
+
+        verify(notifications, never()).awaitingDelivery(ALICE);
+        verify(mailer, times(1)).send(eq(BOB), eq("bob@example.com"), any(), anyString());
+        verify(notifications, never()).markNotified(eq(ALICE), any(), any());
+        verify(metrics).recordSweep(any());
     }
 
     @Test

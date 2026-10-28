@@ -49,6 +49,9 @@ curl -f http://localhost:3000
 - [ ] `APP_EMAIL_PROVIDER=smtp` with a reachable relay and a from address it
   accepts — the console transport logs resets instead of mailing them (see
   [Email](#email))
+- [ ] `APP_MAIL_LINK_SECRET` set to 32+ random bytes (`openssl rand -base64 48`).
+  It signs the unsubscribe links in every letter; the dev default is published in
+  this repository, so leaving it in prod lets anyone forge a stop-link
 - [ ] Reverse proxy (nginx/Traefik/Caddy) terminates TLS and forwards to:
   - Frontend: `http://frontend:3000`
   - Backend API: `http://backend:8080`
@@ -348,8 +351,8 @@ test.
 
 ## Email
 
-Outbound mail (password resets and the weekly letter) leaves through the transport
-`APP_EMAIL_PROVIDER` names:
+Outbound mail (password resets, the Monday letter and the morning signal mail)
+leaves through the transport `APP_EMAIL_PROVIDER` names:
 
 - `console` (the default) logs each letter instead of sending it. The body — a
   reset link carrying a usable token — is withheld unless
@@ -388,6 +391,22 @@ heartbeat (22.4): `careeros.digest.last.sweep.timestamp` moves after every compl
 compose, with or without letters, and `CareerOSDigestSweepStale` pages at eight days — so
 a wrong `careeros.digest.cron` cannot pass for a quiet week
 (`docs/RUNBOOK.md#the-monday-letter-was-never-written`).
+
+Every letter carries a way out (23.1). Both mails end with a settings link and
+go out with the `List-Unsubscribe` / `List-Unsubscribe-Post` headers, so a
+mailbox can offer one-click stop without a password. The link is its own
+credential: `/api/v1/mail/preferences/{userId}/{token}` where the token is an
+HMAC-SHA256 of the account id under `APP_MAIL_LINK_SECRET`, compared in constant
+time; nothing is stored per link, and rotating the secret retires every link
+already mailed (readers can still unsubscribe from the next letter). Page opens
+change nothing — mail scanners prefetch links — and each dial (`weekly` for the
+Monday letter, `signals` for the morning inbox mail) is flipped by a POST. The
+choice lives in `mail_preferences`; no row means both are on. The Monday sweep
+skips an account that turned the letter off without counting a delivery attempt,
+and the morning sweep never asks such an account what is waiting. Composing from
+the dashboard still files the week's letter — the preference silences the mail,
+not the archive. The app refuses to start when the secret is blank: an HMAC with
+no key would make every account's link forgeable.
 
 The inbox's signals ride the same transport (22.1). Every morning at 07:30 UTC a
 sweep asks each account what is waiting — unread in the app and never mailed — and

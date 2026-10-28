@@ -24,7 +24,11 @@ reachable from a browser.
   `/api-docs/ui`, and the filter admits both spellings), CORS preflight
   (`OPTIONS /**`), the observability pair `/actuator/health` and
   `/actuator/prometheus` (read-only Micrometer metrics; restrict the scrape at
-  the reverse proxy in production if metrics must not be public), and the
+  the reverse proxy in production if metrics must not be public), the
+  signed-link mail-settings page `/api/v1/mail/**` (its path is its own
+  credential — an HMAC-SHA256 of the account id under `app.mail.link-secret`,
+  compared in constant time; forge one and the route is a 404, but it still
+  answers without a session so a mailbox can unsubscribe in one click), and the
   internal surface `/api/internal/**` (guarded below).
 
 ## Service-to-service authentication (ai-service)

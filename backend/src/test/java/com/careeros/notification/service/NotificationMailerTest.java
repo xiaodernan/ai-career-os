@@ -1,15 +1,22 @@
 package com.careeros.notification.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 import com.careeros.auth.service.EmailSender;
+import com.careeros.mail.service.MailLinks;
+import com.careeros.mail.service.MailList;
 import com.careeros.notification.dto.NotificationDtos.NotificationItem;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 /**
  * The signal mail's readable half (roadmap 22.1).
@@ -21,6 +28,8 @@ import org.junit.jupiter.api.Test;
  * signal's own names pass through as the reader wrote them.
  */
 class NotificationMailerTest {
+
+    private static final String SETTINGS = "https://careeros.example/settings/1/signature";
 
     private static NotificationItem item(String kind, String title, String subject, Integer count,
                                          String note, String link) {
@@ -46,7 +55,7 @@ class NotificationMailerTest {
                 item(NotificationService.KIND_INGESTION_CREATED, "Hiring board", "", 3, null,
                         "/ingestion"));
 
-        String body = NotificationMailer.body(waiting, "en", "https://careeros.example");
+        String body = NotificationMailer.body(waiting, "en", "https://careeros.example", SETTINGS);
 
         assertThat(NotificationMailer.subject(waiting.size(), "en"))
                 .isEqualTo("Career OS: 4 signals are waiting in your inbox");
@@ -59,7 +68,8 @@ class NotificationMailerTest {
                 "  Feed answered HTTP 503",
                 "  https://careeros.example/ingestion",
                 "- Hiring board — last night's pull proposed 3 new postings",
-                "a signal is mailed at most once");
+                "a signal is mailed at most once",
+                "Stop these letters: " + SETTINGS);
     }
 
     @Test
@@ -68,7 +78,7 @@ class NotificationMailerTest {
                 item(NotificationService.KIND_INGESTION_CREATED, "Hiring board", "", 1, null,
                         "/ingestion"));
 
-        String body = NotificationMailer.body(waiting, "en", "http://localhost:3000");
+        String body = NotificationMailer.body(waiting, "en", "http://localhost:3000", SETTINGS);
 
         assertThat(NotificationMailer.subject(waiting.size(), "en"))
                 .isEqualTo("Career OS: a signal is waiting in your inbox");
@@ -84,7 +94,7 @@ class NotificationMailerTest {
                     "/applications?application=app-" + i));
         }
 
-        String body = NotificationMailer.body(waiting, "en", "http://localhost:3000");
+        String body = NotificationMailer.body(waiting, "en", "http://localhost:3000", SETTINGS);
 
         assertThat(body).contains("Role 10", "  ... and 3 more");
         assertThat(body).doesNotContain("Role 11");
@@ -97,7 +107,7 @@ class NotificationMailerTest {
                 item(NotificationService.KIND_REMINDER, "", "", null, null, "/applications"),
                 item(NotificationService.KIND_INGESTION_FAILED, "", "", null, "boom", "/ingestion"));
 
-        String body = NotificationMailer.body(waiting, "en", "http://localhost:3000");
+        String body = NotificationMailer.body(waiting, "en", "http://localhost:3000", SETTINGS);
 
         assertThat(body).contains("- A role at Acme — a reminder you set has come due",
                 "- An application — a reminder you set has come due",
@@ -110,7 +120,7 @@ class NotificationMailerTest {
                 item(NotificationService.KIND_INGESTION_FAILED, "Hiring board", "", null,
                         "Feed answered HTTP 503", "/ingestion"));
 
-        String body = NotificationMailer.body(waiting, "zh", "https://careeros.example/");
+        String body = NotificationMailer.body(waiting, "zh", "https://careeros.example/", SETTINGS);
 
         assertThat(NotificationMailer.subject(waiting.size(), "zh"))
                 .isEqualTo("Career OS：收件箱里有 3 条待看的信号");
@@ -121,20 +131,49 @@ class NotificationMailerTest {
                 "- Hiring board —— 昨晚的抓取失败了",
                 "  Feed answered HTTP 503",
                 "  https://careeros.example/ingestion",
-                "同一条信号最多寄一次。");
+                "同一条信号最多寄一次。",
+                "不想再收到这些信：" + SETTINGS);
     }
 
     @Test
     void the_transport_receives_the_rendered_letter_for_the_account() {
         EmailSender email = mock(EmailSender.class);
+        MailLinks links = new MailLinks("test-secret", "https://careeros.example");
+        UUID user = UUID.fromString("11111111-1111-4111-8111-111111111111");
 
-        new NotificationMailer(email, "https://careeros.example").send(
-                "alice@example.com", List.of(reminder()), "zh");
+        new NotificationMailer(email, links).send(user, "alice@example.com",
+                List.of(reminder()), "zh");
 
         verify(email).send("alice@example.com", "Career OS：收件箱里有 1 条待看的信号",
                 "收件箱里等你处理的信号：\n\n"
                         + "- Acme 的 Senior Analyst —— 你设置的提醒已经到期\n"
                         + "  https://careeros.example/applications?application=app-1\n\n"
-                        + "在应用里读过或处理之后，这条信号就会安静下来；同一条信号最多寄一次。\n");
+                        + "在应用里读过或处理之后，这条信号就会安静下来；同一条信号最多寄一次。\n"
+                        + "不想再收到这些信：" + links.page(user) + "\n",
+                links.oneClick(user, MailList.SIGNALS));
+    }
+
+    /**
+     * The way out the mailbox itself can press (roadmap 23.1): the header names the POST that
+     * stops this letter, not the page, so a client that offers "unsubscribe" settles it
+     * without opening anything, and the page the body links to is the read-only one.
+     */
+    @Test
+    void the_letter_carries_the_one_click_unsubscribe_for_this_account() {
+        EmailSender email = mock(EmailSender.class);
+        MailLinks links = new MailLinks("test-secret", "https://careeros.example");
+        UUID user = UUID.fromString("11111111-1111-4111-8111-111111111111");
+
+        new NotificationMailer(email, links).send(user, "alice@example.com",
+                List.of(reminder()), "en");
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Map<String, String>> headers = ArgumentCaptor.forClass(Map.class);
+        verify(email).send(eq("alice@example.com"), anyString(), anyString(), headers.capture());
+        assertThat(headers.getValue())
+                .containsEntry("List-Unsubscribe",
+                        "<https://careeros.example/api/v1/mail/preferences/" + user + "/"
+                                + links.token(user) + "/stop/signals>")
+                .containsEntry("List-Unsubscribe-Post", "List-Unsubscribe=One-Click");
     }
 }

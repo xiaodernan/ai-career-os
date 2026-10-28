@@ -250,6 +250,28 @@ Nothing has to be enabled; `careeros.signals.cron` moves the clock.
 | POST | `/notifications/read-all` | marks every item the inbox is showing read; answers the fresh inbox, the same shape GET /notifications answers |
 | POST | `/notifications/dismiss` | `{key}` → files one item away and answers the fresh inbox: {items[], unread, generatedAt} |
 
+### Mail preferences (`/mail`)
+
+The way out of every letter (roadmap 23.1). Both mails carry a footer link to this
+page and the `List-Unsubscribe` / `List-Unsubscribe-Post` headers, so a mailbox can
+offer one-click stop without the reader typing a password. The link is its own
+credential: the token is an HMAC-SHA256 of the account id under
+`app.mail.link-secret`, so the page needs no session, nothing is stored per link,
+and rotating the secret retires every link that was ever mailed.
+
+Two letters, two dials: `weekly` is the Monday digest, `signals` is the morning
+inbox mail. No row means both are on. The GET only renders the page — mail
+scanners prefetch links, so a read that flipped a switch would unsubscribe readers
+who never clicked — and every change is a POST that answers the re-rendered page.
+These routes are the signed-link surface and are the only `/api/v1` paths besides
+auth, health and the metrics scrape that need no bearer token.
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/mail/preferences/{userId}/{token}` | the settings page as HTML with Cache-Control: no-store and X-Robots-Tag: noindex, in the account's language, showing both dials; changes nothing |
+| POST | `/mail/preferences/{userId}/{token}/stop/{list}` | turns `list` (`weekly` or `signals`) off and answers the re-rendered page with a saved notice; a forged token or unknown list is 404 |
+| POST | `/mail/preferences/{userId}/{token}/start/{list}` | turns `list` back on and answers the re-rendered page with a saved notice |
+
 ### Growth engines (`/growth`)
 
 The granular 10.x engines, each asked on its own. The 10.2 aggregate

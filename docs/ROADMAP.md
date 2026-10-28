@@ -1092,6 +1092,62 @@ settled, and the letter is only a pointer to it.
   heartbeat assertions, the backend unit suite at 686 and the integration suite at 69,
   the alarms/docs gates passing, no frontend or copy-census movement.)
 
+## Epic 23 — The Letters Can Be Stopped
+
+Epic 22 finished the outbound loop: the inbox and the week both leave the app on a
+cadence, and both are metered while they do. What neither letter could do was stop. An
+account that no longer wanted the Monday digest or the morning signals had no switch
+anywhere -- not in the mail, not in the app -- so the only way out a mailbox offers is
+the spam button, and a spam report costs every letter the install sends after it. This
+epic gives both lists a stored preference, a signed page a mailbox can open without a
+password, and the RFC 8058 headers mail clients read; the sweeps obey the preference
+and the dashboard archive does not: a reader can stop the mail without losing the
+record.
+
+- [x] **23.1** Every letter carries a way out, and the clocks obey it.
+  (Two lists, two dials -- `weekly` for the Monday letter and `signals` for the morning
+  inbox mail -- stored in V20's `mail_preferences`, one row per account, absence meaning
+  both on: the shipped default is what an account that never visited the page gets, and a
+  row that turns a dial back on is written rather than deleted, so "on" is a value the
+  reader chose and not a missing row. `MailList` names the two and owns the mapping to
+  their columns; `MailPreferenceService` answers `receives(userId, list)` with the absent
+  default and `optedOut(list)` with the set of accounts that said no, read once per
+  sweep, so the morning pass can skip a reader before asking what is waiting and the
+  Monday `deliver` can return before the attempt counter moves -- turning the mail off is
+  not a refusal, so it must not spend one of the five retries or page the relay.
+
+  The link is its own credential. `MailLinks` signs `careeros-mail-preference:<userId>`
+  with HMAC-SHA256 under `app.mail.link-secret`, URL-safe and unpadded, and compares the
+  presented token in constant time: no per-link row, no expiry to sweep, and rotating the
+  secret retires every link ever mailed -- the answer to a forwarded letter or a leaked
+  mailbox. A blank secret stops the boot instead of signing with an empty key, which would
+  make every account's URL forgeable. `app.web.base-url` prefixes the page because the
+  reader's origin is the app that proxies the backend, and a trailing slash in that knob
+  does not double the separator.
+
+  The page is server-rendered and bilingual, in the account's own language like the
+  letters: `MailPreferenceController` serves `/api/v1/mail/preferences/{userId}/{token}`
+  as HTML (`no-store`, `X-Robots-Tag: noindex`, because it states private settings) with
+  one section per list and a POST button each. The GET changes nothing -- mail scanners
+  prefetch every URL in a letter, so a read that flipped a switch would unsubscribe
+  readers who never clicked -- and a GET on either POST URL is a 405. A forged token, an
+  unknown account and an unknown list are one 404 and touch no state. The prefix is
+  admitted by `SecurityConfig` without a bearer because a mailbox cannot send one, and
+  `SECURITY.md`'s public-routes list names it beside auth and health.
+
+  Both letters carry the footer and the headers: `EmailSender` grew a header map so the
+  RFC 8058 pair (`List-Unsubscribe: <.../stop/{list}>`,
+  `List-Unsubscribe-Post: List-Unsubscribe=One-Click`) reaches the relay, and
+  `SmtpEmailSender` builds a UTF-8 `MimeMessage` because a Chinese subject cannot ride a
+  `SimpleMailMessage`; the console transport logs header names only, so a token URL never
+  leaks by default. The Monday letter's one-click names `weekly` and the signal letter's
+  names `signals`, so a one-click from one letter can never silence the other.
+
+  26 backend tests (7 for the signed links, 5 for the stored preference, 8 for the
+  page, and the mailers, sweeps and transport updated for the new signatures and
+  headers), the backend unit suite at 712 and the integration suite at 69, the
+  API/knob/security/env doc gates passing, no frontend or copy-census movement.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

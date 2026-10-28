@@ -1,9 +1,11 @@
 package com.careeros.notification.service;
 
 import com.careeros.auth.service.EmailSender;
+import com.careeros.mail.service.MailLinks;
+import com.careeros.mail.service.MailList;
 import com.careeros.notification.dto.NotificationDtos.NotificationItem;
 import java.util.List;
-import org.springframework.beans.factory.annotation.Value;
+import java.util.UUID;
 import org.springframework.stereotype.Component;
 
 /**
@@ -43,7 +45,8 @@ public class NotificationMailer {
             "{title} at {company}",
             "A scheduled pull",
             "  ... and {n} more\n",
-            "Reading or acting in the app settles these, and a signal is mailed at most once.\n");
+            "Reading or acting in the app settles these, and a signal is mailed at most once.\n",
+            "Stop these letters: {url}\n");
 
     private static final Words ZH = new Words(
             "Career OS：收件箱里有 {n} 条待看的信号",
@@ -60,19 +63,21 @@ public class NotificationMailer {
             "{company} 的 {title}",
             "一次定时抓取",
             "  …… 另有 {n} 条\n",
-            "在应用里读过或处理之后，这条信号就会安静下来；同一条信号最多寄一次。\n");
+            "在应用里读过或处理之后，这条信号就会安静下来；同一条信号最多寄一次。\n",
+            "不想再收到这些信：{url}\n");
 
     private final EmailSender email;
-    private final String baseUrl;
+    private final MailLinks links;
 
-    public NotificationMailer(EmailSender email,
-            @Value("${app.web.base-url:http://localhost:3000}") String baseUrl) {
+    public NotificationMailer(EmailSender email, MailLinks links) {
         this.email = email;
-        this.baseUrl = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
+        this.links = links;
     }
 
-    public void send(String to, List<NotificationItem> items, String locale) {
-        email.send(to, subject(items.size(), locale), body(items, locale, baseUrl));
+    public void send(UUID userId, String to, List<NotificationItem> items, String locale) {
+        email.send(to, subject(items.size(), locale),
+                body(items, locale, links.webRoot(), links.page(userId)),
+                links.oneClick(userId, MailList.SIGNALS));
     }
 
     /**
@@ -87,10 +92,12 @@ public class NotificationMailer {
     }
 
     /**
-     * The letter itself: one line per waiting signal, a link under each, the rest counted. The
-     * link is absolute because a mailbox has no browser history to resolve a path against.
+     * The letter itself: one line per waiting signal, a link under each, the rest counted, and
+     * the way out at the end. The item links are absolute because a mailbox has no browser
+     * history to resolve a path against; the last line goes to the read-only settings page,
+     * which is why a scanner that opens it changes nothing.
      */
-    static String body(List<NotificationItem> items, String locale, String baseUrl) {
+    static String body(List<NotificationItem> items, String locale, String baseUrl, String settingsUrl) {
         Words words = wordsFor(locale);
         String root = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
         StringBuilder body = new StringBuilder();
@@ -114,6 +121,7 @@ public class NotificationMailer {
             body.append(fill(words.more(), "n", items.size() - MAX_ROWS));
         }
         body.append(words.footer());
+        body.append(fill(words.unsubscribe(), "url", settingsUrl));
         return body.toString();
     }
 
@@ -187,6 +195,7 @@ public class NotificationMailer {
             String titleAtCompany,
             String aFeed,
             String more,
-            String footer) {
+            String footer,
+            String unsubscribe) {
     }
 }
