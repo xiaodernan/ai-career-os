@@ -966,6 +966,30 @@ that can leave the machine, and then lets the letter ride it.
   no frontend or copy-census movement -- the digest card's delivery line waits for the
   frontend's i18n lane to land before the page can print the receipt.)
 
+- [x] **21.4** The account's language reaches the letter.
+  (21.2's mailer wrote English because the sweep composes without a browser, and the only
+  copy of "the reader's language" was the browser's cookie. V18 gives the account one:
+  `users.locale` (en or zh, default en) is answered by `/me` and accepted by PATCH `/me`
+  as an eleventh optional field -- anything but en/zh is a 400 with a field-level detail
+  before the service runs -- and `weekly_digests.locale` freezes the language with the
+  payload. The sweep reads the account's language, passes it to the digest engine's
+  `locale` so the signals are written in it, and stores it on the row; `WeeklyDigestMailer`
+  lays the same readings out in Chinese words (subject, week line, stage mix, rates,
+  stalled rows and signals), keyed off the letter's own locale, and the English output is
+  byte-identical to before. A retry re-sends the stored letter, so a week keeps the language
+  it was written in even if the account switches later. In the browser the cookie still
+  paints the first render, and a new `AccountLocale` inside the signed-in shell reconciles
+  the two copies: an explicit switch in this browser (the `localStorage` marker) is pushed
+  to the account through the same PATCH, skipped without a session, while a browser that
+  never chose adopts the account's language via `adoptLocale` -- cookie and screen, never
+  `localStorage` -- so it keeps following a change made elsewhere. 5 backend tests (1 sweep,
+  2 mailer, 2 controller), the backend unit suite at 664; 10 frontend tests over the
+  decision table and the no-session guard; the user request census now pins eleven fields
+  (with a mutation arm run) and the two failure-toast assertions the i18n commit moved are
+  current again; `API.md` and the deployment guide state the account-language rule. The
+  lifetime census was also charging a RUNBOOK metrics-refresh interval as a refresh-token
+  lifetime, reworded. No copy-census movement: the reconciler prints nothing.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

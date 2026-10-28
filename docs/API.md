@@ -74,8 +74,8 @@ per-user budget on AI endpoints.
 
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/me` | account summary |
-| PATCH | `/me` | `{displayName, headline, location, summary, yearsExperience, targetRoles, targetLocations, links, workAuthorization, preferences}` — every field optional, `null` means leave unchanged |
+| GET | `/me` | account summary, including the account's language (locale, en or zh) |
+| PATCH | `/me` | `{displayName, headline, location, summary, yearsExperience, targetRoles, targetLocations, links, workAuthorization, preferences, locale}` — every field optional, `null` means leave unchanged. Locale is the language the account is written to: the screen's own copy is the browser's cookie, but the nightly letter has no browser, so this is the copy a sweep can read; anything but en or zh is a 400 |
 | GET | `/users/me` | alias of `/me` (binding seam) |
 | PATCH | `/users/me` | same body as `PATCH /me` (`{displayName, headline, location, ...}`) |
 | GET | `/users/me/profile` | career profile |
@@ -131,7 +131,10 @@ assembled from — the sweep writes each letter, hands it to the configured tran
 keeps the outcome (`delivered_at`, `delivery_error`, `delivery_attempts`) on the row. The
 same three fields travel with every letter the API answers, so a page can say whether a
 week left, when, and what the relay said if it did not; zero attempts is "never tried" and
-is not the same fact as a refusal.
+is not the same fact as a refusal. A letter is written in the account's language — the
+`locale` on `/me`, not the browser's cookie, because the sweep composes without a reader —
+and it freezes that language with its payload: switching later does not rewrite a week that
+was already written (the retry re-sends the stored letter as it was).
 
 | Method | Path | Notes |
 |---|---|---|

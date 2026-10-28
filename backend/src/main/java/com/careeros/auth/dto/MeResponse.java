@@ -12,6 +12,12 @@ import java.util.Map;
 public record MeResponse(
         String displayName,
         String email,
+        /**
+         * The account's language (roadmap 21.4): "en" or "zh". The browser reads its own copy
+         * from the cookie for the first paint; this is the copy a browser with no choice yet
+         * adopts, and the copy the nightly letter is written in.
+         */
+        String locale,
         String headline,
         String location,
         @DecimalMin("0") @DecimalMax("60") BigDecimal yearsExperience,
@@ -21,8 +27,8 @@ public record MeResponse(
         Map<String, Object> workAuthorization,
         Map<String, Object> preferences) {
 
-    public static MeResponse of(String displayName, String email, UserProfile profile) {
-        return new MeResponse(displayName, email, profile.getHeadline(), profile.getLocation(),
+    public static MeResponse of(String displayName, String email, String locale, UserProfile profile) {
+        return new MeResponse(displayName, email, locale, profile.getHeadline(), profile.getLocation(),
                 profile.getYearsExperience(), profile.getTargetRoles(), profile.getTargetLocations(),
                 profile.getLinks(), profile.getWorkAuthorization(), profile.getPreferences());
     }

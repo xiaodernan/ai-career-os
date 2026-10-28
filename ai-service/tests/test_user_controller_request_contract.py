@@ -4,8 +4,10 @@ UserController serves the frontend-facing /me surface. Two entry points carry JS
 
 1. ``PATCH /users/me`` -- account update, binds
    ``UpdateMeRequest(displayName, headline, location, summary, yearsExperience, targetRoles,
-   targetLocations, links, workAuthorization, preferences)``; all fields optional ("null means
-   leave unchanged"), ``displayName`` guarded ``@Size(min = 1, max = 120)``. The frontend calls
+   targetLocations, links, workAuthorization, preferences, locale)``; all fields optional
+   ("null means leave unchanged"), ``displayName`` guarded ``@Size(min = 1, max = 120)`` and
+   ``locale`` guarded ``@Pattern(regexp = "en|zh")`` -- the account's language (roadmap 21.4),
+   which the nightly letter is written in. The frontend calls
    this through ``useUpdateProfile`` in ``actions.ts``; its only caller, the settings page,
    sends ``{ displayName }``. The hook's patch *type* also declares ``email`` and ``avatarUrl``
    -- keys UpdateMeRequest binds neither of, so a caller sending them would be silently
@@ -202,14 +204,15 @@ def single_size_max(record: str, field: str, source: str) -> int:
     return int(sizes[0])
 
 
-# --------------------------------------------------------------------------- case 1: UpdateMeRequest has ten fields
+# --------------------------------------------------------------------------- case 1: UpdateMeRequest has eleven fields
 
-def test_the_update_me_request_dto_declares_ten_names():
+def test_the_update_me_request_dto_declares_eleven_names():
     fields = java_record_fields("UpdateMeRequest", me_dto_source())
     assert sorted(fields) == [
         "displayName",
         "headline",
         "links",
+        "locale",
         "location",
         "preferences",
         "summary",
@@ -385,13 +388,13 @@ def test_the_unbound_hook_type_keys_stay_unbound_while_the_sent_key_is_bound():
 def test_the_profile_mutations_announce_their_failures():
     bodies = ts_call_bodies("useUpdateProfile", actions_source())
     assert len(bodies) == 1, "expected exactly one useUpdateProfile"
-    assert 'describe(err, "Couldn\'t save your profile.")' in bodies[0], (
+    assert 'describe(err, "failures.profileSave")' in bodies[0], (
         "useUpdateProfile failure toast changed"
     )
 
     details = ts_call_bodies("useUpdateProfileDetails", actions_source())
     assert len(details) == 1, "expected exactly one useUpdateProfileDetails"
-    assert 'fail("Couldn\'t save your career profile.")' in details[0], (
+    assert 'fail("failures.careerProfileSave")' in details[0], (
         "useUpdateProfileDetails failure toast changed"
     )
 

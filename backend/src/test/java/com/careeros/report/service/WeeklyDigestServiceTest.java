@@ -82,7 +82,7 @@ class WeeklyDigestServiceTest {
 
     @Test
     void aLetterIsAboutSevenDaysAndTheEngineIsAskedForThatWindow() {
-        when(analysis.insightDigest(ALICE, null, 7))
+        when(analysis.insightDigest(ALICE, "en", 7))
                 .thenReturn(Map.of("totalApplications", 4, "stalledCount", 1));
         when(digests.findByUserIdAndWeekStart(eq(ALICE), any())).thenReturn(Optional.empty());
 
@@ -94,7 +94,24 @@ class WeeklyDigestServiceTest {
         assertThat(letter.windowDays()).isEqualTo(7);
         assertThat(letter.generatedAt()).isNotNull();
         assertThat(letter.payload()).containsEntry("totalApplications", 4);
-        verify(analysis).insightDigest(ALICE, null, 7);
+        verify(analysis).insightDigest(ALICE, "en", 7);
+    }
+
+    @Test
+    void theLetterIsWrittenInTheAccountsLanguage() {
+        User chinese = account(ALICE, "alice@example.com");
+        chinese.setLocale("zh");
+        when(users.findById(ALICE)).thenReturn(Optional.of(chinese));
+        when(analysis.insightDigest(ALICE, "zh", 7)).thenReturn(Map.of("totalApplications", 2));
+        when(digests.findByUserIdAndWeekStart(eq(ALICE), any())).thenReturn(Optional.empty());
+
+        WeeklyDigestDto letter = service.compose(ALICE, WEEK);
+
+        verify(analysis).insightDigest(ALICE, "zh", 7);
+        assertThat(letter.weekStart()).isEqualTo(WEEK);
+        ArgumentCaptor<WeeklyDigest> written = ArgumentCaptor.forClass(WeeklyDigest.class);
+        verify(digests).save(written.capture());
+        assertThat(written.getValue().getLocale()).isEqualTo("zh");
     }
 
     @Test
@@ -106,7 +123,7 @@ class WeeklyDigestServiceTest {
         existing.setPayload(Map.of("totalApplications", 1));
         ReflectionTestUtils.setField(existing, "id", LETTER);
         when(digests.findByUserIdAndWeekStart(ALICE, WEEK)).thenReturn(Optional.of(existing));
-        when(analysis.insightDigest(ALICE, null, 7))
+        when(analysis.insightDigest(ALICE, "en", 7))
                 .thenReturn(Map.of("totalApplications", 4, "stalledCount", 2));
 
         WeeklyDigestDto letter = service.compose(ALICE, WEEK);
@@ -172,7 +189,7 @@ class WeeklyDigestServiceTest {
         answer.put("totalApplications", 3);
         answer.put("stalled", List.of(Map.of("title", "Backend Engineer", "daysSinceLastActivity", 9)));
         answer.put("signals", List.of("3 application(s) have gone quiet past 7 days."));
-        when(analysis.insightDigest(ALICE, null, 7)).thenReturn(answer);
+        when(analysis.insightDigest(ALICE, "en", 7)).thenReturn(answer);
         when(digests.findByUserIdAndWeekStart(eq(ALICE), any())).thenReturn(Optional.empty());
 
         WeeklyDigestDto letter = service.compose(ALICE, WEEK);

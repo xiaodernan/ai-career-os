@@ -2,6 +2,7 @@ package com.careeros.auth.dto;
 
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.util.List;
@@ -18,5 +19,7 @@ public record UpdateMeRequest(
         @Size(max = 20) List<@Size(max = 120) String> targetLocations,
         Map<String, Object> links,
         Map<String, Object> workAuthorization,
-        Map<String, Object> preferences) {
+        Map<String, Object> preferences,
+        /** The language switch's choice (roadmap 21.4): the two languages the product speaks. */
+        @Pattern(regexp = "en|zh") String locale) {
 }

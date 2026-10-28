@@ -119,6 +119,7 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.displayName").value("Ada Lovelace"))
                 .andExpect(jsonPath("$.data.email").value("ada@example.invalid"))
+                .andExpect(jsonPath("$.data.locale").value("en"))
                 .andExpect(jsonPath("$.data.headline").value("Backend engineer"))
                 .andExpect(jsonPath("$.data.location").value("London"))
                 .andExpect(jsonPath("$.data.yearsExperience").value(7.5))
@@ -203,6 +204,37 @@ class UserControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.code").value("VALIDATION_FAILED"))
                 .andExpect(jsonPath("$.error.details[0].field").value("displayName"));
+
+        verify(users, never()).save(any());
+    }
+
+    @Test
+    void a_locale_switch_writes_the_account_and_the_answer_reads_it_back() throws Exception {
+        mvc.perform(patch("/api/v1/users/me")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"locale\":\"zh\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.locale").value("zh"))
+                .andExpect(jsonPath("$.data.displayName").value("Ada Lovelace"));
+
+        ArgumentCaptor<User> saved = ArgumentCaptor.forClass(User.class);
+        verify(users).save(saved.capture());
+        assertThat(saved.getValue().getLocale()).isEqualTo("zh");
+        // The same row answers the next read: the account keeps the language, it is not a
+        // per-request decoration.
+        mvc.perform(get("/api/v1/users/me"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.locale").value("zh"));
+    }
+
+    @Test
+    void a_language_the_product_does_not_speak_is_refused_before_the_service_sees_it() throws Exception {
+        mvc.perform(patch("/api/v1/users/me")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"locale\":\"fr\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.error.details[0].field").value("locale"));
 
         verify(users, never()).save(any());
     }

@@ -40,6 +40,14 @@ public class WeeklyDigest {
     @Column(name = "window_days", nullable = false)
     private int windowDays;
 
+    /**
+     * The language the letter was written in (roadmap 21.4). The payload's signals are the
+     * engine's prose, so the language is frozen with them: a retry days later mails the same
+     * words rather than a chrome that disagrees with its own sentences.
+     */
+    @Column(name = "locale", nullable = false)
+    private String locale = "en";
+
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb", nullable = false)
     private Map<String, Object> payload;
@@ -84,6 +92,14 @@ public class WeeklyDigest {
 
     public void setWindowDays(int windowDays) {
         this.windowDays = windowDays;
+    }
+
+    public String getLocale() {
+        return locale;
+    }
+
+    public void setLocale(String locale) {
+        this.locale = locale;
     }
 
     public Map<String, Object> getPayload() {

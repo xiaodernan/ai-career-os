@@ -14,6 +14,14 @@ interface LocaleContextValue {
   locale: Locale;
   setLocale: (locale: Locale) => void;
   /**
+   * Record a language the account chose elsewhere on this browser, without claiming the
+   * reader chose it here (roadmap 21.4). It paints the screen and rewrites the cookie, but
+   * leaves the `localStorage` choice empty -- so the next switch is still the one that
+   * speaks for this browser, and a device that merely adopted the account keeps adopting
+   * it as the account changes.
+   */
+  adoptLocale: (locale: Locale) => void;
+  /**
    * Read a string out of the table.
    *
    * `vars` fills `{name}` holes in the string, so a sentence that wraps a value
@@ -52,7 +60,15 @@ export function fill(value: string, vars?: Record<string, string | number>): str
   );
 }
 
-function readStoredLocale(): Locale | null {
+/**
+ * The language this browser chose, or null when it never chose one.
+ *
+ * Exported because the distinction is a rule, not an implementation detail (roadmap 21.4):
+ * `localStorage` holds the reader's own switch and the cookie holds what this browser paints.
+ * A device that only adopted the account's language has the cookie and not this, which is
+ * how a later account change can still reach it -- and how an explicit switch wins over it.
+ */
+export function readStoredLocale(): Locale | null {
   if (typeof window === "undefined") return null;
   try {
     const stored = window.localStorage.getItem(STORAGE_KEY);
@@ -136,6 +152,15 @@ export function LocaleProvider({
     applyDocumentLang(next);
   }, []);
 
+  // The account's language reaching a browser that never chose one: paint it and let the
+  // next request's server render agree, but do not write the reader's choice -- this browser
+  // has not made one, and an `localStorage` entry would keep it from later adopting a change.
+  const adoptLocale = React.useCallback((next: Locale) => {
+    setLocaleState(next);
+    writeLocaleCookie(next);
+    applyDocumentLang(next);
+  }, []);
+
   // After hydration the browser's copy wins when it disagrees with the cookie's: it is the
   // copy the reader's own last switch wrote. The cookie is rewritten by the effect below,
   // so the next request's server render agrees.
@@ -162,7 +187,10 @@ export function LocaleProvider({
     [locale]
   );
 
-  const value = React.useMemo(() => ({ locale, setLocale, t }), [locale, setLocale, t]);
+  const value = React.useMemo(
+    () => ({ locale, setLocale, adoptLocale, t }),
+    [locale, setLocale, adoptLocale, t]
+  );
 
   return <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>;
 }

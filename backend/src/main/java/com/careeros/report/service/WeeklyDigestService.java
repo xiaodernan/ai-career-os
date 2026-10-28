@@ -34,9 +34,11 @@ import org.springframework.transaction.annotation.Transactional;
  * letter replaces it rather than filing a second one. The scheduler writes the week that just
  * ended, when it can no longer change; the manual route writes the current week, as it stands.
  *
- * <p>The letter is composed without a reader, so the engine is asked for its default language;
- * the page prints its own translated sentences from the numbers, and the engine's own words
- * stay in the payload the mail is assembled from.
+ * <p>The letter is composed without a browser, but not without a reader (roadmap 21.4): the
+ * account keeps the language its switch chose, and that is the language the engine is asked
+ * for its signals in and the language the mail chrome is written in. The language is frozen
+ * on the row beside the payload it wrote, so a retry days later mails the same letter rather
+ * than chrome that disagrees with its own sentences.
  *
  * <p>On the sweeper's path the letter is also mailed (roadmap 21.2): the row is written first
  * and handed to the transport second, so a refused letter is a stored letter with an error on
@@ -161,7 +163,8 @@ public class WeeklyDigestService {
     }
 
     private WeeklyDigest composeLetter(UUID userId, LocalDate weekStart) {
-        Map<String, Object> payload = analysis.insightDigest(userId, null, WINDOW_DAYS);
+        String locale = localeOf(userId);
+        Map<String, Object> payload = analysis.insightDigest(userId, locale, WINDOW_DAYS);
         WeeklyDigest letter = digests.findByUserIdAndWeekStart(userId, weekStart)
                 .orElseGet(() -> {
                     WeeklyDigest fresh = new WeeklyDigest();
@@ -170,6 +173,7 @@ public class WeeklyDigestService {
                     return fresh;
                 });
         letter.setWindowDays(WINDOW_DAYS);
+        letter.setLocale(locale);
         letter.setPayload(payload);
         letter.setGeneratedAt(OffsetDateTime.now(ZoneOffset.UTC));
         return digests.save(letter);
@@ -221,6 +225,15 @@ public class WeeklyDigestService {
         String message = e.getMessage();
         String text = message == null || message.isBlank() ? e.getClass().getSimpleName() : message;
         return text.length() <= DELIVERY_ERROR_LIMIT ? text : text.substring(0, DELIVERY_ERROR_LIMIT);
+    }
+
+    /**
+     * The language the account is written to in, defaulting to the product's own when the row
+     * (or its column) has none. The table constrains the column to the two languages if a value
+     * is there at all; this only decides what an absent one means.
+     */
+    private String localeOf(UUID userId) {
+        return users.findById(userId).map(User::getLocale).orElse("en");
     }
 
     /** The Monday of the week {@code day} falls in -- the one week-start the table accepts. */

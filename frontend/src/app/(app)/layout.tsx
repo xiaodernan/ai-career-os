@@ -9,7 +9,8 @@ import { CommandPaletteProvider } from "@/components/common/command-palette";
 import { SkipLink } from "@/components/layout/skip-link";
 import { tokenStore } from "@/lib/api/token-store";
 import { useUser } from "@/lib/hooks/auth";
-import { useLocale } from "@/lib/i18n/locale-context";
+import { readStoredLocale, useLocale } from "@/lib/i18n/locale-context";
+import { decideLocale, saveLocalePreference } from "@/lib/i18n/locale-preference";
 
 function Splash() {
   const { t } = useLocale();
@@ -23,6 +24,35 @@ function Splash() {
       </p>
     </div>
   );
+}
+
+/**
+ * The browser and the account agreeing on one language (roadmap 21.4).
+ *
+ * The cookie paints this browser; the account is what the nightly letter can read.
+ * This effect keeps the two honest: an explicit switch here is pushed to the account,
+ * and a browser that never chose adopts the account's language. The rules live in
+ * `decideLocale`; this is only the effect that applies one.
+ */
+function AccountLocale() {
+  const { locale, adoptLocale } = useLocale();
+  const { data: user } = useUser();
+  // The /me answer carries the account's language; the shared account type predates it,
+  // so the one name this effect reads is named here rather than widened everywhere.
+  const account = (user as { locale?: unknown } | undefined)?.locale;
+
+  React.useEffect(() => {
+    const decision = decideLocale(account, locale, readStoredLocale());
+    if (decision.action === "adopt") {
+      adoptLocale(decision.locale);
+    } else if (decision.action === "save") {
+      void saveLocalePreference(decision.locale).catch(() => {
+        /* the cookie still speaks for this browser; the next switch tries again */
+      });
+    }
+  }, [account, locale, adoptLocale]);
+
+  return null;
 }
 
 /**
@@ -53,6 +83,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <AuthGuard>
+      <AccountLocale />
       <CommandPaletteProvider>
         <SkipLink />
         <div className="flex min-h-dvh">

@@ -378,7 +378,12 @@ a letter at the cap stays on its row and is not mailed. Composing from the dashb
 (`POST /digests/run`) files the letter without mailing it, and its zero attempts keep
 it out of the retry queue — the scheduler is the only sender. On `console` each
 week's letter is a log line instead of mail, which is the right default for a
-development machine.
+development machine. A letter is written in the account's own language
+(`users.locale`, switched from the app's language control): the sweep has no
+browser, so the cookie cannot speak for the reader, and a letter freezes its
+language with its payload — a retry re-sends the stored week as it was written
+rather than re-composing it in whatever the account speaks today. Nothing has to
+be configured for this; both languages ship in the image.
 
 ## Health & first data
 

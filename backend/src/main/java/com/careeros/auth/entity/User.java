@@ -34,6 +34,13 @@ public class User {
     @Column(name = "avatar_url")
     private String avatarUrl;
 
+    /**
+     * The language the account is written to in -- the switch's choice, kept here because the
+     * nightly letter is mailed without a browser to read a cookie from (roadmap 21.4).
+     */
+    @Column(name = "locale", nullable = false)
+    private String locale = "en";
+
     @Column(name = "role", nullable = false)
     private String role = "user";
 
@@ -94,6 +101,14 @@ public class User {
 
     public void setAvatarUrl(String avatarUrl) {
         this.avatarUrl = avatarUrl;
+    }
+
+    public String getLocale() {
+        return locale;
+    }
+
+    public void setLocale(String locale) {
+        this.locale = locale;
     }
 
     public String getRole() {

@@ -265,7 +265,7 @@ The metric families the rules read are written by
 `backend/src/main/java/com/careeros/job/service/IngestionMetrics.java` (the counter
 and the success marker), `backend/src/main/java/com/careeros/ai/service/AiUsageMetrics.java`
 (the rolling 24-hour spend, tokens and calls, refreshed every
-`careeros.ai.metrics-refresh-ms`, 60 seconds by default), and
+`careeros.ai.metrics-refresh-ms`, one minute by default), and
 `backend/src/main/java/com/careeros/report/service/NightlyVerdictMetrics.java`
 (the newest nightly finish and the failure streak, moved by each recorded night and
 once at boot). A metric missing from the scrape means the bean did not start: the
