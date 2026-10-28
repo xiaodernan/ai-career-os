@@ -1162,7 +1162,11 @@ export interface ExportBundle {
 
 /** One write operation in an import plan (13.2). */
 export interface ImportOp {
-  op: "create" | "update" | "delete";
+  /**
+   * `skip` is a row the target already has, unchanged: the plan names it so
+   * the preview can count it, and the apply writes nothing for it.
+   */
+  op: "create" | "update" | "delete" | "skip";
   id?: string;
   content_hash?: string | null;
 }
@@ -1172,7 +1176,13 @@ export interface ImportPlan {
   schema_version?: string;
   source_content_hash?: string;
   sections?: Record<string, ImportOp[]>;
-  op_counts?: { create: number; update: number; delete: number; total: number };
+  op_counts?: {
+    create: number;
+    update: number;
+    delete: number;
+    skip: number;
+    total: number;
+  };
 }
 
 /**
@@ -1181,9 +1191,18 @@ export interface ImportPlan {
  * rather than reported as a success.
  */
 export interface ImportApplied {
-  applied?: Record<string, { created?: number; updated?: number; deleted?: number }>;
+  applied?: Record<
+    string,
+    { created?: number; updated?: number; deleted?: number; unchanged?: number }
+  >;
   skipped?: Array<{ section: string; reason: string }>;
-  op_counts?: { create: number; update: number; delete: number; total: number };
+  op_counts?: {
+    create: number;
+    update: number;
+    delete: number;
+    skip: number;
+    total: number;
+  };
 }
 
 /** A bundle with sections dropped (13.3). */

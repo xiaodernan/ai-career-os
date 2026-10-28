@@ -129,9 +129,17 @@ export default function DataPortabilityPage() {
       {
         onSuccess: (plan) => {
           const counts = plan.op_counts;
+          // The skip count is not a footnote: it is the row the copy under the
+          // title promises, and a plan that hid it would leave the reader
+          // unable to tell "nothing to do" from "nothing found".
           toast.success(
             counts
-              ? `Plan ready: ${counts.create} to create, ${counts.update} to update, ${counts.delete} to delete.`
+              ? t("data.planWithCounts", {
+                  create: counts.create ?? 0,
+                  update: counts.update ?? 0,
+                  delete: counts.delete ?? 0,
+                  skip: counts.skip ?? 0,
+                })
               : t("data.planReady")
           );
         },
@@ -355,7 +363,7 @@ export default function DataPortabilityPage() {
           {importPlan.data && (
             <div className="space-y-2 rounded-lg border border-border/60 p-3">
               <p className="text-sm font-medium">{t("data.plan")}</p>
-              <dl className="grid grid-cols-4 gap-2 text-center">
+              <dl className="grid grid-cols-5 gap-2 text-center">
                 <div>
                   <dt className="text-2xs text-muted-foreground uppercase">
                     {t("data.opCreate")}
@@ -378,6 +386,14 @@ export default function DataPortabilityPage() {
                   </dt>
                   <dd className="text-lg font-semibold tabular-nums">
                     {importPlan.data.op_counts?.delete ?? 0}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-2xs text-muted-foreground uppercase">
+                    {t("data.opSkip")}
+                  </dt>
+                  <dd className="text-lg font-semibold tabular-nums">
+                    {importPlan.data.op_counts?.skip ?? 0}
                   </dd>
                 </div>
                 <div>
@@ -413,7 +429,12 @@ export default function DataPortabilityPage() {
                   <li key={section} className="flex items-center justify-between gap-2">
                     <span className="capitalize">{section.replace(/_/g, " ")}</span>
                     <span className="text-xs text-muted-foreground">
-                      {`${counts.created ?? 0} created · ${counts.updated ?? 0} updated · ${counts.deleted ?? 0} deleted`}
+                      {t("data.appliedCounts", {
+                        created: counts.created ?? 0,
+                        updated: counts.updated ?? 0,
+                        deleted: counts.deleted ?? 0,
+                        unchanged: counts.unchanged ?? 0,
+                      })}
                     </span>
                   </li>
                 ))}

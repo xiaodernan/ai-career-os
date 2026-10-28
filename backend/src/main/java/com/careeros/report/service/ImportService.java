@@ -56,11 +56,18 @@ import org.springframework.transaction.annotation.Transactional;
  *   applied is reported as skipped with the reason, and the rest of the bundle
  *   still lands. A restore that half-applied a section and reported success
  *   would be worse than one that said which section it left alone.
+ * - **An unchanged row is not written.** The engine plans a {@code skip} for a
+ *   row whose content is already the target's, and this service takes the op
+ *   at its word: nothing is saved for it, and the answer counts it as
+ *   {@code unchanged}. That is the half of the promise the "Your data" panel
+ *   makes -- a re-import of the bundle the workspace exported writes nothing,
+ *   and the user can see that it wrote nothing.
  */
 @Service
 public class ImportService {
 
     private final AiServiceClient aiService;
+    private final ExportService exports;
     private final UserProfileRepository profiles;
     private final UserNoteRepository notes;
     private final ContactRepository contacts;
@@ -75,7 +82,8 @@ public class ImportService {
     private final InterviewTurnRepository turns;
     private final InterviewEvaluationRepository evaluations;
 
-    public ImportService(AiServiceClient aiService, UserProfileRepository profiles,
+    public ImportService(AiServiceClient aiService, ExportService exports,
+                          UserProfileRepository profiles,
                           UserNoteRepository notes, ContactRepository contacts,
                           ApplicationRepository applications,
                           GrowthPlanRepository growthPlans, ResumeService resumes,
@@ -85,6 +93,7 @@ public class ImportService {
                           InterviewTurnRepository turns,
                           InterviewEvaluationRepository evaluations) {
         this.aiService = aiService;
+        this.exports = exports;
         this.profiles = profiles;
         this.notes = notes;
         this.contacts = contacts;
@@ -150,7 +159,7 @@ public class ImportService {
                 .collect(java.util.stream.Collectors.toMap(
                         Map.Entry::getKey,
                         e -> Map.of("created", e.getValue()[0], "updated", e.getValue()[1],
-                                "deleted", e.getValue()[2]))));
+                                "deleted", e.getValue()[2], "unchanged", e.getValue()[3]))));
         result.put("skipped", skipped);
         result.put("op_counts", plan.get("op_counts"));
         return result;
@@ -166,6 +175,12 @@ public class ImportService {
                               Map<String, int[]> applied, List<Map<String, String>> skipped) {
         List<Map<String, Object>> ops = sections.get("profile");
         if (ops == null || ops.isEmpty()) {
+            return;
+        }
+        if ("skip".equals(str(ops.get(0), "op"))) {
+            // The row the panel already has is the row the bundle carries:
+            // saving it again would be a write with no change to show for it.
+            count(applied, "profile", 0, 0, 0, 1);
             return;
         }
         Object row = data.get("profile");
@@ -208,9 +223,14 @@ public class ImportService {
         int created = 0;
         int updated = 0;
         int deleted = 0;
+        int unchanged = 0;
         for (Map<String, Object> op : ops) {
             String id = str(op, "id");
             String kind = str(op, "op");
+            if ("skip".equals(kind)) {
+                unchanged++;
+                continue;
+            }
             if ("delete".equals(kind)) {
                 // Only the caller's own row goes: the id is looked up under
                 // their id, so a bundle naming someone else's row finds
@@ -250,7 +270,7 @@ public class ImportService {
             target.setReminderAt(time(row, "reminder_at"));
             applications.save(target);
         }
-        count(applied, "applications", created, updated, deleted);
+        count(applied, "applications", created, updated, deleted, unchanged);
     }
 
     /**
@@ -282,10 +302,15 @@ public class ImportService {
         int created = 0;
         int updated = 0;
         int deleted = 0;
+        int unchanged = 0;
         for (Map<String, Object> op : ops) {
             String id = str(op, "id");
             String kind = str(op, "op");
             UUID rowId = uuid(id);
+            if ("skip".equals(kind)) {
+                unchanged++;
+                continue;
+            }
             if ("delete".equals(kind)) {
                 if (rowId == null) {
                     continue;
@@ -317,7 +342,7 @@ public class ImportService {
                 created++;
             }
         }
-        count(applied, "notes", created, updated, deleted);
+        count(applied, "notes", created, updated, deleted, unchanged);
     }
 
     /**
@@ -347,10 +372,15 @@ public class ImportService {
         int created = 0;
         int updated = 0;
         int deleted = 0;
+        int unchanged = 0;
         for (Map<String, Object> op : ops) {
             String id = str(op, "id");
             String kind = str(op, "op");
             UUID rowId = uuid(id);
+            if ("skip".equals(kind)) {
+                unchanged++;
+                continue;
+            }
             if ("delete".equals(kind)) {
                 if (rowId == null) {
                     continue;
@@ -380,7 +410,7 @@ public class ImportService {
                 created++;
             }
         }
-        count(applied, "contacts", created, updated, deleted);
+        count(applied, "contacts", created, updated, deleted, unchanged);
     }
 
     /** The stored growth runs: one row per report the candidate ever built. */
@@ -399,9 +429,14 @@ public class ImportService {
         int created = 0;
         int updated = 0;
         int deleted = 0;
+        int unchanged = 0;
         for (Map<String, Object> op : ops) {
             String id = str(op, "id");
             String kind = str(op, "op");
+            if ("skip".equals(kind)) {
+                unchanged++;
+                continue;
+            }
             if ("delete".equals(kind)) {
                 UUID rowId = uuid(id);
                 if (rowId == null) {
@@ -436,7 +471,7 @@ public class ImportService {
             target.setReport(report == null ? Map.of() : report);
             growthPlans.save(target);
         }
-        count(applied, "growth_plans", created, updated, deleted);
+        count(applied, "growth_plans", created, updated, deleted, unchanged);
     }
 
     /**
@@ -467,8 +502,10 @@ public class ImportService {
         }
         List<Map<String, Object>> payload = new ArrayList<>();
         for (Map<String, Object> op : ops) {
-            if ("delete".equals(str(op, "op"))) {
-                continue;  // a memory the user forgot stays forgotten
+            String kind = str(op, "op");
+            if ("delete".equals(kind) || "skip".equals(kind)) {
+                continue;  // a memory the user forgot stays forgotten; an
+                           // unchanged one is not sent to be written again
             }
             Map<?, ?> row = findRow(list, str(op, "id"));
             if (row == null) {
@@ -519,7 +556,8 @@ public class ImportService {
         }
         int created = 0;
         for (Map<String, Object> op : ops) {
-            if ("delete".equals(str(op, "op"))) {
+            String kind = str(op, "op");
+            if ("delete".equals(kind) || "skip".equals(kind)) {
                 continue;  // a deleted resume is retired below, not resurrected
             }
             Map<?, ?> row = findRow(list, str(op, "id"));
@@ -568,7 +606,8 @@ public class ImportService {
         }
         int created = 0;
         for (Map<String, Object> op : ops) {
-            if ("delete".equals(str(op, "op"))) {
+            String kind = str(op, "op");
+            if ("delete".equals(kind) || "skip".equals(kind)) {
                 continue;  // a retired document stays retired
             }
             Map<?, ?> row = findRow(list, str(op, "id"));
@@ -619,7 +658,8 @@ public class ImportService {
         }
         int created = 0;
         for (Map<String, Object> op : ops) {
-            if ("delete".equals(str(op, "op"))) {
+            String kind = str(op, "op");
+            if ("delete".equals(kind) || "skip".equals(kind)) {
                 continue;  // a deleted posting stays deleted
             }
             Map<?, ?> row = findRow(list, str(op, "id"));
@@ -669,7 +709,8 @@ public class ImportService {
         }
         int created = 0;
         for (Map<String, Object> op : ops) {
-            if ("delete".equals(str(op, "op"))) {
+            String kind = str(op, "op");
+            if ("delete".equals(kind) || "skip".equals(kind)) {
                 continue;  // a deleted interview stays deleted
             }
             Map<?, ?> row = findRow(sessionsList, str(op, "id"));
@@ -739,45 +780,27 @@ public class ImportService {
     /* ------------------------------------------------------------------ */
     /* Helpers                                                             */
     /* ------------------------------------------------------------------ */
-    /** The caller's current state, exported the same way — the plan's other half. */
+    /**
+     * The caller's current state, exported the same way — the plan's other half.
+     *
+     * <p>"The same way" is the whole point of reading through {@link
+     * ExportService#backendSections}: the plan tells a create from an update
+     * from a skip by comparing the bundle's row with this one, so a row
+     * serialized two different ways is a row that always looks changed. The
+     * four sections used to be summarized here -- an application was its id,
+     * its title and its status -- which was enough to tell a create from an
+     * update and not enough to tell an update from a skip.
+     *
+     * <p>The notes and the contacts are here for the same reason the
+     * applications are: a section the current state does not carry is a
+     * section every row in the bundle is a *create* for, and a restore that
+     * wrote a second copy of every note would be worse than one that left
+     * them alone.
+     */
     private Map<String, Object> currentState(UUID userId) {
-        Map<String, Object> data = new LinkedHashMap<>();
-        data.put("profile", profiles.findByUserId(userId).orElse(null));
-        data.put("applications", applications.findByUserIdOrderByUpdatedAtDescIdAsc(
-                userId, com.careeros.common.Paging.first(1000)).stream()
-                .map(row -> {
-                    Map<String, Object> m = new LinkedHashMap<>();
-                    m.put("id", row.getId() == null ? null : row.getId().toString());
-                    m.put("title", row.getTitle());
-                    m.put("status", row.getStatus());
-                    return m;
-                }).toList());
-        data.put("growth_plans", growthPlans.findByUserIdOrderByCreatedAtDesc(userId).stream()
-                .map(row -> {
-                    Map<String, Object> m = new LinkedHashMap<>();
-                    m.put("id", row.getId() == null ? null : row.getId().toString());
-                    m.put("target_role", row.getTargetRole());
-                    return m;
-                }).toList());
-        // The notes and the contacts are here for the same reason the
-        // applications are: the plan tells a create from an update by the id,
-        // so a section the current state does not carry is a section every
-        // row in the bundle is a *create* for. A restore that wrote a second
-        // copy of every note would be worse than one that left them alone.
-        data.put("notes", notes.findByUserId(userId).stream()
-                .map(row -> {
-                    Map<String, Object> m = new LinkedHashMap<>();
-                    m.put("id", row.getId() == null ? null : row.getId().toString());
-                    m.put("title", row.getTitle());
-                    return m;
-                }).toList());
-        data.put("contacts", contacts.findByUserIdOrderByUpdatedAtDesc(userId).stream()
-                .map(row -> {
-                    Map<String, Object> m = new LinkedHashMap<>();
-                    m.put("id", row.getId() == null ? null : row.getId().toString());
-                    m.put("name", row.getName());
-                    return m;
-                }).toList());
+        Map<String, Object> data = new LinkedHashMap<>(exports.backendSections(userId));
+        UserProfile profile = profiles.findByUserId(userId).orElse(null);
+        data.put("profile", profile == null ? Map.of() : ExportService.toProfile(profile));
         return Map.of("data", data);
     }
 
@@ -887,15 +910,25 @@ public class ImportService {
     }
 
     private static void count(Map<String, int[]> applied, String section, int created, int updated) {
-        count(applied, section, created, updated, 0);
+        count(applied, section, created, updated, 0, 0);
     }
 
     private static void count(Map<String, int[]> applied, String section,
                               int created, int updated, int deleted) {
-        applied.computeIfAbsent(section, k -> new int[3]);
+        count(applied, section, created, updated, deleted, 0);
+    }
+
+    /**
+     * The four numbers a section reports: what it wrote, and what it did not
+     * have to. The fourth is the one the panel's promise is about.
+     */
+    private static void count(Map<String, int[]> applied, String section,
+                              int created, int updated, int deleted, int unchanged) {
+        applied.computeIfAbsent(section, k -> new int[4]);
         int[] row = applied.get(section);
         row[0] += created;
         row[1] += updated;
         row[2] += deleted;
+        row[3] += unchanged;
     }
 }

@@ -2,9 +2,11 @@
 
 ``python -m app.ops.restore_plan backup.json [--existing current.json]`` reads an
 export bundle, validates it, and prints the idempotent import plan -- per section, the
-``create`` / ``update`` / ``delete`` operations with their content hashes -- **without
-touching a database**. An operator can dry-run a restore, or diff a backup against the
-current export, before any upsert runs.
+``create`` / ``update`` / ``delete`` / ``skip`` operations with their content hashes --
+**without touching a database**. An operator can dry-run a restore, or diff a backup
+against the current export, before any upsert runs. A ``skip`` is a row the target
+already has unchanged: the plan names it so the counts add up, and the apply writes
+nothing for it.
 
 This is the operator-facing seam between the two ai-service engines that already exist:
 ``features/export`` (serialize / validate / read) and ``features/import_plan`` (the
@@ -49,7 +51,8 @@ def _parser() -> argparse.ArgumentParser:
         description="Print the idempotent import plan for an export bundle (dry run).")
     p.add_argument("bundle", help="path to the export bundle JSON")
     p.add_argument("--existing", default=None,
-                   help="optional current export to diff against (marks updates/deletes)")
+                   help="optional current export to diff against "
+                        "(marks updates/deletes/skips)")
     return p
 
 
@@ -64,7 +67,7 @@ def main(argv: list[str] | None = None) -> int:
     c = plan.get("op_counts", {})
     print(f"restore-plan: {c.get('total', 0)} ops "
           f"(create {c.get('create', 0)}, update {c.get('update', 0)}, "
-          f"delete {c.get('delete', 0)})")
+          f"delete {c.get('delete', 0)}, skip {c.get('skip', 0)})")
     return 0
 
 

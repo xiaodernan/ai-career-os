@@ -30,12 +30,14 @@ def test_plan_for_bundle_all_creates_against_nothing():
     assert plan["op_counts"]["delete"] == 0
 
 
-def test_plan_for_bundle_reimport_is_all_updates():
+def test_plan_for_bundle_reimport_is_all_skips():
     b = _bundle()
     plan = R.plan_for_bundle(b, existing=b)
     assert plan["op_counts"]["create"] == 0
-    assert plan["op_counts"]["update"] == 2
+    assert plan["op_counts"]["update"] == 0
     assert plan["op_counts"]["delete"] == 0
+    assert plan["op_counts"]["skip"] == 2
+    assert all(op["op"] == "skip" for ops in plan["sections"].values() for op in ops)
 
 
 def test_plan_for_bundle_rejects_invalid():
@@ -68,7 +70,9 @@ def test_main_diffs_against_existing(tmp_path, capsys):
     path = tmp_path / "backup.json"
     write_bundle(_bundle(), str(path))
     assert R.main([str(path), "--existing", str(path)]) == 0
-    assert "update 2" in capsys.readouterr().out
+    # A file diffed against itself has nothing to write, and the summary has
+    # to say so: "update 2" was the old plan's answer for a no-op restore.
+    assert "skip 2" in capsys.readouterr().out
 
 
 def test_main_missing_file_exits_2(tmp_path, capsys):

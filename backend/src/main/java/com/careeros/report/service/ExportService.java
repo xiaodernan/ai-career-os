@@ -62,8 +62,16 @@ public class ExportService {
         return aiService.exportBundle(userId, anonymized, backendSections(userId));
     }
 
-    /** The sections the backend owns, in the bundle's own shape. */
-    private Map<String, Object> backendSections(UUID userId) {
+    /**
+     * The sections the backend owns, in the bundle's own shape.
+     *
+     * <p>Package-private because the restore reads through it too: the plan's
+     * {@code existing} half has to be the same serialization as the bundle's
+     * rows, or a row would look changed merely because the two halves spelled
+     * it differently -- and the "unchanged rows are skipped" promise would be
+     * kept by an accident of matching spellings rather than by one serializer.
+     */
+    Map<String, Object> backendSections(UUID userId) {
         Map<String, Object> sections = new LinkedHashMap<>();
         sections.put("applications", applications
                 .findByUserIdOrderByUpdatedAtDescIdAsc(userId, Paging.first(MAX_ROWS)).stream()
@@ -173,6 +181,33 @@ public class ExportService {
         if (c.getUpdatedAt() != null) {
             row.put("updated_at", c.getUpdatedAt().toString());
         }
+        return row;
+    }
+
+    /**
+     * The profile row as the bundle spells it.
+     *
+     * <p>The bundle's profile is the ai-service's own read of {@code user_profiles}
+     * -- a {@code SELECT *} of the same table, in the same snake_case. The restore's
+     * {@code existing} half has to answer with the same spelling, or the engine
+     * would read one field name it has and one it has not as two different rows.
+     */
+    static Map<String, Object> toProfile(com.careeros.auth.entity.UserProfile p) {
+        Map<String, Object> row = new LinkedHashMap<>();
+        row.put("id", p.getId() == null ? null : p.getId().toString());
+        row.put("user_id", p.getUserId() == null ? null : p.getUserId().toString());
+        row.put("headline", p.getHeadline());
+        row.put("summary", p.getSummary());
+        row.put("location", p.getLocation());
+        row.put("years_experience", p.getYearsExperience());
+        row.put("target_roles", p.getTargetRoles());
+        row.put("target_locations", p.getTargetLocations());
+        row.put("links", p.getLinks());
+        row.put("work_authorization", p.getWorkAuthorization());
+        row.put("preferences", p.getPreferences());
+        // The two stamps are omitted rather than read: the entity has the
+        // columns but no getters, and the engine's comparison is over the
+        // fields the restore writes -- which is the point of the shape.
         return row;
     }
 }

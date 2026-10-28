@@ -86,6 +86,21 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   said "created". The id is now kept only when it is free and minted when it is
   not: the restore still lands the rows, and it no longer lands them on top of
   somebody else's.
+- **An unchanged row is not written (2026-10-28).** The "Your data" panel
+  promises that unchanged rows are skipped, and the plan answered `update` for
+  every row whose id it already knew — so a re-import of the bundle the
+  workspace itself exported counted "2 to update" and the apply wrote both rows
+  again. The plan now emits a fourth op, `skip`, for a known id whose content
+  did not change; the apply writes nothing for it and counts it `unchanged`.
+  Deciding that required the `existing` half to be the *same serialization* as
+  the bundle (it now reads through `ExportService.backendSections`, and the
+  profile row is spelled the way the engine reads it) and the comparison to
+  cover the fields the apply writes rather than the stamps the database sets —
+  otherwise the first apply bumps `updated_at` and every row is changed
+  forever. The operator's `restore_plan` dry run reports the fourth count too.
+  The open thread above is unchanged: the current state still does not cover
+  the resumes, the knowledge base, the job descriptions, the interviews and the
+  memories, so a restore still cannot promise a delete for them.
 
 - **The errors a reader sees were the server's own English (measured 2026-10-22;
   the codes that mean one thing are bilingual now, the ones that mean several
@@ -481,8 +496,9 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   (`translations.test.ts`) holds the two halves of the table to the same key set
   and keeps Chinese out of the English table.)
 - [x] **17.1b** The browser's copy census (the long tail of 17.1, measured).
-  (Frontend: `lib/i18n/copy-scan.ts` walks the 130 `.tsx` files under
-  `app/` and `components/` and finds the copy that is still a literal — a
+  (Frontend: `lib/i18n/copy-scan.ts` walks the `.tsx` files under `app/`
+  and `components/` (the gate pins the population, so a walk that skips a
+  directory is red) and finds the copy that is still a literal — a
   copy-bearing attribute (`title`, `label`, `placeholder`, `aria-label`,
   `eyebrow`, `heading`, …), the text between two tags at any length, the
   same copy-bearing names inside an object literal (`{ label: "Technical" }`)
@@ -497,8 +513,9 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   string that is simply a *value*. A bar labelled "Technical" on a Chinese
   page was exactly as invisible to the gate as an attribute was.
   `KNOWN` is the honest list of what is left, file by file and string by
-  string, and the number is pinned: 93, every one of them in a file
-  another session is working in at the same time.
+  string, and its size is pinned by the gate rather than typed here: the
+  count moves whenever a hole closes, and a figure written into this
+  paragraph would be stale the next day.
   `scripts/regen-known.mjs` regenerates the list from the browser's own
   sources — through the same scan the gate uses, so the two cannot drift
   and leave the list measuring a different population than the gate.)
@@ -523,8 +540,7 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   tree it just hydrated. The end-to-end suite holds the result — the
   titles are read in both languages, and the 404 names itself in the
   reader's language too.)
-- [x] **17.2** Full a11y pass (keyboard, motion-reduce, screen-reader labels) — the
-  recent frontend commits already moved this forward; finish the long tail.
+- [x] **17.2** Full a11y pass (keyboard, motion-reduce, screen-reader labels).
   (Global CSS: skip link, `:focus-visible` ring, `.sr-only`, 44px touch targets,
   `prefers-contrast` and `forced-colors` media queries.)
 

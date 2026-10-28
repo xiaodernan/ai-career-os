@@ -11,7 +11,6 @@ import {
 } from "@/components/ai/processing-steps";
 import { ProcessingSteps } from "@/components/ai/processing-steps";
 import { AgentTimeline, type AgentTraceEvent, type TraceKind } from "@/components/ai/agent-timeline";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ChevronRight } from "lucide-react";
 
@@ -255,11 +254,3 @@ export function localStages(labels: string[], index: number): ProcessingStep[] {
   }));
 }
 
-/** "t("ai.taskStream.skipWait")" affordance used next to long-running progress. */
-export function StopStreamButton({ onStop, className }: { onStop: () => void; className?: string }) {
-  return (
-    <Button variant="ghost" size="xs" className={className} onClick={onStop}>
-      t("ai.taskStream.stopFollowing")
-    </Button>
-  );
-}

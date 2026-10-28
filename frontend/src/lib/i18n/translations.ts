@@ -221,25 +221,23 @@ export const translations = {
         indexing: "Indexing the document",
       },
     },
-    jobCard: {
-
     // AI / task stream
     ai: {
       taskStream: {
         waitingForAgent: "Waiting for the agent...",
         streamNotReported: "The run stream hasn't reported progress yet -- results appear as soon as it does.",
-        stopFollowing: "Stop following this run",
         agentTrace: "Agent trace",
       },
       processing: {
         active: "Active",
         error: "Error",
-            ariaLabel: "AI processing progress",
-},
-    
-      trace: "Agent execution trace",
-      skipWait: "Skip / cancel the wait",
-},
+        ariaLabel: "AI processing progress",
+      },
+      agentTimeline: {
+        trace: "Agent execution trace",
+      },
+    },
+    jobCard: {
       companyNotResearched: "Company not researched yet",
       noMatchYet: "No match computed yet",
       matchFor: "Match for {title}",
@@ -674,7 +672,14 @@ export const translations = {
       opCreate: "Create",
       opUpdate: "Update",
       opDelete: "Delete",
+      opSkip: "Unchanged",
       opTotal: "Total",
+      // The plan's own sentence: the four counts the preview shows, and the
+      // promise under the title ("unchanged rows are skipped") made countable.
+      planWithCounts:
+        "Plan ready: {create} to create, {update} to update, {delete} to delete, {skip} unchanged.",
+      appliedCounts:
+        "{created} created · {updated} updated · {deleted} deleted · {unchanged} unchanged",
     },
     // Ingestion
     ingestion: {
@@ -870,29 +875,32 @@ export const translations = {
       paletteLight: "light",
       keyboard: "Keyboard",
       commandPalette: "Command palette",
-    
-      "memory.description": "Facts the model extracted from your conversations and interviews. Correct a wrong one, or lower its weight — these shape every answer you get.",
-      "memory.loading": "Loading memories…",
-      "memory.empty": "Chat with the copilot or finish an interview and the facts it learns appear here.",
-      "memory.forgetConfirm": "Forget this memory?",
-      "memory.forgetDescription": "It will stop shaping the answers the agents give you. This cannot be undone.",
-      "memory.weightHigherFirst": "Higher-weight memories come first in every answer.",
-      "profile.description": "What the agents assume about you — headline, targets and the story they tell recruiters.",
-      "profile.loading": "Loading profile…",
-      "profile.targetRoles": "Target roles (comma separated)",
-      "profile.targetLocations": "Target locations (comma separated)",
-      "profile.linksExtras": "Links & extras",
-      "profile.mapsDescription": "Free-form maps the agents read — links, work authorization, preferences. Values that parse as JSON keep their type; everything else is saved as a string.",
-      "profile.headline": "Headline",
-      "profile.summary": "Summary",
-      "profile.yearsExperience": "Years of experience (0–60)",
-      "profile.saveProfile": "Save profile",
-      "profile.saveMaps": "Save maps",
-
-      empty: "Nothing remembered yet",
+    },
+    memory: {
+      description: "Facts the model extracted from your conversations and interviews. Correct a wrong one, or lower its weight — these shape every answer you get.",
+      loading: "Loading memories…",
+      emptyTitle: "Nothing remembered yet",
+      empty: "Chat with the copilot or finish an interview and the facts it learns appear here.",
       whatAgentsRemember: "What the agents remember",
       whatAgentRemembers: "What the agent remembers",
+      forgetConfirm: "Forget this memory?",
+      forgetDescription: "It will stop shaping the answers the agents give you. This cannot be undone.",
+      weightHigherFirst: "Higher-weight memories come first in every answer.",
       loadFailed: "Memories could not be loaded",
+    },
+    profile: {
+      description: "What the agents assume about you — headline, targets and the story they tell recruiters.",
+      loading: "Loading profile…",
+      targetRoles: "Target roles (comma separated)",
+      targetLocations: "Target locations (comma separated)",
+      linksExtras: "Links & extras",
+      mapsDescription: "Free-form maps the agents read — links, work authorization, preferences. Values that parse as JSON keep their type; everything else is saved as a string.",
+      headline: "Headline",
+      summary: "Summary",
+      yearsExperience: "Years of experience (0–60)",
+      saveProfile: "Save profile",
+      saveMaps: "Save maps",
+      loadFailed: "Profile could not be loaded",
     },
     /**
      * The auth pages' marketing panel. A visitor who cannot read English
@@ -937,18 +945,16 @@ export const translations = {
           text: "An AI interviewer that follows up, scores dimensions and adapts difficulty.",
         },
       },
-    
-      "auth.welcomeBack": "Welcome back.",
-      "auth.accountCreated": "Account created — welcome to Career OS.",
-      "auth.signInToWorkspace": "Sign in to your workspace",
-      "auth.createYourAccount": "Create your account",
-      "auth.signIn": "Sign in",
-      "auth.createAccount": "Create account",
-
+      welcomeBack: "Welcome back.",
+      accountCreated: "Account created — welcome to Career OS.",
+      signInToWorkspace: "Sign in to your workspace",
+      createYourAccount: "Create your account",
+      signIn: "Sign in",
+      createAccount: "Create account",
       confirmPassword: "Confirm password",
       passwordsDoNotMatch: "Passwords do not match",
       forgotPassword: "Forgot your password?",
-},
+    },
     /**
      * The skill chips: the two labels that sit above the matched row and
      * the missing one.
@@ -1931,19 +1937,16 @@ export const translations = {
         required: "Required",
         niceToHave: "Nice to have",
       },
-    
-      "jd.title": "JD intelligence",
-      "jd.readingPosting": "Reading the posting",
-      "jd.description": "Paste a job description. The JD analyst extracts requirements, priorities and the gap against your parsed resume.",
-      "jd.structuredOutput": "Structured output from /jds",
-      "jd.comparingResume": "Comparing with your resume…",
-      "jd.comparingProfile": "Comparing with your profile",
-      "jd.analysisFailed": "The analysis came back without structured fields. That usually means the posting text was too short — paste the full description and run it again.",
-      "jd.pasteFullPosting": "Paste the full posting — responsibilities, requirements, nice-to-haves…",
-      "import.description": "Paste the full posting. The analyst fills in the company, skills and responsibilities and the role lands in your tracker.",
-      "import.sourceUrl": "Source URL (optional)",
-      "import.pasteFullPosting": "Paste the full posting — responsibilities, requirements, nice-to-haves…",
-
+    },
+    jd: {
+      title: "JD intelligence",
+      readingPosting: "Reading the posting",
+      description: "Paste a job description. The JD analyst extracts requirements, priorities and the gap against your parsed resume.",
+      structuredOutput: "Structured output from /jds",
+      comparingResume: "Comparing with your resume…",
+      comparingProfile: "Comparing with your profile",
+      analysisFailed: "The analysis came back without structured fields. That usually means the posting text was too short — paste the full description and run it again.",
+      pasteFullPosting: "Paste the full posting — responsibilities, requirements, nice-to-haves…",
       extractingRequirements: "Extracting requirements",
       preferredSkills: "Preferred skills",
       rankingPriorities: "Ranking priorities",
@@ -1954,11 +1957,17 @@ export const translations = {
       hiddenRequirements: "Hidden requirements",
       interviewTopics: "Interview topics",
       skillGap: "Your skill gap",
+    },
+    import: {
+      title: "Import a job posting",
+      description: "Paste the full posting. The analyst fills in the company, skills and responsibilities and the role lands in your tracker.",
+      sourceUrl: "Source URL (optional)",
+      pasteFullPosting: "Paste the full posting — responsibilities, requirements, nice-to-haves…",
       filingTracker: "Filing it in your tracker",
       extractingCompanyRole: "Extracting the company and role",
       jobPostingText: "Job posting text",
       readingPosting: "Reading the posting",
-},
+    },
   },
   zh: {
     // Navigation
@@ -2131,24 +2140,23 @@ export const translations = {
         indexing: "建立文档索引",
       },
     },
-    jobCard: {
-
     // AI / task stream
     ai: {
       taskStream: {
         waitingForAgent: "等待代理中…",
         streamNotReported: "运行流未报呎进度 —— 一有结果立即显示。",
-        stopFollowing: "停止跟踪此运行",
         agentTrace: "代理连踪",
       },
       processing: {
         active: "进行中",
         error: "错误",
+        ariaLabel: "AI 处理进度",
       },
-    
-      trace: "代理执行轨迹",
-      skipWait: "跳过 / 取消等待",
-},
+      agentTimeline: {
+        trace: "代理执行轨迹",
+      },
+    },
+    jobCard: {
       companyNotResearched: "这家公司还没调研过",
       noMatchYet: "还没有算过匹配度",
       matchFor: "与「{title}」的匹配度",
@@ -2547,7 +2555,10 @@ export const translations = {
       opCreate: "新增",
       opUpdate: "更新",
       opDelete: "删除",
+      opSkip: "未变化",
       opTotal: "合计",
+      planWithCounts: "计划已就绪：新增 {create}、更新 {update}、删除 {delete}、未变化 {skip}。",
+      appliedCounts: "新增 {created} · 更新 {updated} · 删除 {deleted} · 未变化 {unchanged}",
     },
     // Ingestion
     ingestion: {
@@ -2691,13 +2702,34 @@ export const translations = {
           extracting: "正在用解析代理提取各段落",
           structuring: "正在整理经历、项目和技能",
           grading: "正在评估简历质量",
-        
-      empty: "暂无记忆",
+        },
+      },
+    },
+    memory: {
+      description: "模型从您的对话和面试中提取的事实。纠正错误的，或降低权重 — 这些塑造您获得的每个答案。",
+      loading: "加载记忆中…",
+      emptyTitle: "暂无记忆",
+      empty: "与 Copilot 对话或完成面试，模型学到的事实将显示在这里。",
       whatAgentsRemember: "代理记住的内容",
       whatAgentRemembers: "代理记住的内容",
+      forgetConfirm: "遗忘此记忆？",
+      forgetDescription: "这将不再塑造代理给您的答案。此操作不可撤销。",
+      weightHigherFirst: "权重越高的记忆在每个答案中排越前。",
       loadFailed: "记忆加载失败",
-      },
-      },
+    },
+    profile: {
+      description: "代理对您的假设 — 标题、目标和它们向招聘者讲述的故事。",
+      loading: "加载档案中…",
+      targetRoles: "目标角色（逗号分隔）",
+      targetLocations: "目标地点（逗号分隔）",
+      linksExtras: "链接与额外信息",
+      mapsDescription: "代理读取的自由形式映射 — 链接、工作授权、偏好。可解析为 JSON 的值保留类型；其余作为字符串保存。",
+      headline: "标题",
+      summary: "摘要",
+      yearsExperience: "从业年限 (0–60)",
+      saveProfile: "保存档案",
+      saveMaps: "保存映射",
+      loadFailed: "档案加载失败",
     },
     // Settings
     settings: {
@@ -2723,25 +2755,7 @@ export const translations = {
       paletteLight: "浅色",
       keyboard: "键盘",
       commandPalette: "命令面板",
-    
-      "memory.description": "模型从您的对话和面试中提取的事实。纠正错误的，或降低权重 — 这些塑造您获得的每个答案。",
-      "memory.loading": "加载记忆中…",
-      "memory.empty": "与 Copilot 对话或完成面试，模型学到的事实将显示在这里。",
-      "memory.forgetConfirm": "遗忘此记忆？",
-      "memory.forgetDescription": "这将不再塑造代理给您的答案。此操作不可撤销。",
-      "memory.weightHigherFirst": "权重越高的记忆在每个答案中排越前。",
-      "profile.description": "代理对您的假设 — 标题、目标和它们向招聘者讲述的故事。",
-      "profile.loading": "加载档案中…",
-      "profile.targetRoles": "目标角色（逗号分隔）",
-      "profile.targetLocations": "目标地点（逗号分隔）",
-      "profile.linksExtras": "链接与额外信息",
-      "profile.mapsDescription": "代理读取的自由形式映射 — 链接、工作授权、偏好。可解析为 JSON 的值保留类型；其余作为字符串保存。",
-      "profile.headline": "标题",
-      "profile.summary": "摘要",
-      "profile.yearsExperience": "从业年限 (0–60)",
-      "profile.saveProfile": "保存档案",
-      "profile.saveMaps": "保存映射",
-},
+    },
     /**
      * The auth pages' marketing panel. A visitor who cannot read English
      * lands here first, and this panel is what they are asked to believe.
@@ -2778,14 +2792,16 @@ export const translations = {
           text: "一个会追问、会按维度打分、会调整难度的 AI 面试官。",
         },
       },
-    
-      "auth.welcomeBack": "欢迎回来。",
-      "auth.accountCreated": "账号创建成功 — 欢迎来到 Career OS。",
-      "auth.signInToWorkspace": "登录到您的工作区",
-      "auth.createYourAccount": "创建您的账号",
-      "auth.signIn": "登录",
-      "auth.createAccount": "创建账号",
-},
+      welcomeBack: "欢迎回来。",
+      accountCreated: "账号创建成功 — 欢迎来到 Career OS。",
+      signInToWorkspace: "登录到您的工作区",
+      createYourAccount: "创建您的账号",
+      signIn: "登录",
+      createAccount: "创建账号",
+      confirmPassword: "确认密码",
+      passwordsDoNotMatch: "密码不匹配",
+      forgotPassword: "忘记密码？",
+    },
     /**
      * The skill chips: the two labels that sit above the matched row and
      * the missing one.
@@ -3573,23 +3589,7 @@ export const translations = {
         allInterviews: "全部面试",
         practiceAgain: "再练一次",
         fromReport: "来自报告 {id}",
-      
-      extractingRequirements: "提取需求中",
-      preferredSkills: "优先技能",
-      rankingPriorities: "优先级排序",
-      jobDescriptionText: "职位描述文本",
-      resumeImprovementSuggestions: "简历改进建议",
-      requiredSkills: "必需技能",
-      responsibilities: "职责",
-      hiddenRequirements: "隐性要求",
-      interviewTopics: "面试话题",
-      skillGap: "您的技能差距",
-      title: "导入职位发布",
-      filingTracker: "归档至跟踪器",
-      extractingCompanyRole: "提取公司和角色中",
-      jobPostingText: "职位发布文本",
-      readingPosting: "读取发布中",
-},
+      },
     },
     // Jobs
     jobs: {
@@ -3713,24 +3713,38 @@ export const translations = {
         required: "必须",
         niceToHave: "加分项",
       },
-    
-      "jd.title": "JD 智能分析",
-      "jd.readingPosting": "读取发布中",
-      "jd.description": "粘贴职位描述。JD 分析师将提取需求、优先级并与您的解析简历对比差距。",
-      "jd.structuredOutput": "/jds 的结构化输出",
-      "jd.comparingResume": "正在与简历对比…",
-      "jd.comparingProfile": "对比您的档案",
-      "jd.analysisFailed": "分析返回无结构化字段。通常是发布文本太短 — 请粘贴完整描述后重试。",
-      "jd.pasteFullPosting": "粘贴完整发布 — 职责、要求、加分项…",
-      "import.description": "粘贴完整发布。分析师将填入公司、技能、职责，角色将进入您的跟踪器。",
-      "import.sourceUrl": "来源网址（可选）",
-      "import.pasteFullPosting": "粘贴完整发布 — 职责、要求、加分项…",
-},
-  
-      confirmPassword: "确认密码",
-      passwordsDoNotMatch: "密码不匹配",
-      forgotPassword: "忘记密码？",
-},
+    },
+    jd: {
+      title: "JD 智能分析",
+      readingPosting: "读取发布中",
+      description: "粘贴职位描述。JD 分析师将提取需求、优先级并与您的解析简历对比差距。",
+      structuredOutput: "/jds 的结构化输出",
+      comparingResume: "正在与简历对比…",
+      comparingProfile: "对比您的档案",
+      analysisFailed: "分析返回无结构化字段。通常是发布文本太短 — 请粘贴完整描述后重试。",
+      pasteFullPosting: "粘贴完整发布 — 职责、要求、加分项…",
+      extractingRequirements: "提取需求中",
+      preferredSkills: "优先技能",
+      rankingPriorities: "优先级排序",
+      jobDescriptionText: "职位描述文本",
+      resumeImprovementSuggestions: "简历改进建议",
+      requiredSkills: "必需技能",
+      responsibilities: "职责",
+      hiddenRequirements: "隐性要求",
+      interviewTopics: "面试话题",
+      skillGap: "您的技能差距",
+    },
+    import: {
+      title: "导入职位发布",
+      description: "粘贴完整发布。分析师将填入公司、技能、职责，角色将进入您的跟踪器。",
+      sourceUrl: "来源网址（可选）",
+      pasteFullPosting: "粘贴完整发布 — 职责、要求、加分项…",
+      filingTracker: "归档至跟踪器",
+      extractingCompanyRole: "提取公司和角色中",
+      jobPostingText: "职位发布文本",
+      readingPosting: "读取发布中",
+    },
+  },
 } as const;
 
 export type TranslationKey = keyof typeof translations.en;

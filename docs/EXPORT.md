@@ -24,7 +24,7 @@ The engines were internal-only until now; the routes that reach them are:
 | Route | Body | Answers |
 |---|---|---|
 | `POST /api/v1/data-portability/export` | `{anonymized?}` | the bundle, with its content hash |
-| `POST /api/v1/data-portability/import-plan` | `{bundle, existing?}` | the per-item create/update/delete plan, with the counts |
+| `POST /api/v1/data-portability/import-plan` | `{bundle, existing?}` | the per-item create/update/delete/skip plan, with the counts |
 | `POST /api/v1/data-portability/import-apply` | `{bundle}` | what each section wrote, and which ones were left alone |
 | `POST /api/v1/data-portability/redact` | `{bundle, drop?}` | the bundle with the named sections removed and the hash recomputed |
 | `POST /api/v1/data-portability/render` | `{bundle, format?}` | the print-ready document — HTML, or PDF bytes |
@@ -87,6 +87,34 @@ A section the plan names but the bundle does not carry the rows for is
 reported as skipped, with the reason. So is a section whose rows are
 malformed. A restore that quietly dropped something is the failure this
 exists to catch.
+
+### An unchanged row is not written (2026-10-28)
+
+The page's copy promises that "unchanged rows are skipped", and the plan used
+to answer `update` for every row it already knew — so the promise was kept by
+the `content_hash` and not by the plan, and the preview's own counts said
+"2 to update" about a restore with nothing to do. The plan now compares each
+bundle row with the caller's current row and emits a `skip` when they are the
+same; `import-apply` takes that at its word, writes nothing for it, and counts
+it as `unchanged`.
+
+The comparison needed two things to be true:
+
+- **The same serializer on both sides.** The `existing` half is now read
+  through `ExportService.backendSections`, the method that builds the bundle's
+  backend sections, instead of a hand-written summary of three columns. A row
+  serialized two different ways always looks changed — and the profile used to
+  travel as the JPA entity, whose fields are camelCase, while the bundle's
+  profile is the engine's snake_case `SELECT *`. Both are pinned by tests.
+- **The stamps are not content.** `created_at` and `updated_at` are set by the
+  database, so the first apply bumps them; a comparison over whole rows would
+  find every row it had just written changed, write it again, and never once
+  answer "skip". The comparison covers the fields the apply writes, which is
+  what "unchanged" means.
+
+The operator's CLI (`python -m app.ops.restore_plan`) reports the fourth
+count too, so a dry run of a backup against the same backup says
+`skip 2` rather than `update 2`.
 
 ### The bundle is complete (1.1.0)
 

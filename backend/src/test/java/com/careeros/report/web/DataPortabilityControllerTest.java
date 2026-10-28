@@ -15,7 +15,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.careeros.ai.AiServiceClient;
 import com.careeros.ai.repository.GrowthPlanRepository;
+import com.careeros.application.entity.Application;
 import com.careeros.application.repository.ApplicationRepository;
+import com.careeros.auth.entity.UserProfile;
 import com.careeros.report.service.ExportService;
 import com.careeros.report.service.ImportService;
 import com.careeros.auth.repository.UserProfileRepository;
@@ -75,6 +77,7 @@ class DataPortabilityControllerTest {
     private UserNoteRepository notes;
     private ContactRepository contacts;
     private KnowledgeService knowledge;
+    private ContactService contactService;
     private MockMvc mvc;
 
     @BeforeEach
@@ -86,11 +89,12 @@ class DataPortabilityControllerTest {
         notes = mock(UserNoteRepository.class);
         contacts = mock(ContactRepository.class);
         knowledge = mock(KnowledgeService.class);
+        contactService = mock(ContactService.class);
         ExportService exports = new ExportService(ai, applications, growthPlans,
                 notes, contacts);
-        ImportService imports = new ImportService(ai, profiles, notes,
+        ImportService imports = new ImportService(ai, exports, profiles, notes,
                 contacts, applications, growthPlans,
-                mock(ResumeService.class), knowledge, mock(ContactService.class),
+                mock(ResumeService.class), knowledge, contactService,
                 mock(JobJdRepository.class), mock(JobRepository.class),
                 mock(InterviewSessionRepository.class), mock(InterviewTurnRepository.class),
                 mock(InterviewEvaluationRepository.class));
@@ -371,6 +375,115 @@ class DataPortabilityControllerTest {
                 // says so rather than claiming the whole bundle landed.
                 .andExpect(jsonPath("$.data.applied.profile.updated").value(1))
                 .andExpect(jsonPath("$.data.skipped[0].section").value("interviews"));
+    }
+
+    /**
+     * An unchanged row is not written, and the answer says so.
+     *
+     * <p>The panel's copy promises that "unchanged rows are skipped". The plan
+     * is where that is decided, and this is where it has to be kept: a skip op
+     * that the apply ignored would write the row again and report it as an
+     * update, which is the half of the promise that used to be missing.
+     */
+    @Test
+    void an_unchanged_row_is_not_written_again() throws Exception {
+        UUID noteId = UUID.fromString("22222222-2222-2222-2222-222222222222");
+        when(applications.findByUserIdOrderByUpdatedAtDescIdAsc(
+                eq(UUID.fromString(USER)), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of()));
+        when(growthPlans.findByUserIdOrderByCreatedAtDesc(eq(UUID.fromString(USER))))
+                .thenReturn(List.of());
+        when(ai.importPlan(eq(UUID.fromString(USER)), any(), any()))
+                .thenReturn(Map.of(
+                        "op_counts", Map.of("create", 0, "update", 0, "delete", 0,
+                                "skip", 1, "total", 1),
+                        "sections", Map.of("notes", List.of(
+                                Map.of("op", "skip", "id", noteId.toString(),
+                                        "content_hash", "same-hash")))));
+
+        Map<String, Object> bundle = Map.of(
+                "schema_version", "1.2.0",
+                "data", Map.of("notes", List.of(
+                        Map.of("id", noteId.toString(), "title", "Salary research",
+                                "content", "Hangzhou senior backend, 40-60w total."))));
+
+        mvc.perform(post("/api/v1/data-portability/import-apply")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("bundle", bundle))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.applied.notes.unchanged").value(1))
+                .andExpect(jsonPath("$.data.applied.notes.created").value(0))
+                .andExpect(jsonPath("$.data.applied.notes.updated").value(0));
+
+        // Nothing was written: not a second copy, not an update, not a delete.
+        verify(knowledge, never()).createNote(any(), any());
+        verify(knowledge, never()).updateNote(any(), any(), any());
+        verify(knowledge, never()).deleteNote(any(), any());
+    }
+
+    /**
+     * The plan's {@code existing} half is the bundle's own serialization.
+     *
+     * <p>A skip is decided by comparing the bundle's row with the target's,
+     * so a row summarized into three columns is a row the plan can never call
+     * unchanged -- it would plan an update for a row nobody changed. And the
+     * profile used to travel as the entity itself, whose field names are
+     * camelCase, while the bundle's profile is the engine's snake_case
+     * {@code SELECT *}. Both are pinned here, because either one alone turns
+     * every re-import into a write.
+     */
+    @Test
+    void the_existing_state_is_the_same_serialization_as_the_bundle() throws Exception {
+        Application application = new Application();
+        application.setUserId(UUID.fromString(USER));
+        application.setTitle("Senior Backend Engineer");
+        application.setCompanyName("Acme");
+        application.setStatus("interviewing");
+        application.setNotes("Phone screen went well.");
+        application.setAppliedAt(java.time.OffsetDateTime.parse("2026-09-01T09:00:00Z"));
+        when(applications.findByUserIdOrderByUpdatedAtDescIdAsc(
+                eq(UUID.fromString(USER)), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(application)));
+        when(growthPlans.findByUserIdOrderByCreatedAtDesc(eq(UUID.fromString(USER))))
+                .thenReturn(List.of());
+
+        UserProfile profile = new UserProfile();
+        profile.setUserId(UUID.fromString(USER));
+        profile.setHeadline("Backend engineer");
+        profile.setYearsExperience(new java.math.BigDecimal("6.5"));
+        when(profiles.findByUserId(eq(UUID.fromString(USER))))
+                .thenReturn(Optional.of(profile));
+
+        when(ai.importPlan(eq(UUID.fromString(USER)), any(), any()))
+                .thenReturn(Map.of("sections", Map.of()));
+
+        mvc.perform(post("/api/v1/data-portability/import-apply")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"bundle\":{\"schema_version\":\"1.2.0\",\"data\":{}}}"))
+                .andExpect(status().isOk());
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Map<String, Object>> existing = ArgumentCaptor.forClass(Map.class);
+        verify(ai).importPlan(eq(UUID.fromString(USER)), any(), existing.capture());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> data = (Map<String, Object>) existing.getValue().get("data");
+
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> rows = (List<Map<String, Object>>) data.get("applications");
+        assertThat(rows).hasSize(1);
+        assertThat(rows.get(0))
+                .containsEntry("title", "Senior Backend Engineer")
+                .containsEntry("company_name", "Acme")
+                .containsEntry("status", "interviewing")
+                .containsEntry("notes", "Phone screen went well.")
+                .containsKey("applied_at");
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> profileRow = (Map<String, Object>) data.get("profile");
+        assertThat(profileRow)
+                .containsEntry("headline", "Backend engineer")
+                .containsKey("years_experience")
+                .doesNotContainKey("yearsExperience");
     }
 
     /**

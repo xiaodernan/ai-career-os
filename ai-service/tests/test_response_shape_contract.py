@@ -3252,7 +3252,9 @@ def test_both_frame_parsers_default_a_nameless_frame_to_the_same_event_name():
         # concurrent types.ts edit had moved the union: a red on the shared worktree
         # is that edit, not this pin. When a types.ts edit lands above the union,
         # the re-aim lands with that edit.
-        ("types.ts", 1259, "kind:"),
+        # 1278 rather than 129c5a7's 1259 since the import plan's own types gained the
+        # skip op and its count (+19 lines above the union); the union itself did not change.
+        ("types.ts", 1278, "kind:"),
         ('use-sse.ts', 15, 'event: SSEEventName | "message" | "progress" | "ping";'),
     ], (f"{[(r['file'], r['line'], r['head']) for r in by_role['type-union-member']]}: three type unions "
         "spell `message`, and only one of them names a frame -- the other two are the trace step kind "
