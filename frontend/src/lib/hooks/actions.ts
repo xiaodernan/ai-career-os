@@ -96,7 +96,7 @@ export function useUploadResume() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["resumes"] });
-      toast.success("Uploaded — parsing your resume.");
+      toast.success(translate("toasts.resumeUploaded"));
     },
     onError: fail("Upload failed."),
   });
@@ -128,7 +128,7 @@ export function useSetCurrentResume(resumeId: string) {
       qc.invalidateQueries({ queryKey: ["resume", resumeId] });
       qc.invalidateQueries({ queryKey: ["resumes"] });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
-      toast.success("Current version updated.");
+      toast.success(translate("toasts.resumeCurrent"));
     },
     onError: fail("Couldn't change the current version."),
   });
@@ -140,7 +140,7 @@ export function useDeleteResume() {
     mutationFn: async (id: string) => api.remove(endpoints.resume(id)),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["resumes"] });
-      toast.success("Resume deleted.");
+      toast.success(translate("toasts.resumeDeleted"));
     },
     onError: fail("Couldn't delete the resume."),
   });
@@ -170,7 +170,9 @@ export function useToggleSaveJob() {
       fail("Couldn't update the saved list.")(err);
     },
     onSuccess: (_d, { saved }) =>
-      toast.success(saved ? "Removed from saved jobs." : "Saved to your pipeline."),
+      toast.success(
+        saved ? translate("toasts.savedJobRemoved") : translate("toasts.jobSavedToPipeline")
+      ),
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ["saved-jobs"] });
       qc.invalidateQueries({ queryKey: ["jobs"] });
@@ -194,7 +196,7 @@ export function useRunJobMatch(jobId: string) {
       qc.invalidateQueries({ queryKey: ["job", jobId] });
       qc.invalidateQueries({ queryKey: ["jobs"] });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
-      toast.success("Match analysis complete.");
+      toast.success(translate("toasts.matchComplete"));
     },
     onError: fail("Match analysis failed."),
   });
@@ -237,7 +239,7 @@ export function useImportJob() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["jobs"] });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
-      toast.success("Job imported - the analyst filled in the details.");
+      toast.success(translate("toasts.jobImported"));
     },
     onError: fail("Import failed."),
   });
@@ -296,7 +298,7 @@ export function useTailorResume(jobId: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["resumes"] });
       qc.invalidateQueries({ queryKey: ["activity"] });
-      toast.success("Tailored resume ready — review the diff before you export it.");
+      toast.success(translate("toasts.resumeTailored"));
     },
     onError: fail("Tailoring failed."),
   });
@@ -441,7 +443,7 @@ export function useCreateApplication() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["applications"] });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
-      toast.success("Added to your pipeline.");
+      toast.success(translate("toasts.addedToPipeline"));
     },
     onError: fail("Couldn't create the application."),
   });
@@ -485,9 +487,9 @@ export function useUpdateApplication() {
       fail("Couldn't update that application.")(err);
     },
     onSuccess: (_d, { patch }) => {
-      if (patch.note !== undefined) toast.success("Note saved.");
-      else if (patch.reminderAt !== undefined) toast.success("Reminder set.");
-      else if (patch.clearReminderAt) toast.success("Reminder cleared.");
+      if (patch.note !== undefined) toast.success(translate("toasts.applicationNoteSaved"));
+      else if (patch.reminderAt !== undefined) toast.success(translate("toasts.reminderSet"));
+      else if (patch.clearReminderAt) toast.success(translate("toasts.reminderCleared"));
     },
     onSettled: (_d, err, vars) => {
       qc.invalidateQueries({ queryKey: ["applications"] });
@@ -539,7 +541,7 @@ export function useDeleteApplication() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["applications"] });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
-      toast.success("Removed from pipeline.");
+      toast.success(translate("toasts.removedFromPipeline"));
     },
     onError: fail("Couldn't delete that application."),
   });
@@ -561,7 +563,7 @@ export function useIngestText() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["knowledge"] });
-      toast.success("Queued for ingestion.");
+      toast.success(translate("toasts.queuedForIngestion"));
     },
     onError: fail("Ingest failed."),
   });
@@ -576,7 +578,7 @@ export function useNoteMutations() {
         api.create<KnowledgeNote>(endpoints.knowledgeNotes, body),
       onSuccess: () => {
         invalidate();
-        toast.success("Note created.");
+        toast.success(translate("toasts.knowledgeNoteCreated"));
       },
       onError: fail("Couldn't save the note."),
     }),
@@ -588,7 +590,7 @@ export function useNoteMutations() {
         }),
       onSuccess: () => {
         invalidate();
-        toast.success("Note updated.");
+        toast.success(translate("toasts.knowledgeNoteUpdated"));
       },
       onError: fail("Couldn't update the note."),
     }),
@@ -597,7 +599,7 @@ export function useNoteMutations() {
       onSuccess: () => {
         invalidate();
         qc.invalidateQueries({ queryKey: ["knowledge", "sources"] });
-        toast.success("Note deleted.");
+        toast.success(translate("toasts.knowledgeNoteDeleted"));
       },
       onError: fail("Couldn't delete the note."),
     }),
@@ -761,7 +763,7 @@ export function useFinalizeInterview(sessionId: string) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["interview"] });
-      toast.success("Interview report is ready.");
+      toast.success(translate("toasts.interviewReportReady"));
     },
     onError: fail("Couldn't finalize the interview."),
   });
@@ -789,7 +791,7 @@ export function useRenameConversation() {
       api.update<unknown>(endpoints.conversation(id), { title }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["conversations"] });
-      toast.success("Conversation renamed.");
+      toast.success(translate("toasts.conversationRenamed"));
     },
     onError: fail("Couldn't rename the conversation."),
   });
@@ -804,7 +806,7 @@ export function useDeleteConversation() {
       // invalidating a query whose source row no longer exists.
       qc.removeQueries({ queryKey: ["conversation", id] });
       qc.invalidateQueries({ queryKey: ["conversations"] });
-      toast.success("Conversation deleted.");
+      toast.success(translate("toasts.conversationDeleted"));
     },
     onError: fail("Couldn't delete the conversation."),
   });
@@ -902,7 +904,7 @@ export function useUpdateProfile() {
       qc.setQueryData(["me"], user);
       qc.invalidateQueries({ queryKey: ["me"] });
       qc.invalidateQueries({ queryKey: ["profile"] });
-      toast.success("Profile saved.");
+      toast.success(translate("toasts.profileSaved"));
     },
     onError: (err) => {
       // Older/newer backends expose the writable copy under /users/me/profile.
@@ -918,7 +920,7 @@ export function useUpdateProfileDetails() {
       api.update<unknown>(endpoints.auth.profile, patch),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["profile"] });
-      toast.success("Career profile saved.");
+      toast.success(translate("toasts.careerProfileSaved"));
     },
     onError: fail("Couldn't save your career profile."),
   });
@@ -955,7 +957,7 @@ export function useUpdateMemory() {
       api.update<MemoryItem>(endpoints.memory(id), { content, importance }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["memories"] });
-      toast.success("Memory updated.");
+      toast.success(translate("toasts.memoryUpdated"));
     },
     onError: fail("Couldn't update that memory."),
   });
@@ -968,7 +970,7 @@ export function useDeleteMemory() {
     mutationFn: async (id: string) => api.remove(endpoints.memory(id)),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["memories"] });
-      toast.success("Memory forgotten.");
+      toast.success(translate("toasts.memoryForgotten"));
     },
     onError: fail("Couldn't forget that memory."),
   });
@@ -988,7 +990,7 @@ export function useCreateContact() {
       api.create<unknown>(endpoints.contacts, contactBody(body)),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["contacts"] });
-      toast.success("Contact saved.");
+      toast.success(translate("toasts.contactSaved"));
     },
     onError: fail("Couldn't save that contact."),
   });
@@ -1001,7 +1003,7 @@ export function useUpdateContact() {
       api.update<unknown>(endpoints.contact(id), contactBody(body)),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["contacts"] });
-      toast.success("Contact updated.");
+      toast.success(translate("toasts.contactUpdated"));
     },
     onError: fail("Couldn't update that contact."),
   });
@@ -1013,7 +1015,7 @@ export function useDeleteContact() {
     mutationFn: (id: string) => api.remove(endpoints.contact(id)),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["contacts"] });
-      toast.success("Contact deleted.");
+      toast.success(translate("toasts.contactDeleted"));
     },
     onError: fail("Couldn't delete that contact."),
   });

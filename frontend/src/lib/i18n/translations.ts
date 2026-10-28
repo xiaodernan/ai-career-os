@@ -129,6 +129,43 @@ export const translations = {
       backToDashboard: "Back to the dashboard",
     },
     /**
+     * What a successful write says.
+     *
+     * A toast is raised from an event handler, long after the render that
+     * knew the language, so these are read through `translate` rather than
+     * the provider's `t` -- but they are the reader's words all the same,
+     * and they were English literals in the write hooks until this table.
+     */
+    toasts: {
+      resumeUploaded: "Uploaded — parsing your resume.",
+      resumeCurrent: "Current version updated.",
+      resumeDeleted: "Resume deleted.",
+      savedJobRemoved: "Removed from saved jobs.",
+      jobSavedToPipeline: "Saved to your pipeline.",
+      resumeTailored: "Tailored resume ready — review the diff before you export it.",
+      matchComplete: "Match analysis complete.",
+      jobImported: "Job imported - the analyst filled in the details.",
+      addedToPipeline: "Added to your pipeline.",
+      removedFromPipeline: "Removed from pipeline.",
+      applicationNoteSaved: "Note saved.",
+      reminderSet: "Reminder set.",
+      reminderCleared: "Reminder cleared.",
+      queuedForIngestion: "Queued for ingestion.",
+      knowledgeNoteCreated: "Note created.",
+      knowledgeNoteUpdated: "Note updated.",
+      knowledgeNoteDeleted: "Note deleted.",
+      interviewReportReady: "Interview report is ready.",
+      conversationRenamed: "Conversation renamed.",
+      conversationDeleted: "Conversation deleted.",
+      profileSaved: "Profile saved.",
+      careerProfileSaved: "Career profile saved.",
+      memoryUpdated: "Memory updated.",
+      memoryForgotten: "Memory forgotten.",
+      contactSaved: "Contact saved.",
+      contactUpdated: "Contact updated.",
+      contactDeleted: "Contact deleted.",
+    },
+    /**
      * What a screen reader is told while a surface is still loading.
      *
      * These are the announcements, not the shimmer: they are the only words a
@@ -2327,6 +2364,43 @@ export const translations = {
       somethingWentWrong: "出了点问题",
       skipToContent: "跳到正文",
       backToDashboard: "回到仪表盘",
+    },
+    /**
+     * What a successful write says.
+     *
+     * A toast is raised from an event handler, long after the render that
+     * knew the language, so these are read through `translate` rather than
+     * the provider's `t` -- but they are the reader's words all the same,
+     * and they were English literals in the write hooks until this table.
+     */
+    toasts: {
+      resumeUploaded: "已上传——正在解析你的简历。",
+      resumeCurrent: "当前版本已更新。",
+      resumeDeleted: "简历已删除。",
+      savedJobRemoved: "已从收藏中移除。",
+      jobSavedToPipeline: "已保存到流水线。",
+      resumeTailored: "定制简历已就绪——导出前请先查看差异。",
+      matchComplete: "匹配分析已完成。",
+      jobImported: "职位已导入——分析师已补齐细节。",
+      addedToPipeline: "已加入流水线。",
+      removedFromPipeline: "已从流水线移除。",
+      applicationNoteSaved: "备注已保存。",
+      reminderSet: "提醒已设置。",
+      reminderCleared: "提醒已清除。",
+      queuedForIngestion: "已加入采集队列。",
+      knowledgeNoteCreated: "笔记已创建。",
+      knowledgeNoteUpdated: "笔记已更新。",
+      knowledgeNoteDeleted: "笔记已删除。",
+      interviewReportReady: "面试报告已就绪。",
+      conversationRenamed: "对话已重命名。",
+      conversationDeleted: "对话已删除。",
+      profileSaved: "个人资料已保存。",
+      careerProfileSaved: "职业档案已保存。",
+      memoryUpdated: "记忆已更新。",
+      memoryForgotten: "记忆已遗忘。",
+      contactSaved: "联系人已保存。",
+      contactUpdated: "联系人已更新。",
+      contactDeleted: "联系人已删除。",
     },
     /**
      * What a screen reader is told while a surface is still loading.
