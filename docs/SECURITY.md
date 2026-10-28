@@ -22,6 +22,16 @@ reachable from a browser.
     `PATCH /me/password`, which re-checks the current password — revokes every
     refresh token the account holds; access tokens are stateless and expire within
     `JWT_ACCESS_TTL_MINUTES`.
+  - A refresh-token family is one signed-in device. Its first token records the
+    user-agent and client address (truncated to 255/45 chars, both optional), and
+    `GET /me/sessions` folds live tokens back into families so the account can
+    recognise its own doors without the family id ever appearing in a letter or a
+    log. `DELETE /me/sessions/{id}` closes one family and `DELETE /me/sessions`
+    closes all; another account's family id answers the same 404 as an unknown
+    one, so the endpoint cannot be used to probe for sessions. Revoking a session
+    is the fastest account-holder response to a borrowed laptop: refresh stops
+    immediately, and the thief's access token dies at its 15-minute horizon — the
+    same bound every access token has, because tokens are stateless.
 - Public (unauthenticated) routes: `/api/v1/auth/**`, `/api/v1/health`,
   OpenAPI/Swagger (`/api-docs/**`, `/v3/api-docs/**`, `/swagger-ui/**`,
   `/swagger-ui.html` — `application.yml` serves them at `/api-docs` and

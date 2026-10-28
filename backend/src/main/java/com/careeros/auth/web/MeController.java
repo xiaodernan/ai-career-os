@@ -3,16 +3,22 @@ package com.careeros.auth.web;
 import com.careeros.auth.dto.EraseAccountRequest;
 import com.careeros.auth.dto.MeResponse;
 import com.careeros.auth.dto.PasswordChangeRequest;
+import com.careeros.auth.dto.SessionResponse;
 import com.careeros.auth.dto.UpdateMeRequest;
 import com.careeros.auth.service.AccountErasureService;
 import com.careeros.auth.service.AuthService;
+import com.careeros.auth.service.TokenService;
 import com.careeros.auth.service.UserService;
 import com.careeros.common.AuthUser;
 import com.careeros.common.CurrentUser;
 import jakarta.validation.Valid;
+import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -25,12 +31,14 @@ public class MeController {
     private final UserService userService;
     private final AuthService authService;
     private final AccountErasureService erasure;
+    private final TokenService tokenService;
 
     public MeController(UserService userService, AuthService authService,
-                        AccountErasureService erasure) {
+                        AccountErasureService erasure, TokenService tokenService) {
         this.userService = userService;
         this.authService = authService;
         this.erasure = erasure;
+        this.tokenService = tokenService;
     }
 
     @GetMapping
@@ -48,6 +56,23 @@ public class MeController {
                                               @RequestBody @Valid PasswordChangeRequest request) {
         authService.changePassword(user.id(), request);
         return Map.of("changed", true);
+    }
+
+    @GetMapping("/sessions")
+    public List<SessionResponse> sessions(@CurrentUser AuthUser user) {
+        return tokenService.listSessions(user.id());
+    }
+
+    @DeleteMapping("/sessions/{familyId}")
+    public Map<String, Object> revokeSession(@CurrentUser AuthUser user, @PathVariable UUID familyId) {
+        tokenService.revokeSession(user.id(), familyId);
+        return Map.of("revoked", true);
+    }
+
+    @DeleteMapping("/sessions")
+    public Map<String, Object> revokeAllSessions(@CurrentUser AuthUser user) {
+        tokenService.revokeAllForUser(user.id());
+        return Map.of("revoked", true);
     }
 
     @PostMapping("/erase")

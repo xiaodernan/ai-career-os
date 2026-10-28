@@ -11,6 +11,8 @@ import com.careeros.auth.dto.TokenPairResponse;
 import com.careeros.auth.entity.User;
 import com.careeros.auth.service.AuthService;
 import com.careeros.auth.service.TokenService;
+import com.careeros.common.ClientInfo;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
@@ -34,15 +36,17 @@ public class AuthController {
 
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
-    public AuthResponse register(@RequestBody @Valid RegisterRequest request) {
+    public AuthResponse register(@RequestBody @Valid RegisterRequest request, HttpServletRequest http) {
         User user = authService.register(request);
-        return new AuthResponse(AuthUserResponse.from(user), tokenService.issueForNewSession(user));
+        return new AuthResponse(AuthUserResponse.from(user),
+                tokenService.issueForNewSession(user, ClientInfo.from(http)));
     }
 
     @PostMapping("/login")
-    public AuthResponse login(@RequestBody @Valid LoginRequest request) {
+    public AuthResponse login(@RequestBody @Valid LoginRequest request, HttpServletRequest http) {
         User user = authService.login(request);
-        return new AuthResponse(AuthUserResponse.from(user), tokenService.issueForNewSession(user));
+        return new AuthResponse(AuthUserResponse.from(user),
+                tokenService.issueForNewSession(user, ClientInfo.from(http)));
     }
 
     @PostMapping("/refresh")

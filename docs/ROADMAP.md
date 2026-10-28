@@ -1215,6 +1215,64 @@ account the two verbs its owner holds: change the lock, and close the door.
   backend unit suite at 734 and the integration suite at 70, the API/knob/security/env
   doc gates passing, no frontend or copy-census movement.)
 
+## Epic 25 — The Reader Can See the Open Doors
+
+Epic 24 gave the account a lock and a door, but a reader who suspected a borrowed
+laptop had no way to see what was still signed in, let alone close one of them: a
+refresh-token family was an opaque id, and the only lever was the password change,
+which signs every device out at once. This epic names each session when it starts and
+gives the account the verbs the list implies.
+
+- [x] **25.1** A session is named when it starts, and listed by family.
+
+  (V21 adds `user_agent` and `client_ip` to `refresh_tokens`. `ClientInfo` reads them
+  from the request that registers or logs in — the agent truncated to 255 chars, the
+  address to 45, both optional because a client may omit the header — and rotation
+  carries the family's name forward rather than re-reading the header, so a stolen
+  refresh token cannot relabel the device it was stolen from. The reverse-proxy
+  address parse now lives in `ClientInfo` and the rate limiter delegates to it, so the
+  two readers of "who is calling" cannot drift apart.
+
+  `GET /me/sessions` folds live tokens back into families: one row per device with the
+  family id, the name, the start, the last rotation and the furthest expiry, newest
+  activity first. The token that opened a family is retired by the first rotation, so
+  the start is computed from every row of the family, not from the live ones alone —
+  otherwise every refresh would make the session look newly opened. Revoked and
+  expired families are left out: a session that can no longer refresh is not something
+  the reader can still close. No token hash, raw token or family secret beyond the id
+  is in the answer.
+
+  8 backend tests (7 for the service — the name recorded at issuance, rotation staying
+  in the family with its name, listing folding a rotation into one session ordered by
+  last visit, closed and expired families left out, one family closed at a time, a
+  stranger's family a 404 that touches nothing, closing twice answering the same 404 —
+  and 1 for the list route's envelope across both spellings).)
+
+- [x] **25.2** The reader can close one door, or all of them.
+
+  (`DELETE /me/sessions/{familyId}` revokes every live token of that family; the
+  refresh token stops buying pairs at once and the answer is `{revoked: true}`. A
+  family id that is not live for the caller — someone else's, or already closed — is
+  one **404** `NOT_FOUND`, deliberately indistinguishable so the endpoint cannot be
+  used to probe for sessions, and it touches nothing. Closing the session that is
+  asking is allowed and behaves like logout: the access token dies at its short
+  expiry, because access tokens are stateless and a revocation list for them would be
+  a second session store. `DELETE /me/sessions` closes everything and is the lever a
+  reader reaches for after a password change has already done the same thing.
+  `/users/me/sessions` mirrors all three verbs for the browser-facing alias, as the
+  rest of the surface does.
+
+  4 backend tests for the close verbs' two spellings, the 404 and the
+  unauthenticated answer, plus 1 integration test that
+  registers and logs in from two agents, proves the list names both and never leaks a
+  token, rotates one without growing the list, closes the other and watches only its
+  refresh die, sees a neighbour's family id answer 404 while the neighbour keeps
+  refreshing, then closes all and watches the remaining refresh die and the list
+  empty. The backend unit suite at 746 and the integration suite at 71, the
+  API/knob/security/env doc gates passing, no frontend or copy-census movement — the
+  settings screen that draws this list is blocked on the shared copy file, and the
+  routes are live for the client that comes after it.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

@@ -34,6 +34,12 @@ public class RefreshToken {
     @Column(name = "revoked_at")
     private OffsetDateTime revokedAt;
 
+    @Column(name = "user_agent")
+    private String userAgent;
+
+    @Column(name = "client_ip")
+    private String clientIp;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
@@ -80,6 +86,26 @@ public class RefreshToken {
 
     public void setRevokedAt(OffsetDateTime revokedAt) {
         this.revokedAt = revokedAt;
+    }
+
+    public String getUserAgent() {
+        return userAgent;
+    }
+
+    public void setUserAgent(String userAgent) {
+        this.userAgent = userAgent;
+    }
+
+    public String getClientIp() {
+        return clientIp;
+    }
+
+    public void setClientIp(String clientIp) {
+        this.clientIp = clientIp;
+    }
+
+    public OffsetDateTime getCreatedAt() {
+        return createdAt;
     }
 
     public boolean isRevoked() {

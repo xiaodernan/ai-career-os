@@ -82,6 +82,12 @@ per-user budget on AI endpoints.
 | PATCH | `/users/me/password` | alias of `PATCH /me/password` |
 | POST | `/me/erase` | `{password, confirmEmail}` → `{erased: true}`. Re-authenticates twice — the password, then the account's own email typed back (case and surrounding spaces forgiven) — deletes the file behind every document the account owns, then deletes the account row, which cascades through every user-scoped table. A wrong password is a **401** `INVALID_CREDENTIALS`, an address belonging to another account a **400** `CONFIRMATION_MISMATCH`, and neither touches anything. The access token used to ask still parses (access tokens are stateless) and its next request is a **404** `USER_NOT_FOUND`; every refresh token is gone with its row |
 | POST | `/users/me/erase` | alias of `POST /me/erase` (`{password, confirmEmail}`) |
+| GET | `/me/sessions` | the account's open doors — one row per refresh-token family with its id, the user-agent and address that opened it, when it started, when it last rotated, and when it expires. Rotation stays inside the family, so refreshing never adds a row, and sessions that are revoked or expired are left out because they can no longer refresh |
+| DELETE | `/me/sessions/{id}` | closes one session by family id; its refresh token stops buying pairs at once and the answer is `{revoked: true}`. A family that is not the caller's, or is already closed, is one **404** `NOT_FOUND` and touches nothing — the two cases are indistinguishable on purpose. Closing the session that is asking is allowed and behaves like logout: the access token dies at its short expiry like every access token |
+| DELETE | `/me/sessions` | closes every session, the caller's included; same answer. Refresh tokens die at once, access tokens at their short expiry |
+| GET | `/users/me/sessions` | alias of `/me/sessions` |
+| DELETE | `/users/me/sessions/{id}` | alias of `DELETE /me/sessions/{id}` |
+| DELETE | `/users/me/sessions` | alias of `DELETE /me/sessions` |
 | GET | `/users/me/profile` | career profile |
 | PATCH | `/users/me/profile` | `{headline, summary, location, yearsExperience, targetRoles, targetLocations, links, workAuthorization, preferences}` |
 

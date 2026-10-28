@@ -2,6 +2,7 @@ package com.careeros.auth.repository;
 
 import com.careeros.auth.entity.RefreshToken;
 import java.time.OffsetDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -15,6 +16,11 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, UUID
     Optional<RefreshToken> findByTokenHash(String tokenHash);
 
     List<RefreshToken> findByFamilyIdAndRevokedAtIsNull(UUID familyId);
+
+    List<RefreshToken> findByUserIdAndRevokedAtIsNullAndExpiresAtAfter(
+            UUID userId, OffsetDateTime now);
+
+    List<RefreshToken> findByFamilyIdIn(Collection<UUID> familyIds);
 
     @Modifying
     @Query("""

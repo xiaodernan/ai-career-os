@@ -74,7 +74,7 @@ class UserControllerTest {
         UserService userService = new UserService(users, profiles);
         UserProfileService profileService = new UserProfileService(users, profiles);
         mvc = MockMvcBuilders.standaloneSetup(new UserController(userService, profileService, authService,
-                        mock(AccountErasureService.class)))
+                        mock(AccountErasureService.class), mock(com.careeros.auth.service.TokenService.class)))
                 .setControllerAdvice(new EnvelopeAdvice(), new GlobalExceptionHandler())
                 .setCustomArgumentResolvers(new CurrentUserArgumentResolver())
                 .build();

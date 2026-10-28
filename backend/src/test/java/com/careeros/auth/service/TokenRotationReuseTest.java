@@ -14,6 +14,7 @@ import com.careeros.auth.repository.RefreshTokenRepository;
 import com.careeros.auth.repository.UserRepository;
 import com.careeros.common.ApiErrorCode;
 import com.careeros.common.ApiException;
+import com.careeros.common.ClientInfo;
 import com.careeros.config.AppProperties;
 import java.lang.reflect.Proxy;
 import java.util.ArrayList;
@@ -70,7 +71,7 @@ class TokenRotationReuseTest {
 
     @Test
     void issuanceStoresHashedTokenAndReturnsOpaqueToken() {
-        TokenPairResponse pair = tokenService.issueForNewSession(user);
+        TokenPairResponse pair = tokenService.issueForNewSession(user, ClientInfo.NONE);
         assertEquals(1, store.size());
         RefreshToken saved = store.get(0);
         assertEquals(TokenHasher.sha256Hex(pair.refreshToken()), saved.getTokenHash());
@@ -80,7 +81,7 @@ class TokenRotationReuseTest {
 
     @Test
     void rotationRevokesPresentedTokenAndKeepsFamily() {
-        TokenPairResponse first = tokenService.issueForNewSession(user);
+        TokenPairResponse first = tokenService.issueForNewSession(user, ClientInfo.NONE);
         TokenPairResponse second = tokenService.refresh(first.refreshToken());
 
         assertNotEquals(first.refreshToken(), second.refreshToken(), "rotation must mint a new token");
@@ -92,7 +93,7 @@ class TokenRotationReuseTest {
 
     @Test
     void reusingRotatedTokenRevokesEntireFamily() {
-        TokenPairResponse first = tokenService.issueForNewSession(user);
+        TokenPairResponse first = tokenService.issueForNewSession(user, ClientInfo.NONE);
         TokenPairResponse second = tokenService.refresh(first.refreshToken());
 
         ApiException reuse = assertThrows(ApiException.class,
@@ -116,7 +117,7 @@ class TokenRotationReuseTest {
 
     @Test
     void logoutRevokesFamilyAndBlocksFurtherRefresh() {
-        TokenPairResponse pair = tokenService.issueForNewSession(user);
+        TokenPairResponse pair = tokenService.issueForNewSession(user, ClientInfo.NONE);
         tokenService.logout(pair.refreshToken());
         ApiException ex = assertThrows(ApiException.class, () -> tokenService.refresh(pair.refreshToken()));
         assertEquals(ApiErrorCode.TOKEN_REUSED, ex.code());

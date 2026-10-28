@@ -4,6 +4,7 @@ import com.careeros.common.ApiError;
 import com.careeros.common.ApiErrorCode;
 import com.careeros.common.ApiResponse;
 import com.careeros.common.AuthUser;
+import com.careeros.common.ClientInfo;
 import com.careeros.config.AppProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
@@ -115,10 +116,6 @@ public class RateLimitFilter extends org.springframework.web.filter.OncePerReque
 
     /** Deployments sit behind a trusted reverse proxy that sets X-Forwarded-For; direct clients cannot spoof it there. */
     static String clientIp(HttpServletRequest request) {
-        String forwarded = request.getHeader("X-Forwarded-For");
-        if (forwarded != null && !forwarded.isBlank()) {
-            return forwarded.split(",")[0].trim();
-        }
-        return request.getRemoteAddr();
+        return ClientInfo.clientIp(request);
     }
 }

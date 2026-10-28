@@ -3,9 +3,11 @@ package com.careeros.user.web;
 import com.careeros.auth.dto.EraseAccountRequest;
 import com.careeros.auth.dto.MeResponse;
 import com.careeros.auth.dto.PasswordChangeRequest;
+import com.careeros.auth.dto.SessionResponse;
 import com.careeros.auth.dto.UpdateMeRequest;
 import com.careeros.auth.service.AccountErasureService;
 import com.careeros.auth.service.AuthService;
+import com.careeros.auth.service.TokenService;
 import com.careeros.auth.service.UserService;
 import com.careeros.common.AuthUser;
 import com.careeros.common.CurrentUser;
@@ -13,9 +15,13 @@ import com.careeros.user.dto.ProfileResponse;
 import com.careeros.user.dto.UpdateProfileRequest;
 import com.careeros.user.service.UserProfileService;
 import jakarta.validation.Valid;
+import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -30,13 +36,16 @@ public class UserController {
     private final UserProfileService profileService;
     private final AuthService authService;
     private final AccountErasureService erasure;
+    private final TokenService tokenService;
 
     public UserController(UserService userService, UserProfileService profileService,
-                          AuthService authService, AccountErasureService erasure) {
+                          AuthService authService, AccountErasureService erasure,
+                          TokenService tokenService) {
         this.userService = userService;
         this.profileService = profileService;
         this.authService = authService;
         this.erasure = erasure;
+        this.tokenService = tokenService;
     }
 
     @GetMapping("/me")
@@ -65,6 +74,23 @@ public class UserController {
                                               @RequestBody @Valid PasswordChangeRequest request) {
         authService.changePassword(user.id(), request);
         return Map.of("changed", true);
+    }
+
+    @GetMapping("/me/sessions")
+    public List<SessionResponse> sessions(@CurrentUser AuthUser user) {
+        return tokenService.listSessions(user.id());
+    }
+
+    @DeleteMapping("/me/sessions/{familyId}")
+    public Map<String, Object> revokeSession(@CurrentUser AuthUser user, @PathVariable UUID familyId) {
+        tokenService.revokeSession(user.id(), familyId);
+        return Map.of("revoked", true);
+    }
+
+    @DeleteMapping("/me/sessions")
+    public Map<String, Object> revokeAllSessions(@CurrentUser AuthUser user) {
+        tokenService.revokeAllForUser(user.id());
+        return Map.of("revoked", true);
     }
 
     @PostMapping("/me/erase")
