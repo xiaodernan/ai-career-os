@@ -13,4 +13,6 @@ public interface DocumentRepository extends JpaRepository<Document, UUID> {
     Optional<Document> findByFileKey(String fileKey);
 
     List<Document> findBySourceId(UUID sourceId);
+
+    List<Document> findByUserId(UUID userId);
 }

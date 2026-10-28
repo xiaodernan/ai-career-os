@@ -1,6 +1,7 @@
 package com.careeros.auth.service;
 
 import com.careeros.auth.dto.LoginRequest;
+import com.careeros.auth.dto.PasswordChangeRequest;
 import com.careeros.auth.dto.RegisterRequest;
 import com.careeros.auth.dto.ResetPasswordRequest;
 import com.careeros.auth.entity.PasswordResetToken;
@@ -13,6 +14,7 @@ import com.careeros.common.ApiErrorCode;
 import com.careeros.common.ApiException;
 import java.time.Duration;
 import java.time.OffsetDateTime;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -116,5 +118,30 @@ public class AuthService {
         // Force re-login everywhere after a password change.
         tokenService.revokeAllForUser(user.getId());
         log.info("Password reset for user {}", user.getId());
+    }
+
+    /**
+     * Replaces the password of a signed-in account (roadmap 24.1). The current password is the
+     * re-authentication: an open tab, a borrowed laptop or a stolen access token is not enough
+     * to take the account away from its owner. Every refresh token is revoked afterwards, the
+     * same response the reset path gives, so a reader who suspects a compromise leaves every
+     * other session behind; the access token already in this reader's hand dies at its short
+     * expiry like it always does.
+     */
+    @Transactional
+    public void changePassword(UUID userId, PasswordChangeRequest request) {
+        User user = users.findById(userId)
+                .orElseThrow(() -> new ApiException(ApiErrorCode.USER_NOT_FOUND, "User not found"));
+        if (!passwordEncoder.matches(request.currentPassword(), user.getPasswordHash())) {
+            throw new ApiException(ApiErrorCode.INVALID_CREDENTIALS, "Current password is incorrect");
+        }
+        if (passwordEncoder.matches(request.newPassword(), user.getPasswordHash())) {
+            throw new ApiException(ApiErrorCode.PASSWORD_UNCHANGED,
+                    "New password must differ from the current one");
+        }
+        user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
+        users.save(user);
+        tokenService.revokeAllForUser(userId);
+        log.info("Password changed for user {}", userId);
     }
 }

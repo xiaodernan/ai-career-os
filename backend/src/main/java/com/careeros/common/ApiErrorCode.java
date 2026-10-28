@@ -25,6 +25,10 @@ public enum ApiErrorCode {
     FILE_KEY_INVALID(HttpStatus.BAD_REQUEST),
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED),
     INVALID_CREDENTIALS(HttpStatus.UNAUTHORIZED),
+    /** The new password is the one already on the account, so the change would buy nothing. */
+    PASSWORD_UNCHANGED(HttpStatus.BAD_REQUEST),
+    /** The typed email is not this account's: the deliberate half of an erasure did not happen. */
+    CONFIRMATION_MISMATCH(HttpStatus.BAD_REQUEST),
     TOKEN_INVALID(HttpStatus.UNAUTHORIZED),
     TOKEN_MALFORMED(HttpStatus.UNAUTHORIZED),
     TOKEN_OWNER_NOT_FOUND(HttpStatus.UNAUTHORIZED),

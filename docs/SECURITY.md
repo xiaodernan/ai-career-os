@@ -18,6 +18,10 @@ reachable from a browser.
   - Refresh tokens are **hashed at rest** (`resume`/`auth` `TokenHasher`) so a DB
     leak does not expose usable tokens; reuse of a rotated refresh token is
     rejected and rotates the whole family (see `TokenRotationReuseTest`).
+  - Replacing a password — the emailed reset and the authenticated
+    `PATCH /me/password`, which re-checks the current password — revokes every
+    refresh token the account holds; access tokens are stateless and expire within
+    `JWT_ACCESS_TTL_MINUTES`.
 - Public (unauthenticated) routes: `/api/v1/auth/**`, `/api/v1/health`,
   OpenAPI/Swagger (`/api-docs/**`, `/v3/api-docs/**`, `/swagger-ui/**`,
   `/swagger-ui.html` — `application.yml` serves them at `/api-docs` and
@@ -49,6 +53,20 @@ ai-service is internal-only and gated by `core/deps.require_internal`:
 Retrieval, matching, resume tools and every RAG query filter by the caller's
 `user_id` — see [RAG.md](RAG.md). One user's evidence chunks are never returned
 into another user's prompt.
+
+### Erasure
+
+`POST /api/v1/me/erase` is the reader's exit. The account must present its password
+and its own email typed back; then the objects named by its `documents.file_key`
+rows are removed from the private bucket and the `users` row is deleted. Every
+user-scoped table has carried `REFERENCES users(id) ON DELETE CASCADE` since V1,
+so the remaining rows — profile, memories, resumes, applications, interviews,
+conversations, chunks, feeds, notifications, digests, usage and refresh tokens —
+leave in the same transaction. A storage failure aborts before the row is removed
+(the account stays whole and retryable); access tokens are stateless and expire
+within `JWT_ACCESS_TTL_MINUTES`, and every request they can still make finds no
+account. Backups are outside the live system: a set taken before the request keeps
+the rows and objects until its retention window passes (see DEPLOYMENT.md).
 
 ## Prompt-injection defense (ai-service)
 

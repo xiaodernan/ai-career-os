@@ -1148,6 +1148,73 @@ record.
   headers), the backend unit suite at 712 and the integration suite at 69, the
   API/knob/security/env doc gates passing, no frontend or copy-census movement.)
 
+## Epic 24 — The Reader Can Leave
+
+The workspace can leave in a file (Epic 13) and the letters can stop (Epic 23), but the
+account itself had neither exit. The only way to replace a password was to sign out,
+claim to have forgotten it and wait for a mail; the only way to leave was to walk away
+from the rows. Everything a reader owns has cascaded from `users` since V1 — 36 foreign
+keys, every user-scoped table — yet no route ever deleted a row. This epic gives the
+account the two verbs its owner holds: change the lock, and close the door.
+
+- [x] **24.1** The password can be changed from the session that already knows it.
+
+  (A signed-in reader had no way to replace a password except the forgot-password
+  detour: sign out, say you forgot, open a mail, pick a new one. `PATCH /me/password`
+  — and its `/users/me/password` alias — takes `{currentPassword, newPassword}`. The
+  current value is the re-authentication: an open tab or a borrowed laptop is not
+  enough to take the account away from its owner, so a wrong current password is a
+  **401** `INVALID_CREDENTIALS` and changes nothing. A new value equal to the current
+  one is refused with its own **400** `PASSWORD_UNCHANGED`, because re-storing the same
+  hash would buy the reader nothing while still signing every other device out. On
+  success the hash is re-encoded (BCrypt, never stored raw) and
+  `TokenService.revokeAllForUser` retires every refresh token — the same response the
+  reset path gives — so the caller's open tab keeps working only for the access
+  token's short life, like every access token. The account id is the principal's; the
+  request body has no field that could name another account. The answer is
+  `{changed: true}` and carries neither password.
+
+  11 backend tests (4 for the service rules — the right current password re-hashes and
+  revokes, a wrong one touches nothing, the same value is refused by name, a vanished
+  account is a 404 — and 7 for the two routes' envelope, validation, refusal codes,
+  unauthenticated answer and body hygiene). The epic's suite and doc gates are recorded
+  with 24.2, whose routes share the same two controllers.)
+
+- [x] **24.2** The account can be erased for good, files and rows together.
+
+  (`POST /me/erase` — and its `/users/me/erase` alias — takes `{password, confirmEmail}`.
+  The password is the re-authentication; the typed address, compared without case or
+  surrounding spaces, makes the request a second, explicit act — the address is on the
+  screen, so it is a speed bump against a mis-click, not a secret. Both wrong answers
+  have their own code — **401** `INVALID_CREDENTIALS` and **400**
+  `CONFIRMATION_MISMATCH` — and touch nothing.
+  Then `AccountErasureService` deletes the object-store file named by every
+  `documents.file_key` the account owns and only after that deletes the `users` row: all
+  36 foreign keys into `users` have carried `ON DELETE CASCADE` since V1, so the
+  workspace — profile, memories, resumes, jobs, applications, interviews, conversations,
+  documents and their chunks, knowledge sources, feeds, notifications, digests, growth
+  plans, jobs, usage, tokens and mail preferences — leaves in one statement. Knowledge
+  sources elsewhere in the product are retired with their files kept as an audit record;
+  erasure is the one operation where the reader's right to be forgotten outranks the
+  record, which is why nothing before this service ever called `StorageService.delete`.
+  A storage failure aborts the transaction before the row is removed, so the account is
+  whole and the request retryable, never half-erased; object deletion is idempotent, so a
+  retry after a database failure finishes the job. The answer is `{erased: true}` and
+  carries no password. The access token used to make the request still parses — access
+  tokens are stateless — and its next request is a **404** `USER_NOT_FOUND`, while every
+  refresh token is gone with its row. Backups are outside the live system and keep what
+  they captured until their retention window passes; DEPLOYMENT.md says so beside the
+  restore drill.
+
+  12 backend tests (5 for the service — every file deleted before the row, a wrong
+  password or a neighbour's address touching nothing, a storage failure leaving the
+  account whole, a vanished account a 404 — 6 for the two routes' envelope, both refusal
+  codes, validation, the unauthenticated answer and body hygiene, and 1 integration test
+  that gives two accounts the same rows and files, erases one through the API and proves
+  every user-scoped table and the bucket empty for it while the neighbour is whole), the
+  backend unit suite at 734 and the integration suite at 70, the API/knob/security/env
+  doc gates passing, no frontend or copy-census movement.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

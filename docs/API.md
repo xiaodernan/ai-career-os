@@ -76,8 +76,12 @@ per-user budget on AI endpoints.
 |---|---|---|
 | GET | `/me` | account summary, including the account's language (locale, en or zh) |
 | PATCH | `/me` | `{displayName, headline, location, summary, yearsExperience, targetRoles, targetLocations, links, workAuthorization, preferences, locale}` — every field optional, `null` means leave unchanged. Locale is the language the account is written to: the screen's own copy is the browser's cookie, but the nightly letter has no browser, so this is the copy a sweep can read; anything but en or zh is a 400 |
+| PATCH | `/me/password` | `{currentPassword, newPassword}` — re-authenticates with the current password (a wrong one is a **401** `INVALID_CREDENTIALS`), refuses a new value equal to the current one (**400** `PASSWORD_UNCHANGED`), stores the new hash and revokes every refresh token, so every other device signs in again; the caller's own access token expires at its short lifetime like any other |
 | GET | `/users/me` | alias of `/me` (binding seam) |
 | PATCH | `/users/me` | same body as `PATCH /me` (`{displayName, headline, location, ...}`) |
+| PATCH | `/users/me/password` | alias of `PATCH /me/password` |
+| POST | `/me/erase` | `{password, confirmEmail}` → `{erased: true}`. Re-authenticates twice — the password, then the account's own email typed back (case and surrounding spaces forgiven) — deletes the file behind every document the account owns, then deletes the account row, which cascades through every user-scoped table. A wrong password is a **401** `INVALID_CREDENTIALS`, an address belonging to another account a **400** `CONFIRMATION_MISMATCH`, and neither touches anything. The access token used to ask still parses (access tokens are stateless) and its next request is a **404** `USER_NOT_FOUND`; every refresh token is gone with its row |
+| POST | `/users/me/erase` | alias of `POST /me/erase` (`{password, confirmEmail}`) |
 | GET | `/users/me/profile` | career profile |
 | PATCH | `/users/me/profile` | `{headline, summary, location, yearsExperience, targetRoles, targetLocations, links, workAuthorization, preferences}` |
 

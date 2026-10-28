@@ -16,6 +16,8 @@ import com.careeros.auth.entity.User;
 import com.careeros.auth.entity.UserProfile;
 import com.careeros.auth.repository.UserProfileRepository;
 import com.careeros.auth.repository.UserRepository;
+import com.careeros.auth.service.AccountErasureService;
+import com.careeros.auth.service.AuthService;
 import com.careeros.auth.service.UserService;
 import com.careeros.common.AuthUser;
 import com.careeros.common.CurrentUserArgumentResolver;
@@ -61,15 +63,18 @@ class UserControllerTest {
 
     private UserRepository users;
     private UserProfileRepository profiles;
+    private AuthService authService;
     private MockMvc mvc;
 
     @BeforeEach
     void setUp() {
         users = mock(UserRepository.class);
         profiles = mock(UserProfileRepository.class);
+        authService = mock(AuthService.class);
         UserService userService = new UserService(users, profiles);
         UserProfileService profileService = new UserProfileService(users, profiles);
-        mvc = MockMvcBuilders.standaloneSetup(new UserController(userService, profileService))
+        mvc = MockMvcBuilders.standaloneSetup(new UserController(userService, profileService, authService,
+                        mock(AccountErasureService.class)))
                 .setControllerAdvice(new EnvelopeAdvice(), new GlobalExceptionHandler())
                 .setCustomArgumentResolvers(new CurrentUserArgumentResolver())
                 .build();

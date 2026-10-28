@@ -188,6 +188,13 @@ already exits 1 and keeps it.
 [RUNBOOK.md](RUNBOOK.md#backups) has the cron example, what a failed night looks
 like, and the by-hand restore for both the database and the objects.
 
+Erasure (`POST /api/v1/me/erase`, roadmap 24.2) removes the account's rows and its
+MinIO objects from the live system, but a backup set taken before the request still
+contains them until `BACKUP_KEEP` rotations pass. Restoring an individual account
+from an old set undoes an erasure the reader asked for: treat such a restore as a
+data-protection decision, not a routine recovery, and prefer restoring the database
+whole only into the scratch drill.
+
 ### Rolling Updates
 
 ```bash
