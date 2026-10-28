@@ -316,13 +316,14 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   it left out four sections the bundle carries (the pipeline, the growth runs,
   the notes and the people the reader knows), so the quick look at a bundle
   stopped at the reading list.
-  **One thing is still true of the Markdown: nothing calls it.** It is a
-  library function — the render route serves the HTML and the PDF, and no
-  route serves the Markdown, and the browser has no Markdown affordance. So
-  the words are right and the document is complete, and the *operator's quick
-  look* is a function an operator calls in Python. Giving it a surface
-  (`format: "markdown"` on the render route, the bridge's field, the export
-  page's button) is the next step of this thread.
+  **And the Markdown has a surface (2026-10-28).** It was a library function
+  nothing called — the render route served the HTML and the PDF, the bridge
+  had no field for it, and the export page had no Markdown affordance — so
+  the *operator's quick look* existed only for someone already inside Python.
+  `format: "markdown"` is a format of the route now, the bridge hands it
+  through unchanged, and the page downloads `career-os-export.md`. The
+  route-level test calls the route the way the bridge calls it, in both
+  languages, and the wire test pins the format the browser sends.
 - **The restore's delete semantics for the sections the current state does not
   cover.** The plan tells a delete from a create by comparing the bundle with the
   caller's current state, and the backend's current state covers the profile, the
