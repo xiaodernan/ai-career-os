@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/common/error-state";
 import { BarChart } from "@/components/common/bar-chart";
+import { NightlyHistory } from "@/components/monitoring/nightly-history";
 import { useHealthReport } from "@/lib/hooks/monitoring";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { formatNumber } from "@/lib/format";
@@ -172,6 +173,11 @@ export default function MonitoringPage() {
           )}
         </>
       )}
+
+      {/* The deployment's own history sits outside the agent-health conditional: it is
+          read from its own endpoint and answers its own states, so a failed health
+          report does not hide the nights that passed. */}
+      <NightlyHistory />
     </div>
   );
 }

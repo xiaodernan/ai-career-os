@@ -457,8 +457,9 @@ def test_the_unbound_mappers_ban_would_find_these_mappers_if_it_read_this_file()
         "the ban now enumerates resources.ts too -- reconcile the two censuses instead of stacking"
     population = re.search(r"assert len\(population\) == (\d+)", gate)
     # 44 rather than 43 since 19.6's `normalizeVoiceState` joined the field gate's census; this
-    # file only echoes that pin, so the two move together or one of them is stale.
-    assert population and population.group(1) == "44", \
+    # file only echoes that pin, so the two move together or one of them is stale. 45 with
+    # 20.1's `normalizeNightlyReport`.
+    assert population and population.group(1) == "45", \
         f"the ban's pinned normalize.ts population moved: {population and population.group(1)}"
 
 
@@ -528,7 +529,13 @@ def test_an_unauthored_name_is_a_snake_twin_a_foreign_name_or_a_name_no_record_d
     # 275 with 19.9's `AiUsageMetrics.Usage`: the ops bean's three-field record names
     # `costUsd` and `tokens`, both of which some earlier record already declared, plus
     # `calls` -- the one name this record is the first to say.
-    assert len(everywhere) == 275, f"the backend record census read {len(everywhere)} component names"
+    # 277 with 20.1's nightly pair: `NightlyReportRequest`/`NightlyReportItem` name the
+    # night's own coordinates, and `commitSha` and `runUrl` are the two components no
+    # earlier record declared (`summary` was already a name elsewhere).
+    # 283 with the step record that same answer carries: `steps` is the list the item
+    # lifts, and `startedAt`/`finishedAt`/`detail` join `commitSha`/`runUrl` as names the
+    # nightly family is the first to declare.
+    assert len(everywhere) == 283, f"the backend record census read {len(everywhere)} component names"
     assert {"id", "title", "status", "createdAt"} <= set(everywhere), sorted(list(everywhere)[:8])
     scanned_unauthored = scanned_nowhere = 0
     for (mapper, receiver), record in ROWS.items():

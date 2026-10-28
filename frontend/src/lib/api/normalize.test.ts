@@ -29,6 +29,7 @@ import {
   missingSkillGaps,
   normalizeMatch,
   normalizeNextQuestion,
+  normalizeNightlyReport,
   normalizeMessages,
   normalizePage,
   normalizePipeline,
@@ -467,6 +468,33 @@ describe("normalizeIngestionRun / Feed / RunDetail (19.2)", () => {
     const bare = normalizeIngestionRunDetail({});
     expect(bare.plan).toBeNull();
     expect(bare.run.status).toBe("");
+  });
+});
+
+describe("normalizeNightlyReport (20.1)", () => {
+  it("reads the typed steps the backend lifted, and drops a step that has no name", () => {
+    const report = normalizeNightlyReport({
+      id: "night-1",
+      status: "passed",
+      commitSha: "d8199f8",
+      runUrl: "https://github.com/acme/careeros/actions/runs/1",
+      startedAt: "2026-10-27T03:20:00Z",
+      finishedAt: "2026-10-27T04:02:00Z",
+      steps: [
+        { name: "backend-it", status: "passed", detail: "686 tests" },
+        { name: "eval", status: "skipped", detail: null },
+        { status: "passed" },
+      ],
+    });
+    expect(report.id).toBe("night-1");
+    expect(report.source).toBe("nightly");
+    expect(report.commitSha).toBe("d8199f8");
+    expect(report.steps.map((step) => step.name)).toEqual(["backend-it", "eval"]);
+    // The job wrote no number for the skipped eval step: null rather than an empty sentence.
+    expect(report.steps[1].detail).toBeNull();
+
+    // A record the backend answers without steps is a night with no rows, not a crash.
+    expect(normalizeNightlyReport({ id: "night-2", status: "failed" }).steps).toEqual([]);
   });
 });
 

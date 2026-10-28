@@ -623,6 +623,17 @@ export const translations = {
       p50: "p50 (median)",
       p95: "p95 (tail)",
       verdictDescription: "Overall agent health assessment.",
+      nightlyTitle: "Nightly verification",
+      nightlyDescription:
+        "The deployment's own checks, one record per night: the backend suites, the eval harness and the portable export.",
+      nightlyEmpty: "No night has left a record yet. The nightly job posts one when it finishes.",
+      nightlyUnavailable: "The nightly history could not be read.",
+      nightlyPassed: "passed",
+      nightlyFailed: "failed",
+      nightlyStepSkipped: "skipped",
+      nightlyOpenRun: "Open the run",
+      nightlyPagination: "Nightly reports pagination",
+      nightlyRecords: "{count} nights recorded",
     },
     // Rate limit
     rateLimit: {
@@ -1246,6 +1257,10 @@ export const translations = {
 
       INGESTION_RUN_NOT_FOUND: "That sweep run is no longer here.",
 
+      INGESTION_RUN_ALREADY_APPLIED: "This run's plan was already applied.",
+
+      INGESTION_RUN_NOT_APPLICABLE: "A failed run has no plan to apply.",
+
       INTERNAL_ERROR: "An internal server error occurred.",
 
       INTERVIEW_ALREADY_STARTED: "This interview has already started.",
@@ -1275,6 +1290,12 @@ export const translations = {
       METHOD_NOT_ALLOWED: "That request is not allowed here.",
 
       NETWORK_ERROR: "Cannot reach the API — is the backend running?",
+
+      NIGHTLY_REPORT_CLOCK_REVERSED: "A nightly report cannot finish before it started.",
+
+      NIGHTLY_REPORT_STATUS_INVALID: "A nightly report must end as passed or failed.",
+
+      NIGHTLY_REPORT_SUMMARY_TOO_LARGE: "A nightly report carries too many summary entries.",
 
       NOTE_NOT_FOUND: "That note is no longer here.",
 
@@ -2758,6 +2779,16 @@ export const translations = {
       p50: "p50（中位）",
       p95: "p95（长尾）",
       verdictDescription: "代理的整体健康评估。",
+      nightlyTitle: "夜间验证",
+      nightlyDescription: "部署自身的检查，每晚一条记录：后端测试、评测框架与可移植导出。",
+      nightlyEmpty: "还没有任何夜晚留下记录。夜间任务完成时会写入一条。",
+      nightlyUnavailable: "无法读取夜间历史。",
+      nightlyPassed: "通过",
+      nightlyFailed: "失败",
+      nightlyStepSkipped: "跳过",
+      nightlyOpenRun: "打开该次运行",
+      nightlyPagination: "夜间报告分页",
+      nightlyRecords: "已记录 {count} 个夜晚",
     },
     // Rate limit
     rateLimit: {
@@ -3317,6 +3348,10 @@ export const translations = {
 
       INGESTION_RUN_NOT_FOUND: "这次清扫运行已经不在了。",
 
+      INGESTION_RUN_ALREADY_APPLIED: "这次运行的计划已经应用过了。",
+
+      INGESTION_RUN_NOT_APPLICABLE: "失败的运行没有可应用的计划。",
+
       INTERNAL_ERROR: "服务器内部错误。",
 
       INTERVIEW_ALREADY_STARTED: "这次面试已经开始了。",
@@ -3346,6 +3381,12 @@ export const translations = {
       METHOD_NOT_ALLOWED: "这个请求在这里不被允许。",
 
       NETWORK_ERROR: "连不上接口——后端在跑吗？",
+
+      NIGHTLY_REPORT_CLOCK_REVERSED: "夜间报告不可能在开始之前结束。",
+
+      NIGHTLY_REPORT_STATUS_INVALID: "夜间报告只能以通过或失败结束。",
+
+      NIGHTLY_REPORT_SUMMARY_TOO_LARGE: "夜间报告摘录的条目太多了。",
 
       NOTE_NOT_FOUND: "这条笔记已经不在了。",
 

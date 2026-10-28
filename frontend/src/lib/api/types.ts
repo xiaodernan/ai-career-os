@@ -866,6 +866,31 @@ export interface HealthReport {
   regressions?: Array<{ metric: string; direction: string; severity: string }>;
 }
 
+/** One step the night reported: a suite's name, how it ended, and whatever it measured. */
+export interface NightlyReportStep {
+  name: string;
+  /** "passed", "failed" or "skipped"; the nightly job's own vocabulary. */
+  status: string;
+  /** The step's numbers as a sentence the job wrote, shown verbatim or not at all. */
+  detail?: string | null;
+}
+
+/**
+ * One night's verification record (roadmap 20.1). Deployment-wide rather than per user:
+ * the same history for every reader, which is what makes it a record of the install.
+ */
+export interface NightlyReport {
+  id: string;
+  source: string;
+  /** "passed" or "failed"; the backend refuses anything else. */
+  status: string;
+  commitSha?: string | null;
+  runUrl?: string | null;
+  startedAt: string;
+  finishedAt: string;
+  steps: NightlyReportStep[];
+}
+
 /* ------------------------------------------------------------------ */
 /* Job ingestion (14.2-14.3)                                         */
 /* ------------------------------------------------------------------ */

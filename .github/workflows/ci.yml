@@ -123,6 +123,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # The record of the night starts at the night's first second, not at
+      # the recorder's clock: the last step must not claim the whole run
+      # lasted a few seconds.
+      - name: Mark the night's start
+        run: date -u +%Y-%m-%dT%H:%M:%SZ > "$RUNNER_TEMP/night-start.txt"
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -141,9 +147,11 @@ jobs:
       # nightly runnable without building the app images; the full-stack e2e
       # golden journey is run locally / via `docker compose --profile app`.
       - name: Start infra (postgres / redis / minio)
+        id: infra
         run: docker compose up -d postgres redis minio
 
       - name: Apply the schema (the Flyway migrations) to career_os
+        id: schema
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
           # Nothing in this job boots the backend against career_os: the *IT step
@@ -158,6 +166,7 @@ jobs:
           done
 
       - name: Seed jobs (12 companies / 41 roles)
+        id: seed-jobs
         run: |
           docker compose run --rm seed-jobs
           # The seed service skips with exit 0 when the schema is not ready -- a
@@ -167,6 +176,7 @@ jobs:
           [ "$n" -gt 0 ] || { echo "the seed landed 0 jobs -- the schema or the seed silently skipped"; exit 1; }
 
       - name: Backend integration tests (*IT)
+        id: backend-it
         working-directory: backend
         env:
           # The nightly's postgres initializes fresh with the compose default; the
@@ -176,6 +186,7 @@ jobs:
         run: ./mvnw -q -B test -Dtest='*IT' || mvn -q -B test -Dtest='*IT'
 
       - name: ai-service install
+        id: ai-install
         working-directory: ai-service
         env:
           # Host-reachable (the compose ports are published to 127.0.0.1).
@@ -186,6 +197,7 @@ jobs:
           pip install -r requirements.txt -r requirements-dev.txt
 
       - name: Backfill job vectors
+        id: vectors
         working-directory: ai-service
         env:
           DATABASE_URL: postgresql://career_os:career_os_dev_password@127.0.0.1:5432/career_os
@@ -193,12 +205,14 @@ jobs:
         run: python -m app.ops.embed_jobs --force
 
       - name: Build vector index (types column + HNSW)
+        id: index
         run: |
           sudo apt-get update && sudo apt-get install -y postgresql-client
           PGPASSWORD=career_os_dev_password psql -h 127.0.0.1 -p 5432 -U career_os -d career_os \
             -v dim=1536 -f ai-service/ops/vector_index.sql
 
       - name: Seed the eval corpus (the golden document)
+        id: eval-corpus
         working-directory: ai-service
         env:
           # The golden set is tuned to scripts/eval-corpus.json and filters
@@ -212,6 +226,7 @@ jobs:
         run: python -m app.ops.seed_eval_corpus --user-id 00000000-0000-0000-0000-000000000000 --corpus ../scripts/eval-corpus.json
 
       - name: RAG + agent eval harnesses (mock/hash, seeded corpus)
+        id: eval
         working-directory: ai-service
         env:
           LLM_PROVIDER: mock
@@ -233,11 +248,41 @@ jobs:
       # else. The app images are deliberately not built in this job, so this
       # is how the nightly learns that the export stopped working.
       - name: The portable export builds against the real schema
+        id: export
         working-directory: ai-service
         env:
           DATABASE_URL: postgresql://career_os:career_os_dev_password@127.0.0.1:5432/career_os
           REDIS_URL: redis://127.0.0.1:16380/0
         run: python -m app.ops.check_export
+
+      # The night records its own verdict, even -- especially -- when it
+      # failed: the Actions red X expires with the logs, and this row is what
+      # the monitoring page reads back afterwards. Without OPS_URL the record
+      # is built and printed but not sent, so forks and dry runs stay green.
+      - name: Record the night in the deployment's history
+        if: always()
+        working-directory: ai-service
+        env:
+          OPS_URL: ${{ vars.CAREEROS_OPS_URL }}
+          OPS_TOKEN: ${{ secrets.CAREEROS_INTERNAL_TOKEN }}
+        run: |
+          python -m app.ops.nightly_report \
+            --started-at "$(cat "$RUNNER_TEMP/night-start.txt")" \
+            --commit "${{ github.sha }}" \
+            --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --eval-report-dir evals/reports \
+            --step "infra=${{ steps.infra.outcome }}" \
+            --step "schema=${{ steps.schema.outcome }}" \
+            --step "seed-jobs=${{ steps.seed-jobs.outcome }}" \
+            --step "backend-it=${{ steps.backend-it.outcome }}" \
+            --step "ai-install=${{ steps.ai-install.outcome }}" \
+            --step "vectors=${{ steps.vectors.outcome }}" \
+            --step "index=${{ steps.index.outcome }}" \
+            --step "eval-corpus=${{ steps.eval-corpus.outcome }}" \
+            --step "eval=${{ steps.eval.outcome }}" \
+            --step "export=${{ steps.export.outcome }}" \
+            --url "$OPS_URL" \
+            --token "$OPS_TOKEN"
 
       - name: Tear down infra
         if: always()

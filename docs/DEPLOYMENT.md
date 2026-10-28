@@ -213,6 +213,22 @@ recomputed from `ai_usage_events` every minute. `ops/prometheus/alerts.yml`
 carries the three rules and each one links its page in
 [RUNBOOK.md](RUNBOOK.md).
 
+### Recording the nightly run
+
+The scheduled workflow (`.github/workflows/ci.yml`, 03:17 UTC) ends with a step that
+runs even when the night failed. It posts the job's own step outcomes to
+`POST /api/internal/nightly-reports`, and the monitoring page reads the history back
+over `GET /api/v1/monitoring/nightly-reports`. Two repository settings arm it:
+
+| Kind | Name | Value |
+|---|---|---|
+| Variable | `CAREEROS_OPS_URL` | the backend's base URL as the runner sees it, e.g. `https://careeros.example.com` — the recorder appends `/api/internal/nightly-reports` |
+| Secret | `CAREEROS_INTERNAL_TOKEN` | the same value as `INTERNAL_API_TOKEN` |
+
+Left unset (forks, dry runs), the recorder builds the record and prints it but posts
+nothing, so the job stays green and says the night was not recorded. A set URL whose
+post fails is a red step: keeping the record is the step's whole purpose.
+
 ---
 
 How to bring AI Career OS up locally and what each knob controls. The stack is

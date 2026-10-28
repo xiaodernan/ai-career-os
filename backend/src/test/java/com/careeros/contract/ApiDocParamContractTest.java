@@ -394,7 +394,7 @@ class ApiDocParamContractTest {
 
     private static final List<String> BODY_VERBS = List.of("POST", "PATCH", "PUT");
 
-    /** "POST /jobs" to the first brace group of its Notes cell — the request, never the response. */
+    /** "POST /jobs" to the first brace group of its request sentence — never the answer. */
     private static Map<String, BodyRow> documentedBodies() {
         Map<String, BodyRow> rows = new TreeMap<>();
         boolean inPublicApi = false;
@@ -412,7 +412,19 @@ class ApiDocParamContractTest {
             }
             String path = cells[2].trim().replace("`", "");
             String notes = String.join(" ", Arrays.copyOfRange(cells, 3, cells.length));
-            Matcher group = Pattern.compile("\\{([^{}]*)}").matcher(notes);
+            // The request is what the row says before it answers: an arrow in most rows, and in
+            // a body-less POST (the ingestion apply) the word "Answers". Reading past either read
+            // that row's answer `{created, updated, closed, appliedAt}` as a body nothing binds.
+            int stop = notes.length();
+            int arrow = notes.indexOf('→');
+            if (arrow >= 0) {
+                stop = Math.min(stop, arrow);
+            }
+            int answers = notes.indexOf("Answers");
+            if (answers >= 0) {
+                stop = Math.min(stop, answers);
+            }
+            Matcher group = Pattern.compile("\\{([^{}]*)}").matcher(notes.substring(0, stop));
             if (!group.find()) {
                 continue;
             }

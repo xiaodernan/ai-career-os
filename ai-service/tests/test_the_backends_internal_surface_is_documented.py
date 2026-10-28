@@ -4,9 +4,10 @@
 that is the surface the backend calls. The traffic runs the other way too: ai-service
 ingestion downloads a stored upload's bytes from `GET /api/internal/files/{fileKey}`, guarded
 by `InternalApiFilter` and `X-Internal-Token` rather than by a user JWT. A reader of section 3
-alone would conclude the backend exposes no internal surface at all -- and the one route it
-does expose is the one that hands out stored document bytes, so "who can call this, and what
-key do they need" is exactly the fact that must not live only in a filter class.
+alone would conclude the backend exposes no internal surface at all -- and the routes it does
+expose are the one that hands out stored document bytes and the one the nightly job writes its
+verdict to, so "who can call this, and what key do they need" is exactly the fact that must not
+live only in a filter class.
 
 This gate walks every `*Controller.java` under `backend/src/main/java` for mappings rooted at
 `/api/internal` and requires each to appear in the doc; it also walks the doc the other way,
@@ -77,7 +78,13 @@ def test_no_documented_internal_route_is_a_phantom():
     assert phantom == [], f"API.md advertises internal routes no controller serves: {phantom}"
 
 
-def test_the_internal_surface_is_the_files_route_and_only_it():
-    """Positive control: the population is the one guarded download, not a bucket of nothing."""
-    assert backend_routes() == {f"{PREFIX}/files/{{}}"}
-    assert documented() == {f"{PREFIX}/files/{{}}"}
+def test_the_internal_surface_is_the_files_route_and_the_nights_record():
+    """Positive control: the population is the one guarded download plus the nightly record.
+
+    The nightly route (roadmap 20.1) is the first internal route whose caller is not the
+    ai-service: the scheduled workflow posts its own verdict through the same filter. The
+    pin is the whole surface, so a third route has to be documented here as well as in the
+    doc -- the two directions above would both stay green on a doc that grew with it.
+    """
+    assert backend_routes() == {f"{PREFIX}/files/{{}}", f"{PREFIX}/nightly-reports"}
+    assert documented() == {f"{PREFIX}/files/{{}}", f"{PREFIX}/nightly-reports"}

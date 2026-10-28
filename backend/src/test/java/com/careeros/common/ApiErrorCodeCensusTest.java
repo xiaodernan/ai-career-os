@@ -21,14 +21,14 @@ import org.springframework.web.bind.annotation.RestController;
  * {@link ApiErrorCode} is the machine-readable contract every client reads — the enum's
  * own comment says "never rename an emitted code" — and three properties of it were
  * unpinned. The status map was spot-checked by whatever route happened to throw each
- * code (a dozen of the 50); an unreachable-coded 2xx would make an error invisible to
+ * code (a dozen of the 82); an unreachable-coded 2xx would make an error invisible to
  * every client's error path and nothing would have noticed. A rename is a wire break
- * nobody can see from the type system. And two of the 50 codes are deliberately
+ * nobody can see from the type system. And two of the 82 codes are deliberately
  * unreachable today, which reads as an enum bug to the next session unless it is
  * written down somewhere a test wakes up.
  *
  * The handler's fidelity half of this file matters as much as the shape half: the
- * advice is one line (`status(ex.code().status())`), so this exercises it for all 50
+ * advice is one line (`status(ex.code().status())`), so this exercises it for all 82
  * codes at once rather than trusting that the twelve spot-checks represent the rest.
  */
 class ApiErrorCodeCensusTest {
@@ -89,7 +89,11 @@ class ApiErrorCodeCensusTest {
                 "INTERVIEW_ALREADY_STARTED", "INTERVIEW_NOTHING_TO_FINALIZE", "INTERVIEW_NOT_STARTED", "INTERVIEW_NO_QUESTION",
                 "INVALID_CREDENTIALS", "INVALID_FILE_TYPE", "INVALID_STATUS", "INVALID_TRANSITION",
                 "JD_NOT_FOUND", "JOB_NOT_FOUND", "MALFORMED_REQUEST", "MATCH_NOT_FOUND",
-                "METHOD_NOT_ALLOWED", "NOTE_NOT_FOUND", "NOT_FOUND", "PROFILE_NOT_FOUND",
+                "METHOD_NOT_ALLOWED",
+                // 20.1: each refusal of a malformed nightly report has one meaning, so each
+                // got its own code rather than one code with three sentences.
+                "NIGHTLY_REPORT_CLOCK_REVERSED", "NIGHTLY_REPORT_STATUS_INVALID", "NIGHTLY_REPORT_SUMMARY_TOO_LARGE",
+                "NOTE_NOT_FOUND", "NOT_FOUND", "PROFILE_NOT_FOUND",
                 "RATE_LIMITED", "RESET_TOKEN_INVALID", "RESET_TOKEN_OWNER_NOT_FOUND", "RESUME_FILE_MISSING",
                 "RESUME_NOT_AVAILABLE", "RESUME_NOT_FOUND", "RESUME_NOT_INGESTED", "RESUME_NOT_PARSED",
                 "RESUME_NOT_TAILABLE", "RESUME_TEXT_NOT_READY", "RESUME_VERSION_MISSING", "RUN_NOT_FOUND",

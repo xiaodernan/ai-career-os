@@ -13,8 +13,11 @@ conversations 20, activity runs 30 -- since #225 the feed's literal, replacing t
 decided. `useSavedJobs` is the only hook that sends no window at all, because its route binds none
 and answers a bare list. 19.5 made the run history the eleventh: `useIngestionRuns` asks with the
 same `{ size: 20, ...(params ?? {}) }` shape every board uses, replacing the `limit` the hook used
-to name while `GET /ingestion/runs` was a newest-N history. Walking every shipped call site outside
-`resources.ts` finds the literal's
+to name while `GET /ingestion/runs` was a newest-N history. 20.1 made the nightly history the
+twelfth, and the first outside `resources.ts`: `useNightlyReports` lives in `monitoring.ts` beside
+the health report, so the walk reads every file under `lib/hooks/` -- a census that kept the one
+filename would have watched the card page while missing the hook whose window it spends. Walking
+every shipped call site outside the hooks' directory finds the literal's
 own value decided elsewhere per call site rather than per hook: `useJobs`'s two callers both carry a
 size (the jobs board spreads its URL-backed `filters`, the dashboard passes `{ size: 3 }`), so the
 `20` at `resources.ts:182` is shadowed on every path -- and the case over `useUrlState` shows the
@@ -81,7 +84,7 @@ FRONT = ROOT / "frontend" / "src"
 # answers `page`/`size` and a total; a history asks for its newest N, and the hook names the N.
 # Empty since 19.5: the one newest-N history (`GET /ingestion/runs`) pages like the boards now.
 NEWEST_N: dict[str, str] = {}
-RESOURCES = FRONT / "lib" / "hooks" / "resources.ts"
+HOOKS = FRONT / "lib" / "hooks"
 NORMALIZE = FRONT / "lib" / "api" / "normalize.ts"
 ENDPOINTS = FRONT / "lib" / "api" / "endpoints.ts"
 CLIENT = FRONT / "lib" / "api" / "client.ts"
@@ -107,6 +110,9 @@ WIRE = {
     "useActivityRuns": ("activityRuns", "{ size: 30, ...(params ?? {}) }"),
     "useIngestionRuns": ("ingestionRuns", "{ size: 20, ...(params ?? {}) }"),
     "useConversations": ("conversations", "{ size: 20, ...(params ?? {}) }"),
+    # 20.1's nightly history is the first paging hook outside `resources.ts`: its reader lives
+    # in `monitoring.ts` beside the health report, and its default is the route's own 10.
+    "useNightlyReports": ("monitoringNightlyReports", "{ size: 10, ...(params ?? {}) }"),
 }
 
 # Measured call sites, one walk; case 3 re-derives them. `""` is a call with no arguments.
@@ -134,6 +140,8 @@ SITES = {
                           "{ page: runPage.rpage, size: PAGE_SIZE }")],
     "useConversations": [("app/(app)/copilot/page.tsx",
                          "{ page: pageState.cpage, size: PAGE_SIZE }")],
+    "useNightlyReports": [("components/monitoring/nightly-history.tsx",
+                           "{ page, size: PAGE_SIZE }")],
 }
 
 # route path -> the `defaultValue` on the handler's `int size` parameter, or None if it binds none.
@@ -149,6 +157,7 @@ SERVER_SIZE = {
     "/api/v1/conversations": "20",
     "/api/v1/activity/runs": "30",
     "/api/v1/ingestion/runs": "20",
+    "/api/v1/monitoring/nightly-reports": "10",
 }
 
 # The hooks whose params object spells a numeric `size`.
@@ -163,6 +172,7 @@ SIZE_LITERAL = {
     "useConversations": 20,
     "useActivityRuns": 30,
     "useIngestionRuns": 20,
+    "useNightlyReports": 10,
 }
 
 
@@ -267,31 +277,36 @@ def list_wires() -> dict[str, tuple[str, str | None]]:
     """hook -> (endpoint key, the params object literal it hands api.get), from the hook's own text.
 
     The population is `normalizePage`, not a name list: a hook that spends a page-shaped answer is a
-    hook whose request window is decided somewhere, which is the question this file asks.
+    hook whose request window is decided somewhere, which is the question this file asks. Every file
+    under `lib/hooks/` is walked -- 20.1 put the first paging hook outside `resources.ts`
+    (`monitoring.ts`), and a census that read one filename would have missed its window while still
+    censusing the card that pages with it.
     """
-    resources = read(RESOURCES)
     out: dict[str, tuple[str, str | None]] = {}
-    for match in re.finditer(r"export function (use\w+)\(", resources):
-        body = function_body(resources, match.group(0))
-        if "normalizePage(" not in body:
+    for path in sorted(HOOKS.glob("*.ts")):
+        if ".test." in path.name:
             continue
-        at = body.index("api.get<unknown>(endpoints.")
-        keyed = re.match(r"api\.get<unknown>\(endpoints\.(\w+)", body[at:])
-        assert keyed, f"{match.group(1)} calls api.get without an endpoints.* key"
-        key = keyed.group(1)
-        close = balanced(body, body.index("(", at), "(", ")")
-        tail = body[at + len(f"api.get<unknown>(endpoints.{key}"):close].strip()
-        params = collapse(tail[1:]) if tail.startswith(",") else None
-        out[match.group(1)] = (key, params)
+        for match in re.finditer(r"export function (use\w+)\(", read(path)):
+            body = function_body(read(path), match.group(0))
+            if "normalizePage(" not in body:
+                continue
+            at = body.index("api.get<unknown>(endpoints.")
+            keyed = re.match(r"api\.get<unknown>\(endpoints\.(\w+)", body[at:])
+            assert keyed, f"{match.group(1)} calls api.get without an endpoints.* key"
+            key = keyed.group(1)
+            close = balanced(body, body.index("(", at), "(", ")")
+            tail = body[at + len(f"api.get<unknown>(endpoints.{key}"):close].strip()
+            params = collapse(tail[1:]) if tail.startswith(",") else None
+            out[match.group(1)] = (key, params)
     return out
 
 
 def call_sites(hook: str, include_tests: bool = False) -> list[tuple[str, str]]:
-    """(file, collapsed arguments) for every call of `hook(` outside the hook file itself."""
+    """(file, collapsed arguments) for every call of `hook(` outside the hooks' own directory."""
     out = []
     for path in sorted(FRONT.rglob("*.ts*")):
         rel = str(path.relative_to(FRONT)).replace("\\", "/")
-        if rel == "lib/hooks/resources.ts":
+        if rel.startswith("lib/hooks/"):
             continue
         if not include_tests and ".test." in rel:
             continue
@@ -328,21 +343,21 @@ def wire_sizes() -> dict[str, int | None]:
     return {hook: literal_size(params) for hook, (_, params) in list_wires().items()}
 
 
-def test_the_eleven_list_hooks_and_their_wire_literals_are_this_table():
+def test_the_twelve_list_hooks_and_their_wire_literals_are_this_table():
     """Case 1: the population and its numbers, derived from the hooks' bodies rather than from here."""
     derived = list_wires()
     assert derived == WIRE, f"a hook's request window changed shape: {derived}"
-    assert len(derived) == 11, f"{sorted(derived)}"
+    assert len(derived) == 12, f"{sorted(derived)}"
     keys = sorted(key for key, _ in derived.values())
-    assert len(keys) == len(set(keys)) == 11, f"two hooks spend the same endpoint key: {keys}"
+    assert len(keys) == len(set(keys)) == 12, f"two hooks spend the same endpoint key: {keys}"
 
 
 def test_every_number_a_hook_offers_is_inside_the_ceiling_the_server_enforces():
-    """Case 2: ten of the eleven offer a `size`, and no client asks for a window the clamp would refuse."""
+    """Case 2: eleven of the twelve offer a `size`, and no client asks for a window the clamp would refuse."""
     sizes = wire_sizes()
     assert sizes == {**SIZE_LITERAL, "useSavedJobs": None}, sizes
     asked = sorted(n for n in sizes.values() if n is not None)
-    assert len(asked) == 10, f"{sizes}"
+    assert len(asked) == 11, f"{sizes}"
     outside = [n for n in asked if not 1 <= n <= MAX_PAGE_SIZE]
     assert outside == [], f"a hook asks for a window Paging would clamp: {outside}"
     paging = java(PAGING)
@@ -371,7 +386,7 @@ def test_the_literals_every_caller_shadows_and_none_without_a_caller():
                       if derived[hook] and not any(offers_no_size(arg) for _, arg in derived[hook]))
     assert shadowed == ["useActivityRuns", "useApplications", "useCompanies", "useConversations",
                         "useIngestionRuns", "useInterviewSessions", "useJobs", "useKnowledgeNotes",
-                        "useKnowledgeSources"], \
+                        "useKnowledgeSources", "useNightlyReports"], \
         f"these literals are shadowed by every caller: {shadowed}"
     # Empty since the notes panel: every size literal has a caller now. Only `useResumes` still
     # spends its literal as written -- on the two callers (dashboard, jobs) that pass no arguments.
@@ -475,7 +490,8 @@ def test_the_applications_board_asks_for_exactly_the_ceiling_and_pages_the_rest(
                        "app/(app)/interviews/page.tsx", "app/(app)/jobs/page.tsx",
                        "app/(app)/knowledge/page.tsx", "app/(app)/resumes/page.tsx",
                        "components/ingestion/scheduled-feeds-panel.tsx",
-                       "components/knowledge/notes-panel.tsx"], \
+                       "components/knowledge/notes-panel.tsx",
+                       "components/monitoring/nightly-history.tsx"], \
         f"the pager census moved: the boards that page give the ceiling its readers: {renders}"
     assert re.search(r"\{total > PAGE_SIZE && \(", apps), \
         "the pager is no longer gated by the window it serves, so a short board would render one"

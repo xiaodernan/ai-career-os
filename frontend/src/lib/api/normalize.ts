@@ -28,6 +28,7 @@ import type {
   MemoryItem,
   NotificationInbox,
   NotificationItem,
+  NightlyReport,
   ResumeScore,
   SavedSearch,
   SearchResults,
@@ -521,6 +522,32 @@ export function normalizeIngestionRunDetail(raw: unknown): IngestionRunDetail {
   return {
     run: normalizeIngestionRun(pick(raw, "run")),
     plan: rec(pick(raw, "plan")),
+  };
+}
+
+/**
+ * One night's verification record (roadmap 20.1). The backend lifts the job's own
+ * `summary.steps` into a typed list before it answers, so the mapper reads one shape:
+ * a step with no name is not a step, and a step's `detail` stays null when the job did
+ * not write one rather than becoming an empty sentence.
+ */
+export function normalizeNightlyReport(raw: unknown): NightlyReport {
+  const steps = list<unknown>(raw, "steps")
+    .map((step) => ({
+      name: str(step, "name") ?? "",
+      status: str(step, "status") ?? "",
+      detail: str(step, "detail") ?? null,
+    }))
+    .filter((step) => step.name !== "");
+  return {
+    id: idOf(raw),
+    source: str(raw, "source") ?? "nightly",
+    status: str(raw, "status") ?? "",
+    commitSha: str(raw, "commitSha") ?? null,
+    runUrl: str(raw, "runUrl") ?? null,
+    startedAt: str(raw, "startedAt") ?? "",
+    finishedAt: str(raw, "finishedAt") ?? "",
+    steps,
   };
 }
 

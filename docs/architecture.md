@@ -288,6 +288,13 @@ user-scoped table (ownership is enforced in backend layer + a single SQL predica
 - `weekly_digests(id, user_id, week_start date, window_days smallint, payload jsonb,
    generated_at)` → one letter per user per week, the engine's answer stored verbatim;
   re-composing the same week refreshes the row rather than appending a second one.
+- `nightly_reports(id, source, status, commit_sha, run_url, started_at, finished_at,
+   summary jsonb, created_at)` → one row per scheduled verification run (20.1), posted
+  through the internal token and never updated afterwards: the night's overall status
+  (passed or failed; the schema's check constraint says the same) and its per-step
+  outcomes under `summary.steps`. There is no `user_id` — the row records the
+  deployment, so every reader of `GET /api/v1/monitoring/nightly-reports` sees the
+  same history, newest first.
 
 Feeds whose `source` names a board (19.8) go through the backend's `BoardConnector`
 seam: the reader gives a token, a board page or the API URL, and the connector

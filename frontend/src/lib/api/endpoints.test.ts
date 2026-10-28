@@ -812,6 +812,7 @@ describe("endpoints ↔ backend route parity", () => {
    */
   const NEVER_REFERENCED: Record<string, string> = {
     "/health": "liveness for the container probe, not something a page calls",
+    "/ingestion/runs/{}/apply": "the board's apply action is the caller; the route landed before it",
     "/me": "MeController's alias of /users/me; the client spells every call through /users/...",
     "/resume-versions/{}": "the version panel reads the list form /resume-versions?resumeId=…",
     "/resumes/{}/versions": "superseded for the panel by GET /resume-versions?resumeId=…",
@@ -1112,12 +1113,13 @@ describe("endpoints ↔ backend route parity", () => {
     expect(new Set(handlers.map((h) => `${h.verb} ${h.pattern}`)).size).toBe(handlers.length);
     expect(handlers.flatMap((h) => h.unparsed)).toEqual([]);
     const bound = handlers.flatMap((h) => h.params);
-    expect(bound.length).toBe(41);
-    // 41 parameters in 19 distinct names, measured: the reader's whole answer rather than a spot
+    expect(bound.length).toBe(43);
+    // 43 parameters in 19 distinct names, measured: the reader's whole answer rather than a spot
     // check, so a signature shape it stops understanding shrinks this set instead of passing quiet
     // (#225 retired `limit` from `/activity/runs`, which now pages like every other list route;
     // 19.2 brought the name back for `GET /ingestion/runs` as a newest-N history, and 19.5 retired
-    // it again -- the runs panel pages, so the route binds page/size like every other list)
+    // it again -- the runs panel pages, so the route binds page/size like every other list; 20.1's
+    // nightly history is one more page/size list, 41 -> 43, both names already in this set)
     expect(new Set(bound.map((p) => p.name))).toEqual(
       new Set([
         "agent", "company", "documentId", "file", "kind", "kinds", "locale",

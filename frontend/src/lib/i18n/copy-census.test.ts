@@ -58,8 +58,10 @@ describe("the browser's copy", () => {
     // with the saved-search panel beside the board's filters, and 133 with
     // `components/ingestion/scheduled-feeds-panel.tsx`, the browser's half of
     // the nightly sweep (19.2), and 134 with `app/(app)/notifications/page.tsx`,
-    // the inbox the synthesized signals land in (19.3).
-    expect(browserSources().length).toBe(134);
+    // the inbox the synthesized signals land in (19.3), and 135 with
+    // `components/monitoring/nightly-history.tsx`, the card the nightly job's
+    // own results are read from (20.1).
+    expect(browserSources().length).toBe(135);
   });
 
   it("finds a sentence, however long it is", () => {

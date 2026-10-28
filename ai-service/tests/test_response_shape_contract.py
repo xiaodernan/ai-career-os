@@ -915,8 +915,11 @@ def test_the_declaration_probes_reach_the_shapes_a_copy_would_miss():
     # weekly letter -- each an exported mapper on the same opener.
     # 60 with 19.6's `normalizeVoiceState`: the interview page's one wire-shape mapper for
     # whether the deployment can hear and speak, exported like its neighbours.
-    assert len(re.findall(TS_OPENER.format(name=r"(\w+)"), source)) == 60, \
-        "54 exported mappers and 6 module-private ones, all through one opener"
+    # 61 with 20.1's `normalizeNightlyReport`: the night's summary is a jsonb map whose
+    # `steps` arrive as their own little wire shape, so the card reads it through the
+    # same opener as every other row.
+    assert len(re.findall(TS_OPENER.format(name=r"(\w+)"), source)) == 61, \
+        "55 exported mappers and 6 module-private ones, all through one opener"
     assert "export function normalizePage(" not in source, \
         "the generic really does sit between the name and the paren, so a literal opener finds nothing"
     assert _ts_function_body("normalizePage").startswith("export function normalizePage<T>(")
@@ -977,8 +980,13 @@ def test_the_java_probe_reads_every_record_the_backend_declares():
     # 152 with 19.9's `AiUsageMetrics.Usage`: the ops bean reads its gauges off a private
     # record, and the probe walks records by their declaration rather than by visibility,
     # so the shape it records from is held to the same opener as every public DTO.
-    assert len(declared) == 152, \
-        f"{len(declared)} records carry a declaration the shared opener reads, not the 152 measured"
+    # 153 with cc2b161's `ApplyResult` in `IngestionFeedDtos`: the receipt an apply answers,
+    # committed without this pin moving (152 -> 153), so this sentence records the debt.
+    # 156 with 20.1's three nightly records in `NightlyReportDtos`: the request the night
+    # posts through the internal token, the item the monitoring page reads back, and the
+    # step row that item's answer carries.
+    assert len(declared) == 156, \
+        f"{len(declared)} records carry a declaration the shared opener reads, not the 156 measured"
     problems, renamed = [], []
     for relative, record in declared:
         names = _record_components_at(relative, record)
@@ -3286,7 +3294,9 @@ def test_both_frame_parsers_default_a_nameless_frame_to_the_same_event_name():
         # the union itself did not change.
         # 1393 rather than 1382 since 19.6's `VoiceState` interface joined above the union
         # (+11 lines); the union itself did not change.
-        ("types.ts", 1393, "kind:"),
+        # 1418 rather than 1393 since 20.1's `NightlyReportStep` and `NightlyReport` joined
+        # above the union (+25 lines with their doc comments); the union itself did not change.
+        ("types.ts", 1418, "kind:"),
         ('use-sse.ts', 15, 'event: SSEEventName | "message" | "progress" | "ping";'),
     ], (f"{[(r['file'], r['line'], r['head']) for r in by_role['type-union-member']]}: three type unions "
         "spell `message`, and only one of them names a frame -- the other two are the trace step kind "
@@ -3750,8 +3760,10 @@ def test_the_stream_media_type_is_written_in_four_spellings_and_read_in_none():
     # header lowercase (`"content-type"`), which is the same header in another spelling.
     # Seven with 19.6's `providers/voice/openai_audio.py`: the speech provider posts its
     # transcript and speak bodies as JSON like the LLM providers, a sender like the rest.
-    assert kinds == {"request-sender": 7, "cors-allowlist": 1, "test-assertion": 1}, \
-        (f"{kinds}: `Content-Type` is sent seven times, allowed by CORS once, and asserted in a test once. "
+    # Eight with 20.1's `app/ops/nightly_report.py`: the nightly recorder posts its own
+    # report to the internal route, so the step's outcome reaches the deployment's history.
+    assert kinds == {"request-sender": 8, "cors-allowlist": 1, "test-assertion": 1}, \
+        (f"{kinds}: `Content-Type` is sent eight times, allowed by CORS once, and asserted in a test once. "
          "This is the population the absence above is drawn from -- an `unclassified` row would be a use "
          "nobody has read")
     # Two rows in `HttpAiServiceClient.java` rather than one: the `post` helper and the `patch`

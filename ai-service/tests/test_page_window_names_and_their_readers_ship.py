@@ -118,19 +118,23 @@ READERS = {
               "app/(app)/dashboard/page.tsx", "app/(app)/jobs/page.tsx",
               "app/(app)/notifications/page.tsx",
               "components/common/module-view.tsx",
-              "components/ingestion/scheduled-feeds-panel.tsx", "lib/hooks/resources.ts"],
+              "components/ingestion/scheduled-feeds-panel.tsx",
+              # The nightly history card (20.1) reads the page's rows and nothing else.
+              "components/monitoring/nightly-history.tsx", "lib/hooks/resources.ts"],
     "total": ["app/(app)/activity/page.tsx", "app/(app)/applications/page.tsx",
               "app/(app)/companies/page.tsx", "app/(app)/copilot/page.tsx",
               "app/(app)/interviews/page.tsx", "app/(app)/jobs/page.tsx",
               "app/(app)/knowledge/page.tsx", "app/(app)/resumes/page.tsx",
               "components/ingestion/scheduled-feeds-panel.tsx",
-              "components/knowledge/notes-panel.tsx"],
+              "components/knowledge/notes-panel.tsx",
+              "components/monitoring/nightly-history.tsx"],
     "page": ["app/(app)/activity/page.tsx", "app/(app)/applications/page.tsx",
              "app/(app)/companies/page.tsx", "app/(app)/copilot/page.tsx",
              "app/(app)/interviews/page.tsx", "app/(app)/jobs/page.tsx",
              "app/(app)/knowledge/page.tsx", "app/(app)/resumes/page.tsx",
              "components/ingestion/scheduled-feeds-panel.tsx",
-             "components/knowledge/notes-panel.tsx"],
+             "components/knowledge/notes-panel.tsx",
+             "components/monitoring/nightly-history.tsx"],
     "size": ["app/(app)/activity/page.tsx", "app/(app)/applications/page.tsx",
              "app/(app)/companies/page.tsx", "app/(app)/copilot/page.tsx",
              "app/(app)/interviews/page.tsx", "app/(app)/jobs/page.tsx",
@@ -334,6 +338,9 @@ def test_the_window_the_server_used_is_read_only_where_a_page_corrects_itself():
     assert "components/ingestion/scheduled-feeds-panel.tsx" in reads["total"], (
         "the runs panel's pager (19.5) left the census, so a `size` read there would be "
         "invisible to the population this case measures")
+    assert "components/monitoring/nightly-history.tsx" in reads["total"], (
+        "the nightly history card's pager (20.1) left the census, so a `size` read there "
+        "would be invisible to the population this case measures")
     assert reads["size"] == ["app/(app)/activity/page.tsx", "app/(app)/applications/page.tsx",
                              "app/(app)/companies/page.tsx", "app/(app)/copilot/page.tsx",
                              "app/(app)/interviews/page.tsx", "app/(app)/jobs/page.tsx",
@@ -343,8 +350,8 @@ def test_the_window_the_server_used_is_read_only_where_a_page_corrects_itself():
         f"the answer's window has readers beyond the ten corrections: {reads['size']}")
 
 
-def test_the_ten_pagers_are_fed_client_numbers_and_the_answered_window_still_is_not_one():
-    """Case 8: all ten `<Pagination>`s take the window the caller asked with, never the answer's."""
+def test_the_eleven_pagers_are_fed_client_numbers_and_the_answered_window_still_is_not_one():
+    """Case 8: all eleven `<Pagination>`s take the window the caller asked with, never the answer's."""
     consumers = sorted(str(p.relative_to(FRONT)).replace("\\", "/")
                        for p in FRONT.rglob("*.tsx")
                        if 'from "@/components/common/pagination"' in read(p))
@@ -353,7 +360,8 @@ def test_the_ten_pagers_are_fed_client_numbers_and_the_answered_window_still_is_
                          "app/(app)/interviews/page.tsx", "app/(app)/jobs/page.tsx",
                          "app/(app)/knowledge/page.tsx", "app/(app)/resumes/page.tsx",
                          "components/ingestion/scheduled-feeds-panel.tsx",
-                         "components/knowledge/notes-panel.tsx"], \
+                         "components/knowledge/notes-panel.tsx",
+                         "components/monitoring/nightly-history.tsx"], \
         f"pager consumers: {consumers}"
     jobs = read(JOBS_PAGE)
     block = jobs[jobs.index("<Pagination"):]

@@ -793,6 +793,38 @@ that; each ships wired to the real API and UI, like every epic before it.
   8 backend tests (6 metrics, 2 wiring), 15 ai-service gates (alerts + backup),
   660 backend tests.)
 
+## Epic 20 — The Deployment Watches Itself
+
+Epic 19 made the pass of a night visible while it ran: metrics, alarms, a runbook.
+But the nightly *verification* run — the one that proves the whole stack still works
+together — answered with a red X in a list that GitHub eventually forgets, and the
+answer to "did the install verify itself last week" expired with the log. This epic
+keeps the answers, and then starts asking the OS to act on them.
+
+- [x] **20.1** The night's verdict, kept: the scheduled workflow records its own
+  step outcomes in the database, and the monitoring page reads the history back.
+  (A failing nightly run was a red X whose log expired; nothing else remembered.
+  Now the job's last step runs under `if: always()` and posts
+  `{startedAt, finishedAt, status, commitSha, runUrl, summary}` through the internal
+  token to `POST /api/internal/nightly-reports`. The backend keeps it in
+  `nightly_reports` (Flyway V15): written once and never updated, with a status
+  check (passed or failed), a finish-before-start check, and a 40-entry cap on the
+  summary's top-level keys — the row is a record, and a record that can be edited
+  is not one. `GET /api/v1/monitoring/nightly-reports` pages the deployment-wide
+  history newest first; it is deliberately not per account, because it records the
+  install, not a user. The recorder (`app.ops.nightly_report`) maps GitHub's step
+  outcomes onto passed / failed / skipped, records an outcome it does not recognise
+  as failed, refuses a night with no steps, and turns the newest eval report's
+  aggregates and case count into the eval step's detail. Without `CAREEROS_OPS_URL`
+  it builds and prints the record without posting, so forks and dry runs stay green;
+  with it, a failed post is a red step, because the record is the step's purpose.
+  The workflow test reads `ci.yml` and holds the wiring: `if: always()`, a tracked
+  step id per suite, and every tracked id read back into the payload. The monitoring
+  page grows a nightly-history card whose own states survive a failed health report.
+  8 ai-service tests (7 recorder + the workflow gate), 13 backend tests (7 service,
+  6 controller), 5 frontend component tests, the copy census at 135 sources, the
+  shape gates at 283 component names and 156 declared records.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

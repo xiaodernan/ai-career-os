@@ -118,6 +118,7 @@ the caller's agent runs. No model runs here.
 | GET | `/analysis/pipeline-funnel` | the pipeline funnel — one row per stage with the count that reached it and the conversion at each step, plus the applied / saved / rejected / total counts. Reached-stage semantics are cumulative: reaching the interview means the application also reached the applied stage, so these counts deliberately do not add up to the number of applications. The counts read each row's current status, so a rejection is credited with the applied stage only — the stages an application actually passed are timed by `/analysis/response-rate`, which reads the status-change log |
 | GET | `/analysis/response-rate` | the response rates — of everything submitted, what fraction got any reply (a rejection included), what fraction reached an interview, what fraction reached an offer, and the average and median days per stage. Applications missing a timestamp are skipped for that stage's duration rather than counted as zero, and so are pairs that cannot be a duration: a stage stamped before the submission, or either moment later than the generated-at stamp the answer is measured from |
 | GET | `/monitoring/health-report` | agent health — the verdict (healthy / warn / regressed), the error rate, the run count, the cost and token totals, the latency percentiles, the alert list and the regression list. No query parameters: the window is the account's own |
+| GET | `/monitoring/nightly-reports` | the install's nightly verification history, newest first — one row per night the scheduled job recorded: the status, the commit and the run's link, when it started and finished, and each step's own status with the numbers it measured. Deployment-wide rather than per account: the history is the same for every reader, which is what makes it a record of the install. `page` (floored at 0) and `size` (default 10, clamped to 100) paginate; the list is append-only, so page 0 always holds the newest nights |
 | GET | `/rate-limit/status` | the configured limits — whether limiting is on, the per-minute AI cap and the per-minute auth cap — plus the caller's remaining AI-bucket quota. Only the AI bucket is reported: it is keyed by the authenticated user id, so the number the page shows is the number the limiter enforces. The auth bucket is keyed by client IP, which the server cannot know from the principal alone — reporting a number for it would be a guess |
 
 ### Weekly digest (`/digests`)
@@ -190,8 +191,9 @@ from the network here, and no model runs.
 
 The 19.2 layer. A feed is a URL the caller subscribes to; the backend's clock
 fetches it, hands the body to the same plan engine 14.3 uses, and files the plan
-as a run. Nothing is applied to the board here — a plan is the record, and a
-night can never rewrite the corpus as a side effect of reading a feed. A failed
+as a run. A plan is the record; nothing is applied when it is filed. Applying
+is the reader's own step (`POST /ingestion/runs/{id}/apply`, below), so no sweep
+ever rewrites the corpus as a side effect of reading a feed. A failed
 pull is a run with `status: "failed"` and the reason, not a 5xx: the feed being
 down is the outcome the caller asked to see. The URL is checked at fetch time
 against private, loopback, link-local and carrier-grade addresses, and again on
@@ -211,6 +213,7 @@ says what would work.
 | POST | `/ingestion/feeds/{id}/run` | pulls one feed now and answers the run plus the engine's plan — create / update / close / duplicates and their counts. A failed pull answers 200 with `status: "failed"` and `error` |
 | GET | `/ingestion/runs` | the caller's runs, newest first, one page at a time — `page` (default 0) and `size` (default 20, clamped to 100) → {items, total, page, size} |
 | GET | `/ingestion/runs/{id}` | one run plus its stored plan |
+| POST | `/ingestion/runs/{id}/apply` | writes the run's stored plan to the board in one transaction — creates the postings the plan calls new, refreshes the ones it names (re-opening a closed one), closes exactly the open rows it lists as closed; companies are reused by name, and a blank company takes the feed's. Answers `{created, updated, closed, appliedAt}`; the counts are what the write produced, so a plan row the board already has is not a create. Applying twice is 409 `INGESTION_RUN_ALREADY_APPLIED`; a failed run, or one whose plan is missing, is 409 `INGESTION_RUN_NOT_APPLICABLE` |
 
 ### Notification center (`/notifications`)
 
@@ -473,6 +476,7 @@ them, so the token *is* the credential.
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `/api/internal/files/{fileKey}` | a stored upload's bytes, for ai-service ingestion — the key must match `{userId}/(resumes\|knowledge)/{id}.{pdf\|docx\|txt}` and belong to a `documents` row, otherwise 400 (malformed key) or 404 (no document owns it) |
+| POST | `/api/internal/nightly-reports` | the scheduled workflow's own record of the night — `{startedAt, finishedAt, status, source, commitSha, runUrl, summary}` — written once per run and never updated; status is passed or failed (`NIGHTLY_REPORT_STATUS_INVALID` otherwise), a finish before the start is `NIGHTLY_REPORT_CLOCK_REVERSED`, and an oversized summary is `NIGHTLY_REPORT_SUMMARY_TOO_LARGE`. The job posts its step outcomes under `summary.steps`; the history answers them back as a typed `steps` list, because the map is the storage shape and the list is the wire shape. The caller is the nightly job (`app.ops.nightly_report`), not the ai-service; the history is read back over `GET /api/v1/monitoring/nightly-reports` |
 
 
 ### 3.2 Forward internal surface -- registered, and not called by the backend

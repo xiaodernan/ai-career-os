@@ -15,7 +15,7 @@ import { fileURLToPath } from "node:url";
 // relative name below is cut at it.
 const SRC = fileURLToPath(new URL("../", import.meta.url)).replace(/[\\/]+$/, "");
 
-/** The six files that ship a new-tab anchor, named so a renamed one is visible rather than silently gone. */
+/** The seven files that ship a new-tab anchor, named so a renamed one is visible rather than silently gone. */
 const CARRIERS = [
   "app/(app)/companies/page.tsx",
   "app/(app)/companies/[id]/page.tsx",
@@ -23,6 +23,9 @@ const CARRIERS = [
   "app/(app)/jobs/[id]/page.tsx",
   "app/(app)/resumes/[id]/page.tsx",
   "components/ai/streaming-text.tsx",
+  // The nightly history's run link (20.1): the record's `runUrl` was written by the job, so
+  // it is a value this app did not build and the anchor takes it through `safeHref`.
+  "components/monitoring/nightly-history.tsx",
 ];
 
 interface AnchorRow {
@@ -98,7 +101,7 @@ const rows = componentFiles(SRC).flatMap((path) => readAnchors(path, readFileSyn
 
 describe("anchors that leave the app", () => {
   it("finds the shipped sinks, so the gate is not reading an empty room", () => {
-    // Six named files, and two of them carry a second anchor -- that is the shipped floor.
+    // Seven named files, and two of them carry a second anchor -- that is the shipped floor.
     expect(rows.length, `found ${rows.length} new-tab anchors; expected at least ${CARRIERS.length + 2}`).toBeGreaterThanOrEqual(
       CARRIERS.length + 2
     );

@@ -71,6 +71,12 @@ public enum ApiErrorCode {
     INGESTION_RUN_ALREADY_APPLIED(HttpStatus.CONFLICT),
     /** A failed run has no plan, so there is nothing to apply. */
     INGESTION_RUN_NOT_APPLICABLE(HttpStatus.CONFLICT),
+    /** A nightly report says passed or failed; any other ending is not a night's outcome. */
+    NIGHTLY_REPORT_STATUS_INVALID(HttpStatus.BAD_REQUEST),
+    /** The night's clock ran backwards: a report cannot finish before it started. */
+    NIGHTLY_REPORT_CLOCK_REVERSED(HttpStatus.BAD_REQUEST),
+    /** A report's summary carries more top-level entries than the column is built to hold. */
+    NIGHTLY_REPORT_SUMMARY_TOO_LARGE(HttpStatus.BAD_REQUEST),
     RUN_NOT_FOUND(HttpStatus.NOT_FOUND),
     FEED_URL_INVALID(HttpStatus.BAD_REQUEST),
     /** A board address the connector could not read: token, page address or API URL. */
