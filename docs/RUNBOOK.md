@@ -5,12 +5,13 @@ alarm in `ops/prometheus/alerts.yml` carries a `runbook:` annotation that links 
 section here, and every section starts with what the operator sees, not with what the
 code does.
 
-The three surfaces this document is about:
+The surfaces this document is about:
 
 | Surface | Where it comes from | What it answers |
 |---------|--------------------|-----------------|
-| `GET /actuator/prometheus` | backend, Micrometer | Is the night running, and what is the AI spending? |
+| `GET /actuator/prometheus` | backend, Micrometer | Is the night running, what is the AI spending, and is the install still verifying itself? |
 | The ingestion runs board | `GET /api/v1/ingestion/runs` | What did each pull do, and why did it fail? |
+| The monitoring page's nightly card | `GET /api/v1/monitoring/nightly-reports` | Did the install verify itself last night, and for how many nights has it not? |
 | `ai_usage_events` | ai-service, one row per AI call | Who spent the money? |
 
 ## The alarms, in one table
@@ -19,6 +20,8 @@ The three surfaces this document is about:
 |-------|----------|----------|------------|
 | `CareerOSIngestionNightMissed` | critical | No ingestion run has completed in 26 hours | [A night that never succeeded](#a-night-that-never-succeeded) |
 | `CareerOSIngestionFailing` | warning | More than half the runs in six hours failed | [A night where every feed failed](#a-night-where-every-feed-failed) |
+| `CareerOSNightlyVerificationStale` | critical | No nightly verification has finished in 36 hours | [The nightly verification stopped reporting](#the-nightly-verification-stopped-reporting) |
+| `CareerOSNightlyVerificationFailing` | warning | Two or more of the newest nightly runs failed | [The nightly verification keeps failing](#the-nightly-verification-keeps-failing) |
 | `CareerOSAiBudgetBurn` | warning | The trailing 24 hours cost more than 5 USD | [The AI budget is burning](#the-ai-budget-is-burning) |
 
 ## A night that never succeeded
@@ -99,6 +102,53 @@ long-running call.
 `promtool check rules` and a Prometheus reload. Raise it after the split above says
 the spend is the traffic, not a loop — the alert exists to make that a decision
 rather than a surprise.
+
+## The nightly verification stopped reporting
+
+**What the alert looks like.** `CareerOSNightlyVerificationStale` fires when
+`time() - careeros_nightly_last_finished_timestamp` stays above 129600 (36 hours).
+The marker moves on every finished night — passed or failed — so this is not about
+one bad verification: it is the report itself stopping. The monitoring card calls
+the same window stale.
+
+**What to do, in order.**
+
+1. Open the workflow's own history: the scheduled run starts at 03:17 UTC and its
+   last step posts the record. A run that is missing from the list means the
+   schedule is the fault (a disabled workflow, an expired token, a fork without
+   `CAREEROS_OPS_URL`).
+2. A run that exists with a red final step means the POST failed: read that step's
+   log for the internal surface's sentence — a rejected status, a reversed clock or
+   an oversized summary, and the recorder prints the code it got.
+3. If the workflow is green and the marker is still old, the scrape and the page are
+   looking at different backends: check the scrape target against the deployment
+   whose database the page reads.
+
+**A fresh process is not a broken one.** The marker starts at the process's boot
+time, so a deploy gets the same 36 hours a healthy install gets before this can
+fire. A boot that cannot read the history keeps those defaults and logs why; the
+nightly card is still the immediate answer to "has this install ever verified
+itself". A deployment that has never recorded a night reads "missing" there at
+once, and this alarm still waits the full window.
+
+## The nightly verification keeps failing
+
+**What the alert looks like.** `CareerOSNightlyVerificationFailing` fires when
+`careeros_nightly_consecutive_failures >= 2` — the same line the nightly card
+warns at. One failed night does not page; it is visible on its own row, and the
+streak ends at the first passed night.
+
+**What to read.** The monitoring page's nightly card, newest rows first: the eval
+step's detail carries the newest eval report's aggregates and case count, every
+other step carries the sentence its suite printed, and the row links to the
+workflow run with the full log.
+
+**What it means.** A single red suite is usually that suite's own dependency (a
+migration, a flaky container); two nights in a row is a change that landed, or a
+dependency that went away. Find the first red night's commit — the row records the
+SHA the run tested — and diff from there. The nightly job tests the whole stack,
+so a red night can be the ai-service, the backend, the frontend build or the eval
+suite; the step names say which.
 
 ## Backups
 
@@ -211,13 +261,15 @@ reload Prometheus rather than restarting it. `/actuator/prometheus` is public by
 default and must be restricted at the reverse proxy to the scraper's address — the
 deployment checklist in `docs/DEPLOYMENT.md` already says so.
 
-The two metric families the rules read are written by
+The metric families the rules read are written by
 `backend/src/main/java/com/careeros/job/service/IngestionMetrics.java` (the counter
-and the success marker) and
-`backend/src/main/java/com/careeros/ai/service/AiUsageMetrics.java` (the rolling
-24-hour spend, tokens and calls, refreshed every `careeros.ai.metrics-refresh-ms`,
-60 seconds by default). A metric missing from the scrape means the bean did not start:
-the backend log has the reason.
+and the success marker), `backend/src/main/java/com/careeros/ai/service/AiUsageMetrics.java`
+(the rolling 24-hour spend, tokens and calls, refreshed every
+`careeros.ai.metrics-refresh-ms`, 60 seconds by default), and
+`backend/src/main/java/com/careeros/report/service/NightlyVerdictMetrics.java`
+(the newest nightly finish and the failure streak, moved by each recorded night and
+once at boot). A metric missing from the scrape means the bean did not start: the
+backend log has the reason.
 
 ## What this runbook does not cover
 

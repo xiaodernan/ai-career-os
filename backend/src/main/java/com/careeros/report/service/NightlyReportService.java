@@ -13,6 +13,10 @@ import com.careeros.report.repository.NightlyReportRepository;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Locale;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,9 +29,15 @@ import org.springframework.transaction.annotation.Transactional;
  * violation: a report says `passed` or `failed`, and it cannot finish before it started.
  * A night that posts anything else is a caller bug worth failing loudly -- the nightly job
  * is the only writer.
+ *
+ * <p>Each write also republishes the verdict as gauges (roadmap 20.3), so the alarm stack
+ * hears the same answer the monitoring page draws, and a boot reads it once more from the
+ * stored history.
  */
 @Service
 public class NightlyReportService {
+
+    private static final Logger log = LoggerFactory.getLogger(NightlyReportService.class);
 
     /**
      * A daily job plus slack: a newest record older than this means the cadence stopped rather
@@ -39,9 +49,11 @@ public class NightlyReportService {
     static final int STREAK_WINDOW = 30;
 
     private final NightlyReportRepository reports;
+    private final NightlyVerdictMetrics metrics;
 
-    public NightlyReportService(NightlyReportRepository reports) {
+    public NightlyReportService(NightlyReportRepository reports, NightlyVerdictMetrics metrics) {
         this.reports = reports;
+        this.metrics = metrics;
     }
 
     @Transactional
@@ -69,7 +81,9 @@ public class NightlyReportService {
         row.setFinishedAt(request.finishedAt());
         row.setSummary(request.summary());
         row.setCreatedAt(OffsetDateTime.now());
-        return NightlyReportItem.of(reports.save(row));
+        NightlyReportItem item = NightlyReportItem.of(reports.save(row));
+        metrics.publish(verdict());
+        return item;
     }
 
     @Transactional(readOnly = true)
@@ -105,5 +119,19 @@ public class NightlyReportService {
                 .isBefore(OffsetDateTime.now());
         return new NightlyVerdict(latest.getStatus(), latest.getFinishedAt(),
                 latest.getCommitSha(), latest.getRunUrl(), streak, stale, STALE_AFTER_HOURS);
+    }
+
+    /**
+     * One read at boot so a restart does not silence a streak the database still holds. The
+     * gauges keep their boot defaults if the read fails: a scrape endpoint is not worth a
+     * process that will not start, and a marker that stays at boot is the documented grace.
+     */
+    @EventListener(ApplicationReadyEvent.class)
+    public void publishStartupVerdict() {
+        try {
+            metrics.publish(verdict());
+        } catch (RuntimeException ex) {
+            log.warn("the nightly verdict gauges keep their boot defaults: the startup read failed", ex);
+        }
     }
 }

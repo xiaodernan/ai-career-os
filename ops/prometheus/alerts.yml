@@ -58,6 +58,43 @@ groups:
             feed's problem, a majority is the fetcher's or the planner's.
           runbook: "docs/RUNBOOK.md#a-night-where-every-feed-failed"
 
+      # The nightly verification is the job that proves the stack still works together, and
+      # it records its own finish through the internal surface. The marker moves on every
+      # finished night, passed or failed -- this rule is about the cadence stopping, the
+      # failures have the rule below. 129600 is 36 hours, twice the daily schedule and the
+      # same window the monitoring page calls stale: change the Java constant and this
+      # number together, or the page and the pager disagree.
+      - alert: CareerOSNightlyVerificationStale
+        expr: time() - careeros_nightly_last_finished_timestamp > 129600
+        for: 10m
+        labels:
+          service: career-os-backend
+          severity: critical
+        annotations:
+          summary: "No nightly verification has finished in over 36 hours"
+          description: >-
+            The newest nightly record finished {{ $value | humanizeDuration }} ago. Either
+            the scheduled verification stopped running (check the workflow's schedule) or
+            its recording step is failing (check the run's log for the internal POST).
+          runbook: "docs/RUNBOOK.md#the-nightly-verification-stopped-reporting"
+
+      # Two failures in a row is the page's own warning line: a single failed night is
+      # visible on its row, and a streak of two means the stack is drifting rather than
+      # flinching. The count is the same number the monitoring card warns at.
+      - alert: CareerOSNightlyVerificationFailing
+        expr: careeros_nightly_consecutive_failures >= 2
+        for: 10m
+        labels:
+          service: career-os-backend
+          severity: warning
+        annotations:
+          summary: "The last {{ $value }} nightly verifications failed in a row"
+          description: >-
+            Read the newest rows on the monitoring page for the failing step's detail; the
+            streak ends at the first passed night, so a green night clears this without an
+            operator action.
+          runbook: "docs/RUNBOOK.md#the-nightly-verification-keeps-failing"
+
       # The budget is a rolling 24-hour spend, read from the ai_usage_events ledger
       # (the same rows the usage figures come from). Five dollars a day is the
       # default for a single-tenant install; a deployment with more traffic raises it

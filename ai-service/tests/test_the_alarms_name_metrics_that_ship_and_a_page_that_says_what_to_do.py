@@ -24,6 +24,12 @@ Two numbers are quoted in both places on purpose -- the 26-hour silence (`93600`
 the 5 USD budget -- and both are read off the rule file here, because a prose threshold that
 drifts from its expression is an operator tuning a number that no longer means anything.
 
+The verdict alarms have the same problem one level up: their 36-hour window is the service's
+own `STALE_AFTER_HOURS`, and their streak threshold is the nightly card's warning line. Both
+are read from the sources that promise them (the Java constant, the component's literal) and
+compared to the expressions here, because an alarm that fires on a different number than the
+page warns at is two judgements wearing one name.
+
 The last reading is the ledger's: the budget gauge is a SQL query over `ai_usage_events`, and
 the columns it sums must be columns the migration creates. The query is pinned to the trailing
 24 hours, not to a calendar day, because the alert is about spend that has not gone away.
@@ -42,6 +48,9 @@ BACKEND = ROOT / "backend"
 MIGRATION = BACKEND / "src" / "main" / "resources" / "db" / "migration" / "V1__init_schema.sql"
 INGESTION_METRICS = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "job" / "service" / "IngestionMetrics.java"
 AI_USAGE_METRICS = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "ai" / "service" / "AiUsageMetrics.java"
+NIGHTLY_VERDICT_METRICS = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "report" / "service" / "NightlyVerdictMetrics.java"
+NIGHTLY_REPORT_SERVICE = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "report" / "service" / "NightlyReportService.java"
+NIGHTLY_CARD = ROOT / "frontend" / "src" / "components" / "monitoring" / "nightly-history.tsx"
 
 # exported Prometheus name -> (the Java file that registers it, the dotted Micrometer name in it).
 # The counter's `_total` is the exporter's suffix: the Java literal stops before it.
@@ -51,11 +60,15 @@ METRICS = {
     "careeros_ai_cost_usd_24h": (AI_USAGE_METRICS, "careeros.ai.cost.usd.24h"),
     "careeros_ai_tokens_24h": (AI_USAGE_METRICS, "careeros.ai.tokens.24h"),
     "careeros_ai_calls_24h": (AI_USAGE_METRICS, "careeros.ai.calls.24h"),
+    "careeros_nightly_last_finished_timestamp": (NIGHTLY_VERDICT_METRICS, "careeros.nightly.last.finished.timestamp"),
+    "careeros_nightly_consecutive_failures": (NIGHTLY_VERDICT_METRICS, "careeros.nightly.consecutive.failures"),
 }
 
 ALERT_NAMES = frozenset({
     "CareerOSIngestionNightMissed",
     "CareerOSIngestionFailing",
+    "CareerOSNightlyVerificationStale",
+    "CareerOSNightlyVerificationFailing",
     "CareerOSAiBudgetBurn",
 })
 
@@ -89,7 +102,7 @@ def headings() -> set:
     }
 
 
-def test_the_three_alarms_are_pinned_and_each_carries_an_audience_and_a_page():
+def test_every_alarm_is_pinned_and_each_carries_an_audience_and_a_page():
     pinned = rules()
 
     assert set(pinned) == ALERT_NAMES, (
@@ -170,7 +183,32 @@ def test_the_runbook_says_what_each_alarm_means_by_its_name():
     for name in ALERT_NAMES:
         assert name in prose, f"{name} fires and the runbook never says its name"
     assert "93600" in prose, "the prose must quote the same 26 hours the rule uses"
+    assert "129600" in prose, "the prose must quote the same 36 hours the stale rule uses"
     assert "5 USD" in prose, "the prose must quote the same budget the rule uses"
+
+
+def test_the_verdict_alarms_read_the_numbers_the_page_and_the_service_promise():
+    # The window is the service's constant, rendered as seconds in the expression; the streak
+    # threshold is the nightly card's own warning line. An alarm that fires on a different
+    # number than the page warns at is two judgements wearing one name.
+    pinned = rules()
+
+    hours = int(re.search(r"STALE_AFTER_HOURS\s*=\s*(\d+)", read(NIGHTLY_REPORT_SERVICE)).group(1))
+    assert hours == 36, f"the stale window moved to {hours} hours; re-aim the rule and the runbook"
+    stale = pinned["CareerOSNightlyVerificationStale"]["expr"]
+    assert f"> {hours * 3600}" in stale, (
+        f"the rule's silence window is not the service's {hours} hours ({hours * 3600} seconds): "
+        f"{stale!r}"
+    )
+
+    card = read(NIGHTLY_CARD)
+    page_line = re.search(r"consecutiveFailures\s*>=\s*(\d+)", card)
+    assert page_line, "the nightly card warns on the streak with a literal threshold"
+    failing = pinned["CareerOSNightlyVerificationFailing"]["expr"]
+    assert f">= {page_line.group(1)}" in failing, (
+        f"the alarm fires at {failing!r} and the card warns at >={page_line.group(1)}: "
+        "one judgement with two numbers is two judgements"
+    )
 
 
 def test_the_runbook_names_only_scripts_that_ship_and_announce_themselves():

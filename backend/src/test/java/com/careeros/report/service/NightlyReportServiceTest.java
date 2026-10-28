@@ -1,7 +1,9 @@
 package com.careeros.report.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.within;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -16,6 +18,8 @@ import com.careeros.report.dto.NightlyReportDtos.NightlyReportStep;
 import com.careeros.report.dto.NightlyReportDtos.NightlyVerdict;
 import com.careeros.report.entity.NightlyReport;
 import com.careeros.report.repository.NightlyReportRepository;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -37,7 +41,9 @@ import org.springframework.test.util.ReflectionTestUtils;
  * meaning, so each gets its own code: a translated client can then say what went wrong
  * instead of "request validation failed". The read side is one page, newest first; the
  * clamping itself belongs to {@code Paging} and is asserted here only to prove the service
- * spends it.
+ * spends it. Every write also republishes the two gauges the alarm stack reads (roadmap
+ * 20.3), and a boot republishes the stored history once, so a restart cannot silence a streak
+ * the database still holds.
  */
 class NightlyReportServiceTest {
 
@@ -45,17 +51,27 @@ class NightlyReportServiceTest {
     private static final OffsetDateTime END = OffsetDateTime.parse("2026-10-27T03:41:12Z");
 
     private NightlyReportRepository reports;
+    private SimpleMeterRegistry registry;
     private NightlyReportService service;
 
     @BeforeEach
     void setUp() {
         reports = mock(NightlyReportRepository.class);
-        service = new NightlyReportService(reports);
+        registry = new SimpleMeterRegistry();
+        service = new NightlyReportService(reports, new NightlyVerdictMetrics(registry));
         when(reports.save(any(NightlyReport.class))).thenAnswer(invocation -> {
             NightlyReport row = invocation.getArgument(0);
             ReflectionTestUtils.setField(row, "id", UUID.randomUUID());
             return row;
         });
+    }
+
+    private double lastFinished() {
+        return registry.get(NightlyVerdictMetrics.LAST_FINISHED).gauge().value();
+    }
+
+    private double streak() {
+        return registry.get(NightlyVerdictMetrics.CONSECUTIVE_FAILURES).gauge().value();
     }
 
     private static NightlyReportRequest request(String status, OffsetDateTime started,
@@ -68,6 +84,7 @@ class NightlyReportServiceTest {
     @Test
     void a_night_is_recorded_with_the_reading_it_posted() {
         Map<String, Object> summary = Map.of("steps", List.of(Map.of("name", "backend-it", "status", "passed")));
+        newestNights();
 
         NightlyReportItem item = service.record(request("PASSED ", START, END, " ", summary));
 
@@ -90,6 +107,7 @@ class NightlyReportServiceTest {
                 Map.of("name", " eval ", "status", " passed ",
                         "detail", "recall_at_k 0.812 · 26 cases"),
                 "not-a-row"));
+        newestNights();
 
         NightlyReportItem item = service.record(request("passed", START, END, null, summary));
 
@@ -99,6 +117,8 @@ class NightlyReportServiceTest {
 
     @Test
     void a_summary_without_steps_answers_an_empty_list_rather_than_null() {
+        newestNights();
+
         NightlyReportItem item = service.record(request("passed", START, END, null, Map.of()));
 
         assertThat(item.steps()).isEmpty();
@@ -245,5 +265,45 @@ class NightlyReportServiceTest {
         assertThat(verdict.status()).isEqualTo("passed");
         assertThat(verdict.stale()).isTrue();
         assertThat(verdict.staleAfterHours()).isEqualTo(NightlyReportService.STALE_AFTER_HOURS);
+    }
+
+    @Test
+    void a_recorded_night_republishes_the_verdict_as_gauges() {
+        newestNights(
+                night(NightlyReport.STATUS_FAILED, END),
+                night(NightlyReport.STATUS_FAILED, END.minusHours(24)));
+
+        service.record(request("failed", START, END, null, Map.of()));
+
+        assertThat(lastFinished()).isEqualTo((double) END.toEpochSecond());
+        assertThat(streak())
+                .as("the alarm and the page read the same streak, and this one ends at the first pass")
+                .isEqualTo(2.0);
+    }
+
+    @Test
+    void a_boot_republishes_the_stored_history_instead_of_starting_from_zero() {
+        OffsetDateTime now = OffsetDateTime.now();
+        newestNights(
+                night(NightlyReport.STATUS_FAILED, now.minusHours(2)),
+                night(NightlyReport.STATUS_PASSED, now.minusHours(26)),
+                night(NightlyReport.STATUS_FAILED, now.minusHours(50)));
+
+        service.publishStartupVerdict();
+
+        assertThat(lastFinished()).isEqualTo((double) now.minusHours(2).toEpochSecond());
+        assertThat(streak()).isEqualTo(1.0);
+    }
+
+    @Test
+    void a_boot_whose_read_fails_keeps_the_boot_defaults_rather_than_refusing_to_start() {
+        when(reports.findAllByOrderByStartedAtDescIdDesc(any(Pageable.class)))
+                .thenThrow(new IllegalStateException("the database is not up yet"));
+
+        assertThatCode(service::publishStartupVerdict).doesNotThrowAnyException();
+        assertThat(lastFinished())
+                .as("boot time: the documented grace, not a fabricated finish")
+                .isCloseTo(Instant.now().getEpochSecond(), within(10.0));
+        assertThat(streak()).isZero();
     }
 }

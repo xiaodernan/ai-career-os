@@ -205,13 +205,15 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --no-deps 
 | Redis      | `redis-cli`                     | `INFO`                     |
 | MinIO      | `mc ready local`                | Prometheus exporter at `/minio/v2/metrics/cluster` (MinIO serves it by default) |
 
-The two families the nightly rules read are the scheduler's —
+The families the nightly rules read are the scheduler's —
 `careeros_ingestion_runs_total{status}` and
-`careeros_ingestion_last_success_timestamp` — and the AI budget's —
+`careeros_ingestion_last_success_timestamp` — the AI budget's —
 `careeros_ai_cost_usd_24h`, `careeros_ai_tokens_24h` and `careeros_ai_calls_24h`,
-recomputed from `ai_usage_events` every minute. `ops/prometheus/alerts.yml`
-carries the three rules and each one links its page in
-[RUNBOOK.md](RUNBOOK.md).
+recomputed from `ai_usage_events` every minute — and the install's own verdict —
+`careeros_nightly_last_finished_timestamp` and
+`careeros_nightly_consecutive_failures`, moved by each recorded night and once at
+boot. `ops/prometheus/alerts.yml` carries the five rules and each one links its
+page in [RUNBOOK.md](RUNBOOK.md).
 
 ### Recording the nightly run
 

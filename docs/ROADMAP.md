@@ -852,6 +852,27 @@ keeps the answers, and then starts asking the OS to act on them.
   shape gates at 283 component names and 157 declared records, the field contract
   at 46 bound readers and 80 producers, the copy census still at 135 sources.)
 
+- [x] **20.3** The verdict reaches the pager: the install's answer becomes two gauges
+  and two alarms, and the operator is told which night to open.
+  (20.2 gave the page one answer, but its only reader was a person who happened to
+  open the page: a deployment whose verification stopped reporting sat quietly until
+  somebody looked. The backend publishes the verdict as Micrometer gauges —
+  `careeros.nightly.last.finished.timestamp`, the newest record's finish whether it
+  passed or failed, because the cadence stopping and the verification failing are
+  different faults, and `careeros.nightly.consecutive.failures`, the same streak the
+  card warns at. Both move when a night is recorded; a boot reads the stored history
+  once so a restart cannot silence a streak, and a boot whose read fails keeps the
+  boot defaults and logs why — a scrape endpoint is not worth a process that will not
+  start. A missing verdict publishes no finish: silence on the wire is exactly what
+  the stale rule exists to catch, and a fabricated "now" would mute it for 36 hours.
+  `ops/prometheus/alerts.yml` gains `CareerOSNightlyVerificationStale` (36 hours of
+  silence, critical) and `CareerOSNightlyVerificationFailing` (two failed nights in a
+  row, warning), each linking its new RUNBOOK section. The alarm gate now reads the
+  36-hour window from `STALE_AFTER_HOURS` and the streak threshold from the card's own
+  warning line, so rule, service, page and prose cannot drift apart. 7 backend tests
+  (3 service, 4 gauges), the alarm gate at 5 rules and 7 metrics, the runbook at 5
+  alarm sections, the copy census still at 135 sources.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
