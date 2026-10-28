@@ -448,6 +448,17 @@ export interface InterviewDimension {
 }
 
 /**
+ * 19.6 -- what this deployment can do with speech. `provider` empty means no
+ * server-side provider is configured, and the page falls back to the browser's
+ * own speech APIs; `stt`/`tts` are the provider's own capabilities.
+ */
+export interface VoiceState {
+  provider: string;
+  stt: boolean;
+  tts: boolean;
+}
+
+/**
  * A question the interviewer asked, from either of its two authors: the persisted `TurnItem` (whose
  * text is `content`, with topic and action in its `questionMeta`) or the advance decision
  * `AnswerResponse.next` (whose text is `question`, and whose action/difficulty are top level). The two

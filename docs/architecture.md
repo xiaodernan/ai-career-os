@@ -93,6 +93,7 @@ frontend/backend/ai-service can also run natively for dev (`pnpm dev`, `mvn spri
 │   └── app/
 │       ├── providers/            # llm/: openai_compat, anthropic, ollama, mock(测试专用)
 │       │                         # embeddings/: openai, ollama, hash(离线开发)
+│       │                         # voice/: openai_compat, mock(测试专用) — STT/TTS for the interview runner
 │       ├── ingestion/            # parsers(pdf/docx/txt) → clean → chunk → metadata → embed → store
 │       ├── rag/                  # rewrite → intent → hybrid retrieve → filter → rerank → compress → compose → cite
 │       ├── agents/               # orchestrator + subagents + tools/ (26 tools) + memory
@@ -335,6 +336,13 @@ as inspectable code + trace events.
   ingestion status so nobody mistakes offline mode for real retrieval quality).
 - Reranker: `llm_rerank` (pointwise, default), `http_cross_encoder` (optional, e.g.
   TEI). Model/pricing registry for cost accounting.
+- `Voice` seam (`providers/voice`): `Transcriber` (audio → text) and `Synthesizer`
+  (text → audio) behind one `get_voice` entry — `openai_compat` (any OpenAI-audio
+  compatible base URL) and `mock` (**test-only**; a fixed transcript and a one-tone
+  WAV, refused under `APP_ENV=prod`). `VOICE_PROVIDER=none` is the default: the
+  interview runner then falls back to the browser's own
+  SpeechRecognition/speechSynthesis, and the deployment is never asked for ears it
+  does not have.
 
 ### 6.2 Ingestion (`app/ingestion`)
 parse (pypdf / docx2txt / txt) → clean (normalize unicode, dehyphenate, strip

@@ -43,6 +43,7 @@ import type {
   TailorDiff,
   TailorResponse,
   TailoredResult,
+  VoiceState,
   WeeklyDigest,
 } from "./types";
 import { field } from "./body";
@@ -1203,6 +1204,19 @@ export function runTotalTokens(run: ActivityRun): number | undefined {
 }
 
 /* ------------------------------- interviews ------------------------------- */
+
+/**
+ * 19.6 -- the deployment's speech capabilities. A missing or malformed answer
+ * is "no provider": the page then shows the browser's own speech controls or
+ * the text box, and never invents a provider that did not answer.
+ */
+export function normalizeVoiceState(raw: unknown): VoiceState {
+  return {
+    provider: str(raw, "provider") ?? "",
+    stt: bool(raw, "stt") ?? false,
+    tts: bool(raw, "tts") ?? false,
+  };
+}
 
 export function normalizeInterviewDims(raw: unknown): InterviewDimension[] {
   // The one shape that exists: `EvaluationItem.dims` is the jsonb copy of the report's

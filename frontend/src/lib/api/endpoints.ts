@@ -70,6 +70,10 @@ export const endpoints = {
   interviewOpening: (id: string) => `/interview/sessions/${seg(id)}/opening`,
   interviewAnswer: (id: string) => `/interview/sessions/${seg(id)}/answer`,
   interviewFinalize: (id: string) => `/interview/sessions/${seg(id)}/finalize`,
+  /** 19.6 -- whether this deployment has a speech provider at all; the page's fallback gate. */
+  interviewVoice: "/interview/voice",
+  interviewVoiceTranscribe: (id: string) => `/interview/sessions/${seg(id)}/voice/transcribe`,
+  interviewVoiceSpeak: (id: string) => `/interview/sessions/${seg(id)}/voice/speak`,
 
   /* ---------------- Knowledge base (RAG) ---------------- */
   knowledge: "/knowledge/sources",

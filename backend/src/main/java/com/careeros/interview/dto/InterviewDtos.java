@@ -58,4 +58,37 @@ public final class InterviewDtos {
 
     public record FinalizeResponse(EvaluationItem evaluation, SessionItem session) {
     }
+
+    /**
+     * 19.6 -- one recorded answer on its way to the speech provider. The audio
+     * is base64 because it crosses the ai-service bridge as JSON; the cap is
+     * the decoded 10 MB the renderer's sibling route enforces, in base64
+     * characters. Voice is an enhancement: nothing about the interview's
+     * scoring reads this record.
+     */
+    public record VoiceAnswerRequest(@NotBlank @Size(max = 14_000_000) String audio,
+                                     @Size(max = 100) String mime,
+                                     @Size(max = 16) String locale) {
+    }
+
+    /** 19.6 -- one question on its way to the speaker, capped at the ai-service's own limit. */
+    public record VoiceLineRequest(@NotBlank @Size(max = 4000) String text,
+                                   @Size(max = 16) String locale) {
+    }
+
+    /** The words of one answer, and which provider heard them. */
+    public record VoiceTranscript(String text, String provider) {
+    }
+
+    /** One question as base64 audio, and the mime type the browser plays it as. */
+    public record VoiceClip(String audio, String mime, String provider) {
+    }
+
+    /**
+     * Whether this deployment can hear and speak. Both false leaves the browser
+     * its own speech APIs -- the page chooses before it records, so a deployment
+     * with no provider never uploads an answer that cannot be read.
+     */
+    public record VoiceState(String provider, boolean stt, boolean tts) {
+    }
 }

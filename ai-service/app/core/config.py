@@ -34,6 +34,16 @@ class Settings(BaseSettings):
     embedding_base_url: str = ""
     embedding_api_key: str = ""
 
+    # Voice (19.6) -- the interview's microphone and speaker. Off unless a
+    # deployment says otherwise: the browser's own speech APIs are the
+    # fallback, and a server that cannot listen says so rather than guesses.
+    voice_provider: str = "none"  # none | openai_compat | mock
+    voice_base_url: str = ""
+    voice_api_key: str = ""
+    voice_stt_model: str = "whisper-1"
+    voice_tts_model: str = "gpt-4o-mini-tts"
+    voice_tts_voice: str = "alloy"
+
     rerank_mode: str = "llm"  # llm | none
     rerank_model: str = ""  # empty -> reuse llm_model
 
@@ -48,6 +58,14 @@ class Settings(BaseSettings):
     @property
     def embedding_key(self) -> str:
         return self.embedding_api_key or self.llm_api_key
+
+    @property
+    def voice_base(self) -> str:
+        return self.voice_base_url or self.llm_base_url
+
+    @property
+    def voice_key(self) -> str:
+        return self.voice_api_key or self.llm_api_key
 
 
 @lru_cache

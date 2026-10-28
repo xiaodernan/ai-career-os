@@ -12,11 +12,15 @@ import {
   Gauge,
   ListChecks,
   Lightbulb,
+  Mic,
   Quote,
   Send,
   Sparkles,
+  Square,
   ThumbsDown,
   ThumbsUp,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,6 +36,7 @@ import dynamic from "next/dynamic";
 import { AIBadge } from "@/components/ai/ai-badge";
 import { ProcessingSteps } from "@/components/ai/processing-steps";
 import { useInterviewOpening, useSubmitInterviewAnswer, useFinalizeInterview } from "@/lib/hooks/actions";
+import { useAnswerVoice } from "@/lib/hooks/voice";
 import { useInterviewSession } from "@/lib/hooks/resources";
 import { depthLabel, depthLevel, titleCase } from "@/lib/format";
 import { interviewDimensionLabel } from "@/lib/dimensions";
@@ -69,6 +74,13 @@ export default function InterviewRunnerPage() {
   const [turns, setTurns] = React.useState<{ question: string; answer: string; score?: number }[]>([]);
   const [confirmFinish, setConfirmFinish] = React.useState(false);
   const openingFired = React.useRef(false);
+
+  // The seam's browser side: record (server ears or the browser's own), play the
+  // question back. A deployment with no provider simply has no mic button --
+  // the textarea is the interview, and voice is the extra way into it.
+  const voice = useAnswerVoice(id ?? "", (text) => {
+    setAnswer((prev) => (prev.trim() ? `${prev.trimEnd()} ${text}` : text));
+  });
 
   const busy = opening.isPending || submit.isPending;
   const data = session.data;
@@ -249,7 +261,31 @@ export default function InterviewRunnerPage() {
                 <span className="text-xs text-muted-foreground">{question.topic}</span>
               )}
             </div>
-            <CardTitle className="pt-1 text-base leading-snug font-medium">{question.text}</CardTitle>
+            <div className="flex items-start justify-between gap-3 pt-1">
+              <CardTitle className="text-base leading-snug font-medium">{question.text}</CardTitle>
+              {voice.canSpeak && (
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  className="shrink-0"
+                  onClick={() =>
+                    voice.speaking ? voice.stopSpeaking() : voice.speak(question.text)
+                  }
+                  aria-label={t(
+                    voice.speaking
+                      ? "interviews.detail.stopListening"
+                      : "interviews.detail.listen"
+                  )}
+                  title={t(
+                    voice.speaking
+                      ? "interviews.detail.stopListening"
+                      : "interviews.detail.listen"
+                  )}
+                >
+                  {voice.speaking ? <VolumeX aria-hidden /> : <Volume2 aria-hidden />}
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent className="space-y-3">
             <Textarea
@@ -265,6 +301,44 @@ export default function InterviewRunnerPage() {
                 }
               }}
             />
+            {(voice.canRecord || voice.error) && (
+              <div className="flex flex-wrap items-center gap-2">
+                {voice.canRecord &&
+                  (voice.recording ? (
+                    <Button variant="danger" size="sm" onClick={voice.stop}>
+                      <Square aria-hidden />
+                      {t("interviews.detail.stopRecording")}
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      loading={voice.status === "transcribing"}
+                      disabled={voice.busy}
+                      onClick={voice.start}
+                    >
+                      <Mic aria-hidden />
+                      {voice.status === "transcribing"
+                        ? t("interviews.detail.transcribingAnswer")
+                        : t("interviews.detail.recordAnswer")}
+                    </Button>
+                  ))}
+                {voice.recording && (
+                  <span
+                    className="flex items-center gap-1.5 text-2xs text-muted-foreground"
+                    aria-live="polite"
+                  >
+                    <span className="size-2 animate-pulse rounded-full bg-destructive" aria-hidden />
+                    {t("interviews.detail.recordingHint")}
+                  </span>
+                )}
+                {voice.error && (
+                  <p className="text-2xs text-warning" role="status" aria-live="polite">
+                    {voice.error}
+                  </p>
+                )}
+              </div>
+            )}
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-2xs text-muted-foreground">
                 {t("interviews.detail.submitHint")}

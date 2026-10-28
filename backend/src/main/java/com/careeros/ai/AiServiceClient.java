@@ -34,6 +34,20 @@ public interface AiServiceClient {
 
     Map<String, Object> interviewFinalize(UUID sessionId, List<Map<String, Object>> turns, UUID userId);
 
+    /**
+     * 19.6 -- whether this deployment can hear an answer and speak a question.
+     * Answers {@code {provider, stt, tts}}; both flags are false when no speech
+     * provider is configured, which is what sends the page to the browser's own
+     * speech APIs.
+     */
+    Map<String, Object> voiceState(UUID userId);
+
+    /** 19.6 -- one recorded answer transcribed to words, in whatever language was spoken. */
+    Map<String, Object> transcribeAnswer(UUID userId, String audio, String mime, String locale);
+
+    /** 19.6 -- one question as base64 audio for the browser to play. */
+    Map<String, Object> speakQuestion(UUID userId, String text, String locale);
+
     Map<String, Object> copilotChatSync(String message, List<Map<String, Object>> history,
                                         UUID conversationId, Map<String, Object> context, UUID userId);
 

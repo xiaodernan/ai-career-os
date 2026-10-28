@@ -65,6 +65,15 @@ public class FakeAiServiceClientConfig {
         public volatile String copilotAnswer =
                 "Based on your resume, prioritise Kubernetes for this role.";
 
+        /**
+         * What the voice seam answers with (19.6). The provider name is the mock
+         * provider's, so a test can tell "the deployment can listen" from "the
+         * bridge fell back"; the transcript and the clip are the mock's own.
+         */
+        public volatile String voiceProvider = "mock";
+
+        public volatile String voiceTranscript = "This is a mock transcript of a spoken answer.";
+
         public final List<String> calls = new ArrayList<>();
 
         public void reset() {
@@ -74,6 +83,8 @@ public class FakeAiServiceClientConfig {
             resumeExperienceCompany = "Acme Corp";
             resumeProjectName = "OpenLedger";
             copilotAnswer = "Based on your resume, prioritise Kubernetes for this role.";
+            voiceProvider = "mock";
+            voiceTranscript = "This is a mock transcript of a spoken answer.";
             calls.clear();
         }
 
@@ -237,6 +248,24 @@ public class FakeAiServiceClientConfig {
                     "recommended_study", List.of("Designing Data-Intensive Applications"),
                     "trajectory_detail", List.of(map("depth", 1, "topic", "system_design")));
             return map("evaluation", evaluation);
+        }
+
+        @Override
+        public Map<String, Object> voiceState(UUID userId) {
+            record("voiceState");
+            return map("provider", voiceProvider, "stt", true, "tts", true);
+        }
+
+        @Override
+        public Map<String, Object> transcribeAnswer(UUID userId, String audio, String mime, String locale) {
+            record("transcribeAnswer");
+            return map("text", voiceTranscript, "provider", voiceProvider);
+        }
+
+        @Override
+        public Map<String, Object> speakQuestion(UUID userId, String text, String locale) {
+            record("speakQuestion");
+            return map("audio", "UklGRg==", "mime", "audio/wav", "provider", voiceProvider);
         }
 
         @Override

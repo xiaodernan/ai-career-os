@@ -388,7 +388,7 @@ def test_the_backend_readers_this_gate_walks_are_the_ones_that_exist():
         "ConversationService.java", "CopilotStreamService.java", "FileIngestService.java",
         "GrowthService.java", "InterviewService.java",
         "JobService.java", "MemoryController.java", "QueryEmbeddingService.java",
-        "ResumeService.java", "ScheduledIngestionService.java",
+        "ResumeService.java", "ScheduledIngestionService.java", "VoiceService.java",
     ]
 
 
@@ -433,10 +433,13 @@ def test_the_files_that_hold_an_ai_answer_stay_declared():
     # `MemoryItem` — it holds the answer long enough to read five keys off it, which is the
     # same reason `InterviewService` is. A controller that forwards a map untouched would not
     # be, but that would leave the casing unmapped.
+    # `VoiceService` (19.6) is the same shape: it reads `provider`/`text` off the transcript
+    # map and `audio`/`mime` off the clip map into its own records, so the keys the browser
+    # finally sees are its reads -- an unlisted holder would let that translation drift.
     assert holding == {"ConversationService.java", "GrowthService.java",
                        "InterviewService.java", "JobService.java",
                        "MemoryController.java", "QueryEmbeddingService.java",
-                       "ResumeService.java"}
+                       "ResumeService.java", "VoiceService.java"}
     assert holding < {p.name for p in _consumer_files()}
 
 
@@ -910,8 +913,10 @@ def test_the_declaration_probes_reach_the_shapes_a_copy_would_miss():
     # 59 with the proactive layer's seven readers: the saved-search row, the ingestion
     # dashboard's run/feed/run-detail trio, and the notification inbox's item, inbox and
     # weekly letter -- each an exported mapper on the same opener.
-    assert len(re.findall(TS_OPENER.format(name=r"(\w+)"), source)) == 59, \
-        "53 exported mappers and 6 module-private ones, all through one opener"
+    # 60 with 19.6's `normalizeVoiceState`: the interview page's one wire-shape mapper for
+    # whether the deployment can hear and speak, exported like its neighbours.
+    assert len(re.findall(TS_OPENER.format(name=r"(\w+)"), source)) == 60, \
+        "54 exported mappers and 6 module-private ones, all through one opener"
     assert "export function normalizePage(" not in source, \
         "the generic really does sit between the name and the paren, so a literal opener finds nothing"
     assert _ts_function_body("normalizePage").startswith("export function normalizePage<T>(")
@@ -966,8 +971,11 @@ def test_the_java_probe_reads_every_record_the_backend_declares():
     # `Inbox`, `KeysRequest`, `KeyRequest`), the service's private `Candidate` row and
     # the weekly letter's `WeeklyDigestDto` -- then 19.5's `PrintResumeRequest` and
     # `ResumePrint`, the request and the self-contained document its route binds.
-    assert len(declared) == 146, \
-        f"{len(declared)} records carry a declaration the shared opener reads, not the 146 measured"
+    # 151 with 19.6's voice quintet in `InterviewDtos`: `VoiceAnswerRequest` and
+    # `VoiceLineRequest` (the two bodies), `VoiceTranscript` and `VoiceClip` (the two
+    # answers) and `VoiceState` (whether the deployment can hear and speak).
+    assert len(declared) == 151, \
+        f"{len(declared)} records carry a declaration the shared opener reads, not the 151 measured"
     problems, renamed = [], []
     for relative, record in declared:
         names = _record_components_at(relative, record)
@@ -3270,7 +3278,9 @@ def test_both_frame_parsers_default_a_nameless_frame_to_the_same_event_name():
         # above the union (saved-search criteria and row, the weekly letter, the ingestion
         # dashboard's counts/run/feed/run-detail, the notification item and inbox: +104 lines);
         # the union itself did not change.
-        ("types.ts", 1382, "kind:"),
+        # 1393 rather than 1382 since 19.6's `VoiceState` interface joined above the union
+        # (+11 lines); the union itself did not change.
+        ("types.ts", 1393, "kind:"),
         ('use-sse.ts', 15, 'event: SSEEventName | "message" | "progress" | "ping";'),
     ], (f"{[(r['file'], r['line'], r['head']) for r in by_role['type-union-member']]}: three type unions "
         "spell `message`, and only one of them names a frame -- the other two are the trace step kind "
@@ -3732,8 +3742,10 @@ def test_the_stream_media_type_is_written_in_four_spellings_and_read_in_none():
         kinds[row["kind"]] = kinds.get(row["kind"], 0) + 1
     # Six request-senders rather than five: the anthropic provider joined and names the
     # header lowercase (`"content-type"`), which is the same header in another spelling.
-    assert kinds == {"request-sender": 6, "cors-allowlist": 1, "test-assertion": 1}, \
-        (f"{kinds}: `Content-Type` is sent six times, allowed by CORS once, and asserted in a test once. "
+    # Seven with 19.6's `providers/voice/openai_audio.py`: the speech provider posts its
+    # transcript and speak bodies as JSON like the LLM providers, a sender like the rest.
+    assert kinds == {"request-sender": 7, "cors-allowlist": 1, "test-assertion": 1}, \
+        (f"{kinds}: `Content-Type` is sent seven times, allowed by CORS once, and asserted in a test once. "
          "This is the population the absence above is drawn from -- an `unclassified` row would be a use "
          "nobody has read")
     # Two rows in `HttpAiServiceClient.java` rather than one: the `post` helper and the `patch`

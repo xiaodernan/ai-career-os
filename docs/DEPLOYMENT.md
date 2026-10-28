@@ -270,6 +270,11 @@ ai-service reads the provider selection from env:
 
 - `LLM_PROVIDER` — `openai_compat` | `anthropic` | `ollama` | `mock`.
 - `EMBEDDING_PROVIDER` — `openai` | `ollama` | `hash`.
+- `VOICE_PROVIDER` — `none` (default) | `openai_compat` | `mock`. `none` leaves the
+  interview text-only and the runner uses the browser's own speech APIs. The real
+  provider serves `/audio/transcriptions` and `/audio/speech` at `VOICE_BASE_URL`
+  (defaults to the LLM base) with `VOICE_API_KEY` (defaults to the LLM key). `mock`
+  is refused when `APP_ENV=prod`, exactly like the LLM mock.
 
 Two offline-only escape hatches for tests and first-run dev: `mock` LLM and
 `hash` embeddings. The app **refuses to boot with `LLM_PROVIDER=mock` when

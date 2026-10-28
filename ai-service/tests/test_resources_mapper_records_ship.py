@@ -456,7 +456,9 @@ def test_the_unbound_mappers_ban_would_find_these_mappers_if_it_read_this_file()
     assert "RESOURCES" not in declarations and "resources" not in declarations, \
         "the ban now enumerates resources.ts too -- reconcile the two censuses instead of stacking"
     population = re.search(r"assert len\(population\) == (\d+)", gate)
-    assert population and population.group(1) == "43", \
+    # 44 rather than 43 since 19.6's `normalizeVoiceState` joined the field gate's census; this
+    # file only echoes that pin, so the two move together or one of them is stale.
+    assert population and population.group(1) == "44", \
         f"the ban's pinned normalize.ts population moved: {population and population.group(1)}"
 
 
@@ -521,7 +523,9 @@ def test_an_unauthored_name_is_a_snake_twin_a_foreign_name_or_a_name_no_record_d
     # pair), the inbox (`NotificationItem`, `Inbox`, and its two key bodies), the weekly digest,
     # and the print pair (`PrintResumeRequest`, `ResumePrint`). The set grew by the 18 names
     # those records introduced that no earlier record declared.
-    assert len(everywhere) == 269, f"the backend record census read {len(everywhere)} component names"
+    # 274 with 19.6's voice quintet: the two request records and three answers introduce
+    # `audio`, `mime`, `provider`, `stt` and `tts` -- five names no earlier record declared.
+    assert len(everywhere) == 274, f"the backend record census read {len(everywhere)} component names"
     assert {"id", "title", "status", "createdAt"} <= set(everywhere), sorted(list(everywhere)[:8])
     scanned_unauthored = scanned_nowhere = 0
     for (mapper, receiver), record in ROWS.items():

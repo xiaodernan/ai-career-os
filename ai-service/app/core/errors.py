@@ -87,6 +87,14 @@ def raise_refusal(refusal: Refusal) -> RefusalError:
     return RefusalError(refusal)
 
 
+# ---------------- voice refusals ----------------
+VOICE_AUDIO_INVALID = Refusal("VOICE_AUDIO_INVALID", "voice audio is not valid base64")
+VOICE_AUDIO_TOO_LARGE = Refusal("VOICE_AUDIO_TOO_LARGE", "voice audio exceeds the size cap")
+VOICE_NOT_CONFIGURED = Refusal("VOICE_NOT_CONFIGURED",
+                               "voice is not configured on this deployment", status=503)
+VOICE_UPSTREAM_FAILED = Refusal("VOICE_UPSTREAM_FAILED",
+                                "the speech provider failed to answer", status=502)
+
 # ---------------- FastAPI handler ----------------
 async def refusal_exception_handler(request: Request, exc: RefusalError) -> JSONResponse:
     """Handle RefusalError raised anywhere in the ai-service.

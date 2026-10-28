@@ -9,6 +9,9 @@ from app.providers.llm.anthropic import AnthropicProvider
 from app.providers.llm.mock import MockProvider
 from app.providers.llm.ollama import OllamaProvider
 from app.providers.llm.openai_compat import OpenAICompatProvider
+from app.providers.voice.base import Voice
+from app.providers.voice.mock import MockVoice
+from app.providers.voice.openai_audio import OpenAIAudioProvider
 
 
 class ConfigError(Exception):
@@ -71,6 +74,35 @@ def get_embeddings(settings: Settings | None = None) -> EmbeddingProvider:
             OpenAICompatProvider(_http_client(), base, key, s.embedding_model),
             s.embedding_model, s.embedding_dim, "openai")
     raise ConfigError(f"unknown EMBEDDING_PROVIDER {s.embedding_provider}")
+
+
+def get_voice(settings: Settings | None = None) -> Voice:
+    s = settings or get_settings()
+    if s.voice_provider in ("", "none"):
+        raise ConfigError("voice is not configured on this deployment")
+    if s.voice_provider == "mock":
+        if s.app_env == "prod":
+            raise ConfigError("mock voice provider is not allowed in prod")
+        return MockVoice()
+    if s.voice_provider == "openai_compat":
+        if not s.voice_key:
+            raise ConfigError(
+                f"VOICE_PROVIDER={s.voice_provider} requires VOICE_API_KEY (see .env.example)")
+        return OpenAIAudioProvider(_http_client(), s.voice_base, s.voice_key,
+                                   s.voice_stt_model, s.voice_tts_model, s.voice_tts_voice)
+    raise ConfigError(f"unknown VOICE_PROVIDER {s.voice_provider}")
+
+
+def voice_configured(settings: Settings | None = None) -> bool:
+    """Whether this deployment named a provider -- what the status route reports.
+
+    Kept a plain check rather than a `get_voice()` call: the status route must
+    answer truthfully even when the named provider cannot be built (a key-less
+    openai_compat is still *configured*, and the route that uses it says why
+    the call failed).
+    """
+    s = settings or get_settings()
+    return s.voice_provider not in ("", "none")
 
 
 async def embed_text(text: str) -> list[float] | None:

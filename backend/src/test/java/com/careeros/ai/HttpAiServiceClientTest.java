@@ -41,6 +41,7 @@ class HttpAiServiceClientTest {
     private HttpServer server;
     private HttpAiServiceClient client;
     private final List<String> bodies = new ArrayList<>();
+    private final List<String> paths = new ArrayList<>();
 
     @BeforeEach
     void setUp() throws Exception {
@@ -51,6 +52,7 @@ class HttpAiServiceClientTest {
                 body = new String(in.readAllBytes(), StandardCharsets.UTF_8);
             }
             bodies.add(body);
+            paths.add(exchange.getRequestURI().getPath());
             // A payload that asks to be refused answers the way the
             // ai-service's typed refusals do; anything else succeeds. The
             // marker rides in the payload, so one context covers both.
@@ -135,6 +137,40 @@ class HttpAiServiceClientTest {
         // from the text, which is what the ingestion page promises.
         client.parseFeed("<rss/>", "rss", UUID.randomUUID());
         assertThat(bodies.get(0)).doesNotContain("parse-board");
+    }
+
+    @Test
+    void theVoiceSeamCallsTheEnginesOwnRoutes() {
+        client.voiceState(UUID.randomUUID());
+        client.transcribeAnswer(UUID.randomUUID(), "AAAA", null, "zh");
+        client.speakQuestion(UUID.randomUUID(), "Hello, candidate.", null);
+
+        assertThat(paths).containsExactly(
+                "/internal/voice/status",
+                "/internal/voice/transcribe",
+                "/internal/voice/speak");
+    }
+
+    @Test
+    void aRecordingWithNoMimeStillSaysWhatItIs() {
+        // MediaRecorder in some browsers hands back an empty type. The engine
+        // needs a mime to name the part, so the bridge says what the page's
+        // recorder produces by default rather than sending an empty string.
+        client.transcribeAnswer(UUID.randomUUID(), "AAAA", "", null);
+        assertThat(bodies.get(0))
+                .contains("\"audio\":\"AAAA\"")
+                .contains("\"mime\":\"audio/webm\"")
+                .doesNotContain("\"locale\"");
+    }
+
+    @Test
+    void theSpokenQuestionCarriesTheReadersLanguageOnlyWhenOneIsNamed() {
+        client.speakQuestion(UUID.randomUUID(), "Tell me about it.", "zh");
+        client.speakQuestion(UUID.randomUUID(), "Tell me about it.", null);
+        assertThat(bodies.get(0)).contains("\"text\":\"Tell me about it.\"")
+                .contains("\"locale\":\"zh\"");
+        assertThat(bodies.get(1)).contains("\"text\":\"Tell me about it.\"")
+                .doesNotContain("\"locale\"");
     }
 
     // ---------------- the upstream's refusals ----------------

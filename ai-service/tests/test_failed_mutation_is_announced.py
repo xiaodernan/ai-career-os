@@ -8,8 +8,8 @@ this request fails, does anyone say so?". This file answers it per mutation site
 the caller's options through the one indirection the app actually uses: a named object handed to two
 different mutations.
 
-What the shipped code says, measured rather than assumed: 78 mutation sites in nine files
-(the hook libraries, plus the knowledge uploader's own actions). 73 declare their failure at
+What the shipped code says, measured rather than assumed: 80 mutation sites in ten files
+(the hook libraries, plus the knowledge uploader's own actions). 75 declare their failure at
 the hook; the five that do not are all in ``auth.ts``. Four of those five are announced by
 their caller -- the password forms pass inline call options, and the credentials form passes
 one shared ``handlers`` object to both ``login.mutate`` and ``register.mutate``, whose
@@ -21,7 +21,7 @@ the server said. That is a design choice -- a local sign-out always happens -- s
 characterises it rather than changing it: it is the one place in the app where "you are signed
 out" is not a claim about the server.
 
-The same walk covers the failure helper: ``fail(...)`` has a single author and 61 uses, and
+The same walk covers the failure helper: ``fail(...)`` has a single author and 63 uses, and
 every use spends a distinct sentence -- when this file first walked it, 28 were distinct,
 because two different deletes shared "Delete failed." and the toast never said which record
 survived the failure. Each delete now names its own record, and the case below pins the spent
@@ -62,6 +62,8 @@ BRIDGE_HOOKS = {
     "frontend/src/lib/hooks/ingestion.ts",
     "frontend/src/lib/hooks/notifications.ts",
     "frontend/src/lib/hooks/offers.ts",
+    # 19.6's voice seam: the transcribe and speak writes announce their failure at the hook.
+    "frontend/src/lib/hooks/voice.ts",
 }
 CLIENT = "frontend/src/lib/api/client.ts"
 CREDENTIALS = "frontend/src/components/auth/credentials-form.tsx"
@@ -87,6 +89,7 @@ ROSTER = {
     "frontend/src/lib/hooks/ingestion.ts": 8,
     "frontend/src/lib/hooks/notifications.ts": 3,
     "frontend/src/lib/hooks/offers.ts": 4,
+    "frontend/src/lib/hooks/voice.ts": 2,
     SOURCE_ACTIONS: 1,
 }
 SITES = sum(ROSTER.values())
@@ -105,6 +108,7 @@ SENTENCES = {
     "frontend/src/lib/hooks/growth.ts": 12,
     "frontend/src/lib/hooks/ingestion.ts": 4,
     "frontend/src/lib/hooks/offers.ts": 4,
+    "frontend/src/lib/hooks/voice.ts": 2,
 }
 FAIL_USES = sum(SENTENCES.values())
 

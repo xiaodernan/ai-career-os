@@ -81,14 +81,29 @@
 5. ~~**Epic 20 — 单版本打印**~~
    ~~定制简历的独立打印视图（复用 export_render 的排版与语言机制），
    让"tailor → 下载 PDF"成为一条完整路径，而不是只打整个数据包。~~
-   已完成（19.5，见上）。下一步：19.6 语音模拟面试。
+   已完成（19.5，见上）。下一步：19.7 移动端 / PWA（已完成，见下）。
 
-6. **Epic 21 — 语音模拟面试**
-   STT/TTS 的 provider 接缝 + 面试页的录音/播放；文本面试已有的评分与轨迹
-   不重写，只把输入输出换成声音。
+6. ~~**Epic 21 — 语音模拟面试**~~
+   ~~STT/TTS 的 provider 接缝 + 面试页的录音/播放；文本面试已有的评分与轨迹
+   不重写，只把输入输出换成声音。~~
+   已完成（19.6）：ai-service 新增 `Voice` 接缝（`VOICE_PROVIDER=none` 默认、
+   `openai_compat`、`mock`——mock 在 prod 被拒），三条内部路由
+   （status / transcribe / speak）与四个类型化拒绝；backend `VoiceService`
+   在任何语音预算花出之前先验会话归属（别人的 session 直接 404），空转写与
+   空音频回 `AI_SERVICE_EMPTY_RESPONSE`，状态路由 best-effort——ai-service
+   挂了页面仍有浏览器自带的语音；面试页一个麦克风按钮（MediaRecorder →
+   base64 → provider，或部署没有耳朵时用浏览器 SpeechRecognition）和一个
+   朗读按钮（provider 的音频，或 speechSynthesis），录音两分钟封顶，麦克风
+   被拒有一句人话，文本框始终在。13 个 ai-service 测试、9 个 controller 测试、
+   3 个桥接测试、10 个前端 helper 测试。下一步：19.7 移动端 / PWA。
 
-7. **Epic 22 — 移动端 / PWA**
-   可安装外壳、离线壳、响应式审计（侧栏、看板拖拽、表格滚动）。
+7. ~~**Epic 22 — 移动端 / PWA**~~
+   ~~可安装外壳、离线壳、响应式审计（侧栏、看板拖拽、表格滚动）。~~
+   已完成（19.7，见 ROADMAP）：manifest + Service Worker + 离线壳页 + 四个
+   图标；worker 只预缓存离线页与图标，导航走网络、断网落离线页，构建产物
+   `_next/static` 缓存优先并后台刷新，`lib/pwa.ts` 只在生产构建注册；看板
+   拖拽手柄补齐 `touch-none`；`pwa.test.ts` 钉住三份文件与四个 PNG。
+   下一步：19.8 真实板卡连接器。
 
 8. **Epic 23 — 真实板卡连接器**
    Greenhouse / Lever 公开 board API 接入既有 `Connector` 协议；

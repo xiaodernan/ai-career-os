@@ -698,9 +698,24 @@ that; each ships wired to the real API and UI, like every epic before it.
   row on the resume detail page prints. 10 ai-service render tests, 3 service
   tests, 11 controller tests, the doc-parameter and error-vocabulary gates
   green, 625 backend tests, 724 vitest.)
-- [ ] **19.6** Voice mock interview: an STT/TTS provider seam plus record/play
+- [x] **19.6** Voice mock interview: an STT/TTS provider seam plus record/play
   on the interview page. The scoring, difficulty ladder and depth trajectory
   stay the text interview's; only the input and output become voice.
+  (`VOICE_PROVIDER=none|openai_compat|mock`, with `mock` refused under
+  `APP_ENV=prod`; the provider's four refusals are typed --
+  `VOICE_AUDIO_INVALID`, `VOICE_AUDIO_TOO_LARGE`, `VOICE_NOT_CONFIGURED` and
+  `VOICE_UPSTREAM_FAILED`. Audio crosses the backend's JSON bridge as base64.
+  `GET /interview/voice` answers `{provider, stt, tts}` best-effort -- an
+  engine that cannot answer reads as no provider, which is what the page
+  offers the browser's own speech for -- and
+  `POST /interview/sessions/{id}/voice/transcribe|speak` checks the session is
+  the caller's before any spend; a provider that answers no text or no clip is
+  `AI_SERVICE_EMPTY_RESPONSE`. The runner's mic records through MediaRecorder
+  (a two-minute cap) and sends base64, or falls back to the browser's
+  SpeechRecognition; the question's listen toggle plays the provider's clip or
+  `speechSynthesis`. A denied microphone is one sentence and the text box is
+  untouched. 13 ai-service voice tests, 9 controller tests, 3 bridge tests,
+  10 vitest helpers, the doc/wire gates green, 637 backend tests, 739 vitest.)
 - [x] **19.7** Mobile/PWA: an installable shell, an offline shell page, and a
   responsive audit of the sidebar, the kanban drag and the wide tables.
   (`app/manifest.ts` + `public/sw.js` + `public/offline.html` + four PNGs under
@@ -709,7 +724,7 @@ that; each ships wired to the real API and UI, like every epic before it.
   cookie the document's metadata does, so the install dialog speaks the
   reader's language; iOS reads the document's `icons`/`appleWebApp` tags, and
   both roads name the same files. The worker precaches only the offline page
-  and the install icons -- never a page or an `/api` answer, because a cached
+  and the install icons -- never a page or an API answer, because a cached
   board would show yesterday's postings as today's -- answers a navigation with
   the network or, with none, the offline page, and serves the build's
   content-hashed `_next/static` chunks cache-first with a background refresh.

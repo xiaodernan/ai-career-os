@@ -321,6 +321,9 @@ catalogue, so the palette and the board rank one query the same way.
 | POST | `/interview/sessions/{id}/opening` | first question |
 | POST | `/interview/sessions/{id}/answer` | `{answer}` → evaluation + follow-up + difficulty step; the candidate's turn, the follow-up and the difficulty step are filed in one transaction, so an answer that cannot file its follow-up files no turn at all |
 | POST | `/interview/sessions/{id}/finalize` | 8-dimension report + trajectory; the report row and the session's completion are filed in one transaction, so a finalize that cannot close the session files neither |
+| GET | `/interview/voice` | whether this deployment has a speech provider, and which halves of the seam it can do — the runner's fallback gate: no provider means the browser's own speech APIs, or the text box |
+| POST | `/interview/sessions/{id}/voice/transcribe` | `{audio, mime?, locale?}` — base64 of one recorded answer → `{text, provider}`; a blank transcript is `AI_SERVICE_EMPTY_RESPONSE`, never a silent success |
+| POST | `/interview/sessions/{id}/voice/speak` | `{text, locale?}` → `{audio, mime, provider}` — base64 of the spoken question for the runner's play button |
 
 There is no `maxQuestions` field: the body binds by name, so one sent at the top level is
 dropped without a word. The question budget is a key inside `config`, in the snake_case the
@@ -447,6 +450,9 @@ crosses the wire now so the mapping can grow a vocabulary later.
 | POST | `/internal/interview/opening` | first question |
 | POST | `/internal/interview/answer` | evaluate + follow up |
 | POST | `/internal/interview/finalize` | final report |
+| GET | `/internal/voice/status` | the deployment's speech provider and its two capabilities; no provider answers an empty name and false flags rather than failing |
+| POST | `/internal/voice/transcribe` | `{audio, mime, locale?}` — base64 audio → `{text, provider}`; refusals: `VOICE_AUDIO_INVALID`, `VOICE_AUDIO_TOO_LARGE`, `VOICE_NOT_CONFIGURED` (503), `VOICE_UPSTREAM_FAILED` (502) |
+| POST | `/internal/voice/speak` | `{text, locale?}` → `{audio, mime, provider}` — base64 of one spoken line; the runner plays it, and falls back to the browser's own voice when this deployment has no provider |
 | GET | `/internal/tasks/{task_id}` | task state (no backend caller: the app follows /internal/stream/{taskId} instead) |
 | GET | `/internal/tasks/{task_id}/stream` | task SSE (canonical) (no backend caller: a second stream spelling, unused by the relay) |
 | GET | `/internal/stream/{task_id}` | SSE alias the backend relay proxies as `/api/v1/ai/stream/{taskId}` |

@@ -15,6 +15,8 @@ async def lifespan(app: FastAPI):
     setup_logging()
     if settings.llm_provider == "mock" and settings.app_env == "prod":
         raise RuntimeError("mock LLM provider forbidden in prod")
+    if settings.voice_provider == "mock" and settings.app_env == "prod":
+        raise RuntimeError("mock voice provider forbidden in prod")
     pool = await init_db()
     app.state.pool = pool
     # Fresh vectors without an ops step: the loop sweeps jobs.embedding IS NULL, so a
@@ -50,7 +52,7 @@ async def health():
     }
 
 
-from app.api import agents, features, ingest, interview, memory, rag, tasks  # noqa: E402
+from app.api import agents, features, ingest, interview, memory, rag, tasks, voice  # noqa: E402
 
 app.include_router(ingest.router)
 app.include_router(rag.router)
@@ -60,3 +62,4 @@ app.include_router(memory.router)
 app.include_router(tasks.router)
 app.include_router(tasks.alias_router)
 app.include_router(features.router)
+app.include_router(voice.router)

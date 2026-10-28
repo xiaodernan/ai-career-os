@@ -138,6 +138,32 @@ public class HttpAiServiceClient implements AiServiceClient {
     }
 
     @Override
+    public Map<String, Object> voiceState(UUID userId) {
+        return get("/internal/voice/status", userId);
+    }
+
+    @Override
+    public Map<String, Object> transcribeAnswer(UUID userId, String audio, String mime, String locale) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("audio", audio);
+        body.put("mime", mime == null || mime.isBlank() ? "audio/webm" : mime);
+        if (locale != null && !locale.isBlank()) {
+            body.put("locale", locale);
+        }
+        return post("/internal/voice/transcribe", userId, body);
+    }
+
+    @Override
+    public Map<String, Object> speakQuestion(UUID userId, String text, String locale) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("text", text);
+        if (locale != null && !locale.isBlank()) {
+            body.put("locale", locale);
+        }
+        return post("/internal/voice/speak", userId, body);
+    }
+
+    @Override
     public Map<String, Object> copilotChatSync(String message, List<Map<String, Object>> history,
                                                UUID conversationId, Map<String, Object> context, UUID userId) {
         return post("/internal/agents/chat/sync", userId, chatBody(message, history, conversationId, context));
