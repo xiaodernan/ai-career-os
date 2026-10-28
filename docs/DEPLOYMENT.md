@@ -212,11 +212,14 @@ The families the nightly rules read are the scheduler's —
 `careeros_ingestion_runs_total{status}` and
 `careeros_ingestion_last_success_timestamp` — the AI budget's —
 `careeros_ai_cost_usd_24h`, `careeros_ai_tokens_24h` and `careeros_ai_calls_24h`,
-recomputed from `ai_usage_events` every minute — and the install's own verdict —
+recomputed from `ai_usage_events` every minute — the install's own verdict —
 `careeros_nightly_last_finished_timestamp` and
 `careeros_nightly_consecutive_failures`, moved by each recorded night and once at
-boot. `ops/prometheus/alerts.yml` carries the five rules and each one links its
-page in [RUNBOOK.md](RUNBOOK.md).
+boot — and the weekly letter's —
+`careeros_digest_delivery_total{outcome}`, `sent` or `refused` per attempt, and
+`careeros_digest_last_delivered_timestamp`, moved only by an accepted letter.
+`ops/prometheus/alerts.yml` carries the six rules and each one links its page in
+[RUNBOOK.md](RUNBOOK.md).
 
 ### Recording the nightly run
 
@@ -369,10 +372,13 @@ just ended, mails each letter, and keeps the outcome on the letter's row
 (`delivered_at`, `delivery_error`, `delivery_attempts`). A letter that already left
 is not mailed again when that week is recomposed, so re-running the sweep cannot put
 a second copy in a mailbox; a refused letter keeps the relay's error on the row while
-the sweep moves on to the next account. Composing from the dashboard
-(`POST /digests/run`) files the letter without mailing it — the sweep is the only
-sender. On `console` each week's letter is a log line instead of mail, which is the
-right default for a development machine.
+the sweep moves on to the next account. A daily retry clock (09:05 UTC) picks the
+refused letters up again, oldest week first, until a letter has been tried five times;
+a letter at the cap stays on its row and is not mailed. Composing from the dashboard
+(`POST /digests/run`) files the letter without mailing it, and its zero attempts keep
+it out of the retry queue — the scheduler is the only sender. On `console` each
+week's letter is a log line instead of mail, which is the right default for a
+development machine.
 
 ## Health & first data
 

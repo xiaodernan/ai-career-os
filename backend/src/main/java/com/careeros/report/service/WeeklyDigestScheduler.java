@@ -8,13 +8,16 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
- * The clock the weekly letter runs on (roadmap 19.4).
+ * The clocks the weekly letter runs on (roadmap 19.4, 21.3).
  *
  * <p>Monday morning, the week that just ended is written down: at 08:00 the week's rows can no
- * longer change, so the letter is final the moment it is composed. Nothing is thrown out of
- * here -- each user's failure is already a warn line inside the sweep, and a night that could
- * not even read the audience is logged rather than crashing the scheduler's thread. The cron is
- * configurable ({@code careeros.digest.cron}) so a deployment can move it without a rebuild.
+ * longer change, so the letter is final the moment it is composed. The second clock is the
+ * retry: every morning at 09:05 UTC the letters the transport refused are tried again, oldest
+ * week first, until the service's cap. Nothing is thrown out of either -- each user's failure
+ * is already a warn line inside the sweep, and a night that could not even read the audience is
+ * logged rather than crashing the scheduler's thread. The compose cron is configurable
+ * ({@code careeros.digest.cron}) so a deployment can move it without a rebuild; the retry is
+ * fixed at an hour that leaves the relay time to have been fixed the evening before.
  */
 @Component
 public class WeeklyDigestScheduler {
@@ -36,6 +39,19 @@ public class WeeklyDigestScheduler {
             log.info("weekly digest composed {} letter(s) for the week of {}", written, week);
         } catch (RuntimeException e) {
             log.warn("the weekly digest could not run", e);
+        }
+    }
+
+    /** The morning retry: only letters that were attempted and are under the cap. */
+    @Scheduled(cron = "0 5 9 * * *")
+    public void retry() {
+        try {
+            int delivered = digests.retryUndelivered();
+            if (delivered > 0) {
+                log.info("weekly digest retry delivered {} letter(s)", delivered);
+            }
+        } catch (RuntimeException e) {
+            log.warn("the weekly digest retry could not run", e);
         }
     }
 }

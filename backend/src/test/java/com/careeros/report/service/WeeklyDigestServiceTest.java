@@ -2,13 +2,16 @@ package com.careeros.report.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.careeros.application.repository.ApplicationRepository;
@@ -56,6 +59,7 @@ class WeeklyDigestServiceTest {
     private AnalysisService analysis;
     private UserRepository users;
     private WeeklyDigestMailer mailer;
+    private WeeklyDigestDeliveryMetrics metrics;
     private WeeklyDigestService service;
 
     @BeforeEach
@@ -65,7 +69,8 @@ class WeeklyDigestServiceTest {
         analysis = mock(AnalysisService.class);
         users = mock(UserRepository.class);
         mailer = mock(WeeklyDigestMailer.class);
-        service = new WeeklyDigestService(digests, applications, analysis, users, mailer);
+        metrics = mock(WeeklyDigestDeliveryMetrics.class);
+        service = new WeeklyDigestService(digests, applications, analysis, users, mailer, metrics);
         when(digests.save(any(WeeklyDigest.class))).thenAnswer(invocation -> {
             WeeklyDigest letter = invocation.getArgument(0);
             if (letter.getId() == null) {
@@ -195,6 +200,8 @@ class WeeklyDigestServiceTest {
         assertThat(mailed.getValue().getDeliveredAt()).isNotNull();
         assertThat(mailed.getValue().getDeliveryAttempts()).isEqualTo(1);
         assertThat(mailed.getValue().getDeliveryError()).isNull();
+        verify(metrics, times(2)).recordSent(any());
+        verify(metrics, never()).recordRefused();
     }
 
     @Test
@@ -217,6 +224,7 @@ class WeeklyDigestServiceTest {
         verify(mailer, never()).send(anyString(), any(WeeklyDigest.class));
         assertThat(delivered.getDeliveryAttempts()).isEqualTo(1);
         assertThat(delivered.getPayload()).containsEntry("totalApplications", 4);
+        verifyNoInteractions(metrics);
     }
 
     @Test
@@ -239,6 +247,8 @@ class WeeklyDigestServiceTest {
         assertThat(refused.getValue().getDeliveryError()).contains("550");
         assertThat(refused.getValue().getDeliveredAt()).isNull();
         assertThat(refused.getValue().getDeliveryAttempts()).isEqualTo(1);
+        verify(metrics).recordRefused();
+        verify(metrics).recordSent(any());
     }
 
     @Test
@@ -256,6 +266,88 @@ class WeeklyDigestServiceTest {
         verify(digests).save(saved.capture());
         assertThat(saved.getValue().getDeliveryAttempts()).isZero();
         assertThat(saved.getValue().getDeliveredAt()).isNull();
+        verifyNoInteractions(metrics);
+    }
+
+    @Test
+    void theRetryClockMailsAnAttemptedLetterAndCountsTheAttempt() {
+        WeeklyDigest refused = letter(ALICE, WEEK, 1, "relay said 550");
+        when(digests
+                .findByDeliveredAtIsNullAndDeliveryAttemptsGreaterThanAndDeliveryAttemptsLessThanOrderByWeekStartAscIdAsc(
+                        anyInt(), anyInt(), any(Pageable.class)))
+                .thenReturn(List.of(refused));
+        when(users.findById(ALICE)).thenReturn(Optional.of(account(ALICE, "alice@example.com")));
+
+        int delivered = service.retryUndelivered();
+
+        assertThat(delivered).isEqualTo(1);
+        verify(mailer).send(eq("alice@example.com"), same(refused));
+        assertThat(refused.getDeliveredAt()).isNotNull();
+        assertThat(refused.getDeliveryError()).isNull();
+        assertThat(refused.getDeliveryAttempts()).isEqualTo(2);
+        verify(metrics).recordSent(any());
+
+        ArgumentCaptor<Integer> above = ArgumentCaptor.forClass(Integer.class);
+        ArgumentCaptor<Integer> below = ArgumentCaptor.forClass(Integer.class);
+        ArgumentCaptor<Pageable> window = ArgumentCaptor.forClass(Pageable.class);
+        verify(digests)
+                .findByDeliveredAtIsNullAndDeliveryAttemptsGreaterThanAndDeliveryAttemptsLessThanOrderByWeekStartAscIdAsc(
+                        above.capture(), below.capture(), window.capture());
+        assertThat(above.getValue())
+                .as("zero attempts is the dashboard's compose, which must never be mailed by the clock")
+                .isZero();
+        assertThat(below.getValue()).isEqualTo(5);
+        assertThat(window.getValue().getPageSize()).isEqualTo(100);
+    }
+
+    @Test
+    void theRetryClockLeavesALetterThatAlreadyHasItsReceipt() {
+        WeeklyDigest delivered = letter(ALICE, WEEK, 2, "relay said 550");
+        delivered.setDeliveredAt(OffsetDateTime.now(ZoneOffset.UTC).minusHours(3));
+        when(digests
+                .findByDeliveredAtIsNullAndDeliveryAttemptsGreaterThanAndDeliveryAttemptsLessThanOrderByWeekStartAscIdAsc(
+                        anyInt(), anyInt(), any(Pageable.class)))
+                .thenReturn(List.of(delivered));
+
+        int sent = service.retryUndelivered();
+
+        assertThat(sent).isZero();
+        verify(mailer, never()).send(anyString(), any(WeeklyDigest.class));
+        verifyNoInteractions(metrics);
+    }
+
+    @Test
+    void theRetryClockDoesNotLetOneRefusalStopTheNextLetter() {
+        WeeklyDigest alice = letter(ALICE, WEEK, 1, "relay said 550");
+        WeeklyDigest bob = letter(BOB, WEEK.minusWeeks(1), 2, "relay said 421");
+        when(digests
+                .findByDeliveredAtIsNullAndDeliveryAttemptsGreaterThanAndDeliveryAttemptsLessThanOrderByWeekStartAscIdAsc(
+                        anyInt(), anyInt(), any(Pageable.class)))
+                .thenReturn(List.of(alice, bob));
+        when(users.findById(ALICE)).thenReturn(Optional.of(account(ALICE, "alice@example.com")));
+        when(users.findById(BOB)).thenReturn(Optional.of(account(BOB, "bob@example.com")));
+        doThrow(new MailSendException("relay still says 550")).when(mailer)
+                .send(eq("alice@example.com"), any(WeeklyDigest.class));
+
+        int delivered = service.retryUndelivered();
+
+        assertThat(delivered).isEqualTo(1);
+        assertThat(alice.getDeliveryError()).contains("still says 550");
+        assertThat(alice.getDeliveryAttempts()).isEqualTo(2);
+        assertThat(bob.getDeliveredAt()).isNotNull();
+        verify(metrics).recordRefused();
+        verify(metrics).recordSent(any());
+    }
+
+    private static WeeklyDigest letter(UUID userId, LocalDate week, int attempts, String error) {
+        WeeklyDigest letter = new WeeklyDigest();
+        letter.setUserId(userId);
+        letter.setWeekStart(week);
+        letter.setWindowDays(7);
+        letter.setPayload(Map.of("totalApplications", 3));
+        letter.setDeliveryAttempts(attempts);
+        letter.setDeliveryError(error);
+        return letter;
     }
 
     private static User account(UUID id, String email) {

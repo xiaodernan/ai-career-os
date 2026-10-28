@@ -278,3 +278,40 @@ backend log has the reason.
 - **The reverse proxy, DNS and TLS.** The deployment guide owns those.
 - **The AI provider's own outage.** It shows up as failed planning calls and, from
   there, as the ingestion alarms above; the provider's status page is the source.
+
+## A weekly letter the relay refused
+
+**What the alert looks like.** `CareerOSDigestDeliveryFailing` fires when
+`increase(careeros_digest_delivery_total{outcome="refused"}[6h]) > 0`: the mail relay
+answered at least one weekly letter with an error. One refusal is enough — a letter is
+one account's Monday, and the Monday sweep does not try it again within the same night.
+The metric is written by
+`backend/src/main/java/com/careeros/report/service/WeeklyDigestDeliveryMetrics.java`;
+its `outcome="sent"` series is what the same relay accepted, so the refusal rate is one
+division.
+
+**What to read.** The backend log names the week and the account ("the weekly letter
+for the week of ... could not be sent"). The letter's own row in `weekly_digests` holds
+the relay's sentence in `delivery_error` (capped at 500 characters) and the count in
+`delivery_attempts`; `delivered_at` is null for a letter that never left. Zero attempts
+is the dashboard's compose route, which never sends — it is not a stuck letter.
+
+**What to do, in order.**
+
+1. Fix the relay. Check `APP_EMAIL_PROVIDER` is `smtp`, `APP_EMAIL_SMTP_HOST` and the
+   from address, then the port and its transport: 587 with STARTTLS or 465 with SSL
+   from the first byte, never both. A provider that rejects the credentials answers
+   with its own code, which is the sentence on the row.
+2. Let the retry clock run. At 09:05 UTC every morning it asks for the undelivered
+   letters that were attempted, oldest week first, and hands them to the transport
+   again; each attempt increments `delivery_attempts`. A letter is tried at most five
+   times, then it stays on its row with its last error and is not mailed.
+3. If the alert is still inside its six-hour window after a success, nothing else is
+   wrong: the rule counts refusals in the window, and the next accepted letter — on the
+   sweep or on a retry — moves the window past them.
+
+**What a retry cannot recover.** A letter already at the attempt cap, and a week whose
+row was deleted, are not re-sent by anything: the Monday sweep writes each week once,
+and the dashboard's compose route files a letter without mailing it. After a relay
+outage that outlasts the cap, the affected week is readable on the analysis page but
+will not arrive by mail.

@@ -128,12 +128,15 @@ The 19.4 letter: the 15.3 digest composed on the backend's clock and kept, so a 
 signals outlive the week. One letter per account per week, refreshed in place; the payload
 is the engine's own answer, stored as it came back, and is the material the Monday mail is
 assembled from — the sweep writes each letter, hands it to the configured transport, and
-keeps the outcome (`delivered_at`, `delivery_error`, `delivery_attempts`) on the row.
+keeps the outcome (`delivered_at`, `delivery_error`, `delivery_attempts`) on the row. The
+same three fields travel with every letter the API answers, so a page can say whether a
+week left, when, and what the relay said if it did not; zero attempts is "never tried" and
+is not the same fact as a refusal.
 
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/digests` | the caller's letters, newest week first, at most twelve — each one the Monday its week starts on, the window it was composed with, when it was written, and the frozen digest payload the engine answered. No query parameters: the list is the caller's own and the cap is the server's |
-| POST | `/digests/run` | composes the current week's letter now and files it, refreshing it if it already exists; answers the filed letter as the list answers one row. No request body and no query parameters — the week is now and the window is the letter's own. Composing is not sending: the Monday schedule writes the week that just ended and is the only sender, and a letter it already mailed is not mailed again |
+| GET | `/digests` | the caller's letters, newest week first, at most twelve — each one the Monday its week starts on, the window it was composed with, when it was written, the frozen digest payload the engine answered, and its delivery receipt: deliveredAt (null until a transport accepts it), deliveryError (the transport's last refusal, null after a success) and deliveryAttempts (0 means nobody tried). No query parameters: the list is the caller's own and the cap is the server's |
+| POST | `/digests/run` | composes the current week's letter now and files it, refreshing it if it already exists; answers the filed letter as the list answers one row, receipt included. No request body and no query parameters — the week is now and the window is the letter's own. Composing is not sending: the Monday schedule writes the week that just ended and is the only sender, its morning retry clock re-sends only letters that were attempted, and a letter it already mailed is not mailed again |
 
 ### Resumes (`/resumes`)
 

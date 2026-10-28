@@ -11,11 +11,13 @@ import java.time.ZoneOffset;
 import org.junit.jupiter.api.Test;
 
 /**
- * The Monday clock (roadmap 19.4).
+ * The weekly letter's two clocks (roadmap 19.4, 21.3).
  *
- * <p>The night writes the week that just ended, not the one starting: by Monday morning the
- * previous week's rows can no longer change, so its letter is final. A sweep that throws is
- * logged, never rethrown -- a scheduler thread that dies costs every future night.
+ * <p>The Monday night writes the week that just ended, not the one starting: by Monday
+ * morning the previous week's rows can no longer change, so its letter is final. The morning
+ * retry is the other clock: it asks the service for the refused letters again. A sweep or a
+ * retry that throws is logged, never rethrown -- a scheduler thread that dies costs every
+ * future night.
  */
 class WeeklyDigestSchedulerTest {
 
@@ -35,6 +37,23 @@ class WeeklyDigestSchedulerTest {
         when(digests.composeWeek(any())).thenThrow(new IllegalStateException("no audience"));
 
         assertThatCode(() -> new WeeklyDigestScheduler(digests).publish())
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    void theMorningRetryAsksTheServiceForTheRefusedLettersAgain() {
+        WeeklyDigestService digests = mock(WeeklyDigestService.class);
+        new WeeklyDigestScheduler(digests).retry();
+
+        verify(digests).retryUndelivered();
+    }
+
+    @Test
+    void aFailedRetryIsLoggedRatherThanThrown() {
+        WeeklyDigestService digests = mock(WeeklyDigestService.class);
+        when(digests.retryUndelivered()).thenThrow(new IllegalStateException("the queue is unreadable"));
+
+        assertThatCode(() -> new WeeklyDigestScheduler(digests).retry())
                 .doesNotThrowAnyException();
     }
 }

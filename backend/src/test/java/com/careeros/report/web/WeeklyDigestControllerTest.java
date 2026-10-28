@@ -70,7 +70,8 @@ class WeeklyDigestControllerTest {
 
     private static WeeklyDigestDto letter(Map<String, Object> payload) {
         return new WeeklyDigestDto(UUID.fromString("44444444-4444-4444-8444-444444444444"),
-                LocalDate.of(2026, 10, 26), 7, OffsetDateTime.parse("2026-10-27T08:00:00Z"), payload);
+                LocalDate.of(2026, 10, 26), 7, OffsetDateTime.parse("2026-10-27T08:00:00Z"), payload,
+                null, null, 0);
     }
 
     @Test
@@ -82,9 +83,31 @@ class WeeklyDigestControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data[0].weekStart").value("2026-10-26"))
                 .andExpect(jsonPath("$.data[0].windowDays").value(7))
-                .andExpect(jsonPath("$.data[0].payload.totalApplications").value(4));
+                .andExpect(jsonPath("$.data[0].payload.totalApplications").value(4))
+                .andExpect(jsonPath("$.data[0].deliveryAttempts").value(0));
 
         verify(digests).recent(UUID.fromString(USER));
+    }
+
+    /**
+     * The receipt is the letter's own (21.3): when it last left, the transport's last refusal
+     * and how many attempts it has had. The page prints its sentence from these three; a
+     * delivered letter that reads as unsent (or the reverse) is the defect this pins.
+     */
+    @Test
+    void theLetterCarriesItsDeliveryReceipt() throws Exception {
+        WeeklyDigestDto refused = new WeeklyDigestDto(
+                UUID.fromString("44444444-4444-4444-8444-444444444444"),
+                LocalDate.of(2026, 10, 26), 7, OffsetDateTime.parse("2026-10-27T08:00:00Z"),
+                Map.of("stalledCount", 1), OffsetDateTime.parse("2026-10-27T09:05:00Z"),
+                "relay said 550", 3);
+        when(digests.recent(UUID.fromString(USER))).thenReturn(List.of(refused));
+
+        mvc.perform(get("/api/v1/digests"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].deliveredAt").value("2026-10-27T09:05:00Z"))
+                .andExpect(jsonPath("$.data[0].deliveryError").value("relay said 550"))
+                .andExpect(jsonPath("$.data[0].deliveryAttempts").value(3));
     }
 
     @Test

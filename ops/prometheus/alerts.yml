@@ -113,3 +113,23 @@ groups:
             last 24 hours. Find the expensive callers before raising the budget:
             embeddings and re-ranking dominate on a busy install.
           runbook: "docs/RUNBOOK.md#the-ai-budget-is-burning"
+
+      # The weekly letter is one account's Monday, and a refusal is recorded on the
+      # letter's own row rather than retried within the sweep. The daily retry clock
+      # tries again at 09:05 UTC, but the relay is the fault the operator has to fix,
+      # so the first refusal inside six hours pages. A letter that leaves, on the
+      # sweep or on a retry, moves the sent series and clears the alert's window.
+      - alert: CareerOSDigestDeliveryFailing
+        expr: increase(careeros_digest_delivery_total{outcome="refused"}[6h]) > 0
+        for: 10m
+        labels:
+          service: career-os-backend
+          severity: warning
+        annotations:
+          summary: "A weekly letter was refused by the mail relay"
+          description: >-
+            {{ $value | humanize }} weekly letter(s) were refused in the last six hours.
+            Read `weekly_digests.delivery_error` for the relay's own sentence; the retry
+            clock tries the letter again each morning until it leaves or has been tried
+            five times.
+          runbook: "docs/RUNBOOK.md#a-weekly-letter-the-relay-refused"

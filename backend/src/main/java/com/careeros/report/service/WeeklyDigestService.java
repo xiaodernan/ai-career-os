@@ -42,6 +42,12 @@ import org.springframework.transaction.annotation.Transactional;
  * and handed to the transport second, so a refused letter is a stored letter with an error on
  * it, never a week that vanished. {@code delivered_at} is the latch as much as the receipt --
  * a week recomposed after a successful send is not mailed a second time.
+ *
+ * <p>A refused letter is not abandoned (roadmap 21.3): a daily retry clock asks for the
+ * undelivered letters that were actually attempted and tries again, oldest week first, until
+ * {@link #MAX_DELIVERY_ATTEMPTS} is reached. Only attempted letters are retried, because zero
+ * attempts is the dashboard's compose and that route's promise is that composing is not
+ * sending.
  */
 @Service
 public class WeeklyDigestService {
@@ -54,20 +60,27 @@ public class WeeklyDigestService {
     static final int HISTORY_LIMIT = 12;
     /** The transport's refusal is kept for a reader, not an incident report; the column holds 500. */
     static final int DELIVERY_ERROR_LIMIT = 500;
+    /** After this many refusals the letter is left on its row with its error, not retried again. */
+    static final int MAX_DELIVERY_ATTEMPTS = 5;
+    /** One retry pass touches at most this many letters; the clock runs daily, so it catches up. */
+    static final int RETRY_BATCH = 100;
 
     private final WeeklyDigestRepository digests;
     private final ApplicationRepository applications;
     private final AnalysisService analysis;
     private final UserRepository users;
     private final WeeklyDigestMailer mailer;
+    private final WeeklyDigestDeliveryMetrics metrics;
 
     public WeeklyDigestService(WeeklyDigestRepository digests, ApplicationRepository applications,
-            AnalysisService analysis, UserRepository users, WeeklyDigestMailer mailer) {
+            AnalysisService analysis, UserRepository users, WeeklyDigestMailer mailer,
+            WeeklyDigestDeliveryMetrics metrics) {
         this.digests = digests;
         this.applications = applications;
         this.analysis = analysis;
         this.users = users;
         this.mailer = mailer;
+        this.metrics = metrics;
     }
 
     /** A user's letters, newest week first. */
@@ -115,6 +128,30 @@ public class WeeklyDigestService {
     }
 
     /**
+     * The retry clock (roadmap 21.3): letters the transport refused, oldest week first, tried
+     * again until {@link #MAX_DELIVERY_ATTEMPTS}. The queue is the repository's -- undelivered,
+     * attempted, under the cap -- so a dashboard compose (zero attempts) is never mailed by
+     * this clock, and a letter at the cap is left on its row with its last error rather than
+     * retried forever. Returns how many letters this pass put in a mailbox.
+     */
+    public int retryUndelivered() {
+        int delivered = 0;
+        for (WeeklyDigest letter : digests
+                .findByDeliveredAtIsNullAndDeliveryAttemptsGreaterThanAndDeliveryAttemptsLessThanOrderByWeekStartAscIdAsc(
+                        0, MAX_DELIVERY_ATTEMPTS, Paging.first(RETRY_BATCH))) {
+            try {
+                if (deliver(letter.getUserId(), letter)) {
+                    delivered++;
+                }
+            } catch (RuntimeException e) {
+                log.warn("the retry of {}'s weekly letter could not be recorded",
+                        letter.getUserId(), e);
+            }
+        }
+        return delivered;
+    }
+
+    /**
      * One letter. The engine is asked first and the row is written afterwards: the read is the
      * expensive, failure-prone half, and a failure there must leave the previous letter -- if
      * any -- untouched rather than blanking the week.
@@ -146,28 +183,38 @@ public class WeeklyDigestService {
      * to reach, and the error is what a reader (or a later attempt) needs to know -- and the
      * attempt is counted either way, so "never tried" and "tried and refused" stay distinct.
      * An account whose row is gone is a warn line: nothing was attempted, so nothing is counted.
+     *
+     * <p>The scrape is told what the transport did (21.3): the outcome counter moves for every
+     * attempt, and the last-delivered marker moves only on an acceptance. A refusal therefore
+     * cannot make the marker claim a delivery the mailbox never received.
+     *
+     * @return whether this call put the letter in a mailbox; a latch hit or an account row
+     *     that is gone is {@code false}, because nothing was sent
      */
-    void deliver(UUID userId, WeeklyDigest letter) {
+    boolean deliver(UUID userId, WeeklyDigest letter) {
         if (letter.getDeliveredAt() != null) {
-            return;
+            return false;
         }
         Optional<User> owner = users.findById(userId);
         if (owner.isEmpty()) {
             log.warn("the weekly letter for the week of {} has no account to mail ({})",
                     letter.getWeekStart(), userId);
-            return;
+            return false;
         }
         letter.setDeliveryAttempts(letter.getDeliveryAttempts() + 1);
         try {
             mailer.send(owner.get().getEmail(), letter);
             letter.setDeliveredAt(OffsetDateTime.now(ZoneOffset.UTC));
             letter.setDeliveryError(null);
+            metrics.recordSent(letter.getDeliveredAt());
         } catch (RuntimeException e) {
             letter.setDeliveryError(describe(e));
+            metrics.recordRefused();
             log.warn("the weekly letter for the week of {} could not be sent to {}",
                     letter.getWeekStart(), userId, e);
         }
         digests.save(letter);
+        return letter.getDeliveredAt() != null;
     }
 
     private static String describe(RuntimeException e) {

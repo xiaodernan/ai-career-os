@@ -942,6 +942,30 @@ that can leave the machine, and then lets the letter ride it.
   suite at 650, the deployment guide and `API.md` stating the sweep's ownership of
   the send, no frontend or census movement.)
 
+- [x] **21.3** The receipt is on the wire, a refused letter is tried again, and the
+  install pages when the relay says no.
+  (21.2 recorded the outcome on the row and stopped there: the browser could not see
+  the receipt, and a refused letter sat until the next Monday. `WeeklyDigestDto` now
+  carries `deliveredAt`, `deliveryError` and `deliveryAttempts` with every letter, so
+  the page can say whether a week left, when, and what the relay said if it did not;
+  zero attempts stays distinct from a refusal. A second scheduler clock runs at 09:05
+  UTC daily: `WeeklyDigestService.retryUndelivered` asks the repository for undelivered
+  letters that were actually attempted, oldest week first, at most a hundred a pass,
+  and hands each to the same `deliver` latch -- so the dashboard's compose, at zero
+  attempts, is never mailed by the clock, and a letter at the five-attempt cap is left
+  on its row with its last error instead of retried forever. `deliver` now reports
+  whether a letter left, which is what the retry counts. `WeeklyDigestDeliveryMetrics`
+  publishes `careeros.digest.delivery{outcome=sent|refused}` and
+  `careeros.digest.last.delivered.timestamp` (boot time at start, moved only by an
+  acceptance). `ops/prometheus/alerts.yml` gains `CareerOSDigestDeliveryFailing`
+  (any refusal in a six-hour window, warning), the alarms gate pins the new metric and
+  rule, and `RUNBOOK.md` gains "A weekly letter the relay refused" with what to read
+  on the row and what the retry can and cannot recover; the deployment guide lists the
+  two families and the retry. 9 backend tests (3 retry, 3 metrics, 1 controller
+  receipt, 2 scheduler), the backend unit suite at 659, the alarms/docs gates passing,
+  no frontend or copy-census movement -- the digest card's delivery line waits for the
+  frontend's i18n lane to land before the page can print the receipt.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
