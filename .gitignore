@@ -33,6 +33,9 @@ venv/
 # Root-anchored on purpose: a bare `storage/` matched the Java package
 # backend/src/main/java/com/careeros/storage/ and kept four shipped sources out of the repository.
 /storage/
+# Default BACKUP_DIR of scripts/backup.sh: a dump of the local database is an artifact of
+# running the script, not a file the repository keeps.
+/backups/
 ai-service/evals/reports/
 playwright-report/
 test-results/

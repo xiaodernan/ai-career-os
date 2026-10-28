@@ -1,0 +1,78 @@
+# Prometheus alerting rules for AI Career OS (roadmap 19.9).
+#
+# Load with an existing Prometheus:
+#   rule_files:
+#     - /etc/prometheus/careeros-alerts.yml
+# Check before reloading:
+#   promtool check rules ops/prometheus/alerts.yml
+#
+# The metrics come from the backend's Micrometer scrape endpoint,
+# GET /actuator/prometheus. Micrometer writes dots, the exporter renders them as
+# underscores, so `careeros.ingestion.last.success.timestamp` arrives as
+# `careeros_ingestion_last_success_timestamp` -- each rule below names the arriving
+# form, and docs/RUNBOOK.md says what to do when one fires.
+#
+# Every alert carries the same two labels: service (which stack raised it) and
+# severity (critical pages, warning is read the next morning).
+groups:
+  - name: career-os-night
+    rules:
+      # The nightly sweep runs at 03:20 (careeros.ingestion.cron). A completed run
+      # moves the success marker; a failed one does not, so this fires whether the
+      # night never started or every feed in it failed. 26 hours is a night plus two
+      # hours of slack for a slow host or a late deploy, and it is the same number in
+      # docs/RUNBOOK.md -- change both or neither.
+      - alert: CareerOSIngestionNightMissed
+        expr: time() - careers_ingestion_last_success_timestamp > 93600
+        for: 10m
+        labels:
+          service: career-os-backend
+          severity: critical
+        annotations:
+          summary: "No ingestion run has completed in over 26 hours"
+          description: >-
+            The last completed run was {{ $value | humanizeDuration }} ago. The sweep
+            either never started (check the scheduler cron and the backend log line
+            "nightly ingestion") or every feed in it failed (check the runs board).
+          runbook: "docs/RUNBOOK.md#a-night-that-never-succeeded"
+
+      # One dead feed is normal and is recorded as that feed's own failed run. This
+      # rule is about a majority: at least three runs in six hours, more than half of
+      # them failed. The count floor keeps a single night of two dead feeds from
+      # paging, and the ratio keeps a busy night of one failure from paging.
+      - alert: CareerOSIngestionFailing
+        expr: |
+          sum(increase(careeros_ingestion_runs_total{status="failed"}[6h]))
+            / sum(increase(careeros_ingestion_runs_total[6h])) > 0.5
+          and
+          sum(increase(careeros_ingestion_runs_total[6h])) >= 3
+        for: 15m
+        labels:
+          service: career-os-backend
+          severity: warning
+        annotations:
+          summary: "More than half of the ingestion runs in the last six hours failed"
+          description: >-
+            {{ $value | humanizePercentage }} of the runs in the window failed. Read
+            the runs board for the error sentences; a single feed's outage is that
+            feed's problem, a majority is the fetcher's or the planner's.
+          runbook: "docs/RUNBOOK.md#a-night-where-every-feed-failed"
+
+      # The budget is a rolling 24-hour spend, read from the ai_usage_events ledger
+      # (the same rows the usage figures come from). Five dollars a day is the
+      # default for a single-tenant install; a deployment with more traffic raises it
+      # in its own copy of this file, and docs/RUNBOOK.md says where the spend is
+      # reported before it is raised.
+      - alert: CareerOSAiBudgetBurn
+        expr: careers_ai_cost_usd_24h > 5
+        for: 15m
+        labels:
+          service: career-os-backend
+          severity: warning
+        annotations:
+          summary: "AI spend in the trailing 24 hours is above the 5 USD budget"
+          description: >-
+            The ledger says {{ $value | humanize }} USD was spent on AI calls in the
+            last 24 hours. Find the expensive callers before raising the budget:
+            embeddings and re-ranking dominate on a busy install.
+          runbook: "docs/RUNBOOK.md#the-ai-budget-is-burning"
