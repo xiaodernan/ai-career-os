@@ -315,3 +315,49 @@ row was deleted, are not re-sent by anything: the Monday sweep writes each week 
 and the dashboard's compose route files a letter without mailing it. After a relay
 outage that outlasts the cap, the affected week is readable on the analysis page but
 will not arrive by mail.
+
+## The morning mail is refused
+
+**What the alert looks like.** `CareerOSSignalMailFailing` fires when
+`sum(increase(careeros_signals_delivery_total{outcome="refused"}[6h])) >= 3`: at least
+three account letters were refused by the mail relay inside six hours. The sweep runs
+once a day at 07:30 UTC, so that many refusals in one window means several accounts'
+letters failed in the same morning — the relay or its configuration, not one mailbox.
+The metric is written by
+`backend/src/main/java/com/careeros/notification/service/NotificationDeliveryMetrics.java`;
+its `outcome="sent"` series is what the relay accepted. The same class exports
+`careeros_signals_last_delivered_timestamp` (the last acceptance, started at boot); it
+is not alarmed on, because an install whose inboxes are quiet writes no letter and
+that is not a fault.
+
+**What to read.** The backend log carries one line per refusal, e.g. "the signal mail
+to <account> was refused", with the transport's exception on it — the provider's own
+code is the diagnosis. Cases that never reached the transport ("no account to mail",
+"no address") are warn lines too, but they are not counted as refusals: the relay was
+never asked, so the metric and the alert stay quiet. A refusal writes nothing to
+`notification_states`: `notified_at` is still null for every episode in that letter, so
+the next morning's sweep asks again. The in-app inbox is unaffected — the items are
+still there, unread.
+
+**What to do, in order.**
+
+1. Tell one bad address from a relay fault. If every refusal in the window names the
+   same account, it is that mailbox (a bounce, a typo, a full inbox): correct the
+   address and let the next sweep deliver it. If refusals name different accounts, the
+   relay is refusing the deployment — check `APP_EMAIL_PROVIDER` is `smtp`,
+   `APP_EMAIL_SMTP_HOST`, `APP_EMAIL_FROM`, the relay credentials, and the port with
+   its transport (587 with STARTTLS or 465 with SSL from the first byte, never both),
+   exactly as in the weekly-letter section above.
+2. Wait for the next morning. There is no retry clock for signals: the 07:30 UTC sweep
+   itself retries every unread, unmailed episode, so a fixed relay is exercised the
+   following day without an operator action. Nothing needs to be re-run.
+3. Do not touch `notified_at`. A refusal left it null on purpose; writing a timestamp
+   there would silence the episode without ever handing it to the reader, and the
+   sweep would never look at it again.
+
+**Why one refusal does not page.** The signal letter re-asks every morning while the
+episode is visible, so a single undeliverable address would refuse once a day forever;
+a fleet with one dead mailbox must not page daily. The three-refusal floor keeps that
+case a warn line while a relay outage — which refuses every account in one pass — pages
+on the first morning. An install with fewer than three mail-bearing accounts is below
+the floor by construction: its relay outage is read from the warn lines instead.

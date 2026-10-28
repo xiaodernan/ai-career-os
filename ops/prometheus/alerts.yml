@@ -133,3 +133,28 @@ groups:
             clock tries the letter again each morning until it leaves or has been tried
             five times.
           runbook: "docs/RUNBOOK.md#a-weekly-letter-the-relay-refused"
+
+      # The signal letter differs from the weekly one in how a refusal behaves: the sweep
+      # retries the same episode every morning while it is still visible, so one
+      # undeliverable address refuses once a day indefinitely. That is a mailbox problem,
+      # not a relay outage, and it must not page daily -- hence a floor of three, the same
+      # "a majority is the fetcher's problem" shape the ingestion rule uses. Three
+      # refusals inside six hours means several accounts in one morning, which is the
+      # relay or its configuration. The sent series is the other half: a morning that
+      # accepts letters on either side of the refusals still leaves the count over zero,
+      # and the operator reads the log for which addresses were refused.
+      - alert: CareerOSSignalMailFailing
+        expr: sum(increase(careeros_signals_delivery_total{outcome="refused"}[6h])) >= 3
+        for: 10m
+        labels:
+          service: career-os-backend
+          severity: warning
+        annotations:
+          summary: "The mail relay refused three or more signal mails in the last six hours"
+          description: >-
+            {{ $value | humanize }} account letters were refused in the last six hours.
+            The backend log names each one ("the signal mail to ... was refused") and a
+            refused letter latches nothing, so tomorrow's sweep tries again; read
+            docs/RUNBOOK.md before touching the mailbox, because one address is usually
+            the culprit.
+          runbook: "docs/RUNBOOK.md#the-morning-mail-is-refused"

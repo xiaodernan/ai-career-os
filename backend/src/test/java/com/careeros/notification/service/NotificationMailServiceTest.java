@@ -43,6 +43,7 @@ class NotificationMailServiceTest {
     private ApplicationRepository applications;
     private IngestionFeedRepository feeds;
     private UserRepository users;
+    private NotificationDeliveryMetrics metrics;
     private NotificationMailService service;
 
     @BeforeEach
@@ -52,7 +53,9 @@ class NotificationMailServiceTest {
         applications = mock(ApplicationRepository.class);
         feeds = mock(IngestionFeedRepository.class);
         users = mock(UserRepository.class);
-        service = new NotificationMailService(notifications, mailer, applications, feeds, users);
+        metrics = mock(NotificationDeliveryMetrics.class);
+        service = new NotificationMailService(notifications, mailer, applications, feeds, users,
+                metrics);
         when(applications.distinctUserIds()).thenReturn(List.of());
         when(feeds.distinctUserIds()).thenReturn(List.of());
     }
@@ -94,6 +97,7 @@ class NotificationMailServiceTest {
 
         verify(mailer).send("alice@example.com", waiting, "zh");
         verify(notifications).markNotified(eq(ALICE), eq(List.of("a", "b")), any());
+        verify(metrics).recordSent(any());
     }
 
     @Test
@@ -111,6 +115,8 @@ class NotificationMailServiceTest {
         verify(mailer).send(eq("bob@example.com"), any(), anyString());
         verify(notifications, never()).markNotified(eq(ALICE), any(), any());
         verify(notifications).markNotified(eq(BOB), any(), any());
+        verify(metrics).recordRefused();
+        verify(metrics, times(1)).recordSent(any());
     }
 
     @Test
@@ -127,6 +133,8 @@ class NotificationMailServiceTest {
         verify(notifications, never()).markNotified(eq(ALICE), any(), any());
         verify(notifications, never()).markNotified(eq(BOB), any(), any());
         verify(notifications).markNotified(eq(CAROL), any(), any());
+        verify(metrics, never()).recordRefused();
+        verify(metrics, times(1)).recordSent(any());
     }
 
     @Test

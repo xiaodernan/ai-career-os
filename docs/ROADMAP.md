@@ -1027,6 +1027,32 @@ settled, and the letter is only a pointer to it.
   absolute-link requirement. No frontend or copy-census movement: the inbox screen is
   unchanged, and the letter is read in the mailbox.)
 
+- [x] **22.2** The morning mail is metered, and a relay that refuses a whole morning
+  pages.
+  (22.1 could refuse every account's letter and leave only warn lines: no counter, no
+  alarm, and the one reading an operator needed -- was the relay down, or is the install
+  quiet? -- did not exist. `NotificationDeliveryMetrics` publishes
+  `careeros.signals.delivery{outcome=sent|refused}`, counted per account letter that
+  reached the transport, and `careeros.signals.last.delivered.timestamp`, the last
+  acceptance (boot time at start, moved only by an acceptance, never by a refusal). An
+  account with no row or no address is a warn line rather than a refusal: the transport
+  was never asked, so counting it would blame the relay for a missing mailbox.
+  `NotificationMailService` records the refusal in the transport's catch and the
+  acceptance before the latch, so the counter and `notified_at` describe the same event
+  and the latch still waits for the transport. The marker is deliberately not alarmed:
+  an install whose inboxes are quiet writes no letter and that is not a fault.
+  `ops/prometheus/alerts.yml` gains `CareerOSSignalMailFailing` at three refusals in six
+  hours (warning) -- not the digest's any-refusal rule, because the signal sweep re-asks
+  every morning while an episode stays visible, so one undeliverable address would
+  refuse once a day forever and page daily, while three refusals inside one sweep window
+  are several accounts failing in the same morning, which is the relay or its
+  configuration. The alarms gate pins the counter's exported and dotted names and the
+  rule; `RUNBOOK.md` gains "The morning mail is refused" (one address versus the relay,
+  why nothing should be latched by hand, why one refusal stays below the floor) and the
+  deployment guide lists the two families and the alert. 3 backend metrics tests plus
+  the sweep's metric assertions, the backend unit suite at 683 and the integration suite
+  at 69, the alarms/docs gates passing, no frontend or copy-census movement.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

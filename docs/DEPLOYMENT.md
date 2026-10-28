@@ -396,6 +396,16 @@ the app is not mailed at all. `careeros.signals.cron` moves the clock, and on
 built from `APP_WEB_BASE_URL` — point it at the deployment's public URL, or every
 link in a real mailbox points at localhost.
 
+The sweep is metered (22.2): `careeros.signals.delivery{outcome="sent"|"refused"}`
+counts account letters that actually reached the transport, and
+`careeros.signals.last.delivered.timestamp` is the moment the last letter was accepted
+(started at boot, moved only by an acceptance — a quiet inbox is not a fault and is not
+alarmed). The shipped rules raise `CareerOSSignalMailFailing` at three refusals inside
+six hours, so one undeliverable address — which refuses once a morning while its
+episode stays visible — is a log line rather than a daily page, while a relay outage
+refusing a whole morning is a page; `docs/RUNBOOK.md#the-morning-mail-is-refused` is
+what the responder reads.
+
 ## Health & first data
 
 - Backend liveness: `GET /api/v1/health` (no auth).

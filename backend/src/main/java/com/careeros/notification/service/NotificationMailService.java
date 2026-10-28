@@ -31,7 +31,9 @@ import org.springframework.stereotype.Service;
  * the read and around the latch -- so a slow relay cannot pin a database connection.
  *
  * <p>One account in a bad state is a warn line, never the rest of the morning: the other
- * accounts still get their letters.
+ * accounts still get their letters. Every attempt that reached the transport is metered
+ * (roadmap 22.2), so a relay that refuses the morning is visible to the scrape and the alarm
+ * can tell it apart from an install whose inboxes are simply quiet.
  */
 @Service
 public class NotificationMailService {
@@ -43,15 +45,17 @@ public class NotificationMailService {
     private final ApplicationRepository applications;
     private final IngestionFeedRepository feeds;
     private final UserRepository users;
+    private final NotificationDeliveryMetrics metrics;
 
     public NotificationMailService(NotificationService notifications, NotificationMailer mailer,
             ApplicationRepository applications, IngestionFeedRepository feeds,
-            UserRepository users) {
+            UserRepository users, NotificationDeliveryMetrics metrics) {
         this.notifications = notifications;
         this.mailer = mailer;
         this.applications = applications;
         this.feeds = feeds;
         this.users = users;
+        this.metrics = metrics;
     }
 
     /** One morning's pass; returns how many mailboxes received a letter. */
@@ -87,11 +91,14 @@ public class NotificationMailService {
         try {
             mailer.send(to, waiting, account.get().getLocale());
         } catch (RuntimeException e) {
+            metrics.recordRefused();
             log.warn("the signal mail to {} was refused", userId, e);
             return false;
         }
+        OffsetDateTime acceptedAt = OffsetDateTime.now(ZoneOffset.UTC);
+        metrics.recordSent(acceptedAt);
         notifications.markNotified(userId, waiting.stream().map(NotificationItem::key).toList(),
-                OffsetDateTime.now(ZoneOffset.UTC));
+                acceptedAt);
         return true;
     }
 

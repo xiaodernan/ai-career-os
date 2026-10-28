@@ -50,6 +50,7 @@ INGESTION_METRICS = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "jo
 AI_USAGE_METRICS = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "ai" / "service" / "AiUsageMetrics.java"
 NIGHTLY_VERDICT_METRICS = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "report" / "service" / "NightlyVerdictMetrics.java"
 DIGEST_METRICS = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "report" / "service" / "WeeklyDigestDeliveryMetrics.java"
+SIGNAL_METRICS = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "notification" / "service" / "NotificationDeliveryMetrics.java"
 NIGHTLY_REPORT_SERVICE = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "report" / "service" / "NightlyReportService.java"
 NIGHTLY_CARD = ROOT / "frontend" / "src" / "components" / "monitoring" / "nightly-history.tsx"
 
@@ -64,6 +65,7 @@ METRICS = {
     "careeros_nightly_last_finished_timestamp": (NIGHTLY_VERDICT_METRICS, "careeros.nightly.last.finished.timestamp"),
     "careeros_nightly_consecutive_failures": (NIGHTLY_VERDICT_METRICS, "careeros.nightly.consecutive.failures"),
     "careeros_digest_delivery_total": (DIGEST_METRICS, "careeros.digest.delivery"),
+    "careeros_signals_delivery_total": (SIGNAL_METRICS, "careeros.signals.delivery"),
 }
 
 ALERT_NAMES = frozenset({
@@ -73,6 +75,7 @@ ALERT_NAMES = frozenset({
     "CareerOSNightlyVerificationFailing",
     "CareerOSAiBudgetBurn",
     "CareerOSDigestDeliveryFailing",
+    "CareerOSSignalMailFailing",
 })
 
 # The columns the budget query sums, each one a column of the ledger migration.
