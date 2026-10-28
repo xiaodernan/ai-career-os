@@ -52,15 +52,19 @@ export function fill(value: string, vars?: Record<string, string | number>): str
   );
 }
 
-function getInitialLocale(): Locale {
-  if (typeof window === "undefined") return "en";
+function readStoredLocale(): Locale | null {
+  if (typeof window === "undefined") return null;
   try {
     const stored = window.localStorage.getItem(STORAGE_KEY);
     if (stored === "en" || stored === "zh") return stored;
   } catch {
     /* ignore */
   }
-  return "en";
+  return null;
+}
+
+function getInitialLocale(): Locale {
+  return readStoredLocale() ?? "en";
 }
 
 /**
@@ -92,8 +96,31 @@ export function translate(
   return value === undefined ? undefined : fill(value, vars);
 }
 
-export function LocaleProvider({ children }: { children: React.ReactNode }) {
-  const [locale, setLocaleState] = React.useState<Locale>(getInitialLocale);
+/**
+ * Put the locale on the document itself.
+ *
+ * `<html lang>` is what a screen reader takes its pronunciation from — a Chinese page
+ * marked `lang="en"` is read aloud with English phonetics — and it is what a translator
+ * uses to decide whether to offer one. The server renders it from the cookie; this keeps
+ * it true when the reader switches without a reload.
+ */
+export function applyDocumentLang(locale: Locale): void {
+  if (typeof document === "undefined") return;
+  document.documentElement.lang = locale;
+}
+
+export function LocaleProvider({
+  children,
+  initialLocale,
+}: {
+  children: React.ReactNode;
+  /** The locale the server read from the cookie — the first render has to match the HTML it sent. */
+  initialLocale?: Locale;
+}) {
+  // Deliberately not `getInitialLocale` when the server named a locale: the browser's copy
+  // can disagree with the cookie (one of the two stores was cleared), and a first render
+  // that disagrees with the server's markup makes React tear the tree down to hydrate it.
+  const [locale, setLocaleState] = React.useState<Locale>(initialLocale ?? getInitialLocale);
 
   const setLocale = React.useCallback((next: Locale) => {
     setLocaleState(next);
@@ -106,7 +133,16 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
     // into the head the browser paints, and the head the server sends is
     // the only one that can be in the reader's language.
     writeLocaleCookie(next);
+    applyDocumentLang(next);
   }, []);
+
+  // After hydration the browser's copy wins when it disagrees with the cookie's: it is the
+  // copy the reader's own last switch wrote. The cookie is rewritten by the effect below,
+  // so the next request's server render agrees.
+  React.useEffect(() => {
+    const stored = readStoredLocale();
+    if (stored && stored !== initialLocale) setLocaleState(stored);
+  }, [initialLocale]);
 
   // The cookie is written on the first render too, so a reader whose
   // cookie was cleared but whose localStorage survived still gets a title
@@ -114,6 +150,7 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
   // default, which is the default everywhere.
   React.useEffect(() => {
     writeLocaleCookie(locale);
+    applyDocumentLang(locale);
   }, [locale]);
 
   const t = React.useCallback(

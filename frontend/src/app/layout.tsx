@@ -1,9 +1,10 @@
 import type { Viewport } from "next";
+import { cookies } from "next/headers";
 import { Inter, Newsreader, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
-import { Providers } from "@/components/providers";
-import { LocaleProvider } from "@/lib/i18n/locale-context";
+import { RootDocument } from "@/components/root-document";
 import { rootMetadata } from "@/lib/i18n/metadata";
+import { LOCALE_COOKIE, localeFromCookie } from "@/lib/i18n/locale-cookie";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -43,18 +44,20 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  // The same cookie the page's metadata reads: the body, like the title, is English until
+  // the reader's language is known, and the only place it can be known before hydration is
+  // the request. `localeFromCookie` maps anything unknown back to English.
+  const store = await cookies();
+  const locale = localeFromCookie(store.get(LOCALE_COOKIE)?.value);
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body
-        className={`${inter.variable} ${newsreader.variable} ${jetbrains.variable} min-h-dvh bg-background text-foreground`}
-      >
-        <LocaleProvider>
-          <Providers>{children}</Providers>
-        </LocaleProvider>
-      </body>
-    </html>
+    <RootDocument
+      locale={locale}
+      bodyClassName={`${inter.variable} ${newsreader.variable} ${jetbrains.variable} min-h-dvh bg-background text-foreground`}
+    >
+      {children}
+    </RootDocument>
   );
 }

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import * as React from "react";
 
-import { LocaleProvider, useLocale } from "./locale-context";
+import { applyDocumentLang, LocaleProvider, useLocale } from "./locale-context";
 
 /**
  * The locale context's own contract.
@@ -78,5 +78,40 @@ describe("useLocale", () => {
         </LocaleProvider>
       )
     ).not.toThrow();
+  });
+
+  it("takes the server's locale on the first render, without an effect", () => {
+    // The shell is rendered on the server from the cookie. If the first render were "en"
+    // while that HTML said zh, the reader would read English until an effect ran -- and a
+    // client first render that disagreed with the server's markup would have to tear it
+    // down to hydrate it.
+    const html = renderToStaticMarkup(
+      <LocaleProvider initialLocale="zh">
+        <Probe />
+      </LocaleProvider>
+    );
+    expect(html).toContain("zh|仪表盘");
+  });
+});
+
+describe("the document's lang attribute", () => {
+  it("follows the reader, and is a no-op where there is no document", () => {
+    // The server render has no document; the guard is what keeps the provider safe there.
+    expect(() => applyDocumentLang("zh")).not.toThrow();
+
+    const element = { lang: "en" };
+    const scope = globalThis as unknown as { document?: { documentElement: typeof element } };
+    const real = scope.document;
+    scope.document = { documentElement: element };
+    try {
+      applyDocumentLang("zh");
+      expect(
+        element.lang,
+        "a Chinese page marked lang=en is read aloud with English phonetics"
+      ).toBe("zh");
+    } finally {
+      if (real === undefined) delete scope.document;
+      else scope.document = real;
+    }
   });
 });
