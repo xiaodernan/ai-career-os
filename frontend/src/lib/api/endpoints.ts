@@ -148,6 +148,12 @@ export const endpoints = {
   ingestionRuns: "/ingestion/runs",
   ingestionRun: (id: string) => `/ingestion/runs/${seg(id)}`,
 
+  /* ---------------- Notification inbox (19.3) ---------------------------- */
+  notifications: "/notifications",
+  notificationsRead: "/notifications/read",
+  notificationsReadAll: "/notifications/read-all",
+  notificationsDismiss: "/notifications/dismiss",
+
   /** SSE stream for any async AI task (match, tailor, copilot turn, ingestion…) */
   aiStream: (taskId: string) => `/ai/stream/${seg(taskId)}`,
 } as const;

@@ -1,4 +1,5 @@
 import {
+  Bell,
   Briefcase,
   Building2,
   CalendarClock,
@@ -52,6 +53,7 @@ export interface NavItem {
 
 export const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", labelKey: "nav.dashboard", descriptionKey: "navDescriptions.dashboard", icon: LayoutDashboard, description: "Career overview and priorities" },
+  { href: "/notifications", label: "Notifications", labelKey: "nav.notifications", descriptionKey: "navDescriptions.notifications", icon: Bell, description: "Signals that need your attention" },
   { href: "/resumes", label: "Resumes", labelKey: "nav.resumes", descriptionKey: "navDescriptions.resumes", icon: FileText, description: "Resume versions and structured profile" },
   { href: "/jobs", label: "Jobs", labelKey: "nav.jobs", descriptionKey: "navDescriptions.jobs", icon: Briefcase, description: "Discovered jobs and AI matches" },
   { href: "/applications", label: "Applications", labelKey: "nav.applications", descriptionKey: "navDescriptions.applications", icon: CalendarClock, description: "Pipeline kanban and reminders" },

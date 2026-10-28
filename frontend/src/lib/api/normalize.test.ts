@@ -22,6 +22,8 @@ import {
   normalizeIngestionRun,
   normalizeIngestionRunDetail,
   normalizeMemory,
+  normalizeNotificationInbox,
+  normalizeNotificationItem,
   normalizeSuggestions,
   missingSkillGaps,
   normalizeMatch,
@@ -464,6 +466,65 @@ describe("normalizeIngestionRun / Feed / RunDetail (19.2)", () => {
     const bare = normalizeIngestionRunDetail({});
     expect(bare.plan).toBeNull();
     expect(bare.run.status).toBe("");
+  });
+});
+
+describe("normalizeNotificationItem / Inbox (19.3)", () => {
+  it("keeps a count and a note null when the item has none, rather than inventing zeros", () => {
+    const stale = normalizeNotificationItem({
+      key: "stale:app-1:1761600000",
+      kind: "stale",
+      title: "Backend engineer",
+      subject: "Acme",
+      status: "applied",
+      link: "/applications?application=app-1",
+      at: "2026-10-27T09:00:00Z",
+      read: true,
+    });
+    expect(stale.key).toBe("stale:app-1:1761600000");
+    expect(stale.kind).toBe("stale");
+    expect(stale.subject).toBe("Acme");
+    // The page prints count/note only when they exist; a fabricated 0 would
+    // turn "a pull failed" into "0 new postings".
+    expect(stale.count).toBeNull();
+    expect(stale.note).toBeNull();
+    expect(stale.read).toBe(true);
+    expect(stale.at).toBe("2026-10-27T09:00:00Z");
+
+    const failed = normalizeNotificationItem({
+      key: "ingestion:run-1",
+      kind: "ingestion_failed",
+      title: "HN hiring",
+      status: "failed",
+      note: "Feed answered HTTP 503",
+      count: 0,
+    });
+    expect(failed.count).toBe(0);
+    expect(failed.note).toBe("Feed answered HTTP 503");
+    // An item the payload did not mark is unread: the badge counts it.
+    expect(failed.read).toBe(false);
+  });
+
+  it("reads the inbox's own unread count, and counts the rows when the answer omits it", () => {
+    const inbox = normalizeNotificationInbox({
+      items: [
+        { key: "a", kind: "reminder", read: false },
+        { key: "b", kind: "stale", read: true },
+      ],
+      unread: 1,
+      generated_at: "2026-10-28T10:00:00Z",
+    });
+    expect(inbox.items.map((item) => item.key)).toEqual(["a", "b"]);
+    expect(inbox.unread).toBe(1);
+    expect(inbox.generatedAt).toBe("2026-10-28T10:00:00Z");
+
+    const uncounted = normalizeNotificationInbox({
+      items: [{ key: "a", read: false }, { key: "b", read: false }, { key: "c", read: true }],
+    });
+    // A badge that says zero over unread rows is worse than one that agrees with them.
+    expect(uncounted.unread).toBe(2);
+    expect(normalizeNotificationInbox({}).items).toEqual([]);
+    expect(normalizeNotificationInbox({}).unread).toBe(0);
   });
 });
 

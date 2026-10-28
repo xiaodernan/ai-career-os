@@ -24,6 +24,8 @@ import type {
   JobMatch,
   MatchDimension,
   MemoryItem,
+  NotificationInbox,
+  NotificationItem,
   ResumeScore,
   SavedSearch,
   SearchResults,
@@ -522,6 +524,41 @@ export function normalizeIngestionRunDetail(raw: unknown): IngestionRunDetail {
   return {
     run: normalizeIngestionRun(pick(raw, "run")),
     plan: rec(pick(raw, "plan")),
+  };
+}
+
+/**
+ * One inbox signal (roadmap 19.3). The backend sends the kind and its holes, not a
+ * sentence — the page composes the sentence in the reader's language — so nothing
+ * here is allowed to invent a value: a missing count stays null rather than becoming
+ * zero, and a missing note stays null rather than becoming an empty reason.
+ */
+export function normalizeNotificationItem(raw: unknown): NotificationItem {
+  return {
+    key: str(raw, "key") ?? "",
+    kind: str(raw, "kind") ?? "",
+    title: str(raw, "title") ?? "",
+    subject: str(raw, "subject") ?? "",
+    status: str(raw, "status") ?? "",
+    count: num(raw, "count") ?? null,
+    note: str(raw, "note") ?? null,
+    link: str(raw, "link") ?? "",
+    at: str(raw, "at"),
+    read: bool(raw, "read") ?? false,
+  };
+}
+
+/**
+ * The synthesized inbox. `unread` is read off the answer; a payload that omits it
+ * falls back to counting the unread items, because a badge that says zero over an
+ * unread row is worse than a badge that agrees with the rows.
+ */
+export function normalizeNotificationInbox(raw: unknown): NotificationInbox {
+  const items = list<unknown>(raw, "items").map(normalizeNotificationItem);
+  return {
+    items,
+    unread: num(raw, "unread") ?? items.filter((item) => !item.read).length,
+    generatedAt: str(raw, "generatedAt", "generated_at"),
   };
 }
 

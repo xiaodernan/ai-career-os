@@ -10,6 +10,7 @@ export const translations = {
     // Navigation
     nav: {
       dashboard: "Dashboard",
+      notifications: "Notifications",
       resumes: "Resumes",
       jobs: "Jobs",
       applications: "Applications",
@@ -39,6 +40,7 @@ export const translations = {
      */
     navDescriptions: {
       dashboard: "Career overview and priorities",
+      notifications: "Signals that need your attention",
       resumes: "Resume versions and structured profile",
       jobs: "Discovered jobs and AI matches",
       applications: "Pipeline kanban and reminders",
@@ -777,6 +779,38 @@ export const translations = {
       staleBadge: "{count} stale",
       expiredBadge: "{count} expired",
       undatedBadge: "{count} undated",
+    },
+    // Notification center (19.3)
+    notifications: {
+      title: "Notifications",
+      description:
+        "Reminders that came due, applications that went quiet, and pulls that need a look — in the order they happened.",
+      markAllRead: "Mark all read",
+      unreadBadge: "{count} unread",
+      allRead: "Everything here is read.",
+      empty: "Nothing needs your attention right now.",
+      emptyDescription:
+        "A reminder that comes due, an application that goes quiet, or a failed feed pull will appear here.",
+      unavailable: "The inbox couldn't be loaded.",
+      kindReminder: "Reminder",
+      kindStale: "Gone quiet",
+      kindIngestionFailed: "Pull failed",
+      kindIngestionCreated: "New postings",
+      kindOther: "Signal",
+      reminderLine: "Your reminder for {title} is due.",
+      staleLine: "No movement on {title} — it has gone quiet.",
+      ingestionFailedLine: "The last pull of {feed} failed.",
+      ingestionCreatedLine: "New postings from {feed}: {count}.",
+      fallbackLine: "A signal is waiting for you.",
+      untitled: "Untitled",
+      unnamedFeed: "an unnamed feed",
+      open: "Open",
+      openAria: "Open {title}",
+      markRead: "Mark read",
+      markReadAria: "Mark {title} read",
+      dismiss: "Dismiss",
+      dismissAria: "Dismiss {title}",
+      actionFailed: "Couldn't update the inbox.",
     },
     // Growth engines
     growthEngines: {
@@ -2128,6 +2162,7 @@ export const translations = {
     // Navigation
     nav: {
       dashboard: "仪表盘",
+      notifications: "通知",
       resumes: "简历",
       jobs: "职位",
       applications: "申请",
@@ -2154,6 +2189,7 @@ export const translations = {
      */
     navDescriptions: {
       dashboard: "求职全局与优先事项",
+      notifications: "需要你关注的信号",
       resumes: "简历版本与结构化档案",
       jobs: "发现的职位与 AI 匹配",
       applications: "投递看板与提醒",
@@ -2806,6 +2842,36 @@ export const translations = {
       staleBadge: "{count} 个待复查",
       expiredBadge: "{count} 个已过期",
       undatedBadge: "{count} 个无日期",
+    },
+    // 通知中心（19.3）
+    notifications: {
+      title: "通知",
+      description: "已到期的提醒、久无动静的申请，以及需要看一眼的拉取——按发生时间排列。",
+      markAllRead: "全部标为已读",
+      unreadBadge: "{count} 条未读",
+      allRead: "这里的都已读过。",
+      empty: "现在没有需要你关注的事项。",
+      emptyDescription: "到期的提醒、久无动静的申请，或失败的订阅拉取，都会出现在这里。",
+      unavailable: "通知列表加载失败。",
+      kindReminder: "提醒",
+      kindStale: "久无动静",
+      kindIngestionFailed: "拉取失败",
+      kindIngestionCreated: "新职位",
+      kindOther: "信号",
+      reminderLine: "你对 {title} 的提醒已到期。",
+      staleLine: "{title} 久无动静，已经安静下来了。",
+      ingestionFailedLine: "{feed} 的上一次拉取失败了。",
+      ingestionCreatedLine: "{feed} 带来了 {count} 个新职位。",
+      fallbackLine: "有一条信号在等你。",
+      untitled: "未命名",
+      unnamedFeed: "一个未命名订阅",
+      open: "打开",
+      openAria: "打开 {title}",
+      markRead: "标为已读",
+      markReadAria: "把 {title} 标为已读",
+      dismiss: "忽略",
+      dismissAria: "忽略 {title}",
+      actionFailed: "更新不了通知列表。",
     },
     // Growth engines
     growthEngines: {

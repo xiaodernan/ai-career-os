@@ -135,7 +135,7 @@ describe("the translation table", () => {
                         "settings", "companies", "knowledge", "activity",
                         "growth", "offers", "analysis", "monitoring",
                         "data", "ingestion", "networking", "copilot",
-                        "dashboard"]) {
+                        "dashboard", "notifications"]) {
       const block = (translations.en as unknown as Record<string, { title?: string }>)[page];
       expect(block, `${page} has no translation block`).toBeTruthy();
       expect(block!.title, `${page}.title is missing`).toBeTruthy();

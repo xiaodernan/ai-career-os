@@ -194,6 +194,25 @@ every redirect hop, so a feed cannot make the server read its own network.
 | GET | `/ingestion/runs` | the caller's runs, newest first; the `limit` parameter defaults to 20 and is clamped to 50 |
 | GET | `/ingestion/runs/{id}` | one run plus its stored plan |
 
+### Notification center (`/notifications`)
+
+The 19.3 inbox. Nothing is stored as a notification: every item is synthesized
+from a signal the platform already wrote down — an open application whose
+reminder has come due or that has gone quiet for the dashboard's own 14-day
+window, and the last week's pulls that failed or proposed new postings. What
+persists is what the reader did with each item, keyed by the signal's own
+episode (`reminder:<applicationId>:<reminderAt>`, `stale:<applicationId>:<updatedAt>`,
+`ingestion:<runId>`), so a dismissal silences that episode and a new reminder or
+a new update arrives unread. A read or dismissed key the inbox is not currently
+showing is ignored, and every write answers with the fresh inbox.
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/notifications` | the synthesized inbox, newest first, with the unread count → {items[], unread, generatedAt} |
+| POST | `/notifications/read` | `{keys}` → marks the named items read and answers the fresh inbox: {items[], unread, generatedAt}. Keys not in the inbox are ignored |
+| POST | `/notifications/read-all` | marks every item the inbox is showing read; answers the fresh inbox, the same shape GET /notifications answers |
+| POST | `/notifications/dismiss` | `{key}` → files one item away and answers the fresh inbox: {items[], unread, generatedAt} |
+
 ### Growth engines (`/growth`)
 
 The granular 10.x engines, each asked on its own. The 10.2 aggregate

@@ -15,6 +15,7 @@ import {
   normalizeMatch,
   normalizeMemory,
   normalizeMessages,
+  normalizeNotificationInbox,
   normalizePage,
   normalizePipeline,
   normalizeQuestion,
@@ -45,6 +46,7 @@ import type {
   KnowledgeNote,
   KnowledgeSource,
   MemoryItem,
+  NotificationInbox,
   Page,
   Resume,
   ResumeScore,
@@ -275,6 +277,17 @@ export function useIngestionRunDetail(id: string | null) {
     enabled: id !== null,
     queryFn: async (): Promise<IngestionRunDetail> =>
       normalizeIngestionRunDetail(await api.get<unknown>(endpoints.ingestionRun(id ?? ""))),
+  });
+}
+
+/* -------------------------------- notifications ---------------------------- */
+
+/** The synthesized inbox (roadmap 19.3), read on demand by the bell and the page. */
+export function useNotifications() {
+  return useQuery({
+    queryKey: ["notifications"],
+    queryFn: async (): Promise<NotificationInbox> =>
+      normalizeNotificationInbox(await api.get<unknown>(endpoints.notifications)),
   });
 }
 

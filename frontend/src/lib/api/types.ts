@@ -943,6 +943,37 @@ export interface IngestionRunDetail {
   plan?: Record<string, unknown> | null;
 }
 
+/**
+ * One signal in the inbox (roadmap 19.3). It is synthesized by the backend from the
+ * source that already knows it — an application, a run — so an item can never
+ * disagree with the screen that shows the same thing.
+ *
+ * The item carries data, not prose: `kind` says which sentence the page should
+ * compose, and `title`/`subject`/`count`/`note` are its holes. The `key` names the
+ * episode, and a new episode of the same kind (a reminder rescheduled, an
+ * application moving again) arrives under a new key and reads as unread again.
+ */
+export interface NotificationItem {
+  key: string;
+  /** `reminder` | `stale` | `ingestion_failed` | `ingestion_created`. */
+  kind: string;
+  title: string;
+  subject: string;
+  status: string;
+  count: number | null;
+  note: string | null;
+  link: string;
+  at?: string;
+  read: boolean;
+}
+
+/** The whole inbox: the items it is showing, the unread count, and when it was read. */
+export interface NotificationInbox {
+  items: NotificationItem[];
+  unread: number;
+  generatedAt?: string;
+}
+
 /* ------------------------------------------------------------------ */
 /* Granular growth engines (10.1-10.13)                               */
 /* ------------------------------------------------------------------ */

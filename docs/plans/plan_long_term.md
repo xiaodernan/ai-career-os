@@ -9,16 +9,16 @@
 
 ## 当前状态 (2026-10-28)
 
-- **前端**: 712 个 vitest 通过（65 个文件）；`tsc --noEmit` 干净。
-- **后端**: 589 个单元测试通过 (`mvn test -Dtest='*Test'`)；`*IT` 需 Docker。
+- **前端**: 718 个 vitest 通过（66 个文件）；`tsc --noEmit` 干净。
+- **后端**: 604 个测试通过 (`mvn test`，含无需 Docker 的 MockMvc 切片)。
 - **ai-service**: 1833 passed, 1 skipped (offline: mock/hash)。
 - **E2E**: 24/24 golden journey（最近一次真实栈验证）。
-- **分支**: main 与 origin 同步；最近提交 `0a61d40`
-  (`feat(saved-searches): the board's question can be kept under a name`)。
+- **分支**: main 与 origin 同步。
 - **已完成**: Epic 0–18 全部勾选；13.2 的不变行跳过、导出序列化统一、
   i18n 表按段落重组并删除死代码；19.1 保存的搜索（后端 CRUD + `/jobs`
   侧栏面板）；19.2 定时摄取（`/ingestion` feeds/runs、03:20 调度、
-  抓取安全边界、导入页订阅面板）。
+  抓取安全边界、导入页订阅面板）；19.3 通知中心（无通知表，按来源实时合成，
+  按 episode 存已读/忽略，四路由 + `/notifications` 页）。
 
 ## 主线队列（按顺序执行）
 
@@ -50,7 +50,15 @@
    （只记录、不落库改写职位板）；`FeedUrls`/`HttpFeedFetcher` 拒绝私网地址
    并逐跳复核重定向、封顶 5 MB；失败拉取是 `200` 的 failed run 及其原因。
    导入页顶部新增订阅面板（增删改开关、立即运行、运行历史、展开计划）。
-   接下来：19.3 通知中心 → 19.4 每周摘要投递 → 19.5 单版本打印视图。
+   ~~19.3 通知中心~~ 已完成：`V13__notification_states.sql` +
+   `NotificationController`（`/notifications` GET + read / read-all / dismiss）。
+   不建通知表——条目在读取时从已知来源合成（仪表盘的 14 天 attention 查询
+   与最近 7 天的 run），因此条目永远不会和它指向的屏幕不一致；只持久化读者
+   状态，按 episode 建键（提醒/久置/每次 run），新 episode 重新变未读，
+   当前列表之外的键一律忽略，每次写入返回全新的收件箱。`/notifications`
+   页按 kind + 空洞在读者语言里组句，可标记已读、忽略、全部已读并深链回
+   申请板 / 运行历史 / 导入页。
+   接下来：19.4 每周摘要投递 → 19.5 单版本打印视图。
    这是"OS 替你先做"的第一层。
 
 5. **Epic 20 — 单版本打印**

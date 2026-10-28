@@ -636,10 +636,27 @@ that; each ships wired to the real API and UI, like every epic before it.
   down. The ingestion page now opens with the feeds panel: add/toggle/delete a
   feed, pull one now, read the night's runs, open a run's plan. 56 backend
   tests for the slice and its two gates, 712 vitest, census 133 files.)
-- [ ] **19.3** Notification center: an in-app inbox for the events the product
-  already computes — a saved search's new high-match jobs, follow-ups due
-  (11.3), stalled applications (15.3), a finished nightly, an eval regression
-  (16.1). Read/unread, dismiss, deep link to the row.
+- [x] **19.3** Notification center: an in-app inbox for the events the product
+  already computes — a reminder that came due, an application that went quiet,
+  a nightly pull that failed or brought postings. Read/unread, dismiss, and a
+  deep link to the row that owns the signal.
+  (`V13__notification_states.sql` + `NotificationController`: GET
+  `/notifications` plus `/read`, `/read-all` and `/dismiss`, scoped to the
+  caller. There is no notifications table — every item is synthesized at read
+  time from the source that already knows it, the dashboard's own 14-day
+  attention query and the last seven days of runs, so an item can never
+  disagree with the screen that shows the same thing and a source that ends
+  takes its item with it. The only stored state is the reader's,
+  `notification_states`, keyed by the episode (`reminder:<app>:<epoch>`,
+  `stale:<app>:<epoch>`, `ingestion:<run>`) so a new episode arrives unread
+  rather than inheriting a dismissal; a write for a key the inbox is not
+  showing is ignored, and every write answers the fresh inbox. A failed pull is
+  always an item, a completed one only when it proposed postings. The
+  `/notifications` page composes each sentence from the item's kind and holes in
+  the reader's language, with mark-read, dismiss, mark-all-read and a link back
+  to the board, the run history or the application. 15 backend tests for the
+  slice, the doc/self-invocation/DTO/paging gates green, 604 backend tests, 718
+  vitest, census 134 files.)
 - [ ] **19.4** Weekly digest delivery: the 15.3 digest delivered on a cadence
   (in-app, with an email-ready payload), so the week's signals do not require
   opening the app.

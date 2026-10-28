@@ -57,8 +57,9 @@ describe("the browser's copy", () => {
     // `<html lang>` and the first paint carry the reader's language, and 132
     // with the saved-search panel beside the board's filters, and 133 with
     // `components/ingestion/scheduled-feeds-panel.tsx`, the browser's half of
-    // the nightly sweep (19.2).
-    expect(browserSources().length).toBe(133);
+    // the nightly sweep (19.2), and 134 with `app/(app)/notifications/page.tsx`,
+    // the inbox the synthesized signals land in (19.3).
+    expect(browserSources().length).toBe(134);
   });
 
   it("finds a sentence, however long it is", () => {
