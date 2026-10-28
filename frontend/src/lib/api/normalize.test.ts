@@ -30,6 +30,7 @@ import {
   normalizeMatch,
   normalizeNextQuestion,
   normalizeNightlyReport,
+  normalizeNightlyVerdict,
   normalizeMessages,
   normalizePage,
   normalizePipeline,
@@ -495,6 +496,35 @@ describe("normalizeNightlyReport (20.1)", () => {
 
     // A record the backend answers without steps is a night with no rows, not a crash.
     expect(normalizeNightlyReport({ id: "night-2", status: "failed" }).steps).toEqual([]);
+  });
+});
+
+describe("normalizeNightlyVerdict (20.2)", () => {
+  it("reads the install's verdict, including a streak and a stopped cadence", () => {
+    const verdict = normalizeNightlyVerdict({
+      status: "failed",
+      finishedAt: "2026-10-27T03:41:12Z",
+      commitSha: "d8199f8",
+      runUrl: "https://github.example/actions/runs/1",
+      consecutiveFailures: 3,
+      stale: true,
+      staleAfterHours: 36,
+    });
+    expect(verdict.status).toBe("failed");
+    expect(verdict.finishedAt).toBe("2026-10-27T03:41:12Z");
+    expect(verdict.consecutiveFailures).toBe(3);
+    expect(verdict.stale).toBe(true);
+    expect(verdict.staleAfterHours).toBe(36);
+  });
+
+  it("treats a verdict with holes as quiet rather than alarming", () => {
+    const verdict = normalizeNightlyVerdict({});
+    expect(verdict.status).toBe("");
+    expect(verdict.finishedAt).toBeNull();
+    expect(verdict.commitSha).toBeNull();
+    // No invented alarm: an unread flag is not a warning, and an unread streak is not a count.
+    expect(verdict.consecutiveFailures).toBe(0);
+    expect(verdict.stale).toBe(false);
   });
 });
 

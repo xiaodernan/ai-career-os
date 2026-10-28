@@ -29,6 +29,7 @@ import type {
   NotificationInbox,
   NotificationItem,
   NightlyReport,
+  NightlyVerdict,
   ResumeScore,
   SavedSearch,
   SearchResults,
@@ -548,6 +549,23 @@ export function normalizeNightlyReport(raw: unknown): NightlyReport {
     startedAt: str(raw, "startedAt") ?? "",
     finishedAt: str(raw, "finishedAt") ?? "",
     steps,
+  };
+}
+
+/**
+ * The install's verdict (roadmap 20.2). Every field falls back to the quiet answer rather
+ * than a guessed alarm: an unread stale flag stays false and an unread streak stays zero,
+ * because the card complains only about facts the backend actually sent.
+ */
+export function normalizeNightlyVerdict(raw: unknown): NightlyVerdict {
+  return {
+    status: str(raw, "status") ?? "",
+    finishedAt: str(raw, "finishedAt") ?? null,
+    commitSha: str(raw, "commitSha") ?? null,
+    runUrl: str(raw, "runUrl") ?? null,
+    consecutiveFailures: num(raw, "consecutiveFailures") ?? 0,
+    stale: bool(raw, "stale") ?? false,
+    staleAfterHours: num(raw, "staleAfterHours") ?? 0,
   };
 }
 

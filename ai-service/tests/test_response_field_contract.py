@@ -284,6 +284,10 @@ PRODUCERS = {
     # list, and each step is the three names the nightly job writes into its `summary` rows.
     "NightlyReportItem": ("java", ("report/dto/NightlyReportDtos.java", "NightlyReportItem")),
     "NightlyReportStep": ("java", ("report/dto/NightlyReportDtos.java", "NightlyReportStep")),
+    # The install's own verdict (roadmap 20.2): one more record in the same file, whose seven
+    # components are exactly the names `normalizeNightlyVerdict` reads -- the newest night's word
+    # plus the streak and the staleness a page of history alone cannot show.
+    "NightlyVerdict": ("java", ("report/dto/NightlyReportDtos.java", "NightlyVerdict")),
 }
 
 # Readers whose producers are known per map. A reader with more producers than one is bound to their
@@ -966,6 +970,18 @@ READERS: dict[str, dict] = {
         "record_of": {"raw": "NightlyReportItem", "step": "NightlyReportStep"},
         "drilled": {},
         "elements": {"step": "raw"},
+        "blind": {},
+        "dynamic": {},
+    },
+    "normalizeNightlyVerdict": {
+        # The install's verdict (roadmap 20.2). `raw` is the backend's `NightlyVerdict` record --
+        # the newest night plus the streak and the staleness -- and these seven reads are its whole
+        # answer. `missing` is a status, not a null: the record always carries one word, and the
+        # quiet defaults live in the mapper rather than being read here, so a hole is a fallback
+        # and never a name this census would have to excuse.
+        "record_of": {"raw": "NightlyVerdict"},
+        "drilled": {},
+        "elements": {},
         "blind": {},
         "dynamic": {},
     },
@@ -1878,13 +1894,14 @@ def test_a_producer_kind_is_dispatched_by_name_and_never_by_the_fallback():
     dispatched = set(re.findall(r'spec\[0\] == "(\w+)"', chain))
     counts = collections.Counter(spec[0] for spec in PRODUCERS.values())
     # 77 with 19.6's `VoiceState`: one more Java record, the only row the voice seam adds;
-    # 79 with 20.1's two nightly records, both Java rows in the same file.
-    assert len(PRODUCERS) == 79, f"{len(PRODUCERS)} rows: the population the counts below are drawn from"
+    # 79 with 20.1's two nightly records, both Java rows in the same file; 80 with 20.2's
+    # `NightlyVerdict`, the third row that file declares.
+    assert len(PRODUCERS) == 80, f"{len(PRODUCERS)} rows: the population the counts below are drawn from"
     assert set(counts) == dispatched, \
         (f"the table uses {sorted(set(counts) - dispatched)} with no branch and the chain compares "
          f"{sorted(dispatched - set(counts))} with no rows: a kind that lost its branch has to gain "
          "one, and a kind that lost its rows has to lose the branch or gain the rows back")
-    assert sorted(counts.items()) == [("jamapof", 2), ("japut", 1), ("java", 45), ("pyadd", 1),
+    assert sorted(counts.items()) == [("jamapof", 2), ("japut", 1), ("java", 46), ("pyadd", 1),
                                       ("pyappend", 6), ("pycons", 1), ("pyconst", 3),
                                       ("pydantic", 3), ("pyfunc", 6), ("pyitem", 1), ("pyretsub", 1),
                                       ("pyskel", 9)], \
@@ -1907,7 +1924,7 @@ def test_a_producer_kind_is_dispatched_by_name_and_never_by_the_fallback():
     assert "nosuchkind" in raised and "BaseModel" not in raised, \
         (f"{raised}: an unknown kind must be named as itself -- pointing at a pydantic model is the "
          "misattribution this branch exists to remove")
-    assert len(PRODUCERS) == 79, "the planted row is still in the table the census above measured"
+    assert len(PRODUCERS) == 80, "the planted row is still in the table the census above measured"
 
 
 def _emitted_for(receiver: str | list[str]) -> set[str]:
@@ -2512,8 +2529,9 @@ def test_no_mapper_is_left_unbound():
     # 43 with the proactive layer's seven: saved searches, the three ingestion readers and the
     # three notification/digest readers all take literal names off their own records.
     # 44 with 19.6's `normalizeVoiceState`, the interview page's three reads; 45 with 20.1's
-    # `normalizeNightlyReport`, the monitoring page's report reader.
-    assert len(population) == 45, sorted(population)
+    # `normalizeNightlyReport`, the monitoring page's report reader; 46 with 20.2's
+    # `normalizeNightlyVerdict`, the same card's one-answer read.
+    assert len(population) == 46, sorted(population)
     private = sorted(name for name, exported in _mapper_declarations() if not exported)
     assert private == ["changeFrom", "groupSkillBuckets", "normalizeAttention", "normalizeFollowUp",
                        "pathOf", "statusCountsToRows"]
@@ -3330,8 +3348,9 @@ def test_the_census_sees_every_read_the_mappers_hold():
     # proactive layer's seven; 44 with 19.6's voice-state reader.
     # 44 with 19.6's `normalizeVoiceState`, the interview page's three reads; 45 with 20.1's
     # `normalizeNightlyReport`, which takes its six item names and three step names off the
-    # records the backend now answers with.
-    assert len(population) == 45, f"the census population moved: {population}"
+    # records the backend now answers with; 46 with 20.2's `normalizeNightlyVerdict`, seven
+    # names off the record that answers the same card with one word.
+    assert len(population) == 46, f"the census population moved: {population}"
 
     diverged = []
     for name in population:
@@ -3354,8 +3373,9 @@ def test_the_census_sees_every_read_the_mappers_hold():
     # normalizeApplicationEvent; 282 with normalizeMemory's nine reads (id, kind, key, content,
     # importance, source, createdAt, createdAt's alias, updatedAt's alias); 340 with 19.6's
     # three `normalizeVoiceState` reads; 351 with 20.1's eleven reads in `normalizeNightlyReport`
-    # (ten quoted names plus the folded `idOf(raw)`).
-    assert len(whole) == 351, f"{len(whole)} reads by the oracle: recount both totals if this moved"
+    # (ten quoted names plus the folded `idOf(raw)`); 358 with 20.2's seven reads in
+    # `normalizeNightlyVerdict`, none of them folded.
+    assert len(whole) == 358, f"{len(whole)} reads by the oracle: recount both totals if this moved"
     assert len(whole) == sum(len(_sites(name)) for name in population), \
         "a named read lives outside every mapper the census walks"
     expressions = [site for site in whole if not _BARE.fullmatch(site["receiver"])]
@@ -3513,14 +3533,15 @@ def test_a_call_whose_key_is_a_variable_is_a_population_every_member_has_to_expl
     # including the four one-argument `idOf(raw)` calls the key-position walk now counts.
     # 355 with 19.6's three literal reads in `normalizeVoiceState` (`provider`, `stt`, `tts`);
     # 366 with 20.1's `normalizeNightlyReport` -- ten paired reads (the steps list, three step
-    # names, six item names) plus the `idOf(raw)` the key-position walk counts in every mapper.
-    assert len(calls) == 366, (f"{len(calls)} accessor calls hand something to a key position: "
+    # names, six item names) plus the `idOf(raw)` the key-position walk counts in every mapper;
+    # 373 with 20.2's seven literal reads in `normalizeNightlyVerdict`, no fold among them.
+    assert len(calls) == 373, (f"{len(calls)} accessor calls hand something to a key position: "
                                "recount the two halves below")
     assert len(nameless) == 16, f"{len(nameless)} calls put a variable where a name is expected"
     counted = {(row["line"], row["accessor"], row["receiver"]) for row in nameless} & \
               {(site["line"], site["name"], site["receiver"]) for site in named}
     assert len(calls) == len(named) + len(nameless) - len(counted), \
-        (f"351 + 16 stopped being 366: the oracle now counts {len(named)} and the census {len(nameless)} "
+        (f"358 + 16 stopped being 373: the oracle now counts {len(named)} and the census {len(nameless)} "
          f"with {sorted(counted)} in common -- one of the three totals moved alone")
     assert [(row[1], row[2]) for row in sorted(counted)] == [("idOf", "h")], \
         (f"the calls that are both nameless and counted are {sorted(counted)}, not one folded `idOf` "
@@ -4099,8 +4120,9 @@ def test_the_bare_read_scanner_agrees_with_a_paired_call_census():
     # spellings, plus id/kind/key/content/importance/source).
     # 277 rather than 274 since the outcome pair and the `field` key: three more str() reads.
     # 339 with 19.6's three `normalizeVoiceState` reads; 349 with 20.1's ten paired reads in
-    # `normalizeNightlyReport` (`idOf` is folded, so it is not one of them).
-    assert len(paired) == 349, (f"{len(paired)} accessor calls: the population the bare-read census is "
+    # `normalizeNightlyReport` (`idOf` is folded, so it is not one of them); 356 with 20.2's
+    # seven paired reads in `normalizeNightlyVerdict`.
+    assert len(paired) == 356, (f"{len(paired)} accessor calls: the population the bare-read census is "
                                 "drawn from -- if this drops, the census below is comparing less")
     assert sum(1 for row in paired if row["argc"] == 1) == 1, \
         f"{[(row['owner'], row['receiver']) for row in paired if row['argc'] == 1]} are the bare reads"
@@ -4114,8 +4136,9 @@ def test_the_bare_read_scanner_agrees_with_a_paired_call_census():
         "the one that says so when one appears"
     # 276 with normalizeMemory: eight of its accessor calls quote every name, which is the
     # only shape `_sites` reads. 330 with 19.6's three `normalizeVoiceState` reads; 340 with
-    # 20.1's ten quoted calls in `normalizeNightlyReport`.
-    assert sum(1 for row in paired if row["argc"] > 1 and row["named"]) == 340, \
+    # 20.1's ten quoted calls in `normalizeNightlyReport`; 347 with 20.2's seven quoted
+    # calls in `normalizeNightlyVerdict`.
+    assert sum(1 for row in paired if row["argc"] > 1 and row["named"]) == 347, \
         f"{sum(1 for row in paired if row['argc'] > 1 and row['named'])}: every-name-quoted is what " \
         "`_sites` reads, so this number is the size of the census every other rule here trusts"
     loose = [row for row in paired if row["argc"] > 1 and not row["named"]]
@@ -4167,8 +4190,9 @@ def test_the_spread_receiver_scanner_agrees_with_the_paired_walk(monkeypatch):
     walked = _paired_accessor_calls(text)
     # 285 with normalizeMemory: the same eight calls the paired-walk census counts above.
     # 339 with 19.6's three `normalizeVoiceState` reads, like the census above; 349 with 20.1's
-    # ten reads in `normalizeNightlyReport`.
-    assert len(walked) == 349, (f"{len(walked)} accessor calls: the population both censuses are drawn "
+    # ten reads in `normalizeNightlyReport`; 356 with 20.2's seven reads in
+    # `normalizeNightlyVerdict`.
+    assert len(walked) == 356, (f"{len(walked)} accessor calls: the population both censuses are drawn "
                                  "from")
     spread = [row for row in walked if row["spread"]]
     assert [(row["name"], row["owner"], row["receiver"]) for row in spread] == [

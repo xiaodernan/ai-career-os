@@ -458,8 +458,8 @@ def test_the_unbound_mappers_ban_would_find_these_mappers_if_it_read_this_file()
     population = re.search(r"assert len\(population\) == (\d+)", gate)
     # 44 rather than 43 since 19.6's `normalizeVoiceState` joined the field gate's census; this
     # file only echoes that pin, so the two move together or one of them is stale. 45 with
-    # 20.1's `normalizeNightlyReport`.
-    assert population and population.group(1) == "45", \
+    # 20.1's `normalizeNightlyReport`; 46 with 20.2's `normalizeNightlyVerdict`.
+    assert population and population.group(1) == "46", \
         f"the ban's pinned normalize.ts population moved: {population and population.group(1)}"
 
 
@@ -534,8 +534,10 @@ def test_an_unauthored_name_is_a_snake_twin_a_foreign_name_or_a_name_no_record_d
     # earlier record declared (`summary` was already a name elsewhere).
     # 283 with the step record that same answer carries: `steps` is the list the item
     # lifts, and `startedAt`/`finishedAt`/`detail` join `commitSha`/`runUrl` as names the
-    # nightly family is the first to declare.
-    assert len(everywhere) == 283, f"the backend record census read {len(everywhere)} component names"
+    # nightly family is the first to declare. 286 with 20.2's `NightlyVerdict`:
+    # `consecutiveFailures`, `stale` and `staleAfterHours` are the three names no earlier
+    # record declared -- the rest of the verdict repeats the night's own coordinates.
+    assert len(everywhere) == 286, f"the backend record census read {len(everywhere)} component names"
     assert {"id", "title", "status", "createdAt"} <= set(everywhere), sorted(list(everywhere)[:8])
     scanned_unauthored = scanned_nowhere = 0
     for (mapper, receiver), record in ROWS.items():

@@ -891,6 +891,25 @@ export interface NightlyReport {
   steps: NightlyReportStep[];
 }
 
+/**
+ * The install's verdict (roadmap 20.2): the newest night as a verdict rather than a row,
+ * plus the two facts one page of history cannot show -- whether the answer has been
+ * "failed" for several nights running, and whether the record stopped arriving. "missing"
+ * is not a night's word; it is the absence of one.
+ */
+export interface NightlyVerdict {
+  /** "passed", "failed" or "missing"; the last is the absence of any record. */
+  status: string;
+  finishedAt?: string | null;
+  commitSha?: string | null;
+  runUrl?: string | null;
+  /** How many newest nights in a row ended failed; zero when the newest one passed. */
+  consecutiveFailures: number;
+  /** True when the newest record is older than the cadence, even if that night passed. */
+  stale: boolean;
+  staleAfterHours: number;
+}
+
 /* ------------------------------------------------------------------ */
 /* Job ingestion (14.2-14.3)                                         */
 /* ------------------------------------------------------------------ */

@@ -13,6 +13,7 @@ import com.careeros.common.PageDTO;
 import com.careeros.report.dto.NightlyReportDtos.NightlyReportItem;
 import com.careeros.report.dto.NightlyReportDtos.NightlyReportRequest;
 import com.careeros.report.dto.NightlyReportDtos.NightlyReportStep;
+import com.careeros.report.dto.NightlyReportDtos.NightlyVerdict;
 import com.careeros.report.entity.NightlyReport;
 import com.careeros.report.repository.NightlyReportRepository;
 import java.time.OffsetDateTime;
@@ -155,5 +156,94 @@ class NightlyReportServiceTest {
         assertThat(page.total()).isEqualTo(1);
         assertThat(page.page()).isZero();
         assertThat(page.size()).isEqualTo(100);
+    }
+
+    private static NightlyReport night(String status, OffsetDateTime finishedAt) {
+        NightlyReport row = new NightlyReport();
+        ReflectionTestUtils.setField(row, "id", UUID.randomUUID());
+        row.setSource("nightly");
+        row.setStatus(status);
+        row.setCommitSha("d8199f8");
+        row.setRunUrl("https://github.example/actions/runs/1");
+        row.setStartedAt(finishedAt.minusMinutes(24));
+        row.setFinishedAt(finishedAt);
+        row.setSummary(Map.of());
+        row.setCreatedAt(finishedAt);
+        return row;
+    }
+
+    private void newestNights(NightlyReport... rows) {
+        Pageable window = PageRequest.of(0, NightlyReportService.STREAK_WINDOW);
+        when(reports.findAllByOrderByStartedAtDescIdDesc(window))
+                .thenReturn(new PageImpl<>(List.of(rows), window, rows.length));
+    }
+
+    @Test
+    void an_install_with_no_nights_is_missing_rather_than_green() {
+        newestNights();
+
+        NightlyVerdict verdict = service.verdict();
+
+        assertThat(verdict.status()).isEqualTo(NightlyVerdict.MISSING);
+        assertThat(verdict.finishedAt()).isNull();
+        assertThat(verdict.consecutiveFailures()).isZero();
+        assertThat(verdict.stale()).isTrue();
+        assertThat(verdict.staleAfterHours()).isEqualTo(NightlyReportService.STALE_AFTER_HOURS);
+    }
+
+    @Test
+    void the_verdict_is_the_newest_nights_own_word() {
+        newestNights(night(NightlyReport.STATUS_PASSED, OffsetDateTime.now().minusHours(2)));
+
+        NightlyVerdict verdict = service.verdict();
+
+        assertThat(verdict.status()).isEqualTo("passed");
+        assertThat(verdict.consecutiveFailures()).isZero();
+        assertThat(verdict.stale()).isFalse();
+        assertThat(verdict.commitSha()).isEqualTo("d8199f8");
+        assertThat(verdict.runUrl()).isEqualTo("https://github.example/actions/runs/1");
+    }
+
+    @Test
+    void a_failure_streak_counts_the_nights_before_the_failures_stopped() {
+        OffsetDateTime now = OffsetDateTime.now();
+        newestNights(
+                night(NightlyReport.STATUS_FAILED, now.minusHours(2)),
+                night(NightlyReport.STATUS_FAILED, now.minusHours(26)),
+                night(NightlyReport.STATUS_PASSED, now.minusHours(50)),
+                night(NightlyReport.STATUS_FAILED, now.minusHours(74)));
+
+        NightlyVerdict verdict = service.verdict();
+
+        assertThat(verdict.status()).isEqualTo("failed");
+        assertThat(verdict.consecutiveFailures()).isEqualTo(2);
+        assertThat(verdict.stale()).isFalse();
+    }
+
+    @Test
+    void a_passed_night_ends_the_streak_instead_of_being_hidden_by_it() {
+        OffsetDateTime now = OffsetDateTime.now();
+        newestNights(
+                night(NightlyReport.STATUS_PASSED, now.minusHours(2)),
+                night(NightlyReport.STATUS_FAILED, now.minusHours(26)),
+                night(NightlyReport.STATUS_FAILED, now.minusHours(50)));
+
+        NightlyVerdict verdict = service.verdict();
+
+        assertThat(verdict.status()).isEqualTo("passed");
+        assertThat(verdict.consecutiveFailures()).isZero();
+        assertThat(verdict.stale()).isFalse();
+    }
+
+    @Test
+    void a_record_that_stopped_arriving_is_stale_even_when_it_passed() {
+        newestNights(night(NightlyReport.STATUS_PASSED,
+                OffsetDateTime.now().minusHours(NightlyReportService.STALE_AFTER_HOURS + 1L)));
+
+        NightlyVerdict verdict = service.verdict();
+
+        assertThat(verdict.status()).isEqualTo("passed");
+        assertThat(verdict.stale()).isTrue();
+        assertThat(verdict.staleAfterHours()).isEqualTo(NightlyReportService.STALE_AFTER_HOURS);
     }
 }

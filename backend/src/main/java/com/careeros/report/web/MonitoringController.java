@@ -4,6 +4,7 @@ import com.careeros.common.AuthUser;
 import com.careeros.common.CurrentUser;
 import com.careeros.common.PageDTO;
 import com.careeros.report.dto.NightlyReportDtos.NightlyReportItem;
+import com.careeros.report.dto.NightlyReportDtos.NightlyVerdict;
 import com.careeros.report.service.MonitoringService;
 import com.careeros.report.service.NightlyReportService;
 import java.util.Map;
@@ -46,5 +47,11 @@ public class MonitoringController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         return nightlyReports.list(page, size);
+    }
+
+    /** Whether the install verified itself, without paging the history (20.2). */
+    @GetMapping("/nightly-reports/verdict")
+    public NightlyVerdict nightlyVerdict() {
+        return nightlyReports.verdict();
     }
 }

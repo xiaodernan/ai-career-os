@@ -89,4 +89,24 @@ public final class NightlyReportDtos {
                     report.getCreatedAt());
         }
     }
+
+    /**
+     * The install's own verdict (roadmap 20.2): the newest night as a verdict rather than a row,
+     * plus the two facts one page of the history cannot show -- whether the answer has been
+     * "failed" for several nights running, and whether the newest record is old enough that the
+     * cadence itself stopped. A stale verdict is an alarm even when the newest night passed: a
+     * record that stopped arriving is the failure nothing wrote down.
+     */
+    public record NightlyVerdict(
+            String status,
+            OffsetDateTime finishedAt,
+            String commitSha,
+            String runUrl,
+            int consecutiveFailures,
+            boolean stale,
+            int staleAfterHours) {
+
+        /** The status of a history with no rows: not a night's own word, the absence of one. */
+        public static final String MISSING = "missing";
+    }
 }

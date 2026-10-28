@@ -23,10 +23,29 @@ const state = vi.hoisted(() => ({
     error: undefined as unknown,
     refetch: () => {},
   },
+  verdict: {
+    data: undefined as
+      | {
+          status: string;
+          finishedAt?: string | null;
+          commitSha?: string | null;
+          runUrl?: string | null;
+          consecutiveFailures: number;
+          stale: boolean;
+          staleAfterHours: number;
+        }
+      | undefined,
+    isPending: false,
+    isError: false,
+    isFetching: false,
+    error: undefined as unknown,
+    refetch: () => {},
+  },
 }));
 
 vi.mock("@/lib/hooks/monitoring", () => ({
   useNightlyReports: () => state.reports,
+  useNightlyVerdict: () => state.verdict,
 }));
 
 import { NightlyHistory } from "./nightly-history";
@@ -58,6 +77,14 @@ function render(): string {
 
 beforeEach(() => {
   state.reports = {
+    data: undefined,
+    isPending: false,
+    isError: false,
+    isFetching: false,
+    error: undefined,
+    refetch: () => {},
+  };
+  state.verdict = {
     data: undefined,
     isPending: false,
     isError: false,
@@ -128,5 +155,72 @@ describe("NightlyHistory", () => {
 
     state.reports.data = { items: [REPORT], total: 11, page: 0, size: 10 };
     expect(render()).toContain("monitoring.nightlyPagination");
+  });
+
+  it("warns when no night has ever written a record", () => {
+    state.reports.data = { items: [], total: 0, page: 0, size: 10 };
+    state.verdict.data = {
+      status: "missing",
+      finishedAt: null,
+      commitSha: null,
+      runUrl: null,
+      consecutiveFailures: 0,
+      stale: true,
+      staleAfterHours: 36,
+    };
+
+    const html = render();
+
+    expect(html).toContain("monitoring.nightlyVerdictMissing");
+    expect(html).toContain("monitoring.nightlyEmpty");
+  });
+
+  it("warns when the newest record stopped arriving, naming the hours", () => {
+    state.reports.data = { items: [REPORT], total: 1, page: 0, size: 10 };
+    state.verdict.data = {
+      status: "passed",
+      finishedAt: "2026-10-25T03:41:12Z",
+      commitSha: "d8199f8aa11",
+      runUrl: null,
+      consecutiveFailures: 0,
+      stale: true,
+      staleAfterHours: 36,
+    };
+
+    expect(render()).toContain("monitoring.nightlyVerdictStale|36");
+  });
+
+  it("warns only after two nights in a row failed, not one", () => {
+    state.reports.data = { items: [REPORT], total: 1, page: 0, size: 10 };
+    state.verdict.data = {
+      status: "failed",
+      finishedAt: "2026-10-27T03:41:12Z",
+      commitSha: null,
+      runUrl: null,
+      consecutiveFailures: 2,
+      stale: false,
+      staleAfterHours: 36,
+    };
+    expect(render()).toContain("monitoring.nightlyVerdictStreak|2");
+
+    state.verdict.data = { ...state.verdict.data, consecutiveFailures: 1 };
+    expect(render()).not.toContain("monitoring.nightlyVerdictStreak");
+  });
+
+  it("draws no warning when the verdict is quiet or has not answered", () => {
+    state.reports.data = { items: [REPORT], total: 1, page: 0, size: 10 };
+    state.verdict.data = {
+      status: "passed",
+      finishedAt: "2026-10-27T03:41:12Z",
+      commitSha: null,
+      runUrl: null,
+      consecutiveFailures: 0,
+      stale: false,
+      staleAfterHours: 36,
+    };
+    expect(render()).not.toContain("monitoring.nightlyVerdict");
+
+    state.verdict.data = undefined;
+    expect(render()).not.toContain("monitoring.nightlyVerdict");
   });
 });

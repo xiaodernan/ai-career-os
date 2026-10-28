@@ -7,9 +7,11 @@ import com.careeros.common.Paging;
 import com.careeros.report.dto.NightlyReportDtos;
 import com.careeros.report.dto.NightlyReportDtos.NightlyReportItem;
 import com.careeros.report.dto.NightlyReportDtos.NightlyReportRequest;
+import com.careeros.report.dto.NightlyReportDtos.NightlyVerdict;
 import com.careeros.report.entity.NightlyReport;
 import com.careeros.report.repository.NightlyReportRepository;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Locale;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +28,15 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Service
 public class NightlyReportService {
+
+    /**
+     * A daily job plus slack: a newest record older than this means the cadence stopped rather
+     * than that one night ran late. The scheduled run starts at 03:20 and takes under an hour, so
+     * a day and a half is more than twice the expected gap.
+     */
+    static final int STALE_AFTER_HOURS = 36;
+    /** How far back the streak walk looks; a longer streak is already "it keeps failing". */
+    static final int STREAK_WINDOW = 30;
 
     private final NightlyReportRepository reports;
 
@@ -66,5 +77,33 @@ public class NightlyReportService {
         Paging.Window window = Paging.of(page, size);
         return PageDTO.from(reports.findAllByOrderByStartedAtDescIdDesc(window.pageable()),
                 NightlyReportItem::of);
+    }
+
+    /**
+     * Whether the install verified itself, as one answer. The walk is newest first, so the
+     * streak ends at the first night that is not a failure; the staleness is measured from the
+     * newest finish, because a night that is itself still running has not left a row yet.
+     */
+    @Transactional(readOnly = true)
+    public NightlyVerdict verdict() {
+        List<NightlyReport> newest = reports
+                .findAllByOrderByStartedAtDescIdDesc(Paging.first(STREAK_WINDOW))
+                .getContent();
+        if (newest.isEmpty()) {
+            return new NightlyVerdict(NightlyVerdict.MISSING, null, null, null, 0, true,
+                    STALE_AFTER_HOURS);
+        }
+        NightlyReport latest = newest.get(0);
+        int streak = 0;
+        for (NightlyReport report : newest) {
+            if (!NightlyReport.STATUS_FAILED.equals(report.getStatus())) {
+                break;
+            }
+            streak++;
+        }
+        boolean stale = latest.getFinishedAt().plusHours(STALE_AFTER_HOURS)
+                .isBefore(OffsetDateTime.now());
+        return new NightlyVerdict(latest.getStatus(), latest.getFinishedAt(),
+                latest.getCommitSha(), latest.getRunUrl(), streak, stale, STALE_AFTER_HOURS);
     }
 }

@@ -19,6 +19,7 @@ import com.careeros.common.PageDTO;
 import com.careeros.report.dto.NightlyReportDtos.NightlyReportItem;
 import com.careeros.report.dto.NightlyReportDtos.NightlyReportRequest;
 import com.careeros.report.dto.NightlyReportDtos.NightlyReportStep;
+import com.careeros.report.dto.NightlyReportDtos.NightlyVerdict;
 import com.careeros.report.service.MonitoringService;
 import com.careeros.report.service.NightlyReportService;
 import java.time.OffsetDateTime;
@@ -119,6 +120,23 @@ class MonitoringControllerTest {
                 .andExpect(jsonPath("$.data.page").value(2));
 
         verify(reports).list(2, 5);
+    }
+
+    @Test
+    void the_verdict_is_one_answer_rather_than_a_page_of_history() throws Exception {
+        when(reports.verdict()).thenReturn(new NightlyVerdict("failed",
+                OffsetDateTime.parse("2026-10-27T03:41:12Z"), "d8199f8",
+                "https://github.example/actions/runs/1", 2, false, 36));
+
+        mvc.perform(get("/api/v1/monitoring/nightly-reports/verdict"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("failed"))
+                .andExpect(jsonPath("$.data.commitSha").value("d8199f8"))
+                .andExpect(jsonPath("$.data.consecutiveFailures").value(2))
+                .andExpect(jsonPath("$.data.stale").value(false))
+                .andExpect(jsonPath("$.data.staleAfterHours").value(36));
+
+        verify(reports).verdict();
     }
 
     @Test

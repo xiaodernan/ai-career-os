@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { CalendarCheck, ExternalLink } from "lucide-react";
+import { CalendarCheck, ExternalLink, TriangleAlert } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -10,7 +10,7 @@ import { Pagination } from "@/components/common/pagination";
 import { relativeTime } from "@/lib/format";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { safeHref } from "@/lib/safe-href";
-import { useNightlyReports } from "@/lib/hooks/monitoring";
+import { useNightlyReports, useNightlyVerdict } from "@/lib/hooks/monitoring";
 
 /**
  * The deployment's own verification history (roadmap 20.1).
@@ -22,6 +22,10 @@ import { useNightlyReports } from "@/lib/hooks/monitoring";
  * The card keeps the same three quiet promises the other list panels keep: the empty
  * copy speaks only once the list has answered, a failed read is named rather than drawn
  * as an empty history, and a step's measurement is shown only when the job wrote one.
+ *
+ * The verdict (roadmap 20.2) rides above the list as its own read: a history with no
+ * rows at all, a cadence that stopped arriving, or a run of failed nights is a sentence
+ * the list alone cannot say, and an unread verdict draws nothing rather than an alarm.
  */
 
 // The route's own default window: `GET /monitoring/nightly-reports` binds `size` with
@@ -38,8 +42,23 @@ export function NightlyHistory() {
   const { t, locale } = useLocale();
   const [page, setPage] = React.useState(0);
   const reports = useNightlyReports({ page, size: PAGE_SIZE });
+  const verdict = useNightlyVerdict();
   const rows = reports.data?.items ?? [];
   const total = reports.data?.total ?? 0;
+
+  const warnings: string[] = [];
+  if (verdict.data?.status === "missing") {
+    warnings.push(t("monitoring.nightlyVerdictMissing"));
+  } else if (verdict.data) {
+    if (verdict.data.stale) {
+      warnings.push(t("monitoring.nightlyVerdictStale", { hours: verdict.data.staleAfterHours }));
+    }
+    if (verdict.data.consecutiveFailures >= 2) {
+      warnings.push(
+        t("monitoring.nightlyVerdictStreak", { count: verdict.data.consecutiveFailures })
+      );
+    }
+  }
 
   return (
     <Card>
@@ -51,6 +70,19 @@ export function NightlyHistory() {
         <CardDescription>{t("monitoring.nightlyDescription")}</CardDescription>
       </CardHeader>
       <CardContent>
+        {warnings.length > 0 && (
+          <div
+            role="status"
+            className="mb-3 flex items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm"
+          >
+            <TriangleAlert className="mt-0.5 size-4 shrink-0 text-amber-600" aria-hidden />
+            <ul className="space-y-1">
+              {warnings.map((warning) => (
+                <li key={warning}>{warning}</li>
+              ))}
+            </ul>
+          </div>
+        )}
         {reports.isPending ? (
           <Skeleton className="h-24 rounded-lg" />
         ) : reports.isError ? (

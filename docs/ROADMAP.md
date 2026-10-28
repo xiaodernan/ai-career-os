@@ -832,6 +832,26 @@ keeps the answers, and then starts asking the OS to act on them.
   6 controller), 5 frontend component tests, the copy census at 135 sources, the
   shape gates at 283 component names and 156 declared records.)
 
+- [x] **20.2** The install's verdict, acted on: the history answers one question —
+  is this deployment verifying itself — and the card says the answer out loud.
+  (A list of nights still makes a reader page it to learn whether the cadence
+  stopped. `GET /api/v1/monitoring/nightly-reports/verdict` reads the newest 30
+  rows, in the same newest-first order the list uses, and answers the newest night
+  as a verdict: `passed`, `failed`, or `missing` when no night has ever recorded,
+  with its finish, commit and run link, the count of consecutive failed nights
+  from the top (the walk ends at the first non-failure), and whether the newest
+  record is older than 36 hours — a day and a half, more than twice the scheduled
+  gap, so a stale verdict is an alarm even when that night passed: a record that
+  stopped arriving is the failure nothing wrote down. The walk is bounded, so a
+  long outage cannot turn one read into a scan of the whole table. The nightly
+  card asks for the verdict through its own query and draws a warning strip only
+  when the verdict earns one: no record at all, a cadence that stopped reporting,
+  or two or more failed nights in a row — a single failure is already visible on
+  its own row, and an unread verdict draws nothing rather than an alarm. 6 backend
+  tests (5 service, 1 controller), 6 frontend tests (2 normalizer, 4 card), the
+  shape gates at 283 component names and 157 declared records, the field contract
+  at 46 bound readers and 80 producers, the copy census still at 135 sources.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

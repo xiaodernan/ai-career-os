@@ -917,9 +917,10 @@ def test_the_declaration_probes_reach_the_shapes_a_copy_would_miss():
     # whether the deployment can hear and speak, exported like its neighbours.
     # 61 with 20.1's `normalizeNightlyReport`: the night's summary is a jsonb map whose
     # `steps` arrive as their own little wire shape, so the card reads it through the
-    # same opener as every other row.
-    assert len(re.findall(TS_OPENER.format(name=r"(\w+)"), source)) == 61, \
-        "55 exported mappers and 6 module-private ones, all through one opener"
+    # same opener as every other row. 62 with 20.2's `normalizeNightlyVerdict`: the
+    # install's verdict reads its seven names off one record through the same opener.
+    assert len(re.findall(TS_OPENER.format(name=r"(\w+)"), source)) == 62, \
+        "56 exported mappers and 6 module-private ones, all through one opener"
     assert "export function normalizePage(" not in source, \
         "the generic really does sit between the name and the paren, so a literal opener finds nothing"
     assert _ts_function_body("normalizePage").startswith("export function normalizePage<T>(")
@@ -984,9 +985,10 @@ def test_the_java_probe_reads_every_record_the_backend_declares():
     # committed without this pin moving (152 -> 153), so this sentence records the debt.
     # 156 with 20.1's three nightly records in `NightlyReportDtos`: the request the night
     # posts through the internal token, the item the monitoring page reads back, and the
-    # step row that item's answer carries.
-    assert len(declared) == 156, \
-        f"{len(declared)} records carry a declaration the shared opener reads, not the 156 measured"
+    # step row that item's answer carries. 157 with 20.2's `NightlyVerdict` in the same
+    # file: the install's one-answer read, the fourth record the night taught that class.
+    assert len(declared) == 157, \
+        f"{len(declared)} records carry a declaration the shared opener reads, not the 157 measured"
     problems, renamed = [], []
     for relative, record in declared:
         names = _record_components_at(relative, record)
@@ -3296,7 +3298,9 @@ def test_both_frame_parsers_default_a_nameless_frame_to_the_same_event_name():
         # (+11 lines); the union itself did not change.
         # 1418 rather than 1393 since 20.1's `NightlyReportStep` and `NightlyReport` joined
         # above the union (+25 lines with their doc comments); the union itself did not change.
-        ("types.ts", 1418, "kind:"),
+        # 1437 rather than 1418 since 20.2's `NightlyVerdict` joined above the union (+19 lines);
+        # the union itself did not change.
+        ("types.ts", 1437, "kind:"),
         ('use-sse.ts', 15, 'event: SSEEventName | "message" | "progress" | "ping";'),
     ], (f"{[(r['file'], r['line'], r['head']) for r in by_role['type-union-member']]}: three type unions "
         "spell `message`, and only one of them names a frame -- the other two are the trace step kind "

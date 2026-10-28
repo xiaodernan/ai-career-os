@@ -106,6 +106,7 @@ export const endpoints = {
   digestsRun: "/digests/run",
   monitoringHealthReport: "/monitoring/health-report",
   monitoringNightlyReports: "/monitoring/nightly-reports",
+  monitoringNightlyVerdict: "/monitoring/nightly-reports/verdict",
   rateLimitStatus: "/rate-limit/status",
   conversations: "/conversations",
   conversation: (id: string) => `/conversations/${seg(id)}`,

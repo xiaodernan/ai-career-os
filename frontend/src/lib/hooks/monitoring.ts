@@ -3,8 +3,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
-import { normalizeNightlyReport, normalizePage, type NormalizedPage } from "@/lib/api/normalize";
-import type { HealthReport, NightlyReport } from "@/lib/api/types";
+import {
+  normalizeNightlyReport,
+  normalizeNightlyVerdict,
+  normalizePage,
+  type NormalizedPage,
+} from "@/lib/api/normalize";
+import type { HealthReport, NightlyReport, NightlyVerdict } from "@/lib/api/types";
 
 /**
  * Production monitoring (16.1): agent health, cost, and regression detection.
@@ -29,5 +34,18 @@ export function useNightlyReports(params?: { page?: number; size?: number }) {
         await api.get<unknown>(endpoints.monitoringNightlyReports, { size: 10, ...(params ?? {}) }),
         normalizeNightlyReport
       ),
+  });
+}
+
+/**
+ * The install's verdict (roadmap 20.2): one answer instead of a page. The card draws the
+ * history; this asks separately whether the history itself is the news, so a stopped
+ * cadence is visible even when the newest row looks fine.
+ */
+export function useNightlyVerdict() {
+  return useQuery({
+    queryKey: ["monitoring", "nightly-verdict"],
+    queryFn: async (): Promise<NightlyVerdict> =>
+      normalizeNightlyVerdict(await api.get<unknown>(endpoints.monitoringNightlyVerdict)),
   });
 }
