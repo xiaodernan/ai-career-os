@@ -58,6 +58,7 @@ class AccountErasureIT extends ApiIntegrationTest {
 
         assertThat(count("select count(*) from documents where user_id = ?", aliceId)).isEqualTo(1);
         assertThat(count("select count(*) from refresh_tokens where user_id = ?", aliceId)).isEqualTo(1);
+        assertThat(count("select count(*) from email_change_tokens where user_id = ?", aliceId)).isEqualTo(1);
         assertThat(storage.store).containsKey(aliceKey);
 
         mvc.perform(post("/api/v1/me/erase")
@@ -74,6 +75,7 @@ class AccountErasureIT extends ApiIntegrationTest {
         assertThat(count("select count(*) from knowledge_sources where user_id = ?", aliceId)).isZero();
         assertThat(count("select count(*) from mail_preferences where user_id = ?", aliceId)).isZero();
         assertThat(count("select count(*) from refresh_tokens where user_id = ?", aliceId)).isZero();
+        assertThat(count("select count(*) from email_change_tokens where user_id = ?", aliceId)).isZero();
         assertThat(storage.store).doesNotContainKey(aliceKey);
 
         // The neighbour: every table and the bucket still hold what this account owns.
@@ -130,6 +132,11 @@ class AccountErasureIT extends ApiIntegrationTest {
                 + "values (?, 'note', ?, ?)", userId, title, documentId);
         jdbc.update("insert into mail_preferences (user_id, weekly_digest, signal_mail) "
                 + "values (?, false, true)", userId);
+        // A pending address move is a letter, not a row the erasure can leave behind.
+        jdbc.update("insert into email_change_tokens (user_id, token_hash, new_email, expires_at) "
+                        + "values (?, ?, ?, ?)", userId, "hash-" + userId,
+                "moved-" + userId + "@example.invalid",
+                java.time.OffsetDateTime.now().plusHours(2));
         return documentId;
     }
 

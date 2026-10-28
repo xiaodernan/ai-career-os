@@ -69,6 +69,7 @@ per-user budget on AI endpoints.
 | POST | `/auth/logout` | `{refreshToken}` |
 | POST | `/auth/password/forgot` | `{email}` → always 200 (no account enumeration); the mail carries `<app.web.base-url>/reset-password?token=…` (the dev stack logs it while APP_EMAIL_CONSOLE_LOGBODY is on), good for 30 minutes |
 | POST | `/auth/password/reset` | `{token, newPassword}` → single-use token; revokes every session the user had |
+| POST | `/auth/email-change/confirm` | `{token}` → `{changed: true}`. Public on purpose: the token is the proof, so the new mailbox answers without a session. Moves `users.email`, revokes every refresh token, and mails the outcome to both the old and the new address. Unknown, spent, expired or ownerless links are one **400** `EMAIL_CHANGE_INVALID`; an address another account registered in the meantime is a **409** `EMAIL_ALREADY_REGISTERED` and spends the link |
 
 ### Current user
 
@@ -80,6 +81,8 @@ per-user budget on AI endpoints.
 | GET | `/users/me` | alias of `/me` (binding seam) |
 | PATCH | `/users/me` | same body as `PATCH /me` (`{displayName, headline, location, ...}`) |
 | PATCH | `/users/me/password` | alias of `PATCH /me/password` |
+| POST | `/me/email-change` | `{password, newEmail}` → `{sent: true}`. Re-authenticates with the password (a wrong one is a **401** `INVALID_CREDENTIALS`), refuses the address the account already has (**400** `EMAIL_UNCHANGED`) and one another account owns (**409** `EMAIL_ALREADY_REGISTERED`), then mails the claimed mailbox a link to `<app.web.base-url>/confirm-email?token=…` and the old mailbox a warning naming the requested address. Nothing moves until the link is confirmed, and asking again replaces the earlier link |
+| POST | `/users/me/email-change` | alias of `POST /me/email-change` (`{password, newEmail}`) |
 | POST | `/me/erase` | `{password, confirmEmail}` → `{erased: true}`. Re-authenticates twice — the password, then the account's own email typed back (case and surrounding spaces forgiven) — deletes the file behind every document the account owns, then deletes the account row, which cascades through every user-scoped table. A wrong password is a **401** `INVALID_CREDENTIALS`, an address belonging to another account a **400** `CONFIRMATION_MISMATCH`, and neither touches anything. The access token used to ask still parses (access tokens are stateless) and its next request is a **404** `USER_NOT_FOUND`; every refresh token is gone with its row |
 | POST | `/users/me/erase` | alias of `POST /me/erase` (`{password, confirmEmail}`) |
 | GET | `/me/sessions` | the account's open doors — one row per refresh-token family with its id, the user-agent and address that opened it, when it started, when it last rotated, and when it expires. Rotation stays inside the family, so refreshing never adds a row, and sessions that are revoked or expired are left out because they can no longer refresh |

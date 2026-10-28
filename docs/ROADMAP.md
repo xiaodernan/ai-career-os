@@ -1154,8 +1154,9 @@ The workspace can leave in a file (Epic 13) and the letters can stop (Epic 23), 
 account itself had neither exit. The only way to replace a password was to sign out,
 claim to have forgotten it and wait for a mail; the only way to leave was to walk away
 from the rows. Everything a reader owns has cascaded from `users` since V1 — 36 foreign
-keys, every user-scoped table — yet no route ever deleted a row. This epic gives the
-account the two verbs its owner holds: change the lock, and close the door.
+keys when this epic landed, 37 after the address move — yet no route ever deleted a row.
+This epic gives the account the two verbs its owner holds: change the lock, and close
+the door.
 
 - [x] **24.1** The password can be changed from the session that already knows it.
 
@@ -1189,9 +1190,10 @@ account the two verbs its owner holds: change the lock, and close the door.
   have their own code — **401** `INVALID_CREDENTIALS` and **400**
   `CONFIRMATION_MISMATCH` — and touch nothing.
   Then `AccountErasureService` deletes the object-store file named by every
-  `documents.file_key` the account owns and only after that deletes the `users` row: all
-  36 foreign keys into `users` have carried `ON DELETE CASCADE` since V1, so the
-  workspace — profile, memories, resumes, jobs, applications, interviews, conversations,
+  `documents.file_key` the account owns and only after that deletes the `users` row: every
+  foreign key into `users` — 36 when this epic landed, 37 since the address move — carries
+  `ON DELETE CASCADE`, so the workspace — profile, memories, resumes, jobs, applications,
+  interviews, conversations,
   documents and their chunks, knowledge sources, feeds, notifications, digests, growth
   plans, jobs, usage, tokens and mail preferences — leaves in one statement. Knowledge
   sources elsewhere in the product are retired with their files kept as an audit record;
@@ -1272,6 +1274,69 @@ gives the account the verbs the list implies.
   API/knob/security/env doc gates passing, no frontend or copy-census movement — the
   settings screen that draws this list is blocked on the shared copy file, and the
   routes are live for the client that comes after it.)
+
+## Epic 26 — The Reader Can Move the Address
+
+Epic 24 gave the account a lock and Epic 25 let it see its own doors, but the
+address on the account was still the one typed at registration. A reader whose
+mailbox closes, or who stops trusting an employer's domain, had no way to move it
+short of opening a new account and losing the workspace. This epic moves the
+address only once the new mailbox answers, because a sign-in address is also where
+reset letters land: a move that skipped the confirmation would let anyone holding
+a borrowed tab send the account's recovery mail to an inbox they own.
+
+- [x] **26.1** The account can ask its address to move.
+
+  (V22 adds `email_change_tokens`: the owner, the requested address in `citext`, a
+  unique SHA-256 hash of the token, an expiry, a spend mark, a creation stamp and
+  an index on the owner, with the same `ON DELETE CASCADE` every table pointing at
+  `users` carries. `POST /me/email-change` — and the `/users/me/email-change`
+  alias — costs the password, so a borrowed tab cannot start the move; it refuses
+  the address the account already has (**400** `EMAIL_UNCHANGED`, compared after
+  trimming and case-insensitively because the column is `citext`) and an address
+  another account owns (**409** `EMAIL_ALREADY_REGISTERED`), and asking again
+  replaces the pending link instead of leaving two live. Two letters leave: the
+  confirmation link to the mailbox being claimed, and a warning naming the
+  requested address to the mailbox on the account, so a reader who did not ask
+  learns that someone holds their password. The raw token exists only in the
+  first letter — the row keeps its hash, so a leaked table cannot answer it — and
+  nothing on the user row changes yet.)
+
+- [x] **26.2** The new mailbox answers, and only then does anything move.
+
+  (`POST /auth/email-change/confirm` is public on purpose: possession of the
+  token is the proof, exactly as on the reset route, so the new mailbox answers
+  without a session. It is the only place that writes `users.email`. The token is
+  spent before the address is checked, so a link that lost a race to a
+  registration answers **409** `EMAIL_ALREADY_REGISTERED` and cannot be retried;
+  unknown, spent, expired and ownerless links are one **400**
+  `EMAIL_CHANGE_INVALID`, so the route is no oracle for which links were real. A
+  confirmed move revokes every refresh token — the reset path's answer to a
+  credential change — and mails the outcome to both addresses; the old address no
+  longer signs in, the new one signs in with the unchanged password, and a
+  neighbour account keeps its address and its sessions. The vocabulary grows to
+  86 codes with `EMAIL_UNCHANGED` and `EMAIL_CHANGE_INVALID`, so the census
+  test's frozen list and its prose counts move with it.)
+
+  20 backend tests — 10 for the service (the two letters and the stored hash, a
+  wrong password mailing nothing, the same address refused however it is cased, a
+  neighbour's address refused, asking again replacing the earlier link, the
+  confirmed move with its revocation and both letters, a link nobody issued, a
+  spent or expired one, a link whose account was erased, and an address
+  registered meanwhile burning the link), 9 for the three routes (both signed-in
+  spellings' envelope and principal, body hygiene, the 401/400/409 answers,
+  validation before the service, the public confirmation answering without a
+  session and carrying only the flag, and the unauthenticated refusal) and 1
+  integration test that registers two accounts, refuses a wrong password and a
+  neighbour's address with no letter sent, reads the link out of the captured
+  mail, confirms it against the real schema and watches `users.email` move, the
+  old refresh die, the old address fail to sign in, the new one sign in with the
+  same password, the link refuse a second answer, and the neighbour keep its
+  address and its refresh. The backend unit suite at 765 and the integration suite
+  at 72, the API/knob/security/env doc gates passing, no frontend or copy-census
+  movement — the screen that starts the move is blocked on the shared copy and
+  endpoint files, as the session list was, and the routes plus the public
+  confirmation are live for it.
 
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +

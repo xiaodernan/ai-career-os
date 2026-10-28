@@ -1,5 +1,6 @@
 package com.careeros.user.web;
 
+import com.careeros.auth.dto.EmailChangeRequest;
 import com.careeros.auth.dto.EraseAccountRequest;
 import com.careeros.auth.dto.MeResponse;
 import com.careeros.auth.dto.PasswordChangeRequest;
@@ -7,6 +8,7 @@ import com.careeros.auth.dto.SessionResponse;
 import com.careeros.auth.dto.UpdateMeRequest;
 import com.careeros.auth.service.AccountErasureService;
 import com.careeros.auth.service.AuthService;
+import com.careeros.auth.service.EmailChangeService;
 import com.careeros.auth.service.TokenService;
 import com.careeros.auth.service.UserService;
 import com.careeros.common.AuthUser;
@@ -37,15 +39,17 @@ public class UserController {
     private final AuthService authService;
     private final AccountErasureService erasure;
     private final TokenService tokenService;
+    private final EmailChangeService emailChange;
 
     public UserController(UserService userService, UserProfileService profileService,
                           AuthService authService, AccountErasureService erasure,
-                          TokenService tokenService) {
+                          TokenService tokenService, EmailChangeService emailChange) {
         this.userService = userService;
         this.profileService = profileService;
         this.authService = authService;
         this.erasure = erasure;
         this.tokenService = tokenService;
+        this.emailChange = emailChange;
     }
 
     @GetMapping("/me")
@@ -91,6 +95,13 @@ public class UserController {
     public Map<String, Object> revokeAllSessions(@CurrentUser AuthUser user) {
         tokenService.revokeAllForUser(user.id());
         return Map.of("revoked", true);
+    }
+
+    @PostMapping("/me/email-change")
+    public Map<String, Object> requestEmailChange(@CurrentUser AuthUser user,
+                                                  @RequestBody @Valid EmailChangeRequest request) {
+        emailChange.request(user.id(), request);
+        return Map.of("sent", true);
     }
 
     @PostMapping("/me/erase")

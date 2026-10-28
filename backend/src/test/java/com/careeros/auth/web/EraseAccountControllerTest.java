@@ -63,9 +63,11 @@ class EraseAccountControllerTest {
         AuthService authService = mock(AuthService.class);
         com.careeros.auth.service.TokenService tokenService = mock(com.careeros.auth.service.TokenService.class);
         mvc = MockMvcBuilders.standaloneSetup(
-                        new MeController(mock(UserService.class), authService, erasure, tokenService),
+                        new MeController(mock(UserService.class), authService, erasure, tokenService,
+                                mock(com.careeros.auth.service.EmailChangeService.class)),
                         new UserController(mock(UserService.class), mock(UserProfileService.class),
-                                authService, erasure, tokenService))
+                                authService, erasure, tokenService,
+                                mock(com.careeros.auth.service.EmailChangeService.class)))
                 .setControllerAdvice(new EnvelopeAdvice(), new GlobalExceptionHandler())
                 .setCustomArgumentResolvers(new CurrentUserArgumentResolver())
                 .build();

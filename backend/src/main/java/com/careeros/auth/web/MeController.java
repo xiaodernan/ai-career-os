@@ -1,5 +1,6 @@
 package com.careeros.auth.web;
 
+import com.careeros.auth.dto.EmailChangeRequest;
 import com.careeros.auth.dto.EraseAccountRequest;
 import com.careeros.auth.dto.MeResponse;
 import com.careeros.auth.dto.PasswordChangeRequest;
@@ -7,6 +8,7 @@ import com.careeros.auth.dto.SessionResponse;
 import com.careeros.auth.dto.UpdateMeRequest;
 import com.careeros.auth.service.AccountErasureService;
 import com.careeros.auth.service.AuthService;
+import com.careeros.auth.service.EmailChangeService;
 import com.careeros.auth.service.TokenService;
 import com.careeros.auth.service.UserService;
 import com.careeros.common.AuthUser;
@@ -32,13 +34,16 @@ public class MeController {
     private final AuthService authService;
     private final AccountErasureService erasure;
     private final TokenService tokenService;
+    private final EmailChangeService emailChange;
 
     public MeController(UserService userService, AuthService authService,
-                        AccountErasureService erasure, TokenService tokenService) {
+                        AccountErasureService erasure, TokenService tokenService,
+                        EmailChangeService emailChange) {
         this.userService = userService;
         this.authService = authService;
         this.erasure = erasure;
         this.tokenService = tokenService;
+        this.emailChange = emailChange;
     }
 
     @GetMapping
@@ -73,6 +78,13 @@ public class MeController {
     public Map<String, Object> revokeAllSessions(@CurrentUser AuthUser user) {
         tokenService.revokeAllForUser(user.id());
         return Map.of("revoked", true);
+    }
+
+    @PostMapping("/email-change")
+    public Map<String, Object> requestEmailChange(@CurrentUser AuthUser user,
+                                                  @RequestBody @Valid EmailChangeRequest request) {
+        emailChange.request(user.id(), request);
+        return Map.of("sent", true);
     }
 
     @PostMapping("/erase")

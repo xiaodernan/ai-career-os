@@ -94,6 +94,10 @@ public enum ApiErrorCode {
     BUNDLE_NO_SECTION(HttpStatus.BAD_REQUEST),
     BUNDLE_NOT_PLANNABLE(HttpStatus.BAD_REQUEST),
     EMAIL_ALREADY_REGISTERED(HttpStatus.CONFLICT),
+    /** The requested address is the account's current one, so the move would buy nothing. */
+    EMAIL_UNCHANGED(HttpStatus.BAD_REQUEST),
+    /** The email-change link is unknown, spent or past its window; nothing moved. */
+    EMAIL_CHANGE_INVALID(HttpStatus.BAD_REQUEST),
     RATE_LIMITED(HttpStatus.TOO_MANY_REQUESTS),
     AI_SERVICE_BAD_REQUEST(HttpStatus.BAD_REQUEST),
     AI_SERVICE_CONFLICT(HttpStatus.CONFLICT),

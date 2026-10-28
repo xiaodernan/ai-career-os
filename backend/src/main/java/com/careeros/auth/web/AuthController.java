@@ -2,6 +2,7 @@ package com.careeros.auth.web;
 
 import com.careeros.auth.dto.AuthResponse;
 import com.careeros.auth.dto.AuthUserResponse;
+import com.careeros.auth.dto.ConfirmEmailChangeRequest;
 import com.careeros.auth.dto.ForgotPasswordRequest;
 import com.careeros.auth.dto.LoginRequest;
 import com.careeros.auth.dto.RefreshTokenRequest;
@@ -10,6 +11,7 @@ import com.careeros.auth.dto.ResetPasswordRequest;
 import com.careeros.auth.dto.TokenPairResponse;
 import com.careeros.auth.entity.User;
 import com.careeros.auth.service.AuthService;
+import com.careeros.auth.service.EmailChangeService;
 import com.careeros.auth.service.TokenService;
 import com.careeros.common.ClientInfo;
 import jakarta.servlet.http.HttpServletRequest;
@@ -28,10 +30,13 @@ public class AuthController {
 
     private final AuthService authService;
     private final TokenService tokenService;
+    private final EmailChangeService emailChange;
 
-    public AuthController(AuthService authService, TokenService tokenService) {
+    public AuthController(AuthService authService, TokenService tokenService,
+                          EmailChangeService emailChange) {
         this.authService = authService;
         this.tokenService = tokenService;
+        this.emailChange = emailChange;
     }
 
     @PostMapping("/register")
@@ -70,5 +75,12 @@ public class AuthController {
     public Map<String, Object> reset(@RequestBody @Valid ResetPasswordRequest request) {
         authService.resetPassword(request);
         return Map.of("reset", true);
+    }
+
+    /** Answered by the new mailbox; the token is the proof, so this route takes no session. */
+    @PostMapping("/email-change/confirm")
+    public Map<String, Object> confirmEmailChange(@RequestBody @Valid ConfirmEmailChangeRequest request) {
+        emailChange.confirm(request.token());
+        return Map.of("changed", true);
     }
 }

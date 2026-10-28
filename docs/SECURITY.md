@@ -32,6 +32,16 @@ reachable from a browser.
     is the fastest account-holder response to a borrowed laptop: refresh stops
     immediately, and the thief's access token dies at its 15-minute horizon — the
     same bound every access token has, because tokens are stateless.
+  - Moving the sign-in address (`POST /me/email-change`) costs the password and
+    the new mailbox: the address on the account and the address being claimed
+    each receive a letter, and nothing moves until the claimed mailbox follows
+    its link (`POST /auth/email-change/confirm`, public because possession of the
+    token is the proof, not a session). The row keeps only a SHA-256 hash of that
+    token and the link lives a two-hour window, so a leaked database cannot
+    answer it. A confirmed move revokes every refresh token, like a password
+    change, and mails both addresses the outcome; a link that is unknown, spent,
+    expired or ownerless is one `EMAIL_CHANGE_INVALID`, so the public route is
+    no existence oracle.
 - Public (unauthenticated) routes: `/api/v1/auth/**`, `/api/v1/health`,
   OpenAPI/Swagger (`/api-docs/**`, `/v3/api-docs/**`, `/swagger-ui/**`,
   `/swagger-ui.html` — `application.yml` serves them at `/api-docs` and

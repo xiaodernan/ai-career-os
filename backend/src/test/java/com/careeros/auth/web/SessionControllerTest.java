@@ -16,6 +16,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.careeros.auth.dto.SessionResponse;
 import com.careeros.auth.service.AccountErasureService;
 import com.careeros.auth.service.AuthService;
+import com.careeros.auth.service.EmailChangeService;
 import com.careeros.auth.service.TokenService;
 import com.careeros.auth.service.UserService;
 import com.careeros.common.ApiErrorCode;
@@ -57,9 +58,11 @@ class SessionControllerTest {
         tokenService = mock(TokenService.class);
         mvc = MockMvcBuilders.standaloneSetup(
                         new MeController(mock(UserService.class), mock(AuthService.class),
-                                mock(AccountErasureService.class), tokenService),
+                                mock(AccountErasureService.class), tokenService,
+                                mock(EmailChangeService.class)),
                         new UserController(mock(UserService.class), mock(UserProfileService.class),
-                                mock(AuthService.class), mock(AccountErasureService.class), tokenService))
+                                mock(AuthService.class), mock(AccountErasureService.class), tokenService,
+                                mock(EmailChangeService.class)))
                 .setControllerAdvice(new EnvelopeAdvice(), new GlobalExceptionHandler())
                 .setCustomArgumentResolvers(new CurrentUserArgumentResolver())
                 .build();
