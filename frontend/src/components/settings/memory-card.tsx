@@ -22,6 +22,7 @@ import {
 import { useMemories } from "@/lib/hooks/resources";
 import { useDeleteMemory, useUpdateMemory } from "@/lib/hooks/actions";
 import { relativeTime, weightLabel } from "@/lib/format";
+import { MEMORY_WEIGHTS, memoryPatch, shownWeight } from "@/lib/memory-edit";
 
 /**
  * t("memory.whatAgentsRemember") about the user, and the one surface that can correct it
@@ -37,9 +38,11 @@ import { relativeTime, weightLabel } from "@/lib/format";
 
 const LENGTH_LIMIT = 4000;
 
-/** The three weights a user can set. The prompt reader sorts by `importance`, so "low"
- *  keeps a fact without being told it first every time. */
-const WEIGHTS = [
+/** The three weights a user can set, labelled. The prompt reader sorts by `importance`, so
+ *  "low" keeps a fact without being told it first every time. The values are the ladder
+ *  `lib/memory-edit.ts` maps a stored weight onto -- a test holds the two lists together --
+ *  and the labels are what the select shows. */
+export const WEIGHTS = [
   { value: "0.3", label: "Low" },
   { value: "0.6", label: "Normal" },
   { value: "0.9", label: "High" },
@@ -187,15 +190,11 @@ function MemoryEditor({
 }) {
   const update = useUpdateMemory();
   const { t } = useLocale();
-  const [weight, setWeight] = React.useState(weightLabel(importance).toLowerCase());
+  // null until the reader moves the select: an untouched weight must not be sent, or a
+  // text-only edit would rewrite a stored 0.7 to the "Normal" band's canonical 0.6.
+  const [weight, setWeight] = React.useState<string | null>(null);
 
-  const save = () => {
-    const value = WEIGHTS.find((w) => w.label.toLowerCase() === weight)?.value;
-    update.mutate(
-      { id, content: draft, importance: value ? Number(value) : undefined },
-      { onSuccess: onSaved }
-    );
-  };
+  const save = () => update.mutate(memoryPatch(id, draft, weight), { onSuccess: onSaved });
 
   return (
     <div className="space-y-3">
@@ -215,13 +214,13 @@ function MemoryEditor({
       </div>
       <div className="space-y-1.5">
         <Label>Weight</Label>
-        <Select value={weight} onValueChange={setWeight}>
+        <Select value={shownWeight(importance, weight)} onValueChange={setWeight}>
           <SelectTrigger className="w-40">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             {WEIGHTS.map((w) => (
-              <SelectItem key={w.value} value={w.label.toLowerCase()}>
+              <SelectItem key={w.value} value={w.value}>
                 {w.label}
               </SelectItem>
             ))}
