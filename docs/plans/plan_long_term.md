@@ -9,15 +9,16 @@
 
 ## 当前状态 (2026-10-28)
 
-- **前端**: 702 个 vitest 通过；`tsc --noEmit` 干净。
-- **后端**: 486 个单元测试通过 (`mvn test -Dtest='*Test'`)；`*IT` 需 Docker。
+- **前端**: 712 个 vitest 通过（65 个文件）；`tsc --noEmit` 干净。
+- **后端**: 589 个单元测试通过 (`mvn test -Dtest='*Test'`)；`*IT` 需 Docker。
 - **ai-service**: 1833 passed, 1 skipped (offline: mock/hash)。
 - **E2E**: 24/24 golden journey（最近一次真实栈验证）。
-- **分支**: main 与 origin 同步；最近提交 `0345a5f`
-  (`feat(i18n): the copy census reads zero and its list is gone`)。
+- **分支**: main 与 origin 同步；最近提交 `0a61d40`
+  (`feat(saved-searches): the board's question can be kept under a name`)。
 - **已完成**: Epic 0–18 全部勾选；13.2 的不变行跳过、导出序列化统一、
   i18n 表按段落重组并删除死代码；19.1 保存的搜索（后端 CRUD + `/jobs`
-  侧栏面板）。
+  侧栏面板）；19.2 定时摄取（`/ingestion` feeds/runs、03:20 调度、
+  抓取安全边界、导入页订阅面板）。
 
 ## 主线队列（按顺序执行）
 
@@ -43,8 +44,14 @@
    服务/控制器，11 个后端测试），criteria 以看板自己的筛选名存成规范 JSONB；
    前端 `lib/saved-search.ts` 负责 URL 状态 ↔ criteria 的双向翻译，`/jobs`
    侧栏的 `SavedSearchPanel` 保存/应用/删除（删除走确认对话框）。
-   接下来：19.2 定时摄取（复用 plan-ingest）→ 19.3 通知中心 →
-   19.4 每周摘要投递。这是"OS 替你先做"的第一层。
+   ~~19.2 定时摄取~~ 已完成：`V12` + `IngestionFeedController`（`/ingestion`
+   7 条路由，feeds 每用户 ≤20），`IngestionScheduler` 按 03:20 扫启用订阅，
+   `ScheduledIngestionService` 复用 14.3 的确定性引擎并把计划存成 run
+   （只记录、不落库改写职位板）；`FeedUrls`/`HttpFeedFetcher` 拒绝私网地址
+   并逐跳复核重定向、封顶 5 MB；失败拉取是 `200` 的 failed run 及其原因。
+   导入页顶部新增订阅面板（增删改开关、立即运行、运行历史、展开计划）。
+   接下来：19.3 通知中心 → 19.4 每周摘要投递 → 19.5 单版本打印视图。
+   这是"OS 替你先做"的第一层。
 
 5. **Epic 20 — 单版本打印**
    定制简历的独立打印视图（复用 export_render 的排版与语言机制），

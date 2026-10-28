@@ -1,11 +1,15 @@
 "use client";
 
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { api } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
+import { normalizeIngestionRunDetail } from "@/lib/api/normalize";
 import { fail } from "@/lib/hooks/failure";
+import { translate } from "@/lib/i18n/locale-context";
 import type {
   IngestPlan,
+  IngestionRunDetail,
   ParsedFeed,
   PostingCollection,
   FreshnessSweep,
@@ -104,5 +108,87 @@ export function useIngestPlan() {
         planBody(input.feed, input.source, input.existing, input.maxAgeDays, input.staleSeenDays)
       )) as IngestPlan,
     onError: fail("Couldn't build the ingestion plan."),
+  });
+}
+
+/* ------------------------------------------------------------------ */
+/* Scheduled ingestion (19.2)                                          */
+/* ------------------------------------------------------------------ */
+
+/** A feed's three fields, built in one place so the wire shape is written down once. */
+function feedBody(
+  name: string,
+  url: string,
+  source?: string
+): { name: string; url: string; source?: string } {
+  return { name, url, source };
+}
+
+/** 19.2 — subscribe to a feed the nightly sweep will fetch. */
+export function useCreateIngestionFeed() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { name: string; url: string; source?: string }) =>
+      api.create<unknown>(
+        endpoints.ingestionFeeds,
+        feedBody(input.name, input.url, input.source)
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["ingestion", "feeds"] });
+      toast.success(translate("ingestion.feedAdded"));
+    },
+    onError: fail(translate("ingestion.feedAddFailed") ?? "Couldn't add that feed."),
+  });
+}
+
+/** 19.2 — the one switch: whether the sweep includes this feed. */
+export function useToggleIngestionFeed() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { id: string; enabled: boolean }) =>
+      api.update<unknown>(endpoints.ingestionFeed(input.id), { enabled: input.enabled }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["ingestion", "feeds"] });
+    },
+    onError: fail(translate("ingestion.feedUpdateFailed") ?? "Couldn't update that feed."),
+  });
+}
+
+/** 19.2 — forget a feed and the runs it filed. */
+export function useDeleteIngestionFeed() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.remove(endpoints.ingestionFeed(id)),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["ingestion", "feeds"] });
+      qc.invalidateQueries({ queryKey: ["ingestion", "runs"] });
+      toast.success(translate("ingestion.feedRemoved"));
+    },
+    onError: fail(translate("ingestion.feedRemoveFailed") ?? "Couldn't remove that feed."),
+  });
+}
+
+/**
+ * 19.2 — pull one feed now. The answer is the run itself, and a failed pull is
+ * still a record: the toast names the sentence the server wrote down.
+ */
+export function useRunIngestionFeed() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string): Promise<IngestionRunDetail> =>
+      normalizeIngestionRunDetail(
+        await api.request<unknown>(endpoints.ingestionFeedRun(id), { method: "POST" })
+      ),
+    onSuccess: (detail) => {
+      qc.invalidateQueries({ queryKey: ["ingestion", "feeds"] });
+      qc.invalidateQueries({ queryKey: ["ingestion", "runs"] });
+      qc.invalidateQueries({ queryKey: ["ingestion", "run", detail.run.id] });
+      if (detail.run.status === "failed") {
+        toast.error(translate("ingestion.runFailedToast", { reason: detail.run.error ?? "" }));
+      } else {
+        toast.success(translate("ingestion.runRecordedToast"));
+      }
+    },
+    onError: fail(translate("ingestion.runNowFailed") ?? "Couldn't pull that feed."),
   });
 }

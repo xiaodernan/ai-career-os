@@ -173,6 +173,27 @@ from the network here, and no model runs.
 | POST | `/jobs/ingest/freshness-sweep` | `{postings, maxAgeDays?, staleSeenDays?}` → `{fresh[], stale[], expired[], undated[], counts}`. A posting with no usable date is reported under `undated` rather than silently bucketed as fresh |
 | POST | `/jobs/ingest/plan` | `{feed, source?, existing?, maxAgeDays?, staleSeenDays?}` → `{create[], update[], close[], duplicates[], counts}`. One plan for a sweep: `close` is proposed only for a posting that is expired *and* absent from this batch, so a still-live posting is never closed for not reappearing today |
 
+### Scheduled ingestion (`/ingestion`)
+
+The 19.2 layer. A feed is a URL the caller subscribes to; the backend's clock
+fetches it, hands the body to the same plan engine 14.3 uses, and files the plan
+as a run. Nothing is applied to the board here — a plan is the record, and a
+night can never rewrite the corpus as a side effect of reading a feed. A failed
+pull is a run with `status: "failed"` and the reason, not a 5xx: the feed being
+down is the outcome the caller asked to see. The URL is checked at fetch time
+against private, loopback, link-local and carrier-grade addresses, and again on
+every redirect hop, so a feed cannot make the server read its own network.
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/ingestion/feeds` | this caller's feeds, newest first, each with its last run (or null) |
+| POST | `/ingestion/feeds` | `{name, url, source}` → the feed (201). `url` must be absolute http(s) and is re-checked at fetch time; `source` defaults to `feed` and only labels the postings; at most 20 feeds per user |
+| PATCH | `/ingestion/feeds/{id}` | `{enabled}` — the one switch: whether the night's sweep includes this feed |
+| DELETE | `/ingestion/feeds/{id}` | forgets the feed and the runs it filed; 204 |
+| POST | `/ingestion/feeds/{id}/run` | pulls one feed now and answers the run plus the engine's plan — create / update / close / duplicates and their counts. A failed pull answers 200 with `status: "failed"` and `error` |
+| GET | `/ingestion/runs` | the caller's runs, newest first; the `limit` parameter defaults to 20 and is clamped to 50 |
+| GET | `/ingestion/runs/{id}` | one run plus its stored plan |
+
 ### Growth engines (`/growth`)
 
 The granular 10.x engines, each asked on its own. The 10.2 aggregate

@@ -903,6 +903,46 @@ export interface IngestPlan {
   };
 }
 
+/** What one run counted, read off the engine's own answer (roadmap 19.2). */
+export interface IngestCounts {
+  incoming?: number;
+  create?: number;
+  update?: number;
+  close?: number;
+  duplicates?: number;
+  [key: string]: number | undefined;
+}
+
+/** One pull of one feed — the record that makes a failed night visible. */
+export interface IngestionRun {
+  id: string;
+  feedId: string;
+  feedName: string;
+  /** "completed" or "failed"; the backend's own vocabulary. */
+  status: string;
+  error?: string | null;
+  counts?: IngestCounts | null;
+  startedAt?: string;
+  finishedAt?: string;
+}
+
+/** A subscribed source the nightly sweep fetches (roadmap 19.2). */
+export interface IngestionFeed {
+  id: string;
+  name: string;
+  url: string;
+  source: string;
+  enabled: boolean;
+  createdAt?: string;
+  lastRun?: IngestionRun | null;
+}
+
+/** One run plus the plan it filed; the plan is the engine's, shown rather than applied. */
+export interface IngestionRunDetail {
+  run: IngestionRun;
+  plan?: Record<string, unknown> | null;
+}
+
 /* ------------------------------------------------------------------ */
 /* Granular growth engines (10.1-10.13)                               */
 /* ------------------------------------------------------------------ */

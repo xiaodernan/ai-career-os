@@ -141,6 +141,13 @@ export const endpoints = {
   jobIngestFreshness: "/jobs/ingest/freshness-sweep",
   jobIngestPlan: "/jobs/ingest/plan",
 
+  /* ---------------- Scheduled ingestion (19.2) -------------------------- */
+  ingestionFeeds: "/ingestion/feeds",
+  ingestionFeed: (id: string) => `/ingestion/feeds/${seg(id)}`,
+  ingestionFeedRun: (id: string) => `/ingestion/feeds/${seg(id)}/run`,
+  ingestionRuns: "/ingestion/runs",
+  ingestionRun: (id: string) => `/ingestion/runs/${seg(id)}`,
+
   /** SSE stream for any async AI task (match, tailor, copilot turn, ingestion…) */
   aiStream: (taskId: string) => `/ai/stream/${seg(taskId)}`,
 } as const;

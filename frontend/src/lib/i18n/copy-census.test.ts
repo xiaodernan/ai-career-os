@@ -55,8 +55,10 @@ describe("the browser's copy", () => {
     // 130 with the language switch, which the two public surfaces need, and
     // 131 with `components/root-document.tsx`, the shell the layout renders so
     // `<html lang>` and the first paint carry the reader's language, and 132
-    // with the saved-search panel beside the board's filters.
-    expect(browserSources().length).toBe(132);
+    // with the saved-search panel beside the board's filters, and 133 with
+    // `components/ingestion/scheduled-feeds-panel.tsx`, the browser's half of
+    // the nightly sweep (19.2).
+    expect(browserSources().length).toBe(133);
   });
 
   it("finds a sentence, however long it is", () => {

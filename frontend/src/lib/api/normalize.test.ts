@@ -18,6 +18,9 @@ import {
   normalizeInterviewReport,
   normalizeJob,
   normalizeJdParsed,
+  normalizeIngestionFeed,
+  normalizeIngestionRun,
+  normalizeIngestionRunDetail,
   normalizeMemory,
   normalizeSuggestions,
   missingSkillGaps,
@@ -395,6 +398,72 @@ describe("normalizeSavedSearch", () => {
     const bare = normalizeSavedSearch({});
     expect(bare.name).toBe("");
     expect(bare.criteria).toEqual({});
+  });
+});
+
+describe("normalizeIngestionRun / Feed / RunDetail (19.2)", () => {
+  it("reads a run's counts as numbers, and an empty map as no counts at all", () => {
+    const run = normalizeIngestionRun({
+      id: "run-1",
+      feedId: "feed-1",
+      feedName: "HN hiring",
+      status: "completed",
+      counts: { incoming: 12, create: 9, update: 2, close: 1, duplicates: 3 },
+      startedAt: "2026-10-27T03:20:00Z",
+      finishedAt: "2026-10-27T03:20:07Z",
+    });
+    expect(run.id).toBe("run-1");
+    expect(run.counts).toEqual({ incoming: 12, create: 9, update: 2, close: 1, duplicates: 3 });
+    expect(run.startedAt).toBe("2026-10-27T03:20:00Z");
+    // An empty map is the server saying nothing ran, not "every count is zero":
+    // the panel drops the badges rather than print a row of zeros.
+    expect(normalizeIngestionRun({ id: "run-2", status: "failed", counts: {} }).counts).toBeNull();
+    expect(normalizeIngestionRun({ id: "run-3", counts: null }).counts).toBeNull();
+  });
+
+  it("tolerates a run serialized in snake_case", () => {
+    const run = normalizeIngestionRun({
+      id: "run-4",
+      feed_id: "feed-2",
+      feed_name: "Board",
+      status: "failed",
+      error: "Feed answered HTTP 503",
+      started_at: "2026-10-26T03:20:00Z",
+      finished_at: "2026-10-26T03:20:01Z",
+    });
+    expect(run.feedId).toBe("feed-2");
+    expect(run.feedName).toBe("Board");
+    expect(run.error).toBe("Feed answered HTTP 503");
+    expect(run.startedAt).toBe("2026-10-26T03:20:00Z");
+    expect(run.finishedAt).toBe("2026-10-26T03:20:01Z");
+  });
+
+  it("defaults a feed's source and switch, and normalizes the run it carries", () => {
+    const feed = normalizeIngestionFeed({
+      id: "feed-1",
+      name: "HN hiring",
+      url: "https://hn.example/rss",
+      last_run: { id: "run-5", status: "completed", counts: { incoming: 4, create: 4 } },
+    });
+    expect(feed.source).toBe("feed");
+    expect(feed.enabled).toBe(true);
+    expect(feed.lastRun?.id).toBe("run-5");
+    expect(feed.lastRun?.counts?.create).toBe(4);
+    // "never run" is null, and the panel says so in words rather than showing a date.
+    expect(normalizeIngestionFeed({ id: "feed-2" }).lastRun).toBeNull();
+    expect(normalizeIngestionFeed({ id: "feed-3", source: "rss", enabled: false }).enabled).toBe(false);
+  });
+
+  it("keeps the plan a run recorded, and survives a detail without one", () => {
+    const detail = normalizeIngestionRunDetail({
+      run: { id: "run-6", status: "completed", counts: { create: 1 } },
+      plan: { create: [{ title: "Backend engineer" }] },
+    });
+    expect(detail.run.id).toBe("run-6");
+    expect(detail.plan).toEqual({ create: [{ title: "Backend engineer" }] });
+    const bare = normalizeIngestionRunDetail({});
+    expect(bare.plan).toBeNull();
+    expect(bare.run.status).toBe("");
   });
 });
 

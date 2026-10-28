@@ -17,6 +17,9 @@ import type {
   Evidence,
   FollowUpItem,
   InterviewDimension,
+  IngestionFeed,
+  IngestionRun,
+  IngestionRunDetail,
   Job,
   JobMatch,
   MatchDimension,
@@ -469,6 +472,56 @@ export function normalizeSavedSearch(raw: unknown): SavedSearch {
       skills: skills.length > 0 ? skills : undefined,
     },
     createdAt: str(raw, "createdAt", "created_at"),
+  };
+}
+
+/**
+ * One pull of one feed (roadmap 19.2). The counts are read off the engine's own
+ * `counts` map rather than re-counted here, so the run list and the stored plan
+ * cannot disagree; a run with no counts answers null rather than zeros.
+ */
+export function normalizeIngestionRun(raw: unknown): IngestionRun {
+  const counts = rec(pick(raw, "counts"));
+  const hasCounts = counts !== null && Object.keys(counts).length > 0;
+  return {
+    id: idOf(raw),
+    feedId: str(raw, "feedId", "feed_id") ?? "",
+    feedName: str(raw, "feedName", "feed_name") ?? "",
+    status: str(raw, "status") ?? "",
+    error: str(raw, "error") ?? null,
+    counts: hasCounts
+      ? {
+          incoming: num(counts, "incoming"),
+          create: num(counts, "create"),
+          update: num(counts, "update"),
+          close: num(counts, "close"),
+          duplicates: num(counts, "duplicates"),
+        }
+      : null,
+    startedAt: str(raw, "startedAt", "started_at"),
+    finishedAt: str(raw, "finishedAt", "finished_at"),
+  };
+}
+
+/** A subscribed source, with the last thing its sweep did (roadmap 19.2). */
+export function normalizeIngestionFeed(raw: unknown): IngestionFeed {
+  const last = pick(raw, "lastRun", "last_run");
+  return {
+    id: idOf(raw),
+    name: str(raw, "name") ?? "",
+    url: str(raw, "url") ?? "",
+    source: str(raw, "source") ?? "feed",
+    enabled: bool(raw, "enabled") ?? true,
+    createdAt: str(raw, "createdAt", "created_at"),
+    lastRun: last ? normalizeIngestionRun(last) : null,
+  };
+}
+
+/** A run plus its plan; the plan is the engine's shape and is shown, not parsed. */
+export function normalizeIngestionRunDetail(raw: unknown): IngestionRunDetail {
+  return {
+    run: normalizeIngestionRun(pick(raw, "run")),
+    plan: rec(pick(raw, "plan")),
   };
 }
 

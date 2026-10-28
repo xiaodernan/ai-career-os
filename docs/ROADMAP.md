@@ -619,11 +619,23 @@ that; each ships wired to the real API and UI, like every epic before it.
   beside the filters saves the live search under a suggested name, applies one
   back in a click through the URL's `replaceAll`, and forgets one behind a
   confirmation. 702 vitest, 29 backend tests green.)
-- [ ] **19.2** Scheduled ingestion: a nightly per-source pull that reuses
+- [x] **19.2** Scheduled ingestion: a nightly per-source pull that reuses
   `plan-ingest` (14.3) and writes the create/update/close plan, so a feed is
   swept without the user pasting it. The scheduler is the backend's, the plan
   is the engine's, and a failed pull is a recorded run rather than a silent
   night.
+  (`V12__ingestion_feeds.sql` + `IngestionFeedController`: feeds and runs under
+  `/api/v1/ingestion`, seven routes scoped to the caller, at most 20 feeds each.
+  `IngestionScheduler` runs at 03:20 (`careeros.ingestion.cron`), and
+  `ScheduledIngestionService` hands every enabled feed to the same
+  deterministic engine 14.3 uses, storing the plan as a run — recorded, never
+  applied, so a night can never rewrite the board. `FeedUrls` refuses
+  non-http(s) shapes and private/loopback/link-local literals, and
+  `HttpFeedFetcher` re-checks every redirect hop and caps the body. A failed
+  pull is a `200` run with `status:"failed"` and the reason the server wrote
+  down. The ingestion page now opens with the feeds panel: add/toggle/delete a
+  feed, pull one now, read the night's runs, open a run's plan. 56 backend
+  tests for the slice and its two gates, 712 vitest, census 133 files.)
 - [ ] **19.3** Notification center: an in-app inbox for the events the product
   already computes — a saved search's new high-match jobs, follow-ups due
   (11.3), stalled applications (15.3), a finished nightly, an eval regression

@@ -1112,16 +1112,17 @@ describe("endpoints ↔ backend route parity", () => {
     expect(new Set(handlers.map((h) => `${h.verb} ${h.pattern}`)).size).toBe(handlers.length);
     expect(handlers.flatMap((h) => h.unparsed)).toEqual([]);
     const bound = handlers.flatMap((h) => h.params);
-    expect(bound.length).toBe(39);
-    // 39 parameters in 19 distinct names, measured: the reader's whole answer rather than a spot
+    expect(bound.length).toBe(40);
+    // 40 parameters in 20 distinct names, measured: the reader's whole answer rather than a spot
     // check, so a signature shape it stops understanding shrinks this set instead of passing quiet
-    // (#225 retired `limit`: `/activity/runs` bound the only one, and now binds page/size like
-    // every other list route)
+    // (#225 retired `limit` from `/activity/runs`, which now pages like every other list route;
+    // 19.2 brought the name back for `GET /ingestion/runs`, where the run history asks for its
+    // newest N)
     expect(new Set(bound.map((p) => p.name))).toEqual(
       new Set([
-        "agent", "company", "documentId", "file", "kind", "kinds", "locale", "location",
-        "maxSalary", "minSalary", "page", "q", "remote", "resumeId", "size", "skills", "sort",
-        "status", "title",
+        "agent", "company", "documentId", "file", "kind", "kinds", "limit", "locale",
+        "location", "maxSalary", "minSalary", "page", "q", "remote", "resumeId", "size",
+        "skills", "sort", "status", "title",
       ])
     );
     // six of them spell the name Spring matches on inside the annotation, so the reader's attribute

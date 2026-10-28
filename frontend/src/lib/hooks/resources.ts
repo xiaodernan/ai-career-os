@@ -8,6 +8,9 @@ import {
   normalizeApplication,
   normalizeApplicationEvent,
   normalizeDashboard,
+  normalizeIngestionFeed,
+  normalizeIngestionRun,
+  normalizeIngestionRunDetail,
   normalizeJob,
   normalizeMatch,
   normalizeMemory,
@@ -35,6 +38,9 @@ import type {
   CompanySource,
   Conversation,
   InterviewSession,
+  IngestionFeed,
+  IngestionRun,
+  IngestionRunDetail,
   Job,
   KnowledgeNote,
   KnowledgeSource,
@@ -237,6 +243,38 @@ export function useSavedSearches() {
     queryKey: ["saved-searches"],
     queryFn: async (): Promise<SavedSearch[]> =>
       listOf<unknown>(await api.get<unknown>(endpoints.savedSearches)).map(normalizeSavedSearch),
+  });
+}
+
+/* ---------------------------- scheduled ingestion -------------------------- */
+
+/** The caller's subscribed feeds, newest first, each with its last run (roadmap 19.2). */
+export function useIngestionFeeds() {
+  return useQuery({
+    queryKey: ["ingestion", "feeds"],
+    queryFn: async (): Promise<IngestionFeed[]> =>
+      listOf<unknown>(await api.get<unknown>(endpoints.ingestionFeeds)).map(normalizeIngestionFeed),
+  });
+}
+
+/** What the sweep did with those feeds, newest first. */
+export function useIngestionRuns(limit = 20) {
+  return useQuery({
+    queryKey: ["ingestion", "runs", limit],
+    queryFn: async (): Promise<IngestionRun[]> =>
+      listOf<unknown>(await api.get<unknown>(endpoints.ingestionRuns, { limit })).map(
+        normalizeIngestionRun
+      ),
+  });
+}
+
+/** One run's stored plan — fetched only when the reader opens the row. */
+export function useIngestionRunDetail(id: string | null) {
+  return useQuery({
+    queryKey: ["ingestion", "run", id],
+    enabled: id !== null,
+    queryFn: async (): Promise<IngestionRunDetail> =>
+      normalizeIngestionRunDetail(await api.get<unknown>(endpoints.ingestionRun(id ?? ""))),
   });
 }
 

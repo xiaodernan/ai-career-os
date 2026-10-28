@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useDedupeJobs, useFreshnessSweep, useIngestPlan, useParseFeed } from "@/lib/hooks/ingestion";
 import { useLocale } from "@/lib/i18n/locale-context";
+import { ScheduledFeedsPanel } from "@/components/ingestion/scheduled-feeds-panel";
 import type { RawPosting } from "@/lib/api/types";
 
 /**
@@ -42,22 +43,25 @@ export default function IngestionPage() {
         onSuccess: (out) => {
           const rows = out.postings ?? [];
           setPostings(rows);
-          toast.success(`Parsed ${out.count ?? rows.length} posting(s).`);
+          toast.success(t("ingestion.parsedToast", { count: out.count ?? rows.length }));
         },
       }
     );
-  }, [feed, parseFeed]);
+  }, [feed, parseFeed, t]);
 
   const runDedupe = React.useCallback(() => {
     if (!postings.length) return;
     dedupe.mutate(postings, {
       onSuccess: (out) => {
         toast.success(
-          `${out.uniqueCount ?? 0} unique, ${out.duplicateCount ?? 0} duplicate(s).`
+          t("ingestion.dedupedToast", {
+            unique: out.uniqueCount ?? 0,
+            duplicate: out.duplicateCount ?? 0,
+          })
         );
       },
     });
-  }, [postings, dedupe]);
+  }, [postings, dedupe, t]);
 
   const runSweep = React.useCallback(() => {
     if (!postings.length) return;
@@ -65,7 +69,14 @@ export default function IngestionPage() {
       onSuccess: (out) => {
         const c = out.counts;
         toast.success(
-          c ? `${c.fresh} fresh, ${c.stale} stale, ${c.expired} expired, ${c.undated} undated.` : t("ingestion.sweepDone")
+          c
+            ? t("ingestion.sweepSummary", {
+                fresh: c.fresh,
+                stale: c.stale,
+                expired: c.expired,
+                undated: c.undated,
+              })
+            : t("ingestion.sweepDone")
         );
       },
     });
@@ -77,7 +88,13 @@ export default function IngestionPage() {
       onSuccess: (out) => {
         const c = out.counts;
         toast.success(
-          c ? `Plan: ${c.create} to create, ${c.update} to update, ${c.close} to close.` : t("ingestion.planReady")
+          c
+            ? t("ingestion.planSummary", {
+                create: c.create,
+                update: c.update,
+                close: c.close,
+              })
+            : t("ingestion.planReady")
         );
       },
     });
@@ -90,14 +107,13 @@ export default function IngestionPage() {
         description={t("ingestion.sweepDescription")}
       />
 
+      <ScheduledFeedsPanel />
+
       {/* Feed */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base">{t("ingestion.sourceFeed")}</CardTitle>
-          <CardDescription>
-            RSS 2.0 / Atom XML, or a board-API JSON payload. Nothing is fetched
-            from the network here — you paste what the source gave you.
-          </CardDescription>
+          <CardDescription>{t("ingestion.sourceDescription")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -196,9 +212,15 @@ export default function IngestionPage() {
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-2">
-              <Badge variant="success">{dedupe.data.uniqueCount ?? 0} unique</Badge>
-              <Badge variant="warning">{dedupe.data.duplicateCount ?? 0} duplicate</Badge>
-              <Badge variant="outline">{dedupe.data.inputCount ?? 0} in</Badge>
+              <Badge variant="success">
+                {t("ingestion.uniqueBadge", { count: dedupe.data.uniqueCount ?? 0 })}
+              </Badge>
+              <Badge variant="warning">
+                {t("ingestion.duplicateBadge", { count: dedupe.data.duplicateCount ?? 0 })}
+              </Badge>
+              <Badge variant="outline">
+                {t("ingestion.inputBadge", { count: dedupe.data.inputCount ?? 0 })}
+              </Badge>
             </div>
           </CardContent>
         </Card>
@@ -212,10 +234,18 @@ export default function IngestionPage() {
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-2">
-              <Badge variant="success">{sweep.data.counts.fresh} fresh</Badge>
-              <Badge variant="warning">{sweep.data.counts.stale} stale</Badge>
-              <Badge variant="destructive">{sweep.data.counts.expired} expired</Badge>
-              <Badge variant="outline">{sweep.data.counts.undated} undated</Badge>
+              <Badge variant="success">
+                {t("ingestion.freshBadge", { count: sweep.data.counts.fresh })}
+              </Badge>
+              <Badge variant="warning">
+                {t("ingestion.staleBadge", { count: sweep.data.counts.stale })}
+              </Badge>
+              <Badge variant="destructive">
+                {t("ingestion.expiredBadge", { count: sweep.data.counts.expired })}
+              </Badge>
+              <Badge variant="outline">
+                {t("ingestion.undatedBadge", { count: sweep.data.counts.undated })}
+              </Badge>
             </div>
           </CardContent>
         </Card>
@@ -229,10 +259,18 @@ export default function IngestionPage() {
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-2">
-              <Badge variant="success">{plan.data.counts.create} to create</Badge>
-              <Badge variant="warning">{plan.data.counts.update} to update</Badge>
-              <Badge variant="destructive">{plan.data.counts.close} to close</Badge>
-              <Badge variant="outline">{plan.data.counts.duplicates} duplicates</Badge>
+              <Badge variant="success">
+                {plan.data.counts.create} {t("ingestion.toCreate")}
+              </Badge>
+              <Badge variant="warning">
+                {plan.data.counts.update} {t("ingestion.toUpdate")}
+              </Badge>
+              <Badge variant="destructive">
+                {plan.data.counts.close} {t("ingestion.toClose")}
+              </Badge>
+              <Badge variant="outline">
+                {plan.data.counts.duplicates} {t("ingestion.duplicates")}
+              </Badge>
             </div>
           </CardContent>
         </Card>
