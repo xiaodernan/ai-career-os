@@ -210,6 +210,47 @@ async def test_a_bundle_the_reader_cannot_use_is_a_bad_request_not_a_broken_serv
     )
 
 
+async def test_the_plan_reads_the_readers_own_state(monkeypatch):
+    """13.2 -- the preview is a comparison, so it reads the other half.
+
+    The bridge sends the sections it owns; the six this service reads must be
+    read here, or a preview with no ``existing`` would call every row a
+    create -- counts about a workspace nobody has, which the apply then
+    contradicts. The route fills them through the export's own fetchers.
+    """
+    from app.db import observability
+    from app.features import import_plan as import_plan_mod
+
+    async def fake_gather(user_id):
+        return {"profile": {"id": "p1", "headline": "Backend"},
+                "resumes": [], "knowledge": [], "job_descriptions": [],
+                "interviews": [], "memories": []}
+
+    async def fake_run(*args, **kwargs):
+        return "run-1"
+
+    async def fake_finish(*args, **kwargs):
+        return None
+
+    monkeypatch.setattr(import_plan_mod, "gather_raw", fake_gather)
+    monkeypatch.setattr(observability, "create_run", fake_run)
+    monkeypatch.setattr(observability, "finish_run", fake_finish)
+
+    route = _routes()["/internal/features/import-plan"]
+    model = _model(route)
+    profile = {"id": "p1", "headline": "Backend"}
+    out = await route.endpoint(model(bundle=_valid_bundle({"profile": profile})), _ctx())
+    assert out["sections"]["profile"][0]["op"] == "skip", (
+        "the same row must be compared, not created: the preview knows it exists"
+    )
+
+
+def _valid_bundle(raw: dict) -> dict:
+    from app.features.export import build_bundle
+
+    return build_bundle(_ctx().user_id, raw)
+
+
 def _ctx():
     from app.core.deps import Ctx
 

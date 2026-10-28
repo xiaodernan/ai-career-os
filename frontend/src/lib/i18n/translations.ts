@@ -660,7 +660,7 @@ export const translations = {
       redactDescription:
         "Drop whole sections — the bundle stays valid and its content hash is recomputed over what is left.",
       restoreDescription:
-        "Paste a bundle and see exactly what a re-import would write — every row carries a content hash, so unchanged rows are skipped.",
+        "Paste a bundle and see exactly what a re-import would write: the plan compares it with your workspace, so unchanged rows are skipped and a row the bundle no longer names is deleted from the sections a restore can match by id — the resumes, documents and memories it re-ingests are only ever added.",
       removedSoFar: "Removed so far:",
       applyTheRestore: "Apply the restore",
       applied: "What was written",
@@ -2543,7 +2543,7 @@ export const translations = {
       exportDescription:
         "包含档案、简历、知识库、职位描述、面试和记忆的版本化数据包——带内容哈希，未变化的工作区导出得到相同哈希。",
       redactDescription: "删掉整块内容——数据包仍然有效，内容哈希会按剩下的内容重新计算。",
-      restoreDescription: "粘贴一个数据包，看看重新导入到底会写什么——每行都带内容哈希，未变化的行会被跳过。",
+      restoreDescription: "粘贴一个数据包，看看重新导入到底会写什么：计划会与你的工作区逐行对比，未变化的行会被跳过，数据包不再包含的行会从能按 id 匹配的部分里删除——重新生成 id 的简历、文档和记忆只会新增。",
       removedSoFar: "已删减：",
       applyTheRestore: "执行恢复",
       applied: "写入了什么",

@@ -178,6 +178,30 @@ def test_content_hash_ignores_generated_at_and_hash():
     assert h1 == h2
 
 
+def test_a_numeric_column_hashes_and_survives_the_round_trip():
+    """asyncpg hands back ``Decimal`` for every ``numeric`` column.
+
+    ``user_profiles.years_experience`` is one, so a serializer that refused
+    ``Decimal`` could not hash a bundle for any reader who had filled the
+    field in -- the export route would answer 500 for exactly the readers
+    with the most complete profiles. A whole number hashes as the integer a
+    JSON reader would see (``Decimal("5.0")`` and ``5`` are one number), and
+    a fractional one lands on the same hash after the round trip through
+    JSON, which is what the re-import's tamper check recomputes.
+    """
+    from decimal import Decimal
+
+    raw = _sample_raw()
+    raw["profile"]["years_experience"] = Decimal("5.5")
+    bundle = ex.build_bundle("u1", raw)  # hashes the data; used to raise
+    assert bundle["data"]["profile"]["years_experience"] == 5.5
+    # Both spellings of a whole number are one number, and a fractional one
+    # hashes as the float JSON will hand back on the next read.
+    assert ex.content_hash({"years_experience": Decimal("5.0")}) == \
+        ex.content_hash({"years_experience": 5})
+    assert ex.content_hash({"n": Decimal("5.5")}) == ex.content_hash({"n": 5.5})
+
+
 # ---------------- anonymize (13.3) ----------------
 
 

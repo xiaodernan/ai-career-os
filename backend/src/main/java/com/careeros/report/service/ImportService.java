@@ -64,6 +64,13 @@ import org.springframework.transaction.annotation.Transactional;
  *   {@code unchanged}. That is the half of the promise the "Your data" panel
  *   makes -- a re-import of the bundle the workspace exported writes nothing,
  *   and the user can see that it wrote nothing.
+ * - **A row the bundle no longer carries is retired, when the restore can
+ *   name it.** The sections matched by id -- the applications, the growth
+ *   runs, the notes, the contacts, the postings, the interviews -- execute
+ *   the plan's {@code delete}; the sections the restore re-ingests (the
+ *   resumes, the documents, the memories) are matched by content, so they are
+ *   never deleted: the restore cannot name a row it would bring back as a
+ *   different one.
  */
 @Service
 public class ImportService {
@@ -114,11 +121,17 @@ public class ImportService {
     /**
      * Plan a re-import without writing anything: the ops the engine would run,
      * and the counts.
+     *
+     * <p>The preview answers the same question as the apply, so it reads the
+     * same current state: a caller may send their own (the ops CLI does), and
+     * a caller that sends none -- the browser's preview -- gets the workspace
+     * read, not an empty one where every row is a create.
      */
     @Transactional(readOnly = true)
     public Map<String, Object> plan(UUID userId, Map<String, Object> bundle,
                                     Map<String, Object> existing) {
-        return aiService.importPlan(userId, bundle, existing);
+        return aiService.importPlan(userId, bundle,
+                existing != null ? existing : currentState(userId));
     }
 
     /**
@@ -503,11 +516,17 @@ public class ImportService {
             return;
         }
         List<Map<String, Object>> payload = new ArrayList<>();
+        int created = 0;
+        int updated = 0;
+        int unchanged = 0;
         for (Map<String, Object> op : ops) {
             String kind = str(op, "op");
-            if ("delete".equals(kind) || "skip".equals(kind)) {
-                continue;  // a memory the user forgot stays forgotten; an
-                           // unchanged one is not sent to be written again
+            if ("delete".equals(kind)) {
+                continue;  // a memory the user forgot stays forgotten
+            }
+            if ("skip".equals(kind)) {
+                unchanged++;
+                continue;
             }
             Map<?, ?> row = findRow(list, str(op, "id"));
             if (row == null) {
@@ -525,13 +544,19 @@ public class ImportService {
             memory.put("importance", importance instanceof Number n ? n.doubleValue() : 0.6);
             memory.put("source", str(row, "source") == null ? "restore" : str(row, "source"));
             payload.add(memory);
+            if ("update".equals(kind)) {
+                updated++;
+            } else {
+                created++;
+            }
         }
-        if (payload.isEmpty()) {
-            count(applied, "memories", 0, 0, 0);
-            return;
+        if (!payload.isEmpty()) {
+            // One upsert per row, keyed on (kind, key) -- the same key the
+            // extraction path uses, which is what makes a re-import land the
+            // same rows instead of a second copy of each memory.
+            aiService.importMemories(userId, payload);
         }
-        aiService.importMemories(userId, payload);
-        count(applied, "memories", payload.size(), 0, 0);
+        count(applied, "memories", created, updated, 0, unchanged);
     }
 
     /**
@@ -557,10 +582,16 @@ public class ImportService {
             return;
         }
         int created = 0;
+        int unchanged = 0;
         for (Map<String, Object> op : ops) {
             String kind = str(op, "op");
-            if ("delete".equals(kind) || "skip".equals(kind)) {
-                continue;  // a deleted resume is retired below, not resurrected
+            if ("delete".equals(kind)) {
+                continue;  // a resume is never retired by a restore: the copy
+                           // the plan matched it by is content, not an id
+            }
+            if ("skip".equals(kind)) {
+                unchanged++;
+                continue;
             }
             Map<?, ?> row = findRow(list, str(op, "id"));
             if (row == null) {
@@ -586,7 +617,7 @@ public class ImportService {
             resumes.create(userId, new CreateResumeRequest(title, plaintext));
             created++;
         }
-        count(applied, "resumes", created, 0, 0);
+        count(applied, "resumes", created, 0, 0, unchanged);
     }
 
     /**
@@ -607,10 +638,16 @@ public class ImportService {
             return;
         }
         int created = 0;
+        int unchanged = 0;
         for (Map<String, Object> op : ops) {
             String kind = str(op, "op");
-            if ("delete".equals(kind) || "skip".equals(kind)) {
-                continue;  // a retired document stays retired
+            if ("delete".equals(kind)) {
+                continue;  // a document is never retired by a restore: the
+                           // plan matched it by its excerpt, not by an id
+            }
+            if ("skip".equals(kind)) {
+                unchanged++;
+                continue;
             }
             Map<?, ?> row = findRow(list, str(op, "id"));
             if (row == null) {
@@ -632,7 +669,7 @@ public class ImportService {
             knowledge.ingestText(userId, title, excerpt, "note", null);
             created++;
         }
-        count(applied, "knowledge", created, 0, 0);
+        count(applied, "knowledge", created, 0, 0, unchanged);
     }
 
     /**
@@ -644,6 +681,11 @@ public class ImportService {
      * the difference between a restore and a re-analysis: the user's own
      * reading of a posting is preserved, not recomputed into something that
      * might differ.
+     *
+     * <p>An id the caller already has is written in place, and a posting the
+     * plan no longer names is retired: the bundle is the document the restore
+     * was asked to land, and a row the document does not carry is a row the
+     * reader took out of it.
      */
     private void applyJobDescriptions(UUID userId, Map<String, Object> data,
                                      Map<String, List<Map<String, Object>>> sections,
@@ -659,12 +701,27 @@ public class ImportService {
             return;
         }
         int created = 0;
+        int updated = 0;
+        int deleted = 0;
+        int unchanged = 0;
         for (Map<String, Object> op : ops) {
+            String id = str(op, "id");
             String kind = str(op, "op");
-            if ("delete".equals(kind) || "skip".equals(kind)) {
-                continue;  // a deleted posting stays deleted
+            UUID rowId = uuid(id);
+            if ("skip".equals(kind)) {
+                unchanged++;
+                continue;
             }
-            Map<?, ?> row = findRow(list, str(op, "id"));
+            if ("delete".equals(kind)) {
+                if (rowId == null) {
+                    continue;
+                }
+                // Only the caller's own row goes: the lookup is under their id.
+                jds.findByIdAndUserId(rowId, userId).ifPresent(jds::delete);
+                deleted++;
+                continue;
+            }
+            Map<?, ?> row = findRow(list, id);
             if (row == null) {
                 continue;
             }
@@ -672,21 +729,28 @@ public class ImportService {
             if (rawText == null || rawText.isBlank()) {
                 continue;
             }
-            JobJd jd = new JobJd();
-            jd.setUserId(userId);
+            JobJd jd = rowId == null ? null
+                    : jds.findByIdAndUserId(rowId, userId).orElse(null);
+            if (jd == null) {
+                jd = new JobJd();
+                jd.setUserId(userId);
+                setId(jd, restorableId(rowId, jds::existsById));
+                created++;
+            } else {
+                updated++;
+            }
             jd.setRawText(rawText);
             // A job is a shared entity -- the corpus belongs to nobody -- so
-            // the link to one is carried over as it is. The posting itself is
-            // the caller's, and that is what the user id on the row says.
+            // the link to one is carried over when the target can hold it. An
+            // update keeps the link the row already has.
             UUID jobId = uuid(str(row, "job_id"));
             if (jobId != null && jobRepository.existsById(jobId)) {
                 jd.setJobId(jobId);
             }
-            jd.setParsed(map(row, "parsed"));
+            jd.setParsed(mapOrNull(row, "parsed"));
             jds.save(jd);
-            created++;
         }
-        count(applied, "job_descriptions", created, 0, 0);
+        count(applied, "job_descriptions", created, updated, deleted, unchanged);
     }
 
     /**
@@ -696,6 +760,13 @@ public class ImportService {
      * interviewer does not run again, which matters because an interview is
      * the one thing the user cannot repeat: the questions were asked of them
      * once.
+     *
+     * <p>The children are replaced rather than merged on an update, and a
+     * retired session is deleted whole: the turns and the report hang off it
+     * with ON DELETE CASCADE, so the same delete the interview's own screen
+     * uses takes the transcript with it. A bundle carrying a report on a
+     * session the target already had with a different one replaces the
+     * verdict as well as the answers, because the report is about the answers.
      */
     private void applyInterviews(UUID userId, Map<String, Object> data,
                                 Map<String, List<Map<String, Object>>> sections,
@@ -710,17 +781,41 @@ public class ImportService {
             return;
         }
         int created = 0;
+        int updated = 0;
+        int deleted = 0;
+        int unchanged = 0;
         for (Map<String, Object> op : ops) {
+            String id = str(op, "id");
             String kind = str(op, "op");
-            if ("delete".equals(kind) || "skip".equals(kind)) {
-                continue;  // a deleted interview stays deleted
+            UUID rowId = uuid(id);
+            if ("skip".equals(kind)) {
+                unchanged++;
+                continue;
             }
-            Map<?, ?> row = findRow(sessionsList, str(op, "id"));
+            if ("delete".equals(kind)) {
+                if (rowId == null) {
+                    continue;
+                }
+                sessions.findByIdAndUserId(rowId, userId).ifPresent(sessions::delete);
+                deleted++;
+                continue;
+            }
+            Map<?, ?> row = findRow(sessionsList, id);
             if (row == null) {
                 continue;
             }
-            InterviewSession session = new InterviewSession();
-            session.setUserId(userId);
+            InterviewSession session = rowId == null ? null
+                    : sessions.findByIdAndUserId(rowId, userId).orElse(null);
+            if (session == null) {
+                session = new InterviewSession();
+                session.setUserId(userId);
+                setId(session, restorableId(rowId, sessions::existsById));
+                created++;
+            } else {
+                turns.deleteAll(turns.findBySessionIdOrderBySeqAsc(session.getId()));
+                evaluations.findBySessionId(session.getId()).ifPresent(evaluations::delete);
+                updated++;
+            }
             session.setMode(str(row, "mode") == null ? "mixed" : str(row, "mode"));
             session.setStatus(str(row, "status") == null ? "completed" : str(row, "status"));
             session.setCompanyName(str(row, "company_name"));
@@ -743,7 +838,9 @@ public class ImportService {
             // The turns carry the questions and the evaluations, so the
             // transcript comes back whole.
             int seq = 0;
-            for (Object turn : (List<?>) (row.get("turns") == null ? List.of() : row.get("turns"))) {                if (!(turn instanceof Map<?, ?> t)) {
+            Object turnRows = row.get("turns") == null ? List.of() : row.get("turns");
+            for (Object turn : (List<?>) turnRows) {
+                if (!(turn instanceof Map<?, ?> t)) {
                     continue;
                 }
                 InterviewTurn saved = new InterviewTurn();
@@ -754,8 +851,8 @@ public class ImportService {
                 seq = saved.getSeq() + 1;
                 saved.setRole(str(t, "role") == null ? "interviewer" : str(t, "role"));
                 saved.setContent(str(t, "content") == null ? "" : str(t, "content"));
-                saved.setQuestionMeta(map(t, "question_meta"));
-                saved.setEvaluation(map(t, "evaluation"));
+                saved.setQuestionMeta(mapOrNull(t, "question_meta"));
+                saved.setEvaluation(mapOrNull(t, "evaluation"));
                 turns.save(saved);
             }
 
@@ -774,9 +871,8 @@ public class ImportService {
                 }
                 evaluations.save(saved);
             }
-            created++;
         }
-        count(applied, "interviews", created, 0, 0);
+        count(applied, "interviews", created, updated, deleted, unchanged);
     }
 
     /* ------------------------------------------------------------------ */
@@ -865,6 +961,24 @@ public class ImportService {
             value = jsonValue(text, Map.class);
         }
         return value instanceof Map<?, ?> m ? (Map<String, Object>) m : Map.of();
+    }
+
+    /**
+     * A nullable JSON column as the value it holds, null included.
+     *
+     * <p>{@link #map} answers an empty object for an absent one, which is the
+     * right answer for a column the schema makes NOT NULL. For the nullable
+     * ones it is not: writing {@code {}} where the bundle carries {@code null}
+     * makes the row differ from the bundle by the restore's own hand, so the
+     * next plan would call it changed and write it again, forever.
+     */
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> mapOrNull(Map<?, ?> row, String key) {
+        Object value = row.get(key);
+        if (value instanceof String text) {
+            value = jsonValue(text, Map.class);
+        }
+        return value instanceof Map<?, ?> m ? (Map<String, Object>) m : null;
     }
 
     private static Object jsonValue(String text, Class<?> type) {

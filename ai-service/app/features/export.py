@@ -28,6 +28,7 @@ from __future__ import annotations
 import hashlib
 import json
 from datetime import datetime, timezone
+from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
@@ -389,6 +390,13 @@ def _stable(value: Any) -> str:
     Postgres and asyncpg hands back a `uuid.UUID` for every id column -- the
     bundle's whole point is to carry those ids, and a serializer that refused
     them could not produce a bundle for any workspace with a row in it.
+
+    A ``Decimal`` becomes a number for the same reason: asyncpg hands back
+    ``Decimal`` for every ``numeric`` column, and ``user_profiles`` has one
+    (``years_experience``). A serializer that refused it could not produce a
+    bundle for any workspace that had filled in that field. An integral value
+    becomes ``int`` so ``5.0`` and ``5`` are one number -- the round trip
+    through JSON has to land on the same hash it started from.
     """
 
     def default(o: Any) -> Any:
@@ -396,6 +404,8 @@ def _stable(value: Any) -> str:
             return o.isoformat() if isinstance(o, datetime) else str(o)
         if isinstance(o, UUID):
             return str(o)
+        if isinstance(o, Decimal):
+            return int(o) if o == o.to_integral_value() else float(o)
         if hasattr(o, "isoformat"):
             return o.isoformat()
         raise TypeError(f"not serializable: {type(o).__name__}")

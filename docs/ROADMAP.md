@@ -339,16 +339,40 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   through unchanged, and the page downloads `career-os-export.md`. The
   route-level test calls the route the way the bridge calls it, in both
   languages, and the wire test pins the format the browser sends.
-- **The restore's delete semantics for the sections the current state does not
-  cover.** The plan tells a delete from a create by comparing the bundle with the
-  caller's current state, and the backend's current state covers the profile, the
-  applications, the growth runs, the notes and the contacts. The resumes, the
-  knowledge base, the job descriptions, the interviews and the memories are not
-  in it, so a restore cannot remove a row the bundle no longer carries in those
-  sections — the plan never promises a delete it cannot keep. Closing it means
-  either the current state grows to cover them (and the sections whose ids the
-  restore remaps have to be thought about separately) or the restore is documented
-  as an upsert rather than a replacement.
+- **The restore can retire what it can name (closed 2026-10-28).** The plan
+  tells a delete from a create by comparing the bundle with the caller's
+  current state, and the current state covered five of the ten sections — so a
+  restore could not remove a row the bundle no longer carried in the rest, and
+  the plan could never promise a delete it could keep.
+  **The current state grew to cover them, in the half that owns each.** The
+  backend defaults `existing` to its own workspace when the browser sends
+  none, and the engine's route reads the six sections it owns and overlays
+  only the caller's gaps (the caller's profile wins) — so a preview and an
+  apply compare the same two documents, which is the only way the preview's
+  counts can be true.
+  **And the remapping question is answered by splitting the sections in
+  two.** The sections the restore keeps ids for — the profile, the
+  applications, the growth runs, the notes, the contacts, the postings, the
+  interviews — are matched by id, so a row the bundle omits is a row the
+  reader took out of the document they asked to restore: it is retired, and
+  an interview whole (the transcript and the report cascade with the
+  session). The sections the restore re-mints — the resumes, the documents,
+  the memories — have no id at the target to match, so they are matched by
+  content (a resume by title and text, a document by title and excerpt, a
+  memory by its kind and key) **and never delete**: the absence of a row
+  whose id is not shared is not a statement the restore can keep, and a
+  redacted bundle must not destroy the target's own rows on the strength of
+  a section the sharer withheld. A row the apply could not write is not
+  planned, and its existing counterpart is not retired on its absence.
+  The comparison now covers exactly what the apply writes — ids, ownership
+  and the database's stamps stripped at every level, the interview's child
+  bookkeeping, the posting's job link and a memory's `last_used_at` with
+  them, JSON text parsed, numbers normalized — so a row that is already the
+  same is a `skip` rather than a write that would recur forever.
+  Pinned by `tests/test_import_plan.py` (the two kinds, the multiset
+  matching, the hash stability), `tests/test_export_redact.py` (a withheld
+  section deletes nothing; a genuinely empty one still does), the
+  controller's apply tests, and the route-level preview test.
 ## Epic 10 — Growth Intelligence
 - [x] **10.1** Gap & growth analysis engine (evidence-bound coverage verdict).
   (Backend bridge: `POST /api/v1/growth/gap-analysis`; the `/growth` page's

@@ -56,9 +56,11 @@ Two rules make it safe:
 - **Only the caller's own rows are touched.** Every read and every write is
   scoped by the user id, so a bundle naming another user's rows finds nothing
   to change rather than writing into someone else's account.
-- **A section is applied whole or not at all.** A section the backend cannot
-  write yet — the resumes, the knowledge base, the job descriptions, the
-  interviews — is reported as skipped rather than claimed.
+- **Every section is applied.** The resumes and the documents re-enter the
+  ingestion pipeline, the memories upsert on their key, and the rest are row
+  writes — every section of the bundle has a writer, so the answer's
+  `skipped` list only ever names a section the bundle carried no rows for,
+  and the reason says so. An omission is visible rather than silent.
 
 What applies today: every section.
 
@@ -115,6 +117,57 @@ The comparison needed two things to be true:
 The operator's CLI (`python -m app.ops.restore_plan`) reports the fourth
 count too, so a dry run of a backup against the same backup says
 `skip 2` rather than `update 2`.
+
+### The restore can retire what it can name (2026-10-28)
+
+The plan is a comparison, so both halves have to read the same state. The
+browser's preview sends no state, and the backend used to default to
+"nothing" — every row a create, counts about a workspace nobody has, which
+the apply then contradicted. `import-plan` reads the caller's workspace when
+the caller sends no `existing` now, and the engine's route fills the six
+sections it owns itself, overlaying only the caller's gaps (the caller's
+profile wins). A preview and an apply compare the same two documents.
+
+That made the sections outside the old current state reachable — and with
+them the question this feature opened with: what does a restore do with a
+row the bundle no longer carries? The answer differs by section, because the
+restore does:
+
+- **The sections matched by id can retire a row.** The profile, the
+  applications, the growth runs, the notes, the people the reader knows, the
+  postings and the interviews keep the bundle's ids through the restore (or
+  find the row the id already names), so a row the bundle omits is a row the
+  reader took out of the document they asked to restore. It is deleted —
+  scoped to the caller, and an interview is retired whole, its transcript and
+  its report with it.
+- **The sections the restore re-mints cannot.** A restored resume is a new
+  resume; a restored document re-enters the ingestion pipeline; a memory
+  upserts on its (kind, key). Their ids mean nothing at the target, so "the
+  bundle omits this id" says nothing about what the target holds. They are
+  matched by content instead — a resume by its title and its text, a
+  document by its title and its excerpt, a memory by its (kind, key) — and
+  they never delete: the absence of a row whose id is not shared is not a
+  statement the restore can keep.
+- **A row the apply could not write is not planned, and not deleted.** A
+  resume with no title or no text, a document with no excerpt, a memory with
+  no content, a posting with no text, a person with no name: the apply skips
+  these (a row it cannot restore is not a row it may claim), so the plan does
+  not name them — and their existing counterparts are not retired on their
+  absence either.
+- **The comparison covers exactly what the apply writes.** Ids, ownership
+  and the database's stamps are stripped at every level, the interview's
+  child bookkeeping with them, and so are the links the restore does not
+  reproduce (the posting's job, the interview's job) and a memory's
+  `last_used_at`. A JSON text column on either side parses before it
+  compares — a bundle written before the boundary decoded `jsonb` carries
+  text — and a number compares as a number, so `3` and `3.0` are one value.
+  Each of these was a way for a row that was already the same to be
+  announced as changed, and to be written again forever.
+
+An interview that did change is replaced, not merged: the bundle carries the
+transcript whole, so the restore is the document a second time — a turn the
+bundle no longer names is a turn the restore was asked to take back, and the
+report is about the answers, so it is rewritten with them.
 
 ### The bundle is complete (1.1.0)
 

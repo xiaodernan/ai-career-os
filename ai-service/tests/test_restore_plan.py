@@ -11,7 +11,11 @@ from app.ops import restore_plan as R
 def _bundle(user="u1", resumes=1):
     raw = {
         "profile": {"id": "p1", "headline": "Backend Engineer"},
-        "resumes": [{"id": f"r{i}", "plaintext": "resume body"} for i in range(resumes)],
+        # The restore writes a resume from its title and its text; a fixture
+        # without a title is a row the apply would leave alone, and the plan
+        # does not promise writes the apply does not make.
+        "resumes": [{"id": f"r{i}", "resume_title": f"Resume {i}",
+                     "plaintext": "resume body"} for i in range(resumes)],
         "knowledge": [],
         "job_descriptions": [],
         "interviews": [],

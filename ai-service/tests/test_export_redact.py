@@ -36,7 +36,10 @@ def _existing() -> dict:
                      "plaintext": "y"}],
         "knowledge": [{"id": "d9", "title": "THEIR OWN NOTE",
                        "media_type": "text/markdown", "status": "ready"}],
-        "job_descriptions": [],
+        # A posting is a row the restore can name and retire -- the section
+        # the redaction rule is pinned against, because the resumes and the
+        # documents are matched by content and are never deleted.
+        "job_descriptions": [{"id": "jd9", "raw_text": "their own posting"}],
         "interviews": [],
         "memories": [],
     }
@@ -169,15 +172,15 @@ def test_a_withheld_section_does_not_delete_the_target_s_rows():
     The plan reads "the bundle carries no rows of this section" as "delete
     every row of this section at the target". For a section the sharer
     *withheld* that reading destroys data the bundle never claimed to
-    carry -- the target's own knowledge, gone, because the sharer chose
+    carry -- the target's own postings, gone, because the sharer chose
     not to share theirs.
     """
-    out = rd.redact_bundle(_bundle(), ["knowledge"])
+    out = rd.redact_bundle(_bundle(), ["job_descriptions"])
     plan = ip.plan_import(out, existing=_existing())
     deletes = [op for ops in plan["sections"].values() for op in ops
                if op["op"] == "delete"]
-    assert all(op["id"] != "d9" for op in deletes), (
-        f"the plan deletes the target's own knowledge: {deletes}"
+    assert all(op["id"] != "jd9" for op in deletes), (
+        f"the plan deletes the target's own postings: {deletes}"
     )
 
 
@@ -186,7 +189,7 @@ def test_a_section_that_was_not_withheld_still_deletes_what_the_bundle_omits():
     # into a no-op: a bundle that genuinely carries fewer rows than the
     # target still plans the deletes. The difference is the manifest's
     # record, not the emptiness.
-    # The honest comparison: a bundle that never had the knowledge, and so
+    # The honest comparison: a bundle that never had the posting, and so
     # never withheld it either.
     plain = ex.build_bundle("u1", {
         "profile": {"id": "u1", "display_name": "Ada"},
@@ -200,6 +203,6 @@ def test_a_section_that_was_not_withheld_still_deletes_what_the_bundle_omits():
     plan = ip.plan_import(plain, existing=_existing())
     deletes = [op for ops in plan["sections"].values() for op in ops
                if op["op"] == "delete"]
-    assert any(op["id"] == "d9" for op in deletes), (
+    assert any(op["id"] == "jd9" for op in deletes), (
         f"an empty section must still plan the delete: {deletes}"
     )

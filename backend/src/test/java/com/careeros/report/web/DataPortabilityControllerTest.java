@@ -25,6 +25,9 @@ import com.careeros.knowledge.repository.UserNoteRepository;
 import com.careeros.knowledge.entity.UserNote;
 import com.careeros.knowledge.dto.KnowledgeDtos.NoteRequest;
 import com.careeros.knowledge.service.KnowledgeService;
+import com.careeros.interview.entity.InterviewEvaluation;
+import com.careeros.interview.entity.InterviewSession;
+import com.careeros.interview.entity.InterviewTurn;
 import com.careeros.interview.repository.InterviewEvaluationRepository;
 import com.careeros.interview.repository.InterviewSessionRepository;
 import com.careeros.interview.repository.InterviewTurnRepository;
@@ -118,6 +121,20 @@ class DataPortabilityControllerTest {
     @AfterEach
     void tearDown() {
         SecurityContextHolder.clearContext();
+    }
+
+    /**
+     * The backend-owned half of the current state, empty.
+     *
+     * <p>The apply reads it before it executes the plan, and a Mockito page
+     * is {@code null} until it is told otherwise.
+     */
+    private void stubAnEmptyWorkspace() {
+        when(applications.findByUserIdOrderByUpdatedAtDescIdAsc(
+                eq(UUID.fromString(USER)), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of()));
+        when(growthPlans.findByUserIdOrderByCreatedAtDesc(eq(UUID.fromString(USER))))
+                .thenReturn(List.of());
     }
 
     @Test
@@ -547,5 +564,201 @@ class DataPortabilityControllerTest {
         assertThat(written.getValue().getParsed())
                 .containsEntry("title", "Backend Engineer")
                 .containsKey("skills");
+    }
+
+    /**
+     * The restore's delete semantics for the sections it can name.
+     *
+     * <p>The plan compares the bundle with the reader's current state, so a
+     * row the bundle no longer carries is a row the reader took out of the
+     * document they asked to restore. The postings and the interviews are
+     * those sections: their rows are matched by id, so the apply can retire
+     * one -- and an interview is retired whole, because the transcript and
+     * the report hang off the session.
+     */
+    @Test
+    void a_retired_posting_is_deleted() throws Exception {
+        stubAnEmptyWorkspace();
+        UUID jdId = UUID.fromString("44444444-4444-4444-4444-444444444444");
+        JobJd jd = new JobJd();
+        when(jds.findByIdAndUserId(eq(jdId), eq(UUID.fromString(USER))))
+                .thenReturn(Optional.of(jd));
+        when(ai.importPlan(eq(UUID.fromString(USER)), any(), any()))
+                .thenReturn(Map.of("sections", Map.of("job_descriptions", List.of(
+                        Map.of("op", "delete", "id", jdId.toString())))));
+
+        mvc.perform(post("/api/v1/data-portability/import-apply")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"bundle":{"schema_version":"1.2.0","data":{
+                                  "job_descriptions":[]}}}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.applied.job_descriptions.deleted").value(1));
+
+        verify(jds).delete(jd);
+    }
+
+    @Test
+    void a_changed_posting_is_written_in_place() throws Exception {
+        stubAnEmptyWorkspace();
+        UUID jdId = UUID.fromString("55555555-5555-5555-5555-555555555555");
+        JobJd existing = new JobJd();
+        when(jds.findByIdAndUserId(eq(jdId), eq(UUID.fromString(USER))))
+                .thenReturn(Optional.of(existing));
+        when(ai.importPlan(eq(UUID.fromString(USER)), any(), any()))
+                .thenReturn(Map.of("sections", Map.of("job_descriptions", List.of(
+                        Map.of("op", "update", "id", jdId.toString())))));
+
+        mvc.perform(post("/api/v1/data-portability/import-apply")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"bundle":{"schema_version":"1.2.0","data":{
+                                  "job_descriptions":[{"id":"55555555-5555-5555-5555-555555555555",
+                                    "raw_text":"We are hiring backend engineers.",
+                                    "parsed":{"title":"Backend Engineer"}}]}}}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.applied.job_descriptions.updated").value(1))
+                .andExpect(jsonPath("$.data.applied.job_descriptions.created").value(0));
+
+        ArgumentCaptor<JobJd> written = ArgumentCaptor.forClass(JobJd.class);
+        verify(jds).save(written.capture());
+        assertThat(written.getValue()).isSameAs(existing);
+        assertThat(written.getValue().getRawText()).isEqualTo("We are hiring backend engineers.");
+        assertThat(written.getValue().getParsed()).containsEntry("title", "Backend Engineer");
+    }
+
+    @Test
+    void a_retired_interview_is_deleted_whole() throws Exception {
+        stubAnEmptyWorkspace();
+        UUID sessionId = UUID.fromString("66666666-6666-6666-6666-666666666666");
+        InterviewSession session = new InterviewSession();
+        when(sessions.findByIdAndUserId(eq(sessionId), eq(UUID.fromString(USER))))
+                .thenReturn(Optional.of(session));
+        when(ai.importPlan(eq(UUID.fromString(USER)), any(), any()))
+                .thenReturn(Map.of("sections", Map.of("interviews", List.of(
+                        Map.of("op", "delete", "id", sessionId.toString())))));
+
+        mvc.perform(post("/api/v1/data-portability/import-apply")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"bundle":{"schema_version":"1.2.0","data":{"interviews":[]}}}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.applied.interviews.deleted").value(1));
+
+        // The turns and the report cascade with the session; the delete is the
+        // one the interview's own screen uses.
+        verify(sessions).delete(session);
+    }
+
+    @Test
+    void an_unchanged_interview_is_not_written_again() throws Exception {
+        stubAnEmptyWorkspace();
+        UUID sessionId = UUID.fromString("77777777-7777-7777-7777-777777777777");
+        when(ai.importPlan(eq(UUID.fromString(USER)), any(), any()))
+                .thenReturn(Map.of("sections", Map.of("interviews", List.of(
+                        Map.of("op", "skip", "id", sessionId.toString())))));
+
+        mvc.perform(post("/api/v1/data-portability/import-apply")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"bundle":{"schema_version":"1.2.0","data":{
+                                  "interviews":[{"id":"77777777-7777-7777-7777-777777777777",
+                                    "mode":"mixed"}]}}}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.applied.interviews.unchanged").value(1))
+                .andExpect(jsonPath("$.data.applied.interviews.created").value(0));
+
+        verify(sessions, never()).save(any());
+        verify(turns, never()).save(any());
+        verify(evaluations, never()).save(any());
+    }
+
+    /**
+     * The transcript is replaced on an update, and the report with it.
+     *
+     * <p>The bundle carries the transcript whole, so the restore is the
+     * document a second time: a turn the bundle no longer names is a turn the
+     * restore was asked to take back. Merging would keep an answer the file
+     * does not carry -- and the report is about the answers, so it is
+     * replaced too.
+     */
+    @Test
+    void a_changed_interview_replaces_its_transcript() throws Exception {
+        stubAnEmptyWorkspace();
+        UUID sessionId = UUID.fromString("88888888-8888-8888-8888-888888888888");
+        InterviewSession session = new InterviewSession();
+        InterviewTurn staleTurn = new InterviewTurn();
+        InterviewEvaluation staleReport = new InterviewEvaluation();
+        when(sessions.findByIdAndUserId(eq(sessionId), eq(UUID.fromString(USER))))
+                .thenReturn(Optional.of(session));
+        when(turns.findBySessionIdOrderBySeqAsc(any())).thenReturn(List.of(staleTurn));
+        when(evaluations.findBySessionId(any())).thenReturn(Optional.of(staleReport));
+        when(sessions.save(any())).thenAnswer(call -> call.getArgument(0));
+        when(ai.importPlan(eq(UUID.fromString(USER)), any(), any()))
+                .thenReturn(Map.of("sections", Map.of("interviews", List.of(
+                        Map.of("op", "update", "id", sessionId.toString())))));
+
+        mvc.perform(post("/api/v1/data-portability/import-apply")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"bundle":{"schema_version":"1.2.0","data":{
+                                  "interviews":[{"id":"88888888-8888-8888-8888-888888888888",
+                                    "mode":"technical","status":"completed",
+                                    "turns":[{"seq":1,"role":"interviewer",
+                                              "content":"Why us?"}],
+                                    "evaluation":{"dims":{"communication":4},
+                                                  "summary":{"well":["clear"]},
+                                                  "trajectory":[]}}]}}}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.applied.interviews.updated").value(1))
+                .andExpect(jsonPath("$.data.applied.interviews.created").value(0));
+
+        verify(turns).deleteAll(List.of(staleTurn));
+        verify(evaluations).delete(staleReport);
+        ArgumentCaptor<InterviewTurn> turn = ArgumentCaptor.forClass(InterviewTurn.class);
+        verify(turns).save(turn.capture());
+        assertThat(turn.getValue().getContent()).isEqualTo("Why us?");
+        verify(evaluations).save(any());
+    }
+
+    /**
+     * The preview reads the workspace when the caller sends no state.
+     *
+     * <p>The plan is a comparison, so a preview with no other half calls every
+     * row a create -- counts about a workspace nobody has, which the apply
+     * then contradicts. The browser's preview sends no state (the engine reads
+     * its own six sections), so the backend has to read the four it owns.
+     */
+    @Test
+    void the_preview_reads_the_workspace_when_the_caller_sends_no_state() throws Exception {
+        when(applications.findByUserIdOrderByUpdatedAtDescIdAsc(
+                eq(UUID.fromString(USER)), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of()));
+        when(growthPlans.findByUserIdOrderByCreatedAtDesc(eq(UUID.fromString(USER))))
+                .thenReturn(List.of());
+        when(notes.findByUserId(eq(UUID.fromString(USER)))).thenReturn(List.of());
+        when(contacts.findByUserIdOrderByUpdatedAtDesc(eq(UUID.fromString(USER))))
+                .thenReturn(List.of());
+        when(profiles.findByUserId(eq(UUID.fromString(USER)))).thenReturn(Optional.empty());
+        when(ai.importPlan(eq(UUID.fromString(USER)), any(), any()))
+                .thenReturn(Map.of("op_counts", Map.of()));
+
+        mvc.perform(post("/api/v1/data-portability/import-plan")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"bundle\":{\"schema_version\":\"1.2.0\"}}"))
+                .andExpect(status().isOk());
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Map<String, Object>> existing = ArgumentCaptor.forClass(Map.class);
+        verify(ai).importPlan(eq(UUID.fromString(USER)), any(), existing.capture());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> state = (Map<String, Object>) existing.getValue().get("data");
+        assertThat(state).containsKeys(
+                "applications", "growth_plans", "notes", "contacts", "profile");
     }
 }

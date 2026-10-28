@@ -796,9 +796,15 @@ async def import_plan_ep(req: ImportPlanReq, ctx: Ctx = Depends(require_internal
     # service request failed", which names the wrong party and tells the
     # reader nothing about the file they are holding.
     try:
-        plan = import_plan_mod.plan_import(req.bundle, existing=req.existing)
+        import_plan_mod.check_bundle(req.bundle)
     except RefusalError as exc:
         raise exc.refusal.to_http_exception() from exc
+    # The plan is a comparison, so its other half is the reader's current
+    # state: the bridge sends the sections it owns, and the six this service
+    # reads are read here, through the export's own fetchers. Without them
+    # every row would be a create -- a preview about a workspace nobody has.
+    existing = await import_plan_mod.current_state(ctx.user_id, req.existing)
+    plan = import_plan_mod.plan_import(req.bundle, existing=existing)
     run_id = await _run(ctx, "import", "import_plan")
     await observability.finish_run(run_id, "completed")
     return plan

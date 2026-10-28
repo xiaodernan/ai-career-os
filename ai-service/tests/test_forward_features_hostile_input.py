@@ -538,7 +538,8 @@ def test_validate_bundle_null_manifest_and_data_are_contract_errors():
 
 
 def test_plan_import_skips_non_dict_items_and_null_data():
-    data = {"profile": None, "resumes": [None, "junk", {"id": "r1"}],
+    row = {"id": "r1", "resume_title": "Main", "plaintext": "x"}
+    data = {"profile": None, "resumes": [None, "junk", row],
             "knowledge": [], "job_descriptions": [], "interviews": [], "memories": []}
     bundle = {"schema_version": "1.0.0", "generator": "g", "generated_at": "t",
               "user": {"id": "u"},
@@ -548,8 +549,7 @@ def test_plan_import_skips_non_dict_items_and_null_data():
               "data": data}
     plan = import_plan.plan_import(bundle)
     assert plan["sections"]["resumes"] == [
-        {"op": "create", "id": "r1",
-         "content_hash": export.content_hash({"id": "r1"})}]
+        {"op": "create", "id": "r1", "content_hash": export.content_hash(row)}]
     assert "profile" not in plan["sections"]      # a null profile is nothing to plan
 
 
