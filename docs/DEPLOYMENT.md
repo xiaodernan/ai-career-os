@@ -54,10 +54,14 @@ curl -f http://localhost:3000
 - [ ] `/actuator/prometheus` restricted at the proxy to the scraper's address (public by default)
 - [ ] DNS records point to the reverse proxy
 - [ ] TLS certificates configured and auto-renewing (Let's Encrypt recommended)
-- [ ] Database backups configured (pg_dump on schedule)
+- [ ] Nightly backups on a cron/timer (`scripts/backup.sh`: one `pg_dump`, one
+  MinIO archive, checksums, `BACKUP_KEEP` full sets) and a restore drill run
+  against the newest set (`scripts/restore_drill.sh`) — see
+  [RUNBOOK.md](RUNBOOK.md#backups)
 - [ ] MinIO bucket versioning enabled for object recovery
 - [ ] Log aggregation configured (Loki/ELK/Datadog)
-- [ ] Metrics/monitoring configured (Prometheus/Grafana)
+- [ ] Prometheus scraping `/actuator/prometheus` with `ops/prometheus/alerts.yml`
+  loaded; each rule's page is a section of [RUNBOOK.md](RUNBOOK.md)
 
 ### Preflight gate (ai-service)
 
@@ -154,16 +158,29 @@ migrations separately before deploying the new backend version.
 
 ### Backup & Recovery
 
+Two scripts own this, so a restore is rehearsed rather than retyped at 3 a.m.:
+
 ```bash
-# Backup Postgres
-docker exec careeros-postgres-prod pg_dump -U career_os career_os > backup_$(date +%F).sql
+# One set: a custom-format pg_dump, the MinIO data directory as a tar, and a
+# sha256 file over both. The oldest set beyond BACKUP_KEEP is removed.
+scripts/backup.sh
 
-# Restore
-docker exec -i careeros-postgres-prod psql -U career_os career_os < backup_2026-01-15.sql
-
-# Backup MinIO (using mc mirror)
-mc mirror local/careeros-files remote/careeros-backup/
+# The drill: verify the newest set's checksums, restore the dump into a scratch
+# database on the same server, compare the table set and the applied Flyway
+# count with the live database's, then drop the scratch database.
+scripts/restore_drill.sh
 ```
+
+Both read the running containers through `docker compose ps -q`, so they follow
+the project's own names — `careeros-postgres-prod` and `careeros-minio-prod`
+under the `-prod` overlay, or the dev stack's names — instead of a name typed
+into the script; production is one
+`COMPOSE_FILE=docker-compose.yml:docker-compose.prod.yml` away, not a second
+copy. `KEEP_DRILL=1` keeps the scratch database for inspection; any mismatch
+already exits 1 and keeps it.
+
+[RUNBOOK.md](RUNBOOK.md#backups) has the cron example, what a failed night looks
+like, and the by-hand restore for both the database and the objects.
 
 ### Rolling Updates
 
@@ -187,6 +204,14 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --no-deps 
 | Postgres   | `pg_isready`                    | `pg_stat_statements` (needs `shared_preload_libraries`, which the compose image does not enable) |
 | Redis      | `redis-cli`                     | `INFO`                     |
 | MinIO      | `mc ready local`                | Prometheus exporter at `/minio/v2/metrics/cluster` (MinIO serves it by default) |
+
+The two families the nightly rules read are the scheduler's —
+`careeros_ingestion_runs_total{status}` and
+`careeros_ingestion_last_success_timestamp` — and the AI budget's —
+`careeros_ai_cost_usd_24h`, `careeros_ai_tokens_24h` and `careeros_ai_calls_24h`,
+recomputed from `ai_usage_events` every minute. `ops/prometheus/alerts.yml`
+carries the three rules and each one links its page in
+[RUNBOOK.md](RUNBOOK.md).
 
 ---
 

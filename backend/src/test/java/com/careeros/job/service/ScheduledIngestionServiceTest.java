@@ -30,6 +30,7 @@ import com.careeros.job.repository.CompanyRepository;
 import com.careeros.job.repository.IngestionFeedRepository;
 import com.careeros.job.repository.IngestionRunRepository;
 import com.careeros.job.repository.JobRepository;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.OffsetDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -67,6 +68,8 @@ class ScheduledIngestionServiceTest {
     private FeedFetcher fetcher;
     private BoardConnectors connectors;
     private AiServiceClient ai;
+    private SimpleMeterRegistry registry;
+    private IngestionMetrics metrics;
     private ScheduledIngestionService service;
 
     @BeforeEach
@@ -79,8 +82,10 @@ class ScheduledIngestionServiceTest {
         connectors = new BoardConnectors(
                 List.of(new GreenhouseConnector(), new LeverConnector()));
         ai = mock(AiServiceClient.class);
+        registry = new SimpleMeterRegistry();
+        metrics = new IngestionMetrics(registry);
         service = new ScheduledIngestionService(feeds, runs, jobs, companies, fetcher,
-                connectors, ai);
+                connectors, ai, metrics);
         when(runs.save(any(IngestionRun.class))).thenAnswer(i -> i.getArgument(0));
     }
 
@@ -401,5 +406,49 @@ class ScheduledIngestionServiceTest {
 
         assertThat(service.sweepEnabled()).isZero();
         verify(fetcher, never()).fetch(any());
+    }
+
+    @Test
+    void a_completed_pull_counts_itself_and_moves_the_success_marker() {
+        IngestionFeed feed = feed();
+        when(feeds.findByIdAndUserId(feedId, userId)).thenReturn(Optional.of(feed));
+        when(fetcher.fetch(feed.getUrl())).thenReturn("<rss/>");
+        when(jobs.findByStatusOrderByPostedAtDescIdDesc(eq("open"), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of()));
+        when(ai.planIngest(any(), any(), anyList(), anyInt(), anyInt(), any(), any()))
+                .thenReturn(Map.of("counts", Map.of()));
+
+        RunDetail detail = service.runNow(userId, feedId);
+
+        assertThat(detail.run().status()).isEqualTo(IngestionRun.STATUS_COMPLETED);
+        assertThat(counter(IngestionRun.STATUS_COMPLETED)).isEqualTo(1.0);
+        assertThat(counter(IngestionRun.STATUS_FAILED)).isZero();
+        assertThat(successMarker()).isEqualTo(detail.run().finishedAt().toEpochSecond());
+    }
+
+    @Test
+    void a_failed_pull_counts_itself_and_leaves_the_success_marker_alone() {
+        IngestionFeed feed = feed();
+        when(feeds.findByIdAndUserId(feedId, userId)).thenReturn(Optional.of(feed));
+        when(fetcher.fetch(feed.getUrl()))
+                .thenThrow(new IllegalStateException("Feed answered HTTP 503"));
+        double before = successMarker();
+
+        RunDetail detail = service.runNow(userId, feedId);
+
+        assertThat(detail.run().status()).isEqualTo(IngestionRun.STATUS_FAILED);
+        assertThat(counter(IngestionRun.STATUS_FAILED)).isEqualTo(1.0);
+        assertThat(counter(IngestionRun.STATUS_COMPLETED)).isZero();
+        assertThat(successMarker())
+                .as("a failed pull must not read as a success, or the alarm above it cannot fire")
+                .isEqualTo(before);
+    }
+
+    private double counter(String status) {
+        return registry.get(IngestionMetrics.RUNS).tag("status", status).counter().count();
+    }
+
+    private double successMarker() {
+        return registry.get(IngestionMetrics.LAST_SUCCESS).gauge().value();
     }
 }

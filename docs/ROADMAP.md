@@ -760,9 +760,38 @@ that; each ships wired to the real API and UI, like every epic before it.
   its raw text plan to the same answer. 7 ai-service tests, 12 connector
   tests, 3 service tests, 1 frontend helper test, the error-code and wire
   gates green, 658 backend tests, 740 vitest.)
-- [ ] **19.9** Delivery hardening: nightly backups plus a restore drill,
+- [x] **19.9** Delivery hardening: nightly backups plus a restore drill,
   metrics/alerts for the scheduler and the AI budget, and a runbook that says
   what a failed night looks like.
+  (The night now leaves readings, not just rows. `IngestionMetrics` is a
+  Micrometer bean wired into `ScheduledIngestionService.runFeed` after the run
+  is filed: one counter tagged by outcome, and a gauge holding the epoch second
+  of the last *completed* run — a night of failures moves the counter and leaves
+  the gauge where it was. The gauge starts at the process's own boot time rather
+  than zero, because zero reads as a 1970 success and would page on every fresh
+  deploy. `AiUsageMetrics` reads the trailing 24 hours of `ai_usage_events` once
+  a minute and publishes cost, tokens and calls; a failed read logs and keeps
+  the last reading instead of publishing zero. `ops/prometheus/alerts.yml` turns
+  three questions into rules — no successful sweep for 26 hours, more than half
+  of the last six hours' runs failed (with at least three runs), and more than
+  5 USD spent in the last day — and each annotation links the
+  `docs/RUNBOOK.md` section that says what to do. The runbook also records the
+  reading the log line hides: `nightly ingestion swept N feed(s)` counts feeds
+  that were *due*, not feeds that succeeded.
+  Backups are two scripts, not a paragraph. `scripts/backup.sh` takes one
+  custom-format `pg_dump`, one tar of the MinIO data directory, and a sha256
+  file over both, verifies the archive lists before calling it a backup, and
+  prunes complete sets beyond `BACKUP_KEEP`. `scripts/restore_drill.sh`
+  verifies the checksums, restores the newest dump into a scratch database on
+  the same server, compares the public table set and the applied Flyway count
+  with the live database's, and drops the scratch database only when every
+  check passed. Both find their containers through `docker compose ps -q`, so
+  the `-prod` overlay is a `COMPOSE_FILE` away rather than a second script.
+  Measured, not asserted: the pair was run against the live dev stack — the
+  backup wrote its three files, and the drill restored 35 tables, 10
+  migrations and a 942-entry files archive and then dropped `career_os_drill`.
+  8 backend tests (6 metrics, 2 wiring), 15 ai-service gates (alerts + backup),
+  660 backend tests.)
 
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +

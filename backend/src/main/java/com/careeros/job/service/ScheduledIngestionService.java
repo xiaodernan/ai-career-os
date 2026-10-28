@@ -47,6 +47,9 @@ import org.springframework.transaction.annotation.Transactional;
  * why -- the night is not silent, and one dead feed does not stop the others. Runs are
  * written when the pull ends, so a process that dies mid-fetch leaves no row claiming to
  * still be running.
+ *
+ * <p>Each run that ends is also a reading: {@link IngestionMetrics} takes the outcome and
+ * the moment it finished, so "did the night succeed" is a scrape rather than a log search.
  */
 @Service
 public class ScheduledIngestionService {
@@ -68,11 +71,12 @@ public class ScheduledIngestionService {
     private final FeedFetcher fetcher;
     private final BoardConnectors connectors;
     private final AiServiceClient ai;
+    private final IngestionMetrics metrics;
 
     public ScheduledIngestionService(IngestionFeedRepository feeds, IngestionRunRepository runs,
                                      JobRepository jobs, CompanyRepository companies,
                                      FeedFetcher fetcher, BoardConnectors connectors,
-                                     AiServiceClient ai) {
+                                     AiServiceClient ai, IngestionMetrics metrics) {
         this.feeds = feeds;
         this.runs = runs;
         this.jobs = jobs;
@@ -80,6 +84,7 @@ public class ScheduledIngestionService {
         this.fetcher = fetcher;
         this.connectors = connectors;
         this.ai = ai;
+        this.metrics = metrics;
     }
 
     @Transactional(readOnly = true)
@@ -221,6 +226,9 @@ public class ScheduledIngestionService {
         }
         run.setFinishedAt(OffsetDateTime.now());
         IngestionRun saved = runs.save(run);
+        // the run that ended is also a reading a scrape sees (19.9): a failed pull moves
+        // the counter and leaves the success marker where it was
+        metrics.record(saved.getStatus(), saved.getFinishedAt());
         return new RunDetail(RunItem.of(saved, feed.getName()), plan);
     }
 
