@@ -345,8 +345,8 @@ test.
 
 ## Email
 
-Outbound mail (password resets, and the weekly letter once it is wired) leaves
-through the transport `APP_EMAIL_PROVIDER` names:
+Outbound mail (password resets and the weekly letter) leaves through the transport
+`APP_EMAIL_PROVIDER` names:
 
 - `console` (the default) logs each letter instead of sending it. The body — a
   reset link carrying a usable token — is withheld unless
@@ -363,6 +363,16 @@ through the transport `APP_EMAIL_PROVIDER` names:
 capped at 5 seconds, so a relay that is down fails the request that needed the
 mail instead of holding it open. A refused letter is an error the caller sees: a
 reset mail silently dropped is worse than a retry.
+
+The weekly letter rides the same transport. The Monday sweep writes the week that
+just ended, mails each letter, and keeps the outcome on the letter's row
+(`delivered_at`, `delivery_error`, `delivery_attempts`). A letter that already left
+is not mailed again when that week is recomposed, so re-running the sweep cannot put
+a second copy in a mailbox; a refused letter keeps the relay's error on the row while
+the sweep moves on to the next account. Composing from the dashboard
+(`POST /digests/run`) files the letter without mailing it — the sweep is the only
+sender. On `console` each week's letter is a log line instead of mail, which is the
+right default for a development machine.
 
 ## Health & first data
 

@@ -126,13 +126,14 @@ the caller's agent runs. No model runs here.
 
 The 19.4 letter: the 15.3 digest composed on the backend's clock and kept, so a week's
 signals outlive the week. One letter per account per week, refreshed in place; the payload
-is the engine's own answer, stored as it came back, and is the material an email would be
-assembled from.
+is the engine's own answer, stored as it came back, and is the material the Monday mail is
+assembled from — the sweep writes each letter, hands it to the configured transport, and
+keeps the outcome (`delivered_at`, `delivery_error`, `delivery_attempts`) on the row.
 
 | Method | Path | Notes |
 |---|---|---|
 | GET | `/digests` | the caller's letters, newest week first, at most twelve — each one the Monday its week starts on, the window it was composed with, when it was written, and the frozen digest payload the engine answered. No query parameters: the list is the caller's own and the cap is the server's |
-| POST | `/digests/run` | composes the current week's letter now and files it, refreshing it if it already exists; answers the filed letter as the list answers one row. No request body and no query parameters — the week is now and the window is the letter's own. The Monday schedule writes the week that just ended, when it can no longer change |
+| POST | `/digests/run` | composes the current week's letter now and files it, refreshing it if it already exists; answers the filed letter as the list answers one row. No request body and no query parameters — the week is now and the window is the letter's own. Composing is not sending: the Monday schedule writes the week that just ended and is the only sender, and a letter it already mailed is not mailed again |
 
 ### Resumes (`/resumes`)
 

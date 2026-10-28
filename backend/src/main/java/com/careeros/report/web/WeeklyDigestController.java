@@ -16,7 +16,9 @@ import org.springframework.web.bind.annotation.RestController;
  * and answers the filed letter, so the page never has to guess what it just wrote.
  *
  * <p>There is no route for another user's letter and none for an arbitrary week: a letter is
- * the account's own week, and the scheduler is the only writer that walks everyone.
+ * the account's own week, and the scheduler is the only writer that walks everyone. Composing
+ * is not sending: the Monday sweep is what hands a letter to the mail transport, so this route
+ * cannot mail a copy by being pressed twice.
  */
 @RestController
 @RequestMapping("/api/v1/digests")

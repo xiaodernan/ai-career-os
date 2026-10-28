@@ -18,7 +18,7 @@ import org.hibernate.type.SqlTypes;
  * kept as it came back, so the week's signals outlive the week.
  *
  * <p>The payload is the engine's answer verbatim -- the totals, the stage mix, the rates, the
- * stalled rows, the signals -- which is also the material an email would be assembled from.
+ * stalled rows, the signals -- which is also the material the letter's mail is assembled from.
  * Keeping the composed answer rather than re-deriving it means the letter a reader opens in
  * December is the one September wrote, not a second reading of rows that have changed since.
  */
@@ -46,6 +46,17 @@ public class WeeklyDigest {
 
     @Column(name = "generated_at", nullable = false)
     private OffsetDateTime generatedAt;
+
+    /** When the letter last left for its mailbox; the sweep's latch against a second copy. */
+    @Column(name = "delivered_at")
+    private OffsetDateTime deliveredAt;
+
+    /** The transport's last refusal, cleared by a later success; null before the first try. */
+    @Column(name = "delivery_error", length = 500)
+    private String deliveryError;
+
+    @Column(name = "delivery_attempts", nullable = false)
+    private int deliveryAttempts;
 
     public UUID getId() {
         return id;
@@ -89,5 +100,29 @@ public class WeeklyDigest {
 
     public void setGeneratedAt(OffsetDateTime generatedAt) {
         this.generatedAt = generatedAt;
+    }
+
+    public OffsetDateTime getDeliveredAt() {
+        return deliveredAt;
+    }
+
+    public void setDeliveredAt(OffsetDateTime deliveredAt) {
+        this.deliveredAt = deliveredAt;
+    }
+
+    public String getDeliveryError() {
+        return deliveryError;
+    }
+
+    public void setDeliveryError(String deliveryError) {
+        this.deliveryError = deliveryError;
+    }
+
+    public int getDeliveryAttempts() {
+        return deliveryAttempts;
+    }
+
+    public void setDeliveryAttempts(int deliveryAttempts) {
+        this.deliveryAttempts = deliveryAttempts;
     }
 }

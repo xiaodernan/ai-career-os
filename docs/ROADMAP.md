@@ -924,6 +924,24 @@ that can leave the machine, and then lets the letter ride it.
   ITs need Docker and are not counted here), no frontend or copy-census
   movement.)
 
+- [x] **21.2** The weekly letter leaves on the night it is written, and the row says
+  whether it did.
+  (The Monday sweep composed each letter and stopped at the row: the week was written
+  and nobody was told. `WeeklyDigestMailer` lays the stored payload out as the
+  plain-text mail — the totals, the stage mix, the rates, the stalled rows and the
+  engine's signals, with a key the payload does not carry dropping its line rather
+  than printing a zero, and a stalled list capped at ten rows — and hands it to
+  whichever transport `app.email.provider` armed. The sweep composes, writes, then
+  mails: `delivered_at` is the latch as much as the receipt, so recomposing the week
+  cannot put a second copy in a mailbox; a refused letter keeps the transport's error
+  (`delivery_error`, capped at 500 characters) and the attempt count on the row while
+  the night moves on to the next account, and an account row that is gone is a warn
+  line with no attempt counted, so "never tried" stays zero. Composing from the
+  dashboard still mails nothing — the sweep is the only sender, and `API.md` says so.
+  V17 adds the three columns. 8 backend tests (4 service, 4 mailer), the backend unit
+  suite at 650, the deployment guide and `API.md` stating the sweep's ownership of
+  the send, no frontend or census movement.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
