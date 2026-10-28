@@ -180,9 +180,10 @@ export default function AnalysisPage() {
                 </div>
                 {(rates.data.appliedCount ?? 0) > 0 && (
                   <p className="mt-3 text-xs text-muted-foreground">
-                    {formatNumber(rates.data.respondedCount ?? 0)} of{" "}
-                    {formatNumber(rates.data.appliedCount ?? 0)} submitted applications
-                    got a reply.
+                    {t("analysis.gotAReply", {
+                      replied: formatNumber(rates.data.respondedCount ?? 0),
+                      applied: formatNumber(rates.data.appliedCount ?? 0),
+                    })}
                   </p>
                 )}
               </CardContent>

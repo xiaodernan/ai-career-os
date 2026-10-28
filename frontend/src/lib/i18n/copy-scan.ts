@@ -151,10 +151,18 @@ export function browserSources(): string[] {
  * backstop against a run of text with no markup in it at all, and a
  * backstop that hides the copy is worse than no backstop.
  *
- * What this does not catch is the lowercase fragments: `} matching{" "}` is
- * the tail of a sentence whose other pieces are elsewhere, and a lone
- * word like that is not a phrase a translation key can hold. Those are a
- * known limit of the scan, not an oversight.
+ * The lower-case *sentence* is the shape the capital rule used to hide. A
+ * sentence split around a value -- `{replied} of {applied} submitted
+ * applications got a reply.` -- is cut into fragments, and the fragment
+ * after a value begins lower-case because the value is the sentence's
+ * subject. The capital rule skipped it, so an entire English sentence could
+ * sit between two expressions and the census never read it; three did.
+ * A fragment with a space and a closing mark is the tail of a sentence, and
+ * the tail of a sentence is copy: it is read now.
+ *
+ * What the rule still does not catch is the lone lower-case word:
+ * `} matching{" "}` is a piece of a sentence whose other pieces are
+ * elsewhere, and no translation key can hold it by itself.
  */
 /**
  * The longest text node the scan will read.
@@ -248,17 +256,34 @@ export function textOffendersIn(file: string, text: string): Offender[] {
     // instead of the copy, and it is the one failure the prose rules below
     // would miss -- so it is caught here rather than by them.
     const unresolved = /^[a-z][a-zA-Z]*(\.[a-z][a-zA-Z]*)+$/.test(value);
-    if (!unresolved) {
-      // A sentence starts with a capital and a lower-case letter after it.
-      // "AI", "OS" and "JD" are names, not sentences.
-      if (!/^[A-Z][a-z]/.test(value)) continue;
-    }
+    if (!unresolved && !sentenceHead(value) && !sentenceTail(value)) continue;
     // Code, not copy.
     if (isCode(value)) continue;
     if (NOT_COPY.has(value)) continue;
     found.push({ file, attribute: "text", value });
   }
   return found;
+}
+
+/**
+ * The start of a sentence: a capital and a lower-case letter after it.
+ * "AI", "OS" and "JD" are names, not sentences.
+ */
+function sentenceHead(value: string): boolean {
+  return /^[A-Z][a-z]/.test(value);
+}
+
+/**
+ * The tail of a sentence that was split around a value.
+ *
+ * `{replied} of {applied} submitted applications got a reply.` reads as one
+ * sentence to the reader and as three text nodes to the scan; the last one
+ * begins lower-case. A fragment that has a space in it and ends in a
+ * closing mark is that tail -- a whole phrase a key can hold -- rather
+ * than the identifier the capital rule was written to skip.
+ */
+function sentenceTail(value: string): boolean {
+  return /^[a-z]/.test(value) && /\s/.test(value) && /[.!?…]$/.test(value);
 }
 
 function textNodeOffenders(): Offender[] {

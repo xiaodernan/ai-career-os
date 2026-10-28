@@ -152,10 +152,11 @@ export function SectionBoundary<T>({
 
 /** Inline "endpoint not live" hint for secondary widgets. */
 export function EndpointOffline({ name, className }: { name: string; className?: string }) {
+  const { t } = useLocale();
   return (
     <p className={cn("flex items-center gap-1.5 text-xs text-muted-foreground", className)}>
       <PlugZap className="size-3.5 shrink-0" aria-hidden />
-      {name} isn&apos;t connected yet — it will appear as soon as the API serves it.
+      {t("common.endpointOffline", { name })}
     </p>
   );
 }

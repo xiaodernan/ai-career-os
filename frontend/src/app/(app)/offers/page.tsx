@@ -354,7 +354,7 @@ export default function OffersPage() {
                   />
                   {comparison.best?.label && (
                     <p className="text-xs text-muted-foreground">
-                      {comparison.best.label} leads on total compensation.
+                      {t("offers.leadsOnTotal", { label: comparison.best.label })}
                     </p>
                   )}
                 </div>

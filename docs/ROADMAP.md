@@ -558,6 +558,13 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   inside an expression, and a toast message is neither of those — it is a
   string that is simply a *value*. A bar labelled "Technical" on a Chinese
   page was exactly as invisible to the gate as an attribute was.
+  A sentence split around a value — `{replied} of {applied} submitted
+  applications got a reply.` — was the last shape: its tail begins
+  lower-case because the value before it is the sentence's subject, and
+  the scan's capital rule skipped it, so whole English sentences rendered
+  on a Chinese page behind a green gate. A lower-case fragment with a
+  space and a closing mark is the tail of a sentence, not an identifier,
+  and it is read now.
   The census now reads **zero**: every string the scan can see is a key in
   both languages, so the gate asserts an empty offender list instead of
   pinning a list of tolerated holes, and the generator that used to

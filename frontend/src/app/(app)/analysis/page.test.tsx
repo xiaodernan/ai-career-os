@@ -143,6 +143,20 @@ describe("the analysis page speaks the reader's language", () => {
     expect(en).toContain("· Saved");
     expect(en).not.toContain("占已投递比例");
   });
+
+  it("words the reply count as one sentence, in the table's language", () => {
+    // The sentence was three text nodes around two numbers -- `{replied} of
+    // {applied} submitted applications got a reply.` -- so it began
+    // lower-case and the copy census could not read it. A Chinese reader saw
+    // it in English. It is one key with two holes now.
+    const zh = render("zh");
+    expect(zh).toContain("4 个投递中有 2 个收到了回复。");
+    expect(zh).not.toContain("submitted applications");
+
+    const en = render("en");
+    expect(en).toContain("2 of 4 submitted applications got a reply.");
+    expect(en).not.toContain("个投递中有");
+  });
 });
 
 /**

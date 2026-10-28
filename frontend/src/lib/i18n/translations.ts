@@ -108,6 +108,9 @@ export const translations = {
        * the explanation use their own.
        */
       notLiveTitle: "This API build has no records for this page",
+      /** The hint a widget shows when its endpoint is not served yet; `{name}` is the widget's own name. */
+      endpointOffline:
+        "{name} isn't connected yet — it will appear as soon as the API serves it.",
       refresh: "Refresh",
       open: "Open",
       close: "Close",
@@ -551,6 +554,7 @@ export const translations = {
       comparisonDone: "Offers compared.",
       counterOfferScript: "Counter-offer script",
       againstTheMarket: "Your offer against the market, and what to say.",
+      leadsOnTotal: "{label} leads on total compensation.",
     },
     // Analysis
     analysis: {
@@ -573,7 +577,7 @@ export const translations = {
       reply: "Reply",
       interview: "Interview",
       offer: "Offer",
-      gotAReply: "of submitted applications got a reply.",
+      gotAReply: "{replied} of {applied} submitted applications got a reply.",
       noFunnel: "No funnel yet",
       noFunnelDescription:
         "Submit an application and the funnel starts measuring where it leaks.",
@@ -2306,6 +2310,7 @@ export const translations = {
       metaDescription:
         "你的个人求职操作系统——有证据支撑的匹配、简历情报，以及 AI 引导的面试。",
       notLiveTitle: "这个后端版本没有这一页的数据",
+      endpointOffline: "{name} 尚未接通——等 API 提供后就会显示。",
       refresh: "刷新",
       open: "打开",
       close: "关闭",
@@ -2712,6 +2717,7 @@ export const translations = {
       comparisonDone: "录用已比较。",
       counterOfferScript: "还价话术",
       againstTheMarket: "你的录用对着市场，以及该怎么说。",
+      leadsOnTotal: "{label} 的总薪酬最高。",
     },
     // Analysis
     analysis: {
@@ -2732,7 +2738,7 @@ export const translations = {
       reply: "回复",
       interview: "面试",
       offer: "录用",
-      gotAReply: "个投递收到了回复。",
+      gotAReply: "{applied} 个投递中有 {replied} 个收到了回复。",
       noFunnel: "还没有漏斗数据",
       noFunnelDescription: "投出第一个申请，漏斗就会开始测量流失点。",
       noStalled: "没有停滞的申请",

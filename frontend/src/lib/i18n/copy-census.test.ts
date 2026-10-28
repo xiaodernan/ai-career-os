@@ -88,4 +88,23 @@ describe("the browser's copy", () => {
     ]);
     expect(TEXT_NODE_LIMIT).toBeGreaterThan(sentence.length);
   });
+
+  it("reads the tail of a sentence split around a value", () => {
+    // `{replied} of {applied} submitted applications got a reply.` reads as
+    // one sentence and is cut into three text nodes, and the last one
+    // begins lower-case. The capital rule skipped it, so the rates card
+    // said this in English on a Chinese page and no gate looked at it.
+    const probe = "export const x = <p>{replied} of {applied} submitted applications got a reply.</p>;";
+    expect(textOffendersIn("probe.tsx", probe).map((o) => o.value)).toEqual([
+      "submitted applications got a reply.",
+    ]);
+  });
+
+  it("still leaves a lone lower-case word alone", () => {
+    // The tail rule needs a phrase: a space and a closing mark. A single
+    // word after a value is the piece of a sentence whose other pieces are
+    // elsewhere, and no key can hold it.
+    const probe = "export const x = <p>{count} matching {noun}</p>;";
+    expect(textOffendersIn("probe.tsx", probe)).toEqual([]);
+  });
 });
