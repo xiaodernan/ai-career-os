@@ -58,6 +58,9 @@ app:
   # (ProductionGuard), so a forgotten secret is a failed boot instead of a forgeable one.
   deployment:
     env: ${APP_ENV:dev}
+  # The origin every mailed link is built from (password reset, email change, unsubscribe).
+  # The shipped default is loopback, so a prod boot (APP_ENV=prod) refuses it and the
+  # example's your-domain.com (ProductionGuard): the link has to open in the reader's browser.
   web:
     base-url: ${APP_WEB_BASE_URL:http://localhost:3000}
   # console logs each letter instead of sending it; smtp hands it to a relay and

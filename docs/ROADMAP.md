@@ -2057,7 +2057,7 @@ where no proxy exists.
   `spring.datasource.password` (through `@Value`, since it is not an `app.*`
   key) and the MinIO pair from `AppProperties` — and hands it to the same pure
   `offenders(env, transport, map)`. The pair is asked for unconditionally: the
-  census forbids the property object as a second reader of `app.storage.enabled`
+  census forbids the property object as a second reader of the storage switch
   (the bean condition decides it), and a prod boot with the store switched off
   has no `StorageService` bean to inject anyway — four services require one — so
   turning the switch off cannot dodge the check. Values added to `PUBLISHED`:
@@ -2080,12 +2080,56 @@ where no proxy exists.
 
   The knob census learned the pair's second reader (`config/ProductionGuard.java`
   beside `storage/MinioStorageService.java`) and judged a fourth flat
-  `app.storage.enabled` row — the new test spells the key to prove a store-off
+  the storage switch's row — the new test spells the switch to prove a store-off
   boot is still refused. `application.yml`'s datasource and storage blocks,
   the DEPLOYMENT checklist item and preflight paragraph, and SECURITY finding #4
   (six values, the unconditional pair, 18 cases) carry the refusal. The backend
   suite answers 897 tests, 0 failed (ITs included); the ai-service suite answers
   11 failed / 1913 passed / 1 skipped, and the eleven are the same three
+  frontend-reading censuses the concurrent session's in-flight files keep red;
+  the 32 doc-reading gate files answer 238/238.)
+
+- [x] **31.10** a production boot mails links the reader can open.
+
+  (`app.web.base-url` defaults to `http://localhost:3000`, and
+  `.env.prod.example` ships `https://your-domain.com`; every password-reset,
+  email-change and unsubscribe link is built from that one value (`AuthService`,
+  `EmailChangeService`, `MailLinks`). A prod boot that forgot the knob mailed its
+  readers a link to their own machine, and a boot that kept the example's value
+  mailed every reset and confirmation token to whoever owns `your-domain.com`.)
+
+  `ProductionGuard` now asks for the link base too: `WEB_BASE_URL` joins the
+  ordered map through `@Value("${app.web.base-url:http://localhost:3000}")`, and
+  its check is the one with a shape rule beside the literal lookup. The shipped
+  loopback default and the example's literal sit in `PUBLISHED`;
+  `isUnreachableBaseUrl` additionally refuses a value that is not an http(s) URL,
+  whose host is loopback (`localhost`, `*.localhost`, `127.*`, `[::1]`,
+  `0.0.0.0`), or whose host is `your-domain.com` under any scheme, trailing slash
+  or `www.` prefix — a copying operator is as likely to keep the domain as the
+  literal. The refusal names the base in the same offender list, so one restart
+  still fixes everything.
+
+  `ProductionGuardTest` grew from 18 to 23 cases: three decision-table arms — the
+  loopback spellings (seven), broken spellings (empty, spaces, a bare host, ftp,
+  `not a url`, `http://`), and the example domain's four spellings — and a drift
+  arm that reads `APP_WEB_BASE_URL` out of `application.yml`, `.env.example` and
+  `.env.prod.example` (all three refused). The context arms: a prod boot with
+  real secrets on loopback names only `APP_WEB_BASE_URL`, the all-offenders arm's
+  exact prefix now carries eight names, and every other prod arm pins a real
+  public base. Mutation arm: forcing `isUnreachableBaseUrl` to `false` turned 3
+  of 23 red — the three decision-table arms; the loopback context arm stayed
+  green because its `http://localhost:3000` is in `PUBLISHED` too, which is the
+  point of the two layers. Restored byte-identical (sha1 b9e0fe10…), 23/23 green.
+
+  `application.yml`'s `web` block carries a comment; the DEPLOYMENT checklist,
+  preflight paragraph and Email section, and SECURITY finding #4 (the base URL,
+  23 cases) state the refusal. The deployment-doc gate caught the first drafts'
+  quantifiers ("only the server or nobody can open", "console-alone"): beside a
+  loopback mention they claim the whole stack, so both sentences were reworded.
+  No census file changed — `app.web.base-url` was already bound through `@Value`
+  outside AppProperties, and the knob census is keyed by the key's name. The
+  backend suite answers 902 tests, 0 failed (ITs included); the ai-service suite
+  answers 11 failed / 1913 passed / 1 skipped, and the eleven are the same three
   frontend-reading censuses the concurrent session's in-flight files keep red;
   the 32 doc-reading gate files answer 238/238.)
 

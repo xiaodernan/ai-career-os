@@ -72,6 +72,12 @@ passwords is no longer a reachable state.
   exits instead of serving forgeable credentials (`ProductionGuard`; see
   [SECURITY.md](SECURITY.md#findings) finding #4). The store's user name may keep
   the shipped `careeros-minio-admin`; the refusal there is on `change-me` names.
+- [ ] `APP_WEB_BASE_URL` is the deployment's public origin (an `https://` URL), not
+  the shipped `http://localhost:3000` and not `.env.prod.example`'s
+  `your-domain.com` placeholder — every password-reset, email-change and
+  unsubscribe link is built from it, and a prod boot refuses a loopback host, a
+  non-http(s) value, the example domain, or an empty value (`ProductionGuard`;
+  see [Email](#email))
 - [ ] Reverse proxy (nginx/Traefik/Caddy) terminates TLS and forwards to:
   - Frontend: `http://frontend:3000`
   - Backend API: `http://backend:8080`
@@ -105,10 +111,12 @@ API key, or an inverted DB pool. It is pure: no database or network is touched.
 The backend carries the same gate inline: with `APP_ENV=prod`, `ProductionGuard`
 refuses the Spring context on a published JWT secret, mail-link secret, internal
 token, database password or object-store credential (or a `CHANGE_ME`/empty value),
-or on the console mail transport that would keep every reset link in the log, and
-names every offender — a boot that would have served forgeable credentials or
-reached production's database and bucket with a published password exits non-zero
-instead.
+on a link base the reader's browser cannot open (a loopback host, a non-http(s)
+value, or the examples' `localhost`/`your-domain.com` placeholders), or on the
+console mail transport that would keep every reset link in the log, and names every
+offender — a boot that would have served forgeable credentials, reached production's
+database and bucket with a published password, or mailed every reset link to a
+machine the reader does not have exits non-zero instead.
 
 ```bash
 cd ai-service
@@ -489,8 +497,9 @@ the transport accepts: a refused morning is a warn line and tomorrow's sweep tri
 again, while an accepted letter is never repeated, and an item read or dismissed in
 the app is not mailed at all. `careeros.signals.cron` moves the clock, and on
 `console` each morning's letter is a log line. The letter's links are absolute and
-built from `APP_WEB_BASE_URL` — point it at the deployment's public URL, or every
-link in a real mailbox points at localhost.
+built from `APP_WEB_BASE_URL`; a prod boot refuses the knob's shipped loopback
+default and the example's `your-domain.com`, because otherwise every link in a
+real mailbox points at localhost or at a domain the operator does not own.
 
 The sweep is metered (22.2): `careeros.signals.delivery{outcome="sent"|"refused"}`
 counts account letters that actually reached the transport, and

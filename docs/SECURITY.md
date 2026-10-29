@@ -218,8 +218,8 @@ residual risk rather than as a clean bill of health.
    `/api/v1/auth/login` answers `401` in **1.20s** — which is what "fails open" was
    always meant to mean. Restoring Redis returns `ok`/`redis:true` with no restart.
 
-4. **A production boot used to accept the repository's published secrets and a mail
-   transport that logs — fixed.**
+4. **A production boot used to accept the repository's published secrets, mail links
+   nobody can open and a mail transport that logs — fixed.**
    `application.yml` interpolates `JWT_SECRET`, `APP_MAIL_LINK_SECRET` and
    `INTERNAL_API_TOKEN` from the environment but ships working defaults, and a deploy
    that forgot one booted fine on a value printed in this repository: access tokens
@@ -254,16 +254,30 @@ residual risk rather than as a clean bill of health.
    `APP_EMAIL_PROVIDER` in the same message. There is no opt-out: a production
    deployment that cannot send mail cannot run the password-reset flow.
 
-   `ProductionGuardTest` has 18 cases: the pure decision table (dev, case/space, a lone
+   The links inside the letters had the same defect with a different ending.
+   `app.web.base-url` defaults to `http://localhost:3000`, and the password-reset,
+   email-change and unsubscribe links are all built from it, so a prod boot that
+   forgot `APP_WEB_BASE_URL` mailed every reader a link to their own machine. The
+   production example ships `https://your-domain.com`, which is worse in one way: a
+   boot that keeps it hands every reset and confirmation token to whoever owns that
+   domain. The guard now refuses `APP_WEB_BASE_URL` when it is blank or a
+   `CHANGE_ME` value, when it is not an http(s) URL, when its host is loopback
+   (`localhost`, `127.*`, `[::1]`, `0.0.0.0`, `*.localhost`), and when it is the
+   example's own domain under any scheme or trailing slash — naming it in the same
+   offender list as the credentials.
+
+   `ProductionGuardTest` has 23 cases: the pure decision table (dev, case/space, a lone
    override, blank, `CHANGE_ME`, the database and store defaults, a published user
-   name over a real secret, and the console transport with its case and blank arms), a
-   *drift* check that reads `application.yml` and both env examples so the guard's
-   copies — six secrets, the store's user name and the transport — cannot go stale, an
-   `ApplicationContextRunner` that proves a prod context fails and names all seven
-   offenders in one sentence, including console-alone with real secrets and a
-   storage-off boot that is still asked for the pair, and that dev or prod-with-`smtp`
-   starts, and the `@Component` wiring. `DEPLOYMENT.md`'s checklist and its Email
-   section state the refusal.
+   name over a real secret, a loopback link base in seven spellings, unparseable and
+   non-http link bases, and the example domain with and without a slash or scheme,
+   plus the console transport with its case and blank arms), *drift* checks that read
+   `application.yml` and both env examples so the guard's copies — six secrets, the
+   store's user name, the link base and the transport — cannot go stale, an
+   `ApplicationContextRunner` that proves a prod context fails and names all eight
+   offenders in one sentence, including a console-transport arm and a loopback-link-base arm
+   with real secrets and a storage-off boot that is still asked for the pair, and
+   that dev or prod-with-`smtp` starts, and the `@Component` wiring.
+   `DEPLOYMENT.md`'s checklist and its Email section state the refusal.
 
 ### Dependency audits (2026-10-24)
 

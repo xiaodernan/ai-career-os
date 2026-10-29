@@ -32,6 +32,7 @@ class ProductionGuardTest {
     private static final String REAL_DB = "pg-4b8e1c7a9d2f6e0b3a5c8d1e4f7a0b2c";
     private static final String REAL_MINIO_USER = "careeros-ops-7c1e";
     private static final String REAL_MINIO_SECRET = "minio-9a3f5b8d2c6e4a0f9b7d5c3e1a8f";
+    private static final String REAL_WEB = "https://career.example.org";
     private static final String REAL_SMTP = "smtp";
 
     private final ApplicationContextRunner runner = new ApplicationContextRunner()
@@ -219,6 +220,62 @@ class ProductionGuardTest {
     }
 
     @Test
+    void aProdBootOnALoopbackLinkBaseIsRefused() {
+        for (String loopback : List.of("http://localhost:3000", "http://localhost:8080",
+                "http://127.0.0.1:3000", "http://127.9.9.9", "http://[::1]:3000", "http://0.0.0.0:3000",
+                "https://app.localhost")) {
+            assertThat(ProductionGuard.offenders("prod", REAL_SMTP,
+                    withBaseUrl(realSettings(), loopback)))
+                    .as("a link base at %s", loopback)
+                    .containsExactly(ProductionGuard.WEB_BASE_URL);
+        }
+        assertThat(ProductionGuard.offenders("prod", REAL_SMTP, withBaseUrl(realSettings(), REAL_WEB)))
+                .as("the public origin the deployment actually owns")
+                .isEmpty();
+    }
+
+    @Test
+    void aLinkBaseThatIsNotAnHttpUrlIsRefused() {
+        for (String broken : List.of("", "   ", "career.example.org", "ftp://career.example.org",
+                "not a url", "http://")) {
+            assertThat(ProductionGuard.offenders("prod", REAL_SMTP,
+                    withBaseUrl(realSettings(), broken)))
+                    .as("a link base spelled %s", broken)
+                    .containsExactly(ProductionGuard.WEB_BASE_URL);
+        }
+    }
+
+    @Test
+    void theExamplesOwnDomainIsRefusedWithAnySpelling() {
+        for (String placeholder : List.of("https://your-domain.com", "https://your-domain.com/",
+                "http://your-domain.com", "https://www.your-domain.com")) {
+            assertThat(ProductionGuard.offenders("prod", REAL_SMTP,
+                    withBaseUrl(realSettings(), placeholder)))
+                    .as("the example domain spelled %s", placeholder)
+                    .containsExactly(ProductionGuard.WEB_BASE_URL);
+        }
+    }
+
+    @Test
+    void theShippedLinkBaseAgreesWithTheGuardToo() throws IOException {
+        assertThat(ProductionGuard.offenders("prod", REAL_SMTP,
+                withBaseUrl(realSettings(), ymlDefault("APP_WEB_BASE_URL"))))
+                .as("application.yml's own default")
+                .containsExactly(ProductionGuard.WEB_BASE_URL);
+
+        assertThat(ProductionGuard.offenders("prod", REAL_SMTP,
+                withBaseUrl(realSettings(), envValue(Path.of("..", ".env.example"), "APP_WEB_BASE_URL"))))
+                .as("a dev example copied into prod")
+                .containsExactly(ProductionGuard.WEB_BASE_URL);
+
+        assertThat(ProductionGuard.offenders("prod", REAL_SMTP,
+                withBaseUrl(realSettings(),
+                        envValue(Path.of("..", ".env.prod.example"), "APP_WEB_BASE_URL"))))
+                .as("a prod example booted before its your-domain.com value was replaced")
+                .containsExactly(ProductionGuard.WEB_BASE_URL);
+    }
+
+    @Test
     void aProdContextRefusesToRefreshAndNamesEveryOffender() {
         runner.withPropertyValues("app.deployment.env=prod", "app.jwt.secret=" + PUBLISHED_JWT,
                         "app.mail.link-secret=" + PUBLISHED_MAIL, "app.internal.token=" + PUBLISHED_INTERNAL)
@@ -226,8 +283,8 @@ class ProductionGuardTest {
                     assertThat(context).hasFailed();
                     assertThat(NestedExceptionUtils.getMostSpecificCause(context.getStartupFailure()).getMessage())
                             .contains("APP_ENV=prod but JWT_SECRET, APP_MAIL_LINK_SECRET, INTERNAL_API_TOKEN, "
-                                    + "POSTGRES_PASSWORD, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, APP_EMAIL_PROVIDER "
-                                    + "cannot open")
+                                    + "POSTGRES_PASSWORD, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, APP_WEB_BASE_URL, "
+                                    + "APP_EMAIL_PROVIDER cannot open")
                             .contains("docs/DEPLOYMENT.md");
                 });
     }
@@ -243,6 +300,23 @@ class ProductionGuardTest {
     }
 
     @Test
+    void aProdContextOnALoopbackLinkBaseIsRefusedEvenWithRealSecrets() {
+        runner.withPropertyValues("app.deployment.env=prod", "app.jwt.secret=" + REAL_JWT,
+                        "app.mail.link-secret=" + REAL_MAIL, "app.internal.token=" + REAL_INTERNAL,
+                        "spring.datasource.password=" + REAL_DB,
+                        "app.storage.access-key=" + REAL_MINIO_USER,
+                        "app.storage.secret-key=" + REAL_MINIO_SECRET,
+                        "app.email.provider=" + REAL_SMTP,
+                        "app.web.base-url=http://localhost:3000")
+                .run(context -> {
+                    assertThat(context).hasFailed();
+                    assertThat(NestedExceptionUtils.getMostSpecificCause(context.getStartupFailure()).getMessage())
+                            .contains("APP_ENV=prod but APP_WEB_BASE_URL cannot open")
+                            .doesNotContain("JWT_SECRET");
+                });
+    }
+
+    @Test
     void aProdContextStartsOnceEveryCredentialIsReal() {
         runner.withPropertyValues(prodProperties(REAL_SMTP)).run(context -> {
             assertThat(context).hasNotFailed();
@@ -255,7 +329,7 @@ class ProductionGuardTest {
         runner.withPropertyValues("app.deployment.env=prod", "app.jwt.secret=" + REAL_JWT,
                         "app.mail.link-secret=" + REAL_MAIL, "app.internal.token=" + REAL_INTERNAL,
                         "spring.datasource.password=" + REAL_DB, "app.email.provider=" + REAL_SMTP,
-                        "app.storage.enabled=false")
+                        "app.web.base-url=" + REAL_WEB, "app.storage.enabled=false")
                 .run(context -> {
                     assertThat(context).hasFailed();
                     assertThat(NestedExceptionUtils.getMostSpecificCause(context.getStartupFailure()).getMessage())
@@ -286,7 +360,17 @@ class ProductionGuardTest {
             "app.storage.access-key=" + REAL_MINIO_USER,
             "app.storage.secret-key=" + REAL_MINIO_SECRET,
             "app.email.provider=" + provider,
+            "app.web.base-url=" + REAL_WEB,
         };
+    }
+
+    private static Map<String, String> realSettings() {
+        return credentials(REAL_JWT, REAL_MAIL, REAL_INTERNAL, REAL_DB, REAL_MINIO_USER, REAL_MINIO_SECRET);
+    }
+
+    private static Map<String, String> withBaseUrl(Map<String, String> values, String baseUrl) {
+        values.put(ProductionGuard.WEB_BASE_URL, baseUrl);
+        return values;
     }
 
     private static Map<String, String> credentials(String jwt, String mailLink, String internal,
