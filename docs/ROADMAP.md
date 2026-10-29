@@ -2244,6 +2244,48 @@ where no proxy exists.
   `docs/SECURITY.md`'s shell-headers bullet names the pair and the banner switch;
   `csp.ts`'s comment counts seven headers.)
 
+## Epic 32 — The Answer Leaves a Trail
+
+Epic 20 taught the deployment to page itself, but every alarm it added points at a
+window of time, not at one request. A report that arrives as "the export failed at
+14:03" still had to be matched against a minute's worth of log lines, and the
+refusals that arrive without a session — a `401`, a `429` — carried nothing a
+reader could quote back. This epic gives every answer an id, writes the same id on
+the lines it logs, and carries it to the services and screens the answer touches,
+so one grep reconstructs one request.
+
+- [x] **32.1** An answer and its log lines share one id.
+
+  (`backend/src/main/java/com/careeros/common/RequestIdFilter.java` runs at
+  `Ordered.HIGHEST_PRECEDENCE`, ahead of the security chain, so the `401`s and
+  `429`s that never reach a controller carry the id too. The value is the caller's
+  own `X-Request-Id` when it is 8–64 characters of `[A-Za-z0-9._-]` and starts
+  with a letter or digit; anything else — an empty string, a space, a line break,
+  `%0d%0a`, 65 characters — is replaced by a fresh UUID rather than refused,
+  because the id is diagnostics, not a credential. The response header is set
+  before the chain runs, so an error handler and the log agree on one value, and
+  the MDC entry is removed in a `finally` so a pooled thread never carries one
+  request's id into the next. `application.yml`'s console pattern gained
+  `[%X{requestId:-}]` — boot lines and scheduled sweeps print an empty bracket —
+  and `SecurityConfig` exposes `X-Request-Id` through CORS so the browser can
+  quote it from a failed call.
+
+  `RequestIdFilterTest` holds three cases: a minted id is already on the response
+  and in the MDC while the chain runs and gone afterwards; four well-formed
+  caller ids are echoed (including a 32-hex trace id and the 64-character
+  ceiling); eight malformed ones are replaced. `RequestIdIT` pins the same
+  promise through the real security chain: an unauthenticated `401` carries a
+  UUID, a caller id is echoed and listed in `Access-Control-Expose-Headers` for
+  the shell's origin, and a malformed id still answers `401` with a replaced id.
+  Mutation arm: deleting the `response.setHeader` line turned all six red (3
+  unit + 3 IT); restored byte-identical (sha1 2a3c1381…), 6/6 green. The full
+  backend suite answers 912 tests, 0 failures, 0 errors, 0 skipped. The
+  doc-reading gate selection answers 238/238 after the two doc edits.
+
+  `docs/RUNBOOK.md` gained "A reader quotes one request" — asking for the header,
+  what the bracket looks like, and why an empty bracket is a scheduled line — and
+  `docs/API.md` its correlation convention.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

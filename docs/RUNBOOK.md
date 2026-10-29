@@ -285,6 +285,29 @@ once at boot), `backend/src/main/java/com/careeros/report/service/WeeklyDigestDe
 (the per-table deletion counter and the nightly sweep heartbeat). A metric missing
 from the scrape means the bean did not start: the backend log has the reason.
 
+## A reader quotes one request
+
+**What arrives.** "The export failed at 14:03" covers a minute of requests. Ask for
+the `X-Request-Id` header on the failed answer — every answer carries one, including
+the `401`s and `429`s that never reached a controller, and the browser exposes it to
+the shell so the reader can copy it from the network panel. A proxy that mints its
+own id keeps it when the value is 8–64 characters of letters, digits, dot, dash or
+underscore; anything else is replaced by a fresh UUID, so a quoted value always
+fits on one log line.
+
+**What to read.** The console pattern prints the id in square brackets after the
+level and thread:
+
+```
+14:03:07.412 WARN  [http-nio-8080-exec-4] [edge-7c1d4f9a] c.c.report.ExportService - ...
+```
+
+Grep the backend log for `[edge-7c1d4f9a]` and every line the request wrote is on
+screen, in order. A line with an empty bracket — `[]` — was written outside any
+request: boot lines and scheduled sweeps have none and cannot be tied to a report.
+The id is diagnostics, not a credential: it is not stored, it changes on every
+call, and quoting it exposes nothing.
+
 ## What this runbook does not cover
 
 - **Redis.** It backs the rate limiter and the health ping; its outage is a degraded

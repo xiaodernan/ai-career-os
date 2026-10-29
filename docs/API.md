@@ -51,6 +51,13 @@ per-user budget on AI endpoints.
 **SSE.** `text/event-stream` with events `status`, `token`, `trace`, `artifact`,
 `done`, `error`.
 
+**Correlation.** Every answer carries `X-Request-Id`: a proxy's own value when it
+is 8–64 characters of letters, digits, dot, dash or underscore, otherwise a fresh
+UUID. The same id is printed in brackets on every backend log line the request
+writes, refusals included, and CORS exposes the header to the shell's origin, so a
+reader reporting a failed call can quote one token instead of describing the
+screen. A malformed inbound value is replaced, never refused.
+
 ## 2. Public API — `/api/v1`
 
 ### Health

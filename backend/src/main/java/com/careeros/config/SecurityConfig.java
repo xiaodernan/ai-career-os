@@ -6,6 +6,7 @@ import com.careeros.auth.service.JwtService;
 import com.careeros.common.ApiError;
 import com.careeros.common.ApiErrorCode;
 import com.careeros.common.ApiResponse;
+import com.careeros.common.RequestIdFilter;
 import com.careeros.ratelimit.RateLimitFilter;
 import com.careeros.ratelimit.RateLimitMetrics;
 import com.careeros.ratelimit.RedisSlidingWindowRateLimiter;
@@ -95,6 +96,8 @@ public class SecurityConfig {
         config.setAllowedOrigins(props.getCors().getAllowedOrigins());
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Internal-Token"));
+        // The browser can quote the id from a failed call instead of describing the screen.
+        config.setExposedHeaders(List.of(RequestIdFilter.HEADER));
         config.setMaxAge(3600L);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);

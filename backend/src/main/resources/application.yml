@@ -137,5 +137,6 @@ management:
       enabled: false
 
 logging:
+  # Every request logs under the id `RequestIdFilter` puts on its answer; boot lines have none.
   pattern:
-    console: "%d{HH:mm:ss.SSS} %-5level [%thread] %logger{28} - %msg%n"
+    console: "%d{HH:mm:ss.SSS} %-5level [%thread] [%X{requestId:-}] %logger{28} - %msg%n"
