@@ -1961,6 +1961,48 @@ where no proxy exists.
   `types.ts` — cache writes, failure announcements, response-field contract —
   and are that session's to land. The backend is untouched.)
 
+- [x] **31.7** the production command feeds compose the file it tells you to fill.
+
+  (DEPLOYMENT.md's production Quick Start says to copy `.env.prod.example` to
+  `.env.prod`, fill it, and start the stack; the command it printed never passed
+  `--env-file`, so compose interpolated the override's values from the process
+  environment and the project-directory `.env` — a file the production procedure
+  never creates. The `env_file: .env.prod` entries look like they cover this and do
+  not: they fill a container after the project renders, while `${...}` is resolved
+  before it, and the `environment:` entries carrying those interpolations override
+  what `env_file:` supplied. A fresh host therefore started postgres on an empty
+  password, redis on `--requirepass ""`, minio on an empty root pair, a backend
+  with blank MinIO keys and an empty CORS allow-list, and a frontend bundle
+  inlined with an empty API base. The stack came up — open and broken in the ways
+  SECURITY.md says it is not.
+
+  All eight values are now `${VAR:?message}`, the message naming both the file and
+  the flag, so an unset or empty value stops the render with the fix. `docker
+  compose config` proved both arms by hand: green with the eight in the
+  environment, and on an empty env file every interpolation stopped the command and
+  named its variable. `--env-file .env.prod` is now on the five commands
+  DEPLOYMENT.md prints, on the override's own usage header, and on the RUNBOOK's
+  six restore lines — two of which (the `exec` and the `ps -q minio` substitution)
+  had been driving the development project, because they named neither the
+  override nor its file. The nightly backup and the weekly drill build their
+  compose argv through a `COMPOSE` array that adds the flag whenever `COMPOSE_FILE`
+  names the override; its fragment was executed for the dev, prod and
+  absolute-path spellings. The new gate reads the scanner against all three
+  compose spellings (comment lines excluded, because the file explains `:?` in
+  prose), reconciles the required set with the eight and with `.env.prod.example`'s
+  uncommented values, walks the documented commands fence by fence, and pins the
+  scripts' one-call rule. Mutation arms: dropping the flag from the Quick Start,
+  dropping `COMPOSE_FILE` from the RUNBOOK exec, and respelling one `${VAR:?}` as
+  `${VAR}` each turned their case red. The CORS gate's interpolation reader learned
+  `:?` — a requirement, not a default — with its own fixture, and the knob census's
+  compose-arm reader now accepts the required spelling. The limiter ledger gained
+  the one row 31.6's ROADMAP prose had left classified, which the suite found at
+  the start of this unit. The affected seven gates run 55/55; the full suite answers
+  11 failed / 1913 passed / 1 skipped, and the eleven are the same three
+  frontend-reading censuses (cache writes, failure announcements, response-field
+  contract) that the concurrent session's in-flight files keep red and that are
+  that session's to land. The backend is untouched.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

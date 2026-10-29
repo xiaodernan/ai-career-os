@@ -98,7 +98,7 @@ MIN_HEADER_SITES = 6
 MIN_METHOD_SITES = 6
 
 INTERP = re.compile(
-    r"\$\{(?P<var>[A-Z][A-Z0-9_]*)(?::(?P<dash>-)?(?P<default>[^}]*))?\}"
+    r"\$\{(?P<var>[A-Z][A-Z0-9_]*)(?::(?:(?P<required>\?)|(?P<dash>-))?(?P<default>[^}]*))?\}"
 )
 # scheme plus loopback host plus optional port: exactly the origin, so no trailing punctuation,
 # path or quote can be mistaken for part of it
@@ -154,16 +154,18 @@ def walk(*roots: Path, code_only: bool = False) -> list[tuple[Path, str]]:
 
 
 def interpolation_default(text: str, var: str, carrier: str) -> str | None:
-    """The default `${VAR:x}` (Spring) or `${VAR:-x}` (compose) carries; None when it states none.
+    """The default `${VAR:x}` (Spring), `${VAR:-x}` (compose) or `${VAR:?m}` carries; None when it states none.
 
-    One expression reads both spellings because the two tools that expand them differ by one
+    One expression reads every spelling because the tools that expand them differ by one
     character: a parser that required the dash would call every default in `application.yml`
     "states nothing", and one that left it in the value would report `-http://localhost`.
+    Compose's `:?` is a requirement, not a default -- the text after it is the message a
+    missing value stops with -- so it reads as None, the same claim as a bare `${VAR}`.
     """
     for match in INTERP.finditer(text):
         if match["var"] != var:
             continue
-        if match["default"] is None:
+        if match["required"] or match["default"] is None:
             return None
         assert not match["default"].startswith("-"), (
             f"{carrier}: {var} uses compose's `:-` and the dash survived into the default "
@@ -401,6 +403,12 @@ def test_the_origin_parsers_read_both_interpolation_spellings_and_a_colon_bearin
     assert interpolation_default("A: ${APP_CORS_ORIGINS:-}", "APP_CORS_ORIGINS", "empty") == "", (
         "`${VAR:-}` states an empty default, which is a different claim from stating none, and the "
         "two have to be told apart by the reader")
+    assert interpolation_default(
+        "A: ${APP_CORS_ORIGINS:?fill .env.prod and pass --env-file .env.prod}",
+        "APP_CORS_ORIGINS", "required") is None, (
+        "compose's `${VAR:?message}` is a requirement, not a default: reading `?message` as the "
+        "value would make the production arm that forbids a default fail on the strongest "
+        "spelling the compose file can use")
     assert origin_list("https://a.example, https://b.example") == \
         {"https://a.example", "https://b.example"}, (
         "a comma-separated allow-list is more than one origin, and the split has to keep both")

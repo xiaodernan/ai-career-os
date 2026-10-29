@@ -35,13 +35,22 @@ die() {
     exit 1
 }
 
+# Compose resolves every `${...}` while it renders the project, from the shell and the file
+# `--env-file` names -- never from the services' `env_file:`. The prod override marks its
+# values required and cannot render without that file, so the script hands it over whenever
+# COMPOSE_FILE names the override; the development stack keeps its own defaults.
+COMPOSE=(docker compose)
+case "${COMPOSE_FILE:-}" in
+    *docker-compose.prod.yml*) COMPOSE+=(--env-file .env.prod) ;;
+esac
+
 STAGE="$(mktemp -d)"
 cleanup() {
     rm -rf "$STAGE"
 }
 trap cleanup EXIT
 
-POSTGRES_ID="$(docker compose ps -q postgres)"
+POSTGRES_ID="$("${COMPOSE[@]}" ps -q postgres)"
 [ -n "$POSTGRES_ID" ] || die "the postgres service is not running (COMPOSE_FILE=${COMPOSE_FILE:-docker-compose.yml})"
 
 # Live names are read from the container, never guessed on the host: the drill must

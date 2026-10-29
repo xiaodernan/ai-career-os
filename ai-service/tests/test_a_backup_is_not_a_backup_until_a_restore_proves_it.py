@@ -100,7 +100,7 @@ def test_neither_script_names_a_container_that_the_compose_file_should_name():
     for script in (BACKUP, DRILL):
         source = read(script)
 
-        assert "docker compose ps -q postgres" in source, (
+        assert '"${COMPOSE[@]}" ps -q postgres' in source, (
             f"{script.name} must ask the compose project which container is postgres"
         )
         for name in CONTAINER_NAMES:

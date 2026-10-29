@@ -14,8 +14,9 @@ degradation back for an outage that looks like a hang. See `docs/SECURITY.md` §
 ## Production Deployment
 
 For production, use the dedicated production compose file with a `.env.prod` file
-containing all secrets. The production compose uses the `app` profile and adds
-resource limits, health checks, and proper restart policies.
+containing all secrets, passed to every command as `--env-file .env.prod`. The
+production compose uses the `app` profile and adds resource limits, health checks,
+and proper restart policies.
 
 ### Prerequisites
 
@@ -32,13 +33,22 @@ cp .env.prod.example .env.prod
 # Edit .env.prod with all required secrets
 
 # 2. Start the production stack
-docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile app up -d
+docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.prod --profile app up -d
 
 # 3. Verify health
 curl -f http://localhost:8080/api/v1/health
 curl -f http://localhost:8000/health
 curl -f http://localhost:3000
 ```
+
+`--env-file` is the flag that matters here, and it is not the same thing as the
+services' `env_file:` entries. Compose expands every `${...}` in the files before a
+container exists, from the process environment and the file `--env-file` names —
+`env_file:` only fills a container afterwards, and an `environment:` entry that
+carries an interpolation overrides it. The override spells each required value
+`${VAR:?...}`, so a command without the flag stops before anything is pulled and
+names the variable, its message saying where to fill it; starting on empty
+passwords is no longer a reachable state.
 
 ### Production Checklist
 
@@ -216,12 +226,12 @@ whole only into the scratch drill.
 
 ```bash
 # Build new images
-docker compose -f docker-compose.yml -f docker-compose.prod.yml build
+docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.prod build
 
 # Rolling restart (one service at a time)
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --no-deps backend
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --no-deps ai-service
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --no-deps frontend
+docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.prod up -d --no-deps backend
+docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.prod up -d --no-deps ai-service
+docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.prod up -d --no-deps frontend
 ```
 
 ### Monitoring Endpoints

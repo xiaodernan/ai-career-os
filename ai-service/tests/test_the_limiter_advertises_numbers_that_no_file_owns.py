@@ -184,6 +184,14 @@ EXCUSED_NUMBERS = [
             "would reproduce in five requests. Nothing deploys this figure, and the sentence says so in "
             "the same clause"),
     },
+    {
+        "site": "ROADMAP.md's record of the 31.6 repair",
+        "pattern": re.compile(r"`RATELIMIT_AUTH_PER_MINUTE=3` row no longer shared"),
+        "reason": (
+            "a history of where SECURITY.md's sentence moved, not a second configuration: the figure is "
+            "the same experiment the entry above excuses, and the roadmap line records that the number "
+            "and its excuse had stopped sharing a line"),
+    },
 ]
 
 

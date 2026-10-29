@@ -1,8 +1,15 @@
 # Production docker-compose for AI Career OS
-# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile app up -d
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.prod --profile app up -d
+#
+# `--env-file .env.prod` is not optional. The `env_file:` entries in the services below feed the
+# containers, but compose expands every `${...}` before a container exists, from the process
+# environment and the file `--env-file` names -- never from `env_file:`. And an `environment:`
+# entry that carries an interpolation overrides the `env_file:` value, so without the flag a
+# fresh host renders every required value as empty and those empties win. Each one below is
+# spelled `${VAR:?message}`, which stops the command with the message instead.
 #
 # Prerequisites:
-# - .env.prod file with production secrets (see .env.prod.example)
+# - .env.prod file with production secrets (see .env.prod.example), passed with --env-file
 # - Reverse proxy (nginx/traefik) for TLS termination
 # - DNS pointing to this host
 #
@@ -15,13 +22,13 @@ services:
     container_name: careeros-postgres-prod
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:?required -- fill .env.prod and pass --env-file .env.prod}
+      POSTGRES_USER: ${POSTGRES_USER:?required -- fill .env.prod and pass --env-file .env.prod}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?required -- fill .env.prod and pass --env-file .env.prod}
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:?required -- fill .env.prod and pass --env-file .env.prod} -d ${POSTGRES_DB:?required -- fill .env.prod and pass --env-file .env.prod}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -36,11 +43,11 @@ services:
     image: redis:7-alpine
     container_name: careeros-redis-prod
     restart: unless-stopped
-    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD}"]
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?required -- fill .env.prod and pass --env-file .env.prod}"]
     volumes:
       - redisdata:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:?required -- fill .env.prod and pass --env-file .env.prod}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -59,8 +66,8 @@ services:
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?required -- fill .env.prod and pass --env-file .env.prod}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?required -- fill .env.prod and pass --env-file .env.prod}
     volumes:
       - miniodata:/data
     healthcheck:
@@ -81,8 +88,8 @@ services:
     restart: unless-stopped
     env_file: .env.prod
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
-      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      DATABASE_URL: postgresql://${POSTGRES_USER:?required -- fill .env.prod and pass --env-file .env.prod}:${POSTGRES_PASSWORD:?required -- fill .env.prod and pass --env-file .env.prod}@postgres:5432/${POSTGRES_DB:?required -- fill .env.prod and pass --env-file .env.prod}
+      REDIS_URL: redis://:${REDIS_PASSWORD:?required -- fill .env.prod and pass --env-file .env.prod}@redis:6379/0
       BACKEND_BASE_URL: http://backend:8080
       APP_ENV: prod
     # Loopback only. ai-service is internal-only by design (README, docs/architecture.md,
@@ -112,15 +119,15 @@ services:
     environment:
       POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      POSTGRES_DB: ${POSTGRES_DB:?required -- fill .env.prod and pass --env-file .env.prod}
+      POSTGRES_USER: ${POSTGRES_USER:?required -- fill .env.prod and pass --env-file .env.prod}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?required -- fill .env.prod and pass --env-file .env.prod}
+      REDIS_URL: redis://:${REDIS_PASSWORD:?required -- fill .env.prod and pass --env-file .env.prod}@redis:6379/0
       MINIO_ENDPOINT: http://minio:9000
-      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
-      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:?required -- fill .env.prod and pass --env-file .env.prod}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:?required -- fill .env.prod and pass --env-file .env.prod}
       AI_SERVICE_BASE_URL: http://ai-service:8000
-      APP_CORS_ORIGINS: ${APP_CORS_ORIGINS}
+      APP_CORS_ORIGINS: ${APP_CORS_ORIGINS:?required -- fill .env.prod and pass --env-file .env.prod}
       APP_ENV: prod
     ports:
       - "8080:8080"
@@ -147,11 +154,11 @@ services:
         # Must be a build arg: the browser bundle inlines NEXT_PUBLIC_* at build time, so
         # a runtime `environment:` entry alone leaves the shipped app calling the dev
         # fallback (http://localhost:8080/api/v1) from every visitor's own machine.
-        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL}
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:?required -- fill .env.prod and pass --env-file .env.prod}
     container_name: careeros-frontend-prod
     restart: unless-stopped
     environment:
-      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL}
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:?required -- fill .env.prod and pass --env-file .env.prod}
       NODE_ENV: production
     ports:
       - "3000:3000"

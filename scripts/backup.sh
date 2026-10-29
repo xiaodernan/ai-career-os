@@ -34,6 +34,15 @@ die() {
     exit 1
 }
 
+# Compose resolves every `${...}` while it renders the project, from the shell and the file
+# `--env-file` names -- never from the services' `env_file:`. The prod override marks its
+# values required and cannot render without that file, so the script hands it over whenever
+# COMPOSE_FILE names the override; the development stack keeps its own defaults.
+COMPOSE=(docker compose)
+case "${COMPOSE_FILE:-}" in
+    *docker-compose.prod.yml*) COMPOSE+=(--env-file .env.prod) ;;
+esac
+
 case "$BACKUP_KEEP" in
     ''|*[!0-9]*) die "BACKUP_KEEP must be a positive integer, got '$BACKUP_KEEP'" ;;
 esac
@@ -54,9 +63,9 @@ trap cleanup EXIT
 
 # The compose project is whatever COMPOSE_FILE says; an empty id means the service is
 # not running, and a dump of a container that is not up is a guess, not a backup.
-POSTGRES_ID="$(docker compose ps -q postgres)"
+POSTGRES_ID="$("${COMPOSE[@]}" ps -q postgres)"
 [ -n "$POSTGRES_ID" ] || die "the postgres service is not running (COMPOSE_FILE=${COMPOSE_FILE:-docker-compose.yml})"
-MINIO_ID="$(docker compose ps -q minio)"
+MINIO_ID="$("${COMPOSE[@]}" ps -q minio)"
 [ -n "$MINIO_ID" ] || die "the minio service is not running (COMPOSE_FILE=${COMPOSE_FILE:-docker-compose.yml})"
 
 echo "backup: dumping postgres"

@@ -214,16 +214,20 @@ after any upgrade that changes the schema.
 
 ## Restoring by hand
 
-Two restores, two commands, both destructive. Stop the writers first.
+Two restores, two commands, both destructive. Stop the writers first. Every line
+names the override with `COMPOSE_FILE` and hands compose `.env.prod` with
+`--env-file`: a bare `docker compose` drives the development project, and the
+override cannot render its required values without the file, so a command missing
+either one restores into the wrong stack or stops before running.
 
 **Database.** With the backend and ai-service stopped:
 
 ```bash
-COMPOSE_FILE=docker-compose.yml:docker-compose.prod.yml docker compose stop backend ai-service
-docker compose exec -T postgres sh -c \
+COMPOSE_FILE=docker-compose.yml:docker-compose.prod.yml docker compose --env-file .env.prod stop backend ai-service
+COMPOSE_FILE=docker-compose.yml:docker-compose.prod.yml docker compose --env-file .env.prod exec -T postgres sh -c \
   'pg_restore --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" --clean --if-exists --no-owner --no-privileges' \
   < backups/careeros-<stamp>.dump
-COMPOSE_FILE=docker-compose.yml:docker-compose.prod.yml docker compose start backend ai-service
+COMPOSE_FILE=docker-compose.yml:docker-compose.prod.yml docker compose --env-file .env.prod start backend ai-service
 ```
 
 `--clean --if-exists` drops the objects the dump is about to recreate, so the result
@@ -233,11 +237,11 @@ restarted backend and finds the schema already at the dump's version.
 **Files.** With MinIO stopped, write the archive back onto the data volume:
 
 ```bash
-COMPOSE_FILE=docker-compose.yml:docker-compose.prod.yml docker compose stop minio
-docker run --rm --volumes-from "$(docker compose ps -q minio)" \
+COMPOSE_FILE=docker-compose.yml:docker-compose.prod.yml docker compose --env-file .env.prod stop minio
+docker run --rm --volumes-from "$(COMPOSE_FILE=docker-compose.yml:docker-compose.prod.yml docker compose --env-file .env.prod ps -q minio)" \
   -v "$(pwd)/backups:/backups:ro" alpine \
   sh -c 'rm -rf /data/* && tar -C /data -xzf /backups/careeros-<stamp>-files.tgz'
-COMPOSE_FILE=docker-compose.yml:docker-compose.prod.yml docker compose start minio
+COMPOSE_FILE=docker-compose.yml:docker-compose.prod.yml docker compose --env-file .env.prod start minio
 ```
 
 The database and the files must come from the **same** set: a row that points at a

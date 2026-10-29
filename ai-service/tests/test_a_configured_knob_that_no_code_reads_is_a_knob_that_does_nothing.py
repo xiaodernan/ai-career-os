@@ -233,7 +233,9 @@ FE_MIRROR = re.compile(r"Mirrors `storage/FileValidator`: (?P<v>\d+) MB cap")
 MAX_DOCUMENT = re.compile(r"MAX_DOCUMENT_BYTES = (?P<a>\d+) \* (?P<b>\d+) \* (?P<c>\d+)")
 RESUME_MAX = re.compile(r"RESUME_MAX_BYTES = (?P<a>\d+) \* (?P<b>\d+) \* (?P<c>\d+)")
 PROP_MENTION = re.compile(r"app\.(?P<s1>[a-z][a-z0-9-]*)\.(?P<s2>[a-z][a-z0-9_-]*)")
-COMPOSE_ENV = re.compile(r"^\s+(?P<var>MINIO_ACCESS_KEY|MINIO_SECRET_KEY):\s*\$\{(?P<from>[A-Z_]+)\}", re.M)
+COMPOSE_ENV = re.compile(
+    r"^\s+(?P<var>MINIO_ACCESS_KEY|MINIO_SECRET_KEY):\s*\$\{(?P<from>[A-Z_]+)(?=[:\}])", re.M
+)
 # The integration harness names the switch inside a multi-line array (it also declares
 # the forwarded-for trust), so the opening brace and the whitespace before the string
 # are optional here; the single-string spelling is still matched.
