@@ -301,6 +301,13 @@ user-scoped table (ownership is enforced in backend layer + a single SQL predica
   second reader signing in there re-points the row rather than adding one that would
   ring the same browser twice. The keys are what a payload would be encrypted with;
   today's push carries none, and the worker fetches the inbox itself.
+  The outbound half (33.2) is the `PushSender` port: the VAPID transport signs an
+  ES256 token whose `aud` is the endpoint's origin, posts an empty body with a `TTL`
+  header, and answers `SENT`/`GONE`/`REFUSED` -- `404`/`410` retires the row, every
+  other refusal is counted and not retried inside the pass. With no key pair the
+  bean is a no-op that reports "not configured"; one half of the pair, or a TTL
+  outside RFC 8030's ceiling, refuses the boot. Since the push carries no payload,
+  no signal text, saved-search name or count transits the push service.
 - `weekly_digests(id, user_id, week_start date, window_days smallint, payload jsonb,
    generated_at)` → one letter per user per week, the engine's answer stored verbatim;
   re-composing the same week refreshes the row rather than appending a second one.

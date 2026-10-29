@@ -86,6 +86,19 @@ app:
   # answer to a forwarded letter or a leaked mailbox.
   mail:
     link-secret: ${APP_MAIL_LINK_SECRET:dev-only-mail-link-secret-please-change-me-0123456789abcdef}
+  # Web Push (roadmap 33.2). Both VAPID keys or neither: with neither the sender is a
+  # no-op that reports "not configured" and registrations are still accepted, and a
+  # boot with only one half is refused (PushConfig) because it would run while every
+  # wake failed. The public key is the browser's `applicationServerKey`; the private
+  # key signs the ES256 VAPID token and never leaves the server. `contact` is RFC
+  # 8292's `sub` claim (a mailto or https URL); empty falls back to the public web
+  # origin above. `ttl-seconds` is how long a push service may hold a wake for an
+  # offline browser, half a day by default.
+  push:
+    vapid-public-key: ${APP_PUSH_VAPID_PUBLIC_KEY:}
+    vapid-private-key: ${APP_PUSH_VAPID_PRIVATE_KEY:}
+    contact: ${APP_PUSH_CONTACT:}
+    ttl-seconds: ${APP_PUSH_TTL_SECONDS:43200}
   jwt:
     secret: ${JWT_SECRET:dev-only-secret-please-change-me-0123456789abcdef0123456789abcdef}
     access-ttl-minutes: ${JWT_ACCESS_TTL_MINUTES:15}

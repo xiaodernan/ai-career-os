@@ -7,10 +7,10 @@
 薪酬 → 数据可携带，全部闭环；并且从"问了才答"进化为"替你先做"——定时摄取、
 主动提醒、通知中心、每周摘要、语音面试、移动端与生产级交付。
 
-## 当前状态 (2026-10-28)
+## 当前状态 (2026-10-29)
 
 - **前端**: 724 个 vitest 通过（66 个文件）；`tsc --noEmit` 干净。
-- **后端**: 660 个测试通过 (`mvn test`，含无需 Docker 的 MockMvc 切片)。
+- **后端**: 872 个不需要真实栈的测试通过（`mvn -o -B test "-Dtest=!*IT"`）。
 - **ai-service**: 1833 passed, 1 skipped (offline: mock/hash)。
 - **E2E**: 24/24 golden journey（最近一次真实栈验证）。
 - **分支**: main 与 origin 同步。
@@ -145,10 +145,30 @@
       就地更新三个计数；API.md 记路由与两个新错误码。
     - 测试：apply 的建/更/关、公司按名复用、重复应用拒绝、非 completed
       拒绝、跨用户 404；两个前端 helper 测试。
-    - 进度：backend 主体已写（V16、`applied_at`/`applied_counts`、悲观锁读取、
-      `ApplyResult`、两个错误码与 census pin、9 个 service 测试 + 4 个路由测试）。
-      编译被并发会话的 `MonitoringControllerTest` 暂时挡住；前端、API.md、
-      ROADMAP 与 ai-service pin 等对方落定后一起收。
+    - 已完成并提交（a0eb950）：`V16` 给 run 加 `applied_at` / `applied_counts`，
+      悲观锁读取、`ApplyResult`、两个错误码与 census pin（9 个 service 测试 +
+      4 个路由测试）；运行历史每行一个“应用此计划”，已应用则显示时间；API.md
+      记下路由与两个新错误码。职位板从此第一次由夜晚的 run 写入。
+
+11. **Epic 33 — 浏览器被叫醒（Web Push）**
+    通知中心已经写在收件箱里，但读者必须打开页面才看得见。本 Epic 让 03:20 的
+    摄取 sweep 与 08:00 的来信在浏览器里发出声音：VAPID 签名的 Web Push。
+    - ~~33.1 订阅登记~~ 已完成（8ea4878）：`V24__push_subscriptions.sql` +
+      `/push/subscriptions` 的 POST/DELETE（订阅按 endpoint 唯一，删行只看本人），
+      前端 `lib/push.ts` 只负责把 `PushSubscription` 折成后端要的形状。
+    - ~~33.2 签名的唤醒离开大楼~~ 已完成：`PushSender` 出站端口
+      （`SENT` / `GONE` / `REFUSED` / `NOT_CONFIGURED`）与 VAPID 传输
+      （RFC 8030/8292：ES256 JWT 的 `aud` 是 endpoint 的 origin、`TTL` 头、
+      空 body；404/410 回 `GONE` 由调用方删行，其他拒绝只计数不重试；
+      无键时 `NoopPushSender`，半对键启动即拒绝）。`VapidKeys` 接受 raw
+      32 字节或 PKCS#8 私钥并用探针签名验键对。8+7+6 个新测试，872 个
+      非 IT 后端测试全绿；配置门禁 33 leaves / 21 readers / 24 fields。
+    - 33.3（下一步）：晨间 sweep 发出声音。audience 增订阅者、每个 episode
+      独立 push latch（新迁移 V25 给 `notification_states` 加列）、计量与
+      `GONE` 删行；发送接进 `NotificationMailService` 的 sweep 与定时器。
+    - 33.4：前端 worker 处理 `push` 与 `notificationclick`（深链回收件箱），
+      设置页开关（permission → `subscribe` → `/push/subscriptions`，关闭即删，
+      `pushsubscriptionchange` 重新登记）。
 
 ## 开发协议（每个任务）
 

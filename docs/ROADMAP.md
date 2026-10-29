@@ -2412,15 +2412,45 @@ no signal text, saved-search name or count transits a push service.
   resolves a lone `getEndpoint()` call to the storage knob, so the entity's accessor
   is `getEndpointUrl()` and the column is still `endpoint`.)
 
-- [ ] **33.2** A signed push leaves the building.
+- [x] **33.2** A signed push leaves the building.
 
-  (A `PushSender` seam with a Web Push transport per RFC 8030/8292: ES256 VAPID
-  JWT scoped to the endpoint's origin, a `TTL` header, an empty body. The push
-  says only "there is news"; the content is fetched by the worker from the
-  authenticated inbox. `404` and `410` mean the registration is gone and the row
-  is pruned; other refusals are counted, not retried in place. With no VAPID keys
-  configured the sender is a no-op that reports "not configured", and a production
-  boot refuses push enabled with half a key pair.)
+  `push/service/PushSender` is the port: one registration in, one
+  `SENT`/`GONE`/`REFUSED`/`NOT_CONFIGURED` out. `VapidWebPushSender` is the RFC
+  8030/8292 transport -- an empty `POST`, an ES256 JWT whose `aud` is the
+  endpoint's *origin* (scheme, host and port; the path is the registration), the
+  deployment's public key as `k`, and a `TTL` header of half a day by default. The
+  push says only "there is news"; no payload and no encryption, so the content is
+  fetched by the worker from the authenticated inbox and the push service learns
+  nothing but that the browser exists. A `404`/`410` answers `GONE` and the caller
+  prunes the row; every other status, a timeout and an unreachable service answer
+  `REFUSED` -- counted, never retried inside the pass, and never thrown out of the
+  port, because the sweep walks many browsers and one dead one must not stop the
+  rest. With no VAPID key pair configured the bean is a `NoopPushSender` that
+  reports "not configured" (registrations stay, so keys arriving later still
+  reach browsers that opted in early) and the boot logs the reason.
+
+  `VapidKeys` reads the two halves in the formats the ecosystem hands them over
+  in -- an uncompressed P-256 point and a 32-byte scalar, with PKCS#8 accepted for
+  the private half -- and refuses a mismatched pair with a probe signature, the
+  only check that can see two well-formed halves from different key pairs. A boot
+  with one half of the pair is refused (`PushConfig`), and so is a TTL outside
+  RFC 8030's four-week ceiling. `app.push.contact` is RFC 8292's `sub`; empty
+  falls back to the deployment's public web origin.
+
+  Gates: `VapidKeysTest` 8 (raw and PKCS#8 halves, padding, a mismatched pair, a
+  wrong-length point, non-base64url, a half pair, a private key that is neither
+  scalar nor PKCS#8), `VapidWebPushSenderTest` 7 (the signed empty POST with
+  method/TTL/headers/body and the token's header, `aud`, `sub` and lifetime
+  verified with the public key; a non-default port in `aud`; 404 and 410 as
+  `GONE`; 400/401/403/429/503 as `REFUSED`; a non-https endpoint refused without
+  a request; the boot refusals; the origin derivation) and `PushConfigTest` 6
+  (no keys, half a pair either way, a real pair, the contact fallback, the TTL
+  bounds, a malformed and a mismatched pair) -- 21 new tests. The knob gate moved
+  with the configuration: 33 `app:*` leaves, 21 accessor readers, 24 leaf fields,
+  and the four push keys pinned to `PushConfig` as their only reader. No DTO
+  records were added, so the 172-record census is unchanged. `docs/API.md`,
+  `docs/architecture.md` 4.7, `docs/DEPLOYMENT.md`'s checklist and both env
+  examples carry the new knobs. The backend's non-IT suite answers 872 tests, 0 failures.
 
 - [ ] **33.3** The morning sweep rings as well as writes.
 

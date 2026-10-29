@@ -17,6 +17,7 @@ public class AppProperties {
     private final Retention retention = new Retention();
     private final Http http = new Http();
     private final Deployment deployment = new Deployment();
+    private final Push push = new Push();
 
     public Cors getCors() {
         return cors;
@@ -56,6 +57,56 @@ public class AppProperties {
 
     public Deployment getDeployment() {
         return deployment;
+    }
+
+    public Push getPush() {
+        return push;
+    }
+
+    public static class Push {
+        /**
+         * The browser's `applicationServerKey`: base64url of an uncompressed P-256 point.
+         * Empty together with the private key means push is off (PushConfig ships a no-op).
+         */
+        private String vapidPublicKey = "";
+        /** The raw 32-byte scalar or a PKCS#8 blob, base64url. Never leaves the server. */
+        private String vapidPrivateKey = "";
+        /** RFC 8292's `sub` contact claim; empty falls back to the deployment's public web origin. */
+        private String contact = "";
+        /** How long a push service may hold a wake (RFC 8030), in seconds; half a day. */
+        private int ttlSeconds = 43200;
+
+        public String getVapidPublicKey() {
+            return vapidPublicKey;
+        }
+
+        public void setVapidPublicKey(String vapidPublicKey) {
+            this.vapidPublicKey = vapidPublicKey;
+        }
+
+        public String getVapidPrivateKey() {
+            return vapidPrivateKey;
+        }
+
+        public void setVapidPrivateKey(String vapidPrivateKey) {
+            this.vapidPrivateKey = vapidPrivateKey;
+        }
+
+        public String getContact() {
+            return contact;
+        }
+
+        public void setContact(String contact) {
+            this.contact = contact;
+        }
+
+        public int getTtlSeconds() {
+            return ttlSeconds;
+        }
+
+        public void setTtlSeconds(int ttlSeconds) {
+            this.ttlSeconds = ttlSeconds;
+        }
     }
 
     public static class Deployment {

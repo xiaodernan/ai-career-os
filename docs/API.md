@@ -299,6 +299,20 @@ the caller.
 | DELETE | `/push/subscriptions/{id}` | forgets one browser; 204. A registration that is not the caller's is **404** `PUSH_SUBSCRIPTION_NOT_FOUND` |
 | DELETE | `/push/subscriptions` | forgets every browser the account can be woken on; 204 |
 
+The routes keep the registrations; the wake is outbound and has no route of its
+own. A registered browser is rung with one empty `POST` to its endpoint (roadmap
+33.2): an ES256 VAPID token scoped to the push service's origin, the deployment's
+public key as `k`, and a `TTL` header (12 hours by default). No payload and no
+encryption travel with it -- the worker wakes, fetches the authenticated inbox and
+shows one notification -- so a push service learns only that the browser exists and
+was asked to wake. A `404`/`410` means the browser is gone and the registration is
+deleted; every other refusal is counted and tried again on the next pass. With no
+VAPID keys configured the sender is a no-op: browsers can still register, nothing
+leaves the building, and the boot log says "push is not configured". The knobs are
+`APP_PUSH_VAPID_PUBLIC_KEY` and `APP_PUSH_VAPID_PRIVATE_KEY` (both or neither; one
+half refuses the boot), `APP_PUSH_CONTACT` (RFC 8292's `sub`, empty falls back to
+`APP_WEB_BASE_URL`) and `APP_PUSH_TTL_SECONDS`.
+
 ### Mail preferences (`/mail`)
 
 The way out of every letter (roadmap 23.1). Both mails carry a footer link to this

@@ -72,6 +72,13 @@ passwords is no longer a reachable state.
   exits instead of serving forgeable credentials (`ProductionGuard`; see
   [SECURITY.md](SECURITY.md#findings) finding #4). The store's user name may keep
   the shipped `careeros-minio-admin`; the refusal there is on `change-me` names.
+- [ ] Web Push (optional): `APP_PUSH_VAPID_PUBLIC_KEY` and `APP_PUSH_VAPID_PRIVATE_KEY`
+  are both set or both empty. With neither, browsers can register but no push leaves
+  the backend and the boot logs "push is not configured"; one half refuses the boot
+  (`PushConfig`). Set `APP_PUSH_CONTACT` to a `mailto:` or `https:` contact (empty
+  falls back to `APP_WEB_BASE_URL`). Generate the pair with
+  `npx web-push generate-vapid-keys`; the public key is also what the browser
+  subscribes with, so it must be the one the frontend is built against
 - [ ] `APP_WEB_BASE_URL` is the deployment's public origin (an `https://` URL), not
   the shipped `http://localhost:3000` and not `.env.prod.example`'s
   `your-domain.com` placeholder — every password-reset, email-change and
