@@ -9,14 +9,16 @@ import org.springframework.data.jpa.repository.Query;
 
 /**
  * The saved-search reads: one user's named questions, newest first, the
- * user-scoped find every delete is anchored on, and the distinct owners the
- * morning sweep asks after (29.2).
+ * user-scoped find every delete is anchored on, the distinct owners the
+ * morning sweep asks after (29.2), and the tally that bounds a list (29.4).
  */
 public interface SavedSearchRepository extends JpaRepository<SavedSearch, UUID> {
 
     List<SavedSearch> findByUserIdOrderByCreatedAtDesc(UUID userId);
 
     Optional<SavedSearch> findByIdAndUserId(UUID id, UUID userId);
+
+    long countByUserId(UUID userId);
 
     /**
      * Every account keeping at least one saved search. The letter's audience

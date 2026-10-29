@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -104,6 +105,28 @@ class SavedSearchServiceTest {
                 new SavedSearchRequest("Inverted", new Criteria(null, null, null, null, 60000, 30000, null))))
                 .isInstanceOfSatisfying(ApiException.class,
                         e -> assertThat(e.code()).isEqualTo(ApiErrorCode.SALARY_RANGE_INVALID));
+    }
+
+    @Test
+    void allowsTheSearchThatFillsTheLastPlace() {
+        when(repository.countByUserId(userId)).thenReturn((long) SavedSearchService.MAX_SAVED_SEARCHES_PER_USER - 1);
+
+        service.create(userId, new SavedSearchRequest("Last one", new Criteria(
+                "backend", null, null, null, null, null, null)));
+
+        assertThat(saved().getName()).isEqualTo("Last one");
+    }
+
+    @Test
+    void refusesAListAlreadyAtTheBoundWithoutWritingAnything() {
+        when(repository.countByUserId(userId)).thenReturn((long) SavedSearchService.MAX_SAVED_SEARCHES_PER_USER);
+
+        assertThatThrownBy(() -> service.create(userId,
+                new SavedSearchRequest("One too many", new Criteria(
+                        "backend", null, null, null, null, null, null))))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.code()).isEqualTo(ApiErrorCode.SAVED_SEARCH_LIMIT_REACHED));
+        verify(repository, never()).save(any(SavedSearch.class));
     }
 
     @Test

@@ -1551,6 +1551,27 @@ episode, settled by reading or acting, and mailed at most once.
   account-security routes have no browser caller yet; pre-existing, and
   untouched here.
 
+- [x] **29.4** A saved-search list is bounded like the feed list.
+
+  (29.1 gave the search a voice, and 29.3 made the bell ask on a minute's beat —
+  which turned the stored list into a multiplier on the read path that feeds
+  never had: a feed is asked once a night, while every saved search is re-asked
+  by every inbox read, by the bell's beat, and again by the morning sweep. The
+  list had no bound, so an account could store as many questions as it liked and
+  every one of them would run the board's predicate before the sweep had asked
+  anything. `SavedSearchService` now refuses a create past
+  `MAX_SAVED_SEARCHES_PER_USER` — the feed list's own 20, so the two lists a
+  reader keeps are bounded alike — with a new `SAVED_SEARCH_LIMIT_REACHED`
+  code, added to the frozen name census (87 codes) and to `API.md`. Validation
+  still comes first: an empty search is refused as empty, not as full. 2 unit
+  tests pin the boundary in both directions — the search that fills the last
+  place is stored, and the one past it is refused without a write. The backend
+  unit suite at 791 and the integration suite at 76 are green. The refusal's
+  sentence reaches the reader in English through the server's own wording
+  until the browser's copy table carries the code; the table is another
+  session's in-flight file, so the localized sentence is left for the change
+  that next opens it.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

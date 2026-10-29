@@ -179,7 +179,7 @@ was already written (the retry re-sends the stored letter as it was).
 | GET | `/jobs` | search: `q, skills, location, remote, company, minSalary, maxSalary, status, sort=posted\|salary\|title\|match\|relevance, page, size` — blank `sort` = relevance for a query, recency for a browse; every ordering ends in the job id, so a page is a partition of the board rather than of a plan's mood |
 | GET | `/jobs/saved` | bookmarked jobs |
 | GET | `/saved-searches` | this caller's saved searches, newest first |
-| POST | `/saved-searches` | `{name, criteria}` → the saved search (201). `criteria` uses the board's own names (`q`, `skills`, `location`, `remote`, `company`, `minSalary`, `maxSalary`) and at least one is required; a repeated skill folds to one, a blank one is dropped, and `remote=false` is not stored because the switch means "remote only" |
+| POST | `/saved-searches` | `{name, criteria}` → the saved search (201). `criteria` uses the board's own names (`q`, `skills`, `location`, `remote`, `company`, `minSalary`, `maxSalary`) and at least one is required; a repeated skill folds to one, a blank one is dropped, and `remote=false` is not stored because the switch means "remote only". An account keeps at most 20 — `SAVED_SEARCH_LIMIT_REACHED` past that — because every inbox read and the morning sweep re-ask each stored question |
 | DELETE | `/saved-searches/{id}` | forgets one saved search; 204 |
 | POST | `/jobs` | create a job (with inline `company`) |
 | POST | `/jobs/import` | pasted/imported posting |

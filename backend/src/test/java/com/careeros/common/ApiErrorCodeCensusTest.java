@@ -21,14 +21,14 @@ import org.springframework.web.bind.annotation.RestController;
  * {@link ApiErrorCode} is the machine-readable contract every client reads — the enum's
  * own comment says "never rename an emitted code" — and three properties of it were
  * unpinned. The status map was spot-checked by whatever route happened to throw each
- * code (a dozen of the 86); an unreachable-coded 2xx would make an error invisible to
+ * code (a dozen of the 87); an unreachable-coded 2xx would make an error invisible to
  * every client's error path and nothing would have noticed. A rename is a wire break
- * nobody can see from the type system. And two of the 86 codes are deliberately
+ * nobody can see from the type system. And two of the 87 codes are deliberately
  * unreachable today, which reads as an enum bug to the next session unless it is
  * written down somewhere a test wakes up.
  *
  * The handler's fidelity half of this file matters as much as the shape half: the
- * advice is one line (`status(ex.code().status())`), so this exercises it for all 86
+ * advice is one line (`status(ex.code().status())`), so this exercises it for all 87
  * codes at once rather than trusting that the twelve spot-checks represent the rest.
  */
 class ApiErrorCodeCensusTest {
@@ -99,7 +99,8 @@ class ApiErrorCodeCensusTest {
                 "RATE_LIMITED", "RESET_TOKEN_INVALID", "RESET_TOKEN_OWNER_NOT_FOUND", "RESUME_FILE_MISSING",
                 "RESUME_NOT_AVAILABLE", "RESUME_NOT_FOUND", "RESUME_NOT_INGESTED", "RESUME_NOT_PARSED",
                 "RESUME_NOT_TAILABLE", "RESUME_TEXT_NOT_READY", "RESUME_VERSION_MISSING", "RUN_NOT_FOUND",
-                "SALARY_RANGE_INVALID", "SAVED_SEARCH_EMPTY", "SAVED_SEARCH_NOT_FOUND", "SESSION_NOT_FOUND",
+                "SALARY_RANGE_INVALID", "SAVED_SEARCH_EMPTY", "SAVED_SEARCH_LIMIT_REACHED",
+                "SAVED_SEARCH_NOT_FOUND", "SESSION_NOT_FOUND",
                 "SOURCE_NOT_FOUND", "STORAGE_DELETE_FAILED",
                 "STORAGE_PRESIGN_FAILED",
                 "STORAGE_READ_FAILED", "STORAGE_WRITE_FAILED", "TAILORED_BODY_MISSING",

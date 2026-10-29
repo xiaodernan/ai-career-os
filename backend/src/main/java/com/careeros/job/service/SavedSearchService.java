@@ -29,6 +29,15 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class SavedSearchService {
 
+    /**
+     * A list, bounded so the read path is bounded with it (29.4). A saved search is not
+     * asked once a night like a feed: every inbox read asks it again -- and the bell asks
+     * on a minute's beat -- so an unbounded list is an unbounded number of board queries
+     * per reader, per minute, before the morning sweep has asked anything. The cap is the
+     * feed list's own, so the two lists a reader keeps are bounded alike.
+     */
+    static final int MAX_SAVED_SEARCHES_PER_USER = 20;
+
     private final SavedSearchRepository savedSearches;
 
     public SavedSearchService(SavedSearchRepository savedSearches) {
@@ -48,6 +57,10 @@ public class SavedSearchService {
         if (criteria.isEmpty()) {
             throw new ApiException(ApiErrorCode.SAVED_SEARCH_EMPTY,
                     "A saved search needs at least one criterion");
+        }
+        if (savedSearches.countByUserId(userId) >= MAX_SAVED_SEARCHES_PER_USER) {
+            throw new ApiException(ApiErrorCode.SAVED_SEARCH_LIMIT_REACHED,
+                    "A user can keep at most " + MAX_SAVED_SEARCHES_PER_USER + " saved searches");
         }
         SavedSearch saved = new SavedSearch();
         saved.setUserId(userId);

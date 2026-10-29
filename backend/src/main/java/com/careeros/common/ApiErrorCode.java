@@ -87,6 +87,8 @@ public enum ApiErrorCode {
     FEED_BOARD_INVALID(HttpStatus.BAD_REQUEST),
     FEED_LIMIT_REACHED(HttpStatus.BAD_REQUEST),
     SAVED_SEARCH_EMPTY(HttpStatus.BAD_REQUEST),
+    /** The account already keeps as many saved searches as the read path will carry. */
+    SAVED_SEARCH_LIMIT_REACHED(HttpStatus.BAD_REQUEST),
     SALARY_RANGE_INVALID(HttpStatus.BAD_REQUEST),
     TAILORED_BODY_MISSING(HttpStatus.BAD_REQUEST),
     INVALID_STATUS(HttpStatus.BAD_REQUEST),
