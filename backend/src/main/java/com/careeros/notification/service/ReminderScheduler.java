@@ -7,6 +7,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -43,6 +44,7 @@ public class ReminderScheduler {
     private final Clock clock;
     private OffsetDateTime lastTick;
 
+    @Autowired
     public ReminderScheduler(NotificationPushService push, PushDeliveryMetrics metrics) {
         this(push, metrics, Clock.systemUTC());
     }

@@ -2653,6 +2653,92 @@ stand in for the other; rotating the secret retires both families at once.
   `npx tsc --noEmit` clean and the frontend suite at 831 tests in 78 files, 0
   failures.
 
+## Epic 35 — The Reminder Rings on Time
+
+Thirty-four gave the reminders two ways out of the app: the morning letter and
+a calendar the phone already reads. Both wait. A callback set for 09:00 is
+carried at 07:30 the next morning — by which time the board has already gone
+red — and an event on a subscribed calendar only reminds a client that renders
+alarms at all. This epic closes the gap at both ends: a minute clock that wakes
+the browsers at the reminder's own hour, and an alarm inside every event, so a
+subscriber who never registered for push still hears the reminder.
+
+- [x] **35.1** The minute clock rings a reminder when it comes due.
+
+  `ReminderScheduler` is a fixed-delay clock (`careeros.reminders.tick-ms`,
+  default `60000`), not a cron: every pass asks
+  `ApplicationRepository.findUserIdsWithReminderBetween(since, until)` which
+  accounts have a reminder inside the span, and
+  `NotificationPushService.pushDue` rings each of them through `ring(userId)` —
+  the same doorway, and the same `notification_states.pushed_at` latch, the
+  morning sweep uses. One episode is rung once: an application the morning
+  already carried is not rung by the tick, and a browser that refused writes no
+  latch, so the next tick asks it again. A reminder on an `offer`/`rejected`
+  row is not due at all — the status filter is the dashboard's attention
+  query's own.
+
+  The first window after boot looks back one minute rather than at the whole
+  board: a deploy does not ring last week's reminders, and a reminder that came
+  due while the backend was down is not rung retroactively — it is still red on
+  the board, and the next morning's sweep still carries it. The window advances
+  only on a completed pass; a tick that throws logs "the reminder clock could
+  not read its audience; the window is retried" and re-asks the same span, so a
+  database blink costs a minute, not a reminder. One account that cannot be
+  prepared does not stop the rest of the pass.
+
+  The pass has its own heartbeat, `careeros.reminders.last.tick.timestamp`,
+  started at boot and moved only at the end of a completed tick, with or
+  without a reminder to ring (`PushDeliveryMetrics.recordDueTick`). It is not
+  the morning sweep's gauge: a stopped minute clock and a stopped 07:30 sweep
+  are different faults whose first readings differ, and the runbook section
+  "The minute clock a reminder rings on" says which is which.
+
+  Gates: `ReminderSchedulerTest` 5 (the first window looks back exactly a
+  minute; a completed pass advances the window; a failed pass repeats the same
+  span; the heartbeat moves on completion; a throw writes none),
+  `NotificationPushServiceTest` 13 (the tick rings only the accounts the board
+  named for its window; an empty window asks no browser list; a reminder the
+  morning already rang is not rung again; one account that cannot be prepared
+  does not stop the next; a browser that refused is not latched),
+  `PushDeliveryMetricsTest` 3 (the gauge starts at boot, moves only when a tick
+  finishes). The ai-service heartbeat census learned the fifth clock in
+  `test_response_shape_contract` — one vocabulary row, the push meter's second
+  line, and the deprecation of "nine Java rows" — because the word now names
+  one more pass.
+
+- [x] **35.2** Every calendar event carries its own alarm.
+
+  `CalendarFeed.event` appends, after `TRANSP`, a display alarm:
+  `BEGIN:VALARM`, `ACTION:DISPLAY`, `DESCRIPTION` the event's own summary,
+  `TRIGGER:PT0M`, `END:VALARM`. `PT0M` is the reminder moment itself — the
+  event's `DTSTART` is the hour the reader picked — so the phone rings when the
+  board would go red. A subscriber who never installed the app, never granted a
+  browser notification and never registered for push still hears it. Clients
+  that ignore alarms inside subscribed feeds (Google Calendar applies its own
+  notification setting to subscribed calendars) are not made worse: the event
+  renders as before, and the app stays the exact surface.
+
+  Gate: `CalendarFeedTest` 10 — the new case asserts the exact five-line block,
+  `DESCRIPTION:Acme · Backend Engineer` included, so an alarm without its text
+  or a trigger other than zero fails as the block it is. `docs/API.md` and
+  `docs/architecture.md` §4.7 state the alarm and the client caveat.
+
+  Gates, measured on the committed tree: the full backend suite,
+  `cd backend && mvn -o -q test`, answers 1005 tests in 153 reports with 0
+  failures, 0 errors and 0 skipped (`EXIT=0`; the non-IT selection alone is
+  920) — the 993 Epic 34 measured grew by the twelve cases above. The first
+  full run after this epic was written answered 85 context errors, every one
+  `No default constructor found` for `ReminderScheduler`: the clock has two
+  constructors and Spring could not choose between them, which the five tests
+  that construct it directly could not see. The public constructor now carries
+  `@Autowired`; the second run is the 1005 above. The ai-service's census gates
+  answer 53/53 after the heartbeat ledger learned the fifth clock (its line
+  pins moved again with the import, which is why the class's three rows name
+  lines 13, 14 and 74). The frontend is untouched by this epic and still
+  answers 831 tests in 78 files, 0 failures, with `npx tsc --noEmit` clean and
+  `npx eslint` at 0 errors over the one pre-existing warning
+  (`MEMORY_WEIGHTS` unused in `memory-card.tsx`).
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

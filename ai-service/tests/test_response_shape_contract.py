@@ -2989,11 +2989,13 @@ def test_the_heartbeat_interval_has_one_definer_and_every_shipped_claim_names_it
     # roadmap entry above it grew, so a line ledger red on an edit that changed no sentence.
     # The file set still reds when a second document picks the word up; the counts still red
     # when a paragraph joins or leaves. 35.1's minute clock is DEPLOYMENT.md's fifth mention:
-    # it gives reminders their own heartbeat and documents the gauge beside it.
+    # it gives reminders their own heartbeat and documents the gauge beside it; ROADMAP.md's
+    # four new ones are 35.1's record and its gates: the clock, its gauge, the census it
+    # taught and the re-run that closed the epic.
     per_file: dict[str, int] = {}
     for row in doc_vocabulary:
         per_file[row["file"]] = per_file.get(row["file"], 0) + 1
-    assert per_file == {"AGENTS.md": 1, "DEPLOYMENT.md": 5, "ROADMAP.md": 7,
+    assert per_file == {"AGENTS.md": 1, "DEPLOYMENT.md": 5, "ROADMAP.md": 11,
                         "RUNBOOK.md": 13, "SECURITY.md": 1}, (
         f"{per_file}: the docs' own vocabulary is censused, so this pass is not reporting on an "
         "empty set -- and a second file picking up the word is a signal the ledger has to grow")
@@ -3010,7 +3012,7 @@ def test_the_heartbeat_interval_has_one_definer_and_every_shipped_claim_names_it
         ("backend/src/main/java/com/careeros/notification/service/NotificationMailService.java", 22),
         # 35.1's minute clock: a fifth reader of the word, with a gauge of its own because a
         # tick that stops is not the morning sweep's fault and its alert has to say so.
-        ("backend/src/main/java/com/careeros/notification/service/ReminderScheduler.java", 13),
+        ("backend/src/main/java/com/careeros/notification/service/ReminderScheduler.java", 14),
         # 33.3's morning ring explains why it adds no second marker: same pass, same clock. 35.1
         # extended the class doc and the due-tick recorder, so the meter now states the word twice.
         ("backend/src/main/java/com/careeros/push/service/PushDeliveryMetrics.java", 13),
