@@ -161,6 +161,7 @@ public class AppProperties {
         private boolean enabled = true;
         private int authPerMinute = 10;
         private int aiPerMinute = 30;
+        private int mailPerMinute = 5;
 
         public boolean isEnabled() {
             return enabled;
@@ -184,6 +185,14 @@ public class AppProperties {
 
         public void setAiPerMinute(int aiPerMinute) {
             this.aiPerMinute = aiPerMinute;
+        }
+
+        public int getMailPerMinute() {
+            return mailPerMinute;
+        }
+
+        public void setMailPerMinute(int mailPerMinute) {
+            this.mailPerMinute = mailPerMinute;
         }
     }
 

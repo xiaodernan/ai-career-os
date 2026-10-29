@@ -82,7 +82,7 @@ public class SecurityConfig {
                                         ApiError.of(ApiErrorCode.FORBIDDEN, "Access denied"))))
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(internalApiFilter, JwtAuthFilter.class)
-                // Rate limiting runs after JWT so AI-endpoint limits can key off the user id.
+                // Rate limiting runs after JWT so the AI and mail buckets can key off the user id.
                 .addFilterAfter(rateLimitFilter, JwtAuthFilter.class);
         return http.build();
     }

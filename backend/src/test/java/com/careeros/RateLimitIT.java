@@ -10,6 +10,7 @@ import java.util.UUID;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MvcResult;
 
 class RateLimitIT extends AbstractIntegrationTest {
 
@@ -45,6 +46,36 @@ class RateLimitIT extends AbstractIntegrationTest {
         // A different identity keeps its own window.
         mvc.perform(get("/api/v1/ai/stream/" + UUID.randomUUID()).header("X-Forwarded-For", "10.88.3.9"))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void addressMoveMailsFiveTimesPerMinuteThenReturns429() throws Exception {
+        // The letter relay is metered per account: every call mails a confirmation and a
+        // warning, so the sixth move in a minute is refused rather than mailed.
+        String email = "rl-move-" + UUID.randomUUID() + "@example.com";
+        MvcResult registration = mvc.perform(post("/api/v1/auth/register")
+                        .header("X-Forwarded-For", "10.88.5.11")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(JSON.writeValueAsString(Map.of(
+                                "email", email,
+                                "password", "Str0ngPassphrase!23",
+                                "displayName", "Relay Tester"))))
+                .andExpect(status().isCreated())
+                .andReturn();
+        String token = JSON.readTree(registration.getResponse().getContentAsString())
+                .path("data").path("tokens").path("accessToken").asText();
+        String move = JSON.writeValueAsString(Map.of(
+                "password", "Str0ngPassphrase!23",
+                "newEmail", "rl-moved-" + UUID.randomUUID() + "@example.com"));
+        for (int i = 1; i <= 5; i++) {
+            mvc.perform(post("/api/v1/me/email-change").header("Authorization", "Bearer " + token)
+                            .contentType(MediaType.APPLICATION_JSON).content(move))
+                    .andExpect(status().isOk());
+        }
+        mvc.perform(post("/api/v1/me/email-change").header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON).content(move))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.error.code").value("RATE_LIMITED"));
     }
 
     @Test

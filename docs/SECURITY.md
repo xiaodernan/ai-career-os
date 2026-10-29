@@ -112,8 +112,15 @@ that rejects invented skills/numbers not present in the source evidence.
   `ai-service` stays reachable over loopback and inside the compose network. Put TLS
   behind a reverse proxy in production.
 - `ratelimit/RateLimitFilter` applies a Redis-backed sliding-window limit; it
-  runs after JWT so AI-heavy endpoints can key limits off the user id.
+  runs after JWT so AI-heavy and mail-sending endpoints can key limits off the user id.
+  `ruleFor` is the one author of a path's bucket: the ceiling, the identity and
+  the Redis key prefix are all read off its answer.
   - `/api/v1/auth/**` — 10/min per client IP.
+  - Mail-sending account routes — 5/min per account. `POST /me/email-change`
+    (and its `/users/me/email-change` alias) asks the relay for two letters on
+    every call, so an unthrottled route is a mailbox any signed-in account can
+    point at an address it names. Both spellings are listed in
+    `RateLimitFilter.sendsMail`; the bucket is keyed by the account id.
   - AI-costing paths — 30/min per user. This is an explicit list
     (`RateLimitFilter.isAiCost`), not a prefix sweep: it covers the `/ai` SSE
     routes **plus** `/copilot` (the agent turn, the single most expensive call),

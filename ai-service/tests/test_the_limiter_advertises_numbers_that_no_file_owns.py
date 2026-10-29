@@ -1,18 +1,19 @@
 """Every number the rate limiter advertises is written in several files, and nothing read them together.
 
-`RateLimitFilter` counts requests against `app.ratelimit.auth-per-minute` and
-`app.ratelimit.ai-per-minute`. Those two integers are restated -- never derived -- in the Java property
-class, both env examples, the filter's own javadoc, `docs/SECURITY.md`, `e2e/README.md` three times, a
-comment and a message in the e2e fixtures, and as the loop bounds of `RateLimitIT`, which sends exactly
-the shipped ceiling and then expects a 429. Seventeen statements of two facts. The number a deployment
-gets is the one `application.yml` interpolates, so that is the authority here and every other statement is
-a claim about it: raise the auth ceiling and leave SECURITY.md at 10/min and the document now describes a
-product that is not running, while `RateLimitIT` goes red for a reason its own name contradicts.
+`RateLimitFilter` counts requests against `app.ratelimit.auth-per-minute`,
+`app.ratelimit.ai-per-minute` and `app.ratelimit.mail-per-minute`. Each integer is restated -- never
+derived -- in the Java property class, both env examples, the filter's own javadoc,
+`docs/SECURITY.md`, `e2e/README.md` three times, a comment and a message in the e2e fixtures, and as
+the loop bounds of `RateLimitIT`, which sends exactly the shipped ceiling and then expects a 429. The
+number a deployment gets is the one `application.yml` interpolates, so that is the authority here and
+every other statement is a claim about it: raise the auth ceiling and leave SECURITY.md at 10/min and
+the document now describes a product that is not running, while `RateLimitIT` goes red for a reason
+its own name contradicts.
 
 The same shape repeats twice more, which is why this is one gate and not three:
 
 * the **window** -- `Duration.ofMinutes(1)` in the filter, `Retry-After: 60` in the 429 it sends, and the
-  `-per-minute` spelling of both property names and both `AppProperties` fields. The header is a promise
+  `-per-minute` spelling of every property name and every `AppProperties` field. The header is a promise
   to a client about a duration computed elsewhere.
 * the **raised ceiling the e2e suite needs** -- 100, in the README's run command, restated as a
   requirement, quoted in a sample `e2e-override.yml`, printed by the fixture when the suite stalls, and
@@ -25,22 +26,24 @@ be red at HEAD about sentences that are true, so admission is by SHAPE -- which 
 claims the shipped default -- and the excluded sites are kept as a ledger with a reason, because an
 exemption nobody can point at is indistinguishable from a reader that missed them silently.
 
-Two more pairings are censused because a number alone cannot show them: the **bucket predicate** is written
-twice in one method pair (`ruleFor` and the `ai` boolean), and the identity that keys the bucket is chosen
-by that same boolean -- the documented "per user" rule is really `userOrIp`, which answers with the client
-IP for an anonymous caller. And the **429** is authored three ways -- the filter's `setStatus(429)`,
-`ApiErrorCode.RATE_LIMITED(HttpStatus.TOO_MANY_REQUESTS)`, and six prose and client claims -- so the status
-an operator reads about is reconciled against the literal the server writes.
+The **bucket predicate** has one author since the mail ceiling landed: `ruleFor` answers the bucket name
+and `doFilterInternal` reads the ceiling, the identity and the Redis key prefix off that answer. It used
+to be written twice in one method pair (`ruleFor` and an `ai` boolean), which is why a third bucket was
+previously the kind of edit this file refused; the test that pins the single predicate reads all three
+readings out of it. And the **429** is authored three ways -- the filter's `setStatus(429)`,
+`ApiErrorCode.RATE_LIMITED(HttpStatus.TOO_MANY_REQUESTS)`, and six prose and client claims -- so the
+status an operator reads about is reconciled against the literal the server writes.
 
-The open scan walks the **whole repository** (608 admitted files at this ref, 24 claim rows), not a list of
-directories someone remembered, because a ceiling written in an unlisted file is the defect class. Two
-refusals make that honest and both are proved rather than stated: directories are pruned while descending
-(`node_modules`, generated trees, and the dot-directories that hold tool state and another agent's scratch
--- `.scratch/ratelimit-3.yml` restates a ceiling no deployment ships), and this file is excluded by name
-because it quotes every number it reconciles, both in prose and in the fixture strings that prove the
-readers. The exclusion costs something: eight rows in this file would arrive unexplained, so the count is
-asserted, and the widened walk is checked against the narrower population it replaced so a pruning rule
-cannot silently swallow `docs` or either env example.
+The open scan walks the **whole repository** (608 admitted files at the ref this scan was widened, and
+every claim row since reconciled), not a list of directories someone remembered, because a ceiling
+written in an unlisted file is the defect class. Two refusals make that honest and both are proved rather
+than stated: directories are pruned while descending (`node_modules`, generated trees, and the
+dot-directories that hold tool state and another agent's scratch -- `.scratch/ratelimit-3.yml` restates a
+ceiling no deployment ships), and this file is excluded by name because it quotes every number it
+reconciles, both in prose and in the fixture strings that prove the readers. The exclusion costs
+something: the rows in this file that would arrive unexplained are counted, and the widened walk is
+checked against the narrower population it replaced so a pruning rule cannot silently swallow `docs` or
+either env example.
 
 The unit matters as much as the integer: `500ms` is a duration with a unit attached, and the Redis pair is
 censused with the same extractors because SECURITY.md ties them to the fail-open promise -- "with the
@@ -99,20 +102,22 @@ CENSUS = Path(__file__).resolve()
 # green say nothing about what deploys -- and print a local config into a test report.
 LOCAL_DOTFILES = {".env"}
 
-AUTH_VAR, AI_VAR = "RATELIMIT_AUTH_PER_MINUTE", "RATELIMIT_AI_PER_MINUTE"
+AUTH_VAR, AI_VAR, MAIL_VAR = "RATELIMIT_AUTH_PER_MINUTE", "RATELIMIT_AI_PER_MINUTE", "RATELIMIT_MAIL_PER_MINUTE"
 REDIS_TIMEOUT, REDIS_CONNECT = "REDIS_TIMEOUT", "REDIS_CONNECT_TIMEOUT"
-CEILING_VARS = (AUTH_VAR, AI_VAR)
+CEILING_VARS = (AUTH_VAR, AI_VAR, MAIL_VAR)
 AUTH_PREFIX = "/api/v1/auth"
-VAR_OF_PROP = {"auth": AUTH_VAR, "ai": AI_VAR}
-VAR_OF_IDENTITY = {"client IP": AUTH_VAR, "user": AI_VAR}
+VAR_OF_PROP = {"auth": AUTH_VAR, "ai": AI_VAR, "mail": MAIL_VAR}
+VAR_OF_IDENTITY = {"client IP": AUTH_VAR, "user": AI_VAR, "account": MAIL_VAR}
 
-# floors read off `git archive HEAD` at the ref this gate landed on, so a census cannot narrow itself:
-# seventeen ceiling claims (eleven about auth, six about AI), eight timeout claims, six raised-ceiling
-# sites, seven 429 claims, twenty-four shape-matched rows in the open scan, eight rows this census's own
-# file would contribute, and at least this many files walked per shipped source tree (215/195/173/11/8/2).
-MIN_CEILING_CARRIERS = 17
+# floors read off `git archive HEAD` at the ref this gate last moved, so a census cannot narrow
+# itself: twenty-three ceiling claims (eleven about auth, six about AI, six about mail), eight
+# timeout claims, six raised-ceiling sites, seven 429 claims, twenty-four shape-matched rows in the
+# open scan, eight rows this census's own file would contribute, and at least this many files walked
+# per shipped source tree (215/195/173/11/8/2).
+MIN_CEILING_CARRIERS = 23
 MIN_AUTH_CARRIERS = 11
 MIN_AI_CARRIERS = 6
+MIN_MAIL_CARRIERS = 6
 MIN_TIMEOUT_CARRIERS = 8
 MIN_RAISED_SITES = 6
 MIN_STATUS_SITES = 7
@@ -127,9 +132,9 @@ JAVA_INT = re.compile(r"private\s+int\s+(?P<field>\w+)\s*=\s*(?P<value>\d+)\s*;"
 # per-minute readers: that spelling belongs to env examples, to a measurement and to an operator's override.
 PROSE_PER_MIN = re.compile(r"(?P<value>\d+)/min\b")
 EMPTY_MEANS = re.compile(r"empty means (?P<value>\d+)\)")
-DOC_IDENTITY = re.compile(r"(?P<value>\d+)/min per (?P<identity>client IP|user)\b")
+DOC_IDENTITY = re.compile(r"(?P<value>\d+)/min per (?P<identity>client IP|user|account)\b")
 JAVADOC_DEFAULT = re.compile(
-    r"app\.ratelimit\.(?P<prop>auth|ai)-per-minute \(default (?P<value>\d+)/min\)")
+    r"app\.ratelimit\.(?P<prop>auth|ai|mail)-per-minute \(default (?P<value>\d+)/min\)")
 AUTH_LIMIT_DEFAULT = re.compile(r'E2E_AUTH_LIMIT \?\? "(?P<value>\d+)"')
 E2E_THRESHOLD = re.compile(r"\[int\]\$rl -ge (?P<value>\d+)")
 RAISED_ASSIGN = re.compile(rf"{AUTH_VAR}[=:]\s*\\?\"?(?P<value>\d+)")
@@ -146,10 +151,13 @@ STATUS_SETTER = re.compile(r"setStatus\((?P<value>\d+)\)")
 HTTP_429 = re.compile(r"\b429\b")
 CODE_NAME = re.compile(r"\bRATE_LIMITED\b")
 ENUM_DECL = re.compile(r"RATE_LIMITED\(HttpStatus\.(?P<name>[A-Z_]+)\)")
-PER_MINUTE_NAME = re.compile(r"\b(?:auth|ai)[-_][pP]er[-_][mM]inute\b|\b(?:auth|ai)PerMinute\b")
-# Directional on purpose: the AI branch must be the user id and the auth branch the client IP. A test
-# that only asked whether both names appear in the line is true with the two branches swapped.
-AI_THEN_IP = re.compile(r"ai\s*\?\s*userOrIp\(request\)\s*:\s*clientIp\(request\)")
+PER_MINUTE_NAME = re.compile(
+    r"\b(?:auth|ai|mail)[-_][pP]er[-_][mM]inute\b|\b(?:auth|ai|mail)PerMinute\b")
+# Directional on purpose: the auth branch must be the client IP and every other branch the user id
+# (falling back to the IP). A test that only asked whether both names appear in the line is true
+# with the two branches swapped.
+BUCKET_IDENTITY = re.compile(
+    r'AUTH\.equals\(bucket\)\s*\?\s*clientIp\(request\)\s*:\s*userOrIp\(request\)')
 MS = re.compile(r"(?P<value>\d+)ms\b")
 UNIT_SECONDS = {"Seconds": 1, "Minutes": 60, "Hours": 3600}
 
@@ -303,7 +311,7 @@ def refused_claims() -> list[tuple[str, str]]:
 
 
 def authority() -> dict[str, int]:
-    """The two integers Spring binds when the deployment sets nothing -- the deciding carriers."""
+    """The integers Spring binds when the deployment sets nothing -- the deciding carriers."""
     out: dict[str, int] = {}
     for var in CEILING_VARS:
         value = interpolation_default(read(YML), var, "application.yml")
@@ -316,35 +324,36 @@ def authority() -> dict[str, int]:
 
 
 def ceiling_carriers() -> list[tuple[str, str, int]]:
-    """(what states it, which knob, what number) for every shipped claim about the two ceilings.
+    """(what states it, which knob, what number) for every shipped claim about the three ceilings.
 
-    SECURITY.md is read once, by the identity-shape reader, because its two `N/min` lines are the same
-    two lines `PROSE_PER_MIN` would find -- a census that counted one file twice would report agreement
+    SECURITY.md is read once, by the identity-shape reader, because its `N/min` lines are the same
+    lines `PROSE_PER_MIN` would find -- a census that counted one file twice would report agreement
     between a document and itself.
     """
     out: list[tuple[str, str, int]] = [
         ("AppProperties' `authPerMinute` initialiser", AUTH_VAR, java_int_default(PROPS, "authPerMinute")),
         ("AppProperties' `aiPerMinute` initialiser", AI_VAR, java_int_default(PROPS, "aiPerMinute")),
+        ("AppProperties' `mailPerMinute` initialiser", MAIL_VAR, java_int_default(PROPS, "mailPerMinute")),
     ]
     for path, label in ((ENV_DEV, ".env.example"), (ENV_PROD, ".env.prod.example")):
         for var in CEILING_VARS:
             value = env_assignment(path, var)
             assert value.isdigit(), f"{label}'s {var} states {value!r}, which is not a plain integer"
             out.append((f"{label}'s {var}", var, int(value)))
-    for match in first_group(FILTER, JAVADOC_DEFAULT, want=2):
+    for match in first_group(FILTER, JAVADOC_DEFAULT, want=3):
         out.append((f"RateLimitFilter's javadoc {match['prop']}-per-minute line",
                     VAR_OF_PROP[match["prop"]], int(match["value"])))
     sec_text = read(SEC)
     identities: dict[str, str] = {}
-    for match in first_group(SEC, DOC_IDENTITY, want=2):
+    for match in first_group(SEC, DOC_IDENTITY, want=3):
         var = VAR_OF_IDENTITY[match["identity"]]
         identities[match["identity"]] = var
         out.append((f"SECURITY.md:{_line_of(sec_text, match.start())} `{match['value']}/min per "
                     f"{match['identity']}`", var, int(match["value"])))
-    assert sorted(identities) == ["client IP", "user"], (
+    assert sorted(identities) == ["account", "client IP", "user"], (
         "SECURITY.md names the bucketed identities "
-        f"{sorted(identities)}; the two ceilings are only reconcilable while the document still says "
-        f"which one is per client IP and which is per user")
+        f"{sorted(identities)}; the three ceilings are only reconcilable while the document still says "
+        f"which one is per client IP, which per user and which per account")
     for path, want in ((E2E_README, 2), (FIXTURES, 1)):
         text = read(path)
         for match in first_group(path, PROSE_PER_MIN, want=want):
@@ -357,9 +366,9 @@ def ceiling_carriers() -> list[tuple[str, str, int]]:
     out.append((f"e2e/tests/fixtures.ts:{_line_of(read(FIXTURES), match.start())} "
                 f"`E2E_AUTH_LIMIT` fallback", AUTH_VAR, int(match["value"])))
     # RateLimitIT sends exactly the shipped ceiling and then expects to be limited, so its loop bounds
-    # are claims about both numbers -- and they are ordered auth-then-ai by the two test methods.
-    bounds = first_group(IT, IT_BOUND, want=2)
-    for match, var in zip(bounds, (AUTH_VAR, AI_VAR), strict=True):
+    # are claims about all three numbers -- and they are ordered auth-then-ai-then-mail by the tests.
+    bounds = first_group(IT, IT_BOUND, want=3)
+    for match, var in zip(bounds, (AUTH_VAR, AI_VAR, MAIL_VAR), strict=True):
         out.append((f"RateLimitIT:{_line_of(read(IT), match.start())} `i <= "
                     f"{match['value']}` warm-up loop", var, int(match["value"])))
     return out
@@ -393,7 +402,7 @@ def window() -> tuple[str, int, int]:
     assert len(hits) == 1, (
         f"RateLimitFilter has {len(hits)} `Duration.of*` literals {[h.group(0) for h in hits]} at "
         f"lines {[_line_of(text, h.start()) for h in hits]}, want exactly 1: the window is the divisor "
-        f"of both ceilings, so a second one means two windows")
+        f"of every ceiling, so a second one means two windows")
     unit, count = hits[0]["unit"], int(hits[0]["value"])
     return unit, count, count * UNIT_SECONDS[unit]
 
@@ -447,7 +456,7 @@ def status_sites() -> list[tuple[str, int, str]]:
 def code_name_sites() -> list[tuple[str, int]]:
     """Every file that spells the envelope code an over-limit request carries."""
     out = []
-    for path, want in ((FILTER, 2), (ENUM, 1), (IT, 2)):
+    for path, want in ((FILTER, 2), (ENUM, 1), (IT, 3)):
         text = read(path)
         for match in first_group(path, CODE_NAME, want=want):
             out.append((f"{path.relative_to(ROOT)}:{_line_of(text, match.start())}", 1))
@@ -504,6 +513,11 @@ def test_the_number_readers_parse_shapes_this_repository_does_not_yet_hold():
     assert hit and hit["prop"] == "auth" and hit["value"] == "5", (
         f"the javadoc reader must find a ceiling it has never seen "
         f"({hit.group(0) if hit else None!r})")
+    mail_hit = JAVADOC_DEFAULT.search(
+        "*  - mail-sending account routes : app.ratelimit.mail-per-minute (default 20/min)")
+    assert mail_hit and mail_hit["prop"] == "mail" and mail_hit["value"] == "20", (
+        f"the javadoc reader must admit the third property name, not just the first two "
+        f"({mail_hit.group(0) if mail_hit else None!r})")
     prose = "the limit is 12/min per client IP, and (empty means 12)"
     assert [m["value"] for m in DOC_IDENTITY.finditer(prose)] == ["12"], (
         "the doc reader is keyed on `N/min per <identity>`; a re-wrapped bullet is still a claim")
@@ -532,8 +546,8 @@ def test_the_number_readers_parse_shapes_this_repository_does_not_yet_hold():
         "field happens to come first")
 
 
-def test_the_two_ceilings_have_one_authority_and_every_other_statement_agrees():
-    """The yml default decides; the rest restate it, and a restatement that drifts is a bug report.
+def test_the_ceilings_have_one_authority_and_every_other_statement_agrees():
+    """The yml defaults decide; the rest restate them, and a restatement that drifts is a bug report.
 
     Read the other way this census would be a tautology: comparing each carrier with the value the same
     file just returned proves nothing, so the authority comes from `application.yml` alone and each
@@ -545,10 +559,11 @@ def test_the_two_ceilings_have_one_authority_and_every_other_statement_agrees():
         f"the ceiling census read {len(carriers)} carriers, below the {MIN_CEILING_CARRIERS} the "
         f"shipped files state: a census that reads nothing reconciles a stub")
     per_var = {var: sum(1 for _l, v, _n in carriers if v == var) for var in CEILING_VARS}
-    assert per_var[AUTH_VAR] >= MIN_AUTH_CARRIERS and per_var[AI_VAR] >= MIN_AI_CARRIERS, (
-        f"the ceiling census splits {per_var} between the two knobs, wanting at least "
-        f"{MIN_AUTH_CARRIERS} auth and {MIN_AI_CARRIERS} ai claims: one ceiling covered by a single "
-        f"stray match is a census that can pass on a coincidence")
+    assert (per_var[AUTH_VAR] >= MIN_AUTH_CARRIERS and per_var[AI_VAR] >= MIN_AI_CARRIERS
+            and per_var[MAIL_VAR] >= MIN_MAIL_CARRIERS), (
+        f"the ceiling census splits {per_var} between the three knobs, wanting at least "
+        f"{MIN_AUTH_CARRIERS} auth, {MIN_AI_CARRIERS} ai and {MIN_MAIL_CARRIERS} mail claims: one "
+        f"ceiling covered by a single stray match is a census that can pass on a coincidence")
     problems = [
         f"{label} states {value}, the shipped default for {var} is {caps[var]}"
         for label, var, value in carriers
@@ -557,27 +572,28 @@ def test_the_two_ceilings_have_one_authority_and_every_other_statement_agrees():
     assert not problems, (
         f"the rate limit is decided in more than one file and they disagree -- {'; '.join(problems)} "
         f"-- the authority is application.yml's `${{RATELIMIT_AUTH_PER_MINUTE}}` / "
-        f"`${{RATELIMIT_AI_PER_MINUTE}}` default, because that file always defines `app.ratelimit.*` "
-        f"and therefore decides what Spring binds; a reader who follows the stale statement sets a "
-        f"ceiling they did not choose, and `RateLimitIT` fails for a reason its own method name "
-        f"contradicts")
+        f"`${{RATELIMIT_AI_PER_MINUTE}}` / `${{RATELIMIT_MAIL_PER_MINUTE}}` default, because that file "
+        f"always defines `app.ratelimit.*` and therefore decides what Spring binds; a reader who "
+        f"follows the stale statement sets a ceiling they did not choose, and `RateLimitIT` fails for "
+        f"a reason its own method name contradicts")
 
 
 def test_the_java_default_is_a_shadow_and_still_says_what_spring_would_bind():
-    """`AppProperties` initialises the same two integers, and every reader assumes it is the default.
+    """`AppProperties` initialises the same integers, and every reader assumes it is the default.
 
-    It is not: `application.yml` defines `app.ratelimit.auth-per-minute` and `ai-per-minute`, so Spring
-    binds the yml and the field initialiser only answers when the key is absent. A shadow whose edits
-    change nothing is still a statement a developer reads, which is why it is reconciled rather than
-    deleted -- and why the census above refuses to let it be the authority.
+    It is not: `application.yml` defines `app.ratelimit.auth-per-minute`, `ai-per-minute` and
+    `mail-per-minute`, so Spring binds the yml and the field initialiser only answers when the key is
+    absent. A shadow whose edits change nothing is still a statement a developer reads, which is why it
+    is reconciled rather than deleted -- and why the census above refuses to let it be the authority.
     """
     caps = authority()
-    keys = re.findall(r"^    (auth-per-minute|ai-per-minute): \$\{([A-Z_]+):", read(YML), re.M)
-    assert sorted(keys) == [("ai-per-minute", AI_VAR), ("auth-per-minute", AUTH_VAR)], (
-        f"application.yml interpolates the ratelimit keys {keys}; without both, the yml stops being the "
-        f"authority and this file is comparing two claims to nothing")
+    keys = re.findall(r"^    (auth-per-minute|ai-per-minute|mail-per-minute): \$\{([A-Z_]+):", read(YML), re.M)
+    assert sorted(keys) == [("ai-per-minute", AI_VAR), ("auth-per-minute", AUTH_VAR),
+                            ("mail-per-minute", MAIL_VAR)], (
+        f"application.yml interpolates the ratelimit keys {keys}; without all three, the yml stops "
+        f"being the authority and this file is comparing claims to nothing")
     assert "app.ratelimit" not in read(YML), (
-        "application.yml spells the two ceilings as nested keys under `ratelimit:`; if the dotted "
+        "application.yml spells the ceilings as nested keys under `ratelimit:`; if the dotted "
         "path ever appears here, the javadoc's `app.ratelimit.*` names are no longer a description of "
         "a different spelling but the same text, and a reader grepping the yml for them gets a "
         "different answer than Spring binds")
@@ -586,7 +602,7 @@ def test_the_java_default_is_a_shadow_and_still_says_what_spring_would_bind():
         "operator-facing name for the ceilings has moved and the census above reads a file nobody "
         "documents")
 
-    for field, var in (("authPerMinute", AUTH_VAR), ("aiPerMinute", AI_VAR)):
+    for field, var in (("authPerMinute", AUTH_VAR), ("aiPerMinute", AI_VAR), ("mailPerMinute", MAIL_VAR)):
         shadow = java_int_default(PROPS, field)
         assert shadow == caps[var], (
             f"AppProperties' {field} initialiser is {shadow} while Spring would bind {caps[var]}: a "
@@ -613,66 +629,81 @@ def test_the_window_the_limiter_counts_and_the_header_it_sends_are_one_duration(
         f"AppProperties: the ceilings are named for their window, so if the window is no longer a "
         f"minute the names lie about the unit")
     assert unit == "Minutes", (
-        f"the limiter counts {unit}({count}) while both knobs are named `auth-per-minute` and "
-        f"`ai-per-minute` and every document says `/min` -- either rename the properties and the "
-        f"prose, or count minutes")
+        f"the limiter counts {unit}({count}) while every knob is named `-per-minute` and every "
+        f"document says `/min` -- either rename the properties and the prose, or count minutes")
 
 
 def test_the_bucket_a_request_lands_in_is_chosen_by_the_predicate_that_names_it():
-    """`doFilterInternal` and `ruleFor` decide auth-vs-AI from the same prefix, twice.
+    """`ruleFor` names every bucket, and `doFilterInternal` decides nothing by itself.
 
-    Two authors of one predicate is the drift: `ruleFor` admits a path, `doFilterInternal` then picks
-    the limit and the identity by its own test, and if only one of them changes the AI ceiling is applied
-    to an auth bucket (or the reverse) while every rule name still reads correct.
+    The earlier shape tested the auth prefix twice -- once in `ruleFor` to admit the path and once in
+    `doFilterInternal` to pick the ceiling and the identity -- so a third bucket could only arrive by
+    writing the predicate a third time. The decision is now read as one thing: the prefix is admitted
+    in exactly one place, the counting method asks `ruleFor` for the bucket, and the ceiling, the
+    identity and the Redis key are all read off that answer.
     """
     text = read(FILTER)
     lines = _lines(text)
     prefix_test = f'startsWith("{AUTH_PREFIX}"'
-    hits = first_group(FILTER, re.compile(re.escape(prefix_test)), want=2)
-    authors = sorted(lines[_line_of(text, h.start()) - 1].strip() for h in hits)
-    assert authors == [f'boolean ai = !uri.{prefix_test});',
-                       f'if (uri.{prefix_test})) {{'], (
-        f"the auth prefix is tested on {authors}: the two authors have to stay the admitting rule "
-        f"(`ruleFor`) and the flag that picks the ceiling and the identity "
-        f"(`doFilterInternal`); a third one, or either rewritten, means a request's bucket is decided "
-        f"by something other than the rule that admits it")
-    ai_line = next(line for line in lines if "boolean ai =" in line)
-    assert f'!uri.startsWith("{AUTH_PREFIX}")' in ai_line, (
-        f"`{ai_line.strip()}` no longer derives the AI flag as the negation of the auth prefix: the "
-        f"same test appears twice in this class and only `ruleFor` is covered by RateLimitFilterTest")
-    identity_line = next((line for line in lines if "String identity = ai ?" in line), None)
+    hits = first_group(FILTER, re.compile(re.escape(prefix_test)), want=1)
+    admitted = lines[_line_of(text, hits[0].start()) - 1].strip()
+    assert admitted.startswith("if (uri."), (
+        f"the auth prefix is admitted by `{admitted}` rather than an `if (uri. ...)` branch of "
+        f"`ruleFor`: the bucket names and the admission rule have to be decided in one place")
+    body = text[text.index("protected void doFilterInternal"):text.index("static String ruleFor")]
+    assert "startsWith(" not in body, (
+        "`doFilterInternal` tests a path prefix again: the admission rule and the counting rule have "
+        "become two authors, and a bucket added to one can be counted by the other")
+    assert "String bucket = ruleFor(request.getRequestURI());" in body, (
+        "`doFilterInternal` no longer asks `ruleFor` for the bucket, so the ceiling it applies is not "
+        "the rule that admitted the request")
+    for name in ("AUTH", "AI", "MAIL"):
+        assert f'static final String {name} = "{name.lower()}";' in text, (
+            f"the {name} bucket name is no longer declared as a constant spelled `{name.lower()}`: "
+            f"the Redis key prefix and SECURITY.md's measurement rest on that spelling")
+    for case in ("case AI -> props.getRatelimit().getAiPerMinute();",
+                 "case MAIL -> props.getRatelimit().getMailPerMinute();",
+                 "default -> props.getRatelimit().getAuthPerMinute();"):
+        assert case in body, (
+            f"the bucket switch no longer reads `{case}`: every bucket name `ruleFor` can answer has "
+            f"to select its own ceiling, and the auth bucket stays the default so a name with no case "
+            f"is counted as a credential attempt rather than silently unthrottled")
+    identity_line = next((line for line in lines if "String identity =" in line), None)
     assert identity_line is not None, (
-        "RateLimitFilter no longer selects the bucket key's identity from the same `ai` flag, so the "
+        "RateLimitFilter no longer selects the bucket key's identity from the bucket name, so the "
         "ceiling and the identity it is counted against can disagree without any name reading wrong")
-    assert AI_THEN_IP.search(identity_line) is not None, (
-        f"the identity is chosen by `{identity_line.strip()}`, which no longer pairs the AI flag with "
-        f"the user id and the auth flag with the client IP")
+    assert BUCKET_IDENTITY.search(identity_line) is not None, (
+        f"the identity is chosen by `{identity_line.strip()}`, which no longer pairs the auth bucket "
+        f"with the client IP and every other bucket with the user id (falling back to the IP)")
     key_line = next((line for line in lines if 'String key = "ratelimit:"' in line), None)
-    assert key_line is not None and "ai ?" in key_line and 'auth:' in key_line, (
-        f"the Redis key prefix is now written by `{(key_line or '').strip()}`: SECURITY.md's "
-        f"measurement counts `ratelimit:auth:*` keys, so the key spelling is a claim too")
+    assert key_line is not None and '"ratelimit:" + bucket + ":" + identity' in key_line, (
+        f"the Redis key is now written by `{(key_line or '').strip()}`: SECURITY.md's measurement "
+        f"counts `ratelimit:auth:*` keys, so the key spelling is a claim too")
 
-    javadoc = lines[_line_of(text, first_group(FILTER, JAVADOC_DEFAULT, want=2)[1].start()) - 1]
+    javadoc = lines[_line_of(text, first_group(FILTER, JAVADOC_DEFAULT, want=3)[1].start()) - 1]
     assert "falls back to IP" in javadoc, (
         f"the javadoc line that declares the AI ceiling is `{javadoc.strip()}`: it used to say the "
         f"per-user rule falls back to the client IP, which is what `userOrIp` actually does")
     fallback = text[text.index("private static String userOrIp"):text.index("static String clientIp")]
     assert "return clientIp(request);" in fallback, (
         "`userOrIp` no longer answers with the client IP when there is no authenticated user, so the "
-        "documented fallback and the AI bucket's key have parted: an anonymous caller's budget is now "
-        "shared per IP, or the request crashes before the limiter")
+        "documented fallback and the account buckets' keys have parted: an anonymous caller's budget "
+        "is now shared per IP, or the request crashes before the limiter")
 
     doc = read(SEC)
     identities = {m["identity"] for m in DOC_IDENTITY.finditer(doc)}
-    assert identities == {"client IP", "user"}, (
-        f"SECURITY.md names {sorted(identities)}; the filter buckets auth by client IP and AI by user "
-        f"id, so a document that drops one of them describes a limiter with one rule")
+    assert identities == {"client IP", "user", "account"}, (
+        f"SECURITY.md names {sorted(identities)}; the filter buckets auth by client IP, AI by user "
+        f"id and mail by account id, so a document that drops one of them describes a limiter with "
+        f"fewer rules than it has")
     pairs = {(m["identity"], m["value"]) for m in DOC_IDENTITY.finditer(doc)}
     caps = authority()
-    assert ("client IP", str(caps[AUTH_VAR])) in pairs and ("user", str(caps[AI_VAR])) in pairs, (
+    assert (("client IP", str(caps[AUTH_VAR])) in pairs and ("user", str(caps[AI_VAR])) in pairs
+            and ("account", str(caps[MAIL_VAR])) in pairs), (
         f"SECURITY.md pairs the identities with {sorted(pairs)} while the filter counts "
-        f"{caps[AUTH_VAR]}/min per client IP and {caps[AI_VAR]}/min per user: swapped numbers read "
-        f"correct in both directions and are wrong in both")
+        f"{caps[AUTH_VAR]}/min per client IP, {caps[AI_VAR]}/min per user and "
+        f"{caps[MAIL_VAR]}/min per account: swapped numbers read correct in both directions and are "
+        f"wrong in both")
 
 
 def test_the_raised_ceiling_the_suite_needs_is_the_number_preflight_demands():
@@ -786,9 +817,9 @@ def test_the_answer_an_over_limit_request_gets_has_one_spelling_across_the_stack
         f"{[label for label, _v, _w in sites]}: a client that branches on 429 -- which the e2e fixture "
         f"does -- would read a rate limit as some other failure")
     names = code_name_sites()
-    assert len(names) == 5, (
-        f"`RATE_LIMITED` appears at {len(names)} sites {[label for label, _ in names]}, want 5 (the "
-        f"filter's javadoc and its `ApiError.of`, the enum's declaration, and RateLimitIT's two "
+    assert len(names) == 6, (
+        f"`RATE_LIMITED` appears at {len(names)} sites {[label for label, _ in names]}, want 6 (the "
+        f"filter's javadoc and its `ApiError.of`, the enum's declaration, and RateLimitIT's three "
         f"envelope assertions): the code is the machine-readable half of the answer")
     decl = first_group(ENUM, ENUM_DECL, want=1)[0]
     assert decl["name"] == "TOO_MANY_REQUESTS", (
@@ -817,7 +848,7 @@ def test_every_limiter_claim_in_the_repository_is_classified_and_the_walk_reache
     """
     caps = authority()
     raised = {value for _label, value in raised_sites()}
-    defaults = {caps[AUTH_VAR], caps[AI_VAR]}
+    defaults = set(caps.values())
     rows = claim_rows()
     seen = {path for path, _text in walk(*SCAN_POPULATION)}
     lost = sorted(str(p.relative_to(ROOT)) for p in {p for p, _t in walk(*BASELINE_POPULATION)} - seen)

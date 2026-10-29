@@ -21,8 +21,14 @@ import org.springframework.security.core.context.SecurityContextHolder;
  * Applies the Redis sliding-window limits:
  *  - /api/v1/auth/**  : per client IP, app.ratelimit.auth-per-minute (default 10/min)
  *  - AI-costing paths : per authenticated user (falls back to IP), app.ratelimit.ai-per-minute (default 30/min)
+ *  - mail-sending account routes : per authenticated user (falls back to IP), app.ratelimit.mail-per-minute (default 5/min)
  * Registered as a plain filter inside the security chain (see SecurityConfig) and toggled by
  * app.ratelimit.enabled. Over-limit requests receive HTTP 429 with the standard envelope, code RATE_LIMITED.
+ *
+ * <p>{@link #ruleFor} is the one author of "which bucket a path lands in": {@code doFilterInternal}
+ * asks it for the bucket name and reads the ceiling, the identity and the Redis key prefix off that
+ * name. The earlier shape tested the auth prefix a second time to pick them, so a path could be
+ * admitted by one rule and counted against another; one predicate makes that impossible.
  *
  * <p>What counts as AI-costing is broader than the `/api/v1/ai/**` streaming routes. Every path
  * in {@link #isAiCost} spends provider tokens or money, and the most expensive one — the copilot
@@ -34,8 +40,16 @@ import org.springframework.security.core.context.SecurityContextHolder;
  * <p>The list is derived from the call sites, not from what the paths look like: every
  * {@code AiServiceClient} method that is not a status read is traced to the route that reaches
  * it, which is how the ingest and import routes joined the sub-path group below.
+ *
+ * <p>The mail bucket is the relay's meter: an address move mails a confirmation to the claimed
+ * mailbox and a warning to the current one, so every call spends two letters. An account that can
+ * call it without limit can use the product to write to any unregistered address it names.
  */
 public class RateLimitFilter extends org.springframework.web.filter.OncePerRequestFilter {
+
+    static final String AUTH = "auth";
+    static final String AI = "ai";
+    static final String MAIL = "mail";
 
     private final AppProperties props;
     private final RedisSlidingWindowRateLimiter limiter;
@@ -55,11 +69,14 @@ public class RateLimitFilter extends org.springframework.web.filter.OncePerReque
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
-        String uri = request.getRequestURI();
-        boolean ai = !uri.startsWith("/api/v1/auth");
-        int limit = ai ? props.getRatelimit().getAiPerMinute() : props.getRatelimit().getAuthPerMinute();
-        String identity = ai ? userOrIp(request) : clientIp(request);
-        String key = "ratelimit:" + (ai ? "ai:" : "auth:") + identity;
+        String bucket = ruleFor(request.getRequestURI());
+        int limit = switch (bucket) {
+            case AI -> props.getRatelimit().getAiPerMinute();
+            case MAIL -> props.getRatelimit().getMailPerMinute();
+            default -> props.getRatelimit().getAuthPerMinute();
+        };
+        String identity = AUTH.equals(bucket) ? clientIp(request) : userOrIp(request);
+        String key = "ratelimit:" + bucket + ":" + identity;
 
         if (!limiter.tryAcquire(key, limit, Duration.ofMinutes(1))) {
             response.setStatus(429);
@@ -76,9 +93,22 @@ public class RateLimitFilter extends org.springframework.web.filter.OncePerReque
     /** The bucket for a URI, or null when the path is not limited. Package-private for tests. */
     static String ruleFor(String uri) {
         if (uri.startsWith("/api/v1/auth")) {
-            return "auth";
+            return AUTH;
         }
-        return isAiCost(uri) ? "ai" : null;
+        if (sendsMail(uri)) {
+            return MAIL;
+        }
+        return isAiCost(uri) ? AI : null;
+    }
+
+    /**
+     * The signed-in routes that hand letters to the relay on every call. Both spellings of the
+     * address move are listed rather than one prefix, because a route added under `/me` is not a
+     * letter until someone wires it to the mail port.
+     */
+    static boolean sendsMail(String uri) {
+        return uri.equals("/api/v1/me/email-change") || uri.equals("/api/v1/me/email-change/")
+                || uri.equals("/api/v1/users/me/email-change") || uri.equals("/api/v1/users/me/email-change/");
     }
 
     /**

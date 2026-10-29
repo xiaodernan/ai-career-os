@@ -48,6 +48,27 @@ class RateLimitFilterTest {
     }
 
     @Test
+    void theAddressMoveIsMeteredAsMailNotAsAi() {
+        // Every call mails a confirmation and a warning, so the route is a relay, not a model
+        // call. It is its own bucket because the AI ceiling (30/min) would let one account
+        // write sixty letters a minute to an address it names.
+        assertThat(RateLimitFilter.ruleFor("/api/v1/me/email-change")).isEqualTo("mail");
+        assertThat(RateLimitFilter.ruleFor("/api/v1/users/me/email-change")).isEqualTo("mail");
+        assertThat(RateLimitFilter.ruleFor("/api/v1/me/email-change/")).isEqualTo("mail");
+        assertThat(RateLimitFilter.ruleFor("/api/v1/users/me/email-change/")).isEqualTo("mail");
+    }
+
+    @Test
+    void theOtherAccountRoutesAreNotMailedEveryCall() {
+        // The bucket exists for letters, not for the account surface: a route that is not wired
+        // to the mail port stays a cheap write.
+        assertThat(RateLimitFilter.ruleFor("/api/v1/me")).isNull();
+        assertThat(RateLimitFilter.ruleFor("/api/v1/me/password")).isNull();
+        assertThat(RateLimitFilter.ruleFor("/api/v1/users/me")).isNull();
+        assertThat(RateLimitFilter.ruleFor("/api/v1/me/email-change-notes")).isNull();
+    }
+
+    @Test
     void cheapReadsAreNotLimited() {
         // Browsing must not be throttled, or the product becomes unusable.
         assertThat(RateLimitFilter.ruleFor("/api/v1/jobs")).isNull();

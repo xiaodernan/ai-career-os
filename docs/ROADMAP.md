@@ -1338,6 +1338,41 @@ a borrowed tab send the account's recovery mail to an inbox they own.
   endpoint files, as the session list was, and the routes plus the public
   confirmation are live for it.
 
+## Epic 27 — The Letter Relay Has a Meter
+
+Epic 26 put a route on the account that writes to a mailbox it names — twice per
+call. The limiter knew two kinds of spend, model calls and credential attempts,
+and this route was neither, so a signed-in account could make the product write
+to any unregistered address as fast as it could type. This epic gives the relay
+its own ceiling and, in doing so, removes the filter's second copy of the
+admission rule that had made a third bucket unsafe to add.
+
+- [x] **27.1** The address move is metered, and one predicate decides every bucket.
+
+  (`app.ratelimit.mail-per-minute` — default five a minute, `RATELIMIT_MAIL_PER_MINUTE`
+  in both env examples — is a third ceiling, keyed by account id. `RateLimitFilter.ruleFor`
+  is now the only author of "which bucket a path lands in": `doFilterInternal`
+  asks it once and reads the ceiling, the identity and the
+  `ratelimit:<bucket>:<identity>` key off that answer, where it used to test the
+  auth prefix a second time — two authors of one predicate, and a path admitted
+  by one rule could be counted against another. The bucket covers
+  `POST /me/email-change` and its `/users/me/email-change` alias, both spellings
+  and a trailing slash, because every call mails a confirmation and a warning;
+  every other account route stays unthrottled. The over-limit answer, the
+  `Retry-After` promise and the fail-open branch are unchanged; a sixth move in
+  a minute is refused before the service mails anything.)
+
+  The gate grew with the ceiling: the census now reads three knobs from
+  `application.yml`, reconciles `AppProperties`' shadow initialisers, both env
+  examples, the filter's javadoc, SECURITY.md's three identity lines and
+  `RateLimitIT`'s three warm-up bounds, and its bucket test now asserts the one
+  predicate and the three readings taken from its answer rather than the old
+  two-author shape. 2 new classification tests and 1 integration test carry the
+  behavior (five moves allowed, the sixth refused with the standard envelope);
+  the backend unit suite at 767 and the integration suite at 73 are green, the
+  knob census reads twenty-six `app.*` leaves with the mail ceiling among the
+  fourteen accessor-read ones, and no frontend or copy-census movement.
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
