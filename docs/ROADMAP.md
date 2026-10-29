@@ -2355,6 +2355,90 @@ so one grep reconstructs one request.
   correlation section now shows the line and says what the status column means and
   what is never printed.)
 
+## Epic 33 — The Bell Rings Without the Tab
+
+The bell already carries a count on every page (29.3), and the morning letter
+carries the inbox out of the app (22.1) — but both assume something is looking: a
+tab holding a session, or a mailbox being read. A reader who closes the laptop
+learns nothing until they come back, and the saved search that found three
+postings overnight has no way to say so. This epic gives the account a Web Push
+address: the browser hands the service its subscription, a VAPID-signed push
+wakes the installed worker, and the worker asks the app what is new. The push
+itself carries no payload — the content comes from the authenticated inbox — so
+no signal text, saved-search name or count transits a push service.
+
+- [x] **33.1** A browser can hand the account its push address.
+
+  (`V24__push_subscriptions.sql` keeps one row per browser registration — the
+  endpoint, the two keys a push service needs, an optional label, and the account
+  it currently rings. The endpoint carries the table's unique constraint, not the
+  caller: a browser is one registration, so a second reader signing in there
+  re-points the row rather than adding a second one, which would ring that browser
+  twice for one morning. Four routes under `/push/subscriptions`: list the
+  caller's registrations, register (an upsert on the endpoint that refreshes the
+  keys and re-points the owner), forget one, and forget every device.
+
+  Validation lives in the service, not only in bean validation, because the
+  service is the boundary that stores the text: an endpoint must parse, be
+  `https`, name a host, carry no userinfo or fragment and stay within 2048
+  characters; a key must be unpadded base64url of the size a P-256 point and a
+  16-byte secret have. Anything else is `PUSH_SUBSCRIPTION_INVALID` — refused
+  here rather than stored and discovered by a failing send at 08:00. An account
+  keeps at most ten browsers, the same bound the feed and saved-search lists
+  carry, and the cap cannot refuse a registration the account already keeps
+  because the upsert is checked first.
+
+  Gates: `PushSubscriptionServiceTest` holds eight cases (stored under the
+  caller with padding trimmed; re-registration moves and refreshes the row without
+  asking the cap; the eleventh browser is refused; the cap does not refuse an
+  endpoint already kept; six unwakeable endpoints refused; five malformed keys
+  refused; another account's row is a 404; forgetting all stays inside the
+  caller), and `PushSubscriptionControllerTest` eight more over the routes,
+  including ownership on list/delete-all and both own refusal codes.
+  `ApiErrorCodeCensusTest`'s frozen name list gained the three new codes on
+  purpose. Mutation arm: deleting the upsert branch turned 2 of 16 red (the
+  re-registration and the cap-does-not-refuse-a-kept-registration cases);
+  restored byte-identical (sha1 0f053f72…), 16/16 green. The full backend suite
+  answers 936 tests, 0 failures, 0 errors, 0 skipped, Flyway applying V24 in the
+  IT harness. `docs/API.md` gained the route table and the no-payload rule, and
+  `docs/architecture.md`'s section 4.7 the table's row.
+
+  The doc-reading gate selection answers 234 of 238. Three reds are the concurrent
+  session's in-flight frame-parser cases; the fourth is that same file's record
+  census, pinned at 170 and now reading 172 — this unit's two DTO records. The pin
+  lives in the concurrent session's uncommitted file, so it is recorded here as
+  debt and moves when that file lands rather than being folded into this commit.
+  One gate did change this unit's code: `test_a_configured_knob_that_no_code_reads`
+  resolves a lone `getEndpoint()` call to the storage knob, so the entity's accessor
+  is `getEndpointUrl()` and the column is still `endpoint`.)
+
+- [ ] **33.2** A signed push leaves the building.
+
+  (A `PushSender` seam with a Web Push transport per RFC 8030/8292: ES256 VAPID
+  JWT scoped to the endpoint's origin, a `TTL` header, an empty body. The push
+  says only "there is news"; the content is fetched by the worker from the
+  authenticated inbox. `404` and `410` mean the registration is gone and the row
+  is pruned; other refusals are counted, not retried in place. With no VAPID keys
+  configured the sender is a no-op that reports "not configured", and a production
+  boot refuses push enabled with half a key pair.)
+
+- [ ] **33.3** The morning sweep rings as well as writes.
+
+  (The sweep's audience gains the accounts with a subscription; a coalesced push
+  goes to each when the inbox holds an unread, undismissed signal. Push keeps its
+  own latch on the episode, so a reader who turned the letter off still gets the
+  ring and a reader who read the letter does not get a second one. Sends and
+  refusals are metered like the mail's, and a dead registration is deleted when
+  the push service says it is gone.)
+
+- [ ] **33.4** The worker wakes, asks and opens.
+
+  (The installed worker handles `push` by fetching the inbox and showing one
+  notification — deep-linked to `/notifications` — and `notificationclick` focuses
+  or opens the app. The settings screen gains a switch that asks permission,
+  subscribes with the deployment's VAPID public key, registers the subscription
+  and forgets it on opt-out; `pushsubscriptionchange` re-registers in place.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

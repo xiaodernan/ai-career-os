@@ -277,6 +277,28 @@ Nothing has to be enabled; `careeros.signals.cron` moves the clock.
 | POST | `/notifications/read-all` | marks every item the inbox is showing read; answers the fresh inbox, the same shape GET /notifications answers |
 | POST | `/notifications/dismiss` | `{key}` → files one item away and answers the fresh inbox: {items[], unread, generatedAt} |
 
+### Push subscriptions (`/push`)
+
+The bell outside the tab (roadmap 33.1). A reader opts in from the installed app,
+and the browser hands over what its push service issued: an endpoint plus the two
+keys a payload would be encrypted with. The push sent today carries no payload —
+the worker wakes, fetches the authenticated inbox and shows one notification — so
+no signal text, saved-search name or count transits a push service.
+
+The endpoint is the registration's identity. A browser re-subscribes whenever it
+likes (a renewed key, a worker update, another reader signing in there), so
+registering is an upsert: the row's keys are refreshed and its owner re-pointed,
+because two rows pointing at one registration would ring that browser twice for
+one morning. An account keeps at most ten browsers, and every route is scoped to
+the caller.
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/push/subscriptions` | the caller's browser registrations, newest first, each with its id, endpoint, optional label and the moment it was first kept |
+| POST | `/push/subscriptions` | `{endpoint, p256dh, auth, label?}` → registers or refreshes one browser and answers the kept row (200). An endpoint that is not https, carries userinfo or a fragment, or is longer than 2048 characters is **400** `PUSH_SUBSCRIPTION_INVALID`; so is a key that is not unpadded base64url of the right size. An eleventh browser is **400** `PUSH_SUBSCRIPTION_LIMIT_REACHED` |
+| DELETE | `/push/subscriptions/{id}` | forgets one browser; 204. A registration that is not the caller's is **404** `PUSH_SUBSCRIPTION_NOT_FOUND` |
+| DELETE | `/push/subscriptions` | forgets every browser the account can be woken on; 204 |
+
 ### Mail preferences (`/mail`)
 
 The way out of every letter (roadmap 23.1). Both mails carry a footer link to this

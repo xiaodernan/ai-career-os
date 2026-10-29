@@ -103,6 +103,10 @@ class ApiErrorCodeCensusTest {
                 // got its own code rather than one code with three sentences.
                 "NIGHTLY_REPORT_CLOCK_REVERSED", "NIGHTLY_REPORT_STATUS_INVALID", "NIGHTLY_REPORT_SUMMARY_TOO_LARGE",
                 "NOTE_NOT_FOUND", "NOT_FOUND", "PASSWORD_UNCHANGED", "PROFILE_NOT_FOUND",
+                // 33.1: a browser registration is refused, capped or forgotten -- each with its
+                // own sentence, so the settings switch can tell the reader which happened.
+                "PUSH_SUBSCRIPTION_INVALID", "PUSH_SUBSCRIPTION_LIMIT_REACHED",
+                "PUSH_SUBSCRIPTION_NOT_FOUND",
                 "RATE_LIMITED", "RESET_TOKEN_INVALID", "RESET_TOKEN_OWNER_NOT_FOUND", "RESUME_FILE_MISSING",
                 "RESUME_NOT_AVAILABLE", "RESUME_NOT_FOUND", "RESUME_NOT_INGESTED", "RESUME_NOT_PARSED",
                 "RESUME_NOT_TAILABLE", "RESUME_TEXT_NOT_READY", "RESUME_VERSION_MISSING", "RUN_NOT_FOUND",

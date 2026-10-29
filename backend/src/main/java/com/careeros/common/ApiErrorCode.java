@@ -122,6 +122,12 @@ public enum ApiErrorCode {
     EMAIL_UNCHANGED(HttpStatus.BAD_REQUEST),
     /** The email-change link is unknown, spent or past its window; nothing moved. */
     EMAIL_CHANGE_INVALID(HttpStatus.BAD_REQUEST),
+    /** A browser handed over a push address or key this service cannot wake. */
+    PUSH_SUBSCRIPTION_INVALID(HttpStatus.BAD_REQUEST),
+    /** The account already keeps as many browser registrations as the morning ring will walk. */
+    PUSH_SUBSCRIPTION_LIMIT_REACHED(HttpStatus.BAD_REQUEST),
+    /** The registration is not among the caller's; already forgotten, or never theirs. */
+    PUSH_SUBSCRIPTION_NOT_FOUND(HttpStatus.NOT_FOUND),
     RATE_LIMITED(HttpStatus.TOO_MANY_REQUESTS),
     AI_SERVICE_BAD_REQUEST(HttpStatus.BAD_REQUEST),
     AI_SERVICE_CONFLICT(HttpStatus.CONFLICT),

@@ -295,6 +295,12 @@ user-scoped table (ownership is enforced in backend layer + a single SQL predica
   → the two switches the letters obey (23.1): the morning signal letter and the Monday
   digest. An absent row means both are on, which is why signup writes nothing — a row
   appears when the reader turns something off.
+- `push_subscriptions(id, user_id, endpoint, p256dh, auth, label, created_at,
+   updated_at)` → the browsers an account can be woken on (33.1). The endpoint is
+  unique across the table, not per account: a registration belongs to a browser, so a
+  second reader signing in there re-points the row rather than adding one that would
+  ring the same browser twice. The keys are what a payload would be encrypted with;
+  today's push carries none, and the worker fetches the inbox itself.
 - `weekly_digests(id, user_id, week_start date, window_days smallint, payload jsonb,
    generated_at)` → one letter per user per week, the engine's answer stored verbatim;
   re-composing the same week refreshes the row rather than appending a second one.
