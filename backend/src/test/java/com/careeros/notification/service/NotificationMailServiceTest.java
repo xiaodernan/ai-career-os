@@ -16,6 +16,7 @@ import com.careeros.application.repository.ApplicationRepository;
 import com.careeros.auth.entity.User;
 import com.careeros.auth.repository.UserRepository;
 import com.careeros.job.repository.IngestionFeedRepository;
+import com.careeros.job.repository.SavedSearchRepository;
 import com.careeros.mail.service.MailList;
 import com.careeros.mail.service.MailPreferenceService;
 import com.careeros.notification.dto.NotificationDtos.NotificationItem;
@@ -31,11 +32,12 @@ import org.springframework.mail.MailSendException;
 /**
  * The morning sweep that carries the inbox out of the app (roadmap 22.1).
  *
- * <p>What is pinned: the audience is the union of the two kinds of account, so an account in
- * both halves gets one letter; an account with nothing waiting gets no letter at all; the latch
- * is written only after the transport accepts, so a refusal is retried tomorrow rather than
- * recorded as delivered; one account's bad state does not cost the others their morning; and a
- * finished pass moves the heartbeat while a pass that could not read its audience does not.
+ * <p>What is pinned: the audience is the union of the three kinds of account, so an account in
+ * more than one half gets one letter (and an account with only a saved search is asked at all);
+ * an account with nothing waiting gets no letter at all; the latch is written only after the
+ * transport accepts, so a refusal is retried tomorrow rather than recorded as delivered; one
+ * account's bad state does not cost the others their morning; and a finished pass moves the
+ * heartbeat while a pass that could not read its audience does not.
  */
 class NotificationMailServiceTest {
 
@@ -47,6 +49,7 @@ class NotificationMailServiceTest {
     private NotificationMailer mailer;
     private ApplicationRepository applications;
     private IngestionFeedRepository feeds;
+    private SavedSearchRepository savedSearches;
     private UserRepository users;
     private NotificationDeliveryMetrics metrics;
     private MailPreferenceService preferences;
@@ -58,13 +61,15 @@ class NotificationMailServiceTest {
         mailer = mock(NotificationMailer.class);
         applications = mock(ApplicationRepository.class);
         feeds = mock(IngestionFeedRepository.class);
+        savedSearches = mock(SavedSearchRepository.class);
         users = mock(UserRepository.class);
         metrics = mock(NotificationDeliveryMetrics.class);
         preferences = mock(MailPreferenceService.class);
-        service = new NotificationMailService(notifications, mailer, applications, feeds, users,
-                metrics, preferences);
+        service = new NotificationMailService(notifications, mailer, applications, feeds,
+                savedSearches, users, metrics, preferences);
         when(applications.distinctUserIds()).thenReturn(List.of());
         when(feeds.distinctUserIds()).thenReturn(List.of());
+        when(savedSearches.distinctUserIds()).thenReturn(List.of());
         when(preferences.optedOut(MailList.SIGNALS)).thenReturn(Set.of());
     }
 
@@ -82,9 +87,10 @@ class NotificationMailServiceTest {
     }
 
     @Test
-    void each_account_is_asked_once_even_when_it_is_in_both_halves_of_the_audience() {
+    void each_account_is_asked_once_even_when_it_is_in_every_half_of_the_audience() {
         when(applications.distinctUserIds()).thenReturn(List.of(ALICE));
         when(feeds.distinctUserIds()).thenReturn(List.of(ALICE, BOB));
+        when(savedSearches.distinctUserIds()).thenReturn(List.of(ALICE, BOB));
         when(notifications.awaitingDelivery(any())).thenReturn(List.of());
 
         assertThat(service.mailPending()).isZero();
@@ -94,6 +100,23 @@ class NotificationMailServiceTest {
         verify(mailer, never()).send(any(), anyString(), any(), any());
         verify(metrics).recordSweep(any());
         verify(metrics, never()).recordSent(any());
+    }
+
+    /**
+     * The audience used to be applications ∪ feeds, so a reader who only browses with saved
+     * questions was never asked -- the search's news had no way out of the app for them.
+     */
+    @Test
+    void an_account_that_only_keeps_a_saved_search_still_gets_its_morning() {
+        when(savedSearches.distinctUserIds()).thenReturn(List.of(CAROL));
+        when(notifications.awaitingDelivery(CAROL)).thenReturn(List.of(item("s")));
+        when(users.findById(CAROL))
+                .thenReturn(Optional.of(account(CAROL, "carol@example.com", "en")));
+
+        assertThat(service.mailPending()).isEqualTo(1);
+
+        verify(mailer).send(eq(CAROL), eq("carol@example.com"), any(), anyString());
+        verify(notifications).markNotified(eq(CAROL), eq(List.of("s")), any());
     }
 
     @Test

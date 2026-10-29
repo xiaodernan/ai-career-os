@@ -4,6 +4,7 @@ import com.careeros.application.repository.ApplicationRepository;
 import com.careeros.auth.entity.User;
 import com.careeros.auth.repository.UserRepository;
 import com.careeros.job.repository.IngestionFeedRepository;
+import com.careeros.job.repository.SavedSearchRepository;
 import com.careeros.mail.service.MailList;
 import com.careeros.mail.service.MailPreferenceService;
 import com.careeros.notification.dto.NotificationDtos.NotificationItem;
@@ -22,12 +23,14 @@ import org.springframework.stereotype.Service;
  * The morning sweep that carries the inbox out of the app (roadmap 22.1).
  *
  * <p>The audience is everyone the inbox could have something for: accounts with an application
- * on the board and accounts subscribing to a feed, unioned so one account is one letter, minus
- * the accounts that turned this letter off (roadmap 23.1). An opt-out is read once per pass
- * rather than per account, and it is silent by design -- a reader who asked for quiet is not a
- * warn line. Each remaining account is asked what is still waiting -- unread in the app and
- * never mailed -- and an empty answer is the common case, which is why the sweep never writes
- * an empty letter.
+ * on the board, accounts subscribing to a feed, and accounts keeping a saved search, unioned so
+ * one account is one letter, minus the accounts that turned this letter off (roadmap 23.1). The
+ * third half is what makes a saved search's voice reach a reader who only browses: with no
+ * application and no feed they were in neither of the old halves, and the news waited for them
+ * to open the app. An opt-out is read once per pass rather than per account, and it is silent by
+ * design -- a reader who asked for quiet is not a warn line. Each remaining account is asked what
+ * is still waiting -- unread in the app and never mailed -- and an empty answer is the common
+ * case, which is why the sweep never writes an empty letter.
  *
  * <p>The latch is written only after the transport accepts: a refused or missing account is a
  * warn line and the next morning tries again, while an accepted letter is remembered on the
@@ -51,18 +54,21 @@ public class NotificationMailService {
     private final NotificationMailer mailer;
     private final ApplicationRepository applications;
     private final IngestionFeedRepository feeds;
+    private final SavedSearchRepository savedSearches;
     private final UserRepository users;
     private final NotificationDeliveryMetrics metrics;
     private final MailPreferenceService preferences;
 
     public NotificationMailService(NotificationService notifications, NotificationMailer mailer,
             ApplicationRepository applications, IngestionFeedRepository feeds,
+            SavedSearchRepository savedSearches,
             UserRepository users, NotificationDeliveryMetrics metrics,
             MailPreferenceService preferences) {
         this.notifications = notifications;
         this.mailer = mailer;
         this.applications = applications;
         this.feeds = feeds;
+        this.savedSearches = savedSearches;
         this.users = users;
         this.metrics = metrics;
         this.preferences = preferences;
@@ -117,10 +123,11 @@ public class NotificationMailService {
         return true;
     }
 
-    /** The two kinds of account that can have a signal, each once. */
+    /** The three kinds of account that can have a signal, each once. */
     private List<UUID> audience() {
         Set<UUID> out = new LinkedHashSet<>(applications.distinctUserIds());
         out.addAll(feeds.distinctUserIds());
+        out.addAll(savedSearches.distinctUserIds());
         return List.copyOf(out);
     }
 }

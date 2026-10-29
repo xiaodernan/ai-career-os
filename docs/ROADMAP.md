@@ -1513,6 +1513,21 @@ episode, settled by reading or acting, and mailed at most once.
   binding test and 2 integration tests cover it. The backend unit suite at
   788 and the integration suite at 76 are green.)
 
+- [x] **29.2** The morning sweep knows the reader who only keeps searches.
+
+  (29.1 gave a saved search a voice inside the app, but the letter's audience was
+  still applications ∪ feeds — the two sources that predate saved searches. A
+  reader who browses with saved questions and never applies or subscribes a feed
+  was in neither half, so their search's news waited in the inbox while every
+  other account's morning left the building. `SavedSearchRepository` now answers
+  its distinct owners and `NotificationMailService` unions it in as the third
+  half; one account is still one letter, an opt-out is still read before the
+  account is asked anything, and one account's bad row still costs nobody else
+  their morning. 1 unit test pins an account reachable only through a saved
+  search getting its mail, and the existing union test now puts one account in all
+  three halves. The backend unit suite at 789 and the integration suite at
+  76 are green.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
