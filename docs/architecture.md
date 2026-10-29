@@ -287,10 +287,14 @@ user-scoped table (ownership is enforced in backend layer + a single SQL predica
   proposed, or failed with the sentence that says why. The row is written when the pull
   ends, so there is no `running` status to go stale if the process dies mid-fetch.
 - `notification_states(user_id, signal_key, read_at, dismissed_at, notified_at,
-  updated_at)` → the inbox is synthesized from signals already written down; what
-  persists is what the reader did with one — read it, dismissed it, or received it by
-  the morning mail — keyed by the episode (`reminder:<id>:<at>`, `stale:<id>:<at>`,
-  `ingestion:<runId>`), so a dismissal silences one episode rather than the next.
+  pushed_at, updated_at)` → the inbox is synthesized from signals already written down;
+  what persists is what the reader did with one — read it, dismissed it, received it by
+  the morning mail, or was woken for it on a browser — keyed by the episode
+  (`reminder:<id>:<at>`, `stale:<id>:<at>`, `ingestion:<runId>`), so a dismissal
+  silences one episode rather than the next. `notified_at` and `pushed_at` are separate
+  latches because the letter and the ring are different doors: a reader who turned the
+  letter off still asked to be woken, and a push the service refused is not a letter
+  that was delivered.
 - `mail_preferences(user_id, weekly_digest, signal_mail, updated_at)`
   → the two switches the letters obey (23.1): the morning signal letter and the Monday
   digest. An absent row means both are on, which is why signup writes nothing — a row
@@ -308,6 +312,13 @@ user-scoped table (ownership is enforced in backend layer + a single SQL predica
   bean is a no-op that reports "not configured"; one half of the pair, or a TTL
   outside RFC 8030's ceiling, refuses the boot. Since the push carries no payload,
   no signal text, saved-search name or count transits the push service.
+  The sweep side (33.3) rides the 07:30 signal clock: every account with a
+  registration is asked what is unread, undismissed and not yet pushed, and one
+  coalesced wake is fanned to each of its browsers -- the mail stop list is not
+  consulted, because the browser registration is this door's own consent. The
+  episode's `pushed_at` latch is written only when some browser accepted, a `GONE`
+  registration is deleted on the spot, and every outbound attempt moves
+  `careeros.push.delivery` under `sent` / `gone` / `refused` / `not_configured`.
 - `weekly_digests(id, user_id, week_start date, window_days smallint, payload jsonb,
    generated_at)` → one letter per user per week, the engine's answer stored verbatim;
   re-composing the same week refreshes the row rather than appending a second one.

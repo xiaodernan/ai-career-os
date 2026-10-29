@@ -531,6 +531,15 @@ letter, and `CareerOSSignalSweepStale` pages at 36 hours without one — that is
 misconfigured `careeros.signals.cron` or a scheduler that never started is caught
 (`docs/RUNBOOK.md#the-morning-sweep-stopped`).
 
+The same pass rings browsers when push is configured (33.3). Every outbound wake moves
+`careeros.push.delivery{outcome="sent"|"gone"|"refused"|"not_configured"}`, one
+registration per attempt; the episode's `notification_states.pushed_at` is written only
+when some browser accepted, and a `gone` registration is deleted on the spot. No page is
+attached to this counter: an install without VAPID keys reports `not_configured` every
+morning by design, a refused wake is retried tomorrow, and `sent` sitting at zero while
+registrations exist is a dashboard question rather than a paging one — the mail sweep's
+own clock already pages when the pass itself stops.
+
 ## Health & first data
 
 - Backend liveness: `GET /api/v1/health` (no auth).

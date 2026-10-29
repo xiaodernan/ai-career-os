@@ -43,6 +43,13 @@ import org.springframework.transaction.annotation.Transactional;
  * -- so the letter and the inbox cannot describe different mornings, and records the mail's
  * acceptance on the same episode row that remembers the read. A signal that was read or
  * dismissed in the app is not mailed; a signal that was mailed is not mailed twice.
+ *
+ * <p>The ring outside the app is a second door with its own latch (roadmap 33.3). The browser
+ * is woken for what is unread, undismissed and not yet pushed -- <em>not</em> for what has
+ * already been mailed, because a reader who turned the letter off asked to be woken instead,
+ * and a reader who has not opened the app since yesterday's letter is exactly who a ring is
+ * for. The two latches never consult each other; each channel records only what its own
+ * transport accepted.
  */
 @Service
 public class NotificationService {
@@ -116,6 +123,36 @@ public class NotificationService {
         for (String key : keys) {
             NotificationState state = stateFor(userId, key);
             state.setNotifiedAt(at);
+            states.save(state);
+        }
+    }
+
+    /**
+     * What a ring may wake the account for (roadmap 33.3): the items the inbox is showing that
+     * the reader has neither read nor dismissed and that no browser has been woken for. The mail
+     * latch is deliberately not consulted -- see the class note -- and neither is the mail stop
+     * list, which belongs to a different door.
+     */
+    @Transactional(readOnly = true)
+    public List<NotificationItem> awaitingPush(UUID userId) {
+        return shown(userId).stream()
+                .filter(entry -> !entry.item().read())
+                .filter(entry -> entry.state() == null || entry.state().getPushedAt() == null)
+                .map(Shown::item)
+                .toList();
+    }
+
+    /**
+     * Latches the morning a browser accepted the ring for these episodes. Called only when at
+     * least one registration took it: an account whose every browser refused is not remembered
+     * as rung, so the next morning tries again. The latch never clears and is per episode, so a
+     * new signal arrives under a new key with no latch.
+     */
+    @Transactional
+    public void markPushed(UUID userId, List<String> keys, OffsetDateTime at) {
+        for (String key : keys) {
+            NotificationState state = stateFor(userId, key);
+            state.setPushedAt(at);
             states.save(state);
         }
     }

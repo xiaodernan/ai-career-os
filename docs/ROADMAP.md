@@ -2452,14 +2452,51 @@ no signal text, saved-search name or count transits a push service.
   `docs/architecture.md` 4.7, `docs/DEPLOYMENT.md`'s checklist and both env
   examples carry the new knobs. The backend's non-IT suite answers 872 tests, 0 failures.
 
-- [ ] **33.3** The morning sweep rings as well as writes.
+- [x] **33.3** The morning sweep rings as well as writes.
 
-  (The sweep's audience gains the accounts with a subscription; a coalesced push
-  goes to each when the inbox holds an unread, undismissed signal. Push keeps its
-  own latch on the episode, so a reader who turned the letter off still gets the
-  ring and a reader who read the letter does not get a second one. Sends and
-  refusals are metered like the mail's, and a dead registration is deleted when
-  the push service says it is gone.)
+  `V25` gives `notification_states` a `pushed_at`: the ring is the second door out
+  of the app, so it gets the episode's second latch rather than sharing the
+  letter's. `NotificationService.awaitingPush` answers what the inbox is showing
+  that is unread, undismissed and not yet pushed -- the mail latch is deliberately
+  not consulted, because a reader who turned the letter off still asked to be
+  woken, and a mailed episode nobody has opened the app for is exactly what a ring
+  is for -- and `markPushed` writes the latch per episode, so a new signal arrives
+  under a new key with none.
+
+  `NotificationPushService` rides the 07:30 clock after the letters. Its audience
+  is every account with a registration (`distinctUserIds` on the push table); the
+  browser is this door's consent, so the mail stop list is never read. One
+  waiting morning is one coalesced wake fanned to each of the account's browsers,
+  not one per item, and the latch is written only when at least one browser
+  accepted -- a morning where every registration refused is tried again rather
+  than remembered as rung, and a deployment whose sender is the no-op reports
+  `not_configured` and latches nothing, so keys arriving later still reach the
+  episodes nobody saw. A `GONE` registration is deleted on the spot, because a
+  push service that retired it will say so every morning. `PushDeliveryMetrics`
+  carries one counter, `careeros.push.delivery`, tagged `sent` / `gone` /
+  `refused` / `not_configured`; there is no second pass marker, because the ring
+  shares the letters' pass and that pass's own gauge already answers whether the
+  clock ran. The scheduler catches the two halves separately: a relay that refuses
+  every letter does not silence the ring, and a hanging push service does not cost
+  the morning its letters.
+
+  Gates: `NotificationPushServiceTest` 8 (one wake per browser and one latch per
+  episode; nothing waiting costs no call; a `GONE` row deleted and a refusing
+  morning not latched; one acceptance enough to latch; a refused morning asked
+  again; no keys latches nothing; a vanished registration skipped; one bad account
+  does not stop the others), `PushDeliveryMetricsTest` 2, `NotificationServiceTest`
+  +3 (a mailed but unread episode still rings; only unread/undismissed/unpushed
+  travels; a rung episode is not rung twice and is still unread in the app) and
+  `NotificationMailSchedulerTest` 3 (both halves in order, a failed letter sweep
+  still rings, a failed ring is swallowed). The full non-IT backend suite answers
+  886 tests, 0 failures. The full run also caught a flake outside this unit: a
+  Micrometer gauge keeps its object weakly, and two tests discarded the metrics
+  instance they had just built, so a collection under load answered `NaN`;
+  `RetentionSweeperTest` and `AiUsageMetricsTest` now hold the instance for the
+  read. `test_response_shape_contract`'s run-stream interval census grew by one row
+  (the ring's class comment says why there is no second marker; nine Java rows), and
+  the knob census is unchanged -- no new settings. `docs/API.md` and
+  `docs/architecture.md` 4.7 carry the sweep and the migration.
 
 - [ ] **33.4** The worker wakes, asks and opens.
 

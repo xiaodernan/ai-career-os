@@ -2978,8 +2978,9 @@ def test_the_heartbeat_interval_has_one_definer_and_every_shipped_claim_names_it
          "interval is a claim this gate has to be able to check rather than a second opinion")
     # A file set and a per-file count rather than a line ledger. The census is over the word
     # (`ping`, `keep-alive`, `heartbeat`), and the epics since 22.3 put the word in front of
-    # three more readers: the morning sweep's heartbeat, the Monday letter's and the retention
-    # sweep's. Each is a different clock that shares the word -- and each line moved whenever a
+    # four more readers: the morning sweep's heartbeat, the Monday letter's, the retention
+    # sweep's and 33.3's morning ring (which adds no marker of its own and says so).
+    # Each is a different clock that shares the word -- and each line moved whenever a
     # roadmap entry above it grew, so a line ledger red on an edit that changed no sentence.
     # The file set still reds when a second document picks the word up; the counts still red
     # when a paragraph joins or leaves.
@@ -3001,6 +3002,8 @@ def test_the_heartbeat_interval_has_one_definer_and_every_shipped_claim_names_it
         ("backend/src/main/java/com/careeros/notification/service/NotificationDeliveryMetrics.java", 11),
         ("backend/src/main/java/com/careeros/notification/service/NotificationDeliveryMetrics.java", 82),
         ("backend/src/main/java/com/careeros/notification/service/NotificationMailService.java", 22),
+        # 33.3's morning ring explains why it adds no second marker: same pass, same clock.
+        ("backend/src/main/java/com/careeros/push/service/PushDeliveryMetrics.java", 9),
         ("backend/src/main/java/com/careeros/report/service/WeeklyDigestDeliveryMetrics.java", 11),
         ("backend/src/main/java/com/careeros/report/service/WeeklyDigestDeliveryMetrics.java", 82),
         ("backend/src/main/java/com/careeros/report/service/WeeklyDigestScheduler.java", 11),
@@ -3008,8 +3011,8 @@ def test_the_heartbeat_interval_has_one_definer_and_every_shipped_claim_names_it
         ("frontend/src/components/ai/task-stream.tsx", 17),
         ("frontend/src/lib/sse/use-sse.ts", 9),
     ], ("spans that name the keep-alive and state no interval: the shape an edited claim leaves behind, "
-        "listed so a claim cannot escape the census above by losing its number -- the eight Java rows "
-        "are the other clocks that share the word, kept here so a ninth clock is a red, not a silent join")
+        "listed so a claim cannot escape the census above by losing its number -- the nine Java rows "
+        "are the other clocks that share the word, kept here so a tenth clock is a red, not a silent join")
     assert [(row["file"], row["line"]) for row in spans["trailing"]] == [
         ("backend/src/main/java/com/careeros/ai/SseRelayService.java", 136),
         ("frontend/src/lib/sse/use-sse.ts", 253),

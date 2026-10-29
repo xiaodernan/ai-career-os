@@ -26,6 +26,8 @@ class AiUsageMetricsTest {
 
     private SimpleMeterRegistry registry;
     private JdbcTemplate jdbc;
+    /** Micrometer holds the gauge's object weakly; a field keeps it alive across the read. */
+    private AiUsageMetrics constructed;
 
     @BeforeEach
     void setUp() {
@@ -46,7 +48,7 @@ class AiUsageMetricsTest {
     void the_first_read_publishes_the_ledgers_window() {
         answer(new AiUsageMetrics.Usage(1.25, 3400, 12));
 
-        new AiUsageMetrics(jdbc, registry);
+        constructed = new AiUsageMetrics(jdbc, registry);
 
         assertThat(gauge(AiUsageMetrics.COST_24H)).isEqualTo(1.25);
         assertThat(gauge(AiUsageMetrics.TOKENS_24H)).isEqualTo(3400.0);

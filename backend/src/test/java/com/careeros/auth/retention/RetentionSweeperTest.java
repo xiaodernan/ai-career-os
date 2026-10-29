@@ -46,6 +46,13 @@ class RetentionSweeperTest {
     private final RetentionSweeper sweeper = new RetentionSweeper(
             refreshTokens, resetTokens, emailChangeTokens, props, new RetentionMetrics(registry));
 
+    /**
+     * Held in a field so it cannot be collected before the read: Micrometer's gauge keeps its
+     * object weakly, and a discarded metrics instance answers {@code NaN} once the collector
+     * takes it -- which it does under a full suite, not when this class runs alone.
+     */
+    private RetentionMetrics freshMetrics;
+
     @BeforeEach
     void defaultCounts() {
         when(refreshTokens.deleteExpiredBefore(NOW.minusDays(30))).thenReturn(3);
@@ -98,7 +105,7 @@ class RetentionSweeperTest {
     void theHeartbeatStartsAtBootNotAtZeroSoAFreshDeployIsNotStale() {
         SimpleMeterRegistry freshRegistry = new SimpleMeterRegistry();
         long before = Instant.now().getEpochSecond();
-        new RetentionMetrics(freshRegistry);
+        freshMetrics = new RetentionMetrics(freshRegistry);
         long after = Instant.now().getEpochSecond();
 
         Gauge gauge = freshRegistry.find(RetentionMetrics.LAST_SWEEP).gauge();

@@ -6,14 +6,16 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
- * The morning clock the signal mail runs on (roadmap 22.1).
+ * The morning clock the signals run on (roadmap 22.1, 33.3).
  *
- * <p>Half an hour before the Monday letter, the inbox's waiting signals are carried out by
- * mail: early enough to be read with the day's first coffee, late enough that the previous
- * night's pulls have been filed. The hour is configurable ({@code careeros.signals.cron}) so a
- * deployment can move it without a rebuild. Nothing is thrown out of the sweep -- every
- * account's failure is already a warn line inside it, and a morning that could not even read
- * the audience is logged rather than crashing the scheduler's thread.
+ * <p>Half an hour before the Monday letter, the inbox's waiting signals are carried out: first
+ * by mail, then by ringing the browsers that asked to be woken. The hour is configurable
+ * ({@code careeros.signals.cron}) so a deployment can move it without a rebuild.
+ *
+ * <p>The two halves are caught separately on purpose. They share an audience but not a failure
+ * mode: an SMTP relay that refuses every letter should not silence a browser that could have
+ * rung, and a push transport that hangs should not cost the morning its letters. Nothing is
+ * thrown out of the run -- a scheduler thread that dies costs every future morning.
  */
 @Component
 public class NotificationMailScheduler {
@@ -21,9 +23,11 @@ public class NotificationMailScheduler {
     private static final Logger log = LoggerFactory.getLogger(NotificationMailScheduler.class);
 
     private final NotificationMailService mail;
+    private final NotificationPushService push;
 
-    public NotificationMailScheduler(NotificationMailService mail) {
+    public NotificationMailScheduler(NotificationMailService mail, NotificationPushService push) {
         this.mail = mail;
+        this.push = push;
     }
 
     @Scheduled(cron = "${careeros.signals.cron:0 30 7 * * *}")
@@ -35,6 +39,14 @@ public class NotificationMailScheduler {
             }
         } catch (RuntimeException e) {
             log.warn("the signal mail sweep could not run", e);
+        }
+        try {
+            int rung = push.pushPending();
+            if (rung > 0) {
+                log.info("morning ring delivered to {} account(s)", rung);
+            }
+        } catch (RuntimeException e) {
+            log.warn("the morning ring sweep could not run", e);
         }
     }
 }

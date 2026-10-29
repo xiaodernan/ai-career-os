@@ -306,8 +306,19 @@ public key as `k`, and a `TTL` header (12 hours by default). No payload and no
 encryption travel with it -- the worker wakes, fetches the authenticated inbox and
 shows one notification -- so a push service learns only that the browser exists and
 was asked to wake. A `404`/`410` means the browser is gone and the registration is
-deleted; every other refusal is counted and tried again on the next pass. With no
-VAPID keys configured the sender is a no-op: browsers can still register, nothing
+deleted; every other refusal is counted and tried again on the next pass.
+
+The 07:30 signal clock runs the ring after its letters (roadmap 33.3). Every
+account with a registration is asked what is unread, undismissed and not yet
+pushed, and one wake is fanned to each of its browsers when the answer is not
+empty; the mail stop list is not consulted, because the browser registration is
+this door's own consent. The episode's `pushed_at` latch is written only when some
+browser accepted, so a morning that only refused is tried again, while a mailed
+episode that is still unread may still be rung. Attempts are counted as
+`careeros.push.delivery` with an `outcome` tag (`sent`, `gone`, `refused`,
+`not_configured`).
+
+With no VAPID keys configured the sender is a no-op: browsers can still register, nothing
 leaves the building, and the boot log says "push is not configured". The knobs are
 `APP_PUSH_VAPID_PUBLIC_KEY` and `APP_PUSH_VAPID_PRIVATE_KEY` (both or neither; one
 half refuses the boot), `APP_PUSH_CONTACT` (RFC 8292's `sub`, empty falls back to

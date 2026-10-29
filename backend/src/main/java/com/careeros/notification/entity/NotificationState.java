@@ -44,6 +44,14 @@ public class NotificationState {
     @Column(name = "notified_at")
     private OffsetDateTime notifiedAt;
 
+    /**
+     * When a browser was woken for this episode (roadmap 33.3); null means its ring has not
+     * happened. Separate from {@link #notifiedAt} because the letter and the ring are different
+     * doors out of the app, with different consent and different failures.
+     */
+    @Column(name = "pushed_at")
+    private OffsetDateTime pushedAt;
+
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
@@ -86,6 +94,14 @@ public class NotificationState {
 
     public void setNotifiedAt(OffsetDateTime notifiedAt) {
         this.notifiedAt = notifiedAt;
+    }
+
+    public OffsetDateTime getPushedAt() {
+        return pushedAt;
+    }
+
+    public void setPushedAt(OffsetDateTime pushedAt) {
+        this.pushedAt = pushedAt;
     }
 
     public OffsetDateTime getUpdatedAt() {

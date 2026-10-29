@@ -163,10 +163,16 @@
       无键时 `NoopPushSender`，半对键启动即拒绝）。`VapidKeys` 接受 raw
       32 字节或 PKCS#8 私钥并用探针签名验键对。8+7+6 个新测试，872 个
       非 IT 后端测试全绿；配置门禁 33 leaves / 21 readers / 24 fields。
-    - 33.3（下一步）：晨间 sweep 发出声音。audience 增订阅者、每个 episode
-      独立 push latch（新迁移 V25 给 `notification_states` 加列）、计量与
-      `GONE` 删行；发送接进 `NotificationMailService` 的 sweep 与定时器。
-    - 33.4：前端 worker 处理 `push` 与 `notificationclick`（深链回收件箱），
+    - ~~33.3 晨间 sweep 发出声音~~ 已完成：`V25` 给 `notification_states` 加
+      `pushed_at`（每 episode 一条 ring latch，与邮件的 `notified_at` 互不
+      读取）；`awaitingPush` 只取未读、未忽略、未 ring 的条目，一次合并的
+      wake 扇给该账号的每台浏览器；至少一台接受才写 latch，`GONE` 当场删行，
+      无键的 no-op 不写 latch；`NotificationPushService` 接在 07:30 的定时器
+      上（邮件之后，两半各自捕获异常），`careeros.push.delivery` 按
+      `sent`/`gone`/`refused`/`not_configured` 计量。8+2+3+3 个新测试，
+      886 个非 IT 后端测试全绿；顺带修掉两个 Micrometer 弱引用导致的
+      `NaN` flake。
+    - 33.4（下一步）：前端 worker 处理 `push` 与 `notificationclick`（深链回收件箱），
       设置页开关（permission → `subscribe` → `/push/subscriptions`，关闭即删，
       `pushsubscriptionchange` 重新登记）。
 

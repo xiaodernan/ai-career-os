@@ -339,6 +339,69 @@ class NotificationServiceTest {
         assertThat(store.get(key).getNotifiedAt()).isEqualTo(now);
     }
 
+    /**
+     * The letter and the ring are different doors (roadmap 33.3): a reader who turned the mail
+     * off still asked to be woken, so an episode the letter already carried may still be rung.
+     */
+    @Test
+    void a_mailed_episode_that_is_still_unread_may_still_be_rung() {
+        OffsetDateTime now = OffsetDateTime.now();
+        OffsetDateTime updated = now.minusDays(20);
+        withAttention(attention("stale", null, updated));
+        String key = "stale:" + APP + ":" + updated.toInstant().getEpochSecond();
+        NotificationState mailed = state(key, null, null);
+        mailed.setNotifiedAt(now.minusMinutes(30));
+        store.put(key, mailed);
+
+        assertThat(service.awaitingDelivery(ALICE)).isEmpty();
+        assertThat(service.awaitingPush(ALICE)).extracting(NotificationItem::key)
+                .containsExactly(key);
+    }
+
+    @Test
+    void the_ring_carries_only_what_is_unread_undismissed_and_unpushed() {
+        OffsetDateTime now = OffsetDateTime.now();
+        OffsetDateTime due = now.minusHours(1);
+        OffsetDateTime updated = now.minusDays(20);
+        withAttention(attention("reminder_due", due, null), attention("stale", null, updated));
+        withRuns(run(RUN, IngestionRun.STATUS_FAILED, "Feed answered HTTP 503", null,
+                        now.minusHours(2)),
+                run(RUN2, IngestionRun.STATUS_FAILED, "Feed answered HTTP 502", null,
+                        now.minusHours(3)));
+        String reminderKey = "reminder:" + APP + ":" + due.toInstant().getEpochSecond();
+        String staleKey = "stale:" + APP + ":" + updated.toInstant().getEpochSecond();
+        store.put(reminderKey, state(reminderKey, now.minusMinutes(10), null));
+        store.put(staleKey, state(staleKey, null, now.minusMinutes(5)));
+        NotificationState rung = state("ingestion:" + RUN, null, null);
+        rung.setPushedAt(now.minusHours(1));
+        store.put("ingestion:" + RUN, rung);
+
+        assertThat(service.awaitingPush(ALICE)).extracting(NotificationItem::kind)
+                .containsExactly(NotificationService.KIND_INGESTION_FAILED);
+        assertThat(service.awaitingPush(ALICE).get(0).key()).isEqualTo("ingestion:" + RUN2);
+    }
+
+    @Test
+    void a_pushed_episode_is_not_rung_twice_and_a_new_episode_is_unpushed_again() {
+        OffsetDateTime now = OffsetDateTime.now();
+        withAttention(attention("stale", null, now.minusDays(20)));
+        List<NotificationItem> first = service.awaitingPush(ALICE);
+        assertThat(first).hasSize(1);
+
+        service.markPushed(ALICE, first.stream().map(NotificationItem::key).toList(), now);
+
+        assertThat(service.awaitingPush(ALICE)).isEmpty();
+        assertThat(service.inbox(ALICE).unread())
+                .as("a ring is not a read: the item is still waiting in the app")
+                .isEqualTo(1);
+
+        withAttention(attention("stale", null, now.minusDays(19)));
+
+        assertThat(service.awaitingPush(ALICE)).extracting(NotificationItem::key)
+                .containsExactly("stale:" + APP + ":"
+                        + now.minusDays(19).toInstant().getEpochSecond());
+    }
+
     @Test
     void a_saved_search_with_new_matches_is_one_item_keyed_by_the_newest_arrival() {
         OffsetDateTime newest = OffsetDateTime.parse("2026-10-29T03:00:00Z");
