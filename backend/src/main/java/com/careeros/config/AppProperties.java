@@ -16,6 +16,7 @@ public class AppProperties {
     private final Upload upload = new Upload();
     private final Retention retention = new Retention();
     private final Http http = new Http();
+    private final Deployment deployment = new Deployment();
 
     public Cors getCors() {
         return cors;
@@ -51,6 +52,26 @@ public class AppProperties {
 
     public Http getHttp() {
         return http;
+    }
+
+    public Deployment getDeployment() {
+        return deployment;
+    }
+
+    public static class Deployment {
+        /**
+         * {@code dev} unless the deployment declares {@code APP_ENV=prod}. A prod boot
+         * refuses the credentials this repository publishes (see ProductionGuard).
+         */
+        private String env = "dev";
+
+        public String getEnv() {
+            return env;
+        }
+
+        public void setEnv(String env) {
+            this.env = env;
+        }
     }
 
     public static class Http {

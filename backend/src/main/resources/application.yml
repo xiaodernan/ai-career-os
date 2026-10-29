@@ -51,6 +51,11 @@ app:
   # rotate the header and buy a fresh login bucket per request (docs/SECURITY.md).
   http:
     trust-forwarded-for: ${APP_HTTP_TRUST_FORWARDED_FOR:false}
+  # "dev" unless the deployment says otherwise. With APP_ENV=prod the backend refuses
+  # to start on the JWT, mail-link or internal-token defaults this repository publishes
+  # (ProductionGuard), so a forgotten secret is a failed boot instead of a forgeable one.
+  deployment:
+    env: ${APP_ENV:dev}
   web:
     base-url: ${APP_WEB_BASE_URL:http://localhost:3000}
   # console logs each letter instead of sending it; smtp hands it to a relay and

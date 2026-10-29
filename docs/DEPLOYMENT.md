@@ -44,7 +44,8 @@ curl -f http://localhost:3000
 
 - [ ] All secrets in `.env.prod` are strong, unique, and not from `.env.example`
 - [ ] `JWT_SECRET` is >= 64 random characters
-- [ ] `APP_ENV=prod` (blocks mock LLM provider)
+- [ ] `APP_ENV=prod` (blocks the mock providers; with it the backend also refuses to
+  start on any published secret, see the next item)
 - [ ] Real LLM/embedding provider keys configured (not `mock`/`hash`)
 - [ ] `APP_EMAIL_PROVIDER=smtp` with a reachable relay and a from address it
   accepts — the console transport logs resets instead of mailing them (see
@@ -52,6 +53,11 @@ curl -f http://localhost:3000
 - [ ] `APP_MAIL_LINK_SECRET` set to 32+ random bytes (`openssl rand -base64 48`).
   It signs the unsubscribe links in every letter; the dev default is published in
   this repository, so leaving it in prod lets anyone forge a stop-link
+- [ ] `JWT_SECRET`, `APP_MAIL_LINK_SECRET` and `INTERNAL_API_TOKEN` are not the
+  repository's published defaults and do not begin with `CHANGE_ME` — booted with
+  `APP_ENV=prod`, the backend refuses to start on any of them, names every offender
+  in one message, and exits instead of serving forgeable credentials
+  (`ProductionGuard`; see [SECURITY.md](SECURITY.md#findings) finding #4)
 - [ ] Reverse proxy (nginx/Traefik/Caddy) terminates TLS and forwards to:
   - Frontend: `http://frontend:3000`
   - Backend API: `http://backend:8080`
@@ -81,6 +87,11 @@ environment. It catches configurations that boot fine and then fail badly — of
 providers in prod, the repo's published default `INTERNAL_API_TOKEN` (which would leave
 `/internal/*` effectively unauthenticated), the development database password, a missing
 API key, or an inverted DB pool. It is pure: no database or network is touched.
+
+The backend carries the same gate inline: with `APP_ENV=prod`, `ProductionGuard`
+refuses the Spring context on a published JWT secret, mail-link secret or internal
+token (or a `CHANGE_ME`/empty value) and names every offender — a boot that would
+have served forgeable credentials exits non-zero instead.
 
 ```bash
 cd ai-service

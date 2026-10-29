@@ -1,9 +1,9 @@
-"""A knob no code reads is a knob that does nothing: twenty-seven `app.*` keys ship, two are read by nobody.
+"""A knob no code reads is a knob that does nothing: twenty-nine `app.*` keys ship, two are read by nobody.
 
-`application.yml`'s `app:` block writes twenty-seven leaves. Twenty-five of them reach a reader that some
-service calls: fifteen through a Java getter, two (`app.web.base-url` through a `@Value` placeholder in
-`AuthService`'s constructor and `app.mail.link-secret` in `MailLinks`'s) that never appear in
-`AppProperties`, and eight `app.email.*` leaves through
+`application.yml`'s `app:` block writes twenty-nine leaves. Twenty-seven of them reach a reader that some
+service calls: seventeen through a Java getter, two (`app.web.base-url` through a `@Value` placeholder in
+`AuthService`'s constructor and `app.mail.link-secret`, read in `MailLinks` and again by the startup
+guard) that never appear in `AppProperties`, and eight `app.email.*` leaves through
 `EmailConfig`'s one transport bean. One (`app.storage.enabled`) is not written by the shipped file but
 is armed by `@ConditionalOnProperty` on the MinIO bean, whose `matchIfMissing = true` makes silence mean "on".
 The last two -- `app.upload.max-file-size-bytes` and `app.upload.presigned-url-ttl-seconds` -- bind fields in
@@ -26,12 +26,15 @@ the sentences, and doing it in one place where the next reader can see which was
 
 A census that greps only for `props.getX().getY()` would have called `app.storage.enabled` dead too, so this
 gate reads three arming mechanisms -- accessor, `@Value`, condition -- and requires all three to come up empty
-before it charges a key. Two more asymmetries are censused rather than smoothed, because each is a decision
+before it charges a key. Three more asymmetries are censused rather than smoothed, because each is a decision
 someone made: the **prod credential pair** (`MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY` are in the dev example and
 not in the prod one, because the prod compose re-arms them from the MinIO root pair -- without that mapping
-the backend would sign in to production with the dev defaults the yml interpolates), and the **env-only key**
+the backend would sign in to production with the dev defaults the yml interpolates), the **proxy trust
+switch** (`APP_HTTP_TRUST_FORWARDED_FOR` sits in neither example because it is a deployment decision, and
+`DEPLOYMENT.md`'s checklist is where an operator meets it -- putting it in the copy-me dev file would invite
+a directly reached backend to trust a header any client can write), and the **env-only key**
 (`app.email.console.log-body` is reachable from the environment, is stated in `docs/API.md`, is named in no
-env example and written in no yml). What this gate reports is a population, not a bug list: 15 accessor
+env example and written in no yml). What this gate reports is a population, not a bug list: 17 accessor
 readers, 10 `@Value` leaf binders (the web base-url, the mail link secret and the eight mail knobs) plus the env-only mail switch,
 1 condition, 2 bound-but-unread leaves, 1 field that is the shadow of a live key.
 Two of those readings are each taken twice on purpose, because each pair was found by turning one of them off:
@@ -71,6 +74,7 @@ ENV_DEV = ROOT / ".env.example"
 ENV_PROD = ROOT / ".env.prod.example"
 COMPOSE_PROD = ROOT / "docker-compose.prod.yml"
 SEC_DOC = ROOT / "docs" / "SECURITY.md"
+DEPLOYMENT_DOC = ROOT / "docs" / "DEPLOYMENT.md"
 API_DOC = ROOT / "docs" / "API.md"
 ARCH_DOC = ROOT / "docs" / "architecture.md"
 FE_SOURCE = ROOT / "frontend" / "src" / "components" / "knowledge" / "source-actions.tsx"
@@ -90,20 +94,23 @@ APP_LEAVES = frozenset({
     "retention.expired-token-days",
     "email.provider", "email.from", "email.smtp.host", "email.smtp.port", "email.smtp.username",
     "email.smtp.password", "email.smtp.starttls", "email.smtp.ssl", "mail.link-secret",
+    "http.trust-forwarded-for", "deployment.env",
 })
 HOLDERS = frozenset({"Cors", "Jwt", "Internal", "Storage", "AiService", "Ratelimit", "Upload",
-                     "Retention"})
+                     "Retention", "Http", "Deployment"})
 HOLDER_KEYS = frozenset({"cors", "web", "jwt", "internal", "storage", "ai-service", "ratelimit", "upload",
-                         "retention", "email", "mail"})
+                         "retention", "email", "mail", "http", "deployment"})
 
 # leaf -> (holder, field, accessor, the files that call it), measured at the ref this gate lands on.
 READERS = {
     "cors.allowed-origins": ("Cors", "allowedOrigins", "getAllowedOrigins", ("config/SecurityConfig.java",)),
-    "jwt.secret": ("Jwt", "secret", "getSecret", ("auth/service/JwtService.java",)),
+    "jwt.secret": ("Jwt", "secret", "getSecret",
+                   ("auth/service/JwtService.java", "config/ProductionGuard.java")),
     "jwt.access-ttl-minutes": ("Jwt", "accessTtlMinutes", "getAccessTtlMinutes", ("auth/service/JwtService.java",)),
     "jwt.refresh-ttl-days": ("Jwt", "refreshTtlDays", "getRefreshTtlDays", ("auth/service/TokenService.java",)),
     "internal.token": ("Internal", "token", "getToken",
-                       ("ai/HttpAiServiceClient.java", "ai/SseRelayService.java", "auth/security/InternalApiFilter.java")),
+                       ("ai/HttpAiServiceClient.java", "ai/SseRelayService.java", "auth/security/InternalApiFilter.java",
+                        "config/ProductionGuard.java")),
     "storage.endpoint": ("Storage", "endpoint", "getEndpoint", ("storage/MinioStorageService.java",)),
     "storage.access-key": ("Storage", "accessKey", "getAccessKey", ("storage/MinioStorageService.java",)),
     "storage.secret-key": ("Storage", "secretKey", "getSecretKey", ("storage/MinioStorageService.java",)),
@@ -126,6 +133,16 @@ READERS = {
     # mean the status page started advertising a quota it does not track.
     "ratelimit.mail-per-minute": ("Ratelimit", "mailPerMinute", "getMailPerMinute",
                                    ("ratelimit/RateLimitFilter.java",)),
+    # The proxy declaration is read by the two places that need a client address
+    # (the limiter and the session record); a third reader would be another
+    # decision about what "trusted" means.
+    "http.trust-forwarded-for": ("Http", "trustForwardedFor", "isTrustForwardedFor",
+                                 ("auth/web/AuthController.java", "ratelimit/RateLimitFilter.java")),
+    # The deployment switch is read by the bean that refuses a prod boot on the
+    # repository's published secrets; it is a knob like any other, and a second
+    # reader would be another place that decides what "prod" means.
+    "deployment.env": ("Deployment", "env", "getEnv",
+                       ("config/ProductionGuard.java",)),
     # The retention window is read only by the sweep it bounds: a second reader
     # (a status route, a manual trigger) would be a caller deciding row ages on
     # its own, so the single site is the claim.
@@ -162,6 +179,12 @@ ORPHAN_FIELDS = {"Storage.enabled"}
 # the two yml leaves that no `${ENV}` interpolates, and the third that is a shipped boolean default.
 FILE_ONLY_LEAVES = frozenset({"ratelimit.enabled", "upload.max-file-size-bytes", "upload.presigned-url-ttl-seconds"})
 PROD_CREDENTIAL_VARS = frozenset({"MINIO_ACCESS_KEY", "MINIO_SECRET_KEY"})
+# Vars neither env example names because they are deployment decisions, not
+# copy-me dev values: docs/DEPLOYMENT.md's checklist is the carrier, and the gate
+# reads that document rather than waving the var through. Turning X-Forwarded-For
+# on in a dev example would invite a directly reached backend to trust a header
+# any client can write, which is the bypass finding #2 measured.
+DOC_NAMED_VARS = frozenset({"APP_HTTP_TRUST_FORWARDED_FOR"})
 EMAIL_KEY = "email.console.log-body"
 
 SCAN_SUFFIXES = {".md", ".yml", ".yaml", ".ts", ".tsx", ".java", ".py", ".sh", ".ps1", ".example", ".txt"}
@@ -211,7 +234,11 @@ MAX_DOCUMENT = re.compile(r"MAX_DOCUMENT_BYTES = (?P<a>\d+) \* (?P<b>\d+) \* (?P
 RESUME_MAX = re.compile(r"RESUME_MAX_BYTES = (?P<a>\d+) \* (?P<b>\d+) \* (?P<c>\d+)")
 PROP_MENTION = re.compile(r"app\.(?P<s1>[a-z][a-z0-9-]*)\.(?P<s2>[a-z][a-z0-9_-]*)")
 COMPOSE_ENV = re.compile(r"^\s+(?P<var>MINIO_ACCESS_KEY|MINIO_SECRET_KEY):\s*\$\{(?P<from>[A-Z_]+)\}", re.M)
-TEST_SOURCE = re.compile(r'@TestPropertySource\(properties = "app\.storage\.enabled=(?P<v>false)"\)')
+# The integration harness names the switch inside a multi-line array (it also declares
+# the forwarded-for trust), so the opening brace and the whitespace before the string
+# are optional here; the single-string spelling is still matched.
+TEST_SOURCE = re.compile(
+    r'@TestPropertySource\(properties = (?:\{\s*)?"app\.storage\.enabled=false"')
 NO_HANDLER = re.compile(r"MaxUploadSizeExceededException|MultipartException|MultiPartException")
 
 
@@ -377,19 +404,19 @@ def armed_bytes() -> int:
 
 # ---------------------------------------------------------------- the cases
 
-def test_the_app_block_writes_twenty_seven_leaves_and_each_binds_by_one_of_three_mechanisms():
+def test_the_app_block_writes_twenty_nine_leaves_and_each_binds_by_one_of_three_mechanisms():
     leaves = app_leaves()
     assert len(leaves) >= 15, (
         f"the `app:` block parsed to {len(leaves)} leaves, below the 15 the shipped file writes -- the parser "
         f"stopped following the indentation, so every number below is a reading of nothing")
     assert frozenset(leaves) == APP_LEAVES, (
-        f"`app:`'s leaves are not the twenty-seven pinned here: extra={sorted(frozenset(leaves) - APP_LEAVES)} "
+        f"`app:`'s leaves are not the twenty-nine pinned here: extra={sorted(frozenset(leaves) - APP_LEAVES)} "
         f"missing={sorted(APP_LEAVES - frozenset(leaves))} -- a new key needs a binder and a reader before it "
         f"is a configuration rather than a comment")
 
     holders, fields = prop_structure()
     assert frozenset(holders) == HOLDERS, (
-        f"AppProperties binds the holder fields {sorted(holders)}, not the eight holders {sorted(HOLDERS)} "
+        f"AppProperties binds the holder fields {sorted(holders)}, not the ten holders {sorted(HOLDERS)} "
         f"-- the leaf-to-field derivation keys off these names, so the census would aim at the wrong class")
     declared = declared_holders()
     assert declared == frozenset(holders), (
@@ -397,8 +424,8 @@ def test_the_app_block_writes_twenty_seven_leaves_and_each_binds_by_one_of_three
         f"{sorted(holders)} -- the leaf walk follows the declarations and the key derivation follows the "
         f"fields, so a name in only one list is a holder the census reads but the walk never fills, or one "
         f"the walk fills but nothing can name its keys")
-    assert len(fields) == 18, (
-        f"AppProperties declares {len(fields)} leaf fields, want the 18 whose readers are censused here -- the "
+    assert len(fields) == 20, (
+        f"AppProperties declares {len(fields)} leaf fields, want the 20 whose readers are censused here -- the "
         f"population moved, so 'every field has a reader or a ledger entry' is a claim about a different file")
 
     values, conds = value_bindings(), conditions()
@@ -666,14 +693,14 @@ def test_the_cap_the_dead_knob_would_set_is_a_compile_time_constant_and_the_cont
         "quotes it")
 
 
-def test_twenty_four_leaves_reach_the_environment_and_the_three_that_do_not_are_literals_in_a_file():
+def test_twenty_six_leaves_reach_the_environment_and_the_three_that_do_not_are_literals_in_a_file():
     leaves = app_leaves()
     interpolated, literal = {}, {}
     for key, value in leaves.items():
         match = ENV_INTERP.match(value)
         (interpolated if match else literal)[key] = (match["var"] if match else value)
-    assert len(interpolated) == 24 and len(literal) == 3, (
-        f"{len(interpolated)} of the twenty-seven leaves interpolate an `${{ENV}}` and {len(literal)} are literals; "
+    assert len(interpolated) == 26 and len(literal) == 3, (
+        f"{len(interpolated)} of the twenty-nine leaves interpolate an `${{ENV}}` and {len(literal)} are literals; "
         f"the split is what makes a knob deployable, so a pair that moved needs this carrier list rewritten")
     assert frozenset(literal) == FILE_ONLY_LEAVES, (
         f"the file-only leaves are {sorted(literal)}: ratelimit.enabled is a shipped default an operator edits in "
@@ -681,13 +708,19 @@ def test_twenty_four_leaves_reach_the_environment_and_the_three_that_do_not_are_
 
     dev, prod = read(ENV_DEV), read(ENV_PROD)
     missing_dev = sorted(v for v in interpolated.values() if v and not re.search(rf"^[#]?\s*{v}=", dev, re.M))
-    assert not missing_dev, (
-        f"these variables the yml interpolates are named nowhere in .env.example: {missing_dev} -- an operator "
-        f"reading the dev example cannot learn the knob exists")
+    assert frozenset(missing_dev) == DOC_NAMED_VARS, (
+        f"these variables the yml interpolates are named nowhere in .env.example: {missing_dev}, while the "
+        f"ledger excuses exactly {sorted(DOC_NAMED_VARS)} -- either an operator reading the dev example cannot "
+        f"learn the knob exists, or a var joined the example and the exception is now stale")
+    for var in sorted(missing_dev):
+        assert var in read(DEPLOYMENT_DOC), (
+            f"{var} is excused from .env.example by DOC_NAMED_VARS but docs/DEPLOYMENT.md never names it, so "
+            f"the exception excuses a knob documented nowhere an operator looks")
     missing_prod = sorted(v for v in interpolated.values() if v and not re.search(rf"^[#]?\s*{v}=", prod, re.M))
-    assert frozenset(missing_prod) == PROD_CREDENTIAL_VARS, (
-        f".env.prod.example omits {missing_prod}; only the MinIO credential pair may be absent, because the prod "
-        f"compose re-arms those two from the MinIO root pair -- a third omission is a knob prod never sets")
+    assert frozenset(missing_prod) == PROD_CREDENTIAL_VARS | DOC_NAMED_VARS, (
+        f".env.prod.example omits {missing_prod}; only the MinIO credential pair (re-armed by the prod compose "
+        f"from the MinIO root pair) and the deployment decisions in DOC_NAMED_VARS may be absent -- any other "
+        f"omission is a knob prod never sets")
     armed_by_compose = {m["var"]: m["from"] for m in COMPOSE_ENV.finditer(read(COMPOSE_PROD))}
     assert armed_by_compose == {"MINIO_ACCESS_KEY": "MINIO_ROOT_USER", "MINIO_SECRET_KEY": "MINIO_ROOT_PASSWORD"}, (
         f"docker-compose.prod.yml arms the credential pair as {armed_by_compose}; without both mappings the "
@@ -737,7 +770,7 @@ def test_the_open_scan_charges_an_app_dot_mention_to_the_config_namespace_only_w
     keys = {r[2] for r in admitted}
     allowed = frozenset(APP_LEAVES) | {EMAIL_KEY, "email.console", "email.smtp", "storage.enabled"}
     assert keys <= allowed, (
-        f"admitted rows name keys outside the twenty-seven leaves plus the env-only email key, the mail holder's "
+        f"admitted rows name keys outside the twenty-nine leaves plus the env-only email key, the mail holder's "
         f"segment and the condition's storage.enabled: {sorted(keys - allowed)} -- either a new key needs a "
         f"binder above, or the holder rule let a module path through")
     # charged against the LEDGER, not against the rule's own predicate: comparing a refusal to the same

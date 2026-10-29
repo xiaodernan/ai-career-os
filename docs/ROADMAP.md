@@ -1877,6 +1877,47 @@ where no proxy exists.
   `application.yml` binds it with an off default; SECURITY.md's finding #2 and
   PRODUCT.md's summary are rewritten as fixed.)
 
+- [x] **31.5** A production boot cannot open on the repository's published
+  secrets.
+
+  (`application.yml` interpolated `JWT_SECRET`, `APP_MAIL_LINK_SECRET` and
+  `INTERNAL_API_TOKEN` from the environment but shipped working defaults, and
+  `APP_ENV` — already passed by both compose files — reached no backend code, so
+  the switch that should have refused a forgotten secret was a no-op. A deploy
+  that missed one booted fine on a value printed in this repository: access
+  tokens anyone can sign, unsubscribe and mail-settings links anyone can forge,
+  and `/internal/*` callable with the shared default. The ai-service had a
+  preflight for this class; the backend had nothing before its context existed.
+
+  `app.deployment.env` (`APP_ENV`, `dev` unless set) now arms
+  `ProductionGuard`: `env=prod` refuses the refresh when any of the three still
+  holds a literal the repository publishes (application.yml's default or
+  `.env.example`'s `generate-a-64+char-random-string`), a `CHANGE_ME` value from
+  `.env.prod.example`, or nothing at all — every offender named in one message,
+  so one restart fixes all three instead of three restarts finding them one by
+  one. Non-prod boots are untouched; the examples are what a dev checkout runs
+  on.
+
+  `ProductionGuardTest` runs 11 cases: the decision table (dev, ` PROD `, a lone
+  override, blank, `CHANGE_ME`), a drift check that reads `application.yml` and
+  both env examples so the guard's copies cannot go stale, an
+  `ApplicationContextRunner` proving a prod context fails while dev and
+  prod-with-real-secrets start, and the `@Component` wiring. Mutation arm:
+  replacing the published-set clause with `isEmpty()` turned 5 of the 11 red,
+  including the prod context; restored byte-identical, 11/11 green.
+  `DEPLOYMENT.md`'s checklist and preflight section and SECURITY.md's finding
+  #4 carry the refusal; both compose files already set `APP_ENV: prod`.
+
+  The knob census this unit had to extend was **red at HEAD, and the red was
+  31.4's**: `app.http.trust-forwarded-for` had no census entry, and the IT
+  harness's array-shaped `@TestPropertySource` — with a comment between its two
+  strings — stopped matching the switch scan. The census now reads 29 leaves /
+  20 fields / 17 accessor readers, follows the multi-line annotation, and pins
+  `APP_HTTP_TRUST_FORWARDED_FOR` out of both env examples by name
+  (`DOC_NAMED_VARS`): it is a deployment decision that `DEPLOYMENT.md` carries,
+  and the gate reads that document rather than waving the var through. The
+  census runs 7/7.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

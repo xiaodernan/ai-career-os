@@ -219,6 +219,30 @@ residual risk rather than as a clean bill of health.
    `/api/v1/auth/login` answers `401` in **1.20s** — which is what "fails open" was
    always meant to mean. Restoring Redis returns `ok`/`redis:true` with no restart.
 
+4. **A production boot used to accept the repository's published secrets — fixed.**
+   `application.yml` interpolates `JWT_SECRET`, `APP_MAIL_LINK_SECRET` and
+   `INTERNAL_API_TOKEN` from the environment but ships working defaults, and a deploy
+   that forgot one booted fine on a value printed in this repository: access tokens
+   anyone can sign, unsubscribe and mail-settings links anyone can forge, and an
+   `/internal/*` surface anyone can call with the shared default. The ai-service had a
+   preflight for the same class; the backend had nothing before its context existed.
+
+   `APP_ENV` (bound as `app.deployment.env`, **`dev` unless set**) now arms
+   `ProductionGuard`: with `env=prod` the bean refuses the context refresh when any of
+   the three still holds a published literal (the `application.yml` default or
+   `.env.example`'s), a `CHANGE_ME` value from `.env.prod.example`, or nothing at all.
+   It names **every** offender in one `IllegalStateException`, so one restart fixes all
+   three instead of three restarts finding them one by one. Non-prod boots are
+   untouched — the example values are exactly what a dev checkout runs on. Both compose
+   files already passed `APP_ENV`; for the backend it was a no-op until now.
+
+   `ProductionGuardTest` has 11 cases: the pure decision table (dev, case/space, a lone
+   override, blank, `CHANGE_ME`), a *drift* check that reads `application.yml` and both
+   env examples so the guard's copies cannot go stale, an `ApplicationContextRunner`
+   that proves a prod context fails and names all three (and that dev, or prod with real
+   secrets, starts), and the `@Component` wiring. `DEPLOYMENT.md`'s checklist and the
+   `APP_ENV` row now state the refusal.
+
 ### Dependency audits (2026-10-24)
 
 `npm audit --omit=dev` carried a critical and a high through PostCSS — both fixed
@@ -248,9 +272,11 @@ traces: `{ success: false, error: { code, message, details[] } }` (written by
 
 ## Production checklist
 
-- Set a unique, long `JWT_SECRET` and `INTERNAL_API_TOKEN`; never reuse the
-  `.env.example` values.
-- `APP_ENV=prod` (this also hard-blocks the `mock` LLM provider at boot).
+- Set a unique, long `JWT_SECRET`, `APP_MAIL_LINK_SECRET` and `INTERNAL_API_TOKEN`;
+  never reuse the `.env.example` values.
+- `APP_ENV=prod` (this also hard-blocks the `mock` LLM provider at boot, and makes the
+  backend refuse to start on any published, `CHANGE_ME` or empty signing secret —
+  finding #4).
 - Use a real embedding provider, not `hash`.
 - Terminate TLS at a proxy and restrict `APP_CORS_ORIGINS` to your real domain(s).
 - Rotate the MinIO and Postgres passwords; keep the buckets private (the
