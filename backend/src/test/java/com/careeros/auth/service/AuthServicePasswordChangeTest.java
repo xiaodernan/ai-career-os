@@ -82,7 +82,7 @@ class AuthServicePasswordChangeTest {
     void aWrongCurrentPasswordChangesNothingAndKeepsEverySessionAlive() {
         assertThatThrownBy(() -> service.changePassword(ALICE, new PasswordChangeRequest("not-it-99", NEXT)))
                 .isInstanceOfSatisfying(ApiException.class, e -> {
-                    assertThat(e.code()).isEqualTo(ApiErrorCode.INVALID_CREDENTIALS);
+                    assertThat(e.code()).isEqualTo(ApiErrorCode.CURRENT_PASSWORD_INCORRECT);
                     assertThat(e.getMessage()).isEqualTo("Current password is incorrect");
                 });
 

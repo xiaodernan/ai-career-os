@@ -17,7 +17,9 @@ The vocabulary is being made finer one code at a time. The resume's
 not-found code is six codes now, the request bucket that answered with twelve
 sentences is thirteen, the session codes are one meaning each, the not-found
 code is five, the storage errors are split, the validation bucket is four, the
-version code is three and the assistant's own errors are two -- with the
+version code is three, the assistant's own errors are two, and the sign-in
+bucket is two -- a failed sign-in and a signed-in reader's mistyped current
+password, which are different sentences to different readers -- with the
 buckets themselves gone, because a name that means nothing is not a
 contract.
 
@@ -59,7 +61,15 @@ CLIENT = ROOT / "frontend" / "src" / "lib" / "api" / "client.ts"
 # The codes that mean several things: one sentence would be wrong about
 # most of them, so they keep the server's own words until the throw sites
 # name them properly. This list is the road map's queue.
-SEVERAL_MEANINGS: frozenset[str] = frozenset()
+SEVERAL_MEANINGS: frozenset[str] = frozenset({
+    # "Resource not found" is the route catch-all, "Session not found" is a
+    # login-session row a reader asked to close, and the mail-settings page
+    # answers its three refusals with one constant the scan cannot read.
+    # One sentence for all three would be wrong about two; the queue item is
+    # a session-row code and a mail-link code, and until then the reader
+    # keeps the server's own words.
+    "NOT_FOUND",
+})
 
 # The codes whose wording cannot be measured at all: the upstream's own
 # sentence, which varies with the request. A sentence for such a code would
@@ -112,6 +122,12 @@ SAME_MEANING: frozenset[str] = frozenset({
     # answered with nothing." -- is true of both, and the reader's next step
     # is the same either way: try again.
     "AI_SERVICE_EMPTY_RESPONSE",
+    # "Invalid email change token" and "Email change token used or expired"
+    # are one refusal on purpose: the controller's own doc comment says the
+    # public route must not tell a forger which half of a guess was right,
+    # so the reader is told the link is not valid or has expired, which is
+    # true of every one of the four cases.
+    "EMAIL_CHANGE_INVALID",
 })
 
 

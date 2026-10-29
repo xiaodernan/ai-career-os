@@ -102,8 +102,8 @@ class AccountErasureServiceTest {
     void aWrongPasswordTouchesNeitherAFileNorARow() {
         assertThatThrownBy(() -> service.erase(ALICE, new EraseAccountRequest("not-the-password", EMAIL)))
                 .isInstanceOfSatisfying(ApiException.class, e -> {
-                    assertThat(e.code()).isEqualTo(ApiErrorCode.INVALID_CREDENTIALS);
-                    assertThat(e.getMessage()).isEqualTo("Password is incorrect");
+                    assertThat(e.code()).isEqualTo(ApiErrorCode.CURRENT_PASSWORD_INCORRECT);
+                    assertThat(e.getMessage()).isEqualTo("Current password is incorrect");
                 });
 
         verifyNoInteractions(documents, storage);

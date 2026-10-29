@@ -21,14 +21,14 @@ import org.springframework.web.bind.annotation.RestController;
  * {@link ApiErrorCode} is the machine-readable contract every client reads — the enum's
  * own comment says "never rename an emitted code" — and three properties of it were
  * unpinned. The status map was spot-checked by whatever route happened to throw each
- * code (a dozen of the 87); an unreachable-coded 2xx would make an error invisible to
+ * code (a dozen of the 88); an unreachable-coded 2xx would make an error invisible to
  * every client's error path and nothing would have noticed. A rename is a wire break
- * nobody can see from the type system. And two of the 87 codes are deliberately
+ * nobody can see from the type system. And two of the 88 codes are deliberately
  * unreachable today, which reads as an enum bug to the next session unless it is
  * written down somewhere a test wakes up.
  *
  * The handler's fidelity half of this file matters as much as the shape half: the
- * advice is one line (`status(ex.code().status())`), so this exercises it for all 87
+ * advice is one line (`status(ex.code().status())`), so this exercises it for all 88
  * codes at once rather than trusting that the twelve spot-checks represent the rest.
  */
 class ApiErrorCodeCensusTest {
@@ -80,6 +80,9 @@ class ApiErrorCodeCensusTest {
                 "AI_SERVICE_BAD_REQUEST", "AI_SERVICE_CONFLICT", "AI_SERVICE_EMPTY_RESPONSE", "AI_SERVICE_NOT_FOUND",
                 "AI_SERVICE_UNAVAILABLE", "APPLICATION_NOT_FOUND", "BUNDLE_NOT_PLANNABLE", "BUNDLE_NO_SECTION",
                 "COMPANY_NOT_FOUND", "CONFIRMATION_MISMATCH", "CONTACT_NOT_FOUND", "CONVERSATION_NOT_FOUND",
+                // 30.4: a signed-in reader's mistyped current password is not a failed sign-in,
+                // so the four re-authentication sites name this code instead of INVALID_CREDENTIALS.
+                "CURRENT_PASSWORD_INCORRECT",
                 "DOCUMENT_KEY_NOT_OWNED",
                 "DOCUMENT_NOT_FOUND", "EMAIL_ALREADY_REGISTERED", "EMAIL_CHANGE_INVALID", "EMAIL_UNCHANGED",
                 "FEED_BOARD_INVALID", "FEED_LIMIT_REACHED",

@@ -1285,15 +1285,23 @@ export const translations = {
 
       COMPANY_NOT_FOUND: "That company is no longer here.",
 
+      CONFIRMATION_MISMATCH: "The email you typed is not this account's.",
+
       CONTACT_NOT_FOUND: "That contact is no longer here.",
 
       CONVERSATION_NOT_FOUND: "That conversation is no longer here.",
+
+      CURRENT_PASSWORD_INCORRECT: "The current password you typed is not right.",
 
       DOCUMENT_KEY_NOT_OWNED: "No document owns that file key.",
 
       DOCUMENT_NOT_FOUND: "That document is no longer here.",
 
       EMAIL_ALREADY_REGISTERED: "That email address is already registered.",
+
+      EMAIL_CHANGE_INVALID: "That email-change link is not valid or has expired.",
+
+      EMAIL_UNCHANGED: "That is already the account's email address.",
 
       FEED_BOARD_INVALID: "A board feed takes the board's token, its page address, or the board's API URL.",
 
@@ -1359,6 +1367,8 @@ export const translations = {
 
       NOT_FOUND: "That address is not served here.",
 
+      PASSWORD_UNCHANGED: "The new password is the same as the current one.",
+
       PROFILE_NOT_FOUND: "Your profile is no longer here.",
 
       RATE_LIMITED: "Too many requests — please slow down.",
@@ -1386,6 +1396,8 @@ export const translations = {
       RUN_NOT_FOUND: "That run is no longer here.",
 
       SAVED_SEARCH_EMPTY: "A saved search needs at least one criterion.",
+
+      SAVED_SEARCH_LIMIT_REACHED: "You already keep as many saved searches as this account allows.",
 
       SAVED_SEARCH_NOT_FOUND: "That saved search is no longer here.",
 
@@ -3526,15 +3538,23 @@ export const translations = {
 
       COMPANY_NOT_FOUND: "这家公司已经不在了。",
 
+      CONFIRMATION_MISMATCH: "你输入的邮箱不是这个账号的。",
+
       CONTACT_NOT_FOUND: "这个联系人已经不在了。",
 
       CONVERSATION_NOT_FOUND: "这段对话已经不在了。",
+
+      CURRENT_PASSWORD_INCORRECT: "你输入的当前密码不对。",
 
       DOCUMENT_KEY_NOT_OWNED: "没有文档拥有这个文件键。",
 
       DOCUMENT_NOT_FOUND: "这份文档已经不在了。",
 
       EMAIL_ALREADY_REGISTERED: "这个邮箱已经注册过了。",
+
+      EMAIL_CHANGE_INVALID: "这个换邮箱链接无效或已经过期。",
+
+      EMAIL_UNCHANGED: "这已经是这个账号的邮箱了。",
 
       FEED_BOARD_INVALID: "招聘板订阅需要板卡令牌、招聘板页面地址或该板的 API 地址。",
 
@@ -3600,6 +3620,8 @@ export const translations = {
 
       NOT_FOUND: "这个地址在这里没有提供。",
 
+      PASSWORD_UNCHANGED: "新密码和当前密码一样。",
+
       PROFILE_NOT_FOUND: "你的档案已经不在了。",
 
       RATE_LIMITED: "请求太频繁了，请慢一点。",
@@ -3627,6 +3649,8 @@ export const translations = {
       RUN_NOT_FOUND: "这次运行记录已经不在了。",
 
       SAVED_SEARCH_EMPTY: "保存的搜索至少要有一个条件。",
+
+      SAVED_SEARCH_LIMIT_REACHED: "这个账号能保留的保存搜索已经到上限了。",
 
       SAVED_SEARCH_NOT_FOUND: "这个保存的搜索已经不在了。",
 

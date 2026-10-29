@@ -106,13 +106,13 @@ class PasswordChangeControllerTest {
 
     @Test
     void aRefusedCurrentPasswordTravelsAsThe401Envelope() throws Exception {
-        doThrow(new ApiException(ApiErrorCode.INVALID_CREDENTIALS, "Current password is incorrect"))
+        doThrow(new ApiException(ApiErrorCode.CURRENT_PASSWORD_INCORRECT, "Current password is incorrect"))
                 .when(authService).changePassword(any(), any());
 
         mvc.perform(patch("/api/v1/me/password")
                         .contentType(MediaType.APPLICATION_JSON).content(BODY))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.error.code").value("INVALID_CREDENTIALS"))
+                .andExpect(jsonPath("$.error.code").value("CURRENT_PASSWORD_INCORRECT"))
                 .andExpect(jsonPath("$.error.message").value("Current password is incorrect"));
     }
 

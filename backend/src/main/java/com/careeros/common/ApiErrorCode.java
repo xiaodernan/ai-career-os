@@ -24,7 +24,15 @@ public enum ApiErrorCode {
     FILE_KEY_MALFORMED(HttpStatus.BAD_REQUEST),
     FILE_KEY_INVALID(HttpStatus.BAD_REQUEST),
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED),
+    /** Signing in was refused: the pair the reader typed opens no account. */
     INVALID_CREDENTIALS(HttpStatus.UNAUTHORIZED),
+    /**
+     * A signed-in reader typed the wrong current password for a re-authenticated act -- changing
+     * the password, moving the address, erasing the account. Not {@code INVALID_CREDENTIALS}:
+     * this reader is signed in with a working password, so the sentence says the one typed is
+     * wrong rather than telling them their account does not exist.
+     */
+    CURRENT_PASSWORD_INCORRECT(HttpStatus.UNAUTHORIZED),
     /** The new password is the one already on the account, so the change would buy nothing. */
     PASSWORD_UNCHANGED(HttpStatus.BAD_REQUEST),
     /** The typed email is not this account's: the deliberate half of an erasure did not happen. */

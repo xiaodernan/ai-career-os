@@ -1686,11 +1686,45 @@ up to the tree both sides actually ship, and writes down which red is whose.
   9). The two that remain after that attribution are the error-code gate's, and
   they are not excused: 24.2's `CONFIRMATION_MISMATCH` has no browser sentence,
   and `INVALID_CREDENTIALS` answers four throw sites with three different
-  sentences (login, a password change, an erased account's wrong password)
-  while the table resolves one sentence per code. The fix is finer codes plus
-  their sentences in `translations.ts`, which the concurrent session is
-  rewriting; the follow-up item lands them after that work commits, and the
-  gate stays red until then.)
+  sentences (login, a password change, an erased account's wrong password, an
+  address move) while the table resolves one sentence per code. The fix is
+  finer codes plus their sentences in `translations.ts`, which the concurrent
+  session is rewriting; **30.4** below lands them, staging only its own hunks
+  beside that rewrite, so the gate is green at 30.4's commit.)
+
+- [x] **30.4** The sign-in refusal and the signed-in reader's wrong password
+  are two codes.
+
+  (`INVALID_CREDENTIALS` answered four throw sites with three sentences: a
+  failed sign-in, a wrong current password at the password change, at the
+  address move and at erasure. The enum gains `CURRENT_PASSWORD_INCORRECT`
+  (401) -- the three re-authentication sites name it with one sentence,
+  "Current password is incorrect", and sign-in keeps `INVALID_CREDENTIALS`
+  with "Invalid email or password" -- so the gate's one-sentence-per-code rule
+  holds with no same-meaning exception. The census's frozen name list grows to
+  88 codes deliberately, the split's reason beside the new name; seven
+  backend test files move their pins to the new code and sentence, the
+  address-move IT moves its request-path pin, and the three `API.md` rows say
+  it.
+
+  The gate had five more unclassified codes behind its first red: epics 26-29
+  added `EMAIL_CHANGE_INVALID`, `EMAIL_UNCHANGED`, `PASSWORD_UNCHANGED` and
+  `SAVED_SEARCH_LIMIT_REACHED` and 24.2 added `CONFIRMATION_MISMATCH`, none
+  with a sentence in either language, because the epics' own tests pinned the
+  server's words and the table was never asked. Six sentences now sit in both
+  `errorCodes` blocks, each read off its throw sites;
+  `EMAIL_CHANGE_INVALID` has two wordings and joins the same-meaning list,
+  because the public route refuses unknown, spent and expired links in one
+  voice on purpose, so the reader is not told which half of a guess was right.
+
+  `NOT_FOUND` is named as a gap instead: it answers the route catch-all
+  ("Resource not found"), a login-session row a reader asked to close
+  ("Session not found"), and the mail-settings page's three refusals through
+  a constant the scan cannot read. One sentence would be wrong about two of
+  the three, so the reader keeps the server's own words -- the queue item this
+  entry leaves behind is a session-row code and a mail-link code. The gate
+  runs 7 of 7 green, and the browser's table gained its six sentences with
+  only this session's hunks staged beside the concurrent rewrite.)
 
 ## Epic 31 — The Shell's Own Hardening
 

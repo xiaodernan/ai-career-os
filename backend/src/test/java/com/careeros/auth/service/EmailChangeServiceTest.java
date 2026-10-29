@@ -113,8 +113,8 @@ class EmailChangeServiceTest {
     void aWrongPasswordShowsNoLetterAndStoresNothing() {
         assertThatThrownBy(() -> service.request(ALICE, new EmailChangeRequest("not-it-99", NEW_EMAIL)))
                 .isInstanceOfSatisfying(ApiException.class, e -> {
-                    assertThat(e.code()).isEqualTo(ApiErrorCode.INVALID_CREDENTIALS);
-                    assertThat(e.getMessage()).isEqualTo("Password is incorrect");
+                    assertThat(e.code()).isEqualTo(ApiErrorCode.CURRENT_PASSWORD_INCORRECT);
+                    assertThat(e.getMessage()).isEqualTo("Current password is incorrect");
                 });
 
         verifyNoInteractions(changeTokens);

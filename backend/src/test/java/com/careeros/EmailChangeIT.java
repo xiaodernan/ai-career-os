@@ -60,7 +60,7 @@ class EmailChangeIT extends ApiIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json(Map.of("password", "NotThePassword!1", "newEmail", newEmail))))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.error.code").value("INVALID_CREDENTIALS"));
+                .andExpect(jsonPath("$.error.code").value("CURRENT_PASSWORD_INCORRECT"));
         // The address the account already has is a refusal, not a letter to itself.
         mvc.perform(post("/api/v1/users/me/email-change")
                         .header("Authorization", "Bearer " + aliceAccess)

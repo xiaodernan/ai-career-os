@@ -133,7 +133,8 @@ public class AuthService {
         User user = users.findById(userId)
                 .orElseThrow(() -> new ApiException(ApiErrorCode.USER_NOT_FOUND, "User not found"));
         if (!passwordEncoder.matches(request.currentPassword(), user.getPasswordHash())) {
-            throw new ApiException(ApiErrorCode.INVALID_CREDENTIALS, "Current password is incorrect");
+            throw new ApiException(ApiErrorCode.CURRENT_PASSWORD_INCORRECT,
+                    "Current password is incorrect");
         }
         if (passwordEncoder.matches(request.newPassword(), user.getPasswordHash())) {
             throw new ApiException(ApiErrorCode.PASSWORD_UNCHANGED,

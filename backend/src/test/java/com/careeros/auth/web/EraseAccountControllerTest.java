@@ -106,12 +106,12 @@ class EraseAccountControllerTest {
 
     @Test
     void aWrongPasswordTravelsAsThe401Envelope() throws Exception {
-        doThrow(new ApiException(ApiErrorCode.INVALID_CREDENTIALS, "Password is incorrect"))
+        doThrow(new ApiException(ApiErrorCode.CURRENT_PASSWORD_INCORRECT, "Current password is incorrect"))
                 .when(erasure).erase(any(), any());
 
         mvc.perform(post("/api/v1/me/erase").contentType(MediaType.APPLICATION_JSON).content(BODY))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.error.code").value("INVALID_CREDENTIALS"));
+                .andExpect(jsonPath("$.error.code").value("CURRENT_PASSWORD_INCORRECT"));
     }
 
     @Test
