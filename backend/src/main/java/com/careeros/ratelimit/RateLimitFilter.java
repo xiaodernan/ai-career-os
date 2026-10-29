@@ -44,6 +44,10 @@ import org.springframework.security.core.context.SecurityContextHolder;
  * <p>The mail bucket is the relay's meter: an address move mails a confirmation to the claimed
  * mailbox and a warning to the current one, so every call spends two letters. An account that can
  * call it without limit can use the product to write to any unregistered address it names.
+ *
+ * <p>Every decision this filter makes moves a counter tagged by the bucket that made it
+ * (see {@link RateLimitMetrics}), so a ceiling refusing traffic is a reading rather than a
+ * client's word for it.
  */
 public class RateLimitFilter extends org.springframework.web.filter.OncePerRequestFilter {
 
@@ -54,11 +58,14 @@ public class RateLimitFilter extends org.springframework.web.filter.OncePerReque
     private final AppProperties props;
     private final RedisSlidingWindowRateLimiter limiter;
     private final ObjectMapper objectMapper;
+    private final RateLimitMetrics metrics;
 
-    public RateLimitFilter(AppProperties props, RedisSlidingWindowRateLimiter limiter, ObjectMapper objectMapper) {
+    public RateLimitFilter(AppProperties props, RedisSlidingWindowRateLimiter limiter, ObjectMapper objectMapper,
+                           RateLimitMetrics metrics) {
         this.props = props;
         this.limiter = limiter;
         this.objectMapper = objectMapper;
+        this.metrics = metrics;
     }
 
     @Override
@@ -79,6 +86,7 @@ public class RateLimitFilter extends org.springframework.web.filter.OncePerReque
         String key = "ratelimit:" + bucket + ":" + identity;
 
         if (!limiter.tryAcquire(key, limit, Duration.ofMinutes(1))) {
+            metrics.record(bucket, false);
             response.setStatus(429);
             response.setHeader("Retry-After", "60");
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
@@ -87,6 +95,7 @@ public class RateLimitFilter extends org.springframework.web.filter.OncePerReque
             objectMapper.writeValue(response.getOutputStream(), body);
             return;
         }
+        metrics.record(bucket, true);
         chain.doFilter(request, response);
     }
 

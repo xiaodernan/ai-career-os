@@ -1373,6 +1373,29 @@ admission rule that had made a third bucket unsafe to add.
   knob census reads twenty-six `app.*` leaves with the mail ceiling among the
   fourteen accessor-read ones, and no frontend or copy-census movement.
 
+- [x] **27.2** Every refusal is a reading an operator can scrape.
+
+  (`RateLimitMetrics` registers `careeros.ratelimit.decisions`, tagged `bucket`
+  — `auth`, `ai`, `mail` — and `outcome` — `allowed`, `denied` — and the filter
+  moves it on either answer, so the 429s that used to leave only a response to
+  the client now leave a counter the scrape endpoint renders as
+  `careeros_ratelimit_decisions_total`. The fail-open branch counts as
+  `allowed`, because that is the decision the server made; dropping it would
+  make a Redis outage read as a quiet period on the one dashboard that should
+  show it. A series exists from the bucket's first decision, so an install that
+  never sees a mail call exports no mail series rather than a flat zero.
+  DEPLOYMENT.md names the family and states that no alarm reads it yet — a
+  refusal rate has no known-good baseline, and a guessed one would page on a
+  busy minute. 3 decision tests drive the filter itself, which the suite had
+  only classified but never executed: a refusal answers 429 with
+  `Retry-After: 60` and the RATE_LIMITED envelope without reaching the chain,
+  an admitted AI request runs the chain keyed by the account id and counted
+  against 30, and a mail refusal is counted against the mail ceiling and
+  neither of the other two; 3 more pin the counter's tags, the allowed/denied
+  split and the lazy series. The backend unit suite at 773 and the integration
+  suite at 73 are green, the metrics, alarms, limiter and knob gates pass, and
+  no frontend or copy-census movement.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

@@ -231,6 +231,13 @@ boot — and the weekly letter's —
 `ops/prometheus/alerts.yml` carries the six rules and each one links its page in
 [RUNBOOK.md](RUNBOOK.md).
 
+The limiter exports one more family for dashboards rather than alarms:
+`careeros_ratelimit_decisions_total{bucket,outcome}` — `auth`, `ai` or `mail` by
+`allowed` or `denied`, moved by every request the filter classifies, with the
+fail-open branch counted as `allowed` because that is the decision the server
+made. No nightly rule reads it: a refusal rate has no known-good baseline yet,
+and an alarm that guessed one would page on a busy minute.
+
 ### Recording the nightly run
 
 The scheduled workflow (`.github/workflows/ci.yml`, 03:17 UTC) ends with a step that

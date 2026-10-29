@@ -7,6 +7,7 @@ import com.careeros.common.ApiError;
 import com.careeros.common.ApiErrorCode;
 import com.careeros.common.ApiResponse;
 import com.careeros.ratelimit.RateLimitFilter;
+import com.careeros.ratelimit.RateLimitMetrics;
 import com.careeros.ratelimit.RedisSlidingWindowRateLimiter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.DispatcherType;
@@ -35,10 +36,11 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, AppProperties props, JwtService jwtService,
                                                    RedisSlidingWindowRateLimiter rateLimiter,
+                                                   RateLimitMetrics rateLimitMetrics,
                                                    ObjectMapper objectMapper) throws Exception {
         JwtAuthFilter jwtAuthFilter = new JwtAuthFilter(jwtService);
         InternalApiFilter internalApiFilter = new InternalApiFilter(props, objectMapper);
-        RateLimitFilter rateLimitFilter = new RateLimitFilter(props, rateLimiter, objectMapper);
+        RateLimitFilter rateLimitFilter = new RateLimitFilter(props, rateLimiter, objectMapper, rateLimitMetrics);
 
         http
                 // CSRF disabled: the API is authenticated exclusively with bearer tokens sent in
