@@ -1,5 +1,5 @@
 import type { Viewport } from "next";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { Inter, Newsreader, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { RootDocument } from "@/components/root-document";
@@ -52,9 +52,14 @@ export default async function RootLayout({
   // the request. `localeFromCookie` maps anything unknown back to English.
   const store = await cookies();
   const locale = localeFromCookie(store.get(LOCALE_COOKIE)?.value);
+  // The middleware stamped this answer's nonce on the request. Next puts it on the
+  // scripts it emits, but next-themes writes its own theme bootstrap, so the nonce
+  // has to travel to that one by hand or the policy blocks the reader's first paint.
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   return (
     <RootDocument
       locale={locale}
+      nonce={nonce}
       bodyClassName={`${inter.variable} ${newsreader.variable} ${jetbrains.variable} min-h-dvh bg-background text-foreground`}
     >
       {children}

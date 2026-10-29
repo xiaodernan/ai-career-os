@@ -1767,6 +1767,41 @@ where no proxy exists.
   all four headers appear on a `200` from `/`, and `tsc` and ESLint stay
   clean.)
 
+- [x] **31.2** Every answer names the sources it may load and run.
+
+  (`frontend/src/middleware.ts` mints a nonce per answer, hands it to Next in
+  the request's `Content-Security-Policy` header — the channel Next reads to
+  stamp the scripts it emits — and returns the same policy on the response.
+  The rules live once in `src/lib/security/csp.ts`: this origin, the API's
+  origin (read off `NEXT_PUBLIC_API_BASE_URL`, path dropped) and nothing else
+  may be connected to; the nonce plus `'strict-dynamic'` is what may run;
+  `style-src` keeps `'unsafe-inline'` because Next writes the fonts'
+  variables and the first paint as inline style; `img-src` adds the local
+  `data:`/`blob:` images and `media-src` the interview page's recorded voice;
+  `worker-src 'self'` admits the installable shell; objects, framing, a
+  foreign `base` and foreign form posts are refused; and
+  `upgrade-insecure-requests` appears only when the answer itself arrived
+  over https, because a plain-http local run has no TLS to upgrade to and the
+  API's own http address would be rewritten into an https one the server does
+  not answer. The development build alone gets `'unsafe-eval'` and the
+  `ws:`/`wss:` connect sources its hot reload needs.
+
+  next-themes writes its own inline theme bootstrap, and a nonce on the
+  framework's scripts is not a nonce on that one: the layout reads the
+  middleware's `x-nonce` and the nonce travels `RootDocument` → `Providers` →
+  `ThemeProvider`. The gate (`csp.test.ts`, 7 cases, and
+  `middleware.test.ts`, 3) pins each directive, the development-only
+  exemptions, the https-only upgrade, that every answer's nonce differs, and
+  that the build's hashed chunks are left out. Verified against `next start`:
+  the header rides every answer; the raw answer's 28 script tags all carried
+  its nonce (before the theme hand-off, 27 of 28 did — the bare one was
+  next-themes); the policy names the configured API origin; the worker
+  registers at this origin; a client-side language switch changed
+  `<html lang>` and the heading, so the page hydrates under the policy;
+  static chunks carry no policy while `sw.js` and `offline.html` do; and the
+  console shows no CSP or hydration error in either the production or the
+  development build. `tsc`, ESLint and `next build` stay clean.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

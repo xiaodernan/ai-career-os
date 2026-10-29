@@ -14,10 +14,13 @@ import type { Locale } from "@/lib/i18n/translations";
  */
 export function RootDocument({
   locale,
+  nonce,
   bodyClassName,
   children,
 }: {
   locale: Locale;
+  /** The answer's content security nonce; absent outside the request shell (tests). */
+  nonce?: string;
   bodyClassName: string;
   children: React.ReactNode;
 }) {
@@ -25,7 +28,7 @@ export function RootDocument({
     <html lang={locale} suppressHydrationWarning>
       <body className={bodyClassName}>
         <LocaleProvider initialLocale={locale}>
-          <Providers>{children}</Providers>
+          <Providers nonce={nonce}>{children}</Providers>
         </LocaleProvider>
       </body>
     </html>
