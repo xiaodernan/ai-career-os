@@ -2538,8 +2538,8 @@ another account's tab.
   wake path), `endpoints.test.ts` drops the two `NEVER_REFERENCED` entries whose
   caller now exists. The copy census moves to 136 browser sources. `npx tsc
   --noEmit` is clean and the frontend suite answers 829 tests in 77 files, 0
-  failures. `docs/API.md`, `docs/architecture.md` §4.7, `docs/DEPLOYMENT.md`,
-  `frontend/.env.example` and the root env examples carry the build-time key.)
+  failures. `docs/API.md`, `docs/architecture.md` §4.7, `docs/DEPLOYMENT.md` and
+  the root env examples carry the build-time key.)
 
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
