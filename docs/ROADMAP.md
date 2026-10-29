@@ -1589,6 +1589,40 @@ episode, settled by reading or acting, and mailed at most once.
   route-parity census in `frontend/src/lib/api/endpoints.test.ts`, the same
   pre-existing, other-session-owned item 29.3 recorded.)
 
+## Epic 30 — The Censuses the Backend's Epics Outran
+
+The repository's cross-language censuses grade the tree from both sides: the
+architecture document against the migrations and the backend's packages, the
+credential lifetimes against every duration written in the repo, the browser's
+copy table against the error codes the services throw. Those gates were written
+before the last ten epics and read the repository as it had been. The ai-service
+suite has been red for several epics, and every red had been read as "the other
+session's mess" without anyone separating the two. This epic brings the censuses
+up to the tree both sides actually ship, and writes down which red is whose.
+
+- [x] **30.1** The structural censuses read the tree the backend ships.
+
+  (Three gates were red for reasons of their own. `docs/architecture.md` §3 did
+  not name `mail/` — the letters' reader-facing half landed in 21.1 and
+  `test_the_repository_layout_names_what_exists.py` refused the undocumented
+  package — and §4 counted 40 of the migrations' 42 tables, missing
+  `email_change_tokens` (26: the hash, never the link; one use; two hours) and
+  `mail_preferences` (23.1: the two switches; an absent row means both on).
+  `SavedSearchAlertIT` backdated its search by `interval '30 days'` — the
+  refresh token's shipped lifetime — and the lifetime census charges every
+  shipped duration written without a credential word beside it, so a fixture
+  about a news window failed a gate about credentials; ten days stays outside
+  the seven-day floor the test needs and outside the credential vocabulary.
+  The three files pass (12 tests), `SavedSearchAlertIT` passes alone against
+  Postgres (2 tests), and the backend stands at 791 unit + 76 integration, 0
+  failures. The epic also measured the suite honestly for the first time: a
+  clean worktree at `f25f6db` answers 27 failed / 1889 passed / 1 skipped,
+  while the shared tree answered 37 — the ten extra reds read the concurrent
+  session's in-flight `normalize.ts`, `types.ts`, `endpoints.ts`,
+  `translations.ts` and `test_response_shape_contract.py`, and are that
+  session's to land. Of the 27 at HEAD, these three were the structural ones;
+  the other 24 are the next items of this epic.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

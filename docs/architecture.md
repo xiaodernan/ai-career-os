@@ -81,6 +81,7 @@ frontend/backend/ai-service can also run natively for dev (`pnpm dev`, `mvn spri
 │       ├── interview/            # sessions, qa turns, evaluations
 │       ├── job/                  # jobs, companies, saved jobs, matches
 │       ├── knowledge/            # sources, documents, chunks (meta; vectors owned by ai-service)
+│       ├── mail/                 # the letters' reader-facing half: preferences, unsubscribe links, the hosted page (23.1, 27.x)
 │       ├── network/              # contacts registry (11.1); outreach/follow-up live here
 │       ├── notification/         # the inbox: read/dismiss state over synthesized signals (19.3)
 │       ├── ratelimit/            # Redis sliding-window filter
@@ -129,6 +130,10 @@ user-scoped table (ownership is enforced in backend layer + a single SQL predica
 - `refresh_tokens(id, user_id, token_hash, family_id, expires_at, revoked_at)`
   → a reused token revokes its whole family, so `family_id` is what rotation detects.
 - `password_reset_tokens(id, user_id, token_hash, expires_at, used_at)`
+- `email_change_tokens(id, user_id, token_hash, new_email, expires_at, used_at,
+   created_at)` → the pending move to a new address (26): the hash is what is stored,
+  never the link; the row is one-use and dies after two hours, and only a click from
+  the new mailbox moves the address.
 - `user_profiles(id, user_id, headline, summary, location, years_experience, target_roles
    jsonb, target_locations jsonb, work_authorization jsonb, links jsonb, preferences jsonb)`
 - `user_memories(id, user_id, kind enum[skill, preference, goal, interview_pattern,
@@ -286,6 +291,10 @@ user-scoped table (ownership is enforced in backend layer + a single SQL predica
   persists is what the reader did with one — read it, dismissed it, or received it by
   the morning mail — keyed by the episode (`reminder:<id>:<at>`, `stale:<id>:<at>`,
   `ingestion:<runId>`), so a dismissal silences one episode rather than the next.
+- `mail_preferences(user_id, weekly_digest, signal_mail, updated_at)`
+  → the two switches the letters obey (23.1): the morning signal letter and the Monday
+  digest. An absent row means both are on, which is why signup writes nothing — a row
+  appears when the reader turns something off.
 - `weekly_digests(id, user_id, week_start date, window_days smallint, payload jsonb,
    generated_at)` → one letter per user per week, the engine's answer stored verbatim;
   re-composing the same week refreshes the row rather than appending a second one.

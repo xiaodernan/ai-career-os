@@ -102,7 +102,7 @@ class SavedSearchAlertIT extends ApiIntegrationTest {
 
         // The search is older than the news window, so its own creation is not the start;
         // the old posting falls outside the seven-day floor and must not be counted.
-        jdbc.update("update saved_searches set created_at = now() - interval '30 days'"
+        jdbc.update("update saved_searches set created_at = now() - interval '10 days'"
                 + " where id = ?", UUID.fromString(searchId));
         jdbc.update("update jobs set posted_at = now() - interval '20 days' where id = ?",
                 UUID.fromString(old));
