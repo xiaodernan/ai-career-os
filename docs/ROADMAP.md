@@ -2043,6 +2043,52 @@ where no proxy exists.
   are the same three frontend-reading censuses the concurrent session's
   in-flight files keep red.)
 
+- [x] **31.9** a production boot refuses the database and object-store defaults.
+
+  (`application.yml` ships `POSTGRES_PASSWORD: dev_pg_pass_9f3k` and
+  `MINIO_SECRET_KEY: careeros_minio_dev_password`, and both env examples ship
+  `change-me` trio values; a prod boot that forgot either credential reached
+  production's Postgres and bucket on a password this repository prints. The
+  MinIO user name is different in kind: an access key is a user name, so the
+  shipped `careeros-minio-admin` stays allowed and only a placeholder
+  (`change-me`/`CHANGE_ME`) or an empty name is refused.)
+
+  `ProductionGuard` now builds one ordered map — JWT, mail-link, internal token,
+  `spring.datasource.password` (through `@Value`, since it is not an `app.*`
+  key) and the MinIO pair from `AppProperties` — and hands it to the same pure
+  `offenders(env, transport, map)`. The pair is asked for unconditionally: the
+  census forbids the property object as a second reader of `app.storage.enabled`
+  (the bean condition decides it), and a prod boot with the store switched off
+  has no `StorageService` bean to inject anyway — four services require one — so
+  turning the switch off cannot dodge the check. Values added to `PUBLISHED`:
+  `dev_pg_pass_9f3k` and `change-me` for the database, `change-me` and
+  `careeros_minio_dev_password` for the store. The refusal message now names up
+  to seven offenders in one sentence.
+
+  `ProductionGuardTest` grew from 15 to 18 cases: the decision table covers the
+  shipped database and store defaults, a published user name over a real secret
+  (allowed), and the `CHANGE_ME`/blank arms extended to six credentials; the
+  drift arm reads `POSTGRES_PASSWORD`, `MINIO_ACCESS_KEY` and `MINIO_SECRET_KEY`
+  out of `application.yml` (two offenders — the user name is allowed),
+  `.env.example`'s trio (three) and `.env.prod.example` through the
+  `MINIO_ROOT_USER`/`MINIO_ROOT_PASSWORD` mapping compose applies (two); the
+  context arms assert the exact seven-name prefix, keep console-alone isolated,
+  and add a storage-off boot that still fails naming only the pair. Mutation
+  arms: dropping the two MinIO puts from the constructor turned 2 of 18 red
+  (the context arms); dropping the published-literal lookup turned 7 of 18 red;
+  restored byte-identical (sha1 934baf5c…), 18/18 green.
+
+  The knob census learned the pair's second reader (`config/ProductionGuard.java`
+  beside `storage/MinioStorageService.java`) and judged a fourth flat
+  `app.storage.enabled` row — the new test spells the key to prove a store-off
+  boot is still refused. `application.yml`'s datasource and storage blocks,
+  the DEPLOYMENT checklist item and preflight paragraph, and SECURITY finding #4
+  (six values, the unconditional pair, 18 cases) carry the refusal. The backend
+  suite answers 897 tests, 0 failed (ITs included); the ai-service suite answers
+  11 failed / 1913 passed / 1 skipped, and the eleven are the same three
+  frontend-reading censuses the concurrent session's in-flight files keep red;
+  the 32 doc-reading gate files answer 238/238.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

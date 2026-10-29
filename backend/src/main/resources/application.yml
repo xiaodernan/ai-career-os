@@ -7,6 +7,8 @@ spring:
   datasource:
     url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:career_os}
     username: ${POSTGRES_USER:career_os}
+    # Published default: a prod boot (APP_ENV=prod) refuses to start on it. The
+    # guard and docs/DEPLOYMENT.md's checklist carry the whole list.
     password: ${POSTGRES_PASSWORD:dev_pg_pass_9f3k}
     hikari:
       maximum-pool-size: 20
@@ -85,6 +87,8 @@ app:
     token: ${INTERNAL_API_TOKEN:shared-secret-between-backend-and-ai-service}
   storage:
     endpoint: ${MINIO_ENDPOINT:http://localhost:19000}
+    # The shipped secret is published, so a prod boot refuses it; the shipped user
+    # name is a name, and only a change-me placeholder is refused on that side.
     access-key: ${MINIO_ACCESS_KEY:careeros-minio-admin}
     secret-key: ${MINIO_SECRET_KEY:careeros_minio_dev_password}
     bucket: ${MINIO_BUCKET:careeros-files}

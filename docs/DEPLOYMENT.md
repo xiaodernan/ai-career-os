@@ -64,11 +64,14 @@ passwords is no longer a reachable state.
 - [ ] `APP_MAIL_LINK_SECRET` set to 32+ random bytes (`openssl rand -base64 48`).
   It signs the unsubscribe links in every letter; the dev default is published in
   this repository, so leaving it in prod lets anyone forge a stop-link
-- [ ] `JWT_SECRET`, `APP_MAIL_LINK_SECRET` and `INTERNAL_API_TOKEN` are not the
-  repository's published defaults and do not begin with `CHANGE_ME` — booted with
-  `APP_ENV=prod`, the backend refuses to start on any of them, names every offender
-  in one message, and exits instead of serving forgeable credentials
-  (`ProductionGuard`; see [SECURITY.md](SECURITY.md#findings) finding #4)
+- [ ] `JWT_SECRET`, `APP_MAIL_LINK_SECRET`, `INTERNAL_API_TOKEN`, `POSTGRES_PASSWORD`
+  and the object-store secret behind `MINIO_ROOT_PASSWORD` are not the repository's
+  published defaults and do not begin with `CHANGE_ME` — booted with `APP_ENV=prod`,
+  the backend refuses to start on any of them (it names the store's pair
+  `MINIO_ACCESS_KEY`/`MINIO_SECRET_KEY`), names every offender in one message, and
+  exits instead of serving forgeable credentials (`ProductionGuard`; see
+  [SECURITY.md](SECURITY.md#findings) finding #4). The store's user name may keep
+  the shipped `careeros-minio-admin`; the refusal there is on `change-me` names.
 - [ ] Reverse proxy (nginx/Traefik/Caddy) terminates TLS and forwards to:
   - Frontend: `http://frontend:3000`
   - Backend API: `http://backend:8080`
@@ -100,10 +103,12 @@ providers in prod, the repo's published default `INTERNAL_API_TOKEN` (which woul
 API key, or an inverted DB pool. It is pure: no database or network is touched.
 
 The backend carries the same gate inline: with `APP_ENV=prod`, `ProductionGuard`
-refuses the Spring context on a published JWT secret, mail-link secret or internal
-token (or a `CHANGE_ME`/empty value), or on the console mail transport that would
-keep every reset link in the log, and names every offender — a boot that would have
-served forgeable credentials or silently lost its mail exits non-zero instead.
+refuses the Spring context on a published JWT secret, mail-link secret, internal
+token, database password or object-store credential (or a `CHANGE_ME`/empty value),
+or on the console mail transport that would keep every reset link in the log, and
+names every offender — a boot that would have served forgeable credentials or
+reached production's database and bucket with a published password exits non-zero
+instead.
 
 ```bash
 cd ai-service

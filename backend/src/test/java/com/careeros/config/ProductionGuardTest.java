@@ -5,7 +5,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
@@ -20,10 +22,16 @@ class ProductionGuardTest {
     private static final String PUBLISHED_JWT = "dev-only-secret-please-change-me-0123456789abcdef0123456789abcdef";
     private static final String PUBLISHED_MAIL = "dev-only-mail-link-secret-please-change-me-0123456789abcdef";
     private static final String PUBLISHED_INTERNAL = "shared-secret-between-backend-and-ai-service";
+    private static final String PUBLISHED_DB = "dev_pg_pass_9f3k";
+    private static final String PUBLISHED_MINIO_USER = "careeros-minio-admin";
+    private static final String PUBLISHED_MINIO_SECRET = "careeros_minio_dev_password";
 
     private static final String REAL_JWT = "f3c1a9e2b7d44058a6c9e1d2b3f4a5c6d7e8f901a2b3c4d5e6f708192a3b4c5d";
     private static final String REAL_MAIL = "b4e2c9d7a1f3e5c8b6d2a4f7e9c1b3d508a6c4e2f1d7b9a3c5e8f2d4b6a9c1e7";
     private static final String REAL_INTERNAL = "internal-7c1e9a3f5b8d2c6e4a0f9b7d5c3e1a8f";
+    private static final String REAL_DB = "pg-4b8e1c7a9d2f6e0b3a5c8d1e4f7a0b2c";
+    private static final String REAL_MINIO_USER = "careeros-ops-7c1e";
+    private static final String REAL_MINIO_SECRET = "minio-9a3f5b8d2c6e4a0f9b7d5c3e1a8f";
     private static final String REAL_SMTP = "smtp";
 
     private final ApplicationContextRunner runner = new ApplicationContextRunner()
@@ -32,89 +40,135 @@ class ProductionGuardTest {
 
     @Test
     void aDevBootKeepsThePublishedDefaults() {
-        assertThat(ProductionGuard.offenders("dev", PUBLISHED_JWT, PUBLISHED_MAIL, PUBLISHED_INTERNAL, "console"))
-                .isEmpty();
-        assertThat(ProductionGuard.offenders("test", PUBLISHED_JWT, PUBLISHED_MAIL, PUBLISHED_INTERNAL, "console"))
-                .isEmpty();
-        assertThat(ProductionGuard.offenders(null, PUBLISHED_JWT, PUBLISHED_MAIL, PUBLISHED_INTERNAL, "console"))
-                .isEmpty();
+        Map<String, String> published = credentials(PUBLISHED_JWT, PUBLISHED_MAIL, PUBLISHED_INTERNAL,
+                "change-me", "change-me", "change-me");
+        assertThat(ProductionGuard.offenders("dev", "console", published)).isEmpty();
+        assertThat(ProductionGuard.offenders("test", "console", published)).isEmpty();
+        assertThat(ProductionGuard.offenders(null, "console", published)).isEmpty();
     }
 
     @Test
     void aProdBootNamesEveryCredentialStillOnAPublishedValue() {
-        assertThat(ProductionGuard.offenders("prod", PUBLISHED_JWT, PUBLISHED_MAIL, PUBLISHED_INTERNAL, REAL_SMTP))
+        assertThat(ProductionGuard.offenders("prod", REAL_SMTP,
+                credentials(PUBLISHED_JWT, PUBLISHED_MAIL, PUBLISHED_INTERNAL, REAL_DB, REAL_MINIO_USER,
+                        REAL_MINIO_SECRET)))
                 .containsExactly(ProductionGuard.JWT_SECRET, ProductionGuard.MAIL_LINK_SECRET,
                         ProductionGuard.INTERNAL_TOKEN);
     }
 
     @Test
     void aLoneOverrideStillLeavesTheOthersNamed() {
-        assertThat(ProductionGuard.offenders("prod", REAL_JWT, PUBLISHED_MAIL, PUBLISHED_INTERNAL, REAL_SMTP))
+        assertThat(ProductionGuard.offenders("prod", REAL_SMTP,
+                credentials(REAL_JWT, PUBLISHED_MAIL, PUBLISHED_INTERNAL, REAL_DB, REAL_MINIO_USER,
+                        REAL_MINIO_SECRET)))
                 .containsExactly(ProductionGuard.MAIL_LINK_SECRET, ProductionGuard.INTERNAL_TOKEN);
-        assertThat(ProductionGuard.offenders("prod", REAL_JWT, REAL_MAIL, PUBLISHED_INTERNAL, REAL_SMTP))
+        assertThat(ProductionGuard.offenders("prod", REAL_SMTP,
+                credentials(REAL_JWT, REAL_MAIL, PUBLISHED_INTERNAL, REAL_DB, REAL_MINIO_USER,
+                        REAL_MINIO_SECRET)))
                 .containsExactly(ProductionGuard.INTERNAL_TOKEN);
     }
 
     @Test
     void theExamplesChangeMePlaceholdersAndEmptyValuesAreRefusedToo() {
-        assertThat(ProductionGuard.offenders("prod", "CHANGE_ME_64_PLUS_RANDOM_CHARS",
-                "CHANGE_ME_MAIL_LINK_SECRET", "CHANGE_ME_STRONG_INTERNAL_TOKEN", REAL_SMTP))
+        assertThat(ProductionGuard.offenders("prod", REAL_SMTP,
+                credentials("CHANGE_ME_64_PLUS_RANDOM_CHARS", "CHANGE_ME_MAIL_LINK_SECRET",
+                        "CHANGE_ME_STRONG_INTERNAL_TOKEN", "CHANGE_ME_STRONG_PASSWORD",
+                        "CHANGE_ME_STRONG_MINIO_USER", "CHANGE_ME_STRONG_MINIO_PASSWORD")))
                 .containsExactly(ProductionGuard.JWT_SECRET, ProductionGuard.MAIL_LINK_SECRET,
-                        ProductionGuard.INTERNAL_TOKEN);
-        assertThat(ProductionGuard.offenders("prod", " ", "", null, REAL_SMTP))
+                        ProductionGuard.INTERNAL_TOKEN, ProductionGuard.POSTGRES_PASSWORD,
+                        ProductionGuard.MINIO_ACCESS_KEY, ProductionGuard.MINIO_SECRET_KEY);
+        assertThat(ProductionGuard.offenders("prod", REAL_SMTP,
+                credentials(" ", "", null, " ", null, "")))
                 .containsExactly(ProductionGuard.JWT_SECRET, ProductionGuard.MAIL_LINK_SECRET,
-                        ProductionGuard.INTERNAL_TOKEN);
+                        ProductionGuard.INTERNAL_TOKEN, ProductionGuard.POSTGRES_PASSWORD,
+                        ProductionGuard.MINIO_ACCESS_KEY, ProductionGuard.MINIO_SECRET_KEY);
     }
 
     @Test
     void aProdBootWithRealSecretsHasNoOffenders() {
-        assertThat(ProductionGuard.offenders("prod", REAL_JWT, REAL_MAIL, REAL_INTERNAL, REAL_SMTP)).isEmpty();
+        assertThat(ProductionGuard.offenders("prod", REAL_SMTP,
+                credentials(REAL_JWT, REAL_MAIL, REAL_INTERNAL, REAL_DB, REAL_MINIO_USER, REAL_MINIO_SECRET)))
+                .isEmpty();
     }
 
     @Test
     void theProdSwitchIgnoresCaseAndSurroundingSpace() {
-        assertThat(ProductionGuard.offenders(" PROD ", PUBLISHED_JWT, REAL_MAIL, REAL_INTERNAL, REAL_SMTP))
+        assertThat(ProductionGuard.offenders(" PROD ", REAL_SMTP,
+                credentials(PUBLISHED_JWT, REAL_MAIL, REAL_INTERNAL, REAL_DB, REAL_MINIO_USER,
+                        REAL_MINIO_SECRET)))
                 .containsExactly(ProductionGuard.JWT_SECRET);
     }
 
     @Test
     void theConsoleTransportCannotOpenAProdBoot() {
-        assertThat(ProductionGuard.offenders("prod", REAL_JWT, REAL_MAIL, REAL_INTERNAL, "console"))
+        Map<String, String> real = credentials(REAL_JWT, REAL_MAIL, REAL_INTERNAL, REAL_DB, REAL_MINIO_USER,
+                REAL_MINIO_SECRET);
+        assertThat(ProductionGuard.offenders("prod", "console", real))
                 .containsExactly(ProductionGuard.EMAIL_PROVIDER);
-        assertThat(ProductionGuard.offenders("prod", REAL_JWT, REAL_MAIL, REAL_INTERNAL, " CONSOLE "))
+        assertThat(ProductionGuard.offenders("prod", " CONSOLE ", real))
                 .containsExactly(ProductionGuard.EMAIL_PROVIDER);
-        assertThat(ProductionGuard.offenders("prod", REAL_JWT, REAL_MAIL, REAL_INTERNAL, " "))
+        assertThat(ProductionGuard.offenders("prod", " ", real))
                 .containsExactly(ProductionGuard.EMAIL_PROVIDER);
-        assertThat(ProductionGuard.offenders("prod", REAL_JWT, REAL_MAIL, REAL_INTERNAL, null))
+        assertThat(ProductionGuard.offenders("prod", null, real))
                 .containsExactly(ProductionGuard.EMAIL_PROVIDER);
     }
 
     @Test
     void aDevBootOnTheConsoleTransportIsUntouched() {
-        assertThat(ProductionGuard.offenders("dev", REAL_JWT, REAL_MAIL, REAL_INTERNAL, "console")).isEmpty();
+        assertThat(ProductionGuard.offenders("dev", "console",
+                credentials(REAL_JWT, REAL_MAIL, REAL_INTERNAL, REAL_DB, REAL_MINIO_USER, REAL_MINIO_SECRET)))
+                .isEmpty();
+    }
+
+    @Test
+    void theDatabaseAndObjectStoreDefaultsArePublished() {
+        assertThat(ProductionGuard.offenders("prod", REAL_SMTP,
+                credentials(REAL_JWT, REAL_MAIL, REAL_INTERNAL, PUBLISHED_DB, REAL_MINIO_USER,
+                        REAL_MINIO_SECRET)))
+                .as("application.yml's database default")
+                .containsExactly(ProductionGuard.POSTGRES_PASSWORD);
+
+        assertThat(ProductionGuard.offenders("prod", REAL_SMTP,
+                credentials(REAL_JWT, REAL_MAIL, REAL_INTERNAL, REAL_DB, PUBLISHED_MINIO_USER,
+                        PUBLISHED_MINIO_SECRET)))
+                .as("application.yml's object-store defaults")
+                .containsExactly(ProductionGuard.MINIO_SECRET_KEY);
+
+        assertThat(ProductionGuard.offenders("prod", REAL_SMTP,
+                credentials(REAL_JWT, REAL_MAIL, REAL_INTERNAL, REAL_DB, "change-me", REAL_MINIO_SECRET)))
+                .as("a dev example's placeholder access key")
+                .containsExactly(ProductionGuard.MINIO_ACCESS_KEY);
+
+        assertThat(ProductionGuard.offenders("prod", REAL_SMTP,
+                credentials(REAL_JWT, REAL_MAIL, REAL_INTERNAL, REAL_DB, PUBLISHED_MINIO_USER,
+                        REAL_MINIO_SECRET)))
+                .as("a published user name over a real secret is not a credential leak")
+                .isEmpty();
     }
 
     @Test
     void thePublishedLiteralsAgreeWithTheShippedFiles() throws IOException {
-        assertThat(ProductionGuard.offenders("prod",
-                ymlDefault("JWT_SECRET"), ymlDefault("APP_MAIL_LINK_SECRET"), ymlDefault("INTERNAL_API_TOKEN"),
-                REAL_SMTP))
+        assertThat(ProductionGuard.offenders("prod", REAL_SMTP,
+                credentials(ymlDefault("JWT_SECRET"), ymlDefault("APP_MAIL_LINK_SECRET"),
+                        ymlDefault("INTERNAL_API_TOKEN"), REAL_DB, REAL_MINIO_USER, REAL_MINIO_SECRET)))
                 .as("application.yml's own defaults")
                 .containsExactly(ProductionGuard.JWT_SECRET, ProductionGuard.MAIL_LINK_SECRET,
                         ProductionGuard.INTERNAL_TOKEN);
 
         Path devExample = Path.of("..", ".env.example");
-        assertThat(ProductionGuard.offenders("prod",
-                envValue(devExample, "JWT_SECRET"), envValue(devExample, "APP_MAIL_LINK_SECRET"),
-                envValue(devExample, "INTERNAL_API_TOKEN"), REAL_SMTP))
+        assertThat(ProductionGuard.offenders("prod", REAL_SMTP,
+                credentials(envValue(devExample, "JWT_SECRET"), envValue(devExample, "APP_MAIL_LINK_SECRET"),
+                        envValue(devExample, "INTERNAL_API_TOKEN"), REAL_DB, REAL_MINIO_USER,
+                        REAL_MINIO_SECRET)))
                 .as("a dev example copied into prod")
                 .containsExactly(ProductionGuard.JWT_SECRET, ProductionGuard.MAIL_LINK_SECRET,
                         ProductionGuard.INTERNAL_TOKEN);
 
         Path prodExample = Path.of("..", ".env.prod.example");
-        assertThat(ProductionGuard.offenders("prod",
-                envValue(prodExample, "JWT_SECRET"), envValue(prodExample, "APP_MAIL_LINK_SECRET"),
-                envValue(prodExample, "INTERNAL_API_TOKEN"), REAL_SMTP))
+        assertThat(ProductionGuard.offenders("prod", REAL_SMTP,
+                credentials(envValue(prodExample, "JWT_SECRET"), envValue(prodExample, "APP_MAIL_LINK_SECRET"),
+                        envValue(prodExample, "INTERNAL_API_TOKEN"), REAL_DB, REAL_MINIO_USER,
+                        REAL_MINIO_SECRET)))
                 .as("a prod example booted before its CHANGE_ME values were filled in")
                 .containsExactly(ProductionGuard.JWT_SECRET, ProductionGuard.MAIL_LINK_SECRET,
                         ProductionGuard.INTERNAL_TOKEN);
@@ -122,20 +176,46 @@ class ProductionGuardTest {
 
     @Test
     void theShippedMailDefaultsAgreeWithTheGuardToo() throws IOException {
-        assertThat(ProductionGuard.offenders("prod", REAL_JWT, REAL_MAIL, REAL_INTERNAL,
-                ymlDefault("APP_EMAIL_PROVIDER")))
+        assertThat(ProductionGuard.offenders("prod", ymlDefault("APP_EMAIL_PROVIDER"),
+                credentials(REAL_JWT, REAL_MAIL, REAL_INTERNAL, REAL_DB, REAL_MINIO_USER, REAL_MINIO_SECRET)))
                 .as("application.yml's own mail default")
                 .containsExactly(ProductionGuard.EMAIL_PROVIDER);
 
-        assertThat(ProductionGuard.offenders("prod", REAL_JWT, REAL_MAIL, REAL_INTERNAL,
-                envValue(Path.of("..", ".env.example"), "APP_EMAIL_PROVIDER")))
+        assertThat(ProductionGuard.offenders("prod",
+                envValue(Path.of("..", ".env.example"), "APP_EMAIL_PROVIDER"),
+                credentials(REAL_JWT, REAL_MAIL, REAL_INTERNAL, REAL_DB, REAL_MINIO_USER, REAL_MINIO_SECRET)))
                 .as("a dev example copied into prod")
                 .containsExactly(ProductionGuard.EMAIL_PROVIDER);
 
-        assertThat(ProductionGuard.offenders("prod", REAL_JWT, REAL_MAIL, REAL_INTERNAL,
-                envValue(Path.of("..", ".env.prod.example"), "APP_EMAIL_PROVIDER")))
+        assertThat(ProductionGuard.offenders("prod",
+                envValue(Path.of("..", ".env.prod.example"), "APP_EMAIL_PROVIDER"),
+                credentials(REAL_JWT, REAL_MAIL, REAL_INTERNAL, REAL_DB, REAL_MINIO_USER, REAL_MINIO_SECRET)))
                 .as(".env.prod.example's transport")
                 .isEmpty();
+    }
+
+    @Test
+    void theShippedDatabaseAndStoreSecretsAgreeWithTheGuardToo() throws IOException {
+        assertThat(ProductionGuard.offenders("prod", REAL_SMTP,
+                credentials(REAL_JWT, REAL_MAIL, REAL_INTERNAL, ymlDefault("POSTGRES_PASSWORD"),
+                        ymlDefault("MINIO_ACCESS_KEY"), ymlDefault("MINIO_SECRET_KEY"))))
+                .as("application.yml's own defaults")
+                .containsExactly(ProductionGuard.POSTGRES_PASSWORD, ProductionGuard.MINIO_SECRET_KEY);
+
+        Path devExample = Path.of("..", ".env.example");
+        assertThat(ProductionGuard.offenders("prod", REAL_SMTP,
+                credentials(REAL_JWT, REAL_MAIL, REAL_INTERNAL, envValue(devExample, "POSTGRES_PASSWORD"),
+                        envValue(devExample, "MINIO_ACCESS_KEY"), envValue(devExample, "MINIO_SECRET_KEY"))))
+                .as("a dev example copied into prod")
+                .containsExactly(ProductionGuard.POSTGRES_PASSWORD, ProductionGuard.MINIO_ACCESS_KEY,
+                        ProductionGuard.MINIO_SECRET_KEY);
+
+        Path prodExample = Path.of("..", ".env.prod.example");
+        assertThat(ProductionGuard.offenders("prod", REAL_SMTP,
+                credentials(REAL_JWT, REAL_MAIL, REAL_INTERNAL, envValue(prodExample, "POSTGRES_PASSWORD"),
+                        envValue(prodExample, "MINIO_ROOT_USER"), envValue(prodExample, "MINIO_ROOT_PASSWORD"))))
+                .as("a prod example booted before its CHANGE_ME values were filled in")
+                .containsExactly(ProductionGuard.POSTGRES_PASSWORD, ProductionGuard.MINIO_SECRET_KEY);
     }
 
     @Test
@@ -146,32 +226,42 @@ class ProductionGuardTest {
                     assertThat(context).hasFailed();
                     assertThat(NestedExceptionUtils.getMostSpecificCause(context.getStartupFailure()).getMessage())
                             .contains("APP_ENV=prod but JWT_SECRET, APP_MAIL_LINK_SECRET, INTERNAL_API_TOKEN, "
-                                    + "APP_EMAIL_PROVIDER cannot open")
+                                    + "POSTGRES_PASSWORD, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, APP_EMAIL_PROVIDER "
+                                    + "cannot open")
                             .contains("docs/DEPLOYMENT.md");
                 });
     }
 
     @Test
     void aProdContextOnTheConsoleTransportIsRefusedEvenWithRealSecrets() {
-        runner.withPropertyValues("app.deployment.env=prod", "app.jwt.secret=" + REAL_JWT,
-                        "app.mail.link-secret=" + REAL_MAIL, "app.internal.token=" + REAL_INTERNAL,
-                        "app.email.provider=console")
-                .run(context -> {
-                    assertThat(context).hasFailed();
-                    assertThat(NestedExceptionUtils.getMostSpecificCause(context.getStartupFailure()).getMessage())
-                            .contains("APP_ENV=prod but APP_EMAIL_PROVIDER cannot open")
-                            .doesNotContain("JWT_SECRET");
-                });
+        runner.withPropertyValues(prodProperties("console")).run(context -> {
+            assertThat(context).hasFailed();
+            assertThat(NestedExceptionUtils.getMostSpecificCause(context.getStartupFailure()).getMessage())
+                    .contains("APP_ENV=prod but APP_EMAIL_PROVIDER cannot open")
+                    .doesNotContain("JWT_SECRET");
+        });
     }
 
     @Test
     void aProdContextStartsOnceEveryCredentialIsReal() {
+        runner.withPropertyValues(prodProperties(REAL_SMTP)).run(context -> {
+            assertThat(context).hasNotFailed();
+            assertThat(context).hasSingleBean(ProductionGuard.class);
+        });
+    }
+
+    @Test
+    void aProdBootCannotSilenceTheStoreCheckByDisablingStorage() {
         runner.withPropertyValues("app.deployment.env=prod", "app.jwt.secret=" + REAL_JWT,
                         "app.mail.link-secret=" + REAL_MAIL, "app.internal.token=" + REAL_INTERNAL,
-                        "app.email.provider=smtp")
+                        "spring.datasource.password=" + REAL_DB, "app.email.provider=" + REAL_SMTP,
+                        "app.storage.enabled=false")
                 .run(context -> {
-                    assertThat(context).hasNotFailed();
-                    assertThat(context).hasSingleBean(ProductionGuard.class);
+                    assertThat(context).hasFailed();
+                    assertThat(NestedExceptionUtils.getMostSpecificCause(context.getStartupFailure()).getMessage())
+                            .as("the switch is the bean condition's; four services still need a StorageService")
+                            .contains("APP_ENV=prod but MINIO_ACCESS_KEY, MINIO_SECRET_KEY cannot open")
+                            .doesNotContain("JWT_SECRET");
                 });
     }
 
@@ -184,6 +274,31 @@ class ProductionGuardTest {
     @Test
     void theGuardIsOnTheShippedComponentScan() {
         assertThat(ProductionGuard.class).hasAnnotation(Component.class);
+    }
+
+    private static String[] prodProperties(String provider) {
+        return new String[] {
+            "app.deployment.env=prod",
+            "app.jwt.secret=" + REAL_JWT,
+            "app.mail.link-secret=" + REAL_MAIL,
+            "app.internal.token=" + REAL_INTERNAL,
+            "spring.datasource.password=" + REAL_DB,
+            "app.storage.access-key=" + REAL_MINIO_USER,
+            "app.storage.secret-key=" + REAL_MINIO_SECRET,
+            "app.email.provider=" + provider,
+        };
+    }
+
+    private static Map<String, String> credentials(String jwt, String mailLink, String internal,
+            String database, String minioAccess, String minioSecret) {
+        Map<String, String> values = new LinkedHashMap<>();
+        values.put(ProductionGuard.JWT_SECRET, jwt);
+        values.put(ProductionGuard.MAIL_LINK_SECRET, mailLink);
+        values.put(ProductionGuard.INTERNAL_TOKEN, internal);
+        values.put(ProductionGuard.POSTGRES_PASSWORD, database);
+        values.put(ProductionGuard.MINIO_ACCESS_KEY, minioAccess);
+        values.put(ProductionGuard.MINIO_SECRET_KEY, minioSecret);
+        return values;
     }
 
     private static String ymlDefault(String envVar) throws IOException {

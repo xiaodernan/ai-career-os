@@ -224,17 +224,26 @@ residual risk rather than as a clean bill of health.
    `INTERNAL_API_TOKEN` from the environment but ships working defaults, and a deploy
    that forgot one booted fine on a value printed in this repository: access tokens
    anyone can sign, unsubscribe and mail-settings links anyone can forge, and an
-   `/internal/*` surface anyone can call with the shared default. The ai-service had a
-   preflight for the same class; the backend had nothing before its context existed.
+   `/internal/*` surface anyone can call with the shared default. The database and
+   object store are the same shape — `POSTGRES_PASSWORD` ships `dev_pg_pass_9f3k`
+   and the MinIO secret ships `careeros_minio_dev_password` — so a deploy that
+   forgot either reached production's Postgres and bucket on a password this
+   repository prints. The ai-service had a preflight for the same class; the backend
+   had nothing before its context existed.
 
    `APP_ENV` (bound as `app.deployment.env`, **`dev` unless set**) now arms
-   `ProductionGuard`: with `env=prod` the bean refuses the context refresh when any of
-   the three still holds a published literal (the `application.yml` default or
-   `.env.example`'s), a `CHANGE_ME` value from `.env.prod.example`, or nothing at all.
-   It names **every** offender in one `IllegalStateException`, so one restart fixes all
-   three instead of three restarts finding them one by one. Non-prod boots are
-   untouched — the example values are exactly what a dev checkout runs on. Both compose
-   files already passed `APP_ENV`; for the backend it was a no-op until now.
+   `ProductionGuard`: with `env=prod` the bean refuses the context refresh when any
+   of the six still holds a published literal (the `application.yml` default or
+   `.env.example`'s), a `CHANGE_ME` value from `.env.prod.example`, or nothing at
+   all. The object-store pair is asked for unconditionally: four services inject a
+   `StorageService`, so a prod boot that turns the store off has no bean to inject
+   and fails anyway — the switch stays the bean condition's to read and cannot dodge
+   the check. The store's user name is the one literal the guard tolerates
+   (`careeros-minio-admin` is a user name, not a secret); the pair is refused on the
+   password. It names **every** offender in one `IllegalStateException`, so one
+   restart fixes all of them instead of one restart per credential. Non-prod boots
+   are untouched — the example values are exactly what a dev checkout runs on. Both
+   compose files already passed `APP_ENV`; for the backend it was a no-op until now.
 
    The mail transport is the same class of hole. `app.email.provider` defaults to
    `console`, which writes each letter into the log instead of sending it, so a prod
@@ -245,14 +254,16 @@ residual risk rather than as a clean bill of health.
    `APP_EMAIL_PROVIDER` in the same message. There is no opt-out: a production
    deployment that cannot send mail cannot run the password-reset flow.
 
-   `ProductionGuardTest` has 15 cases: the pure decision table (dev, case/space, a lone
-   override, blank, `CHANGE_ME`, and the console transport with its case and blank
-   arms), a *drift* check that reads `application.yml` and both env examples so the
-   guard's copies — secrets and transport — cannot go stale, an
-   `ApplicationContextRunner` that proves a prod context fails and names all four,
-   including console-alone with real secrets, and that dev or prod-with-`smtp` starts,
-   and the `@Component` wiring. `DEPLOYMENT.md`'s checklist and its Email section state
-   the refusal.
+   `ProductionGuardTest` has 18 cases: the pure decision table (dev, case/space, a lone
+   override, blank, `CHANGE_ME`, the database and store defaults, a published user
+   name over a real secret, and the console transport with its case and blank arms), a
+   *drift* check that reads `application.yml` and both env examples so the guard's
+   copies — six secrets, the store's user name and the transport — cannot go stale, an
+   `ApplicationContextRunner` that proves a prod context fails and names all seven
+   offenders in one sentence, including console-alone with real secrets and a
+   storage-off boot that is still asked for the pair, and that dev or prod-with-`smtp`
+   starts, and the `@Component` wiring. `DEPLOYMENT.md`'s checklist and its Email
+   section state the refusal.
 
 ### Dependency audits (2026-10-24)
 
@@ -286,9 +297,10 @@ traces: `{ success: false, error: { code, message, details[] } }` (written by
 - Set a unique, long `JWT_SECRET`, `APP_MAIL_LINK_SECRET` and `INTERNAL_API_TOKEN`;
   never reuse the `.env.example` values.
 - `APP_ENV=prod` (this also hard-blocks the `mock` LLM provider at boot, and makes the
-  backend refuse to start on any published, `CHANGE_ME` or empty signing secret —
-  finding #4).
+  backend refuse to start on any published, `CHANGE_ME` or empty signing secret,
+  database password or object-store credential — finding #4).
 - Use a real embedding provider, not `hash`.
 - Terminate TLS at a proxy and restrict `APP_CORS_ORIGINS` to your real domain(s).
 - Rotate the MinIO and Postgres passwords; keep the buckets private (the
-  `minio-init` step sets the app bucket to `private`).
+  `minio-init` step sets the app bucket to `private`). `APP_ENV=prod` refuses the
+  shipped ones, so the rotation is a boot requirement, not a checklist wish.

@@ -112,8 +112,13 @@ READERS = {
                        ("ai/HttpAiServiceClient.java", "ai/SseRelayService.java", "auth/security/InternalApiFilter.java",
                         "config/ProductionGuard.java")),
     "storage.endpoint": ("Storage", "endpoint", "getEndpoint", ("storage/MinioStorageService.java",)),
-    "storage.access-key": ("Storage", "accessKey", "getAccessKey", ("storage/MinioStorageService.java",)),
-    "storage.secret-key": ("Storage", "secretKey", "getSecretKey", ("storage/MinioStorageService.java",)),
+    # Since 31.9 the guard reads the credential pair to refuse a prod boot on the
+    # repository's published object-store defaults; the store itself still reads all
+    # four keys, so the pair legitimately has two readers and the other two have one.
+    "storage.access-key": ("Storage", "accessKey", "getAccessKey",
+                           ("config/ProductionGuard.java", "storage/MinioStorageService.java")),
+    "storage.secret-key": ("Storage", "secretKey", "getSecretKey",
+                           ("config/ProductionGuard.java", "storage/MinioStorageService.java")),
     "storage.bucket": ("Storage", "bucket", "getBucket", ("storage/MinioStorageService.java",)),
     "ai-service.base-url": ("AiService", "baseUrl", "getBaseUrl",
                             ("ai/HttpAiServiceClient.java", "ai/SseRelayService.java")),
@@ -792,7 +797,11 @@ def test_the_open_scan_charges_an_app_dot_mention_to_the_config_namespace_only_w
         f"`app.upload.presigned-url-ttl-seconds` is now spelled where the walk reads it: {[(rel(p), n) for p, n, _, _ in presigned]} "
         f"-- DEAD_KNOBS says the TTL names an unrouted duration, so a fourth mention needs its own verdict")
     storage_enabled = [r for r in admitted if r[2] == "storage.enabled"]
-    assert len(storage_enabled) == 3, (
-        f"`app.storage.enabled` is written down in {len(storage_enabled)} flat rows, want the 3 the tests leave "
-        f"-- the annotation's split spelling (prefix + name) is read by another scanner, so a fourth row means "
-        f"the key is now also spelled in a place this census has not judged")
+    # 31.9 added the fourth: ProductionGuardTest turns the store off with every other
+    # credential real and asserts the guard still names the MinIO pair, because four
+    # services inject a StorageService and a prod boot cannot use the switch to dodge
+    # the check. The three integration-test carriers are unchanged.
+    assert len(storage_enabled) == 4, (
+        f"`app.storage.enabled` is written down in {len(storage_enabled)} flat rows, want the 4 judged "
+        f"here -- the annotation's split spelling (prefix + name) is read by another scanner, so a fifth "
+        f"row means the key is now also spelled in a place this census has not judged")
