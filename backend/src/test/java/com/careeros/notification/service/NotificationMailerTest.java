@@ -87,6 +87,28 @@ class NotificationMailerTest {
     }
 
     @Test
+    void a_saved_search_is_named_with_its_count_in_both_languages() {
+        List<NotificationItem> waiting = List.of(
+                item(NotificationService.KIND_SAVED_SEARCH, "Backend roles", "", 1, null,
+                        "/jobs?q=backend"),
+                item(NotificationService.KIND_SAVED_SEARCH, "Data roles", "", 3, null,
+                        "/jobs?q=data"));
+
+        String english = NotificationMailer.body(waiting, "en", "https://careeros.example",
+                SETTINGS);
+        String chinese = NotificationMailer.body(waiting, "zh", "https://careeros.example",
+                SETTINGS);
+
+        assertThat(english).contains(
+                "- Backend roles — a new posting matches this saved search",
+                "  https://careeros.example/jobs?q=backend",
+                "- Data roles — 3 new postings match this saved search");
+        assertThat(chinese).contains(
+                "- Backend roles —— 有 1 个新职位符合这个保存的搜索",
+                "- Data roles —— 有 3 个新职位符合这个保存的搜索");
+    }
+
+    @Test
     void a_long_waiting_list_is_capped_and_the_rest_counted() {
         List<NotificationItem> waiting = new ArrayList<>();
         for (int i = 1; i <= 13; i++) {

@@ -11,6 +11,7 @@ import com.careeros.job.entity.IngestionFeed;
 import com.careeros.job.entity.IngestionRun;
 import com.careeros.job.repository.IngestionFeedRepository;
 import com.careeros.job.repository.IngestionRunRepository;
+import com.careeros.job.service.SavedSearchMatcher;
 import com.careeros.notification.dto.NotificationDtos.Inbox;
 import com.careeros.notification.dto.NotificationDtos.NotificationItem;
 import com.careeros.notification.entity.NotificationState;
@@ -44,10 +45,12 @@ class NotificationServiceTest {
     private static final UUID FEED = UUID.fromString("33333333-3333-4333-8333-333333333333");
     private static final UUID RUN = UUID.fromString("44444444-4444-4444-8444-444444444444");
     private static final UUID RUN2 = UUID.fromString("55555555-5555-4555-8555-555555555555");
+    private static final UUID SEARCH = UUID.fromString("66666666-6666-4666-8666-666666666666");
 
     private DashboardRepository dashboard;
     private IngestionRunRepository runs;
     private IngestionFeedRepository feeds;
+    private SavedSearchMatcher savedSearches;
     private NotificationStateRepository states;
     private Map<String, NotificationState> store;
     private NotificationService service;
@@ -57,6 +60,7 @@ class NotificationServiceTest {
         dashboard = mock(DashboardRepository.class);
         runs = mock(IngestionRunRepository.class);
         feeds = mock(IngestionFeedRepository.class);
+        savedSearches = mock(SavedSearchMatcher.class);
         states = mock(NotificationStateRepository.class);
         store = new LinkedHashMap<>();
 
@@ -71,8 +75,9 @@ class NotificationServiceTest {
         when(feeds.findByUserIdOrderByCreatedAtDesc(ALICE)).thenReturn(List.of());
         when(runs.findByUserIdOrderByStartedAtDescIdDesc(eq(ALICE), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of()));
+        when(savedSearches.alerts(eq(ALICE), any())).thenReturn(List.of());
 
-        service = new NotificationService(dashboard, runs, feeds, states);
+        service = new NotificationService(dashboard, runs, feeds, savedSearches, states);
     }
 
     private static AttentionItem attention(String reason, OffsetDateTime reminderAt,
@@ -332,6 +337,49 @@ class NotificationServiceTest {
 
         assertThat(store.get(key).getReadAt()).isNotNull();
         assertThat(store.get(key).getNotifiedAt()).isEqualTo(now);
+    }
+
+    @Test
+    void a_saved_search_with_new_matches_is_one_item_keyed_by_the_newest_arrival() {
+        OffsetDateTime newest = OffsetDateTime.parse("2026-10-29T03:00:00Z");
+        when(savedSearches.alerts(eq(ALICE), any())).thenReturn(List.of(
+                new SavedSearchMatcher.Alert(SEARCH, "Backend roles in Berlin", 4, newest,
+                        "/jobs?q=backend&location=Berlin")));
+
+        Inbox inbox = service.inbox(ALICE);
+
+        assertThat(inbox.items()).hasSize(1);
+        NotificationItem item = inbox.items().get(0);
+        assertThat(item.kind()).isEqualTo(NotificationService.KIND_SAVED_SEARCH);
+        assertThat(item.title()).isEqualTo("Backend roles in Berlin");
+        assertThat(item.count()).isEqualTo(4);
+        assertThat(item.link()).isEqualTo("/jobs?q=backend&location=Berlin");
+        assertThat(item.key()).isEqualTo("saved_search:" + SEARCH + ":"
+                + newest.toInstant().getEpochSecond());
+        assertThat(item.at()).isEqualTo(newest);
+        assertThat(item.read()).isFalse();
+        assertThat(service.awaitingDelivery(ALICE)).extracting(NotificationItem::kind)
+                .containsExactly(NotificationService.KIND_SAVED_SEARCH);
+    }
+
+    @Test
+    void a_dismissed_search_alert_stays_away_until_a_newer_posting_matches() {
+        OffsetDateTime first = OffsetDateTime.now().minusHours(2);
+        when(savedSearches.alerts(eq(ALICE), any())).thenReturn(List.of(
+                new SavedSearchMatcher.Alert(SEARCH, "Backend roles", 2, first, "/jobs?q=backend")));
+        String key = service.inbox(ALICE).items().get(0).key();
+
+        assertThat(service.dismiss(ALICE, key).items()).isEmpty();
+
+        OffsetDateTime second = OffsetDateTime.now().minusMinutes(5);
+        when(savedSearches.alerts(eq(ALICE), any())).thenReturn(List.of(
+                new SavedSearchMatcher.Alert(SEARCH, "Backend roles", 1, second, "/jobs?q=backend")));
+        Inbox after = service.inbox(ALICE);
+
+        assertThat(after.unread()).isEqualTo(1);
+        assertThat(after.items().get(0).key()).endsWith(":"
+                + second.toInstant().getEpochSecond());
+        assertThat(after.items().get(0).count()).isEqualTo(1);
     }
 
     private static NotificationState state(String key, OffsetDateTime readAt,

@@ -1471,6 +1471,48 @@ visible to an operator. It stops deliberately where visible history begins.
   pass the mocks and fail here. The backend unit suite at 779 and the
   integration suite at 74 are green.)
 
+## Epic 29 — The Search Speaks
+
+A saved search is a question the reader asked once and kept. The rest of the
+proactive layer has a voice — an application's reminder, a pull's failure, the
+morning letter — but the criterion set itself was silent: the board answered it
+only on the click that reopened it, so a posting that matched overnight waited
+for the reader to come back and ask again. This epic gives the saved search its
+own signal, on the inbox's own terms: synthesized at read time, keyed by the
+episode, settled by reading or acting, and mailed at most once.
+
+- [x] **29.1** A saved search speaks when new postings match it.
+
+  (`SavedSearchMatcher` asks the board's own predicate:
+  `JobSearchRepository.matchStats` reuses the WHERE fragment `search` and
+  `count` build, so an alert cannot name a posting the board would not answer,
+  and answers how many matching postings appeared since a moment and when the
+  newest one did. The window starts at the later of the search's own creation
+  and a seven-day floor (`NEW_WINDOW_DAYS`) — the same lookback the inbox gives
+  a pull — so a search kept for months does not announce the catalogue it was
+  saved against while a ten-day-old arrival is history, not news. Only
+  `status='open'` postings count, and an empty criterion set is skipped rather
+  than answered. The item is keyed
+  `saved_search:<searchId>:<newestPostingAt epoch second>`, so a dismissal
+  silences that arrival and the next matching posting re-arms the search with
+  nothing stored but the reader's own state; its link is the board on the same
+  question in the page's own spellings (`/jobs?q=…&skills=a,b&remote=1&…`), every
+  value encoded. The morning letter names it in both languages ("a new posting
+  matches this saved search" / "有 1 个新职位符合这个保存的搜索") and counts it like
+  any other kind.
+
+  Two facts came from evidence rather than reading. `matchStats` binds the WHERE
+  values without `:userId`, because its statement carries no match-score join to
+  reference it; the blind reuse of `bind` made every inbox read a 500 until
+  `SavedSearchAlertIT` said so, and `JobSearchRepositoryTest` now pins the
+  binding symmetry of this third statement. The integration test also pins the
+  window against the schema Flyway builds: two matching postings, one inside
+  seven days and one pushed twenty days back, and only the recent one is
+  counted, with a dismissal round trip proving the episode re-arms on the next
+  arrival. 5 matcher unit tests, 2 service tests, 1 mailer test, 1 repository
+  binding test and 2 integration tests cover it. The backend unit suite at
+  788 and the integration suite at 76 are green.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

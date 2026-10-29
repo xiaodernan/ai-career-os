@@ -10,8 +10,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.careeros.job.repository.JobSearchRepository.Filters;
+import com.careeros.job.repository.JobSearchRepository.MatchStats;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
+import java.time.OffsetDateTime;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -116,6 +118,27 @@ class JobSearchRepositoryTest {
     void countBindsExactlyTheParametersItsSqlReferences() {
         repo.count(fullFilters("posted"));
         assertThat(placeholders(capturedSql())).isEqualTo(bound);
+    }
+
+    /**
+     * The alert statement is built from the same WHERE fragment but skips the match-score
+     * join, so it is the one statement in this class whose SQL never says {@code :userId} —
+     * and binding it anyway made every inbox read a 500 (found by SavedSearchAlertIT).
+     */
+    @Test
+    void theAlertStatsBindExactlyTheParametersItsSqlReferencesAndNeverTheUserId() {
+        OffsetDateTime since = OffsetDateTime.parse("2026-10-01T00:00:00Z");
+        OffsetDateTime newest = OffsetDateTime.parse("2026-10-28T09:30:00Z");
+        when(query.getSingleResult()).thenReturn(new Object[] {3L, newest});
+
+        MatchStats stats = repo.matchStats(fullFilters("posted"), since);
+
+        String sql = capturedSql();
+        assertThat(placeholders(sql)).isEqualTo(bound);
+        assertThat(bound).doesNotContain("userId");
+        assertThat(params).containsEntry("postedSince", since);
+        assertThat(stats.count()).isEqualTo(3);
+        assertThat(stats.newest()).isEqualTo(newest);
     }
 
     @Test

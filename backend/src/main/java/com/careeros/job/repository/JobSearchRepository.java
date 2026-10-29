@@ -4,6 +4,7 @@ import com.careeros.common.LikePattern;
 import com.careeros.common.Paging;
 import com.careeros.common.Times;
 import com.careeros.job.dto.JobDtos.JobListItem;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -139,6 +140,32 @@ public class JobSearchRepository {
         Query query = em.createNativeQuery(sql);
         bind(f, query, null);
         return ((Number) query.getSingleResult()).longValue();
+    }
+
+    /** How many matching postings appeared since a moment, and when the newest one did. */
+    public record MatchStats(long count, OffsetDateTime newest) {
+    }
+
+    /**
+     * What an alert needs and nothing more (roadmap 29.1): the board's own predicate over one
+     * criterion set, read as a count and the newest arrival. The WHERE fragment is the one
+     * {@link #count} and {@link #search} build, so a saved search can never alert on a set the
+     * board would not answer; the query is unpaged and needs no match score, so it skips the
+     * lateral join and the ranking CTEs.
+     */
+    public MatchStats matchStats(Filters f, OffsetDateTime since) {
+        StringBuilder statement = new StringBuilder(
+                "SELECT COUNT(*), MAX(j.posted_at) FROM jobs j"
+                        + " JOIN companies c ON c.id = j.company_id WHERE 1=1");
+        applyWhere(f, statement);
+        statement.append(" AND j.posted_at >= :postedSince");
+        Query query = em.createNativeQuery(statement.toString());
+        // This statement carries no match-score join, so :userId has no referent; binding it
+        // would be a parameter the SQL never references -- the same 500 the other way round.
+        bindFilterValues(f, query);
+        query.setParameter("postedSince", since);
+        Object[] row = (Object[]) query.getSingleResult();
+        return new MatchStats(((Number) row[0]).longValue(), Times.offset(row[1]));
     }
 
     /**
@@ -327,14 +354,29 @@ public class JobSearchRepository {
      */
     private static void bind(Filters f, Query query, Paging.Window window) {
         query.setParameter("userId", f.userId());
-        if (f.q() != null && !f.q().isBlank()) {
-            query.setParameter("q", f.q());
-            query.setParameter("qLike", LikePattern.contains(f.q()));
-        }
+        bindFilterValues(f, query);
         // Bound only when the hybrid statement was built: a parameter the SQL never references is
         // as wrong as the other way round, and sort=posted with a vector in hand stays keyword SQL.
         if (hybrid(f)) {
             query.setParameter("vec", vectorLiteral(f.embedding()));
+        }
+        if (window != null) {
+            query.setParameter("limit", window.size());
+            query.setParameter("offset", window.offset());
+        }
+    }
+
+    /**
+     * The values the WHERE fragments bind. Split from {@link #bind} because two of the
+     * parameters belong to the statement's shape rather than its predicate: {@code :userId} is
+     * referenced only by the match-score join, which {@link #matchStats} does without, and
+     * {@code :vec} only by the hybrid ranking CTEs. A statement built from {@code applyWhere}
+     * alone still binds all of these.
+     */
+    private static void bindFilterValues(Filters f, Query query) {
+        if (f.q() != null && !f.q().isBlank()) {
+            query.setParameter("q", f.q());
+            query.setParameter("qLike", LikePattern.contains(f.q()));
         }
         if (f.location() != null && !f.location().isBlank()) {
             // Only the escaped form reaches SQL now: a raw :location bind would be a
@@ -361,10 +403,6 @@ public class JobSearchRepository {
         }
         if (f.skills() != null && !f.skills().isEmpty()) {
             query.setParameter("skills", String.join(",", f.skills()));
-        }
-        if (window != null) {
-            query.setParameter("limit", window.size());
-            query.setParameter("offset", window.offset());
         }
     }
 

@@ -40,10 +40,13 @@ public class NotificationMailer {
             "last night's pull failed",
             "last night's pull proposed a new posting",
             "last night's pull proposed {n} new postings",
+            "a new posting matches this saved search",
+            "{n} new postings match this saved search",
             "An application",
             "A role at {company}",
             "{title} at {company}",
             "A scheduled pull",
+            "A saved search",
             "  ... and {n} more\n",
             "Reading or acting in the app settles these, and a signal is mailed at most once.\n",
             "Stop these letters: {url}\n");
@@ -58,10 +61,13 @@ public class NotificationMailer {
             "昨晚的抓取失败了",
             "昨晚的抓取带来了 1 个新职位",
             "昨晚的抓取带来了 {n} 个新职位",
+            "有 1 个新职位符合这个保存的搜索",
+            "有 {n} 个新职位符合这个保存的搜索",
             "一条投递",
             "{company} 的一个职位",
             "{company} 的 {title}",
             "一次定时抓取",
+            "一个保存的搜索",
             "  …… 另有 {n} 条\n",
             "在应用里读过或处理之后，这条信号就会安静下来；同一条信号最多寄一次。\n",
             "不想再收到这些信：{url}\n");
@@ -145,6 +151,9 @@ public class NotificationMailer {
             return subject == null ? title
                     : fill(fill(words.titleAtCompany(), "title", title), "company", subject);
         }
+        if (NotificationService.KIND_SAVED_SEARCH.equals(item.kind())) {
+            return title == null ? words.aSearch() : title;
+        }
         return title == null ? words.aFeed() : title;
     }
 
@@ -158,6 +167,11 @@ public class NotificationMailer {
                 Integer count = item.count();
                 yield count == null || count == 1 ? words.ingestionCreatedOne()
                         : fill(words.ingestionCreatedMany(), "n", count);
+            }
+            case NotificationService.KIND_SAVED_SEARCH -> {
+                Integer count = item.count();
+                yield count == null || count == 1 ? words.savedSearchOne()
+                        : fill(words.savedSearchMany(), "n", count);
             }
             default -> "";
         };
@@ -177,8 +191,9 @@ public class NotificationMailer {
 
     /**
      * One language's half of the letter. The patterns carry named holes filled at render time;
-     * the two counts that read badly as digits in English -- a lone reminder, a lone posting --
-     * have their own wordless singulars, while Chinese lets one pattern carry the number.
+     * the counts that read badly as digits in English -- a lone reminder, a lone posting, a
+     * lone match -- have their own wordless singulars, while Chinese lets one pattern carry
+     * the number.
      */
     record Words(
             String subjectOne,
@@ -190,10 +205,13 @@ public class NotificationMailer {
             String ingestionFailed,
             String ingestionCreatedOne,
             String ingestionCreatedMany,
+            String savedSearchOne,
+            String savedSearchMany,
             String anApplication,
             String aRoleAt,
             String titleAtCompany,
             String aFeed,
+            String aSearch,
             String more,
             String footer,
             String unsubscribe) {

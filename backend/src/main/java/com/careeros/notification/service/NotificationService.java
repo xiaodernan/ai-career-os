@@ -5,6 +5,7 @@ import com.careeros.job.entity.IngestionFeed;
 import com.careeros.job.entity.IngestionRun;
 import com.careeros.job.repository.IngestionFeedRepository;
 import com.careeros.job.repository.IngestionRunRepository;
+import com.careeros.job.service.SavedSearchMatcher;
 import com.careeros.notification.dto.NotificationDtos.Inbox;
 import com.careeros.notification.dto.NotificationDtos.NotificationItem;
 import com.careeros.notification.entity.NotificationState;
@@ -28,10 +29,10 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * <p>There is no notifications table, and that is the design. Every item is read off a source
  * that is its own record -- an open application whose reminder has come due or that has been
- * quiet for the dashboard's own window, a pull the nightly sweep filed -- so an item can never
- * disagree with the screen that shows the same thing, and a source that disappears takes its
- * item with it. The only state stored is the reader's: {@link NotificationState}, keyed by the
- * episode, not by the row.
+ * quiet for the dashboard's own window, a pull the nightly sweep filed, a saved search the
+ * board has new postings for -- so an item can never disagree with the screen that shows the
+ * same thing, and a source that disappears takes its item with it. The only state stored is
+ * the reader's: {@link NotificationState}, keyed by the episode, not by the row.
  *
  * <p>Acting on the inbox is scoped to what it is showing. A read or dismissed key that is not
  * among the current items is ignored, which keeps a stale browser tab from filing state for a
@@ -60,19 +61,24 @@ public class NotificationService {
     public static final String KIND_STALE = "stale";
     public static final String KIND_INGESTION_FAILED = "ingestion_failed";
     public static final String KIND_INGESTION_CREATED = "ingestion_created";
+    /** A saved search whose question the board answered with postings it had not seen (29.1). */
+    public static final String KIND_SAVED_SEARCH = "saved_search";
 
     private static final String INGESTION_PAGE = "/ingestion";
 
     private final DashboardRepository dashboard;
     private final IngestionRunRepository runs;
     private final IngestionFeedRepository feeds;
+    private final SavedSearchMatcher savedSearches;
     private final NotificationStateRepository states;
 
     public NotificationService(DashboardRepository dashboard, IngestionRunRepository runs,
-                               IngestionFeedRepository feeds, NotificationStateRepository states) {
+                               IngestionFeedRepository feeds, SavedSearchMatcher savedSearches,
+                               NotificationStateRepository states) {
         this.dashboard = dashboard;
         this.runs = runs;
         this.feeds = feeds;
+        this.savedSearches = savedSearches;
         this.states = states;
     }
 
@@ -208,6 +214,7 @@ public class NotificationService {
             out.add(attention(item));
         }
         out.addAll(ingestion(userId));
+        out.addAll(savedSearchAlerts(userId));
         return out;
     }
 
@@ -272,6 +279,24 @@ public class NotificationService {
             return null;
         }
         return counts.get("create") instanceof Number number ? number.intValue() : null;
+    }
+
+    /**
+     * A saved search the board has news for (roadmap 29.1): one item per search, keyed by the
+     * newest matching posting's arrival. The episode is the arrival rather than the search, so
+     * dismissing today's news leaves the search armed -- the next posting to match is a new
+     * key, and therefore unread, without anything being stored to remember that it was armed.
+     */
+    private List<Candidate> savedSearchAlerts(UUID userId) {
+        List<Candidate> out = new ArrayList<>();
+        for (SavedSearchMatcher.Alert alert : savedSearches.alerts(userId, OffsetDateTime.now())) {
+            out.add(new Candidate(
+                    KIND_SAVED_SEARCH + ":" + alert.searchId() + ":"
+                            + alert.newestAt().toInstant().getEpochSecond(),
+                    KIND_SAVED_SEARCH, alert.name(), "", "", alert.count(), null, alert.link(),
+                    alert.newestAt()));
+        }
+        return out;
     }
 
     private static String text(String value) {

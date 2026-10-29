@@ -241,12 +241,18 @@ says what would work.
 The 19.3 inbox. Nothing is stored as a notification: every item is synthesized
 from a signal the platform already wrote down — an open application whose
 reminder has come due or that has gone quiet for the dashboard's own 14-day
-window, and the last week's pulls that failed or proposed new postings. What
-persists is what the reader did with each item, keyed by the signal's own
-episode (`reminder:<applicationId>:<reminderAt>`, `stale:<applicationId>:<updatedAt>`,
-`ingestion:<runId>`), so a dismissal silences that episode and a new reminder or
-a new update arrives unread. A read or dismissed key the inbox is not currently
-showing is ignored, and every write answers with the fresh inbox.
+window, the last week's pulls that failed or proposed new postings, and a saved
+search the board has new postings for (roadmap 29.1: newest seven days at most,
+and never a posting older than the search itself). What persists is what the
+reader did with each item, keyed by the signal's own episode
+(`reminder:<applicationId>:<reminderAt>`, `stale:<applicationId>:<updatedAt>`,
+`ingestion:<runId>`, `saved_search:<searchId>:<newestPostingAt>`), so a dismissal
+silences that episode and a new reminder, a new update or a newer matching
+posting arrives unread. A saved-search item carries the search's name, the count
+of new matches and a link to the board on the same question; the alert is
+derived from the board's own predicate, so it can never name a posting the board
+would not answer. A read or dismissed key the inbox is not currently showing is
+ignored, and every write answers with the fresh inbox.
 
 The inbox also leaves the app by mail (roadmap 22.1). A daily sweep at 07:30 UTC
 mails each account the items it is showing unread that no letter has carried yet:
