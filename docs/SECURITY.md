@@ -119,9 +119,16 @@ that rejects invented skills/numbers not present in the source evidence.
   behind a reverse proxy in production.
 - Every answer from the Next shell carries `X-Frame-Options: DENY`,
   `X-Content-Type-Options: nosniff`, `Referrer-Policy:
-  strict-origin-when-cross-origin` and a `Permissions-Policy` that denies the
+  strict-origin-when-cross-origin`, a `Permissions-Policy` that denies the
   camera and geolocation but leaves the microphone to this origin — the
-  interview page records with it. `frontend/next.config.ts` exports the list
+  interview page records with it — and `Strict-Transport-Security:
+  max-age=31536000`, which pins the shell's https for a year so a downgrade to
+  http cannot intercept the next page. The transport value is exactly one
+  directive: `includeSubDomains` would pin hosts under the shell's own name that
+  this repository does not know the operator runs, and `preload` is a commitment
+  only the operator can make for their hostname; a reverse proxy may add both.
+  Browsers ignore STS delivered over http, so plain-http local runs are
+  unchanged. `frontend/next.config.ts` exports the list
   and `src/app/security-headers.test.ts` pins the rule Next reads, so the
   headers exist under `next start` and the E2E stack too, not only in a
   deployment's reverse proxy.

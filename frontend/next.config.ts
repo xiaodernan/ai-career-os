@@ -24,12 +24,21 @@ import type { NextConfig } from "next";
  * browser that guesses is guessing about data, not markup; and the one device feature
  * the product uses is the interview page's microphone, which stays available to this
  * origin while the camera and location the app never asks for are denied outright.
+ *
+ * The transport rule is the one header that bites a visitor rather than a page: a
+ * browser that has seen the shell over https refuses a plain-http downgrade to the
+ * same origin for a year. Browsers ignore STS delivered over http, so the local runs
+ * and the E2E stack are untouched; `includeSubDomains` and `preload` are left out
+ * because the shell may share a parent domain with services this repository does not
+ * run, and the preload list is a commitment only the operator can make for their
+ * hostname. A reverse proxy may add both around the app.
  */
 export const SECURITY_HEADERS = [
   { key: "X-Frame-Options", value: "DENY" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "Permissions-Policy", value: "camera=(), geolocation=(), microphone=(self)" },
+  { key: "Strict-Transport-Security", value: "max-age=31536000" },
 ] as const;
 
 const nextConfig: NextConfig = {

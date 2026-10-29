@@ -2177,6 +2177,44 @@ where no proxy exists.
   frontend-reading censuses the concurrent session's in-flight files keep red; the
   doc-reading gate selection answers 238/238.)
 
+- [x] **31.12** a browser is told the shell speaks https only.
+
+  (The shell's answers said what a page may frame, sniff, load and run, and the
+  API's door named the shell; the transport the first answer arrived on was still
+  whatever the visitor typed. A reader who reached the http spelling once — a typed
+  address, a link in a letter, a bookmark saved before TLS — kept being served over
+  http until they noticed, and a network in between could rewrite pages and API
+  calls wholesale. Browsers offer one defense: a host that answers over https with
+  `Strict-Transport-Security` is pinned, and every later spelling of it is upgraded
+  before a byte leaves the browser. The shell sent none of it.)
+
+  The header rides the same one exported list in `frontend/next.config.ts` as the
+  other four, so every `/:path*` answer carries it. Its value is exactly one
+  directive, `max-age=31536000`: a year of pinning and nothing else on purpose.
+  `includeSubDomains` would extend the promise to hosts under the shell's own name
+  that this repository does not know the operator runs, `preload` is a commitment
+  only the operator can make for a hostname they own, and a reverse proxy may add
+  both around the app. STS delivered over http is ignored by browsers, so the
+  plain-http dev runs and the E2E stack are untouched — the header costs them
+  nothing and protects every https deployment, including the ones served by
+  `next start` with no proxy to add it.
+
+  The gate grew a second case: the exact five-header array for `/:path*` (a sixth
+  header added to the list cannot skip the rule; a rule that stops carrying the list
+  is a red), and a transport case that parses the value as `max-age=\d+` only — an
+  accidental `includeSubDomains`, `preload` or `max-age=0` cannot arrive unnoticed —
+  and floors the year at 31536000 seconds. Mutation arm: deleting the entry turned
+  both cases red; restored byte-identical (sha1 82954f1e…), 2/2 green. Verified live
+  against a dev server on a fresh port: a `200` from `/` carried all five headers,
+  HSTS last, under the existing policy and nonce; `tsc` and ESLint stayed clean, and
+  the full frontend suite answers 800 tests, 799 passed, the one red the concurrent
+  session's in-flight `endpoints.test.ts` parity case. The doc-reading gate
+  selection answers 238/238 after SECURITY's new prose.
+
+  `docs/SECURITY.md`'s shell-headers bullet names the value, the one-year pin and
+  why the two stronger directives are the operator's to add; `csp.ts`'s comment now
+  counts five headers.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
