@@ -1106,6 +1106,21 @@ export const translations = {
       permissionDenied: "Permission was not granted, so nothing was registered.",
       failed: "The browser registration could not be saved. Try again.",
     },
+    /**
+     * The calendar card's sentences (34.1). "The address is the credential" is the
+     * one fact the reader has to understand before copying it somewhere else, so the
+     * description says it outright rather than leaving it to the hint.
+     */
+    calendar: {
+      title: "Calendar subscription",
+      description:
+        "Read your reminders in the calendar app you already open. The address below is the whole credential — anyone holding it can read these reminders, and a new secret retires every address at once.",
+      linkLabel: "Your calendar address",
+      copy: "Copy address",
+      loading: "Preparing your address…",
+      loadFailed: "The address could not be prepared. Reload the page and try again.",
+      hint: "Paste it into Google Calendar, Apple Calendar or Outlook under “subscribe from a URL”. A reminder appears on the calendar's next poll, and stays until you clear it here.",
+    },
     memory: {
       description: "Facts the model extracted from your conversations and interviews. Correct a wrong one, or lower its weight — these shape every answer you get.",
       loading: "Loading memories…",
@@ -1315,6 +1330,8 @@ export const translations = {
       BUNDLE_NOT_PLANNABLE: "That file could not be turned into a restore plan.",
 
       BUNDLE_NO_SECTION: "That file has no data section.",
+
+      CALENDAR_LINK_INVALID: "That calendar link is not valid or has been retired.",
 
       COMPANY_NOT_FOUND: "That company is no longer here.",
 
@@ -3480,6 +3497,17 @@ export const translations = {
       permissionDenied: "没有拿到通知权限，所以没有登记。",
       failed: "浏览器注册没能保存。再试一次。",
     },
+    /** 日历卡片的句子（34.1）。“地址就是凭证”是读者把它复制走之前必须知道的一件事。 */
+    calendar: {
+      title: "日历订阅",
+      description:
+        "在你本来就天天打开的日历应用里读你的提醒。下面这个地址就是全部凭证——拿到它的人就能读到这些提醒，而换一次密钥会让所有地址同时作废。",
+      linkLabel: "你的日历地址",
+      copy: "复制地址",
+      loading: "正在准备你的地址……",
+      loadFailed: "地址没能准备好。刷新页面再试一次。",
+      hint: "把它粘进 Google 日历、Apple 日历或 Outlook 的“从网址订阅”。提醒会在日历下一次轮询时出现，并一直留到你在这里清掉它。",
+    },
     /**
      * The auth pages' marketing panel. A visitor who cannot read English
      * lands here first, and this panel is what they are asked to believe.
@@ -3605,6 +3633,8 @@ export const translations = {
       BUNDLE_NOT_PLANNABLE: "这个文件没法变成一份恢复计划。",
 
       BUNDLE_NO_SECTION: "这个文件里没有数据段。",
+
+      CALENDAR_LINK_INVALID: "这个日历订阅链接无效，或已经停用。",
 
       COMPANY_NOT_FOUND: "这家公司已经不在了。",
 

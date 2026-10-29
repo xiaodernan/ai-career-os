@@ -169,6 +169,9 @@ export const endpoints = {
   pushSubscriptions: "/push/subscriptions",
   pushSubscription: (id: string) => `/push/subscriptions/${seg(id)}`,
 
+  /* ---------------- Calendar subscription (34.1) -------------------------- */
+  calendarLink: "/calendar/link",
+
   /** SSE stream for any async AI task (match, tailor, copilot turn, ingestion…) */
   aiStream: (taskId: string) => `/ai/stream/${seg(taskId)}`,
 } as const;

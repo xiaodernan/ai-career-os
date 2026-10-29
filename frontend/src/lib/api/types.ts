@@ -1084,6 +1084,17 @@ export interface PushSubscriptionRow {
   createdAt?: string;
 }
 
+/**
+ * The account's calendar subscription address (34.1).
+ *
+ * A calendar app cannot sign in, so the URL is the whole credential: it carries the
+ * account id and a signature the backend checks on every poll. The screen shows it
+ * once and the browser never calls the feed itself.
+ */
+export interface CalendarLinkRow {
+  url: string;
+}
+
 /* ------------------------------------------------------------------ */
 /* Granular growth engines (10.1-10.13)                               */
 /* ------------------------------------------------------------------ */

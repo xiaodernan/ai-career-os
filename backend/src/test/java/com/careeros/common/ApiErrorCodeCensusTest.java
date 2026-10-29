@@ -79,6 +79,9 @@ class ApiErrorCodeCensusTest {
         org.assertj.core.api.Assertions.assertThat(names).containsExactly(
                 "AI_SERVICE_BAD_REQUEST", "AI_SERVICE_CONFLICT", "AI_SERVICE_EMPTY_RESPONSE", "AI_SERVICE_NOT_FOUND",
                 "AI_SERVICE_UNAVAILABLE", "APPLICATION_NOT_FOUND", "BUNDLE_NOT_PLANNABLE", "BUNDLE_NO_SECTION",
+                // 34.1: the calendar feed's token is a second link credential, and its refusal
+                // is about a subscription a calendar app keeps polling -- its own sentence.
+                "CALENDAR_LINK_INVALID",
                 "COMPANY_NOT_FOUND", "CONFIRMATION_MISMATCH", "CONTACT_NOT_FOUND", "CONVERSATION_NOT_FOUND",
                 // 30.4: a signed-in reader's mistyped current password is not a failed sign-in,
                 // so the four re-authentication sites name this code instead of INVALID_CREDENTIALS.

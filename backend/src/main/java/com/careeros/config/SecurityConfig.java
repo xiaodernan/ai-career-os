@@ -64,6 +64,11 @@ public class SecurityConfig {
                         // the path is the credential. This prefix serves nothing else; a route
                         // added under it is public until it is moved.
                         .requestMatchers("/api/v1/mail/**").permitAll()
+                        // The calendar feed a reader subscribes to (roadmap 34.1): a calendar
+                        // app polls on its own clock and cannot carry a token in a header, so
+                        // the signed query string is the credential. Only this one path is
+                        // public -- the address that hands it out is signed-in.
+                        .requestMatchers("/api/v1/calendar.ics").permitAll()
                         .requestMatchers("/api-docs/**", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/api/v1/health").permitAll()
                         // Observability surface, pinned to the two exposed endpoints rather

@@ -2541,6 +2541,148 @@ another account's tab.
   failures. `docs/API.md`, `docs/architecture.md` §4.7, `docs/DEPLOYMENT.md` and
   the root env examples carry the build-time key.)
 
+## Epic 34 — the reminders leave the app (calendar subscription)
+
+- [x] **34.1** The board's reminders become a calendar the phone already reads.
+
+  (`GET /api/v1/calendar.ics?token=…` is a second reading of `applications`
+  rows that already carry `reminder_at`, rendered per request and stored
+  nowhere, so a reminder edited in the app changes the feed on the calendar's
+  next poll. A calendar client cannot sign in, so the URL is the whole
+  credential: `CalendarLinks` signs the account id under
+  `app.mail.link-secret` with a `careeros-calendar:` purpose prefix, and
+  `SignedLink` holds the shared HMAC code the mail-preferences links already
+  used. The prefixes are what keep the two families apart -- a mail token
+  opens no calendar and a calendar token flips no mail switch -- and rotating
+  the secret retires every address ever handed out, with no per-link row to
+  migrate.
+
+  The document is RFC 5545: one `VEVENT` per reminded application with a
+  stable `UID` (`<application id>@careeros`, so a re-subscribed feed updates
+  rows instead of duplicating them), UTC `DTSTART`, a fixed 30-minute
+  `DTEND`, `TRANSP:TRANSPARENT`, a `DESCRIPTION` and `URL` pointing at the
+  board, and a `DTSTAMP` taken from the row's own `updated_at` (falling back
+  to `created_at`, then the reminder) so a poll that finds nothing changed
+  produces the same document. TEXT values escape backslash, newline,
+  semicolon and comma, and lines fold at 75 octets of UTF-8 -- a Chinese
+  title is where that rule earns its keep. Past reminders stay: the calendar
+  mirrors the board, so an event leaves when the reader clears the reminder.
+  An empty feed is a valid, empty calendar. A forged, retired, missing or
+  erased-account token is one **404** `CALENDAR_LINK_INVALID`, so the open
+  internet cannot tell the cases apart. `GET /calendar/link` is the
+  signed-in half the settings card copies.
+
+  `components/settings/calendar-card.tsx` + `lib/hooks/calendar.ts` are that
+  card: a read-only address, a copy button, and a sentence that says the
+  address is the credential. Gates: `CalendarLinksTest` 7 (determinism, a
+  forged/truncated/unreadable token, the shape-but-wrong-signature token, the
+  mail↔calendar separation, the exact URL, a trailing slash, a blank secret
+  stopping the boot), `CalendarFeedTest` 9 (fields, past reminders kept, role
+  without company, escaping, bilingual calendar name/note, empty calendar,
+  `DTSTAMP` fallbacks, folding/unfolding a long Chinese title),
+  `CalendarControllerTest` 6 (raw ICS with no-store and noindex, locale
+  passthrough, every bad token one 404 with no service call, erased account,
+  the link route, no session a 401). `endpoints.test.ts` lists `/calendar.ics`
+  in `NEVER_REFERENCED` with its reason and moves the measured query surface
+  to 44 parameters in 20 names; the copy census moves to 137 browser
+  sources. `docs/API.md`, `docs/architecture.md`, `docs/DEPLOYMENT.md` and
+  `docs/SECURITY.md` carry the feed and the key's rotation meaning.)
+
+## Epic 34 — The Reminder Leaves the App
+
+Every time on this board lives only inside the product: `reminder_at` turns a row
+red on the dashboard at its hour, and nothing else on the reader's phone knows.
+The calendar is the one app already open, already synced, already shared with a
+partner — and it cannot be told about an account, because it cannot sign in. This
+epic gives the reminders an address: a read-only signed URL a calendar client
+subscribes to, and a settings card that shows it once and says plainly that the
+URL is the credential. The signature is the same HMAC secret the letters'
+unsubscribe links use, under a purpose of its own, so one leaked link cannot
+stand in for the other; rotating the secret retires both families at once.
+
+- [x] **34.1** The account's reminders leave as a calendar feed.
+
+  `common/SignedLink` is the signature both link families now share —
+  HMAC-SHA256 over `purpose + account id`, URL-safe and unpadded, verified in
+  constant time and answering false rather than throwing on anything the open
+  internet can send; `MailLinks` delegates to it unchanged in behavior, and
+  `CalendarLinks` signs `careeros-calendar:` so a mail token cannot open a feed
+  and a feed token cannot flip a mail switch. A blank `app.mail.link-secret`
+  stops the boot. `CalendarLinks.token` is `<account id>.<signature>`, so the id
+  is readable but worthless without the MAC; `account` answers null for a
+  missing, truncated, re-signed or retired URL.
+
+  `CalendarService.feed(account, locale)` reads the rows carrying a
+  `reminder_at` through `findByUserIdAndReminderAtIsNotNullOrderByReminderAtAscIdAsc`
+  and hands them to `CalendarFeed.render`: one `VEVENT` per row, `UID`
+  `<application id>@careeros` so a re-subscription updates rather than
+  duplicates, `DTSTART` the reminder in UTC, a fixed 30-minute `DTEND`,
+  `DTSTAMP` from the row's own `updated_at` (its creation, then the reminder,
+  when a row is unstamped) so an unchanged board renders byte-identically,
+  `SUMMARY` company and title joined by a middle dot (the role alone when no
+  company was recorded), `DESCRIPTION` and `URL` pointing at the apps list, and
+  `TRANSP:TRANSPARENT` so a reminder does not mark the reader busy. TEXT values
+  escape backslash, newline, semicolon and comma; every content line folds at 75
+  UTF-8 octets without splitting a code point, which is where a Chinese company
+  name and a parser meet. Past reminders stay: the feed mirrors the board, so an
+  event leaves when the reader clears the reminder, not when the date slips by.
+  The calendar's name and note follow the account's locale.
+
+  Two routes. `GET /calendar/link` is the signed-in half the settings card
+  reads; `GET /calendar.ics` is the anonymous half — permitAll for that one path
+  only — answering the document itself as `text/calendar;charset=UTF-8` with
+  `Cache-Control: no-store` and `X-Robots-Tag: noindex`, because the body names
+  the reader's applications. The envelope's `byte[]` passthrough is what keeps a
+  calendar client from rejecting a wrapped feed. An unreadable token, a token
+  signed for another account, a retired secret and a token naming an erased
+  account are one 404 `CALENDAR_LINK_INVALID` with one sentence, so the internet
+  cannot grade its guesses; the code joined the frozen enum census, the 404
+  ledger and the browser's copy table.
+
+  Gates: `CalendarFeedTest` 9 (one event per reminder with UID, UTC start,
+  half-hour end, summary, way back and transparency; a past reminder still
+  listed; a company-less row named by its role; the four escaped characters;
+  both languages' name and note; an empty feed still a valid calendar; the stamp
+  from `updated_at` with both fallbacks; a folded Chinese title under 75 octets
+  per physical line and unfolding back to itself), `CalendarLinksTest` 7 (one
+  account one address, another another; forged, truncated, empty, null,
+  non-base64 and rotated-secret tokens all null; a well-shaped token with an
+  unknown MAC null; mail and calendar tokens refused by each other's reader;
+  absolute address and trailing slash; blank secret refuses the boot),
+  `CalendarControllerTest` 6 (the document raw with no-store and noindex; the
+  account's locale reaching the service; forged, foreign, unreadable and missing
+  tokens all the same 404 with no service call; an erased account the same 404;
+  the signed-in account handed the address that signs back to it; no session, no
+  address). Twenty-two tests. Mutation arm: `account` returning the parsed id
+  without checking the MAC turned 3 of 13 red — two `CalendarLinksTest` cases
+  and the controller's forged-token case, answered 200 — and the restored file
+  is byte-identical (sha1 607bd77b…).
+
+  SUITE_RESULT_PLACEHOLDER
+
+  The doc-gate selection answered 74 tests with one red: `types.ts`'s union pin,
+  which the concurrent lane's `CalendarLinkRow` had moved eleven lines; re-aimed
+  with the reason. The same selection exposed drift the push units outran, and
+  this unit repaired it in passing: the message-token census's twenty rows (the
+  worker's DOM `message` event classified as `dom-event-name`), the lifetimes
+  census's fourth TTL field (`presignedUrlTtlSeconds`) and the VAPID comment's
+  bare "24 hours" reworded off the ledger, the prod command's optional
+  `NEXT_PUBLIC_VAPID_PUBLIC_KEY` build arg declared as the one defaulted
+  interpolation, and `PUSH_SUBSCRIPTION_NOT_FOUND` missing from the 404 ledger.
+  `docs/API.md`, `docs/SECURITY.md`, `docs/DEPLOYMENT.md` and
+  `docs/architecture.md` §4.7 carry the route, its semantics and the rotation
+  meaning. The browser's copy line for `CALENDAR_LINK_INVALID` sits in the
+  shared `translations.ts` the concurrent lane is editing for 34.2, so it rides
+  that unit's commit rather than being split out of a file two sessions hold.
+
+- [ ] **34.2** The settings page hands out the calendar address.
+
+  `Settings → Calendar` gets a read-only address and a copy button, with the
+  sentence that matters beside it: whoever holds the link reads these reminders,
+  and a rotated secret retires every address at once. The browser never fetches
+  the feed itself; it asks the backend to sign a URL and puts it where the reader
+  can paste it into Google Calendar, Apple Calendar or Outlook.
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

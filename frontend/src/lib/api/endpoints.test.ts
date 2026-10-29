@@ -812,6 +812,8 @@ describe("endpoints ↔ backend route parity", () => {
    */
   const NEVER_REFERENCED: Record<string, string> = {
     "/health": "liveness for the container probe, not something a page calls",
+    "/calendar.ics":
+      "the feed address is pasted into a calendar client, not fetched by the browser; the settings card copies the URL the backend already signed",
     "/me": "MeController's alias of /users/me; the client spells every call through /users/...",
     "/resume-versions/{}": "the version panel reads the list form /resume-versions?resumeId=…",
     "/resumes/{}/versions": "superseded for the panel by GET /resume-versions?resumeId=…",
@@ -1127,24 +1129,25 @@ describe("endpoints ↔ backend route parity", () => {
     expect(new Set(handlers.map((h) => `${h.verb} ${h.pattern}`)).size).toBe(handlers.length);
     expect(handlers.flatMap((h) => h.unparsed)).toEqual([]);
     const bound = handlers.flatMap((h) => h.params);
-    expect(bound.length).toBe(43);
-    // 43 parameters in 19 distinct names, measured: the reader's whole answer rather than a spot
+    expect(bound.length).toBe(44);
+    // 44 parameters in 20 distinct names, measured: the reader's whole answer rather than a spot
     // check, so a signature shape it stops understanding shrinks this set instead of passing quiet
     // (#225 retired `limit` from `/activity/runs`, which now pages like every other list route;
     // 19.2 brought the name back for `GET /ingestion/runs` as a newest-N history, and 19.5 retired
     // it again -- the runs panel pages, so the route binds page/size like every other list; 20.1's
-    // nightly history is one more page/size list, 41 -> 43, both names already in this set)
+    // nightly history is one more page/size list, 41 -> 43, both names already in this set;
+    // 34.1's calendar feed binds `token`, the anonymous half's only credential, 43 -> 44)
     expect(new Set(bound.map((p) => p.name))).toEqual(
       new Set([
         "agent", "company", "documentId", "file", "kind", "kinds", "locale",
         "location", "maxSalary", "minSalary", "page", "q", "remote", "resumeId", "size",
-        "skills", "sort", "status", "title",
+        "skills", "sort", "status", "title", "token",
       ])
     );
-    // six of them spell the name Spring matches on inside the annotation, so the reader's attribute
+    // seven of them spell the name Spring matches on inside the annotation, so the reader's attribute
     // path is exercised by real source rather than by the variable name that happens to agree
     expect(bound.filter((p) => p.spelledInAttribute).map((p) => p.name).sort()).toEqual([
-      "file", "file", "locale", "maxSalary", "minSalary", "resumeId",
+      "file", "file", "locale", "maxSalary", "minSalary", "resumeId", "token",
     ]);
     // The whole answer of the helper the required-parameter rule consumes, route-qualified. Without
     // this the rule would be green because it found nothing to ask for — and the multipart

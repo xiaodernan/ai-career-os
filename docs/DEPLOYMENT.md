@@ -510,6 +510,17 @@ the dashboard still files the week's letter — the preference silences the mail
 not the archive. The app refuses to start when the secret is blank: an HMAC with
 no key would make every account's link forgeable.
 
+Rotating `APP_MAIL_LINK_SECRET` also retires every calendar feed (34.1). The
+feed is `/api/v1/calendar.ics` with the address's `token` query parameter, and
+its token is the same HMAC of the
+account id under the same secret, signed with a separate prefix so the two
+surfaces cannot be exchanged. A reader whose calendar app stops updating after a
+rotation pastes a fresh address from Settings → Calendar; nothing else carries
+over, because nothing about a link is stored. If a feed URL leaked, rotate the
+secret: that is the only revocation this surface has, short of deleting the
+account, and it costs every mailed unsubscribe link too — so rotate for a real
+disclosure, not for a hunch.
+
 The inbox's signals ride the same transport (22.1). Every morning at 07:30 UTC a
 sweep asks each account what is waiting — unread in the app and never mailed — and
 sends one plain-text letter naming up to ten items, counting the rest, with links

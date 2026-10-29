@@ -52,7 +52,12 @@ reachable from a browser.
   signed-link mail-settings page `/api/v1/mail/**` (its path is its own
   credential — an HMAC-SHA256 of the account id under `app.mail.link-secret`,
   compared in constant time; forge one and the route is a 404, but it still
-  answers without a session so a mailbox can unsubscribe in one click), and the
+  answers without a session so a mailbox can unsubscribe in one click), the
+  calendar feed `/api/v1/calendar.ics` (a calendar app cannot hold a session, so
+  the `token` query parameter is the credential — the same HMAC and secret as the
+  mail links, domain-separated by a different signed prefix, constant-time
+  compared; a forged, retired or erased-account token is a 404 and rotating the
+  secret retires every handed-out feed), and the
   internal surface `/api/internal/**` (guarded below).
 
 ## Service-to-service authentication (ai-service)

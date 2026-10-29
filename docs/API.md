@@ -356,13 +356,52 @@ inbox mail. No row means both are on. The GET only renders the page — mail
 scanners prefetch links, so a read that flipped a switch would unsubscribe readers
 who never clicked — and every change is a POST that answers the re-rendered page.
 These routes are the signed-link surface and are the only `/api/v1` paths besides
-auth, health and the metrics scrape that need no bearer token.
+auth, health, the metrics scrape and the calendar feed that need no bearer token.
 
 | Method | Path | Notes |
 |---|---|---|
 | GET | `/mail/preferences/{userId}/{token}` | the settings page as HTML with Cache-Control: no-store and X-Robots-Tag: noindex, in the account's language, showing both dials; changes nothing, and an unreadable id or a signature that is not this account's is a **404** `MAIL_LINK_INVALID` |
 | POST | `/mail/preferences/{userId}/{token}/stop/{list}` | turns `list` (`weekly` or `signals`) off and answers the re-rendered page with a saved notice; a forged token or unknown list is a **404** `MAIL_LINK_INVALID` |
 | POST | `/mail/preferences/{userId}/{token}/start/{list}` | turns `list` back on and answers the re-rendered page with a saved notice |
+
+### Calendar feed (`/calendar`)
+
+The account's reminders as a read-only calendar (roadmap 34.1). A calendar app
+cannot hold a session, so the feed is a link and the link is the credential, the
+same way the mail-preferences page works: the `token` is the account id and its
+signature, an HMAC-SHA256 under `app.mail.link-secret` signed with a
+calendar-specific prefix, nothing is stored per link, and rotating the secret
+retires every address that was ever handed out. `GET /calendar/link` is where a
+signed-in account obtains its own URL — it is the settings card's copy target,
+not a form of its own.
+
+The document is RFC 5545: one `VEVENT` per application that carries a
+`reminder_at`, with a stable `UID` (`<application id>@careeros`, so a
+re-subscribed feed updates rows instead of duplicating them), `DTSTART` as the
+reminder in UTC, a fixed 30-minute `DTEND`, and a `DTSTAMP` taken from the row's
+own `updated_at` (falling back to `created_at`, then the reminder itself), so a
+poll that finds nothing changed produces the same document. `SUMMARY` is company
+and title joined by a middle dot, or the role alone when the row has no company,
+and `TRANSP:TRANSPARENT` keeps a reminder from marking the reader busy. Both
+`DESCRIPTION` and `URL` point at the apps list on `app.web.base-url`. Lines are
+CRLF and fold at 75 octets, and TEXT values escape backslash, newline, semicolon
+and comma, so a company name with punctuation survives the parser. The
+calendar's name and note follow the account's locale.
+
+Past reminders stay: the feed mirrors the board, so an event leaves the calendar
+when the reader clears the reminder, not when the date slips by. An empty feed is
+a valid, empty calendar, not an error. The answer is `text/calendar;charset=UTF-8`
+with `Cache-Control: no-store` and `X-Robots-Tag: noindex`, and it is the raw
+document rather than the usual JSON envelope — a calendar client parses the body
+as ICS, so wrapping it would make the feed unreadable. An erased account has no
+feed: a token that parses but names a deleted account is the same **404**
+`CALENDAR_LINK_INVALID` as a forged, retired or missing one, so the open internet
+cannot tell the two apart.
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/calendar.ics` | the account's reminders as an RFC 5545 document; `token` is the credential, and a forged, retired, missing or erased-account token is a **404** `CALENDAR_LINK_INVALID` |
+| GET | `/calendar/link` | the signed feed URL for the signed-in account — the settings card's copy target |
 
 ### Growth engines (`/growth`)
 

@@ -1,13 +1,8 @@
 package com.careeros.mail.service;
 
-import java.nio.charset.StandardCharsets;
-import java.security.GeneralSecurityException;
-import java.security.MessageDigest;
-import java.util.Base64;
+import com.careeros.common.SignedLink;
 import java.util.Map;
 import java.util.UUID;
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -33,7 +28,6 @@ public class MailLinks {
     static final String LIST_UNSUBSCRIBE = "List-Unsubscribe";
     static final String LIST_UNSUBSCRIBE_POST = "List-Unsubscribe-Post";
 
-    private static final String ALGORITHM = "HmacSHA256";
     private static final String PREFIX = "careeros-mail-preference:";
 
     private final String secret;
@@ -71,14 +65,7 @@ public class MailLinks {
 
     /** The per-account signature, URL-safe and unpadded so a mail client never re-encodes it. */
     public String token(UUID userId) {
-        try {
-            Mac mac = Mac.getInstance(ALGORITHM);
-            mac.init(new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), ALGORITHM));
-            byte[] signature = mac.doFinal((PREFIX + userId).getBytes(StandardCharsets.UTF_8));
-            return Base64.getUrlEncoder().withoutPadding().encodeToString(signature);
-        } catch (GeneralSecurityException e) {
-            throw new IllegalStateException("HMAC-SHA256 is unavailable", e);
-        }
+        return SignedLink.token(secret, PREFIX, userId);
     }
 
     /**
@@ -87,17 +74,7 @@ public class MailLinks {
      * it arrives from the open internet.
      */
     public boolean valid(UUID userId, String token) {
-        if (token == null || token.isBlank()) {
-            return false;
-        }
-        byte[] presented;
-        try {
-            presented = Base64.getUrlDecoder().decode(token);
-        } catch (IllegalArgumentException e) {
-            return false;
-        }
-        byte[] expected = Base64.getUrlDecoder().decode(token(userId));
-        return MessageDigest.isEqual(expected, presented);
+        return SignedLink.valid(secret, PREFIX, userId, token);
     }
 
     /**

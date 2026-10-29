@@ -61,6 +61,14 @@ public enum ApiErrorCode {
      * about a letter's link, not an address.
      */
     MAIL_LINK_INVALID(HttpStatus.NOT_FOUND),
+    /**
+     * The calendar feed's token is unreadable, signed with a retired secret, a mail link's token
+     * rather than this purpose's, or names an account that no longer exists. One answer for all
+     * four: a calendar client handed a retired URL stops polling, and the open internet cannot
+     * grade its guesses. Its own code because the sentence is about a subscription URL, not an
+     * address.
+     */
+    CALENDAR_LINK_INVALID(HttpStatus.NOT_FOUND),
     AI_SERVICE_NOT_FOUND(HttpStatus.NOT_FOUND),
     USER_NOT_FOUND(HttpStatus.NOT_FOUND),
     PROFILE_NOT_FOUND(HttpStatus.NOT_FOUND),

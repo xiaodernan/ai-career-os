@@ -63,8 +63,9 @@ describe("the browser's copy", () => {
     // `components/monitoring/nightly-history.tsx`, the card the nightly job's
     // own results are read from (20.1), and 136 with
     // `components/settings/push-card.tsx`, the switch that rings this browser
-    // (33.4).
-    expect(browserSources().length).toBe(136);
+    // (33.4), and 137 with `components/settings/calendar-card.tsx`, the address
+    // the reader pastes into a calendar app (34.1).
+    expect(browserSources().length).toBe(137);
   });
 
   it("finds a sentence, however long it is", () => {

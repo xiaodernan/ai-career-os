@@ -350,6 +350,23 @@ names its own company still wins. The engine's normalizer maps both payloads
 sweep and a hand paste take the same road; a commitment word outside the
 canonical four keeps the default rather than inventing a value.
 
+The calendar feed (34.1) adds no table: it is a second reading of `applications`
+rows that already carry `reminder_at`. `GET /api/v1/calendar.ics`, with the
+address's `token` query parameter, is rendered per request and stored nowhere, so
+a reminder edited in the app changes the feed on the calendar's next poll. The
+token is the account id and its signature, an HMAC-SHA256 under
+`app.mail.link-secret` with a domain-separating prefix, so a mail-preferences
+token cannot open the feed and a feed token cannot flip a mail switch; the URL is
+therefore the whole credential, which is what lets a calendar client with no
+session subscribe. Each entry is one `VEVENT` keyed by `<application id>@careeros`
+with `DTSTAMP` taken from the row's own `updated_at` (its creation, then the
+reminder, when a row is unstamped) — stable across polls, because a stamp of
+"now" would make every fetch look like the event changed. Past reminders stay:
+the document mirrors the board, so an event leaves when the reader clears the
+reminder. The response is `text/calendar` bytes, not the JSON envelope: the
+advice that wraps every body passes `byte[]` through untouched, which is the same
+door the hosted mail page uses for HTML.
+
 ## 5. Backend (Spring Boot) design
 
 - Java 21 / Spring Boot 3.5, Spring Security (JWT access 15m + refresh rotation),

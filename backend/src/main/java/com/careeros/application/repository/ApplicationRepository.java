@@ -20,6 +20,12 @@ public interface ApplicationRepository extends JpaRepository<Application, UUID> 
 
     List<Application> findByUserIdAndJobId(UUID userId, UUID jobId);
 
+    /**
+     * The rows the calendar feed speaks for (roadmap 34), in the order a day lists them: a row
+     * with no {@code reminder_at} is not a time the reader ever wrote down, so it has no event.
+     */
+    List<Application> findByUserIdAndReminderAtIsNotNullOrderByReminderAtAscIdAsc(UUID userId);
+
     long countByUserId(UUID userId);
 
     long countByUserIdAndStatus(UUID userId, String status);

@@ -183,20 +183,21 @@
       前端构建参数，一个变量填两半。27 + 1 个前端测试，829 个前端测试 / 77 文件
       全绿，`tsc` 干净；copy census 136。
 
-12. **Epic 34 — 提醒离开应用（日历订阅）**
-    现在所有时间都只在产品里：申请的 `reminder_at` 只在仪表盘上到点变红，
-    读者的日历（手机、系统日历、与他人共享的日历）不知道这些时刻。docs 里
-    calendar / ICS 尚无一字实现。计划：
-    - 后端加一条只读的 `GET /api/v1/calendar.ics?token=…`（无会话；token 与
-      退订链接同一套 `APP_MAIL_LINK_SECRET` 的 HMAC "链接即凭证"语义，轮换密钥
-      即作废所有链接），把该账号每个带 `reminder_at` 的申请导成 RFC 5545 的
-      `VEVENT`（`UID` 由申请 id 稳定生成、`DTSTAMP` 固定、UTC `DTSTART`、
-      `SUMMARY` 公司+职位、`DESCRIPTION` 指向应用内页面）。
-    - 设置页给出订阅地址与"复制链接"（卡片说明持有链接即可读，和退订链接一样
-      可轮换作废）。
-    - 测试：VEVENT 的字段与转义（逗号、分号、换行按 RFC 折行）、token 伪造
-      404、跨用户不串行、空日历合法、已过期提醒的处理；前端链接构造与复制。
-    - 文档：API.md 新路由与错误、DEPLOYMENT 的密钥轮换含义、ROADMAP 勾选。
+12. ~~**Epic 34 — 提醒离开应用（日历订阅）**~~ 已完成：
+    后端 `GET /api/v1/calendar.ics?token=…`（无会话，链接即凭证）把该账号每个
+    带 `reminder_at` 的申请导成 RFC 5545 文档。新建的 `SharedLink` 抽出 HMAC
+    工具，邮件退订与日历共用 `APP_MAIL_LINK_SECRET` 但以用途前缀域分离（两种
+    token 互不通用，轮换密钥同时作废全部地址）；`UID` 稳定（改订阅是更新而非
+    复制）、`DTSTAMP` 取行自身 `updated_at`（回退 `created_at` 再回退提醒时刻，
+    轮询不产生假变更）、30 分钟 `DTEND`、`TRANSP:TRANSPARENT`、75 字节折行与
+    TEXT 转义（中文长标题按八位组折，不切半个字）。过期提醒保留——日历是看板
+    的镜像，清空提醒才消失；空日历合法；伪造、轮换、缺失与已删账号统一 404
+    `CALENDAR_LINK_INVALID`，响应 `text/calendar` + `no-store` + `noindex`。
+    `GET /calendar/link` 给设置卡片签名地址；前端 `useCalendarLink` +
+    `calendar-card.tsx`（只读地址 + 复制，双语键），`endpoints.test` 的
+    `NEVER_REFERENCED` 记下"浏览器从不自己请求 feed"的理由。门禁随人口移动
+    （copy census 137、查询参数 44/20）。22 个日历后端测试；API.md、
+    architecture.md、DEPLOYMENT、SECURITY 同批更新。
 
 ## 开发协议（每个任务）
 

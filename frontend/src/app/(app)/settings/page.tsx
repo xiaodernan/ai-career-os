@@ -8,6 +8,7 @@ import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { CareerProfileCard, CareerProfileMapsCard } from "@/components/settings/profile-cards";
 import { MemoryCard } from "@/components/settings/memory-card";
 import { PushCard } from "@/components/settings/push-card";
+import { CalendarCard } from "@/components/settings/calendar-card";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -163,6 +164,9 @@ export default function SettingsPage() {
 
       {/* The bell outside the tab (33.4) */}
       <PushCard />
+
+      {/* The reminders outside the app (34.1) */}
+      <CalendarCard />
 
       {/* Keyboard */}
       <Card>
