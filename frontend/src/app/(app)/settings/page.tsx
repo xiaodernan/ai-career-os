@@ -9,6 +9,7 @@ import { CareerProfileCard, CareerProfileMapsCard } from "@/components/settings/
 import { MemoryCard } from "@/components/settings/memory-card";
 import { PushCard } from "@/components/settings/push-card";
 import { CalendarCard } from "@/components/settings/calendar-card";
+import { SecurityCard } from "@/components/settings/security-card";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -115,6 +116,9 @@ export default function SettingsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* The second door (36.4) */}
+      <SecurityCard />
 
       {/* Career profile */}
       <CareerProfileCard />

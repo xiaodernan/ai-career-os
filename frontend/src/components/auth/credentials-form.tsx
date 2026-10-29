@@ -6,9 +6,11 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { AuthField } from "@/components/auth/auth-field";
 import { Button } from "@/components/ui/button";
+import { ApiError } from "@/lib/api/client";
 import { issueText, type Translate } from "@/lib/i18n/issue";
 import {
   authFormErrorMessage,
+  codeIssue,
   confirmationIssue,
   displayNameIssue,
   emailIssue,
@@ -17,7 +19,7 @@ import {
 import { useLogin, useRegister } from "@/lib/hooks/auth";
 
 export interface FieldConfig {
-  name: "displayName" | "email" | "password" | "confirmPassword";
+  name: "displayName" | "email" | "password" | "confirmPassword" | "code";
   labelKey: string;
   type: string;
   autoComplete: string;
@@ -27,6 +29,22 @@ export interface FieldConfig {
   placeholderKey?: string;
   validate?: (v: string, all: Record<string, string>, t: Translate) => string | undefined;
 }
+
+/**
+ * The sign-in screen's second step (36.4).
+ *
+ * It is drawn only after the API refused the password with `MFA_REQUIRED`, which is the
+ * one 401 that means the password was right, and it accepts a six-digit code or a printed
+ * recovery code. The register screen never draws it: a new account has no factor.
+ */
+const challengeField: FieldConfig = {
+  name: "code",
+  labelKey: "auth.code",
+  type: "text",
+  autoComplete: "one-time-code",
+  placeholderKey: "auth.codePlaceholder",
+  validate: (v, _all, t) => issueText(codeIssue(v), t),
+};
 
 const baseFields: FieldConfig[] = [
   {
@@ -72,7 +90,6 @@ const registerFields: FieldConfig[] = [
 export function CredentialsForm({ mode, notice }: { mode: "login" | "register"; notice?: string }) {
   const { t } = useLocale();
   const isLogin = mode === "login";
-  const fields = isLogin ? baseFields : registerFields;
   const login = useLogin();
   const register = useRegister();
   const mutation = isLogin ? login : register;
@@ -80,6 +97,18 @@ export function CredentialsForm({ mode, notice }: { mode: "login" | "register"; 
   const [values, setValues] = React.useState<Record<string, string>>({});
   const [errors, setErrors] = React.useState<Record<string, string | undefined>>({});
   const [touched, setTouched] = React.useState<Record<string, boolean>>({});
+  const [challenge, setChallenge] = React.useState(false);
+
+  const fields = isLogin && challenge ? [...baseFields, challengeField] : isLogin ? baseFields : registerFields;
+
+  // `MFA_REQUIRED` is a 401 from an account whose password was right. The error is read
+  // here rather than in the shared onError because the two mutations share that handler,
+  // and register must never draw a code field.
+  React.useEffect(() => {
+    if (login.error instanceof ApiError && login.error.code === "MFA_REQUIRED") {
+      setChallenge(true);
+    }
+  }, [login.error]);
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,7 +125,10 @@ export function CredentialsForm({ mode, notice }: { mode: "login" | "register"; 
         onError: (err: unknown) => toast.error(authFormErrorMessage(err)),
     };
     if (isLogin) {
-      login.mutate({ email: values.email, password: values.password }, handlers);
+      login.mutate(
+        { email: values.email, password: values.password, code: challenge ? values.code : undefined },
+        handlers
+      );
     } else {
       register.mutate(
         { displayName: values.displayName, email: values.email, password: values.password },
@@ -122,6 +154,9 @@ export function CredentialsForm({ mode, notice }: { mode: "login" | "register"; 
         <p className="text-sm text-muted-foreground">
           {isLogin ? t("auth.loginBlurb") : t("auth.registerBlurb")}
         </p>
+        {isLogin && challenge ? (
+          <p className="text-sm text-muted-foreground">{t("auth.codeHint")}</p>
+        ) : null}
       </header>
 
       <form onSubmit={onSubmit} noValidate className="space-y-4">
@@ -139,7 +174,15 @@ export function CredentialsForm({ mode, notice }: { mode: "login" | "register"; 
               error={touched[f.name] ? errors[f.name] : undefined}
               onChange={(e) => {
                 const v = e.target.value;
-                setValues((prev) => ({ ...prev, [f.name]: v }));
+                // A different address may be a different account: the step the server asked
+                // for belongs to the one whose password was just checked. Dropping the step
+                // here also leaves the reader a way back to a two-field sign-in.
+                if (f.name === "email" && challenge) {
+                  setChallenge(false);
+                  setValues((prev) => ({ ...prev, email: v, code: "" }));
+                } else {
+                  setValues((prev) => ({ ...prev, [f.name]: v }));
+                }
                 if (touched[f.name]) {
                   setErrors((prev) => ({ ...prev, [f.name]: f.validate?.(v, { ...values, [f.name]: v }, t) }));
                 }

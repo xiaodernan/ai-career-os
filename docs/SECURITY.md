@@ -42,6 +42,23 @@ reachable from a browser.
     change, and mails both addresses the outcome; a link that is unknown, spent,
     expired or ownerless is one `EMAIL_CHANGE_INVALID`, so the public route is
     no existence oracle.
+- The second factor (roadmap 36.1-36.4) is a TOTP seed **sealed at rest** with
+  AES-256-GCM under `APP_MFA_SECRET`, plus ten single-use recovery codes stored
+  only as BCrypt hashes. The seed leaves the backend exactly once, in the answer
+  to the enroll that minted it (`secret` plus the `otpauth://` URI); the status
+  read reports flags and the count of unspent printed codes, never the seed or
+  the codes. Activating, reprinting and turning the factor off each ask for the
+  account's password again, so a borrowed session cannot bolt a phone onto the
+  account, reprint a sheet, or quietly remove the door. A lost phone costs one
+  printed code: sign in with it (a printed code answers the login's code field
+  and is burned), then reprint or disable from settings, which needs one more
+  printed code — the sheet is what makes the factor survivable, and it is shown
+  once, at activation or reprint. Rotating `APP_MFA_SECRET` is **not** a routine
+  rotation: every stored seed becomes unreadable, and because the login opens the
+  seed before it tries the printed set, even a recovery code is refused. The
+  answer is to restore the old secret, or to delete the affected `user_mfa` rows
+  — the operator-assisted path the runbook spells out — so the accounts return to
+  password-only sign-in and can enroll again.
 - Public (unauthenticated) routes: `/api/v1/auth/**`, `/api/v1/health`,
   OpenAPI/Swagger (`/api-docs/**`, `/v3/api-docs/**`, `/swagger-ui/**`,
   `/swagger-ui.html` — `application.yml` serves them at `/api-docs` and
@@ -360,6 +377,9 @@ traces: `{ success: false, error: { code, message, details[] } }` (written by
 
 - Set a unique, long `JWT_SECRET`, `APP_MAIL_LINK_SECRET`, `APP_MFA_SECRET` and
   `INTERNAL_API_TOKEN`; never reuse the `.env.example` values.
+- Treat `APP_MFA_SECRET` as a sealing key, not a casually rotatable one: every stored
+  seed was sealed under it, so rotating it locks every enrolled account out until the
+  rows are re-sealed or deleted (see the runbook's lockout section).
 - `APP_ENV=prod` (this also hard-blocks the `mock` LLM provider at boot, and makes the
   backend refuse to start on any published, `CHANGE_ME` or empty signing secret,
   database password or object-store credential — finding #4).

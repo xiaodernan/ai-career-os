@@ -2850,7 +2850,7 @@ password in the database.
   `/me/mfa/disable`, each saying the 36.4 security card is the caller -- because
   `endpoints.test.ts` measures Spring's table, not a hand-copied list.
 
-- [ ] **36.4** The reader can see and turn the door from settings, and answer it at login.
+- [x] **36.4** The reader can see and turn the door from settings, and answer it at login.
 
   A security card: status, enroll (the seed in spaced groups plus the `otpauth://`
   URI to copy, a code field, and a sentence that says to keep the recovery codes
@@ -2860,6 +2860,48 @@ password in the database.
   both languages, the browser's error table, `API.md` and `SECURITY.md` (what the
   seed sees, what a lost phone costs, what rotation of the secret does), and the
   runbook's "an account is locked out of its second factor" section.
+
+  Landed with three decisions the outline left open. The card is a section of the
+  settings page, not a route of its own, and it keeps one cached status (`["mfa"]`,
+  a minute of staleness) that every write invalidates: the answer to activation is
+  a fresh recovery sheet, not a new status, so nothing is patched locally and the
+  card cannot show a factor it just turned off. The login's second step is driven
+  by the refusal itself -- the form draws the code field only when the server
+  answers `MFA_REQUIRED`, which happens after the password matched -- so no status
+  preflight runs on a page strangers can visit, and a reader without a factor never
+  sees a field they cannot answer; changing the email clears the challenge and the
+  field, because a step left open would strand someone signing into a different
+  account. And `MFA_REQUIRED` gained its own sentence ahead of the generic 401 rule
+  in the recovery module: the generic rule would have replaced "enter the code from
+  your authenticator" with advice about an expired session, which is the one thing
+  that answer is saying it is not.
+
+  The card's states are the server's answer. Off offers Start; pending offers Start
+  over (a fresh seed replaces the unproven one) and says no code has proven the seed
+  yet; on offers Replace and Turn off and says how many printed codes remain.
+  Activation, reprint and disable each take the password and a code -- six digits,
+  or a printed code where the route accepts one -- and a recovery sheet, when an
+  answer carries one, is shown once with a copy-all and a Done button that drops it
+  from the page. The verbs speak from the keys `failures.mfa*` while a known code
+  (`MFA_INVALID`, `RATE_LIMITED`, `MFA_NOT_ENROLLED`) keeps its own sentence, so a
+  reader who mistyped a digit is told that, not "the write failed".
+
+  Measured: the new helper suite `mfa.test.ts` (8: the spaced seed, the printable
+  sheet, and the three field checks), `auth-recovery.test.ts` (35, three new: the
+  empty/whitespace code issue, six digits and a printed code both accepted, and
+  `MFA_REQUIRED` winning before the 401 rule); `copy-census` pins 138 files with
+  `security-card.tsx` named; the endpoint ledger lost its five MFA rows because they
+  now have a caller, and re-measures 65 request call sites; `translations` and
+  `used-keys` carry every new key in both languages; the full browser suite is 79
+  files / 842 tests and `tsc --noEmit` is clean. The census gates follow the new
+  population: `test_failed_mutation_is_announced` reads 86 mutation sites in twelve
+  files (80 announcing at the hook, the same six quiet, 77 `fail` uses),
+  `test_cache_writes_ship_what_the_key_owner_produces` files the four writes in an
+  eighth file, `test_invalidated_keys_are_queries_screens_mount` reads 50 promises,
+  every one naming a declared key and matching a query a screen mounts, and
+  `test_auth_controller_request_contract` reads the optional `code` through the
+  payload's `?` and pins login's keys as `[email, password, code]`. No Java changed
+  in this unit, so the backend counts are 36.3's.
 
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +

@@ -95,6 +95,18 @@ export function confirmationIssue(value: string, password: string): TextIssue | 
 }
 
 /**
+ * What to show under the sign-in screen's second-step field.
+ *
+ * The field is only drawn after the password matched an enrolled account, and it accepts
+ * either a six-digit code or a printed recovery code -- so the screen refuses emptiness
+ * and leaves the shape to the server, which is the only side that can tell a wrong code
+ * from a malformed one without naming which accounts are enrolled.
+ */
+export function codeIssue(value: string): TextIssue | undefined {
+  return value.trim() ? undefined : { key: "auth.issues.codeRequired" };
+}
+
+/**
  * The token the reset mail carries, read out of a location search string.
  *
  * `null` means "this link cannot work", and the screen says so before the user picks a
@@ -142,10 +154,18 @@ function genericFailure(): string {
  * which of the two fields was wrong without telling an attacker which one was
  * right, so the API's "Invalid credentials" and the form's "Incorrect email or
  * password" are the same claim at different volumes — one friendly, one a leak.
+ *
+ * `MFA_REQUIRED` is the exception, and it is a 401 too: the password was right and
+ * the account is asking for its second step. Swallowing it as "incorrect email or
+ * password" would send the reader back to a field that already passed and hide the
+ * one the screen is about to draw, so its own sentence wins before the status rule.
  * Everything else (validation messages, the network, the unknown) is the recovery
  * describer's answer, composed rather than re-spelled.
  */
 export function authFormErrorMessage(err: unknown): string {
+  if (err instanceof ApiError && err.code === "MFA_REQUIRED") {
+    return translate("errorCodes.MFA_REQUIRED") ?? err.message;
+  }
   if (err instanceof ApiError
       && (err.code === "INVALID_CREDENTIALS" || err.status === 401)) {
     return translate("errorCodes.INVALID_CREDENTIALS") ?? "Incorrect email or password.";

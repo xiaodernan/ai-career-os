@@ -408,9 +408,35 @@ export async function postSSE<T>(
 export interface LoginPayload {
   email: string;
   password: string;
+  /**
+   * The second factor (36.4): six digits from the authenticator, or a printed recovery
+   * code. Absent while the account may have no factor; the sign-in screen adds it only
+   * after `MFA_REQUIRED` says the password matched an enrolled account. An `undefined`
+   * code is dropped by `JSON.stringify`, so the no-factor login still posts two keys.
+   */
+  code?: string;
 }
 export interface RegisterPayload extends LoginPayload {
   displayName: string;
+}
+
+/** The second door's status, as `GET /me/mfa` answers it. */
+export interface MfaStatus {
+  enabled: boolean;
+  pending: boolean;
+  recoveryCodesRemaining: number;
+}
+
+/** The seed and the `otpauth://` URI are two spellings of the same secret, shown once. */
+export interface MfaEnrollment {
+  secret: string;
+  otpauthUri: string;
+}
+
+/** The password plus a code: what activation, a reprint and a turn-off each verify. */
+export interface MfaProof {
+  password: string;
+  code: string;
 }
 
 export const authApi = {
@@ -473,6 +499,42 @@ export const authApi = {
   me(): Promise<User> {
     return request<User>(endpoints.auth.me);
   },
+};
+
+/* ------------------------------------------------------------------ */
+/* The second door (36.1-36.4)                                         */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The MFA management surface, behind the signed-in session.
+ *
+ * Every write posts its keys literally: the browser's body gate reads these call sites
+ * and holds each name against the record the route binds, so the two cannot drift. The
+ * two POSTs that answer recovery codes carry the only copy of that sheet -- the database
+ * keeps hashes -- so the screen that calls them has to show it before dropping it.
+ */
+export const mfaApi = {
+  status: () => request<MfaStatus>(endpoints.mfa),
+
+  enroll: () => request<MfaEnrollment>(endpoints.mfaEnroll, { method: "POST" }),
+
+  activate: (proof: MfaProof) =>
+    request<{ recoveryCodes: string[] }>(endpoints.mfaActivate, {
+      method: "POST",
+      body: { password: proof.password, code: proof.code },
+    }),
+
+  reissueRecoveryCodes: (proof: MfaProof) =>
+    request<{ recoveryCodes: string[] }>(endpoints.mfaRecoveryCodes, {
+      method: "POST",
+      body: { password: proof.password, code: proof.code },
+    }),
+
+  disable: (proof: MfaProof) =>
+    request<{ disabled: boolean }>(endpoints.mfaDisable, {
+      method: "POST",
+      body: { password: proof.password, code: proof.code },
+    }),
 };
 
 /* ------------------------------------------------------------------ */

@@ -24,8 +24,11 @@ import org.springframework.stereotype.Component;
  *
  * <p>Failure is {@link IllegalStateException}, not a checked exception: there is no request a
  * caller can make to fix it. The two causes are a rotated {@code app.security.mfa-secret} and a
- * damaged row, and both mean the same thing to the account -- this seed cannot be read, so the
- * account has to enroll again (roadmap 36.3's disable is the door back in).
+ * damaged row, and both mean the same thing to the account -- this seed cannot be read. A printed
+ * recovery code does not help either: the proof opens the seed before it tries the printed set, so
+ * the login and every proof route refuse. The operator path is the runbook's lockout section --
+ * restore the old secret, or delete the account's {@code user_mfa} and
+ * {@code user_mfa_recovery_codes} rows so it returns to password-only sign-in.
  */
 @Component
 public class MfaSecretCipher {

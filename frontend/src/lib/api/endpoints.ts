@@ -172,6 +172,14 @@ export const endpoints = {
   /* ---------------- Calendar subscription (34.1) -------------------------- */
   calendarLink: "/calendar/link",
 
+  /* ---------------- The second door (36.1-36.4) --------------------------- */
+  /** Status, enrollment, activation and the two proofs; see MfaController. */
+  mfa: "/me/mfa",
+  mfaEnroll: "/me/mfa/enroll",
+  mfaActivate: "/me/mfa/activate",
+  mfaRecoveryCodes: "/me/mfa/recovery-codes",
+  mfaDisable: "/me/mfa/disable",
+
   /** SSE stream for any async AI task (match, tailor, copilot turn, ingestion…) */
   aiStream: (taskId: string) => `/ai/stream/${seg(taskId)}`,
 } as const;

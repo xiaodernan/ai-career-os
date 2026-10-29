@@ -1121,6 +1121,62 @@ export const translations = {
       loadFailed: "The address could not be prepared. Reload the page and try again.",
       hint: "Paste it into Google Calendar, Apple Calendar or Outlook under “subscribe from a URL”. A reminder appears on the calendar's next poll, and stays until you clear it here.",
     },
+    /**
+     * The second door's card (36.4). The card is the only screen that can turn the
+     * factor on, print the recovery codes and take the factor off again, so its
+     * sentences say what each action costs rather than what it does.
+     */
+    security: {
+      title: "Two-factor authentication",
+      description:
+        "A second step at sign-in: the password, then a six-digit code from an authenticator app.",
+      on: "On",
+      off: "Off",
+      pending: "Not proven",
+      onDescription:
+        "This account asks for a code after the password. Keep the printed recovery codes somewhere other than the phone that holds the key.",
+      offDescription:
+        "The password alone opens this account right now. Turn on the second step and a stolen password stops being enough.",
+      pendingDescription:
+        "An enrollment was started here but never proven. The key was shown once and cannot be shown again, so start over to mint a new one.",
+      remaining: "{count} recovery codes left",
+      remainingNone:
+        "No unused recovery codes are left. Replace them with a fresh set before you need one.",
+      loading: "Checking the second door…",
+      loadFailed: "The second factor's state could not be loaded. Reload the page and try again.",
+      start: "Turn on two-factor",
+      startOver: "Start over",
+      enrollHint:
+        "Add this key to your authenticator — scan the setup address or type the key by hand — then prove it with the six digits the app shows.",
+      secretLabel: "Authenticator key",
+      copySecret: "Copy key",
+      uriLabel: "Setup address",
+      copyUri: "Copy address",
+      passwordLabel: "Your password",
+      passwordPlaceholder: "Your current password",
+      codeLabel: "Six-digit code",
+      codePlaceholder: "123456",
+      proofCodeLabel: "Code or recovery code",
+      proofCodePlaceholder: "123456 or a printed code",
+      activate: "Prove and turn on",
+      replace: "Replace recovery codes",
+      replaceHint:
+        "This revokes every printed code and hands you ten new ones. Enter your password and a working code — the app's or one of the printed ones.",
+      disable: "Turn off two-factor",
+      disableHint:
+        "This removes the second step from this account and revokes every printed code. Enter your password and a working code.",
+      cancel: "Cancel",
+      codesTitle: "Your recovery codes",
+      codesHint:
+        "Ten single-use codes, each one signing in place of the app's code. This is the only time they are shown — save them somewhere else now.",
+      copyAll: "Copy all codes",
+      codesDone: "I saved them",
+      issues: {
+        passwordRequired: "Enter your password",
+        codeRequired: "Enter the code",
+        codeSixDigits: "Enter the six digits from your authenticator",
+      },
+    },
     memory: {
       description: "Facts the model extracted from your conversations and interviews. Correct a wrong one, or lower its weight — these shape every answer you get.",
       loading: "Loading memories…",
@@ -1239,6 +1295,8 @@ export const translations = {
       forgotPassword: "Forgot your password?",
       email: "Email",
       password: "Password",
+      code: "Six-digit code",
+      codePlaceholder: "123456",
       fullName: "Full name",
       fullNamePlaceholder: "Ada Zhang",
       noAccount: "No account yet?",
@@ -1246,12 +1304,15 @@ export const translations = {
       alreadyRegistered: "Already registered?",
       loginBlurb: "Pick up where the agents left off.",
       registerBlurb: "Your resume becomes a knowledge base in minutes.",
+      codeHint:
+        "Your password checked out. Add the six-digit code from your authenticator, or one of your printed recovery codes.",
       // The field checks answer with these keys; the sentence is built where
       // it is shown, so the error under a Chinese field is Chinese.
       issues: {
         emailRequired: "Email is required",
         emailInvalid: "Enter a valid email address",
         passwordRequired: "Password is required",
+        codeRequired: "Enter the code from your authenticator or a recovery code",
         nameRequired: "Name is required",
         tokenRequired: "Paste the token from your email",
         confirmRequired: "Confirm your new password",
@@ -2471,6 +2532,10 @@ export const translations = {
       negotiationPlan: "Couldn't build the negotiation plan.",
       offerCompare: "Couldn't compare those offers.",
       counterOffer: "Couldn't draft the counter-offer.",
+      mfaEnroll: "Couldn't start two-factor setup.",
+      mfaActivate: "Couldn't prove the code — two-factor is still off.",
+      mfaRecoveryCodes: "Couldn't replace the recovery codes.",
+      mfaDisable: "Couldn't turn two-factor off.",
     },
   },
   zh: {
@@ -3518,6 +3583,54 @@ export const translations = {
       loadFailed: "地址没能准备好。刷新页面再试一次。",
       hint: "把它粘进 Google 日历、Apple 日历或 Outlook 的“从网址订阅”。提醒会在日历下一次轮询时出现，并一直留到你在这里清掉它。",
     },
+    /** 第二道门的卡片（36.4）。每个动作都说清它要付出什么，而不是它做了什么。 */
+    security: {
+      title: "两步验证",
+      description: "登录时的第二步：先输密码，再输验证器应用里的六位验证码。",
+      on: "已开启",
+      off: "未开启",
+      pending: "未验证",
+      onDescription:
+        "这个账号在密码之后还会要一次验证码。请把打印好的备用码放在别处，不要和存着密钥的手机放在一起。",
+      offDescription: "现在只凭密码就能打开这个账号。开启第二步之后，光偷到密码就不够了。",
+      pendingDescription:
+        "这里开始过一次设置，但一直没有验证。密钥只显示一次，无法再显示，所以请重新开始，生成一把新的。",
+      remaining: "还剩 {count} 张备用码",
+      remainingNone: "没有未使用的备用码了。在需要之前先换一套新的。",
+      loading: "正在检查第二道门……",
+      loadFailed: "没能读到两步验证的状态。刷新页面再试一次。",
+      start: "开启两步验证",
+      startOver: "重新开始",
+      enrollHint:
+        "把这把密钥加进你的验证器——扫下面的设置地址，或者手动输入密钥——再用应用里显示的六位数字证明它。",
+      secretLabel: "验证器密钥",
+      copySecret: "复制密钥",
+      uriLabel: "设置地址",
+      copyUri: "复制地址",
+      passwordLabel: "你的密码",
+      passwordPlaceholder: "当前密码",
+      codeLabel: "六位验证码",
+      codePlaceholder: "123456",
+      proofCodeLabel: "验证码或备用码",
+      proofCodePlaceholder: "123456 或一张备用码",
+      activate: "验证并开启",
+      replace: "更换备用码",
+      replaceHint:
+        "这会作废所有已打印的备用码，并给你十张新的。请输入密码和一个可用的验证码——应用里的，或某张备用码。",
+      disable: "关闭两步验证",
+      disableHint: "这会从这个账号上移除第二步，并作废所有备用码。请输入密码和一个可用的验证码。",
+      cancel: "取消",
+      codesTitle: "你的备用码",
+      codesHint:
+        "十张一次性的备用码，每一张都能代替应用里的验证码登录。它们只会显示这一次——现在就把它们存到别处。",
+      copyAll: "复制全部备用码",
+      codesDone: "我已保存",
+      issues: {
+        passwordRequired: "请输入密码",
+        codeRequired: "请输入验证码",
+        codeSixDigits: "请输入验证器里的六位数字",
+      },
+    },
     /**
      * The auth pages' marketing panel. A visitor who cannot read English
      * lands here first, and this panel is what they are asked to believe.
@@ -3565,6 +3678,8 @@ export const translations = {
       forgotPassword: "忘记密码？",
       email: "邮箱",
       password: "密码",
+      code: "六位验证码",
+      codePlaceholder: "123456",
       fullName: "姓名",
       fullNamePlaceholder: "张艾达",
       noAccount: "还没有账号？",
@@ -3572,10 +3687,12 @@ export const translations = {
       alreadyRegistered: "已经注册过？",
       loginBlurb: "从代理停下的地方继续。",
       registerBlurb: "你的简历几分钟内就变成一个知识库。",
+      codeHint: "密码已通过。请输入验证器里的六位验证码，或一张打印好的备用码。",
       issues: {
         emailRequired: "请输入邮箱",
         emailInvalid: "请输入有效的邮箱地址",
         passwordRequired: "请输入密码",
+        codeRequired: "请输入验证器里的验证码或一张备用码",
         nameRequired: "请输入姓名",
         tokenRequired: "粘贴邮件里的重置令牌",
         confirmRequired: "请再次输入新密码",
@@ -4722,6 +4839,10 @@ export const translations = {
       negotiationPlan: "没能生成谈判方案。",
       offerCompare: "没能比较这些 offer。",
       counterOffer: "没能起草还价。",
+      mfaEnroll: "没能开始两步验证的设置。",
+      mfaActivate: "没能验证这个验证码——两步验证仍是关闭的。",
+      mfaRecoveryCodes: "没能更换备用码。",
+      mfaDisable: "没能关闭两步验证。",
     },
   },
 } as const;

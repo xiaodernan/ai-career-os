@@ -24,13 +24,13 @@ Four walks, none of which imports production code:
 4. the users controller, for the fact that the profile surface is real on the server and now has a
    screen to answer.
 
-What the walk records, and does not fix: 46 promises, every one of them naming a declared key --
+What the walk records, and does not fix: 50 promises, every one of them naming a declared key --
 and since the settings page grew its account and career-profile editors, and the jobs page its
 paste-a-posting importer, every promise's matches include a query a screen mounts, so the
-dead-promise ledger this file used to pin is empty. Three declared
-queries are still unmounted (`useResumeScore`, `useSourceStatus`, `useGlobalSearch`), each a
-duplicate or a window onto data another hook already fetches, and every one of the three is bound
-to the screen that answers the same routes without it (cases 8, 8b and 8c). Closing any of them
+dead-promise ledger this file used to pin is empty. Two declared
+queries are still unmounted (`useResumeScore` and `useGlobalSearch`), each a
+duplicate or a window onto data another hook already fetches, and either is bound
+to the screen that answers the same routes without it (cases 8 and 8b). Closing either
 is an owner's choice
 (mount a screen or delete the data layer), and the first cases make either move cost a ledger edit.
 What is *not* a choice is the live chain: the Versions

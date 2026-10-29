@@ -8,9 +8,10 @@ this request fails, does anyone say so?". This file answers it per mutation site
 the caller's options through the one indirection the app actually uses: a named object handed to two
 different mutations.
 
-What the shipped code says, measured rather than assumed: 82 mutation sites in eleven files
-(the hook libraries, the knowledge uploader's own actions, and 33.1's push switch). 76
-declare their failure at the hook; the six that do not sit in ``auth.ts`` and ``push.ts``.
+What the shipped code says, measured rather than assumed: 86 mutation sites in twelve files
+(the hook libraries, the knowledge uploader's own actions, 33.1's push switch, and 36.4's
+second door). 80 declare their failure at the hook; the six that do not sit in ``auth.ts``
+and ``push.ts``.
 Five of those six are announced by their caller -- the password forms pass inline call
 options, the credentials form passes one shared ``handlers`` object to both ``login.mutate``
 and ``register.mutate``, whose ``onError`` maps the failure through the recovery module's
@@ -23,7 +24,7 @@ choice -- a local sign-out always happens -- so this file characterises it rathe
 changing it: it is the one place in the app where "you are signed out" is not a claim about
 the server.
 
-The same walk covers the failure helper: ``fail(...)`` has a single author and 73 uses, and
+The same walk covers the failure helper: ``fail(...)`` has a single author and 77 uses, and
 every use names a key the browser's table answers -- the sentence is resolved when the toast
 is raised, in the reader's language. All but three name a different key: the inbox's read,
 mark-all-read and dismiss share ``notifications.actionFailed`` because they are one sentence
@@ -67,6 +68,9 @@ BRIDGE_HOOKS = {
     "frontend/src/lib/hooks/ingestion.ts",
     "frontend/src/lib/hooks/notifications.ts",
     "frontend/src/lib/hooks/offers.ts",
+    # 36.4's second factor: enroll, activate, reprint and disable each announce their failure
+    # at the hook with a sentence of their own.
+    "frontend/src/lib/hooks/mfa.ts",
     # 19.6's voice seam: the transcribe and speak writes announce their failure at the hook.
     "frontend/src/lib/hooks/voice.ts",
 }
@@ -95,6 +99,7 @@ ROSTER = {
     "frontend/src/lib/hooks/data-portability.ts": 5,
     "frontend/src/lib/hooks/growth.ts": 12,
     "frontend/src/lib/hooks/ingestion.ts": 9,
+    "frontend/src/lib/hooks/mfa.ts": 4,
     "frontend/src/lib/hooks/notifications.ts": 3,
     "frontend/src/lib/hooks/offers.ts": 4,
     PUSH_HOOKS: 1,
@@ -121,6 +126,7 @@ SENTENCES = {
     "frontend/src/lib/hooks/ingestion.ts": 8,
     "frontend/src/lib/hooks/notifications.ts": 3,
     "frontend/src/lib/hooks/offers.ts": 4,
+    "frontend/src/lib/hooks/mfa.ts": 4,
     "frontend/src/lib/hooks/voice.ts": 2,
 }
 FAIL_USES = sum(SENTENCES.values())

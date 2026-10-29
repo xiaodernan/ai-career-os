@@ -19,7 +19,7 @@ back where it was read from; and three *merge*: one preserves a wrapper object i
 that sentence from the walk, because this header shipped
 "seven sites ... six spell their key ... two merge" for a run of commits after the reorder board
 copied the update hook's optimistic shape wholesale -- the numbers a reader trusts most are the ones
-nobody grades. Seven files make the app's react-query calls, across eight methods, and case 1's roster
+nobody grades. Eight files make the app's react-query calls, across eight methods, and case 1's roster
 is where a new one has to be filed.
 
 The other thing this header shipped was a finding it said it would not fix: the row merge spread
@@ -95,6 +95,7 @@ RESUMES_PAGE = "frontend/src/app/(app)/resumes/page.tsx"
 SOURCE_ACTIONS = "frontend/src/components/knowledge/source-actions.tsx"
 INGESTION_HOOKS = "frontend/src/lib/hooks/ingestion.ts"
 ANALYTICS_HOOKS = "frontend/src/lib/hooks/analytics.ts"
+MFA_HOOKS = "frontend/src/lib/hooks/mfa.ts"
 NOTIFICATION_HOOKS = "frontend/src/lib/hooks/notifications.ts"
 
 WRITERS = ("setQueryData", "setQueriesData")
@@ -121,6 +122,8 @@ CLIENT_CALLS = {
     # 10 since 19.2's apply receipt: the write refreshes the feed and the run it
     # started, plus the one run every other applied receipt belongs to.
     INGESTION_HOOKS: {"invalidateQueries": 10},
+    # 36.4: the four second-factor writes each refresh the one status the card reads.
+    MFA_HOOKS: {"invalidateQueries": 4},
     NOTIFICATION_HOOKS: {"setQueryData": 3},
     RESUMES_PAGE: {"invalidateQueries": 1},
     SOURCE_ACTIONS: {"invalidateQueries": 1},

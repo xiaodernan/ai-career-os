@@ -106,6 +106,15 @@ screen. A malformed inbound value is replaced, never refused.
 | GET | `/users/me/profile` | career profile |
 | PATCH | `/users/me/profile` | `{headline, summary, location, yearsExperience, targetRoles, targetLocations, links, workAuthorization, preferences}` |
 
+The login's `code` field and the five `/me/mfa` routes are drawn by two surfaces, and only by
+them. The login form grows the code field the first time an enabled factor answers
+`MFA_REQUIRED`, resubmits `{email, password, code}` together, and clears the field when the
+email changes — a challenge left open would strand a reader who switched to an account without
+a factor. The settings page's security card is the only caller of the status read, the
+enrollment, the activation, the reprint and the disable: every write invalidates the one
+status query, and the recovery sheet is shown once, with a copy-all, because the server keeps
+only BCrypt hashes and cannot print it again.
+
 ### Long-term memory
 
 What the agents remember about the caller (AGENTS.md §6). The write path runs at the end of

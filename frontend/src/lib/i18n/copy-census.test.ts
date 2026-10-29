@@ -64,8 +64,9 @@ describe("the browser's copy", () => {
     // own results are read from (20.1), and 136 with
     // `components/settings/push-card.tsx`, the switch that rings this browser
     // (33.4), and 137 with `components/settings/calendar-card.tsx`, the address
-    // the reader pastes into a calendar app (34.1).
-    expect(browserSources().length).toBe(137);
+    // the reader pastes into a calendar app (34.1), and 138 with
+    // `components/settings/security-card.tsx`, the second door's status and codes (36.4).
+    expect(browserSources().length).toBe(138);
   });
 
   it("finds a sentence, however long it is", () => {

@@ -185,9 +185,15 @@ def object_literal_keys(block: str) -> list[str]:
 
 
 def type_literal_keys(block: str) -> list[str]:
-    """Member names of a TypeScript type literal, whose members separate with ``;``."""
+    """Member names of a TypeScript type literal, whose members separate with ``;``.
+
+    An optional member spells its name with a question mark (``code?: string``), so the
+    mark is read as part of the member's clothes rather than as the end of its name: a
+    regex that demanded the colon right after the name would silently omit every
+    optional field, which is exactly the field the second step sends.
+    """
     inner = block[1:-1]
-    return re.findall(r"([A-Za-z_$][\w$]*)\s*:", inner)
+    return re.findall(r"([A-Za-z_$][\w$]*)\??\s*:", inner)
 
 
 def ts_call_bodies(fn_name: str, source: str) -> list[str]:
@@ -339,20 +345,19 @@ def test_the_payload_types_carry_exactly_the_record_fields():
     assert "extends LoginPayload" in src, (
         "RegisterPayload no longer extends LoginPayload; the key union below assumes it does"
     )
-    assert login_iface == ["email", "password"], (
-        "LoginPayload carries %s, not the two keys every account sends -- the second-step key "
-        "joins it with the sign-in screen (36.4), and this assertion moves in the same change"
-        % login_iface
+    assert login_iface == ["email", "password", "code"], (
+        "LoginPayload carries %s, not the two keys every account sends plus the optional "
+        "second-step code (36.4)" % login_iface
     )
-    assert java_record_fields("LoginRequest", read(LOGIN_DTO)) == login_iface + ["code"], (
-        "LoginRequest binds %s; the only field beyond the payload's two is the optional code, "
-        "so a fourth wire key has to redden here -- passing `payload` verbatim means the "
-        "interface's keys are what the account actually sends" % java_record_fields(
+    assert java_record_fields("LoginRequest", read(LOGIN_DTO)) == login_iface, (
+        "LoginRequest binds %s; the payload's keys are what the account actually sends, so a "
+        "fourth wire key has to redden here -- passing `payload` verbatim means the "
+        "interface's keys are the whole body" % java_record_fields(
             "LoginRequest", read(LOGIN_DTO))
     )
-    assert sorted(register_iface + login_iface) == ["displayName", "email", "password"], (
+    assert sorted(register_iface + login_iface) == ["code", "displayName", "email", "password"], (
         "RegisterPayload's own members are %s; with LoginPayload that must be exactly "
-        "RegisterRequest's three fields" % register_iface
+        "RegisterRequest's three fields plus the optional code" % register_iface
     )
     assert "async register(payload: RegisterPayload): Promise<User> {" in src, (
         "authApi.register no longer takes the typed RegisterPayload"
@@ -378,10 +383,10 @@ def test_the_credential_screens_mutate_exactly_the_payload_keys():
     form = read(CREDENTIALS_FORM)
     login_keys = object_literal_keys(braced_arg_after(form, "login.mutate("))
     register_keys = object_literal_keys(braced_arg_after(form, "register.mutate("))
-    assert login_keys == ["email", "password"], (
-        "the sign-in screen mutates %s; it sends the two keys every account sends until the "
-        "second-step screen lands (36.4), while LoginRequest already accepts the optional code"
-        % login_keys
+    assert login_keys == ["email", "password", "code"], (
+        "the sign-in screen mutates %s; LoginRequest binds ['email', 'password', 'code'] and "
+        "the code key is always spelled -- undefined until the second step is asked for, which "
+        "JSON.stringify drops so a no-factor login still posts two keys" % login_keys
     )
     assert sorted(register_keys) == ["displayName", "email", "password"], (
         "the register screen mutates %s; RegisterRequest binds ['email', 'password', "

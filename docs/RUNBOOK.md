@@ -584,3 +584,58 @@ by default) are ever deleted. The tables behind visible history -- AI usage even
 notification read state, ingestion runs, weekly letters -- are deliberately not swept.
 If the delete itself is slow after a restart, confirm the V23 migration applied; it
 adds the `expires_at` index each sweep relies on.
+
+## An account is locked out of its second factor
+
+**What the reader sees.** The password is right and the code field still refuses every
+six-digit number (401 `MFA_INVALID`), or a fresh code changes nothing. `POST /auth/login`
+with an enrolled account answers 401 `MFA_REQUIRED` until a code is sent, then judges it;
+a wrong password is a different answer (`INVALID_CREDENTIALS`), so "the code is refused"
+always means the password matched.
+
+**What to read, in order.**
+
+1. **The phone's clock.** TOTP is time-based: 30-second steps, one step of drift either
+   side. Ask the reader to switch the phone to automatic time and try two codes from
+   consecutive windows. This is the most common cause by far.
+2. **The code's kind.** The field accepts six digits or one printed recovery code (case,
+   hyphens and spaces forgiven). A printed code is single-use: the settings card shows how
+   many remain (`recoveryCodesRemaining`), and a spent one is refused exactly like a wrong
+   one.
+3. **The bucket.** The MFA routes are metered at five verdicts a minute per signed-in
+   account, and login is metered per client IP. A reader who tried five codes in a row is
+   told 429 `RATE_LIMITED`, not another verdict -- wait out the minute before concluding
+   anything.
+4. **The seed.** The backend log line `the sealed TOTP seed cannot be opened with this
+   app.security.mfa-secret` means the row was sealed under a different `APP_MFA_SECRET`
+   (or is damaged). No code -- not even a printed one -- can pass, because the login opens
+   the seed before it tries the printed set. This is the one case where nothing the reader
+   holds can help.
+
+**What to do, in order.**
+
+1. Clock or wrong-reader trouble needs nothing on the server. The printed sheet is the way
+   in when the phone is gone: sign in with one printed code, then reprint or turn the
+   factor off from settings, which needs one more printed code.
+2. No phone and no printed sheet: establish identity through the ordinary password-reset
+   path (the mailbox link proves the mailbox), then have an operator delete the two rows
+   for that account once the request is confirmed out-of-band:
+
+   ```sql
+   DELETE FROM user_mfa_recovery_codes WHERE user_id = '<user id>';
+   DELETE FROM user_mfa WHERE user_id = '<user id>';
+   ```
+
+   The next login asks for the password alone. Record who asked and who deleted; the
+   factor is gone until the reader enrolls again, and nothing else on the account changes.
+3. A rotated `APP_MFA_SECRET`: either put the old value back (every seed opens again) or
+   accept that every enrolled account is in case 2 at once and delete the rows for the
+   accounts that ask. There is no bulk re-seal, and no route can prove ownership of a
+   seed this deployment cannot open.
+
+**What this does not mean.** It is not a password problem: `INVALID_CREDENTIALS` is the
+wrong-password answer, and a wrong code never says whether the password was right. It is
+not account loss: the deletion removes the second factor, not the account, its documents
+or its open sessions -- those still expire or close on their own. And it is not a reason
+to lower the factor for everyone: the door exists so a leaked password alone cannot open
+the account.

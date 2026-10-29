@@ -8,6 +8,7 @@ import {
   PASSWORD_MIN_LENGTH,
   RESET_TOKEN_MAX_LENGTH,
   authFormErrorMessage,
+  codeIssue,
   confirmationIssue,
   displayNameIssue,
   emailIssue,
@@ -120,6 +121,18 @@ describe("confirmationIssue", () => {
 
   it("is quiet once the two agree", () => {
     expect(confirmationIssue("correct horse", "correct horse")).toBeUndefined();
+  });
+});
+
+describe("codeIssue", () => {
+  it("asks for the code when the field is empty or only whitespace", () => {
+    expectIssue(codeIssue(""), "auth.issues.codeRequired");
+    expectIssue(codeIssue("   "), "auth.issues.codeRequired");
+  });
+
+  it("leaves the shape to the server, since a printed recovery code is a second spelling", () => {
+    expect(codeIssue("123456")).toBeUndefined();
+    expect(codeIssue("abcd-efgh-ijkl-mnop")).toBeUndefined();
   });
 });
 
@@ -269,6 +282,17 @@ describe("authFormErrorMessage", () => {
     // fired through the status half and nobody noticed the dead check.
     const bare401 = new ApiError("SOMETHING_ELSE", "no", 401);
     expect(authFormErrorMessage(bare401)).toBe("That email address or password is not right.");
+  });
+
+  it("answers MFA_REQUIRED with its own sentence before the 401 rule can hide it", () => {
+    // The account's password was right and the server is asking for the second step. The
+    // generic 401 sentence would send the reader back to a field that already passed.
+    const challenge = new ApiError(
+      "MFA_REQUIRED",
+      "This account asks for a six-digit code as a second step",
+      401,
+    );
+    expect(authFormErrorMessage(challenge)).toBe(en("errorCodes.MFA_REQUIRED"));
   });
 
   it("passes other API messages through, since validation messages are actionable", () => {
