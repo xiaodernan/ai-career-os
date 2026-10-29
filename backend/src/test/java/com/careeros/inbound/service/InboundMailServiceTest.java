@@ -10,6 +10,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.careeros.ai.AiServiceClient;
 import com.careeros.auth.entity.User;
 import com.careeros.auth.repository.UserRepository;
 import com.careeros.common.ApiErrorCode;
@@ -18,6 +19,7 @@ import com.careeros.inbound.entity.InboundMail;
 import com.careeros.inbound.repository.InboundMailRepository;
 import com.careeros.inbound.web.InboundMailPayload;
 import java.time.OffsetDateTime;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
@@ -43,7 +45,8 @@ class InboundMailServiceTest {
     private final InboundLinks links = new InboundLinks("test-secret", DOMAIN);
     private final InboundMailRepository mails = mock(InboundMailRepository.class);
     private final UserRepository users = mock(UserRepository.class);
-    private final InboundMailService service = new InboundMailService(links, mails, users);
+    private final AiServiceClient ai = mock(AiServiceClient.class);
+    private final InboundMailService service = new InboundMailService(links, mails, users, ai);
 
     private String token() {
         return links.address(ALICE).split("@")[0];
@@ -96,6 +99,70 @@ class InboundMailServiceTest {
 
         assertThat(received.duplicate()).isTrue();
         verify(mails, never()).save(any());
+        verify(ai, never()).classifyReply(any(), anyString());
+    }
+
+    @Test
+    void aReadableReplyIsFiledWithItsIntentAndTheNamesItCarries() {
+        accountExists();
+        when(ai.classifyReply(eq(ALICE), anyString())).thenReturn(Map.of(
+                "intent", "Interview", "company", "  Acme  ", "role", "Backend Engineer"));
+
+        service.receive(token(), payload("<abc@mail>", "ada@example.com",
+                "Your interview", "Let's schedule a call.", null));
+
+        ArgumentCaptor<InboundMail> captor = ArgumentCaptor.forClass(InboundMail.class);
+        verify(mails, org.mockito.Mockito.times(2)).save(captor.capture());
+        InboundMail mail = captor.getValue();
+        assertThat(mail.getIntent()).isEqualTo("interview");
+        assertThat(mail.getCompany()).isEqualTo("Acme");
+        assertThat(mail.getRole()).isEqualTo("Backend Engineer");
+    }
+
+    @Test
+    void theClassifierReadsTheSubjectAndThenTheBody() {
+        accountExists();
+        when(ai.classifyReply(eq(ALICE), anyString())).thenReturn(Map.of("intent", "offer"));
+
+        service.receive(token(), payload("<abc@mail>", "ada@example.com", "Offer",
+                "We are pleased to offer you the role.", null));
+
+        verify(ai).classifyReply(ALICE,
+                "Subject: Offer\n\nWe are pleased to offer you the role.");
+    }
+
+    @Test
+    void aClassifierOutageLeavesTheLetterStoredAndUnread() {
+        accountExists();
+        when(ai.classifyReply(any(), anyString()))
+                .thenThrow(new ApiException(ApiErrorCode.AI_SERVICE_UNAVAILABLE,
+                        "ai-service is down"));
+
+        InboundMailService.Received received = service.receive(token(),
+                payload("<abc@mail>", "ada@example.com", "Hi", "Hello", null));
+
+        assertThat(received.duplicate()).isFalse();
+        InboundMail mail = captured();
+        assertThat(mail.getMessageKey()).isEqualTo("<abc@mail>");
+        assertThat(mail.getIntent()).isNull();
+        assertThat(mail.getCompany()).isNull();
+        assertThat(mail.getRole()).isNull();
+    }
+
+    @Test
+    void anIntentOutsideTheEnginesFiveIsNotStored() {
+        accountExists();
+        when(ai.classifyReply(any(), anyString())).thenReturn(Map.of(
+                "intent", "spam", "company", " ", "role", "Backend Engineer"));
+
+        service.receive(token(), payload("<abc@mail>", "ada@example.com", "Hi", "Hello", null));
+
+        ArgumentCaptor<InboundMail> captor = ArgumentCaptor.forClass(InboundMail.class);
+        verify(mails, org.mockito.Mockito.times(2)).save(captor.capture());
+        InboundMail mail = captor.getValue();
+        assertThat(mail.getIntent()).isNull();
+        assertThat(mail.getCompany()).isNull();
+        assertThat(mail.getRole()).isEqualTo("Backend Engineer");
     }
 
     @Test

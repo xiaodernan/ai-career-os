@@ -449,6 +449,14 @@ duplicate is acknowledged without a second one. The answer is always **200**
 and a forged, retired or erased-account token is the same **404**
 `INBOUND_LINK_INVALID` as a missing one.
 
+The letter is read as it arrives (roadmap 37.2): the intent the words settle is
+decided by a deterministic bilingual cue pass and cannot be overruled by the
+model, which reads the letter for the two names and for an intent the cues left
+open, and the reading is stored as `intent`, `company` and `role` on the row. The store happens first and the reading second, so a classifier outage
+never loses a letter — it leaves the three columns null, which means "not
+answered yet", not "nothing to read". A duplicate delivery is not classified
+again.
+
 When `APP_INBOUND_DOMAIN` is blank the deployment has no inbox: `GET
 /inbound/link` answers **503** `INBOUND_NOT_CONFIGURED` instead of handing out
 an address nothing delivers to. Erasing an account deletes its letters with its
@@ -651,6 +659,7 @@ crosses the wire now so the mapping can grow a vocabulary later.
 | POST | `/internal/features/redact-bundle` | Epic 13.3 -- the bundle with sections dropped and the hash recomputed over what is left (backend `redactBundle`) |
 | POST | `/internal/features/render-bundle` | Epic 13.1 -- the human-readable half: a print-ready document of the bundle, HTML or PDF (backend `renderBundle`) |
 | POST | `/internal/features/render-resume` | Epic 19.5 -- one resume version as a print-ready document: the structured body in the export's print chrome and section words, or the version's plaintext when it was never parsed (backend `renderResume`) |
+| POST | `/internal/features/classify-reply` | Epic 37.2 -- the reading of one forwarded recruiter reply: `{intent, company, role}`, with the intent one of rejection / interview / offer / info / other. A deterministic bilingual cue pass decides the intent when the words settle it, and the model cannot overrule that; the model supplies the two names a letter rarely spells in a pattern, and the intent for a letter the cues left open (backend `classifyReply`) |
 | POST | `/internal/memories/import` | Epic 13.2 -- restore a bundle's long-term memories, upserted on the same (kind, key) the extraction path uses, so the restore is idempotent (backend `importMemories`) |
 | POST | `/internal/features/salary-benchmark` | Epic 12.1 -- percentiles by role, seniority band and location (backend `salaryBenchmark`) |
 | POST | `/internal/features/negotiate` | Epic 12.2 -- an offer against the benchmark, with leverage and talking points (backend `negotiate`) |

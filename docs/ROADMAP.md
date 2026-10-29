@@ -2930,14 +2930,18 @@ accept -- and a letter the engine cannot read is still a letter that arrived.
   deployment without `app.inbound.domain` answers `INBOUND_NOT_CONFIGURED` on
   the link route and 404 on the webhook. `V27` holds the letters, and account
   erasure takes them with it.
-- [ ] **37.2** The engine reads the reply: ai-service's internal
+- [x] **37.2** The engine reads the reply: ai-service's internal
   `POST /internal/features/classify-reply` answers `{intent, company, role}`
   with intents `rejection | interview | offer | info | other` -- deterministic
   keyword passes in the letter's language first, the model only filling what
   the rules abstain on, and the offline mock stays deterministic. The route is
   pinned in `test_forward_features_contract.py`. The backend's bridge runs on
   arrival, and its failure leaves the letter with no intent rather than losing
-  it: a classifier outage is not a lost reply.
+  it: a classifier outage is not a lost reply. `V28` adds the three reading
+  columns, `intent` CHECK-constrained to those five values; the row is stored
+  before it is read (two transactions, so a stalled classifier holds no
+  connection), and a duplicate delivery is not classified again. The shape
+  census counts `InboundMailService` among the classes that read an AI answer.
 - [ ] **37.3** The reply meets the application: a company-name match
   (case-insensitive, narrowed by role containment when the name repeats) files
   the mail on one application, and a guess that narrows to nothing files

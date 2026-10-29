@@ -692,6 +692,18 @@ public class FakeAiServiceClientConfig {
         }
 
         /**
+         * What the reply reader answers with (37.2): the engine's own three keys. The
+         * intent is one the tracker can act on, so a webhook test sees a letter that
+         * was read rather than one left blank; the names name the fake's own company.
+         */
+        @Override
+        public Map<String, Object> classifyReply(UUID userId, String text) {
+            record("classifyReply");
+            return map("intent", "interview", "company", "FakeCorp",
+                    "role", "Backend Engineer");
+        }
+
+        /**
          * What the pipeline funnel answers with (15.1): the stage counts and the
          * conversion at each step.
          */

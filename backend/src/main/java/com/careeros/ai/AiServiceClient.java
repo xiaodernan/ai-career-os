@@ -276,6 +276,15 @@ public interface AiServiceClient {
     Map<String, Object> outreach(UUID userId, com.careeros.ai.dto.OutreachRequest request);
 
     /**
+     * 37.2 — what one forwarded reply says: {@code {intent, company, role}}.
+     * The letter's text is the whole input, and the answer's shape is the
+     * engine's. A letter nobody could read answers {@code other}; an exception
+     * means neither the cue passes nor the model read it, and the caller must
+     * keep the letter and file it unread rather than losing it.
+     */
+    Map<String, Object> classifyReply(UUID userId, String text);
+
+    /**
      * 15.1 — the pipeline funnel: how many applications reached each stage, and
      * where the leak is.
      */

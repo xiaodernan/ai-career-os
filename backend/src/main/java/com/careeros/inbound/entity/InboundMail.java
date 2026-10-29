@@ -42,6 +42,16 @@ public class InboundMail {
     @Column(name = "body_text", nullable = false)
     private String bodyText;
 
+    /** The classifier's reading (37.2); null when it could not answer, never "nothing to read". */
+    @Column(name = "intent", length = 16)
+    private String intent;
+
+    @Column(name = "company", length = 200)
+    private String company;
+
+    @Column(name = "role", length = 200)
+    private String role;
+
     @Column(name = "received_at", nullable = false)
     private OffsetDateTime receivedAt;
 
@@ -91,6 +101,30 @@ public class InboundMail {
 
     public void setBodyText(String bodyText) {
         this.bodyText = bodyText;
+    }
+
+    public String getIntent() {
+        return intent;
+    }
+
+    public void setIntent(String intent) {
+        this.intent = intent;
+    }
+
+    public String getCompany() {
+        return company;
+    }
+
+    public void setCompany(String company) {
+        this.company = company;
+    }
+
+    public String getRole() {
+        return role;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
     }
 
     public OffsetDateTime getReceivedAt() {

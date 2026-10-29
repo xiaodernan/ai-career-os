@@ -1,5 +1,6 @@
 package com.careeros.inbound.service;
 
+import com.careeros.ai.AiServiceClient;
 import com.careeros.auth.repository.UserRepository;
 import com.careeros.common.ApiErrorCode;
 import com.careeros.common.ApiException;
@@ -16,12 +17,14 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.HexFormat;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Receives one forwarded reply and keeps it (roadmap 37.1).
@@ -42,6 +45,13 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>The date is the letter's own when the payload carries one, clamped so a forged future
  * cannot pin the top of the reader's list. A date that cannot be read falls back to the
  * moment the webhook arrived, which is what a reader means by "received" anyway.
+ *
+ * <p>The letter is stored before it is read (37.2). The classifier is another service, and an
+ * outage, a model too slow to answer or a request that never left costs the reading and never
+ * the letter: the reader can still open what the recruiter wrote, and a retried delivery finds
+ * the row first, so it neither writes a second letter nor calls the classifier again. The two
+ * writes are separate transactions on purpose -- a classifier that stalls must not pin one
+ * open.
  */
 @Service
 public class InboundMailService {
@@ -52,23 +62,28 @@ public class InboundMailService {
     private static final int SUBJECT_MAX = 500;
     private static final int BODY_MAX = 20_000;
     private static final int KEY_MAX = 256;
+    private static final int NAME_MAX = 200;
     private static final Duration FUTURE_SKEW = Duration.ofHours(24);
+    private static final Set<String> INTENTS =
+            Set.of("rejection", "interview", "offer", "info", "other");
 
     private final InboundLinks links;
     private final InboundMailRepository mails;
     private final UserRepository users;
+    private final AiServiceClient ai;
 
-    public InboundMailService(InboundLinks links, InboundMailRepository mails, UserRepository users) {
+    public InboundMailService(InboundLinks links, InboundMailRepository mails,
+                              UserRepository users, AiServiceClient ai) {
         this.links = links;
         this.mails = mails;
         this.users = users;
+        this.ai = ai;
     }
 
     /** One delivery's outcome: the row it names, and whether this call was a retry. */
     public record Received(UUID id, boolean duplicate) {
     }
 
-    @Transactional
     public Received receive(String token, InboundMailPayload payload) {
         UUID userId = links.account(token);
         if (userId == null || users.findById(userId).isEmpty()) {
@@ -97,8 +112,63 @@ public class InboundMailService {
         mail.setBodyText(body);
         mail.setReceivedAt(receivedAt(payload.date()));
         mails.save(mail);
+        if (read(mail, userId)) {
+            mails.save(mail);
+        }
         log.info("Inbound mail {} received for user {}", mail.getId(), userId);
         return new Received(mail.getId(), false);
+    }
+
+    /**
+     * Files the classifier's reading onto the letter just stored, and answers whether anything
+     * was read. A failure of any kind -- an unreachable ai-service, a model that never answers,
+     * a body the engine refuses -- leaves the row as it was: the letter is the record, and the
+     * intent is an addition to it. An intent outside the engine's five is not stored at all;
+     * a made-up intent is worse than an unread letter.
+     */
+    private boolean read(InboundMail mail, UUID userId) {
+        try {
+            Map<String, Object> reading = ai.classifyReply(userId, letter(mail));
+            if (reading == null) {
+                return false;
+            }
+            String readIntent = intentOf(reading.get("intent"));
+            String readCompany = nameOf(reading.get("company"));
+            String readRole = nameOf(reading.get("role"));
+            if (readIntent == null && readCompany == null && readRole == null) {
+                return false;
+            }
+            mail.setIntent(readIntent);
+            mail.setCompany(readCompany);
+            mail.setRole(readRole);
+            return true;
+        } catch (RuntimeException e) {
+            log.warn("Reply classifier did not answer for letter {}: {}",
+                    mail.getId(), e.getMessage());
+            return false;
+        }
+    }
+
+    /** The letter as the classifier reads it: the subject names the thread, the body says it. */
+    private static String letter(InboundMail mail) {
+        return "Subject: " + mail.getSubject() + "\n\n" + mail.getBodyText();
+    }
+
+    private static String intentOf(Object value) {
+        String text = nameOf(value);
+        if (text == null) {
+            return null;
+        }
+        text = text.toLowerCase(Locale.ROOT);
+        return INTENTS.contains(text) ? text : null;
+    }
+
+    private static String nameOf(Object value) {
+        if (!(value instanceof String raw)) {
+            return null;
+        }
+        String text = raw.strip();
+        return text.isEmpty() ? null : cap(text, NAME_MAX);
     }
 
     private static String key(InboundMailPayload payload, String from, String subject, String body) {

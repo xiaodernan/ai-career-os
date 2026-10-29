@@ -107,6 +107,13 @@ class MockProvider:
         )
 
     def _json_response(self, low: str, prompt: str) -> str:
+        if "classify one recruiter reply" in low:
+            # 37.2: the reply reader. The intent the words settle never reaches this
+            # branch -- `reply_classify` asks only for what its cue passes left open --
+            # so the fixed answer is the neutral reading plus the two names a letter
+            # may not carry. A fixed answer is what keeps the offline stack stable.
+            return json.dumps({"intent": "other", "company": "Mock Corp",
+                               "role": "Backend Engineer"})
         if "resume" in low and ("parse" in low or "profile" in low):
             return json.dumps({
                 "profile": {"name": "Mock Candidate", "headline": "Backend Engineer",

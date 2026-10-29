@@ -295,7 +295,16 @@
     `inbound` 桶按令牌计（`RATELIMIT_INBOUND_PER_MINUTE`，默认 10），`RateLimitIT` 第十
     一封得到 429；双语错误句、API.md、SECURITY、DEPLOYMENT 与 `AccountErasureIT` 的入站
     行随人口移动；响应形状 census 182→186、限流 census 四桶→五桶。
-    下一步：37.2。
+    37.2 已落地：`reply_classify.py` 的线索表先读双语（拒信/录用/面试/问询，按表序破并列，
+    明确拒信优先，避免“cannot offer you”被读成录用）；规则已定的意图，模型无权改写；公司
+    与职位没有线索可循，始终由模型抄录，模型还补线索弃权的意图；offline mock 答中性
+    `other` 与两个名字。`POST /internal/features/classify-reply` 进转发契约（请求体只有
+    `text`，回答恰为 `{intent, company, role}`）。后端 `AiServiceClient.classifyReply` 由
+    `InboundMailService` 在落库后调用——两次独立事务，分类器卡住不占库连接；失败只记警告、
+    三列留空（NULL 是“还没读”，不是“没得读”）；重投不再分类。`V28__inbound_mail_reading.sql`
+    加 intent/company/role 与五值 CHECK；响应形状 census 的消费者与持有者名单各加
+    `InboundMailService`。
+    下一步：37.3。
 
 ## 开发协议（每个任务）
 

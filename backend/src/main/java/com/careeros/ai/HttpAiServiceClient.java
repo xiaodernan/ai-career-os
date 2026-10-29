@@ -572,6 +572,11 @@ public class HttpAiServiceClient implements AiServiceClient {
     }
 
     @Override
+    public Map<String, Object> classifyReply(UUID userId, String text) {
+        return post("/internal/features/classify-reply", userId, Map.of("text", text));
+    }
+
+    @Override
     public Map<String, Object> pipelineFunnel(UUID userId, List<Map<String, Object>> applications) {
         return post("/internal/features/pipeline-funnel", userId, Map.of("applications", applications));
     }

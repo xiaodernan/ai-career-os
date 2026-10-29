@@ -20,6 +20,7 @@ from app.features import outreach as outreach_mod
 from app.features import progress as progress_mod
 from app.features import readiness as readiness_mod
 from app.features import reminders as reminders_mod
+from app.features import reply_classify as reply_classify_mod
 from app.features import resume_parse as rp
 from app.features import roles as roles_mod
 from app.features import salary as salary_mod
@@ -910,3 +911,32 @@ async def render_resume_ep(req: ResumeRenderReq, ctx: Ctx = Depends(require_inte
         req.resume, req.locale, title=req.title, subtitle=req.subtitle, text=req.text)
     await observability.finish_run(run_id, "completed")
     return {"format": "html", "html": html_text}
+
+
+class ClassifyReplyReq(BaseModel):
+    """37.2 -- one forwarded reply, as the webhook received it.
+
+    The letter's text is the whole input: the webhook has already kept the row,
+    and this reading is filed back onto it. A blank letter has nothing to read,
+    and the webhook never sends one -- it acknowledges an empty payload without
+    writing a row -- but the field stays required so a caller that sends nothing
+    learns it sent nothing.
+    """
+    text: str = Field(min_length=1)
+
+
+@router.post("/classify-reply")
+async def classify_reply_ep(req: ClassifyReplyReq, ctx: Ctx = Depends(require_internal)):
+    """37.2 -- what a recruiter's reply says: its intent, the company and the role."""
+    run_id = await _run(ctx, "inbox", "classify_reply")
+    try:
+        result = await reply_classify_mod.classify_reply(
+            req.text, user_id=ctx.user_id, run_id=run_id)
+    except Exception:
+        # The run is closed as failed and the refusal travels: the backend's
+        # bridge keeps the letter and stores no intent, which is the honest
+        # answer when neither the words nor the model read it.
+        await observability.finish_run(run_id, "failed")
+        raise
+    await observability.finish_run(run_id, "completed")
+    return result

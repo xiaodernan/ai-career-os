@@ -68,6 +68,9 @@ FORWARD = {
     "/internal/features/import-plan": ("ImportPlanReq", {"bundle"}),
     "/internal/features/redact-bundle": ("RedactBundleReq", {"bundle"}),
     "/internal/features/render-bundle": ("RenderBundleReq", {"bundle"}),
+    # 37.2: the webhook has already kept the letter when this runs, so the text
+    # is the whole input and "no text" is the caller's mistake, not a real state.
+    "/internal/features/classify-reply": ("ClassifyReplyReq", {"text"}),
 }
 
 
@@ -482,4 +485,22 @@ def test_health_report_response_keys():
 def test_parse_board_response_keys():
     out = ingestion.parse_json_board('[{"title": "T"}]')
     assert isinstance(out, list) and set(out[0]) == {"title", "source"}
+
+
+def test_classify_reply_response_keys():
+    """37.2 -- one reply, three answers, and the words outrank the model.
+
+    The backend files the reading onto the letter it already stored, so the key
+    set is what its bridge reads: intent, company, role. The rule pass is the
+    first reading; the model only fills what it left open -- which is why the
+    disagreement below keeps the rejection the words named.
+    """
+    from app.features import reply_classify
+
+    out = reply_classify.compose_reading(
+        "rejection", {"intent": "interview", "company": " Acme ",
+                      "role": "Backend Engineer"})
+    assert set(out) == {"intent", "company", "role"}
+    assert out["intent"] == "rejection"
+    assert out["company"] == "Acme"
 

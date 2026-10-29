@@ -386,7 +386,7 @@ def test_the_backend_readers_this_gate_walks_are_the_ones_that_exist():
     """A new consumer class must widen the corpus here, not go unmeasured."""
     assert sorted(p.name for p in _consumer_files()) == [
         "ConversationService.java", "CopilotStreamService.java", "FileIngestService.java",
-        "GrowthService.java", "InterviewService.java",
+        "GrowthService.java", "InboundMailService.java", "InterviewService.java",
         "JobService.java", "MemoryController.java", "QueryEmbeddingService.java",
         "ResumeService.java", "ScheduledIngestionService.java", "VoiceService.java",
     ]
@@ -436,8 +436,10 @@ def test_the_files_that_hold_an_ai_answer_stay_declared():
     # `VoiceService` (19.6) is the same shape: it reads `provider`/`text` off the transcript
     # map and `audio`/`mime` off the clip map into its own records, so the keys the browser
     # finally sees are its reads -- an unlisted holder would let that translation drift.
+    # `InboundMailService` (37.2) holds the reply reading long enough to read its three keys
+    # into the mail row, one of them validated against the engine's five intents.
     assert holding == {"ConversationService.java", "GrowthService.java",
-                       "InterviewService.java", "JobService.java",
+                       "InboundMailService.java", "InterviewService.java", "JobService.java",
                        "MemoryController.java", "QueryEmbeddingService.java",
                        "ResumeService.java", "VoiceService.java"}
     assert holding < {p.name for p in _consumer_files()}
