@@ -45,6 +45,12 @@ spring:
 app:
   cors:
     allowed-origins: ${APP_CORS_ORIGINS:http://localhost:3000}
+  # The rate limiter and the session record count a caller by this address. The shipped
+  # topology is a reverse proxy that writes X-Forwarded-For, so a deployment behind that
+  # proxy sets this to true; a service reached directly must leave it off, or a client can
+  # rotate the header and buy a fresh login bucket per request (docs/SECURITY.md).
+  http:
+    trust-forwarded-for: ${APP_HTTP_TRUST_FORWARDED_FOR:false}
   web:
     base-url: ${APP_WEB_BASE_URL:http://localhost:3000}
   # console logs each letter instead of sending it; smtp hands it to a relay and

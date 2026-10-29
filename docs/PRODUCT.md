@@ -209,13 +209,16 @@ Remaining gaps, stated plainly rather than hidden:
 
 A pass over the PRD §30 checklist is recorded in `docs/SECURITY.md`. It closed one
 real gap — the AI rate limit did not cover any of the blocking AI endpoints,
-including `/copilot/chat`, the most expensive call in the product — and documents
-two residual risks rather than papering over them: `X-Forwarded-For` is trusted
-for IP throttling (so the backend must sit behind a proxy that *sets* it, or
-login throttling can be spoofed away), and a Redis outage degrades the service
-rather than killing it — the fail-open path was always correct, but it was only
-reachable after a Redis timeout, so the client timeout is now pinned to 500ms and
-a stopped Redis yields `/health` `degraded` in 0.51s instead of no response at all.
+including `/copilot/chat`, the most expensive call in the product — and it
+documented a second one that has since been closed: `X-Forwarded-For` used to be
+trusted for IP throttling unconditionally, so a directly exposed backend let a
+client rotate the header and spoof login throttling away. The header is now read
+only behind a declared proxy (`APP_HTTP_TRUST_FORWARDED_FOR`, off by default)
+and only its last hop, the one the proxy wrote. The remaining operational note
+is that a Redis outage degrades the service rather than killing it — the
+fail-open path was always correct, but it was only reachable after a Redis
+timeout, so the client timeout is now pinned to 500ms and a stopped Redis yields
+`/health` `degraded` in 0.51s instead of no response at all.
 
 See `docs/product-plan.md` for the epic/task breakdown and
 `docs/architecture.md` for the system design.

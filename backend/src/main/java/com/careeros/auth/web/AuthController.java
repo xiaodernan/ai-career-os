@@ -14,6 +14,7 @@ import com.careeros.auth.service.AuthService;
 import com.careeros.auth.service.EmailChangeService;
 import com.careeros.auth.service.TokenService;
 import com.careeros.common.ClientInfo;
+import com.careeros.config.AppProperties;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.util.Map;
@@ -31,12 +32,14 @@ public class AuthController {
     private final AuthService authService;
     private final TokenService tokenService;
     private final EmailChangeService emailChange;
+    private final AppProperties props;
 
     public AuthController(AuthService authService, TokenService tokenService,
-                          EmailChangeService emailChange) {
+                          EmailChangeService emailChange, AppProperties props) {
         this.authService = authService;
         this.tokenService = tokenService;
         this.emailChange = emailChange;
+        this.props = props;
     }
 
     @PostMapping("/register")
@@ -44,14 +47,14 @@ public class AuthController {
     public AuthResponse register(@RequestBody @Valid RegisterRequest request, HttpServletRequest http) {
         User user = authService.register(request);
         return new AuthResponse(AuthUserResponse.from(user),
-                tokenService.issueForNewSession(user, ClientInfo.from(http)));
+                tokenService.issueForNewSession(user, clientInfo(http)));
     }
 
     @PostMapping("/login")
     public AuthResponse login(@RequestBody @Valid LoginRequest request, HttpServletRequest http) {
         User user = authService.login(request);
         return new AuthResponse(AuthUserResponse.from(user),
-                tokenService.issueForNewSession(user, ClientInfo.from(http)));
+                tokenService.issueForNewSession(user, clientInfo(http)));
     }
 
     @PostMapping("/refresh")
@@ -82,5 +85,9 @@ public class AuthController {
     public Map<String, Object> confirmEmailChange(@RequestBody @Valid ConfirmEmailChangeRequest request) {
         emailChange.confirm(request.token());
         return Map.of("changed", true);
+    }
+
+    private ClientInfo clientInfo(HttpServletRequest request) {
+        return ClientInfo.from(request, props.getHttp().isTrustForwardedFor());
     }
 }

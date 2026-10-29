@@ -24,6 +24,7 @@ import com.careeros.common.AuthUser;
 import com.careeros.common.CurrentUserArgumentResolver;
 import com.careeros.common.EnvelopeAdvice;
 import com.careeros.common.GlobalExceptionHandler;
+import com.careeros.config.AppProperties;
 import com.careeros.user.service.UserProfileService;
 import com.careeros.user.web.UserController;
 import java.util.List;
@@ -68,7 +69,8 @@ class EmailChangeControllerTest {
                         new UserController(mock(UserService.class), mock(UserProfileService.class),
                                 mock(AuthService.class), mock(AccountErasureService.class),
                                 mock(TokenService.class), emailChange),
-                        new AuthController(mock(AuthService.class), mock(TokenService.class), emailChange))
+                        new AuthController(mock(AuthService.class), mock(TokenService.class), emailChange,
+                                new AppProperties()))
                 .setControllerAdvice(new EnvelopeAdvice(), new GlobalExceptionHandler())
                 .setCustomArgumentResolvers(new CurrentUserArgumentResolver())
                 .build();

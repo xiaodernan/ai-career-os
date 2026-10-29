@@ -30,7 +30,13 @@ import org.springframework.test.web.servlet.MockMvc;
  */
 @SpringBootTest
 @AutoConfigureMockMvc
-@TestPropertySource(properties = "app.storage.enabled=false")
+@TestPropertySource(properties = {
+        "app.storage.enabled=false",
+        // The harness stands where the deployment's proxy stands: every IT that sets
+        // X-Forwarded-For to give a test its own limiter bucket is speaking through that
+        // proxy. ForwardedAddressIT turns the declaration off to speak as a direct client.
+        "app.http.trust-forwarded-for=true"
+})
 public abstract class AbstractIntegrationTest {
 
     private static final String PG_ADMIN_URL = "jdbc:postgresql://localhost:5432/postgres";

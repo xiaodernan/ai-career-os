@@ -145,7 +145,7 @@ public class RateLimitFilter extends org.springframework.web.filter.OncePerReque
                 || uri.matches("^/api/v1/resumes/upload/?$");
     }
 
-    private static String userOrIp(HttpServletRequest request) {
+    private String userOrIp(HttpServletRequest request) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.getPrincipal() instanceof AuthUser user) {
             return user.id().toString();
@@ -153,8 +153,12 @@ public class RateLimitFilter extends org.springframework.web.filter.OncePerReque
         return clientIp(request);
     }
 
-    /** Deployments sit behind a trusted reverse proxy that sets X-Forwarded-For; direct clients cannot spoof it there. */
-    static String clientIp(HttpServletRequest request) {
-        return ClientInfo.clientIp(request);
+    /**
+     * X-Forwarded-For is only believed when the deployment declares a trusted proxy
+     * ({@code app.http.trust-forwarded-for}); otherwise the socket's address is the
+     * identity, so a direct client cannot rotate the header into fresh buckets.
+     */
+    private String clientIp(HttpServletRequest request) {
+        return ClientInfo.clientIp(request, props.getHttp().isTrustForwardedFor());
     }
 }

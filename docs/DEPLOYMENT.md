@@ -56,7 +56,12 @@ curl -f http://localhost:3000
   - Frontend: `http://frontend:3000`
   - Backend API: `http://backend:8080`
   - AI service: **not exposed** (internal only)
-- [ ] Reverse proxy sets `X-Forwarded-For` and `X-Forwarded-Proto` headers
+- [ ] Reverse proxy sets `X-Forwarded-Proto` and writes `X-Forwarded-For` with
+  `$remote_addr` (overwrite, not `$proxy_add_x_forwarded_for`: the limiter reads the
+  last hop, and an overwrite keeps the client's own text out of the header entirely)
+- [ ] Backend runs with `APP_HTTP_TRUST_FORWARDED_FOR=true` — without it the limiter
+  counts the proxy's socket address and every client shares one bucket; with the
+  backend exposed directly, leave it off (see [SECURITY.md](SECURITY.md#findings))
 - [ ] `/actuator/prometheus` restricted at the proxy to the scraper's address (public by default)
 - [ ] DNS records point to the reverse proxy
 - [ ] TLS certificates configured and auto-renewing (Let's Encrypt recommended)
@@ -138,7 +143,8 @@ server {
         proxy_pass http://frontend:3000;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        # Overwrite, do not append: the backend reads the hop this proxy wrote.
+        proxy_set_header X-Forwarded-For $remote_addr;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
@@ -147,7 +153,7 @@ server {
         proxy_pass http://backend:8080;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-For $remote_addr;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 

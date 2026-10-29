@@ -15,6 +15,7 @@ public class AppProperties {
     private final Ratelimit ratelimit = new Ratelimit();
     private final Upload upload = new Upload();
     private final Retention retention = new Retention();
+    private final Http http = new Http();
 
     public Cors getCors() {
         return cors;
@@ -46,6 +47,27 @@ public class AppProperties {
 
     public Retention getRetention() {
         return retention;
+    }
+
+    public Http getHttp() {
+        return http;
+    }
+
+    public static class Http {
+        /**
+         * Whether X-Forwarded-For was written by a trusted reverse proxy. Off by
+         * default: a service reached directly must count the socket's address, or a
+         * client can rotate the header to buy a fresh login bucket per request.
+         */
+        private boolean trustForwardedFor = false;
+
+        public boolean isTrustForwardedFor() {
+            return trustForwardedFor;
+        }
+
+        public void setTrustForwardedFor(boolean trustForwardedFor) {
+            this.trustForwardedFor = trustForwardedFor;
+        }
     }
 
     public static class Cors {

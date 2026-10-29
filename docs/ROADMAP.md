@@ -1845,6 +1845,38 @@ where no proxy exists.
   request; the chain was restored byte-identical and the class runs 5/5
   green. Full backend suite green.)
 
+- [x] **31.4** The client's address is the socket's unless a proxy is
+  declared.
+
+  (`docs/SECURITY.md` finding #2 had measured this bypass: `clientIp` read the
+  leftmost `X-Forwarded-For` entry unconditionally, so six logins carrying six
+  spoofed values bought six fresh buckets. The trust is now a deployment
+  declaration — `APP_HTTP_TRUST_FORWARDED_FOR` (`app.http.trust-forwarded-for`),
+  **off by default**. Off, the socket's address is the identity and the header
+  is hearsay; on, the **rightmost** hop is read — the one the trusted proxy
+  wrote — because the nginx form the docs used to show,
+  `$proxy_add_x_forwarded_for`, appends to whatever the client sent, which made
+  even the leftmost read spoofable behind a compliant proxy. Overwrite and
+  append shapes both now name the address the proxy saw. The same declaration
+  governs the address a session records, since `AuthController` and the limiter
+  read through `ClientInfo`.
+
+  `ClientInfoTest` (6 cases) pins both modes, the rightmost hop, the
+  empty-header fallback, and the column-width truncation the session row
+  relies on. `ForwardedAddressIT` speaks as a direct client with the auth
+  limit at 2: two logins from one socket fill its bucket and the third is
+  `429` although each carried a different `X-Forwarded-For`; a second socket
+  still has its own window. The IT harness declares the trust (it stands where
+  the shipped proxy stands), and `RateLimitIT` keeps exercising that topology,
+  so the declaration is tested from both sides. Mutation arm: deleting the
+  flag check turned the chain IT's third login into `401` — the measured
+  bypass — and two unit cases red; restored byte-identical, both green.
+
+  `DEPLOYMENT.md` now writes the header as `$remote_addr` (overwrite) and
+  carries `APP_HTTP_TRUST_FORWARDED_FOR=true` as a checklist item;
+  `application.yml` binds it with an off default; SECURITY.md's finding #2 and
+  PRODUCT.md's summary are rewritten as fixed.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
