@@ -3,7 +3,7 @@ import { API_BASE_URL } from "@/lib/api/endpoints";
 /**
  * The shell's content security policy.
  *
- * The five headers in `next.config.ts` are the same on every answer, but a script
+ * The seven headers in `next.config.ts` are the same on every answer, but a script
  * nonce cannot be: it is minted per response, so the policy is built in the
  * middleware and this module is the one place its rules live. It is pure, so the
  * gate can read every rule without a server.

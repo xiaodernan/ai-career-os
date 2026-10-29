@@ -128,7 +128,14 @@ that rejects invented skills/numbers not present in the source evidence.
   this repository does not know the operator runs, and `preload` is a commitment
   only the operator can make for their hostname; a reverse proxy may add both.
   Browsers ignore STS delivered over http, so plain-http local runs are
-  unchanged. `frontend/next.config.ts` exports the list
+  unchanged. The same list closes the shell's handles: `Cross-Origin-Opener-Policy:
+  same-origin` severs another origin's window handle on a shell window it opened,
+  so that page cannot steer or time it, and `Cross-Origin-Resource-Policy:
+  same-origin` stops another origin reading shell answers as its own subresources;
+  same-origin windows, chunks, the manifest and the worker's cache writes are
+  untouched. `frontend/next.config.ts` also sets `poweredByHeader: false`, so an
+  answer does not name the framework that built it.
+  `frontend/next.config.ts` exports the list
   and `src/app/security-headers.test.ts` pins the rule Next reads, so the
   headers exist under `next start` and the E2E stack too, not only in a
   deployment's reverse proxy.

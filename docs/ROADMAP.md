@@ -2215,6 +2215,35 @@ where no proxy exists.
   why the two stronger directives are the operator's to add; `csp.ts`'s comment now
   counts five headers.)
 
+- [x] **31.13** the shell stops naming its framework and keeps no handles.
+
+  (Two things were still volunteered on every answer. `X-Powered-By: Next.js`
+  named the framework and gave a version fingerprint no reader uses. And a page on
+  another origin that opened the shell in a new window kept a handle on that
+  window — enough to steer it later or time what it loaded. Neither is a page
+  behavior; both are facts the answer gave away.)
+
+  `next.config.ts` sets `poweredByHeader: false`, so the banner is gone from every
+  route, and the one exported header list gained the isolation pair:
+  `Cross-Origin-Opener-Policy: same-origin` severs a cross-origin opener's link to
+  a shell window, and `Cross-Origin-Resource-Policy: same-origin` refuses another
+  origin the shell's answers as subresources of its own. Same-origin windows and
+  fetches are untouched — the app's print window, its chunks, the manifest, the
+  worker's own cache writes — and a reverse proxy may add its own around the app.
+
+  The gate now has three cases: the exact seven-header array for `/:path*`, a
+  `poweredByHeader: false` case, and the transport rule's shape. Mutation arm:
+  deleting the `poweredByHeader` line turned 1 of 3 red — the banner case, since the
+  array and the transport rule know nothing about it; restored byte-identical
+  (sha1 8ae616b2…), 3/3 green. Verified live against a dev server on a fresh port:
+  a `200` from `/` carried all seven headers and no `X-Powered-By`; `tsc` and
+  ESLint stayed clean, and the full frontend suite answers 801 tests, 800 passed,
+  the one red the concurrent session's in-flight `endpoints.test.ts` parity case.
+  The doc-reading gate selection answers 238/238.
+
+  `docs/SECURITY.md`'s shell-headers bullet names the pair and the banner switch;
+  `csp.ts`'s comment counts seven headers.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

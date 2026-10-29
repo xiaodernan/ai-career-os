@@ -32,17 +32,29 @@ import type { NextConfig } from "next";
  * because the shell may share a parent domain with services this repository does not
  * run, and the preload list is a commitment only the operator can make for their
  * hostname. A reverse proxy may add both around the app.
+ *
+ * The isolation pair closes the shell's handles: `Cross-Origin-Opener-Policy`
+ * severs the link to a page on another origin that opened the app in a new window,
+ * so that page cannot steer the shell's window or time its loads, and
+ * `Cross-Origin-Resource-Policy` stops another origin reading the shell's answers as
+ * subresources of its own. Both leave same-origin windows and fetches alone -- the
+ * app's print window, its chunks, its manifest, the worker's own cache writes. The
+ * config also stops answering `X-Powered-By: Next.js`, because the framework a
+ * server runs is not a fact its visitors need.
  */
 export const SECURITY_HEADERS = [
   { key: "X-Frame-Options", value: "DENY" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "Permissions-Policy", value: "camera=(), geolocation=(), microphone=(self)" },
+  { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+  { key: "Cross-Origin-Resource-Policy", value: "same-origin" },
   { key: "Strict-Transport-Security", value: "max-age=31536000" },
 ] as const;
 
 const nextConfig: NextConfig = {
   ...(process.env.NEXT_STANDALONE === "1" ? { output: "standalone" as const } : {}),
+  poweredByHeader: false,
   async headers() {
     return [{ source: "/:path*", headers: SECURITY_HEADERS.map((header) => ({ ...header })) }];
   },
