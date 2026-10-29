@@ -111,6 +111,14 @@ that rejects invented skills/numbers not present in the source evidence.
   a host firewall or a loopback override of your own unless the exposure is intended.
   `ai-service` stays reachable over loopback and inside the compose network. Put TLS
   behind a reverse proxy in production.
+- Every answer from the Next shell carries `X-Frame-Options: DENY`,
+  `X-Content-Type-Options: nosniff`, `Referrer-Policy:
+  strict-origin-when-cross-origin` and a `Permissions-Policy` that denies the
+  camera and geolocation but leaves the microphone to this origin — the
+  interview page records with it. `frontend/next.config.ts` exports the list
+  and `src/app/security-headers.test.ts` pins the rule Next reads, so the
+  headers exist under `next start` and the E2E stack too, not only in a
+  deployment's reverse proxy.
 - `ratelimit/RateLimitFilter` applies a Redis-backed sliding-window limit; it
   runs after JWT so AI-heavy and mail-sending endpoints can key limits off the user id.
   `ruleFor` is the one author of a path's bucket: the ceiling, the identity and

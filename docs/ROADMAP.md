@@ -1692,6 +1692,26 @@ up to the tree both sides actually ship, and writes down which red is whose.
   rewriting; the follow-up item lands them after that work commits, and the
   gate stays red until then.)
 
+## Epic 31 — The Shell's Own Hardening
+
+Every hardening epic so far guarded the services behind the browser: limits,
+retention, metrics, mail. The browser's half was left to "the reverse proxy",
+yet the same shell is served by `next start` in local runs and the E2E suite,
+where no proxy exists.
+
+- [x] **31.1** Every answer tells the browser what it may frame, sniff and use.
+
+  (`frontend/next.config.ts` returns four headers for `/:path*`:
+  frame-denial, no-sniff, a referrer policy that strips the path from
+  cross-site referrers — record ids live in the path — and a permissions
+  policy that denies the camera and geolocation while leaving the microphone
+  to this origin, because the interview page records with it. The list is
+  exported once and `src/app/security-headers.test.ts` pins the rule Next
+  reads, so a header added to the list cannot skip the rule and a rule that
+  stops carrying the list is a red. Verified against a running dev server:
+  all four headers appear on a `200` from `/`, and `tsc` and ESLint stay
+  clean.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
