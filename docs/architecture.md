@@ -74,6 +74,7 @@ frontend/backend/ai-service can also run natively for dev (`pnpm dev`, `mvn spri
 │       ├── ai/                   # typed ai-service client + SSE relay
 │       ├── application/          # applications + kanban statuses + notes + reminders
 │       ├── auth/                 # register/login/refresh/logout/reset, JWT, roles
+│       ├── calendar/             # the reminders' read-only ICS feed, per request, stored nowhere (34.1)
 │       ├── common/               # ApiResponse envelope, exceptions, errors, pagination
 │       ├── config/               # security, cors, sse, redis, storage, web envelope
 │       ├── conversation/         # copilot chats, messages, artifacts, actions
@@ -84,6 +85,7 @@ frontend/backend/ai-service can also run natively for dev (`pnpm dev`, `mvn spri
 │       ├── mail/                 # the letters' reader-facing half: preferences, unsubscribe links, the hosted page (23.1, 27.x)
 │       ├── network/              # contacts registry (11.1); outreach/follow-up live here
 │       ├── notification/         # the inbox: read/dismiss state over synthesized signals (19.3)
+│       ├── push/                 # Web Push registrations and the signed wake (33.x)
 │       ├── ratelimit/            # Redis sliding-window filter
 │       ├── report/               # dashboard read model (aggregates over the other domains)
 │       ├── resume/               # resumes, versions, parsed entities (exp/proj/skill)
@@ -363,7 +365,10 @@ with `DTSTAMP` taken from the row's own `updated_at` (its creation, then the
 reminder, when a row is unstamped) — stable across polls, because a stamp of
 "now" would make every fetch look like the event changed. Past reminders stay:
 the document mirrors the board, so an event leaves when the reader clears the
-reminder. The response is `text/calendar` bytes, not the JSON envelope: the
+reminder. Each event carries a display `VALARM` at its own start (35.2), so a
+subscriber's calendar can ring without the app or a browser registration; a
+client that ignores alarms in subscribed feeds leaves ringing to its own
+notification setting. The response is `text/calendar` bytes, not the JSON envelope: the
 advice that wraps every body passes `byte[]` through untouched, which is the same
 door the hosted mail page uses for HTML.
 

@@ -84,6 +84,17 @@ class CalendarFeedTest {
     }
 
     @Test
+    void theEventCarriesItsOwnAlarmAtTheReminderMoment() {
+        String ics = render(List.of(row(at("2026-10-30T10:00:00Z"), "Acme", "Backend Engineer")), "en");
+
+        assertThat(ics).contains("BEGIN:VALARM\r\n"
+                + "ACTION:DISPLAY\r\n"
+                + "DESCRIPTION:Acme \u00b7 Backend Engineer\r\n"
+                + "TRIGGER:PT0M\r\n"
+                + "END:VALARM\r\n");
+    }
+
+    @Test
     void aReminderThatPassedStaysOnTheFeedBecauseTheCalendarMirrorsTheBoard() {
         String ics = render(List.of(row(at("2026-10-01T09:00:00Z"), "Old", "Follow up")), "en");
 

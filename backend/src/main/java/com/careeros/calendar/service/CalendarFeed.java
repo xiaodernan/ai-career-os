@@ -19,6 +19,12 @@ import java.util.UUID;
  * transparent ({@code TRANSP:TRANSPARENT}): a follow-up reminder should not make the reader
  * look busy in somebody else's scheduling view.
  *
+ * <p>Each event also carries its own alarm (roadmap 35.2), a DISPLAY {@code VALARM} triggered at
+ * the event's start: the reader who subscribes from a phone gets the reminder without a browser
+ * registration or the app being open. Clients that honour feed alarms ring once from this; a
+ * client that ignores them (Google Calendar applies its own notification setting to subscribed
+ * calendars) is not made worse by it.
+ *
  * <p>Text values are escaped and every content line is folded at 75 octets, counting UTF-8
  * bytes rather than characters, so a company name in Chinese folds where RFC 5545 says it
  * should instead of cutting a character in half.
@@ -75,6 +81,11 @@ public final class CalendarFeed {
         raw(out, "URL", appUrl);
         out.append("STATUS:CONFIRMED\r\n");
         out.append("TRANSP:TRANSPARENT\r\n");
+        out.append("BEGIN:VALARM\r\n");
+        out.append("ACTION:DISPLAY\r\n");
+        text(out, "DESCRIPTION", summary(reminder));
+        out.append("TRIGGER:PT0M\r\n");
+        out.append("END:VALARM\r\n");
         out.append("END:VEVENT\r\n");
     }
 

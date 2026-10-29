@@ -382,7 +382,11 @@ reminder in UTC, a fixed 30-minute `DTEND`, and a `DTSTAMP` taken from the row's
 own `updated_at` (falling back to `created_at`, then the reminder itself), so a
 poll that finds nothing changed produces the same document. `SUMMARY` is company
 and title joined by a middle dot, or the role alone when the row has no company,
-and `TRANSP:TRANSPARENT` keeps a reminder from marking the reader busy. Both
+and `TRANSP:TRANSPARENT` keeps a reminder from marking the reader busy. Each event
+also carries a display alarm (`BEGIN:VALARM`, `ACTION:DISPLAY`, `TRIGGER:PT0M`)
+so a phone that subscribed from a URL rings at the reminder without a browser
+registration; a client that ignores alarms in subscribed feeds (Google Calendar
+applies its own notification setting there) is not made worse by it. Both
 `DESCRIPTION` and `URL` point at the apps list on `app.web.base-url`. Lines are
 CRLF and fold at 75 octets, and TEXT values escape backslash, newline, semicolon
 and comma, so a company name with punctuation survives the parser. The
