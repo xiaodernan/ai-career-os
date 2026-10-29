@@ -69,13 +69,20 @@ class RateLimitFilterTest {
     }
 
     @Test
-    void onlyTheRouteThatJudgesACodeIsMeteredAsMfa() {
+    void onlyTheRoutesThatJudgeACodeAreMeteredAsMfa() {
         // Guessing six digits is the attack; the meter is the account's. The status read and the
         // seed minting are outside on purpose: a settings screen polls one and may re-ask the
-        // other, and neither answers a verdict on a code.
+        // other, and neither answers a verdict on a code. The reprint and the disable judge one
+        // too, so they share the bucket -- a stolen session cannot grind against a lost phone
+        // through the newer doors either.
         assertThat(RateLimitFilter.ruleFor("/api/v1/me/mfa/activate")).isEqualTo("mfa");
         assertThat(RateLimitFilter.ruleFor("/api/v1/me/mfa/activate/")).isEqualTo("mfa");
+        assertThat(RateLimitFilter.ruleFor("/api/v1/me/mfa/recovery-codes")).isEqualTo("mfa");
+        assertThat(RateLimitFilter.ruleFor("/api/v1/me/mfa/recovery-codes/")).isEqualTo("mfa");
+        assertThat(RateLimitFilter.ruleFor("/api/v1/me/mfa/disable")).isEqualTo("mfa");
+        assertThat(RateLimitFilter.ruleFor("/api/v1/me/mfa/disable/")).isEqualTo("mfa");
         assertThat(RateLimitFilter.ruleFor("/api/v1/me/mfa")).isNull();
+        assertThat(RateLimitFilter.ruleFor("/api/v1/me/mfa/")).isNull();
         assertThat(RateLimitFilter.ruleFor("/api/v1/me/mfa/enroll")).isNull();
         assertThat(RateLimitFilter.ruleFor("/api/v1/me/mfa/activate/notes")).isNull();
     }

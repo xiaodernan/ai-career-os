@@ -307,6 +307,86 @@ class AuthFlowIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.error.code").value("MFA_INVALID"));
     }
 
+    /**
+     * Roadmap 36.3 end to end: the sheet can replace itself, the replaced sheet is dead, and the
+     * door comes off with a printed code. The unit tests pin the order of the deletes against
+     * mocks; this walks the real rows, BCrypt hashes and the login that follows.
+     */
+    @Test
+    void anActivatedAccountCanReplaceItsSheetAndTakeTheDoorOff() throws Exception {
+        String ip = freshIp();
+        String email = "mfa-door-it@example.com";
+        String password = "Str0ngPassphrase!23";
+        String accessToken = register(ip, email).path("tokens").path("accessToken").asText();
+
+        String enrollment = mvc.perform(post("/api/v1/me/mfa/enroll")
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        String secret = JSON.readTree(enrollment).path("data").path("secret").asText();
+
+        long step = com.careeros.auth.mfa.Totp.stepAt(java.time.Instant.now());
+        String activation = mvc.perform(post("/api/v1/me/mfa/activate")
+                        .header("Authorization", "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(JSON.writeValueAsString(java.util.Map.of(
+                                "password", password,
+                                "code", com.careeros.auth.mfa.Totp.code(secret, step)))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        JsonNode oldSheet = JSON.readTree(activation).path("data").path("recoveryCodes");
+        assertThat(oldSheet.size()).isEqualTo(10);
+
+        // A printed code is proof enough to replace the sheet; the answer is a fresh ten.
+        String reprintBody = mvc.perform(post("/api/v1/me/mfa/recovery-codes")
+                        .header("Authorization", "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(JSON.writeValueAsString(java.util.Map.of(
+                                "password", password, "code", oldSheet.get(1).asText()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        JsonNode freshSheet = JSON.readTree(reprintBody).path("data").path("recoveryCodes");
+        assertThat(freshSheet.size()).isEqualTo(10);
+        java.util.Set<String> previous = new java.util.HashSet<>();
+        oldSheet.forEach(code -> previous.add(code.asText()));
+        freshSheet.forEach(code -> assertThat(previous).doesNotContain(code.asText()));
+        mvc.perform(get("/api/v1/me/mfa").header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.enabled").value(true))
+                .andExpect(jsonPath("$.data.recoveryCodesRemaining").value(10));
+
+        // The replaced sheet is dead in both directions: its rows were deleted, not just marked,
+        // so one of its codes cannot even re-authenticate a reprint of its successor.
+        mvc.perform(post("/api/v1/me/mfa/recovery-codes")
+                        .header("Authorization", "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(JSON.writeValueAsString(java.util.Map.of(
+                                "password", password, "code", oldSheet.get(2).asText()))))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error.code").value("MFA_INVALID"));
+
+        // The door comes off with a printed code from the current sheet, and answers true.
+        mvc.perform(post("/api/v1/me/mfa/disable")
+                        .header("Authorization", "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(JSON.writeValueAsString(java.util.Map.of(
+                                "password", password, "code", freshSheet.get(0).asText()))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.disabled").value(true));
+
+        // The next sign-in asks for the password alone, and the status says nothing is left.
+        mvc.perform(auth(post("/api/v1/auth/login"), ip)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(JSON.writeValueAsString(java.util.Map.of(
+                                "email", email, "password", password))))
+                .andExpect(status().isOk());
+        mvc.perform(get("/api/v1/me/mfa").header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.enabled").value(false))
+                .andExpect(jsonPath("$.data.pending").value(false))
+                .andExpect(jsonPath("$.data.recoveryCodesRemaining").value(0));
+    }
+
     @Test
     void validationFailureReturnsStructuredDetails() throws Exception {
         String ip = freshIp();

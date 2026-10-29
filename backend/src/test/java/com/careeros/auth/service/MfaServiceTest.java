@@ -3,6 +3,7 @@ package com.careeros.auth.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -188,16 +189,109 @@ class MfaServiceTest {
     }
 
     @Test
-    void statusNamesEnabledPendingAndNeither() {
+    void statusNamesEnabledPendingAndHowManyCodesAreLeft() {
         when(mfa.findByUserId(ALICE)).thenReturn(Optional.empty());
-        assertThat(service.status(ALICE)).isEqualTo(new MfaService.Status(false, false));
+        assertThat(service.status(ALICE)).isEqualTo(new MfaService.Status(false, false, 0));
 
         UserMfa pending = pending(Totp.newSecret());
         when(mfa.findByUserId(ALICE)).thenReturn(Optional.of(pending));
-        assertThat(service.status(ALICE)).isEqualTo(new MfaService.Status(false, true));
+        assertThat(service.status(ALICE)).isEqualTo(new MfaService.Status(false, true, 0));
 
         pending.setActive(true);
-        assertThat(service.status(ALICE)).isEqualTo(new MfaService.Status(true, false));
+        when(recoveryCodes.countByUserIdAndUsedAtIsNull(ALICE)).thenReturn(4L);
+        assertThat(service.status(ALICE)).isEqualTo(new MfaService.Status(true, false, 4L));
+    }
+
+    @Test
+    void aReprintBurnsTheOldSheetAndAnswersAFreshOne() {
+        String secret = Totp.newSecret();
+        UserMfa active = active(secret);
+        when(mfa.findByUserId(ALICE)).thenReturn(Optional.of(active));
+
+        MfaService.Activation reprint = service.reissueRecoveryCodes(ALICE, PASSWORD,
+                Totp.code(secret, Totp.stepAt(NOW)), NOW);
+
+        assertThat(reprint.recoveryCodes()).hasSize(10).doesNotHaveDuplicates();
+        // The old sheet dies first: every code the reader printed before this answer is spent.
+        var order = inOrder(recoveryCodes);
+        order.verify(recoveryCodes).deleteByUserId(ALICE);
+        order.verify(recoveryCodes, times(10)).save(any(UserMfaRecoveryCode.class));
+    }
+
+    @Test
+    void aPrintedCodeIsProofEnoughToReprintEvenWithoutThePhone() {
+        String secret = Totp.newSecret();
+        when(mfa.findByUserId(ALICE)).thenReturn(Optional.of(active(secret)));
+
+        UserMfaRecoveryCode printed = new UserMfaRecoveryCode();
+        printed.setUserId(ALICE);
+        printed.setCodeHash(encoder.encode(MfaService.normalizeRecoveryCode("abcd-ef23-4567-ghij")));
+        when(recoveryCodes.findByUserId(ALICE)).thenReturn(List.of(printed));
+
+        service.reissueRecoveryCodes(ALICE, PASSWORD, "ABCD EF23 4567 GHIJ", NOW);
+
+        assertThat(printed.getUsedAt().toInstant()).isEqualTo(NOW);
+        verify(recoveryCodes).deleteByUserId(ALICE);
+    }
+
+    @Test
+    void aWrongPasswordCannotReprintTheSheet() {
+        String secret = Totp.newSecret();
+        when(mfa.findByUserId(ALICE)).thenReturn(Optional.of(active(secret)));
+
+        assertThatThrownBy(() -> service.reissueRecoveryCodes(ALICE, "not-the-password",
+                Totp.code(secret, Totp.stepAt(NOW)), NOW))
+                .isInstanceOfSatisfying(ApiException.class, e ->
+                        assertThat(e.code()).isEqualTo(ApiErrorCode.INVALID_CREDENTIALS));
+
+        verify(recoveryCodes, never()).deleteByUserId(any());
+        verify(recoveryCodes, never()).save(any());
+    }
+
+    @Test
+    void aPendingEnrollmentHasNothingToReprintOrTurnOff() {
+        when(mfa.findByUserId(ALICE)).thenReturn(Optional.of(pending(Totp.newSecret())));
+
+        for (Runnable call : new Runnable[] {
+                () -> service.reissueRecoveryCodes(ALICE, PASSWORD, "123456", NOW),
+                () -> service.disable(ALICE, PASSWORD, "123456", NOW)}) {
+            assertThatThrownBy(call::run)
+                    .isInstanceOfSatisfying(ApiException.class, e ->
+                            assertThat(e.code()).isEqualTo(ApiErrorCode.MFA_NOT_ENROLLED));
+        }
+        verify(mfa, never()).delete(any());
+        verify(recoveryCodes, never()).deleteByUserId(any());
+    }
+
+    @Test
+    void disablingTakesTheDoorAndTheSheetWithIt() {
+        String secret = Totp.newSecret();
+        UserMfa active = active(secret);
+        when(mfa.findByUserId(ALICE)).thenReturn(Optional.of(active));
+
+        service.disable(ALICE, PASSWORD, Totp.code(secret, Totp.stepAt(NOW)), NOW);
+
+        verify(recoveryCodes).deleteByUserId(ALICE);
+        verify(mfa).delete(active);
+    }
+
+    @Test
+    void aWrongOrMissingCodeCannotDisableTheFactor() {
+        String secret = Totp.newSecret();
+        UserMfa active = active(secret);
+        when(mfa.findByUserId(ALICE)).thenReturn(Optional.of(active));
+
+        String right = Totp.code(secret, Totp.stepAt(NOW));
+        String wrong = right.equals("000000") ? "000001" : "000000";
+        assertThatThrownBy(() -> service.disable(ALICE, PASSWORD, wrong, NOW))
+                .isInstanceOfSatisfying(ApiException.class, e ->
+                        assertThat(e.code()).isEqualTo(ApiErrorCode.MFA_INVALID));
+        assertThatThrownBy(() -> service.disable(ALICE, PASSWORD, null, NOW))
+                .isInstanceOfSatisfying(ApiException.class, e ->
+                        assertThat(e.code()).isEqualTo(ApiErrorCode.MFA_REQUIRED));
+
+        verify(mfa, never()).delete(any());
+        verify(recoveryCodes, never()).deleteByUserId(any());
     }
 
     @Test

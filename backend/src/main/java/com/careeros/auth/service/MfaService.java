@@ -34,13 +34,14 @@ import org.springframework.transaction.annotation.Transactional;
  * password change, locking the owner out of a factor they never set up. A pending enrollment can
  * be replaced (a reader who mistyped the seed into the phone, or abandoned the screen); an active
  * one cannot, because a stolen session could otherwise mint itself a fresh seed and quietly retire
- * the phone the real owner is holding. Turning two-factor off is its own operation (roadmap
- * 36.3), and it takes the password too.
+ * the phone the real owner is holding. Turning two-factor off (roadmap 36.3) and reprinting the
+ * recovery codes are their own operations, and both take the password and a working code: the
+ * password proves the caller is the reader, and the code proves the phone is still in hand.
  *
  * <p>Recovery codes are ordinary single-use passwords: hashed with the same encoder as the
  * account's password, normalized (lowercase, no spaces or hyphens) before hashing so the
  * printed spelling and the typed spelling are the same string, and replaced wholesale on every
- * activation. Their plaintext leaves the service exactly once, in this answer.
+ * activation or reprint. Their plaintext leaves the service exactly once, in that answer.
  */
 @Service
 public class MfaService {
@@ -80,8 +81,12 @@ public class MfaService {
     public record Activation(List<String> recoveryCodes) {
     }
 
-    /** Whether the second factor is in force, and whether a started enrollment is still waiting. */
-    public record Status(boolean enabled, boolean pending) {
+    /**
+     * Whether the second factor is in force, whether a started enrollment is still waiting, and
+     * how many printed codes are left -- the last number is what a settings card says as
+     * "3 left", and the {@code me} payload carries it so the card needs no second request.
+     */
+    public record Status(boolean enabled, boolean pending, long recoveryCodesRemaining) {
     }
 
     @Transactional
@@ -122,7 +127,7 @@ public class MfaService {
         }
         UserMfa row = mfa.findByUserId(userId)
                 .orElseThrow(() -> new ApiException(ApiErrorCode.MFA_NOT_ENROLLED,
-                        "Two-factor authentication has not been started for this account"));
+                        "Two-factor authentication is not on for this account"));
         if (row.isActive()) {
             throw new ApiException(ApiErrorCode.MFA_ALREADY_ACTIVE,
                     "Two-factor authentication is already on");
@@ -138,23 +143,15 @@ public class MfaService {
         mfa.save(row);
 
         recoveryCodes.deleteByUserId(userId);
-        List<String> printed = new ArrayList<>(RECOVERY_CODE_COUNT);
-        for (int index = 0; index < RECOVERY_CODE_COUNT; index++) {
-            String code4 = groupedRecoveryCode();
-            UserMfaRecoveryCode entity = new UserMfaRecoveryCode();
-            entity.setUserId(userId);
-            entity.setCodeHash(passwordEncoder.encode(normalizeRecoveryCode(code4)));
-            recoveryCodes.save(entity);
-            printed.add(code4);
-        }
-        return new Activation(List.copyOf(printed));
+        return new Activation(mintRecoveryCodes(userId));
     }
 
     @Transactional(readOnly = true)
     public Status status(UUID userId) {
         return mfa.findByUserId(userId)
-                .map(row -> new Status(row.isActive(), !row.isActive()))
-                .orElse(new Status(false, false));
+                .map(row -> new Status(row.isActive(), !row.isActive(),
+                        recoveryCodes.countByUserIdAndUsedAtIsNull(userId)))
+                .orElse(new Status(false, false, 0));
     }
 
     /** Roadmap 36.2: the second factor as a login reads it, after the password has matched. */
@@ -181,6 +178,62 @@ public class MfaService {
         if (row == null) {
             return;
         }
+        prove(userId, row, code, now);
+    }
+
+    /** Roadmap 36.3: a fresh set of printed codes, after password and a working code. */
+    @Transactional
+    public Activation reissueRecoveryCodes(UUID userId, String password, String code) {
+        return reissueRecoveryCodes(userId, password, code, Instant.now());
+    }
+
+    Activation reissueRecoveryCodes(UUID userId, String password, String code, Instant now) {
+        prove(userId, row(userId, password), code, now);
+        recoveryCodes.deleteByUserId(userId);
+        return new Activation(mintRecoveryCodes(userId));
+    }
+
+    /**
+     * Roadmap 36.3: the door comes off, after password and a working code (the phone's or a
+     * printed one). Deleting the row is the whole change -- the next login finds no active
+     * factor and asks for the password alone -- and the recovery rows go with it, because a
+     * printed code for a door that no longer exists is a secret with no owner.
+     */
+    @Transactional
+    public void disable(UUID userId, String password, String code) {
+        disable(userId, password, code, Instant.now());
+    }
+
+    void disable(UUID userId, String password, String code, Instant now) {
+        UserMfa row = row(userId, password);
+        prove(userId, row, code, now);
+        recoveryCodes.deleteByUserId(userId);
+        mfa.delete(row);
+    }
+
+    /**
+     * The half both re-authentications share: the account's password, then an active factor.
+     * A pending enrollment is not a door, so it has nothing to reprint or turn off -- it can
+     * still be replaced by enrolling again.
+     */
+    private UserMfa row(UUID userId, String password) {
+        User user = users.findById(userId)
+                .orElseThrow(() -> new ApiException(ApiErrorCode.USER_NOT_FOUND, "User not found"));
+        if (!passwordEncoder.matches(password, user.getPasswordHash())) {
+            throw new ApiException(ApiErrorCode.INVALID_CREDENTIALS, "Invalid credentials");
+        }
+        return mfa.findByUserId(userId).filter(UserMfa::isActive)
+                .orElseThrow(() -> new ApiException(ApiErrorCode.MFA_NOT_ENROLLED,
+                        "Two-factor authentication is not on for this account"));
+    }
+
+    /**
+     * The verdict both doors read: a blank answer means the factor is asking ({@code MFA_REQUIRED}),
+     * a TOTP code moves the spent-step mark forward, and a printed code is burned as it answers.
+     * A code from a step at or below the mark is refused as {@code MFA_INVALID} rather than as a
+     * replay-specific answer, because "read the phone again" is the reader's whole next move.
+     */
+    private void prove(UUID userId, UserMfa row, String code, Instant now) {
         if (code == null || code.isBlank()) {
             throw new ApiException(ApiErrorCode.MFA_REQUIRED,
                     "This account asks for a six-digit code as a second step");
@@ -210,6 +263,20 @@ public class MfaService {
             }
         }
         throw new ApiException(ApiErrorCode.MFA_INVALID, "That code is not right or was already used");
+    }
+
+    /** Ten fresh codes for {@code userId}, hashed and stored; the plaintext is the caller's answer. */
+    private List<String> mintRecoveryCodes(UUID userId) {
+        List<String> printed = new ArrayList<>(RECOVERY_CODE_COUNT);
+        for (int index = 0; index < RECOVERY_CODE_COUNT; index++) {
+            String code4 = groupedRecoveryCode();
+            UserMfaRecoveryCode entity = new UserMfaRecoveryCode();
+            entity.setUserId(userId);
+            entity.setCodeHash(passwordEncoder.encode(normalizeRecoveryCode(code4)));
+            recoveryCodes.save(entity);
+            printed.add(code4);
+        }
+        return List.copyOf(printed);
     }
 
     /**

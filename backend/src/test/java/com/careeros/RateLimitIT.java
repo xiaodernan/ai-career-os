@@ -108,6 +108,19 @@ class RateLimitIT extends AbstractIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON).content(proof))
                 .andExpect(status().isTooManyRequests())
                 .andExpect(jsonPath("$.error.code").value("RATE_LIMITED"));
+
+        // Reprint and disable judge a code too, so they share the account's bucket: once it is
+        // spent, the newer doors are shut for the same minute.
+        for (String path : java.util.List.of("/api/v1/me/mfa/recovery-codes",
+                "/api/v1/me/mfa/disable")) {
+            mvc.perform(post(path).header("Authorization", "Bearer " + token)
+                            .contentType(MediaType.APPLICATION_JSON).content(proof))
+                    .andExpect(status().isTooManyRequests());
+        }
+        // The status read is not a code judgement, so the settings card still gets its answer.
+        mvc.perform(get("/api/v1/me/mfa").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.enabled").value(false));
     }
 
     @Test

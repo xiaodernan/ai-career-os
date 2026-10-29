@@ -827,6 +827,10 @@ describe("endpoints ↔ backend route parity", () => {
     "/me/mfa": "the second door's status read; 36.4's security card is the screen that asks",
     "/me/mfa/activate": "enrollment is proved by a POST only the 36.4 settings card makes",
     "/me/mfa/enroll": "the seed is minted for a QR code 36.4 draws; no page asks for one yet",
+    "/me/mfa/recovery-codes":
+      "36.3's reprint is a button the 36.4 security card grows; nothing in the shell asks yet",
+    "/me/mfa/disable":
+      "36.3's turn-off is a button the 36.4 security card grows; nothing in the shell asks yet",
     "/me/password": "the account-password alias the client has not wired",
     "/me/sessions": "the sessions alias the client has not wired",
     "/me/sessions/{}": "the revoke-session alias the client has not wired",

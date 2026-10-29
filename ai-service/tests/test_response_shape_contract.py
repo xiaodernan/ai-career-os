@@ -1007,12 +1007,18 @@ def test_the_java_probe_reads_every_record_the_backend_declares():
     # existed for a moment until the controller took the record into its own file; its deletion
     # is why the count settled at 174 rather than 175.
     # 181 with 36.1's seven: the three `/me/mfa` bodies and answers (`MfaEnrollResponse`,
-    # `MfaActivateRequest`, `MfaActivateResponse`, `MfaStatusResponse`) and `MfaService`'s
-    # three nested rows (`Enrollment`, `Activation`, `Status`), which the declaration walk
-    # counts like any private row -- the service speaks them to its controller, so they are
-    # wire shapes in everything but visibility.
-    assert len(declared) == 181, \
-        f"{len(declared)} records carry a declaration the shared opener reads, not the 181 measured"
+    # `MfaActivateRequest`, `MfaActivateResponse` -- renamed `MfaRecoveryCodesResponse` by 36.3,
+    # which moved no count -- and `MfaStatusResponse`) and `MfaService`'s three nested rows
+    # (`Enrollment`, `Activation`, `Status`), which the declaration walk counts like any private
+    # row -- the service speaks them to its controller, so they are wire shapes in everything but
+    # visibility.
+    # 182 with 36.3's `MfaProofRequest` in `MfaProofRequest.java`: the password-and-code body the
+    # reprint and the disable bind, whose `code` may be a six-digit TOTP or a printed recovery
+    # code. Activation keeps its own body (`MfaActivateRequest`, six digits only): proving a new
+    # seed and re-authenticating an enabled factor are different sentences to the reader, so the
+    # two bodies state different rules.
+    assert len(declared) == 182, \
+        f"{len(declared)} records carry a declaration the shared opener reads, not the 182 measured"
     problems, renamed = [], []
     for relative, record in declared:
         names = _record_components_at(relative, record)

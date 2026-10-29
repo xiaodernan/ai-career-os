@@ -123,12 +123,16 @@ public class RateLimitFilter extends org.springframework.web.filter.OncePerReque
     }
 
     /**
-     * The signed-in route that judges a second-factor code. Kept narrow on purpose: the status read
-     * is polled by a settings screen and minting a seed answers a new QR code, so only the route
-     * that answers "right or wrong" is metered.
+     * The signed-in routes that judge a second-factor code. Kept narrow on purpose: the status read
+     * is polled by a settings screen and minting a seed answers a new QR code, so only the routes
+     * that answer "right or wrong" are metered -- activation, the reprint, and turning the factor
+     * off, each of which takes a code from the phone or from the printed sheet.
      */
     static boolean checksMfaCode(String uri) {
-        return uri.equals("/api/v1/me/mfa/activate") || uri.equals("/api/v1/me/mfa/activate/");
+        String path = uri.endsWith("/") ? uri.substring(0, uri.length() - 1) : uri;
+        return path.equals("/api/v1/me/mfa/activate")
+                || path.equals("/api/v1/me/mfa/recovery-codes")
+                || path.equals("/api/v1/me/mfa/disable");
     }
 
     /**

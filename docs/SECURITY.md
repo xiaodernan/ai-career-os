@@ -167,14 +167,16 @@ that rejects invented skills/numbers not present in the source evidence.
     call those three without limit — the exact hole this list exists to close.
     Cheap reads (search, listings, dashboards) are deliberately excluded so browsing
     is not throttled. Covered by `RateLimitFilterTest`.
-  - Code-judging MFA routes — 5/min per signed-in user. `POST /me/mfa/activate`
-    verifies a six-digit code against the sealed seed and, when the digits miss,
-    tries the presented string as one of ten printed recovery codes — up to eleven
-    BCrypt comparisons per call, and a six-digit space is only a million guesses.
-    `RateLimitFilter.checksMfaCode` names the route, the bucket is keyed by the
-    account id (a stolen session is exactly the caller this must outlast), and the
-    status read and seed minting stay outside the bucket: a settings screen polls
-    the one and may re-ask the other.
+  - Code-judging MFA routes — 5/min per signed-in user. `POST /me/mfa/activate`,
+    `POST /me/mfa/recovery-codes` and `POST /me/mfa/disable` each verify a
+    six-digit code against the sealed seed and, when the digits miss, try the
+    presented string as one of ten printed recovery codes — up to eleven BCrypt
+    comparisons per call, and a six-digit space is only a million guesses.
+    `RateLimitFilter.checksMfaCode` names the three routes, the bucket is keyed by
+    the account id (a stolen session is exactly the caller this must outlast), and
+    the status read and seed minting stay outside the bucket: a settings screen
+    polls the one and may re-ask the other. The reprint and the disable judge a
+    code too, so a spent bucket shuts them for the same minute.
   - **Fails open** when Redis is unavailable, logged at WARN — the limiter never
     locks anyone out. The client timeout is pinned to 500ms so that branch is
     actually reached promptly: with the defaults in effect a Redis outage left

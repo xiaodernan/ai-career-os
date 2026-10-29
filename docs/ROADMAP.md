@@ -2807,16 +2807,48 @@ password in the database.
   four ceilings and 29 carriers, and the browser's error table carries both new
   codes in both languages.
 
-- [ ] **36.3** Recovery codes can be reissued, and the account can turn the door off.
+- [x] **36.3** Recovery codes can be reissued, and the account can turn the door off.
 
-  `POST /auth/mfa/recovery-codes` replaces the set after password and code,
-  answers the new ten once and revokes every old code; `DELETE /auth/mfa` turns
-  the factor off after password and code (or a recovery code), deletes the seed
-  and every recovery row, and the next login asks for the password alone. The
-  signed-in `me` payload carries whether the factor is on and how many recovery
-  codes remain, so the settings card can say "3 left" without a second request.
-  Erasing the account deletes both tables; the retention sweep leaves enabled
-  seeds alone and clears used or revoked recovery rows past the grace window.
+  `POST /api/v1/me/mfa/recovery-codes` replaces the set after password and code,
+  answers the new ten once and revokes every old code; `POST /api/v1/me/mfa/disable`
+  turns the factor off after password and code (or a recovery code), deletes the
+  seed and every recovery row, and the next login asks for the password alone. The
+  status answer carries how many recovery codes remain, so the settings card can
+  say "3 left" without a second request. Erasing the account deletes both tables.
+
+  Landed with three decisions the outline left open. The two routes live under
+  `/api/v1/me/mfa` beside the status read, and both are POSTs on their own paths
+  rather than a `DELETE /me/mfa`: the limiter meters a route's whole URI, so a
+  DELETE beside the settings GET would put every status read in the same
+  five-a-minute bucket as the code guesses -- the card would throttle itself.
+  The `me` payload does **not** grow the two fields the outline named: the card
+  already calls `GET /me/mfa` for the enabled/pending flags, that answer now
+  carries `recoveryCodesRemaining`, and an MFA query behind every profile read
+  would charge the header for a screen it never shows. And the retention sweep
+  gains no fourth table: the rows are bounded at ten per account, and every path
+  that ends a set -- activation, reprint, disable, erasure -- deletes it
+  wholesale, so this table cannot grow with the install's history the way the
+  token tables could. A used code is a credential with nowhere left to go; the
+  sweep's subject is rows no other code path removes.
+
+  Measured: `MfaServiceTest` (22, six new: the reprint's delete-then-mint order,
+  a printed code as proof, the wrong password, the pending enrollment, the
+  disable's two deletes, and a wrong or blank code leaving the door standing);
+  `MfaControllerTest` (11, three new: the reprint's answer, the two fields'
+  validation on both routes, and the disable's `{disabled: true}`, with both new
+  routes added to the unauthenticated sweep); `RateLimitFilterTest` (12, the
+  classification now naming the three code-judging routes); `RateLimitIT` (5, the
+  activate arm extended: once the account's bucket is spent, both new routes
+  answer 429 while `GET /me/mfa` still answers 200); `AuthFlowIT` (10, the new case
+  walking enroll → activate → reprint using a printed code → the replaced sheet's
+  code refused → disable using a fresh code → password-only sign-in → status
+  reports no door and no codes); `AccountErasureIT` now seeds
+  both MFA tables and reads both empty for the erased account and whole for the
+  neighbour. The shape contract is 182 with `MfaProofRequest`, and the limiter
+  census still reads seven `RATE_LIMITED` sites over four ceilings. The browser's
+  endpoint ledger grew the two rows 36.3 added -- `/me/mfa/recovery-codes` and
+  `/me/mfa/disable`, each saying the 36.4 security card is the caller -- because
+  `endpoints.test.ts` measures Spring's table, not a hand-copied list.
 
 - [ ] **36.4** The reader can see and turn the door from settings, and answer it at login.
 

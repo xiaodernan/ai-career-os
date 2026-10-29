@@ -31,8 +31,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 /**
- * The three routes of the second door, pinned to their contract: the signed-in caller's id
- * reaches the service, the body is validated before it does, and the two refusals travel as
+ * The five routes of the second door, pinned to their contract: the signed-in caller's id
+ * reaches the service, the body is validated before it does, and the refusals travel as
  * their own codes so the browser's table can say something precise.
  */
 class MfaControllerTest {
@@ -60,13 +60,14 @@ class MfaControllerTest {
 
     @Test
     void statusAnswersThePrincipalAndTheTwoFlags() throws Exception {
-        when(mfa.status(ALICE)).thenReturn(new MfaService.Status(true, false));
+        when(mfa.status(ALICE)).thenReturn(new MfaService.Status(true, false, 6));
 
         mvc.perform(get("/api/v1/me/mfa"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.enabled").value(true))
-                .andExpect(jsonPath("$.data.pending").value(false));
+                .andExpect(jsonPath("$.data.pending").value(false))
+                .andExpect(jsonPath("$.data.recoveryCodesRemaining").value(6));
     }
 
     @Test
@@ -152,6 +153,49 @@ class MfaControllerTest {
     }
 
     @Test
+    void aReprintHandsTheProofToTheServiceAndAnswersTheFreshSheet() throws Exception {
+        when(mfa.reissueRecoveryCodes(ALICE, "correct-horse-battery-staple", "abcd-efgh-ijkl-mnop"))
+                .thenReturn(new MfaService.Activation(List.of("wxyz-2345-6789-abcd")));
+
+        mvc.perform(post("/api/v1/me/mfa/recovery-codes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"password\":\"correct-horse-battery-staple\","
+                                + "\"code\":\"abcd-efgh-ijkl-mnop\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.recoveryCodes[0]").value("wxyz-2345-6789-abcd"));
+    }
+
+    @Test
+    void eitherFieldMissingIsRefusedBeforeTheServiceRuns() throws Exception {
+        for (String path : List.of("/api/v1/me/mfa/recovery-codes", "/api/v1/me/mfa/disable")) {
+            mvc.perform(post(path)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"code\":\"123456\"}"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error.code").value("VALIDATION_FAILED"))
+                    .andExpect(jsonPath("$.error.details[0].field").value("password"));
+            mvc.perform(post(path)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"password\":\"correct-horse-battery-staple\"}"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error.details[0].field").value("code"));
+        }
+
+        verifyNoInteractions(mfa);
+    }
+
+    @Test
+    void disableAnswersTrueAfterTheServiceTurnsTheDoorOff() throws Exception {
+        mvc.perform(post("/api/v1/me/mfa/disable")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"password\":\"correct-horse-battery-staple\",\"code\":\"123456\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.disabled").value(true));
+
+        verify(mfa).disable(ALICE, "correct-horse-battery-staple", "123456");
+    }
+
+    @Test
     void anUnauthenticatedCallerIsRefusedOnEveryRoute() throws Exception {
         SecurityContextHolder.clearContext();
 
@@ -161,6 +205,14 @@ class MfaControllerTest {
         mvc.perform(post("/api/v1/me/mfa/enroll"))
                 .andExpect(status().isUnauthorized());
         mvc.perform(post("/api/v1/me/mfa/activate")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"password\":\"correct-horse-battery-staple\",\"code\":\"123456\"}"))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/v1/me/mfa/recovery-codes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"password\":\"correct-horse-battery-staple\",\"code\":\"123456\"}"))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/v1/me/mfa/disable")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"password\":\"correct-horse-battery-staple\",\"code\":\"123456\"}"))
                 .andExpect(status().isUnauthorized());

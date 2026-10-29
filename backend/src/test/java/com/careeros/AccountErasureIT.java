@@ -59,6 +59,9 @@ class AccountErasureIT extends ApiIntegrationTest {
         assertThat(count("select count(*) from documents where user_id = ?", aliceId)).isEqualTo(1);
         assertThat(count("select count(*) from refresh_tokens where user_id = ?", aliceId)).isEqualTo(1);
         assertThat(count("select count(*) from email_change_tokens where user_id = ?", aliceId)).isEqualTo(1);
+        assertThat(count("select count(*) from user_mfa where user_id = ?", aliceId)).isEqualTo(1);
+        assertThat(count("select count(*) from user_mfa_recovery_codes where user_id = ?", aliceId))
+                .isEqualTo(1);
         assertThat(storage.store).containsKey(aliceKey);
 
         mvc.perform(post("/api/v1/me/erase")
@@ -76,12 +79,17 @@ class AccountErasureIT extends ApiIntegrationTest {
         assertThat(count("select count(*) from mail_preferences where user_id = ?", aliceId)).isZero();
         assertThat(count("select count(*) from refresh_tokens where user_id = ?", aliceId)).isZero();
         assertThat(count("select count(*) from email_change_tokens where user_id = ?", aliceId)).isZero();
+        assertThat(count("select count(*) from user_mfa where user_id = ?", aliceId)).isZero();
+        assertThat(count("select count(*) from user_mfa_recovery_codes where user_id = ?", aliceId)).isZero();
         assertThat(storage.store).doesNotContainKey(aliceKey);
 
         // The neighbour: every table and the bucket still hold what this account owns.
         assertThat(count("select count(*) from users where id = ?", bobId)).isEqualTo(1);
         assertThat(count("select count(*) from documents where user_id = ?", bobId)).isEqualTo(1);
         assertThat(count("select count(*) from refresh_tokens where user_id = ?", bobId)).isEqualTo(1);
+        assertThat(count("select count(*) from user_mfa where user_id = ?", bobId)).isEqualTo(1);
+        assertThat(count("select count(*) from user_mfa_recovery_codes where user_id = ?", bobId))
+                .isEqualTo(1);
         assertThat(storage.store).containsKey(bobKey);
 
         // The refresh token died with its row: there is no session left to rotate.
@@ -118,8 +126,9 @@ class AccountErasureIT extends ApiIntegrationTest {
     }
 
     /**
-     * A document with its chunk, a knowledge source pointing at the document and a mail
-     * preference -- one row in each shape the cascade has to reach.
+     * A document with its chunk, a knowledge source pointing at the document, a mail
+     * preference, an address move in flight and the second door's two rows -- one row in each
+     * shape the cascade has to reach.
      */
     private UUID insertDocument(UUID userId, String fileKey, String title) {
         UUID documentId = jdbc.queryForObject(
@@ -137,6 +146,12 @@ class AccountErasureIT extends ApiIntegrationTest {
                         + "values (?, ?, ?, ?)", userId, "hash-" + userId,
                 "moved-" + userId + "@example.invalid",
                 java.time.OffsetDateTime.now().plusHours(2));
+        // The seed and one printed code: the erasure reaches both tables or a second factor
+        // outlives the account it guards.
+        jdbc.update("insert into user_mfa (user_id, secret_ciphertext, active) values (?, ?, true)",
+                userId, "sealed-" + userId);
+        jdbc.update("insert into user_mfa_recovery_codes (id, user_id, code_hash) values (?, ?, ?)",
+                UUID.randomUUID(), userId, "code-hash-" + userId);
         return documentId;
     }
 
