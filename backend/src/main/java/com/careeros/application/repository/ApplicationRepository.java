@@ -1,6 +1,7 @@
 package com.careeros.application.repository;
 
 import com.careeros.application.entity.Application;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -25,6 +26,17 @@ public interface ApplicationRepository extends JpaRepository<Application, UUID> 
      * with no {@code reminder_at} is not a time the reader ever wrote down, so it has no event.
      */
     List<Application> findByUserIdAndReminderAtIsNotNullOrderByReminderAtAscIdAsc(UUID userId);
+
+    /**
+     * The accounts whose reminder came due inside the ticker's window (roadmap 35.1). Closed
+     * applications are excluded for the dashboard's own reason: `offer` and `rejected` are
+     * decisions already made, and a clock that rings for them would wake the reader about work
+     * that is finished.
+     */
+    @Query("SELECT DISTINCT a.userId FROM Application a WHERE a.reminderAt > :since "
+            + "AND a.reminderAt <= :until AND a.status NOT IN ('offer', 'rejected')")
+    List<UUID> findUserIdsWithReminderBetween(@Param("since") OffsetDateTime since,
+            @Param("until") OffsetDateTime until);
 
     long countByUserId(UUID userId);
 

@@ -10,6 +10,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.careeros.application.repository.ApplicationRepository;
 import com.careeros.notification.dto.NotificationDtos.NotificationItem;
 import com.careeros.push.entity.PushSubscription;
 import com.careeros.push.repository.PushSubscriptionRepository;
@@ -31,6 +32,11 @@ import org.junit.jupiter.api.Test;
  * second morning must not ring the same signal again; a registration the push service retired is
  * deleted, since it would answer `gone` every morning; and one account in a bad state does not
  * cost the others their ring.
+ *
+ * <p>The minute clock (roadmap 35.1) is pinned as a pass over a window: only the accounts the
+ * board names for that window are rung, an episode the morning already carried is not asked
+ * again because the latch is the morning's, and a broken account cannot silence the rest of the
+ * tick.
  */
 class NotificationPushServiceTest {
 
@@ -38,10 +44,14 @@ class NotificationPushServiceTest {
     private static final UUID BOB = UUID.fromString("22222222-2222-4222-8222-222222222222");
     private static final UUID CAROL = UUID.fromString("33333333-3333-4333-8333-333333333333");
 
+    private static final OffsetDateTime SINCE = OffsetDateTime.parse("2026-10-30T10:00:00Z");
+    private static final OffsetDateTime UNTIL = OffsetDateTime.parse("2026-10-30T10:01:00Z");
+
     private NotificationService notifications;
     private PushSender sender;
     private PushSubscriptionRepository subscriptions;
     private PushDeliveryMetrics metrics;
+    private ApplicationRepository applications;
     private NotificationPushService service;
 
     @BeforeEach
@@ -50,8 +60,11 @@ class NotificationPushServiceTest {
         sender = mock(PushSender.class);
         subscriptions = mock(PushSubscriptionRepository.class);
         metrics = mock(PushDeliveryMetrics.class);
-        service = new NotificationPushService(notifications, sender, subscriptions, metrics);
+        applications = mock(ApplicationRepository.class);
+        service = new NotificationPushService(notifications, sender, subscriptions, metrics,
+                applications);
         when(subscriptions.distinctUserIds()).thenReturn(List.of());
+        when(applications.findUserIdsWithReminderBetween(any(), any())).thenReturn(List.of());
     }
 
     private static NotificationItem item(String key) {
@@ -186,5 +199,76 @@ class NotificationPushServiceTest {
         assertThat(service.pushPending()).isEqualTo(1);
 
         verify(notifications).markPushed(eq(BOB), eq(List.of("b")), any());
+    }
+
+    @Test
+    void a_tick_rings_only_the_accounts_the_board_named_for_its_window() {
+        PushSubscription alicePhone = browser();
+        accepts(sender, alicePhone);
+        when(applications.findUserIdsWithReminderBetween(SINCE, UNTIL))
+                .thenReturn(List.of(ALICE));
+        when(subscriptions.findByUserIdOrderByCreatedAtDesc(ALICE))
+                .thenReturn(List.of(alicePhone));
+        when(notifications.awaitingPush(ALICE)).thenReturn(List.of(item("reminder:a:1")));
+
+        assertThat(service.pushDue(SINCE, UNTIL)).isEqualTo(1);
+
+        verify(applications).findUserIdsWithReminderBetween(SINCE, UNTIL);
+        verify(sender).send(alicePhone);
+        verify(notifications).markPushed(eq(ALICE), eq(List.of("reminder:a:1")), any());
+        verify(subscriptions, never()).distinctUserIds();
+    }
+
+    @Test
+    void a_window_with_nobody_due_rings_nobody_and_asks_no_browser_list() {
+        assertThat(service.pushDue(SINCE, UNTIL)).isZero();
+
+        verify(sender, never()).send(any());
+        verify(subscriptions, never()).findByUserIdOrderByCreatedAtDesc(any());
+        verify(notifications, never()).markPushed(any(), anyList(), any());
+    }
+
+    @Test
+    void a_reminder_the_morning_already_rang_is_not_rung_again_by_the_tick() {
+        when(applications.findUserIdsWithReminderBetween(SINCE, UNTIL))
+                .thenReturn(List.of(ALICE));
+        when(notifications.awaitingPush(ALICE)).thenReturn(List.of());
+
+        assertThat(service.pushDue(SINCE, UNTIL)).isZero();
+
+        verify(sender, never()).send(any());
+        verify(notifications, never()).markPushed(any(), anyList(), any());
+    }
+
+    @Test
+    void one_account_that_cannot_be_prepared_does_not_stop_the_tick_for_the_next() {
+        PushSubscription bobPhone = browser();
+        accepts(sender, bobPhone);
+        when(applications.findUserIdsWithReminderBetween(SINCE, UNTIL))
+                .thenReturn(List.of(ALICE, BOB));
+        when(notifications.awaitingPush(ALICE)).thenThrow(new IllegalStateException("bad row"));
+        when(notifications.awaitingPush(BOB)).thenReturn(List.of(item("reminder:b:2")));
+        when(subscriptions.findByUserIdOrderByCreatedAtDesc(BOB))
+                .thenReturn(List.of(bobPhone));
+
+        assertThat(service.pushDue(SINCE, UNTIL)).isEqualTo(1);
+
+        verify(notifications).markPushed(eq(BOB), eq(List.of("reminder:b:2")), any());
+    }
+
+    @Test
+    void a_browser_that_refused_is_not_latched_so_the_next_morning_tries_again() {
+        PushSubscription refused = browser();
+        when(sender.send(refused)).thenReturn(PushSender.Outcome.REFUSED);
+        when(applications.findUserIdsWithReminderBetween(SINCE, UNTIL))
+                .thenReturn(List.of(ALICE));
+        when(subscriptions.findByUserIdOrderByCreatedAtDesc(ALICE))
+                .thenReturn(List.of(refused));
+        when(notifications.awaitingPush(ALICE)).thenReturn(List.of(item("reminder:a:1")));
+
+        assertThat(service.pushDue(SINCE, UNTIL)).isZero();
+
+        verify(metrics).record(PushSender.Outcome.REFUSED);
+        verify(notifications, never()).markPushed(any(), anyList(), any());
     }
 }

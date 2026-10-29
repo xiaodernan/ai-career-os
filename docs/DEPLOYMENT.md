@@ -556,6 +556,17 @@ morning by design, a refused wake is retried tomorrow, and `sent` sitting at zer
 registrations exist is a dashboard question rather than a paging one — the mail sweep's
 own clock already pages when the pass itself stops.
 
+A reminder that comes due is rung when it comes due (35.1). `careeros.reminders.tick-ms`
+(default `60000`) is a fixed-delay clock: every tick asks the board which accounts' reminders
+fell inside the window since the last completed tick, and rings their browsers through the same
+latch the morning uses, so an episode already carried is not rung again and a browser that
+refused is not remembered as rung. A failed tick does not advance its window — the next tick
+asks for the same span again. The heartbeat is `careeros.reminders.last.tick.timestamp`, moved
+at the end of every completed tick with or without a reminder to ring;
+`docs/RUNBOOK.md#the-minute-clock-a-reminder-rings-on` is what the responder reads. The
+calendar feed does not depend on this clock: each event carries its own alarm (35.2), so a
+subscriber's phone rings even with push turned off.
+
 ## Health & first data
 
 - Backend liveness: `GET /api/v1/health` (no auth).

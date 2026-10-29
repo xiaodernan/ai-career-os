@@ -1001,8 +1001,13 @@ def test_the_java_probe_reads_every_record_the_backend_declares():
     # 172 with 8ea4878's push pair in `PushDtos`: the browser's registration body and the
     # row it answers, committed without this pin moving (170 -> 172), so this sentence
     # records the debt the same way the apply receipt above does.
-    assert len(declared) == 172, \
-        f"{len(declared)} records carry a declaration the shared opener reads, not the 172 measured"
+    # 174 with 34.1's two: `CalendarController.CalendarLink` (the settings card's copyable feed
+    # URL, declared beside the route that hands it out) and `CalendarFeed.Reminder` (one row's
+    # worth of an event, the renderer's private input). A third, `CalendarDtos.CalendarLink`,
+    # existed for a moment until the controller took the record into its own file; its deletion
+    # is why the count settled at 174 rather than 175.
+    assert len(declared) == 174, \
+        f"{len(declared)} records carry a declaration the shared opener reads, not the 174 measured"
     problems, renamed = [], []
     for relative, record in declared:
         names = _record_components_at(relative, record)
@@ -2983,11 +2988,12 @@ def test_the_heartbeat_interval_has_one_definer_and_every_shipped_claim_names_it
     # Each is a different clock that shares the word -- and each line moved whenever a
     # roadmap entry above it grew, so a line ledger red on an edit that changed no sentence.
     # The file set still reds when a second document picks the word up; the counts still red
-    # when a paragraph joins or leaves.
+    # when a paragraph joins or leaves. 35.1's minute clock is DEPLOYMENT.md's fifth mention:
+    # it gives reminders their own heartbeat and documents the gauge beside it.
     per_file: dict[str, int] = {}
     for row in doc_vocabulary:
         per_file[row["file"]] = per_file.get(row["file"], 0) + 1
-    assert per_file == {"AGENTS.md": 1, "DEPLOYMENT.md": 4, "ROADMAP.md": 7,
+    assert per_file == {"AGENTS.md": 1, "DEPLOYMENT.md": 5, "ROADMAP.md": 7,
                         "RUNBOOK.md": 13, "SECURITY.md": 1}, (
         f"{per_file}: the docs' own vocabulary is censused, so this pass is not reporting on an "
         "empty set -- and a second file picking up the word is a signal the ledger has to grow")
@@ -3002,8 +3008,13 @@ def test_the_heartbeat_interval_has_one_definer_and_every_shipped_claim_names_it
         ("backend/src/main/java/com/careeros/notification/service/NotificationDeliveryMetrics.java", 11),
         ("backend/src/main/java/com/careeros/notification/service/NotificationDeliveryMetrics.java", 82),
         ("backend/src/main/java/com/careeros/notification/service/NotificationMailService.java", 22),
-        # 33.3's morning ring explains why it adds no second marker: same pass, same clock.
-        ("backend/src/main/java/com/careeros/push/service/PushDeliveryMetrics.java", 9),
+        # 35.1's minute clock: a fifth reader of the word, with a gauge of its own because a
+        # tick that stops is not the morning sweep's fault and its alert has to say so.
+        ("backend/src/main/java/com/careeros/notification/service/ReminderScheduler.java", 13),
+        # 33.3's morning ring explains why it adds no second marker: same pass, same clock. 35.1
+        # extended the class doc and the due-tick recorder, so the meter now states the word twice.
+        ("backend/src/main/java/com/careeros/push/service/PushDeliveryMetrics.java", 13),
+        ("backend/src/main/java/com/careeros/push/service/PushDeliveryMetrics.java", 74),
         ("backend/src/main/java/com/careeros/report/service/WeeklyDigestDeliveryMetrics.java", 11),
         ("backend/src/main/java/com/careeros/report/service/WeeklyDigestDeliveryMetrics.java", 82),
         ("backend/src/main/java/com/careeros/report/service/WeeklyDigestScheduler.java", 11),
@@ -3011,8 +3022,8 @@ def test_the_heartbeat_interval_has_one_definer_and_every_shipped_claim_names_it
         ("frontend/src/components/ai/task-stream.tsx", 17),
         ("frontend/src/lib/sse/use-sse.ts", 9),
     ], ("spans that name the keep-alive and state no interval: the shape an edited claim leaves behind, "
-        "listed so a claim cannot escape the census above by losing its number -- the nine Java rows "
-        "are the other clocks that share the word, kept here so a tenth clock is a red, not a silent join")
+        "listed so a claim cannot escape the census above by losing its number -- the eleven Java rows "
+        "are the other clocks that share the word, kept here so a twelfth clock is a red, not a silent join")
     assert [(row["file"], row["line"]) for row in spans["trailing"]] == [
         ("backend/src/main/java/com/careeros/ai/SseRelayService.java", 136),
         ("frontend/src/lib/sse/use-sse.ts", 253),
@@ -3222,6 +3233,12 @@ def _message_token_census() -> list[dict]:
                 role = "frame-exit"
             elif inside:
                 role = "unclassified"
+            elif re.search(r"\b(?:add|remove)EventListener\b", line):
+                # A DOM event name, not a frame name: the push card types the worker's
+                # registration with the browser's own `message` event (33.4). Classified rather
+                # than excluded, because the census walks every TS file and a line it read but
+                # did not name would be a hole dressed as a tidy count.
+                role = "dom-event-name"
             elif ".test." in path.name:
                 role = "test-assertion"
             elif line.strip().startswith("|") or re.search(r'\|\s*"message"', line):
@@ -3285,13 +3302,19 @@ def test_both_frame_parsers_default_a_nameless_frame_to_the_same_event_name():
     by_role: dict[str, list[dict]] = {}
     for row in census:
         by_role.setdefault(row["role"], []).append(row)
-    assert len(census) == 16, \
+    assert len(census) == 20, \
         (f"{sorted(by_role)} counts {[(r, len(v)) for r, v in by_role.items()]}: the floor comes from the "
          "same walk as the roles below, so a narrowed scan cannot make the ledger tidy by reading nothing")
-    assert sorted(by_role) == ["frame-default", "frame-exit", "test-assertion", "type-union-member"], \
-        (f"{sorted(by_role)}: every occurrence of the token is accounted for by one of these four roles -- "
+    assert sorted(by_role) == ["dom-event-name", "frame-default", "frame-exit", "test-assertion",
+                               "type-union-member"], \
+        (f"{sorted(by_role)}: every occurrence of the token is accounted for by one of these five roles -- "
          "an `unclassified` row is a new vocabulary that this gate has not been told about, and a census "
          "that silently files it under a default would report on the wrong system")
+    assert sorted((row["file"], row["line"]) for row in by_role["dom-event-name"]) == [
+        ("push.test.ts", 46), ("push.test.ts", 47), ("push.ts", 69), ("push.ts", 70)], \
+        (f"{[(r['file'], r['line'], r['text']) for r in by_role['dom-event-name']]}: the push card types "
+         "the worker's registration with the browser's own `message` event (33.4) -- the same spelling as "
+         "a frame name, a different system, which is why it has a role of its own")
     assert [(row["file"], row["line"]) for row in by_role["frame-default"]] == \
         [(row["file"], row["line"]) for row in rows], \
         "the census's `frame-default` rows and the parser scan are the same sites, read two ways"
@@ -3332,7 +3355,11 @@ def test_both_frame_parsers_default_a_nameless_frame_to_the_same_event_name():
         # 1444 rather than 1418 since the apply plan's own types joined above the union
         # (+26 lines); the union itself did not change. 1463 rather than 1444 since 20.2's
         # `NightlyVerdict` joined above the union (+19 lines); the union itself did not change.
-        ("types.ts", 1463, "kind:"),
+        # 1477 rather than 1463 since the push unit's own types joined above the union
+        # (+14 lines); the union itself did not change. 1488 rather than 1477 since 34.1's
+        # `CalendarLinkRow` joined above the union (+11 lines with its doc comment); the
+        # union itself did not change.
+        ("types.ts", 1488, "kind:"),
         ('use-sse.ts', 15, 'event: SSEEventName | "message" | "progress" | "ping";'),
     ], (f"{[(r['file'], r['line'], r['head']) for r in by_role['type-union-member']]}: three type unions "
         "spell `message`, and only one of them names a frame -- the other two are the trace step kind "
@@ -3784,10 +3811,12 @@ def test_the_stream_media_type_is_written_in_four_spellings_and_read_in_none():
          "be a read it cannot say anything about")
     declared_rows = buckets["declared-constant"]
     assert [(row["file"], row["line"], row["spelling"]) for row in declared_rows] == [
+        ("backend/src/main/java/com/careeros/calendar/web/CalendarController.java", 39,
+         "MediaType.parseMediaType("),
         ("backend/src/main/java/com/careeros/mail/web/MailPreferenceController.java", 44,
          "MediaType.parseMediaType(")], \
-        (f"{declared_rows}: 23.1's mail-settings page names its own answer as HTML -- a constant built "
-         "from a literal, which the reader regex catches but which asks nothing of any answer. Pinned "
+        (f"{declared_rows}: the two controllers that name their own answer as a constant built from a "
+         "literal -- the mail-settings page's HTML (23.1) and the calendar feed's ICS (34.1). Pinned "
          "here so a controller that starts declaring a media type is a line in this ledger, not a "
          "silently absorbed third bucket")
     assert buckets.get("http-answer-headers", []) == [], \

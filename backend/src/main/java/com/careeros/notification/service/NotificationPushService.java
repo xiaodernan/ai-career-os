@@ -1,5 +1,6 @@
 package com.careeros.notification.service;
 
+import com.careeros.application.repository.ApplicationRepository;
 import com.careeros.notification.dto.NotificationDtos.NotificationItem;
 import com.careeros.push.entity.PushSubscription;
 import com.careeros.push.repository.PushSubscriptionRepository;
@@ -36,6 +37,11 @@ import org.springframework.stereotype.Service;
  * registration no longer exists will say it every morning; keeping the row would make the sweep
  * walk a dead browser forever and ring nothing. One account in a bad state is a warn line, never
  * the rest of the morning: the other accounts still ring.
+ *
+ * <p>The same {@link #ring} also answers the minute clock (roadmap 35.1). That pass is handed the
+ * window a tick covers and asks the board which accounts' reminders fell inside it; the ring
+ * itself is the morning's, latch and all, so a reminder the morning already carried costs no
+ * outbound call and a browser that refused is not woken twice for one episode.
  */
 @Service
 public class NotificationPushService {
@@ -46,13 +52,16 @@ public class NotificationPushService {
     private final PushSender sender;
     private final PushSubscriptionRepository subscriptions;
     private final PushDeliveryMetrics metrics;
+    private final ApplicationRepository applications;
 
     public NotificationPushService(NotificationService notifications, PushSender sender,
-            PushSubscriptionRepository subscriptions, PushDeliveryMetrics metrics) {
+            PushSubscriptionRepository subscriptions, PushDeliveryMetrics metrics,
+            ApplicationRepository applications) {
         this.notifications = notifications;
         this.sender = sender;
         this.subscriptions = subscriptions;
         this.metrics = metrics;
+        this.applications = applications;
     }
 
     /** One morning's ring pass; returns how many accounts were woken on at least one browser. */
@@ -65,6 +74,26 @@ public class NotificationPushService {
                 }
             } catch (RuntimeException e) {
                 log.warn("the morning ring for {} could not be prepared", userId, e);
+            }
+        }
+        return rung;
+    }
+
+    /**
+     * One tick's ring pass (roadmap 35.1): only the accounts whose reminder came due inside
+     * {@code (since, until]}. A window rather than "everything due now" because an account is rung
+     * once per episode -- the episode's own lazy latch already refuses a second ring, so the
+     * window is what keeps tomorrow's tick from re-reading every row the morning sweep carried.
+     */
+    public int pushDue(OffsetDateTime since, OffsetDateTime until) {
+        int rung = 0;
+        for (UUID userId : applications.findUserIdsWithReminderBetween(since, until)) {
+            try {
+                if (ring(userId)) {
+                    rung++;
+                }
+            } catch (RuntimeException e) {
+                log.warn("the reminder ring for {} could not be prepared", userId, e);
             }
         }
         return rung;
