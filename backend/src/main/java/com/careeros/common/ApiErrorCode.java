@@ -46,7 +46,21 @@ public enum ApiErrorCode {
     RESET_TOKEN_OWNER_NOT_FOUND(HttpStatus.BAD_REQUEST),
     FORBIDDEN(HttpStatus.FORBIDDEN),
     USER_DISABLED(HttpStatus.FORBIDDEN),
+    /** Nothing is served at this address: the route catch-all, and nothing else. */
     NOT_FOUND(HttpStatus.NOT_FOUND),
+    /**
+     * The login session a reader asked to close is not among their live families -- already
+     * closed, or never theirs. Separate from {@code NOT_FOUND}, whose sentence is about an
+     * address: this one is about a session, and the reader's answer is to refresh the list.
+     */
+    LOGIN_SESSION_NOT_FOUND(HttpStatus.NOT_FOUND),
+    /**
+     * The mail-settings link is unreadable, signed for another account, names an unknown list,
+     * or belongs to a deleted account. One answer for all four, so the open internet cannot
+     * grade its guesses -- and its own code rather than the catch-all, because the sentence is
+     * about a letter's link, not an address.
+     */
+    MAIL_LINK_INVALID(HttpStatus.NOT_FOUND),
     AI_SERVICE_NOT_FOUND(HttpStatus.NOT_FOUND),
     USER_NOT_FOUND(HttpStatus.NOT_FOUND),
     PROFILE_NOT_FOUND(HttpStatus.NOT_FOUND),

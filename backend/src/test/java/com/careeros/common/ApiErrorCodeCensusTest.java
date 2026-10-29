@@ -21,14 +21,14 @@ import org.springframework.web.bind.annotation.RestController;
  * {@link ApiErrorCode} is the machine-readable contract every client reads — the enum's
  * own comment says "never rename an emitted code" — and three properties of it were
  * unpinned. The status map was spot-checked by whatever route happened to throw each
- * code (a dozen of the 88); an unreachable-coded 2xx would make an error invisible to
+ * code (a dozen of the 90); an unreachable-coded 2xx would make an error invisible to
  * every client's error path and nothing would have noticed. A rename is a wire break
- * nobody can see from the type system. And two of the 88 codes are deliberately
+ * nobody can see from the type system. And two of the 90 codes are deliberately
  * unreachable today, which reads as an enum bug to the next session unless it is
  * written down somewhere a test wakes up.
  *
  * The handler's fidelity half of this file matters as much as the shape half: the
- * advice is one line (`status(ex.code().status())`), so this exercises it for all 88
+ * advice is one line (`status(ex.code().status())`), so this exercises it for all 90
  * codes at once rather than trusting that the twelve spot-checks represent the rest.
  */
 class ApiErrorCodeCensusTest {
@@ -93,7 +93,11 @@ class ApiErrorCodeCensusTest {
                 "INTERNAL_ERROR",
                 "INTERVIEW_ALREADY_STARTED", "INTERVIEW_NOTHING_TO_FINALIZE", "INTERVIEW_NOT_STARTED", "INTERVIEW_NO_QUESTION",
                 "INVALID_CREDENTIALS", "INVALID_FILE_TYPE", "INVALID_STATUS", "INVALID_TRANSITION",
-                "JD_NOT_FOUND", "JOB_NOT_FOUND", "MALFORMED_REQUEST", "MATCH_NOT_FOUND",
+                "JD_NOT_FOUND", "JOB_NOT_FOUND",
+                // 30.5: the catch-all had three meanings; the session-row and the mail-link
+                // refusals now name their own, so NOT_FOUND is the address and nothing else.
+                "LOGIN_SESSION_NOT_FOUND", "MAIL_LINK_INVALID",
+                "MALFORMED_REQUEST", "MATCH_NOT_FOUND",
                 "METHOD_NOT_ALLOWED",
                 // 20.1: each refusal of a malformed nightly report has one meaning, so each
                 // got its own code rather than one code with three sentences.

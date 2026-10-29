@@ -81,7 +81,7 @@ public class MailPreferenceController {
         User account = account(userId, token);
         MailList which = MailList.of(list);
         if (which == null) {
-            throw new ApiException(ApiErrorCode.NOT_FOUND, NO_LINK);
+            throw new ApiException(ApiErrorCode.MAIL_LINK_INVALID, NO_LINK);
         }
         preferences.set(account.getId(), which, enabled);
         return render(account, true);
@@ -105,10 +105,10 @@ public class MailPreferenceController {
     private User account(String rawId, String token) {
         UUID id = canonical(rawId);
         if (id == null || !links.valid(id, token)) {
-            throw new ApiException(ApiErrorCode.NOT_FOUND, NO_LINK);
+            throw new ApiException(ApiErrorCode.MAIL_LINK_INVALID, NO_LINK);
         }
         return users.findById(id)
-                .orElseThrow(() -> new ApiException(ApiErrorCode.NOT_FOUND, NO_LINK));
+                .orElseThrow(() -> new ApiException(ApiErrorCode.MAIL_LINK_INVALID, NO_LINK));
     }
 
     private static UUID canonical(String rawId) {

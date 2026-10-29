@@ -1726,6 +1726,27 @@ up to the tree both sides actually ship, and writes down which red is whose.
   runs 7 of 7 green, and the browser's table gained its six sentences with
   only this session's hunks staged beside the concurrent rewrite.)
 
+- [x] **30.5** The catch-all is the address, and the session and the letter
+  have their own refusals.
+
+  (`NOT_FOUND` answered three things: the route catch-all ("Resource not
+  found"), a login-session row a reader asked to close ("Session not found"),
+  and the mail-settings page's three refusals, which share one constant. The
+  gate could not read the constant at all, so the code was named a gap with
+  three meanings. `LOGIN_SESSION_NOT_FOUND` (404, "That session is already
+  closed.") and `MAIL_LINK_INVALID` (404, "That mail-settings link is not
+  valid or has been retired.") are the split; `NOT_FOUND` keeps the
+  catch-all's one sentence, and the gaps list is empty again.
+
+  The gate learned to read a same-file `static final String`, so the mail
+  page's one sentence is measured rather than guessed -- the three throw sites
+  still share the constant, and the scan now follows it. The frozen name
+  census reads 90 codes; `TokenServiceSessionsTest`'s two refusals and
+  `SessionControllerTest`'s envelope move to the session code, `API.md`'s
+  three rows name them, and both tables answer the two sentences. The gate
+  reddened on the measured three meanings before the split and runs 7 of 7
+  after it.)
+
 ## Epic 31 — The Shell's Own Hardening
 
 Every hardening epic so far guarded the services behind the browser: limits,

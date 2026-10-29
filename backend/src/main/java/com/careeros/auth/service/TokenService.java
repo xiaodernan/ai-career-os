@@ -162,7 +162,7 @@ public class TokenService {
                 .filter(token -> token.getUserId().equals(userId))
                 .toList();
         if (live.isEmpty()) {
-            throw new ApiException(ApiErrorCode.NOT_FOUND, "Session not found");
+            throw new ApiException(ApiErrorCode.LOGIN_SESSION_NOT_FOUND, "Session not found");
         }
         for (RefreshToken token : live) {
             token.setRevokedAt(now);

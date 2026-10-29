@@ -86,7 +86,7 @@ per-user budget on AI endpoints.
 | POST | `/me/erase` | `{password, confirmEmail}` → `{erased: true}`. Re-authenticates twice — the password, then the account's own email typed back (case and surrounding spaces forgiven) — deletes the file behind every document the account owns, then deletes the account row, which cascades through every user-scoped table. A wrong password is a **401** `CURRENT_PASSWORD_INCORRECT`, an address belonging to another account a **400** `CONFIRMATION_MISMATCH`, and neither touches anything. The access token used to ask still parses (access tokens are stateless) and its next request is a **404** `USER_NOT_FOUND`; every refresh token is gone with its row |
 | POST | `/users/me/erase` | alias of `POST /me/erase` (`{password, confirmEmail}`) |
 | GET | `/me/sessions` | the account's open doors — one row per refresh-token family with its id, the user-agent and address that opened it, when it started, when it last rotated, and when it expires. Rotation stays inside the family, so refreshing never adds a row, and sessions that are revoked or expired are left out because they can no longer refresh |
-| DELETE | `/me/sessions/{id}` | closes one session by family id; its refresh token stops buying pairs at once and the answer is `{revoked: true}`. A family that is not the caller's, or is already closed, is one **404** `NOT_FOUND` and touches nothing — the two cases are indistinguishable on purpose. Closing the session that is asking is allowed and behaves like logout: the access token dies at its short expiry like every access token |
+| DELETE | `/me/sessions/{id}` | closes one session by family id; its refresh token stops buying pairs at once and the answer is `{revoked: true}`. A family that is not the caller's, or is already closed, is one **404** `LOGIN_SESSION_NOT_FOUND` and touches nothing — the two cases are indistinguishable on purpose. Closing the session that is asking is allowed and behaves like logout: the access token dies at its short expiry like every access token |
 | DELETE | `/me/sessions` | closes every session, the caller's included; same answer. Refresh tokens die at once, access tokens at their short expiry |
 | GET | `/users/me/sessions` | alias of `/me/sessions` |
 | DELETE | `/users/me/sessions/{id}` | alias of `DELETE /me/sessions/{id}` |
@@ -288,8 +288,8 @@ auth, health and the metrics scrape that need no bearer token.
 
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/mail/preferences/{userId}/{token}` | the settings page as HTML with Cache-Control: no-store and X-Robots-Tag: noindex, in the account's language, showing both dials; changes nothing |
-| POST | `/mail/preferences/{userId}/{token}/stop/{list}` | turns `list` (`weekly` or `signals`) off and answers the re-rendered page with a saved notice; a forged token or unknown list is 404 |
+| GET | `/mail/preferences/{userId}/{token}` | the settings page as HTML with Cache-Control: no-store and X-Robots-Tag: noindex, in the account's language, showing both dials; changes nothing, and an unreadable id or a signature that is not this account's is a **404** `MAIL_LINK_INVALID` |
+| POST | `/mail/preferences/{userId}/{token}/stop/{list}` | turns `list` (`weekly` or `signals`) off and answers the re-rendered page with a saved notice; a forged token or unknown list is a **404** `MAIL_LINK_INVALID` |
 | POST | `/mail/preferences/{userId}/{token}/start/{list}` | turns `list` back on and answers the re-rendered page with a saved notice |
 
 ### Growth engines (`/growth`)

@@ -181,7 +181,7 @@ class TokenServiceSessionsTest {
         ApiException ex = assertThrows(ApiException.class,
                 () -> tokenService.revokeSession(user.getId(), stranger.getFamilyId()));
 
-        assertEquals(ApiErrorCode.NOT_FOUND, ex.code());
+        assertEquals(ApiErrorCode.LOGIN_SESSION_NOT_FOUND, ex.code());
         assertThat(store).allMatch(t -> t.getRevokedAt() == null);
     }
 
@@ -194,7 +194,7 @@ class TokenServiceSessionsTest {
 
         ApiException ex = assertThrows(ApiException.class,
                 () -> tokenService.revokeSession(user.getId(), family));
-        assertEquals(ApiErrorCode.NOT_FOUND, ex.code());
+        assertEquals(ApiErrorCode.LOGIN_SESSION_NOT_FOUND, ex.code());
     }
 
     /** created_at is filled by Hibernate on insert; the proxy store bypasses it, so tests stamp it. */

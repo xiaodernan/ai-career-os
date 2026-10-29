@@ -17,11 +17,12 @@ The vocabulary is being made finer one code at a time. The resume's
 not-found code is six codes now, the request bucket that answered with twelve
 sentences is thirteen, the session codes are one meaning each, the not-found
 code is five, the storage errors are split, the validation bucket is four, the
-version code is three, the assistant's own errors are two, and the sign-in
+version code is three, the assistant's own errors are two, the sign-in
 bucket is two -- a failed sign-in and a signed-in reader's mistyped current
-password, which are different sentences to different readers -- with the
-buckets themselves gone, because a name that means nothing is not a
-contract.
+password, which are different sentences to different readers -- and the
+catch-all is one address now that the session row and the mail link answer
+for themselves -- with the buckets themselves gone, because a name that
+means nothing is not a contract.
 
 This gate holds the classification, and it *measures* it rather than
 remembering it:
@@ -60,16 +61,10 @@ CLIENT = ROOT / "frontend" / "src" / "lib" / "api" / "client.ts"
 # throw sites changed to name them.
 # The codes that mean several things: one sentence would be wrong about
 # most of them, so they keep the server's own words until the throw sites
-# name them properly. This list is the road map's queue.
-SEVERAL_MEANINGS: frozenset[str] = frozenset({
-    # "Resource not found" is the route catch-all, "Session not found" is a
-    # login-session row a reader asked to close, and the mail-settings page
-    # answers its three refusals with one constant the scan cannot read.
-    # One sentence for all three would be wrong about two; the queue item is
-    # a session-row code and a mail-link code, and until then the reader
-    # keeps the server's own words.
-    "NOT_FOUND",
-})
+# name them properly. This list is the road map's queue -- empty since 30.5
+# split the last coarse code, and kept because the next one belongs here
+# before it belongs in the reader's face.
+SEVERAL_MEANINGS: frozenset[str] = frozenset()
 
 # The codes whose wording cannot be measured at all: the upstream's own
 # sentence, which varies with the request. A sentence for such a code would
@@ -147,14 +142,22 @@ def throw_sites() -> tuple[dict[str, set[str]], set[str]]:
     throws would have called `RATE_LIMITED` and `FORBIDDEN` silent, and
     "silent" is not the same as "one meaning".
 
-    A code whose message is not a literal cannot be measured here -- and a
+    A message named by identifier is read when the file itself declares it
+    as a `static final String`; the mail page holds its one refusal that way
+    so the three throw sites cannot drift apart. An identifier the file does
+    not define -- a parameter, a shared constant -- stays unmeasured, and a
     code whose wording cannot be measured cannot be given one sentence, so
     it is treated as a gap.
     """
+    constant = re.compile(
+        r'\b(?:(?:private|protected|public)\s+)?static\s+final\s+String\s+'
+        r'([A-Za-z_]\w*)\s*=\s*"((?:[^"\\]|\\.)*)"\s*;'
+    )
     wordings: dict[str, set[str]] = {}
     unmeasured: set[str] = set()
     for path in BACKEND_MAIN.rglob("*.java"):
         text = path.read_text(encoding="utf-8", errors="replace")
+        constants = dict(constant.findall(text))
         patterns = (
             r"new ApiException\(\s*ApiErrorCode\.([A-Z_]+)\s*,\s*",
             r"ApiError\.of\(\s*ApiErrorCode\.([A-Z_]+)\s*,\s*",
@@ -168,6 +171,10 @@ def throw_sites() -> tuple[dict[str, set[str]], set[str]]:
                 if rest.startswith('"'):
                     end = rest.find('"', 1)
                     wordings.setdefault(code, set()).add(rest[1:end])
+                    continue
+                named = re.match(r"([A-Za-z_]\w*)\s*[,)]", rest)
+                if named and named.group(1) in constants:
+                    wordings.setdefault(code, set()).add(constants[named.group(1)])
                 else:
                     unmeasured.add(code)
     return wordings, unmeasured

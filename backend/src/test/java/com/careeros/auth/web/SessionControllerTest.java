@@ -121,12 +121,12 @@ class SessionControllerTest {
 
     @Test
     void aFamilyThatIsNotTheCallersTravelsAsOne404() throws Exception {
-        doThrow(new ApiException(ApiErrorCode.NOT_FOUND, "Session not found"))
+        doThrow(new ApiException(ApiErrorCode.LOGIN_SESSION_NOT_FOUND, "Session not found"))
                 .when(tokenService).revokeSession(any(), any());
 
         mvc.perform(delete("/api/v1/me/sessions/" + FAMILY))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.error.code").value("NOT_FOUND"))
+                .andExpect(jsonPath("$.error.code").value("LOGIN_SESSION_NOT_FOUND"))
                 .andExpect(jsonPath("$.error.message").value("Session not found"));
     }
 

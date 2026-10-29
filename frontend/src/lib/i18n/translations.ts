@@ -1349,6 +1349,10 @@ export const translations = {
 
       JOB_NOT_FOUND: "That job is no longer here.",
 
+      LOGIN_SESSION_NOT_FOUND: "That session is already closed.",
+
+      MAIL_LINK_INVALID: "That mail-settings link is not valid or has been retired.",
+
       MALFORMED_REQUEST: "The request could not be read.",
 
       MATCH_NOT_FOUND: "There is no match for that yet.",
@@ -3601,6 +3605,10 @@ export const translations = {
       JD_NOT_FOUND: "这份职位描述已经不在了。",
 
       JOB_NOT_FOUND: "这个职位已经不在了。",
+
+      LOGIN_SESSION_NOT_FOUND: "这次登录已经关闭了。",
+
+      MAIL_LINK_INVALID: "这个邮件设置链接无效或已经停用。",
 
       MALFORMED_REQUEST: "请求无法解析。",
 
