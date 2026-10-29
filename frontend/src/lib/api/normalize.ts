@@ -9,6 +9,8 @@ import type {
   ActivityRun,
   Application,
   ApplicationEvent,
+  AppliedCounts,
+  ApplyResult,
   AttentionItem,
   CopilotAction,
   CopilotArtifact,
@@ -492,6 +494,8 @@ export function normalizeSavedSearch(raw: unknown): SavedSearch {
 export function normalizeIngestionRun(raw: unknown): IngestionRun {
   const counts = rec(pick(raw, "counts"));
   const hasCounts = counts !== null && Object.keys(counts).length > 0;
+  const applied = rec(pick(raw, "appliedCounts", "applied_counts"));
+  const hasApplied = applied !== null && Object.keys(applied).length > 0;
   return {
     id: idOf(raw),
     feedId: str(raw, "feedId", "feed_id") ?? "",
@@ -501,6 +505,8 @@ export function normalizeIngestionRun(raw: unknown): IngestionRun {
     counts: hasCounts ? (counts as IngestCounts) : null,
     startedAt: str(raw, "startedAt", "started_at"),
     finishedAt: str(raw, "finishedAt", "finished_at"),
+    appliedAt: str(raw, "appliedAt", "applied_at") ?? null,
+    appliedCounts: hasApplied ? (applied as AppliedCounts) : null,
   };
 }
 
@@ -523,6 +529,19 @@ export function normalizeIngestionRunDetail(raw: unknown): IngestionRunDetail {
   return {
     run: normalizeIngestionRun(pick(raw, "run")),
     plan: rec(pick(raw, "plan")),
+  };
+}
+
+/**
+ * The receipt an apply sends back. A missing count is zero: the answer always
+ * carries all three, so a hole would only mean a reader that cannot count.
+ */
+export function normalizeApplyResult(raw: unknown): ApplyResult {
+  return {
+    created: num(raw, "created") ?? 0,
+    updated: num(raw, "updated") ?? 0,
+    closed: num(raw, "closed") ?? 0,
+    appliedAt: str(raw, "appliedAt", "applied_at"),
   };
 }
 

@@ -32,6 +32,7 @@ vi.mock("@/lib/hooks/resources", () => ({
 }));
 
 vi.mock("@/lib/hooks/ingestion", () => ({
+  useApplyIngestionRun: () => ({ mutate: () => {}, isPending: false }),
   useCreateIngestionFeed: () => ({ mutate: () => {}, isPending: false }),
   useToggleIngestionFeed: () => ({ mutate: () => {}, isPending: false }),
   useDeleteIngestionFeed: () => ({ mutate: () => {}, isPending: false }),
@@ -143,6 +144,60 @@ describe("ScheduledFeedsPanel", () => {
     expect(html).toContain("ingestion.neverRun");
     expect(html).toContain("ingestion.noRuns");
   });
+
+  it("offers to apply a completed run, and shows the receipt once it is applied", () => {
+    state.feeds = { data: [FEED], isSuccess: true, isError: false };
+    state.runs = {
+      data: { items: [FEED.lastRun], total: 1, page: 0, size: 20 },
+      isSuccess: true,
+      isError: false,
+    };
+    const fresh = render();
+    expect(fresh).toContain("ingestion.applyPlan");
+    expect(fresh).not.toContain("ingestion.appliedAt|");
+
+    state.runs = {
+      data: {
+        items: [
+          {
+            ...FEED.lastRun,
+            appliedAt: "2026-10-27T04:02:00Z",
+            appliedCounts: { created: 3, updated: 2, closed: 1 },
+          },
+        ],
+        total: 1,
+        page: 0,
+        size: 20,
+      },
+      isSuccess: true,
+      isError: false,
+    };
+    const applied = render();
+    // The button is gone and the row carries the receipt: this run is spent.
+    expect(applied).not.toContain("ingestion.applyPlan");
+    expect(applied).toContain("ingestion.appliedAt|");
+    expect(applied).toContain("ingestion.appliedCounts|3,2,1");
+  });
+
+  it("does not offer to apply a failed run", () => {
+      const failed = {
+        id: "run-2",
+        feedId: "feed-1",
+        feedName: "HN hiring",
+        status: "failed",
+        error: "Feed answered HTTP 503",
+        startedAt: "2026-10-27T03:20:00Z",
+      };
+      state.feeds = { data: [FEED], isSuccess: true, isError: false };
+      state.runs = {
+        data: { items: [failed], total: 1, page: 0, size: 20 },
+        isSuccess: true,
+        isError: false,
+      };
+      const html = render();
+      // A failed pull recorded no plan, so there is nothing to apply either.
+      expect(html).not.toContain("ingestion.applyPlan");
+    });
 
   it("shows a failed pull as the run it is, with the server's reason", () => {
     const failed = {

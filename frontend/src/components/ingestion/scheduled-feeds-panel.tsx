@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { CalendarClock, Play, Plus, Trash2 } from "lucide-react";
+import { CalendarClock, Check, Play, Plus, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,6 +22,7 @@ import { lastPageOf } from "@/lib/page-window";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { useUrlState } from "@/lib/hooks/use-url-state";
 import {
+  useApplyIngestionRun,
   useCreateIngestionFeed,
   useDeleteIngestionFeed,
   useRunIngestionFeed,
@@ -43,8 +44,10 @@ import type { IngestionFeed, IngestionRun } from "@/lib/api/types";
  * down — rather than as an error state, because the sweep already turned it
  * into a record.
  *
- * Applying a plan is deliberately absent: a run is a proposal, and the board
- * is only written through the reviewable ingestion path above.
+ * A completed run carries a plan the reader can write to the board from here.
+ * Applying is a deliberate press, confirmed against the counts the plan itself
+ * proposed, and a run is applied at most once -- the second press is refused
+ * rather than writing the rows again.
  */
 
 // The route's own default window: `GET /ingestion/runs` binds `size` with
@@ -133,11 +136,13 @@ export function ScheduledFeedsPanel() {
   const toggle = useToggleIngestionFeed();
   const remove = useDeleteIngestionFeed();
   const runNow = useRunIngestionFeed();
+  const apply = useApplyIngestionRun();
 
   const [name, setName] = React.useState("");
   const [url, setUrl] = React.useState("");
   const [source, setSource] = React.useState<FeedSource>("feed");
   const [pendingDelete, setPendingDelete] = React.useState<IngestionFeed | null>(null);
+  const [pendingApply, setPendingApply] = React.useState<IngestionRun | null>(null);
   const [openRun, setOpenRun] = React.useState<string | null>(null);
   const detail = useIngestionRunDetail(openRun);
 
@@ -320,6 +325,23 @@ export function ScheduledFeedsPanel() {
                     </div>
                     <div className="flex items-center gap-2">
                       <RunCounts run={run} />
+                      {run.status !== "failed" && run.appliedAt && (
+                        <span className="text-xs text-muted-foreground">
+                          {t("ingestion.appliedAt", {
+                            time: relativeTime(run.appliedAt, locale),
+                          })}
+                        </span>
+                      )}
+                      {run.status !== "failed" && !run.appliedAt && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setPendingApply(run)}
+                        >
+                          <Check aria-hidden />
+                          {t("ingestion.applyPlan")}
+                        </Button>
+                      )}
                       {run.status !== "failed" && (
                         <Button
                           size="sm"
@@ -332,6 +354,15 @@ export function ScheduledFeedsPanel() {
                     </div>
                   </div>
                   {run.error && <p className="mt-1 text-xs text-danger">{run.error}</p>}
+                  {run.appliedCounts && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {t("ingestion.appliedCounts", {
+                        created: run.appliedCounts.created ?? 0,
+                        updated: run.appliedCounts.updated ?? 0,
+                        closed: run.appliedCounts.closed ?? 0,
+                      })}
+                    </p>
+                  )}
                   {openRun === run.id && (
                     <div className="mt-2 space-y-2 rounded-md bg-muted/40 p-2.5">
                       {detail.isPending ? (
@@ -371,6 +402,33 @@ export function ScheduledFeedsPanel() {
           )}
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        open={pendingApply != null}
+        onOpenChange={(open) => {
+          if (!open) setPendingApply(null);
+        }}
+        title={t("ingestion.applyPlanTitle")}
+        description={
+          pendingApply
+            ? t("ingestion.applyPlanDescription", {
+                name: pendingApply.feedName || t("ingestion.unnamedFeed"),
+                create: pendingApply.counts?.create ?? 0,
+                update: pendingApply.counts?.update ?? 0,
+                close: pendingApply.counts?.close ?? 0,
+              })
+            : undefined
+        }
+        confirmLabel={t("ingestion.applyPlanConfirm")}
+        cancelLabel={t("common.cancel")}
+        loading={apply.isPending}
+        onConfirm={() => {
+          if (!pendingApply) return;
+          apply.mutate(pendingApply.id, {
+            onSuccess: () => setPendingApply(null),
+          });
+        }}
+      />
 
       <ConfirmDialog
         open={pendingDelete != null}

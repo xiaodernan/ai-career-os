@@ -156,6 +156,8 @@ export const endpoints = {
   ingestionFeedRun: (id: string) => `/ingestion/feeds/${seg(id)}/run`,
   ingestionRuns: "/ingestion/runs",
   ingestionRun: (id: string) => `/ingestion/runs/${seg(id)}`,
+  /** 19.2 -- write this run's stored plan to the board, once. */
+  ingestionRunApply: (id: string) => `/ingestion/runs/${seg(id)}/apply`,
 
   /* ---------------- Notification inbox (19.3) ---------------------------- */
   notifications: "/notifications",

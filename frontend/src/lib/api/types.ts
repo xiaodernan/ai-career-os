@@ -983,6 +983,20 @@ export interface IngestCounts {
   [key: string]: number | undefined;
 }
 
+/**
+ * What an apply actually wrote — the run's `applied_counts`.
+ *
+ * The plan proposed three numbers; this is the receipt: a create whose
+ * row already existed is not a create the second time, so the two sets
+ * of counts answer different questions.
+ */
+export interface AppliedCounts {
+  created?: number;
+  updated?: number;
+  closed?: number;
+  [key: string]: number | undefined;
+}
+
 /** One pull of one feed — the record that makes a failed night visible. */
 export interface IngestionRun {
   id: string;
@@ -994,6 +1008,18 @@ export interface IngestionRun {
   counts?: IngestCounts | null;
   startedAt?: string;
   finishedAt?: string;
+  /** When this run's plan was written to the board; absent until it is. */
+  appliedAt?: string | null;
+  /** What that write made — the receipt, not the plan's proposal. */
+  appliedCounts?: AppliedCounts | null;
+}
+
+/** The answer an apply sends back: the three counts and the stamp they share. */
+export interface ApplyResult {
+  created: number;
+  updated: number;
+  closed: number;
+  appliedAt?: string;
 }
 
 /** A subscribed source the nightly sweep fetches (roadmap 19.2). */

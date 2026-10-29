@@ -70,8 +70,17 @@ SEVERAL_MEANINGS: frozenset[str] = frozenset()
 # sentence, which varies with the request. A sentence for such a code would
 # be wrong about most of the requests, so it keeps the server's own words --
 # and the reason it is still here is written down rather than implied.
+#
+# The push surface's `PUSH_SUBSCRIPTION_INVALID` joins for the same
+# mechanical reason, not for the upstream one: it is thrown through a helper
+# whose message is a parameter (four sentences about length, scheme, shape),
+# so there is no literal a scan can read. `PUSH_SUBSCRIPTION_LIMIT_REACHED`
+# is measured after all -- the scan keeps the first literal of its spliced
+# sentence -- so it is translated rather than parked here. Until 33.4's
+# opt-in switch is the caller, nothing in the browser shows either code.
 UNMEASURABLE: frozenset[str] = frozenset({
     "AI_SERVICE_BAD_REQUEST",
+    "PUSH_SUBSCRIPTION_INVALID",
 })
 
 COARSE: frozenset[str] = SEVERAL_MEANINGS | UNMEASURABLE

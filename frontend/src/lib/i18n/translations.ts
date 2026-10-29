@@ -114,6 +114,7 @@ export const translations = {
       refresh: "Refresh",
       open: "Open",
       close: "Close",
+      confirm: "Confirm",
       cancel: "Cancel",
       save: "Save",
       delete: "Delete",
@@ -682,6 +683,11 @@ export const translations = {
         "The deployment's own checks, one record per night: the backend suites, the eval harness and the portable export.",
       nightlyEmpty: "No night has left a record yet. The nightly job posts one when it finishes.",
       nightlyUnavailable: "The nightly history could not be read.",
+      nightlyVerdictMissing:
+        "No night has ever written a record — the verification job may never have run.",
+      nightlyVerdictStale:
+        "The newest record is more than {hours} hours old — the nightly job stopped reporting.",
+      nightlyVerdictStreak: "{count} nights in a row ended failed.",
       nightlyPassed: "passed",
       nightlyFailed: "failed",
       nightlyStepSkipped: "skipped",
@@ -857,6 +863,15 @@ export const translations = {
       createBadge: "{count} to create",
       updateBadge: "{count} to update",
       closeBadge: "{count} to close",
+      applyPlan: "Apply this plan",
+      applyPlanTitle: "Apply this run's plan?",
+      applyPlanDescription:
+        "Writes {name}'s plan to the board: {create} to create, {update} to update, {close} to close. A run is applied once — the second press is refused.",
+      applyPlanConfirm: "Apply the plan",
+      appliedAt: "Applied {time}",
+      appliedCounts: "{created} created · {updated} updated · {closed} closed",
+      applyDone: "Plan applied: {created} created, {updated} updated, {closed} closed.",
+      applyFailed: "Couldn't apply that plan.",
       noFeeds: "No feeds yet — add one above and the night's sweep will keep it current.",
       // The paste-feed card's own counts and toasts (14.2-14.3).
       parsedToast: "Parsed {count} posting(s).",
@@ -1374,6 +1389,11 @@ export const translations = {
       PASSWORD_UNCHANGED: "The new password is the same as the current one.",
 
       PROFILE_NOT_FOUND: "Your profile is no longer here.",
+
+      PUSH_SUBSCRIPTION_LIMIT_REACHED:
+        "This account already keeps as many browsers as one morning can ring.",
+
+      PUSH_SUBSCRIPTION_NOT_FOUND: "That browser registration is no longer on this account.",
 
       RATE_LIMITED: "Too many requests — please slow down.",
 
@@ -2483,6 +2503,7 @@ export const translations = {
       refresh: "刷新",
       open: "打开",
       close: "关闭",
+      confirm: "确认",
       cancel: "取消",
       save: "保存",
       delete: "删除",
@@ -3003,6 +3024,9 @@ export const translations = {
       nightlyDescription: "部署自身的检查，每晚一条记录：后端测试、评测框架与可移植导出。",
       nightlyEmpty: "还没有任何夜晚留下记录。夜间任务完成时会写入一条。",
       nightlyUnavailable: "无法读取夜间历史。",
+      nightlyVerdictMissing: "还没有任何夜晚留下记录——验证任务可能从未运行过。",
+      nightlyVerdictStale: "最新记录已超过 {hours} 小时——夜间任务停止上报了。",
+      nightlyVerdictStreak: "已连续 {count} 个夜晚以失败告终。",
       nightlyPassed: "通过",
       nightlyFailed: "失败",
       nightlyStepSkipped: "跳过",
@@ -3159,6 +3183,15 @@ export const translations = {
       createBadge: "{count} 个待新增",
       updateBadge: "{count} 个待更新",
       closeBadge: "{count} 个待关闭",
+      applyPlan: "应用此计划",
+      applyPlanTitle: "应用这次运行的计划？",
+      applyPlanDescription:
+        "把“{name}”的计划写到职位板上：{create} 个新建、{update} 个更新、{close} 个关闭。一次运行只能应用一次——第二次会被拒绝。",
+      applyPlanConfirm: "应用计划",
+      appliedAt: "已应用 · {time}",
+      appliedCounts: "新建 {created} · 更新 {updated} · 关闭 {closed}",
+      applyDone: "计划已应用：新建 {created}、更新 {updated}、关闭 {closed}。",
+      applyFailed: "应用这份计划失败了。",
       noFeeds: "还没有订阅——在上方添加一个，夜间清扫会持续跟进它。",
       // 粘贴解析卡片的计数与提示（14.2-14.3）
       parsedToast: "已解析 {count} 个职位。",
@@ -3631,6 +3664,10 @@ export const translations = {
       PASSWORD_UNCHANGED: "新密码和当前密码一样。",
 
       PROFILE_NOT_FOUND: "你的档案已经不在了。",
+
+      PUSH_SUBSCRIPTION_LIMIT_REACHED: "这个账号保存的浏览器数量已到上限，一次早安提醒叫不完更多了。",
+
+      PUSH_SUBSCRIPTION_NOT_FOUND: "这条浏览器注册已经不在这个账号下了。",
 
       RATE_LIMITED: "请求太频繁了，请慢一点。",
 

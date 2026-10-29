@@ -19,6 +19,7 @@ import {
   normalizeJob,
   normalizeJdParsed,
   normalizeIngestionFeed,
+  normalizeApplyResult,
   normalizeIngestionRun,
   normalizeIngestionRunDetail,
   normalizeMemory,
@@ -457,6 +458,27 @@ describe("normalizeIngestionRun / Feed / RunDetail (19.2)", () => {
     // "never run" is null, and the panel says so in words rather than showing a date.
     expect(normalizeIngestionFeed({ id: "feed-2" }).lastRun).toBeNull();
     expect(normalizeIngestionFeed({ id: "feed-3", source: "rss", enabled: false }).enabled).toBe(false);
+  });
+
+  it("reads the receipt an apply stamped, and refuses to invent counts", () => {
+    const run = normalizeIngestionRun({
+      id: "run-7",
+      status: "completed",
+      applied_at: "2026-10-27T04:02:00Z",
+      applied_counts: { created: 2, updated: 1, closed: 0 },
+    });
+    expect(run.appliedAt).toBe("2026-10-27T04:02:00Z");
+    expect(run.appliedCounts).toEqual({ created: 2, updated: 1, closed: 0 });
+    // Not applied yet: both fields are absent, not zero and not now.
+    const fresh = normalizeIngestionRun({ id: "run-8", status: "completed" });
+    expect(fresh.appliedAt).toBeNull();
+    expect(fresh.appliedCounts).toBeNull();
+    expect(normalizeIngestionRun({ id: "run-9", applied_counts: {} }).appliedCounts).toBeNull();
+
+    const receipt = normalizeApplyResult({ created: 1, updated: 2, closed: 3, appliedAt: "2026-10-27T04:02:00Z" });
+    expect(receipt).toEqual({ created: 1, updated: 2, closed: 3, appliedAt: "2026-10-27T04:02:00Z" });
+    // The route always sends all three; a hole reads as zero rather than NaN.
+    expect(normalizeApplyResult({})).toEqual({ created: 0, updated: 0, closed: 0, appliedAt: undefined });
   });
 
   it("keeps the plan a run recorded, and survives a detail without one", () => {

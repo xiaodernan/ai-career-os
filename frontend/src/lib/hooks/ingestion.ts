@@ -4,10 +4,11 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { api } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
-import { normalizeIngestionRunDetail } from "@/lib/api/normalize";
+import { normalizeApplyResult, normalizeIngestionRunDetail } from "@/lib/api/normalize";
 import { fail } from "@/lib/hooks/failure";
 import { translate } from "@/lib/i18n/locale-context";
 import type {
+  ApplyResult,
   IngestPlan,
   IngestionRunDetail,
   ParsedFeed,
@@ -190,5 +191,35 @@ export function useRunIngestionFeed() {
       }
     },
     onError: fail("ingestion.runNowFailed"),
+  });
+}
+
+/**
+ * 19.2 -- write a completed run's plan to the board, once.
+ *
+ * The answer is the receipt: the counts *this* write made, not the plan's
+ * proposal -- a create whose row already exists is not a create the second
+ * time. The board changed, so the job lists are re-read with the run's row.
+ */
+export function useApplyIngestionRun() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string): Promise<ApplyResult> =>
+      normalizeApplyResult(
+        await api.request<unknown>(endpoints.ingestionRunApply(id), { method: "POST" })
+      ),
+    onSuccess: (result) => {
+      qc.invalidateQueries({ queryKey: ["ingestion", "runs"] });
+      qc.invalidateQueries({ queryKey: ["ingestion", "run"] });
+      qc.invalidateQueries({ queryKey: ["jobs"] });
+      toast.success(
+        translate("ingestion.applyDone", {
+          created: result.created,
+          updated: result.updated,
+          closed: result.closed,
+        })
+      );
+    },
+    onError: fail(translate("ingestion.applyFailed") ?? "Couldn't apply that plan."),
   });
 }

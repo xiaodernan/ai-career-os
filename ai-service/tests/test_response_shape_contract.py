@@ -917,10 +917,13 @@ def test_the_declaration_probes_reach_the_shapes_a_copy_would_miss():
     # whether the deployment can hear and speak, exported like its neighbours.
     # 61 with 20.1's `normalizeNightlyReport`: the night's summary is a jsonb map whose
     # `steps` arrive as their own little wire shape, so the card reads it through the
-    # same opener as every other row. 62 with 20.2's `normalizeNightlyVerdict`: the
-    # install's verdict reads its seven names off one record through the same opener.
-    assert len(re.findall(TS_OPENER.format(name=r"(\w+)"), source)) == 62, \
-        "56 exported mappers and 6 module-private ones, all through one opener"
+    # same opener as every other row.
+    # 62 with the apply receipt's `normalizeApplyResult`: the board reads its three
+    # counts and the applied-at stamp through the same opener as every other row. 63 with
+    # 20.2's `normalizeNightlyVerdict`: the install's verdict reads its seven names off one
+    # record through the same opener as every other row.
+    assert len(re.findall(TS_OPENER.format(name=r"(\w+)"), source)) == 63, \
+        "57 exported mappers and 6 module-private ones, all through one opener"
     assert "export function normalizePage(" not in source, \
         "the generic really does sit between the name and the paren, so a literal opener finds nothing"
     assert _ts_function_body("normalizePage").startswith("export function normalizePage<T>(")
@@ -995,8 +998,11 @@ def test_the_java_probe_reads_every_record_the_backend_declares():
     # the hosted mail page render their copies from (`NotificationMailer.Words`,
     # `WeeklyDigestMailer.Words`, `MailPage.Words`). The probe walks records by declaration,
     # so a private row or a letter's template counts like a public DTO.
-    assert len(declared) == 170, \
-        f"{len(declared)} records carry a declaration the shared opener reads, not the 170 measured"
+    # 172 with 8ea4878's push pair in `PushDtos`: the browser's registration body and the
+    # row it answers, committed without this pin moving (170 -> 172), so this sentence
+    # records the debt the same way the apply receipt above does.
+    assert len(declared) == 172, \
+        f"{len(declared)} records carry a declaration the shared opener reads, not the 172 measured"
     problems, renamed = [], []
     for relative, record in declared:
         names = _record_components_at(relative, record)
@@ -1262,7 +1268,9 @@ def test_the_response_envelope_has_exactly_one_wrapper_and_one_unwrapper():
     # 53 since the proactive layer's five confirmations joined: a saved search saved and
     # deleted, a feed added and removed, and an ingestion run recorded -- each written
     # through the same shared handler, so none can drift into a silent success.
-    assert len(toasts) == 53, (f"{len(toasts)} `toast.success` lines came out of the same walk: that is "
+    # 54 with the apply action's confirmation: a plan landed, written through the same
+    # shared handler, so it cannot drift into a silent success either.
+    assert len(toasts) == 54, (f"{len(toasts)} `toast.success` lines came out of the same walk: that is "
                                "the floor proving the scan reached the pages and the hooks, so a walk "
                                "narrowed to the api directory cannot pass quietly")
 
@@ -1271,7 +1279,7 @@ def test_a_message_frame_reader_names_only_keys_the_orchestrator_emits():
     """#173: a `message` frame has one producer, and this test is the ledger of the reader's inventions.
 
     `orchestrator.py:277` publishes `_emit(task_id, "message", out.to_dict())`, and the Java relay only
-    defaults a frame's name to `message` when the upstream had none (`SseRelayService.java:109`) while
+    defaults a frame's name to `message` when the upstream had none (`SseRelayService.java:129`) while
     every ai-service frame carries an event name (`api/tasks.py:30`, `core/taskbus.py:29`). So the keys of
     `Outcome.to_dict` are the frame's shape. `use-sse.ts` re-dispatches inside the `message` case on
     `payload.type`, `payload.token` and `payload.data` -- three fields no producer writes, under a cast
@@ -1404,7 +1412,7 @@ def test_the_client_dispatches_two_frame_kinds_no_service_can_send():
     error, token, message, ping. `artifact` and `trace` appear in no publishing call site anywhere: the
     string `"artifact"` does not occur in `ai-service/app` at all, `trace` frames are never published
     because `observability.trace()` writes to the database instead of the task bus, and the backend adds no
-    name of its own beyond re-sending `done`/`error` (`SseRelayService.java:109`, `CopilotStreamService.java:126`).
+    name of its own beyond re-sending `done`/`error` (`SseRelayService.java:129`, `CopilotStreamService.java:126`).
     Yet `components/ai/task-stream.tsx:98` turns trace frames into timeline rows and :125 flips a reporting
     state on an artifact frame, so the affordance is wired to a signal nothing sends -- and
     `use-sse.test.ts:75-76` feeds both by hand, which is how it has stayed green.
@@ -3003,7 +3011,7 @@ def test_the_heartbeat_interval_has_one_definer_and_every_shipped_claim_names_it
         "listed so a claim cannot escape the census above by losing its number -- the eight Java rows "
         "are the other clocks that share the word, kept here so a ninth clock is a red, not a silent join")
     assert [(row["file"], row["line"]) for row in spans["trailing"]] == [
-        ("backend/src/main/java/com/careeros/ai/SseRelayService.java", 116),
+        ("backend/src/main/java/com/careeros/ai/SseRelayService.java", 136),
         ("frontend/src/lib/sse/use-sse.ts", 253),
     ], ("the other spelling -- a comment after code, which a span scan cannot see -- and neither states "
         "an interval: both say a line beginning with `:` is a keep-alive the parser skips, so the "
@@ -3256,8 +3264,8 @@ def test_both_frame_parsers_default_a_nameless_frame_to_the_same_event_name():
          "name -- the relay forwards to the browser, so a default that differs on one side is a frame "
          "that reaches the client as an event its router has never heard of")
     assert [(row["file"], row["line"], row["language"], row["default"]) for row in rows] == [
-        ("SseRelayService.java", 109, "java", "message"),
         ("SseRelayService.java", 129, "java", "message"),
+        ("SseRelayService.java", 149, "java", "message"),
         ("use-sse.ts", 250, "ts", "message"),
     ], ("where each parser invents the name: the Java pair is the in-stream frame and the stream's tail, "
         "and losing either half means one of the two exit paths stops defaulting")
@@ -3318,9 +3326,10 @@ def test_both_frame_parsers_default_a_nameless_frame_to_the_same_event_name():
         # (+11 lines); the union itself did not change.
         # 1418 rather than 1393 since 20.1's `NightlyReportStep` and `NightlyReport` joined
         # above the union (+25 lines with their doc comments); the union itself did not change.
-        # 1437 rather than 1418 since 20.2's `NightlyVerdict` joined above the union (+19 lines);
-        # the union itself did not change.
-        ("types.ts", 1437, "kind:"),
+        # 1444 rather than 1418 since the apply plan's own types joined above the union
+        # (+26 lines); the union itself did not change. 1463 rather than 1444 since 20.2's
+        # `NightlyVerdict` joined above the union (+19 lines); the union itself did not change.
+        ("types.ts", 1463, "kind:"),
         ('use-sse.ts', 15, 'event: SSEEventName | "message" | "progress" | "ping";'),
     ], (f"{[(r['file'], r['line'], r['head']) for r in by_role['type-union-member']]}: three type unions "
         "spell `message`, and only one of them names a frame -- the other two are the trace step kind "
@@ -3736,9 +3745,11 @@ def test_the_stream_media_type_is_written_in_four_spellings_and_read_in_none():
          "census would have no classification for")
     senders = by_kind["request-header"]
     # 322 rather than 237 since the XHR upload transport and the shared envelopeError helper
-    # joined client.ts above postSSE, moving its Accept line down.
+    # joined client.ts above postSSE, moving its Accept line down. The relay's own Accept
+    # sits at 87 rather than 71 since the ops request-id lines joined above its request
+    # builder -- same line, same meaning, counted again rather than assumed unmoved.
     assert [(row["file"], row["line"]) for row in senders] == [
-        ("backend/src/main/java/com/careeros/ai/SseRelayService.java", 71),
+        ("backend/src/main/java/com/careeros/ai/SseRelayService.java", 87),
         ("frontend/src/lib/api/client.ts", 322),
         ("frontend/src/lib/sse/use-sse.ts", 92)], \
         (f"{[(r['file'], r['line']) for r in senders]}: three senders arm the stream -- the relay, the "

@@ -812,10 +812,28 @@ describe("endpoints ↔ backend route parity", () => {
    */
   const NEVER_REFERENCED: Record<string, string> = {
     "/health": "liveness for the container probe, not something a page calls",
-    "/ingestion/runs/{}/apply": "the board's apply action is the caller; the route landed before it",
     "/me": "MeController's alias of /users/me; the client spells every call through /users/...",
     "/resume-versions/{}": "the version panel reads the list form /resume-versions?resumeId=…",
     "/resumes/{}/versions": "superseded for the panel by GET /resume-versions?resumeId=…",
+    "/push/subscriptions":
+      "roadmap 33.1 is the server half only; 33.4's settings opt-in is the caller that will register a browser",
+    "/push/subscriptions/{}":
+      "forget-one rides 33.4's opt-in switch, which does not exist until the worker can be rung",
+    "/auth/email-change/confirm":
+      "the email-confirmation landing route has no screen until the auth flow grows one",
+    "/mail/preferences/{}/{}": "the mail-preference read/update surface is not wired yet",
+    "/mail/preferences/{}/{}/start/{}": "the mail preference unsubscribe start link is not wired yet",
+    "/mail/preferences/{}/{}/stop/{}": "the mail preference unsubscribe stop link is not wired yet",
+    "/me/email-change": "the account email-change alias the client has not wired",
+    "/me/erase": "the account-erase alias the client has not wired",
+    "/me/password": "the account-password alias the client has not wired",
+    "/me/sessions": "the sessions alias the client has not wired",
+    "/me/sessions/{}": "the revoke-session alias the client has not wired",
+    "/users/me/email-change": "the account email-change route the client has not wired",
+    "/users/me/erase": "the account-erase route the client has not wired",
+    "/users/me/password": "the account-password route the client has not wired",
+    "/users/me/sessions": "the sessions route the client has not wired",
+    "/users/me/sessions/{}": "the revoke-session route the client has not wired",
   };
 
   function unreferencedRoutes(): string[] {
@@ -829,7 +847,7 @@ describe("endpoints ↔ backend route parity", () => {
   }
 
   it("the routes the browser never asks for are listed, with a reason each", () => {
-    expect(unreferencedRoutes()).toEqual(Object.keys(NEVER_REFERENCED));
+    expect([...unreferencedRoutes()].sort()).toEqual([...Object.keys(NEVER_REFERENCED)].sort());
     Object.entries(NEVER_REFERENCED).forEach(([route, why]) =>
       expect(why, `${route} needs a reason, not a blank`).not.toBe(""));
   });

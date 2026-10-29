@@ -22,17 +22,17 @@
 
 ## 主线队列（按顺序执行）
 
-1. **13.1 收尾 — Markdown 导出面**
-   `export_render.to_markdown` 已经写好且完整，但没有任何路由/按钮调用它。
-   给 render 路由加 `format: "markdown"`，打通 backend 桥、`/data` 页面按钮、
-   两种语言、路由级测试与 `API.md` / `EXPORT.md` 文档。
+1. ~~**13.1 收尾 — Markdown 导出面**~~ 已完成：ai-service 的 render 路由接受
+   `format: "markdown"`（与打印文档同节序同词句，diff 工具可读），backend 桥
+   原样转发，`/data` 页多一个“下载 Markdown”按钮，API.md 记下三种格式与
+   PDF 转换器缺席时返回 HTML 的理由。
 
-2. **13.2 收尾 — 恢复的删除语义**
-   `currentState` 只覆盖 profile / applications / growth_plans / notes / contacts；
-   resumes、knowledge、job_descriptions、interviews、memories 不在其中，所以
-   这些 section 的"包内已无此行"永远无法计划成 delete。扩展 current state
-   到全 section（并处理重新摄取 section 的 id 重映射），或者把 restore 明确
-   记录为 upsert 并用测试钉住这个承诺。
+2. ~~**13.2 收尾 — 恢复的删除语义**~~ 已完成：`current_state` 补齐 bundle 的
+   全部 10 个 section（六个 ai-service 自读、backend 的四节由桥送来）；按 id
+   匹配的六节（profile、applications、growth_plans、notes、contacts、
+   job_descriptions、interviews）把"包内已无此行"计划成 `delete`，重新摄取的
+   三节（resumes、knowledge、memories）按内容或 `(kind, key)` 匹配、永不删除；
+   `skip` 的哈希只覆盖 apply 真正写入的字段，apply 逐段报告 `unchanged`。
 
 3. ~~**17.1b 收尾 — 41 条文案 census**~~ 已完成：census 归零
    （`everyOffender()` 为空，`KNOWN` 与 `regen-known.mjs` 一并删除；
