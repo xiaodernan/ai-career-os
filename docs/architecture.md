@@ -136,6 +136,15 @@ user-scoped table (ownership is enforced in backend layer + a single SQL predica
    created_at)` → the pending move to a new address (26): the hash is what is stored,
   never the link; the row is one-use and dies after two hours, and only a click from
   the new mailbox moves the address.
+- `user_mfa(user_id, secret_ciphertext, active, last_used_step, created_at,
+   activated_at)` → one row per enrolled account (36.1): the TOTP seed sealed with
+   AES-GCM under `app.security.mfa-secret`, never in clear. `active` separates a seed
+   that is waiting for its first proof from one in force, and `last_used_step` is the
+   step the seed was last proven at, so a replay inside the same 30-second window is
+   refused. Erasing the account cascades this row away with the rest.
+- `user_mfa_recovery_codes(id, user_id, code_hash, used_at, created_at)` → ten
+   single-use codes minted once, at activation: only the BCrypt hash is stored, and a
+   spent code keeps its row with `used_at` set so it can never be spent again.
 - `user_profiles(id, user_id, headline, summary, location, years_experience, target_roles
    jsonb, target_locations jsonb, work_authorization jsonb, links jsonb, preferences jsonb)`
 - `user_memories(id, user_id, kind enum[skill, preference, goal, interview_pattern,

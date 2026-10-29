@@ -96,11 +96,15 @@ APP_LEAVES = frozenset({
     "email.smtp.password", "email.smtp.starttls", "email.smtp.ssl", "mail.link-secret",
     "http.trust-forwarded-for", "deployment.env",
     "push.vapid-public-key", "push.vapid-private-key", "push.contact", "push.ttl-seconds",
+    "security.mfa-secret",
 })
 HOLDERS = frozenset({"Cors", "Jwt", "Internal", "Storage", "AiService", "Ratelimit", "Upload",
                      "Retention", "Http", "Deployment", "Push"})
+# `security` joins the namespace without an AppProperties holder, the same shape `mail` has:
+# 36.1's seed key is read through `@Value` by the cipher and the guard, so the admission rule
+# follows the yml's block rather than a nested class that would exist only to be unread.
 HOLDER_KEYS = frozenset({"cors", "web", "jwt", "internal", "storage", "ai-service", "ratelimit", "upload",
-                         "retention", "email", "mail", "http", "deployment", "push"})
+                         "retention", "email", "mail", "http", "deployment", "push", "security"})
 
 # leaf -> (holder, field, accessor, the files that call it), measured at the ref this gate lands on.
 READERS = {
@@ -422,13 +426,13 @@ def armed_bytes() -> int:
 
 # ---------------------------------------------------------------- the cases
 
-def test_the_app_block_writes_thirty_three_leaves_and_each_binds_by_one_of_three_mechanisms():
+def test_the_app_block_writes_thirty_four_leaves_and_each_binds_by_one_of_three_mechanisms():
     leaves = app_leaves()
     assert len(leaves) >= 15, (
         f"the `app:` block parsed to {len(leaves)} leaves, below the 15 the shipped file writes -- the parser "
         f"stopped following the indentation, so every number below is a reading of nothing")
     assert frozenset(leaves) == APP_LEAVES, (
-        f"`app:`'s leaves are not the thirty-three pinned here: extra={sorted(frozenset(leaves) - APP_LEAVES)} "
+        f"`app:`'s leaves are not the thirty-four pinned here: extra={sorted(frozenset(leaves) - APP_LEAVES)} "
         f"missing={sorted(APP_LEAVES - frozenset(leaves))} -- a new key needs a binder and a reader before it "
         f"is a configuration rather than a comment")
 
@@ -711,14 +715,14 @@ def test_the_cap_the_dead_knob_would_set_is_a_compile_time_constant_and_the_cont
         "quotes it")
 
 
-def test_thirty_leaves_reach_the_environment_and_the_three_that_do_not_are_literals_in_a_file():
+def test_thirty_one_leaves_reach_the_environment_and_the_three_that_do_not_are_literals_in_a_file():
     leaves = app_leaves()
     interpolated, literal = {}, {}
     for key, value in leaves.items():
         match = ENV_INTERP.match(value)
         (interpolated if match else literal)[key] = (match["var"] if match else value)
-    assert len(interpolated) == 30 and len(literal) == 3, (
-        f"{len(interpolated)} of the thirty-three leaves interpolate an `${{ENV}}` and {len(literal)} are literals; "
+    assert len(interpolated) == 31 and len(literal) == 3, (
+        f"{len(interpolated)} of the thirty-four leaves interpolate an `${{ENV}}` and {len(literal)} are literals; "
         f"the split is what makes a knob deployable, so a pair that moved needs this carrier list rewritten")
     assert frozenset(literal) == FILE_ONLY_LEAVES, (
         f"the file-only leaves are {sorted(literal)}: ratelimit.enabled is a shipped default an operator edits in "

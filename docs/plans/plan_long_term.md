@@ -10,16 +10,18 @@
 ## 当前状态 (2026-10-30)
 
 - **前端**: 831 个 vitest 通过（78 个文件）；`tsc --noEmit` 干净。
-- **后端**: 993 个测试通过，含真实栈 IT（0 失败 / 0 错误 / 0 跳过；
-  `mvn -o -q test`；不含 IT 的选集为 908 个）。
-- **ai-service**: 1833 passed, 1 skipped (offline: mock/hash)。
+- **后端**: 1036 个测试通过、157 份报告，含真实栈 IT（0 失败 / 0 错误 /
+  0 跳过；`mvn -o -q test`；不含 IT 的选集为 951 个）。
+- **ai-service**: 1929 passed, 1 skipped (offline: mock/hash)。
 - **E2E**: 24/24 golden journey（最近一次真实栈验证）。
-- **分支**: main 与 origin 同步。
-- **已完成**: Epic 0–34 全部勾选；最近一段是 19.1–19.9（保存的搜索、
-  定时摄取、通知中心、语音面试、离线壳、夜间报告落板）、20–33（部署自检、
-  来信离楼、收件箱离应用、退订、导出、开放入口、改地址、邮件计量、遗忘、
-  搜索、后端 census 补齐、壳层加固、答案留痕、浏览器唤醒）与 34（提醒以
-  RFC 5545 日历订阅离开应用，设置页交出签名地址）。
+- **分支**: main 与 origin 同步（本次推送后）。
+- **已完成**: Epic 0–35 全部勾选；36（登录的第二道门）进行中，36.1（注册、
+  激活、恢复码）已落地。最近一段是 19.1–19.9（保存的搜索、定时摄取、
+  通知中心、语音面试、离线壳、夜间报告落板）、20–33（部署自检、来信离楼、
+  收件箱离应用、退订、导出、开放入口、改地址、邮件计量、遗忘、搜索、后端
+  census 补齐、壳层加固、答案留痕、浏览器唤醒）、34（提醒以 RFC 5545 日历
+  订阅离开应用，设置页交出签名地址）与 35（分钟时钟按提醒自己的时刻响，
+  日历事件自带 VALARM）。
 
 ## 主线队列（按顺序执行）
 
@@ -200,6 +202,32 @@
     `NEVER_REFERENCED` 记下"浏览器从不自己请求 feed"的理由。门禁随人口移动
     （copy census 137、查询参数 44/20）。22 个日历后端测试；API.md、
     architecture.md、DEPLOYMENT、SECURITY 同批更新。
+
+13. ~~**Epic 35 — 提醒按时响（分钟时钟 + 日历闹钟）**~~ 已完成：
+    后端 `ReminderScheduler` 用 fixed-delay（`careeros.reminders.tick-ms`，默认
+    60000）每分钟问一次 `ApplicationRepository.findUserIdsWithReminderBetween`
+    "上一拍到现在有哪些账号的提醒到期"，再由 `NotificationPushService.pushDue`
+    走早晨同一条 `notification_states.pushed_at` 闩锁只响一次（浏览器拒绝不记
+    闩，下一拍重试；offer/rejected 行不算到期）。首拍只回看一分钟：部署不补响
+    旧提醒，停机期间到期的提醒也不补响（看板仍红、次晨 sweep 仍送达）。失败
+    的一拍不推进窗口、只记 warn，成功才写 `careeros.reminders.last.tick.timestamp`
+    心跳；RUNBOOK 新增"分钟时钟"排障段，DEPLOYMENT 记下开关与心跳。日历侧每个
+    `VEVENT` 带 `VALARM`/`ACTION:DISPLAY`/`TRIGGER:PT0M`，未注册推送的手机也能
+    在提醒时刻响（订阅源忽略闹钟的客户端维持自身通知设置）。5 + 13 + 3 + 10
+    个后端测试；ai-service 心跳词表随第五个时钟移动。
+
+14. **Epic 36 — 登录的第二道门（TOTP 双因素 + 恢复码）** 进行中：
+    密码是账号唯一的一道门。36.1 加 `user_mfa` 与 `user_mfa_recovery_codes`
+    两张表（V26），TOTP 种子用 `app.security.mfa-secret` 的 AES-GCM 封装后落库；
+    `Totp` 实现 RFC 6238（SHA1/30 秒/六位/±一步漂移/无填充 Base32/恒定时间比较）；
+    注册与激活都需登录态，激活再问一次当前密码（会话被盗也不能把一部手机挂到
+    账号上、在改密后继续存活），限流随 36.2 的 MFA 桶落地；未证明的种子可被
+    覆盖、已启用的不可。36.2 让
+    `AuthService.login` 在密码之后核对六位码或一次性恢复码（用后即焚），重放
+    （步数不增）即使数字正确也拒绝；错误码 `MFA_REQUIRED`/`MFA_INVALID`，限流器
+    加 MFA 桶。36.3 支持换发恢复码、关闭第二因子、`me` 报告剩余恢复码数，删除
+    账号时两表同删、留存清扫只清已用/已撤销的码。36.4 设置页安全卡与登录第二步
+    （双语、浏览器错误表、API/SECURITY/RUNBOOK、端点账本与 copy census 随人口移动）。
 
 ## 开发协议（每个任务）
 

@@ -64,6 +64,11 @@ passwords is no longer a reachable state.
 - [ ] `APP_MAIL_LINK_SECRET` set to 32+ random bytes (`openssl rand -base64 48`).
   It signs the unsubscribe links in every letter; the dev default is published in
   this repository, so leaving it in prod lets anyone forge a stop-link
+- [ ] `APP_MFA_SECRET` set to 32+ random bytes (`openssl rand -base64 48`). It
+  seals every enrolled authenticator seed at rest (roadmap 36.1); the dev default
+  is published here, so leaving it in prod is every account's second factor in a
+  database dump. Rotating it makes every existing seed unreadable — those accounts
+  sign in on their password until they enroll again
 - [ ] `JWT_SECRET`, `APP_MAIL_LINK_SECRET`, `INTERNAL_API_TOKEN`, `POSTGRES_PASSWORD`
   and the object-store secret behind `MINIO_ROOT_PASSWORD` are not the repository's
   published defaults and do not begin with `CHANGE_ME` — booted with `APP_ENV=prod`,

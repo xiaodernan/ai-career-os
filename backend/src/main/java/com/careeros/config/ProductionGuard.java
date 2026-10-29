@@ -16,6 +16,10 @@ import org.springframework.stereotype.Component;
  * on a link base the reader cannot open, on a cross-origin list the deployed shell is
  * not in, or on a mail transport that keeps every letter in the log.
  *
+ * <p>The key that seals every enrolled authenticator seed ({@code app.security.mfa-secret},
+ * roadmap 36.1) is on the same list: under the value this repository publishes, a database
+ * dump is not a list of hashes but every account's second factor in clear.
+ *
  * <p>{@code application.yml} interpolates each secret from an environment variable but
  * ships a working default, so a production boot that forgets one starts happily on a
  * value printed in this repository: access tokens anyone can sign, unsubscribe and
@@ -50,6 +54,7 @@ public class ProductionGuard {
 
     static final String JWT_SECRET = "JWT_SECRET";
     static final String MAIL_LINK_SECRET = "APP_MAIL_LINK_SECRET";
+    static final String MFA_SECRET = "APP_MFA_SECRET";
     static final String INTERNAL_TOKEN = "INTERNAL_API_TOKEN";
     static final String POSTGRES_PASSWORD = "POSTGRES_PASSWORD";
     static final String MINIO_ACCESS_KEY = "MINIO_ACCESS_KEY";
@@ -72,6 +77,7 @@ public class ProductionGuard {
             Set.of("dev-only-secret-please-change-me-0123456789abcdef0123456789abcdef",
                     "generate-a-64+char-random-string"),
             MAIL_LINK_SECRET, Set.of("dev-only-mail-link-secret-please-change-me-0123456789abcdef"),
+            MFA_SECRET, Set.of("dev-only-mfa-secret-please-change-me-0123456789abcdef"),
             INTERNAL_TOKEN, Set.of("shared-secret-between-backend-and-ai-service"),
             POSTGRES_PASSWORD, Set.of("dev_pg_pass_9f3k", "change-me"),
             MINIO_ACCESS_KEY, Set.of("change-me"),
@@ -84,12 +90,14 @@ public class ProductionGuard {
     private static final String EXAMPLE_PLACEHOLDER = "CHANGE_ME";
 
     public ProductionGuard(AppProperties props, @Value("${app.mail.link-secret}") String mailLinkSecret,
+            @Value("${app.security.mfa-secret:}") String mfaSecret,
             @Value("${app.email.provider:console}") String emailProvider,
             @Value("${spring.datasource.password:}") String databasePassword,
             @Value("${app.web.base-url:http://localhost:3000}") String webBaseUrl) {
         Map<String, String> values = new LinkedHashMap<>();
         values.put(JWT_SECRET, props.getJwt().getSecret());
         values.put(MAIL_LINK_SECRET, mailLinkSecret);
+        values.put(MFA_SECRET, mfaSecret);
         values.put(INTERNAL_TOKEN, props.getInternal().getToken());
         values.put(POSTGRES_PASSWORD, databasePassword);
         values.put(MINIO_ACCESS_KEY, props.getStorage().getAccessKey());

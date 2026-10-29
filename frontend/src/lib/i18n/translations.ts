@@ -1409,6 +1409,12 @@ export const translations = {
 
       METHOD_NOT_ALLOWED: "That request is not allowed here.",
 
+      MFA_ALREADY_ACTIVE: "Two-factor authentication is already on for this account.",
+
+      MFA_CODE_INVALID: "That six-digit code is not right.",
+
+      MFA_NOT_ENROLLED: "This account has not started setting up two-factor authentication.",
+
       NETWORK_ERROR: "Cannot reach the API — is the backend running?",
 
       NIGHTLY_REPORT_CLOCK_REVERSED: "A nightly report cannot finish before it started.",
@@ -3711,6 +3717,12 @@ export const translations = {
       MATCH_NOT_FOUND: "还没有匹配的结果。",
 
       METHOD_NOT_ALLOWED: "这个请求在这里不被允许。",
+
+      MFA_ALREADY_ACTIVE: "这个账号的两步验证已经开启了。",
+
+      MFA_CODE_INVALID: "这个六位验证码不对。",
+
+      MFA_NOT_ENROLLED: "这个账号还没有开始设置两步验证。",
 
       NETWORK_ERROR: "连不上接口——后端在跑吗？",
 

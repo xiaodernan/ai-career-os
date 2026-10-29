@@ -245,10 +245,12 @@ residual risk rather than as a clean bill of health.
 
 4. **A production boot used to accept the repository's published secrets, mail links
    nobody can open and a mail transport that logs — fixed.**
-   `application.yml` interpolates `JWT_SECRET`, `APP_MAIL_LINK_SECRET` and
-   `INTERNAL_API_TOKEN` from the environment but ships working defaults, and a deploy
+   `application.yml` interpolates `JWT_SECRET`, `APP_MAIL_LINK_SECRET`,
+   `APP_MFA_SECRET` and `INTERNAL_API_TOKEN` from the environment but ships
+   working defaults, and a deploy
    that forgot one booted fine on a value printed in this repository: access tokens
-   anyone can sign, unsubscribe and mail-settings links anyone can forge, and an
+   anyone can sign, unsubscribe and mail-settings links anyone can forge, every
+   enrolled authenticator seed anyone can unseal, and an
    `/internal/*` surface anyone can call with the shared default. The database and
    object store are the same shape — `POSTGRES_PASSWORD` ships `dev_pg_pass_9f3k`
    and the MinIO secret ships `careeros_minio_dev_password` — so a deploy that
@@ -346,8 +348,8 @@ traces: `{ success: false, error: { code, message, details[] } }` (written by
 
 ## Production checklist
 
-- Set a unique, long `JWT_SECRET`, `APP_MAIL_LINK_SECRET` and `INTERNAL_API_TOKEN`;
-  never reuse the `.env.example` values.
+- Set a unique, long `JWT_SECRET`, `APP_MAIL_LINK_SECRET`, `APP_MFA_SECRET` and
+  `INTERNAL_API_TOKEN`; never reuse the `.env.example` values.
 - `APP_ENV=prod` (this also hard-blocks the `mock` LLM provider at boot, and makes the
   backend refuse to start on any published, `CHANGE_ME` or empty signing secret,
   database password or object-store credential — finding #4).

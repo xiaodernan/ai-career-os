@@ -86,6 +86,13 @@ app:
   # answer to a forwarded letter or a leaked mailbox.
   mail:
     link-secret: ${APP_MAIL_LINK_SECRET:dev-only-mail-link-secret-please-change-me-0123456789abcdef}
+  # The key that seals every enrolled authenticator seed at rest (roadmap 36.1). The
+  # shipped value is published, so a prod boot (APP_ENV=prod) refuses it (ProductionGuard):
+  # a database dump plus a published key is every account's second factor. Rotating it
+  # leaves every seed unreadable -- those accounts sign in on their password until they
+  # enroll again (docs/DEPLOYMENT.md's rotation note).
+  security:
+    mfa-secret: ${APP_MFA_SECRET:dev-only-mfa-secret-please-change-me-0123456789abcdef}
   # Web Push (roadmap 33.2). Both VAPID keys or neither: with neither the sender is a
   # no-op that reports "not configured" and registrations are still accepted, and a
   # boot with only one half is refused (PushConfig) because it would run while every

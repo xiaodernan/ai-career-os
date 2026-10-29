@@ -35,6 +35,17 @@ public enum ApiErrorCode {
     CURRENT_PASSWORD_INCORRECT(HttpStatus.UNAUTHORIZED),
     /** The new password is the one already on the account, so the change would buy nothing. */
     PASSWORD_UNCHANGED(HttpStatus.BAD_REQUEST),
+    /** Two-factor is already on: a second enrollment would mint a second seed for one account. */
+    MFA_ALREADY_ACTIVE(HttpStatus.CONFLICT),
+    /** Activation arrived with no enrollment to prove: there is no seed this code could answer for. */
+    MFA_NOT_ENROLLED(HttpStatus.BAD_REQUEST),
+    /**
+     * The six-digit code is not this seed's code in the accepted window -- mistyped, from a
+     * clock too far off, or a code the account already spent (the replay guard refuses the
+     * step, and the sentence is the same because the reader's answer is the same: read the
+     * phone's current number again).
+     */
+    MFA_CODE_INVALID(HttpStatus.UNAUTHORIZED),
     /** The typed email is not this account's: the deliberate half of an erasure did not happen. */
     CONFIRMATION_MISMATCH(HttpStatus.BAD_REQUEST),
     TOKEN_INVALID(HttpStatus.UNAUTHORIZED),

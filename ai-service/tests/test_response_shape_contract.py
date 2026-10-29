@@ -1006,8 +1006,13 @@ def test_the_java_probe_reads_every_record_the_backend_declares():
     # worth of an event, the renderer's private input). A third, `CalendarDtos.CalendarLink`,
     # existed for a moment until the controller took the record into its own file; its deletion
     # is why the count settled at 174 rather than 175.
-    assert len(declared) == 174, \
-        f"{len(declared)} records carry a declaration the shared opener reads, not the 174 measured"
+    # 181 with 36.1's seven: the three `/me/mfa` bodies and answers (`MfaEnrollResponse`,
+    # `MfaActivateRequest`, `MfaActivateResponse`, `MfaStatusResponse`) and `MfaService`'s
+    # three nested rows (`Enrollment`, `Activation`, `Status`), which the declaration walk
+    # counts like any private row -- the service speaks them to its controller, so they are
+    # wire shapes in everything but visibility.
+    assert len(declared) == 181, \
+        f"{len(declared)} records carry a declaration the shared opener reads, not the 181 measured"
     problems, renamed = [], []
     for relative, record in declared:
         names = _record_components_at(relative, record)

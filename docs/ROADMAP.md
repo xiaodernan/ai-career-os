@@ -2739,6 +2739,73 @@ subscriber who never registered for push still hears the reminder.
   `npx eslint` at 0 errors over the one pre-existing warning
   (`MEMORY_WEIGHTS` unused in `memory-card.tsx`).
 
+## Epic 36 — The Account's Second Door
+
+An account holds a resume, a mailbox address and every application the reader has
+made; a password is the only thing between that and the open internet. The
+password can be changed (24.1), the sessions listed and closed (25.x), the address
+moved (26) and the rows erased (24.2) — but every one of those starts with the same
+single factor, and a password reused on another site hands the whole board over.
+This epic adds a second: a six-digit code from an authenticator app, asked only
+after the password, replay-proof, with single-use recovery codes for the day the
+phone is gone. A reader who never enrolls loses nothing but the offer; a reader who
+does gets a login a leaked password alone cannot open. The seed is sealed at rest
+under its own secret, so a second factor does not become a second copy of the
+password in the database.
+
+- [x] **36.1** An account can enroll an authenticator and prove it answers.
+
+  Migration `V26__user_mfa.sql` adds `user_mfa` (one row per account: the TOTP seed
+  sealed with AES-GCM under `app.security.mfa-secret`, the step it was last used
+  at, the moment it was proven) and `user_mfa_recovery_codes` (ten rows, each a
+  BCrypt hash of a single-use code, with `used_at`). `Totp` is the RFC 6238 core:
+  HMAC-SHA1, 30-second steps, six digits, one step of drift either side, Base32
+  without padding both ways, constant-time compare. `MfaService.enroll` mints a
+  fresh 160-bit seed and answers the `otpauth://` URI and the seed in spaced groups
+  for manual entry; `activate` accepts the account's current password and a code,
+  refuses an unproven seed, stores the step it was proved at, and issues the ten
+  recovery codes once. Enrolling is authenticated; activation asks for the password
+  again, so a stolen session cannot bolt a phone onto the account and outlive a
+  password change, and 36.2's MFA bucket is where these routes also become
+  rate-limited. A second enrollment replaces an unproven seed but never an enabled
+  one. A blank `app.security.mfa-secret` refuses a prod boot (the same guard as the
+  mail-link secret), and the dev default is the published one the guard names.
+
+- [ ] **36.2** A login cannot pass with the password alone.
+
+  `LoginRequest` gains an optional `code`. When the account is enrolled,
+  `AuthService.login` checks the password first and then the code — or a recovery
+  code, which is burned on use — refusing with `MFA_REQUIRED` when no code was
+  sent and `MFA_INVALID` when the one sent is wrong, wasted or already spent. A
+  step at or below the stored one is refused even when its digits are correct, so
+  a code watched over a shoulder does not open a second session. The refusal
+  names the factor, never the password: a wrong password on an enrolled account
+  is still `INVALID_CREDENTIALS`, and a wrong code never says whether the password
+  was right. The limiter gains an MFA bucket so guessing six digits is as
+  expensive as guessing a password.
+
+- [ ] **36.3** Recovery codes can be reissued, and the account can turn the door off.
+
+  `POST /auth/mfa/recovery-codes` replaces the set after password and code,
+  answers the new ten once and revokes every old code; `DELETE /auth/mfa` turns
+  the factor off after password and code (or a recovery code), deletes the seed
+  and every recovery row, and the next login asks for the password alone. The
+  signed-in `me` payload carries whether the factor is on and how many recovery
+  codes remain, so the settings card can say "3 left" without a second request.
+  Erasing the account deletes both tables; the retention sweep leaves enabled
+  seeds alone and clears used or revoked recovery rows past the grace window.
+
+- [ ] **36.4** The reader can see and turn the door from settings, and answer it at login.
+
+  A security card: status, enroll (the seed in spaced groups plus the `otpauth://`
+  URI to copy, a code field, and a sentence that says to keep the recovery codes
+  somewhere else), recovery codes shown once with a copy-all, replace, and turn
+  off. The login page grows one step: a refused login answered `MFA_REQUIRED`
+  shows the code field and resubmits email, password and code together. Copy in
+  both languages, the browser's error table, `API.md` and `SECURITY.md` (what the
+  seed sees, what a lost phone costs, what rotation of the secret does), and the
+  runbook's "an account is locked out of its second factor" section.
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

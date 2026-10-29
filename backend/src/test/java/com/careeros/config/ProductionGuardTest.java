@@ -21,6 +21,7 @@ class ProductionGuardTest {
 
     private static final String PUBLISHED_JWT = "dev-only-secret-please-change-me-0123456789abcdef0123456789abcdef";
     private static final String PUBLISHED_MAIL = "dev-only-mail-link-secret-please-change-me-0123456789abcdef";
+    private static final String PUBLISHED_MFA = "dev-only-mfa-secret-please-change-me-0123456789abcdef";
     private static final String PUBLISHED_INTERNAL = "shared-secret-between-backend-and-ai-service";
     private static final String PUBLISHED_DB = "dev_pg_pass_9f3k";
     private static final String PUBLISHED_MINIO_USER = "careeros-minio-admin";
@@ -28,6 +29,7 @@ class ProductionGuardTest {
 
     private static final String REAL_JWT = "f3c1a9e2b7d44058a6c9e1d2b3f4a5c6d7e8f901a2b3c4d5e6f708192a3b4c5d";
     private static final String REAL_MAIL = "b4e2c9d7a1f3e5c8b6d2a4f7e9c1b3d508a6c4e2f1d7b9a3c5e8f2d4b6a9c1e7";
+    private static final String REAL_MFA = "mfa-2e7c4a9f1b6d8e3a0c5f7b9d2e4a6c8f1a3e5b7d";
     private static final String REAL_INTERNAL = "internal-7c1e9a3f5b8d2c6e4a0f9b7d5c3e1a8f";
     private static final String REAL_DB = "pg-4b8e1c7a9d2f6e0b3a5c8d1e4f7a0b2c";
     private static final String REAL_MINIO_USER = "careeros-ops-7c1e";
@@ -198,6 +200,40 @@ class ProductionGuardTest {
     }
 
     @Test
+    void theShippedMfaSeedKeyAgreesWithTheGuardToo() throws IOException {
+        assertThat(ProductionGuard.offenders("prod", REAL_SMTP,
+                credentials(REAL_JWT, REAL_MAIL, PUBLISHED_MFA, REAL_INTERNAL, REAL_DB, REAL_MINIO_USER,
+                        REAL_MINIO_SECRET)))
+                .as("the literal this repository publishes")
+                .containsExactly(ProductionGuard.MFA_SECRET);
+
+        assertThat(ProductionGuard.offenders("prod", REAL_SMTP,
+                credentials(REAL_JWT, REAL_MAIL, ymlDefault("APP_MFA_SECRET"), REAL_INTERNAL, REAL_DB,
+                        REAL_MINIO_USER, REAL_MINIO_SECRET)))
+                .as("application.yml's own default")
+                .containsExactly(ProductionGuard.MFA_SECRET);
+
+        assertThat(ProductionGuard.offenders("prod", REAL_SMTP,
+                credentials(REAL_JWT, REAL_MAIL, envValue(Path.of("..", ".env.example"), "APP_MFA_SECRET"),
+                        REAL_INTERNAL, REAL_DB, REAL_MINIO_USER, REAL_MINIO_SECRET)))
+                .as("a dev example copied into prod")
+                .containsExactly(ProductionGuard.MFA_SECRET);
+
+        assertThat(ProductionGuard.offenders("prod", REAL_SMTP,
+                credentials(REAL_JWT, REAL_MAIL,
+                        envValue(Path.of("..", ".env.prod.example"), "APP_MFA_SECRET"),
+                        REAL_INTERNAL, REAL_DB, REAL_MINIO_USER, REAL_MINIO_SECRET)))
+                .as("a prod example booted before its CHANGE_ME value was filled in")
+                .containsExactly(ProductionGuard.MFA_SECRET);
+
+        assertThat(ProductionGuard.offenders("prod", REAL_SMTP,
+                credentials(REAL_JWT, REAL_MAIL, " ", REAL_INTERNAL, REAL_DB, REAL_MINIO_USER,
+                        REAL_MINIO_SECRET)))
+                .as("an empty seed key")
+                .containsExactly(ProductionGuard.MFA_SECRET);
+    }
+
+    @Test
     void theShippedDatabaseAndStoreSecretsAgreeWithTheGuardToo() throws IOException {
         assertThat(ProductionGuard.offenders("prod", REAL_SMTP,
                 credentials(REAL_JWT, REAL_MAIL, REAL_INTERNAL, ymlDefault("POSTGRES_PASSWORD"),
@@ -341,7 +377,8 @@ class ProductionGuardTest {
                 .run(context -> {
                     assertThat(context).hasFailed();
                     assertThat(NestedExceptionUtils.getMostSpecificCause(context.getStartupFailure()).getMessage())
-                            .contains("APP_ENV=prod but JWT_SECRET, APP_MAIL_LINK_SECRET, INTERNAL_API_TOKEN, "
+                            .contains("APP_ENV=prod but JWT_SECRET, APP_MAIL_LINK_SECRET, APP_MFA_SECRET, "
+                                    + "INTERNAL_API_TOKEN, "
                                     + "POSTGRES_PASSWORD, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, APP_WEB_BASE_URL, "
                                     + "APP_CORS_ORIGINS, APP_EMAIL_PROVIDER cannot open")
                             .contains("docs/DEPLOYMENT.md");
@@ -361,7 +398,8 @@ class ProductionGuardTest {
     @Test
     void aProdContextOnALoopbackLinkBaseIsRefusedEvenWithRealSecrets() {
         runner.withPropertyValues("app.deployment.env=prod", "app.jwt.secret=" + REAL_JWT,
-                        "app.mail.link-secret=" + REAL_MAIL, "app.internal.token=" + REAL_INTERNAL,
+                        "app.mail.link-secret=" + REAL_MAIL, "app.security.mfa-secret=" + REAL_MFA,
+                        "app.internal.token=" + REAL_INTERNAL,
                         "spring.datasource.password=" + REAL_DB,
                         "app.storage.access-key=" + REAL_MINIO_USER,
                         "app.storage.secret-key=" + REAL_MINIO_SECRET,
@@ -399,7 +437,8 @@ class ProductionGuardTest {
     @Test
     void aProdBootCannotSilenceTheStoreCheckByDisablingStorage() {
         runner.withPropertyValues("app.deployment.env=prod", "app.jwt.secret=" + REAL_JWT,
-                        "app.mail.link-secret=" + REAL_MAIL, "app.internal.token=" + REAL_INTERNAL,
+                        "app.mail.link-secret=" + REAL_MAIL, "app.security.mfa-secret=" + REAL_MFA,
+                        "app.internal.token=" + REAL_INTERNAL,
                         "spring.datasource.password=" + REAL_DB, "app.email.provider=" + REAL_SMTP,
                         "app.web.base-url=" + REAL_WEB, "app.cors.allowed-origins=" + REAL_CORS,
                         "app.storage.enabled=false")
@@ -428,6 +467,7 @@ class ProductionGuardTest {
             "app.deployment.env=prod",
             "app.jwt.secret=" + REAL_JWT,
             "app.mail.link-secret=" + REAL_MAIL,
+            "app.security.mfa-secret=" + REAL_MFA,
             "app.internal.token=" + REAL_INTERNAL,
             "spring.datasource.password=" + REAL_DB,
             "app.storage.access-key=" + REAL_MINIO_USER,
@@ -449,9 +489,15 @@ class ProductionGuardTest {
 
     private static Map<String, String> credentials(String jwt, String mailLink, String internal,
             String database, String minioAccess, String minioSecret) {
+        return credentials(jwt, mailLink, REAL_MFA, internal, database, minioAccess, minioSecret);
+    }
+
+    private static Map<String, String> credentials(String jwt, String mailLink, String mfa, String internal,
+            String database, String minioAccess, String minioSecret) {
         Map<String, String> values = new LinkedHashMap<>();
         values.put(ProductionGuard.JWT_SECRET, jwt);
         values.put(ProductionGuard.MAIL_LINK_SECRET, mailLink);
+        values.put(ProductionGuard.MFA_SECRET, mfa);
         values.put(ProductionGuard.INTERNAL_TOKEN, internal);
         values.put(ProductionGuard.POSTGRES_PASSWORD, database);
         values.put(ProductionGuard.MINIO_ACCESS_KEY, minioAccess);
