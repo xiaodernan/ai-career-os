@@ -610,10 +610,11 @@ def test_the_lifetime_readers_parse_shapes_this_repository_does_not_yet_write():
         "the wiring reader exists to see a `Duration.of*` unit that disagrees with the property it "
         "reads; hard-coding either half of the pair makes it blind to the drift it is for")
     ttl_fields = [m["field"] for m in JAVA_TTL_FIELD.finditer(read(PROPS))]
-    assert len(ttl_fields) == 3, (
-        f"AppProperties now holds {ttl_fields} as `private int *Ttl* = n;` fields: the trap this reader "
+    assert len(ttl_fields) == 4, (
+        f"AppProperties holds {ttl_fields} as `private int *Ttl* = n;` fields: the trap this reader "
         f"exists for is that a ttl-named integer default is not necessarily a credential lifetime -- "
-        f"`presignedUrlTtlSeconds` is a storage URL's, in seconds")
+        f"`presignedUrlTtlSeconds` is a storage URL's, in seconds, and it is the fourth field only "
+        f"because the storage presign brought its own default")
     named = [m["field"] for m in groups(PROPS, JAVA_FIELD, 2, "AppProperties")]
     assert "presignedUrlTtlSeconds" in ttl_fields and "presignedUrlTtlSeconds" not in named, (
         f"the shadow reader names {named}: once it stops naming the two credential fields exactly, a "

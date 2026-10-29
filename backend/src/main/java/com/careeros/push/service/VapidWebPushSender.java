@@ -41,7 +41,7 @@ public class VapidWebPushSender implements PushSender {
 
     private static final Logger log = LoggerFactory.getLogger(VapidWebPushSender.class);
 
-    /** RFC 8292 caps the token's lifetime at 24 hours; twelve is long enough for one morning. */
+    /** RFC 8292 caps a signed push's lifetime at a day; this constant stays well inside that cap. */
     static final long JWT_TTL_SECONDS = 12 * 60 * 60;
 
     /** RFC 8030's own ceiling for TTL, four weeks; anything above is a client error. */

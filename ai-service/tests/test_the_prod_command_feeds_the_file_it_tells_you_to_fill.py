@@ -17,9 +17,13 @@ root pair, the backend's allow-list is empty and its MinIO keys are blank, and t
 bundle is built against an empty API base. The stack comes up; it is just open and broken in the
 ways the documentation says it is not.
 
-Two halves, one contract. Every one of the eight is now `${VAR:?message}` -- compose refuses to
-render the project and prints the message, which names the file and the flag -- and every shipped
-command that names the override passes `--env-file .env.prod`. What this gate measures:
+Two halves, one contract. Every one of the eight is now `${VAR:?message}` -- compose refuses
+to render the project and prints the message, which names the file and the flag -- and every
+shipped command that names the override passes `--env-file .env.prod`. One value is exempt on
+purpose since 33.4: the frontend's push build arg may render empty, because a deployment
+without push is a supported deployment and an empty key turns the settings switch off rather
+than subscribing a browser under a key no sender signs with. That exemption is a written set,
+not a quiet gap. What this gate measures:
 
 * the scanner reads all three compose spellings (`${VAR}`, `${VAR:-default}`, `${VAR:?message}`)
   on a fixture, because a parser that only knew the bare form would read an empty population;
@@ -66,6 +70,14 @@ REQUIRED = {
     "APP_CORS_ORIGINS",
     "NEXT_PUBLIC_API_BASE_URL",
 }
+
+# The one value the override may render empty on purpose (33.4): the frontend build arg carrying
+# the browser's push public key. Push is optional by design -- an empty key turns the settings
+# switch off rather than subscribing a browser under a key no sender signs with -- and this is a
+# `build.args` entry, not an `environment:` line that would shadow a filled `env_file:` secret,
+# so the empty-string hazard above does not apply to it. The set is written down so a second
+# defaulted value has to argue its way in rather than slip in beside it.
+OPTIONAL_EMPTY = {"APP_PUSH_VAPID_PUBLIC_KEY"}
 
 INTERP = re.compile(r"\$\{(?P<var>[A-Z][A-Z0-9_]*)(?::(?P<flag>[?-])?(?P<rest>[^}]*))?\}")
 HEADING = re.compile(r"^#{1,6} ")
@@ -200,12 +212,19 @@ def test_the_command_walker_flags_the_missing_flag_and_reads_only_commands():
 def test_every_interpolation_in_the_override_is_a_required_value():
     found = interpolations(read(COMPOSE_PROD))
 
-    unmarked = [(var, flag, rest) for var, flag, rest in found if flag != "?"]
+    unmarked = [(var, flag, rest) for var, flag, rest in found
+                if flag != "?" and var not in OPTIONAL_EMPTY]
     assert unmarked == [], (
         f"docker-compose.prod.yml still interpolates {unmarked} without a `:?` marker: compose "
         f"renders a bare or defaulted value as whatever the file says -- usually the empty "
         f"string -- and the `environment:` entry carrying it then overrides the filled "
         f"`env_file:` value instead of failing")
+
+    defaulted = {var for var, flag, _rest in found if flag == "-"}
+    assert defaulted == OPTIONAL_EMPTY, (
+        f"the override renders {sorted(defaulted)} from an empty default; the only value allowed "
+        f"to do that is {sorted(OPTIONAL_EMPTY)} -- leaving the list is a `:?`, joining it needs "
+        f"the argument written beside the set")
 
     required = {var for var, _flag, _rest in found if var in REQUIRED}
     assert required == REQUIRED, (
