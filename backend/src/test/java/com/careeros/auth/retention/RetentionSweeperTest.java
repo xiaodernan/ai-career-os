@@ -10,7 +10,9 @@ import com.careeros.auth.repository.PasswordResetTokenRepository;
 import com.careeros.auth.repository.RefreshTokenRepository;
 import com.careeros.config.AppProperties;
 import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import java.time.Instant;
 import java.time.OffsetDateTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,6 +28,10 @@ import org.junit.jupiter.api.Test;
  * transactions so a lock timeout on refresh tokens leaves reset and address-change rows pruned;
  * the failed table is named in the summary and, deliberately, exports no counter, so a stale
  * reading can never be mistaken for a fresh one.
+ *
+ * <p>And 28.2's one: the heartbeat answers whether the schedule ran, which no deletion count
+ * can. It starts at boot rather than at zero, and a pass that failed every table still moves
+ * it — the failures are the counters' story, not the clock's.
  */
 class RetentionSweeperTest {
 
@@ -67,6 +73,43 @@ class RetentionSweeperTest {
         assertThat(count(RetentionSweeper.REFRESH_TOKENS)).isEqualTo(3.0);
         assertThat(count(RetentionSweeper.PASSWORD_RESET_TOKENS)).isEqualTo(5.0);
         assertThat(count(RetentionSweeper.EMAIL_CHANGE_TOKENS)).isZero();
+        assertThat(heartbeat()).isEqualTo(NOW.toEpochSecond());
+    }
+
+    @Test
+    void theHeartbeatMovesEvenWhenEveryTableFailed() {
+        when(refreshTokens.deleteExpiredBefore(NOW.minusDays(30)))
+                .thenThrow(new IllegalStateException("database is down"));
+        when(resetTokens.deleteExpiredBefore(NOW.minusDays(30)))
+                .thenThrow(new IllegalStateException("database is down"));
+        when(emailChangeTokens.deleteExpiredBefore(NOW.minusDays(30)))
+                .thenThrow(new IllegalStateException("database is down"));
+
+        RetentionSweeper.Sweep sweep = sweeper.sweep(NOW);
+
+        assertThat(sweep.failed()).containsExactly(
+                RetentionSweeper.REFRESH_TOKENS,
+                RetentionSweeper.PASSWORD_RESET_TOKENS,
+                RetentionSweeper.EMAIL_CHANGE_TOKENS);
+        assertThat(heartbeat()).isEqualTo(NOW.toEpochSecond());
+    }
+
+    @Test
+    void theHeartbeatStartsAtBootNotAtZeroSoAFreshDeployIsNotStale() {
+        SimpleMeterRegistry freshRegistry = new SimpleMeterRegistry();
+        long before = Instant.now().getEpochSecond();
+        new RetentionMetrics(freshRegistry);
+        long after = Instant.now().getEpochSecond();
+
+        Gauge gauge = freshRegistry.find(RetentionMetrics.LAST_SWEEP).gauge();
+        assertThat(gauge).as("the heartbeat is registered when the bean is built").isNotNull();
+        assertThat(gauge.value()).isBetween((double) before, (double) after);
+    }
+
+    private double heartbeat() {
+        Gauge gauge = registry.find(RetentionMetrics.LAST_SWEEP).gauge();
+        assertThat(gauge).as("the heartbeat gauge is registered at boot").isNotNull();
+        return gauge.value();
     }
 
     @Test

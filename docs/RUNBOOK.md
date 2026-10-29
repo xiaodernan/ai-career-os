@@ -23,6 +23,11 @@ The surfaces this document is about:
 | `CareerOSNightlyVerificationStale` | critical | No nightly verification has finished in 36 hours | [The nightly verification stopped reporting](#the-nightly-verification-stopped-reporting) |
 | `CareerOSNightlyVerificationFailing` | warning | Two or more of the newest nightly runs failed | [The nightly verification keeps failing](#the-nightly-verification-keeps-failing) |
 | `CareerOSAiBudgetBurn` | warning | The trailing 24 hours cost more than 5 USD | [The AI budget is burning](#the-ai-budget-is-burning) |
+| `CareerOSDigestDeliveryFailing` | warning | A weekly letter was refused by the relay | [A weekly letter the relay refused](#a-weekly-letter-the-relay-refused) |
+| `CareerOSDigestSweepStale` | warning | No Monday digest compose finished in eight days | [The Monday letter was never written](#the-monday-letter-was-never-written) |
+| `CareerOSSignalMailFailing` | warning | Three or more signal mails were refused in six hours | [The morning mail is refused](#the-morning-mail-is-refused) |
+| `CareerOSSignalSweepStale` | warning | No morning mail sweep finished in 36 hours | [The morning sweep stopped](#the-morning-sweep-stopped) |
+| `CareerOSRetentionSweepStale` | warning | No credential-retention sweep finished in 36 hours | [The retention sweep stopped](#the-retention-sweep-stopped) |
 
 ## A night that never succeeded
 
@@ -265,11 +270,16 @@ The metric families the rules read are written by
 `backend/src/main/java/com/careeros/job/service/IngestionMetrics.java` (the counter
 and the success marker), `backend/src/main/java/com/careeros/ai/service/AiUsageMetrics.java`
 (the rolling 24-hour spend, tokens and calls, refreshed every
-`careeros.ai.metrics-refresh-ms`, one minute by default), and
+`careeros.ai.metrics-refresh-ms`, one minute by default),
 `backend/src/main/java/com/careeros/report/service/NightlyVerdictMetrics.java`
 (the newest nightly finish and the failure streak, moved by each recorded night and
-once at boot). A metric missing from the scrape means the bean did not start: the
-backend log has the reason.
+once at boot), `backend/src/main/java/com/careeros/report/service/WeeklyDigestDeliveryMetrics.java`
+(the letter counter, the delivered marker and the Monday heartbeat),
+`backend/src/main/java/com/careeros/notification/service/NotificationDeliveryMetrics.java`
+(the signal-letter counter and the morning heartbeat), and
+`backend/src/main/java/com/careeros/auth/retention/RetentionMetrics.java`
+(the per-table deletion counter and the nightly sweep heartbeat). A metric missing
+from the scrape means the bean did not start: the backend log has the reason.
 
 ## What this runbook does not cover
 
@@ -446,3 +456,51 @@ evidence of what was written for each week.
 was composed and the transport refused it. This alert fires when no compose finished at
 all. Fix the clock here; fix the relay there. A week that fails both is two separate
 promises, and both sections apply.
+
+## The retention sweep stopped
+
+**What the alert looks like.** `CareerOSRetentionSweepStale` fires when
+`time() - careeros_retention_last_sweep_timestamp > 129600`: no completed
+credential-retention sweep in 36 hours. The gauge is the sweep's heartbeat, moved at
+the end of every completed pass by
+`backend/src/main/java/com/careeros/auth/retention/RetentionMetrics.java`, and it is
+the only reading that can answer "did the clock run". The deletion counter cannot: a
+sweep that stopped leaves `careeros_retention_deleted_rows_total` at its last value,
+which a scrape cannot tell from a night that had nothing to delete. 36 hours is twice
+the daily cadence, so one late or skipped run does not page and two do. A fresh
+process starts the heartbeat at boot, so a deploy is not read as stale before its
+first 04:47.
+
+**What to read.** First the scrape: `careeros_retention_last_sweep_timestamp` in
+`/actuator/prometheus` says when the last pass finished. Then the backend log: every
+completed pass logs "Retention sweep removed N expired credential row(s) older than
+..."; a table whose delete threw logs "Retention sweep failed for <table>" with the
+stack trace and is left out of the summary. Check `careeros.retention.cron` (default
+`0 47 4 * * *`) in the deployment's environment, whether the backend was running at
+that hour, and whether scheduling is enabled at all. The per-table counters
+(`refresh_tokens`, `password_reset_tokens`, `email_change_tokens`) separate a quiet
+night (series present, value flat) from a table that has never been swept (no series),
+because the series is registered on the first successful sweep of that table.
+
+**What to do, in order.**
+
+1. If the log shows no firings at all, the clock is wrong or missing. Correct
+   `careeros.retention.cron`, restart the backend so the schedule is re-read, and
+   confirm the next night's "Retention sweep removed" line. A backend that has been
+   down counts: its boot time is the only reading until a pass completes.
+2. If the log shows a pass that failed one or more tables, fix what the stack trace
+   names -- usually a lock timeout or a database outage. The other tables were pruned
+   in their own transactions and the next night retries the failed one on its own; the
+   heartbeat moved because the scheduler ran, so this alert staying quiet is correct.
+3. Leave the gauge alone. Nothing writes it except a completed sweep, and a missed
+   night cannot be replayed through any route: the next completed pass sweeps with its
+   own clock, which is later and deletes strictly more.
+
+**What this alert does not mean.** It is not a table-failure alarm (the heartbeat moves
+on a failed pass; read the WARN line and the missing series), not a disk-full alarm
+(rows are deleted, files are not), and not data loss: only refresh, password-reset and
+address-change rows past the grace window (`RETENTION_EXPIRED_TOKEN_DAYS`, thirty days
+by default) are ever deleted. The tables behind visible history -- AI usage events,
+notification read state, ingestion runs, weekly letters -- are deliberately not swept.
+If the delete itself is slow after a restart, confirm the V23 migration applied; it
+adds the `expires_at` index each sweep relies on.

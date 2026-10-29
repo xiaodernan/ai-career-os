@@ -203,3 +203,24 @@ groups:
             should follow each Monday; a missed week cannot be recomposed through any route,
             so the job is to make the next Monday happen.
           runbook: "docs/RUNBOOK.md#the-monday-letter-was-never-written"
+
+      # Retention's heartbeat (roadmap 28.2). The deleted-rows counter answers how much a
+      # sweep removed, not whether it ran: a stopped sweep leaves a scrape showing the last
+      # value, which cannot be told from a night that deleted nothing. The gauge moves after
+      # every completed pass, with or without deletions and even when a table failed -- a
+      # failed table has its own WARN line and a missing per-table series.
+      - alert: CareerOSRetentionSweepStale
+        expr: time() - careeros_retention_last_sweep_timestamp > 129600
+        for: 10m
+        labels:
+          service: career-os-backend
+          severity: warning
+        annotations:
+          summary: "No retention sweep has finished in over 36 hours"
+          description: >-
+            The last completed credential-retention sweep was {{ $value | humanizeDuration }}
+            ago, so expired refresh, reset and address-change rows are accumulating again.
+            Check `careeros.retention.cron` (default 04:47) and the backend log for
+            "Retention sweep removed"; a pass whose tables failed moves this gauge too and
+            logs "Retention sweep failed for" for each one.
+          runbook: "docs/RUNBOOK.md#the-retention-sweep-stopped"

@@ -228,7 +228,7 @@ recomputed from `ai_usage_events` every minute — the install's own verdict —
 boot — and the weekly letter's —
 `careeros_digest_delivery_total{outcome}`, `sent` or `refused` per attempt, and
 `careeros_digest_last_delivered_timestamp`, moved only by an accepted letter.
-`ops/prometheus/alerts.yml` carries the six rules and each one links its page in
+`ops/prometheus/alerts.yml` carries the ten rules and each one links its page in
 [RUNBOOK.md](RUNBOOK.md).
 
 The limiter exports one more family for dashboards rather than alarms:
@@ -249,6 +249,14 @@ notification read state, ingestion runs, weekly letters — because deleting tho
 rows would rewrite a screen or re-announce a story the reader already settled.
 V23 adds an `expires_at` index to each of the three swept tables, so the nightly
 delete stays a range read as the tables grow.
+
+The sweep also exports `careeros_retention_last_sweep_timestamp`, moved at the
+end of every completed pass, with or without deletions. The counter cannot say
+whether the clock still runs — a stopped sweep leaves its last value on the
+scrape — so `CareerOSRetentionSweepStale` fires (warning) when the heartbeat is
+more than 36 hours old, twice the daily cadence. A pass whose tables failed
+still moves it; the failures are visible as "Retention sweep failed for" in the
+log and as a missing per-table series.
 
 ### Recording the nightly run
 

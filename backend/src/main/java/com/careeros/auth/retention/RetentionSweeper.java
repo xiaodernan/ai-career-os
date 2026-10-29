@@ -31,9 +31,12 @@ import org.springframework.stereotype.Component;
  * <p>Each table is swept in its own transaction, so a lock timeout on one leaves the other two
  * pruned rather than rolling the whole night back; a failed table is logged and omitted from
  * the summary, and no metric moves for it, so the counter tells an operator which tables were
- * actually swept. The tables that hold visible history -- AI usage events behind the activity
- * totals, notification read state, ingestion runs, weekly letters -- are deliberately absent:
- * removing their rows would rewrite a screen or re-announce a story the reader already settled.
+ * actually swept. The pass then moves the heartbeat gauge even if a table failed: the gauge
+ * answers whether the schedule still runs, and a pass that ran and failed is a different fault
+ * from a clock that stopped. The tables that hold visible history -- AI usage events behind the
+ * activity totals, notification read state, ingestion runs, weekly letters -- are deliberately
+ * absent: removing their rows would rewrite a screen or re-announce a story the reader already
+ * settled.
  */
 @Component
 public class RetentionSweeper {
@@ -89,6 +92,7 @@ public class RetentionSweeper {
                 log.warn("Retention sweep failed for {}; the other tables keep their own rows", table, e);
             }
         }
+        metrics.recordSweep(now);
         log.info("Retention sweep removed {} expired credential row(s) older than {} ({})",
                 deleted.values().stream().mapToInt(Integer::intValue).sum(), cutoff, deleted);
         return new Sweep(deleted, failed);

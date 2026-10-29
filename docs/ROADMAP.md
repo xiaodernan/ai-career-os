@@ -1436,6 +1436,29 @@ visible to an operator. It stops deliberately where visible history begins.
   suite at 777 and the integration suite at 73 are green, the knob, env, alarms
   and deployment gates pass, and no frontend or copy-census movement.)
 
+- [x] **28.2** The sweep proves it ran, not just how much it deleted.
+
+  (A counter cannot answer whether a clock still runs: a stopped sweep leaves
+  `careeros_retention.deleted_rows` at its last value, which a scrape reads the
+  same as a night with nothing to delete, and the log line that would say so
+  scrolls away. `RetentionMetrics` now also exports
+  `careeros.retention.last.sweep.timestamp`, moved at the end of every completed
+  pass — with or without deletions, and even when every table failed, because a
+  pass that ran and failed is a different fault from a clock that stopped; the
+  failed table is already a WARN line and an absent per-table series. The gauge
+  starts at the process's boot time rather than zero, so a fresh deploy is not
+  read as stale before its first 04:47. `CareerOSRetentionSweepStale` fires at 36
+  hours — twice the daily cadence, the same window the other staleness rules
+  use — and links a new RUNBOOK section that reads the gauge, the counters and
+  the two log lines in order and names the one thing an operator must not do
+  (hand-write the gauge; a missed night cannot be replayed). The RUNBOOK's
+  "alarms, in one table" was five rows behind the rules it claimed to list, so
+  it now carries all ten, and DEPLOYMENT.md names the gauge beside the delete
+  counter. 2 unit tests cover the all-tables-failed pass moving the heartbeat and
+  the boot-time start; the class is at 6. The backend unit suite at 779 and the
+  integration suite at 73 are green, the alarms and deployment gates pass, and no
+  frontend or copy-census movement.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

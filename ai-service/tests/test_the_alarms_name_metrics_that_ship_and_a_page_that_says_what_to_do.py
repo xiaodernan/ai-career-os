@@ -51,6 +51,7 @@ AI_USAGE_METRICS = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "ai"
 NIGHTLY_VERDICT_METRICS = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "report" / "service" / "NightlyVerdictMetrics.java"
 DIGEST_METRICS = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "report" / "service" / "WeeklyDigestDeliveryMetrics.java"
 SIGNAL_METRICS = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "notification" / "service" / "NotificationDeliveryMetrics.java"
+RETENTION_METRICS = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "auth" / "retention" / "RetentionMetrics.java"
 NIGHTLY_REPORT_SERVICE = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "report" / "service" / "NightlyReportService.java"
 NIGHTLY_CARD = ROOT / "frontend" / "src" / "components" / "monitoring" / "nightly-history.tsx"
 
@@ -68,6 +69,7 @@ METRICS = {
     "careeros_digest_last_sweep_timestamp": (DIGEST_METRICS, "careeros.digest.last.sweep.timestamp"),
     "careeros_signals_delivery_total": (SIGNAL_METRICS, "careeros.signals.delivery"),
     "careeros_signals_last_sweep_timestamp": (SIGNAL_METRICS, "careeros.signals.last.sweep.timestamp"),
+    "careeros_retention_last_sweep_timestamp": (RETENTION_METRICS, "careeros.retention.last.sweep.timestamp"),
 }
 
 ALERT_NAMES = frozenset({
@@ -80,6 +82,7 @@ ALERT_NAMES = frozenset({
     "CareerOSDigestSweepStale",
     "CareerOSSignalMailFailing",
     "CareerOSSignalSweepStale",
+    "CareerOSRetentionSweepStale",
 })
 
 # The columns the budget query sums, each one a column of the ledger migration.
