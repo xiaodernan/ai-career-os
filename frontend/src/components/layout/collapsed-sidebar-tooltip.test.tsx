@@ -8,6 +8,9 @@ vi.mock("@/lib/i18n/locale-context", () => ({
   // renders that key, an item without one keeps its English name.
   useLocale: () => ({ locale: "en", t: (key: string) => key, setLocale: () => {} }),
 }));
+// The rail now reads the inbox for its unread badge; this test is about the
+// labels, and an unanswered query is the state before the first answer.
+vi.mock("@/lib/hooks/resources", () => ({ useNotifications: () => ({ data: undefined }) }));
 
 import { NavLinks } from "./sidebar";
 import { NAV_ITEMS } from "./nav";

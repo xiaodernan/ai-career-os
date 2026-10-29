@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { Menu } from "lucide-react";
+import { useNotifications } from "@/lib/hooks/resources";
 
 const COLLAPSE_KEY = "careeros.sidebarCollapsed";
 
@@ -55,6 +56,12 @@ function useCollapsed() {
  * tooltip is rendered outside a provider — so the provider lives here rather
  * than somewhere up the tree. The list is then self-contained: rendered
  * anywhere, it works.
+ *
+ * The notifications row carries the inbox's unread count (roadmap 29.3): the
+ * inbox is synthesized from clocks, so the count is the one place the reader
+ * learns a reminder came due without opening the page. In the rail the badge
+ * rides the icon, and the link gets an aria-label -- with the label hidden and
+ * the icon aria-hidden, the link would otherwise have no name at all.
  */
 export function NavLinks({
   collapsed,
@@ -65,6 +72,8 @@ export function NavLinks({
 }) {
   const pathname = usePathname();
   const { t } = useLocale();
+  const { data: inbox } = useNotifications();
+  const unread = inbox?.unread ?? 0;
   return (
     <TooltipProvider delayDuration={200}>
       <nav
@@ -76,12 +85,18 @@ export function NavLinks({
           // The English label is the fallback: a key the table does not carry
           // answers the English name rather than the key itself.
           const label = item.labelKey ? t(item.labelKey) : item.label;
+          const unreadHere = item.href === "/notifications" ? unread : 0;
+          const unreadText =
+            unreadHere > 0 ? t("notifications.unreadBadge", { count: unreadHere }) : "";
           const link = (
             <Link
               key={item.href}
               href={item.href}
               onClick={onNavigate}
               aria-current={active ? "page" : undefined}
+              aria-label={
+                collapsed ? (unreadText ? `${label}, ${unreadText}` : label) : undefined
+              }
               className={cn(
                 "group flex h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-sm font-medium transition-colors duration-150 focus-visible:ring-[3px] focus-visible:ring-ring/35",
                 collapsed && "justify-center px-0",
@@ -90,9 +105,28 @@ export function NavLinks({
                   : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
               )}
             >
-              <item.icon className="size-4 shrink-0" aria-hidden />
+              <span className="relative flex shrink-0 items-center">
+                <item.icon className="size-4 shrink-0" aria-hidden />
+                {collapsed && unreadHere > 0 && (
+                  <span
+                    aria-hidden
+                    className="absolute -right-2 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold leading-none text-primary-foreground tabular-nums"
+                  >
+                    {unreadHere}
+                  </span>
+                )}
+              </span>
               {!collapsed && <span className="truncate">{label}</span>}
-              {!collapsed && active && (
+              {!collapsed && unreadHere > 0 && (
+                <span
+                  aria-hidden
+                  className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-2xs font-semibold text-primary-foreground tabular-nums"
+                >
+                  {unreadHere}
+                </span>
+              )}
+              {!collapsed && unreadText !== "" && <span className="sr-only">{unreadText}</span>}
+              {!collapsed && active && unreadHere === 0 && (
                 <span aria-hidden className="ml-auto size-1.5 rounded-full bg-primary" />
               )}
             </Link>

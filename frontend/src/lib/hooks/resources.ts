@@ -289,12 +289,24 @@ export function useIngestionRunDetail(id: string | null) {
 
 /* -------------------------------- notifications ---------------------------- */
 
-/** The synthesized inbox (roadmap 19.3), read on demand by the bell and the page. */
+/**
+ * The synthesized inbox (roadmap 19.3), read by the bell and the page.
+ *
+ * The inbox is built from clocks rather than from writes -- a reminder comes
+ * due, a posting matches a saved search, and nothing is stored when it
+ * happens -- so the answer goes stale on its own. The bell asks again on a
+ * slow beat: a signal that arrives while the reader is on another page should
+ * reach the count without a reload. A hidden tab does not poll; React Query
+ * pauses the interval until the tab is back.
+ */
+const INBOX_REFRESH_MS = 60_000;
+
 export function useNotifications() {
   return useQuery({
     queryKey: ["notifications"],
     queryFn: async (): Promise<NotificationInbox> =>
       normalizeNotificationInbox(await api.get<unknown>(endpoints.notifications)),
+    refetchInterval: INBOX_REFRESH_MS,
   });
 }
 

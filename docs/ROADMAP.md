@@ -1528,6 +1528,29 @@ episode, settled by reading or acting, and mailed at most once.
   three halves. The backend unit suite at 789 and the integration suite at
   76 are green.)
 
+- [x] **29.3** The bell the inbox's own hook promised.
+
+  (`useNotifications` said it was "read on demand by the bell and the page", but
+  there was no bell: the synthesized inbox existed only on its own page, so a
+  reminder that came due while the reader was on the board waited to be
+  discovered. The notifications row now carries the unread count — a pill after
+  the label, a badge on the icon in the collapsed rail — and the link's
+  accessible name carries the count too; in the rail that name is the only one,
+  since the label is hidden and the icon is aria-hidden (before this the
+  collapsed rail's links had no name at all, so every row announced as "link").
+  The query asks again on a 60-second beat (`INBOX_REFRESH_MS`), and React Query
+  pauses the beat in a hidden tab, so a signal that arrives while the reader is
+  elsewhere reaches the count without a reload and without a request per page
+  view. A read inbox paints nothing rather than a zero. The copy is the
+  existing `notifications.unreadBadge` key in every language — no new strings.
+  3 layout tests pin the count, the empty state and the rail's name, and the
+  badge was read in a real browser against a live backend: one unread
+  saved-search signal, the count `1` on the notifications row. The full suite
+  ran 785 of 786 — the one red is the route-parity census in
+  `frontend/src/lib/api/endpoints.test.ts`, where the backend's
+  account-security routes have no browser caller yet; pre-existing, and
+  untouched here.
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
