@@ -124,6 +124,34 @@ class RateLimitIT extends AbstractIntegrationTest {
     }
 
     @Test
+    void theInboundWebhookIsMeteredPerAddressThenReturns429() throws Exception {
+        // Every account's deliveries arrive from the provider's own hosts, so the meter is the
+        // address's: ten letters for one token in a minute, then the eleventh is the limiter's.
+        String token = "fake." + UUID.randomUUID().toString().replace("-", "");
+        String body = JSON.writeValueAsString(Map.of(
+                "MessageID", UUID.randomUUID().toString(),
+                "From", "recruiter@example.com",
+                "Subject", "Your application",
+                "TextBody", "Hello"));
+        for (int i = 1; i <= 10; i++) {
+            // The token decodes to no account, so the service answers 404 -- but only after the
+            // limiter admitted the delivery, which is the work the ceiling meters.
+            mvc.perform(post("/api/v1/inbound/mail/" + token)
+                            .contentType(MediaType.APPLICATION_JSON).content(body))
+                    .andExpect(status().isNotFound());
+        }
+        mvc.perform(post("/api/v1/inbound/mail/" + token)
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.error.code").value("RATE_LIMITED"));
+
+        // Another address keeps its own window.
+        mvc.perform(post("/api/v1/inbound/mail/other." + token)
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     void healthReportsDbAndRedisThroughEnvelope() throws Exception {
         mvc.perform(get("/api/v1/health"))
                 .andExpect(status().isOk())

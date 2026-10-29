@@ -23,6 +23,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
  *  - AI-costing paths : per authenticated user (falls back to IP), app.ratelimit.ai-per-minute (default 30/min)
  *  - mail-sending account routes : per authenticated user (falls back to IP), app.ratelimit.mail-per-minute (default 5/min)
  *  - code-judging MFA routes : per signed-in user (falls back to IP), app.ratelimit.mfa-per-minute (default 5/min)
+ *  - the inbound webhook : per forwarding address, app.ratelimit.inbound-per-minute (default 10/min)
  * Registered as a plain filter inside the security chain (see SecurityConfig) and toggled by
  * app.ratelimit.enabled. Over-limit requests receive HTTP 429 with the standard envelope, code RATE_LIMITED.
  *
@@ -52,6 +53,12 @@ import org.springframework.security.core.context.SecurityContextHolder;
  * status read and the seed minting stay outside: a settings screen polls one and may re-ask the
  * other, and neither answers a verdict on a code.
  *
+ * <p>The inbound bucket is the forwarding address's meter, not the provider's: every
+ * account's letters arrive from the same provider IPs, so an IP bucket would let one busy
+ * reader's replies refuse another's. Keying by the address's signed local part makes a
+ * leaked address's junk stay its own account's problem, and the token is already the
+ * webhook's credential, so no second identifier has to be trusted.
+ *
  * <p>Every decision this filter makes moves a counter tagged by the bucket that made it
  * (see {@link RateLimitMetrics}), so a ceiling refusing traffic is a reading rather than a
  * client's word for it.
@@ -62,6 +69,7 @@ public class RateLimitFilter extends org.springframework.web.filter.OncePerReque
     static final String AI = "ai";
     static final String MAIL = "mail";
     static final String MFA = "mfa";
+    static final String INBOUND = "inbound";
 
     private final AppProperties props;
     private final RedisSlidingWindowRateLimiter limiter;
@@ -89,9 +97,14 @@ public class RateLimitFilter extends org.springframework.web.filter.OncePerReque
             case AI -> props.getRatelimit().getAiPerMinute();
             case MAIL -> props.getRatelimit().getMailPerMinute();
             case MFA -> props.getRatelimit().getMfaPerMinute();
+            case INBOUND -> props.getRatelimit().getInboundPerMinute();
             default -> props.getRatelimit().getAuthPerMinute();
         };
-        String identity = AUTH.equals(bucket) ? clientIp(request) : userOrIp(request);
+        String identity = switch (bucket) {
+            case AUTH -> clientIp(request);
+            case INBOUND -> inboundToken(request.getRequestURI());
+            default -> userOrIp(request);
+        };
         String key = "ratelimit:" + bucket + ":" + identity;
 
         if (!limiter.tryAcquire(key, limit, Duration.ofMinutes(1))) {
@@ -113,6 +126,9 @@ public class RateLimitFilter extends org.springframework.web.filter.OncePerReque
         if (checksMfaCode(uri)) {
             return MFA;
         }
+        if (isInboundMail(uri)) {
+            return INBOUND;
+        }
         if (uri.startsWith("/api/v1/auth")) {
             return AUTH;
         }
@@ -120,6 +136,21 @@ public class RateLimitFilter extends org.springframework.web.filter.OncePerReque
             return MAIL;
         }
         return isAiCost(uri) ? AI : null;
+    }
+
+    /**
+     * The provider's webhook: exactly the one path segment after {@code /mail/}. The address
+     * route beside it ({@code GET /inbound/link}) is signed-in and cheap, and any other
+     * shape is a 404 rather than a bucket.
+     */
+    static boolean isInboundMail(String uri) {
+        return uri.matches("^/api/v1/inbound/mail/[^/]+/?$");
+    }
+
+    /** The signed local part the address carries, which is the webhook's own credential. */
+    static String inboundToken(String uri) {
+        String path = uri.endsWith("/") ? uri.substring(0, uri.length() - 1) : uri;
+        return path.substring(path.lastIndexOf('/') + 1);
     }
 
     /**

@@ -526,6 +526,21 @@ secret: that is the only revocation this surface has, short of deleting the
 account, and it costs every mailed unsubscribe link too — so rotate for a real
 disclosure, not for a hunch.
 
+The inbound address (37.1) points the other way: it is how a recruiter's reply
+reaches the reader. Set `APP_INBOUND_DOMAIN` to a host whose mail the deployment
+can route (the bare hostname, e.g. `inbox.careeros.example`), give the provider
+an inbound route for that host, and have it POST the delivery to
+`/api/v1/inbound/mail/{token}` with the recipient's local part in the path and
+the provider's inbound JSON as the body. A provider that only offers one fixed
+webhook URL needs an email worker or route in front that expands the recipient's
+local part into the path and passes the body through: the token is in the path
+precisely so the app never trusts an unsigned `To` header. The address shares
+`APP_MAIL_LINK_SECRET`, so rotating that secret retires every address along with
+the unsubscribe and calendar links; a reader pastes a fresh one from the replies
+settings. Leaving `APP_INBOUND_DOMAIN` blank is valid — the deployment has no
+inbox, and the settings card says so (**503** `INBOUND_NOT_CONFIGURED`) instead
+of handing out an address nothing delivers to.
+
 The inbox's signals ride the same transport (22.1). Every morning at 07:30 UTC a
 sweep asks each account what is waiting — unread in the app and never mailed — and
 sends one plain-text letter naming up to ten items, counting the rest, with links

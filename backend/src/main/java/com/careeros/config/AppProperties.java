@@ -262,6 +262,7 @@ public class AppProperties {
         private int aiPerMinute = 30;
         private int mailPerMinute = 5;
         private int mfaPerMinute = 5;
+        private int inboundPerMinute = 10;
 
         public boolean isEnabled() {
             return enabled;
@@ -301,6 +302,14 @@ public class AppProperties {
 
         public void setMfaPerMinute(int mfaPerMinute) {
             this.mfaPerMinute = mfaPerMinute;
+        }
+
+        public int getInboundPerMinute() {
+            return inboundPerMinute;
+        }
+
+        public void setInboundPerMinute(int inboundPerMinute) {
+            this.inboundPerMinute = inboundPerMinute;
         }
     }
 

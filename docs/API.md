@@ -421,6 +421,44 @@ cannot tell the two apart.
 | GET | `/calendar.ics` | the account's reminders as an RFC 5545 document; `token` is the credential, and a forged, retired, missing or erased-account token is a **404** `CALENDAR_LINK_INVALID` |
 | GET | `/calendar/link` | the signed feed URL for the signed-in account — the settings card's copy target |
 
+### Inbound mail (`/inbound`)
+
+Letters that come back (roadmap 37.1): recruiters reply to the address on the
+applications the reader sent, and the deployment receives those replies through
+its mail provider's webhook. Every account gets an address of its own from
+`GET /inbound/link`; the local part is the account id (16 bytes, base64url) and
+the first 16 bytes of an HMAC-SHA256 under `app.mail.link-secret` with an
+inbound-specific prefix, joined by a dot — 45 octets, inside the RFC 5321
+64-octet local-part cap. Nothing is stored per address: the domain comes from
+`app.inbound.domain` (`APP_INBOUND_DOMAIN`), the signature is checked on every
+delivery, and rotating the secret retires every handed-out address at once.
+
+`POST /inbound/mail/{token}` is the provider's anonymous webhook — the provider
+cannot hold a session, so the path itself is the credential. The body is
+Postmark's inbound JSON (`MessageID`, `From`, `Subject`, `TextBody`, `Date`);
+other providers map their payload into that shape in their transform. The
+letter is stored under the account the address names, in `inbound_mails`, keyed
+for deduplication by `MessageID` (or, when the provider omits it, a SHA-256 of
+from, subject, date and body) and stamped with the letter's own date — a date
+that cannot be read, or lies more than a day in the future, falls back to
+arrival. Fields are trimmed and capped (from 320, subject 500, body 20 000
+characters) rather than refused: a provider that retries an oversized letter
+forever would never stop. An empty payload is acknowledged without a row, and a
+duplicate is acknowledged without a second one. The answer is always **200**
+`{"status":"received"}` — the provider only needs to know the delivery landed —
+and a forged, retired or erased-account token is the same **404**
+`INBOUND_LINK_INVALID` as a missing one.
+
+When `APP_INBOUND_DOMAIN` is blank the deployment has no inbox: `GET
+/inbound/link` answers **503** `INBOUND_NOT_CONFIGURED` instead of handing out
+an address nothing delivers to. Erasing an account deletes its letters with its
+other rows.
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/inbound/link` | the signed-in account's own inbound address; **503** `INBOUND_NOT_CONFIGURED` when the deployment has no domain |
+| POST | `/inbound/mail/{token}` | the provider's webhook; body is Postmark inbound JSON; always **200** `{"status":"received"}` on a resolvable token, **404** `INBOUND_LINK_INVALID` otherwise |
+
 ### Growth engines (`/growth`)
 
 The granular 10.x engines, each asked on its own. The 10.2 aggregate

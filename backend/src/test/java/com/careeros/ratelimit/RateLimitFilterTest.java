@@ -88,6 +88,21 @@ class RateLimitFilterTest {
     }
 
     @Test
+    void theInboundWebhookIsMeteredByAddressAndTheLinkRouteIsNotMeteredAtAll() {
+        // Every account's letters arrive from the same provider IPs, so the identity is the
+        // signed local part the address carries -- the webhook's own credential. Only the one
+        // path segment after /mail/ is the webhook; the signed-in address route is a cheap read.
+        assertThat(RateLimitFilter.ruleFor("/api/v1/inbound/mail/abc.def")).isEqualTo("inbound");
+        assertThat(RateLimitFilter.ruleFor("/api/v1/inbound/mail/abc.def/")).isEqualTo("inbound");
+        assertThat(RateLimitFilter.inboundToken("/api/v1/inbound/mail/abc.def")).isEqualTo("abc.def");
+        assertThat(RateLimitFilter.inboundToken("/api/v1/inbound/mail/abc.def/")).isEqualTo("abc.def");
+        assertThat(RateLimitFilter.ruleFor("/api/v1/inbound/mail/")).isNull();
+        assertThat(RateLimitFilter.ruleFor("/api/v1/inbound/mail")).isNull();
+        assertThat(RateLimitFilter.ruleFor("/api/v1/inbound/mail/abc/def")).isNull();
+        assertThat(RateLimitFilter.ruleFor("/api/v1/inbound/link")).isNull();
+    }
+
+    @Test
     void cheapReadsAreNotLimited() {
         // Browsing must not be throttled, or the product becomes unusable.
         assertThat(RateLimitFilter.ruleFor("/api/v1/jobs")).isNull();

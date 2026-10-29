@@ -69,6 +69,11 @@ public class SecurityConfig {
                         // the signed query string is the credential. Only this one path is
                         // public -- the address that hands it out is signed-in.
                         .requestMatchers("/api/v1/calendar.ics").permitAll()
+                        // The provider's inbound webhook (roadmap 37.1): a mail provider posts
+                        // one forwarded letter and carries no bearer token, so the signed local
+                        // part of the address is the credential. Only this prefix is public;
+                        // the route that hands the address out is signed-in.
+                        .requestMatchers("/api/v1/inbound/mail/**").permitAll()
                         .requestMatchers("/api-docs/**", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/api/v1/health").permitAll()
                         // Observability surface, pinned to the two exposed endpoints rather

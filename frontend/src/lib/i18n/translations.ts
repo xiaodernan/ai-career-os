@@ -1438,6 +1438,10 @@ export const translations = {
 
       INGESTION_RUN_NOT_APPLICABLE: "A failed run has no plan to apply.",
 
+      INBOUND_LINK_INVALID: "That inbound address is not valid or has been retired.",
+
+      INBOUND_NOT_CONFIGURED: "Inbound mail is not configured on this deployment.",
+
       INTERNAL_ERROR: "An internal server error occurred.",
 
       INTERVIEW_ALREADY_STARTED: "This interview has already started.",
@@ -3806,6 +3810,10 @@ export const translations = {
       INGESTION_RUN_ALREADY_APPLIED: "这次运行的计划已经应用过了。",
 
       INGESTION_RUN_NOT_APPLICABLE: "失败的运行没有可应用的计划。",
+
+      INBOUND_LINK_INVALID: "这个来信地址无效，或已经停用。",
+
+      INBOUND_NOT_CONFIGURED: "这个部署还没有配置来信收件。",
 
       INTERNAL_ERROR: "服务器内部错误。",
 

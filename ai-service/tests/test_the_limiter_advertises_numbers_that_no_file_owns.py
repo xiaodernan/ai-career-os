@@ -1,7 +1,8 @@
 """Every number the rate limiter advertises is written in several files, and nothing read them together.
 
 `RateLimitFilter` counts requests against `app.ratelimit.auth-per-minute`,
-`app.ratelimit.ai-per-minute`, `app.ratelimit.mail-per-minute` and `app.ratelimit.mfa-per-minute`.
+`app.ratelimit.ai-per-minute`, `app.ratelimit.mail-per-minute`,
+`app.ratelimit.mfa-per-minute` and `app.ratelimit.inbound-per-minute`.
 Each integer is restated -- never derived -- in the Java property class, both env examples, the
 filter's own javadoc, `docs/SECURITY.md`, `e2e/README.md` three times, a comment and a message in
 the e2e fixtures, and as the loop bounds of `RateLimitIT`, which sends exactly the shipped ceiling
@@ -11,7 +12,10 @@ and leave SECURITY.md at 10/min and the document now describes a product that is
 `RateLimitIT` goes red for a reason its own name contradicts. The MFA ceiling joined the same shape
 in 36.2 and is the one bucket whose document says `per signed-in user` -- the reader has to keep
 that spelling distinct from the AI bucket's `per user`, because the two identities are different
-questions: one account's code guesses, not a person's model calls.
+questions: one account's code guesses, not a person's model calls. The inbound ceiling joined in
+37.1 and is keyed by neither a person nor an IP: every account's deliveries arrive from the
+provider's own hosts, so the document says `per inbound address` and the filter reads the address
+out of the webhook path.
 
 The same shape repeats twice more, which is why this is one gate and not three:
 
@@ -108,26 +112,30 @@ LOCAL_DOTFILES = {".env"}
 
 AUTH_VAR, AI_VAR, MAIL_VAR = "RATELIMIT_AUTH_PER_MINUTE", "RATELIMIT_AI_PER_MINUTE", "RATELIMIT_MAIL_PER_MINUTE"
 MFA_VAR = "RATELIMIT_MFA_PER_MINUTE"
+INBOUND_VAR = "RATELIMIT_INBOUND_PER_MINUTE"
 REDIS_TIMEOUT, REDIS_CONNECT = "REDIS_TIMEOUT", "REDIS_CONNECT_TIMEOUT"
-CEILING_VARS = (AUTH_VAR, AI_VAR, MAIL_VAR, MFA_VAR)
+CEILING_VARS = (AUTH_VAR, AI_VAR, MAIL_VAR, MFA_VAR, INBOUND_VAR)
 AUTH_PREFIX = "/api/v1/auth"
-VAR_OF_PROP = {"auth": AUTH_VAR, "ai": AI_VAR, "mail": MAIL_VAR, "mfa": MFA_VAR}
+VAR_OF_PROP = {"auth": AUTH_VAR, "ai": AI_VAR, "mail": MAIL_VAR, "mfa": MFA_VAR,
+               "inbound": INBOUND_VAR}
 # `signed-in user` is deliberately a separate identity from `user`: the AI bucket meters a
 # person's model calls, the MFA bucket an account's code guesses, and a reader who conflates them
-# reconciles two ceilings against each other.
+# reconciles two ceilings against each other. `inbound address` is separate again: the webhook is
+# anonymous, so neither a person nor a client IP can key it -- the provider's hosts are shared.
 VAR_OF_IDENTITY = {"client IP": AUTH_VAR, "user": AI_VAR, "account": MAIL_VAR,
-                   "signed-in user": MFA_VAR}
+                   "signed-in user": MFA_VAR, "inbound address": INBOUND_VAR}
 
 # floors read off `git archive HEAD` at the ref this gate last moved, so a census cannot narrow
 # itself: twenty-nine ceiling claims (eleven about auth, six about AI, six about mail, six about
 # mfa), eight timeout claims, six raised-ceiling sites, nine 429 claims, twenty-four shape-matched
 # rows in the open scan, eight rows this census's own file would contribute, and at least this many
 # files walked per shipped source tree (215/195/173/11/8/2).
-MIN_CEILING_CARRIERS = 29
+MIN_CEILING_CARRIERS = 35
 MIN_AUTH_CARRIERS = 11
 MIN_AI_CARRIERS = 6
 MIN_MAIL_CARRIERS = 6
 MIN_MFA_CARRIERS = 6
+MIN_INBOUND_CARRIERS = 4
 MIN_TIMEOUT_CARRIERS = 8
 MIN_RAISED_SITES = 6
 MIN_STATUS_SITES = 9
@@ -143,9 +151,9 @@ JAVA_INT = re.compile(r"private\s+int\s+(?P<field>\w+)\s*=\s*(?P<value>\d+)\s*;"
 PROSE_PER_MIN = re.compile(r"(?P<value>\d+)/min\b")
 EMPTY_MEANS = re.compile(r"empty means (?P<value>\d+)\)")
 DOC_IDENTITY = re.compile(
-    r"(?P<value>\d+)/min per (?P<identity>client IP|signed-in user|user|account)\b")
+    r"(?P<value>\d+)/min per (?P<identity>client IP|signed-in user|inbound address|user|account)\b")
 JAVADOC_DEFAULT = re.compile(
-    r"app\.ratelimit\.(?P<prop>auth|ai|mail|mfa)-per-minute \(default (?P<value>\d+)/min\)")
+    r"app\.ratelimit\.(?P<prop>auth|ai|mail|mfa|inbound)-per-minute \(default (?P<value>\d+)/min\)")
 AUTH_LIMIT_DEFAULT = re.compile(r'E2E_AUTH_LIMIT \?\? "(?P<value>\d+)"')
 E2E_THRESHOLD = re.compile(r"\[int\]\$rl -ge (?P<value>\d+)")
 RAISED_ASSIGN = re.compile(rf"{AUTH_VAR}[=:]\s*\\?\"?(?P<value>\d+)")
@@ -163,12 +171,14 @@ HTTP_429 = re.compile(r"\b429\b")
 CODE_NAME = re.compile(r"\bRATE_LIMITED\b")
 ENUM_DECL = re.compile(r"RATE_LIMITED\(HttpStatus\.(?P<name>[A-Z_]+)\)")
 PER_MINUTE_NAME = re.compile(
-    r"\b(?:auth|ai|mail|mfa)[-_][pP]er[-_][mM]inute\b|\b(?:auth|ai|mail|mfa)PerMinute\b")
-# Directional on purpose: the auth branch must be the client IP and every other branch the user id
-# (falling back to the IP). A test that only asked whether both names appear in the line is true
-# with the two branches swapped.
+    r"\b(?:auth|ai|mail|mfa|inbound)[-_][pP]er[-_][mM]inute\b|\b(?:auth|ai|mail|mfa|inbound)PerMinute\b")
+# Directional on purpose: the auth branch must be the client IP, the inbound branch the token in
+# the webhook path, and every other branch the user id (falling back to the IP). A test that only
+# asked whether the names appear is true with the branches swapped.
 BUCKET_IDENTITY = re.compile(
-    r'AUTH\.equals\(bucket\)\s*\?\s*clientIp\(request\)\s*:\s*userOrIp\(request\)')
+    r'case AUTH -> clientIp\(request\);\s*'
+    r'case INBOUND -> inboundToken\(request\.getRequestURI\(\)\);\s*'
+    r'default -> userOrIp\(request\);')
 MS = re.compile(r"(?P<value>\d+)ms\b")
 UNIT_SECONDS = {"Seconds": 1, "Minutes": 60, "Hours": 3600}
 
@@ -354,26 +364,29 @@ def ceiling_carriers() -> list[tuple[str, str, int]]:
         ("AppProperties' `aiPerMinute` initialiser", AI_VAR, java_int_default(PROPS, "aiPerMinute")),
         ("AppProperties' `mailPerMinute` initialiser", MAIL_VAR, java_int_default(PROPS, "mailPerMinute")),
         ("AppProperties' `mfaPerMinute` initialiser", MFA_VAR, java_int_default(PROPS, "mfaPerMinute")),
+        ("AppProperties' `inboundPerMinute` initialiser", INBOUND_VAR,
+         java_int_default(PROPS, "inboundPerMinute")),
     ]
     for path, label in ((ENV_DEV, ".env.example"), (ENV_PROD, ".env.prod.example")):
         for var in CEILING_VARS:
             value = env_assignment(path, var)
             assert value.isdigit(), f"{label}'s {var} states {value!r}, which is not a plain integer"
             out.append((f"{label}'s {var}", var, int(value)))
-    for match in first_group(FILTER, JAVADOC_DEFAULT, want=4):
+    for match in first_group(FILTER, JAVADOC_DEFAULT, want=5):
         out.append((f"RateLimitFilter's javadoc {match['prop']}-per-minute line",
                     VAR_OF_PROP[match["prop"]], int(match["value"])))
     sec_text = read(SEC)
     identities: dict[str, str] = {}
-    for match in first_group(SEC, DOC_IDENTITY, want=4):
+    for match in first_group(SEC, DOC_IDENTITY, want=5):
         var = VAR_OF_IDENTITY[match["identity"]]
         identities[match["identity"]] = var
         out.append((f"SECURITY.md:{_line_of(sec_text, match.start())} `{match['value']}/min per "
                     f"{match['identity']}`", var, int(match["value"])))
-    assert sorted(identities) == ["account", "client IP", "signed-in user", "user"], (
+    assert sorted(identities) == ["account", "client IP", "inbound address", "signed-in user", "user"], (
         "SECURITY.md names the bucketed identities "
-        f"{sorted(identities)}; the four ceilings are only reconcilable while the document still says "
-        f"which one is per client IP, which per user, which per account and which per signed-in user")
+        f"{sorted(identities)}; the five ceilings are only reconcilable while the document still says "
+        f"which one is per client IP, which per user, which per account, which per signed-in user and "
+        f"which per inbound address")
     for path, want in ((E2E_README, 2), (FIXTURES, 1)):
         text = read(path)
         for match in first_group(path, PROSE_PER_MIN, want=want):
@@ -386,10 +399,11 @@ def ceiling_carriers() -> list[tuple[str, str, int]]:
     out.append((f"e2e/tests/fixtures.ts:{_line_of(read(FIXTURES), match.start())} "
                 f"`E2E_AUTH_LIMIT` fallback", AUTH_VAR, int(match["value"])))
     # RateLimitIT sends exactly the shipped ceiling and then expects to be limited, so its loop bounds
-    # are claims about all four numbers -- and they are ordered auth-then-ai-then-mail-then-mfa by the
-    # tests. The MFA arm joined last, so the first three indexes the docs above rest on do not move.
-    bounds = first_group(IT, IT_BOUND, want=4)
-    for match, var in zip(bounds, (AUTH_VAR, AI_VAR, MAIL_VAR, MFA_VAR), strict=True):
+    # are claims about all five numbers -- and they are ordered auth-then-ai-then-mail-then-mfa-then-
+    # inbound by the tests. The MFA arm joined before the inbound one, so the first three indexes the
+    # docs above rest on do not move.
+    bounds = first_group(IT, IT_BOUND, want=5)
+    for match, var in zip(bounds, (AUTH_VAR, AI_VAR, MAIL_VAR, MFA_VAR, INBOUND_VAR), strict=True):
         out.append((f"RateLimitIT:{_line_of(read(IT), match.start())} `i <= "
                     f"{match['value']}` warm-up loop", var, int(match["value"])))
     return out
@@ -477,7 +491,7 @@ def status_sites() -> list[tuple[str, int, str]]:
 def code_name_sites() -> list[tuple[str, int]]:
     """Every file that spells the envelope code an over-limit request carries."""
     out = []
-    for path, want in ((FILTER, 2), (ENUM, 1), (IT, 4)):
+    for path, want in ((FILTER, 2), (ENUM, 1), (IT, 5)):
         text = read(path)
         for match in first_group(path, CODE_NAME, want=want):
             out.append((f"{path.relative_to(ROOT)}:{_line_of(text, match.start())}", 1))
@@ -546,6 +560,15 @@ def test_the_number_readers_parse_shapes_this_repository_does_not_yet_hold():
         == [("7", "signed-in user")], (
         "the doc reader must read the MFA bucket's identity as one phrase: a reader that stopped at "
         "`user` would reconcile a code-guessing ceiling against the AI bucket's ceiling")
+    assert [(m["value"], m["identity"]) for m in DOC_IDENTITY.finditer("6/min per inbound address")] \
+        == [("6", "inbound address")], (
+        "the doc reader must read the inbound bucket's two-word identity: a reader that stopped at "
+        "`signed-in user` or `user` would miss the one bucket keyed by neither a person nor an IP")
+    inbound_hit = JAVADOC_DEFAULT.search(
+        "*  - the inbound webhook : app.ratelimit.inbound-per-minute (default 8/min)")
+    assert inbound_hit and inbound_hit["prop"] == "inbound" and inbound_hit["value"] == "8", (
+        f"the javadoc reader must admit the fifth property name "
+        f"({inbound_hit.group(0) if inbound_hit else None!r})")
     assert fixture_value(EMPTY_MEANS, prose, "`(empty means N)`") == "12", (
         "the `(empty means N)` shape is a default claim")
     assert fixture_value(RAISED_ASSIGN, f"{AUTH_VAR}=1000", "raised-ceiling") == "1000", (
@@ -585,11 +608,12 @@ def test_the_ceilings_have_one_authority_and_every_other_statement_agrees():
         f"shipped files state: a census that reads nothing reconciles a stub")
     per_var = {var: sum(1 for _l, v, _n in carriers if v == var) for var in CEILING_VARS}
     assert (per_var[AUTH_VAR] >= MIN_AUTH_CARRIERS and per_var[AI_VAR] >= MIN_AI_CARRIERS
-            and per_var[MAIL_VAR] >= MIN_MAIL_CARRIERS and per_var[MFA_VAR] >= MIN_MFA_CARRIERS), (
-        f"the ceiling census splits {per_var} between the four knobs, wanting at least "
-        f"{MIN_AUTH_CARRIERS} auth, {MIN_AI_CARRIERS} ai, {MIN_MAIL_CARRIERS} mail and "
-        f"{MIN_MFA_CARRIERS} mfa claims: one ceiling covered by a single stray match is a census that "
-        f"can pass on a coincidence")
+            and per_var[MAIL_VAR] >= MIN_MAIL_CARRIERS and per_var[MFA_VAR] >= MIN_MFA_CARRIERS
+            and per_var[INBOUND_VAR] >= MIN_INBOUND_CARRIERS), (
+        f"the ceiling census splits {per_var} between the five knobs, wanting at least "
+        f"{MIN_AUTH_CARRIERS} auth, {MIN_AI_CARRIERS} ai, {MIN_MAIL_CARRIERS} mail, "
+        f"{MIN_MFA_CARRIERS} mfa and {MIN_INBOUND_CARRIERS} inbound claims: one ceiling covered by a "
+        f"single stray match is a census that can pass on a coincidence")
     problems = [
         f"{label} states {value}, the shipped default for {var} is {caps[var]}"
         for label, var, value in carriers
@@ -614,11 +638,12 @@ def test_the_java_default_is_a_shadow_and_still_says_what_spring_would_bind():
     refuses to let it be the authority.
     """
     caps = authority()
-    keys = re.findall(r"^    (auth-per-minute|ai-per-minute|mail-per-minute|mfa-per-minute): \$\{([A-Z_]+):",
+    keys = re.findall(r"^    (auth-per-minute|ai-per-minute|mail-per-minute|mfa-per-minute|inbound-per-minute): \$\{([A-Z_]+):",
                       read(YML), re.M)
     assert sorted(keys) == [("ai-per-minute", AI_VAR), ("auth-per-minute", AUTH_VAR),
-                            ("mail-per-minute", MAIL_VAR), ("mfa-per-minute", MFA_VAR)], (
-        f"application.yml interpolates the ratelimit keys {keys}; without all four, the yml stops "
+                            ("inbound-per-minute", INBOUND_VAR), ("mail-per-minute", MAIL_VAR),
+                            ("mfa-per-minute", MFA_VAR)], (
+        f"application.yml interpolates the ratelimit keys {keys}; without all five, the yml stops "
         f"being the authority and this file is comparing claims to nothing")
     assert "app.ratelimit" not in read(YML), (
         "application.yml spells the ceilings as nested keys under `ratelimit:`; if the dotted "
@@ -631,7 +656,7 @@ def test_the_java_default_is_a_shadow_and_still_says_what_spring_would_bind():
         "documents")
 
     for field, var in (("authPerMinute", AUTH_VAR), ("aiPerMinute", AI_VAR), ("mailPerMinute", MAIL_VAR),
-                       ("mfaPerMinute", MFA_VAR)):
+                       ("mfaPerMinute", MFA_VAR), ("inboundPerMinute", INBOUND_VAR)):
         shadow = java_int_default(PROPS, field)
         assert shadow == caps[var], (
             f"AppProperties' {field} initialiser is {shadow} while Spring would bind {caps[var]}: a "
@@ -686,31 +711,31 @@ def test_the_bucket_a_request_lands_in_is_chosen_by_the_predicate_that_names_it(
     assert "String bucket = ruleFor(request.getRequestURI());" in body, (
         "`doFilterInternal` no longer asks `ruleFor` for the bucket, so the ceiling it applies is not "
         "the rule that admitted the request")
-    for name in ("AUTH", "AI", "MAIL", "MFA"):
+    for name in ("AUTH", "AI", "MAIL", "MFA", "INBOUND"):
         assert f'static final String {name} = "{name.lower()}";' in text, (
             f"the {name} bucket name is no longer declared as a constant spelled `{name.lower()}`: "
             f"the Redis key prefix and SECURITY.md's measurement rest on that spelling")
     for case in ("case AI -> props.getRatelimit().getAiPerMinute();",
                  "case MAIL -> props.getRatelimit().getMailPerMinute();",
                  "case MFA -> props.getRatelimit().getMfaPerMinute();",
+                 "case INBOUND -> props.getRatelimit().getInboundPerMinute();",
                  "default -> props.getRatelimit().getAuthPerMinute();"):
         assert case in body, (
             f"the bucket switch no longer reads `{case}`: every bucket name `ruleFor` can answer has "
             f"to select its own ceiling, and the auth bucket stays the default so a name with no case "
             f"is counted as a credential attempt rather than silently unthrottled")
-    identity_line = next((line for line in lines if "String identity =" in line), None)
-    assert identity_line is not None, (
-        "RateLimitFilter no longer selects the bucket key's identity from the bucket name, so the "
-        "ceiling and the identity it is counted against can disagree without any name reading wrong")
-    assert BUCKET_IDENTITY.search(identity_line) is not None, (
-        f"the identity is chosen by `{identity_line.strip()}`, which no longer pairs the auth bucket "
-        f"with the client IP and every other bucket with the user id (falling back to the IP)")
+    identity_start = body.index("String identity =")
+    identity_block = body[identity_start:body.index("};", identity_start) + 2]
+    assert BUCKET_IDENTITY.search(identity_block) is not None, (
+        f"the identity is now chosen by `{identity_block.strip()}`, which no longer pairs the auth "
+        f"bucket with the client IP, the inbound bucket with the token in the webhook path, and every "
+        f"other bucket with the user id (falling back to the IP)")
     key_line = next((line for line in lines if 'String key = "ratelimit:"' in line), None)
     assert key_line is not None and '"ratelimit:" + bucket + ":" + identity' in key_line, (
         f"the Redis key is now written by `{(key_line or '').strip()}`: SECURITY.md's measurement "
         f"counts `ratelimit:auth:*` keys, so the key spelling is a claim too")
 
-    javadoc = lines[_line_of(text, first_group(FILTER, JAVADOC_DEFAULT, want=4)[1].start()) - 1]
+    javadoc = lines[_line_of(text, first_group(FILTER, JAVADOC_DEFAULT, want=5)[1].start()) - 1]
     assert "falls back to IP" in javadoc, (
         f"the javadoc line that declares the AI ceiling is `{javadoc.strip()}`: it used to say the "
         f"per-user rule falls back to the client IP, which is what `userOrIp` actually does")
@@ -722,19 +747,21 @@ def test_the_bucket_a_request_lands_in_is_chosen_by_the_predicate_that_names_it(
 
     doc = read(SEC)
     identities = {m["identity"] for m in DOC_IDENTITY.finditer(doc)}
-    assert identities == {"client IP", "user", "account", "signed-in user"}, (
+    assert identities == {"client IP", "user", "account", "signed-in user", "inbound address"}, (
         f"SECURITY.md names {sorted(identities)}; the filter buckets auth by client IP, AI by user "
-        f"id, mail by account id and MFA by signed-in user, so a document that drops one of them "
-        f"describes a limiter with fewer rules than it has")
+        f"id, mail by account id, MFA by signed-in user and inbound by the address in the webhook "
+        f"path, so a document that drops one of them describes a limiter with fewer rules than it has")
     pairs = {(m["identity"], m["value"]) for m in DOC_IDENTITY.finditer(doc)}
     caps = authority()
     assert (("client IP", str(caps[AUTH_VAR])) in pairs and ("user", str(caps[AI_VAR])) in pairs
             and ("account", str(caps[MAIL_VAR])) in pairs
-            and ("signed-in user", str(caps[MFA_VAR])) in pairs), (
+            and ("signed-in user", str(caps[MFA_VAR])) in pairs
+            and ("inbound address", str(caps[INBOUND_VAR])) in pairs), (
         f"SECURITY.md pairs the identities with {sorted(pairs)} while the filter counts "
         f"{caps[AUTH_VAR]}/min per client IP, {caps[AI_VAR]}/min per user, "
-        f"{caps[MAIL_VAR]}/min per account and {caps[MFA_VAR]}/min per signed-in user: swapped "
-        f"numbers read correct in both directions and are wrong in both")
+        f"{caps[MAIL_VAR]}/min per account, {caps[MFA_VAR]}/min per signed-in user and "
+        f"{caps[INBOUND_VAR]}/min per inbound address: swapped numbers read correct in both "
+        f"directions and are wrong in both")
 
 
 def test_the_raised_ceiling_the_suite_needs_is_the_number_preflight_demands():
@@ -849,9 +876,9 @@ def test_the_answer_an_over_limit_request_gets_has_one_spelling_across_the_stack
         f"{[label for label, _v, _w in sites]}: a client that branches on 429 -- which the e2e fixture "
         f"does -- would read a rate limit as some other failure")
     names = code_name_sites()
-    assert len(names) == 7, (
-        f"`RATE_LIMITED` appears at {len(names)} sites {[label for label, _ in names]}, want 7 (the "
-        f"filter's javadoc and its `ApiError.of`, the enum's declaration, and RateLimitIT's four "
+    assert len(names) == 8, (
+        f"`RATE_LIMITED` appears at {len(names)} sites {[label for label, _ in names]}, want 8 (the "
+        f"filter's javadoc and its `ApiError.of`, the enum's declaration, and RateLimitIT's five "
         f"envelope assertions): the code is the machine-readable half of the answer")
     decl = first_group(ENUM, ENUM_DECL, want=1)[0]
     assert decl["name"] == "TOO_MANY_REQUESTS", (

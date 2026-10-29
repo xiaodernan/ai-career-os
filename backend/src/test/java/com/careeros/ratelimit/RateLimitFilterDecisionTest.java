@@ -115,6 +115,23 @@ class RateLimitFilterDecisionTest {
         assertThat(countedLimit.get()).isEqualTo(props.getRatelimit().getMfaPerMinute());
     }
 
+    @Test
+    void theInboundBucketCountsAgainstTheAddressCeilingAndNotTheProviderIp() throws Exception {
+        MockHttpServletRequest request = request("POST", "/api/v1/inbound/mail/abc.def");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        AtomicBoolean chained = new AtomicBoolean();
+
+        filter(false).doFilterInternal(request, response, chain(chained));
+
+        assertThat(response.getStatus()).isEqualTo(429);
+        assertThat(chained).isFalse();
+        assertThat(count(RateLimitFilter.INBOUND, RateLimitMetrics.DENIED)).isEqualTo(1.0);
+        assertThat(count(RateLimitFilter.AUTH, RateLimitMetrics.DENIED)).isZero();
+        // The provider is one IP for every account: the key is the address's own credential.
+        assertThat(countedKey.get()).isEqualTo("ratelimit:inbound:abc.def");
+        assertThat(countedLimit.get()).isEqualTo(props.getRatelimit().getInboundPerMinute());
+    }
+
     private RateLimitFilter filter(boolean admit) {
         RedisSlidingWindowRateLimiter limiter = new RedisSlidingWindowRateLimiter(null) {
             @Override

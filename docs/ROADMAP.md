@@ -2914,12 +2914,13 @@ application it answers, and filed where the tracker already tells the story.
 Nothing is applied silently -- the intent is a suggestion with a one-click
 accept -- and a letter the engine cannot read is still a letter that arrived.
 
-- [ ] **37.1** A mailbox of one's own: `GET /api/v1/inbound/link` hands the
+- [x] **37.1** A mailbox of one's own: `GET /api/v1/inbound/link` hands the
   signed-in reader the address, and `POST /api/v1/inbound/mail/{token}` is the
   provider's anonymous webhook. The token is the credential -- `SignedLink`
-  with a purpose of its own over the account id, the same construction as the
-  calendar feed, so rotating `app.mail.link-secret` retires every address at
-  once and a calendar token reads nothing here. The canonical payload is
+  with a purpose of its own over the account id, cut to a 16-byte MAC so the
+  local part (45 octets) fits RFC 5321's mailbox cap and otherwise the calendar
+  feed's construction, so rotating `app.mail.link-secret` retires every address
+  at once and a calendar token reads nothing here. The canonical payload is
   Postmark's inbound JSON (`MessageID`, `From`, `Subject`, `TextBody`, `Date`);
   a letter without a message id is keyed by SHA-256 of those fields,
   `(user_id, message_key)` is unique, and a provider retry answers the same

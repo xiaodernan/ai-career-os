@@ -74,8 +74,14 @@ reachable from a browser.
   the `token` query parameter is the credential — the same HMAC and secret as the
   mail links, domain-separated by a different signed prefix, constant-time
   compared; a forged, retired or erased-account token is a 404 and rotating the
-  secret retires every handed-out feed), and the
-  internal surface `/api/internal/**` (guarded below).
+  secret retires every handed-out feed), the inbound webhook
+  `/api/v1/inbound/mail/**` (the mail provider cannot hold a session, so the
+  address in the path is the credential — the account id plus a truncated
+  HMAC-SHA256 under the same secret, domain-separated by an inbound-specific
+  prefix, constant-time compared; the local part is 45 octets so it fits RFC
+  5321's mailbox cap, and the answer to a forged, retired or erased-account
+  address is the same 404, so the open internet cannot grade its guesses), and
+  the internal surface `/api/internal/**` (guarded below).
 
 ## Service-to-service authentication (ai-service)
 
@@ -103,7 +109,8 @@ and its own email typed back; then the objects named by its `documents.file_key`
 rows are removed from the private bucket and the `users` row is deleted. Every
 user-scoped table has carried `REFERENCES users(id) ON DELETE CASCADE` since V1,
 so the remaining rows — profile, memories, resumes, applications, interviews,
-conversations, chunks, feeds, notifications, digests, usage and refresh tokens —
+conversations, chunks, feeds, notifications, digests, usage, refresh tokens and
+received letters (`inbound_mails`) —
 leave in the same transaction. A storage failure aborts before the row is removed
 (the account stays whole and retryable); access tokens are stateless and expire
 within `JWT_ACCESS_TTL_MINUTES`, and every request they can still make finds no
@@ -194,6 +201,13 @@ that rejects invented skills/numbers not present in the source evidence.
     the status read and seed minting stay outside the bucket: a settings screen
     polls the one and may re-ask the other. The reprint and the disable judge a
     code too, so a spent bucket shuts them for the same minute.
+  - The inbound webhook — 10/min per inbound address. `POST
+    /api/v1/inbound/mail/{token}` is anonymous and every account's deliveries
+    arrive from the provider's own hosts, so a client-IP bucket would let one
+    noisy mailbox starve the rest. `RateLimitFilter.isInboundMail` names the
+    route and `inboundToken` keys the bucket by the address's local part: the
+    token is the credential, and a forged one spends only its own budget before
+    the 404 answers.
   - **Fails open** when Redis is unavailable, logged at WARN — the limiter never
     locks anyone out. The client timeout is pinned to 500ms so that branch is
     actually reached promptly: with the defaults in effect a Redis outage left

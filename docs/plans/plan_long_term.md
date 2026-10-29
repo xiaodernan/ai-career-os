@@ -264,7 +264,8 @@
     读不懂的信也仍然是到达的信。
     - 37.1 自己的邮箱：`GET /api/v1/inbound/link` 交地址，
       `POST /api/v1/inbound/mail/{token}` 是匿名 webhook；令牌即凭证
-      （`SignedLink` 自有用途前缀 + 账号 id，与日历同构，轮换
+      （`SignedLink` 自有用途前缀 + 账号 id，与日历同构，MAC 截断为 16
+      字节、local-part 共 45 字符，守住 RFC 5321 的上限；轮换
       `app.mail.link-secret` 一次作废全部地址）；载荷以 Postmark 入站 JSON
       为准，缺 MessageID 时按四字段 SHA-256 去重，`(user_id, message_key)`
       唯一，重投同答 200 不落第二行；只收纯文本、逐字段限量，限流桶按令牌计；
@@ -286,7 +287,15 @@
       轮换警告、未配置句）。双语、copy census、endpoint 台账与三个 hook 门随
       人口移动；API.md 记四条路由与两个新错误码，SECURITY 记地址是凭证、信是
       随账号删除的用户数据，RUNBOOK 记转发域配置与地址沉默的含义。
-    下一步：37.1。
+    37.1 已落地：`InboundLinks` 由 `SignedLink.token` 的 HMAC 截出 16 字节 MAC，
+    45 字符 local-part；`V27__inbound_mails.sql` 唯一键 `(user_id, message_key)` 且
+    `ON DELETE CASCADE`；`InboundMailService` 逐字段限长（320/500/20000，代理对安全）、
+    缺 MessageID 时按四字段 SHA-256 去重、超前一日的信按到达时间落；`InboundController`
+    两扇门，未配置域时地址路由 503 `INBOUND_NOT_CONFIGURED`、webhook 404；限流新增
+    `inbound` 桶按令牌计（`RATELIMIT_INBOUND_PER_MINUTE`，默认 10），`RateLimitIT` 第十
+    一封得到 429；双语错误句、API.md、SECURITY、DEPLOYMENT 与 `AccountErasureIT` 的入站
+    行随人口移动；响应形状 census 182→186、限流 census 四桶→五桶。
+    下一步：37.2。
 
 ## 开发协议（每个任务）
 

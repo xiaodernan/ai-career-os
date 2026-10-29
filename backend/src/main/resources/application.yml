@@ -83,9 +83,17 @@ app:
       ssl: ${APP_EMAIL_SMTP_SSL:false}
   # The key that signs the unsubscribe links the letters carry (roadmap 23.1). It never
   # leaves the server; rotating it retires every link ever mailed at once, which is the
-  # answer to a forwarded letter or a leaked mailbox.
+  # answer to a forwarded letter or a leaked mailbox. It signs the calendar feed and the
+  # inbound address too, with a purpose prefix keeping the three from opening each other.
   mail:
     link-secret: ${APP_MAIL_LINK_SECRET:dev-only-mail-link-secret-please-change-me-0123456789abcdef}
+  # The domain a provider receives forwarded replies on (roadmap 37.1). Empty means inbound
+  # mail is not configured: the settings card says so and the webhook answers 404, so a
+  # deployment that has not arranged a receiving domain never hands out an address that
+  # bounces. The address is <signed-local-part>@<this domain>; the provider posts Postmark's
+  # inbound JSON to /api/v1/inbound/mail/<signed-local-part> (docs/DEPLOYMENT.md).
+  inbound:
+    domain: ${APP_INBOUND_DOMAIN:}
   # The key that seals every enrolled authenticator seed at rest (roadmap 36.1). The
   # shipped value is published, so a prod boot (APP_ENV=prod) refuses it (ProductionGuard):
   # a database dump plus a published key is every account's second factor. Rotating it
@@ -127,6 +135,11 @@ app:
     ai-per-minute: ${RATELIMIT_AI_PER_MINUTE:30}
     mail-per-minute: ${RATELIMIT_MAIL_PER_MINUTE:5}
     mfa-per-minute: ${RATELIMIT_MFA_PER_MINUTE:5}
+    # The inbound webhook's meter, keyed by the address's token rather than by caller: the
+    # provider is one IP for every account, so an IP bucket would let one busy reader's
+    # letters refuse another's. Ten a minute is far more than a recruiter writes and far
+    # less than a leaked address needs to fill a row with junk.
+    inbound-per-minute: ${RATELIMIT_INBOUND_PER_MINUTE:10}
   upload:
     max-file-size-bytes: 20971520
     presigned-url-ttl-seconds: 600

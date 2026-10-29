@@ -55,6 +55,14 @@ class AccountErasureIT extends ApiIntegrationTest {
         assertThat(bobDocument).isNotNull();
         storage.put(aliceKey, "alice's file".getBytes(StandardCharsets.UTF_8), "text/plain");
         storage.put(bobKey, "bob's file".getBytes(StandardCharsets.UTF_8), "text/plain");
+        // A forwarded reply is user data too: the erasure has to take the letters with the
+        // account, or "no copy remains" would be false for every reader who configured one.
+        jdbc.update("insert into inbound_mails (user_id, message_key, from_address, subject, body_text, received_at) "
+                        + "values (?, ?, 'recruiter@example.com', 'Your application', 'Hello', now())",
+                aliceId, "erase-" + aliceId);
+        jdbc.update("insert into inbound_mails (user_id, message_key, from_address, subject, body_text, received_at) "
+                        + "values (?, ?, 'recruiter@example.com', 'Your application', 'Hello', now())",
+                bobId, "stay-" + bobId);
 
         assertThat(count("select count(*) from documents where user_id = ?", aliceId)).isEqualTo(1);
         assertThat(count("select count(*) from refresh_tokens where user_id = ?", aliceId)).isEqualTo(1);
@@ -62,6 +70,7 @@ class AccountErasureIT extends ApiIntegrationTest {
         assertThat(count("select count(*) from user_mfa where user_id = ?", aliceId)).isEqualTo(1);
         assertThat(count("select count(*) from user_mfa_recovery_codes where user_id = ?", aliceId))
                 .isEqualTo(1);
+        assertThat(count("select count(*) from inbound_mails where user_id = ?", aliceId)).isEqualTo(1);
         assertThat(storage.store).containsKey(aliceKey);
 
         mvc.perform(post("/api/v1/me/erase")
@@ -81,6 +90,7 @@ class AccountErasureIT extends ApiIntegrationTest {
         assertThat(count("select count(*) from email_change_tokens where user_id = ?", aliceId)).isZero();
         assertThat(count("select count(*) from user_mfa where user_id = ?", aliceId)).isZero();
         assertThat(count("select count(*) from user_mfa_recovery_codes where user_id = ?", aliceId)).isZero();
+        assertThat(count("select count(*) from inbound_mails where user_id = ?", aliceId)).isZero();
         assertThat(storage.store).doesNotContainKey(aliceKey);
 
         // The neighbour: every table and the bucket still hold what this account owns.
@@ -90,6 +100,7 @@ class AccountErasureIT extends ApiIntegrationTest {
         assertThat(count("select count(*) from user_mfa where user_id = ?", bobId)).isEqualTo(1);
         assertThat(count("select count(*) from user_mfa_recovery_codes where user_id = ?", bobId))
                 .isEqualTo(1);
+        assertThat(count("select count(*) from inbound_mails where user_id = ?", bobId)).isEqualTo(1);
         assertThat(storage.store).containsKey(bobKey);
 
         // The refresh token died with its row: there is no session left to rotate.

@@ -1017,8 +1017,13 @@ def test_the_java_probe_reads_every_record_the_backend_declares():
     # code. Activation keeps its own body (`MfaActivateRequest`, six digits only): proving a new
     # seed and re-authenticating an enabled factor are different sentences to the reader, so the
     # two bodies state different rules.
-    assert len(declared) == 182, \
-        f"{len(declared)} records carry a declaration the shared opener reads, not the 182 measured"
+    # 186 with 37.1's four: `InboundMailPayload` (the provider's inbound JSON, converted at the
+    # door so the rest of the backend never binds a vendor's spelling), the controller's
+    # `InboundAddress` and `Acknowledgement` (the address the settings card copies, and the one
+    # word the provider reads back), and `InboundMailService.Received` (the stored row's id and
+    # whether the delivery was a duplicate -- a private answer, counted like any other record).
+    assert len(declared) == 186, \
+        f"{len(declared)} records carry a declaration the shared opener reads, not the 186 measured"
     problems, renamed = [], []
     for relative, record in declared:
         names = _record_components_at(relative, record)

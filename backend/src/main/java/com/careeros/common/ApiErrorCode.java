@@ -94,6 +94,20 @@ public enum ApiErrorCode {
      * address.
      */
     CALENDAR_LINK_INVALID(HttpStatus.NOT_FOUND),
+    /**
+     * The inbound address's token is unreadable, signed with a retired secret, another
+     * surface's token rather than this purpose's, or names an account that no longer exists.
+     * One answer for all four, so the open internet cannot grade its guesses, and its own
+     * code because the sentence is about a forwarding address, not a subscription URL.
+     */
+    INBOUND_LINK_INVALID(HttpStatus.NOT_FOUND),
+    /**
+     * The deployment has no receiving domain, so it cannot hand out an address. Not a 404:
+     * the account is real and the route exists -- what is missing is a configuration the
+     * operator has to supply, and the sentence says so rather than pretending the address
+     * was retired.
+     */
+    INBOUND_NOT_CONFIGURED(HttpStatus.SERVICE_UNAVAILABLE),
     AI_SERVICE_NOT_FOUND(HttpStatus.NOT_FOUND),
     USER_NOT_FOUND(HttpStatus.NOT_FOUND),
     PROFILE_NOT_FOUND(HttpStatus.NOT_FOUND),
