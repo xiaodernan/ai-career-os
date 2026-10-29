@@ -2903,6 +2903,64 @@ password in the database.
   payload's `?` and pins login's keys as `[email, password, code]`. No Java changed
   in this unit, so the backend counts are 36.3's.
 
+## Epic 37 — The Reply Comes Back
+
+Every letter this product has sent left the building and never wrote back. The
+unsubscribe and calendar links are read-only, the inbox files only signals the
+app computed itself, and a recruiter's answer lives in a mailbox the app cannot
+see. This epic opens the returning road: an account gets an address of its own,
+a provider forwards the reply to it, and the reply is read, matched to the
+application it answers, and filed where the tracker already tells the story.
+Nothing is applied silently -- the intent is a suggestion with a one-click
+accept -- and a letter the engine cannot read is still a letter that arrived.
+
+- [ ] **37.1** A mailbox of one's own: `GET /api/v1/inbound/link` hands the
+  signed-in reader the address, and `POST /api/v1/inbound/mail/{token}` is the
+  provider's anonymous webhook. The token is the credential -- `SignedLink`
+  with a purpose of its own over the account id, the same construction as the
+  calendar feed, so rotating `app.mail.link-secret` retires every address at
+  once and a calendar token reads nothing here. The canonical payload is
+  Postmark's inbound JSON (`MessageID`, `From`, `Subject`, `TextBody`, `Date`);
+  a letter without a message id is keyed by SHA-256 of those fields,
+  `(user_id, message_key)` is unique, and a provider retry answers the same
+  200 without a second row. Text only, capped per field and body, behind a
+  limiter bucket keyed by the token and not the address. Forged, rotated,
+  missing and erased accounts answer one 404 `INBOUND_LINK_INVALID`; a
+  deployment without `app.inbound.domain` answers `INBOUND_NOT_CONFIGURED` on
+  the link route and 404 on the webhook. `V27` holds the letters, and account
+  erasure takes them with it.
+- [ ] **37.2** The engine reads the reply: ai-service's internal
+  `POST /internal/features/classify-reply` answers `{intent, company, role}`
+  with intents `rejection | interview | offer | info | other` -- deterministic
+  keyword passes in the letter's language first, the model only filling what
+  the rules abstain on, and the offline mock stays deterministic. The route is
+  pinned in `test_forward_features_contract.py`. The backend's bridge runs on
+  arrival, and its failure leaves the letter with no intent rather than losing
+  it: a classifier outage is not a lost reply.
+- [ ] **37.3** The reply meets the application: a company-name match
+  (case-insensitive, narrowed by role containment when the name repeats) files
+  the mail on one application, and a guess that narrows to nothing files
+  nothing rather than the wrong row. Filing writes an `application_events`
+  row of kind `reply` (mail id, sender, subject, intent) and the notification
+  center gains a `reply:<id>` episode, so the bell counts the reply, the
+  morning sweep may ring it, and the stamp stays the reader's. An unmatched
+  letter waits on the replies page with a "file this reply" route; the intent
+  maps to a suggested stage (rejected / interviewing / offer) that the reader
+  applies in one click, never automatically, and only on the application the
+  mail is actually filed on. The letters are readable through
+  `GET /api/v1/inbound/mails` (paged, scoped) and fileable through
+  `POST /api/v1/inbound/mails/{id}/file`.
+- [ ] **37.4** The replies have a page: `/replies` lists the letters newest
+  first -- sender, subject, time, the intent as a badge, the application the
+  letter is filed on or the picker that files it, and the suggested-stage
+  action behind the existing confirmation; settings grows the address card
+  (copy, the rotation warning beside the address, the not-configured
+  sentence). Both languages, the copy census, the endpoint ledger and the
+  three hook gates follow the new population; API.md records the four routes
+  and the two new error codes, SECURITY.md says the address is a capability
+  and the letters are user data that leaves with the account, RUNBOOK says how
+  to forward a domain to the webhook and what a silent address means.
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

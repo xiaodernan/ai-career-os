@@ -256,6 +256,38 @@
     写多出第 8 个文件，失效承诺 50 条全部命中已声明且被屏幕挂载的键，登录
     载荷 `[email, password, code]` 由 auth 契约门读可选的 `?` 记下。
 
+15. **Epic 37 — 回信回到应用（入站邮件）**（进行中）
+    产品发出的每封信都离开大楼，却从没有一条回来的路：退订与日历链接只读，
+    通知中心只合成应用自己算出的信号，招聘方的回复躺在应用看不见的邮箱里。
+    本 Epic 给每个账号一个自己的地址，由邮件服务把回复转进来，读信、对上申请、
+    落到看板本来就在讲的故事里；不静默改状态——意图只是建议，一键才采纳；
+    读不懂的信也仍然是到达的信。
+    - 37.1 自己的邮箱：`GET /api/v1/inbound/link` 交地址，
+      `POST /api/v1/inbound/mail/{token}` 是匿名 webhook；令牌即凭证
+      （`SignedLink` 自有用途前缀 + 账号 id，与日历同构，轮换
+      `app.mail.link-secret` 一次作废全部地址）；载荷以 Postmark 入站 JSON
+      为准，缺 MessageID 时按四字段 SHA-256 去重，`(user_id, message_key)`
+      唯一，重投同答 200 不落第二行；只收纯文本、逐字段限量，限流桶按令牌计；
+      伪造/轮换/缺失/已删号统一 404 `INBOUND_LINK_INVALID`，未配
+      `app.inbound.domain` 时地址路由回 `INBOUND_NOT_CONFIGURED`；`V27`
+      存信，删号 CASCADE。
+    - 37.2 引擎读信：ai-service 内部 `POST /internal/features/classify-reply`
+      答 `{intent, company, role}`（rejection/interview/offer/info/other），
+      先走双语关键词规则、模型只补规则弃权处，offline mock 保持确定；路由进
+      `test_forward_features_contract.py`；桥接失败留空意图而不丢信。
+    - 37.3 信对上申请：公司名不区分大小写匹配、重名时用职位包含收窄；对上一封
+      写 `application_events` 的 `reply` 行（信 id、发件人、主题、意图），通知
+      中心多出 `reply:<id>` episode，铃铛会数、晨间推送可响；未对上的信停在
+      回复页等“归档到这封申请”；意图映射建议阶段（rejected/interviewing/
+      offer），一键才落、只落在信真正归档的申请上；`GET /api/v1/inbound/mails`
+      分页读、`POST /api/v1/inbound/mails/{id}/file` 归档。
+    - 37.4 回复页：`/replies` 按时间列信——发件人、主题、时间、意图徽章、归档
+      到的申请或归档选择器、确认框后的建议阶段按钮；设置页新增地址卡（复制、
+      轮换警告、未配置句）。双语、copy census、endpoint 台账与三个 hook 门随
+      人口移动；API.md 记四条路由与两个新错误码，SECURITY 记地址是凭证、信是
+      随账号删除的用户数据，RUNBOOK 记转发域配置与地址沉默的含义。
+    下一步：37.1。
+
 ## 开发协议（每个任务）
 
 - 先跑相关测试，再改；改完跑三套件相关子集；提交前 `tsc` + lint。
