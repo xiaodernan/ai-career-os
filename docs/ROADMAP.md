@@ -2133,6 +2133,50 @@ where no proxy exists.
   frontend-reading censuses the concurrent session's in-flight files keep red;
   the 32 doc-reading gate files answer 238/238.)
 
+- [x] **31.11** a production boot admits the shell the browser loads.
+
+  (`app.cors.allowed-origins` defaults to `http://localhost:3000`, and the browser
+  compares its `Origin` header to the allow-list literally. A prod boot that kept
+  the default served the shell and refused the API call behind each page — healthy
+  in the logs, unusable in the browser. The prod example's
+  `https://your-domain.com,https://www.your-domain.com` had the same ending until
+  replaced, and an origin pasted from the address bar (`https://app.example.com/`,
+  a path, a query) never equals an Origin, so it sat in the list and matched
+  nothing.)
+
+  `ProductionGuard` now reads the allow-list (`AppProperties.Cors`) and names it in
+  the same offender list, after the link base. Its rule is stricter than the link
+  base's: every comma-separated entry must be a bare public http(s) origin — no
+  blank entry, `CHANGE_ME`, loopback or example-domain host, no path, trailing
+  slash, query or userinfo, because Spring compares the header to the string and a
+  spelling the header cannot carry matches nothing. A well-formed list also has to
+  name the shell's own origin, built from `APP_WEB_BASE_URL` (lowercased scheme and
+  host, port only when the value carries one), because that is where the mailed
+  links open. When the base is itself an offender the shell rule is skipped — the
+  operator is about to change it, so judging the list against the old value would
+  only add noise. The refusal message now sends the operator to the shell's origin.
+
+  `ProductionGuardTest` grew from 23 to 27 cases: the dev and example lists in
+  fourteen spellings (loopback, example domain, blank, `CHANGE_ME`, bare host, ftp,
+  trailing slash, path, query, one bad entry beside a good one), the public-list
+  arm including an uppercase host, which is the same origin; a public list that
+  does not name the shell (a sibling subdomain, a different port, a different
+  scheme); a drift arm reading `APP_CORS_ORIGINS` out of `application.yml`,
+  `.env.example` and `.env.prod.example` (all three refused); a context arm where
+  real secrets plus the dev list fail naming only `APP_CORS_ORIGINS`, and the
+  all-offenders arm's exact prefix now carries nine names. Mutation arm: disabling
+  the CORS branch turned 5 of 27 red — the four CORS arms and the nine-name prefix;
+  restored byte-identical (sha1 5951aa57…), 27/27 green.
+
+  The knob census learned the allow-list's second reader
+  (`config/ProductionGuard.java` beside `config/SecurityConfig.java`).
+  `application.yml`'s `cors` block, the DEPLOYMENT checklist item and preflight
+  paragraph, and SECURITY's transport bullet and finding #4 state the refusal. The
+  backend suite answers 906 tests, 0 failed (ITs included); the ai-service suite
+  answers 11 failed / 1913 passed / 1 skipped, and the eleven are the same three
+  frontend-reading censuses the concurrent session's in-flight files keep red; the
+  doc-reading gate selection answers 238/238.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

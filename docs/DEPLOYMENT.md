@@ -78,6 +78,12 @@ passwords is no longer a reachable state.
   unsubscribe link is built from it, and a prod boot refuses a loopback host, a
   non-http(s) value, the example domain, or an empty value (`ProductionGuard`;
   see [Email](#email))
+- [ ] `APP_CORS_ORIGINS` names the shell's public origin — the origin of
+  `APP_WEB_BASE_URL`, comma-separated, with no path or trailing slash. With
+  `APP_ENV=prod` the backend refuses the dev `http://localhost:3000`, the example's
+  `your-domain.com` entries, a spelling a browser's `Origin` header cannot equal,
+  and a list that does not include the shell's origin (`ProductionGuard`; see
+  [SECURITY.md](SECURITY.md#transport--headers))
 - [ ] Reverse proxy (nginx/Traefik/Caddy) terminates TLS and forwards to:
   - Frontend: `http://frontend:3000`
   - Backend API: `http://backend:8080`
@@ -112,11 +118,14 @@ The backend carries the same gate inline: with `APP_ENV=prod`, `ProductionGuard`
 refuses the Spring context on a published JWT secret, mail-link secret, internal
 token, database password or object-store credential (or a `CHANGE_ME`/empty value),
 on a link base the reader's browser cannot open (a loopback host, a non-http(s)
-value, or the examples' `localhost`/`your-domain.com` placeholders), or on the
-console mail transport that would keep every reset link in the log, and names every
-offender — a boot that would have served forgeable credentials, reached production's
-database and bucket with a published password, or mailed every reset link to a
-machine the reader does not have exits non-zero instead.
+value, or the examples' `localhost`/`your-domain.com` placeholders), on a
+cross-origin list no deployed shell can use (the dev origin, the example domain, a
+spelling a browser's `Origin` header cannot equal, or a list missing the shell's own
+origin), or on the console mail transport that would keep every reset link in the
+log, and names every offender — a boot that would have served forgeable
+credentials, reached production's database and bucket with a published password,
+mailed every reset link to a machine the reader does not have, or blocked the real
+page's API calls exits non-zero instead.
 
 ```bash
 cd ai-service

@@ -103,7 +103,10 @@ HOLDER_KEYS = frozenset({"cors", "web", "jwt", "internal", "storage", "ai-servic
 
 # leaf -> (holder, field, accessor, the files that call it), measured at the ref this gate lands on.
 READERS = {
-    "cors.allowed-origins": ("Cors", "allowedOrigins", "getAllowedOrigins", ("config/SecurityConfig.java",)),
+    # Since 31.11 the guard reads the allow-list to refuse a prod boot whose origins no
+    # deployed shell can use; SecurityConfig still applies the list to the CORS filter.
+    "cors.allowed-origins": ("Cors", "allowedOrigins", "getAllowedOrigins",
+                             ("config/ProductionGuard.java", "config/SecurityConfig.java")),
     "jwt.secret": ("Jwt", "secret", "getSecret",
                    ("auth/service/JwtService.java", "config/ProductionGuard.java")),
     "jwt.access-ttl-minutes": ("Jwt", "accessTtlMinutes", "getAccessTtlMinutes", ("auth/service/JwtService.java",)),

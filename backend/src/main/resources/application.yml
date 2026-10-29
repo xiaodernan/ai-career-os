@@ -45,6 +45,10 @@ spring:
       queue-capacity: 200
 
 app:
+  # The API admits only these browser origins, matched against the browser's Origin header
+  # exactly. The shipped value is the dev shell; with APP_ENV=prod the backend refuses a
+  # loopback or example-domain list, a spelling with a path, and a list the deployed shell
+  # is not in (the origin of APP_WEB_BASE_URL) -- ProductionGuard.
   cors:
     allowed-origins: ${APP_CORS_ORIGINS:http://localhost:3000}
   # The rate limiter and the session record count a caller by this address. The shipped

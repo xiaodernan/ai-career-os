@@ -33,6 +33,7 @@ class ProductionGuardTest {
     private static final String REAL_MINIO_USER = "careeros-ops-7c1e";
     private static final String REAL_MINIO_SECRET = "minio-9a3f5b8d2c6e4a0f9b7d5c3e1a8f";
     private static final String REAL_WEB = "https://career.example.org";
+    private static final String REAL_CORS = "https://career.example.org,https://www.career.example.org";
     private static final String REAL_SMTP = "smtp";
 
     private final ApplicationContextRunner runner = new ApplicationContextRunner()
@@ -46,6 +47,7 @@ class ProductionGuardTest {
         assertThat(ProductionGuard.offenders("dev", "console", published)).isEmpty();
         assertThat(ProductionGuard.offenders("test", "console", published)).isEmpty();
         assertThat(ProductionGuard.offenders(null, "console", published)).isEmpty();
+        assertThat(ProductionGuard.offenders("dev", "console", published, "http://localhost:3000")).isEmpty();
     }
 
     @Test
@@ -276,6 +278,63 @@ class ProductionGuardTest {
     }
 
     @Test
+    void theDevCorsListCannotOpenAProdBoot() {
+        for (String refused : List.of("http://localhost:3000", "http://localhost:8080",
+                "https://your-domain.com", "https://www.your-domain.com", "", "   ",
+                "CHANGE_ME_ORIGIN", "career.example.org", "ftp://career.example.org", "not a url",
+                "https://career.example.org/", "https://career.example.org/app",
+                "https://career.example.org?x=1", REAL_CORS + ",http://127.0.0.1:3000")) {
+            assertThat(ProductionGuard.offenders("prod", REAL_SMTP,
+                    withBaseUrl(realSettings(), REAL_WEB), refused))
+                    .as("a CORS list spelled %s", refused)
+                    .containsExactly(ProductionGuard.CORS_ORIGINS);
+        }
+        assertThat(ProductionGuard.offenders("prod", REAL_SMTP,
+                withBaseUrl(realSettings(), REAL_WEB), REAL_CORS))
+                .as("the shell's own origin plus a second public spelling")
+                .isEmpty();
+        assertThat(ProductionGuard.offenders("prod", REAL_SMTP,
+                withBaseUrl(realSettings(), REAL_WEB), "https://CAREER.EXAMPLE.ORG"))
+                .as("host case is not part of an origin")
+                .isEmpty();
+    }
+
+    @Test
+    void aCorsListThatDoesNotAdmitTheShellIsRefused() {
+        for (String elsewhere : List.of("https://www.career.example.org", "https://career.example.org:8443",
+                "http://career.example.org")) {
+            assertThat(ProductionGuard.offenders("prod", REAL_SMTP,
+                    withBaseUrl(realSettings(), REAL_WEB), elsewhere))
+                    .as("a public origin that is not the shell's: %s", elsewhere)
+                    .containsExactly(ProductionGuard.CORS_ORIGINS);
+        }
+        assertThat(ProductionGuard.offenders("prod", REAL_SMTP,
+                withBaseUrl(realSettings(), REAL_WEB), "http://localhost:3000"))
+                .as("the dev default while the base is real")
+                .containsExactly(ProductionGuard.CORS_ORIGINS);
+    }
+
+    @Test
+    void theShippedCorsListsAgreeWithTheGuardToo() throws IOException {
+        assertThat(ProductionGuard.offenders("prod", REAL_SMTP,
+                withBaseUrl(realSettings(), REAL_WEB), ymlDefault("APP_CORS_ORIGINS")))
+                .as("application.yml's own default")
+                .containsExactly(ProductionGuard.CORS_ORIGINS);
+
+        assertThat(ProductionGuard.offenders("prod", REAL_SMTP,
+                withBaseUrl(realSettings(), REAL_WEB),
+                envValue(Path.of("..", ".env.example"), "APP_CORS_ORIGINS")))
+                .as("a dev example copied into prod")
+                .containsExactly(ProductionGuard.CORS_ORIGINS);
+
+        assertThat(ProductionGuard.offenders("prod", REAL_SMTP,
+                withBaseUrl(realSettings(), REAL_WEB),
+                envValue(Path.of("..", ".env.prod.example"), "APP_CORS_ORIGINS")))
+                .as("a prod example booted before its your-domain.com origins were replaced")
+                .containsExactly(ProductionGuard.CORS_ORIGINS);
+    }
+
+    @Test
     void aProdContextRefusesToRefreshAndNamesEveryOffender() {
         runner.withPropertyValues("app.deployment.env=prod", "app.jwt.secret=" + PUBLISHED_JWT,
                         "app.mail.link-secret=" + PUBLISHED_MAIL, "app.internal.token=" + PUBLISHED_INTERNAL)
@@ -284,7 +343,7 @@ class ProductionGuardTest {
                     assertThat(NestedExceptionUtils.getMostSpecificCause(context.getStartupFailure()).getMessage())
                             .contains("APP_ENV=prod but JWT_SECRET, APP_MAIL_LINK_SECRET, INTERNAL_API_TOKEN, "
                                     + "POSTGRES_PASSWORD, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, APP_WEB_BASE_URL, "
-                                    + "APP_EMAIL_PROVIDER cannot open")
+                                    + "APP_CORS_ORIGINS, APP_EMAIL_PROVIDER cannot open")
                             .contains("docs/DEPLOYMENT.md");
                 });
     }
@@ -307,11 +366,24 @@ class ProductionGuardTest {
                         "app.storage.access-key=" + REAL_MINIO_USER,
                         "app.storage.secret-key=" + REAL_MINIO_SECRET,
                         "app.email.provider=" + REAL_SMTP,
-                        "app.web.base-url=http://localhost:3000")
+                        "app.web.base-url=http://localhost:3000",
+                        "app.cors.allowed-origins=" + REAL_CORS)
                 .run(context -> {
                     assertThat(context).hasFailed();
                     assertThat(NestedExceptionUtils.getMostSpecificCause(context.getStartupFailure()).getMessage())
                             .contains("APP_ENV=prod but APP_WEB_BASE_URL cannot open")
+                            .doesNotContain("JWT_SECRET");
+                });
+    }
+
+    @Test
+    void aProdContextOnTheDevCorsListIsRefusedEvenWithRealSecrets() {
+        runner.withPropertyValues(prodProperties(REAL_SMTP))
+                .withPropertyValues("app.cors.allowed-origins=http://localhost:3000")
+                .run(context -> {
+                    assertThat(context).hasFailed();
+                    assertThat(NestedExceptionUtils.getMostSpecificCause(context.getStartupFailure()).getMessage())
+                            .contains("APP_ENV=prod but APP_CORS_ORIGINS cannot open")
                             .doesNotContain("JWT_SECRET");
                 });
     }
@@ -329,7 +401,8 @@ class ProductionGuardTest {
         runner.withPropertyValues("app.deployment.env=prod", "app.jwt.secret=" + REAL_JWT,
                         "app.mail.link-secret=" + REAL_MAIL, "app.internal.token=" + REAL_INTERNAL,
                         "spring.datasource.password=" + REAL_DB, "app.email.provider=" + REAL_SMTP,
-                        "app.web.base-url=" + REAL_WEB, "app.storage.enabled=false")
+                        "app.web.base-url=" + REAL_WEB, "app.cors.allowed-origins=" + REAL_CORS,
+                        "app.storage.enabled=false")
                 .run(context -> {
                     assertThat(context).hasFailed();
                     assertThat(NestedExceptionUtils.getMostSpecificCause(context.getStartupFailure()).getMessage())
@@ -361,6 +434,7 @@ class ProductionGuardTest {
             "app.storage.secret-key=" + REAL_MINIO_SECRET,
             "app.email.provider=" + provider,
             "app.web.base-url=" + REAL_WEB,
+            "app.cors.allowed-origins=" + REAL_CORS,
         };
     }
 

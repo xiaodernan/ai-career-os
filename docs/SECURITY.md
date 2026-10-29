@@ -102,6 +102,12 @@ that rejects invented skills/numbers not present in the source evidence.
 - CORS is allow-listed from `APP_CORS_ORIGINS` (default
   `http://localhost:3000`); methods `GET/POST/PUT/PATCH/DELETE/OPTIONS`; headers
   `Authorization`, `Content-Type`, `X-Internal-Token` only.
+- With `APP_ENV=prod` the backend refuses to start on a CORS list that is blank, a
+  non-http(s) entry, a loopback host, the example's domain, a spelling a browser's
+  `Origin` header cannot equal (bare host, trailing slash, path, query), or a list
+  that does not name the shell's own origin (the origin of `APP_WEB_BASE_URL`) —
+  a list the deployed page is not in fails each API call while the boot looks
+  healthy (`ProductionGuard`, finding #4).
 - `docker-compose.yml` publishes the host ports in its `ports:` blocks on `127.0.0.1`,
   so a development stack answers on the machine that runs it. The production override
   `docker-compose.prod.yml` republishes `backend` as `8080:8080` and `frontend` as
@@ -266,17 +272,30 @@ residual risk rather than as a clean bill of health.
    example's own domain under any scheme or trailing slash — naming it in the same
    offender list as the credentials.
 
-   `ProductionGuardTest` has 23 cases: the pure decision table (dev, case/space, a lone
+   The API's cross-origin door had the same ending. `APP_CORS_ORIGINS` defaults to
+   the dev shell, and the list is compared to the browser's `Origin` header exactly,
+   so a production boot that forgot the knob comes up healthy while the deployed
+   page's API calls are refused; a copied example entry fails the same way, because
+   `https://your-domain.com` is a domain the operator does not own, and a pasted
+   address-bar spelling (`https://app.example.com/`, a path, a query) can never
+   equal an Origin. The guard refuses a list that is blank or a `CHANGE_ME` value,
+   holds a non-http(s), loopback or example-domain entry, holds a spelling an Origin
+   header cannot equal, or does not name the shell's own origin — the origin of
+   `APP_WEB_BASE_URL`, which is where the mailed links open.
+
+   `ProductionGuardTest` has 27 cases: the pure decision table (dev, case/space, a lone
    override, blank, `CHANGE_ME`, the database and store defaults, a published user
    name over a real secret, a loopback link base in seven spellings, unparseable and
-   non-http link bases, and the example domain with and without a slash or scheme,
-   plus the console transport with its case and blank arms), *drift* checks that read
+   non-http link bases, the example domain with and without a slash or scheme, the
+   dev CORS list's spellings and a public origin that is not the shell's, plus the
+   console transport with its case and blank arms), *drift* checks that read
    `application.yml` and both env examples so the guard's copies — six secrets, the
-   store's user name, the link base and the transport — cannot go stale, an
-   `ApplicationContextRunner` that proves a prod context fails and names all eight
-   offenders in one sentence, including a console-transport arm and a loopback-link-base arm
-   with real secrets and a storage-off boot that is still asked for the pair, and
-   that dev or prod-with-`smtp` starts, and the `@Component` wiring.
+   store's user name, the link base, the CORS lists and the transport — cannot go
+   stale, an `ApplicationContextRunner` that proves a prod context fails and names
+   all nine offenders in one sentence, including a console-transport arm, a
+   loopback-link-base arm and a dev-CORS-list arm with real secrets and a
+   storage-off boot that is still asked for the pair, and that dev or
+   prod-with-`smtp` starts, and the `@Component` wiring.
    `DEPLOYMENT.md`'s checklist and its Email section state the refusal.
 
 ### Dependency audits (2026-10-24)
