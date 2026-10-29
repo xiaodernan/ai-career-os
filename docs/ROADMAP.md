@@ -1572,6 +1572,23 @@ episode, settled by reading or acting, and mailed at most once.
   session's in-flight file, so the localized sentence is left for the change
   that next opens it.)
 
+- [x] **29.5** The phone's menu trigger carries the count.
+
+  (29.3 put the count on the notifications row, but below `lg` the rows live in
+  a drawer behind the topbar's hamburger: a reader on a phone saw nothing until
+  they opened the menu, so the bell still waited to be discovered on exactly the
+  form factor where the app is hardest to check. `MobileSidebar` now reads the
+  same inbox the rows read — one query key, so the beats do not double — and the
+  trigger carries the count twice: the badge on the icon, and the count inside
+  the trigger's accessible name, because the badge is decorative. A read inbox
+  leaves the trigger plain. The copy is the existing `notifications.unreadBadge`
+  key; no new strings. 2 server-render tests pin the named trigger and the
+  plain one, and the file now holds 5; the live inbox-to-row path was already
+  read in a real browser under 29.3, and this change only adds a second reader
+  of the same query. The full suite ran 787 of 788 — the one red is the
+  route-parity census in `frontend/src/lib/api/endpoints.test.ts`, the same
+  pre-existing, other-session-owned item 29.3 recorded.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

@@ -22,16 +22,18 @@ vi.mock("@/lib/hooks/resources", () => ({
   useNotifications: () => ({ data: { items: [], unread: inbox.unread } }),
 }));
 
-import { NavLinks } from "./sidebar";
+import { MobileSidebar, NavLinks } from "./sidebar";
 
 /**
- * The bell on the notifications row (roadmap 29.3).
+ * The bell on the notifications row (roadmap 29.3), and on the phone's menu
+ * trigger (29.5).
  *
  * The inbox is synthesized from clocks rather than from writes, so the count is
  * how a reader learns a reminder came due without opening the page. What is
  * pinned: the number rides the notifications row and no other; the link's
  * accessible name carries the count (in the rail the label is hidden, so the
- * name is the only thing a screen reader would hear); and a read inbox paints
+ * name is the only thing a screen reader would hear); the phone's trigger --
+ * whose rows are behind it -- carries the count too; and a read inbox paints
  * nothing rather than a zero.
  */
 describe("the sidebar's unread bell", () => {
@@ -59,5 +61,29 @@ describe("the sidebar's unread bell", () => {
     expect(html).toContain('aria-label="Notifications, notifications.unreadBadge=3"');
     // The badge itself is decorative -- the name already carries the count.
     expect(html).toContain(">3<");
+  });
+
+  it("carries the count on the phone's trigger, whose rows are behind it", () => {
+    inbox.unread = 3;
+    const html = renderToStaticMarkup(
+      <MobileSidebar>
+        <span />
+      </MobileSidebar>
+    );
+    expect(html).toContain(
+      'aria-label="chrome.openNavigationMenu, notifications.unreadBadge=3"'
+    );
+    expect(html).toContain(">3<");
+  });
+
+  it("keeps the phone's trigger plain when the inbox is read", () => {
+    inbox.unread = 0;
+    const html = renderToStaticMarkup(
+      <MobileSidebar>
+        <span />
+      </MobileSidebar>
+    );
+    expect(html).toContain('aria-label="chrome.openNavigationMenu"');
+    expect(html).not.toContain("notifications.unreadBadge");
   });
 });

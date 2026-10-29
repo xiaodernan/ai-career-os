@@ -203,16 +203,30 @@ export function Sidebar() {
 export function MobileSidebar({ children }: { children: React.ReactNode }) {
   const { t } = useLocale();
   const [open, setOpen] = React.useState(false);
+  // The drawer's rows carry the count, but the rows are behind this button: on a
+  // phone the trigger is the only thing on screen, so the count rides it too
+  // (roadmap 29.5). The name carries it as well -- the badge is decorative.
+  const { data: inbox } = useNotifications();
+  const unread = inbox?.unread ?? 0;
+  const unreadText = unread > 0 ? t("notifications.unreadBadge", { count: unread }) : "";
+  const menuLabel = unreadText
+    ? `${t("chrome.openNavigationMenu")}, ${unreadText}`
+    : t("chrome.openNavigationMenu");
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label={t("chrome.openNavigationMenu")}
-          className="lg:hidden"
-        >
-          <Menu aria-hidden />
+        <Button variant="ghost" size="icon-sm" aria-label={menuLabel} className="lg:hidden">
+          <span className="relative flex shrink-0 items-center">
+            <Menu aria-hidden />
+            {unread > 0 && (
+              <span
+                aria-hidden
+                className="absolute -right-2 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold leading-none text-primary-foreground tabular-nums"
+              >
+                {unread}
+              </span>
+            )}
+          </span>
         </Button>
       </SheetTrigger>
       <SheetContent side="left" className="w-64 gap-0 bg-sidebar p-0 text-sidebar-foreground">
