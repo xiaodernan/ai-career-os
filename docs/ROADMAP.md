@@ -1459,6 +1459,18 @@ visible to an operator. It stops deliberately where visible history begins.
   integration suite at 73 are green, the alarms and deployment gates pass, and no
   frontend or copy-census movement.)
 
+- [x] **28.3** The sweep's delete is proven against the schema Flyway builds.
+
+  (The unit tests mock the repositories, so the JPQL delete and the V23 indexes
+  were arguments, not evidence. `RetentionSweepIT` registers a real account,
+  writes two rows into each credential table through the schema Flyway built --
+  one expired sixty days ago, one expired yesterday -- runs the sweep, and
+  asserts the far row is gone while the near one survives in all three tables,
+  then reads `pg_indexes` for the three expiry indexes. A renamed column, a
+  dropped index or a grace window that collapsed to "expired now" would each
+  pass the mocks and fail here. The backend unit suite at 779 and the
+  integration suite at 74 are green.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
