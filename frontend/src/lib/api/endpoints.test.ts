@@ -832,13 +832,10 @@ describe("endpoints ↔ backend route parity", () => {
     "/users/me/password": "the account-password route the client has not wired",
     "/users/me/sessions": "the sessions route the client has not wired",
     "/users/me/sessions/{}": "the revoke-session route the client has not wired",
-    // 37.1/37.3: the inbound mail loop. The provider is the one caller of the webhook, never a
-    // browser; the three signed-in routes are the replies surface's, whose page and settings card
-    // land with 37.4 and will take their entries off this list then.
+    // 37.1/37.4: the inbound loop's webhook. The provider is its one caller, never a browser;
+    // the three signed-in routes left this list with 37.4, when lib/hooks/replies.ts began
+    // reaching them for the replies page and the settings address card.
     "/inbound/mail/{}": "a mail provider posts here, not the browser; the address is what the settings card hands out",
-    "/inbound/link": "the settings card asks for the address with the replies surface (37.4)",
-    "/inbound/mails": "the replies page reads it (37.4)",
-    "/inbound/mails/{}/file": "the replies page files from it (37.4)",
   };
 
   function unreferencedRoutes(): string[] {

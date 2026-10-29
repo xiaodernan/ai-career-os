@@ -2971,7 +2971,7 @@ accept -- and a letter the engine cannot read is still a letter that arrived.
   to `/replies?mail=<id>`; the morning letter names it in both languages and
   prints the reply's own subject under the line. The suggested stage is advice
   on the wire only — no route here moves an application.
-- [ ] **37.4** The replies have a page: `/replies` lists the letters newest
+- [x] **37.4** The replies have a page: `/replies` lists the letters newest
   first -- sender, subject, time, the intent as a badge, the application the
   letter is filed on or the picker that files it, and the suggested-stage
   action behind the existing confirmation; settings grows the address card
@@ -2981,6 +2981,16 @@ accept -- and a letter the engine cannot read is still a letter that arrived.
   and the two new error codes, SECURITY.md says the address is a capability
   and the letters are user data that leaves with the account, RUNBOOK says how
   to forward a domain to the webhook and what a silent address means.
+  `app/(app)/replies/page.tsx` draws the row, the picker and the
+  confirmation, `components/settings/inbound-card.tsx` tells
+  `INBOUND_NOT_CONFIGURED` from a retryable failure, and `lib/hooks/replies.ts`
+  is the three routes' one reader (`mapInboundMail` keeps "not read yet" null
+  rather than borrowing an intent). The page highlights `?mail=` -- the bell's
+  link -- and corrects a past-the-end page through `lastPageOf`; the nav gains
+  `nav.replies` and `navDescriptions.replies`. The endpoint ledger drops the
+  three reader routes it had listed for this unit (`/inbound/mail/{}` stays:
+  only the provider calls it), and the browser population the copy census
+  walks grows 138 -> 140 with the page and the card.
 
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +

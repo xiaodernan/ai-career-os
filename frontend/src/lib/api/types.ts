@@ -1095,6 +1095,40 @@ export interface CalendarLinkRow {
   url: string;
 }
 
+/**
+ * The account's forwarding address (37.1), shown and copied by the settings card (37.4).
+ *
+ * The address is the whole credential: a deployment that has no receiving domain answers
+ * 503 `INBOUND_NOT_CONFIGURED` instead of handing out one that bounces, so this row only
+ * exists when there is something to copy.
+ */
+export interface InboundLinkRow {
+  address: string;
+}
+
+/**
+ * One letter a recruiter sent back (37.1-37.4), as the replies page reads it.
+ *
+ * The first five fields are the letter's own; `intent`, `company`, `role` are the
+ * engine's reading (all null when the classifier has not answered -- "not read yet",
+ * not "nothing to read"); `suggestedStage` is advice in the board's vocabulary, and
+ * `applicationId` is the card the letter is filed on, or null while it waits.
+ */
+export interface InboundMail {
+  id: string;
+  fromAddress: string;
+  subject: string;
+  bodyText: string;
+  intent: string | null;
+  company: string | null;
+  role: string | null;
+  suggestedStage: string | null;
+  applicationId: string | null;
+  applicationTitle: string | null;
+  receivedAt: string | null;
+  filedAt: string | null;
+}
+
 /* ------------------------------------------------------------------ */
 /* Granular growth engines (10.1-10.13)                               */
 /* ------------------------------------------------------------------ */

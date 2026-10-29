@@ -65,8 +65,12 @@ describe("the browser's copy", () => {
     // `components/settings/push-card.tsx`, the switch that rings this browser
     // (33.4), and 137 with `components/settings/calendar-card.tsx`, the address
     // the reader pastes into a calendar app (34.1), and 138 with
-    // `components/settings/security-card.tsx`, the second door's status and codes (36.4).
-    expect(browserSources().length).toBe(138);
+    // `components/settings/security-card.tsx`, the second door's status and codes
+    // (36.4), and 140 with the replies surface (37.4): `app/(app)/replies/page.tsx`
+    // lists the letters and `components/settings/inbound-card.tsx` hands out the
+    // address they are forwarded to. (`lib/hooks/replies.ts` is the `.ts` half and
+    // was never part of this walk.)
+    expect(browserSources().length).toBe(140);
   });
 
   it("finds a sentence, however long it is", () => {

@@ -102,6 +102,28 @@ Retrieval, matching, resume tools and every RAG query filter by the caller's
 `user_id` — see [RAG.md](RAG.md). One user's evidence chunks are never returned
 into another user's prompt.
 
+### Inbound replies
+
+The forwarding address (37.1) is a capability in the same sense as the calendar
+feed's token: possession is what authorises a delivery, so the settings card
+shows it and the signing secret is the only revoke. Nothing is stored per
+address — the local part is re-derived from the account id and
+`APP_MAIL_LINK_SECRET` on every request — so rotating that secret retires every
+handed-out address at once, and a forged, retired or erased-account address is
+the same 404, which keeps the open internet from grading its guesses. Anyone
+who learns an address can deposit a letter under that account; they cannot read
+a letter, file one, or reach any other route, because the three reader routes
+require the session and the webhook can only write the row its address names
+(at 10 deliveries a minute, see the rate-limit section).
+
+The letters are the account's data, not the deployment's. Every `inbound_mails`
+row is scoped to one `user_id`; the reader routes answer only the caller's rows,
+and a letter id that is not the caller's is the same **404** as one that never
+existed. The classifier's reading is stored beside the letter and never crosses
+accounts. Erasure deletes the letters with the account (below), and the body is
+stored as received and painted as text — the page renders it between tags, never
+as HTML — so a letter cannot inject markup into another screen.
+
 ### Erasure
 
 `POST /api/v1/me/erase` is the reader's exit. The account must present its password

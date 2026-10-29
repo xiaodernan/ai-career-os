@@ -172,6 +172,13 @@ export const endpoints = {
   /* ---------------- Calendar subscription (34.1) -------------------------- */
   calendarLink: "/calendar/link",
 
+  /* ---------------- Inbound mail (37.1-37.4) ------------------------------ */
+  /** The account's forwarding address, shown and copied by the settings card. */
+  inboundLink: "/inbound/link",
+  /** The replies page: the account's letters, newest first, paged. */
+  inboundMails: "/inbound/mails",
+  inboundMailFile: (id: string) => `/inbound/mails/${seg(id)}/file`,
+
   /* ---------------- The second door (36.1-36.4) --------------------------- */
   /** Status, enrollment, activation and the two proofs; see MfaController. */
   mfa: "/me/mfa",

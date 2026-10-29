@@ -11,6 +11,7 @@ export const translations = {
     nav: {
       dashboard: "Dashboard",
       notifications: "Notifications",
+      replies: "Replies",
       resumes: "Resumes",
       jobs: "Jobs",
       applications: "Applications",
@@ -41,6 +42,7 @@ export const translations = {
     navDescriptions: {
       dashboard: "Career overview and priorities",
       notifications: "Signals that need your attention",
+      replies: "Recruiter replies filed on your applications",
       resumes: "Resume versions and structured profile",
       jobs: "Discovered jobs and AI matches",
       applications: "Pipeline kanban and reminders",
@@ -1122,6 +1124,66 @@ export const translations = {
       loading: "Preparing your address…",
       loadFailed: "The address could not be prepared. Reload the page and try again.",
       hint: "Paste it into Google Calendar, Apple Calendar or Outlook under “subscribe from a URL”. A reminder appears on the calendar's next poll, and stays until you clear it here.",
+    },
+    /**
+     * The forwarding address card (37.4). "The address is the credential" is the same
+     * sentence the calendar card says, and here it is literally true: the address is
+     * all a sender needs to write into this account's replies, so rotating the secret
+     * is the only way to retire it.
+     */
+    inbound: {
+      title: "Forwarding address",
+      description:
+        "Send recruiters' replies straight into your applications: forward their mail to the address below and each letter lands on the timeline it answers, read before the page ever sees it.",
+      addressLabel: "Your reply address",
+      copy: "Copy address",
+      loading: "Preparing your address…",
+      notConfigured:
+        "This deployment has no receiving inbox yet, so a reply has nowhere to land. The address appears once an operator configures a receiving domain.",
+      loadFailed: "The address could not be prepared. Reload the page and try again.",
+      rotationWarning:
+        "The address is the whole credential — anyone who holds it can write into this account's replies. Rotating the signing secret retires it; there is no per-address revoke.",
+      hint: "Only mail forwarded to this address is read. Your own mailbox's password never leaves your mail provider.",
+      openReplies: "Open replies",
+    },
+    /**
+     * The replies page (37.4). The badge's words are the classifier's five intents
+     * plus the one state that is not a reading at all: a letter nobody has opened yet.
+     */
+    replies: {
+      title: "Replies",
+      description:
+        "What recruiters wrote back, newest first. A letter either names the application it answers or waits here until you pick one.",
+      loading: "Reading the replies…",
+      unavailable: "The replies could not be read. Try again in a moment.",
+      unnamed: "A letter with no subject",
+      senderUnknown: "Sender unknown",
+      intents: {
+        unread: "Unread",
+        rejection: "Rejection",
+        interview: "Interview",
+        offer: "Offer",
+        info: "Information",
+        other: "Other",
+      },
+      filedOn: "Filed on {title}",
+      openApplication: "Open application",
+      notFiled: "Not filed yet — add an application to file it on.",
+      pickApplication: "Pick the application",
+      file: "File",
+      filedToast: "The letter is filed on its application.",
+      fileFailed: "The letter could not be filed",
+      readLetter: "Read the letter",
+      applyStage: "Move to {stage}",
+      applyStageConfirm: "Move “{title}” to {stage}?",
+      applyStageDescription:
+        "The letter reads as a {intent}, so the classifier suggests {stage}. This moves the card now; you can move it back at any time.",
+      applyStageToast: "The card moved.",
+      getAddress: "Get your address",
+      empty: "No replies yet",
+      emptyDescription:
+        "Forward recruiter mail to your reply address and each letter lands here, attached to the application it answers.",
+      paginationLabel: "Replies pages",
     },
     /**
      * The second door's card (36.4). The card is the only screen that can turn the
@@ -2554,6 +2616,7 @@ export const translations = {
     nav: {
       dashboard: "仪表盘",
       notifications: "通知",
+      replies: "回信",
       resumes: "简历",
       jobs: "职位",
       applications: "申请",
@@ -2581,6 +2644,7 @@ export const translations = {
     navDescriptions: {
       dashboard: "求职全局与优先事项",
       notifications: "需要你关注的信号",
+      replies: "归到投递上的招聘方回信",
       resumes: "简历版本与结构化档案",
       jobs: "发现的职位与 AI 匹配",
       applications: "投递看板与提醒",
@@ -3595,6 +3659,58 @@ export const translations = {
       loading: "正在准备你的地址……",
       loadFailed: "地址没能准备好。刷新页面再试一次。",
       hint: "把它粘进 Google 日历、Apple 日历或 Outlook 的“从网址订阅”。提醒会在日历下一次轮询时出现，并一直留到你在这里清掉它。",
+    },
+    /** 转发地址卡片（37.4）。“地址就是凭证”和日历卡片说的是同一句话，而在这里它是字面意义上的真：谁拿到这个地址，谁就能往这个账号的回信里写信，所以换密钥是让它作废的唯一办法。 */
+    inbound: {
+      title: "转发地址",
+      description:
+        "让招聘方的回信直接落进你的投递：把他们的邮件转发到下面的地址，每封信都会落到它回答的那条时间线上，而且先被读过，页面才看得到。",
+      addressLabel: "你的回信地址",
+      copy: "复制地址",
+      loading: "正在准备你的地址……",
+      notConfigured:
+        "这个部署还没有收信邮箱，回信无处可落。等运维配置好收信域名，地址就会出现在这里。",
+      loadFailed: "地址没能准备好。刷新页面再试一次。",
+      rotationWarning:
+        "地址就是全部凭证——知道它的人就能往这个账号的回信里写信。换一次签名密钥会让它作废；没有单独吊销某个地址的办法。",
+      hint: "只有转发到这个地址的信会被读取。你自己邮箱的密码不会离开你的邮件服务商。",
+      openReplies: "打开回信",
+    },
+    /** 回信页（37.4）。徽章上的词是分类器的五种意图，加上一种根本不是“读数”的状态：还没人打开过的信。 */
+    replies: {
+      title: "回信",
+      description:
+        "招聘方写回来的话，最新的在前。一封信要么说明它回答的是哪次投递，要么留在这里等你挑一个。",
+      loading: "正在读回信……",
+      unavailable: "回信没能读取。稍后再试。",
+      unnamed: "一封没有主题的信",
+      senderUnknown: "发件人不明",
+      intents: {
+        unread: "未读",
+        rejection: "拒信",
+        interview: "面试",
+        offer: "录用",
+        info: "信息",
+        other: "其他",
+      },
+      filedOn: "已归入 {title}",
+      openApplication: "打开投递",
+      notFiled: "还没归档——先添加一条投递，再把它归进去。",
+      pickApplication: "选择投递",
+      file: "归档",
+      filedToast: "这封信已归入对应的投递。",
+      fileFailed: "这封信没能归档",
+      readLetter: "读这封信",
+      applyStage: "移到{stage}",
+      applyStageConfirm: "把“{title}”移到{stage}？",
+      applyStageDescription:
+        "这封信读起来像{intent}，所以分类器建议{stage}。这会立刻移动这张卡片；你随时可以移回来。",
+      applyStageToast: "卡片已移动。",
+      getAddress: "获取你的地址",
+      empty: "还没有回信",
+      emptyDescription:
+        "把招聘方的邮件转发到你的回信地址，每封信都会落在这里，并挂到它回答的那次投递上。",
+      paginationLabel: "回信分页",
     },
     /** 第二道门的卡片（36.4）。每个动作都说清它要付出什么，而不是它做了什么。 */
     security: {

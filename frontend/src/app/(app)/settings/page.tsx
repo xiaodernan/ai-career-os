@@ -9,6 +9,7 @@ import { CareerProfileCard, CareerProfileMapsCard } from "@/components/settings/
 import { MemoryCard } from "@/components/settings/memory-card";
 import { PushCard } from "@/components/settings/push-card";
 import { CalendarCard } from "@/components/settings/calendar-card";
+import { InboundCard } from "@/components/settings/inbound-card";
 import { SecurityCard } from "@/components/settings/security-card";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -171,6 +172,9 @@ export default function SettingsPage() {
 
       {/* The reminders outside the app (34.1) */}
       <CalendarCard />
+
+      {/* The address replies come back to (37.4) */}
+      <InboundCard />
 
       {/* Keyboard */}
       <Card>

@@ -639,3 +639,62 @@ not account loss: the deletion removes the second factor, not the account, its d
 or its open sessions -- those still expire or close on their own. And it is not a reason
 to lower the factor for everyone: the door exists so a leaked password alone cannot open
 the account.
+
+## A reply never arrives
+
+**What the operator sets up first.** Inbound mail is not a mailbox the app polls: the
+provider forwards each delivery to the webhook, and the recipient's local part has to
+reach the path, because the token *is* the credential. Set `APP_INBOUND_DOMAIN` to a host
+whose mail the provider accepts (the bare hostname, e.g. `inbox.careeros.example`), give
+that host a catch-all inbound route, and have it POST to `/api/v1/inbound/mail/{token}` —
+the local part goes in the path, the provider's Postmark-shaped body passes through
+unchanged. A provider that only offers one fixed webhook URL needs a worker or route in
+front that expands the recipient's local part into the path. A rule that strips
+plus-addressing at the first dot, or rewrites the recipient to a fixed address, produces a
+token the backend cannot verify. `docs/DEPLOYMENT.md` has the provider-side paragraph;
+this section is the diagnosis when a reader says "someone replied and nothing appeared".
+
+**What a silent address means, in order.**
+
+1. **No address at all.** `GET /api/v1/inbound/link` answers **503**
+   `INBOUND_NOT_CONFIGURED` and the settings card says the deployment has no inbox:
+   `APP_INBOUND_DOMAIN` is blank, or the boot predates it. Nothing is delivered and
+   nothing is lost; set the variable and restart.
+2. **An address, but every delivery answers 404 `INBOUND_LINK_INVALID`.** The token did
+   not verify: `APP_MAIL_LINK_SECRET` was rotated (every address minted under the old
+   secret is dead, along with every calendar and unsubscribe link), the account was
+   erased, or the mail path mangled the local part (see above). Rotation is the
+   documented revoke — the reader pastes a fresh address from settings, and there is
+   nothing to repair server-side.
+3. **Deliveries answer 200, the letters are on `/replies`, but intent, company and role
+   are null.** The letter was stored before it was read (37.2), so this is a classifier
+   outage, not mail loss: the reader can file the letter by hand, and the next delivery
+   reads normally. The backend log line names the failure per letter.
+4. **Deliveries answer 200 and the letters are filed nowhere.** The reading named no
+   company, or named one where the account has several applications and the role did not
+   narrow to one. That is the designed answer — a wrong timeline is worse than a waiting
+   letter — and the page's picker is the fix, not the server.
+5. **429 from the webhook.** The meter is 10 deliveries a minute per address
+   (`RATELIMIT_INBOUND_PER_MINUTE`); one address's provider retry burst can hit it. The
+   provider's own retry policy decides whether the delivery comes back; if it gives up on
+   429, raise the limit or find the loop that is re-delivering.
+
+**What to read.** The row is in `inbound_mails`, scoped to the account:
+
+```sql
+SELECT id, from_address, subject, intent, company, role, received_at, filed_at,
+       application_id, message_key
+FROM inbound_mails
+WHERE user_id = '<user id>'
+ORDER BY received_at DESC
+LIMIT 20;
+```
+
+`filed_at` null with `application_id` null is a waiting letter; both set is a filed one.
+`message_key` is the deduplication key — a provider that retries the same `MessageID`
+stores one row, so two rows with the same subject are two letters, not a loop.
+
+**What this does not mean.** It is not the morning signal mail: that letter is outbound
+and has its own section above. And one silent address is not a reader-visible outage on
+the other accounts: the webhook's 200 is the provider's receipt, and a forged or
+erased-account token's 404 is deliberately indistinguishable from a nonexistent address.
