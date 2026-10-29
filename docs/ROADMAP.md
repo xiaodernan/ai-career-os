@@ -1396,6 +1396,46 @@ admission rule that had made a third bucket unsafe to add.
   suite at 73 are green, the metrics, alarms, limiter and knob gates pass, and
   no frontend or copy-census movement.)
 
+## Epic 28 — The Tables Forget
+
+Every account act writes a row that outlives the act: a sign-in writes a refresh
+token, a forgotten password a reset row, an address move a confirmation row. Each
+is read exactly once, by hash, while it is fresh, and every reader checks expiry —
+but nothing ever deleted one. The tables therefore carry the install's entire
+history of credentials, and an install that has been up for a year pays for every
+token it has ever issued on each nightly scan. This epic is about tables that
+forget: rows nothing can still act on, removed on a schedule, with the deletions
+visible to an operator. It stops deliberately where visible history begins.
+
+- [x] **28.1** Expired credential rows do not live forever.
+
+  (`RetentionSweeper` runs nightly at 04:47 and deletes `refresh_tokens`,
+  `password_reset_tokens` and `email_change_tokens` rows whose expiry is more
+  than `app.retention.expired-token-days` in the past — thirty days by default,
+  `RETENTION_EXPIRED_TOKEN_DAYS` in both env examples, and a negative value
+  clamps to zero rather than deleting rows that expire in the future. The cutoff
+  is the sweep's clock minus the grace window, not "expired now": a late request,
+  a clock-skewed client or a support investigation still finds its row. Each
+  table is deleted in its own repository transaction, so a lock timeout on one
+  leaves the other two pruned; the failed table is logged and exports no counter,
+  which is how a quiet night and a broken sweep stay different shapes. The
+  deletions move `careeros.retention.deleted_rows`, tagged `table`, registered
+  per table on its first successful sweep so an unused table advertises nothing.
+  V23 adds an `expires_at` index to each of the three tables — the delete is a
+  range read, not a full scan, which is the difference between a sweep that
+  stays cheap as the tables grow and one that gets slower every night. The
+  tables behind visible history are deliberately absent: `ai_usage_events` feeds
+  the activity page's all-time totals, `notification_states` is the reader's
+  read/dismiss memory, and ingestion runs and weekly letters are records, not
+  residue; deleting any of them would rewrite a screen or re-announce a story the
+  reader already settled. 4 unit tests pin the grace cutoff, the per-table
+  counters, the failure isolation that leaves no series, and the negative clamp;
+  the knob census now reads twenty-seven `app.*` leaves, twenty-four
+  interpolated, eighteen bound fields and fifteen accessor readers; DEPLOYMENT.md
+  names the metric family and the tables that are not pruned. The backend unit
+  suite at 777 and the integration suite at 73 are green, the knob, env, alarms
+  and deployment gates pass, and no frontend or copy-census movement.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

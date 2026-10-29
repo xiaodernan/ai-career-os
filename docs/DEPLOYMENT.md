@@ -238,6 +238,18 @@ fail-open branch counted as `allowed` because that is the decision the server
 made. No nightly rule reads it: a refusal rate has no known-good baseline yet,
 and an alarm that guessed one would page on a busy minute.
 
+The retention sweep exports `careeros_retention_deleted_rows_total{table}` for
+`refresh_tokens`, `password_reset_tokens` and `email_change_tokens`, moved by the
+nightly 04:47 UTC delete of rows whose expiry is more than
+`RETENTION_EXPIRED_TOKEN_DAYS` (30 by default) in the past. A table whose delete
+fails is logged and leaves no reading, so a quiet night and a broken sweep are
+different shapes on the dashboard. The sweep deliberately leaves the tables whose
+rows are visible history — AI usage events behind the activity totals,
+notification read state, ingestion runs, weekly letters — because deleting those
+rows would rewrite a screen or re-announce a story the reader already settled.
+V23 adds an `expires_at` index to each of the three swept tables, so the nightly
+delete stays a range read as the tables grow.
+
 ### Recording the nightly run
 
 The scheduled workflow (`.github/workflows/ci.yml`, 03:17 UTC) ends with a step that

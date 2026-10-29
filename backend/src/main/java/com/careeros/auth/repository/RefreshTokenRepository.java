@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 public interface RefreshTokenRepository extends JpaRepository<RefreshToken, UUID> {
 
@@ -28,4 +29,13 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, UUID
             where t.userId = :userId and t.revokedAt is null
             """)
     int revokeAllForUser(@Param("userId") UUID userId, @Param("now") OffsetDateTime now);
+
+    /**
+     * Rows whose token expired before the cutoff (roadmap 28.1). The sweep's own
+     * transaction: a slow delete on this table must not hold the other two.
+     */
+    @Modifying
+    @Transactional
+    @Query("delete from RefreshToken t where t.expiresAt < :cutoff")
+    int deleteExpiredBefore(@Param("cutoff") OffsetDateTime cutoff);
 }

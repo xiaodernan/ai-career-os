@@ -85,6 +85,11 @@ app:
   upload:
     max-file-size-bytes: 20971520
     presigned-url-ttl-seconds: 600
+  # Expired refresh, password-reset and address-change rows are deleted nightly once
+  # they are this many days past expiry (see auth/retention). The grace window keeps a
+  # late request or a support investigation from finding the row already gone.
+  retention:
+    expired-token-days: ${RETENTION_EXPIRED_TOKEN_DAYS:30}
 
 springdoc:
   api-docs.path: /api-docs

@@ -14,6 +14,7 @@ public class AppProperties {
     private final AiService aiService = new AiService();
     private final Ratelimit ratelimit = new Ratelimit();
     private final Upload upload = new Upload();
+    private final Retention retention = new Retention();
 
     public Cors getCors() {
         return cors;
@@ -41,6 +42,10 @@ public class AppProperties {
 
     public Upload getUpload() {
         return upload;
+    }
+
+    public Retention getRetention() {
+        return retention;
     }
 
     public static class Cors {
@@ -214,6 +219,19 @@ public class AppProperties {
 
         public void setPresignedUrlTtlSeconds(int presignedUrlTtlSeconds) {
             this.presignedUrlTtlSeconds = presignedUrlTtlSeconds;
+        }
+    }
+
+    public static class Retention {
+        /** Days past expiry an expired credential row is kept before the nightly sweep. */
+        private int expiredTokenDays = 30;
+
+        public int getExpiredTokenDays() {
+            return expiredTokenDays;
+        }
+
+        public void setExpiredTokenDays(int expiredTokenDays) {
+            this.expiredTokenDays = expiredTokenDays;
         }
     }
 }

@@ -1,7 +1,7 @@
-"""A knob no code reads is a knob that does nothing: twenty-six `app.*` keys ship, two are read by nobody.
+"""A knob no code reads is a knob that does nothing: twenty-seven `app.*` keys ship, two are read by nobody.
 
-`application.yml`'s `app:` block writes twenty-six leaves. Twenty-four of them reach a reader that some
-service calls: fourteen through a Java getter, two (`app.web.base-url` through a `@Value` placeholder in
+`application.yml`'s `app:` block writes twenty-seven leaves. Twenty-five of them reach a reader that some
+service calls: fifteen through a Java getter, two (`app.web.base-url` through a `@Value` placeholder in
 `AuthService`'s constructor and `app.mail.link-secret` in `MailLinks`'s) that never appear in
 `AppProperties`, and eight `app.email.*` leaves through
 `EmailConfig`'s one transport bean. One (`app.storage.enabled`) is not written by the shipped file but
@@ -31,7 +31,7 @@ someone made: the **prod credential pair** (`MINIO_ACCESS_KEY` / `MINIO_SECRET_K
 not in the prod one, because the prod compose re-arms them from the MinIO root pair -- without that mapping
 the backend would sign in to production with the dev defaults the yml interpolates), and the **env-only key**
 (`app.email.console.log-body` is reachable from the environment, is stated in `docs/API.md`, is named in no
-env example and written in no yml). What this gate reports is a population, not a bug list: 14 accessor
+env example and written in no yml). What this gate reports is a population, not a bug list: 15 accessor
 readers, 10 `@Value` leaf binders (the web base-url, the mail link secret and the eight mail knobs) plus the env-only mail switch,
 1 condition, 2 bound-but-unread leaves, 1 field that is the shadow of a live key.
 Two of those readings are each taken twice on purpose, because each pair was found by turning one of them off:
@@ -87,11 +87,14 @@ APP_LEAVES = frozenset({
     "ai-service.base-url", "ratelimit.enabled", "ratelimit.auth-per-minute", "ratelimit.ai-per-minute",
     "ratelimit.mail-per-minute",
     "upload.max-file-size-bytes", "upload.presigned-url-ttl-seconds",
+    "retention.expired-token-days",
     "email.provider", "email.from", "email.smtp.host", "email.smtp.port", "email.smtp.username",
     "email.smtp.password", "email.smtp.starttls", "email.smtp.ssl", "mail.link-secret",
 })
-HOLDERS = frozenset({"Cors", "Jwt", "Internal", "Storage", "AiService", "Ratelimit", "Upload"})
-HOLDER_KEYS = frozenset({"cors", "web", "jwt", "internal", "storage", "ai-service", "ratelimit", "upload", "email", "mail"})
+HOLDERS = frozenset({"Cors", "Jwt", "Internal", "Storage", "AiService", "Ratelimit", "Upload",
+                     "Retention"})
+HOLDER_KEYS = frozenset({"cors", "web", "jwt", "internal", "storage", "ai-service", "ratelimit", "upload",
+                         "retention", "email", "mail"})
 
 # leaf -> (holder, field, accessor, the files that call it), measured at the ref this gate lands on.
 READERS = {
@@ -123,6 +126,11 @@ READERS = {
     # mean the status page started advertising a quota it does not track.
     "ratelimit.mail-per-minute": ("Ratelimit", "mailPerMinute", "getMailPerMinute",
                                    ("ratelimit/RateLimitFilter.java",)),
+    # The retention window is read only by the sweep it bounds: a second reader
+    # (a status route, a manual trigger) would be a caller deciding row ages on
+    # its own, so the single site is the claim.
+    "retention.expired-token-days": ("Retention", "expiredTokenDays", "getExpiredTokenDays",
+                                     ("auth/retention/RetentionSweeper.java",)),
 }
 
 # A shared accessor name belongs to more than the knob. `isEnabled()` is the
@@ -164,7 +172,7 @@ CENSUS = Path(__file__).resolve()
 # floors read off this repository at the ref the gate lands on, so a narrowed scan cannot report "no readers"
 # for a census that simply stopped reading files.
 MIN_MAIN_JAVA_FILES = 150
-MIN_ACCESSOR_SITES = 14
+MIN_ACCESSOR_SITES = 15
 MIN_SCANNED_FILES = 600
 MIN_PROP_ROWS = 250
 MIN_ADMITTED_ROWS = 18
@@ -369,19 +377,19 @@ def armed_bytes() -> int:
 
 # ---------------------------------------------------------------- the cases
 
-def test_the_app_block_writes_twenty_six_leaves_and_each_binds_by_one_of_three_mechanisms():
+def test_the_app_block_writes_twenty_seven_leaves_and_each_binds_by_one_of_three_mechanisms():
     leaves = app_leaves()
     assert len(leaves) >= 15, (
         f"the `app:` block parsed to {len(leaves)} leaves, below the 15 the shipped file writes -- the parser "
         f"stopped following the indentation, so every number below is a reading of nothing")
     assert frozenset(leaves) == APP_LEAVES, (
-        f"`app:`'s leaves are not the twenty-six pinned here: extra={sorted(frozenset(leaves) - APP_LEAVES)} "
+        f"`app:`'s leaves are not the twenty-seven pinned here: extra={sorted(frozenset(leaves) - APP_LEAVES)} "
         f"missing={sorted(APP_LEAVES - frozenset(leaves))} -- a new key needs a binder and a reader before it "
         f"is a configuration rather than a comment")
 
     holders, fields = prop_structure()
     assert frozenset(holders) == HOLDERS, (
-        f"AppProperties binds the holder fields {sorted(holders)}, not the seven holders {sorted(HOLDERS)} "
+        f"AppProperties binds the holder fields {sorted(holders)}, not the eight holders {sorted(HOLDERS)} "
         f"-- the leaf-to-field derivation keys off these names, so the census would aim at the wrong class")
     declared = declared_holders()
     assert declared == frozenset(holders), (
@@ -389,8 +397,8 @@ def test_the_app_block_writes_twenty_six_leaves_and_each_binds_by_one_of_three_m
         f"{sorted(holders)} -- the leaf walk follows the declarations and the key derivation follows the "
         f"fields, so a name in only one list is a holder the census reads but the walk never fills, or one "
         f"the walk fills but nothing can name its keys")
-    assert len(fields) == 17, (
-        f"AppProperties declares {len(fields)} leaf fields, want the 17 whose readers are censused here -- the "
+    assert len(fields) == 18, (
+        f"AppProperties declares {len(fields)} leaf fields, want the 18 whose readers are censused here -- the "
         f"population moved, so 'every field has a reader or a ledger entry' is a claim about a different file")
 
     values, conds = value_bindings(), conditions()
@@ -430,7 +438,7 @@ def test_a_live_knob_is_one_whose_name_a_reader_calls_and_the_reader_resolves_to
         f"key that in fact has one")
     total = sum(len(sites(accessor, sources)) for _, _, accessor, _ in READERS.values())
     assert total >= MIN_ACCESSOR_SITES, (
-        f"the fourteen read keys together produced {total} accessor call sites, below {MIN_ACCESSOR_SITES}: the "
+        f"the fifteen read keys together produced {total} accessor call sites, below {MIN_ACCESSOR_SITES}: the "
         f"scanner is not finding calls that exist, so a 'no reader' verdict anywhere else is a scanner failure")
 
     _, fields = prop_structure()
@@ -658,14 +666,14 @@ def test_the_cap_the_dead_knob_would_set_is_a_compile_time_constant_and_the_cont
         "quotes it")
 
 
-def test_twenty_three_leaves_reach_the_environment_and_the_three_that_do_not_are_literals_in_a_file():
+def test_twenty_four_leaves_reach_the_environment_and_the_three_that_do_not_are_literals_in_a_file():
     leaves = app_leaves()
     interpolated, literal = {}, {}
     for key, value in leaves.items():
         match = ENV_INTERP.match(value)
         (interpolated if match else literal)[key] = (match["var"] if match else value)
-    assert len(interpolated) == 23 and len(literal) == 3, (
-        f"{len(interpolated)} of the twenty-six leaves interpolate an `${{ENV}}` and {len(literal)} are literals; "
+    assert len(interpolated) == 24 and len(literal) == 3, (
+        f"{len(interpolated)} of the twenty-seven leaves interpolate an `${{ENV}}` and {len(literal)} are literals; "
         f"the split is what makes a knob deployable, so a pair that moved needs this carrier list rewritten")
     assert frozenset(literal) == FILE_ONLY_LEAVES, (
         f"the file-only leaves are {sorted(literal)}: ratelimit.enabled is a shipped default an operator edits in "
@@ -729,7 +737,7 @@ def test_the_open_scan_charges_an_app_dot_mention_to_the_config_namespace_only_w
     keys = {r[2] for r in admitted}
     allowed = frozenset(APP_LEAVES) | {EMAIL_KEY, "email.console", "email.smtp", "storage.enabled"}
     assert keys <= allowed, (
-        f"admitted rows name keys outside the twenty-six leaves plus the env-only email key, the mail holder's "
+        f"admitted rows name keys outside the twenty-seven leaves plus the env-only email key, the mail holder's "
         f"segment and the condition's storage.enabled: {sorted(keys - allowed)} -- either a new key needs a "
         f"binder above, or the holder rule let a module path through")
     # charged against the LEDGER, not against the rule's own predicate: comparing a refusal to the same
