@@ -59,7 +59,9 @@ app:
   web:
     base-url: ${APP_WEB_BASE_URL:http://localhost:3000}
   # console logs each letter instead of sending it; smtp hands it to a relay and
-  # refuses to start without a host and a from address the relay accepts.
+  # refuses to start without a host and a from address the relay accepts. With
+  # APP_ENV=prod the backend also refuses to start on console (ProductionGuard):
+  # a production reset link that lands in the log never reaches the mailbox.
   email:
     provider: ${APP_EMAIL_PROVIDER:console}
     from: ${APP_EMAIL_FROM:}

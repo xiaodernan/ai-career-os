@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.NestedExceptionUtils;
 import org.springframework.stereotype.Component;
 
 class ProductionGuardTest {
@@ -23,6 +24,7 @@ class ProductionGuardTest {
     private static final String REAL_JWT = "f3c1a9e2b7d44058a6c9e1d2b3f4a5c6d7e8f901a2b3c4d5e6f708192a3b4c5d";
     private static final String REAL_MAIL = "b4e2c9d7a1f3e5c8b6d2a4f7e9c1b3d508a6c4e2f1d7b9a3c5e8f2d4b6a9c1e7";
     private static final String REAL_INTERNAL = "internal-7c1e9a3f5b8d2c6e4a0f9b7d5c3e1a8f";
+    private static final String REAL_SMTP = "smtp";
 
     private final ApplicationContextRunner runner = new ApplicationContextRunner()
             .withUserConfiguration(BoundProperties.class)
@@ -30,52 +32,73 @@ class ProductionGuardTest {
 
     @Test
     void aDevBootKeepsThePublishedDefaults() {
-        assertThat(ProductionGuard.offenders("dev", PUBLISHED_JWT, PUBLISHED_MAIL, PUBLISHED_INTERNAL)).isEmpty();
-        assertThat(ProductionGuard.offenders("test", PUBLISHED_JWT, PUBLISHED_MAIL, PUBLISHED_INTERNAL)).isEmpty();
-        assertThat(ProductionGuard.offenders(null, PUBLISHED_JWT, PUBLISHED_MAIL, PUBLISHED_INTERNAL)).isEmpty();
+        assertThat(ProductionGuard.offenders("dev", PUBLISHED_JWT, PUBLISHED_MAIL, PUBLISHED_INTERNAL, "console"))
+                .isEmpty();
+        assertThat(ProductionGuard.offenders("test", PUBLISHED_JWT, PUBLISHED_MAIL, PUBLISHED_INTERNAL, "console"))
+                .isEmpty();
+        assertThat(ProductionGuard.offenders(null, PUBLISHED_JWT, PUBLISHED_MAIL, PUBLISHED_INTERNAL, "console"))
+                .isEmpty();
     }
 
     @Test
     void aProdBootNamesEveryCredentialStillOnAPublishedValue() {
-        assertThat(ProductionGuard.offenders("prod", PUBLISHED_JWT, PUBLISHED_MAIL, PUBLISHED_INTERNAL))
+        assertThat(ProductionGuard.offenders("prod", PUBLISHED_JWT, PUBLISHED_MAIL, PUBLISHED_INTERNAL, REAL_SMTP))
                 .containsExactly(ProductionGuard.JWT_SECRET, ProductionGuard.MAIL_LINK_SECRET,
                         ProductionGuard.INTERNAL_TOKEN);
     }
 
     @Test
     void aLoneOverrideStillLeavesTheOthersNamed() {
-        assertThat(ProductionGuard.offenders("prod", REAL_JWT, PUBLISHED_MAIL, PUBLISHED_INTERNAL))
+        assertThat(ProductionGuard.offenders("prod", REAL_JWT, PUBLISHED_MAIL, PUBLISHED_INTERNAL, REAL_SMTP))
                 .containsExactly(ProductionGuard.MAIL_LINK_SECRET, ProductionGuard.INTERNAL_TOKEN);
-        assertThat(ProductionGuard.offenders("prod", REAL_JWT, REAL_MAIL, PUBLISHED_INTERNAL))
+        assertThat(ProductionGuard.offenders("prod", REAL_JWT, REAL_MAIL, PUBLISHED_INTERNAL, REAL_SMTP))
                 .containsExactly(ProductionGuard.INTERNAL_TOKEN);
     }
 
     @Test
     void theExamplesChangeMePlaceholdersAndEmptyValuesAreRefusedToo() {
         assertThat(ProductionGuard.offenders("prod", "CHANGE_ME_64_PLUS_RANDOM_CHARS",
-                "CHANGE_ME_MAIL_LINK_SECRET", "CHANGE_ME_STRONG_INTERNAL_TOKEN"))
+                "CHANGE_ME_MAIL_LINK_SECRET", "CHANGE_ME_STRONG_INTERNAL_TOKEN", REAL_SMTP))
                 .containsExactly(ProductionGuard.JWT_SECRET, ProductionGuard.MAIL_LINK_SECRET,
                         ProductionGuard.INTERNAL_TOKEN);
-        assertThat(ProductionGuard.offenders("prod", " ", "", null))
+        assertThat(ProductionGuard.offenders("prod", " ", "", null, REAL_SMTP))
                 .containsExactly(ProductionGuard.JWT_SECRET, ProductionGuard.MAIL_LINK_SECRET,
                         ProductionGuard.INTERNAL_TOKEN);
     }
 
     @Test
     void aProdBootWithRealSecretsHasNoOffenders() {
-        assertThat(ProductionGuard.offenders("prod", REAL_JWT, REAL_MAIL, REAL_INTERNAL)).isEmpty();
+        assertThat(ProductionGuard.offenders("prod", REAL_JWT, REAL_MAIL, REAL_INTERNAL, REAL_SMTP)).isEmpty();
     }
 
     @Test
     void theProdSwitchIgnoresCaseAndSurroundingSpace() {
-        assertThat(ProductionGuard.offenders(" PROD ", PUBLISHED_JWT, REAL_MAIL, REAL_INTERNAL))
+        assertThat(ProductionGuard.offenders(" PROD ", PUBLISHED_JWT, REAL_MAIL, REAL_INTERNAL, REAL_SMTP))
                 .containsExactly(ProductionGuard.JWT_SECRET);
+    }
+
+    @Test
+    void theConsoleTransportCannotOpenAProdBoot() {
+        assertThat(ProductionGuard.offenders("prod", REAL_JWT, REAL_MAIL, REAL_INTERNAL, "console"))
+                .containsExactly(ProductionGuard.EMAIL_PROVIDER);
+        assertThat(ProductionGuard.offenders("prod", REAL_JWT, REAL_MAIL, REAL_INTERNAL, " CONSOLE "))
+                .containsExactly(ProductionGuard.EMAIL_PROVIDER);
+        assertThat(ProductionGuard.offenders("prod", REAL_JWT, REAL_MAIL, REAL_INTERNAL, " "))
+                .containsExactly(ProductionGuard.EMAIL_PROVIDER);
+        assertThat(ProductionGuard.offenders("prod", REAL_JWT, REAL_MAIL, REAL_INTERNAL, null))
+                .containsExactly(ProductionGuard.EMAIL_PROVIDER);
+    }
+
+    @Test
+    void aDevBootOnTheConsoleTransportIsUntouched() {
+        assertThat(ProductionGuard.offenders("dev", REAL_JWT, REAL_MAIL, REAL_INTERNAL, "console")).isEmpty();
     }
 
     @Test
     void thePublishedLiteralsAgreeWithTheShippedFiles() throws IOException {
         assertThat(ProductionGuard.offenders("prod",
-                ymlDefault("JWT_SECRET"), ymlDefault("APP_MAIL_LINK_SECRET"), ymlDefault("INTERNAL_API_TOKEN")))
+                ymlDefault("JWT_SECRET"), ymlDefault("APP_MAIL_LINK_SECRET"), ymlDefault("INTERNAL_API_TOKEN"),
+                REAL_SMTP))
                 .as("application.yml's own defaults")
                 .containsExactly(ProductionGuard.JWT_SECRET, ProductionGuard.MAIL_LINK_SECRET,
                         ProductionGuard.INTERNAL_TOKEN);
@@ -83,7 +106,7 @@ class ProductionGuardTest {
         Path devExample = Path.of("..", ".env.example");
         assertThat(ProductionGuard.offenders("prod",
                 envValue(devExample, "JWT_SECRET"), envValue(devExample, "APP_MAIL_LINK_SECRET"),
-                envValue(devExample, "INTERNAL_API_TOKEN")))
+                envValue(devExample, "INTERNAL_API_TOKEN"), REAL_SMTP))
                 .as("a dev example copied into prod")
                 .containsExactly(ProductionGuard.JWT_SECRET, ProductionGuard.MAIL_LINK_SECRET,
                         ProductionGuard.INTERNAL_TOKEN);
@@ -91,10 +114,28 @@ class ProductionGuardTest {
         Path prodExample = Path.of("..", ".env.prod.example");
         assertThat(ProductionGuard.offenders("prod",
                 envValue(prodExample, "JWT_SECRET"), envValue(prodExample, "APP_MAIL_LINK_SECRET"),
-                envValue(prodExample, "INTERNAL_API_TOKEN")))
+                envValue(prodExample, "INTERNAL_API_TOKEN"), REAL_SMTP))
                 .as("a prod example booted before its CHANGE_ME values were filled in")
                 .containsExactly(ProductionGuard.JWT_SECRET, ProductionGuard.MAIL_LINK_SECRET,
                         ProductionGuard.INTERNAL_TOKEN);
+    }
+
+    @Test
+    void theShippedMailDefaultsAgreeWithTheGuardToo() throws IOException {
+        assertThat(ProductionGuard.offenders("prod", REAL_JWT, REAL_MAIL, REAL_INTERNAL,
+                ymlDefault("APP_EMAIL_PROVIDER")))
+                .as("application.yml's own mail default")
+                .containsExactly(ProductionGuard.EMAIL_PROVIDER);
+
+        assertThat(ProductionGuard.offenders("prod", REAL_JWT, REAL_MAIL, REAL_INTERNAL,
+                envValue(Path.of("..", ".env.example"), "APP_EMAIL_PROVIDER")))
+                .as("a dev example copied into prod")
+                .containsExactly(ProductionGuard.EMAIL_PROVIDER);
+
+        assertThat(ProductionGuard.offenders("prod", REAL_JWT, REAL_MAIL, REAL_INTERNAL,
+                envValue(Path.of("..", ".env.prod.example"), "APP_EMAIL_PROVIDER")))
+                .as(".env.prod.example's transport")
+                .isEmpty();
     }
 
     @Test
@@ -103,18 +144,31 @@ class ProductionGuardTest {
                         "app.mail.link-secret=" + PUBLISHED_MAIL, "app.internal.token=" + PUBLISHED_INTERNAL)
                 .run(context -> {
                     assertThat(context).hasFailed();
-                    assertThat(context.getStartupFailure())
-                            .hasStackTraceContaining(ProductionGuard.JWT_SECRET)
-                            .hasStackTraceContaining(ProductionGuard.MAIL_LINK_SECRET)
-                            .hasStackTraceContaining(ProductionGuard.INTERNAL_TOKEN)
-                            .hasStackTraceContaining("docs/DEPLOYMENT.md");
+                    assertThat(NestedExceptionUtils.getMostSpecificCause(context.getStartupFailure()).getMessage())
+                            .contains("APP_ENV=prod but JWT_SECRET, APP_MAIL_LINK_SECRET, INTERNAL_API_TOKEN, "
+                                    + "APP_EMAIL_PROVIDER cannot open")
+                            .contains("docs/DEPLOYMENT.md");
+                });
+    }
+
+    @Test
+    void aProdContextOnTheConsoleTransportIsRefusedEvenWithRealSecrets() {
+        runner.withPropertyValues("app.deployment.env=prod", "app.jwt.secret=" + REAL_JWT,
+                        "app.mail.link-secret=" + REAL_MAIL, "app.internal.token=" + REAL_INTERNAL,
+                        "app.email.provider=console")
+                .run(context -> {
+                    assertThat(context).hasFailed();
+                    assertThat(NestedExceptionUtils.getMostSpecificCause(context.getStartupFailure()).getMessage())
+                            .contains("APP_ENV=prod but APP_EMAIL_PROVIDER cannot open")
+                            .doesNotContain("JWT_SECRET");
                 });
     }
 
     @Test
     void aProdContextStartsOnceEveryCredentialIsReal() {
         runner.withPropertyValues("app.deployment.env=prod", "app.jwt.secret=" + REAL_JWT,
-                        "app.mail.link-secret=" + REAL_MAIL, "app.internal.token=" + REAL_INTERNAL)
+                        "app.mail.link-secret=" + REAL_MAIL, "app.internal.token=" + REAL_INTERNAL,
+                        "app.email.provider=smtp")
                 .run(context -> {
                     assertThat(context).hasNotFailed();
                     assertThat(context).hasSingleBean(ProductionGuard.class);

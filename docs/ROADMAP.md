@@ -2003,6 +2003,46 @@ where no proxy exists.
   contract) that the concurrent session's in-flight files keep red and that are
   that session's to land. The backend is untouched.)
 
+- [x] **31.8** a production boot refuses the console mail transport.
+
+  (`app.email.provider` defaults to `console`, and both `application.yml` and
+  `.env.example` ship that default. `.env.prod.example` sets `smtp` and the
+  production checklist names the knob, but nothing refused a boot that kept the
+  default: the stack came up healthy, answered "check your email" to a password
+  reset, and wrote the letter into the log — with the console transport's body
+  withheld by default, not even the link was there. Every reset of such a
+  deployment was a silent loss, discovered only by the user who could not get
+  back into the account.
+
+  `ProductionGuard` now refuses `APP_EMAIL_PROVIDER` alongside the three
+  published secrets when `APP_ENV=prod`; a blank value is refused too, because
+  the interpolation's own default is console. The refusal joins the same
+  offender list, so one restart names the knob with the secrets. `smtp` keeps
+  its own requirement — a host and a from address, `EmailConfig` — and there is
+  no opt-out: a production deployment that cannot send mail cannot run the
+  password-reset flow, and console is exactly the state the checklist warns
+  about. Non-prod boots are untouched; console is what a dev checkout runs on.
+
+  `ProductionGuardTest` grew from 11 to 15 cases: console, `" CONSOLE "`,
+  blank and null in the decision table, dev untouched on console, a drift check
+  that reads `APP_EMAIL_PROVIDER` out of `application.yml`, `.env.example` and
+  `.env.prod.example` (the first two must be refused, the third must not), and
+  an `ApplicationContextRunner` arm where real secrets plus console fail naming
+  only `APP_EMAIL_PROVIDER`, while real secrets plus `smtp` start. Mutation arm:
+  forcing the console predicate to `false` turned 4 of the 15 red; restored
+  byte-identical (sha1), 15/15 green. The context arms assert the exact
+  offender list through `NestedExceptionUtils.getMostSpecificCause` — a
+  `hasStackTraceContaining("APP_EMAIL_PROVIDER")` passed even with the check
+  disabled, because the guard's own message ends "…and APP_EMAIL_PROVIDER=smtp
+  with a relay".
+
+  `application.yml`'s comment, the production checklist item, DEPLOYMENT.md's
+  preflight paragraph and Email section, and SECURITY.md's finding #4 carry the
+  refusal. The backend suite answers 894 tests, 0 failed (ITs included); the
+  ai-service suite answers 11 failed / 1913 passed / 1 skipped, and the eleven
+  are the same three frontend-reading censuses the concurrent session's
+  in-flight files keep red.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

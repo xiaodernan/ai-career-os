@@ -218,7 +218,8 @@ residual risk rather than as a clean bill of health.
    `/api/v1/auth/login` answers `401` in **1.20s** — which is what "fails open" was
    always meant to mean. Restoring Redis returns `ok`/`redis:true` with no restart.
 
-4. **A production boot used to accept the repository's published secrets — fixed.**
+4. **A production boot used to accept the repository's published secrets and a mail
+   transport that logs — fixed.**
    `application.yml` interpolates `JWT_SECRET`, `APP_MAIL_LINK_SECRET` and
    `INTERNAL_API_TOKEN` from the environment but ships working defaults, and a deploy
    that forgot one booted fine on a value printed in this repository: access tokens
@@ -235,12 +236,23 @@ residual risk rather than as a clean bill of health.
    untouched — the example values are exactly what a dev checkout runs on. Both compose
    files already passed `APP_ENV`; for the backend it was a no-op until now.
 
-   `ProductionGuardTest` has 11 cases: the pure decision table (dev, case/space, a lone
-   override, blank, `CHANGE_ME`), a *drift* check that reads `application.yml` and both
-   env examples so the guard's copies cannot go stale, an `ApplicationContextRunner`
-   that proves a prod context fails and names all three (and that dev, or prod with real
-   secrets, starts), and the `@Component` wiring. `DEPLOYMENT.md`'s checklist and the
-   `APP_ENV` row now state the refusal.
+   The mail transport is the same class of hole. `app.email.provider` defaults to
+   `console`, which writes each letter into the log instead of sending it, so a prod
+   boot that missed `APP_EMAIL_PROVIDER=smtp` answered "check your email" to a reset
+   whose link never reached the mailbox — and the console default withholds the body,
+   so the link was not even in the log. The guard now refuses `console` (and a blank
+   value, whose interpolation default is console) alongside the secrets, naming
+   `APP_EMAIL_PROVIDER` in the same message. There is no opt-out: a production
+   deployment that cannot send mail cannot run the password-reset flow.
+
+   `ProductionGuardTest` has 15 cases: the pure decision table (dev, case/space, a lone
+   override, blank, `CHANGE_ME`, and the console transport with its case and blank
+   arms), a *drift* check that reads `application.yml` and both env examples so the
+   guard's copies — secrets and transport — cannot go stale, an
+   `ApplicationContextRunner` that proves a prod context fails and names all four,
+   including console-alone with real secrets, and that dev or prod-with-`smtp` starts,
+   and the `@Component` wiring. `DEPLOYMENT.md`'s checklist and its Email section state
+   the refusal.
 
 ### Dependency audits (2026-10-24)
 

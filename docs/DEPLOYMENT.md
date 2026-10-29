@@ -58,7 +58,8 @@ passwords is no longer a reachable state.
   start on any published secret, see the next item)
 - [ ] Real LLM/embedding provider keys configured (not `mock`/`hash`)
 - [ ] `APP_EMAIL_PROVIDER=smtp` with a reachable relay and a from address it
-  accepts — the console transport logs resets instead of mailing them (see
+  accepts — with `APP_ENV=prod` the backend refuses to start on the console
+  transport, which logs resets instead of mailing them (`ProductionGuard`; see
   [Email](#email))
 - [ ] `APP_MAIL_LINK_SECRET` set to 32+ random bytes (`openssl rand -base64 48`).
   It signs the unsubscribe links in every letter; the dev default is published in
@@ -100,8 +101,9 @@ API key, or an inverted DB pool. It is pure: no database or network is touched.
 
 The backend carries the same gate inline: with `APP_ENV=prod`, `ProductionGuard`
 refuses the Spring context on a published JWT secret, mail-link secret or internal
-token (or a `CHANGE_ME`/empty value) and names every offender — a boot that would
-have served forgeable credentials exits non-zero instead.
+token (or a `CHANGE_ME`/empty value), or on the console mail transport that would
+keep every reset link in the log, and names every offender — a boot that would have
+served forgeable credentials or silently lost its mail exits non-zero instead.
 
 ```bash
 cd ai-service
@@ -431,7 +433,10 @@ leaves through the transport `APP_EMAIL_PROVIDER` names:
 `smtp` refuses to boot without a host and a from address, and every SMTP call is
 capped at 5 seconds, so a relay that is down fails the request that needed the
 mail instead of holding it open. A refused letter is an error the caller sees: a
-reset mail silently dropped is worse than a retry.
+reset mail silently dropped is worse than a retry. With `APP_ENV=prod` the boot
+refuses `console` — and a blank value, whose default is `console` — naming
+`APP_EMAIL_PROVIDER` in `ProductionGuard`'s message, because a production reset
+link that goes into the log never reaches the mailbox.
 
 The weekly letter rides the same transport. The Monday sweep writes the week that
 just ended, mails each letter, and keeps the outcome on the letter's row
