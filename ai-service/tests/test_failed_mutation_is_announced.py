@@ -21,11 +21,14 @@ the server said. That is a design choice -- a local sign-out always happens -- s
 characterises it rather than changing it: it is the one place in the app where "you are signed
 out" is not a claim about the server.
 
-The same walk covers the failure helper: ``fail(...)`` has a single author and 63 uses, and
-every use spends a distinct sentence -- when this file first walked it, 28 were distinct,
-because two different deletes shared "Delete failed." and the toast never said which record
-survived the failure. Each delete now names its own record, and the case below pins the spent
-state so a reused sentence goes red rather than quietly shipping.
+The same walk covers the failure helper: ``fail(...)`` has a single author and 73 uses, and
+every use names a key the browser's table answers -- the sentence is resolved when the toast
+is raised, in the reader's language. All but three name a different key: the inbox's read,
+mark-all-read and dismiss share ``notifications.actionFailed`` because they are one sentence
+about one screen, and the case below pins that exception by name. When this file first walked
+a helper that took sentences, 28 were distinct, because two different deletes shared
+"Delete failed." and the toast never said which record survived. Each delete now names its
+own key, and the case below pins the spent state so a quietly reused sentence goes red.
 
 Both populations used to be pinned as totals copied into four assertions. Two feature
 commits (be6eea0's ``useImportApply``, c8d0a4b's ``useRenderBundle``) each added a site and
@@ -99,18 +102,26 @@ SITES = sum(ROSTER.values())
 #: wherever it lives.
 QUIET_AUTH = ["useForgotPassword", "useLogin", "useLogout", "useRegister", "useResetPassword"]
 
-#: ``fail("...")`` calls per file -- the sentences a failed write is announced with. Pinned per
-#: file because the useful failure is "actions.ts spent one more sentence", not a total that
+#: ``fail("...")`` calls per file -- the copy keys a failed write is announced with. Pinned per
+#: file because the useful failure is "actions.ts spent one more key", not a total that
 #: moves whenever any hook is touched.
 SENTENCES = {
-    ACTIONS: 36,
+    ACTIONS: 38,
+    "frontend/src/lib/hooks/analytics.ts": 1,
     "frontend/src/lib/hooks/data-portability.ts": 5,
     "frontend/src/lib/hooks/growth.ts": 12,
-    "frontend/src/lib/hooks/ingestion.ts": 4,
+    "frontend/src/lib/hooks/ingestion.ts": 8,
+    "frontend/src/lib/hooks/notifications.ts": 3,
     "frontend/src/lib/hooks/offers.ts": 4,
     "frontend/src/lib/hooks/voice.ts": 2,
 }
 FAIL_USES = sum(SENTENCES.values())
+
+#: The one key more than one write spends, pinned by name and count. The inbox's three writes
+#: -- read, mark-all-read and dismiss -- are one sentence about one screen ("Couldn't update
+#: the inbox."), so they share a key on purpose. Every other write names its own, because a
+#: toast that hides which record failed was the collision this file was written to stop.
+SHARED_KEYS = {"notifications.actionFailed": 3}
 
 #: The auth form's shared call options, declared inside the submit handler and passed to both
 #: ``login.mutate`` and ``register.mutate``. The failure is mapped through the recovery module's
@@ -424,34 +435,37 @@ def test_the_failure_helper_has_one_author_and_every_message_is_spent_once():
     ]
     assert authors == [FAILURE], "fail() is authored in %s" % authors
     text = sources()[FAILURE]
-    assert "return (err: unknown) => toast.error(describe(err, fallback));" in text, (
-        "fail() no longer builds a toast from the caller's own fallback sentence"
+    assert "return (err: unknown) => toast.error(describe(err, fallbackKey));" in text, (
+        "fail() no longer builds a toast from the caller's own fallback key"
     )
     messages = fail_messages()
-    reused = sorted(m for m, n in messages.items() if n > 1)
-    # Where the sentences are spent, per file, and the one-per-file sums. The count that used
+    shared = {m: n for m, n in messages.items() if n > 1}
+    # Where the keys are spent, per file, and the one-per-file sums. The count that used
     # to sit here -- a hand-copied total, refreshed each time a bridge grew a write -- could
-    # only ever say "some number moved"; this says which file spent or unspent a sentence.
+    # only ever say "some number moved"; this says which file spent or unspent a key.
     uses = fail_uses()
     moved = {rel.split("/")[-1]: (want, uses.get(rel, 0)) for rel, want in sorted(SENTENCES.items())
              if uses.get(rel, 0) != want}
     outside = sorted(rel.split("/")[-1] for rel in set(uses) - set(SENTENCES))
     assert not moved and not outside, (
-        "fail() sentences per file moved (file: pinned, counted) %s; files outside the roster: %s"
+        "fail() keys per file moved (file: pinned, counted) %s; files outside the roster: %s"
         % (moved, outside))
-    assert sum(uses.values()) == sum(messages.values()) == FAIL_USES and not reused, (
-        "fail() messages: %d uses, %d distinct, reused: %s" % (
-            sum(messages.values()), len(messages), reused
+    assert sum(uses.values()) == sum(messages.values()) == FAIL_USES, (
+        "fail() keys: %d uses, %d distinct, pinned %d" % (
+            sum(messages.values()), len(messages), FAIL_USES
         )
     )
+    assert shared == SHARED_KEYS, (
+        "the only key more than one write may spend is the inbox's own; shared: %s, pinned: %s"
+        % (shared, SHARED_KEYS))
     assert "Delete failed." not in text, (
         "the collision this file spent is back: a toast again hides which record failed"
     )
-    # The two deletes that used to share one sentence now each name their own record; each sentence
+    # The two deletes that used to share one sentence now each name their own record; each key
     # is pinned beside its holder's request verb so neither can drift alone.
     deletes = {
-        "useDeleteResume": 'fail("Couldn\'t delete the resume.")',
-        "useDeleteApplication": 'fail("Couldn\'t delete that application.")',
+        "useDeleteResume": 'fail("failures.resumeDelete")',
+        "useDeleteApplication": 'fail("failures.applicationDelete")',
     }
     for name, sentence in deletes.items():
         body = hook_body(ACTIONS, name)

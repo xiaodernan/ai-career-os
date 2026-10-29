@@ -222,4 +222,4 @@ def test_the_copilot_mutation_announces_its_failure():
     # onError must call fail() with a message
     assert "onError:" in body, "onError handler missing"
     assert 'fail(' in body, "onError does not call fail()"
-    assert "Copilot couldn't answer" in body, "the failure toast message changed"
+    assert 'fail("copilot.couldNotAnswer")' in body, "the failure key changed"

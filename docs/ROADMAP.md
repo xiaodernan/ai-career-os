@@ -1623,6 +1623,27 @@ up to the tree both sides actually ship, and writes down which red is whose.
   session's to land. Of the 27 at HEAD, these three were the structural ones;
   the other 24 are the next items of this epic.)
 
+- [x] **30.2** The mutation censuses read the key the toast resolves.
+
+  (Between Epics 23 and 29 the browser moved every failed write from an English
+  literal at the hook to a copy key -- `onError: fail("failures.applicationCreate")`
+  -- because the toast is raised long after the render that knew the reader's
+  language, and the sentence has to be resolved then. Ten ai-service censuses
+  still searched for the retired sentences, and each red said "the failure toast
+  message changed" about a message that had been deliberately replaced. They now
+  pin the key each mutation spends: the six action-hook contracts (application
+  create/update/move, conversation start/rename, copilot, interview
+  start/evaluate, JD analysis/suggestions, the resume version switch), the two
+  route rosters the account-security epics grew (`/email-change/confirm` is the
+  auth controller's seventh POST and sixth record; `/me` keeps the profile pair
+  bare and lists its six security paths), and the central fail() census, whose
+  roster now reads 73 uses across eight files and names its one shared key
+  (`notifications.actionFailed`, the inbox's three writes, which are one
+  sentence about one screen). The helper's own shape moved with it
+  (`fail(fallbackKey: string)`), and every key a call names is answered in both
+  languages by the browser's own `fail-keys` gate, so the two suites meet at
+  the table. Ten reds closed; the nine files run 76 tests green at `f25f6db`.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

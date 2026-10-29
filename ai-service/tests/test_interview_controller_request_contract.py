@@ -222,8 +222,8 @@ def test_the_interview_mutations_announce_their_failures():
     body_create = bodies_create[0]
     assert "onError:" in body_create, "useCreateInterviewSession onError handler missing"
     assert 'fail(' in body_create, "useCreateInterviewSession onError does not call fail()"
-    assert "Couldn't start the interview" in body_create, (
-        "useCreateInterviewSession failure toast message changed"
+    assert 'fail("failures.interviewStart")' in body_create, (
+        "useCreateInterviewSession failure key changed"
     )
 
     # useSubmitInterviewAnswer
@@ -232,6 +232,6 @@ def test_the_interview_mutations_announce_their_failures():
     body_answer = bodies_answer[0]
     assert "onError:" in body_answer, "useSubmitInterviewAnswer onError handler missing"
     assert 'fail(' in body_answer, "useSubmitInterviewAnswer onError does not call fail()"
-    assert "Couldn't evaluate that answer" in body_answer, (
-        "useSubmitInterviewAnswer failure toast message changed"
+    assert 'fail("failures.answerEvaluate")' in body_answer, (
+        "useSubmitInterviewAnswer failure key changed"
     )

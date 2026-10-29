@@ -230,7 +230,7 @@ def test_the_jd_mutations_announce_their_failures():
     body_analyze = bodies_analyze[0]
     assert "onError:" in body_analyze, "useAnalyzeJd onError handler missing"
     assert 'fail(' in body_analyze, "useAnalyzeJd onError does not call fail()"
-    assert "JD analysis failed" in body_analyze, "useAnalyzeJd failure toast message changed"
+    assert 'fail("failures.jdAnalysis")' in body_analyze, "useAnalyzeJd failure key changed"
 
     # useResumeSuggestions
     bodies_suggest = ts_call_bodies("useResumeSuggestions", actions_source())
@@ -238,6 +238,6 @@ def test_the_jd_mutations_announce_their_failures():
     body_suggest = bodies_suggest[0]
     assert "onError:" in body_suggest, "useResumeSuggestions onError handler missing"
     assert 'fail(' in body_suggest, "useResumeSuggestions onError does not call fail()"
-    assert "Couldn't fetch suggestions" in body_suggest, (
-        "useResumeSuggestions failure toast message changed"
+    assert 'fail("failures.suggestionsFetch")' in body_suggest, (
+        "useResumeSuggestions failure key changed"
     )

@@ -229,8 +229,8 @@ def test_the_application_mutations_announce_their_failures():
     body_create = bodies_create[0]
     assert "onError:" in body_create, "useCreateApplication onError handler missing"
     assert 'fail(' in body_create, "useCreateApplication onError does not call fail()"
-    assert "Couldn't create the application" in body_create, (
-        "useCreateApplication failure toast message changed"
+    assert 'fail("failures.applicationCreate")' in body_create, (
+        "useCreateApplication failure key changed"
     )
 
     # useUpdateApplication
@@ -239,8 +239,8 @@ def test_the_application_mutations_announce_their_failures():
     body_update = bodies_update[0]
     assert "onError:" in body_update, "useUpdateApplication onError handler missing"
     assert 'fail(' in body_update, "useUpdateApplication onError does not call fail()"
-    assert "Couldn't update that application" in body_update, (
-        "useUpdateApplication failure toast message changed"
+    assert 'fail("failures.applicationUpdate")' in body_update, (
+        "useUpdateApplication failure key changed"
     )
 
     # useReorderApplication
@@ -249,6 +249,6 @@ def test_the_application_mutations_announce_their_failures():
     body_reorder = bodies_reorder[0]
     assert "onError:" in body_reorder, "useReorderApplication onError handler missing"
     assert 'fail(' in body_reorder, "useReorderApplication onError does not call fail()"
-    assert "Couldn't persist that move" in body_reorder, (
-        "useReorderApplication failure toast message changed"
+    assert 'fail("failures.applicationMove")' in body_reorder, (
+        "useReorderApplication failure key changed"
     )

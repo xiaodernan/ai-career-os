@@ -196,8 +196,8 @@ def test_the_conversation_mutations_announce_their_failures():
     body_create = bodies_create[0]
     assert "onError:" in body_create, "useCreateConversation onError handler missing"
     assert 'fail(' in body_create, "useCreateConversation onError does not call fail()"
-    assert "Couldn't start a conversation" in body_create, (
-        "useCreateConversation failure toast message changed"
+    assert 'fail("failures.conversationStart")' in body_create, (
+        "useCreateConversation failure key changed"
     )
 
     # useRenameConversation
@@ -206,6 +206,6 @@ def test_the_conversation_mutations_announce_their_failures():
     body_rename = bodies_rename[0]
     assert "onError:" in body_rename, "useRenameConversation onError handler missing"
     assert 'fail(' in body_rename, "useRenameConversation onError does not call fail()"
-    assert "Couldn't rename the conversation" in body_rename, (
-        "useRenameConversation failure toast message changed"
+    assert 'fail("failures.conversationRename")' in body_rename, (
+        "useRenameConversation failure key changed"
     )

@@ -218,6 +218,6 @@ def test_the_resume_mutations_announce_their_failures():
     body = bodies[0]
     assert "onError:" in body, "useSetCurrentResume onError handler missing"
     assert 'fail(' in body, "useSetCurrentResume onError does not call fail()"
-    assert "Couldn't change the current version" in body, (
-        "useSetCurrentResume failure toast message changed"
+    assert 'fail("failures.versionSwitch")' in body, (
+        "useSetCurrentResume failure key changed"
     )

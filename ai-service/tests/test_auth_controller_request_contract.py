@@ -1,7 +1,8 @@
-"""The auth controller's request contract: six public POSTs, five records, four screens.
+"""The auth controller's request contract: seven public POSTs, six records, four screens.
 
-``AuthController`` carries the session lifecycle -- register, login, refresh, logout, and the
-two password-recovery routes. Six JSON bodies, each bound with ``@Valid``:
+``AuthController`` carries the session lifecycle -- register, login, refresh, logout, the
+two password-recovery routes, and the address move's confirmation. Seven JSON bodies, each
+bound with ``@Valid``:
 
 - ``POST /register`` -> ``RegisterRequest(email, password, displayName)``, answered 201
 - ``POST /login`` -> ``LoginRequest(email, password)``
@@ -11,6 +12,9 @@ two password-recovery routes. Six JSON bodies, each bound with ``@Valid``:
   two binding routes, two writers
 - ``POST /password/forgot`` -> ``ForgotPasswordRequest(email)``
 - ``POST /password/reset`` -> ``ResetPasswordRequest(token, newPassword)``
+- ``POST /email-change/confirm`` -> ``ConfirmEmailChangeRequest(token)``, the one-use
+  link's confirmation (26); the browser has no screen for it yet, so its writer is the
+  mailbox's link, not a form
 
 The browser reaches them through ``authApi`` in ``lib/api/client.ts``. Its register/login
 bodies are verbatim pass-throughs (``body: payload``) typed by the exported interfaces
@@ -18,10 +22,10 @@ bodies are verbatim pass-throughs (``body: payload``) typed by the exported inte
 ``frontend/src/lib/api/endpoints.test.ts`` parks in its UNREADABLE_BODIES registry with the
 reason "its fields are typed by client.ts, which this reader stops at". This gate is the
 reader that does not stop: it joins the interfaces, the screens' ``mutate`` literals, and
-the five records, so the register/login payload keys are held name-by-name after all.
+the six records, so the register/login payload keys are held name-by-name after all.
 
 Cross-plane split (measured, not assumed): the vitest gate already holds the route/verb
-parity of all six routes, and checks the four *literal* bodies (logout, forgot, reset and
+parity of all seven routes, and checks the four *literal* bodies (logout, forgot, reset and
 runRefresh's ``JSON.stringify``) as a subset rule -- every key sent must be accepted by the
 record. This gate holds the complementary equality (a record field no writer sends reddens
 here only), the parked register/login pair, and what a name-oriented rule cannot see:
@@ -62,6 +66,7 @@ LOGIN_DTO = DTO_DIR + "LoginRequest.java"
 TOKEN_DTO = DTO_DIR + "RefreshTokenRequest.java"
 FORGOT_DTO = DTO_DIR + "ForgotPasswordRequest.java"
 RESET_DTO = DTO_DIR + "ResetPasswordRequest.java"
+CONFIRM_EMAIL_DTO = DTO_DIR + "ConfirmEmailChangeRequest.java"
 CLIENT = "frontend/src/lib/api/client.ts"
 ENDPOINTS = "frontend/src/lib/api/endpoints.ts"
 HOOKS = "frontend/src/lib/hooks/auth.ts"
@@ -77,6 +82,7 @@ ROUTE_BODIES = {
     "/logout": "RefreshTokenRequest",
     "/password/forgot": "ForgotPasswordRequest",
     "/password/reset": "ResetPasswordRequest",
+    "/email-change/confirm": "ConfirmEmailChangeRequest",
 }
 
 RECORD_FILES = {
@@ -85,6 +91,7 @@ RECORD_FILES = {
     "RefreshTokenRequest": (TOKEN_DTO, ["refreshToken"]),
     "ForgotPasswordRequest": (FORGOT_DTO, ["email"]),
     "ResetPasswordRequest": (RESET_DTO, ["token", "newPassword"]),
+    "ConfirmEmailChangeRequest": (CONFIRM_EMAIL_DTO, ["token"]),
 }
 
 GUARD_LINES = {
@@ -103,6 +110,7 @@ GUARD_LINES = {
         "@NotBlank @Size(max = 512) String token",
         "@NotBlank @Size(min = 8, max = 72) String newPassword",
     ],
+    "ConfirmEmailChangeRequest": ["@NotBlank @Size(max = 512) String token"],
 }
 
 
@@ -236,7 +244,7 @@ def size_bounds(rel: str, field: str) -> tuple:
 
 # --------------------------------------------------------------------------- case 1: the route table
 
-def test_the_controller_binds_six_routes_each_to_one_validated_record():
+def test_the_controller_binds_seven_routes_each_to_one_validated_record():
     src = controller_source()
     assert '@RequestMapping("/api/v1/auth")' in src, (
         "AuthController's base path moved; every endpoint below resolves against it"
@@ -246,25 +254,25 @@ def test_the_controller_binds_six_routes_each_to_one_validated_record():
         "the route->record table drifted: %s\n@PostMapping and @RequestBody @Valid are both "
         "required for a route to appear here with its record" % table
     )
-    assert src.count("@PostMapping") == 6, (
-        "expected six POST routes, found %d" % src.count("@PostMapping")
+    assert src.count("@PostMapping") == 7, (
+        "expected seven POST routes, found %d" % src.count("@PostMapping")
     )
-    assert src.count("@RequestBody") == 6, (
+    assert src.count("@RequestBody") == 7, (
         "expected one @RequestBody per route, found %d" % src.count("@RequestBody")
     )
-    assert src.count("@Valid") == 6, (
+    assert src.count("@Valid") == 7, (
         "expected every body to be @Valid, found %d -- without it the record's guards stop "
         "being enforced and bad payloads reach the service" % src.count("@Valid")
     )
     assert src.count("@RequestParam") == 0 and src.count("@PathVariable") == 0, (
-        "AuthController grew a query or path binding; the six-POST shape is the whole request "
+        "AuthController grew a query or path binding; the seven-POST shape is the whole request "
         "surface of this gate"
     )
 
 
-# --------------------------------------------------------------------------- case 2: the five records
+# --------------------------------------------------------------------------- case 2: the six records
 
-def test_the_five_records_bind_exactly_their_declared_fields():
+def test_the_six_records_bind_exactly_their_declared_fields():
     for record, (rel, expected) in RECORD_FILES.items():
         fields = java_record_fields(record, read(rel))
         assert fields == expected, (

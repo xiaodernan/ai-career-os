@@ -1,16 +1,18 @@
 """MeController: the canonical /me surface, and its frontend-facing alias in UserController.
 
 ``backend/src/main/java/com/careeros/auth/web/MeController.java`` serves ``/api/v1/me``
-(GET + PATCH) and is the only other place in the backend that binds ``UpdateMeRequest``:
-the browser's calls go through its alias ``UserController`` (``/api/v1/users/me``), which
-vitest's ``endpoints.test.ts`` lists in ``NEVER_REFERENCED`` as "MeController's alias of
+(GET + PATCH for the profile, plus the account-security routes 24.x-26 added) and is the
+only other place in the backend that binds ``UpdateMeRequest``: the browser's calls go
+through its alias ``UserController`` (``/api/v1/users/me``), which vitest's
+``endpoints.test.ts`` lists in ``NEVER_REFERENCED`` as "MeController's alias of
 /users/me". Nothing else in the suite reads this file -- a dropped ``@Valid``, a retyped
 answer, or a PATCH forwarding to the read path would leave every other gate green.
 
 This gate pins, on the canonical side and across the pair:
 
-- The class binds exactly one base prefix with a bare ``@GetMapping`` and a bare
-  ``@PatchMapping`` -- two routes, no other verb.
+- The class binds exactly one base prefix; the profile's pair is the only bare route
+  (``@GetMapping`` and ``@PatchMapping``), and the account-security routes live under
+  named paths -- the whole surface is pinned, so a new route is a deliberate edit.
 - GET asks for no body (``@CurrentUser`` only) and answers ``MeResponse``.
 - PATCH binds ``@RequestBody @Valid UpdateMeRequest`` and answers ``MeResponse``.
 - Both spellings forward to the same ``UserService`` methods with the same argument
@@ -172,18 +174,29 @@ def braced_after(source: str, marker: str) -> str:
 
 # ----------------------------------------------------------- the canonical surface
 
-def test_the_canonical_route_is_one_base_prefix_with_exactly_a_get_and_a_patch():
+#: The profile's pair is bare; the account-security routes keep their own paths. Read whole
+#: and in file order: a route added, removed or moved on /me is a deliberate edit here.
+PROFILE_ROUTES = [("Get", ""), ("Patch", "")]
+ACCOUNT_SECURITY_ROUTES = [
+    ("Patch", "/password"),      # change the password from inside the app (24.1)
+    ("Get", "/sessions"),        # list the signed-in devices, by family (25.1)
+    ("Delete", "/sessions/{familyId}"),  # close one family (25.2)
+    ("Delete", "/sessions"),     # close every other family (25.2)
+    ("Post", "/email-change"),   # ask the new mailbox to confirm (26)
+    ("Post", "/erase"),          # erase the account for good (24.2)
+]
+
+
+def test_the_canonical_route_is_one_base_prefix_with_the_profile_pair_and_named_security_paths():
     src = me_source()
     assert base_prefix(src) == "/api/v1/me", (
         "MeController's base prefix moved to %r" % base_prefix(src)
     )
     mapping = mapping_verbs(src)
-    assert mapping == [("Get", ""), ("Patch", "")], (
-        "the canonical surface now binds %s -- exactly a bare GET and a bare PATCH live here"
-        % mapping
+    assert mapping == PROFILE_ROUTES + ACCOUNT_SECURITY_ROUTES, (
+        "the canonical surface now binds %s -- the bare profile pair first, then the "
+        "account-security paths" % mapping
     )
-    for verb in ("Post", "Put", "Delete"):
-        assert "@%sMapping" % verb not in src, "%s route appeared on the canonical surface" % verb
     assert client_path(base_prefix(src)) == "/me"
 
 
