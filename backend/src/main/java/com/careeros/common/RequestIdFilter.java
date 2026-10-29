@@ -42,6 +42,14 @@ public class RequestIdFilter extends OncePerRequestFilter {
 
     private static final Pattern ACCEPTED = Pattern.compile("[A-Za-z0-9][A-Za-z0-9._-]{7,63}");
 
+    /**
+     * The id the calling thread is serving, or null when it is not serving a request --
+     * a boot line, a scheduled sweep, or a pool thread between requests.
+     */
+    public static String currentId() {
+        return MDC.get(MDC_KEY);
+    }
+
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
             FilterChain chain) throws ServletException, IOException {

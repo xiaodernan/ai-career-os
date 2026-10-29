@@ -308,6 +308,16 @@ request: boot lines and scheduled sweeps have none and cannot be tied to a repor
 The id is diagnostics, not a credential: it is not stored, it changes on every
 call, and quoting it exposes nothing.
 
+**What crosses the service boundary.** Every backend call to the ai-service — the
+typed `/internal/*` routes and the SSE stream — carries the same id in
+`X-Request-Id`; the ai-service echoes it on its answer and writes it as
+`request_id` in its JSON log lines. A turn that failed upstream is then one grep in
+two files: the backend line that says the call failed and the ai-service line with
+the same value that says why. The stream relay reads on a worker thread, so the id
+is copied across threads explicitly. A scheduled sweep has no id and sends none:
+the ai-service mints one for its own lines, and that value appears nowhere in the
+backend log.
+
 ## What this runbook does not cover
 
 - **Redis.** It backs the rate limiter and the health ping; its outage is a degraded

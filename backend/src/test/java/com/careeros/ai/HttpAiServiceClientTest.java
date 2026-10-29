@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.careeros.common.ApiErrorCode;
 import com.careeros.common.ApiException;
+import com.careeros.common.RequestIdFilter;
 import com.careeros.config.AppProperties;
 import com.sun.net.httpserver.HttpServer;
 import java.io.InputStream;
@@ -18,6 +19,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.MDC;
 import org.springframework.web.client.RestClient;
 
 /**
@@ -42,6 +44,7 @@ class HttpAiServiceClientTest {
     private HttpAiServiceClient client;
     private final List<String> bodies = new ArrayList<>();
     private final List<String> paths = new ArrayList<>();
+    private final List<String> requestIds = new ArrayList<>();
 
     @BeforeEach
     void setUp() throws Exception {
@@ -53,6 +56,7 @@ class HttpAiServiceClientTest {
             }
             bodies.add(body);
             paths.add(exchange.getRequestURI().getPath());
+            requestIds.add(exchange.getRequestHeaders().getFirst("X-Request-Id"));
             // A payload that asks to be refused answers the way the
             // ai-service's typed refusals do; anything else succeeds. The
             // marker rides in the payload, so one context covers both.
@@ -215,6 +219,25 @@ class HttpAiServiceClientTest {
                 client.parseFeed("REFUSE-LONG", "rss", UUID.randomUUID()))
                 .isInstanceOf(ApiException.class)
                 .hasMessage("x".repeat(300) + "\u2026");
+    }
+
+    @Test
+    void theRequestsIdRidesAlongToTheAiService() {
+        MDC.put(RequestIdFilter.MDC_KEY, "edge-7c1d4f9a");
+        try {
+            client.parseFeed("<rss/>", "rss", UUID.randomUUID());
+        } finally {
+            MDC.remove(RequestIdFilter.MDC_KEY);
+        }
+        assertThat(requestIds).containsExactly("edge-7c1d4f9a");
+    }
+
+    @Test
+    void aSweepOutsideARequestSendsNoId() {
+        // The nightly report and the embedding pass have no id to give; inventing one
+        // here would be a value no answer carries, and the ai-service mints its own.
+        client.parseFeed("<rss/>", "rss", UUID.randomUUID());
+        assertThat(requestIds).hasSize(1).containsOnlyNulls();
     }
 
     /** The refusal bodies the fake upstream answers, keyed by payload marker. */

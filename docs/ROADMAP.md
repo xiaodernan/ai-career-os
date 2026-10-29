@@ -2286,6 +2286,49 @@ so one grep reconstructs one request.
   what the bracket looks like, and why an empty bracket is a scheduled line — and
   `docs/API.md` its correlation convention.)
 
+- [x] **32.2** The id crosses into the ai-service.
+
+  (Every backend call to the ai-service — the typed `/internal/*` routes through
+  `HttpAiServiceClient` and the SSE relay — now sends the request's id as
+  `X-Request-Id`. The ai-service's new `app/core/request_id.py` middleware echoes
+  it on the answer, keeps it in a `ContextVar` while the request runs, and the
+  JSON formatter writes it as `request_id` on every line logged in that scope; the
+  variable is reset in a `finally` so a reused task does not inherit it. The
+  middleware accepts the same 8–64-character alphabet the backend accepts and
+  replaces anything else with a fresh UUID, so a value quoted across two logs is
+  always one line long and the id never changes the status a route answers.
+
+  The SSE relay hands the upstream read to a task executor, and MDC is a
+  thread-local: the id would have been lost on exactly the long calls that need
+  it. `relay` captures it on the request thread and puts it back on the worker for
+  the duration of the pump, removing it in a `finally`. Calls made outside a
+  request (the nightly report, the embedding pass) send no header; the ai-service
+  mints one for its own lines.
+
+  Gates: `HttpAiServiceClientTest` gained two cases over its real socket — a
+  request-thread id arrives at the upstream, and a call outside a request carries
+  none — and the new `SseRelayServiceTest` proves the id survives the hop onto a
+  real second thread and that the worker keeps none afterwards. On the ai-service
+  side, `test_the_id_the_backend_sends_is_the_id_the_service_logs.py` holds five
+  cases: the answer echoes a well-formed id, a malformed one is replaced without
+  changing the status, the id is in scope only while the request runs, a line
+  logged inside the request carries it, and a line outside any request has none.
+  Mutation arms: deleting the RestClient interceptor turned 1 of 16 red (the
+  forwarding case only); dropping the relay's cross-thread copy turned 1 of 2 red;
+  removing the middleware's `ContextVar.set` turned 4 of 5 red. All restored
+  byte-identical (sha1 b968efac…, 2eba47e9…, 603f4670…), all green. The full
+  backend suite answers 916 tests, 0 failures, 0 errors, 0 skipped. The full
+  ai-service suite answers 14 failed, 1915 passed, 1 skipped — every red the
+  concurrent session's in-flight frontend files; one census this unit moved was
+  updated: `test_file_key_composers.py` now names `RequestIdFilter.java` among the
+  UUID mints (a fifth, composing no key). The doc-reading gate selection answers
+  235 of 238, the three reds the concurrent session's in-flight
+  `test_response_shape_contract.py`.
+
+  `docs/RUNBOOK.md`'s correlation section gained the boundary paragraph: the same
+  id crosses to the ai-service, appears as `request_id` in its JSON lines, and a
+  scheduler-minted id appears only there.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

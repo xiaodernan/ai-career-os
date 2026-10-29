@@ -386,9 +386,10 @@ def test_exactly_two_statements_mint_a_file_key_and_three_write_one_to_storage()
 
     mints = sorted(file for file, _, _ in uuid_mints())
     assert mints == ["FileIngestService.java", "RedisSlidingWindowRateLimiter.java",
-                     "ResumeService.java", "TokenService.java"], (
-        f"the population of minted UUIDs changed: {mints}. Four mints exist, two of them joined into "
-        f"a path; a fifth would have to say whether it composes a key")
+                     "RequestIdFilter.java", "ResumeService.java", "TokenService.java"], (
+        f"the population of minted UUIDs changed: {mints}. Five mints exist, two of them joined into "
+        f"a path and RequestIdFilter's naming a request rather than a file; a sixth would have to say "
+        f"whether it composes a key")
 
     writes, reads_storage = [], []
     for path in sorted(JAVA.rglob("*.java")):

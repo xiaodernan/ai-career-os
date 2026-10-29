@@ -3,6 +3,7 @@ package com.careeros.ai;
 import com.careeros.common.ApiErrorCode;
 import com.careeros.common.ApiException;
 import com.careeros.common.EnvelopeJson;
+import com.careeros.common.RequestIdFilter;
 import com.careeros.config.AppProperties;
 import java.net.http.HttpClient;
 import java.time.Duration;
@@ -47,6 +48,16 @@ public class HttpAiServiceClient implements AiServiceClient {
         factory.setReadTimeout(Duration.ofSeconds(180));
         this.restClient = builder.baseUrl(props.getAiService().getBaseUrl())
                 .requestFactory(factory)
+                // The ai-service logs the same id, so one grep follows a turn across both
+                // services. Calls made outside a request (the nightly sweep) have none and
+                // send none; the ai-service mints its own and logs that.
+                .requestInterceptor((request, body, execution) -> {
+                    String requestId = RequestIdFilter.currentId();
+                    if (requestId != null) {
+                        request.getHeaders().set(RequestIdFilter.HEADER, requestId);
+                    }
+                    return execution.execute(request, body);
+                })
                 .build();
     }
 

@@ -34,7 +34,10 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="AI Career OS — AI Service", version="0.1.0", lifespan=lifespan)
 
-from app.core.errors import register_refusal_handlers
+from app.core.request_id import RequestIdMiddleware  # noqa: E402
+app.add_middleware(RequestIdMiddleware)
+
+from app.core.errors import register_refusal_handlers  # noqa: E402
 register_refusal_handlers(app)
 
 

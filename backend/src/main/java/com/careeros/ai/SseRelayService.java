@@ -1,5 +1,6 @@
 package com.careeros.ai;
 
+import com.careeros.common.RequestIdFilter;
 import com.careeros.config.AppProperties;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -14,6 +15,7 @@ import java.time.Duration;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -43,7 +45,21 @@ public class SseRelayService {
 
     public SseEmitter relay(UUID taskId, UUID userId) {
         SseEmitter emitter = new SseEmitter(RELAY_TIMEOUT.toMillis());
-        taskExecutor.execute(() -> pump(taskId, userId, emitter));
+        String requestId = RequestIdFilter.currentId();
+        taskExecutor.execute(() -> {
+            // MDC does not follow a task onto another thread: without this the upstream
+            // call would carry no id and the two logs could not be joined.
+            if (requestId == null) {
+                pump(taskId, userId, emitter);
+                return;
+            }
+            MDC.put(RequestIdFilter.MDC_KEY, requestId);
+            try {
+                pump(taskId, userId, emitter);
+            } finally {
+                MDC.remove(RequestIdFilter.MDC_KEY);
+            }
+        });
         emitter.onCompletion(() -> log.debug("SSE relay completed for task {}", taskId));
         return emitter;
     }
@@ -63,15 +79,19 @@ public class SseRelayService {
      * through {@link #relay}. One parser, so the two paths cannot disagree about what a frame is.
      */
     public void consume(UUID taskId, UUID userId, FrameListener listener) throws Exception {
-        HttpRequest request = HttpRequest.newBuilder()
+        HttpRequest.Builder upstream = HttpRequest.newBuilder()
                 .uri(URI.create(props.getAiService().getBaseUrl() + "/internal/stream/" + taskId))
                 .timeout(RELAY_TIMEOUT)
                 .header("X-Internal-Token", props.getInternal().getToken())
                 .header("X-User-Id", userId.toString())
                 .header("Accept", "text/event-stream")
-                .GET()
-                .build();
-        HttpResponse<InputStream> response = httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
+                .GET();
+        String requestId = RequestIdFilter.currentId();
+        if (requestId != null) {
+            upstream.header(RequestIdFilter.HEADER, requestId);
+        }
+        HttpResponse<InputStream> response = httpClient.send(upstream.build(),
+                HttpResponse.BodyHandlers.ofInputStream());
         if (response.statusCode() != 200) {
             listener.onFrame("error", "upstream status " + response.statusCode());
             return;

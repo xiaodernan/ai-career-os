@@ -2,6 +2,8 @@ import json
 import logging
 import sys
 
+from app.core.request_id import request_id
+
 
 class JsonFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
@@ -11,6 +13,9 @@ class JsonFormatter(logging.Formatter):
             "logger": record.name,
             "msg": record.getMessage(),
         }
+        rid = request_id.get()
+        if rid:
+            payload["request_id"] = rid
         ctx = getattr(record, "ctx", None)
         if isinstance(ctx, dict):
             payload.update(ctx)
