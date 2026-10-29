@@ -93,7 +93,7 @@ class SessionsIT extends ApiIntegrationTest {
         mvc.perform(delete("/api/v1/me/sessions/" + bobFamily)
                         .header("Authorization", "Bearer " + aliceAccess))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.error.code").value("NOT_FOUND"));
+                .andExpect(jsonPath("$.error.code").value("LOGIN_SESSION_NOT_FOUND"));
         mvc.perform(post("/api/v1/auth/refresh")
                         .header("X-Forwarded-For", freshIp())
                         .contentType(MediaType.APPLICATION_JSON)

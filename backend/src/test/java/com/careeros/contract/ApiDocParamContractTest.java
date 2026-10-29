@@ -85,17 +85,32 @@ class ApiDocParamContractTest {
      * pressure gets resolved is the sentence disappearing from the doc, which is what happened.
      * Declining to grade it as a parameter is not a licence to say anything: an invented key is a
      * field an integrator will look for in the answer and never find.
+     *
+     * <p>The mail-settings row quotes a second vocabulary: {@code MAIL_LINK_INVALID} is an error
+     * code, not a field, and it is read on the wire as {@code error.code}. Those names are graded
+     * against {@link com.careeros.common.ApiErrorCode} instead -- a typo in a code the doc
+     * promises is exactly as invisible to a client as a field that never arrives.
      */
     @Test
     void everyProseNameAGetRowQuotesIsAKeyTheBackendWrites() {
         Set<String> keys = backendWireKeys();
+        Set<String> codes = errorCodes();
         List<String> invented = new ArrayList<>();
         documentedProse().forEach((path, names) -> names.stream()
-                .filter(name -> !keys.contains(name))
+                .filter(name -> !keys.contains(name) && !codes.contains(name))
                 .forEach(name -> invented.add(path + " quotes `" + name
-                        + "`, which no backend source writes")));
+                        + "`, which no backend source writes and no ApiErrorCode declares")));
         assertThat(invented).as("a GET row names a snake_case field the platform does not use")
                 .isEmpty();
+    }
+
+    /** The names {@code error.code} answers with, read off the enum rather than copied. */
+    private static Set<String> errorCodes() {
+        Set<String> names = new TreeSet<>();
+        for (com.careeros.common.ApiErrorCode code : com.careeros.common.ApiErrorCode.values()) {
+            names.add(code.name());
+        }
+        return names;
     }
 
     @Test
@@ -125,6 +140,8 @@ class ApiDocParamContractTest {
                 + "the prose branch would be grading an empty population").isNotEmpty();
         assertThat(backendWireKeys()).as("the literal walk over src/main/java found no wire key")
                 .contains("applied_at");
+        assertThat(errorCodes()).as("the error-code vocabulary the prose rule consults was read")
+                .contains("MAIL_LINK_INVALID", "LOGIN_SESSION_NOT_FOUND");
         assertThat(exampleQueries()).hasSizeGreaterThanOrEqualTo(2);
         assertThat(Files.readString(DOC)).contains("## 2. Public API");
     }

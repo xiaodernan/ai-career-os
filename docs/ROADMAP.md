@@ -1747,6 +1747,25 @@ up to the tree both sides actually ship, and writes down which red is whose.
   reddened on the measured three meanings before the split and runs 7 of 7
   after it.)
 
+- [x] **30.6** The split's two readers: a session IT still expected the
+  catch-all, and the docs census read an error code as a field.
+
+  (30.5 ran its own gate and a targeted backend run, not the full suite, and
+  two readers it had not taught were left red. `SessionsIT` closed a
+  neighbour's session family and still expected `NOT_FOUND` — the route the
+  split had just re-coded; it now expects `LOGIN_SESSION_NOT_FOUND`.
+  `ApiDocParamContractTest` reads a snake_case name quoted in a GET row as a
+  field the backend writes, and the mail row legitimately names
+  `MAIL_LINK_INVALID`, an error code rather than a field. The census now
+  grades a quoted name against the field literals *or* the `ApiErrorCode`
+  members, so a code the enum does not declare is still a red — a typo in a
+  promised code is as invisible to an integrator as a field that never
+  arrives. The positive control asserts the vocabulary is actually read.
+
+  Seen by a full-suite run — 872 tests, exactly these 2 failures — fixed, and
+  green since. The lesson is the 30.5 entry's own: a split's gate is not the
+  suite.)
+
 ## Epic 31 — The Shell's Own Hardening
 
 Every hardening epic so far guarded the services behind the browser: limits,
@@ -1801,6 +1820,30 @@ where no proxy exists.
   static chunks carry no policy while `sw.js` and `offline.html` do; and the
   console shows no CSP or hydration error in either the production or the
   development build. `tsc`, ESLint and `next build` stay clean.)
+
+- [x] **31.3** The API's cross-origin door names the shell and nothing else.
+
+  (The services behind the browser were gated; the door between the browser
+  and the API was not. `docs/SECURITY.md` described the CORS allow-list, but
+  nothing had ever driven it: a chain that forgot `.cors(...)`, a method
+  dropped from the list, or a header the shell sends but the door no longer
+  names would have surfaced only as a request that never leaves the browser.
+  `backend/src/test/java/com/careeros/CorsContractIT.java` now speaks through
+  the real filter chain as `http://localhost:3000` — the shipped
+  `APP_CORS_ORIGINS` default — and as `https://evil.example`. It pins the
+  shell's preflight (`200`; the origin echoed back; `POST` among the allowed
+  methods; `authorization` and `content-type` among the allowed headers;
+  `max-age 3600`), that the shell's actual request carries the origin back,
+  and that a foreign origin gets neither door: its preflight is a `403` with
+  no `Access-Control-Allow-Origin`, and its request to the public
+  `/api/v1/health` is refused before the route is reached — only the origin
+  check can refuse a public route, so the `403` names the door as the
+  refuser. A `TRACE` preflight from the shell is refused too.
+
+  Mutation arm: deleting `.cors(...)` from `SecurityConfig` turned the
+  shell's preflight into a `403` and stripped the origin from the actual
+  request; the chain was restored byte-identical and the class runs 5/5
+  green. Full backend suite green.)
 
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
