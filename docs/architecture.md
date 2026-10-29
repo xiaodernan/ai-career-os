@@ -304,7 +304,8 @@ user-scoped table (ownership is enforced in backend layer + a single SQL predica
   unique across the table, not per account: a registration belongs to a browser, so a
   second reader signing in there re-points the row rather than adding one that would
   ring the same browser twice. The keys are what a payload would be encrypted with;
-  today's push carries none, and the worker fetches the inbox itself.
+  today's push carries none: the worker shows one sentence and the tab it opens reads
+  the authenticated inbox, so the worker itself never holds an account token.
   The outbound half (33.2) is the `PushSender` port: the VAPID transport signs an
   ES256 token whose `aud` is the endpoint's origin, posts an empty body with a `TTL`
   header, and answers `SENT`/`GONE`/`REFUSED` -- `404`/`410` retires the row, every
@@ -319,6 +320,14 @@ user-scoped table (ownership is enforced in backend layer + a single SQL predica
   episode's `pushed_at` latch is written only when some browser accepted, a `GONE`
   registration is deleted on the spot, and every outbound attempt moves
   `careeros.push.delivery` under `sent` / `gone` / `refused` / `not_configured`.
+  The browser's half (33.4) is `public/sw.js` plus the settings switch: the worker
+  answers `push` with one sentence in the browser's language, tagged and deep-linked
+  to `/notifications`, and `notificationclick` focuses or opens that tab;
+  `pushsubscriptionchange` re-subscribes with the old key and messages the new
+  registration to any open tab, which upserts it. The switch subscribes with the
+  deployment's public key inlined at build time (`NEXT_PUBLIC_VAPID_PUBLIC_KEY`),
+  rolls the local subscribe back if the registration fails, and deletes this browser's
+  row on opt-out; every state it shows is re-read from the browser, never remembered.
 - `weekly_digests(id, user_id, week_start date, window_days smallint, payload jsonb,
    generated_at)` → one letter per user per week, the engine's answer stored verbatim;
   re-composing the same week refreshes the row rather than appending a second one.

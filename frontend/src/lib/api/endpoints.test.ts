@@ -815,10 +815,6 @@ describe("endpoints ↔ backend route parity", () => {
     "/me": "MeController's alias of /users/me; the client spells every call through /users/...",
     "/resume-versions/{}": "the version panel reads the list form /resume-versions?resumeId=…",
     "/resumes/{}/versions": "superseded for the panel by GET /resume-versions?resumeId=…",
-    "/push/subscriptions":
-      "roadmap 33.1 is the server half only; 33.4's settings opt-in is the caller that will register a browser",
-    "/push/subscriptions/{}":
-      "forget-one rides 33.4's opt-in switch, which does not exist until the worker can be rung",
     "/auth/email-change/confirm":
       "the email-confirmation landing route has no screen until the auth flow grows one",
     "/mail/preferences/{}/{}": "the mail-preference read/update surface is not wired yet",

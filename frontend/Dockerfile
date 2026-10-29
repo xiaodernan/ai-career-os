@@ -12,6 +12,15 @@ COPY . .
 # machine. The default matches the dev fallback; production passes the real origin.
 ARG NEXT_PUBLIC_API_BASE_URL=http://localhost:8080/api/v1
 ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
+# The VAPID public key is a build argument for the same reason, and one reason more: it
+# must be the *public half of the backend's own pair*, because the backend signs the
+# wake with the private half. A browser subscribed under any other key is a browser no
+# wake can reach, and the mismatch is invisible until a push is sent. Compose passes
+# `APP_PUSH_VAPID_PUBLIC_KEY` here, so one variable in the deployment's `.env` covers
+# both sides (33.4). Empty is a real answer: a deployment with no pair has the switch
+# off, with a sentence that says so.
+ARG NEXT_PUBLIC_VAPID_PUBLIC_KEY=
+ENV NEXT_PUBLIC_VAPID_PUBLIC_KEY=$NEXT_PUBLIC_VAPID_PUBLIC_KEY
 # NEXT_STANDALONE=1 is what makes `next build` emit `.next/standalone`. It cannot be the
 # default: `next start` refuses to serve a standalone build, and the local run and the
 # E2E suite both use `next start`.

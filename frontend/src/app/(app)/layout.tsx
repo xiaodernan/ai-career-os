@@ -9,6 +9,8 @@ import { CommandPaletteProvider } from "@/components/common/command-palette";
 import { SkipLink } from "@/components/layout/skip-link";
 import { tokenStore } from "@/lib/api/token-store";
 import { useUser } from "@/lib/hooks/auth";
+import { renewPushSubscription } from "@/lib/hooks/push";
+import { onPushRenewal } from "@/lib/push";
 import { readStoredLocale, useLocale } from "@/lib/i18n/locale-context";
 import { decideLocale, saveLocalePreference } from "@/lib/i18n/locale-preference";
 
@@ -56,6 +58,26 @@ function AccountLocale() {
 }
 
 /**
+ * The worker's renewed registration, made the account's (33.4).
+ *
+ * A push service may rotate a browser's registration at any time, and the worker
+ * re-subscribes with the old key and posts the new endpoint to whichever tabs are
+ * open. The account's row still names the retired endpoint, so the next morning would
+ * be a `410` and a deleted row -- the bell would stop for a browser that never asked
+ * to stop. Posting it here keeps the row pointed at the live registration. The post is
+ * an upsert, so hearing the same renewal twice writes the same row; a failure is left
+ * to the settings card, whose read-repair runs on its next visit.
+ */
+function PushRenewals() {
+  React.useEffect(() => {
+    return onPushRenewal((record) => {
+      void renewPushSubscription(record).catch(() => undefined);
+    });
+  }, []);
+  return null;
+}
+
+/**
  * Client-side route guard: v1 keeps the access token client-side
  * (architecture.md §7), so the server middleware cannot see it.
  * No session → /login; session → verify /users/me (client auto-refreshes 401).
@@ -84,6 +106,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <AuthGuard>
       <AccountLocale />
+      <PushRenewals />
       <CommandPaletteProvider>
         <SkipLink />
         <div className="flex min-h-dvh">

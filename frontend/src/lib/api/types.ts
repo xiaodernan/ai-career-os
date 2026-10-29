@@ -1070,6 +1070,20 @@ export interface NotificationInbox {
   generatedAt?: string;
 }
 
+/**
+ * One browser the account can be woken on (33.1).
+ *
+ * The row answers with the endpoint and when it was first kept, never the two keys:
+ * the browser already holds them, and a list screen has no reason to repeat what a
+ * payload would be encrypted with.
+ */
+export interface PushSubscriptionRow {
+  id: string;
+  endpoint: string;
+  label: string | null;
+  createdAt?: string;
+}
+
 /* ------------------------------------------------------------------ */
 /* Granular growth engines (10.1-10.13)                               */
 /* ------------------------------------------------------------------ */

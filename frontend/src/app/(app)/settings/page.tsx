@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/common/page-header";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { CareerProfileCard, CareerProfileMapsCard } from "@/components/settings/profile-cards";
 import { MemoryCard } from "@/components/settings/memory-card";
+import { PushCard } from "@/components/settings/push-card";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -159,6 +160,9 @@ export default function SettingsPage() {
           </p>
         </CardContent>
       </Card>
+
+      {/* The bell outside the tab (33.4) */}
+      <PushCard />
 
       {/* Keyboard */}
       <Card>

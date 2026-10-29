@@ -78,7 +78,12 @@ passwords is no longer a reachable state.
   (`PushConfig`). Set `APP_PUSH_CONTACT` to a `mailto:` or `https:` contact (empty
   falls back to `APP_WEB_BASE_URL`). Generate the pair with
   `npx web-push generate-vapid-keys`; the public key is also what the browser
-  subscribes with, so it must be the one the frontend is built against
+  subscribes with, so it must be the one the frontend is built against — both
+  compose files pass `APP_PUSH_VAPID_PUBLIC_KEY` into the frontend image as
+  `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, which Next inlines at build time, so changing the
+  key needs a frontend rebuild (`docker compose build frontend`). An empty value
+  ships a switch that reads "not configured" rather than a browser subscribed under
+  a key nothing signs with
 - [ ] `APP_WEB_BASE_URL` is the deployment's public origin (an `https://` URL), not
   the shipped `http://localhost:3000` and not `.env.prod.example`'s
   `your-domain.com` placeholder — every password-reset, email-change and

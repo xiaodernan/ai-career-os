@@ -9,6 +9,7 @@ import {
   shouldRegisterServiceWorker,
   type ServiceWorkerHost,
 } from "./pwa";
+import { PUSH_DEEPLINK, PUSH_RENEWED_MESSAGE } from "./push";
 import { translations } from "@/lib/i18n/translations";
 
 /**
@@ -110,6 +111,42 @@ describe("the installable shell", () => {
     expect(worker).toMatch(/startsWith\("\/api\/"\)/);
     // And only the build's content-hashed chunks are kept.
     expect(worker).toContain('startsWith("/_next/static/")');
+  });
+
+  it("wakes for a push without ever holding the account's token", () => {
+    const worker = publicFile("sw.js");
+
+    // The three events 33.4 promised: the wake, the click, and the browser rotating the
+    // registration while no tab is open.
+    expect(worker).toContain('addEventListener("push"');
+    expect(worker).toContain("showNotification");
+    expect(worker).toContain('addEventListener("notificationclick"');
+    expect(worker).toContain("openWindow");
+    expect(worker).toContain('addEventListener("pushsubscriptionchange"');
+    expect(worker).toContain("postMessage");
+    expect(worker).toContain(PUSH_RENEWED_MESSAGE);
+
+    // The notification lands on the inbox and is one bubble rather than one per event.
+    expect(worker).toContain(PUSH_DEEPLINK);
+    expect(worker).toContain("careeros-inbox");
+
+    // The sentence is in the worker because the app's table is not reachable there, and
+    // both languages ship because the browser's own setting picks one.
+    expect(worker, "the English sentence").toContain("Something new is waiting in your inbox.");
+    expect(worker, "the Chinese sentence").toContain("收件箱里有新东西。");
+
+    // The whole point of the design: a worker that keeps no token cannot leak one account's
+    // inbox to another account's tab, and cannot revoke the token family the page is using.
+    expect(worker).not.toContain("localStorage");
+    expect(worker).not.toContain("accessToken");
+    expect(worker).not.toContain("refreshToken");
+
+    // Nor does it ask the API: the tab the click opens reads the authenticated inbox.
+    const wake = worker.slice(
+      worker.indexOf('addEventListener("push"'),
+      worker.indexOf('addEventListener("notificationclick"')
+    );
+    expect(wake, "the wake handler must not fetch").not.toContain("fetch(");
   });
 
   it("carries an offline page that can be read with nothing else fetched", () => {

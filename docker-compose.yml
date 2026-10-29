@@ -164,10 +164,14 @@ services:
         # a build arg; the runtime `environment:` entry below only reaches server-side
         # rendering. Both are set from one source so the two cannot disagree.
         NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8080/api/v1}
+        # 33.4: the public half of the backend's own VAPID pair, so the browser subscribes
+        # with the key the backend signs with. Empty means push is off, and the switch says so.
+        NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${APP_PUSH_VAPID_PUBLIC_KEY:-}
     container_name: careeros-frontend
     restart: unless-stopped
     environment:
       NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8080/api/v1}
+      NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${APP_PUSH_VAPID_PUBLIC_KEY:-}
     ports:
       - "127.0.0.1:3000:3000"
     depends_on:

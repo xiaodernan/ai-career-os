@@ -155,10 +155,15 @@ services:
         # a runtime `environment:` entry alone leaves the shipped app calling the dev
         # fallback (http://localhost:8080/api/v1) from every visitor's own machine.
         NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:?required -- fill .env.prod and pass --env-file .env.prod}
+        # 33.4: the public half of the backend's own VAPID pair. Optional, because a
+        # deployment may run without push at all; empty turns the settings switch off
+        # rather than shipping a browser subscribed under a key nothing signs with.
+        NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${APP_PUSH_VAPID_PUBLIC_KEY:-}
     container_name: careeros-frontend-prod
     restart: unless-stopped
     environment:
       NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:?required -- fill .env.prod and pass --env-file .env.prod}
+      NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${APP_PUSH_VAPID_PUBLIC_KEY:-}
       NODE_ENV: production
     ports:
       - "3000:3000"

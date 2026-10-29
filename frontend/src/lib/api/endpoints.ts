@@ -165,6 +165,10 @@ export const endpoints = {
   notificationsReadAll: "/notifications/read-all",
   notificationsDismiss: "/notifications/dismiss",
 
+  /* ---------------- Push registrations (33.1) ----------------------------- */
+  pushSubscriptions: "/push/subscriptions",
+  pushSubscription: (id: string) => `/push/subscriptions/${seg(id)}`,
+
   /** SSE stream for any async AI task (match, tailor, copilot turn, ingestion…) */
   aiStream: (taskId: string) => `/ai/stream/${seg(taskId)}`,
 } as const;

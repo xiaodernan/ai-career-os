@@ -45,6 +45,94 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+/* ---------------------------------------------------------------------------------------------
+ * The bell outside the tab (33.4).
+ *
+ * The worker holds no account token, and must not: replaying the page's refresh token from here
+ * would revoke the token family the page is still using, and one browser can have tabs open under
+ * different accounts. So the notification is one sentence in the browser's own language -- no
+ * count, no title, no name -- and the tab it opens reads the authenticated inbox itself.
+ *
+ * `pushsubscriptionchange` reports the new subscription to the page by message for the same
+ * reason: only the page knows whose subscription it is. If no tab is open the message is lost and
+ * the settings switch re-registers on its next visit.
+ */
+
+const PUSH_DEEPLINK = "/notifications";
+const PUSH_RENEWED_MESSAGE = "careeros:push-renewed";
+const PUSH_TITLE = "AI Career OS";
+const PUSH_BODY = {
+  en: "Something new is waiting in your inbox.",
+  zh: "收件箱里有新东西。",
+};
+
+/** The one sentence, in whichever language the browser is set to. */
+function pushCopy() {
+  const language = (self.navigator.language || "").toLowerCase();
+  return language.startsWith("zh") ? PUSH_BODY.zh : PUSH_BODY.en;
+}
+
+self.addEventListener("push", (event) => {
+  event.waitUntil(
+    self.registration.showNotification(PUSH_TITLE, {
+      body: pushCopy(),
+      icon: "/icons/icon-192.png",
+      badge: "/icons/icon-192.png",
+      // One bubble per inbox, not one per event: a morning with five additions is still one
+      // sentence, and the deep link is the same for all of them.
+      tag: "careeros-inbox",
+      data: { url: PUSH_DEEPLINK },
+    })
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const target = (event.notification.data && event.notification.data.url) || PUSH_DEEPLINK;
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((windows) => {
+      // A tab already on the inbox is the reader's own; focus it instead of stacking another.
+      const open = windows.find((client) => {
+        try {
+          return new URL(client.url).pathname === target;
+        } catch {
+          return false;
+        }
+      });
+      if (open) return open.focus();
+      // `openWindow` is allowed from a notification click and nowhere else, which is exactly
+      // where this runs.
+      return self.clients.openWindow(target);
+    })
+  );
+});
+
+self.addEventListener("pushsubscriptionchange", (event) => {
+  const old = event.oldSubscription;
+  // Without the old options there is no key to subscribe with; the switch on the settings page
+  // is the repair path, so this event simply gives up.
+  if (!old || !old.options) return;
+
+  const renewed = event.newSubscription
+    ? Promise.resolve(event.newSubscription)
+    : self.registration.pushManager.subscribe(old.options);
+
+  event.waitUntil(
+    renewed
+      .then((subscription) =>
+        self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((windows) => {
+          for (const client of windows) {
+            client.postMessage({
+              type: PUSH_RENEWED_MESSAGE,
+              subscription: subscription.toJSON(),
+            });
+          }
+        })
+      )
+      .catch(() => undefined)
+  );
+});
+
 /** The build's own immutable chunks and the install icons -- the only things safe to keep. */
 function isImmutableAsset(url) {
   return url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/icons/");

@@ -61,8 +61,10 @@ describe("the browser's copy", () => {
     // the nightly sweep (19.2), and 134 with `app/(app)/notifications/page.tsx`,
     // the inbox the synthesized signals land in (19.3), and 135 with
     // `components/monitoring/nightly-history.tsx`, the card the nightly job's
-    // own results are read from (20.1).
-    expect(browserSources().length).toBe(135);
+    // own results are read from (20.1), and 136 with
+    // `components/settings/push-card.tsx`, the switch that rings this browser
+    // (33.4).
+    expect(browserSources().length).toBe(136);
   });
 
   it("finds a sentence, however long it is", () => {

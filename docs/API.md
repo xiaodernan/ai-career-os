@@ -282,8 +282,10 @@ Nothing has to be enabled; `careeros.signals.cron` moves the clock.
 The bell outside the tab (roadmap 33.1). A reader opts in from the installed app,
 and the browser hands over what its push service issued: an endpoint plus the two
 keys a payload would be encrypted with. The push sent today carries no payload —
-the worker wakes, fetches the authenticated inbox and shows one notification — so
-no signal text, saved-search name or count transits a push service.
+the worker shows one generic sentence and the tab it opens reads the authenticated
+inbox itself — so no signal text, saved-search name or count transits a push
+service, and a worker that holds no account token cannot show one account's inbox
+on another account's tab.
 
 The endpoint is the registration's identity. A browser re-subscribes whenever it
 likes (a renewed key, a worker update, another reader signing in there), so
@@ -303,10 +305,11 @@ The routes keep the registrations; the wake is outbound and has no route of its
 own. A registered browser is rung with one empty `POST` to its endpoint (roadmap
 33.2): an ES256 VAPID token scoped to the push service's origin, the deployment's
 public key as `k`, and a `TTL` header (12 hours by default). No payload and no
-encryption travel with it -- the worker wakes, fetches the authenticated inbox and
-shows one notification -- so a push service learns only that the browser exists and
-was asked to wake. A `404`/`410` means the browser is gone and the registration is
-deleted; every other refusal is counted and tried again on the next pass.
+encryption travel with it -- the worker shows one generic sentence and the tab it
+opens reads the authenticated inbox itself -- so a push service learns only that
+the browser exists and was asked to wake. A `404`/`410` means the browser is gone
+and the registration is deleted; every other refusal is counted and tried again on
+the next pass.
 
 The 07:30 signal clock runs the ring after its letters (roadmap 33.3). Every
 account with a registration is asked what is unread, undismissed and not yet
@@ -318,11 +321,26 @@ episode that is still unread may still be rung. Attempts are counted as
 `careeros.push.delivery` with an `outcome` tag (`sent`, `gone`, `refused`,
 `not_configured`).
 
+The bell's other half is in the browser (roadmap 33.4). The installed worker answers
+`push` with one notification — the same sentence in the browser's own language, one
+bubble tagged for the inbox, deep-linked to `/notifications` — and `notificationclick`
+focuses a tab already on the inbox or opens one. The settings screen's switch
+asks permission, subscribes with the deployment's `NEXT_PUBLIC_VAPID_PUBLIC_KEY` (the
+build-time copy of `APP_PUSH_VAPID_PUBLIC_KEY`) and posts the registration; opting out
+unsubscribes the browser first and then deletes the row. `pushsubscriptionchange`
+re-subscribes with the old key and messages the new registration to any open tab, which
+upserts it; with no tab open the message is lost and the switch's next visit re-registers
+what the browser holds. The notification's wording lives in `public/sw.js`, not the
+translation table, because a worker runs before a document exists and chooses by the
+browser's own language setting.
+
 With no VAPID keys configured the sender is a no-op: browsers can still register, nothing
 leaves the building, and the boot log says "push is not configured". The knobs are
 `APP_PUSH_VAPID_PUBLIC_KEY` and `APP_PUSH_VAPID_PRIVATE_KEY` (both or neither; one
 half refuses the boot), `APP_PUSH_CONTACT` (RFC 8292's `sub`, empty falls back to
-`APP_WEB_BASE_URL`) and `APP_PUSH_TTL_SECONDS`.
+`APP_WEB_BASE_URL`) and `APP_PUSH_TTL_SECONDS`. The public key must also reach the
+frontend as `NEXT_PUBLIC_VAPID_PUBLIC_KEY` at build time; compose passes the same
+variable through, and an empty one leaves the switch off with a sentence that says so.
 
 ### Mail preferences (`/mail`)
 

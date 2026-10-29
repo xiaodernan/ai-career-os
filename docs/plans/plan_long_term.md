@@ -172,9 +172,17 @@
       `sent`/`gone`/`refused`/`not_configured` 计量。8+2+3+3 个新测试，
       886 个非 IT 后端测试全绿；顺带修掉两个 Micrometer 弱引用导致的
       `NaN` flake。
-    - 33.4（下一步）：前端 worker 处理 `push` 与 `notificationclick`（深链回收件箱），
-      设置页开关（permission → `subscribe` → `/push/subscriptions`，关闭即删，
-      `pushsubscriptionchange` 重新登记）。
+    - ~~33.4 浏览器被叫醒并打开~~ 已完成：`public/sw.js` 处理 `push`
+      （浏览器语言的一句话、`careeros-inbox` 合并气泡、`/notifications` 深链）、
+      `notificationclick`（已有收件箱标签页则聚焦，否则打开）与
+      `pushsubscriptionchange`（用旧 key 重订阅并把新登记 postMessage 给任一
+      打开的标签页）。worker 不持令牌：刷新令牌复用会吊销整条 family，同源标签页
+      也可能属于不同账号，所以通知不带计数/标题，收件箱由打开的页面自己读。
+      设置页的开关（`push-card.tsx`）每次从浏览器重读状态，授权 → 用构建期
+      `NEXT_PUBLIC_VAPID_PUBLIC_KEY` 订阅 → 注册，注册失败回滚本地订阅，关闭时
+      先 unsubscribe 再删本机那一行；compose 把 `APP_PUSH_VAPID_PUBLIC_KEY` 传成
+      前端构建参数，一个变量填两半。27 + 1 个前端测试，829 个前端测试 / 77 文件
+      全绿，`tsc` 干净；copy census 136。
 
 ## 开发协议（每个任务）
 

@@ -2363,9 +2363,13 @@ tab holding a session, or a mailbox being read. A reader who closes the laptop
 learns nothing until they come back, and the saved search that found three
 postings overnight has no way to say so. This epic gives the account a Web Push
 address: the browser hands the service its subscription, a VAPID-signed push
-wakes the installed worker, and the worker asks the app what is new. The push
-itself carries no payload — the content comes from the authenticated inbox — so
-no signal text, saved-search name or count transits a push service.
+wakes the installed worker, and the worker shows one sentence and opens the
+inbox; the tab it opens asks the app what is new. The push itself carries no
+payload, and the worker holds no account token — one browser can have tabs open
+under different accounts, and a token replayed from a worker would revoke the
+family the page is still using — so no signal text, saved-search name, count or
+name transits a push service and a wake can never show one account's inbox on
+another account's tab.
 
 - [x] **33.1** A browser can hand the account its push address.
 
@@ -2498,13 +2502,44 @@ no signal text, saved-search name or count transits a push service.
   the knob census is unchanged -- no new settings. `docs/API.md` and
   `docs/architecture.md` 4.7 carry the sweep and the migration.
 
-- [ ] **33.4** The worker wakes, asks and opens.
+- [x] **33.4** The worker wakes, asks and opens.
 
-  (The installed worker handles `push` by fetching the inbox and showing one
-  notification — deep-linked to `/notifications` — and `notificationclick` focuses
-  or opens the app. The settings screen gains a switch that asks permission,
-  subscribes with the deployment's VAPID public key, registers the subscription
-  and forgets it on opt-out; `pushsubscriptionchange` re-registers in place.)
+  (`public/sw.js` answers `push` with one notification — one sentence in the
+  browser's language, one bubble tagged `careeros-inbox`, the install icon and
+  badge, deep-linked to `/notifications` — and `notificationclick` focuses a tab
+  already on that path or opens one. The worker holds no token by design: a
+  refresh token replayed from a worker would revoke the family the page is still
+  using, and one browser can have tabs open under different accounts, so the
+  notification carries no count, title or name and the tab it opens reads the
+  authenticated inbox itself. `pushsubscriptionchange` re-subscribes with the old
+  key and messages the new registration to any open tab, which upserts it; with
+  no tab open the message is lost and the switch's next visit re-registers what
+  the browser holds.
+
+  `lib/push.ts` is the browser's half as pure functions — the public key trimmed
+  out of the build, base64url to bytes, the three-field record, the five states a
+  switch can read, permission before subscribe, opt-out — and `lib/hooks/push.ts`
+  is the account's half: the upsert, the one-row forget (never the whole list,
+  because another browser's row is another browser's consent), and the
+  read-then-write repair. `components/settings/push-card.tsx` is the switch: it
+  re-reads the browser on mount, asks permission on the reader's gesture,
+  subscribes with `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, rolls the local subscribe back
+  when the registration fails, and on opt-out unsubscribes and deletes this
+  browser's row. Compose passes `APP_PUSH_VAPID_PUBLIC_KEY` into the frontend
+  build arg in both compose files, so one variable fills both halves; empty
+  leaves the switch off with a sentence that says so.
+
+  Gates: `push.test.ts` 27 (the key's alphabet and trimming, the record's three
+  fields, every state the switch can read, permission before subscribe, an
+  existing subscription kept rather than doubled, a refused prompt / failed
+  subscribe / failed unsubscribe as sentences, opt-out twice, a renewal's type
+  and shape, the handler's filters and clean-up), `pwa.test.ts` +1 (the worker's
+  three handlers, the deep link, both languages, no token and no `fetch` in the
+  wake path), `endpoints.test.ts` drops the two `NEVER_REFERENCED` entries whose
+  caller now exists. The copy census moves to 136 browser sources. `npx tsc
+  --noEmit` is clean and the frontend suite answers 829 tests in 77 files, 0
+  failures. `docs/API.md`, `docs/architecture.md` §4.7, `docs/DEPLOYMENT.md`,
+  `frontend/.env.example` and the root env examples carry the build-time key.)
 
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +

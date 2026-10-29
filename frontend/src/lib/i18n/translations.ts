@@ -1088,6 +1088,24 @@ export const translations = {
       keyboard: "Keyboard",
       commandPalette: "Command palette",
     },
+    push: {
+      title: "Browser notifications",
+      description:
+        "The morning sweep can ring this browser even when the tab is closed. The wake carries no text — the inbox it opens does.",
+      toggle: "Ring this browser",
+      onDescription: "This browser will ring when the morning finds something new.",
+      offDescription: "This browser stays quiet. The inbox still fills.",
+      checking: "Checking this browser…",
+      unsupported: "This browser cannot receive push notifications.",
+      notInstalled:
+        "Notifications need the installed app's worker. Open the production build once, then come back.",
+      blocked:
+        "This browser has blocked notifications for this site. Allow them in the site settings, then turn this on again.",
+      notConfigured:
+        "This deployment has no push keys, so no wake can leave. The inbox still fills.",
+      permissionDenied: "Permission was not granted, so nothing was registered.",
+      failed: "The browser registration could not be saved. Try again.",
+    },
     memory: {
       description: "Facts the model extracted from your conversations and interviews. Correct a wrong one, or lower its weight — these shape every answer you get.",
       loading: "Loading memories…",
@@ -3446,6 +3464,21 @@ export const translations = {
       paletteLight: "浅色",
       keyboard: "键盘",
       commandPalette: "命令面板",
+    },
+    push: {
+      title: "浏览器通知",
+      description:
+        "早晨的 sweep 可以在这个标签页关着时叫醒这台浏览器。唤醒不带任何内容——它打开的收件箱才有。",
+      toggle: "叫醒这台浏览器",
+      onDescription: "早晨发现新东西时，这台浏览器会响。",
+      offDescription: "这台浏览器保持安静。收件箱照样会填。",
+      checking: "正在检查这台浏览器……",
+      unsupported: "这台浏览器无法接收推送通知。",
+      notInstalled: "通知需要已安装应用的 worker。先打开一次生产构建，再回来。",
+      blocked: "这台浏览器已屏蔽本站的通知。请在站点设置里允许，然后再打开这个开关。",
+      notConfigured: "这个部署没有配置推送密钥，所以唤不醒。收件箱照样会填。",
+      permissionDenied: "没有拿到通知权限，所以没有登记。",
+      failed: "浏览器注册没能保存。再试一次。",
     },
     /**
      * The auth pages' marketing panel. A visitor who cannot read English
