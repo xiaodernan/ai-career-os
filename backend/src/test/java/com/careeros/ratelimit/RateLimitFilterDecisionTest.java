@@ -95,6 +95,26 @@ class RateLimitFilterDecisionTest {
         assertThat(countedLimit.get()).isEqualTo(props.getRatelimit().getMailPerMinute());
     }
 
+    @Test
+    void theMfaBucketCountsAgainstItsOwnCeilingAndNotTheMailOne() throws Exception {
+        UUID userId = signIn();
+        MockHttpServletRequest request = request("POST", "/api/v1/me/mfa/activate");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        AtomicBoolean chained = new AtomicBoolean();
+
+        filter(false).doFilterInternal(request, response, chain(chained));
+
+        assertThat(response.getStatus()).isEqualTo(429);
+        assertThat(chained).isFalse();
+        assertThat(count(RateLimitFilter.MFA, RateLimitMetrics.DENIED)).isEqualTo(1.0);
+        assertThat(count(RateLimitFilter.MAIL, RateLimitMetrics.DENIED)).isZero();
+        assertThat(count(RateLimitFilter.AI, RateLimitMetrics.DENIED)).isZero();
+        // The guessed code is one account's problem, so the key names the signed-in user even
+        // though the address is shared.
+        assertThat(countedKey.get()).isEqualTo("ratelimit:mfa:" + userId);
+        assertThat(countedLimit.get()).isEqualTo(props.getRatelimit().getMfaPerMinute());
+    }
+
     private RateLimitFilter filter(boolean admit) {
         RedisSlidingWindowRateLimiter limiter = new RedisSlidingWindowRateLimiter(null) {
             @Override

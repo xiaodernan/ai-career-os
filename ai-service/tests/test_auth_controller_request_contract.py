@@ -5,7 +5,8 @@ two password-recovery routes, and the address move's confirmation. Seven JSON bo
 bound with ``@Valid``:
 
 - ``POST /register`` -> ``RegisterRequest(email, password, displayName)``, answered 201
-- ``POST /login`` -> ``LoginRequest(email, password)``
+- ``POST /login`` -> ``LoginRequest(email, password, code?)`` -- ``code`` is the second
+  factor's answer (36.2), optional because an account with no factor sends two keys
 - ``POST /refresh`` -> ``RefreshTokenRequest(refreshToken)``, written by ``runRefresh``'s raw
   fetch (the only /auth/refresh caller in the app)
 - ``POST /logout`` -> ``RefreshTokenRequest``, written by ``authApi.logout`` -- one record,
@@ -87,7 +88,7 @@ ROUTE_BODIES = {
 
 RECORD_FILES = {
     "RegisterRequest": (REGISTER_DTO, ["email", "password", "displayName"]),
-    "LoginRequest": (LOGIN_DTO, ["email", "password"]),
+    "LoginRequest": (LOGIN_DTO, ["email", "password", "code"]),
     "RefreshTokenRequest": (TOKEN_DTO, ["refreshToken"]),
     "ForgotPasswordRequest": (FORGOT_DTO, ["email"]),
     "ResetPasswordRequest": (RESET_DTO, ["token", "newPassword"]),
@@ -103,6 +104,7 @@ GUARD_LINES = {
     "LoginRequest": [
         "@NotBlank @Email @Size(max = 255) String email",
         "@NotBlank @Size(max = 72) String password",
+        "@Size(max = 32) String code",
     ],
     "RefreshTokenRequest": ["@NotBlank @Size(max = 512) String refreshToken"],
     "ForgotPasswordRequest": ["@NotBlank @Email @Size(max = 255) String email"],
@@ -338,8 +340,15 @@ def test_the_payload_types_carry_exactly_the_record_fields():
         "RegisterPayload no longer extends LoginPayload; the key union below assumes it does"
     )
     assert login_iface == ["email", "password"], (
-        "LoginPayload carries %s but LoginRequest binds ['email', 'password'] -- register and "
-        "login post `payload` verbatim, so this interface IS the wire" % login_iface
+        "LoginPayload carries %s, not the two keys every account sends -- the second-step key "
+        "joins it with the sign-in screen (36.4), and this assertion moves in the same change"
+        % login_iface
+    )
+    assert java_record_fields("LoginRequest", read(LOGIN_DTO)) == login_iface + ["code"], (
+        "LoginRequest binds %s; the only field beyond the payload's two is the optional code, "
+        "so a fourth wire key has to redden here -- passing `payload` verbatim means the "
+        "interface's keys are what the account actually sends" % java_record_fields(
+            "LoginRequest", read(LOGIN_DTO))
     )
     assert sorted(register_iface + login_iface) == ["displayName", "email", "password"], (
         "RegisterPayload's own members are %s; with LoginPayload that must be exactly "
@@ -370,7 +379,9 @@ def test_the_credential_screens_mutate_exactly_the_payload_keys():
     login_keys = object_literal_keys(braced_arg_after(form, "login.mutate("))
     register_keys = object_literal_keys(braced_arg_after(form, "register.mutate("))
     assert login_keys == ["email", "password"], (
-        "the sign-in screen mutates %s; LoginRequest binds ['email', 'password']" % login_keys
+        "the sign-in screen mutates %s; it sends the two keys every account sends until the "
+        "second-step screen lands (36.4), while LoginRequest already accepts the optional code"
+        % login_keys
     )
     assert sorted(register_keys) == ["displayName", "email", "password"], (
         "the register screen mutates %s; RegisterRequest binds ['email', 'password', "

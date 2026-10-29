@@ -2771,7 +2771,7 @@ password in the database.
   one. A blank `app.security.mfa-secret` refuses a prod boot (the same guard as the
   mail-link secret), and the dev default is the published one the guard names.
 
-- [ ] **36.2** A login cannot pass with the password alone.
+- [x] **36.2** A login cannot pass with the password alone.
 
   `LoginRequest` gains an optional `code`. When the account is enrolled,
   `AuthService.login` checks the password first and then the code — or a recovery
@@ -2783,6 +2783,29 @@ password in the database.
   is still `INVALID_CREDENTIALS`, and a wrong code never says whether the password
   was right. The limiter gains an MFA bucket so guessing six digits is as
   expensive as guessing a password.
+
+  Landed as specified, with three decisions the outline left open. Login became a
+  writing transaction (`@Transactional`, not `readOnly`), because a verified code
+  moves `last_used_step` or burns a recovery row and those writes must commit with
+  the session they paid for; a login that fails afterwards spends nothing. The
+  MFA bucket covers exactly the route that judges a code —
+  `POST /api/v1/me/mfa/activate`, whose every miss can cost eleven BCrypt
+  comparisons — and is keyed by the signed-in account, the one identity a stolen
+  session cannot rotate; the status read and seed minting stay outside it on
+  purpose. And `SECURITY.md` spells the identity `per signed-in user`, which the
+  limiter census reads as a fourth identity distinct from the AI bucket's `per
+  user`: the reader is told which knob counts an account's guesses and which
+  counts a person's model calls.
+
+  Measured: the new `AuthServiceLoginTest` (6), six new `MfaServiceTest` cases
+  (16 total), `ApiErrorCodeCensusTest` (4, the two new names frozen),
+  `RateLimitFilterTest` (12) and `RateLimitFilterDecisionTest` (4, the `mfa` key
+  and its own ceiling) all green; `AuthFlowIT` (9) drives enroll → activate →
+  `MFA_REQUIRED` → `MFA_INVALID` → right code → replayed code refused → recovery
+  code accepted once → reuse refused against the real stack, and `RateLimitIT` (5)
+  sends five verdicts then reads a 429. The limiter census is 10/10 green over
+  four ceilings and 29 carriers, and the browser's error table carries both new
+  codes in both languages.
 
 - [ ] **36.3** Recovery codes can be reissued, and the account can turn the door off.
 

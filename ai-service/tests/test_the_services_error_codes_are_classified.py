@@ -132,6 +132,14 @@ SAME_MEANING: frozenset[str] = frozenset({
     # so the reader is told the link is not valid or has expired, which is
     # true of every one of the four cases.
     "EMAIL_CHANGE_INVALID",
+    # Sign-in's "Invalid email or password" and re-authentication's "Invalid
+    # credentials" are one refusal at two doors: the typed password is not this
+    # account's. The sign-in wording is deliberately vague so a stranger learns
+    # nothing about which addresses carry an account; the re-auth sites (MFA
+    # activation, 36.1) speak to a caller who already holds a session, where the
+    # vagueness would only hide the field they just mistyped. The reader's move
+    # is the same at either door -- type the password again.
+    "INVALID_CREDENTIALS",
 })
 
 

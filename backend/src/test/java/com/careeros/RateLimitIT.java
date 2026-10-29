@@ -79,6 +79,38 @@ class RateLimitIT extends AbstractIntegrationTest {
     }
 
     @Test
+    void mfaActivationJudgesFiveCodesPerAccountThenReturns429() throws Exception {
+        // A six-digit code is a million possibilities, so the meter is the account's, not the
+        // address's: five verdicts in a minute, then the sixth answer is the limiter's.
+        String email = "rl-mfa-" + UUID.randomUUID() + "@example.com";
+        MvcResult registration = mvc.perform(post("/api/v1/auth/register")
+                        .header("X-Forwarded-For", "10.88.6.12")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(JSON.writeValueAsString(Map.of(
+                                "email", email,
+                                "password", "Str0ngPassphrase!23",
+                                "displayName", "Factor Tester"))))
+                .andExpect(status().isCreated())
+                .andReturn();
+        String token = JSON.readTree(registration.getResponse().getContentAsString())
+                .path("data").path("tokens").path("accessToken").asText();
+        String proof = JSON.writeValueAsString(Map.of(
+                "password", "Str0ngPassphrase!23",
+                "code", "000000"));
+        for (int i = 1; i <= 5; i++) {
+            // No enrollment exists, so the code is judged and refused -- but it was judged,
+            // which is the work the ceiling meters.
+            mvc.perform(post("/api/v1/me/mfa/activate").header("Authorization", "Bearer " + token)
+                            .contentType(MediaType.APPLICATION_JSON).content(proof))
+                    .andExpect(status().isBadRequest());
+        }
+        mvc.perform(post("/api/v1/me/mfa/activate").header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON).content(proof))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.error.code").value("RATE_LIMITED"));
+    }
+
+    @Test
     void healthReportsDbAndRedisThroughEnvelope() throws Exception {
         mvc.perform(get("/api/v1/health"))
                 .andExpect(status().isOk())

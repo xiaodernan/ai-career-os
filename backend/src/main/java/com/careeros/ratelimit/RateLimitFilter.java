@@ -22,6 +22,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
  *  - /api/v1/auth/**  : per client IP, app.ratelimit.auth-per-minute (default 10/min)
  *  - AI-costing paths : per authenticated user (falls back to IP), app.ratelimit.ai-per-minute (default 30/min)
  *  - mail-sending account routes : per authenticated user (falls back to IP), app.ratelimit.mail-per-minute (default 5/min)
+ *  - code-judging MFA routes : per signed-in user (falls back to IP), app.ratelimit.mfa-per-minute (default 5/min)
  * Registered as a plain filter inside the security chain (see SecurityConfig) and toggled by
  * app.ratelimit.enabled. Over-limit requests receive HTTP 429 with the standard envelope, code RATE_LIMITED.
  *
@@ -45,6 +46,12 @@ import org.springframework.security.core.context.SecurityContextHolder;
  * mailbox and a warning to the current one, so every call spends two letters. An account that can
  * call it without limit can use the product to write to any unregistered address it names.
  *
+ * <p>The MFA bucket meters guessing, not spending. A six-digit code is a million possibilities and
+ * one activation attempt costs up to ten BCrypt comparisons, so the ceiling is keyed by the account
+ * whose factor is being probed -- a stolen session is exactly the caller it must not outlast. The
+ * status read and the seed minting stay outside: a settings screen polls one and may re-ask the
+ * other, and neither answers a verdict on a code.
+ *
  * <p>Every decision this filter makes moves a counter tagged by the bucket that made it
  * (see {@link RateLimitMetrics}), so a ceiling refusing traffic is a reading rather than a
  * client's word for it.
@@ -54,6 +61,7 @@ public class RateLimitFilter extends org.springframework.web.filter.OncePerReque
     static final String AUTH = "auth";
     static final String AI = "ai";
     static final String MAIL = "mail";
+    static final String MFA = "mfa";
 
     private final AppProperties props;
     private final RedisSlidingWindowRateLimiter limiter;
@@ -80,6 +88,7 @@ public class RateLimitFilter extends org.springframework.web.filter.OncePerReque
         int limit = switch (bucket) {
             case AI -> props.getRatelimit().getAiPerMinute();
             case MAIL -> props.getRatelimit().getMailPerMinute();
+            case MFA -> props.getRatelimit().getMfaPerMinute();
             default -> props.getRatelimit().getAuthPerMinute();
         };
         String identity = AUTH.equals(bucket) ? clientIp(request) : userOrIp(request);
@@ -101,6 +110,9 @@ public class RateLimitFilter extends org.springframework.web.filter.OncePerReque
 
     /** The bucket for a URI, or null when the path is not limited. Package-private for tests. */
     static String ruleFor(String uri) {
+        if (checksMfaCode(uri)) {
+            return MFA;
+        }
         if (uri.startsWith("/api/v1/auth")) {
             return AUTH;
         }
@@ -108,6 +120,15 @@ public class RateLimitFilter extends org.springframework.web.filter.OncePerReque
             return MAIL;
         }
         return isAiCost(uri) ? AI : null;
+    }
+
+    /**
+     * The signed-in route that judges a second-factor code. Kept narrow on purpose: the status read
+     * is polled by a settings screen and minting a seed answers a new QR code, so only the route
+     * that answers "right or wrong" is metered.
+     */
+    static boolean checksMfaCode(String uri) {
+        return uri.equals("/api/v1/me/mfa/activate") || uri.equals("/api/v1/me/mfa/activate/");
     }
 
     /**

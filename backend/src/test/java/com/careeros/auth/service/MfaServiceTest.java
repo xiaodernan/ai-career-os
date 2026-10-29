@@ -206,11 +206,113 @@ class MfaServiceTest {
         assertThat(MfaService.normalizeRecoveryCode(null)).isEmpty();
     }
 
+    @Test
+    void anAccountWithNoActiveFactorSignsInUnasked() {
+        when(mfa.findByUserId(ALICE)).thenReturn(Optional.empty());
+        service.proveLogin(ALICE, null, NOW);
+
+        UserMfa pending = pending(Totp.newSecret());
+        when(mfa.findByUserId(ALICE)).thenReturn(Optional.of(pending));
+        service.proveLogin(ALICE, null, NOW);
+
+        // A seed nobody proved cannot demand a code, and a login writes nothing of its own.
+        verify(mfa, never()).save(any());
+        verify(recoveryCodes, never()).findByUserId(any());
+    }
+
+    @Test
+    void anActiveFactorDemandsACodeWhenTheLoginSendsNone() {
+        UserMfa active = active(Totp.newSecret());
+        when(mfa.findByUserId(ALICE)).thenReturn(Optional.of(active));
+
+        for (String missing : new String[] {null, "", "   "}) {
+            assertThatThrownBy(() -> service.proveLogin(ALICE, missing, NOW))
+                    .isInstanceOfSatisfying(ApiException.class, e ->
+                            assertThat(e.code()).isEqualTo(ApiErrorCode.MFA_REQUIRED));
+        }
+        verify(mfa, never()).save(any());
+    }
+
+    @Test
+    void aRightCodeMovesTheSpentStepForward() {
+        String secret = Totp.newSecret();
+        UserMfa active = active(secret);
+        active.setLastUsedStep(Totp.stepAt(NOW) - 3);
+        when(mfa.findByUserId(ALICE)).thenReturn(Optional.of(active));
+
+        service.proveLogin(ALICE, Totp.code(secret, Totp.stepAt(NOW)), NOW);
+
+        assertThat(active.getLastUsedStep()).isEqualTo(Totp.stepAt(NOW));
+        verify(mfa).save(active);
+        verify(recoveryCodes, never()).save(any());
+    }
+
+    @Test
+    void aCodeFromAStepTheAccountAlreadySpentIsRefused() {
+        String secret = Totp.newSecret();
+        UserMfa active = active(secret);
+        active.setLastUsedStep(Totp.stepAt(NOW));
+        when(mfa.findByUserId(ALICE)).thenReturn(Optional.of(active));
+
+        assertThatThrownBy(() -> service.proveLogin(ALICE, Totp.code(secret, Totp.stepAt(NOW)), NOW))
+                .isInstanceOfSatisfying(ApiException.class, e ->
+                        assertThat(e.code()).isEqualTo(ApiErrorCode.MFA_INVALID));
+
+        // The mark only moves forward; a replayed code changes nothing.
+        assertThat(active.getLastUsedStep()).isEqualTo(Totp.stepAt(NOW));
+        verify(mfa, never()).save(any());
+    }
+
+    @Test
+    void aRecoveryCodeAnswersOnceAndThenIsSpent() {
+        String secret = Totp.newSecret();
+        UserMfa active = active(secret);
+        when(mfa.findByUserId(ALICE)).thenReturn(Optional.of(active));
+
+        UserMfaRecoveryCode printed = new UserMfaRecoveryCode();
+        printed.setUserId(ALICE);
+        printed.setCodeHash(encoder.encode(MfaService.normalizeRecoveryCode("abcd-ef23-4567-ghij")));
+        when(recoveryCodes.findByUserId(ALICE)).thenReturn(List.of(printed));
+
+        service.proveLogin(ALICE, "ABCD-EF23-4567-GHIJ", NOW);
+        assertThat(printed.getUsedAt().toInstant()).isEqualTo(NOW);
+        verify(recoveryCodes).save(printed);
+
+        assertThatThrownBy(() -> service.proveLogin(ALICE, "abcd ef23 4567 ghij", NOW))
+                .isInstanceOfSatisfying(ApiException.class, e ->
+                        assertThat(e.code()).isEqualTo(ApiErrorCode.MFA_INVALID));
+    }
+
+    @Test
+    void aWrongCodeTouchesNothing() {
+        String secret = Totp.newSecret();
+        UserMfa active = active(secret);
+        active.setLastUsedStep(Totp.stepAt(NOW) - 1);
+        when(mfa.findByUserId(ALICE)).thenReturn(Optional.of(active));
+
+        String right = Totp.code(secret, Totp.stepAt(NOW));
+        String wrong = right.equals("000000") ? "000001" : "000000";
+
+        assertThatThrownBy(() -> service.proveLogin(ALICE, wrong, NOW))
+                .isInstanceOfSatisfying(ApiException.class, e ->
+                        assertThat(e.code()).isEqualTo(ApiErrorCode.MFA_INVALID));
+
+        assertThat(active.getLastUsedStep()).isEqualTo(Totp.stepAt(NOW) - 1);
+        verify(mfa, never()).save(any());
+        verify(recoveryCodes, never()).save(any());
+    }
+
     private UserMfa pending(String secret) {
         UserMfa row = new UserMfa();
         row.setUserId(ALICE);
         row.setSecretCiphertext(cipher.seal(secret));
         row.setActive(false);
+        return row;
+    }
+
+    private UserMfa active(String secret) {
+        UserMfa row = pending(secret);
+        row.setActive(true);
         return row;
     }
 }

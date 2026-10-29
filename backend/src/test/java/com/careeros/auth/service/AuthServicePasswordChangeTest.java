@@ -54,7 +54,7 @@ class AuthServicePasswordChangeTest {
         resetTokens = mock(PasswordResetTokenRepository.class);
         tokenService = mock(TokenService.class);
         service = new AuthService(users, mock(UserProfileRepository.class), resetTokens, tokenService,
-                encoder, mock(EmailSender.class), "https://careeros.example");
+                encoder, mock(EmailSender.class), mock(MfaService.class), "https://careeros.example");
 
         alice = new User();
         alice.setId(ALICE);

@@ -126,6 +126,7 @@ app:
     auth-per-minute: ${RATELIMIT_AUTH_PER_MINUTE:10}
     ai-per-minute: ${RATELIMIT_AI_PER_MINUTE:30}
     mail-per-minute: ${RATELIMIT_MAIL_PER_MINUTE:5}
+    mfa-per-minute: ${RATELIMIT_MFA_PER_MINUTE:5}
   upload:
     max-file-size-bytes: 20971520
     presigned-url-ttl-seconds: 600

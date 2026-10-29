@@ -46,6 +46,20 @@ public enum ApiErrorCode {
      * phone's current number again).
      */
     MFA_CODE_INVALID(HttpStatus.UNAUTHORIZED),
+    /**
+     * The password opened an account whose second factor is on, and the login sent no code: the
+     * reader is being told a code is needed before the browser shows a field for it. Separate
+     * from {@code MFA_INVALID} because the answer is "type the six digits", not "that one was
+     * wrong" -- and only asked after the password matched, so a stranger learns nothing.
+     */
+    MFA_REQUIRED(HttpStatus.UNAUTHORIZED),
+    /**
+     * A login's code is not this account's: mistyped, from a clock too far off, TOTP code
+     * repeated inside a step the account already spent, or a recovery code already used. One
+     * code for all four because the reader's next move is the same -- read the phone again, or
+     * take another printed code.
+     */
+    MFA_INVALID(HttpStatus.UNAUTHORIZED),
     /** The typed email is not this account's: the deliberate half of an erasure did not happen. */
     CONFIRMATION_MISMATCH(HttpStatus.BAD_REQUEST),
     TOKEN_INVALID(HttpStatus.UNAUTHORIZED),

@@ -145,7 +145,7 @@ that rejects invented skills/numbers not present in the source evidence.
   headers exist under `next start` and the E2E stack too, not only in a
   deployment's reverse proxy.
 - `ratelimit/RateLimitFilter` applies a Redis-backed sliding-window limit; it
-  runs after JWT so AI-heavy and mail-sending endpoints can key limits off the user id.
+  runs after JWT so AI-heavy, mail-sending and code-judging endpoints can key limits off the user id.
   `ruleFor` is the one author of a path's bucket: the ceiling, the identity and
   the Redis key prefix are all read off its answer.
   - `/api/v1/auth/**` — 10/min per client IP.
@@ -167,6 +167,14 @@ that rejects invented skills/numbers not present in the source evidence.
     call those three without limit — the exact hole this list exists to close.
     Cheap reads (search, listings, dashboards) are deliberately excluded so browsing
     is not throttled. Covered by `RateLimitFilterTest`.
+  - Code-judging MFA routes — 5/min per signed-in user. `POST /me/mfa/activate`
+    verifies a six-digit code against the sealed seed and, when the digits miss,
+    tries the presented string as one of ten printed recovery codes — up to eleven
+    BCrypt comparisons per call, and a six-digit space is only a million guesses.
+    `RateLimitFilter.checksMfaCode` names the route, the bucket is keyed by the
+    account id (a stolen session is exactly the caller this must outlast), and the
+    status read and seed minting stay outside the bucket: a settings screen polls
+    the one and may re-ask the other.
   - **Fails open** when Redis is unavailable, logged at WARN — the limiter never
     locks anyone out. The client timeout is pinned to 500ms so that branch is
     actually reached promptly: with the defaults in effect a Redis outage left

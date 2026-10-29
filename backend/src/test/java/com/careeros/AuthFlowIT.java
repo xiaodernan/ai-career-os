@@ -219,6 +219,94 @@ class AuthFlowIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.error.code").value("RESET_TOKEN_INVALID"));
     }
 
+    /**
+     * The second step, end to end (roadmap 36.2). The unit tests pin each branch against mocks;
+     * this walks the real seed, cipher, repositories and login path: the password alone stops
+     * with {@code MFA_REQUIRED}, a wrong code with {@code MFA_INVALID}, the phone's code opens
+     * the door exactly once, and a printed recovery code opens it once and never again.
+     *
+     * <p>Activation spends the step its code answers for, so the login code is computed one step
+     * ahead -- what the reader's phone shows after the setup screen closes. Everything on one IP
+     * stays under the auth bucket: one registration and six sign-ins.
+     */
+    @Test
+    void anEnrolledAccountCannotSignInWithThePasswordAlone() throws Exception {
+        String ip = freshIp();
+        String email = "mfa-login-it@example.com";
+        String password = "Str0ngPassphrase!23";
+        String accessToken = register(ip, email).path("tokens").path("accessToken").asText();
+
+        String enrollment = mvc.perform(post("/api/v1/me/mfa/enroll")
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        String secret = JSON.readTree(enrollment).path("data").path("secret").asText();
+
+        long step = com.careeros.auth.mfa.Totp.stepAt(java.time.Instant.now());
+        String activation = mvc.perform(post("/api/v1/me/mfa/activate")
+                        .header("Authorization", "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(JSON.writeValueAsString(java.util.Map.of(
+                                "password", password,
+                                "code", com.careeros.auth.mfa.Totp.code(secret, step)))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        String recoveryCode = JSON.readTree(activation).path("data").path("recoveryCodes").get(0).asText();
+
+        String loginBody = "{\"email\":\"%s\",\"password\":\"%s\"%s}";
+        // The password opens nothing by itself, and a wrong password is still the old answer --
+        // the two are asked in that order, so the factor never tells a stranger anything.
+        mvc.perform(auth(post("/api/v1/auth/login"), ip)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(loginBody.formatted(email, "NotThePassword!1", "")))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error.code").value("INVALID_CREDENTIALS"));
+        mvc.perform(auth(post("/api/v1/auth/login"), ip)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(loginBody.formatted(email, password, "")))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error.code").value("MFA_REQUIRED"));
+
+        String laterCode = com.careeros.auth.mfa.Totp.code(secret, step + 1);
+        String wrongCode = laterCode.equals("000000") ? "000001" : "000000";
+        mvc.perform(auth(post("/api/v1/auth/login"), ip)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(loginBody.formatted(email, password,
+                                ",\"code\":\"" + wrongCode + "\"")))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error.code").value("MFA_INVALID"));
+
+        mvc.perform(auth(post("/api/v1/auth/login"), ip)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(loginBody.formatted(email, password,
+                                ",\"code\":\"" + laterCode + "\"")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.user.email").value(email));
+
+        // RFC 6238 repeats one number for a whole window; a watched code must not open a second
+        // session even though its digits are still right.
+        mvc.perform(auth(post("/api/v1/auth/login"), ip)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(loginBody.formatted(email, password,
+                                ",\"code\":\"" + laterCode + "\"")))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error.code").value("MFA_INVALID"));
+
+        // The printed fallback answers once, in the spelling it was printed in.
+        mvc.perform(auth(post("/api/v1/auth/login"), ip)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(loginBody.formatted(email, password,
+                                ",\"code\":\"" + recoveryCode + "\"")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.user.email").value(email));
+        mvc.perform(auth(post("/api/v1/auth/login"), ip)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(loginBody.formatted(email, password,
+                                ",\"code\":\"" + recoveryCode + "\"")))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error.code").value("MFA_INVALID"));
+    }
+
     @Test
     void validationFailureReturnsStructuredDetails() throws Exception {
         String ip = freshIp();

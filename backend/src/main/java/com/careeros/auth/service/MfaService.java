@@ -157,6 +157,61 @@ public class MfaService {
                 .orElse(new Status(false, false));
     }
 
+    /** Roadmap 36.2: the second factor as a login reads it, after the password has matched. */
+    @Transactional
+    public void proveLogin(UUID userId, String code) {
+        proveLogin(userId, code, Instant.now());
+    }
+
+    /**
+     * The login's half of the door. An account with no enabled factor passes unasked; an enabled
+     * one demands a code ({@code MFA_REQUIRED}) and refuses a wrong one ({@code MFA_INVALID}).
+     * A TOTP code that verifies moves the account's spent-step mark forward, and a recovery code
+     * that answers is burned -- both writes ride the login's own transaction, so a login that
+     * fails later does not spend a code the reader never got the benefit of.
+     *
+     * <p>The step mark is what makes a watched code useless: RFC 6238 repeats one number for a
+     * whole 30-second window, so a shoulder-surfed code would otherwise open a second session.
+     * A code from a step at or below the mark is refused even though its digits are right --
+     * and it is refused as {@code MFA_INVALID} rather than as a replay-specific answer, because
+     * "read the phone again" is the reader's whole next move either way.
+     */
+    void proveLogin(UUID userId, String code, Instant now) {
+        UserMfa row = mfa.findByUserId(userId).filter(UserMfa::isActive).orElse(null);
+        if (row == null) {
+            return;
+        }
+        if (code == null || code.isBlank()) {
+            throw new ApiException(ApiErrorCode.MFA_REQUIRED,
+                    "This account asks for a six-digit code as a second step");
+        }
+        OptionalLong matched = Totp.match(cipher.open(row.getSecretCiphertext()), code, now,
+                Totp.DEFAULT_SKEW_STEPS);
+        if (matched.isPresent()) {
+            if (row.getLastUsedStep() != null && matched.getAsLong() <= row.getLastUsedStep()) {
+                throw new ApiException(ApiErrorCode.MFA_INVALID,
+                        "That code is not right or was already used");
+            }
+            row.setLastUsedStep(matched.getAsLong());
+            mfa.save(row);
+            return;
+        }
+        String normalized = normalizeRecoveryCode(code);
+        if (!normalized.isEmpty()) {
+            for (UserMfaRecoveryCode candidate : recoveryCodes.findByUserId(userId)) {
+                if (candidate.getUsedAt() != null) {
+                    continue;
+                }
+                if (passwordEncoder.matches(normalized, candidate.getCodeHash())) {
+                    candidate.setUsedAt(OffsetDateTime.ofInstant(now, ZoneOffset.UTC));
+                    recoveryCodes.save(candidate);
+                    return;
+                }
+            }
+        }
+        throw new ApiException(ApiErrorCode.MFA_INVALID, "That code is not right or was already used");
+    }
+
     /**
      * The one spelling a recovery code is hashed and verified under: lowercase, no spaces or
      * hyphens. Printing adds the hyphens and verification strips them, so the reader's keyboard

@@ -105,7 +105,10 @@ class ApiErrorCodeCensusTest {
                 // 36.1: a second factor that is already on, an account that never started one, and
                 // a code that is not the phone's -- three different answers, so the settings card
                 // can tell the reader whether to stop, start, or retype.
-                "MFA_ALREADY_ACTIVE", "MFA_CODE_INVALID", "MFA_NOT_ENROLLED",
+                // 36.2: the login's two answers -- a code is needed (the browser shows the field)
+                // and a code is wrong (the reader reads the phone again) -- asked only after the
+                // password matched, so a stranger never hears either.
+                "MFA_ALREADY_ACTIVE", "MFA_CODE_INVALID", "MFA_INVALID", "MFA_NOT_ENROLLED", "MFA_REQUIRED",
                 // 20.1: each refusal of a malformed nightly report has one meaning, so each
                 // got its own code rather than one code with three sentences.
                 "NIGHTLY_REPORT_CLOCK_REVERSED", "NIGHTLY_REPORT_STATUS_INVALID", "NIGHTLY_REPORT_SUMMARY_TOO_LARGE",

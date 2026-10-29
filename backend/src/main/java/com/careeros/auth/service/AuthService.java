@@ -34,6 +34,7 @@ public class AuthService {
     private final TokenService tokenService;
     private final PasswordEncoder passwordEncoder;
     private final EmailSender emailSender;
+    private final MfaService mfa;
 
     /**
      * Where the browser app is served, so the reset mail can carry a link the user can click
@@ -45,6 +46,7 @@ public class AuthService {
     public AuthService(UserRepository users, UserProfileRepository profiles,
                        PasswordResetTokenRepository resetTokens, TokenService tokenService,
                        PasswordEncoder passwordEncoder, EmailSender emailSender,
+                       MfaService mfa,
                        @Value("${app.web.base-url:http://localhost:3000}") String webBaseUrl) {
         this.users = users;
         this.profiles = profiles;
@@ -52,6 +54,7 @@ public class AuthService {
         this.tokenService = tokenService;
         this.passwordEncoder = passwordEncoder;
         this.emailSender = emailSender;
+        this.mfa = mfa;
         this.webBaseUrl = webBaseUrl.endsWith("/") ? webBaseUrl.substring(0, webBaseUrl.length() - 1) : webBaseUrl;
     }
 
@@ -72,7 +75,17 @@ public class AuthService {
         return user;
     }
 
-    @Transactional(readOnly = true)
+    /**
+     * The sign-in (roadmap 36.2): password first, then the second factor the password opened.
+     * The password check stays first and its answer stays {@code INVALID_CREDENTIALS} even on
+     * an enrolled account, so a stranger learns nothing about which accounts carry a factor.
+     * Only after the password matches does a missing or wrong code get its own answer
+     * ({@code MFA_REQUIRED} / {@code MFA_INVALID}), which is the browser's cue to ask for one.
+     *
+     * <p>Not {@code readOnly}: a verified code moves the account's spent-step mark or burns a
+     * printed recovery code, and both writes must commit with the login they paid for.
+     */
+    @Transactional
     public User login(LoginRequest request) {
         User user = users.findByEmail(request.email().trim())
                 .filter(u -> passwordEncoder.matches(request.password(), u.getPasswordHash()))
@@ -80,6 +93,7 @@ public class AuthService {
         if (!user.isActive()) {
             throw new ApiException(ApiErrorCode.USER_DISABLED, "Account is disabled");
         }
+        mfa.proveLogin(user.getId(), request.code());
         return user;
     }
 

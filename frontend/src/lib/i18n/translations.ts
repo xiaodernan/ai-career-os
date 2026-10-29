@@ -1413,7 +1413,11 @@ export const translations = {
 
       MFA_CODE_INVALID: "That six-digit code is not right.",
 
+      MFA_INVALID: "That code is not right, or it was already used. Read the phone again, or take another printed code.",
+
       MFA_NOT_ENROLLED: "This account has not started setting up two-factor authentication.",
+
+      MFA_REQUIRED: "This account asks for a six-digit code as a second step. Type the code from your authenticator app, or one of your printed recovery codes.",
 
       NETWORK_ERROR: "Cannot reach the API — is the backend running?",
 
@@ -3722,7 +3726,11 @@ export const translations = {
 
       MFA_CODE_INVALID: "这个六位验证码不对。",
 
+      MFA_INVALID: "这个验证码不对，或者已经用过了。请再看一眼手机上的验证码，或换一张打印好的备用码。",
+
       MFA_NOT_ENROLLED: "这个账号还没有开始设置两步验证。",
+
+      MFA_REQUIRED: "这个账号需要第二步：六位验证码。请输入验证器应用里的验证码，或一张打印好的备用码。",
 
       NETWORK_ERROR: "连不上接口——后端在跑吗？",
 
