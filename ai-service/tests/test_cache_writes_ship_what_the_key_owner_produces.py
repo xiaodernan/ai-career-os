@@ -118,7 +118,9 @@ CLIENT_CALLS = {
               "invalidateQueries": 52, "removeQueries": 1, "setQueriesData": 2, "setQueryData": 5},
     ANALYTICS_HOOKS: {"invalidateQueries": 1},
     AUTH_HOOKS: {"clear": 2, "setQueryData": 2},
-    INGESTION_HOOKS: {"invalidateQueries": 7},
+    # 10 since 19.2's apply receipt: the write refreshes the feed and the run it
+    # started, plus the one run every other applied receipt belongs to.
+    INGESTION_HOOKS: {"invalidateQueries": 10},
     NOTIFICATION_HOOKS: {"setQueryData": 3},
     RESUMES_PAGE: {"invalidateQueries": 1},
     SOURCE_ACTIONS: {"invalidateQueries": 1},

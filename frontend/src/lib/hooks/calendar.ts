@@ -15,12 +15,10 @@ import type { CalendarLinkRow } from "@/lib/api/types";
  * for the life of the tab rather than persisted.
  */
 
-export const calendarLinkKey = ["calendar", "link"] as const;
-
 export function fetchCalendarLink(): Promise<CalendarLinkRow> {
   return api.get<CalendarLinkRow>(endpoints.calendarLink);
 }
 
 export function useCalendarLink() {
-  return useQuery({ queryKey: calendarLinkKey, queryFn: fetchCalendarLink });
+  return useQuery({ queryKey: ["calendar", "link"], queryFn: fetchCalendarLink });
 }

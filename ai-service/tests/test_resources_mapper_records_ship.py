@@ -465,8 +465,10 @@ def test_the_unbound_mappers_ban_would_find_these_mappers_if_it_read_this_file()
     population = re.search(r"assert len\(population\) == (\d+)", gate)
     # 44 rather than 43 since 19.6's `normalizeVoiceState` joined the field gate's census; this
     # file only echoes that pin, so the two move together or one of them is stale. 45 with
-    # 20.1's `normalizeNightlyReport`; 46 with 20.2's `normalizeNightlyVerdict`.
-    assert population and population.group(1) == "46", \
+    # 20.1's `normalizeNightlyReport`; 46 with 20.2's `normalizeNightlyVerdict`; 47 with
+    # `normalizeApplyResult`, the receipt reader 19.2 shipped without moving the pin -- the
+    # field gate's own comment records the same recovery.
+    assert population and population.group(1) == "47", \
         f"the ban's pinned normalize.ts population moved: {population and population.group(1)}"
 
 
