@@ -29,12 +29,20 @@ Two more populations have to fit inside the same bean. `docs/SECURITY.md` states
 default origin inside its transport bullet, which makes the document a carrier like any `${...:}` --
 and the one a developer reads before setting the variable -- and it lists the CORS methods and headers
 as a security property, `SecurityConfig.java` decides them, and the browser is the thing that
-must live inside them -- so what a browser sends is censused from `frontend/src` and checked in both
-directions: allowed, or one of the four headers the Fetch standard carries without a preflight; and
+must live inside them -- so what a browser sends is censused from the browser-side modules
+under `frontend/src` and checked in both directions: allowed, or one of the four headers the Fetch
+standard carries without a preflight; and
 anything the allow-list admits either sent by that browser or ledgered against the server-side sender
 that proves the entry is deliberate. `X-Internal-Token` is allowed although no browser sends it, and
 the ledger says so, because a reader auditing what a cross-origin request may carry needs that answer
 and the list alone does not give it.
+
+The Next middleware module is the one file the header census refuses by name. It runs on the
+server: the nonce and policy it writes decorate the request the Next server hands its own
+renderer, and the policy the browser enforces leaves on the response. Neither is a header a
+browser sends, so neither crosses a preflight. The refusal is proved rather than assumed by a
+case that reads the module and checks it is still that shape, and the browser census asserts
+the pair is gone from its own answer.
 """
 
 import re
@@ -76,6 +84,13 @@ PREFLIGHT_METHOD = "OPTIONS"
 SERVER_ONLY_HEADERS = {
     "x-internal-token": "shared secret the backend and ai-service present to each other",
 }
+
+# Next middleware runs on the server: the nonce and policy it writes decorate the request the Next
+# server hands its own renderer, and the policy the browser enforces leaves on the response. Neither
+# is a header a browser sends, so the browser census refuses this module by name --
+# `test_the_middleware_headers_are_server_side_and_not_browser_traffic` proves the refusal is about
+# that shape rather than a place a browser call moved into.
+SERVER_MODULES = {FRONTEND_SRC / "middleware.ts"}
 
 MIN_CARRIERS = 9
 MIN_LOOPBACK_URLS = 10
@@ -206,14 +221,18 @@ def setter_sites(name: str) -> list[tuple[str, int]]:
 
 
 def browser_header_sites() -> list[tuple[str, int, str]]:
-    """(file, line, header) for every header name shipped frontend code puts on a request.
+    """(file, line, header) for every header name shipped browser code puts on a request.
 
     Four shapes are read: `bag.set("Name", ...)`, `xhr.setRequestHeader("Name", ...)`,
     `headers.Name = ...` and a `headers` object literal. Every header the app sends reaches a
     preflight through one of them, so a name outside all four is a name no request carries.
+    `SERVER_MODULES` are refused by name: a module Next runs on the server cannot send a browser
+    request, and the control case below pins the file to that role.
     """
     sites: list[tuple[str, int, str]] = []
     for path, text in walk(FRONTEND_SRC, code_only=True):
+        if path in SERVER_MODULES:
+            continue
         for pattern in (HEADER_SETTER, SET_REQUEST_HEADER, HEADER_ASSIGN):
             for hit in pattern.finditer(text):
                 sites.append((path.name, _line_of(text, hit.start()), hit["name"]))
@@ -587,6 +606,32 @@ def test_every_header_the_browser_sends_is_allowed_and_every_allowed_header_has_
         assert senders, (
             f"{name} is ledgered as server-to-service ({reason!r}) but no backend or ai-service "
             f"source puts that header on a request, so the reason is a story")
+
+
+def test_the_middleware_headers_are_server_side_and_not_browser_traffic():
+    """The one file the header census refuses, pinned to the role the refusal names."""
+    path = FRONTEND_SRC / "middleware.ts"
+    assert SERVER_MODULES == {path}, (
+        f"the refusal list is {sorted(p.name for p in SERVER_MODULES)}; it was written for Next's "
+        f"middleware module, and a second entry needs its own case rather than a wider net")
+    text = read(path)
+    assert re.search(r"export (?:function|const) middleware\b", text), (
+        "the refused module no longer exports Next's middleware entry point, so nothing proves "
+        "Next is the thing that runs it")
+    assert "NextResponse.next(" in text, (
+        "the refused module no longer hands a decorated request to Next's renderer, so the "
+        "server-side reading of its headers is a story")
+    names = {hit["name"].lower() for hit in HEADER_SETTER.finditer(text)}
+    assert {"x-nonce", "content-security-policy"} <= names, (
+        f"the refused module sets {sorted(names)}, not the CSP nonce pair this refusal was written "
+        f"for; re-read the refusal rather than widen it")
+    assert not re.search(r"\bfetch\s*\(|XMLHttpRequest|setRequestHeader\(", text), (
+        "the refused module sends a browser-shaped request now, so a header it sets does reach a "
+        "preflight and the refusal would hide one the allow-list has to admit")
+    sent = {name.lower() for _f, _n, name in browser_header_sites()}
+    assert not ({"x-nonce", "content-security-policy"} & sent), (
+        "the browser census still reports the middleware's nonce pair as a header a browser sends, "
+        "so the refusal above is no longer in effect")
 
 
 def test_the_browser_stays_inside_the_allowed_methods_and_no_allowed_method_is_dead():

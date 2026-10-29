@@ -34,6 +34,13 @@ compose files and the interface each port is bound to lives in
 The read-oracle is deliberately generous: any uppercase token of three or more characters
 appearing in a source file counts as read. A phantom is therefore one that appears in no
 source at all, which is the only kind worth failing a doc over.
+
+One variable is the deliberate exception: `APP_HTTP_TRUST_FORWARDED_FOR` is a
+deployment-topology decision (off for a directly exposed backend, on behind a
+proxy), not a knob a checkout sets, and neither example carries it. It is
+ledgered by name against DEPLOYMENT.md's checklist, and the last case refuses a
+row the document has stopped naming, the code has stopped reading, or an example
+has started declaring, so the exemption cannot outlive its sentence.
 """
 
 import re
@@ -60,6 +67,16 @@ SKIP_DIRS = {"node_modules", "__pycache__", ".venv", "dist", ".next", "target",
 COMPOSE_DERIVED = {
     "MINIO_ACCESS_KEY": "prod compose maps it from MINIO_ROOT_USER",
     "MINIO_SECRET_KEY": "prod compose maps it from MINIO_ROOT_PASSWORD",
+}
+
+# Variables application.yml reads that no env example carries on purpose: a deployment decision
+# about the network the stack sits behind, not a value a checkout sets. DEPLOYMENT.md's production
+# checklist is where an operator states it, and the last case below refuses a row that document has
+# stopped naming.
+DOC_DECLARED = {
+    "APP_HTTP_TRUST_FORWARDED_FOR": (
+        "off is the only safe value for a directly exposed backend, and behind a proxy the "
+        "checklist turns it on; DEPLOYMENT.md carries it instead of an example"),
 }
 
 
@@ -114,7 +131,7 @@ def doc_containers() -> set[str]:
 
 
 def test_every_variable_the_backend_reads_is_declared_in_the_env_example():
-    missing = sorted(backend_reads() - declared(ENV_EXAMPLE))
+    missing = sorted(backend_reads() - declared(ENV_EXAMPLE) - set(DOC_DECLARED))
     assert missing == [], (
         f"application.yml reads {missing} but .env.example never declares them, and "
         f"DEPLOYMENT.md calls that file the single source of truth for the variable list")
@@ -122,11 +139,33 @@ def test_every_variable_the_backend_reads_is_declared_in_the_env_example():
 
 def test_every_variable_the_backend_reads_reaches_the_production_example():
     """`.env.prod` may leave a variable out only when the prod compose supplies it."""
-    missing = sorted(backend_reads() - declared(ENV_PROD_EXAMPLE) - set(COMPOSE_DERIVED))
+    missing = sorted(backend_reads() - declared(ENV_PROD_EXAMPLE) - set(COMPOSE_DERIVED)
+                     - set(DOC_DECLARED))
     assert missing == [], (
         f"application.yml reads {missing} but neither .env.prod.example declares them nor "
         f"docker-compose.prod.yml sets them, so a production stack falls back to the "
         f"development default")
+
+
+def test_each_doc_declared_variable_is_read_and_named_where_the_doc_says():
+    """The exception list is a ledger, not a hiding place: every row is still a live variable."""
+    doc = read(DEPLOYMENT)
+    problems = []
+    for name, reason in sorted(DOC_DECLARED.items()):
+        if len(reason) <= 20:
+            problems.append(f"{name}'s reason does not say where a deployment states it")
+        if name not in backend_reads():
+            problems.append(
+                f"{name} is ledgered as doc-declared, but application.yml no longer reads it")
+        if name not in doc:
+            problems.append(
+                f"{name} is ledgered as doc-declared, but DEPLOYMENT.md never names it")
+        if name in declared(ENV_EXAMPLE) or name in declared(ENV_PROD_EXAMPLE):
+            problems.append(
+                f"{name} is ledgered as doc-declared, but an env example declares it now")
+    assert problems == [], (
+        "\n".join(problems) + "\n-- a doc-declared row has to name the document that declares it, "
+        "and it stops being an exception the moment an example carries the variable")
 
 
 def test_no_env_example_declares_a_variable_nothing_reads():

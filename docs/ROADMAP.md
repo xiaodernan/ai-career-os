@@ -1918,6 +1918,49 @@ where no proxy exists.
   and the gate reads that document rather than waving the var through. The
   census runs 7/7.)
 
+- [x] **31.6** rep: the censuses the session and security units outran.
+
+  (31.5 closed with one census repaired and the ai-service suite still red in
+  four more populations, across five gates. None was a product defect: each was
+  a pin that had stopped describing the app while the unit that moved the
+  population ran its own green. 30.5's split of `NOT_FOUND` into a session row
+  and a mail link added two enum constants and the 404 gate still read
+  twenty-nine. 31.4 turned `userOrIp` from a static helper into an instance
+  method that reads the declared-proxy switch, and two gates anchored on
+  `private static String userOrIp`. 31.2's middleware puts a nonce and a policy
+  on the request Next hands its own renderer, and the browser-header census read
+  them as headers a browser sends. And 31.4 re-wrapped SECURITY.md's measurement
+  so its `RATELIMIT_AUTH_PER_MINUTE=3` row no longer shared a line with the
+  sentence that excuses it, stated 429 twice in a file pinned at once, and added
+  `app.http.trust-forwarded-for` to a yml whose gate reconciles every read
+  against the env examples — which are a checkout's knobs, not a deployment's
+  topology.
+
+  The 404 table reads thirty-one constants (one route, thirty record names) and
+  the docstring's "thirty places" became thirty-two. Both limiter gates read the
+  helper as it is written now. SECURITY.md's second measurement is a site the
+  429 census should count, so its pin is two and the floor is the measured nine —
+  the setter excluded, five prose sentences and the fixture's four detection
+  strings; the measurement sentence and its `=3` figure share a line again, and
+  the ledger's dead-entry check still proves it excuses exactly one row. The
+  header census refuses `frontend/src/middleware.ts` by name through
+  `SERVER_MODULES`, and a control pins the refusal to the file's role: it
+  exports Next's middleware, decorates via `NextResponse.next`, sets exactly the
+  CSP/nonce pair, sends no fetch/XHR/setRequestHeader, and the pair is absent
+  from the fifteen browser sites the census reads; a mutant with a `fetch(...)`
+  inserted flips the detector. The env gate gains `DOC_DECLARED`:
+  `APP_HTTP_TRUST_FORWARDED_FOR` is reconciled three ways — the yml reads it,
+  DEPLOYMENT.md names it, neither example declares it — and a row that loses any
+  of the three goes red; DEPLOYMENT.md's "single source of truth" sentence now
+  names the exception instead of overclaiming.
+
+  The five gates run 40/40. The full suite at this measurement answers 11
+  failed / 1907 passed / 1 skipped, and all eleven are the three
+  frontend-reading censuses whose populations moved with the concurrent
+  session's in-flight `ingestion.ts`, `source-actions.tsx`, `normalize.ts` and
+  `types.ts` — cache writes, failure announcements, response-field contract —
+  and are that session's to land. The backend is untouched.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

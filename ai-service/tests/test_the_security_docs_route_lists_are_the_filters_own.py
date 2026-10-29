@@ -104,7 +104,7 @@ def ai_cost_routes() -> set[str]:
     """Every path `isAiCost` throttles, as the doc spells them (no `/api/v1` prefix)."""
     body = read(RATE_LIMIT)
     start = body.index("static boolean isAiCost(")
-    stop = body.index("private static String userOrIp(")
+    stop = body.index("private String userOrIp(")
     window = body[start:stop]
     out = {path[len(PREFIX) :] for path in re.findall(r'"(/api/v1[^"]*)"', window)}
     for pattern in re.findall(r'"(\^/api/v1[^"]*)"', window):

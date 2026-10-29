@@ -322,7 +322,9 @@ cp .env.example .env
 ```
 
 Never commit `.env`. `.env.example` is the single source of truth for the full
-variable list.
+variable list a checkout sets; the one it does not carry,
+`APP_HTTP_TRUST_FORWARDED_FOR`, describes the network a deployment sits behind
+and is set from the production checklist above.
 
 ## Run with Docker (recommended)
 

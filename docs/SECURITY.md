@@ -180,9 +180,8 @@ residual risk rather than as a clean bill of health.
 2. **`X-Forwarded-For` is only believed when a proxy is declared — fixed.**
    `clientIp` used to read the leftmost `X-Forwarded-For` entry unconditionally, so
    a service reached directly let a client rotate a spoofed header to get a fresh
-   auth bucket per request and defeat login throttling. Measured against the
-   running stack with `RATELIMIT_AUTH_PER_MINUTE=3`: with no header the fourth and
-   fifth requests returned **429**; six requests sent with
+   auth bucket per request and defeat login throttling. Measured against the running stack with `RATELIMIT_AUTH_PER_MINUTE=3`:
+   with no header the fourth and fifth requests returned **429**; six requests sent with
    `X-Forwarded-For: 203.0.113.{1..6}` returned **401 six times**, and Redis then
    held seven `ratelimit:auth:*` keys — one per spoofed address plus the real
    client. The bypass needed no tooling beyond `curl`.

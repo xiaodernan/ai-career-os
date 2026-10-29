@@ -31,7 +31,8 @@ and `doFilterInternal` reads the ceiling, the identity and the Redis key prefix 
 to be written twice in one method pair (`ruleFor` and an `ai` boolean), which is why a third bucket was
 previously the kind of edit this file refused; the test that pins the single predicate reads all three
 readings out of it. And the **429** is authored three ways -- the filter's `setStatus(429)`,
-`ApiErrorCode.RATE_LIMITED(HttpStatus.TOO_MANY_REQUESTS)`, and six prose and client claims -- so the
+`ApiErrorCode.RATE_LIMITED(HttpStatus.TOO_MANY_REQUESTS)`, and nine claims outside the setter
+(five prose sentences and the e2e fixture's four detection strings) -- so the
 status an operator reads about is reconciled against the literal the server writes.
 
 The open scan walks the **whole repository** (608 admitted files at the ref this scan was widened, and
@@ -111,7 +112,7 @@ VAR_OF_IDENTITY = {"client IP": AUTH_VAR, "user": AI_VAR, "account": MAIL_VAR}
 
 # floors read off `git archive HEAD` at the ref this gate last moved, so a census cannot narrow
 # itself: twenty-three ceiling claims (eleven about auth, six about AI, six about mail), eight
-# timeout claims, six raised-ceiling sites, seven 429 claims, twenty-four shape-matched rows in the
+# timeout claims, six raised-ceiling sites, nine 429 claims, twenty-four shape-matched rows in the
 # open scan, eight rows this census's own file would contribute, and at least this many files walked
 # per shipped source tree (215/195/173/11/8/2).
 MIN_CEILING_CARRIERS = 23
@@ -120,7 +121,7 @@ MIN_AI_CARRIERS = 6
 MIN_MAIL_CARRIERS = 6
 MIN_TIMEOUT_CARRIERS = 8
 MIN_RAISED_SITES = 6
-MIN_STATUS_SITES = 7
+MIN_STATUS_SITES = 9
 MIN_CLAIM_ROWS = 24
 MIN_CENSUS_ROWS = 8
 MIN_FILES_BY_DIR = {"backend": 170, "ai-service": 150, "frontend": 140, "docs": 9, "e2e": 6,
@@ -440,7 +441,7 @@ def status_sites() -> list[tuple[str, int, str]]:
                 int(setter["value"]), "the server writes this status"))
     for path in (FILTER, API_DOC, SEC, E2E_README, FIXTURES):
         text = read(path)
-        want = {str(FILTER): 2, str(API_DOC): 1, str(SEC): 1, str(E2E_README): 1,
+        want = {str(FILTER): 2, str(API_DOC): 1, str(SEC): 2, str(E2E_README): 1,
                 str(FIXTURES): 4}[str(path)]
         for match in first_group(path, HTTP_429, want=want):
             number = _line_of(text, match.start())
@@ -684,7 +685,7 @@ def test_the_bucket_a_request_lands_in_is_chosen_by_the_predicate_that_names_it(
     assert "falls back to IP" in javadoc, (
         f"the javadoc line that declares the AI ceiling is `{javadoc.strip()}`: it used to say the "
         f"per-user rule falls back to the client IP, which is what `userOrIp` actually does")
-    fallback = text[text.index("private static String userOrIp"):text.index("static String clientIp")]
+    fallback = text[text.index("private String userOrIp"):text.index("String clientIp")]
     assert "return clientIp(request);" in fallback, (
         "`userOrIp` no longer answers with the client IP when there is no authenticated user, so the "
         "documented fallback and the account buckets' keys have parted: an anonymous caller's budget "
@@ -803,8 +804,9 @@ def test_the_answer_an_over_limit_request_gets_has_one_spelling_across_the_stack
     """The 429 and the `RATE_LIMITED` code are written three ways: the server, the enum, the prose.
 
     `setStatus(429)` is the number a client keys on, `ApiErrorCode.RATE_LIMITED(HttpStatus.TOO_MANY_REQUESTS)`
-    is the number the envelope's owner declares, and five shipped sentences plus the e2e fixture's
-    detection tell a reader what to expect. Nothing in the repository maps the enum name back to 429, so
+    is the number the envelope's owner declares, and nine claims outside the setter -- five prose
+    sentences and the e2e fixture's four detection strings -- tell a reader what to expect. Nothing
+    in the repository maps the enum name back to 429, so
     the literals are reconciled against each other and the enum is reconciled by name.
     """
     sites = status_sites()
