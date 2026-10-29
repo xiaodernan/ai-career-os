@@ -91,7 +91,13 @@ class ApiErrorCodeCensusTest {
                 "FEED_BOARD_INVALID", "FEED_LIMIT_REACHED",
                 "FEED_URL_INVALID",
                 "FILE_EMPTY", "FILE_KEY_INVALID",
-                "FILE_KEY_MALFORMED", "FILE_TOO_LARGE", "FORBIDDEN", "INGESTION_FEED_NOT_FOUND",
+                "FILE_KEY_MALFORMED", "FILE_TOO_LARGE", "FORBIDDEN",
+                // 37.1: a forwarding address refuses a forged token and a missing receiving
+                // domain with its own sentences; 37.3 adds the replies page's two refusals --
+                // a letter that is not the account's, and one already filed elsewhere.
+                "INBOUND_LINK_INVALID", "INBOUND_MAIL_ALREADY_FILED", "INBOUND_MAIL_NOT_FOUND",
+                "INBOUND_NOT_CONFIGURED",
+                "INGESTION_FEED_NOT_FOUND",
                 "INGESTION_RUN_ALREADY_APPLIED", "INGESTION_RUN_NOT_APPLICABLE", "INGESTION_RUN_NOT_FOUND",
                 "INTERNAL_ERROR",
                 "INTERVIEW_ALREADY_STARTED", "INTERVIEW_NOTHING_TO_FINALIZE", "INTERVIEW_NOT_STARTED", "INTERVIEW_NO_QUESTION",

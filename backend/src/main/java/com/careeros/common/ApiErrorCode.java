@@ -108,6 +108,17 @@ public enum ApiErrorCode {
      * was retired.
      */
     INBOUND_NOT_CONFIGURED(HttpStatus.SERVICE_UNAVAILABLE),
+    /**
+     * The letter id is unknown, or belongs to another account. One answer for both, so the
+     * replies page cannot be used to probe which letters exist.
+     */
+    INBOUND_MAIL_NOT_FOUND(HttpStatus.NOT_FOUND),
+    /**
+     * The letter is already filed on a different application. Refused rather than moved: the
+     * timeline row on the first card already says this reply answers it, and a silent move
+     * would leave that card's story pointing at a letter that no longer names it.
+     */
+    INBOUND_MAIL_ALREADY_FILED(HttpStatus.CONFLICT),
     AI_SERVICE_NOT_FOUND(HttpStatus.NOT_FOUND),
     USER_NOT_FOUND(HttpStatus.NOT_FOUND),
     PROFILE_NOT_FOUND(HttpStatus.NOT_FOUND),

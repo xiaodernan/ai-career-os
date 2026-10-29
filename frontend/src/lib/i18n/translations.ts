@@ -902,11 +902,13 @@ export const translations = {
       kindStale: "Gone quiet",
       kindIngestionFailed: "Pull failed",
       kindIngestionCreated: "New postings",
+      kindReply: "Recruiter reply",
       kindOther: "Signal",
       reminderLine: "Your reminder for {title} is due.",
       staleLine: "No movement on {title} — it has gone quiet.",
       ingestionFailedLine: "The last pull of {feed} failed.",
       ingestionCreatedLine: "New postings from {feed}: {count}.",
+      replyLine: "A recruiter replied about your application — {title}.",
       fallbackLine: "A signal is waiting for you.",
       untitled: "Untitled",
       unnamedFeed: "an unnamed feed",
@@ -1439,6 +1441,11 @@ export const translations = {
       INGESTION_RUN_NOT_APPLICABLE: "A failed run has no plan to apply.",
 
       INBOUND_LINK_INVALID: "That inbound address is not valid or has been retired.",
+
+      INBOUND_MAIL_ALREADY_FILED:
+        "This reply is already filed on another application; open it there instead.",
+
+      INBOUND_MAIL_NOT_FOUND: "That reply is no longer here.",
 
       INBOUND_NOT_CONFIGURED: "Inbound mail is not configured on this deployment.",
 
@@ -3334,11 +3341,13 @@ export const translations = {
       kindStale: "久无动静",
       kindIngestionFailed: "拉取失败",
       kindIngestionCreated: "新职位",
+      kindReply: "招聘方回复",
       kindOther: "信号",
       reminderLine: "你对 {title} 的提醒已到期。",
       staleLine: "{title} 久无动静，已经安静下来了。",
       ingestionFailedLine: "{feed} 的上一次拉取失败了。",
       ingestionCreatedLine: "{feed} 带来了 {count} 个新职位。",
+      replyLine: "招聘方回复了你的投递 —— {title}。",
       fallbackLine: "有一条信号在等你。",
       untitled: "未命名",
       unnamedFeed: "一个未命名订阅",
@@ -3812,6 +3821,10 @@ export const translations = {
       INGESTION_RUN_NOT_APPLICABLE: "失败的运行没有可应用的计划。",
 
       INBOUND_LINK_INVALID: "这个来信地址无效，或已经停用。",
+
+      INBOUND_MAIL_ALREADY_FILED: "这封回复已经归档到另一条投递上，请到那里查看。",
+
+      INBOUND_MAIL_NOT_FOUND: "这封回复已经不在了。",
 
       INBOUND_NOT_CONFIGURED: "这个部署还没有配置来信收件。",
 

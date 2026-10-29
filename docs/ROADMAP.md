@@ -2942,7 +2942,7 @@ accept -- and a letter the engine cannot read is still a letter that arrived.
   before it is read (two transactions, so a stalled classifier holds no
   connection), and a duplicate delivery is not classified again. The shape
   census counts `InboundMailService` among the classes that read an AI answer.
-- [ ] **37.3** The reply meets the application: a company-name match
+- [x] **37.3** The reply meets the application: a company-name match
   (case-insensitive, narrowed by role containment when the name repeats) files
   the mail on one application, and a guess that narrows to nothing files
   nothing rather than the wrong row. Filing writes an `application_events`
@@ -2950,11 +2950,27 @@ accept -- and a letter the engine cannot read is still a letter that arrived.
   center gains a `reply:<id>` episode, so the bell counts the reply, the
   morning sweep may ring it, and the stamp stays the reader's. An unmatched
   letter waits on the replies page with a "file this reply" route; the intent
-  maps to a suggested stage (rejected / interviewing / offer) that the reader
-  applies in one click, never automatically, and only on the application the
-  mail is actually filed on. The letters are readable through
-  `GET /api/v1/inbound/mails` (paged, scoped) and fileable through
-  `POST /api/v1/inbound/mails/{id}/file`.
+  maps to a suggested stage (`rejected` / `interview` / `offer`, the board's
+  own vocabulary) that the reader applies in one click, never automatically,
+  and only on the application the mail is actually filed on. The letters are
+  readable through `GET /api/v1/inbound/mails` (paged, scoped) and fileable
+  through `POST /api/v1/inbound/mails/{id}/file`.
+  `V29` adds `application_id` (`ON DELETE SET NULL`, so deleting a card
+  returns its letters to unmatched rather than deleting them) and `filed_at`
+  (null exactly when unfiled). `InboundReplyService` owns the match, the two
+  writes of a filing (the letter names the card; the card's timeline gains the
+  event) and the list; `InboundMailService` calls `autoFile` after the reading,
+  in its own transaction and its own failure, so a matcher that throws costs
+  the filing and never the letter. Filing on the same card twice is a no-op;
+  a different card is `409 INBOUND_MAIL_ALREADY_FILED` rather than a silent
+  move, because the first card's timeline already says the letter answers it.
+  A letter that is not the caller's is `404 INBOUND_MAIL_NOT_FOUND`, the same
+  answer as one that never existed. The notification item is synthesized, not
+  stored: filed letters inside the seven-day lookback, keyed `reply:<mailId>`,
+  titled by the employer (the sender when the reading named none) and linked
+  to `/replies?mail=<id>`; the morning letter names it in both languages and
+  prints the reply's own subject under the line. The suggested stage is advice
+  on the wire only — no route here moves an application.
 - [ ] **37.4** The replies have a page: `/replies` lists the letters newest
   first -- sender, subject, time, the intent as a badge, the application the
   letter is filed on or the picker that files it, and the suggested-stage

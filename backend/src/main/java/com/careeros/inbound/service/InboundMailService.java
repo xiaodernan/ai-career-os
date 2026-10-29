@@ -52,6 +52,12 @@ import org.springframework.stereotype.Service;
  * the row first, so it neither writes a second letter nor calls the classifier again. The two
  * writes are separate transactions on purpose -- a classifier that stalls must not pin one
  * open.
+ *
+ * <p>A letter that was read is offered to the matcher (37.3), also in its own transaction and
+ * also best-effort: the letter names a company the account already tracks, and the card it
+ * belongs on is found rather than guessed. A letter no card can be named for simply waits,
+ * unfiled, until the reader files it; a matcher that throws costs the filing and never the
+ * letter, for the same reason the classifier's failure must not.
  */
 @Service
 public class InboundMailService {
@@ -71,13 +77,16 @@ public class InboundMailService {
     private final InboundMailRepository mails;
     private final UserRepository users;
     private final AiServiceClient ai;
+    private final InboundReplyService replies;
 
     public InboundMailService(InboundLinks links, InboundMailRepository mails,
-                              UserRepository users, AiServiceClient ai) {
+                              UserRepository users, AiServiceClient ai,
+                              InboundReplyService replies) {
         this.links = links;
         this.mails = mails;
         this.users = users;
         this.ai = ai;
+        this.replies = replies;
     }
 
     /** One delivery's outcome: the row it names, and whether this call was a retry. */
@@ -114,9 +123,23 @@ public class InboundMailService {
         mails.save(mail);
         if (read(mail, userId)) {
             mails.save(mail);
+            file(mail);
         }
         log.info("Inbound mail {} received for user {}", mail.getId(), userId);
         return new Received(mail.getId(), false);
+    }
+
+    /**
+     * Offers a read letter to the matcher. Its own transaction and its own failure: a card
+     * cannot be named is an ordinary answer, and a matcher that throws must not turn a stored
+     * letter into a provider retry.
+     */
+    private void file(InboundMail mail) {
+        try {
+            replies.autoFile(mail);
+        } catch (RuntimeException e) {
+            log.warn("Reply filing did not answer for letter {}: {}", mail.getId(), e.getMessage());
+        }
     }
 
     /**

@@ -44,6 +44,8 @@ function kindKey(kind: string): string {
       return "notifications.kindIngestionFailed";
     case "ingestion_created":
       return "notifications.kindIngestionCreated";
+    case "reply":
+      return "notifications.kindReply";
     default:
       return "notifications.kindOther";
   }
@@ -84,6 +86,8 @@ function lineOf(item: NotificationItem, t: Translate): string {
         feed: title,
         count: item.count ?? 0,
       });
+    case "reply":
+      return t("notifications.replyLine", { title });
     default:
       return item.title || t("notifications.fallbackLine");
   }

@@ -22,6 +22,13 @@ public interface ApplicationRepository extends JpaRepository<Application, UUID> 
     List<Application> findByUserIdAndJobId(UUID userId, UUID jobId);
 
     /**
+     * The cards a reply's employer names (roadmap 37.3), case aside and nothing else: a match
+     * that is not the same name is a guess, and a guess that files a reply on the wrong card is
+     * worse than a reply waiting for the reader. The service narrows a repeated name by role.
+     */
+    List<Application> findByUserIdAndCompanyNameIgnoreCase(UUID userId, String companyName);
+
+    /**
      * The rows the calendar feed speaks for (roadmap 34), in the order a day lists them: a row
      * with no {@code reminder_at} is not a time the reader ever wrote down, so it has no event.
      */

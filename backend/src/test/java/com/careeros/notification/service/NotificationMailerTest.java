@@ -109,6 +109,36 @@ class NotificationMailerTest {
     }
 
     @Test
+    void a_reply_is_named_by_its_employer_and_says_a_recruiter_answered() {
+        List<NotificationItem> waiting = List.of(
+                item(NotificationService.KIND_REPLY, "Acme", "Your interview", null, null,
+                        "/replies?mail=mail-1"));
+
+        String english = NotificationMailer.body(waiting, "en", "https://careeros.example",
+                SETTINGS);
+        String chinese = NotificationMailer.body(waiting, "zh", "https://careeros.example",
+                SETTINGS);
+
+        assertThat(english).contains(
+                "- Acme — a recruiter replied to your application",
+                "  Your interview",
+                "  https://careeros.example/replies?mail=mail-1");
+        assertThat(chinese).contains("- Acme —— 招聘方回复了你的投递");
+    }
+
+    @Test
+    void a_reply_with_no_employer_read_is_still_named() {
+        List<NotificationItem> waiting = List.of(
+                item(NotificationService.KIND_REPLY, "", "Re: your application", null, null,
+                        "/replies?mail=mail-2"));
+
+        String english = NotificationMailer.body(waiting, "en", "https://careeros.example",
+                SETTINGS);
+
+        assertThat(english).contains("- A recruiter — a recruiter replied to your application");
+    }
+
+    @Test
     void a_long_waiting_list_is_capped_and_the_rest_counted() {
         List<NotificationItem> waiting = new ArrayList<>();
         for (int i = 1; i <= 13; i++) {

@@ -7,6 +7,8 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.careeros.inbound.entity.InboundMail;
+import com.careeros.inbound.repository.InboundMailRepository;
 import com.careeros.job.entity.IngestionFeed;
 import com.careeros.job.entity.IngestionRun;
 import com.careeros.job.repository.IngestionFeedRepository;
@@ -46,12 +48,14 @@ class NotificationServiceTest {
     private static final UUID RUN = UUID.fromString("44444444-4444-4444-8444-444444444444");
     private static final UUID RUN2 = UUID.fromString("55555555-5555-4555-8555-555555555555");
     private static final UUID SEARCH = UUID.fromString("66666666-6666-4666-8666-666666666666");
+    private static final UUID MAIL = UUID.fromString("77777777-7777-4777-8777-777777777777");
 
     private DashboardRepository dashboard;
     private IngestionRunRepository runs;
     private IngestionFeedRepository feeds;
     private SavedSearchMatcher savedSearches;
     private NotificationStateRepository states;
+    private InboundMailRepository inbound;
     private Map<String, NotificationState> store;
     private NotificationService service;
 
@@ -62,6 +66,7 @@ class NotificationServiceTest {
         feeds = mock(IngestionFeedRepository.class);
         savedSearches = mock(SavedSearchMatcher.class);
         states = mock(NotificationStateRepository.class);
+        inbound = mock(InboundMailRepository.class);
         store = new LinkedHashMap<>();
 
         when(states.findByUserId(ALICE)).thenAnswer(invocation -> List.copyOf(store.values()));
@@ -76,8 +81,10 @@ class NotificationServiceTest {
         when(runs.findByUserIdOrderByStartedAtDescIdDesc(eq(ALICE), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of()));
         when(savedSearches.alerts(eq(ALICE), any())).thenReturn(List.of());
+        when(inbound.findByUserIdAndApplicationIdIsNotNullOrderByReceivedAtDescIdDesc(
+                eq(ALICE), any(Pageable.class))).thenReturn(List.of());
 
-        service = new NotificationService(dashboard, runs, feeds, savedSearches, states);
+        service = new NotificationService(dashboard, runs, feeds, savedSearches, states, inbound);
     }
 
     private static AttentionItem attention(String reason, OffsetDateTime reminderAt,
@@ -190,6 +197,60 @@ class NotificationServiceTest {
     void a_pull_older_than_the_lookback_is_history_not_news() {
         withRuns(run(RUN, IngestionRun.STATUS_FAILED, "Feed answered HTTP 503", null,
                 OffsetDateTime.now().minusDays(NotificationService.LOOKBACK_DAYS + 1)));
+
+        assertThat(service.inbox(ALICE).items()).isEmpty();
+    }
+
+    @Test
+    void a_reply_that_landed_on_a_card_is_an_item_named_by_its_employer() {
+        OffsetDateTime now = OffsetDateTime.now();
+        InboundMail letter = mock(InboundMail.class);
+        when(letter.getId()).thenReturn(MAIL);
+        when(letter.getCompany()).thenReturn("Acme");
+        when(letter.getSubject()).thenReturn("Your interview");
+        when(letter.getIntent()).thenReturn("interview");
+        when(letter.getReceivedAt()).thenReturn(now.minusHours(3));
+        when(inbound.findByUserIdAndApplicationIdIsNotNullOrderByReceivedAtDescIdDesc(
+                eq(ALICE), any(Pageable.class))).thenReturn(List.of(letter));
+
+        Inbox inbox = service.inbox(ALICE);
+
+        assertThat(inbox.items()).hasSize(1);
+        NotificationItem item = inbox.items().get(0);
+        assertThat(item.kind()).isEqualTo(NotificationService.KIND_REPLY);
+        assertThat(item.key()).isEqualTo("reply:" + MAIL);
+        assertThat(item.title()).isEqualTo("Acme");
+        assertThat(item.subject()).isEqualTo("Your interview");
+        assertThat(item.status()).isEqualTo("interview");
+        assertThat(item.link()).isEqualTo("/replies?mail=" + MAIL);
+        assertThat(item.at()).isEqualTo(now.minusHours(3));
+        assertThat(item.read()).isFalse();
+    }
+
+    @Test
+    void a_reply_with_no_employer_read_is_named_by_its_sender() {
+        OffsetDateTime now = OffsetDateTime.now();
+        InboundMail letter = mock(InboundMail.class);
+        when(letter.getId()).thenReturn(MAIL);
+        when(letter.getFromAddress()).thenReturn("recruiter@example.com");
+        when(letter.getSubject()).thenReturn("Re: your application");
+        when(letter.getReceivedAt()).thenReturn(now.minusMinutes(5));
+        when(inbound.findByUserIdAndApplicationIdIsNotNullOrderByReceivedAtDescIdDesc(
+                eq(ALICE), any(Pageable.class))).thenReturn(List.of(letter));
+
+        NotificationItem item = service.inbox(ALICE).items().get(0);
+
+        assertThat(item.title()).isEqualTo("recruiter@example.com");
+        assertThat(item.status()).isNull();
+    }
+
+    @Test
+    void a_reply_older_than_the_lookback_is_history_not_news() {
+        InboundMail letter = mock(InboundMail.class);
+        when(letter.getReceivedAt()).thenReturn(
+                OffsetDateTime.now().minusDays(NotificationService.LOOKBACK_DAYS + 1));
+        when(inbound.findByUserIdAndApplicationIdIsNotNullOrderByReceivedAtDescIdDesc(
+                eq(ALICE), any(Pageable.class))).thenReturn(List.of(letter));
 
         assertThat(service.inbox(ALICE).items()).isEmpty();
     }

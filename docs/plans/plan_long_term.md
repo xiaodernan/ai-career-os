@@ -305,6 +305,23 @@
     加 intent/company/role 与五值 CHECK；响应形状 census 的消费者与持有者名单各加
     `InboundMailService`。
     下一步：37.3。
+    37.3 已落地：`InboundReplyService` 独占匹配、归档与列表。匹配只认公司名（仓储层
+    ignore case），同公司多条投递时用信里职位的包含关系收窄；收窄到零条或两条以上都不归档
+    ——错卡上的回复比等待的回复更糟。归档是一次事务里的两行：信记住 `application_id` 与
+    `filed_at`，卡的时间线添一条 `reply` 事件（邮件 id、发件人、主题、意图）。`V29` 的
+    `application_id` 用 `ON DELETE SET NULL`，删卡让信回到未归档而不是随卡消失。收到即归档
+    由 `InboundMailService` 在读数之后调用，独立事务、独立失败——匹配器抛错只损失归档，
+    不损失信。同一张卡重复归档是幂等空操作；换一张卡返回 409
+    `INBOUND_MAIL_ALREADY_FILED`（第一张卡的时间线已经写明这封信回应它）；别人的信与
+    不存在的信同为 404 `INBOUND_MAIL_NOT_FOUND`。建议阶段只在线上作答（rejected /
+    interview / offer），任何路由都不替读者移动投递。通知中心新增合成剧集 `reply:<mailId>`
+    （已归档、七天内、按收信时间排序，标题取公司、无公司取发件人，链到
+    `/replies?mail=<id>`），晨信两种语言都有一句，并在行下印出信自己的主题；`Words`
+    末尾加两个字段。前端通知页加 `reply` 分支与两语言键；错误码 census 与
+    `ApiErrorCode` 同增两码（37.1 的两个 INBOUND 码此前漏进 census 的钉表，这次一并补上）；
+    API.md 记两条路由；endpoint 账本把四个 inbound 路由列进未引用表，读者面两条待 37.4
+    落地时移出。
+    下一步：37.4。
 
 ## 开发协议（每个任务）
 

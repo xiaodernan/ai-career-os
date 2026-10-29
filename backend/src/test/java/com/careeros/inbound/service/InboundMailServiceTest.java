@@ -46,7 +46,8 @@ class InboundMailServiceTest {
     private final InboundMailRepository mails = mock(InboundMailRepository.class);
     private final UserRepository users = mock(UserRepository.class);
     private final AiServiceClient ai = mock(AiServiceClient.class);
-    private final InboundMailService service = new InboundMailService(links, mails, users, ai);
+    private final InboundReplyService replies = mock(InboundReplyService.class);
+    private final InboundMailService service = new InboundMailService(links, mails, users, ai, replies);
 
     private String token() {
         return links.address(ALICE).split("@")[0];
@@ -117,6 +118,25 @@ class InboundMailServiceTest {
         assertThat(mail.getIntent()).isEqualTo("interview");
         assertThat(mail.getCompany()).isEqualTo("Acme");
         assertThat(mail.getRole()).isEqualTo("Backend Engineer");
+        verify(replies).autoFile(mail);
+    }
+
+    @Test
+    void aFilingThatThrowsCostsTheFilingAndNeverTheLetter() {
+        accountExists();
+        when(ai.classifyReply(eq(ALICE), anyString())).thenReturn(Map.of("intent", "offer"));
+        org.mockito.Mockito.doThrow(new IllegalStateException("matcher down"))
+                .when(replies).autoFile(any());
+
+        InboundMailService.Received received = service.receive(token(),
+                payload("<abc@mail>", "ada@example.com", "Offer", "We are pleased to offer you the role.", null));
+
+        assertThat(received.duplicate()).isFalse();
+        ArgumentCaptor<InboundMail> captor = ArgumentCaptor.forClass(InboundMail.class);
+        verify(mails, org.mockito.Mockito.times(2)).save(captor.capture());
+        InboundMail mail = captor.getValue();
+        assertThat(mail.getIntent()).isEqualTo("offer");
+        verify(replies).autoFile(mail);
     }
 
     @Test

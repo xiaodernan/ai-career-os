@@ -49,7 +49,9 @@ public class NotificationMailer {
             "A saved search",
             "  ... and {n} more\n",
             "Reading or acting in the app settles these, and a signal is mailed at most once.\n",
-            "Stop these letters: {url}\n");
+            "Stop these letters: {url}\n",
+            "A recruiter",
+            "a recruiter replied to your application");
 
     private static final Words ZH = new Words(
             "Career OS：收件箱里有 {n} 条待看的信号",
@@ -70,7 +72,9 @@ public class NotificationMailer {
             "一个保存的搜索",
             "  …… 另有 {n} 条\n",
             "在应用里读过或处理之后，这条信号就会安静下来；同一条信号最多寄一次。\n",
-            "不想再收到这些信：{url}\n");
+            "不想再收到这些信：{url}\n",
+            "一位招聘方",
+            "招聘方回复了你的投递");
 
     private final EmailSender email;
     private final MailLinks links;
@@ -115,6 +119,10 @@ public class NotificationMailer {
                 body.append(words.dash()).append(sentence);
             }
             body.append('\n');
+            if (NotificationService.KIND_REPLY.equals(item.kind())
+                    && item.subject() != null && !item.subject().isBlank()) {
+                body.append("  ").append(item.subject().trim()).append('\n');
+            }
             if (item.note() != null && !item.note().isBlank()) {
                 body.append("  ").append(item.note().trim()).append('\n');
             }
@@ -154,6 +162,9 @@ public class NotificationMailer {
         if (NotificationService.KIND_SAVED_SEARCH.equals(item.kind())) {
             return title == null ? words.aSearch() : title;
         }
+        if (NotificationService.KIND_REPLY.equals(item.kind())) {
+            return title == null ? words.aRecruiter() : title;
+        }
         return title == null ? words.aFeed() : title;
     }
 
@@ -173,6 +184,7 @@ public class NotificationMailer {
                 yield count == null || count == 1 ? words.savedSearchOne()
                         : fill(words.savedSearchMany(), "n", count);
             }
+            case NotificationService.KIND_REPLY -> words.reply();
             default -> "";
         };
     }
@@ -214,6 +226,8 @@ public class NotificationMailer {
             String aSearch,
             String more,
             String footer,
-            String unsubscribe) {
+            String unsubscribe,
+            String aRecruiter,
+            String reply) {
     }
 }

@@ -1,6 +1,8 @@
 package com.careeros.notification.service;
 
 import com.careeros.common.Paging;
+import com.careeros.inbound.entity.InboundMail;
+import com.careeros.inbound.repository.InboundMailRepository;
 import com.careeros.job.entity.IngestionFeed;
 import com.careeros.job.entity.IngestionRun;
 import com.careeros.job.repository.IngestionFeedRepository;
@@ -50,6 +52,11 @@ import org.springframework.transaction.annotation.Transactional;
  * and a reader who has not opened the app since yesterday's letter is exactly who a ring is
  * for. The two latches never consult each other; each channel records only what its own
  * transport accepted.
+ *
+ * <p>A forwarded reply joins the same walk once it lands on a card (37.3). It needs no new
+ * storage: the letter row is the episode, and its own received moment is the item's time, so
+ * the inbox, the morning letter and the ring all describe the same reply without any of them
+ * writing a notification row.
  */
 @Service
 public class NotificationService {
@@ -70,6 +77,8 @@ public class NotificationService {
     public static final String KIND_INGESTION_CREATED = "ingestion_created";
     /** A saved search whose question the board answered with postings it had not seen (29.1). */
     public static final String KIND_SAVED_SEARCH = "saved_search";
+    /** A forwarded reply that landed on one of the reader's applications (37.3). */
+    public static final String KIND_REPLY = "reply";
 
     private static final String INGESTION_PAGE = "/ingestion";
 
@@ -78,15 +87,17 @@ public class NotificationService {
     private final IngestionFeedRepository feeds;
     private final SavedSearchMatcher savedSearches;
     private final NotificationStateRepository states;
+    private final InboundMailRepository inbound;
 
     public NotificationService(DashboardRepository dashboard, IngestionRunRepository runs,
                                IngestionFeedRepository feeds, SavedSearchMatcher savedSearches,
-                               NotificationStateRepository states) {
+                               NotificationStateRepository states, InboundMailRepository inbound) {
         this.dashboard = dashboard;
         this.runs = runs;
         this.feeds = feeds;
         this.savedSearches = savedSearches;
         this.states = states;
+        this.inbound = inbound;
     }
 
     @Transactional(readOnly = true)
@@ -252,6 +263,7 @@ public class NotificationService {
         }
         out.addAll(ingestion(userId));
         out.addAll(savedSearchAlerts(userId));
+        out.addAll(replies(userId));
         return out;
     }
 
@@ -332,6 +344,33 @@ public class NotificationService {
                             + alert.newestAt().toInstant().getEpochSecond(),
                     KIND_SAVED_SEARCH, alert.name(), "", "", alert.count(), null, alert.link(),
                     alert.newestAt()));
+        }
+        return out;
+    }
+
+    /**
+     * A forwarded reply that landed on an application (roadmap 37.3): one item per letter, keyed
+     * by the letter itself, so dismissing this reply never silences the next one. Only filed
+     * letters are items -- an unmatched letter waits on the replies page, where the reader can
+     * place it, and becomes news only once it answers a card. The lookback matches the run
+     * window: a reply older than a week is history the card's timeline still shows.
+     */
+    private List<Candidate> replies(UUID userId) {
+        OffsetDateTime cutoff = OffsetDateTime.now().minusDays(LOOKBACK_DAYS);
+        List<Candidate> out = new ArrayList<>();
+        for (InboundMail mail : inbound.findByUserIdAndApplicationIdIsNotNullOrderByReceivedAtDescIdDesc(
+                userId, Paging.first(RUN_WINDOW))) {
+            OffsetDateTime received = mail.getReceivedAt();
+            if (received == null || received.isBefore(cutoff)) {
+                break;
+            }
+            String title = text(mail.getCompany());
+            if (title.isBlank()) {
+                title = text(mail.getFromAddress());
+            }
+            out.add(new Candidate(KIND_REPLY + ":" + mail.getId(), KIND_REPLY, title,
+                    text(mail.getSubject()), mail.getIntent(), null, null,
+                    "/replies?mail=" + mail.getId(), received));
         }
         return out;
     }

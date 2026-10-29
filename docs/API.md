@@ -462,10 +462,33 @@ When `APP_INBOUND_DOMAIN` is blank the deployment has no inbox: `GET
 an address nothing delivers to. Erasing an account deletes its letters with its
 other rows.
 
+The reader's side of the same rows is two routes (roadmap 37.3). `GET
+/inbound/mails` lists the account's letters newest first, each with the reading
+(37.2) and the stage that reading suggests — `rejection` suggests `rejected`,
+`interview` `interview`, `offer` `offer`, and the other two suggest nothing —
+plus the card the letter is filed on, when it has one; a letter that was never
+read or never filed still appears, with those fields null. Filing is the only
+write: `POST /inbound/mails/{id}/file` with `{"applicationId"}` ties one letter
+to one of the caller's applications and appends a `reply` event to that card's
+timeline carrying the mail id, sender, subject and intent. A letter whose
+reading named a company is filed automatically on arrival when that company,
+narrowed by the letter's role when the account has several applications there,
+names exactly one card; a match that narrows to nothing, or to more than one
+card, files nothing — a reply on the wrong card is worse than a reply waiting,
+and the reader can file it here. Filing the same letter on the same card again
+answers the card unchanged, so a double click is not an error; filing it on a
+different card is refused with **409** `INBOUND_MAIL_ALREADY_FILED`, because
+the first card's timeline already says the letter answers it. A letter id that
+is not the caller's is **404** `INBOUND_MAIL_NOT_FOUND`, the same answer as one
+that never existed. The suggested stage is advice, never a move: no route here
+changes an application's status.
+
 | Method | Path | Notes |
 |---|---|---|
 | GET | `/inbound/link` | the signed-in account's own inbound address; **503** `INBOUND_NOT_CONFIGURED` when the deployment has no domain |
 | POST | `/inbound/mail/{token}` | the provider's webhook; body is Postmark inbound JSON; always **200** `{"status":"received"}` on a resolvable token, **404** `INBOUND_LINK_INVALID` otherwise |
+| GET | `/inbound/mails` | the caller's letters, newest first — `page` (default 0) and `size` (default 50, clamped) → {items, total, page, size}; each item carries the reading, the suggested stage and the filed application, all nullable |
+| POST | `/inbound/mails/{id}/file` | files one letter on `{"applicationId"}` and appends a `reply` event to that card; a second call on the same card is a no-op, a different card is **409** `INBOUND_MAIL_ALREADY_FILED`, and a letter that is not the caller's is **404** `INBOUND_MAIL_NOT_FOUND` — the same answer as one that never existed |
 
 ### Growth engines (`/growth`)
 

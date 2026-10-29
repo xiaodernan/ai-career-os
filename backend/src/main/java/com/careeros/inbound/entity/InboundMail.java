@@ -52,6 +52,17 @@ public class InboundMail {
     @Column(name = "role", length = 200)
     private String role;
 
+    /**
+     * The application this letter answers (37.3); null while it waits unmatched. The link is a
+     * pointer to the reader's own card, so deleting the card clears the column rather than the
+     * letter -- a reply is the reader's record of what a recruiter wrote.
+     */
+    @Column(name = "application_id")
+    private UUID applicationId;
+
+    @Column(name = "filed_at")
+    private OffsetDateTime filedAt;
+
     @Column(name = "received_at", nullable = false)
     private OffsetDateTime receivedAt;
 
@@ -125,6 +136,22 @@ public class InboundMail {
 
     public void setRole(String role) {
         this.role = role;
+    }
+
+    public UUID getApplicationId() {
+        return applicationId;
+    }
+
+    public void setApplicationId(UUID applicationId) {
+        this.applicationId = applicationId;
+    }
+
+    public OffsetDateTime getFiledAt() {
+        return filedAt;
+    }
+
+    public void setFiledAt(OffsetDateTime filedAt) {
+        this.filedAt = filedAt;
     }
 
     public OffsetDateTime getReceivedAt() {

@@ -832,6 +832,13 @@ describe("endpoints ↔ backend route parity", () => {
     "/users/me/password": "the account-password route the client has not wired",
     "/users/me/sessions": "the sessions route the client has not wired",
     "/users/me/sessions/{}": "the revoke-session route the client has not wired",
+    // 37.1/37.3: the inbound mail loop. The provider is the one caller of the webhook, never a
+    // browser; the three signed-in routes are the replies surface's, whose page and settings card
+    // land with 37.4 and will take their entries off this list then.
+    "/inbound/mail/{}": "a mail provider posts here, not the browser; the address is what the settings card hands out",
+    "/inbound/link": "the settings card asks for the address with the replies surface (37.4)",
+    "/inbound/mails": "the replies page reads it (37.4)",
+    "/inbound/mails/{}/file": "the replies page files from it (37.4)",
   };
 
   function unreferencedRoutes(): string[] {
@@ -1129,14 +1136,15 @@ describe("endpoints ↔ backend route parity", () => {
     expect(new Set(handlers.map((h) => `${h.verb} ${h.pattern}`)).size).toBe(handlers.length);
     expect(handlers.flatMap((h) => h.unparsed)).toEqual([]);
     const bound = handlers.flatMap((h) => h.params);
-    expect(bound.length).toBe(44);
+    expect(bound.length).toBe(46);
     // 44 parameters in 20 distinct names, measured: the reader's whole answer rather than a spot
     // check, so a signature shape it stops understanding shrinks this set instead of passing quiet
     // (#225 retired `limit` from `/activity/runs`, which now pages like every other list route;
     // 19.2 brought the name back for `GET /ingestion/runs` as a newest-N history, and 19.5 retired
     // it again -- the runs panel pages, so the route binds page/size like every other list; 20.1's
     // nightly history is one more page/size list, 41 -> 43, both names already in this set;
-    // 34.1's calendar feed binds `token`, the anonymous half's only credential, 43 -> 44)
+    // 34.1's calendar feed binds `token`, the anonymous half's only credential, 43 -> 44;
+    // 37.3's replies page is one more page/size list, 44 -> 46, both names already in this set)
     expect(new Set(bound.map((p) => p.name))).toEqual(
       new Set([
         "agent", "company", "documentId", "file", "kind", "kinds", "locale",
