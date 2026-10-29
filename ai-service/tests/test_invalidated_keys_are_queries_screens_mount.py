@@ -595,15 +595,20 @@ def test_the_profile_surface_is_real_on_the_server_and_mounted_by_a_screen():
         assert mentions(hook) != [], "%s is named nowhere outside its own declaration" % hook
 
 
-def test_the_profile_toasts_are_copy_no_user_can_hear():
-    sentences = re.findall(r'toast\.(?:success|error)\("([^"]+)"\)', hook_body(ACTIONS, "useUpdateProfile"))
-    sentences += re.findall(
-        r'toast\.(?:success|error)\("([^"]+)"\)', hook_body(ACTIONS, "useUpdateProfileDetails")
-    )
-    assert "Profile saved." in sentences and "Career profile saved." in sentences, sentences
-    for line in sentences:
-        heard = [rel for rel, text in sources().items() if line in text]
-        assert heard == [ACTIONS], "%r is rendered in %s, so it is no longer unreachable copy" % (line, heard)
+def test_the_profile_toasts_are_read_from_the_one_locale_table():
+    hooks = hook_body(ACTIONS, "useUpdateProfile") + hook_body(ACTIONS, "useUpdateProfileDetails")
+    keys = re.findall(r'toast\.success\(translate\("(toasts\.[^"]+)"\)\)', hooks)
+    assert keys == ["toasts.profileSaved", "toasts.careerProfileSaved"], keys
+    locale = read("frontend/src/lib/i18n/translations.ts")
+    for key in keys:
+        name = key.split(".", 1)[1]
+        copies = re.findall(r'^\s*%s:\s*"([^"]+)"' % re.escape(name), locale, re.M)
+        assert len(copies) == 2, (
+            "%s is answered in %d languages, not the two a reader can pick between" % (key, len(copies)))
+        for sentence in copies:
+            heard = [rel for rel, text in sources().items() if sentence in text]
+            assert heard == ["frontend/src/lib/i18n/translations.ts"], (
+                "%r is spelled in %s, so the key is no longer the one author of this toast" % (sentence, heard))
     assert "Profile saved" not in sources()[SETTINGS], "the settings screen now says it"
 
 

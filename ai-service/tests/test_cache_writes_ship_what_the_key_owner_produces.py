@@ -728,8 +728,8 @@ def test_the_clear_is_announced_and_the_row_the_card_draws_loses_the_instant():
     )
     assert ": null" in body[nulled:], "the else arm no longer contributes nothing: %r" % body[nulled : nulled + 40]
     hook = hook_body(ACTIONS, "useUpdateApplication")
-    assert 'else if (patch.clearReminderAt) toast.success("Reminder cleared.");' in hook
-    assert hook.index("optimisticApplicationRow(a, patch)") < hook.index("Reminder cleared."), (
+    assert 'else if (patch.clearReminderAt) toast.success(translate("toasts.reminderCleared"));' in hook
+    assert hook.index("optimisticApplicationRow(a, patch)") < hook.index('translate("toasts.reminderCleared")'), (
         "the toast no longer follows the merge that removes the instant it announces"
     )
     tail = hook.split("onSettled:")[1]

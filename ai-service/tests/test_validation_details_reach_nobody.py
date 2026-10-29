@@ -188,8 +188,10 @@ def test_every_visible_copy_is_read_from_the_code_and_never_from_the_details_lis
 
     state = read(ERROR_STATE)
     sblock = state[state.index("const detail ="): state.index("return (")]
-    assert "describe(error, \"\")" in sblock, (
+    assert "describe(error)" in sblock, (
         "ErrorState no longer shows the describer's sentence: %s" % " ".join(sblock.split()))
+    assert "error instanceof Error" in sblock and "error.message" in sblock, (
+        "ErrorState no longer shows a plain error's own message: %s" % " ".join(sblock.split()))
     assert "details" not in state and "status" not in state, (
         "ErrorState consults the status or the list now, so the generic-sentence claim is closing")
     assert "role=\"alert\"" in state, "the failure surface is no longer announced as an alert"

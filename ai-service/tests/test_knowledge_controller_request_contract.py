@@ -258,13 +258,13 @@ def test_the_client_endpoint_map_names_the_three_routes():
 def test_the_knowledge_mutations_announce_their_failures():
     ingest = ts_call_bodies("useIngestText", actions_source())
     assert len(ingest) == 1, "expected exactly one useIngestText"
-    assert 'fail("Ingest failed.")' in ingest[0], (
+    assert 'fail("failures.ingest")' in ingest[0], (
         "useIngestText failure toast changed"
     )
 
     notes = ts_call_bodies("useNoteMutations", actions_source())
     assert len(notes) == 1, "expected exactly one useNoteMutations"
     body = notes[0]
-    assert 'fail("Couldn\'t save the note.")' in body, "create failure toast changed"
-    assert 'fail("Couldn\'t update the note.")' in body, "update failure toast changed"
-    assert 'fail("Couldn\'t delete the note.")' in body, "delete failure toast changed"
+    assert 'fail("failures.noteSave")' in body, "create failure toast changed"
+    assert 'fail("failures.noteUpdate")' in body, "update failure toast changed"
+    assert 'fail("failures.noteDelete")' in body, "delete failure toast changed"

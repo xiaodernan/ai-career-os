@@ -1608,9 +1608,9 @@ up to the tree both sides actually ship, and writes down which red is whose.
   package — and §4 counted 40 of the migrations' 42 tables, missing
   `email_change_tokens` (26: the hash, never the link; one use; two hours) and
   `mail_preferences` (23.1: the two switches; an absent row means both on).
-  `SavedSearchAlertIT` backdated its search by `interval '30 days'` — the
-  refresh token's shipped lifetime — and the lifetime census charges every
-  shipped duration written without a credential word beside it, so a fixture
+  `SavedSearchAlertIT` backdated its search by `interval '30 days'`, the refresh
+  token's shipped lifetime, and the lifetime census charges every shipped
+  duration written without a credential word beside it, so a fixture
   about a news window failed a gate about credentials; ten days stays outside
   the seven-day floor the test needs and outside the credential vocabulary.
   The three files pass (12 tests), `SavedSearchAlertIT` passes alone against
@@ -1643,6 +1643,54 @@ up to the tree both sides actually ship, and writes down which red is whose.
   (`fail(fallbackKey: string)`), and every key a call names is answered in both
   languages by the browser's own `fail-keys` gate, so the two suites meet at
   the table. Ten reds closed; the nine files run 76 tests green at `f25f6db`.)
+
+- [x] **30.3** The drift censuses read the keys and the tree both lanes ship.
+
+  (Six census files still pinned sentences the copy-key refactor had retired --
+  the reminder toast, the 404 page's offline and missing-route sentences, the
+  two profile toasts, the validation detail line, and the knowledge mutations'
+  four failure keys -- and every red said "the message changed" about a message
+  that had been deliberately replaced by a key. They now pin the key each site
+  spends and read the sentence from the one locale table: the 404 sentence's
+  English copy is answered exactly twice there, the two profile toasts resolve
+  through keys in both languages and their sentences appear in no other source,
+  and the knowledge contract's mutation arm breaks `failures.ingest` instead of
+  an English literal. The records mapper's component census became a floor at
+  349 -- 63 names joined since it was written at 286 and none left, because the
+  walk grows with the backend -- and its dead-name tiers split when `versionNo`
+  turned out to be carried by the copy census's fixture and scanner as well as
+  the three readers.
+
+  `test_response_shape_contract.py` carried three drifts of its own. The
+  backend declares 170 records, not 157: thirteen joined with the
+  account-security, session, retention, saved-search, notification and mail
+  epics, and the comment names each one. The interval ledger's doc census is
+  now per-file counts (26 rows: ROADMAP 7, RUNBOOK 13, DEPLOYMENT 4, AGENTS 1,
+  SECURITY 1) because a line ledger red on every roadmap paragraph written
+  above it, and its shipped-code vocabulary lists all ten spans -- the run
+  stream's two and the eight the other three clocks contribute (22.3's signal
+  mail, 22.4's Monday letter, 28.2's retention sweep). The media-type census
+  grew a third bucket, `declared-constant`, for 23.1's mail-settings page
+  naming its own answer as HTML from a literal, and 25.1's `ClientInfo` reads
+  `User-Agent`, joining the request-header floor -- still no media type among
+  them. The 30.1 entry above was charged by the lifetime census itself: its
+  sentence put the old interval on one line and the refresh token on the next,
+  and that scan is line-scoped; the wrap moved, the claim did not.
+
+  At `f25f6db` these eight files run 107 of 109 green. In the shared tree the
+  suite reads 14 failed / 1902 passed / 1 skipped: two reds are the cache-writes
+  pair reading this session's in-flight `ingestion.ts` and `source-actions.tsx`
+  (7 -> 10 invalidation calls, 62 -> 65 borrowed promises), six read the same
+  session's uncommitted `normalize.ts` / `types.ts` (`normalizeApplyResult` and
+  the accessor counts), and three read its `ingestion.ts` mutation roster (8 ->
+  9). The two that remain after that attribution are the error-code gate's, and
+  they are not excused: 24.2's `CONFIRMATION_MISMATCH` has no browser sentence,
+  and `INVALID_CREDENTIALS` answers four throw sites with three different
+  sentences (login, a password change, an erased account's wrong password)
+  while the table resolves one sentence per code. The fix is finer codes plus
+  their sentences in `translations.ts`, which the concurrent session is
+  rewriting; the follow-up item lands them after that work commits, and the
+  gate stays red until then.)
 
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +

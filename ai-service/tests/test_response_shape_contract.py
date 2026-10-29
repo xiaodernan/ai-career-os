@@ -987,8 +987,16 @@ def test_the_java_probe_reads_every_record_the_backend_declares():
     # posts through the internal token, the item the monitoring page reads back, and the
     # step row that item's answer carries. 157 with 20.2's `NightlyVerdict` in the same
     # file: the install's one-answer read, the fourth record the night taught that class.
-    assert len(declared) == 157, \
-        f"{len(declared)} records carry a declaration the shared opener reads, not the 157 measured"
+    # 170 with the epics after it -- 13 records, the account-security family
+    # (`PasswordChangeRequest`, `EraseAccountRequest`, `EmailChangeRequest`,
+    # `ConfirmEmailChangeRequest`, `SessionResponse`), the sweep and matcher rows
+    # (`RetentionSweeper.Sweep`, `JobSearchRepository.MatchStats`, `SavedSearchMatcher.Alert`),
+    # `ClientInfo`, `NotificationService.Shown`, and the three word tables the two letters and
+    # the hosted mail page render their copies from (`NotificationMailer.Words`,
+    # `WeeklyDigestMailer.Words`, `MailPage.Words`). The probe walks records by declaration,
+    # so a private row or a letter's template counts like a public DTO.
+    assert len(declared) == 170, \
+        f"{len(declared)} records carry a declaration the shared opener reads, not the 170 measured"
     problems, renamed = [], []
     for relative, record in declared:
         names = _record_components_at(relative, record)
@@ -2960,28 +2968,40 @@ def test_the_heartbeat_interval_has_one_definer_and_every_shipped_claim_names_it
     assert doc_claims == [], \
         (f"{doc_claims}: `docs/` states the keep-alive without a number today, and a doc that quotes an "
          "interval is a claim this gate has to be able to check rather than a second opinion")
-    assert [(row["file"], row["line"]) for row in doc_vocabulary] == [
-        # SECURITY.md's keep-alive mention moved again (148 -> 150): the 10.2 bridge's `/growth`
-        # joined the throttle list above it, the sentence itself unchanged. AGENTS.md's moved
-        # 144 -> 150 for the same reason: the networking subagent's §2 whitelist row and the four
-        # §4 tool rows joined the tables above it, and that sentence did not change either. It
-        # moved once more to 159 when the deterministic-engines section (§7) and the
-        # tool table's growth rows joined the file below it -- again the sentence
-        # itself is untouched. Now 162: the tracker's `list_applications` row and the
-        # interview surface's two read rows joined the §4 tool table above it, and the
-        # sentence still says the same thing.
-        # RUNBOOK.md joins with 19.9: its "what this runbook does not cover" list says
-        # Redis backs "the health ping" -- the same keep-alive by name, introduced by the
-        # ops page that also owns the interval's shipped comment.
-        ("AGENTS.md", 162), ("DEPLOYMENT.md", 8), ("RUNBOOK.md", 224), ("SECURITY.md", 150),
-    ], (f"{doc_vocabulary}: the docs' own vocabulary is censused, so this pass is not reporting on an "
+    # A file set and a per-file count rather than a line ledger. The census is over the word
+    # (`ping`, `keep-alive`, `heartbeat`), and the epics since 22.3 put the word in front of
+    # three more readers: the morning sweep's heartbeat, the Monday letter's and the retention
+    # sweep's. Each is a different clock that shares the word -- and each line moved whenever a
+    # roadmap entry above it grew, so a line ledger red on an edit that changed no sentence.
+    # The file set still reds when a second document picks the word up; the counts still red
+    # when a paragraph joins or leaves.
+    per_file: dict[str, int] = {}
+    for row in doc_vocabulary:
+        per_file[row["file"]] = per_file.get(row["file"], 0) + 1
+    assert per_file == {"AGENTS.md": 1, "DEPLOYMENT.md": 4, "ROADMAP.md": 7,
+                        "RUNBOOK.md": 13, "SECURITY.md": 1}, (
+        f"{per_file}: the docs' own vocabulary is censused, so this pass is not reporting on an "
         "empty set -- and a second file picking up the word is a signal the ledger has to grow")
 
     assert [(row["file"], row["line"]) for row in spans["vocabulary"]] == [
+        # The other clocks that share the word -- 22.3's signal mail, 22.4's Monday letter and
+        # 28.2's retention sweep each call their pass marker a heartbeat, so their comments name
+        # the word and state no interval. They are not run-stream claims, but the noun census is
+        # over the word, and listing them keeps its population counted rather than pruned.
+        ("backend/src/main/java/com/careeros/auth/retention/RetentionMetrics.java", 13),
+        ("backend/src/main/java/com/careeros/auth/retention/RetentionSweeper.java", 17),
+        ("backend/src/main/java/com/careeros/notification/service/NotificationDeliveryMetrics.java", 11),
+        ("backend/src/main/java/com/careeros/notification/service/NotificationDeliveryMetrics.java", 82),
+        ("backend/src/main/java/com/careeros/notification/service/NotificationMailService.java", 22),
+        ("backend/src/main/java/com/careeros/report/service/WeeklyDigestDeliveryMetrics.java", 11),
+        ("backend/src/main/java/com/careeros/report/service/WeeklyDigestDeliveryMetrics.java", 82),
+        ("backend/src/main/java/com/careeros/report/service/WeeklyDigestScheduler.java", 11),
+        # The run stream's own two, the population this ledger was written for.
         ("frontend/src/components/ai/task-stream.tsx", 17),
         ("frontend/src/lib/sse/use-sse.ts", 9),
     ], ("spans that name the keep-alive and state no interval: the shape an edited claim leaves behind, "
-        "listed so a claim cannot escape the census above by losing its number")
+        "listed so a claim cannot escape the census above by losing its number -- the eight Java rows "
+        "are the other clocks that share the word, kept here so a ninth clock is a red, not a silent join")
     assert [(row["file"], row["line"]) for row in spans["trailing"]] == [
         ("backend/src/main/java/com/careeros/ai/SseRelayService.java", 116),
         ("frontend/src/lib/sse/use-sse.ts", 253),
@@ -3502,6 +3522,7 @@ ANSWER_READ = re.compile(
 # Which bag the media type was taken out of: an HTTP answer's headers, or a value the code already holds.
 HTTP_HEADER_BAG = re.compile(r"\bheaders\b")
 STORED_VALUE_READ = re.compile(r"\.get(?:MediaType|ContentType|MimeType)\s*\(\)|\.mediaType\s*\(\)")
+MEDIA_DECLARATION = re.compile(r"\bfinal\s+MediaType\s+\w+\s*=")
 CONTENT_TYPE_TOKEN = re.compile(r'[\"\'][Cc]ontent-[Tt]ype[\"\']')
 CONSUMERS = (
     ("SseRelayService.consume", "java", RELAY_PATH, r"\bvoid\s+consume\s*\("),
@@ -3568,7 +3589,8 @@ def _java_media_writers() -> list[dict]:
 
 
 def _answer_type_reads() -> dict[str, list[dict]]:
-    """Media-type reads, split by where the value came from -- the answer's headers, or the code's own."""
+    """Media-type reads and declarations, split by where the value came from -- the answer's headers,
+    the code's own stored record, or a constant the file itself declares."""
     buckets: dict[str, list[dict]] = {}
     for _label, path, text in _walk_shipped_code():
         for match in ANSWER_READ.finditer(text):
@@ -3581,6 +3603,8 @@ def _answer_type_reads() -> dict[str, list[dict]]:
                 kind = "http-answer-headers"
             elif STORED_VALUE_READ.search(context):
                 kind = "stored-value"
+            elif MEDIA_DECLARATION.search(line):
+                kind = "declared-constant"
             else:
                 kind = "unclassified"
             buckets.setdefault(kind, []).append(
@@ -3739,10 +3763,19 @@ def test_the_stream_media_type_is_written_in_four_spellings_and_read_in_none():
         "the answer-side spelling in Python is that one writer call"
 
     buckets = _answer_type_reads()
-    assert sorted(buckets) == ["stored-value", "test-assertion"], \
-        (f"{ {k: len(v) for k, v in buckets.items()} }: a media type is read out of a value the code "
-         "itself stores once, and out of an HTTP answer's headers only inside a test -- those are the two "
-         "buckets this census can hold. An `unclassified` row would be a read it cannot say anything about")
+    assert sorted(buckets) == ["declared-constant", "stored-value", "test-assertion"], \
+        (f"{ {k: len(v) for k, v in buckets.items()} }: a media type is declared once from a literal, "
+         "read out of a value the code itself stores twice, and read out of an HTTP answer's headers only "
+         "inside a test -- those are the three buckets this census can hold. An `unclassified` row would "
+         "be a read it cannot say anything about")
+    declared_rows = buckets["declared-constant"]
+    assert [(row["file"], row["line"], row["spelling"]) for row in declared_rows] == [
+        ("backend/src/main/java/com/careeros/mail/web/MailPreferenceController.java", 44,
+         "MediaType.parseMediaType(")], \
+        (f"{declared_rows}: 23.1's mail-settings page names its own answer as HTML -- a constant built "
+         "from a literal, which the reader regex catches but which asks nothing of any answer. Pinned "
+         "here so a controller that starts declaring a media type is a line in this ledger, not a "
+         "silently absorbed third bucket")
     assert buckets.get("http-answer-headers", []) == [], \
         (f"{buckets.get('http-answer-headers', [])}: no shipped reader asks an answer what its media type "
          "is -- that is this unit's fact. A row here means the check exists and the status guards in the "
@@ -3781,8 +3814,10 @@ def test_the_stream_media_type_is_written_in_four_spellings_and_read_in_none():
     ], (f"{_java_media_writers()}: Java names a media type on the JSON it sends and on the two files it "
         "serves (the internal download and the resume download), so the missing answer check is a choice "
         "at the read site, not a tool the language lacks")
+    # `User-Agent` joined with 25.1's ClientInfo: a session is named from the browser's own
+    # sentence, read off the request before the session row is written. Still no media type.
     assert sorted({row["header"] for row in _request_header_reads()}) == \
-        ["Authorization", "X-Forwarded-For", "X-Internal-Token"], \
+        ["Authorization", "User-Agent", "X-Forwarded-For", "X-Internal-Token"], \
         (f"{sorted({r['header'] for r in _request_header_reads()})}: Java does read request headers by "
          "name, and none of them is a media type -- a second floor proving the reader scan is not simply "
          "blind to header reads")

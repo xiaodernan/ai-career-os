@@ -211,7 +211,8 @@ def test_the_offline_affordance_has_been_rendered_by_nobody():
         if n:
             refs.append((rel, n))
     assert refs == [(BOUNDARY, 1)], "EndpointOffline is spelled in %s -- the declaration itself is the only reference" % refs
-    assert "isn&apos;t connected yet" in text, "the dead hint's sentence changed; the claim about it is stale"
+    assert 't("common.endpointOffline", { name })' in text, (
+        "the dead hint's sentence moved into the locale table, so the claim about it is stale")
 
 
 def test_the_missing_endpoint_rule_reads_the_code_and_the_client_keeps_it():
@@ -312,11 +313,18 @@ def test_the_run_a_user_opens_by_url_id_gets_the_version_sentence():
     assert stmt(boundary, "description={notLive?.description ??") == \
         "description={notLive?.description ?? missingEndpointMessage()}", (
         "the boundary no longer falls back to the version sentence, so this finding needs re-measuring")
-    assert stmt(read(MISSING), 'const route =') == (
-        'const route = path ? `${path} answered 404` : "A route this screen needs answered 404";'), (
-        "the fallback's own wording moved")
-    assert "different versions" in read(MISSING) and "Nothing is shown in place of the real data" in read(MISSING), (
-        "the sentence this finding quotes is no longer the sentence the screen shows")
+    assert stmt(read(MISSING), "const key =") == (
+        'const key = path ? "common.missingEndpointRoute" : "common.missingEndpoint";'), (
+        "the fallback's own wording moved into the locale table; re-read which keys it reads")
+    assert 'return translate(key, path ? { route: path } : undefined) ?? key;' in read(MISSING), (
+        "the fallback sentence is no longer read through the one translating call, so a reader "
+        "whose language is not English gets the key back")
+    locale = read("frontend/src/lib/i18n/translations.ts")
+    sentence = ("so this frontend and the backend it is talking to are different versions. "
+                "Nothing is shown in place of the real data.")
+    assert locale.count(sentence) == 2, (
+        "the sentence this finding quotes is no longer the sentence the screen shows: %d copies"
+        % locale.count(sentence))
     # The retry button's label reads from the locale table now, so the gate
     # accepts the key the boundary reads rather than the English copy.
     assert 't("common.checkAgain")' in boundary or "Check again" in boundary, \

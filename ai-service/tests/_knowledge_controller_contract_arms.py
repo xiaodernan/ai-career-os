@@ -122,15 +122,15 @@ def arm_unbind_one_note_request_route() -> dict:
 
 
 def arm_change_ingest_failure_message() -> dict:
-    """Change useIngestText's failure toast -- the announcement test should fail."""
+    """Change useIngestText's failure key -- the announcement test should fail."""
     old = read(ACTIONS)
-    new = old.replace('fail("Ingest failed.")', 'fail("Ingest crashed.")')
-    assert new != old, "ingest failure message not found"
+    new = old.replace('fail("failures.ingest")', 'fail("failures.ingestCrashed")')
+    assert new != old, "ingest failure key not found"
     write(ACTIONS, new)
     return {
-        "name": "change useIngestText failure message",
+        "name": "change useIngestText failure key",
         "predicted_red": ["test_the_knowledge_mutations_announce_their_failures"],
-        "description": "fail() still called, but the shipped sentence changed",
+        "description": "fail() still called, but the key the toast resolves changed",
     }
 
 

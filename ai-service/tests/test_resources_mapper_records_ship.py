@@ -220,7 +220,14 @@ DEAD_NAME_TIERS = {
     ("components/common/command-palette.tsx", "lib/api/normalize.ts",
      "lib/hooks/resources.ts"): {"company_name"},
     ("app/(app)/resumes/[id]/page.tsx", "lib/api/types.ts",
-     "lib/hooks/resources.ts"): {"isCurrent", "versionNo"},
+     "lib/hooks/resources.ts"): {"isCurrent"},
+    # `versionNo` grew two spellers without growing a reader: the template-literal
+    # scanner's docstring names the retired `Version ${v.versionNo ...}` pattern as its
+    # example, and the copy census's test pins that same pattern as a fixture. The row
+    # that reads it is still the versions screen, which is what the screen-tier
+    # assertions below keep true.
+    ("app/(app)/resumes/[id]/page.tsx", "lib/api/types.ts", "lib/hooks/resources.ts",
+     "lib/i18n/copy-census.test.ts", "lib/i18n/copy-scan.ts"): {"versionNo"},
     ("lib/api/normalize-actions.test.ts", "lib/api/normalize.test.ts", "lib/api/normalize.ts",
      "lib/hooks/resources.ts"): {"job_id"},
     ("lib/api/normalize.test.ts", "lib/api/normalize.ts", "lib/hooks/resources.ts"): {"created_at",
@@ -537,7 +544,24 @@ def test_an_unauthored_name_is_a_snake_twin_a_foreign_name_or_a_name_no_record_d
     # nightly family is the first to declare. 286 with 20.2's `NightlyVerdict`:
     # `consecutiveFailures`, `stale` and `staleAfterHours` are the three names no earlier
     # record declared -- the rest of the verdict repeats the night's own coordinates.
-    assert len(everywhere) == 286, f"the backend record census read {len(everywhere)} component names"
+    # 349 with the account-security, mail and notification epics: the session/erase/
+    # email-change/password records, the digest's delivery receipt, the saved-search
+    # alert, and -- most of the growth -- the word tables the two mailers and the hosted
+    # mail page carry their copies in (`Words`, `Shown`). The walk reads every Java
+    # record, so a template's word table is a record declaring its names; 63 names joined
+    # and none left.
+    # A FLOOR, not an equality, for the reason the frontend-file pin below states: the
+    # backend grows a record with every epic, and `== 286` made each of those additions
+    # red a gate that says nothing about it. What the equality was for -- proving the walk
+    # read the backend rather than one dto package -- the floor keeps. What it was standing
+    # in for is graded per row: every mapper's unauthored set and every name no record
+    # declares are pinned exactly below, so a record that drops the only declaration of a
+    # classified name still reds this case through that table, not through the total. The
+    # arm that proves the sentence: delete a declaration and watch the per-row table,
+    # not the floor, go red.
+    assert len(everywhere) >= 349, (
+        f"the backend record census read {len(everywhere)} component names, below the 349 that "
+        "ship: the walk stopped reaching part of the tree")
     assert {"id", "title", "status", "createdAt"} <= set(everywhere), sorted(list(everywhere)[:8])
     scanned_unauthored = scanned_nowhere = 0
     for (mapper, receiver), record in ROWS.items():
@@ -742,7 +766,9 @@ def test_the_screens_read_their_mapper_output_and_only_the_versions_row_asks_dea
     authored = set(record_components("ResumeVersionItem"))
     assert reads - authored == {"isCurrent", "versionNo", "source"}, sorted(reads - authored)
     assert "const isCurrent = v.isCurrent || v.id === r.currentVersionId;" in page
-    assert "Version ${v.versionNo ?? v.id.slice(0, 8)}" in page
+    assert 't("resumes.detail.versionFallback", {' in page and \
+        "version: v.versionNo ?? v.id.slice(0, 8)," in page, (
+        "the versions row stopped asking its two dead names for the fallback label")
     assert "v.structured" not in page, "a screen now reads the field no version record declares"
     assert "currentVersionId" in set(record_components("ResumeListItem")), \
         "the term that carries the badge stopped being authored"
@@ -779,12 +805,14 @@ def test_the_dead_names_spread_in_three_measured_tiers_and_three_reached_a_scree
     """Blast radius of a name no record authors, spelled out over the whole frontend census.
 
     The population is every `*.ts*` file under `frontend/src` (137 at this plane); the spellings
-    walked are the 56 names the eight mappers ask for that their record declares in no spelling, and
-    a camel name and its snake twin are separate entries. Twenty-eight of them live in three files
-    or fewer, and those 28 are classified by exactly which files; beyond that a generic name (`name`,
+    walked are the 57 names the eight mappers ask for that their record declares in no spelling, and
+    a camel name and its snake twin are separate entries. Twenty-seven of them live in five files
+    or fewer, and those 27 are classified by exactly which files; beyond that a generic name (`name`,
     `score`, `title`) means something else in the file that spells it, so the census stops rather
-    than pretend. The tier worth a decision is the one a screen belongs to: the versions row reads
-    `isCurrent` and `versionNo`, both calls dead, the badge alive on a second real term.
+    than pretend. The widest classified tier is `versionNo`, whose two extra spellers are the copy
+    scanner's docstring and its test's fixture rather than readers. The tier worth a decision is the
+    one a screen belongs to: the versions row reads `isCurrent` and `versionNo`, both calls dead, the
+    badge alive on a second real term.
     """
     files = frontend_files()
     # 170 rather than 169 since the interview picker got a test of its own
@@ -866,11 +894,19 @@ def test_the_dead_names_spread_in_three_measured_tiers_and_three_reached_a_scree
                         | set().union(*READERS_BY_PAGE.values()))
     assert TYPES_MIRROR_NAMES & read_by_a_screen == set(), \
         sorted(TYPES_MIRROR_NAMES & read_by_a_screen)
-    # The screen tier is the versions row's pair. `fileName` collapsed into the mapper-only tier:
-    # the detail screen stopped reading it when the download went live (#155), and the batch-upload
-    # rework took source-actions.tsx -- the last other speller -- with it.
+    # The screen tier is the versions row's pair, and `versionNo` -- the half that grew
+    # two non-reader spellers -- is pinned as its own tier in the next assertion. `fileName`
+    # collapsed into the mapper-only tier: the detail screen stopped reading it when the
+    # download went live (#155), and the batch-upload rework took source-actions.tsx --
+    # the last other speller -- with it.
     screen_tier = DEAD_NAME_TIERS[("app/(app)/resumes/[id]/page.tsx", "lib/api/types.ts",
                                    "lib/hooks/resources.ts")]
-    assert screen_tier == SCREEN_READ_NAMES, sorted(screen_tier ^ SCREEN_READ_NAMES)
+    assert screen_tier == SCREEN_READ_NAMES - {"versionNo"}, sorted(screen_tier ^ SCREEN_READ_NAMES)
+    # `versionNo`'s tier is the screen plus the two files that only spell it: the copy
+    # scanner's docstring and its test's fixture. Neither reads the mapper output.
+    five = DEAD_NAME_TIERS[("app/(app)/resumes/[id]/page.tsx", "lib/api/types.ts",
+                            "lib/hooks/resources.ts", "lib/i18n/copy-census.test.ts",
+                            "lib/i18n/copy-scan.ts")]
+    assert five == {"versionNo"}, sorted(five)
     assert SCREEN_READ_NAMES <= read_by_a_screen
     assert VERSION_ROW_READS >= {"isCurrent", "versionNo"}
