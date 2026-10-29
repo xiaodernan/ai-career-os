@@ -7,6 +7,8 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.UUID;
 import java.util.regex.Pattern;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -29,10 +31,18 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * not fail because its trace header was malformed. The id is also exposed to the browser
  * through CORS, because the contract is that a reader can quote it from a failed request
  * instead of describing the screen.
+ *
+ * <p>The filter also writes the access line the backend otherwise lacks: one line per
+ * answer carrying the method, the request's path, the status and the elapsed time. It is
+ * written under the id, so "what was happening at 14:03" is a grep of `careeros.access`
+ * rather than a guess. The query string is deliberately left out -- a search term is the
+ * reader's text and a reset flow carries a token, and neither belongs in every log file.
  */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class RequestIdFilter extends OncePerRequestFilter {
+
+    private static final Logger accessLog = LoggerFactory.getLogger("careeros.access");
 
     /** The request and response header the id travels in. */
     public static final String HEADER = "X-Request-Id";
@@ -59,11 +69,29 @@ public class RequestIdFilter extends OncePerRequestFilter {
                 : UUID.randomUUID().toString();
         response.setHeader(HEADER, requestId);
         MDC.put(MDC_KEY, requestId);
+        long startedNanos = System.nanoTime();
         try {
             chain.doFilter(request, response);
+            writeAccessLine(request, response, startedNanos);
+        } catch (IOException | ServletException | RuntimeException e) {
+            // The container will turn this into a 500 after the filter unwinds; a number
+            // here would be one the answer does not end up carrying.
+            accessLog.info("{} {} error {}ms", request.getMethod(), request.getRequestURI(),
+                    elapsedMs(startedNanos));
+            throw e;
         } finally {
             // A pooled thread must not carry this request's id into the next one.
             MDC.remove(MDC_KEY);
         }
+    }
+
+    private static void writeAccessLine(HttpServletRequest request, HttpServletResponse response,
+            long startedNanos) {
+        accessLog.info("{} {} {} {}ms", request.getMethod(), request.getRequestURI(),
+                response.getStatus(), elapsedMs(startedNanos));
+    }
+
+    private static long elapsedMs(long startedNanos) {
+        return (System.nanoTime() - startedNanos) / 1_000_000;
     }
 }

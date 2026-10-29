@@ -2329,6 +2329,32 @@ so one grep reconstructs one request.
   id crosses to the ai-service, appears as `request_id` in its JSON lines, and a
   scheduler-minted id appears only there.)
 
+- [x] **32.3** Every answer leaves one access line.
+
+  (The id joined the lines a request chose to write, but a slow request that logged
+  nothing still had to be found by hand. `RequestIdFilter` now writes one line per
+  answer to the `careeros.access` logger — `GET /api/v1/jobs 200 37ms` — under the
+  id the console pattern already prints. A chain that throws logs `error` in the
+  status slot rather than a number, because the container's 500 is decided after the
+  filter unwinds and a number there would be one the answer never ends up carrying.
+  The query string is deliberately omitted: a search term is the reader's text and a
+  reset flow carries a token, and neither belongs in every log file.
+
+  `RequestIdFilterAccessLogTest` pins the sentence shape through a Logback appender
+  — method, path, status and a millisecond figure — asserts the event's MDC carries
+  the id the answer carries (the line is written before the MDC is cleared), proves
+  `?q=my-private-search&token=secret` never reaches the line, and that a throwing
+  chain still leaves its `error` line and clears the id. Mutation arm: deleting the
+  `writeAccessLine` call turned 3 of 4 red (the throwing case still logged); restored
+  byte-identical (sha1 762b7ca5…), 4/4 green. The full backend suite answers 920
+  tests, 0 failures, 0 errors, 0 skipped, and the suite's own run wrote 401 access
+  lines in the shape the case pins.
+
+  The doc-reading gate selection answers 235 of 238, the three reds the concurrent
+  session's in-flight `test_response_shape_contract.py`. `docs/RUNBOOK.md`'s
+  correlation section now shows the line and says what the status column means and
+  what is never printed.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

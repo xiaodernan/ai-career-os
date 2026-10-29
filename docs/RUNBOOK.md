@@ -308,6 +308,18 @@ request: boot lines and scheduled sweeps have none and cannot be tied to a repor
 The id is diagnostics, not a credential: it is not stored, it changes on every
 call, and quoting it exposes nothing.
 
+Every answer also leaves one `careeros.access` line under that id:
+
+```
+14:03:08.913 INFO  [http-nio-8080-exec-4] [edge-7c1d4f9a] c.c.common.RequestIdFilter - GET /api/v1/jobs 200 37ms
+```
+
+so "what was the backend doing at 14:03" is `grep 'careeros.access'` followed by
+the status and time columns — no id needed. A request whose chain threw says
+`error` instead of a number, because the container's 500 is decided after this
+line is written. The query string is never printed: a search term is the reader's
+text and a reset flow carries a token.
+
 **What crosses the service boundary.** Every backend call to the ai-service — the
 typed `/internal/*` routes and the SSE stream — carries the same id in
 `X-Request-Id`; the ai-service echoes it on its answer and writes it as
