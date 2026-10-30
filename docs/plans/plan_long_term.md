@@ -9,13 +9,12 @@
 
 ## 当前状态 (2026-10-30)
 
-- **前端**: 899 个 vitest 通过（88 个文件）；`tsc --noEmit` 干净。
-- **后端**: 非 IT 选集 **1067 条全绿**（`mvn -o -B -Dtest="!*IT" test`；1037 基线 +
-  41.1 的 19 条 + 42.1 的 4 条 + 并发会话在制的 7 条导出/导入测试）；含真实栈 IT 的全量（1128 条基线上
-  再加本单元与并发会话的新测试）待下一次 `mvn -o -q test` 复核。
-- **ai-service**: 1903 passed, 48 failed, 1 skipped（offline: mock/hash）。48 条失败全是
-  37/38 新增人口留下的跨语言 census 漂移，在 39.2 父提交的干净检出上逐条重现，已列为
-  下一单元；39.2 不新增失败。
+- **前端**: 911 个 vitest 通过（90 个文件）；`tsc --noEmit` 干净。
+- **后端**: 非 IT 选集 **1078 条全绿**（`mvn -o -B -Dtest="!*IT" test`，本轮实测；43.1 无后端
+  改动）；含真实栈 IT 的全量待下一次 `mvn -o -q test` 复核。
+- **ai-service**: **1996 passed, 1 skipped**（offline: mock/hash；全量 `python -m pytest -q`
+  本轮实测）。39/40 遗留的 48 条 census 漂移已逐条修完；43.1 只让深链闸门改读行组件
+  （`test_applications_deep_link_reaches_any_page.py`）。
 - **E2E**: 24/24 golden journey（最近一次真实栈验证）。
 - **分支**: main 与 origin 同步（本次推送后）。
 - **已完成**: Epic 0–38 全部勾选，Epic 39 进行中（39.1–39.2 已勾选）；38（账号够到自己的动词）在 38.5 收口。36（登录的第二道门）在 36.4 收口：设置页
@@ -38,7 +37,8 @@
 **41.2** 让这口钟有了自己的警报（`alerts.yml` 十一条、拒绝计数改说两种信、9 条闸门测试绿）；
 **42.1** 让邮件设置不再只住在旧信里（`GET /me/mail/settings` + 设置页邮件卡，4 条后端测试绿）；
 **42.2** 让这张卡自己扳动三个开关（`PUT /me/mail/settings/{list}` + Switch 的乐观更新，
-3 条后端测试 + 2 条 hook 写面测试绿）。
+3 条后端测试 + 2 条 hook 写面测试绿）；**43.1** 让 attention 卡上的到期提醒就地可答
+（`Snooze to tomorrow` / `Clear` 走同一个 PATCH，新行组件 + 5 条 SSR 测试，前端 911 条 / 90 文件）。
 
 ## 主线队列（按顺序执行）
 
@@ -601,6 +601,23 @@
     `lib/hooks/mail-settings.ts`；API.md、DEPLOYMENT.md、architecture.md 同步。
   - 下一步（避开并发会话在制的 export/import）：仪表盘 attention 的提醒过期语义；或 Epic 40
     的后续单元（40.2 常驻选择随包走）提交后再接手。
+
+- **Epic 43 — 卡片回答自己的问题**（本轮起）
+  - 盘点结论（2026-10-30）：attention 卡把「提醒到期」与「两周没有进展」的申请列出来，但到期提醒
+    只有两个回答——「明早再说」「不用记了」——都得打开申请对话框才说得出。卡片的本职就是被回答，
+    它却只能指路。后端无需新端点：`PATCH /applications/{id}` 已经收 `reminderAt` 与
+    `clearReminderAt`，缺的只是入口。
+  - **43.1** 到期的提醒在它被读到的地方被回答（已完成）：`Snooze to tomorrow` 把 `reminderAt`
+    写成**本地**明天 09:00（`lib/application-edit.ts` 的 `snoozeReminder(now)`：23:50 按下是九小时
+    后，不是一天零十分钟；3 条确定性的纯函数测试，含跨月与午夜边界）；`Clear` 走对话框自己的
+    `reminderPatch(row.reminderAt, "")`，所以 `clearReminderAt` 仍只在一个文件里被发明，乐观合并、
+    提示与回滚都是对话框已有的那一套。两个按钮共用 `useUpdateApplication`（本行写时禁用本行两个按
+    钮）；提醒变更现在也刷新收件箱——它把同一条提醒单列成一行。过期行没有按钮：没有可移动的提醒，
+    「清除」也无事可清。新组件 `components/dashboard/attention-row.tsx` + 5 条 SSR 测试（含一条把
+    两个按钮钉在行链接之外，回答时不会顺带导航）；浏览器源普查 148→149，缓存调用台账
+    `invalidateQueries` 52→53。
+  - 下一步候选（避开并发会话在制的 export/import）：收件箱里 reminder 条目的就地动作、
+    attention 行的「谁在等你」；或 Epic 40 的后续单元提交后再接手。
 
 
 ## 开发协议

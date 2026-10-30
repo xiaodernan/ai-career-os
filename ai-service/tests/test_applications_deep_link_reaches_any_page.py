@@ -26,7 +26,9 @@ FRONT = ROOT / "frontend" / "src"
 RESOURCES = FRONT / "lib" / "hooks" / "resources.ts"
 ENDPOINTS = FRONT / "lib" / "api" / "endpoints.ts"
 APPS_PAGE = FRONT / "app" / "(app)" / "applications" / "page.tsx"
-DASHBOARD = FRONT / "app" / "(app)" / "dashboard" / "page.tsx"
+#: 43.1 moved the attention row -- and the link it writes -- out of the dashboard page into
+#: this component, so case 2 reads the row the page renders rather than the page's own text.
+ATTENTION_ROW = FRONT / "components" / "dashboard" / "attention-row.tsx"
 CONTROLLER = "com/careeros/application/web/ApplicationController.java"
 
 LINK_PARAM = "application="
@@ -79,11 +81,11 @@ def test_the_by_id_route_has_a_reader_and_the_hook_spends_that_route():
 
 
 def test_the_deep_link_reads_the_page_in_hand_first_and_fetches_the_rest():
-    """Case 2: the dashboard writes the param; the board answers from its page or a fetch."""
-    dashboard = read(DASHBOARD)
+    """Case 2: the dashboard's attention row writes the param; the board answers from its page or a fetch."""
+    row = read(ATTENTION_ROW)
     link = "/applications?" + LINK_PARAM + "${encodeURIComponent(row.id)}"
-    assert link in dashboard, (
-        f"the dashboard no longer writes the {LINK_PARAM!r} param this file reads")
+    assert link in row, (
+        f"the attention row no longer writes the {LINK_PARAM!r} param this file reads")
 
     page = read(APPS_PAGE)
     assert "useUrlState<{ application?: string; page: number }>(" in page, page
