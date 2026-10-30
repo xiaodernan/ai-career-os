@@ -12,6 +12,10 @@ import com.careeros.conversation.repository.ConversationRepository;
 import com.careeros.conversation.repository.MessageRepository;
 import com.careeros.knowledge.entity.UserNote;
 import com.careeros.knowledge.repository.UserNoteRepository;
+import com.careeros.job.entity.IngestionFeed;
+import com.careeros.job.entity.SavedSearch;
+import com.careeros.job.repository.IngestionFeedRepository;
+import com.careeros.job.repository.SavedSearchRepository;
 import com.careeros.network.entity.Contact;
 import com.careeros.network.repository.ContactRepository;
 import java.util.ArrayList;
@@ -26,9 +30,10 @@ import org.springframework.transaction.annotation.Transactional;
  * The export bundle (13.1), with the backend's own sections in it.
  *
  * <p>The ai-service reads six sections for itself and hashes the bundle; this
- * service reads the five the BACKEND owns — {@code applications},
- * {@code growth_plans}, {@code notes}, {@code contacts} and
- * {@code conversations} — and hands them over.
+ * service reads the seven the BACKEND owns — {@code applications},
+ * {@code growth_plans}, {@code notes}, {@code contacts},
+ * {@code conversations}, {@code saved_searches} and {@code ingestion_feeds} —
+ * and hands them over.
  * The hash is still computed in one place (the ai-service), so a bundle has one
  * hashing rule rather than one per producer, and a bundle without the pipeline the
  * candidate actually worked is a bundle of their reading list and nothing else.
@@ -38,7 +43,10 @@ import org.springframework.transaction.annotation.Transactional;
  * typed into is not their data. The chats are the same argument one step further:
  * the reader's questions and the coaching they were given are the reader's own
  * words too, and a bundle without them loses the reasoning behind every resume
- * and plan the engines produced.
+ * and plan the engines produced. The saved searches and the feeds are the
+ * account's standing choices: the question the morning sweep speaks for and the
+ * sources the ingester is pointed at -- leave them out, and a restored account
+ * goes silent at the next sunrise.
  */
 @Service
 public class ExportService {
@@ -53,11 +61,14 @@ public class ExportService {
     private final ContactRepository contacts;
     private final ConversationRepository conversations;
     private final MessageRepository messages;
+    private final SavedSearchRepository savedSearches;
+    private final IngestionFeedRepository feeds;
 
     public ExportService(AiServiceClient aiService, ApplicationRepository applications,
                           GrowthPlanRepository growthPlans, UserNoteRepository notes,
                           ContactRepository contacts, ConversationRepository conversations,
-                          MessageRepository messages) {
+                          MessageRepository messages, SavedSearchRepository savedSearches,
+                          IngestionFeedRepository feeds) {
         this.aiService = aiService;
         this.applications = applications;
         this.growthPlans = growthPlans;
@@ -65,11 +76,13 @@ public class ExportService {
         this.contacts = contacts;
         this.conversations = conversations;
         this.messages = messages;
+        this.savedSearches = savedSearches;
+        this.feeds = feeds;
     }
 
     /**
      * The export bundle for the caller: the ai-service's six sections plus the
-     * backend's two, hashed together.
+     * backend's seven, hashed together.
      */
     @Transactional(readOnly = true)
     public Map<String, Object> exportBundle(UUID userId, boolean anonymized) {
@@ -101,6 +114,14 @@ public class ExportService {
                 .map(ExportService::toContact)
                 .toList());
         sections.put("conversations", conversationsOf(userId));
+        sections.put("saved_searches", savedSearches
+                .findByUserIdOrderByCreatedAtDesc(userId).stream()
+                .map(ExportService::toSavedSearch)
+                .toList());
+        sections.put("ingestion_feeds", feeds
+                .findByUserIdOrderByCreatedAtDesc(userId).stream()
+                .map(ExportService::toIngestionFeed)
+                .toList());
         return sections;
     }
 
@@ -264,6 +285,53 @@ public class ExportService {
         row.put("actions", m.getActions());
         if (m.getCreatedAt() != null) {
             row.put("created_at", m.getCreatedAt().toString());
+        }
+        return row;
+    }
+
+    /**
+     * One saved search as the bundle carries it: the name the reader gave the
+     * question and the board's own criteria.
+     *
+     * <p>The criteria travel as the map they are, not as the fields this
+     * service happens to know: the board grows filters more often than this
+     * table should need a change, and a restore that dropped the one it did
+     * not recognize would bring back a different question.
+     */
+    private static Map<String, Object> toSavedSearch(SavedSearch s) {
+        Map<String, Object> row = new LinkedHashMap<>();
+        row.put("id", s.getId() == null ? null : s.getId().toString());
+        row.put("name", s.getName());
+        row.put("criteria", s.getCriteria());
+        if (s.getCreatedAt() != null) {
+            row.put("created_at", s.getCreatedAt().toString());
+        }
+        if (s.getUpdatedAt() != null) {
+            row.put("updated_at", s.getUpdatedAt().toString());
+        }
+        return row;
+    }
+
+    /**
+     * One ingestion feed as the bundle carries it: the source's name, its
+     * address, its label and whether the sweep is still pointed at it.
+     *
+     * <p>The URL is configuration rather than a secret -- the anonymized
+     * bundle keeps it, because redacting a source hides nothing about a
+     * person while dropping the row would break the restore's counts.
+     */
+    private static Map<String, Object> toIngestionFeed(IngestionFeed f) {
+        Map<String, Object> row = new LinkedHashMap<>();
+        row.put("id", f.getId() == null ? null : f.getId().toString());
+        row.put("name", f.getName());
+        row.put("url", f.getUrl());
+        row.put("source", f.getSource());
+        row.put("enabled", f.isEnabled());
+        if (f.getCreatedAt() != null) {
+            row.put("created_at", f.getCreatedAt().toString());
+        }
+        if (f.getUpdatedAt() != null) {
+            row.put("updated_at", f.getUpdatedAt().toString());
         }
         return row;
     }

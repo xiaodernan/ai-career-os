@@ -35,7 +35,7 @@ from uuid import UUID
 # The words of the readable half, in every language it ships in.
 from app.features import export_words as words_mod
 
-SCHEMA_VERSION = "1.3.0"
+SCHEMA_VERSION = "1.4.0"
 GENERATOR = "ai-career-os"
 
 # Top-level profile keys stripped by ``anonymize`` unless the caller overrides.
@@ -85,6 +85,14 @@ ANONYMIZED_FIELDS: dict[str, tuple[str, ...]] = {
     # handled by the nested policy.
     "conversations": ("title",),
 }
+
+# The standing choices -- ``saved_searches`` and ``ingestion_feeds`` -- are
+# deliberately absent from both policies: a saved search's name and criteria
+# and a feed's URL are the reader's configuration, not their identity, and
+# dropping the row would break the restore's counts while hiding nothing
+# about a person. The anonymized bundle keeps them whole; the gate classifies
+# every column they carry so the silence is a decision rather than an
+# oversight.
 
 # Fields that carry a **bag** -- a JSON object stored in one column -- whose
 # *inside* holds the reader's words.
@@ -141,10 +149,23 @@ BACKEND_SECTIONS: tuple[str, ...] = (
     # bundle that leaves them out is missing the place the reader thought
     # out loud.
     "conversations",
+    # Since 1.4.0 the standing choices travel: the saved searches the
+    # morning sweep speaks for and the sources the ingester is pointed at.
+    # They are configuration rather than correspondence -- which is why the
+    # anonymized export keeps them (see the policy below) -- but they are
+    # the reader's, and a restore that leaves them behind leaves the next
+    # morning silent.
+    "saved_searches",
+    "ingestion_feeds",
 )
 
 # Every section the current schema carries.
 SECTIONS: tuple[str, ...] = AI_SECTIONS + BACKEND_SECTIONS
+
+# The sections a 1.3.0 bundle carried: everything up to the standing choices.
+SECTIONS_1_3: tuple[str, ...] = AI_SECTIONS + (
+    "applications", "growth_plans", "notes", "contacts", "conversations")
+
 
 # What a 1.0.0 bundle carried. A bundle written before the bridge has no
 # backend sections, and it is still a valid bundle -- so the required set is
@@ -159,15 +180,16 @@ LEGACY_SECTIONS: tuple[str, ...] = AI_SECTIONS
 #
 # A bundle's required set is read off its OWN version, so an older backup
 # stays a valid bundle: a 1.0.0 one predates the backend's sections, a
-# 1.1.0 one predates the notes and the contacts. The map is the record of
-# what grew when, and it is read by *parsed* version rather than by string
-# comparison -- "1.10.0" is after "1.9.0", and a string comparison says
-# otherwise.
+# 1.1.0 one predates the notes and the contacts, a 1.3.0 one predates the
+# saved searches and the feeds. The map is the record of what grew when, and
+# it is read by *parsed* version rather than by string comparison --
+# "1.10.0" is after "1.9.0", and a string comparison says otherwise.
 SECTIONS_BY_VERSION: dict[str, tuple[str, ...]] = {
     "1.0.0": LEGACY_SECTIONS,
     "1.1.0": AI_SECTIONS + ("applications", "growth_plans"),
     "1.2.0": AI_SECTIONS + ("applications", "growth_plans", "notes", "contacts"),
-    "1.3.0": SECTIONS,
+    "1.3.0": SECTIONS_1_3,
+    "1.4.0": SECTIONS,
 }
 
 
@@ -493,6 +515,29 @@ def _dicts(rows: Any) -> list:
     render (or crash on) a non-dict, so every consumer funnels its list through
     here first."""
     return [r for r in (rows or []) if isinstance(r, dict)]
+
+
+def _criteria_summary(criteria: Any) -> str:
+    """A saved search's filters as one line a reader can scan.
+
+    The criteria are the board's own filter names in a JSON column, so the
+    document prints them by name and value rather than picking the ones it
+    knows: a filter added to the board tomorrow is in the file the day it is
+    saved, not the day this document learns about it.
+    """
+    if not isinstance(criteria, dict):
+        return ""
+    parts: list[str] = []
+    for key, value in criteria.items():
+        if value is None or value is False:
+            continue
+        if value is True:
+            parts.append(str(key))
+            continue
+        if isinstance(value, list):
+            value = ", ".join(str(v) for v in value)
+        parts.append(f"{key}={value}")
+    return " · ".join(parts)
 
 
 def build_bundle(user_id: str, raw: dict, *, anonymized: bool = False,
@@ -837,6 +882,31 @@ def to_markdown(bundle: dict, locale: str | None = None) -> str:
             messages = transcript if isinstance(transcript, list) else []
             lines.append(f"- {clip(c.get('title'), 120)} · "
                          f"{len(messages)} {words['messages']}")
+        lines.append("")
+
+    # The standing choices (1.4.0): the question the morning sweep speaks
+    # for, and the source the ingester is pointed at. They are configuration,
+    # not correspondence -- the anonymized export keeps them -- but a quick
+    # look that stopped before them would leave out what the account will do
+    # tomorrow morning.
+    searches = _dicts(data.get("saved_searches"))
+    if searches:
+        lines.append(f"## {titles['saved_searches']} ({len(searches)})")
+        for s in searches:
+            summary = _criteria_summary(s.get("criteria"))
+            lines.append(f"- {s.get('name') or ''}"
+                         + (f" · {clip(summary, 160)}" if summary else ""))
+        lines.append("")
+
+    feeds = _dicts(data.get("ingestion_feeds"))
+    if feeds:
+        lines.append(f"## {titles['ingestion_feeds']} ({len(feeds)})")
+        for f in feeds:
+            lines.append(f"- {f.get('name') or ''}"
+                         + (f" · {f.get('url')}" if f.get("url") else "")
+                         + (f" · {f.get('source')}" if f.get("source") else "")
+                         + " · " + (words["enabled"] if f.get("enabled", True)
+                                    else words["disabled"]))
         lines.append("")
 
     lines.append("---")

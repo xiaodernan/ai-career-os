@@ -13,9 +13,9 @@ Two kinds of section, two matching rules:
 
 - The sections the restore writes through an id it can find again (the profile,
   the applications, the growth runs, the notes, the contacts, the job
-  descriptions, the interviews) are matched by id, and an id the target has and
-  the bundle does not is a ``delete`` — the restore can name the row, so it can
-  retire it.
+  descriptions, the interviews, the chats, the saved searches and the feeds) are
+  matched by id, and an id the target has and the bundle does not is a
+  ``delete`` — the restore can name the row, so it can retire it.
 - The sections the restore *re-ingests* (the resumes, the knowledge documents,
   the memories) are matched by what the apply recognizes them by — their
   content, or their ``(kind, key)`` — because their restored rows get new ids
@@ -82,7 +82,8 @@ _NOT_WRITTEN_BY_SECTION: dict[str, tuple[str, ...]] = {
 # The sections the restore matches by id: the row it writes is the row the
 # bundle names, so an id the target no longer has is retired.
 _REPLACEABLE = ("applications", "growth_plans", "notes", "contacts",
-                "job_descriptions", "interviews", "conversations")
+                "job_descriptions", "interviews", "conversations",
+                "saved_searches", "ingestion_feeds")
 
 # The bookkeeping a conversation's messages do not carry: the restore mints a
 # message id and stamps it, and the transcript's owner and parent are the
@@ -167,6 +168,28 @@ def _identity_hash(item: dict, section: str) -> str:
             else _canonical(message)
             for message in stripped["messages"]
         ]
+    if section == "saved_searches":
+        # The apply trims a search's name, as the create form does. The
+        # comparison trims too, or a name with a stray space would be
+        # written again on every re-import of the file that wrote it.
+        if isinstance(stripped.get("name"), str):
+            stripped["name"] = stripped["name"].strip()
+    if section == "ingestion_feeds":
+        # The apply fills the defaults the subscribe form would have: a
+        # provenance label and an enabled switch. A bundle that omits them
+        # restores to exactly those, so it compares as those. It also trims
+        # the name and the address it writes, so the comparison does too --
+        # otherwise a row with a stray space would be rewritten on every
+        # re-import of the file that wrote it.
+        if isinstance(stripped.get("name"), str):
+            stripped["name"] = stripped["name"].strip()
+        if isinstance(stripped.get("url"), str):
+            stripped["url"] = stripped["url"].strip()
+        source = stripped.get("source")
+        if not isinstance(source, str) or not source.strip():
+            stripped["source"] = "feed"
+        if stripped.get("enabled") is None:
+            stripped["enabled"] = True
     return content_hash(stripped)
 
 
@@ -198,6 +221,17 @@ def _content_key(section: str, item: dict) -> tuple:
     return ("row", item.get("id"))
 
 
+def _object(item: dict, name: str) -> dict:
+    """A JSON-object field as the object it holds, tolerating its text."""
+    value = item.get(name)
+    if isinstance(value, str):
+        try:
+            value = json.loads(value)
+        except (TypeError, ValueError):
+            return {}
+    return value if isinstance(value, dict) else {}
+
+
 def _writable(section: str, item: dict) -> bool:
     """Whether the apply can write this row at all.
 
@@ -218,6 +252,13 @@ def _writable(section: str, item: dict) -> bool:
         return bool(_text(item, "content"))
     if section == "contacts":
         return bool(_text(item, "name"))
+    if section == "saved_searches":
+        # A search with no criteria asks the board nothing: the creation
+        # path refuses one, and the morning sweep skips it, so the restore
+        # does not write one either.
+        return bool(_text(item, "name")) and bool(_object(item, "criteria"))
+    if section == "ingestion_feeds":
+        return bool(_text(item, "name") and _text(item, "url"))
     return True
 
 

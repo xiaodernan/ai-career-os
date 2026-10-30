@@ -868,7 +868,7 @@ export const translations = {
       title: "Your data",
       description: "Export everything, preview a restore, and remove sections before you share.",
       /**
-       * The eight sections a bundle holds, by name.
+       * The sections a bundle holds, by name.
        *
        * The keys are the bundle's own -- the sections the exporter writes --
        * and the names are the reader's.
@@ -885,6 +885,8 @@ export const translations = {
         notes: "Notes",
         contacts: "Contacts",
         conversations: "Copilot chats",
+        savedSearches: "Saved searches",
+        ingestionFeeds: "Ingestion feeds",
       },
       export: "Export",
       exportEverything: "Export everything",
@@ -3624,6 +3626,8 @@ export const translations = {
         notes: "笔记",
         contacts: "联系人",
         conversations: "Copilot 对话",
+        savedSearches: "已保存搜索",
+        ingestionFeeds: "订阅源",
       },
       export: "导出",
       exportEverything: "导出全部",

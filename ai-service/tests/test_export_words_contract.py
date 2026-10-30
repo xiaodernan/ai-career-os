@@ -149,6 +149,11 @@ def _bundle_with_every_section() -> dict:
                       "relation": "Mentor"}],
         "conversations": [{"id": "v1", "title": "The search",
                            "messages": [{"role": "user", "content": "find backend roles"}]}],
+        "saved_searches": [{"id": "q1", "name": "Hangzhou senior backend",
+                            "criteria": {"city": "Hangzhou", "min_years": 5}}],
+        "ingestion_feeds": [{"id": "f1", "name": "Acme careers",
+                             "url": "https://acme.example/careers/feed.xml",
+                             "source": "rss", "enabled": False}],
     }
     return ex.build_bundle("11111111-1111-1111-1111-111111111111", raw)
 
@@ -203,3 +208,12 @@ def test_the_markdown_view_carries_the_chats_and_their_lengths() -> None:
     document = ex.to_markdown(_bundle_with_every_section(), "en")
     messages = words_mod.words("en")["messages"]
     assert f"- The search · 1 {messages}" in document
+
+
+def test_the_markdown_view_carries_the_standing_choices() -> None:
+    # A saved search is its name and its filters; a feed is the source it
+    # points at and whether the reader still wants to hear from it.
+    document = ex.to_markdown(_bundle_with_every_section(), "en")
+    assert "- Hangzhou senior backend · city=Hangzhou · min_years=5" in document
+    assert ("- Acme careers · https://acme.example/careers/feed.xml · rss · "
+            + words_mod.words("en")["disabled"]) in document

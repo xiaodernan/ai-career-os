@@ -34,6 +34,11 @@ def _bundle(anonymized: bool = False) -> dict:
                                {"role": "user", "content": "find backend roles"},
                                {"role": "assistant", "content": "Here are three"},
                            ]}],
+        "saved_searches": [{"id": "q1", "name": "Hangzhou senior backend",
+                            "criteria": {"city": "Hangzhou", "min_years": 5}}],
+        "ingestion_feeds": [{"id": "f1", "name": "Acme careers",
+                             "url": "https://acme.example/careers/feed.xml",
+                             "source": "rss", "enabled": True}],
     }
     return ex.build_bundle("u1", raw, anonymized=anonymized)
 
@@ -83,6 +88,15 @@ def test_to_html_carries_the_chats_with_their_transcript_lengths():
     html = rnd.to_html(_bundle(), "en")
     assert "The search" in html
     assert "The search · 2 messages" in html
+
+
+def test_to_html_carries_the_standing_choices():
+    # The saved search as the question it is -- its name and its filters on
+    # one line -- and the feed as the source it points at, on or off.
+    html = rnd.to_html(_bundle(), "en")
+    assert "Hangzhou senior backend · city=Hangzhou · min_years=5" in html
+    assert ("Acme careers · https://acme.example/careers/feed.xml · rss · "
+            + words_mod.words("en")["enabled"]) in html
 
 
 def test_to_html_carries_hash_and_schema():

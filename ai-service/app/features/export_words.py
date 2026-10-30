@@ -44,6 +44,9 @@ _SECTIONS: dict[str, dict[str, str]] = {
         "contacts": "Contacts",
         # The place the reader thought out loud (1.3.0).
         "conversations": "Copilot chats",
+        # The standing choices the account makes for tomorrow (1.4.0).
+        "saved_searches": "Saved searches",
+        "ingestion_feeds": "Ingestion feeds",
     },
     "zh": {
         "profile": "个人档案",
@@ -57,6 +60,8 @@ _SECTIONS: dict[str, dict[str, str]] = {
         "notes": "笔记",
         "contacts": "联系人",
         "conversations": "Copilot 对话",
+        "saved_searches": "已保存搜索",
+        "ingestion_feeds": "订阅源",
     },
 }
 
@@ -75,6 +80,8 @@ _WORDS: dict[str, dict[str, str]] = {
         "rounds": "rounds",
         "coverage": "coverage",
         "messages": "messages",
+        "enabled": "enabled",
+        "disabled": "disabled",
     },
     "zh": {
         "title": "AI Career OS — 数据导出",
@@ -89,6 +96,8 @@ _WORDS: dict[str, dict[str, str]] = {
         "rounds": "轮",
         "coverage": "覆盖率",
         "messages": "条消息",
+        "enabled": "已启用",
+        "disabled": "已禁用",
     },
 }
 
@@ -105,6 +114,8 @@ SECTION_ORDER: tuple[str, ...] = (
     "notes",
     "contacts",
     "conversations",
+    "saved_searches",
+    "ingestion_feeds",
 )
 
 # The headings of the single-version print view (19.5). Same rule as the

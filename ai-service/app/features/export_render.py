@@ -55,6 +55,29 @@ def _strings(values: Any) -> list[str]:
     return [_str(v) for v in (values or []) if _str(v)]
 
 
+def _criteria_summary(criteria: Any) -> str:
+    """A saved search's filters as one line a reader can scan.
+
+    The criteria are the board's own filter names in a JSON column, so the
+    document prints them by name and value rather than picking the ones it
+    knows: a filter the board grows tomorrow is in the file the day it is
+    saved, not the day this document learns about it.
+    """
+    if not isinstance(criteria, dict):
+        return ""
+    parts: list[str] = []
+    for key, value in criteria.items():
+        if value is None or value is False:
+            continue
+        if value is True:
+            parts.append(str(key))
+            continue
+        if isinstance(value, list):
+            value = ", ".join(str(v) for v in value)
+        parts.append(f"{key}={value}")
+    return " · ".join(parts)
+
+
 def _row(label: str, value: str) -> str:
     return f'<tr><th>{_esc(label)}</th><td>{value}</td></tr>'
 
@@ -240,6 +263,31 @@ def to_html(bundle: dict, locale: str | None = None) -> str:
             for c in chats
         )
         section(titles["conversations"], f"<ul>{items}</ul>")
+
+    # The standing choices (1.4.0): the question the morning sweep speaks
+    # for, and the source the ingester is pointed at.
+    searches = _dicts(data.get("saved_searches"))
+    if searches:
+        items = ""
+        for s in searches:
+            summary = _criteria_summary(s.get("criteria"))
+            items += (f"<li>{_esc(s.get('name') or '')}"
+                      + (f" · {_clip(summary, 160)}" if summary else "")
+                      + "</li>")
+        section(titles["saved_searches"], f"<ul>{items}</ul>")
+
+    feeds = _dicts(data.get("ingestion_feeds"))
+    if feeds:
+        items = "".join(
+            f"<li>{_esc(f.get('name') or '')}"
+            + (f" · {_esc(f.get('url'))}" if f.get("url") else "")
+            + (f" · {_esc(f.get('source'))}" if f.get("source") else "")
+            + " · " + (words["enabled"] if f.get("enabled", True)
+                       else words["disabled"])
+            + "</li>"
+            for f in feeds
+        )
+        section(titles["ingestion_feeds"], f"<ul>{items}</ul>")
 
     parts.append("<hr>")
     stat = " · ".join(f"{_esc(k)}={_esc(v)}" for k, v in counts.items())

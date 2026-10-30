@@ -3475,7 +3475,7 @@ quietly land on the wrong side of it.
   passed, 1 skipped, 0 failed on a clean HEAD snapshot; the frontend's
   translation and copy censuses 19 green.)
 
-- [ ] **40.2** The standing choices travel: saved searches and ingestion feeds.
+- [x] **40.2** The standing choices travel: saved searches and ingestion feeds.
 
   (A saved search is the reader's standing question and the reason the morning
   sweep has an audience; a feed is the source they pointed the ingester at. Both
@@ -3485,6 +3485,29 @@ quietly land on the wrong side of it.
   configuration, not a secret, and the anonymized bundle keeps them: redacting a
   source hides nothing about a person, while dropping the row would break the
   restore's counts.)
+
+  (Shipped: the bundle's twelfth and thirteenth sections, under schema
+  **1.4.0** — the ladder keeps a 1.3.0 backup to its eleven sections, so a
+  bundle written before the standing choices still validates. A search
+  travels as its name and its criteria map; a feed as its name, address,
+  provenance label and the reader's switch. Both are matched by id, so a
+  search or a feed the bundle omits is retired, and the comparison covers
+  exactly what the apply writes: the criteria map compares as the object it
+  holds, the stamps are not content, and the apply's own trims and defaults
+  — a search's or feed's name, a feed's address, a missing source and
+  switch — compare as the values it writes. A row the apply would refuse
+  (no name, no criteria, no address) is neither promised nor retired. The
+  anonymize policy is a decision, not a silence: both sections carry an
+  empty `PEOPLE` set and a written-out `SUBSTANCE` set because a standing
+  question and a public feed address name no person, the anonymized bundle
+  keeps them whole, and a test holds it to the same rows. The readable half
+  lists searches with their filters and feeds with their address, label and
+  switch in both languages; the data page carries both labels; the restore
+  counts both like the others. Backend unit suite 1164 green; ai-service
+  1938 passed, 1 skipped, 0 failed (the mail-settings lane's three census
+  files were excluded while their re-pin is in flight — they fail on this
+  HEAD without this change); the frontend's i18n suites 49 green across
+  seven files.)
 
 - [ ] **40.3** The bookmarks and the letters travel: saved jobs and inbound mail.
 
@@ -3579,6 +3602,20 @@ though the state was sitting in their own account.
   letters open, so the buttons a mailbox would press are one click away. A failed read
   is a sentence, not blank switches. 4 backend tests and 2 frontend hook tests; API.md
   and DEPLOYMENT.md follow.)
+
+- [x] **42.2** The card flips its own dials.
+
+  (`PUT /api/v1/me/mail/settings/{list}` takes `{enabled}` and answers the whole `MailSettings`
+  read, so a switch follows the service rather than its own guess. `enabled` is a `Boolean`
+  with `@NotNull` on purpose: a body that omits it is a 400 `VALIDATION_FAILED` rather than
+  a silently off dial. An unknown list name is its own 400 `MAIL_LIST_UNKNOWN` -- only the
+  browser spells the slug, so a reader meets that answer when a build and the service
+  disagree -- and it touches no column. The card's badges become switches: one press at a
+  time, the optimistic flip is rolled back with a sentence if the write fails, and every
+  answer replaces all three states, so a dial a sweep turned off between the read and the
+  press comes back with it. 3 backend MockMvc tests and 2 frontend hook tests; the
+  handler-shaped census admits the hook's `onError` by name; API.md, DEPLOYMENT.md and
+  architecture.md follow.)
 
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +

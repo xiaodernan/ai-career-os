@@ -9,7 +9,7 @@
 
 ## 当前状态 (2026-10-30)
 
-- **前端**: 897 个 vitest 通过（88 个文件）；`tsc --noEmit` 干净（含并发会话在制的前端增补）。
+- **前端**: 899 个 vitest 通过（88 个文件）；`tsc --noEmit` 干净。
 - **后端**: 非 IT 选集 **1067 条全绿**（`mvn -o -B -Dtest="!*IT" test`；1037 基线 +
   41.1 的 19 条 + 42.1 的 4 条 + 并发会话在制的 7 条导出/导入测试）；含真实栈 IT 的全量（1128 条基线上
   再加本单元与并发会话的新测试）待下一次 `mvn -o -q test` 复核。
@@ -36,7 +36,9 @@
 `/account-erased` 页上（token 对丢弃、整页导航离开、无会话也能说清结局），以 877 个前端测试、85 个文件收口。
 随后 **Epic 41.1**（提醒到点时的信）以 19 条新后端测试收口，非 IT 选集 1063 条全绿；
 **41.2** 让这口钟有了自己的警报（`alerts.yml` 十一条、拒绝计数改说两种信、9 条闸门测试绿）；
-**42.1** 让邮件设置不再只住在旧信里（`GET /me/mail/settings` + 设置页邮件卡，4 条后端测试绿）。
+**42.1** 让邮件设置不再只住在旧信里（`GET /me/mail/settings` + 设置页邮件卡，4 条后端测试绿）；
+**42.2** 让这张卡自己扳动三个开关（`PUT /me/mail/settings/{list}` + Switch 的乐观更新，
+3 条后端测试 + 2 条 hook 写面测试绿）。
 
 ## 主线队列（按顺序执行）
 
@@ -532,8 +534,10 @@
 - 40.0 完成即本节；40.1 已完成（2026-10-31）对话随包走：新增 `conversations` 节（消息内嵌：role、content、artifacts、
   sources、actions、created_at），AI 半边直接读；匿名导出按字段抹掉标题与正文等；可读半边两种语言加词；
   plan 保留 id（包中省略即退休，消息级联），apply 连同消息写入；schema 升到 1.3.0，旧包仍有效。
-- 40.2 常驻选择随包走：`saved_searches` + `ingestion_feeds`（后端所有）；按 id 匹配，省略即取消，
-  字段级比较让未变行为 `skip`；匿名包保留 URL（配置不是秘密）。
+- 40.2 常驻选择随包走（已完成 2026-10-31）：`saved_searches` + `ingestion_feeds`（后端所有）；按 id 匹配，省略即取消，
+  字段级比较让未变行为 `skip`；匿名包把两节整节保留——筛选与公开地址都不指向某个人，闸门里两节的 `PEOPLE` 集为空、
+  `SUBSTANCE` 集逐列写明，所以这是决定而不是遗漏。可读半边两种语言列出搜索的筛选与订阅源地址/开关；plan 的字段比较镜像 apply 的手：搜索名与订阅源名/地址都去空白，`source`/`enabled` 缺省补齐，所以 apply 刚写入的行再次导入仍是 `skip`；apply 写不了的行（缺名字、缺筛选、缺地址）既不承诺也不退休。
+  schema 升到 1.4.0，1.3.0 旧包仍有效（`SECTIONS_BY_VERSION` 逐版本持有节集）。
 - 40.3 书签与来信随包走：`saved_jobs`（目标没有该职位时报告而非伪造）+ `inbound_mails`
   （`message_key` 幂等，归档链接指向同一次恢复写入的 application id；匿名包抹掉发件地址、主题与正文）。
 - 40.4 分界成为闸门：读 `db/migration` 中所有带 user 归属的表，要求每张要么被某节承载（含
@@ -541,7 +545,7 @@
   页面所载清单由 bundle 的 manifest 得出，可读半边的节序与 redact 列表共用同一个 section 元组。
   新表出现即按名失败。
 
-下一步：40.2（常驻选择）与本会话 Epic 41 的下一段。
+下一步：40.3（书签与来信）与本会话 Epic 41 的下一段。
 
 ## Epic 41 — 提醒到点时的信
 
@@ -587,8 +591,16 @@
     CopyButton + "打开设置页"，失败是一句话而不是空白开关）、设置页放在日历卡之后；EN/ZH
     `mailLetters` 两块。4 条后端测试（页面地址、三列、no-store、401）+ 2 条前端 hook 测试；
     API.md、DEPLOYMENT.md 同步。
+  - **42.2** 卡片自己扳动这些开关（已完成）：新增 `PUT /api/v1/me/mail/settings/{list}`，body
+    `{enabled}`（`Boolean` + `@NotNull`：缺字段是 400 `VALIDATION_FAILED` 而不是静默的"关"），
+    未知 list 是新码 `MAIL_LIST_UNKNOWN`（400，且 `verify(never())` 证明没写列）；答案复用
+    `settings(user)`，仍是 `no-store` 的三布尔。前端 `endpoints.mailSettingsDial`、
+    `useSetMailDial`（乐观更新 + 失败回滚 + `failures.mailSettingSave` 的 toast）、`MailCard`
+    把状态徽章换成 Switch（写时禁用，避免两笔并发写互相覆盖）。3 条后端 MockMvc 测试 +
+    2 条 hook 写面测试；`test_response_shape_contract.py` 的 handler 拒绝名单补入
+    `lib/hooks/mail-settings.ts`；API.md、DEPLOYMENT.md、architecture.md 同步。
   - 下一步（避开并发会话在制的 export/import）：仪表盘 attention 的提醒过期语义；或 Epic 40
-    提交后接手对话随包走。
+    的后续单元（40.2 常驻选择随包走）提交后再接手。
 
 
 ## 开发协议

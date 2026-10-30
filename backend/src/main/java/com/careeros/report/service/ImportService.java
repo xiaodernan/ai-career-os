@@ -27,8 +27,12 @@ import com.careeros.interview.repository.InterviewEvaluationRepository;
 import com.careeros.interview.repository.InterviewSessionRepository;
 import com.careeros.interview.repository.InterviewTurnRepository;
 import com.careeros.job.entity.JobJd;
+import com.careeros.job.entity.IngestionFeed;
+import com.careeros.job.entity.SavedSearch;
+import com.careeros.job.repository.IngestionFeedRepository;
 import com.careeros.job.repository.JobJdRepository;
 import com.careeros.job.repository.JobRepository;
+import com.careeros.job.repository.SavedSearchRepository;
 import com.careeros.network.entity.Contact;
 import com.careeros.network.dto.ContactDtos.ContactRequest;
 import com.careeros.network.repository.ContactRepository;
@@ -70,11 +74,11 @@ import org.springframework.transaction.annotation.Transactional;
  *   and the user can see that it wrote nothing.
  * - **A row the bundle no longer carries is retired, when the restore can
  *   name it.** The sections matched by id -- the applications, the growth
- *   runs, the notes, the contacts, the postings, the interviews, the chats --
- *   execute the plan's {@code delete}; the sections the restore re-ingests
- *   (the resumes, the documents, the memories) are matched by content, so they
- *   are never deleted: the restore cannot name a row it would bring back as a
- *   different one.
+ *   runs, the notes, the contacts, the postings, the interviews, the chats,
+ *   the saved searches and the feeds -- execute the plan's {@code delete};
+ *   the sections the restore re-ingests (the resumes, the documents, the
+ *   memories) are matched by content, so they are never deleted: the restore
+ *   cannot name a row it would bring back as a different one.
  */
 @Service
 public class ImportService {
@@ -96,6 +100,8 @@ public class ImportService {
     private final InterviewEvaluationRepository evaluations;
     private final ConversationRepository conversations;
     private final MessageRepository messages;
+    private final SavedSearchRepository savedSearches;
+    private final IngestionFeedRepository feeds;
 
     public ImportService(AiServiceClient aiService, ExportService exports,
                           UserProfileRepository profiles,
@@ -108,7 +114,9 @@ public class ImportService {
                           InterviewTurnRepository turns,
                           InterviewEvaluationRepository evaluations,
                           ConversationRepository conversations,
-                          MessageRepository messages) {
+                          MessageRepository messages,
+                          SavedSearchRepository savedSearches,
+                          IngestionFeedRepository feeds) {
         this.aiService = aiService;
         this.exports = exports;
         this.profiles = profiles;
@@ -126,6 +134,8 @@ public class ImportService {
         this.evaluations = evaluations;
         this.conversations = conversations;
         this.messages = messages;
+        this.savedSearches = savedSearches;
+        this.feeds = feeds;
     }
 
     /**
@@ -179,6 +189,8 @@ public class ImportService {
         applyNotes(userId, data, sections, applied, skipped);
         applyContacts(userId, data, sections, applied, skipped);
         applyConversations(userId, data, sections, applied, skipped);
+        applySavedSearches(userId, data, sections, applied, skipped);
+        applyIngestionFeeds(userId, data, sections, applied, skipped);
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("applied", applied.entrySet().stream()
@@ -542,6 +554,164 @@ public class ImportService {
             }
         }
         count(applied, "conversations", created, updated, deleted, unchanged);
+    }
+
+    /**
+     * The saved searches: the reader's standing questions, which the morning
+     * sweep asks on their behalf.
+     *
+     * <p>A saved search is the reader's configuration rather than their
+     * correspondence -- the anonymized export keeps it whole -- so the write
+     * is the row's own fields, and the id the bundle names is kept when the
+     * caller already has it. The criteria travel as the map they are rather
+     * than the filters this service knows: the board grows filters more often
+     * than this restore should need a change.
+     *
+     * <p>A row the restore cannot write is left alone, the same way the
+     * panel refuses to create one: a search with no name, or with no criteria
+     * to ask the board, is not a search.
+     */
+    private void applySavedSearches(UUID userId, Map<String, Object> data,
+                                    Map<String, List<Map<String, Object>>> sections,
+                                    Map<String, int[]> applied, List<Map<String, String>> skipped) {
+        List<Map<String, Object>> ops = sections.get("saved_searches");
+        if (ops == null || ops.isEmpty()) {
+            return;
+        }
+        Object rows = data.get("saved_searches");
+        if (!(rows instanceof List<?> list)) {
+            skipped.add(Map.of("section", "saved_searches",
+                    "reason", "The bundle carries no saved searches."));
+            return;
+        }
+        int created = 0;
+        int updated = 0;
+        int deleted = 0;
+        int unchanged = 0;
+        for (Map<String, Object> op : ops) {
+            String id = str(op, "id");
+            String kind = str(op, "op");
+            UUID rowId = uuid(id);
+            if ("skip".equals(kind)) {
+                unchanged++;
+                continue;
+            }
+            if ("delete".equals(kind)) {
+                if (rowId == null) {
+                    continue;
+                }
+                var retired = savedSearches.findByIdAndUserId(rowId, userId);
+                if (retired.isPresent()) {
+                    savedSearches.delete(retired.get());
+                    deleted++;
+                }
+                continue;
+            }
+            Map<?, ?> row = findRow(list, id);
+            if (row == null) {
+                continue;
+            }
+            String name = str(row, "name");
+            Map<String, Object> criteria = map(row, "criteria");
+            if (name == null || name.isBlank() || criteria.isEmpty()) {
+                continue;
+            }
+            SavedSearch target = rowId == null ? null
+                    : savedSearches.findByIdAndUserId(rowId, userId).orElse(null);
+            boolean fresh = target == null;
+            if (fresh) {
+                target = new SavedSearch();
+                target.setUserId(userId);
+                setId(target, restorableId(rowId, savedSearches::existsById));
+            }
+            target.setName(name.trim());
+            target.setCriteria(criteria);
+            savedSearches.save(target);
+            if (fresh) {
+                created++;
+            } else {
+                updated++;
+            }
+        }
+        count(applied, "saved_searches", created, updated, deleted, unchanged);
+    }
+
+    /**
+     * The ingestion feeds: the sources the reader pointed the ingester at.
+     *
+     * <p>The URL is the reader's configuration, not a secret -- the
+     * anonymized bundle keeps it -- and the enabled flag is the reader's own
+     * choice, so both are written as the bundle carries them. The label
+     * defaults to {@code feed} and the switch to on, which is what the panel
+     * writes when a feed is created, so a bundle from a version that did not
+     * carry both still restores a working subscription.
+     */
+    private void applyIngestionFeeds(UUID userId, Map<String, Object> data,
+                                     Map<String, List<Map<String, Object>>> sections,
+                                     Map<String, int[]> applied, List<Map<String, String>> skipped) {
+        List<Map<String, Object>> ops = sections.get("ingestion_feeds");
+        if (ops == null || ops.isEmpty()) {
+            return;
+        }
+        Object rows = data.get("ingestion_feeds");
+        if (!(rows instanceof List<?> list)) {
+            skipped.add(Map.of("section", "ingestion_feeds",
+                    "reason", "The bundle carries no ingestion feeds."));
+            return;
+        }
+        int created = 0;
+        int updated = 0;
+        int deleted = 0;
+        int unchanged = 0;
+        for (Map<String, Object> op : ops) {
+            String id = str(op, "id");
+            String kind = str(op, "op");
+            UUID rowId = uuid(id);
+            if ("skip".equals(kind)) {
+                unchanged++;
+                continue;
+            }
+            if ("delete".equals(kind)) {
+                if (rowId == null) {
+                    continue;
+                }
+                var retired = feeds.findByIdAndUserId(rowId, userId);
+                if (retired.isPresent()) {
+                    feeds.delete(retired.get());
+                    deleted++;
+                }
+                continue;
+            }
+            Map<?, ?> row = findRow(list, id);
+            if (row == null) {
+                continue;
+            }
+            String name = str(row, "name");
+            String url = str(row, "url");
+            if (name == null || name.isBlank() || url == null || url.isBlank()) {
+                continue;
+            }
+            IngestionFeed target = rowId == null ? null
+                    : feeds.findByIdAndUserId(rowId, userId).orElse(null);
+            boolean fresh = target == null;
+            if (fresh) {
+                target = new IngestionFeed();
+                target.setUserId(userId);
+                setId(target, restorableId(rowId, feeds::existsById));
+            }
+            target.setName(name.trim());
+            target.setUrl(url.trim());
+            String source = str(row, "source");
+            target.setSource(source == null || source.isBlank() ? "feed" : source);
+            target.setEnabled(!Boolean.FALSE.equals(row.get("enabled")));
+            feeds.save(target);
+            if (fresh) {
+                created++;
+            } else {
+                updated++;
+            }
+        }
+        count(applied, "ingestion_feeds", created, updated, deleted, unchanged);
     }
 
     /** The stored growth runs: one row per report the candidate ever built. */

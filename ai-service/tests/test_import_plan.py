@@ -398,6 +398,126 @@ def test_a_chat_the_bundle_no_longer_carries_is_retired():
     assert ops["c2"] == "delete"
 
 
+# ---------------- the standing choices: saved searches and feeds ----------------
+
+
+def _bundle_with_choices(searches=(), feeds=()) -> dict:
+    raw = {
+        "profile": {"id": "u1", "display_name": "Ada"},
+        "resumes": [], "knowledge": [], "job_descriptions": [],
+        "interviews": [], "memories": [],
+        "saved_searches": [
+            {"id": s, "name": f"Search {s}", "criteria": {"city": "Hangzhou"}}
+            for s in searches],
+        "ingestion_feeds": [
+            {"id": f, "name": f"Feed {f}", "url": f"https://{f}.example/feed.xml",
+             "source": "rss", "enabled": True}
+            for f in feeds],
+    }
+    return ex.build_bundle("u1", raw)
+
+
+def test_a_saved_search_the_bundle_no_longer_carries_is_retired():
+    incoming = _bundle_with_choices(searches=("s1",))
+    existing = _bundle_with_choices(searches=("s1", "s2"))
+    ops = {o["id"]: o["op"] for o in
+           pl.plan_import(incoming, existing=existing)["sections"]["saved_searches"]}
+    assert ops["s1"] == "skip"
+    assert ops["s2"] == "delete"
+
+
+def test_a_changed_criteria_is_a_saved_search_update():
+    incoming = _bundle_with_choices(searches=("s1",))
+    existing = _bundle_with_choices(searches=("s1",))
+    existing["data"]["saved_searches"][0]["criteria"] = {"city": "Shanghai"}
+    _edited(existing)
+    op = pl.plan_import(incoming, existing=existing)["sections"]["saved_searches"][0]
+    assert op["op"] == "update"
+
+
+def test_a_feed_is_skipped_when_the_switch_and_the_address_are_the_same():
+    """The stamps the database sets are not the feed's content.
+
+    The feed's switch and its address are; a re-import that sees them the
+    same must not rewrite the row just because the first apply stamped it.
+    """
+    incoming = _bundle_with_choices(feeds=("f1",))
+    existing = _bundle_with_choices(feeds=("f1",))
+    for row in existing["data"]["ingestion_feeds"]:
+        row["created_at"] = "2026-10-01T00:00:00+00:00"
+        row["updated_at"] = "2026-10-02T00:00:00+00:00"
+    _edited(existing)
+    out = pl.plan_import(incoming, existing=existing)
+    assert [o["op"] for o in out["sections"]["ingestion_feeds"]] == ["skip"]
+    assert out["op_counts"]["delete"] == 0
+
+
+def test_a_feed_the_bundle_flips_off_is_an_update():
+    incoming = _bundle_with_choices(feeds=("f1",))
+    incoming["data"]["ingestion_feeds"][0]["enabled"] = False
+    _edited(incoming)
+    existing = _bundle_with_choices(feeds=("f1",))
+    op = pl.plan_import(incoming, existing=existing)["sections"]["ingestion_feeds"][0]
+    assert op["op"] == "update", "the reader's switch is content"
+
+
+def test_a_saved_search_carried_as_text_is_the_map_it_holds():
+    incoming = _bundle_with_choices(searches=("s1",))
+    existing = _bundle_with_choices(searches=("s1",))
+    existing["data"]["saved_searches"][0]["criteria"] = json.dumps(
+        existing["data"]["saved_searches"][0]["criteria"])
+    _edited(existing)
+    op = pl.plan_import(incoming, existing=existing)["sections"]["saved_searches"][0]
+    assert op["op"] == "skip"
+
+
+def test_the_applies_transformations_are_not_changes():
+    """The apply trims names and addresses and fills a feed's defaults.
+
+    A comparison that did not mirror those would call the row it had just
+    written changed on the next run -- the plan would keep writing and
+    "unchanged rows are skipped" would never hold for these two sections.
+    """
+    incoming = _bundle_with_choices(searches=("s1",), feeds=("f1",))
+    existing = _bundle_with_choices(searches=("s1",), feeds=("f1",))
+    incoming["data"]["saved_searches"][0]["name"] = " Search s1 "
+    incoming["data"]["ingestion_feeds"][0]["name"] = " Feed f1 "
+    incoming["data"]["ingestion_feeds"][0]["url"] = " https://f1.example/feed.xml "
+    del incoming["data"]["ingestion_feeds"][0]["source"]
+    del incoming["data"]["ingestion_feeds"][0]["enabled"]
+    existing["data"]["ingestion_feeds"][0]["source"] = "feed"
+    existing["data"]["ingestion_feeds"][0]["enabled"] = True
+    _edited(incoming)
+    _edited(existing)
+
+    out = pl.plan_import(incoming, existing=existing)
+    assert [o["op"] for o in out["sections"]["saved_searches"]] == ["skip"]
+    assert [o["op"] for o in out["sections"]["ingestion_feeds"]] == ["skip"]
+
+
+def test_a_row_the_apply_cannot_write_is_not_promised_or_retired():
+    """The creation paths refuse these rows, so the plan does not promise them.
+
+    A saved search with no criteria asks the board nothing and a feed with no
+    address points at nothing: the services refuse both at creation. A
+    restore that planned them would count creates the apply skips -- and
+    their existing counterparts must not be retired over the bundle's
+    silence either.
+    """
+    raw = {
+        "profile": {"id": "u1"},
+        "resumes": [], "knowledge": [], "job_descriptions": [],
+        "interviews": [], "memories": [],
+        "saved_searches": [{"id": "s1", "name": "Empty", "criteria": {}}],
+        "ingestion_feeds": [{"id": "f1", "name": "No address", "url": ""}],
+    }
+    bundle = ex.build_bundle("u1", raw)
+    out = pl.plan_import(bundle, existing=bundle)
+    assert out["sections"]["saved_searches"] == []
+    assert out["sections"]["ingestion_feeds"] == []
+    assert out["op_counts"]["delete"] == 0
+
+
 # ---------------- two spellings of the same value ----------------
 
 

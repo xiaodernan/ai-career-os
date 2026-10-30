@@ -269,6 +269,12 @@ PEOPLE: dict[str, frozenset[str]] = {
     "applications": frozenset({"notes", "rejection_reason", "offer_compensation"}),
     "growth_plans": frozenset({"coverage", "report"}),
     "conversations": frozenset({"title"}),
+    # The standing choices name no person: a saved search is the question the
+    # reader wants asked again, and a feed is a public address. The anonymized
+    # export keeps them whole -- redacting a source hides nothing about a
+    # person, and dropping the row would break the restore's counts.
+    "saved_searches": frozenset(),
+    "ingestion_feeds": frozenset(),
 }
 
 # The interview turns are their own group: a list of rows inside the row.
@@ -340,6 +346,14 @@ SUBSTANCE: dict[str, frozenset[str]] = {
     }),
     "growth_plans": frozenset({"id", "target_role", "created_at"}),
     "conversations": frozenset({"id", "context", "created_at", "updated_at"}),
+    # The standing choices, in the backend's own words: the search's filters
+    # and the feed's address, label and switch are all the substance.
+    "saved_searches": frozenset({
+        "id", "name", "criteria", "created_at", "updated_at",
+    }),
+    "ingestion_feeds": frozenset({
+        "id", "name", "url", "source", "enabled", "created_at", "updated_at",
+    }),
 }
 
 TURN_SUBSTANCE = frozenset({
@@ -364,7 +378,8 @@ def _real_columns() -> dict[str, list[str]]:
     # not have. The report is one too: it lives in its own table, and the
     # restore reads it off the session.
     real["interviews"] = real["interviews"] + ["turns", "evaluation"]
-    for section in ("notes", "contacts", "applications", "growth_plans"):
+    for section in ("notes", "contacts", "applications", "growth_plans",
+                    "saved_searches", "ingestion_feeds"):
         real[section] = _backend_rows(section)
     # The chats: the row the backend writes, and the transcript inside it.
     # The messages are their own group, like the interview turns -- the
@@ -470,9 +485,15 @@ def _realistic_bundle() -> dict:
     # report is.
     session["evaluation"] = _marker("interviews", "evaluation")
 
-    for section in ("notes", "contacts", "applications", "growth_plans"):
+    for section in ("notes", "contacts", "applications", "growth_plans",
+                    "saved_searches", "ingestion_feeds"):
         columns = _backend_rows(section)
         raw[section] = [_row(section, columns, {})]
+    # A saved search's criteria is a jsonb map, and the feed's switch is a
+    # boolean -- the two columns the anonymized export has a decision about.
+    # Keeping the rows whole is the decision: neither names a person.
+    raw["saved_searches"][0]["criteria"] = {"city": "Hangzhou", "min_years": 5}
+    raw["ingestion_feeds"][0]["enabled"] = False
 
     # The chats: a row built by the backend, with its transcript inside it.
     chat = _row("conversations", _chat_columns(), _table("conversations"))
@@ -769,6 +790,25 @@ def test_the_anonymized_export_keeps_the_shape_and_the_substance() -> None:
     assert out["data"]["conversations"][0]["id"] == bundle["data"]["conversations"][0]["id"]
     assert out["data"]["conversations"][0]["messages"][0]["role"] == (
         bundle["data"]["conversations"][0]["messages"][0]["role"])
+
+
+def test_the_anonymized_export_keeps_the_standing_choices() -> None:
+    """The two sections the policy deliberately leaves alone.
+
+    A saved search and a feed are configuration, not correspondence: the
+    filters ask the board a question and the URL is a public address. The
+    decision is written down as an empty ``PEOPLE`` set above and as a
+    comment in the policy, so silence here is not the same as forgetting --
+    and this test is what holds the decision to its word.
+    """
+    bundle = _realistic_bundle()
+    out = ex.anonymize(bundle)
+    assert out["data"]["saved_searches"] == bundle["data"]["saved_searches"]
+    assert out["data"]["ingestion_feeds"] == bundle["data"]["ingestion_feeds"]
+    assert out["data"]["saved_searches"][0]["criteria"] == {
+        "city": "Hangzhou", "min_years": 5}
+    assert out["data"]["saved_searches"][0]["name"] is not None
+    assert out["data"]["ingestion_feeds"][0]["url"] is not None
 
 
 def test_the_anonymized_export_leaves_the_original_alone() -> None:

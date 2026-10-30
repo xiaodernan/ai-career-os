@@ -4,7 +4,8 @@ A personal job-search OS is only as trustworthy as the user's ability to leave
 with their data. This document locks the export/import contract implemented in
 `ai-service/app/features/export.py` and bridged through
 `POST /api/v1/data-portability/*` (the backend owns the `applications`,
-`growth_plans`, `notes`, `contacts` and `conversations` sections).
+`growth_plans`, `notes`, `contacts`, `conversations`, `saved_searches` and
+`ingestion_feeds` sections).
 
 ## Scope
 
@@ -17,20 +18,20 @@ with their data. This document locks the export/import contract implemented in
 | `applications` + `growth_plans` sections | **done** (shipped in the bundle since 1.1.0) | backend bridge |
 | `notes` + `contacts` sections | **done** (shipped in the bundle since 1.2.0) | backend bridge |
 | `conversations` + `messages` sections | **done** (shipped in the bundle since 1.3.0) | backend bridge |
-| `saved_jobs` + `saved_searches` + `ingestion_feeds` + `inbound_mails` sections | **open** (measured 2026-10-30; Epic 40.3) | ai-service + backend bridge |
+| `saved_searches` + `ingestion_feeds` sections | **done** (shipped in the bundle since 1.4.0) | backend bridge |
+| `saved_jobs` + `inbound_mails` sections | **open** (measured 2026-10-30; Epic 40.3) | ai-service + backend bridge |
 
-## The bundle is not everything yet (measured 2026-10-30; chats closed 2026-10-31)
+## The bundle is not everything yet (measured 2026-10-30; searches, feeds and chats closed 2026-10-31)
 
 The page says "Export everything". The measurement found five gaps by reading
-the ten sections against every table the migrations create. The copilot chats
-closed first — they travel since **1.3.0**, described below — and four remain,
-each the reader's own content or standing choice:
+the ten sections against every table the migrations create. Three have closed —
+the copilot chats travel since **1.3.0**, and the saved searches and the feeds
+since **1.4.0**, described below — and two remain, each the reader's own
+content:
 
 | Table | What it holds | Why it belongs |
 |---|---|---|
 | `saved_jobs` | a bookmark and the note beside it | the reader's shortlist |
-| `saved_searches` | the standing queries the morning sweep speaks for | the reader's standing question |
-| `ingestion_feeds` | the sources the ingester is pointed at | the reader's configuration |
 | `inbound_mails` | the letters a provider forwarded, their reading and the application each was filed on | the reader's correspondence |
 
 What stays out is bookkeeping rather than content: tokens and sessions, MFA
@@ -89,12 +90,15 @@ Two rules make it safe:
 What applies today: every section.
 
 - The profile, the applications, the stored growth runs, the job
-  descriptions, the interviews and the copilot chats are row writes. The analyst does not run
+  descriptions, the interviews, the copilot chats, the saved searches and
+  the feeds are row writes. The analyst does not run
   again over a posting and the interviewer does not question the user a
   second time: the bundle carries the parsed result and the whole
   transcript, so the user's own reading of a posting and the answers they
   gave come back as they were. A restored chat is replaced whole and its
-  messages are written with it, at ids minted for the caller.
+  messages are written with it, at ids minted for the caller. A restored
+  search keeps its filters — the question the morning sweep asks again —
+  and a restored feed keeps its address and its switch.
 - The resumes and the knowledge base are re-ingested. A restored resume is
   a *new* resume with the same content, because its id is the key its
   knowledge chunks and its versions hang off and the ingestion pipeline
@@ -160,7 +164,8 @@ restore does:
 
 - **The sections matched by id can retire a row.** The profile, the
   applications, the growth runs, the notes, the people the reader knows, the
-  postings, the interviews and the chats keep the bundle's ids through the
+  postings, the interviews, the chats, the saved searches and the feeds keep
+  the bundle's ids through the
   restore (or find the row the id already names), so a row the bundle omits is
   a row the reader took out of the document they asked to restore. It is
   deleted — scoped to the caller, and an interview is retired whole, its
@@ -253,6 +258,44 @@ time. The run id stays out — which run produced an answer is bookkeeping.
 A 1.2.0 backup still validates with its ten sections: `SECTIONS_BY_VERSION`
 holds each version to the sections it shipped with.
 
+### The standing choices travel (1.4.0)
+
+The morning sweep and the ingester are the two things in the product that act
+when the reader is not looking — the saved search asks the board their
+question again, and the feed points the ingester at a source. Both are the
+reader's standing choice, and neither travelled: a restored workspace woke to
+a silent morning, with none of the questions they had saved being asked and
+none of the sources they had subscribed being read.
+
+Since **1.4.0** the bundle carries `saved_searches` (the name and the criteria
+map) and `ingestion_feeds` (the name, the address, the provenance label and
+the enabled switch). The sections are the **backend's**, like the pipeline and
+the chats.
+
+- **The anonymized export keeps them whole.** A saved search is a question
+  about the market and a feed is a public address; neither names a person, so
+  the policy classifies both as substance. This is a decision, not an
+  omission: the gate's `PEOPLE` sets for the two sections are empty and their
+  `SUBSTANCE` sets are written out, and a test holds the anonymized bundle to
+  the same rows. Redacting a source hides nothing about a person, and
+  dropping the row would break the restore's counts.
+- **The readable half carries them**: a search as its name and its filters on
+  one line, a feed as its name, address, label and whether the reader still
+  wants to hear from it — in both languages.
+- **The restore keeps the ids**, so a search or a feed the bundle omits is
+  retired; and it writes through the same gates as the creation paths — a
+  search with no name or no criteria and a feed with no name or no address
+  are not written, because the services refuse them at creation.
+- **The comparison covers what the apply writes**: the criteria map compares
+  as the object it holds (text from an older bundle parses first), the
+  database stamps are not content, and a trimmed name or address or a feed's
+  filled source and enabled defaults compare as the values the apply writes
+  — so a re-import of the workspace's own bundle plans `skip` and writes
+  nothing.
+
+A 1.3.0 backup still validates with its eleven sections: `SECTIONS_BY_VERSION`
+holds each version to the sections it shipped with.
+
 ### The restore does not write over somebody else's rows
 
 A bundle's ids are the source's, and the restore keeps them — so the links
@@ -270,17 +313,18 @@ the rows, and it no longer lands them on top of somebody else's.
 
 ```jsonc
 {
-  "schema_version": "1.3.0",
+  "schema_version": "1.4.0",
   "generator": "ai-career-os",
   "generated_at": "2026-10-20T00:00:00+00:00",
   "user": { "id": "<uuid>", "anonymized": false },
   "manifest": {
-    "schema_version": "1.3.0",
+    "schema_version": "1.4.0",
     "generator": "ai-career-os",
     "counts": { "profile": 1, "resumes": 1, "knowledge": 1,
                 "job_descriptions": 1, "interviews": 1, "memories": 1,
                 "applications": 12, "growth_plans": 3, "notes": 4,
-                "contacts": 9, "conversations": 6 },
+                "contacts": 9, "conversations": 6, "saved_searches": 2,
+                "ingestion_feeds": 3 },
     "content_hash": "<sha256 over data>",
     "anonymized": false
   },
@@ -292,7 +336,7 @@ the rows, and it no longer lands them on top of somebody else's.
     "interviews": [ { ...interview_sessions joined jobs..., "turns": [...],
                       "evaluation": { dims, summary, trajectory } } ],
     "memories": [ { ...user_memories row... } ],
-    // The five the BACKEND owns — the bridge hands them over, and the hash
+    // The seven the BACKEND owns — the bridge hands them over, and the hash
     // covers them like every other section.
     "applications": [ { ...applications row... } ],
     "growth_plans": [ { ...growth_plans row... } ],
@@ -303,7 +347,12 @@ the rows, and it no longer lands them on top of somebody else's.
     // The copilot chats: each conversation with its transcript below it.
     // The messages' run ids stay out — which run answered is bookkeeping.
     "conversations": [ { ...conversations row..., "messages": [
-        { id, role, content, artifacts, sources, actions, created_at } ] } ]
+        { id, role, content, artifacts, sources, actions, created_at } ] } ],
+    // The standing choices: the question the morning sweep asks again, and
+    // the source the ingester reads. The anonymized export keeps both whole.
+    "saved_searches": [ { id, name, criteria, created_at, updated_at } ],
+    "ingestion_feeds": [ { id, name, url, source, enabled,
+                           created_at, updated_at } ]
   }
 }
 ```

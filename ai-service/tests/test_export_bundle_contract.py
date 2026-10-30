@@ -42,6 +42,7 @@ from app.features.export import (
     BACKEND_SECTIONS,
     SCHEMA_VERSION,
     SECTIONS,
+    SECTIONS_1_3,
     required_sections,
 )
 
@@ -110,22 +111,25 @@ def test_the_browser_offers_no_section_twice() -> None:
 def test_the_bundle_carries_the_pipeline_too() -> None:
     # The backend's sections are the ones the reader cannot get anywhere
     # else: the applications and the growth runs, and -- since 1.2.0 -- the
-    # notes they typed and the people they know, and since 1.3.0 the
-    # copilot chats and their transcripts. A bundle without them is a
-    # reading list, not a record of a search -- so they are in the bundle,
-    # and the browser offers to redact them.
+    # notes they typed and the people they know, since 1.3.0 the copilot
+    # chats and their transcripts, and since 1.4.0 the standing choices: the
+    # saved searches and the feeds. A bundle without them is a reading list,
+    # not a record of a search -- so they are in the bundle, and the browser
+    # offers to redact them.
     assert BACKEND_SECTIONS == (
-        "applications", "growth_plans", "notes", "contacts", "conversations")
+        "applications", "growth_plans", "notes", "contacts", "conversations",
+        "saved_searches", "ingestion_feeds")
     assert set(BACKEND_SECTIONS) <= set(SECTIONS)
     assert set(AI_SECTIONS) <= set(SECTIONS)
 
 
 def test_the_backend_writes_exactly_the_sections_it_owns() -> None:
-    # The backend owns two sections -- the applications and the growth runs
-    # -- because those rows live in its own database and the ai-service
-    # cannot read them. It writes them under their bundle names, and a name
-    # the ai-service does not know is a section the bundle's manifest counts
-    # and the reader cannot restore.
+    # The backend owns seven sections -- the applications, the growth runs,
+    # the notes, the contacts, the chats, the saved searches and the feeds --
+    # because those rows live in its own database and the ai-service cannot
+    # read them. It writes them under their bundle names, and a name the
+    # ai-service does not know is a section the bundle's manifest counts and
+    # the reader cannot restore.
     written = _backend_written_sections()
     assert written, f"no sections were read out of {EXPORT_SERVICE}"
     assert sorted(written) == sorted(BACKEND_SECTIONS), (
@@ -180,10 +184,13 @@ def test_the_required_sections_follow_the_schema_version() -> None:
     assert required_sections("1.1.0") == AI_SECTIONS + ("applications", "growth_plans")
     assert required_sections("1.2.0") == (
         AI_SECTIONS + ("applications", "growth_plans", "notes", "contacts"))
+    assert required_sections("1.3.0") == SECTIONS_1_3
+    assert required_sections("1.4.0") == SECTIONS
+    assert set(SECTIONS_1_3) < set(SECTIONS)
     assert set(AI_SECTIONS) < set(SECTIONS)
 
 
-@pytest.mark.parametrize("version", ["1.3.0", "2.0.0", "not-a-version"])
+@pytest.mark.parametrize("version", ["1.4.0", "2.0.0", "not-a-version"])
 def test_an_unknown_or_newer_version_carries_everything(version: str) -> None:
     # The version comparison is on parsed numbers rather than on strings, so
     # a future version ("2.0.0") is read as newer and gets the full set --
@@ -206,5 +213,6 @@ def test_the_versions_are_compared_as_numbers_and_not_as_strings() -> None:
     # and held to the wrong set of sections.
     assert required_sections("1.10.0") == SECTIONS
     # 1.9.0 sits between known versions, so it resolves to the newest known
-    # set at or before itself -- the 1.3.0 one, now that conversations exist.
-    assert required_sections("1.9.0") == required_sections("1.3.0")
+    # set at or before itself -- the 1.4.0 one, now that the standing
+    # choices exist.
+    assert required_sections("1.9.0") == required_sections("1.4.0")

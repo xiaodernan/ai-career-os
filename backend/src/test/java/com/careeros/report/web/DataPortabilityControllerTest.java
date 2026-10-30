@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -36,8 +37,12 @@ import com.careeros.interview.repository.InterviewEvaluationRepository;
 import com.careeros.interview.repository.InterviewSessionRepository;
 import com.careeros.interview.repository.InterviewTurnRepository;
 import com.careeros.job.entity.JobJd;
+import com.careeros.job.entity.IngestionFeed;
+import com.careeros.job.entity.SavedSearch;
+import com.careeros.job.repository.IngestionFeedRepository;
 import com.careeros.job.repository.JobJdRepository;
 import com.careeros.job.repository.JobRepository;
+import com.careeros.job.repository.SavedSearchRepository;
 import com.careeros.network.repository.ContactRepository;
 import com.careeros.network.entity.Contact;
 import com.careeros.network.service.ContactService;
@@ -92,6 +97,8 @@ class DataPortabilityControllerTest {
     private InterviewEvaluationRepository evaluations;
     private ConversationRepository conversations;
     private MessageRepository messages;
+    private SavedSearchRepository savedSearches;
+    private IngestionFeedRepository feeds;
     private MockMvc mvc;
 
     @BeforeEach
@@ -110,16 +117,23 @@ class DataPortabilityControllerTest {
         evaluations = mock(InterviewEvaluationRepository.class);
         conversations = mock(ConversationRepository.class);
         messages = mock(MessageRepository.class);
+        savedSearches = mock(SavedSearchRepository.class);
+        feeds = mock(IngestionFeedRepository.class);
         when(conversations.findByUserIdOrderByUpdatedAtDescIdAsc(
                 eq(UUID.fromString(USER)), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of()));
+        when(savedSearches.findByUserIdOrderByCreatedAtDesc(eq(UUID.fromString(USER))))
+                .thenReturn(List.of());
+        when(feeds.findByUserIdOrderByCreatedAtDesc(eq(UUID.fromString(USER))))
+                .thenReturn(List.of());
         ExportService exports = new ExportService(ai, applications, growthPlans,
-                notes, contacts, conversations, messages);
+                notes, contacts, conversations, messages, savedSearches, feeds);
         ImportService imports = new ImportService(ai, exports, profiles, notes,
                 contacts, applications, growthPlans,
                 mock(ResumeService.class), knowledge, contactService,
                 jds, mock(JobRepository.class),
-                sessions, turns, evaluations, conversations, messages);
+                sessions, turns, evaluations, conversations, messages,
+                savedSearches, feeds);
         DataPortabilityController controller = new DataPortabilityController(ai, exports, imports);
         mvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new EnvelopeAdvice(), new GlobalExceptionHandler())
@@ -159,6 +173,10 @@ class DataPortabilityControllerTest {
                 eq(UUID.fromString(USER)), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of()));
         when(growthPlans.findByUserIdOrderByCreatedAtDesc(eq(UUID.fromString(USER))))
+                .thenReturn(List.of());
+        when(savedSearches.findByUserIdOrderByCreatedAtDesc(eq(UUID.fromString(USER))))
+                .thenReturn(List.of());
+        when(feeds.findByUserIdOrderByCreatedAtDesc(eq(UUID.fromString(USER))))
                 .thenReturn(List.of());
     }
 
@@ -250,14 +268,33 @@ class DataPortabilityControllerTest {
         answer.setRole("assistant");
         answer.setContent("The platform resume, because the posting leads with scale.");
         answer.setArtifacts(List.of(Map.of("kind", "resume", "version", 2)));
+        stubs:
         when(conversations.findByUserIdOrderByUpdatedAtDescIdAsc(
                 eq(UUID.fromString(USER)), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(chat)));
         when(messages.findByConversationIdInOrderByCreatedAtAscIdAsc(List.of(chatId)))
                 .thenReturn(List.of(answer));
 
+        SavedSearch search = new SavedSearch();
+        identify(search, UUID.fromString("dddddddd-dddd-dddd-dddd-dddddddddddd"));
+        search.setUserId(UUID.fromString(USER));
+        search.setName("Hangzhou senior backend");
+        search.setCriteria(Map.of("city", "Hangzhou", "min_years", 5));
+        when(savedSearches.findByUserIdOrderByCreatedAtDesc(eq(UUID.fromString(USER))))
+                .thenReturn(List.of(search));
+
+        IngestionFeed feed = new IngestionFeed();
+        identify(feed, UUID.fromString("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"));
+        feed.setUserId(UUID.fromString(USER));
+        feed.setName("Acme careers");
+        feed.setUrl("https://acme.example/careers/feed.xml");
+        feed.setSource("rss");
+        feed.setEnabled(false);
+        when(feeds.findByUserIdOrderByCreatedAtDesc(eq(UUID.fromString(USER))))
+                .thenReturn(List.of(feed));
+
         when(ai.exportBundle(eq(UUID.fromString(USER)), anyBoolean(), any()))
-                .thenReturn(Map.of("schema_version", "1.3.0"));
+                .thenReturn(Map.of("schema_version", "1.4.0"));
 
         mvc.perform(post("/api/v1/data-portability/export")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -268,7 +305,8 @@ class DataPortabilityControllerTest {
         ArgumentCaptor<Map<String, Object>> sections = ArgumentCaptor.forClass(Map.class);
         verify(ai).exportBundle(eq(UUID.fromString(USER)), eq(false), sections.capture());
         assertThat(sections.getValue()).containsKeys(
-                "applications", "growth_plans", "notes", "contacts", "conversations");
+                "applications", "growth_plans", "notes", "contacts", "conversations",
+                "saved_searches", "ingestion_feeds");
 
         // And the reader's own words are in there, not just the section names.
         @SuppressWarnings("unchecked")
@@ -306,6 +344,26 @@ class DataPortabilityControllerTest {
                 .containsEntry("content",
                         "The platform resume, because the posting leads with scale.")
                 .doesNotContainKey("agent_run_id");
+
+        // The standing choices travel too: the question the morning sweep asks
+        // again and the source the ingester is pointed at. A restore that left
+        // them behind would leave the next morning silent.
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> exportedSearches =
+                (List<Map<String, Object>>) sections.getValue().get("saved_searches");
+        assertThat(exportedSearches).hasSize(1);
+        assertThat(exportedSearches.get(0))
+                .containsEntry("name", "Hangzhou senior backend")
+                .containsKey("criteria");
+
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> exportedFeeds =
+                (List<Map<String, Object>>) sections.getValue().get("ingestion_feeds");
+        assertThat(exportedFeeds).hasSize(1);
+        assertThat(exportedFeeds.get(0))
+                .containsEntry("name", "Acme careers")
+                .containsEntry("url", "https://acme.example/careers/feed.xml")
+                .containsEntry("source", "rss");
     }
 
     /**
@@ -871,6 +929,139 @@ class DataPortabilityControllerTest {
     }
 
     /**
+     * The standing choices restore as the rows they were.
+     *
+     * <p>A saved search is the question the morning sweep speaks for, and its
+     * criteria are a {@code jsonb} map -- the one thing about the row that is
+     * not a string. A restore that kept the name and dropped the map would
+     * leave a search that asks the board nothing. The bundle's id comes back
+     * with it, as it does for every id-matched section.
+     */
+    @Test
+    void a_restored_saved_search_keeps_its_criteria_and_its_id() throws Exception {
+        stubAnEmptyWorkspace();
+        UUID searchId = UUID.fromString("12121212-1212-1212-1212-121212121212");
+        when(savedSearches.findByIdAndUserId(eq(searchId), eq(UUID.fromString(USER))))
+                .thenReturn(Optional.empty());
+        when(savedSearches.existsById(eq(searchId))).thenReturn(false);
+        when(ai.importPlan(eq(UUID.fromString(USER)), any(), any()))
+                .thenReturn(Map.of("sections", Map.of("saved_searches", List.of(
+                        Map.of("op", "create", "id", searchId.toString())))));
+
+        mvc.perform(post("/api/v1/data-portability/import-apply")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"bundle":{"schema_version":"1.4.0","data":{
+                                  "saved_searches":[{"id":"12121212-1212-1212-1212-121212121212",
+                                    "name":"Hangzhou senior backend",
+                                    "criteria":{"city":"Hangzhou","min_years":5}}]}}}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.applied.saved_searches.created").value(1));
+
+        ArgumentCaptor<SavedSearch> written = ArgumentCaptor.forClass(SavedSearch.class);
+        verify(savedSearches).save(written.capture());
+        assertThat(written.getValue().getId()).isEqualTo(searchId);
+        assertThat(written.getValue().getUserId()).isEqualTo(UUID.fromString(USER));
+        assertThat(written.getValue().getName()).isEqualTo("Hangzhou senior backend");
+        assertThat(written.getValue().getCriteria())
+                .containsEntry("city", "Hangzhou")
+                .containsEntry("min_years", 5);
+    }
+
+    /**
+     * A feed restores pointed where it was pointed, and on when it was on.
+     *
+     * <p>The source label is provenance and the enabled flag is the reader's
+     * standing choice to stop hearing from one board; both are content. A feed
+     * the bundle carries without them comes back with the creation defaults,
+     * which is what the subscribe form would have written.
+     */
+    @Test
+    void a_restored_feed_keeps_its_source_and_its_enabled_flag() throws Exception {
+        stubAnEmptyWorkspace();
+        UUID offId = UUID.fromString("13131313-1313-1313-1313-131313131313");
+        UUID plainId = UUID.fromString("14141414-1414-1414-1414-141414141414");
+        when(feeds.findByIdAndUserId(eq(offId), eq(UUID.fromString(USER))))
+                .thenReturn(Optional.empty());
+        when(feeds.existsById(eq(offId))).thenReturn(false);
+        when(feeds.existsById(eq(plainId))).thenReturn(false);
+        when(ai.importPlan(eq(UUID.fromString(USER)), any(), any()))
+                .thenReturn(Map.of("sections", Map.of("ingestion_feeds", List.of(
+                        Map.of("op", "create", "id", offId.toString()),
+                        Map.of("op", "create", "id", plainId.toString())))));
+
+        mvc.perform(post("/api/v1/data-portability/import-apply")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"bundle":{"schema_version":"1.4.0","data":{
+                                  "ingestion_feeds":[
+                                    {"id":"13131313-1313-1313-1313-131313131313",
+                                     "name":"Acme careers",
+                                     "url":"https://acme.example/careers/feed.xml",
+                                     "source":"rss","enabled":false},
+                                    {"id":"14141414-1414-1414-1414-141414141414",
+                                     "name":"Beta board",
+                                     "url":"https://beta.example/jobs.json"}]}}}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.applied.ingestion_feeds.created").value(2));
+
+        ArgumentCaptor<IngestionFeed> written = ArgumentCaptor.forClass(IngestionFeed.class);
+        verify(feeds, times(2)).save(written.capture());
+        IngestionFeed off = written.getAllValues().get(0);
+        assertThat(off.getId()).isEqualTo(offId);
+        assertThat(off.getName()).isEqualTo("Acme careers");
+        assertThat(off.getUrl()).isEqualTo("https://acme.example/careers/feed.xml");
+        assertThat(off.getSource()).isEqualTo("rss");
+        assertThat(off.isEnabled()).isFalse();
+
+        IngestionFeed plain = written.getAllValues().get(1);
+        assertThat(plain.getId()).isEqualTo(plainId);
+        assertThat(plain.getSource()).isEqualTo("feed");
+        assertThat(plain.isEnabled()).isTrue();
+    }
+
+    /**
+     * A search or a feed the bundle no longer carries is retired.
+     *
+     * <p>They are id-matched like the notes and the chats, so the absence is a
+     * statement the restore can keep -- and both finds are scoped to the
+     * caller, which is what the delete half rests on.
+     */
+    @Test
+    void a_retired_search_and_feed_are_deleted() throws Exception {
+        stubAnEmptyWorkspace();
+        UUID searchId = UUID.fromString("15151515-1515-1515-1515-151515151515");
+        UUID feedId = UUID.fromString("16161616-1616-1616-1616-161616161616");
+        SavedSearch search = new SavedSearch();
+        IngestionFeed feed = new IngestionFeed();
+        when(savedSearches.findByIdAndUserId(eq(searchId), eq(UUID.fromString(USER))))
+                .thenReturn(Optional.of(search));
+        when(feeds.findByIdAndUserId(eq(feedId), eq(UUID.fromString(USER))))
+                .thenReturn(Optional.of(feed));
+        when(ai.importPlan(eq(UUID.fromString(USER)), any(), any()))
+                .thenReturn(Map.of("sections", Map.of(
+                        "saved_searches", List.of(
+                                Map.of("op", "delete", "id", searchId.toString())),
+                        "ingestion_feeds", List.of(
+                                Map.of("op", "delete", "id", feedId.toString())))));
+
+        mvc.perform(post("/api/v1/data-portability/import-apply")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"bundle":{"schema_version":"1.4.0","data":{
+                                  "saved_searches":[],"ingestion_feeds":[]}}}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.applied.saved_searches.deleted").value(1))
+                .andExpect(jsonPath("$.data.applied.ingestion_feeds.deleted").value(1));
+
+        verify(savedSearches).delete(search);
+        verify(feeds).delete(feed);
+    }
+
+    /**
      * The preview reads the workspace when the caller sends no state.
      *
      * <p>The plan is a comparison, so a preview with no other half calls every
@@ -903,6 +1094,7 @@ class DataPortabilityControllerTest {
         @SuppressWarnings("unchecked")
         Map<String, Object> state = (Map<String, Object>) existing.getValue().get("data");
         assertThat(state).containsKeys(
-                "applications", "growth_plans", "notes", "contacts", "conversations", "profile");
+                "applications", "growth_plans", "notes", "contacts", "conversations",
+                "saved_searches", "ingestion_feeds", "profile");
     }
 }

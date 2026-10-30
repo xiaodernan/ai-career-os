@@ -44,6 +44,11 @@ const SECTIONS = [
   { key: "contacts", labelKey: "data.sections.contacts" },
   // And the chats: what the reader asked and what the assistant answered.
   { key: "conversations", labelKey: "data.sections.conversations" },
+  // The standing choices: the question the morning sweep speaks for and the
+  // sources the ingester is pointed at. A restore that leaves them behind
+  // leaves the next morning silent.
+  { key: "saved_searches", labelKey: "data.sections.savedSearches" },
+  { key: "ingestion_feeds", labelKey: "data.sections.ingestionFeeds" },
 ] as const;
 
 export default function DataPortabilityPage() {

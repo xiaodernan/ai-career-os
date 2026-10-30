@@ -208,6 +208,10 @@ READERS = {
 # added.
 NON_KNOB_SHARED = {
     ("job/dto/IngestionFeedDtos.java", "isEnabled"),
+    # The export serializer reads the entity's own toggle -- the same
+    # non-knob use as the DTO's, now that a feed's switch travels in the
+    # bundle.
+    ("report/service/ExportService.java", "isEnabled"),
 }
 
 # the bound-but-unread leaves, each stated with the authority that decides the value instead and with what an
