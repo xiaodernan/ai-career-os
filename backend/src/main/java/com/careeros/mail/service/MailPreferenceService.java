@@ -11,15 +11,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * The reader's answer about the two letters (roadmap 23.1).
+ * The reader's answer about the letters (roadmap 23.1, 41.1).
  *
- * <p>An account with no row receives both: the default is the reason signup writes nothing and
- * the reason a reader who never opened this page is not a special case in any sweep. Turning a
- * list off writes the row (or the column) and is idempotent; turning it back on flips the same
- * column rather than deleting the row, so "asked twice" leaves the same evidence as "asked
- * once".
+ * <p>An account with no row receives all of them: the default is the reason signup writes
+ * nothing and the reason a reader who never opened this page is not a special case in any
+ * sweep. Turning a list off writes the row (or the column) and is idempotent; turning it back
+ * on flips the same column rather than deleting the row, so "asked twice" leaves the same
+ * evidence as "asked once".
  *
- * <p>Both surfaces ask the same question. The sweeps read the opt-out set once per pass, while
+ * <p>Every surface asks the same question. The sweeps read the opt-out set once per pass, while
  * a single delivery asks {@link #receives}; the two answers come from the same columns, so a
  * letter cannot be suppressed on the sweep and mailed by the retry.
  */
@@ -64,8 +64,10 @@ public class MailPreferenceService {
     }
 
     private List<MailPreference> preferencesOf(MailList list) {
-        return list == MailList.WEEKLY
-                ? preferences.findByWeeklyDigestFalse()
-                : preferences.findBySignalMailFalse();
+        return switch (list) {
+            case WEEKLY -> preferences.findByWeeklyDigestFalse();
+            case SIGNALS -> preferences.findBySignalMailFalse();
+            case REMINDERS -> preferences.findByReminderMailFalse();
+        };
     }
 }

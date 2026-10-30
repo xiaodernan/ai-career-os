@@ -29,15 +29,15 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 /**
- * The page a mailbox can open and the POST it can post (roadmap 23.1).
+ * The page a mailbox can open and the POST it can post (roadmap 23.1, 41.1).
  *
- * <p>What is pinned. The GET renders both dials and changes nothing -- mail scanners prefetch
+ * <p>What is pinned. The GET renders every dial and changes nothing -- mail scanners prefetch
  * links, so a read that flipped a switch would unsubscribe readers who never clicked. The POST
  * applies exactly the list in its URL and re-renders, so a one-click from the Monday letter
- * cannot silence the morning signals. A forged token, an unknown account and an unknown list
- * are one 404 with no state touched. A scanner's GET on the POST URL is a 405. And the page is
- * {@code no-store}, in the reader's language, and marked noindex, because it states private
- * settings.
+ * cannot silence the morning signals or the reminder's own letter. A forged token, an unknown
+ * account and an unknown list are one 404 with no state touched. A scanner's GET on the POST URL
+ * is a 405. And the page is {@code no-store}, in the reader's language, and marked noindex,
+ * because it states private settings.
  */
 class MailPreferenceControllerTest {
 
@@ -82,7 +82,7 @@ class MailPreferenceControllerTest {
     }
 
     @Test
-    void thePageShowsBothDialsAndChangesNothing() throws Exception {
+    void thePageShowsEveryDialAndChangesNothing() throws Exception {
         MvcResult result = mvc.perform(get(url("")))
                 .andExpect(status().isOk())
                 .andReturn();
@@ -92,8 +92,10 @@ class MailPreferenceControllerTest {
         assertThat(body(result)).contains(
                 "The Monday letter",
                 "The morning signals",
+                "The reminder's own letter",
                 "/stop/weekly",
                 "/stop/signals",
+                "/stop/reminders",
                 "On");
         verify(preferences, never()).set(any(), any(), anyBoolean());
     }
@@ -125,6 +127,19 @@ class MailPreferenceControllerTest {
                 .andExpect(status().isOk());
 
         verify(preferences).set(ALICE, MailList.WEEKLY, true);
+    }
+
+    @Test
+    void theReminderLetterIsItsOwnOneClick() throws Exception {
+        when(preferences.receives(ALICE, MailList.REMINDERS)).thenReturn(false);
+
+        MvcResult result = mvc.perform(post(url("stop/reminders")))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        verify(preferences).set(ALICE, MailList.REMINDERS, false);
+        verify(preferences, never()).set(ALICE, MailList.SIGNALS, false);
+        assertThat(body(result)).contains("The reminder's own letter", "/start/reminders");
     }
 
     @Test
@@ -162,6 +177,6 @@ class MailPreferenceControllerTest {
                 .andExpect(status().isOk())
                 .andReturn();
 
-        assertThat(body(result)).contains("lang=\"zh\"", "周一信", "每日信号", "开");
+        assertThat(body(result)).contains("lang=\"zh\"", "周一信", "每日信号", "提醒的即时信", "开");
     }
 }

@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * The way out of the mail (roadmap 23.1), reachable from a mailbox and from nowhere else.
+ * The way out of the mail (roadmap 23.1, 41.1), reachable from a mailbox and from nowhere else.
  *
  * <p>No login: a mail client cannot carry the app's bearer token, and asking a reader to sign in
  * to stop mail is how a complaint becomes spam. The account id and its HMAC travel in the path,
@@ -27,7 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
  * private settings.
  *
  * <p>Reading and changing are different verbs on purpose. Mail clients and security scanners
- * prefetch links in letters, so a {@code GET} must never flip a dial: it renders the two states
+ * prefetch links in letters, so a {@code GET} must never flip a dial: it renders every state
  * with the buttons that do. The change travels only through {@code POST} -- the button's form
  * for a reader, the RFC 8058 one-click URL in the letter's headers for a client that offered
  * "unsubscribe" beside the sender. Both are the same handler, and both are idempotent, so a
@@ -92,6 +92,7 @@ public class MailPreferenceController {
                 account.getLocale(),
                 preferences.receives(account.getId(), MailList.WEEKLY),
                 preferences.receives(account.getId(), MailList.SIGNALS),
+                preferences.receives(account.getId(), MailList.REMINDERS),
                 links.page(account.getId()),
                 changed);
         return ResponseEntity.ok()

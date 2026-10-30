@@ -470,14 +470,15 @@ promise "every morning the inbox can leave" stopped being kept.
 **What the alert looks like.** No Prometheus rule ships for this clock yet; the reading is
 `careeros_reminders_last_tick_timestamp`, the epoch second of the last completed tick. A value
 older than a couple of minutes means the clock stopped: from then on a reminder that comes due
-waits for the next morning's pass instead of ringing when the reader asked. The clock wakes
+waits for the next morning's pass instead of ringing and mailing when the reader asked. The clock wakes
 every `careeros.reminders.tick-ms` (default `60000`, one minute) and moves the gauge only when a
 tick finished, so a board with nothing due and a dead clock read differently.
 
-**What to read.** The backend log prints "reminder ring delivered to N account(s)" when a tick
-woke at least one; an ordinary minute is silent. A tick whose audience query failed logs "the
-reminder clock could not read its audience; the window is retried" with the stack trace, and the
-window is not advanced — the next tick asks for the same span again. Then check
+**What to read.** The backend log prints "reminder ring delivered to N account(s)" and
+"reminder letter written for N account(s)" when a tick woke or mailed at least one; an ordinary
+minute is silent. A tick whose audience query failed logs "the reminder clock could not read
+its audience for the ring" or "... for the letter" with the stack trace, and the window is not
+advanced — the next tick asks for the same span again. Then check
 `careeros.reminders.tick-ms` and that `@EnableScheduling` is active.
 
 **What to do, in order.**
@@ -488,13 +489,16 @@ window is not advanced — the next tick asks for the same span again. Then chec
    `careeros.reminders.tick-ms`, restart the backend so the schedule is re-read, and confirm the
    gauge moves within two minutes.
 3. Do not backfill by hand. A reminder whose moment fell while the process was down is not
-   replayed by this clock — the next morning's pass rings what is still unread and unpushed, and
-   the inbox showed it all along.
+   replayed by this clock — the next morning's pass rings what is still unread and unpushed, the
+   morning letter carries the episode when the signals dial is on, and the inbox and calendar
+   feed showed it all along.
 
-**What this clock does not own.** It rings only browsers that registered for push, and it never
-mails. An episode the morning already carried is not rung again, and a browser that refused is
-not latched, so the next morning's pass asks it again. The calendar feed rings on its own
-through each event's alarm and does not depend on this clock.
+**What this clock does not own.** It rings only browsers that registered for push, and it mails
+only accounts whose `reminders` dial is on. An episode the morning already carried is not rung
+or mailed again, and a browser that refused is not latched, so the next morning's pass asks it
+again. A letter the relay refused is not latched either, so the episode remains for the morning
+sweep. The calendar feed rings on its own through each event's alarm and does not depend on this
+clock.
 
 ## The Monday letter was never written
 

@@ -12,4 +12,7 @@ public interface MailPreferenceRepository extends JpaRepository<MailPreference, 
 
     /** Accounts that turned the morning signals off. */
     List<MailPreference> findBySignalMailFalse();
+
+    /** Accounts that turned the reminder's own letter off (roadmap 41.1). */
+    List<MailPreference> findByReminderMailFalse();
 }

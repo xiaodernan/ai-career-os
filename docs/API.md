@@ -365,8 +365,11 @@ credential: the token is an HMAC-SHA256 of the account id under
 `app.mail.link-secret`, so the page needs no session, nothing is stored per link,
 and rotating the secret retires every link that was ever mailed.
 
-Two letters, two dials: `weekly` is the Monday digest, `signals` is the morning
-inbox mail. No row means both are on. The GET only renders the page — mail
+Three letters, three dials: `weekly` is the Monday digest, `signals` is the morning
+inbox mail, and `reminders` is the reminder's own letter, mailed the moment a reminder
+comes due (41.1). No row means all three are on. The `reminders` dial chooses the
+moment, not the silence: turned off, the reminder waits for the morning letter
+instead of being dropped. The GET only renders the page — mail
 scanners prefetch links, so a read that flipped a switch would unsubscribe readers
 who never clicked — and every change is a POST that answers the re-rendered page.
 These routes are the signed-link surface and are the only `/api/v1` paths besides
@@ -374,8 +377,8 @@ auth, health, the metrics scrape and the calendar feed that need no bearer token
 
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/mail/preferences/{userId}/{token}` | the settings page as HTML with Cache-Control: no-store and X-Robots-Tag: noindex, in the account's language, showing both dials; changes nothing, and an unreadable id or a signature that is not this account's is a **404** `MAIL_LINK_INVALID` |
-| POST | `/mail/preferences/{userId}/{token}/stop/{list}` | turns `list` (`weekly` or `signals`) off and answers the re-rendered page with a saved notice; a forged token or unknown list is a **404** `MAIL_LINK_INVALID` |
+| GET | `/mail/preferences/{userId}/{token}` | the settings page as HTML with Cache-Control: no-store and X-Robots-Tag: noindex, in the account's language, showing every dial; changes nothing, and an unreadable id or a signature that is not this account's is a **404** `MAIL_LINK_INVALID` |
+| POST | `/mail/preferences/{userId}/{token}/stop/{list}` | turns `list` (`weekly`, `signals` or `reminders`) off and answers the re-rendered page with a saved notice; a forged token or unknown list is a **404** `MAIL_LINK_INVALID` |
 | POST | `/mail/preferences/{userId}/{token}/start/{list}` | turns `list` back on and answers the re-rendered page with a saved notice |
 
 ### Calendar feed (`/calendar`)

@@ -318,11 +318,16 @@ user-scoped table (ownership is enforced in backend layer + a single SQL predica
   silences one episode rather than the next. `notified_at` and `pushed_at` are separate
   latches because the letter and the ring are different doors: a reader who turned the
   letter off still asked to be woken, and a push the service refused is not a letter
-  that was delivered.
-- `mail_preferences(user_id, weekly_digest, signal_mail, updated_at)`
-  → the two switches the letters obey (23.1): the morning signal letter and the Monday
-  digest. An absent row means both are on, which is why signup writes nothing — a row
-  appears when the reader turns something off.
+  that was delivered. Both letters latch the same `notified_at` on the same episode
+  (41.1) — the morning sweep and the minute clock's reminder letter are two passes
+  over one promise, so whichever carried the episode first keeps it from being carried
+  again.
+- `mail_preferences(user_id, weekly_digest, signal_mail, reminder_mail, updated_at)`
+  → the switches the letters obey (23.1, 41.1): the Monday digest, the morning signal
+  letter and the reminder's own letter. An absent row means all three are on, which is
+  why signup writes nothing — a row appears when the reader turns something off.
+  `reminder_mail` selects the moment rather than the silence: off means a due reminder
+  waits for the morning letter, not that it is dropped.
 - `push_subscriptions(id, user_id, endpoint, p256dh, auth, label, created_at,
    updated_at)` → the browsers an account can be woken on (33.1). The endpoint is
   unique across the table, not per account: a registration belongs to a browser, so a

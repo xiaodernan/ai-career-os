@@ -3490,6 +3490,34 @@ quietly land on the wrong side of it.
   tuple. The census fails by name on a new table, which is the only way the
   promise survives the next migration.)
 
+## Epic 41 — The Reminder Reaches the Mailbox at Its Moment
+
+The inbox has carried a due reminder since 19.3, and the minute clock has rung its
+browsers since 35.1 — but a reader with no push registration heard about it only in
+the next morning's letter, and a reminder's whole point is its moment. The clock now
+writes the letter itself, and the mail page grows a third dial so the moment is a
+choice rather than a side effect of the morning sweep.
+
+- [x] **41.1** The reminder's own letter, written when it comes due.
+
+  (`V30` adds `mail_preferences.reminder_mail`; absence of a row still means every
+  letter is on. `MailList.REMINDERS` is the third slug — the page, the header and the
+  query read one spelling — and `MailPage` grows the section that says what the dial
+  chooses: the moment, not the silence, because turning it off leaves the reminder in
+  the morning letter. `ReminderMailer` writes a short bilingual letter naming the
+  roles that came due with a link per card (five, then counted), and
+  `ReminderMailService` mails only the reminder items that fell inside the tick's
+  window, so the morning's stale and reply items wait for the morning. The latch is
+  the episode's own `notified_at` rather than a column on `applications`: one episode
+  is one letter whichever pass carries it, so the morning sweep cannot mail it again,
+  and a refused letter latches nothing — the morning sweep is the fallback.
+  `ReminderScheduler` runs the two halves separately and holds its window when either
+  fails, so a relay that refuses letters cannot silence a browser and a failed tick
+  still asks the same minute. 19 backend tests (7 service, 6 mailer, 4 scheduler, 1
+  preference, 1 page); the touched subset 44 green. API.md, architecture.md,
+  DEPLOYMENT.md and RUNBOOK.md follow the third dial and the second half of the
+  clock.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

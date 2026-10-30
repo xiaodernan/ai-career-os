@@ -2,13 +2,13 @@ package com.careeros.mail.web;
 
 /**
  * The unsubscribe page's markup (roadmap 23.1): one small HTML document, in the reader's
- * language, that shows both dials and posts a change for either.
+ * language, that shows every dial and posts a change for any of them.
  *
  * <p>There is no template engine in this app and this page is not a reason to add one. Every
- * value written into the markup is server-built -- the two action URLs come from
- * {@code MailLinks}, which signs them, and they are the only interpolation -- so no reader
- * text reaches the document and there is nothing here to escape. The page ships as UTF-8 bytes
- * with a language attribute so the Chinese copy renders in whatever browser a mailbox opens.
+ * value written into the markup is server-built -- the action URLs come from {@code MailLinks},
+ * which signs them, and they are the only interpolation -- so no reader text reaches the
+ * document and there is nothing here to escape. The page ships as UTF-8 bytes with a language
+ * attribute so the Chinese copy renders in whatever browser a mailbox opens.
  */
 final class MailPage {
 
@@ -23,6 +23,10 @@ final class MailPage {
             "The morning signals",
             "Anything waiting in your inbox -- a reminder that came due, a quiet application, a "
                     + "failed pull -- mailed at most once per item.",
+            "The reminder's own letter",
+            "A reminder you set, mailed the moment it comes due instead of waiting for the "
+                    + "morning. Turning this off does not silence the reminder: the morning "
+                    + "letter still carries it.",
             "On",
             "Off",
             "Stop",
@@ -41,6 +45,8 @@ final class MailPage {
             "每周一寄出一次：这一周的投递、回复率和停滞的职位。",
             "每日信号",
             "收件箱里等你的内容——到期的提醒、安静的投递、失败的抓取——每条最多寄一次。",
+            "提醒的即时信",
+            "你设的提醒到点那一刻就寄出，而不是等到第二天早上。关掉它不会让提醒消失：每日信号里仍然会有。",
             "开",
             "关",
             "停止",
@@ -56,8 +62,8 @@ final class MailPage {
      * action and the list to it. {@code changed} adds the confirmation line for the POST that
      * just happened.
      */
-    static String render(String locale, boolean weeklyOn, boolean signalOn, String pageUrl,
-                         boolean changed) {
+    static String render(String locale, boolean weeklyOn, boolean signalOn, boolean reminderOn,
+                         String pageUrl, boolean changed) {
         Words words = wordsFor(locale);
         StringBuilder html = new StringBuilder(2048);
         html.append("<!doctype html>\n<html lang=\"").append(words.lang()).append("\">\n<head>\n")
@@ -83,6 +89,8 @@ final class MailPage {
                 pageUrl + "/stop/weekly", pageUrl + "/start/weekly");
         section(html, words.signalTitle(), words.signalBlurb(), signalOn, words,
                 pageUrl + "/stop/signals", pageUrl + "/start/signals");
+        section(html, words.reminderTitle(), words.reminderBlurb(), reminderOn, words,
+                pageUrl + "/stop/reminders", pageUrl + "/start/reminders");
         html.append("<footer>").append(words.keyWarning()).append("</footer>\n</body>\n</html>\n");
         return html.toString();
     }
@@ -111,6 +119,8 @@ final class MailPage {
             String weeklyBlurb,
             String signalTitle,
             String signalBlurb,
+            String reminderTitle,
+            String reminderBlurb,
             String on,
             String off,
             String stop,

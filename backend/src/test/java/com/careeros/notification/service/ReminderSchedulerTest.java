@@ -17,7 +17,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 /**
- * The minute clock a reminder rings on (roadmap 35.1).
+ * The minute clock a reminder rings on (roadmap 35.1) and writes its letter on (41.1).
  *
  * <p>What is pinned is the window, because the window is the whole design. The first tick after a
  * boot reaches back one minute, so the minute the process started in is not lost; a completed
@@ -25,9 +25,11 @@ import org.junit.jupiter.api.Test;
  * elapsed span; and a tick that failed moves nothing, so the next one asks for the same span
  * again rather than letting a reminder disappear into a window nobody read.
  *
- * <p>The heartbeat is the second claim: it moves at the end of every completed tick -- with or
- * without a reminder to ring -- and does not move for a tick that threw, because a pass that
- * never read its audience is not evidence that the clock is alive.
+ * <p>The two halves share a window but not a failure: one throwing does not skip the other, and
+ * either one throwing holds the window where it was. The heartbeat is the second claim: it moves
+ * at the end of every completed tick -- with or without a reminder to ring or letter to write --
+ * and does not move for a tick that threw, because a pass that never read its audience is not
+ * evidence that the clock is alive.
  */
 class ReminderSchedulerTest {
 
@@ -53,15 +55,18 @@ class ReminderSchedulerTest {
     };
 
     private NotificationPushService push;
+    private ReminderMailService mail;
     private PushDeliveryMetrics metrics;
     private ReminderScheduler scheduler;
 
     @BeforeEach
     void setUp() {
         push = mock(NotificationPushService.class);
+        mail = mock(ReminderMailService.class);
         metrics = mock(PushDeliveryMetrics.class);
-        scheduler = new ReminderScheduler(push, metrics, clock);
+        scheduler = new ReminderScheduler(push, mail, metrics, clock);
         when(push.pushDue(any(), any())).thenReturn(0);
+        when(mail.mailDue(any(), any())).thenReturn(0);
     }
 
     private void advance(long seconds) {
@@ -116,6 +121,50 @@ class ReminderSchedulerTest {
 
         scheduler.tick();
 
+        verify(metrics, never()).recordDueTick(any());
+    }
+
+    @Test
+    void theLetterHalfAsksForTheSameWindowTheRingDoes() {
+        advance(60);
+
+        scheduler.tick();
+
+        verify(mail).mailDue(FIRST_START, OffsetDateTime.parse("2026-10-30T10:01:00Z"));
+    }
+
+    @Test
+    void aRefusedRingDoesNotCostTheTickItsLetter() {
+        when(push.pushDue(FIRST_START, OffsetDateTime.parse("2026-10-30T10:01:00Z")))
+                .thenThrow(new IllegalStateException("database down"));
+
+        advance(60);
+        scheduler.tick();
+
+        verify(mail).mailDue(FIRST_START, OffsetDateTime.parse("2026-10-30T10:01:00Z"));
+    }
+
+    @Test
+    void aRefusedLetterDoesNotCostTheTickItsRing() {
+        when(mail.mailDue(FIRST_START, OffsetDateTime.parse("2026-10-30T10:01:00Z")))
+                .thenThrow(new IllegalStateException("smtp down"));
+
+        advance(60);
+        scheduler.tick();
+
+        verify(push).pushDue(FIRST_START, OffsetDateTime.parse("2026-10-30T10:01:00Z"));
+    }
+
+    @Test
+    void aFailedLetterHoldsTheWindowSoTheSameMinuteIsAskedAgain() {
+        advance(60);
+        when(mail.mailDue(any(), any())).thenThrow(new IllegalStateException("smtp down"));
+        scheduler.tick();
+        advance(60);
+
+        scheduler.tick();
+
+        verify(mail).mailDue(FIRST_START, OffsetDateTime.parse("2026-10-30T10:02:00Z"));
         verify(metrics, never()).recordDueTick(any());
     }
 }

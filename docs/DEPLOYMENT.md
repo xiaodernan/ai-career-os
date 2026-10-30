@@ -527,16 +527,17 @@ compose, with or without letters, and `CareerOSDigestSweepStale` pages at eight 
 a wrong `careeros.digest.cron` cannot pass for a quiet week
 (`docs/RUNBOOK.md#the-monday-letter-was-never-written`).
 
-Every letter carries a way out (23.1). Both mails end with a settings link and
-go out with the `List-Unsubscribe` / `List-Unsubscribe-Post` headers, so a
+Every letter carries a way out (23.1). Each one ends with a settings link and
+goes out with the `List-Unsubscribe` / `List-Unsubscribe-Post` headers, so a
 mailbox can offer one-click stop without a password. The link is its own
 credential: `/api/v1/mail/preferences/{userId}/{token}` where the token is an
 HMAC-SHA256 of the account id under `APP_MAIL_LINK_SECRET`, compared in constant
 time; nothing is stored per link, and rotating the secret retires every link
 already mailed (readers can still unsubscribe from the next letter). Page opens
 change nothing — mail scanners prefetch links — and each dial (`weekly` for the
-Monday letter, `signals` for the morning inbox mail) is flipped by a POST. The
-choice lives in `mail_preferences`; no row means both are on. The Monday sweep
+Monday letter, `signals` for the morning inbox mail, `reminders` for the letter
+mailed the moment a reminder comes due) is flipped by a POST. The
+choice lives in `mail_preferences`; no row means all three are on. The Monday sweep
 skips an account that turned the letter off without counting a delivery attempt,
 and the morning sweep never asks such an account what is waiting. Composing from
 the dashboard still files the week's letter — the preference silences the mail,
@@ -604,12 +605,17 @@ morning by design, a refused wake is retried tomorrow, and `sent` sitting at zer
 registrations exist is a dashboard question rather than a paging one — the mail sweep's
 own clock already pages when the pass itself stops.
 
-A reminder that comes due is rung when it comes due (35.1). `careeros.reminders.tick-ms`
+A reminder that comes due is rung when it comes due (35.1), and its letter is written then
+(41.1). `careeros.reminders.tick-ms`
 (default `60000`) is a fixed-delay clock: every tick asks the board which accounts' reminders
-fell inside the window since the last completed tick, and rings their browsers through the same
-latch the morning uses, so an episode already carried is not rung again and a browser that
-refused is not remembered as rung. A failed tick does not advance its window — the next tick
-asks for the same span again. The heartbeat is `careeros.reminders.last.tick.timestamp`, moved
+fell inside the window since the last completed tick, rings their browsers through the same
+latch the morning uses, and mails the reminder's own letter to the accounts whose `reminders`
+dial is on. The letter and the ring latch the same episode (`notified_at` / `pushed_at`), so
+whichever door carried it, the morning letter does not repeat it, and a browser that
+refused is not remembered as rung. The two halves are caught separately — a relay that refuses
+letters does not silence a browser, and a push transport that hangs does not cost the tick its
+letter — but a tick that failed in either half does not advance its window: the next tick asks
+for the same span again. The heartbeat is `careeros.reminders.last.tick.timestamp`, moved
 at the end of every completed tick with or without a reminder to ring;
 `docs/RUNBOOK.md#the-minute-clock-a-reminder-rings-on` is what the responder reads. The
 calendar feed does not depend on this clock: each event carries its own alarm (35.2), so a

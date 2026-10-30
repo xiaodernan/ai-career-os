@@ -10,8 +10,9 @@
 ## 当前状态 (2026-10-30)
 
 - **前端**: 877 个 vitest 通过（85 个文件）；`tsc --noEmit` 干净。
-- **后端**: 1128 个测试通过、164 份报告，含真实栈 IT（0 失败 / 0 错误 /
-  0 跳过；`mvn -o -q test`；不含 IT 的选集为 1037 个）。
+- **后端**: 非 IT 选集 **1063 条全绿**（`mvn -o -B -Dtest="!*IT" test`；1037 基线 +
+  41.1 的 19 条 + 并发会话在制的 7 条导出/导入测试）；含真实栈 IT 的全量（1128 条基线上
+  再加本单元与并发会话的新测试）待下一次 `mvn -o -q test` 复核。
 - **ai-service**: 1903 passed, 48 failed, 1 skipped（offline: mock/hash）。48 条失败全是
   37/38 新增人口留下的跨语言 census 漂移，在 39.2 父提交的干净检出上逐条重现，已列为
   下一单元；39.2 不新增失败。
@@ -33,6 +34,7 @@
 交出改密码卡（当前密码 + 两遍新密码、成功态说出全部后果），以 874 个前端测试、84 个文件收口。38.5 让设置页
 交出销号卡（什么走、什么留下、密码 + 回打地址、确认后才 POST），并让账号在成功后落在公开的
 `/account-erased` 页上（token 对丢弃、整页导航离开、无会话也能说清结局），以 877 个前端测试、85 个文件收口。
+随后 **Epic 41.1**（提醒到点时的信）以 19 条新后端测试收口，非 IT 选集 1063 条全绿。
 
 ## 主线队列（按顺序执行）
 
@@ -537,7 +539,28 @@
   页面所载清单由 bundle 的 manifest 得出，可读半边的节序与 redact 列表共用同一个 section 元组。
   新表出现即按名失败。
 
-下一步：40.1。
+下一步：40.1（由并发会话在制）与本会话 Epic 41 的下一段。
+
+## Epic 41 — 提醒到点时的信
+
+- 盘点结论（2026-10-30）：Epic 35 让分钟时钟（`ReminderScheduler`，默认 60s 一跳）在提醒到期那一刻把
+  ring 送给浏览器；Epic 19.4 的信是**晨信**，每天 07:30 一封信把所有到期的提醒合成一句。于是
+  没有浏览器的账号在提醒的那一刻什么也收不到，要等到第二天早上。设置页的邮件偏好只有两个 dial
+  （weekly / signals），"提醒的即时信"没有位置。
+- **41.1** 提醒自己的信（已完成）：`V30__reminder_mail.sql` 给 `mail_preferences` 加
+  `reminder_mail`（无行仍=全开）；`MailList.REMINDERS` 成为第三个 slug = URL 段 = 数据库列，
+  页面第三段文案明说"关掉不等于消除，晨信仍会带"（时刻而非静音）。`ReminderMailer` 写双语
+  （主题带条数、最多列 5 条、超出 `... and N more`、无 title/company 有回退、无 link 回落
+  `/applications`、RFC 8058 一键退订指向 `/stop/reminders`）；`ReminderMailService.mailDue(since, until)`
+  读一次偏好、遍历 `findUserIdsWithReminderBetween`（已排除 offer/rejected）、从
+  `awaitingDelivery` 里只取窗口内 `KIND_REMINDER` 且读者未读未忽略的条目。**不新增 latch**：
+  与晨信共用同一条 episode 的 `notified_at`，"一条 episode 只有一封信"，晨信不会重发；
+  发送被拒/无地址/无账号都不写 latch，晨信成为后备。`ReminderScheduler` 的 tick 变成两半
+  （ring + letter），每半各自捕获异常；只有两半都完成才推进窗口与心跳，任一半失败窗口重试，
+  两把 latch 保证重试不重复送。指标复用 `NotificationDeliveryMetrics`
+  （`careeros.signals.delivery{outcome=sent|refused}`）。19 条新测试（Mailer 6 / Service 7 /
+  Scheduler +4 / 偏好 +2），API.md、architecture.md、DEPLOYMENT.md、RUNBOOK.md、ROADMAP 同步。
+  下一步候选（避开并发会话在制的 export/import）：仪表盘 attention 的提醒过期语义、或 Epic 40 提交后接手。
 
 
 ## 开发协议
