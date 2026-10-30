@@ -75,8 +75,9 @@ describe("the browser's copy", () => {
     // `components/settings/email-change-card.tsx`, the settings card that asks
     // for the two letters (38.2); 144 with
     // `components/settings/sessions-card.tsx`, the card that draws the open doors
-    // and closes them (38.3).
-    expect(browserSources().length).toBe(144);
+    // and closes them (38.3); 145 with `components/settings/password-card.tsx`,
+    // the card that replaces the password and says what that costs (38.4).
+    expect(browserSources().length).toBe(145);
   });
 
   it("finds a sentence, however long it is", () => {

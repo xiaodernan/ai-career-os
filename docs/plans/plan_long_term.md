@@ -9,7 +9,7 @@
 
 ## 当前状态 (2026-10-30)
 
-- **前端**: 869 个 vitest 通过（83 个文件）；`tsc --noEmit` 干净。
+- **前端**: 874 个 vitest 通过（84 个文件）；`tsc --noEmit` 干净。
 - **后端**: 1116 个测试通过、162 份报告，含真实栈 IT（0 失败 / 0 错误 /
   0 跳过；`mvn -o -q test`；不含 IT 的选集为 1027 个）。
 - **ai-service**: 1929 passed, 1 skipped (offline: mock/hash)。
@@ -27,7 +27,8 @@
   服务商 webhook、双语线索先读的引擎、公司名匹配归档与 `/replies` 页，
   设置页交出地址）。37.4 以 850 个前端测试、81 个文件收口。38.1 先让 26.1 的信落地（确认页四态），以 857 个前端测试、82 个文件收口；38.2 让设置页
 交出改地址卡（两封信、四种拒绝各归其位），以 863 个前端测试、82 个文件收口。38.3 让设置页
-交出会话卡（每行一段登录、当前这台标出、单关/全关与已关的诚实状态），以 869 个前端测试、83 个文件收口。
+交出会话卡（每行一段登录、当前这台标出、单关/全关与已关的诚实状态），以 869 个前端测试、83 个文件收口。38.4 让设置页
+交出改密码卡（当前密码 + 两遍新密码、成功态说出全部后果），以 874 个前端测试、84 个文件收口。
 
 ## 主线队列（按顺序执行）
 
@@ -410,11 +411,24 @@
       `inbound_mails` 裸插入漏了 Hibernate 在 Java 侧生成的 id；自调用 census 指控
       `InboundMailService.receive`，而它的两次写入必须被分类器调用隔开——现在把这个
       站点连同理由记进清单，而不是硬塞进一个事务。后端 1116 个测试（单元 + IT）全绿。
-    - 38.4 改密码卡：当前密码 + 两遍新密码，先按记录的（8, 72）校验，PATCH
+    - 38.4 改密码卡（已完成）：当前密码 + 两遍新密码，先按记录的（8, 72）校验，PATCH
       `/users/me/password`。CURRENT_PASSWORD_INCORRECT 是再认证失败（与改地址、销号
       同码），PASSWORD_UNCHANGED 按名字拒绝；成功态说真话：所有 refresh token 被
       吊销、别的设备下次刷新下线、本标签页活到 access token 到期——表单换成那句话，
       而不是清空后 toast。
+      落地：`components/settings/password-card.tsx` 放在会话卡与两步验证之间，三格
+      （当前、新、再输一遍）；`lib/password-change.ts:currentPasswordIssue` 照
+      `PasswordChangeRequest.currentPassword` 的 `@NotBlank @Size(max = 72)`（当前值没有
+      下限），新值走既有 `passwordIssue` 的 (8, 72)，两遍一致性走 `confirmationIssue`——
+      三条都在请求离开发送之前判。`passwordChangeRefusal` 把 `CURRENT_PASSWORD_INCORRECT`
+      归当前密码框、`PASSWORD_UNCHANGED` 归新密码框，其余（含 429）归表单。客户端只有
+      `PATCH /users/me/password` 一种拼写，body 两个字段各只写一次；`useChangePassword`
+      成功后让会话列表失效，于是那堆门如实变成空列表。账本移出 `/users/me/password`
+      一行，`/me/password` 别名仍留在表里。copy census 144→145；
+      `lib/password-change.test.ts` 5 条。前端 874 个测试 / 84 个文件，tsc 与 eslint 干净；
+      卡片在浏览器里走过空表单的三条提示、密码错的框内句子（401 先触发一次刷新、重试后
+      才拿到码）、PASSWORD_UNCHANGED 归新密码框、8 字符下限在本地拒发、成功面板换成完整
+      后果且会话列表清空（API 用桩顶替）。
     - 38.5 销号卡放在设置页最底：写明什么会走（documents.file_key 背后的对象、从
       users 级联的每一行）与什么不会（备份到保留期结束）；密码 + 回打的地址，
       `POST /users/me/erase` 只在重申两者的确认之后。CURRENT_PASSWORD_INCORRECT 与
@@ -423,7 +437,7 @@
       wired” 变成它们真正的样子（客户端所用拼写的别名；mail preferences 是后端
       渲染的公开页），copy census / used-key / translations 跟着新卡片与落地页走，
       24–26 的段落补上落点，24.1 里被 30.4 取代的 INVALID_CREDENTIALS 一并改正。
-    下一步：38.4。
+    下一步：38.5。
 
 
 ## 开发协议（每个任务）

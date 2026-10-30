@@ -3111,7 +3111,7 @@ client for all four verbs, starting with the link that is already in the mail.
   now named in the census list with that reason instead of being forced into one
   transaction. Backend 1116 tests, unit and ITs, green.)
 
-- [ ] **38.4** The lock changes from the page that shows it.
+- [x] **38.4** The lock changes from the page that shows it.
 
   (A settings card takes the current password and the new one twice, mirrors the
   record's `(min = 8, max = 72)` before sending, and posts
@@ -3122,6 +3122,28 @@ client for all four verbs, starting with the link that is already in the mail.
   true consequence: every refresh token is revoked, other devices sign out at their
   next refresh, and this tab keeps working until its access token expires. The form is
   replaced by that sentence rather than cleared into a toast.)
+
+  (Shipped: `components/settings/password-card.tsx` sits between the sessions card and
+  the second factor and asks for the current password, the new one twice. The bounds are
+  the record's: `lib/password-change.ts:currentPasswordIssue` mirrors
+  `PasswordChangeRequest.currentPassword` (`@NotBlank @Size(max = 72)`; the current
+  value has no floor), the new one uses the existing `passwordIssue` `(8, 72)`, and the
+  two values meet in `confirmationIssue` — all three decided before a request leaves the
+  browser. `passwordChangeRefusal` puts `CURRENT_PASSWORD_INCORRECT` under the current
+  field and `PASSWORD_UNCHANGED` under the new one (the server declines before writing,
+  so nothing was revoked); everything else, the limiter included, is the form's.
+
+  The client spells the route `/users/me/password` once and posts each field once;
+  `useChangePassword` refetches the open-door list on success, so the sessions card
+  truthfully empties the moment the change lands. The endpoint ledger drops its
+  `/users/me/password` line and keeps the `/me/password` alias listed. Copy census
+  144 -> 145; `lib/password-change.test.ts` adds 5 tests; frontend 874 tests over 84
+  files, tsc and eslint clean. Walked in a browser against a stubbed API: the empty
+  form's three sentences, a wrong current password under its field (the client answers
+  the server's 401 by refreshing once and retrying, so the code reaches the card), an
+  unchanged new value under the new field, a seven-character new value refused locally
+  before any request was sent, and success replacing the form with the full consequence
+  while the sessions list emptied. Backend unchanged and green at 1116 tests.)
 
 - [ ] **38.5** The door out is drawn like the doors in, and the ledger stops calling
   these routes unwired.

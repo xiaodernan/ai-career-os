@@ -33,6 +33,9 @@ export const endpoints = {
     /* The account's open doors: list them, close one by family, close all (38.3). */
     sessions: "/users/me/sessions",
     session: (familyId: string) => `/users/me/sessions/${seg(familyId)}`,
+    /* Replacing the password, which re-checks the old one and revokes every refresh
+       token (38.4). */
+    password: "/users/me/password",
   },
 
   /* ---------------- Resumes ---------------- */

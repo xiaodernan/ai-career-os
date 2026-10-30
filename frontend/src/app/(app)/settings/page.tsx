@@ -12,6 +12,7 @@ import { CalendarCard } from "@/components/settings/calendar-card";
 import { InboundCard } from "@/components/settings/inbound-card";
 import { EmailChangeCard } from "@/components/settings/email-change-card";
 import { SessionsCard } from "@/components/settings/sessions-card";
+import { PasswordCard } from "@/components/settings/password-card";
 import { SecurityCard } from "@/components/settings/security-card";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -125,6 +126,9 @@ export default function SettingsPage() {
 
       {/* Every device that can still refresh this account (38.3) */}
       <SessionsCard />
+
+      {/* The lock those doors are opened with (38.4) */}
+      <PasswordCard />
 
       {/* The second door (36.4) */}
       <SecurityCard />

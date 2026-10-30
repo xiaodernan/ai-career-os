@@ -447,6 +447,28 @@ export const translations = {
         "Every device signs out, including this one. This tab keeps working only until its access token expires.",
       alreadyClosed: "That session was already closed; the list has been refreshed.",
     },
+    /**
+     * The password card (38.4). Success names the server's whole consequence: every
+     * refresh token is revoked, other devices sign out at their next refresh, and this
+     * tab lives until its own access token expires.
+     */
+    passwordChange: {
+      title: "Password",
+      description:
+        "Replace the password this account signs in with. The current password is asked for first, so a borrowed tab cannot lock you out.",
+      currentLabel: "Current password",
+      currentPlaceholder: "Type your current password",
+      newLabel: "New password",
+      newPlaceholder: "At least 8 characters",
+      confirmLabel: "New password again",
+      confirmPlaceholder: "Type the new password again",
+      submit: "Change the password",
+      hint: "Changing the password signs out every other device. This tab stays signed in until its access token expires.",
+      changedTitle: "The password is changed",
+      changedBody:
+        "Every session's refresh token has been revoked. Other devices sign out the next time they need a new access token, and this tab keeps working until its own token expires, then asks for the new password. Signing in from now on takes the new one.",
+      again: "Change it again",
+    },
     tailor: {
       title: "Tailored resume for this role",
       draftBadge: "Tailored draft",
@@ -3062,6 +3084,26 @@ export const translations = {
       closeAllTitle: "关闭所有登录？",
       closeAllDescription: "所有设备都会退出登录，包括这一台。这个标签页只能用到访问令牌到期为止。",
       alreadyClosed: "这段登录已经关闭了；列表已刷新。",
+    },
+    /**
+     * 设置页的密码卡片（38.4）。成功态说出服务端的完整后果：所有刷新令牌作废，
+     * 其他设备下次续期时退出登录，这个标签页用到自己的访问令牌到期。
+     */
+    passwordChange: {
+      title: "密码",
+      description: "更换这个账号登录用的密码。会先核对当前密码，借来的标签页没法把你锁在外面。",
+      currentLabel: "当前密码",
+      currentPlaceholder: "输入你的当前密码",
+      newLabel: "新密码",
+      newPlaceholder: "至少 8 个字符",
+      confirmLabel: "再输入一次新密码",
+      confirmPlaceholder: "再输入一次新密码",
+      submit: "更换密码",
+      hint: "更换密码会让其他设备都退出登录；这个标签页会一直用到访问令牌到期。",
+      changedTitle: "密码已经更换",
+      changedBody:
+        "所有会话的刷新令牌都已作废：其他设备下次需要新的访问令牌时会退出登录，这个标签页会用到自己的访问令牌到期为止，然后请你用新密码重新登录。从现在起登录都用新密码。",
+      again: "再换一次",
     },
     tailor: {
       title: "为这个职位定制的简历",

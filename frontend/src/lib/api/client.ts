@@ -548,6 +548,20 @@ export const authApi = {
     await request<{ revoked: boolean }>(endpoints.auth.sessions, { method: "DELETE" });
   },
 
+  /**
+   * Replace the password (24.1, 38.4). The current password is the re-authentication,
+   * so a borrowed tab cannot lock the owner out; the server refuses a new value equal
+   * to the old one by name (`PASSWORD_UNCHANGED`) before it writes. A successful change
+   * revokes every refresh token the account holds, this tab's family included — the
+   * access token already in memory keeps working until it expires.
+   */
+  async changePassword(payload: { currentPassword: string; newPassword: string }): Promise<void> {
+    await request<{ changed: boolean }>(endpoints.auth.password, {
+      method: "PATCH",
+      body: { currentPassword: payload.currentPassword, newPassword: payload.newPassword },
+    });
+  },
+
   me(): Promise<User> {
     return request<User>(endpoints.auth.me);
   },
