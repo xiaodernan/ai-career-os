@@ -235,7 +235,11 @@ DEAD_NAME_TIERS = {
      "lib/hooks/resources.ts"): {"job_id"},
     ("lib/api/normalize.test.ts", "lib/api/normalize.ts", "lib/hooks/resources.ts"): {"created_at",
                                                                                       "updated_at"},
-    ("lib/api/normalize.ts", "lib/hooks/resources.ts", "lib/job-filter.ts"): {"resume_versions"},
+    # `resume_versions` gained a fourth speller without a reader: the status-words module's
+    # docstring names the column whose five values it turns into the resumes page's badge.
+    # The mapper still folds the wire name into the versions row, which is the only reader.
+    ("lib/api/normalize.ts", "lib/hooks/resources.ts", "lib/job-filter.ts",
+     "lib/status-words.ts"): {"resume_versions"},
 }
 # Beyond three carriers a generic name (`name`, `score`, `title`, `kind`) means something else in the
 # file that spells it, so the census stops classifying rather than pretending to.

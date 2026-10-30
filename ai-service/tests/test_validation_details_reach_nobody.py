@@ -180,7 +180,10 @@ def test_every_visible_copy_is_read_from_the_code_and_never_from_the_details_lis
     """
     failure = read(FAILURE)
     block = failure[failure.index("export function describe"): failure.index("export function fail")]
-    assert "translate(`errorCodes.${err.code}`)" in block, (
+    # The lookup, not the whole call: the describer passes the status into the sentence's hole
+    # (a bodyless failure has no other diagnostic), so the argument list after the key is the
+    # sentence's business and the gate pins what makes the reader see the code's own words.
+    assert "translate(`errorCodes.${err.code}`" in block, (
         "the describer no longer reads the code's own sentence: %s" % " ".join(block.split()))
     assert "err.message || fallback" in block, (
         "the describer no longer falls back to the server's own wording")

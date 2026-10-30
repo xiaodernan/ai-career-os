@@ -33,6 +33,7 @@ MODULE = "frontend/src/lib/interview-modes.ts"
 MODULE_TEST = "frontend/src/lib/interview-modes.test.ts"
 INTERVIEWS_PAGE = "frontend/src/app/(app)/interviews/page.tsx"
 JOB_PAGE = "frontend/src/app/(app)/jobs/[id]/page.tsx"
+STATUS_WORDS = "frontend/src/lib/status-words.ts"
 FEATURE_PY = "ai-service/app/features/interview.py"
 JAVA_SESSION = "backend/src/main/java/com/careeros/interview/entity/InterviewSession.java"
 JAVA_DTO = "backend/src/main/java/com/careeros/interview/dto/InterviewDtos.java"
@@ -134,7 +135,7 @@ def test_the_service_names_its_vocabulary_in_one_place() -> None:
             "of the mode list can drift from the personas nobody reads it against")
 
 
-def test_the_client_list_has_one_author_and_the_two_menus_read_it() -> None:
+def test_the_client_list_has_one_author_and_every_reader_is_named() -> None:
     files = client_files()
     assert len(files) > 100, (
         f"the client walk read {len(files)} files, so finding one author proves nothing")
@@ -144,9 +145,11 @@ def test_the_client_list_has_one_author_and_the_two_menus_read_it() -> None:
         "send this field would then be free to offer different interviews")
     readers = sorted(rel for rel in files
                      if rel != MODULE and any(READER.finditer(read(rel))))
-    assert readers == sorted([INTERVIEWS_PAGE, JOB_PAGE]), (
-        f"{SPECIFIER} is imported by {readers}, not the two menus that were meant to share it; "
-        "a screen that stops importing it has grown its own list again")
+    assert readers == sorted([INTERVIEWS_PAGE, JOB_PAGE, STATUS_WORDS]), (
+        f"{SPECIFIER} is imported by {readers}, not the two menus and the words module that "
+        "names them for a reader; a screen that stops importing it has grown its own list again, "
+        "and a new importer is a new menu or a new vocabulary that no one checked against the "
+        "personas")
 
 
 def test_the_modes_the_client_sends_fit_the_backends_own_bound() -> None:

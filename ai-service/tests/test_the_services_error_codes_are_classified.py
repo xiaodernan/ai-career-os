@@ -223,9 +223,25 @@ def error_tables() -> tuple[set[str], set[str]]:
 
 
 def browser_codes() -> set[str]:
-    """The codes the browser raises itself."""
+    """The codes the browser raises itself, in both spellings it mints one.
+
+    `new ApiError("CODE", ...)` is the direct spelling. The other is `envelopeError`:
+    when a response carries no `{error: {code}}` the browser has no server code to
+    forward and authors one in the constructor's first argument, so a scan for
+    `new ApiError("CODE"` cannot see it -- and `HTTP_ERROR`'s table entry was charged
+    as invented until this reader existed.
+    """
     source = CLIENT.read_text(encoding="utf-8")
-    return set(re.findall(r"new ApiError\(\s*\"([A-Z_]+)\"", source))
+    codes = set(re.findall(r'new ApiError\(\s*"([A-Z][A-Z0-9_]+)"', source))
+    envelope = re.search(r"export function envelopeError\(.*?\n\}", source, re.S)
+    assert envelope, (
+        "client.ts no longer declares envelopeError, so the code the browser mints for a "
+        "body with no envelope is outside this gate's population")
+    minted = set(re.findall(r'"([A-Z][A-Z0-9_]+)"', envelope.group(0)))
+    assert minted, (
+        "the envelopeError body names no code literal, so the reader that exists for "
+        "`HTTP_ERROR` is reading an empty set")
+    return codes | minted
 
 
 def test_every_code_the_services_can_send_is_classified() -> None:

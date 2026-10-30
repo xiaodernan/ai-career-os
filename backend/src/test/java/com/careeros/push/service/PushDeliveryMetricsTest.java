@@ -3,7 +3,9 @@ package com.careeros.push.service;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -51,11 +53,14 @@ class PushDeliveryMetricsTest {
         long boot = (long) lastTick();
         assertThat(boot).isPositive();
 
-        metrics.recordDueTick(OffsetDateTime.parse("2026-10-30T10:01:00Z"));
+        // The tick is anchored to the boot reading, not to a wall-clock date: the gauge's
+        // claim is that it holds the epoch second of the tick that finished, and a fixed
+        // date in the past turns "the tick moved it forward" red on the calendar, not on
+        // the code. Sixty seconds after boot is the smallest step the minute clock takes.
+        long firstTick = boot + 60;
+        metrics.recordDueTick(OffsetDateTime.ofInstant(Instant.ofEpochSecond(firstTick), ZoneOffset.UTC));
 
-        assertThat(lastTick())
-                .isEqualTo(OffsetDateTime.parse("2026-10-30T10:01:00Z").toEpochSecond())
-                .isGreaterThan(boot);
+        assertThat(lastTick()).isEqualTo(firstTick).isGreaterThan(boot);
     }
 
     @Test
