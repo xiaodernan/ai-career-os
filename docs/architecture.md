@@ -330,8 +330,11 @@ user-scoped table (ownership is enforced in backend layer + a single SQL predica
   waits for the morning letter, not that it is dropped. The three states are also
   readable from the account itself (42.1): `GET /api/v1/me/mail/settings` answers each
   switch and the signed page's address, so the settings screen does not depend on a
-  letter that may no longer exist. The read changes nothing; a switch is still flipped
-  by a POST on the signed page.
+  letter that may no longer exist. The read changes nothing. A switch is flipped by a
+  POST on the signed page, or — since 42.2 — by the settings screen itself, which writes
+  one dial at a time (`PUT /api/v1/me/mail/settings/{list}`, `{enabled}`) and takes the
+  three states back with every answer. The first write creates the row with the other
+  two on, so turning the Monday letter off does not silence the morning one.
 - `push_subscriptions(id, user_id, endpoint, p256dh, auth, label, created_at,
    updated_at)` → the browsers an account can be woken on (33.1). The endpoint is
   unique across the table, not per account: a registration belongs to a browser, so a

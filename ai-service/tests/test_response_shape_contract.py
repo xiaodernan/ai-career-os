@@ -2159,7 +2159,9 @@ def test_the_run_stream_contract_is_one_table_of_publishers_cases_and_subscriber
     # 38.3-38.5's four settings cards joined the rejection list for the reason the auth forms
     # are on it: their `onError:` members belong to react-query mutations, not to a run's
     # stream -- the sessions card's two closes, the password card's one change, the address
-    # card's request, and the erase card's one write.
+    # card's request, and the erase card's one write. 42.2's `mail-settings.ts` is the sixth
+    # of that kind: its one `onError` rolls the optimistic dial back, so the callback shapes
+    # a stream reader while it belongs to a mutation -- the collision the list exists for.
     assert rejected_files == ["components/auth/credentials-form.tsx",
                               "components/auth/forgot-password-form.tsx",
                               "components/auth/reset-password-form.tsx",
@@ -2167,7 +2169,8 @@ def test_the_run_stream_contract_is_one_table_of_publishers_cases_and_subscriber
                               "components/settings/email-change-card.tsx",
                               "components/settings/erase-account-card.tsx",
                               "components/settings/password-card.tsx",
-                              "components/settings/sessions-card.tsx"], \
+                              "components/settings/sessions-card.tsx",
+                              "lib/hooks/mail-settings.ts"], \
         (f"{rejected_files} name handler-shaped callbacks the entry rule rejects: their `onError:` belongs "
          "to react-query, not to a stream. Under #177's shape-only census three of these were stream "
          "readers -- if this list empties, the walk stopped reading rather than the collision going away")

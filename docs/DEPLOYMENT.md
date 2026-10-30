@@ -539,7 +539,9 @@ Monday letter, `signals` for the morning inbox mail, `reminders` for the letter
 mailed the moment a reminder comes due) is flipped by a POST. A signed-in reader does
 not need a letter to reach these dials (42.1): `GET /api/v1/me/mail/settings` answers
 the three states plus the page's signed address, and Settings → Mail shows the states
-and opens the page. The choice lives in `mail_preferences`; no row means all three are on. The Monday sweep
+and opens the page. Since 42.2 the card's switches write the same three states
+(`PUT /api/v1/me/mail/settings/{list}` with `{enabled}`), so a press and the sweep that
+reads it meet on one column. The choice lives in `mail_preferences`; no row means all three are on. The Monday sweep
 skips an account that turned the letter off without counting a delivery attempt,
 and the morning sweep never asks such an account what is waiting. Composing from
 the dashboard still files the week's letter — the preference silences the mail,
