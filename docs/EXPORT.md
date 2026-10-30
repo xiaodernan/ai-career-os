@@ -16,6 +16,29 @@ with their data. This document locks the export/import contract implemented in
 | 13.3 Right-to-be-forgotten / anonymized export | **done** (anonymize + validate + section redaction) | ai-service + backend bridge |
 | `applications` + `growth_plans` sections | **done** (shipped in the bundle since 1.1.0) | backend bridge |
 | `notes` + `contacts` sections | **done** (shipped in the bundle since 1.2.0) | backend bridge |
+| `conversations` + `saved_jobs` + `saved_searches` + `ingestion_feeds` + `inbound_mails` sections | **open** (measured 2026-10-30; Epic 40) | ai-service + backend bridge |
+
+## The bundle is not everything yet (measured 2026-10-30)
+
+The page says "Export everything", and the bundle still has five gaps. They were
+measured by reading the ten sections against every table the migrations create,
+and each is the reader's own content or standing choice:
+
+| Table | What it holds | Why it belongs |
+|---|---|---|
+| `conversations` + `messages` | the copilot chats: the reader's questions, the answers, the artifacts built from their material | the reader's own words |
+| `saved_jobs` | a bookmark and the note beside it | the reader's shortlist |
+| `saved_searches` | the standing queries the morning sweep speaks for | the reader's standing question |
+| `ingestion_feeds` | the sources the ingester is pointed at | the reader's configuration |
+| `inbound_mails` | the letters a provider forwarded, their reading and the application each was filed on | the reader's correspondence |
+
+What stays out is bookkeeping rather than content: tokens and sessions, MFA
+secrets, push subscriptions, notification read state, mail preferences, usage
+events and agent runs, digests and nightly reports — they describe what the
+account did, not what it holds. Epic 40 carries the five sections end-to-end
+(export, anonymize, readable half, plan, apply) under schema 1.3.0, and its last
+unit makes the distinction a census so a future table cannot land on the wrong
+side of it.
 
 ## The bridge (2026-10-20)
 

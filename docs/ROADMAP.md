@@ -98,9 +98,9 @@ for "what to build next" across sessions; pick the top un-done task and execute.
   cover the fields the apply writes rather than the stamps the database sets —
   otherwise the first apply bumps `updated_at` and every row is changed
   forever. The operator's `restore_plan` dry run reports the fourth count too.
-  The open thread above is unchanged: the current state still does not cover
-  the resumes, the knowledge base, the job descriptions, the interviews and the
-  memories, so a restore still cannot promise a delete for them.
+  The thread this note called open closed later in Epic 13: the current state now
+  covers the six sections the engine owns, so the restore can retire what it can
+  name -- see "The restore can retire what it can name" below.
 
 - **The bundle carries what the restore writes (2026-10-28).** The restore
   writes a `jsonb` column through a map, and the bundle carried those columns
@@ -3400,6 +3400,95 @@ what did I become, and did I finish what I took before I left.
   happened; DEPLOYMENT.md's Rolling Updates section says the same in one paragraph.
   Backend unit suite 1042 green (1040 plus these two); ai-service 1951 passed,
   1 skipped, 0 failed.)
+
+## Epic 40 — The Bundle Means Everything
+
+The `/data` page promises "Export everything", and the 1.2.0 growth carried the
+notes and the contacts because "your data" that leaves out the tables the reader
+typed into is not their data. Measured on 2026-10-30 against the schema
+(V1–V29), ten sections is not everything the reader owns: five user-scoped
+tables carry content or standing choices the reader made and travel in no
+section at all — `conversations` and their `messages` (the copilot chats: the
+reader's questions, the coaching, the artifacts the assistant built from their
+own material), `saved_jobs` (a bookmark and the note attached to it),
+`saved_searches` (the standing queries the morning sweep speaks for),
+`ingestion_feeds` (the sources the reader configured) and `inbound_mails` (the
+letters a provider forwarded to the reader's own address, with the classifier's
+reading and the application each was filed on). A restore cannot bring any of
+them back, and an anonymized bundle cannot withhold them — they were never
+there.
+
+What is deliberately *not* in the bundle is bookkeeping rather than content:
+tokens and sessions, MFA secrets, push subscriptions, notification read state,
+mail preferences, usage events and agent runs, digests and nightly reports.
+Those describe what the account did, not what it holds. The last unit writes
+that distinction down as a census, so the next table the product adds cannot
+quietly land on the wrong side of it.
+
+- [x] **40.0** Inventory the bundle's omissions and open the epic.
+
+  (Measured, not remembered: the bundle's ten sections were read against every
+  `CREATE TABLE` in `db/migration`, and the five above are the ones that carry
+  the reader's own words or choices. The 1.2.0 note's open thread — "the current
+  state still does not cover the resumes, the knowledge base, the job
+  descriptions, the interviews and the memories" — was stale: the restore's
+  current state grew to cover all ten sections later in Epic 13, and the note
+  now points at that paragraph instead of repeating a closed thread. EXPORT.md
+  records the measured gap as open so the document stops implying the bundle is
+  complete. All five live in the backend (the conversation service writes the
+  chats; the schedulers and stores write the choices, the bookmarks and the
+  letters), so each unit grows the bundle where the rows are written, end-to-end
+  — export, anonymize, readable half, plan with the fourth op, apply, and the
+  page's counts — then one census that holds the whole promise.)
+
+- [ ] **40.1** The chats travel: a `conversations` section and its messages.
+
+  (The copilot is where the reader thinks out loud: the question they asked, the
+  answer they were given, the artifacts built from their own resume and the
+  sources those artifacts cite. None of it is in the bundle. The section carries
+  each conversation with its messages nested — role, content, artifacts,
+  sources, suggested actions and the created time — and the six fields an
+  anonymized bundle must blank are named rather than guessed. The chat is the
+  reader's own words, so the readable half gets its words in both languages, the
+  plan keeps its ids (a conversation the bundle omits is retired, its messages
+  cascade), and the apply writes messages with their conversation. A 1.2.0
+  bundle stays valid: the new sections arrive under schema 1.3.0.)
+
+- [ ] **40.2** The standing choices travel: saved searches and ingestion feeds.
+
+  (A saved search is the reader's standing question and the reason the morning
+  sweep has an audience; a feed is the source they pointed the ingester at. Both
+  are backend-owned, both are matched by id at the target — an omitted row is a
+  choice the reader cancelled — and both are compared field-for-field so an
+  unchanged row is `skip` rather than a write. The feeds' URLs are the reader's
+  configuration, not a secret, and the anonymized bundle keeps them: redacting a
+  source hides nothing about a person, while dropping the row would break the
+  restore's counts.)
+
+- [ ] **40.3** The bookmarks and the letters travel: saved jobs and inbound mail.
+
+  (A bookmark carries the reader's note beside the posting; the posting itself
+  belongs to the shared catalogue, so the restore keeps a bookmark only when the
+  target has that job and reports the ones it could not keep rather than
+  inventing a posting. The letters are what a provider forwarded to the reader's
+  address — the recruiter's words, the classifier's reading and the application
+  it filed on — and the filed link resolves against the applications the same
+  restore wrote, because the restore keeps application ids. `message_key` stays
+  the provider's idempotency key, so restoring a bundle twice answers one row
+  per letter. The anonymized bundle blanks the address, the subject and the
+  body: those are the other person's words.)
+
+- [ ] **40.4** The sections are all of it, and the gate says so.
+
+  (A new gate reads every table in `db/migration` whose rows name a reader and
+  requires each to be either carried by a section — itself or nested, like
+  `messages` under `conversations` — or listed in EXPORT.md's exclusion table
+  with a reason that says "bookkeeping, not content". The page's list of what
+  an export carries is derived from the bundle's own manifest rather than typed
+  by hand, so "Export everything" is a sentence the product can keep; the
+  readable half's section order and the drop list both follow the one section
+  tuple. The census fails by name on a new table, which is the only way the
+  promise survives the next migration.)
 
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +

@@ -512,10 +512,36 @@
       sweep、排空期间的新连接各付出什么，以及 `Commencing graceful shutdown...` /
       `Graceful shutdown complete` 两行日志）；DEPLOYMENT.md 的 Rolling Updates 补一段。后端非 IT
       1042 全绿（1040+2）；ai-service 全套 1951 通过、1 跳过、0 失败。
-    下一步：Epic 39 收口；先做缺口盘点，再开启下一个 Epic。
+    下一步：见下方 Epic 40。
+
+## Epic 40 — 数据包即全部
+
+- 盘点结论（2026-10-30）：`/data` 页承诺“Export everything”，但数据包只有十节；对照 V1–V29 的建表语句，
+  五张属于读者本人内容或选择的表不在任何一节里：`conversations`/`messages`（copilot 对话：读者的问题、
+  回答、用其材料生成的 artifacts 与引用）、`saved_jobs`（书签及附注）、`saved_searches`（晨间 sweep
+  为其发声的常驻查询）、`ingestion_feeds`（读者配置的抓取源）、`inbound_mails`（转发到读者地址的信件、
+  分类读数与归档的申请）。恢复无法带回它们，匿名导出也无法隐去它们——因为它们从未在包里。
+  刻意不带的只有记账类数据：token/会话、MFA 密钥、推送订阅、通知已读状态、邮件偏好、用量与 agent runs、
+  摘要与夜报——它们描述账户做过什么，而不是持有过什么。40.4 把这条分界写成 census。
+  同时修正 ROADMAP 里一句过期的“open thread”：恢复的 current state 早已覆盖全部十节（Epic 13 后文），
+  原句改为指向该段；EXPORT.md 记录本次测量与排除理由。
+- 40.0 完成即本节；40.1（下一步）对话随包走：新增 `conversations` 节（消息内嵌：role、content、artifacts、
+  sources、actions、created_at），AI 半边直接读；匿名导出按字段抹掉标题与正文等；可读半边两种语言加词；
+  plan 保留 id（包中省略即退休，消息级联），apply 连同消息写入；schema 升到 1.3.0，旧包仍有效。
+- 40.2 常驻选择随包走：`saved_searches` + `ingestion_feeds`（后端所有）；按 id 匹配，省略即取消，
+  字段级比较让未变行为 `skip`；匿名包保留 URL（配置不是秘密）。
+- 40.3 书签与来信随包走：`saved_jobs`（目标没有该职位时报告而非伪造）+ `inbound_mails`
+  （`message_key` 幂等，归档链接指向同一次恢复写入的 application id；匿名包抹掉发件地址、主题与正文）。
+- 40.4 分界成为闸门：读 `db/migration` 中所有带 user 归属的表，要求每张要么被某节承载（含
+  `messages` 之于 `conversations` 的内嵌），要么在 EXPORT.md 的排除表里写明“记账而非内容”；
+  页面所载清单由 bundle 的 manifest 得出，可读半边的节序与 redact 列表共用同一个 section 元组。
+  新表出现即按名失败。
+
+下一步：40.1。
 
 
-## 开发协议（每个任务）
+## 开发协议
+（每个任务）
 
 - 先跑相关测试，再改；改完跑三套件相关子集；提交前 `tsc` + lint。
 - 实现 + 测试 + 真实 API/UI 接线（无 placeholder 端点）+ 文档/census 同步。
