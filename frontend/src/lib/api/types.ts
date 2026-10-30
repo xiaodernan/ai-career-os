@@ -1113,6 +1113,21 @@ export interface CalendarLinkRow {
 }
 
 /**
+ * The three mail dials, asked for by the signed-in reader (42.1).
+ *
+ * Before this route the only key to the settings was a link in an old letter. The
+ * card reads the booleans to say what is on, and shows the signed page's address so
+ * a reader who deleted every letter can still change them; the address is a
+ * credential, so the endpoint is `no-store` and the browser only displays it.
+ */
+export interface MailSettingsRow {
+  url: string;
+  weekly: boolean;
+  signals: boolean;
+  reminders: boolean;
+}
+
+/**
  * The account's forwarding address (37.1), shown and copied by the settings card (37.4).
  *
  * The address is the whole credential: a deployment that has no receiving domain answers

@@ -185,6 +185,10 @@ export const endpoints = {
   /* ---------------- Calendar subscription (34.1) -------------------------- */
   calendarLink: "/calendar/link",
 
+  /* ---------------- Mail settings, without an old letter (42.1) ----------- */
+  /** The three dials plus the signed page a letter's footer would have opened. */
+  mailSettings: "/me/mail/settings",
+
   /* ---------------- Inbound mail (37.1-37.4) ------------------------------ */
   /** The account's forwarding address, shown and copied by the settings card. */
   inboundLink: "/inbound/link",

@@ -3538,6 +3538,27 @@ choice rather than a side effect of the morning sweep.
   expression — nine tests green. DEPLOYMENT.md's rule count and both mail paragraphs
   follow.)
 
+## Epic 42 — The Settings That Do Not Need a Letter
+
+Every dial in the product is reachable from the screen except the three mail dials:
+their only entrance has been the signed page in a letter's footer. A reader who
+deleted the letters -- or who never waited for a Monday -- had no way back, even
+though the state was sitting in their own account.
+
+- [x] **42.1** The signed-in reader answers for the mail settings.
+
+  (`GET /api/v1/me/mail/settings` answers `{url, weekly, signals, reminders}`: the three
+  booleans come from the same columns the sweeps read, and `url` is the very page
+  `MailLinks` signs for the letters. The route sits under `/me` rather than `/mail`
+  because that prefix is `permitAll` for the anonymous page -- a route added there
+  would be public until it was moved -- so the session is the credential, and the
+  answer is `no-store` and `noindex` because the address it carries is one too. The
+  settings page grows a mail card beside the calendar card: each dial's state with
+  On/Off, the signed address with a copy button, and a link that opens the page the
+  letters open, so the buttons a mailbox would press are one click away. A failed read
+  is a sentence, not blank switches. 4 backend tests and 2 frontend hook tests; API.md
+  and DEPLOYMENT.md follow.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

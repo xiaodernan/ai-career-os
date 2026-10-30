@@ -103,6 +103,7 @@ screen. A malformed inbound value is replaced, never refused.
 | GET | `/users/me/sessions` | alias of `/me/sessions` |
 | DELETE | `/users/me/sessions/{id}` | alias of `DELETE /me/sessions/{id}` |
 | DELETE | `/users/me/sessions` | alias of `DELETE /me/sessions` |
+| GET | `/me/mail/settings` | → {url, weekly, signals, reminders} — the three dial states and the signed settings page's address, so a reader who deleted every letter can still change them (42.1). The answer is neither cached nor indexed, because the address is a credential, and a request without a session is a 401 UNAUTHORIZED |
 | GET | `/users/me/profile` | career profile |
 | PATCH | `/users/me/profile` | `{headline, summary, location, yearsExperience, targetRoles, targetLocations, links, workAuthorization, preferences}` |
 
@@ -114,6 +115,13 @@ a factor. The settings page's security card is the only caller of the status rea
 enrollment, the activation, the reprint and the disable: every write invalidates the one
 status query, and the recovery sheet is shown once, with a copy-all, because the server keeps
 only BCrypt hashes and cannot print it again.
+
+The mail settings are the account's own read (roadmap 42.1): `GET /me/mail/settings` answers
+the three dials and the signed page a letter's footer opens, so the settings screen can show
+them without an old letter. The route sits under `/me` rather than under `/mail` because that
+prefix is `permitAll` for the anonymous page — a route added there would be public until it
+was moved — and the answer carries the page's address, which is a credential, so it is
+`no-store`.
 
 ### Long-term memory
 

@@ -1273,6 +1273,27 @@ export const translations = {
       hint: "Paste it into Google Calendar, Apple Calendar or Outlook under “subscribe from a URL”. A reminder appears on the calendar's next poll, and stays until you clear it here.",
     },
     /**
+     * The mail-letters card (42.1). The three dials used to be reachable only from the
+     * footer of a letter; this card reads them from the account and hands over the same
+     * signed page, so the reader never has to find an old mail to change one.
+     */
+    mailLetters: {
+      title: "The letters Career OS sends",
+      description:
+        "Three letters can reach your address: the Monday letter, the morning signals, and the reminder's own letter. Their switches are read from your account here, so you do not need an old mail to change them.",
+      weekly: "The Monday letter",
+      signals: "The morning signals",
+      reminders: "The reminder's own letter",
+      on: "On",
+      off: "Off",
+      linkLabel: "The settings page",
+      copy: "Copy address",
+      open: "Open the settings page",
+      loading: "Reading your mail settings…",
+      loadFailed: "The mail settings could not be read. Reload the page and try again.",
+      hint: "The address is a key: it carries this account's signature, so anyone holding it can change these switches. Replacing the server's link secret retires every address at once.",
+    },
+    /**
      * The forwarding address card (37.4). "The address is the credential" is the same
      * sentence the calendar card says, and here it is literally true: the address is
      * all a sender needs to write into this account's replies, so rotating the secret
@@ -4006,6 +4027,23 @@ export const translations = {
       loading: "正在准备你的地址……",
       loadFailed: "地址没能准备好。刷新页面再试一次。",
       hint: "把它粘进 Google 日历、Apple 日历或 Outlook 的“从网址订阅”。提醒会在日历下一次轮询时出现，并一直留到你在这里清掉它。",
+    },
+    /** 邮件卡片（42.1）。三个开关过去只能从一封信的页脚进入；这张卡片直接从账号里读出来，并把同一个签名页交到读者手上，不必再翻出一封旧信。 */
+    mailLetters: {
+      title: "Career OS 寄出的信",
+      description:
+        "能寄到这个地址的信有三种：周一信、每日信号，以及提醒的即时信。三个开关的状态在这里直接从你的账号读出来，不必翻出一封旧信才能改。",
+      weekly: "周一信",
+      signals: "每日信号",
+      reminders: "提醒的即时信",
+      on: "开",
+      off: "关",
+      linkLabel: "设置页地址",
+      copy: "复制地址",
+      open: "打开设置页",
+      loading: "正在读取邮件设置……",
+      loadFailed: "邮件设置没能读取。刷新页面再试一次。",
+      hint: "这个地址就是钥匙：它带着这个账号的签名，拿到它的人就能改这三个开关。更换服务器上的链接密钥会让所有地址同时失效。",
     },
     /** 转发地址卡片（37.4）。“地址就是凭证”和日历卡片说的是同一句话，而在这里它是字面意义上的真：谁拿到这个地址，谁就能往这个账号的回信里写信，所以换密钥是让它作废的唯一办法。 */
     inbound: {

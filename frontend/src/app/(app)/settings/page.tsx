@@ -9,6 +9,7 @@ import { CareerProfileCard, CareerProfileMapsCard } from "@/components/settings/
 import { MemoryCard } from "@/components/settings/memory-card";
 import { PushCard } from "@/components/settings/push-card";
 import { CalendarCard } from "@/components/settings/calendar-card";
+import { MailCard } from "@/components/settings/mail-card";
 import { InboundCard } from "@/components/settings/inbound-card";
 import { EmailChangeCard } from "@/components/settings/email-change-card";
 import { SessionsCard } from "@/components/settings/sessions-card";
@@ -185,6 +186,9 @@ export default function SettingsPage() {
 
       {/* The reminders outside the app (34.1) */}
       <CalendarCard />
+
+      {/* The letters, without needing an old one (42.1) */}
+      <MailCard />
 
       {/* The address replies come back to (37.4) */}
       <InboundCard />

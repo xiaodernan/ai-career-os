@@ -79,8 +79,9 @@ describe("the browser's copy", () => {
     // the card that replaces the password and says what that costs (38.4); 147 with
     // `components/settings/erase-account-card.tsx`, the card that erases the account
     // (38.5), and `app/(auth)/account-erased/page.tsx`, the public landing it leaves
-    // the reader on.
-    expect(browserSources().length).toBe(147);
+    // the reader on; 148 with `components/settings/mail-card.tsx`, the card that reads
+    // the three mail dials and opens the page they live on (42.1).
+    expect(browserSources().length).toBe(148);
   });
 
   it("finds a sentence, however long it is", () => {

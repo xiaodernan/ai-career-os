@@ -9,9 +9,9 @@
 
 ## 当前状态 (2026-10-30)
 
-- **前端**: 877 个 vitest 通过（85 个文件）；`tsc --noEmit` 干净。
-- **后端**: 非 IT 选集 **1063 条全绿**（`mvn -o -B -Dtest="!*IT" test`；1037 基线 +
-  41.1 的 19 条 + 并发会话在制的 7 条导出/导入测试）；含真实栈 IT 的全量（1128 条基线上
+- **前端**: 897 个 vitest 通过（88 个文件）；`tsc --noEmit` 干净（含并发会话在制的前端增补）。
+- **后端**: 非 IT 选集 **1067 条全绿**（`mvn -o -B -Dtest="!*IT" test`；1037 基线 +
+  41.1 的 19 条 + 42.1 的 4 条 + 并发会话在制的 7 条导出/导入测试）；含真实栈 IT 的全量（1128 条基线上
   再加本单元与并发会话的新测试）待下一次 `mvn -o -q test` 复核。
 - **ai-service**: 1903 passed, 48 failed, 1 skipped（offline: mock/hash）。48 条失败全是
   37/38 新增人口留下的跨语言 census 漂移，在 39.2 父提交的干净检出上逐条重现，已列为
@@ -35,7 +35,8 @@
 交出销号卡（什么走、什么留下、密码 + 回打地址、确认后才 POST），并让账号在成功后落在公开的
 `/account-erased` 页上（token 对丢弃、整页导航离开、无会话也能说清结局），以 877 个前端测试、85 个文件收口。
 随后 **Epic 41.1**（提醒到点时的信）以 19 条新后端测试收口，非 IT 选集 1063 条全绿；
-**41.2** 让这口钟有了自己的警报（`alerts.yml` 十一条、拒绝计数改说两种信、9 条闸门测试绿）。
+**41.2** 让这口钟有了自己的警报（`alerts.yml` 十一条、拒绝计数改说两种信、9 条闸门测试绿）；
+**42.1** 让邮件设置不再只住在旧信里（`GET /me/mail/settings` + 设置页邮件卡，4 条后端测试绿）。
 
 ## 主线队列（按顺序执行）
 
@@ -570,6 +571,24 @@
   调度器默认 tick 推出 300、钉住指标来源与 RUNBOOK 的同一表达式，9 条绿；DEPLOYMENT 的
   规则数（十→十一）与两段邮件文字同步。
   下一步候选（避开并发会话在制的 export/import）：仪表盘 attention 的提醒过期语义、或 Epic 40 提交后接手。
+
+- **Epic 42 — 设置不必靠一封信回来**（本轮起）
+  - 盘点结论（2026-10-30）：三个 dial 的唯一入口是信里的签名页（23.1/41.1）。读者把信删了、
+    或从没等到周一信，就再也够不到自己的邮件设置——而答案一直在他自己的账号里。`/api/v1/mail/**`
+    在 `SecurityConfig` 里整体 `permitAll`（注释明写"加到这个前缀下的路由在被搬走前就是公开的"），
+    所以登录态的新路由不能放进去，参照 `/inbound`（匿名 webhook 与登录态列表同 controller 不同路径）
+    的做法，放到 `/me` 下面。
+  - **42.1** 邮件设置由登录的读者回答（已完成）：新增 `MailSettingsController`
+    （`@RequestMapping("/api/v1/me/mail")` + `GET /settings`）→ `record MailSettings(url, weekly,
+    signals, reminders)`；三个布尔来自 `MailPreferenceService.receives`（与 sweep 同一列），`url`
+    是 `MailLinks.page` 签出的同一张页；响应 `no-store` + `noindex`（地址是凭证）；无会话走
+    `CurrentUserArgumentResolver` 的 401。前端 `endpoints.mailSettings`、`MailSettingsRow`、
+    `hooks/mail-settings.ts`、`components/settings/mail-card.tsx`（三个 dial 的开/关徽章 + 地址 +
+    CopyButton + "打开设置页"，失败是一句话而不是空白开关）、设置页放在日历卡之后；EN/ZH
+    `mailLetters` 两块。4 条后端测试（页面地址、三列、no-store、401）+ 2 条前端 hook 测试；
+    API.md、DEPLOYMENT.md 同步。
+  - 下一步（避开并发会话在制的 export/import）：仪表盘 attention 的提醒过期语义；或 Epic 40
+    提交后接手对话随包走。
 
 
 ## 开发协议

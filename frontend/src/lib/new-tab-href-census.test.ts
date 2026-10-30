@@ -15,7 +15,7 @@ import { fileURLToPath } from "node:url";
 // relative name below is cut at it.
 const SRC = fileURLToPath(new URL("../", import.meta.url)).replace(/[\\/]+$/, "");
 
-/** The seven files that ship a new-tab anchor, named so a renamed one is visible rather than silently gone. */
+/** The eight files that ship a new-tab anchor, named so a renamed one is visible rather than silently gone. */
 const CARRIERS = [
   "app/(app)/companies/page.tsx",
   "app/(app)/companies/[id]/page.tsx",
@@ -26,6 +26,9 @@ const CARRIERS = [
   // The nightly history's run link (20.1): the record's `runUrl` was written by the job, so
   // it is a value this app did not build and the anchor takes it through `safeHref`.
   "components/monitoring/nightly-history.tsx",
+  // The mail-settings card (42.1): the address is signed by the backend, but it is still a
+  // value this component did not build, so the anchor takes it through `safeHref` too.
+  "components/settings/mail-card.tsx",
 ];
 
 interface AnchorRow {

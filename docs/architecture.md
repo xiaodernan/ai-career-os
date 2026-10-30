@@ -327,7 +327,11 @@ user-scoped table (ownership is enforced in backend layer + a single SQL predica
   letter and the reminder's own letter. An absent row means all three are on, which is
   why signup writes nothing — a row appears when the reader turns something off.
   `reminder_mail` selects the moment rather than the silence: off means a due reminder
-  waits for the morning letter, not that it is dropped.
+  waits for the morning letter, not that it is dropped. The three states are also
+  readable from the account itself (42.1): `GET /api/v1/me/mail/settings` answers each
+  switch and the signed page's address, so the settings screen does not depend on a
+  letter that may no longer exist. The read changes nothing; a switch is still flipped
+  by a POST on the signed page.
 - `push_subscriptions(id, user_id, endpoint, p256dh, auth, label, created_at,
    updated_at)` → the browsers an account can be woken on (33.1). The endpoint is
   unique across the table, not per account: a registration belongs to a browser, so a
