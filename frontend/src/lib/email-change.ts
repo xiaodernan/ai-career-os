@@ -40,3 +40,24 @@ export function emailChangeOutcome(err: unknown): "invalid" | "registered" | nul
   if (err.code === "EMAIL_ALREADY_REGISTERED") return "registered";
   return null;
 }
+
+/**
+ * Which field a refused address-move belongs under (38.2), or `null` when the server's
+ * answer is not one the form can attribute.
+ *
+ * The API names the reason on the code, not on a field: a wrong password and an address
+ * it will not take arrive as bare bodies. The form puts each sentence under the field
+ * that caused it, because "that email address is already registered" above a password box
+ * would send the reader to edit the wrong thing. The limiter's 429 belongs to no field at
+ * all — asking again too soon is about the whole form — so it keeps the form-level line.
+ * Anything else (the network, an unexpected refusal) is the caller's generic failure.
+ */
+export type AddressMoveField = "password" | "email" | "form";
+
+export function addressMoveRefusal(err: unknown): AddressMoveField | null {
+  if (!(err instanceof ApiError)) return null;
+  if (err.code === "CURRENT_PASSWORD_INCORRECT") return "password";
+  if (err.code === "EMAIL_UNCHANGED" || err.code === "EMAIL_ALREADY_REGISTERED") return "email";
+  if (err.code === "RATE_LIMITED") return "form";
+  return null;
+}

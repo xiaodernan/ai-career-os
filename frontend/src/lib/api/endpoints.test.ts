@@ -825,7 +825,6 @@ describe("endpoints ↔ backend route parity", () => {
     "/me/password": "the account-password alias the client has not wired",
     "/me/sessions": "the sessions alias the client has not wired",
     "/me/sessions/{}": "the revoke-session alias the client has not wired",
-    "/users/me/email-change": "the account email-change route the client has not wired",
     "/users/me/erase": "the account-erase route the client has not wired",
     "/users/me/password": "the account-password route the client has not wired",
     "/users/me/sessions": "the sessions route the client has not wired",

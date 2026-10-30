@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import * as React from "react";
 
-import { applyDocumentLang, LocaleProvider, useLocale } from "./locale-context";
+import { applyDocumentLang, currentLocale, LocaleProvider, translate, useLocale } from "./locale-context";
 
 /**
  * The locale context's own contract.
@@ -91,6 +91,32 @@ describe("useLocale", () => {
       </LocaleProvider>
     );
     expect(html).toContain("zh|仪表盘");
+  });
+});
+
+describe("translate outside a render", () => {
+  it("answers in the language the page paints when only the cookie remembers it", () => {
+    // A device that adopted the account's language has the cookie and no stored choice
+    // (21.4). Reading `localStorage` alone answered English there, so a refusal raised
+    // from an event handler -- a toast, or the address card's field error -- arrived in
+    // the wrong language on an otherwise Chinese screen.
+    const scope = globalThis as unknown as { document?: { cookie: string } };
+    const real = scope.document;
+    scope.document = { cookie: "theme=dark; careeros.locale=zh" };
+    try {
+      expect(currentLocale()).toBe("zh");
+      expect(translate("errorCodes.CURRENT_PASSWORD_INCORRECT")).toBe("你输入的当前密码不对。");
+    } finally {
+      if (real === undefined) delete scope.document;
+      else scope.document = real;
+    }
+  });
+
+  it("answers English where neither store named a language", () => {
+    expect(currentLocale()).toBe("en");
+    expect(translate("errorCodes.CURRENT_PASSWORD_INCORRECT")).toBe(
+      "The current password you typed is not right.",
+    );
   });
 });
 

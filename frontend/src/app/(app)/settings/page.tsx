@@ -10,6 +10,7 @@ import { MemoryCard } from "@/components/settings/memory-card";
 import { PushCard } from "@/components/settings/push-card";
 import { CalendarCard } from "@/components/settings/calendar-card";
 import { InboundCard } from "@/components/settings/inbound-card";
+import { EmailChangeCard } from "@/components/settings/email-change-card";
 import { SecurityCard } from "@/components/settings/security-card";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -117,6 +118,9 @@ export default function SettingsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* The address move (38.2) sits beside the account it belongs to. */}
+      <EmailChangeCard />
 
       {/* The second door (36.4) */}
       <SecurityCard />

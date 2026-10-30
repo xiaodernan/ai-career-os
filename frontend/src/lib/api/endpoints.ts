@@ -28,6 +28,8 @@ export const endpoints = {
     emailChangeConfirm: "/auth/email-change/confirm",
     me: "/users/me",
     profile: "/users/me/profile",
+    /* The sign-in address move, behind the session and the password (38.2). */
+    emailChange: "/users/me/email-change",
   },
 
   /* ---------------- Resumes ---------------- */

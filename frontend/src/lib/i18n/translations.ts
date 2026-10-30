@@ -397,6 +397,27 @@ export const translations = {
       retryBody: "We could not answer the link just now. It is still good — try it again.",
       retry: "Try again",
     },
+    /**
+     * The address move on the settings page (38.2). Every sentence here describes what
+     * the server does: two letters leave, nothing moves until the new mailbox answers,
+     * and the move itself signs every session out.
+     */
+    emailMove: {
+      title: "Sign-in address",
+      description:
+        "Move the address this account signs in with. Asking sends two letters, and the move waits for the new mailbox to answer.",
+      current: "This account signs in with {email}.",
+      newLabel: "New address",
+      newPlaceholder: "you@example.com",
+      passwordLabel: "Current password",
+      passwordPlaceholder: "Type your current password",
+      send: "Send the confirmation letter",
+      sentTitle: "Two letters are on their way",
+      sentBody:
+        "One went to {newEmail} with the link that finishes the move, good for two hours. The other went to {oldEmail}, so whoever reads that mailbox learns the move was asked for. Nothing changes until the new mailbox opens the link.",
+      hint: "When the link is answered, every session is signed out; the password stays the same.",
+      askAgain: "Use a different address",
+    },
     tailor: {
       title: "Tailored resume for this role",
       draftBadge: "Tailored draft",
@@ -2968,6 +2989,25 @@ export const translations = {
       confirm: "确认更换",
       retryBody: "刚才没能回应这个链接。它仍然有效——可以再试一次。",
       retry: "重试",
+    },
+    /**
+     * 设置页上的换邮箱卡片（38.2）。这里每一句都照实描述服务端的动作：寄出两封信，
+     * 新邮箱回应之前什么都不改变，换址本身会让所有会话退出登录。
+     */
+    emailMove: {
+      title: "登录邮箱",
+      description: "更换这个账号用来登录的邮箱。申请会寄出两封信，换址要等新邮箱回应才生效。",
+      current: "这个账号现在用 {email} 登录。",
+      newLabel: "新邮箱",
+      newPlaceholder: "you@example.com",
+      passwordLabel: "当前密码",
+      passwordPlaceholder: "输入你的当前密码",
+      send: "寄出确认信",
+      sentTitle: "两封信已经在路上",
+      sentBody:
+        "一封寄往 {newEmail}，里面的链接在两个小时里有效，点开它换址才会完成；另一封寄往 {oldEmail}，让能看到那个邮箱的人知道有人申请了换址。新邮箱点开链接之前，什么都不会改变。",
+      hint: "链接被回应后，所有会话都会退出登录；密码保持不变。",
+      askAgain: "换一个邮箱",
     },
     tailor: {
       title: "为这个职位定制的简历",

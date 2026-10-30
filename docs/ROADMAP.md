@@ -3033,7 +3033,7 @@ client for all four verbs, starting with the link that is already in the mail.
   eslint clean, and the page was walked in a browser — paste form, answering, moved
   and invalid states — against a stubbed API.)
 
-- [ ] **38.2** The address moves from settings, and the screen says it takes two letters.
+- [x] **38.2** The address moves from settings, and the screen says it takes two letters.
 
   (A settings card names the address on the account, takes the new address and the
   password, and posts `POST /users/me/email-change`. Each refusal has its own
@@ -3045,6 +3045,24 @@ client for all four verbs, starting with the link that is already in the mail.
   mailbox holds the link that moves the address, the current mailbox holds the warning,
   and nothing changes until the link is answered. The card and the landing page share
   one hook family, so the two sides of the move cannot drift.)
+
+  (Shipped: `components/settings/email-change-card.tsx` sits beside the account card it
+  belongs to, and `lib/hooks/account.ts` holds `useRequestEmailChange` — the only
+  reference to the route, so the ledger line for `/users/me/email-change` left. The card
+  names the address on the account, checks the new one with the sign-in form's own
+  `emailIssue` and the password by presence, and puts each refusal under the field that
+  caused it (`lib/email-change.ts:addressMoveRefusal`, four unit tests):
+  `CURRENT_PASSWORD_INCORRECT` under the password, `EMAIL_UNCHANGED` and
+  `EMAIL_ALREADY_REGISTERED` under the address, and the meter's `RATE_LIMITED` on the
+  form, because no field caused it. `describe` supplies the sentence from the code, so
+  the wrong-password answer is in the reader's language — which exposed a real leak:
+  `currentLocale()` read only `localStorage`, so a browser that had adopted the account's
+  language (21.4) raised every sentence composed this way in English on a Chinese page;
+  it now falls back to the cookie the provider writes, with two unit tests. Success
+  replaces the form with the two letters and their two-hour window. Frontend 863 tests
+  across 82 files; tsc and eslint clean; the card was walked in a browser — the form, the
+  success panel, a wrong password, the limiter and an address already taken — against a
+  stubbed API.)
 
 - [ ] **38.3** The open doors are drawn, and each one can be closed.
 

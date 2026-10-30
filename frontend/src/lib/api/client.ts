@@ -509,6 +509,19 @@ export const authApi = {
     });
   },
 
+  /**
+   * Ask to move the sign-in address (26.1, 38.2). The password is the re-authentication,
+   * so a borrowed tab cannot start the move. Two letters leave — the confirmation to the
+   * claimed address and a heads-up to the one on the account — and nothing moves until
+   * the new mailbox answers, so the caller keeps its session and its cache.
+   */
+  async requestEmailChange(payload: { password: string; newEmail: string }): Promise<void> {
+    await request<{ sent: boolean }>(endpoints.auth.emailChange, {
+      method: "POST",
+      body: { password: payload.password, newEmail: payload.newEmail },
+    });
+  },
+
   me(): Promise<User> {
     return request<User>(endpoints.auth.me);
   },

@@ -9,7 +9,7 @@
 
 ## 当前状态 (2026-10-30)
 
-- **前端**: 857 个 vitest 通过（82 个文件）；`tsc --noEmit` 干净。
+- **前端**: 863 个 vitest 通过（82 个文件）；`tsc --noEmit` 干净。
 - **后端**: 1062 个测试通过、158 份报告，含真实栈 IT（0 失败 / 0 错误 /
   0 跳过；`mvn -o -q test`；不含 IT 的选集为 974 个）。
 - **ai-service**: 1929 passed, 1 skipped (offline: mock/hash)。
@@ -25,7 +25,8 @@
   日历事件自带 VALARM）与 36（第二道门的四段：注册/激活、登录第二步、
   换发/关闭、设置页安全卡与登录码字段）与 37（回信的三段：签名入站地址与
   服务商 webhook、双语线索先读的引擎、公司名匹配归档与 `/replies` 页，
-  设置页交出地址）。37.4 以 850 个前端测试、81 个文件收口。38.1 先让 26.1 的信落地（确认页四态），以 857 个前端测试、82 个文件收口。
+  设置页交出地址）。37.4 以 850 个前端测试、81 个文件收口。38.1 先让 26.1 的信落地（确认页四态），以 857 个前端测试、82 个文件收口；38.2 让设置页
+交出改地址卡（两封信、四种拒绝各归其位），以 863 个前端测试、82 个文件收口。
 
 ## 主线队列（按顺序执行）
 
@@ -365,12 +366,22 @@
       `metadata.test.ts` 记下新的公开路由，copy census 140→142。前端 857 个测试 / 82 个。
       tsc 与 eslint 干净；页面在浏览器里走过四种状态（粘贴表单、作答中、已搬走、链接无效），
       API 用桩顶替。
-    - 38.2 设置页的改地址卡：当前地址、新地址、密码，POST
+    - 38.2 设置页的改地址卡（已完成）：当前地址、新地址、密码，POST
       `/users/me/email-change`。三个拒绝各有自己的句子而不是服务器英文——
       CURRENT_PASSWORD_INCORRECT / EMAIL_UNCHANGED（trim 且不分大小写）/
       EMAIL_ALREADY_REGISTERED；RATE_LIMITED 是 27.1 的信件计量（一分钟五封）。
       成功态不说“已发送”，而说：两封信都走了，新邮箱拿到会搬家的链接、旧邮箱拿到
       警告，链接作答之前什么都不会变。与落地页共用一组 hook，搬家两侧不会漂移。
+      落地：`components/settings/email-change-card.tsx` 放在账户卡旁边；`lib/hooks/account.ts`
+      的 `useRequestEmailChange` 是这条路由唯一的引用，账本移出 `/users/me/email-change`。
+      新地址用登录表单自己的 `emailIssue` 校验、密码只查有没有；拒绝归到造成它的字段
+      （`lib/email-change.ts:addressMoveRefusal`，4 条单测）：密码错归密码框、地址没变或
+      已被注册归地址框、计量器的 429 归表单（没有字段造成它）。句子走 `describe` 的
+      码表，于是暴出一个真问题：`currentLocale()` 只读 `localStorage`，只采纳过账号语言
+      （21.4）的浏览器上，这类句子会在中文页面里说英文——现在回退到 provider 写的 cookie，
+      补 2 条单测。成功态把表单换成两封信与两小时窗口。前端 863 个测试 / 82 个文件，
+      tsc 与 eslint 干净；卡片在浏览器里走过表单、成功、密码错、限流、地址被占五种状态，
+      API 用桩顶替。
     - 38.3 会话卡：`GET /users/me/sessions` 按 family 列一台设备——名字、来源地址、
       开始、最后活动、最远到期；正在提问的这台被标出，并写明关掉它就等于登出。
       单关走 `DELETE /users/me/sessions/{familyId}` 与既有确认框；全关是同一动词
@@ -389,7 +400,7 @@
       wired” 变成它们真正的样子（客户端所用拼写的别名；mail preferences 是后端
       渲染的公开页），copy census / used-key / translations 跟着新卡片与落地页走，
       24–26 的段落补上落点，24.1 里被 30.4 取代的 INVALID_CREDENTIALS 一并改正。
-    下一步：38.2。
+    下一步：38.3。
 
 
 ## 开发协议（每个任务）

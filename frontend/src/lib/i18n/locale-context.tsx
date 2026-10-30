@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { translations, type Locale } from "./translations";
-import { writeLocaleCookie } from "./locale-cookie";
+import { localeFromCookie, LOCALE_COOKIE, writeLocaleCookie } from "./locale-cookie";
 
 /**
  * Locale context (17.1): provides the current locale and a translation function.
@@ -79,8 +79,29 @@ export function readStoredLocale(): Locale | null {
   return null;
 }
 
+/**
+ * The locale the page paints, read from the cookie the provider writes.
+ *
+ * Distinct from {@link readStoredLocale}: that one answers "did the reader choose here?",
+ * and this one answers "what language is this browser showing?". They differ on a device
+ * that only adopted the account's language (21.4) -- it has the cookie and no stored
+ * choice -- which is exactly the device whose toast would otherwise arrive in English.
+ */
+function readLocaleCookie(): Locale | null {
+  if (typeof document === "undefined") return null;
+  try {
+    const entry = document.cookie
+      .split(";")
+      .map((part) => part.trim())
+      .find((part) => part.startsWith(`${LOCALE_COOKIE}=`));
+    return entry ? localeFromCookie(entry.slice(LOCALE_COOKIE.length + 1)) : null;
+  } catch {
+    return null;
+  }
+}
+
 function getInitialLocale(): Locale {
-  return readStoredLocale() ?? "en";
+  return readStoredLocale() ?? readLocaleCookie() ?? "en";
 }
 
 /**
@@ -89,9 +110,11 @@ function getInitialLocale(): Locale {
  * A toast is raised from an event handler, long after the render that knew
  * the language -- so the sentence a failure shows cannot come from a hook.
  * The language is global anyway (a cookie and a `localStorage` entry), and
- * this reads the same `localStorage` the provider writes, so the two cannot
- * disagree: the provider writes it the moment the reader switches, and this
- * reads it the moment a toast is raised.
+ * this reads both: the reader's own stored choice first, and the cookie the
+ * provider also writes when they never made one. Reading only `localStorage`
+ * left every sentence raised this way in English on a browser that had
+ * adopted the account's language, because the provider paints the cookie
+ * and the adopted language never writes a stored choice.
  */
 export function currentLocale(): Locale {
   return getInitialLocale();

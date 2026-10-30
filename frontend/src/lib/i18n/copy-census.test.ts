@@ -71,8 +71,10 @@ describe("the browser's copy", () => {
     // address they are forwarded to. (`lib/hooks/replies.ts` is the `.ts` half and
     // was never part of this walk.) 142 with the address-move landing (38.1):
     // `app/(auth)/confirm-email/page.tsx` answers the mailed link and
-    // `components/auth/confirm-email-form.tsx` draws its states.
-    expect(browserSources().length).toBe(142);
+    // `components/auth/confirm-email-form.tsx` draws its states; 143 with
+    // `components/settings/email-change-card.tsx`, the settings card that asks
+    // for the two letters (38.2).
+    expect(browserSources().length).toBe(143);
   });
 
   it("finds a sentence, however long it is", () => {
