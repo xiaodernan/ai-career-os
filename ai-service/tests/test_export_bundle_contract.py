@@ -22,10 +22,14 @@ writer and the backend's own reader -- and holds them to the same set. A
 section added on one side and not the other fails here rather than in a
 user's export.
 
-The browser's list is read from the page that offers the redaction
-checkboxes (`app/(app)/data/page.tsx`), because that is the list that
-decides what a reader can leave out. The backend's writer is read from
-`ExportService`, which owns the sections only the backend can produce.
+The browser's names are read from the labels map
+(`lib/export-sections.ts`) that the page uses for the redaction checkboxes
+and the count badges. Since 40.4 membership is not typed in the browser at
+all -- the page derives the list from the bundle's own manifest -- so the
+map is the one list left to hold to the section tuple, and the page is held
+to reading the manifest rather than a list of its own. The backend's writer
+is read from `ExportService`, which owns the sections only the backend can
+produce.
 The backend's reader is read from `ImportService`, which dispatches on the
 plan's section names -- so a section the plan names and the importer does
 not read is a section that is planned, counted, and then dropped on the
@@ -50,13 +54,16 @@ from app.features.export import (
 AI_SERVICE_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = AI_SERVICE_ROOT.parent
 FRONTEND_DATA_PAGE = REPO_ROOT / "frontend" / "src" / "app" / "(app)" / "data" / "page.tsx"
+FRONTEND_SECTIONS = REPO_ROOT / "frontend" / "src" / "lib" / "export-sections.ts"
 BACKEND_SERVICE = REPO_ROOT / "backend" / "src" / "main" / "java" / "com" / "careeros" / "report" / "service"
 EXPORT_SERVICE = BACKEND_SERVICE / "ExportService.java"
 IMPORT_SERVICE = BACKEND_SERVICE / "ImportService.java"
 
-# The browser's redaction list: `{ key: "profile", labelKey: "data.sections.profile" }`.
-# The `key` is the section's name in the bundle; the label is the reader's.
-_SECTION_KEY = re.compile(r'\{\s*key:\s*"([a-z_]+)"\s*,\s*labelKey:\s*"data\.sections\.')
+# The browser's labels: `profile: "data.sections.profile"` in the map 40.4
+# split out of the page. Membership is no longer typed in the browser -- the
+# page derives it from the bundle's manifest -- so this map is the one list
+# left to hold to the section tuple.
+_SECTION_LABEL = re.compile(r'^\s*([a-z_]+):\s*"data\.sections\.', re.M)
 
 # The backend writes its sections with `sections.put("name", ...)`.
 _JAVA_PUT = re.compile(r'\bsections\.put\(\s*"([a-z_]+)"')
@@ -67,12 +74,23 @@ _JAVA_DATA_GET = re.compile(r'(?<!bundle\.)\bdata\.get\(\s*"([a-z_]+)"')
 
 
 def _frontend_sections() -> list[str]:
-    """The section names the browser offers to redact."""
+    """The section names the browser knows how to label."""
+    source = FRONTEND_SECTIONS.read_text(encoding="utf-8")
+    # Only the labels map, not the strings that happen to match elsewhere.
+    start = source.index("export const SECTION_LABELS")
+    end = source.index("};", start)
+    return _SECTION_LABEL.findall(source[start:end])
+
+
+def test_the_page_reads_the_sections_the_bundle_carries() -> None:
+    # 40.4: the page used to type the section list itself, so the browser and
+    # the writer could disagree and a section the server started carrying
+    # stayed un-redactable until a browser release caught up. The list now
+    # comes from the bundle's own manifest -- the server counts every section,
+    # zero included, so the checkbox list is the file's own account of itself.
     source = FRONTEND_DATA_PAGE.read_text(encoding="utf-8")
-    # Only the SECTIONS table, not the strings that happen to match elsewhere.
-    start = source.index("const SECTIONS")
-    end = source.index("] as const;", start)
-    return _SECTION_KEY.findall(source[start:end])
+    assert "bundleSections(bundle?.manifest?.counts)" in source
+    assert "const SECTIONS" not in source
 
 
 def _backend_written_sections() -> list[str]:

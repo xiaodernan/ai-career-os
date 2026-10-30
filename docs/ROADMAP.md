@@ -3550,7 +3550,7 @@ quietly land on the wrong side of it.
   still re-pinning (none in this unit's files); the frontend's typecheck green
   and its i18n suites 49 green across seven files.)
 
-- [ ] **40.4** The sections are all of it, and the gate says so.
+- [x] **40.4** The sections are all of it, and the gate says so.
 
   (A new gate reads every table in `db/migration` whose rows name a reader and
   requires each to be either carried by a section — itself or nested, like
@@ -3561,6 +3561,30 @@ quietly land on the wrong side of it.
   readable half's section order and the drop list both follow the one section
   tuple. The census fails by name on a new table, which is the only way the
   promise survives the next migration.)
+
+  (Shipped: the census is `ai-service/tests/test_every_reader_table_is_carried_or_excluded.py`,
+  and it holds all 46 tables the migrations create to one of three answers.
+  Forty-three name a reader — every table with a `user_id`, the `users` root, and
+  whatever they reach through a foreign key, like `agent_traces` through
+  `agent_runs` — and each of those is either carried by one of the fifteen
+  sections (nineteen tables; `messages`, `resume_versions`, `interview_turns`
+  and `interview_evaluations` are nested and name their parent's section) or
+  excluded by name in EXPORT.md with one of three reasons: nine "Rebuilt:"
+  tables the restore recomputes from bundle data, fifteen "Bookkeeping:" tables
+  that describe what the account did rather than what it holds, and the three
+  outside the closure — companies, jobs, nightly reports — which are the shared
+  catalogue and the platform's clock. The parser strips `--` comments first (the
+  migrations quote DDL in comments), folds ALTER-added columns and references
+  into the table they touch, and balances parentheses rather than trusting a
+  line; a table added by the next migration fails the gate by name until it is
+  carried or documented. The data page no longer types its own section list:
+  `lib/export-sections.ts` keeps only the labels, membership and order come from
+  the bundle's `manifest.counts` (the server counts all fifteen, zero included),
+  and a section the browser does not yet know renders humanized. The Markdown and
+  HTML views, the manifest and the restore's counters all keep `SECTIONS` order,
+  and tests pin each. Backend unit suite 1169 green; frontend 911 tests across 90
+  files and typecheck green; ai-service 1996 passed, 1 skipped, 0 failed on a clean
+  checkout of this tree with the unit's files overlaid.)
 
 ## Epic 41 — The Reminder Reaches the Mailbox at Its Moment
 

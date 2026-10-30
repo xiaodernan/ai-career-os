@@ -20,6 +20,7 @@ with their data. This document locks the export/import contract implemented in
 | `conversations` + `messages` sections | **done** (shipped in the bundle since 1.3.0) | backend bridge |
 | `saved_searches` + `ingestion_feeds` sections | **done** (shipped in the bundle since 1.4.0) | backend bridge |
 | `saved_jobs` + `inbound_mails` sections | **done** (shipped in the bundle since 1.5.0) | ai-service + backend bridge |
+| Every reader table carried or excluded | **done** (the census and the manifest-driven page, 40.4) | ai-service gate + docs |
 
 ## The bundle is everything that is the reader's (closed 2026-10-31)
 
@@ -103,7 +104,12 @@ The engines were internal-only until now; the routes that reach them are:
 The frontend's `/data` page drives all five: export (plain or anonymized),
 download the JSON, drop sections before sharing, paste a bundle back to
 preview what a re-import would write — then to run it — and open the
-print-ready view of the whole thing.
+print-ready view of the whole thing. Its badges and redaction checkboxes are
+read from the bundle's own `manifest.counts` (the server counts every
+section, zero included), so the browser's list of what the file carries is
+the file's account of itself; the only thing the page types is each
+section's label, with a humanized fallback for a section a newer server
+adds before the browser learns its name.
 
 ### The readable half (13.1, the PDF)
 

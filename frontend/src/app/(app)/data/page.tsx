@@ -10,6 +10,11 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
+import {
+  bundleSections,
+  humanizeSection,
+  sectionLabelKey,
+} from "@/lib/export-sections";
 import { useExportBundle, useImportApply, useImportPlan, useRedactBundle, useRenderBundle } from "@/lib/hooks/data-portability";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { downloadText } from "@/lib/format";
@@ -20,41 +25,11 @@ import type { ExportBundle } from "@/lib/api/types";
  * and redact sections before sharing.
  *
  * Every number here is read from the bundle the server built — the content hash
- * and the section counts are the server's, not recomputed in the browser.
+ * and the section counts are the server's, not recomputed in the browser. The
+ * section list is the manifest's too (40.4): the server counts every section
+ * into `manifest.counts`, so the badges and the redaction checkboxes follow the
+ * file in hand instead of a list typed into this page.
  */
-
-const SECTIONS = [
-  { key: "profile", labelKey: "data.sections.profile" },
-  { key: "resumes", labelKey: "data.sections.resumes" },
-  { key: "knowledge", labelKey: "data.sections.knowledge" },
-  { key: "job_descriptions", labelKey: "data.sections.jobDescriptions" },
-  { key: "interviews", labelKey: "data.sections.interviews" },
-  { key: "memories", labelKey: "data.sections.memories" },
-  // The sections the BACKEND owns: it writes the applications, the stored
-  // growth runs, the notes, the people the reader knows and the copilot
-  // chats, so the bridge reads them and hands them into the bundle. Without
-  // them an export is a reading list and not a record of the search.
-  { key: "applications", labelKey: "data.sections.applications" },
-  { key: "growth_plans", labelKey: "data.sections.growthRuns" },
-  // The two the reader typed into: their own notes and the people they know.
-  // They were the first things a reader lost when they left, because the
-  // bundle used to carry every table the engines read and neither table the
-  // reader wrote in.
-  { key: "notes", labelKey: "data.sections.notes" },
-  { key: "contacts", labelKey: "data.sections.contacts" },
-  // And the chats: what the reader asked and what the assistant answered.
-  { key: "conversations", labelKey: "data.sections.conversations" },
-  // The standing choices: the question the morning sweep speaks for and the
-  // sources the ingester is pointed at. A restore that leaves them behind
-  // leaves the next morning silent.
-  { key: "saved_searches", labelKey: "data.sections.savedSearches" },
-  { key: "ingestion_feeds", labelKey: "data.sections.ingestionFeeds" },
-  // The two ends of the pipeline: the postings the reader flagged and the
-  // letters recruiters wrote back. One is what they want to remember, the
-  // other is what the search answered.
-  { key: "saved_jobs", labelKey: "data.sections.savedJobs" },
-  { key: "inbound_mails", labelKey: "data.sections.inboundMails" },
-] as const;
 
 export default function DataPortabilityPage() {
   const { t } = useLocale();
@@ -69,6 +44,16 @@ export default function DataPortabilityPage() {
   const [bundle, setBundle] = React.useState<ExportBundle | null>(null);
   const [dropped, setDropped] = React.useState<string[]>([]);
   const [importText, setImportText] = React.useState("");
+
+  // The sections the bundle says it carries, in the manifest's order. The
+  // server counted every section, so this list is the export's own account of
+  // itself -- including a section a newer server carries and this page has
+  // never heard of, which still gets a checkbox and a humanized name.
+  const sections = bundleSections(bundle?.manifest?.counts);
+  const sectionLabel = (section: string) => {
+    const labelKey = sectionLabelKey(section);
+    return labelKey ? t(labelKey) : humanizeSection(section);
+  };
 
   const runExport = React.useCallback(
     (anonymized: boolean) => {
@@ -290,10 +275,10 @@ export default function DataPortabilityPage() {
                 </div>
               </div>
               <ul className="flex flex-wrap gap-1.5">
-                {Object.entries(bundle.manifest.counts ?? {}).map(([section, count]) => (
+                {sections.map((section) => (
                   <li key={section}>
-                    <Badge variant="outline" className="capitalize">
-                      {section.replace(/_/g, " ")}: {count}
+                    <Badge variant="outline">
+                      {sectionLabel(section)}: {bundle?.manifest?.counts?.[section] ?? 0}
                     </Badge>
                   </li>
                 ))}
@@ -312,16 +297,16 @@ export default function DataPortabilityPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <ul className="space-y-2">
-              {SECTIONS.map((s) => (
-                <li key={s.key}>
+              {sections.map((section) => (
+                <li key={section}>
                   <label className="flex items-center gap-2 text-sm">
                     <input
                       type="checkbox"
-                      checked={dropped.includes(s.key)}
-                      onChange={() => toggleDrop(s.key)}
+                      checked={dropped.includes(section)}
+                      onChange={() => toggleDrop(section)}
                       className="size-4 rounded border-border"
                     />
-                    {t(s.labelKey)}
+                    {sectionLabel(section)}
                   </label>
                 </li>
               ))}

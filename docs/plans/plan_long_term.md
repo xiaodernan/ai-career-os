@@ -540,12 +540,16 @@
   schema 升到 1.4.0，1.3.0 旧包仍有效（`SECTIONS_BY_VERSION` 逐版本持有节集）。
 - 40.3 书签与来信随包走（已完成 2026-10-31）：`saved_jobs` + `inbound_mails`（后端所有，schema 1.5.0，1.4.0 旧包仍有效）。
   书签只在其职位仍存在于目标工作区时写入（缺职位的书签计入该节 `skipped` 理由，而不是伪造一行悬空外键）；来信按 `message_key` 幂等折叠（同一 inbox 恢复两次不翻倍），归档链接只在调用者拥有该 application 时恢复。匿名包抹掉发件地址、主题、正文与书签附注；职位的标题/公司、分类读数与时间戳保留。plan 的比较覆盖 apply 实际写入的字段：书签的展示字段、来信由目标决定的 application_id、NULL→空字符串的 NOT NULL 文本都不算内容，所以未改行是 `skip`；apply 写不了的行（书签缺职位 id、来信缺 message_key 或 received_at）既不承诺也不退休。可读半边两种语言写出书签与来信，页面给出两节标签，恢复按节计数。
-- 40.4 分界成为闸门：读 `db/migration` 中所有带 user 归属的表，要求每张要么被某节承载（含
-  `messages` 之于 `conversations` 的内嵌），要么在 EXPORT.md 的排除表里写明“记账而非内容”；
-  页面所载清单由 bundle 的 manifest 得出，可读半边的节序与 redact 列表共用同一个 section 元组。
-  新表出现即按名失败。
+- 40.4 分界成为闸门（已完成 2026-10-31）：新闸门 `test_every_reader_table_is_carried_or_excluded.py` 解析
+  `db/migration` 的每个 `CREATE TABLE`（含 ALTER 补列/补外键），按 `user_id`、`users` 根与 FK 可达闭包
+  算出读者表：每张要么在 CARRIED 映射里落到某一节（`messages`→`conversations`、`resume_versions`→`resumes`、
+  面试轮次与评估→`interviews` 这类内嵌子表声明父表并同节），要么在 EXPORT.md 的排除表里写明理由；理由只有
+  `Bookkeeping:`（账户做过什么）、`Rebuilt:`（恢复时从包内数据重算）、`Shared:`（目录与平台夜报）三种前缀。
+  排除表 27 行（9 Rebuilt + 15 Bookkeeping + 3 Shared），闭包 43 张 + 共享 3 张 = 迁移的 46 张；新表出现即按名失败。
+  页面不再自带节列表：`lib/export-sections.ts` 只留标签，徽章与 redact 复选框读 `manifest.counts`（服务端逐节计数，
+  零也在内），不认识的节回落为可读名字；Markdown/HTML 的节序与 manifest 的计数顺序都钉到 `SECTIONS`。
 
-下一步：40.4（分界成为闸门）与本会话 Epic 41 的下一段。
+下一步：Epic 41 的下一段（Epic 40 已在 40.4 收口）。
 
 ## Epic 41 — 提醒到点时的信
 
