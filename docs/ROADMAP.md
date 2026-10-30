@@ -3209,6 +3209,73 @@ client for all four verbs, starting with the link that is already in the mail.
   after success, and the browser landed on `/account-erased` — "账号已经删除", title
   "账号已删除 · AI Career OS" — which renders without a session and makes no request.)
 
+## Epic 39 — The Deployment Answers for Itself
+
+Epic 38 let the product tell a reader what it did with their account. The process
+running it cannot be asked the same questions. `/api/v1/health` names the database and
+Redis and calls everything else "ok" — an object store that stopped answering and an
+ai-service that died are invisible on that line, though they own every uploaded file
+and every AI feature. Compose prints `running` for a container that started and never
+answered, because only postgres, redis and minio carry healthchecks. A boot says
+nothing about which mail transport, storage endpoint or provider it selected, and a
+redeploy cuts in-flight requests because Spring's default shutdown is immediate. This
+epic makes the deployment answer three questions in its own words: is anything down,
+what did I become, and did I finish what I took before I left.
+
+- [ ] **39.1** The health line names the object store and the AI service.
+
+  (`/api/v1/health` answers `{status, db, redis}`. The object store holds every uploaded
+  file and the ai-service performs every analysis, so a line that says `ok` while either
+  is unreachable is a report that lies by omission. The route gains `storage` and `ai`,
+  each probed under a short bound of its own — a hung dependency must not hang the
+  probe, which is why the bound is smaller than any client's call budget. `status` is
+  `ok` only when all four are true and `degraded` otherwise, and the answer stays 200:
+  the API can serve most routes without either dependency, so the line reports, it does
+  not gate. `StorageService` gains an availability probe implemented by the MinIO
+  adapter as a bucket-exists check; the AI client gains a health call against the
+  ai-service's own `/health` with its own short timeouts, never the 180-second feature
+  budget. Unit tests pin each answer — all up, storage down, AI down, and a probe that
+  hangs coming back within its bound; API.md and DEPLOYMENT.md's probe table gain the
+  two names.)
+
+- [ ] **39.2** The stack waits for an app that answers, not one that started.
+
+  (The three application services in `docker-compose.yml` have no healthcheck, and
+  `docker compose ps` reports them `running` whether or not they can answer; only
+  postgres, redis and minio are probed. Each app service gains one that checks the
+  process answers — the backend and ai-service by fetching their own health route and
+  accepting its 200 whether the body says `ok` or `degraded` (a degraded dependency
+  must not restart-loop the container), the frontend by fetching its landing page. The
+  stack's `depends_on` gates become `condition: service_healthy` where a service
+  genuinely needs another up (frontend on backend, backend on ai-service and its three
+  data stores), so a first boot cannot serve requests against a half-started stack.
+  A deployment test reads both compose files and refuses, by name, an app service with
+  no healthcheck, a dependency without a health condition, or a probe that names a
+  different port than the service publishes. DEPLOYMENT.md's per-dependency table gains
+  the three rows.)
+
+- [ ] **39.3** A boot says what it became, and no secret is in the sentence.
+
+  (A boot currently logs what Spring logs and nothing about the choices this deployment
+  made. One line at readiness states them: the environment, the port, the database host
+  and name (never the URL, which carries a password), the Redis host (never the URL),
+  the storage endpoint host and bucket or that storage is off, the AI service host,
+  which mail transport bean was selected (`Console` or `Smtp`, never a host's
+  credentials), whether push has a key pair, and which schedulers are on. It is built
+  from the bound beans and properties rather than re-reading the environment, so it
+  cannot disagree with what the process uses; a unit test builds it from values that
+  include sentinel secrets and asserts none appears, and RUNBOOK names the line as the
+  first thing to read when a stack looks healthy but is not.)
+
+- [ ] **39.4** A shutdown finishes the request it already took.
+
+  (`server.shutdown` is Spring's default `immediate`: a redeploy cuts requests that were
+  already being answered. It becomes `graceful`, with a bounded
+  `spring.lifecycle.timeout-per-shutdown-phase` so a stuck request cannot hold a process
+  forever; the schedulers stop with the context and the RUNBOOK says what a redeploy is
+  allowed to cost. A config contract test pins both settings, so a future edit cannot
+  quietly put the deployment back on immediate shutdown.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
