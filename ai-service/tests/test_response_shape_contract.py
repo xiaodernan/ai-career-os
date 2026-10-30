@@ -3067,7 +3067,9 @@ def test_the_heartbeat_interval_has_one_definer_and_every_shipped_claim_names_it
         ("backend/src/main/java/com/careeros/report/service/WeeklyDigestDeliveryMetrics.java", 82),
         ("backend/src/main/java/com/careeros/report/service/WeeklyDigestScheduler.java", 11),
         # The run stream's own two, the population this ledger was written for.
-        ("frontend/src/components/ai/task-stream.tsx", 17),
+        # 21 rather than 17 since 7e2f334's re-export block moved this comment block
+        # down; the sentence itself did not change.
+        ("frontend/src/components/ai/task-stream.tsx", 21),
         ("frontend/src/lib/sse/use-sse.ts", 9),
     ], ("spans that name the keep-alive and state no interval: the shape an edited claim leaves behind, "
         "listed so a claim cannot escape the census above by losing its number -- the eleven Java rows "
@@ -3350,7 +3352,7 @@ def test_both_frame_parsers_default_a_nameless_frame_to_the_same_event_name():
     by_role: dict[str, list[dict]] = {}
     for row in census:
         by_role.setdefault(row["role"], []).append(row)
-    assert len(census) == 20, \
+    assert len(census) == 19, \
         (f"{sorted(by_role)} counts {[(r, len(v)) for r, v in by_role.items()]}: the floor comes from the "
          "same walk as the roles below, so a narrowed scan cannot make the ledger tidy by reading nothing")
     assert sorted(by_role) == ["dom-event-name", "frame-default", "frame-exit", "test-assertion",
@@ -3370,7 +3372,6 @@ def test_both_frame_parsers_default_a_nameless_frame_to_the_same_event_name():
         (f"{[(r['file'], r['line'], r['text']) for r in by_role['frame-exit']]}: the one non-default use "
          "inside a parser is the exit that drops a frame with neither data nor an explicit name")
     assert sorted((row["file"], row["line"], row["head"]) for row in by_role["type-union-member"]) == [
-        ("agent-timeline.tsx", 34, "export type TraceKind ="),
         # 1180 rather than 744 since concurrent types.ts additions above the trace-step union
         # moved its `kind:` head down. The forward bridges' own types (the growth
         # engines, the offers, the portability and ingestion payloads) joined the file
@@ -3413,17 +3414,24 @@ def test_both_frame_parsers_default_a_nameless_frame_to_the_same_event_name():
         # 1554 rather than 1539 since 42.1's `MailSettingsRow` joined above the union
         # (+15 lines with its doc comment); the union itself did not change, and the
         # three-flag answer reuses the type rather than adding a second one below it.
+        # The third union left this list: 7e2f334 moved TraceKind from an inline union
+        # in agent-timeline.tsx to the TRACE_KINDS roster in lib/trace-kinds.ts -- an
+        # array form this token scan does not read (it matches `?`/`=`/`|`/`:` value
+        # positions, not array elements). The kind's "message" member still exists and
+        # is still the wire's vocabulary; the roster's own names are pinned by the
+        # browser's suite (status-words.test.ts), which is where they are read.
         ("types.ts", 1554, "kind:"),
         ('use-sse.ts', 15, 'event: SSEEventName | "message" | "progress" | "ping";'),
-    ], (f"{[(r['file'], r['line'], r['head']) for r in by_role['type-union-member']]}: three type unions "
-        "spell `message`, and only one of them names a frame -- the other two are the trace step kind "
-        "lists, so the head of each union is pinned with its position: the pair (`file`, `line`) says "
+    ], (f"{[(r['file'], r['line'], r['head']) for r in by_role['type-union-member']]}: two type unions "
+        "spell `message` now, and only one of them names a frame -- the other is the trace step kind "
+        "list, so the head of each union is pinned with its position: the pair (`file`, `line`) says "
         "where the census found it and the head says which declaration it belongs to")
     assert [row["union"] for row in by_role["type-union-member"] if "handoff" in row["union"]] == [
         sorted(row["union"]) for row in by_role["type-union-member"] if "handoff" in row["union"]
-    ] and len([row for row in by_role["type-union-member"] if "handoff" in row["union"]]) == 2, \
-        ("exactly two of the three unions carry `handoff`, which is the trace-step marker: the third is "
-         "the frame-name union, and the discriminator is the vocabulary around it, not the line")
+    ] and len([row for row in by_role["type-union-member"] if "handoff" in row["union"]]) == 1, \
+        ("the one union that carries `handoff`, the trace-step marker, is types.ts's kind list: the "
+         "second trace vocabulary moved to the TRACE_KINDS array 7e2f334 and this scan does not read "
+         "array elements, while the frame-name union never carried the marker at all")
     assert {row["file"] for row in by_role["test-assertion"]} == {"use-sse.test.ts"} \
         and len(by_role["test-assertion"]) == 9, \
         (f"{[(r['file'], r['line']) for r in by_role['test-assertion']]}: the fixtures that hand a parser "
