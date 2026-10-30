@@ -185,9 +185,11 @@ export const endpoints = {
   /* ---------------- Calendar subscription (34.1) -------------------------- */
   calendarLink: "/calendar/link",
 
-  /* ---------------- Mail settings, without an old letter (42.1) ----------- */
+  /* ---------------- Mail settings, without an old letter (42.1, 42.2) ------ */
   /** The three dials plus the signed page a letter's footer would have opened. */
   mailSettings: "/me/mail/settings",
+  /** One dial, settled from the settings screen; the answer is the whole page again. */
+  mailSettingsDial: (list: string) => `/me/mail/settings/${seg(list)}`,
 
   /* ---------------- Inbound mail (37.1-37.4) ------------------------------ */
   /** The account's forwarding address, shown and copied by the settings card. */

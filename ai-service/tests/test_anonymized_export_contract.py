@@ -268,10 +268,16 @@ PEOPLE: dict[str, frozenset[str]] = {
     "contacts": frozenset({"name", "role", "company", "relation", "email", "notes"}),
     "applications": frozenset({"notes", "rejection_reason", "offer_compensation"}),
     "growth_plans": frozenset({"coverage", "report"}),
+    "conversations": frozenset({"title"}),
 }
 
 # The interview turns are their own group: a list of rows inside the row.
 TURN_PEOPLE = frozenset({"user_id", "content", "evaluation"})
+
+# The same for the transcript: the words and the things they point at are
+# the reader's, the role and the stamps are the shape of the conversation.
+MESSAGE_PEOPLE = frozenset({"content", "artifacts", "sources"})
+MESSAGE_SUBSTANCE = frozenset({"id", "role", "actions", "created_at"})
 
 # The bags: a column that holds a JSON object -- or a list of rows -- whose
 # *inside* holds the reader. The column itself is neither the reader's nor
@@ -279,6 +285,7 @@ TURN_PEOPLE = frozenset({"user_id", "content", "evaluation"})
 BAGS: dict[str, frozenset[str]] = {
     "knowledge": frozenset({"meta"}),
     "interviews": frozenset({"turns"}),
+    "conversations": frozenset({"messages"}),
 }
 
 # The bags: a column that holds a JSON object whose *inside* holds the
@@ -286,6 +293,7 @@ BAGS: dict[str, frozenset[str]] = {
 PEOPLE_INSIDE: dict[str, dict[str, frozenset[str]]] = {
     "knowledge": {"meta": frozenset({"inline_text"})},
     "interviews": {"turns": TURN_PEOPLE},
+    "conversations": {"messages": MESSAGE_PEOPLE},
 }
 
 # The keys of the bag that are its shape rather than its content.
@@ -331,6 +339,7 @@ SUBSTANCE: dict[str, frozenset[str]] = {
         "created_at", "updated_at",
     }),
     "growth_plans": frozenset({"id", "target_role", "created_at"}),
+    "conversations": frozenset({"id", "context", "created_at", "updated_at"}),
 }
 
 TURN_SUBSTANCE = frozenset({
@@ -357,11 +366,31 @@ def _real_columns() -> dict[str, list[str]]:
     real["interviews"] = real["interviews"] + ["turns", "evaluation"]
     for section in ("notes", "contacts", "applications", "growth_plans"):
         real[section] = _backend_rows(section)
+    # The chats: the row the backend writes, and the transcript inside it.
+    # The messages are their own group, like the interview turns -- the
+    # conversation's ``messages`` column is a list of rows, not a column
+    # with a value of its own.
+    real["conversations"] = _unique(_chat_columns())
     return real
 
 
 def _turn_columns() -> list[str]:
     return list(_table("interview_turns"))
+
+
+def _java_row_columns(method: str) -> list[str]:
+    """The fields a backend serializer writes, in its own ``row.put`` calls."""
+    source = BACKEND_EXPORT.read_text(encoding="utf-8")
+    start = source.index("static Map<String, Object> " + method)
+    return re.findall(r'row\.put\("(\w+)"', _method_body(source, start))
+
+
+def _chat_columns() -> list[str]:
+    return _java_row_columns("toConversation")
+
+
+def _message_columns() -> list[str]:
+    return _java_row_columns("toMessage")
 
 
 # --------------------------------------------------------------------------- #
@@ -445,6 +474,21 @@ def _realistic_bundle() -> dict:
         columns = _backend_rows(section)
         raw[section] = [_row(section, columns, {})]
 
+    # The chats: a row built by the backend, with its transcript inside it.
+    chat = _row("conversations", _chat_columns(), _table("conversations"))
+    message_types = _table("messages")
+    chat["messages"] = [
+        {
+            column: (
+                _marker("conversations.messages", column)
+                if column in MESSAGE_PEOPLE
+                else _value(column, message_types.get(column, "text"))
+            )
+            for column in _message_columns()
+        }
+    ]
+    raw["conversations"] = [chat]
+
     return ex.build_bundle("11111111-1111-1111-1111-111111111111", raw)
 
 
@@ -509,6 +553,19 @@ def test_every_turn_column_is_classified() -> None:
     assert classified == set(_turn_columns()), (
         f"the turns are classified as {sorted(classified)}, but the turn "
         f"carries {sorted(_turn_columns())}"
+    )
+
+
+def test_every_message_column_is_classified() -> None:
+    """The transcript is its own group, for the same reason the turns are."""
+    classified = MESSAGE_PEOPLE | MESSAGE_SUBSTANCE
+    for column in _message_columns():
+        assert column in classified, (
+            f"the chat message carries a column nobody classified: `{column}`"
+        )
+    assert classified == set(_message_columns()), (
+        f"the messages are classified as {sorted(classified)}, but the message "
+        f"carries {sorted(_message_columns())}"
     )
 
 
@@ -629,6 +686,8 @@ def test_the_flag_means_the_file_is_anonymized() -> None:
     assert bundle["data"]["resumes"][0]["plaintext"] is None
     assert bundle["data"]["interviews"][0]["turns"][0]["content"] is None
     assert bundle["data"]["memories"][0]["content"] is None
+    assert bundle["data"]["conversations"][0]["title"] is None
+    assert bundle["data"]["conversations"][0]["messages"][0]["content"] is None
     assert ex.validate_bundle(bundle) == [], (
         f"the anonymized bundle is not a valid bundle: {ex.validate_bundle(bundle)}"
     )
@@ -661,6 +720,12 @@ def test_the_anonymized_export_takes_the_people_out() -> None:
     memory = out["data"]["memories"][0]
     for field in ("key", "content"):
         assert memory[field] is None, f"the memory still carries its `{field}`"
+
+    chat = out["data"]["conversations"][0]
+    assert chat["title"] is None, "the chat still carries its title"
+    message = chat["messages"][0]
+    for field in ("content", "artifacts", "sources"):
+        assert message[field] is None, f"the chat message still carries its `{field}`"
 
     application = out["data"]["applications"][0]
     for field in ("notes", "rejection_reason", "offer_compensation"):
@@ -699,6 +764,11 @@ def test_the_anonymized_export_keeps_the_shape_and_the_substance() -> None:
     # still carries it. The row that says *whose* posting it is does not.
     assert out["data"]["job_descriptions"][0]["raw_text"] == bundle["data"]["job_descriptions"][0]["raw_text"]
     assert out["data"]["job_descriptions"][0]["user_id"] is None
+    # The chat's shape survives too: the conversation is still the
+    # conversation, and who said what is still the shape of the transcript.
+    assert out["data"]["conversations"][0]["id"] == bundle["data"]["conversations"][0]["id"]
+    assert out["data"]["conversations"][0]["messages"][0]["role"] == (
+        bundle["data"]["conversations"][0]["messages"][0]["role"])
 
 
 def test_the_anonymized_export_leaves_the_original_alone() -> None:
@@ -738,4 +808,16 @@ def test_the_policy_names_fields_the_bundle_actually_carries(section: str) -> No
         assert field in rows[0], (
             f"the policy strips `{section}.{field}`, which the bundle does not "
             "carry: the strip does nothing and the reader keeps it"
+        )
+
+
+def test_the_nested_policy_names_fields_the_transcripts_carry() -> None:
+    # The same promise one level down: a field the policy names inside a bag
+    # has to be a field the bag actually holds, or the strip does nothing
+    # while the reader keeps their words.
+    message = _realistic_bundle()["data"]["conversations"][0]["messages"][0]
+    for field in ex.ANONYMIZED_NESTED_FIELDS["conversations"]["messages"]:
+        assert field in message, (
+            f"the policy strips `conversations.messages.{field}`, which the "
+            "transcript does not carry: the strip does nothing"
         )

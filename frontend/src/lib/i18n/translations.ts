@@ -884,6 +884,7 @@ export const translations = {
         growthRuns: "Growth runs",
         notes: "Notes",
         contacts: "Contacts",
+        conversations: "Copilot chats",
       },
       export: "Export",
       exportEverything: "Export everything",
@@ -1273,14 +1274,14 @@ export const translations = {
       hint: "Paste it into Google Calendar, Apple Calendar or Outlook under “subscribe from a URL”. A reminder appears on the calendar's next poll, and stays until you clear it here.",
     },
     /**
-     * The mail-letters card (42.1). The three dials used to be reachable only from the
-     * footer of a letter; this card reads them from the account and hands over the same
-     * signed page, so the reader never has to find an old mail to change one.
+     * The mail-letters card (42.1, 42.2). The three dials used to be reachable only from the
+     * footer of a letter; this card reads them from the account, settles each switch there,
+     * and hands over the same signed page, so the reader never has to find an old mail.
      */
     mailLetters: {
       title: "The letters Career OS sends",
       description:
-        "Three letters can reach your address: the Monday letter, the morning signals, and the reminder's own letter. Their switches are read from your account here, so you do not need an old mail to change them.",
+        "Three letters can reach your address: the Monday letter, the morning signals, and the reminder's own letter. The switches here read and settle those states in your account, so you do not need an old mail to change them.",
       weekly: "The Monday letter",
       signals: "The morning signals",
       reminders: "The reminder's own letter",
@@ -1708,8 +1709,7 @@ export const translations = {
       LOGIN_SESSION_NOT_FOUND: "That session is already closed.",
 
       MAIL_LINK_INVALID: "That mail-settings link is not valid or has been retired.",
-      MAIL_LIST_UNKNOWN:
-        "That mail-settings link points at a reader this account cannot see.",
+      MAIL_LIST_UNKNOWN: "That mail setting is not recognized.",
 
       MALFORMED_REQUEST: "The request could not be read.",
 
@@ -2844,6 +2844,7 @@ export const translations = {
       mfaActivate: "Couldn't prove the code — two-factor is still off.",
       mfaRecoveryCodes: "Couldn't replace the recovery codes.",
       mfaDisable: "Couldn't turn two-factor off.",
+      mailSettingSave: "Couldn't change that mail setting.",
     },
   },
   zh: {
@@ -3622,6 +3623,7 @@ export const translations = {
         growthRuns: "成长记录",
         notes: "笔记",
         contacts: "联系人",
+        conversations: "Copilot 对话",
       },
       export: "导出",
       exportEverything: "导出全部",
@@ -4030,11 +4032,11 @@ export const translations = {
       loadFailed: "地址没能准备好。刷新页面再试一次。",
       hint: "把它粘进 Google 日历、Apple 日历或 Outlook 的“从网址订阅”。提醒会在日历下一次轮询时出现，并一直留到你在这里清掉它。",
     },
-    /** 邮件卡片（42.1）。三个开关过去只能从一封信的页脚进入；这张卡片直接从账号里读出来，并把同一个签名页交到读者手上，不必再翻出一封旧信。 */
+    /** 邮件卡片（42.1、42.2）。三个开关过去只能从一封信的页脚进入；这张卡片直接从账号里读出状态、把开关写回账号，并把同一个签名页交到读者手上，不必再翻出一封旧信。 */
     mailLetters: {
       title: "Career OS 寄出的信",
       description:
-        "能寄到这个地址的信有三种：周一信、每日信号，以及提醒的即时信。三个开关的状态在这里直接从你的账号读出来，不必翻出一封旧信才能改。",
+        "能寄到这个地址的信有三种：周一信、每日信号，以及提醒的即时信。这里的开关直接从你的账号读取并写回状态，不必翻出一封旧信才能改。",
       weekly: "周一信",
       signals: "每日信号",
       reminders: "提醒的即时信",
@@ -4360,7 +4362,7 @@ export const translations = {
       LOGIN_SESSION_NOT_FOUND: "这次登录已经关闭了。",
 
       MAIL_LINK_INVALID: "这个邮件设置链接无效或已经停用。",
-      MAIL_LIST_UNKNOWN: "这个邮件设置链接指向的读者不属于当前账号。",
+      MAIL_LIST_UNKNOWN: "这个邮件设置不存在。",
 
       MALFORMED_REQUEST: "请求无法解析。",
 
@@ -5432,6 +5434,7 @@ export const translations = {
       mfaActivate: "没能验证这个验证码——两步验证仍是关闭的。",
       mfaRecoveryCodes: "没能更换备用码。",
       mfaDisable: "没能关闭两步验证。",
+      mailSettingSave: "没能改这个邮件设置。",
     },
   },
 } as const;

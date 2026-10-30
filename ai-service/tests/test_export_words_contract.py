@@ -195,3 +195,11 @@ def test_the_markdown_view_carries_every_section_the_bundle_carries() -> None:
                 f"the {locale} document leaves out the {section} section, which "
                 "the bundle carries"
             )
+
+
+def test_the_markdown_view_carries_the_chats_and_their_lengths() -> None:
+    # A chat is a title and a transcript; a quick look that shows only the
+    # heading tells the reader a chat exists and nothing about it.
+    document = ex.to_markdown(_bundle_with_every_section(), "en")
+    messages = words_mod.words("en")["messages"]
+    assert f"- The search · 1 {messages}" in document

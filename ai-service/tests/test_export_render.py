@@ -29,6 +29,11 @@ def _bundle(anonymized: bool = False) -> dict:
                         "turns": [{"seq": 1}]}],
         "memories": [{"id": "m1", "kind": "preference",
                       "content": "Prefers remote"}],
+        "conversations": [{"id": "v1", "title": "The search",
+                           "messages": [
+                               {"role": "user", "content": "find backend roles"},
+                               {"role": "assistant", "content": "Here are three"},
+                           ]}],
     }
     return ex.build_bundle("u1", raw, anonymized=anonymized)
 
@@ -69,6 +74,15 @@ def test_to_html_emits_profile_table_and_list_sections():
     # profile rendered as a table (has <table>), resumes as a list (has <ul>)
     assert "<table>" in html
     assert "<ul>" in html
+
+
+def test_to_html_carries_the_chats_with_their_transcript_lengths():
+    # The chat's own title, and how much conversation is behind it: the
+    # document is a look at the search, and a chat with no length is a
+    # title whose substance the reader cannot see.
+    html = rnd.to_html(_bundle(), "en")
+    assert "The search" in html
+    assert "The search · 2 messages" in html
 
 
 def test_to_html_carries_hash_and_schema():

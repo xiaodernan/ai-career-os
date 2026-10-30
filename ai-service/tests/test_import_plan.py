@@ -2,10 +2,10 @@
 
 The planner's contract is a promise about the apply, so the pins here are of
 two kinds. The id-matched sections (applications, growth runs, notes, contacts,
-postings, interviews) are held to create / update / skip / delete. The sections
-the restore re-ingests (resumes, knowledge, memories) are held to the opposite:
-they are found by content, never deleted, and a bundle that carries two copies
-still restores both.
+postings, interviews, chats) are held to create / update / skip / delete. The
+sections the restore re-ingests (resumes, knowledge, memories) are held to the
+opposite: they are found by content, never deleted, and a bundle that carries
+two copies still restores both.
 """
 
 import json
@@ -60,6 +60,35 @@ def _bundle_with_interviews(*sessions: dict) -> dict:
         "profile": {"id": "u1", "display_name": "Ada"},
         "resumes": [], "knowledge": [], "job_descriptions": [],
         "interviews": list(sessions), "memories": [],
+    })
+
+
+def _chat(**overrides) -> dict:
+    """One copilot chat as the export carries it: the row and its transcript."""
+    row = {
+        "id": "c1", "title": "Which resume fits a platform role?",
+        "context": {"resumeId": "r1"},
+        "created_at": "2026-10-01T09:00:00+00:00",
+        "updated_at": "2026-10-01T09:05:00+00:00",
+        "messages": [
+            {"id": "m1", "role": "user", "content": "Which resume fits?",
+             "artifacts": [], "sources": [], "actions": [],
+             "created_at": "2026-10-01T09:00:00+00:00"},
+            {"id": "m2", "role": "assistant", "content": "The platform one.",
+             "artifacts": [{"kind": "resume", "version": 2}],
+             "sources": [{"kind": "job", "id": "j1"}], "actions": [],
+             "created_at": "2026-10-01T09:01:00+00:00"},
+        ],
+    }
+    row.update(overrides)
+    return row
+
+
+def _bundle_with_chats(*chats: dict) -> dict:
+    return ex.build_bundle("u1", {
+        "profile": {"id": "u1", "display_name": "Ada"},
+        "resumes": [], "knowledge": [], "job_descriptions": [],
+        "interviews": [], "memories": [], "conversations": list(chats),
     })
 
 
@@ -324,6 +353,49 @@ def test_a_changed_report_is_an_interview_update():
     _edited(existing)
     op = pl.plan_import(incoming, existing=existing)["sections"]["interviews"][0]
     assert op["op"] == "update", "the report is about the answers and travels with them"
+
+
+# ---------------- the chats: the row and its transcript ----------------
+
+
+def test_a_chat_is_compared_by_what_the_restore_writes():
+    """The message ids and stamps are the target's, not the bundle's.
+
+    The restore mints each message's id and stamps and ignores the transcript's
+    user and conversation columns -- they are the parent's, and the parent is
+    the row matched by id. Comparing any of them would make every re-import an
+    update, and the apply would delete and rewrite every transcript just to be
+    told nothing had changed.
+    """
+    incoming = _bundle_with_chats(_chat())
+    existing = _bundle_with_chats(_chat())
+    message = existing["data"]["conversations"][0]["messages"][1]
+    message["id"] = "a-fresh-message-id"
+    message["conversation_id"] = "c1"
+    message["user_id"] = "u1"
+    message["created_at"] = "2026-10-02T08:00:00+00:00"
+    _edited(existing)
+    op = pl.plan_import(incoming, existing=existing)["sections"]["conversations"][0]
+    assert op["op"] == "skip", f"the same chat was planned as a write: {op}"
+
+
+def test_a_changed_answer_is_a_chat_update():
+    incoming = _bundle_with_chats(_chat())
+    existing = _bundle_with_chats(_chat())
+    existing["data"]["conversations"][0]["messages"][1]["content"] = (
+        "The platform one, because the posting leads with scale.")
+    _edited(existing)
+    op = pl.plan_import(incoming, existing=existing)["sections"]["conversations"][0]
+    assert op["op"] == "update"
+
+
+def test_a_chat_the_bundle_no_longer_carries_is_retired():
+    incoming = _bundle_with_chats(_chat())
+    existing = _bundle_with_chats(_chat(), _chat(id="c2", title="Another chat"))
+    ops = {o["id"]: o["op"]
+           for o in pl.plan_import(incoming, existing=existing)["sections"]["conversations"]}
+    assert ops["c1"] == "skip"
+    assert ops["c2"] == "delete"
 
 
 # ---------------- two spellings of the same value ----------------
