@@ -279,8 +279,8 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.
 
 | Service    | Health Check                    | Metrics                    |
 |------------|---------------------------------|----------------------------|
-| Backend    | `GET /api/v1/health`            | Prometheus at `/actuator/prometheus` (Micrometer); orchestrator probe at `/actuator/health`. The custom `/api/v1/health` additionally reports the Redis state (`redis: true/false`) as degraded-but-up. |
-| AI Service | `GET /health`                   | None. The service is internal-only and logs to stdout; there is no `/metrics` route. |
+| Backend    | `GET /api/v1/health`            | Prometheus at `/actuator/prometheus` (Micrometer); orchestrator probe at `/actuator/health`. The custom `/api/v1/health` is the deployment's dependency report: `db`, `redis`, `storage` and `ai` booleans, with `status: ok` only when all four answer. It answers **200 either way** so a monitor reads which half is down instead of guessing from a refusal; the four probes run together under one 2-second bound. |
+| AI Service | `GET /health`                   | None. The service is internal-only and logs to stdout; there is no `/metrics` route. The dependency report asks this route with a 2-second bound (`ai: true/false`). |
 | Frontend   | `GET /` (200 OK)                | —                          |
 | Postgres   | `pg_isready`                    | `pg_stat_statements` (needs `shared_preload_libraries`, which the compose image does not enable) |
 | Redis      | `redis-cli`                     | `INFO`                     |

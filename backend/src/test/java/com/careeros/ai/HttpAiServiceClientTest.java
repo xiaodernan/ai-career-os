@@ -45,10 +45,25 @@ class HttpAiServiceClientTest {
     private final List<String> bodies = new ArrayList<>();
     private final List<String> paths = new ArrayList<>();
     private final List<String> requestIds = new ArrayList<>();
+    private final List<String> healthPaths = new ArrayList<>();
+    private final List<String> healthTokens = new ArrayList<>();
+    private volatile int healthStatus = 200;
 
     @BeforeEach
     void setUp() throws Exception {
         server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        // 39.1: the health line's AI probe. The real ai-service answers this route
+        // publicly and with a JSON body; the probe only reads the status code, so the
+        // body here is the shape the route really sends.
+        server.createContext("/health", exchange -> {
+            healthPaths.add(exchange.getRequestURI().getPath());
+            healthTokens.add(exchange.getRequestHeaders().getFirst("X-Internal-Token"));
+            byte[] answer = "{\"status\":\"ok\",\"db\":true}".getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().add("Content-Type", "application/json");
+            exchange.sendResponseHeaders(healthStatus, answer.length);
+            exchange.getResponseBody().write(answer);
+            exchange.close();
+        });
         server.createContext("/internal", exchange -> {
             String body;
             try (InputStream in = exchange.getRequestBody()) {
@@ -238,6 +253,25 @@ class HttpAiServiceClientTest {
         // here would be a value no answer carries, and the ai-service mints its own.
         client.parseFeed("<rss/>", "rss", UUID.randomUUID());
         assertThat(requestIds).hasSize(1).containsOnlyNulls();
+    }
+
+    // ---------------- the health probe (39.1) ----------------
+
+    @Test
+    void theHealthProbeAsksTheAiServicesOwnPublicRoute() {
+        // The route is public on the far side, so the probe carries no user and no
+        // internal token: a secret handed to a door that never asks for it is a leak
+        // looking for a place to happen.
+        assertThat(client.healthy()).isTrue();
+        assertThat(healthPaths).containsExactly("/health");
+        assertThat(healthTokens).containsOnlyNulls();
+    }
+
+    @Test
+    void anAiServiceThatRefusesItsHealthRouteIsNotCalledHealthy() {
+        healthStatus = 503;
+
+        assertThat(client.healthy()).isFalse();
     }
 
     /** The refusal bodies the fake upstream answers, keyed by payload marker. */

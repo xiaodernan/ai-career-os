@@ -96,4 +96,18 @@ public class MinioStorageService implements StorageService {
             throw new ApiException(ApiErrorCode.STORAGE_READ_FAILED, "Object storage read failed");
         }
     }
+
+    /**
+     * One bucket-existence round trip is the cheapest question MinIO answers, and it is the
+     * same one boot asks: if the bucket is gone, every upload is about to fail. A false here
+     * is a report, not an error -- the health line is where it belongs.
+     */
+    @Override
+    public boolean available() {
+        try {
+            return client.bucketExists(BucketExistsArgs.builder().bucket(bucket).build());
+        } catch (Exception e) {
+            return false;
+        }
+    }
 }

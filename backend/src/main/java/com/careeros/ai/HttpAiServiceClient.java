@@ -5,7 +5,10 @@ import com.careeros.common.ApiException;
 import com.careeros.common.EnvelopeJson;
 import com.careeros.common.RequestIdFilter;
 import com.careeros.config.AppProperties;
+import java.net.URI;
 import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
@@ -33,11 +36,25 @@ public class HttpAiServiceClient implements AiServiceClient {
     /** How long an upstream sentence may be before the toast cuts it. */
     private static final int MAX_UPSTREAM_DETAIL = 300;
 
+    /**
+     * How long the health probe waits, connect and answer together. Shorter than any
+     * user-facing call's budget on purpose: the health line answers in bounded time even
+     * when the AI half is hung, and "nothing answered within two seconds" is the answer.
+     */
+    private static final Duration HEALTH_TIMEOUT = Duration.ofSeconds(2);
+
     private final RestClient restClient;
     private final String internalToken;
+    private final String baseUrl;
+    private final HttpClient healthClient;
 
     public HttpAiServiceClient(RestClient.Builder builder, AppProperties props) {
         this.internalToken = props.getInternal().getToken();
+        this.baseUrl = props.getAiService().getBaseUrl().replaceAll("/+$", "");
+        this.healthClient = HttpClient.newBuilder()
+                .version(HttpClient.Version.HTTP_1_1)
+                .connectTimeout(HEALTH_TIMEOUT)
+                .build();
         // JDK HttpClient defaults to HTTP/2 and probes with an h2c upgrade; uvicorn rejects the
         // upgrade and loses the request body (FastAPI then 422s with body=null). Force HTTP/1.1.
         HttpClient httpClient = HttpClient.newBuilder()
@@ -59,6 +76,30 @@ public class HttpAiServiceClient implements AiServiceClient {
                     return execution.execute(request, body);
                 })
                 .build();
+    }
+
+    /**
+     * The ai-service's own public health route, asked over its own small client. No internal
+     * token and no user id: the route does not need them, and the probe should not carry a
+     * secret to a door that never asks for one. Anything that is not a 2xx -- a refusal, a
+     * timeout, a socket that never opened -- is false; a failed probe is a report, not an
+     * exception.
+     */
+    @Override
+    public boolean healthy() {
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(baseUrl + "/health"))
+                    .timeout(HEALTH_TIMEOUT)
+                    .GET()
+                    .build();
+            return healthClient.send(request, HttpResponse.BodyHandlers.discarding()).statusCode() / 100 == 2;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     @Override

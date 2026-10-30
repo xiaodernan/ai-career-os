@@ -3222,7 +3222,7 @@ redeploy cuts in-flight requests because Spring's default shutdown is immediate.
 epic makes the deployment answer three questions in its own words: is anything down,
 what did I become, and did I finish what I took before I left.
 
-- [ ] **39.1** The health line names the object store and the AI service.
+- [x] **39.1** The health line names the object store and the AI service.
 
   (`/api/v1/health` answers `{status, db, redis}`. The object store holds every uploaded
   file and the ai-service performs every analysis, so a line that says `ok` while either
@@ -3237,6 +3237,28 @@ what did I become, and did I finish what I took before I left.
   budget. Unit tests pin each answer — all up, storage down, AI down, and a probe that
   hangs coming back within its bound; API.md and DEPLOYMENT.md's probe table gain the
   two names.)
+
+  (Shipped: `StorageService` gains `available()`, the MinIO adapter answering with the one
+  bucket-exists round trip boot already makes and the in-memory test store answering true
+  by construction. `AiServiceClient` gains `healthy()`, the HTTP bridge asking the
+  ai-service's own public `/health` through a client of the probe's own — 2-second connect
+  and 2-second request, never the 180-second feature budget — with no internal token,
+  because that route does not ask for one; the fake exposes `aiHealthy` so an integration
+  test can turn the AI half off. The four probes left the controller for
+  `com.careeros.health.HealthService`: each runs on its own virtual thread, all four share
+  one 2-second deadline, a timeout cancels its probe and counts as false, an exception
+  counts as false, and a deployment with no storage bean says `storage: false` rather than
+  skipping a half it never had. The body keeps the report's order — `status, db, redis,
+  storage, ai` — `status` is `ok` only when all four answered true, and the controller
+  always answers 200. Tests: `HealthServiceTest`'s eight cases (all up; storage false; AI
+  false; AI throwing; absent store; db false; Redis throwing; a storage probe that never
+  answers returning inside a 100 ms budget, measured under two seconds);
+  `HttpAiServiceClientTest`'s two socket cases (the public route is asked with no token; a
+  503 is not health); `HealthIT`'s two against the real database and Redis (all four true →
+  `ok`; the fake AI turned off → `ai: false`, `status: degraded`, still 200).
+  `RateLimitIT`'s and `CorsContractIT`'s existing health assertions still pass. API.md's
+  health row and DEPLOYMENT.md's probe table now name all four dependencies. Backend 1128
+  tests, unit and ITs, green.)
 
 - [ ] **39.2** The stack waits for an app that answers, not one that started.
 

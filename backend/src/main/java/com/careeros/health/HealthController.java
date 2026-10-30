@@ -1,10 +1,6 @@
 package com.careeros.health;
 
-import java.sql.Connection;
-import java.util.LinkedHashMap;
 import java.util.Map;
-import javax.sql.DataSource;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -13,39 +9,21 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/health")
 public class HealthController {
 
-    private final DataSource dataSource;
-    private final RedisTemplate<String, ?> redisTemplate;
+    private final HealthService health;
 
-    public HealthController(DataSource dataSource, RedisTemplate<String, ?> redisTemplate) {
-        this.dataSource = dataSource;
-        this.redisTemplate = redisTemplate;
+    public HealthController(HealthService health) {
+        this.health = health;
     }
 
+    /**
+     * The deployment's own report: the database, Redis, the object store and the ai-service,
+     * each true or false, with one verdict over them. Always 200, whatever it says -- the
+     * body is the message, and a probe that refuses to answer cannot tell a monitor which
+     * half is missing. The work behind it lives in {@link HealthService}, where each probe
+     * is bounded so a hung dependency cannot hang the route.
+     */
     @GetMapping
     public Map<String, Object> health() {
-        Map<String, Object> body = new LinkedHashMap<>();
-        boolean db = dbUp();
-        boolean redis = redisUp();
-        body.put("status", db && redis ? "ok" : "degraded");
-        body.put("db", db);
-        body.put("redis", redis);
-        return body;
-    }
-
-    private boolean dbUp() {
-        try (Connection connection = dataSource.getConnection()) {
-            return connection.isValid(2);
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
-    private boolean redisUp() {
-        try {
-            redisTemplate.execute(connection -> connection.ping(), true);
-            return true;
-        } catch (Exception e) {
-            return false;
-        }
+        return health.report();
     }
 }

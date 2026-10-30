@@ -41,6 +41,12 @@ public class InMemoryStorageConfig {
             store.remove(key);
         }
 
+        /** The in-memory store answers by construction; there is no socket to be down. */
+        @Override
+        public boolean available() {
+            return true;
+        }
+
         @Override
         public byte[] getBytes(String key) {
             byte[] bytes = store.get(key);

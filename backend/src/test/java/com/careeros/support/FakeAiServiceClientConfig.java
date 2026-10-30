@@ -34,6 +34,13 @@ public class FakeAiServiceClientConfig {
         public volatile boolean failIngest;
 
         /**
+         * What {@link #healthy()} answers. True by default: every integration test runs
+         * against a working double, and a test that needs the health line to say the AI
+         * half is gone flips it for the length of that test.
+         */
+        public volatile boolean aiHealthy = true;
+
+        /**
          * What {@link #embedQuery} answers with: empty means "no provider", so the job search
          * keeps keyword ordering. Tests that exercise hybrid ranking point it at a vector.
          */
@@ -78,6 +85,7 @@ public class FakeAiServiceClientConfig {
 
         public void reset() {
             failIngest = false;
+            aiHealthy = true;
             queryEmbedding = List.of();
             jdCompany = "FakeCorp";
             resumeExperienceCompany = "Acme Corp";
@@ -96,6 +104,13 @@ public class FakeAiServiceClientConfig {
             if (failIngest) {
                 throw new ApiException(ApiErrorCode.AI_SERVICE_UNAVAILABLE, "fake ai-service outage");
             }
+        }
+
+        /** 39.1 -- the health line's AI probe, answering the flag this double exposes. */
+        @Override
+        public boolean healthy() {
+            record("healthy");
+            return aiHealthy;
         }
 
         @Override

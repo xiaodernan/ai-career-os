@@ -12,4 +12,10 @@ public interface StorageService {
     void delete(String key);
 
     byte[] getBytes(String key);
+
+    /**
+     * Whether the store answers at all. A probe for the health line (39.1), not a request:
+     * an unreachable store must be reported as unreachable, not thrown as a failed upload.
+     */
+    boolean available();
 }

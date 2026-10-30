@@ -7,6 +7,14 @@ import java.util.UUID;
 /** Internal ai-service endpoints (X-Internal-Token + X-User-Id headers added by the implementation). */
 public interface AiServiceClient {
 
+    /**
+     * Whether the ai-service answers its own public health route. A probe, not a user
+     * request: no user id and no internal token ride with it, because that route is public
+     * on the other side. The backend's health line asks this (39.1) so a deployment whose
+     * AI half is gone says so instead of looking whole.
+     */
+    boolean healthy();
+
     Map<String, Object> ingestDocument(UUID documentId, UUID userId);
 
     Map<String, Object> ingestText(UUID userId, String title, String text, String kind, UUID refId);

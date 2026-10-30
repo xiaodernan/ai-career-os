@@ -64,7 +64,7 @@ screen. A malformed inbound value is replaced, never refused.
 
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/health` | liveness; no auth |
+| GET | `/health` | dependency report; no auth, always **200**. Answers {status, db, redis, storage, ai}: status is ok only when all four answered true, otherwise degraded. The four probes run together under one 2-second bound, so a hung dependency is reported false rather than hanging the route; storage is false when no object store is configured. |
 
 ### Auth (`/auth`)
 

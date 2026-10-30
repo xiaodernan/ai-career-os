@@ -10,12 +10,12 @@
 ## 当前状态 (2026-10-30)
 
 - **前端**: 877 个 vitest 通过（85 个文件）；`tsc --noEmit` 干净。
-- **后端**: 1116 个测试通过、162 份报告，含真实栈 IT（0 失败 / 0 错误 /
-  0 跳过；`mvn -o -q test`；不含 IT 的选集为 1027 个）。
+- **后端**: 1128 个测试通过、164 份报告，含真实栈 IT（0 失败 / 0 错误 /
+  0 跳过；`mvn -o -q test`；不含 IT 的选集为 1037 个）。
 - **ai-service**: 1929 passed, 1 skipped (offline: mock/hash)。
 - **E2E**: 24/24 golden journey（最近一次真实栈验证）。
 - **分支**: main 与 origin 同步（本次推送后）。
-- **已完成**: Epic 0–38 全部勾选；38（账号够到自己的动词）在 38.5 收口。36（登录的第二道门）在 36.4 收口：设置页
+- **已完成**: Epic 0–38 全部勾选，Epic 39 进行中（39.1 已勾选）；38（账号够到自己的动词）在 38.5 收口。36（登录的第二道门）在 36.4 收口：设置页
   安全卡、登录第二步、种子与丢手机的 SECURITY 说明、runbook 的锁门处置。
   最近一段是 19.1–19.9（保存的搜索、定时摄取、通知中心、语音面试、离线壳、
   夜间报告落板）、20–33（部署自检、来信离楼、
@@ -455,9 +455,18 @@
     应用服务显示 “running” 不代表能作答；启动日志不说它选了哪个邮件传输、哪个存储端点、
     哪个 provider；Spring 默认 immediate 关停，重新部署会切断已经接下的请求。据此立
     Epic 39：
-    - 39.1 健康行点名对象存储与 AI 服务：storage/ai 两个布尔，各自短超时（挂住的依赖
-      不能挂住探针），四项全真才 `ok`，仍返回 200——多数路由离了它们也能服务，这一行是
-      报告不是闸门。
+    - 39.1 健康行点名对象存储与 AI 服务（已完成）：`StorageService.available()` 由 MinIO
+      适配器用 bucketExists 作答，内存存储按构造为真；`AiServiceClient.healthy()` 由
+      HttpAiServiceClient 用只属于探针的 2 秒客户端请求 ai-service 自己的公开 `/health`，
+      不带内部令牌——那扇门不问，探针就不递；FakeAiServiceClient 暴露 `aiHealthy`。新的
+      `HealthService` 把四个探针放上各自的虚拟线程，共用一条 2 秒预算：超时取消、异常算假、
+      未配置存储算假；`status` 四项全真才 `ok`，键序 status/db/redis/storage/ai，控制器
+      只转发，永远 200。三处测试：`HealthServiceTest` 8 条（全真、存储假、AI 假、AI 抛错、
+      存储缺席、db 假、Redis 抛错、挂住的探针在 100ms 预算内返回且 <2s），
+      `HttpAiServiceClientTest` 新增 2 条走真实 socket（公开路由且不带令牌；503 不算健康），
+      `HealthIT` 2 条对着真 Postgres/Redis（全真 `ok`；关掉 AI 后 `degraded` 且仍 200）。
+      API.md 的健康行（纯散文，避免文档闸门把行内代码读成参数）与 DEPLOYMENT.md 的探针表
+      改成四个名字。后端 1128 条全绿（164 份报告，非 IT 选集 1037）。
     - 39.2 compose 等“能作答”而不是“已启动”：三个应用服务各配探针，探针只认进程作答，
       不把 `degraded` 当失败（否则依赖抖动会把容器重启成雪崩）；depends_on 改成
       service_healthy；一个部署测试按名字拒绝缺探针、缺健康条件或端口对不上的服务。
@@ -465,7 +474,7 @@
       Redis 主机、存储端点与 bucket、AI 主机、邮件传输 bean、push 是否有密钥、哪些调度器
       开着；用绑定的 bean 与属性拼，单测塞进哨兵机密并断言一个都不出现。
     - 39.4 关停先收尾再关门：graceful + 有界的 lifecycle 超时，配置契约测试钉住。
-    下一步：39.1。
+    下一步：39.2。
 
 
 ## 开发协议（每个任务）
