@@ -24,8 +24,9 @@ import { useInterviewSessions } from "@/lib/hooks/resources";
 import { useUrlState } from "@/lib/hooks/use-url-state";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { str } from "@/lib/api/normalize";
-import { formatDateTime, relativeTime, titleCase } from "@/lib/format";
+import { formatDateTime, relativeTime } from "@/lib/format";
 import { INTERVIEW_MODES } from "@/lib/interview-modes";
+import { interviewModeHint, interviewModeName } from "@/lib/status-words";
 
 // The route's own default window: `GET /interview/sessions` binds `size` with
 // `defaultValue = "20"`, so this number asks for exactly what the server would have
@@ -87,8 +88,8 @@ export default function InterviewsPage() {
               {INTERVIEW_MODES.map((m) => (
                 <DropdownMenuItem key={m.value} onSelect={() => start(m.value)}>
                   <span className="flex min-w-0 flex-col">
-                    <span>{m.label}</span>
-                    <span className="text-xs text-muted-foreground">{m.hint}</span>
+                    <span>{interviewModeName(t, m.value)}</span>
+                    <span className="text-xs text-muted-foreground">{interviewModeHint(t, m.value)}</span>
                   </span>
                 </DropdownMenuItem>
               ))}
@@ -135,7 +136,7 @@ export default function InterviewsPage() {
                       </span>
                       <div className="min-w-0 flex-1 basis-52">
                         <p className="truncate text-sm font-medium">
-                          {titleCase(s.mode)} interview
+                          {t("interviews.modeInterview", { mode: interviewModeName(t, s.mode) })}
                           {s.jobTitle ? ` · ${s.jobTitle}` : s.companyName ? ` · ${s.companyName}` : ""}
                         </p>
                         <p className="mt-0.5 truncate text-xs text-muted-foreground">

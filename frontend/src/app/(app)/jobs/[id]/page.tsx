@@ -49,7 +49,8 @@ import { CoverLetterPanel } from "@/components/jobs/cover-letter-panel";
 import { useJob } from "@/lib/hooks/resources";
 import { useCreateApplication, useCreateInterviewSession, useRunJobMatch } from "@/lib/hooks/actions";
 import { list as listOf, pick, rec, str } from "@/lib/api/normalize";
-import { formatSalary, titleCase } from "@/lib/format";
+import { formatSalary } from "@/lib/format";
+import { remoteTypeWord, interviewModeName } from "@/lib/status-words";
 import { useLocale } from "@/lib/i18n/locale-context";
 import type { Evidence, JdRequirement, PreparationItem, SkillGap } from "@/lib/api/types";
 import { normalizeJdParsed } from "@/lib/api/normalize";
@@ -203,7 +204,7 @@ export default function JobDetailPage() {
                 )}
                 {job.remoteType && (
                   <Badge variant="outline" className="text-2xs font-normal">
-                    {titleCase(job.remoteType)}
+                    {remoteTypeWord(t, job.remoteType)}
                   </Badge>
                 )}
                 {job.experienceLevel && (
@@ -275,7 +276,7 @@ export default function JobDetailPage() {
                       )
                     }
                   >
-                    {m.label}
+                    {interviewModeName(t, m.value)}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>

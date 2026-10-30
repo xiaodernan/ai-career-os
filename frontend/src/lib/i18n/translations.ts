@@ -577,6 +577,9 @@ export const translations = {
     // Dashboard
     dashboard: {
       theScoredVersion: "The version every agent scores against.",
+      resumeTitle: "Resume",
+      resumeReady: "{status} · the profile every agent matches against",
+      resumeAwaitingParse: "{status} · the structured profile is not ready yet",
       straightFromTheBoard: "Straight from the job board — run a match to rank them.",
       ctaPasteJd: "Paste a JD",
       ctaMatch: "Match a job",
@@ -2122,6 +2125,22 @@ export const translations = {
     // Activity
     activity: {
       title: "AI Activity",
+      runStatus: {
+        running: "Running",
+        completed: "Completed",
+        failed: "Failed",
+        cancelled: "Cancelled",
+      },
+      trigger: {
+        chat: "Chat",
+        resume_parse: "Resume parse",
+        match: "Match",
+        tailor: "Tailor",
+        cover_letter: "Cover letter",
+        interview: "Interview",
+        ingest: "Ingest",
+        nightly: "Nightly",
+      },
       description: "Every agent run, tool call and retrieval — the debug view behind the answers.",
       ctaLabel: "Run something in Copilot",
       paginationLabel: "runs",
@@ -2133,6 +2152,8 @@ export const translations = {
         noTraceSteps: "This run recorded no trace steps. Tools that run without the orchestrator (single-call parses) log only the run row.",
         debugView: "The debug view behind one agent answer.",
         agentRun: "Agent run",
+        triggerRun: "{trigger} run",
+        runSubtitle: "{agent} · {trigger} — every step the orchestrator persisted for this run.",
         traceHint: "Persisted by the orchestrator — expand a row for its raw payload.",
         steps: "Steps",
         toolCalls: "Tool calls",
@@ -2370,6 +2391,26 @@ export const translations = {
       paginationLabel: "interview sessions",
       startInterview: "Start interview",
       mode: "Mode",
+      modeNames: {
+        behavioral: "Behavioral",
+        technical: "Technical",
+        system_design: "System design",
+        ai_llm: "AI / LLM",
+        rag: "RAG",
+        agent: "Agent",
+        backend: "Backend",
+      },
+      modeHints: {
+        behavioral: "STAR stories from your real experience",
+        technical: "coding & fundamentals, deepening by answer",
+        system_design: "scaling trade-offs for your target role",
+        ai_llm: "models, fine-tuning, evaluation",
+        rag: "retrieval, chunking, reranking, citations",
+        agent: "planning, tools, orchestration",
+        backend: "APIs, storage, concurrency",
+      },
+      modeInterview: "{mode} interview",
+      modeReport: "{mode} interview report",
       pickATargetJob: "Pick a target job first",
       empty: "No mock interviews yet",
       emptyDescription:
@@ -2483,6 +2524,15 @@ export const translations = {
       notLiveSearchTitle: "This API build has no job search",
       notLiveSavedTitle: "This API build has no saved-jobs list",
       title: "Jobs",
+      status: {
+        open: "Open",
+        closed: "Closed",
+      },
+      remoteTypes: {
+        remote: "Remote",
+        hybrid: "Hybrid",
+        onsite: "On-site",
+      },
       description:
         "Discovered and pasted roles, scored against your resume with evidence — the match ring leads, the metadata follows.",
       sort: {
@@ -3250,6 +3300,9 @@ export const translations = {
     // Dashboard
     dashboard: {
       theScoredVersion: "每个代理打分时对照的那一版。",
+      resumeTitle: "简历",
+      resumeReady: "{status} · 所有代理按这一版匹配",
+      resumeAwaitingParse: "{status} · 结构化档案尚未就绪",
       straightFromTheBoard: "直接来自职位板——跑一次匹配来给它们排序。",
       ctaPasteJd: "粘贴一份 JD",
       ctaMatch: "匹配一个职位",
@@ -4643,6 +4696,22 @@ export const translations = {
     // Activity
     activity: {
       title: "AI 活动",
+      runStatus: {
+        running: "运行中",
+        completed: "已完成",
+        failed: "失败",
+        cancelled: "已取消",
+      },
+      trigger: {
+        chat: "对话",
+        resume_parse: "简历解析",
+        match: "岗位匹配",
+        tailor: "简历定制",
+        cover_letter: "求职信",
+        interview: "模拟面试",
+        ingest: "资料摄取",
+        nightly: "夜间任务",
+      },
       description: "每一次代理运行、工具调用和检索——答案背后的调试视图。",
       ctaLabel: "在副驾驶里跑点什么",
       paginationLabel: "运行",
@@ -4653,6 +4722,8 @@ export const translations = {
         noTraceSteps: "这次运行没有记录轨迹步骤。不经过编排器的工具（单次调用的解析）只记录运行本身。",
         debugView: "一次代理回答背后的调试视图。",
         agentRun: "代理运行",
+        triggerRun: "{trigger}运行",
+        runSubtitle: "{agent} · {trigger}——编排器为这次运行持久化的每一步。",
         traceHint: "由编排器持久化——展开任意一行可以看到原始载荷。",
         steps: "步骤",
         toolCalls: "工具调用",
@@ -4878,6 +4949,26 @@ export const translations = {
       paginationLabel: "面试场次",
       startInterview: "开始面试",
       mode: "模式",
+      modeNames: {
+        behavioral: "行为面试",
+        technical: "技术面试",
+        system_design: "系统设计",
+        ai_llm: "AI / LLM",
+        rag: "RAG",
+        agent: "Agent",
+        backend: "后端",
+      },
+      modeHints: {
+        behavioral: "用 STAR 结构讲你真实经历中的故事",
+        technical: "编码与基础，随回答逐步加深",
+        system_design: "面向目标岗位的扩展性取舍",
+        ai_llm: "模型、微调、评测",
+        rag: "检索、分块、重排、引用",
+        agent: "规划、工具调用、编排",
+        backend: "API、存储、并发",
+      },
+      modeInterview: "{mode}",
+      modeReport: "{mode}报告",
       pickATargetJob: "先挑一个目标职位",
       empty: "还没有模拟面试",
       emptyDescription:
@@ -4980,6 +5071,15 @@ export const translations = {
       notLiveSearchTitle: "这个后端版本没有职位搜索",
       notLiveSavedTitle: "这个后端版本没有收藏列表",
       title: "职位",
+      status: {
+        open: "招聘中",
+        closed: "已关闭",
+      },
+      remoteTypes: {
+        remote: "远程",
+        hybrid: "混合办公",
+        onsite: "现场办公",
+      },
       description: "发现和粘贴的职位，带着证据和你的简历对过分——匹配度在前，元数据在后。",
       sort: {
         auto: "最佳匹配",

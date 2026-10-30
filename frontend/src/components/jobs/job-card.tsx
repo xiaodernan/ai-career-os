@@ -9,7 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { MatchRing } from "@/components/ai/match-ring";
 import { SkillChips } from "@/components/common/skill-chips";
 import { SaveToggle } from "@/components/jobs/save-toggle";
-import { formatSalary, relativeTime, titleCase } from "@/lib/format";
+import { formatSalary, relativeTime } from "@/lib/format";
+import { jobStatusWord, remoteTypeWord } from "@/lib/status-words";
 import { useLocale } from "@/lib/i18n/locale-context";
 import type { Job } from "@/lib/api/types";
 
@@ -140,10 +141,10 @@ function JobCard({
         <span className="flex items-center gap-2">
           {job.status && job.status !== "open" && (
             <Badge variant="secondary" className="text-2xs">
-              {titleCase(job.status)}
+              {jobStatusWord(t, job.status)}
             </Badge>
           )}
-          {job.remoteType && <span className="capitalize">{titleCase(job.remoteType)}</span>}
+          {job.remoteType && <span className="capitalize">{remoteTypeWord(t, job.remoteType)}</span>}
           {job.source === "user_paste" && <span>{t("jobCard.pastedJd")}</span>}
           {job.source === "agent_research" && <span>{t("jobCard.foundByResearch")}</span>}
         </span>

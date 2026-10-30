@@ -28,7 +28,8 @@ import { AIBadge } from "@/components/ai/ai-badge";
 import { useFinalizeInterview } from "@/lib/hooks/actions";
 import { useInterviewSession } from "@/lib/hooks/resources";
 import { normalizeInterviewReport, type InterviewTrajectoryPoint } from "@/lib/api/normalize";
-import { depthBand, depthLevel, formatDate, titleCase } from "@/lib/format";
+import { depthBand, depthLevel, formatDate } from "@/lib/format";
+import { interviewModeName } from "@/lib/status-words";
 import { safeHref } from "@/lib/safe-href";
 import { interviewDimensionLabel } from "@/lib/dimensions";
 import { useLocale } from "@/lib/i18n/locale-context";
@@ -145,7 +146,7 @@ export default function InterviewReportPage() {
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <CardTitle className="font-serif text-display-sm text-lg">
-                {titleCase(data.mode)} interview report
+                {t("interviews.modeReport", { mode: interviewModeName(t, data.mode) })}
               </CardTitle>
               <CardDescription>
                 {data.companyName ? `${data.companyName} · ` : ""}

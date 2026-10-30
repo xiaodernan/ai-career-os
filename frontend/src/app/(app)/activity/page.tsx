@@ -13,7 +13,8 @@ import { useActivityRuns } from "@/lib/hooks/resources";
 import { useUrlState } from "@/lib/hooks/use-url-state";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { runTotalTokens } from "@/lib/api/normalize";
-import { formatDateTime, formatDuration, formatNumber, formatUsd, titleCase } from "@/lib/format";
+import { formatDateTime, formatDuration, formatNumber, formatUsd } from "@/lib/format";
+import { runStatusWord } from "@/lib/status-words";
 import type { ActivityRun } from "@/lib/api/types";
 
 // The route's own default window: `GET /activity/runs` binds `size` with
@@ -65,7 +66,7 @@ function RunRow({ run }: { run: ActivityRun }) {
         <div className="flex shrink-0 flex-col items-end gap-2">
           {run.status && (
             <Badge variant={statusVariant(run.status)} className="capitalize">
-              {titleCase(run.status)}
+              {runStatusWord(t, run.status)}
             </Badge>
           )}
           <Button variant="ghost" size="xs" asChild>

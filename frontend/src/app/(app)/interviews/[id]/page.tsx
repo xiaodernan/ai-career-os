@@ -38,7 +38,8 @@ import { ProcessingSteps } from "@/components/ai/processing-steps";
 import { useInterviewOpening, useSubmitInterviewAnswer, useFinalizeInterview } from "@/lib/hooks/actions";
 import { useAnswerVoice } from "@/lib/hooks/voice";
 import { useInterviewSession } from "@/lib/hooks/resources";
-import { depthBand, depthLevel, titleCase } from "@/lib/format";
+import { depthBand, depthLevel } from "@/lib/format";
+import { interviewModeName } from "@/lib/status-words";
 import { interviewDimensionLabel } from "@/lib/dimensions";
 import { useLocale } from "@/lib/i18n/locale-context";
 import type { AnswerResponse } from "@/lib/hooks/actions";
@@ -222,7 +223,7 @@ export default function InterviewRunnerPage() {
       {/* Session header */}
       <div className="flex flex-wrap items-center gap-2">
         <h1 className="font-serif text-display-sm font-medium">
-          {titleCase(data.mode)} interview
+          {t("interviews.modeInterview", { mode: interviewModeName(t, data.mode) })}
         </h1>
         {(data.jobTitle || data.companyName) && (
           <span className="text-sm text-muted-foreground">

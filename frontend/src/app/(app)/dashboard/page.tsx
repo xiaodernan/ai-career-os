@@ -46,7 +46,8 @@ import {
 } from "@/lib/hooks/resources";
 import { runTotalTokens, type NormalizedPage } from "@/lib/api/normalize";
 import { rankingHintKey } from "@/lib/dashboard-ranking";
-import { formatNumber, relativeTime, titleCase } from "@/lib/format";
+import { formatNumber, relativeTime } from "@/lib/format";
+import { resumeStatusWord } from "@/lib/status-words";
 import type { ActivityRun, DashboardPayload, Job, Resume } from "@/lib/api/types";
 
 /**
@@ -307,7 +308,7 @@ export default function DashboardPage() {
                             .filter((r) => !known.has(r.status))
                             .map((r) => (
                               <p key={r.status} className="mt-2 text-xs text-muted-foreground">
-                                {titleCase(r.status)}: {r.count}
+                                {stageLabel(t, r.status)}: {r.count}
                               </p>
                             ))}
                           <p className="mt-2 text-xs text-muted-foreground" aria-live="polite">
@@ -516,10 +517,16 @@ export default function DashboardPage() {
                   <SectionHeading
                     eyebrow={t("eyebrows.currentResume")}
                     icon={<FileText className="size-4" aria-hidden />}
-                    title={resumeRow?.title ?? resumes.data?.items[0]?.title ?? "Resume"}
+                    title={resumeRow?.title ?? resumes.data?.items[0]?.title ?? t("dashboard.resumeTitle")}
                     description={
                       resumeRow
-                        ? `${titleCase(resumeRow.status)} · ${resumeRow.currentVersionId ? "structured profile ready" : "awaiting parse"}`
+                        ? resumeRow.currentVersionId
+                          ? t("dashboard.resumeReady", {
+                              status: resumeStatusWord(t, resumeRow.status),
+                            })
+                          : t("dashboard.resumeAwaitingParse", {
+                              status: resumeStatusWord(t, resumeRow.status),
+                            })
                         : t("dashboard.theScoredVersion")
                     }
                     action={

@@ -27,7 +27,8 @@ import { QueryBoundary } from "@/components/common/query-boundary";
 import { LoadingListSkeleton } from "@/components/common/loading-skeletons";
 import { normalizeRunTrace, traceTotals, type RunTrace } from "@/lib/activity-trace";
 import { cn } from "@/lib/utils";
-import { formatDateTime, formatDuration, formatNumber, formatUsd, relativeTime, titleCase } from "@/lib/format";
+import { formatDateTime, formatDuration, formatNumber, formatUsd, relativeTime } from "@/lib/format";
+import { runStatusWord, runTriggerWord } from "@/lib/status-words";
 import { useLocale } from "@/lib/i18n/locale-context";
 
 function statusVariant(status?: string) {
@@ -195,14 +196,17 @@ export default function ActivityRunPage() {
             <AgentRunTitle run={run} />
             {run?.status && (
               <Badge variant={statusVariant(run.status)} className="capitalize">
-                {titleCase(run.status)}
+                {runStatusWord(t, run.status)}
               </Badge>
             )}
           </span>
         }
         description={
           run
-            ? `${run.agent ?? "career"} · ${run.trigger ?? "run"} — every step the orchestrator persisted for this run.`
+            ? t("activity.detail.runSubtitle", {
+                agent: run.agent ?? "career",
+                trigger: run.trigger ? runTriggerWord(t, run.trigger) : t("activity.detail.agentRun"),
+              })
             : t("activity.detail.debugView")
         }
         actions={
@@ -259,7 +263,7 @@ function AgentRunTitle({ run }: { run?: RunTrace["run"] }) {
   const { t } = useLocale();
   return (
     <span className={cn("font-serif text-display-md")}>
-      {run?.trigger ? `${titleCase(run.trigger)} run` : t("activity.detail.agentRun")}
+      {run?.trigger ? t("activity.detail.triggerRun", { trigger: runTriggerWord(t, run.trigger) }) : t("activity.detail.agentRun")}
     </span>
   );
 }
