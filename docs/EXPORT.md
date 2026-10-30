@@ -3,8 +3,8 @@
 A personal job-search OS is only as trustworthy as the user's ability to leave
 with their data. This document locks the export/import contract implemented in
 `ai-service/app/features/export.py` and bridged through
-`POST /api/v1/data-portability/*` (the backend owns the `applications` and
-`growth_plans` sections).
+`POST /api/v1/data-portability/*` (the backend owns the `applications`,
+`growth_plans`, `notes`, `contacts` and `conversations` sections).
 
 ## Scope
 
@@ -16,17 +16,18 @@ with their data. This document locks the export/import contract implemented in
 | 13.3 Right-to-be-forgotten / anonymized export | **done** (anonymize + validate + section redaction) | ai-service + backend bridge |
 | `applications` + `growth_plans` sections | **done** (shipped in the bundle since 1.1.0) | backend bridge |
 | `notes` + `contacts` sections | **done** (shipped in the bundle since 1.2.0) | backend bridge |
-| `conversations` + `saved_jobs` + `saved_searches` + `ingestion_feeds` + `inbound_mails` sections | **open** (measured 2026-10-30; Epic 40) | ai-service + backend bridge |
+| `conversations` + `messages` sections | **done** (shipped in the bundle since 1.3.0) | backend bridge |
+| `saved_jobs` + `saved_searches` + `ingestion_feeds` + `inbound_mails` sections | **open** (measured 2026-10-30; Epic 40.3) | ai-service + backend bridge |
 
-## The bundle is not everything yet (measured 2026-10-30)
+## The bundle is not everything yet (measured 2026-10-30; chats closed 2026-10-31)
 
-The page says "Export everything", and the bundle still has five gaps. They were
-measured by reading the ten sections against every table the migrations create,
-and each is the reader's own content or standing choice:
+The page says "Export everything". The measurement found five gaps by reading
+the ten sections against every table the migrations create. The copilot chats
+closed first — they travel since **1.3.0**, described below — and four remain,
+each the reader's own content or standing choice:
 
 | Table | What it holds | Why it belongs |
 |---|---|---|
-| `conversations` + `messages` | the copilot chats: the reader's questions, the answers, the artifacts built from their material | the reader's own words |
 | `saved_jobs` | a bookmark and the note beside it | the reader's shortlist |
 | `saved_searches` | the standing queries the morning sweep speaks for | the reader's standing question |
 | `ingestion_feeds` | the sources the ingester is pointed at | the reader's configuration |
@@ -35,10 +36,10 @@ and each is the reader's own content or standing choice:
 What stays out is bookkeeping rather than content: tokens and sessions, MFA
 secrets, push subscriptions, notification read state, mail preferences, usage
 events and agent runs, digests and nightly reports — they describe what the
-account did, not what it holds. Epic 40 carries the five sections end-to-end
-(export, anonymize, readable half, plan, apply) under schema 1.3.0, and its last
-unit makes the distinction a census so a future table cannot land on the wrong
-side of it.
+account did, not what it holds. Epic 40 carries each remaining section
+end-to-end (export, anonymize, readable half, plan, apply), extending the
+version ladder so an older file stays valid, and its last unit makes the
+distinction a census so a future table cannot land on the wrong side of it.
 
 ## The bridge (2026-10-20)
 
@@ -88,11 +89,12 @@ Two rules make it safe:
 What applies today: every section.
 
 - The profile, the applications, the stored growth runs, the job
-  descriptions and the interviews are row writes. The analyst does not run
+  descriptions, the interviews and the copilot chats are row writes. The analyst does not run
   again over a posting and the interviewer does not question the user a
   second time: the bundle carries the parsed result and the whole
   transcript, so the user's own reading of a posting and the answers they
-  gave come back as they were.
+  gave come back as they were. A restored chat is replaced whole and its
+  messages are written with it, at ids minted for the caller.
 - The resumes and the knowledge base are re-ingested. A restored resume is
   a *new* resume with the same content, because its id is the key its
   knowledge chunks and its versions hang off and the ingestion pipeline
@@ -158,11 +160,11 @@ restore does:
 
 - **The sections matched by id can retire a row.** The profile, the
   applications, the growth runs, the notes, the people the reader knows, the
-  postings and the interviews keep the bundle's ids through the restore (or
-  find the row the id already names), so a row the bundle omits is a row the
-  reader took out of the document they asked to restore. It is deleted —
-  scoped to the caller, and an interview is retired whole, its transcript and
-  its report with it.
+  postings, the interviews and the chats keep the bundle's ids through the
+  restore (or find the row the id already names), so a row the bundle omits is
+  a row the reader took out of the document they asked to restore. It is
+  deleted — scoped to the caller, and an interview is retired whole, its
+  transcript and its report with it, as a chat is retired with its messages.
 - **The sections the restore re-mints cannot.** A restored resume is a new
   resume; a restored document re-enters the ingestion pipeline; a memory
   upserts on its (kind, key). Their ids mean nothing at the target, so "the
@@ -221,6 +223,36 @@ still read off the bundle's own version, and the version is compared as
 otherwise. A 1.1.0 backup still validates with its eight sections; a 1.1.5
 one is held to the 1.1.0 sections rather than to the newest.
 
+### The copilot chats travel (1.3.0)
+
+The copilot is where the reader thinks out loud: the question they asked, the
+answer they were given, the artifacts built from their own resume and the
+sources those artifacts cite. The conversations service writes those rows, so
+the section is the **backend's**, like the pipeline and the growth runs. Since
+**1.3.0** the bundle carries `conversations`, each one with its transcript
+nested: role, content, artifacts, sources, suggested actions and the created
+time. The run id stays out — which run produced an answer is bookkeeping.
+
+- **The anonymized export walks the transcript.** The policy classifies the
+  chat's title and each message's content, artifacts and sources as the
+  reader's, so an anonymized bundle keeps the shape of the conversation and
+  nothing the reader or the assistant wrote. The gate classifies every message
+  column against the real sources and puts a marker in each one; none survives.
+- **The readable half carries the chats**, with their transcript lengths, in
+  both languages — the same table that carries every other section's words.
+- **The restore keeps the ids**, so a chat the bundle omits is a chat the
+  reader took back: it is deleted, and its messages leave with it through the
+  foreign key's cascade — the same path the chat screen uses. A chat that did
+  change is replaced whole: a message the bundle no longer carries is a
+  message the restore was asked to take back.
+- **The comparison covers what the apply writes.** Message ids, ownership, the
+  conversation link and the database stamps are not content; a re-import of
+  the bundle the workspace exported plans `skip` for every chat and writes
+  nothing.
+
+A 1.2.0 backup still validates with its ten sections: `SECTIONS_BY_VERSION`
+holds each version to the sections it shipped with.
+
 ### The restore does not write over somebody else's rows
 
 A bundle's ids are the source's, and the restore keeps them — so the links
@@ -238,17 +270,17 @@ the rows, and it no longer lands them on top of somebody else's.
 
 ```jsonc
 {
-  "schema_version": "1.2.0",
+  "schema_version": "1.3.0",
   "generator": "ai-career-os",
   "generated_at": "2026-10-20T00:00:00+00:00",
   "user": { "id": "<uuid>", "anonymized": false },
   "manifest": {
-    "schema_version": "1.2.0",
+    "schema_version": "1.3.0",
     "generator": "ai-career-os",
     "counts": { "profile": 1, "resumes": 1, "knowledge": 1,
                 "job_descriptions": 1, "interviews": 1, "memories": 1,
                 "applications": 12, "growth_plans": 3, "notes": 4,
-                "contacts": 9 },
+                "contacts": 9, "conversations": 6 },
     "content_hash": "<sha256 over data>",
     "anonymized": false
   },
@@ -260,14 +292,18 @@ the rows, and it no longer lands them on top of somebody else's.
     "interviews": [ { ...interview_sessions joined jobs..., "turns": [...],
                       "evaluation": { dims, summary, trajectory } } ],
     "memories": [ { ...user_memories row... } ],
-    // The four the BACKEND owns — the bridge hands them over, and the hash
+    // The five the BACKEND owns — the bridge hands them over, and the hash
     // covers them like every other section.
     "applications": [ { ...applications row... } ],
     "growth_plans": [ { ...growth_plans row... } ],
     // And the two the reader typed into: their own words, and the people
     // they know. They are the first things a reader loses when they leave.
     "notes": [ { ...user_notes row... } ],
-    "contacts": [ { ...contacts row... } ]
+    "contacts": [ { ...contacts row... } ],
+    // The copilot chats: each conversation with its transcript below it.
+    // The messages' run ids stay out — which run answered is bookkeeping.
+    "conversations": [ { ...conversations row..., "messages": [
+        { id, role, content, artifacts, sources, actions, created_at } ] } ]
   }
 }
 ```
@@ -402,8 +438,9 @@ export really carries:
 - **the substance** — the posting, the title, the company, the status, the
   counts, the timestamps, the ids;
 - **a bag** — a column whose *inside* holds the reader (`meta` on a
-  document, the turns inside an interview session). The bag keeps its
-  shape — the document still says it was a *note* — and loses its text.
+  document, the turns inside an interview session, the transcript inside a
+  conversation). The bag keeps its shape — the document still says it was a
+  *note* — and loses its text.
 
 The gate holds that classification against the **real sources**: the real
 tables, the real queries the export runs, the real rows the backend writes.

@@ -529,7 +529,7 @@
   摘要与夜报——它们描述账户做过什么，而不是持有过什么。40.4 把这条分界写成 census。
   同时修正 ROADMAP 里一句过期的“open thread”：恢复的 current state 早已覆盖全部十节（Epic 13 后文），
   原句改为指向该段；EXPORT.md 记录本次测量与排除理由。
-- 40.0 完成即本节；40.1（下一步）对话随包走：新增 `conversations` 节（消息内嵌：role、content、artifacts、
+- 40.0 完成即本节；40.1 已完成（2026-10-31）对话随包走：新增 `conversations` 节（消息内嵌：role、content、artifacts、
   sources、actions、created_at），AI 半边直接读；匿名导出按字段抹掉标题与正文等；可读半边两种语言加词；
   plan 保留 id（包中省略即退休，消息级联），apply 连同消息写入；schema 升到 1.3.0，旧包仍有效。
 - 40.2 常驻选择随包走：`saved_searches` + `ingestion_feeds`（后端所有）；按 id 匹配，省略即取消，
@@ -541,7 +541,7 @@
   页面所载清单由 bundle 的 manifest 得出，可读半边的节序与 redact 列表共用同一个 section 元组。
   新表出现即按名失败。
 
-下一步：40.1（由并发会话在制）与本会话 Epic 41 的下一段。
+下一步：40.2（常驻选择）与本会话 Epic 41 的下一段。
 
 ## Epic 41 — 提醒到点时的信
 

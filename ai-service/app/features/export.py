@@ -143,7 +143,7 @@ BACKEND_SECTIONS: tuple[str, ...] = (
     "conversations",
 )
 
-# Every section a 1.2.0 bundle carries.
+# Every section the current schema carries.
 SECTIONS: tuple[str, ...] = AI_SECTIONS + BACKEND_SECTIONS
 
 # What a 1.0.0 bundle carried. A bundle written before the bridge has no
@@ -595,7 +595,9 @@ def anonymize(bundle: dict, drop: tuple[str, ...] = DEFAULT_PII_FIELDS) -> dict:
 
     Since 1.2.0 the bundle also carries the notes the reader typed and the
     people they know, which is worse: an "anonymized" file that names every
-    contact in the reader's address book, with their email.
+    contact in the reader's address book, with their email. Since 1.3.0 the
+    copilot's chats ride along too, and a transcript is the reader's own words
+    twice over -- the question they typed and the answer written for them.
 
     So the policy is one list, per section, read by the code that does the
     stripping. A field is on it because it names a person -- the reader or

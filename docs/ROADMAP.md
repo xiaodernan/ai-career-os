@@ -3441,7 +3441,7 @@ quietly land on the wrong side of it.
   — export, anonymize, readable half, plan with the fourth op, apply, and the
   page's counts — then one census that holds the whole promise.)
 
-- [ ] **40.1** The chats travel: a `conversations` section and its messages.
+- [x] **40.1** The chats travel: a `conversations` section and its messages.
 
   (The copilot is where the reader thinks out loud: the question they asked, the
   answer they were given, the artifacts built from their own resume and the
@@ -3453,6 +3453,27 @@ quietly land on the wrong side of it.
   plan keeps its ids (a conversation the bundle omits is retired, its messages
   cascade), and the apply writes messages with their conversation. A 1.2.0
   bundle stays valid: the new sections arrive under schema 1.3.0.)
+
+  (Shipped: the bundle's eleventh section, under schema **1.3.0** — and the
+  ladder in `SECTIONS_BY_VERSION` holds a 1.2.0 backup to its ten sections, so
+  the older file still validates. The bridge reads the caller's chats a page at
+  a time and their transcripts in one statement, and each conversation travels
+  with its messages nested — role, content, artifacts, sources, suggested
+  actions and the created time — while the run id, which is bookkeeping, stays
+  out. The anonymized policy walks the transcript: the chat's title and each
+  message's content, artifacts and sources are the reader's, every message
+  column is classified by the gate, and a marker in any of them does not
+  survive. The readable half carries the chats and their transcript lengths in
+  both languages. The plan compares a chat by what the restore writes — the
+  message ids, the ownership, the conversation link and the stamps are not
+  content — so an unchanged chat is `skip`, a changed answer is an `update`,
+  and a chat the bundle no longer carries is a `delete`. The apply replaces
+  the transcript whole on update, mints message ids at the target, and retires
+  a dropped chat through the same cascade the chat screen relies on. The data
+  page lists the section with its label in both languages, and the restore
+  counts it like the others. Backend unit suite 1070 green; ai-service 1967
+  passed, 1 skipped, 0 failed on a clean HEAD snapshot; the frontend's
+  translation and copy censuses 19 green.)
 
 - [ ] **40.2** The standing choices travel: saved searches and ingestion feeds.
 
