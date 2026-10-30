@@ -2666,6 +2666,11 @@ export const translations = {
         unknownError: "unknown error",
         requirementsBreakdown: "Requirements breakdown",
         requirementsBreakdownDescription: "Priority analysis from the JD extractor.",
+        priorities: {
+          must: "Must have",
+          should: "Strongly preferred",
+          nice: "Nice to have",
+        },
         sources: "Sources",
         sourcesDescription: "What this page is built from.",
         scoreFrom: "Score from",
@@ -5284,6 +5289,11 @@ export const translations = {
         unknownError: "未知错误",
         requirementsBreakdown: "要求拆解",
         requirementsBreakdownDescription: "JD 提取器给出的优先级分析。",
+        priorities: {
+          must: "必备",
+          should: "优先考虑",
+          nice: "加分项",
+        },
         sources: "来源",
         sourcesDescription: "这个页面是由什么构建的。",
         scoreFrom: "分数来自",

@@ -15,6 +15,7 @@ import {
   marketVerdictWord,
   readinessVerdictWord,
   remoteTypeWord,
+  requirementPriorityWord,
   resumeStatusWord,
   runStatusWord,
   runTriggerWord,
@@ -25,6 +26,7 @@ import {
   MARKET_VERDICTS,
   READINESS_VERDICTS,
   REMOTE_TYPES,
+  REQUIREMENT_PRIORITIES,
   RESUME_STATUSES,
   RUN_STATUSES,
   RUN_TRIGGERS,
@@ -60,6 +62,7 @@ const ROSTERS: [string, readonly string[]][] = [
   ["monitoring.verdicts", HEALTH_VERDICTS],
   ["growth.verdicts", READINESS_VERDICTS],
   ["offers.verdicts", MARKET_VERDICTS],
+  ["jobs.detail.priorities", REQUIREMENT_PRIORITIES],
 ];
 
 describe("the enum words", () => {
@@ -109,6 +112,7 @@ describe("the enum words", () => {
     expect(healthVerdictWord(zh, "degraded")).toBe("Degraded");
     expect(readinessVerdictWord(zh, "almost")).toBe("Almost");
     expect(marketVerdictWord(zh, "at_market")).toBe("At Market");
+    expect(requirementPriorityWord(zh, "urgent")).toBe("Urgent");
     expect(interviewModeName(zh, "pair_programming")).toBe("Pair Programming");
     expect(interviewModeHint(zh, "pair_programming")).toBe("");
   });
@@ -128,6 +132,11 @@ describe("the enum words", () => {
     expect(readinessVerdictWord(zh, "not_ready")).toBe("未就绪");
     expect(marketVerdictWord(en, "within_market")).toBe("Within market");
     expect(marketVerdictWord(zh, "below_market")).toBe("低于市场");
+    // The requirement badge and the gap badge draw the JD's own priority word.
+    expect(requirementPriorityWord(en, "must")).toBe("Must have");
+    expect(requirementPriorityWord(zh, "must")).toBe("必备");
+    expect(requirementPriorityWord(zh, "should")).toBe("优先考虑");
+    expect(requirementPriorityWord(zh, "nice")).toBe("加分项");
     expect(interviewModeName(zh, "system_design")).toBe("系统设计");
     expect(interviewModeHint(zh, "rag")).toBe("检索、分块、重排、引用");
     // The seniority chip: the count keeps its plus, the word follows the reader.
@@ -340,6 +349,55 @@ describe("the verdict badges", () => {
     ).toEqual(["app/probe.tsx"]);
     expect(
       rawVerdictSurfaces([{ path: "app/clean.tsx", text: "{marketVerdictWord(t, v)}" }])
+    ).toEqual([]);
+  });
+});
+
+const PRIORITY_SURFACES: [string, string][] = [
+  [
+    "app/(app)/jobs/[id]/page.tsx",
+    'requirementPriorityWord(t, r.priority ?? (r.required ? "must" : "nice"))',
+  ],
+  ["components/jobs/match-panel.tsx", "requirementPriorityWord(t, g.importance)"],
+];
+
+/**
+ * The charge is the spelling, not the file: a badge that builds its word from
+ * the wire value prints "must have" on a Chinese posting. The gap card's
+ * importance is the requirement's own priority word (match.py copies it), so
+ * one function serves both surfaces.
+ */
+function rawPrioritySurfaces(files: { path: string; text: string }[]): string[] {
+  return files
+    .filter((f) => f.path !== STATUS_WORDS)
+    .filter((f) => /\.(?:priority|importance)\??\.replace\s*\(/.test(f.text))
+    .map((f) => f.path);
+}
+
+describe("the requirement priority badges", () => {
+  it("draw the wire priority through the table", () => {
+    const files = sources();
+    expect(files.length, "the scan read no files").toBeGreaterThan(150);
+    for (const [rel, seam] of PRIORITY_SURFACES) {
+      const file = files.find((f) => f.path.endsWith(rel));
+      expect(file, `${rel} is not in the walk`).toBeTruthy();
+      expect(file!.text, `${rel} no longer draws its priority through ${seam}`).toContain(seam);
+    }
+    const offenders = rawPrioritySurfaces(files);
+    expect(
+      offenders,
+      `surfaces spelling a wire priority themselves:\n${offenders.join("\n")}`
+    ).toEqual([]);
+  });
+
+  it("would still see a surface that spelled the priority itself", () => {
+    expect(
+      rawPrioritySurfaces([
+        { path: "app/probe.tsx", text: '{r.priority?.replace(/_/g, " ")}' },
+      ])
+    ).toEqual(["app/probe.tsx"]);
+    expect(
+      rawPrioritySurfaces([{ path: "app/clean.tsx", text: "{requirementPriorityWord(t, p)}" }])
     ).toEqual([]);
   });
 });

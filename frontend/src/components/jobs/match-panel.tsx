@@ -13,6 +13,7 @@ import { SectionHeading } from "@/components/common/export-buttons";
 import { AIBadge } from "@/components/ai/ai-badge";
 import type { JobMatch, PreparationItem, SkillGap } from "@/lib/api/types";
 import { matchDimensionLabel } from "@/lib/dimensions";
+import { requirementPriorityWord } from "@/lib/status-words";
 
 /**
  * Match breakdown (§10): every number here is traceable — the ring is the
@@ -179,8 +180,8 @@ export function SkillGapCard({ gaps, className }: { gaps: SkillGap[]; className?
                 <p className="flex flex-wrap items-center gap-2 text-sm font-medium">
                   {g.skill}
                   {g.importance && (
-                    <Badge variant={g.importance === "critical" || g.importance === "must" ? "destructive" : "outline"} className="text-2xs font-normal capitalize">
-                      {g.importance.replace(/_/g, " ")}
+                    <Badge variant={g.importance === "critical" || g.importance === "must" ? "destructive" : "outline"} className="text-2xs font-normal">
+                      {requirementPriorityWord(t, g.importance)}
                     </Badge>
                   )}
                 </p>

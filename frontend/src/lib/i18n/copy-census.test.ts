@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   browserSources,
   everyOffender,
+  expressionOffendersIn,
   templateOffendersIn,
   textOffendersIn,
   TEXT_NODE_LIMIT,
@@ -261,5 +262,37 @@ describe("the browser's copy", () => {
       "export const d = <span>{`${done}/${total}`}</span>;",
     ].join("\n");
     expect(templateOffendersIn("probe.tsx", probe)).toEqual([]);
+  });
+
+  it("reads the lower-case phrase a branch holds", () => {
+    // `{r.required ? "must have" : "nice to have"}` was a requirement badge's
+    // whole text. The expression scan wanted a capital, so the phrase printed
+    // in English on every Chinese posting with the gate green.
+    const probe = 'export const x = cond ? "must have" : "nice to have";';
+    expect(expressionOffendersIn("probe.tsx", probe).map((o) => o.value)).toEqual([
+      "must have",
+      "nice to have",
+    ]);
+    // A wire value is one lower-case token; a class name and a MIME type carry
+    // punctuation a phrase does not. None of them is copy.
+    const values = [
+      'export const a = cond ? "ready" : "failed";',
+      'export const b = cond ? "px-4 py-2" : "text-sm";',
+      'export const c = cond ? "application/json" : "text/plain";',
+    ].join("\n");
+    expect(expressionOffendersIn("probe.tsx", values)).toEqual([]);
+  });
+
+  it("still reads the capital branch beside the lower-case one", () => {
+    // The new rule is additive: an expression with both shapes comes back
+    // with both, so the capital rule keeps its half.
+    const probe =
+      'export const x = a ? "Interview-ready" : "Needs work";' +
+      'export const y = b ? "nice to have" : "none";';
+    expect(expressionOffendersIn("probe.tsx", probe).map((o) => o.value)).toEqual([
+      "Interview-ready",
+      "Needs work",
+      "nice to have",
+    ]);
   });
 });

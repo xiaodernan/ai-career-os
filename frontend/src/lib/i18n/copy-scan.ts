@@ -381,35 +381,68 @@ function textNodeOffenders(): Offender[] {
  * The filter is the one the other scans use: a word that starts
  * lower-case is an identifier, and one that is entirely upper case is a
  * code -- a variant name, a language tag, an initialism.
+ *
+ * One shape was still missing: the branch that holds a lower-case phrase.
+ * `{r.required ? "must have" : "nice to have"}` is a requirement badge's
+ * whole text, and the capital rule skipped it -- a lower-case string was an
+ * identifier by that rule. A *phrase* of two or more lower-case words is not
+ * an identifier; {@link sentenceBranch} reads it. A single lower-case token
+ * stays a wire value (`ready`, `error`), which the page draws through its own
+ * table, and a hyphen, slash or digit makes the string a class name, a path
+ * or a MIME type rather than prose.
  */
 const TERNARY = /\?\s*"([^"\\]{2,})"\s*:\s*"([^"\\]{2,})"/g;
 const FALLBACK = /\|\|\s*"([^"\\]{2,})"/g;
 
-function expressionOffenders(): Offender[] {
+/**
+ * The lower-case phrase a ternary branch or a fallback can hold.
+ *
+ * Every other rule in this file wants a capital or a closing mark, so a
+ * phrase like "nice to have" was invisible to all of them. The one-token
+ * exclusion is deliberate: `ready` and `error` are wire values, and the
+ * page that draws them reads a roster, not a sentence. Letters and single
+ * spaces only -- a class name, a URL path or a MIME type carries punctuation
+ * a phrase does not.
+ */
+function sentenceBranch(value: string): boolean {
+  const trimmed = value.trim();
+  if (!/^[a-z]+(?: [a-z]+)+$/.test(trimmed)) return false;
+  return trimmed.split(/\s+/).some((word) => word.length >= 3);
+}
+
+/** The copy in one source's expression branches, for the gate's probes. */
+export function expressionOffendersIn(file: string, source: string): Offender[] {
   const found: Offender[] = [];
-  for (const rel of browserSources()) {
-    const text = readFileSync(join(ROOT, rel), "utf-8");
-    const seen = new Set<string>();
-    for (const m of text.matchAll(TERNARY)) {
-      seen.add(m[1]);
-      seen.add(m[2]);
+  const seen = new Set<string>();
+  for (const m of source.matchAll(TERNARY)) {
+    seen.add(m[1]);
+    seen.add(m[2]);
+  }
+  for (const m of source.matchAll(FALLBACK)) {
+    seen.add(m[1]);
+  }
+  for (const value of seen) {
+    if (sentenceBranch(value)) {
+      found.push({ file, attribute: "expression", value });
+      continue;
     }
-    for (const m of text.matchAll(FALLBACK)) {
-      seen.add(m[1]);
-    }
-    for (const value of seen) {
-      // A sentence starts with a capital and a lower-case letter after it.
-      if (!/^[A-Z][a-z]/.test(value)) continue;
-      // Entirely upper case is a code: a variant, a language tag, an
-      // initialism. "EN" is a language, not a word.
-      if (/^[A-Z\s]+$/.test(value)) continue;
-      // Code characters.
-      if (isCode(value)) continue;
-      if (NOT_COPY.has(value.trim())) continue;
-      found.push({ file: rel, attribute: "expression", value });
-    }
+    // A sentence starts with a capital and a lower-case letter after it.
+    if (!/^[A-Z][a-z]/.test(value)) continue;
+    // Entirely upper case is a code: a variant, a language tag, an
+    // initialism. "EN" is a language, not a word.
+    if (/^[A-Z\s]+$/.test(value)) continue;
+    // Code characters.
+    if (isCode(value)) continue;
+    if (NOT_COPY.has(value.trim())) continue;
+    found.push({ file, attribute: "expression", value });
   }
   return found;
+}
+
+function expressionOffenders(): Offender[] {
+  return browserSources().flatMap((rel) =>
+    expressionOffendersIn(rel, readFileSync(join(ROOT, rel), "utf-8"))
+  );
 }
 
 /**

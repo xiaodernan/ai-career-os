@@ -43,6 +43,13 @@ export const READINESS_VERDICTS = ["ready", "borderline", "not_ready", "unknown"
 /** `negotiation.py`'s market position, and the assessment's own "unknown". */
 export const MARKET_VERDICTS = ["below_market", "above_market", "within_market", "unknown"] as const;
 
+/**
+ * The JD's priority word. `jd_analyze.py` writes must|should|nice on every
+ * requirement, and `match.py` copies the requirement's own word onto each
+ * skill gap, so the requirements badge and the gap badge draw one vocabulary.
+ */
+export const REQUIREMENT_PRIORITIES = ["must", "should", "nice"] as const;
+
 function wordFrom(
   t: TranslateFn,
   prefix: string,
@@ -85,6 +92,10 @@ export function readinessVerdictWord(t: TranslateFn, verdict: string): string {
 
 export function marketVerdictWord(t: TranslateFn, verdict: string): string {
   return wordFrom(t, "offers.verdicts", verdict, MARKET_VERDICTS);
+}
+
+export function requirementPriorityWord(t: TranslateFn, priority: string): string {
+  return wordFrom(t, "jobs.detail.priorities", priority, REQUIREMENT_PRIORITIES);
 }
 
 /**

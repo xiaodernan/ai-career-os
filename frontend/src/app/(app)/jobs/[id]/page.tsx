@@ -49,7 +49,7 @@ import { CoverLetterPanel } from "@/components/jobs/cover-letter-panel";
 import { useJob } from "@/lib/hooks/resources";
 import { useCreateApplication, useCreateInterviewSession, useRunJobMatch } from "@/lib/hooks/actions";
 import { list as listOf, pick, rec, str } from "@/lib/api/normalize";
-import { remoteTypeWord, interviewModeName, seniorityWord, salaryBandWord } from "@/lib/status-words";
+import { remoteTypeWord, interviewModeName, seniorityWord, salaryBandWord, requirementPriorityWord } from "@/lib/status-words";
 import { useLocale } from "@/lib/i18n/locale-context";
 import type { Evidence, JdRequirement, PreparationItem, SkillGap } from "@/lib/api/types";
 import { normalizeJdParsed } from "@/lib/api/normalize";
@@ -341,7 +341,7 @@ export default function JobDetailPage() {
                     <li key={i} className="flex items-center gap-3 py-2 text-sm first:pt-0 last:pb-0">
                       <span className="min-w-0 flex-1 truncate">{r.skill}</span>
                       <Badge variant={r.required ? "ai" : "outline"} className="shrink-0 text-2xs font-normal">
-                        {r.priority?.replace(/_/g, " ") ?? (r.required ? "must have" : "nice to have")}
+                        {requirementPriorityWord(t, r.priority ?? (r.required ? "must" : "nice"))}
                       </Badge>
                     </li>
                   ))}
