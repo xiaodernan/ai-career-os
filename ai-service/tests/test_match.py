@@ -762,3 +762,28 @@ async def test_compute_match_why_match_is_empty_for_a_thin_jd(monkeypatch):
                                  user_id="u-1")
     assert result["whyMatch"] == []
     assert result["preparation"] == []
+
+
+async def test_a_failed_narrative_keeps_the_computed_score(monkeypatch):
+    """The module's own docstring: "The LLM only writes the narrative over the computed numbers."
+
+    Every number is deterministic, so a provider outage during the *prose* call must not
+    discard them -- `calculate_match` would otherwise answer with a tool error where it
+    could have answered "72%, missing Kafka". The fallback states the computed facts,
+    which is what the narrative was constrained to anyway.
+    """
+    calls: list = []
+    _stub_io(monkeypatch, calls)
+
+    async def broken_ask(req, *, user_id=None, run_id=None, agent="system", kind="chat"):
+        raise RuntimeError("provider down")
+
+    monkeypatch.setattr(match_mod, "ask", broken_ask)
+
+    result = await compute_match(_RESUME, _JD, user_id="u-1")
+    assert 0.0 < result["overall"] <= 1.0, "the score is still computed"
+    assert result["matchedSkills"] == ["Java"]
+    assert result["whyMatch"], "the deterministic explanations survive too"
+    assert result["narrative"].startswith("Computed scores"), \
+        "the fallback says what it knows instead of inventing prose"
+    assert result["model"] == "", "no model wrote it, so no model is claimed"

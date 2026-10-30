@@ -5,12 +5,16 @@ then every criterion is bound to retrieved evidence chunks so the UI can show
 "why". The LLM only writes the narrative over the computed numbers.
 """
 
+import logging
+
 from app.core import db
 from app.core.ai import ask
 from app.core.skills import extract_skills, normalize
 from app.features.schemas import MatchResult
 from app.providers.base import LLMMessage, LLMRequest
 from app.rag import store
+
+log = logging.getLogger(__name__)
 
 _DEGREE_RANK = {"high school": 0, "associate": 1, "bachelor": 2, "master": 2.5,
                 "phd": 3, "doctor": 3}
@@ -371,16 +375,25 @@ async def compute_match(resume_parsed: dict, jd: dict, *, user_id: str,
              f"({len(matched)} of {len(req) + len(pref)} listed skills matched), "
              f"experience:{experience:.0%} ({exp_note}) projects:{projects:.0%} education:{education:.0%}.\n"
              f"Matched: {', '.join(matched[:12])}\nMissing: {', '.join(missing[:12])}")
-    llm = await ask(LLMRequest(
-        messages=[
-            LLMMessage("system", "You are a hiring analyst. Using ONLY the computed facts, "
-                                 "write 2 short paragraphs: (1) overall assessment, (2) the "
-                                 "top 2-3 concrete actions to improve chances. Do not change "
-                                 "or restate numbers beyond those given; do not invent "
-                                 "experience. Plain text."),
-            LLMMessage("user", f"JD: {jd.get('title','')} at {jd.get('company','')}\n{facts}"),
-        ], temperature=0.4, max_tokens=500),
-        user_id=user_id, run_id=run_id, agent="jd_analyst", kind="match_narrative")
+    try:
+        llm = await ask(LLMRequest(
+            messages=[
+                LLMMessage("system", "You are a hiring analyst. Using ONLY the computed facts, "
+                                     "write 2 short paragraphs: (1) overall assessment, (2) the "
+                                     "top 2-3 concrete actions to improve chances. Do not change "
+                                     "or restate numbers beyond those given; do not invent "
+                                     "experience. Plain text."),
+                LLMMessage("user", f"JD: {jd.get('title','')} at {jd.get('company','')}\n{facts}"),
+            ], temperature=0.4, max_tokens=500),
+            user_id=user_id, run_id=run_id, agent="jd_analyst", kind="match_narrative")
+        narrative, model = llm.text, llm.model
+    except Exception as e:
+        # The narrative is the only part of this engine that needs a provider; every
+        # number above is deterministic. Failing the whole match because the prose could
+        # not be written would discard a score the user can act on -- `calculate_match`
+        # would answer with a tool error instead of "72%, missing Kafka".
+        log.warning("match narrative failed; answering with the computed facts: %s", e)
+        narrative, model = facts, ""
 
     result = MatchResult(
         overall=overall, technical=round(technical, 4), experience=round(experience, 4),
@@ -390,8 +403,8 @@ async def compute_match(resume_parsed: dict, jd: dict, *, user_id: str,
         evidence=evidence,
         whyMatch=_why_match(matched, req, pref, experience, exp_note, education, jd),
         preparation=_preparation(req, pref, r_skills, _technical_denominator(req, pref)),
-        narrative=llm.text,
-        interviewTopics=(jd.get("interviewTopics") or [])[:8], model=llm.model)
+        narrative=narrative,
+        interviewTopics=(jd.get("interviewTopics") or [])[:8], model=model)
     return result.model_dump()
 
 
