@@ -40,6 +40,11 @@ import { translations } from "./translations";
  * that needed 187 exceptions would train people to ignore it, and a gate
  * that cries wolf is worse than no gate: the direction that matters is the
  * one that shows a raw key on a reader's screen.
+ *
+ * One family is closed enough to check the other way too: the dashboard's
+ * `*Description` lines are each asked for by literal name, so a description
+ * with no literal reader is dead copy. Keys the block reads through a roster
+ * (`RANKING_HINT_KEYS`) do not end in `Description` and stay outside it.
  */
 
 const ROOT = fileURLToPath(new URL("../../", import.meta.url));
@@ -95,5 +100,54 @@ describe("the keys the browser asks for", () => {
     // `expected [ Array(2) ] to deeply equal []`, which names neither the key nor the file,
     // and the reader has to re-run the scan by hand to find out what the gate found.
     expect(missing, `a key is asked for and the table does not answer it:\n${missing.join("\n")}`).toEqual([]);
+  });
+});
+
+/** Every literal key the browser's sources ask for. */
+function askedKeys(files = browserSources()): Set<string> {
+  const asked = new Set<string>();
+  for (const rel of files) {
+    const source = stripComments(readFileSync(join(ROOT, rel), "utf-8"));
+    for (const m of source.matchAll(KEY_CALL)) asked.add(m[1]);
+  }
+  return asked;
+}
+
+/** The dashboard's description lines that no source asks for by name. */
+function unreadDashboardDescriptions(
+  block: Record<string, unknown>,
+  asked: Set<string>
+): string[] {
+  return Object.keys(block)
+    .filter((key) => /Description$/.test(key))
+    .map((key) => `dashboard.${key}`)
+    .filter((key) => !asked.has(key));
+}
+
+describe("the dashboard's description lines", () => {
+  it("are each asked for by name", () => {
+    const block = translations.en.dashboard as unknown as Record<string, unknown>;
+    const descriptions = Object.keys(block).filter((key) => /Description$/.test(key));
+    // The family is the population: a renamed suffix or a moved block must not
+    // leave the case with nothing to charge.
+    expect(descriptions.length, "the scan found no description lines").toBeGreaterThan(15);
+    const unread = unreadDashboardDescriptions(block, askedKeys());
+    expect(
+      unread,
+      `dashboard descriptions no source asks for:\n${unread.join("\n")}`
+    ).toEqual([]);
+  });
+
+  it("would still see a dead description, and stays out of roster-read keys", () => {
+    const asked = new Set(["dashboard.liveDescription"]);
+    expect(
+      unreadDashboardDescriptions(
+        { liveDescription: "asked for", deadDescription: "dead" },
+        asked
+      )
+    ).toEqual(["dashboard.deadDescription"]);
+    expect(
+      unreadDashboardDescriptions({ skillGapsHint: "roster-read", count: 2 }, new Set())
+    ).toEqual([]);
   });
 });

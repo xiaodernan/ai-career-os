@@ -620,8 +620,6 @@ export const translations = {
       attentionDescription:
         "Reminders that have come due, and applications with no step logged in two weeks.",
       whereToFocus: "Where to focus",
-      whereToFocusDescription:
-        "Ranked by the matching agent against your resume.",
       recentRuns: "Recent AI runs",
       recentRunsDescription: "Every match, tailor and ingestion the agents performed.",
       resumeScore: "Resume score",
@@ -3392,7 +3390,6 @@ export const translations = {
       attention: "需要关注",
       attentionDescription: "已到期的提醒，以及两周没有任何进展记录的申请。",
       whereToFocus: "值得关注",
-      whereToFocusDescription: "由匹配代理根据你的简历排序。",
       recentRuns: "最近AI运行",
       recentRunsDescription: "代理做过的每一次匹配、定制和摄取。",
       resumeScore: "简历评分",
