@@ -154,6 +154,14 @@ def _bundle_with_every_section() -> dict:
         "ingestion_feeds": [{"id": "f1", "name": "Acme careers",
                              "url": "https://acme.example/careers/feed.xml",
                              "source": "rss", "enabled": False}],
+        "saved_jobs": [{"id": "k1", "job_title": "Senior Backend Engineer",
+                        "company_name": "Acme", "note": "Strong platform team."}],
+        "inbound_mails": [{"id": "i1", "message_key": "key-1",
+                           "from_address": "recruiter@acme.example",
+                           "subject": "Next step", "body_text": "Are you free Thursday?",
+                           "intent": "interview_invite", "company": "Acme",
+                           "role": "Backend",
+                           "received_at": "2026-10-29T08:00:00+00:00"}],
     }
     return ex.build_bundle("11111111-1111-1111-1111-111111111111", raw)
 
@@ -217,3 +225,12 @@ def test_the_markdown_view_carries_the_standing_choices() -> None:
     assert "- Hangzhou senior backend · city=Hangzhou · min_years=5" in document
     assert ("- Acme careers · https://acme.example/careers/feed.xml · rss · "
             + words_mod.words("en")["disabled"]) in document
+
+
+def test_the_markdown_view_carries_the_bookmarks_and_the_replies() -> None:
+    # A bookmark is the posting and the reader's note on it; a reply is what
+    # a recruiter wrote, who wrote it, and the classifier's reading of it.
+    document = ex.to_markdown(_bundle_with_every_section(), "en")
+    assert "- Senior Backend Engineer · Acme · Strong platform team." in document
+    assert ("- Next step · recruiter@acme.example · Acme · interview_invite"
+            in document)

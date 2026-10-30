@@ -275,6 +275,11 @@ PEOPLE: dict[str, frozenset[str]] = {
     # person, and dropping the row would break the restore's counts.
     "saved_searches": frozenset(),
     "ingestion_feeds": frozenset(),
+    # A bookmark's note is the reader's own words; the posting it points at
+    # is the corpus's. And a reply is a person writing to the reader: the
+    # address, the subject and the body are theirs, not the search's.
+    "saved_jobs": frozenset({"note"}),
+    "inbound_mails": frozenset({"from_address", "subject", "body_text"}),
 }
 
 # The interview turns are their own group: a list of rows inside the row.
@@ -354,6 +359,18 @@ SUBSTANCE: dict[str, frozenset[str]] = {
     "ingestion_feeds": frozenset({
         "id", "name", "url", "source", "enabled", "created_at", "updated_at",
     }),
+    # The bookmark is the pair and the posting's own title and company; the
+    # note beside it is the reader's and is classified above.
+    "saved_jobs": frozenset({
+        "id", "job_title", "company_name", "created_at",
+    }),
+    # What the classifier read out of a reply is the search's: the intent,
+    # the company and the role. The address, the subject and the body are
+    # the correspondent's and are classified above.
+    "inbound_mails": frozenset({
+        "id", "message_key", "intent", "company", "role", "application_id",
+        "filed_at", "received_at", "created_at",
+    }),
 }
 
 TURN_SUBSTANCE = frozenset({
@@ -379,7 +396,8 @@ def _real_columns() -> dict[str, list[str]]:
     # restore reads it off the session.
     real["interviews"] = real["interviews"] + ["turns", "evaluation"]
     for section in ("notes", "contacts", "applications", "growth_plans",
-                    "saved_searches", "ingestion_feeds"):
+                    "saved_searches", "ingestion_feeds", "saved_jobs",
+                    "inbound_mails"):
         real[section] = _backend_rows(section)
     # The chats: the row the backend writes, and the transcript inside it.
     # The messages are their own group, like the interview turns -- the
@@ -486,7 +504,8 @@ def _realistic_bundle() -> dict:
     session["evaluation"] = _marker("interviews", "evaluation")
 
     for section in ("notes", "contacts", "applications", "growth_plans",
-                    "saved_searches", "ingestion_feeds"):
+                    "saved_searches", "ingestion_feeds", "saved_jobs",
+                    "inbound_mails"):
         columns = _backend_rows(section)
         raw[section] = [_row(section, columns, {})]
     # A saved search's criteria is a jsonb map, and the feed's switch is a
@@ -756,6 +775,13 @@ def test_the_anonymized_export_takes_the_people_out() -> None:
     for field in ("user_id", "title", "text_excerpt", "file_key"):
         assert document[field] is None, f"the document still carries its `{field}`"
 
+    bookmark = out["data"]["saved_jobs"][0]
+    assert bookmark["note"] is None, "the bookmark still carries the reader's note"
+
+    reply = out["data"]["inbound_mails"][0]
+    for field in ("from_address", "subject", "body_text"):
+        assert reply[field] is None, f"the reply still carries its `{field}`"
+
     # The bag: the reader's text inside goes, the shape of the bag stays.
     bag = json.loads(out["data"]["knowledge"][0]["meta"])
     assert bag["inline_text"] is None, "the bag still carries the reader's text"
@@ -790,6 +816,13 @@ def test_the_anonymized_export_keeps_the_shape_and_the_substance() -> None:
     assert out["data"]["conversations"][0]["id"] == bundle["data"]["conversations"][0]["id"]
     assert out["data"]["conversations"][0]["messages"][0]["role"] == (
         bundle["data"]["conversations"][0]["messages"][0]["role"])
+    # The bookmark still says which posting it points at, and the reply still
+    # says what the classifier read out of it -- what a recruiter wrote is
+    # not the same as the fact that they wrote about an interview.
+    assert out["data"]["saved_jobs"][0]["job_title"] == (
+        bundle["data"]["saved_jobs"][0]["job_title"])
+    assert out["data"]["inbound_mails"][0]["intent"] == (
+        bundle["data"]["inbound_mails"][0]["intent"])
 
 
 def test_the_anonymized_export_keeps_the_standing_choices() -> None:

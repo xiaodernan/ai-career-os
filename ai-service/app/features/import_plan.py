@@ -13,7 +13,8 @@ Two kinds of section, two matching rules:
 
 - The sections the restore writes through an id it can find again (the profile,
   the applications, the growth runs, the notes, the contacts, the job
-  descriptions, the interviews, the chats, the saved searches and the feeds) are
+  descriptions, the interviews, the chats, the saved searches, the feeds, the
+  bookmarks and the replies) are
   matched by id, and an id the target has and the bundle does not is a
   ``delete`` — the restore can name the row, so it can retire it.
 - The sections the restore *re-ingests* (the resumes, the knowledge documents,
@@ -77,13 +78,24 @@ _NOT_WRITTEN_BY_SECTION: dict[str, tuple[str, ...]] = {
     # A memory's weight is only written when the bundle carries one; the
     # apply's default is the row's, and the field is not the memory itself.
     "memories": ("last_used_at",),
+    # A bookmark's title and company are the posting's, read from the shared
+    # corpus for the bundle's readable half. The restore cannot write a job
+    # row, so they are display-only and comparing them would make a renamed
+    # posting look like a changed bookmark.
+    "saved_jobs": ("job_title", "company_name"),
+    # The reply's link to an application is the target's to decide: the apply
+    # writes it only when the target owns that application card. Comparing it
+    # would rewrite every reply restored into an account that lacked the card,
+    # forever -- the same rule as the interview's links to a job.
+    "inbound_mails": ("application_id",),
 }
 
 # The sections the restore matches by id: the row it writes is the row the
 # bundle names, so an id the target no longer has is retired.
 _REPLACEABLE = ("applications", "growth_plans", "notes", "contacts",
                 "job_descriptions", "interviews", "conversations",
-                "saved_searches", "ingestion_feeds")
+                "saved_searches", "ingestion_feeds", "saved_jobs",
+                "inbound_mails")
 
 # The bookkeeping a conversation's messages do not carry: the restore mints a
 # message id and stamps it, and the transcript's owner and parent are the
@@ -190,6 +202,14 @@ def _identity_hash(item: dict, section: str) -> str:
             stripped["source"] = "feed"
         if stripped.get("enabled") is None:
             stripped["enabled"] = True
+    if section == "inbound_mails":
+        # The three text columns are NOT NULL. An anonymized bundle carries
+        # them as null, and the apply writes "" where null would not save --
+        # so the comparison writes "" too, and the row it just landed is a
+        # skip rather than an update on every re-import.
+        for field in ("from_address", "subject", "body_text"):
+            if stripped.get(field) is None:
+                stripped[field] = ""
     return content_hash(stripped)
 
 
@@ -259,6 +279,16 @@ def _writable(section: str, item: dict) -> bool:
         return bool(_text(item, "name")) and bool(_object(item, "criteria"))
     if section == "ingestion_feeds":
         return bool(_text(item, "name") and _text(item, "url"))
+    if section == "saved_jobs":
+        # A bookmark's id IS the posting's id. A row that names no posting
+        # bookmarks nothing, and the apply has nothing to point the row at.
+        return bool(_text(item, "id"))
+    if section == "inbound_mails":
+        # The message key is the provider's idempotency key -- the pair with
+        # the account is unique, and a letter without one cannot be filed.
+        # The received stamp is NOT NULL, so a row without one is a row the
+        # apply cannot save.
+        return bool(_text(item, "message_key") and _text(item, "received_at"))
     return True
 
 

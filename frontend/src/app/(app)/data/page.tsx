@@ -49,6 +49,11 @@ const SECTIONS = [
   // leaves the next morning silent.
   { key: "saved_searches", labelKey: "data.sections.savedSearches" },
   { key: "ingestion_feeds", labelKey: "data.sections.ingestionFeeds" },
+  // The two ends of the pipeline: the postings the reader flagged and the
+  // letters recruiters wrote back. One is what they want to remember, the
+  // other is what the search answered.
+  { key: "saved_jobs", labelKey: "data.sections.savedJobs" },
+  { key: "inbound_mails", labelKey: "data.sections.inboundMails" },
 ] as const;
 
 export default function DataPortabilityPage() {

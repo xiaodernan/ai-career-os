@@ -4,8 +4,8 @@ A personal job-search OS is only as trustworthy as the user's ability to leave
 with their data. This document locks the export/import contract implemented in
 `ai-service/app/features/export.py` and bridged through
 `POST /api/v1/data-portability/*` (the backend owns the `applications`,
-`growth_plans`, `notes`, `contacts`, `conversations`, `saved_searches` and
-`ingestion_feeds` sections).
+`growth_plans`, `notes`, `contacts`, `conversations`, `saved_searches`,
+`ingestion_feeds`, `saved_jobs` and `inbound_mails` sections).
 
 ## Scope
 
@@ -19,28 +19,24 @@ with their data. This document locks the export/import contract implemented in
 | `notes` + `contacts` sections | **done** (shipped in the bundle since 1.2.0) | backend bridge |
 | `conversations` + `messages` sections | **done** (shipped in the bundle since 1.3.0) | backend bridge |
 | `saved_searches` + `ingestion_feeds` sections | **done** (shipped in the bundle since 1.4.0) | backend bridge |
-| `saved_jobs` + `inbound_mails` sections | **open** (measured 2026-10-30; Epic 40.3) | ai-service + backend bridge |
+| `saved_jobs` + `inbound_mails` sections | **done** (shipped in the bundle since 1.5.0) | ai-service + backend bridge |
 
-## The bundle is not everything yet (measured 2026-10-30; searches, feeds and chats closed 2026-10-31)
+## The bundle is everything that is the reader's (closed 2026-10-31)
 
-The page says "Export everything". The measurement found five gaps by reading
-the ten sections against every table the migrations create. Three have closed —
-the copilot chats travel since **1.3.0**, and the saved searches and the feeds
-since **1.4.0**, described below — and two remain, each the reader's own
-content:
-
-| Table | What it holds | Why it belongs |
-|---|---|---|
-| `saved_jobs` | a bookmark and the note beside it | the reader's shortlist |
-| `inbound_mails` | the letters a provider forwarded, their reading and the application each was filed on | the reader's correspondence |
+The page says "Export everything". The measurement of 2026-10-30 read the ten
+sections against every table the migrations create and found five content
+gaps; all five have closed — the copilot chats since **1.3.0**, the saved
+searches and the feeds since **1.4.0**, and the bookmarks and the replies
+since **1.5.0**, each described below. Every table that holds something the
+reader wrote, saved or received now travels, and the browser offers to redact
+each of them.
 
 What stays out is bookkeeping rather than content: tokens and sessions, MFA
 secrets, push subscriptions, notification read state, mail preferences, usage
 events and agent runs, digests and nightly reports — they describe what the
-account did, not what it holds. Epic 40 carries each remaining section
-end-to-end (export, anonymize, readable half, plan, apply), extending the
-version ladder so an older file stays valid, and its last unit makes the
-distinction a census so a future table cannot land on the wrong side of it.
+account did, not what it holds. Epic 40's last unit (40.4) makes the
+distinction a census, so a future table cannot land on the wrong side of it
+without a test failing.
 
 ## The bridge (2026-10-20)
 
@@ -90,15 +86,17 @@ Two rules make it safe:
 What applies today: every section.
 
 - The profile, the applications, the stored growth runs, the job
-  descriptions, the interviews, the copilot chats, the saved searches and
-  the feeds are row writes. The analyst does not run
-  again over a posting and the interviewer does not question the user a
+  descriptions, the interviews, the copilot chats, the saved searches, the
+  feeds, the bookmarks and the replies are row writes. The analyst does not
+  run again over a posting and the interviewer does not question the user a
   second time: the bundle carries the parsed result and the whole
   transcript, so the user's own reading of a posting and the answers they
   gave come back as they were. A restored chat is replaced whole and its
   messages are written with it, at ids minted for the caller. A restored
   search keeps its filters — the question the morning sweep asks again —
-  and a restored feed keeps its address and its switch.
+  and a restored feed keeps its address and its switch. A restored bookmark
+  keeps the note beside the posting it flagged, and a restored reply keeps
+  the engine's reading and its link to an application the caller owns.
 - The resumes and the knowledge base are re-ingested. A restored resume is
   a *new* resume with the same content, because its id is the key its
   knowledge chunks and its versions hang off and the ingestion pipeline
@@ -164,9 +162,10 @@ restore does:
 
 - **The sections matched by id can retire a row.** The profile, the
   applications, the growth runs, the notes, the people the reader knows, the
-  postings, the interviews, the chats, the saved searches and the feeds keep
-  the bundle's ids through the
-  restore (or find the row the id already names), so a row the bundle omits is
+  postings, the interviews, the chats, the saved searches, the feeds, the
+  bookmarks and the replies keep the bundle's ids through the
+  restore (or find the row the id already names — a bookmark is found by the
+  posting it pairs with), so a row the bundle omits is
   a row the reader took out of the document they asked to restore. It is
   deleted — scoped to the caller, and an interview is retired whole, its
   transcript and its report with it, as a chat is retired with its messages.
@@ -296,6 +295,53 @@ the chats.
 A 1.3.0 backup still validates with its eleven sections: `SECTIONS_BY_VERSION`
 holds each version to the sections it shipped with.
 
+### The bookmarks and the replies travel (1.5.0)
+
+The two ends of the pipeline were the last content the bundle left behind. The
+reader's shortlist lived in `saved_jobs` — the posting they flagged and the
+note they wrote beside it — and the search's answers lived in `inbound_mails`:
+the letters a provider forwarded, the engine's reading of each, and the
+application the reader filed it on. A reader who left with their bundle got
+the interviews and not the shortlist, the applications and not the replies
+that answered them.
+
+Since **1.5.0** the bundle carries `saved_jobs` and `inbound_mails`. The
+sections are the **backend's**, like the pipeline and the chats.
+
+- **The anonymized export takes the people out of the correspondence.** A
+  bookmark's note is the reader's own words, and a reply's sender, subject
+  and body are the letter someone wrote to them: all of it is people and none
+  of it survives. The posting's title and company on the bookmark, the
+  engine's reading of the reply (`intent`, `company`, `role`), the message
+  key and the stamps are the shape of the search and stay. The gate
+  classifies every column of both sections against the real sources, as it
+  does for every other section, and a test holds the anonymized bundle to it.
+- **The readable half carries them**, in both languages: a bookmark as its
+  posting, its company and its note, a reply as its subject, its sender, its
+  company and the intent the engine read.
+- **The restore keeps the ids**, so a bookmark or a reply the bundle omits is
+  retired — a bookmark scoped to the caller and its posting, a reply through
+  its own row. A bookmark is only written when the workspace has the posting
+  it names; the ones that name a posting it lacks are counted in the
+  section's `skipped` reason rather than landed as rows pointing at nothing.
+  A reply's `message_key` is the inbox's own dedupe key, so a create that
+  names a key the inbox already holds is folded onto that row rather than
+  failing the unique constraint — the same inbox, restored twice, does not
+  double. The application link is reproduced only when the caller owns that
+  application: a link between two of the caller's rows or no link at all.
+- **The comparison covers what the apply writes.** The bookmark's display-only
+  title and company — serialized from the posting, never written — and a
+  reply's target-decided application link are not content; the database
+  stamps are not content; and a NOT NULL text column a bundle leaves null
+  compares as the empty string the apply stores, so an anonymized bundle
+  re-imports as `skip` like any other. A bookmark without its posting id and a
+  reply without its key or its received time are not planned, because the
+  apply cannot write them — and their existing counterparts are not retired
+  on their absence.
+
+A 1.4.0 backup still validates with its thirteen sections:
+`SECTIONS_BY_VERSION` holds each version to the sections it shipped with.
+
 ### The restore does not write over somebody else's rows
 
 A bundle's ids are the source's, and the restore keeps them — so the links
@@ -313,18 +359,18 @@ the rows, and it no longer lands them on top of somebody else's.
 
 ```jsonc
 {
-  "schema_version": "1.4.0",
+  "schema_version": "1.5.0",
   "generator": "ai-career-os",
   "generated_at": "2026-10-20T00:00:00+00:00",
   "user": { "id": "<uuid>", "anonymized": false },
   "manifest": {
-    "schema_version": "1.4.0",
+    "schema_version": "1.5.0",
     "generator": "ai-career-os",
     "counts": { "profile": 1, "resumes": 1, "knowledge": 1,
                 "job_descriptions": 1, "interviews": 1, "memories": 1,
                 "applications": 12, "growth_plans": 3, "notes": 4,
                 "contacts": 9, "conversations": 6, "saved_searches": 2,
-                "ingestion_feeds": 3 },
+                "ingestion_feeds": 3, "saved_jobs": 5, "inbound_mails": 2 },
     "content_hash": "<sha256 over data>",
     "anonymized": false
   },
@@ -336,7 +382,7 @@ the rows, and it no longer lands them on top of somebody else's.
     "interviews": [ { ...interview_sessions joined jobs..., "turns": [...],
                       "evaluation": { dims, summary, trajectory } } ],
     "memories": [ { ...user_memories row... } ],
-    // The seven the BACKEND owns — the bridge hands them over, and the hash
+    // The nine the BACKEND owns — the bridge hands them over, and the hash
     // covers them like every other section.
     "applications": [ { ...applications row... } ],
     "growth_plans": [ { ...growth_plans row... } ],
@@ -352,7 +398,13 @@ the rows, and it no longer lands them on top of somebody else's.
     // the source the ingester reads. The anonymized export keeps both whole.
     "saved_searches": [ { id, name, criteria, created_at, updated_at } ],
     "ingestion_feeds": [ { id, name, url, source, enabled,
-                           created_at, updated_at } ]
+                           created_at, updated_at } ],
+    // The two ends of the pipeline: the postings the reader flagged (the id
+    // is the posting's, paired with the note) and the letters that came
+    // back. The bookmark's title and company are display, read from the
+    // posting; the restore writes only the note.
+    "saved_jobs": [ { id, job_title, company_name, note, created_at } ],
+    "inbound_mails": [ { ...inbound_mails row... } ]
   }
 }
 ```

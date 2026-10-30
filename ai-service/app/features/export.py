@@ -35,7 +35,7 @@ from uuid import UUID
 # The words of the readable half, in every language it ships in.
 from app.features import export_words as words_mod
 
-SCHEMA_VERSION = "1.4.0"
+SCHEMA_VERSION = "1.5.0"
 GENERATOR = "ai-career-os"
 
 # Top-level profile keys stripped by ``anonymize`` unless the caller overrides.
@@ -84,6 +84,13 @@ ANONYMIZED_FIELDS: dict[str, tuple[str, ...]] = {
     # The chat's title is the reader's own words; the transcript below is
     # handled by the nested policy.
     "conversations": ("title",),
+    # The bookmark's annotation is the reader's own words; the posting it
+    # names is the board's, not theirs.
+    "saved_jobs": ("note",),
+    # The replies (1.5.0): who wrote, what they wrote, and the whole letter
+    # -- the reader's correspondence, which is the last thing a
+    # right-to-be-forgotten file may carry.
+    "inbound_mails": ("from_address", "subject", "body_text"),
 }
 
 # The standing choices -- ``saved_searches`` and ``ingestion_feeds`` -- are
@@ -93,6 +100,11 @@ ANONYMIZED_FIELDS: dict[str, tuple[str, ...]] = {
 # about a person. The anonymized bundle keeps them whole; the gate classifies
 # every column they carry so the silence is a decision rather than an
 # oversight.
+#
+# The replies are the opposite case and the reason 1.5.0 grew a policy for
+# them: a letter is a person writing to the reader, so its address, its
+# subject and its body go. What the classifier read out of it -- the intent,
+# the company, the role -- stays: it is the substance of the search.
 
 # Fields that carry a **bag** -- a JSON object stored in one column -- whose
 # *inside* holds the reader's words.
@@ -157,10 +169,24 @@ BACKEND_SECTIONS: tuple[str, ...] = (
     # morning silent.
     "saved_searches",
     "ingestion_feeds",
+    # Since 1.5.0 the bookmarks and the replies travel. The bookmarks are the
+    # postings the reader kept before they applied -- the top of the pipeline
+    # the applications section continues. The replies are what recruiters
+    # wrote back, filed on those applications: correspondence, not
+    # configuration, and a bundle that left it out lost the other half of the
+    # conversation the search was made of.
+    "saved_jobs",
+    "inbound_mails",
 )
 
 # Every section the current schema carries.
 SECTIONS: tuple[str, ...] = AI_SECTIONS + BACKEND_SECTIONS
+
+# The sections a 1.4.0 bundle carried: everything before the bookmarks and
+# the replies.
+SECTIONS_1_4: tuple[str, ...] = AI_SECTIONS + (
+    "applications", "growth_plans", "notes", "contacts", "conversations",
+    "saved_searches", "ingestion_feeds")
 
 # The sections a 1.3.0 bundle carried: everything up to the standing choices.
 SECTIONS_1_3: tuple[str, ...] = AI_SECTIONS + (
@@ -181,7 +207,8 @@ LEGACY_SECTIONS: tuple[str, ...] = AI_SECTIONS
 # A bundle's required set is read off its OWN version, so an older backup
 # stays a valid bundle: a 1.0.0 one predates the backend's sections, a
 # 1.1.0 one predates the notes and the contacts, a 1.3.0 one predates the
-# saved searches and the feeds. The map is the record of what grew when, and
+# saved searches and the feeds, and a 1.4.0 one predates the bookmarks and
+# the replies. The map is the record of what grew when, and
 # it is read by *parsed* version rather than by string comparison --
 # "1.10.0" is after "1.9.0", and a string comparison says otherwise.
 SECTIONS_BY_VERSION: dict[str, tuple[str, ...]] = {
@@ -189,7 +216,8 @@ SECTIONS_BY_VERSION: dict[str, tuple[str, ...]] = {
     "1.1.0": AI_SECTIONS + ("applications", "growth_plans"),
     "1.2.0": AI_SECTIONS + ("applications", "growth_plans", "notes", "contacts"),
     "1.3.0": SECTIONS_1_3,
-    "1.4.0": SECTIONS,
+    "1.4.0": SECTIONS_1_4,
+    "1.5.0": SECTIONS,
 }
 
 
@@ -643,6 +671,9 @@ def anonymize(bundle: dict, drop: tuple[str, ...] = DEFAULT_PII_FIELDS) -> dict:
     contact in the reader's address book, with their email. Since 1.3.0 the
     copilot's chats ride along too, and a transcript is the reader's own words
     twice over -- the question they typed and the answer written for them.
+    Since 1.5.0 the recruiter replies ride along as well, and a letter is
+    somebody else's words addressed to the reader: the address, the subject
+    and the body have to go.
 
     So the policy is one list, per section, read by the code that does the
     stripping. A field is on it because it names a person -- the reader or
@@ -907,6 +938,27 @@ def to_markdown(bundle: dict, locale: str | None = None) -> str:
                          + (f" · {f.get('source')}" if f.get("source") else "")
                          + " · " + (words["enabled"] if f.get("enabled", True)
                                     else words["disabled"]))
+        lines.append("")
+
+    # The bookmarks and the replies (1.5.0): the postings the reader kept and
+    # the letters filed on the applications they sent.
+    bookmarks = _dicts(data.get("saved_jobs"))
+    if bookmarks:
+        lines.append(f"## {titles['saved_jobs']} ({len(bookmarks)})")
+        for b in bookmarks:
+            lines.append(f"- {b.get('job_title') or ''}"
+                         + (f" · {b.get('company_name')}" if b.get("company_name") else "")
+                         + (f" · {clip(b.get('note'), 160)}" if b.get("note") else ""))
+        lines.append("")
+
+    mails = _dicts(data.get("inbound_mails"))
+    if mails:
+        lines.append(f"## {titles['inbound_mails']} ({len(mails)})")
+        for m in mails:
+            lines.append(f"- {clip(m.get('subject'), 120)}"
+                         + (f" · {m.get('from_address')}" if m.get("from_address") else "")
+                         + (f" · {m.get('company')}" if m.get("company") else "")
+                         + (f" · {m.get('intent')}" if m.get("intent") else ""))
         lines.append("")
 
     lines.append("---")

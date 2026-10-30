@@ -39,6 +39,14 @@ def _bundle(anonymized: bool = False) -> dict:
         "ingestion_feeds": [{"id": "f1", "name": "Acme careers",
                              "url": "https://acme.example/careers/feed.xml",
                              "source": "rss", "enabled": True}],
+        "saved_jobs": [{"id": "k1", "job_title": "Senior Backend Engineer",
+                        "company_name": "Acme", "note": "Strong platform team."}],
+        "inbound_mails": [{"id": "i1", "message_key": "key-1",
+                           "from_address": "recruiter@acme.example",
+                           "subject": "Next step", "body_text": "Are you free Thursday?",
+                           "intent": "interview_invite", "company": "Acme",
+                           "role": "Backend",
+                           "received_at": "2026-10-29T08:00:00+00:00"}],
     }
     return ex.build_bundle("u1", raw, anonymized=anonymized)
 
@@ -97,6 +105,14 @@ def test_to_html_carries_the_standing_choices():
     assert "Hangzhou senior backend · city=Hangzhou · min_years=5" in html
     assert ("Acme careers · https://acme.example/careers/feed.xml · rss · "
             + words_mod.words("en")["enabled"]) in html
+
+
+def test_to_html_carries_the_bookmarks_and_the_replies():
+    # A bookmark is the posting and the reader's note; a reply is what a
+    # recruiter wrote and the classifier's reading of it.
+    html = rnd.to_html(_bundle(), "en")
+    assert "Senior Backend Engineer · Acme · Strong platform team." in html
+    assert "Next step · recruiter@acme.example · Acme · interview_invite" in html
 
 
 def test_to_html_carries_hash_and_schema():

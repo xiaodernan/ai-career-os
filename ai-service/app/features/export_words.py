@@ -47,6 +47,10 @@ _SECTIONS: dict[str, dict[str, str]] = {
         # The standing choices the account makes for tomorrow (1.4.0).
         "saved_searches": "Saved searches",
         "ingestion_feeds": "Ingestion feeds",
+        # The postings the reader kept and the letters recruiters wrote back
+        # (1.5.0).
+        "saved_jobs": "Saved jobs",
+        "inbound_mails": "Recruiter replies",
     },
     "zh": {
         "profile": "个人档案",
@@ -62,6 +66,8 @@ _SECTIONS: dict[str, dict[str, str]] = {
         "conversations": "Copilot 对话",
         "saved_searches": "已保存搜索",
         "ingestion_feeds": "订阅源",
+        "saved_jobs": "已收藏职位",
+        "inbound_mails": "招聘回信",
     },
 }
 
@@ -116,6 +122,8 @@ SECTION_ORDER: tuple[str, ...] = (
     "conversations",
     "saved_searches",
     "ingestion_feeds",
+    "saved_jobs",
+    "inbound_mails",
 )
 
 # The headings of the single-version print view (19.5). Same rule as the

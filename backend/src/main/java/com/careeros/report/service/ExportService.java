@@ -10,11 +10,19 @@ import com.careeros.conversation.entity.Conversation;
 import com.careeros.conversation.entity.Message;
 import com.careeros.conversation.repository.ConversationRepository;
 import com.careeros.conversation.repository.MessageRepository;
+import com.careeros.inbound.entity.InboundMail;
+import com.careeros.inbound.repository.InboundMailRepository;
 import com.careeros.knowledge.entity.UserNote;
 import com.careeros.knowledge.repository.UserNoteRepository;
+import com.careeros.job.entity.Company;
 import com.careeros.job.entity.IngestionFeed;
+import com.careeros.job.entity.Job;
+import com.careeros.job.entity.SavedJob;
 import com.careeros.job.entity.SavedSearch;
+import com.careeros.job.repository.CompanyRepository;
 import com.careeros.job.repository.IngestionFeedRepository;
+import com.careeros.job.repository.JobRepository;
+import com.careeros.job.repository.SavedJobRepository;
 import com.careeros.job.repository.SavedSearchRepository;
 import com.careeros.network.entity.Contact;
 import com.careeros.network.repository.ContactRepository;
@@ -22,7 +30,11 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,9 +42,10 @@ import org.springframework.transaction.annotation.Transactional;
  * The export bundle (13.1), with the backend's own sections in it.
  *
  * <p>The ai-service reads six sections for itself and hashes the bundle; this
- * service reads the seven the BACKEND owns — {@code applications},
+ * service reads the nine the BACKEND owns — {@code applications},
  * {@code growth_plans}, {@code notes}, {@code contacts},
- * {@code conversations}, {@code saved_searches} and {@code ingestion_feeds} —
+ * {@code conversations}, {@code saved_searches}, {@code ingestion_feeds},
+ * {@code saved_jobs} and {@code inbound_mails} —
  * and hands them over.
  * The hash is still computed in one place (the ai-service), so a bundle has one
  * hashing rule rather than one per producer, and a bundle without the pipeline the
@@ -46,7 +59,9 @@ import org.springframework.transaction.annotation.Transactional;
  * and plan the engines produced. The saved searches and the feeds are the
  * account's standing choices: the question the morning sweep speaks for and the
  * sources the ingester is pointed at -- leave them out, and a restored account
- * goes silent at the next sunrise.
+ * goes silent at the next sunrise. The bookmarks and the replies are the two
+ * ends of the pipeline: the postings the reader kept before they applied, and
+ * what recruiters wrote back after they did.
  */
 @Service
 public class ExportService {
@@ -63,12 +78,18 @@ public class ExportService {
     private final MessageRepository messages;
     private final SavedSearchRepository savedSearches;
     private final IngestionFeedRepository feeds;
+    private final SavedJobRepository savedJobs;
+    private final InboundMailRepository inboundMails;
+    private final JobRepository jobs;
+    private final CompanyRepository companies;
 
     public ExportService(AiServiceClient aiService, ApplicationRepository applications,
                           GrowthPlanRepository growthPlans, UserNoteRepository notes,
                           ContactRepository contacts, ConversationRepository conversations,
                           MessageRepository messages, SavedSearchRepository savedSearches,
-                          IngestionFeedRepository feeds) {
+                          IngestionFeedRepository feeds, SavedJobRepository savedJobs,
+                          InboundMailRepository inboundMails, JobRepository jobs,
+                          CompanyRepository companies) {
         this.aiService = aiService;
         this.applications = applications;
         this.growthPlans = growthPlans;
@@ -78,11 +99,15 @@ public class ExportService {
         this.messages = messages;
         this.savedSearches = savedSearches;
         this.feeds = feeds;
+        this.savedJobs = savedJobs;
+        this.inboundMails = inboundMails;
+        this.jobs = jobs;
+        this.companies = companies;
     }
 
     /**
      * The export bundle for the caller: the ai-service's six sections plus the
-     * backend's seven, hashed together.
+     * backend's nine, hashed together.
      */
     @Transactional(readOnly = true)
     public Map<String, Object> exportBundle(UUID userId, boolean anonymized) {
@@ -121,6 +146,14 @@ public class ExportService {
         sections.put("ingestion_feeds", feeds
                 .findByUserIdOrderByCreatedAtDesc(userId).stream()
                 .map(ExportService::toIngestionFeed)
+                .toList());
+        sections.put("saved_jobs", savedJobsOf(userId).stream()
+                .map(ExportService::toSavedJob)
+                .toList());
+        sections.put("inbound_mails", inboundMails
+                .findByUserIdOrderByReceivedAtDescIdDesc(userId, Paging.first(MAX_ROWS))
+                .getContent().stream()
+                .map(ExportService::toInboundMail)
                 .toList());
         return sections;
     }
@@ -332,6 +365,99 @@ public class ExportService {
         }
         if (f.getUpdatedAt() != null) {
             row.put("updated_at", f.getUpdatedAt().toString());
+        }
+        return row;
+    }
+
+    /**
+     * The bookmarks, each with the posting it names resolved.
+     *
+     * <p>A bookmark row is the pair {@code (user, job)} and the note the
+     * reader wrote; the posting's title and company are read from the shared
+     * corpus so the bundle reads like the saved-jobs screen. They are
+     * display-only — the restore cannot write a job row, and the plan does
+     * not compare them — but a bookmark without them is a row the reader
+     * cannot recognize in the document.
+     *
+     * <p>The lookups are batched for the same reason the saved-jobs screen's
+     * are: a list of N bookmarks must not cost 1 + 2N queries.
+     */
+    private List<SavedJobView> savedJobsOf(UUID userId) {
+        List<SavedJob> rows = savedJobs.findByUserIdOrderByCreatedAtDesc(userId);
+        if (rows.isEmpty()) {
+            return List.of();
+        }
+        Map<UUID, Job> jobsById = jobs.findAllById(
+                        rows.stream().map(SavedJob::getJobId).collect(Collectors.toSet()))
+                .stream().collect(Collectors.toMap(Job::getId, Function.identity()));
+        Set<UUID> companyIds = jobsById.values().stream()
+                .map(Job::getCompanyId).filter(Objects::nonNull).collect(Collectors.toSet());
+        Map<UUID, String> companyNames = companyIds.isEmpty() ? Map.of()
+                : companies.findAllById(companyIds).stream()
+                        .collect(Collectors.toMap(Company::getId, Company::getName));
+        return rows.stream()
+                .map(s -> {
+                    Job job = jobsById.get(s.getJobId());
+                    UUID companyId = job == null ? null : job.getCompanyId();
+                    return new SavedJobView(s, job,
+                            companyId == null ? null : companyNames.get(companyId));
+                })
+                .toList();
+    }
+
+    /** A bookmark with the posting it names resolved. */
+    record SavedJobView(SavedJob bookmark, Job job, String companyName) {
+    }
+
+    /**
+     * One bookmark as the bundle carries it: the posting's own id — the key
+     * the restore matches on — the posting's title and company for the
+     * readable half, and the note the reader wrote about it.
+     */
+    static Map<String, Object> toSavedJob(SavedJobView view) {
+        SavedJob s = view.bookmark();
+        Job job = view.job();
+        Map<String, Object> row = new LinkedHashMap<>();
+        row.put("id", s.getJobId() == null ? null : s.getJobId().toString());
+        row.put("job_title", job == null ? null : job.getTitle());
+        row.put("company_name", view.companyName());
+        row.put("note", s.getNote());
+        if (s.getCreatedAt() != null) {
+            row.put("created_at", s.getCreatedAt().toString());
+        }
+        return row;
+    }
+
+    /**
+     * One recruiter reply as the bundle carries it.
+     *
+     * <p>The letter is the reader's correspondence — the address it came
+     * from, the subject and the body — so those travel, and the anonymized
+     * export blanks exactly those three. What the classifier read out of it
+     * (the intent, the company, the role) is the substance of the search and
+     * stays. The link to an application is carried as it is; the restore
+     * writes it only when the target account owns that card.
+     */
+    static Map<String, Object> toInboundMail(InboundMail m) {
+        Map<String, Object> row = new LinkedHashMap<>();
+        row.put("id", m.getId() == null ? null : m.getId().toString());
+        row.put("message_key", m.getMessageKey());
+        row.put("from_address", m.getFromAddress());
+        row.put("subject", m.getSubject());
+        row.put("body_text", m.getBodyText());
+        row.put("intent", m.getIntent());
+        row.put("company", m.getCompany());
+        row.put("role", m.getRole());
+        row.put("application_id",
+                m.getApplicationId() == null ? null : m.getApplicationId().toString());
+        if (m.getFiledAt() != null) {
+            row.put("filed_at", m.getFiledAt().toString());
+        }
+        if (m.getReceivedAt() != null) {
+            row.put("received_at", m.getReceivedAt().toString());
+        }
+        if (m.getCreatedAt() != null) {
+            row.put("created_at", m.getCreatedAt().toString());
         }
         return row;
     }

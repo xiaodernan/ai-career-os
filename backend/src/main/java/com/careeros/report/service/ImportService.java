@@ -26,12 +26,16 @@ import com.careeros.interview.entity.InterviewTurn;
 import com.careeros.interview.repository.InterviewEvaluationRepository;
 import com.careeros.interview.repository.InterviewSessionRepository;
 import com.careeros.interview.repository.InterviewTurnRepository;
+import com.careeros.inbound.entity.InboundMail;
+import com.careeros.inbound.repository.InboundMailRepository;
 import com.careeros.job.entity.JobJd;
 import com.careeros.job.entity.IngestionFeed;
+import com.careeros.job.entity.SavedJob;
 import com.careeros.job.entity.SavedSearch;
 import com.careeros.job.repository.IngestionFeedRepository;
 import com.careeros.job.repository.JobJdRepository;
 import com.careeros.job.repository.JobRepository;
+import com.careeros.job.repository.SavedJobRepository;
 import com.careeros.job.repository.SavedSearchRepository;
 import com.careeros.network.entity.Contact;
 import com.careeros.network.dto.ContactDtos.ContactRequest;
@@ -75,7 +79,8 @@ import org.springframework.transaction.annotation.Transactional;
  * - **A row the bundle no longer carries is retired, when the restore can
  *   name it.** The sections matched by id -- the applications, the growth
  *   runs, the notes, the contacts, the postings, the interviews, the chats,
- *   the saved searches and the feeds -- execute the plan's {@code delete};
+ *   the saved searches, the feeds, the bookmarks and the replies -- execute
+ *   the plan's {@code delete};
  *   the sections the restore re-ingests (the resumes, the documents, the
  *   memories) are matched by content, so they are never deleted: the restore
  *   cannot name a row it would bring back as a different one.
@@ -102,6 +107,8 @@ public class ImportService {
     private final MessageRepository messages;
     private final SavedSearchRepository savedSearches;
     private final IngestionFeedRepository feeds;
+    private final SavedJobRepository savedJobs;
+    private final InboundMailRepository inboundMails;
 
     public ImportService(AiServiceClient aiService, ExportService exports,
                           UserProfileRepository profiles,
@@ -116,7 +123,9 @@ public class ImportService {
                           ConversationRepository conversations,
                           MessageRepository messages,
                           SavedSearchRepository savedSearches,
-                          IngestionFeedRepository feeds) {
+                          IngestionFeedRepository feeds,
+                          SavedJobRepository savedJobs,
+                          InboundMailRepository inboundMails) {
         this.aiService = aiService;
         this.exports = exports;
         this.profiles = profiles;
@@ -136,6 +145,8 @@ public class ImportService {
         this.messages = messages;
         this.savedSearches = savedSearches;
         this.feeds = feeds;
+        this.savedJobs = savedJobs;
+        this.inboundMails = inboundMails;
     }
 
     /**
@@ -191,6 +202,8 @@ public class ImportService {
         applyConversations(userId, data, sections, applied, skipped);
         applySavedSearches(userId, data, sections, applied, skipped);
         applyIngestionFeeds(userId, data, sections, applied, skipped);
+        applySavedJobs(userId, data, sections, applied, skipped);
+        applyInboundMails(userId, data, sections, applied, skipped);
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("applied", applied.entrySet().stream()
@@ -714,6 +727,183 @@ public class ImportService {
         count(applied, "ingestion_feeds", created, updated, deleted, unchanged);
     }
 
+    /**
+     * The bookmarks: the postings the reader flagged, and the note they left.
+     *
+     * <p>A bookmark is the pair (account, posting): its id in the bundle IS the
+     * posting's, so there is no second id to mint and no {@code setId} here.
+     * The restore can only point a bookmark at a posting this deployment's
+     * corpus holds -- it cannot create a job row -- so a bookmark naming a
+     * posting the target lacks is reported as skipped instead of saved
+     * dangling, once per section because that is how the panel reads it.
+     */
+    private void applySavedJobs(UUID userId, Map<String, Object> data,
+                                Map<String, List<Map<String, Object>>> sections,
+                                Map<String, int[]> applied, List<Map<String, String>> skipped) {
+        List<Map<String, Object>> ops = sections.get("saved_jobs");
+        if (ops == null || ops.isEmpty()) {
+            return;
+        }
+        Object rows = data.get("saved_jobs");
+        if (!(rows instanceof List<?> list)) {
+            skipped.add(Map.of("section", "saved_jobs",
+                    "reason", "The bundle carries no saved jobs."));
+            return;
+        }
+        int created = 0;
+        int updated = 0;
+        int deleted = 0;
+        int unchanged = 0;
+        int unpointed = 0;
+        for (Map<String, Object> op : ops) {
+            String id = str(op, "id");
+            String kind = str(op, "op");
+            UUID jobId = uuid(id);
+            if ("skip".equals(kind)) {
+                unchanged++;
+                continue;
+            }
+            if ("delete".equals(kind)) {
+                if (jobId == null) {
+                    continue;
+                }
+                // The pair is the key: the caller's own bookmark goes, and a
+                // bundle naming a posting they never saved finds nothing.
+                var retired = savedJobs.findById(new SavedJob.SavedJobId(userId, jobId));
+                if (retired.isPresent()) {
+                    savedJobs.delete(retired.get());
+                    deleted++;
+                }
+                continue;
+            }
+            Map<?, ?> row = findRow(list, id);
+            if (row == null || jobId == null) {
+                continue;
+            }
+            if (!jobRepository.existsById(jobId)) {
+                unpointed++;
+                continue;
+            }
+            SavedJob target = savedJobs.findById(new SavedJob.SavedJobId(userId, jobId))
+                    .orElse(null);
+            boolean fresh = target == null;
+            if (fresh) {
+                target = new SavedJob();
+                target.setUserId(userId);
+                target.setJobId(jobId);
+            }
+            target.setNote(str(row, "note"));
+            savedJobs.save(target);
+            if (fresh) {
+                created++;
+            } else {
+                updated++;
+            }
+        }
+        if (unpointed > 0) {
+            skipped.add(Map.of("section", "saved_jobs", "reason",
+                    unpointed + " bookmark(s) name a posting this workspace does not have."));
+        }
+        count(applied, "saved_jobs", created, updated, deleted, unchanged);
+    }
+
+    /**
+     * The recruiter replies, as the inbox recorded them.
+     *
+     * <p>A letter is identified by the provider's message key: the pair with
+     * the account is unique, so a create that lands on a key the target
+     * already has is the same letter delivered twice -- the apply updates
+     * that row rather than failing on the constraint, and counts it as the
+     * write it made. The three NOT NULL text columns are written as the empty
+     * string when the bundle carries none, which is also how the planner
+     * compares them, so a restored letter re-reads as unchanged.
+     *
+     * <p>The link to an application is the target's to grant: the reply is
+     * written with it only when the caller owns that card, the same rule the
+     * interview's links to a posting follow.
+     */
+    private void applyInboundMails(UUID userId, Map<String, Object> data,
+                                   Map<String, List<Map<String, Object>>> sections,
+                                   Map<String, int[]> applied, List<Map<String, String>> skipped) {
+        List<Map<String, Object>> ops = sections.get("inbound_mails");
+        if (ops == null || ops.isEmpty()) {
+            return;
+        }
+        Object rows = data.get("inbound_mails");
+        if (!(rows instanceof List<?> list)) {
+            skipped.add(Map.of("section", "inbound_mails",
+                    "reason", "The bundle carries no inbound mail."));
+            return;
+        }
+        int created = 0;
+        int updated = 0;
+        int deleted = 0;
+        int unchanged = 0;
+        for (Map<String, Object> op : ops) {
+            String id = str(op, "id");
+            String kind = str(op, "op");
+            UUID rowId = uuid(id);
+            if ("skip".equals(kind)) {
+                unchanged++;
+                continue;
+            }
+            if ("delete".equals(kind)) {
+                if (rowId == null) {
+                    continue;
+                }
+                var retired = inboundMails.findByIdAndUserId(rowId, userId);
+                if (retired.isPresent()) {
+                    inboundMails.delete(retired.get());
+                    deleted++;
+                }
+                continue;
+            }
+            Map<?, ?> row = findRow(list, id);
+            if (row == null) {
+                continue;
+            }
+            String messageKey = str(row, "message_key");
+            OffsetDateTime receivedAt = time(row, "received_at");
+            if (messageKey == null || messageKey.isBlank() || receivedAt == null) {
+                // The key is the provider's idempotency and the stamp is NOT
+                // NULL: a letter without either is one the apply cannot file.
+                continue;
+            }
+            InboundMail target = rowId == null ? null
+                    : inboundMails.findByIdAndUserId(rowId, userId).orElse(null);
+            if (target == null) {
+                target = inboundMails.findByUserIdAndMessageKey(userId, messageKey)
+                        .orElse(null);
+            }
+            boolean fresh = target == null;
+            if (fresh) {
+                target = new InboundMail();
+                target.setUserId(userId);
+                target.setMessageKey(messageKey);
+                setId(target, restorableId(rowId, inboundMails::existsById));
+            }
+            target.setFromAddress(text(row, "from_address"));
+            target.setSubject(text(row, "subject"));
+            target.setBodyText(text(row, "body_text"));
+            target.setIntent(str(row, "intent"));
+            target.setCompany(str(row, "company"));
+            target.setRole(str(row, "role"));
+            UUID applicationId = uuid(str(row, "application_id"));
+            target.setApplicationId(applicationId != null
+                    && applications.findByIdAndUserId(applicationId, userId).isPresent()
+                    ? applicationId : null);
+            target.setFiledAt(time(row, "filed_at"));
+            target.setReceivedAt(receivedAt);
+            inboundMails.save(target);
+            if (fresh) {
+                created++;
+            } else {
+                updated++;
+            }
+        }
+        count(applied, "inbound_mails", created, updated, deleted, unchanged);
+    }
+
     /** The stored growth runs: one row per report the candidate ever built. */
     private void applyGrowthPlans(UUID userId, Map<String, Object> data,
                                   Map<String, List<Map<String, Object>>> sections,
@@ -1201,6 +1391,13 @@ public class ImportService {
     private static String str(Map<?, ?> row, String key) {
         Object value = row.get(key);
         return value == null ? null : String.valueOf(value);
+    }
+
+    /** A NOT NULL text column: absent in the bundle becomes the empty string
+     *  the apply's own re-read will show, not the null the database refuses. */
+    private static String text(Map<?, ?> row, String key) {
+        String value = str(row, key);
+        return value == null ? "" : value;
     }
 
     private static BigDecimal dec(Map<?, ?> row, String key) {

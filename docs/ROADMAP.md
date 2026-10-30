@@ -3509,7 +3509,7 @@ quietly land on the wrong side of it.
   HEAD without this change); the frontend's i18n suites 49 green across
   seven files.)
 
-- [ ] **40.3** The bookmarks and the letters travel: saved jobs and inbound mail.
+- [x] **40.3** The bookmarks and the letters travel: saved jobs and inbound mail.
 
   (A bookmark carries the reader's note beside the posting; the posting itself
   belongs to the shared catalogue, so the restore keeps a bookmark only when the
@@ -3521,6 +3521,34 @@ quietly land on the wrong side of it.
   the provider's idempotency key, so restoring a bundle twice answers one row
   per letter. The anonymized bundle blanks the address, the subject and the
   body: those are the other person's words.)
+
+  (Shipped: the bundle's fourteenth and fifteenth sections, under schema
+  **1.5.0** — the ladder keeps a 1.4.0 backup to its thirteen sections. A
+  bookmark travels as the posting's id, the posting's title and company for
+  display, its note and its created time; a reply as its message key, sender,
+  subject and body, the classifier's intent, company and role, the application
+  it was filed on and the filed and received stamps. Both are matched by id —
+  a bookmark by the (account, posting) pair, a reply by its own row — so a row
+  the bundle omits is retired. The apply writes a bookmark only when the
+  workspace has the posting it names, and folds a reply onto the row its
+  message key already names rather than failing the unique constraint; a
+  reply's application link is written only when the caller owns that card.
+  The anonymize policy takes the bookmark's note and the reply's sender,
+  subject and body — the reader's words and the correspondent's — and keeps
+  the posting's title and company, the intent, the company, the role and the
+  stamps; the gate classifies every column of both sections against the real
+  sources. The plan's comparison covers exactly what the apply writes: the
+  bookmark's display-only title and company, the target-decided application
+  link, the database stamps, and a null NOT NULL text compared as the empty
+  string the apply stores, so an anonymized bundle re-imports as `skip` and a
+  re-import of the workspace's own bundle writes nothing. A bookmark with no
+  posting id and a reply with no key or no received stamp are neither planned
+  nor retired. The readable half lists bookmarks and replies in both
+  languages; the data page carries both labels; the restore counts both like
+  the others. Backend unit suite 1169 green; ai-service 1975 passed, 1 skipped,
+  and the only 12 failures are the three census files the mail-settings lane is
+  still re-pinning (none in this unit's files); the frontend's typecheck green
+  and its i18n suites 49 green across seven files.)
 
 - [ ] **40.4** The sections are all of it, and the gate says so.
 

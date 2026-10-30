@@ -36,12 +36,19 @@ import com.careeros.interview.entity.InterviewTurn;
 import com.careeros.interview.repository.InterviewEvaluationRepository;
 import com.careeros.interview.repository.InterviewSessionRepository;
 import com.careeros.interview.repository.InterviewTurnRepository;
+import com.careeros.inbound.entity.InboundMail;
+import com.careeros.inbound.repository.InboundMailRepository;
+import com.careeros.job.entity.Company;
+import com.careeros.job.entity.Job;
 import com.careeros.job.entity.JobJd;
 import com.careeros.job.entity.IngestionFeed;
+import com.careeros.job.entity.SavedJob;
 import com.careeros.job.entity.SavedSearch;
+import com.careeros.job.repository.CompanyRepository;
 import com.careeros.job.repository.IngestionFeedRepository;
 import com.careeros.job.repository.JobJdRepository;
 import com.careeros.job.repository.JobRepository;
+import com.careeros.job.repository.SavedJobRepository;
 import com.careeros.job.repository.SavedSearchRepository;
 import com.careeros.network.repository.ContactRepository;
 import com.careeros.network.entity.Contact;
@@ -99,6 +106,10 @@ class DataPortabilityControllerTest {
     private MessageRepository messages;
     private SavedSearchRepository savedSearches;
     private IngestionFeedRepository feeds;
+    private SavedJobRepository savedJobs;
+    private InboundMailRepository inboundMails;
+    private JobRepository jobs;
+    private CompanyRepository companies;
     private MockMvc mvc;
 
     @BeforeEach
@@ -119,6 +130,10 @@ class DataPortabilityControllerTest {
         messages = mock(MessageRepository.class);
         savedSearches = mock(SavedSearchRepository.class);
         feeds = mock(IngestionFeedRepository.class);
+        savedJobs = mock(SavedJobRepository.class);
+        inboundMails = mock(InboundMailRepository.class);
+        jobs = mock(JobRepository.class);
+        companies = mock(CompanyRepository.class);
         when(conversations.findByUserIdOrderByUpdatedAtDescIdAsc(
                 eq(UUID.fromString(USER)), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of()));
@@ -126,14 +141,20 @@ class DataPortabilityControllerTest {
                 .thenReturn(List.of());
         when(feeds.findByUserIdOrderByCreatedAtDesc(eq(UUID.fromString(USER))))
                 .thenReturn(List.of());
+        when(savedJobs.findByUserIdOrderByCreatedAtDesc(eq(UUID.fromString(USER))))
+                .thenReturn(List.of());
+        when(inboundMails.findByUserIdOrderByReceivedAtDescIdDesc(
+                eq(UUID.fromString(USER)), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of()));
         ExportService exports = new ExportService(ai, applications, growthPlans,
-                notes, contacts, conversations, messages, savedSearches, feeds);
+                notes, contacts, conversations, messages, savedSearches, feeds,
+                savedJobs, inboundMails, jobs, companies);
         ImportService imports = new ImportService(ai, exports, profiles, notes,
                 contacts, applications, growthPlans,
                 mock(ResumeService.class), knowledge, contactService,
-                jds, mock(JobRepository.class),
+                jds, jobs,
                 sessions, turns, evaluations, conversations, messages,
-                savedSearches, feeds);
+                savedSearches, feeds, savedJobs, inboundMails);
         DataPortabilityController controller = new DataPortabilityController(ai, exports, imports);
         mvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new EnvelopeAdvice(), new GlobalExceptionHandler())
@@ -178,6 +199,11 @@ class DataPortabilityControllerTest {
                 .thenReturn(List.of());
         when(feeds.findByUserIdOrderByCreatedAtDesc(eq(UUID.fromString(USER))))
                 .thenReturn(List.of());
+        when(savedJobs.findByUserIdOrderByCreatedAtDesc(eq(UUID.fromString(USER))))
+                .thenReturn(List.of());
+        when(inboundMails.findByUserIdOrderByReceivedAtDescIdDesc(
+                eq(UUID.fromString(USER)), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of()));
     }
 
     @Test
@@ -306,7 +332,7 @@ class DataPortabilityControllerTest {
         verify(ai).exportBundle(eq(UUID.fromString(USER)), eq(false), sections.capture());
         assertThat(sections.getValue()).containsKeys(
                 "applications", "growth_plans", "notes", "contacts", "conversations",
-                "saved_searches", "ingestion_feeds");
+                "saved_searches", "ingestion_feeds", "saved_jobs", "inbound_mails");
 
         // And the reader's own words are in there, not just the section names.
         @SuppressWarnings("unchecked")
@@ -1062,6 +1088,280 @@ class DataPortabilityControllerTest {
     }
 
     /**
+     * The two ends of the pipeline travel: what the reader saved and what a
+     * recruiter wrote back.
+     *
+     * <p>A bookmark is half the reader's and half the corpus's -- the note is
+     * theirs, the title and the company are the posting's -- so the export
+     * resolves them here rather than handing the reader's file a list of ids.
+     * A reply is the reader's record of what a recruiter wrote, and the
+     * classifier's reading of it travels with the letter.
+     */
+    @Test
+    void the_export_carries_the_bookmarks_and_the_replies() throws Exception {
+        stubAnEmptyWorkspace();
+        UUID jobId = UUID.fromString("17171717-1717-1717-1717-171717171717");
+        UUID companyId = UUID.fromString("18181818-1818-1818-1818-181818181818");
+
+        Job job = new Job();
+        identify(job, jobId);
+        job.setCompanyId(companyId);
+        job.setTitle("Senior Backend Engineer");
+        Company company = new Company();
+        identify(company, companyId);
+        company.setName("Acme");
+        when(jobs.findAllById(eq(java.util.Set.of(jobId)))).thenReturn(List.of(job));
+        when(companies.findAllById(eq(java.util.Set.of(companyId))))
+                .thenReturn(List.of(company));
+
+        SavedJob bookmark = new SavedJob();
+        bookmark.setUserId(UUID.fromString(USER));
+        bookmark.setJobId(jobId);
+        bookmark.setNote("Strong platform team; apply after the interview loop.");
+        when(savedJobs.findByUserIdOrderByCreatedAtDesc(eq(UUID.fromString(USER))))
+                .thenReturn(List.of(bookmark));
+
+        InboundMail reply = new InboundMail();
+        identify(reply, UUID.fromString("19191919-1919-1919-1919-191919191919"));
+        reply.setUserId(UUID.fromString(USER));
+        reply.setMessageKey("provider-key-1");
+        reply.setFromAddress("recruiter@acme.example");
+        reply.setSubject("Next step: technical interview");
+        reply.setBodyText("Thanks for applying. Are you free Thursday?");
+        reply.setIntent("interview_invite");
+        reply.setCompany("Acme");
+        reply.setRole("Senior Backend Engineer");
+        reply.setReceivedAt(java.time.OffsetDateTime.parse("2026-10-29T08:00:00Z"));
+        when(inboundMails.findByUserIdOrderByReceivedAtDescIdDesc(
+                eq(UUID.fromString(USER)), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(reply)));
+
+        when(ai.exportBundle(eq(UUID.fromString(USER)), anyBoolean(), any()))
+                .thenReturn(Map.of("schema_version", "1.5.0"));
+
+        mvc.perform(post("/api/v1/data-portability/export")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isOk());
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Map<String, Object>> sections = ArgumentCaptor.forClass(Map.class);
+        verify(ai).exportBundle(eq(UUID.fromString(USER)), eq(false), sections.capture());
+
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> exportedBookmarks =
+                (List<Map<String, Object>>) sections.getValue().get("saved_jobs");
+        assertThat(exportedBookmarks).hasSize(1);
+        assertThat(exportedBookmarks.get(0))
+                .containsEntry("id", jobId.toString())
+                .containsEntry("job_title", "Senior Backend Engineer")
+                .containsEntry("company_name", "Acme")
+                .containsEntry("note", "Strong platform team; apply after the interview loop.");
+
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> exportedReplies =
+                (List<Map<String, Object>>) sections.getValue().get("inbound_mails");
+        assertThat(exportedReplies).hasSize(1);
+        assertThat(exportedReplies.get(0))
+                .containsEntry("message_key", "provider-key-1")
+                .containsEntry("from_address", "recruiter@acme.example")
+                .containsEntry("subject", "Next step: technical interview")
+                .containsEntry("body_text", "Thanks for applying. Are you free Thursday?")
+                .containsEntry("intent", "interview_invite")
+                .containsEntry("company", "Acme")
+                .containsEntry("role", "Senior Backend Engineer")
+                .containsKey("received_at");
+    }
+
+    /**
+     * A bookmark restores only when this workspace has the posting to point at.
+     *
+     * <p>A bookmark is the pair (reader, posting). The restore can bring the
+     * reader's half back -- the note and the pair -- but not the posting: job
+     * rows are the corpus's, and a restore that minted a stub posting would
+     * invent a job nobody can apply to. So the rows that can be pointed at are
+     * written, and the rest are named in the answer's skipped list instead of
+     * silently dropped.
+     */
+    @Test
+    void a_bookmark_restores_only_when_the_workspace_has_the_posting() throws Exception {
+        stubAnEmptyWorkspace();
+        UUID keptId = UUID.fromString("21212121-2121-2121-2121-212121212121");
+        UUID orphanId = UUID.fromString("22222222-2222-2222-2222-222222222223");
+        when(jobs.existsById(eq(keptId))).thenReturn(true);
+        when(jobs.existsById(eq(orphanId))).thenReturn(false);
+        when(ai.importPlan(eq(UUID.fromString(USER)), any(), any()))
+                .thenReturn(Map.of("sections", Map.of("saved_jobs", List.of(
+                        Map.of("op", "create", "id", keptId.toString()),
+                        Map.of("op", "create", "id", orphanId.toString())))));
+
+        mvc.perform(post("/api/v1/data-portability/import-apply")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"bundle":{"schema_version":"1.5.0","data":{
+                                  "saved_jobs":[
+                                    {"id":"21212121-2121-2121-2121-212121212121",
+                                     "note":"Strong platform team."},
+                                    {"id":"22222222-2222-2222-2222-222222222223",
+                                     "note":"From the old board."}]}}}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.applied.saved_jobs.created").value(1))
+                .andExpect(jsonPath("$.data.skipped[0].section").value("saved_jobs"));
+
+        ArgumentCaptor<SavedJob> written = ArgumentCaptor.forClass(SavedJob.class);
+        verify(savedJobs).save(written.capture());
+        assertThat(written.getValue().getUserId()).isEqualTo(UUID.fromString(USER));
+        assertThat(written.getValue().getJobId()).isEqualTo(keptId);
+        assertThat(written.getValue().getNote()).isEqualTo("Strong platform team.");
+    }
+
+    /**
+     * A reply keeps its application link only when the caller owns that card.
+     *
+     * <p>The link points at the reader's own application -- the card that says
+     * "they wrote back about this one". Restored into another account the card
+     * may not be there, and a link to a row the caller does not own would
+     * either fail the foreign key or point at somebody else's card. So the
+     * letter is written, and the link only where the caller's own card is.
+     */
+    @Test
+    void a_reply_links_to_an_application_only_when_the_caller_owns_it() throws Exception {
+        stubAnEmptyWorkspace();
+        UUID ownedCard = UUID.fromString("23232323-2323-2323-2323-232323232323");
+        UUID foreignCard = UUID.fromString("24242424-2424-2424-2424-242424242424");
+        UUID linkedId = UUID.fromString("25252525-2525-2525-2525-252525252525");
+        UUID unlinkedId = UUID.fromString("26262626-2626-2626-2626-262626262626");
+        when(applications.findByIdAndUserId(eq(ownedCard), eq(UUID.fromString(USER))))
+                .thenReturn(Optional.of(new Application()));
+        when(applications.findByIdAndUserId(eq(foreignCard), eq(UUID.fromString(USER))))
+                .thenReturn(Optional.empty());
+        when(ai.importPlan(eq(UUID.fromString(USER)), any(), any()))
+                .thenReturn(Map.of("sections", Map.of("inbound_mails", List.of(
+                        Map.of("op", "create", "id", linkedId.toString()),
+                        Map.of("op", "create", "id", unlinkedId.toString())))));
+
+        mvc.perform(post("/api/v1/data-portability/import-apply")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"bundle":{"schema_version":"1.5.0","data":{
+                                  "inbound_mails":[
+                                    {"id":"25252525-2525-2525-2525-252525252525",
+                                     "message_key":"key-1","from_address":"r@acme.example",
+                                     "subject":"Interview","body_text":"Are you free Thursday?",
+                                     "intent":"interview_invite","company":"Acme",
+                                     "role":"Backend",
+                                     "application_id":"23232323-2323-2323-2323-232323232323",
+                                     "received_at":"2026-10-29T08:00:00Z"},
+                                    {"id":"26262626-2626-2626-2626-262626262626",
+                                     "message_key":"key-2","from_address":null,
+                                     "subject":"Update","body_text":"We filled the role.",
+                                     "intent":"rejection",
+                                     "application_id":"24242424-2424-2424-2424-242424242424",
+                                     "received_at":"2026-10-30T08:00:00Z"}]}}}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.applied.inbound_mails.created").value(2));
+
+        ArgumentCaptor<InboundMail> written = ArgumentCaptor.forClass(InboundMail.class);
+        verify(inboundMails, times(2)).save(written.capture());
+        InboundMail linked = written.getAllValues().get(0);
+        assertThat(linked.getApplicationId()).isEqualTo(ownedCard);
+        assertThat(linked.getFromAddress()).isEqualTo("r@acme.example");
+        assertThat(linked.getIntent()).isEqualTo("interview_invite");
+        assertThat(linked.getReceivedAt())
+                .isEqualTo(java.time.OffsetDateTime.parse("2026-10-29T08:00:00Z"));
+
+        InboundMail unlinked = written.getAllValues().get(1);
+        assertThat(unlinked.getApplicationId()).isNull();
+        // NOT NULL text columns: an absent value is the empty string, not null.
+        assertThat(unlinked.getFromAddress()).isEmpty();
+        assertThat(unlinked.getSubject()).isEqualTo("Update");
+    }
+
+    /**
+     * A letter the inbox already has is folded by its message key.
+     *
+     * <p>The provider's key is the idempotency: the account and the key are
+     * unique. A restore into an account whose webhook already filed the letter
+     * must land on that row rather than fail the constraint -- and the answer
+     * counts it as the update it made. The key itself is not writable after
+     * insert, which is why the row is found by it in the first place.
+     */
+    @Test
+    void a_reply_the_inbox_already_has_is_folded_by_its_message_key() throws Exception {
+        stubAnEmptyWorkspace();
+        UUID bundleId = UUID.fromString("27272727-2727-2727-2727-272727272727");
+        InboundMail alreadyFiled = new InboundMail();
+        alreadyFiled.setUserId(UUID.fromString(USER));
+        alreadyFiled.setMessageKey("provider-key-1");
+        when(inboundMails.findByUserIdAndMessageKey(
+                eq(UUID.fromString(USER)), eq("provider-key-1")))
+                .thenReturn(Optional.of(alreadyFiled));
+        when(ai.importPlan(eq(UUID.fromString(USER)), any(), any()))
+                .thenReturn(Map.of("sections", Map.of("inbound_mails", List.of(
+                        Map.of("op", "create", "id", bundleId.toString())))));
+
+        mvc.perform(post("/api/v1/data-portability/import-apply")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"bundle":{"schema_version":"1.5.0","data":{
+                                  "inbound_mails":[{"id":"27272727-2727-2727-2727-272727272727",
+                                    "message_key":"provider-key-1",
+                                    "from_address":"recruiter@acme.example",
+                                    "subject":"Interview","body_text":"Are you free Thursday?",
+                                    "received_at":"2026-10-29T08:00:00Z"}]}}}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.applied.inbound_mails.updated").value(1))
+                .andExpect(jsonPath("$.data.applied.inbound_mails.created").value(0));
+
+        verify(inboundMails).save(alreadyFiled);
+        assertThat(alreadyFiled.getSubject()).isEqualTo("Interview");
+        assertThat(alreadyFiled.getReceivedAt())
+                .isEqualTo(java.time.OffsetDateTime.parse("2026-10-29T08:00:00Z"));
+    }
+
+    /**
+     * A bookmark or a reply the bundle no longer carries is retired.
+     *
+     * <p>Both are id-matched, so the absence is a statement the restore can
+     * keep -- and both deletes are scoped to the caller: a bundle naming
+     * somebody else's bookmark or letter finds nothing to retire.
+     */
+    @Test
+    void a_retired_bookmark_and_reply_are_deleted() throws Exception {
+        stubAnEmptyWorkspace();
+        UUID jobId = UUID.fromString("28282828-2828-2828-2828-282828282828");
+        UUID mailId = UUID.fromString("29292929-2929-2929-2929-292929292929");
+        SavedJob bookmark = new SavedJob();
+        InboundMail reply = new InboundMail();
+        when(savedJobs.findById(eq(new SavedJob.SavedJobId(UUID.fromString(USER), jobId))))
+                .thenReturn(Optional.of(bookmark));
+        when(inboundMails.findByIdAndUserId(eq(mailId), eq(UUID.fromString(USER))))
+                .thenReturn(Optional.of(reply));
+        when(ai.importPlan(eq(UUID.fromString(USER)), any(), any()))
+                .thenReturn(Map.of("sections", Map.of(
+                        "saved_jobs", List.of(
+                                Map.of("op", "delete", "id", jobId.toString())),
+                        "inbound_mails", List.of(
+                                Map.of("op", "delete", "id", mailId.toString())))));
+
+        mvc.perform(post("/api/v1/data-portability/import-apply")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"bundle":{"schema_version":"1.5.0","data":{
+                                  "saved_jobs":[],"inbound_mails":[]}}}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.applied.saved_jobs.deleted").value(1))
+                .andExpect(jsonPath("$.data.applied.inbound_mails.deleted").value(1));
+
+        verify(savedJobs).delete(bookmark);
+        verify(inboundMails).delete(reply);
+    }
+
+    /**
      * The preview reads the workspace when the caller sends no state.
      *
      * <p>The plan is a comparison, so a preview with no other half calls every
@@ -1095,6 +1395,7 @@ class DataPortabilityControllerTest {
         Map<String, Object> state = (Map<String, Object>) existing.getValue().get("data");
         assertThat(state).containsKeys(
                 "applications", "growth_plans", "notes", "contacts", "conversations",
-                "saved_searches", "ingestion_feeds", "profile");
+                "saved_searches", "ingestion_feeds", "saved_jobs", "inbound_mails",
+                "profile");
     }
 }

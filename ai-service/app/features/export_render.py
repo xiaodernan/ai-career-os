@@ -289,6 +289,31 @@ def to_html(bundle: dict, locale: str | None = None) -> str:
         )
         section(titles["ingestion_feeds"], f"<ul>{items}</ul>")
 
+    # The bookmarks and the replies (1.5.0): the postings the reader kept and
+    # the letters filed on the applications they sent.
+    bookmarks = _dicts(data.get("saved_jobs"))
+    if bookmarks:
+        items = "".join(
+            f"<li>{_esc(b.get('job_title') or '')}"
+            + (f" · {_esc(b.get('company_name'))}" if b.get("company_name") else "")
+            + (f" · {_clip(b.get('note'), 160)}" if b.get("note") else "")
+            + "</li>"
+            for b in bookmarks
+        )
+        section(titles["saved_jobs"], f"<ul>{items}</ul>")
+
+    mails = _dicts(data.get("inbound_mails"))
+    if mails:
+        items = "".join(
+            f"<li>{_clip(m.get('subject'), 160)}"
+            + (f" · {_esc(m.get('from_address'))}" if m.get("from_address") else "")
+            + (f" · {_esc(m.get('company'))}" if m.get("company") else "")
+            + (f" · {_esc(m.get('intent'))}" if m.get("intent") else "")
+            + "</li>"
+            for m in mails
+        )
+        section(titles["inbound_mails"], f"<ul>{items}</ul>")
+
     parts.append("<hr>")
     stat = " · ".join(f"{_esc(k)}={_esc(v)}" for k, v in counts.items())
     parts.append(f'<p class="meta">{_esc(words["stats"])}: {stat}</p>')

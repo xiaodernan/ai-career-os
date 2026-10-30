@@ -518,6 +518,134 @@ def test_a_row_the_apply_cannot_write_is_not_promised_or_retired():
     assert out["op_counts"]["delete"] == 0
 
 
+# ---------------- the two ends of the pipeline: bookmarks and replies ----------------
+
+
+def _bundle_with_ends(bookmarks=(), replies=()) -> dict:
+    raw = {
+        "profile": {"id": "u1", "display_name": "Ada"},
+        "resumes": [], "knowledge": [], "job_descriptions": [],
+        "interviews": [], "memories": [],
+        "saved_jobs": [
+            {"id": b, "job_title": f"Job {b}", "company_name": "Acme",
+             "note": None}
+            for b in bookmarks],
+        "inbound_mails": [
+            {"id": m, "message_key": f"key-{m}",
+             "from_address": "recruiter@acme.example",
+             "subject": f"Subject {m}", "body_text": f"Body {m}",
+             "intent": "interview_invite", "company": "Acme", "role": "Backend",
+             "application_id": None,
+             "received_at": "2026-10-29T08:00:00+00:00"}
+            for m in replies],
+    }
+    return ex.build_bundle("u1", raw)
+
+
+def test_a_bookmark_is_compared_by_the_note_the_restore_writes():
+    """The title and the company are the posting's, not the bookmark's.
+
+    The export resolves them from the shared corpus for the readable half,
+    and the restore cannot write a job row -- so a renamed posting is not a
+    changed bookmark, and comparing the two would rewrite every bookmark
+    whose posting was edited after it was saved.
+    """
+    incoming = _bundle_with_ends(bookmarks=("b1",))
+    existing = _bundle_with_ends(bookmarks=("b1",))
+    existing["data"]["saved_jobs"][0]["job_title"] = "Renamed since"
+    existing["data"]["saved_jobs"][0]["company_name"] = "NewCo"
+    _edited(existing)
+    op = pl.plan_import(incoming, existing=existing)["sections"]["saved_jobs"][0]
+    assert op["op"] == "skip", "a renamed posting made the bookmark look changed"
+
+    incoming["data"]["saved_jobs"][0]["note"] = "Apply after the loop."
+    _edited(incoming)
+    op = pl.plan_import(incoming, existing=existing)["sections"]["saved_jobs"][0]
+    assert op["op"] == "update", "the reader's own note is content"
+
+
+def test_a_bookmark_that_names_no_posting_is_not_planned():
+    # A bookmark's id IS the posting's. A row that names none bookmarks
+    # nothing, and the apply has nothing to point it at.
+    raw = {
+        "profile": {"id": "u1"},
+        "resumes": [], "knowledge": [], "job_descriptions": [],
+        "interviews": [], "memories": [],
+        "saved_jobs": [{"id": "", "job_title": "Nowhere", "note": "orphan"}],
+    }
+    bundle = ex.build_bundle("u1", raw)
+    out = pl.plan_import(bundle, existing=bundle)
+    assert out["sections"]["saved_jobs"] == []
+    assert out["op_counts"]["delete"] == 0
+
+
+def test_a_reply_is_compared_by_what_the_restore_writes():
+    """The application link is the target's to decide; the letter is not.
+
+    The apply writes the link only when the caller owns that card, so
+    comparing the link would make every reply restored into an account
+    without the card an update on every run -- the same rule the
+    interview's links to a job follow.
+    """
+    incoming = _bundle_with_ends(replies=("m1",))
+    existing = _bundle_with_ends(replies=("m1",))
+    existing["data"]["inbound_mails"][0]["application_id"] = "a-card"
+    _edited(existing)
+    op = pl.plan_import(incoming, existing=existing)["sections"]["inbound_mails"][0]
+    assert op["op"] == "skip", "a target-side link made the reply look changed"
+
+    incoming["data"]["inbound_mails"][0]["body_text"] = "Are you free Friday?"
+    _edited(incoming)
+    op = pl.plan_import(incoming, existing=existing)["sections"]["inbound_mails"][0]
+    assert op["op"] == "update", "what the recruiter wrote is content"
+
+
+def test_an_anonymized_reply_matches_the_empty_strings_the_apply_writes():
+    """The three NOT NULL text columns are written as "" for a null.
+
+    The anonymized bundle carries null in all three; the apply cannot save
+    null, so it writes the empty string. The comparison writes "" too --
+    otherwise every reply in an anonymized file would be an update on every
+    re-import, and the row the apply itself landed would never match the
+    file that made it.
+    """
+    anon = ex.anonymize(_bundle_with_ends(replies=("m1",)))
+    existing = _bundle_with_ends(replies=("m1",))
+    for field in ("from_address", "subject", "body_text"):
+        existing["data"]["inbound_mails"][0][field] = ""
+    op = pl.plan_import(anon, existing=existing)["sections"]["inbound_mails"][0]
+    assert op["op"] == "skip"
+
+
+def test_a_reply_without_its_key_or_stamp_is_not_planned():
+    # The message key is the provider's idempotency and the received stamp
+    # is NOT NULL: a letter without either is one the apply cannot file.
+    raw = {
+        "profile": {"id": "u1"},
+        "resumes": [], "knowledge": [], "job_descriptions": [],
+        "interviews": [], "memories": [],
+        "inbound_mails": [{"id": "m1", "message_key": "", "subject": "No key",
+                           "received_at": None}],
+    }
+    bundle = ex.build_bundle("u1", raw)
+    out = pl.plan_import(bundle, existing=bundle)
+    assert out["sections"]["inbound_mails"] == []
+    assert out["op_counts"]["delete"] == 0
+
+
+def test_a_retired_bookmark_and_reply_are_retired():
+    incoming = _bundle_with_ends(bookmarks=("b1",), replies=("m1",))
+    existing = _bundle_with_ends(bookmarks=("b1", "b2"), replies=("m1", "m2"))
+    out = pl.plan_import(incoming, existing=existing)
+    bookmarks = {o["id"]: o["op"] for o in out["sections"]["saved_jobs"]}
+    assert bookmarks["b1"] == "skip"
+    assert bookmarks["b2"] == "delete"
+    replies = {o["id"]: o["op"] for o in out["sections"]["inbound_mails"]}
+    assert replies["m1"] == "skip"
+    assert replies["m2"] == "delete"
+    assert out["op_counts"]["delete"] == 2
+
+
 # ---------------- two spellings of the same value ----------------
 
 
