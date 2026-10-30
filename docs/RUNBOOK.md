@@ -486,6 +486,12 @@ waits for the next morning's pass instead of ringing and mailing when the reader
 lags is the moment, not the reminder: the inbox showed it, the morning letter still carries it
 when the signals dial is on, and the calendar carries its own alarm.
 
+**A fresh process is not a broken one.** The gauge starts at the process's boot time, so a
+deploy gets its first five minutes before this can fire — the same shape every heartbeat in
+this file has. A backend that is up but whose schedule never started moves nothing, and that
+is exactly what the rule is for; a backend that is down is not scraped at all, and its
+silence is the other alarms' business.
+
 **What to read.** The backend log prints "reminder ring delivered to N account(s)" and
 "reminder letter written for N account(s)" when a tick woke or mailed at least one; an ordinary
 minute is silent. A tick whose audience query failed logs "the reminder clock could not read
