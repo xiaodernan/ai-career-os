@@ -30,9 +30,10 @@ const SECTIONS = [
   { key: "job_descriptions", labelKey: "data.sections.jobDescriptions" },
   { key: "interviews", labelKey: "data.sections.interviews" },
   { key: "memories", labelKey: "data.sections.memories" },
-  // The two the BACKEND owns: it writes the applications and the stored growth
-  // runs, so the bridge reads them and hands them into the bundle. Without them
-  // an export is a reading list and not a record of the search.
+  // The sections the BACKEND owns: it writes the applications, the stored
+  // growth runs, the notes, the people the reader knows and the copilot
+  // chats, so the bridge reads them and hands them into the bundle. Without
+  // them an export is a reading list and not a record of the search.
   { key: "applications", labelKey: "data.sections.applications" },
   { key: "growth_plans", labelKey: "data.sections.growthRuns" },
   // The two the reader typed into: their own notes and the people they know.
@@ -41,6 +42,8 @@ const SECTIONS = [
   // reader wrote in.
   { key: "notes", labelKey: "data.sections.notes" },
   { key: "contacts", labelKey: "data.sections.contacts" },
+  // And the chats: what the reader asked and what the assistant answered.
+  { key: "conversations", labelKey: "data.sections.conversations" },
 ] as const;
 
 export default function DataPortabilityPage() {

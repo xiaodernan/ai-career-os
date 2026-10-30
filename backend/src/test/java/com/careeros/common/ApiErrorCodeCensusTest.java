@@ -106,6 +106,9 @@ class ApiErrorCodeCensusTest {
                 // 30.5: the catch-all had three meanings; the session-row and the mail-link
                 // refusals now name their own, so NOT_FOUND is the address and nothing else.
                 "LOGIN_SESSION_NOT_FOUND", "MAIL_LINK_INVALID",
+                // 42.2: the in-app dial write names the mail lists, and a slug none of them
+                // spells is a setting that does not exist -- its own sentence, not a link's.
+                "MAIL_LIST_UNKNOWN",
                 "MALFORMED_REQUEST", "MATCH_NOT_FOUND",
                 "METHOD_NOT_ALLOWED",
                 // 36.1: a second factor that is already on, an account that never started one, and

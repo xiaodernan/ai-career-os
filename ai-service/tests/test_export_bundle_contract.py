@@ -25,7 +25,7 @@ user's export.
 The browser's list is read from the page that offers the redaction
 checkboxes (`app/(app)/data/page.tsx`), because that is the list that
 decides what a reader can leave out. The backend's writer is read from
-`ExportService`, which owns the two sections only the backend can produce.
+`ExportService`, which owns the sections only the backend can produce.
 The backend's reader is read from `ImportService`, which dispatches on the
 plan's section names -- so a section the plan names and the importer does
 not read is a section that is planned, counted, and then dropped on the
@@ -110,10 +110,12 @@ def test_the_browser_offers_no_section_twice() -> None:
 def test_the_bundle_carries_the_pipeline_too() -> None:
     # The backend's sections are the ones the reader cannot get anywhere
     # else: the applications and the growth runs, and -- since 1.2.0 -- the
-    # notes they typed and the people they know. A bundle without them is a
+    # notes they typed and the people they know, and since 1.3.0 the
+    # copilot chats and their transcripts. A bundle without them is a
     # reading list, not a record of a search -- so they are in the bundle,
     # and the browser offers to redact them.
-    assert BACKEND_SECTIONS == ("applications", "growth_plans", "notes", "contacts")
+    assert BACKEND_SECTIONS == (
+        "applications", "growth_plans", "notes", "contacts", "conversations")
     assert set(BACKEND_SECTIONS) <= set(SECTIONS)
     assert set(AI_SECTIONS) <= set(SECTIONS)
 
@@ -176,16 +178,17 @@ def test_the_required_sections_follow_the_schema_version() -> None:
     assert required_sections(SCHEMA_VERSION) == SECTIONS
     assert required_sections("1.0.0") == AI_SECTIONS
     assert required_sections("1.1.0") == AI_SECTIONS + ("applications", "growth_plans")
+    assert required_sections("1.2.0") == (
+        AI_SECTIONS + ("applications", "growth_plans", "notes", "contacts"))
     assert set(AI_SECTIONS) < set(SECTIONS)
 
 
-@pytest.mark.parametrize("version", ["1.2.0", "2.0.0", "not-a-version"])
+@pytest.mark.parametrize("version", ["1.3.0", "2.0.0", "not-a-version"])
 def test_an_unknown_or_newer_version_carries_everything(version: str) -> None:
     # The version comparison is on parsed numbers rather than on strings, so
-    # a future version ("1.2.0", "2.0.0") is read as newer and gets the full
-    # set -- and a version nobody wrote is read as newer too, which would
-    # silently drop the backend's sections from a bundle that is meant to
-    # have them.
+    # a future version ("2.0.0") is read as newer and gets the full set --
+    # and a version nobody wrote is read as newer too, which would silently
+    # drop the backend's sections from a bundle that is meant to have them.
     assert required_sections(version) == SECTIONS
 
 
@@ -202,4 +205,6 @@ def test_the_versions_are_compared_as_numbers_and_not_as_strings() -> None:
     # so a bundle written by a future 1.10 would be read as older than 1.9
     # and held to the wrong set of sections.
     assert required_sections("1.10.0") == SECTIONS
-    assert required_sections("1.9.0") == required_sections("1.2.0")
+    # 1.9.0 sits between known versions, so it resolves to the newest known
+    # set at or before itself -- the 1.3.0 one, now that conversations exist.
+    assert required_sections("1.9.0") == required_sections("1.3.0")

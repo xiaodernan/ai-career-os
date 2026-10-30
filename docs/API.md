@@ -104,6 +104,7 @@ screen. A malformed inbound value is replaced, never refused.
 | DELETE | `/users/me/sessions/{id}` | alias of `DELETE /me/sessions/{id}` |
 | DELETE | `/users/me/sessions` | alias of `DELETE /me/sessions` |
 | GET | `/me/mail/settings` | → {url, weekly, signals, reminders} — the three dial states and the signed settings page's address, so a reader who deleted every letter can still change them (42.1). The answer is neither cached nor indexed, because the address is a credential, and a request without a session is a 401 UNAUTHORIZED |
+| PUT | `/me/mail/settings/{list}` | `{enabled}` — flips one of the three dial states (`weekly`, `signals`, `reminders`); answers the full `MailSettings` read. An unknown list name is a 400 `MAIL_LIST_UNKNOWN`; the answer asks the signed-in reader, not an old letter, so a stale id another account retired is the caller's own row again |
 | GET | `/users/me/profile` | career profile |
 | PATCH | `/users/me/profile` | `{headline, summary, location, yearsExperience, targetRoles, targetLocations, links, workAuthorization, preferences}` |
 

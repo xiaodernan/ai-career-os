@@ -82,7 +82,12 @@ _NOT_WRITTEN_BY_SECTION: dict[str, tuple[str, ...]] = {
 # The sections the restore matches by id: the row it writes is the row the
 # bundle names, so an id the target no longer has is retired.
 _REPLACEABLE = ("applications", "growth_plans", "notes", "contacts",
-                "job_descriptions", "interviews")
+                "job_descriptions", "interviews", "conversations")
+
+# The bookkeeping a conversation's messages do not carry: the restore mints a
+# message id and stamps it, and the transcript's owner and parent are the
+# conversation it is being written with.
+_MESSAGE_NOT_WRITTEN = ("id", "user_id", "conversation_id", "created_at", "updated_at")
 
 # The sections the restore re-ingests: a restored row is a new row with a new
 # id, so identity is the content and the restore never retires.
@@ -153,6 +158,15 @@ def _identity_hash(item: dict, section: str) -> str:
         if isinstance(stripped.get("evaluation"), dict):
             stripped["evaluation"] = _without(
                 stripped["evaluation"], _CHILD_NOT_WRITTEN)
+    if section == "conversations" and isinstance(stripped.get("messages"), list):
+        # The transcript is replaced whole when the conversation changes,
+        # and its rows get ids and stamps from the target -- comparing them
+        # would make every restored chat look changed forever.
+        stripped["messages"] = [
+            _without(message, _MESSAGE_NOT_WRITTEN) if isinstance(message, dict)
+            else _canonical(message)
+            for message in stripped["messages"]
+        ]
     return content_hash(stripped)
 
 

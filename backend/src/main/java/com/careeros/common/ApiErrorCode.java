@@ -87,6 +87,12 @@ public enum ApiErrorCode {
      */
     MAIL_LINK_INVALID(HttpStatus.NOT_FOUND),
     /**
+     * A signed-in write named a dial the mail lists do not have. Its own code because the
+     * sentence is about a mail setting, not about a letter's link -- and only the browser
+     * constructs the slug, so a reader meets it when a build and the service disagree.
+     */
+    MAIL_LIST_UNKNOWN(HttpStatus.BAD_REQUEST),
+    /**
      * The calendar feed's token is unreadable, signed with a retired secret, a mail link's token
      * rather than this purpose's, or names an account that no longer exists. One answer for all
      * four: a calendar client handed a retired URL stops polling, and the open internet cannot

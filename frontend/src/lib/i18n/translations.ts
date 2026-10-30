@@ -1708,6 +1708,8 @@ export const translations = {
       LOGIN_SESSION_NOT_FOUND: "That session is already closed.",
 
       MAIL_LINK_INVALID: "That mail-settings link is not valid or has been retired.",
+      MAIL_LIST_UNKNOWN:
+        "That mail-settings link points at a reader this account cannot see.",
 
       MALFORMED_REQUEST: "The request could not be read.",
 
@@ -4358,6 +4360,7 @@ export const translations = {
       LOGIN_SESSION_NOT_FOUND: "这次登录已经关闭了。",
 
       MAIL_LINK_INVALID: "这个邮件设置链接无效或已经停用。",
+      MAIL_LIST_UNKNOWN: "这个邮件设置链接指向的读者不属于当前账号。",
 
       MALFORMED_REQUEST: "请求无法解析。",
 

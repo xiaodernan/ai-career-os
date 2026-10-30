@@ -35,7 +35,7 @@ from uuid import UUID
 # The words of the readable half, in every language it ships in.
 from app.features import export_words as words_mod
 
-SCHEMA_VERSION = "1.2.0"
+SCHEMA_VERSION = "1.3.0"
 GENERATOR = "ai-career-os"
 
 # Top-level profile keys stripped by ``anonymize`` unless the caller overrides.
@@ -81,6 +81,9 @@ ANONYMIZED_FIELDS: dict[str, tuple[str, ...]] = {
     # about their answers -- the summary quotes them back, the way the
     # growth report quotes the material it was built from.
     "interviews": ("user_id", "evaluation"),
+    # The chat's title is the reader's own words; the transcript below is
+    # handled by the nested policy.
+    "conversations": ("title",),
 }
 
 # Fields that carry a **bag** -- a JSON object stored in one column -- whose
@@ -95,6 +98,10 @@ ANONYMIZED_FIELDS: dict[str, tuple[str, ...]] = {
 # The gate holds this list against the writer that owns the shape, so a
 # bag that grows a new text-bearing key cannot be added quietly.
 ANONYMIZED_NESTED_FIELDS: dict[str, dict[str, tuple[str, ...]]] = {
+    # The transcript: the reader's question, and the assistant's answer,
+    # artifacts and cited sources -- all of it made from the reader's own
+    # material.
+    "conversations": {"messages": ("content", "artifacts", "sources")},
     "knowledge": {"meta": ("inline_text", "text_excerpt")},
     # The interview turns: a list of rows inside the session's row, and the
     # reader's own answers in it. The evaluation quotes the answer back, so
@@ -128,6 +135,12 @@ BACKEND_SECTIONS: tuple[str, ...] = (
     "growth_plans",
     "notes",
     "contacts",
+    # Since 1.3.0 the copilot chats travel too. The conversation service
+    # writes them, so the backend reads them; the questions the reader asked
+    # and the coaching they were given are the reader's own words, and a
+    # bundle that leaves them out is missing the place the reader thought
+    # out loud.
+    "conversations",
 )
 
 # Every section a 1.2.0 bundle carries.
@@ -153,7 +166,8 @@ LEGACY_SECTIONS: tuple[str, ...] = AI_SECTIONS
 SECTIONS_BY_VERSION: dict[str, tuple[str, ...]] = {
     "1.0.0": LEGACY_SECTIONS,
     "1.1.0": AI_SECTIONS + ("applications", "growth_plans"),
-    "1.2.0": SECTIONS,
+    "1.2.0": AI_SECTIONS + ("applications", "growth_plans", "notes", "contacts"),
+    "1.3.0": SECTIONS,
 }
 
 
@@ -811,6 +825,16 @@ def to_markdown(bundle: dict, locale: str | None = None) -> str:
                          + (f" · {c.get('company')}" if c.get("company") else "")
                          + (f" · {c.get('relation')}" if c.get("relation") else "")
                          + (f" · {clip(c.get('notes'), 160)}" if c.get("notes") else ""))
+        lines.append("")
+
+    chats = _dicts(data.get("conversations"))
+    if chats:
+        lines.append(f"## {titles['conversations']} ({len(chats)})")
+        for c in chats:
+            transcript = c.get("messages")
+            messages = transcript if isinstance(transcript, list) else []
+            lines.append(f"- {clip(c.get('title'), 120)} · "
+                         f"{len(messages)} {words['messages']}")
         lines.append("")
 
     lines.append("---")

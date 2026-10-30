@@ -823,6 +823,8 @@ describe("endpoints ↔ backend route parity", () => {
       "the rendered mail-settings page's own form posts here; the app never calls it",
     "/mail/preferences/{}/{}/stop/{}":
       "the one-click unsubscribe URL a mail client fires; the app never calls it",
+    "/me/mail/settings/{}":
+      "the dial flip behind the rendered mail page's own switches; the settings card reads the state (GET /me/mail/settings) and sends the reader to the signed page to change it -- two doors to one state, and the browser only walks through one",
     "/me/email-change": "MeController's alias of /users/me/email-change, which the settings card calls (38.2)",
     "/me/erase": "MeController's alias of /users/me/erase, which the settings card calls (38.5)",
     "/me/password": "MeController's alias of /users/me/password, which the settings card calls (38.4)",

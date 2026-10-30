@@ -11,6 +11,10 @@ import com.careeros.common.ApiException;
 import com.careeros.common.ApiErrorCode;
 import com.careeros.common.EnvelopeJson;
 import com.careeros.common.Json;
+import com.careeros.conversation.entity.Conversation;
+import com.careeros.conversation.entity.Message;
+import com.careeros.conversation.repository.ConversationRepository;
+import com.careeros.conversation.repository.MessageRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.careeros.knowledge.entity.UserNote;
 import com.careeros.knowledge.repository.UserNoteRepository;
@@ -66,10 +70,10 @@ import org.springframework.transaction.annotation.Transactional;
  *   and the user can see that it wrote nothing.
  * - **A row the bundle no longer carries is retired, when the restore can
  *   name it.** The sections matched by id -- the applications, the growth
- *   runs, the notes, the contacts, the postings, the interviews -- execute
- *   the plan's {@code delete}; the sections the restore re-ingests (the
- *   resumes, the documents, the memories) are matched by content, so they are
- *   never deleted: the restore cannot name a row it would bring back as a
+ *   runs, the notes, the contacts, the postings, the interviews, the chats --
+ *   execute the plan's {@code delete}; the sections the restore re-ingests
+ *   (the resumes, the documents, the memories) are matched by content, so they
+ *   are never deleted: the restore cannot name a row it would bring back as a
  *   different one.
  */
 @Service
@@ -90,6 +94,8 @@ public class ImportService {
     private final InterviewSessionRepository sessions;
     private final InterviewTurnRepository turns;
     private final InterviewEvaluationRepository evaluations;
+    private final ConversationRepository conversations;
+    private final MessageRepository messages;
 
     public ImportService(AiServiceClient aiService, ExportService exports,
                           UserProfileRepository profiles,
@@ -100,7 +106,9 @@ public class ImportService {
                           JobJdRepository jds,
                           JobRepository jobRepository, InterviewSessionRepository sessions,
                           InterviewTurnRepository turns,
-                          InterviewEvaluationRepository evaluations) {
+                          InterviewEvaluationRepository evaluations,
+                          ConversationRepository conversations,
+                          MessageRepository messages) {
         this.aiService = aiService;
         this.exports = exports;
         this.profiles = profiles;
@@ -116,6 +124,8 @@ public class ImportService {
         this.sessions = sessions;
         this.turns = turns;
         this.evaluations = evaluations;
+        this.conversations = conversations;
+        this.messages = messages;
     }
 
     /**
@@ -168,6 +178,7 @@ public class ImportService {
         applyInterviews(userId, data, sections, applied, skipped);
         applyNotes(userId, data, sections, applied, skipped);
         applyContacts(userId, data, sections, applied, skipped);
+        applyConversations(userId, data, sections, applied, skipped);
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("applied", applied.entrySet().stream()
@@ -426,6 +437,111 @@ public class ImportService {
             }
         }
         count(applied, "contacts", created, updated, deleted, unchanged);
+    }
+
+    /**
+     * The copilot chats: the conversation, its transcript and the artifacts the
+     * answers carried.
+     *
+     * <p>A chat is the one row the candidate did not type: it is what they
+     * asked and what the assistant answered, and losing it loses the reasoning
+     * that led to a resume, a plan or a search. So the transcript travels with
+     * the chat and is replaced whole -- an update writes the bundle's messages
+     * over the target's, because a transcript with half of one conversation and
+     * half of another is not a conversation.
+     *
+     * <p>The message ids are the target's to mint: the export carries them so
+     * the file reads like the row, but an artifact inside a message points at
+     * content rather than a message, and the plan compares transcripts with the
+     * ids stripped. The run pointer does not travel, so the restore does not
+     * write one -- a link to a run the target does not have is a dead link.
+     *
+     * <p>A retired chat is deleted through the conversation repository, which
+     * is the same delete the chat screen uses: the messages hang off the
+     * conversation with ON DELETE CASCADE and leave with it.
+     */
+    private void applyConversations(UUID userId, Map<String, Object> data,
+                                    Map<String, List<Map<String, Object>>> sections,
+                                    Map<String, int[]> applied, List<Map<String, String>> skipped) {
+        List<Map<String, Object>> ops = sections.get("conversations");
+        if (ops == null || ops.isEmpty()) {
+            return;
+        }
+        Object rows = data.get("conversations");
+        if (!(rows instanceof List<?> list)) {
+            skipped.add(Map.of("section", "conversations",
+                    "reason", "The bundle carries no conversations."));
+            return;
+        }
+        int created = 0;
+        int updated = 0;
+        int deleted = 0;
+        int unchanged = 0;
+        for (Map<String, Object> op : ops) {
+            String id = str(op, "id");
+            String kind = str(op, "op");
+            UUID rowId = uuid(id);
+            if ("skip".equals(kind)) {
+                unchanged++;
+                continue;
+            }
+            if ("delete".equals(kind)) {
+                if (rowId == null) {
+                    continue;
+                }
+                // The row's own delete, so the messages leave with it through
+                // the same cascade the chat screen relies on.
+                var retired = conversations.findByIdAndUserId(rowId, userId);
+                if (retired.isPresent()) {
+                    conversations.delete(retired.get());
+                    deleted++;
+                }
+                continue;
+            }
+            Map<?, ?> row = findRow(list, id);
+            if (row == null) {
+                continue;
+            }
+            Conversation target = rowId == null ? null
+                    : conversations.findByIdAndUserId(rowId, userId).orElse(null);
+            boolean fresh = target == null;
+            if (fresh) {
+                target = new Conversation();
+                target.setUserId(userId);
+                setId(target, restorableId(rowId, conversations::existsById));
+            }
+            String title = str(row, "title");
+            target.setTitle(title == null || title.isBlank() ? "New chat" : title);
+            target.setContext(map(row, "context"));
+            target = conversations.save(target);
+
+            if (!fresh) {
+                messages.deleteAll(messages.findByConversationIdOrderByCreatedAtAsc(target.getId()));
+            }
+            Object transcript = row.get("messages");
+            if (transcript instanceof List<?> items) {
+                for (Object item : items) {
+                    if (!(item instanceof Map<?, ?> message)) {
+                        continue;
+                    }
+                    Message saved = new Message();
+                    saved.setConversationId(target.getId());
+                    saved.setUserId(userId);
+                    saved.setRole(str(message, "role") == null ? "user" : str(message, "role"));
+                    saved.setContent(str(message, "content") == null ? "" : str(message, "content"));
+                    saved.setArtifacts(objects(message, "artifacts"));
+                    saved.setSources(objects(message, "sources"));
+                    saved.setActions(objects(message, "actions"));
+                    messages.save(saved);
+                }
+            }
+            if (fresh) {
+                created++;
+            } else {
+                updated++;
+            }
+        }
+        count(applied, "conversations", created, updated, deleted, unchanged);
     }
 
     /** The stored growth runs: one row per report the candidate ever built. */
@@ -941,6 +1057,23 @@ public class ImportService {
             return list.stream().map(String::valueOf).toList();
         }
         return List.of();
+    }
+
+    /**
+     * A JSON list column as the list it holds -- an artifact's payload, a
+     * message's sources, the actions an answer offered.
+     *
+     * <p>As with {@link #map}, a list is restored from either shape the file
+     * can carry: the value itself, or its JSON text from a bundle written by
+     * the older export.
+     */
+    @SuppressWarnings("unchecked")
+    private static List<Object> objects(Map<?, ?> row, String key) {
+        Object value = row.get(key);
+        if (value instanceof String text) {
+            value = jsonValue(text, List.class);
+        }
+        return value instanceof List<?> list ? (List<Object>) list : List.of();
     }
 
     /**

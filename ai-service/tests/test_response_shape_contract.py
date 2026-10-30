@@ -1028,8 +1028,14 @@ def test_the_java_probe_reads_every_record_the_backend_declares():
     # filing write binds, an application id and nothing else) and `InboundMailItem` (the letter
     # the replies page lists, carrying the reading's five fields as columns rather than a nested
     # object). Both are public DTOs, so the walk counts them by declaration like every other.
-    assert len(declared) == 188, \
-        f"{len(declared)} records carry a declaration the shared opener reads, not the 188 measured"
+    # 190 re-measured on the tree, rather than 188 derived from the last sentence: the four
+    # portability bodies Epic 40 added (`ExportRequest`, `ImportPlanRequest`, `ImportApplyRequest`
+    # and `RenderRequest` in `DataPortabilityDtos`) never moved this pin, and 42.1's `MailSettings`
+    # (the controller's three-flag answer) joined them. `MailDialRequest` -- the one-boolean body
+    # the settings card PUTs -- took it to 191. This pass counts the whole repository again,
+    # which is why it lands on a number the sentences above do not add up to.
+    assert len(declared) == 191, \
+        f"{len(declared)} records carry a declaration the shared opener reads, not the 191 measured"
     problems, renamed = [], []
     for relative, record in declared:
         names = _record_components_at(relative, record)
@@ -3028,8 +3034,11 @@ def test_the_heartbeat_interval_has_one_definer_and_every_shipped_claim_names_it
     per_file: dict[str, int] = {}
     for row in doc_vocabulary:
         per_file[row["file"]] = per_file.get(row["file"], 0) + 1
-    assert per_file == {"AGENTS.md": 1, "DEPLOYMENT.md": 5, "ROADMAP.md": 11,
-                        "RUNBOOK.md": 13, "SECURITY.md": 1}, (
+    # ROADMAP.md's 12 and RUNBOOK.md's 14 rather than the 11 and 13 this pin once carried:
+    # 41.2's "a fresh process is not a broken one" paragraph says the word once more in each
+    # file, which is exactly the paragraph the ledger is meant to notice.
+    assert per_file == {"AGENTS.md": 1, "DEPLOYMENT.md": 5, "ROADMAP.md": 12,
+                        "RUNBOOK.md": 14, "SECURITY.md": 1}, (
         f"{per_file}: the docs' own vocabulary is censused, so this pass is not reporting on an "
         "empty set -- and a second file picking up the word is a signal the ledger has to grow")
 
@@ -3397,7 +3406,10 @@ def test_both_frame_parsers_default_a_nameless_frame_to_the_same_event_name():
         # 1539 rather than 1488 since three interfaces joined above the union: 38.3's
         # `AccountSession`, and 37.4's `InboundLinkRow` and `InboundMail` (+52 lines with
         # their doc comments, -1 from a rewrite); the union itself did not change.
-        ("types.ts", 1539, "kind:"),
+        # 1554 rather than 1539 since 42.1's `MailSettingsRow` joined above the union
+        # (+15 lines with its doc comment); the union itself did not change, and the
+        # three-flag answer reuses the type rather than adding a second one below it.
+        ("types.ts", 1554, "kind:"),
         ('use-sse.ts', 15, 'event: SSEEventName | "message" | "progress" | "ping";'),
     ], (f"{[(r['file'], r['line'], r['head']) for r in by_role['type-union-member']]}: three type unions "
         "spell `message`, and only one of them names a frame -- the other two are the trace step kind "

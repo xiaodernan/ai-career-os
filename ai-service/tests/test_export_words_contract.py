@@ -147,6 +147,8 @@ def _bundle_with_every_section() -> dict:
         "notes": [{"id": "n1", "title": "A note", "content": "Hello."}],
         "contacts": [{"id": "c1", "name": "Li Ming", "company": "Acme",
                       "relation": "Mentor"}],
+        "conversations": [{"id": "v1", "title": "The search",
+                           "messages": [{"role": "user", "content": "find backend roles"}]}],
     }
     return ex.build_bundle("11111111-1111-1111-1111-111111111111", raw)
 

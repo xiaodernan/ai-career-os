@@ -6,10 +6,15 @@ import com.careeros.ai.repository.GrowthPlanRepository;
 import com.careeros.application.entity.Application;
 import com.careeros.application.repository.ApplicationRepository;
 import com.careeros.common.Paging;
+import com.careeros.conversation.entity.Conversation;
+import com.careeros.conversation.entity.Message;
+import com.careeros.conversation.repository.ConversationRepository;
+import com.careeros.conversation.repository.MessageRepository;
 import com.careeros.knowledge.entity.UserNote;
 import com.careeros.knowledge.repository.UserNoteRepository;
 import com.careeros.network.entity.Contact;
 import com.careeros.network.repository.ContactRepository;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -21,15 +26,19 @@ import org.springframework.transaction.annotation.Transactional;
  * The export bundle (13.1), with the backend's own sections in it.
  *
  * <p>The ai-service reads six sections for itself and hashes the bundle; this
- * service reads the four the BACKEND owns — {@code applications},
- * {@code growth_plans}, {@code notes} and {@code contacts} — and hands them over.
+ * service reads the five the BACKEND owns — {@code applications},
+ * {@code growth_plans}, {@code notes}, {@code contacts} and
+ * {@code conversations} — and hands them over.
  * The hash is still computed in one place (the ai-service), so a bundle has one
  * hashing rule rather than one per producer, and a bundle without the pipeline the
  * candidate actually worked is a bundle of their reading list and nothing else.
  *
  * <p>The notes and the contacts are not a nicety: they are the reader's own words
  * and the people they know. "Your data" that leaves out the two tables the reader
- * typed into is not their data.
+ * typed into is not their data. The chats are the same argument one step further:
+ * the reader's questions and the coaching they were given are the reader's own
+ * words too, and a bundle without them loses the reasoning behind every resume
+ * and plan the engines produced.
  */
 @Service
 public class ExportService {
@@ -42,15 +51,20 @@ public class ExportService {
     private final GrowthPlanRepository growthPlans;
     private final UserNoteRepository notes;
     private final ContactRepository contacts;
+    private final ConversationRepository conversations;
+    private final MessageRepository messages;
 
     public ExportService(AiServiceClient aiService, ApplicationRepository applications,
                           GrowthPlanRepository growthPlans, UserNoteRepository notes,
-                          ContactRepository contacts) {
+                          ContactRepository contacts, ConversationRepository conversations,
+                          MessageRepository messages) {
         this.aiService = aiService;
         this.applications = applications;
         this.growthPlans = growthPlans;
         this.notes = notes;
         this.contacts = contacts;
+        this.conversations = conversations;
+        this.messages = messages;
     }
 
     /**
@@ -86,7 +100,37 @@ public class ExportService {
         sections.put("contacts", contacts.findByUserIdOrderByUpdatedAtDesc(userId).stream()
                 .map(ExportService::toContact)
                 .toList());
+        sections.put("conversations", conversationsOf(userId));
         return sections;
+    }
+
+    /**
+     * The copilot chats, each with its transcript.
+     *
+     * <p>The reader's questions and the coaching they were given are the
+     * reader's own words, and until 1.3.0 they were the largest table in the
+     * product that "Export everything" left out. One query per page of chats
+     * would walk the history a conversation at a time; the transcripts are
+     * read in one statement and grouped here.
+     */
+    private List<Map<String, Object>> conversationsOf(UUID userId) {
+        List<Conversation> rows = conversations
+                .findByUserIdOrderByUpdatedAtDescIdAsc(userId, Paging.first(MAX_ROWS))
+                .getContent();
+        if (rows.isEmpty()) {
+            return List.of();
+        }
+        List<UUID> ids = rows.stream().map(Conversation::getId).toList();
+        Map<UUID, List<Map<String, Object>>> transcripts = new LinkedHashMap<>();
+        for (Message message : messages.findByConversationIdInOrderByCreatedAtAscIdAsc(ids)) {
+            transcripts.computeIfAbsent(message.getConversationId(), key -> new ArrayList<>())
+                    .add(toMessage(message));
+        }
+        List<Map<String, Object>> out = new ArrayList<>(rows.size());
+        for (Conversation c : rows) {
+            out.add(toConversation(c, transcripts.getOrDefault(c.getId(), List.of())));
+        }
+        return out;
     }
 
     /**
@@ -180,6 +224,46 @@ public class ExportService {
         }
         if (c.getUpdatedAt() != null) {
             row.put("updated_at", c.getUpdatedAt().toString());
+        }
+        return row;
+    }
+
+    /**
+     * One chat as the bundle carries it: the conversation's own fields and
+     * its transcript below them.
+     */
+    private static Map<String, Object> toConversation(Conversation c,
+                                                      List<Map<String, Object>> messages) {
+        Map<String, Object> row = new LinkedHashMap<>();
+        row.put("id", c.getId() == null ? null : c.getId().toString());
+        row.put("title", c.getTitle());
+        row.put("context", c.getContext());
+        if (c.getCreatedAt() != null) {
+            row.put("created_at", c.getCreatedAt().toString());
+        }
+        if (c.getUpdatedAt() != null) {
+            row.put("updated_at", c.getUpdatedAt().toString());
+        }
+        row.put("messages", messages);
+        return row;
+    }
+
+    /**
+     * One message in the transcript. The run pointer is deliberately absent:
+     * an activity run is bookkeeping that does not travel, and an id pointing
+     * at a run the target does not have would be a dead link the restore
+     * wrote on purpose.
+     */
+    private static Map<String, Object> toMessage(Message m) {
+        Map<String, Object> row = new LinkedHashMap<>();
+        row.put("id", m.getId() == null ? null : m.getId().toString());
+        row.put("role", m.getRole());
+        row.put("content", m.getContent());
+        row.put("artifacts", m.getArtifacts());
+        row.put("sources", m.getSources());
+        row.put("actions", m.getActions());
+        if (m.getCreatedAt() != null) {
+            row.put("created_at", m.getCreatedAt().toString());
         }
         return row;
     }

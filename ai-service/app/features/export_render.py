@@ -231,6 +231,16 @@ def to_html(bundle: dict, locale: str | None = None) -> str:
         )
         section(titles["contacts"], f"<ul>{items}</ul>")
 
+    # The copilot chats (1.3.0): a title and the size of its transcript.
+    chats = _dicts(data.get("conversations"))
+    if chats:
+        items = "".join(
+            f"<li>{_esc(c.get('title') or '')} · "
+            f"{len(c.get('messages') or [])} {_esc(words['messages'])}</li>"
+            for c in chats
+        )
+        section(titles["conversations"], f"<ul>{items}</ul>")
+
     parts.append("<hr>")
     stat = " · ".join(f"{_esc(k)}={_esc(v)}" for k, v in counts.items())
     parts.append(f'<p class="meta">{_esc(words["stats"])}: {stat}</p>')

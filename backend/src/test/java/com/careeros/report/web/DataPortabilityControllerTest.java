@@ -18,6 +18,10 @@ import com.careeros.ai.repository.GrowthPlanRepository;
 import com.careeros.application.entity.Application;
 import com.careeros.application.repository.ApplicationRepository;
 import com.careeros.auth.entity.UserProfile;
+import com.careeros.conversation.entity.Conversation;
+import com.careeros.conversation.entity.Message;
+import com.careeros.conversation.repository.ConversationRepository;
+import com.careeros.conversation.repository.MessageRepository;
 import com.careeros.report.service.ExportService;
 import com.careeros.report.service.ImportService;
 import com.careeros.auth.repository.UserProfileRepository;
@@ -86,6 +90,8 @@ class DataPortabilityControllerTest {
     private InterviewSessionRepository sessions;
     private InterviewTurnRepository turns;
     private InterviewEvaluationRepository evaluations;
+    private ConversationRepository conversations;
+    private MessageRepository messages;
     private MockMvc mvc;
 
     @BeforeEach
@@ -102,13 +108,18 @@ class DataPortabilityControllerTest {
         sessions = mock(InterviewSessionRepository.class);
         turns = mock(InterviewTurnRepository.class);
         evaluations = mock(InterviewEvaluationRepository.class);
+        conversations = mock(ConversationRepository.class);
+        messages = mock(MessageRepository.class);
+        when(conversations.findByUserIdOrderByUpdatedAtDescIdAsc(
+                eq(UUID.fromString(USER)), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of()));
         ExportService exports = new ExportService(ai, applications, growthPlans,
-                notes, contacts);
+                notes, contacts, conversations, messages);
         ImportService imports = new ImportService(ai, exports, profiles, notes,
                 contacts, applications, growthPlans,
                 mock(ResumeService.class), knowledge, contactService,
                 jds, mock(JobRepository.class),
-                sessions, turns, evaluations);
+                sessions, turns, evaluations, conversations, messages);
         DataPortabilityController controller = new DataPortabilityController(ai, exports, imports);
         mvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new EnvelopeAdvice(), new GlobalExceptionHandler())
@@ -121,6 +132,20 @@ class DataPortabilityControllerTest {
     @AfterEach
     void tearDown() {
         SecurityContextHolder.clearContext();
+    }
+
+    /**
+     * {@code id} is {@code @UuidGenerator}-managed, so a detached chat or
+     * message gets the value the persistence layer would assign by reflection.
+     */
+    private static void identify(Object target, UUID id) {
+        try {
+            java.lang.reflect.Field f = target.getClass().getDeclaredField("id");
+            f.setAccessible(true);
+            f.set(target, id);
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException("cannot set id", e);
+        }
     }
 
     /**
@@ -212,8 +237,27 @@ class DataPortabilityControllerTest {
         when(contacts.findByUserIdOrderByUpdatedAtDesc(eq(UUID.fromString(USER))))
                 .thenReturn(List.of(contact));
 
+        UUID chatId = UUID.fromString("99999999-9999-9999-9999-999999999999");
+        Conversation chat = new Conversation();
+        identify(chat, chatId);
+        chat.setUserId(UUID.fromString(USER));
+        chat.setTitle("Which resume fits a platform role?");
+        chat.setContext(Map.of("resumeId", "r1"));
+        Message answer = new Message();
+        identify(answer, UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"));
+        answer.setConversationId(chatId);
+        answer.setUserId(UUID.fromString(USER));
+        answer.setRole("assistant");
+        answer.setContent("The platform resume, because the posting leads with scale.");
+        answer.setArtifacts(List.of(Map.of("kind", "resume", "version", 2)));
+        when(conversations.findByUserIdOrderByUpdatedAtDescIdAsc(
+                eq(UUID.fromString(USER)), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(chat)));
+        when(messages.findByConversationIdInOrderByCreatedAtAscIdAsc(List.of(chatId)))
+                .thenReturn(List.of(answer));
+
         when(ai.exportBundle(eq(UUID.fromString(USER)), anyBoolean(), any()))
-                .thenReturn(Map.of("schema_version", "1.2.0"));
+                .thenReturn(Map.of("schema_version", "1.3.0"));
 
         mvc.perform(post("/api/v1/data-portability/export")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -224,7 +268,7 @@ class DataPortabilityControllerTest {
         ArgumentCaptor<Map<String, Object>> sections = ArgumentCaptor.forClass(Map.class);
         verify(ai).exportBundle(eq(UUID.fromString(USER)), eq(false), sections.capture());
         assertThat(sections.getValue()).containsKeys(
-                "applications", "growth_plans", "notes", "contacts");
+                "applications", "growth_plans", "notes", "contacts", "conversations");
 
         // And the reader's own words are in there, not just the section names.
         @SuppressWarnings("unchecked")
@@ -243,6 +287,25 @@ class DataPortabilityControllerTest {
                 .containsEntry("name", "Li Ming")
                 .containsEntry("relation", "Mentor")
                 .containsEntry("notes", "Met at the conference; happy to review my design.");
+
+        // The chats travel with their transcripts: a bundle that leaves them
+        // out loses the reasoning behind the resumes and plans it does carry.
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> exportedChats =
+                (List<Map<String, Object>>) sections.getValue().get("conversations");
+        assertThat(exportedChats).hasSize(1);
+        assertThat(exportedChats.get(0))
+                .containsEntry("title", "Which resume fits a platform role?")
+                .containsKey("context");
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> transcript =
+                (List<Map<String, Object>>) exportedChats.get(0).get("messages");
+        assertThat(transcript).hasSize(1);
+        assertThat(transcript.get(0))
+                .containsEntry("role", "assistant")
+                .containsEntry("content",
+                        "The platform resume, because the posting leads with scale.")
+                .doesNotContainKey("agent_run_id");
     }
 
     /**
@@ -727,6 +790,87 @@ class DataPortabilityControllerTest {
     }
 
     /**
+     * A chat is restored with the transcript the bundle carries, whole.
+     *
+     * <p>The chat is the one row the candidate did not type: it is what they
+     * asked and what the assistant answered, and a restore that kept the title
+     * and dropped the messages would restore an empty room. The transcript is
+     * replaced rather than merged for the same reason the interview's is -- a
+     * chat holding half of each conversation is not either one.
+     */
+    @Test
+    void a_changed_chat_replaces_its_transcript() throws Exception {
+        stubAnEmptyWorkspace();
+        UUID chatId = UUID.fromString("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+        Conversation chat = new Conversation();
+        identify(chat, chatId);
+        chat.setUserId(UUID.fromString(USER));
+        Message stale = new Message();
+        stale.setConversationId(chatId);
+        when(conversations.findByIdAndUserId(eq(chatId), eq(UUID.fromString(USER))))
+                .thenReturn(Optional.of(chat));
+        when(messages.findByConversationIdOrderByCreatedAtAsc(chatId))
+                .thenReturn(List.of(stale));
+        when(conversations.save(any())).thenAnswer(call -> call.getArgument(0));
+        when(ai.importPlan(eq(UUID.fromString(USER)), any(), any()))
+                .thenReturn(Map.of("sections", Map.of("conversations", List.of(
+                        Map.of("op", "update", "id", chatId.toString())))));
+
+        mvc.perform(post("/api/v1/data-portability/import-apply")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"bundle":{"schema_version":"1.3.0","data":{
+                                  "conversations":[{"id":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+                                    "title":"Why is my match low?",
+                                    "context":{"resumeId":"r1"},
+                                    "messages":[{"role":"assistant",
+                                      "content":"The posting asks for Go.",
+                                      "sources":[{"kind":"job","id":"j1"}],
+                                      "actions":[]}]}]}}}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.applied.conversations.updated").value(1))
+                .andExpect(jsonPath("$.data.applied.conversations.created").value(0));
+
+        verify(messages).deleteAll(List.of(stale));
+        ArgumentCaptor<Message> written = ArgumentCaptor.forClass(Message.class);
+        verify(messages).save(written.capture());
+        assertThat(written.getValue().getConversationId()).isEqualTo(chatId);
+        assertThat(written.getValue().getUserId()).isEqualTo(UUID.fromString(USER));
+        assertThat(written.getValue().getContent()).isEqualTo("The posting asks for Go.");
+        assertThat(written.getValue().getSources()).hasSize(1);
+        assertThat(chat.getTitle()).isEqualTo("Why is my match low?");
+        assertThat(chat.getContext()).containsEntry("resumeId", "r1");
+    }
+
+    /**
+     * A chat the bundle no longer carries is retired, and its messages with it.
+     */
+    @Test
+    void a_retired_chat_is_deleted_whole() throws Exception {
+        stubAnEmptyWorkspace();
+        UUID chatId = UUID.fromString("cccccccc-cccc-cccc-cccc-cccccccccccc");
+        Conversation chat = new Conversation();
+        identify(chat, chatId);
+        chat.setUserId(UUID.fromString(USER));
+        when(conversations.findByIdAndUserId(eq(chatId), eq(UUID.fromString(USER))))
+                .thenReturn(Optional.of(chat));
+        when(ai.importPlan(eq(UUID.fromString(USER)), any(), any()))
+                .thenReturn(Map.of("sections", Map.of("conversations", List.of(
+                        Map.of("op", "delete", "id", chatId.toString())))));
+
+        mvc.perform(post("/api/v1/data-portability/import-apply")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"bundle":{"schema_version":"1.3.0","data":{"conversations":[]}}}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.applied.conversations.deleted").value(1));
+
+        verify(conversations).delete(chat);
+    }
+
+    /**
      * The preview reads the workspace when the caller sends no state.
      *
      * <p>The plan is a comparison, so a preview with no other half calls every
@@ -759,6 +903,6 @@ class DataPortabilityControllerTest {
         @SuppressWarnings("unchecked")
         Map<String, Object> state = (Map<String, Object>) existing.getValue().get("data");
         assertThat(state).containsKeys(
-                "applications", "growth_plans", "notes", "contacts", "profile");
+                "applications", "growth_plans", "notes", "contacts", "conversations", "profile");
     }
 }

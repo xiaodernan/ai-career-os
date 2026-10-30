@@ -1,9 +1,14 @@
 package com.careeros.mail.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -20,19 +25,25 @@ import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 /**
- * The settings route that does not need a letter (roadmap 42.1).
+ * The settings routes that do not need a letter (roadmap 42.1, 42.2).
  *
  * <p>What is pinned. A signed-in reader is handed the same signed page the letters carry, so the
  * screen and the mailbox open one document. Each of the three booleans comes from the column its
  * sweep reads, so the card cannot claim a letter is on while the sweep subtracts the account. No
  * session means no settings. And the answer is {@code no-store} and noindex: the URL in it is a
  * credential that can change private settings, so a cache must not keep it.
+ *
+ * <p>The write half (42.2) pins three things the read half cannot: the slug reaches the service
+ * through the same enum the signed page's buttons use, so the two doors settle one state; a slug
+ * no list spells refuses without touching a column; and a body with no dial refuses rather than
+ * reading as "off", because turning a letter off was never what a missing field said.
  */
 class MailSettingsControllerTest {
 
@@ -104,5 +115,45 @@ class MailSettingsControllerTest {
         mvc.perform(get("/api/v1/me/mail/settings"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error.code").value("UNAUTHORIZED"));
+    }
+
+    @Test
+    void theDialTheReaderTurnsGoesThroughTheServiceTheSweepsRead() throws Exception {
+        // The answer is the page as the sweeps will now see it, not the boolean that was sent:
+        // the card must not be told "done" while a delivery still subtracts this account.
+        when(preferences.receives(ALICE, MailList.SIGNALS)).thenReturn(false);
+
+        mvc.perform(put("/api/v1/me/mail/settings/signals")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"enabled\":false}"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Cache-Control", "no-store"))
+                .andExpect(jsonPath("$.data.url").value(links.page(ALICE)))
+                .andExpect(jsonPath("$.data.signals").value(false))
+                .andExpect(jsonPath("$.data.weekly").value(true));
+
+        verify(preferences).set(ALICE, MailList.SIGNALS, false);
+    }
+
+    @Test
+    void aDialNoListSpellsIsItsOwnRefusalAndTouchesNoColumn() throws Exception {
+        mvc.perform(put("/api/v1/me/mail/settings/hourly")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"enabled\":false}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("MAIL_LIST_UNKNOWN"));
+
+        verify(preferences, never()).set(any(), any(), anyBoolean());
+    }
+
+    @Test
+    void aBodyWithoutTheDialIsRefusedRatherThanReadAsOff() throws Exception {
+        mvc.perform(put("/api/v1/me/mail/settings/weekly")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("VALIDATION_FAILED"));
+
+        verify(preferences, never()).set(any(), any(), anyBoolean());
     }
 }
