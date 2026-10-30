@@ -71,7 +71,17 @@ export { describe, fail };
 export const RESUME_ACCEPT = [".pdf", ".docx", ".txt"];
 export const RESUME_MAX_BYTES = 10 * 1024 * 1024;
 
-export function validateResumeFile(file: File): string | null {
+/**
+ * Why a picked file was refused, as a code rather than a sentence.
+ *
+ * The dropzone shows this refusal twice -- inline under the box and in a toast
+ * -- and a Chinese reader was shown an English sentence both times. The words
+ * belong to the screen, which owns the reader's language; this module only
+ * knows the three things that can be wrong with a file.
+ */
+export type ResumeFileProblem = "unsupported" | "too-large" | "empty";
+
+export function validateResumeFile(file: File): ResumeFileProblem | null {
   const name = file.name.toLowerCase();
   const okExt = RESUME_ACCEPT.some((ext) => name.endsWith(ext));
   const okMime = [
@@ -80,9 +90,9 @@ export function validateResumeFile(file: File): string | null {
     "text/plain",
     "application/msword",
   ].includes(file.type);
-  if (!okExt && !okMime) return "Only PDF, DOCX or TXT files are supported.";
-  if (file.size > RESUME_MAX_BYTES) return `File is larger than ${RESUME_MAX_BYTES / 1024 / 1024}MB.`;
-  if (file.size === 0) return "That file looks empty.";
+  if (!okExt && !okMime) return "unsupported";
+  if (file.size > RESUME_MAX_BYTES) return "too-large";
+  if (file.size === 0) return "empty";
   return null;
 }
 

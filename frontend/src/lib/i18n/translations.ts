@@ -254,7 +254,10 @@ export const translations = {
       uploading: "Uploading…",
       dropHere: "Drop your resume here, or click to browse",
       accepted:
-        "{formats} — up to 10 MB. Files stay in your workspace and feed the knowledge base the agents cite from.",
+        "{formats} — up to {mb} MB. Files stay in your workspace and feed the knowledge base the agents cite from.",
+      problemUnsupported: "Only PDF, DOCX or TXT files are supported.",
+      problemTooLarge: "File is larger than {mb}MB.",
+      problemEmpty: "That file looks empty.",
       ingesting: "Ingesting",
       ingestedToast: "Resume ingested — your knowledge base is updated.",
       canLeave:
@@ -3018,7 +3021,10 @@ export const translations = {
       uploading: "上传中…",
       dropHere: "把简历拖到这里，或点击选择",
       accepted:
-        "{formats} — 最大 10 MB。文件留在你的工作区里，并成为代理引用的知识库的一部分。",
+        "{formats} — 最大 {mb} MB。文件留在你的工作区里，并成为代理引用的知识库的一部分。",
+      problemUnsupported: "只支持 PDF、DOCX 或 TXT 文件。",
+      problemTooLarge: "文件大于 {mb}MB。",
+      problemEmpty: "这个文件看起来是空的。",
       ingesting: "摄取中",
       ingestedToast: "简历已摄取——你的知识库已更新。",
       canLeave: "你可以离开这个页面——运行会在服务端继续，下面的列表会反映它的真实状态。",

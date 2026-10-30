@@ -8,8 +8,36 @@ import { Card, CardContent } from "@/components/ui/card";
 import { TaskProgress } from "@/components/ai/task-stream";
 import { pickResumeId, pickTaskId } from "@/lib/resume-upload";
 import { ingestSeed } from "@/lib/ingest-steps";
-import { RESUME_ACCEPT, validateResumeFile, useUploadResume } from "@/lib/hooks/actions";
+import {
+  RESUME_ACCEPT,
+  RESUME_MAX_BYTES,
+  validateResumeFile,
+  useUploadResume,
+  type ResumeFileProblem,
+} from "@/lib/hooks/actions";
 import { useLocale } from "@/lib/i18n/locale-context";
+
+/**
+ * The sentence a refusal code names.
+ *
+ * Exhaustive by union rather than defaulted: a fourth reason becomes a type
+ * error here, not a file that is quietly refused with no words at all. The
+ * size is derived from `RESUME_MAX_BYTES`, so raising the cap moves the copy
+ * and the guard together.
+ */
+export function problemMessage(
+  t: (key: string, vars?: Record<string, string | number>) => string,
+  problem: ResumeFileProblem
+): string {
+  switch (problem) {
+    case "unsupported":
+      return t("upload.problemUnsupported");
+    case "too-large":
+      return t("upload.problemTooLarge", { mb: RESUME_MAX_BYTES / 1024 / 1024 });
+    case "empty":
+      return t("upload.problemEmpty");
+  }
+}
 
 /**
  * UploadDropzone — drag & drop resume intake with a *client-side* size/mime
@@ -41,7 +69,7 @@ export function UploadDropzone({ onUploaded, className, compact = false, ...prop
   const inputRef = React.useRef<HTMLInputElement>(null);
   const resumeIdRef = React.useRef<string | null>(null);
   const [dragging, setDragging] = React.useState(false);
-  const [rejected, setRejected] = React.useState<string | null>(null);
+  const [rejected, setRejected] = React.useState<ResumeFileProblem | null>(null);
   const [taskId, setTaskId] = React.useState<string | null>(null);
   const upload = useUploadResume();
 
@@ -52,7 +80,7 @@ export function UploadDropzone({ onUploaded, className, compact = false, ...prop
       const problem = validateResumeFile(file);
       if (problem) {
         setRejected(problem);
-        toast.error(problem);
+        toast.error(problemMessage(t, problem));
         return;
       }
       setRejected(null);
@@ -66,7 +94,7 @@ export function UploadDropzone({ onUploaded, className, compact = false, ...prop
         },
       });
     },
-    [upload, onUploaded]
+    [upload, onUploaded, t]
   );
 
   return (
@@ -113,7 +141,10 @@ export function UploadDropzone({ onUploaded, className, compact = false, ...prop
           {upload.isPending ? t("upload.uploading") : t("upload.dropHere")}
         </p>
         <p className="text-xs text-muted-foreground">
-          {t("upload.accepted", { formats: RESUME_ACCEPT.join(" · ") })}
+          {t("upload.accepted", {
+            formats: RESUME_ACCEPT.join(" · "),
+            mb: RESUME_MAX_BYTES / 1024 / 1024,
+          })}
         </p>
         <input
           ref={inputRef}
@@ -130,7 +161,7 @@ export function UploadDropzone({ onUploaded, className, compact = false, ...prop
       {rejected && (
         <p role="alert" className="flex items-center gap-1.5 text-xs text-destructive">
           <TriangleAlert className="size-3.5" aria-hidden />
-          {rejected}
+          {problemMessage(t, rejected)}
         </p>
       )}
 

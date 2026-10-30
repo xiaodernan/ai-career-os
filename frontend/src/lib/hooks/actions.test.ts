@@ -32,24 +32,24 @@ describe("validateResumeFile", () => {
 
   it("refuses a file that is neither supported-extension nor supported-mime", () => {
     expect(validateResumeFile(file("resume.exe", "application/x-msdownload", 1024)))
-        .toBe("Only PDF, DOCX or TXT files are supported.");
+        .toBe("unsupported");
     expect(validateResumeFile(file("resume.zip", "", 1024)))
-        .toBe("Only PDF, DOCX or TXT files are supported.");
+        .toBe("unsupported");
   });
 
   it("distinguishes an oversized file from an empty one", () => {
     expect(validateResumeFile(file("a.pdf", "application/pdf", RESUME_MAX_BYTES + 1)))
-        .toBe("File is larger than 10MB.");
+        .toBe("too-large");
     expect(validateResumeFile(file("a.pdf", "application/pdf", RESUME_MAX_BYTES)))
         .toBeNull();
     expect(validateResumeFile(file("a.pdf", "application/pdf", 0)))
-        .toBe("That file looks empty.");
+        .toBe("empty");
   });
 
-  it("checks the type before the size, so the message names the real problem", () => {
+  it("checks the type before the size, so the answer names the real problem", () => {
     // An oversized .exe is first rejected as the wrong type of file.
     expect(validateResumeFile(file("a.exe", "", RESUME_MAX_BYTES * 2)))
-        .toBe("Only PDF, DOCX or TXT files are supported.");
+        .toBe("unsupported");
   });
 });
 
