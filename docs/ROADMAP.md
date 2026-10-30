@@ -3645,6 +3645,30 @@ though the state was sitting in their own account.
   handler-shaped census admits the hook's `onError` by name; API.md, DEPLOYMENT.md and
   architecture.md follow.)
 
+## Epic 43 — The Card That Answers Its Own Question
+
+The attention card names the applications that need a reader: a reminder that has come
+due, or no step logged in two weeks. A due reminder's two answers -- "not now, tomorrow
+morning" and "nothing to remember" -- have lived one screen away, inside the application
+dialog, so a reader who saw "Reminder due yesterday" had to open that row, find the
+picker and save to say them. The card whose whole job is to be answered could only point.
+
+- [x] **43.1** A due reminder is answered where it is read.
+
+  (`Snooze to tomorrow` PATCHes `reminderAt` to the next local 09:00 --
+  `snoozeReminder()` in `lib/application-edit.ts`, so the button is arithmetic three unit
+  tests can pin rather than a clock read the page hides; a reminder snoozed at 23:50
+  belongs nine hours later, not a day and ten minutes. `Clear` sends the dialog's own
+  `reminderPatch(row.reminderAt, "")`, so `clearReminderAt` is still invented in one file
+  and the optimistic merge, the toast and the rollback are the ones the dialog already
+  has. Both presses share `useUpdateApplication`, and a reminder change now refetches the
+  inbox too, because it lists the same reminder as a row of its own. A stale row gets no
+  press: it has no reminder to move, and a "clear" that clears nothing would teach a dead
+  button. `components/dashboard/attention-row.tsx` is the row, 5 SSR tests -- including
+  one that keeps both presses outside the row's link, so answering cannot also navigate.
+  The browser-source census moves to 149 and the cache-call roster's `invalidateQueries`
+  to 53.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

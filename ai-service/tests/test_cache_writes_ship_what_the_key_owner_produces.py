@@ -119,8 +119,10 @@ QC_CALL = re.compile(r"(?<![\w$])qc\.(\w+)\s*(?=<|\()")
 #: ever report that a number moved. Filed by file, a spent call names the file that spent it, and the
 #: three walks can be made to agree per file rather than merely in total.
 CLIENT_CALLS = {
+    # 53 rather than 52 since 43.1: answering a due reminder on the dashboard also tells the
+    # inbox to refetch, because it lists the same reminder as a row of its own.
     ACTIONS: {"cancelQueries": 3, "getQueriesData": 2, "getQueryData": 1,
-              "invalidateQueries": 52, "removeQueries": 1, "setQueriesData": 2, "setQueryData": 5},
+              "invalidateQueries": 53, "removeQueries": 1, "setQueriesData": 2, "setQueryData": 5},
     # 38.3-38.5: three writes refresh the open-doors list, and the erase drops the cache.
     ACCOUNT_HOOKS: {"clear": 1, "invalidateQueries": 3},
     ANALYTICS_HOOKS: {"invalidateQueries": 1},

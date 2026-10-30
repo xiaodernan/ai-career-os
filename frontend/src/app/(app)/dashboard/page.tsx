@@ -37,7 +37,7 @@ import { JobCard } from "@/components/jobs/job-card";
 import { AttentionRow } from "@/components/dashboard/attention-row";
 import { APPLICATION_STAGES, stageLabel, stageMeta } from "@/lib/pipeline";
 import { useUpdateApplication } from "@/lib/hooks/actions";
-import { snoozeReminder } from "@/lib/application-edit";
+import { snoozeReminder, reminderPatch } from "@/lib/application-edit";
 import { useUser } from "@/lib/hooks/auth";
 import {
   useActivityRuns,
@@ -378,7 +378,13 @@ export default function DashboardPage() {
                             settleReminder.mutate({ id: row.id, patch: { reminderAt: snoozeReminder() } })
                           }
                           onClear={() =>
-                            settleReminder.mutate({ id: row.id, patch: { clearReminderAt: true } })
+                            settleReminder.mutate({
+                              id: row.id,
+                              // The dialog's own word for "remove it": emptying the picker is what
+                              // the reader does there, and `reminderPatch` is what turns that into
+                              // the flag the server binds.
+                              patch: reminderPatch(row.reminderAt, ""),
+                            })
                           }
                         />
                       ))}
