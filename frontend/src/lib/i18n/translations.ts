@@ -1720,6 +1720,8 @@ export const translations = {
 
       PROFILE_NOT_FOUND: "Your profile is no longer here.",
 
+      PUSH_SUBSCRIPTION_INVALID: "This browser's push subscription is not valid.",
+
       PUSH_SUBSCRIPTION_LIMIT_REACHED:
         "This account already keeps as many browsers as one morning can ring.",
 
@@ -4348,6 +4350,7 @@ export const translations = {
 
       PROFILE_NOT_FOUND: "你的档案已经不在了。",
 
+      PUSH_SUBSCRIPTION_INVALID: "这个浏览器的推送订阅不合法。",
       PUSH_SUBSCRIPTION_LIMIT_REACHED: "这个账号保存的浏览器数量已到上限，一次早安提醒叫不完更多了。",
 
       PUSH_SUBSCRIPTION_NOT_FOUND: "这条浏览器注册已经不在这个账号下了。",
