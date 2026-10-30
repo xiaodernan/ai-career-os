@@ -8,15 +8,16 @@ this request fails, does anyone say so?". This file answers it per mutation site
 the caller's options through the one indirection the app actually uses: a named object handed to two
 different mutations.
 
-What the shipped code says, measured rather than assumed: 86 mutation sites in twelve files
-(the hook libraries, the knowledge uploader's own actions, 33.1's push switch, and 36.4's
-second door). 80 declare their failure at the hook; the six that do not sit in ``auth.ts``
-and ``push.ts``.
-Five of those six are announced by their caller -- the password forms pass inline call
+What the shipped code says, measured rather than assumed: 93 mutation sites in fourteen files
+(the hook libraries, the knowledge uploader's own actions, 33.1's push switch, 36.4's
+second door, and the account and replies screens' hooks). 81 declare their failure at the
+hook; the twelve that do not sit in ``account.ts`` and ``auth.ts`` and ``push.ts``.
+Eleven of those twelve are announced by their caller -- the password forms pass inline call
 options, the credentials form passes one shared ``handlers`` object to both ``login.mutate``
 and ``register.mutate``, whose ``onError`` maps the failure through the recovery module's
-describer, and the push card wraps its ``mutateAsync`` in a try/catch that turns the
-rejection into a refusal the reader can see. The sixth, ``useLogout``, is announced by
+describer, the account cards announce each open-door, password, erase and address-move
+failure at the call, and the push card wraps its ``mutateAsync`` in a try/catch that turns the
+rejection into a refusal the reader can see. The twelfth, ``useLogout``, is announced by
 nobody, and its ``mutationFn`` swallows the rejection (``.catch(() => undefined)``), so the
 mutation cannot even enter an error state for a screen to read; its ``onSettled`` clears the
 token, clears the cache and redirects regardless of what the server said. That is a design
@@ -24,7 +25,7 @@ choice -- a local sign-out always happens -- so this file characterises it rathe
 changing it: it is the one place in the app where "you are signed out" is not a claim about
 the server.
 
-The same walk covers the failure helper: ``fail(...)`` has a single author and 77 uses, and
+The same walk covers the failure helper: ``fail(...)`` has a single author and 78 uses, and
 every use names a key the browser's table answers -- the sentence is resolved when the toast
 is raised, in the reader's language. All but three name a different key: the inbox's read,
 mark-all-read and dismiss share ``notifications.actionFailed`` because they are one sentence
@@ -77,6 +78,10 @@ BRIDGE_HOOKS = {
 #: 33.1's push switch: one write, and the only one whose failure is announced by its
 #: caller's try/catch instead of the hook's ``onError``.
 PUSH_HOOKS = "frontend/src/lib/hooks/push.ts"
+#: 38.3-38.5's account card: every write is announced by the card at the call, not the hook.
+ACCOUNT_HOOKS = "frontend/src/lib/hooks/account.ts"
+#: 37.4's replies surface: the one file write announces its failure at the hook.
+REPLIES_HOOKS = "frontend/src/lib/hooks/replies.ts"
 CLIENT = "frontend/src/lib/api/client.ts"
 CREDENTIALS = "frontend/src/components/auth/credentials-form.tsx"
 FORGOT = "frontend/src/components/auth/forgot-password-form.tsx"
@@ -94,7 +99,9 @@ DECL = re.compile(r"^(?:export\s+)?(?:default\s+)?(?:async\s+)?(?:function\s+(\w
 #: the app. A mutation in a file outside this roster is still a red, and the red names that file.
 ROSTER = {
     ACTIONS: 39,
-    AUTH_HOOKS: 5,
+    # 5 since 38.1's confirmation joined the four credential writes.
+    AUTH_HOOKS: 6,
+    ACCOUNT_HOOKS: 5,
     "frontend/src/lib/hooks/analytics.ts": 1,
     "frontend/src/lib/hooks/data-portability.ts": 5,
     "frontend/src/lib/hooks/growth.ts": 12,
@@ -104,16 +111,20 @@ ROSTER = {
     "frontend/src/lib/hooks/offers.ts": 4,
     PUSH_HOOKS: 1,
     "frontend/src/lib/hooks/voice.ts": 2,
+    REPLIES_HOOKS: 1,
     SOURCE_ACTIONS: 1,
 }
 SITES = sum(ROSTER.values())
 
-#: The hooks that state no ``onError`` of their own: the five auth signs and the push switch.
-#: The set being closed is the claim -- a seventh quiet site is a write whose failure nobody
-#: says out loud at the hook, wherever it lives. Who says it at the call instead is read by
+#: The hooks that state no ``onError`` of their own: the six auth writes, the five account
+#: writes and the push switch. The set being closed is the claim -- a thirteenth quiet site
+#: is a write whose failure nobody says out loud at the hook, wherever it lives. Who says it
+#: at the call instead is read by
 #: ``test_every_quiet_hook_is_announced_by_the_code_that_calls_it_except_the_signout``.
-QUIET = ["useForgotPassword", "useLogin", "useLogout", "useRegister",
-         "useRegisterPushSubscription", "useResetPassword"]
+QUIET = ["useChangePassword", "useConfirmEmailChange", "useEraseAccount",
+         "useForgotPassword", "useLogin", "useLogout", "useRegister",
+         "useRegisterPushSubscription", "useRequestEmailChange", "useResetPassword",
+         "useRevokeAllSessions", "useRevokeSession"]
 
 #: ``fail("...")`` calls per file -- the copy keys a failed write is announced with. Pinned per
 #: file because the useful failure is "actions.ts spent one more key", not a total that
@@ -128,6 +139,8 @@ SENTENCES = {
     "frontend/src/lib/hooks/offers.ts": 4,
     "frontend/src/lib/hooks/mfa.ts": 4,
     "frontend/src/lib/hooks/voice.ts": 2,
+    # 37.3: filing a waiting letter announces a refusal with the replies page's own sentence.
+    REPLIES_HOOKS: 1,
 }
 FAIL_USES = sum(SENTENCES.values())
 
@@ -147,7 +160,8 @@ RECOVERY = "frontend/src/lib/auth-recovery.ts"
 #: The docstring writes its census in words as well as digits; the last case re-reads the
 #: walk and looks for the sentence it would have to have written today.
 NUM_WORDS = {1: "one", 2: "two", 3: "three", 4: "four", 5: "five", 6: "six", 7: "seven",
-             8: "eight", 9: "nine", 10: "ten", 11: "eleven", 12: "twelve"}
+             8: "eight", 9: "nine", 10: "ten", 11: "eleven", 12: "twelve", 13: "thirteen",
+             14: "fourteen"}
 
 
 def object_literal(text: str, pos: int) -> str:
@@ -341,15 +355,15 @@ def test_every_mutation_the_app_declares_sits_in_a_function_the_walk_can_name():
     )
 
 
-def test_the_six_quiet_hooks_are_the_auth_signs_and_the_push_switch_and_every_other_site_announces_at_its_hook():
+def test_the_quiet_hooks_are_the_session_and_push_writes_and_every_other_site_announces_at_its_hook():
     quiet = [s for s in sites() if not s.hook_level]
     assert len(quiet) == len(QUIET), "%d mutations announce nothing at the hook: %s" % (
         len(quiet), [s.where for s in quiet]
     )
     assert sorted(s.name for s in quiet) == QUIET, "the hook-level silent set moved: %s" % sorted(
         s.name for s in quiet)
-    assert {s.rel for s in quiet} == {AUTH_HOOKS, PUSH_HOOKS}, (
-        "the silent set left the two files this file reads: %s" % sorted({s.rel for s in quiet}))
+    assert {s.rel for s in quiet} == {ACCOUNT_HOOKS, AUTH_HOOKS, PUSH_HOOKS}, (
+        "the silent set left the files this file reads: %s" % sorted({s.rel for s in quiet}))
     untyped = [s.where for s in sites() if "mutationFn" not in s.keys]
     assert not untyped, "a mutation with no mutationFn is not a request: %s" % untyped
 
@@ -362,8 +376,7 @@ def test_every_quiet_hook_is_announced_by_the_code_that_calls_it_except_the_sign
             announced[site.name] = sorted({c.where.split(":")[0] for c in calls})
         else:
             silent[site.name] = [(c.where, c.keys, c.caught) for c in calls]
-    assert sorted(announced) == ["useForgotPassword", "useLogin", "useRegister",
-                                 "useRegisterPushSubscription", "useResetPassword"], (
+    assert sorted(announced) == sorted(set(QUIET) - {"useLogout"}), (
         "the caller-announced set is %s, still silent %s" % (sorted(announced), sorted(silent))
     )
     # The push switch is the one announcer that is not a call-level ``onError``: its options
@@ -537,9 +550,10 @@ def test_this_gate_reads_the_same_shipped_sources_as_the_gates_it_borrows():
     assert len([s for s in sites() if s.hook_level]) == SITES - len(QUIET), (
         "the hook-level count is not the roster less the named quiet set, so a site changed "
         "announcer without changing the quiet set this file reads")
-    assert set(ROSTER) == {ACTIONS, AUTH_HOOKS, PUSH_HOOKS, SOURCE_ACTIONS} | BRIDGE_HOOKS, (
+    screens = {ACTIONS, ACCOUNT_HOOKS, AUTH_HOOKS, PUSH_HOOKS, REPLIES_HOOKS, SOURCE_ACTIONS}
+    assert set(ROSTER) == screens | BRIDGE_HOOKS, (
         "the roster and the files this gate set out to read are different sets: %s"
-        % sorted(set(ROSTER) ^ ({ACTIONS, AUTH_HOOKS, PUSH_HOOKS, SOURCE_ACTIONS} | BRIDGE_HOOKS)))
+        % sorted(set(ROSTER) ^ (screens | BRIDGE_HOOKS)))
     assert callers("useLogout") and callers("useLogin") and callers("useForgotPassword")
     assert callers("useRegisterPushSubscription"), "the push switch's one call site vanished"
     for rel in (ACTIONS, AUTH_HOOKS, PUSH_HOOKS, SOURCE_ACTIONS, CREDENTIALS, FORGOT, RESET, TOPBAR):

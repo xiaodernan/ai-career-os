@@ -166,7 +166,10 @@ UNAUTHORED = {
 # so no route this app can call answers it. The other two classes are derived by rule in the case.
 DECLARED_NOWHERE = {
     ("mapResume", "raw"): {"fileName", "file_name"},
-    ("mapResumeVersions", "v"): {"current", "index", "isCurrent", "is_current", "number", "origin",
+    # `current` left this row when 25.1's `SessionResponse` became the first record to
+    # declare it: the versions mapper still asks it as a legacy alias, but it is now a
+    # foreign name -- some route answers it, so it is not a name nothing declares.
+    ("mapResumeVersions", "v"): {"index", "isCurrent", "is_current", "number", "origin",
                                  "structuredResume", "structured_resume", "tailorDiff",
                                  "tailor_diff", "versionNo", "version_no"},
     ("mapCompany", "raw"): set(),
@@ -594,7 +597,10 @@ def test_an_unauthored_name_is_a_snake_twin_a_foreign_name_or_a_name_no_record_d
     # Both ledger numbers come out of the scan above, so a row that stops reading names narrows the
     # total and gets named, instead of a table quietly agreeing with itself.
     assert scanned_unauthored == 69, scanned_unauthored
-    assert scanned_nowhere == 28, scanned_nowhere
+    # 27 rather than 28 since 25.1's `SessionResponse` declared `current`: the versions
+    # mapper's legacy alias is still unauthored for `ResumeVersionItem`, but another route
+    # now answers the name, which is the foreign class rather than this one.
+    assert scanned_nowhere == 27, scanned_nowhere
 
 
 def test_no_naming_strategy_and_no_annotation_renames_an_answer_record():

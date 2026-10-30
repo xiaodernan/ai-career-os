@@ -20,25 +20,26 @@ export function useRequestEmailChange() {
  * so it is refetched whenever a close settles — a close that failed because the door was
  * already closed is exactly when the screen's copy is stale.
  */
-export const SESSIONS_KEY = ["account", "sessions"] as const;
-
 export function useSessions() {
-  return useQuery({ queryKey: SESSIONS_KEY, queryFn: authApi.listSessions });
+  return useQuery({
+    queryKey: ["account", "sessions"],
+    queryFn: authApi.listSessions,
+  });
 }
 
 export function useRevokeSession() {
-  const queryClient = useQueryClient();
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: authApi.revokeSession,
-    onSettled: () => queryClient.invalidateQueries({ queryKey: SESSIONS_KEY }),
+    onSettled: () => qc.invalidateQueries({ queryKey: ["account", "sessions"] }),
   });
 }
 
 export function useRevokeAllSessions() {
-  const queryClient = useQueryClient();
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: authApi.revokeAllSessions,
-    onSettled: () => queryClient.invalidateQueries({ queryKey: SESSIONS_KEY }),
+    onSettled: () => qc.invalidateQueries({ queryKey: ["account", "sessions"] }),
   });
 }
 
@@ -48,10 +49,10 @@ export function useRevokeAllSessions() {
  * refetches and tells the truth — no family can refresh any more, including this tab's.
  */
 export function useChangePassword() {
-  const queryClient = useQueryClient();
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: authApi.changePassword,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: SESSIONS_KEY }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["account", "sessions"] }),
   });
 }
 
@@ -64,12 +65,12 @@ export function useChangePassword() {
  * deleted account, and the landing page says the account is gone instead of a 401 bounce.
  */
 export function useEraseAccount() {
-  const queryClient = useQueryClient();
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: authApi.eraseAccount,
     onSuccess: () => {
       tokenStore.clear();
-      queryClient.clear();
+      qc.clear();
       window.location.assign("/account-erased");
     },
   });

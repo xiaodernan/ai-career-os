@@ -6,7 +6,7 @@ there the one that arrives? Three numbers can decide a request window -- the lit
 query hook, the argument the screen passes to that hook, and the `defaultValue` on the controller's
 `@RequestParam`. Only two of the three ever get spent, and the shipped text decides which per route.
 
-Ten hooks hand `normalizePage` a request. Nine offer a `size` literal: resumes 20, jobs 20,
+Thirteen hooks hand `normalizePage` a request. Twelve offer a `size` literal: resumes 20, jobs 20,
 applications 50, companies 20, knowledge sources 20, knowledge notes 20, interviews 20,
 conversations 20, activity runs 30 -- since #225 the feed's literal, replacing the
 `{ limit: params?.limit }` it sent while `/activity/runs` was the one window the server still
@@ -16,7 +16,9 @@ same `{ size: 20, ...(params ?? {}) }` shape every board uses, replacing the `li
 to name while `GET /ingestion/runs` was a newest-N history. 20.1 made the nightly history the
 twelfth, and the first outside `resources.ts`: `useNightlyReports` lives in `monitoring.ts` beside
 the health report, so the walk reads every file under `lib/hooks/` -- a census that kept the one
-filename would have watched the card page while missing the hook whose window it spends. Walking
+filename would have watched the card page while missing the hook whose window it spends. 37.4's
+replies inbox made the thirteenth: `useInboundMails` asks the route's own 50, and the screen that
+mounts it shadows that number with its own 20. Walking
 every shipped call site outside the hooks' directory finds the literal's
 own value decided elsewhere per call site rather than per hook: `useJobs`'s two callers both carry a
 size (the jobs board spreads its URL-backed `filters`, the dashboard passes `{ size: 3 }`), so the
@@ -32,14 +34,18 @@ URL key, because the page already spends `?c=` on the selected conversation; and
 activity board asks `{ page: state.page, size: PAGE_SIZE }` while the dashboard preview passes
 `{ size: 5 }`. `useIngestionRuns`'s one caller is the runs panel, asking
 `{ page: runPage.rpage, size: PAGE_SIZE }` under its own `?rpage=`, so its literal is shadowed on
-its only path too. `useResumes` is the last per-call-site case: its screen asks `PAGE_SIZE`
+its only path too. The replies page (37.4) mounts `useInboundMails` with
+`{ page: state.page, size: PAGE_SIZE }`, and spends the applications hook a second time for the
+filing picker: `{ size: 100 }`, the ceiling, because a picker that paged would hide the card a
+waiting letter answers. `useResumes` is the last per-call-site case: its screen asks `PAGE_SIZE`
 (restating the route's own 20), while the dashboard and jobs callers pass no arguments -- so it is
 the only literal that still spends as written, on two of its three paths.
 
-The server's side of the same table: all ten literals now agree with the route's own
+The server's side of the same table: all twelve literals now agree with the route's own
 `defaultValue` -- resumes 20/20, jobs 20/20, companies 20/20, applications 50/50, activity runs
 30/30, and, since #228, knowledge sources 20/20, notes 20/20, interviews 20/20 and conversations
-20/20, with the run history's 20/20 joining them in 19.5. #195 measured the four of them asking 50
+20/20, with the run history's 20/20 joining them in 19.5, the nightly history's 10/10 in 20.1 and
+the replies inbox's 50/50 in 37.4. #195 measured the four of them asking 50
 where the handler says 20 and left which number
 should win open; it is decided here, and the decision is the boring one: the literal that loses
 its only shadow is a number the app would send that the server would never have chosen, and the
@@ -113,6 +119,9 @@ WIRE = {
     # 20.1's nightly history is the first paging hook outside `resources.ts`: its reader lives
     # in `monitoring.ts` beside the health report, and its default is the route's own 10.
     "useNightlyReports": ("monitoringNightlyReports", "{ size: 10, ...(params ?? {}) }"),
+    # 37.4's replies page is the thirteenth paging hook; its literal is the route's own 50,
+    # and the page shadows it with its own PAGE_SIZE exactly as every other board does.
+    "useInboundMails": ("inboundMails", "{ size: 50, ...(params ?? {}) }"),
 }
 
 # Measured call sites, one walk; case 3 re-derives them. `""` is a call with no arguments.
@@ -124,7 +133,10 @@ SITES = {
                  'tab === "discover" ? filters : { size: filters.size, page: filters.page }')],
     "useSavedJobs": [("app/(app)/jobs/page.tsx", "")],
     "useApplications": [("app/(app)/applications/page.tsx",
-                         "{ page: state.page, size: PAGE_SIZE }")],
+                         "{ page: state.page, size: PAGE_SIZE }"),
+                        # the replies page's picker asks the ceiling once, to name every card
+                        # a waiting letter could answer.
+                        ("app/(app)/replies/page.tsx", "{ size: 100 }")],
     "useCompanies": [("app/(app)/companies/page.tsx",
                       "{ page: state.page, size: PAGE_SIZE }")],
     "useKnowledgeSources": [("app/(app)/knowledge/page.tsx",
@@ -142,6 +154,8 @@ SITES = {
                          "{ page: pageState.cpage, size: PAGE_SIZE }")],
     "useNightlyReports": [("components/monitoring/nightly-history.tsx",
                            "{ page, size: PAGE_SIZE }")],
+    "useInboundMails": [("app/(app)/replies/page.tsx",
+                         "{ page: state.page, size: PAGE_SIZE }")],
 }
 
 # route path -> the `defaultValue` on the handler's `int size` parameter, or None if it binds none.
@@ -158,6 +172,7 @@ SERVER_SIZE = {
     "/api/v1/activity/runs": "30",
     "/api/v1/ingestion/runs": "20",
     "/api/v1/monitoring/nightly-reports": "10",
+    "/api/v1/inbound/mails": "50",
 }
 
 # The hooks whose params object spells a numeric `size`.
@@ -173,6 +188,7 @@ SIZE_LITERAL = {
     "useActivityRuns": 30,
     "useIngestionRuns": 20,
     "useNightlyReports": 10,
+    "useInboundMails": 50,
 }
 
 
@@ -343,21 +359,21 @@ def wire_sizes() -> dict[str, int | None]:
     return {hook: literal_size(params) for hook, (_, params) in list_wires().items()}
 
 
-def test_the_twelve_list_hooks_and_their_wire_literals_are_this_table():
+def test_the_thirteen_list_hooks_and_their_wire_literals_are_this_table():
     """Case 1: the population and its numbers, derived from the hooks' bodies rather than from here."""
     derived = list_wires()
     assert derived == WIRE, f"a hook's request window changed shape: {derived}"
-    assert len(derived) == 12, f"{sorted(derived)}"
+    assert len(derived) == 13, f"{sorted(derived)}"
     keys = sorted(key for key, _ in derived.values())
-    assert len(keys) == len(set(keys)) == 12, f"two hooks spend the same endpoint key: {keys}"
+    assert len(keys) == len(set(keys)) == 13, f"two hooks spend the same endpoint key: {keys}"
 
 
 def test_every_number_a_hook_offers_is_inside_the_ceiling_the_server_enforces():
-    """Case 2: eleven of the twelve offer a `size`, and no client asks for a window the clamp would refuse."""
+    """Case 2: twelve of the thirteen offer a `size`, and no client asks for a window the clamp would refuse."""
     sizes = wire_sizes()
     assert sizes == {**SIZE_LITERAL, "useSavedJobs": None}, sizes
     asked = sorted(n for n in sizes.values() if n is not None)
-    assert len(asked) == 11, f"{sizes}"
+    assert len(asked) == 12, f"{sizes}"
     outside = [n for n in asked if not 1 <= n <= MAX_PAGE_SIZE]
     assert outside == [], f"a hook asks for a window Paging would clamp: {outside}"
     paging = java(PAGING)
@@ -385,8 +401,8 @@ def test_the_literals_every_caller_shadows_and_none_without_a_caller():
     shadowed = sorted(hook for hook in with_size
                       if derived[hook] and not any(offers_no_size(arg) for _, arg in derived[hook]))
     assert shadowed == ["useActivityRuns", "useApplications", "useCompanies", "useConversations",
-                        "useIngestionRuns", "useInterviewSessions", "useJobs", "useKnowledgeNotes",
-                        "useKnowledgeSources", "useNightlyReports"], \
+                        "useInboundMails", "useIngestionRuns", "useInterviewSessions", "useJobs",
+                        "useKnowledgeNotes", "useKnowledgeSources", "useNightlyReports"], \
         f"these literals are shadowed by every caller: {shadowed}"
     # Empty since the notes panel: every size literal has a caller now. Only `useResumes` still
     # spends its literal as written -- on the two callers (dashboard, jobs) that pass no arguments.
@@ -471,8 +487,13 @@ def test_the_number_the_server_would_use_if_the_app_sent_none():
 
 def test_the_applications_board_asks_for_exactly_the_ceiling_and_pages_the_rest():
     """Case 7: 100 rows a request, and since #218 a pager that reaches the rows past the window."""
-    (site, args), = call_sites("useApplications")
-    assert args == "{ page: state.page, size: PAGE_SIZE }" and site == "app/(app)/applications/page.tsx"
+    sites = call_sites("useApplications")
+    assert ("app/(app)/applications/page.tsx", "{ page: state.page, size: PAGE_SIZE }") in sites, \
+        f"the board no longer asks its own window: {sites}"
+    # 37.4's replies page spends the same hook for a picker, not a board: it asks the ceiling
+    # once so every card a waiting letter could answer is in the menu, and renders no pager.
+    assert ("app/(app)/replies/page.tsx", "{ size: 100 }") in sites, \
+        f"the filing picker no longer names the ceiling: {sites}"
     apps = read(APPS_PAGE)
     pinned = re.search(r"const PAGE_SIZE = (\d+);", apps)
     assert pinned and int(pinned.group(1)) == MAX_PAGE_SIZE, \
@@ -488,7 +509,8 @@ def test_the_applications_board_asks_for_exactly_the_ceiling_and_pages_the_rest(
     assert renders == ["app/(app)/activity/page.tsx", "app/(app)/applications/page.tsx",
                        "app/(app)/companies/page.tsx", "app/(app)/copilot/page.tsx",
                        "app/(app)/interviews/page.tsx", "app/(app)/jobs/page.tsx",
-                       "app/(app)/knowledge/page.tsx", "app/(app)/resumes/page.tsx",
+                       "app/(app)/knowledge/page.tsx", "app/(app)/replies/page.tsx",
+                       "app/(app)/resumes/page.tsx",
                        "components/ingestion/scheduled-feeds-panel.tsx",
                        "components/knowledge/notes-panel.tsx",
                        "components/monitoring/nightly-history.tsx"], \

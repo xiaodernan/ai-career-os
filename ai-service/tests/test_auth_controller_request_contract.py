@@ -482,15 +482,23 @@ def test_the_token_record_is_written_at_two_sites_that_share_one_reader():
 
 def test_the_public_wrappers_opt_out_of_the_bearer_and_the_session_ones_do_not():
     block = braced_arg_after(client_source(), "export const authApi = ")
-    assert block.count("auth: false") == 4, (
-        "expected register/login/forgot/reset to run without a bearer token, found %d "
-        "opt-outs" % block.count("auth: false")
+    # 38.1's email-change confirmation joined the public set: the letter lands in the new
+    # mailbox and possession of its token is the proof, so the call must work on a browser
+    # that has no session (the address it is moving away from may not be signed in there).
+    assert block.count("auth: false") == 5, (
+        "expected register/login/forgot/reset/confirmEmailChange to run without a bearer "
+        "token, found %d opt-outs" % block.count("auth: false")
     )
-    for member in ("register", "login", "forgotPassword", "resetPassword"):
-        blob = options_blob(member)
+    # The method name and the endpoint member differ for the confirmation: the writer is
+    # `confirmEmailChange`, the route is addressed as `emailChangeConfirm`.
+    public = {"register": "register", "login": "login",
+              "forgotPassword": "forgotPassword", "resetPassword": "resetPassword",
+              "confirmEmailChange": "emailChangeConfirm"}
+    for member, endpoint in public.items():
+        blob = options_blob(endpoint)
         assert "auth: false" in blob, (
-            "authApi.%s lost its auth: false -- it now attaches a stale token to the one "
-            "call that must work before a session exists" % member
+            "authApi.%s lost its auth: false -- it now attaches a stale token to a call "
+            "that must work without a session" % member
         )
     logout_blob = options_blob("logout")
     assert "auth: false" not in logout_blob, (

@@ -5,9 +5,9 @@ contract used by every surface". The same file decides, from one boolean, whethe
 error or a designed empty state with a sentence about version mismatch. Both halves of that promise
 are measurable, and this file pins them:
 
-* Only 5 of the 25 ``(app)`` screens route a query through the boundary. Five route the same
+* Only 5 of the 26 ``(app)`` screens route a query through the boundary. Five route the same
   pending/error/empty decision through ``components/common/module-view.tsx``, which re-implements it
-  in its own JSX, and fifteen decide it inline from their own ``isPending``/``error`` flags. Each of
+  in its own JSX, and sixteen decide it inline from their own ``isPending``/``error`` flags. Each of
   the two shared shells claims universality in its own docstring -- "the single async contract used
   by every surface" and "the shared async list shell for every (app) resource page" -- and they answer
   the same status with opposite states, so this file pins which screens spend which.
@@ -16,8 +16,8 @@ are measurable, and this file pins them:
   whose job was deleted that their build is the wrong version. The second shell used to
   read the status alone, so a gone record landed on the screen's "nothing here yet" hint;
   it reads ``error.code`` now and a record that is gone reaches ``ErrorState``.
-  The backend answers 404 from thirty-two places -- thirty-one ``ApiErrorCode`` constants (one
-  that means "this route is not served", thirty that name a record) and one
+  The backend answers 404 from thirty-six places -- thirty-five ``ApiErrorCode`` constants (one
+  that means "this route is not served", thirty-four that name a record) and one
   ``NoResourceFoundException`` handler that means "this route is not served" -- and it puts the
   distinguishing name in ``error.code`` on the wire. The historical fold is what the last
   screen-level case records: a deleted agent run opened at ``/activity/[id]`` used to render
@@ -83,6 +83,9 @@ OWN_FLAG_SCREENS = [
     "frontend/src/app/(app)/notifications/page.tsx",
     "frontend/src/app/(app)/offers/page.tsx",
     "frontend/src/app/(app)/rate-limit/page.tsx",
+    # The replies page (37.4) branches on its own `letters.isPending`/`letters.isError`
+    # rather than either shell: its letter list is a query with its own failure arm.
+    "frontend/src/app/(app)/replies/page.tsx",
     "frontend/src/app/(app)/resumes/[id]/page.tsx",
     "frontend/src/app/(app)/settings/page.tsx",
 ]
@@ -90,6 +93,7 @@ NF_CODES = [
     "AI_SERVICE_NOT_FOUND", "APPLICATION_NOT_FOUND", "CALENDAR_LINK_INVALID",
     "COMPANY_NOT_FOUND", "CONTACT_NOT_FOUND",
     "CONVERSATION_NOT_FOUND", "DOCUMENT_KEY_NOT_OWNED", "DOCUMENT_NOT_FOUND",
+    "INBOUND_LINK_INVALID", "INBOUND_MAIL_NOT_FOUND",
     "INGESTION_FEED_NOT_FOUND", "INGESTION_RUN_NOT_FOUND", "JD_NOT_FOUND",
     "JOB_NOT_FOUND", "LOGIN_SESSION_NOT_FOUND", "MAIL_LINK_INVALID",
     "MATCH_NOT_FOUND", "NOTE_NOT_FOUND", "NOT_FOUND", "PROFILE_NOT_FOUND",
@@ -121,7 +125,7 @@ def ts_files() -> list:
 @lru_cache(maxsize=None)
 def app_screens() -> list:
     out = sorted(p.relative_to(ROOT).as_posix() for p in APP.rglob("page.tsx"))
-    assert len(out) == 30, "app/%s page.tsx files, not the 30 this file walks" % len(out)
+    assert len(out) == 33, "app/%s page.tsx files, not the 33 this file walks" % len(out)
     return [rel for rel in out if "/(app)/" in rel]
 
 
@@ -174,9 +178,9 @@ def status_of(status: str) -> list:
 # ------------------------------------------------------------------ cases
 
 
-def test_the_contract_called_single_is_used_by_five_of_the_twenty_five_app_screens():
+def test_the_contract_called_single_is_used_by_five_of_the_twenty_six_app_screens():
     screens = app_screens()
-    assert len(screens) == 25, "%d screens under app/(app), not 25" % len(screens)
+    assert len(screens) == 26, "%d screens under app/(app), not 26" % len(screens)
     users = boundary_users()
     assert users == BOUNDARY_SCREENS, "the boundary is used by %s" % [u.split("app/")[-1] for u in users]
     assert stmt(read(BOUNDARY), "single async contract used by every surface") == \
@@ -184,10 +188,10 @@ def test_the_contract_called_single_is_used_by_five_of_the_twenty_five_app_scree
         "the file's own claim about its reach moved, so the set above needs re-measuring, not this pin"
     )
     non = [s for s in screens if s not in users]
-    assert len(non) == 20, "%d screens render without the contract this file calls single" % len(non)
+    assert len(non) == 21, "%d screens render without the contract this file calls single" % len(non)
 
 
-def test_twenty_of_the_twenty_five_screens_decide_the_async_state_somewhere_else():
+def test_twenty_one_of_the_twenty_six_screens_decide_the_async_state_somewhere_else():
     screens = app_screens()
     b, mv = boundary_users(), module_view_users()
     assert mv == MODULE_VIEW_SCREENS, "ModuleView is spent by %s" % [u.split("app/")[-1] for u in mv]
@@ -197,7 +201,7 @@ def test_twenty_of_the_twenty_five_screens_decide_the_async_state_somewhere_else
     flags = set(own_flag_screens())
     bare = [s for s in neither if s not in flags]
     assert bare == [], "%s render a query with no failure branch at all -- this file used to claim so" % bare
-    assert len(b) + len(mv) + len(neither) == len(screens) == 25, "the three sets stopped covering the app"
+    assert len(b) + len(mv) + len(neither) == len(screens) == 26, "the three sets stopped covering the app"
     assert stmt(read(MODULE_VIEW), "shared async list shell for every") == \
         "* ModuleView \u2014 the shared async list shell for every (app) resource page.", (
         "the second shell's own universality claim moved, so the 5/5/15 split above needs re-measuring")
@@ -246,10 +250,10 @@ def test_the_missing_endpoint_rule_reads_the_code_and_the_client_keeps_it():
 def test_the_backend_answers_404_for_records_and_for_routes_in_the_same_status():
     codes = not_found_codes()
     assert sorted(codes) == NF_CODES, "%d codes answer 404: %s" % (len(codes), sorted(codes))
-    assert len(codes) == len(set(codes)) == 33, "the 404 table moved; this file reads 33 constants"
+    assert len(codes) == len(set(codes)) == 35, "the 404 table moved; this file reads 35 constants"
     assert status_of("BAD_REQUEST") and status_of("FORBIDDEN"), "the enum walk is blind -- it read no other status"
     record = [c for c in codes if c != "NOT_FOUND"]
-    assert len(record) == 32, "%d of the 404 codes name a record, not a route" % len(record)
+    assert len(record) == 34, "%d of the 404 codes name a record, not a route" % len(record)
     window = handler_404()
     assert "ApiErrorCode.NOT_FOUND" in window and "Resource not found" in window, (
         "the unmapped-route handler no longer answers the bare NOT_FOUND code: %s" % window)
@@ -382,5 +386,5 @@ def test_this_gate_reads_the_envelope_and_the_branches_it_claims():
     assert "items: arr.map(map)," in read(NORMALIZE), "the page builder no longer writes items"
     for rel in (BOUNDARY, MODULE_VIEW, MISSING, CLIENT, NORMALIZE, CODES, HANDLER, RUN_DETAIL):
         assert (ROOT / rel).exists(), "%s is not where this file reads it" % rel
-    assert len(not_found_codes()) == 33 and len(boundary_users()) == 5
-    assert len(module_view_users()) == 5 and len(OWN_FLAG_SCREENS) == 15
+    assert len(not_found_codes()) == 35 and len(boundary_users()) == 5
+    assert len(module_view_users()) == 5 and len(OWN_FLAG_SCREENS) == 16

@@ -19,7 +19,7 @@ back where it was read from; and three *merge*: one preserves a wrapper object i
 that sentence from the walk, because this header shipped
 "seven sites ... six spell their key ... two merge" for a run of commits after the reorder board
 copied the update hook's optimistic shape wholesale -- the numbers a reader trusts most are the ones
-nobody grades. Eight files make the app's react-query calls, across eight methods, and case 1's roster
+nobody grades. Ten files make the app's react-query calls, across eight methods, and case 1's roster
 is where a new one has to be filed.
 
 The other thing this header shipped was a finding it said it would not fix: the row merge spread
@@ -97,6 +97,8 @@ INGESTION_HOOKS = "frontend/src/lib/hooks/ingestion.ts"
 ANALYTICS_HOOKS = "frontend/src/lib/hooks/analytics.ts"
 MFA_HOOKS = "frontend/src/lib/hooks/mfa.ts"
 NOTIFICATION_HOOKS = "frontend/src/lib/hooks/notifications.ts"
+ACCOUNT_HOOKS = "frontend/src/lib/hooks/account.ts"
+REPLIES_HOOKS = "frontend/src/lib/hooks/replies.ts"
 
 WRITERS = ("setQueryData", "setQueriesData")
 READERS = ("getQueryData", "getQueriesData")
@@ -117,14 +119,20 @@ QC_CALL = re.compile(r"(?<![\w$])qc\.(\w+)\s*(?=<|\()")
 CLIENT_CALLS = {
     ACTIONS: {"cancelQueries": 3, "getQueriesData": 2, "getQueryData": 1,
               "invalidateQueries": 52, "removeQueries": 1, "setQueriesData": 2, "setQueryData": 5},
+    # 38.3-38.5: three writes refresh the open-doors list, and the erase drops the cache.
+    ACCOUNT_HOOKS: {"clear": 1, "invalidateQueries": 3},
     ANALYTICS_HOOKS: {"invalidateQueries": 1},
-    AUTH_HOOKS: {"clear": 2, "setQueryData": 2},
+    # 3 rather than 2 since 38.1: the confirmation handler drops the pair like the two
+    # sign-out handlers, because a confirmed move revokes every refresh token.
+    AUTH_HOOKS: {"clear": 3, "setQueryData": 2},
     # 10 since 19.2's apply receipt: the write refreshes the feed and the run it
     # started, plus the one run every other applied receipt belongs to.
     INGESTION_HOOKS: {"invalidateQueries": 10},
     # 36.4: the four second-factor writes each refresh the one status the card reads.
     MFA_HOOKS: {"invalidateQueries": 4},
     NOTIFICATION_HOOKS: {"setQueryData": 3},
+    # 37.3: filing a letter refreshes the inbox, the bell count and the card's timeline.
+    REPLIES_HOOKS: {"invalidateQueries": 3},
     RESUMES_PAGE: {"invalidateQueries": 1},
     SOURCE_ACTIONS: {"invalidateQueries": 1},
 }
@@ -461,7 +469,8 @@ def test_the_cache_methods_the_app_calls_are_the_methods_the_key_walk_covers():
                           {n: (want[n], got[n]) for n in sorted(set(got) | set(want)) if got[n] != want[n]}))
     assert not moved, "client-call roster and the walk disagree (file: pinned, counted) %s" % moved
     unkeyed = {rel: sorted(set(m) - set(KEYED)) for rel, m in CLIENT_CALLS.items() if set(m) - set(KEYED)}
-    assert unkeyed == {AUTH_HOOKS: ["clear"]}, "no bucket exists for %s" % unkeyed
+    assert unkeyed == {ACCOUNT_HOOKS: ["clear"], AUTH_HOOKS: ["clear"]}, (
+        "no bucket exists for %s" % unkeyed)
     # The two walks that key their sites must read what this file's token census reads, in the same
     # file, the same number of times. Three dict sums agreeing is not three dict claims agreeing.
     expected = {rel: collections.Counter({n: c for n, c in m.items() if n in KEYED})
@@ -470,19 +479,31 @@ def test_the_cache_methods_the_app_calls_are_the_methods_the_key_walk_covers():
     theirs = by_file(cache_reads() + opaque_key_sites() + promises())
     assert mine == expected, "this gate's keyed walk reads %s, the roster files %s" % (mine, expected)
     assert theirs == expected, "the invalidation gate's walks read %s, the roster files %s" % (theirs, expected)
-    assert sum(c["clear"] for c in census.values()) == SITES - KEYED_SITES == 2, (
+    # 4 rather than 2 since the account screens: the three session-ending handlers in auth.ts
+    # and the erase in account.ts are the only whole-cache drops, and none of them carries a key.
+    assert sum(c["clear"] for c in census.values()) == SITES - KEYED_SITES == 4, (
         "the only calls neither gate can key are the %d that carry no key" % (SITES - KEYED_SITES)
     )
 
 
-def test_the_keyless_clear_is_the_two_signout_handlers_and_nothing_else():
+def test_the_keyless_clears_are_the_signout_handlers_and_the_erase_and_nothing_else():
+    """The only whole-cache drops are the moments the local session stops being valid.
+
+    Two were sign-out handlers when this case was written; 38.1 added the address-move
+    confirmation, which revokes every refresh token exactly like a reset does, and 38.5
+    added the erase, which spends the account itself. Anything else reaching for a
+    keyless clear is a screen throwing away data it could have refreshed.
+    """
     hits = [rel for rel, text in sources().items() if "qc.clear()" in text]
-    assert hits == [AUTH_HOOKS], "qc.clear() is called from %s" % hits
-    assert sources()[AUTH_HOOKS].count("qc.clear();") == 2, "qc.clear() is not spelled with empty parens twice"
-    owners = [f for f in ("useLogout", "useResetPassword") if "qc.clear();" in hook_body(AUTH_HOOKS, f)]
-    assert len(owners) == 2, "qc.clear() is not inside both signout handlers: %s" % owners
-    for f in owners:
-        body = hook_body(AUTH_HOOKS, f)
+    assert hits == [ACCOUNT_HOOKS, AUTH_HOOKS], "qc.clear() is called from %s" % hits
+    assert sources()[AUTH_HOOKS].count("qc.clear();") == 3, "qc.clear() is not spelled with empty parens three times"
+    owners = [f for f in ("useLogout", "useResetPassword", "useConfirmEmailChange")
+              if "qc.clear();" in hook_body(AUTH_HOOKS, f)]
+    assert len(owners) == 3, "qc.clear() is not inside all three session-ending handlers: %s" % owners
+    assert "qc.clear();" in hook_body(ACCOUNT_HOOKS, "useEraseAccount"), (
+        "the erase no longer drops the cache")
+    for rel, f in [(AUTH_HOOKS, f) for f in owners] + [(ACCOUNT_HOOKS, "useEraseAccount")]:
+        body = hook_body(rel, f)
         assert body.index("tokenStore.clear();") < body.index("qc.clear();"), (
             "%s drops the cache before the token, so a request still in flight can re-fill the cache "
             "with an answer for the account that just signed out" % f

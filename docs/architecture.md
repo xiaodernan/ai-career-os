@@ -79,6 +79,7 @@ frontend/backend/ai-service can also run natively for dev (`pnpm dev`, `mvn spri
 │       ├── config/               # security, cors, sse, redis, storage, web envelope
 │       ├── conversation/         # copilot chats, messages, artifacts, actions
 │       ├── health/               # liveness + dependency probe
+│       ├── inbound/              # signed inbound address, provider webhook, reply extraction (37.1)
 │       ├── interview/            # sessions, qa turns, evaluations
 │       ├── job/                  # jobs, companies, saved jobs, matches
 │       ├── knowledge/            # sources, documents, chunks (meta; vectors owned by ai-service)
@@ -297,6 +298,17 @@ user-scoped table (ownership is enforced in backend layer + a single SQL predica
    started_at, finished_at)` → one pull of one feed: completed with the plan the engine
   proposed, or failed with the sentence that says why. The row is written when the pull
   ends, so there is no `running` status to go stale if the process dies mid-fetch.
+- `inbound_mails(id, user_id, message_key, from_address, subject, body_text,
+   received_at, created_at, intent, company, role, application_id, filed_at)`
+  → the replies a provider forwards to an account's signed inbound address (37.1).
+  `body_text` is the letter as received; `received_at` is the provider's own date,
+  not the row's clock, so a late relay still sits where it was written. The unique
+  `(user_id, message_key)` pair is what makes a provider retry answer the same
+  letter instead of a second row. `intent` is the classifier's five-word reading
+  (37.2) and may be null -- an unread letter, not an empty one; `application_id`
+  is the board row the letter files on (37.3), cleared rather than cascaded when
+  that application is deleted, so the letter returns to the replies page as
+  unmatched. `filed_at` moves with it: the two are null exactly together.
 - `notification_states(user_id, signal_key, read_at, dismissed_at, notified_at,
   pushed_at, updated_at)` → the inbox is synthesized from signals already written down;
   what persists is what the reader did with one — read it, dismissed it, received it by

@@ -1,9 +1,9 @@
-"""A knob no code reads is a knob that does nothing: thirty-four `app.*` keys ship, two are read by nobody.
+"""A knob no code reads is a knob that does nothing: thirty-seven `app.*` keys ship, two are read by nobody.
 
-`application.yml`'s `app:` block writes thirty-four leaves. Thirty-two of them reach a reader that some
-service calls: twenty-two through a Java getter, two (`app.web.base-url` through a `@Value` placeholder in
-`AuthService`'s constructor and `app.mail.link-secret`, read in `MailLinks` and again by the startup
-guard) that never appear in `AppProperties`, and eight `app.email.*` leaves through
+`application.yml`'s `app:` block writes thirty-seven leaves. Thirty-five of them reach a reader that some
+service calls: twenty-three through a Java getter, four (`app.web.base-url`, `app.mail.link-secret`,
+`app.security.mfa-secret` and `app.inbound.domain`) that never appear in `AppProperties` and are read
+through `@Value` placeholders by the beans that need them, and eight `app.email.*` leaves through
 `EmailConfig`'s one transport bean. One (`app.storage.enabled`) is not written by the shipped file but
 is armed by `@ConditionalOnProperty` on the MinIO bean, whose `matchIfMissing = true` makes silence mean "on".
 The last two -- `app.upload.max-file-size-bytes` and `app.upload.presigned-url-ttl-seconds` -- bind fields in
@@ -91,10 +91,12 @@ APP_LEAVES = frozenset({
     "ai-service.base-url", "ratelimit.enabled", "ratelimit.auth-per-minute", "ratelimit.ai-per-minute",
     "ratelimit.mail-per-minute",
     "ratelimit.mfa-per-minute",
+    "ratelimit.inbound-per-minute",
     "upload.max-file-size-bytes", "upload.presigned-url-ttl-seconds",
     "retention.expired-token-days",
     "email.provider", "email.from", "email.smtp.host", "email.smtp.port", "email.smtp.username",
     "email.smtp.password", "email.smtp.starttls", "email.smtp.ssl", "mail.link-secret",
+    "inbound.domain",
     "http.trust-forwarded-for", "deployment.env",
     "push.vapid-public-key", "push.vapid-private-key", "push.contact", "push.ttl-seconds",
     "security.mfa-secret",
@@ -104,8 +106,11 @@ HOLDERS = frozenset({"Cors", "Jwt", "Internal", "Storage", "AiService", "Ratelim
 # `security` joins the namespace without an AppProperties holder, the same shape `mail` has:
 # 36.1's seed key is read through `@Value` by the cipher and the guard, so the admission rule
 # follows the yml's block rather than a nested class that would exist only to be unread.
+# 37.1's `inbound` block is the third of that shape: its one leaf is read by `InboundLinks`
+# through `@Value`, and the settings card's "not configured" arm is the empty default.
 HOLDER_KEYS = frozenset({"cors", "web", "jwt", "internal", "storage", "ai-service", "ratelimit", "upload",
-                         "retention", "email", "mail", "http", "deployment", "push", "security"})
+                         "retention", "email", "mail", "http", "deployment", "push", "security",
+                         "inbound"})
 
 # leaf -> (holder, field, accessor, the files that call it), measured at the ref this gate lands on.
 READERS = {
@@ -152,6 +157,13 @@ READERS = {
     # reports it -- a second reader would advertise a quota nothing else tracks.
     "ratelimit.mfa-per-minute": ("Ratelimit", "mfaPerMinute", "getMfaPerMinute",
                                   ("ratelimit/RateLimitFilter.java",)),
+    # The inbound webhook's meter (37.1) is the filter's alone for the MFA bucket's
+    # reason: it is keyed by the forwarding address's token, and no status route
+    # reports that bucket, so a second reader would advertise a quota nothing else
+    # tracks. The one call site names its holder getter (`props.getRatelimit()`), so
+    # the accessor census can charge the line to this key.
+    "ratelimit.inbound-per-minute": ("Ratelimit", "inboundPerMinute", "getInboundPerMinute",
+                                      ("ratelimit/RateLimitFilter.java",)),
     # The proxy declaration is read by the two places that need a client address
     # (the limiter and the session record); a third reader would be another
     # decision about what "trusted" means.
@@ -432,19 +444,19 @@ def armed_bytes() -> int:
 
 # ---------------------------------------------------------------- the cases
 
-def test_the_app_block_writes_thirty_five_leaves_and_each_binds_by_one_of_three_mechanisms():
+def test_the_app_block_writes_thirty_seven_leaves_and_each_binds_by_one_of_three_mechanisms():
     leaves = app_leaves()
     assert len(leaves) >= 15, (
         f"the `app:` block parsed to {len(leaves)} leaves, below the 15 the shipped file writes -- the parser "
         f"stopped following the indentation, so every number below is a reading of nothing")
     assert frozenset(leaves) == APP_LEAVES, (
-        f"`app:`'s leaves are not the thirty-five pinned here: extra={sorted(frozenset(leaves) - APP_LEAVES)} "
+        f"`app:`'s leaves are not the thirty-seven pinned here: extra={sorted(frozenset(leaves) - APP_LEAVES)} "
         f"missing={sorted(APP_LEAVES - frozenset(leaves))} -- a new key needs a binder and a reader before it "
         f"is a configuration rather than a comment")
 
     holders, fields = prop_structure()
     assert frozenset(holders) == HOLDERS, (
-        f"AppProperties binds the holder fields {sorted(holders)}, not the ten holders {sorted(HOLDERS)} "
+        f"AppProperties binds the holder fields {sorted(holders)}, not the eleven holders {sorted(HOLDERS)} "
         f"-- the leaf-to-field derivation keys off these names, so the census would aim at the wrong class")
     declared = declared_holders()
     assert declared == frozenset(holders), (
@@ -452,8 +464,8 @@ def test_the_app_block_writes_thirty_five_leaves_and_each_binds_by_one_of_three_
         f"{sorted(holders)} -- the leaf walk follows the declarations and the key derivation follows the "
         f"fields, so a name in only one list is a holder the census reads but the walk never fills, or one "
         f"the walk fills but nothing can name its keys")
-    assert len(fields) == 25, (
-        f"AppProperties declares {len(fields)} leaf fields, want the 25 whose readers are censused here -- the "
+    assert len(fields) == 26, (
+        f"AppProperties declares {len(fields)} leaf fields, want the 26 whose readers are censused here -- the "
         f"population moved, so 'every field has a reader or a ledger entry' is a claim about a different file")
 
     values, conds = value_bindings(), conditions()
@@ -721,14 +733,14 @@ def test_the_cap_the_dead_knob_would_set_is_a_compile_time_constant_and_the_cont
         "quotes it")
 
 
-def test_thirty_two_leaves_reach_the_environment_and_the_three_that_do_not_are_literals_in_a_file():
+def test_thirty_four_leaves_reach_the_environment_and_the_three_that_do_not_are_literals_in_a_file():
     leaves = app_leaves()
     interpolated, literal = {}, {}
     for key, value in leaves.items():
         match = ENV_INTERP.match(value)
         (interpolated if match else literal)[key] = (match["var"] if match else value)
-    assert len(interpolated) == 32 and len(literal) == 3, (
-        f"{len(interpolated)} of the thirty-five leaves interpolate an `${{ENV}}` and {len(literal)} are literals; "
+    assert len(interpolated) == 34 and len(literal) == 3, (
+        f"{len(interpolated)} of the thirty-seven leaves interpolate an `${{ENV}}` and {len(literal)} are literals; "
         f"the split is what makes a knob deployable, so a pair that moved needs this carrier list rewritten")
     assert frozenset(literal) == FILE_ONLY_LEAVES, (
         f"the file-only leaves are {sorted(literal)}: ratelimit.enabled is a shipped default an operator edits in "
@@ -822,7 +834,10 @@ def test_the_open_scan_charges_an_app_dot_mention_to_the_config_namespace_only_w
     # credential real and asserts the guard still names the MinIO pair, because four
     # services inject a StorageService and a prod boot cannot use the switch to dodge
     # the check. The three integration-test carriers are unchanged.
-    assert len(storage_enabled) == 4, (
-        f"`app.storage.enabled` is written down in {len(storage_enabled)} flat rows, want the 4 judged "
-        f"here -- the annotation's split spelling (prefix + name) is read by another scanner, so a fifth "
+    # 39.1 added the fifth: HealthServiceTest's comment names the switch to explain why the
+    # health line reads "not configured" -- prose rather than a @TestPropertySource, and
+    # judged here so a comment cannot spell a key this census never examined.
+    assert len(storage_enabled) == 5, (
+        f"`app.storage.enabled` is written down in {len(storage_enabled)} flat rows, want the 5 judged "
+        f"here -- the annotation's split spelling (prefix + name) is read by another scanner, so a sixth "
         f"row means the key is now also spelled in a place this census has not judged")

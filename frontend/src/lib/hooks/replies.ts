@@ -44,7 +44,7 @@ export function useInboundMails(params?: { page?: number; size?: number }) {
     queryKey: ["inbound", "mails", params],
     queryFn: async (): Promise<Page<InboundMail>> =>
       normalizePage(
-        await api.get<unknown>(endpoints.inboundMails, { size: 20, ...(params ?? {}) }),
+        await api.get<unknown>(endpoints.inboundMails, { size: 50, ...(params ?? {}) }),
         mapInboundMail
       ),
   });

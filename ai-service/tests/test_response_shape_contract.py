@@ -1024,8 +1024,12 @@ def test_the_java_probe_reads_every_record_the_backend_declares():
     # `InboundAddress` and `Acknowledgement` (the address the settings card copies, and the one
     # word the provider reads back), and `InboundMailService.Received` (the stored row's id and
     # whether the delivery was a duplicate -- a private answer, counted like any other record).
-    assert len(declared) == 186, \
-        f"{len(declared)} records carry a declaration the shared opener reads, not the 186 measured"
+    # 188 with 37.3's and 37.4's pair in `InboundMailDtos`: `FileRequest` (the one body the
+    # filing write binds, an application id and nothing else) and `InboundMailItem` (the letter
+    # the replies page lists, carrying the reading's five fields as columns rather than a nested
+    # object). Both are public DTOs, so the walk counts them by declaration like every other.
+    assert len(declared) == 188, \
+        f"{len(declared)} records carry a declaration the shared opener reads, not the 188 measured"
     problems, renamed = [], []
     for relative, record in declared:
         names = _record_components_at(relative, record)
@@ -1247,7 +1251,7 @@ def test_the_response_envelope_has_exactly_one_wrapper_and_one_unwrapper():
     files in two languages, and it is only safe while both halves stay where they are: widen the advice
     and the unwrap returns `undefined` for responses that were never wrapped, add a second unwrap and the
     one that is gated stops being the one that runs. Measured on this plane: two `success` reads and one
-    `?.data` unwrap, all of them in `lib/api/client.ts`, plus 31 `toast.success` lines the exclusion has
+    `?.data` unwrap, all of them in `lib/api/client.ts`, plus 56 `toast.success` lines the exclusion has
     to keep out. `client.ts` belongs to a concurrent session's file list, so this gate reads it and never
     edits it -- if a third reader appears, the test names it and a human decides where it belongs.
     """
@@ -1293,7 +1297,10 @@ def test_the_response_envelope_has_exactly_one_wrapper_and_one_unwrapper():
     # through the same shared handler, so none can drift into a silent success.
     # 54 with the apply action's confirmation: a plan landed, written through the same
     # shared handler, so it cannot drift into a silent success either.
-    assert len(toasts) == 54, (f"{len(toasts)} `toast.success` lines came out of the same walk: that is "
+    # 56 with 37.4's replies pair: `useFileInboundMail` announces that a letter was filed, and
+    # the page announces that a suggested stage was applied -- the second is written at its
+    # mutation site (the apply hook is shared with the board), so both are counted here.
+    assert len(toasts) == 56, (f"{len(toasts)} `toast.success` lines came out of the same walk: that is "
                                "the floor proving the scan reached the pages and the hooks, so a walk "
                                "narrowed to the api directory cannot pass quietly")
 
@@ -2143,10 +2150,18 @@ def test_the_run_stream_contract_is_one_table_of_publishers_cases_and_subscriber
     shaped = {rel: object_shaped[rel] + jsx_shaped[rel] for rel in object_shaped}
     admitted = {s["file"]: len(s["sites"]) for s in subscribers}
     rejected_files = sorted(f for f, n in shaped.items() if n and f not in admitted and f not in transport)
+    # 38.3-38.5's four settings cards joined the rejection list for the reason the auth forms
+    # are on it: their `onError:` members belong to react-query mutations, not to a run's
+    # stream -- the sessions card's two closes, the password card's one change, the address
+    # card's request, and the erase card's one write.
     assert rejected_files == ["components/auth/credentials-form.tsx",
                               "components/auth/forgot-password-form.tsx",
                               "components/auth/reset-password-form.tsx",
-                              "components/knowledge/source-actions.tsx"], \
+                              "components/knowledge/source-actions.tsx",
+                              "components/settings/email-change-card.tsx",
+                              "components/settings/erase-account-card.tsx",
+                              "components/settings/password-card.tsx",
+                              "components/settings/sessions-card.tsx"], \
         (f"{rejected_files} name handler-shaped callbacks the entry rule rejects: their `onError:` belongs "
          "to react-query, not to a stream. Under #177's shape-only census three of these were stream "
          "readers -- if this list empties, the walk stopped reading rather than the collision going away")
@@ -3379,7 +3394,10 @@ def test_both_frame_parsers_default_a_nameless_frame_to_the_same_event_name():
         # (+14 lines); the union itself did not change. 1488 rather than 1477 since 34.1's
         # `CalendarLinkRow` joined above the union (+11 lines with its doc comment); the
         # union itself did not change.
-        ("types.ts", 1488, "kind:"),
+        # 1539 rather than 1488 since three interfaces joined above the union: 38.3's
+        # `AccountSession`, and 37.4's `InboundLinkRow` and `InboundMail` (+52 lines with
+        # their doc comments, -1 from a rewrite); the union itself did not change.
+        ("types.ts", 1539, "kind:"),
         ('use-sse.ts', 15, 'event: SSEEventName | "message" | "progress" | "ping";'),
     ], (f"{[(r['file'], r['line'], r['head']) for r in by_role['type-union-member']]}: three type unions "
         "spell `message`, and only one of them names a frame -- the other two are the trace step kind "

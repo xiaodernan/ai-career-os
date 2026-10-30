@@ -24,7 +24,8 @@ Four walks, none of which imports production code:
 4. the users controller, for the fact that the profile surface is real on the server and now has a
    screen to answer.
 
-What the walk records, and does not fix: 50 promises, every one of them naming a declared key --
+What the walk records, and does not fix: 75 promises -- the count grew with the account,
+mail, push, replies and second-factor screens -- every one of them naming a declared key --
 and since the settings page grew its account and career-profile editors, and the jobs page its
 paste-a-posting importer, every promise's matches include a query a screen mounts, so the
 dead-promise ledger this file used to pin is empty. Two declared

@@ -142,6 +142,10 @@ BOUNDED_NOT_PASTED: dict[tuple[str, str, str], str] = {
     # JSON, shape detected server-side), and read by the ingestion path -- never by the
     # posting analyst the floor protects. A paste of a *posting* it is not.
     ("ParseFeedReq", "payload", "/parse-feed"): "a feed body pasted for the connector to parse, bounded at 2",
+    # 37.2's reply reading: the letter a provider forwarded, bounded at 1 only so a caller
+    # that sends nothing learns it sent nothing. It is mail, not a posting, and the client
+    # floor has no business above it -- the webhook never sends a blank letter.
+    ("ClassifyReplyReq", "text", "/classify-reply"): "one forwarded reply letter, bounded at 1 against an empty body",
 }
 
 

@@ -3304,6 +3304,37 @@ what did I become, and did I finish what I took before I left.
   config leaves, new error codes and records); none is touched by this unit, and the repair
   is the next one. Backend 1128 and frontend 877 unchanged.)
 
+- [x] **39.2b** rep: the censuses the 37/38 epics outran.
+
+  (39.1 and 39.2 each ran their own gates green while the ai-service suite stayed red in
+  forty-eight cases across five cross-language censuses. The replies inbox (37.4) added a
+  thirteenth window hook, a second `useApplications` call site and a pager; the account
+  cards (38.1–38.5) and the inbound address (37.1–37.3) added routes, error codes,
+  records, toasts and config leaves; a health-test comment (39.1) spelled
+  `app.storage.enabled` a fifth time. None was a product defect — each was a pin that had
+  stopped describing the app — and this unit moved no product code.
+
+  Window sizes: thirteen list hooks, twelve of them asking for a size and every literal
+  the route's own (the replies inbox's 50 joined the nightly letter's 10/10), the replies
+  screen shadowing it with its own 20 while its application picker asks for the 100-row
+  ceiling. Envelope readers: twelve page-typed hooks, two over routes that answer bare
+  lists (`/jobs/saved`, `/contacts`), `size` read in eleven places — the ten
+  past-the-end corrections plus the replies page's — and twelve pagers still fed the
+  caller's number. Response shape: 188 backend record declarations (37.3's `FileRequest`
+  and 37.4's `InboundMailItem` joining), 56 `toast.success` lines, and eight rejecting
+  files, the four settings cards (38.2–38.5) joining the auth forms because their
+  `onError:` belongs to react-query. 404: thirty-six answering places — thirty-five
+  `ApiErrorCode` constants, thirty-four of them naming a record, plus the
+  `NoResourceFoundException` handler — and twenty-six `(app)` screens, five through the
+  boundary and sixteen deciding the async state on their own flags, the replies page
+  among them. Knobs: thirty-seven leaves, eleven holders, twenty-six fields,
+  thirty-four env-only keys; `inbound.domain` is a fourth `@Value`-only key (after web,
+  mail and security), `ratelimit.inbound-per-minute` is read by the limiter's INBOUND
+  arm, and `app.storage.enabled` now has five flat rows, the fifth 39.1's test comment.
+
+  The five gates run 8/8, 8/8, 32/32, 9/9 and 7/7; the full ai-service suite is 1951
+  passed, 1 skipped, 0 failed in 161.54s.)
+
 - [ ] **39.3** A boot says what it became, and no secret is in the sentence.
 
   (A boot currently logs what Spring logs and nothing about the choices this deployment
