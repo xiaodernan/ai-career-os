@@ -53,3 +53,6 @@ frontend/.vitest-reports/
 
 # Local Python install manager cache (tool artifact, not project code)
 Python/
+
+# pnpm lockfile (the repo tracks npm's package-lock.json; npx pnpm runs leave one behind)
+frontend/pnpm-lock.yaml
