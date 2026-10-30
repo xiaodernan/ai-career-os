@@ -1165,7 +1165,7 @@ the door.
   — and its `/users/me/password` alias — takes `{currentPassword, newPassword}`. The
   current value is the re-authentication: an open tab or a borrowed laptop is not
   enough to take the account away from its owner, so a wrong current password is a
-  **401** `INVALID_CREDENTIALS` and changes nothing. A new value equal to the current
+  **401** `CURRENT_PASSWORD_INCORRECT` and changes nothing. A new value equal to the current
   one is refused with its own **400** `PASSWORD_UNCHANGED`, because re-storing the same
   hash would buy the reader nothing while still signing every other device out. On
   success the hash is re-encoded (BCrypt, never stored raw) and
@@ -1179,7 +1179,9 @@ the door.
   revokes, a wrong one touches nothing, the same value is refused by name, a vanished
   account is a 404 — and 7 for the two routes' envelope, validation, refusal codes,
   unauthenticated answer and body hygiene). The epic's suite and doc gates are recorded
-  with 24.2, whose routes share the same two controllers.)
+  with 24.2, whose routes share the same two controllers. The screen landed in 38.4:
+  `components/settings/password-card.tsx` posts the route and puts each refusal under
+  the field that caused it.)
 
 - [x] **24.2** The account can be erased for good, files and rows together.
 
@@ -1187,7 +1189,7 @@ the door.
   The password is the re-authentication; the typed address, compared without case or
   surrounding spaces, makes the request a second, explicit act — the address is on the
   screen, so it is a speed bump against a mis-click, not a secret. Both wrong answers
-  have their own code — **401** `INVALID_CREDENTIALS` and **400**
+  have their own code — **401** `CURRENT_PASSWORD_INCORRECT` and **400**
   `CONFIRMATION_MISMATCH` — and touch nothing.
   Then `AccountErasureService` deletes the object-store file named by every
   `documents.file_key` the account owns and only after that deletes the `users` row: every
@@ -1215,7 +1217,9 @@ the door.
   that gives two accounts the same rows and files, erases one through the API and proves
   every user-scoped table and the bucket empty for it while the neighbour is whole), the
   backend unit suite at 734 and the integration suite at 70, the API/knob/security/env
-  doc gates passing, no frontend or copy-census movement.)
+  doc gates passing, no frontend or copy-census movement. The screen landed in 38.5:
+  `components/settings/erase-account-card.tsx` draws the card, and the public
+  `app/(auth)/account-erased/page.tsx` is the sentence the erased reader lands on.)
 
 ## Epic 25 — The Reader Can See the Open Doors
 
@@ -1248,15 +1252,17 @@ gives the account the verbs the list implies.
   in the family with its name, listing folding a rotation into one session ordered by
   last visit, closed and expired families left out, one family closed at a time, a
   stranger's family a 404 that touches nothing, closing twice answering the same 404 —
-  and 1 for the list route's envelope across both spellings).)
+  and 1 for the list route's envelope across both spellings). The screen landed in
+  38.3: `components/settings/sessions-card.tsx`.)
 
 - [x] **25.2** The reader can close one door, or all of them.
 
   (`DELETE /me/sessions/{familyId}` revokes every live token of that family; the
   refresh token stops buying pairs at once and the answer is `{revoked: true}`. A
   family id that is not live for the caller — someone else's, or already closed — is
-  one **404** `NOT_FOUND`, deliberately indistinguishable so the endpoint cannot be
-  used to probe for sessions, and it touches nothing. Closing the session that is
+  one **404** `LOGIN_SESSION_NOT_FOUND` (the catch-all `NOT_FOUND` until 30.5 split
+  it), deliberately indistinguishable so the endpoint cannot be used to probe for
+  sessions, and it touches nothing. Closing the session that is
   asking is allowed and behaves like logout: the access token dies at its short
   expiry, because access tokens are stateless and a revocation list for them would be
   a second session store. `DELETE /me/sessions` closes everything and is the lever a
@@ -1272,8 +1278,8 @@ gives the account the verbs the list implies.
   refreshing, then closes all and watches the remaining refresh die and the list
   empty. The backend unit suite at 746 and the integration suite at 71, the
   API/knob/security/env doc gates passing, no frontend or copy-census movement — the
-  settings screen that draws this list is blocked on the shared copy file, and the
-  routes are live for the client that comes after it.)
+  settings screen that draws this list waited for the shared copy file, then landed in
+  38.3 as `components/settings/sessions-card.tsx`.)
 
 ## Epic 26 — The Reader Can Move the Address
 
@@ -1334,9 +1340,10 @@ a borrowed tab send the account's recovery mail to an inbox they own.
   same password, the link refuse a second answer, and the neighbour keep its
   address and its refresh. The backend unit suite at 765 and the integration suite
   at 72, the API/knob/security/env doc gates passing, no frontend or copy-census
-  movement — the screen that starts the move is blocked on the shared copy and
-  endpoint files, as the session list was, and the routes plus the public
-  confirmation are live for it.
+  movement — the screen that starts the move waited for the shared copy and endpoint
+  files, as the session list did; the card landed in 38.2
+  (`components/settings/email-change-card.tsx`) and the public confirmation in 38.1
+  (`app/(auth)/confirm-email/page.tsx`).
 
 ## Epic 27 — The Letter Relay Has a Meter
 
@@ -3145,7 +3152,7 @@ client for all four verbs, starting with the link that is already in the mail.
   before any request was sent, and success replacing the form with the full consequence
   while the sessions list emptied. Backend unchanged and green at 1116 tests.)
 
-- [ ] **38.5** The door out is drawn like the doors in, and the ledger stops calling
+- [x] **38.5** The door out is drawn like the doors in, and the ledger stops calling
   these routes unwired.
 
   (The bottom of settings gains the erasure card: it names what leaves (the objects
@@ -3163,6 +3170,44 @@ client for all four verbs, starting with the link that is already in the mail.
   page. Epics 24–26's paragraphs gain a pointer to where their verbs' screens finally
   landed, and 24.1's stale `INVALID_CREDENTIALS` (superseded by 30.4's split) is
   corrected in the same pass.)
+
+  (Shipped: `components/settings/erase-account-card.tsx` closes the settings page, after
+  every card whose rows the request would take with it. It names the address on the
+  account, what leaves (the object-store files behind `documents.file_key` and every row
+  cascading from `users`) and what does not (backups until their retention window
+  passes; letters already delivered stay in their mailboxes). The password must be
+  present and the typed address passes the sign-in form's own `emailIssue` before any
+  request leaves; the values then open a confirmation that restates the typed address,
+  and only its button posts `POST /users/me/erase` through `authApi.eraseAccount`. The
+  card posts the trimmed address, and `lib/erase-account.ts:eraseRefusal` puts
+  `CURRENT_PASSWORD_INCORRECT` under the password field and `CONFIRMATION_MISMATCH`
+  under the address, everything else on the form — a refusal closes nothing and loses
+  nothing; three unit tests pin that mapping and its silence on other codes.
+  `useEraseAccount` drops the token pair, clears the query cache and hands the browser a
+  full-document navigation to `/account-erased`, so the workspace tree unmounts instead
+  of firing the next request into a 401 that no refresh can answer.
+
+  The landing is `app/(auth)/account-erased/page.tsx`, a public server component: it
+  reads the locale cookie, paints the sentence in the reader's language on the first
+  response, repeats what survived (backups, delivered letters), and offers only the two
+  doors out — register again or sign in as someone else. It makes no API call and needs
+  no session, which is the point: the account it would ask about no longer exists. The
+  endpoint ledger's remaining lines stop pretending a screen is pending: the `/me/*`
+  entries name the `MeController` alias and the settings card that calls its
+  `/users/me/*` twin (38.2–38.5), and `/mail/preferences/*` is described as
+  backend-rendered public pages the browser navigates to from a mailbox and never
+  fetches. The `/users/me/erase` line left with the card. Copy census 145 -> 147 with
+  the card and the page; `metadata.test.ts` names the public landing title and the
+  used-key and translation-parity gates follow the added keys. Frontend 877 tests over
+  85 files, tsc and eslint clean.
+
+  Walked in a browser against a stubbed API: the empty form asked for the password and
+  a matching address and sent no request; a wrong password landed under its field after
+  one refresh and retry, and a mistyped address under the address field, with nothing
+  posted before the confirmation was accepted; the confirmation restated the typed
+  address, a value typed with spaces around it was posted trimmed, the pair was gone
+  after success, and the browser landed on `/account-erased` — "账号已经删除", title
+  "账号已删除 · AI Career OS" — which renders without a session and makes no request.)
 
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +

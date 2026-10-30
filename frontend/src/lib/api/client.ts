@@ -562,6 +562,20 @@ export const authApi = {
     });
   },
 
+  /**
+   * Erase the account for good (24.2, 38.5). The password is the re-authentication and
+   * the typed-back address the deliberate second act; the server deletes the files the
+   * account's documents name and then the row every other row cascades from. Nothing in
+   * the answer names either value, and the caller must drop its token pair and cache the
+   * moment it resolves — the account whose rows just left cannot refresh.
+   */
+  async eraseAccount(payload: { password: string; confirmEmail: string }): Promise<void> {
+    await request<{ erased: boolean }>(endpoints.auth.erase, {
+      method: "POST",
+      body: { password: payload.password, confirmEmail: payload.confirmEmail },
+    });
+  },
+
   me(): Promise<User> {
     return request<User>(endpoints.auth.me);
   },

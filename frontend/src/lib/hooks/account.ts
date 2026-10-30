@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { authApi } from "@/lib/api/client";
+import { tokenStore } from "@/lib/api/token-store";
 
 /**
  * Ask for the two letters that move the sign-in address (38.2).
@@ -51,5 +52,25 @@ export function useChangePassword() {
   return useMutation({
     mutationFn: authApi.changePassword,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: SESSIONS_KEY }),
+  });
+}
+
+/**
+ * Erasing the account (38.5). Success is the one moment the local pair must not survive the
+ * request that spent it: the rows behind that refresh token are gone, and the access token
+ * in memory parses only until its next call answers 404. So the pair and the whole cache
+ * are dropped, and the browser leaves through a full document navigation rather than a
+ * client route change — the app tree unmounts, no background query refires against the
+ * deleted account, and the landing page says the account is gone instead of a 401 bounce.
+ */
+export function useEraseAccount() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: authApi.eraseAccount,
+    onSuccess: () => {
+      tokenStore.clear();
+      queryClient.clear();
+      window.location.assign("/account-erased");
+    },
   });
 }

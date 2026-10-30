@@ -469,6 +469,48 @@ export const translations = {
         "Every session's refresh token has been revoked. Other devices sign out the next time they need a new access token, and this tab keeps working until its own token expires, then asks for the new password. Signing in from now on takes the new one.",
       again: "Change it again",
     },
+    /**
+     * The erasure card (38.5). Every sentence describes what the server does: both checks,
+     * the files deleted before the row, the rows that cascade, and the backups that outlive
+     * the live system until their retention window passes.
+     */
+    eraseAccount: {
+      title: "Erase this account",
+      description:
+        "Close the account for good. It takes the password and the sign-in address typed back, and neither wrong answer touches anything.",
+      current: "The account being erased is {email}.",
+      leavesTitle: "What leaves",
+      leavesBody:
+        "Every row that names this account — profile, resumes and versions, jobs, applications, interviews, knowledge sources, letters, notifications, sessions and tokens — and every stored file behind its documents.",
+      staysTitle: "What stays",
+      staysBody:
+        "Backups outside the live system keep what they captured until their retention window passes. Letters already delivered stay in their mailboxes.",
+      passwordLabel: "Current password",
+      passwordPlaceholder: "Type your current password",
+      confirmLabel: "Sign-in address, typed back",
+      confirmPlaceholder: "{email}",
+      hint: "Case and surrounding spaces are forgiven; a different address is refused.",
+      submit: "Erase the account",
+      dialogTitle: "Erase this account for good?",
+      dialogDescription:
+        "The password you typed is checked first, then {email}. If both pass, every row and every stored file this account owns is erased, and there is no way to restore it.",
+      dialogConfirm: "Erase it",
+    },
+    /**
+     * The landing after 24.2's route answers `{erased: true}` (38.5). The reader has no
+     * account and no session any more, so the page says that plainly and offers the two
+     * doors that remain: create a new account, or sign in with another one.
+     */
+    accountErased: {
+      title: "The account is gone",
+      body:
+        "Every row and every stored file this account owned has been erased. No session can sign in with it again.",
+      keptTitle: "What is still out there",
+      keptBody:
+        "Backups outside the live system keep what they captured until their retention window passes, and letters already delivered stay in their mailboxes.",
+      startAgain: "Create a new account",
+      signInOther: "Sign in with another account",
+    },
     tailor: {
       title: "Tailored resume for this role",
       draftBadge: "Tailored draft",
@@ -1414,6 +1456,7 @@ export const translations = {
         forgotPassword: "Reset your password",
         resetPassword: "Set a new password",
         confirmEmail: "Confirm your new address",
+        accountErased: "Account erased",
       },
       eyebrow: "The job-search operating system",
       headline: "Run your search like an engineer runs a system.",
@@ -3105,6 +3148,44 @@ export const translations = {
         "所有会话的刷新令牌都已作废：其他设备下次需要新的访问令牌时会退出登录，这个标签页会用到自己的访问令牌到期为止，然后请你用新密码重新登录。从现在起登录都用新密码。",
       again: "再换一次",
     },
+    /**
+     * 删除账号卡片（38.5）。每一句都照实描述服务端的动作：两道核对、先删文件再删行、
+     * 随账号级联的行，以及实时系统之外、要等保留期结束的备份。
+     */
+    eraseAccount: {
+      title: "删除这个账号",
+      description: "彻底关闭这个账号。需要输入密码，并再次输入登录邮箱；任何一项不对，什么都不会被删除。",
+      current: "正在删除的是 {email}。",
+      leavesTitle: "会离开的",
+      leavesBody:
+        "所有指向这个账号的行——资料、简历与版本、职位、申请、面试、知识库来源、来信、通知、会话与令牌——以及这些文档背后的每一个已存储文件。",
+      staysTitle: "会留下的",
+      staysBody:
+        "实时系统之外的备份会保留它们记录下的内容，直到保留期结束。已经投递出去的信件留在各自的邮箱里。",
+      passwordLabel: "当前密码",
+      passwordPlaceholder: "输入你的当前密码",
+      confirmLabel: "再次输入登录邮箱",
+      confirmPlaceholder: "{email}",
+      hint: "大小写和首尾空格不计较；换一个邮箱会被拒绝。",
+      submit: "删除账号",
+      dialogTitle: "确定要彻底删除这个账号吗？",
+      dialogDescription:
+        "先核对输入的密码，再核对 {email}。两项都通过后，这个账号名下的所有行和所有已存储文件都会被删除，无法恢复。",
+      dialogConfirm: "彻底删除",
+    },
+    /**
+     * 24.2 的路由回答 `{erased: true}` 之后落到的页面（38.5）。读者已经没有账号、
+     * 也没有会话，所以页面直说这一点，并给出仍然存在的两扇门：注册新账号，或用另一个账号登录。
+     */
+    accountErased: {
+      title: "账号已经删除",
+      body: "这个账号名下的所有行和所有已存储文件都已删除，任何会话都无法再用它登录。",
+      keptTitle: "仍然留在外面的",
+      keptBody:
+        "实时系统之外的备份会保留它们记录下的内容，直到保留期结束；已经投递出去的信件留在各自的邮箱里。",
+      startAgain: "注册新账号",
+      signInOther: "登录另一个账号",
+    },
     tailor: {
       title: "为这个职位定制的简历",
       draftBadge: "定制草稿",
@@ -3946,6 +4027,7 @@ export const translations = {
         forgotPassword: "重置密码",
         resetPassword: "设置新密码",
         confirmEmail: "确认新邮箱地址",
+        accountErased: "账号已删除",
       },
       eyebrow: "求职操作系统",
       headline: "像工程师跑系统一样跑你的求职。",

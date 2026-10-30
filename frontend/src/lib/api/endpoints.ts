@@ -36,6 +36,9 @@ export const endpoints = {
     /* Replacing the password, which re-checks the old one and revokes every refresh
        token (38.4). */
     password: "/users/me/password",
+    /* The door out: re-checks the password and the address typed back, deletes the
+       account's files, then the row every other row cascades from (38.5). */
+    erase: "/users/me/erase",
   },
 
   /* ---------------- Resumes ---------------- */

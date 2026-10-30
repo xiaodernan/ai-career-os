@@ -13,6 +13,7 @@ import { InboundCard } from "@/components/settings/inbound-card";
 import { EmailChangeCard } from "@/components/settings/email-change-card";
 import { SessionsCard } from "@/components/settings/sessions-card";
 import { PasswordCard } from "@/components/settings/password-card";
+import { EraseAccountCard } from "@/components/settings/erase-account-card";
 import { SecurityCard } from "@/components/settings/security-card";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -209,6 +210,9 @@ export default function SettingsPage() {
 
       {/* Long-term memory — the one surface that can correct what the model believes */}
       <MemoryCard />
+
+      {/* The door out (38.5) — last on the page, after everything it would take with it */}
+      <EraseAccountCard />
 
       <ConfirmDialog
         open={confirmOpen}

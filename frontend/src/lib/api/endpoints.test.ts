@@ -817,15 +817,17 @@ describe("endpoints ↔ backend route parity", () => {
     "/me": "MeController's alias of /users/me; the client spells every call through /users/...",
     "/resume-versions/{}": "the version panel reads the list form /resume-versions?resumeId=…",
     "/resumes/{}/versions": "superseded for the panel by GET /resume-versions?resumeId=…",
-    "/mail/preferences/{}/{}": "the mail-preference read/update surface is not wired yet",
-    "/mail/preferences/{}/{}/start/{}": "the mail preference unsubscribe start link is not wired yet",
-    "/mail/preferences/{}/{}/stop/{}": "the mail preference unsubscribe stop link is not wired yet",
-    "/me/email-change": "the account email-change alias the client has not wired",
-    "/me/erase": "the account-erase alias the client has not wired",
-    "/me/password": "the account-password alias the client has not wired",
-    "/me/sessions": "the sessions alias the client has not wired",
-    "/me/sessions/{}": "the revoke-session alias the client has not wired",
-    "/users/me/erase": "the account-erase route the client has not wired",
+    "/mail/preferences/{}/{}":
+      "the mail-settings page a letter's footer opens; the backend renders it and the browser only navigates to it from a mailbox, never fetches it from the app",
+    "/mail/preferences/{}/{}/start/{}":
+      "the rendered mail-settings page's own form posts here; the app never calls it",
+    "/mail/preferences/{}/{}/stop/{}":
+      "the one-click unsubscribe URL a mail client fires; the app never calls it",
+    "/me/email-change": "MeController's alias of /users/me/email-change, which the settings card calls (38.2)",
+    "/me/erase": "MeController's alias of /users/me/erase, which the settings card calls (38.5)",
+    "/me/password": "MeController's alias of /users/me/password, which the settings card calls (38.4)",
+    "/me/sessions": "MeController's alias of /users/me/sessions, which the settings card calls (38.3)",
+    "/me/sessions/{}": "MeController's alias of /users/me/sessions/{}, which the settings card calls (38.3)",
     // 37.1/37.4: the inbound loop's webhook. The provider is its one caller, never a browser;
     // the three signed-in routes left this list with 37.4, when lib/hooks/replies.ts began
     // reaching them for the replies page and the settings address card.
