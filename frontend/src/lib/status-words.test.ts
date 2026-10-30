@@ -15,6 +15,7 @@ import {
   resumeStatusWord,
   runStatusWord,
   runTriggerWord,
+  salaryBandWord,
   seniorityWord,
   JOB_STATUSES,
   REMOTE_TYPES,
@@ -240,6 +241,69 @@ describe("the seniority chip", () => {
     ).toEqual(["app/probe.tsx"]);
     expect(
       preWordedSeniority([{ path: "lib/api/normalize.ts", text: "// no experienceLevel here" }]),
+    ).toEqual([]);
+  });
+});
+
+const SALARY_SURFACES = [
+  "components/jobs/job-card.tsx",
+  "app/(app)/jobs/[id]/page.tsx",
+  "app/(app)/companies/[id]/page.tsx",
+];
+
+/**
+ * The charge is the call, not the file: a surface formatting the stored band itself draws
+ * a ceiling with no sentence for the reader. Every other call in the tree formats a point
+ * estimate (`v, v`), which can never reach the ceiling branch.
+ */
+function rawBandCalls(files: { path: string; text: string }[]): string[] {
+  return files
+    .filter((f) => f.path !== FORMAT && f.path !== STATUS_WORDS)
+    .filter((f) => /formatSalary\s*\(/.test(f.text) && /\.salary(?:Min|Max)\b/.test(f.text))
+    .map((f) => f.path);
+}
+
+describe("the salary band", () => {
+  it("puts the reader's sentence on a ceiling-only band", () => {
+    const en = tFor("en");
+    const zh = tFor("zh");
+    expect(salaryBandWord(en, 40000, 60000, "USD")).toBe("$40k–$60k");
+    expect(salaryBandWord(zh, 40000, 60000, "USD")).toBe("$40k–$60k");
+    expect(salaryBandWord(en, 50000, null, "USD")).toBe("$50k+");
+    expect(salaryBandWord(en, null, 20000, "USD")).toBe("Up to $20k");
+    expect(salaryBandWord(zh, null, 20000, "USD")).toBe("最高 $20k");
+    expect(salaryBandWord(zh, null, 300000, "CNY")).toBe("最高 30万");
+    expect(salaryBandWord(zh, null, null, "USD")).toBeNull();
+  });
+
+  it("draws every job's stored band through the table", () => {
+    const files = sources();
+    expect(files.length, "the scan read no files").toBeGreaterThan(150);
+    for (const rel of SALARY_SURFACES) {
+      const file = files.find((f) => f.path.endsWith(rel));
+      expect(file, `${rel} is not in the walk`).toBeTruthy();
+      expect(file!.text).toContain(
+        "salaryBandWord(t, job.salaryMin, job.salaryMax, job.salaryCurrency)",
+      );
+    }
+    const offenders = rawBandCalls(files);
+    expect(
+      offenders,
+      `surfaces formatting a stored band without the reader's sentence:\n${offenders.join("\n")}`,
+    ).toEqual([]);
+  });
+
+  it("would still see a surface that formatted the band itself", () => {
+    expect(
+      rawBandCalls([
+        {
+          path: "app/probe.tsx",
+          text: "const salary = formatSalary(job.salaryMin, job.salaryMax, job.salaryCurrency);",
+        },
+      ]),
+    ).toEqual(["app/probe.tsx"]);
+    expect(
+      rawBandCalls([{ path: "app/point.tsx", text: "formatSalary(v, v, currency)" }]),
     ).toEqual([]);
   });
 });

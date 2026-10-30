@@ -2600,6 +2600,7 @@ export const translations = {
       nothingSaved: "Nothing saved yet",
       savedTab: "Saved",
       savedAt: "Saved {date}",
+      salaryUpTo: "Up to {amount}",
       nothingSavedDescription:
         "Save a role from Discover and it appears in your pipeline, ready for a match run and a tailored resume.",
       browseDiscover: "Browse discover",
@@ -5197,6 +5198,7 @@ export const translations = {
       clearFilters: "清空筛选",
       nothingSaved: "还没有收藏",
       savedAt: "收藏于 {date}",
+      salaryUpTo: "最高 {amount}",
       nothingSavedDescription:
         "在「发现」里收藏一个职位，它就会出现在你的流水线里，随时可以跑匹配、定制简历。",
       browseDiscover: "去发现页看看",

@@ -110,20 +110,33 @@ function compact(n: number): string {
   return String(Math.round(n));
 }
 
-/** Salary band, e.g. "$40k–$60k" / "¥30–45万". Missing parts are dropped. */
-export function formatSalary(
-  min?: number | null,
-  max?: number | null,
-  currency?: string | null
-): string | null {
-  if (min == null && max == null) return null;
+/** The amount and the currency's own unit — "$40k", "38万". No words: the sentence around it is the reader's. */
+function salaryAmount(n: number, currency?: string | null): string {
   const cur = (currency ?? "USD").toUpperCase();
   const symbol = CURRENCY_SYMBOL[cur] ?? `${cur} `;
   const perYear = cur === "CNY" || cur === "RMB";
-  const fmt = (n: number) => (perYear ? `${Math.round(n / 10_000)}万` : `${symbol}${compact(n)}`);
+  return perYear ? `${Math.round(n / 10_000)}万` : `${symbol}${compact(n)}`;
+}
+
+/**
+ * Salary band, e.g. "$40k–$60k" / "¥30–45万". Missing parts are dropped.
+ *
+ * The ceiling-only branch speaks through `upTo`; its default is neutral rather than the
+ * English "up to" this function used to mint, so a caller that never learned about the
+ * parameter cannot put English on a Chinese page.
+ */
+export function formatSalary(
+  min?: number | null,
+  max?: number | null,
+  currency?: string | null,
+  upTo?: (amount: string) => string
+): string | null {
+  if (min == null && max == null) return null;
+  const fmt = (n: number) => salaryAmount(n, currency);
   if (min != null && max != null && min !== max) return `${fmt(min)}–${fmt(max)}`;
   if (min != null) return `${fmt(min)}+`;
-  return `up to ${fmt(max as number)}`;
+  const ceiling = fmt(max as number);
+  return upTo ? upTo(ceiling) : `≤${ceiling}`;
 }
 
 export function formatNumber(n?: number | null): string {

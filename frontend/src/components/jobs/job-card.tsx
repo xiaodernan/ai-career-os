@@ -9,8 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { MatchRing } from "@/components/ai/match-ring";
 import { SkillChips } from "@/components/common/skill-chips";
 import { SaveToggle } from "@/components/jobs/save-toggle";
-import { formatSalary, relativeTime } from "@/lib/format";
-import { jobStatusWord, remoteTypeWord } from "@/lib/status-words";
+import { relativeTime } from "@/lib/format";
+import { jobStatusWord, remoteTypeWord, salaryBandWord } from "@/lib/status-words";
 import { useLocale } from "@/lib/i18n/locale-context";
 import type { Job } from "@/lib/api/types";
 
@@ -38,7 +38,7 @@ function JobCard({
   const match = job.latestMatch ?? null;
   const { t, locale } = useLocale();
   const to = href ?? `/jobs/${job.id}`;
-  const salary = formatSalary(job.salaryMin, job.salaryMax, job.salaryCurrency);
+  const salary = salaryBandWord(t, job.salaryMin, job.salaryMax, job.salaryCurrency);
   const company = job.company?.name || job.companyName;
 
   return (

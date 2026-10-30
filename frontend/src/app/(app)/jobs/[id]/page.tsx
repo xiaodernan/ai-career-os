@@ -49,8 +49,7 @@ import { CoverLetterPanel } from "@/components/jobs/cover-letter-panel";
 import { useJob } from "@/lib/hooks/resources";
 import { useCreateApplication, useCreateInterviewSession, useRunJobMatch } from "@/lib/hooks/actions";
 import { list as listOf, pick, rec, str } from "@/lib/api/normalize";
-import { formatSalary } from "@/lib/format";
-import { remoteTypeWord, interviewModeName, seniorityWord } from "@/lib/status-words";
+import { remoteTypeWord, interviewModeName, seniorityWord, salaryBandWord } from "@/lib/status-words";
 import { useLocale } from "@/lib/i18n/locale-context";
 import type { Evidence, JdRequirement, PreparationItem, SkillGap } from "@/lib/api/types";
 import { normalizeJdParsed } from "@/lib/api/normalize";
@@ -155,7 +154,7 @@ export default function JobDetailPage() {
     );
   }
 
-  const salary = formatSalary(job.salaryMin, job.salaryMax, job.salaryCurrency);
+  const salary = salaryBandWord(t, job.salaryMin, job.salaryMax, job.salaryCurrency);
   // The reader pasted this link; it is only worth a button if it opens a page.
   const postingHref = safeHref(job.externalUrl);
 

@@ -8,7 +8,7 @@
  * value the table knows reads as the reader's word, and a value the roster does not know
  * keeps its English spelling rather than becoming a raw key or a blank badge.
  */
-import { titleCase } from "@/lib/format";
+import { formatSalary, titleCase } from "@/lib/format";
 import { INTERVIEW_MODES } from "@/lib/interview-modes";
 import type { TranslateFn } from "@/lib/pipeline";
 
@@ -80,6 +80,22 @@ type SentenceFn = (key: string, vars?: Record<string, string | number>) => strin
 export function seniorityWord(t: SentenceFn, years: number): string {
   if (years === 0) return t("jobs.detail.entryLevel");
   return t(years === 1 ? "jobs.detail.experienceYear" : "jobs.detail.experienceYears", { years });
+}
+
+/**
+ * The salary band's sentence, read from the table.
+ *
+ * `formatSalary` formats the amount but cannot speak for a reader; its ceiling branch
+ * used to say "up to" in every language. A page draws a stored band through this call,
+ * which hands the table's sentence for the ceiling and leaves the amounts alone.
+ */
+export function salaryBandWord(
+  t: SentenceFn,
+  min?: number | null,
+  max?: number | null,
+  currency?: string | null
+): string | null {
+  return formatSalary(min, max, currency, (amount) => t("jobs.salaryUpTo", { amount }));
 }
 
 /**

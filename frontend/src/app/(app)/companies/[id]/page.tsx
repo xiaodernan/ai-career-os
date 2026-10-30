@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/common/error-state";
 import { useCompany } from "@/lib/hooks/resources";
 import { useCompanyBrief } from "@/lib/hooks/growth";
-import { formatSalary } from "@/lib/format";
+import { salaryBandWord } from "@/lib/status-words";
 import { safeHref } from "@/lib/safe-href";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { ApiError } from "@/lib/api/client";
@@ -299,7 +299,8 @@ export default function CompanyDetailPage() {
  * shows nothing rather than a placeholder.
  */
 function RoleRow({ job }: { job: Job }) {
-  const salary = formatSalary(job.salaryMin, job.salaryMax, job.salaryCurrency);
+  const { t } = useLocale();
+  const salary = salaryBandWord(t, job.salaryMin, job.salaryMax, job.salaryCurrency);
   return (
     <li>
       <Link

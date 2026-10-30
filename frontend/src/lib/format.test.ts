@@ -39,7 +39,24 @@ describe("formatSalary", () => {
   });
   it("renders open-ended bounds", () => {
     expect(formatSalary(50000, null, "USD")).toBe("$50k+");
-    expect(formatSalary(null, 20000, "USD")).toBe("up to $20k");
+    // A ceiling-only band carries no language: the page supplies the sentence, and the
+    // default is neutral rather than the English "up to" this function used to mint.
+    expect(formatSalary(null, 20000, "USD")).toBe("≤$20k");
+    expect(formatSalary(null, 300000, "CNY")).toBe("≤30万");
+  });
+  it("lets the caller put the reader's sentence on the ceiling", () => {
+    const upTo = (amount: string) => `最高 ${amount}`;
+    expect(formatSalary(null, 20000, "USD", upTo)).toBe("最高 $20k");
+    // The sentence belongs to the ceiling branch alone: a band with two bounds or a
+    // floor never asks for it.
+    const asked: string[] = [];
+    const spy = (amount: string) => {
+      asked.push(amount);
+      return amount;
+    };
+    expect(formatSalary(40000, 60000, "USD", spy)).toBe("$40k–$60k");
+    expect(formatSalary(50000, null, "USD", spy)).toBe("$50k+");
+    expect(asked).toEqual([]);
   });
   it("returns null when both bounds are missing", () => {
     expect(formatSalary(null, null, null)).toBeNull();
