@@ -6,9 +6,28 @@ import { renderToStaticMarkup } from "react-dom/server";
 // reader; a factory closing over a plain `let` would read it before the test file's body runs.
 const reader = vi.hoisted(() => ({ locale: "en" as "en" | "zh" }));
 
-vi.mock("@/lib/i18n/locale-context", () => ({
-  useLocale: () => ({ locale: reader.locale, t: (key: string) => key, setLocale: () => {} }),
-}));
+// The stub reads the real table the way the provider does: a key that exists resolves to
+// its sentence with the holes filled, and only a missing key falls back to its own name.
+// A stub that always returns the key would hide the date the moment the stamp became a
+// sentence with a `{when}` hole in it -- the panel would render "jobs.match.computedAt"
+// and this test would call that a missing date rather than a missing key.
+vi.mock("@/lib/i18n/locale-context", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/i18n/locale-context")>(
+    "@/lib/i18n/locale-context"
+  );
+  const { translations } = await import("@/lib/i18n/translations");
+  return {
+    ...actual,
+    useLocale: () => ({
+      locale: reader.locale,
+      setLocale: () => {},
+      t: (key: string, vars?: Record<string, string | number>) => {
+        const value = actual.lookup(translations[reader.locale], key);
+        return value === undefined ? key : actual.fill(value, vars);
+      },
+    }),
+  };
+});
 
 import { MatchPanel } from "./match-panel";
 import type { JobMatch } from "@/lib/api/types";

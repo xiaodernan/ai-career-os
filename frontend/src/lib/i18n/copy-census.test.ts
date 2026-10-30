@@ -194,4 +194,38 @@ describe("the browser's copy", () => {
       "is over the 20 MB ingestion cap.",
     ]);
   });
+
+  it("reads the lower-case phrase a value left on either side", () => {
+    // A row's metadata is a label with a value in the middle: `210 · last
+    // touch 3 Oct`, `4 roles`, `120 tokens · 3d ago`. Each remaining chunk
+    // opens lower-case and carries no closing mark, so the head rule (a
+    // capital) and the tail rule (a closing mark) both skipped it, and the
+    // whole row printed in English on a Chinese page with the gate green.
+    // Thirteen such chunks sat in the tree when this rule was added.
+    const probe = [
+      "export const a = <p>{`${n} role${plural}`}</p>;",
+      "export const b = <p>{` · last touch ${formatDate(c.lastTouchAt, locale)}`}</p>;",
+      "export const c = <p>{`${formatNumber(tokens)} tokens · ${days}d ago`}</p>;",
+    ].join("\n");
+    expect(templateOffendersIn("probe.tsx", probe).map((o) => o.value)).toEqual([
+      "role",
+      "· last touch",
+      "tokens ·",
+      "d ago",
+    ]);
+  });
+
+  it("leaves a static template and a class name alone", () => {
+    // The fragment rule only reads a chunk beside a value. A lone
+    // lower-case word in a template with no `${...}` is a static string,
+    // and a class name, a URL or a number is code or data whether or not a
+    // value sits next to it.
+    const probe = [
+      "export const a = <span>{`slug`}</span>;",
+      "export const b = <span className={`px-${n} py-2`} />;",
+      "export const c = <a href={`/jobs/${id}`} />;",
+      "export const d = <span>{`${done}/${total}`}</span>;",
+    ].join("\n");
+    expect(templateOffendersIn("probe.tsx", probe)).toEqual([]);
+  });
 });

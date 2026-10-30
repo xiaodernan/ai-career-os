@@ -512,6 +512,13 @@ function literalOffenders(): Offender[] {
  * was cut around a value. The chunk after an interpolation often opens with
  * the punctuation that closed around the value -- see {@link bare}.
  *
+ * One shape was still missing: the lower-case phrase with no closing mark,
+ * `` ` · last touch ${formatDate(...)}` `` or `` `${n} role${plural}` ``.
+ * Every rule above wants a capital or a full stop, and these have neither,
+ * so a whole row's metadata -- "last touch", "added", "score", "d ago",
+ * "requirements evidenced" -- printed in English on a Chinese page with the
+ * gate green. {@link sentenceFragment} reads that shape.
+ *
  * The expression reader tracks braces, so a nested template or an object
  * literal inside `${...}` does not end the outer literal early, and a nested
  * template is read too: its prose is as visible as the outer one's.
@@ -535,8 +542,16 @@ function readQuoted(source: string, i: number, quote: string): number {
   return i;
 }
 
-function readTemplate(source: string, i: number, chunks: string[]): number {
+interface TemplateChunk {
+  text: string;
+  /** The template this chunk was cut from has at least one `${...}`. */
+  besideValue: boolean;
+}
+
+function readTemplate(source: string, i: number, chunks: TemplateChunk[]): number {
+  const start = chunks.length;
   let chunk = "";
+  let hasExpression = false;
   while (i < source.length) {
     const ch = source[i];
     if (ch === "\\") {
@@ -545,23 +560,26 @@ function readTemplate(source: string, i: number, chunks: string[]): number {
       continue;
     }
     if (ch === "`") {
-      chunks.push(chunk);
+      chunks.push({ text: chunk, besideValue: false });
+      for (let k = start; k < chunks.length; k++) chunks[k].besideValue = hasExpression;
       return i + 1;
     }
     if (ch === "$" && source[i + 1] === "{") {
-      chunks.push(chunk);
+      chunks.push({ text: chunk, besideValue: false });
       chunk = "";
+      hasExpression = true;
       i = readTemplateExpression(source, i + 2, chunks);
       continue;
     }
     chunk += ch;
     i++;
   }
-  chunks.push(chunk);
+  chunks.push({ text: chunk, besideValue: false });
+  for (let k = start; k < chunks.length; k++) chunks[k].besideValue = hasExpression;
   return i;
 }
 
-function readTemplateExpression(source: string, i: number, chunks: string[]): number {
+function readTemplateExpression(source: string, i: number, chunks: TemplateChunk[]): number {
   let depth = 1;
   while (i < source.length) {
     const ch = source[i];
@@ -591,7 +609,11 @@ function readTemplateExpression(source: string, i: number, chunks: string[]): nu
 
 /** The text between the expressions of every template literal in a source. */
 export function templateChunksIn(source: string): string[] {
-  const chunks: string[] = [];
+  return templateSegmentsIn(source).map((c) => c.text);
+}
+
+function templateSegmentsIn(source: string): TemplateChunk[] {
+  const chunks: TemplateChunk[] = [];
   let i = 0;
   while (i < source.length) {
     const ch = source[i];
@@ -609,17 +631,52 @@ export function templateChunksIn(source: string): string[] {
 }
 
 /**
+ * The lower-case phrase left between two values.
+ *
+ * ` · last touch ${formatDate(...)}` and `${n} role${plural}` cut a label
+ * around its value: the remaining chunk opens lower-case and carries no
+ * closing mark, so the head rule and the tail rule both skipped it. A
+ * chunk made only of lower-case words, one of them at least three letters,
+ * is that phrase -- provided the template it came from carries an
+ * expression. A lone lower-case word in a template with no `${...}` is a
+ * static string (a class name, a slug), and nothing about it says the
+ * reader sees it in a sentence.
+ *
+ * What keeps the rule honest is what it refuses to strip. A separator, an
+ * em dash, a comma are spacing, so they become spaces; but a hyphen, a
+ * digit, a slash, a bracket or a quote is the shape of a class name, a
+ * URL or a value, and any of those disqualifies the chunk outright. The
+ * lower bound of three letters is what leaves a unit like `ms` alone: it is
+ * one word, so it never reaches this rule anyway, and a two-letter word
+ * alone (`of`, `to`) is too thin to be a label. Measured over this tree
+ * when the rule was added: thirteen fragments at HEAD, every one of them
+ * the words around a value on a screen, and none in a class name.
+ */
+function sentenceFragment(value: string): string | null {
+  const words = value.replace(/[·—–,]/g, " ").replace(/\s+/g, " ").trim();
+  if (!/^[a-z]+( [a-z]+)*$/.test(words)) return null;
+  if (!words.split(" ").some((word) => word.length >= 3)) return null;
+  return words;
+}
+
+/**
  * The chunk of a template that reads as copy, in the form the gate reports
  * it -- or null when the chunk is a value, a class name or code.
  */
-function proseChunk(chunk: string): string | null {
+function proseChunk(chunk: string, besideValue: boolean): string | null {
   const head = bare(chunk);
   if (!head) return null;
   // A phrase: it has a second word, or it ends a sentence. `Only ` is a
   // phrase because of its space; `Delete` alone is left to the scans that
   // read the positions a lone label is written in.
-  if (!/\s/.test(head) && !/[.!?…]$/.test(head)) return null;
-  if (!sentenceHead(head) && !sentenceTail(head)) return null;
+  //
+  // The fragment rule is the exception, and only beside a value: a lone
+  // lower-case word cut out of a template that carries no expression is a
+  // static string -- a class name, a slug -- not half of a label. It is
+  // the adjacency to `${...}` that makes the word a word around a value.
+  const fragment = besideValue ? sentenceFragment(head) : null;
+  if (!/\s/.test(head) && !/[.!?…]$/.test(head) && !fragment) return null;
+  if (!sentenceHead(head) && !sentenceTail(head) && !fragment) return null;
   if (isCode(head)) return null;
   if (NOT_COPY.has(head.trim())) return null;
   return head.trim();
@@ -628,8 +685,8 @@ function proseChunk(chunk: string): string | null {
 /** The prose in the template literals of one source, for the gate's probes. */
 export function templateOffendersIn(file: string, source: string): Offender[] {
   const found: Offender[] = [];
-  for (const chunk of templateChunksIn(stripComments(source))) {
-    const value = proseChunk(chunk);
+  for (const chunk of templateSegmentsIn(stripComments(source))) {
+    const value = proseChunk(chunk.text, chunk.besideValue);
     if (value) found.push({ file, attribute: "template", value });
   }
   return found;

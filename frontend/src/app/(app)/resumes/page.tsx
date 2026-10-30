@@ -131,7 +131,7 @@ export default function ResumesPage() {
                               : r.status === "parsed"
                                 ? t("resumes.parsedOpenToSet")
                                 : t("resumes.awaitingParsing")}
-                            {r.createdAt ? ` · added ${formatDate(r.createdAt, locale)}` : ""}
+                            {r.createdAt ? t("resumes.addedOn", { when: formatDate(r.createdAt, locale) }) : ""}
                           </p>
                         </div>
                         <Badge variant={badge.variant} className="shrink-0 text-2xs font-normal">

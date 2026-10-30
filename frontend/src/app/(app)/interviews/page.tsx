@@ -140,10 +140,15 @@ export default function InterviewsPage() {
                           {s.jobTitle ? ` · ${s.jobTitle}` : s.companyName ? ` · ${s.companyName}` : ""}
                         </p>
                         <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                          {s.questionCount ? `${s.questionCount} questions · ` : ""}
+                          {s.questionCount
+                            ? t("interviews.questionsInline", {
+                                count: s.questionCount,
+                                plural: s.questionCount === 1 ? "" : "s",
+                              })
+                            : ""}
                           {done
-                            ? `finished ${relativeTime(s.finishedAt, locale)}`
-                            : `started ${formatDateTime(s.startedAt, locale)}`}
+                            ? t("interviews.finishedAt", { when: relativeTime(s.finishedAt, locale) })
+                            : t("interviews.startedAt", { when: formatDateTime(s.startedAt, locale) })}
                         </p>
                       </div>
                       {!done && s.status === "active" && (

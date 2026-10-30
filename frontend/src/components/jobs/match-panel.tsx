@@ -101,11 +101,17 @@ export function MatchPanel({
                 </p>
                 <p className="text-xs text-muted-foreground">
                   {match.reasoning ??
-                    `${match.matchedSkills?.length ?? 0} requirements evidenced · ${match.missingSkills?.length ?? 0} gaps`}
+                    t("jobs.match.evidenceLine", {
+                      matched: match.matchedSkills?.length ?? 0,
+                      missing: match.missingSkills?.length ?? 0,
+                      plural: (match.missingSkills?.length ?? 0) === 1 ? "" : "s",
+                    })}
                 </p>
                 {match.createdAt && (
                   <p className="text-2xs text-muted-foreground">
-                    computed {formatDateTime(match.createdAt, locale)}
+                    {t("jobs.match.computedAt", {
+                      when: formatDateTime(match.createdAt, locale),
+                    })}
                   </p>
                 )}
               </div>

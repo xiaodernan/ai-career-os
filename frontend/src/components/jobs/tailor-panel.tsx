@@ -71,7 +71,7 @@ export function TailorPanel({
           title={t("tailor.title")}
           description={
             resumeLabel
-              ? `${t("tailor.descriptionWith", { resume: resumeLabel })} ${t("tailor.neverInvented")} — unsupported claims are rejected and listed.`
+              ? `${t("tailor.descriptionWith", { resume: resumeLabel })} ${t("tailor.neverInvented")} ${t("tailor.claimsKeptOut")}`
               : `${t("tailor.description")} ${t("tailor.neverInvented")}.`
           }
           action={

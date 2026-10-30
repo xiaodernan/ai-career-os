@@ -47,7 +47,7 @@ import {
 import { runTotalTokens, type NormalizedPage } from "@/lib/api/normalize";
 import { rankingHintKey } from "@/lib/dashboard-ranking";
 import { formatNumber, relativeTime } from "@/lib/format";
-import { resumeStatusWord } from "@/lib/status-words";
+import { resumeStatusWord, runTriggerWord } from "@/lib/status-words";
 import type { ActivityRun, DashboardPayload, Job, Resume } from "@/lib/api/types";
 
 /**
@@ -778,7 +778,8 @@ export default function DashboardPage() {
                             <p className="font-medium">{f.name}</p>
                             <p className="text-xs text-muted-foreground">
                               {[f.company, f.relation].filter(Boolean).join(" · ") || "—"}
-                              {f.daysSince != null && ` · ${f.daysSince}d ago`}
+                              {f.daysSince != null &&
+                                ` · ${t("dashboard.daysAgo", { count: f.daysSince })}`}
                             </p>
                           </div>
                         </div>
@@ -859,11 +860,12 @@ function RunFeed({ runs }: { runs: ActivityRun[] }) {
             />
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm">
-                {`${run.agent ?? "agent"} · ${run.kind ?? "run"}`}
+                {run.agent ?? t("activity.detail.agentFallback")} ·{" "}
+                {run.kind ? runTriggerWord(t, run.kind) : t("activity.detail.runFallback")}
               </p>
               <p className="truncate text-xs text-muted-foreground">
                 {relativeTime(run.startedAt, locale)}
-                {tokens ? ` · ${formatNumber(tokens)} tokens` : ""}
+                {tokens ? ` · ${t("dashboard.rowTokens", { count: formatNumber(tokens) })}` : ""}
               </p>
             </div>
             <Button variant="link" size="xs" asChild className="shrink-0">

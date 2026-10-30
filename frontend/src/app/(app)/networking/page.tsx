@@ -95,7 +95,8 @@ export default function NetworkingPage() {
                 </p>
                 <p className="truncate text-xs text-muted-foreground">
                   {[c.role, c.relation].filter(Boolean).join(" · ") || "—"}
-                  {c.lastTouchAt && ` · last touch ${formatDate(c.lastTouchAt, locale)}`}
+                  {c.lastTouchAt &&
+                    t("networking.lastTouchLine", { when: formatDate(c.lastTouchAt, locale) })}
                 </p>
               </button>
               {c.relation && (

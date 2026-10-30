@@ -329,8 +329,10 @@ export default function ResumeDetailPage() {
                       </div>
                       <p className="mt-1 text-xs text-muted-foreground">
                         {v.source ? `${v.source.replace(/_/g, " ")} · ` : ""}
-                        {v.createdAt ? formatDate(v.createdAt, locale) : "date unavailable"}
-                        {typeof v.score?.overall === "number" ? ` · score ${v.score.overall}` : ""}
+                        {v.createdAt ? formatDate(v.createdAt, locale) : t("resumes.detail.dateUnavailable")}
+                        {typeof v.score?.overall === "number"
+                          ? t("resumes.detail.scoreSuffix", { score: v.score.overall })
+                          : ""}
                       </p>
                       {diff && (diff.accepted.length > 0 || diff.rejected.length > 0) && (
                         <div className="mt-2 border-t border-border/60 pt-2">
@@ -561,7 +563,10 @@ function StructuredProfileView({ structured }: { structured: StructuredResume })
         <SectionCard
           icon={<Briefcase className="size-4" aria-hidden />}
           eyebrow={t("eyebrows.workHistory")}
-          title={`${structured.experience!.length} role${structured.experience!.length === 1 ? "" : "s"}`}
+          title={t("resumes.detail.rolesTitle", {
+            count: structured.experience!.length,
+            plural: structured.experience!.length === 1 ? "" : "s",
+          })}
         >
           <ol className="space-y-5">
             {structured.experience!.map((exp, i) => (
@@ -594,7 +599,10 @@ function StructuredProfileView({ structured }: { structured: StructuredResume })
         <SectionCard
           icon={<Hammer className="size-4" aria-hidden />}
           eyebrow={t("eyebrows.projects")}
-          title={`${structured.projects!.length} project${structured.projects!.length === 1 ? "" : "s"}`}
+          title={t("resumes.detail.projectsTitle", {
+            count: structured.projects!.length,
+            plural: structured.projects!.length === 1 ? "" : "s",
+          })}
         >
           <ul className="space-y-4">
             {structured.projects!.map((p: ResumeProject, i) => (

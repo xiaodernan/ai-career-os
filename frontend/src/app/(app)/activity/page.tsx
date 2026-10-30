@@ -14,7 +14,7 @@ import { useUrlState } from "@/lib/hooks/use-url-state";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { runTotalTokens } from "@/lib/api/normalize";
 import { formatDateTime, formatDuration, formatNumber, formatUsd } from "@/lib/format";
-import { runStatusWord } from "@/lib/status-words";
+import { runStatusWord, runTriggerWord } from "@/lib/status-words";
 import type { ActivityRun } from "@/lib/api/types";
 
 // The route's own default window: `GET /activity/runs` binds `size` with
@@ -50,13 +50,14 @@ function RunRow({ run }: { run: ActivityRun }) {
         </span>
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium">
-            {`${run.agent ?? "career"} · ${run.kind ?? "run"}`}
+            {run.agent ?? "career"}
+            {run.kind ? ` · ${runTriggerWord(t, run.kind)}` : ""}
           </p>
           <p className="mt-0.5 text-xs text-muted-foreground">
             {when ? formatDateTime(when, locale) : "—"}
             {run.durationMs ? ` · ${formatDuration(run.durationMs)}` : ""}
             {run.model && ` · ${run.model}`}
-            {tokens ? ` · ${formatNumber(tokens)} tok` : ""}
+            {tokens ? ` · ${t("activity.rowTokens", { count: formatNumber(tokens) })}` : ""}
             {run.costUsd ? ` · ${formatUsd(run.costUsd)}` : ""}
           </p>
           {run.error && (
