@@ -14,6 +14,8 @@ import { useKnowledgeSources } from "@/lib/hooks/resources";
 import { useUrlState } from "@/lib/hooks/use-url-state";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { knowledgeFocus } from "@/lib/knowledge-focus";
+import { sourceKindLabel } from "@/lib/source-kinds";
+import { knowledgeSourceStatusWord } from "@/lib/status-words";
 
 // The route's own default window: `GET /knowledge/sources` binds `size` with
 // `defaultValue = "20"`, so this number asks for exactly what the server would have
@@ -108,8 +110,8 @@ export default function KnowledgePage() {
             </span>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium">{s.title}</p>
-              <p className="truncate text-xs text-muted-foreground capitalize">
-                {s.kind.replace("_", " ")}
+              <p className="truncate text-xs text-muted-foreground">
+                {sourceKindLabel(t, s.kind)}
                 {s.error && <span className="text-destructive"> · {s.error}</span>}
               </p>
             </div>
@@ -117,9 +119,8 @@ export default function KnowledgePage() {
               variant={
                 s.status === "ready" ? "success" : s.status === "failed" ? "destructive" : s.status === "ingesting" ? "ai" : "secondary"
               }
-              className="capitalize"
             >
-              {s.status}
+              {knowledgeSourceStatusWord(t, s.status)}
             </Badge>
             <SourceDeleteButton id={s.id} title={s.title} />
           </CardContent>

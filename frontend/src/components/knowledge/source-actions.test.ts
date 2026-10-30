@@ -12,6 +12,8 @@ import {
   validateDocumentFile,
 } from "@/components/knowledge/source-actions";
 import type { UploadRow } from "@/components/knowledge/source-actions";
+import { lookup } from "@/lib/i18n/locale-context";
+import { translations, type Locale } from "@/lib/i18n/translations";
 
 /**
  * Knowledge upload gates. The kind list is a cross-language contract: the backend
@@ -41,6 +43,18 @@ describe("SOURCE_KINDS", () => {
     expect(SOURCE_KINDS[0].value).toBe("note");
     // Labels stay human-readable next to the snake_case wire values.
     for (const k of SOURCE_KINDS) expect(k.label).toBeTruthy();
+  });
+
+  it("names every kind in both languages, not just in the English fallback column", () => {
+    // The uploader's selector and the list row both draw the kind through the table;
+    // a kind without a key would read as its English fallback on a Chinese page.
+    const locales: Locale[] = ["en", "zh"];
+    for (const k of SOURCE_KINDS) {
+      for (const locale of locales) {
+        const word = lookup(translations[locale], `knowledge.sources.kinds.${k.value}`);
+        expect(word, `knowledge.sources.kinds.${k.value} is missing from ${locale}`).toBeTruthy();
+      }
+    }
   });
 });
 

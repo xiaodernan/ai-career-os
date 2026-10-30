@@ -7,11 +7,14 @@ import { describe, expect, it } from "vitest";
 import { fill, lookup } from "@/lib/i18n/locale-context";
 import { translations, type Locale } from "@/lib/i18n/translations";
 import { INTERVIEW_MODES } from "@/lib/interview-modes";
+import { sourceKindLabel } from "@/lib/source-kinds";
+import { TRACE_KINDS } from "@/lib/trace-kinds";
 import {
   healthVerdictWord,
   interviewModeHint,
   interviewModeName,
   jobStatusWord,
+  knowledgeSourceStatusWord,
   marketVerdictWord,
   readinessVerdictWord,
   remoteTypeWord,
@@ -21,8 +24,10 @@ import {
   runTriggerWord,
   salaryBandWord,
   seniorityWord,
+  traceKindWord,
   HEALTH_VERDICTS,
   JOB_STATUSES,
+  KNOWLEDGE_SOURCE_STATUSES,
   MARKET_VERDICTS,
   READINESS_VERDICTS,
   REMOTE_TYPES,
@@ -63,6 +68,8 @@ const ROSTERS: [string, readonly string[]][] = [
   ["growth.verdicts", READINESS_VERDICTS],
   ["offers.verdicts", MARKET_VERDICTS],
   ["jobs.detail.priorities", REQUIREMENT_PRIORITIES],
+  ["knowledge.sources.statuses", KNOWLEDGE_SOURCE_STATUSES],
+  ["ai.agentTimeline.kinds", TRACE_KINDS],
 ];
 
 describe("the enum words", () => {
@@ -113,6 +120,8 @@ describe("the enum words", () => {
     expect(readinessVerdictWord(zh, "almost")).toBe("Almost");
     expect(marketVerdictWord(zh, "at_market")).toBe("At Market");
     expect(requirementPriorityWord(zh, "urgent")).toBe("Urgent");
+    expect(knowledgeSourceStatusWord(zh, "retired")).toBe("Retired");
+    expect(traceKindWord(zh, "token")).toBe("Token");
     expect(interviewModeName(zh, "pair_programming")).toBe("Pair Programming");
     expect(interviewModeHint(zh, "pair_programming")).toBe("");
   });
@@ -137,6 +146,18 @@ describe("the enum words", () => {
     expect(requirementPriorityWord(zh, "must")).toBe("必备");
     expect(requirementPriorityWord(zh, "should")).toBe("优先考虑");
     expect(requirementPriorityWord(zh, "nice")).toBe("加分项");
+    // The knowledge row's badge and the evidence card's kind draw the wire through the table.
+    expect(knowledgeSourceStatusWord(en, "ready")).toBe("Ready");
+    expect(knowledgeSourceStatusWord(zh, "pending")).toBe("待处理");
+    expect(knowledgeSourceStatusWord(zh, "ingesting")).toBe("摄取中");
+    expect(knowledgeSourceStatusWord(zh, "ready")).toBe("就绪");
+    expect(knowledgeSourceStatusWord(zh, "failed")).toBe("失败");
+    expect(sourceKindLabel(en, "interview_feedback")).toBe("Interview feedback");
+    expect(sourceKindLabel(zh, "interview_feedback")).toBe("面试反馈");
+    // The trace row's kind badge follows the reader's language too.
+    expect(traceKindWord(en, "tool_call")).toBe("Tool call");
+    expect(traceKindWord(zh, "tool_call")).toBe("工具调用");
+    expect(traceKindWord(zh, "final")).toBe("最终");
     expect(interviewModeName(zh, "system_design")).toBe("系统设计");
     expect(interviewModeHint(zh, "rag")).toBe("检索、分块、重排、引用");
     // The seniority chip: the count keeps its plus, the word follows the reader.
@@ -398,6 +419,77 @@ describe("the requirement priority badges", () => {
     ).toEqual(["app/probe.tsx"]);
     expect(
       rawPrioritySurfaces([{ path: "app/clean.tsx", text: "{requirementPriorityWord(t, p)}" }])
+    ).toEqual([]);
+  });
+});
+
+const KIND_SURFACES: [string, string][] = [
+  ["app/(app)/knowledge/page.tsx", "sourceKindLabel(t, s.kind)"],
+  ["components/ai/evidence-list.tsx", "sourceKindLabel(t, e.source.kind)"],
+  ["components/ai/agent-timeline.tsx", "traceKindWord(t, event.kind)"],
+];
+
+const STATUS_SURFACES: [string, string][] = [
+  ["app/(app)/knowledge/page.tsx", "knowledgeSourceStatusWord(t, s.status)"],
+];
+
+/**
+ * The charge is the spelling, not the file: a badge that spells a wire kind itself
+ * prints "interview feedback" on the knowledge row and "TOOL CALL" on a Chinese
+ * trace, even though the table already names both vocabularies.
+ */
+function rawKindSurfaces(files: { path: string; text: string }[]): string[] {
+  return files.filter((f) => /\.kind\s*\.replace\s*\(/.test(f.text)).map((f) => f.path);
+}
+
+/**
+ * A status text node is a bare value between the open tag's `>` and the element's
+ * close. An attribute (`status={r.status}`), a React key, and a wire comparison all
+ * sit inside the tag and are not copy.
+ */
+function rawStatusSurfaces(files: { path: string; text: string }[]): string[] {
+  return files
+    .filter((f) =>
+      />[ \t\r\n]*\{[ \t\r\n]*[A-Za-z_$][\w$]*(?:\.[\w$]+)*\.status[ \t\r\n]*\}/.test(f.text)
+    )
+    .map((f) => f.path);
+}
+
+describe("the kind and status badges", () => {
+  it("draw the wire value through the table", () => {
+    const files = sources();
+    expect(files.length, "the scan read no files").toBeGreaterThan(150);
+    for (const [rel, seam] of [...KIND_SURFACES, ...STATUS_SURFACES]) {
+      const file = files.find((f) => f.path.endsWith(rel));
+      expect(file, `${rel} is not in the walk`).toBeTruthy();
+      expect(file!.text, `${rel} no longer draws its badge through ${seam}`).toContain(seam);
+    }
+    const kinds = rawKindSurfaces(files);
+    expect(kinds, `surfaces spelling a wire kind themselves:\n${kinds.join("\n")}`).toEqual([]);
+    const statuses = rawStatusSurfaces(files);
+    expect(statuses, `surfaces printing a wire status itself:\n${statuses.join("\n")}`).toEqual([]);
+  });
+
+  it("would still see a surface that spelled the value itself", () => {
+    expect(
+      rawKindSurfaces([{ path: "app/probe.tsx", text: '{e.source.kind.replace(/_/g, " ")}' }])
+    ).toEqual(["app/probe.tsx"]);
+    expect(
+      rawStatusSurfaces([{ path: "app/probe.tsx", text: "<Badge>{s.status}</Badge>" }])
+    ).toEqual(["app/probe.tsx"]);
+    // An attribute, a React key and a wire comparison are not a rendered word.
+    expect(
+      rawStatusSurfaces([
+        {
+          path: "app/ok.tsx",
+          text: '<StatusPill key={r.status} status={r.status} variant={s.status === "ready" ? "success" : "secondary"} />',
+        },
+      ])
+    ).toEqual([]);
+    expect(
+      rawKindSurfaces([
+        { path: "app/ok.tsx", text: "<Badge>{sourceKindLabel(t, e.source.kind)}</Badge>" },
+      ])
     ).toEqual([]);
   });
 });

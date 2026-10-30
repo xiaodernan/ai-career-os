@@ -17,22 +17,15 @@ import {
   XCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { TraceKind } from "@/lib/trace-kinds";
+import { traceKindWord } from "@/lib/status-words";
 
 /**
  * AgentTimeline — inspectable agent traces (architecture.md §4.5 agent_traces / §6.4).
  * tool_call · retrieval · rerank · llm_call · handoff · message · final …
  * Collapsible rows with icon, duration and JSON payload peek.
  */
-export type TraceKind =
-  | "step_start"
-  | "tool_call"
-  | "tool_result"
-  | "llm_call"
-  | "retrieval"
-  | "rerank"
-  | "handoff"
-  | "message"
-  | "final";
+export type { TraceKind } from "@/lib/trace-kinds";
 
 export type TraceStatus = "running" | "ok" | "error";
 
@@ -127,7 +120,7 @@ function TimelineRow({
           )}
           <span className="truncate font-medium">{event.label}</span>
           <span className="shrink-0 text-2xs font-medium tracking-wide text-muted-foreground uppercase">
-            {event.kind.replace("_", " ")}
+            {traceKindWord(t, event.kind)}
           </span>
           <span className="ml-auto flex shrink-0 items-center gap-1.5 pr-1">
             {event.status === "running" && <CircleDashed className="size-3.5 animate-spin text-muted-foreground" aria-label={t("ai.agentTimeline.running")} />}

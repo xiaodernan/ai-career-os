@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { evidencePath } from "@/lib/api/normalize";
 import type { Evidence } from "@/lib/api/types";
 import { useLocale } from "@/lib/i18n/locale-context";
+import { sourceKindLabel } from "@/lib/source-kinds";
 
 /**
  * EvidenceList — the RAG explainability surface (§6): every AI conclusion is
@@ -45,8 +46,8 @@ function EvidenceList({ items, limit, hrefFor, dense = false, className, ...prop
                   <span className="text-muted-foreground">/100</span>
                 </Badge>
               ) : e.source?.kind ? (
-                <Badge variant="outline" className="capitalize">
-                  {e.source.kind.replace(/_/g, " ")}
+                <Badge variant="outline">
+                  {sourceKindLabel(t, e.source.kind)}
                 </Badge>
               ) : null
             }

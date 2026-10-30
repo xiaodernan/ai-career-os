@@ -10,9 +10,13 @@ import {
   type StepStatus,
 } from "@/components/ai/processing-steps";
 import { ProcessingSteps } from "@/components/ai/processing-steps";
-import { AgentTimeline, type AgentTraceEvent, type TraceKind } from "@/components/ai/agent-timeline";
+import { AgentTimeline, type AgentTraceEvent } from "@/components/ai/agent-timeline";
+import { asTraceKind } from "@/lib/trace-kinds";
 import { cn } from "@/lib/utils";
 import { ChevronRight } from "lucide-react";
+
+export { TRACE_KINDS, asTraceKind } from "@/lib/trace-kinds";
+export type { TraceKind } from "@/lib/trace-kinds";
 
 /**
  * Task stream — the live progress surface for every async AI run.
@@ -24,22 +28,6 @@ import { ChevronRight } from "lucide-react";
  * one lands. It never invents progress: until the backend pushes something, the UI
  * says so.
  */
-
-export const TRACE_KINDS: TraceKind[] = [
-  "step_start",
-  "tool_call",
-  "tool_result",
-  "llm_call",
-  "retrieval",
-  "rerank",
-  "handoff",
-  "message",
-  "final",
-];
-
-export function asTraceKind(v: unknown): TraceKind {
-  return (TRACE_KINDS as string[]).includes(String(v)) ? (v as TraceKind) : "step_start";
-}
 
 export interface UseTaskStreamOptions {
   /** Step ids + labels shown before the first SSE frame arrives. */

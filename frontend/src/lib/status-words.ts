@@ -11,6 +11,7 @@
 import { formatSalary, titleCase } from "@/lib/format";
 import { INTERVIEW_MODES } from "@/lib/interview-modes";
 import type { TranslateFn } from "@/lib/pipeline";
+import { TRACE_KINDS } from "@/lib/trace-kinds";
 
 /** `agent_runs.status` — running|completed|failed|cancelled in the schema's own comment. */
 export const RUN_STATUSES = ["running", "completed", "failed", "cancelled"] as const;
@@ -33,6 +34,12 @@ export const REMOTE_TYPES = ["remote", "hybrid", "onsite"] as const;
 
 /** `resume_versions.status` — the same five words the resumes page's badge draws. */
 export const RESUME_STATUSES = ["uploaded", "parsing", "ingesting", "parsed", "failed"] as const;
+
+/**
+ * `knowledge_sources.status` — the default `pending`, the ingest service's
+ * `ingesting`/`failed`, and the `ready` the ai-service's ready callback writes.
+ */
+export const KNOWLEDGE_SOURCE_STATUSES = ["pending", "ingesting", "ready", "failed"] as const;
 
 /** `monitoring.py`'s health verdict, and the word the page shows when the report has none. */
 export const HEALTH_VERDICTS = ["healthy", "warn", "regressed", "unknown"] as const;
@@ -96,6 +103,15 @@ export function marketVerdictWord(t: TranslateFn, verdict: string): string {
 
 export function requirementPriorityWord(t: TranslateFn, priority: string): string {
   return wordFrom(t, "jobs.detail.priorities", priority, REQUIREMENT_PRIORITIES);
+}
+
+export function knowledgeSourceStatusWord(t: TranslateFn, status: string): string {
+  return wordFrom(t, "knowledge.sources.statuses", status, KNOWLEDGE_SOURCE_STATUSES);
+}
+
+/** The trace row's kind badge; the roster is the transport's own gate (`asTraceKind`). */
+export function traceKindWord(t: TranslateFn, kind: string): string {
+  return wordFrom(t, "ai.agentTimeline.kinds", kind, TRACE_KINDS);
 }
 
 /**

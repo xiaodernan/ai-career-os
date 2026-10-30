@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { asTraceKind, TRACE_KINDS } from "@/components/ai/task-stream";
+import { asTraceKind, TRACE_KINDS } from "@/lib/trace-kinds";
 
 describe("TRACE_KINDS", () => {
   it("lists every step kind the pipeline can publish", () => {
