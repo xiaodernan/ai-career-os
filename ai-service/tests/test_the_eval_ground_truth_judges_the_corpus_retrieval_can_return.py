@@ -40,6 +40,8 @@ from app.core import db
 from app.eval import run_eval as ev
 from app.eval.dataset import GOLDEN_SET, EvalCase
 from app.rag import store
+from app.rag import rewrite as rewrite_prompt
+from app.rag.kinds import KINDS_INLINE, KNOWLEDGE_KINDS
 
 TESTS = Path(__file__).resolve().parent
 ROOT = TESTS.parent.parent
@@ -200,9 +202,17 @@ def test_every_declared_kind_is_a_spelling_the_filter_can_match():
         "no golden case declares `kinds` any more -- the field's reader above is then "
         "vacuous, and so is the two cases' claim to test a metadata filter"
     )
-    vocabulary = re.search(r"<subset of ([a-z_|]+),", read(REWRITE))
-    assert vocabulary, "rewrite.py no longer declares the source-kind vocabulary"
-    legal = set(vocabulary.group(1).split("|"))
+    # The vocabulary has one home (`app/rag/kinds.py`) and the prompt spells it from
+    # there. Check the *rendered* prompt, then check the source derives it: a
+    # hand-written list drifts from the one the store can match, and a prompt listing
+    # kinds the store cannot hold filters the corpus away -- the same failure the
+    # golden-set check below is about.
+    assert KINDS_INLINE in rewrite_prompt._SYSTEM, (
+        "rewrite.py's rendered prompt no longer spells the source-kind vocabulary")
+    assert "KINDS_INLINE" in read(REWRITE), (
+        "rewrite.py spells the vocabulary by hand instead of importing it from "
+        "app/rag/kinds.py")
+    legal = set(KNOWLEDGE_KINDS)
     unknown = sorted(set(declared) - legal)
     assert unknown == [], (
         f"gs- cases filter on {unknown}, which no `knowledge_sources.kind` row can "

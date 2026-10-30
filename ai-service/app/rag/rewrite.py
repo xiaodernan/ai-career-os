@@ -2,6 +2,7 @@
 
 from app.core.ai import ask_json
 from app.providers.base import LLMMessage, LLMRequest
+from app.rag.kinds import KINDS_INLINE
 
 _INTENTS = [
     "career_advice",        # general guidance about user's search
@@ -21,7 +22,7 @@ Return JSON only:
   "intent": "<one of: {', '.join(_INTENTS)}>",
   "keywords": ["<5-8 retrieval keywords incl. skill names>"],
   "needs_personal_evidence": <true|false>,
-  "filters": {{"kinds": [<subset of resume|note|jd|company|interview_feedback|project|certificate|course|goal, empty if none>]}}}}"""
+  "filters": {{"kinds": [<subset of {KINDS_INLINE}, empty if none>]}}}}"""
 
 
 def _str_list(value, limit: int) -> list[str]:

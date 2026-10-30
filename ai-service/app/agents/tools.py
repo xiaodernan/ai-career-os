@@ -12,6 +12,7 @@ from app.core import db
 from app.db import domain
 from app.providers.base import ToolSpec
 from app.providers.registry import embed_text
+from app.rag.kinds import KNOWLEDGE_KINDS
 
 
 class Tool:
@@ -893,11 +894,14 @@ ALL_TOOLS: list[Tool] = [
        {"type": "object", "properties": {"query": {"type": "string"},
                                          "top_k": {"type": "integer", "default": 6}},
         "required": ["query"], "additionalProperties": False}, search_resume),
-    _t("search_knowledge_base", "Hybrid RAG retrieval over the career knowledge base.",
-       {"type": "object", "properties": {"query": {"type": "string"},
-                                         "top_k": {"type": "integer", "default": 8},
-                                         "kinds": {"type": "array",
-                                                   "items": {"type": "string"}}},
+    _t("search_knowledge_base",
+       "Hybrid RAG retrieval over the career knowledge base. `kinds` scopes it to some "
+       "sources; the enum is the whole vocabulary.",
+       {"type": "object", "properties": {
+           "query": {"type": "string"},
+           "top_k": {"type": "integer", "default": 8},
+           "kinds": {"type": "array",
+                     "items": {"type": "string", "enum": list(KNOWLEDGE_KINDS)}}},
         "required": ["query"], "additionalProperties": False}, search_knowledge_base),
     _t("analyze_jd", "Analyze a pasted job description into structured requirements.",
        {"type": "object", "properties": {"raw_text": {"type": "string"}},
