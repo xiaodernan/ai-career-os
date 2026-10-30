@@ -73,7 +73,7 @@ function useGreeting(t: (key: string) => string): string {
 }
 
 export default function DashboardPage() {
-  const { t, locale } = useLocale();
+  const { t } = useLocale();
   const greeting = useGreeting(t);
   const { data: user } = useUser();
   const dashboard = useDashboard();
