@@ -23,6 +23,7 @@ import { useMemories } from "@/lib/hooks/resources";
 import { useDeleteMemory, useUpdateMemory } from "@/lib/hooks/actions";
 import { relativeTime, weightBand, type WeightBand } from "@/lib/format";
 import { MEMORY_WEIGHTS, memoryPatch, shownWeight } from "@/lib/memory-edit";
+import { memoryKindWord } from "@/lib/status-words";
 
 /**
  * t("memory.whatAgentsRemember") about the user, and the one surface that can correct it
@@ -100,8 +101,8 @@ export function MemoryCard() {
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <Badge variant="outline" className="shrink-0 text-2xs font-normal capitalize">
-                          {m.kind}
+                        <Badge variant="outline" className="shrink-0 text-2xs font-normal">
+                          {memoryKindWord(t, m.kind)}
                         </Badge>
                         <Badge variant="secondary" className="shrink-0 text-2xs font-normal">
                           {t(`memory.weightBands.${weightBand(m.importance)}`)}

@@ -11,21 +11,4 @@ package com.careeros.ai.dto;
 public record MemoryItem(String id, String kind, String key, String content,
                          Double importance, String source, String createdAt,
                          String updatedAt) {
-
-    /** The kinds §17 names. An unknown one still shows what the extractor wrote, even when
-     * the prompt no longer has a label for it. */
-    public String label() {
-        if (kind == null || kind.isBlank()) {
-            return "Memory";
-        }
-        return switch (kind) {
-            case "skill" -> "Skills";
-            case "preference" -> "Preferences";
-            case "profile" -> "Profile";
-            case "interview" -> "Interview history";
-            case "goal" -> "Goals";
-            case "fact" -> "Facts";
-            default -> kind;
-        };
-    }
 }

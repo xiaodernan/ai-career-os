@@ -41,6 +41,13 @@ export const RESUME_STATUSES = ["uploaded", "parsing", "ingesting", "parsed", "f
  */
 export const KNOWLEDGE_SOURCE_STATUSES = ["pending", "ingesting", "ready", "failed"] as const;
 
+/**
+ * `user_memories.kind` — the set the extractor accepts (`agents/memory.py`
+ * `MEMORY_KINDS`) and the interview report writes. A row whose kind is outside it
+ * was stored by an older prompt, so it keeps its wire spelling instead of a blank.
+ */
+export const MEMORY_KINDS = ["profile", "skill", "preference", "interview", "goal", "fact"] as const;
+
 /** `monitoring.py`'s health verdict, and the word the page shows when the report has none. */
 export const HEALTH_VERDICTS = ["healthy", "warn", "regressed", "unknown"] as const;
 
@@ -112,6 +119,11 @@ export function knowledgeSourceStatusWord(t: TranslateFn, status: string): strin
 /** The trace row's kind badge; the roster is the transport's own gate (`asTraceKind`). */
 export function traceKindWord(t: TranslateFn, kind: string): string {
   return wordFrom(t, "ai.agentTimeline.kinds", kind, TRACE_KINDS);
+}
+
+/** The memory row's kind badge — the card used to print the wire value and let CSS capitalize it. */
+export function memoryKindWord(t: TranslateFn, kind: string): string {
+  return wordFrom(t, "memory.kinds", kind, MEMORY_KINDS);
 }
 
 /**

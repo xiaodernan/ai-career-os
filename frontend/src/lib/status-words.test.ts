@@ -16,6 +16,7 @@ import {
   jobStatusWord,
   knowledgeSourceStatusWord,
   marketVerdictWord,
+  memoryKindWord,
   readinessVerdictWord,
   remoteTypeWord,
   requirementPriorityWord,
@@ -29,6 +30,7 @@ import {
   JOB_STATUSES,
   KNOWLEDGE_SOURCE_STATUSES,
   MARKET_VERDICTS,
+  MEMORY_KINDS,
   READINESS_VERDICTS,
   REMOTE_TYPES,
   REQUIREMENT_PRIORITIES,
@@ -68,6 +70,7 @@ const ROSTERS: [string, readonly string[]][] = [
   ["growth.verdicts", READINESS_VERDICTS],
   ["offers.verdicts", MARKET_VERDICTS],
   ["jobs.detail.priorities", REQUIREMENT_PRIORITIES],
+  ["memory.kinds", MEMORY_KINDS],
   ["knowledge.sources.statuses", KNOWLEDGE_SOURCE_STATUSES],
   ["ai.agentTimeline.kinds", TRACE_KINDS],
 ];
@@ -122,6 +125,7 @@ describe("the enum words", () => {
     expect(requirementPriorityWord(zh, "urgent")).toBe("Urgent");
     expect(knowledgeSourceStatusWord(zh, "retired")).toBe("Retired");
     expect(traceKindWord(zh, "token")).toBe("Token");
+    expect(memoryKindWord(zh, "secret")).toBe("Secret");
     expect(interviewModeName(zh, "pair_programming")).toBe("Pair Programming");
     expect(interviewModeHint(zh, "pair_programming")).toBe("");
   });
@@ -158,6 +162,10 @@ describe("the enum words", () => {
     expect(traceKindWord(en, "tool_call")).toBe("Tool call");
     expect(traceKindWord(zh, "tool_call")).toBe("工具调用");
     expect(traceKindWord(zh, "final")).toBe("最终");
+    // The memory card's kind badge: the six kinds the extractor accepts.
+    expect(memoryKindWord(en, "skill")).toBe("Skills");
+    expect(memoryKindWord(zh, "skill")).toBe("技能");
+    expect(memoryKindWord(zh, "interview")).toBe("面试记录");
     expect(interviewModeName(zh, "system_design")).toBe("系统设计");
     expect(interviewModeHint(zh, "rag")).toBe("检索、分块、重排、引用");
     // The seniority chip: the count keeps its plus, the word follows the reader.
@@ -427,6 +435,7 @@ const KIND_SURFACES: [string, string][] = [
   ["app/(app)/knowledge/page.tsx", "sourceKindLabel(t, s.kind)"],
   ["components/ai/evidence-list.tsx", "sourceKindLabel(t, e.source.kind)"],
   ["components/ai/agent-timeline.tsx", "traceKindWord(t, event.kind)"],
+  ["components/settings/memory-card.tsx", "memoryKindWord(t, m.kind)"],
 ];
 
 const STATUS_SURFACES: [string, string][] = [
@@ -455,6 +464,19 @@ function rawStatusSurfaces(files: { path: string; text: string }[]): string[] {
     .map((f) => f.path);
 }
 
+/**
+ * A kind text node is a bare value between the open tag's `>` and the element's
+ * close. The memory card printed `{m.kind}` and let CSS capitalize it, which draws
+ * the wire spelling on every reader's page; a prop (`kind={m.kind}`) is plumbing.
+ */
+function bareKindSurfaces(files: { path: string; text: string }[]): string[] {
+  return files
+    .filter((f) =>
+      />[ \t\r\n]*\{[ \t\r\n]*[A-Za-z_$][\w$]*(?:\.[\w$]+)*\.kind[ \t\r\n]*\}/.test(f.text)
+    )
+    .map((f) => f.path);
+}
+
 describe("the kind and status badges", () => {
   it("draw the wire value through the table", () => {
     const files = sources();
@@ -466,6 +488,8 @@ describe("the kind and status badges", () => {
     }
     const kinds = rawKindSurfaces(files);
     expect(kinds, `surfaces spelling a wire kind themselves:\n${kinds.join("\n")}`).toEqual([]);
+    const bare = bareKindSurfaces(files);
+    expect(bare, `surfaces printing a wire kind:\n${bare.join("\n")}`).toEqual([]);
     const statuses = rawStatusSurfaces(files);
     expect(statuses, `surfaces printing a wire status itself:\n${statuses.join("\n")}`).toEqual([]);
   });
@@ -491,6 +515,37 @@ describe("the kind and status badges", () => {
         { path: "app/ok.tsx", text: "<Badge>{sourceKindLabel(t, e.source.kind)}</Badge>" },
       ])
     ).toEqual([]);
+    expect(
+      bareKindSurfaces([{ path: "app/probe.tsx", text: "<Badge>\n{m.kind}\n</Badge>" }])
+    ).toEqual(["app/probe.tsx"]);
+    expect(
+      bareKindSurfaces([
+        { path: "app/ok.tsx", text: "<Badge>{memoryKindWord(t, m.kind)}</Badge>" },
+      ])
+    ).toEqual([]);
+    expect(
+      bareKindSurfaces([{ path: "app/ok.tsx", text: "<Row kind={m.kind} />" }])
+    ).toEqual([]);
+  });
+});
+
+/**
+ * The roster's other half: `extract_and_store` drops a kind outside MEMORY_KINDS
+ * before it reaches the database, so the prompt and the browser have to share one
+ * set. A kind added to the prompt alone would be stored and drawn as a raw wire
+ * word on every reader's page; a kind kept here but removed from the prompt would
+ * be a word nothing can produce.
+ */
+const EXTRACTOR = new URL("../../../ai-service/app/agents/memory.py", import.meta.url);
+
+describe("the memory kinds", () => {
+  it("are the set the extractor accepts, not a second list", () => {
+    const py = readFileSync(EXTRACTOR, "utf8");
+    const declared = py.match(/MEMORY_KINDS\s*=\s*\{([^}]*)\}/);
+    expect(declared, "MEMORY_KINDS is not declared in agents/memory.py").toBeTruthy();
+    const words = [...declared![1].matchAll(/"([^"]+)"/g)].map((m) => m[1]).sort();
+    expect(words.length, "the extractor's roster parsed empty").toBeGreaterThan(0);
+    expect([...MEMORY_KINDS].sort()).toEqual(words);
   });
 });
 

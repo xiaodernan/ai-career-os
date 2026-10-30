@@ -112,7 +112,11 @@ class MemoryControllerTest {
                 .andExpect(jsonPath("$.data[0].importance").value(0.8))
                 .andExpect(jsonPath("$.data[0].source").value("conversation"))
                 .andExpect(jsonPath("$.data[0].createdAt").value("2026-10-01 10:00:00"))
-                .andExpect(jsonPath("$.data[0].updatedAt").value("2026-10-02 11:00:00"));
+                .andExpect(jsonPath("$.data[0].updatedAt").value("2026-10-02 11:00:00"))
+                // The wire carries the kind, not a word for it: the browser draws the
+                // badge from the translation table, so a `label` here would be a second
+                // spelling of the same vocabulary with no reader.
+                .andExpect(jsonPath("$.data[0].label").doesNotExist());
     }
 
     @Test
