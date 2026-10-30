@@ -8,9 +8,9 @@ this request fails, does anyone say so?". This file answers it per mutation site
 the caller's options through the one indirection the app actually uses: a named object handed to two
 different mutations.
 
-What the shipped code says, measured rather than assumed: 93 mutation sites in fourteen files
+What the shipped code says, measured rather than assumed: 94 mutation sites in fifteen files
 (the hook libraries, the knowledge uploader's own actions, 33.1's push switch, 36.4's
-second door, and the account and replies screens' hooks). 81 declare their failure at the
+second door, the account and replies screens' hooks, and 42.2's mail dials). 82 declare their failure at the
 hook; the twelve that do not sit in ``account.ts`` and ``auth.ts`` and ``push.ts``.
 Eleven of those twelve are announced by their caller -- the password forms pass inline call
 options, the credentials form passes one shared ``handlers`` object to both ``login.mutate``
@@ -25,7 +25,7 @@ choice -- a local sign-out always happens -- so this file characterises it rathe
 changing it: it is the one place in the app where "you are signed out" is not a claim about
 the server.
 
-The same walk covers the failure helper: ``fail(...)`` has a single author and 78 uses, and
+The same walk covers the failure helper: ``fail(...)`` has a single author and 79 uses, and
 every use names a key the browser's table answers -- the sentence is resolved when the toast
 is raised, in the reader's language. All but three name a different key: the inbox's read,
 mark-all-read and dismiss share ``notifications.actionFailed`` because they are one sentence
@@ -74,6 +74,8 @@ BRIDGE_HOOKS = {
     "frontend/src/lib/hooks/mfa.ts",
     # 19.6's voice seam: the transcribe and speak writes announce their failure at the hook.
     "frontend/src/lib/hooks/voice.ts",
+    # 42.2's mail dials: one write per dial, announced at the hook with the card's own sentence.
+    "frontend/src/lib/hooks/mail-settings.ts",
 }
 #: 33.1's push switch: one write, and the only one whose failure is announced by its
 #: caller's try/catch instead of the hook's ``onError``.
@@ -107,6 +109,8 @@ ROSTER = {
     "frontend/src/lib/hooks/growth.ts": 12,
     "frontend/src/lib/hooks/ingestion.ts": 9,
     "frontend/src/lib/hooks/mfa.ts": 4,
+    # 42.2: the settings card's one dial write, announced at the hook.
+    "frontend/src/lib/hooks/mail-settings.ts": 1,
     "frontend/src/lib/hooks/notifications.ts": 3,
     "frontend/src/lib/hooks/offers.ts": 4,
     PUSH_HOOKS: 1,
@@ -138,6 +142,8 @@ SENTENCES = {
     "frontend/src/lib/hooks/notifications.ts": 3,
     "frontend/src/lib/hooks/offers.ts": 4,
     "frontend/src/lib/hooks/mfa.ts": 4,
+    # 42.2: one write, one sentence -- the dial could not be changed.
+    "frontend/src/lib/hooks/mail-settings.ts": 1,
     "frontend/src/lib/hooks/voice.ts": 2,
     # 37.3: filing a waiting letter announces a refusal with the replies page's own sentence.
     REPLIES_HOOKS: 1,
@@ -161,7 +167,7 @@ RECOVERY = "frontend/src/lib/auth-recovery.ts"
 #: walk and looks for the sentence it would have to have written today.
 NUM_WORDS = {1: "one", 2: "two", 3: "three", 4: "four", 5: "five", 6: "six", 7: "seven",
              8: "eight", 9: "nine", 10: "ten", 11: "eleven", 12: "twelve", 13: "thirteen",
-             14: "fourteen"}
+             14: "fourteen", 15: "fifteen"}
 
 
 def object_literal(text: str, pos: int) -> str:
