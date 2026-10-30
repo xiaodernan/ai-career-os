@@ -34,7 +34,8 @@
 交出改密码卡（当前密码 + 两遍新密码、成功态说出全部后果），以 874 个前端测试、84 个文件收口。38.5 让设置页
 交出销号卡（什么走、什么留下、密码 + 回打地址、确认后才 POST），并让账号在成功后落在公开的
 `/account-erased` 页上（token 对丢弃、整页导航离开、无会话也能说清结局），以 877 个前端测试、85 个文件收口。
-随后 **Epic 41.1**（提醒到点时的信）以 19 条新后端测试收口，非 IT 选集 1063 条全绿。
+随后 **Epic 41.1**（提醒到点时的信）以 19 条新后端测试收口，非 IT 选集 1063 条全绿；
+**41.2** 让这口钟有了自己的警报（`alerts.yml` 十一条、拒绝计数改说两种信、9 条闸门测试绿）。
 
 ## 主线队列（按顺序执行）
 
@@ -560,6 +561,14 @@
   两把 latch 保证重试不重复送。指标复用 `NotificationDeliveryMetrics`
   （`careeros.signals.delivery{outcome=sent|refused}`）。19 条新测试（Mailer 6 / Service 7 /
   Scheduler +4 / 偏好 +2），API.md、architecture.md、DEPLOYMENT.md、RUNBOOK.md、ROADMAP 同步。
+- **41.2** 能停的钟成为警报，拒绝计数说出两种信（已完成）：RUNBOOK 自 35.1 起写着"这口钟还没有
+  Prometheus 规则"；心跳 `careeros.reminders.last.tick.timestamp` 在，却没有人看。`alerts.yml`
+  现在十一条：`CareerOSReminderClockStale` 在 gauge 300 秒（默认 tick 的五个）未动、持续五分钟时
+  报警，说明写清"落后的是那一刻，不是提醒本身"（收件箱、晨信、日历仍在）。`CareerOSSignalMailFailing`
+  改成数"信"而不是一种信：41.1 的提醒信写同一条 `careeros.signals.delivery{outcome="refused"}`，
+  摘要/描述/RUNBOOK 段同时点名两行日志，并说明被拒的提醒由次日晨信兜底、分钟钟不重试。闸门测试读
+  调度器默认 tick 推出 300、钉住指标来源与 RUNBOOK 的同一表达式，9 条绿；DEPLOYMENT 的
+  规则数（十→十一）与两段邮件文字同步。
   下一步候选（避开并发会话在制的 export/import）：仪表盘 attention 的提醒过期语义、或 Epic 40 提交后接手。
 
 

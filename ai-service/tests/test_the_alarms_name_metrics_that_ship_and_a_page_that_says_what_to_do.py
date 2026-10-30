@@ -20,10 +20,10 @@ about other alarms. The runbook is also where an operator is told which script b
 up, so every `scripts/*.sh` it names must exist and start with a shebang; a runbook that sends
 someone to a file that is not in the tree is worse than a runbook that says nothing.
 
-Two numbers are quoted in both places on purpose -- the 26-hour silence (`93600` seconds) and
-the 5 USD budget -- and both are read off the rule file here, because a prose threshold that
-drifts from its expression is an operator tuning a number that no longer means anything.
-
+Three numbers are quoted in both places on purpose -- the 26-hour silence (`93600` seconds),
+the 5 USD budget, and the reminder clock's five missed ticks (`300` seconds, read off the
+scheduler's own default here) -- because a prose threshold that drifts from its expression is
+an operator tuning a number that no longer means anything.
 The verdict alarms have the same problem one level up: their 36-hour window is the service's
 own `STALE_AFTER_HOURS`, and their streak threshold is the nightly card's warning line. Both
 are read from the sources that promise them (the Java constant, the component's literal) and
@@ -51,6 +51,8 @@ AI_USAGE_METRICS = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "ai"
 NIGHTLY_VERDICT_METRICS = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "report" / "service" / "NightlyVerdictMetrics.java"
 DIGEST_METRICS = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "report" / "service" / "WeeklyDigestDeliveryMetrics.java"
 SIGNAL_METRICS = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "notification" / "service" / "NotificationDeliveryMetrics.java"
+PUSH_METRICS = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "push" / "service" / "PushDeliveryMetrics.java"
+REMINDER_CLOCK = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "notification" / "service" / "ReminderScheduler.java"
 RETENTION_METRICS = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "auth" / "retention" / "RetentionMetrics.java"
 NIGHTLY_REPORT_SERVICE = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "report" / "service" / "NightlyReportService.java"
 NIGHTLY_CARD = ROOT / "frontend" / "src" / "components" / "monitoring" / "nightly-history.tsx"
@@ -69,6 +71,7 @@ METRICS = {
     "careeros_digest_last_sweep_timestamp": (DIGEST_METRICS, "careeros.digest.last.sweep.timestamp"),
     "careeros_signals_delivery_total": (SIGNAL_METRICS, "careeros.signals.delivery"),
     "careeros_signals_last_sweep_timestamp": (SIGNAL_METRICS, "careeros.signals.last.sweep.timestamp"),
+    "careeros_reminders_last_tick_timestamp": (PUSH_METRICS, "careeros.reminders.last.tick.timestamp"),
     "careeros_retention_last_sweep_timestamp": (RETENTION_METRICS, "careeros.retention.last.sweep.timestamp"),
 }
 
@@ -82,6 +85,7 @@ ALERT_NAMES = frozenset({
     "CareerOSDigestSweepStale",
     "CareerOSSignalMailFailing",
     "CareerOSSignalSweepStale",
+    "CareerOSReminderClockStale",
     "CareerOSRetentionSweepStale",
 })
 
@@ -188,6 +192,25 @@ def test_every_runbook_link_is_a_heading_the_runbook_has():
             f"{name} links to #{anchor}, but docs/RUNBOOK.md has no heading that renders as it: "
             f"{sorted(available)}"
         )
+
+
+def test_the_reminder_clock_alarm_is_five_ticks_and_the_page_quotes_it():
+    # The clock's cadence is the scheduler's own default and the alarm's window is five of
+    # those ticks. Neither number is recalled: a rule that fired after one slow tick would
+    # page on every deploy's drain, and a rule that waited twenty ticks would let a due
+    # reminder miss its moment for twenty minutes before anyone heard.
+    tick = int(re.search(r"tick-ms:(\d+)", read(REMINDER_CLOCK)).group(1))
+    window = 5 * tick // 1000
+    expr = rules()["CareerOSReminderClockStale"]["expr"]
+    assert f"> {window}" in expr, (
+        f"the alarm's window is not five ticks of the scheduler's {tick} ms default: {expr!r}"
+    )
+    prose = read(RUNBOOK)
+    assert f"time() - careeros_reminders_last_tick_timestamp > {window}" in prose, (
+        "the runbook has to quote the window the rule uses; a prose threshold that drifts "
+        "from its expression is an operator tuning a number that no longer means anything"
+    )
+    assert "five missed ticks" in prose
 
 
 def test_the_runbook_says_what_each_alarm_means_by_its_name():

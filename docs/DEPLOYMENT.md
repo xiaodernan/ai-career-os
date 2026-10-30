@@ -303,7 +303,7 @@ recomputed from `ai_usage_events` every minute — the install's own verdict —
 boot — and the weekly letter's —
 `careeros_digest_delivery_total{outcome}`, `sent` or `refused` per attempt, and
 `careeros_digest_last_delivered_timestamp`, moved only by an accepted letter.
-`ops/prometheus/alerts.yml` carries the ten rules and each one links its page in
+`ops/prometheus/alerts.yml` carries the eleven rules and each one links its page in
 [RUNBOOK.md](RUNBOOK.md).
 
 The limiter exports one more family for dashboards rather than alarms:
@@ -589,7 +589,9 @@ counts account letters that actually reached the transport, and
 alarmed). The shipped rules raise `CareerOSSignalMailFailing` at three refusals inside
 six hours, so one undeliverable address — which refuses once a morning while its
 episode stays visible — is a log line rather than a daily page, while a relay outage
-refusing a whole morning is a page; `docs/RUNBOOK.md#the-morning-mail-is-refused` is
+refusing a whole morning is a page; since 41.1 the same counter carries the minute clock's
+reminder letters, so a day with three due reminders can lift one dead address over the
+floor. `docs/RUNBOOK.md#the-morning-mail-is-refused` is
 what the responder reads. `careeros.signals.last.sweep.timestamp` is the sweep's own
 heartbeat (22.3), moved at the end of every completed pass even when no account has a
 letter, and `CareerOSSignalSweepStale` pages at 36 hours without one — that is how a
@@ -617,6 +619,8 @@ letters does not silence a browser, and a push transport that hangs does not cos
 letter — but a tick that failed in either half does not advance its window: the next tick asks
 for the same span again. The heartbeat is `careeros.reminders.last.tick.timestamp`, moved
 at the end of every completed tick with or without a reminder to ring;
+`CareerOSReminderClockStale` pages when it has not moved for 300 seconds (five missed
+ticks) and
 `docs/RUNBOOK.md#the-minute-clock-a-reminder-rings-on` is what the responder reads. The
 calendar feed does not depend on this clock: each event carries its own alarm (35.2), so a
 subscriber's phone rings even with push turned off.

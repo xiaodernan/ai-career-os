@@ -3518,6 +3518,26 @@ choice rather than a side effect of the morning sweep.
   DEPLOYMENT.md and RUNBOOK.md follow the third dial and the second half of the
   clock.)
 
+- [x] **41.2** The clock that can stop is an alarm, and the refusal count says both
+  letters.
+
+  (The runbook had said "No Prometheus rule ships for this clock yet" since 35.1: the
+  heartbeat `careeros.reminders.last.tick.timestamp` existed and nothing watched it. The
+  shipped rules are eleven now — `CareerOSReminderClockStale` fires when the gauge has
+  not moved for `300` seconds, five missed ticks of the scheduler's `60000` ms default,
+  held for five minutes so a deploy's drain is not a fault, and its description says what
+  lags is the moment rather than the reminder. `CareerOSSignalMailFailing` now counts
+  letters rather than one letter kind, because 41.1's reminder letter writes the same
+  `careeros.signals.delivery{outcome="refused"}` series; its summary, description and
+  runbook section name both log lines ("the signal mail to ..." and "the reminder letter
+  to ...") and say a refused reminder is retried by the next morning's sweep, not by the
+  minute clock. The gate
+  `test_the_alarms_name_metrics_that_ship_and_a_page_that_says_what_to_do.py` pins the
+  new metric to `PushDeliveryMetrics`, the name to the set of alarms, and the window to
+  five ticks of the scheduler's own default, and requires the runbook to quote the same
+  expression — nine tests green. DEPLOYMENT.md's rule count and both mail paragraphs
+  follow.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

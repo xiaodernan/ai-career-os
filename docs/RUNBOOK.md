@@ -25,8 +25,9 @@ The surfaces this document is about:
 | `CareerOSAiBudgetBurn` | warning | The trailing 24 hours cost more than 5 USD | [The AI budget is burning](#the-ai-budget-is-burning) |
 | `CareerOSDigestDeliveryFailing` | warning | A weekly letter was refused by the relay | [A weekly letter the relay refused](#a-weekly-letter-the-relay-refused) |
 | `CareerOSDigestSweepStale` | warning | No Monday digest compose finished in eight days | [The Monday letter was never written](#the-monday-letter-was-never-written) |
-| `CareerOSSignalMailFailing` | warning | Three or more signal mails were refused in six hours | [The morning mail is refused](#the-morning-mail-is-refused) |
+| `CareerOSSignalMailFailing` | warning | Three or more account letters were refused in six hours, morning and reminder alike | [The morning mail is refused](#the-morning-mail-is-refused) |
 | `CareerOSSignalSweepStale` | warning | No morning mail sweep finished in 36 hours | [The morning sweep stopped](#the-morning-sweep-stopped) |
+| `CareerOSReminderClockStale` | warning | The minute clock has not finished a tick in five minutes | [The minute clock a reminder rings on](#the-minute-clock-a-reminder-rings-on) |
 | `CareerOSRetentionSweepStale` | warning | No credential-retention sweep finished in 36 hours | [The retention sweep stopped](#the-retention-sweep-stopped) |
 
 ## A night that never succeeded
@@ -379,10 +380,13 @@ will not arrive by mail.
 
 **What the alert looks like.** `CareerOSSignalMailFailing` fires when
 `sum(increase(careeros_signals_delivery_total{outcome="refused"}[6h])) >= 3`: at least
-three account letters were refused by the mail relay inside six hours. The sweep runs
-once a day at 07:30 UTC, so that many refusals in one window means several accounts'
-letters failed in the same morning — the relay or its configuration, not one mailbox.
-The metric is written by
+three account letters were refused by the mail relay inside six hours. Since 41.1 the
+counter is of letters, not of one letter kind: the 07:30 UTC morning sweep and the minute
+clock's reminder letter write the same series, so three refusals can be three reminders
+inside one hour, or both kinds mixed. Several accounts in one window still means the relay
+or its configuration rather than one mailbox; a single address that refuses both its
+morning letter and its reminder letters reaches the floor sooner than it used to. The metric
+is written by
 `backend/src/main/java/com/careeros/notification/service/NotificationDeliveryMetrics.java`;
 its `outcome="sent"` series is what the relay accepted. The same class exports
 `careeros_signals_last_delivered_timestamp` (the last acceptance, started at boot); it
@@ -390,12 +394,14 @@ is not alarmed on, because an install whose inboxes are quiet writes no letter a
 that is not a fault.
 
 **What to read.** The backend log carries one line per refusal, e.g. "the signal mail
-to <account> was refused", with the transport's exception on it — the provider's own
-code is the diagnosis. Cases that never reached the transport ("no account to mail",
-"no address") are warn lines too, but they are not counted as refusals: the relay was
+to <account> was refused" or "the reminder letter to <account> was refused", with the
+transport's exception on it — the provider's own code is the diagnosis, and the line's
+wording says which letter was refused. Cases that never reached the transport ("no account
+to mail", "no address") are warn lines too, but they are not counted as refusals: the relay was
 never asked, so the metric and the alert stay quiet. A refusal writes nothing to
 `notification_states`: `notified_at` is still null for every episode in that letter, so
-the next morning's sweep asks again. The in-app inbox is unaffected — the items are
+the next pass asks again — the next morning's sweep for a morning letter, and the next
+morning for a refused reminder's episode (the minute clock does not retry its own letter). The in-app inbox is unaffected — the items are
 still there, unread.
 
 **What to do, in order.**
@@ -414,11 +420,15 @@ still there, unread.
    there would silence the episode without ever handing it to the reader, and the
    sweep would never look at it again.
 
-**Why one refusal does not page.** The signal letter re-asks every morning while the
+**Why one refusal does not page.** The morning letter re-asks every morning while the
 episode is visible, so a single undeliverable address would refuse once a day forever;
 a fleet with one dead mailbox must not page daily. The three-refusal floor keeps that
 case a warn line while a relay outage — which refuses every account in one pass — pages
-on the first morning. An install with fewer than three mail-bearing accounts is below
+on the first morning. A reminder letter adds at most one refusal per account per tick,
+but a day with three different reminders coming due can carry one dead address over the
+floor; that is the moment the alert is for as well, because the reader has then missed
+three moments the clock promised, and the log's wording still names the one address.
+An install with fewer than three mail-bearing accounts is below
 the floor by construction: its relay outage is read from the warn lines instead.
 
 ## The morning sweep stopped
@@ -467,12 +477,14 @@ promise "every morning the inbox can leave" stopped being kept.
 
 ## The minute clock a reminder rings on
 
-**What the alert looks like.** No Prometheus rule ships for this clock yet; the reading is
-`careeros_reminders_last_tick_timestamp`, the epoch second of the last completed tick. A value
-older than a couple of minutes means the clock stopped: from then on a reminder that comes due
-waits for the next morning's pass instead of ringing and mailing when the reader asked. The clock wakes
-every `careeros.reminders.tick-ms` (default `60000`, one minute) and moves the gauge only when a
-tick finished, so a board with nothing due and a dead clock read differently.
+**What the alert looks like.** `CareerOSReminderClockStale` fires when
+`time() - careeros_reminders_last_tick_timestamp > 300` for five minutes — five missed ticks
+of the default `careeros.reminders.tick-ms` of `60000`. The gauge is the epoch second of the
+last completed tick, and it moves only when a tick finished; a board with nothing due and a
+dead clock therefore read differently. From a stale gauge onward a reminder that comes due
+waits for the next morning's pass instead of ringing and mailing when the reader asked. What
+lags is the moment, not the reminder: the inbox showed it, the morning letter still carries it
+when the signals dial is on, and the calendar carries its own alarm.
 
 **What to read.** The backend log prints "reminder ring delivered to N account(s)" and
 "reminder letter written for N account(s)" when a tick woke or mailed at least one; an ordinary

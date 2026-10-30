@@ -143,6 +143,9 @@ groups:
       # relay or its configuration. The sent series is the other half: a morning that
       # accepts letters on either side of the refusals still leaves the count over zero,
       # and the operator reads the log for which addresses were refused.
+      # The minute clock, and the letters it now writes, count into the same refusal series
+      # (roadmap 41.1): the counter is of refused account letters, not of one letter kind,
+      # so the operator is told both log lines to grep rather than sent to one.
       - alert: CareerOSSignalMailFailing
         expr: sum(increase(careeros_signals_delivery_total{outcome="refused"}[6h])) >= 3
         for: 10m
@@ -150,13 +153,14 @@ groups:
           service: career-os-backend
           severity: warning
         annotations:
-          summary: "The mail relay refused three or more signal mails in the last six hours"
+          summary: "The mail relay refused three or more letters in the last six hours"
           description: >-
-            {{ $value | humanize }} account letters were refused in the last six hours.
-            The backend log names each one ("the signal mail to ... was refused") and a
-            refused letter latches nothing, so tomorrow's sweep tries again; read
-            docs/RUNBOOK.md before touching the mailbox, because one address is usually
-            the culprit.
+            {{ $value | humanize }} account letters were refused in the last six hours. That
+            counts the morning letter and the reminder's own letter alike; the backend log
+            names which each was ("the signal mail to ... was refused" or "the reminder letter
+            to ... was refused") and a refused letter latches nothing, so the next pass tries
+            again. Read docs/RUNBOOK.md before touching the mailbox, because one address is
+            usually the culprit.
           runbook: "docs/RUNBOOK.md#the-morning-mail-is-refused"
 
       # The delivered marker cannot answer "did the clock still run?" -- an install with
@@ -181,6 +185,29 @@ groups:
             enough that its boot time is the only reading. The in-app inbox is unaffected;
             only the mail lags.
           runbook: "docs/RUNBOOK.md#the-morning-sweep-stopped"
+
+      # The minute clock's heartbeat (roadmap 41.1's letter, 41.2's alarm). A due reminder is
+      # rung and mailed by a fixed-delay tick that runs every 60 seconds and moves
+      # `careeros.reminders.last.tick.timestamp` only when a tick finished -- so a board with
+      # nothing due and a dead clock read differently. 300 is five missed ticks: a single slow
+      # tick is not a stopped clock, and a deploy's drain is not a fault. What lags is the
+      # moment, not the reminder: the inbox, the morning letter and the calendar still carry it.
+      - alert: CareerOSReminderClockStale
+        expr: time() - careeros_reminders_last_tick_timestamp > 300
+        for: 5m
+        labels:
+          service: career-os-backend
+          severity: warning
+        annotations:
+          summary: "The reminder clock has not finished a tick in over five minutes"
+          description: >-
+            The last completed tick was {{ $value | humanizeDuration }} ago, so a reminder that
+            came due since it was neither rung nor mailed at its moment. Either the scheduler
+            stopped (check `careeros.reminders.tick-ms` and that `@EnableScheduling` is active)
+            or both halves of the tick are failing; the log says which ("the reminder clock
+            could not read its audience for the ring" or "... for the letter"). The reminder
+            itself is not lost: the inbox, the morning letter and the calendar still carry it.
+          runbook: "docs/RUNBOOK.md#the-minute-clock-a-reminder-rings-on"
 
       # The weekly letter's own clock, with a window that respects its cadence: the Monday
       # compose runs once a week, so a silence has to be read in weeks, not hours. 691200 is
