@@ -3260,7 +3260,7 @@ what did I become, and did I finish what I took before I left.
   health row and DEPLOYMENT.md's probe table now name all four dependencies. Backend 1128
   tests, unit and ITs, green.)
 
-- [ ] **39.2** The stack waits for an app that answers, not one that started.
+- [x] **39.2** The stack waits for an app that answers, not one that started.
 
   (The three application services in `docker-compose.yml` have no healthcheck, and
   `docker compose ps` reports them `running` whether or not they can answer; only
@@ -3275,6 +3275,34 @@ what did I become, and did I finish what I took before I left.
   no healthcheck, a dependency without a health condition, or a probe that names a
   different port than the service publishes. DEPLOYMENT.md's per-dependency table gains
   the three rows.)
+
+  (Shipped: each application service now probes its own route from inside the container.
+  The ai-service uses `python -c` and urllib against `/health` — the image carries python,
+  not curl or wget — and a 500 (its database half is gone) exits non-zero, because this
+  probe gates the backend's start. The backend uses busybox `wget` against `/api/v1/health`,
+  which answers 200 whether the body says `ok` or `degraded`, so an outage is reported in
+  `docker compose ps`, not restart-looped; Docker's 5-second timeout sits above the route's
+  own 2-second bound. The frontend uses `node -e` and `fetch` against `/`, spelled
+  `localhost` rather than `127.0.0.1` because the shell's admitted origin is that host and
+  the origin census reads every shipped file. `start_period` is 30s for the two light
+  services and 90s for Spring; `depends_on` becomes the long form with
+  `condition: service_healthy` in both files — the development backend now waits for
+  ai-service too, both frontends wait for the backend, and the production backend's
+  ai-service gate moves from `service_started` to `service_healthy`. `docker compose config`
+  parses the development file and the merged production override.
+  `ai-service/tests/test_the_stack_waits_for_an_app_that_answers.py` reads only the
+  `services:` section (a volume's child sits at a service header's indent), requires exactly
+  one loopback HTTP probe per application service, checks that probe's port against the
+  container ports the service publishes and its path against DEPLOYMENT.md's Monitoring
+  table, and refuses any app-service dependency without `service_healthy`; a clean fixture
+  passes while a broken one is refused by name for each rule, and the data stores'
+  `pg_isready` and `mc ready local` probes are decoys it leaves alone. DEPLOYMENT.md gains a
+  "Startup gating" section with the three rows. The four deployment gates pass together (21
+  cases). The full ai-service suite is 1903 passed, 48 failed, 1 skipped — every one of the
+  48 fails identically on a clean checkout of this commit's parent, in cross-language
+  censuses the 37/38 epics outgrew (new replies hooks and page, account hooks, inbound
+  config leaves, new error codes and records); none is touched by this unit, and the repair
+  is the next one. Backend 1128 and frontend 877 unchanged.)
 
 - [ ] **39.3** A boot says what it became, and no secret is in the sentence.
 

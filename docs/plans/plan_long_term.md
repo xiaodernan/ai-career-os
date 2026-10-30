@@ -12,10 +12,12 @@
 - **前端**: 877 个 vitest 通过（85 个文件）；`tsc --noEmit` 干净。
 - **后端**: 1128 个测试通过、164 份报告，含真实栈 IT（0 失败 / 0 错误 /
   0 跳过；`mvn -o -q test`；不含 IT 的选集为 1037 个）。
-- **ai-service**: 1929 passed, 1 skipped (offline: mock/hash)。
+- **ai-service**: 1903 passed, 48 failed, 1 skipped（offline: mock/hash）。48 条失败全是
+  37/38 新增人口留下的跨语言 census 漂移，在 39.2 父提交的干净检出上逐条重现，已列为
+  下一单元；39.2 不新增失败。
 - **E2E**: 24/24 golden journey（最近一次真实栈验证）。
 - **分支**: main 与 origin 同步（本次推送后）。
-- **已完成**: Epic 0–38 全部勾选，Epic 39 进行中（39.1 已勾选）；38（账号够到自己的动词）在 38.5 收口。36（登录的第二道门）在 36.4 收口：设置页
+- **已完成**: Epic 0–38 全部勾选，Epic 39 进行中（39.1–39.2 已勾选）；38（账号够到自己的动词）在 38.5 收口。36（登录的第二道门）在 36.4 收口：设置页
   安全卡、登录第二步、种子与丢手机的 SECURITY 说明、runbook 的锁门处置。
   最近一段是 19.1–19.9（保存的搜索、定时摄取、通知中心、语音面试、离线壳、
   夜间报告落板）、20–33（部署自检、来信离楼、
@@ -467,14 +469,29 @@
       `HealthIT` 2 条对着真 Postgres/Redis（全真 `ok`；关掉 AI 后 `degraded` 且仍 200）。
       API.md 的健康行（纯散文，避免文档闸门把行内代码读成参数）与 DEPLOYMENT.md 的探针表
       改成四个名字。后端 1128 条全绿（164 份报告，非 IT 选集 1037）。
-    - 39.2 compose 等“能作答”而不是“已启动”：三个应用服务各配探针，探针只认进程作答，
-      不把 `degraded` 当失败（否则依赖抖动会把容器重启成雪崩）；depends_on 改成
-      service_healthy；一个部署测试按名字拒绝缺探针、缺健康条件或端口对不上的服务。
+    - 39.2 compose 等“能作答”而不是“已启动”（已完成）：三个应用服务各配容器内探针——
+      ai-service 用 `python -c` + urllib 打自己的 `/health`（镜像有 python 没有 curl/wget，
+      500 即非零退出，因为这枚探针是后端启动的闸）；backend 用 busybox `wget` 打
+      `/api/v1/health`，`ok` 与 `degraded` 都算 200，依赖故障只被报告、不被重启循环，Docker
+      的 5 秒超时高于路由自带的 2 秒预算；frontend 用 `node -e` 的 `fetch` 打 `/`，主机写成
+      `localhost` 而不是 `127.0.0.1`——外壳被承认的 origin 就是它，来源 census 读取每个随包
+      文件。start_period 两个轻服务 30s、Spring 90s；两份 compose 的 depends_on 全部改成
+      `condition: service_healthy`——开发栈的后端从此也等 ai-service，两个前端等后端，生产栈
+      后端对 ai-service 从 `service_started` 改为 `service_healthy`。`docker compose config`
+      解析开发文件与合并后的生产覆盖。新闸门
+      `ai-service/tests/test_the_stack_waits_for_an_app_that_answers.py` 只读 `services:` 段
+      （volume 的子项与 service 头同缩进），要求每个应用服务恰好一个 loopback HTTP 探针，
+      探针端口必须是该服务发布的容器端口、路径必须是 DEPLOYMENT.md 监控表写的那条，并拒绝
+      任何没有 `service_healthy` 的应用服务依赖；干净 fixture 通过，坏 fixture 按三条规则
+      逐条点名，数据存储的 `pg_isready` / `mc ready local` 是它不碰的诱饵。DEPLOYMENT.md 新增
+      “Startup gating” 三行表。四个部署闸门一起 21 条通过。ai-service 全套 1903 通过、
+      48 失败、1 跳过——48 条在父提交的干净检出上完全同样失败，全是 37/38 人口移动留下的
+      census 债，本单元一条不碰，修复列为下一单元。后端 1128、前端 877 不变。
     - 39.3 启动时用一行说清“我成了什么”：环境、端口、db 主机与库名（不是带密码的 URL）、
       Redis 主机、存储端点与 bucket、AI 主机、邮件传输 bean、push 是否有密钥、哪些调度器
       开着；用绑定的 bean 与属性拼，单测塞进哨兵机密并断言一个都不出现。
     - 39.4 关停先收尾再关门：graceful + 有界的 lifecycle 超时，配置契约测试钉住。
-    下一步：39.2。
+    下一步：先补齐 37/38 遗留的 ai-service census（14 个文件、48 条），再 39.3。
 
 
 ## 开发协议（每个任务）

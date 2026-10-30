@@ -326,6 +326,27 @@ more than 36 hours old, twice the daily cadence. A pass whose tables failed
 still moves it; the failures are visible as "Retention sweep failed for" in the
 log and as a missing per-table series.
 
+### Startup gating (healthchecks)
+
+The three application services are probed, not assumed. Each healthcheck fetches the
+service's own route on the container's loopback and accepts its 200; `depends_on` then
+waits for `service_healthy`, so `--profile app up -d` no longer returns while a
+dependency is still booting. A degraded dependency does not fail the backend's probe —
+`/api/v1/health` answers 200 with `status: degraded` — so a transient database or Redis
+outage is reported in `docker compose ps` rather than restarted by Docker.
+
+| Service    | Probe (inside the container)                         | Starts after                                   |
+|------------|------------------------------------------------------|------------------------------------------------|
+| ai-service | `python -c` GET `http://127.0.0.1:8000/health`       | postgres healthy                               |
+| backend    | `wget` GET `http://127.0.0.1:8080/api/v1/health`     | postgres, redis, minio and ai-service healthy  |
+| frontend   | `node -e` fetch `http://localhost:3000/`             | backend healthy                                |
+
+The production override carries the same probes; `ai-service` there also waits for Redis.
+A probe's port is a container port the service publishes, and its path is the route in
+the table above — `ai-service/tests/test_the_stack_waits_for_an_app_that_answers.py`
+refuses, by name, an application service with no probe, a dependency without a health
+condition, and a probe pointed at a port the service does not publish.
+
 ### Recording the nightly run
 
 The scheduled workflow (`.github/workflows/ci.yml`, 03:17 UTC) ends with a step that

@@ -124,6 +124,14 @@ services:
       EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-}
     ports:
       - "127.0.0.1:8000:8000"
+    # The image carries python, not curl or wget. A 500 (its database half is gone)
+    # exits non-zero: this probe gates the backend's start, so it must mean "can serve".
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
     depends_on:
       postgres:
         condition: service_healthy
@@ -147,12 +155,23 @@ services:
       APP_EMAIL_CONSOLE_LOGBODY: "true"
     ports:
       - "127.0.0.1:8080:8080"
+    # `/api/v1/health` answers 200 whether the body says ok or degraded, so a dependency
+    # outage is reported, not restart-looped. Docker's timeout is above the route's own
+    # 2-second probe bound.
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/api/v1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 90s
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
       minio:
+        condition: service_healthy
+      ai-service:
         condition: service_healthy
 
   frontend:
@@ -174,8 +193,15 @@ services:
       NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${APP_PUSH_VAPID_PUBLIC_KEY:-}
     ports:
       - "127.0.0.1:3000:3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
 
 volumes:
   pgdata:
