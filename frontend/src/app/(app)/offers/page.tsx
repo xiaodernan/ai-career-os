@@ -21,6 +21,7 @@ import {
 import { useLocale } from "@/lib/i18n/locale-context";
 import { BarChart } from "@/components/common/bar-chart";
 import { formatSalary } from "@/lib/format";
+import { marketVerdictWord } from "@/lib/status-words";
 
 /**
  * The offers page (Epics 12.1-12.5): what the market pays, what to say back,
@@ -217,8 +218,12 @@ export default function OffersPage() {
           <CardHeader>
             <CardTitle className="text-base">{t("offers.whatTheMarketPays")}</CardTitle>
             <CardDescription>
-              {bench.sampleSize ?? 0} matching postings
-              {bench.location ? ` in ${bench.location}` : ""}.
+              {bench.location
+                ? t("offers.matchingPostingsIn", {
+                    count: bench.sampleSize ?? 0,
+                    location: bench.location,
+                  })
+                : t("offers.matchingPostings", { count: bench.sampleSize ?? 0 })}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -248,9 +253,8 @@ export default function OffersPage() {
             <div className="flex items-center gap-2">
               <Badge
                 variant={plan.verdict === "above_market" ? "success" : plan.verdict === "below_market" ? "warning" : "secondary"}
-                className="capitalize"
               >
-                {(plan.verdict ?? "unknown").replace(/_/g, " ")}
+                {marketVerdictWord(t, plan.verdict ?? "unknown")}
               </Badge>
               {plan.leverage && <p className="text-sm">{plan.leverage}</p>}
             </div>
@@ -346,7 +350,9 @@ export default function OffersPage() {
                     data={comparison.rows!.map((row) => ({
                       label: row.label ?? "—",
                       value: row.totalComp ?? 0,
-                      detail: row.assessment?.verdict?.replace(/_/g, " "),
+                      detail: row.assessment?.verdict
+                        ? marketVerdictWord(t, row.assessment.verdict)
+                        : undefined,
                       tone:
                         row.label && comparison.best?.label === row.label
                           ? "success"

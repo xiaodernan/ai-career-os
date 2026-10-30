@@ -12,6 +12,7 @@ import { NightlyHistory } from "@/components/monitoring/nightly-history";
 import { useHealthReport } from "@/lib/hooks/monitoring";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { formatNumber } from "@/lib/format";
+import { healthVerdictWord } from "@/lib/status-words";
 
 /** A 0–1 rate as a percent string. "No data" is an em dash, not a zero. */
 function percent(value?: number): string {
@@ -70,10 +71,10 @@ export default function MonitoringPage() {
                   variant={data.verdict === "healthy" ? "success" : data.verdict === "warn" ? "warning" : "destructive"}
                   className="text-sm"
                 >
-                  {data.verdict ?? "unknown"}
+                  {healthVerdictWord(t, data.verdict ?? "unknown")}
                 </Badge>
                 <span className="text-sm text-muted-foreground">
-                  {data.totalRuns ?? 0} runs analyzed
+                  {t("monitoring.runsAnalyzed", { count: data.totalRuns ?? 0 })}
                 </span>
               </div>
             </CardContent>

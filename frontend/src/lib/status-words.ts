@@ -34,6 +34,15 @@ export const REMOTE_TYPES = ["remote", "hybrid", "onsite"] as const;
 /** `resume_versions.status` — the same five words the resumes page's badge draws. */
 export const RESUME_STATUSES = ["uploaded", "parsing", "ingesting", "parsed", "failed"] as const;
 
+/** `monitoring.py`'s health verdict, and the word the page shows when the report has none. */
+export const HEALTH_VERDICTS = ["healthy", "warn", "regressed", "unknown"] as const;
+
+/** `readiness.py`'s coverage verdict, and the page's fallback for a missing one. */
+export const READINESS_VERDICTS = ["ready", "borderline", "not_ready", "unknown"] as const;
+
+/** `negotiation.py`'s market position, and the assessment's own "unknown". */
+export const MARKET_VERDICTS = ["below_market", "above_market", "within_market", "unknown"] as const;
+
 function wordFrom(
   t: TranslateFn,
   prefix: string,
@@ -64,6 +73,18 @@ export function remoteTypeWord(t: TranslateFn, type: string): string {
 
 export function resumeStatusWord(t: TranslateFn, status: string): string {
   return wordFrom(t, "resumes.status", status, RESUME_STATUSES);
+}
+
+export function healthVerdictWord(t: TranslateFn, verdict: string): string {
+  return wordFrom(t, "monitoring.verdicts", verdict, HEALTH_VERDICTS);
+}
+
+export function readinessVerdictWord(t: TranslateFn, verdict: string): string {
+  return wordFrom(t, "growth.verdicts", verdict, READINESS_VERDICTS);
+}
+
+export function marketVerdictWord(t: TranslateFn, verdict: string): string {
+  return wordFrom(t, "offers.verdicts", verdict, MARKET_VERDICTS);
 }
 
 /**

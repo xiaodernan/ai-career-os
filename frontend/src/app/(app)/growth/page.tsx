@@ -24,6 +24,7 @@ import { PageHeader } from "@/components/common/page-header";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { useGrowthReport } from "@/lib/hooks/actions";
 import { formatSalary } from "@/lib/format";
+import { readinessVerdictWord } from "@/lib/status-words";
 import type { GrowthReport } from "@/lib/api/types";
 
 /**
@@ -152,15 +153,19 @@ export default function GrowthPage() {
               <div className="min-w-0">
                 <CardTitle className="truncate">{readiness.targetRole ?? targetRole}</CardTitle>
                 <CardDescription>
-                  {readiness.coveredCount ?? 0} covered · {gap?.partialCount ?? 0} partial ·{" "}
-                  {readiness.gapCount ?? 0} open of {gap?.expectedSkillCount ?? 0} expected skills
+                  {t("growth.skillCounts", {
+                    covered: readiness.coveredCount ?? 0,
+                    partial: gap?.partialCount ?? 0,
+                    open: readiness.gapCount ?? 0,
+                    expected: gap?.expectedSkillCount ?? 0,
+                  })}
                 </CardDescription>
               </div>
               <Badge
                 variant={VERDICT_VARIANT[readiness.verdict ?? ""] ?? "secondary"}
-                className="shrink-0 capitalize"
+                className="shrink-0"
               >
-                {(readiness.verdict ?? "unknown").replace("_", " ")}
+                {readinessVerdictWord(t, readiness.verdict ?? "unknown")}
               </Badge>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -203,8 +208,12 @@ export default function GrowthPage() {
               <CardHeader>
                 <CardTitle>{t("growth.salaryBand")}</CardTitle>
                 <CardDescription>
-                  {salary.sampleSize ?? 0} matched postings
-                  {salary.location ? ` in ${salary.location}` : ""}
+                  {salary.location
+                    ? t("growth.matchedPostingsIn", {
+                        count: salary.sampleSize ?? 0,
+                        location: salary.location,
+                      })
+                    : t("growth.matchingPostings", { count: salary.sampleSize ?? 0 })}
                 </CardDescription>
               </CardHeader>
               <CardContent>

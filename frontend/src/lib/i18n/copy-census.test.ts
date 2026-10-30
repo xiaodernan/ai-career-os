@@ -134,6 +134,36 @@ describe("the browser's copy", () => {
     expect(textOffendersIn("probe.tsx", unit)).toEqual([]);
   });
 
+  it("reads the continuation a value left behind", () => {
+    // A count sentence whose words live after the value carries no capital
+    // and no closing mark: `{n} runs analyzed`, `{n} covered · {m} partial`.
+    // The head rule wants a tag anchor and the tail rule wants a full stop,
+    // so both skipped these and seven fragments printed English count
+    // sentences inside Chinese cards while the gate stayed green.
+    const probe =
+      "export const x = <p>{data.totalRuns ?? 0} runs analyzed</p>;" +
+      "export const y = <p>{n} covered · {m} partial ·</p>;" +
+      "export const z = <p>{n} open of {m} expected skills</p>;";
+    expect(textOffendersIn("probe.tsx", probe).map((o) => o.value)).toEqual([
+      "runs analyzed",
+      "covered ·",
+      "partial ·",
+      "open of",
+      "expected skills",
+    ]);
+  });
+
+  it("leaves a unit and a value pair alone", () => {
+    // The continuation rule needs a lower-case phrase. A unit, a ratio and
+    // a lone trailing word are values or pieces of a value, not sentences.
+    const probes = [
+      "export const a = <p>{n} ms</p>;",
+      "export const b = <p>{done} / {total}</p>;",
+      "export const c = <p>{count} / {limit} pages</p>;",
+    ];
+    for (const probe of probes) expect(textOffendersIn("probe.tsx", probe)).toEqual([]);
+  });
+
   it("reads the head of a sentence split around a value", () => {
     // The depth badge read `reached depth 3 / 5 · Solid` on a Chinese page:
     // the first chunk begins lower-case and carries no closing mark, so the

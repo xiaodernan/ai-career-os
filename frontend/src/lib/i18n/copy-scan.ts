@@ -162,7 +162,8 @@ export function browserSources(): string[] {
  *
  * What the rule still does not catch is the lone lower-case word:
  * `} matching{" "}` is a piece of a sentence whose other pieces are
- * elsewhere, and no translation key can hold it by itself.
+ * elsewhere, and no translation key can hold it by itself. A fragment with
+ * a space but no closing mark is read by {@link sentenceContinuation}.
  */
 /**
  * The longest text node the scan will read.
@@ -260,7 +261,8 @@ export function textOffendersIn(file: string, text: string): Offender[] {
       !unresolved &&
       !sentenceHead(value) &&
       !sentenceTail(value) &&
-      !sentenceLead(value, m[0][0])
+      !sentenceLead(value, m[0][0]) &&
+      !sentenceContinuation(value, m[0][0])
     )
       continue;
     // Code, not copy.
@@ -327,6 +329,32 @@ function sentenceLead(value: string, opened: string): boolean {
   if (opened !== ">") return false;
   const head = bare(value);
   return /^[a-z]/.test(head) && /\s/.test(head) && !/["()]/.test(head) && !CODE_HEAD.test(head);
+}
+
+/**
+ * The continuation a value left behind.
+ *
+ * `{count} runs analyzed`, `{covered} covered · {partial} partial`, `{n}
+ * matched postings` -- a lower-case phrase that follows a value and carries
+ * no closing mark. The head rule needs a tag anchor and the tail rule needs
+ * a full stop, so both skipped it: seven such fragments printed English
+ * count sentences inside Chinese cards with the gate green.
+ *
+ * The shape is the template scan's fragment rule ({@link sentenceFragment}):
+ * the separators `·—–,` are spacing, everything else has to be a lower-case
+ * word, and one word of at least three letters is what makes it a phrase
+ * rather than a unit like `ms`. A statement keyword is code the
+ * brace-anchored regex caught out of alignment, not a sentence.
+ */
+function sentenceContinuation(value: string, opened: string): boolean {
+  if (opened !== "}") return false;
+  const head = bare(value);
+  if (!/^[a-z]/.test(head)) return false;
+  if (!/\s/.test(head)) return false;
+  if (CODE_HEAD.test(head)) return false;
+  const words = head.replace(/[·—–,]/g, " ").replace(/\s+/g, " ").trim();
+  if (!/^[a-z]+( [a-z]+)*$/.test(words)) return false;
+  return words.split(" ").some((word) => word.length >= 3);
 }
 
 function textNodeOffenders(): Offender[] {
