@@ -1,9 +1,18 @@
 server:
   port: ${BACKEND_PORT:8080}
+  # A redeploy drains the requests it already took instead of cutting them. The bound
+  # on that drain is spring.lifecycle.timeout-per-shutdown-phase below.
+  shutdown: graceful
 
 spring:
   application:
     name: career-os-backend
+  # The graceful shutdown stops accepting connections and gives active requests this
+  # long to finish before they are cut: a stuck request must not hold a redeploy
+  # forever. docker-compose's backend stop_grace_period must stay above this bound, or
+  # Docker's SIGKILL ends the process first (ShutdownContractTest pins both files).
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
   datasource:
     url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:career_os}
     username: ${POSTGRES_USER:career_os}

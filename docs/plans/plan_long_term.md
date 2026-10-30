@@ -501,8 +501,18 @@
       storage.endpoint、storage.bucket、ai-service.base-url、deployment.env 的读者（只描述、
       不决策）。后端非 IT 1040 全绿（1037+3）；ai-service 全套 1951 通过、1 跳过、0 失败
       （212.73s），knob 闸门 7/7。
-    - 39.4 关停先收尾再关门：graceful + 有界的 lifecycle 超时，配置契约测试钉住。
-    下一步：39.4（优雅关停）。
+    - 39.4 关停先收尾再关门（已完成）：`application.yml` 设 `server.shutdown: graceful` 与
+      `spring.lifecycle.timeout-per-shutdown-phase: 30s`——SIGTERM 后连接器停止收新连接，已在进程内
+      的请求跑完，超过上界的请求被切断，卡住的请求拖不住一次重部署。两份 compose 给 backend 设
+      `stop_grace_period: 40s`（Docker 默认 10s 会先 SIGKILL，抢在 JVM 的 30s 排空之前）；调度器是
+      bean，随上下文一起停，不会在旧进程里继续触发。`ShutdownContractTest` 2 条直接读真实文件：
+      第一条只认 `application.yml` 的 `server.shutdown`（不是别的 `shutdown:` 行）并要求阶段是有界
+      时长；第二条读两份 compose 的 `backend` 块，要求 `stop_grace_period` 至少高出 YAML 阶段 5s。
+      RUNBOOK 新增“A redeploy finishes what it started”（四行表：在途请求、超预算请求、跑到一半的
+      sweep、排空期间的新连接各付出什么，以及 `Commencing graceful shutdown...` /
+      `Graceful shutdown complete` 两行日志）；DEPLOYMENT.md 的 Rolling Updates 补一段。后端非 IT
+      1042 全绿（1040+2）；ai-service 全套 1951 通过、1 跳过、0 失败。
+    下一步：Epic 39 收口；先做缺口盘点，再开启下一个 Epic。
 
 
 ## 开发协议（每个任务）

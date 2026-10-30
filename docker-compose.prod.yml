@@ -121,6 +121,9 @@ services:
     build: ./backend
     container_name: careeros-backend-prod
     restart: unless-stopped
+    # Above the JVM's 30-second graceful-shutdown phase (application.yml); Docker's
+    # 10-second default would SIGKILL while requests are still draining.
+    stop_grace_period: 40s
     env_file: .env.prod
     environment:
       POSTGRES_HOST: postgres

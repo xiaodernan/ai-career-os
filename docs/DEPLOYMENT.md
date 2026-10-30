@@ -275,6 +275,13 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.
 docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.prod up -d --no-deps frontend
 ```
 
+The backend drains instead of cutting: `server.shutdown` is `graceful` with a
+30-second `spring.lifecycle.timeout-per-shutdown-phase`, and both compose files give
+Docker a 40-second `stop_grace_period` so the SIGKILL never pre-empts that bound. A
+request still running at 30 seconds — typically a long AI stream — is cut and the
+client retries; anything that finishes sooner is answered. A scheduled sweep stops with
+the context and is not resumed. See RUNBOOK's "A redeploy finishes what it started".
+
 ### Monitoring Endpoints
 
 | Service    | Health Check                    | Metrics                    |

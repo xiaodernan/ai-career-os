@@ -3372,7 +3372,7 @@ what did I become, and did I finish what I took before I left.
   the three here); ai-service 1951 passed, 1 skipped, 0 failed in 212.73s, with the
   knob census 7/7 among them.)
 
-- [ ] **39.4** A shutdown finishes the request it already took.
+- [x] **39.4** A shutdown finishes the request it already took.
 
   (`server.shutdown` is Spring's default `immediate`: a redeploy cuts requests that were
   already being answered. It becomes `graceful`, with a bounded
@@ -3380,6 +3380,26 @@ what did I become, and did I finish what I took before I left.
   forever; the schedulers stop with the context and the RUNBOOK says what a redeploy is
   allowed to cost. A config contract test pins both settings, so a future edit cannot
   quietly put the deployment back on immediate shutdown.)
+
+  (Shipped: `application.yml` sets `server.shutdown: graceful` and
+  `spring.lifecycle.timeout-per-shutdown-phase: 30s`. On SIGTERM the connector stops
+  accepting, requests already inside the process finish, and a request still running at
+  the bound is cut — a stuck request cannot hold a redeploy forever. Both compose files
+  set the backend's `stop_grace_period: 40s`, because Docker's 10-second default would
+  SIGKILL the JVM while its own 30-second phase was still draining; the schedulers are
+  beans and stop with the context rather than firing from the old process.
+  `ShutdownContractTest`'s two cases read the real files: the first parses
+  `server.shutdown` out of `application.yml` (not any other `shutdown:` line) and
+  requires the phase to be a bounded duration; the second reads both compose files,
+  finds the `backend` service block, and refuses a `stop_grace_period` below the YAML
+  phase plus five seconds — so neither a quiet return to `immediate` nor a compose grace
+  that undercuts the drain can land. RUNBOOK gains "A redeploy finishes what it
+  started": a four-row table of what an in-flight request, an over-budget request, a
+  mid-run sweep and a new connection each cost, and the two log lines
+  (`Commencing graceful shutdown…` / `Graceful shutdown complete`) that show the drain
+  happened; DEPLOYMENT.md's Rolling Updates section says the same in one paragraph.
+  Backend unit suite 1042 green (1040 plus these two); ai-service 1951 passed,
+  1 skipped, 0 failed.)
 
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +

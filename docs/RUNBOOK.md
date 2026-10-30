@@ -747,3 +747,33 @@ URL fails the suite rather than leaking in production.
 **When there is no boot line at all.** The application never reached readiness: whatever
 stopped it is earlier in the log. And on a multi-replica deployment, read every replica's
 line — a rolling deploy can leave one process running yesterday's environment.
+
+## A redeploy finishes what it started
+
+**What changed.** The backend stops like a service, not like a process: `server.shutdown`
+is `graceful` and `spring.lifecycle.timeout-per-shutdown-phase` is 30 seconds
+(`backend/src/main/resources/application.yml`). On `docker compose up -d --no-deps
+backend` (or any SIGTERM) the connector stops accepting new connections and requests
+already inside the process are allowed to finish. Both compose files set
+`stop_grace_period: 40s`, so Docker's SIGKILL comes after the JVM's own bound — Docker's
+10-second default would come first and cut the drain short.
+
+**What a redeploy is allowed to cost.**
+
+| In flight at SIGTERM | What happens |
+|---|---|
+| A request that finishes within 30 seconds | answered normally; the container exits when the drain ends and the new one starts |
+| A request still running at 30 seconds | cut at the phase bound. The usual case is a long AI stream (copilot, tailoring and interview answers carry a 180-second budget); the client sees the stream end without its ending and retries |
+| A scheduled sweep mid-run | schedulers are beans, not detached workers: they are destroyed with the context and do not fire from the old process. The half-done run is not resumed; the next scheduled run starts fresh |
+| New requests during the drain | refused by the closing connector; through a reverse proxy the caller may see a brief 502 until the new container is healthy. That is the rolling update's gap, not a cut request |
+
+**How to see it.** `docker compose logs backend | grep -i 'graceful shutdown'` — the
+backend logs `Commencing graceful shutdown. Waiting for active requests to complete`
+and, when the drain ends, `Graceful shutdown complete`. A redeploy that shows neither
+line is running configuration older than this change.
+
+**Do not raise the phase past the compose grace.** Docker kills at
+`stop_grace_period` regardless of what Spring is still waiting for; `ShutdownContractTest`
+refuses a compose file whose backend grace does not exceed the YAML phase by at least
+five seconds. If a deployment needs a longer drain, raise both numbers in the same
+change.

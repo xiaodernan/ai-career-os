@@ -141,6 +141,11 @@ services:
     build: ./backend
     container_name: careeros-backend
     restart: unless-stopped
+    # Longer than the JVM's 30-second graceful-shutdown phase (application.yml):
+    # Docker's 10-second default would SIGKILL the backend mid-drain. 40s leaves the
+    # JVM time to cut what outlived its own bound and exit; ShutdownContractTest
+    # requires at least phase + 5s in both compose files.
+    stop_grace_period: 40s
     env_file: .env
     environment:
       POSTGRES_HOST: postgres
