@@ -2992,6 +2992,105 @@ accept -- and a letter the engine cannot read is still a letter that arrived.
   only the provider calls it), and the browser population the copy census
   walks grows 138 -> 140 with the page and the card.
 
+## Epic 38 — The Account Can Reach Its Own Verbs
+
+Epics 24–26 put four verbs on the account — change the lock, erase the account, list
+and close its doors, move its sign-in address — and each closed by saying the routes
+were live for a client that had not come. The endpoint ledger still carries ten lines
+that begin "the client has not wired". Worse, 26.1's confirmation letter points at
+`<app.web.base-url>/confirm-email`, and no such page has ever existed: a reader who
+asks the address to move receives a letter whose link is a 404. This epic builds the
+client for all four verbs, starting with the link that is already in the mail.
+
+- [x] **38.1** The confirmation letter's link lands on a page that can answer it.
+
+  (`/confirm-email` is the public landing for 26.1's letter: it reads `?token=` in an
+  effect — the URL is unreadable to the server render — and posts it to the public
+  `POST /auth/email-change/confirm`, the one route that writes `users.email`. The
+  page has honest states rather than one spinner: answering (the call is in flight),
+  moved (`users.email` moved and every refresh token was revoked, so the page sends
+  the reader to sign in with the new address instead of pretending the tab is still
+  signed in), refused (unknown, spent and expired links are one
+  `EMAIL_CHANGE_INVALID`, answered with advice to ask again from settings) and
+  already-registered (`EMAIL_ALREADY_REGISTERED`, where the address won a race with a
+  registration; re-sending the same link cannot succeed because the token was spent).
+  A link with no token says so before calling, and a token can be pasted into a field
+  for the same reason the reset screen offers one. The page is a `PUBLIC_PAGE_TITLES`
+  entry outside the `(app)` group, so a signed-out browser can spend it; the endpoint
+  ledger drops `/auth/email-change/confirm`, and the auth flow's gates follow the new
+  population.
+
+  `app/(auth)/confirm-email/page.tsx` takes its title from `PUBLIC_PAGE_TITLES`, and
+  `components/auth/confirm-email-form.tsx` is its one client component; the two
+  decisions that are not markup — where the token comes from and which refusal earns
+  which sentence — live in `lib/email-change.ts` and are pinned by 7 unit tests, the
+  way `auth-recovery.ts` holds the reset screen's arithmetic. `useConfirmEmailChange`
+  posts through `authApi.confirmEmailChange` (`auth: false`) and drops the local token
+  pair on success, because a confirmed move revokes every refresh token. The endpoint
+  ledger loses its "the auth flow has no screen" line, `nav.test.ts` and
+  `metadata.test.ts` name the new public route, and the copy census grows 140 -> 142
+  with the page and the form. The frontend suite is 857 tests over 82 files, tsc and
+  eslint clean, and the page was walked in a browser — paste form, answering, moved
+  and invalid states — against a stubbed API.)
+
+- [ ] **38.2** The address moves from settings, and the screen says it takes two letters.
+
+  (A settings card names the address on the account, takes the new address and the
+  password, and posts `POST /users/me/email-change`. Each refusal has its own
+  sentence, not the server's English: `CURRENT_PASSWORD_INCORRECT` is
+  re-authentication failing, `EMAIL_UNCHANGED` is the same address after trimming and
+  case-folding, `EMAIL_ALREADY_REGISTERED` means the target mailbox already owns an
+  account, and `RATE_LIMITED` is 27.1's mail meter with its `Retry-After`. The success
+  state explains what happened instead of saying "sent": two letters left, the claimed
+  mailbox holds the link that moves the address, the current mailbox holds the warning,
+  and nothing changes until the link is answered. The card and the landing page share
+  one hook family, so the two sides of the move cannot drift.)
+
+- [ ] **38.3** The open doors are drawn, and each one can be closed.
+
+  (`GET /users/me/sessions` fills a settings card: one row per refresh-token family
+  with the device name, the address it last came from, when it started, when it was
+  last seen and when its furthest token expires. The family that is asking is marked,
+  and the row says that closing it behaves like logout. Closing one door is
+  `DELETE /users/me/sessions/{familyId}` behind the existing confirmation; closing all
+  is the same verb without an id, states that every device signs out and that the
+  current tab keeps working only until its access token expires. A neighbour's family
+  or one already closed answers one `404 NOT_FOUND`; the screen reads that as "this
+  door is already closed" and refreshes instead of apologising for an error the reader
+  cannot act on. An empty list is an honest state: no family can refresh, so the next
+  expired access token sends the reader to sign in.)
+
+- [ ] **38.4** The lock changes from the page that shows it.
+
+  (A settings card takes the current password and the new one twice, mirrors the
+  record's `(min = 8, max = 72)` before sending, and posts
+  `PATCH /users/me/password`. A wrong current password is
+  `CURRENT_PASSWORD_INCORRECT` — the same re-authentication failure the address and
+  erasure cards show — and `PASSWORD_UNCHANGED` is refused by name, because re-storing
+  the same hash would still sign every other device out for nothing. Success says the
+  true consequence: every refresh token is revoked, other devices sign out at their
+  next refresh, and this tab keeps working until its access token expires. The form is
+  replaced by that sentence rather than cleared into a toast.)
+
+- [ ] **38.5** The door out is drawn like the doors in, and the ledger stops calling
+  these routes unwired.
+
+  (The bottom of settings gains the erasure card: it names what leaves (the objects
+  behind `documents.file_key`, every row cascading from `users`) and what does not
+  (backups, until their retention window passes), takes the password and the address
+  typed back, and posts `POST /users/me/erase` only behind a confirmation restating
+  both. A wrong password and a mistyped address are `CURRENT_PASSWORD_INCORRECT` and
+  `CONFIRMATION_MISMATCH`, and neither touches anything; success drops the local token
+  pair — the account whose rows just left cannot refresh — and lands on a sentence
+  that says the account is gone, not a silent redirect into a 401. With the four
+  screens wired the endpoint ledger's ten "the client has not wired" lines become what
+  they are — aliases of the spelling the client uses, or, for `/mail/preferences/*`,
+  backend-rendered public pages the browser navigates to and never fetches — and the
+  copy census, used-key and translation gates follow the new cards and the landing
+  page. Epics 24–26's paragraphs gain a pointer to where their verbs' screens finally
+  landed, and 24.1's stale `INVALID_CREDENTIALS` (superseded by 30.4's split) is
+  corrected in the same pass.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

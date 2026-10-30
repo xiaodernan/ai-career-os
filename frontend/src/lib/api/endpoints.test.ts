@@ -817,8 +817,6 @@ describe("endpoints ↔ backend route parity", () => {
     "/me": "MeController's alias of /users/me; the client spells every call through /users/...",
     "/resume-versions/{}": "the version panel reads the list form /resume-versions?resumeId=…",
     "/resumes/{}/versions": "superseded for the panel by GET /resume-versions?resumeId=…",
-    "/auth/email-change/confirm":
-      "the email-confirmation landing route has no screen until the auth flow grows one",
     "/mail/preferences/{}/{}": "the mail-preference read/update surface is not wired yet",
     "/mail/preferences/{}/{}/start/{}": "the mail preference unsubscribe start link is not wired yet",
     "/mail/preferences/{}/{}/stop/{}": "the mail preference unsubscribe stop link is not wired yet",

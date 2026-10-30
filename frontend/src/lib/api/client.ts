@@ -496,6 +496,19 @@ export const authApi = {
     });
   },
 
+  /**
+   * Answer the address-move letter (26.2). Public on purpose: possession of the token is
+   * the proof, so the new mailbox answers without a session. The API moves `users.email`
+   * and revokes every refresh token, so the caller drops its local pair too.
+   */
+  async confirmEmailChange(payload: { token: string }): Promise<void> {
+    await request<{ changed: boolean }>(endpoints.auth.emailChangeConfirm, {
+      method: "POST",
+      body: { token: payload.token },
+      auth: false,
+    });
+  },
+
   me(): Promise<User> {
     return request<User>(endpoints.auth.me);
   },

@@ -55,6 +55,7 @@ describe("the public pages' titles", () => {
   it("names every public route", () => {
     expect(Object.keys(PUBLIC_PAGE_TITLES).sort()).toEqual([
       "/",
+      "/confirm-email",
       "/forgot-password",
       "/login",
       "/register",

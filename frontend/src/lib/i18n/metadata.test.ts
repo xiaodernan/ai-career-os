@@ -63,6 +63,7 @@ describe("the title table", () => {
       "auth.pageTitles.signUp",
       "auth.pageTitles.forgotPassword",
       "auth.pageTitles.resetPassword",
+      "auth.pageTitles.confirmEmail",
       "common.pageNotFound",
       "landing.pageTitle",
     ];

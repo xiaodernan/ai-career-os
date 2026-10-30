@@ -75,3 +75,22 @@ export function useResetPassword() {
     },
   });
 }
+
+/**
+ * Answer the address-move letter (26.2, 38.1).
+ *
+ * Same consequence as the reset: a confirmed move revokes every refresh token, so the
+ * local pair is dropped here instead of being left to fail on the next refresh. Nothing
+ * else is cached that the move invalidates -- the address is on the `me` query, and
+ * clearing the cache is how it stops showing the old one.
+ */
+export function useConfirmEmailChange() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: authApi.confirmEmailChange,
+    onSuccess: () => {
+      tokenStore.clear();
+      qc.clear();
+    },
+  });
+}

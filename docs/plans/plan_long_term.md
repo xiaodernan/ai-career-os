@@ -9,13 +9,13 @@
 
 ## 当前状态 (2026-10-30)
 
-- **前端**: 850 个 vitest 通过（81 个文件）；`tsc --noEmit` 干净。
+- **前端**: 857 个 vitest 通过（82 个文件）；`tsc --noEmit` 干净。
 - **后端**: 1062 个测试通过、158 份报告，含真实栈 IT（0 失败 / 0 错误 /
   0 跳过；`mvn -o -q test`；不含 IT 的选集为 974 个）。
 - **ai-service**: 1929 passed, 1 skipped (offline: mock/hash)。
 - **E2E**: 24/24 golden journey（最近一次真实栈验证）。
 - **分支**: main 与 origin 同步（本次推送后）。
-- **已完成**: Epic 0–37 全部勾选。36（登录的第二道门）在 36.4 收口：设置页
+- **已完成**: Epic 0–37 全部勾选；38 进行中。36（登录的第二道门）在 36.4 收口：设置页
   安全卡、登录第二步、种子与丢手机的 SECURITY 说明、runbook 的锁门处置。
   最近一段是 19.1–19.9（保存的搜索、定时摄取、通知中心、语音面试、离线壳、
   夜间报告落板）、20–33（部署自检、来信离楼、
@@ -25,7 +25,7 @@
   日历事件自带 VALARM）与 36（第二道门的四段：注册/激活、登录第二步、
   换发/关闭、设置页安全卡与登录码字段）与 37（回信的三段：签名入站地址与
   服务商 webhook、双语线索先读的引擎、公司名匹配归档与 `/replies` 页，
-  设置页交出地址）。37.4 以 850 个前端测试、81 个文件收口。
+  设置页交出地址）。37.4 以 850 个前端测试、81 个文件收口。38.1 先让 26.1 的信落地（确认页四态），以 857 个前端测试、82 个文件收口。
 
 ## 主线队列（按顺序执行）
 
@@ -339,7 +339,58 @@
     `replies/page.test.tsx`（5 条：英/中、已归档、待归档、空看板、空收件箱）。SECURITY
     记地址是能力、信是随账号删除的用户数据；RUNBOOK 新增“回信一直不到”一节（域转发、
     local-part 不能改写，503 / 404 / 未读数 / 未归档 / 429 五层含义与 `inbound_mails` 查询）。
-    下一步：Epic 37 收口，盘点剩余缺口并立下一段 Epic。
+    下一步：38.1（见下）。
+
+16. **Epic 38 — 账号能伸手够到自己的按钮**（进行中）
+    38.0 盘点：Epics 24–26 给账号装了四个动词（改密码、销号、按 family 列/关会话、
+    改登录地址），每个都在收口时写着“路由先活着，等前端来”。endpoint 账本里仍躺着
+    十条 “the client has not wired”；更糟的是 26.1 的信链到
+    `{app.web.base-url}/confirm-email`，而 Next 里从来没有这个页面——要求改地址的
+    读者收到一封指向 404 的信。`/mail/preferences/*` 不是缺口（后端渲染的公开页，
+    浏览器只导航、不 fetch），其余未引用路由是别名、健康探针与只给服务商调的 webhook。
+    据此立 Epic 38：先补已经在信里的那个链接，再补四张设置卡，最后让账本改口。
+    - 38.1 确认信的链接落到一个能作答的页面（已完成）：`/confirm-email` 在 `(app)`
+      组外、是 `PUBLIC_PAGE_TITLES` 的一条；effect 里读 `?token=`（服务端渲染读不到
+      URL），POST 公开的 `/auth/email-change/confirm`。四种诚实状态：作答中、已搬走
+      （全端 refresh 已被吊销，所以引导用新地址重新登录而不是假装这个标签页还活着）、
+      链接无效（EMAIL_CHANGE_INVALID：未知/已用/过期同答，建议回设置重发）、地址已被
+      注册（EMAIL_ALREADY_REGISTERED，token 已被花掉，同一链接不能再试）。没有 token
+      先说清楚，也允许粘贴 token。endpoint 账本移出这条路由。
+      落地：`app/(auth)/confirm-email/page.tsx` 取 `PUBLIC_PAGE_TITLES` 的标题，
+      `components/auth/confirm-email-form.tsx` 是唯一客户端件；两个不是标记的决定——token
+      从哪里来、哪种拒绝配哪句话——放在 `lib/email-change.ts`，7 条单测钉住，和
+      `auth-recovery.ts` 管重置页算术一样。`useConfirmEmailChange` 走
+      `authApi.confirmEmailChange`（`auth: false`），成功后丢掉本地 token 对（搬家会吊销
+      所有 refresh token）。账本移出“auth 流程还没有页面”那一行，`nav.test.ts` 与
+      `metadata.test.ts` 记下新的公开路由，copy census 140→142。前端 857 个测试 / 82 个。
+      tsc 与 eslint 干净；页面在浏览器里走过四种状态（粘贴表单、作答中、已搬走、链接无效），
+      API 用桩顶替。
+    - 38.2 设置页的改地址卡：当前地址、新地址、密码，POST
+      `/users/me/email-change`。三个拒绝各有自己的句子而不是服务器英文——
+      CURRENT_PASSWORD_INCORRECT / EMAIL_UNCHANGED（trim 且不分大小写）/
+      EMAIL_ALREADY_REGISTERED；RATE_LIMITED 是 27.1 的信件计量（一分钟五封）。
+      成功态不说“已发送”，而说：两封信都走了，新邮箱拿到会搬家的链接、旧邮箱拿到
+      警告，链接作答之前什么都不会变。与落地页共用一组 hook，搬家两侧不会漂移。
+    - 38.3 会话卡：`GET /users/me/sessions` 按 family 列一台设备——名字、来源地址、
+      开始、最后活动、最远到期；正在提问的这台被标出，并写明关掉它就等于登出。
+      单关走 `DELETE /users/me/sessions/{familyId}` 与既有确认框；全关是同一动词
+      无 id，说明所有设备都会登出、当前标签页只活到 access token 到期。别人的或已关
+      的 family 只有一个 404，页面把它读成“这扇门已经关了”并刷新；空列表是诚实状态。
+    - 38.4 改密码卡：当前密码 + 两遍新密码，先按记录的（8, 72）校验，PATCH
+      `/users/me/password`。CURRENT_PASSWORD_INCORRECT 是再认证失败（与改地址、销号
+      同码），PASSWORD_UNCHANGED 按名字拒绝；成功态说真话：所有 refresh token 被
+      吊销、别的设备下次刷新下线、本标签页活到 access token 到期——表单换成那句话，
+      而不是清空后 toast。
+    - 38.5 销号卡放在设置页最底：写明什么会走（documents.file_key 背后的对象、从
+      users 级联的每一行）与什么不会（备份到保留期结束）；密码 + 回打的地址，
+      `POST /users/me/erase` 只在重申两者的确认之后。CURRENT_PASSWORD_INCORRECT 与
+      CONFIRMATION_MISMATCH 什么都不动；成功丢掉本地 token 对，落在“账号已删除”的
+      句子上而不是静默跳进 401。四张卡接线后账本改口：十条 “the client has not
+      wired” 变成它们真正的样子（客户端所用拼写的别名；mail preferences 是后端
+      渲染的公开页），copy census / used-key / translations 跟着新卡片与落地页走，
+      24–26 的段落补上落点，24.1 里被 30.4 取代的 INVALID_CREDENTIALS 一并改正。
+    下一步：38.2。
+
 
 ## 开发协议（每个任务）
 

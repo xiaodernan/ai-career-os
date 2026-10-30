@@ -24,6 +24,8 @@ export const endpoints = {
     logout: "/auth/logout",
     forgotPassword: "/auth/password/forgot",
     resetPassword: "/auth/password/reset",
+    /* The address-move letter's link answers here; public, the token is the proof (38.1). */
+    emailChangeConfirm: "/auth/email-change/confirm",
     me: "/users/me",
     profile: "/users/me/profile",
   },

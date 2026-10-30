@@ -120,4 +120,8 @@ export const PUBLIC_PAGE_TITLES: Record<string, { key: string; label: string }> 
     key: "auth.pageTitles.resetPassword",
     label: "Set a new password",
   },
+  "/confirm-email": {
+    key: "auth.pageTitles.confirmEmail",
+    label: "Confirm your new address",
+  },
 };

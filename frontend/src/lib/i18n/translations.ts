@@ -378,6 +378,25 @@ export const translations = {
       requestAnother: "Request another",
       genericFailure: "Something went wrong. Please try again.",
     },
+    emailChange: {
+      confirmHeading: "Confirm your new address",
+      answering: "Answering the link from your email…",
+      movedTitle: "Address moved",
+      movedBody:
+        "Your sign-in address has moved, and every device has been signed out. Sign in with the new address and your unchanged password.",
+      invalidTitle: "This link cannot be used",
+      invalidBody:
+        "It may have expired, already been used, or never been issued. Sign in and ask for a new one from Settings → Account.",
+      registeredTitle: "That address was taken",
+      registeredBody:
+        "Another account registered it before this link was answered, so the move did not happen. Sign in and ask for a different address from Settings → Account.",
+      pasteBody: "Open the link in the letter. If it did not open, paste its token here.",
+      tokenLabel: "Link token",
+      tokenPlaceholder: "the token from the email",
+      confirm: "Confirm the move",
+      retryBody: "We could not answer the link just now. It is still good — try it again.",
+      retry: "Try again",
+    },
     tailor: {
       title: "Tailored resume for this role",
       draftBadge: "Tailored draft",
@@ -1322,6 +1341,7 @@ export const translations = {
         signUp: "Create account",
         forgotPassword: "Reset your password",
         resetPassword: "Set a new password",
+        confirmEmail: "Confirm your new address",
       },
       eyebrow: "The job-search operating system",
       headline: "Run your search like an engineer runs a system.",
@@ -2930,6 +2950,25 @@ export const translations = {
       requestAnother: "再要一个",
       genericFailure: "出错了，请再试一次。",
     },
+    emailChange: {
+      confirmHeading: "确认新邮箱地址",
+      answering: "正在回应邮件里的链接……",
+      movedTitle: "邮箱已更换",
+      movedBody:
+        "登录邮箱已经更换，所有设备都已退出登录。请用新邮箱和原来的密码重新登录。",
+      invalidTitle: "这个链接不能用",
+      invalidBody:
+        "它可能已经过期、已经被使用，或者从未发出。登录后请在设置 → 账户里重新申请。",
+      registeredTitle: "这个邮箱已经被占用",
+      registeredBody:
+        "在链接被回应之前，另一个账号注册了这个邮箱，所以这次更换没有发生。登录后请在设置 → 账户里换一个地址。",
+      pasteBody: "请打开邮件里的链接。如果链接没有打开，可以把其中的令牌粘贴到这里。",
+      tokenLabel: "链接令牌",
+      tokenPlaceholder: "邮件里的令牌",
+      confirm: "确认更换",
+      retryBody: "刚才没能回应这个链接。它仍然有效——可以再试一次。",
+      retry: "重试",
+    },
     tailor: {
       title: "为这个职位定制的简历",
       draftBadge: "定制草稿",
@@ -3770,6 +3809,7 @@ export const translations = {
         signUp: "注册账号",
         forgotPassword: "重置密码",
         resetPassword: "设置新密码",
+        confirmEmail: "确认新邮箱地址",
       },
       eyebrow: "求职操作系统",
       headline: "像工程师跑系统一样跑你的求职。",
