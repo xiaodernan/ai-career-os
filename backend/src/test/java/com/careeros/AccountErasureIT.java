@@ -57,12 +57,14 @@ class AccountErasureIT extends ApiIntegrationTest {
         storage.put(bobKey, "bob's file".getBytes(StandardCharsets.UTF_8), "text/plain");
         // A forwarded reply is user data too: the erasure has to take the letters with the
         // account, or "no copy remains" would be false for every reader who configured one.
-        jdbc.update("insert into inbound_mails (user_id, message_key, from_address, subject, body_text, received_at) "
-                        + "values (?, ?, 'recruiter@example.com', 'Your application', 'Hello', now())",
-                aliceId, "erase-" + aliceId);
-        jdbc.update("insert into inbound_mails (user_id, message_key, from_address, subject, body_text, received_at) "
-                        + "values (?, ?, 'recruiter@example.com', 'Your application', 'Hello', now())",
-                bobId, "stay-" + bobId);
+        // The id is the entity's own UUID generator, not a database default: a row written beside
+        // Hibernate has to carry it.
+        jdbc.update("insert into inbound_mails (id, user_id, message_key, from_address, subject, body_text, received_at) "
+                        + "values (?, ?, ?, 'recruiter@example.com', 'Your application', 'Hello', now())",
+                UUID.randomUUID(), aliceId, "erase-" + aliceId);
+        jdbc.update("insert into inbound_mails (id, user_id, message_key, from_address, subject, body_text, received_at) "
+                        + "values (?, ?, ?, 'recruiter@example.com', 'Your application', 'Hello', now())",
+                UUID.randomUUID(), bobId, "stay-" + bobId);
 
         assertThat(count("select count(*) from documents where user_id = ?", aliceId)).isEqualTo(1);
         assertThat(count("select count(*) from refresh_tokens where user_id = ?", aliceId)).isEqualTo(1);

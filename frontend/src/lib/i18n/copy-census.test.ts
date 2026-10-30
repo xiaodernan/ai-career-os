@@ -73,8 +73,10 @@ describe("the browser's copy", () => {
     // `app/(auth)/confirm-email/page.tsx` answers the mailed link and
     // `components/auth/confirm-email-form.tsx` draws its states; 143 with
     // `components/settings/email-change-card.tsx`, the settings card that asks
-    // for the two letters (38.2).
-    expect(browserSources().length).toBe(143);
+    // for the two letters (38.2); 144 with
+    // `components/settings/sessions-card.tsx`, the card that draws the open doors
+    // and closes them (38.3).
+    expect(browserSources().length).toBe(144);
   });
 
   it("finds a sentence, however long it is", () => {

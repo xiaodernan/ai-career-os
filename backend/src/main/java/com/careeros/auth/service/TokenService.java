@@ -55,7 +55,7 @@ public class TokenService {
         entity.setExpiresAt(OffsetDateTime.now().plus(refreshTtl));
         refreshTokens.save(entity);
 
-        AuthUser principal = new AuthUser(user.getId(), user.getEmail(), user.getRole());
+        AuthUser principal = new AuthUser(user.getId(), user.getEmail(), user.getRole(), familyId);
         String accessToken = jwtService.generateAccessToken(principal);
         return TokenPairResponse.of(accessToken, rawToken, jwtService.accessTtlSeconds());
     }
@@ -118,10 +118,11 @@ public class TokenService {
      * replaces the token without adding a row the reader would read as a second device, so
      * the family's first token dates the session and its last token dates the last visit.
      * Revoked and expired tokens are left out — a session that can no longer refresh is
-     * not something the reader can still close.
+     * not something the reader can still close. {@code currentFamilyId} is the family the
+     * asking access token was minted with; null (an old token) simply marks nothing.
      */
     @Transactional(readOnly = true)
-    public List<SessionResponse> listSessions(UUID userId) {
+    public List<SessionResponse> listSessions(UUID userId, UUID currentFamilyId) {
         Map<UUID, List<RefreshToken>> byFamily = refreshTokens
                 .findByUserIdAndRevokedAtIsNullAndExpiresAtAfter(userId, OffsetDateTime.now())
                 .stream()
@@ -143,7 +144,8 @@ public class TokenService {
                         entry.getValue().stream().map(RefreshToken::getCreatedAt)
                                 .max(Comparator.naturalOrder()).orElse(null),
                         entry.getValue().stream().map(RefreshToken::getExpiresAt)
-                                .max(Comparator.naturalOrder()).orElse(null)))
+                                .max(Comparator.naturalOrder()).orElse(null),
+                        entry.getKey().equals(currentFamilyId)))
                 .sorted(Comparator.comparing(SessionResponse::lastSeenAt,
                         Comparator.nullsLast(Comparator.reverseOrder())))
                 .toList();

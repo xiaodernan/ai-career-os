@@ -26,7 +26,9 @@ reachable from a browser.
     user-agent and client address (truncated to 255/45 chars, both optional), and
     `GET /me/sessions` folds live tokens back into families so the account can
     recognise its own doors without the family id ever appearing in a letter or a
-    log. `DELETE /me/sessions/{id}` closes one family and `DELETE /me/sessions`
+    log. The access token carries the family it was minted for as `fid`, so the
+    list can mark the asking device; a token minted before the claim, or one with
+    no family, marks nothing. `DELETE /me/sessions/{id}` closes one family and `DELETE /me/sessions`
     closes all; another account's family id answers the same 404 as an unknown
     one, so the endpoint cannot be used to probe for sessions. Revoking a session
     is the fastest account-holder response to a borrowed laptop: refresh stops

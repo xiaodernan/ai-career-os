@@ -93,12 +93,19 @@ class SelfInvokedTransactionContractTest {
             "class", "interface", "enum", "record", "if", "for", "while", "switch", "return", "new");
 
     /**
-     * One entry per self-invocation that still commits its rows one transaction at a time: the
-     * class, the entering method, the writer it calls on itself, and how many rows are at stake.
-     * The list is empty now -- every site it once held is below, held by a witness -- and it stays
-     * a list rather than a bare {@code List.of()} so the next site has somewhere to land.
+     * One entry per un-armed site: either a defect still waiting for its witness, or a boundary
+     * that must stay split. The list held only defects until this entry; the site below is the
+     * other kind, and its comment says why. The equality check still runs in both directions, so a
+     * new site reddens the build and a site fixed but left listed reddens it too.
      */
-    private static final List<String> NOT_YET_ATOMIC = List.of();
+    private static final List<String> NOT_YET_ATOMIC = List.of(
+            // The letter must commit before the classifier is called, and the reading is a second,
+            // best-effort write that must not ride on a transaction held open across that call --
+            // a stalled engine would pin the connection, and a lost reading costs the intent, never
+            // the letter. One row is at stake, not two; the census counts statements. The split is
+            // pinned by InboundMailServiceTest.aClassifierOutageLeavesTheLetterStoredAndUnread.
+            "InboundMailService.java#receive() 2 rows spread over Received() 0 + file() 0 + read() 0 "
+                    + "+ key() 0 + trim() 0 + cap() 0");
 
     /**
      * The sites that left the list, each paired with the behaviour witness under {@code src/test

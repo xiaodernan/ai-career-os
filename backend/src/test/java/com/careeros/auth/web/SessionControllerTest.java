@@ -67,7 +67,7 @@ class SessionControllerTest {
                 .setCustomArgumentResolvers(new CurrentUserArgumentResolver())
                 .build();
         SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
-                new AuthUser(ALICE, "ada@example.invalid", "user"), null, List.of()));
+                new AuthUser(ALICE, "ada@example.invalid", "user", FAMILY), null, List.of()));
     }
 
     @AfterEach
@@ -77,11 +77,11 @@ class SessionControllerTest {
 
     @Test
     void bothSpellingsListTheCallersSessionsInTheEnvelope() throws Exception {
-        when(tokenService.listSessions(ALICE)).thenReturn(List.of(
+        when(tokenService.listSessions(ALICE, FAMILY)).thenReturn(List.of(
                 new SessionResponse(FAMILY, "Laptop/1.0", "203.0.113.1",
                         OffsetDateTime.parse("2026-10-01T09:00:00Z"),
                         OffsetDateTime.parse("2026-10-02T10:00:00Z"),
-                        OffsetDateTime.parse("2026-11-01T09:00:00Z"))));
+                        OffsetDateTime.parse("2026-11-01T09:00:00Z"), true)));
 
         for (String path : List.of("/api/v1/me/sessions", "/api/v1/users/me/sessions")) {
             mvc.perform(get(path))
@@ -90,10 +90,11 @@ class SessionControllerTest {
                     .andExpect(jsonPath("$.data", hasSize(1)))
                     .andExpect(jsonPath("$.data[0].id").value(FAMILY.toString()))
                     .andExpect(jsonPath("$.data[0].userAgent").value("Laptop/1.0"))
-                    .andExpect(jsonPath("$.data[0].clientIp").value("203.0.113.1"));
+                    .andExpect(jsonPath("$.data[0].clientIp").value("203.0.113.1"))
+                    .andExpect(jsonPath("$.data[0].current").value(true));
         }
 
-        verify(tokenService, times(2)).listSessions(ALICE);
+        verify(tokenService, times(2)).listSessions(ALICE, FAMILY);
     }
 
     @Test

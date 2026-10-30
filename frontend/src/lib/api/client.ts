@@ -1,6 +1,6 @@
 import { API_BASE_URL, endpoints } from "./endpoints";
 import { tokenStore } from "./token-store";
-import type { AuthResponse, AuthTokens, Page, User } from "./types";
+import type { AccountSession, AuthResponse, AuthTokens, Page, User } from "./types";
 import { SESSION_EXPIRED_REASON } from "../session-expiry";
 import { dispatchEvent, errorText, findFrameEnd, parseFrame, type SSEHandlers } from "../sse/use-sse";
 export interface ApiErrorDetails {
@@ -520,6 +520,32 @@ export const authApi = {
       method: "POST",
       body: { password: payload.password, newEmail: payload.newEmail },
     });
+  },
+
+  /**
+   * The account's open doors, newest activity first (25.1, 38.3). One row is one
+   * refresh-token family; `current` marks the family this tab's access token belongs to.
+   */
+  listSessions(): Promise<AccountSession[]> {
+    return request<AccountSession[]>(endpoints.auth.sessions);
+  },
+
+  /**
+   * Close one door by its family id (25.2, 38.3). A family that is not live for this
+   * account — a neighbour's or one already closed — is one `404 LOGIN_SESSION_NOT_FOUND`;
+   * the screen reads that as "already closed" rather than an error the reader can act on.
+   */
+  async revokeSession(familyId: string): Promise<void> {
+    await request<{ revoked: boolean }>(endpoints.auth.session(familyId), { method: "DELETE" });
+  },
+
+  /**
+   * Close every door, this tab's included (25.2, 38.3). Refresh tokens die at once; the
+   * access token in this tab keeps working until it expires, because access tokens are
+   * stateless. The caller says exactly that instead of claiming the tab is logged out.
+   */
+  async revokeAllSessions(): Promise<void> {
+    await request<{ revoked: boolean }>(endpoints.auth.sessions, { method: "DELETE" });
   },
 
   me(): Promise<User> {

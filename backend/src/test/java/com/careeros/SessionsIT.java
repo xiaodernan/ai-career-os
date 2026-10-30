@@ -43,6 +43,10 @@ class SessionsIT extends ApiIntegrationTest {
                 .andReturn();
         JsonNode sessions = body(listed);
         assertThat(agentsIn(sessions)).containsExactlyInAnyOrder("JUnit/laptop", "JUnit/phone");
+        // The access token that asked was minted for the laptop's door, so that is the one
+        // the list marks (38.3); the phone must not claim to be the reader's tab.
+        assertThat(currentOf(sessions, "JUnit/laptop")).isTrue();
+        assertThat(currentOf(sessions, "JUnit/phone")).isFalse();
         assertThat(listed.getResponse().getContentAsString())
                 .doesNotContain(laptopRefresh)
                 .doesNotContain(phoneRefresh);
@@ -146,6 +150,15 @@ class SessionsIT extends ApiIntegrationTest {
         for (JsonNode session : sessions) {
             if (agent.equals(session.path("userAgent").asText())) {
                 return session.path("id").asText();
+            }
+        }
+        throw new AssertionError("no session for " + agent + " in " + sessions);
+    }
+
+    private static boolean currentOf(JsonNode sessions, String agent) {
+        for (JsonNode session : sessions) {
+            if (agent.equals(session.path("userAgent").asText())) {
+                return session.path("current").asBoolean();
             }
         }
         throw new AssertionError("no session for " + agent + " in " + sessions);

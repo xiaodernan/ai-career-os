@@ -9,9 +9,9 @@
 
 ## 当前状态 (2026-10-30)
 
-- **前端**: 863 个 vitest 通过（82 个文件）；`tsc --noEmit` 干净。
-- **后端**: 1062 个测试通过、158 份报告，含真实栈 IT（0 失败 / 0 错误 /
-  0 跳过；`mvn -o -q test`；不含 IT 的选集为 974 个）。
+- **前端**: 869 个 vitest 通过（83 个文件）；`tsc --noEmit` 干净。
+- **后端**: 1116 个测试通过、162 份报告，含真实栈 IT（0 失败 / 0 错误 /
+  0 跳过；`mvn -o -q test`；不含 IT 的选集为 1027 个）。
 - **ai-service**: 1929 passed, 1 skipped (offline: mock/hash)。
 - **E2E**: 24/24 golden journey（最近一次真实栈验证）。
 - **分支**: main 与 origin 同步（本次推送后）。
@@ -26,7 +26,8 @@
   换发/关闭、设置页安全卡与登录码字段）与 37（回信的三段：签名入站地址与
   服务商 webhook、双语线索先读的引擎、公司名匹配归档与 `/replies` 页，
   设置页交出地址）。37.4 以 850 个前端测试、81 个文件收口。38.1 先让 26.1 的信落地（确认页四态），以 857 个前端测试、82 个文件收口；38.2 让设置页
-交出改地址卡（两封信、四种拒绝各归其位），以 863 个前端测试、82 个文件收口。
+交出改地址卡（两封信、四种拒绝各归其位），以 863 个前端测试、82 个文件收口。38.3 让设置页
+交出会话卡（每行一段登录、当前这台标出、单关/全关与已关的诚实状态），以 869 个前端测试、83 个文件收口。
 
 ## 主线队列（按顺序执行）
 
@@ -382,11 +383,33 @@
       补 2 条单测。成功态把表单换成两封信与两小时窗口。前端 863 个测试 / 82 个文件，
       tsc 与 eslint 干净；卡片在浏览器里走过表单、成功、密码错、限流、地址被占五种状态，
       API 用桩顶替。
-    - 38.3 会话卡：`GET /users/me/sessions` 按 family 列一台设备——名字、来源地址、
+    - 38.3 会话卡（已完成）：`GET /users/me/sessions` 按 family 列一台设备——名字、来源地址、
       开始、最后活动、最远到期；正在提问的这台被标出，并写明关掉它就等于登出。
       单关走 `DELETE /users/me/sessions/{familyId}` 与既有确认框；全关是同一动词
       无 id，说明所有设备都会登出、当前标签页只活到 access token 到期。别人的或已关
-      的 family 只有一个 404，页面把它读成“这扇门已经关了”并刷新；空列表是诚实状态。
+      的 family 只有一个 404 `LOGIN_SESSION_NOT_FOUND`，页面把它读成“这扇门已经关了”
+      并刷新；空列表是诚实状态。
+      落地：列表缺的那一个事实——哪一行是正在提问的标签页——由 access token 的
+      `fid` claim 补上（`AuthUser.familyId` 可空，旧 token 与旧测试照常解析）；
+      `TokenService.listSessions(userId, currentFamilyId)` 标出匹配行，
+      `SessionResponse` 多一个 `current`，页面不再拿 user-agent 猜。两种拼写的列表
+      路由都把 family 传进去。`JwtServiceTest` 往返 claim 与缺席，
+      `TokenServiceSessionsTest` 钉住“标出这一行”和“没有 family 就一行都不标”，
+      `SessionsIT` 读笔记本为 current、手机为否。
+      前端 `components/settings/sessions-card.tsx` 一行一家：`lib/sessions.ts:deviceLabel`
+      把七种浏览器记号与六种系统折成 "Chrome · Windows"，不认识的照原样写（部署自己的
+      客户端、未命名设备都有行）。当前行带徽章并写明关掉它是登出；单关与全关共用既有
+      `ConfirmDialog`，各自说真实后果；已关的 family 答 `LOGIN_SESSION_NOT_FOUND`，
+      `sessionCloseRefusal` 读成“这扇门已经关了”并触发刷新；空列表说明这个标签页只活到
+      access token 到期。`lib/hooks/account.ts` 的三个 hook 是路由唯一引用，账本移出
+      `/users/me/sessions` 两行，`/me` 别名仍留在表里。copy census 143→144；
+      `lib/sessions.test.ts` 6 条。前端 869 个测试 / 83 个文件，tsc 与 eslint 干净；
+      卡片在浏览器里走过三行与当前徽章、两种确认框句子、404 提示与刷新、全关之后的
+      空状态（API 用桩顶替）。
+      这次全量套件还抓出两个 Epic 37 的潜伏问题，一并修好：`AccountErasureIT` 的
+      `inbound_mails` 裸插入漏了 Hibernate 在 Java 侧生成的 id；自调用 census 指控
+      `InboundMailService.receive`，而它的两次写入必须被分类器调用隔开——现在把这个
+      站点连同理由记进清单，而不是硬塞进一个事务。后端 1116 个测试（单元 + IT）全绿。
     - 38.4 改密码卡：当前密码 + 两遍新密码，先按记录的（8, 72）校验，PATCH
       `/users/me/password`。CURRENT_PASSWORD_INCORRECT 是再认证失败（与改地址、销号
       同码），PASSWORD_UNCHANGED 按名字拒绝；成功态说真话：所有 refresh token 被
@@ -400,7 +423,7 @@
       wired” 变成它们真正的样子（客户端所用拼写的别名；mail preferences 是后端
       渲染的公开页），copy census / used-key / translations 跟着新卡片与落地页走，
       24–26 的段落补上落点，24.1 里被 30.4 取代的 INVALID_CREDENTIALS 一并改正。
-    下一步：38.3。
+    下一步：38.4。
 
 
 ## 开发协议（每个任务）

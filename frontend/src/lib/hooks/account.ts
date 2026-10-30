@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { authApi } from "@/lib/api/client";
 
 /**
@@ -12,4 +12,31 @@ import { authApi } from "@/lib/api/client";
  */
 export function useRequestEmailChange() {
   return useMutation({ mutationFn: authApi.requestEmailChange });
+}
+
+/**
+ * The account's open doors (38.3). One query for one card; the list is about live tokens,
+ * so it is refetched whenever a close settles — a close that failed because the door was
+ * already closed is exactly when the screen's copy is stale.
+ */
+export const SESSIONS_KEY = ["account", "sessions"] as const;
+
+export function useSessions() {
+  return useQuery({ queryKey: SESSIONS_KEY, queryFn: authApi.listSessions });
+}
+
+export function useRevokeSession() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: authApi.revokeSession,
+    onSettled: () => queryClient.invalidateQueries({ queryKey: SESSIONS_KEY }),
+  });
+}
+
+export function useRevokeAllSessions() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: authApi.revokeAllSessions,
+    onSettled: () => queryClient.invalidateQueries({ queryKey: SESSIONS_KEY }),
+  });
 }

@@ -65,7 +65,7 @@ public class MeController {
 
     @GetMapping("/sessions")
     public List<SessionResponse> sessions(@CurrentUser AuthUser user) {
-        return tokenService.listSessions(user.id());
+        return tokenService.listSessions(user.id(), user.familyId());
     }
 
     @DeleteMapping("/sessions/{familyId}")

@@ -41,15 +41,19 @@ public class JwtService {
 
     public String generateAccessToken(AuthUser user) {
         Instant now = Instant.now();
-        return Jwts.builder()
+        var builder = Jwts.builder()
                 .subject(user.id().toString())
                 .claim("email", user.email())
                 .claim("role", user.role())
                 .claim("typ", "access")
                 .issuedAt(Date.from(now))
-                .expiration(Date.from(now.plus(accessTtl)))
-                .signWith(key)
-                .compact();
+                .expiration(Date.from(now.plus(accessTtl)));
+        // The session list marks the door that is asking; the access token is what makes
+        // that possible without the browser having to remember a family id (38.3).
+        if (user.familyId() != null) {
+            builder.claim("fid", user.familyId().toString());
+        }
+        return builder.signWith(key).compact();
     }
 
     /** @throws ApiException TOKEN_EXPIRED / TOKEN_INVALID when the token is not usable. */
@@ -66,8 +70,10 @@ public class JwtService {
             throw new ApiException(ApiErrorCode.TOKEN_MALFORMED, "Not an access token");
         }
         try {
+            String fid = claims.get("fid", String.class);
             return new AuthUser(UUID.fromString(claims.getSubject()),
-                    claims.get("email", String.class), claims.get("role", String.class));
+                    claims.get("email", String.class), claims.get("role", String.class),
+                    fid == null ? null : UUID.fromString(fid));
         } catch (IllegalArgumentException e) {
             throw new ApiException(ApiErrorCode.TOKEN_MALFORMED, "Malformed token subject");
         }

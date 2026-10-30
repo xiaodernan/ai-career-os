@@ -3064,7 +3064,7 @@ client for all four verbs, starting with the link that is already in the mail.
   success panel, a wrong password, the limiter and an address already taken — against a
   stubbed API.)
 
-- [ ] **38.3** The open doors are drawn, and each one can be closed.
+- [x] **38.3** The open doors are drawn, and each one can be closed.
 
   (`GET /users/me/sessions` fills a settings card: one row per refresh-token family
   with the device name, the address it last came from, when it started, when it was
@@ -3073,10 +3073,43 @@ client for all four verbs, starting with the link that is already in the mail.
   `DELETE /users/me/sessions/{familyId}` behind the existing confirmation; closing all
   is the same verb without an id, states that every device signs out and that the
   current tab keeps working only until its access token expires. A neighbour's family
-  or one already closed answers one `404 NOT_FOUND`; the screen reads that as "this
-  door is already closed" and refreshes instead of apologising for an error the reader
-  cannot act on. An empty list is an honest state: no family can refresh, so the next
-  expired access token sends the reader to sign in.)
+  or one already closed answers one `404 LOGIN_SESSION_NOT_FOUND`; the screen reads
+  that as "this door is already closed" and refreshes instead of apologising for an
+  error the reader cannot act on. An empty list is an honest state: no family can
+  refresh, so the next expired access token sends the reader to sign in.)
+
+  (Shipped: the list needed one fact it never carried — which row is the tab that is
+  asking. The access token now carries `fid`, the refresh-token family it was minted
+  for (`AuthUser.familyId`, nullable so tokens and principals minted before the claim
+  still parse); `TokenService.listSessions(userId, currentFamilyId)` marks the matching
+  row and `SessionResponse` gained `current`, so the screen never guesses from a
+  user-agent string. Both spellings of the list route pass the family to it.
+  `JwtServiceTest` round-trips the claim (and its absence), `TokenServiceSessionsTest`
+  pins both the marked row and a token with no family marking no row, and `SessionsIT`
+  reads the laptop row as current and the phone as not.
+
+  `components/settings/sessions-card.tsx` draws one row per family: `lib/sessions.ts:
+  deviceLabel` folds the seven browser tokens and six systems into "Chrome · Windows"
+  and keeps anything it does not recognise as written, so a deployment's own client
+  and an unnamed device still have a row. The current row is badged and told that
+  closing it is logout. Closing one door and closing all share the existing
+  `ConfirmDialog`, and each says its true consequence; one already shut answers
+  `LOGIN_SESSION_NOT_FOUND`, which `sessionCloseRefusal` reads as "this door was
+  already closed" and the list refetches; the empty list says the tab lives only until
+  its access token expires. `useSessions`, `useRevokeSession` and
+  `useRevokeAllSessions` in `lib/hooks/account.ts` are the routes' only references, so
+  the ledger drops its two `/users/me/sessions` lines while the `/me` aliases stay
+  listed. Copy census 143 -> 144; `lib/sessions.test.ts` adds 6 tests. Frontend 869
+  tests over 83 files, tsc and eslint clean. Walked in a browser against a stubbed API:
+  three rows with the current badge and note, both dialog sentences, the 404 notice
+  with its refetch, and the close-all confirmation ending in the empty state.
+
+  The full suite this shipped against also caught two latent Epic 37 breaks, fixed
+  here: `AccountErasureIT`'s raw `inbound_mails` inserts omitted the id Hibernate
+  generates in Java, and the self-invocation census charged `InboundMailService.
+  receive`, whose two writes must stay split around the classifier call — the site is
+  now named in the census list with that reason instead of being forced into one
+  transaction. Backend 1116 tests, unit and ITs, green.)
 
 - [ ] **38.4** The lock changes from the page that shows it.
 

@@ -30,6 +30,9 @@ export const endpoints = {
     profile: "/users/me/profile",
     /* The sign-in address move, behind the session and the password (38.2). */
     emailChange: "/users/me/email-change",
+    /* The account's open doors: list them, close one by family, close all (38.3). */
+    sessions: "/users/me/sessions",
+    session: (familyId: string) => `/users/me/sessions/${seg(familyId)}`,
   },
 
   /* ---------------- Resumes ---------------- */

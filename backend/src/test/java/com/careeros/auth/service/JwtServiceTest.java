@@ -54,7 +54,20 @@ class JwtServiceTest {
         assertThat(parsed.id()).isEqualTo(USER_ID);
         assertThat(parsed.email()).isEqualTo("ada@example.invalid");
         assertThat(parsed.role()).isEqualTo("user");
+        assertThat(parsed.familyId()).isNull();
         assertThat(jwt.accessTtlSeconds()).isEqualTo(15L * 60);
+    }
+
+    @Test
+    void the_session_family_the_token_was_minted_for_survives_the_round_trip() {
+        // 38.3: the session list marks the asking door; the access token is where the
+        // backend learns which family that is, and a token without one marks nothing.
+        UUID family = UUID.fromString("33333333-3333-4333-8333-333333333333");
+        JwtService jwt = jwt();
+        AuthUser parsed = jwt.parseAccessToken(
+                jwt.generateAccessToken(new AuthUser(USER_ID, "ada@example.invalid", "user", family)));
+
+        assertThat(parsed.familyId()).isEqualTo(family);
     }
 
     @Test

@@ -827,8 +827,6 @@ describe("endpoints ↔ backend route parity", () => {
     "/me/sessions/{}": "the revoke-session alias the client has not wired",
     "/users/me/erase": "the account-erase route the client has not wired",
     "/users/me/password": "the account-password route the client has not wired",
-    "/users/me/sessions": "the sessions route the client has not wired",
-    "/users/me/sessions/{}": "the revoke-session route the client has not wired",
     // 37.1/37.4: the inbound loop's webhook. The provider is its one caller, never a browser;
     // the three signed-in routes left this list with 37.4, when lib/hooks/replies.ts began
     // reaching them for the replies page and the settings address card.

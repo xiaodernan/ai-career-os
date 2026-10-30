@@ -122,15 +122,32 @@ class TokenServiceSessionsTest {
 
         tokenService.refresh(laptop.refreshToken());
         stamp(store.get(2), T0.plusMinutes(30));
+        UUID laptopFamily = store.get(2).getFamilyId();
 
-        List<SessionResponse> sessions = tokenService.listSessions(user.getId());
+        List<SessionResponse> sessions = tokenService.listSessions(user.getId(), laptopFamily);
 
         assertThat(sessions).hasSize(2);
         SessionResponse newest = sessions.get(0);
         assertThat(newest.userAgent()).isEqualTo("Laptop");
         assertThat(newest.startedAt()).isEqualTo(T0);
         assertThat(newest.lastSeenAt()).isEqualTo(T0.plusMinutes(30));
+        assertThat(newest.current()).isTrue();
         assertThat(sessions.get(1).userAgent()).isEqualTo("Phone");
+        assertThat(sessions.get(1).current()).isFalse();
+    }
+
+    @Test
+    void aTokenWithoutAFamilyMarksNoDoorAsCurrent() {
+        tokenService.issueForNewSession(user, new ClientInfo("Laptop", "203.0.113.1"));
+        stamp(store.get(0), T0);
+        tokenService.issueForNewSession(user, new ClientInfo("Phone", "198.51.100.2"));
+        stamp(store.get(1), T0.plusMinutes(1));
+
+        assertThat(tokenService.listSessions(user.getId(), null))
+                .noneMatch(SessionResponse::current);
+        // A family that is not in the caller's live list marks nothing either.
+        assertThat(tokenService.listSessions(user.getId(), UUID.randomUUID()))
+                .noneMatch(SessionResponse::current);
     }
 
     @Test
@@ -146,7 +163,7 @@ class TokenServiceSessionsTest {
         stamp(store.get(2), T0.plusMinutes(2));
         store.get(2).setExpiresAt(T0.plusMinutes(3));
 
-        List<SessionResponse> sessions = tokenService.listSessions(user.getId());
+        List<SessionResponse> sessions = tokenService.listSessions(user.getId(), null);
 
         assertThat(sessions).singleElement().satisfies(session ->
                 assertThat(session.userAgent()).isEqualTo("Live"));

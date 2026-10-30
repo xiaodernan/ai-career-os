@@ -32,6 +32,23 @@ export interface Page<T> {
   size: number;
 }
 
+/**
+ * One signed-in device on `GET /users/me/sessions` (25.1, 38.3).
+ *
+ * One refresh-token family is one row, however often it rotates. `current` marks the
+ * family whose access token answered the list request — the door the reader is looking
+ * through — so the screen can say what closing it means.
+ */
+export interface AccountSession {
+  id: string;
+  userAgent: string | null;
+  clientIp: string | null;
+  startedAt: string;
+  lastSeenAt: string | null;
+  expiresAt: string | null;
+  current: boolean;
+}
+
 /* ------------------------------------------------------------------ */
 /* Resumes                                                             */
 /* ------------------------------------------------------------------ */
