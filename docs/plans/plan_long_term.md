@@ -487,11 +487,22 @@
       “Startup gating” 三行表。四个部署闸门一起 21 条通过。ai-service 全套 1903 通过、
       48 失败、1 跳过——48 条在父提交的干净检出上完全同样失败，全是 37/38 人口移动留下的
       census 债，本单元一条不碰，修复列为下一单元。后端 1128、前端 877 不变；39.2b 随后把 48 条 census 债清零（五道闸门 8/8、8/8、32/32、9/9、7/7，全套 1951 通过 / 1 跳过、0 失败），未改产品代码。
-    - 39.3 启动时用一行说清“我成了什么”：环境、端口、db 主机与库名（不是带密码的 URL）、
-      Redis 主机、存储端点与 bucket、AI 主机、邮件传输 bean、push 是否有密钥、哪些调度器
-      开着；用绑定的 bean 与属性拼，单测塞进哨兵机密并断言一个都不出现。
+    - 39.3 启动时用一行说清“我成了什么”（已完成）：`BootReport` 监听 ApplicationReadyEvent，
+      打印 `boot: env=... port=... db=host/path redis=host storage=host bucket=name ai=host
+      mail=console|smtp push=off|keypair schedulers=[...]`。事实全部来自进程真正绑定的对象——
+      AppProperties、Boot 的 datasource 与 Redis 属性、实际选中的 mail/push bean、store bean
+      是否存在、上下文里声明 `@Scheduled` 的 bean——不回读环境；URL 只取主机从不回显，读不出的
+      值写 `unset`/`unparseable`，push 只报开关、不带 VAPID 密钥。Spring 6.2 的
+      `Task.getRunnable()` 返回 `OutcomeTrackingRunnable`，`ScheduledTaskHolder` 报不出 bean 名，
+      于是改为上下文扫描，并在真实 AnnotationConfigApplicationContext 上测。`BootReportTest`
+      3 条：哨兵机密的精确整句（断言哨兵、`jdbc:`、`postgresql`、`redis://`、`@` 均不出现）、
+      三处关闭的 dev 句、坏 URL 只报 unparseable 不回显。RUNBOOK 新增“A stack that looks
+      healthy and is the wrong one”，architecture.md 包树加 `boot/`；knob census 把报告登记为
+      storage.endpoint、storage.bucket、ai-service.base-url、deployment.env 的读者（只描述、
+      不决策）。后端非 IT 1040 全绿（1037+3）；ai-service 全套 1951 通过、1 跳过、0 失败
+      （212.73s），knob 闸门 7/7。
     - 39.4 关停先收尾再关门：graceful + 有界的 lifecycle 超时，配置契约测试钉住。
-    下一步：Epic 39 只剩 39.3（启动自述）与 39.4（优雅关停）。
+    下一步：39.4（优雅关停）。
 
 
 ## 开发协议（每个任务）

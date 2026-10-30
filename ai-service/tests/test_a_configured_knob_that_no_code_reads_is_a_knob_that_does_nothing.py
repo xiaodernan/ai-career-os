@@ -34,8 +34,9 @@ switch** (`APP_HTTP_TRUST_FORWARDED_FOR` sits in neither example because it is a
 `DEPLOYMENT.md`'s checklist is where an operator meets it -- putting it in the copy-me dev file would invite
 a directly reached backend to trust a header any client can write), and the **env-only key**
 (`app.email.console.log-body` is reachable from the environment, is stated in `docs/API.md`, is named in no
-env example and written in no yml). What this gate reports is a population, not a bug list: 22 accessor
-readers, 10 `@Value` leaf binders (the web base-url, the mail link secret and the eight mail knobs) plus the env-only mail switch,
+env example and written in no yml). What this gate reports is a population, not a bug list: 23 accessor
+readers, 12 `@Value` leaf binders (the web base-url, the mail link secret, the MFA secret, the inbound
+domain and the eight mail knobs) plus the env-only mail switch,
 1 condition, 2 bound-but-unread leaves, 1 field that is the shadow of a live key.
 Two of those readings are each taken twice on purpose, because each pair was found by turning one of them off:
 `AppProperties`'s nested classes are enumerated from the class declarations *and* from the `private final`
@@ -125,17 +126,27 @@ READERS = {
     "internal.token": ("Internal", "token", "getToken",
                        ("ai/HttpAiServiceClient.java", "ai/SseRelayService.java", "auth/security/InternalApiFilter.java",
                         "config/ProductionGuard.java")),
-    "storage.endpoint": ("Storage", "endpoint", "getEndpoint", ("storage/MinioStorageService.java",)),
+    # Since 39.3 the boot line names the object store's host and bucket: it reads the
+    # endpoint to keep the host and drops the rest of the URL. The store still signs
+    # against the whole thing, so the two readers are one decision each.
+    "storage.endpoint": ("Storage", "endpoint", "getEndpoint",
+                         ("boot/BootReport.java", "storage/MinioStorageService.java")),
     # Since 31.9 the guard reads the credential pair to refuse a prod boot on the
     # repository's published object-store defaults; the store itself still reads all
-    # four keys, so the pair legitimately has two readers and the other two have one.
+    # four keys, and since 39.3 the boot line reads the endpoint and bucket as well --
+    # the credentials' second reader is the guard, the address's is the report.
     "storage.access-key": ("Storage", "accessKey", "getAccessKey",
                            ("config/ProductionGuard.java", "storage/MinioStorageService.java")),
     "storage.secret-key": ("Storage", "secretKey", "getSecretKey",
                            ("config/ProductionGuard.java", "storage/MinioStorageService.java")),
-    "storage.bucket": ("Storage", "bucket", "getBucket", ("storage/MinioStorageService.java",)),
+    "storage.bucket": ("Storage", "bucket", "getBucket",
+                       ("boot/BootReport.java", "storage/MinioStorageService.java")),
+    # 39.3's boot line adds a reader that prints the host of this URL and never the
+    # URL: the client calls it, the relay forwards to it, and the report says which
+    # ai-service the process actually became.
     "ai-service.base-url": ("AiService", "baseUrl", "getBaseUrl",
-                            ("ai/HttpAiServiceClient.java", "ai/SseRelayService.java")),
+                            ("ai/HttpAiServiceClient.java", "ai/SseRelayService.java",
+                             "boot/BootReport.java")),
     # The rate-limit knobs are read by the filter that enforces them and, since
     # 16.2, by the status route that reports them — a knob with two readers
     # still has to be the one the operator edits, and the table names both so
@@ -170,10 +181,10 @@ READERS = {
     "http.trust-forwarded-for": ("Http", "trustForwardedFor", "isTrustForwardedFor",
                                  ("auth/web/AuthController.java", "ratelimit/RateLimitFilter.java")),
     # The deployment switch is read by the bean that refuses a prod boot on the
-    # repository's published secrets; it is a knob like any other, and a second
-    # reader would be another place that decides what "prod" means.
+    # repository's published secrets and, since 39.3, by the boot line that names the
+    # environment it became -- a report, not a second decision about what "prod" means.
     "deployment.env": ("Deployment", "env", "getEnv",
-                       ("config/ProductionGuard.java",)),
+                       ("boot/BootReport.java", "config/ProductionGuard.java")),
     # The retention window is read only by the sweep it bounds: a second reader
     # (a status route, a manual trigger) would be a caller deciding row ages on
     # its own, so the single site is the claim.

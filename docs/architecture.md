@@ -74,6 +74,7 @@ frontend/backend/ai-service can also run natively for dev (`pnpm dev`, `mvn spri
 │       ├── ai/                   # typed ai-service client + SSE relay
 │       ├── application/          # applications + kanban statuses + notes + reminders
 │       ├── auth/                 # register/login/refresh/logout/reset, JWT, roles
+│       ├── boot/                 # readiness line: what this process became, hosts and choices, no secrets (39.3)
 │       ├── calendar/             # the reminders' read-only ICS feed, per request, stored nowhere (34.1)
 │       ├── common/               # ApiResponse envelope, exceptions, errors, pagination
 │       ├── config/               # security, cors, sse, redis, storage, web envelope

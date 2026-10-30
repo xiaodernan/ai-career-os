@@ -698,3 +698,52 @@ stores one row, so two rows with the same subject are two letters, not a loop.
 and has its own section above. And one silent address is not a reader-visible outage on
 the other accounts: the webhook's 200 is the provider's receipt, and a forged or
 erased-account token's 404 is deliberately indistinguishable from a nonexistent address.
+
+## A stack that looks healthy and is the wrong one
+
+**What you see.** `docker compose ps` shows every service `running` (or even `healthy`),
+the landing page renders, `/api/v1/health` answers `ok` — and still nothing happens: no
+nightly pull, no morning letter, an upload that ends at its first file. Nothing crashed;
+the process came up with different choices than the ones you believe you made. A stale
+container, an override file or an exported shell variable won the race against the
+`.env` you edited.
+
+**Read the boot line first.** `docker compose logs backend | grep 'boot:'` — one line,
+written once at readiness:
+
+```
+boot: env=prod port=8080 db=db.internal/career_os redis=cache.internal storage=objects.internal bucket=career_os_files ai=ai.internal mail=smtp push=keypair schedulers=[AiUsageMetrics, IngestionScheduler, NotificationMailScheduler, ReminderScheduler, RetentionSweeper, WeeklyDigestScheduler]
+```
+
+The line is the process describing the objects it actually bound — bound properties, the
+chosen mail and push beans, whether a store bean exists, and the scheduler beans the
+context really registered — never a re-read of the environment. If it disagrees with
+`.env`, the `.env` you edited is not the one this process loaded.
+
+**The words to look for, and what each means.**
+
+1. `env=dev` where you expected `prod`. The production guards (published secrets,
+   console mail, default object store) all key off this one word, so a dev-labelled
+   production boot has every demo convenience on.
+2. `db=unset` or `db=unparseable`. The datasource never bound; requests will fail after
+   readiness rather than at boot.
+3. `storage=off`. No store bean was created — uploads answer 503 and the resume flow
+   ends at its first file. `bucket=unset` is the other half: a store with no bucket name.
+4. `mail=console`. Letters go to the log, not to a mailbox; a production install that
+   says `console` was never configured. `mail=smtp` is the configured transport.
+5. `push=off`. No VAPID pair: registrations are still stored, but no wake is ever signed.
+6. `schedulers=` missing a name you rely on. The full set is
+   `[AiUsageMetrics, IngestionScheduler, NotificationMailScheduler, ReminderScheduler,
+   RetentionSweeper, WeeklyDigestScheduler]`; an empty list means the clock is off
+   entirely, and one missing name is a bean that did not load — read earlier in the log
+   for why. None of the alarms above can fire from a process with no scheduler, which is
+   why this line comes before them.
+
+**What the line never contains.** Passwords, tokens, JDBC or Redis URLs, SMTP credentials
+or the private VAPID key — only hosts, names and choices. A unit test builds the line
+from sentinel secrets and asserts none of them appears, so an edit that starts echoing a
+URL fails the suite rather than leaking in production.
+
+**When there is no boot line at all.** The application never reached readiness: whatever
+stopped it is earlier in the log. And on a multi-replica deployment, read every replica's
+line — a rolling deploy can leave one process running yesterday's environment.

@@ -3310,8 +3310,8 @@ what did I become, and did I finish what I took before I left.
   forty-eight cases across five cross-language censuses. The replies inbox (37.4) added a
   thirteenth window hook, a second `useApplications` call site and a pager; the account
   cards (38.1–38.5) and the inbound address (37.1–37.3) added routes, error codes,
-  records, toasts and config leaves; a health-test comment (39.1) spelled
-  `app.storage.enabled` a fifth time. None was a product defect — each was a pin that had
+  records, toasts and config leaves; a health-test comment (39.1) spelled the object
+  store's switch a fifth time. None was a product defect — each was a pin that had
   stopped describing the app — and this unit moved no product code.
 
   Window sizes: thirteen list hooks, twelve of them asking for a size and every literal
@@ -3330,12 +3330,12 @@ what did I become, and did I finish what I took before I left.
   among them. Knobs: thirty-seven leaves, eleven holders, twenty-six fields,
   thirty-four env-only keys; `inbound.domain` is a fourth `@Value`-only key (after web,
   mail and security), `ratelimit.inbound-per-minute` is read by the limiter's INBOUND
-  arm, and `app.storage.enabled` now has five flat rows, the fifth 39.1's test comment.
+  arm, and the object store's switch now has five flat rows, the fifth 39.1's comment.
 
   The five gates run 8/8, 8/8, 32/32, 9/9 and 7/7; the full ai-service suite is 1951
   passed, 1 skipped, 0 failed in 161.54s.)
 
-- [ ] **39.3** A boot says what it became, and no secret is in the sentence.
+- [x] **39.3** A boot says what it became, and no secret is in the sentence.
 
   (A boot currently logs what Spring logs and nothing about the choices this deployment
   made. One line at readiness states them: the environment, the port, the database host
@@ -3347,6 +3347,30 @@ what did I become, and did I finish what I took before I left.
   cannot disagree with what the process uses; a unit test builds it from values that
   include sentinel secrets and asserts none appears, and RUNBOOK names the line as the
   first thing to read when a stack looks healthy but is not.)
+
+  (Shipped: `com.careeros.boot.BootReport` listens for `ApplicationReadyEvent` and logs
+  one line — `boot: env=... port=... db=host/path redis=host storage=host bucket=name
+  ai=host mail=console|smtp push=off|keypair schedulers=[...]`. Every fact comes from
+  the object the process is actually using: the bound `AppProperties` and Boot's
+  datasource and Redis properties, the chosen mail and push beans, the store bean's
+  presence, and the context's own bean-definition scan for methods declaring
+  `@Scheduled` — never a re-read of the environment. URLs are parsed for their host and
+  never echoed, a value the line cannot read is named `unset`/`unparseable` rather than
+  quoted, push says on or off without the VAPID pair, and a store bean that does not
+  exist says `storage=off` rather than skipping the half. `BootReportTest`'s three cases
+  pin the exact sentence over sentinel secrets (asserting the sentinel, `jdbc:`,
+  `postgresql`, `redis://` and `@` all absent), the dev sentence where storage, push and
+  the database are off, and the unparseable sentence that must not echo the malformed
+  URL. Spring 6.2's `Task.getRunnable()` hands back an `OutcomeTrackingRunnable`, so the
+  `ScheduledTaskHolder` cannot name a scheduler bean; the context scan can, and the test
+  exercises it against a real `AnnotationConfigApplicationContext`. RUNBOOK gains "A
+  stack that looks healthy and is the wrong one", naming the line as the first read,
+  the six words to look for, and what the line never contains; architecture.md's
+  backend tree gains `boot/`. The config-knob census counts the report as a reader of
+  `storage.endpoint`, `storage.bucket`, `ai-service.base-url` and `deployment.env` —
+  reading them to describe, never to decide. Backend unit suite 1040 green (1037 plus
+  the three here); ai-service 1951 passed, 1 skipped, 0 failed in 212.73s, with the
+  knob census 7/7 among them.)
 
 - [ ] **39.4** A shutdown finishes the request it already took.
 
