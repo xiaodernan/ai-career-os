@@ -167,9 +167,11 @@ def validate_tool_args(name: str, schema: dict, args: dict) -> str | None:
     """A human-readable reason `args` violates the tool's schema, or None.
 
     Only structural violations are rejected -- a missing required property, an
-    unknown property, or a container of the wrong shape. Scalar types are left to
-    the handler's own coercion: `limit: "5"` is a value the handler knows how to
-    read, and rejecting it would turn a usable call into an error.
+    unknown property, a container of the wrong shape, or a value outside a declared
+    `enum`. Scalar types are left to the handler's own coercion: `limit: "5"` is a
+    value the handler knows how to read, and rejecting it would turn a usable call
+    into an error. An enum is different in kind: the handler cannot coerce a word it
+    does not know, it drops it, and a dropped filter silently widens the search.
 
     The point is the message, not the rejection. Python's own TypeError for a
     missing kwarg names no property the model can add back, and for an unknown one
@@ -179,7 +181,8 @@ def validate_tool_args(name: str, schema: dict, args: dict) -> str | None:
     if not isinstance(schema, dict):
         return None
     props = schema.get("properties") or {}
-    for key in schema.get("required") or []:
+    required = set(schema.get("required") or [])
+    for key in required:
         if key not in args:
             return f"missing required property {key!r}"
     if schema.get("additionalProperties") is False:
@@ -202,6 +205,23 @@ def validate_tool_args(name: str, schema: dict, args: dict) -> str | None:
             return f"property {key!r} must be a string"
         if want == "boolean" and not isinstance(value, bool):
             return f"property {key!r} must be a boolean"
+        # A declared enum is a vocabulary the handler will filter on. A value outside
+        # it is dropped silently -- `kinds: ["notes"]` becomes "no filter", so a scoped
+        # search quietly answers from the whole corpus. Name the allowed set instead.
+        allowed = spec.get("enum")
+        if allowed and value not in allowed:
+            # An optional filter sent as "" means "no filter" -- the handlers read it
+            # that way. Rejecting it would turn a call that works today into an error.
+            if not (value == "" and key not in required):
+                return (f"property {key!r} must be one of "
+                        + ", ".join(str(a) for a in allowed))
+        if want == "array" and isinstance(value, list):
+            item_enum = (spec.get("items") or {}).get("enum")
+            if item_enum:
+                bad = [v for v in value if v not in item_enum]
+                if bad:
+                    return (f"property {key!r} contains {bad!r}, which is not one of "
+                            + ", ".join(str(a) for a in item_enum))
     return None
 
 

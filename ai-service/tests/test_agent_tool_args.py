@@ -131,6 +131,51 @@ def test_drop_absent_optionals_drops_null_but_keeps_required_nulls():
         {"name": "", "text": "x"}
 
 
+def test_a_value_outside_the_declared_enum_is_named_with_the_vocabulary():
+    """`kinds: ["notes"]` is not a type error -- it is a word the store does not know.
+
+    `_clean_kinds` drops it, which turns a scoped search into an unscoped one without
+    saying so; the model then answers about a job description when the user asked
+    about their notes. Naming the allowed set lets it correct on the next step.
+    """
+    schema = tools.TOOL_INDEX["search_knowledge_base"].spec().parameters
+    reason = tools.validate_tool_args("search_knowledge_base", schema,
+                                      {"query": "kafka", "kinds": ["notes"]})
+    assert reason and "not one of" in reason
+    assert "note" in reason and "resume" in reason   # the vocabulary is in the message
+    assert tools.validate_tool_args("search_knowledge_base", schema,
+                                    {"query": "kafka", "kinds": ["note", "resume"]}) is None
+
+
+def test_a_scalar_outside_an_enum_is_named_too():
+    schema = {"type": "object",
+              "properties": {"mode": {"type": "string",
+                                      "enum": ["behavioral", "technical"]}},
+              "required": ["mode"]}
+    assert tools.validate_tool_args("t", schema, {"mode": "casual"}) == \
+        "property 'mode' must be one of behavioral, technical"
+    assert tools.validate_tool_args("t", schema, {"mode": "technical"}) is None
+
+
+def test_an_empty_optional_enum_filter_is_not_a_typo():
+    """`remote: ""` is how a caller says "no filter", and the handlers read it that way.
+
+    Rejecting it would break a call that works today; only a *required* enum has to
+    carry a real value.
+    """
+    search = tools.TOOL_INDEX["search_jobs"].spec().parameters
+    assert tools.validate_tool_args("search_jobs", search,
+                                    {"query": "java", "remote": ""}) is None
+    assert "must be one of" in tools.validate_tool_args(
+        "search_jobs", search, {"query": "java", "remote": "anywhere"})
+
+    required = {"type": "object",
+                "properties": {"status": {"type": "string", "enum": ["saved", "applied"]}},
+                "required": ["status"]}
+    assert tools.validate_tool_args("t", required, {"status": ""}) == \
+        "property 'status' must be one of saved, applied"
+
+
 def test_validate_tool_args_names_the_unknown_property_and_the_allowed_set():
     problem = tools.validate_tool_args(
         "get_job", _GET_JOB_SCHEMA, {"job_id": "j1", "verbose": True})
