@@ -200,18 +200,24 @@ export function weightBand(importance: number): WeightBand {
 const MAX_EXPERIENCE_YEARS = 30;
 
 /**
- * `jobs.experience_years` → the one chip the job header draws for it. 0 is a real
- * answer ("no experience required") and must not read as missing; null means the
- * posting never said, so the chip hides instead of inventing "0+".
+ * `jobs.experience_years` → the number the seniority chip draws, or undefined when the
+ * chip hides. 0 is a real answer ("no experience required") and must not read as
+ * missing; null means the posting never said, so the chip hides instead of inventing
+ * "0+".
+ *
+ * The number is the wire fact; the words are the reader's. This function used to mint
+ * the English phrase itself ("3+ years experience"), which the job detail printed
+ * verbatim on a Chinese page — and the copy census could not see it, because the
+ * sentence lived in the data layer rather than in a page. `seniorityWord` picks the
+ * words from the table from this number.
  */
-export function seniorityLabel(
+export function seniorityYears(
   years: number | null | undefined
-): string | undefined {
+): number | undefined {
   if (typeof years !== "number" || !Number.isFinite(years)) return undefined;
   const y = Math.trunc(years);
   if (y < 0 || y > MAX_EXPERIENCE_YEARS) return undefined;
-  if (y === 0) return "Entry level";
-  return `${y}+ year${y === 1 ? "" : "s"} experience`;
+  return y;
 }
 
 export function initialsOf(...parts: (string | undefined | null)[]): string {

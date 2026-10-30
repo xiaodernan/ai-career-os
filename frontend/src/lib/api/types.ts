@@ -166,7 +166,7 @@ export interface Job {
   location?: string | null;
   remoteType?: string | null;
   employmentType?: string | null;
-  experienceLevel?: string | null;
+  experienceYears?: number;
   postedAt?: string | null;
   salaryMin?: number | null;
   salaryMax?: number | null;

@@ -15,6 +15,7 @@ import {
   resumeStatusWord,
   runStatusWord,
   runTriggerWord,
+  seniorityWord,
   JOB_STATUSES,
   REMOTE_TYPES,
   RESUME_STATUSES,
@@ -72,6 +73,20 @@ describe("the enum words", () => {
     }
   });
 
+  it("gives the seniority chip a sentence in both languages", () => {
+    // The three keys are chosen inside `seniorityWord` by a ternary and a branch, so the
+    // used-keys gate's literal `t("…")` scan cannot see them; this list is their census.
+    for (const key of [
+      "jobs.detail.entryLevel",
+      "jobs.detail.experienceYear",
+      "jobs.detail.experienceYears",
+    ]) {
+      for (const locale of LOCALES) {
+        expect(lookup(translations[locale], key), `${key} is missing from ${locale}`).toBeTruthy();
+      }
+    }
+  });
+
   it("keeps an unknown value's English spelling instead of a raw key", () => {
     const zh = tFor("zh");
     // A status the backend adds before this roster does is still readable; a missing
@@ -96,6 +111,13 @@ describe("the enum words", () => {
     expect(resumeStatusWord(zh, "parsed")).toBe(lookup(translations.zh, "resumes.status.parsed"));
     expect(interviewModeName(zh, "system_design")).toBe("系统设计");
     expect(interviewModeHint(zh, "rag")).toBe("检索、分块、重排、引用");
+    // The seniority chip: the count keeps its plus, the word follows the reader.
+    expect(seniorityWord(en, 0)).toBe("Entry level");
+    expect(seniorityWord(en, 1)).toBe("1+ year experience");
+    expect(seniorityWord(en, 3)).toBe("3+ years experience");
+    expect(seniorityWord(zh, 0)).toBe("入门级");
+    expect(seniorityWord(zh, 1)).toBe("1+ 年经验");
+    expect(seniorityWord(zh, 3)).toBe("3+ 年经验");
   });
 
   it("fills a rendered title with the reader's word, not a key", () => {
@@ -182,5 +204,42 @@ describe("the words a page assembles at render time", () => {
       { path: "app/clean.tsx", text: 'const word = t("jobs.status.open");' },
     ];
     expect(assembleCalls(home)).toEqual([]);
+  });
+});
+
+const JOB_DETAIL = "app/(app)/jobs/[id]/page.tsx";
+
+/**
+ * The charge is the field, not the phrase: a surface reading `experienceLevel` is
+ * reading words somebody else chose, before the reader's language was known. A comment
+ * that names the retired field carries no dot, so it stays out of the list.
+ */
+function preWordedSeniority(files: { path: string; text: string }[]): string[] {
+  return files.filter((f) => /\.experienceLevel\b/.test(f.text)).map((f) => f.path);
+}
+
+describe("the seniority chip", () => {
+  it("draws the number the API sends through the table", () => {
+    const files = sources();
+    expect(files.length, "the scan read no files").toBeGreaterThan(150);
+    const page = files.find((f) => f.path.endsWith(JOB_DETAIL));
+    expect(page, "the job detail page is not in the walk").toBeTruthy();
+    // The seam: without this call the chip loses its words entirely, and the unit
+    // cases above would still be green.
+    expect(page!.text).toContain("seniorityWord(t, job.experienceYears)");
+    const offenders = preWordedSeniority(files);
+    expect(
+      offenders,
+      `surfaces reading words the mapper chose:\n${offenders.join("\n")}`,
+    ).toEqual([]);
+  });
+
+  it("would still see a page that came back to a pre-worded field", () => {
+    expect(
+      preWordedSeniority([{ path: "app/probe.tsx", text: "{job.experienceLevel}" }]),
+    ).toEqual(["app/probe.tsx"]);
+    expect(
+      preWordedSeniority([{ path: "lib/api/normalize.ts", text: "// no experienceLevel here" }]),
+    ).toEqual([]);
   });
 });

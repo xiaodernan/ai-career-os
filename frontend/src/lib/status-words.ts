@@ -67,6 +67,22 @@ export function resumeStatusWord(t: TranslateFn, status: string): string {
 }
 
 /**
+ * The seniority chip's words, from the reader's table.
+ *
+ * `jobs.experience_years` is a number on the wire; the mapper used to turn it into the
+ * English phrase ("3+ years experience", "Entry level") before any page saw it, so the
+ * sentence could not be translated and the copy census could not see it. 0 stays a real
+ * answer ("entry level"), and the two English plurals need two keys — `1+ year` is not
+ * `1+ years`.
+ */
+type SentenceFn = (key: string, vars?: Record<string, string | number>) => string;
+
+export function seniorityWord(t: SentenceFn, years: number): string {
+  if (years === 0) return t("jobs.detail.entryLevel");
+  return t(years === 1 ? "jobs.detail.experienceYear" : "jobs.detail.experienceYears", { years });
+}
+
+/**
  * The mode's own name — what the two pickers list and what fills the "{mode}" slot of
  * every title. The roster's label is the fallback, the same shape `stageLabel` uses.
  */

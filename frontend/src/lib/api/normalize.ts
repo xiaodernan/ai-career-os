@@ -51,7 +51,7 @@ import type {
   WeeklyDigest,
 } from "./types";
 import { field } from "./body";
-import { seniorityLabel } from "../format";
+import { seniorityYears } from "../format";
 import { safeHref } from "../safe-href";
 
 /* ------------------------------- primitives ------------------------------ */
@@ -399,10 +399,9 @@ export function normalizeJob(raw: unknown): Job {
     remoteType: str(raw, "remoteType", "remote_type", "workMode", "work_mode"),
     employmentType: str(raw, "employmentType", "employment_type", "type"),
     // The only seniority the backend models is `jobs.experience_years` (Integer on both
-    // JobListItem and JobDetail); nothing ever sent an `experienceLevel` string, so the
-    // header's chip could never appear. Label it here rather than at the call site —
-    // the list, search and saved-job rows all project through this one mapper.
-    experienceLevel: seniorityLabel(num(raw, "experienceYears", "experience_years")),
+    // JobListItem and JobDetail). The mapper carries the number: the chip's words are
+    // the reader's, and a phrase minted here rendered in English on a Chinese page.
+    experienceYears: seniorityYears(num(raw, "experienceYears", "experience_years")),
     postedAt: str(raw, "postedAt", "posted_at", "publishedAt", "published_at"),
     salaryMin: num(raw, "salaryMin", "salary_min", "minSalary", "min_salary"),
     salaryMax: num(raw, "salaryMax", "salary_max", "maxSalary", "max_salary"),

@@ -50,7 +50,7 @@ import { useJob } from "@/lib/hooks/resources";
 import { useCreateApplication, useCreateInterviewSession, useRunJobMatch } from "@/lib/hooks/actions";
 import { list as listOf, pick, rec, str } from "@/lib/api/normalize";
 import { formatSalary } from "@/lib/format";
-import { remoteTypeWord, interviewModeName } from "@/lib/status-words";
+import { remoteTypeWord, interviewModeName, seniorityWord } from "@/lib/status-words";
 import { useLocale } from "@/lib/i18n/locale-context";
 import type { Evidence, JdRequirement, PreparationItem, SkillGap } from "@/lib/api/types";
 import { normalizeJdParsed } from "@/lib/api/normalize";
@@ -207,9 +207,9 @@ export default function JobDetailPage() {
                     {remoteTypeWord(t, job.remoteType)}
                   </Badge>
                 )}
-                {job.experienceLevel && (
+                {job.experienceYears !== undefined && (
                   <Badge variant="outline" className="text-2xs font-normal">
-                    {job.experienceLevel}
+                    {seniorityWord(t, job.experienceYears)}
                   </Badge>
                 )}
               </p>
