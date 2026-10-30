@@ -1032,10 +1032,11 @@ def test_the_java_probe_reads_every_record_the_backend_declares():
     # portability bodies Epic 40 added (`ExportRequest`, `ImportPlanRequest`, `ImportApplyRequest`
     # and `RenderRequest` in `DataPortabilityDtos`) never moved this pin, and 42.1's `MailSettings`
     # (the controller's three-flag answer) joined them. `MailDialRequest` -- the one-boolean body
-    # the settings card PUTs -- took it to 191. This pass counts the whole repository again,
+    # the settings card PUTs -- took it to 191, and the parallel mail wave's
+    # `MailSettingsRow`/reader records took it further. This pass counts the whole repository again,
     # which is why it lands on a number the sentences above do not add up to.
-    assert len(declared) == 191, \
-        f"{len(declared)} records carry a declaration the shared opener reads, not the 191 measured"
+    assert len(declared) == 192, \
+        f"{len(declared)} records carry a declaration the shared opener reads, not the 192 measured"
     problems, renamed = [], []
     for relative, record in declared:
         names = _record_components_at(relative, record)

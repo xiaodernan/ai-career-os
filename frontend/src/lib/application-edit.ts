@@ -54,3 +54,16 @@ export function reminderPatch(
   const next = fromReminderInput(nextInput);
   return next ? { reminderAt: next } : { clearReminderAt: true };
 }
+
+/**
+ * The instant a snoozed reminder should ring: tomorrow at 09:00, local time.
+ *
+ * "Tomorrow morning" is a promise about the wall clock, not about twenty-four hours from now:
+ * a reminder snoozed at 23:50 belongs nine hours later, not a day and ten minutes. The date is
+ * advanced and the hour pinned, so the answer is always in the future — a snooze that landed
+ * in the past would leave the row reading "reminder due" with nothing to press.
+ */
+export function snoozeReminder(now: Date = new Date()): string {
+  const at = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 9, 0, 0, 0);
+  return at.toISOString();
+}

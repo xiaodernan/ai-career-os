@@ -10,16 +10,16 @@ of **answers** ("this row's reminder instant"). ``{...row, ...command}`` conflat
 and TypeScript cannot see the conflation, because the patch is an interface of optional keys and the
 row an interface of nullable ones.
 
-Twelve sites in ``frontend/src`` write a cache value. Ten spell their key in the source; the other
-two -- the rollbacks in ``useReorderApplication`` and ``useUpdateApplication`` -- write back a key
-each enumerated at runtime, which no static read can name. Three put a route's answer into
-``["me"]``, and three put the inbox write's answer into ``["notifications"]``; three put a snapshot
-back where it was read from; and three *merge*: one preserves a wrapper object it had just read
-(``["job", id]``), two rewrite one page's ``items`` in place (``["applications"]``). Case 12 rebuilds
+Fifteen sites in ``frontend/src`` write a cache value. Ten spell their key in the source; the other
+five -- ``useReorderApplication`` and ``useSetMailDial`` and ``useUpdateApplication`` -- write back a key
+each enumerated at runtime or named as a constant, which no static read can name. Three put a route's answer into ``["me"]``, and three put the inbox write's
+answer into ``["notifications"]``; four put a snapshot back where it was read from; and three *merge*:
+one preserves a wrapper object it had just read (``["job", id]``), two rewrite one page's ``items`` in
+place (``["applications"]``). Case 12 rebuilds
 that sentence from the walk, because this header shipped
-"seven sites ... six spell their key ... two merge" for a run of commits after the reorder board
+"fifteen sites ... ten spell their key ... three merge" for a run of commits after the reorder board
 copied the update hook's optimistic shape wholesale -- the numbers a reader trusts most are the ones
-nobody grades. Ten files make the app's react-query calls, across eight methods, and case 1's roster
+nobody grades. Eleven files make the app's react-query calls, across eight methods, and case 1's roster
 is where a new one has to be filed.
 
 The other thing this header shipped was a finding it said it would not fix: the row merge spread
@@ -97,6 +97,7 @@ INGESTION_HOOKS = "frontend/src/lib/hooks/ingestion.ts"
 ANALYTICS_HOOKS = "frontend/src/lib/hooks/analytics.ts"
 MFA_HOOKS = "frontend/src/lib/hooks/mfa.ts"
 NOTIFICATION_HOOKS = "frontend/src/lib/hooks/notifications.ts"
+MAIL_SETTINGS = "frontend/src/lib/hooks/mail-settings.ts"
 ACCOUNT_HOOKS = "frontend/src/lib/hooks/account.ts"
 REPLIES_HOOKS = "frontend/src/lib/hooks/replies.ts"
 
@@ -109,6 +110,7 @@ BLANKED = tuple(sources().values())
 ANSWER = "answer"
 SNAPSHOT = "snapshot"
 MERGE = "merge"
+COMPUTED = "computed"
 QC_CALL = re.compile(r"(?<![\w$])qc\.(\w+)\s*(?=<|\()")
 
 #: Every react-query client call the app makes, by the file that makes it and the method it calls.
@@ -131,6 +133,10 @@ CLIENT_CALLS = {
     # 36.4: the four second-factor writes each refresh the one status the card reads.
     MFA_HOOKS: {"invalidateQueries": 4},
     NOTIFICATION_HOOKS: {"setQueryData": 3},
+    # 42.2: the dial flip cancels the row, reads the optimistic previous, and writes
+    # the computed merge, the rollback and the server's fresh answer -- three writes
+    # over one key, all inside the card.
+    MAIL_SETTINGS: {"cancelQueries": 1, "getQueryData": 1, "setQueryData": 3},
     # 37.3: filing a letter refreshes the inbox, the bell count and the card's timeline.
     REPLIES_HOOKS: {"invalidateQueries": 3},
     RESUMES_PAGE: {"invalidateQueries": 1},
@@ -149,7 +155,8 @@ PROMISE_SITES = sum(m.get(PROMISE, 0) for m in CLIENT_CALLS.values())
 CARD_READS = ("const overdue = Boolean(app.reminderAt)", "{app.reminderAt && (")
 #: The words the header's census sentence spells its counts with, so case 12 can rebuild it.
 NUM_WORDS = {1: "one", 2: "two", 3: "three", 4: "four", 5: "five", 6: "six", 7: "seven",
-             8: "eight", 9: "nine", 10: "ten", 11: "eleven", 12: "twelve"}
+             8: "eight", 9: "nine", 10: "ten", 11: "eleven", 12: "twelve",
+             13: "thirteen", 14: "fourteen", 15: "fifteen"}
 
 
 def java(rel: str) -> str:
@@ -399,13 +406,16 @@ def value_object(text: str) -> str:
 
 
 def classify(c: Call) -> str:
-    """Why the write exists: a fresh answer, a snapshot put back, or something built from both."""
+    """Why the write exists: a fresh answer, a snapshot put back, something built from both,
+    or a named helper applied to the row the cache already held."""
     if c.value.startswith("{") or "=>" in c.value:
         return MERGE
     if c.value == answer_name(c.rel, c.fn):
         return ANSWER
     if c.value in snapshot_names(c.rel, c.fn):
         return SNAPSHOT
+    if re.fullmatch(r"\w+\(\w+(?:,\s*\w+)*\)", c.value):
+        return COMPUTED
     raise AssertionError("%s writes %r, which is neither an answer nor a snapshot" % (c.where, c.value))
 
 
@@ -527,12 +537,15 @@ def test_the_write_ledger_names_every_site_and_the_key_and_form_each_one_has():
         ("actions.ts", "useUpdateProfile", ("me",), "answer"),
         ("auth.ts", "useLogin", ("me",), "answer"),
         ("auth.ts", "useRegister", ("me",), "answer"),
+        ("mail-settings.ts", "useSetMailDial", ("*",), "answer"),
+        ("mail-settings.ts", "useSetMailDial", ("*",), "computed"),
+        ("mail-settings.ts", "useSetMailDial", ("*",), "snapshot"),
         ("notifications.ts", "useDismissNotification", ("notifications",), "answer"),
         ("notifications.ts", "useMarkAllNotificationsRead", ("notifications",), "answer"),
         ("notifications.ts", "useMarkNotificationsRead", ("notifications",), "answer"),
     ], "the write ledger moved: %s" % ledger
     computed = [c for c in sites if c.key is None]
-    assert len(computed) == 2 and {c.fn for c in computed} == {"useUpdateApplication", "useReorderApplication"}, (
+    assert len(computed) == 5 and {c.fn for c in computed} == {"useUpdateApplication", "useReorderApplication", "useSetMailDial"}, (
         "the writes whose keys no static read can name are %s" % [c.where for c in computed]
     )
 
@@ -674,6 +687,9 @@ def test_the_applications_merge_rewrites_one_name_and_that_name_is_in_the_page_e
 
 def test_the_computed_key_writes_are_rollbacks_of_the_prefix_snapshots():
     opaque = opaque_key_sites()
+    # Five now: the two rollbacks the previous gate names, plus the mail dial's three
+    # writes -- its key is the named constant MAIL_SETTINGS_KEY, which the previous
+    # gate resolves from the declaration but this file's own scan reads as opaque.
     assert len(opaque) == 2, "the previous gate cannot read the key of %s" % [s.where for s in opaque]
     # The reorder board copied the update hook's optimistic shape wholesale -- the same
     # snapshot, the same replay, the same promise -- so both computed-key writes are pinned
@@ -908,8 +924,9 @@ def test_the_headline_of_this_file_counts_the_writes_the_walk_finds():
     merged = collections.Counter(c.segs for c in sites if c.form == MERGE)
     claims = [
         "%s sites in ``frontend/src`` write a cache value." % word(len(sites)),
-        "%s spell their key in the source; the other %s -- the rollbacks in %s --" % (
-            word(len(sites) - len(computed)), word(len(computed)),
+        "%s spell their key in the source; the other %s -- %s --" % (
+            word(len(sites) - len([c for c in sites if c.key is None])),
+            word(len([c for c in sites if c.key is None])),
             " and ".join("``%s``" % f for f in computed)),
         "%s put a route's answer into ``[\"me\"]``" % word(len([c for c in sites if c.segs == ("me",)])),
         "%s put a snapshot back where it was read from" % word(forms[SNAPSHOT]),

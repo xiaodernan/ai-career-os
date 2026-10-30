@@ -501,6 +501,10 @@ export function useUpdateApplication() {
     onSettled: (_d, err, vars) => {
       qc.invalidateQueries({ queryKey: ["applications"] });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
+      // The inbox lists the same reminder as a row of its own, so a reminder moved or cleared
+      // from the attention card must not leave the old copy standing there until a reload.
+      if (!err && (vars.patch.reminderAt !== undefined || vars.patch.clearReminderAt))
+        qc.invalidateQueries({ queryKey: ["notifications"] });
       if (!err && vars.patch.status) qc.invalidateQueries({ queryKey: ["application", vars.id, "events"] });
     },
   });

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { fromReminderInput, reminderPatch, toReminderInput } from "./application-edit";
+import { fromReminderInput, reminderPatch, snoozeReminder, toReminderInput } from "./application-edit";
 
 /** Built from local components so the expectations hold in any timezone CI runs in. */
 const LOCAL = new Date(2026, 8, 30, 9, 0);
@@ -48,5 +48,22 @@ describe("reminderPatch", () => {
   it("ignores the distance between two spellings of the same instant", () => {
     const sameMoment = new Date(LOCAL.getTime()).toISOString();
     expect(reminderPatch(sameMoment, toReminderInput(LOCAL.toISOString()))).toEqual({});
+  });
+});
+
+describe("snoozeReminder", () => {
+  it("answers tomorrow at nine, not twenty-four hours away", () => {
+    expect(snoozeReminder(new Date(2026, 9, 30, 23, 50))).toBe(
+      new Date(2026, 9, 31, 9, 0).toISOString()
+    );
+  });
+  it("rolls the month when tomorrow belongs to the next one", () => {
+    expect(snoozeReminder(new Date(2026, 9, 31, 8, 0))).toBe(
+      new Date(2026, 10, 1, 9, 0).toISOString()
+    );
+  });
+  it("lands after the moment it was pressed, even just before midnight", () => {
+    const now = new Date(2026, 9, 30, 23, 59, 30);
+    expect(new Date(snoozeReminder(now)).getTime()).toBeGreaterThan(now.getTime());
   });
 });

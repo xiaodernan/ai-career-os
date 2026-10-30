@@ -34,7 +34,10 @@ import { ShareChart } from "@/components/common/bar-chart";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { missingEndpointMessage } from "@/lib/api/missing-endpoint";
 import { JobCard } from "@/components/jobs/job-card";
-import { APPLICATION_STAGES, stageLabel, stageMeta, stageShort } from "@/lib/pipeline";
+import { AttentionRow } from "@/components/dashboard/attention-row";
+import { APPLICATION_STAGES, stageLabel, stageMeta } from "@/lib/pipeline";
+import { useUpdateApplication } from "@/lib/hooks/actions";
+import { snoozeReminder } from "@/lib/application-edit";
 import { useUser } from "@/lib/hooks/auth";
 import {
   useActivityRuns,
@@ -79,6 +82,9 @@ export default function DashboardPage() {
   // F8.2's spend line: the summary endpoint has existed with no consumer, so the numbers
   // the activity log bills were nowhere the user could see them.
   const aiUsage = useAIUsage();
+  // One write, two answers: the attention card's "tomorrow morning" and "clear" both PATCH the
+  // application, so they share this hook -- and with it, the optimistic merge and the rollback.
+  const settleReminder = useUpdateApplication();
 
   const data = dashboard.data;
   const metrics = data?.metrics;
@@ -363,42 +369,19 @@ export default function DashboardPage() {
                     />
                   ) : (
                     <ul className="divide-y divide-border/60">
-                      {attention.map((row) => {
-                        const meta = stageMeta(row.status ?? "");
-                        const due = row.reason === "reminder_due";
-                        return (
-                          <li key={row.id}>
-                            <Link
-                              href={`/applications?application=${encodeURIComponent(row.id)}`}
-                              className="-mx-2.5 flex items-start gap-3 rounded-lg p-2.5 transition-colors duration-150 hover:bg-accent/40 focus-visible:ring-[3px] focus-visible:ring-primary/30"
-                            >
-                              <span
-                                className={cn(
-                                  "mt-1.5 size-1.5 shrink-0 rounded-full",
-                                  due ? "bg-warning" : "bg-muted-foreground/50"
-                                )}
-                                aria-hidden
-                              />
-                              <span className="min-w-0 flex-1">
-                                <span className="flex items-center gap-2">
-                                  <span className="truncate text-sm font-medium">{row.title}</span>
-                                  <Badge variant={meta.badgeVariant} className="shrink-0">
-                                    {stageShort(t, row.status ?? "")}
-                                  </Badge>
-                                </span>
-                                <span className="mt-0.5 block truncate text-xs text-muted-foreground">
-                                  {row.companyName ? `${row.companyName} · ` : ""}
-                                  {due && row.reminderAt
-                                    ? t("dashboard.reminderDue", { when: relativeTime(row.reminderAt, locale) })
-                                    : row.updatedAt
-                                      ? t("dashboard.lastStep", { when: relativeTime(row.updatedAt, locale) })
-                                      : t("dashboard.noStep")}
-                                </span>
-                              </span>
-                            </Link>
-                          </li>
-                        );
-                      })}
+                      {attention.map((row) => (
+                        <AttentionRow
+                          key={row.id}
+                          row={row}
+                          busy={settleReminder.isPending && settleReminder.variables?.id === row.id}
+                          onSnooze={() =>
+                            settleReminder.mutate({ id: row.id, patch: { reminderAt: snoozeReminder() } })
+                          }
+                          onClear={() =>
+                            settleReminder.mutate({ id: row.id, patch: { clearReminderAt: true } })
+                          }
+                        />
+                      ))}
                     </ul>
                   )}
                   {/* Only when rows are shown: with none listed the empty state above already

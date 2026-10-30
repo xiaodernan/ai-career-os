@@ -33,10 +33,60 @@ each of them.
 
 What stays out is bookkeeping rather than content: tokens and sessions, MFA
 secrets, push subscriptions, notification read state, mail preferences, usage
-events and agent runs, digests and nightly reports — they describe what the
-account did, not what it holds. Epic 40's last unit (40.4) makes the
-distinction a census, so a future table cannot land on the wrong side of it
-without a test failing.
+events and agent runs, and digests — they describe what the account did, not
+what it holds. Epic 40's last unit (40.4) makes the distinction a census, so a
+future table cannot land on the wrong side of it without a test failing. The
+table below is that census's document: every table the migrations create is
+either carried by one of the fifteen sections (itself or nested, like
+`messages` under `conversations`), listed here, or part of the shared
+catalogue no reader owns.
+
+## What the bundle does not carry
+
+Read from `backend/src/main/resources/db/migration` and classified
+2026-10-31. The census gate
+(`ai-service/tests/test_every_reader_table_is_carried_or_excluded.py`) parses
+this table, computes the reader-scoped tables from the migrations (a `user_id`
+column, the `users` root, and any table reachable from those by a foreign
+key), and fails by name when a new table is neither carried nor listed here.
+A reason must start with one of three prefixes:
+
+- **Bookkeeping:** a record of what the account did — a token, a run, a
+  meter — not content it holds.
+- **Rebuilt:** derived data the restore recomputes from something the bundle
+  does carry.
+- **Shared:** not one reader's data at all — the catalogue, or the
+  platform's own run history.
+
+| Table | Why it stays out |
+|---|---|
+| `experiences` | Rebuilt: the resume version's `structured.experience` list is what travels; the service projects it into these rows on write. |
+| `projects` | Rebuilt: the same projection of `structured.projects`. |
+| `educations` | Rebuilt: the same projection of `structured.education`. |
+| `achievements` | Rebuilt: the same projection of `structured.achievements`. |
+| `skills` | Rebuilt: the canonical skill rows are re-created from the structured skill list the version carries. |
+| `resume_skills` | Rebuilt: the version's skill links are the join rows of that same projection. |
+| `knowledge_sources` | Rebuilt: a document is re-ingested from the excerpt the bundle carries, and the ingestion creates the source row again. |
+| `document_chunks` | Rebuilt: that ingestion recomputes the chunks and their embeddings. |
+| `job_matches` | Rebuilt: a match is a computed score, not something the reader wrote; the pair is scored again when it is next opened. |
+| `users` | Bookkeeping: the account itself is what a restore restores into, not content; the bundle names its id and carries no credentials. |
+| `refresh_tokens` | Bookkeeping: a session credential — a restore must not revive a session. |
+| `password_reset_tokens` | Bookkeeping: a credential in flight, not content. |
+| `email_change_tokens` | Bookkeeping: a confirmation in flight, not content. |
+| `user_mfa` | Bookkeeping: an MFA secret belongs to the account's security, not its content. |
+| `user_mfa_recovery_codes` | Bookkeeping: recovery codes are the same secret's spare keys. |
+| `push_subscriptions` | Bookkeeping: a browser registration is a delivery address for signals, not content. |
+| `notification_states` | Bookkeeping: read and dismissed state describes what the account did with a signal. |
+| `weekly_digests` | Bookkeeping: a sent digest is a record of a letter the platform wrote. |
+| `mail_preferences` | Bookkeeping: which letters the account wants is a setting, not content. |
+| `ingestion_runs` | Bookkeeping: a run log of an ingestion the restore performs again. |
+| `application_events` | Bookkeeping: the status timeline of an application whose current status the bundle does carry. |
+| `agent_runs` | Bookkeeping: a record of an agent the reader invoked. |
+| `agent_traces` | Bookkeeping: the steps inside such a run. |
+| `ai_usage_events` | Bookkeeping: a meter, not content. |
+| `companies` | Shared: the company catalogue every reader's postings point at. |
+| `jobs` | Shared: the posting catalogue; a bookmark or an application carries the ids it needs. |
+| `nightly_reports` | Shared: the platform's own nightly measurement of the catalogue, not a reader's data. |
 
 ## The bridge (2026-10-20)
 

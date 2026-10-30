@@ -257,6 +257,10 @@ def walk(rel: str, text: str) -> tuple[list[Site], list[Site], list[Site], list[
     """
     regions = call_regions(text)
     decls, promises, others, opaque = [], [], [], []
+    # A key written as a named constant is readable: the declaration is in this very file, so the
+    # walk resolves the identifier to the array it names instead of filing the call as opaque.
+    consts = {m.group(1): m.start(2) for m in
+              re.finditer(r"(?:export )?const (\w+) = (\[)", text)}
     for index, (name, open_i, end) in enumerate(regions):
         for other, (_, o2, e2) in enumerate(regions):
             if other != index and o2 < e2 and o2 > open_i and e2 < end:
@@ -266,12 +270,17 @@ def walk(rel: str, text: str) -> tuple[list[Site], list[Site], list[Site], list[
         if q:
             a = open_i + 1 + q.start(1)
         else:
-            b = window.find("[")
-            if b < 0:
-                assert name != PROMISE, "%s: an invalidate with no queryKey property" % rel
-                opaque.append(Site(rel, text, open_i + 1, "[?]", name))
-                continue
-            a = open_i + 1 + b
+            # The constant may ride as the positional key or as queryKey's value.
+            ident = re.match(r"\s*([A-Z][A-Z0-9_]+)\b", window) or                 re.search(r"queryKey:\s*([A-Z][A-Z0-9_]+)\b", window)
+            if ident and ident.group(1) in consts:
+                a = consts[ident.group(1)]
+            else:
+                b = window.find("[")
+                if b < 0:
+                    assert name != PROMISE, "%s: an invalidate with no queryKey property" % rel
+                    opaque.append(Site(rel, text, open_i + 1, "[?]", name))
+                    continue
+                a = open_i + 1 + b
         arr_end = balanced_end(text, a, "[", "]")
         assert arr_end <= end, "%s: a queryKey array at %d runs past its %s() call" % (rel, a, name)
         site = Site(rel, text, a, text[a:arr_end], name)
