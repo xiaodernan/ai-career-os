@@ -1,8 +1,9 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-import { ApiError } from "@/lib/api/client";
+import { ApiError, envelopeError } from "@/lib/api/client";
 import { describe as describeError } from "@/lib/hooks/failure";
+import { fill } from "@/lib/i18n/locale-context";
 import { translations } from "@/lib/i18n/translations";
 
 /**
@@ -76,5 +77,38 @@ describe("the sentences for the errors the browser raises", () => {
     const shown = describeError(new ApiError("STREAM_ERROR", "The stream failed.", 502), "fallback");
     expect(shown).toBe(sentence);
     expect(shown).not.toBe("The stream failed.");
+  });
+
+  it("has a sentence for the code the envelope's fallback raises", () => {
+    // A bodyless failure -- a proxy's 502 page, a route that died before the
+    // handler -- reaches `envelopeError` with no envelope at all, and the
+    // client mints the code itself. The scan above reads `new ApiError("CODE"`
+    // literals and cannot see this one, so the code is asked out of the
+    // function that raises it rather than out of a shape in the source.
+    const statuses = [400, 401, 403, 409, 422, 429, 500, 502, 503];
+    for (const language of ["en", "zh"] as const) {
+      for (const status of statuses) {
+        const err = envelopeError(null, status);
+        expect(err.status).toBe(status);
+        expect(err.isNotFound, "a 404 is the version sentence's, not this gate's").toBe(false);
+        const sentence = table(language)[err.code];
+        expect(
+          sentence,
+          `the ${language} table has no sentence for ${err.code} (status ${status})`,
+        ).toBeTruthy();
+        expect(sentence, `${language}.errorCodes.${err.code} is the code itself`).not.toBe(err.code);
+      }
+    }
+  });
+
+  it("shows the status in that sentence, not the client's English", () => {
+    const shown = describeError(envelopeError(null, 502), "fallback");
+    expect(shown).toBe(fill(table("en").HTTP_ERROR, { status: 502 }));
+    expect(shown).not.toBe("Request failed with status 502");
+    for (const language of ["en", "zh"] as const) {
+      const sentence = fill(table(language).HTTP_ERROR, { status: 502 });
+      expect(sentence, `${language}.errorCodes.HTTP_ERROR does not carry the status`).toContain("502");
+      expect(sentence).not.toContain("{status}");
+    }
   });
 });

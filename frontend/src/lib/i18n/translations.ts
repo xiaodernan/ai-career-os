@@ -1643,6 +1643,8 @@ export const translations = {
 
       FORBIDDEN: "You do not have access to that.",
 
+      HTTP_ERROR: "The server returned an error (status {status}).",
+
       INGESTION_FEED_NOT_FOUND: "That scheduled feed is no longer here.",
 
       INGESTION_RUN_NOT_FOUND: "That sweep run is no longer here.",
@@ -4269,6 +4271,8 @@ export const translations = {
       FILE_TOO_LARGE: "文件超出了允许的大小。",
 
       FORBIDDEN: "你没有权限访问它。",
+
+      HTTP_ERROR: "服务器返回了错误（状态码 {status}）。",
 
       INGESTION_FEED_NOT_FOUND: "这个定时抓取任务已经不在了。",
 

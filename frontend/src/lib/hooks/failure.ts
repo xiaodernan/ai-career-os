@@ -47,7 +47,9 @@ import { translate } from "@/lib/i18n/locale-context";
 export function describe(err: unknown, fallbackKey?: string): string {
   const fallback = fallbackKey ? translate(fallbackKey) ?? fallbackKey : "";
   if (err instanceof ApiError) {
-    const sentence = translate(`errorCodes.${err.code}`);
+    // The status is the one diagnostic a bodyless failure has; sentences without a
+    // hole ignore it, and `fill` leaves an unknown hole alone rather than blanking it.
+    const sentence = translate(`errorCodes.${err.code}`, { status: err.status });
     if (sentence) return sentence;
     if (err.isNotFound) return missingEndpointMessage();
     return err.message || fallback;
