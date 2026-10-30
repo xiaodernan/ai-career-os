@@ -121,6 +121,10 @@ function salaryAmount(n: number, currency?: string | null): string {
 /**
  * Salary band, e.g. "$40k–$60k" / "¥30–45万". Missing parts are dropped.
  *
+ * Two equal bounds are a point, not a floor: the percentile bars, the counter-offer
+ * anchor and the copilot's figures pass one value twice, and "$50k+" claimed a minimum
+ * the number never stated. Only a band with no ceiling gets the plus.
+ *
  * The ceiling-only branch speaks through `upTo`; its default is neutral rather than the
  * English "up to" this function used to mint, so a caller that never learned about the
  * parameter cannot put English on a Chinese page.
@@ -133,7 +137,7 @@ export function formatSalary(
 ): string | null {
   if (min == null && max == null) return null;
   const fmt = (n: number) => salaryAmount(n, currency);
-  if (min != null && max != null && min !== max) return `${fmt(min)}–${fmt(max)}`;
+  if (min != null && max != null) return min === max ? fmt(min) : `${fmt(min)}–${fmt(max)}`;
   if (min != null) return `${fmt(min)}+`;
   const ceiling = fmt(max as number);
   return upTo ? upTo(ceiling) : `≤${ceiling}`;

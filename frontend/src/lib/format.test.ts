@@ -58,6 +58,15 @@ describe("formatSalary", () => {
     expect(formatSalary(50000, null, "USD", spy)).toBe("$50k+");
     expect(asked).toEqual([]);
   });
+  it("draws two equal bounds as a point, not a floor", () => {
+    // The growth and offer percentile bars, the counter-offer anchor and the copilot's
+    // figures pass one value twice; the min-only branch used to answer "$50k+", which
+    // claims a minimum the number never stated.
+    expect(formatSalary(50000, 50000, "USD")).toBe("$50k");
+    expect(formatSalary(300000, 300000, "CNY")).toBe("30万");
+    // A band with no ceiling is still a floor.
+    expect(formatSalary(50000, null, "USD")).toBe("$50k+");
+  });
   it("returns null when both bounds are missing", () => {
     expect(formatSalary(null, null, null)).toBeNull();
   });
