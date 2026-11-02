@@ -1,0 +1,165 @@
+"use client";
+
+import * as React from "react";
+import Link from "next/link";
+import { ArrowUpRight } from "lucide-react";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { relativeTime } from "@/lib/format";
+import { useLocale } from "@/lib/i18n/locale-context";
+import type { Application, ApplicationPacket } from "@/lib/api/types";
+
+/**
+ * The pipeline packet attached to one application.
+ *
+ * The application used to show three raw uuids, which is not something a reader can check.
+ * This panel resolves each link into the label its owner would recognise -- the resume's title
+ * and version, the JD's role and company, the match's score -- and links to the screen that
+ * holds it. A linked column whose row can no longer be read is not drawn as "not linked": the
+ * two mean different things to someone deciding whether the packet they sent was complete.
+ */
+
+type Translate = (key: string, vars?: Record<string, string | number>) => string;
+
+interface PacketRow {
+  key: "resume" | "jd" | "match";
+  label: string;
+  primary: string;
+  secondary?: string;
+  href?: string;
+  state: "ready" | "unavailable" | "missing";
+}
+
+export interface ApplicationPacketPanelProps {
+  application: Application;
+  packet?: ApplicationPacket | null;
+  loading?: boolean;
+  failed?: boolean;
+}
+
+function resumeRow(
+  packet: ApplicationPacket,
+  t: Translate,
+  locale: "en" | "zh"
+): PacketRow {
+  const value = packet.resume;
+  const secondary = [value?.label, value?.kind !== value?.label ? value?.kind : null]
+    .filter(Boolean)
+    .join(" · ");
+  return {
+    key: "resume",
+    label: t("applications.dialog.resumeVersionLink"),
+    primary: value?.title || t("applications.dialog.packet.untitledResume"),
+    secondary: [secondary, value?.createdAt ? relativeTime(value.createdAt, locale) : ""]
+      .filter(Boolean)
+      .join(" · "),
+    href: value?.resumeId ? `/resumes/${encodeURIComponent(value.resumeId)}` : undefined,
+    state: !packet.resumeLinked ? "missing" : value ? "ready" : "unavailable",
+  };
+}
+
+function jdRow(application: Application, packet: ApplicationPacket, t: Translate, locale: "en" | "zh"): PacketRow {
+  const value = packet.jd;
+  return {
+    key: "jd",
+    label: t("applications.dialog.jdAnalysis"),
+    primary: value?.title || application.title,
+    secondary: [value?.companyName, value?.createdAt ? relativeTime(value.createdAt, locale) : ""]
+      .filter(Boolean)
+      .join(" · "),
+    href: value?.jobId ? `/jobs/${encodeURIComponent(value.jobId)}` : undefined,
+    state: !packet.jdLinked ? "missing" : value ? "ready" : "unavailable",
+  };
+}
+
+function matchRow(packet: ApplicationPacket, t: Translate, locale: "en" | "zh"): PacketRow {
+  const value = packet.match;
+  return {
+    key: "match",
+    label: t("applications.dialog.match"),
+    primary: value?.overall != null
+      ? t("applications.dialog.packet.matchScore", { score: Math.round(value.overall * 100) })
+      : t("applications.dialog.packet.untitledMatch"),
+    secondary: value?.createdAt ? relativeTime(value.createdAt, locale) : undefined,
+    href: value?.jobId ? `/jobs/${encodeURIComponent(value.jobId)}` : undefined,
+    state: !packet.matchLinked ? "missing" : value ? "ready" : "unavailable",
+  };
+}
+
+function Status({ row, t }: { row: PacketRow; t: Translate }) {
+  if (row.href) {
+    return (
+      <Button asChild size="sm" variant="ghost">
+        <Link href={row.href}>
+          {t("applications.dialog.packet.open")}
+          <ArrowUpRight aria-hidden />
+        </Link>
+      </Button>
+    );
+  }
+  return (
+    <Badge variant={row.state === "unavailable" ? "warning" : "outline"} className="shrink-0">
+      {row.state === "unavailable"
+        ? t("applications.dialog.packet.unavailable")
+        : t("applications.dialog.packet.notLinked")}
+    </Badge>
+  );
+}
+
+export function ApplicationPacketPanel({
+  application,
+  packet,
+  loading = false,
+  failed = false,
+}: ApplicationPacketPanelProps) {
+  const { t, locale } = useLocale();
+  const headingId = React.useId();
+  const rows = packet
+    ? [resumeRow(packet, t, locale), jdRow(application, packet, t, locale), matchRow(packet, t, locale)]
+    : [];
+  const allMissing = packet != null && !packet.resumeLinked && !packet.jdLinked && !packet.matchLinked;
+
+  return (
+    <section className="space-y-2" aria-labelledby={headingId}>
+      <h4 id={headingId} className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+        {t("applications.dialog.pipelineLinks")}
+      </h4>
+      {loading ? (
+        <div className="space-y-2" aria-label={t("applications.dialog.packet.loading")}>
+          <Skeleton className="h-14 w-full" />
+          <Skeleton className="h-14 w-full" />
+          <Skeleton className="h-14 w-full" />
+        </div>
+      ) : failed ? (
+        <p role="alert" className="text-sm text-destructive">
+          {t("applications.dialog.packet.failed")}
+        </p>
+      ) : (
+        <>
+          <ul className="divide-y divide-border/70 rounded-lg border border-border/70">
+            {rows.map((row) => (
+              <li key={row.key} className="flex items-center gap-3 p-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs text-muted-foreground">{row.label}</p>
+                  <p className="truncate text-sm font-medium">{row.primary}</p>
+                  {row.secondary ? (
+                    <p className="truncate text-xs text-muted-foreground">{row.secondary}</p>
+                  ) : null}
+                </div>
+                <Status row={row} t={t} />
+              </li>
+            ))}
+          </ul>
+          {allMissing ? (
+            <p className="text-xs text-muted-foreground">
+              {t("applications.dialog.packet.empty")}
+            </p>
+          ) : null}
+        </>
+      )}
+      <p className="text-xs text-muted-foreground">{t("applications.dialog.pipelineLinksHint")}</p>
+    </section>
+  );
+}

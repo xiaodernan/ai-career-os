@@ -3843,6 +3843,37 @@ telling a reader "no movement" while an answer sits in their inbox.
   reason to need attention. 2 SSR tests, the normalizer's exact shape, and the
   repository's column mapping; 950 frontend tests in 92 files.)
 
+## Epic 47 -- The application remembers its packet
+
+An application stores the resume version, JD analysis and match that stand behind
+it, but the detail dialog could only print their uuids. A uuid is not a packet a
+reader can check: it does not say which resume version, whether it was tailored,
+what the JD asked for, or how the match scored. This epic resolves those links to
+the labels their owners already carry, and keeps the difference between "nothing
+was attached" and "what was attached can no longer be read".
+
+- [x] **47.1** The packet is read as a packet.
+
+  (`GET /api/v1/applications/{id}/packet` resolves the row's three link columns
+  through the same user-scoped repositories that own them: the resume version
+  carries its resume title, label and kind; the JD analysis carries the analyst's
+  own title/company with the posting as fallback; the match carries its score and
+  posting. Each `*Linked` flag comes from the application row, while its value is
+  null when the named row is not the caller's -- so a cross-account id is neither
+  leaked nor mistaken for an empty column. The dialog's uuid list becomes a packet
+  panel with three readable rows, each linking to the screen that owns it. 3
+  service tests, 1 route test, 5 SSR tests and 2 normalizer tests.)
+
+- [x] **47.2** The board says how much of the packet is there.
+
+  (`lib/application-packet.ts` reads the same three link columns the packet route
+  resolves and answers `{linked, total, missing}` in display order. A card with at
+  least one link carries a `Packet 2/3` badge -- warning while incomplete, success
+  when all three are attached -- and its title names the missing artifacts, so the
+  reader knows whether to open the dialog before they do. A card with nothing
+  attached stays quiet: the count cannot tell an untouched application from a
+  broken packet, and it does not pretend to. 3 pure-function tests.)
+
 - [x] **46.2** That sentence opens the letter it is talking about.
 
   (`AttentionItem` carries the letter's own id as `replyId`, read in the same

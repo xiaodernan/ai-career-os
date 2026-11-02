@@ -636,6 +636,7 @@ strings, and `lastTouchAt` is the user's claim about when contact last happened.
 | PATCH | `/applications/{id}` | `{status, position, note, reminderAt, clearReminderAt, offerCompensation, rejectionReason}` — kanban drag & drop; `reminder_at` / `clear_reminder_at` are the accepted aliases, `note` (singular) is the writable one, a null component means "leave it alone" (so removing a reminder travels as `clearReminderAt: true`), and the outcome pair records the compensation on an offer or the reason on a rejection |
 | PUT | `/applications/{id}/reorder` | `{position, status?}` within column |
 | GET | `/applications/{id}/timeline` | status-transition audit events |
+| GET | `/applications/{id}/packet` | the resume version, JD analysis and match this application carries, resolved to readable titles and user-scoped (a `*Linked` flag distinguishes "not attached" from an id that can no longer be read) |
 | DELETE | `/applications/{id}` | |
 
 ### Copilot & conversations

@@ -9,6 +9,7 @@ import type {
   ActivityRun,
   Application,
   ApplicationEvent,
+  ApplicationPacket,
   AppliedCounts,
   ApplyResult,
   AttentionItem,
@@ -668,6 +669,58 @@ export function normalizeApplication(raw: unknown): Application {
     appliedAt: str(raw, "appliedAt", "applied_at") ?? null,
     createdAt: str(raw, "createdAt", "created_at"),
     updatedAt: str(raw, "updatedAt", "updated_at"),
+  };
+}
+
+/** One artifact inside `GET /applications/{id}/packet`; the record's components are the names. */
+function normalizePacketResume(raw: unknown): ApplicationPacket["resume"] {
+  if (!rec(raw)) return null;
+  return {
+    id: str(raw, "id") ?? "",
+    resumeId: str(raw, "resumeId") ?? null,
+    title: str(raw, "title") ?? null,
+    label: str(raw, "label") ?? null,
+    kind: str(raw, "kind") ?? null,
+    createdAt: str(raw, "createdAt") ?? null,
+  };
+}
+
+function normalizePacketJd(raw: unknown): ApplicationPacket["jd"] {
+  if (!rec(raw)) return null;
+  return {
+    id: str(raw, "id") ?? "",
+    jobId: str(raw, "jobId") ?? null,
+    title: str(raw, "title") ?? null,
+    companyName: str(raw, "companyName") ?? null,
+    createdAt: str(raw, "createdAt") ?? null,
+  };
+}
+
+function normalizePacketMatch(raw: unknown): ApplicationPacket["match"] {
+  if (!rec(raw)) return null;
+  return {
+    id: str(raw, "id") ?? "",
+    jobId: str(raw, "jobId") ?? null,
+    overall: num(raw, "overall") ?? null,
+    createdAt: str(raw, "createdAt") ?? null,
+  };
+}
+
+/**
+ * The application packet. `ApplicationPacket` is the one producer and speaks camelCase, so each
+ * nested reader takes exactly the record's own component names. A null asset stays null: the
+ * surrounding `*Linked` flag is what tells the panel whether nothing was attached or the named
+ * row is no longer available.
+ */
+export function normalizeApplicationPacket(raw: unknown): ApplicationPacket {
+  return {
+    applicationId: str(raw, "applicationId") ?? "",
+    resumeLinked: bool(raw, "resumeLinked") ?? false,
+    resume: normalizePacketResume(pick(raw, "resume")),
+    jdLinked: bool(raw, "jdLinked") ?? false,
+    jd: normalizePacketJd(pick(raw, "jd")),
+    matchLinked: bool(raw, "matchLinked") ?? false,
+    match: normalizePacketMatch(pick(raw, "match")),
   };
 }
 

@@ -110,6 +110,13 @@ from tests.test_response_shape_contract import (
 # annotated fields `model_dump()` emits verbatim.
 PRODUCERS = {
     "ApplicationItem": ("java", "application/dto/ApplicationDtos.java"),
+    # The packet's three artifacts and its envelope (roadmap 47.1). Each is its own record in the
+    # same file, so a read of the resume's title is checked against `PacketResume` rather than the
+    # envelope that carries it.
+    "ApplicationPacket": ("java", "application/dto/ApplicationDtos.java"),
+    "PacketResume": ("java", "application/dto/ApplicationDtos.java"),
+    "PacketJd": ("java", "application/dto/ApplicationDtos.java"),
+    "PacketMatch": ("java", "application/dto/ApplicationDtos.java"),
     # One row of `GET /applications/{id}/timeline`. Its audit detail is the `payload`
     # map below, which is why the reader has to be declared at two levels at once.
     "TimelineEvent": ("java", "application/dto/ApplicationDtos.java"),
@@ -851,10 +858,46 @@ READERS: dict[str, dict] = {
         "blind": {},
         "dynamic": {},
     },
+    "normalizePacketResume": {
+        # One artifact of `GET /applications/{id}/packet`: `PacketResume`, whose six components are
+        # exactly the names read below. The record is the only producer and speaks camelCase.
+        "record_of": {"raw": "PacketResume"},
+        "drilled": {},
+        "elements": {},
+        "blind": {},
+        "dynamic": {},
+    },
+    "normalizePacketJd": {
+        # The packet's JD half: `PacketJd`; `jobId` is null for a paste-only analysis, which is a
+        # value the record owns rather than a second spelling for it.
+        "record_of": {"raw": "PacketJd"},
+        "drilled": {},
+        "elements": {},
+        "blind": {},
+        "dynamic": {},
+    },
+    "normalizePacketMatch": {
+        # The packet's match half: `PacketMatch`, whose four components are the names read here.
+        "record_of": {"raw": "PacketMatch"},
+        "drilled": {},
+        "elements": {},
+        "blind": {},
+        "dynamic": {},
+    },
+    "normalizeApplicationPacket": {
+        # The whole packet: `ApplicationPacket` carries the three `*Linked` flags beside the three
+        # nested records. The nested reads are handed their own bindings above, so this reader is
+        # checked only against the envelope's seven components.
+        "record_of": {"raw": "ApplicationPacket"},
+        "drilled": {},
+        "elements": {},
+        "blind": {},
+        "dynamic": {},
+    },
     "normalizeAttention": {
         # The dashboard's attention card: one row of `DashboardResponse.attention`, the
         # `List<AttentionItem>` that sits beside the `needsAttention` count and is built by the same
-        # predicate. `raw` is that row, and the seven names read here are exactly the record's seven
+        # predicate. `raw` is that row, and the ten names read here are exactly the record's ten
         # components -- no snake_case twin for any of them, because the backend has no naming
         # strategy on this direction and a twin beside a live name is a second shape the mapper
         # silently reinterprets. `id` is the read that decides whether a row renders at all (the
@@ -1893,7 +1936,7 @@ def test_a_producer_kind_is_dispatched_by_name_and_never_by_the_fallback():
     raised about a BaseModel that was never declared, or found one and answered the site with keys no
     code writes.
 
-    Measured on this plane: 81 producer rows over 12 kinds -- `java` 47, `pyskel` 9, `pyappend` 6,
+    Measured on this plane: 85 producer rows over 12 kinds -- `java` 51, `pyskel` 9, `pyappend` 6,
     `pyfunc` 6, `pyconst` 3, `pydantic` 3, `jamapof` 2, `japut` 1, `pyadd` 1, `pycons` 1, `pyitem` 1,
     `pyretsub` 1. Both ends come out of the same walk over this file, so a branch and a row cannot
     drift apart quietly.
@@ -1913,12 +1956,12 @@ def test_a_producer_kind_is_dispatched_by_name_and_never_by_the_fallback():
     # 79 with 20.1's two nightly records, both Java rows in the same file; 80 with 20.2's
     # `NightlyVerdict`, the third row that file declares; 81 with the apply receipt, whose reader
     # (`normalizeApplyResult`, `a0eb950`) had been bound to a producer the table never named.
-    assert len(PRODUCERS) == 81, f"{len(PRODUCERS)} rows: the population the counts below are drawn from"
+    assert len(PRODUCERS) == 85, f"{len(PRODUCERS)} rows: the population the counts below are drawn from"
     assert set(counts) == dispatched, \
         (f"the table uses {sorted(set(counts) - dispatched)} with no branch and the chain compares "
          f"{sorted(dispatched - set(counts))} with no rows: a kind that lost its branch has to gain "
          "one, and a kind that lost its rows has to lose the branch or gain the rows back")
-    assert sorted(counts.items()) == [("jamapof", 2), ("japut", 1), ("java", 47), ("pyadd", 1),
+    assert sorted(counts.items()) == [("jamapof", 2), ("japut", 1), ("java", 51), ("pyadd", 1),
                                       ("pyappend", 6), ("pycons", 1), ("pyconst", 3),
                                       ("pydantic", 3), ("pyfunc", 6), ("pyitem", 1), ("pyretsub", 1),
                                       ("pyskel", 9)], \
@@ -1941,7 +1984,7 @@ def test_a_producer_kind_is_dispatched_by_name_and_never_by_the_fallback():
     assert "nosuchkind" in raised and "BaseModel" not in raised, \
         (f"{raised}: an unknown kind must be named as itself -- pointing at a pydantic model is the "
          "misattribution this branch exists to remove")
-    assert len(PRODUCERS) == 81, "the planted row is still in the table the census above measured"
+    assert len(PRODUCERS) == 85, "the planted row is still in the table the census above measured"
 
 
 def _emitted_for(receiver: str | list[str]) -> set[str]:
@@ -2550,12 +2593,14 @@ def test_no_mapper_is_left_unbound():
     # `normalizeNightlyVerdict`, the same card's one-answer read; 47 with 19.2's
     # `normalizeApplyResult`, the apply receipt's four names (`a0eb950` added the reader without
     # moving this population, so the pin had fallen one behind the file).
-    assert len(population) == 47, sorted(population)
+    assert len(population) == 51, sorted(population)
     private = sorted(name for name, exported in _mapper_declarations() if not exported)
     assert private == ["changeFrom", "groupSkillBuckets", "normalizeAttention", "normalizeFollowUp",
+                       "normalizePacketJd", "normalizePacketMatch", "normalizePacketResume",
                        "pathOf", "statusCountsToRows"]
     assert sorted(n for n in private if n in population) == \
-        ["changeFrom", "groupSkillBuckets", "normalizeAttention", "normalizeFollowUp"], \
+        ["changeFrom", "groupSkillBuckets", "normalizeAttention", "normalizeFollowUp",
+         "normalizePacketJd", "normalizePacketMatch", "normalizePacketResume"], \
         "the private half of this census is what #160 added; if it reads empty, the ban is exported-only again"
 
 
@@ -3370,7 +3415,7 @@ def test_the_census_sees_every_read_the_mappers_hold():
     # records the backend now answers with; 46 with 20.2's `normalizeNightlyVerdict`, seven
     # names off the record that answers the same card with one word; 47 with the apply receipt's
     # reader, which had been added to the table's bindings without joining this count.
-    assert len(population) == 47, f"the census population moved: {population}"
+    assert len(population) == 51, f"the census population moved: {population}"
 
     diverged = []
     for name in population:
@@ -3396,7 +3441,7 @@ def test_the_census_sees_every_read_the_mappers_hold():
     # (ten quoted names plus the folded `idOf(raw)`); 358 with 20.2's seven reads in
     # `normalizeNightlyVerdict`, none of them folded; 364 with the apply receipt's six reads --
     # `normalizeIngestionRun`'s two new pairs and `normalizeApplyResult`'s four calls.
-    assert len(whole) == 364, f"{len(whole)} reads by the oracle: recount both totals if this moved"
+    assert len(whole) == 389, f"{len(whole)} reads by the oracle: recount both totals if this moved"
     assert len(whole) == sum(len(_sites(name)) for name in population), \
         "a named read lives outside every mapper the census walks"
     expressions = [site for site in whole if not _BARE.fullmatch(site["receiver"])]
@@ -3559,13 +3604,13 @@ def test_a_call_whose_key_is_a_variable_is_a_population_every_member_has_to_expl
     # 379 with the apply receipt's six calls: `normalizeIngestionRun` gained two paired `pick`s
     # (the `appliedCounts`/`applied_counts` and `appliedAt`/`applied_at` pairs), and
     # `normalizeApplyResult` is four -- the three counts plus the stamp's pair.
-    assert len(calls) == 379, (f"{len(calls)} accessor calls hand something to a key position: "
+    assert len(calls) == 404, (f"{len(calls)} accessor calls hand something to a key position: "
                                "recount the two halves below")
     assert len(nameless) == 16, f"{len(nameless)} calls put a variable where a name is expected"
     counted = {(row["line"], row["accessor"], row["receiver"]) for row in nameless} & \
               {(site["line"], site["name"], site["receiver"]) for site in named}
     assert len(calls) == len(named) + len(nameless) - len(counted), \
-        (f"364 + 16 stopped being 379: the oracle now counts {len(named)} and the census {len(nameless)} "
+        (f"389 + 16 stopped being 404: the oracle now counts {len(named)} and the census {len(nameless)} "
          f"with {sorted(counted)} in common -- one of the three totals moved alone")
     assert [(row[1], row[2]) for row in sorted(counted)] == [("idOf", "h")], \
         (f"the calls that are both nameless and counted are {sorted(counted)}, not one folded `idOf` "
@@ -4147,7 +4192,7 @@ def test_the_bare_read_scanner_agrees_with_a_paired_call_census():
     # `normalizeNightlyReport` (`idOf` is folded, so it is not one of them); 356 with 20.2's
     # seven paired reads in `normalizeNightlyVerdict`; 362 with the apply receipt's six --
     # `normalizeIngestionRun`'s two new pairs and `normalizeApplyResult`'s four calls.
-    assert len(paired) == 362, (f"{len(paired)} accessor calls: the population the bare-read census is "
+    assert len(paired) == 387, (f"{len(paired)} accessor calls: the population the bare-read census is "
                                 "drawn from -- if this drops, the census below is comparing less")
     assert sum(1 for row in paired if row["argc"] == 1) == 1, \
         f"{[(row['owner'], row['receiver']) for row in paired if row['argc'] == 1]} are the bare reads"
@@ -4164,7 +4209,7 @@ def test_the_bare_read_scanner_agrees_with_a_paired_call_census():
     # 20.1's ten quoted calls in `normalizeNightlyReport`; 347 with 20.2's seven quoted
     # calls in `normalizeNightlyVerdict`; 353 with the apply receipt's six quoted calls (two
     # in `normalizeIngestionRun`, four in `normalizeApplyResult`).
-    assert sum(1 for row in paired if row["argc"] > 1 and row["named"]) == 353, \
+    assert sum(1 for row in paired if row["argc"] > 1 and row["named"]) == 378, \
         f"{sum(1 for row in paired if row['argc'] > 1 and row['named'])}: every-name-quoted is what " \
         "`_sites` reads, so this number is the size of the census every other rule here trusts"
     loose = [row for row in paired if row["argc"] > 1 and not row["named"]]
@@ -4219,7 +4264,7 @@ def test_the_spread_receiver_scanner_agrees_with_the_paired_walk(monkeypatch):
     # ten reads in `normalizeNightlyReport`; 356 with 20.2's seven reads in
     # `normalizeNightlyVerdict`; 362 with the apply receipt's six, the same calls the census above
     # gained.
-    assert len(walked) == 362, (f"{len(walked)} accessor calls: the population both censuses are drawn "
+    assert len(walked) == 387, (f"{len(walked)} accessor calls: the population both censuses are drawn "
                                  "from")
     spread = [row for row in walked if row["spread"]]
     assert [(row["name"], row["owner"], row["receiver"]) for row in spread] == [

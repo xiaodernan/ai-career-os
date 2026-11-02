@@ -1,11 +1,13 @@
 package com.careeros.application.web;
 
 import com.careeros.application.dto.ApplicationDtos.ApplicationItem;
+import com.careeros.application.dto.ApplicationDtos.ApplicationPacket;
 import com.careeros.application.dto.ApplicationDtos.CreateApplicationRequest;
 import com.careeros.application.dto.ApplicationDtos.ReorderRequest;
 import com.careeros.application.dto.ApplicationDtos.TimelineEvent;
 import com.careeros.application.dto.ApplicationDtos.UpdateApplicationRequest;
 import com.careeros.application.service.ApplicationService;
+import com.careeros.application.service.ApplicationPacketService;
 import com.careeros.common.AuthUser;
 import com.careeros.common.CurrentUser;
 import com.careeros.common.PageDTO;
@@ -31,9 +33,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class ApplicationController {
 
     private final ApplicationService applications;
+    private final ApplicationPacketService packets;
 
-    public ApplicationController(ApplicationService applications) {
+    public ApplicationController(ApplicationService applications, ApplicationPacketService packets) {
         this.applications = applications;
+        this.packets = packets;
     }
 
     @GetMapping
@@ -71,6 +75,11 @@ public class ApplicationController {
     @GetMapping("/{id}/timeline")
     public List<TimelineEvent> timeline(@CurrentUser AuthUser user, @PathVariable UUID id) {
         return applications.timeline(user.id(), id);
+    }
+
+    @GetMapping("/{id}/packet")
+    public ApplicationPacket packet(@CurrentUser AuthUser user, @PathVariable UUID id) {
+        return packets.packet(user.id(), id);
     }
 
     @DeleteMapping("/{id}")

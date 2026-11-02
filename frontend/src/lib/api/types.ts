@@ -385,6 +385,49 @@ export interface Application {
   updatedAt?: string;
 }
 
+/** The resume version an application carries, resolved to the labels a reader can check. */
+export interface ApplicationPacketResume {
+  id: string;
+  resumeId?: string | null;
+  title?: string | null;
+  label?: string | null;
+  kind?: string | null;
+  createdAt?: string | null;
+}
+
+/** The JD analysis an application carries; `jobId` is null for a paste-only analysis. */
+export interface ApplicationPacketJd {
+  id: string;
+  jobId?: string | null;
+  title?: string | null;
+  companyName?: string | null;
+  createdAt?: string | null;
+}
+
+export interface ApplicationPacketMatch {
+  id: string;
+  jobId?: string | null;
+  overall?: number | null;
+  createdAt?: string | null;
+}
+
+/**
+ * `GET /applications/{id}/packet`: the three pipeline artifacts this application points at.
+ *
+ * A `*Linked` flag comes from the application's own column; its value is null when that column
+ * is empty, or when the row it names cannot be read by this account. The two states are kept
+ * apart on purpose: one means "nothing was attached", the other means "what was attached is gone".
+ */
+export interface ApplicationPacket {
+  applicationId: string;
+  resumeLinked: boolean;
+  resume?: ApplicationPacketResume | null;
+  jdLinked: boolean;
+  jd?: ApplicationPacketJd | null;
+  matchLinked: boolean;
+  match?: ApplicationPacketMatch | null;
+}
+
 /**
  * One audit row of an application's history, as `TimelineEvent` puts it on the wire:
  * `{id, kind, payload, createdAt}`, with the detail nested under `payload`.

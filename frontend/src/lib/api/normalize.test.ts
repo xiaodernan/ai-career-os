@@ -9,6 +9,7 @@ import {
   normalizeArtifacts,
   normalizeApplication,
   normalizeApplicationEvent,
+  normalizeApplicationPacket,
   normalizeChatActions,
   normalizeDashboard,
   normalizeDimensions,
@@ -684,6 +685,63 @@ describe("normalizeApplication", () => {
     // ApplicationItem has matchId but not matchScore, and no page renders it today. When the
     // list starts embedding the score, this assertion is the one to change deliberately.
     expect(normalizeApplication(ITEM).matchScore).toBeNull();
+  });
+});
+
+describe("normalizeApplicationPacket", () => {
+  it("keeps the application's linked flag beside the resolved artifact", () => {
+    const packet = normalizeApplicationPacket({
+      applicationId: "app-1",
+      resumeLinked: true,
+      resume: {
+        id: "rv-1",
+        resumeId: "resume-1",
+        title: "Ada CV",
+        label: "tailored",
+        kind: "tailored",
+        createdAt: "2026-10-01T09:00:00Z",
+      },
+      jdLinked: true,
+      jd: null,
+      matchLinked: false,
+      match: null,
+    });
+
+    expect(packet).toEqual({
+      applicationId: "app-1",
+      resumeLinked: true,
+      resume: {
+        id: "rv-1",
+        resumeId: "resume-1",
+        title: "Ada CV",
+        label: "tailored",
+        kind: "tailored",
+        createdAt: "2026-10-01T09:00:00Z",
+      },
+      jdLinked: true,
+      jd: null,
+      matchLinked: false,
+      match: null,
+    });
+  });
+
+  it("reads the match score and job id from the record's own names", () => {
+    const packet = normalizeApplicationPacket({
+      applicationId: "app-1",
+      resumeLinked: false,
+      resume: null,
+      jdLinked: false,
+      jd: null,
+      matchLinked: true,
+      match: { id: "m-1", jobId: "job-1", overall: 0.82, createdAt: "2026-10-03T09:00:00Z" },
+    });
+
+    expect(packet.match).toEqual({
+      id: "m-1",
+      jobId: "job-1",
+      overall: 0.82,
+      createdAt: "2026-10-03T09:00:00Z",
+    });
   });
 });
 

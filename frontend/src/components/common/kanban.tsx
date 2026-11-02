@@ -31,6 +31,7 @@ import {
 } from "@/lib/pipeline";
 import { formatDate } from "@/lib/format";
 import { useLocale } from "@/lib/i18n/locale-context";
+import { packetCompleteness } from "@/lib/application-packet";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -124,6 +125,16 @@ function KanbanCard({
   // card in trouble says so on the board itself instead of only after a trip to the dashboard.
   const now = Date.now();
   const overdue = Boolean(app.reminderAt) && new Date(app.reminderAt as string).getTime() <= now;
+  const packet = packetCompleteness(app);
+  const packetMissing = packet.missing
+    .map((link) =>
+      link === "resume"
+        ? t("applications.dialog.resumeVersionLink")
+        : link === "jd"
+          ? t("applications.dialog.jdAnalysis")
+          : t("applications.dialog.match")
+    )
+    .join(", ");
   const stale =
     !isTerminal(app.status) &&
     Boolean(app.updatedAt) &&
@@ -236,6 +247,22 @@ function KanbanCard({
         {!overdue && stale && (
           <Badge variant="outline" className="w-fit">
             {t("applications.noStep14d")}
+          </Badge>
+        )}
+        {packet.linked > 0 && (
+          <Badge
+            variant={packet.linked === packet.total ? "success" : "warning"}
+            className="w-fit"
+            title={
+              packet.linked === packet.total
+                ? t("applications.packetComplete")
+                : t("applications.packetMissing", { labels: packetMissing })
+            }
+          >
+            {t("applications.packetStatus", {
+              linked: packet.linked,
+              total: packet.total,
+            })}
           </Badge>
         )}
       </div>

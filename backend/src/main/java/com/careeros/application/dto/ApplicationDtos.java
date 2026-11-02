@@ -20,6 +20,37 @@ public final class ApplicationDtos {
                                   String rejectionReason) {
     }
 
+    /** The resume version this application carries, resolved for a reader rather than an id. */
+    public record PacketResume(UUID id, UUID resumeId, String title, String label, String kind,
+                               OffsetDateTime createdAt) {
+    }
+
+    /**
+     * The JD analysis this application carries. `title` and `companyName` are the analyst's own
+     * reading when it named them, and the posting's when it did not; `jobId` is the posting the
+     * analysis belongs to, and is null for a pasted JD that was never attached to one.
+     */
+    public record PacketJd(UUID id, UUID jobId, String title, String companyName,
+                           OffsetDateTime createdAt) {
+    }
+
+    public record PacketMatch(UUID id, UUID jobId, float overall, OffsetDateTime createdAt) {
+    }
+
+    /**
+     * What one tracked application carries from the pipeline.
+     *
+     * <p>The three `*Linked` flags are read from the application's own columns; the value beside
+     * each is null when that column is empty <em>or</em> when the row it names is not the caller's.
+     * A reader can therefore tell "nothing was ever linked" from "the thing that was linked can no
+     * longer be read", without this route revealing whether an id belongs to another account.
+     */
+    public record ApplicationPacket(UUID applicationId,
+                                    boolean resumeLinked, PacketResume resume,
+                                    boolean jdLinked, PacketJd jd,
+                                    boolean matchLinked, PacketMatch match) {
+    }
+
     public record CreateApplicationRequest(@JsonAlias("job_id") UUID jobId,
                                            @JsonAlias("company_id") UUID companyId,
                                            @NotBlank @Size(max = 300) String title,

@@ -7,6 +7,7 @@ import {
   list as listOf,
   normalizeApplication,
   normalizeApplicationEvent,
+  normalizeApplicationPacket,
   normalizeDashboard,
   normalizeIngestionFeed,
   normalizeIngestionRun,
@@ -33,6 +34,7 @@ import type {
   ActivityRun,
   Application,
   ApplicationEvent,
+  ApplicationPacket,
   Company,
   Contact,
   CompanyDetail,
@@ -349,6 +351,16 @@ export function useApplicationEvents(id: string | null) {
       // `payload` stayed invisible.
       return listOf(raw, "items", "events", "content").map(normalizeApplicationEvent);
     },
+  });
+}
+
+/** The artifacts one application points at, resolved to titles the detail dialog can show. */
+export function useApplicationPacket(id: string | null) {
+  return useQuery({
+    queryKey: ["application", id, "packet"],
+    enabled: Boolean(id),
+    queryFn: async (): Promise<ApplicationPacket> =>
+      normalizeApplicationPacket(await api.get<unknown>(endpoints.applicationPacket(id!))),
   });
 }
 

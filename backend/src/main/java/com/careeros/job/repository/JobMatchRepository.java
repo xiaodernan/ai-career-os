@@ -8,6 +8,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface JobMatchRepository extends JpaRepository<JobMatch, UUID> {
 
+    Optional<JobMatch> findByIdAndUserId(UUID id, UUID userId);
+
     Optional<JobMatch> findFirstByUserIdAndJobIdOrderByCreatedAtDesc(UUID userId, UUID jobId);
 
     List<JobMatch> findByUserIdAndJobIdIn(UUID userId, List<UUID> jobIds);

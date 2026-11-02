@@ -4,6 +4,7 @@ import * as React from "react";
 import { CalendarClock, Trash2 } from "lucide-react";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { ErrorState } from "@/components/common/error-state";
+import { ApplicationPacketPanel } from "@/components/applications/application-packet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,7 +36,7 @@ import {
   useDeleteApplication,
   useUpdateApplication,
 } from "@/lib/hooks/actions";
-import { useApplicationEvents } from "@/lib/hooks/resources";
+import { useApplicationEvents, useApplicationPacket } from "@/lib/hooks/resources";
 import { pickerStages, stageBlurb, stageLabel } from "@/lib/pipeline";
 import { useLocale } from "@/lib/i18n/locale-context";
 import type { Application, ApplicationEvent, ApplicationStatus } from "@/lib/api/types";
@@ -95,23 +96,6 @@ function eventText(
   return event.type ?? t("applications.dialog.update");
 }
 
-/**
- * One pipeline link in the drawer: the id the match / tailor / JD-analysis route stored on this row.
- *
- * Renders nothing without an id, so a card that has never been matched does not carry three dashes,
- * and the full uuid is shown rather than a prefix — it is the only handle the reader has on the
- * artifact, and a truncated one cannot be copied into a query.
- */
-function PipelineLink({ label, id }: { label: string; id?: string | null }) {
-  if (!id) return null;
-  return (
-    <div className="flex items-baseline gap-2">
-      <dt className="shrink-0 text-muted-foreground">{label}</dt>
-      <dd className="min-w-0 font-mono text-xs break-all">{id}</dd>
-    </div>
-  );
-}
-
 export function ApplicationDialog({ application, open, onOpenChange }: ApplicationDialogProps) {
   const { t, locale } = useLocale();
   const editing = application !== null;
@@ -119,6 +103,7 @@ export function ApplicationDialog({ application, open, onOpenChange }: Applicati
   const updateApp = useUpdateApplication();
   const deleteApp = useDeleteApplication();
   const events = useApplicationEvents(editing && open ? application.id : null);
+  const packet = useApplicationPacket(editing && open ? application.id : null);
 
   const [title, setTitle] = React.useState("");
   const [companyName, setCompanyName] = React.useState("");
@@ -366,27 +351,15 @@ export function ApplicationDialog({ application, open, onOpenChange }: Applicati
               </ol>
             </section>
 
-            {/* Read-only, and only when there is something to read: these three are written by the
-                match / tailor / JD-analysis routes, never here, so an empty row of UUID inputs would
-                be a form pretending to be editable. */}
-            {(application.resumeVersionId || application.jdId || application.matchId) && (
-              <section className="space-y-2">
-                <h4 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                  {t("applications.dialog.pipelineLinks")}
-                </h4>
-                <dl className="space-y-1 text-sm">
-                  <PipelineLink
-                    label={t("applications.dialog.resumeVersionLink")}
-                    id={application.resumeVersionId}
-                  />
-                  <PipelineLink label={t("applications.dialog.jdAnalysis")} id={application.jdId} />
-                  <PipelineLink label={t("applications.dialog.match")} id={application.matchId} />
-                </dl>
-                <p className="text-xs text-muted-foreground">
-                  {t("applications.dialog.pipelineLinksHint")}
-                </p>
-              </section>
-            )}
+            {/* Read-only: these three are written by the match / tailor / JD-analysis routes,
+                never here. The panel resolves them to titles and links, so the reader sees the
+                packet rather than three uuids. */}
+            <ApplicationPacketPanel
+              application={application}
+              packet={packet.data}
+              loading={packet.isPending}
+              failed={packet.isError}
+            />
           </>
         )}
 
