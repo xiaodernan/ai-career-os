@@ -648,7 +648,16 @@ export function mapInterviewSessionDetail(raw: unknown, fallbackId?: string | nu
   };
 }
 
-export function useInterviewSessions(params?: { page?: number; size?: number }) {
+/**
+ * `applicationId` (57.1) narrows the list to one card's rehearsals -- the
+ * drawer's link lands here. It rides in the same params object as the window,
+ * so each narrowed page is its own cache entry like each page of the whole list.
+ */
+export function useInterviewSessions(params?: {
+  page?: number;
+  size?: number;
+  applicationId?: string;
+}) {
   return useQuery({
     queryKey: ["interview", "sessions", params],
     queryFn: async (): Promise<Page<InterviewSession>> =>

@@ -88,7 +88,9 @@ def test_the_hook_takes_a_window_and_keys_each_page_as_its_own_cache_entry():
     """Case 1: the signature, the key, and the spread over the hook's own 50 literal."""
     body = function_body(read(RESOURCES), "export function useInterviewSessions(")
     assert re.search(r"export function useInterviewSessions\("
-                     r"params\?: \{ page\?: number; size\?: number \}\)", body), (
+                     r"params\?: \{ page\?: number; size\?: number; "
+                     r"applicationId\?: string;? \}\)",
+                     collapse(body)), (
         f"the hook lost its window parameters, so the board cannot ask for a page: "
         f"{collapse(body)[:140]}")
     assert re.search(r'queryKey: \["interview", "sessions", params\]', body), (
@@ -101,7 +103,8 @@ def test_the_hook_takes_a_window_and_keys_each_page_as_its_own_cache_entry():
     # #228 moved the literal to the route's own 20, so the two now agree; what this gate
     # still pins is that the caller's window is spread over it rather than spelled beside it.
     assert hook_calls("useInterviewSessions") == [
-        ("app/(app)/interviews/page.tsx", "{ page: state.page, size: PAGE_SIZE }"),
+        ("app/(app)/interviews/page.tsx",
+         "{ page: state.page, size: PAGE_SIZE, applicationId, }"),
     ], f"the call sites moved: {hook_calls('useInterviewSessions')}"
 
 
@@ -114,15 +117,20 @@ def test_the_board_puts_its_page_in_the_url_and_renders_the_pager_the_rows_earn(
         "default this case measures it against")
     assert "import { Pagination } from \"@/components/common/pagination\";" in page, (
         "the shared pager is no longer imported, so the rows past the first window stay unreachable")
-    assert re.search(r"const PAGE_DEFAULTS: \{ page: number \} = \{ page: 0 \};", page), (
+    assert re.search(r"const PAGE_DEFAULTS: \{ page: number; application\?: string \} = "
+                     r"\{ page: 0 \};", page), (
         "the defaults object is no longer the module-level const `setUrl` needs to stay stable")
-    assert re.search(r"const \[state, setUrl\] = useUrlState<\{ page: number \}>\(\n"
+    assert re.search(r"const \[state, setUrl\] = "
+                     r"useUrlState<\{ page: number; application\?: string \}>\(\n"
                      r"\s*PAGE_DEFAULTS,\n"
                      r"\s*\{ numericKeys: \[\"page\"\] \}\n"
                      r"\s*\);", page), (
         "the page index no longer lives in the URL, so a shared board link always opens page 0")
-    assert re.search(r"const sessions = useInterviewSessions\("
-                     r"\{ page: state\.page, size: PAGE_SIZE \}\);", page), (
+    assert re.search(r"const sessions = useInterviewSessions\(\{\n"
+                     r"\s*page: state\.page,\n"
+                     r"\s*size: PAGE_SIZE,\n"
+                     r"\s*applicationId,\n"
+                     r"\s*\}\);", page), (
         "the screen no longer asks for the URL's page, so the pager's numbers would govern nothing")
 
     at = page.index("<Pagination")
@@ -170,11 +178,12 @@ def test_the_route_binds_the_page_the_board_sends_and_orders_the_rows_it_pages()
     controller = collapse(java(CONTROLLER))
     assert '@RequestMapping("/api/v1/interview/sessions")' in controller, (
         "this case reads the controller whose prefix the screen's endpoint composes from")
-    assert re.search(r'@RequestParam\(defaultValue = "0"\) int page, '
+    assert re.search(r'@RequestParam\(required = false\) UUID applicationId, '
+                     r'@RequestParam\(defaultValue = "0"\) int page, '
                      r'@RequestParam\(defaultValue = "20"\) int size\)', controller), (
         f"the route's own window moved, so the board's PAGE_SIZE restates a different "
         f"number: {controller[controller.index('@GetMapping'):][:220]}")
-    assert "return interviews.list(user.id(), page, size);" in controller, (
+    assert "return interviews.list(user.id(), page, size, applicationId);" in controller, (
         "the handler no longer forwards the request's own page and size to the service, so "
         "the window the board asks for would be decided elsewhere")
     service = collapse(java(SERVICE))
@@ -183,3 +192,36 @@ def test_the_route_binds_the_page_the_board_sends_and_orders_the_rows_it_pages()
         "the list no longer comes back clamped and in a deterministic order, so pages of it "
         "would repeat or skip rows -- or a `?size=` past the ceiling would reach the query "
         "unbounded")
+
+
+def test_the_board_narrows_to_a_card_when_the_url_names_one():
+    """Case 5 (57.1): the drawer's rehearsals link, all the way down.
+
+    The card's row links to `/interviews?application=<id>`; the board has to
+    adopt that key from the URL, hand it to the hook, and let the reader widen
+    the list again. A filter the page keeps in React state only would be lost
+    on reload, and a filter the hook drops would page over the whole history
+    under a link that promised one card's.
+    """
+    page = read(INTERVIEWS_PAGE)
+    assert "const applicationId = state.application;" in page, (
+        "the board no longer reads the card filter out of the URL state")
+    assert re.search(r"applicationId,\s*\n\s*\}\);", page), (
+        "the hook is no longer given the card filter, so the list would be the whole history")
+    assert 't("interviews.filteredToApplication")' in page, (
+        "nothing on the page says the list is narrowed")
+    assert page.count("setUrl({ page: 0, application: undefined })") == 2, (
+        "both the header action and the empty state have to widen the list again")
+
+    hook = collapse(read(RESOURCES))
+    assert "applicationId?: string;" in hook, (
+        "the hook's params no longer name the card filter it forwards")
+
+    controller = collapse(java(CONTROLLER))
+    assert '@RequestParam(required = false) UUID applicationId' in controller, (
+        "the route no longer binds the filter the board sends")
+    service = collapse(java(SERVICE))
+    assert ("findByUserIdAndApplicationIdOrderByStartedAtDescIdAsc( userId, applicationId, "
+            "Paging.of(page, size).pageable())"
+            ) in service, (
+        "the narrowed read is not scoped by the caller and the card together")

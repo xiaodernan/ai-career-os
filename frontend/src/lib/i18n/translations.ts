@@ -2586,6 +2586,7 @@ export const translations = {
       modeReport: "{mode} interview report",
       pickATargetJob: "Pick a target job first",
       openApplication: "Open application",
+      filteredToApplication: "Showing the rehearsals for one application",
       empty: "No mock interviews yet",
       emptyDescription:
         "Pick a mode above — the session is built from your resume and the job you're targeting, so answers are graded against evidence, not trivia.",
@@ -5334,6 +5335,7 @@ export const translations = {
       modeReport: "{mode}报告",
       pickATargetJob: "先挑一个目标职位",
       openApplication: "打开申请",
+      filteredToApplication: "只显示这张申请的演练",
       empty: "还没有模拟面试",
       emptyDescription:
         "在上面选一种模式——这场面试是用你的简历和目标职位搭建的，所以回答是拿证据来评的，不是拿常识。",

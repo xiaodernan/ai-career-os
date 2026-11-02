@@ -2,7 +2,9 @@ package com.careeros.interview.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -71,8 +73,30 @@ class InterviewServiceListDigestTest {
     }
 
     private List<SessionItem> listed() {
-        PageDTO<SessionItem> page = service.list(userId, 0, 20);
+        PageDTO<SessionItem> page = service.list(userId, 0, 20, null);
         return page.items();
+    }
+
+    @Test
+    void aCardIdNarrowsTheListToThatCardsRehearsals() {
+        // 57.1: the drawer's "rehearsals" link lands on a list of this card's
+        // sessions, so the filter has to be a second scope on the query -- not
+        // something the browser re-filters after the fact, which would page
+        // over the whole history and show a page of nothing.
+        UUID card = UUID.randomUUID();
+        InterviewSession row = session(first, "A");
+        when(sessions.findByUserIdAndApplicationIdOrderByStartedAtDescIdAsc(
+                any(), any(), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(row),
+                        PageRequest.of(0, 20), 1));
+        when(digests.forSessions(any())).thenReturn(Map.of());
+
+        List<SessionItem> items = service.list(userId, 0, 20, card).items();
+
+        assertThat(items).hasSize(1);
+        verify(sessions).findByUserIdAndApplicationIdOrderByStartedAtDescIdAsc(
+                eq(userId), eq(card), any(Pageable.class));
+        verify(sessions, never()).findByUserIdOrderByStartedAtDescIdAsc(any(), any(Pageable.class));
     }
 
     @Test

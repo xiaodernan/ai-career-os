@@ -12,6 +12,13 @@ public interface InterviewSessionRepository extends JpaRepository<InterviewSessi
 
     Page<InterviewSession> findByUserIdOrderByStartedAtDescIdAsc(UUID userId, Pageable pageable);
 
+    /**
+     * One card's rehearsals (57.1), newest first -- the same order the board
+     * uses, so the narrowed list reads like the whole list, only shorter.
+     */
+    Page<InterviewSession> findByUserIdAndApplicationIdOrderByStartedAtDescIdAsc(
+            UUID userId, UUID applicationId, Pageable pageable);
+
     Optional<InterviewSession> findByIdAndUserId(UUID id, UUID userId);
 
     long countByUserId(UUID userId);

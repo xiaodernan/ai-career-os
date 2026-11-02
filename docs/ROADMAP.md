@@ -4207,6 +4207,19 @@ application it belonged to.
   section, so a restore into an account that lacks the card is a skip and not an update that
   rewrites the transcript forever. 3 backend unit tests + 1 export assertion + 1 planner test.)
 
+## Epic 57 — the card remembers the practice
+
+The link now points both ways: the list and the report open the card (56.3/56.4), and the card
+has to be able to show what was rehearsed for it. The rehearsal list is the same board, narrowed.
+
+- [x] **57.1** A card's rehearsals are a list.
+
+  (`GET /interview/sessions` takes an optional `applicationId`; the query scopes by the caller
+  *and* the card, so a guessed id is an empty page rather than someone else's history. The page
+  adopts `?application=` from the URL like its page index -- a narrowed list is shareable and a
+  reload does not widen it -- says which card it is showing, and offers one way out: *All
+  interviews*, in the header and in the empty state. 2 backend tests + 1 contract case.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

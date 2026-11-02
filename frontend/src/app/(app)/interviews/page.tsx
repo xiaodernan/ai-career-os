@@ -35,16 +35,24 @@ import { interviewApplicationHref } from "@/lib/interview-target";
 const PAGE_SIZE = 20;
 
 // Module-level so `setUrl` (a `useCallback` keyed on this object) is stable across renders.
-const PAGE_DEFAULTS: { page: number } = { page: 0 };
+const PAGE_DEFAULTS: { page: number; application?: string } = { page: 0 };
 
 export default function InterviewsPage() {
   const { t, locale } = useLocale();
   // The page index lives in the URL, so a reload or a shared list link opens the same window.
-  const [state, setUrl] = useUrlState<{ page: number }>(
+  const [state, setUrl] = useUrlState<{ page: number; application?: string }>(
     PAGE_DEFAULTS,
     { numericKeys: ["page"] }
   );
-  const sessions = useInterviewSessions({ page: state.page, size: PAGE_SIZE });
+  // 57.1: the drawer's rehearsals link names a card, so the list narrows to it.
+  // The filter travels in the URL like the page does, so the narrowed list is
+  // shareable and a reload does not silently widen it back to everything.
+  const applicationId = state.application;
+  const sessions = useInterviewSessions({
+    page: state.page,
+    size: PAGE_SIZE,
+    applicationId,
+  });
   const create = useCreateInterviewSession();
   const router = useRouter();
 
@@ -77,7 +85,16 @@ export default function InterviewsPage() {
         title={t("interviews.title")}
         description={t("interviews.description")}
         actions={
-          <DropdownMenu>
+          <div className="flex items-center gap-2">
+            {applicationId && (
+              <Button
+                variant="outline"
+                onClick={() => setUrl({ page: 0, application: undefined })}
+              >
+                {t("interviews.detail.allInterviews")}
+              </Button>
+            )}
+            <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ai" loading={create.isPending}>
                 <Plus aria-hidden />
@@ -95,9 +112,24 @@ export default function InterviewsPage() {
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
-          </DropdownMenu>
+            </DropdownMenu>
+          </div>
         }
       />
+
+      {applicationId && (
+        // The chip is the answer to "why is this list short": it names the card
+        // the list is scoped to and leads back to it (51.2's deep link).
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+          <Briefcase className="size-4 shrink-0" aria-hidden />
+          <span>{t("interviews.filteredToApplication")}</span>
+          <Button variant="link" size="sm" className="h-auto p-0" asChild>
+            <Link href={interviewApplicationHref(applicationId) ?? "/applications"}>
+              {t("interviews.openApplication")}
+            </Link>
+          </Button>
+        </div>
+      )}
 
       <QueryBoundary
         query={sessions}
@@ -105,9 +137,21 @@ export default function InterviewsPage() {
         empty={{
           icon: <CalendarClock aria-hidden />,
           title: t("interviews.empty"),
-          description:
-            t("interviews.emptyDescription"),
-          action: (
+          // A card with no rehearsals yet is not "no interviews ever": the
+          // narrowed list gets its own action, so the way out is the honest
+          // one -- widen the list -- rather than "pick a target job".
+          description: applicationId
+            ? t("interviews.filteredToApplication")
+            : t("interviews.emptyDescription"),
+          action: applicationId ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setUrl({ page: 0, application: undefined })}
+            >
+              {t("interviews.detail.allInterviews")}
+            </Button>
+          ) : (
             <Button variant="outline" size="sm" asChild>
               <Link href="/jobs">{t("interviews.pickATargetJob")}</Link>
             </Button>

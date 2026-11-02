@@ -42,6 +42,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -390,9 +393,30 @@ class InterviewControllerTest {
     }
 
     @Test
+    void the_list_narrows_to_a_card_when_the_query_names_one() throws Exception {
+        // 57.1: `?applicationId=` is the drawer's rehearsals link. The handler
+        // has to hand the id through -- a filter the route drops would show the
+        // whole history under a link that promised one card's.
+        UUID card = UUID.fromString("77777777-7777-4777-8777-777777777777");
+        InterviewSession row = session("completed");
+        when(sessions.findByUserIdAndApplicationIdOrderByStartedAtDescIdAsc(
+                eq(ALICE), eq(card), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(row),
+                        PageRequest.of(0, 20), 1));
+
+        mvc.perform(get("/api/v1/interview/sessions").param("applicationId", card.toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.items.length()").value(1));
+
+        verify(sessions, never()).findByUserIdOrderByStartedAtDescIdAsc(any(), any(Pageable.class));
+    }
+
+    @Test
     void an_unauthenticated_caller_is_refused_before_the_service_runs() throws Exception {
         SecurityContextHolder.clearContext();
 
+        mvc.perform(get("/api/v1/interview/sessions")).andExpect(status().isUnauthorized());
         mvc.perform(get("/api/v1/interview/sessions/" + SESSION)).andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error.code").value("UNAUTHORIZED"));
         mvc.perform(post("/api/v1/interview/sessions/" + SESSION + "/opening"))
