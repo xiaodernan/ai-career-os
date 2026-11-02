@@ -67,4 +67,15 @@ describe("the inbox's own filter", () => {
     expect(rowsUnder(items, "reply").map((row) => row.key)).toEqual(["b", "c"]);
     expect(rowsUnder(items, "stale")).toEqual([]);
   });
+
+  it("drops the read rows when only the unread are asked for", () => {
+    const items = [
+      item("reminder", "a"),
+      { ...item("reminder", "b"), read: true },
+      { ...item("reply", "c"), read: true },
+    ];
+    expect(rowsUnder(items, null, true).map((row) => row.key)).toEqual(["a"]);
+    expect(rowsUnder(items, "reply", true)).toEqual([]);
+    expect(rowsUnder(items, "reminder", false).map((row) => row.key)).toEqual(["a", "b"]);
+  });
 });

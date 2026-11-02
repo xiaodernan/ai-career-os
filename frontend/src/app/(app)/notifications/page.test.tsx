@@ -170,8 +170,9 @@ describe("the notifications page", () => {
     // The filter row names every kind the inbox is holding, and "All" is the view it opens on.
     expect(html).toContain('aria-label="Filter by kind"');
     expect(html).toContain(">All</button>");
+    expect(html).toContain("Unread only");
     expect(html.match(/aria-pressed="true"/g)).toHaveLength(1);
-    expect(html.match(/aria-pressed="false"/g)).toHaveLength(6);
+    expect(html.match(/aria-pressed="false"/g)).toHaveLength(7);
     expect(html).toContain(`href="/applications?application=${APP_ID}"`);
     expect(html).toContain('aria-label="Mark Backend engineer read"');
     expect(html).toContain('aria-label="Dismiss Backend engineer"');
@@ -233,6 +234,7 @@ describe("the notifications page", () => {
     expect(html).toContain("全部标为已读");
     expect(html).toContain('aria-label="按类型筛选"');
     expect(html).toContain(">全部</button>");
+    expect(html).toContain("只看未读");
     expect(html).toContain("推迟到明早");
     expect(html).toContain("清除");
     expect(html).not.toContain("Your reminder for");
@@ -263,9 +265,9 @@ describe("the notifications page", () => {
       isError: false,
     };
     const html = render();
-    // "All" and the one kind present; no chip for a kind that is not in the list.
+    // "All", the one kind present, and the unread toggle; no chip for a kind not in the list.
     expect(html.match(/aria-pressed="true"/g)).toHaveLength(1);
-    expect(html.match(/aria-pressed="false"/g)).toHaveLength(1);
+    expect(html.match(/aria-pressed="false"/g)).toHaveLength(2);
     expect(html).toContain("New postings from Boards: 3.");
     expect(html).not.toContain("Saved search");
   });

@@ -47,7 +47,7 @@ import type { NotificationItem } from "@/lib/api/types";
 type Translate = (key: string, vars?: Record<string, string | number>) => string;
 
 /** The address bar's filter, absent until the reader picks one. */
-const VIEW_DEFAULTS: { kind?: string } = { kind: undefined };
+const VIEW_DEFAULTS: { kind?: string; unread?: boolean } = { kind: undefined, unread: undefined };
 
 function kindKey(kind: string): string {
   switch (kind) {
@@ -126,11 +126,14 @@ export default function NotificationsPage() {
   const markAll = useMarkAllNotificationsRead();
   const dismiss = useDismissNotification();
   const settleReminder = useUpdateApplication();
-  const [view, setView] = useUrlState<{ kind?: string }>(VIEW_DEFAULTS);
+  const [view, setView] = useUrlState<{ kind?: string; unread?: boolean }>(VIEW_DEFAULTS, {
+    booleanKeys: ["unread"],
+  });
   const kind = asInboxKind(view.kind);
+  const unreadOnly = view.unread === true;
 
   const items = inbox.data?.items ?? [];
-  const rows = rowsUnder(items, kind);
+  const rows = rowsUnder(items, kind, unreadOnly);
   const unread = inbox.data?.unread ?? 0;
   const busy =
     markRead.isPending || markAll.isPending || dismiss.isPending || settleReminder.isPending;
@@ -167,10 +170,11 @@ export default function NotificationsPage() {
         <CardContent className="p-6">
           {items.length > 0 ? (
             <>
-              {/* One kind at a time (45.2): the inbox holds six kinds of signal, and a
-                  reader looking for one of them should not have to read the other five.
-                  Only the kinds actually present get a chip, and the address bar keeps
-                  the choice so a reload lands on the same view. */}
+              {/* One kind at a time (45.2), and the unread ones alone (45.3): the inbox
+                  holds six kinds of signal, and a reader looking for one of them should
+                  not have to read the other five. Only the kinds actually present get a
+                  chip, and the address bar keeps the choice so a reload lands on the
+                  same view. */}
               <div
                 className="mb-4 flex flex-wrap items-center gap-1.5"
                 role="group"
@@ -178,9 +182,9 @@ export default function NotificationsPage() {
               >
                 <Button
                   size="sm"
-                  variant={kind === null ? "secondary" : "ghost"}
-                  aria-pressed={kind === null}
-                  onClick={() => setView({ kind: undefined })}
+                  variant={kind === null && !unreadOnly ? "secondary" : "ghost"}
+                  aria-pressed={kind === null && !unreadOnly}
+                  onClick={() => setView({ kind: undefined, unread: undefined })}
                 >
                   {t("notifications.filterAll")}
                 </Button>
@@ -196,6 +200,17 @@ export default function NotificationsPage() {
                     <span className="text-xs text-muted-foreground">{group.count}</span>
                   </Button>
                 ))}
+                <Button
+                  size="sm"
+                  variant={unreadOnly ? "secondary" : "ghost"}
+                  aria-pressed={unreadOnly}
+                  disabled={unread === 0 && !unreadOnly}
+                  className="ml-auto"
+                  onClick={() => setView({ unread: !unreadOnly })}
+                >
+                  {t("notifications.filterUnread")}
+                  <span className="text-xs text-muted-foreground">{unread}</span>
+                </Button>
               </div>
               {rows.length > 0 ? (
                 <ul className="space-y-2">

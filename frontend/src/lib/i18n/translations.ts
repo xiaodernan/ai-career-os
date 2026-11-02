@@ -1072,6 +1072,7 @@ export const translations = {
       allRead: "Everything here is read.",
       filterAll: "All",
       filterByKind: "Filter by kind",
+      filterUnread: "Unread only",
       filterEmpty: "Nothing under this filter right now.",
       empty: "Nothing needs your attention right now.",
       emptyDescription:
@@ -3865,6 +3866,7 @@ export const translations = {
       allRead: "这里的都已读过。",
       filterAll: "全部",
       filterByKind: "按类型筛选",
+      filterUnread: "只看未读",
       filterEmpty: "这个筛选下暂时没有条目。",
       empty: "现在没有需要你关注的事项。",
       emptyDescription:

@@ -3792,6 +3792,18 @@ sentence of its own, and the tests read each one rather than the shape of the li
   saved search, the reply -- and the description above the list says the same. 5 unit
   tests and 6 SSR tests; 947 frontend tests in 92 files.)
 
+- [x] **45.3** The unread alone are one press away.
+
+  (The same filter row carries an `Unread only` toggle, with the inbox's unread count,
+  on the right; it composes with a chosen kind rather than replacing it, so a reader can
+  ask for the unread recruiter replies and nothing else. The choice rides the same
+  `useUrlState` (`unread=1`), so a reload keeps it, and `rowsUnder` gained a third
+  argument that drops the read rows after the kind filter -- one function still answers
+  what the screen shows. The toggle is disabled when nothing is unread and no unread
+  view is active, because a filter with nothing behind it is a dead button; a reader
+  already in the unread view can always leave it. One more unit test; 948 frontend
+  tests in 92 files.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

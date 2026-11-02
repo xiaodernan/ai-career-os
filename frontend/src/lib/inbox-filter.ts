@@ -40,10 +40,12 @@ export function kindsPresent(items: readonly NotificationItem[]): InboxGroup[] {
   })).filter((group) => group.count > 0);
 }
 
-/** The rows under a chosen kind; no kind means every row. */
+/** The rows under a chosen kind; no kind means every row, and unread-only drops the read. */
 export function rowsUnder(
   items: readonly NotificationItem[],
-  kind: InboxKind | null
+  kind: InboxKind | null,
+  unreadOnly = false
 ): NotificationItem[] {
-  return kind == null ? [...items] : items.filter((item) => item.kind === kind);
+  const filtered = kind == null ? [...items] : items.filter((item) => item.kind === kind);
+  return unreadOnly ? filtered.filter((item) => !item.read) : filtered;
 }
