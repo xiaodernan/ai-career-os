@@ -3886,6 +3886,37 @@ was attached" and "what was attached can no longer be read".
   nowhere is worse than no link. 1 SSR test (`href`), one for the no-id shape,
   and the repository's column mapping; 951 frontend tests in 92 files.)
 
+## Epic 48 — What the Bucket Holds That No Row Names
+
+Epic 44 closed the debt a delete owes the stored copy: the bytes go once no row a retrieval can
+quote names them, and the audit record that kept the key as a retry clue has a window on it. Two
+ways are left for bytes to sit in the bucket with no row naming them at all, and neither has a
+remover. An upload writes the object *before* its rows: `FileIngestService` and `ResumeService`
+`put` the bytes and only then open the transaction that inserts the document and the source, so a
+commit that fails after the put leaves bytes that no row ever named -- invisible to 44.2's reclaim,
+which starts from a row, and invisible to account erasure, which starts from a row too. And 44.3's
+window burns the trail: a reclaim the store refused keeps its key in the retired row only until the
+purge deletes that row, which is why DEPLOYMENT.md can currently say the object is simply an
+orphan. Nothing can see either case, because `StorageService` has no listing -- the bucket is only
+ever walked by the keys the database happens to name. 48.1 gives the port its eyes and censuses who
+may own a key; 48.2 walks the bucket against the rows and takes what no row names after a window,
+turning that sentence into a remover; 48.3 rep-wards the asymmetry that let 44.2's counter ship
+while no rule read it, so a meter cannot be born unwatched again.
+
+- [ ] **48.1** The port can list its bucket, and every key owner is named. (A listing that answers
+  key, last-modified and size, with the refusal path loud rather than short: a partial listing read
+  as a complete one is the defect class this epic must not add to. The census names the two writers
+  and the two columns that can hold a key, so a third owner reddens a gate instead of becoming
+  invisible to the sweep.)
+- [ ] **48.2** A nightly pass reclaims the objects no row names. (List, subtract every key any row
+  names in any status -- a retired row's key is still 44.2's trail, not garbage -- take only objects
+  past a window so an upload mid-transaction keeps its bytes, and delete nothing when the listing
+  failed. Rides the retention heartbeat, counts its outcomes, and alarms when the store refuses.)
+- [ ] **48.3** Every meter that ships is alarmed or excused by name. (The alarms gate reads the
+  rules and asks whether each metric they name is registered; it never asked the reverse, which is
+  how `careeros.storage.objects_reclaimed` shipped with a runbook line telling an operator to read
+  a series nothing watches. Flip the direction and hold the exemptions to a reason each.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
