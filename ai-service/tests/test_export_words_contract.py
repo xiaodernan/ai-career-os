@@ -162,6 +162,10 @@ def _bundle_with_every_section() -> dict:
                            "intent": "interview_invite", "company": "Acme",
                            "role": "Backend",
                            "received_at": "2026-10-29T08:00:00+00:00"}],
+        "cover_letters": [{"id": "l1", "application_id": "a1", "mode": "generate",
+                           "tone": "warm", "length": "short",
+                           "body": "Dear Acme, I would like to join the platform team.",
+                           "created_at": "2026-10-30T08:00:00+00:00"}],
     }
     return ex.build_bundle("11111111-1111-1111-1111-111111111111", raw)
 

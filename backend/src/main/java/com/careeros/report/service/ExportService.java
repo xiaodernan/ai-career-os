@@ -4,6 +4,8 @@ import com.careeros.ai.AiServiceClient;
 import com.careeros.ai.entity.GrowthPlan;
 import com.careeros.ai.repository.GrowthPlanRepository;
 import com.careeros.application.entity.Application;
+import com.careeros.application.entity.ApplicationLetter;
+import com.careeros.application.repository.ApplicationLetterRepository;
 import com.careeros.application.repository.ApplicationRepository;
 import com.careeros.common.Paging;
 import com.careeros.conversation.entity.Conversation;
@@ -80,6 +82,7 @@ public class ExportService {
     private final IngestionFeedRepository feeds;
     private final SavedJobRepository savedJobs;
     private final InboundMailRepository inboundMails;
+    private final ApplicationLetterRepository letters;
     private final JobRepository jobs;
     private final CompanyRepository companies;
 
@@ -88,7 +91,8 @@ public class ExportService {
                           ContactRepository contacts, ConversationRepository conversations,
                           MessageRepository messages, SavedSearchRepository savedSearches,
                           IngestionFeedRepository feeds, SavedJobRepository savedJobs,
-                          InboundMailRepository inboundMails, JobRepository jobs,
+                          InboundMailRepository inboundMails,
+                          ApplicationLetterRepository letters, JobRepository jobs,
                           CompanyRepository companies) {
         this.aiService = aiService;
         this.applications = applications;
@@ -101,6 +105,7 @@ public class ExportService {
         this.feeds = feeds;
         this.savedJobs = savedJobs;
         this.inboundMails = inboundMails;
+        this.letters = letters;
         this.jobs = jobs;
         this.companies = companies;
     }
@@ -154,6 +159,14 @@ public class ExportService {
                 .findByUserIdOrderByReceivedAtDescIdDesc(userId, Paging.first(MAX_ROWS))
                 .getContent().stream()
                 .map(ExportService::toInboundMail)
+                .toList());
+        // The letters the reader wrote with the pipeline (47.4). A relay ended when the tab
+        // closed; a kept letter is the reader's own words about their own search, so it rides
+        // the bundle as its own section rather than as bookkeeping beside the application.
+        sections.put("cover_letters", letters
+                .findByUserIdOrderByCreatedAtDescIdDesc(userId).stream()
+                .limit(MAX_ROWS)
+                .map(ExportService::toLetter)
                 .toList());
         return sections;
     }
@@ -438,6 +451,25 @@ public class ExportService {
      * stays. The link to an application is carried as it is; the restore
      * writes it only when the target account owns that card.
      */
+    /** One kept cover letter, with the row it was written for and the dials it was asked with. */
+    static Map<String, Object> toLetter(ApplicationLetter l) {
+        Map<String, Object> row = new LinkedHashMap<>();
+        row.put("id", l.getId() == null ? null : l.getId().toString());
+        row.put("application_id",
+                l.getApplicationId() == null ? null : l.getApplicationId().toString());
+        row.put("job_id", l.getJobId() == null ? null : l.getJobId().toString());
+        row.put("resume_version_id",
+                l.getResumeVersionId() == null ? null : l.getResumeVersionId().toString());
+        row.put("mode", l.getMode());
+        row.put("tone", l.getTone());
+        row.put("length", l.getLength());
+        row.put("body", l.getBody());
+        if (l.getCreatedAt() != null) {
+            row.put("created_at", l.getCreatedAt().toString());
+        }
+        return row;
+    }
+
     static Map<String, Object> toInboundMail(InboundMail m) {
         Map<String, Object> row = new LinkedHashMap<>();
         row.put("id", m.getId() == null ? null : m.getId().toString());

@@ -17,6 +17,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.careeros.ai.AiServiceClient;
 import com.careeros.ai.repository.GrowthPlanRepository;
 import com.careeros.application.entity.Application;
+import com.careeros.application.repository.ApplicationLetterRepository;
 import com.careeros.application.repository.ApplicationRepository;
 import com.careeros.auth.entity.UserProfile;
 import com.careeros.conversation.entity.Conversation;
@@ -148,9 +149,9 @@ class DataPortabilityControllerTest {
                 .thenReturn(new PageImpl<>(List.of()));
         ExportService exports = new ExportService(ai, applications, growthPlans,
                 notes, contacts, conversations, messages, savedSearches, feeds,
-                savedJobs, inboundMails, jobs, companies);
+                savedJobs, inboundMails, mock(ApplicationLetterRepository.class), jobs, companies);
         ImportService imports = new ImportService(ai, exports, profiles, notes,
-                contacts, applications, growthPlans,
+                contacts, applications, mock(ApplicationLetterRepository.class), growthPlans,
                 mock(ResumeService.class), knowledge, contactService,
                 jds, jobs,
                 sessions, turns, evaluations, conversations, messages,

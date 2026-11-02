@@ -4,6 +4,8 @@ import com.careeros.ai.AiServiceClient;
 import com.careeros.ai.entity.GrowthPlan;
 import com.careeros.ai.repository.GrowthPlanRepository;
 import com.careeros.application.entity.Application;
+import com.careeros.application.entity.ApplicationLetter;
+import com.careeros.application.repository.ApplicationLetterRepository;
 import com.careeros.application.repository.ApplicationRepository;
 import com.careeros.auth.entity.UserProfile;
 import com.careeros.auth.repository.UserProfileRepository;
@@ -94,6 +96,7 @@ public class ImportService {
     private final UserNoteRepository notes;
     private final ContactRepository contacts;
     private final ApplicationRepository applications;
+    private final ApplicationLetterRepository letters;
     private final GrowthPlanRepository growthPlans;
     private final ResumeService resumes;
     private final KnowledgeService knowledge;
@@ -114,6 +117,7 @@ public class ImportService {
                           UserProfileRepository profiles,
                           UserNoteRepository notes, ContactRepository contacts,
                           ApplicationRepository applications,
+                          ApplicationLetterRepository letters,
                           GrowthPlanRepository growthPlans, ResumeService resumes,
                           KnowledgeService knowledge, ContactService contactService,
                           JobJdRepository jds,
@@ -132,6 +136,7 @@ public class ImportService {
         this.notes = notes;
         this.contacts = contacts;
         this.applications = applications;
+        this.letters = letters;
         this.growthPlans = growthPlans;
         this.resumes = resumes;
         this.knowledge = knowledge;
@@ -188,10 +193,14 @@ public class ImportService {
         Map<String, Object> data = (Map<String, Object>) bundle.get("data");
         Map<String, int[]> applied = new LinkedHashMap<>();
         List<Map<String, String>> skipped = new ArrayList<>();
+        // The bundle's application ids are not always the target's: an account that never had
+        // the row gets a fresh one, so the letters filed under it have to follow the id that was
+        // actually written rather than the one the backup spells.
+        Map<String, UUID> applicationIds = new LinkedHashMap<>();
 
         applyProfile(userId, data, sections, applied, skipped);
         applyMemories(userId, data, sections, applied, skipped);
-        applyApplications(userId, data, sections, applied, skipped);
+        applyApplications(userId, data, sections, applied, skipped, applicationIds);
         applyGrowthPlans(userId, data, sections, applied, skipped);
         applyResumes(userId, data, sections, applied, skipped);
         applyKnowledge(userId, data, sections, applied, skipped);
@@ -204,6 +213,7 @@ public class ImportService {
         applyIngestionFeeds(userId, data, sections, applied, skipped);
         applySavedJobs(userId, data, sections, applied, skipped);
         applyInboundMails(userId, data, sections, applied, skipped);
+        applyCoverLetters(userId, data, sections, applied, skipped, applicationIds);
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("applied", applied.entrySet().stream()
@@ -261,7 +271,8 @@ public class ImportService {
     /** The applications: the pipeline the candidate actually worked. */
     private void applyApplications(UUID userId, Map<String, Object> data,
                                    Map<String, List<Map<String, Object>>> sections,
-                                   Map<String, int[]> applied, List<Map<String, String>> skipped) {
+                                   Map<String, int[]> applied, List<Map<String, String>> skipped,
+                                   Map<String, UUID> applicationIds) {
         List<Map<String, Object>> ops = sections.get("applications");
         if (ops == null || ops.isEmpty()) {
             return;
@@ -279,6 +290,11 @@ public class ImportService {
             String id = str(op, "id");
             String kind = str(op, "op");
             if ("skip".equals(kind)) {
+                UUID kept = uuid(id);
+                if (kept != null) {
+                    applications.findByIdAndUserId(kept, userId)
+                            .ifPresent(row -> applicationIds.put(id, row.getId()));
+                }
                 unchanged++;
                 continue;
             }
@@ -320,6 +336,9 @@ public class ImportService {
             target.setAppliedAt(time(row, "applied_at"));
             target.setReminderAt(time(row, "reminder_at"));
             applications.save(target);
+            if (id != null) {
+                applicationIds.put(id, target.getId());
+            }
         }
         count(applied, "applications", created, updated, deleted, unchanged);
     }
@@ -902,6 +921,94 @@ public class ImportService {
             }
         }
         count(applied, "inbound_mails", created, updated, deleted, unchanged);
+    }
+
+    /**
+     * The cover letters the reader kept with their applications (47.4).
+     *
+     * <p>A letter's home is the application, so the restore writes it against the id that
+     * section actually landed on -- an imported row is sometimes minted fresh, and the backup's
+     * id would point at nothing. A letter whose application the bundle does not carry is left
+     * out and reported rather than attached to a stranger's card. The posting and the resume
+     * version are links the target has to grant: the posting may not exist in this workspace,
+     * and the version belongs to the resume section, so they are kept only when resolvable here.
+     */
+    private void applyCoverLetters(UUID userId, Map<String, Object> data,
+                                   Map<String, List<Map<String, Object>>> sections,
+                                   Map<String, int[]> applied, List<Map<String, String>> skipped,
+                                   Map<String, UUID> applicationIds) {
+        List<Map<String, Object>> ops = sections.get("cover_letters");
+        if (ops == null || ops.isEmpty()) {
+            return;
+        }
+        Object rows = data.get("cover_letters");
+        if (!(rows instanceof List<?> list)) {
+            skipped.add(Map.of("section", "cover_letters",
+                    "reason", "The bundle carries no cover letters."));
+            return;
+        }
+        int created = 0;
+        int updated = 0;
+        int deleted = 0;
+        int unchanged = 0;
+        int unowned = 0;
+        for (Map<String, Object> op : ops) {
+            String id = str(op, "id");
+            String kind = str(op, "op");
+            UUID rowId = uuid(id);
+            if ("skip".equals(kind)) {
+                unchanged++;
+                continue;
+            }
+            if ("delete".equals(kind)) {
+                if (rowId == null) {
+                    continue;
+                }
+                letters.findById(rowId)
+                        .filter(row -> userId.equals(row.getUserId()))
+                        .ifPresent(row -> letters.delete(row));
+                deleted++;
+                continue;
+            }
+            Map<?, ?> row = findRow(list, id);
+            if (row == null) {
+                continue;
+            }
+            UUID applicationId = applicationIds.get(str(row, "application_id"));
+            if (applicationId == null) {
+                unowned++;
+                continue;
+            }
+            ApplicationLetter target = rowId == null ? null
+                    : letters.findById(rowId)
+                            .filter(r -> userId.equals(r.getUserId()))
+                            .orElse(null);
+            boolean fresh = target == null;
+            if (fresh) {
+                target = new ApplicationLetter();
+                target.setUserId(userId);
+                setId(target, restorableId(rowId, letters::existsById));
+            }
+            target.setApplicationId(applicationId);
+            UUID jobId = uuid(str(row, "job_id"));
+            target.setJobId(jobId != null && jobRepository.existsById(jobId) ? jobId : null);
+            target.setResumeVersionId(null);
+            target.setMode(str(row, "mode"));
+            target.setTone(str(row, "tone"));
+            target.setLength(str(row, "length"));
+            target.setBody(text(row, "body"));
+            letters.save(target);
+            if (fresh) {
+                created++;
+            } else {
+                updated++;
+            }
+        }
+        if (unowned > 0) {
+            skipped.add(Map.of("section", "cover_letters", "reason",
+                    unowned + " letter(s) name an application this bundle does not carry."));
+        }
+        count(applied, "cover_letters", created, updated, deleted, unchanged);
     }
 
     /** The stored growth runs: one row per report the candidate ever built. */

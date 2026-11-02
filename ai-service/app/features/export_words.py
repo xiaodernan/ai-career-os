@@ -51,6 +51,7 @@ _SECTIONS: dict[str, dict[str, str]] = {
         # (1.5.0).
         "saved_jobs": "Saved jobs",
         "inbound_mails": "Recruiter replies",
+        "cover_letters": "Cover letters",
     },
     "zh": {
         "profile": "个人档案",
@@ -68,6 +69,7 @@ _SECTIONS: dict[str, dict[str, str]] = {
         "ingestion_feeds": "订阅源",
         "saved_jobs": "已收藏职位",
         "inbound_mails": "招聘回信",
+        "cover_letters": "求职信",
     },
 }
 

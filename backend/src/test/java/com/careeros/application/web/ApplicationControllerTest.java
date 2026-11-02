@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.careeros.application.dto.ApplicationDtos.ApplicationPacket;
 import com.careeros.application.dto.ApplicationDtos.PacketResume;
+import com.careeros.application.service.ApplicationLetterService;
 import com.careeros.application.service.ApplicationPacketService;
 import com.careeros.application.service.ApplicationService;
 import com.careeros.common.AuthUser;
@@ -38,7 +39,8 @@ class ApplicationControllerTest {
     void setUp() {
         packets = mock(ApplicationPacketService.class);
         mvc = MockMvcBuilders.standaloneSetup(
-                        new ApplicationController(mock(ApplicationService.class), packets))
+                        new ApplicationController(mock(ApplicationService.class), packets,
+                                mock(ApplicationLetterService.class)))
                 .setControllerAdvice(new EnvelopeAdvice(), new GlobalExceptionHandler())
                 .setCustomArgumentResolvers(new CurrentUserArgumentResolver())
                 .build();

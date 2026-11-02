@@ -314,6 +314,20 @@ def to_html(bundle: dict, locale: str | None = None) -> str:
         )
         section(titles["inbound_mails"], f"<ul>{items}</ul>")
 
+    # The kept cover letters (1.6.0): the reader's own words, kept with the
+    # application they were written for.
+    kept = _dicts(data.get("cover_letters"))
+    if kept:
+        items = "".join(
+            f"<li>{_clip(l.get('body'), 160)}"
+            + (f" · {_esc(l.get('mode'))}" if l.get("mode") else "")
+            + (f" · {_esc(l.get('tone'))}" if l.get("tone") else "")
+            + (f" · {_esc(l.get('created_at'))}" if l.get("created_at") else "")
+            + "</li>"
+            for l in kept
+        )
+        section(titles["cover_letters"], f"<ul>{items}</ul>")
+
     parts.append("<hr>")
     stat = " · ".join(f"{_esc(k)}={_esc(v)}" for k, v in counts.items())
     parts.append(f'<p class="meta">{_esc(words["stats"])}: {stat}</p>')

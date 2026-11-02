@@ -5,7 +5,7 @@ with their data. This document locks the export/import contract implemented in
 `ai-service/app/features/export.py` and bridged through
 `POST /api/v1/data-portability/*` (the backend owns the `applications`,
 `growth_plans`, `notes`, `contacts`, `conversations`, `saved_searches`,
-`ingestion_feeds`, `saved_jobs` and `inbound_mails` sections).
+`ingestion_feeds`, `saved_jobs`, `inbound_mails` and `cover_letters` sections).
 
 ## Scope
 
@@ -20,6 +20,7 @@ with their data. This document locks the export/import contract implemented in
 | `conversations` + `messages` sections | **done** (shipped in the bundle since 1.3.0) | backend bridge |
 | `saved_searches` + `ingestion_feeds` sections | **done** (shipped in the bundle since 1.4.0) | backend bridge |
 | `saved_jobs` + `inbound_mails` sections | **done** (shipped in the bundle since 1.5.0) | ai-service + backend bridge |
+| `cover_letters` section | **done** (shipped in the bundle since 1.6.0) | backend bridge |
 | Every reader table carried or excluded | **done** (the census and the manifest-driven page, 40.4) | ai-service gate + docs |
 
 ## The bundle is everything that is the reader's (closed 2026-10-31)
@@ -28,7 +29,9 @@ The page says "Export everything". The measurement of 2026-10-30 read the ten
 sections against every table the migrations create and found five content
 gaps; all five have closed — the copilot chats since **1.3.0**, the saved
 searches and the feeds since **1.4.0**, and the bookmarks and the replies
-since **1.5.0**, each described below. Every table that holds something the
+since **1.5.0** — and, since **1.6.0**, the letters the reader kept with their
+applications travel too; each is described below. Every table that holds
+something the
 reader wrote, saved or received now travels, and the browser offers to redact
 each of them.
 
@@ -38,7 +41,7 @@ events and agent runs, and digests — they describe what the account did, not
 what it holds. Epic 40's last unit (40.4) makes the distinction a census, so a
 future table cannot land on the wrong side of it without a test failing. The
 table below is that census's document: every table the migrations create is
-either carried by one of the fifteen sections (itself or nested, like
+either carried by one of the sixteen sections (itself or nested, like
 `messages` under `conversations`), listed here, or part of the shared
 catalogue no reader owns.
 
@@ -395,8 +398,30 @@ sections are the **backend's**, like the pipeline and the chats.
   apply cannot write them — and their existing counterparts are not retired
   on their absence.
 
-A 1.4.0 backup still validates with its thirteen sections:
-`SECTIONS_BY_VERSION` holds each version to the sections it shipped with.
+### The kept cover letters travel (1.6.0)
+
+A cover letter was the one artifact of the application that had no home. The
+job page asked the engine for a draft and handed the text back to the browser;
+closing the tab was the only save there was. Since **1.6.0** a draft the
+reader keeps is a row in `application_letters`, carried as the
+`cover_letters` section.
+
+- **The anonymized export takes the letter out.** The body is the reader's
+  own words to a named employer, so it goes; the dials it was written with
+  (`mode`, `tone`, `length`) and the stamps describe the letter, not the
+  person, and stay.
+- **The readable half carries them**, in both languages: a kept letter as the
+  application it belongs to, its posting and the day it was kept.
+- **The restore follows the application.** A letter is written against the id
+  the applications section actually landed on -- an imported card may be
+  minted fresh -- and a letter whose application the bundle does not carry is
+  reported in the section's `skipped` reason instead of landing on a
+  stranger's card. The posting link is reproduced only when the workspace has
+  that posting; the resume-version link is the resume section's to grant.
+
+A 1.5.0 backup still validates with its fifteen sections and a 1.4.0 one with
+its thirteen: `SECTIONS_BY_VERSION` holds each version to the sections it
+shipped with.
 
 ### The restore does not write over somebody else's rows
 
@@ -415,18 +440,19 @@ the rows, and it no longer lands them on top of somebody else's.
 
 ```jsonc
 {
-  "schema_version": "1.5.0",
+  "schema_version": "1.6.0",
   "generator": "ai-career-os",
   "generated_at": "2026-10-20T00:00:00+00:00",
   "user": { "id": "<uuid>", "anonymized": false },
   "manifest": {
-    "schema_version": "1.5.0",
+    "schema_version": "1.6.0",
     "generator": "ai-career-os",
     "counts": { "profile": 1, "resumes": 1, "knowledge": 1,
                 "job_descriptions": 1, "interviews": 1, "memories": 1,
                 "applications": 12, "growth_plans": 3, "notes": 4,
                 "contacts": 9, "conversations": 6, "saved_searches": 2,
-                "ingestion_feeds": 3, "saved_jobs": 5, "inbound_mails": 2 },
+                "ingestion_feeds": 3, "saved_jobs": 5, "inbound_mails": 2,
+                "cover_letters": 2 },
     "content_hash": "<sha256 over data>",
     "anonymized": false
   },
@@ -438,7 +464,7 @@ the rows, and it no longer lands them on top of somebody else's.
     "interviews": [ { ...interview_sessions joined jobs..., "turns": [...],
                       "evaluation": { dims, summary, trajectory } } ],
     "memories": [ { ...user_memories row... } ],
-    // The nine the BACKEND owns — the bridge hands them over, and the hash
+    // The ten the BACKEND owns — the bridge hands them over, and the hash
     // covers them like every other section.
     "applications": [ { ...applications row... } ],
     "growth_plans": [ { ...growth_plans row... } ],
@@ -460,7 +486,11 @@ the rows, and it no longer lands them on top of somebody else's.
     // back. The bookmark's title and company are display, read from the
     // posting; the restore writes only the note.
     "saved_jobs": [ { id, job_title, company_name, note, created_at } ],
-    "inbound_mails": [ { ...inbound_mails row... } ]
+    "inbound_mails": [ { ...inbound_mails row... } ],
+    // The letters the reader kept (1.6.0). The body is theirs; the
+    // application the letter belongs to is the row it was written for.
+    "cover_letters": [ { id, application_id, job_id, resume_version_id, mode,
+                         tone, length, body, created_at } ]
   }
 }
 ```

@@ -3,9 +3,12 @@ package com.careeros.application.web;
 import com.careeros.application.dto.ApplicationDtos.ApplicationItem;
 import com.careeros.application.dto.ApplicationDtos.ApplicationPacket;
 import com.careeros.application.dto.ApplicationDtos.CreateApplicationRequest;
+import com.careeros.application.dto.ApplicationDtos.LetterItem;
 import com.careeros.application.dto.ApplicationDtos.ReorderRequest;
+import com.careeros.application.dto.ApplicationDtos.SaveLetterRequest;
 import com.careeros.application.dto.ApplicationDtos.TimelineEvent;
 import com.careeros.application.dto.ApplicationDtos.UpdateApplicationRequest;
+import com.careeros.application.service.ApplicationLetterService;
 import com.careeros.application.service.ApplicationService;
 import com.careeros.application.service.ApplicationPacketService;
 import com.careeros.common.AuthUser;
@@ -34,10 +37,13 @@ public class ApplicationController {
 
     private final ApplicationService applications;
     private final ApplicationPacketService packets;
+    private final ApplicationLetterService letters;
 
-    public ApplicationController(ApplicationService applications, ApplicationPacketService packets) {
+    public ApplicationController(ApplicationService applications, ApplicationPacketService packets,
+                                 ApplicationLetterService letters) {
         this.applications = applications;
         this.packets = packets;
+        this.letters = letters;
     }
 
     @GetMapping
@@ -81,6 +87,18 @@ public class ApplicationController {
     @GetMapping("/{id}/packet")
     public ApplicationPacket packet(@CurrentUser AuthUser user, @PathVariable UUID id) {
         return packets.packet(user.id(), id);
+    }
+
+    @GetMapping("/{id}/letters")
+    public List<LetterItem> letters(@CurrentUser AuthUser user, @PathVariable UUID id) {
+        return letters.list(user.id(), id);
+    }
+
+    @PostMapping("/{id}/letters")
+    @ResponseStatus(HttpStatus.CREATED)
+    public LetterItem saveLetter(@CurrentUser AuthUser user, @PathVariable UUID id,
+                                 @RequestBody @Valid SaveLetterRequest request) {
+        return letters.save(user.id(), id, request);
     }
 
     @DeleteMapping("/{id}")

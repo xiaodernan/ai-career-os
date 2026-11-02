@@ -38,6 +38,22 @@ public final class ApplicationDtos {
     }
 
     /**
+     * One cover letter kept for an application. The mode, tone and length are the dials the
+     * writer was asked with -- null when the draft came from a path that did not ask -- and the
+     * body is the letter itself, kept whole because that is the thing the reader wanted.
+     */
+    public record LetterItem(UUID id, UUID applicationId, UUID jobId, UUID resumeVersionId,
+                             String mode, String tone, String length, String body,
+                             OffsetDateTime createdAt) {
+    }
+
+    /** A draft the reader chose to keep; the application row supplies the posting and version. */
+    public record SaveLetterRequest(@JsonAlias("resume_version_id") UUID resumeVersionId,
+                                    String mode, String tone, String length,
+                                    @NotBlank @Size(max = 20000) String body) {
+    }
+
+    /**
      * What one tracked application carries from the pipeline.
      *
      * <p>The three `*Linked` flags are read from the application's own columns; the value beside

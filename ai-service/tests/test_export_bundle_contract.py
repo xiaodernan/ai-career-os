@@ -48,6 +48,7 @@ from app.features.export import (
     SECTIONS,
     SECTIONS_1_3,
     SECTIONS_1_4,
+    SECTIONS_1_5,
     required_sections,
 )
 
@@ -139,7 +140,8 @@ def test_the_bundle_carries_the_pipeline_too() -> None:
     # them.
     assert BACKEND_SECTIONS == (
         "applications", "growth_plans", "notes", "contacts", "conversations",
-        "saved_searches", "ingestion_feeds", "saved_jobs", "inbound_mails")
+        "saved_searches", "ingestion_feeds", "saved_jobs", "inbound_mails",
+        "cover_letters")
     assert set(BACKEND_SECTIONS) <= set(SECTIONS)
     assert set(AI_SECTIONS) <= set(SECTIONS)
 
@@ -207,12 +209,14 @@ def test_the_required_sections_follow_the_schema_version() -> None:
         AI_SECTIONS + ("applications", "growth_plans", "notes", "contacts"))
     assert required_sections("1.3.0") == SECTIONS_1_3
     assert required_sections("1.4.0") == SECTIONS_1_4
-    assert required_sections("1.5.0") == SECTIONS
+    assert required_sections("1.5.0") == SECTIONS_1_5
+    assert required_sections("1.6.0") == SECTIONS
     assert set(SECTIONS_1_3) < set(SECTIONS_1_4) < set(SECTIONS)
+    assert set(SECTIONS_1_5) < set(SECTIONS)
     assert set(AI_SECTIONS) < set(SECTIONS)
 
 
-@pytest.mark.parametrize("version", ["1.5.0", "2.0.0", "not-a-version"])
+@pytest.mark.parametrize("version", ["1.6.0", "2.0.0", "not-a-version"])
 def test_an_unknown_or_newer_version_carries_everything(version: str) -> None:
     # The version comparison is on parsed numbers rather than on strings, so
     # a future version ("2.0.0") is read as newer and gets the full set --
@@ -235,6 +239,6 @@ def test_the_versions_are_compared_as_numbers_and_not_as_strings() -> None:
     # and held to the wrong set of sections.
     assert required_sections("1.10.0") == SECTIONS
     # 1.9.0 sits between known versions, so it resolves to the newest known
-    # set at or before itself -- the 1.5.0 one, now that the bookmarks and
-    # the replies exist.
-    assert required_sections("1.9.0") == required_sections("1.5.0")
+    # set at or before itself -- the 1.6.0 one, now that the kept cover
+    # letters exist.
+    assert required_sections("1.9.0") == SECTIONS

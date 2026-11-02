@@ -33,6 +33,7 @@ export const SECTION_LABELS: Record<string, string> = {
   ingestion_feeds: "data.sections.ingestionFeeds",
   saved_jobs: "data.sections.savedJobs",
   inbound_mails: "data.sections.inboundMails",
+  cover_letters: "data.sections.coverLetters",
 };
 
 /** The sections an export carries, in the order the manifest counted them. */

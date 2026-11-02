@@ -35,7 +35,7 @@ from uuid import UUID
 # The words of the readable half, in every language it ships in.
 from app.features import export_words as words_mod
 
-SCHEMA_VERSION = "1.5.0"
+SCHEMA_VERSION = "1.6.0"
 GENERATOR = "ai-career-os"
 
 # Top-level profile keys stripped by ``anonymize`` unless the caller overrides.
@@ -91,6 +91,10 @@ ANONYMIZED_FIELDS: dict[str, tuple[str, ...]] = {
     # -- the reader's correspondence, which is the last thing a
     # right-to-be-forgotten file may carry.
     "inbound_mails": ("from_address", "subject", "body_text"),
+    # The kept cover letter (1.6.0): the reader's own words to a named employer, so the body
+    # goes in an anonymized file. The dials it was written with stay -- they describe the letter,
+    # not the person.
+    "cover_letters": ("body",),
 }
 
 # The standing choices -- ``saved_searches`` and ``ingestion_feeds`` -- are
@@ -177,10 +181,19 @@ BACKEND_SECTIONS: tuple[str, ...] = (
     # conversation the search was made of.
     "saved_jobs",
     "inbound_mails",
+    # Since 1.6.0 the letters the reader kept with their applications travel too. A draft used
+    # to be a relay -- a response the browser could lose when the tab closed -- and the letter
+    # the reader chose to keep is their own words about their own search, not bookkeeping.
+    "cover_letters",
 )
 
 # Every section the current schema carries.
 SECTIONS: tuple[str, ...] = AI_SECTIONS + BACKEND_SECTIONS
+
+# The sections a 1.5.0 bundle carried: everything before the kept cover letters.
+SECTIONS_1_5: tuple[str, ...] = AI_SECTIONS + (
+    "applications", "growth_plans", "notes", "contacts", "conversations",
+    "saved_searches", "ingestion_feeds", "saved_jobs", "inbound_mails")
 
 # The sections a 1.4.0 bundle carried: everything before the bookmarks and
 # the replies.
@@ -217,7 +230,8 @@ SECTIONS_BY_VERSION: dict[str, tuple[str, ...]] = {
     "1.2.0": AI_SECTIONS + ("applications", "growth_plans", "notes", "contacts"),
     "1.3.0": SECTIONS_1_3,
     "1.4.0": SECTIONS_1_4,
-    "1.5.0": SECTIONS,
+    "1.5.0": SECTIONS_1_5,
+    "1.6.0": SECTIONS,
 }
 
 
@@ -959,6 +973,19 @@ def to_markdown(bundle: dict, locale: str | None = None) -> str:
                          + (f" · {m.get('from_address')}" if m.get("from_address") else "")
                          + (f" · {m.get('company')}" if m.get("company") else "")
                          + (f" · {m.get('intent')}" if m.get("intent") else ""))
+        lines.append("")
+
+    # The kept cover letters (1.6.0): the letters the reader chose to keep with an
+    # application. The document names what the letter says and the dials it was
+    # asked with; the clipping is the same as every other long text here.
+    kept = _dicts(data.get("cover_letters"))
+    if kept:
+        lines.append(f"## {titles['cover_letters']} ({len(kept)})")
+        for l in kept:
+            lines.append(f"- {clip(l.get('body'), 160)}"
+                         + (f" · {l.get('mode')}" if l.get("mode") else "")
+                         + (f" · {l.get('tone')}" if l.get("tone") else "")
+                         + (f" · {clip(l.get('created_at'), 40)}" if l.get("created_at") else ""))
         lines.append("")
 
     lines.append("---")

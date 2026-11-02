@@ -71,6 +71,7 @@ CARRIED: dict[str, str] = {
     "ingestion_feeds": "ingestion_feeds",
     "saved_jobs": "saved_jobs",
     "inbound_mails": "inbound_mails",
+    "application_letters": "cover_letters",
 }
 
 # A child table with no section of its own: its rows are embedded in the
