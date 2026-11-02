@@ -1564,7 +1564,8 @@ describe("normalizeSearch", () => {
     expect(groups[2].items[0].href).toBe("/resumes/r1");
     expect(groups[3].items[0].href).toBe("/knowledge");
     expect(groups[4].items[0].href).toBe("/copilot");
-    expect(groups[5].items[0].href).toBe("/applications");
+    // 55.1: the hit names one application, so it opens that drawer rather than the board.
+    expect(groups[5].items[0].href).toBe("/applications?application=a1");
     expect(groups.flatMap((g) => g.items).every((i) => i.type && i.href)).toBe(true);
   });
 

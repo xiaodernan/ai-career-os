@@ -4152,6 +4152,19 @@ setting the same tone and length from memory.
   to `/resumes/{resumeId}` where that version lives and can be printed. A version that can no
   longer be read says so rather than vanishing: losing provenance is information. 2 SSR tests, 1
   mapping test, and the census entry removed.)
+## Epic 55 -- Every hit in the palette goes where it says
+
+The palette (52.2) learned to show seven groups, but one of them still lied: an application hit
+carried the row's own id and then threw it away, landing the reader on the whole board. Nothing
+in the palette should name a thing and then make the reader find it again.
+
+- [x] **55.1** An application hit opens its drawer.
+
+  (An application hit's href was the bare `/applications`; the id was decoded and dropped. It now
+  reads `/applications?application=<id>`, the deep link the dashboard's attention rows already
+  use (51.2), so the board opens that card's drawer on paint. A hit without an id -- a shape the
+  wire does not produce -- still falls back to the board rather than
+  `/applications?application=undefined`. 1 normalisation assertion.)
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

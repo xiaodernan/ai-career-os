@@ -1608,7 +1608,15 @@ export const SEARCH_GROUPS: {
   { key: "resumes", type: "resume", label: "Resumes", href: (id) => `/resumes/${id}` },
   { key: "notes", type: "note", label: "Notes", href: () => "/knowledge" },
   { key: "conversations", type: "conversation", label: "Conversations", href: () => "/copilot" },
-  { key: "applications", type: "application", label: "Applications", href: () => "/applications" },
+  {
+    key: "applications",
+    type: "application",
+    label: "Applications",
+    // 55.1: the hit carries the row's own id, and the board opens that drawer for `?application=`
+    // (the same deep link the dashboard's attention rows use). Landing on the board and making
+    // the reader hunt for the card was the one hit in the palette that did not go where it said.
+    href: (id) => (id ? `/applications?application=${id}` : "/applications"),
+  },
   {
     key: "letters",
     type: "letter",
