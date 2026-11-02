@@ -1,7 +1,7 @@
-"""A knob no code reads is a knob that does nothing: thirty-seven `app.*` keys ship, two are read by nobody.
+"""A knob no code reads is a knob that does nothing: thirty-eight `app.*` keys ship, two are read by nobody.
 
-`application.yml`'s `app:` block writes thirty-seven leaves. Thirty-five of them reach a reader that some
-service calls: twenty-three through a Java getter, four (`app.web.base-url`, `app.mail.link-secret`,
+`application.yml`'s `app:` block writes thirty-eight leaves. Thirty-six of them reach a reader that some
+service calls: twenty-four through a Java getter, four (`app.web.base-url`, `app.mail.link-secret`,
 `app.security.mfa-secret` and `app.inbound.domain`) that never appear in `AppProperties` and are read
 through `@Value` placeholders by the beans that need them, and eight `app.email.*` leaves through
 `EmailConfig`'s one transport bean. One (`app.storage.enabled`) is not written by the shipped file but
@@ -95,6 +95,7 @@ APP_LEAVES = frozenset({
     "ratelimit.inbound-per-minute",
     "upload.max-file-size-bytes", "upload.presigned-url-ttl-seconds",
     "retention.expired-token-days",
+    "retention.retired-document-days",
     "email.provider", "email.from", "email.smtp.host", "email.smtp.port", "email.smtp.username",
     "email.smtp.password", "email.smtp.starttls", "email.smtp.ssl", "mail.link-secret",
     "inbound.domain",
@@ -190,6 +191,12 @@ READERS = {
     # its own, so the single site is the claim.
     "retention.expired-token-days": ("Retention", "expiredTokenDays", "getExpiredTokenDays",
                                      ("auth/retention/RetentionSweeper.java",)),
+    # The evidence window has the sweep's own single reader for the same reason, and one more:
+    # 44.3's purge runs inside that sweep's transaction, so a second caller would be a second
+    # process deleting rows a retrieval can no longer quote -- outside the heartbeat that says
+    # the pass ran and outside the per-table counters that say what it took.
+    "retention.retired-document-days": ("Retention", "retiredDocumentDays", "getRetiredDocumentDays",
+                                        ("auth/retention/RetentionSweeper.java",)),
     # The VAPID pair is read by the bean that chooses a transport (PushConfig) and by no
     # other site: the guard cannot name a half pair because the bean already refuses to
     # start on one, and the sender receives the parsed keys rather than the properties.
@@ -459,13 +466,13 @@ def armed_bytes() -> int:
 
 # ---------------------------------------------------------------- the cases
 
-def test_the_app_block_writes_thirty_seven_leaves_and_each_binds_by_one_of_three_mechanisms():
+def test_the_app_block_writes_thirty_eight_leaves_and_each_binds_by_one_of_three_mechanisms():
     leaves = app_leaves()
     assert len(leaves) >= 15, (
         f"the `app:` block parsed to {len(leaves)} leaves, below the 15 the shipped file writes -- the parser "
         f"stopped following the indentation, so every number below is a reading of nothing")
     assert frozenset(leaves) == APP_LEAVES, (
-        f"`app:`'s leaves are not the thirty-seven pinned here: extra={sorted(frozenset(leaves) - APP_LEAVES)} "
+        f"`app:`'s leaves are not the thirty-eight pinned here: extra={sorted(frozenset(leaves) - APP_LEAVES)} "
         f"missing={sorted(APP_LEAVES - frozenset(leaves))} -- a new key needs a binder and a reader before it "
         f"is a configuration rather than a comment")
 
@@ -479,8 +486,8 @@ def test_the_app_block_writes_thirty_seven_leaves_and_each_binds_by_one_of_three
         f"{sorted(holders)} -- the leaf walk follows the declarations and the key derivation follows the "
         f"fields, so a name in only one list is a holder the census reads but the walk never fills, or one "
         f"the walk fills but nothing can name its keys")
-    assert len(fields) == 26, (
-        f"AppProperties declares {len(fields)} leaf fields, want the 26 whose readers are censused here -- the "
+    assert len(fields) == 27, (
+        f"AppProperties declares {len(fields)} leaf fields, want the 27 whose readers are censused here -- the "
         f"population moved, so 'every field has a reader or a ledger entry' is a claim about a different file")
 
     values, conds = value_bindings(), conditions()
@@ -748,14 +755,14 @@ def test_the_cap_the_dead_knob_would_set_is_a_compile_time_constant_and_the_cont
         "quotes it")
 
 
-def test_thirty_four_leaves_reach_the_environment_and_the_three_that_do_not_are_literals_in_a_file():
+def test_thirty_five_leaves_reach_the_environment_and_the_three_that_do_not_are_literals_in_a_file():
     leaves = app_leaves()
     interpolated, literal = {}, {}
     for key, value in leaves.items():
         match = ENV_INTERP.match(value)
         (interpolated if match else literal)[key] = (match["var"] if match else value)
-    assert len(interpolated) == 34 and len(literal) == 3, (
-        f"{len(interpolated)} of the thirty-seven leaves interpolate an `${{ENV}}` and {len(literal)} are literals; "
+    assert len(interpolated) == 35 and len(literal) == 3, (
+        f"{len(interpolated)} of the thirty-eight leaves interpolate an `${{ENV}}` and {len(literal)} are literals; "
         f"the split is what makes a knob deployable, so a pair that moved needs this carrier list rewritten")
     assert frozenset(literal) == FILE_ONLY_LEAVES, (
         f"the file-only leaves are {sorted(literal)}: ratelimit.enabled is a shipped default an operator edits in "

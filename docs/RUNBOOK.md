@@ -562,8 +562,9 @@ promises, and both sections apply.
 ## The retention sweep stopped
 
 **What the alert looks like.** `CareerOSRetentionSweepStale` fires when
-`time() - careeros_retention_last_sweep_timestamp > 129600`: no completed
-credential-retention sweep in 36 hours. The gauge is the sweep's heartbeat, moved at
+`time() - careeros_retention_last_sweep_timestamp > 129600`: no completed retention sweep in
+36 hours -- one pass does both halves, the credential deletes and the purge of retired
+evidence, so this is the clock for both. The gauge is the sweep's heartbeat, moved at
 the end of every completed pass by
 `backend/src/main/java/com/careeros/auth/retention/RetentionMetrics.java`, and it is
 the only reading that can answer "did the clock run". The deletion counter cannot: a
@@ -575,14 +576,18 @@ first 04:47.
 
 **What to read.** First the scrape: `careeros_retention_last_sweep_timestamp` in
 `/actuator/prometheus` says when the last pass finished. Then the backend log: every
-completed pass logs "Retention sweep removed N expired credential row(s) older than
-..."; a table whose delete threw logs "Retention sweep failed for <table>" with the
-stack trace and is left out of the summary. Check `careeros.retention.cron` (default
-`0 47 4 * * *`) in the deployment's environment, whether the backend was running at
-that hour, and whether scheduling is enabled at all. The per-table counters
-(`refresh_tokens`, `password_reset_tokens`, `email_change_tokens`) separate a quiet
-night (series present, value flat) from a table that has never been swept (no series),
-because the series is registered on the first successful sweep of that table.
+completed pass logs "Retention sweep removed N row(s) at <clock> (<per-table map>)"; a
+table whose delete threw logs "Retention sweep failed for <table>" with the stack trace
+and is left out of the summary, and a purge that skipped rows it would rather not delete
+logs "Retention sweep left N retired document row(s)". Check `careeros.retention.cron`
+(default `0 47 4 * * *`) in the deployment's environment, whether the backend was running
+at that hour, and whether scheduling is enabled at all. The per-table counters
+(`refresh_tokens`, `password_reset_tokens`, `email_change_tokens`, `documents`,
+`document_chunks`) separate a quiet night (series present, value flat) from a table that
+has never been swept (no series), because the series is registered on the first
+successful sweep of that table. The evidence pair moves together or not at all: rows and
+chunks go in one statement, so a `documents` reading with no `document_chunks` beside it
+is a dashboard missing a series, not a night that deleted only rows.
 
 **What to do, in order.**
 
@@ -599,13 +604,22 @@ because the series is registered on the first successful sweep of that table.
    own clock, which is later and deletes strictly more.
 
 **What this alert does not mean.** It is not a table-failure alarm (the heartbeat moves
-on a failed pass; read the WARN line and the missing series), not a disk-full alarm
-(rows are deleted, files are not), and not data loss: only refresh, password-reset and
-address-change rows past the grace window (`RETENTION_EXPIRED_TOKEN_DAYS`, thirty days
-by default) are ever deleted. The tables behind visible history -- AI usage events,
+on a failed pass; read the WARN line and the missing series), and it is not data loss:
+only rows past a window are ever deleted -- refresh, password-reset and address-change
+rows more than `RETENTION_EXPIRED_TOKEN_DAYS` (thirty days) past expiry, and documents
+more than `RETENTION_RETIRED_DOCUMENT_DAYS` (180 days) past the delete that retired them,
+together with the chunks indexed from them. Nothing a reader can see is in either set:
+retirement is what takes a document out of evidence, and the purge only closes the window
+on a record nobody quotes. The tables behind visible history -- AI usage events,
 notification read state, ingestion runs, weekly letters -- are deliberately not swept.
-If the delete itself is slow after a restart, confirm the V23 migration applied; it
-adds the `expires_at` index each sweep relies on.
+It is also not a storage-growing alarm, which is the direction the old version of this
+paragraph pointed: files are removed now, both by a delete that retires the last row
+naming an object and by the purge of a row that aged out, so a bucket that keeps growing
+is a reclaim failing rather than a sweep not running -- read
+`careeros_storage_objects_reclaimed_total{outcome="failed"}` and the WARN line naming the
+key. If the delete itself is slow after a restart, confirm the V23 and V31 migrations
+applied: they add the `expires_at` indexes the credential deletes ride and the partial
+index on the retired slice of `documents` that the purge reads.
 
 ## An account is locked out of its second factor
 

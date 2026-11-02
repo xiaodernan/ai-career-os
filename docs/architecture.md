@@ -267,15 +267,22 @@ user-scoped table (ownership is enforced in backend layer + a single SQL predica
   source or note goes, and neither a late ingest callback nor a failed trigger may move
   the row off it — retrieval admits a chunk only while the document reads `ready`, so
   an answer that arrives after the delete has to lose the race. The row and its chunks stay
-  where they were — the audit record is why retirement deletes nothing. The object behind
-  `file_key` is a separate question, and the delete path answers it only after its own rows
-  commit: the bytes go when no row retrieval can quote and no resume version names that key,
-  counted as `careeros.storage.objects_reclaimed{outcome}`. An upload is one object behind two
-  rows, so retiring a resume's ingested copy leaves the file to the page still serving it.
+  where they were for a window — the audit record is why retirement deletes nothing, and
+  `RETENTION_RETIRED_DOCUMENT_DAYS` (180) is how long it is kept before the nightly sweep
+  purges the row and the database takes its chunks with it through the cascade below. The
+  object behind `file_key` is a separate question, and the delete path answers it only after
+  its own rows commit: the bytes go when no row retrieval can quote and no resume version
+  names that key, counted as `careeros.storage.objects_reclaimed{outcome}`. An upload is one
+  object behind two rows, so retiring a resume's ingested copy leaves the file to the page
+  still serving it — and the purge asks the same question before the row that names the key
+  disappears, because after the window there is nothing left to trace the object by.
 - `document_chunks(id, document_id, user_id, ordinal, text, token_count, meta jsonb
    /* section path e.g. resume>experience>3rd-intern, skill tags */, embedding vector,
    tsv tsvector GENERATED, uniq(document_id, ordinal))`
   → **the evidence layer.** Every AI conclusion cites chunk ids.
+  `document_id` is `on delete cascade`, and the backend owns no repository for this table at
+  all — the ai-service writes the rows — so the two paths that ever remove a chunk are the
+  delete that re-ingests a note and the retention sweep that purges a retired document.
 - `agent_runs(id, user_id, root_run_id nullable, agent enum[career, resume,
    job_research, jd_analyst, rag, interview, learning, tracker], trigger, model,
    status, input_tokens, output_tokens, cached_tokens, cost_usd, latency_ms, error)`

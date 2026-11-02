@@ -652,12 +652,18 @@
     结果按 `careeros.storage.objects_reclaimed{outcome}` 计数。10 条 `StoredObjectReclaimTest`
     + 3 条 `ResumeDeleteReclaimTest` + 5 条 `ObjectReclaimIT`（需真实栈），退役测试改为读回 key；
     architecture.md 与 DEPLOYMENT.md 同步这条引用核对。
-  - **44.3** 审计记录要有期限：`RetentionSweeper` 如今只清凭据 token，加一个内容阶段——过了
-    可配置的窗口就把 retired 文档连同 chunk 一起清掉，live 与还能重试的行不动，按表报数，
-    沿用那个停摆就会报警的心跳。这一阶段还要替这些行收回对象：44.2 留给"收回失败"的线索是
-    retired 行仍写着 file_key、由销号去补删，行随窗口消失就等于把线索一起烧掉——所以清行之前
-    先问存储。
-  - 下一步候选（避开并发会话正在改的文件）：Epic 44 剩 44.3。
+  - **44.3** 审计记录要有期限（已完成 2026-11-02）：`RetiredEvidencePurger` 在同一个夜间扫描里
+    清掉退役超过 `RETENTION_RETIRED_DOCUMENT_DAYS`（默认 180 天）的 document 行，chunk 由 V1 声明的
+    `on delete cascade` 随行消失——后端对这张表没有任何仓库，它是 ai-service 写的，所以这两条路径
+    是 chunk 唯一的去处。被清掉的行把手里的 key 交给 44.2 的 reclaimer：等这一批行真正提交之后才问
+    存储，因为"收回失败"的线索就是这行还写着 key，窗口把行烧掉之前必须先问。还活着、还在索引、
+    还能重试的行都不动；仍被 source 指向的 retired 行留着并单独说一句 WARN——悄悄什么都没删的夜里
+    和本来没东西可删的夜里长得一样。`documents` 与 `document_chunks` 各自计数（同一语句的活，
+    要么一起有读数要么一起缺），沿用那个停摆就会报警的心跳；V31 给 retired 那一片加了部分索引。
+    7 条 `RetiredEvidencePurgerTest` + `RetentionSweeperTest` 新增 3 条（共 10）
+    + 4 条 `RetiredEvidencePurgeIT`（需真实栈）；architecture.md、DEPLOYMENT.md、RUNBOOK.md、
+    alerts.yml 与两份 env 示例同步这个窗口。
+  - 下一步候选（避开并发会话正在改的文件）：Epic 44 已闭合，另开下一段。
 
 - **Epic 45 — 每种信号说自己的句子**（本段起）
   - 盘点结论（2026-11-02）：收件箱的后端会发六种 kind，页面只给其中五种自己的徽章与句子。

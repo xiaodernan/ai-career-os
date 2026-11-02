@@ -7,11 +7,16 @@ prose rot quietly -- the two digest repositories that replaced the copilot sideb
 interview list's per-row reads (`ConversationDigestRepository`, `InterviewDigestRepository`)
 each run two grouped native statements, and the row still said four while the backend served
 five. A reader auditing the injection surface would have walked four files and missed two.
+Six now, and this pass moved the pin and the row together rather than letting the row fall
+behind a third time: 44.3's retention purge counts the chunk rows its document delete takes
+with it, and `document_chunks` is the one user table with no backend entity -- ai-service
+writes it and V1's cascade removes it -- so only a native count over the table can say how
+much the window took.
 
 This gate walks the backend for the two ways a native statement appears -- `createNativeQuery`
 and `nativeQuery = true` -- pins the exact set, and then reads the doc row back: the census is
 only useful if the document that states it states the same one. It also checks the claim the
-row makes about interpolation, because that is the part that would make a sixth query
+row makes about interpolation, because that is the part that would make a seventh query
 dangerous rather than merely undocumented: no native statement may splice a value into its
 SQL text (the known `${...}` placeholder indices and the int limit live in JobSearchRepository
 and are named in the doc).
@@ -31,6 +36,10 @@ NATIVE_QUERIES = {
     "DashboardRepository.java",
     "ConversationDigestRepository.java",
     "InterviewDigestRepository.java",
+    # 44.3's chunk count: `document_chunks` has no backend entity -- ai-service writes it and the
+    # database's cascade removes it -- so the only way to report how many rows the window took is
+    # a native count over the table. Bound parameters, no spliced value, like the other five.
+    "DocumentRepository.java",
 }
 
 # Where a value may be spliced into SQL text, and why each is not user data.

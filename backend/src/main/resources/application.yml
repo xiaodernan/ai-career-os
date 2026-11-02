@@ -155,8 +155,12 @@ app:
   # Expired refresh, password-reset and address-change rows are deleted nightly once
   # they are this many days past expiry (see auth/retention). The grace window keeps a
   # late request or a support investigation from finding the row already gone.
+  # A retired document is the audit record of a delete, so it is kept this many days
+  # past the retirement before the same sweep purges the row, its chunks and the
+  # object behind its key.
   retention:
     expired-token-days: ${RETENTION_EXPIRED_TOKEN_DAYS:30}
+    retired-document-days: ${RETENTION_RETIRED_DOCUMENT_DAYS:180}
 
 springdoc:
   api-docs.path: /api-docs

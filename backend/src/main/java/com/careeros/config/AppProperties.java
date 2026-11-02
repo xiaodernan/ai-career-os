@@ -338,12 +338,26 @@ public class AppProperties {
         /** Days past expiry an expired credential row is kept before the nightly sweep. */
         private int expiredTokenDays = 30;
 
+        /**
+         * Days since retirement a retired document (and its chunks) is kept before the nightly
+         * sweep purges it. The window is how long the audit record outlives the reader's delete.
+         */
+        private int retiredDocumentDays = 180;
+
         public int getExpiredTokenDays() {
             return expiredTokenDays;
         }
 
         public void setExpiredTokenDays(int expiredTokenDays) {
             this.expiredTokenDays = expiredTokenDays;
+        }
+
+        public int getRetiredDocumentDays() {
+            return retiredDocumentDays;
+        }
+
+        public void setRetiredDocumentDays(int retiredDocumentDays) {
+            this.retiredDocumentDays = retiredDocumentDays;
         }
     }
 }

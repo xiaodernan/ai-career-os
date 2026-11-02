@@ -3715,8 +3715,9 @@ already running knows nothing about the delete -- it finishes, writes `ready` ov
 and the material the reader removed is quotable again. And the bytes an upload put in the
 object store stayed there for good: account erasure swept them, deleting one item did not,
 while the retired row and its chunks were kept as an audit record with no window on how long
-they are kept. 44.1 closes the first, 44.2 the second's object half, 44.3 puts a window on
-the audit record.
+they are kept. The epic closed all three: 44.1 stops the late ingest, 44.2 reclaims the object
+once the last row naming it is gone, and 44.3 puts the window on the record -- so a delete now
+owes the stored copy an end rather than an endless tail.
 
 - [x] **44.1** A late ingestion cannot revive a deleted document.
 
@@ -3746,15 +3747,22 @@ the audit record.
   `ResumeDeleteReclaimTest`, 5 in `ObjectReclaimIT` (needs real stack), and the retirement
   tests now read the keys back; architecture.md and DEPLOYMENT.md name the reference check.)
 
-- [ ] **44.3** The audit record has a window.
+- [x] **44.3** The audit record has a window.
 
-  (`RetentionSweeper` ages credential tokens; it gains a content phase that purges retired
-  documents, their chunks with them, once a configurable window has passed, leaves live and
-  retryable rows alone, and reports a count per table the way the token phase does -- under
-  the same alarm that pages when a scheduled sweep stops running. The purge also reclaims the
-  object the row names: 44.2's recovery route for a failed reclaim is account erasure reading
-  the retired row's key, and a row that goes to the window takes that trail with it unless the
-  sweep asks the store first.)
+  (`RetentionSweeper` ages credential tokens and now, in the same pass, purges the evidence a
+  delete retired: `RetiredEvidencePurger` deletes documents whose `status` the delete path wrote
+  and whose last write is older than `app.retention.retired-document-days` (180 by default), the
+  database takes their chunks with the row through V1's `on delete cascade`, and the keys those
+  rows named go to 44.2's reclaimer -- which waits for this purge's own commit, because the trail
+  that lets a reclaim run is the row this pass deletes. A retired row a source still names is
+  spared and said out loud, since a purge that quietly removed nothing looks exactly like a night
+  with nothing to remove; live, pending and failed rows are nobody's window to close. Both
+  evidence tables leave a reading under `careeros.retention.deleted_rows{table}` -- the chunks
+  get their own because they are the bulk of what goes -- and the phase rides the alarm that
+  pages when a scheduled sweep stops running, under V31's partial index on the retired slice.
+  7 tests in `RetiredEvidencePurgerTest`, 10 in `RetentionSweeperTest` (three of them new), 4 in
+  `RetiredEvidencePurgeIT` (needs real stack); architecture.md, DEPLOYMENT.md and RUNBOOK.md
+  move with the window.)
 
 ## Epic 45 — Every Signal Speaks Its Own Sentence
 

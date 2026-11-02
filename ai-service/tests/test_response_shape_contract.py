@@ -1035,8 +1035,12 @@ def test_the_java_probe_reads_every_record_the_backend_declares():
     # the settings card PUTs -- took it to 191, and the parallel mail wave's
     # `MailSettingsRow`/reader records took it further. This pass counts the whole repository again,
     # which is why it lands on a number the sentences above do not add up to.
-    assert len(declared) == 192, \
-        f"{len(declared)} records carry a declaration the shared opener reads, not the 192 measured"
+    # 193 with 44.3's `RetiredEvidencePurger.Purge`: what one retention pass took -- the document
+    # rows it deleted, the chunk rows the cascade took with them and the retired rows a source still
+    # named. The sweep's receipt is not a wire shape and no controller binds it, but the walk reads
+    # declarations rather than routes, so it is held to the same opener as the DTOs above.
+    assert len(declared) == 193, \
+        f"{len(declared)} records carry a declaration the shared opener reads, not the 193 measured"
     problems, renamed = [], []
     for relative, record in declared:
         names = _record_components_at(relative, record)
@@ -3052,7 +3056,9 @@ def test_the_heartbeat_interval_has_one_definer_and_every_shipped_claim_names_it
         # the word and state no interval. They are not run-stream claims, but the noun census is
         # over the word, and listing them keeps its population counted rather than pruned.
         ("backend/src/main/java/com/careeros/auth/retention/RetentionMetrics.java", 13),
-        ("backend/src/main/java/com/careeros/auth/retention/RetentionSweeper.java", 17),
+        # 44.3's purge added an import above this comment block, so the span now starts at 18
+        # rather than 17; the sentence itself did not change.
+        ("backend/src/main/java/com/careeros/auth/retention/RetentionSweeper.java", 18),
         ("backend/src/main/java/com/careeros/notification/service/NotificationDeliveryMetrics.java", 11),
         ("backend/src/main/java/com/careeros/notification/service/NotificationDeliveryMetrics.java", 82),
         ("backend/src/main/java/com/careeros/notification/service/NotificationMailService.java", 22),

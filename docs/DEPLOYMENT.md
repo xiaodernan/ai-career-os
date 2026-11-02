@@ -316,14 +316,26 @@ and an alarm that guessed one would page on a busy minute.
 The retention sweep exports `careeros_retention_deleted_rows_total{table}` for
 `refresh_tokens`, `password_reset_tokens` and `email_change_tokens`, moved by the
 nightly 04:47 UTC delete of rows whose expiry is more than
-`RETENTION_EXPIRED_TOKEN_DAYS` (30 by default) in the past. A table whose delete
-fails is logged and leaves no reading, so a quiet night and a broken sweep are
-different shapes on the dashboard. The sweep deliberately leaves the tables whose
-rows are visible history — AI usage events behind the activity totals,
-notification read state, ingestion runs, weekly letters — because deleting those
-rows would rewrite a screen or re-announce a story the reader already settled.
-V23 adds an `expires_at` index to each of the three swept tables, so the nightly
-delete stays a range read as the tables grow.
+`RETENTION_EXPIRED_TOKEN_DAYS` (30 by default) in the past, and for `documents` and
+`document_chunks`, moved by the same pass deleting rows whose retirement is more than
+`RETENTION_RETIRED_DOCUMENT_DAYS` (180 by default) in the past. The evidence tables get
+separate readings because they are one statement's work — the chunks leave through the
+schema's cascade, not a delete anyone calls — and an operator watching either table grow
+back can only act on a count that names it. A table whose delete fails is logged and
+leaves no reading, so a quiet night and a broken sweep are different shapes on the
+dashboard. The sweep deliberately leaves the tables whose rows are visible history — AI
+usage events behind the activity totals, notification read state, ingestion runs, weekly
+letters — because deleting those rows would rewrite a screen or re-announce a story the
+reader already settled. V23 adds an `expires_at` index to each of the three swept
+credential tables and V31 a partial index on the retired slice of `documents`, so both
+halves of the nightly work stay range reads as the tables grow.
+
+A retired row that a source still points at is left in place — the delete path drops the
+source in the transaction that retires the copy, so this is an anomaly, not a category —
+and it is logged as "Retention sweep left N retired document row(s)" rather than counted
+as a failure. Read that line as a thing to look at, not to fix tonight: the rows are
+still retired, so nothing is quotable, and they will be purged the day the source row
+goes.
 
 The sweep also exports `careeros_retention_last_sweep_timestamp`, moved at the
 end of every completed pass, with or without deletions. The counter cannot say
@@ -338,9 +350,13 @@ A delete that retires an ingested copy asks the object store for the bytes behin
 `deleted` when no row still names the key, `referenced` when another row does, and `failed`
 when the store refused. Resume uploads put one object behind two rows — the resume serves it
 as the original file and the document row is the copy the AI quotes — so the first of the two
-to go records `referenced` and keeps the bytes. No nightly rule reads the family: an object
-that outlives a row is not an outage, and a counter with no baseline would alarm on a quiet
-week.
+to go records `referenced` and keeps the bytes. The nightly purge moves the same family for
+the rows it retires out of the audit window, which is where a `failed` reading changes
+meaning: an item delete leaves the retired row naming its key, so account erasure can finish
+a reclaim the store refused, while a purged row has no trail and the object is an orphan.
+The WARN line the same failure logs names the key, and that is the list to work from.
+No nightly rule reads the family: an object that outlives a row is not an outage, and a
+counter with no baseline would alarm on a quiet week.
 
 ### Startup gating (healthchecks)
 

@@ -1,6 +1,7 @@
 package com.careeros.auth.retention;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -9,6 +10,7 @@ import com.careeros.auth.repository.EmailChangeTokenRepository;
 import com.careeros.auth.repository.PasswordResetTokenRepository;
 import com.careeros.auth.repository.RefreshTokenRepository;
 import com.careeros.config.AppProperties;
+import com.careeros.knowledge.service.RetiredEvidencePurger;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
@@ -32,6 +34,12 @@ import org.junit.jupiter.api.Test;
  * <p>And 28.2's one: the heartbeat answers whether the schedule ran, which no deletion count
  * can. It starts at boot rather than at zero, and a pass that failed every table still moves
  * it — the failures are the counters' story, not the clock's.
+ *
+ * <p>44.3 adds the evidence phase and the same two promises to it: the window on a retired
+ * document is its own knob, so moving the credential grace cannot quietly start purging audit
+ * records early; the chunks the cascade took get their own reading, because counting only the
+ * rows would understate the night; and a purge that skipped a row a source still names is an
+ * anomaly in the log, not a failed table with no counter.
  */
 class RetentionSweeperTest {
 
@@ -41,10 +49,12 @@ class RetentionSweeperTest {
     private final PasswordResetTokenRepository resetTokens = mock(PasswordResetTokenRepository.class);
     private final EmailChangeTokenRepository emailChangeTokens =
             mock(EmailChangeTokenRepository.class);
+    private final RetiredEvidencePurger evidence = mock(RetiredEvidencePurger.class);
     private final SimpleMeterRegistry registry = new SimpleMeterRegistry();
     private final AppProperties props = new AppProperties();
     private final RetentionSweeper sweeper = new RetentionSweeper(
-            refreshTokens, resetTokens, emailChangeTokens, props, new RetentionMetrics(registry));
+            refreshTokens, resetTokens, emailChangeTokens, evidence, props,
+            new RetentionMetrics(registry));
 
     /**
      * Held in a field so it cannot be collected before the read: Micrometer's gauge keeps its
@@ -58,6 +68,10 @@ class RetentionSweeperTest {
         when(refreshTokens.deleteExpiredBefore(NOW.minusDays(30))).thenReturn(3);
         when(resetTokens.deleteExpiredBefore(NOW.minusDays(30))).thenReturn(5);
         when(emailChangeTokens.deleteExpiredBefore(NOW.minusDays(30))).thenReturn(0);
+        // Any cutoff: the tests that care which window the phase used verify the argument, and a
+        // stub pinned to one date would make every other pass look like a failed purge.
+        when(evidence.purgeBefore(any()))
+                .thenReturn(new RetiredEvidencePurger.Purge(2, 40, 0));
     }
 
     @Test
@@ -67,9 +81,9 @@ class RetentionSweeperTest {
         verify(refreshTokens).deleteExpiredBefore(NOW.minusDays(30));
         verify(resetTokens).deleteExpiredBefore(NOW.minusDays(30));
         verify(emailChangeTokens).deleteExpiredBefore(NOW.minusDays(30));
-        assertThat(sweep.deleted()).containsEntry(RetentionSweeper.REFRESH_TOKENS, 3)
-                .containsEntry(RetentionSweeper.PASSWORD_RESET_TOKENS, 5)
-                .containsEntry(RetentionSweeper.EMAIL_CHANGE_TOKENS, 0);
+        assertThat(sweep.deleted()).containsEntry(RetentionSweeper.REFRESH_TOKENS, 3L)
+                .containsEntry(RetentionSweeper.PASSWORD_RESET_TOKENS, 5L)
+                .containsEntry(RetentionSweeper.EMAIL_CHANGE_TOKENS, 0L);
         assertThat(sweep.failed()).isEmpty();
     }
 
@@ -127,8 +141,8 @@ class RetentionSweeperTest {
         RetentionSweeper.Sweep sweep = sweeper.sweep(NOW);
 
         assertThat(sweep.failed()).containsExactly(RetentionSweeper.REFRESH_TOKENS);
-        assertThat(sweep.deleted()).containsEntry(RetentionSweeper.PASSWORD_RESET_TOKENS, 5)
-                .containsEntry(RetentionSweeper.EMAIL_CHANGE_TOKENS, 0)
+        assertThat(sweep.deleted()).containsEntry(RetentionSweeper.PASSWORD_RESET_TOKENS, 5L)
+                .containsEntry(RetentionSweeper.EMAIL_CHANGE_TOKENS, 0L)
                 .doesNotContainKey(RetentionSweeper.REFRESH_TOKENS);
         verify(resetTokens).deleteExpiredBefore(NOW.minusDays(30));
         verify(emailChangeTokens).deleteExpiredBefore(NOW.minusDays(30));
@@ -139,13 +153,77 @@ class RetentionSweeperTest {
     @Test
     void aNegativeGraceWindowIsClampedToZeroRatherThanDeletingFutureRows() {
         props.getRetention().setExpiredTokenDays(-5);
+        props.getRetention().setRetiredDocumentDays(-5);
 
         RetentionSweeper.Sweep sweep = sweeper.sweep(NOW);
 
         verify(refreshTokens).deleteExpiredBefore(NOW);
         verify(resetTokens).deleteExpiredBefore(NOW);
         verify(emailChangeTokens).deleteExpiredBefore(NOW);
+        verify(evidence).purgeBefore(NOW);
         assertThat(sweep.failed()).isEmpty();
+    }
+
+    @Test
+    void theEvidenceWindowIsItsOwnKnobNotTheCredentialGrace() {
+        props.getRetention().setRetiredDocumentDays(7);
+
+        sweeper.sweep(NOW);
+
+        // Two questions with two clocks: thirty days past a token's expiry and a week past a
+        // document's retirement are different promises, and one operator moving one knob must
+        // not move the other.
+        verify(evidence).purgeBefore(NOW.minusDays(7));
+        verify(refreshTokens).deleteExpiredBefore(NOW.minusDays(30));
+    }
+
+    @Test
+    void thePurgeReportsTheRowsItDeletedAndTheChunksThatWentWithThem() {
+        when(evidence.purgeBefore(NOW.minusDays(180)))
+                .thenReturn(new RetiredEvidencePurger.Purge(2, 40, 0));
+
+        RetentionSweeper.Sweep sweep = sweeper.sweep(NOW);
+
+        // Chunks are the bulk of what a purge removes and they leave by the row's cascade, so
+        // a reading that counted only documents would understate the night by the table that
+        // actually grew fastest.
+        assertThat(sweep.deleted()).containsEntry(RetentionSweeper.DOCUMENTS, 2L)
+                .containsEntry(RetentionSweeper.DOCUMENT_CHUNKS, 40L);
+        assertThat(count(RetentionSweeper.DOCUMENTS)).isEqualTo(2.0);
+        assertThat(count(RetentionSweeper.DOCUMENT_CHUNKS)).isEqualTo(40.0);
+        assertThat(sweep.failed()).isEmpty();
+    }
+
+    @Test
+    void aRowThePurgeLeftBehindIsAnomalyNotFailure() {
+        when(evidence.purgeBefore(NOW.minusDays(180)))
+                .thenReturn(new RetiredEvidencePurger.Purge(2, 40, 3));
+
+        RetentionSweeper.Sweep sweep = sweeper.sweep(NOW);
+
+        // Three retired rows a source still names stayed, and the sweep did remove the other
+        // two: a phase that skipped a row is not a phase that failed, so both readings move and
+        // nothing lands in the failed list. The skip itself is the WARN line's business.
+        assertThat(sweep.failed()).isEmpty();
+        assertThat(sweep.deleted()).containsEntry(RetentionSweeper.DOCUMENTS, 2L);
+    }
+
+    @Test
+    void aFailedPurgeNamesBothEvidenceTablesAndLeavesTheCredentialsSwept() {
+        when(evidence.purgeBefore(NOW.minusDays(180)))
+                .thenThrow(new IllegalStateException("deadlock on documents"));
+
+        RetentionSweeper.Sweep sweep = sweeper.sweep(NOW);
+
+        // Rows and chunks go in one statement, so a failed purge leaves neither count known --
+        // and the credential deletes already committed in their own transactions.
+        assertThat(sweep.failed()).containsExactly(
+                RetentionSweeper.DOCUMENTS, RetentionSweeper.DOCUMENT_CHUNKS);
+        assertThat(sweep.deleted()).doesNotContainKey(RetentionSweeper.DOCUMENTS)
+                .doesNotContainKey(RetentionSweeper.DOCUMENT_CHUNKS);
+        assertThat(counter(RetentionSweeper.DOCUMENTS)).isNull();
+        assertThat(count(RetentionSweeper.REFRESH_TOKENS)).isEqualTo(3.0);
+        assertThat(heartbeat()).isEqualTo(NOW.toEpochSecond());
     }
 
     private Counter counter(String table) {

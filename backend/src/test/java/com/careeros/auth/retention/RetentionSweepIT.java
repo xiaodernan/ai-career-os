@@ -52,6 +52,10 @@ class RetentionSweepIT extends ApiIntegrationTest {
         assertThat(index("idx_refresh_expires")).isEqualTo(1);
         assertThat(index("idx_reset_expires")).isEqualTo(1);
         assertThat(index("idx_email_change_expires")).isEqualTo(1);
+        // 44.3's purge reads the retired slice of documents; the partial index is what keeps
+        // that read a range scan, so a migration that did not apply is a slow night, not an
+        // error -- which is exactly why it is asserted here rather than trusted.
+        assertThat(index("idx_docs_retired_age")).isEqualTo(1);
     }
 
     private void insertTokens(UUID userId, String expired, String fresh) {

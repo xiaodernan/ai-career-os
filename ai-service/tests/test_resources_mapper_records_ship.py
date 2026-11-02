@@ -174,7 +174,14 @@ DECLARED_NOWHERE = {
                                  "tailor_diff", "versionNo", "version_no"},
     ("mapCompany", "raw"): set(),
     ("mapContact", "raw"): set(),
-    ("mapSource", "raw"): {"chunkCount", "chunk_count", "chunks", "errorMessage", "error_message",
+    # `chunks` left this row when 44.3's `RetiredEvidencePurger.Purge` became the first record to
+    # declare it: the source mapper still asks the name and `SourceItem` still does not answer it
+    # -- that is the row above, unchanged -- but this census classifies by declaration, so the name
+    # is now one some backend record spells. The move is worth reading as a limit of the proxy:
+    # the record is an internal purge receipt, not a wire shape, so "some record declares it" is
+    # weaker here than the row's sentence claims. What keeps the claim honest is that the name
+    # stays in UNAUTHORED: a mapper asking it is still asking something its DTO cannot answer.
+    ("mapSource", "raw"): {"chunkCount", "chunk_count", "errorMessage", "error_message",
                            "fileName", "file_name", "type"},
     ("mapSessionScalars", "s"): {"depth", "level", "type"},
     ("mapInterviewSessionItem", "s"): {"overallScore", "turnCount"},
@@ -604,7 +611,11 @@ def test_an_unauthored_name_is_a_snake_twin_a_foreign_name_or_a_name_no_record_d
     # 27 rather than 28 since 25.1's `SessionResponse` declared `current`: the versions
     # mapper's legacy alias is still unauthored for `ResumeVersionItem`, but another route
     # now answers the name, which is the foreign class rather than this one.
-    assert scanned_nowhere == 27, scanned_nowhere
+    # 26 rather than 27 since 44.3's `RetiredEvidencePurger.Purge` declared `chunks` -- the same
+    # move by the same rule, and a weaker one, because the record that spells the name is a purge
+    # receipt no controller binds. `SourceItem` still cannot answer it, which is what the row above
+    # says; this total only says some backend record now declares the name.
+    assert scanned_nowhere == 26, scanned_nowhere
 
 
 def test_no_naming_strategy_and_no_annotation_renames_an_answer_record():

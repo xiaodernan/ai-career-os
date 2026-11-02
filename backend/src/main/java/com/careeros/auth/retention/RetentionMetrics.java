@@ -11,8 +11,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.springframework.stereotype.Component;
 
 /**
- * The retention sweep's readings (roadmap 28.1, heartbeat 28.2): how many expired rows each
- * table gave up, tagged by table, and when the sweep last finished.
+ * The retention sweep's readings (roadmap 28.1, heartbeat 28.2, content phase 44.3): how many
+ * rows each table gave up, tagged by table, and when the sweep last finished.
  *
  * <p>The counter answers how much a sweep removed; the gauge answers whether the clock still
  * runs. Neither answers the other's question: a stopped sweep leaves the counters at their last
@@ -21,6 +21,12 @@ import org.springframework.stereotype.Component;
  * without rows, and an alarm reads its age. The tag is registered on the first sweep over that
  * table rather than at boot, so an install that has never accumulated a reset token does not
  * export a series pretending it has been pruning one.
+ *
+ * <p>The tags name both things the sweep prunes: the credential tables whose rows expire, and
+ * the evidence tables whose rows the delete path retired -- a document and, cascaded with it,
+ * the chunks that were indexed from it. The chunks get their own tag rather than being counted
+ * under the document row, because they are the bulk of what a purge removes and an operator
+ * watching the table grow back can only act on a reading that names the table.
  *
  * <p>The gauge starts at the process's own boot time, not at zero, for the reason the other
  * sweep markers do: zero reads as an event in 1970 and would page a fresh deploy before its
@@ -34,7 +40,7 @@ public class RetentionMetrics {
     static final String DELETED = "careeros.retention.deleted_rows";
     static final String LAST_SWEEP = "careeros.retention.last.sweep.timestamp";
     private static final String DESCRIPTION =
-            "Expired credential rows removed by the retention sweep, by table";
+            "Rows removed by the retention sweep, by table: expired credentials and retired evidence";
 
     private final MeterRegistry registry;
     private final Map<String, Counter> counters = new ConcurrentHashMap<>();
@@ -48,7 +54,7 @@ public class RetentionMetrics {
                 .register(registry);
     }
 
-    void record(String table, int rows) {
+    void record(String table, long rows) {
         counters.computeIfAbsent(table, name -> Counter.builder(DELETED)
                         .tag("table", name)
                         .description(DESCRIPTION)
