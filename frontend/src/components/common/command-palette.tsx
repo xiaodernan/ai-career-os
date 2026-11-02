@@ -18,9 +18,10 @@ import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
 import { normalizeSearch, searchGroupNames } from "@/lib/api/normalize";
+import { loadRecentSearches, rememberSearch } from "@/lib/recent-searches";
 import { useLocale } from "@/lib/i18n/locale-context";
 import type { SearchResults } from "@/lib/api/types";
-import { FileText, Briefcase, Building2, Mail, MessageSquare, LayoutDashboard, CornerDownLeft, Loader2, type LucideIcon } from "lucide-react";
+import { FileText, Briefcase, Building2, History, Mail, MessageSquare, LayoutDashboard, CornerDownLeft, Loader2, type LucideIcon } from "lucide-react";
 
 /**
  * CommandPalette — global ⌘K shell (architecture.md §3 search module).
@@ -67,8 +68,15 @@ export function CommandPaletteProvider({
 }) {
   const [isOpen, setIsOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
+  const [recents, setRecents] = React.useState<string[]>([]);
   const router = useRouter();
   const { t } = useLocale();
+
+  // Read on open rather than on mount: another tab may have added a query since this one loaded,
+  // and a private-mode write can fail without the reader needing to know.
+  React.useEffect(() => {
+    if (isOpen) setRecents(loadRecentSearches());
+  }, [isOpen]);
 
   React.useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -97,8 +105,9 @@ export function CommandPaletteProvider({
 
   const navigate = React.useCallback((href: string) => {
     setIsOpen(false);
+    setRecents(rememberSearch(query));
     router.push(href);
-  }, [router]);
+  }, [query, router]);
 
   // Rendered as-is: the response is already the filtered set, and `shouldFilter={false}`
   // stops cmdk from filtering again. A local title match here used to delete every hit
@@ -194,6 +203,21 @@ export function CommandPaletteProvider({
             ))}
 
             {apiGroups.length > 0 && <CommandSeparator />}
+
+            {!query.trim() && recents.length > 0 && (
+              <CommandGroup heading={t("chrome.recentSearches")}>
+                {recents.map((term) => (
+                  <CommandItem
+                    key={`recent-${term}`}
+                    value={`recent:${term}`}
+                    onSelect={() => setQuery(term)}
+                  >
+                    <History aria-hidden />
+                    <span className="min-w-0 flex-1 truncate">{term}</span>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
 
             <CommandGroup heading={t("chrome.goTo")}>
               {navMatches.map((item) => (

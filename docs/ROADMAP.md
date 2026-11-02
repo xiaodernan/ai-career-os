@@ -4077,6 +4077,15 @@ the whole cross-entity search has stayed invisible.
   drawer is where it lives (51.2). A letter with no application id falls back to the board rather
   than `/applications?application=undefined`. 3 normalisation tests.)
 
+- [x] **52.3** The palette remembers what was run.
+
+  (A query the reader already trusted had to be retyped every visit. The palette now keeps the
+  last five in `localStorage` -- the browser's memory, not the account's, because a search is a
+  moment of a browser and the palette has to work before `/users/me` answers. The rules live in
+  `lib/recent-searches.ts` so they can be exercised without a browser: trimmed, folded for
+  comparison, newest first, capped at five, and neither a malformed entry nor a private mode that
+  refuses the write is allowed to break the palette. 6 pure-function tests and 1 wiring test.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

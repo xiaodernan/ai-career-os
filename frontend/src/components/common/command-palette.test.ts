@@ -49,6 +49,19 @@ describe("the command palette's result list", () => {
     expect(source).toMatch(/NAV_ITEMS\.map\(/);
   });
 
+  it("remembers the queries actually run, and offers them back before anything is typed", () => {
+    // The list is the browser's, not the account's: it is read when the palette opens (another
+    // tab may have added to it) and written when a row is chosen -- the moment the reader showed
+    // the query was worth running.
+    expect(source).toContain("rememberSearch(query)");
+    expect(source).toContain("setRecents(loadRecentSearches())");
+    expect(source).toContain('t("chrome.recentSearches")');
+    // A recent row re-runs the query instead of navigating somewhere.
+    expect(source).toContain("onSelect={() => setQuery(term)}");
+    expect(source).toMatch(/!query\.trim\(\) && recents\.length > 0/);
+  });
+
+
   it("filters navigation on the names it shows, not the English ones", () => {
     // The bug this pins: the palette filtered on `item.label` -- the English
     // name -- while the list beside it read the same English. A Chinese
