@@ -356,10 +356,10 @@ function topArgs(args: string): string[] {
 }
 
 /**
- * A request body the reader can name. `field("k", v)` puts `k` on the wire whether it stands alone
- * or is spread into a literal; an object literal contributes its top-level keys, spelled-out or
- * shorthand. Anything else — a variable, a builder call, a spread of an unknown value — is
- * reported as unresolved rather than silently checked as "no keys".
+ * A request body the reader can name. `field("k", v)` and `dial("k", v)` put `k` on the wire
+ * whether they stand alone or are spread into a literal; an object literal contributes its
+ * top-level keys, spelled-out or shorthand. Anything else — a variable, a builder call, a spread
+ * of an unknown value — is reported as unresolved rather than silently checked as "no keys".
  */
 interface BodyReading {
   keys: string[];
@@ -370,11 +370,12 @@ function readBody(raw: string): BodyReading {
   const text = unwrapStringify(raw.trim());
   const keys = new Set<string>();
   const unresolved: string[] = [];
-  for (const m of text.matchAll(/\bfield\(\s*["']([\w]+)["']/g)) keys.add(m[1]);
+  for (const m of text.matchAll(/\b(?:field|dial)\(\s*["']([\w]+)["']/g)) keys.add(m[1]);
   const literal = outerObject(text);
   if (literal === undefined) {
     // a lone `field("k", v)` is the whole body; `payload` is not readable here
-    const alone = /^field\(/.test(text) && matchingClose(text, text.indexOf("(")) === text.length - 1;
+    const alone =
+      /^(?:field|dial)\(/.test(text) && matchingClose(text, text.indexOf("(")) === text.length - 1;
     if (alone) return { keys: [...keys], unresolved: [] };
     const call = /^([A-Za-z_$][\w$]*)\s*\(/.exec(text);
     const returned = call ? helperReturn(call[1]) : undefined;
@@ -383,7 +384,7 @@ function readBody(raw: string): BodyReading {
   }
   for (const piece of topArgs(literal)) {
     if (piece.startsWith("...")) {
-      if (!/\bfield\(/.test(piece)) unresolvedPush(piece, unresolved);
+      if (!/\b(?:field|dial)\(/.test(piece)) unresolvedPush(piece, unresolved);
       continue;
     }
     const named = /^["']?([A-Za-z_$][\w$]*)["']?\s*:/.exec(piece);
