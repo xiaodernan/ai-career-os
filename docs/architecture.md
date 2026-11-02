@@ -266,9 +266,9 @@ user-scoped table (ownership is enforced in backend layer + a single SQL predica
   `status = 'retired'` is terminal: the delete path writes it when the owning resume,
   source or note goes, and neither a late ingest callback nor a failed trigger may move
   the row off it — retrieval admits a chunk only while the document reads `ready`, so
-  an answer that arrives after the delete has to lose the race. The row and its chunks
-  stay as the audit record; reclaiming them is the retention sweep's job, not the
-  delete's.
+  an answer that arrives after the delete has to lose the race. The row, its chunks and
+  the object the upload stored all stay where they were: the delete stops the material
+  being quoted, it does not reclaim what it retired.
 - `document_chunks(id, document_id, user_id, ordinal, text, token_count, meta jsonb
    /* section path e.g. resume>experience>3rd-intern, skill tags */, embedding vector,
    tsv tsvector GENERATED, uniq(document_id, ordinal))`

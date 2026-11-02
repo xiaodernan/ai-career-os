@@ -3693,6 +3693,45 @@ picker and save to say them. The card whose whole job is to be answered could on
   The browser-source census moves to 149 and the cache-call roster's `invalidateQueries`
   to 53.)
 
+## Epic 44 — What a Delete Owes the Stored Copy
+
+Deleting a resume, a source or a note stops the AI quoting it: `documents.status = 'ready'`
+is the single predicate all three hybrid retrieval channels share, so retirement takes the
+text out of evidence. Two debts were left unpaid. An ingest that was already running knows
+nothing about the delete -- it finishes, writes `ready` over `retired`, and the material the
+reader removed is quotable again. And the bytes an upload put in the object store stay there
+for good: account erasure sweeps them, deleting one item does not, while the retired row and
+its chunks are kept as an audit record with no window on how long they are kept.
+
+- [x] **44.1** A late ingestion cannot revive a deleted document.
+
+  (`set_status` carries `AND status <> 'retired'` in both of its statements and now answers
+  whether the row moved, so the delete wins whichever write reaches the row last;
+  `replace_chunks` reads the status before it touches anything and adds no chunks to a
+  retired or missing document, leaving the ones it retired with as the audit. The pipeline
+  obeys that answer at both of its writes: a task that starts on a retired document writes
+  nothing and says so, and one that loses the row while it embeds stops before marking the
+  source ready instead of publishing an indexed document that is not there. The backend's
+  late `markFailed` keeps the marker too -- a trigger failure is no reason to un-retire.
+  9 ai-service tests in `test_retired_documents_do_not_come_back.py` and 2 backend tests in
+  `FileIngestRetirementTest`; architecture.md states the terminal status.)
+
+- [ ] **44.2** Deleting the item reclaims the object it uploaded.
+
+  (Today only account erasure removes file keys, so every deleted resume and source leaves a
+  private-bucket object holding its bytes. Retirement already knows the key; the missing half
+  is a reference check -- no live document and no resume version names this key -- and an
+  object delete that runs after the row transaction commits, so a rolled-back delete cannot
+  destroy a file still in use. A count says how many objects went, and a test pins that a key
+  two rows share is not reclaimed by the first one to go.)
+
+- [ ] **44.3** The audit record has a window.
+
+  (`RetentionSweeper` ages credential tokens; it gains a content phase that purges retired
+  documents, their chunks with them, once a configurable window has passed, leaves live and
+  retryable rows alone, and reports a count per table the way the token phase does -- under
+  the same alarm that pages when a scheduled sweep stops running.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
