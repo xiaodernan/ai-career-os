@@ -4,6 +4,8 @@ import hashlib
 
 from app.core import db
 
+RETIRED = "retired"
+
 
 async def get_document(doc_id: str) -> dict | None:
     row = await db.fetchrow("SELECT * FROM documents WHERE id=$1::uuid", doc_id)
@@ -27,17 +29,33 @@ def sha256(data: bytes) -> str:
 
 
 async def set_status(doc_id: str, status: str, error: str | None = None,
-                     text_excerpt: str | None = None) -> None:
+                     text_excerpt: str | None = None) -> bool:
+    """Move the ingestion state, returning whether the row moved.
+
+    Retirement is terminal: the backend writes it when the reader deletes the
+    owning resume, source or note, and retrieval admits a chunk only while its
+    document reads 'ready'. A callback that lands after that delete must lose,
+    whichever write reaches the row last.
+    """
     if text_excerpt is not None:
-        await db.execute(
-            "UPDATE documents SET status=$2, error=$3, text_excerpt=$4 WHERE id=$1::uuid",
+        tag = await db.execute(
+            "UPDATE documents SET status=$2, error=$3, text_excerpt=$4 "
+            "WHERE id=$1::uuid AND status <> 'retired'",
             doc_id, status, error, text_excerpt[:2000])
     else:
-        await db.execute("UPDATE documents SET status=$2, error=$3 WHERE id=$1::uuid",
-                         doc_id, status, error)
+        tag = await db.execute(
+            "UPDATE documents SET status=$2, error=$3 "
+            "WHERE id=$1::uuid AND status <> 'retired'",
+            doc_id, status, error)
+    return not tag.endswith(" 0")
 
 
 async def replace_chunks(doc_id: str, user_id: str, chunks: list[dict]) -> int:
+    row = await db.fetchrow("SELECT status FROM documents WHERE id=$1::uuid", doc_id)
+    if row is None or row["status"] == RETIRED:
+        # A retired document keeps the chunks it died with as the audit record;
+        # a late ingest may neither delete them nor add quotable new ones.
+        return 0
     await db.execute("DELETE FROM document_chunks WHERE document_id=$1::uuid", doc_id)
     if not chunks:
         return 0

@@ -128,6 +128,11 @@ public class FileIngestService {
             s.setError(reason);
         });
         documents.findById(persisted.documentId()).ifPresent(d -> {
+            // Retirement is terminal: a trigger failure that lands after the reader
+            // deleted the upload must not erase the marker retrieval is gated on.
+            if ("retired".equals(d.getStatus())) {
+                return;
+            }
             d.setStatus("failed");
             d.setError(reason);
         });

@@ -34,8 +34,13 @@ async def ingest_document(doc_id: str, task_id: str) -> dict:
     if not doc:
         taskbus.finish(task_id, False, error="document not found")
         return {"error": "not found"}
+    if doc.get("status") == docs_repo.RETIRED:
+        taskbus.finish(task_id, False, error="document retired")
+        return {"error": "retired"}
     source_id = doc["source_id"]
-    await docs_repo.set_status(doc_id, "indexing")
+    if not await docs_repo.set_status(doc_id, "indexing"):
+        taskbus.finish(task_id, False, error="document retired")
+        return {"error": "retired"}
     try:
         taskbus.publish(task_id, "status", {"step": "extracting", "state": "active"})
         if doc["file_key"]:
@@ -86,7 +91,9 @@ async def ingest_document(doc_id: str, task_id: str) -> dict:
 
         taskbus.publish(task_id, "status", {"step": "indexing", "state": "active"})
         n = await docs_repo.replace_chunks(doc_id, str(doc["user_id"]), payload)
-        await docs_repo.set_status(doc_id, "ready", text_excerpt=text)
+        if not await docs_repo.set_status(doc_id, "ready", text_excerpt=text):
+            taskbus.finish(task_id, False, error="document retired")
+            return {"error": "retired"}
         await docs_repo.mark_source_ready(str(source_id) if source_id else None, doc_id)
         taskbus.publish(task_id, "status", {"step": "indexing", "state": "done"})
 
