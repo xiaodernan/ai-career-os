@@ -10,6 +10,7 @@ import { Pagination } from "@/components/common/pagination";
 import { relativeTime } from "@/lib/format";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { safeHref } from "@/lib/safe-href";
+import { nightlyStatusWord } from "@/lib/status-words";
 import { useNightlyReports, useNightlyVerdict } from "@/lib/hooks/monitoring";
 
 /**
@@ -101,11 +102,7 @@ export function NightlyHistory() {
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex min-w-0 flex-wrap items-center gap-2">
                     <Badge variant={badgeVariant(row.status)}>
-                      {row.status === "passed"
-                        ? t("monitoring.nightlyPassed")
-                        : row.status === "failed"
-                          ? t("monitoring.nightlyFailed")
-                          : row.status}
+                      {nightlyStatusWord(t, row.status)}
                     </Badge>
                     <span className="text-xs text-muted-foreground">
                       {relativeTime(row.startedAt, locale)}

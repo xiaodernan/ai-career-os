@@ -19,6 +19,7 @@ import {
 import { api } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
 import { SOURCE_KINDS, sourceKindLabel } from "@/lib/source-kinds";
+import { knowledgeSourceStatusWord } from "@/lib/status-words";
 import { useSourceStatus } from "@/lib/hooks/resources";
 import { translate, useLocale } from "@/lib/i18n/locale-context";
 
@@ -494,7 +495,7 @@ function IngestStageText({
       <span className="min-w-0 shrink-0 truncate text-muted-foreground">
         {failure
           ? t("knowledge.sources.failedPrefix", { reason: failure })
-          : (status ?? t("knowledge.sources.pending"))}
+          : knowledgeSourceStatusWord(t, status ?? "pending")}
       </span>
     );
   }

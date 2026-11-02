@@ -36,10 +36,24 @@ export const REMOTE_TYPES = ["remote", "hybrid", "onsite"] as const;
 export const RESUME_STATUSES = ["uploaded", "parsing", "ingesting", "parsed", "failed"] as const;
 
 /**
- * `knowledge_sources.status` — the default `pending`, the ingest service's
- * `ingesting`/`failed`, and the `ready` the ai-service's ready callback writes.
+ * `knowledge_sources.status` and `documents.status` — one field on the wire.
+ *
+ * `GET /knowledge/sources/{id}/status` answers with the document's status whenever the
+ * source names one (`KnowledgeService.sourceStatus`), so the badge reads two tables'
+ * vocabularies through the same field: `indexing` is the ingest's own middle stage and
+ * only ever lives on a document, and `retired` is what a delete leaves behind.
  */
-export const KNOWLEDGE_SOURCE_STATUSES = ["pending", "ingesting", "ready", "failed"] as const;
+export const KNOWLEDGE_SOURCE_STATUSES = [
+  "pending",
+  "ingesting",
+  "indexing",
+  "ready",
+  "failed",
+  "retired",
+] as const;
+
+/** The two words a nightly report may carry — `NightlyReport.STATUS_*`, and nothing else. */
+export const NIGHTLY_STATUSES = ["passed", "failed"] as const;
 
 /**
  * `user_memories.kind` — the set the extractor accepts (`agents/memory.py`
@@ -114,6 +128,11 @@ export function requirementPriorityWord(t: TranslateFn, priority: string): strin
 
 export function knowledgeSourceStatusWord(t: TranslateFn, status: string): string {
   return wordFrom(t, "knowledge.sources.statuses", status, KNOWLEDGE_SOURCE_STATUSES);
+}
+
+/** The nightly record's own badge; the panel used to print the runner's word for a stranger. */
+export function nightlyStatusWord(t: TranslateFn, status: string): string {
+  return wordFrom(t, "monitoring.nightlyStatuses", status, NIGHTLY_STATUSES);
 }
 
 /** The trace row's kind badge; the roster is the transport's own gate (`asTraceKind`). */

@@ -34,6 +34,7 @@ import { DiffView } from "@/components/common/diff-view";
 import { DimensionBars } from "@/components/common/skill-chips";
 import { MatchRing } from "@/components/ai/match-ring";
 import { resumeCriterionLabel, resumeDimensionLabel } from "@/lib/dimensions";
+import { resumeStatusWord } from "@/lib/status-words";
 import { TaskProgress } from "@/components/ai/task-stream";
 import { useParseResume, usePrintResumeVersion, useSetCurrentResume } from "@/lib/hooks/actions";
 import { useResume, useResumeVersions } from "@/lib/hooks/resources";
@@ -398,6 +399,7 @@ function BackLink() {
 }
 
 function StatusBadge({ status }: { status: string }) {
+  const { t } = useLocale();
   const variant =
     status === "parsed"
       ? "success"
@@ -407,8 +409,8 @@ function StatusBadge({ status }: { status: string }) {
           ? "warning"
           : "secondary";
   return (
-    <Badge variant={variant} className="text-2xs font-normal capitalize">
-      {status}
+    <Badge variant={variant} className="text-2xs font-normal">
+      {resumeStatusWord(t, status)}
     </Badge>
   );
 }

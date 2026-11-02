@@ -919,6 +919,7 @@ function ResumeScore({
 }
 
 function StatusPill({ status }: { status: string }) {
+  const { t } = useLocale();
   const variant =
     status === "parsed" || status === "ready"
       ? "success"
@@ -928,8 +929,8 @@ function StatusPill({ status }: { status: string }) {
           ? "warning"
           : "secondary";
   return (
-    <Badge variant={variant} className="shrink-0 text-2xs font-normal capitalize">
-      {status}
+    <Badge variant={variant} className="shrink-0 text-2xs font-normal">
+      {resumeStatusWord(t, status)}
     </Badge>
   );
 }

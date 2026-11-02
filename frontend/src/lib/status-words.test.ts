@@ -17,6 +17,7 @@ import {
   knowledgeSourceStatusWord,
   marketVerdictWord,
   memoryKindWord,
+  nightlyStatusWord,
   readinessVerdictWord,
   remoteTypeWord,
   requirementPriorityWord,
@@ -31,6 +32,7 @@ import {
   KNOWLEDGE_SOURCE_STATUSES,
   MARKET_VERDICTS,
   MEMORY_KINDS,
+  NIGHTLY_STATUSES,
   READINESS_VERDICTS,
   REMOTE_TYPES,
   REQUIREMENT_PRIORITIES,
@@ -72,6 +74,7 @@ const ROSTERS: [string, readonly string[]][] = [
   ["jobs.detail.priorities", REQUIREMENT_PRIORITIES],
   ["memory.kinds", MEMORY_KINDS],
   ["knowledge.sources.statuses", KNOWLEDGE_SOURCE_STATUSES],
+  ["monitoring.nightlyStatuses", NIGHTLY_STATUSES],
   ["ai.agentTimeline.kinds", TRACE_KINDS],
 ];
 
@@ -123,7 +126,9 @@ describe("the enum words", () => {
     expect(readinessVerdictWord(zh, "almost")).toBe("Almost");
     expect(marketVerdictWord(zh, "at_market")).toBe("At Market");
     expect(requirementPriorityWord(zh, "urgent")).toBe("Urgent");
-    expect(knowledgeSourceStatusWord(zh, "retired")).toBe("Retired");
+    // `retired` and `indexing` reached the table in this unit; a status the ingest has
+    // never written is what this case still has to degrade.
+    expect(knowledgeSourceStatusWord(zh, "archiving")).toBe("Archiving");
     expect(traceKindWord(zh, "token")).toBe("Token");
     expect(memoryKindWord(zh, "secret")).toBe("Secret");
     expect(interviewModeName(zh, "pair_programming")).toBe("Pair Programming");
@@ -156,6 +161,16 @@ describe("the enum words", () => {
     expect(knowledgeSourceStatusWord(zh, "ingesting")).toBe("摄取中");
     expect(knowledgeSourceStatusWord(zh, "ready")).toBe("就绪");
     expect(knowledgeSourceStatusWord(zh, "failed")).toBe("失败");
+    // The two words the `/status` route brings from the documents table, which the
+    // source column never used: the ingest's own middle stage and the delete's end.
+    expect(knowledgeSourceStatusWord(en, "indexing")).toBe("Indexing");
+    expect(knowledgeSourceStatusWord(zh, "indexing")).toBe("索引中");
+    expect(knowledgeSourceStatusWord(en, "retired")).toBe("Retired");
+    expect(knowledgeSourceStatusWord(zh, "retired")).toBe("已退役");
+    // The nightly record's badge kept the runner's own two words in the table's voice.
+    expect(nightlyStatusWord(en, "passed")).toBe("Passed");
+    expect(nightlyStatusWord(zh, "passed")).toBe("通过");
+    expect(nightlyStatusWord(zh, "failed")).toBe("失败");
     expect(sourceKindLabel(en, "interview_feedback")).toBe("Interview feedback");
     expect(sourceKindLabel(zh, "interview_feedback")).toBe("面试反馈");
     // The trace row's kind badge follows the reader's language too.
@@ -440,6 +455,14 @@ const KIND_SURFACES: [string, string][] = [
 
 const STATUS_SURFACES: [string, string][] = [
   ["app/(app)/knowledge/page.tsx", "knowledgeSourceStatusWord(t, s.status)"],
+  // The upload panel's own line: the polled value is a status, and the row drew it raw.
+  // The `?? "pending"` is the panel's own answer for a poll that has not replied yet.
+  ["components/knowledge/source-actions.tsx", 'knowledgeSourceStatusWord(t, status ?? "pending")'],
+  // Two copies of the same badge, both of which let CSS speak for the word.
+  ["app/(app)/resumes/[id]/page.tsx", "resumeStatusWord(t, status)"],
+  ["app/(app)/dashboard/page.tsx", "resumeStatusWord(t, status)"],
+  // The nightly record's own badge, whose fall-through arm printed what the runner sent.
+  ["components/monitoring/nightly-history.tsx", "nightlyStatusWord(t, row.status)"],
 ];
 
 /**
@@ -463,15 +486,198 @@ function rawKindSurfaces(files: { path: string; text: string }[]): string[] {
 }
 
 /**
- * A status text node is a bare value between the open tag's `>` and the element's
- * close. An attribute (`status={r.status}`), a React key, and a wire comparison all
- * sit inside the tag and are not copy.
+ * The word every text node draws, read with its nesting.
+ *
+ * The first rule looked for `{x.status}` between the tag's `>` and the close, which is
+ * the shape one page happened to use. Five more surfaces printed the same field in
+ * shapes that scan could not reach: a badge whose value is the bare identifier `{status}`
+ * -- the field arrived from the hook already named -- a value behind a `??` fallback,
+ * where a `[^{}]*` scan stops at the first brace of the call the fallback guards
+ * against, the last arm of a chain whose other arms ask the table, and a badge the
+ * panel builds one level down inside `.map()`, where the outer node's braces hold the
+ * whole subtree and the call-blanking erases it. So the walk keeps going *through* a
+ * node it has read instead of jumping past it: every `>` gets its own look.
  */
+function textNodeBodies(text: string): string[] {
+  const bodies: string[] = [];
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] !== ">") continue;
+    // An arrow's `=>` opens a block of code, not a child list; every plain `{` in a
+    // module would read as a rendered expression otherwise.
+    if (text[i - 1] === "=") continue;
+    let j = i + 1;
+    while (j < text.length && /[ \t\r\n]/.test(text[j])) j++;
+    if (text[j] !== "{") continue;
+    const end = skipBalanced(text, j);
+    if (end < 0) continue;
+    const body = text.slice(j + 1, end);
+    if (/^\s*\/\*[\s\S]*\*\/\s*$/.test(body)) continue; // `{/* a comment */}` renders nothing
+    bodies.push(body);
+  }
+  return bodies;
+}
+
+/**
+ * Index of the delimiter that closes the one at `open`, past quotes, comments and inner pairs.
+ *
+ * A comment is not code. The apostrophe in a JSX comment that says "the card's own fields"
+ * opens no string, so without this the quote scanner swallows everything up to the next
+ * apostrophe in the file, and the comment-only node is read as a live expression.
+ */
+function skipBalanced(text: string, open: number): number {
+  const pairs: Record<string, string> = { "{": "}", "(": ")", "[": "]" };
+  const close = pairs[text[open]];
+  if (!close) return -1;
+  let depth = 0;
+  let quote = "";
+  for (let i = open; i < text.length; i++) {
+    const c = text[i];
+    if (quote) {
+      if (c === "\\") i++;
+      else if (c === quote) quote = "";
+      continue;
+    }
+    if (c === "/" && (text[i + 1] === "/" || text[i + 1] === "*")) {
+      const line = text[i + 1] === "/";
+      const end = line ? text.indexOf("\n", i) : text.indexOf("*/", i + 2);
+      i = end < 0 ? text.length : line ? end : end + 1;
+      continue;
+    }
+    if (c === '"' || c === "'" || c === "`") quote = c;
+    else if (c === text[open]) depth++;
+    else if (c === close) {
+      depth--;
+      if (depth === 0) return i;
+    }
+  }
+  return -1;
+}
+
+/**
+ * What the text node could put on the page, with the plumbing blanked out.
+ *
+ * Three things are not the field's own spelling: a call that asks the table for the word
+ * (`t("…")`, `…Word(t, status)`, `…Short(t, row.status)`) goes whole; a call that asks for
+ * something else keeps its name and loses its arguments, because
+ * `statusVariant(run.status)` hands the badge a variant and `status.replace(…)` does draw
+ * the word; and an open tag's attributes are plumbing (`<StatusPill status={r.status} />`),
+ * so the tag is blanked up to its `>` and only its children are read.
+ */
+function printableResidue(body: string): string {
+  const tableCall = /^(t|[A-Za-z_$][\w$]*(Word|Short|Label|Name|Hint))$/;
+  const out: string[] = [];
+  let ident = "";
+  let i = 0;
+  while (i < body.length) {
+    const c = body[i];
+    if (/[A-Za-z_$0-9]/.test(c)) {
+      ident += c;
+      out.push(c);
+      i++;
+      continue;
+    }
+    if (c === "." && /[A-Za-z_$0-9]$/.test(ident)) {
+      ident += c;
+      out.push(c);
+      i++;
+      continue;
+    }
+    if (c === "(") {
+      const callee = (ident.match(/[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*$/) ?? [""])[0];
+      const isCall = callee !== "";
+      const end = skipBalanced(body, i);
+      const last = callee.split(".").pop() ?? "";
+      if (isCall && tableCall.test(last)) {
+        // Drop the callee too: the call's own name is not the field's spelling.
+        out.splice(out.length - callee.length, callee.length, " ");
+        out.push(" ");
+        i = end + 1;
+        ident = "";
+        continue;
+      }
+      if (isCall) {
+        out.push("()");
+        i = end + 1;
+        ident = "";
+        continue;
+      }
+      out.push(c);
+      ident = "";
+      i++;
+      continue;
+    }
+    if (c === "<" && /^[A-Za-z!/]/.test(body[i + 1] ?? "")) {
+      let k = i + 1;
+      let depth = 0;
+      let quote = "";
+      for (; k < body.length; k++) {
+        const d = body[k];
+        if (quote) {
+          if (d === "\\") k++;
+          else if (d === quote) quote = "";
+          continue;
+        }
+        if (d === '"' || d === "'" || d === "`") quote = d;
+        else if (d === "{" || d === "(" || d === "[") depth++;
+        else if (d === "}" || d === ")" || d === "]") depth--;
+        else if (d === ">" && depth === 0) break;
+      }
+      out.push(" ");
+      i = k + 1;
+      ident = "";
+      continue;
+    }
+    if (c === '"' || c === "'" || c === "`") {
+      const end = body.indexOf(c, i + 1);
+      out.push(" ");
+      i = end < 0 ? i + 1 : end + 1;
+      ident = "";
+      continue;
+    }
+    // A comment says nothing about what the node draws: the prose inside it is for the
+    // reader of the source, and `status frame` in a docstring is not a rendered word.
+    if (c === "/" && (body[i + 1] === "/" || body[i + 1] === "*")) {
+      const line = body[i + 1] === "/";
+      const end = line ? body.indexOf("\n", i) : body.indexOf("*/", i + 2);
+      out.push(" ");
+      i = end < 0 ? body.length : line ? end : end + 2;
+      ident = "";
+      continue;
+    }
+    if (c !== "}" && c !== ")" && c !== "]") ident = "";
+    out.push(c);
+    i++;
+  }
+  return out.join("");
+}
+
+/**
+ * A status is charged when it is drawn rather than tested.
+ *
+ * `status === "ready"`, `status && <Badge>` and `status ? a : b` ask about the value and
+ * print something else, so they stay plumbing; `{status}`, `(status ?? …)` and
+ * `{status.replace(…)}` put the wire spelling on the page. A dotted tail is plumbing too
+ * unless it spells the word out: `status.isPending` is the query's own object, while
+ * `status.replace(/_/g, " ")` is the stored value with its underscore still in it.
+ */
+const SPELLING_VERB = /^(replace|toLowerCase|toUpperCase|trim|split|charAt|substring|slice)/;
+
+function printsStatus(body: string): boolean {
+  const residue = printableResidue(body);
+  for (const m of residue.matchAll(/(^|[^\w$.])(?:[A-Za-z_$][\w$]*\.)*status\b/g)) {
+    const after = residue.slice((m.index ?? 0) + m[0].length).match(/^\s*(\S*)/)?.[1] ?? "";
+    if (/^(===|!==|==|!=|<=|>=|&&|=)/.test(after)) continue;
+    if (after.startsWith("?") && !after.startsWith("?.") && !after.startsWith("??")) continue;
+    if (after.startsWith(".") && !SPELLING_VERB.test(after.slice(1))) continue;
+    return true;
+  }
+  return false;
+}
+
 function rawStatusSurfaces(files: { path: string; text: string }[]): string[] {
   return files
-    .filter((f) =>
-      />[ \t\r\n]*\{[ \t\r\n]*[A-Za-z_$][\w$]*(?:\.[\w$]+)*\.status[ \t\r\n]*\}/.test(f.text)
-    )
+    .filter((f) => f.path !== STATUS_WORDS)
+    .filter((f) => textNodeBodies(f.text).some(printsStatus))
     .map((f) => f.path);
 }
 
@@ -492,6 +698,12 @@ describe("the kind and status badges", () => {
   it("draw the wire value through the table", () => {
     const files = sources();
     expect(files.length, "the scan read no files").toBeGreaterThan(150);
+    // The charge runs before the seams: a name in this list says which page prints the
+    // wire word, and a missing seam only says which call the gate expected.
+    const statuses = rawStatusSurfaces(files);
+    expect(statuses, `surfaces printing a wire status itself:\n${statuses.join("\n")}`).toEqual(
+      []
+    );
     for (const [rel, seam] of [...KIND_SURFACES, ...STATUS_SURFACES]) {
       const file = files.find((f) => f.path.endsWith(rel));
       expect(file, `${rel} is not in the walk`).toBeTruthy();
@@ -506,8 +718,6 @@ describe("the kind and status badges", () => {
     expect(kinds, `surfaces spelling a wire kind themselves:\n${kinds.join("\n")}`).toEqual([]);
     const bare = bareKindSurfaces(files);
     expect(bare, `surfaces printing a wire kind:\n${bare.join("\n")}`).toEqual([]);
-    const statuses = rawStatusSurfaces(files);
-    expect(statuses, `surfaces printing a wire status itself:\n${statuses.join("\n")}`).toEqual([]);
   });
 
   it("would still see a surface that spelled the value itself", () => {
@@ -517,6 +727,74 @@ describe("the kind and status badges", () => {
     expect(
       rawStatusSurfaces([{ path: "app/probe.tsx", text: "<Badge>{s.status}</Badge>" }])
     ).toEqual(["app/probe.tsx"]);
+    // The two shapes the old scan could not reach: the identifier the hook named, and
+    // the fallback whose own call puts a brace inside the text node.
+    expect(
+      rawStatusSurfaces([{ path: "app/probe.tsx", text: "<Badge className=\"cap\">{status}</Badge>" }])
+    ).toEqual(["app/probe.tsx"]);
+    expect(
+      rawStatusSurfaces([
+        {
+          path: "app/probe.tsx",
+          text: '<span>{failure\n  ? t("a.failed", { reason: failure })\n  : (status ?? t("a.pending"))}</span>',
+        },
+      ])
+    ).toEqual(["app/probe.tsx"]);
+    expect(
+      rawStatusSurfaces([{ path: "app/probe.tsx", text: "<Badge>{status.replace(/_/g, \" \")}</Badge>" }])
+    ).toEqual(["app/probe.tsx"]);
+    // ...and the same field drawn through the table, tested for a variant, or kept as a
+    // guard, is plumbing.
+    expect(
+      rawStatusSurfaces([
+        { path: "app/ok.tsx", text: "<Badge>{knowledgeSourceStatusWord(t, status)}</Badge>" },
+      ])
+    ).toEqual([]);
+    expect(
+      rawStatusSurfaces([
+        {
+          path: "app/ok.tsx",
+          text: '<div>{run.status && <Badge variant={statusVariant(run.status)}>{runStatusWord(t, run.status)}</Badge>}</div>',
+        },
+      ])
+    ).toEqual([]);
+    expect(
+      rawStatusSurfaces([
+        { path: "app/ok.tsx", text: "<span>{stageShort(t, row.status ?? \"\")}</span>" },
+      ])
+    ).toEqual([]);
+    // The third shape is the fall-through arm of a chain whose other arms ask the table:
+    // the badge drew "passed" and "failed" from the reader's words and the wire spelling
+    // for anything else, which is the same printing right wearing a different shape.
+    expect(
+      rawStatusSurfaces([
+        {
+          path: "app/blind.tsx",
+          text: '<Badge>{row.status === "passed" ? t("a") : row.status === "failed" ? t("b") : row.status}</Badge>',
+        },
+      ])
+    ).toEqual(["app/blind.tsx"]);
+    // ...and so is one level deeper: a panel that builds its rows inside `.map()` keeps
+    // the badge under the call's own parentheses, which the scan used to blank whole.
+    expect(
+      rawStatusSurfaces([
+        {
+          path: "app/blind.tsx",
+          text: '<ul>{rows.map((row) => (\n  <li key={row.id}><Badge>{row.status}</Badge></li>\n))}</ul>',
+        },
+      ])
+    ).toEqual(["app/blind.tsx"]);
+    // A JSX comment is prose, and the apostrophe inside it opens no string: the kanban
+    // card's own note used to read as a rendered expression because the quote scanner
+    // ran on past the comment to the next `'` in the file.
+    expect(
+      rawStatusSurfaces([
+        {
+          path: "app/ok.tsx",
+          text: "<div>{/* the card's own fields open the editor, so a click is never a move */}</div>",
+        },
+      ])
+    ).toEqual([]);
     // An attribute, a React key and a wire comparison are not a rendered word.
     expect(
       rawStatusSurfaces([
@@ -562,6 +840,124 @@ describe("the memory kinds", () => {
     const words = [...declared![1].matchAll(/"([^"]+)"/g)].map((m) => m[1]).sort();
     expect(words.length, "the extractor's roster parsed empty").toBeGreaterThan(0);
     expect([...MEMORY_KINDS].sort()).toEqual(words);
+  });
+});
+
+/**
+ * Two vocabularies answer one status field.
+ *
+ * `GET /knowledge/sources/{id}/status` reads `documents.status` whenever the source names
+ * a document and `knowledge_sources.status` when it does not (`KnowledgeService.sourceStatus`),
+ * so the badge the upload panel draws sees both tables' words through one wire field. The
+ * ingest spends most of its life in `indexing`, which only the documents table ever says,
+ * and a deleted source's copy answers `retired` -- neither was in the roster, so a Chinese
+ * reader watched the panel poll an English word it had no right to print.
+ *
+ * The scan takes the writes from the two stacks rather than from a list kept here: the
+ * knowledge package's own assignments and defaults, the ai-service's `status='…'` clauses
+ * and `set_status(…, "…")` calls. A value outside them is this field's honest unknown and
+ * keeps its English spelling; a value inside them has to have a word.
+ */
+const KNOWLEDGE_JAVA = new URL("../../../backend/src/main/java/com/careeros/knowledge", import.meta.url);
+const AI_SERVICE = new URL("../../../ai-service/app", import.meta.url);
+
+function javaFilesUnder(dir: string): string[] {
+  const out: string[] = [];
+  for (const entry of readdirSync(dir)) {
+    const full = join(dir, entry);
+    if (statSync(full).isDirectory()) out.push(...javaFilesUnder(full));
+    else if (entry.endsWith(".java")) out.push(full);
+  }
+  return out;
+}
+
+function pythonFilesUnder(dir: string): string[] {
+  const out: string[] = [];
+  for (const entry of readdirSync(dir)) {
+    const full = join(dir, entry);
+    if (statSync(full).isDirectory()) out.push(...pythonFilesUnder(full));
+    else if (entry.endsWith(".py")) out.push(full);
+  }
+  return out;
+}
+
+function statusesWrittenIn(files: { path: string; text: string }[]): string[] {
+  const written = new Set<string>();
+  for (const f of files) {
+    if (!f.path.endsWith(".java") && !f.path.endsWith(".py")) continue;
+    for (const m of f.text.matchAll(/setStatus\(\s*"([a-z_]+)"/g)) written.add(m[1]);
+    for (const m of f.text.matchAll(/STATUS_[A-Z_]+\s*=\s*"([a-z_]+)"/g)) written.add(m[1]);
+    for (const m of f.text.matchAll(/String status\s*=\s*"([a-z_]+)"/g)) written.add(m[1]);
+    for (const m of
+      f.text.matchAll(/UPDATE\s+(?:knowledge_sources|documents)\s+SET\s+status\s*=\s*'([a-z_]+)'/g))
+      written.add(m[1]);
+    for (const m of f.text.matchAll(/set_status\(\s*[A-Za-z_]\w*\s*,\s*"([a-z_]+)"/g)) written.add(m[1]);
+  }
+  return [...written].sort();
+}
+
+function backendStatusWrites(): { path: string; text: string }[] {
+  const files: { path: string; text: string }[] = [];
+  for (const file of javaFilesUnder(fileURLToPath(KNOWLEDGE_JAVA)))
+    files.push({ path: file, text: readFileSync(file, "utf8") });
+  for (const file of pythonFilesUnder(fileURLToPath(AI_SERVICE)))
+    files.push({ path: file, text: readFileSync(file, "utf8") });
+  return files;
+}
+
+describe("the knowledge status vocabulary", () => {
+  it("covers every status the two stacks write into the field the panel reads", () => {
+    const written = statusesWrittenIn(backendStatusWrites());
+    expect(written.length, "the write-scan read no status at all").toBeGreaterThan(3);
+    const missing = written.filter((s) => !KNOWLEDGE_SOURCE_STATUSES.includes(s as never));
+    expect(
+      missing,
+      `statuses the backends write but the table cannot say: ${missing.join(", ")}`
+    ).toEqual([]);
+  });
+
+  it("would still see a status the roster has no word for", () => {
+    const planted = [
+      { path: "app/KnowledgeService.java", text: `private String status = "schematised";` },
+      {
+        path: "app/documents.py",
+        text: `await db.execute("UPDATE documents SET status='schematised' WHERE id=$1")`,
+      },
+      { path: "app/pipeline.py", text: `await docs_repo.set_status(doc_id, "schematised")` },
+      // A write through a named constant is caught at the constant, which is where the
+      // spelling lives -- `KnowledgeService` retires its documents that way.
+      {
+        path: "app/RetiredEvidencePurger.java",
+        text: `private static final String STATUS_RETIRED = "schematised";\n doc.setStatus(STATUS_RETIRED);`,
+      },
+    ];
+    expect(statusesWrittenIn(planted)).toEqual(["schematised"]);
+    expect(KNOWLEDGE_SOURCE_STATUSES).not.toContain("schematised");
+    // The scan reads only the two tables' own writes: an application's status is a
+    // different field, and folding it in would charge a word this badge never draws.
+    expect(statusesWrittenIn([{ path: "x.py", text: `UPDATE jobs SET status='closed'` }])).toEqual(
+      []
+    );
+  });
+});
+
+/**
+ * The nightly record says one of two words, and the backend says so in code:
+ * `NightlyReportService` refuses a report whose status is neither `passed` nor `failed`,
+ * and the two strings are the entity's own constants. The badge's roster is that pair --
+ * a third copy of the vocabulary would be the drift this arc keeps paying down.
+ */
+const NIGHTLY_ENTITY = new URL(
+  "../../../backend/src/main/java/com/careeros/report/entity/NightlyReport.java",
+  import.meta.url
+);
+
+describe("the nightly verdict words", () => {
+  it("are the pair the record's own constants declare", () => {
+    const src = readFileSync(NIGHTLY_ENTITY, "utf8");
+    const declared = [...src.matchAll(/STATUS_([A-Z_]+)\s*=\s*"([a-z_]+)"/g)].map((m) => m[2]).sort();
+    expect(declared.length, "NightlyReport declares no status constant").toBeGreaterThan(0);
+    expect([...NIGHTLY_STATUSES].sort()).toEqual(declared);
   });
 });
 

@@ -1,13 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 
-// The identity translator keeps the card's keys visible in the markup, with the holes
-// appended, so an assertion can name the key and the value it got.
+// The translator answers with the key it was given, wrapped so an answer is never
+// identical to the question: a word helper that compares `t(key) === key` to decide
+// whether the table has the key would treat a bare echo as "no word" and fall back,
+// hiding the seam this file is meant to show. Holes are appended for the same reason.
 vi.mock("@/lib/i18n/locale-context", () => ({
   useLocale: () => ({
     locale: "en",
     t: (key: string, vars?: Record<string, unknown>) =>
-      vars ? `${key}|${Object.values(vars).join(",")}` : key,
+      vars ? `[${key}|${Object.values(vars).join(",")}]` : `[${key}]`,
     setLocale: () => {},
   }),
 }));
@@ -99,7 +101,7 @@ describe("NightlyHistory", () => {
     state.reports.data = { items: [REPORT], total: 1, page: 0, size: 10 };
     const html = render();
     expect(html).toContain("monitoring.nightlyTitle");
-    expect(html).toContain("monitoring.nightlyPassed");
+    expect(html).toContain("monitoring.nightlyStatuses.passed");
     expect(html).toContain("d8199f8");
     expect(html).toContain("backend-it");
     expect(html).toContain("evals");
@@ -127,9 +129,21 @@ describe("NightlyHistory", () => {
       size: 10,
     };
     const html = render();
-    expect(html).toContain("monitoring.nightlyFailed");
+    expect(html).toContain("monitoring.nightlyStatuses.failed");
     expect(html).toContain("backend-it");
     expect(html).toContain('title="410 passed, 2 failed"');
+  });
+
+  it("draws a status the runner invented as a word, not as its wire spelling", () => {
+    state.reports.data = {
+      items: [{ ...REPORT, id: "report-3", status: "aborted" }],
+      total: 1,
+      page: 0,
+      size: 10,
+    };
+    const html = render();
+    expect(html).toContain("Aborted");
+    expect(html).not.toContain("aborted");
   });
 
   it("holds the empty copy until the history has actually answered", () => {

@@ -871,8 +871,10 @@ export const translations = {
       nightlyVerdictStale:
         "The newest record is more than {hours} hours old — the nightly job stopped reporting.",
       nightlyVerdictStreak: "{count} nights in a row ended failed.",
-      nightlyPassed: "passed",
-      nightlyFailed: "failed",
+      nightlyStatuses: {
+        passed: "Passed",
+        failed: "Failed",
+      },
       nightlyStepSkipped: "skipped",
       nightlyOpenRun: "Open the run",
       nightlyPagination: "Nightly reports pagination",
@@ -2201,8 +2203,10 @@ export const translations = {
         statuses: {
           pending: "Pending",
           ingesting: "Ingesting",
+          indexing: "Indexing",
           ready: "Ready",
           failed: "Failed",
+          retired: "Retired",
         },
       },
     },
@@ -3747,8 +3751,10 @@ export const translations = {
       nightlyVerdictMissing: "还没有任何夜晚留下记录——验证任务可能从未运行过。",
       nightlyVerdictStale: "最新记录已超过 {hours} 小时——夜间任务停止上报了。",
       nightlyVerdictStreak: "已连续 {count} 个夜晚以失败告终。",
-      nightlyPassed: "通过",
-      nightlyFailed: "失败",
+      nightlyStatuses: {
+        passed: "通过",
+        failed: "失败",
+      },
       nightlyStepSkipped: "跳过",
       nightlyOpenRun: "打开该次运行",
       nightlyPagination: "夜间报告分页",
@@ -4952,8 +4958,10 @@ export const translations = {
         statuses: {
           pending: "待处理",
           ingesting: "摄取中",
+          indexing: "索引中",
           ready: "就绪",
           failed: "失败",
+          retired: "已退役",
         },
       },
     },
