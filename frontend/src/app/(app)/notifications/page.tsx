@@ -26,9 +26,9 @@ import type { NotificationItem } from "@/lib/api/types";
  *
  * Nothing here is a stored notification: each row is a signal the platform already
  * knows about — a reminder that came due, an application that went quiet, a pull the
- * nightly sweep filed — and the row links back to the screen that owns it. The page
- * composes the sentence from the item's kind and its holes, so the wording is the
- * reader's even though the signal is not.
+ * nightly sweep filed, a saved search the board answered — and the row links back to
+ * the screen that owns it. The page composes the sentence from the item's kind and its
+ * holes, so the wording is the reader's even though the signal is not.
  *
  * Reading and dismissing are the reader's own state, and the backend answers both
  * with the fresh inbox: a row whose episode ended between renders leaves the screen
@@ -54,6 +54,8 @@ function kindKey(kind: string): string {
       return "notifications.kindIngestionFailed";
     case "ingestion_created":
       return "notifications.kindIngestionCreated";
+    case "saved_search":
+      return "notifications.kindSavedSearch";
     case "reply":
       return "notifications.kindReply";
     default:
@@ -68,6 +70,7 @@ function kindVariant(kind: string): "warning" | "outline" | "destructive" | "suc
     case "ingestion_failed":
       return "destructive";
     case "ingestion_created":
+    case "saved_search":
       return "success";
     default:
       return "outline";
@@ -78,6 +81,9 @@ function kindVariant(kind: string): "warning" | "outline" | "destructive" | "suc
 function nameOf(item: NotificationItem, t: Translate): string {
   if (item.kind === "ingestion_failed" || item.kind === "ingestion_created") {
     return item.title || t("notifications.unnamedFeed");
+  }
+  if (item.kind === "saved_search") {
+    return item.title || t("notifications.unnamedSearch");
   }
   return item.title || t("notifications.untitled");
 }
@@ -94,6 +100,11 @@ function lineOf(item: NotificationItem, t: Translate): string {
     case "ingestion_created":
       return t("notifications.ingestionCreatedLine", {
         feed: title,
+        count: item.count ?? 0,
+      });
+    case "saved_search":
+      return t("notifications.savedSearchLine", {
+        name: title,
         count: item.count ?? 0,
       });
     case "reply":

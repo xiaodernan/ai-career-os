@@ -3756,6 +3756,27 @@ the audit record.
   the retired row's key, and a row that goes to the window takes that trail with it unless the
   sweep asks the store first.)
 
+## Epic 45 — Every Signal Speaks Its Own Sentence
+
+The inbox knows six kinds of signal, and each one is a sentence the reader can act on. A
+saved search's alert fell through to "Signal" with its count dropped -- the server names
+the search and counts the postings it found, and the row said neither. The reply's
+sentence was written before its test was, so nothing held it in place. The page's promise
+is that a row says what happened and where to look, so every kind has a badge and a
+sentence of its own, and the tests read each one rather than the shape of the list.
+
+- [x] **45.1** A saved search's alert says what it found.
+
+  (`saved_search` now has the badge and the sentence the other five already had: the badge
+  reads `Saved search`, and the line names the search and its count -- `New postings match
+  your saved search Remote Rust: 4.`, or `an unnamed search` when the reader saved it
+  without a name. It takes the success badge beside a pull that created postings, because
+  it is the board answering a question the reader asked. The reply's own sentence (`A
+  recruiter replied about your application -- Initech.`) was already on the screen and had
+  no test; a fixture per kind now pins both, in both languages, together with the subject
+  line the server wrote (`Re: interview`), the link to `/replies?mail=...`, and the unread
+  count. Page tests only: the server was already sending both kinds.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

@@ -96,6 +96,30 @@ const ITEMS = [
     at: "2026-10-24T03:20:00Z",
     read: false,
   },
+  {
+    key: "saved_search:6a1d7c2e-9b3f-4a8d-b0c5-2e4f6a8b0c1d:1761400000",
+    kind: "saved_search",
+    title: "Remote Rust",
+    subject: "",
+    status: "",
+    count: 4,
+    note: null,
+    link: "/jobs?q=rust",
+    at: "2026-10-23T09:00:00Z",
+    read: false,
+  },
+  {
+    key: "reply:0b9e4d1a-7c2f-4e6b-9a3d-5f8c1b2e4a6d",
+    kind: "reply",
+    title: "Initech",
+    subject: "Re: interview",
+    status: "interview_request",
+    count: null,
+    note: null,
+    link: "/replies?mail=0b9e4d1a-7c2f-4e6b-9a3d-5f8c1b2e4a6d",
+    at: "2026-10-22T09:00:00Z",
+    read: true,
+  },
 ];
 
 function render(locale: "en" | "zh" = "en"): string {
@@ -120,7 +144,7 @@ beforeEach(() => {
 describe("the notifications page", () => {
   it("composes each kind's sentence from the item, in English", () => {
     state.inbox = {
-      data: { items: ITEMS, unread: 3, generatedAt: "2026-10-28T10:00:00Z" },
+      data: { items: ITEMS, unread: 4, generatedAt: "2026-10-28T10:00:00Z" },
       isSuccess: true,
       isError: false,
     };
@@ -133,7 +157,15 @@ describe("the notifications page", () => {
     // The reason is the server's record of the failure, shown as it was written.
     expect(html).toContain("Feed answered HTTP 503");
     expect(html).toContain("New postings from Boards: 3.");
-    expect(html).toContain("3 unread");
+    // A saved search names itself and its count; it has no feed or reminder behind it.
+    expect(html).toContain("New postings match your saved search Remote Rust: 4.");
+    expect(html).toContain("Saved search");
+    // A forward lands on someone else's mail: the reply says whose it is and opens there.
+    expect(html).toContain("A recruiter replied about your application — Initech.");
+    expect(html).toContain("Recruiter reply");
+    expect(html).toContain("Re: interview");
+    expect(html).toContain('href="/replies?mail=0b9e4d1a-7c2f-4e6b-9a3d-5f8c1b2e4a6d"');
+    expect(html).toContain("4 unread");
     expect(html).toContain("Mark all read");
     expect(html).toContain(`href="/applications?application=${APP_ID}"`);
     expect(html).toContain('aria-label="Mark Backend engineer read"');
@@ -174,6 +206,8 @@ describe("the notifications page", () => {
         items: [
           { ...ITEMS[0], title: "后端工程师", subject: "Acme" },
           { ...ITEMS[2], note: "订阅源返回 HTTP 503" },
+          { ...ITEMS[4], title: "远程 Rust", read: true },
+          { ...ITEMS[5], subject: "Re: 面试" },
         ],
         unread: 2,
       },
@@ -185,6 +219,11 @@ describe("the notifications page", () => {
     expect(html).toContain("你对 后端工程师 的提醒已到期。");
     expect(html).toContain("HN hiring 的上一次拉取失败了。");
     expect(html).toContain("订阅源返回 HTTP 503");
+    expect(html).toContain("你的已保存搜索「远程 Rust」有 4 个新职位。");
+    expect(html).toContain("已保存搜索");
+    expect(html).toContain("招聘方回复了你的投递 —— Initech。");
+    expect(html).toContain("招聘方回复");
+    expect(html).toContain("Re: 面试");
     expect(html).toContain("2 条未读");
     expect(html).toContain("全部标为已读");
     expect(html).toContain("推迟到明早");
