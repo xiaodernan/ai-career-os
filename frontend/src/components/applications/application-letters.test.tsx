@@ -94,6 +94,24 @@ describe("ApplicationLettersPanel", () => {
     expect(html.match(/<details/g)?.length).toBe(1);
   });
 
+  it("points a kept letter at the job page with the same dials to write another", () => {
+    lettersState.value = {
+      data: [{ id: "letter-1", body: "Dear Acme,", tone: "formal", length: "short" }],
+    };
+
+    const html = render({ jobId: "job-1" });
+
+    expect(html).toContain('href="/jobs/job-1?tone=formal&amp;length=short#cover-letter"');
+    expect(html).toContain("applications.dialog.letterRewrite");
+  });
+
+  it("does not offer to write another when the application has no posting", () => {
+    lettersState.value = { data: [{ id: "letter-1", body: "Dear Acme.", tone: "formal" }] };
+
+    const html = render();
+
+    expect(html).not.toContain("applications.dialog.letterRewrite");
+  });
   it("offers no way to take away a letter that has no text", () => {
     lettersState.value = { data: [{ id: "letter-1", body: "" }] };
 

@@ -19,6 +19,7 @@ import { useApplicationLetters } from "@/lib/hooks/resources";
 import {
   COVER_LETTER_LENGTHS as LENGTHS,
   COVER_LETTER_TONES as TONES,
+  dialSeed,
 } from "@/lib/cover-letter-dials";
 import { normalizeEvidence } from "@/lib/api/normalize";
 import { ApiError } from "@/lib/api/client";
@@ -58,6 +59,15 @@ export function CoverLetterPanel({
   const { t } = useLocale();
   const [tone, setTone] = React.useState("balanced");
   const [length, setLength] = React.useState("standard");
+
+  // 54.1: a kept letter's "Write another like this" arrives as `?tone=&length=#cover-letter`.
+  // The first paint uses the defaults, then the address is adopted here -- the job page stays
+  // free of `useSearchParams`, so it never needs a Suspense boundary just for two dials.
+  React.useEffect(() => {
+    const seed = dialSeed(window.location.search, { tone: "balanced", length: "standard" });
+    setTone(seed.tone);
+    setLength(seed.length);
+  }, []);
   const mutation = useCoverLetter(jobId);
   const saveLetter = useSaveApplicationLetter(applicationId ?? null);
   const kept = useApplicationLetters(applicationId ?? null);

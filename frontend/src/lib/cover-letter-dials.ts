@@ -56,3 +56,43 @@ export function dialsToWire(dials: LetterDials): LetterDials {
   const wire = (value: string) => (value === UNSET_DIAL ? "" : value);
   return { tone: wire(dials.tone), length: wire(dials.length) };
 }
+
+/**
+ * 54.1: where a kept letter sends the reader to write the next one. The job page's drafting
+ * card reads `tone` and `length` off the address (and the hash scrolls to it), so the next
+ * draft starts with the same dials instead of the defaults. Only catalogue values travel: a
+ * stored "warm" from before the catalogue would preselect nothing on the generator, so it is
+ * left out rather than sent as a value the select cannot show.
+ */
+export function letterRewriteHref(
+  jobId: string,
+  letter: { tone?: string | null; length?: string | null }
+): string {
+  const params = new URLSearchParams();
+  if (letter.tone && COVER_LETTER_TONES.some((option) => option.value === letter.tone)) {
+    params.set("tone", letter.tone);
+  }
+  if (letter.length && COVER_LETTER_LENGTHS.some((option) => option.value === letter.length)) {
+    params.set("length", letter.length);
+  }
+  const query = params.toString();
+  return `/jobs/${jobId}${query ? `?${query}` : ""}#cover-letter`;
+}
+
+/**
+ * The dials a job page adopts from its own address. A hand-edited or stale `?tone=` must not
+ * reach the generator: only values the catalogue knows are adopted, and anything else leaves
+ * the default standing.
+ */
+export function dialSeed(search: string, fallback: LetterDials): LetterDials {
+  const params = new URLSearchParams(search);
+  const tone = params.get("tone");
+  const length = params.get("length");
+  return {
+    tone: tone && COVER_LETTER_TONES.some((option) => option.value === tone) ? tone : fallback.tone,
+    length:
+      length && COVER_LETTER_LENGTHS.some((option) => option.value === length)
+        ? length
+        : fallback.length,
+  };
+}

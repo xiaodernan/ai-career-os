@@ -4129,6 +4129,21 @@ it has no screen of its own, and there may be none, one or several.
   into view once it is open, then drops the hash with `history.replaceState` so a later plain open
   of the same card does not jump again. A hit with no application still lands on the board with
   no hash. 1 normalisation assertion and 1 SSR assertion.)
+## Epic 54 -- The kept letter can start the next one
+
+A kept letter is the reader's work, and the dials it was written with are part of that work. The
+drawer could read them back, but starting another draft meant returning to the job page and
+setting the same tone and length from memory.
+
+- [x] **54.1** A kept letter hands its dials to the next draft.
+
+  (`Write another like this` sits beside Edit / Copy / Download on every kept letter that belongs
+  to a posting. Its address is `/jobs/{jobId}?tone=…&length=…#cover-letter`: the hash lands on
+  the drafting card (51.3), and the panel adopts the two catalogue dials from the address on
+  mount -- an unknown or hand-edited value is ignored and the default stands, because a select
+  that cannot show the value would silently generate with it. Only catalogue values travel out of
+  a stored letter too: a pre-catalogue `warm` is dropped rather than sent back. 5 pure-function
+  tests and 2 SSR assertions.)
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

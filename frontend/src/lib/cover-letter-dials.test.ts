@@ -7,6 +7,8 @@ import {
   dialOptions,
   dialsOf,
   dialsToWire,
+  dialSeed,
+  letterRewriteHref,
 } from "./cover-letter-dials";
 import { translations } from "./i18n/translations";
 
@@ -58,5 +60,40 @@ describe("the dial catalogue", () => {
       expect(Object.keys(translations.en.coverLetter)).toContain(key.split(".")[1]);
       expect(Object.keys(translations.zh.coverLetter)).toContain(key.split(".")[1]);
     }
+  });
+});
+
+describe("letterRewriteHref", () => {
+  it("carries the catalogue dials and the anchor the drafting card owns", () => {
+    expect(letterRewriteHref("job-1", { tone: "formal", length: "short" })).toBe(
+      "/jobs/job-1?tone=formal&length=short#cover-letter"
+    );
+  });
+
+  it("leaves out a dial the catalogue does not know rather than preselecting nothing", () => {
+    expect(letterRewriteHref("job-1", { tone: "warm", length: "short" })).toBe(
+      "/jobs/job-1?length=short#cover-letter"
+    );
+  });
+
+  it("still lands on the drafting card when no dial was set", () => {
+    expect(letterRewriteHref("job-1", { tone: null, length: null })).toBe(
+      "/jobs/job-1#cover-letter"
+    );
+  });
+});
+
+describe("dialSeed", () => {
+  it("adopts the dials the address carries", () => {
+    expect(dialSeed("?tone=formal&length=short", { tone: "balanced", length: "standard" })).toEqual({
+      tone: "formal",
+      length: "short",
+    });
+  });
+
+  it("keeps the defaults for anything a hand-edited address carries", () => {
+    const fallback = { tone: "balanced", length: "standard" };
+    expect(dialSeed("?tone=shouty&length=epic", fallback)).toEqual(fallback);
+    expect(dialSeed("", fallback)).toEqual(fallback);
   });
 });

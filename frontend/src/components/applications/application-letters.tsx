@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Check, Mail, Pencil, Trash2, X } from "lucide-react";
+import { Check, Mail, Pencil, PenLine, Trash2, X } from "lucide-react";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { CopyButton, DownloadButton } from "@/components/common/export-buttons";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +25,7 @@ import {
   dialOptions,
   dialsOf,
   dialsToWire,
+  letterRewriteHref,
   type LetterDials,
 } from "@/lib/cover-letter-dials";
 import { letterDownloadName, relativeTime } from "@/lib/format";
@@ -173,6 +174,14 @@ export function ApplicationLettersPanel({
                           <Pencil aria-hidden />
                           {t("applications.dialog.letterEdit")}
                         </Button>
+                        {jobId && (
+                          <Button asChild variant="ghost" size="sm">
+                            <Link href={letterRewriteHref(jobId, letter)}>
+                              <PenLine aria-hidden />
+                              {t("applications.dialog.letterRewrite")}
+                            </Link>
+                          </Button>
+                        )}
                       </>
                     )}
                     <Button
