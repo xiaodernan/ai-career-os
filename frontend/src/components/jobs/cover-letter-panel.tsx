@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { FileText, RefreshCw, Save, Sparkles } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,7 @@ import { EvidenceList } from "@/components/ai/evidence-list";
 import { CopyButton, DownloadButton, SectionHeading } from "@/components/common/export-buttons";
 import { localStages } from "@/components/ai/task-stream";
 import { useCoverLetter, useSaveApplicationLetter } from "@/lib/hooks/actions";
+import { useApplicationLetters } from "@/lib/hooks/resources";
 import {
   COVER_LETTER_LENGTHS as LENGTHS,
   COVER_LETTER_TONES as TONES,
@@ -58,6 +60,7 @@ export function CoverLetterPanel({
   const [length, setLength] = React.useState("standard");
   const mutation = useCoverLetter(jobId);
   const saveLetter = useSaveApplicationLetter(applicationId ?? null);
+  const kept = useApplicationLetters(applicationId ?? null);
   const [result, setResult] = React.useState<{ text: string; evidence: unknown } | null>(null);
 
   const run = () => {
@@ -120,6 +123,18 @@ export function CoverLetterPanel({
           </div>
         </div>
 
+        {kept.data && kept.data.length > 0 && (
+          <p className="flex flex-wrap items-baseline gap-x-1 text-xs text-muted-foreground">
+            {t("coverLetter.keptHere", { count: kept.data.length })}
+            <Link
+              href="/applications"
+              className="underline underline-offset-2 hover:text-foreground"
+            >
+              {t("coverLetter.openPipeline")}
+            </Link>
+          </p>
+        )}
+
         {mutation.isPending && !result && (
           <div className="rounded-lg border border-border/70 bg-muted/30 p-3">
             <ProcessingSteps steps={localStages(STAGE_KEYS.map((k) => t(k)), 1)} />
@@ -161,7 +176,9 @@ export function CoverLetterPanel({
                   }
                 >
                   <Save aria-hidden />
-                  {t("coverLetter.saveToApplication")}
+                  {kept.data && kept.data.length > 0
+                    ? t("coverLetter.saveAnother")
+                    : t("coverLetter.saveToApplication")}
                 </Button>
                 <CopyButton text={result.text} label={t("coverLetter.copyLetter")} />
                 <DownloadButton

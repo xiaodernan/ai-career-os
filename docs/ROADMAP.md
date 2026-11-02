@@ -4023,6 +4023,19 @@ application has: remove a row, correct one, and take one out of the product.
   does not know (`warm`, from an older build) is shown as itself rather than silently blank. 8
   pure-function tests, 3 request-body tests and 2 SSR tests.)
 
+## Epic 51 -- The draft and the shelf know each other
+
+A letter is written on the job page and kept in the pipeline, but the two screens never
+acknowledged each other: the writer saw `Save to application` on every generation, with no sign
+that this posting already held three drafts and no way to reach them from where they were written.
+
+- [x] **51.1** The writer sees what this posting already keeps.
+
+  (`CoverLetterPanel` reads the application's own letters as soon as the posting is in the
+  pipeline and says `2 kept for this posting.` beside a link to `/applications`; once anything is
+  kept, the save button says `Save another copy` rather than pretending the shelf is empty. The
+  read shares the drawer's query key, so the count moves as soon as a save lands. 2 SSR tests.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
