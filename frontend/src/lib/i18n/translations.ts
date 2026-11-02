@@ -298,6 +298,9 @@ export const translations = {
         running: "Running",
         completed: "Completed",
         failed: "Failed",
+        /** The line a tool_result step shows: the reader's sentence around
+         * the tool's own name, which the payload carries. */
+        resultOf: "{tool} result",
         kinds: {
           step_start: "Step start",
           tool_call: "Tool call",
@@ -3144,6 +3147,7 @@ export const translations = {
         running: "进行中",
         completed: "已完成",
         failed: "失败",
+        resultOf: "{tool} 的结果",
         kinds: {
           step_start: "步骤开始",
           tool_call: "工具调用",

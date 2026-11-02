@@ -443,6 +443,17 @@ const STATUS_SURFACES: [string, string][] = [
 ];
 
 /**
+ * A label a mapper assembles from a stored kind, rather than a badge that prints it.
+ *
+ * The run trace's step line falls back to the kind's word when the payload carries no
+ * text; the mapper used to return its own English phrase there, and the copy census
+ * cannot see it because the phrase sits in a `.ts` module the census does not read.
+ */
+const LABEL_SURFACES: [string, string][] = [
+  ["lib/activity-trace.ts", "traceKindWord(t, kind)"],
+];
+
+/**
  * The charge is the spelling, not the file: a badge that spells a wire kind itself
  * prints "interview feedback" on the knowledge row and "TOOL CALL" on a Chinese
  * trace, even though the table already names both vocabularies.
@@ -485,6 +496,11 @@ describe("the kind and status badges", () => {
       const file = files.find((f) => f.path.endsWith(rel));
       expect(file, `${rel} is not in the walk`).toBeTruthy();
       expect(file!.text, `${rel} no longer draws its badge through ${seam}`).toContain(seam);
+    }
+    for (const [rel, seam] of LABEL_SURFACES) {
+      const file = files.find((f) => f.path.endsWith(rel));
+      expect(file, `${rel} is not in the walk`).toBeTruthy();
+      expect(file!.text, `${rel} no longer draws its step's word through ${seam}`).toContain(seam);
     }
     const kinds = rawKindSurfaces(files);
     expect(kinds, `surfaces spelling a wire kind themselves:\n${kinds.join("\n")}`).toEqual([]);

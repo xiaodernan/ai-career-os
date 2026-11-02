@@ -183,7 +183,7 @@ export default function ActivityRunPage() {
     queryKey: ["activity", "run-detail", id],
     enabled: Boolean(id),
     queryFn: async (): Promise<RunTrace> =>
-      normalizeRunTrace(await api.get<unknown>(endpoints.activityRun(id!))),
+      normalizeRunTrace(t, await api.get<unknown>(endpoints.activityRun(id!))),
   });
 
   const run = query.data?.run;
