@@ -24,13 +24,13 @@ import type { Application, ApplicationPacket } from "@/lib/api/types";
 type Translate = (key: string, vars?: Record<string, string | number>) => string;
 
 interface PacketRow {
-  key: "resume" | "jd" | "match" | "letters";
+  key: "resume" | "jd" | "match" | "letters" | "rehearsals";
   label: string;
   primary: string;
   secondary?: string;
   href?: string;
   state: "ready" | "unavailable" | "missing";
-  /** Set only for the letters row, which reports a number instead of a link or a state badge. */
+  /** Set for the two counting rows (letters, rehearsals) instead of a state badge. */
   count?: number;
 }
 
@@ -108,10 +108,39 @@ function lettersRow(packet: ApplicationPacket, t: Translate): PacketRow {
   };
 }
 
+/**
+ * The fifth artifact (57.2). Also a count, and the only count that links: the
+ * rehearsals are a screen of their own (`/interviews`), narrowed to this card
+ * by the filter 57.1 added. A card nobody practised for draws no link -- there
+ * is nothing on the other side of it.
+ */
+function rehearsalsRow(
+  application: Application,
+  packet: ApplicationPacket,
+  t: Translate
+): PacketRow {
+  const count = packet.rehearsals ?? 0;
+  return {
+    key: "rehearsals",
+    label: t("applications.dialog.rehearsals"),
+    primary:
+      count > 0
+        ? t("applications.dialog.packet.rehearsalCount", {
+            count,
+            plural: count === 1 ? "" : "s",
+          })
+        : t("applications.dialog.packet.noRehearsals"),
+    href: count > 0 ? `/interviews?application=${encodeURIComponent(application.id)}` : undefined,
+    state: count > 0 ? "ready" : "missing",
+    count,
+  };
+}
+
 function Status({ row, t }: { row: PacketRow; t: Translate }) {
   // A count is its own status: printing "Not linked" beside "None kept yet" would say the same
   // thing twice, and "Not linked" would be false for a letter that simply was never written.
-  if (row.count !== undefined) return null;
+  // The rehearsal count keeps its link, though: a count of something that has a screen is a door.
+  if (row.count !== undefined && !row.href) return null;
   if (row.href) {
     return (
       <Button asChild size="sm" variant="ghost">
@@ -145,6 +174,7 @@ export function ApplicationPacketPanel({
         jdRow(application, packet, t, locale),
         matchRow(packet, t, locale),
         lettersRow(packet, t),
+        rehearsalsRow(application, packet, t),
       ]
     : [];
   const allMissing =
@@ -152,7 +182,8 @@ export function ApplicationPacketPanel({
     !packet.resumeLinked &&
     !packet.jdLinked &&
     !packet.matchLinked &&
-    (packet.letters ?? 0) === 0;
+    (packet.letters ?? 0) === 0 &&
+    (packet.rehearsals ?? 0) === 0;
 
   return (
     <section className="space-y-2" aria-labelledby={headingId}>

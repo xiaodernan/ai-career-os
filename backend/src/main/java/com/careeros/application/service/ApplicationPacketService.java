@@ -7,6 +7,7 @@ import com.careeros.application.dto.ApplicationDtos.PacketResume;
 import com.careeros.application.entity.Application;
 import com.careeros.application.repository.ApplicationLetterRepository;
 import com.careeros.common.Json;
+import com.careeros.interview.repository.InterviewSessionRepository;
 import com.careeros.job.entity.Company;
 import com.careeros.job.entity.Job;
 import com.careeros.job.entity.JobJd;
@@ -49,6 +50,7 @@ public class ApplicationPacketService {
     private final JobRepository jobs;
     private final CompanyRepository companies;
     private final ApplicationLetterRepository letters;
+    private final InterviewSessionRepository interviews;
 
     public ApplicationPacketService(ApplicationService applications,
                                     ResumeVersionRepository resumeVersions,
@@ -57,7 +59,8 @@ public class ApplicationPacketService {
                                     JobMatchRepository matches,
                                     JobRepository jobs,
                                     CompanyRepository companies,
-                                    ApplicationLetterRepository letters) {
+                                    ApplicationLetterRepository letters,
+                                    InterviewSessionRepository interviews) {
         this.applications = applications;
         this.resumeVersions = resumeVersions;
         this.resumes = resumes;
@@ -66,6 +69,7 @@ public class ApplicationPacketService {
         this.jobs = jobs;
         this.companies = companies;
         this.letters = letters;
+        this.interviews = interviews;
     }
 
     @Transactional(readOnly = true)
@@ -82,7 +86,10 @@ public class ApplicationPacketService {
                 // A letter is not a link: there can be none, one, or several, and the card that
                 // carries them is this application. The count is scoped to the caller like the
                 // three lookups above, so a stray row can never be reported as this card's.
-                (int) letters.countByApplicationIdAndUserId(app.getId(), userId));
+                (int) letters.countByApplicationIdAndUserId(app.getId(), userId),
+                // 57.2: the practice the reader has done for this card. Scoped the
+                // same way, so a rehearsal of somebody else's card is not counted.
+                (int) interviews.countByApplicationIdAndUserId(app.getId(), userId));
     }
 
     private PacketResume resume(UUID userId, UUID versionId) {

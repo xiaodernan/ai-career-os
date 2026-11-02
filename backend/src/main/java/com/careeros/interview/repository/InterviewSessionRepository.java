@@ -22,4 +22,7 @@ public interface InterviewSessionRepository extends JpaRepository<InterviewSessi
     Optional<InterviewSession> findByIdAndUserId(UUID id, UUID userId);
 
     long countByUserId(UUID userId);
+
+    /** One card's rehearsals (57.2): the packet's fifth row is this number. */
+    long countByApplicationIdAndUserId(UUID applicationId, UUID userId);
 }

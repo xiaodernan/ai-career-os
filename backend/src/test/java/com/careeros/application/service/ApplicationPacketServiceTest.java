@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 import com.careeros.application.dto.ApplicationDtos.ApplicationPacket;
 import com.careeros.application.entity.Application;
 import com.careeros.application.repository.ApplicationLetterRepository;
+import com.careeros.interview.repository.InterviewSessionRepository;
 import com.careeros.job.entity.Company;
 import com.careeros.job.entity.Job;
 import com.careeros.job.entity.JobJd;
@@ -50,6 +51,7 @@ class ApplicationPacketServiceTest {
     private JobRepository jobs;
     private CompanyRepository companies;
     private ApplicationLetterRepository letters;
+    private InterviewSessionRepository interviews;
     private ApplicationPacketService service;
     private Application app;
 
@@ -63,13 +65,15 @@ class ApplicationPacketServiceTest {
         jobs = mock(JobRepository.class);
         companies = mock(CompanyRepository.class);
         letters = mock(ApplicationLetterRepository.class);
+        interviews = mock(InterviewSessionRepository.class);
         service = new ApplicationPacketService(applications, resumeVersions, resumes, jds,
-                matches, jobs, companies, letters);
+                matches, jobs, companies, letters, interviews);
 
         app = mock(Application.class);
         when(app.getId()).thenReturn(applicationId);
         when(applications.require(userId, applicationId)).thenReturn(app);
         when(letters.countByApplicationIdAndUserId(applicationId, userId)).thenReturn(2L);
+        when(interviews.countByApplicationIdAndUserId(applicationId, userId)).thenReturn(1L);
     }
 
     @Test
@@ -125,6 +129,7 @@ class ApplicationPacketServiceTest {
         assertThat(packet.match().overall()).isEqualTo(0.82f);
         assertThat(packet.match().jobId()).isEqualTo(jobId);
         assertThat(packet.letters()).isEqualTo(2);
+        assertThat(packet.rehearsals()).isEqualTo(1);
     }
 
     @Test
@@ -186,5 +191,21 @@ class ApplicationPacketServiceTest {
 
         assertThat(packet.letters()).isEqualTo(3);
         verify(letters).countByApplicationIdAndUserId(applicationId, userId);
+    }
+
+    @Test
+    void theRehearsalCountIsScopedToTheApplicationAndTheCallerToo() {
+        // 57.2: the fifth row is what came back from the practice, so it is
+        // counted the same way the letters are -- the card and the caller
+        // together, never the card alone.
+        when(app.getResumeVersionId()).thenReturn(null);
+        when(app.getJdId()).thenReturn(null);
+        when(app.getMatchId()).thenReturn(null);
+        when(interviews.countByApplicationIdAndUserId(applicationId, userId)).thenReturn(4L);
+
+        ApplicationPacket packet = service.packet(userId, applicationId);
+
+        assertThat(packet.rehearsals()).isEqualTo(4);
+        verify(interviews).countByApplicationIdAndUserId(applicationId, userId);
     }
 }

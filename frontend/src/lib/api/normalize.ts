@@ -727,6 +727,9 @@ export function normalizeApplicationPacket(raw: unknown): ApplicationPacket {
     // A missing count reads as none: the route always answers the number, and a body that lost
     // it (an older build, a mocked fixture) must not draw "undefined kept".
     letters: num(raw, "letters") ?? 0,
+    // Same rule for the rehearsals (57.2): a body without the field is a card
+    // nobody has practised for, not a card with an unknown number of them.
+    rehearsals: num(raw, "rehearsals") ?? 0,
   };
 }
 

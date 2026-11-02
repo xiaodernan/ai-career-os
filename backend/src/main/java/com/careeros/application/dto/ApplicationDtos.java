@@ -77,12 +77,16 @@ public final class ApplicationDtos {
      *
      * <p>`letters` is the fourth artifact and the only one that is a count: a kept letter is not a
      * column on the application but a row in its own table, and the reader may keep several.
+     *
+     * <p>`rehearsals` (57.2) is the fifth row and the second count: the mock interviews the reader
+     * has run for this card. It is not part of the material that was sent, but it is what came
+     * back -- and the row links to the narrowed interview list, so the count is a way in.
      */
     public record ApplicationPacket(UUID applicationId,
                                     boolean resumeLinked, PacketResume resume,
                                     boolean jdLinked, PacketJd jd,
                                     boolean matchLinked, PacketMatch match,
-                                    int letters) {
+                                    int letters, int rehearsals) {
     }
 
     public record CreateApplicationRequest(@JsonAlias("job_id") UUID jobId,

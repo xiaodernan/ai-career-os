@@ -37,6 +37,7 @@ const full: ApplicationPacket = {
   matchLinked: true,
   match: { id: "match-1", jobId: "job-1", overall: 0.82, createdAt: "2026-10-03T09:00:00Z" },
   letters: 2,
+  rehearsals: 3,
 };
 
 const render = (props: React.ComponentProps<typeof ApplicationPacketPanel>) =>
@@ -52,6 +53,9 @@ describe("ApplicationPacketPanel", () => {
     expect(html).toContain('href="/resumes/resume-1"');
     expect(html).toContain('href="/jobs/job-1"');
     expect(html).toContain("applications.dialog.packet.letterCount");
+    // 57.2: the count of what came back, and the door to the list it counts.
+    expect(html).toContain("applications.dialog.packet.rehearsalCount");
+    expect(html).toContain('href="/interviews?application=app-1"');
   });
 
   it("keeps an attached-but-unreadable row apart from an empty column", () => {
@@ -66,6 +70,7 @@ describe("ApplicationPacketPanel", () => {
         matchLinked: true,
         match: null,
         letters: 0,
+        rehearsals: 0,
       },
     });
     expect(html).toContain("applications.dialog.packet.unavailable");
@@ -85,6 +90,7 @@ describe("ApplicationPacketPanel", () => {
         matchLinked: false,
         match: null,
         letters: 0,
+        rehearsals: 0,
       },
     });
     expect(html).toContain("applications.dialog.packet.empty");
@@ -104,10 +110,32 @@ describe("ApplicationPacketPanel", () => {
         matchLinked: false,
         match: null,
         letters: 1,
+        rehearsals: 0,
       },
     });
     expect(html).not.toContain("applications.dialog.packet.empty");
     expect(html).toContain("applications.dialog.packet.letterCount");
+  });
+
+  it("draws no rehearsal link for a card nobody practised for", () => {
+    // The row still says the count is zero; what it must not do is offer a
+    // door to a list that is empty because the practice never happened.
+    const html = render({
+      application,
+      packet: {
+        applicationId: "app-1",
+        resumeLinked: false,
+        resume: null,
+        jdLinked: false,
+        jd: null,
+        matchLinked: false,
+        match: null,
+        letters: 0,
+        rehearsals: 0,
+      },
+    });
+    expect(html).toContain("applications.dialog.packet.noRehearsals");
+    expect(html).not.toContain('href="/interviews?application=');
   });
 
   it("shows a loading state without drawing empty rows", () => {

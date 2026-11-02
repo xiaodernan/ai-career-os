@@ -4220,6 +4220,15 @@ has to be able to show what was rehearsed for it. The rehearsal list is the same
   reload does not widen it -- says which card it is showing, and offers one way out: *All
   interviews*, in the header and in the empty state. 2 backend tests + 1 contract case.)
 
+- [x] **57.2** The drawer counts the rehearsals.
+
+  (The packet grows a fifth row, `rehearsals`, counted for the caller and the card the same way
+  the letters are. It is the only count that links: a non-zero count opens
+  `/interviews?application=<id>`, the narrowed list from 57.1; zero says "None rehearsed yet"
+  and draws no door, because there is nothing on the other side. The row is also the first one
+  in the packet that is about what came *back* from the application rather than what was sent.
+  1 service test + 1 route assertion + 2 normalizer assertions + 2 panel tests.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

@@ -437,6 +437,11 @@ export interface ApplicationPacket {
    * is a row in its own table, and there may be none, one or several.
    */
   letters?: number;
+  /**
+   * How many mock interviews were run for this card (57.2). The other count, and the only row
+   * that is about what came *back* from the application rather than what was sent.
+   */
+  rehearsals?: number;
 }
 
 /**

@@ -713,6 +713,7 @@ describe("normalizeApplicationPacket", () => {
       matchLinked: false,
       match: null,
       letters: 0,
+      rehearsals: 0,
     });
 
     expect(packet).toEqual({
@@ -731,6 +732,7 @@ describe("normalizeApplicationPacket", () => {
       matchLinked: false,
       match: null,
       letters: 0,
+      rehearsals: 0,
     });
   });
 
@@ -744,6 +746,7 @@ describe("normalizeApplicationPacket", () => {
       matchLinked: true,
       match: { id: "m-1", jobId: "job-1", overall: 0.82, createdAt: "2026-10-03T09:00:00Z" },
       letters: 3,
+      rehearsals: 2,
     });
 
     expect(packet.match).toEqual({
@@ -753,6 +756,7 @@ describe("normalizeApplicationPacket", () => {
       createdAt: "2026-10-03T09:00:00Z",
     });
     expect(packet.letters).toBe(3);
+    expect(packet.rehearsals).toBe(2);
   });
 });
 
