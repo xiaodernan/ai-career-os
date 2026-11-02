@@ -14,6 +14,10 @@ import { EvidenceList } from "@/components/ai/evidence-list";
 import { CopyButton, DownloadButton, SectionHeading } from "@/components/common/export-buttons";
 import { localStages } from "@/components/ai/task-stream";
 import { useCoverLetter, useSaveApplicationLetter } from "@/lib/hooks/actions";
+import {
+  COVER_LETTER_LENGTHS as LENGTHS,
+  COVER_LETTER_TONES as TONES,
+} from "@/lib/cover-letter-dials";
 import { normalizeEvidence } from "@/lib/api/normalize";
 import { ApiError } from "@/lib/api/client";
 import { missingEndpointMessage } from "@/lib/api/missing-endpoint";
@@ -32,19 +36,6 @@ const STAGE_KEYS = [
   "coverLetter.stages.pullingContext",
   "coverLetter.stages.drafting",
   "coverLetter.stages.checkingClaims",
-];
-
-const TONES = [
-  { value: "balanced", labelKey: "coverLetter.tones.balanced" },
-  { value: "formal", labelKey: "coverLetter.tones.formal" },
-  { value: "concise", labelKey: "coverLetter.tones.concise" },
-  { value: "confident", labelKey: "coverLetter.tones.confident" },
-];
-
-const LENGTHS = [
-  { value: "short", labelKey: "coverLetter.lengths.short" },
-  { value: "standard", labelKey: "coverLetter.lengths.standard" },
-  { value: "detailed", labelKey: "coverLetter.lengths.detailed" },
 ];
 
 /**

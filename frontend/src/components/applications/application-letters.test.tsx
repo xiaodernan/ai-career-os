@@ -34,7 +34,7 @@ vi.mock("@/lib/hooks/actions", () => ({
   useUpdateApplicationLetter: () => ({ isPending: false, mutate: () => undefined }),
 }));
 
-import { ApplicationLettersPanel } from "./application-letters";
+import { ApplicationLettersPanel, LetterEditor } from "./application-letters";
 
 const render = () =>
   renderToStaticMarkup(<ApplicationLettersPanel applicationId="app-1" />);
@@ -120,5 +120,35 @@ describe("ApplicationLettersPanel", () => {
 
     expect(html).toContain("applications.dialog.lettersFailed");
     expect(html).not.toContain("applications.dialog.lettersEmpty");
+  });
+});
+
+describe("LetterEditor", () => {
+  const editor = (letter: Record<string, unknown> = {}) =>
+    renderToStaticMarkup(
+      <LetterEditor
+        letter={{ id: "letter-1", body: "Dear Ada,", tone: "warm", length: "short", ...letter }}
+        saving={false}
+        onCancel={() => undefined}
+        onSave={() => undefined}
+      />
+    );
+
+  it("opens with the letter's own words and both dials", () => {
+    const html = editor();
+
+    expect(html).toContain("Dear Ada,");
+    expect(html).toContain("coverLetter.tone");
+    expect(html).toContain("coverLetter.length");
+    expect(html.match(/role="combobox"/g)).toHaveLength(2);
+  });
+
+  it("will not save a correction that only removes the words", () => {
+    const html = editor({ body: "   " });
+
+    const saveAt = html.indexOf("applications.dialog.letterSave");
+    expect(saveAt).toBeGreaterThan(0);
+    const saveButton = html.slice(html.lastIndexOf("<button", saveAt), saveAt);
+    expect(saveButton).toContain("disabled");
   });
 });

@@ -13,3 +13,12 @@
 export function field<T>(key: string, value: T | null | undefined): Record<string, T> {
   return value === null || value === undefined || value === "" ? {} : { [key]: value };
 }
+
+/**
+ * A dial has three states, not two: omitted (leave it alone), a value, or the empty string
+ * (clear it). `field` cannot express the third because it drops `""` -- and that distinction is
+ * exactly what a correction of a kept letter needs.
+ */
+export function dial(key: string, value: string | null | undefined): Record<string, string> {
+  return value === null || value === undefined ? {} : { [key]: value };
+}

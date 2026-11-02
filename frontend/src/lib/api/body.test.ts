@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { field } from "./body";
+import { dial, field } from "./body";
 import { tailorSaveBody } from "./normalize";
 
 /**
@@ -36,5 +36,25 @@ describe("field", () => {
     });
     const names = Object.keys(body).map(canonical);
     expect(new Set(names).size).toBe(names.length);
+  });
+});
+
+/**
+ * A dial is the one field where the empty string is a value rather than an absence: it is how a
+ * correction says "clear this" while a missing key says "leave it alone" (50.4).
+ */
+describe("dial", () => {
+  it("carries the empty string, which `field` would have dropped", () => {
+    expect(dial("tone", "")).toEqual({ tone: "" });
+    expect(field("tone", "")).toEqual({});
+  });
+
+  it("still leaves the key out when the caller has no opinion at all", () => {
+    expect(dial("tone", null)).toEqual({});
+    expect(dial("tone", undefined)).toEqual({});
+  });
+
+  it("passes a chosen value through", () => {
+    expect(dial("length", "short")).toEqual({ length: "short" });
   });
 });

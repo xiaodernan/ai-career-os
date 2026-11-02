@@ -4013,6 +4013,16 @@ application has: remove a row, correct one, and take one out of the product.
   not, so a Chinese title never collapses into one shared `document`. An empty letter offers
   neither action rather than copying nothing. 4 pure-function tests and 2 extra SSR tests.)
 
+- [x] **50.4** The correction can move the dials.
+
+  (A letter is written with a tone and a length, so a reader who fixes the words may also want to
+  fix those. The editor now starts from the dials the letter was actually kept with, offers the
+  same catalogue the generator uses, and adds a real `Not set` choice. That third state is why
+  `dial()` sits next to `field()`: the route reads a missing key as "leave it alone" and an empty
+  string as "clear it", while `field` drops empty strings by design. A stored value the catalogue
+  does not know (`warm`, from an older build) is shown as itself rather than silently blank. 8
+  pure-function tests, 3 request-body tests and 2 SSR tests.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

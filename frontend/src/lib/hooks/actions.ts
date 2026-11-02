@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { api, ApiError, postSSE } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
-import { field } from "@/lib/api/body";
+import { dial, field } from "@/lib/api/body";
 import {
   coverLetterText,
   normalizeCoverLetter,
@@ -467,9 +467,9 @@ export function useUpdateApplicationLetter(applicationId: string | null) {
           method: "PATCH",
           body: {
             body: body.body,
-            ...field("mode", body.mode),
-            ...field("tone", body.tone),
-            ...field("length", body.length),
+            ...dial("mode", body.mode),
+            ...dial("tone", body.tone),
+            ...dial("length", body.length),
           },
         }
       );
