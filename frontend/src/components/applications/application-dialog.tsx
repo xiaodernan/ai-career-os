@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { CalendarClock, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { CalendarClock, MessagesSquare, Trash2 } from "lucide-react";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { ErrorState } from "@/components/common/error-state";
 import { ApplicationLettersPanel } from "@/components/applications/application-letters";
@@ -31,9 +32,11 @@ import { field } from "@/lib/api/body";
 import { ApiError } from "@/lib/api/client";
 import { fromReminderInput, reminderPatch, toReminderInput } from "@/lib/application-edit";
 import { relativeTime } from "@/lib/format";
+import { str } from "@/lib/api/normalize";
 import type { Locale } from "@/lib/i18n/translations";
 import {
   useCreateApplication,
+  useCreateInterviewSession,
   useDeleteApplication,
   useUpdateApplication,
 } from "@/lib/hooks/actions";
@@ -103,6 +106,8 @@ export function ApplicationDialog({ application, open, onOpenChange }: Applicati
   const createApp = useCreateApplication();
   const updateApp = useUpdateApplication();
   const deleteApp = useDeleteApplication();
+  const startInterview = useCreateInterviewSession();
+  const router = useRouter();
   const events = useApplicationEvents(editing && open ? application.id : null);
   const packet = useApplicationPacket(editing && open ? application.id : null);
 
@@ -143,6 +148,26 @@ export function ApplicationDialog({ application, open, onOpenChange }: Applicati
 
   const pending = createApp.isPending || updateApp.isPending;
   const error = createApp.error ?? updateApp.error;
+
+  // 56.2: the product's loop -- track, prepare, feed back -- starts here. The card already knows
+  // the posting and the two artifacts behind it, so a rehearsal started from it does not ask the
+  // reader to repeat any of that; the session inherits them server-side (56.1).
+  const startRehearsal = () => {
+    if (!editing) return;
+    startInterview.mutate(
+      { applicationId: application.id },
+      {
+        onSuccess: (res) => {
+          const id =
+            str(res, "id", "session_id", "sessionId") ??
+            str((res as { session?: unknown }).session, "id");
+          if (!id) return;
+          onOpenChange(false);
+          router.push(`/interviews/${id}`);
+        },
+      }
+    );
+  };
 
   const save = () => {
     if (!editing) {
@@ -370,6 +395,28 @@ export function ApplicationDialog({ application, open, onOpenChange }: Applicati
               loading={packet.isPending}
               failed={packet.isError}
             />
+
+            {/* 56.2: a rehearsal started from the card inherits the posting and its artifacts
+                (56.1), so the interview opens already pointed at this role. */}
+            <section className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/70 bg-muted/20 p-3">
+              <div className="min-w-0">
+                <p className="text-sm font-medium">{t("applications.dialog.rehearseTitle")}</p>
+                <p className="text-xs text-muted-foreground">
+                  {t("applications.dialog.rehearseHint")}
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                loading={startInterview.isPending}
+                disabled={startInterview.isPending}
+                onClick={startRehearsal}
+              >
+                <MessagesSquare aria-hidden />
+                {t("applications.dialog.rehearseAction")}
+              </Button>
+            </section>
 
             {/* A letter is written on the job page, where the draft and the posting sit
                 together. This is where it is read back, corrected and taken away. */}

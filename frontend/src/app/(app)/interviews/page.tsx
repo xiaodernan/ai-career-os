@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, CalendarClock, FileBarChart, MessagesSquare, Plus } from "lucide-react";
+import { ArrowRight, Briefcase, CalendarClock, FileBarChart, MessagesSquare, Plus } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
 import { Pagination } from "@/components/common/pagination";
 import { lastPageOf } from "@/lib/page-window";
@@ -160,6 +160,14 @@ export default function InterviewsPage() {
                         <Badge variant={s.overall >= 75 ? "success" : s.overall >= 50 ? "warning" : "destructive"} className="shrink-0 tabular-nums">
                           {Math.round(s.overall)}/100
                         </Badge>
+                      )}
+                      {s.applicationId && (
+                        <Button variant="ghost" size="sm" asChild className="shrink-0">
+                          <Link href={`/applications?application=${s.applicationId}`}>
+                            <Briefcase aria-hidden />
+                            {t("interviews.openApplication")}
+                          </Link>
+                        </Button>
                       )}
                       <Button variant="outline" size="sm" asChild className="shrink-0">
                         <Link href={done ? `/interviews/${s.id}/report` : `/interviews/${s.id}`}>

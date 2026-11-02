@@ -4180,6 +4180,18 @@ application it belonged to.
   **404** `APPLICATION_NOT_FOUND`, not someone else's session -- and fills every target field the
   request left empty (posting, JD analysis, resume version, role, company) from the card itself.
   Text the caller did supply still wins. 3 service tests and the two atomicity ITs' constructors.)
+- [x] **56.2** The drawer starts a rehearsal for the card.
+
+  (`Rehearse for this role` sits under the packet and above the letters: one click creates the
+  session from the card and navigates to `/interviews/{id}`, which opens on the first question.
+  The button carries the create mutation's own loading state; a failed create surfaces the
+  hook's toast instead of a dead click.)
+
+- [x] **56.3** The interviews list points back at the card.
+
+  (A row whose session carries an application id grows an `Open application` link to
+  `/applications?application=<id>` -- the deep link that opens that drawer (51.2). A free
+  rehearsal gets no link, because there is no card to open. 1 page test.)
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

@@ -710,7 +710,7 @@ export function useNoteMutations() {
 export function useCreateInterviewSession() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: { jobId?: string; mode?: string; difficulty?: number }) =>
+    mutationFn: (body: { jobId?: string; applicationId?: string; mode?: string; difficulty?: number }) =>
       api.create<{ id?: string; session?: { id: string }; session_id?: string }>(
         endpoints.interviews,
         body
