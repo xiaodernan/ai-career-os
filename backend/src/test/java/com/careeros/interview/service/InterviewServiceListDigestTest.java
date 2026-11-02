@@ -49,7 +49,9 @@ class InterviewServiceListDigestTest {
         digests = mock(InterviewDigestRepository.class);
         service = new InterviewService(sessions, mock(InterviewTurnRepository.class),
                 mock(InterviewEvaluationRepository.class), mock(JobRepository.class),
-                mock(CompanyRepository.class), digests, mock(AiServiceClient.class),
+                mock(CompanyRepository.class),
+                mock(com.careeros.application.service.ApplicationService.class), digests,
+                mock(AiServiceClient.class),
                 TestTransactions.executing());
     }
 

@@ -500,6 +500,8 @@ export interface KnowledgeNote {
 export interface InterviewSession {
   id: string;
   jobId?: string | null;
+  /** The application card this rehearsal was started from (56.1), or null for free practice. */
+  applicationId?: string | null;
   jobTitle?: string | null;
   companyName?: string | null;
   mode: string;

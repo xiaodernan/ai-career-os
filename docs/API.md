@@ -597,7 +597,7 @@ catalogue, so the palette and the board rank one query the same way.
 | Method | Path | Notes |
 |---|---|---|
 | GET | `/interview/sessions` | list |
-| POST | `/interview/sessions` | `{jobId, jdId?, resumeVersionId?, companyName?, positionTitle?, mode, config}` |
+| POST | `/interview/sessions` | `{jobId, jdId?, resumeVersionId?, applicationId?, companyName?, positionTitle?, mode, config}` — `applicationId` names the tracker card being rehearsed (56.1); the session inherits that card's posting, JD analysis and resume version for any field the request left empty, and a card that is not the caller's is **404** `APPLICATION_NOT_FOUND` |
 | GET | `/interview/sessions/{id}` | session + turns + evaluation |
 | PATCH | `/interview/sessions/{id}` | `{status, mode, difficulty, config}` — pause / resume / abandon |
 | DELETE | `/interview/sessions/{id}` | |

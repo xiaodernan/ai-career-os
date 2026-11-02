@@ -86,7 +86,8 @@ class InterviewControllerTest {
         when(evaluations.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         InterviewService service = new InterviewService(sessions, turns, evaluations, jobs,
-                companies, digests, ai, TestTransactions.executing());
+                companies, mock(com.careeros.application.service.ApplicationService.class),
+                digests, ai, TestTransactions.executing());
         mvc = MockMvcBuilders.standaloneSetup(new InterviewController(service))
                 .setControllerAdvice(new EnvelopeAdvice(), new GlobalExceptionHandler())
                 .setCustomArgumentResolvers(new CurrentUserArgumentResolver())

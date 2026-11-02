@@ -1,6 +1,8 @@
 package com.careeros.interview.service;
 
 import com.careeros.ai.AiServiceClient;
+import com.careeros.application.entity.Application;
+import com.careeros.application.service.ApplicationService;
 import com.careeros.common.ApiErrorCode;
 import com.careeros.common.ApiException;
 import com.careeros.common.Json;
@@ -42,19 +44,22 @@ public class InterviewService {
     private final InterviewEvaluationRepository evaluations;
     private final JobRepository jobs;
     private final CompanyRepository companies;
+    private final ApplicationService applications;
     private final InterviewDigestRepository digests;
     private final AiServiceClient ai;
     private final TransactionTemplate tx;
 
     public InterviewService(InterviewSessionRepository sessions, InterviewTurnRepository turns,
                             InterviewEvaluationRepository evaluations, JobRepository jobs,
-                            CompanyRepository companies, InterviewDigestRepository digests,
+                            CompanyRepository companies, ApplicationService applications,
+                            InterviewDigestRepository digests,
                             AiServiceClient ai, TransactionTemplate tx) {
         this.sessions = sessions;
         this.turns = turns;
         this.evaluations = evaluations;
         this.jobs = jobs;
         this.companies = companies;
+        this.applications = applications;
         this.digests = digests;
         this.ai = ai;
         this.tx = tx;
@@ -88,8 +93,30 @@ public class InterviewService {
         session.setJobId(request.jobId());
         session.setJdId(request.jdId());
         session.setResumeVersionId(request.resumeVersionId());
+        session.setApplicationId(request.applicationId());
         session.setCompanyName(request.companyName());
         session.setPositionTitle(request.positionTitle());
+        // A rehearsal started from a card (56.1) inherits what the card already knows: the
+        // posting and the two artifacts behind it. The card is the caller's or this is a 404 --
+        // a guessed id must never let a session name someone else's application.
+        if (request.applicationId() != null) {
+            Application app = applications.require(userId, request.applicationId());
+            if (session.getJobId() == null) {
+                session.setJobId(app.getJobId());
+            }
+            if (session.getJdId() == null) {
+                session.setJdId(app.getJdId());
+            }
+            if (session.getResumeVersionId() == null) {
+                session.setResumeVersionId(app.getResumeVersionId());
+            }
+            if (isBlank(session.getCompanyName())) {
+                session.setCompanyName(app.getCompanyName());
+            }
+            if (isBlank(session.getPositionTitle())) {
+                session.setPositionTitle(app.getTitle());
+            }
+        }
         // The UI starts a job-targeted session with only job_id, so without this copy the row
         // is born without a role or company and every screen naming the target stays blank.
         // Text the caller supplied wins — including text the job cannot know about — and a
@@ -315,7 +342,7 @@ public class InterviewService {
 
     static SessionItem toItem(InterviewSession s, InterviewDigestRepository.Digest digest) {
         return new SessionItem(s.getId(), s.getJobId(), s.getJdId(), s.getResumeVersionId(),
-                s.getCompanyName(), s.getPositionTitle(), s.getMode(), s.getStatus(),
+                s.getApplicationId(), s.getCompanyName(), s.getPositionTitle(), s.getMode(), s.getStatus(),
                 s.getDifficulty(), s.getConfig(), s.getStartedAt(), s.getFinishedAt(),
                 digest.questions(), digest.overall());
     }

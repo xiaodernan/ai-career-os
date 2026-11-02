@@ -18,7 +18,13 @@ public final class InterviewDtos {
      * the list row shows how far a session got and how it scored, and `overall` stays null when
      * no report exists (unknown is not zero). Null when the caller did not ask for digests.
      */
+    /**
+     * `applicationId` is the tracker card this practice was started from (56.1), or null for a
+     * free rehearsal. It is what lets the interviews list send the reader back to the card that
+     * owns the posting and the two artifacts behind it.
+     */
     public record SessionItem(UUID id, UUID jobId, UUID jdId, UUID resumeVersionId,
+                              UUID applicationId,
                               String companyName, String positionTitle, String mode, String status,
                               float difficulty, Map<String, Object> config, OffsetDateTime startedAt,
                               OffsetDateTime finishedAt, Integer questionCount, Float overall) {
@@ -39,6 +45,7 @@ public final class InterviewDtos {
     public record CreateSessionRequest(@JsonAlias("job_id") UUID jobId,
                                        @JsonAlias("jd_id") UUID jdId,
                                        @JsonAlias("resume_version_id") UUID resumeVersionId,
+                                       @JsonAlias("application_id") UUID applicationId,
                                        @JsonAlias("company_name") String companyName,
                                        @JsonAlias("position_title") String positionTitle,
                                        @Size(max = 32) String mode,

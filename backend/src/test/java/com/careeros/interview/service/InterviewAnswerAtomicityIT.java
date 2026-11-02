@@ -76,7 +76,7 @@ class InterviewAnswerAtomicityIT extends ApiIntegrationTest {
         String email = "answer-atomic-" + runId + "@example.test";
         register(email);
         userId = users.findByEmail(email).orElseThrow().getId();
-        SessionItem item = interviews.create(userId, new CreateSessionRequest(null, null, null,
+        SessionItem item = interviews.create(userId, new CreateSessionRequest(null, null, null, null,
                 "ACME GmbH", "Backend Engineer", "technical", Map.of()));
         sessionId = item.id();
         interviews.opening(userId, sessionId);

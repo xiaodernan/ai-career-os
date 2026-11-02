@@ -8,6 +8,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.careeros.ai.AiServiceClient;
+import com.careeros.application.entity.Application;
+import com.careeros.application.service.ApplicationService;
 import com.careeros.interview.dto.InterviewDtos.CreateSessionRequest;
 import com.careeros.interview.entity.InterviewSession;
 import com.careeros.interview.repository.InterviewDigestRepository;
@@ -39,6 +41,7 @@ class InterviewServiceCreateTest {
     private InterviewSessionRepository sessions;
     private JobRepository jobs;
     private CompanyRepository companies;
+    private ApplicationService applications;
     private InterviewService service;
 
     @BeforeEach
@@ -46,8 +49,10 @@ class InterviewServiceCreateTest {
         sessions = mock(InterviewSessionRepository.class);
         jobs = mock(JobRepository.class);
         companies = mock(CompanyRepository.class);
+        applications = mock(ApplicationService.class);
         service = new InterviewService(sessions, mock(InterviewTurnRepository.class),
                 mock(InterviewEvaluationRepository.class), jobs, companies,
+                applications,
                 mock(InterviewDigestRepository.class), mock(AiServiceClient.class),
                 TestTransactions.executing());
         when(sessions.save(any(InterviewSession.class))).thenAnswer(i -> i.getArgument(0));
@@ -70,7 +75,7 @@ class InterviewServiceCreateTest {
     }
 
     private CreateSessionRequest request(String companyName, String positionTitle) {
-        return new CreateSessionRequest(jobId, null, null, companyName, positionTitle, "technical", null);
+        return new CreateSessionRequest(jobId, null, null, null, companyName, positionTitle, "technical", null);
     }
 
     @Test
@@ -110,7 +115,7 @@ class InterviewServiceCreateTest {
 
     @Test
     void freeTextSessionWithoutAJobSkipsTheLookup() {
-        service.create(userId, new CreateSessionRequest(null, null, null,
+        service.create(userId, new CreateSessionRequest(null, null, null, null,
                 "Self-employed", "Own project", "behavioral", null));
 
         verify(jobs, never()).findById(any());
@@ -131,4 +136,51 @@ class InterviewServiceCreateTest {
         // Columns that are nullable stay null rather than inventing a placeholder.
         verify(companies, never()).findById(any());
     }
-}
+    @Test
+    void aRehearsalStartedFromACardInheritsWhatTheCardKnows() {
+        UUID applicationId = UUID.randomUUID();
+        UUID jd = UUID.randomUUID();
+        UUID resumeVersion = UUID.randomUUID();
+        Application app = new Application();
+        app.setTitle("Staff Backend Engineer");
+        app.setCompanyName("ACME GmbH");
+        app.setJobId(jobId);
+        app.setJdId(jd);
+        app.setResumeVersionId(resumeVersion);
+        when(applications.require(userId, applicationId)).thenReturn(app);
+
+        service.create(userId, new CreateSessionRequest(null, null, null, applicationId,
+                null, null, "mixed", null));
+
+        InterviewSession s = saved();
+        assertThat(s.getApplicationId()).isEqualTo(applicationId);
+        assertThat(s.getJobId()).isEqualTo(jobId);
+        assertThat(s.getJdId()).isEqualTo(jd);
+        assertThat(s.getResumeVersionId()).isEqualTo(resumeVersion);
+        assertThat(s.getPositionTitle()).isEqualTo("Staff Backend Engineer");
+        assertThat(s.getCompanyName()).isEqualTo("ACME GmbH");
+        verify(applications).require(userId, applicationId);
+    }
+
+    @Test
+    void aRehearsalThatNamesItsOwnTargetKeepsIt() {
+        UUID applicationId = UUID.randomUUID();
+        Application app = new Application();
+        app.setTitle("Title from the card");
+        when(applications.require(userId, applicationId)).thenReturn(app);
+
+        service.create(userId, new CreateSessionRequest(jobId, null, null, applicationId,
+                "Freelance", "Senior Platform Engineer", "behavioral", null));
+
+        InterviewSession s = saved();
+        assertThat(s.getPositionTitle()).isEqualTo("Senior Platform Engineer");
+        assertThat(s.getCompanyName()).isEqualTo("Freelance");
+    }
+
+    @Test
+    void aFreeRehearsalNeverLooksUpAnApplication() {
+        service.create(userId, new CreateSessionRequest(null, null, null, null,
+                "Self-employed", "Own project", "mixed", null));
+
+        verify(applications, never()).require(any(), any());
+    }}

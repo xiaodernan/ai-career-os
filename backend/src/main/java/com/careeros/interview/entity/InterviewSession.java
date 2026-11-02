@@ -33,6 +33,10 @@ public class InterviewSession {
     @Column(name = "resume_version_id")
     private UUID resumeVersionId;
 
+    /** The application card this practice session belongs to, when it was started from one. */
+    @Column(name = "application_id")
+    private UUID applicationId;
+
     @Column(name = "company_name")
     private String companyName;
 
@@ -86,6 +90,13 @@ public class InterviewSession {
         this.jdId = jdId;
     }
 
+    public UUID getApplicationId() {
+        return applicationId;
+    }
+
+    public void setApplicationId(UUID applicationId) {
+        this.applicationId = applicationId;
+    }
     public UUID getResumeVersionId() {
         return resumeVersionId;
     }

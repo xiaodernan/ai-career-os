@@ -57,6 +57,16 @@ describe("mapInterviewSessionItem", () => {
     expect(got.overall).toBeUndefined();
   });
 
+  it("keeps the application card a rehearsal was started from", () => {
+    // 56.1: the interviews list sends the reader back to the card that owns the posting.
+    expect(
+      mapInterviewSessionItem({
+        ...SESSION_ITEM,
+        applicationId: "aaaaaaaa-0000-0000-0000-000000000001",
+      }).applicationId
+    ).toBe("aaaaaaaa-0000-0000-0000-000000000001");
+    expect(mapInterviewSessionItem({ id: "s-1" }).applicationId).toBeNull();
+  });
   it("keeps the mock-mode defaults when the row is sparse", () => {
     expect(mapInterviewSessionItem({ id: "s-1" })).toMatchObject({
       id: "s-1",

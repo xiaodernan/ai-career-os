@@ -4165,6 +4165,21 @@ in the palette should name a thing and then make the reader find it again.
   use (51.2), so the board opens that card's drawer on paint. A hit without an id -- a shape the
   wire does not produce -- still falls back to the board rather than
   `/applications?application=undefined`. 1 normalisation assertion.)
+## Epic 56 -- The rehearsal remembers the card it is for
+
+The product's loop says interview feedback feeds back into what to learn and what to target. The
+session table carried the posting, the JD analysis and the resume version, but never the tracker
+card, so a rehearsal started from the board had no way back to it and the list could not say which
+application it belonged to.
+
+- [x] **56.1** A rehearsal can name its application.
+
+  (`interview_sessions` gains a nullable `application_id` (V35) with ON DELETE SET NULL: deleting
+  the card leaves the practice history standing rather than erasing it. `POST /interview/sessions`
+  accepts `applicationId`; the service requires that card to be the caller's -- a guessed id is
+  **404** `APPLICATION_NOT_FOUND`, not someone else's session -- and fills every target field the
+  request left empty (posting, JD analysis, resume version, role, company) from the card itself.
+  Text the caller did supply still wins. 3 service tests and the two atomicity ITs' constructors.)
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
