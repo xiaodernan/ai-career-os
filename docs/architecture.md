@@ -263,6 +263,12 @@ user-scoped table (ownership is enforced in backend layer + a single SQL predica
 - `documents(id, user_id, source_id, file_key nullable, media_type, title, content_hash,
    lang, status, error, text_excerpt, meta jsonb)` — `status`/`error` are the ingestion
   state the sources list polls; `content_hash` is what makes a re-upload a no-op.
+  `status = 'retired'` is terminal: the delete path writes it when the owning resume,
+  source or note goes, and neither a late ingest callback nor a failed trigger may move
+  the row off it — retrieval admits a chunk only while the document reads `ready`, so
+  an answer that arrives after the delete has to lose the race. The row and its chunks
+  stay as the audit record; reclaiming them is the retention sweep's job, not the
+  delete's.
 - `document_chunks(id, document_id, user_id, ordinal, text, token_count, meta jsonb
    /* section path e.g. resume>experience>3rd-intern, skill tags */, embedding vector,
    tsv tsvector GENERATED, uniq(document_id, ordinal))`
