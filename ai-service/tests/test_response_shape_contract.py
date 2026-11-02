@@ -924,8 +924,12 @@ def test_the_declaration_probes_reach_the_shapes_a_copy_would_miss():
     # counts and the applied-at stamp through the same opener as every other row. 63 with
     # 20.2's `normalizeNightlyVerdict`: the install's verdict reads its seven names off one
     # record through the same opener as every other row.
-    assert len(re.findall(TS_OPENER.format(name=r"(\w+)"), source)) == 63, \
-        "57 exported mappers and 6 module-private ones, all through one opener"
+    # 67 with the packet's four readers (47.1): `normalizePacketResume`, `normalizePacketJd`
+    # and `normalizePacketMatch` are module-private because each answers one component of the
+    # packet, and the exported `normalizeApplyPacket` composes them -- four names on one opener,
+    # three of them the fourth non-exported reader the ban above has to reach.
+    assert len(re.findall(TS_OPENER.format(name=r"(\w+)"), source)) == 67, \
+        "58 exported mappers and 9 module-private ones, all through one opener"
     assert "export function normalizePage(" not in source, \
         "the generic really does sit between the name and the paren, so a literal opener finds nothing"
     assert _ts_function_body("normalizePage").startswith("export function normalizePage<T>(")
@@ -1039,8 +1043,13 @@ def test_the_java_probe_reads_every_record_the_backend_declares():
     # rows it deleted, the chunk rows the cascade took with them and the retired rows a source still
     # named. The sweep's receipt is not a wire shape and no controller binds it, but the walk reads
     # declarations rather than routes, so it is held to the same opener as the DTOs above.
-    assert len(declared) == 193, \
-        f"{len(declared)} records carry a declaration the shared opener reads, not the 193 measured"
+    # 198 on this tree: cce4492's packet answer (`ApplicationPacket` and its three parts
+    # `PacketResume`, `PacketJd`, `PacketMatch`, declared in `ApplicationDtos`), plus 48.1's
+    # `StorageService.StoredObject` -- the listing's row, which names a key, its age and its size so
+    # a sweep can decide what no database row names. It is a port's type and no route serializes it,
+    # and the walk counts declarations, so it joins `Purge` in being held to this opener.
+    assert len(declared) == 198, \
+        f"{len(declared)} records carry a declaration the shared opener reads, not the 198 measured"
     problems, renamed = [], []
     for relative, record in declared:
         names = _record_components_at(relative, record)
@@ -3045,7 +3054,11 @@ def test_the_heartbeat_interval_has_one_definer_and_every_shipped_claim_names_it
     # ROADMAP.md's 12 and RUNBOOK.md's 14 rather than the 11 and 13 this pin once carried:
     # 41.2's "a fresh process is not a broken one" paragraph says the word once more in each
     # file, which is exactly the paragraph the ledger is meant to notice.
-    assert per_file == {"AGENTS.md": 1, "DEPLOYMENT.md": 5, "ROADMAP.md": 12,
+    # 13 in ROADMAP.md since 26d2ee6 opened Epic 48: 48.2's bullet promises the sweep "rides the
+    # retention heartbeat", which is a fourth clock the roadmap names without a number -- and the
+    # doc_claims assertion above is what keeps that promise from becoming a second opinion about
+    # the interval. 48.1's shipped paragraph adds no mention of its own.
+    assert per_file == {"AGENTS.md": 1, "DEPLOYMENT.md": 5, "ROADMAP.md": 13,
                         "RUNBOOK.md": 14, "SECURITY.md": 1}, (
         f"{per_file}: the docs' own vocabulary is censused, so this pass is not reporting on an "
         "empty set -- and a second file picking up the word is a signal the ledger has to grow")
@@ -3420,13 +3433,16 @@ def test_both_frame_parsers_default_a_nameless_frame_to_the_same_event_name():
         # 1554 rather than 1539 since 42.1's `MailSettingsRow` joined above the union
         # (+15 lines with its doc comment); the union itself did not change, and the
         # three-flag answer reuses the type rather than adding a second one below it.
+        # 1602 rather than 1554: 47.1's packet types (+43 lines in cce4492), the attention row's
+        # reply field (+3 in e011f88) and the reply line's link (+2 in c66a8a4) all joined above
+        # the union. 48 lines, and the union's own text is byte-for-byte what it was.
         # The third union left this list: 7e2f334 moved TraceKind from an inline union
         # in agent-timeline.tsx to the TRACE_KINDS roster in lib/trace-kinds.ts -- an
         # array form this token scan does not read (it matches `?`/`=`/`|`/`:` value
         # positions, not array elements). The kind's "message" member still exists and
         # is still the wire's vocabulary; the roster's own names are pinned by the
         # browser's suite (status-words.test.ts), which is where they are read.
-        ("types.ts", 1554, "kind:"),
+        ("types.ts", 1602, "kind:"),
         ('use-sse.ts', 15, 'event: SSEEventName | "message" | "progress" | "ping";'),
     ], (f"{[(r['file'], r['line'], r['head']) for r in by_role['type-union-member']]}: two type unions "
         "spell `message` now, and only one of them names a frame -- the other is the trace step kind "

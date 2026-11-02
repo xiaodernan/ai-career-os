@@ -8,9 +8,9 @@ this request fails, does anyone say so?". This file answers it per mutation site
 the caller's options through the one indirection the app actually uses: a named object handed to two
 different mutations.
 
-What the shipped code says, measured rather than assumed: 94 mutation sites in fifteen files
+What the shipped code says, measured rather than assumed: 95 mutation sites in fifteen files
 (the hook libraries, the knowledge uploader's own actions, 33.1's push switch, 36.4's
-second door, the account and replies screens' hooks, and 42.2's mail dials). 82 declare their failure at the
+second door, the account and replies screens' hooks, and 42.2's mail dials). 83 declare their failure at the
 hook; the twelve that do not sit in ``account.ts`` and ``auth.ts`` and ``push.ts``.
 Eleven of those twelve are announced by their caller -- the password forms pass inline call
 options, the credentials form passes one shared ``handlers`` object to both ``login.mutate``
@@ -25,10 +25,11 @@ choice -- a local sign-out always happens -- so this file characterises it rathe
 changing it: it is the one place in the app where "you are signed out" is not a claim about
 the server.
 
-The same walk covers the failure helper: ``fail(...)`` has a single author and 79 uses, and
+The same walk covers the failure helper: ``fail(...)`` has a single author and 80 uses, and
 every use names a key the browser's table answers -- the sentence is resolved when the toast
-is raised, in the reader's language. All but three name a different key: the inbox's read,
-mark-all-read and dismiss share ``notifications.actionFailed`` because they are one sentence
+is raised, in the reader's language. All but four name a different key: the inbox's read,
+mark-all-read, dismiss and 45.4's dismiss-read-in-one-press share ``notifications.actionFailed``
+because they are one sentence
 about one screen, and the case below pins that exception by name. When this file first walked
 a helper that took sentences, 28 were distinct, because two different deletes shared
 "Delete failed." and the toast never said which record survived. Each delete now names its
@@ -111,7 +112,9 @@ ROSTER = {
     "frontend/src/lib/hooks/mfa.ts": 4,
     # 42.2: the settings card's one dial write, announced at the hook.
     "frontend/src/lib/hooks/mail-settings.ts": 1,
-    "frontend/src/lib/hooks/notifications.ts": 3,
+    # 4 rather than 3 since 45.4: dismissing every read row is a fourth inbox write, announced at the
+    # hook with the same sentence the other three spend.
+    "frontend/src/lib/hooks/notifications.ts": 4,
     "frontend/src/lib/hooks/offers.ts": 4,
     PUSH_HOOKS: 1,
     "frontend/src/lib/hooks/voice.ts": 2,
@@ -139,7 +142,8 @@ SENTENCES = {
     "frontend/src/lib/hooks/data-portability.ts": 5,
     "frontend/src/lib/hooks/growth.ts": 12,
     "frontend/src/lib/hooks/ingestion.ts": 8,
-    "frontend/src/lib/hooks/notifications.ts": 3,
+    # 4 since 45.4: the fourth inbox write spends the same key the read, mark-all and dismiss share.
+    "frontend/src/lib/hooks/notifications.ts": 4,
     "frontend/src/lib/hooks/offers.ts": 4,
     "frontend/src/lib/hooks/mfa.ts": 4,
     # 42.2: one write, one sentence -- the dial could not be changed.
@@ -154,7 +158,7 @@ FAIL_USES = sum(SENTENCES.values())
 #: -- read, mark-all-read and dismiss -- are one sentence about one screen ("Couldn't update
 #: the inbox."), so they share a key on purpose. Every other write names its own, because a
 #: toast that hides which record failed was the collision this file was written to stop.
-SHARED_KEYS = {"notifications.actionFailed": 3}
+SHARED_KEYS = {"notifications.actionFailed": 4}
 
 #: The auth form's shared call options, declared inside the submit handler and passed to both
 #: ``login.mutate`` and ``register.mutate``. The failure is mapped through the recovery module's

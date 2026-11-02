@@ -10,9 +10,9 @@ of **answers** ("this row's reminder instant"). ``{...row, ...command}`` conflat
 and TypeScript cannot see the conflation, because the patch is an interface of optional keys and the
 row an interface of nullable ones.
 
-Fifteen sites in ``frontend/src`` write a cache value. Ten spell their key in the source; the other
+Sixteen sites in ``frontend/src`` write a cache value. Eleven spell their key in the source; the other
 five -- ``useReorderApplication`` and ``useSetMailDial`` and ``useUpdateApplication`` -- write back a key
-each enumerated at runtime or named as a constant, which no static read can name. Three put a route's answer into ``["me"]``, and three put the inbox write's
+each enumerated at runtime or named as a constant, which no static read can name. Three put a route's answer into ``["me"]``, and four put the inbox write's
 answer into ``["notifications"]``; four put a snapshot back where it was read from; and three *merge*:
 one preserves a wrapper object it had just read (``["job", id]``), two rewrite one page's ``items`` in
 place (``["applications"]``). Case 12 rebuilds
@@ -134,7 +134,9 @@ CLIENT_CALLS = {
     INGESTION_HOOKS: {"invalidateQueries": 10},
     # 36.4: the four second-factor writes each refresh the one status the card reads.
     MFA_HOOKS: {"invalidateQueries": 4},
-    NOTIFICATION_HOOKS: {"setQueryData": 3},
+    # 4 rather than 3 since 45.4's "the read rows leave in one press": dismissing the read rows is a
+    # fourth write into the inbox's key, and it puts the same answer there the other three do.
+    NOTIFICATION_HOOKS: {"setQueryData": 4},
     # 42.2: the dial flip cancels the row, reads the optimistic previous, and writes
     # the computed merge, the rollback and the server's fresh answer -- three writes
     # over one key, all inside the card.
@@ -158,7 +160,7 @@ CARD_READS = ("const overdue = Boolean(app.reminderAt)", "{app.reminderAt && (")
 #: The words the header's census sentence spells its counts with, so case 12 can rebuild it.
 NUM_WORDS = {1: "one", 2: "two", 3: "three", 4: "four", 5: "five", 6: "six", 7: "seven",
              8: "eight", 9: "nine", 10: "ten", 11: "eleven", 12: "twelve",
-             13: "thirteen", 14: "fourteen", 15: "fifteen"}
+             13: "thirteen", 14: "fourteen", 15: "fifteen", 16: "sixteen"}
 
 
 def java(rel: str) -> str:
@@ -543,6 +545,7 @@ def test_the_write_ledger_names_every_site_and_the_key_and_form_each_one_has():
         ("mail-settings.ts", "useSetMailDial", ("*",), "computed"),
         ("mail-settings.ts", "useSetMailDial", ("*",), "snapshot"),
         ("notifications.ts", "useDismissNotification", ("notifications",), "answer"),
+        ("notifications.ts", "useDismissReadNotifications", ("notifications",), "answer"),
         ("notifications.ts", "useMarkAllNotificationsRead", ("notifications",), "answer"),
         ("notifications.ts", "useMarkNotificationsRead", ("notifications",), "answer"),
     ], "the write ledger moved: %s" % ledger

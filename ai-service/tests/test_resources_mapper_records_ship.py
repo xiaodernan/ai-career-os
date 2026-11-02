@@ -466,8 +466,10 @@ def test_the_unbound_mappers_ban_would_find_these_mappers_if_it_read_this_file()
     # 37 since the contacts registry (11.1): `mapContact` joined the named mappers and
     # `useContacts` the query hooks.
     # 42 since the proactive layer (19.1-19.3): saved searches, the feed and run readers, and the
-    # notification inbox each brought one query hook.
-    assert len(seen) == 42, f"resources.ts now declares {len(seen)} functions for the ban's rule"
+    # notification inbox each brought one query hook. 43 with the packet's `useApplicationPacket`:
+    # the detail page's second read of the same application, which the ban cannot bind because
+    # resources.ts is not the file it reads.
+    assert len(seen) == 43, f"resources.ts now declares {len(seen)} functions for the ban's rule"
     assert [n for n in seen if n.startswith("map")] == NAMED_MAPPERS, \
         "the ban's own rule no longer recognizes these declarations in file order: " \
         f"{[n for n in seen if n.startswith('map')]}"
@@ -481,8 +483,10 @@ def test_the_unbound_mappers_ban_would_find_these_mappers_if_it_read_this_file()
     # file only echoes that pin, so the two move together or one of them is stale. 45 with
     # 20.1's `normalizeNightlyReport`; 46 with 20.2's `normalizeNightlyVerdict`; 47 with
     # `normalizeApplyResult`, the receipt reader 19.2 shipped without moving the pin -- the
-    # field gate's own comment records the same recovery.
-    assert population and population.group(1) == "47", \
+    # field gate's own comment records the same recovery. 51 with the packet's four readers (47.1):
+    # `normalizeApplyPacket` plus the three component readers it calls, which are private and so
+    # reach the field gate's census the same way `changeFrom` does.
+    assert population and population.group(1) == "51", \
         f"the ban's pinned normalize.ts population moved: {population and population.group(1)}"
 
 

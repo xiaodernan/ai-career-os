@@ -3907,17 +3907,31 @@ commit that fails after the put leaves bytes that no row ever named -- invisible
 which starts from a row, and invisible to account erasure, which starts from a row too. And 44.3's
 window burns the trail: a reclaim the store refused keeps its key in the retired row only until the
 purge deletes that row, which is why DEPLOYMENT.md can currently say the object is simply an
-orphan. Nothing can see either case, because `StorageService` has no listing -- the bucket is only
+orphan. Nothing could see either case, because `StorageService` had no listing -- the bucket was only
 ever walked by the keys the database happens to name. 48.1 gives the port its eyes and censuses who
 may own a key; 48.2 walks the bucket against the rows and takes what no row names after a window,
 turning that sentence into a remover; 48.3 rep-wards the asymmetry that let 44.2's counter ship
 while no rule read it, so a meter cannot be born unwatched again.
 
-- [ ] **48.1** The port can list its bucket, and every key owner is named. (A listing that answers
-  key, last-modified and size, with the refusal path loud rather than short: a partial listing read
-  as a complete one is the defect class this epic must not add to. The census names the two writers
-  and the two columns that can hold a key, so a third owner reddens a gate instead of becoming
-  invisible to the sweep.)
+- [x] **48.1** The port can list its bucket, and every key owner is named.
+
+  (`StorageService.list()` answers every object the bucket holds as key, last-modified and size, and
+  promises the whole walk or a refusal: the page loop sits inside the same try as the first page, so
+  a store that goes quiet mid-list throws `STORAGE_READ_FAILED` instead of returning the pages it
+  reached -- a short listing handed to 48.2 would read an object the first page never showed as
+  garbage and delete it. An object the store cannot date is reported at the moment of the listing,
+  which is the direction that makes a missing timestamp keep bytes rather than lose them.
+  `InMemoryStorageConfig` records a time per put so the test fable keeps the same promise. The
+  census is a gate rather than a comment: 11 cases pin the port's six operations, its two writers
+  and their three puts, its two readers, its two removers, and the two columns that can hold a key
+  with the entities that declare them -- a third key column or a fourth writer reddens the gate
+  instead of going invisible to the sweep, and `LISTERS` stays empty on purpose until 48.2 names
+  its own class there. 6 tests in `StorageListingTest`, the refused-mid-list one building the real
+  MinIO client against a closed port. `StorageService.StoredObject` joins the record census at 198;
+  the listing's refusal reuses `STORAGE_READ_FAILED` and its exact sentence, because a translated
+  code that answers with two wordings is the defect `test_the_services_error_codes_are_classified`
+  reads. 1125 backend tests in the non-IT selection, and the ai-service census gates answer the moved
+  populations -- 67 mapper openers in normalize.ts, 198 records, 43 declarations in resources.ts.)
 - [ ] **48.2** A nightly pass reclaims the objects no row names. (List, subtract every key any row
   names in any status -- a retired row's key is still 44.2's trail, not garbage -- take only objects
   past a window so an upload mid-transaction keeps its bytes, and delete nothing when the listing

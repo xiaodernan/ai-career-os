@@ -266,11 +266,20 @@ def test_the_shipped_key_is_read_by_the_three_browser_files_that_render_it():
                             RESUME_REPO_FILE, RECLAIMER_FILE, RECLAIM_TEST_FILE,
                             "ai-service/tests/test_file_key_composers.py",
                             "ai-service/tests/test_resources_mapper_records_ship.py",
-                            "ai-service/tests/test_resume_file_fields_ship.py"]), (
+                            "ai-service/tests/test_resume_file_fields_ship.py",
+                            # Epic 48 opened by naming the two columns that can hold a key, in prose
+                            # first (the plan's 48.1 bullet) and then in a gate that walks the tree for
+                            # every entity that declares one (48.1's owner census). Neither reads or
+                            # writes a resume's file; both spell the column, which is what this scan
+                            # sees and what it has to keep honest about.
+                            "docs/plans/plan_long_term.md",
+                            "ai-service/tests/"
+                            "test_the_bucket_owners_are_censused_and_the_listing_answers_whole.py"]), (
         f"the key is named in {sites}. The schema, the ingestion trail, the response record, the "
         f"controller's route, the two docs, the three gates, the reclaim path's question, its asker "
-        f"and its test are the accounted spellers; a new name here is a new author or a new reader, "
-        f"and this census has to say which")
+        f"and its test are the accounted spellers, along with the plan line and the gate that name "
+        f"the column as an owner rather than as a reader; a new name here is a new author or a new "
+        f"reader, and this census has to say which")
 
     # The reclaim trio spell the key because the delete path has to ask the resume table whether a
     # stored object is still served as someone's original. A key spelled somewhere else is a new

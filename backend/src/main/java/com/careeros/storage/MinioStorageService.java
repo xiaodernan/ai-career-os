@@ -6,14 +6,21 @@ import com.careeros.config.AppProperties;
 import io.minio.BucketExistsArgs;
 import io.minio.GetObjectArgs;
 import io.minio.GetPresignedObjectUrlArgs;
+import io.minio.ListObjectsArgs;
 import io.minio.MakeBucketArgs;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
 import io.minio.RemoveObjectArgs;
+import io.minio.Result;
 import io.minio.http.Method;
+import io.minio.messages.Item;
 import jakarta.annotation.PostConstruct;
 import java.io.ByteArrayInputStream;
 import java.time.Duration;
+import java.time.OffsetDateTime;
+import java.time.ZonedDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -93,6 +100,37 @@ public class MinioStorageService implements StorageService {
         try (var stream = client.getObject(GetObjectArgs.builder().bucket(bucket).object(key).build())) {
             return stream.readAllBytes();
         } catch (Exception e) {
+            throw new ApiException(ApiErrorCode.STORAGE_READ_FAILED, "Object storage read failed");
+        }
+    }
+
+    /**
+     * Every object is accumulated before anything is returned, because the port's promise is that a
+     * listing either covers the bucket or throws: a method that returned what it had reached when the
+     * store went quiet would hand a sweep a short list and let it delete what that list never showed.
+     * The walk therefore sits inside the same try as the call that starts it, so a refusal anywhere --
+     * on the first page or the tenth -- is a refusal of the whole listing. Pagination is the client's
+     * own, and its errors surface as a failed item, which is why reading each item is inside the try.
+     */
+    @Override
+    public List<StoredObject> list() {
+        try {
+            List<StoredObject> objects = new ArrayList<>();
+            for (Result<Item> result : client.listObjects(ListObjectsArgs.builder()
+                    .bucket(bucket)
+                    .recursive(true)
+                    .build())) {
+                Item item = result.get();
+                ZonedDateTime stamp = item.lastModified();
+                objects.add(new StoredObject(item.objectName(),
+                        stamp == null ? OffsetDateTime.now() : stamp.toOffsetDateTime(),
+                        item.size()));
+            }
+            return objects;
+        } catch (Exception e) {
+            // One code answers with one sentence: the reader's message is chosen from the code, so a
+            // listing-specific wording would make STORAGE_READ_FAILED mean two things at once. Which
+            // read failed is in the cause this throw carries.
             throw new ApiException(ApiErrorCode.STORAGE_READ_FAILED, "Object storage read failed");
         }
     }
