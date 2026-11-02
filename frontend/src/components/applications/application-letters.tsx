@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { Check, Mail, Pencil, Trash2, X } from "lucide-react";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { CopyButton, DownloadButton } from "@/components/common/export-buttons";
@@ -42,10 +43,13 @@ import type { CoverLetter } from "@/lib/api/types";
 export function ApplicationLettersPanel({
   applicationId,
   jobLabel,
+  jobId,
 }: {
   applicationId: string;
   /** The posting's title, used to name a downloaded letter after the application it belongs to. */
   jobLabel?: string | null;
+  /** The posting itself, so an empty shelf can point at the page that fills it. */
+  jobId?: string | null;
 }) {
   const { t, locale } = useLocale();
   const letters = useApplicationLetters(applicationId);
@@ -85,7 +89,16 @@ export function ApplicationLettersPanel({
       {letters.data?.length === 0 && (
         <p className="text-sm text-muted-foreground">
           {t("applications.dialog.lettersEmpty")}{" "}
-          <span className="text-xs">{t("applications.dialog.lettersHint")}</span>
+          {jobId ? (
+            <Link
+              href={`/jobs/${jobId}#cover-letter`}
+              className="text-xs underline underline-offset-2 hover:text-foreground"
+            >
+              {t("applications.dialog.lettersWriteOne")}
+            </Link>
+          ) : (
+            <span className="text-xs">{t("applications.dialog.lettersHint")}</span>
+          )}
         </p>
       )}
 

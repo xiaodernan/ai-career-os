@@ -75,7 +75,7 @@ export function CoverLetterPanel({
   const error = mutation.error;
 
   return (
-    <Card>
+    <Card id="cover-letter">
       <CardContent className="space-y-4">
         <SectionHeading
           eyebrow={t("coverLetter.eyebrow")}

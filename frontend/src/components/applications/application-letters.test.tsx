@@ -36,8 +36,8 @@ vi.mock("@/lib/hooks/actions", () => ({
 
 import { ApplicationLettersPanel, LetterEditor } from "./application-letters";
 
-const render = () =>
-  renderToStaticMarkup(<ApplicationLettersPanel applicationId="app-1" />);
+const render = (props: { jobId?: string | null } = {}) =>
+  renderToStaticMarkup(<ApplicationLettersPanel applicationId="app-1" {...props} />);
 
 describe("ApplicationLettersPanel", () => {
   it("draws a loading skeleton without claiming there are no letters", () => {
@@ -56,6 +56,15 @@ describe("ApplicationLettersPanel", () => {
 
     expect(html).toContain("applications.dialog.lettersEmpty");
     expect(html).toContain("applications.dialog.lettersHint");
+  });
+
+  it("points an empty shelf at the page that fills it", () => {
+    lettersState.value = { data: [] };
+
+    const html = render({ jobId: "job-1" });
+
+    expect(html).toContain('href="/jobs/job-1#cover-letter"');
+    expect(html).toContain("applications.dialog.lettersWriteOne");
   });
 
   it("shows each kept letter's first line, dials and whole body", () => {

@@ -4042,6 +4042,14 @@ that this posting already held three drafts and no way to reach them from where 
   again. It now carries `?application=<id>` -- the same deep link the attention rows and the
   pipeline chip already use -- so that application's drawer is open when the board paints.)
 
+- [x] **51.3** An empty shelf points at the page that fills it.
+
+  (The drawer's empty state said `Drafts you keep from the job page are stored here` and left the
+  reader to find that page. When the application carries a `jobId`, the sentence now ends in a
+  link to `/jobs/{jobId}#cover-letter`, and the drafting card carries that id so the anchor lands
+  on it. An application with no posting keeps the plain hint -- there is nowhere honest to send
+  it. 1 SSR test.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

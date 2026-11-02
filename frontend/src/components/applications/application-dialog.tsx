@@ -364,7 +364,11 @@ export function ApplicationDialog({ application, open, onOpenChange }: Applicati
 
             {/* A letter is written on the job page, where the draft and the posting sit
                 together. This is where it is read back, corrected and taken away. */}
-            <ApplicationLettersPanel applicationId={application.id} jobLabel={application.title} />
+            <ApplicationLettersPanel
+              applicationId={application.id}
+              jobLabel={application.title}
+              jobId={application.jobId}
+            />
           </>
         )}
 
