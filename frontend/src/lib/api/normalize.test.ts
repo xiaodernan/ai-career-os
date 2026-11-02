@@ -1578,7 +1578,7 @@ describe("normalizeSearch", () => {
       title: "Frontend Eng", // the posting, because a letter's wire name is jobTitle
       subtitle: "Dear Acme,",
     });
-    expect(letter.href).toBe("/applications?application=a1");
+    // 53.3: the hash asks the drawer to scroll to the shelf.\n    expect(letter.href).toBe("/applications?application=a1#letters");
   });
 
   it("sends a letter with no application back to the board rather than a broken drawer", () => {

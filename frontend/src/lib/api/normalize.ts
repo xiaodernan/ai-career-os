@@ -1615,9 +1615,13 @@ export const SEARCH_GROUPS: {
     label: "Letters",
     // A kept letter has no screen of its own: it lives in the drawer of the application it was
     // filed under, so the hit carries that application's id and opens the drawer directly (51.2).
+    // The `#letters` hash asks the drawer to scroll to its shelf (53.3); a hit without an
+    // application has no shelf to point at, so it still lands on the board with no hash.
     href: (_id, hit) => {
       const applicationId = hit ? str(hit, "applicationId") : undefined;
-      return applicationId ? `/applications?application=${applicationId}` : "/applications";
+      return applicationId
+        ? `/applications?application=${applicationId}#letters`
+        : "/applications";
     },
   },
 ];

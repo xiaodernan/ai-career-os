@@ -106,6 +106,15 @@ export function ApplicationDialog({ application, open, onOpenChange }: Applicati
   const events = useApplicationEvents(editing && open ? application.id : null);
   const packet = useApplicationPacket(editing && open ? application.id : null);
 
+  // 53.3: a letter hit in the palette lands as `?application=<id>#letters`. The drawer opens
+  // scrolled to the shelf instead of making the reader hunt for it; the hash is consumed, so a
+  // later plain open of the same card does not jump again.
+  React.useEffect(() => {
+    if (!open || typeof window === "undefined" || window.location.hash !== "#letters") return;
+    document.getElementById("letters")?.scrollIntoView({ block: "start" });
+    window.history.replaceState(null, "", window.location.pathname + window.location.search);
+  }, [open]);
+
   const [title, setTitle] = React.useState("");
   const [companyName, setCompanyName] = React.useState("");
   const [status, setStatus] = React.useState<string>("saved");

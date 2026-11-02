@@ -59,7 +59,7 @@ export function ApplicationLettersPanel({
   const [editingId, setEditingId] = React.useState<string | null>(null);
 
   return (
-    <section className="space-y-2">
+    <section id="letters" className="scroll-mt-4 space-y-2">
       <div className="flex items-baseline gap-2">
         <h4 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
           {t("applications.dialog.letters")}

@@ -160,4 +160,12 @@ describe("LetterEditor", () => {
     const saveButton = html.slice(html.lastIndexOf("<button", saveAt), saveAt);
     expect(saveButton).toContain("disabled");
   });
+  it("carries the anchor a #letters link lands on", () => {
+    // 53.3: the palette's letter hits end in `#letters`, and this id is what that hash finds.
+    lettersState.value = { data: [] };
+
+    const html = render();
+
+    expect(html).toContain('id="letters"');
+  });
 });

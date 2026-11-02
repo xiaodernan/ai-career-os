@@ -4121,6 +4121,14 @@ it has no screen of its own, and there may be none, one or several.
   only when the total is above zero, with the full sentence in its title: for a letter-less card
   that badge would be a permanent zero. 2 service tests, 1 mapper test, 2 SSR tests and 1
   normalisation test.)
+- [x] **53.3** A letter hit lands on the shelf it lives on.
+
+  (52.2's href opened the drawer, but at the top: a reader who searched a letter's text then had
+  to scroll past the form, the timeline and the packet to find it. The letters panel now carries
+  `id="letters"`, the palette's letter hits end in `#letters`, and the drawer scrolls that section
+  into view once it is open, then drops the hash with `history.replaceState` so a later plain open
+  of the same card does not jump again. A hit with no application still lands on the board with
+  no hash. 1 normalisation assertion and 1 SSR assertion.)
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
