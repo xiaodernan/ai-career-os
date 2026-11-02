@@ -17,6 +17,7 @@ import com.careeros.knowledge.entity.UserNote;
 import com.careeros.knowledge.repository.DocumentRepository;
 import com.careeros.knowledge.repository.KnowledgeSourceRepository;
 import com.careeros.knowledge.repository.UserNoteRepository;
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -44,13 +45,16 @@ public class KnowledgeService {
     private final DocumentRepository documents;
     private final UserNoteRepository notes;
     private final FileIngestService fileIngest;
+    private final StoredObjectReclaimer reclaimer;
 
     public KnowledgeService(KnowledgeSourceRepository sources, DocumentRepository documents,
-                            UserNoteRepository notes, FileIngestService fileIngest) {
+                            UserNoteRepository notes, FileIngestService fileIngest,
+                            StoredObjectReclaimer reclaimer) {
         this.sources = sources;
         this.documents = documents;
         this.notes = notes;
         this.fileIngest = fileIngest;
+        this.reclaimer = reclaimer;
     }
 
     @Transactional(readOnly = true)
@@ -63,45 +67,65 @@ public class KnowledgeService {
         return PageDTO.from(result, SourceItem::from);
     }
 
+    /**
+     * Deleting a source retires its documents, drops the row and hands the retired keys to
+     * {@link StoredObjectReclaimer}. The reclaim waits for this transaction's commit, so a delete
+     * that rolls back never takes a file and a file another row still serves is never taken.
+     */
     @Transactional
     public void deleteSource(UUID userId, UUID sourceId) {
         KnowledgeSource source = requireSource(userId, sourceId);
-        retireDocuments(userId, source);
+        List<String> retired = retireDocuments(userId, source);
         sources.delete(source);
+        reclaimer.reclaim(retired);
     }
 
     /**
      * Drops the knowledge-base copy of a domain row that was deleted through its own page —
      * a resume removed from the resume list otherwise keeps a source row (a ghost entry the
      * user cannot open) and keeps feeding the AI.
+     *
+     * <p>The keys of what it retired come back to the caller, because the caller owns the
+     * transaction that removes the domain row and only a reclaim after that commit sees whether
+     * anything still names them. A caller that leaves the domain row alive — switching a resume to
+     * another version retires that resume's copy while the resume itself keeps serving its
+     * upload — has nothing to reclaim.
      */
     @Transactional
-    public void retireRef(UUID userId, String kind, UUID refId) {
+    public List<String> retireRef(UUID userId, String kind, UUID refId) {
+        List<String> keys = new ArrayList<>();
         for (KnowledgeSource source : sources.findByUserIdAndKindAndRefId(userId, kind, refId)) {
-            retireDocuments(userId, source);
+            keys.addAll(retireDocuments(userId, source));
             sources.delete(source);
         }
+        return keys;
     }
 
     /**
      * Retrieval admits a chunk only while its document row reads
      * {@code documents.status = 'ready'} — that single predicate is the gate all three hybrid
      * channels share. So un-owning a source leaves the deleted material fully quotable: the
-     * row must stop being ready. The document and its chunks stay on disk as the audit record
-     * the original un-linking was written to preserve; the object-storage file is untouched.
+     * row must stop being ready. The document and its chunks stay as the audit record the original
+     * un-linking was written to preserve, and the row keeps naming its file key so that record can
+     * still be traced back to what was stored; the object itself is the caller's to reclaim.
      */
-    private void retireDocuments(UUID userId, KnowledgeSource source) {
+    private List<String> retireDocuments(UUID userId, KnowledgeSource source) {
         // Both directions of the link are covered: ingestion writes documents.source_id,
         // while the ready callback only knows knowledge_sources.document_id.
         Set<Document> docs = new LinkedHashSet<>(documents.findBySourceId(source.getId()));
         if (source.getDocumentId() != null) {
             documents.findByIdAndUserId(source.getDocumentId(), userId).ifPresent(docs::add);
         }
+        List<String> keys = new ArrayList<>();
         for (Document doc : docs) {
             doc.setSourceId(null);
             doc.setStatus(STATUS_RETIRED);
+            if (doc.getFileKey() != null) {
+                keys.add(doc.getFileKey());
+            }
         }
         documents.saveAll(docs);
+        return keys;
     }
 
     @Transactional(readOnly = true)
@@ -161,6 +185,8 @@ public class KnowledgeService {
         // to go: the reader deleted a sentence and the assistant keeps
         // quoting it. Retiring them is what leaves the *old* document
         // unquotable, and the fresh ingest is what carries the new text.
+        // The retired copy's key is not reclaimed: this note survives the call,
+        // the way a resume survives switching its current version does.
         retireRef(userId, "note", note.getId());
         ingestNote(userId, note);
         return toNoteItem(note);
@@ -193,8 +219,9 @@ public class KnowledgeService {
         UserNote note = requireNote(userId, noteId);
         // Same rule as a deleted resume: the note was embedded, so dropping the row while its
         // chunks stay 'ready' leaves the AI quoting text the user just deleted.
-        retireRef(userId, "note", note.getId());
+        List<String> retired = retireRef(userId, "note", note.getId());
         notes.delete(note);
+        reclaimer.reclaim(retired);
     }
 
     public TextIngestResponse ingestText(UUID userId, String title, String text, String kind, UUID refId) {

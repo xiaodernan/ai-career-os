@@ -13,6 +13,7 @@ import com.careeros.knowledge.repository.DocumentRepository;
 import com.careeros.knowledge.repository.KnowledgeSourceRepository;
 import com.careeros.knowledge.service.FileIngestService;
 import com.careeros.knowledge.service.KnowledgeService;
+import com.careeros.knowledge.service.StoredObjectReclaimer;
 import com.careeros.resume.dto.ResumeDtos.AchievementItem;
 import com.careeros.resume.dto.ResumeDtos.CreateResumeRequest;
 import com.careeros.resume.dto.ResumeDtos.EducationItem;
@@ -75,6 +76,7 @@ public class ResumeService {
     private final DocumentRepository documents;
     private final KnowledgeService knowledge;
     private final FileIngestService fileIngest;
+    private final StoredObjectReclaimer reclaimer;
     private final StorageService storage;
     private final AiServiceClient ai;
     private final TransactionTemplate tx;
@@ -87,7 +89,7 @@ public class ResumeService {
                          SkillRepository skills, ResumeSkillRepository resumeSkills,
                          KnowledgeSourceRepository sources, KnowledgeService knowledge,
                          DocumentRepository documents, FileIngestService fileIngest,
-                         StorageService storage, AiServiceClient ai,
+                         StoredObjectReclaimer reclaimer, StorageService storage, AiServiceClient ai,
                          TransactionTemplate tx) {
         this.resumes = resumes;
         this.versions = versions;
@@ -101,6 +103,7 @@ public class ResumeService {
         this.documents = documents;
         this.knowledge = knowledge;
         this.fileIngest = fileIngest;
+        this.reclaimer = reclaimer;
         this.storage = storage;
         this.ai = ai;
         this.tx = tx;
@@ -230,14 +233,21 @@ public class ResumeService {
         return ResumeListItem.from(resumes.save(resume));
     }
 
+    /**
+     * Deleting the resume retires its ingested copy, removes the row and hands the retired keys to
+     * {@link StoredObjectReclaimer}. The copy and the resume were stored under one key, so the file
+     * goes only with this delete -- and the reclaim waits for the commit, which is what keeps a
+     * rolled-back delete from taking a file that is still in use.
+     */
     @Transactional
     public void delete(UUID userId, UUID resumeId) {
         Resume resume = requireResume(userId, resumeId);
         // Deleting the domain row is not enough: the ingested copy stays `ready`, so the AI
         // keeps quoting a resume the user can no longer see, and the source row survives as a
         // listing entry whose target is gone.
-        knowledge.retireRef(userId, "resume", resume.getId());
+        List<String> retired = knowledge.retireRef(userId, "resume", resume.getId());
         resumes.delete(resume);
+        reclaimer.reclaim(retired);
     }
 
     public UploadResumeResponse upload(UUID userId, MultipartFile file) {
@@ -446,7 +456,8 @@ public class ResumeService {
         // versions has moved on from the text the copy carries, and an
         // assistant that keeps quoting the old one quotes a resume the
         // reader no longer has -- the same shape as a deleted note keeping
-        // its chunks.
+        // its chunks. The retired copy's key is deliberately not reclaimed:
+        // the resume survives this call and still serves the upload behind it.
         knowledge.retireRef(userId, "resume", resumeId);
         ingestCopy(userId, resume, version.getPlaintext());
         return ResumeListItem.from(resume);

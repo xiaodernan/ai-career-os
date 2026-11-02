@@ -266,9 +266,12 @@ user-scoped table (ownership is enforced in backend layer + a single SQL predica
   `status = 'retired'` is terminal: the delete path writes it when the owning resume,
   source or note goes, and neither a late ingest callback nor a failed trigger may move
   the row off it — retrieval admits a chunk only while the document reads `ready`, so
-  an answer that arrives after the delete has to lose the race. The row, its chunks and
-  the object the upload stored all stay where they were: the delete stops the material
-  being quoted, it does not reclaim what it retired.
+  an answer that arrives after the delete has to lose the race. The row and its chunks stay
+  where they were — the audit record is why retirement deletes nothing. The object behind
+  `file_key` is a separate question, and the delete path answers it only after its own rows
+  commit: the bytes go when no row retrieval can quote and no resume version names that key,
+  counted as `careeros.storage.objects_reclaimed{outcome}`. An upload is one object behind two
+  rows, so retiring a resume's ingested copy leaves the file to the page still serving it.
 - `document_chunks(id, document_id, user_id, ordinal, text, token_count, meta jsonb
    /* section path e.g. resume>experience>3rd-intern, skill tags */, embedding vector,
    tsv tsvector GENERATED, uniq(document_id, ordinal))`

@@ -33,6 +33,9 @@ ENDPOINTS_FILE = "frontend/src/lib/api/endpoints.ts"
 TYPES_FILE = "frontend/src/lib/api/types.ts"
 RESOURCES_FILE = "frontend/src/lib/hooks/resources.ts"
 PAGE_FILE = "frontend/src/app/(app)/resumes/[id]/page.tsx"
+RESUME_REPO_FILE = "backend/src/main/java/com/careeros/resume/repository/ResumeRepository.java"
+RECLAIMER_FILE = "backend/src/main/java/com/careeros/knowledge/service/StoredObjectReclaimer.java"
+RECLAIM_TEST_FILE = "backend/src/test/java/com/careeros/knowledge/service/StoredObjectReclaimTest.java"
 
 KEY = "sourceFileKey"
 SNAKE = "source_file_key"
@@ -260,12 +263,22 @@ def test_the_shipped_key_is_read_by_the_three_browser_files_that_render_it():
     assert sites == sorted([DTO_FILE, SERVICE_FILE, ENTITY_FILE, CONTROLLER_FILE, V1_FILE,
                             "docs/API.md", "docs/architecture.md",
                             TYPES_FILE, RESOURCES_FILE, PAGE_FILE,
+                            RESUME_REPO_FILE, RECLAIMER_FILE, RECLAIM_TEST_FILE,
                             "ai-service/tests/test_file_key_composers.py",
                             "ai-service/tests/test_resources_mapper_records_ship.py",
                             "ai-service/tests/test_resume_file_fields_ship.py"]), (
         f"the key is named in {sites}. The schema, the ingestion trail, the response record, the "
-        f"controller's route, the two docs and the three gates are the accounted spellers; a new "
-        f"name here is a new author or a new reader, and this census has to say which")
+        f"controller's route, the two docs, the three gates, the reclaim path's question, its asker "
+        f"and its test are the accounted spellers; a new name here is a new author or a new reader, "
+        f"and this census has to say which")
+
+    # The reclaim trio spell the key because the delete path has to ask the resume table whether a
+    # stored object is still served as someone's original. A key spelled somewhere else is a new
+    # reader of the column, and this is where that reader gets named.
+    assert "existsBySourceFileKey" in read(RESUME_REPO_FILE) \
+        and "existsBySourceFileKey(key)" in read(RECLAIMER_FILE), (
+        "the delete path stopped asking the resume table its question, so an object could go while "
+        "a resume page still served its bytes")
 
     legs = {rel: [line for f, _n, line in scan("frontend/src", KEY_RE, (".ts", ".tsx"))
                   if f == rel]

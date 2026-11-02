@@ -3697,11 +3697,13 @@ picker and save to say them. The card whose whole job is to be answered could on
 
 Deleting a resume, a source or a note stops the AI quoting it: `documents.status = 'ready'`
 is the single predicate all three hybrid retrieval channels share, so retirement takes the
-text out of evidence. Two debts were left unpaid. An ingest that was already running knows
-nothing about the delete -- it finishes, writes `ready` over `retired`, and the material the
-reader removed is quotable again. And the bytes an upload put in the object store stay there
-for good: account erasure sweeps them, deleting one item does not, while the retired row and
-its chunks are kept as an audit record with no window on how long they are kept.
+text out of evidence. Two debts were left unpaid when this epic opened. An ingest that was
+already running knows nothing about the delete -- it finishes, writes `ready` over `retired`,
+and the material the reader removed is quotable again. And the bytes an upload put in the
+object store stayed there for good: account erasure swept them, deleting one item did not,
+while the retired row and its chunks were kept as an audit record with no window on how long
+they are kept. 44.1 closes the first, 44.2 the second's object half, 44.3 puts a window on
+the audit record.
 
 - [x] **44.1** A late ingestion cannot revive a deleted document.
 
@@ -3716,21 +3718,30 @@ its chunks are kept as an audit record with no window on how long they are kept.
   9 ai-service tests in `test_retired_documents_do_not_come_back.py` and 2 backend tests in
   `FileIngestRetirementTest`; architecture.md states the terminal status.)
 
-- [ ] **44.2** Deleting the item reclaims the object it uploaded.
+- [x] **44.2** Deleting the item reclaims the object it uploaded.
 
-  (Today only account erasure removes file keys, so every deleted resume and source leaves a
-  private-bucket object holding its bytes. Retirement already knows the key; the missing half
-  is a reference check -- no live document and no resume version names this key -- and an
-  object delete that runs after the row transaction commits, so a rolled-back delete cannot
-  destroy a file still in use. A count says how many objects went, and a test pins that a key
-  two rows share is not reclaimed by the first one to go.)
+  (`StoredObjectReclaimer` takes the keys a retirement handed back and asks two questions of
+  each: does a document a retrieval can still quote name it, does a resume still serve it as its
+  original. Only a key neither question claims is deleted, and the asking waits for the caller's
+  transaction to commit -- a rolled-back delete therefore never took a file, and a bundle restore
+  that retires rows inside its own transaction is judged at the same moment a screen's delete is.
+  A store that refuses leaves the row delete standing and counts `failed`. The two questions exist
+  because an upload is one object behind two rows: deleting a resume's ingested copy leaves
+  the resume page serving the same bytes, so only deleting the resume takes them, and the
+  reclaim for a version switch that retires a copy asks nothing at all. Outcome counted as
+  `careeros.storage.objects_reclaimed{outcome}`. 10 tests in `StoredObjectReclaimTest`, 3 in
+  `ResumeDeleteReclaimTest`, 5 in `ObjectReclaimIT` (needs real stack), and the retirement
+  tests now read the keys back; architecture.md and DEPLOYMENT.md name the reference check.)
 
 - [ ] **44.3** The audit record has a window.
 
   (`RetentionSweeper` ages credential tokens; it gains a content phase that purges retired
   documents, their chunks with them, once a configurable window has passed, leaves live and
   retryable rows alone, and reports a count per table the way the token phase does -- under
-  the same alarm that pages when a scheduled sweep stops running.)
+  the same alarm that pages when a scheduled sweep stops running. The purge also reclaims the
+  object the row names: 44.2's recovery route for a failed reclaim is account erasure reading
+  the retired row's key, and a row that goes to the window takes that trail with it unless the
+  sweep asks the store first.)
 
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +

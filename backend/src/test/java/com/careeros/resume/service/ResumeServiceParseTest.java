@@ -16,6 +16,7 @@ import com.careeros.knowledge.repository.DocumentRepository;
 import com.careeros.knowledge.repository.KnowledgeSourceRepository;
 import com.careeros.knowledge.service.FileIngestService;
 import com.careeros.knowledge.service.KnowledgeService;
+import com.careeros.knowledge.service.StoredObjectReclaimer;
 import com.careeros.resume.entity.Resume;
 import com.careeros.resume.entity.ResumeVersion;
 import com.careeros.resume.repository.AchievementRepository;
@@ -67,7 +68,8 @@ class ResumeServiceParseTest {
                 mock(AchievementRepository.class), mock(SkillRepository.class),
                 mock(ResumeSkillRepository.class), sources, mock(KnowledgeService.class),
                 mock(DocumentRepository.class), mock(FileIngestService.class),
-                mock(StorageService.class), ai, TestTransactions.executing());
+                mock(StoredObjectReclaimer.class), mock(StorageService.class), ai,
+                TestTransactions.executing());
     }
 
     private void givenVersion(String plaintext) {

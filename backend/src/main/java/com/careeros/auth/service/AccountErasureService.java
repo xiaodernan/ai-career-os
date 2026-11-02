@@ -31,10 +31,13 @@ import org.springframework.transaction.annotation.Transactional;
  * rows whose files are gone, and the next attempt finishes what the first started -- object
  * deletion is idempotent, so neither order can double-delete into an error.
  *
- * <p>Knowledge sources are deliberately soft-retired elsewhere in the product (the file stays
- * as the audit record), which is why nothing before this service ever called
- * {@link StorageService#delete}. Erasure is the one operation where the reader's right to be
- * forgotten outranks the record: the whole point of the request is that no copy remains.
+ * <p>Deleting one item elsewhere in the product soft-retires its document and reclaims the object
+ * only when nothing else names the key (roadmap 44.2), because the audit record and the resume a
+ * copy was made from can both still be pointing at the same file. Erasure asks no such question: it
+ * removes every object the account's document rows name, whatever still refers to them, because the
+ * reader's right to be forgotten outranks the record and the whole point of the request is that no
+ * copy remains. An item the reader deleted earlier already reclaimed its own object, and a key with
+ * no bytes behind it is not an error here: deletion is idempotent either way.
  */
 @Service
 public class AccountErasureService {

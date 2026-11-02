@@ -333,6 +333,15 @@ more than 36 hours old, twice the daily cadence. A pass whose tables failed
 still moves it; the failures are visible as "Retention sweep failed for" in the
 log and as a missing per-table series.
 
+A delete that retires an ingested copy asks the object store for the bytes behind it, and
+`careeros_storage_objects_reclaimed_total{outcome}` moves once per key it handed back:
+`deleted` when no row still names the key, `referenced` when another row does, and `failed`
+when the store refused. Resume uploads put one object behind two rows — the resume serves it
+as the original file and the document row is the copy the AI quotes — so the first of the two
+to go records `referenced` and keeps the bytes. No nightly rule reads the family: an object
+that outlives a row is not an outage, and a counter with no baseline would alarm on a quiet
+week.
+
 ### Startup gating (healthchecks)
 
 The three application services are probed, not assumed. Each healthcheck fetches the

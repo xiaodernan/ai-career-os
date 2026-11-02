@@ -14,5 +14,12 @@ public interface ResumeRepository extends JpaRepository<Resume, UUID> {
 
     Optional<Resume> findByIdAndUserId(UUID id, UUID userId);
 
+    /**
+     * Whether a resume still serves this key as its original upload. The upload stores one object
+     * and points two rows at it, so a live resume is a reason to leave the file alone even after
+     * its ingested copy is retired.
+     */
+    boolean existsBySourceFileKey(String sourceFileKey);
+
     List<Resume> findByUserId(UUID userId);
 }

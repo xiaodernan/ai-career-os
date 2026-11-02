@@ -637,13 +637,21 @@
     退役标记——触发失败不是复活的理由。9 条 ai-service 测试
     （`tests/test_retired_documents_do_not_come_back.py`）+ 2 条后端测试
     （`FileIngestRetirementTest`）；architecture.md 写明 retired 是终态。
-  - **44.2** 删条目要收回它上传的对象：删除前先核对引用——没有还活着的 document 与简历版本再
-    用这个 key——对象删除排在行事务提交之后，回滚就删不掉仍在用的文件；两行共享同一个 key 时，
-    先走的那条不能收回。计数说清这一次收回了多少对象。
+  - **44.2** 删条目要收回它上传的对象（已完成 2026-11-02）：`StoredObjectReclaimer` 拿退役交回来的
+    key，逐个问两句——还有没有被检索引到的 document 用它，还有没有简历版本把它当原始文件——两句都
+    否才删。等待提交写在 reclaimer 里而不是调用方：单条删除自己的事务、整包恢复自己的大事务，都在真正
+    提交之后才被判断——回滚的删除动不了文件，存储拒绝也只是把对象留下并记
+    `failed`，行删除照旧成立。两句问题之所以都在，是因为一次上传是一个对象后面两行——删简历的入库副本
+    时，简历页面还在发同一批字节，于是只有删简历才收得走；切换当前版本那种只退役副本的调用什么都不问。
+    结果按 `careeros.storage.objects_reclaimed{outcome}` 计数。10 条 `StoredObjectReclaimTest`
+    + 3 条 `ResumeDeleteReclaimTest` + 5 条 `ObjectReclaimIT`（需真实栈），退役测试改为读回 key；
+    architecture.md 与 DEPLOYMENT.md 同步这条引用核对。
   - **44.3** 审计记录要有期限：`RetentionSweeper` 如今只清凭据 token，加一个内容阶段——过了
     可配置的窗口就把 retired 文档连同 chunk 一起清掉，live 与还能重试的行不动，按表报数，
-    沿用那个停摆就会报警的心跳。
-  - 下一步候选（避开并发会话正在改的文件）：Epic 44 按 44.2 → 44.3 推进。
+    沿用那个停摆就会报警的心跳。这一阶段还要替这些行收回对象：44.2 留给"收回失败"的线索是
+    retired 行仍写着 file_key、由销号去补删，行随窗口消失就等于把线索一起烧掉——所以清行之前
+    先问存储。
+  - 下一步候选（避开并发会话正在改的文件）：Epic 44 剩 44.3。
 
 ## 开发协议
 （每个任务）

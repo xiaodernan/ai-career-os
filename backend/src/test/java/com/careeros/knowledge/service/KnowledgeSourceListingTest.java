@@ -47,7 +47,8 @@ class KnowledgeSourceListingTest {
     void setUp() {
         sources = mock(KnowledgeSourceRepository.class);
         service = new KnowledgeService(sources, mock(DocumentRepository.class),
-                mock(UserNoteRepository.class), mock(FileIngestService.class));
+                mock(UserNoteRepository.class), mock(FileIngestService.class),
+                mock(StoredObjectReclaimer.class));
     }
 
     private Page<KnowledgeSource> one() {

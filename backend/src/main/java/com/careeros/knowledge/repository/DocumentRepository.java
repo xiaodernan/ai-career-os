@@ -12,6 +12,13 @@ public interface DocumentRepository extends JpaRepository<Document, UUID> {
 
     Optional<Document> findByFileKey(String fileKey);
 
+    /**
+     * Whether a row that retrieval can still quote names this key. Retired rows are the ones
+     * the delete path left behind, so they are excluded: they keep their key as the audit
+     * record, and the audit record is not a reason to hold the bytes.
+     */
+    boolean existsByFileKeyAndStatusNot(String fileKey, String status);
+
     List<Document> findBySourceId(UUID sourceId);
 
     List<Document> findByUserId(UUID userId);

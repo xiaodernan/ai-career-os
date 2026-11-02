@@ -57,7 +57,8 @@ class NoteCitationTest {
         documents = mock(DocumentRepository.class);
         notes = mock(UserNoteRepository.class);
         fileIngest = mock(FileIngestService.class);
-        service = new KnowledgeService(sources, documents, notes, fileIngest);
+        service = new KnowledgeService(sources, documents, notes, fileIngest,
+                mock(StoredObjectReclaimer.class));
     }
 
     @Test
