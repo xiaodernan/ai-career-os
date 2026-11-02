@@ -30,6 +30,7 @@ import java.time.OffsetDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -77,14 +78,21 @@ public class InterviewService {
         // Two grouped reads for the whole page; a per-row query would scale with the board.
         Map<UUID, InterviewDigestRepository.Digest> rows = digests.forSessions(
                 result.getContent().stream().map(InterviewSession::getId).toList());
+        Map<UUID, String> stages = applications.stagesOf(userId,
+                result.getContent().stream().map(InterviewSession::getApplicationId)
+                        .filter(Objects::nonNull).distinct().toList());
         return PageDTO.from(result,
-                s -> toItem(s, rows.getOrDefault(s.getId(), InterviewDigestRepository.Digest.UNKNOWN)));
+                s -> toItem(s, rows.getOrDefault(s.getId(), InterviewDigestRepository.Digest.UNKNOWN),
+                        s.getApplicationId() == null ? null : stages.get(s.getApplicationId())));
     }
 
     @Transactional(readOnly = true)
     public SessionDetail detail(UUID userId, UUID sessionId) {
         InterviewSession session = require(userId, sessionId);
-        return new SessionDetail(toItem(session),
+        String cardStage = session.getApplicationId() == null ? null
+                : applications.stagesOf(userId, List.of(session.getApplicationId()))
+                        .get(session.getApplicationId());
+        return new SessionDetail(toItem(session, InterviewDigestRepository.Digest.UNKNOWN, cardStage),
                 turns.findBySessionIdOrderBySeqAsc(sessionId).stream().map(InterviewService::toTurnItem).toList(),
                 evaluations.findBySessionId(sessionId)
                         .map(e -> new EvaluationItem(e.getId(), e.getDims(), e.getSummary(),
@@ -343,12 +351,24 @@ public class InterviewService {
     }
 
     static SessionItem toItem(InterviewSession s) {
-        return toItem(s, InterviewDigestRepository.Digest.UNKNOWN);
+        return toItem(s, InterviewDigestRepository.Digest.UNKNOWN, null);
     }
 
     static SessionItem toItem(InterviewSession s, InterviewDigestRepository.Digest digest) {
+        return toItem(s, digest, null);
+    }
+
+    /**
+     * `applicationStatus` is the card's stage (57.4): the rehearsal list says
+     * whether the practice belongs to an application still in play. It is read
+     * with the rows, not per row, and a session with no card -- or one whose
+     * card this caller does not own -- simply carries no stage.
+     */
+    static SessionItem toItem(InterviewSession s, InterviewDigestRepository.Digest digest,
+                              String applicationStatus) {
         return new SessionItem(s.getId(), s.getJobId(), s.getJdId(), s.getResumeVersionId(),
-                s.getApplicationId(), s.getCompanyName(), s.getPositionTitle(), s.getMode(), s.getStatus(),
+                s.getApplicationId(), applicationStatus,
+                s.getCompanyName(), s.getPositionTitle(), s.getMode(), s.getStatus(),
                 s.getDifficulty(), s.getConfig(), s.getStartedAt(), s.getFinishedAt(),
                 digest.questions(), digest.overall());
     }

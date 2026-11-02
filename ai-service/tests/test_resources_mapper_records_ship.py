@@ -69,11 +69,12 @@ RECORD_FILES = {
 # mapCompany alias lists went away with it -- its eleven calls now ask eleven authored names, first.
 # `mapMemories` is the second envelope row: the memories list route answers `{items: [...]}`, and
 # the rows are shaped by normalizeMemory over in normalize.ts, not by a Java record this file binds.
-NAMED_MAPPERS = ["mapResume", "mapResumeVersions", "mapCompany", "mapCompanySource",
+NAMED_MAPPERS = ["mapResume", "mapResumeVersions", "mapResumeVersion", "mapCompany",
+                 "mapCompanySource",
                  "mapContact", "mapSource", "mapSessionScalars",
                  "mapInterviewSessionItem", "mapInterviewSessionDetail", "mapMemories"]
-EXPORTED_MAPPERS = ["mapResumeVersions", "mapInterviewSessionItem", "mapInterviewSessionDetail",
-                    "mapMemories"]
+EXPORTED_MAPPERS = ["mapResumeVersions", "mapResumeVersion", "mapInterviewSessionItem",
+                    "mapInterviewSessionDetail", "mapMemories"]
 
 ROWS = {
     ("mapResume", "raw"): "ResumeListItem",
@@ -108,7 +109,8 @@ CALLED = {
                             "updatedAt": 0},
     ("mapSource", "raw"): {"kind": 0, "title": 0, "status": 0, "error": 0, "chunkCount": None,
                            "createdAt": 0, "updatedAt": None, "taskId": None, "documentId": 0},
-    ("mapSessionScalars", "s"): {"jobId": 0, "positionTitle": 0, "companyName": 0, "mode": 0,
+    ("mapSessionScalars", "s"): {"applicationId": 0, "applicationStatus": 0,
+                                 "jobId": 0, "positionTitle": 0, "companyName": 0, "mode": 0,
                                  "status": 0, "difficulty": 0, "startedAt": 0, "finishedAt": 0},
     ("mapInterviewSessionItem", "s"): {"questionCount": 0, "overall": 0},
     ("mapInterviewSessionDetail", "raw"): {"session": 0, "turns": 0, "evaluation": 0},
@@ -128,7 +130,7 @@ SCANNER_SHAPE = {
     ("mapCompany", "raw"): (11, 11),
     ("mapContact", "raw"): (9, 9),
     ("mapSource", "raw"): (9, 21),
-    ("mapSessionScalars", "s"): (8, 22),
+    ("mapSessionScalars", "s"): (10, 26),
     ("mapInterviewSessionItem", "s"): (2, 6),
     ("mapInterviewSessionDetail", "raw"): (3, 7),
     ("mapInterviewSessionDetail", "sess"): (2, 4),
@@ -150,8 +152,9 @@ UNAUTHORED = {
     ("mapSource", "raw"): {"chunkCount", "chunk_count", "chunks", "created_at", "document_id",
                            "errorMessage", "error_message", "fileName", "file_name", "name",
                            "taskId", "task_id", "type", "updatedAt", "updated_at"},
-    ("mapSessionScalars", "s"): {"company_name", "createdAt", "created_at", "depth", "jobTitle",
-                                 "job_title", "job_id", "kind", "level", "finished_at", "position",
+    ("mapSessionScalars", "s"): {"application_id", "application_status", "company_name",
+                                 "createdAt", "created_at", "depth", "jobTitle", "job_title",
+                                 "job_id", "kind", "level", "finished_at", "position",
                                  "position_title", "started_at", "type"},
     ("mapInterviewSessionItem", "s"): {"overallScore", "question_count", "score", "turnCount"},
     ("mapInterviewSessionDetail", "raw"): {"answers", "history", "questions", "report"},
@@ -201,8 +204,9 @@ RESUME_DETAIL_READS = {"createdAt", "currentVersionId", "id", "score", "sourceFi
 COMPANY_PAGE_READS = {"id", "industry", "logoUrl", "name", "openRoleCount", "size", "techStack",
                       "website"}
 KNOWLEDGE_PAGE_READS = {"error", "id", "kind", "status", "title"}
-INTERVIEWS_PAGE_READS = {"companyName", "finishedAt", "id", "jobTitle", "mode", "overall",
-                         "questionCount", "startedAt", "status"}
+INTERVIEWS_PAGE_READS = {"applicationId", "applicationStatus", "companyName", "finishedAt",
+                         "id", "jobTitle", "mode", "overall", "questionCount", "startedAt",
+                         "status"}
 READERS_BY_PAGE = {
     "app/(app)/companies/page.tsx": COMPANY_PAGE_READS,
     "app/(app)/knowledge/page.tsx": KNOWLEDGE_PAGE_READS,
@@ -250,7 +254,11 @@ DEAD_NAME_TIERS = {
 }
 # Beyond three carriers a generic name (`name`, `score`, `title`, `kind`) means something else in the
 # file that spells it, so the census stops classifying rather than pretending to.
-WIDER_DEAD_NAMES = 30
+# 32 rather than 30 since 56.3/57.4: the interviews page reads the session's card
+# (`applicationId`) and its stage (`applicationStatus`), and both snake twins
+# (`application_id`, `application_status`) are asked by the mapper and answered by
+# no record -- dead names that reach no screen, which is what this bucket holds.
+WIDER_DEAD_NAMES = 32
 TYPES_MIRROR_NAMES = {"chunkCount"}
 SCREEN_READ_NAMES = {"isCurrent", "versionNo"}
 
@@ -469,7 +477,9 @@ def test_the_unbound_mappers_ban_would_find_these_mappers_if_it_read_this_file()
     # notification inbox each brought one query hook. 43 with the packet's `useApplicationPacket`:
     # the detail page's second read of the same application, which the ban cannot bind because
     # resources.ts is not the file it reads.
-    assert len(seen) == 43, f"resources.ts now declares {len(seen)} functions for the ban's rule"
+    # 46 rather than 43 since 47.4's letters reader (`useApplicationLetters`) and
+    # 54.2's resume-version pair (`mapResumeVersion`, `useResumeVersion`) joined.
+    assert len(seen) == 46, f"resources.ts now declares {len(seen)} functions for the ban's rule"
     assert [n for n in seen if n.startswith("map")] == NAMED_MAPPERS, \
         "the ban's own rule no longer recognizes these declarations in file order: " \
         f"{[n for n in seen if n.startswith('map')]}"
@@ -498,9 +508,9 @@ def test_the_scanner_finds_the_calls_and_names_each_row_actually_makes():
         assert len(found) == calls, f"{mapper}/{receiver}: {len(found)} calls, pinned {calls}"
         assert sum(len(lit) for _, lit in found) == names, \
             f"{mapper}/{receiver}: {sum(len(lit) for _, lit in found)} names, pinned {names}"
-    assert sum(len(v) for v in CALLED.values()) == 58, "the call table and the scan disagree"
-    assert sum(SCANNER_SHAPE[key][0] for key in SCANNER_SHAPE) == 60
-    assert sum(SCANNER_SHAPE[key][1] for key in SCANNER_SHAPE) == 119
+    assert sum(len(v) for v in CALLED.values()) == 60, "the call table and the scan disagree"
+    assert sum(SCANNER_SHAPE[key][0] for key in SCANNER_SHAPE) == 62
+    assert sum(SCANNER_SHAPE[key][1] for key in SCANNER_SHAPE) == 123
     # The calls the table above does not key are the envelopes': their receivers have no record, so
     # they are classified by payload shape in their own cases instead of by a first authored name.
     # Two rows now ride a bare list -- the versions history and the memories list.
@@ -531,7 +541,7 @@ def test_every_call_is_classified_against_the_record_behind_its_receiver():
         assert keyed == CALLED[(mapper, receiver)], \
             f"{mapper}/{receiver} no longer calls in the order the record answers: {keyed}"
     first_authored = [v for table in CALLED.values() for v in table.values()]
-    assert first_authored.count(0) == 50, first_authored.count(0)
+    assert first_authored.count(0) == 52, first_authored.count(0)
     assert first_authored.count(2) == 0, "a call asks its record's name third; re-measure which"
     assert first_authored.count(None) == 8, \
         f"{first_authored.count(None)} calls can never return a value, pinned 8"
@@ -611,7 +621,7 @@ def test_an_unauthored_name_is_a_snake_twin_a_foreign_name_or_a_name_no_record_d
         scanned_nowhere += len(nowhere)
     # Both ledger numbers come out of the scan above, so a row that stops reading names narrows the
     # total and gets named, instead of a table quietly agreeing with itself.
-    assert scanned_unauthored == 69, scanned_unauthored
+    assert scanned_unauthored == 71, scanned_unauthored
     # 27 rather than 28 since 25.1's `SessionResponse` declared `current`: the versions
     # mapper's legacy alias is still unauthored for `ResumeVersionItem`, but another route
     # now answers the name, which is the foreign class rather than this one.
@@ -899,7 +909,7 @@ def test_the_dead_names_spread_in_three_measured_tiers_and_three_reached_a_scree
     assert len(files) >= 228, (f"the frontend census walked {len(files)} files, below the 228 that "
                                "ship: the walk stopped reaching part of the tree")
     asked = {name for row in UNAUTHORED.values() for name in row}
-    assert len(asked) == 57, f"{len(asked)} dead names are asked, pinned 57"
+    assert len(asked) == 59, f"{len(asked)} dead names are asked, pinned 59"
     classified = set()
     for carriers, names in DEAD_NAME_TIERS.items():
         for name in sorted(names):

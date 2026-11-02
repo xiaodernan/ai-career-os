@@ -606,6 +606,8 @@ function mapSessionScalars(s: unknown) {
     jobId: str(s, "jobId", "job_id") ?? null,
     // 56.1: the card a rehearsal was started from, when it was started from one.
     applicationId: str(s, "applicationId", "application_id") ?? null,
+    // 57.4: the stage that card is in now, read with the page.
+    applicationStatus: str(s, "applicationStatus", "application_status") ?? null,
     // InterviewDtos.SessionItem calls the role `positionTitle`; jobTitle/position were
     // never on the wire, so the list row, the session header and the report all lost it.
     jobTitle:

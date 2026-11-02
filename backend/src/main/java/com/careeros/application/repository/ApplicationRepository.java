@@ -2,6 +2,7 @@ package com.careeros.application.repository;
 
 import com.careeros.application.entity.Application;
 import java.time.OffsetDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -20,6 +21,12 @@ public interface ApplicationRepository extends JpaRepository<Application, UUID> 
     Page<Application> findByUserIdOrderByUpdatedAtDescIdAsc(UUID userId, Pageable pageable);
 
     List<Application> findByUserIdAndJobId(UUID userId, UUID jobId);
+
+    /**
+     * The cards a page of rehearsals names (57.4) -- one read for the whole
+     * page, so the stage badge costs the list one query rather than one per row.
+     */
+    List<Application> findByUserIdAndIdIn(UUID userId, Collection<UUID> ids);
 
     Page<Application> findByUserIdAndJobIdOrderByUpdatedAtDescIdAsc(UUID userId, UUID jobId,
                                                                    Pageable pageable);

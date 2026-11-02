@@ -43,16 +43,18 @@ class InterviewServiceListDigestTest {
 
     private InterviewSessionRepository sessions;
     private InterviewDigestRepository digests;
+    private com.careeros.application.service.ApplicationService applications;
     private InterviewService service;
 
     @BeforeEach
     void setUp() {
         sessions = mock(InterviewSessionRepository.class);
         digests = mock(InterviewDigestRepository.class);
+        applications = mock(com.careeros.application.service.ApplicationService.class);
+        when(applications.stagesOf(any(), any())).thenReturn(Map.of());
         service = new InterviewService(sessions, mock(InterviewTurnRepository.class),
                 mock(InterviewEvaluationRepository.class), mock(JobRepository.class),
-                mock(CompanyRepository.class),
-                mock(com.careeros.application.service.ApplicationService.class), digests,
+                mock(CompanyRepository.class), applications, digests,
                 mock(AiServiceClient.class),
                 TestTransactions.executing());
     }
@@ -97,6 +99,27 @@ class InterviewServiceListDigestTest {
         verify(sessions).findByUserIdAndApplicationIdOrderByStartedAtDescIdAsc(
                 eq(userId), eq(card), any(Pageable.class));
         verify(sessions, never()).findByUserIdOrderByStartedAtDescIdAsc(any(), any(Pageable.class));
+    }
+
+    @Test
+    void theRowCarriesTheCardsStageReadOnceForThePage() {
+        // 57.4: the list says whether the practice belongs to an application
+        // still in play. The stage is one grouped read for the page, and a
+        // rehearsal whose card is not in the answer carries none -- the row
+        // must not invent a column for it.
+        UUID card = UUID.randomUUID();
+        InterviewSession withCard = session(first, "A");
+        when(withCard.getApplicationId()).thenReturn(card);
+        InterviewSession free = session(second, "B");
+        givenPage(withCard, free);
+        when(digests.forSessions(any())).thenReturn(Map.of());
+        when(applications.stagesOf(any(), any())).thenReturn(Map.of(card, "interview"));
+
+        List<SessionItem> items = listed();
+
+        assertThat(items.get(0).applicationStatus()).isEqualTo("interview");
+        assertThat(items.get(1).applicationStatus()).isNull();
+        verify(applications).stagesOf(userId, List.of(card));
     }
 
     @Test

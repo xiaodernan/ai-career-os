@@ -67,6 +67,15 @@ describe("mapInterviewSessionItem", () => {
     ).toBe("aaaaaaaa-0000-0000-0000-000000000001");
     expect(mapInterviewSessionItem({ id: "s-1" }).applicationId).toBeNull();
   });
+
+  it("keeps the stage the card is in", () => {
+    // 57.4: the row says whether the practice belongs to an application still
+    // in play; a free rehearsal (or a card this reader does not own) has none.
+    expect(
+      mapInterviewSessionItem({ ...SESSION_ITEM, applicationStatus: "interview" }).applicationStatus
+    ).toBe("interview");
+    expect(mapInterviewSessionItem({ id: "s-1" }).applicationStatus).toBeNull();
+  });
   it("keeps the mock-mode defaults when the row is sparse", () => {
     expect(mapInterviewSessionItem({ id: "s-1" })).toMatchObject({
       id: "s-1",

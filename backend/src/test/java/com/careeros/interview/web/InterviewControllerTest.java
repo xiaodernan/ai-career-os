@@ -83,13 +83,16 @@ class InterviewControllerTest {
         CompanyRepository companies = mock(CompanyRepository.class);
         InterviewDigestRepository digests = mock(InterviewDigestRepository.class);
         when(digests.forSessions(any())).thenReturn(Map.of());
+        com.careeros.application.service.ApplicationService applications =
+                mock(com.careeros.application.service.ApplicationService.class);
+        when(applications.stagesOf(any(), any())).thenReturn(Map.of());
         ai = mock(AiServiceClient.class);
         when(sessions.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(turns.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(evaluations.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         InterviewService service = new InterviewService(sessions, turns, evaluations, jobs,
-                companies, mock(com.careeros.application.service.ApplicationService.class),
+                companies, applications,
                 digests, ai, TestTransactions.executing());
         mvc = MockMvcBuilders.standaloneSetup(new InterviewController(service))
                 .setControllerAdvice(new EnvelopeAdvice(), new GlobalExceptionHandler())

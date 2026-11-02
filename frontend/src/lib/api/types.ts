@@ -507,6 +507,12 @@ export interface InterviewSession {
   jobId?: string | null;
   /** The application card this rehearsal was started from (56.1), or null for free practice. */
   applicationId?: string | null;
+  /**
+   * The stage that card is in when the list is read (57.4), or null when there is no card (or the
+   * card is not this reader's). A rehearsal for a rejected application and one for a live
+   * interview are different facts, and the row should not have to make the reader guess.
+   */
+  applicationStatus?: string | null;
   jobTitle?: string | null;
   companyName?: string | null;
   mode: string;

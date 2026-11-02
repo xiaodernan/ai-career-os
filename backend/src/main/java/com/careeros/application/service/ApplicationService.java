@@ -18,6 +18,7 @@ import com.careeros.job.entity.Job;
 import com.careeros.job.repository.CompanyRepository;
 import com.careeros.job.repository.JobRepository;
 import java.time.OffsetDateTime;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -280,6 +281,27 @@ public class ApplicationService {
     @Transactional(readOnly = true)
     public ApplicationItem get(UUID userId, UUID id) {
         return item(userId, require(userId, id));
+    }
+
+    /**
+     * The stage of each card a page of rehearsals names (57.4), in one read.
+     *
+     * <p>The interview list draws a stage badge per row, and a per-row lookup
+     * would be one query per rehearsal -- the exact shape the digest read
+     * avoids. Scoped by the caller like every other read here: a card the page
+     * names but this account does not own is simply absent from the map, and
+     * the row falls back to no badge.
+     */
+    @Transactional(readOnly = true)
+    public Map<UUID, String> stagesOf(UUID userId, Collection<UUID> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return Map.of();
+        }
+        Map<UUID, String> stages = new HashMap<>();
+        for (Application card : applications.findByUserIdAndIdIn(userId, ids)) {
+            stages.put(card.getId(), card.getStatus());
+        }
+        return stages;
     }
 
     /** The one place a single application's letter total is read, scoped to its owner. */

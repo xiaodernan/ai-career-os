@@ -28,6 +28,7 @@ import { formatDateTime, relativeTime } from "@/lib/format";
 import { INTERVIEW_MODES } from "@/lib/interview-modes";
 import { interviewModeHint, interviewModeName } from "@/lib/status-words";
 import { interviewApplicationHref } from "@/lib/interview-target";
+import { stageLabel } from "@/lib/pipeline";
 
 // The route's own default window: `GET /interview/sessions` binds `size` with
 // `defaultValue = "20"`, so this number asks for exactly what the server would have
@@ -209,6 +210,13 @@ export default function InterviewsPage() {
                       {done && typeof s.overall === "number" && (
                         <Badge variant={s.overall >= 75 ? "success" : s.overall >= 50 ? "warning" : "destructive"} className="shrink-0 tabular-nums">
                           {Math.round(s.overall)}/100
+                        </Badge>
+                      )}
+                      {s.applicationStatus && (
+                        // 57.4: the card's stage, so the reader knows whether this practice
+                        // belongs to an application still in play (or one already decided).
+                        <Badge variant="outline" className="shrink-0 font-normal">
+                          {stageLabel(t, s.applicationStatus)}
                         </Badge>
                       )}
                       {applicationHref && (

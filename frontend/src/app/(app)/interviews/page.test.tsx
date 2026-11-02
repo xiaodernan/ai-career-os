@@ -22,6 +22,7 @@ vi.mock("@/lib/hooks/resources", () => ({
           status: "completed",
           mode: "technical",
           applicationId: "app-9",
+          applicationStatus: "interview",
           jobTitle: "Staff Backend Engineer",
           questionCount: 3,
           finishedAt: "2026-11-02T10:00:00Z",
@@ -52,5 +53,8 @@ describe("InterviewsPage application link", () => {
 
     expect(html).toContain('href="/applications?application=app-9"');
     expect(html).toContain("interviews.openApplication");
+    // 57.4: the row names the stage the card is in. The test's `t` echoes the
+    // key, so `stageLabel` falls back to the stage's own English label.
+    expect(html).toContain(">Interview<");
   });
 });

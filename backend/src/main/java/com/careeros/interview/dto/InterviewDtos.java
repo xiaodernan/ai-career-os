@@ -24,7 +24,7 @@ public final class InterviewDtos {
      * owns the posting and the two artifacts behind it.
      */
     public record SessionItem(UUID id, UUID jobId, UUID jdId, UUID resumeVersionId,
-                              UUID applicationId,
+                              UUID applicationId, String applicationStatus,
                               String companyName, String positionTitle, String mode, String status,
                               float difficulty, Map<String, Object> config, OffsetDateTime startedAt,
                               OffsetDateTime finishedAt, Integer questionCount, Float overall) {

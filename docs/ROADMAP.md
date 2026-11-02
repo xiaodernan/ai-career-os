@@ -4236,6 +4236,15 @@ has to be able to show what was rehearsed for it. The rehearsal list is the same
   the report had no card -- and the list the reader came from would not have shown the session
   at all. 1 contract case.)
 
+- [x] **57.4** The row says what stage the card is in.
+
+  (`SessionItem` gains `applicationStatus`, read for the whole page in one grouped query through
+  `ApplicationService.stagesOf` -- the card and the caller together, so a card this reader does not
+  own is absent rather than borrowed. The list draws it beside the score: a rehearsal for a card
+  already rejected and one for a live interview are different facts. The detail carries it too,
+  which is what the runner and the report headers read. 1 service test + 1 mapper test + 1 page
+  assertion, and the resources census reconciled with the three commits it had drifted from.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
