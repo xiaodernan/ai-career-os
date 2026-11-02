@@ -4004,6 +4004,15 @@ application has: remove a row, correct one, and take one out of the product.
   refetches before the toast fades. 3 service tests, 1 route test, the error-code census, and 1
   extra SSR test.)
 
+- [x] **50.3** A kept letter can leave.
+
+  (The drawer's expanded letter gains `Copy text` and `Download .md`, both reading the same body
+  the panel already shows: a letter kept here is the reader's, and it has to be usable in the mail
+  client that will actually send it. The file is named after the posting when its title has latin
+  letters (`cover-letter-senior-frontend-engineer.md`) and after the letter's own id when it does
+  not, so a Chinese title never collapses into one shared `document`. An empty letter offers
+  neither action rather than copying nothing. 4 pure-function tests and 2 extra SSR tests.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

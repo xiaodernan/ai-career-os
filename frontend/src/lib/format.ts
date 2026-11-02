@@ -295,6 +295,18 @@ export function downloadBlob(filename: string, blob: Blob) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-export function slugify(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60) || "document";
+export function slugify(value: string, fallback = "document"): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60) || fallback;
+}
+
+/**
+ * The name a kept letter leaves under (50.3).
+ *
+ * The posting's own words when they survive slugging, the letter's own id when they do not --
+ * a Chinese job title slugifies to nothing, and `cover-letter-3f9a1c22.md` still names the row
+ * it came from, which is more than one shared "document" would.
+ */
+export function letterDownloadName(letter: { id?: string | null }, jobLabel?: string | null): string {
+  const stem = slugify(jobLabel ?? "", "") || (letter.id ?? "").slice(0, 8);
+  return `cover-letter-${stem || "letter"}.md`;
 }

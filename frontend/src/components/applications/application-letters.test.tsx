@@ -80,7 +80,19 @@ describe("ApplicationLettersPanel", () => {
     expect(html).toContain("applications.dialog.letterKept");
     expect(html).toContain("applications.dialog.letterDelete");
     expect(html).toContain("applications.dialog.letterEdit");
+    expect(html).toContain("applications.dialog.letterCopy");
+    expect(html).toContain("applications.dialog.letterDownload");
     expect(html.match(/<details/g)?.length).toBe(1);
+  });
+
+  it("offers no way to take away a letter that has no text", () => {
+    lettersState.value = { data: [{ id: "letter-1", body: "" }] };
+
+    const html = render();
+
+    expect(html).not.toContain("applications.dialog.letterCopy");
+    expect(html).not.toContain("applications.dialog.letterDownload");
+    expect(html).toContain("applications.dialog.letterEdit");
   });
 
   it("says a corrected letter was edited, not first kept", () => {

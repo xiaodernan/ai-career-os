@@ -12,6 +12,7 @@ import {
   formatSalary,
   formatUsd,
   initialsOf,
+  letterDownloadName,
   pluralize,
   relativeTime,
   seniorityYears,
@@ -206,6 +207,25 @@ describe("slugify", () => {
   it("kebab-cases and guards the empty string", () => {
     expect(slugify("Hello World!")).toBe("hello-world");
     expect(slugify("   ")).toBe("document");
+  });
+  it("lets a caller name its own fallback, so an empty stem can be detected", () => {
+    expect(slugify("高级前端工程师", "")).toBe("");
+  });
+});
+
+describe("letterDownloadName", () => {
+  it("names the file after the posting it was written for", () => {
+    expect(letterDownloadName({ id: "3f9a1c22-aaaa" }, "Senior Frontend Engineer")).toBe(
+      "cover-letter-senior-frontend-engineer.md"
+    );
+  });
+  it("falls back to the letter's own id when the title has no latin letters", () => {
+    expect(letterDownloadName({ id: "3f9a1c22-aaaa" }, "高级前端工程师")).toBe(
+      "cover-letter-3f9a1c22.md"
+    );
+  });
+  it("still names a file when neither the posting nor the id is known", () => {
+    expect(letterDownloadName({}, null)).toBe("cover-letter-letter.md");
   });
 });
 

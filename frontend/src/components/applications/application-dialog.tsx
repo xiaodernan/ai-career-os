@@ -362,9 +362,9 @@ export function ApplicationDialog({ application, open, onOpenChange }: Applicati
               failed={packet.isError}
             />
 
-            {/* Read-only: a letter is written on the job page, where the draft and the
-                posting sit together. This is where it is read back. */}
-            <ApplicationLettersPanel applicationId={application.id} />
+            {/* A letter is written on the job page, where the draft and the posting sit
+                together. This is where it is read back, corrected and taken away. */}
+            <ApplicationLettersPanel applicationId={application.id} jobLabel={application.title} />
           </>
         )}
 

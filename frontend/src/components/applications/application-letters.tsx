@@ -3,12 +3,13 @@
 import * as React from "react";
 import { Check, Mail, Pencil, Trash2, X } from "lucide-react";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
+import { CopyButton, DownloadButton } from "@/components/common/export-buttons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/common/error-state";
 import { Textarea } from "@/components/ui/textarea";
-import { relativeTime } from "@/lib/format";
+import { letterDownloadName, relativeTime } from "@/lib/format";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { useDeleteApplicationLetter, useUpdateApplicationLetter } from "@/lib/hooks/actions";
 import { useApplicationLetters } from "@/lib/hooks/resources";
@@ -18,10 +19,17 @@ import type { CoverLetter } from "@/lib/api/types";
  * The cover letters kept with this application (47.4).
  *
  * A draft is written on the job page where the letter was made; this is where a reader comes
- * back to check, correct or remove what they kept. Each letter opens in place -- the body is
- * the whole point, and a link to another screen would hide it behind a navigation.
+ * back to check, correct, take away or remove what they kept. Each letter opens in place -- the
+ * body is the whole point, and a link to another screen would hide it behind a navigation.
  */
-export function ApplicationLettersPanel({ applicationId }: { applicationId: string }) {
+export function ApplicationLettersPanel({
+  applicationId,
+  jobLabel,
+}: {
+  applicationId: string;
+  /** The posting's title, used to name a downloaded letter after the application it belongs to. */
+  jobLabel?: string | null;
+}) {
   const { t, locale } = useLocale();
   const letters = useApplicationLetters(applicationId);
   const remove = useDeleteApplicationLetter(applicationId);
@@ -138,20 +146,36 @@ export function ApplicationLettersPanel({ applicationId }: { applicationId: stri
                   ) : (
                     <p className="whitespace-pre-wrap text-sm leading-relaxed">{letter.body}</p>
                   )}
-                  <div className="mt-3 flex justify-end gap-1.5">
+                  <div className="mt-3 flex flex-wrap justify-end gap-1.5">
                     {!isEditing && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        disabled={!letter.id}
-                        onClick={() =>
-                          letter.id && setEditing({ letterId: letter.id, body: letter.body ?? "" })
-                        }
-                      >
-                        <Pencil aria-hidden />
-                        {t("applications.dialog.letterEdit")}
-                      </Button>
+                      <>
+                        <CopyButton
+                          text={letter.body ?? ""}
+                          label={t("applications.dialog.letterCopy")}
+                          variant="ghost"
+                          size="sm"
+                        />
+                        <DownloadButton
+                          text={letter.body ?? ""}
+                          filename={letterDownloadName(letter, jobLabel)}
+                          label={t("applications.dialog.letterDownload")}
+                          mime="text/markdown;charset=utf-8"
+                          variant="ghost"
+                          size="sm"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          disabled={!letter.id}
+                          onClick={() =>
+                            letter.id && setEditing({ letterId: letter.id, body: letter.body ?? "" })
+                          }
+                        >
+                          <Pencil aria-hidden />
+                          {t("applications.dialog.letterEdit")}
+                        </Button>
+                      </>
                     )}
                     <Button
                       type="button"
