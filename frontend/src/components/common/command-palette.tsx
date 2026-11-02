@@ -18,10 +18,10 @@ import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
 import { normalizeSearch, searchGroupNames } from "@/lib/api/normalize";
-import { loadRecentSearches, rememberSearch } from "@/lib/recent-searches";
+import { clearRecentSearches, loadRecentSearches, rememberSearch } from "@/lib/recent-searches";
 import { useLocale } from "@/lib/i18n/locale-context";
 import type { SearchResults } from "@/lib/api/types";
-import { FileText, Briefcase, Building2, History, Mail, MessageSquare, LayoutDashboard, CornerDownLeft, Loader2, type LucideIcon } from "lucide-react";
+import { FileText, Briefcase, Building2, History, Mail, MessageSquare, LayoutDashboard, CornerDownLeft, Loader2, Trash2, type LucideIcon } from "lucide-react";
 
 /**
  * CommandPalette — global ⌘K shell (architecture.md §3 search module).
@@ -216,6 +216,15 @@ export function CommandPaletteProvider({
                     <span className="min-w-0 flex-1 truncate">{term}</span>
                   </CommandItem>
                 ))}
+                <CommandItem
+                  value="recent:clear"
+                  onSelect={() => setRecents(clearRecentSearches())}
+                >
+                  <Trash2 aria-hidden />
+                  <span className="min-w-0 flex-1 truncate">
+                    {t("chrome.clearRecentSearches")}
+                  </span>
+                </CommandItem>
               </CommandGroup>
             )}
 

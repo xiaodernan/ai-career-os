@@ -61,6 +61,11 @@ describe("the command palette's result list", () => {
     expect(source).toMatch(/!query\.trim\(\) && recents\.length > 0/);
   });
 
+  it("lets the reader clear what it remembers without leaving the palette", () => {
+    expect(source).toContain("clearRecentSearches()");
+    expect(source).toContain('t("chrome.clearRecentSearches")');
+  });
+
 
   it("filters navigation on the names it shows, not the English ones", () => {
     // The bug this pins: the palette filtered on `item.label` -- the English

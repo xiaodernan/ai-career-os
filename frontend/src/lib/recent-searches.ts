@@ -12,7 +12,7 @@ export const RECENT_SEARCH_LIMIT = 5;
 const KEY = "careeros.recent-searches";
 
 type Readable = Pick<Storage, "getItem">;
-type Writable = Pick<Storage, "setItem">;
+type Writable = Pick<Storage, "setItem" | "removeItem">;
 
 function defaultStorage(): (Readable & Writable) | undefined {
   return typeof window === "undefined" ? undefined : window.localStorage;
@@ -51,4 +51,15 @@ export function rememberSearch(
     // Private mode refuses the write; the list still answers this visit.
   }
   return next;
+}
+
+/** Forgets every remembered query. Answers the empty list that replaces them. */
+export function clearRecentSearches(storage: (Readable & Writable) | undefined = defaultStorage()): string[] {
+  if (!storage) return [];
+  try {
+    storage.removeItem(KEY);
+  } catch {
+    // Nothing to do: the next open will read whatever survived.
+  }
+  return [];
 }

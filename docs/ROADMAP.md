@@ -4086,6 +4086,13 @@ the whole cross-entity search has stayed invisible.
   comparison, newest first, capped at five, and neither a malformed entry nor a private mode that
   refuses the write is allowed to break the palette. 6 pure-function tests and 1 wiring test.)
 
+- [x] **52.4** The remembered queries can be forgotten.
+
+  (A list the reader cannot empty is a record, not a convenience. The recents group ends in
+  `Clear recent searches`, which removes the key and answers the empty list it left behind -- the
+  same answer the palette already trusts, so a private mode that refuses the removal cannot leave
+  the UI claiming a list that is still there. 1 pure-function test and 1 wiring test.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

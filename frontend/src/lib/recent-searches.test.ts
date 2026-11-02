@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { RECENT_SEARCH_LIMIT, loadRecentSearches, rememberSearch } from "./recent-searches";
+import {
+  RECENT_SEARCH_LIMIT,
+  clearRecentSearches,
+  loadRecentSearches,
+  rememberSearch,
+} from "./recent-searches";
 
 /** The smallest thing that behaves like localStorage, so no browser is needed. */
 function fakeStorage(initial: Record<string, string> = {}) {
@@ -10,6 +15,9 @@ function fakeStorage(initial: Record<string, string> = {}) {
     getItem: (key: string) => data[key] ?? null,
     setItem: (key: string, value: string) => {
       data[key] = value;
+    },
+    removeItem: (key: string) => {
+      delete data[key];
     },
   };
 }
@@ -59,5 +67,14 @@ describe("recent searches", () => {
   it("survives a value that is not the list it wrote", () => {
     expect(loadRecentSearches(fakeStorage({ "careeros.recent-searches": "{oops" }))).toEqual([]);
     expect(loadRecentSearches(fakeStorage({ "careeros.recent-searches": '{"a":1}' }))).toEqual([]);
+  });
+
+  it("forgets everything when asked, and answers the empty list it left behind", () => {
+    const store = fakeStorage();
+    rememberSearch("kafka", store);
+
+    expect(clearRecentSearches(store)).toEqual([]);
+    expect(loadRecentSearches(store)).toEqual([]);
+    expect(clearRecentSearches(undefined)).toEqual([]);
   });
 });
