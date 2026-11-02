@@ -742,6 +742,7 @@ export function normalizeCoverLetter(raw: unknown, index = 0): CoverLetter {
     length: str(raw, "length"),
     body: str(raw, "body") ?? "",
     createdAt: str(raw, "createdAt"),
+    updatedAt: str(raw, "updatedAt"),
   };
 }
 

@@ -640,6 +640,7 @@ strings, and `lastTouchAt` is the user's claim about when contact last happened.
 | GET | `/applications/{id}/letters` | the cover letters kept for this application, newest first |
 | POST | `/applications/{id}/letters` | `{body, mode?, tone?, length?, resumeVersionId?}` — keeps a generated draft; the posting and the resume version default to the application's own links, and an empty body is **400** |
 | DELETE | `/applications/{id}/letters/{letterId}` | removes one kept letter; the lookup names both the application and its owner, and a letter that is already gone still answers **204** — the reader's intent is already true |
+| PATCH | `/applications/{id}/letters/{letterId}` | `{body, mode?, tone?, length?}` — corrects a kept letter in place and answers the updated row with `createdAt` and `updatedAt`; a null dial leaves the stored value alone, an empty one clears it, and a letter that is gone or not the caller's is **404** `APPLICATION_LETTER_NOT_FOUND` |
 | DELETE | `/applications/{id}` | |
 
 ### Copilot & conversations

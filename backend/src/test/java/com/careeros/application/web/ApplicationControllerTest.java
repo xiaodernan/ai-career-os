@@ -5,11 +5,14 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.careeros.application.dto.ApplicationDtos.ApplicationPacket;
+import com.careeros.application.dto.ApplicationDtos.LetterItem;
 import com.careeros.application.dto.ApplicationDtos.PacketResume;
+import com.careeros.application.dto.ApplicationDtos.UpdateLetterRequest;
 import com.careeros.application.service.ApplicationLetterService;
 import com.careeros.application.service.ApplicationPacketService;
 import com.careeros.application.service.ApplicationService;
@@ -23,6 +26,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
@@ -82,5 +86,24 @@ class ApplicationControllerTest {
                 .andExpect(status().isNoContent());
 
         verify(letters).delete(UUID.fromString(USER), APP, letterId);
+    }
+
+    @Test
+    void aLetterCorrectionCarriesTheBodyAndTheSessionUser() throws Exception {
+        UUID letterId = UUID.randomUUID();
+        OffsetDateTime now = OffsetDateTime.parse("2026-11-03T09:00:00Z");
+        when(letters.update(UUID.fromString(USER), APP, letterId,
+                new UpdateLetterRequest("Dear Ada", null, null, null)))
+                .thenReturn(new LetterItem(letterId, APP, null, null, null, null, null,
+                        "Dear Ada", now, now));
+
+        mvc.perform(patch("/api/v1/applications/" + APP + "/letters/" + letterId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"body\":\"Dear Ada\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.body").value("Dear Ada"));
+
+        verify(letters).update(UUID.fromString(USER), APP, letterId,
+                new UpdateLetterRequest("Dear Ada", null, null, null));
     }
 }

@@ -145,6 +145,8 @@ public enum ApiErrorCode {
     JD_NOT_FOUND(HttpStatus.NOT_FOUND),
     MATCH_NOT_FOUND(HttpStatus.NOT_FOUND),
     APPLICATION_NOT_FOUND(HttpStatus.NOT_FOUND),
+    /** The kept letter is unknown, already removed, or belongs to another application. */
+    APPLICATION_LETTER_NOT_FOUND(HttpStatus.NOT_FOUND),
     SESSION_NOT_FOUND(HttpStatus.NOT_FOUND),
     CONVERSATION_NOT_FOUND(HttpStatus.NOT_FOUND),
     INTERVIEW_ALREADY_STARTED(HttpStatus.BAD_REQUEST),

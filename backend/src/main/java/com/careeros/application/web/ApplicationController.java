@@ -8,6 +8,7 @@ import com.careeros.application.dto.ApplicationDtos.ReorderRequest;
 import com.careeros.application.dto.ApplicationDtos.SaveLetterRequest;
 import com.careeros.application.dto.ApplicationDtos.TimelineEvent;
 import com.careeros.application.dto.ApplicationDtos.UpdateApplicationRequest;
+import com.careeros.application.dto.ApplicationDtos.UpdateLetterRequest;
 import com.careeros.application.service.ApplicationLetterService;
 import com.careeros.application.service.ApplicationService;
 import com.careeros.application.service.ApplicationPacketService;
@@ -106,6 +107,13 @@ public class ApplicationController {
     public void deleteLetter(@CurrentUser AuthUser user, @PathVariable UUID id,
                              @PathVariable UUID letterId) {
         letters.delete(user.id(), id, letterId);
+    }
+
+    @PatchMapping("/{id}/letters/{letterId}")
+    public LetterItem updateLetter(@CurrentUser AuthUser user, @PathVariable UUID id,
+                                   @PathVariable UUID letterId,
+                                   @RequestBody @Valid UpdateLetterRequest request) {
+        return letters.update(user.id(), id, letterId, request);
     }
 
     @DeleteMapping("/{id}")

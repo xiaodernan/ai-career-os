@@ -160,6 +160,7 @@ export const translations = {
       addedToPipeline: "Added to your pipeline.",
       coverLetterSaved: "Cover letter saved to the application.",
       letterRemoved: "Letter removed.",
+      letterUpdated: "Letter corrected.",
       removedFromPipeline: "Removed from pipeline.",
       applicationNoteSaved: "Note saved.",
       reminderSet: "Reminder set.",
@@ -1685,6 +1686,8 @@ export const translations = {
 
       APPLICATION_NOT_FOUND: "That application is no longer here.",
 
+      APPLICATION_LETTER_NOT_FOUND: "That kept letter is no longer here.",
+
       BUNDLE_NOT_PLANNABLE: "That file could not be turned into a restore plan.",
 
       BUNDLE_NO_SECTION: "That file has no data section.",
@@ -2369,6 +2372,10 @@ export const translations = {
         letterDeleteTitle: "Remove this letter?",
         letterDeleteBody: "The letter disappears from this application. This cannot be undone.",
         letterDeleteConfirm: "Remove",
+        letterEdit: "Edit letter",
+        letterSave: "Save correction",
+        letterCancel: "Cancel",
+        letterEdited: "Edited {when}",
         notFound: "That application no longer exists.",
         saveFailed: "Couldn't save the application.",
         delete: "Delete",
@@ -2894,6 +2901,7 @@ export const translations = {
       coverLetter: "Cover letter generation failed.",
       coverLetterSave: "Couldn't save the cover letter.",
       letterRemove: "Couldn't remove the letter.",
+      letterUpdate: "Couldn't correct the letter.",
       transcribe: "Couldn't transcribe that recording.",
       speak: "Couldn't speak that question.",
       savedListUpdate: "Couldn't update the saved list.",
@@ -3072,6 +3080,7 @@ export const translations = {
       addedToPipeline: "已加入流水线。",
       coverLetterSaved: "求职信已保存到这个申请。",
       letterRemoved: "求职信已删除。",
+      letterUpdated: "求职信已修改。",
       removedFromPipeline: "已从流水线移除。",
       applicationNoteSaved: "备注已保存。",
       reminderSet: "提醒已设置。",
@@ -4449,6 +4458,8 @@ export const translations = {
 
       APPLICATION_NOT_FOUND: "这条申请记录已经不在了。",
 
+      APPLICATION_LETTER_NOT_FOUND: "这封保存的求职信已经不在了。",
+
       BUNDLE_NOT_PLANNABLE: "这个文件没法变成一份恢复计划。",
 
       BUNDLE_NO_SECTION: "这个文件里没有数据段。",
@@ -5089,6 +5100,10 @@ export const translations = {
         letterDeleteTitle: "删除这封信？",
         letterDeleteBody: "这封信会从这个申请里消失，无法撤销。",
         letterDeleteConfirm: "删除",
+        letterEdit: "修改这封信",
+        letterSave: "保存修改",
+        letterCancel: "取消",
+        letterEdited: "修改于 {when}",
         notFound: "这个申请已经不存在了。",
         saveFailed: "没能保存这个申请。",
         delete: "删除",
@@ -5594,6 +5609,7 @@ export const translations = {
       coverLetter: "求职信生成失败了。",
       coverLetterSave: "没能保存这封求职信。",
       letterRemove: "没能删除这封求职信。",
+      letterUpdate: "没能修改这封求职信。",
       transcribe: "没能转写这段录音。",
       speak: "没能念出这个问题。",
       savedListUpdate: "没能更新收藏列表。",

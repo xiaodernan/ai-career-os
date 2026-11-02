@@ -673,6 +673,8 @@ export interface CoverLetter {
   wordCount?: number | null;
   evidence?: Evidence[];
   createdAt?: string;
+  /** When the kept letter was last corrected; equal to `createdAt` until then. */
+  updatedAt?: string | null;
   taskId?: string | null;
 }
 

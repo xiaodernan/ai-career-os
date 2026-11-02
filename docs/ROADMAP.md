@@ -3993,8 +3993,16 @@ application has: remove a row, correct one, and take one out of the product.
   before the toast fades. 2 service tests and 1 route test; the endpoints census now sees
   `/applications` query keys explicitly instead of excusing a spread it could not read.)
 
-- [ ] **50.2** A kept letter can be corrected. (Edit the body and its dials in place, with an
-  `updated_at` that says the correction happened; the export carries the latest text.)
+- [x] **50.2** A kept letter can be corrected.
+
+  (`PATCH /applications/{id}/letters/{letterId}` updates the row the reader already kept instead
+  of filing a second draft. The body is required and trimmed; a null dial leaves that dial alone
+  while an empty one clears it. `updated_at` moves with the correction, and the drawer shows
+  `Edited ...` rather than the original kept moment. A letter that is gone, or belongs to another
+  application or account, names `APPLICATION_LETTER_NOT_FOUND` instead of editing something else.
+  The drawer's expanded letter gains `Edit letter`, a textarea and save/cancel controls; the list
+  refetches before the toast fades. 3 service tests, 1 route test, the error-code census, and 1
+  extra SSR test.)
 
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +

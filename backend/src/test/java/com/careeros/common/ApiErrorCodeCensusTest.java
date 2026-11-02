@@ -78,7 +78,7 @@ class ApiErrorCodeCensusTest {
                 .map(Enum::name).sorted().toList();
         org.assertj.core.api.Assertions.assertThat(names).containsExactly(
                 "AI_SERVICE_BAD_REQUEST", "AI_SERVICE_CONFLICT", "AI_SERVICE_EMPTY_RESPONSE", "AI_SERVICE_NOT_FOUND",
-                "AI_SERVICE_UNAVAILABLE", "APPLICATION_NOT_FOUND", "BUNDLE_NOT_PLANNABLE", "BUNDLE_NO_SECTION",
+                "AI_SERVICE_UNAVAILABLE", "APPLICATION_LETTER_NOT_FOUND", "APPLICATION_NOT_FOUND", "BUNDLE_NOT_PLANNABLE", "BUNDLE_NO_SECTION",
                 // 34.1: the calendar feed's token is a second link credential, and its refusal
                 // is about a subscription a calendar app keeps polling -- its own sentence.
                 "CALENDAR_LINK_INVALID",

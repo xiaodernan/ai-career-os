@@ -450,6 +450,39 @@ export function useDeleteApplicationLetter(applicationId: string | null) {
   });
 }
 
+/** Corrects the text of a kept letter without filing a second draft. */
+export function useUpdateApplicationLetter(applicationId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: {
+      letterId: string;
+      body: string;
+      mode?: string;
+      tone?: string;
+      length?: string;
+    }) => {
+      const raw = await api.request<unknown>(
+        endpoints.applicationLetter(applicationId!, body.letterId),
+        {
+          method: "PATCH",
+          body: {
+            body: body.body,
+            ...field("mode", body.mode),
+            ...field("tone", body.tone),
+            ...field("length", body.length),
+          },
+        }
+      );
+      return normalizeCoverLetter(raw);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["application", applicationId, "letters"] });
+      toast.success(translate("toasts.letterUpdated"));
+    },
+    onError: fail("failures.letterUpdate"),
+  });
+}
+
 export function useResumeSuggestions() {
   return useMutation({
     mutationFn: async (body: { jdRaw: string; resumeVersionId?: string | null }) => {

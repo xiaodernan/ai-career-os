@@ -31,6 +31,7 @@ vi.mock("@/lib/hooks/resources", () => ({
 
 vi.mock("@/lib/hooks/actions", () => ({
   useDeleteApplicationLetter: () => ({ isPending: false, mutate: () => undefined }),
+  useUpdateApplicationLetter: () => ({ isPending: false, mutate: () => undefined }),
 }));
 
 import { ApplicationLettersPanel } from "./application-letters";
@@ -78,7 +79,26 @@ describe("ApplicationLettersPanel", () => {
     expect(html).toContain("formal · warm · short");
     expect(html).toContain("applications.dialog.letterKept");
     expect(html).toContain("applications.dialog.letterDelete");
+    expect(html).toContain("applications.dialog.letterEdit");
     expect(html.match(/<details/g)?.length).toBe(1);
+  });
+
+  it("says a corrected letter was edited, not first kept", () => {
+    lettersState.value = {
+      data: [
+        {
+          id: "letter-1",
+          body: "Corrected words",
+          createdAt: "2026-11-03T09:00:00Z",
+          updatedAt: "2026-11-04T09:00:00Z",
+        },
+      ],
+    };
+
+    const html = render();
+
+    expect(html).toContain("applications.dialog.letterEdited");
+    expect(html).not.toContain("applications.dialog.letterKept");
   });
 
   it("reports a failed read instead of drawing an empty shelf", () => {

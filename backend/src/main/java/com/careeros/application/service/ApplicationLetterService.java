@@ -2,6 +2,7 @@ package com.careeros.application.service;
 
 import com.careeros.application.dto.ApplicationDtos.LetterItem;
 import com.careeros.application.dto.ApplicationDtos.SaveLetterRequest;
+import com.careeros.application.dto.ApplicationDtos.UpdateLetterRequest;
 import com.careeros.application.entity.Application;
 import com.careeros.application.entity.ApplicationLetter;
 import com.careeros.application.repository.ApplicationLetterRepository;
@@ -35,12 +36,6 @@ public class ApplicationLetterService {
     @Transactional
     public LetterItem save(UUID userId, UUID applicationId, SaveLetterRequest request) {
         Application app = applications.require(userId, applicationId);
-        String body = request.body() == null ? "" : request.body().trim();
-        if (body.isEmpty()) {
-            // The bean validation catches this at the HTTP edge; the service keeps the rule for
-            // every caller that is not a request body (the import path writes rows directly).
-            throw new ApiException(ApiErrorCode.VALIDATION_FAILED, "The letter is empty");
-        }
         ApplicationLetter row = new ApplicationLetter();
         row.setUserId(userId);
         row.setApplicationId(app.getId());
@@ -50,8 +45,38 @@ public class ApplicationLetterService {
         row.setMode(trimToNull(request.mode()));
         row.setTone(trimToNull(request.tone()));
         row.setLength(trimToNull(request.length()));
-        row.setBody(body);
+        row.setBody(requireBody(request.body()));
         return toItem(letters.save(row));
+    }
+
+    /**
+     * Corrects a kept letter without turning it into a new row.
+     *
+     * <p>A reader who fixes a sentence should not have to delete the letter and keep a second
+     * draft; the row's id stays, `updated_at` moves, and the drawer's order remains the moment
+     * the letter was first kept. A null dial leaves the stored one alone and an empty dial clears
+     * it, the same distinction the application PATCH uses for optional fields.
+     */
+    @Transactional
+    public LetterItem update(UUID userId, UUID applicationId, UUID letterId,
+                             UpdateLetterRequest request) {
+        Application app = applications.require(userId, applicationId);
+        ApplicationLetter row = letters.findByIdAndApplicationIdAndUserId(letterId, app.getId(), userId)
+                .orElseThrow(() -> new ApiException(ApiErrorCode.APPLICATION_LETTER_NOT_FOUND,
+                        "Cover letter not found"));
+        row.setBody(requireBody(request.body()));
+        if (request.mode() != null) {
+            row.setMode(trimToNull(request.mode()));
+        }
+        if (request.tone() != null) {
+            row.setTone(trimToNull(request.tone()));
+        }
+        if (request.length() != null) {
+            row.setLength(trimToNull(request.length()));
+        }
+        // Flush before reading the row back: @UpdateTimestamp is stamped during flush, so a
+        // plain save would answer the correction with the timestamp of the previous write.
+        return toItem(letters.saveAndFlush(row));
     }
 
     /** Newest first: a regenerated letter is the one the reader is looking at. */
@@ -83,7 +108,17 @@ public class ApplicationLetterService {
     static LetterItem toItem(ApplicationLetter row) {
         return new LetterItem(row.getId(), row.getApplicationId(), row.getJobId(),
                 row.getResumeVersionId(), row.getMode(), row.getTone(), row.getLength(),
-                row.getBody(), row.getCreatedAt());
+                row.getBody(), row.getCreatedAt(), row.getUpdatedAt());
+    }
+
+    private static String requireBody(String value) {
+        String body = value == null ? "" : value.trim();
+        if (body.isEmpty()) {
+            // The bean validation catches this at the HTTP edge; the service keeps the rule for
+            // every caller that is not a request body (the import path writes rows directly).
+            throw new ApiException(ApiErrorCode.VALIDATION_FAILED, "The letter is empty");
+        }
+        return body;
     }
 
     private static String trimToNull(String value) {

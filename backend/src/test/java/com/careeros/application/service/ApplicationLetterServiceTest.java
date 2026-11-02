@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 
 import com.careeros.application.dto.ApplicationDtos.LetterItem;
 import com.careeros.application.dto.ApplicationDtos.SaveLetterRequest;
+import com.careeros.application.dto.ApplicationDtos.UpdateLetterRequest;
 import com.careeros.application.entity.Application;
 import com.careeros.application.entity.ApplicationLetter;
 import com.careeros.application.repository.ApplicationLetterRepository;
@@ -44,6 +45,7 @@ class ApplicationLetterServiceTest {
         letters = mock(ApplicationLetterRepository.class);
         service = new ApplicationLetterService(applications, letters);
         when(letters.save(any(ApplicationLetter.class))).thenAnswer(i -> i.getArgument(0));
+        when(letters.saveAndFlush(any(ApplicationLetter.class))).thenAnswer(i -> i.getArgument(0));
     }
 
     private void owned() {
@@ -139,5 +141,58 @@ class ApplicationLetterServiceTest {
         service.delete(userId, applicationId, letterId);
 
         verify(letters, never()).delete(any(ApplicationLetter.class));
+    }
+
+    @Test
+    void updateCorrectsTheBodyAndKeepsADialTheRequestDidNotName() {
+        owned();
+        UUID letterId = UUID.randomUUID();
+        ApplicationLetter row = new ApplicationLetter();
+        row.setApplicationId(applicationId);
+        row.setBody("old words");
+        row.setTone("warm");
+        row.setLength("short");
+        when(letters.findByIdAndApplicationIdAndUserId(letterId, applicationId, userId))
+                .thenReturn(Optional.of(row));
+
+        LetterItem item = service.update(userId, applicationId, letterId,
+                new UpdateLetterRequest("  corrected words  ", "formal", "", null));
+
+        assertThat(item.body()).isEqualTo("corrected words");
+        assertThat(item.mode()).isEqualTo("formal");
+        assertThat(item.tone()).isNull();
+        assertThat(item.length()).isEqualTo("short");
+        verify(letters).saveAndFlush(row);
+    }
+
+    @Test
+    void updateRefusesAnEmptyCorrectionAndWritesNothing() {
+        owned();
+        UUID letterId = UUID.randomUUID();
+        ApplicationLetter row = new ApplicationLetter();
+        when(letters.findByIdAndApplicationIdAndUserId(letterId, applicationId, userId))
+                .thenReturn(Optional.of(row));
+
+        assertThatThrownBy(() -> service.update(userId, applicationId, letterId,
+                new UpdateLetterRequest("   ", null, null, null)))
+                .isInstanceOf(ApiException.class)
+                .extracting(e -> ((ApiException) e).code())
+                .isEqualTo(ApiErrorCode.VALIDATION_FAILED);
+        verify(letters, never()).save(any(ApplicationLetter.class));
+        verify(letters, never()).saveAndFlush(any(ApplicationLetter.class));
+    }
+
+    @Test
+    void updateOfAGoneOrForeignLetterNamesItsOwnNotFound() {
+        owned();
+        UUID letterId = UUID.randomUUID();
+        when(letters.findByIdAndApplicationIdAndUserId(letterId, applicationId, userId))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.update(userId, applicationId, letterId,
+                new UpdateLetterRequest("anything", null, null, null)))
+                .isInstanceOf(ApiException.class)
+                .extracting(e -> ((ApiException) e).code())
+                .isEqualTo(ApiErrorCode.APPLICATION_LETTER_NOT_FOUND);
     }
 }

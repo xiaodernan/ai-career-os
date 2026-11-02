@@ -758,6 +758,7 @@ describe("normalizeCoverLetter", () => {
       length: "short",
       body: "Dear hiring manager,\n\nI built the thing.",
       createdAt: "2026-11-03T09:00:00Z",
+      updatedAt: "2026-11-03T10:00:00Z",
     });
 
     expect(letter).toEqual({
@@ -770,6 +771,7 @@ describe("normalizeCoverLetter", () => {
       length: "short",
       body: "Dear hiring manager,\n\nI built the thing.",
       createdAt: "2026-11-03T09:00:00Z",
+      updatedAt: "2026-11-03T10:00:00Z",
     });
     expect(normalizeCoverLetter({ id: "letter-2" }).body).toBe("");
   });

@@ -44,13 +44,22 @@ public final class ApplicationDtos {
      */
     public record LetterItem(UUID id, UUID applicationId, UUID jobId, UUID resumeVersionId,
                              String mode, String tone, String length, String body,
-                             OffsetDateTime createdAt) {
+                             OffsetDateTime createdAt, OffsetDateTime updatedAt) {
     }
 
     /** A draft the reader chose to keep; the application row supplies the posting and version. */
     public record SaveLetterRequest(@JsonAlias("resume_version_id") UUID resumeVersionId,
                                     String mode, String tone, String length,
                                     @NotBlank @Size(max = 20000) String body) {
+    }
+
+    /**
+     * The correction of a kept letter. The body is the one required component -- a letter
+     * without text is not a letter -- while a null dial leaves the stored value alone and an
+     * empty one clears it, the same null-versus-empty rule the application PATCH follows.
+     */
+    public record UpdateLetterRequest(@NotBlank @Size(max = 20000) String body,
+                                      String mode, String tone, String length) {
     }
 
     /**

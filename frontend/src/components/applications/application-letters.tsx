@@ -1,30 +1,33 @@
 "use client";
 
 import * as React from "react";
-import { Mail, Trash2 } from "lucide-react";
+import { Check, Mail, Pencil, Trash2, X } from "lucide-react";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/common/error-state";
+import { Textarea } from "@/components/ui/textarea";
 import { relativeTime } from "@/lib/format";
 import { useLocale } from "@/lib/i18n/locale-context";
-import { useDeleteApplicationLetter } from "@/lib/hooks/actions";
+import { useDeleteApplicationLetter, useUpdateApplicationLetter } from "@/lib/hooks/actions";
 import { useApplicationLetters } from "@/lib/hooks/resources";
 import type { CoverLetter } from "@/lib/api/types";
 
 /**
  * The cover letters kept with this application (47.4).
  *
- * Read-only here, because a draft is written on the job page where the letter was made; this
- * is where a reader comes back to check what they kept. Each letter opens in place -- the body
- * is the whole point, and a link to another screen would hide it behind a navigation.
+ * A draft is written on the job page where the letter was made; this is where a reader comes
+ * back to check, correct or remove what they kept. Each letter opens in place -- the body is
+ * the whole point, and a link to another screen would hide it behind a navigation.
  */
 export function ApplicationLettersPanel({ applicationId }: { applicationId: string }) {
   const { t, locale } = useLocale();
   const letters = useApplicationLetters(applicationId);
   const remove = useDeleteApplicationLetter(applicationId);
+  const update = useUpdateApplicationLetter(applicationId);
   const [pendingRemoval, setPendingRemoval] = React.useState<CoverLetter | null>(null);
+  const [editing, setEditing] = React.useState<{ letterId: string; body: string } | null>(null);
 
   return (
     <section className="space-y-2">
@@ -64,6 +67,17 @@ export function ApplicationLettersPanel({ applicationId }: { applicationId: stri
       <ul className="space-y-2">
         {(letters.data ?? []).map((letter) => {
           const dials = [letter.mode, letter.tone, letter.length].filter(Boolean).join(" · ");
+          const moment =
+            letter.updatedAt && letter.updatedAt !== letter.createdAt
+              ? t("applications.dialog.letterEdited", {
+                  when: relativeTime(letter.updatedAt, locale),
+                })
+              : letter.createdAt
+                ? t("applications.dialog.letterKept", {
+                    when: relativeTime(letter.createdAt, locale),
+                  })
+                : "";
+          const isEditing = editing?.letterId === letter.id;
           return (
             <li key={letter.id}>
               <details className="group rounded-lg border border-border/70 bg-muted/20">
@@ -78,20 +92,72 @@ export function ApplicationLettersPanel({ applicationId }: { applicationId: stri
                     </span>
                   )}
                   <span className="shrink-0 text-xs text-muted-foreground">
-                    {letter.createdAt
-                      ? t("applications.dialog.letterKept", {
-                          when: relativeTime(letter.createdAt, locale),
-                        })
-                      : ""}
+                    {moment}
                   </span>
                 </summary>
                 <div className="border-t border-border/70 p-3">
-                  <p className="whitespace-pre-wrap text-sm leading-relaxed">{letter.body}</p>
-                  <div className="mt-3 flex justify-end">
+                  {editing && isEditing ? (
+                    <div className="space-y-2">
+                      <Textarea
+                        value={editing.body}
+                        onChange={(event) =>
+                          setEditing({ letterId: editing.letterId, body: event.target.value })
+                        }
+                        rows={8}
+                        autoFocus
+                      />
+                      <div className="flex justify-end gap-1.5">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setEditing(null)}
+                          disabled={update.isPending}
+                        >
+                          <X aria-hidden />
+                          {t("applications.dialog.letterCancel")}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="primary"
+                          size="sm"
+                          loading={update.isPending}
+                          disabled={!editing.body.trim()}
+                          onClick={() =>
+                            update.mutate(
+                              { letterId: editing.letterId, body: editing.body },
+                              { onSuccess: () => setEditing(null) }
+                            )
+                          }
+                        >
+                          <Check aria-hidden />
+                          {t("applications.dialog.letterSave")}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="whitespace-pre-wrap text-sm leading-relaxed">{letter.body}</p>
+                  )}
+                  <div className="mt-3 flex justify-end gap-1.5">
+                    {!isEditing && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        disabled={!letter.id}
+                        onClick={() =>
+                          letter.id && setEditing({ letterId: letter.id, body: letter.body ?? "" })
+                        }
+                      >
+                        <Pencil aria-hidden />
+                        {t("applications.dialog.letterEdit")}
+                      </Button>
+                    )}
                     <Button
                       type="button"
                       variant="ghost"
                       size="sm"
+                      disabled={isEditing}
                       onClick={() => setPendingRemoval(letter)}
                     >
                       <Trash2 aria-hidden />
