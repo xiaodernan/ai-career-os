@@ -21,6 +21,9 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 /**
  * Audited status transitions: the {@code from} value in the timeline event must be the
@@ -157,5 +160,42 @@ class ApplicationServiceTest {
         service.update(userId, appId, new UpdateApplicationRequest(null, null, null, at, true, null, null));
 
         assertThat(app.getReminderAt()).isEqualTo(at);
+    }
+
+    /**
+     * The job page asks one posting's rows so it can say "already in the pipeline" before the
+     * reader presses Add a second time. The narrow query must be the one that runs -- falling
+     * back to the whole board and filtering in memory would scan pages the posting is not on.
+     */
+    @Test
+    void listNarrowsToThePostingWhenAJobIdIsGiven() {
+        UUID jobId = UUID.randomUUID();
+        Pageable pageable = PageRequest.of(0, 1);
+        when(applications.findByUserIdAndJobIdOrderByUpdatedAtDescIdAsc(userId, jobId, pageable))
+                .thenReturn(Page.empty(pageable));
+
+        var page = service.list(userId, null, jobId, pageable);
+
+        assertThat(page.items()).isEmpty();
+        verify(applications).findByUserIdAndJobIdOrderByUpdatedAtDescIdAsc(userId, jobId, pageable);
+        verify(applications, never()).findByUserIdOrderByUpdatedAtDescIdAsc(any(), any());
+    }
+
+    /** A status alongside the posting keeps both narrowings instead of silently dropping one. */
+    @Test
+    void listKeepsTheStatusWhenItComesWithAPosting() {
+        UUID jobId = UUID.randomUUID();
+        Pageable pageable = PageRequest.of(0, 1);
+        when(applications.findByUserIdAndJobIdAndStatusOrderByPositionAscIdAsc(
+                        userId, jobId, "applied", pageable))
+                .thenReturn(Page.empty(pageable));
+
+        var page = service.list(userId, "applied", jobId, pageable);
+
+        assertThat(page.items()).isEmpty();
+        verify(applications).findByUserIdAndJobIdAndStatusOrderByPositionAscIdAsc(
+                userId, jobId, "applied", pageable);
+        verify(applications, never()).findByUserIdAndJobIdOrderByUpdatedAtDescIdAsc(
+                any(), any(), any());
     }
 }

@@ -314,7 +314,16 @@ export function useNotifications() {
 
 /* ------------------------------- applications ------------------------------ */
 
-export function useApplications(params?: { page?: number; size?: number; status?: string }) {
+export function useApplications(params?: {
+  page?: number;
+  size?: number;
+  status?: string;
+  /**
+   * One posting's rows. The job detail page asks its own posting so the action bar can say
+   * "already in the pipeline" -- a title search would have to walk pages the posting is not on.
+   */
+  jobId?: string;
+}) {
   return useQuery({
     queryKey: ["applications", params],
     queryFn: async (): Promise<Page<Application>> =>

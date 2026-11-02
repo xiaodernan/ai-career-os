@@ -46,7 +46,7 @@ import {
 } from "@/components/jobs/match-panel";
 import { TailorPanel } from "@/components/jobs/tailor-panel";
 import { CoverLetterPanel } from "@/components/jobs/cover-letter-panel";
-import { useJob } from "@/lib/hooks/resources";
+import { useApplications, useJob } from "@/lib/hooks/resources";
 import { useCreateApplication, useCreateInterviewSession, useRunJobMatch } from "@/lib/hooks/actions";
 import { list as listOf, pick, rec, str } from "@/lib/api/normalize";
 import { remoteTypeWord, interviewModeName, seniorityWord, salaryBandWord, requirementPriorityWord } from "@/lib/status-words";
@@ -54,6 +54,7 @@ import { useLocale } from "@/lib/i18n/locale-context";
 import type { Evidence, JdRequirement, PreparationItem, SkillGap } from "@/lib/api/types";
 import { normalizeJdParsed } from "@/lib/api/normalize";
 import { INTERVIEW_MODES } from "@/lib/interview-modes";
+import { pipelineApplication, stageLabel } from "@/lib/pipeline";
 
 export default function JobDetailPage() {
   const params = useParams<{ id: string }>();
@@ -64,10 +65,15 @@ export default function JobDetailPage() {
   const matchRun = useRunJobMatch(id ?? "");
   const addApplication = useCreateApplication();
   const startInterview = useCreateInterviewSession();
+  // The action bar's Add button is a promise that pressing it adds something. If this posting is
+  // already on the board, the promise is false -- pressing it a second time would file a duplicate
+  // card -- so the button becomes a link to the card that already exists.
+  const pipeline = useApplications(id ? { jobId: id, size: 1 } : undefined);
 
   const data = query.data;
   const job = data?.job;
   const match = data?.match ?? null;
+  const inPipeline = pipelineApplication(pipeline.data?.items, job?.id);
 
   /* JD extraction may arrive as a structured object or free text.
    * JobDetail.jd is a JdItem — the extracted dict is nested under `parsed`,
@@ -281,23 +287,37 @@ export default function JobDetailPage() {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <Button
-              variant="ghost"
-              size="sm"
-              loading={addApplication.isPending}
-              onClick={() =>
-                addApplication.mutate({
-                  jobId: job.id,
-                  companyId: job.companyId || undefined,
-                  companyName: job.company?.name ?? job.companyName ?? undefined,
-                  title: job.title,
-                  status: "applied",
-                })
-              }
-            >
-              <Plus aria-hidden />
-              {t("jobs.detail.addToPipeline")}
-            </Button>
+            {inPipeline ? (
+              <Button
+                variant="outline"
+                size="sm"
+                asChild
+                title={t("jobs.detail.inPipelineHint")}
+              >
+                <Link href={`/applications?application=${inPipeline.id}`}>
+                  <Briefcase aria-hidden />
+                  {t("jobs.detail.inPipeline", { stage: stageLabel(t, inPipeline.status) })}
+                </Link>
+              </Button>
+            ) : (
+              <Button
+                variant="ghost"
+                size="sm"
+                loading={addApplication.isPending}
+                onClick={() =>
+                  addApplication.mutate({
+                    jobId: job.id,
+                    companyId: job.companyId || undefined,
+                    companyName: job.company?.name ?? job.companyName ?? undefined,
+                    title: job.title,
+                    status: "applied",
+                  })
+                }
+              >
+                <Plus aria-hidden />
+                {t("jobs.detail.addToPipeline")}
+              </Button>
+            )}
 
             {postingHref && (
               <Button variant="link" size="sm" asChild className="ml-auto">

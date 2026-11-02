@@ -21,6 +21,13 @@ public interface ApplicationRepository extends JpaRepository<Application, UUID> 
 
     List<Application> findByUserIdAndJobId(UUID userId, UUID jobId);
 
+    Page<Application> findByUserIdAndJobIdOrderByUpdatedAtDescIdAsc(UUID userId, UUID jobId,
+                                                                   Pageable pageable);
+
+    Page<Application> findByUserIdAndJobIdAndStatusOrderByPositionAscIdAsc(UUID userId, UUID jobId,
+                                                                           String status,
+                                                                           Pageable pageable);
+
     /**
      * The cards a reply's employer names (roadmap 37.3), case aside and nothing else: a match
      * that is not the same name is a guess, and a guess that files a reply on the wrong card is

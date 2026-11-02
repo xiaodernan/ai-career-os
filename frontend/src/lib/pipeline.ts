@@ -122,6 +122,21 @@ export function stageLabel(t: TranslateFn, status: string): string {
   return translated === key ? STAGE_META[known].label : translated;
 }
 
+/**
+ * The application a job page should point at, if this posting already has one.
+ *
+ * The page asks the server for this posting's rows (`?jobId=`), but the id is checked again
+ * here: a response read while the route param was still settling, or a backend that ignored
+ * the filter, must not turn another posting's card into "already in the pipeline".
+ */
+export function pipelineApplication<T extends { jobId?: string | null }>(
+  items: readonly T[] | undefined,
+  jobId: string | null | undefined
+): T | undefined {
+  if (!jobId) return undefined;
+  return items?.find((item) => item.jobId === jobId);
+}
+
 /** The stage's one-line explanation, in the reader's language. */
 export function stageBlurb(t: TranslateFn, status: string): string {
   const known = status as ApplicationStatus;

@@ -48,10 +48,21 @@ public class ApplicationService {
     }
 
     @Transactional(readOnly = true)
-    public PageDTO<ApplicationItem> list(UUID userId, String status, Pageable pageable) {
-        var page = (status == null || status.isBlank())
-                ? applications.findByUserIdOrderByUpdatedAtDescIdAsc(userId, pageable)
-                : applications.findByUserIdAndStatusOrderByPositionAscIdAsc(userId, status, pageable);
+    public PageDTO<ApplicationItem> list(UUID userId, String status, UUID jobId, Pageable pageable) {
+        // `jobId` is the reading side of "did I already apply to this posting": the job page asks
+        // one posting's rows and opens the newest, instead of scanning pages the way a title
+        // search would have to. A status still narrows the same posting when both are given.
+        boolean hasStatus = status != null && !status.isBlank();
+        var page = jobId != null
+                ? (hasStatus
+                        ? applications.findByUserIdAndJobIdAndStatusOrderByPositionAscIdAsc(
+                                userId, jobId, status, pageable)
+                        : applications.findByUserIdAndJobIdOrderByUpdatedAtDescIdAsc(
+                                userId, jobId, pageable))
+                : (hasStatus
+                        ? applications.findByUserIdAndStatusOrderByPositionAscIdAsc(
+                                userId, status, pageable)
+                        : applications.findByUserIdOrderByUpdatedAtDescIdAsc(userId, pageable));
         return PageDTO.from(page, ApplicationService::toItem);
     }
 

@@ -5,6 +5,7 @@ import {
   APPLICATION_STAGES,
   isTerminal,
   pickerStages,
+  pipelineApplication,
   STAGE_ORDER,
   stageBlurb,
   stageLabel,
@@ -24,6 +25,32 @@ describe("stageMeta", () => {
     expect(unknown.badgeVariant).toBe("outline");
     expect(unknown.label).toBe("ghost");
     expect(stageMeta("").label).toBe("Unknown");
+  });
+});
+
+/**
+ * 47.3's lookup. The server narrows by `?jobId=`, but the page still asks "does this row name
+ * the posting in the URL" -- an unfiltered page can never become a false "already in the
+ * pipeline" badge, and a missing id asks nothing at all.
+ */
+describe("pipelineApplication", () => {
+  const posting = "job-1";
+  const rows = [
+    { id: "app-1", jobId: "job-1", status: "applied" },
+    { id: "app-2", jobId: "job-2", status: "saved" },
+  ];
+
+  it("finds the row that names this posting", () => {
+    expect(pipelineApplication(rows, posting)?.id).toBe("app-1");
+  });
+
+  it("refuses a row filed on another posting", () => {
+    expect(pipelineApplication(rows, "job-3")).toBeUndefined();
+  });
+
+  it("asks nothing without an id or a page", () => {
+    expect(pipelineApplication(rows, undefined)).toBeUndefined();
+    expect(pipelineApplication(undefined, posting)).toBeUndefined();
   });
 });
 

@@ -3874,6 +3874,16 @@ was attached" and "what was attached can no longer be read".
   attached stays quiet: the count cannot tell an untouched application from a
   broken packet, and it does not pretend to. 3 pure-function tests.)
 
+- [x] **47.3** The job page knows it is already in the pipeline.
+
+  (`GET /applications` takes `jobId`, so the detail page asks its own posting instead
+  of walking the board; a status given beside it narrows the same posting rather than
+  being silently dropped. The action bar's Add button becomes `In pipeline - Applied`,
+  a link to that card's editor through `?application=<id>`, because a second press
+  would file a duplicate. The narrow query is the one that runs -- a page of the
+  whole board filtered in memory would miss a posting that is not on it. 2 service
+  tests.)
+
 - [x] **46.2** That sentence opens the letter it is talking about.
 
   (`AttentionItem` carries the letter's own id as `replyId`, read in the same

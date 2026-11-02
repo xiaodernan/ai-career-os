@@ -43,9 +43,10 @@ public class ApplicationController {
     @GetMapping
     public PageDTO<ApplicationItem> list(@CurrentUser AuthUser user,
                                          @RequestParam(required = false) String status,
+                                         @RequestParam(required = false) UUID jobId,
                                          @RequestParam(defaultValue = "0") int page,
                                          @RequestParam(defaultValue = "50") int size) {
-        return applications.list(user.id(), status, Paging.of(page, size).pageable());
+        return applications.list(user.id(), status, jobId, Paging.of(page, size).pageable());
     }
 
     @PostMapping
