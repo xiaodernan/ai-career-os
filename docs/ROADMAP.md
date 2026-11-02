@@ -3777,6 +3777,21 @@ sentence of its own, and the tests read each one rather than the shape of the li
   line the server wrote (`Re: interview`), the link to `/replies?mail=...`, and the unread
   count. Page tests only: the server was already sending both kinds.)
 
+- [x] **45.2** The inbox is read one kind at a time, and its empty copy names every
+  arrival.
+
+  (The list opens with a row of filter chips -- `All` plus each kind the inbox is
+  actually holding, in the server's order, each with its row count -- and the chosen
+  chip is the pressed one. The choice lives in the address bar through `useUrlState`,
+  so a reload or a shared link lands on the same view; `lib/inbox-filter.ts` is the
+  pure half: `kindsPresent` lists only the kinds present, `asInboxKind` adopts only a
+  kind the page can name (a stale `?kind=replied` shows the whole inbox rather than an
+  empty one that looks like a quiet morning), and `rowsUnder` keeps every row when no
+  kind is chosen. The empty copy promised three sources and the inbox had grown to
+  six, so it now names them all -- the failed pull, the pull that created postings, the
+  saved search, the reply -- and the description above the list says the same. 5 unit
+  tests and 6 SSR tests; 947 frontend tests in 92 files.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

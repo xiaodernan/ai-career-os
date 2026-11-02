@@ -1066,13 +1066,16 @@ export const translations = {
     notifications: {
       title: "Notifications",
       description:
-        "Reminders that came due, applications that went quiet, and pulls that need a look — in the order they happened.",
+        "Reminders that came due, applications that went quiet, pulls that need a look, saved searches the board answered, and recruiter replies — in the order they happened.",
       markAllRead: "Mark all read",
       unreadBadge: "{count} unread",
       allRead: "Everything here is read.",
+      filterAll: "All",
+      filterByKind: "Filter by kind",
+      filterEmpty: "Nothing under this filter right now.",
       empty: "Nothing needs your attention right now.",
       emptyDescription:
-        "A reminder that comes due, an application that goes quiet, or a failed feed pull will appear here.",
+        "A reminder that comes due, an application that goes quiet, a failed feed pull, a pull that created postings, a saved search that finds new postings, or a reply from a recruiter will appear here.",
       unavailable: "The inbox couldn't be loaded.",
       kindReminder: "Reminder",
       kindStale: "Gone quiet",
@@ -3855,12 +3858,17 @@ export const translations = {
     // 通知中心（19.3）
     notifications: {
       title: "通知",
-      description: "已到期的提醒、久无动静的申请，以及需要看一眼的拉取——按发生时间排列。",
+      description:
+        "已到期的提醒、久无动静的申请、需要看一眼的拉取、职位板回答的已保存搜索，以及招聘方的回复——按发生时间排列。",
       markAllRead: "全部标为已读",
       unreadBadge: "{count} 条未读",
       allRead: "这里的都已读过。",
+      filterAll: "全部",
+      filterByKind: "按类型筛选",
+      filterEmpty: "这个筛选下暂时没有条目。",
       empty: "现在没有需要你关注的事项。",
-      emptyDescription: "到期的提醒、久无动静的申请，或失败的订阅拉取，都会出现在这里。",
+      emptyDescription:
+        "到期的提醒、久无动静的申请、失败的订阅拉取、带来新职位的拉取、找到新职位的已保存搜索，或招聘方的回复，都会出现在这里。",
       unavailable: "通知列表加载失败。",
       kindReminder: "提醒",
       kindStale: "久无动静",

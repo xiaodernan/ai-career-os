@@ -167,6 +167,11 @@ describe("the notifications page", () => {
     expect(html).toContain('href="/replies?mail=0b9e4d1a-7c2f-4e6b-9a3d-5f8c1b2e4a6d"');
     expect(html).toContain("4 unread");
     expect(html).toContain("Mark all read");
+    // The filter row names every kind the inbox is holding, and "All" is the view it opens on.
+    expect(html).toContain('aria-label="Filter by kind"');
+    expect(html).toContain(">All</button>");
+    expect(html.match(/aria-pressed="true"/g)).toHaveLength(1);
+    expect(html.match(/aria-pressed="false"/g)).toHaveLength(6);
     expect(html).toContain(`href="/applications?application=${APP_ID}"`);
     expect(html).toContain('aria-label="Mark Backend engineer read"');
     expect(html).toContain('aria-label="Dismiss Backend engineer"');
@@ -226,6 +231,8 @@ describe("the notifications page", () => {
     expect(html).toContain("Re: 面试");
     expect(html).toContain("2 条未读");
     expect(html).toContain("全部标为已读");
+    expect(html).toContain('aria-label="按类型筛选"');
+    expect(html).toContain(">全部</button>");
     expect(html).toContain("推迟到明早");
     expect(html).toContain("清除");
     expect(html).not.toContain("Your reminder for");
@@ -242,9 +249,25 @@ describe("the notifications page", () => {
     const empty = render();
     expect(empty).toContain("Nothing needs your attention right now.");
     expect(empty).toContain(
-      "A reminder that comes due, an application that goes quiet, or a failed feed pull will appear here."
+      "A reminder that comes due, an application that goes quiet, a failed feed pull, a pull that created postings, a saved search that finds new postings, or a reply from a recruiter will appear here."
     );
     expect(empty).toContain("Everything here is read.");
+    // An empty inbox has no kinds to filter by, so it offers no filter.
+    expect(empty).not.toContain('aria-label="Filter by kind"');
+  });
+
+  it("offers a chip only for the kinds the inbox is holding", () => {
+    state.inbox = {
+      data: { items: [ITEMS[3]], unread: 1 },
+      isSuccess: true,
+      isError: false,
+    };
+    const html = render();
+    // "All" and the one kind present; no chip for a kind that is not in the list.
+    expect(html.match(/aria-pressed="true"/g)).toHaveLength(1);
+    expect(html.match(/aria-pressed="false"/g)).toHaveLength(1);
+    expect(html).toContain("New postings from Boards: 3.");
+    expect(html).not.toContain("Saved search");
   });
 
   it("names a failed read rather than pretending the inbox is empty", () => {

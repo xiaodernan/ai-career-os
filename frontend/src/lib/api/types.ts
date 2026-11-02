@@ -1068,7 +1068,7 @@ export interface IngestionRunDetail {
  */
 export interface NotificationItem {
   key: string;
-  /** `reminder` | `stale` | `ingestion_failed` | `ingestion_created` | `reply`. */
+  /** `reminder` | `stale` | `ingestion_failed` | `ingestion_created` | `saved_search` | `reply`. */
   kind: string;
   title: string;
   subject: string;

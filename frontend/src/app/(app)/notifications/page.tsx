@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { reminderPatch, snoozeReminder } from "@/lib/application-edit";
 import { relativeTime } from "@/lib/format";
+import { asInboxKind, kindsPresent, rowsUnder } from "@/lib/inbox-filter";
+import { useUrlState } from "@/lib/hooks/use-url-state";
 import { stageLabel } from "@/lib/pipeline";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { useUpdateApplication } from "@/lib/hooks/actions";
@@ -43,6 +45,9 @@ import type { NotificationItem } from "@/lib/api/types";
  */
 
 type Translate = (key: string, vars?: Record<string, string | number>) => string;
+
+/** The address bar's filter, absent until the reader picks one. */
+const VIEW_DEFAULTS: { kind?: string } = { kind: undefined };
 
 function kindKey(kind: string): string {
   switch (kind) {
@@ -121,8 +126,11 @@ export default function NotificationsPage() {
   const markAll = useMarkAllNotificationsRead();
   const dismiss = useDismissNotification();
   const settleReminder = useUpdateApplication();
+  const [view, setView] = useUrlState<{ kind?: string }>(VIEW_DEFAULTS);
+  const kind = asInboxKind(view.kind);
 
   const items = inbox.data?.items ?? [];
+  const rows = rowsUnder(items, kind);
   const unread = inbox.data?.unread ?? 0;
   const busy =
     markRead.isPending || markAll.isPending || dismiss.isPending || settleReminder.isPending;
@@ -158,116 +166,154 @@ export default function NotificationsPage() {
       <Card>
         <CardContent className="p-6">
           {items.length > 0 ? (
-            <ul className="space-y-2">
-              {items.map((item) => {
-                const name = nameOf(item, t);
-                const applicationId =
-                  item.kind === "reminder" ? reminderApplicationId(item.key) : null;
-                return (
-                  <li
-                    key={item.key}
-                    className="rounded-lg border border-border/70 p-3"
+            <>
+              {/* One kind at a time (45.2): the inbox holds six kinds of signal, and a
+                  reader looking for one of them should not have to read the other five.
+                  Only the kinds actually present get a chip, and the address bar keeps
+                  the choice so a reload lands on the same view. */}
+              <div
+                className="mb-4 flex flex-wrap items-center gap-1.5"
+                role="group"
+                aria-label={t("notifications.filterByKind")}
+              >
+                <Button
+                  size="sm"
+                  variant={kind === null ? "secondary" : "ghost"}
+                  aria-pressed={kind === null}
+                  onClick={() => setView({ kind: undefined })}
+                >
+                  {t("notifications.filterAll")}
+                </Button>
+                {kindsPresent(items).map((group) => (
+                  <Button
+                    key={group.kind}
+                    size="sm"
+                    variant={kind === group.kind ? "secondary" : "ghost"}
+                    aria-pressed={kind === group.kind}
+                    onClick={() => setView({ kind: group.kind })}
                   >
-                    <div className="flex flex-wrap items-start justify-between gap-2">
-                      <div className="min-w-0 space-y-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Badge variant={kindVariant(item.kind)}>
-                            {t(kindKey(item.kind))}
-                          </Badge>
-                          {!item.read && (
-                            <span
-                              className="size-1.5 rounded-full bg-primary"
-                              aria-hidden
-                            />
-                          )}
-                          {item.status &&
-                            (item.kind === "reminder" || item.kind === "stale") && (
+                    {t(kindKey(group.kind))}
+                    <span className="text-xs text-muted-foreground">{group.count}</span>
+                  </Button>
+                ))}
+              </div>
+              {rows.length > 0 ? (
+                <ul className="space-y-2">
+                  {rows.map((item) => {
+                    const name = nameOf(item, t);
+                    const applicationId =
+                      item.kind === "reminder" ? reminderApplicationId(item.key) : null;
+                    return (
+                      <li
+                        key={item.key}
+                        className="rounded-lg border border-border/70 p-3"
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div className="min-w-0 space-y-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <Badge variant={kindVariant(item.kind)}>
+                                {t(kindKey(item.kind))}
+                              </Badge>
+                              {!item.read && (
+                                <span
+                                  className="size-1.5 rounded-full bg-primary"
+                                  aria-hidden
+                                />
+                              )}
+                              {item.status &&
+                                (item.kind === "reminder" || item.kind === "stale") && (
+                                  <span className="text-xs text-muted-foreground">
+                                    {stageLabel(t, item.status)}
+                                  </span>
+                                )}
                               <span className="text-xs text-muted-foreground">
-                                {stageLabel(t, item.status)}
+                                {relativeTime(item.at, locale)}
                               </span>
+                            </div>
+                            <p className="text-sm">{lineOf(item, t)}</p>
+                            {item.subject && (
+                              <p className="text-xs text-muted-foreground">{item.subject}</p>
                             )}
-                          <span className="text-xs text-muted-foreground">
-                            {relativeTime(item.at, locale)}
-                          </span>
+                            {item.note && <p className="text-xs text-danger">{item.note}</p>}
+                          </div>
+                          <div className="flex shrink-0 items-center gap-1">
+                            {/* The reminder's two answers (43.2). The clear travels through the same
+                                picker-shaped patch as the dialog: emptying a reminder is spelled as
+                                an explicit command there, and this page must not invent a second
+                                spelling of it. */}
+                            {applicationId && (
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  disabled={busy}
+                                  onClick={() =>
+                                    settleReminder.mutate({
+                                      id: applicationId,
+                                      patch: { reminderAt: snoozeReminder() },
+                                    })
+                                  }
+                                >
+                                  {t("notifications.snoozeReminder")}
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  disabled={busy}
+                                  onClick={() =>
+                                    settleReminder.mutate({
+                                      id: applicationId,
+                                      patch: reminderPatch(item.at, ""),
+                                    })
+                                  }
+                                >
+                                  {t("notifications.clearReminder")}
+                                </Button>
+                              </>
+                            )}
+                            {item.link && (
+                              <Button asChild size="sm" variant="ghost">
+                                <Link
+                                  href={item.link}
+                                  aria-label={t("notifications.openAria", { title: name })}
+                                >
+                                  <ArrowUpRight aria-hidden />
+                                  {t("notifications.open")}
+                                </Link>
+                              </Button>
+                            )}
+                            {!item.read && (
+                              <Button
+                                size="icon-sm"
+                                variant="ghost"
+                                disabled={busy}
+                                aria-label={t("notifications.markReadAria", { title: name })}
+                                onClick={() => markRead.mutate([item.key])}
+                              >
+                                <Check aria-hidden />
+                              </Button>
+                            )}
+                            <Button
+                              size="icon-sm"
+                              variant="ghost"
+                              disabled={busy}
+                              aria-label={t("notifications.dismissAria", { title: name })}
+                              onClick={() => dismiss.mutate(item.key)}
+                            >
+                              <X aria-hidden />
+                            </Button>
+                          </div>
                         </div>
-                        <p className="text-sm">{lineOf(item, t)}</p>
-                        {item.subject && (
-                          <p className="text-xs text-muted-foreground">{item.subject}</p>
-                        )}
-                        {item.note && <p className="text-xs text-danger">{item.note}</p>}
-                      </div>
-                      <div className="flex shrink-0 items-center gap-1">
-                        {/* The reminder's two answers (43.2). The clear travels through the same
-                            picker-shaped patch as the dialog: emptying a reminder is spelled as
-                            an explicit command there, and this page must not invent a second
-                            spelling of it. */}
-                        {applicationId && (
-                          <>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              disabled={busy}
-                              onClick={() =>
-                                settleReminder.mutate({
-                                  id: applicationId,
-                                  patch: { reminderAt: snoozeReminder() },
-                                })
-                              }
-                            >
-                              {t("notifications.snoozeReminder")}
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              disabled={busy}
-                              onClick={() =>
-                                settleReminder.mutate({
-                                  id: applicationId,
-                                  patch: reminderPatch(item.at, ""),
-                                })
-                              }
-                            >
-                              {t("notifications.clearReminder")}
-                            </Button>
-                          </>
-                        )}
-                        {item.link && (
-                          <Button asChild size="sm" variant="ghost">
-                            <Link
-                              href={item.link}
-                              aria-label={t("notifications.openAria", { title: name })}
-                            >
-                              <ArrowUpRight aria-hidden />
-                              {t("notifications.open")}
-                            </Link>
-                          </Button>
-                        )}
-                        {!item.read && (
-                          <Button
-                            size="icon-sm"
-                            variant="ghost"
-                            disabled={busy}
-                            aria-label={t("notifications.markReadAria", { title: name })}
-                            onClick={() => markRead.mutate([item.key])}
-                          >
-                            <Check aria-hidden />
-                          </Button>
-                        )}
-                        <Button
-                          size="icon-sm"
-                          variant="ghost"
-                          disabled={busy}
-                          aria-label={t("notifications.dismissAria", { title: name })}
-                          onClick={() => dismiss.mutate(item.key)}
-                        >
-                          <X aria-hidden />
-                        </Button>
-                      </div>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <p className="py-6 text-center text-sm text-muted-foreground">
+                  {t("notifications.filterEmpty")}
+                </p>
+              )}
+            </>
           ) : inbox.isSuccess ? (
             <div className="space-y-1 py-6 text-center">
               <p className="text-sm font-medium">{t("notifications.empty")}</p>
