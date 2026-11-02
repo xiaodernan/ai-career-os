@@ -4050,6 +4050,23 @@ that this posting already held three drafts and no way to reach them from where 
   on it. An application with no posting keeps the plain hint -- there is nowhere honest to send
   it. 1 SSR test.)
 
+## Epic 52 -- Everything the reader kept is findable
+
+`GET /search` has answered across six groups for a while, but the letters the reader kept (47.4)
+were not one of them: a draft could only be found by opening the card it was filed under. And the
+endpoint has never had a surface of its own -- the ⌘K palette was never built on the frontend, so
+the whole cross-entity search has stayed invisible.
+
+- [x] **52.1** The letters answer a search.
+
+  (`SearchResponse` gains a seventh group, `letters`: the letter's id, the application it belongs
+  to, the posting's title, a 180-character snippet and `updated_at`. Matching reads the letter's
+  own text *or* the posting's title, so "Acme" finds the letter written for Acme; the sort key is
+  `updated_at`, so a correction moves its own letter to the top of the group. The application id
+  is what makes a hit openable -- the palette's only honest destination is the board drawer
+  (51.2). The repository tests pin the group's bound parameters, its ordering tie-break and the
+  join that carries the posting. 2 repository tests.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

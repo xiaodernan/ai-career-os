@@ -82,6 +82,11 @@ class SearchRepositoryTest {
         bound.clear();
         repo.applications(userId, "java", 5);
         assertThat(placeholders(lastSql)).isEqualTo(bound);
+
+        bound.clear();
+        repo.letters(userId, "java", 5);
+        assertThat(placeholders(lastSql)).isEqualTo(bound);
+        assertThat(bound).containsExactlyInAnyOrder("userId", "qLike", "limit");
     }
 
     @Test
@@ -106,6 +111,7 @@ class SearchRepositoryTest {
         assertThat(boundOf(r -> r.resumes(userId, "q", 1))).contains("userId");
         assertThat(boundOf(r -> r.notes(userId, "q", 1))).contains("userId");
         assertThat(boundOf(r -> r.applications(userId, "q", 1))).contains("userId");
+        assertThat(boundOf(r -> r.letters(userId, "q", 1))).contains("userId");
         assertThat(boundOf(r -> r.conversations(userId, "q", 1))).contains("userId");
         assertThat(boundOf(r -> r.companies("q", 1))).doesNotContain("userId");
         // jobs are catalog rows: :userId is not in the statement even though the caller has one
@@ -166,6 +172,8 @@ class SearchRepositoryTest {
         assertThat(orderByClause(lastSql)).isEqualTo("cv.updated_at DESC, cv.id ASC");
         repo.applications(userId, "java", 5);
         assertThat(orderByClause(lastSql)).isEqualTo("updated_at DESC, id ASC");
+        repo.letters(userId, "java", 5);
+        assertThat(orderByClause(lastSql)).isEqualTo("l.updated_at DESC, l.id ASC");
     }
 
     /** The outer ORDER BY of a captured statement, whitespace-collapsed, without its LIMIT. */
@@ -193,6 +201,22 @@ class SearchRepositoryTest {
         return new HashSet<>(bound);
     }
 
+    /**
+     * A letter hit has to name the application it belongs to: the honest way to open one is the
+     * board drawer deep link (`?application=<id>`), and a letter alone does not carry it. The
+     * statement joins the posting too, because a reader searching a company name expects the
+     * letter written for that company to answer.
+     */
+    @Test
+    void theLettersStatementCarriesTheApplicationAndThePostingItWasWrittenFor() {
+        repo.letters(userId, "java", 5);
+
+        assertThat(lastSql).contains("l.application_id");
+        assertThat(lastSql).contains("JOIN applications a ON a.id = l.application_id");
+        assertThat(lastSql.replaceAll("\\s+", " "))
+                .contains("COALESCE(a.title, '') ILIKE :qLike");
+    }
+
     @Test
     void everyLikeMatchTreatsTheTermAsALiteralNotAPattern() {
         // '%'||:q||'%' hands user text to LIKE verbatim: "a_b" then matches "axb", "%"
@@ -204,6 +228,7 @@ class SearchRepositoryTest {
         calls.add(r -> r.notes(userId, "a_b", 1));
         calls.add(r -> r.conversations(userId, "a_b", 1));
         calls.add(r -> r.applications(userId, "a_b", 1));
+        calls.add(r -> r.letters(userId, "a_b", 1));
         for (java.util.function.Consumer<SearchRepository> call : calls) {
             boundOf(call);
             assertThat(lastSql).as("raw term used as a LIKE pattern").doesNotContain("'%'||:q||'%'");

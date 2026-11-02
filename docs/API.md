@@ -662,7 +662,7 @@ strings, and `lastTouchAt` is the user's claim about when contact last happened.
 | GET | `/activity/runs` | agent runs (`?page=&size=&agent=`) |
 | GET | `/activity/runs/{id}` | run + ordered traces (AI Activity detail) |
 | GET | `/ai-usage/summary` | tokens, requests, cached tokens, estimated cost |
-| GET | `/search` | global ⌘K search (`?q=`, required) across jobs/companies/resumes/notes/conversations/applications — the jobs channel is hybrid-ranked, like `/jobs?sort=relevance` |
+| GET | `/search` | global ⌘K search (`?q=`, required) across jobs/companies/resumes/notes/conversations/applications/letters — the jobs channel is hybrid-ranked, like `/jobs?sort=relevance`; a letter hit carries `id`, `applicationId`, `jobTitle`, `snippet` and `updatedAt`, so the palette can open the board drawer on it (52.1) |
 | GET | `/ai/stream/{taskId}` | SSE relay of an ai-service task |
 
 ## 3. Internal API — ai-service

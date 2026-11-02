@@ -6,6 +6,7 @@ import com.careeros.search.dto.SearchDtos.ApplicationHit;
 import com.careeros.search.dto.SearchDtos.CompanyHit;
 import com.careeros.search.dto.SearchDtos.ConversationHit;
 import com.careeros.search.dto.SearchDtos.JobHit;
+import com.careeros.search.dto.SearchDtos.LetterHit;
 import com.careeros.search.dto.SearchDtos.NoteHit;
 import com.careeros.search.dto.SearchDtos.ResumeHit;
 import jakarta.persistence.EntityManager;
@@ -209,6 +210,27 @@ public class SearchRepository {
                 """;
         return rows(sql, params(userId, q).set("limit", limit), (row) ->
                 new ApplicationHit((UUID) row[0], (String) row[1], (String) row[2], (String) row[3],
+                        Times.offset(row[4])));
+    }
+
+    /**
+     * The letters the reader kept, matched by their own text or by the posting's title (52.1).
+     * `updated_at` is the sort key, so a correction moves its letter to the top of the group --
+     * which is what the reader who just fixed that sentence expects to find.
+     */
+    public List<LetterHit> letters(UUID userId, String q, int limit) {
+        String sql = """
+                SELECT l.id, l.application_id, COALESCE(a.title, ''), left(l.body, 180), l.updated_at
+                  FROM application_letters l
+                  JOIN applications a ON a.id = l.application_id
+                 WHERE l.user_id = :userId
+                   AND (l.body ILIKE :qLike ESCAPE '!'
+                        OR COALESCE(a.title, '') ILIKE :qLike ESCAPE '!')
+                 ORDER BY l.updated_at DESC, l.id ASC
+                 LIMIT :limit
+                """;
+        return rows(sql, params(userId, q).set("limit", limit), (row) ->
+                new LetterHit((UUID) row[0], (UUID) row[1], (String) row[2], (String) row[3],
                         Times.offset(row[4])));
     }
 

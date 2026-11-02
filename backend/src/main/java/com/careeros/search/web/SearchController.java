@@ -24,7 +24,8 @@ public class SearchController {
     public SearchResponse search(@CurrentUser AuthUser user, @RequestParam String q) {
         if (q == null || q.isBlank()) {
             return new SearchResponse("", java.util.List.of(), java.util.List.of(), java.util.List.of(),
-                    java.util.List.of(), java.util.List.of(), java.util.List.of());
+                    java.util.List.of(), java.util.List.of(), java.util.List.of(),
+                    java.util.List.of());
         }
         return search.search(user.id(), q);
     }

@@ -32,6 +32,7 @@ public class SearchService {
                 search.resumes(userId, term, GROUP_CAP),
                 search.notes(userId, term, GROUP_CAP),
                 search.conversations(userId, term, GROUP_CAP),
-                search.applications(userId, term, GROUP_CAP));
+                search.applications(userId, term, GROUP_CAP),
+                search.letters(userId, term, GROUP_CAP));
     }
 }

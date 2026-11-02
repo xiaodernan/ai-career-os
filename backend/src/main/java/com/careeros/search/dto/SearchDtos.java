@@ -30,12 +30,21 @@ public final class SearchDtos {
                                  OffsetDateTime updatedAt) {
     }
 
+    /**
+     * A kept cover letter, found by its own words or by the posting it was written for. The
+     * application id is what makes the hit actionable: the board's drawer opens on it (51.2).
+     */
+    public record LetterHit(UUID id, UUID applicationId, String jobTitle, String snippet,
+                            OffsetDateTime updatedAt) {
+    }
+
     public record SearchResponse(String query,
                                  List<JobHit> jobs,
                                  List<CompanyHit> companies,
                                  List<ResumeHit> resumes,
                                  List<NoteHit> notes,
                                  List<ConversationHit> conversations,
-                                 List<ApplicationHit> applications) {
+                                 List<ApplicationHit> applications,
+                                 List<LetterHit> letters) {
     }
 }
