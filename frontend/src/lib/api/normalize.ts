@@ -1135,6 +1135,8 @@ function normalizeAttention(raw: unknown): AttentionItem | null {
     reason: str(raw, "reason"),
     reminderAt: str(raw, "reminderAt") ?? null,
     updatedAt: str(raw, "updatedAt") ?? null,
+    replySubject: str(raw, "replySubject") ?? null,
+    replyAt: str(raw, "replyAt") ?? null,
   };
 }
 

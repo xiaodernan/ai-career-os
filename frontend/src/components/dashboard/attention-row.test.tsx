@@ -60,6 +60,20 @@ describe("AttentionRow", () => {
     expect(html.match(/disabled=""/g)?.length).toBe(2);
   });
 
+  it("says a recruiter replied when the newest reply rides the row", () => {
+    const html = render({
+      ...stale,
+      replyAt: "2026-10-30T09:00:00Z",
+      replySubject: "Re: interview",
+    });
+    expect(html).toContain("dashboard.replyWaiting");
+    expect(html).toContain("Re: interview");
+  });
+
+  it("says nothing about a reply when none has landed", () => {
+    expect(render(due)).not.toContain("dashboard.replyWaiting");
+  });
+
   it("says no step rather than nothing when the row has no timestamp", () => {
     const html = renderToStaticMarkup(
       <AttentionRow row={{ id: "app-3", title: "Untitled" }} onSnooze={() => {}} onClear={() => {}} />

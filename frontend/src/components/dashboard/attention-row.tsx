@@ -64,6 +64,15 @@ export function AttentionRow({ row, busy = false, onSnooze, onClear }: Attention
                 ? t("dashboard.lastStep", { when: relativeTime(row.updatedAt, locale) })
                 : t("dashboard.noStep")}
           </span>
+          {/* The row's reason is the quiet window, but the newest reply is what makes the
+              application worth opening: a card that only says "no movement" while a recruiter
+              answered yesterday is telling the reader the wrong story. */}
+          {row.replyAt ? (
+            <span className="mt-0.5 block truncate text-xs text-foreground/80">
+              {t("dashboard.replyWaiting", { when: relativeTime(row.replyAt, locale) })}
+              {row.replySubject ? ` · ${row.replySubject}` : ""}
+            </span>
+          ) : null}
         </span>
       </Link>
       {/* Only a reminder that has come due can be answered here; a stale row has no reminder to

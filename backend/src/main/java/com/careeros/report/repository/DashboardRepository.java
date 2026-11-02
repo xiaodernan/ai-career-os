@@ -116,9 +116,16 @@ public class DashboardRepository {
                 SELECT a.id, a.title, COALESCE(c.name, a.company_name), a.status,
                        CASE WHEN a.reminder_at IS NOT NULL AND a.reminder_at <= now()
                             THEN 'reminder_due' ELSE 'stale' END,
-                       a.reminder_at, a.updated_at
+                       a.reminder_at, a.updated_at, r.subject, r.received_at
                   FROM applications a
                   LEFT JOIN companies c ON c.id = a.company_id
+                  LEFT JOIN LATERAL (
+                      SELECT m.subject, m.received_at
+                        FROM inbound_mails m
+                       WHERE m.application_id = a.id AND m.user_id = :userId
+                       ORDER BY m.received_at DESC, m.id DESC
+                       LIMIT 1
+                  ) r ON true
                  WHERE a.user_id = :userId
                  """ + "AND " + NEEDS_ATTENTION + """
                  ORDER BY (a.reminder_at IS NOT NULL AND a.reminder_at <= now()) DESC,
@@ -132,7 +139,8 @@ public class DashboardRepository {
         return ((List<Object[]>) query.getResultList()).stream()
                 .map(row -> new AttentionItem(
                         (UUID) row[0], (String) row[1], (String) row[2], (String) row[3],
-                        (String) row[4], Times.offset(row[5]), Times.offset(row[6])))
+                        (String) row[4], Times.offset(row[5]), Times.offset(row[6]),
+                        (String) row[7], Times.offset(row[8])))
                 .toList();
     }
 }

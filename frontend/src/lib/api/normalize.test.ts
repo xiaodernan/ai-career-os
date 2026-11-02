@@ -1103,6 +1103,8 @@ describe("normalizeDashboard", () => {
           reason: "reminder_due",
           reminderAt: "2026-09-20T09:00:00Z",
           updatedAt: "2026-09-18T09:00:00Z",
+          replySubject: "Re: interview",
+          replyAt: "2026-09-21T09:00:00Z",
         },
         { title: "row with no id" },
       ],
@@ -1117,6 +1119,8 @@ describe("normalizeDashboard", () => {
         reason: "reminder_due",
         reminderAt: "2026-09-20T09:00:00Z",
         updatedAt: "2026-09-18T09:00:00Z",
+        replySubject: "Re: interview",
+        replyAt: "2026-09-21T09:00:00Z",
       },
     ]);
   });

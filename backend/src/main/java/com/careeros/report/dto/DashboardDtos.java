@@ -48,7 +48,8 @@ public final class DashboardDtos {
      */
     public record AttentionItem(UUID id, String title, String companyName, String status,
                                 String reason, OffsetDateTime reminderAt,
-                                OffsetDateTime updatedAt) {
+                                OffsetDateTime updatedAt,
+                                String replySubject, OffsetDateTime replyAt) {
     }
 
     /**

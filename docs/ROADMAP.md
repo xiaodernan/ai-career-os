@@ -3824,6 +3824,25 @@ sentence of its own, and the tests read each one rather than the shape of the li
   because an action with nothing behind it is a dead button. 3 service tests, 1
   route test, and the doc census; 948 frontend tests in 92 files.)
 
+## Epic 46 -- The card says who is waiting
+
+The attention card's rows explain why an application is listed -- a reminder came
+due, or nothing has been logged for the window -- but a recruiter who answered
+yesterday is the one fact that makes the row worth opening. The row's reason stays
+the query's own; the newest reply simply rides alongside it, so the card stops
+telling a reader "no movement" while an answer sits in their inbox.
+
+- [x] **46.1** A reply on the application is named on the attention row.
+
+  (The attention query now takes the newest letter filed on each application -- a
+  `LEFT JOIN LATERAL` over `inbound_mails`, newest first, one row -- and the payload
+  carries its subject and moment as `replySubject` / `replyAt`. The row renders a
+  third line, `A recruiter replied 3 days ago - Re: interview`, under the
+  quiet-window line; an application with no letter renders exactly what it did
+  before. The predicate and the count are untouched: a reply is context, not a new
+  reason to need attention. 2 SSR tests, the normalizer's exact shape, and the
+  repository's column mapping; 950 frontend tests in 92 files.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

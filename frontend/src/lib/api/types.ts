@@ -715,6 +715,9 @@ export interface AttentionItem {
   reason?: string;
   reminderAt?: string | null;
   updatedAt?: string | null;
+  /** The newest reply on this application, when one has landed: its subject and moment. */
+  replySubject?: string | null;
+  replyAt?: string | null;
 }
 
 /**

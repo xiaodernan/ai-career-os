@@ -70,7 +70,8 @@ class DashboardServiceMetricsTest {
     void attentionRowsCarryTheSameWindowAsTheCountAndACap() {
         UUID applicationId = UUID.randomUUID();
         List<AttentionItem> items = List.of(new AttentionItem(applicationId, "Role", "Acme",
-                "applied", "reminder_due", OffsetDateTime.now(), OffsetDateTime.now()));
+                "applied", "reminder_due", OffsetDateTime.now(), OffsetDateTime.now(),
+                null, null));
         when(dashboard.attention(userId, 14, 5)).thenReturn(items);
 
         // The same 14-day window the count above is asked for: two different windows would let the

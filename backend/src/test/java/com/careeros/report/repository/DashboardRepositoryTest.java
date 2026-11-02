@@ -196,7 +196,8 @@ class DashboardRepositoryTest {
         UUID applicationId = UUID.randomUUID();
         Object[] row = new Object[]{applicationId, "Senior Backend Engineer", "Acme", "applied",
                 "reminder_due", Timestamp.from(Instant.parse("2026-09-01T09:00:00Z")),
-                Timestamp.from(Instant.parse("2026-08-01T09:00:00Z"))};
+                Timestamp.from(Instant.parse("2026-08-01T09:00:00Z")),
+                "Your interview", Timestamp.from(Instant.parse("2026-08-05T09:00:00Z"))};
         List<Object[]> data = new ArrayList<>();
         data.add(row);
         rows(data);
@@ -209,6 +210,10 @@ class DashboardRepositoryTest {
         assertThat(item.reason()).isEqualTo("reminder_due");
         assertThat(item.reminderAt().toInstant()).isEqualTo(Instant.parse("2026-09-01T09:00:00Z"));
         assertThat(item.updatedAt().toInstant()).isEqualTo(Instant.parse("2026-08-01T09:00:00Z"));
+        // The newest reply, if the application has one, rides the row so the card can say
+        // someone is waiting rather than only how long the application has been quiet.
+        assertThat(item.replySubject()).isEqualTo("Your interview");
+        assertThat(item.replyAt().toInstant()).isEqualTo(Instant.parse("2026-08-05T09:00:00Z"));
     }
 
     @Test
@@ -217,7 +222,7 @@ class DashboardRepositoryTest {
         // the user sets one. The card renders the typed-in name (COALESCE), and a `stale` row has
         // no instant to show -- both have to survive the mapping.
         Object[] row = new Object[]{UUID.randomUUID(), "Take-home", "Somewhere", "oa",
-                "stale", null, Timestamp.from(Instant.now())};
+                "stale", null, Timestamp.from(Instant.now()), null, null};
         List<Object[]> data = new ArrayList<>();
         data.add(row);
         rows(data);
@@ -225,6 +230,8 @@ class DashboardRepositoryTest {
         AttentionItem item = repo.attention(userId, 14, 5).get(0);
         assertThat(item.reason()).isEqualTo("stale");
         assertThat(item.reminderAt()).isNull();
+        assertThat(item.replySubject()).isNull();
+        assertThat(item.replyAt()).isNull();
     }
 
     @Test
@@ -233,6 +240,9 @@ class DashboardRepositoryTest {
         repo.attention(userId, 14, 5);
         assertThat(lastSql)
                 .contains("LEFT JOIN companies c ON c.id = a.company_id")
+                .contains("LEFT JOIN LATERAL")
+                .contains("FROM inbound_mails m")
+                .contains("ORDER BY m.received_at DESC, m.id DESC")
                 .contains("COALESCE(c.name, a.company_name)")
                 .contains("ORDER BY (a.reminder_at IS NOT NULL AND a.reminder_at <= now()) DESC")
                 .contains("a.updated_at ASC")
