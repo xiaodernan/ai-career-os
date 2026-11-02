@@ -1,12 +1,15 @@
 "use client";
 
 import * as React from "react";
-import { Mail } from "lucide-react";
+import { Mail, Trash2 } from "lucide-react";
+import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/common/error-state";
 import { relativeTime } from "@/lib/format";
 import { useLocale } from "@/lib/i18n/locale-context";
+import { useDeleteApplicationLetter } from "@/lib/hooks/actions";
 import { useApplicationLetters } from "@/lib/hooks/resources";
 import type { CoverLetter } from "@/lib/api/types";
 
@@ -20,6 +23,8 @@ import type { CoverLetter } from "@/lib/api/types";
 export function ApplicationLettersPanel({ applicationId }: { applicationId: string }) {
   const { t, locale } = useLocale();
   const letters = useApplicationLetters(applicationId);
+  const remove = useDeleteApplicationLetter(applicationId);
+  const [pendingRemoval, setPendingRemoval] = React.useState<CoverLetter | null>(null);
 
   return (
     <section className="space-y-2">
@@ -82,13 +87,41 @@ export function ApplicationLettersPanel({ applicationId }: { applicationId: stri
                 </summary>
                 <div className="border-t border-border/70 p-3">
                   <p className="whitespace-pre-wrap text-sm leading-relaxed">{letter.body}</p>
-                  <span className="sr-only">{t("applications.dialog.letterOpen")}</span>
+                  <div className="mt-3 flex justify-end">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setPendingRemoval(letter)}
+                    >
+                      <Trash2 aria-hidden />
+                      {t("applications.dialog.letterDelete")}
+                    </Button>
+                  </div>
                 </div>
               </details>
             </li>
           );
         })}
       </ul>
+
+      <ConfirmDialog
+        open={pendingRemoval !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingRemoval(null);
+        }}
+        title={t("applications.dialog.letterDeleteTitle")}
+        description={t("applications.dialog.letterDeleteBody")}
+        confirmLabel={t("applications.dialog.letterDeleteConfirm")}
+        destructive
+        loading={remove.isPending}
+        onConfirm={() => {
+          if (!pendingRemoval?.id) return;
+          remove.mutate(pendingRemoval.id, {
+            onSuccess: () => setPendingRemoval(null),
+          });
+        }}
+      />
     </section>
   );
 }

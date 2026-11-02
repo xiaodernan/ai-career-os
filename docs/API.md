@@ -639,6 +639,7 @@ strings, and `lastTouchAt` is the user's claim about when contact last happened.
 | GET | `/applications/{id}/packet` | the resume version, JD analysis and match this application carries, resolved to readable titles and user-scoped (a `*Linked` flag distinguishes "not attached" from an id that can no longer be read) |
 | GET | `/applications/{id}/letters` | the cover letters kept for this application, newest first |
 | POST | `/applications/{id}/letters` | `{body, mode?, tone?, length?, resumeVersionId?}` — keeps a generated draft; the posting and the resume version default to the application's own links, and an empty body is **400** |
+| DELETE | `/applications/{id}/letters/{letterId}` | removes one kept letter; the lookup names both the application and its owner, and a letter that is already gone still answers **204** — the reader's intent is already true |
 | DELETE | `/applications/{id}` | |
 
 ### Copilot & conversations

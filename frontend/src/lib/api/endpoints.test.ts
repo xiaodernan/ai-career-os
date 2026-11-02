@@ -1129,8 +1129,8 @@ describe("endpoints ↔ backend route parity", () => {
     expect(new Set(handlers.map((h) => `${h.verb} ${h.pattern}`)).size).toBe(handlers.length);
     expect(handlers.flatMap((h) => h.unparsed)).toEqual([]);
     const bound = handlers.flatMap((h) => h.params);
-    expect(bound.length).toBe(47);
-    // 47 parameters in 20 distinct names, measured: the reader's whole answer rather than a spot
+    expect(bound.length).toBe(49);
+    // 49 parameters in 22 distinct names, measured: the reader's whole answer rather than a spot
     // check, so a signature shape it stops understanding shrinks this set instead of passing quiet
     // (#225 retired `limit` from `/activity/runs`, which now pages like every other list route;
     // 19.2 brought the name back for `GET /ingestion/runs` as a newest-N history, and 19.5 retired
@@ -1138,13 +1138,14 @@ describe("endpoints ↔ backend route parity", () => {
     // nightly history is one more page/size list, 41 -> 43, both names already in this set;
     // 34.1's calendar feed binds `token`, the anonymous half's only credential, 43 -> 44;
     // 37.3's replies page is one more page/size list, 44 -> 46, both names already in this set;
-    // 49.1's reply search binds `q` beside that page/size pair, 46 -> 47, all three names already
-    // in this set -- so the count moved and the name set did not)
+    // 49.1's reply search binds `q` beside that page/size pair, 46 -> 47; 47.3's job page asks
+    // `/applications` for one posting, adding `jobId` (47 -> 48), and 49's reading chips add
+    // `intent` to the same reply list (48 -> 49). The two latest names are in this set now.)
     expect(new Set(bound.map((p) => p.name))).toEqual(
       new Set([
-        "agent", "company", "documentId", "file", "kind", "kinds", "locale",
-        "location", "maxSalary", "minSalary", "page", "q", "remote", "resumeId", "size",
-        "skills", "sort", "status", "title", "token",
+        "agent", "company", "documentId", "file", "intent", "jobId", "kind", "kinds",
+        "locale", "location", "maxSalary", "minSalary", "page", "q", "remote", "resumeId",
+        "size", "skills", "sort", "status", "title", "token",
       ])
     );
     // seven of them spell the name Spring matches on inside the annotation, so the reader's attribute

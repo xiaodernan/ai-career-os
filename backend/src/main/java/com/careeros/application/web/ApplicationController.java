@@ -101,6 +101,13 @@ public class ApplicationController {
         return letters.save(user.id(), id, request);
     }
 
+    @DeleteMapping("/{id}/letters/{letterId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteLetter(@CurrentUser AuthUser user, @PathVariable UUID id,
+                             @PathVariable UUID letterId) {
+        letters.delete(user.id(), id, letterId);
+    }
+
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@CurrentUser AuthUser user, @PathVariable UUID id) {

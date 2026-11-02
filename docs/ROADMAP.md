@@ -3976,6 +3976,26 @@ letters does not need to fix a deployment that is fine.
   unfiled mail is fixed on the way, because the empty map refuses the null key `byId.get(null)`
   asks for. 964 frontend tests in 94 files; 1117 backend tests.)
 
+## Epic 50 -- A kept letter is the reader's to manage
+
+A draft can now be kept, but a mistaken save has no exit. The application drawer can read every
+letter and nothing else, so an accidental duplicate or a draft written against the wrong resume
+version stays on the shelf for good. This epic gives the shelf the same verbs the rest of the
+application has: remove a row, correct one, and take one out of the product.
+
+- [x] **50.1** A kept letter can be let go.
+
+  (`DELETE /applications/{id}/letters/{letterId}` resolves the application through the caller's
+  own rows and removes only a letter whose id, application and user all agree. The delete is
+  idempotent: a second press answers 204 because the reader's intent is already true, while an id
+  copied from another card removes nothing. The drawer's expanded letter gains `Remove letter`
+  behind the same destructive confirmation the application itself uses, and the list refetches
+  before the toast fades. 2 service tests and 1 route test; the endpoints census now sees
+  `/applications` query keys explicitly instead of excusing a spread it could not read.)
+
+- [ ] **50.2** A kept letter can be corrected. (Edit the body and its dials in place, with an
+  `updated_at` that says the correction happened; the export carries the latest text.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

@@ -64,6 +64,22 @@ public class ApplicationLetterService {
                 .toList();
     }
 
+    /**
+     * Removes one kept letter, if it is still there.
+     *
+     * <p>The delete is idempotent: a second press after a successful one answers 204 rather than
+     * a 404, because the reader's intent -- "this letter should not be here" -- is already true.
+     * The lookup names the application as well as the user so a letter id copied from another
+     * card cannot be used to remove it through this route; a row that does not match is simply
+     * not found and nothing is deleted.
+     */
+    @Transactional
+    public void delete(UUID userId, UUID applicationId, UUID letterId) {
+        Application app = applications.require(userId, applicationId);
+        letters.findByIdAndApplicationIdAndUserId(letterId, app.getId(), userId)
+                .ifPresent(letters::delete);
+    }
+
     static LetterItem toItem(ApplicationLetter row) {
         return new LetterItem(row.getId(), row.getApplicationId(), row.getJobId(),
                 row.getResumeVersionId(), row.getMode(), row.getTone(), row.getLength(),

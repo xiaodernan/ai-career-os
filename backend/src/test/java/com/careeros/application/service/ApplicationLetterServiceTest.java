@@ -16,6 +16,7 @@ import com.careeros.application.repository.ApplicationLetterRepository;
 import com.careeros.common.ApiErrorCode;
 import com.careeros.common.ApiException;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -113,5 +114,30 @@ class ApplicationLetterServiceTest {
                 .isInstanceOf(ApiException.class);
         verify(letters, never())
                 .findByApplicationIdAndUserIdOrderByCreatedAtDescIdDesc(any(), any());
+    }
+
+    @Test
+    void deleteRemovesOnlyTheApplicationsOwnLetter() {
+        owned();
+        UUID letterId = UUID.randomUUID();
+        ApplicationLetter row = new ApplicationLetter();
+        when(letters.findByIdAndApplicationIdAndUserId(letterId, applicationId, userId))
+                .thenReturn(Optional.of(row));
+
+        service.delete(userId, applicationId, letterId);
+
+        verify(letters).delete(row);
+    }
+
+    @Test
+    void deleteLeavesAnUnknownOrForeignLetterAlone() {
+        owned();
+        UUID letterId = UUID.randomUUID();
+        when(letters.findByIdAndApplicationIdAndUserId(letterId, applicationId, userId))
+                .thenReturn(Optional.empty());
+
+        service.delete(userId, applicationId, letterId);
+
+        verify(letters, never()).delete(any(ApplicationLetter.class));
     }
 }

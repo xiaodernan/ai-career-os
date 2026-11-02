@@ -436,6 +436,20 @@ export function useSaveApplicationLetter(applicationId: string | null) {
   });
 }
 
+/** Removes one letter the reader no longer wants on the application. */
+export function useDeleteApplicationLetter(applicationId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (letterId: string) =>
+      api.remove(endpoints.applicationLetter(applicationId!, letterId)),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["application", applicationId, "letters"] });
+      toast.success(translate("toasts.letterRemoved"));
+    },
+    onError: fail("failures.letterRemove"),
+  });
+}
+
 export function useResumeSuggestions() {
   return useMutation({
     mutationFn: async (body: { jdRaw: string; resumeVersionId?: string | null }) => {

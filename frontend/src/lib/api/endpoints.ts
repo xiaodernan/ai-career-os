@@ -74,6 +74,8 @@ export const endpoints = {
   applicationTimeline: (id: string) => `/applications/${seg(id)}/timeline`,
   applicationPacket: (id: string) => `/applications/${seg(id)}/packet`,
   applicationLetters: (id: string) => `/applications/${seg(id)}/letters`,
+  applicationLetter: (id: string, letterId: string) =>
+    `/applications/${seg(id)}/letters/${seg(letterId)}`,
 
   /* ---------------- Companies ---------------- */
   companies: "/companies",

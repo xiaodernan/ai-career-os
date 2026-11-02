@@ -1,7 +1,9 @@
 package com.careeros.application.web;
 
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -33,14 +35,16 @@ class ApplicationControllerTest {
     private static final UUID APP = UUID.fromString("00000000-0000-0000-0000-0000000000aa");
 
     private ApplicationPacketService packets;
+    private ApplicationLetterService letters;
     private MockMvc mvc;
 
     @BeforeEach
     void setUp() {
         packets = mock(ApplicationPacketService.class);
+        letters = mock(ApplicationLetterService.class);
         mvc = MockMvcBuilders.standaloneSetup(
                         new ApplicationController(mock(ApplicationService.class), packets,
-                                mock(ApplicationLetterService.class)))
+                                letters))
                 .setControllerAdvice(new EnvelopeAdvice(), new GlobalExceptionHandler())
                 .setCustomArgumentResolvers(new CurrentUserArgumentResolver())
                 .build();
@@ -68,5 +72,15 @@ class ApplicationControllerTest {
                 .andExpect(jsonPath("$.data.resume.title").value("Ada CV"))
                 .andExpect(jsonPath("$.data.jdLinked").value(false))
                 .andExpect(jsonPath("$.data.jd").doesNotExist());
+    }
+
+    @Test
+    void aLetterDeleteNamesTheSessionUserAndBothIds() throws Exception {
+        UUID letterId = UUID.randomUUID();
+
+        mvc.perform(delete("/api/v1/applications/" + APP + "/letters/" + letterId))
+                .andExpect(status().isNoContent());
+
+        verify(letters).delete(UUID.fromString(USER), APP, letterId);
     }
 }

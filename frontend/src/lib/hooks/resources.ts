@@ -330,7 +330,12 @@ export function useApplications(params?: {
     queryKey: ["applications", params],
     queryFn: async (): Promise<Page<Application>> =>
       normalizePage(
-        await api.get<unknown>(endpoints.applications, { size: 50, ...(params ?? {}) }),
+        await api.get<unknown>(endpoints.applications, {
+          size: params?.size ?? 50,
+          page: params?.page,
+          status: params?.status,
+          jobId: params?.jobId,
+        }),
         normalizeApplication
       ),
   });

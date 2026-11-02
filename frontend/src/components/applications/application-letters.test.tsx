@@ -29,6 +29,10 @@ vi.mock("@/lib/hooks/resources", () => ({
   }),
 }));
 
+vi.mock("@/lib/hooks/actions", () => ({
+  useDeleteApplicationLetter: () => ({ isPending: false, mutate: () => undefined }),
+}));
+
 import { ApplicationLettersPanel } from "./application-letters";
 
 const render = () =>
@@ -73,6 +77,7 @@ describe("ApplicationLettersPanel", () => {
     expect(html).toContain("I built the thing.");
     expect(html).toContain("formal · warm · short");
     expect(html).toContain("applications.dialog.letterKept");
+    expect(html).toContain("applications.dialog.letterDelete");
     expect(html.match(/<details/g)?.length).toBe(1);
   });
 
