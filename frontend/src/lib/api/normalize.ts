@@ -13,6 +13,7 @@ import type {
   AppliedCounts,
   ApplyResult,
   AttentionItem,
+  CoverLetter,
   CopilotAction,
   CopilotArtifact,
   DashboardMetrics,
@@ -721,6 +722,26 @@ export function normalizeApplicationPacket(raw: unknown): ApplicationPacket {
     jd: normalizePacketJd(pick(raw, "jd")),
     matchLinked: bool(raw, "matchLinked") ?? false,
     match: normalizePacketMatch(pick(raw, "match")),
+  };
+}
+
+/**
+ * One kept cover letter. Every name is the backend's `LetterItem` field: the id, the
+ * application it was kept for, the posting and version it was written against, the dials the
+ * writer was asked with, and the body. A row with no id still gets a stable key so a list can
+ * render, and a missing body is the empty string rather than the word "undefined".
+ */
+export function normalizeCoverLetter(raw: unknown, index = 0): CoverLetter {
+  return {
+    id: str(raw, "id") ?? `letter-${index}`,
+    applicationId: str(raw, "applicationId"),
+    jobId: str(raw, "jobId"),
+    resumeVersionId: str(raw, "resumeVersionId"),
+    mode: str(raw, "mode"),
+    tone: str(raw, "tone"),
+    length: str(raw, "length"),
+    body: str(raw, "body") ?? "",
+    createdAt: str(raw, "createdAt"),
   };
 }
 

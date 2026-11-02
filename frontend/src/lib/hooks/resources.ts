@@ -8,6 +8,7 @@ import {
   normalizeApplication,
   normalizeApplicationEvent,
   normalizeApplicationPacket,
+  normalizeCoverLetter,
   normalizeDashboard,
   normalizeIngestionFeed,
   normalizeIngestionRun,
@@ -35,6 +36,7 @@ import type {
   Application,
   ApplicationEvent,
   ApplicationPacket,
+  CoverLetter,
   Company,
   Contact,
   CompanyDetail,
@@ -370,6 +372,18 @@ export function useApplicationPacket(id: string | null) {
     enabled: Boolean(id),
     queryFn: async (): Promise<ApplicationPacket> =>
       normalizeApplicationPacket(await api.get<unknown>(endpoints.applicationPacket(id!))),
+  });
+}
+
+/** The cover letters kept for one application, newest first. */
+export function useApplicationLetters(id: string | null) {
+  return useQuery({
+    queryKey: ["application", id, "letters"],
+    enabled: Boolean(id),
+    queryFn: async (): Promise<CoverLetter[]> => {
+      const raw = await api.get<unknown>(endpoints.applicationLetters(id!));
+      return listOf(raw, "items", "letters", "content").map(normalizeCoverLetter);
+    },
   });
 }
 

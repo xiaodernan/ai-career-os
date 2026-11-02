@@ -85,8 +85,10 @@ describe("the browser's copy", () => {
     // `components/dashboard/attention-row.tsx`, the row that answers a due reminder where
     // it is read instead of sending the reader to the dialog (43.1); 150 with
     // `components/applications/application-packet.tsx`, the panel that names the resume
-    // version, JD analysis and match an application was sent with (47.1).
-    expect(browserSources().length).toBe(150);
+    // version, JD analysis and match an application was sent with (47.1), and 151 with
+    // `components/applications/application-letters.tsx`, the shelf a kept draft is read
+    // back from (47.4).
+    expect(browserSources().length).toBe(151);
   });
 
   it("finds a sentence, however long it is", () => {

@@ -655,7 +655,15 @@ export interface TailorResponse {
 }
 
 export interface CoverLetter {
+  /** Present when the letter was kept; a generated draft may not have a row id yet. */
   id?: string;
+  /** The application this letter was kept for (`GET /applications/{id}/letters`). */
+  applicationId?: string | null;
+  jobId?: string | null;
+  resumeVersionId?: string | null;
+  mode?: string | null;
+  /** The kept letter itself. Generated drafts arrive as `content` or `text` instead. */
+  body?: string;
   content?: string;
   text?: string;
   markdown?: string;

@@ -10,6 +10,7 @@ import {
   normalizeApplication,
   normalizeApplicationEvent,
   normalizeApplicationPacket,
+  normalizeCoverLetter,
   normalizeChatActions,
   normalizeDashboard,
   normalizeDimensions,
@@ -742,6 +743,39 @@ describe("normalizeApplicationPacket", () => {
       overall: 0.82,
       createdAt: "2026-10-03T09:00:00Z",
     });
+  });
+});
+
+describe("normalizeCoverLetter", () => {
+  it("reads LetterItem's own fields and keeps a missing body as the empty string", () => {
+    const letter = normalizeCoverLetter({
+      id: "letter-1",
+      applicationId: "app-1",
+      jobId: "job-1",
+      resumeVersionId: "rv-1",
+      mode: "formal",
+      tone: "warm",
+      length: "short",
+      body: "Dear hiring manager,\n\nI built the thing.",
+      createdAt: "2026-11-03T09:00:00Z",
+    });
+
+    expect(letter).toEqual({
+      id: "letter-1",
+      applicationId: "app-1",
+      jobId: "job-1",
+      resumeVersionId: "rv-1",
+      mode: "formal",
+      tone: "warm",
+      length: "short",
+      body: "Dear hiring manager,\n\nI built the thing.",
+      createdAt: "2026-11-03T09:00:00Z",
+    });
+    expect(normalizeCoverLetter({ id: "letter-2" }).body).toBe("");
+  });
+
+  it("gives an id-less row a stable list key rather than dropping it", () => {
+    expect(normalizeCoverLetter({ body: "Kept anyway" }, 3).id).toBe("letter-3");
   });
 });
 

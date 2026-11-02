@@ -1,9 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { FileText, RefreshCw, Sparkles } from "lucide-react";
+import { FileText, RefreshCw, Save, Sparkles } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { ProcessingSteps } from "@/components/ai/processing-steps";
@@ -12,7 +13,7 @@ import dynamic from "next/dynamic";
 import { EvidenceList } from "@/components/ai/evidence-list";
 import { CopyButton, DownloadButton, SectionHeading } from "@/components/common/export-buttons";
 import { localStages } from "@/components/ai/task-stream";
-import { useCoverLetter } from "@/lib/hooks/actions";
+import { useCoverLetter, useSaveApplicationLetter } from "@/lib/hooks/actions";
 import { normalizeEvidence } from "@/lib/api/normalize";
 import { ApiError } from "@/lib/api/client";
 import { missingEndpointMessage } from "@/lib/api/missing-endpoint";
@@ -51,15 +52,30 @@ const LENGTHS = [
  * download. Output is markdown-rendered and evidence-cited where the backend
  * supplies citations.
  */
-export function CoverLetterPanel({ jobId, resumeVersionId }: { jobId: string; resumeVersionId?: string | null }) {
+export function CoverLetterPanel({
+  jobId,
+  resumeVersionId,
+  applicationId,
+}: {
+  jobId: string;
+  resumeVersionId?: string | null;
+  /** The card this letter will be kept on; null until the posting is in the pipeline. */
+  applicationId?: string | null;
+}) {
   const { t } = useLocale();
   const [tone, setTone] = React.useState("balanced");
   const [length, setLength] = React.useState("standard");
   const mutation = useCoverLetter(jobId);
+  const saveLetter = useSaveApplicationLetter(applicationId ?? null);
   const [result, setResult] = React.useState<{ text: string; evidence: unknown } | null>(null);
 
-  const run = () =>
-    mutation.mutate({ resumeVersionId, tone, length }, { onSuccess: (d) => setResult({ text: d.text, evidence: d.evidence }) });
+  const run = () => {
+    saveLetter.reset();
+    mutation.mutate(
+      { resumeVersionId, tone, length },
+      { onSuccess: (d) => setResult({ text: d.text, evidence: d.evidence }) }
+    );
+  };
 
   const evidence: Evidence[] = result ? normalizeEvidence(result.evidence) : [];
   const error = mutation.error;
@@ -133,12 +149,29 @@ export function CoverLetterPanel({ jobId, resumeVersionId }: { jobId: string; re
           <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-2">
               <AIBadge label={t("coverLetter.draftBadge")} />
+              {saveLetter.isSuccess && (
+                <Badge variant="success" className="font-normal">
+                  {t("coverLetter.savedBadge")}
+                </Badge>
+              )}
               <span className="text-xs text-muted-foreground tabular-nums">
                 {result.text
                   ? t("coverLetter.words", { count: result.text.trim().split(/\s+/).length })
                   : ""}
               </span>
               <div className="ml-auto flex gap-1.5">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={!result.text || !applicationId}
+                  loading={saveLetter.isPending}
+                  onClick={() =>
+                    saveLetter.mutate({ body: result.text, tone, length, resumeVersionId })
+                  }
+                >
+                  <Save aria-hidden />
+                  {t("coverLetter.saveToApplication")}
+                </Button>
                 <CopyButton text={result.text} label={t("coverLetter.copyLetter")} />
                 <DownloadButton
                   text={result.text}
@@ -156,6 +189,11 @@ export function CoverLetterPanel({ jobId, resumeVersionId }: { jobId: string; re
               </p>
             )}
             {evidence.length > 0 && <EvidenceList items={evidence} limit={2} dense />}
+            {!applicationId && (
+              <p className="text-xs text-muted-foreground">
+                {t("coverLetter.saveNeedsPipeline")}
+              </p>
+            )}
           </div>
         )}
 

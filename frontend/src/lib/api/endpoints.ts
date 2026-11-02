@@ -73,6 +73,7 @@ export const endpoints = {
   applicationReorder: (id: string) => `/applications/${seg(id)}/reorder`,
   applicationTimeline: (id: string) => `/applications/${seg(id)}/timeline`,
   applicationPacket: (id: string) => `/applications/${seg(id)}/packet`,
+  applicationLetters: (id: string) => `/applications/${seg(id)}/letters`,
 
   /* ---------------- Companies ---------------- */
   companies: "/companies",

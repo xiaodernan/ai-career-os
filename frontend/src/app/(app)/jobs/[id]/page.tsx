@@ -398,7 +398,11 @@ export default function JobDetailPage() {
             <TailorPanel jobId={job.id} resumeVersionId={resumeVersionId} />
           </div>
           <div id="cover-letter" className="scroll-mt-20">
-            <CoverLetterPanel jobId={job.id} resumeVersionId={resumeVersionId} />
+            <CoverLetterPanel
+              jobId={job.id}
+              resumeVersionId={resumeVersionId}
+              applicationId={inPipeline?.id ?? null}
+            />
           </div>
         </div>
 

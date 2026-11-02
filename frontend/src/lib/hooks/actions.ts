@@ -8,6 +8,7 @@ import { endpoints } from "@/lib/api/endpoints";
 import { field } from "@/lib/api/body";
 import {
   coverLetterText,
+  normalizeCoverLetter,
   normalizeArtifacts,
   normalizeChatActions,
   normalizeEvidence,
@@ -394,6 +395,44 @@ export function useCoverLetter(jobId: string) {
       return { text: coverLetterText(raw), evidence: raw };
     },
     onError: fail("failures.coverLetter"),
+  });
+}
+
+/**
+ * Keeps a generated draft as a letter on the application (47.4).
+ *
+ * Until this route existed the draft was a relay: the panel held it in component state and a
+ * tab close was the only save. The write names the application, not the posting -- a letter's
+ * home is the card it was written for -- and the dialog's list is refetched so the letter is
+ * there before the toast fades.
+ */
+export function useSaveApplicationLetter(applicationId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: {
+      body: string;
+      mode?: string;
+      tone?: string;
+      length?: string;
+      resumeVersionId?: string | null;
+    }) => {
+      const raw = await api.request<unknown>(endpoints.applicationLetters(applicationId!), {
+        method: "POST",
+        body: {
+          body: body.body,
+          ...field("mode", body.mode),
+          ...field("tone", body.tone),
+          ...field("length", body.length),
+          ...field("resumeVersionId", body.resumeVersionId),
+        },
+      });
+      return normalizeCoverLetter(raw);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["application", applicationId, "letters"] });
+      toast.success(translate("toasts.coverLetterSaved"));
+    },
+    onError: fail("failures.coverLetterSave"),
   });
 }
 

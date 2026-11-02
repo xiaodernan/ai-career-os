@@ -3884,6 +3884,19 @@ was attached" and "what was attached can no longer be read".
   whole board filtered in memory would miss a posting that is not on it. 2 service
   tests.)
 
+- [x] **47.4** The letter has a home.
+
+  (`POST /applications/{id}/letters` keeps a generated draft on the application it
+  was written for; `GET /applications/{id}/letters` reads the shelf back, newest
+  first. Both routes resolve the application through the caller's own rows, trim a
+  blank body into `VALIDATION_FAILED`, and keep the dials the writer used. The job
+  page's draft panel gains `Save to application` (disabled until the posting is in
+  the pipeline, with the reason in words), while the application drawer reads each
+  kept letter in place -- first line, dials and full body. The export bundle carries
+  them as `cover_letters` under schema 1.6.0, and restore follows the application that
+  actually landed. 4 letter-service tests, the controller route test, 4 SSR tests, 2
+  normalizer tests, and the export contract suite.)
+
 - [x] **46.2** That sentence opens the letter it is talking about.
 
   (`AttentionItem` carries the letter's own id as `replyId`, read in the same

@@ -4,6 +4,7 @@ import * as React from "react";
 import { CalendarClock, Trash2 } from "lucide-react";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { ErrorState } from "@/components/common/error-state";
+import { ApplicationLettersPanel } from "@/components/applications/application-letters";
 import { ApplicationPacketPanel } from "@/components/applications/application-packet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -360,6 +361,10 @@ export function ApplicationDialog({ application, open, onOpenChange }: Applicati
               loading={packet.isPending}
               failed={packet.isError}
             />
+
+            {/* Read-only: a letter is written on the job page, where the draft and the
+                posting sit together. This is where it is read back. */}
+            <ApplicationLettersPanel applicationId={application.id} />
           </>
         )}
 
