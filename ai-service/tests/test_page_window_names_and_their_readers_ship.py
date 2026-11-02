@@ -120,7 +120,11 @@ READERS = {
     # The inbox (19.3) reads `items` and nothing else: its unread badge is the answer's own
     # `unread`, and the list is one unpaged answer, so no strip here reads a window.
     "items": ["app/(app)/applications/page.tsx", "app/(app)/copilot/page.tsx",
-              "app/(app)/dashboard/page.tsx", "app/(app)/jobs/page.tsx",
+              "app/(app)/dashboard/page.tsx",
+              # 47.3's job page asks the pipeline one question -- is this posting already on the
+              # board -- and the answer it reads is the page's `items`, empty or not. It pages
+              # nothing and reads no window, so it joins `items` alone.
+              "app/(app)/jobs/[id]/page.tsx", "app/(app)/jobs/page.tsx",
               "app/(app)/notifications/page.tsx", "app/(app)/replies/page.tsx",
               "components/common/module-view.tsx",
               "components/ingestion/scheduled-feeds-panel.tsx",

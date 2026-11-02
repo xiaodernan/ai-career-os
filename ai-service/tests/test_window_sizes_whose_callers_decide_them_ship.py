@@ -121,7 +121,12 @@ WIRE = {
     "useNightlyReports": ("monitoringNightlyReports", "{ size: 10, ...(params ?? {}) }"),
     # 37.4's replies page is the thirteenth paging hook; its literal is the route's own 50,
     # and the page shadows it with its own PAGE_SIZE exactly as every other board does.
-    "useInboundMails": ("inboundMails", "{ size: 50, ...(params ?? {}) }"),
+    # 49.1 rewrote that params object to spell every key it sends -- the page's question is now a
+    # `q` beside the window -- and reads the window off the caller with 50 as the default, because a
+    # conditional spread is the shape the endpoint gate refuses to guess at. `literal_size` below
+    # reads that default: the number the hook offers when nobody decides is still the number a
+    # server clamp has to cover.
+    "useInboundMails": ("inboundMails", "{ size: params?.size ?? 50, page: params?.page, q, }"),
 }
 
 # Measured call sites, one walk; case 3 re-derives them. `""` is a call with no arguments.
@@ -134,6 +139,10 @@ SITES = {
     "useSavedJobs": [("app/(app)/jobs/page.tsx", "")],
     "useApplications": [("app/(app)/applications/page.tsx",
                          "{ page: state.page, size: PAGE_SIZE }"),
+                        # 47.3's job page asks the pipeline whether this posting is already on the
+                        # board, so it names a window of one row it will never page through.
+                        ("app/(app)/jobs/[id]/page.tsx",
+                         "id ? { jobId: id, size: 1 } : undefined"),
                         # the replies page's picker asks the ceiling once, to name every card
                         # a waiting letter could answer.
                         ("app/(app)/replies/page.tsx", "{ size: 100 }")],
@@ -155,7 +164,7 @@ SITES = {
     "useNightlyReports": [("components/monitoring/nightly-history.tsx",
                            "{ page, size: PAGE_SIZE }")],
     "useInboundMails": [("app/(app)/replies/page.tsx",
-                         "{ page: state.page, size: PAGE_SIZE }")],
+                         "{ page: state.page, size: PAGE_SIZE, q: state.q }")],
 }
 
 # route path -> the `defaultValue` on the handler's `int size` parameter, or None if it binds none.
@@ -334,10 +343,20 @@ def call_sites(hook: str, include_tests: bool = False) -> list[tuple[str, str]]:
 
 
 def literal_size(params: str | None) -> int | None:
+    """The window a hook offers when no caller decides it, read off its own params object.
+
+    Two shapes answer that: the plain literal every hook wrote until 49.1, and the defaulted
+    `size: params?.size ?? 50` the replies page's hook writes now. Reading only the first would
+    report a hook that does state a number as offering none, and case 2's ceiling check would
+    quietly cover one window fewer than it claims to.
+    """
     if not params:
         return None
     found = re.search(r"(?<![\w$])size:\s*(\d+)", params)
-    return int(found.group(1)) if found else None
+    if found:
+        return int(found.group(1))
+    defaulted = re.search(r"(?<![\w$])size:\s*[\w$][\w.$?]*\s*\?\?\s*(\d+)", params)
+    return int(defaulted.group(1)) if defaulted else None
 
 
 def offers_no_size(arg: str) -> bool:
@@ -370,6 +389,18 @@ def test_the_thirteen_list_hooks_and_their_wire_literals_are_this_table():
 
 def test_every_number_a_hook_offers_is_inside_the_ceiling_the_server_enforces():
     """Case 2: twelve of the thirteen offer a `size`, and no client asks for a window the clamp would refuse."""
+    # The window reader is checked before its verdicts are spent: the plain literal, the defaulted
+    # one 49.1 introduced, and a params object that states no number at all each have to answer the
+    # way this file claims. Without the control, "twelve" could be a count of what one regex reached
+    # rather than of what the shipped hooks offer.
+    assert literal_size("{ size: 20, ...(params ?? {}) }") == 20, \
+        "the reader lost the shape ten hooks still write"
+    assert literal_size("{ size: params?.size ?? 50, page: params?.page, q, }") == 50, \
+        "the reader cannot see a defaulted window, so a hook that states its number would be counted " \
+        "as offering none"
+    assert literal_size("{ documentId, ...(params ?? {}) }") is None, \
+        "the reader matched a params object with no number in it, so the twelve below is not twelve"
+
     sizes = wire_sizes()
     assert sizes == {**SIZE_LITERAL, "useSavedJobs": None}, sizes
     asked = sorted(n for n in sizes.values() if n is not None)
