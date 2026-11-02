@@ -8,6 +8,7 @@ import com.careeros.application.dto.ApplicationDtos.UpdateApplicationRequest;
 import com.careeros.application.entity.Application;
 import com.careeros.application.entity.ApplicationEvent;
 import com.careeros.application.repository.ApplicationEventRepository;
+import com.careeros.application.repository.ApplicationLetterRepository;
 import com.careeros.application.repository.ApplicationRepository;
 import com.careeros.common.ApiErrorCode;
 import com.careeros.common.ApiException;
@@ -17,6 +18,7 @@ import com.careeros.job.entity.Job;
 import com.careeros.job.repository.CompanyRepository;
 import com.careeros.job.repository.JobRepository;
 import java.time.OffsetDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -38,13 +40,16 @@ public class ApplicationService {
     private final ApplicationEventRepository events;
     private final JobRepository jobs;
     private final CompanyRepository companies;
+    private final ApplicationLetterRepository letters;
 
     public ApplicationService(ApplicationRepository applications, ApplicationEventRepository events,
-                              JobRepository jobs, CompanyRepository companies) {
+                              JobRepository jobs, CompanyRepository companies,
+                              ApplicationLetterRepository letters) {
         this.applications = applications;
         this.events = events;
         this.jobs = jobs;
         this.companies = companies;
+        this.letters = letters;
     }
 
     @Transactional(readOnly = true)
@@ -63,7 +68,17 @@ public class ApplicationService {
                         ? applications.findByUserIdAndStatusOrderByPositionAscIdAsc(
                                 userId, status, pageable)
                         : applications.findByUserIdOrderByUpdatedAtDescIdAsc(userId, pageable));
-        return PageDTO.from(page, ApplicationService::toItem);
+        // The card's fourth artifact is a count (53.1), and the board must not spend one request
+        // per card to learn it: one grouped read answers the whole page, and an application with
+        // no letters is simply absent from the map.
+        List<UUID> ids = page.getContent().stream().map(Application::getId).toList();
+        Map<UUID, Long> letterTotals = new HashMap<>();
+        for (ApplicationLetterRepository.LetterTotal row : ids.isEmpty()
+                ? List.<ApplicationLetterRepository.LetterTotal>of()
+                : letters.countByUserAndApplicationIds(userId, ids)) {
+            letterTotals.put(row.getApplicationId(), row.getTotal());
+        }
+        return PageDTO.from(page, a -> toItem(a, letterTotals.getOrDefault(a.getId(), 0L).intValue()));
     }
 
     @Transactional
@@ -105,7 +120,8 @@ public class ApplicationService {
         app.setPosition((int) applications.countByUserIdAndStatus(userId, status));
         applications.save(app);
         writeEvent(app, "status", Map.of("to", status));
-        return toItem(app);
+        // A brand-new application cannot hold a letter yet; saying so costs no query.
+        return toItem(app, 0);
     }
 
     @Transactional
@@ -150,7 +166,7 @@ public class ApplicationService {
                 writeEvent(app, "outcome", Map.of("field", "rejection_reason"));
             }
         }
-        return toItem(applications.save(app));
+        return item(userId, applications.save(app));
     }
 
     @Transactional
@@ -161,7 +177,7 @@ public class ApplicationService {
             applyStatusChange(app, request.status());
         }
         app.setPosition(request.position());
-        return toItem(applications.save(app));
+        return item(userId, applications.save(app));
     }
 
     /**
@@ -260,11 +276,26 @@ public class ApplicationService {
         }
     }
 
+    /** One application with its letter total read for this caller. */
+    @Transactional(readOnly = true)
+    public ApplicationItem get(UUID userId, UUID id) {
+        return item(userId, require(userId, id));
+    }
+
+    /** The one place a single application's letter total is read, scoped to its owner. */
+    private ApplicationItem item(UUID userId, Application app) {
+        return toItem(app, (int) letters.countByApplicationIdAndUserId(app.getId(), userId));
+    }
+
     public static ApplicationItem toItem(Application a) {
+        return toItem(a, 0);
+    }
+
+    public static ApplicationItem toItem(Application a, int letters) {
         return new ApplicationItem(a.getId(), a.getJobId(), a.getCompanyId(), a.getTitle(),
                 a.getCompanyName(), a.getStatus(), a.getPosition(), a.getNotes(), a.getReminderAt(),
                 a.getResumeVersionId(), a.getJdId(), a.getMatchId(), a.getAppliedAt(),
                 a.getCreatedAt(), a.getUpdatedAt(), a.getOfferCompensation(),
-                a.getRejectionReason());
+                a.getRejectionReason(), letters);
     }
 }

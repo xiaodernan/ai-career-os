@@ -65,7 +65,7 @@ public class ApplicationController {
 
     @GetMapping("/{id}")
     public ApplicationItem get(@CurrentUser AuthUser user, @PathVariable UUID id) {
-        return ApplicationService.toItem(applications.require(user.id(), id));
+        return applications.get(user.id(), id);
     }
 
     @PatchMapping("/{id}")

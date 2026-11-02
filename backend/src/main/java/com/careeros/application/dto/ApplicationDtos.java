@@ -12,12 +12,17 @@ public final class ApplicationDtos {
     private ApplicationDtos() {
     }
 
+    /**
+     * One tracked application as the board reads it. `letters` is how many cover letters are kept
+     * for it (53.2): the card needs the number without spending a request per card, so the list
+     * route reads a page of totals in one grouped query. It is derived, never written here.
+     */
     public record ApplicationItem(UUID id, UUID jobId, UUID companyId, String title,
                                   String companyName, String status, int position, String notes,
                                   OffsetDateTime reminderAt, UUID resumeVersionId, UUID jdId,
                                   UUID matchId, OffsetDateTime appliedAt, OffsetDateTime createdAt,
                                   OffsetDateTime updatedAt, String offerCompensation,
-                                  String rejectionReason) {
+                                  String rejectionReason, int letters) {
     }
 
     /** The resume version this application carries, resolved for a reader rather than an id. */

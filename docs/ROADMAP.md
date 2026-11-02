@@ -4111,6 +4111,16 @@ it has no screen of its own, and there may be none, one or several.
   missing value reads as zero, so an older body cannot draw "undefined kept"; the empty-packet
   sentence now also requires zero letters. 2 service tests, 1 route assertion, 4 SSR assertions
   and 2 normalisation tests.)
+- [x] **53.2** The board card says how many letters it holds.
+
+  (The card could count three artifacts (47.2) but not the letters kept under them. `GET
+  /applications` now carries `letters` on every row, read for the whole page in one grouped query
+  -- `count by application_id where user_id = caller` -- so a board of fifty cards costs one
+  extra read, not fifty. The count is derived and scoped like the packet's; a card with no
+  letters is absent from the map and still reads zero. The card paints a Mail badge "3 letters"
+  only when the total is above zero, with the full sentence in its title: for a letter-less card
+  that badge would be a permanent zero. 2 service tests, 1 mapper test, 2 SSR tests and 1
+  normalisation test.)
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

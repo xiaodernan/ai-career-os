@@ -18,7 +18,7 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical } from "lucide-react";
+import { GripVertical, Mail } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Application, ApplicationStatus } from "@/lib/api/types";
 import {
@@ -247,6 +247,16 @@ function KanbanCard({
         {!overdue && stale && (
           <Badge variant="outline" className="w-fit">
             {t("applications.noStep14d")}
+          </Badge>
+        )}
+        {(app.letters ?? 0) > 0 && (
+          <Badge
+            variant="outline"
+            className="w-fit gap-1"
+            title={t("applications.letterBadgeTitle", { count: app.letters ?? 0 })}
+          >
+            <Mail className="size-3" aria-hidden />
+            {t("applications.letterBadge", { count: app.letters ?? 0 })}
           </Badge>
         )}
         {packet.linked > 0 && (

@@ -379,6 +379,12 @@ export interface Application {
   offerCompensation?: string | null;
   /** Why the application did not proceed, when it was rejected. */
   rejectionReason?: string | null;
+  /**
+   * How many cover letters are kept for this application (53.2). Derived by the list route from
+   * `application_letters`, never written by the client; the card needs it without a request per
+   * card, which is why it rides on the row instead of the packet.
+   */
+  letters?: number;
   /** When the application was moved to 'applied' stage */
   appliedAt?: string | null;
   createdAt?: string;

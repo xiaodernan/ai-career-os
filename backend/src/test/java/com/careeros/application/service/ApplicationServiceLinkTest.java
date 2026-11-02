@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 
 import com.careeros.application.entity.Application;
 import com.careeros.application.repository.ApplicationEventRepository;
+import com.careeros.application.repository.ApplicationLetterRepository;
 import com.careeros.application.repository.ApplicationRepository;
 import com.careeros.job.repository.CompanyRepository;
 import com.careeros.job.repository.JobRepository;
@@ -43,7 +44,8 @@ class ApplicationServiceLinkTest {
         applications = mock(ApplicationRepository.class);
         events = mock(ApplicationEventRepository.class);
         service = new ApplicationService(applications, events,
-                mock(JobRepository.class), mock(CompanyRepository.class));
+                mock(JobRepository.class), mock(CompanyRepository.class),
+                mock(ApplicationLetterRepository.class));
     }
 
     private Application tracked(String status) {

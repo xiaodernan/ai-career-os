@@ -135,4 +135,11 @@ class ApplicationMapperTest {
         assertThat(item.status()).isEqualTo("saved");
         assertThat(item.position()).isZero();
     }
+    @Test
+    void theLetterTotalIsTheOnlyDerivedFieldAndDefaultsToZero() {
+        // Letters are not a column on the application: the caller hands the count in, and a
+        // mapping that was never given one must say zero rather than invent a number.
+        assertThat(ApplicationService.toItem(fullyPopulated(), 3).letters()).isEqualTo(3);
+        assertThat(ApplicationService.toItem(fullyPopulated()).letters()).isZero();
+    }
 }

@@ -667,6 +667,8 @@ export function normalizeApplication(raw: unknown): Application {
     matchId: str(raw, "matchId", "match_id") ?? null,
     offerCompensation: str(raw, "offerCompensation", "offer_compensation") ?? null,
     rejectionReason: str(raw, "rejectionReason", "rejection_reason") ?? null,
+    // A missing total reads as none: an older body (or a mocked fixture) must not draw "undefined".
+    letters: num(raw, "letters") ?? 0,
     appliedAt: str(raw, "appliedAt", "applied_at") ?? null,
     createdAt: str(raw, "createdAt", "created_at"),
     updatedAt: str(raw, "updatedAt", "updated_at"),

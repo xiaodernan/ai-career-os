@@ -682,6 +682,12 @@ describe("normalizeApplication", () => {
     expect(a.companyId).toBeNull();
   });
 
+  it("carries the board's letter total, and reads a missing one as zero", () => {
+    // 53.2: the list route derives this from `application_letters`; the card must not draw
+    // "undefined" when an older body does not carry the column.
+    expect(normalizeApplication({ id: "a", letters: 3 }).letters).toBe(3);
+    expect(normalizeApplication({ id: "a" }).letters).toBe(0);
+  });
   it("reports no match score rather than a zero: the DTO carries no such column", () => {
     // ApplicationItem has matchId but not matchScore, and no page renders it today. When the
     // list starts embedding the score, this assertion is the one to change deliberately.

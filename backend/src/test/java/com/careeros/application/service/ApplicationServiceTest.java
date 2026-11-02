@@ -11,17 +11,21 @@ import com.careeros.application.dto.ApplicationDtos.ReorderRequest;
 import com.careeros.application.dto.ApplicationDtos.UpdateApplicationRequest;
 import com.careeros.application.entity.Application;
 import com.careeros.application.entity.ApplicationEvent;
+import com.careeros.application.dto.ApplicationDtos.ApplicationItem;
 import com.careeros.application.repository.ApplicationEventRepository;
+import com.careeros.application.repository.ApplicationLetterRepository;
 import com.careeros.application.repository.ApplicationRepository;
 import com.careeros.job.repository.CompanyRepository;
 import com.careeros.job.repository.JobRepository;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
@@ -37,14 +41,16 @@ class ApplicationServiceTest {
 
     private ApplicationRepository applications;
     private ApplicationEventRepository events;
+    private ApplicationLetterRepository letters;
     private ApplicationService service;
 
     @BeforeEach
     void setUp() {
         applications = mock(ApplicationRepository.class);
         events = mock(ApplicationEventRepository.class);
+        letters = mock(ApplicationLetterRepository.class);
         service = new ApplicationService(applications, events,
-                mock(JobRepository.class), mock(CompanyRepository.class));
+                mock(JobRepository.class), mock(CompanyRepository.class), letters);
         when(applications.save(any(Application.class))).thenAnswer(i -> i.getArgument(0));
     }
 
@@ -197,5 +203,44 @@ class ApplicationServiceTest {
                 userId, jobId, "applied", pageable);
         verify(applications, never()).findByUserIdAndJobIdOrderByUpdatedAtDescIdAsc(
                 any(), any(), any());
+    }
+
+    /** A record so the grouped-count projection has something to answer with. */
+    private record Total(UUID getApplicationId, long getTotal)
+            implements ApplicationLetterRepository.LetterTotal {
+    }
+
+    /**
+     * The board asks for every card's letter total at once. One grouped read answers the whole
+     * page; a card with no letters is simply absent from it and must still read zero, not null.
+     */
+    @Test
+    void theListCarriesEachCardLetterCountFromOneGroupedRead() {
+        UUID otherId = UUID.randomUUID();
+        Application withLetters = mock(Application.class);
+        Application without = mock(Application.class);
+        when(withLetters.getId()).thenReturn(appId);
+        when(without.getId()).thenReturn(otherId);
+        when(applications.findByUserIdOrderByUpdatedAtDescIdAsc(userId, PageRequest.of(0, 50)))
+                .thenReturn(new PageImpl<>(List.of(withLetters, without), PageRequest.of(0, 50), 2));
+        when(letters.countByUserAndApplicationIds(userId, List.of(appId, otherId)))
+                .thenReturn(List.of(new Total(appId, 4)));
+
+        var page = service.list(userId, null, null, PageRequest.of(0, 50));
+
+        assertThat(page.items()).extracting(ApplicationItem::letters).containsExactly(4, 0);
+        verify(letters).countByUserAndApplicationIds(userId, List.of(appId, otherId));
+    }
+
+    @Test
+    void aSingleReadCountsOnlyThisApplicationsLetters() {
+        Application app = mock(Application.class);
+        when(app.getId()).thenReturn(appId);
+        when(applications.findByIdAndUserId(appId, userId)).thenReturn(Optional.of(app));
+        when(letters.countByApplicationIdAndUserId(appId, userId)).thenReturn(5L);
+
+        ApplicationItem item = service.get(userId, appId);
+
+        assertThat(item.letters()).isEqualTo(5);
     }
 }
