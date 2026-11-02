@@ -499,6 +499,7 @@ async def test_gather_raw_decodes_the_json_columns_and_carries_the_report(monkey
             return [{"id": "j1", "raw_text": "JD", "parsed": '{"title": "BE"}'}]
         if "FROM interview_sessions" in query:
             return [{"id": "s1", "status": "completed",
+                     "application_id": "a-card",
                      "config": '{"style": "deep"}'}]
         if "FROM interview_turns" in query:
             return [{"id": "t1", "session_id": "s1", "seq": 1, "content": "q",
@@ -530,6 +531,10 @@ async def test_gather_raw_decodes_the_json_columns_and_carries_the_report(monkey
     assert raw["job_descriptions"][0]["parsed"] == {"title": "BE"}
     session = raw["interviews"][0]
     assert session["config"] == {"style": "deep"}
+    # The rehearsal's card link rides with the row (56.5): the restore can
+    # only put the rehearsal back on its application if the bundle carries
+    # the id, and ``SELECT s.*`` is what carries it.
+    assert session["application_id"] == "a-card"
     assert session["turns"][0]["question_meta"] == {"topic": "db"}
     assert session["turns"][0]["evaluation"] == {"score": 3}
     # The session's report, which the restore reads off the session -- and

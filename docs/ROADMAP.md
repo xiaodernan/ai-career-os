@@ -4197,6 +4197,16 @@ application it belonged to.
   (Both headers carry the same `Open application` link, through one helper
   (`lib/interview-target.ts`) so the list, the runner and the report cannot disagree about the
   route or about a free rehearsal having none. 2 pure-function tests.)
+- [x] **56.5** The link survives a backup.
+
+  (The export already read the session with `SELECT s.*`, so the column rode along; the restore
+  did not write it, and a bundle that came back lost every rehearsal's card. `applyInterviews`
+  now writes it -- through one `cardLink` helper, the same rule the reply's card follows: the id
+  is kept only when the target owns the card, and a fresh account keeps the rehearsal and drops
+  only the link, because the column is a foreign key rather than text. The planner strips it per
+  section, so a restore into an account that lacks the card is a skip and not an update that
+  rewrites the transcript forever. 3 backend unit tests + 1 export assertion + 1 planner test.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

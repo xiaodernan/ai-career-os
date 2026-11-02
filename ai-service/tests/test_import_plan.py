@@ -328,6 +328,21 @@ def test_an_interview_is_compared_by_what_the_restore_writes():
     assert op["op"] == "skip", f"the same interview was planned as a write: {op}"
 
 
+def test_the_card_link_is_not_part_of_what_changed():
+    """The card link is the target's to decide, so it is not a change.
+
+    The apply writes ``application_id`` only when the target owns the card
+    (56.5), exactly as it does for a reply. Comparing it would plan an
+    update on every restore into an account that lacks the card, and the
+    update would replace a transcript to write a link that was never going
+    to land.
+    """
+    incoming = _bundle_with_interviews(_interview(application_id="a-card"))
+    existing = _bundle_with_interviews(_interview(application_id=None))
+    op = pl.plan_import(incoming, existing=existing)["sections"]["interviews"][0]
+    assert op["op"] == "skip", f"the card link was compared: {op}"
+
+
 def test_a_changed_answer_is_an_interview_update():
     incoming = _bundle_with_interviews(_interview())
     existing = _bundle_with_interviews(_interview())

@@ -257,6 +257,14 @@ transcript whole, so the restore is the document a second time — a turn the
 bundle no longer names is a turn the restore was asked to take back, and the
 report is about the answers, so it is rewritten with them.
 
+A rehearsal that was opened for an application card carries that id in the
+bundle, and the restore writes it back when the target owns the card. Into an
+account that does not, the rehearsal still lands and only the link is
+dropped — the column is a foreign key, not text, so a blind write would fail
+the row instead of restoring it. The link is therefore not part of the
+comparison either: the target decides it, exactly as it decides a reply's
+card.
+
 ### The bundle is complete (1.1.0)
 
 Six of the eight sections are the ai-service's own. The other two —

@@ -71,8 +71,11 @@ _NOT_WRITTEN_BY_SECTION: dict[str, tuple[str, ...]] = {
     # The session's links to a job, a JD and a resume version are carried
     # when the target can hold them; they are not what the restore writes,
     # and comparing them would rewrite a session forever in an account that
-    # lacks one of those rows.
-    "interviews": ("job_id", "jd_id", "resume_version_id", "job_title"),
+    # lacks one of those rows. Its link to the application card is the same
+    # kind of link: the apply writes it only when the target owns the card,
+    # so it travels with the row and is not part of "changed".
+    "interviews": ("job_id", "jd_id", "resume_version_id", "job_title",
+                   "application_id"),
     # Same rule for a posting's link to the shared job corpus.
     "job_descriptions": ("job_id",),
     # A memory's weight is only written when the bundle carries one; the

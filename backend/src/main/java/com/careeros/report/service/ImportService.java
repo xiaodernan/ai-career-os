@@ -907,10 +907,8 @@ public class ImportService {
             target.setIntent(str(row, "intent"));
             target.setCompany(str(row, "company"));
             target.setRole(str(row, "role"));
-            UUID applicationId = uuid(str(row, "application_id"));
-            target.setApplicationId(applicationId != null
-                    && applications.findByIdAndUserId(applicationId, userId).isPresent()
-                    ? applicationId : null);
+            target.setApplicationId(cardLink(uuid(str(row, "application_id")),
+                    userId, applications));
             target.setFiledAt(time(row, "filed_at"));
             target.setReceivedAt(receivedAt);
             inboundMails.save(target);
@@ -1416,6 +1414,13 @@ public class ImportService {
             if (finished != null) {
                 session.setFinishedAt(finished);
             }
+            // The card the rehearsal was for travels with the session (56.5):
+            // without it a restored rehearsal loses the one link that says
+            // *which* application the answers were about. The column is a
+            // foreign key the target may not have, so a bundle from another
+            // reader keeps the rehearsal and drops only the link.
+            session.setApplicationId(cardLink(uuid(str(row, "application_id")),
+                    userId, applications));
             session = sessions.save(session);
 
             // The turns carry the questions and the evaluations, so the
@@ -1660,6 +1665,21 @@ public class ImportService {
             return null;
         }
         return taken.test(rowId) ? null : rowId;
+    }
+
+    /**
+     * The application card a restored row may point at, or {@code null}.
+     *
+     * <p>The bundle's {@code application_id} is a foreign key into the
+     * caller's own cards, and the target account may not have the card the
+     * bundle names -- a bundle restored into a fresh account has none of
+     * them. Writing the id blindly would fail the row on the foreign key and
+     * take the whole section with it; dropping it keeps the row, which is
+     * the thing the reader asked to restore, and loses only the link.
+     */
+    static UUID cardLink(UUID candidate, UUID userId, ApplicationRepository applications) {
+        return candidate != null && applications.findByIdAndUserId(candidate, userId).isPresent()
+                ? candidate : null;
     }
 
     private static void count(Map<String, int[]> applied, String section, int created, int updated) {
