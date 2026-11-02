@@ -305,6 +305,7 @@ Nothing has to be enabled; `careeros.signals.cron` moves the clock.
 | POST | `/notifications/read` | `{keys}` → marks the named items read and answers the fresh inbox: {items[], unread, generatedAt}. Keys not in the inbox are ignored |
 | POST | `/notifications/read-all` | marks every item the inbox is showing read; answers the fresh inbox, the same shape GET /notifications answers |
 | POST | `/notifications/dismiss` | `{key}` → files one item away and answers the fresh inbox: {items[], unread, generatedAt} |
+| POST | `/notifications/dismiss-read` | files every read item the inbox is showing away, leaves the unread ones untouched, and answers the fresh inbox: items[], unread, generatedAt |
 
 ### Push subscriptions (`/push`)
 

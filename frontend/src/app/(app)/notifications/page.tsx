@@ -16,6 +16,7 @@ import { useLocale } from "@/lib/i18n/locale-context";
 import { useUpdateApplication } from "@/lib/hooks/actions";
 import {
   useDismissNotification,
+  useDismissReadNotifications,
   useMarkAllNotificationsRead,
   useMarkNotificationsRead,
 } from "@/lib/hooks/notifications";
@@ -42,6 +43,12 @@ import type { NotificationItem } from "@/lib/api/types";
  * same PATCH the application dialog uses. The application's id is read out of the
  * reminder's key; a key that does not parse has no buttons, because a press that
  * guessed an id would either 404 or edit the wrong application.
+ *
+ * The rows the reader has already dealt with are also noise to clear in one press
+ * (roadmap 45.4): the "Clear read" action files every read row away and leaves the
+ * unread ones untouched, so a screen that has been worked through is emptied
+ * without hiding anything still waiting. The button is absent when nothing is read,
+ * because an action with nothing behind it is a dead button.
  */
 
 type Translate = (key: string, vars?: Record<string, string | number>) => string;
@@ -125,6 +132,7 @@ export default function NotificationsPage() {
   const markRead = useMarkNotificationsRead();
   const markAll = useMarkAllNotificationsRead();
   const dismiss = useDismissNotification();
+  const clearRead = useDismissReadNotifications();
   const settleReminder = useUpdateApplication();
   const [view, setView] = useUrlState<{ kind?: string; unread?: boolean }>(VIEW_DEFAULTS, {
     booleanKeys: ["unread"],
@@ -135,8 +143,14 @@ export default function NotificationsPage() {
   const items = inbox.data?.items ?? [];
   const rows = rowsUnder(items, kind, unreadOnly);
   const unread = inbox.data?.unread ?? 0;
+  /** The rows the reader has dealt with: the inbox it is showing, minus the unread. */
+  const read = Math.max(0, items.length - unread);
   const busy =
-    markRead.isPending || markAll.isPending || dismiss.isPending || settleReminder.isPending;
+    markRead.isPending ||
+    markAll.isPending ||
+    dismiss.isPending ||
+    clearRead.isPending ||
+    settleReminder.isPending;
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -161,6 +175,17 @@ export default function NotificationsPage() {
                 <CheckCheck aria-hidden />
                 {t("notifications.markAllRead")}
               </Button>
+              {read > 0 ? (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  loading={clearRead.isPending}
+                  onClick={() => clearRead.mutate()}
+                >
+                  {t("notifications.clearRead")}
+                  <span className="text-xs text-muted-foreground">{read}</span>
+                </Button>
+              ) : null}
             </div>
           ) : undefined
         }

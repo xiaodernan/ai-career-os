@@ -195,6 +195,28 @@ public class NotificationService {
         return inbox(userId);
     }
 
+    /**
+     * Files away every item the inbox is showing that the reader has already read (roadmap
+     * 45.4): the read rows are signals they have dealt with, and clearing them in one press
+     * leaves the unread ones exactly where they were. An unread item is never filed, so the
+     * press cannot hide a signal still waiting; each read item is filed under its own episode
+     * key, so the next episode of the same application arrives unread instead of inheriting
+     * the dismissal.
+     */
+    @Transactional
+    public Inbox dismissRead(UUID userId) {
+        OffsetDateTime now = OffsetDateTime.now();
+        for (NotificationItem item : visibleByKey(userId).values()) {
+            if (!item.read()) {
+                continue;
+            }
+            NotificationState state = stateFor(userId, item.key());
+            state.setDismissedAt(now);
+            states.save(state);
+        }
+        return inbox(userId);
+    }
+
     /** Files one item away; it stays away until the signal becomes a new episode. */
     @Transactional
     public Inbox dismiss(UUID userId, String key) {

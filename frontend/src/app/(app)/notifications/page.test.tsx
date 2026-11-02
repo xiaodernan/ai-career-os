@@ -23,6 +23,7 @@ vi.mock("@/lib/hooks/notifications", () => ({
   useMarkNotificationsRead: () => ({ mutate: () => {}, isPending: false }),
   useMarkAllNotificationsRead: () => ({ mutate: () => {}, isPending: false }),
   useDismissNotification: () => ({ mutate: () => {}, isPending: false }),
+  useDismissReadNotifications: () => ({ mutate: () => {}, isPending: false }),
 }));
 
 // The reminder's two answers share the application write hook; the page only reads
@@ -167,6 +168,10 @@ describe("the notifications page", () => {
     expect(html).toContain('href="/replies?mail=0b9e4d1a-7c2f-4e6b-9a3d-5f8c1b2e4a6d"');
     expect(html).toContain("4 unread");
     expect(html).toContain("Mark all read");
+    // Two of the six rows are read, so the page offers to clear those and names its count.
+    expect(html).toContain("Clear read");
+    const clearButton = html.slice(html.indexOf("Clear read"), html.indexOf("Clear read") + 80);
+    expect(clearButton).toContain(">2</span>");
     // The filter row names every kind the inbox is holding, and "All" is the view it opens on.
     expect(html).toContain('aria-label="Filter by kind"');
     expect(html).toContain(">All</button>");
@@ -232,6 +237,7 @@ describe("the notifications page", () => {
     expect(html).toContain("Re: 面试");
     expect(html).toContain("2 条未读");
     expect(html).toContain("全部标为已读");
+    expect(html).toContain("清掉已读");
     expect(html).toContain('aria-label="按类型筛选"');
     expect(html).toContain(">全部</button>");
     expect(html).toContain("只看未读");
@@ -256,6 +262,8 @@ describe("the notifications page", () => {
     expect(empty).toContain("Everything here is read.");
     // An empty inbox has no kinds to filter by, so it offers no filter.
     expect(empty).not.toContain('aria-label="Filter by kind"');
+    // Nothing is read either, so there is nothing to clear.
+    expect(empty).not.toContain("Clear read");
   });
 
   it("offers a chip only for the kinds the inbox is holding", () => {
@@ -270,6 +278,8 @@ describe("the notifications page", () => {
     expect(html.match(/aria-pressed="false"/g)).toHaveLength(2);
     expect(html).toContain("New postings from Boards: 3.");
     expect(html).not.toContain("Saved search");
+    // The one row is unread, so there is nothing to clear.
+    expect(html).not.toContain("Clear read");
   });
 
   it("names a failed read rather than pretending the inbox is empty", () => {

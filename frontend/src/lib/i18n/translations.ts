@@ -1068,6 +1068,7 @@ export const translations = {
       description:
         "Reminders that came due, applications that went quiet, pulls that need a look, saved searches the board answered, and recruiter replies — in the order they happened.",
       markAllRead: "Mark all read",
+      clearRead: "Clear read",
       unreadBadge: "{count} unread",
       allRead: "Everything here is read.",
       filterAll: "All",
@@ -3862,6 +3863,7 @@ export const translations = {
       description:
         "已到期的提醒、久无动静的申请、需要看一眼的拉取、职位板回答的已保存搜索，以及招聘方的回复——按发生时间排列。",
       markAllRead: "全部标为已读",
+      clearRead: "清掉已读",
       unreadBadge: "{count} 条未读",
       allRead: "这里的都已读过。",
       filterAll: "全部",

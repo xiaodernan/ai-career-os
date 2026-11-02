@@ -3812,6 +3812,18 @@ sentence of its own, and the tests read each one rather than the shape of the li
   already in the unread view can always leave it. One more unit test; 948 frontend
   tests in 92 files.)
 
+- [x] **45.4** The read rows leave in one press.
+
+  (A `Clear read` action sits beside the inbox's badge and its count, and files
+  away every row the reader has already read while leaving the unread ones exactly
+  where they were. The backend grew `POST /notifications/dismiss-read` -- documented
+  in `API.md` with no body, because it takes none -- answering the fresh inbox like
+  every other write, and `dismissRead` walks only the visible read items under their
+  own episode key, so the next episode of the same application comes back unread
+  instead of inheriting the filing. The action is absent when nothing is read,
+  because an action with nothing behind it is a dead button. 3 service tests, 1
+  route test, and the doc census; 948 frontend tests in 92 files.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

@@ -47,4 +47,9 @@ public class NotificationController {
     public Inbox dismiss(@CurrentUser AuthUser user, @RequestBody @Valid KeyRequest request) {
         return notifications.dismiss(user.id(), request.key());
     }
+
+    @PostMapping("/dismiss-read")
+    public Inbox dismissRead(@CurrentUser AuthUser user) {
+        return notifications.dismissRead(user.id());
+    }
 }

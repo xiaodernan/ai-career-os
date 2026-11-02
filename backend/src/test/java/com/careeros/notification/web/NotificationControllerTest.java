@@ -119,6 +119,17 @@ class NotificationControllerTest {
     }
 
     @Test
+    void clearing_the_read_takes_no_body_and_answers_the_fresh_inbox() throws Exception {
+        when(notifications.dismissRead(ALICE)).thenReturn(inbox(0));
+
+        mvc.perform(post("/api/v1/notifications/dismiss-read"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.unread").value(0));
+
+        verify(notifications).dismissRead(ALICE);
+    }
+
+    @Test
     void a_blank_or_missing_key_is_refused_before_the_service_sees_it() throws Exception {
         mvc.perform(post("/api/v1/notifications/dismiss")
                         .contentType(MediaType.APPLICATION_JSON)

@@ -333,6 +333,50 @@ class NotificationServiceTest {
     }
 
     @Test
+    void clearing_the_read_files_the_read_rows_and_leaves_the_unread_ones() {
+        OffsetDateTime now = OffsetDateTime.now();
+        withAttention(attention("reminder_due", now.minusHours(1), null),
+                attention("stale", null, now.minusDays(20)));
+        String reminder = "reminder:" + APP + ":" + now.minusHours(1).toInstant().getEpochSecond();
+        service.markRead(ALICE, List.of(reminder));
+
+        Inbox after = service.dismissRead(ALICE);
+
+        assertThat(after.items()).extracting(NotificationItem::kind)
+                .containsExactly(NotificationService.KIND_STALE);
+        assertThat(after.unread()).isEqualTo(1);
+        assertThat(store.get(reminder).getDismissedAt()).isNotNull();
+        assertThat(store.get(reminder).getReadAt()).isNotNull();
+        assertThat(store).hasSize(1);
+    }
+
+    @Test
+    void clearing_the_read_with_nothing_read_files_nothing() {
+        OffsetDateTime now = OffsetDateTime.now();
+        withAttention(attention("reminder_due", now.minusHours(1), null));
+
+        Inbox after = service.dismissRead(ALICE);
+
+        assertThat(after.items()).hasSize(1);
+        assertThat(after.unread()).isEqualTo(1);
+        assertThat(store).isEmpty();
+    }
+
+    @Test
+    void a_cleared_episode_comes_back_unread_with_a_new_one() {
+        OffsetDateTime now = OffsetDateTime.now();
+        withAttention(attention("stale", null, now.minusDays(20)));
+        String key = service.inbox(ALICE).items().get(0).key();
+        service.markRead(ALICE, List.of(key));
+        assertThat(service.dismissRead(ALICE).items()).isEmpty();
+
+        withAttention(attention("stale", null, now.minusDays(19)));
+
+        assertThat(service.inbox(ALICE).unread()).isEqualTo(1);
+        assertThat(service.inbox(ALICE).items().get(0).read()).isFalse();
+    }
+
+    @Test
     void dismissing_a_key_the_inbox_is_not_showing_files_nothing() {
         withAttention(attention("stale", null, OffsetDateTime.now().minusDays(20)));
 

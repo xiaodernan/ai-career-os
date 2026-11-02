@@ -177,6 +177,7 @@ export const endpoints = {
   notificationsRead: "/notifications/read",
   notificationsReadAll: "/notifications/read-all",
   notificationsDismiss: "/notifications/dismiss",
+  notificationsDismissRead: "/notifications/dismiss-read",
 
   /* ---------------- Push registrations (33.1) ----------------------------- */
   pushSubscriptions: "/push/subscriptions",

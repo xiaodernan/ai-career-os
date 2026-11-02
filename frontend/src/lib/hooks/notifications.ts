@@ -62,3 +62,16 @@ export function useDismissNotification() {
     onError: fail("notifications.actionFailed"),
   });
 }
+
+/** 45.4 — file away every row the reader has already read, in one press. */
+export function useDismissReadNotifications() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (): Promise<NotificationInbox> =>
+      normalizeNotificationInbox(
+        await api.request<unknown>(endpoints.notificationsDismissRead, { method: "POST" })
+      ),
+    onSuccess: (inbox) => qc.setQueryData(["notifications"], inbox),
+    onError: fail("notifications.actionFailed"),
+  });
+}
