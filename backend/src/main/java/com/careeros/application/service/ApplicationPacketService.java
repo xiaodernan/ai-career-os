@@ -5,6 +5,7 @@ import com.careeros.application.dto.ApplicationDtos.PacketJd;
 import com.careeros.application.dto.ApplicationDtos.PacketMatch;
 import com.careeros.application.dto.ApplicationDtos.PacketResume;
 import com.careeros.application.entity.Application;
+import com.careeros.application.repository.ApplicationLetterRepository;
 import com.careeros.common.Json;
 import com.careeros.job.entity.Company;
 import com.careeros.job.entity.Job;
@@ -47,6 +48,7 @@ public class ApplicationPacketService {
     private final JobMatchRepository matches;
     private final JobRepository jobs;
     private final CompanyRepository companies;
+    private final ApplicationLetterRepository letters;
 
     public ApplicationPacketService(ApplicationService applications,
                                     ResumeVersionRepository resumeVersions,
@@ -54,7 +56,8 @@ public class ApplicationPacketService {
                                     JobJdRepository jds,
                                     JobMatchRepository matches,
                                     JobRepository jobs,
-                                    CompanyRepository companies) {
+                                    CompanyRepository companies,
+                                    ApplicationLetterRepository letters) {
         this.applications = applications;
         this.resumeVersions = resumeVersions;
         this.resumes = resumes;
@@ -62,6 +65,7 @@ public class ApplicationPacketService {
         this.matches = matches;
         this.jobs = jobs;
         this.companies = companies;
+        this.letters = letters;
     }
 
     @Transactional(readOnly = true)
@@ -74,7 +78,11 @@ public class ApplicationPacketService {
                 app.getId(),
                 resumeVersionId != null, resume(userId, resumeVersionId),
                 jdId != null, jd(userId, jdId),
-                matchId != null, match(userId, matchId));
+                matchId != null, match(userId, matchId),
+                // A letter is not a link: there can be none, one, or several, and the card that
+                // carries them is this application. The count is scoped to the caller like the
+                // three lookups above, so a stray row can never be reported as this card's.
+                (int) letters.countByApplicationIdAndUserId(app.getId(), userId));
     }
 
     private PacketResume resume(UUID userId, UUID versionId) {

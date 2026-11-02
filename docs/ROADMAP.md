@@ -4093,6 +4093,24 @@ the whole cross-entity search has stayed invisible.
   same answer the palette already trusts, so a private mode that refuses the removal cannot leave
   the UI claiming a list that is still there. 1 pure-function test and 1 wiring test.)
 
+## Epic 53 -- The packet counts every artifact
+
+The packet (47.1) answers "what does this application carry" with three links -- the resume
+version, the JD analysis, the match. The letters the reader keeps (47.4) were not in that answer
+at all, so the drawer could say "every pipeline artifact is attached" while three cover letters
+sat in the section underneath. A letter is the one artifact that is a count rather than a link:
+it has no screen of its own, and there may be none, one or several.
+
+- [x] **53.1** The packet counts the letters.
+
+  (`GET /applications/{id}/packet` gains `letters`, the number of `application_letters` rows for
+  this application and this caller. The count is scoped like the three lookups beside it, so a
+  stray row can never be reported as this card's. The drawer's fourth row says "2 kept" or
+  "None kept yet" and carries no status badge: "Not linked" would be false for a letter that was
+  simply never written, and a count is its own status. On the wire the field is optional and a
+  missing value reads as zero, so an older body cannot draw "undefined kept"; the empty-packet
+  sentence now also requires zero letters. 2 service tests, 1 route assertion, 4 SSR assertions
+  and 2 normalisation tests.)
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

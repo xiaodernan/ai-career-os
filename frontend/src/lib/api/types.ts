@@ -412,7 +412,7 @@ export interface ApplicationPacketMatch {
 }
 
 /**
- * `GET /applications/{id}/packet`: the three pipeline artifacts this application points at.
+ * `GET /applications/{id}/packet`: the artifacts this application carries.
  *
  * A `*Linked` flag comes from the application's own column; its value is null when that column
  * is empty, or when the row it names cannot be read by this account. The two states are kept
@@ -426,6 +426,11 @@ export interface ApplicationPacket {
   jd?: ApplicationPacketJd | null;
   matchLinked: boolean;
   match?: ApplicationPacketMatch | null;
+  /**
+   * How many kept cover letters the card holds (53.1). Not a link like the other three: a letter
+   * is a row in its own table, and there may be none, one or several.
+   */
+  letters?: number;
 }
 
 /**

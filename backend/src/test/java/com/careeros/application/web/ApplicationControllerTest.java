@@ -67,7 +67,7 @@ class ApplicationControllerTest {
                 APP, true,
                 new PacketResume(UUID.randomUUID(), UUID.randomUUID(), "Ada CV",
                         "tailored", "tailored", OffsetDateTime.parse("2026-10-01T09:00:00Z")),
-                false, null, false, null));
+                false, null, false, null, 2));
 
         mvc.perform(get("/api/v1/applications/" + APP + "/packet"))
                 .andExpect(status().isOk())
@@ -75,7 +75,8 @@ class ApplicationControllerTest {
                 .andExpect(jsonPath("$.data.resumeLinked").value(true))
                 .andExpect(jsonPath("$.data.resume.title").value("Ada CV"))
                 .andExpect(jsonPath("$.data.jdLinked").value(false))
-                .andExpect(jsonPath("$.data.jd").doesNotExist());
+                .andExpect(jsonPath("$.data.jd").doesNotExist())
+                .andExpect(jsonPath("$.data.letters").value(2));
     }
 
     @Test

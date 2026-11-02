@@ -722,6 +722,9 @@ export function normalizeApplicationPacket(raw: unknown): ApplicationPacket {
     jd: normalizePacketJd(pick(raw, "jd")),
     matchLinked: bool(raw, "matchLinked") ?? false,
     match: normalizePacketMatch(pick(raw, "match")),
+    // A missing count reads as none: the route always answers the number, and a body that lost
+    // it (an older build, a mocked fixture) must not draw "undefined kept".
+    letters: num(raw, "letters") ?? 0,
   };
 }
 

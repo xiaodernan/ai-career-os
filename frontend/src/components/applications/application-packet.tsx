@@ -24,12 +24,14 @@ import type { Application, ApplicationPacket } from "@/lib/api/types";
 type Translate = (key: string, vars?: Record<string, string | number>) => string;
 
 interface PacketRow {
-  key: "resume" | "jd" | "match";
+  key: "resume" | "jd" | "match" | "letters";
   label: string;
   primary: string;
   secondary?: string;
   href?: string;
   state: "ready" | "unavailable" | "missing";
+  /** Set only for the letters row, which reports a number instead of a link or a state badge. */
+  count?: number;
 }
 
 export interface ApplicationPacketPanelProps {
@@ -88,7 +90,28 @@ function matchRow(packet: ApplicationPacket, t: Translate, locale: "en" | "zh"):
   };
 }
 
+/**
+ * The fourth artifact (53.1). It is a count, not a link: a kept letter has no screen of its own
+ * and there may be several, so the row answers "how much is here" rather than "which one".
+ */
+function lettersRow(packet: ApplicationPacket, t: Translate): PacketRow {
+  const count = packet.letters ?? 0;
+  return {
+    key: "letters",
+    label: t("applications.dialog.letters"),
+    primary:
+      count > 0
+        ? t("applications.dialog.packet.letterCount", { count })
+        : t("applications.dialog.packet.noLetters"),
+    state: count > 0 ? "ready" : "missing",
+    count,
+  };
+}
+
 function Status({ row, t }: { row: PacketRow; t: Translate }) {
+  // A count is its own status: printing "Not linked" beside "None kept yet" would say the same
+  // thing twice, and "Not linked" would be false for a letter that simply was never written.
+  if (row.count !== undefined) return null;
   if (row.href) {
     return (
       <Button asChild size="sm" variant="ghost">
@@ -117,9 +140,19 @@ export function ApplicationPacketPanel({
   const { t, locale } = useLocale();
   const headingId = React.useId();
   const rows = packet
-    ? [resumeRow(packet, t, locale), jdRow(application, packet, t, locale), matchRow(packet, t, locale)]
+    ? [
+        resumeRow(packet, t, locale),
+        jdRow(application, packet, t, locale),
+        matchRow(packet, t, locale),
+        lettersRow(packet, t),
+      ]
     : [];
-  const allMissing = packet != null && !packet.resumeLinked && !packet.jdLinked && !packet.matchLinked;
+  const allMissing =
+    packet != null &&
+    !packet.resumeLinked &&
+    !packet.jdLinked &&
+    !packet.matchLinked &&
+    (packet.letters ?? 0) === 0;
 
   return (
     <section className="space-y-2" aria-labelledby={headingId}>

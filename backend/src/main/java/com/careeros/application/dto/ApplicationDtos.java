@@ -69,11 +69,15 @@ public final class ApplicationDtos {
      * each is null when that column is empty <em>or</em> when the row it names is not the caller's.
      * A reader can therefore tell "nothing was ever linked" from "the thing that was linked can no
      * longer be read", without this route revealing whether an id belongs to another account.
+     *
+     * <p>`letters` is the fourth artifact and the only one that is a count: a kept letter is not a
+     * column on the application but a row in its own table, and the reader may keep several.
      */
     public record ApplicationPacket(UUID applicationId,
                                     boolean resumeLinked, PacketResume resume,
                                     boolean jdLinked, PacketJd jd,
-                                    boolean matchLinked, PacketMatch match) {
+                                    boolean matchLinked, PacketMatch match,
+                                    int letters) {
     }
 
     public record CreateApplicationRequest(@JsonAlias("job_id") UUID jobId,

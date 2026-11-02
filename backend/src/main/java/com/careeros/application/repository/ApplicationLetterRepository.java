@@ -15,4 +15,7 @@ public interface ApplicationLetterRepository extends JpaRepository<ApplicationLe
 
     Optional<ApplicationLetter> findByIdAndApplicationIdAndUserId(
             UUID id, UUID applicationId, UUID userId);
+
+    /** How many letters this application holds for this caller; another account's rows do not count. */
+    long countByApplicationIdAndUserId(UUID applicationId, UUID userId);
 }

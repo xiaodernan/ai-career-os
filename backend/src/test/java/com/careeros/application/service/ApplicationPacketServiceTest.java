@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 
 import com.careeros.application.dto.ApplicationDtos.ApplicationPacket;
 import com.careeros.application.entity.Application;
+import com.careeros.application.repository.ApplicationLetterRepository;
 import com.careeros.job.entity.Company;
 import com.careeros.job.entity.Job;
 import com.careeros.job.entity.JobJd;
@@ -48,6 +49,7 @@ class ApplicationPacketServiceTest {
     private JobMatchRepository matches;
     private JobRepository jobs;
     private CompanyRepository companies;
+    private ApplicationLetterRepository letters;
     private ApplicationPacketService service;
     private Application app;
 
@@ -60,12 +62,14 @@ class ApplicationPacketServiceTest {
         matches = mock(JobMatchRepository.class);
         jobs = mock(JobRepository.class);
         companies = mock(CompanyRepository.class);
+        letters = mock(ApplicationLetterRepository.class);
         service = new ApplicationPacketService(applications, resumeVersions, resumes, jds,
-                matches, jobs, companies);
+                matches, jobs, companies, letters);
 
         app = mock(Application.class);
         when(app.getId()).thenReturn(applicationId);
         when(applications.require(userId, applicationId)).thenReturn(app);
+        when(letters.countByApplicationIdAndUserId(applicationId, userId)).thenReturn(2L);
     }
 
     @Test
@@ -120,6 +124,7 @@ class ApplicationPacketServiceTest {
         assertThat(packet.matchLinked()).isTrue();
         assertThat(packet.match().overall()).isEqualTo(0.82f);
         assertThat(packet.match().jobId()).isEqualTo(jobId);
+        assertThat(packet.letters()).isEqualTo(2);
     }
 
     @Test
@@ -163,5 +168,23 @@ class ApplicationPacketServiceTest {
                 org.mockito.ArgumentMatchers.any());
         verify(matches, never()).findByIdAndUserId(org.mockito.ArgumentMatchers.any(),
                 org.mockito.ArgumentMatchers.any());
+    }
+
+    /**
+     * The fourth artifact is a count rather than a link, and the count has to be this caller's:
+     * the query names both the application and the user, so a stray row can never be reported as
+     * this card's letter.
+     */
+    @Test
+    void theLetterCountIsScopedToTheApplicationAndTheCaller() {
+        when(app.getResumeVersionId()).thenReturn(null);
+        when(app.getJdId()).thenReturn(null);
+        when(app.getMatchId()).thenReturn(null);
+        when(letters.countByApplicationIdAndUserId(applicationId, userId)).thenReturn(3L);
+
+        ApplicationPacket packet = service.packet(userId, applicationId);
+
+        assertThat(packet.letters()).isEqualTo(3);
+        verify(letters).countByApplicationIdAndUserId(applicationId, userId);
     }
 }
