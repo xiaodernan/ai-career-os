@@ -27,6 +27,7 @@ import { str } from "@/lib/api/normalize";
 import { formatDateTime, relativeTime } from "@/lib/format";
 import { INTERVIEW_MODES } from "@/lib/interview-modes";
 import { interviewModeHint, interviewModeName } from "@/lib/status-words";
+import { interviewApplicationHref } from "@/lib/interview-target";
 
 // The route's own default window: `GET /interview/sessions` binds `size` with
 // `defaultValue = "20"`, so this number asks for exactly what the server would have
@@ -123,6 +124,7 @@ export default function InterviewsPage() {
           <ul className="space-y-3">
             {page.items.map((s) => {
               const done = s.status === "completed";
+              const applicationHref = interviewApplicationHref(s.applicationId);
               return (
                 <li key={s.id}>
                   <Card className="transition-shadow duration-200 hover:shadow-pop">
@@ -161,9 +163,9 @@ export default function InterviewsPage() {
                           {Math.round(s.overall)}/100
                         </Badge>
                       )}
-                      {s.applicationId && (
+                      {applicationHref && (
                         <Button variant="ghost" size="sm" asChild className="shrink-0">
-                          <Link href={`/applications?application=${s.applicationId}`}>
+                          <Link href={applicationHref}>
                             <Briefcase aria-hidden />
                             {t("interviews.openApplication")}
                           </Link>

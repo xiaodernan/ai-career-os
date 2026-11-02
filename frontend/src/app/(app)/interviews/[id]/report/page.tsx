@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { interviewApplicationHref } from "@/lib/interview-target";
 import { useParams } from "next/navigation";
 import {
   ArrowLeft,
@@ -153,6 +154,14 @@ export default function InterviewReportPage() {
                 {data.jobTitle ? `${data.jobTitle} · ` : ""}
                 {data.finishedAt ? formatDate(data.finishedAt, locale) : formatDate(data.startedAt, locale)}
               </CardDescription>
+              {interviewApplicationHref(data.applicationId) && (
+                <Link
+                  href={interviewApplicationHref(data.applicationId)!}
+                  className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+                >
+                  {t("interviews.openApplication")}
+                </Link>
+              )}
             </div>
             <AIBadge label="evaluator output" />
           </div>

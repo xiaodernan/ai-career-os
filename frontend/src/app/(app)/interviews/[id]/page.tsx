@@ -23,6 +23,7 @@ import {
   VolumeX,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { interviewApplicationHref } from "@/lib/interview-target";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -229,6 +230,14 @@ export default function InterviewRunnerPage() {
           <span className="text-sm text-muted-foreground">
             · {data.companyName ?? ""} {data.jobTitle ? `— ${data.jobTitle}` : ""}
           </span>
+        )}
+        {interviewApplicationHref(data.applicationId) && (
+          <Link
+            href={interviewApplicationHref(data.applicationId)!}
+            className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+          >
+            {t("interviews.openApplication")}
+          </Link>
         )}
         <Badge variant="outline" className="ml-auto text-2xs font-normal tabular-nums">
           {t("interviews.detail.question", {

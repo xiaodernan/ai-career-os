@@ -4192,6 +4192,11 @@ application it belonged to.
   (A row whose session carries an application id grows an `Open application` link to
   `/applications?application=<id>` -- the deep link that opens that drawer (51.2). A free
   rehearsal gets no link, because there is no card to open. 1 page test.)
+- [x] **56.4** The session and its report point back too.
+
+  (Both headers carry the same `Open application` link, through one helper
+  (`lib/interview-target.ts`) so the list, the runner and the report cannot disagree about the
+  route or about a free rehearsal having none. 2 pure-function tests.)
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
