@@ -67,10 +67,19 @@ public class InboundReplyService {
         this.events = events;
     }
 
-    /** The replies page: one account's letters newest first, each with what it is filed on. */
+    /**
+     * The replies page: one account's letters newest first, each with what it is filed on.
+     * A non-blank {@code query} narrows the same page to letters whose subject, sender,
+     * company or role contains it, case aside; a blank one is no filter at all, because an
+     * empty search box must not turn the page into an empty room.
+     */
     @Transactional(readOnly = true)
-    public PageDTO<InboundMailItem> list(UUID userId, Pageable pageable) {
-        Page<InboundMail> page = mails.findByUserIdOrderByReceivedAtDescIdDesc(userId, pageable);
+    public PageDTO<InboundMailItem> list(UUID userId, Pageable pageable, String query) {
+        String needle = trimmed(query);
+        String q = needle == null ? null : needle.toLowerCase(Locale.ROOT);
+        Page<InboundMail> page = q == null
+                ? mails.findByUserIdOrderByReceivedAtDescIdDesc(userId, pageable)
+                : mails.search(userId, q, pageable);
         Map<UUID, Application> byId = applicationsOf(userId, page.getContent());
         return PageDTO.from(page, mail -> item(mail, byId.get(mail.getApplicationId())));
     }
@@ -171,7 +180,11 @@ public class InboundReplyService {
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
         if (ids.isEmpty()) {
-            return Map.of();
+            // A page of entirely unfiled letters still asks `byId.get(null)` -- the map on the
+            // call site does not know which letters are waiting. `Map.of()` refuses a null key
+            // rather than answering null, so an empty page used to fail here instead of
+            // rendering; a HashMap answers null like every other lookup.
+            return new HashMap<>();
         }
         Map<UUID, Application> out = new HashMap<>();
         for (Application app : applications.findAllById(ids)) {

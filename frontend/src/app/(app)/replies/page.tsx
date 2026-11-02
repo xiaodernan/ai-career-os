@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ArrowUpRight, Inbox } from "lucide-react";
+import { ArrowUpRight, Inbox, Search } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/common/page-header";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
@@ -12,6 +12,7 @@ import { Pagination } from "@/components/common/pagination";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
@@ -48,7 +49,11 @@ type Translate = (key: string, vars?: Record<string, string | number>) => string
 
 const PAGE_SIZE = 20;
 // Module-level so `setUrl` (a `useCallback` keyed on this object) is stable across renders.
-const PAGE_DEFAULTS: { mail?: string; page: number } = { mail: undefined, page: 0 };
+const PAGE_DEFAULTS: { mail?: string; page: number; q?: string } = {
+  mail: undefined,
+  page: 0,
+  q: undefined,
+};
 
 function intentKey(intent: string | null): string {
   switch (intent) {
@@ -88,16 +93,25 @@ function titleOf(mail: InboundMail, t: Translate): string {
 
 export default function RepliesPage() {
   const { t, locale } = useLocale();
-  const [state, setUrl] = useUrlState<{ mail?: string; page: number }>(PAGE_DEFAULTS, {
+  const [state, setUrl] = useUrlState<{ mail?: string; page: number; q?: string }>(PAGE_DEFAULTS, {
     numericKeys: ["page"],
   });
-  const letters = useInboundMails({ page: state.page, size: PAGE_SIZE });
+  const letters = useInboundMails({ page: state.page, size: PAGE_SIZE, q: state.q });
   const applications = useApplications({ size: 100 });
   const file = useFileInboundMail();
   const apply = useUpdateApplication();
   // mail id → the card the reader picked for it; a picked value lives only on this screen.
   const [picked, setPicked] = React.useState<Record<string, string>>({});
   const [applyFor, setApplyFor] = React.useState<InboundMail | null>(null);
+  // The box is a draft: typing does not query the server on every key, Enter does. It follows
+  // the URL when the URL changes by another route -- hydration on load, or a cleared search.
+  const [draft, setDraft] = React.useState(state.q ?? "");
+  React.useEffect(() => setDraft(state.q ?? ""), [state.q]);
+
+  const search = (value: string) => {
+    const q = value.trim();
+    setUrl({ q: q || undefined, page: 0 });
+  };
 
   const items = letters.data?.items ?? [];
   const total = letters.data?.total ?? 0;
@@ -145,6 +159,49 @@ export default function RepliesPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <PageHeader title={t("replies.title")} description={t("replies.description")} />
+
+      {/* The search is the server's, not a filter over this page: the pager below counts the
+          matches, so page two of a search is the second page of the matches rather than the
+          second page of the inbox with most of its rows hidden. */}
+      <form
+        role="search"
+        className="flex gap-2"
+        onSubmit={(event) => {
+          event.preventDefault();
+          search(draft);
+        }}
+      >
+        <div className="relative min-w-0 flex-1">
+          <Search
+            aria-hidden
+            className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+          />
+          <Input
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            placeholder={t("replies.searchPlaceholder")}
+            aria-label={t("replies.searchLabel")}
+            autoComplete="off"
+            className="pl-9"
+          />
+        </div>
+        <Button type="submit" size="sm" variant="outline">
+          {t("replies.search")}
+        </Button>
+        {state.q ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              setDraft("");
+              search("");
+            }}
+          >
+            {t("replies.clearSearch")}
+          </Button>
+        ) : null}
+      </form>
 
       <Card>
         <CardContent className="p-6">
@@ -283,6 +340,24 @@ export default function RepliesPage() {
                 );
               })}
             </ul>
+          ) : state.q ? (
+            <EmptyState
+              icon={<Search aria-hidden />}
+              title={t("replies.noMatch", { query: state.q })}
+              description={t("replies.noMatchDescription")}
+              action={
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setDraft("");
+                    search("");
+                  }}
+                >
+                  {t("replies.clearSearch")}
+                </Button>
+              }
+            />
           ) : (
             <EmptyState
               icon={<Inbox aria-hidden />}

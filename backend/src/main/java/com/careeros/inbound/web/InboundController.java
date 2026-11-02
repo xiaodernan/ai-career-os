@@ -75,12 +75,17 @@ public class InboundController {
         return new Acknowledgement("received");
     }
 
-    /** The replies page: the account's letters newest first, filed or waiting. */
+    /**
+     * The replies page: the account's letters newest first, filed or waiting. A non-blank
+     * {@code q} narrows the page to the letters whose subject, sender, company or role
+     * contains it, case aside; paging counts the narrowed total, not the whole inbox.
+     */
     @GetMapping("/mails")
     public PageDTO<InboundMailItem> list(@CurrentUser AuthUser user,
                                          @RequestParam(defaultValue = "0") int page,
-                                         @RequestParam(defaultValue = "50") int size) {
-        return replies.list(user.id(), Paging.of(page, size).pageable());
+                                         @RequestParam(defaultValue = "50") int size,
+                                         @RequestParam(required = false) String q) {
+        return replies.list(user.id(), Paging.of(page, size).pageable(), q);
     }
 
     /** Ties one waiting letter to the card it answers; a double click on the same card is a no-op. */

@@ -3917,6 +3917,28 @@ while no rule read it, so a meter cannot be born unwatched again.
   how `careeros.storage.objects_reclaimed` shipped with a runbook line telling an operator to read
   a series nothing watches. Flip the direction and hold the exemptions to a reason each.)
 
+## Epic 49 -- The Replies Can Be Found
+
+The replies page can turn pages but cannot be asked a question. A reader with forty letters and
+one recruiter's name in mind scrolls fifty at a time, and the count above the list describes the
+whole inbox rather than what they are looking for. The server already knows how to answer narrower
+than that; the page simply never asked. 49.1 gives the list route a `q`, matched without case
+against subject, sender, company and role -- the same fields a reader would search by hand -- and
+gives the empty state under a search its own sentence. A blank `q` has to remain a non-question:
+the moment the box exists, an empty search that filtered would turn every page into "no matches".
+And the no-match state must not borrow the inbox's "get an address" copy: a reader with forty
+letters does not need to fix a deployment that is fine.
+
+- [x] **49.1** The replies can be found. (`GET /inbound/mails` binds `q`, trimmed and
+  lowercased, and answers a page whose total describes the narrowed set. The repository uses
+  `LOCATE` rather than a bound `LIKE` so a typed `%` is a percent sign instead of a wildcard,
+  and `COALESCE` so a letter with no company is still found by its subject. The page keeps a
+  draft box and queries on submit, the URL keeps the words so a reload is the same question,
+  and the empty state under a search offers "clear search" rather than the settings link. 2
+  service tests + 1 route test + 3 SSR tests; the list's `Map.of()` NPE on a page of entirely
+  unfiled mail is fixed on the way, because the empty map refuses the null key `byId.get(null)`
+  asks for. 964 frontend tests in 94 files; 1117 backend tests.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

@@ -506,7 +506,7 @@ changes an application's status.
 |---|---|---|
 | GET | `/inbound/link` | the signed-in account's own inbound address; **503** `INBOUND_NOT_CONFIGURED` when the deployment has no domain |
 | POST | `/inbound/mail/{token}` | the provider's webhook; body is Postmark inbound JSON; always **200** `{"status":"received"}` on a resolvable token, **404** `INBOUND_LINK_INVALID` otherwise |
-| GET | `/inbound/mails` | the caller's letters, newest first — `page` (default 0) and `size` (default 50, clamped) → {items, total, page, size}; each item carries the reading, the suggested stage and the filed application, all nullable |
+| GET | `/inbound/mails` | the caller's letters, newest first — `page` (default 0), `size` (default 50, clamped) and `q` (a case-insensitive substring of subject, sender, company or role; blank means no filter) → {items, total, page, size}; each item carries the reading, the suggested stage and the filed application, all nullable |
 | POST | `/inbound/mails/{id}/file` | files one letter on `{"applicationId"}` and appends a `reply` event to that card; a second call on the same card is a no-op, a different card is **409** `INBOUND_MAIL_ALREADY_FILED`, and a letter that is not the caller's is **404** `INBOUND_MAIL_NOT_FOUND` — the same answer as one that never existed |
 
 ### Growth engines (`/growth`)
@@ -630,7 +630,7 @@ strings, and `lastTouchAt` is the user's claim about when contact last happened.
 
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/applications` | board (`?status=&page=&size=`) |
+| GET | `/applications` | board (`?status=&jobId=&page=&size=`); `jobId` narrows to one posting, so a job page can ask whether it is already in the pipeline |
 | POST | `/applications` | create |
 | GET | `/applications/{id}` | detail |
 | PATCH | `/applications/{id}` | `{status, position, note, reminderAt, clearReminderAt, offerCompensation, rejectionReason}` — kanban drag & drop; `reminder_at` / `clear_reminder_at` are the accepted aliases, `note` (singular) is the writable one, a null component means "leave it alone" (so removing a reminder travels as `clearReminderAt: true`), and the outcome pair records the compensation on an offer or the reason on a rejection |

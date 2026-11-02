@@ -83,8 +83,10 @@ describe("the browser's copy", () => {
     // the reader on; 148 with `components/settings/mail-card.tsx`, the card that reads
     // the three mail dials and opens the page they live on (42.1); 149 with
     // `components/dashboard/attention-row.tsx`, the row that answers a due reminder where
-    // it is read instead of sending the reader to the dialog (43.1).
-    expect(browserSources().length).toBe(149);
+    // it is read instead of sending the reader to the dialog (43.1); 150 with
+    // `components/applications/application-packet.tsx`, the panel that names the resume
+    // version, JD analysis and match an application was sent with (47.1).
+    expect(browserSources().length).toBe(150);
   });
 
   it("finds a sentence, however long it is", () => {

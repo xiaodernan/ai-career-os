@@ -3,6 +3,8 @@ package com.careeros.inbound.web;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -155,7 +157,7 @@ class InboundControllerTest {
 
     @Test
     void theRepliesPageIsTheAccountsLettersAndAsksForTheFirstPage() throws Exception {
-        when(replies.list(argThat(ALICE::equals), any()))
+        when(replies.list(argThat(ALICE::equals), any(), any()))
                 .thenReturn(PageDTO.of(List.of(item(APP)), 1, 0, 50));
 
         mvc.perform(get("/api/v1/inbound/mails"))
@@ -166,8 +168,23 @@ class InboundControllerTest {
                 .andExpect(jsonPath("$.data.total").value(1));
 
         verify(replies).list(argThat(ALICE::equals), argThat(pageable ->
-                pageable.getPageNumber() == 0 && pageable.getPageSize() == 50));
+                pageable.getPageNumber() == 0 && pageable.getPageSize() == 50), isNull());
         verifyNoInteractions(mail);
+    }
+
+    @Test
+    void aSearchTravelsToTheServiceAsTheReaderTypedIt() throws Exception {
+        // The page owns the words, the service trims and lowercases them; this route only has
+        // to carry the box across, including its spaces, so the two never disagree about what
+        // was asked.
+        when(replies.list(argThat(ALICE::equals), any(), eq("Acme")))
+                .thenReturn(PageDTO.of(List.of(item(APP)), 1, 0, 50));
+
+        mvc.perform(get("/api/v1/inbound/mails").param("q", "Acme"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1));
+
+        verify(replies).list(argThat(ALICE::equals), any(Pageable.class), eq("Acme"));
     }
 
     @Test

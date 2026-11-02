@@ -38,13 +38,29 @@ export function mapInboundMail(raw: unknown): InboundMail {
   };
 }
 
-/** The account's letters, newest first, one page at a time (37.3's list route). */
-export function useInboundMails(params?: { page?: number; size?: number }) {
+/**
+ * The account's letters, newest first, one page at a time (37.3's list route).
+ *
+ * A non-blank `q` narrows the page on the server -- subject, sender, company or role, case
+ * aside -- so the count and the pager describe the search rather than the whole inbox. The
+ * key carries the trimmed words, because " acme" and "acme" are the same question and must
+ * not cost two caches.
+ */
+export function useInboundMails(params?: { page?: number; size?: number; q?: string }) {
+  const q = params?.q?.trim() || undefined;
   return useQuery({
-    queryKey: ["inbound", "mails", params],
+    queryKey: ["inbound", "mails", params?.page ?? 0, params?.size ?? 50, q ?? ""],
     queryFn: async (): Promise<Page<InboundMail>> =>
       normalizePage(
-        await api.get<unknown>(endpoints.inboundMails, { size: 50, ...(params ?? {}) }),
+        // Every key is spelled out rather than spread conditionally: the endpoint gate reads
+        // this literal to check each name against the handler's `@RequestParam`s, and a
+        // `...(cond ? {...} : {})` is exactly the shape it refuses to guess at. `undefined`
+        // costs nothing on the wire -- `buildUrl` drops it -- so blank stays blank.
+        await api.get<unknown>(endpoints.inboundMails, {
+          size: params?.size ?? 50,
+          page: params?.page,
+          q,
+        }),
         mapInboundMail
       ),
   });

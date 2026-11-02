@@ -24,11 +24,19 @@ const state = vi.hoisted(() => ({
       | undefined,
     isPending: false,
   },
+  url: { q: undefined as string | undefined, page: 0 },
 }));
 
 vi.mock("@/lib/hooks/replies", () => ({
   useInboundMails: () => state.letters,
   useFileInboundMail: () => ({ mutate: () => {}, isPending: false, variables: undefined }),
+}));
+
+// The page's URL state is the one piece SSR cannot hydrate (its effect only runs in a
+// browser), so each test hands the page the query it would have adopted. The setter is a
+// no-op: these tests read the first paint, they do not press the box.
+vi.mock("@/lib/hooks/use-url-state", () => ({
+  useUrlState: () => [state.url, () => {}],
 }));
 
 vi.mock("@/lib/hooks/resources", () => ({
@@ -110,6 +118,7 @@ function withLetters(items: InboundMail[]): void {
 }
 
 beforeEach(() => {
+  state.url = { q: undefined, page: 0 };
   state.letters = {
     data: undefined,
     isPending: false,
@@ -189,5 +198,39 @@ describe("the replies page", () => {
     expect(html).toContain("No replies yet");
     expect(html).toContain('href="/settings"');
     expect(html).toContain("Get your address");
+  });
+
+  it("puts the typed question in the box and offers to clear it", () => {
+    withLetters(ITEMS);
+    state.url = { q: "acme", page: 0 };
+    const html = render();
+
+    expect(html).toContain('role="search"');
+    expect(html).toContain('value="acme"');
+    expect(html).toContain("Search replies");
+    expect(html).toContain("Clear search");
+  });
+
+  it("says nothing matched instead of sending a searcher to settings", () => {
+    // A search that found nothing is not an inbox with nowhere to write: the settings card
+    // would hand out an address that solves a problem this reader does not have.
+    withLetters([]);
+    state.url = { q: "globex", page: 0 };
+    const html = render();
+
+    expect(html).toContain("No replies match “globex”");
+    expect(html).toContain("Try a shorter word");
+    expect(html).toContain("Clear search");
+    expect(html).not.toContain("Get your address");
+    expect(html).not.toContain('href="/settings"');
+  });
+
+  it("says the search found nothing in the reader's language", () => {
+    withLetters([]);
+    state.url = { q: "globex", page: 0 };
+    const html = render("zh");
+
+    expect(html).toContain("没有与“globex”匹配的回信");
+    expect(html).toContain("清除搜索");
   });
 });
