@@ -20,7 +20,7 @@ import { endpoints } from "@/lib/api/endpoints";
 import { normalizeSearch, searchGroupNames } from "@/lib/api/normalize";
 import { useLocale } from "@/lib/i18n/locale-context";
 import type { SearchResults } from "@/lib/api/types";
-import { FileText, Briefcase, Building2, MessageSquare, LayoutDashboard, CornerDownLeft, Loader2, type LucideIcon } from "lucide-react";
+import { FileText, Briefcase, Building2, Mail, MessageSquare, LayoutDashboard, CornerDownLeft, Loader2, type LucideIcon } from "lucide-react";
 
 /**
  * CommandPalette — global ⌘K shell (architecture.md §3 search module).
@@ -48,6 +48,7 @@ const RESULT_ICONS: Record<string, LucideIcon> = {
   job: Briefcase,
   company: Building2,
   conversation: MessageSquare,
+  letter: Mail,
 };
 
 type SearchFn = (q: string) => Promise<SearchResults>;

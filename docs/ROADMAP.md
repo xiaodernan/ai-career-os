@@ -4067,6 +4067,16 @@ the whole cross-entity search has stayed invisible.
   (51.2). The repository tests pin the group's bound parameters, its ordering tie-break and the
   join that carries the posting. 2 repository tests.)
 
+- [x] **52.2** The palette shows the letters.
+
+  (The ⌘K palette already called `/search`, but its group table stopped at six, so a letter the
+  server returned was decoded and then dropped. The parity test ties that table to the Java
+  record's own components, which is how the omission stayed honest instead of silent. `letters`
+  is the seventh row: the posting's title is the line, the body's opening is the subtitle, and
+  the href is `/applications?application=<id>` -- a letter has no screen of its own, and the
+  drawer is where it lives (51.2). A letter with no application id falls back to the board rather
+  than `/applications?application=undefined`. 3 normalisation tests.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

@@ -1536,12 +1536,15 @@ describe("normalizeSearch", () => {
     notes: [{ id: "n1", title: "Idea", snippet: "about react" }],
     conversations: [{ id: "v1", title: "Chat", snippet: "prev" }],
     applications: [{ id: "a1", title: "Applied", companyName: "Acme", status: "applied" }],
+    letters: [
+      { id: "l1", applicationId: "a1", jobTitle: "Frontend Eng", snippet: "Dear Acme," },
+    ],
   };
 
   it("maps the backend typed-lists shape into groups with real routes", () => {
     const { groups } = normalizeSearch(backendShape);
     expect(groups.map((g) => g.label)).toEqual([
-      "Jobs", "Companies", "Resumes", "Notes", "Conversations", "Applications",
+      "Jobs", "Companies", "Resumes", "Notes", "Conversations", "Applications", "Letters",
     ]);
     const job = groups[0].items[0];
     expect(job).toMatchObject({ id: "j1", type: "job", title: "Frontend Eng", subtitle: "Acme" });
@@ -1553,6 +1556,27 @@ describe("normalizeSearch", () => {
     expect(groups[4].items[0].href).toBe("/copilot");
     expect(groups[5].items[0].href).toBe("/applications");
     expect(groups.flatMap((g) => g.items).every((i) => i.type && i.href)).toBe(true);
+  });
+
+  it("opens a letter through the application whose drawer holds it", () => {
+    const { groups } = normalizeSearch(backendShape);
+    const letter = groups[5 + 1].items[0];
+
+    expect(letter).toMatchObject({
+      id: "l1",
+      type: "letter",
+      title: "Frontend Eng", // the posting, because a letter's wire name is jobTitle
+      subtitle: "Dear Acme,",
+    });
+    expect(letter.href).toBe("/applications?application=a1");
+  });
+
+  it("sends a letter with no application back to the board rather than a broken drawer", () => {
+    const { groups } = normalizeSearch({
+      letters: [{ id: "l1", jobTitle: "Frontend Eng", snippet: "Dear Acme," }],
+    });
+
+    expect(groups[0].items[0].href).toBe("/applications");
   });
 
   it("drops empty typed buckets so no blank headings appear", () => {
@@ -1579,12 +1603,13 @@ describe("normalizeSearch", () => {
       notes: [{ id: "n1", title: "SRE plan", snippet: "adopt k8s in Q3" }],
       conversations: [{ id: "v1", title: "Weekly sync", snippet: "we moved to k8s" }],
       applications: [{ id: "a1", title: "Infra Engineer", companyName: "Northwind", status: "applied" }],
+      letters: [{ id: "l1", applicationId: "a1", jobTitle: "Platform Engineer", snippet: "about k8s" }],
     });
     const survivors = groups.flatMap((g) => g.items);
-    expect(survivors.map((i) => i.id)).toEqual(["j1", "c1", "r1", "n1", "v1", "a1"]);
+    expect(survivors.map((i) => i.id)).toEqual(["j1", "c1", "r1", "n1", "v1", "a1", "l1"]);
     // Five of the six titles carry no trace of the term — resumes are the exception,
     // because that one query matches the title and nothing else.
-    expect(survivors.filter((i) => !i.title.toLowerCase().includes(k8s))).toHaveLength(5);
+    expect(survivors.filter((i) => !i.title.toLowerCase().includes(k8s))).toHaveLength(6);
   });
 
   it("answers for exactly the groups the backend's SearchResponse carries", () => {
@@ -1603,7 +1628,7 @@ describe("normalizeSearch", () => {
 
   it("says every group it can search, in one sentence", () => {
     expect(searchGroupNames()).toBe(
-      "jobs, companies, resumes, notes, conversations and applications"
+      "jobs, companies, resumes, notes, conversations, applications and letters"
     );
   });
 });

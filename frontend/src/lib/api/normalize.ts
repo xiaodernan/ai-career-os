@@ -1587,7 +1587,7 @@ export function serializeJobFilters(params: object): Record<string, unknown> {
 }
 
 /**
- * The six lists GET /search answers with, in response order — each pinned to one
+ * The seven lists GET /search answers with, in response order — each pinned to one
  * `SearchDtos.SearchResponse` component (a contract test keeps them in step). The
  * palette's "what can I search" copy reads this table too, so neither list can rot
  * on its own.
@@ -1596,7 +1596,7 @@ export const SEARCH_GROUPS: {
   key: string;
   type: string;
   label: string;
-  href: (id: string) => string;
+  href: (id: string, hit?: Record<string, unknown>) => string;
 }[] = [
   { key: "jobs", type: "job", label: "Jobs", href: (id) => `/jobs/${id}` },
   { key: "companies", type: "company", label: "Companies", href: () => "/companies" },
@@ -1604,10 +1604,21 @@ export const SEARCH_GROUPS: {
   { key: "notes", type: "note", label: "Notes", href: () => "/knowledge" },
   { key: "conversations", type: "conversation", label: "Conversations", href: () => "/copilot" },
   { key: "applications", type: "application", label: "Applications", href: () => "/applications" },
+  {
+    key: "letters",
+    type: "letter",
+    label: "Letters",
+    // A kept letter has no screen of its own: it lives in the drawer of the application it was
+    // filed under, so the hit carries that application's id and opens the drawer directly (51.2).
+    href: (_id, hit) => {
+      const applicationId = hit ? str(hit, "applicationId") : undefined;
+      return applicationId ? `/applications?application=${applicationId}` : "/applications";
+    },
+  },
 ];
 
 /**
- * "jobs, companies, resumes, notes, conversations and applications" — the palette's
+ * "jobs, companies, resumes, notes, conversations, applications and letters" — the palette's
  * capability line, derived from the table that decodes the response so it can never
  * claim fewer groups than /search actually answers.
  */
@@ -1619,14 +1630,14 @@ export function searchGroupNames(): string {
 
 /**
  * Global search: `GET /search` answers with typed top-level lists
- * (`{query, jobs, companies, resumes, notes, conversations, applications}`), not a `groups`
+ * (`{query, jobs, companies, resumes, notes, conversations, applications, letters}`), not a `groups`
  * array, so each entity becomes a navigable item on the deepest route that really exists.
  * `SEARCH_GROUPS` is the only table of those lists and the parity test ties its keys to the
  * Java record's `List<…>` components, so a group nobody renders is a red test rather than a
  * silently missing section.
  *
- * No item is dropped for the term not appearing in its title: four of the six
- * groups can match a column the list never shows (see `SearchRepository`), so a
+ * No item is dropped for the term not appearing in its title: most of the groups can match
+ * a column the list never shows (see `SearchRepository`), so a
  * title filter here would hide real hits.
  */
 export function normalizeSearch(raw: unknown): SearchResults {
@@ -1638,14 +1649,16 @@ export function normalizeSearch(raw: unknown): SearchResults {
       label: g.label,
       items: arr.map((h) => {
         const id = idOf(h, g.type);
+        const hit = h as Record<string, unknown>;
         return {
           id,
           type: g.type,
-          title: str(h, "title", "name") ?? "Untitled",
+          // A letter's own "title" is the posting it was written for; the wire calls it jobTitle.
+          title: str(h, "title", "jobTitle", "name") ?? "Untitled",
           subtitle:
             str(h, "companyName", "company_name", "industry", "snippet", "location", "status") ??
             undefined,
-          href: g.href(id),
+          href: g.href(id, hit),
         };
       }),
     });
