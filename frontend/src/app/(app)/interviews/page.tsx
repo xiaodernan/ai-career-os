@@ -69,7 +69,11 @@ export default function InterviewsPage() {
 
   const start = (mode: string) =>
     create.mutate(
-      { mode },
+      // 57.3: on a card's narrowed list, a new rehearsal is for that card.
+      // The button used to start a free session and then drop the reader on a
+      // list it was not on -- the filter is the context the reader chose, so
+      // the create reads it too.
+      { mode, ...(applicationId ? { applicationId } : {}) },
       {
         onSuccess: (res) => {
           const id = str(res, "id", "session_id", "sessionId") ?? str((res as { session?: unknown }).session, "id");

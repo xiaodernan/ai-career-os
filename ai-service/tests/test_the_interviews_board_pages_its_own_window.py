@@ -225,3 +225,17 @@ def test_the_board_narrows_to_a_card_when_the_url_names_one():
             "Paging.of(page, size).pageable())"
             ) in service, (
         "the narrowed read is not scoped by the caller and the card together")
+
+
+def test_starting_a_rehearsal_from_a_cards_list_starts_it_for_that_card():
+    """Case 6 (57.3): the filter is the context of the screen, so it is the context of the create.
+
+    On `/interviews?application=<id>` the start button used to create a free
+    session; the reader then landed on a runner whose report had no card, and
+    the narrowed list they came from would not have shown the new session at
+    all. The create now carries the filter whenever the board has one.
+    """
+    page = read(INTERVIEWS_PAGE)
+    assert re.search(r"\{ mode, \.\.\.\(applicationId \? \{ applicationId \} : "
+                     r"\{\}\) \},", page), (
+        "the create no longer carries the card the list is narrowed to")

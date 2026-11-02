@@ -4229,6 +4229,13 @@ has to be able to show what was rehearsed for it. The rehearsal list is the same
   in the packet that is about what came *back* from the application rather than what was sent.
   1 service test + 1 route assertion + 2 normalizer assertions + 2 panel tests.)
 
+- [x] **57.3** A rehearsal started on a card's list is for that card.
+
+  (The filter is the context the reader chose, so the create reads it: the start menu passes
+  `applicationId` whenever the board is narrowed. Before, the button started a free session and
+  the report had no card -- and the list the reader came from would not have shown the session
+  at all. 1 contract case.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
