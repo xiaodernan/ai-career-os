@@ -205,7 +205,7 @@ was already written (the retry re-sends the stored letter as it was).
 | POST | `/resumes/{id}/set-current` | mark current version |
 | GET | `/resumes/{id}/versions` | version history (original + tailored) |
 | GET | `/resume-versions` | all versions for the user |
-| GET | `/resume-versions/{id}` | one version's metadata — label, kind, job, score, diff; the body is not in this shape, and the print route below is the read that renders it |
+| GET | `/resume-versions/{id}` | one version's metadata — label, kind, job, score, diff; the body is not in this shape, and the print route below is the read that renders it. The application drawer reads one by id to name the version a kept letter was written with (54.2) |
 | POST | `/resume-versions/{id}/print` | `{locale}` → `{html}` — one version as a self-contained, print-ready document in the reader's language: its structured body section by section, or its stored text when it was never parsed. The browser's own print dialog is the PDF. Scoped to the caller: a version that is not the caller's is a 404, not someone's resume |
 
 ### Jobs & companies

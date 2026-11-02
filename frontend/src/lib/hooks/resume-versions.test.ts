@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { fetchResumeVersions, mapResumeVersions } from "@/lib/hooks/resources";
+import { fetchResumeVersions, mapResumeVersion, mapResumeVersions } from "@/lib/hooks/resources";
 
 const okEnv = (data: unknown) => ({ success: true, data, error: null });
 
@@ -105,6 +105,17 @@ describe("mapResumeVersions", () => {
   });
 });
 
+describe("mapResumeVersion", () => {
+  it("reads the one row GET /resume-versions/{id} answers with the same names a list row has", () => {
+    const got = mapResumeVersion(VERSIONS[1]);
+    expect(got).toMatchObject({
+      id: "bbbbbbbb-0000-0000-0000-000000000003",
+      resumeId: "aaaaaaaa-0000-0000-0000-000000000001",
+      label: "v1",
+      source: "original",
+    });
+  });
+});
 describe("fetchResumeVersions", () => {
   it("requests the resume-scoped versions route", async () => {
     mockFetch(VERSIONS);

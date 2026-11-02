@@ -132,6 +132,25 @@ export async function fetchResumeVersions(resumeId: string): Promise<ResumeVersi
   return mapResumeVersions(await api.get<unknown>(endpoints.resumeVersions, { resumeId }));
 }
 
+/** One version by id for a screen that only holds the id (54.2). Same shape as a list row. */
+export function mapResumeVersion(raw: unknown): ResumeVersion {
+  return mapResumeVersions([raw])[0];
+}
+
+/**
+ * GET /resume-versions/{id}. The drawer's kept letters carry the id of the version they were
+ * written with and nothing else, so this is the one read that can turn it into a name and the
+ * resume page that owns it. Scoped to the caller by the route: a stranger's id is a 404.
+ */
+export function useResumeVersion(id: string | null) {
+  return useQuery({
+    queryKey: ["resume-version", id],
+    enabled: Boolean(id),
+    queryFn: async (): Promise<ResumeVersion> =>
+      mapResumeVersion(await api.get<unknown>(endpoints.resumeVersion(id!))),
+  });
+}
+
 /**
  * Versions live on their own route: the resume detail DTO has no versions array, so reading
  * them off `useResume` yielded [] forever. The query key is prefixed by ["resume", id] so the

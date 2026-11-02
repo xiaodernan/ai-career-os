@@ -816,7 +816,6 @@ describe("endpoints ↔ backend route parity", () => {
     "/calendar.ics":
       "the feed address is pasted into a calendar client, not fetched by the browser; the settings card copies the URL the backend already signed",
     "/me": "MeController's alias of /users/me; the client spells every call through /users/...",
-    "/resume-versions/{}": "the version panel reads the list form /resume-versions?resumeId=…",
     "/resumes/{}/versions": "superseded for the panel by GET /resume-versions?resumeId=…",
     "/mail/preferences/{}/{}":
       "the mail-settings page a letter's footer opens; the backend renders it and the browser only navigates to it from a mailbox, never fetches it from the app",

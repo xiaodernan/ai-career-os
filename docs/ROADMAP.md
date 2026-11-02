@@ -4144,6 +4144,14 @@ setting the same tone and length from memory.
   that cannot show the value would silently generate with it. Only catalogue values travel out of
   a stored letter too: a pre-catalogue `warm` is dropped rather than sent back. 5 pure-function
   tests and 2 SSR assertions.)
+- [x] **54.2** A kept letter names the resume version it was written with.
+
+  (The letter row stored only `resumeVersionId` -- a uuid the reader could not use. The drawer now
+  reads `GET /resume-versions/{id}` for each letter that carries one (a route the browser had
+  never asked for; its entry leaves the unwired census) and prints `Written with <label>`, linking
+  to `/resumes/{resumeId}` where that version lives and can be printed. A version that can no
+  longer be read says so rather than vanishing: losing provenance is information. 2 SSR tests, 1
+  mapping test, and the census entry removed.)
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

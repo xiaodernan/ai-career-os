@@ -17,7 +17,17 @@ const lettersState = vi.hoisted(() => ({
   },
 }));
 
+const versionState = vi.hoisted(() => ({
+  value: {} as { data?: unknown; isPending?: boolean; isError?: boolean },
+}));
+
 vi.mock("@/lib/hooks/resources", () => ({
+  useResumeVersion: () => ({
+    data: undefined,
+    isPending: false,
+    isError: false,
+    ...versionState.value,
+  }),
   useApplicationLetters: () => ({
     data: undefined,
     isPending: false,
@@ -111,6 +121,31 @@ describe("ApplicationLettersPanel", () => {
     const html = render();
 
     expect(html).not.toContain("applications.dialog.letterRewrite");
+  });
+  it("names the resume version a kept letter was written with, and links its resume", () => {
+    lettersState.value = {
+      data: [{ id: "letter-1", body: "Dear Acme.", resumeVersionId: "rv-1" }],
+    };
+    versionState.value = {
+      data: { id: "rv-1", resumeId: "resume-1", label: "Tailored for Acme" },
+    };
+
+    const html = render();
+
+    expect(html).toContain("applications.dialog.letterWrittenWith");
+    expect(html).toContain("Tailored for Acme");
+    expect(html).toContain('href="/resumes/resume-1"');
+  });
+
+  it("says a letter's resume version is gone instead of hiding the line", () => {
+    lettersState.value = {
+      data: [{ id: "letter-1", body: "Dear Acme.", resumeVersionId: "rv-1" }],
+    };
+    versionState.value = { isError: true };
+
+    const html = render();
+
+    expect(html).toContain("applications.dialog.letterVersionUnavailable");
   });
   it("offers no way to take away a letter that has no text", () => {
     lettersState.value = { data: [{ id: "letter-1", body: "" }] };

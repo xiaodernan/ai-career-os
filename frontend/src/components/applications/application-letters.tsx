@@ -31,9 +31,41 @@ import {
 import { letterDownloadName, relativeTime } from "@/lib/format";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { useDeleteApplicationLetter, useUpdateApplicationLetter } from "@/lib/hooks/actions";
-import { useApplicationLetters } from "@/lib/hooks/resources";
+import { useApplicationLetters, useResumeVersion } from "@/lib/hooks/resources";
 import type { CoverLetter } from "@/lib/api/types";
 
+/**
+ * Which resume version the letter was written with (54.2). The letter carries only an id, so
+ * this row is the one read that turns it into a name and the resume page that owns it. A version
+ * that can no longer be read says so instead of vanishing: the link is provenance, and losing it
+ * is information, not a detail to hide.
+ */
+function LetterResumeVersion({ versionId }: { versionId: string }) {
+  const { t } = useLocale();
+  const version = useResumeVersion(versionId);
+  if (version.isPending) return null;
+  if (version.isError || !version.data) {
+    return (
+      <p className="mb-2 text-xs text-muted-foreground">
+        {t("applications.dialog.letterVersionUnavailable")}
+      </p>
+    );
+  }
+  const { label, resumeId } = version.data;
+  const name = label || t("applications.dialog.untitledVersion");
+  return (
+    <p className="mb-2 text-xs text-muted-foreground">
+      {t("applications.dialog.letterWrittenWith")}{" "}
+      {resumeId ? (
+        <Link href={`/resumes/${resumeId}`} className="underline underline-offset-2 hover:text-foreground">
+          {name}
+        </Link>
+      ) : (
+        name
+      )}
+    </p>
+  );
+}
 /**
  * The cover letters kept with this application (47.4).
  *
@@ -131,6 +163,9 @@ export function ApplicationLettersPanel({
                   <span className="shrink-0 text-xs text-muted-foreground">{moment}</span>
                 </summary>
                 <div className="border-t border-border/70 p-3">
+                  {letter.resumeVersionId && (
+                    <LetterResumeVersion versionId={letter.resumeVersionId} />
+                  )}
                   {isEditing ? (
                     <LetterEditor
                       letter={letter}
