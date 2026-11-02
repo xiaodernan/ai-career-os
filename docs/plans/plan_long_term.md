@@ -7,10 +7,10 @@
 薪酬 → 数据可携带，全部闭环；并且从"问了才答"进化为"替你先做"——定时摄取、
 主动提醒、通知中心、每周摘要、语音面试、移动端与生产级交付。
 
-## 当前状态 (2026-10-30)
+## 当前状态 (2026-11-02)
 
-- **前端**: 911 个 vitest 通过（90 个文件）；`tsc --noEmit` 干净。
-- **后端**: 非 IT 选集 **1078 条全绿**（`mvn -o -B -Dtest="!*IT" test`，本轮实测；43.1 无后端
+- **前端**: 941 个 vitest 通过（91 个文件）；`tsc --noEmit` 干净。
+- **后端**: 非 IT 选集 **1078 条全绿**（`mvn -o -B -Dtest="!*IT" test`，本轮实测；43.1/43.2 无后端
   改动）；含真实栈 IT 的全量待下一次 `mvn -o -q test` 复核。
 - **ai-service**: **1996 passed, 1 skipped**（offline: mock/hash；全量 `python -m pytest -q`
   本轮实测）。39/40 遗留的 48 条 census 漂移已逐条修完；43.1 只让深链闸门改读行组件
@@ -38,7 +38,7 @@
 **42.1** 让邮件设置不再只住在旧信里（`GET /me/mail/settings` + 设置页邮件卡，4 条后端测试绿）；
 **42.2** 让这张卡自己扳动三个开关（`PUT /me/mail/settings/{list}` + Switch 的乐观更新，
 3 条后端测试 + 2 条 hook 写面测试绿）；**43.1** 让 attention 卡上的到期提醒就地可答
-（`Snooze to tomorrow` / `Clear` 走同一个 PATCH，新行组件 + 5 条 SSR 测试，前端 911 条 / 90 文件）。
+（`Snooze to tomorrow` / `Clear` 走同一个 PATCH，新行组件 + 5 条 SSR 测试，前端 941 条 / 91 文件）；**43.2** 让收件箱里的提醒也能就地回答（同一对手势落在通知行，新解析函数 + 6 条纯函数测试 + 5 条页面测试）。
 
 ## 主线队列（按顺序执行）
 
@@ -620,8 +620,14 @@
     「清除」也无事可清。新组件 `components/dashboard/attention-row.tsx` + 5 条 SSR 测试（含一条把
     两个按钮钉在行链接之外，回答时不会顺带导航）；浏览器源普查 148→149，缓存调用台账
     `invalidateQueries` 52→53。
-  - 下一步候选（避开并发会话在制的 export/import）：收件箱里 reminder 条目的就地动作、
-    attention 行的「谁在等你」；或 Epic 40 的后续单元提交后再接手。
+  - **43.2** 收件箱里的提醒也能就地回答（已完成 2026-11-02）：收件箱把同一条提醒单列一行，
+    读者在这里处理通知时仍要打开申请才能回答。两个按钮与 43.1 相同；application id 从条目的
+    episode key `reminder:<uuid>:<epoch>` 读出（新纯函数 `lib/notification-reminder.ts` + 6 条
+    单测），解析不出的 key 不给按钮——对猜来的 id 发 PATCH 不是 404 就是改错东西。`Clear` 仍走
+    `reminderPatch(item.at, "")`，`clearReminderAt` 依旧只在一个文件里被发明；两个写共用
+    `useUpdateApplication`，它 settled 时的收件箱失效让被回答的 episode 在服务端停止发送后离场。
+    页面测试 5 条（含 key 不合法时没有按钮），中英各两条文案。
+  - 下一步候选：attention 行的「谁在等你」（Epic 43 的下一段）；Epic 44 的收尾由并发会话在制。
 
 - **Epic 44 — 删除欠存储副本的那两笔账**（本段起）
   - 盘点结论（2026-11-02）：删简历、删资料、删笔记都已经把 `documents.status` 从 `ready`

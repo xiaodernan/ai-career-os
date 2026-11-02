@@ -7,14 +7,17 @@ import { PageHeader } from "@/components/common/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { reminderPatch, snoozeReminder } from "@/lib/application-edit";
 import { relativeTime } from "@/lib/format";
 import { stageLabel } from "@/lib/pipeline";
 import { useLocale } from "@/lib/i18n/locale-context";
+import { useUpdateApplication } from "@/lib/hooks/actions";
 import {
   useDismissNotification,
   useMarkAllNotificationsRead,
   useMarkNotificationsRead,
 } from "@/lib/hooks/notifications";
+import { reminderApplicationId } from "@/lib/notification-reminder";
 import { useNotifications } from "@/lib/hooks/resources";
 import type { NotificationItem } from "@/lib/api/types";
 
@@ -30,6 +33,13 @@ import type { NotificationItem } from "@/lib/api/types";
  * Reading and dismissing are the reader's own state, and the backend answers both
  * with the fresh inbox: a row whose episode ended between renders leaves the screen
  * because the server stopped sending it, not because the page guessed.
+ *
+ * A due reminder is also something to answer, not only to open (roadmap 43.2): the
+ * two replies a reader of this list actually gives -- "not now, tomorrow morning"
+ * and "nothing to remember" -- are here, next to the row, and travel through the
+ * same PATCH the application dialog uses. The application's id is read out of the
+ * reminder's key; a key that does not parse has no buttons, because a press that
+ * guessed an id would either 404 or edit the wrong application.
  */
 
 type Translate = (key: string, vars?: Record<string, string | number>) => string;
@@ -99,10 +109,12 @@ export default function NotificationsPage() {
   const markRead = useMarkNotificationsRead();
   const markAll = useMarkAllNotificationsRead();
   const dismiss = useDismissNotification();
+  const settleReminder = useUpdateApplication();
 
   const items = inbox.data?.items ?? [];
   const unread = inbox.data?.unread ?? 0;
-  const busy = markRead.isPending || markAll.isPending || dismiss.isPending;
+  const busy =
+    markRead.isPending || markAll.isPending || dismiss.isPending || settleReminder.isPending;
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -138,6 +150,8 @@ export default function NotificationsPage() {
             <ul className="space-y-2">
               {items.map((item) => {
                 const name = nameOf(item, t);
+                const applicationId =
+                  item.kind === "reminder" ? reminderApplicationId(item.key) : null;
                 return (
                   <li
                     key={item.key}
@@ -172,6 +186,40 @@ export default function NotificationsPage() {
                         {item.note && <p className="text-xs text-danger">{item.note}</p>}
                       </div>
                       <div className="flex shrink-0 items-center gap-1">
+                        {/* The reminder's two answers (43.2). The clear travels through the same
+                            picker-shaped patch as the dialog: emptying a reminder is spelled as
+                            an explicit command there, and this page must not invent a second
+                            spelling of it. */}
+                        {applicationId && (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              disabled={busy}
+                              onClick={() =>
+                                settleReminder.mutate({
+                                  id: applicationId,
+                                  patch: { reminderAt: snoozeReminder() },
+                                })
+                              }
+                            >
+                              {t("notifications.snoozeReminder")}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              disabled={busy}
+                              onClick={() =>
+                                settleReminder.mutate({
+                                  id: applicationId,
+                                  patch: reminderPatch(item.at, ""),
+                                })
+                              }
+                            >
+                              {t("notifications.clearReminder")}
+                            </Button>
+                          </>
+                        )}
                         {item.link && (
                           <Button asChild size="sm" variant="ghost">
                             <Link

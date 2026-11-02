@@ -3693,6 +3693,19 @@ picker and save to say them. The card whose whole job is to be answered could on
   The browser-source census moves to 149 and the cache-call roster's `invalidateQueries`
   to 53.)
 
+- [x] **43.2** The inbox answers its reminders too.
+
+  (The same two presses as 43.1, on the row that names the reminder: the inbox lists a
+  reminder separately from the attention card, so a reader working the inbox still had to
+  open the application to answer it. The application's id is read out of the episode key
+  `reminder:<uuid>:<epoch>` by `lib/notification-reminder.ts` -- a pure function with six
+  unit tests -- and a key that does not parse gets no press, because a PATCH aimed at a
+  guessed id either 404s or edits something else. `Clear` still travels through
+  `reminderPatch(item.at, "")`, so `clearReminderAt` is invented in one file; both presses
+  share `useUpdateApplication`, whose settled invalidation already refetches the inbox, so
+  an answered episode leaves the screen when the server stops sending it. Five SSR tests,
+  the malformed-key case among them, and the two button names in both languages.)
+
 ## Epic 44 — What a Delete Owes the Stored Copy
 
 Deleting a resume, a source or a note stops the AI quoting it: `documents.status = 'ready'`

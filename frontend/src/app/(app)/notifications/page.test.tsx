@@ -25,6 +25,12 @@ vi.mock("@/lib/hooks/notifications", () => ({
   useDismissNotification: () => ({ mutate: () => {}, isPending: false }),
 }));
 
+// The reminder's two answers share the application write hook; the page only reads
+// `mutate` and `isPending` from it, and the test presses nothing.
+vi.mock("@/lib/hooks/actions", () => ({
+  useUpdateApplication: () => ({ mutate: () => {}, isPending: false }),
+}));
+
 import NotificationsPage from "./page";
 import { LocaleProvider } from "@/lib/i18n/locale-context";
 
@@ -39,16 +45,18 @@ import { LocaleProvider } from "@/lib/i18n/locale-context";
  * is a page that throws on the screen.
  */
 
+const APP_ID = "3f2b8c1e-6a4d-4f9b-8e2c-1d5a7b9c0e3f";
+
 const ITEMS = [
   {
-    key: "reminder:app-1:1761600000",
+    key: `reminder:${APP_ID}:1761600000`,
     kind: "reminder",
     title: "Backend engineer",
     subject: "Acme",
     status: "applied",
     count: null,
     note: null,
-    link: "/applications?application=app-1",
+    link: `/applications?application=${APP_ID}`,
     at: "2026-10-27T09:00:00Z",
     read: false,
   },
@@ -127,14 +135,37 @@ describe("the notifications page", () => {
     expect(html).toContain("New postings from Boards: 3.");
     expect(html).toContain("3 unread");
     expect(html).toContain("Mark all read");
-    expect(html).toContain('href="/applications?application=app-1"');
+    expect(html).toContain(`href="/applications?application=${APP_ID}"`);
     expect(html).toContain('aria-label="Mark Backend engineer read"');
     expect(html).toContain('aria-label="Dismiss Backend engineer"');
     expect(html).toContain('aria-label="Open Backend engineer"');
     // A read row has nothing to mark read; it can still be dismissed.
     expect(html).not.toContain('aria-label="Mark Data engineer read"');
     expect(html).toContain('aria-label="Dismiss Data engineer"');
+    // Only a reminder is answerable: one snooze and one clear, on the reminder row alone.
+    expect(html.match(/Snooze to tomorrow/g)).toHaveLength(1);
+    expect(html.match(/>Clear</g)).toHaveLength(1);
     expect(html).not.toContain("Nothing needs your attention right now.");
+  });
+
+  it("offers the two answers only where the key names a reminder's application", () => {
+    state.inbox = {
+      data: {
+        items: [
+          { ...ITEMS[0], key: "reminder:not-an-id:1761600000" },
+          { ...ITEMS[1], key: `reminder:3f2b8c1e-6a4d-4f9b-8e2c-1d5a7b9c0e3f:1761600000` },
+        ],
+        unread: 0,
+      },
+      isSuccess: true,
+      isError: false,
+    };
+    const html = render();
+    // The malformed reminder keeps its sentence but gets no press that could 404.
+    expect(html).toContain("Your reminder for Backend engineer is due.");
+    expect(html).not.toContain("Snooze to tomorrow");
+    // A stale row is not a reminder even when its key carries a reminder's spelling.
+    expect(html).toContain("No movement on Data engineer — it has gone quiet.");
   });
 
   it("says the same sentences in the reader's language", () => {
@@ -156,6 +187,8 @@ describe("the notifications page", () => {
     expect(html).toContain("订阅源返回 HTTP 503");
     expect(html).toContain("2 条未读");
     expect(html).toContain("全部标为已读");
+    expect(html).toContain("推迟到明早");
+    expect(html).toContain("清除");
     expect(html).not.toContain("Your reminder for");
   });
 
