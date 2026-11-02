@@ -718,6 +718,8 @@ export interface AttentionItem {
   /** The newest reply on this application, when one has landed: its subject and moment. */
   replySubject?: string | null;
   replyAt?: string | null;
+  /** The letter's own id, so the row's sentence can open it on the replies screen. */
+  replyId?: string | null;
 }
 
 /**

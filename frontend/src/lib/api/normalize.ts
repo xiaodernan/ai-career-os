@@ -1123,6 +1123,10 @@ export function normalizeResumeScore(raw: unknown): ResumeScore | null {
  * components and nothing else -- `AttentionItem` is the one producer, and an alias beside each
  * live name would be a second shape this mapper silently reinterprets. A row without an id is
  * dropped rather than rendered, because every row on the card links to its application.
+ *
+ * `replyId` is read the same way as the two words beside it: the row's "a recruiter replied"
+ * sentence links to that letter, and a payload that carries the sentence without the letter
+ * still renders it -- as text, because a link to nowhere is worse than no link.
  */
 function normalizeAttention(raw: unknown): AttentionItem | null {
   const id = str(raw, "id");
@@ -1137,6 +1141,7 @@ function normalizeAttention(raw: unknown): AttentionItem | null {
     updatedAt: str(raw, "updatedAt") ?? null,
     replySubject: str(raw, "replySubject") ?? null,
     replyAt: str(raw, "replyAt") ?? null,
+    replyId: str(raw, "replyId") ?? null,
   };
 }
 

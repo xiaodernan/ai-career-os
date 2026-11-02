@@ -45,11 +45,15 @@ public final class DashboardDtos {
      * `reminder_due` means the user asked to be told at this time, `stale` means nobody has
      * logged a step on it for the window. The frontend renders the two differently, so a reason
      * the backend stopped sending would show up as an unlabelled row rather than as a wrong one.
+     *
+     * The reply trio rides the row only when a letter has landed on this application: `replyId`
+     * is what lets the card open that letter on the replies screen, and the other two are what
+     * it says before the reader presses anything.
      */
     public record AttentionItem(UUID id, String title, String companyName, String status,
                                 String reason, OffsetDateTime reminderAt,
                                 OffsetDateTime updatedAt,
-                                String replySubject, OffsetDateTime replyAt) {
+                                String replySubject, OffsetDateTime replyAt, UUID replyId) {
     }
 
     /**

@@ -194,10 +194,11 @@ class DashboardRepositoryTest {
     @Test
     void attentionMapsTheRowAndItsReasonInColumnOrder() {
         UUID applicationId = UUID.randomUUID();
+        UUID replyId = UUID.randomUUID();
         Object[] row = new Object[]{applicationId, "Senior Backend Engineer", "Acme", "applied",
                 "reminder_due", Timestamp.from(Instant.parse("2026-09-01T09:00:00Z")),
                 Timestamp.from(Instant.parse("2026-08-01T09:00:00Z")),
-                "Your interview", Timestamp.from(Instant.parse("2026-08-05T09:00:00Z"))};
+                "Your interview", Timestamp.from(Instant.parse("2026-08-05T09:00:00Z")), replyId};
         List<Object[]> data = new ArrayList<>();
         data.add(row);
         rows(data);
@@ -214,6 +215,9 @@ class DashboardRepositoryTest {
         // someone is waiting rather than only how long the application has been quiet.
         assertThat(item.replySubject()).isEqualTo("Your interview");
         assertThat(item.replyAt().toInstant()).isEqualTo(Instant.parse("2026-08-05T09:00:00Z"));
+        // The letter's own id travels with it: the card's "replied" sentence links to the replies
+        // screen, and a sentence without an id could only be read.
+        assertThat(item.replyId()).isEqualTo(replyId);
     }
 
     @Test
@@ -222,7 +226,7 @@ class DashboardRepositoryTest {
         // the user sets one. The card renders the typed-in name (COALESCE), and a `stale` row has
         // no instant to show -- both have to survive the mapping.
         Object[] row = new Object[]{UUID.randomUUID(), "Take-home", "Somewhere", "oa",
-                "stale", null, Timestamp.from(Instant.now()), null, null};
+                "stale", null, Timestamp.from(Instant.now()), null, null, null};
         List<Object[]> data = new ArrayList<>();
         data.add(row);
         rows(data);
@@ -232,6 +236,7 @@ class DashboardRepositoryTest {
         assertThat(item.reminderAt()).isNull();
         assertThat(item.replySubject()).isNull();
         assertThat(item.replyAt()).isNull();
+        assertThat(item.replyId()).isNull();
     }
 
     @Test
@@ -241,6 +246,7 @@ class DashboardRepositoryTest {
         assertThat(lastSql)
                 .contains("LEFT JOIN companies c ON c.id = a.company_id")
                 .contains("LEFT JOIN LATERAL")
+                .contains("SELECT m.id, m.subject, m.received_at")
                 .contains("FROM inbound_mails m")
                 .contains("ORDER BY m.received_at DESC, m.id DESC")
                 .contains("COALESCE(c.name, a.company_name)")

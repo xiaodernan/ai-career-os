@@ -90,7 +90,7 @@ class NotificationServiceTest {
     private static AttentionItem attention(String reason, OffsetDateTime reminderAt,
                                            OffsetDateTime updatedAt) {
         return new AttentionItem(APP, "Senior Analyst", "Acme", "applied", reason,
-                reminderAt, updatedAt, null, null);
+                reminderAt, updatedAt, null, null, null);
     }
 
     private static IngestionFeed named(String name) {

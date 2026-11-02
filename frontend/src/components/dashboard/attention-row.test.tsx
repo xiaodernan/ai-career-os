@@ -65,9 +65,24 @@ describe("AttentionRow", () => {
       ...stale,
       replyAt: "2026-10-30T09:00:00Z",
       replySubject: "Re: interview",
+      replyId: "mail-1",
     });
     expect(html).toContain("dashboard.replyWaiting");
     expect(html).toContain("Re: interview");
+    // The sentence opens the letter itself, not the application behind it.
+    expect(html).toContain('href="/replies?mail=mail-1"');
+  });
+
+  it("still says it as text when the payload carries no letter to open", () => {
+    // An older row cached before the id existed carries the sentence but nothing to press; it
+    // must not turn into a link to nowhere.
+    const html = render({
+      ...stale,
+      replyAt: "2026-10-30T09:00:00Z",
+      replySubject: "Re: interview",
+    });
+    expect(html).toContain("dashboard.replyWaiting");
+    expect(html).not.toContain("/replies?mail=");
   });
 
   it("says nothing about a reply when none has landed", () => {

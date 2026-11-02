@@ -1105,6 +1105,7 @@ describe("normalizeDashboard", () => {
           updatedAt: "2026-09-18T09:00:00Z",
           replySubject: "Re: interview",
           replyAt: "2026-09-21T09:00:00Z",
+          replyId: "m1",
         },
         { title: "row with no id" },
       ],
@@ -1121,6 +1122,7 @@ describe("normalizeDashboard", () => {
         updatedAt: "2026-09-18T09:00:00Z",
         replySubject: "Re: interview",
         replyAt: "2026-09-21T09:00:00Z",
+        replyId: "m1",
       },
     ]);
   });

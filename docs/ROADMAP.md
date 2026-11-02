@@ -3843,6 +3843,18 @@ telling a reader "no movement" while an answer sits in their inbox.
   reason to need attention. 2 SSR tests, the normalizer's exact shape, and the
   repository's column mapping; 950 frontend tests in 92 files.)
 
+- [x] **46.2** That sentence opens the letter it is talking about.
+
+  (`AttentionItem` carries the letter's own id as `replyId`, read in the same
+  lateral that already fetched its subject and moment, and the row's reply line
+  becomes a link to `/replies?mail=<id>` -- the replies screen already
+  highlights the card named in that parameter. The sentence moves outside the
+  application anchor, one anchor inside another being a page a browser will not
+  build, and keeps its own alignment under the title. A payload without the id
+  -- an older cached row -- still renders the sentence, as text: a link to
+  nowhere is worse than no link. 1 SSR test (`href`), one for the no-id shape,
+  and the repository's column mapping; 951 frontend tests in 92 files.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

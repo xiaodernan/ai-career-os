@@ -106,6 +106,11 @@ public class DashboardRepository {
      * One query with the company joined and `COALESCE`d against the row's own typed-in name — an
      * application added by hand has no `company_id`, and its card on the board shows the typed
      * name, so this list has to show the same one or two screens name one row differently.
+     *
+     * The lateral read is the newest letter on each application, and it brings its `id` along:
+     * the card already says "a recruiter replied", and without the id that sentence could only
+     * be read, not pressed. The ordering inside the lateral is the same pair the replies screen
+     * sorts by, so the row and that screen name the same letter as "the newest".
      */
     public List<AttentionItem> attention(UUID userId, int staleDays, int limit) {
         // The join onto the shared predicate has to be spelled in an ordinary string: a text
@@ -116,11 +121,11 @@ public class DashboardRepository {
                 SELECT a.id, a.title, COALESCE(c.name, a.company_name), a.status,
                        CASE WHEN a.reminder_at IS NOT NULL AND a.reminder_at <= now()
                             THEN 'reminder_due' ELSE 'stale' END,
-                       a.reminder_at, a.updated_at, r.subject, r.received_at
+                       a.reminder_at, a.updated_at, r.subject, r.received_at, r.id
                   FROM applications a
                   LEFT JOIN companies c ON c.id = a.company_id
                   LEFT JOIN LATERAL (
-                      SELECT m.subject, m.received_at
+                      SELECT m.id, m.subject, m.received_at
                         FROM inbound_mails m
                        WHERE m.application_id = a.id AND m.user_id = :userId
                        ORDER BY m.received_at DESC, m.id DESC
@@ -140,7 +145,7 @@ public class DashboardRepository {
                 .map(row -> new AttentionItem(
                         (UUID) row[0], (String) row[1], (String) row[2], (String) row[3],
                         (String) row[4], Times.offset(row[5]), Times.offset(row[6]),
-                        (String) row[7], Times.offset(row[8])))
+                        (String) row[7], Times.offset(row[8]), (UUID) row[9]))
                 .toList();
     }
 }
