@@ -4036,6 +4036,12 @@ that this posting already held three drafts and no way to reach them from where 
   kept, the save button says `Save another copy` rather than pretending the shelf is empty. The
   read shares the drawer's query key, so the count moves as soon as a save lands. 2 SSR tests.)
 
+- [x] **51.2** The count opens the card itself.
+
+  (The line pointed at `/applications`, which meant opening a board and hunting for the posting
+  again. It now carries `?application=<id>` -- the same deep link the attention rows and the
+  pipeline chip already use -- so that application's drawer is open when the board paints.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

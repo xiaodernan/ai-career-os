@@ -127,7 +127,11 @@ export function CoverLetterPanel({
           <p className="flex flex-wrap items-baseline gap-x-1 text-xs text-muted-foreground">
             {t("coverLetter.keptHere", { count: kept.data.length })}
             <Link
-              href="/applications"
+              href={
+                applicationId
+                  ? `/applications?application=${applicationId}`
+                  : "/applications"
+              }
               className="underline underline-offset-2 hover:text-foreground"
             >
               {t("coverLetter.openPipeline")}

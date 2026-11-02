@@ -51,6 +51,8 @@ describe("CoverLetterPanel", () => {
 
     expect(html).toContain("coverLetter.keptHere");
     expect(html).toContain("&quot;count&quot;:2");
-    expect(html).toContain('href="/applications"');
+    // The same deep link the attention rows and the pipeline chip use: the reader lands with
+    // that application's drawer already open, not on a board they have to search again.
+    expect(html).toContain('href="/applications?application=app-1"');
   });
 });
