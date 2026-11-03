@@ -656,6 +656,11 @@ export const translations = {
       skillGapsDescription: "Across your matched jobs.",
       followUps: "Follow-up reminders",
       followUpsDescription: "Contacts who need a touch, ranked by their relation's cadence.",
+      followUpPriorities: {
+        overdue: "Overdue",
+        soon: "Due soon",
+        fresh: "On track",
+      },
       noResumeScore: "No resume score yet",
       noResumeScoreDescription:
         "Upload and parse a resume — the reviewer agent grades bullets, structure, impact and keyword coverage.",
@@ -1124,6 +1129,12 @@ export const translations = {
     // Growth engines
     growthEngines: {
       title: "Growth engines",
+      priorities: {
+        critical: "Critical",
+        high: "High",
+        medium: "Medium",
+        low: "Low",
+      },
       description:
         "Each engine on its own — the same ones the growth report composes, asked one question at a time.",
       targetRole: "Target role",
@@ -3576,6 +3587,11 @@ export const translations = {
       skillGapsDescription: "来自你已匹配的职位。",
       followUps: "跟进提醒",
       followUpsDescription: "需要联系的联系人，按关系节奏排序。",
+      followUpPriorities: {
+        overdue: "已逾期",
+        soon: "即将到期",
+        fresh: "节奏正常",
+      },
       noResumeScore: "还没有简历评分",
       noResumeScoreDescription: "上传并解析简历——评审代理会打分条目、结构、影响力和关键词覆盖。",
       noAttention: "没有需要关注的事项",
@@ -4007,6 +4023,12 @@ export const translations = {
     // Growth engines
     growthEngines: {
       title: "成长引擎",
+      priorities: {
+        critical: "关键",
+        high: "高",
+        medium: "中",
+        low: "低",
+      },
       description: "每个引擎单独运行——和成长报告里组合的是同一批引擎，一次只问一个问题。",
       targetRole: "目标职位",
       run: "运行",

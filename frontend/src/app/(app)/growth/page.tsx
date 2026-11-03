@@ -24,7 +24,7 @@ import { PageHeader } from "@/components/common/page-header";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { useGrowthReport } from "@/lib/hooks/actions";
 import { formatSalary } from "@/lib/format";
-import { readinessVerdictWord } from "@/lib/status-words";
+import { readinessVerdictWord, requirementPriorityWord } from "@/lib/status-words";
 import type { GrowthReport } from "@/lib/api/types";
 
 /**
@@ -248,12 +248,14 @@ export default function GrowthPage() {
                       {(phase.items ?? []).map((item) => (
                         <li key={item.topic} className="flex flex-wrap items-baseline gap-2 text-sm">
                           <span className="font-medium">{item.topic}</span>
-                          <Badge
-                            variant={item.priority === "must" ? "destructive" : "secondary"}
-                            className="text-2xs"
-                          >
-                            {item.priority}
-                          </Badge>
+                          {item.priority && (
+                            <Badge
+                              variant={item.priority === "must" ? "destructive" : "secondary"}
+                              className="text-2xs"
+                            >
+                              {requirementPriorityWord(t, item.priority)}
+                            </Badge>
+                          )}
                           {item.resource_hint && (
                             <span className="text-xs text-muted-foreground">
                               {item.resource_hint}

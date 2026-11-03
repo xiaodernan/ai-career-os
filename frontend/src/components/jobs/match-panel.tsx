@@ -246,7 +246,7 @@ export function PreparationCard({ items, className }: { items: PreparationItem[]
                 {item.title ?? item.topic}
                 {item.priority && (
                   <Badge variant="outline" className="text-2xs font-normal capitalize">
-                    {item.priority}
+                    {requirementPriorityWord(t, item.priority)}
                   </Badge>
                 )}
                 {typeof item.hours === "number" && (

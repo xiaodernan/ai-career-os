@@ -78,6 +78,21 @@ export const MARKET_VERDICTS = ["below_market", "above_market", "within_market",
  */
 export const REQUIREMENT_PRIORITIES = ["must", "should", "nice"] as const;
 
+/**
+ * The market band `prioritize.py` assigns to a ranked gap (`_priority_label`).
+ *
+ * A different vocabulary from the JD's own word, on a different field: the growth
+ * panel's ranked-gap row draws `priority` from here, while every gap card draws
+ * `importance` from the JD. "Critical" is this band's word, never a requirement's.
+ */
+export const MARKET_PRIORITIES = ["critical", "high", "medium", "low"] as const;
+
+/**
+ * The cadence band `reminders.py` assigns to a contact (`_PRIORITY_ORDER`).
+ * The dashboard's follow-up tile and its chart legend both draw this word.
+ */
+export const FOLLOW_UP_PRIORITIES = ["overdue", "soon", "fresh"] as const;
+
 function wordFrom(
   t: TranslateFn,
   prefix: string,
@@ -124,6 +139,16 @@ export function marketVerdictWord(t: TranslateFn, verdict: string): string {
 
 export function requirementPriorityWord(t: TranslateFn, priority: string): string {
   return wordFrom(t, "jobs.detail.priorities", priority, REQUIREMENT_PRIORITIES);
+}
+
+/** The ranked-gap band's own words; the panel drew `critical` on every language. */
+export function marketPriorityWord(t: TranslateFn, priority: string): string {
+  return wordFrom(t, "growthEngines.priorities", priority, MARKET_PRIORITIES);
+}
+
+/** The follow-up cadence band; the dashboard drew `overdue` on every language. */
+export function followUpPriorityWord(t: TranslateFn, priority: string): string {
+  return wordFrom(t, "dashboard.followUpPriorities", priority, FOLLOW_UP_PRIORITIES);
 }
 
 export function knowledgeSourceStatusWord(t: TranslateFn, status: string): string {

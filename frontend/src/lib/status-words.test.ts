@@ -10,11 +10,13 @@ import { INTERVIEW_MODES } from "@/lib/interview-modes";
 import { sourceKindLabel } from "@/lib/source-kinds";
 import { TRACE_KINDS } from "@/lib/trace-kinds";
 import {
+  followUpPriorityWord,
   healthVerdictWord,
   interviewModeHint,
   interviewModeName,
   jobStatusWord,
   knowledgeSourceStatusWord,
+  marketPriorityWord,
   marketVerdictWord,
   memoryKindWord,
   nightlyStatusWord,
@@ -27,9 +29,11 @@ import {
   salaryBandWord,
   seniorityWord,
   traceKindWord,
+  FOLLOW_UP_PRIORITIES,
   HEALTH_VERDICTS,
   JOB_STATUSES,
   KNOWLEDGE_SOURCE_STATUSES,
+  MARKET_PRIORITIES,
   MARKET_VERDICTS,
   MEMORY_KINDS,
   NIGHTLY_STATUSES,
@@ -72,6 +76,8 @@ const ROSTERS: [string, readonly string[]][] = [
   ["growth.verdicts", READINESS_VERDICTS],
   ["offers.verdicts", MARKET_VERDICTS],
   ["jobs.detail.priorities", REQUIREMENT_PRIORITIES],
+  ["growthEngines.priorities", MARKET_PRIORITIES],
+  ["dashboard.followUpPriorities", FOLLOW_UP_PRIORITIES],
   ["memory.kinds", MEMORY_KINDS],
   ["knowledge.sources.statuses", KNOWLEDGE_SOURCE_STATUSES],
   ["monitoring.nightlyStatuses", NIGHTLY_STATUSES],
@@ -126,6 +132,8 @@ describe("the enum words", () => {
     expect(readinessVerdictWord(zh, "almost")).toBe("Almost");
     expect(marketVerdictWord(zh, "at_market")).toBe("At Market");
     expect(requirementPriorityWord(zh, "urgent")).toBe("Urgent");
+    expect(marketPriorityWord(zh, "severe")).toBe("Severe");
+    expect(followUpPriorityWord(zh, "someday")).toBe("Someday");
     // `retired` and `indexing` reached the table in this unit; a status the ingest has
     // never written is what this case still has to degrade.
     expect(knowledgeSourceStatusWord(zh, "archiving")).toBe("Archiving");
@@ -155,6 +163,14 @@ describe("the enum words", () => {
     expect(requirementPriorityWord(zh, "must")).toBe("必备");
     expect(requirementPriorityWord(zh, "should")).toBe("优先考虑");
     expect(requirementPriorityWord(zh, "nice")).toBe("加分项");
+    // The same field name carries two other bands, and each has its own words:
+    // the ranked gap's market tier, and a follow-up's cadence bucket.
+    expect(marketPriorityWord(en, "critical")).toBe("Critical");
+    expect(marketPriorityWord(zh, "critical")).toBe("关键");
+    expect(marketPriorityWord(zh, "medium")).toBe("中");
+    expect(followUpPriorityWord(en, "soon")).toBe("Due soon");
+    expect(followUpPriorityWord(zh, "overdue")).toBe("已逾期");
+    expect(followUpPriorityWord(zh, "fresh")).toBe("节奏正常");
     // The knowledge row's badge and the evidence card's kind draw the wire through the table.
     expect(knowledgeSourceStatusWord(en, "ready")).toBe("Ready");
     expect(knowledgeSourceStatusWord(zh, "pending")).toBe("待处理");
@@ -402,19 +418,51 @@ const PRIORITY_SURFACES: [string, string][] = [
     "app/(app)/jobs/[id]/page.tsx",
     'requirementPriorityWord(t, r.priority ?? (r.required ? "must" : "nice"))',
   ],
+  // The two cards on the match screen: the gap badge and the preparation item.
   ["components/jobs/match-panel.tsx", "requirementPriorityWord(t, g.importance)"],
+  ["components/jobs/match-panel.tsx", "requirementPriorityWord(t, item.priority)"],
+  // The dashboard's copies of the same two cards the match screen fixed first.
+  ["app/(app)/dashboard/page.tsx", "requirementPriorityWord(t, g.importance)"],
+  ["app/(app)/dashboard/page.tsx", "followUpPriorityWord(t, f.priority)"],
+  // The growth screen's plan item and its two gap lists.
+  ["app/(app)/growth/page.tsx", "requirementPriorityWord(t, item.priority)"],
+  ["components/growth/growth-engines-panel.tsx", "requirementPriorityWord(t, g.importance)"],
+  // The ranked-gap row carries the market band, which is a different vocabulary.
+  ["components/growth/growth-engines-panel.tsx", 'marketPriorityWord(t, p.priority ?? "")'],
 ];
 
 /**
- * The charge is the spelling, not the file: a badge that builds its word from
- * the wire value prints "must have" on a Chinese posting. The gap card's
- * importance is the requirement's own priority word (match.py copies it), so
- * one function serves both surfaces.
+ * The charge is the print, not the spelling.
+ *
+ * `priority` and `importance` are enum-only names in this product: every producer sends
+ * one of three closed bands (the JD's word, the market tier, the cadence bucket). The
+ * first rule only charged a priority it had seen humanised -- `.replace(/_/g, " ")` --
+ * so a badge that printed the bare identifier walked past it and the preparation card
+ * guessed the field was free text. The same walk that reads `{s.status}` reads these
+ * fields, whatever shape the node has.
  */
 function rawPrioritySurfaces(files: { path: string; text: string }[]): string[] {
   return files
     .filter((f) => f.path !== STATUS_WORDS)
-    .filter((f) => /\.(?:priority|importance)\??\.replace\s*\(/.test(f.text))
+    .filter(
+      (f) =>
+        // The humanised spelling anywhere in the file -- a mapper can build the word
+        // outside a text node, and the old rule stays as that net.
+        /\.(?:priority|importance)\??\.replace\s*\(/.test(f.text) ||
+        textNodeBodies(f.text).some((b) => printsEnum(b, "priority") || printsEnum(b, "importance"))
+    )
+    .map((f) => f.path);
+}
+
+/**
+ * A chart slice labelled with the wire field itself puts the wire word in the legend:
+ * the follow-up chart reduced the rows to `{priority: count}` and handed the key to
+ * `label`, so the ring's caption stayed English on a Chinese page.
+ */
+function rawPriorityLabels(files: { path: string; text: string }[]): string[] {
+  return files
+    .filter((f) => f.path !== STATUS_WORDS)
+    .filter((f) => /\blabel:\s*(?:[A-Za-z_$][\w$]*\.)?(?:priority|importance)\b/.test(f.text))
     .map((f) => f.path);
 }
 
@@ -432,6 +480,10 @@ describe("the requirement priority badges", () => {
       offenders,
       `surfaces spelling a wire priority themselves:\n${offenders.join("\n")}`
     ).toEqual([]);
+    const labels = rawPriorityLabels(files);
+    expect(labels, `charts labelling a slice with the wire value:\n${labels.join("\n")}`).toEqual(
+      []
+    );
   });
 
   it("would still see a surface that spelled the priority itself", () => {
@@ -440,8 +492,33 @@ describe("the requirement priority badges", () => {
         { path: "app/probe.tsx", text: '{r.priority?.replace(/_/g, " ")}' },
       ])
     ).toEqual(["app/probe.tsx"]);
+    // The badge that printed the bare identifier: the shape the first rule could not see.
+    expect(
+      rawPrioritySurfaces([{ path: "app/probe.tsx", text: "<Badge>{item.priority}</Badge>" }])
+    ).toEqual(["app/probe.tsx"]);
+    expect(
+      rawPrioritySurfaces([{ path: "app/probe.tsx", text: "<Badge>{g.importance ?? 'gap'}</Badge>" }])
+    ).toEqual(["app/probe.tsx"]);
+    // A comparison asks about the value and prints something else.
+    expect(
+      rawPrioritySurfaces([
+        { path: "app/clean.tsx", text: '<span>{g.importance === "must" ? "a" : "b"}</span>' },
+      ])
+    ).toEqual([]);
     expect(
       rawPrioritySurfaces([{ path: "app/clean.tsx", text: "{requirementPriorityWord(t, p)}" }])
+    ).toEqual([]);
+  });
+
+  it("would still see a legend labelled with the wire key", () => {
+    expect(rawPriorityLabels([{ path: "app/probe.tsx", text: "label: priority," }])).toEqual([
+      "app/probe.tsx",
+    ]);
+    expect(rawPriorityLabels([{ path: "app/probe.tsx", text: "label: row.importance," }])).toEqual([
+      "app/probe.tsx",
+    ]);
+    expect(
+      rawPriorityLabels([{ path: "app/clean.tsx", text: "label: followUpPriorityWord(t, priority)," }])
     ).toEqual([]);
   });
 });
@@ -652,7 +729,7 @@ function printableResidue(body: string): string {
 }
 
 /**
- * A status is charged when it is drawn rather than tested.
+ * A value is charged when it is drawn rather than tested.
  *
  * `status === "ready"`, `status && <Badge>` and `status ? a : b` ask about the value and
  * print something else, so they stay plumbing; `{status}`, `(status ?? …)` and
@@ -662,9 +739,10 @@ function printableResidue(body: string): string {
  */
 const SPELLING_VERB = /^(replace|toLowerCase|toUpperCase|trim|split|charAt|substring|slice)/;
 
-function printsStatus(body: string): boolean {
+function printsEnum(body: string, field: string): boolean {
   const residue = printableResidue(body);
-  for (const m of residue.matchAll(/(^|[^\w$.])(?:[A-Za-z_$][\w$]*\.)*status\b/g)) {
+  const re = new RegExp(`(^|[^\\w$.])(?:[A-Za-z_$][\\w$]*\\.)*${field}\\b`, "g");
+  for (const m of residue.matchAll(re)) {
     const after = residue.slice((m.index ?? 0) + m[0].length).match(/^\s*(\S*)/)?.[1] ?? "";
     if (/^(===|!==|==|!=|<=|>=|&&|=)/.test(after)) continue;
     if (after.startsWith("?") && !after.startsWith("?.") && !after.startsWith("??")) continue;
@@ -672,6 +750,10 @@ function printsStatus(body: string): boolean {
     return true;
   }
   return false;
+}
+
+function printsStatus(body: string): boolean {
+  return printsEnum(body, "status");
 }
 
 function rawStatusSurfaces(files: { path: string; text: string }[]): string[] {
@@ -958,6 +1040,49 @@ describe("the nightly verdict words", () => {
     const declared = [...src.matchAll(/STATUS_([A-Z_]+)\s*=\s*"([a-z_]+)"/g)].map((m) => m[2]).sort();
     expect(declared.length, "NightlyReport declares no status constant").toBeGreaterThan(0);
     expect([...NIGHTLY_STATUSES].sort()).toEqual(declared);
+  });
+});
+
+/**
+ * Two more priority bands, each declared by the engine that emits it.
+ *
+ * The market tier is `prioritize.py`'s `_priority_label` -- the four words a ranked gap
+ * can carry -- and the cadence bucket is `reminders.py`'s `_PRIORITY_ORDER`, which ranks
+ * exactly the words `priority_for` returns. The panel and the dashboard drew both raw,
+ * so the roster is the engines' own list: a fifth tier added there reddens this case
+ * instead of shipping as an English word.
+ */
+const PRIORITIZE = new URL("../../../ai-service/app/features/prioritize.py", import.meta.url);
+const REMINDERS = new URL("../../../ai-service/app/features/reminders.py", import.meta.url);
+
+function marketBandWords(source: string): string[] {
+  const body = source.match(/def _priority_label[\s\S]*?(?=\ndef |$)/)?.[0] ?? "";
+  return [...body.matchAll(/return "([a-z_]+)"/g)].map((m) => m[1]).sort();
+}
+
+function cadenceBuckets(source: string): string[] {
+  const order = source.match(/_PRIORITY_ORDER\s*=\s*\{([^}]*)\}/)?.[1] ?? "";
+  return [...order.matchAll(/"([a-z_]+)"/g)].map((m) => m[1]).sort();
+}
+
+describe("the two priority bands", () => {
+  it("are the words their engines return", () => {
+    const band = marketBandWords(readFileSync(fileURLToPath(PRIORITIZE), "utf8"));
+    expect(band.length, "the band scan read no return").toBeGreaterThan(2);
+    expect([...MARKET_PRIORITIES].sort()).toEqual(band);
+
+    const buckets = cadenceBuckets(readFileSync(fileURLToPath(REMINDERS), "utf8"));
+    expect(buckets.length, "the cadence scan read no bucket").toBeGreaterThan(2);
+    expect([...FOLLOW_UP_PRIORITIES].sort()).toEqual(buckets);
+  });
+
+  it("would still see a band the roster has no word for", () => {
+    const band = marketBandWords('def _priority_label(importance, share):\n    return "urgent"\n');
+    expect(band).toEqual(["urgent"]);
+    expect(MARKET_PRIORITIES).not.toContain("urgent");
+    const buckets = cadenceBuckets('_PRIORITY_ORDER = {"overdue": 0, "someday": 1}');
+    expect(buckets).toEqual(["overdue", "someday"]);
+    expect(FOLLOW_UP_PRIORITIES).not.toContain("someday");
   });
 });
 

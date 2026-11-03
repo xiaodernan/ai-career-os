@@ -38,6 +38,7 @@ import type {
   StoryBank,
 } from "@/lib/api/types";
 import { useLocale } from "@/lib/i18n/locale-context";
+import { marketPriorityWord, requirementPriorityWord } from "@/lib/status-words";
 import { growthEngineLabel } from "@/lib/growth-engines";
 
 /**
@@ -263,9 +264,11 @@ function EngineAnswer({ engine, data }: { engine: EngineKey; data: Record<string
           <ul className="space-y-1">
             {(report.gaps ?? []).map((g, i) => (
               <li key={`${g.skill}-${i}`} className="flex items-center gap-2 text-sm">
-                <Badge variant={g.importance === "must" ? "warning" : "outline"} className="text-2xs">
-                  {g.importance ?? "gap"}
-                </Badge>
+                {g.importance && (
+                  <Badge variant={g.importance === "must" ? "warning" : "outline"} className="text-2xs">
+                    {requirementPriorityWord(t, g.importance)}
+                  </Badge>
+                )}
                 {g.skill}
               </li>
             ))}
@@ -294,7 +297,7 @@ function EngineAnswer({ engine, data }: { engine: EngineKey; data: Record<string
             <li key={`${p.skill}-${i}`} className="flex items-center justify-between text-sm">
               <span>{p.skill}</span>
               <span className="text-xs text-muted-foreground">
-                {p.priority} · demand {Math.round((p.marketShare ?? 0) * 100)}%
+                {marketPriorityWord(t, p.priority ?? "")} · demand {Math.round((p.marketShare ?? 0) * 100)}%
               </span>
             </li>
           ))}

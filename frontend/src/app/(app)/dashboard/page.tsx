@@ -50,7 +50,12 @@ import {
 import { runTotalTokens, type NormalizedPage } from "@/lib/api/normalize";
 import { rankingHintKey } from "@/lib/dashboard-ranking";
 import { formatNumber, relativeTime } from "@/lib/format";
-import { resumeStatusWord, runTriggerWord } from "@/lib/status-words";
+import {
+  followUpPriorityWord,
+  requirementPriorityWord,
+  resumeStatusWord,
+  runTriggerWord,
+} from "@/lib/status-words";
 import type { ActivityRun, DashboardPayload, Job, Resume } from "@/lib/api/types";
 
 /**
@@ -673,12 +678,14 @@ export default function DashboardPage() {
                   {(data?.skillGaps?.length ?? 0) > 0 ? (
                     data!.skillGaps!.slice(0, 5).map((g, i) => (
                       <div key={`${g.skill}-${i}`} className="flex items-start gap-2 text-sm">
-                        <Badge
-                          variant={g.importance === "critical" || g.importance === "high" ? "warning" : "outline"}
-                          className="mt-0.5 shrink-0 text-2xs font-normal capitalize"
-                        >
-                          {g.importance ?? "gap"}
-                        </Badge>
+                        {g.importance && (
+                          <Badge
+                            variant={g.importance === "must" ? "warning" : "outline"}
+                            className="mt-0.5 shrink-0 text-2xs font-normal capitalize"
+                          >
+                            {requirementPriorityWord(t, g.importance)}
+                          </Badge>
+                        )}
                         <div className="min-w-0">
                           <p className="font-medium">{g.skill}</p>
                           {g.reason && <p className="text-xs text-muted-foreground">{g.reason}</p>}
@@ -745,7 +752,7 @@ export default function DashboardPage() {
                             return acc;
                           }, {})
                         ).map(([priority, count]) => ({
-                          label: priority,
+                          label: followUpPriorityWord(t, priority),
                           value: count,
                           tone:
                             priority === "overdue"
@@ -757,12 +764,14 @@ export default function DashboardPage() {
                       />
                       {data!.followUps!.slice(0, 3).map((f) => (
                         <div key={f.id} className="flex items-start gap-2 text-sm">
-                          <Badge
-                            variant={f.priority === "overdue" ? "destructive" : "warning"}
-                            className="mt-0.5 shrink-0 text-2xs font-normal capitalize"
-                          >
-                            {f.priority}
-                          </Badge>
+                          {f.priority && (
+                            <Badge
+                              variant={f.priority === "overdue" ? "destructive" : "warning"}
+                              className="mt-0.5 shrink-0 text-2xs font-normal capitalize"
+                            >
+                              {followUpPriorityWord(t, f.priority)}
+                            </Badge>
+                          )}
                           <div className="min-w-0">
                             <p className="font-medium">{f.name}</p>
                             <p className="text-xs text-muted-foreground">

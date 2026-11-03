@@ -271,7 +271,9 @@ export interface JobMatch {
 
 export interface SkillGap {
   skill: string;
-  importance?: "critical" | "high" | "medium" | "low" | string;
+  /** The JD's own priority word: `match.py` copies the requirement's onto the gap. The
+   *  market tier (`critical`/`high`/…) is `prioritize.py`'s band on `priority`, not this. */
+  importance?: "must" | "should" | "nice" | string;
   reason?: string;
   relatedEvidence?: string;
 }
