@@ -511,11 +511,21 @@ the letters no reading has answered yet. A word outside that set is **400**
 banana" would be a fact about the inbox, and the reader's mistake was in the
 filter.
 
+The chips above the list need their own number (roadmap 49.4). `GET /inbound/mails/intents`
+answers one count per chip under the same `q`: the six words the page draws --
+`unread` first, then the five readings -- always all six, zeros included, so a
+chip never has to invent a number or vanish because its letters happen to be
+zero. The counts narrow by `q` only, never by the reading already picked: a
+selected chip still has to show how many letters back its word. The letters
+themselves are still on `GET /inbound/mails`; this route answers only the row
+of numbers.
+
 | Method | Path | Notes |
 |---|---|---|
 | GET | `/inbound/link` | the signed-in account's own inbound address; **503** `INBOUND_NOT_CONFIGURED` when the deployment has no domain |
 | POST | `/inbound/mail/{token}` | the provider's webhook; body is Postmark inbound JSON; always **200** `{"status":"received"}` on a resolvable token, **404** `INBOUND_LINK_INVALID` otherwise |
 | GET | `/inbound/mails` | the caller's letters, newest first — `page` (default 0), `size` (default 50, clamped), `q` (a case-insensitive substring of subject, sender, company, role or the letter's own text; blank means no filter) and `intent` (one of the five readings or unread; both narrow together, and any other word is **400** `INBOUND_INTENT_UNKNOWN`) → {items, total, page, size}; each item carries the reading, the suggested stage and the filed application, all nullable |
+| GET | `/inbound/mails/intents` | one number per chip under the same `q` (a case-insensitive substring of subject, sender, company, role or the letter's own text; blank means no filter) → {items}; all six words always appear — unread first, then the five readings — zeros included, and the counts narrow by `q` only |
 | POST | `/inbound/mails/{id}/file` | files one letter on `{"applicationId"}` and appends a `reply` event to that card; a second call on the same card is a no-op, a different card is **409** `INBOUND_MAIL_ALREADY_FILED`, and a letter that is not the caller's is **404** `INBOUND_MAIL_NOT_FOUND` — the same answer as one that never existed |
 
 ### Growth engines (`/growth`)

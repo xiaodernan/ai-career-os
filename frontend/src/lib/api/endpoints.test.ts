@@ -1129,8 +1129,8 @@ describe("endpoints ↔ backend route parity", () => {
     expect(new Set(handlers.map((h) => `${h.verb} ${h.pattern}`)).size).toBe(handlers.length);
     expect(handlers.flatMap((h) => h.unparsed)).toEqual([]);
     const bound = handlers.flatMap((h) => h.params);
-    expect(bound.length).toBe(50);
-    // 50 parameters in 23 distinct names, measured: the reader's whole answer rather than a spot
+    expect(bound.length).toBe(51);
+    // 51 parameters in 23 distinct names, measured: the reader's whole answer rather than a spot
     // check, so a signature shape it stops understanding shrinks this set instead of passing quiet
     // (#225 retired `limit` from `/activity/runs`, which now pages like every other list route;
     // 19.2 brought the name back for `GET /ingestion/runs` as a newest-N history, and 19.5 retired
@@ -1141,7 +1141,8 @@ describe("endpoints ↔ backend route parity", () => {
     // 49.1's reply search binds `q` beside that page/size pair, 46 -> 47; 47.3's job page asks
     // `/applications` for one posting, adding `jobId` (47 -> 48), and 49's reading chips add
     // `intent` to the same reply list (48 -> 49); a card's rehearsal list adds `applicationId`
-    // to `/interviews` (49 -> 50). The three latest names are in this set now.)
+    // to `/interviews` (49 -> 50), and 49.4's chip counts bind `q` again on their own route
+    // (50 -> 51). The three latest names are in this set now.)
     expect(new Set(bound.map((p) => p.name))).toEqual(
       new Set([
         "agent", "applicationId", "company", "documentId", "file", "intent", "jobId", "kind",

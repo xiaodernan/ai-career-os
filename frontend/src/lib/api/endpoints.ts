@@ -201,6 +201,8 @@ export const endpoints = {
   inboundLink: "/inbound/link",
   /** The replies page: the account's letters, newest first, paged. */
   inboundMails: "/inbound/mails",
+  /** The chips' numbers under the same words (49.4); the reading filter is not applied. */
+  inboundIntentCounts: "/inbound/mails/intents",
   inboundMailFile: (id: string) => `/inbound/mails/${seg(id)}/file`,
 
   /* ---------------- The second door (36.1-36.4) --------------------------- */

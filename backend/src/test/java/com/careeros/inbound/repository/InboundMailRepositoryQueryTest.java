@@ -33,4 +33,20 @@ class InboundMailRepositoryQueryTest {
                 .contains("m.subject", "m.fromaddress", "m.company", "m.role", "m.bodytext")
                 .contains(":intent", ":unread");
     }
+
+    @Test
+    void theChipCountsReadTheSameFieldsAsThePage() throws NoSuchMethodException {
+        // The chip and the page it opens must answer one question. The two queries keep the
+        // five-field predicate side by side rather than sharing a string, so this test says
+        // out loud that the copy is deliberate and that a field added to one is added here.
+        Query query = InboundMailRepository.class
+                .getMethod("countByIntent", UUID.class, String.class)
+                .getAnnotation(Query.class);
+
+        assertThat(query).as("countByIntent is an annotated query").isNotNull();
+        assertThat(query.value().toLowerCase(Locale.ROOT))
+                .as("the counts narrow under the same words as the page")
+                .contains("m.subject", "m.fromaddress", "m.company", "m.role", "m.bodytext")
+                .contains("group by m.intent");
+    }
 }

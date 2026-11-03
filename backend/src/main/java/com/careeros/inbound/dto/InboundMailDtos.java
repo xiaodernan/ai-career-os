@@ -2,6 +2,7 @@ package com.careeros.inbound.dto;
 
 import jakarta.validation.constraints.NotNull;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -26,5 +27,16 @@ public final class InboundMailDtos {
 
     /** The one thing a reader chooses when filing a letter by hand. */
     public record FileRequest(@NotNull(message = "applicationId is required") UUID applicationId) {
+    }
+
+    /** One chip's number: a reading's word, or `unread` for the letters it has not read. */
+    public record IntentCount(String intent, long count) {
+    }
+
+    /**
+     * The whole row of chips (49.4), in the order the page draws them. Every reading is
+     * present, zeros included, so the page never has to invent a number for a word.
+     */
+    public record IntentCounts(List<IntentCount> items) {
     }
 }

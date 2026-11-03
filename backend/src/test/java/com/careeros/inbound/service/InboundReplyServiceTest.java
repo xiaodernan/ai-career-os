@@ -19,6 +19,8 @@ import com.careeros.common.ApiErrorCode;
 import com.careeros.common.ApiException;
 import com.careeros.common.PageDTO;
 import com.careeros.inbound.dto.InboundMailDtos.InboundMailItem;
+import com.careeros.inbound.dto.InboundMailDtos.IntentCount;
+import com.careeros.inbound.dto.InboundMailDtos.IntentCounts;
 import com.careeros.inbound.entity.InboundMail;
 import com.careeros.inbound.repository.InboundMailRepository;
 import java.time.OffsetDateTime;
@@ -330,6 +332,33 @@ class InboundReplyServiceTest {
                 .isInstanceOfSatisfying(ApiException.class,
                         e -> assertThat(e.code()).isEqualTo(ApiErrorCode.INBOUND_INTENT_UNKNOWN));
         verifyNoInteractions(mails);
+    }
+
+    @Test
+    void theChipsCountEveryReadingAndNameTheUnreadOnes() {
+        // The null group is the letters no reading answered; the page's chip is called
+        // `unread`, and the number has to reach it under that word. Missing readings are
+        // zeros, not absent keys: the page should not have to invent them.
+        when(mails.countByIntent(eq(ALICE), eq(""))).thenReturn(List.of(
+                new Object[]{null, 2L}, new Object[]{"rejection", 1L}, new Object[]{"offer", 4L}));
+
+        IntentCounts counts = service.intentCounts(ALICE, null);
+
+        assertThat(counts.items()).extracting(IntentCount::intent)
+                .containsExactly("unread", "rejection", "interview", "offer", "info", "other");
+        assertThat(counts.items()).extracting(IntentCount::count)
+                .containsExactly(2L, 1L, 0L, 4L, 0L, 0L);
+    }
+
+    @Test
+    void theChipCountsNarrowWithTheSameWordsAsThePage() {
+        // The numbers describe the search, not the whole inbox: a chip under "acme" counts
+        // the acme letters, because that is the page it would open.
+        when(mails.countByIntent(eq(ALICE), eq("acme offer"))).thenReturn(List.of());
+
+        IntentCounts counts = service.intentCounts(ALICE, "  Acme Offer ");
+
+        assertThat(counts.items()).allMatch(item -> item.count() == 0);
     }
 
     @Test

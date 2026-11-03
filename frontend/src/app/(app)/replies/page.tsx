@@ -27,7 +27,11 @@ import { lastPageOf } from "@/lib/page-window";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { useUrlState } from "@/lib/hooks/use-url-state";
 import { useApplications } from "@/lib/hooks/resources";
-import { useFileInboundMail, useInboundMails } from "@/lib/hooks/replies";
+import {
+  useFileInboundMail,
+  useInboundIntentCounts,
+  useInboundMails,
+} from "@/lib/hooks/replies";
 import { useUpdateApplication } from "@/lib/hooks/actions";
 import type { ApplicationStatus, InboundMail } from "@/lib/api/types";
 
@@ -114,6 +118,12 @@ export default function RepliesPage() {
     intent: state.intent,
   });
   const applications = useApplications({ size: 100 });
+  // The numbers beside the chips share the words but not the picked reading: a chip counts
+  // what it would show, so the page can tell a reader what is waiting before they click.
+  const counts = useInboundIntentCounts({ q: state.q });
+  const allCount = counts.data
+    ? INTENT_FILTERS.reduce((sum, key) => sum + (counts.data?.[key] ?? 0), 0)
+    : undefined;
   const file = useFileInboundMail();
   const apply = useUpdateApplication();
   // mail id → the card the reader picked for it; a picked value lives only on this screen.
@@ -241,18 +251,29 @@ export default function RepliesPage() {
           onClick={() => setUrl({ intent: undefined, page: 0 })}
         >
           {t("replies.filterAll")}
+          {allCount !== undefined ? (
+            <span className="ml-1 text-xs tabular-nums text-muted-foreground">{allCount}</span>
+          ) : null}
         </Button>
-        {INTENT_FILTERS.map((intent) => (
-          <Button
-            key={intent}
-            size="sm"
-            variant={state.intent === intent ? "secondary" : "ghost"}
-            aria-pressed={state.intent === intent}
-            onClick={() => setUrl({ intent, page: 0 })}
-          >
-            {t(intentKey(intent))}
-          </Button>
-        ))}
+        {INTENT_FILTERS.map((intent) => {
+          // A zero is shown rather than hidden: "Rejections 0" tells the reader the page
+          // will be empty before they click, and that is a fact about the inbox, not noise.
+          const count = counts.data?.[intent];
+          return (
+            <Button
+              key={intent}
+              size="sm"
+              variant={state.intent === intent ? "secondary" : "ghost"}
+              aria-pressed={state.intent === intent}
+              onClick={() => setUrl({ intent, page: 0 })}
+            >
+              {t(intentKey(intent))}
+              {count !== undefined ? (
+                <span className="ml-1 text-xs tabular-nums text-muted-foreground">{count}</span>
+              ) : null}
+            </Button>
+          );
+        })}
       </div>
 
       <Card>

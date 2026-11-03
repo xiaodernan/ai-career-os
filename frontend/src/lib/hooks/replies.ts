@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { api } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
 import { field } from "@/lib/api/body";
-import { normalizePage, str } from "@/lib/api/normalize";
+import { normalizePage, num, str } from "@/lib/api/normalize";
 import { translate } from "@/lib/i18n/locale-context";
 import { fail } from "@/lib/hooks/failure";
 import type { InboundLinkRow, InboundMail, Page } from "@/lib/api/types";
@@ -79,6 +79,32 @@ export function useInboundMails(params?: {
         }),
         mapInboundMail
       ),
+  });
+}
+
+/**
+ * The numbers the chips above the list carry (49.4).
+ *
+ * The route answers every reading in the chip vocabulary, zeros included, under the same
+ * `q` as the page -- so the number on "Rejections" and the page it opens are answers to one
+ * question. It deliberately does not take the picked reading: a chip counts what it would
+ * show, not what the picked chip is already showing.
+ */
+export function useInboundIntentCounts(params?: { q?: string }) {
+  const q = params?.q?.trim() || undefined;
+  return useQuery({
+    queryKey: ["inbound", "mails", "intents", q ?? ""],
+    queryFn: async (): Promise<Record<string, number>> => {
+      const raw = await api.get<unknown>(endpoints.inboundIntentCounts, { q });
+      const items = (raw as { items?: unknown[] } | null)?.items ?? [];
+      const counts: Record<string, number> = {};
+      for (const item of items) {
+        const intent = str(item, "intent");
+        const count = num(item, "count");
+        if (intent && count !== undefined) counts[intent] = count;
+      }
+      return counts;
+    },
   });
 }
 

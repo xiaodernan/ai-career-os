@@ -8,9 +8,12 @@ import com.careeros.common.ApiErrorCode;
 import com.careeros.common.ApiException;
 import com.careeros.common.PageDTO;
 import com.careeros.inbound.dto.InboundMailDtos.InboundMailItem;
+import com.careeros.inbound.dto.InboundMailDtos.IntentCount;
+import com.careeros.inbound.dto.InboundMailDtos.IntentCounts;
 import com.careeros.inbound.entity.InboundMail;
 import com.careeros.inbound.repository.InboundMailRepository;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -57,10 +60,15 @@ public class InboundReplyService {
             "offer", "offer");
 
     /**
-     * Every reading the replies page may filter by. `unread` is not one of them: it is the
-     * state of a letter no reading has answered yet, and it is asked for as its own word.
+     * The five readings the classifier answers with, in the order the page's chips follow.
+     * `unread` is not one of them: it is the state of a letter no reading has answered yet,
+     * and it is asked for as its own word.
      */
-    private static final Set<String> INTENTS = Set.of("rejection", "interview", "offer", "info", "other");
+    private static final List<String> READINGS =
+            List.of("rejection", "interview", "offer", "info", "other");
+
+    /** The same five words as a set, for the one question a filter asks: is this a reading? */
+    private static final Set<String> INTENTS = Set.copyOf(READINGS);
 
     /** The filter word for the letters whose reading never arrived. */
     private static final String UNREAD = "unread";
@@ -113,6 +121,34 @@ public class InboundReplyService {
         Page<InboundMail> page = mails.findPage(userId, q, named, unread, pageable);
         Map<UUID, Application> byId = applicationsOf(userId, page.getContent());
         return PageDTO.from(page, mail -> item(mail, byId.get(mail.getApplicationId())));
+    }
+
+    /**
+     * The numbers the chips above the list carry (roadmap 49.4), under the same words as the
+     * page. The reading filter is deliberately absent: a chip counts what it would show, not
+     * how many letters are already showing under the chip that is picked.
+     *
+     * <p>A reading with no letters is answered with a zero rather than left out. The page
+     * draws a fixed vocabulary, and a missing key would make the number a thing the client
+     * invented; an absent `unread` key in particular would read as "nothing waiting", which
+     * is a claim about the inbox rather than a layout choice.
+     */
+    @Transactional(readOnly = true)
+    public IntentCounts intentCounts(UUID userId, String query) {
+        String needle = trimmed(query);
+        String q = needle == null ? "" : needle.toLowerCase(Locale.ROOT);
+        Map<String, Long> counts = new HashMap<>();
+        for (Object[] row : mails.countByIntent(userId, q)) {
+            String reading = (String) row[0];
+            long count = ((Number) row[1]).longValue();
+            counts.merge(reading == null ? UNREAD : reading, count, Long::sum);
+        }
+        List<IntentCount> items = new ArrayList<>(READINGS.size() + 1);
+        items.add(new IntentCount(UNREAD, counts.getOrDefault(UNREAD, 0L)));
+        for (String reading : READINGS) {
+            items.add(new IntentCount(reading, counts.getOrDefault(reading, 0L)));
+        }
+        return new IntentCounts(items);
     }
 
     /**

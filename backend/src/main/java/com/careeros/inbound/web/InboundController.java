@@ -8,6 +8,7 @@ import com.careeros.common.PageDTO;
 import com.careeros.common.Paging;
 import com.careeros.inbound.dto.InboundMailDtos.FileRequest;
 import com.careeros.inbound.dto.InboundMailDtos.InboundMailItem;
+import com.careeros.inbound.dto.InboundMailDtos.IntentCounts;
 import com.careeros.inbound.service.InboundLinks;
 import com.careeros.inbound.service.InboundMailService;
 import com.careeros.inbound.service.InboundReplyService;
@@ -89,6 +90,17 @@ public class InboundController {
                                          @RequestParam(required = false) String q,
                                          @RequestParam(required = false) String intent) {
         return replies.list(user.id(), Paging.of(page, size).pageable(), q, intent);
+    }
+
+    /**
+     * The chips' numbers: every reading's count under the same {@code q}, zeros included, and
+     * the letters no reading has answered under {@code unread}. The reading filter is not a
+     * parameter here -- a chip counts what it would show, not the one already picked.
+     */
+    @GetMapping("/mails/intents")
+    public IntentCounts intents(@CurrentUser AuthUser user,
+                                @RequestParam(required = false) String q) {
+        return replies.intentCounts(user.id(), q);
     }
 
     /** Ties one waiting letter to the card it answers; a double click on the same card is a no-op. */

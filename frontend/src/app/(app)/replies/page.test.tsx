@@ -29,10 +29,12 @@ const state = vi.hoisted(() => ({
     intent: undefined as string | undefined,
     page: 0,
   },
+  counts: { data: undefined as Record<string, number> | undefined },
 }));
 
 vi.mock("@/lib/hooks/replies", () => ({
   useInboundMails: () => state.letters,
+  useInboundIntentCounts: () => state.counts,
   useFileInboundMail: () => ({ mutate: () => {}, isPending: false, variables: undefined }),
 }));
 
@@ -123,6 +125,7 @@ function withLetters(items: InboundMail[]): void {
 
 beforeEach(() => {
   state.url = { q: undefined, intent: undefined, page: 0 };
+  state.counts.data = undefined;
   state.letters = {
     data: undefined,
     isPending: false,
@@ -258,6 +261,22 @@ describe("the replies page", () => {
     // The picked chip is pressed; "All" is not, even though the words are still on.
     expect(html).toMatch(/aria-pressed="true"[^>]*>Rejection</);
     expect(html).toMatch(/aria-pressed="false"[^>]*>All</);
+  });
+
+  it("counts what each chip would show, zeros included", () => {
+    // The numbers are answers to the same question as the pages behind them: All sums the
+    // readings under the current words, and a zero is printed rather than hidden so a reader
+    // knows the chip opens an empty page before they click it.
+    withLetters(ITEMS);
+    state.counts.data = { unread: 2, rejection: 1, interview: 0, offer: 0, info: 0, other: 0 };
+
+    const html = render();
+
+    expect(html).toMatch(/All<span[^>]*>3</);
+    expect(html).toMatch(/Unread<span[^>]*>2</);
+    expect(html).toMatch(/Rejection<span[^>]*>1</);
+    expect(html).toMatch(/Interview<span[^>]*>0</);
+    expect(html).toMatch(/Other<span[^>]*>0</);
   });
 
   it("says the words and the reading together matched nothing", () => {

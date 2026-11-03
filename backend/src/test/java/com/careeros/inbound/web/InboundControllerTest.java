@@ -22,6 +22,8 @@ import com.careeros.common.EnvelopeAdvice;
 import com.careeros.common.GlobalExceptionHandler;
 import com.careeros.common.PageDTO;
 import com.careeros.inbound.dto.InboundMailDtos.InboundMailItem;
+import com.careeros.inbound.dto.InboundMailDtos.IntentCount;
+import com.careeros.inbound.dto.InboundMailDtos.IntentCounts;
 import com.careeros.inbound.service.InboundLinks;
 import com.careeros.inbound.service.InboundMailService;
 import com.careeros.inbound.service.InboundReplyService;
@@ -185,6 +187,22 @@ class InboundControllerTest {
                 .andExpect(jsonPath("$.data.total").value(1));
 
         verify(replies).list(argThat(ALICE::equals), any(Pageable.class), eq("Acme"), isNull());
+    }
+
+    @Test
+    void theChipNumbersTravelWithTheSameSearch() throws Exception {
+        // The numbers and the list are two answers to one question: the route carries `q` and
+        // nothing else -- the picked reading is not sent, because each chip counts what it
+        // would show rather than the one already showing.
+        when(replies.intentCounts(argThat(ALICE::equals), eq("Acme")))
+                .thenReturn(new IntentCounts(List.of(new IntentCount("unread", 2L))));
+
+        mvc.perform(get("/api/v1/inbound/mails/intents").param("q", "Acme"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items[0].intent").value("unread"))
+                .andExpect(jsonPath("$.data.items[0].count").value(2));
+
+        verify(replies).intentCounts(argThat(ALICE::equals), eq("Acme"));
     }
 
     @Test

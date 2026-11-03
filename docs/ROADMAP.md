@@ -4002,6 +4002,16 @@ inbox, and "clear the search" alone must not leave the reader staring at the sam
   body too. One query-text test pins all five columns and both filters -- the one thing a
   mocked service test cannot see. No new route, no new parameter.)
 
+- [x] **49.4** The chips count what they would show. (`GET /inbound/mails/intents` answers
+  one grouped count, narrowed by `q` alone: the reading already picked must not shrink the
+  number on the chip that offered it, or a selected chip would read `0` beside the very
+  letters it selected. The service fills all six words -- unread first, then the five
+  readings -- zeros included, because a chip that vanishes at zero is a word the reader
+  cannot discover; a null reading is counted as unread, the same meaning 49.2 gave it. The
+  page draws each number inside its chip and "all" sums the six. 2 service tests + 1 route
+  test + 1 query-text test + 1 SSR test; 1178 backend tests, 1035 frontend tests in 101
+  files.)
+
 ## Epic 50 -- A kept letter is the reader's to manage
 
 A draft can now be kept, but a mistaken save has no exit. The application drawer can read every

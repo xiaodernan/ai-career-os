@@ -50,6 +50,29 @@ public interface InboundMailRepository extends JpaRepository<InboundMail, UUID> 
             """)
     Page<InboundMail> findPage(UUID userId, String q, String intent, boolean unread, Pageable pageable);
 
+    /**
+     * What the chips above the list would show (roadmap 49.4): one count per reading, under the
+     * same words as the page -- the reading filter deliberately does not apply here, because
+     * the chips count their alternatives rather than the one already picked.
+     *
+     * <p>The search half mirrors {@link #findPage}: the same five fields, the same empty-string
+     * escape for a blank box, so the number on a chip and the page it opens are answers to the
+     * same question. A null intent (a letter no reading has answered) comes back as a null key;
+     * the service names it `unread`.
+     */
+    @Query("""
+            SELECT m.intent, COUNT(m) FROM InboundMail m
+             WHERE m.userId = :userId
+               AND (:q = ''
+                    OR LOCATE(:q, LOWER(COALESCE(m.subject, ''))) > 0
+                    OR LOCATE(:q, LOWER(COALESCE(m.fromAddress, ''))) > 0
+                    OR LOCATE(:q, LOWER(COALESCE(m.company, ''))) > 0
+                    OR LOCATE(:q, LOWER(COALESCE(m.role, ''))) > 0
+                    OR LOCATE(:q, LOWER(COALESCE(m.bodyText, ''))) > 0)
+             GROUP BY m.intent
+            """)
+    List<Object[]> countByIntent(UUID userId, String q);
+
     /** What the inbox may carry (37.3): the letters already filed on an application. */
     List<InboundMail> findByUserIdAndApplicationIdIsNotNullOrderByReceivedAtDescIdDesc(
             UUID userId, Pageable pageable);
