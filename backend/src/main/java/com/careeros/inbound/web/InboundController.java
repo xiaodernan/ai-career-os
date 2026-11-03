@@ -77,8 +77,8 @@ public class InboundController {
 
     /**
      * The replies page: the account's letters newest first, filed or waiting. A non-blank
-     * {@code q} narrows the page to the letters whose subject, sender, company or role
-     * contains it, case aside; a non-blank {@code intent} keeps only the letters the
+     * {@code q} narrows the page to the letters whose subject, sender, company, role or own
+     * text contains it, case aside; a non-blank {@code intent} keeps only the letters the
      * classifier read that way ({@code unread} keeps the ones it has not read). Both filters
      * apply together, and paging counts the narrowed total, not the whole inbox.
      */

@@ -3996,6 +3996,12 @@ inbox, and "clear the search" alone must not leave the reader staring at the sam
   clears both, and a filter that found nothing is still not an empty inbox. 4 service tests +
   1 route test + 3 SSR tests.)
 
+- [x] **49.3** The search reads the letter itself. (`q` looks inside the body beside the
+  envelope's four fields, so a reader who remembers "we would like to schedule" finds the
+  letter that said it rather than an empty page; the box's accessibility label names the
+  body too. One query-text test pins all five columns and both filters -- the one thing a
+  mocked service test cannot see. No new route, no new parameter.)
+
 ## Epic 50 -- A kept letter is the reader's to manage
 
 A draft can now be kept, but a mistaken save has no exit. The application drawer can read every

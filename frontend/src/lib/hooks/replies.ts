@@ -41,12 +41,12 @@ export function mapInboundMail(raw: unknown): InboundMail {
 /**
  * The account's letters, newest first, one page at a time (37.3's list route).
  *
- * A non-blank `q` narrows the page on the server -- subject, sender, company or role, case
- * aside -- so the count and the pager describe the search rather than the whole inbox. A
- * non-blank `intent` narrows it further, to the reading the reader picked (`unread` keeps
- * the letters the classifier has not read); the two travel together and both apply. The
- * key carries the trimmed words, because " acme" and "acme" are the same question and must
- * not cost two caches.
+ * A non-blank `q` narrows the page on the server -- subject, sender, company, role or the
+ * letter's own text, case aside -- so the count and the pager describe the search rather than
+ * the whole inbox. A non-blank `intent` narrows it further, to the reading the reader picked
+ * (`unread` keeps the letters the classifier has not read); the two travel together and both
+ * apply. The key carries the trimmed words, because " acme" and "acme" are the same question
+ * and must not cost two caches.
  */
 export function useInboundMails(params?: {
   page?: number;

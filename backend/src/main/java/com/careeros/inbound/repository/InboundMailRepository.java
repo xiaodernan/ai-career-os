@@ -20,17 +20,20 @@ public interface InboundMailRepository extends JpaRepository<InboundMail, UUID> 
 
     /**
      * The replies page with its two filters (roadmap 49.1-49.2): the same ordering, narrowed
-     * to the letters whose subject, sender, company or role contains `q` (case aside) and to
-     * the reading `intent` -- or, when `unread` is true, to the letters no reading has
-     * answered yet.
+     * to the letters whose subject, sender, company, role or own text contains `q` (case
+     * aside) and to the reading `intent` -- or, when `unread` is true, to the letters no
+     * reading has answered yet.
      *
-     * A blank `q` is no filter rather than an empty room: the first branch asks the literal
-     * empty string, which every row satisfies, so the LOCATE below is never the reason a page
-     * came back empty. `LOCATE` rather than `LIKE` on purpose: a reader who types `%` into a
-     * search box is looking for a percent sign, not asking for every letter, and a bound
-     * `LIKE` pattern would quietly treat their words as wildcards. The four `COALESCE`s keep
-     * a letter with no company or role searchable by the fields it does have, because a null
-     * operand in `OR` must not swallow the other matches.
+     * The body is searched because the words a reader remembers are usually in the letter
+     * itself ("we would like to schedule"), not in its subject line; an envelope-only search
+     * would answer that memory with an empty page. A blank `q` is still no filter rather than
+     * an empty room: the first branch asks the literal empty string, which every row
+     * satisfies, so the LOCATE below is never the reason a page came back empty. `LOCATE`
+     * rather than `LIKE` on purpose: a reader who types `%` into a search box is looking for
+     * a percent sign, not asking for every letter, and a bound `LIKE` pattern would quietly
+     * treat their words as wildcards. The five `COALESCE`s keep a letter with no company,
+     * role or body searchable by the fields it does have, because a null operand in `OR` must
+     * not swallow the other matches.
      */
     @Query("""
             SELECT m FROM InboundMail m
@@ -39,7 +42,8 @@ public interface InboundMailRepository extends JpaRepository<InboundMail, UUID> 
                     OR LOCATE(:q, LOWER(COALESCE(m.subject, ''))) > 0
                     OR LOCATE(:q, LOWER(COALESCE(m.fromAddress, ''))) > 0
                     OR LOCATE(:q, LOWER(COALESCE(m.company, ''))) > 0
-                    OR LOCATE(:q, LOWER(COALESCE(m.role, ''))) > 0)
+                    OR LOCATE(:q, LOWER(COALESCE(m.role, ''))) > 0
+                    OR LOCATE(:q, LOWER(COALESCE(m.bodyText, ''))) > 0)
                AND (:intent IS NULL OR m.intent = :intent)
                AND (:unread = FALSE OR m.intent IS NULL)
              ORDER BY m.receivedAt DESC, m.id DESC
