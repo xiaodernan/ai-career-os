@@ -1048,8 +1048,14 @@ def test_the_java_probe_reads_every_record_the_backend_declares():
     # `StorageService.StoredObject` -- the listing's row, which names a key, its age and its size so
     # a sweep can decide what no database row names. It is a port's type and no route serializes it,
     # and the walk counts declarations, so it joins `Purge` in being held to this opener.
-    assert len(declared) == 198, \
-        f"{len(declared)} records carry a declaration the shared opener reads, not the 198 measured"
+    # 199 with 48.2's `UnnamedObjectReclaimer.Reclaim`: the four verdicts one bucket pass reached,
+    # counted against the listing they add up to. A sweep's receipt, like `Purge`, reaches no route.
+    # 201 measured on the tree this commit lands on: the letter wave declared `LetterItem` (the drawer's
+    # row) and `SaveLetterRequest` (the body the job page posts) in `ApplicationDtos` and repinned nothing,
+    # so HEAD reads two more than its own pin. Naming them here is the same arithmetic the sentences above
+    # keep -- a pin is a census, and a census that quietly absorbs someone else's rows stops being evidence.
+    assert len(declared) == 201, \
+        f"{len(declared)} records carry a declaration the shared opener reads, not the 201 measured"
     problems, renamed = [], []
     for relative, record in declared:
         names = _record_components_at(relative, record)

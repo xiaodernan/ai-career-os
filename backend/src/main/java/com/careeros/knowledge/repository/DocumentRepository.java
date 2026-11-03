@@ -83,6 +83,17 @@ public interface DocumentRepository extends JpaRepository<Document, UUID> {
             """)
     int deleteRetiredBefore(@Param("status") String status, @Param("cutoff") OffsetDateTime cutoff);
 
+    /**
+     * Every key any document row names, in every status (roadmap 48.2). Retired rows are included
+     * here although 44.2's reference check excludes them, because the two questions differ: the
+     * delete path asks whether the bytes are still useful, and the bucket sweep asks whether any
+     * row still claims them. A retired row claims its key until 44.3 purges the row, and the
+     * purge hands the key to the reclaimer as it goes -- so the only object this read cannot
+     * account for is one no row ever named.
+     */
+    @Query("select d.fileKey from Document d where d.fileKey is not null")
+    List<String> findAllFileKeys();
+
     List<Document> findBySourceId(UUID sourceId);
 
     List<Document> findByUserId(UUID userId);

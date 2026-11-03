@@ -54,6 +54,7 @@ SIGNAL_METRICS = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "notif
 PUSH_METRICS = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "push" / "service" / "PushDeliveryMetrics.java"
 REMINDER_CLOCK = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "notification" / "service" / "ReminderScheduler.java"
 RETENTION_METRICS = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "auth" / "retention" / "RetentionMetrics.java"
+UNNAMED_RECLAIMER = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "auth" / "retention" / "UnnamedObjectReclaimer.java"
 NIGHTLY_REPORT_SERVICE = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "report" / "service" / "NightlyReportService.java"
 NIGHTLY_CARD = ROOT / "frontend" / "src" / "components" / "monitoring" / "nightly-history.tsx"
 
@@ -73,6 +74,10 @@ METRICS = {
     "careeros_signals_last_sweep_timestamp": (SIGNAL_METRICS, "careeros.signals.last.sweep.timestamp"),
     "careeros_reminders_last_tick_timestamp": (PUSH_METRICS, "careeros.reminders.last.tick.timestamp"),
     "careeros_retention_last_sweep_timestamp": (RETENTION_METRICS, "careeros.retention.last.sweep.timestamp"),
+    # 48.2's per-pass verdict. The sweep's own timestamp moves through a night whose listing the
+    # store refused -- the pass finishes, its tables and its purge run -- so the alarm about the
+    # bucket has to read a number that says only "the store would not answer", once per pass.
+    "careeros_storage_bucket_reads_total": (UNNAMED_RECLAIMER, "careeros.storage.bucket_reads"),
 }
 
 ALERT_NAMES = frozenset({
@@ -87,6 +92,7 @@ ALERT_NAMES = frozenset({
     "CareerOSSignalSweepStale",
     "CareerOSReminderClockStale",
     "CareerOSRetentionSweepStale",
+    "CareerOSBucketListingRefused",
 })
 
 # The columns the budget query sums, each one a column of the ledger migration.

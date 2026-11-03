@@ -303,7 +303,7 @@ recomputed from `ai_usage_events` every minute — the install's own verdict —
 boot — and the weekly letter's —
 `careeros_digest_delivery_total{outcome}`, `sent` or `refused` per attempt, and
 `careeros_digest_last_delivered_timestamp`, moved only by an accepted letter.
-`ops/prometheus/alerts.yml` carries the eleven rules and each one links its page in
+`ops/prometheus/alerts.yml` carries the twelve rules and each one links its page in
 [RUNBOOK.md](RUNBOOK.md).
 
 The limiter exports one more family for dashboards rather than alarms:
@@ -356,7 +356,25 @@ meaning: an item delete leaves the retired row naming its key, so account erasur
 a reclaim the store refused, while a purged row has no trail and the object is an orphan.
 The WARN line the same failure logs names the key, and that is the list to work from.
 No nightly rule reads the family: an object that outlives a row is not an outage, and a
-counter with no baseline would alarm on a quiet week.
+counter with no baseline would alarm on a quiet week. An orphan is now a category with a
+remover rather than a permanent loss — the sweep below walks the bucket itself.
+
+The nightly sweep also asks the object store what the bucket holds, and
+`careeros_storage_objects_judged_total{outcome}` moves once per object that listing showed:
+`named` when any row still points at the key in any status — a retired row is the trail 44.2
+leaves a refused reclaim on, not garbage — `young` when no row names it but it is inside
+`RETENTION_UNNAMED_OBJECT_DAYS` (7 by default), which is what keeps an upload that has stored
+its bytes and not yet committed its row from losing them, `deleted` when the sweep reclaimed
+it, and `failed` when the store would not give it back. The four outcomes add up to the
+listing, so a pass that ended early shows as a sum that does not close rather than as a quiet
+night. A second family counts the pass instead of the objects:
+`careeros_storage_bucket_reads_total{outcome}` moves once per night with `listed` or `refused`,
+and `CareerOSBucketListingRefused` pages on a `refused`. That rule exists because the retention
+sweep's clock moves through a night that could not read the bucket — the pass finishes, its
+tables and its purge run — so a store that refuses the listing would otherwise look exactly
+like a bucket that holds nothing, and nothing on that path deletes. `objects_judged` carries no
+rule of its own for the same reason the family above does not: one object the store would not
+release is retried by the next night and named in the log meanwhile.
 
 ### Startup gating (healthchecks)
 

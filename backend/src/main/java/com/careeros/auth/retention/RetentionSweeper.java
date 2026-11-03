@@ -37,6 +37,16 @@ import org.springframework.stereotype.Component;
  * answered by the same clock, and an operator who finds the sweep stopped should not have to
  * notice that only half of it stopped.
  *
+ * <p>The bucket phase asks the third question the same clock answers. Everything the two phases
+ * above prune is named by a row: an expired token has its table, a retired document its audit
+ * record. The objects the store holds that no row names are invisible to both of those deletes --
+ * bytes stored by a request whose row never arrived, or freed by a purge whose reclaim the store
+ * refused -- and they are what {@link UnnamedObjectReclaimer} subtracts the two key columns from,
+ * once {@code app.retention.unnamed-object-days} (7 by default) has passed over them. That window
+ * is the whole difference between a janitor and a data-loss bug: an object is only garbage once the
+ * request that stored it can no longer be on its way to a row, and a pass that reclaimed anything
+ * younger would be deleting the upload of a reader still waiting for their document to appear.
+ *
  * <p>Each table is swept in its own transaction, so a lock timeout on one leaves the other two
  * pruned rather than rolling the whole night back; a failed table is logged and omitted from
  * the summary, and no metric moves for it, so the counter tells an operator which tables were
@@ -59,12 +69,16 @@ public class RetentionSweeper {
     /** The evidence tables the content phase removes in one transaction, so one failure names both. */
     private static final List<String> EVIDENCE_TABLES = List.of(DOCUMENTS, DOCUMENT_CHUNKS);
 
+    /** The bucket is not a table, but a phase that could not finish it is reported like one. */
+    static final String BUCKET_OBJECTS = "bucket_objects";
+
     private static final Logger log = LoggerFactory.getLogger(RetentionSweeper.class);
 
     private final RefreshTokenRepository refreshTokens;
     private final PasswordResetTokenRepository resetTokens;
     private final EmailChangeTokenRepository emailChangeTokens;
     private final RetiredEvidencePurger evidence;
+    private final UnnamedObjectReclaimer unnamed;
     private final AppProperties props;
     private final RetentionMetrics metrics;
 
@@ -72,11 +86,13 @@ public class RetentionSweeper {
                             PasswordResetTokenRepository resetTokens,
                             EmailChangeTokenRepository emailChangeTokens,
                             RetiredEvidencePurger evidence,
+                            UnnamedObjectReclaimer unnamed,
                             AppProperties props, RetentionMetrics metrics) {
         this.refreshTokens = refreshTokens;
         this.resetTokens = resetTokens;
         this.emailChangeTokens = emailChangeTokens;
         this.evidence = evidence;
+        this.unnamed = unnamed;
         this.props = props;
         this.metrics = metrics;
     }
@@ -95,6 +111,7 @@ public class RetentionSweeper {
         List<String> failed = new ArrayList<>();
         sweepCredentials(now, deleted, failed);
         sweepRetiredEvidence(now, deleted, failed);
+        sweepUnnamedObjects(now, failed);
         metrics.recordSweep(now);
         log.info("Retention sweep removed {} row(s) at {} ({})",
                 deleted.values().stream().mapToLong(Long::longValue).sum(), now, deleted);
@@ -149,7 +166,34 @@ public class RetentionSweeper {
         }
     }
 
-    /** What one sweep removed per table, and the tables it could not finish. */
+    /**
+     * The bucket's own phase, last because the purge above is what frees most of what it finds:
+     * that pass commits before this one starts, so a retired row has already stopped naming its
+     * key and a reclaim the store accepted has already taken the object out of the listing. What
+     * is left for the bucket to name is a row that no longer exists -- which is precisely the
+     * object no other delete can reach.
+     *
+     * <p>Its readings are the reclaimer's four verdicts, counted per object rather than per row,
+     * so they stay on their own meter and out of the summary's row counts. A pass that could not
+     * list the bucket moves none of them and is named in the failed list: nothing was reclaimed,
+     * because the sweep that cannot see the bucket cannot see that it is empty either.
+     */
+    private void sweepUnnamedObjects(OffsetDateTime now, List<String> failed) {
+        int days = Math.max(0, props.getRetention().getUnnamedObjectDays());
+        try {
+            UnnamedObjectReclaimer.Reclaim reclaim = unnamed.reclaimBefore(now.minusDays(days));
+            log.info("Retention sweep judged {} bucket object(s) at {} "
+                            + "({} named by a row, {} inside the window, {} reclaimed, {} refused)",
+                    reclaim.listed(), now, reclaim.named(), reclaim.young(),
+                    reclaim.deleted(), reclaim.failed());
+        } catch (RuntimeException e) {
+            failed.add(BUCKET_OBJECTS);
+            log.warn("Retention sweep could not list the bucket, so it reclaimed nothing; "
+                    + "a store that refused is not a store that answered empty", e);
+        }
+    }
+
+    /** What one sweep removed per table, and the things -- tables and bucket -- it could not finish. */
     record Sweep(Map<String, Long> deleted, List<String> failed) {
     }
 }

@@ -253,3 +253,25 @@ groups:
             backend log for "Retention sweep removed"; a pass whose tables failed moves this
             gauge too and logs "Retention sweep failed for" for each one.
           runbook: "docs/RUNBOOK.md#the-retention-sweep-stopped"
+
+      # The bucket's own reading (roadmap 48.2). The rule above says the sweep ran; it cannot say
+      # the sweep could see the bucket, because a pass whose listing the store refused still finishes
+      # and still moves that gauge. So this reads the per-pass verdict instead: the counter moves
+      # once a night with `listed` when the whole listing arrived and `refused` when it did not, and
+      # a night that could not ask is the one case in this file where the install is not merely
+      # behind -- a pass that judged nothing is a pass that reported a clean bucket.
+      - alert: CareerOSBucketListingRefused
+        expr: increase(careeros_storage_bucket_reads_total{outcome="refused"}[24h]) > 0
+        for: 10m
+        labels:
+          service: career-os-backend
+          severity: warning
+        annotations:
+          summary: "The nightly sweep could not list the bucket"
+          description: >-
+            The retention sweep asked the object store for its whole listing in the last day and the
+            store refused, so no unclaimed object was reclaimed and none was judged. Read the backend
+            log for "Retention sweep could not list the bucket" and check whether MinIO was reachable
+            at 04:47; the sweep's own clock moved, so nothing else on this dashboard says the bucket
+            half of the night did not run.
+          runbook: "docs/RUNBOOK.md#the-bucket-was-not-swept"

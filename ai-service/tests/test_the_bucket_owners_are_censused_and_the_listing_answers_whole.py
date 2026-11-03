@@ -2,19 +2,21 @@
 
 A reclaim that deletes bytes no row names is the most permanent operation in this project: nothing
 later can undo it, because the record that would have described the file is the file. So the sweep
-that will do it (48.2) has to subtract, from every key the store shows, every key any row could hold
--- and an unlisted key owner is a deletion bug waiting for the day a table gains a column. Today the
+that does it (48.2) subtracts, from every key the store shows, every key any row could hold -- and
+an unlisted key owner is a deletion bug waiting for the day a table gains a column. Today the
 owners are exactly two writers (`FileIngestService`'s two upload paths and `ResumeService`'s parse),
-two removers (24.2's `AccountErasureService` and 44.2's `StoredObjectReclaimer`), two readers, and two
-columns (`documents.file_key`, `resumes.source_file_key`). Each axis here is walked from what a call
-site or a declaration looks like rather than from a file name, so a third writer, a renamed remover or
-a new key column reddens a case instead of becoming invisible to a sweep.
+three removers (24.2's `AccountErasureService`, 44.2's `StoredObjectReclaimer` and 48.2's
+`UnnamedObjectReclaimer`), two readers, and two columns (`documents.file_key`,
+`resumes.source_file_key`). Each axis here is walked from what a call site or a declaration looks
+like rather than from a file name, so a third writer, a renamed remover or a new key column reddens
+a case instead of becoming invisible to a sweep.
 
 The other half is the listing itself (48.1). `StorageService.list()` promises the whole bucket, and a
 store that cannot deliver every page throws rather than returning what it reached -- because a short
 list is not a smaller answer, it is an accusation against every object it left out. So the port's
-surface, both implementations of `list()`, and the fact that nothing in production may call it until
-48.2 adds the sweep, are pinned here too.
+surface, both implementations of `list()`, and the one production class allowed to read the bucket
+whole are pinned here too: a sweeper that appears in the code but not in `LISTERS` is the unlisted
+owner this file was written to catch, and 48.2 landing it is what makes that set non-empty.
 """
 
 import re
@@ -38,9 +40,11 @@ PORT_OPERATIONS = {"put", "getPresignedUrl", "delete", "getBytes", "list", "avai
 WRITERS = {"FileIngestService.java": 2, "ResumeService.java": 1}
 
 # Every class that can take bytes out. Erasure deletes directly because the account's rows are going
-# anyway; the reclaimer deletes once no live row names the key. A third way to remove an object is a
-# third thing a sweep has to be reasoned against before it trusts its own listing.
-REMOVERS = {"AccountErasureService.java": 1, "StoredObjectReclaimer.java": 1}
+# anyway; the delete-path reclaimer deletes once no live row names the key; 48.2's sweep deletes once
+# no row at all names it. Each is a different question, so a third way to remove an object is a third
+# thing a reader has to reason about before trusting any of the other two.
+REMOVERS = {"AccountErasureService.java": 1, "StoredObjectReclaimer.java": 1,
+            "UnnamedObjectReclaimer.java": 1}
 
 # Who may read bytes back out: a reader is a route that proves a key still resolves.
 READERS = {"InternalFileController.java": 1, "ResumeService.java": 1}
@@ -50,10 +54,19 @@ READERS = {"InternalFileController.java": 1, "ResumeService.java": 1}
 KEY_COLUMNS = {("documents", "file_key"), ("resumes", "source_file_key")}
 KEY_ENTITIES = {"Document.java", "Resume.java"}
 
-# Production classes that read the whole bucket. Empty is the honest current state: `list()` shipped
-# with 48.1 and its first caller is 48.2's sweep, which has to land in this set in its own commit --
-# a sweep that appears in the code but not in a census is the unlisted owner this file exists to catch.
-LISTERS: set[str] = set()
+# Production classes that read the whole bucket. One today: 48.2's sweep, which landed in the same
+# change that put it here. A second reader is a second place that can act on a listing -- and a
+# sweep that appears in the code but not in this set is the unlisted owner this file exists to catch.
+LISTERS = {"UnnamedObjectReclaimer.java"}
+
+# The two reads the sweep subtracts, one per key column. Named by the repository methods rather than
+# by a table string so a third owner column is a missing read here, not a query that quietly returns
+# the two keys it knows about.
+SWEEP = MAIN_JAVA / "auth" / "retention" / "UnnamedObjectReclaimer.java"
+OWNER_READS = {"DocumentRepository.java": "findAllFileKeys",
+               "ResumeRepository.java": "findAllSourceFileKeys"}
+REPOS = {"DocumentRepository.java": MAIN_JAVA / "knowledge" / "repository" / "DocumentRepository.java",
+         "ResumeRepository.java": MAIN_JAVA / "resume" / "repository" / "ResumeRepository.java"}
 
 LISTING = "List<StoredObject> list()"
 
@@ -124,6 +137,18 @@ def declared_operations() -> set[str]:
     source = read(PORT)
     interface = balanced_body(source, source.index("{", source.index("interface StorageService")))
     return set(re.findall(r"\b(\w+)\s*\([^)]*\)\s*;", interface))
+
+
+def query_above(path: Path, method: str) -> str:
+    """The text a repository declares its query with, from `@Query` down to the method's own line.
+
+    A repository interface holds several queries, so this takes the nearest one above the named
+    method rather than the whole file -- asking "does this read filter a status" of a file that
+    also declares one that does would answer yes for the wrong query and no for the right one.
+    """
+    source = read(path)
+    at = source.index(f"List<String> {method}(")
+    return source[source.rindex("@Query", 0, at):at]
 
 
 def key_columns(sql: str) -> set[tuple[str, str]]:
@@ -230,12 +255,12 @@ def test_exactly_the_two_known_classes_can_write_the_bucket():
         "of who can point a row at an object")
 
 
-def test_exactly_the_two_known_classes_can_delete_from_the_bucket():
+def test_exactly_the_three_known_classes_can_delete_from_the_bucket():
     found = call_sites("delete", MAIN_JAVA)
     assert found == REMOVERS, (
-        f"the classes that take bytes out of the bucket moved: {found}. Each is a way an object can go "
-        "without a row being retired -- the half of the story 44.2 tells -- and a third has to be "
-        "reasoned about before 48.2's sweep trusts what the store shows it")
+        f"the classes that take bytes out of the bucket moved: {found}. Each is a different question "
+        "about a key -- erasure asks none of them, 44.2 asks whether a quotable row survives, 48.2 "
+        "asks whether any row does -- and a fourth has to be reasoned about before it is trusted")
 
 
 def test_exactly_the_two_known_classes_can_read_bytes_back_out():
@@ -252,17 +277,20 @@ def test_the_call_site_scanner_is_proved_on_operations_that_exist_and_one_that_d
     """
     assert sum(call_sites("put", MAIN_JAVA).values()) == 3, (
         "the scanner lost a write site, so an empty census below could mean an empty scan")
-    assert sum(call_sites("delete", MAIN_JAVA).values()) == 2, "same, for the removers"
+    assert sum(call_sites("delete", MAIN_JAVA).values()) == 3, "same, for the three removers"
+    assert sum(call_sites("list", MAIN_JAVA).values()) == 1, (
+        "the scanner cannot see the sweep's own read of the bucket, so LISTERS above could be "
+        "passing on a scan that found nothing")
     assert call_sites("touch", MAIN_JAVA) == {}, (
         "the scanner matched an operation the port does not declare, so its emptiness proves nothing")
 
 
-def test_no_production_class_lists_the_bucket_until_the_sweep_that_would_is_named_here():
+def test_only_the_sweeps_the_census_names_read_the_whole_bucket():
     found = set(call_sites("list", MAIN_JAVA))
     assert found == LISTERS, (
-        f"these classes now read the whole bucket: {sorted(found)}. 48.2 lands the sweep that does, "
-        "and its class belongs in LISTERS in the same change -- a sweep no census names is the "
-        "unlisted owner this file was written to catch")
+        f"these classes now read the whole bucket: {sorted(found)}. Each one can act on a listing, "
+        "which is the most permanent thing a bucket can be asked about, so a second reader belongs "
+        "in LISTERS in the same change that adds it")
 
 
 def test_two_and_only_two_columns_can_name_a_stored_object_and_two_entities_hold_them():
@@ -278,6 +306,27 @@ def test_two_and_only_two_columns_can_name_a_stored_object_and_two_entities_hold
     assert holders == KEY_ENTITIES, (
         f"these entities map a key field: {sorted(holders)}. The Java side has to move with the SQL "
         "side, or this census calls a column unreadable while a repository asks its rows by name")
+
+
+def test_the_sweep_subtracts_both_owner_reads_and_neither_of_them_filters_a_status():
+    """48.2's own question, which is deliberately wider than 44.2's.
+
+    The delete path asks about one key with `retired` excluded, because an audit record is no reason
+    to hold bytes a reader deleted. The sweep asks about every key with nothing excluded, because a
+    row that still exists is still pointing -- and the two live one method name apart in the same
+    repository, so the wider question is read from the sweep's own body and from the query it calls,
+    not inferred from a file that happens to hold both shapes.
+    """
+    sweep = read(SWEEP)
+    for name, method in sorted(OWNER_READS.items()):
+        assert f".{method}()" in sweep, (
+            f"{SWEEP.name} no longer subtracts {name}'s {method}(), so a key column has joined or "
+            "left the sweep's owners without this census being told")
+    for name, method in sorted(OWNER_READS.items()):
+        query = query_above(REPOS[name], method)
+        assert "status" not in query, (
+            f"{name}'s {method} filters a status, which is 44.2's question and not this one: a "
+            "sweep that skips retired rows reclaims the bytes an audit record still names")
 
 
 def test_the_column_reader_fires_on_declarations_it_has_to_see_and_stops_at_the_ones_it_must():

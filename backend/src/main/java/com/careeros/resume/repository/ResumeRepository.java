@@ -7,6 +7,7 @@ import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 public interface ResumeRepository extends JpaRepository<Resume, UUID> {
 
@@ -20,6 +21,15 @@ public interface ResumeRepository extends JpaRepository<Resume, UUID> {
      * its ingested copy is retired.
      */
     boolean existsBySourceFileKey(String sourceFileKey);
+
+    /**
+     * Every key any resume row serves as its original upload, with no status filter because the
+     * row has no status to filter on (roadmap 48.2). A resume keeps its upload for as long as the
+     * resume row exists: the detail page hands back the bytes that key names, so a sweep that
+     * missed this read would delete a file a reader can still open.
+     */
+    @Query("select r.sourceFileKey from Resume r where r.sourceFileKey is not null")
+    List<String> findAllSourceFileKeys();
 
     List<Resume> findByUserId(UUID userId);
 }

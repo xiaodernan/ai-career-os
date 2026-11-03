@@ -158,9 +158,13 @@ app:
   # A retired document is the audit record of a delete, so it is kept this many days
   # past the retirement before the same sweep purges the row, its chunks and the
   # object behind its key.
+  # An object the bucket holds that NO row names is garbage only once the request that
+  # stored it has finished: this is how much older than the sweep it has to be before the
+  # same pass reclaims it. A week is longer than any upload can hold a transaction open.
   retention:
     expired-token-days: ${RETENTION_EXPIRED_TOKEN_DAYS:30}
     retired-document-days: ${RETENTION_RETIRED_DOCUMENT_DAYS:180}
+    unnamed-object-days: ${RETENTION_UNNAMED_OBJECT_DAYS:7}
 
 springdoc:
   api-docs.path: /api-docs

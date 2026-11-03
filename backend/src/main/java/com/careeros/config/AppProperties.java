@@ -344,6 +344,13 @@ public class AppProperties {
          */
         private int retiredDocumentDays = 180;
 
+        /**
+         * How old an object the bucket holds has to be, in days, before the nightly sweep may
+         * reclaim it for naming no row. The window is what keeps an upload that is still writing
+         * its row from losing its bytes; see {@code UnnamedObjectReclaimer}.
+         */
+        private int unnamedObjectDays = 7;
+
         public int getExpiredTokenDays() {
             return expiredTokenDays;
         }
@@ -358,6 +365,14 @@ public class AppProperties {
 
         public void setRetiredDocumentDays(int retiredDocumentDays) {
             this.retiredDocumentDays = retiredDocumentDays;
+        }
+
+        public int getUnnamedObjectDays() {
+            return unnamedObjectDays;
+        }
+
+        public void setUnnamedObjectDays(int unnamedObjectDays) {
+            this.unnamedObjectDays = unnamedObjectDays;
         }
     }
 }

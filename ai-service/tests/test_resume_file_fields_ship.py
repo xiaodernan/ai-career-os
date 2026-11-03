@@ -36,6 +36,11 @@ PAGE_FILE = "frontend/src/app/(app)/resumes/[id]/page.tsx"
 RESUME_REPO_FILE = "backend/src/main/java/com/careeros/resume/repository/ResumeRepository.java"
 RECLAIMER_FILE = "backend/src/main/java/com/careeros/knowledge/service/StoredObjectReclaimer.java"
 RECLAIM_TEST_FILE = "backend/src/test/java/com/careeros/knowledge/service/StoredObjectReclaimTest.java"
+# 48.2's sweep reads the column the way an owner census has to: every row, no status, because a row
+# that exists is a row still pointing. Its three files spell the key for that reason.
+SWEEP_FILE = "backend/src/main/java/com/careeros/auth/retention/UnnamedObjectReclaimer.java"
+SWEEP_TEST_FILE = "backend/src/test/java/com/careeros/auth/retention/UnnamedObjectReclaimTest.java"
+SWEEP_IT_FILE = "backend/src/test/java/com/careeros/auth/retention/UnnamedObjectSweepIT.java"
 
 KEY = "sourceFileKey"
 SNAKE = "source_file_key"
@@ -264,6 +269,7 @@ def test_the_shipped_key_is_read_by_the_three_browser_files_that_render_it():
                             "docs/API.md", "docs/architecture.md",
                             TYPES_FILE, RESOURCES_FILE, PAGE_FILE,
                             RESUME_REPO_FILE, RECLAIMER_FILE, RECLAIM_TEST_FILE,
+                            SWEEP_FILE, SWEEP_TEST_FILE, SWEEP_IT_FILE,
                             "ai-service/tests/test_file_key_composers.py",
                             "ai-service/tests/test_resources_mapper_records_ship.py",
                             "ai-service/tests/test_resume_file_fields_ship.py",
@@ -273,21 +279,31 @@ def test_the_shipped_key_is_read_by_the_three_browser_files_that_render_it():
                             # writes a resume's file; both spell the column, which is what this scan
                             # sees and what it has to keep honest about.
                             "docs/plans/plan_long_term.md",
+                            # 48.2's shipped record names the two owner reads, one of them by the
+                            # column's own spelling, so the roadmap is now a speller too -- prose, not
+                            # a fourth reader of the column, which is what this list has to keep saying.
+                            "docs/ROADMAP.md",
                             "ai-service/tests/"
                             "test_the_bucket_owners_are_censused_and_the_listing_answers_whole.py"]), (
         f"the key is named in {sites}. The schema, the ingestion trail, the response record, the "
         f"controller's route, the two docs, the three gates, the reclaim path's question, its asker "
-        f"and its test are the accounted spellers, along with the plan line and the gate that name "
-        f"the column as an owner rather than as a reader; a new name here is a new author or a new "
-        f"reader, and this census has to say which")
+        f"and its test, and 48.2's sweep trio -- the pass that reads every row, its unit test and "
+        f"the night it runs against a real schema -- are the accounted spellers, along with the plan "
+        f"line, 48.2's own record and the gate that name the column as an owner rather than as a "
+        f"reader; a new name here is a new author or a new reader, and this census has to say which")
 
-    # The reclaim trio spell the key because the delete path has to ask the resume table whether a
-    # stored object is still served as someone's original. A key spelled somewhere else is a new
-    # reader of the column, and this is where that reader gets named.
+    # The two trios spell the key for the same reason seen from two sides: the delete path asks the
+    # resume table whether a stored object is still served as someone's original, and the bucket sweep
+    # asks it which originals there are at all. A key spelled somewhere else is a new reader of the
+    # column, and this is where that reader gets named.
     assert "existsBySourceFileKey" in read(RESUME_REPO_FILE) \
         and "existsBySourceFileKey(key)" in read(RECLAIMER_FILE), (
         "the delete path stopped asking the resume table its question, so an object could go while "
         "a resume page still served its bytes")
+    assert "findAllSourceFileKeys" in read(RESUME_REPO_FILE) \
+        and "findAllSourceFileKeys()" in read(SWEEP_FILE), (
+        "the bucket sweep stopped reading the resume table's whole column, so an object a resume "
+        "still serves could be judged by a sweep that never asked it")
 
     legs = {rel: [line for f, _n, line in scan("frontend/src", KEY_RE, (".ts", ".tsx"))
                   if f == rel]

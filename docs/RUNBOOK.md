@@ -29,6 +29,7 @@ The surfaces this document is about:
 | `CareerOSSignalSweepStale` | warning | No morning mail sweep finished in 36 hours | [The morning sweep stopped](#the-morning-sweep-stopped) |
 | `CareerOSReminderClockStale` | warning | The minute clock has not finished a tick in five minutes | [The minute clock a reminder rings on](#the-minute-clock-a-reminder-rings-on) |
 | `CareerOSRetentionSweepStale` | warning | No credential-retention sweep finished in 36 hours | [The retention sweep stopped](#the-retention-sweep-stopped) |
+| `CareerOSBucketListingRefused` | warning | The nightly sweep asked the object store for its whole listing in the last day and was refused | [The bucket was not swept](#the-bucket-was-not-swept) |
 
 ## A night that never succeeded
 
@@ -620,6 +621,52 @@ is a reclaim failing rather than a sweep not running -- read
 key. If the delete itself is slow after a restart, confirm the V23 and V31 migrations
 applied: they add the `expires_at` indexes the credential deletes ride and the partial
 index on the retired slice of `documents` that the purge reads.
+
+## The bucket was not swept
+
+**What the alert looks like.** `CareerOSBucketListingRefused` fires when
+`increase(careeros_storage_bucket_reads_total{outcome="refused"}[24h]) > 0`: the nightly
+retention sweep asked the object store for the whole listing of the bucket and the store
+refused, so the pass that reclaims what no row names (roadmap 48.2) judged nothing. The
+sweep's own clock almost certainly moved — a pass that could not read the bucket still
+finishes its tables and its purge — so `CareerOSRetentionSweepStale` stays quiet while this
+fires, and that pair of readings is the point: one says the night ran, the other says the
+bucket half of it did not.
+
+**Why it is a counter and not a timestamp.** `careeros_storage_objects_judged_total` moves
+once per object the listing showed, and on a refused listing there is no listing — no size,
+no objects, nothing to divide. So this family answers one question per pass: did the store
+answer (`listed`) or refuse (`refused`). A night that never asked at all moves neither,
+which is the reading `CareerOSRetentionSweepStale` already covers.
+
+**What to read.** The backend log for "Retention sweep could not list the bucket, so it
+reclaimed nothing" with its stack trace, and the sweep's own summary line: a failed bucket
+phase adds `bucket_objects` to its list of what did not finish, beside the table names.
+Then the two families together on the scrape —
+`careeros_storage_bucket_reads_total{outcome="listed"}` should step once a day, and
+`careeros_storage_objects_judged_total` should add up to the listing across its four
+outcomes (`named`, `young`, `deleted`, `failed`). A `refused` reading with four flat
+judgement series is the same night described twice, which is the check.
+
+**What to do, in order.**
+
+1. Check whether the object store was reachable at 04:47 UTC: `docker compose ps minio`,
+   the MinIO container's log, and the backend's `MINIO_*` credentials. The refusal is a
+   store problem, not a scheduler problem — the pass ran.
+2. Nothing needs replaying. The next night's pass lists the bucket from the start, so a
+   refused night costs one night of reclaim and no data: an object that was not judged is
+   an object that was not deleted.
+3. If refusals keep arriving while the store looks healthy, read the same log for the
+   delete-side WARN line naming a key. That is `outcome="failed"` on the judgement family
+   and a different problem: the store answers the listing but will not give a specific
+   object back, usually a permission or an already-deleted key. It does not page here.
+
+**What this alert does not mean.** It is not data loss, and it is not a warning that the
+bucket is full. Nothing on this path deletes when the listing failed, and the objects it
+would have reclaimed stay exactly where they are. The delete path's own reclaims
+(`careeros_storage_objects_reclaimed_total`) are counted separately and alarm nowhere: an
+object that outlives a row is a storage cost, and a counter with no baseline would page on
+a quiet week.
 
 ## An account is locked out of its second factor
 

@@ -2,6 +2,7 @@ package com.careeros.auth.retention;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -9,6 +10,8 @@ import static org.mockito.Mockito.when;
 import com.careeros.auth.repository.EmailChangeTokenRepository;
 import com.careeros.auth.repository.PasswordResetTokenRepository;
 import com.careeros.auth.repository.RefreshTokenRepository;
+import com.careeros.common.ApiErrorCode;
+import com.careeros.common.ApiException;
 import com.careeros.config.AppProperties;
 import com.careeros.knowledge.service.RetiredEvidencePurger;
 import io.micrometer.core.instrument.Counter;
@@ -18,6 +21,7 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.InOrder;
 
 /**
  * Roadmap 28.1's two promises, neither of which an integration test can pin without a clock:
@@ -40,6 +44,11 @@ import org.junit.jupiter.api.Test;
  * records early; the chunks the cascade took get their own reading, because counting only the
  * rows would understate the night; and a purge that skipped a row a source still names is an
  * anomaly in the log, not a failed table with no counter.
+ *
+ * <p>48.2 adds the bucket phase and one promise of its own: a store that will not answer the
+ * listing is the pass that reclaims nothing, named in the failed list, and it must not be
+ * mistaken for a bucket that was empty -- which is why its failure moves no verdict counter.
+ * Its window is a third knob for the same reason the evidence window is a second one.
  */
 class RetentionSweeperTest {
 
@@ -50,10 +59,11 @@ class RetentionSweeperTest {
     private final EmailChangeTokenRepository emailChangeTokens =
             mock(EmailChangeTokenRepository.class);
     private final RetiredEvidencePurger evidence = mock(RetiredEvidencePurger.class);
+    private final UnnamedObjectReclaimer unnamed = mock(UnnamedObjectReclaimer.class);
     private final SimpleMeterRegistry registry = new SimpleMeterRegistry();
     private final AppProperties props = new AppProperties();
     private final RetentionSweeper sweeper = new RetentionSweeper(
-            refreshTokens, resetTokens, emailChangeTokens, evidence, props,
+            refreshTokens, resetTokens, emailChangeTokens, evidence, unnamed, props,
             new RetentionMetrics(registry));
 
     /**
@@ -72,6 +82,8 @@ class RetentionSweeperTest {
         // stub pinned to one date would make every other pass look like a failed purge.
         when(evidence.purgeBefore(any()))
                 .thenReturn(new RetiredEvidencePurger.Purge(2, 40, 0));
+        when(unnamed.reclaimBefore(any()))
+                .thenReturn(new UnnamedObjectReclaimer.Reclaim(6, 4, 1, 1, 0));
     }
 
     @Test
@@ -154,6 +166,7 @@ class RetentionSweeperTest {
     void aNegativeGraceWindowIsClampedToZeroRatherThanDeletingFutureRows() {
         props.getRetention().setExpiredTokenDays(-5);
         props.getRetention().setRetiredDocumentDays(-5);
+        props.getRetention().setUnnamedObjectDays(-5);
 
         RetentionSweeper.Sweep sweep = sweeper.sweep(NOW);
 
@@ -161,6 +174,7 @@ class RetentionSweeperTest {
         verify(resetTokens).deleteExpiredBefore(NOW);
         verify(emailChangeTokens).deleteExpiredBefore(NOW);
         verify(evidence).purgeBefore(NOW);
+        verify(unnamed).reclaimBefore(NOW);
         assertThat(sweep.failed()).isEmpty();
     }
 
@@ -224,6 +238,70 @@ class RetentionSweeperTest {
         assertThat(counter(RetentionSweeper.DOCUMENTS)).isNull();
         assertThat(count(RetentionSweeper.REFRESH_TOKENS)).isEqualTo(3.0);
         assertThat(heartbeat()).isEqualTo(NOW.toEpochSecond());
+    }
+
+    @Test
+    void theBucketWindowIsItsOwnKnobAndDefaultsToAWeek() {
+        sweeper.sweep(NOW);
+
+        // Three clocks, three knobs: a week past an upload, a month past a token's expiry and six
+        // months past a retirement are three different promises, and an operator moving one is not
+        // moving the sweep that answers the other two.
+        verify(unnamed).reclaimBefore(NOW.minusDays(7));
+        verify(evidence).purgeBefore(NOW.minusDays(180));
+        verify(refreshTokens).deleteExpiredBefore(NOW.minusDays(30));
+    }
+
+    @Test
+    void movingTheBucketWindowMovesThePurgeNotAtAll() {
+        props.getRetention().setUnnamedObjectDays(2);
+
+        sweeper.sweep(NOW);
+
+        verify(unnamed).reclaimBefore(NOW.minusDays(2));
+        verify(evidence).purgeBefore(NOW.minusDays(180));
+    }
+
+    @Test
+    void theBucketIsSweptAfterThePurgeBecauseThePurgeIsWhatFreesMostOfWhatItFinds() {
+        InOrder order = inOrder(evidence, unnamed);
+
+        sweeper.sweep(NOW);
+
+        // The purge's own reclaim runs when its transaction commits, which is before this phase
+        // starts, so an object the store accepted back is already out of the listing and an object
+        // it refused is already un-named. Sweeping the bucket first would judge yesterday's rows.
+        order.verify(evidence).purgeBefore(NOW.minusDays(180));
+        order.verify(unnamed).reclaimBefore(NOW.minusDays(7));
+    }
+
+    @Test
+    void aRefusedListingNamesTheBucketAndReclaimsNothing() {
+        when(unnamed.reclaimBefore(NOW.minusDays(7)))
+                .thenThrow(new ApiException(ApiErrorCode.STORAGE_READ_FAILED,
+                        "Object storage read failed"));
+
+        RetentionSweeper.Sweep sweep = sweeper.sweep(NOW);
+
+        // The one shape this phase must never take is an empty answer standing for a clean bucket,
+        // so it contributes nothing to the summary and lands in the failed list -- while the rows
+        // it runs after keep everything they already removed and the clock keeps moving.
+        assertThat(sweep.failed()).containsExactly(RetentionSweeper.BUCKET_OBJECTS);
+        assertThat(sweep.deleted()).containsEntry(RetentionSweeper.DOCUMENTS, 2L)
+                .doesNotContainKey(RetentionSweeper.BUCKET_OBJECTS);
+        assertThat(heartbeat()).isEqualTo(NOW.toEpochSecond());
+    }
+
+    @Test
+    void theBucketIsCountedApartFromTheRowsBecauseItsUnitsAreObjects() {
+        RetentionSweeper.Sweep sweep = sweeper.sweep(NOW);
+
+        // `careeros.retention.deleted_rows` counts rows and the summary line adds them up. Six
+        // objects judged is not six rows removed, so the phase that counts per object keeps its
+        // own meter rather than inflating a reading an operator sums.
+        assertThat(sweep.deleted()).doesNotContainKey(RetentionSweeper.BUCKET_OBJECTS);
+        assertThat(counter(RetentionSweeper.BUCKET_OBJECTS)).isNull();
+        assertThat(count(RetentionSweeper.DOCUMENTS)).isEqualTo(2.0);
     }
 
     private Counter counter(String table) {
