@@ -24,7 +24,11 @@ const state = vi.hoisted(() => ({
       | undefined,
     isPending: false,
   },
-  url: { q: undefined as string | undefined, page: 0 },
+  url: {
+    q: undefined as string | undefined,
+    intent: undefined as string | undefined,
+    page: 0,
+  },
 }));
 
 vi.mock("@/lib/hooks/replies", () => ({
@@ -118,7 +122,7 @@ function withLetters(items: InboundMail[]): void {
 }
 
 beforeEach(() => {
-  state.url = { q: undefined, page: 0 };
+  state.url = { q: undefined, intent: undefined, page: 0 };
   state.letters = {
     data: undefined,
     isPending: false,
@@ -202,7 +206,7 @@ describe("the replies page", () => {
 
   it("puts the typed question in the box and offers to clear it", () => {
     withLetters(ITEMS);
-    state.url = { q: "acme", page: 0 };
+    state.url = { q: "acme", intent: undefined, page: 0 };
     const html = render();
 
     expect(html).toContain('role="search"');
@@ -215,7 +219,7 @@ describe("the replies page", () => {
     // A search that found nothing is not an inbox with nowhere to write: the settings card
     // would hand out an address that solves a problem this reader does not have.
     withLetters([]);
-    state.url = { q: "globex", page: 0 };
+    state.url = { q: "globex", intent: undefined, page: 0 };
     const html = render();
 
     expect(html).toContain("No replies match “globex”");
@@ -227,10 +231,60 @@ describe("the replies page", () => {
 
   it("says the search found nothing in the reader's language", () => {
     withLetters([]);
-    state.url = { q: "globex", page: 0 };
+    state.url = { q: "globex", intent: undefined, page: 0 };
     const html = render("zh");
 
     expect(html).toContain("没有与“globex”匹配的回信");
     expect(html).toContain("清除搜索");
+  });
+
+  it("offers every reading as a filter and marks the one in the URL", () => {
+    // The chips are the classifier's whole vocabulary, not only the readings present in the
+    // page that happens to be loaded: a reading with no letters today must still be askable,
+    // and its empty answer says so rather than hiding the question.
+    withLetters(ITEMS);
+    state.url = { q: "acme", intent: "rejection", page: 0 };
+
+    const html = render();
+
+    expect(html).toContain('role="group"');
+    expect(html).toContain("All");
+    expect(html).toContain("Unread");
+    expect(html).toContain("Rejection");
+    expect(html).toContain("Interview");
+    expect(html).toContain("Offer");
+    expect(html).toContain("Information");
+    expect(html).toContain("Other");
+    // The picked chip is pressed; "All" is not, even though the words are still on.
+    expect(html).toMatch(/aria-pressed="true"[^>]*>Rejection</);
+    expect(html).toMatch(/aria-pressed="false"[^>]*>All</);
+  });
+
+  it("says the words and the reading together matched nothing", () => {
+    // Under a chip, "clear the search" would leave the reader on the same empty page: the
+    // one escape offers to drop both filters, and does not send them to the settings card.
+    withLetters([]);
+    state.url = { q: "globex", intent: "rejection", page: 0 };
+
+    const html = render();
+
+    expect(html).toContain("No replies match “globex”");
+    expect(html).toContain("under this filter");
+    expect(html).toContain("Show every letter");
+    expect(html).not.toContain("Get your address");
+    expect(html).not.toContain('href="/settings"');
+  });
+
+  it("names the filter when no letter carries that reading", () => {
+    // An empty filter is not an empty inbox: the reader still has an address to hand out.
+    withLetters([]);
+    state.url = { q: undefined, intent: "unread", page: 0 };
+
+    const html = render("zh");
+
+    expect(html).toContain("这个筛选下没有回信");
+    expect(html).toContain("你选的这个读数下没有信");
+    expect(html).toContain("看全部回信");
+    expect(html).not.toContain('href="/settings"');
   });
 });

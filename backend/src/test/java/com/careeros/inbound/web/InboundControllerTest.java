@@ -157,7 +157,7 @@ class InboundControllerTest {
 
     @Test
     void theRepliesPageIsTheAccountsLettersAndAsksForTheFirstPage() throws Exception {
-        when(replies.list(argThat(ALICE::equals), any(), any()))
+        when(replies.list(argThat(ALICE::equals), any(), any(), any()))
                 .thenReturn(PageDTO.of(List.of(item(APP)), 1, 0, 50));
 
         mvc.perform(get("/api/v1/inbound/mails"))
@@ -168,7 +168,7 @@ class InboundControllerTest {
                 .andExpect(jsonPath("$.data.total").value(1));
 
         verify(replies).list(argThat(ALICE::equals), argThat(pageable ->
-                pageable.getPageNumber() == 0 && pageable.getPageSize() == 50), isNull());
+                pageable.getPageNumber() == 0 && pageable.getPageSize() == 50), isNull(), isNull());
         verifyNoInteractions(mail);
     }
 
@@ -177,14 +177,28 @@ class InboundControllerTest {
         // The page owns the words, the service trims and lowercases them; this route only has
         // to carry the box across, including its spaces, so the two never disagree about what
         // was asked.
-        when(replies.list(argThat(ALICE::equals), any(), eq("Acme")))
+        when(replies.list(argThat(ALICE::equals), any(), eq("Acme"), isNull()))
                 .thenReturn(PageDTO.of(List.of(item(APP)), 1, 0, 50));
 
         mvc.perform(get("/api/v1/inbound/mails").param("q", "Acme"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.total").value(1));
 
-        verify(replies).list(argThat(ALICE::equals), any(Pageable.class), eq("Acme"));
+        verify(replies).list(argThat(ALICE::equals), any(Pageable.class), eq("Acme"), isNull());
+    }
+
+    @Test
+    void aReadingChipTravelsToTheServiceAsTheReaderPickedIt() throws Exception {
+        // The chip is the page's word; this route carries it unchanged beside the search, and
+        // the service is the only place that decides which words are readings.
+        when(replies.list(argThat(ALICE::equals), any(), eq("Acme"), eq("rejection")))
+                .thenReturn(PageDTO.of(List.of(item(APP)), 1, 0, 50));
+
+        mvc.perform(get("/api/v1/inbound/mails").param("q", "Acme").param("intent", "rejection"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1));
+
+        verify(replies).list(argThat(ALICE::equals), any(Pageable.class), eq("Acme"), eq("rejection"));
     }
 
     @Test

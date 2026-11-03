@@ -56,6 +56,15 @@ public class InboundReplyService {
             "interview", "interview",
             "offer", "offer");
 
+    /**
+     * Every reading the replies page may filter by. `unread` is not one of them: it is the
+     * state of a letter no reading has answered yet, and it is asked for as its own word.
+     */
+    private static final Set<String> INTENTS = Set.of("rejection", "interview", "offer", "info", "other");
+
+    /** The filter word for the letters whose reading never arrived. */
+    private static final String UNREAD = "unread";
+
     private final InboundMailRepository mails;
     private final ApplicationRepository applications;
     private final ApplicationEventRepository events;
@@ -72,14 +81,36 @@ public class InboundReplyService {
      * A non-blank {@code query} narrows the same page to letters whose subject, sender,
      * company or role contains it, case aside; a blank one is no filter at all, because an
      * empty search box must not turn the page into an empty room.
+     *
+     * <p>{@code intent} narrows the page by the reading -- one of the five words the
+     * classifier answers with, or {@code unread} for the letters it has not read. Both
+     * filters apply when both are given: the reading is a further narrowing of the same
+     * search, never a replacement that quietly drops the words. A word outside that set is
+     * refused, because an unmatched word answered with an empty page would read as "your
+     * inbox holds none of these" when the truth is "that is not a reading".
      */
     @Transactional(readOnly = true)
-    public PageDTO<InboundMailItem> list(UUID userId, Pageable pageable, String query) {
+    public PageDTO<InboundMailItem> list(UUID userId, Pageable pageable, String query, String intent) {
         String needle = trimmed(query);
-        String q = needle == null ? null : needle.toLowerCase(Locale.ROOT);
-        Page<InboundMail> page = q == null
-                ? mails.findByUserIdOrderByReceivedAtDescIdDesc(userId, pageable)
-                : mails.search(userId, q, pageable);
+        // The repository asks the empty string for "no search": that branch is always true,
+        // so a blank box never becomes the reason the page came back empty.
+        String q = needle == null ? "" : needle.toLowerCase(Locale.ROOT);
+        String reading = trimmed(intent);
+        String named = null;
+        boolean unread = false;
+        if (reading != null) {
+            String low = reading.toLowerCase(Locale.ROOT);
+            if (UNREAD.equals(low)) {
+                unread = true;
+            } else {
+                named = low;
+                if (!INTENTS.contains(named)) {
+                    throw new ApiException(ApiErrorCode.INBOUND_INTENT_UNKNOWN,
+                            "Unknown reply intent: " + reading);
+                }
+            }
+        }
+        Page<InboundMail> page = mails.findPage(userId, q, named, unread, pageable);
         Map<UUID, Application> byId = applicationsOf(userId, page.getContent());
         return PageDTO.from(page, mail -> item(mail, byId.get(mail.getApplicationId())));
     }

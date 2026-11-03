@@ -1384,8 +1384,16 @@ export const translations = {
       searchLabel: "Search replies by subject, sender, company or role",
       search: "Search",
       clearSearch: "Clear search",
+      filterByIntent: "Filter replies by reading",
+      filterAll: "All",
+      showAll: "Show every letter",
       noMatch: "No replies match “{query}”",
       noMatchDescription: "Try a shorter word, or clear the search to see every letter.",
+      noMatchFilterDescription:
+        "No letter matches those words under this filter. Show every letter to start over.",
+      noIntentMatch: "Nothing under this filter",
+      noIntentMatchDescription:
+        "No letter is filed under the reading you picked. Show every letter, or pick another reading.",
       unavailable: "The replies could not be read. Try again in a moment.",
       unnamed: "A letter with no subject",
       senderUnknown: "Sender unknown",
@@ -1746,6 +1754,8 @@ export const translations = {
       INGESTION_RUN_ALREADY_APPLIED: "This run's plan was already applied.",
 
       INGESTION_RUN_NOT_APPLICABLE: "A failed run has no plan to apply.",
+
+      INBOUND_INTENT_UNKNOWN: "That reading is not one the classifier knows.",
 
       INBOUND_LINK_INVALID: "That inbound address is not valid or has been retired.",
 
@@ -4287,8 +4297,14 @@ export const translations = {
       searchLabel: "按主题、发件人、公司或职位搜索回信",
       search: "搜索",
       clearSearch: "清除搜索",
+      filterByIntent: "按意图筛选回信",
+      filterAll: "全部",
+      showAll: "看全部回信",
       noMatch: "没有与“{query}”匹配的回信",
       noMatchDescription: "换个短一点的词，或者清除搜索，看全部回信。",
+      noMatchFilterDescription: "这个筛选下没有匹配这些词的回信。看全部回信，重新开始。",
+      noIntentMatch: "这个筛选下没有回信",
+      noIntentMatchDescription: "你选的这个读数下没有信。看全部回信，或换一个读数。",
       unavailable: "回信没能读取。稍后再试。",
       unnamed: "一封没有主题的信",
       senderUnknown: "发件人不明",
@@ -4548,6 +4564,8 @@ export const translations = {
       INGESTION_RUN_ALREADY_APPLIED: "这次运行的计划已经应用过了。",
 
       INGESTION_RUN_NOT_APPLICABLE: "失败的运行没有可应用的计划。",
+
+      INBOUND_INTENT_UNKNOWN: "分类器不认识这个读数。",
 
       INBOUND_LINK_INVALID: "这个来信地址无效，或已经停用。",
 

@@ -3966,6 +3966,13 @@ the moment the box exists, an empty search that filtered would turn every page i
 And the no-match state must not borrow the inbox's "get an address" copy: a reader with forty
 letters does not need to fix a deployment that is fine.
 
+49.2 asks the other question the page already knows how to answer: which letters are rejections,
+which are interviews, and which nobody has read yet. The reading is a chip rather than a typed
+word, but it is the same narrowing -- it travels beside `q` and the pager counts the intersection,
+so "rejections from Acme" is one question rather than a page of rejections filtered by eye. The
+empty state has to be as honest as the search's: a filter that found nothing is not an empty
+inbox, and "clear the search" alone must not leave the reader staring at the same empty page.
+
 - [x] **49.1** The replies can be found. (`GET /inbound/mails` binds `q`, trimmed and
   lowercased, and answers a page whose total describes the narrowed set. The repository uses
   `LOCATE` rather than a bound `LIKE` so a typed `%` is a percent sign instead of a wildcard,
@@ -3975,6 +3982,19 @@ letters does not need to fix a deployment that is fine.
   service tests + 1 route test + 3 SSR tests; the list's `Map.of()` NPE on a page of entirely
   unfiled mail is fixed on the way, because the empty map refuses the null key `byId.get(null)`
   asks for. 964 frontend tests in 94 files; 1117 backend tests.)
+
+- [x] **49.2** The replies can be filtered by what they say. (`GET /inbound/mails` binds `intent`
+  beside `q`: one of the five readings the classifier answers with, or `unread` for the letters
+  it has not read. Both filters apply in the same query -- the reading narrows the words rather
+  than replacing them -- so the pager counts the intersection. A word outside that set is a
+  **400** `INBOUND_INTENT_UNKNOWN`, because an empty page would read as "your inbox holds none
+  of these" when the mistake was in the filter. The repository's page query takes the reading
+  as a nullable parameter and `unread` as its own flag, so "no filter" and "the letters with no
+  reading" are different questions, and a blank `q` is still no filter rather than an empty
+  room. The page draws the six chips above the list, keeps the picked one in the URL, and its
+  empty states say whether the words, the filter, or both found nothing -- "show every letter"
+  clears both, and a filter that found nothing is still not an empty inbox. 4 service tests +
+  1 route test + 3 SSR tests.)
 
 ## Epic 50 -- A kept letter is the reader's to manage
 

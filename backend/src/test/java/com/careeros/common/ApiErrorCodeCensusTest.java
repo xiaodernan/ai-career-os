@@ -95,6 +95,9 @@ class ApiErrorCodeCensusTest {
                 // 37.1: a forwarding address refuses a forged token and a missing receiving
                 // domain with its own sentences; 37.3 adds the replies page's two refusals --
                 // a letter that is not the account's, and one already filed elsewhere.
+                // 49.2: a filter word the classifier never says is the reader's mistake in the
+                // chip, not a fact about the inbox -- its own sentence rather than an empty page.
+                "INBOUND_INTENT_UNKNOWN",
                 "INBOUND_LINK_INVALID", "INBOUND_MAIL_ALREADY_FILED", "INBOUND_MAIL_NOT_FOUND",
                 "INBOUND_NOT_CONFIGURED",
                 "INGESTION_FEED_NOT_FOUND",

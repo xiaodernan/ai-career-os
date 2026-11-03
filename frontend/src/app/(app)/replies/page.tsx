@@ -49,11 +49,19 @@ type Translate = (key: string, vars?: Record<string, string | number>) => string
 
 const PAGE_SIZE = 20;
 // Module-level so `setUrl` (a `useCallback` keyed on this object) is stable across renders.
-const PAGE_DEFAULTS: { mail?: string; page: number; q?: string } = {
+const PAGE_DEFAULTS: { mail?: string; page: number; q?: string; intent?: string } = {
   mail: undefined,
   page: 0,
   q: undefined,
+  intent: undefined,
 };
+
+/**
+ * The readings the chips offer, in the order a reader looks for them. `unread` is first
+ * because a letter nobody has read is the one that still needs an answer; the five readings
+ * follow the classifier's own words, which are also the keys `intents` translates.
+ */
+const INTENT_FILTERS = ["unread", "rejection", "interview", "offer", "info", "other"] as const;
 
 function intentKey(intent: string | null): string {
   switch (intent) {
@@ -93,10 +101,18 @@ function titleOf(mail: InboundMail, t: Translate): string {
 
 export default function RepliesPage() {
   const { t, locale } = useLocale();
-  const [state, setUrl] = useUrlState<{ mail?: string; page: number; q?: string }>(PAGE_DEFAULTS, {
-    numericKeys: ["page"],
+  const [state, setUrl] = useUrlState<{
+    mail?: string;
+    page: number;
+    q?: string;
+    intent?: string;
+  }>(PAGE_DEFAULTS, { numericKeys: ["page"] });
+  const letters = useInboundMails({
+    page: state.page,
+    size: PAGE_SIZE,
+    q: state.q,
+    intent: state.intent,
   });
-  const letters = useInboundMails({ page: state.page, size: PAGE_SIZE, q: state.q });
   const applications = useApplications({ size: 100 });
   const file = useFileInboundMail();
   const apply = useUpdateApplication();
@@ -111,6 +127,14 @@ export default function RepliesPage() {
   const search = (value: string) => {
     const q = value.trim();
     setUrl({ q: q || undefined, page: 0 });
+  };
+
+  // The empty states' one escape: drop the words and the reading together, so "show every
+  // letter" does what it says even when both filters are on and only one of them is the
+  // reason nothing matched.
+  const showAll = () => {
+    setDraft("");
+    setUrl({ q: undefined, intent: undefined, page: 0 });
   };
 
   const items = letters.data?.items ?? [];
@@ -193,6 +217,8 @@ export default function RepliesPage() {
             type="button"
             size="sm"
             variant="ghost"
+            // Clearing the words says nothing about the reading: a reader who picked
+            // "Rejections" and typed "acme" still wants the rejections once the word is gone.
             onClick={() => {
               setDraft("");
               search("");
@@ -202,6 +228,32 @@ export default function RepliesPage() {
           </Button>
         ) : null}
       </form>
+
+      {/* The chips are the server's filter too: the pager below counts the narrowed set, so
+          page two of "Rejections" is the second page of the rejections rather than the second
+          page of the inbox with everything else hidden. "All" clears the reading and keeps
+          the words, because the two are separate questions asked of the same page. */}
+      <div role="group" aria-label={t("replies.filterByIntent")} className="flex flex-wrap gap-1">
+        <Button
+          size="sm"
+          variant={state.intent ? "ghost" : "secondary"}
+          aria-pressed={!state.intent}
+          onClick={() => setUrl({ intent: undefined, page: 0 })}
+        >
+          {t("replies.filterAll")}
+        </Button>
+        {INTENT_FILTERS.map((intent) => (
+          <Button
+            key={intent}
+            size="sm"
+            variant={state.intent === intent ? "secondary" : "ghost"}
+            aria-pressed={state.intent === intent}
+            onClick={() => setUrl({ intent, page: 0 })}
+          >
+            {t(intentKey(intent))}
+          </Button>
+        ))}
+      </div>
 
       <Card>
         <CardContent className="p-6">
@@ -344,17 +396,40 @@ export default function RepliesPage() {
             <EmptyState
               icon={<Search aria-hidden />}
               title={t("replies.noMatch", { query: state.q })}
-              description={t("replies.noMatchDescription")}
+              // Under a chip, "clear the search" alone would leave the reader looking at the
+              // same empty page -- the words and the reading have to go together.
+              description={
+                state.intent
+                  ? t("replies.noMatchFilterDescription")
+                  : t("replies.noMatchDescription")
+              }
               action={
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    setDraft("");
-                    search("");
-                  }}
-                >
-                  {t("replies.clearSearch")}
+                state.intent ? (
+                  <Button size="sm" variant="outline" onClick={showAll}>
+                    {t("replies.showAll")}
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setDraft("");
+                      search("");
+                    }}
+                  >
+                    {t("replies.clearSearch")}
+                  </Button>
+                )
+              }
+            />
+          ) : state.intent ? (
+            <EmptyState
+              icon={<Inbox aria-hidden />}
+              title={t("replies.noIntentMatch")}
+              description={t("replies.noIntentMatchDescription")}
+              action={
+                <Button size="sm" variant="outline" onClick={showAll}>
+                  {t("replies.showAll")}
                 </Button>
               }
             />

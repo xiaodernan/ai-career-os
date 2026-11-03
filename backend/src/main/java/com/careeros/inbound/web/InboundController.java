@@ -78,14 +78,17 @@ public class InboundController {
     /**
      * The replies page: the account's letters newest first, filed or waiting. A non-blank
      * {@code q} narrows the page to the letters whose subject, sender, company or role
-     * contains it, case aside; paging counts the narrowed total, not the whole inbox.
+     * contains it, case aside; a non-blank {@code intent} keeps only the letters the
+     * classifier read that way ({@code unread} keeps the ones it has not read). Both filters
+     * apply together, and paging counts the narrowed total, not the whole inbox.
      */
     @GetMapping("/mails")
     public PageDTO<InboundMailItem> list(@CurrentUser AuthUser user,
                                          @RequestParam(defaultValue = "0") int page,
                                          @RequestParam(defaultValue = "50") int size,
-                                         @RequestParam(required = false) String q) {
-        return replies.list(user.id(), Paging.of(page, size).pageable(), q);
+                                         @RequestParam(required = false) String q,
+                                         @RequestParam(required = false) String intent) {
+        return replies.list(user.id(), Paging.of(page, size).pageable(), q, intent);
     }
 
     /** Ties one waiting letter to the card it answers; a double click on the same card is a no-op. */

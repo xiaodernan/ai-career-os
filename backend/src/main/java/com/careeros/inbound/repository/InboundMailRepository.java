@@ -19,25 +19,32 @@ public interface InboundMailRepository extends JpaRepository<InboundMail, UUID> 
     Page<InboundMail> findByUserIdOrderByReceivedAtDescIdDesc(UUID userId, Pageable pageable);
 
     /**
-     * The replies page with a search (roadmap 47.1): the same ordering, narrowed to the letters
-     * whose subject, sender, company or role contains `q`, case aside.
+     * The replies page with its two filters (roadmap 49.1-49.2): the same ordering, narrowed
+     * to the letters whose subject, sender, company or role contains `q` (case aside) and to
+     * the reading `intent` -- or, when `unread` is true, to the letters no reading has
+     * answered yet.
      *
-     * `LOCATE` rather than `LIKE` on purpose: a reader who types `%` into a search box is
-     * looking for a percent sign, not asking for every letter, and a bound `LIKE` pattern
-     * would quietly treat their words as wildcards. The four `COALESCE`s keep a letter with
-     * no company or role searchable by the fields it does have, because a null operand in
-     * `OR` must not swallow the other matches.
+     * A blank `q` is no filter rather than an empty room: the first branch asks the literal
+     * empty string, which every row satisfies, so the LOCATE below is never the reason a page
+     * came back empty. `LOCATE` rather than `LIKE` on purpose: a reader who types `%` into a
+     * search box is looking for a percent sign, not asking for every letter, and a bound
+     * `LIKE` pattern would quietly treat their words as wildcards. The four `COALESCE`s keep
+     * a letter with no company or role searchable by the fields it does have, because a null
+     * operand in `OR` must not swallow the other matches.
      */
     @Query("""
             SELECT m FROM InboundMail m
              WHERE m.userId = :userId
-               AND (LOCATE(:q, LOWER(COALESCE(m.subject, ''))) > 0
+               AND (:q = ''
+                    OR LOCATE(:q, LOWER(COALESCE(m.subject, ''))) > 0
                     OR LOCATE(:q, LOWER(COALESCE(m.fromAddress, ''))) > 0
                     OR LOCATE(:q, LOWER(COALESCE(m.company, ''))) > 0
                     OR LOCATE(:q, LOWER(COALESCE(m.role, ''))) > 0)
+               AND (:intent IS NULL OR m.intent = :intent)
+               AND (:unread = FALSE OR m.intent IS NULL)
              ORDER BY m.receivedAt DESC, m.id DESC
             """)
-    Page<InboundMail> search(UUID userId, String q, Pageable pageable);
+    Page<InboundMail> findPage(UUID userId, String q, String intent, boolean unread, Pageable pageable);
 
     /** What the inbox may carry (37.3): the letters already filed on an application. */
     List<InboundMail> findByUserIdAndApplicationIdIsNotNullOrderByReceivedAtDescIdDesc(

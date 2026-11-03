@@ -125,6 +125,13 @@ public enum ApiErrorCode {
      * would leave that card's story pointing at a letter that no longer names it.
      */
     INBOUND_MAIL_ALREADY_FILED(HttpStatus.CONFLICT),
+    /**
+     * The reading a reader asked the replies page to show is not one the classifier can
+     * answer with. Refused rather than answered with an empty page: "none of your letters
+     * is a banana" reads as a fact about the inbox, and the reader's actual mistake was in
+     * the filter.
+     */
+    INBOUND_INTENT_UNKNOWN(HttpStatus.BAD_REQUEST),
     AI_SERVICE_NOT_FOUND(HttpStatus.NOT_FOUND),
     USER_NOT_FOUND(HttpStatus.NOT_FOUND),
     PROFILE_NOT_FOUND(HttpStatus.NOT_FOUND),

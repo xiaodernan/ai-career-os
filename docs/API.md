@@ -502,11 +502,20 @@ is not the caller's is **404** `INBOUND_MAIL_NOT_FOUND`, the same answer as one
 that never existed. The suggested stage is advice, never a move: no route here
 changes an application's status.
 
+`GET /inbound/mails` takes two filters, and they apply together. `q` is a
+case-insensitive substring of subject, sender, company or role; blank means no
+filter. `intent` is one of the five readings the classifier answers with
+(`rejection`, `interview`, `offer`, `info`, `other`) or `unread`, which keeps
+the letters no reading has answered yet. A word outside that set is **400**
+`INBOUND_INTENT_UNKNOWN` rather than an empty page: "none of your letters is a
+banana" would be a fact about the inbox, and the reader's mistake was in the
+filter.
+
 | Method | Path | Notes |
 |---|---|---|
 | GET | `/inbound/link` | the signed-in account's own inbound address; **503** `INBOUND_NOT_CONFIGURED` when the deployment has no domain |
 | POST | `/inbound/mail/{token}` | the provider's webhook; body is Postmark inbound JSON; always **200** `{"status":"received"}` on a resolvable token, **404** `INBOUND_LINK_INVALID` otherwise |
-| GET | `/inbound/mails` | the caller's letters, newest first — `page` (default 0), `size` (default 50, clamped) and `q` (a case-insensitive substring of subject, sender, company or role; blank means no filter) → {items, total, page, size}; each item carries the reading, the suggested stage and the filed application, all nullable |
+| GET | `/inbound/mails` | the caller's letters, newest first — `page` (default 0), `size` (default 50, clamped), `q` (a case-insensitive substring of subject, sender, company or role; blank means no filter) and `intent` (one of the five readings or unread; both narrow together, and any other word is **400** `INBOUND_INTENT_UNKNOWN`) → {items, total, page, size}; each item carries the reading, the suggested stage and the filed application, all nullable |
 | POST | `/inbound/mails/{id}/file` | files one letter on `{"applicationId"}` and appends a `reply` event to that card; a second call on the same card is a no-op, a different card is **409** `INBOUND_MAIL_ALREADY_FILED`, and a letter that is not the caller's is **404** `INBOUND_MAIL_NOT_FOUND` — the same answer as one that never existed |
 
 ### Growth engines (`/growth`)
@@ -596,7 +605,7 @@ catalogue, so the palette and the board rank one query the same way.
 
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/interview/sessions` | list — `?applicationId=` narrows to one card's rehearsals (57.1; the card id is a second scope on the caller's own rows, so a foreign id is an empty page); each row carries `applicationStatus`, the stage that card is in now (57.4), or null for free practice |
+| GET | `/interview/sessions` | list — `page` and `size` page it; `applicationId` (a filter) narrows to one card's rehearsals (57.1; the card id is a second scope on the caller's own rows, so a foreign id is an empty page); each row carries applicationStatus, the stage that card is in now (57.4), or null for free practice |
 | POST | `/interview/sessions` | `{jobId, jdId?, resumeVersionId?, applicationId?, companyName?, positionTitle?, mode, config}` — `applicationId` names the tracker card being rehearsed (56.1); the session inherits that card's posting, JD analysis and resume version for any field the request left empty, and a card that is not the caller's is **404** `APPLICATION_NOT_FOUND` |
 | GET | `/interview/sessions/{id}` | session + turns + evaluation |
 | PATCH | `/interview/sessions/{id}` | `{status, mode, difficulty, config}` — pause / resume / abandon |
@@ -630,13 +639,13 @@ strings, and `lastTouchAt` is the user's claim about when contact last happened.
 
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/applications` | board (`?status=&jobId=&page=&size=`); `jobId` narrows to one posting, so a job page can ask whether it is already in the pipeline; every row carries `letters`, its cover-letter total, read for the whole page in one grouped query |
+| GET | `/applications` | board (`?status=&jobId=&page=&size=`); `jobId` narrows to one posting, so a job page can ask whether it is already in the pipeline; every row carries letters, its cover-letter total, read for the whole page in one grouped query |
 | POST | `/applications` | create |
 | GET | `/applications/{id}` | detail |
 | PATCH | `/applications/{id}` | `{status, position, note, reminderAt, clearReminderAt, offerCompensation, rejectionReason}` — kanban drag & drop; `reminder_at` / `clear_reminder_at` are the accepted aliases, `note` (singular) is the writable one, a null component means "leave it alone" (so removing a reminder travels as `clearReminderAt: true`), and the outcome pair records the compensation on an offer or the reason on a rejection |
 | PUT | `/applications/{id}/reorder` | `{position, status?}` within column |
 | GET | `/applications/{id}/timeline` | status-transition audit events |
-| GET | `/applications/{id}/packet` | the artifacts this application carries — the resume version, JD analysis and match resolved to readable titles, each user-scoped (a `*Linked` flag distinguishes "not attached" from an id that can no longer be read), plus two counts for the caller alone: `letters`, how many cover letters are kept for it, and `rehearsals`, how many mock interviews were run for it (57.2) |
+| GET | `/applications/{id}/packet` | the artifacts this application carries — the resume version, JD analysis and match resolved to readable titles, each user-scoped (a `*Linked` flag distinguishes "not attached" from an id that can no longer be read), plus two counts for the caller alone: letters, how many cover letters are kept for it, and rehearsals, how many mock interviews were run for it (57.2) |
 | GET | `/applications/{id}/letters` | the cover letters kept for this application, newest first |
 | POST | `/applications/{id}/letters` | `{body, mode?, tone?, length?, resumeVersionId?}` — keeps a generated draft; the posting and the resume version default to the application's own links, and an empty body is **400** |
 | DELETE | `/applications/{id}/letters/{letterId}` | removes one kept letter; the lookup names both the application and its owner, and a letter that is already gone still answers **204** — the reader's intent is already true |
@@ -662,7 +671,7 @@ strings, and `lastTouchAt` is the user's claim about when contact last happened.
 | GET | `/activity/runs` | agent runs (`?page=&size=&agent=`) |
 | GET | `/activity/runs/{id}` | run + ordered traces (AI Activity detail) |
 | GET | `/ai-usage/summary` | tokens, requests, cached tokens, estimated cost |
-| GET | `/search` | global ⌘K search (`?q=`, required) across jobs/companies/resumes/notes/conversations/applications/letters — the jobs channel is hybrid-ranked, like `/jobs?sort=relevance`; a letter hit carries `id`, `applicationId`, `jobTitle`, `snippet` and `updatedAt`, so the palette can open the board drawer on it (52.1) |
+| GET | `/search` | global ⌘K search (`?q=`, required) across jobs/companies/resumes/notes/conversations/applications/letters — the jobs channel is hybrid-ranked, like `/jobs?sort=relevance`; a letter hit carries id, applicationId, jobTitle, snippet and updatedAt, so the palette can open the board drawer on it (52.1) |
 | GET | `/ai/stream/{taskId}` | SSE relay of an ai-service task |
 
 ## 3. Internal API — ai-service

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -245,12 +246,12 @@ class InboundReplyServiceTest {
         InboundMail waiting = mail("Globex", null);
         waiting.setIntent(null);
         ReflectionTestUtils.setField(waiting, "id", UUID.randomUUID());
-        when(mails.findByUserIdOrderByReceivedAtDescIdDesc(eq(ALICE), any(Pageable.class)))
+        when(mails.findPage(eq(ALICE), eq(""), isNull(), eq(false), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(filed, waiting), PageRequest.of(0, 50), 2));
         when(applications.findAllById(any())).thenReturn(List.of(
                 application(APP, "Backend Engineer", "Acme")));
 
-        PageDTO<InboundMailItem> page = service.list(ALICE, PageRequest.of(0, 50), null);
+        PageDTO<InboundMailItem> page = service.list(ALICE, PageRequest.of(0, 50), null, null);
 
         assertThat(page.total()).isEqualTo(2);
         assertThat(page.page()).isZero();
@@ -268,28 +269,76 @@ class InboundReplyServiceTest {
         // The reader types "  Acme Offer " into the box; the page asks the query for the same
         // words with the spaces gone and case aside, because the columns are compared lowercased.
         InboundMail match = mail("Acme", "Backend Engineer");
-        when(mails.search(eq(ALICE), eq("acme offer"), any(Pageable.class)))
+        when(mails.findPage(eq(ALICE), eq("acme offer"), isNull(), eq(false), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(match), PageRequest.of(0, 50), 1));
         when(applications.findAllById(any())).thenReturn(List.of());
 
         PageDTO<InboundMailItem> page =
-                service.list(ALICE, PageRequest.of(0, 50), "  Acme Offer ");
+                service.list(ALICE, PageRequest.of(0, 50), "  Acme Offer ", null);
 
         assertThat(page.total()).isEqualTo(1);
         assertThat(page.items()).hasSize(1);
-        verify(mails, never()).findByUserIdOrderByReceivedAtDescIdDesc(any(), any());
     }
 
     @Test
     void aBlankSearchIsNoFilterRatherThanAnEmptyRoom() {
         // An empty box that still narrowed the query would show nothing the moment a reader
-        // backspaced the last character -- the page asks the unfiltered list instead.
-        when(mails.findByUserIdOrderByReceivedAtDescIdDesc(eq(ALICE), any(Pageable.class)))
+        // backspaced the last character -- the page asks the same query with an empty needle,
+        // whose first branch every row satisfies.
+        when(mails.findPage(eq(ALICE), eq(""), isNull(), eq(false), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 50), 0));
 
-        PageDTO<InboundMailItem> page = service.list(ALICE, PageRequest.of(0, 50), "   ");
+        PageDTO<InboundMailItem> page = service.list(ALICE, PageRequest.of(0, 50), "   ", null);
 
         assertThat(page.total()).isZero();
-        verify(mails, never()).search(any(), any(), any());
+    }
+
+    @Test
+    void aReadingNarrowsTheSamePageWithoutDroppingTheSearch() {
+        // Both filters are one question: the chip is a further narrowing of the words, not a
+        // replacement. The words travel lowercased, like every other search on this page.
+        InboundMail match = mail("Acme", "Backend Engineer");
+        when(mails.findPage(eq(ALICE), eq("acme"), eq("rejection"), eq(false), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(match), PageRequest.of(0, 50), 1));
+        when(applications.findAllById(any())).thenReturn(List.of());
+
+        PageDTO<InboundMailItem> page =
+                service.list(ALICE, PageRequest.of(0, 50), "  ACME ", "Rejection");
+
+        assertThat(page.total()).isEqualTo(1);
+        assertThat(page.items()).hasSize(1);
+    }
+
+    @Test
+    void theUnreadChipAsksForTheLettersNoReadingAnswered() {
+        // `unread` is not a reading: it is the absence of one, and the page asks for exactly
+        // the rows whose intent is null rather than for a word no letter carries.
+        when(mails.findPage(eq(ALICE), eq(""), isNull(), eq(true), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 50), 0));
+
+        PageDTO<InboundMailItem> page = service.list(ALICE, PageRequest.of(0, 50), null, "UNREAD");
+
+        assertThat(page.total()).isZero();
+    }
+
+    @Test
+    void aWordThatIsNotAReadingIsRefusedRatherThanAnsweredWithAnEmptyPage() {
+        // An empty page would read as "your inbox holds none of these", while the truth is
+        // "that is not something the classifier says". The reader's answer is to fix the
+        // filter, so the route says so rather than answering a fact about the inbox.
+        assertThatThrownBy(() -> service.list(ALICE, PageRequest.of(0, 50), null, "banana"))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.code()).isEqualTo(ApiErrorCode.INBOUND_INTENT_UNKNOWN));
+        verifyNoInteractions(mails);
+    }
+
+    @Test
+    void aBlankReadingIsNoFilterRatherThanAnEmptyRoom() {
+        when(mails.findPage(eq(ALICE), eq(""), isNull(), eq(false), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 50), 0));
+
+        PageDTO<InboundMailItem> page = service.list(ALICE, PageRequest.of(0, 50), null, "   ");
+
+        assertThat(page.total()).isZero();
     }
 }
