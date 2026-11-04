@@ -1,0 +1,6 @@
+resumes: add versionKind support (roadmap resume-kind feature)
+
+- frontend/src/lib/status-words.ts: add RESUME_VERSION_KINDS = ["original", "tailored"] as const; add resumeVersionKindWord(t, kind) function that maps through the i18n table keyed by "resumes.versionKinds"
+- frontend/src/lib/status-words.test.ts: import and test resumeVersionKindWord in both locales; add ["resumes.versionKinds", RESUME_VERSION_KINDS] to the ROSTERS roster; update printsEnum to recognize `?.` optional spelling verbs for nested property draws
+- frontend/src/lib/i18n/translations.ts: add versionKinds object with original/tailored in both English and Chinese (original: "Original parse"/"原始解析", tailored: "Tailored draft"/"定制草稿")
+- frontend/src/app/(app)/resumes/[id]/page.tsx: import resumeVersionKindWord from status-words and use it to render the version's kind metadata line (the only surface that draws it); the version metadata now shows "Original parse" or "Tailored draft" beside the version badge

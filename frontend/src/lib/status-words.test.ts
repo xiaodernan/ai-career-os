@@ -24,6 +24,7 @@ import {
   remoteTypeWord,
   requirementPriorityWord,
   resumeStatusWord,
+  resumeVersionKindWord,
   runStatusWord,
   runTriggerWord,
   salaryBandWord,
@@ -42,6 +43,7 @@ import {
   REMOTE_TYPES,
   REQUIREMENT_PRIORITIES,
   RESUME_STATUSES,
+  RESUME_VERSION_KINDS,
   RUN_STATUSES,
   RUN_TRIGGERS,
   USER_ROLES,
@@ -74,6 +76,7 @@ const ROSTERS: [string, readonly string[]][] = [
   ["jobs.status", JOB_STATUSES],
   ["jobs.remoteTypes", REMOTE_TYPES],
   ["resumes.status", RESUME_STATUSES],
+  ["resumes.versionKinds", RESUME_VERSION_KINDS],
   ["monitoring.verdicts", HEALTH_VERDICTS],
   ["growth.verdicts", READINESS_VERDICTS],
   ["offers.verdicts", MARKET_VERDICTS],
@@ -139,6 +142,8 @@ describe("the enum words", () => {
     expect(followUpPriorityWord(zh, "someday")).toBe("Someday");
     // `users.role` is the schema's pair; a role a later deployment adds still reads.
     expect(userRoleWord(zh, "owner")).toBe("Owner");
+    // `resume_versions.kind` is the schema's pair too; a kind a later migration adds still reads.
+    expect(resumeVersionKindWord(zh, "imported")).toBe("Imported");
     // `retired` and `indexing` reached the table in this unit; a status the ingest has
     // never written is what this case still has to degrade.
     expect(knowledgeSourceStatusWord(zh, "archiving")).toBe("Archiving");
@@ -181,6 +186,10 @@ describe("the enum words", () => {
     expect(userRoleWord(en, "user")).toBe("User");
     expect(userRoleWord(zh, "admin")).toBe("管理员");
     expect(userRoleWord(zh, "user")).toBe("用户");
+    // The version line's origin word: the schema's `kind`, mapped onto the row's `source`.
+    expect(resumeVersionKindWord(en, "original")).toBe("Original parse");
+    expect(resumeVersionKindWord(zh, "original")).toBe("原始解析");
+    expect(resumeVersionKindWord(zh, "tailored")).toBe("定制草稿");
     // The knowledge row's badge and the evidence card's kind draw the wire through the table.
     expect(knowledgeSourceStatusWord(en, "ready")).toBe("Ready");
     expect(knowledgeSourceStatusWord(zh, "pending")).toBe("待处理");
@@ -553,7 +562,7 @@ function rawRoleSurfaces(files: { path: string; text: string }[]): string[] {
     .map((f) => f.path);
 }
 
-const USERS_SCHEMA = new URL(
+const SCHEMA_V1 = new URL(
   "../../../backend/src/main/resources/db/migration/V1__init_schema.sql",
   import.meta.url
 );
@@ -617,7 +626,7 @@ describe("the account role badge", () => {
   });
 
   it("are the words the users table declares", () => {
-    const words = roleWordsInSchema(readFileSync(fileURLToPath(USERS_SCHEMA), "utf8"));
+    const words = roleWordsInSchema(readFileSync(fileURLToPath(SCHEMA_V1), "utf8"));
     expect(words.length, "the schema's role comment parsed empty").toBeGreaterThan(1);
     expect([...USER_ROLES].sort()).toEqual(words);
   });
@@ -629,6 +638,122 @@ describe("the account role badge", () => {
     expect(USER_ROLES).not.toContain("owner");
     // A file with no users table is an empty reading, not a pass dressed as one.
     expect(roleWordsInSchema("CREATE TABLE jobs (id uuid);")).toEqual([]);
+  });
+});
+
+const VERSION_ORIGIN_SURFACES: [string, string][] = [
+  ["app/(app)/resumes/[id]/page.tsx", "resumeVersionKindWord(t, v.source)"],
+];
+
+/**
+ * The mapper's own line is a carrier too: the page can only draw the origin word while
+ * `mapResumeVersions` still fills `source` from the wire's `kind`. A row that stopped
+ * carrying it would make the line silently vanish, not print a wrong word.
+ */
+const VERSION_ORIGIN_MAPS: [string, string][] = [
+  ["lib/hooks/resources.ts", 'source: str(v, "kind", "source", "origin")'],
+];
+
+/**
+ * The charge is the drawn origin word, not every `.source`.
+ *
+ * `mapResumeVersions` maps `resume_versions.kind` onto the view model's `source`, which
+ * is why the kind charges below never saw this line: they spell `.kind`. Evidence rows
+ * read a nested document (`e.source?.docTitle`), and a dotted tail is plumbing; a
+ * version row's `source` is the schema's two words, and drawing it raw is the charge.
+ */
+function rawVersionOriginSurfaces(files: { path: string; text: string }[]): string[] {
+  return files
+    .filter((f) => f.path !== STATUS_WORDS)
+    .filter((f) => textNodeBodies(f.text).some((b) => printsEnum(b, "[A-Za-z_$][\\w$]*\\.source")))
+    .map((f) => f.path);
+}
+
+/** The words `resume_versions.kind`'s own column comment declares: `-- original | tailored`. */
+function versionKindWordsInSchema(sql: string): string[] {
+  const table = sql.match(/CREATE TABLE resume_versions[\s\S]*?\n\s*\);/)?.[0] ?? "";
+  const comment = table.match(/^\s*kind\s+text[^\n]*?--\s*([a-z_ |]+)$/m)?.[1] ?? "";
+  return comment
+    .split("|")
+    .map((w) => w.trim())
+    .filter(Boolean)
+    .sort();
+}
+
+describe("the resume version's origin word", () => {
+  it("draws the mapped kind through the table", () => {
+    const files = sources();
+    expect(files.length, "the scan read no files").toBeGreaterThan(150);
+    // The charge runs before the seams: a name in this list says which page prints the
+    // wire word, and a missing seam only says which call the gate expected.
+    const offenders = rawVersionOriginSurfaces(files);
+    expect(
+      offenders,
+      `surfaces printing a version's wire origin:\n${offenders.join("\n")}`
+    ).toEqual([]);
+    for (const [rel, seam] of VERSION_ORIGIN_SURFACES) {
+      const file = files.find((f) => f.path.endsWith(rel));
+      expect(file, `${rel} is not in the walk`).toBeTruthy();
+      expect(file!.text, `${rel} no longer draws the origin word through ${seam}`).toContain(seam);
+    }
+    for (const [rel, seam] of VERSION_ORIGIN_MAPS) {
+      const file = files.find((f) => f.path.endsWith(rel));
+      expect(file, `${rel} is not in the walk`).toBeTruthy();
+      expect(file!.text, `${rel} no longer carries the origin through ${seam}`).toContain(seam);
+    }
+  });
+
+  it("would still see a version line that drew the wire origin", () => {
+    // The pre-fix line: the mapper's field, lowercased by the page, inside a template
+    // literal. The kind charges spell `.kind`, and the string blanker used to swallow
+    // interpolations, so both read past it.
+    expect(
+      rawVersionOriginSurfaces([
+        {
+          path: "app/probe.tsx",
+          text: '<p>{v.source ? `${v.source.replace(/_/g, " ")} · ` : ""}{v.createdAt}</p>',
+        },
+      ])
+    ).toEqual(["app/probe.tsx"]);
+    expect(
+      rawVersionOriginSurfaces([{ path: "app/probe.tsx", text: "<span>{v.source}</span>" }])
+    ).toEqual(["app/probe.tsx"]);
+    expect(
+      rawVersionOriginSurfaces([{ path: "app/probe.tsx", text: "<span>{`${version.source}`}</span>" }])
+    ).toEqual(["app/probe.tsx"]);
+    // A nested document is not the enum: the card draws the document's own title.
+    expect(
+      rawVersionOriginSurfaces([{ path: "app/ok.tsx", text: "<span>{e.source?.docTitle}</span>" }])
+    ).toEqual([]);
+    // ...and the mapped word through the table, or tested for a comparison, is plumbing.
+    expect(
+      rawVersionOriginSurfaces([
+        { path: "app/ok.tsx", text: "<span>{resumeVersionKindWord(t, v.source)}</span>" },
+      ])
+    ).toEqual([]);
+    expect(
+      rawVersionOriginSurfaces([
+        {
+          path: "app/ok.tsx",
+          text: '<span>{v.source === "tailored" ? t("a.t") : t("a.o")}</span>',
+        },
+      ])
+    ).toEqual([]);
+  });
+
+  it("are the words the resume_versions table declares", () => {
+    const words = versionKindWordsInSchema(readFileSync(fileURLToPath(SCHEMA_V1), "utf8"));
+    expect(words.length, "the schema's kind comment parsed empty").toBeGreaterThan(1);
+    expect([...RESUME_VERSION_KINDS].sort()).toEqual(words);
+  });
+
+  it("would still see a schema that declares a third version kind", () => {
+    const planted =
+      "CREATE TABLE resume_versions (\n  kind        text NOT NULL DEFAULT 'original',  -- original | tailored | imported\n);";
+    expect(versionKindWordsInSchema(planted)).toEqual(["imported", "original", "tailored"]);
+    expect(RESUME_VERSION_KINDS).not.toContain("imported");
+    // A file with no resume_versions table is an empty reading, not a pass dressed as one.
+    expect(versionKindWordsInSchema("CREATE TABLE jobs (id uuid);")).toEqual([]);
   });
 });
 
@@ -881,7 +1006,13 @@ function printsEnum(body: string, field: string): boolean {
   for (const m of residue.matchAll(re)) {
     const after = residue.slice((m.index ?? 0) + m[0].length).match(/^\s*(\S*)/)?.[1] ?? "";
     if (/^(===|!==|==|!=|<=|>=|&&|=)/.test(after)) continue;
-    if (after.startsWith("?") && !after.startsWith("?.") && !after.startsWith("??")) continue;
+    // `e.source?.docTitle` draws the nested document's title, not the enum; only an
+    // optional spelling verb (`status?.replace(…)`) puts the value's own letters out.
+    if (after.startsWith("?.")) {
+      if (SPELLING_VERB.test(after.slice(2))) return true;
+      continue;
+    }
+    if (after.startsWith("?") && !after.startsWith("??")) continue;
     if (after.startsWith(".") && !SPELLING_VERB.test(after.slice(1))) continue;
     return true;
   }

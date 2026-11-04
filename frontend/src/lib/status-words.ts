@@ -42,6 +42,13 @@ export const USER_ROLES = ["user", "admin"] as const;
 export const RESUME_STATUSES = ["uploaded", "parsing", "ingesting", "parsed", "failed"] as const;
 
 /**
+ * `resume_versions.kind` — V1's own comment, `-- original | tailored`. The versions
+ * list maps it onto the view model's `source` field, and the metadata line under each
+ * version is the only surface that draws it.
+ */
+export const RESUME_VERSION_KINDS = ["original", "tailored"] as const;
+
+/**
  * `knowledge_sources.status` and `documents.status` — one field on the wire.
  *
  * `GET /knowledge/sources/{id}/status` answers with the document's status whenever the
@@ -129,6 +136,11 @@ export function remoteTypeWord(t: TranslateFn, type: string): string {
 
 export function resumeStatusWord(t: TranslateFn, status: string): string {
   return wordFrom(t, "resumes.status", status, RESUME_STATUSES);
+}
+
+/** The version row's origin word; the metadata line drew `original` in every language. */
+export function resumeVersionKindWord(t: TranslateFn, kind: string): string {
+  return wordFrom(t, "resumes.versionKinds", kind, RESUME_VERSION_KINDS);
 }
 
 export function healthVerdictWord(t: TranslateFn, verdict: string): string {

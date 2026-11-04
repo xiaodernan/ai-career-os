@@ -34,7 +34,7 @@ import { DiffView } from "@/components/common/diff-view";
 import { DimensionBars } from "@/components/common/skill-chips";
 import { MatchRing } from "@/components/ai/match-ring";
 import { resumeCriterionLabel, resumeDimensionLabel } from "@/lib/dimensions";
-import { resumeStatusWord } from "@/lib/status-words";
+import { resumeStatusWord, resumeVersionKindWord } from "@/lib/status-words";
 import { TaskProgress } from "@/components/ai/task-stream";
 import { useParseResume, usePrintResumeVersion, useSetCurrentResume } from "@/lib/hooks/actions";
 import { useResume, useResumeVersions } from "@/lib/hooks/resources";
@@ -329,7 +329,7 @@ export default function ResumeDetailPage() {
                         )}
                       </div>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        {v.source ? `${v.source.replace(/_/g, " ")} · ` : ""}
+                        {v.source ? `${resumeVersionKindWord(t, v.source)} · ` : ""}
                         {v.createdAt ? formatDate(v.createdAt, locale) : t("resumes.detail.dateUnavailable")}
                         {typeof v.score?.overall === "number"
                           ? t("resumes.detail.scoreSuffix", { score: v.score.overall })

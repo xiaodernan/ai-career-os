@@ -1240,6 +1240,10 @@ export const translations = {
           "Only shown when the reviewer has actually scored this document.",
         versions: "Versions",
         versionsDescription: "Original parses and tailored drafts.",
+        versionKinds: {
+          original: "Original parse",
+          tailored: "Tailored draft",
+        },
         versionsLoadFailed: "Couldn't load versions",
         whereFrom: "Where this comes from",
         scoreRing: "Resume score",
@@ -4116,6 +4120,10 @@ export const translations = {
         qualityDescription: "只有在评审代理真的给这份文档打过分时才会显示。",
         versions: "版本",
         versionsDescription: "原始解析结果和定制草稿。",
+        versionKinds: {
+          original: "原始解析",
+          tailored: "定制草稿",
+        },
         versionsLoadFailed: "没能加载版本列表",
         whereFrom: "这份简历的来源",
         scoreRing: "简历评分",
