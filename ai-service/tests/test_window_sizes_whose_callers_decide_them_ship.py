@@ -35,9 +35,14 @@ activity board asks `{ page: state.page, size: PAGE_SIZE }` while the dashboard 
 `{ size: 5 }`. `useIngestionRuns`'s one caller is the runs panel, asking
 `{ page: runPage.rpage, size: PAGE_SIZE }` under its own `?rpage=`, so its literal is shadowed on
 its only path too. The replies page (37.4) mounts `useInboundMails` with
-`{ page: state.page, size: PAGE_SIZE }`, and spends the applications hook a second time for the
+`{ page: state.page, size: PAGE_SIZE }` and, since the inbox learned to narrow itself, the
+letters' own words and reading beside the window (49.1/49.2) and the waiting scope (49.5:
+`unfiled`); it spends the applications hook a second time for the
 filing picker: `{ size: 100 }`, the ceiling, because a picker that paged would hide the card a
-waiting letter answers. `useResumes` is the last per-call-site case: its screen asks `PAGE_SIZE`
+waiting letter answers. 49.5 also moved the replies hook's params object into an exported reader
+(`fetchInboundMails`) one call away, so `list_wires` follows that one same-file hop rather than
+losing the thirteenth row while every other hook still spells its literal inline. `useResumes` is
+the last per-call-site case: its screen asks `PAGE_SIZE`
 (restating the route's own 20), while the dashboard and jobs callers pass no arguments -- so it is
 the only literal that still spends as written, on two of its three paths.
 
@@ -128,8 +133,10 @@ WIRE = {
     # conditional spread is the shape the endpoint gate refuses to guess at. `literal_size` below
     # reads that default: the number the hook offers when nobody decides is still the number a
     # server clamp has to cover. 49.2's intent chip adds `intent` beside `q`, so a narrowed
-    # inbox asks the server the same question the page is showing.
-    "useInboundMails": ("inboundMails", "{ size: params?.size ?? 50, page: params?.page, q, intent, }"),
+    # inbox asks the server the same question the page is showing. 49.5 adds the waiting scope,
+    # so the literal now names all three filters; the literal lives in `fetchInboundMails`, the
+    # reader the hook hands its params to, and `list_wires` follows that one same-file hop.
+    "useInboundMails": ("inboundMails", "{ size: params?.size ?? 50, page: params?.page, q, intent, unfiled, }"),
 }
 
 # Measured call sites, one walk; case 3 re-derives them. `""` is a call with no arguments.
@@ -168,7 +175,7 @@ SITES = {
     "useNightlyReports": [("components/monitoring/nightly-history.tsx",
                            "{ page, size: PAGE_SIZE }")],
     "useInboundMails": [("app/(app)/replies/page.tsx",
-                         "{ page: state.page, size: PAGE_SIZE, q: state.q, intent: state.intent, }")],
+                         "{ page: state.page, size: PAGE_SIZE, q: state.q, intent: state.intent, unfiled: state.unfiled, }")],
 }
 
 # route path -> the `defaultValue` on the handler's `int size` parameter, or None if it binds none.
@@ -302,6 +309,29 @@ def bound_ints(path: str) -> dict[str, str | None]:
     return out
 
 
+def wire_holder(text: str, name: str, body: str) -> str | None:
+    """The text whose `api.get` literal is this hook's list request, or None if it spends no page.
+
+    49.5 moved the replies hook's params object into an exported reader in the same file so the
+    wire could be graded without a renderer. One hop, same file: a hook that delegates to an
+    imported reader is a different census, and the thirteen-row comparison below is the reach
+    guard that refuses to lose it quietly.
+    """
+    if "normalizePage(" not in body:
+        handed = re.search(r"queryFn:\s*\(\s*\)\s*=>\s*([A-Za-z_$][\w$]*)\s*\(", body)
+        if not handed:
+            return None
+        reader = re.search(r"export (?:async )?function " + re.escape(handed.group(1)) + r"\(", text)
+        if not reader:
+            return None
+        body = function_body(text, reader.group(0))
+        if "normalizePage(" not in body:
+            return None
+    assert "api.get<unknown>(endpoints." in body, \
+        f"{name} spends normalizePage but reads through no api.get this walk can see"
+    return body
+
+
 def list_wires() -> dict[str, tuple[str, str | None]]:
     """hook -> (endpoint key, the params object literal it hands api.get), from the hook's own text.
 
@@ -315,16 +345,18 @@ def list_wires() -> dict[str, tuple[str, str | None]]:
     for path in sorted(HOOKS.glob("*.ts")):
         if ".test." in path.name:
             continue
-        for match in re.finditer(r"export function (use\w+)\(", read(path)):
-            body = function_body(read(path), match.group(0))
-            if "normalizePage(" not in body:
+        text = read(path)
+        for match in re.finditer(r"export function (use\w+)\(", text):
+            body = function_body(text, match.group(0))
+            holder = wire_holder(text, match.group(1), body)
+            if holder is None:
                 continue
-            at = body.index("api.get<unknown>(endpoints.")
-            keyed = re.match(r"api\.get<unknown>\(endpoints\.(\w+)", body[at:])
+            at = holder.index("api.get<unknown>(endpoints.")
+            keyed = re.match(r"api\.get<unknown>\(endpoints\.(\w+)", holder[at:])
             assert keyed, f"{match.group(1)} calls api.get without an endpoints.* key"
             key = keyed.group(1)
-            close = balanced(body, body.index("(", at), "(", ")")
-            tail = body[at + len(f"api.get<unknown>(endpoints.{key}"):close].strip()
+            close = balanced(holder, holder.index("(", at), "(", ")")
+            tail = holder[at + len(f"api.get<unknown>(endpoints.{key}"):close].strip()
             params = collapse(tail[1:]) if tail.startswith(",") else None
             out[match.group(1)] = (key, params)
     return out

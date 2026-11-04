@@ -3464,7 +3464,9 @@ def test_both_frame_parsers_default_a_nameless_frame_to_the_same_event_name():
         # positions, not array elements). The kind's "message" member still exists and
         # is still the wire's vocabulary; the roster's own names are pinned by the
         # browser's suite (status-words.test.ts), which is where they are read.
-        ("types.ts", 1638, "kind:"),
+        # 1652 rather than 1638 since 79dda2a's `InboundIntentCounts` joined above the
+        # union (+14 lines with its doc comment); the union itself did not change.
+        ("types.ts", 1652, "kind:"),
         ('use-sse.ts', 15, 'event: SSEEventName | "message" | "progress" | "ping";'),
     ], (f"{[(r['file'], r['line'], r['head']) for r in by_role['type-union-member']]}: two type unions "
         "spell `message` now, and only one of them names a frame -- the other is the trace step kind "
