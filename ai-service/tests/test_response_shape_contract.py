@@ -3075,7 +3075,11 @@ def test_the_heartbeat_interval_has_one_definer_and_every_shipped_claim_names_it
     # retention heartbeat", which is a fourth clock the roadmap names without a number -- and the
     # doc_claims assertion above is what keeps that promise from becoming a second opinion about
     # the interval. 48.1's shipped paragraph adds no mention of its own.
-    assert per_file == {"AGENTS.md": 1, "DEPLOYMENT.md": 5, "ROADMAP.md": 13,
+    # 15 since 48.4: the roster's three DEPLOYMENT cells first said this noun beside their window's
+    # number and were caught by the assertion above, and the record of that collision names the word
+    # twice more in ROADMAP.md while explaining why the rows now say `pass marker`. A census over the
+    # word counts a paragraph about the word; what it must not do is let a number arrive beside one.
+    assert per_file == {"AGENTS.md": 1, "DEPLOYMENT.md": 5, "ROADMAP.md": 15,
                         "RUNBOOK.md": 14, "SECURITY.md": 1}, (
         f"{per_file}: the docs' own vocabulary is censused, so this pass is not reporting on an "
         "empty set -- and a second file picking up the word is a signal the ledger has to grow")

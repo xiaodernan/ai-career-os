@@ -3924,7 +3924,9 @@ orphan. Nothing could see either case, because `StorageService` had no listing -
 ever walked by the keys the database happens to name. 48.1 gives the port its eyes and censuses who
 may own a key; 48.2 walks the bucket against the rows and takes what no row names after a window,
 turning that sentence into a remover; 48.3 rep-wards the asymmetry that let 44.2's counter ship
-while no rule read it, so a meter cannot be born unwatched again.
+while no rule read it, so a meter cannot be born unwatched again; 48.4 moves the answer to
+"what watches this series?" onto the page an operator already reads, and counts the one refusal
+48.3's excuse had covered for the whole push family rather than for its tags.
 
 - [x] **48.1** The port can list its bucket, and every key owner is named.
 
@@ -4004,6 +4006,45 @@ while no rule read it, so a meter cannot be born unwatched again.
   whose failures are logged with their key and retried rather than outages -- the listing refusal
   keeps `CareerOSBucketListingRefused`. An excuse under sixty characters is a label, not a reason.
   10 tests in the gate.)
+
+- [x] **48.4** A refused browser wake pages, and the roster of meters lives on the page that reads it.
+  (`careeros.push.delivery` was the one shipped counter whose refusals nobody watched: the family had
+  an excuse in the gate rather than a rule, and the excuse said the four outcomes share no threshold --
+  true of the family, false of the tag. A day with three `refused` wakes is not the churn the excuse
+  described, because a registration retiring on its own answers 404 or 410 and is deleted from the
+  database inside the same ring that counted it, while anything else the service answers repeats: a
+  wake that was refused leaves the notification unread, so the next pass asks the same browser again.
+  `CareerOSPushDeliveryFailing` therefore reads only `outcome="refused"`, over `[24h]`, at a floor of
+  three -- the morning sweep and the minute clock between them touch every registration of every
+  account with something waiting, so a third refusal is a transport or an egress, not a laptop that
+  closed. RUNBOOK gained its row in the alarm table and a section that quotes the expression rather
+  than paraphrasing the number.)
+
+  (The excuses moved. 48.3 kept the unalarmed meters in a `UNALARMED` dict inside the gate, which left
+  DEPLOYMENT.md restating the same nine decisions in its own prose with nothing comparing the two -- and
+  the prose had already drifted once in the direction that matters: it called the push family unwatched
+  while the gate's own reason claimed the minute clock was its substitute. So the page an operator reads
+  is now the roster: "Every Meter and What Watches It" holds 21 rows, one for every meter the Java
+  registers, and its `Rule that reads it` cell is compared to `ops/prometheus/alerts.yml` in both
+  directions -- the rules a row names must be exactly the rules whose expression names that series, so a
+  row cannot claim a watch that was deleted and an excuse cannot outlive the rule that arrives over it.
+  The reason column stays prose and is held only to being a reason (sixty characters, no shrug).
+  Thirteen of the 21 rows name a rule, eight carry the em dash; the dict is gone, and `UNALARMED`
+  with it. 12 tests
+  in the gate, two of them new -- the runbook's alarm table has to be exactly the alarms that ship, and
+  the push rule's floor has to appear in the page as the expression itself. Measured in a sandbox cut
+  from HEAD: eight mutations, each reddening exactly one test -- a roster row removed, a watcher cell
+  over-claiming a rule, a row excused while its rule reads it, a watcher cell turned to prose, and a row
+  for a meter that does not ship all five landing on the roster test; the rule's floor moved under the
+  quoted prose landing on the floor test; the runbook table naming a rule that does not ship landing on
+  the table test; its section renamed under the rule's link landing on the anchor test that already
+  existed. A ninth mutation, the rule deleted from the YAML, reddens four at once, which is the shape a
+  half-landed alarm leaves behind and why the record above says a new alarm needs a name, a section and
+  a reader. The table's first draft lost a
+  different gate: three of its cells called a pass marker a `heartbeat` beside the number that marker
+  waits on, and the SSE keep-alive census grades every line of `docs/*.md` that carries that noun with
+  a seconds claim -- a shared word, four clocks. The rows now say `pass marker`, because the rule that
+  holds the interval to one definer is not the rule to loosen for a table's prose.)
 
 ## Epic 49 -- The Replies Can Be Found
 

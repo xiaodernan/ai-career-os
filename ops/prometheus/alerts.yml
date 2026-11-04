@@ -275,3 +275,30 @@ groups:
             at 04:47; the sweep's own clock moved, so nothing else on this dashboard says the bucket
             half of the night did not run.
           runbook: "docs/RUNBOOK.md#the-bucket-was-not-swept"
+
+      # The browser ring's refusal (roadmap 33.3's counter, 48.3's alarm). `refused` is every answer
+      # that is neither an acceptance nor a retirement: the push service could not be reached, it
+      # answered outside 2xx, the stored endpoint is not a usable https origin, or the VAPID JWT
+      # was rejected. One of those is noise -- a browser that abandoned its registration can refuse
+      # once before the sweep forgets it -- so the rule wants three in a day: the morning pass and
+      # the minute clock between them touch every registration of every account with something due,
+      # and a run that keeps refusing means the transport or its egress, not one dead subscription.
+      # The other two outcomes are deliberately absent: `gone` is a registration the service retired
+      # (404/410), which is normal churn the sweep cleans up, and `not_configured` is an install
+      # that ships no VAPID keys at all -- a deployment choice, and not a failing transport.
+      - alert: CareerOSPushDeliveryFailing
+        expr: sum(increase(careeros_push_delivery_total{outcome="refused"}[24h])) >= 3
+        for: 15m
+        labels:
+          service: career-os-backend
+          severity: warning
+        annotations:
+          summary: "A push service refused three or more browser wakes in the last day"
+          description: >-
+            {{ $value | humanize }} browser wakes were refused in the last day. Read the
+            backend log for "push service ... refused a wake with status", "could not be
+            reached" or "no usable endpoint"; the first two name the host, so the question is
+            whether the install can reach it and whether its VAPID keys are the ones the
+            service expects. A refused wake is a browser that did not ring, not a reminder
+            that was lost -- the inbox, the morning letter and the calendar still carry it.
+          runbook: "docs/RUNBOOK.md#the-wake-a-push-service-refused"

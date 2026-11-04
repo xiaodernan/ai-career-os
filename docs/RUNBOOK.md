@@ -30,6 +30,7 @@ The surfaces this document is about:
 | `CareerOSReminderClockStale` | warning | The minute clock has not finished a tick in five minutes | [The minute clock a reminder rings on](#the-minute-clock-a-reminder-rings-on) |
 | `CareerOSRetentionSweepStale` | warning | No credential-retention sweep finished in 36 hours | [The retention sweep stopped](#the-retention-sweep-stopped) |
 | `CareerOSBucketListingRefused` | warning | The nightly sweep asked the object store for its whole listing in the last day and was refused | [The bucket was not swept](#the-bucket-was-not-swept) |
+| `CareerOSPushDeliveryFailing` | warning | Three or more browser wakes were refused by a push service in a day | [The wake a push service refused](#the-wake-a-push-service-refused) |
 
 ## A night that never succeeded
 
@@ -667,6 +668,54 @@ would have reclaimed stay exactly where they are. The delete path's own reclaims
 (`careeros_storage_objects_reclaimed_total`) are counted separately and alarm nowhere: an
 object that outlives a row is a storage cost, and a counter with no baseline would page on
 a quiet week.
+
+## The wake a push service refused
+
+**What the alert looks like.** `CareerOSPushDeliveryFailing` fires when
+`sum(increase(careeros_push_delivery_total{outcome="refused"}[24h])) >= 3`: three browser wakes in a
+day that the push service answered with something other than an acceptance. The family counts one
+reading per registration a ring pass asked to wake, tagged `sent`, `gone`, `refused` or
+`not_configured`, and only `refused` is in the expression.
+
+**Why three, and why only that tag.** One refusal is normal churn: a browser that abandoned its
+registration can refuse once on its way out. Three in a day is not churn, because the two passes
+that ring -- the morning sweep and the minute clock -- walk every registration of every account with
+something waiting, and a registration that keeps refusing keeps counting. `gone` is the service
+saying 404 or 410, which the ring deletes from the database on the spot, so it is a cleanup rather
+than a fault and an alarm on it would page on every reader who closes a laptop for good.
+`not_configured` is an install that ships no VAPID keys at all: the boot line says `push=off`, and a
+deployment choice is not a transport that broke.
+
+**What to read.** The backend log for the sentence that names the host, since a refusal is written by
+whichever half failed: "push service ... refused a wake with status ..." (the service answered
+outside 2xx), "push service ... could not be reached" (egress, DNS or the service being down),
+"push subscription ... has no usable endpoint" or "... has no https origin to address" (a stored
+address this service cannot dial), and "push service ... answered a wake that could not be read".
+Then the whole family on the scrape: `careeros_push_delivery_total` split by `outcome` says whether
+the day was all refusals -- keys or egress, so every browser failed together -- or one registration
+refusing in an otherwise accepting day, which is one broken browser.
+
+**What to do, in order.**
+
+1. Check the boot line's `push=` reading first. `keypair` means the install thinks it has VAPID
+   keys, so a day of refusals is about those keys or the address in the JWT's `sub`; `off` means no
+   rule here should be firing at all, because every wake lands on `not_configured`.
+2. Read the refused host from the log and ask whether the install can reach it at all. Push services
+   are third-party endpoints, so a firewall, a proxy change or a provider outage produces the same
+   counter as a bad key, and the log line separates them: a status code is an answer, "could not be
+   reached" is not.
+3. Nothing needs replaying, and nothing is lost. A wake that was refused leaves the notification
+   unread, which means it is still in the next pass's audience -- the morning sweep and the minute
+   clock will ask that browser again. The in-app inbox, the morning letter and the calendar all
+   carried the item whether or not the browser rang.
+4. If one account is the only one refusing, have the reader turn the browser's permission off and on
+   again from the settings page. The registration is an upsert on its endpoint, so a renewed
+   subscription replaces the address that cannot be dialed rather than adding a second one.
+
+**What this alert does not mean.** It is not a stopped clock; `CareerOSReminderClockStale` and
+`CareerOSSignalSweepStale` say whether the passes ran, and this rule can fire on a night where both
+did. It is not a lost reminder, and it is not the account's second factor or the mail relay -- the
+push transport is a different outbound path with its own host in the log.
 
 ## An account is locked out of its second factor
 

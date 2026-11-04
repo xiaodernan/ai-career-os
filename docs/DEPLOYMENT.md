@@ -303,7 +303,7 @@ recomputed from `ai_usage_events` every minute — the install's own verdict —
 boot — and the weekly letter's —
 `careeros_digest_delivery_total{outcome}`, `sent` or `refused` per attempt, and
 `careeros_digest_last_delivered_timestamp`, moved only by an accepted letter.
-`ops/prometheus/alerts.yml` carries the twelve rules and each one links its page in
+`ops/prometheus/alerts.yml` carries the thirteen rules and each one links its page in
 [RUNBOOK.md](RUNBOOK.md).
 
 The limiter exports one more family for dashboards rather than alarms:
@@ -375,6 +375,44 @@ tables and its purge run — so a store that refuses the listing would otherwise
 like a bucket that holds nothing, and nothing on that path deletes. `objects_judged` carries no
 rule of its own for the same reason the family above does not: one object the store would not
 release is retried by the next night and named in the log meanwhile.
+
+### Every Meter and What Watches It
+
+The table is the roster, not a summary: every meter the backend registers is one row, and
+`ai-service/tests/test_the_alarms_name_metrics_that_ship_and_a_page_that_says_what_to_do.py`
+walks the Java files that consult `MeterRegistry`, renders each dotted Micrometer name the way the
+exporter will (`careeros.ingestion.runs` arrives as `careeros_ingestion_runs_total`, and the
+`_total` is the exporter's suffix rather than a string the Java ever writes), and requires this
+table to hold exactly one row per meter. `Rule that reads it` is checked against the expressions
+themselves, in both directions: the rules named for a row are exactly the rules whose `expr` reads
+that series, so a row cannot claim a watch that was deleted and a new rule cannot read a meter this
+page leaves naming another one. A `—` is a decision with a reason attached, and the reason is what
+the row exists to carry -- the prose above explains each family at length, and this column says
+which reading answers the operator's question instead of an alarm.
+
+| Meter as the scrape renders it | Rule that reads it | What the reading is for |
+|--------------------------------|--------------------|-------------------------|
+| `careeros_ai_calls_24h` | — | Call count prices nothing by itself -- one expensive call and a thousand cheap ones read the same -- so `CareerOSAiBudgetBurn` holds the only number, and this is the dashboard's shape of the same rolling 24 hours. |
+| `careeros_ai_cost_usd_24h` | `CareerOSAiBudgetBurn` | The trailing 24 hours of the AI ledger, recomputed every minute from `ai_usage_events`; above 5 USD for 15 minutes the budget rule fires (warning). |
+| `careeros_ai_tokens_24h` | — | The dollar figure this gauge decomposes is the alarmed half. A raw token count has no threshold of its own, because a busy day inside the budget is not a fault. |
+| `careeros_digest_delivery_total` | `CareerOSDigestDeliveryFailing` | One reading per weekly-letter attempt, tagged `sent` or `refused`; the first refusal inside six hours fires, because the relay is the fault an operator has to fix rather than one the retry clock can outlast. |
+| `careeros_digest_last_delivered_timestamp` | — | Moved only by an accepted letter, so a week with no applications leaves it flat and that is healthy. `CareerOSDigestSweepStale` watches the compose clock; the delivery rule watches the relay. |
+| `careeros_digest_last_sweep_timestamp` | `CareerOSDigestSweepStale` | The Monday compose's own pass marker, moved by every completed pass. Eight days of silence fires, because a week that never ran cannot be recomposed through any route. |
+| `careeros_ingestion_last_success_timestamp` | `CareerOSIngestionNightMissed` | The last run that ended `completed`; 26 hours (93600 seconds) without one fires critical, whether the night never started or every feed in it failed. |
+| `careeros_ingestion_runs_total` | `CareerOSIngestionFailing` | One reading per run, tagged by status. More than half failed across at least three runs in six hours fires warning -- a majority is the fetcher's problem, one dead feed is that feed's own. |
+| `careeros_nightly_consecutive_failures` | `CareerOSNightlyVerificationFailing` | The install's own streak of failed nights, moved as each night is recorded. Two or more fires, which is the same line the nightly card warns at. |
+| `careeros_nightly_last_finished_timestamp` | `CareerOSNightlyVerificationStale` | The last recorded verification night. 36 hours (129600 seconds) of silence fires critical, the service's own `STALE_AFTER_HOURS` rendered as seconds. |
+| `careeros_push_delivery_total` | `CareerOSPushDeliveryFailing` | One reading per browser wake, tagged `sent`, `gone`, `refused` or `not_configured`. Three refusals in a day fires warning; the other outcomes are not faults, which is why the rule reads only this tag. |
+| `careeros_ratelimit_decisions_total` | — | `auth`, `ai` or `mail` by `allowed` or `denied`, moved by every request the filter classifies. No known-good refusal rate exists yet, so any threshold would page on a busy minute; the family is exported for dashboards until a baseline is measured. |
+| `careeros_reminders_last_tick_timestamp` | `CareerOSReminderClockStale` | The minute clock's own marker, moved at the end of every tick whether or not anything was due. Five missed ticks (300 seconds) fires, which tells a stopped scheduler from an empty board. |
+| `careeros_retention_deleted_rows_total` | — | Rows per table the 04:47 sweep deleted. A stopped sweep leaves the counter at its last value, indistinguishable from a quiet night, and the first purge of a backlog would cross any rate threshold; the sweep's timestamp is the alarm. |
+| `careeros_retention_last_sweep_timestamp` | `CareerOSRetentionSweepStale` | Moved at the end of every completed pass, with or without deletions; 36 hours of silence fires. A pass whose tables failed still moves it, and those failures are a log line plus a missing per-table series. |
+| `careeros_signals_delivery_total` | `CareerOSSignalMailFailing` | Account letters accepted and refused, the morning letter and a reminder's own letter alike, because the counter is of letters and not of one kind. Three refusals in six hours fires. |
+| `careeros_signals_last_delivered_timestamp` | — | The last morning the relay accepted a letter, which a quiet morning never moves. The sweep gauge covers the clock and the refusal counter covers the relay, leaving this as the dashboard's acceptance reading. |
+| `careeros_signals_last_sweep_timestamp` | `CareerOSSignalSweepStale` | The morning sweep's own pass marker; 36 hours (129600 seconds) without a completed pass fires, which is the failure the delivery rules cannot see. |
+| `careeros_storage_bucket_reads_total` | `CareerOSBucketListingRefused` | One reading per nightly pass, `listed` or `refused`. The retention clock moves through a night whose listing the store refused, so this is the only series that says the bucket half of the night did not run. |
+| `careeros_storage_objects_judged_total` | — | One reading per object the listing showed, across `named`, `young`, `deleted` and `failed`, and the four sum to the listing. A store that would not release one object is retried the next night and named in the WARN line meanwhile, so this is the dashboard companion to the listing rule rather than a second judgement. |
+| `careeros_storage_objects_reclaimed_total` | — | One reading per key the delete path or the purge handed back (`deleted`, `referenced`, `failed`). An object that outlives its row is a storage cost, not an outage, and a counter with no baseline would page on a quiet week. |
 
 ### Startup gating (healthchecks)
 
@@ -648,11 +686,13 @@ misconfigured `careeros.signals.cron` or a scheduler that never started is caugh
 The same pass rings browsers when push is configured (33.3). Every outbound wake moves
 `careeros.push.delivery{outcome="sent"|"gone"|"refused"|"not_configured"}`, one
 registration per attempt; the episode's `notification_states.pushed_at` is written only
-when some browser accepted, and a `gone` registration is deleted on the spot. No page is
-attached to this counter: an install without VAPID keys reports `not_configured` every
-morning by design, a refused wake is retried tomorrow, and `sent` sitting at zero while
-registrations exist is a dashboard question rather than a paging one — the mail sweep's
-own clock already pages when the pass itself stops.
+when some browser accepted, and a `gone` registration is deleted on the spot.
+Three `refused` wakes in a day page — `CareerOSPushDeliveryFailing`, whose page is
+`docs/RUNBOOK.md#the-wake-a-push-service-refused`. The other outcomes stay
+unpaged on purpose: a refusal that clears costs one silent morning and the next pass asks the
+same browser again, an install without VAPID keys reports `not_configured` every morning by
+design, and `sent` sitting at zero while registrations exist is a dashboard question rather
+than a paging one — the mail sweep's own clock already pages when the pass itself stops.
 
 A reminder that comes due is rung when it comes due (35.1), and its letter is written then
 (41.1). `careeros.reminders.tick-ms`
