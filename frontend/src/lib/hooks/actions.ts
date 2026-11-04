@@ -710,7 +710,9 @@ export function useNoteMutations() {
 export function useCreateInterviewSession() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: { jobId?: string; applicationId?: string; mode?: string; difficulty?: number }) =>
+    // `difficulty` is not one of these: the create record has no component for it, so Jackson
+    // would drop it without a word, and the ladder is set by the difficulty step instead.
+    mutationFn: (body: { jobId?: string; applicationId?: string; mode?: string }) =>
       api.create<{ id?: string; session?: { id: string }; session_id?: string }>(
         endpoints.interviews,
         body

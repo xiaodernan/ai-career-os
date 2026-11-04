@@ -178,24 +178,67 @@ def hooks_using_note_route() -> dict[str, str]:
 
 
 def search_group_rows() -> list[dict[str, str]]:
-    """The `SEARCH_GROUPS` table, read as rows: key, type, label and the href arrow's body."""
+    """The `SEARCH_GROUPS` table, read as rows: key, type, label and the href arrow's body.
+
+    Brace-matched, not line-matched. Five of the seven rows are written on one line and two are not
+    -- an explanatory comment above the row and a `href` whose arrow returns a ternary or a block --
+    and the single-line pattern this walk ran before parses the five and reports the other two as
+    absent. That is the defect this file hunts on the screen's side, running on the gate's own side:
+    a row the reader could not parse is indistinguishable from a group the table does not have, and
+    the floor that should have caught it (`>= 4`) cleared at five out of seven. So the walk now
+    counts the rows the array declares by a second, cheaper reading (`key:`) and refuses to return
+    a number that disagrees with it.
+    """
     text = read(NORMALIZE)
-    start = text.index("export const SEARCH_GROUPS")
-    opener = text.index("= [", start) + 2
+    opener = text.index("= [", text.index("export const SEARCH_GROUPS")) + 3
     depth = 0
-    for index in range(opener, len(text)):
-        if text[index] == "[":
+    for end in range(opener, len(text)):
+        char = text[end]
+        if char == "[":
             depth += 1
-        elif text[index] == "]":
-            depth -= 1
+        elif char == "]":
             if depth == 0:
                 break
+            depth -= 1
     else:
         raise AssertionError("no closing ] for the SEARCH_GROUPS array -- the walk would read a prefix")
-    rows = re.findall(r'\{ key: "(\w+)", type: "(\w+)", label: "(\w+)", href: \((.*?)\)\s*=>\s*(.*?)\s*\},?$',
-                      text[opener:index], re.M)
-    assert len(rows) >= 4, f"the group-table walk found only {len(rows)} rows: {rows}"
-    return [dict(zip(("key", "type", "label", "href_args", "href_body"), row)) for row in rows]
+    array = text[opener:end]
+
+    chunks: list[str] = []
+    depth = 0
+    begin = 0
+    for index, char in enumerate(array):
+        if char == "{":
+            depth += 1
+            if depth == 1:
+                begin = index
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                chunks.append(array[begin:index + 1])
+    declared = len(re.findall(r'\bkey:\s*"', array))
+    assert len(chunks) == declared >= 4, (
+        f"the row walk parsed {len(chunks)} rows out of the {declared} the array declares: a row it "
+        "cannot read is a group the palette stops promising and /search still answers")
+
+    rows = []
+    for chunk in chunks:
+        inner = chunk[1:-1]
+        # Every field read on its own line of search: two of the seven rows carry a comment between
+        # `label:` and `href:`, and a pattern demanding all four in one run is a walk that loses
+        # exactly those two -- which is how the row below `applications` left the census unnoticed.
+        found = {name: re.search(r'\b%s:\s*"(\w+)"' % name, inner) for name in ("key", "type", "label")}
+        arrow = re.search(r'\bhref:\s*\(([^)]*)\)\s*=>', inner)
+        lost = [name for name, match in found.items() if match is None]
+        if arrow is None:
+            lost.append("href")
+        assert not lost, (
+            f"a SEARCH_GROUPS row lost {lost}, so this walk cannot say where its hits link: "
+            f"{' '.join(inner.split())[:140]}")
+        rows.append({"key": found["key"].group(1), "type": found["type"].group(1),
+                     "label": found["label"].group(1), "href_args": arrow.group(1).strip(),
+                     "href_body": " ".join(inner[arrow.end():].split())})
+    return rows
 
 
 def query_keys(rel: str) -> dict[str, list[tuple[str, str]]]:
@@ -380,8 +423,9 @@ def test_the_knowledge_screen_keeps_one_page_hook_and_the_notes_reader_lives_in_
 def test_the_group_table_links_notes_to_the_screen_that_now_renders_them() -> None:
     """The notes row's `href` is a constant, so its destination is a screen, and that screen renders notes."""
     rows = search_group_rows()
-    assert [r["key"] for r in rows] == ["jobs", "companies", "resumes", "notes", "conversations", "applications"], \
-        f"the group table's rows or order moved, so the palette's sentence names a different list: {[r['key'] for r in rows]}"
+    assert [r["key"] for r in rows] == [
+        "jobs", "companies", "resumes", "notes", "conversations", "applications", "letters",
+    ], f"the group table's rows or order moved, so the palette's sentence names a different list: {[r['key'] for r in rows]}"
     notes = next(r for r in rows if r["key"] == "notes")
     assert notes["href_args"] == "" and notes["href_body"] == '"/knowledge"', \
         f"the notes row now links somewhere that carries an id ({notes['href_args']} => {notes['href_body']}): " \
@@ -399,7 +443,7 @@ def test_the_palette_sentence_is_built_from_that_table_and_the_notes_group_is_ba
     """`searchGroupNames()` is the footer's subject: the sentence on screen is the table, not a typed string."""
     labels = [r["label"].lower() for r in search_group_rows()]
     sentence = ", ".join(labels[:-1]) + f" and {labels[-1]}"
-    assert sentence == "jobs, companies, resumes, notes, conversations and applications", \
+    assert sentence == "jobs, companies, resumes, notes, conversations, applications and letters", \
         f"the capability line the footer prints changed: {sentence}"
     assert "notes" in labels, f"the palette stopped promising notes: {labels}"
 

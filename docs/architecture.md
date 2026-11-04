@@ -214,6 +214,17 @@ user-scoped table (ownership is enforced in backend layer + a single SQL predica
   → the timeline: one row per transition, append-only. `GET /applications/{id}/timeline`
   replays it and the dashboard's recent activity reads it, so a card's history is a
   query rather than a diff of two states.
+- `application_letters(id, application_id, user_id, job_id nullable, resume_version_id
+   nullable, mode, tone, length, body, created_at, updated_at)`
+  → the letter itself, kept rather than relayed (roadmap 47.4): the row records which
+  application it was written for and, when the text came from the generator, which
+  posting and which resume version it was written against and with which dials, so the
+  drawer can show the words as the reader left them. `updated_at` is the correction's
+  moment (50.2) and `created_at` the keeping's, and the panel says which of the two the
+  text belongs to. Both foreign keys are `ON DELETE SET NULL` and the parent is
+  `ON DELETE CASCADE`: a letter outlives the posting it argued for, and goes with the
+  application it was sent to. It is the reader's own prose, so it travels in the export
+  bundle as its own section rather than as bookkeeping.
 - `contacts(id, user_id, name, role, company, relation, email, notes, last_touch_at,
    created_at, updated_at)`
   → the people a search actually touches (roadmap 11.1), kept so the outreach generator

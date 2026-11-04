@@ -3,9 +3,16 @@
 InterviewController has two entry points with typed request bodies:
 
 1. ``POST /interview/sessions`` -- create an interview session. Binds
-   ``CreateSessionRequest(jobId, jdId, resumeVersionId, companyName, positionTitle, mode, difficulty)``
-   where all fields are optional with multiple ``@JsonAlias`` spellings. The frontend calls this through
-   ``useCreateInterviewSession`` in ``actions.ts``, sending ``{ jobId, mode, difficulty }``.
+   ``CreateSessionRequest(jobId, jdId, resumeVersionId, applicationId, companyName, positionTitle, mode, config)``
+   where every field is optional and the first five carry ``@JsonAlias`` snake_case spellings. The
+   frontend calls this through ``useCreateInterviewSession`` in ``actions.ts``, sending
+   ``{ jobId, applicationId, mode }``.
+
+   ``difficulty`` is not among the eight: the session row has the column and the ``PATCH /{id}`` map
+   accepts the key, but the create record has no component for it -- and Jackson drops a body
+   property the target record lacks without an error, a warning or a log line. Case 9 reads the
+   hook's own declared body type against the record's components, because a field a caller can
+   type and the server silently forgets is a dial that does nothing.
 
 2. ``POST /interview/sessions/{id}/answer`` -- submit an answer for evaluation. Binds
    ``AnswerRequest(answer)`` where ``answer`` is required (``@NotBlank``). The frontend calls this
@@ -17,7 +24,8 @@ included in this gate.
 This gate holds the contract at both ends:
 
 - Each DTO declares exactly the expected field names (no extra fields silently accepted).
-- Every call site in the app sends exactly those names (no alias the server cannot bind).
+- Every call site in the app sends exactly those names (no alias the server cannot bind), and the
+  create hook's declared body type asks for nothing the record has no component for.
 - The ``@NotBlank`` guard is armed on ``answer`` in AnswerRequest.
 - The mutation failure paths are announced via ``fail()``.
 
@@ -112,11 +120,12 @@ def ts_call_bodies(fn_name: str, source: str) -> list[str]:
     return blocks
 
 
-# --------------------------------------------------------------------------- case 1: CreateSessionRequest has seven fields
+# --------------------------------------------------------------------------- case 1: CreateSessionRequest has eight fields
 
-def test_the_create_session_request_dto_declares_seven_names():
+def test_the_create_session_request_dto_declares_eight_names():
     fields = java_record_fields("CreateSessionRequest", dto_source())
     assert sorted(fields) == [
+        "applicationId",
         "companyName",
         "config",
         "jdId",
@@ -234,4 +243,28 @@ def test_the_interview_mutations_announce_their_failures():
     assert 'fail(' in body_answer, "useSubmitInterviewAnswer onError does not call fail()"
     assert 'fail("failures.answerEvaluate")' in body_answer, (
         "useSubmitInterviewAnswer failure key changed"
+    )
+
+
+# --------------------------------------------------------------------------- case 9: the create hook asks only for names the record binds
+
+def test_the_create_session_hook_declares_no_field_the_record_drops():
+    # The other eight cases compare the record to the doc and the call sites to the endpoint. This
+    # one compares the caller's *type* to the record's components, which is where a request field
+    # that reaches nobody lives: Jackson has no component to put `difficulty` in, so it forgets the
+    # key, answers 201, and the browser holds a session at the default ladder with nothing said.
+    fields = set(java_record_fields("CreateSessionRequest", dto_source()))
+    bodies = ts_call_bodies("useCreateInterviewSession", actions_source())
+    assert bodies, "useCreateInterviewSession not found in actions.ts"
+    declared = re.search(r"body:\s*\{([^}]*)\}", bodies[0])
+    assert declared, (
+        "the create hook no longer declares its body keys as a type literal, so this gate has "
+        "nothing to compare and a caller's unread field is free again"
+    )
+    sent = {match.group(1) for match in re.finditer(r"\b([A-Za-z][A-Za-z0-9]*)\??\s*:", declared.group(1))}
+    assert sent, "the create hook's body type lists no key at all"
+    dropped = sorted(sent - fields)
+    assert not dropped, (
+        f"useCreateInterviewSession offers {dropped}, which CreateSessionRequest has no component "
+        "for -- the server drops the property without an error or a log line"
     )

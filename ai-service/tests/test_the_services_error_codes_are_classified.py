@@ -140,6 +140,13 @@ SAME_MEANING: frozenset[str] = frozenset({
     # vagueness would only hide the field they just mistyped. The reader's move
     # is the same at either door -- type the password again.
     "INVALID_CREDENTIALS",
+    # "Request validation failed" is what the envelope handler answers for every
+    # bean-validation refusal, and "The letter is empty" is what the letter
+    # service answers for a compose with no text (51.1). The table's sentence --
+    # "The request data is not valid." -- is true of both, and the reader's move
+    # is the same either way: change what was sent and send it again. A finer
+    # code could name the field, and nothing on screen reads a field name.
+    "VALIDATION_FAILED",
 })
 
 

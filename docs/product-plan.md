@@ -63,7 +63,7 @@ core → ai core → features → frontend → quality → delivery.
   reminders, linked resume version/jd/match
 - F8.2 Dashboard: greeting, attention counts, progress, pipeline, recommended jobs,
   skill gaps, recent AI insights, resume score, AI usage/cost
-- F8.3 ⌘K global search across jobs/companies/resumes/notes/conversations/applications
+- F8.3 ⌘K global search across jobs/companies/resumes/notes/conversations/applications/letters
 
 ## Epic 9 — Quality & Delivery
 - F9.1 Unit + integration tests all services; API tests with envelope/auth assertions

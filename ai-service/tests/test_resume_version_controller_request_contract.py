@@ -10,8 +10,11 @@ contract is the query parameter the list route binds:
 
 2. ``GET /resume-versions/{id}`` -- an unnamed ``@PathVariable`` whose parameter name must
    stay the template's variable name. ``endpoints.resumeVersion`` (singular) maps the path,
-   and a census over ``frontend/src`` shows it ships with **zero clients** -- the route is
-   served but never fetched.
+   and it ships with exactly one client: ``useResumeVersion`` in ``resources.ts``, read by the
+   application drawer's letters shelf (54.2), which holds the id of the version a letter was
+   written with and needs the name and the resume page that owns it. Case 9 pins the member,
+   its one caller and its one screen, because a route that is served and never fetched is a
+   route nobody notices when it breaks.
 
 3. ``POST /resume-versions/{id}/print`` (19.5) -- the one write. The version is the path,
    and the request body is exactly one field, ``locale``, which the renderer needs because
@@ -32,9 +35,9 @@ claim the join as new ground.
 What only this gate holds: the binding *modifiers* the name-oriented vitest rules cannot see
 (``required = false``, a ``defaultValue``, the ``UUID`` type), the hook's ``enabled`` guard,
 the panel's failure affordance, the user-scoped forwarding calls with their argument order,
-the path-variable name join, and the census of the client-free singular member (the vitest
-registry records the *route* ``/resume-versions/{}`` as never fetched; this census counts
-references to the *member* and pins its template). It does NOT re-pin what earlier gates
+the path-variable name join, and the census of the singular member's one client (it counts the
+references to the *member*, names the hook that calls it and the screen that renders it, and pins
+its template, so the route can neither lose its only reader nor gain a second silent one here). It does NOT re-pin what earlier gates
 already hold: the ``/api/v1`` + member path join (#192's mapper-ship gate), the
 ``["resume", resumeId, "versions"]`` query key and the detail screen's
 ``useResumeVersions(id)`` call (#197), or the mapper's per-item reads (#122/#192).
@@ -260,31 +263,53 @@ def test_the_item_route_takes_its_path_variable_from_the_template():
     )
 
 
-# --------------------------------------------------------------------------- case 9: the client-free singular route
+# --------------------------------------------------------------------------- case 9: the singular route's one client is named
 
-def test_the_single_version_route_ships_with_no_client():
+def test_the_single_version_route_has_one_client_and_that_client_is_named():
     root = ROOT / "frontend" / "src"
     files = sorted(list(root.rglob("*.ts")) + list(root.rglob("*.tsx")))
     assert len(files) >= 100, (
         "the census walked %d files; the floor is 100, so this is a walk bug, not an "
         "absence" % len(files)
     )
-    hits = []
-    for p in files:
-        text = p.read_text(encoding="utf-8")
-        for m in re.finditer(r"resumeVersion\b", text):
-            hits.append((p.relative_to(ROOT).as_posix(), text.count("\n", 0, m.start()) + 1))
-    assert len(hits) == 1, (
-        "the singular endpoint member resumeVersion has %d references; if a real client "
-        "appeared, pin it instead of re-freezing this census:\n%s" % (len(hits), hits)
-    )
-    where, line = hits[0]
-    assert where == "frontend/src/lib/api/endpoints.ts", (
-        "the only resumeVersion reference moved to %s:%d" % (where, line)
-    )
+
+    def spellings(pattern: str) -> dict[str, int]:
+        out: dict[str, int] = {}
+        for path in files:
+            found = len(re.findall(pattern, path.read_text(encoding="utf-8")))
+            if found:
+                out[path.relative_to(ROOT).as_posix()] = found
+        return out
+
+    # Named, not counted. A census that only says "one reference" is satisfied by the declaration
+    # alone -- which is how this route stayed un-read for three waves -- so the two spellings are
+    # pinned to the files that write them, and a second silent caller reds here instead of at
+    # runtime. `\bresumeVersion\b` cannot match the plural member or `mapResumeVersion`, so the
+    # population is exactly the singular one.
+    member = spellings(r"\bresumeVersion\b")
+    assert member == {
+        "frontend/src/lib/api/endpoints.ts": 1,
+        "frontend/src/lib/hooks/resources.ts": 1,
+    }, (
+        "the singular member is spelled by %s, and this gate names every author of it: a new "
+        "caller is a screen that now depends on the route, and a rename is a 404" % sorted(member))
     assert "resumeVersion: (id: string) => `/resume-versions/${seg(id)}`," in read(ENDPOINTS), (
-        "the member's own template changed; if it gained a client, re-home this census"
-    )
+        "the member's own template changed; re-home this census with it")
+
+    hook = ts_call_bodies("useResumeVersion", resources_source())
+    assert len(hook) == 1, f"useResumeVersion is declared {len(hook)} times in resources.ts"
+    assert 'queryKey: ["resume-version", id]' in hook[0] and "enabled: Boolean(id)" in hook[0], (
+        "the hook's cache key or its disabled-until-an-id-exists guard moved, so the read this "
+        "gate calls the route's only client is not the read that ships")
+    assert "endpoints.resumeVersion(id!)" in hook[0], (
+        "the hook no longer asks the singular route for the id it was handed")
+
+    screens = sorted(p for p in spellings(r"\buseResumeVersion\(")
+                     if p != "frontend/src/lib/hooks/resources.ts")
+    assert screens == ["frontend/src/components/applications/application-letters.tsx"], (
+        f"the kept-letters shelf was the route's only reader; {screens} now read it too, and the "
+        "shelf's assumption -- that a letter carries a version id and nothing else -- is a shared "
+        "one")
 
 
 # --------------------------------------------------------------------------- case 10: the print write

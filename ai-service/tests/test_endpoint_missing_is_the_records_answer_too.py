@@ -16,8 +16,8 @@ are measurable, and this file pins them:
   whose job was deleted that their build is the wrong version. The second shell used to
   read the status alone, so a gone record landed on the screen's "nothing here yet" hint;
   it reads ``error.code`` now and a record that is gone reaches ``ErrorState``.
-  The backend answers 404 from thirty-six places -- thirty-five ``ApiErrorCode`` constants (one
-  that means "this route is not served", thirty-four that name a record) and one
+  The backend answers 404 from thirty-seven places -- thirty-six ``ApiErrorCode`` constants (one
+  that means "this route is not served", thirty-five that name a record) and one
   ``NoResourceFoundException`` handler that means "this route is not served" -- and it puts the
   distinguishing name in ``error.code`` on the wire. The historical fold is what the last
   screen-level case records: a deleted agent run opened at ``/activity/[id]`` used to render
@@ -90,7 +90,8 @@ OWN_FLAG_SCREENS = [
     "frontend/src/app/(app)/settings/page.tsx",
 ]
 NF_CODES = [
-    "AI_SERVICE_NOT_FOUND", "APPLICATION_NOT_FOUND", "CALENDAR_LINK_INVALID",
+    "AI_SERVICE_NOT_FOUND", "APPLICATION_LETTER_NOT_FOUND", "APPLICATION_NOT_FOUND",
+    "CALENDAR_LINK_INVALID",
     "COMPANY_NOT_FOUND", "CONTACT_NOT_FOUND",
     "CONVERSATION_NOT_FOUND", "DOCUMENT_KEY_NOT_OWNED", "DOCUMENT_NOT_FOUND",
     "INBOUND_LINK_INVALID", "INBOUND_MAIL_NOT_FOUND",
@@ -250,10 +251,10 @@ def test_the_missing_endpoint_rule_reads_the_code_and_the_client_keeps_it():
 def test_the_backend_answers_404_for_records_and_for_routes_in_the_same_status():
     codes = not_found_codes()
     assert sorted(codes) == NF_CODES, "%d codes answer 404: %s" % (len(codes), sorted(codes))
-    assert len(codes) == len(set(codes)) == 35, "the 404 table moved; this file reads 35 constants"
+    assert len(codes) == len(set(codes)) == 36, "the 404 table moved; this file reads 36 constants"
     assert status_of("BAD_REQUEST") and status_of("FORBIDDEN"), "the enum walk is blind -- it read no other status"
     record = [c for c in codes if c != "NOT_FOUND"]
-    assert len(record) == 34, "%d of the 404 codes name a record, not a route" % len(record)
+    assert len(record) == 35, "%d of the 404 codes name a record, not a route" % len(record)
     window = handler_404()
     assert "ApiErrorCode.NOT_FOUND" in window and "Resource not found" in window, (
         "the unmapped-route handler no longer answers the bare NOT_FOUND code: %s" % window)
@@ -386,5 +387,5 @@ def test_this_gate_reads_the_envelope_and_the_branches_it_claims():
     assert "items: arr.map(map)," in read(NORMALIZE), "the page builder no longer writes items"
     for rel in (BOUNDARY, MODULE_VIEW, MISSING, CLIENT, NORMALIZE, CODES, HANDLER, RUN_DETAIL):
         assert (ROOT / rel).exists(), "%s is not where this file reads it" % rel
-    assert len(not_found_codes()) == 35 and len(boundary_users()) == 5
+    assert len(not_found_codes()) == 36 and len(boundary_users()) == 5
     assert len(module_view_users()) == 5 and len(OWN_FLAG_SCREENS) == 16

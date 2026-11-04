@@ -813,10 +813,37 @@ function printableResidue(body: string): string {
       ident = "";
       continue;
     }
-    if (c === '"' || c === "'" || c === "`") {
+    if (c === '"' || c === "'") {
       const end = body.indexOf(c, i + 1);
       out.push(" ");
       i = end < 0 ? i + 1 : end + 1;
+      ident = "";
+      continue;
+    }
+    // A template literal's prose is not a word the node draws, but each `${…}` is:
+    // the metadata line this gate grew up around prints its value inside one, and
+    // blanking the whole literal read the interpolation as a string and missed it.
+    if (c === "`") {
+      let k = i + 1;
+      while (k < body.length && body[k] !== "`") {
+        if (body[k] === "\\") {
+          k += 2;
+          continue;
+        }
+        if (body[k] === "$" && body[k + 1] === "{") {
+          const end = skipBalanced(body, k + 1);
+          if (end < 0) {
+            k = body.length;
+            break;
+          }
+          out.push(printableResidue(body.slice(k + 2, end)));
+          k = end + 1;
+          continue;
+        }
+        k++;
+      }
+      out.push(" ");
+      i = k + 1;
       ident = "";
       continue;
     }
