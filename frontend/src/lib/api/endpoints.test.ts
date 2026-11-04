@@ -1129,8 +1129,8 @@ describe("endpoints ↔ backend route parity", () => {
     expect(new Set(handlers.map((h) => `${h.verb} ${h.pattern}`)).size).toBe(handlers.length);
     expect(handlers.flatMap((h) => h.unparsed)).toEqual([]);
     const bound = handlers.flatMap((h) => h.params);
-    expect(bound.length).toBe(51);
-    // 51 parameters in 23 distinct names, measured: the reader's whole answer rather than a spot
+    expect(bound.length).toBe(53);
+    // 53 parameters in 24 distinct names, measured: the reader's whole answer rather than a spot
     // check, so a signature shape it stops understanding shrinks this set instead of passing quiet
     // (#225 retired `limit` from `/activity/runs`, which now pages like every other list route;
     // 19.2 brought the name back for `GET /ingestion/runs` as a newest-N history, and 19.5 retired
@@ -1142,12 +1142,13 @@ describe("endpoints ↔ backend route parity", () => {
     // `/applications` for one posting, adding `jobId` (47 -> 48), and 49's reading chips add
     // `intent` to the same reply list (48 -> 49); a card's rehearsal list adds `applicationId`
     // to `/interviews` (49 -> 50), and 49.4's chip counts bind `q` again on their own route
-    // (50 -> 51). The three latest names are in this set now.)
+    // (50 -> 51); 49.5's unfiled switch binds `unfiled` on the reply list and on its intent
+    // counts (51 -> 53), a name this set did not have. The four latest names are in it now.)
     expect(new Set(bound.map((p) => p.name))).toEqual(
       new Set([
         "agent", "applicationId", "company", "documentId", "file", "intent", "jobId", "kind",
         "kinds", "locale", "location", "maxSalary", "minSalary", "page", "q", "remote",
-        "resumeId", "size", "skills", "sort", "status", "title", "token",
+        "resumeId", "size", "skills", "sort", "status", "title", "token", "unfiled",
       ])
     );
     // seven of them spell the name Spring matches on inside the annotation, so the reader's attribute
