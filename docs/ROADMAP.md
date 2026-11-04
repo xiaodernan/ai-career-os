@@ -4096,7 +4096,7 @@ application has: remove a row, correct one, and take one out of the product.
   (The drawer's expanded letter gains `Copy text` and `Download .md`, both reading the same body
   the panel already shows: a letter kept here is the reader's, and it has to be usable in the mail
   client that will actually send it. The file is named after the posting when its title has latin
-  letters (`cover-letter-senior-frontend-engineer.md`) and after the letter's own id when it does
+  letters (`cover-letter-<posting-slug>.md`) and after the letter's own id when it does
   not, so a Chinese title never collapses into one shared `document`. An empty letter offers
   neither action rather than copying nothing. 4 pure-function tests and 2 extra SSR tests.)
 

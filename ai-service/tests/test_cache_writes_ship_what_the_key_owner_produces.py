@@ -120,9 +120,11 @@ QC_CALL = re.compile(r"(?<![\w$])qc\.(\w+)\s*(?=<|\()")
 #: three walks can be made to agree per file rather than merely in total.
 CLIENT_CALLS = {
     # 53 rather than 52 since 43.1: answering a due reminder on the dashboard also tells the
-    # inbox to refetch, because it lists the same reminder as a row of its own.
+    # inbox to refetch, because it lists the same reminder as a row of its own. 56 with the kept
+    # letter's three writes (1076949's save, 5080e67's delete and bff366d's correction): each
+    # refreshes the shelf it wrote to.
     ACTIONS: {"cancelQueries": 3, "getQueriesData": 2, "getQueryData": 1,
-              "invalidateQueries": 53, "removeQueries": 1, "setQueriesData": 2, "setQueryData": 5},
+              "invalidateQueries": 56, "removeQueries": 1, "setQueriesData": 2, "setQueryData": 5},
     # 38.3-38.5: three writes refresh the open-doors list, and the erase drops the cache.
     ACCOUNT_HOOKS: {"clear": 1, "invalidateQueries": 3},
     ANALYTICS_HOOKS: {"invalidateQueries": 1},
@@ -836,7 +838,10 @@ def test_the_key_the_merge_invents_is_emitted_once_translated_once_and_acted_on_
 
 def test_the_docstring_that_lists_the_patch_names_a_strict_subset_of_the_body_the_caller_sends():
     text = read(ACTIONS)
-    window = text[max(0, text.index("export function useUpdateApplication") - 400) : text.index("export function useUpdateApplication")]
+    # The hook's own opener, paren included: `useUpdateApplicationLetter` shares the prefix, and
+    # without the boundary the window read the letter hook's docstring instead (bff366d).
+    at = text.index("export function useUpdateApplication(")
+    window = text[max(0, at - 400) : at]
     docs = re.findall(r"^/\*\* (.*) \*/$", window, re.M)
     assert docs, "useUpdateApplication has no docstring above it"
     doc = docs[-1]

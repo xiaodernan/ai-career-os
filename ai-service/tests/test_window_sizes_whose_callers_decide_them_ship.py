@@ -108,7 +108,9 @@ WIRE = {
     "useResumes": ("resumes", "{ size: 20, ...(params ?? {}) }"),
     "useJobs": ("jobs", "{ size: 20, ...clean }"),
     "useSavedJobs": ("savedJobs", None),
-    "useApplications": ("applications", "{ size: 50, ...(params ?? {}) }"),
+    # 5080e67 spelled the board's query out (status and jobId beside page and size) when the
+    # drawer's delete joined this gate; the hook still defaults the window to the route's 50.
+    "useApplications": ("applications", "{ size: params?.size ?? 50, page: params?.page, status: params?.status, jobId: params?.jobId, }"),
     "useCompanies": ("companies", "{ size: 20, ...(params ?? {}) }"),
     "useKnowledgeSources": ("knowledge", "{ size: 20, documentId, ...(params ?? {}) }"),
     "useKnowledgeNotes": ("knowledgeNotes", "{ size: 20, ...(params ?? {}) }"),
@@ -125,8 +127,9 @@ WIRE = {
     # `q` beside the window -- and reads the window off the caller with 50 as the default, because a
     # conditional spread is the shape the endpoint gate refuses to guess at. `literal_size` below
     # reads that default: the number the hook offers when nobody decides is still the number a
-    # server clamp has to cover.
-    "useInboundMails": ("inboundMails", "{ size: params?.size ?? 50, page: params?.page, q, }"),
+    # server clamp has to cover. 49.2's intent chip adds `intent` beside `q`, so a narrowed
+    # inbox asks the server the same question the page is showing.
+    "useInboundMails": ("inboundMails", "{ size: params?.size ?? 50, page: params?.page, q, intent, }"),
 }
 
 # Measured call sites, one walk; case 3 re-derives them. `""` is a call with no arguments.
@@ -153,7 +156,8 @@ SITES = {
     "useKnowledgeNotes": [("components/knowledge/notes-panel.tsx",
                           "{ page: state.npage, size: PAGE_SIZE }")],
     "useInterviewSessions": [("app/(app)/interviews/page.tsx",
-                              "{ page: state.page, size: PAGE_SIZE }")],
+                              # 57.1's narrowed list passes the card it is showing.
+                              "{ page: state.page, size: PAGE_SIZE, applicationId, }")],
     "useActivityRuns": [("app/(app)/activity/page.tsx",
                          "{ page: state.page, size: PAGE_SIZE }"),
                         ("app/(app)/dashboard/page.tsx", "{ size: 5 }")],
@@ -164,7 +168,7 @@ SITES = {
     "useNightlyReports": [("components/monitoring/nightly-history.tsx",
                            "{ page, size: PAGE_SIZE }")],
     "useInboundMails": [("app/(app)/replies/page.tsx",
-                         "{ page: state.page, size: PAGE_SIZE, q: state.q }")],
+                         "{ page: state.page, size: PAGE_SIZE, q: state.q, intent: state.intent, }")],
 }
 
 # route path -> the `defaultValue` on the handler's `int size` parameter, or None if it binds none.

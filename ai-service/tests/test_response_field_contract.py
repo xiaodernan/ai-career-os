@@ -110,6 +110,9 @@ from tests.test_response_shape_contract import (
 # annotated fields `model_dump()` emits verbatim.
 PRODUCERS = {
     "ApplicationItem": ("java", "application/dto/ApplicationDtos.java"),
+    # 1076949's kept-letter row: the same file declares `LetterItem`, whose ten components are
+    # the ten names `normalizeCoverLetter` reads.
+    "LetterItem": ("java", "application/dto/ApplicationDtos.java"),
     # The packet's three artifacts and its envelope (roadmap 47.1). Each is its own record in the
     # same file, so a read of the resume's title is checked against `PacketResume` rather than the
     # envelope that carries it.
@@ -151,6 +154,8 @@ PRODUCERS = {
     "NoteHit": ("java", "search/dto/SearchDtos.java"),
     "ConversationHit": ("java", "search/dto/SearchDtos.java"),
     "ApplicationHit": ("java", "search/dto/SearchDtos.java"),
+    # a7ea329's seventh group: the letter hit the palette opens the drawer with.
+    "LetterHit": ("java", "search/dto/SearchDtos.java"),
     "DashboardResponse": ("java", "report/dto/DashboardDtos.java"),
     "Kanban": ("java", "report/dto/DashboardDtos.java"),
     "ResumeSummary": ("java", "report/dto/DashboardDtos.java"),
@@ -490,6 +495,17 @@ READERS: dict[str, dict] = {
         "blind": {},
         "dynamic": {},
     },
+    "normalizeCoverLetter": {
+        # 1076949's kept-letter shelf: one `LetterItem` per row, the same record both the read
+        # route and the correction answer with. All ten names are that record's components,
+        # camelCase because the Java record is the only producer on this direction; the
+        # `letter-${index}` id fallback invents a key for a row without an id but reads no name.
+        "record_of": {"raw": "LetterItem"},
+        "drilled": {},
+        "elements": {},
+        "blind": {},
+        "dynamic": {},
+    },
     "normalizeJob": {
         # `raw` is deliberately bound to all three job payloads: the saved-jobs list hands over a
         # SavedJobItem and the reader's first statement unwraps it (`raw = rec(pick(raw, "job", …))`),
@@ -796,18 +812,18 @@ READERS: dict[str, dict] = {
     },
     "normalizeSearch": {
         # One endpoint feeds this mapper (`GET /search` via `useGlobalSearch` and the palette), and
-        # its answer is `SearchResponse`: seven flat components, six of them `List<*Hit>`. There is
+        # its answer is `SearchResponse`: eight flat components, seven of them `List<*Hit>`. There is
         # no other shape. The reader also used to accept `{groups:[…]}` and a flat `{items:[…]}`;
         # nothing on either service emits either name for this route, so #128 deleted both paths along
         # with the two tests that fed them invented payloads -- a fallback a producer cannot reach is
         # a shape the mapper would silently reinterpret rather than a tolerance anyone needs.
         # `h` is a hit of whichever group is being rendered, which is why it is bound to the union of
-        # the six records rather than to one of them: a name only `CompanyHit` carries is a real read
+        # the seven records rather than to one of them: a name only `CompanyHit` carries is a real read
         # for companies and a blank for jobs, and the palette shows a blank subtitle by design.
         # `_search_hits` is what keeps that union honest rather than hand-picked.
         "record_of": {"raw": "SearchResponse",
                       "h": ["JobHit", "CompanyHit", "ResumeHit", "NoteHit",
-                            "ConversationHit", "ApplicationHit"]},
+                            "ConversationHit", "ApplicationHit", "LetterHit"]},
         "drilled": {},
         "elements": {"h": "arr"},
         "blind": {},
@@ -1330,11 +1346,16 @@ def _key_read_calls(source: str) -> tuple[dict, ...]:
     return tuple(sorted(calls, key=lambda call: call["line"]))
 
 
-def _search_group_keys() -> list[str]:
-    """The list names `SEARCH_GROUPS` walks, read out of that table rather than repeated here."""
+def _search_groups_table() -> str:
+    """The `SEARCH_GROUPS` declaration from its `export const` to the closing bracket."""
     source = NORMALIZE.read_text(encoding="utf-8")
     start = source.index("export const SEARCH_GROUPS")
-    return re.findall(r'key:\s*"([^"]+)"', source[start:source.index("\n];", start)])
+    return source[start:source.index("\n];", start)]
+
+
+def _search_group_keys() -> list[str]:
+    """The list names `SEARCH_GROUPS` walks, read out of that table rather than repeated here."""
+    return re.findall(r'key:\s*"([^"]+)"', _search_groups_table())
 
 
 def _search_hits() -> dict[str, str]:
@@ -1936,7 +1957,7 @@ def test_a_producer_kind_is_dispatched_by_name_and_never_by_the_fallback():
     raised about a BaseModel that was never declared, or found one and answered the site with keys no
     code writes.
 
-    Measured on this plane: 85 producer rows over 12 kinds -- `java` 51, `pyskel` 9, `pyappend` 6,
+    Measured on this plane: 87 producer rows over 12 kinds -- `java` 53, `pyskel` 9, `pyappend` 6,
     `pyfunc` 6, `pyconst` 3, `pydantic` 3, `jamapof` 2, `japut` 1, `pyadd` 1, `pycons` 1, `pyitem` 1,
     `pyretsub` 1. Both ends come out of the same walk over this file, so a branch and a row cannot
     drift apart quietly.
@@ -1956,12 +1977,14 @@ def test_a_producer_kind_is_dispatched_by_name_and_never_by_the_fallback():
     # 79 with 20.1's two nightly records, both Java rows in the same file; 80 with 20.2's
     # `NightlyVerdict`, the third row that file declares; 81 with the apply receipt, whose reader
     # (`normalizeApplyResult`, `a0eb950`) had been bound to a producer the table never named.
-    assert len(PRODUCERS) == 85, f"{len(PRODUCERS)} rows: the population the counts below are drawn from"
+    # 87 with the kept-letter wave's two records: `LetterItem` (1076949), which `normalizeCoverLetter`
+    # reads, and `LetterHit` (a7ea329), the seventh hit the search palette binds.
+    assert len(PRODUCERS) == 87, f"{len(PRODUCERS)} rows: the population the counts below are drawn from"
     assert set(counts) == dispatched, \
         (f"the table uses {sorted(set(counts) - dispatched)} with no branch and the chain compares "
          f"{sorted(dispatched - set(counts))} with no rows: a kind that lost its branch has to gain "
          "one, and a kind that lost its rows has to lose the branch or gain the rows back")
-    assert sorted(counts.items()) == [("jamapof", 2), ("japut", 1), ("java", 51), ("pyadd", 1),
+    assert sorted(counts.items()) == [("jamapof", 2), ("japut", 1), ("java", 53), ("pyadd", 1),
                                       ("pyappend", 6), ("pycons", 1), ("pyconst", 3),
                                       ("pydantic", 3), ("pyfunc", 6), ("pyitem", 1), ("pyretsub", 1),
                                       ("pyskel", 9)], \
@@ -1984,7 +2007,7 @@ def test_a_producer_kind_is_dispatched_by_name_and_never_by_the_fallback():
     assert "nosuchkind" in raised and "BaseModel" not in raised, \
         (f"{raised}: an unknown kind must be named as itself -- pointing at a pydantic model is the "
          "misattribution this branch exists to remove")
-    assert len(PRODUCERS) == 85, "the planted row is still in the table the census above measured"
+    assert len(PRODUCERS) == 87, "the planted row is still in the table the census above measured"
 
 
 def _emitted_for(receiver: str | list[str]) -> set[str]:
@@ -2592,8 +2615,9 @@ def test_no_mapper_is_left_unbound():
     # `normalizeNightlyReport`, the monitoring page's report reader; 46 with 20.2's
     # `normalizeNightlyVerdict`, the same card's one-answer read; 47 with 19.2's
     # `normalizeApplyResult`, the apply receipt's four names (`a0eb950` added the reader without
-    # moving this population, so the pin had fallen one behind the file).
-    assert len(population) == 51, sorted(population)
+    # moving this population, so the pin had fallen one behind the file). 52 with 1076949's
+    # `normalizeCoverLetter`, the ten names the kept-letter drawer reads off `LetterItem`.
+    assert len(population) == 52, sorted(population)
     private = sorted(name for name, exported in _mapper_declarations() if not exported)
     assert private == ["changeFrom", "groupSkillBuckets", "normalizeAttention", "normalizeFollowUp",
                        "normalizePacketJd", "normalizePacketMatch", "normalizePacketResume",
@@ -2617,8 +2641,10 @@ def _mapper_declarations() -> list[tuple[str, bool]]:
 
 def _mappers_that_read() -> dict[str, int]:
     """Every mapper in normalize.ts -- exported or module-private -- whose own body makes a named read.
-    The two `export const` tables (SEARCH_GROUPS, CHAT_ACTION_ROUTES) hold data, not reads, so they are
-    out of the population by construction rather than by exemption."""
+    The two `export const` tables (SEARCH_GROUPS, CHAT_ACTION_ROUTES) are not function bodies, so they
+    are out of the population by construction rather than by exemption; the one read `SEARCH_GROUPS`
+    holds lives in its letters href and is named by
+    `test_the_census_sees_every_read_the_mappers_hold` instead."""
     return {name: len(sites) for name, _ in _mapper_declarations()
             for sites in [_sites(name)] if sites}
 
@@ -2628,8 +2654,9 @@ def test_the_reads_are_actually_found():
     pinned -- real sites, at the receivers this gate claims to bind, against real components."""
     applications = _sites("normalizeApplication")
     # 22 rather than 20 since the outcome pair: `offerCompensation`/`rejectionReason` joined the
-    # application row when the tracker learned to record terminal outcomes.
-    assert len(applications) == 22
+    # application row when the tracker learned to record terminal outcomes. 23 with 43539de's
+    # `letters` total, the grouped count the board card draws beside the row.
+    assert len(applications) == 23
     assert {s["receiver"] for s in applications} == {"raw", "nested"}
     assert sum(1 for s in applications if s["receiver"] == "nested") == 3
     messages = _sites("normalizeMessages")
@@ -2722,7 +2749,9 @@ def test_the_reads_are_actually_found():
     # `list(raw, g.key)` is the one read of `raw` left, and it has no literal name to check, so the
     # two source-derived lists below are what make it live instead of a candidate table here.
     groups, records = _search_group_keys(), _search_hits()
-    assert groups == ["jobs", "companies", "resumes", "notes", "conversations", "applications"]
+    # a7ea329's seventh group: the palette lists the letters table too.
+    assert groups == ["jobs", "companies", "resumes", "notes", "conversations", "applications",
+                      "letters"]
     assert sorted(groups) == sorted(records)
     assert set(records.values()) == set(READERS["normalizeSearch"]["record_of"]["h"])
     assert set(groups) <= _emitted("SearchResponse")
@@ -2737,6 +2766,7 @@ def test_the_reads_are_actually_found():
         "notes": ["snippet"],
         "conversations": ["snippet"],
         "applications": ["companyName", "status"],
+        "letters": ["snippet"],
     }
     dash = _sites("normalizeDashboard")
     assert len(dash) == 18
@@ -3213,11 +3243,13 @@ def test_the_reads_are_actually_found():
     assert _emitted("RecentRun") - read_off_run == set()
     assert len(_emitted("JobListItem")) == 18
     assert len(_emitted("SavedJobItem")) == 3
-    assert len(_emitted("SearchResponse")) == 7
+    # 8 with a7ea329's `letters`: the seventh `List<*Hit>` beside `query`, off the same record.
+    assert len(_emitted("SearchResponse")) == 8
     assert len(_emitted("SkillGap")) == 3
     # 17, up from 15: the outcome pair (`offerCompensation`, `rejectionReason`) joined the tracker
-    # row when terminal outcomes became writable.
-    assert len(_emitted("ApplicationItem")) == 17
+    # row when terminal outcomes became writable. 18 with 43539de's `letters`, the grouped count the
+    # board card draws beside the row.
+    assert len(_emitted("ApplicationItem")) == 18
     # 12, up from 9: the company page needed `culture`, `interviewProcess` and `sources` back, which
     # the `companies` row has stored and `CompanyRequest` has accepted since the first migration --
     # write-only fields, so the profile a user posted could never be read again.
@@ -3414,8 +3446,9 @@ def test_the_census_sees_every_read_the_mappers_hold():
     # `normalizeNightlyReport`, which takes its six item names and three step names off the
     # records the backend now answers with; 46 with 20.2's `normalizeNightlyVerdict`, seven
     # names off the record that answers the same card with one word; 47 with the apply receipt's
-    # reader, which had been added to the table's bindings without joining this count.
-    assert len(population) == 51, f"the census population moved: {population}"
+    # reader, which had been added to the table's bindings without joining this count. 52 with
+    # 1076949's `normalizeCoverLetter`, the kept-letter reader the drawer's shelf mounts.
+    assert len(population) == 52, f"the census population moved: {population}"
 
     diverged = []
     for name in population:
@@ -3430,20 +3463,33 @@ def test_the_census_sees_every_read_the_mappers_hold():
                             f"cannot see: {diverged}")
 
     whole = _key_read_calls(NORMALIZE.read_text(encoding="utf-8"))
-    # Measured at this plane: the whole file and the sum over its mappers answer 274 each, which is
-    # what says no read lives outside a body -- in a module-level table or a top-level statement --
-    # where the per-reader floors would never be consulted. The number moves with every read added
-    # or removed, so it is a restatement of the two totals below it, not a separate claim.
+    # Measured at this plane: 403 named reads, 402 of them inside a mapper body and one in
+    # `SEARCH_GROUPS`' letters href -- which is what says no *other* read lives outside a body, in a
+    # module-level table or a top-level statement, where the per-reader floors would never be
+    # consulted. The number moves with every read added or removed, so it is a restatement of the
+    # totals below it, not a separate claim.
     # 274 rather than 271 since the outcome pair in normalizeApplication and the `field` key in
     # normalizeApplicationEvent; 282 with normalizeMemory's nine reads (id, kind, key, content,
     # importance, source, createdAt, createdAt's alias, updatedAt's alias); 340 with 19.6's
     # three `normalizeVoiceState` reads; 351 with 20.1's eleven reads in `normalizeNightlyReport`
     # (ten quoted names plus the folded `idOf(raw)`); 358 with 20.2's seven reads in
     # `normalizeNightlyVerdict`, none of them folded; 364 with the apply receipt's six reads --
-    # `normalizeIngestionRun`'s two new pairs and `normalizeApplyResult`'s four calls.
-    assert len(whole) == 389, f"{len(whole)} reads by the oracle: recount both totals if this moved"
-    assert len(whole) == sum(len(_sites(name)) for name in population), \
-        "a named read lives outside every mapper the census walks"
+    # `normalizeIngestionRun`'s two new pairs and `normalizeApplyResult`'s four calls. 403 with
+    # the kept-letter and reply waves' fourteen, the same calls the key-position census counts.
+    assert len(whole) == 403, f"{len(whole)} reads by the oracle: recount both totals if this moved"
+    table_reads = _key_read_calls(_search_groups_table())
+    # a7ea329 taught the table to read: the letters href asks a hit for its card id so the palette can
+    # deep-link to that application. It is the only named read outside every mapper, and it is bound
+    # the way a mapper's site is -- the name has to be one `LetterHit` actually emits.
+    assert [(site["name"], site["receiver"], site["keys"]) for site in table_reads] == \
+        [("str", "hit", ("applicationId",))], \
+        (f"SEARCH_GROUPS' href reads {[(s['receiver'], s['keys']) for s in table_reads]}, not the one "
+         "`applicationId` off the hit: a read that moved or multiplied has to be bound here")
+    assert all(key in _emitted("LetterHit") for site in table_reads for key in site["keys"]), \
+        "a href read names a field no `LetterHit` emits, so the palette builds links off a key the " \
+        "backend never sends"
+    assert len(whole) == sum(len(_sites(name)) for name in population) + len(table_reads), \
+        "a named read lives outside every mapper the census walks and outside SEARCH_GROUPS' href"
     expressions = [site for site in whole if not _BARE.fullmatch(site["receiver"])]
     assert expressions == [], (f"reads taken off an expression, invisible to `SITE_RECEIVER`: "
                                f"{[(s['line'], s['name'], s['receiver']) for s in expressions]} -- "
@@ -3579,8 +3625,8 @@ def test_a_call_whose_key_is_a_variable_is_a_population_every_member_has_to_expl
     `str(row, col)` matches `CENSUS_SITE` and then yields no candidates to `_NAME`, so `_sites` drops
     it at the `if not candidates` branch; `_key_read_calls` asks the same question of the same shape
     and drops it too. Two scanners agreeing because both are blind is the failure #163 named, and the
-    blind spot is live in this file: normalize.ts holds 274 accessor calls with a key position, the
-    oracle names 259 of them, and 16 hand their key position to a variable. 259 + 16 - 1 = 274, the
+    blind spot is live in this file: normalize.ts holds 418 accessor calls with a key position, the
+    oracle names 403 of them, and 16 hand their key position to a variable. 403 + 16 - 1 = 418, the
     one being `idOf(h, g.type)`, which the oracle counts as a read of `h` through the fold while the
     variable it passes is not a name at all. Nothing in this file walked those 16 before now.
 
@@ -3603,14 +3649,17 @@ def test_a_call_whose_key_is_a_variable_is_a_population_every_member_has_to_expl
     # 373 with 20.2's seven literal reads in `normalizeNightlyVerdict`, no fold among them;
     # 379 with the apply receipt's six calls: `normalizeIngestionRun` gained two paired `pick`s
     # (the `appliedCounts`/`applied_counts` and `appliedAt`/`applied_at` pairs), and
-    # `normalizeApplyResult` is four -- the three counts plus the stamp's pair.
-    assert len(calls) == 404, (f"{len(calls)} accessor calls hand something to a key position: "
+    # `normalizeApplyResult` is four -- the three counts plus the stamp's pair. 418 with the
+    # kept-letter and reply waves' fourteen: 1076949's `normalizeCoverLetter` quotes ten names,
+    # 43539de and 18433e9/f1ad0cf add the application's and the packet's letter and rehearsal
+    # totals, and a7ea329's letter hit reads `applicationId` in `SEARCH_GROUPS`' href.
+    assert len(calls) == 418, (f"{len(calls)} accessor calls hand something to a key position: "
                                "recount the two halves below")
     assert len(nameless) == 16, f"{len(nameless)} calls put a variable where a name is expected"
     counted = {(row["line"], row["accessor"], row["receiver"]) for row in nameless} & \
               {(site["line"], site["name"], site["receiver"]) for site in named}
     assert len(calls) == len(named) + len(nameless) - len(counted), \
-        (f"389 + 16 stopped being 404: the oracle now counts {len(named)} and the census {len(nameless)} "
+        (f"403 + 16 stopped being 418: the oracle now counts {len(named)} and the census {len(nameless)} "
          f"with {sorted(counted)} in common -- one of the three totals moved alone")
     assert [(row[1], row[2]) for row in sorted(counted)] == [("idOf", "h")], \
         (f"the calls that are both nameless and counted are {sorted(counted)}, not one folded `idOf` "
@@ -3768,7 +3817,7 @@ def test_a_dynamic_entry_has_to_excuse_a_measured_read_and_cite_the_table_that_r
     cited = {(reader, receiver): _cited_name_tables(why)
              for reader, table in READERS.items() for receiver, why in table["dynamic"].items()}
     assert cited == {("normalizeJdParsed", "body"): (("_jd_arr_names", 5),),
-                     ("normalizeSearch", "raw"): (("_search_hits", 6),),
+                     ("normalizeSearch", "raw"): (("_search_hits", 7),),
                      ("normalizeTrajectory", "source"): (("_trajectory_keys", 4),)}, \
         (f"each entry cites exactly one live no-arg name table, sized {cited}: a second table, or a "
          "different size, means the entry no longer says which names stand in for the read")
@@ -4191,8 +4240,9 @@ def test_the_bare_read_scanner_agrees_with_a_paired_call_census():
     # 339 with 19.6's three `normalizeVoiceState` reads; 349 with 20.1's ten paired reads in
     # `normalizeNightlyReport` (`idOf` is folded, so it is not one of them); 356 with 20.2's
     # seven paired reads in `normalizeNightlyVerdict`; 362 with the apply receipt's six --
-    # `normalizeIngestionRun`'s two new pairs and `normalizeApplyResult`'s four calls.
-    assert len(paired) == 387, (f"{len(paired)} accessor calls: the population the bare-read census is "
+    # `normalizeIngestionRun`'s two new pairs and `normalizeApplyResult`'s four calls. 401 with
+    # the kept-letter and reply waves' fourteen, the calls the key-position census above lists.
+    assert len(paired) == 401, (f"{len(paired)} accessor calls: the population the bare-read census is "
                                 "drawn from -- if this drops, the census below is comparing less")
     assert sum(1 for row in paired if row["argc"] == 1) == 1, \
         f"{[(row['owner'], row['receiver']) for row in paired if row['argc'] == 1]} are the bare reads"
@@ -4208,8 +4258,9 @@ def test_the_bare_read_scanner_agrees_with_a_paired_call_census():
     # only shape `_sites` reads. 330 with 19.6's three `normalizeVoiceState` reads; 340 with
     # 20.1's ten quoted calls in `normalizeNightlyReport`; 347 with 20.2's seven quoted
     # calls in `normalizeNightlyVerdict`; 353 with the apply receipt's six quoted calls (two
-    # in `normalizeIngestionRun`, four in `normalizeApplyResult`).
-    assert sum(1 for row in paired if row["argc"] > 1 and row["named"]) == 378, \
+    # in `normalizeIngestionRun`, four in `normalizeApplyResult`). 392 with the kept-letter and
+    # reply waves' fourteen quoted calls, the same ones again.
+    assert sum(1 for row in paired if row["argc"] > 1 and row["named"]) == 392, \
         f"{sum(1 for row in paired if row['argc'] > 1 and row['named'])}: every-name-quoted is what " \
         "`_sites` reads, so this number is the size of the census every other rule here trusts"
     loose = [row for row in paired if row["argc"] > 1 and not row["named"]]
@@ -4263,8 +4314,8 @@ def test_the_spread_receiver_scanner_agrees_with_the_paired_walk(monkeypatch):
     # 339 with 19.6's three `normalizeVoiceState` reads, like the census above; 349 with 20.1's
     # ten reads in `normalizeNightlyReport`; 356 with 20.2's seven reads in
     # `normalizeNightlyVerdict`; 362 with the apply receipt's six, the same calls the census above
-    # gained.
-    assert len(walked) == 387, (f"{len(walked)} accessor calls: the population both censuses are drawn "
+    # gained. 401 with the kept-letter and reply waves' fourteen, the same calls again.
+    assert len(walked) == 401, (f"{len(walked)} accessor calls: the population both censuses are drawn "
                                  "from")
     spread = [row for row in walked if row["spread"]]
     assert [(row["name"], row["owner"], row["receiver"]) for row in spread] == [

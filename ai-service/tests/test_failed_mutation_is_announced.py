@@ -8,10 +8,11 @@ this request fails, does anyone say so?". This file answers it per mutation site
 the caller's options through the one indirection the app actually uses: a named object handed to two
 different mutations.
 
-What the shipped code says, measured rather than assumed: 95 mutation sites in fifteen files
+What the shipped code says, measured rather than assumed: 98 mutation sites in fifteen files
 (the hook libraries, the knowledge uploader's own actions, 33.1's push switch, 36.4's
-second door, the account and replies screens' hooks, and 42.2's mail dials). 83 declare their failure at the
-hook; the twelve that do not sit in ``account.ts`` and ``auth.ts`` and ``push.ts``.
+second door, the account and replies screens' hooks, 42.2's mail dials, and the kept letter's
+save/delete/correct trio). 86 declare their failure at the hook; the twelve that do not sit in
+``account.ts`` and ``auth.ts`` and ``push.ts``.
 Eleven of those twelve are announced by their caller -- the password forms pass inline call
 options, the credentials form passes one shared ``handlers`` object to both ``login.mutate``
 and ``register.mutate``, whose ``onError`` maps the failure through the recovery module's
@@ -25,7 +26,7 @@ choice -- a local sign-out always happens -- so this file characterises it rathe
 changing it: it is the one place in the app where "you are signed out" is not a claim about
 the server.
 
-The same walk covers the failure helper: ``fail(...)`` has a single author and 80 uses, and
+The same walk covers the failure helper: ``fail(...)`` has a single author and 83 uses, and
 every use names a key the browser's table answers -- the sentence is resolved when the toast
 is raised, in the reader's language. All but four name a different key: the inbox's read,
 mark-all-read, dismiss and 45.4's dismiss-read-in-one-press share ``notifications.actionFailed``
@@ -101,7 +102,9 @@ DECL = re.compile(r"^(?:export\s+)?(?:default\s+)?(?:async\s+)?(?:function\s+(\w
 #: failure at the hook with its own ``fail()`` sentence, so what went stale was the census, not
 #: the app. A mutation in a file outside this roster is still a red, and the red names that file.
 ROSTER = {
-    ACTIONS: 39,
+    # 42 with the kept letter's three writes (1076949's save, 5080e67's delete and bff366d's
+    # correction), each announcing its failure at the hook through the shared `fail`.
+    ACTIONS: 42,
     # 5 since 38.1's confirmation joined the four credential writes.
     AUTH_HOOKS: 6,
     ACCOUNT_HOOKS: 5,
@@ -137,7 +140,8 @@ QUIET = ["useChangePassword", "useConfirmEmailChange", "useEraseAccount",
 #: file because the useful failure is "actions.ts spent one more key", not a total that
 #: moves whenever any hook is touched.
 SENTENCES = {
-    ACTIONS: 38,
+    # 41 with the kept letter's three writes, each spending a sentence of its own.
+    ACTIONS: 41,
     "frontend/src/lib/hooks/analytics.ts": 1,
     "frontend/src/lib/hooks/data-portability.ts": 5,
     "frontend/src/lib/hooks/growth.ts": 12,

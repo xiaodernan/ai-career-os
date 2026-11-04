@@ -137,9 +137,12 @@ DEAD = {
                                 "updated_at"},
     ("useAIUsage", "raw"): set(),
 }
+# `body` left this set when 1076949's kept-letter DTOs began authoring it. The note row still
+# asks a name no route it calls answers; what changed is that some response in the backend now
+# spells it, which is the line between the two "dead" verdicts.
 UNAUTHORED = {
     ("useSavedJobs", "j"): set(),
-    ("useKnowledgeNotes", "n"): {"body", "created_at", "labels", "source_id", "updated_at"},
+    ("useKnowledgeNotes", "n"): {"created_at", "labels", "source_id", "updated_at"},
     ("useConversations", "c"): {"created_at", "message_count", "preview", "updated_at"},
     ("useAIUsage", "raw"): set(),
 }
@@ -512,7 +515,9 @@ def test_noteitem_answers_six_names_and_the_note_row_asks_sixteen():
     assert asked & authors == {"content", "createdAt", "id", "tags", "title", "updatedAt"}
     kinds = {name for name in DEAD[("useKnowledgeNotes", "n")]
              if name in response_names()}
-    assert kinds == {"kind", "name", "sourceId", "text", "type"}, (
+    # `body` joined in 1076949: the kept letter's `LetterItem` authors it, so the word the note
+    # row asks is now a spelling some response carries -- still dead here, but no longer unauthored.
+    assert kinds == {"body", "kind", "name", "sourceId", "text", "type"}, (
         f"{sorted(kinds)} joined or left the set of dead note names some other record authors")
     note_type = function_body(read(TYPES), "export interface KnowledgeNote {")
     for name in ("body", "kind", "sourceId"):

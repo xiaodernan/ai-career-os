@@ -249,8 +249,10 @@ DEAD_NAME_TIERS = {
     # `resume_versions` gained a fourth speller without a reader: the status-words module's
     # docstring names the column whose five values it turns into the resumes page's badge.
     # The mapper still folds the wire name into the versions row, which is the only reader.
+    # d3f4c85's versionKind suite spells the table name in the SQL fixtures it grades those
+    # words against, so the test is a carrier too, not a reader.
     ("lib/api/normalize.ts", "lib/hooks/resources.ts", "lib/job-filter.ts",
-     "lib/status-words.ts"): {"resume_versions"},
+     "lib/status-words.ts", "lib/status-words.test.ts"): {"resume_versions"},
 }
 # Beyond three carriers a generic name (`name`, `score`, `title`, `kind`) means something else in the
 # file that spells it, so the census stops classifying rather than pretending to.
@@ -495,8 +497,9 @@ def test_the_unbound_mappers_ban_would_find_these_mappers_if_it_read_this_file()
     # `normalizeApplyResult`, the receipt reader 19.2 shipped without moving the pin -- the
     # field gate's own comment records the same recovery. 51 with the packet's four readers (47.1):
     # `normalizeApplyPacket` plus the three component readers it calls, which are private and so
-    # reach the field gate's census the same way `changeFrom` does.
-    assert population and population.group(1) == "51", \
+    # reach the field gate's census the same way `changeFrom` does. 52 with 1076949's
+    # `normalizeCoverLetter`, the kept-letter reader the field gate now binds to `LetterItem`.
+    assert population and population.group(1) == "52", \
         f"the ban's pinned normalize.ts population moved: {population and population.group(1)}"
 
 
