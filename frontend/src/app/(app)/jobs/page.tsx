@@ -98,6 +98,10 @@ export default function JobsPage() {
   // have saved nothing": a filter can empty a list that still has rows behind it.
   const savedFilteredToEmpty =
     tab === "saved" && hasActiveJobFilters(filters) && (saved.data?.items.length ?? 0) > 0;
+  // Discover cannot tell "filters emptied it" from "the board is empty": the filtered
+  // answer never says how many rows sit behind the filter. What it can tell is whether
+  // any filter is set, and with none set the copy must not blame them for the emptiness.
+  const discoverFilteredToEmpty = tab === "discover" && hasActiveJobFilters(filters);
   // The same correction as the applications board, over the window both tabs share: the
   // answer's own window is the divisor (`data.size`) and `lastPageOf`
   // (lib/page-window.ts) is that rule in one place, so a past-the-end page lands on the
@@ -228,21 +232,32 @@ export default function JobsPage() {
                         </Button>
                       ),
                     }
-                  : {
-                      icon: <Briefcase aria-hidden />,
-                      title: t("jobs.boardIsQuiet"),
-                      description: t("jobs.boardIsQuietDescription"),
-                      action: (
-                        <>
-                          <Button variant="outline" size="sm" onClick={() => setFilters(DEFAULTS, { replaceAll: true })}>
-                            {t("jobs.clearFilters")}
-                          </Button>
+                  : discoverFilteredToEmpty
+                    ? {
+                        icon: <Briefcase aria-hidden />,
+                        title: t("jobs.boardIsQuiet"),
+                        description: t("jobs.boardIsQuietDescription"),
+                        action: (
+                          <>
+                            <Button variant="outline" size="sm" onClick={() => setFilters(DEFAULTS, { replaceAll: true })}>
+                              {t("jobs.clearFilters")}
+                            </Button>
+                            <Button variant="ai" size="sm" asChild>
+                              <Link href="/copilot">{t("jobs.askCopilot")}</Link>
+                            </Button>
+                          </>
+                        ),
+                      }
+                    : {
+                        icon: <Briefcase aria-hidden />,
+                        title: t("jobs.boardEmpty"),
+                        description: t("jobs.boardEmptyDescription"),
+                        action: (
                           <Button variant="ai" size="sm" asChild>
                             <Link href="/copilot">{t("jobs.askCopilot")}</Link>
                           </Button>
-                        </>
-                      ),
-                    }
+                        ),
+                      }
             }
             notLive={{
               title:

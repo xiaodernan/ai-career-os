@@ -2789,6 +2789,9 @@ export const translations = {
       boardIsQuiet: "The job board is quiet",
       boardIsQuietDescription:
         "No roles match these filters yet. Clear a filter, paste a JD for the analyst, or let Copilot research roles for your target.",
+      boardEmpty: "The job board is empty",
+      boardEmptyDescription:
+        "No roles have landed here yet. Paste a posting for the analyst, or let Copilot research roles for your target.",
       askCopilot: "Ask Copilot",
       paginationLabel: "jobs",
       notLiveDescription:
@@ -5577,6 +5580,9 @@ export const translations = {
       boardIsQuiet: "职位板很安静",
       boardIsQuietDescription:
         "目前没有职位符合这些筛选。清掉一个筛选、粘贴一份 JD 给分析器，或者让副驾驶为你的目标职位做调研。",
+      boardEmpty: "职位板还空着",
+      boardEmptyDescription:
+        "还没有职位进来。把一份 JD 交给分析器，或者让副驾驶为你的目标职位做调研。",
       askCopilot: "问问副驾驶",
       paginationLabel: "职位",
       notLiveDescription:

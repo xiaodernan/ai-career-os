@@ -348,6 +348,9 @@ def test_the_record_and_the_list_are_named_by_a_pinned_set_of_sites():
         "frontend/src/lib/hooks/resources.ts",
         "frontend/src/app/(app)/dashboard/page.tsx",
         "frontend/src/app/(app)/jobs/page.tsx",
+        # The board's own page test stubs `useResumes` so the real page renders; it is a
+        # stand-in for the reader above, not a second surface reading the list body.
+        "frontend/src/app/(app)/jobs/page.test.tsx",
         "frontend/src/app/(app)/resumes/page.tsx",
         "ai-service/tests/test_resume_list_body_ships.py",
         "ai-service/tests/test_page_window_names_and_their_readers_ship.py",
