@@ -3984,10 +3984,26 @@ while no rule read it, so a meter cannot be born unwatched again.
   there without a repin -- and the knob ledger to 39 leaves, 36 of them interpolated, 28 fields.
   `ops/prometheus/alerts.yml` carries twelve rules now, with a page in RUNBOOK.md, and DEPLOYMENT.md
   stops calling an orphan a permanent loss.)
-- [ ] **48.3** Every meter that ships is alarmed or excused by name. (The alarms gate reads the
+- [x] **48.3** Every meter that ships is alarmed or excused by name. (The alarms gate reads the
   rules and asks whether each metric they name is registered; it never asked the reverse, which is
   how `careeros.storage.objects_reclaimed` shipped with a runbook line telling an operator to read
   a series nothing watches. Flip the direction and hold the exemptions to a reason each.)
+
+  (`declared_meters()` is the second roster: it walks the ten backend main-tree files that consult
+  `MeterRegistry` -- the import is the population, so a registering class cannot sit outside it --
+  and reads every exact `careeros.` literal in them, 21 meters. `METRICS` names all 21 with the
+  exporter's spelling (`_total` on nine counters), and the reverse test reds when the registry and
+  the roster disagree, when a meter is neither read by a rule nor listed in `UNALARMED`, when an
+  excuse names a meter the project does not ship, and when an excuse outlives the rule that starts
+  reading its meter. Twelve meters are read by the twelve rules; the other nine carry a written
+  reason: the AI token and call gauges decompose the dollar the budget rule reads, the two
+  accepted-letter markers are healthy when flat (the sweep gauges and refusal counters are the
+  alarms), the retention deletion count cannot tell a stopped sweep from a quiet night, the push
+  outcomes are four judgements with no shared threshold (`not_configured` is an install without
+  keys), the limiter's denial rate has no baseline yet, and the two storage families are costs
+  whose failures are logged with their key and retried rather than outages -- the listing refusal
+  keeps `CareerOSBucketListingRefused`. An excuse under sixty characters is a label, not a reason.
+  10 tests in the gate.)
 
 ## Epic 49 -- The Replies Can Be Found
 

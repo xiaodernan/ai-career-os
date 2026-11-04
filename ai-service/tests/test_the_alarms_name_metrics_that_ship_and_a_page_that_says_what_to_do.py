@@ -11,6 +11,18 @@ conversion: `careeros.ingestion.runs` arrives as `careeros_ingestion_runs_total`
 the Java source never writes -- grep the Java for the exported name and the gate would report a
 missing metric that is in fact registered.
 
+The roster is the registry, not the rules' reading list. `declared_meters()` walks every
+backend file that consults `MeterRegistry` -- the import is the population, so a class that
+registers a meter cannot sit outside it -- and reads the exact `careeros.` literals those files
+declare. `METRICS` has to name every one of them, and the reverse test asks the question the
+forward test never did: is each meter either read by a rule or excused in `UNALARMED` with a
+written reason? Both directions matter for the same reason. A rule on an unregistered name
+evaluates to the empty vector forever; a registered meter no rule reads is a series an operator
+can only find by already knowing it exists. `careeros.storage.objects_reclaimed` sat in that
+state while the runbook told an operator to read it. An excuse is a decision, not a leftover:
+an entry whose meter a rule later reads fails the gate, so the reason cannot outlive the gap it
+describes.
+
 The second half of the file is human. An alert without a page is a page at 03:00 with nothing
 to read, so every rule carries `annotations.runbook`, every one of those links is checked
 against the headings `docs/RUNBOOK.md` actually has (a GitHub anchor, lowercased with the
@@ -55,11 +67,16 @@ PUSH_METRICS = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "push" /
 REMINDER_CLOCK = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "notification" / "service" / "ReminderScheduler.java"
 RETENTION_METRICS = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "auth" / "retention" / "RetentionMetrics.java"
 UNNAMED_RECLAIMER = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "auth" / "retention" / "UnnamedObjectReclaimer.java"
+STORED_OBJECT_RECLAIMER = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "knowledge" / "service" / "StoredObjectReclaimer.java"
+RATE_LIMIT_METRICS = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "ratelimit" / "RateLimitMetrics.java"
+REGISTRATION_ROOT = BACKEND / "src" / "main" / "java"
 NIGHTLY_REPORT_SERVICE = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "report" / "service" / "NightlyReportService.java"
 NIGHTLY_CARD = ROOT / "frontend" / "src" / "components" / "monitoring" / "nightly-history.tsx"
 
 # exported Prometheus name -> (the Java file that registers it, the dotted Micrometer name in it).
-# The counter's `_total` is the exporter's suffix: the Java literal stops before it.
+# The counter's `_total` is the exporter's suffix: the Java literal stops before it. Every meter
+# the backend registers appears here, read or not -- the reverse test below holds this roster
+# complete against the files that consult the registry.
 METRICS = {
     "careeros_ingestion_runs_total": (INGESTION_METRICS, "careeros.ingestion.runs"),
     "careeros_ingestion_last_success_timestamp": (INGESTION_METRICS, "careeros.ingestion.last.success.timestamp"),
@@ -69,15 +86,68 @@ METRICS = {
     "careeros_nightly_last_finished_timestamp": (NIGHTLY_VERDICT_METRICS, "careeros.nightly.last.finished.timestamp"),
     "careeros_nightly_consecutive_failures": (NIGHTLY_VERDICT_METRICS, "careeros.nightly.consecutive.failures"),
     "careeros_digest_delivery_total": (DIGEST_METRICS, "careeros.digest.delivery"),
+    "careeros_digest_last_delivered_timestamp": (DIGEST_METRICS, "careeros.digest.last.delivered.timestamp"),
     "careeros_digest_last_sweep_timestamp": (DIGEST_METRICS, "careeros.digest.last.sweep.timestamp"),
     "careeros_signals_delivery_total": (SIGNAL_METRICS, "careeros.signals.delivery"),
+    "careeros_signals_last_delivered_timestamp": (SIGNAL_METRICS, "careeros.signals.last.delivered.timestamp"),
     "careeros_signals_last_sweep_timestamp": (SIGNAL_METRICS, "careeros.signals.last.sweep.timestamp"),
+    "careeros_push_delivery_total": (PUSH_METRICS, "careeros.push.delivery"),
     "careeros_reminders_last_tick_timestamp": (PUSH_METRICS, "careeros.reminders.last.tick.timestamp"),
+    "careeros_retention_deleted_rows_total": (RETENTION_METRICS, "careeros.retention.deleted_rows"),
     "careeros_retention_last_sweep_timestamp": (RETENTION_METRICS, "careeros.retention.last.sweep.timestamp"),
+    "careeros_ratelimit_decisions_total": (RATE_LIMIT_METRICS, "careeros.ratelimit.decisions"),
     # 48.2's per-pass verdict. The sweep's own timestamp moves through a night whose listing the
     # store refused -- the pass finishes, its tables and its purge run -- so the alarm about the
     # bucket has to read a number that says only "the store would not answer", once per pass.
     "careeros_storage_bucket_reads_total": (UNNAMED_RECLAIMER, "careeros.storage.bucket_reads"),
+    "careeros_storage_objects_reclaimed_total": (STORED_OBJECT_RECLAIMER, "careeros.storage.objects_reclaimed"),
+    "careeros_storage_objects_judged_total": (UNNAMED_RECLAIMER, "careeros.storage.objects_judged"),
+}
+
+# Meters no rule reads, each with the reason the absence is a decision rather than a hole.
+#
+# The reverse direction needs somewhere to put a deliberate silence. Without this table the
+# gate would either fail on the healthy meters no rule reads or be relaxed into a list of names; with it,
+# an exemption is a written judgement and the next meter to ship has to be one of three
+# things: watched, excused here, or caught. The substitute reading named in each reason is the
+# point -- a meter is unalarmed because another one answers the operator's question, or
+# because there is no threshold a quiet week could not cross.
+UNALARMED = {
+    "careeros_ai_tokens_24h":
+        "The budget rule reads the dollar figure this gauge decomposes; a raw token count has no "
+        "threshold of its own -- a busy day within budget is not a fault -- and the usage panel "
+        "reads the same ledger for its shape.",
+    "careeros_ai_calls_24h":
+        "Call count prices nothing by itself -- one expensive call and a thousand cheap ones read "
+        "the same -- so the money rule is the one with a number; the figure is a dashboard "
+        "reading of the same rolling window.",
+    "careeros_digest_last_delivered_timestamp":
+        "A week with no applications writes no letter, so a flat marker is healthy; the sweep "
+        "heartbeat covers the clock and CareerOSDigestDeliveryFailing covers the relay.",
+    "careeros_signals_last_delivered_timestamp":
+        "A quiet morning with nothing to say moves no marker; CareerOSSignalSweepStale covers the "
+        "clock and CareerOSSignalMailFailing covers the relay, which leaves this as the "
+        "dashboard's last-acceptance reading.",
+    "careeros_push_delivery_total":
+        "The outcomes are not one judgement: gone is a retired browser and not_configured is an "
+        "install without VAPID keys, so no single threshold covers the family; the minute clock "
+        "has its own alarm, and a refused wake leaves the in-app inbox.",
+    "careeros_retention_deleted_rows_total":
+        "A stopped sweep leaves this counter at its last value, indistinguishable from a quiet "
+        "night, and the first purge of a backlog would cross any rate threshold; the sweep's own "
+        "timestamp (CareerOSRetentionSweepStale) is the alarm.",
+    "careeros_ratelimit_decisions_total":
+        "No known-good refusal rate exists yet, so any threshold would page on a busy minute; the "
+        "family is exported for dashboards, and DEPLOYMENT.md records the decision until a "
+        "baseline is measured.",
+    "careeros_storage_objects_reclaimed_total":
+        "An object that outlives its row is a storage cost, not an outage, and a counter with no "
+        "baseline would page on a quiet week; a failed reclaim is logged with its key and retried "
+        "by the next delete or purge.",
+    "careeros_storage_objects_judged_total":
+        "One object the store would not release is retried by the next night and named in the WARN "
+        "line meanwhile; the four verdicts are the dashboard companion to the listing-refusal "
+        "rule, not a second judgement.",
 }
 
 ALERT_NAMES = frozenset({
@@ -101,6 +171,32 @@ USAGE_COLUMNS = ("cost_usd", "input_tokens", "output_tokens", "created_at")
 
 def read(path: Path) -> str:
     return path.read_text(encoding="utf-8").replace("\r\n", "\n")
+
+
+def declared_meters() -> dict:
+    """Dotted Micrometer name -> the file that declares it, read off the registry's users.
+
+    The population is structural: a class that registers a meter consults MeterRegistry -- a
+    fully-qualified reference still contains the word -- so the walk takes the files that name
+    it rather than a list somebody has to remember to extend. A file inside that population
+    that declares no careeros meter fails loudly: either it registers under a prefix no rule
+    here can watch, or the census has stopped seeing a name it used to.
+    """
+    out = {}
+    for source in sorted(REGISTRATION_ROOT.rglob("*.java")):
+        text = read(source)
+        if "MeterRegistry" not in text:
+            continue
+        names = set(re.findall(r'"(careeros\.[a-z0-9._]+)"', text))
+        assert names, (
+            f"{source.relative_to(ROOT)} consults MeterRegistry and declares no careeros meter; "
+            "a meter registered under another prefix is a reading no rule here can watch"
+        )
+        for name in names:
+            assert name not in out, f"{name} is declared in both {out[name]} and {source}"
+            out[name] = source
+    assert out, "the registration walk found no meter at all"
+    return out
 
 
 def rules():
@@ -171,6 +267,50 @@ def test_every_metric_an_alarm_reads_is_a_name_java_registers():
     for exported, (source, dotted) in METRICS.items():
         assert dotted in read(source), (
             f"{exported} is rendered from {dotted}, which {source.relative_to(ROOT)} does not register"
+        )
+
+
+def test_every_meter_that_ships_is_alarmed_or_excused_by_name():
+    # The forward test asks whether a rule reads a registered name. This is the reverse: does
+    # every registered name reach an operator, by a rule or by a reason? The census makes the
+    # population checkable, so a new meter cannot slip in unread and an old excuse cannot
+    # outlive the rule that starts reading its meter.
+    census = declared_meters()
+    roster = {dotted for _, dotted in METRICS.values()}
+    assert set(census) == roster, (
+        "the registry and the roster disagree -- meters registered and not in METRICS: "
+        f"{sorted(set(census) - roster)}; METRICS rows with no registration in the walked files: "
+        f"{sorted(roster - set(census))}. A new meter has to be named in METRICS before it can "
+        "be alarmed or excused"
+    )
+
+    used = set()
+    for rule in rules().values():
+        used |= set(re.findall(r"\bcareer\w*", rule["expr"]))
+    unalarmed = {exported for exported in METRICS if exported not in used}
+
+    unknown = set(UNALARMED) - set(METRICS)
+    assert not unknown, (
+        f"these excuses name a meter this project does not ship: {sorted(unknown)}. A typo here "
+        "excuses nothing, because nothing registers under it"
+    )
+    missing = unalarmed - set(UNALARMED)
+    assert not missing, (
+        f"these meters ship and no rule reads them: {sorted(missing)}. Add a rule that watches "
+        "one, or a line in UNALARMED that says why the reading has no threshold"
+    )
+    stale = set(UNALARMED) - unalarmed
+    assert not stale, (
+        f"these meters are excused and a rule reads them: {sorted(stale)}. The reason has to go "
+        "when the rule arrives -- an excuse for a watched meter is a comment a future reader "
+        "will trust instead of the rule"
+    )
+
+    for exported, reason in UNALARMED.items():
+        assert len(reason) >= 60, (
+            f"{exported}'s excuse is a label, not a reason: {reason!r}. The gate holds an "
+            "exemption to a written decision, because 'not alarmed' is the state every missing "
+            "alarm starts in"
         )
 
 
