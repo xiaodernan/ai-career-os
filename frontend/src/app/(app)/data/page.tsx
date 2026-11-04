@@ -4,6 +4,7 @@ import * as React from "react";
 import { toast } from "sonner";
 import { Download, FileJson, FileText, Shield, Upload } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
+import { BundleFacts } from "@/components/data/bundle-facts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -258,22 +259,7 @@ export default function DataPortabilityPage() {
           {bundle?.manifest && (
             <>
               <Separator />
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div>
-                  <p className="text-2xs font-medium tracking-wide text-muted-foreground uppercase">
-                    {t("data.contentHash")}
-                  </p>
-                  <p className="mt-1 font-mono text-xs break-all">
-                    {bundle.manifest.content_hash ?? "—"}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-2xs font-medium tracking-wide text-muted-foreground uppercase">
-                    {t("data.generated")}
-                  </p>
-                  <p className="mt-1 text-xs">{bundle.generated_at ?? "—"}</p>
-                </div>
-              </div>
+              <BundleFacts bundle={bundle} />
               <ul className="flex flex-wrap gap-1.5">
                 {sections.map((section) => (
                   <li key={section}>

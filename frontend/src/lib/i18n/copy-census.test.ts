@@ -90,8 +90,9 @@ describe("the browser's copy", () => {
     // `components/applications/application-packet.tsx`, the panel that names the resume
     // version, JD analysis and match an application was sent with (47.1), and 151 with
     // `components/applications/application-letters.tsx`, the shelf a kept draft is read
-    // back from (47.4).
-    expect(browserSources().length).toBe(151);
+    // back from (47.4), and 152 with `components/data/bundle-facts.tsx`, the card that draws
+    // the export's content hash and build instant (13.1).
+    expect(browserSources().length).toBe(152);
   });
 
   it("finds a sentence, however long it is", () => {
