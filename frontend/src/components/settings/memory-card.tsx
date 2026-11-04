@@ -22,7 +22,7 @@ import {
 import { useMemories } from "@/lib/hooks/resources";
 import { useDeleteMemory, useUpdateMemory } from "@/lib/hooks/actions";
 import { relativeTime, weightBand, type WeightBand } from "@/lib/format";
-import { MEMORY_WEIGHTS, memoryPatch, shownWeight } from "@/lib/memory-edit";
+import { memoryPatch, shownWeight } from "@/lib/memory-edit";
 import { memoryKindWord } from "@/lib/status-words";
 
 /**
