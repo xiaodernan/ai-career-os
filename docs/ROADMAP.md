@@ -4024,6 +4024,12 @@ so "rejections from Acme" is one question rather than a page of rejections filte
 empty state has to be as honest as the search's: a filter that found nothing is not an empty
 inbox, and "clear the search" alone must not leave the reader staring at the same empty page.
 
+49.5 closes the narrowing with the one question the page could not ask: which letters still
+have no card. The waiting switch is a scope rather than a seventh reading -- it narrows beside
+the words and the picked reading, and the same answer that lists the pile counts it, so the
+reader knows how much waits before pressing anything. An empty pile is good news and must not
+borrow the empty inbox's settings link.
+
 - [x] **49.1** The replies can be found. (`GET /inbound/mails` binds `q`, trimmed and
   lowercased, and answers a page whose total describes the narrowed set. The repository uses
   `LOCATE` rather than a bound `LIKE` so a typed `%` is a percent sign instead of a wildcard,
@@ -4061,6 +4067,21 @@ inbox, and "clear the search" alone must not leave the reader staring at the sam
   cannot discover; a null reading is counted as unread, the same meaning 49.2 gave it. The
   page draws each number inside its chip and "all" sums the six. 2 service tests + 1 route
   test + 1 query-text test + 1 SSR test; 1178 backend tests, 1035 frontend tests in 101
+  files.)
+
+- [x] **49.5** The waiting letters are their own pile. (`GET /inbound/mails` binds `unfiled`
+  beside `q` and `intent`: `true` keeps only the letters no reader has filed, so the page can
+  ask what still needs a card without walking the inbox by eye. The switch narrows beside the
+  picked reading and the pager counts the intersection, so "unread letters waiting for a
+  card" is one question. `GET /inbound/mails/intents` binds the same switch: with it on, the
+  six counts describe the waiting pile, and the answer always carries that pile's own
+  `unfiled` number under the same `q` -- so the switch can say how much waits before it is
+  pressed. The page keeps the scope in the URL, clearing the words leaves it standing (the
+  words and the pile are different questions), and "show every letter" drops it with the
+  rest. An empty waiting pile says every reply already names its application instead of
+  offering the settings card. The switch arrived with its production code but without
+  compiling gates or documentation; this entry completes it: 2 service tests + 2 route tests,
+  3 wire tests + 2 mapper tests + 5 SSR tests; 1182 backend tests, 1069 frontend tests in 102
   files.)
 
 ## Epic 50 -- A kept letter is the reader's to manage

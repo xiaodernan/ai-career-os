@@ -24,17 +24,31 @@ const state = vi.hoisted(() => ({
       | undefined,
     isPending: false,
   },
+  // The page reads a partial URL state: a filter nobody set is absent, not `undefined`.
   url: {
-    q: undefined as string | undefined,
-    intent: undefined as string | undefined,
+    q: undefined,
+    intent: undefined,
+    unfiled: undefined,
     page: 0,
+  } as { q?: string; intent?: string; unfiled?: boolean; page: number },
+  counts: {
+    data: undefined as
+      | { counts: Record<string, number>; unfiled: number | undefined }
+      | undefined,
   },
-  counts: { data: undefined as Record<string, number> | undefined },
+  lettersParams: undefined as Record<string, unknown> | undefined,
+  countsParams: undefined as Record<string, unknown> | undefined,
 }));
 
 vi.mock("@/lib/hooks/replies", () => ({
-  useInboundMails: () => state.letters,
-  useInboundIntentCounts: () => state.counts,
+  useInboundMails: (params?: Record<string, unknown>) => {
+    state.lettersParams = params;
+    return state.letters;
+  },
+  useInboundIntentCounts: (params?: Record<string, unknown>) => {
+    state.countsParams = params;
+    return state.counts;
+  },
   useFileInboundMail: () => ({ mutate: () => {}, isPending: false, variables: undefined }),
 }));
 
@@ -124,7 +138,9 @@ function withLetters(items: InboundMail[]): void {
 }
 
 beforeEach(() => {
-  state.url = { q: undefined, intent: undefined, page: 0 };
+  state.url = { q: undefined, intent: undefined, unfiled: undefined, page: 0 };
+  state.lettersParams = undefined;
+  state.countsParams = undefined;
   state.counts.data = undefined;
   state.letters = {
     data: undefined,
@@ -268,7 +284,10 @@ describe("the replies page", () => {
     // readings under the current words, and a zero is printed rather than hidden so a reader
     // knows the chip opens an empty page before they click it.
     withLetters(ITEMS);
-    state.counts.data = { unread: 2, rejection: 1, interview: 0, offer: 0, info: 0, other: 0 };
+    state.counts.data = {
+      counts: { unread: 2, rejection: 1, interview: 0, offer: 0, info: 0, other: 0 },
+      unfiled: 2,
+    };
 
     const html = render();
 
@@ -277,6 +296,77 @@ describe("the replies page", () => {
     expect(html).toMatch(/Rejection<span[^>]*>1</);
     expect(html).toMatch(/Interview<span[^>]*>0</);
     expect(html).toMatch(/Other<span[^>]*>0</);
+  });
+
+  it("offers the waiting pile as a scope with its own number", () => {
+    // The switch asks a different question from a reading: whether a letter has a card at
+    // all. Its number is the answer's waiting total under the current words, so a reader
+    // knows how much waits before pressing it.
+    withLetters(ITEMS);
+    state.counts.data = {
+      counts: { unread: 2, rejection: 1, interview: 0, offer: 0, info: 0, other: 0 },
+      unfiled: 3,
+    };
+
+    const html = render();
+
+    expect(html).toContain("Waiting for a card");
+    expect(html).toMatch(/Waiting for a card<span[^>]*>3</);
+    expect(html).toMatch(/aria-pressed="false"[^>]*>(?:(?!<\/button>).)*Waiting for a card/);
+  });
+
+  it("marks the waiting scope when the URL carries it", () => {
+    withLetters(ITEMS);
+    state.url = { q: undefined, intent: undefined, unfiled: true, page: 0 };
+
+    const html = render();
+
+    expect(html).toMatch(/aria-pressed="true"[^>]*>(?:(?!<\/button>).)*Waiting for a card/);
+  });
+
+  it("sends the waiting scope to both the page and the chips", () => {
+    // The switch is only real if the request for letters and the request for numbers both
+    // carry it; a page that filters one and counts the other would put a wrong number
+    // beside a right list.
+    withLetters(ITEMS);
+    state.url = { q: "acme", intent: "rejection", unfiled: true, page: 0 };
+
+    render();
+
+    expect(state.lettersParams).toEqual({
+      page: 0,
+      size: 20,
+      q: "acme",
+      intent: "rejection",
+      unfiled: true,
+    });
+    expect(state.countsParams).toEqual({ q: "acme", unfiled: true });
+  });
+
+  it("says nothing waits rather than sending a reader to settings", () => {
+    // An empty waiting pile means every letter already has a card -- good news. The settings
+    // link would hand out an address to solve a problem this reader does not have.
+    withLetters([]);
+    state.url = { q: undefined, intent: undefined, unfiled: true, page: 0 };
+
+    const html = render();
+
+    expect(html).toContain("Nothing is waiting for a card");
+    expect(html).toContain("Every reply already names its application.");
+    expect(html).toContain("Show every letter");
+    expect(html).not.toContain("Get your address");
+    expect(html).not.toContain('href="/settings"');
+  });
+
+  it("says nothing waits in the reader's language", () => {
+    withLetters([]);
+    state.url = { q: undefined, intent: undefined, unfiled: true, page: 0 };
+
+    const html = render("zh");
+
+    expect(html).toContain("待归档");
+    expect(html).toContain("没有待归档的回信");
+    expect(html).toContain("看全部回信");
   });
 
   it("says the words and the reading together matched nothing", () => {

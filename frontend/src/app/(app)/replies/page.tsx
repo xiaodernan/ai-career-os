@@ -53,11 +53,18 @@ type Translate = (key: string, vars?: Record<string, string | number>) => string
 
 const PAGE_SIZE = 20;
 // Module-level so `setUrl` (a `useCallback` keyed on this object) is stable across renders.
-const PAGE_DEFAULTS: { mail?: string; page: number; q?: string; intent?: string } = {
+const PAGE_DEFAULTS: {
+  mail?: string;
+  page: number;
+  q?: string;
+  intent?: string;
+  unfiled?: boolean;
+} = {
   mail: undefined,
   page: 0,
   q: undefined,
   intent: undefined,
+  unfiled: undefined,
 };
 
 /**
@@ -110,19 +117,23 @@ export default function RepliesPage() {
     page: number;
     q?: string;
     intent?: string;
-  }>(PAGE_DEFAULTS, { numericKeys: ["page"] });
+    unfiled?: boolean;
+  }>(PAGE_DEFAULTS, { numericKeys: ["page"], booleanKeys: ["unfiled"] });
   const letters = useInboundMails({
     page: state.page,
     size: PAGE_SIZE,
     q: state.q,
     intent: state.intent,
+    unfiled: state.unfiled,
   });
   const applications = useApplications({ size: 100 });
   // The numbers beside the chips share the words but not the picked reading: a chip counts
   // what it would show, so the page can tell a reader what is waiting before they click.
-  const counts = useInboundIntentCounts({ q: state.q });
+  // Under the waiting scope the same six numbers describe the waiting pile, and `unfiled`
+  // is that pile's size.
+  const counts = useInboundIntentCounts({ q: state.q, unfiled: state.unfiled });
   const allCount = counts.data
-    ? INTENT_FILTERS.reduce((sum, key) => sum + (counts.data?.[key] ?? 0), 0)
+    ? INTENT_FILTERS.reduce((sum, key) => sum + (counts.data?.counts[key] ?? 0), 0)
     : undefined;
   const file = useFileInboundMail();
   const apply = useUpdateApplication();
@@ -139,12 +150,12 @@ export default function RepliesPage() {
     setUrl({ q: q || undefined, page: 0 });
   };
 
-  // The empty states' one escape: drop the words and the reading together, so "show every
-  // letter" does what it says even when both filters are on and only one of them is the
-  // reason nothing matched.
+  // The empty states' one escape: drop the words, the reading and the waiting scope together,
+  // so "show every letter" does what it says even when more than one filter is on and only
+  // one of them is the reason nothing matched.
   const showAll = () => {
     setDraft("");
-    setUrl({ q: undefined, intent: undefined, page: 0 });
+    setUrl({ q: undefined, intent: undefined, unfiled: undefined, page: 0 });
   };
 
   const items = letters.data?.items ?? [];
@@ -258,7 +269,7 @@ export default function RepliesPage() {
         {INTENT_FILTERS.map((intent) => {
           // A zero is shown rather than hidden: "Rejections 0" tells the reader the page
           // will be empty before they click, and that is a fact about the inbox, not noise.
-          const count = counts.data?.[intent];
+          const count = counts.data?.counts[intent];
           return (
             <Button
               key={intent}
@@ -274,6 +285,27 @@ export default function RepliesPage() {
             </Button>
           );
         })}
+      </div>
+
+      {/* The waiting scope is not a seventh reading: it asks whether a letter has a card at
+          all, and it narrows beside the reading rather than replacing it. The number is the
+          answer's own waiting total under the current words, so the switch can say how much
+          waits before it is pressed. */}
+      <div role="group" aria-label={t("replies.filterByFileState")} className="flex flex-wrap gap-1">
+        <Button
+          size="sm"
+          variant={state.unfiled ? "secondary" : "ghost"}
+          aria-pressed={!!state.unfiled}
+          onClick={() => setUrl({ unfiled: state.unfiled ? undefined : true, page: 0 })}
+        >
+          <Inbox aria-hidden />
+          {t("replies.filterUnfiled")}
+          {counts.data?.unfiled !== undefined ? (
+            <span className="ml-1 text-xs tabular-nums text-muted-foreground">
+              {counts.data.unfiled}
+            </span>
+          ) : null}
+        </Button>
       </div>
 
       <Card>
@@ -417,15 +449,15 @@ export default function RepliesPage() {
             <EmptyState
               icon={<Search aria-hidden />}
               title={t("replies.noMatch", { query: state.q })}
-              // Under a chip, "clear the search" alone would leave the reader looking at the
-              // same empty page -- the words and the reading have to go together.
+              // Under a chip or the waiting scope, "clear the search" alone would leave the
+              // reader looking at the same empty page -- every filter has to go together.
               description={
-                state.intent
+                state.intent || state.unfiled
                   ? t("replies.noMatchFilterDescription")
                   : t("replies.noMatchDescription")
               }
               action={
-                state.intent ? (
+                state.intent || state.unfiled ? (
                   <Button size="sm" variant="outline" onClick={showAll}>
                     {t("replies.showAll")}
                   </Button>
@@ -448,6 +480,20 @@ export default function RepliesPage() {
               icon={<Inbox aria-hidden />}
               title={t("replies.noIntentMatch")}
               description={t("replies.noIntentMatchDescription")}
+              action={
+                <Button size="sm" variant="outline" onClick={showAll}>
+                  {t("replies.showAll")}
+                </Button>
+              }
+            />
+          ) : state.unfiled ? (
+            // An empty waiting pile is good news, not an empty inbox: every letter already
+            // names its card, so the settings link would solve a problem this reader does
+            // not have.
+            <EmptyState
+              icon={<Inbox aria-hidden />}
+              title={t("replies.noUnfiledMatch")}
+              description={t("replies.noUnfiledMatchDescription")}
               action={
                 <Button size="sm" variant="outline" onClick={showAll}>
                   {t("replies.showAll")}

@@ -1245,6 +1245,20 @@ export interface InboundMail {
   filedAt: string | null;
 }
 
+/**
+ * What the reply chips count (49.4), and the waiting pile beside them (49.5).
+ *
+ * `counts` always spells all six readings, zeros included. `unfiled` is the number of
+ * letters that still have no card, under the same `q` as the page; with the waiting
+ * switch on, `counts` describes that pile too. The number is `undefined` only when the
+ * answer did not carry it -- an absent number must not paint a zero that claims the
+ * pile is empty.
+ */
+export interface InboundIntentCounts {
+  counts: Record<string, number>;
+  unfiled: number | undefined;
+}
+
 /* ------------------------------------------------------------------ */
 /* Granular growth engines (10.1-10.13)                               */
 /* ------------------------------------------------------------------ */

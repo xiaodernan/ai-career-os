@@ -8,7 +8,7 @@ import { field } from "@/lib/api/body";
 import { normalizePage, num, str } from "@/lib/api/normalize";
 import { translate } from "@/lib/i18n/locale-context";
 import { fail } from "@/lib/hooks/failure";
-import type { InboundLinkRow, InboundMail, Page } from "@/lib/api/types";
+import type { InboundIntentCounts, InboundLinkRow, InboundMail, Page } from "@/lib/api/types";
 
 /**
  * The replies surface (37.4): the address the settings card hands out, the letters the
@@ -38,6 +38,21 @@ export function mapInboundMail(raw: unknown): InboundMail {
   };
 }
 
+type MailFilters = { q?: string; intent?: string; unfiled?: boolean };
+
+/**
+ * The one place the three filters are trimmed and coerced, so the cache key and the wire
+ * cannot disagree about what "the same question" means. A blank word is no filter, and an
+ * unpressed switch is the whole inbox (`false` and absent are one answer, not two caches).
+ */
+function normalizedFilters(params?: MailFilters) {
+  return {
+    q: params?.q?.trim() || undefined,
+    intent: params?.intent?.trim() || undefined,
+    unfiled: params?.unfiled ? true : undefined,
+  };
+}
+
 /**
  * The account's letters, newest first, one page at a time (37.3's list route).
  *
@@ -45,17 +60,41 @@ export function mapInboundMail(raw: unknown): InboundMail {
  * letter's own text, case aside -- so the count and the pager describe the search rather than
  * the whole inbox. A non-blank `intent` narrows it further, to the reading the reader picked
  * (`unread` keeps the letters the classifier has not read); the two travel together and both
- * apply. The key carries the trimmed words, because " acme" and "acme" are the same question
- * and must not cost two caches.
+ * apply. `unfiled` is a scope, not a reading: it keeps only the letters no reader has filed,
+ * and it narrows beside the other two. The key carries the trimmed words, because " acme" and
+ * "acme" are the same question and must not cost two caches.
+ *
+ * Exported so the wire can be graded without a renderer: the page tests mock this module,
+ * so only a direct call proves the scope actually travels beside the words and the reading.
  */
+export async function fetchInboundMails(
+  params?: { page?: number; size?: number } & MailFilters
+): Promise<Page<InboundMail>> {
+  const { q, intent, unfiled } = normalizedFilters(params);
+  return normalizePage(
+    // Every key is spelled out rather than spread conditionally: the endpoint gate reads
+    // this literal to check each name against the handler's `@RequestParam`s, and a
+    // `...(cond ? {...} : {})` is exactly the shape it refuses to guess at. `undefined`
+    // costs nothing on the wire -- `buildUrl` drops it -- so blank stays blank.
+    await api.get<unknown>(endpoints.inboundMails, {
+      size: params?.size ?? 50,
+      page: params?.page,
+      q,
+      intent,
+      unfiled,
+    }),
+    mapInboundMail
+  );
+}
+
 export function useInboundMails(params?: {
   page?: number;
   size?: number;
   q?: string;
   intent?: string;
+  unfiled?: boolean;
 }) {
-  const q = params?.q?.trim() || undefined;
-  const intent = params?.intent?.trim() || undefined;
+  const { q, intent, unfiled } = normalizedFilters(params);
   return useQuery({
     queryKey: [
       "inbound",
@@ -64,47 +103,58 @@ export function useInboundMails(params?: {
       params?.size ?? 50,
       q ?? "",
       intent ?? "",
+      unfiled ? "unfiled" : "",
     ],
-    queryFn: async (): Promise<Page<InboundMail>> =>
-      normalizePage(
-        // Every key is spelled out rather than spread conditionally: the endpoint gate reads
-        // this literal to check each name against the handler's `@RequestParam`s, and a
-        // `...(cond ? {...} : {})` is exactly the shape it refuses to guess at. `undefined`
-        // costs nothing on the wire -- `buildUrl` drops it -- so blank stays blank.
-        await api.get<unknown>(endpoints.inboundMails, {
-          size: params?.size ?? 50,
-          page: params?.page,
-          q,
-          intent,
-        }),
-        mapInboundMail
-      ),
+    queryFn: () => fetchInboundMails(params),
   });
 }
 
 /**
- * The numbers the chips above the list carry (49.4).
+ * One answer of the counts route, read as the page's shape (49.4/49.5).
+ *
+ * The numbers are the server's: a reading it did not count stays absent rather than becoming
+ * a zero this file invented, and a missing `unfiled` stays undefined rather than claiming the
+ * waiting pile is empty. With the scope on, the same six numbers describe the waiting pile.
+ */
+export function mapIntentCounts(raw: unknown): InboundIntentCounts {
+  const items = (raw as { items?: unknown[] } | null)?.items ?? [];
+  const counts: Record<string, number> = {};
+  for (const item of items) {
+    const intent = str(item, "intent");
+    const count = num(item, "count");
+    if (intent && count !== undefined) counts[intent] = count;
+  }
+  return { counts, unfiled: num(raw, "unfiled") };
+}
+
+/**
+ * The counts route one page's chips are drawn from (49.4/49.5), read off the wire.
+ *
+ * Exported for the same reason as `fetchInboundMails`: the page tests hand the page a mock,
+ * so only a direct call can prove the waiting scope travels on this route too.
+ */
+export async function fetchInboundIntentCounts(params?: {
+  q?: string;
+  unfiled?: boolean;
+}): Promise<InboundIntentCounts> {
+  const { q, unfiled } = normalizedFilters(params);
+  return mapIntentCounts(await api.get<unknown>(endpoints.inboundIntentCounts, { q, unfiled }));
+}
+
+/**
+ * The numbers the chips above the list carry (49.4), and the waiting pile beside them (49.5).
  *
  * The route answers every reading in the chip vocabulary, zeros included, under the same
  * `q` as the page -- so the number on "Rejections" and the page it opens are answers to one
  * question. It deliberately does not take the picked reading: a chip counts what it would
- * show, not what the picked chip is already showing.
+ * show, not what the picked chip is already showing. With `unfiled` on, the six numbers
+ * describe the waiting pile and the answer's own `unfiled` is that pile's size.
  */
-export function useInboundIntentCounts(params?: { q?: string }) {
-  const q = params?.q?.trim() || undefined;
+export function useInboundIntentCounts(params?: { q?: string; unfiled?: boolean }) {
+  const { q, unfiled } = normalizedFilters(params);
   return useQuery({
-    queryKey: ["inbound", "mails", "intents", q ?? ""],
-    queryFn: async (): Promise<Record<string, number>> => {
-      const raw = await api.get<unknown>(endpoints.inboundIntentCounts, { q });
-      const items = (raw as { items?: unknown[] } | null)?.items ?? [];
-      const counts: Record<string, number> = {};
-      for (const item of items) {
-        const intent = str(item, "intent");
-        const count = num(item, "count");
-        if (intent && count !== undefined) counts[intent] = count;
-      }
-      return counts;
-    },
+    queryKey: ["inbound", "mails", "intents", q ?? "", unfiled ? "unfiled" : ""],
+    queryFn: () => fetchInboundIntentCounts(params),
   });
 }
 
