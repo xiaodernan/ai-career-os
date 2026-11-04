@@ -140,7 +140,7 @@ export default function OffersPage() {
                 id="offer-role"
                 value={role}
                 onChange={(e) => setRole(e.target.value)}
-                placeholder="e.g. Senior Backend Engineer (Java)"
+                placeholder={t("offers.rolePlaceholder")}
                 autoComplete="off"
               />
             </div>
@@ -150,7 +150,7 @@ export default function OffersPage() {
                 id="offer-location"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
-                placeholder="e.g. Shanghai"
+                placeholder={t("offers.locationPlaceholder")}
                 autoComplete="off"
               />
             </div>
@@ -161,7 +161,7 @@ export default function OffersPage() {
                 type="number"
                 value={offerBase}
                 onChange={(e) => setOfferBase(e.target.value)}
-                placeholder="e.g. 400000"
+                placeholder={t("offers.basePlaceholder")}
                 autoComplete="off"
               />
             </div>
@@ -172,7 +172,7 @@ export default function OffersPage() {
                 type="number"
                 value={matchScore}
                 onChange={(e) => setMatchScore(e.target.value)}
-                placeholder="e.g. 82"
+                placeholder={t("offers.matchPlaceholder")}
                 autoComplete="off"
               />
             </div>

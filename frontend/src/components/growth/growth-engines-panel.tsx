@@ -160,7 +160,7 @@ export function GrowthEnginesPanel() {
               id="engine-role"
               value={role}
               onChange={(e) => setRole(e.target.value)}
-              placeholder="e.g. Senior Backend Engineer (Java)"
+              placeholder={t("growthEngines.targetRolePlaceholder")}
               autoComplete="off"
             />
           </div>
@@ -170,7 +170,7 @@ export function GrowthEnginesPanel() {
               id="engine-location"
               value={location}
               onChange={(e) => setLocation(e.target.value)}
-              placeholder="e.g. Shanghai"
+              placeholder={t("growthEngines.locationPlaceholder")}
               autoComplete="off"
             />
           </div>

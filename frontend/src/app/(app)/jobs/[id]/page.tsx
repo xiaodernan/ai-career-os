@@ -423,7 +423,7 @@ export default function JobDetailPage() {
             </CardHeader>
             <CardContent className="space-y-2 text-xs text-muted-foreground">
               <p className="flex items-center gap-2">
-                <AIBadge label="job" />
+                <AIBadge label={t("jobs.detail.sourceBadgeJob")} />
                 {job.source === "user_paste" ? t("jobs.detail.pastedByYou") : job.source === "agent_research" ? t("jobs.detail.foundByResearch") : t("jobs.detail.seededBoard")}
               </p>
               <Separator className="my-1" />

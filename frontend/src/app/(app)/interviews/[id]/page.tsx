@@ -517,7 +517,7 @@ function EvaluationPanel({
       <CardHeader className="pb-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <CardTitle className="flex items-center gap-2 text-base">
-            <AIBadge label="evaluator" />
+            <AIBadge label={t("interviews.detail.evaluatorBadge")} />
             {t("interviews.detail.answerEvaluation")}
           </CardTitle>
           {typeof score === "number" && (
@@ -575,7 +575,7 @@ function EvaluationPanel({
           <div className="rounded-lg border border-border/70 bg-muted/30 p-3">
             <p className="mb-1.5 flex items-center gap-1.5 text-2xs font-medium tracking-wide text-muted-foreground uppercase">
               <Lightbulb className="size-3.5" aria-hidden />
-              A stronger answer, from your own material
+              {t("interviews.detail.betterAnswerHint")}
             </p>
             <StreamingText content={evaluation.betterAnswer} className="text-xs" />
           </div>

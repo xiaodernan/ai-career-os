@@ -163,7 +163,7 @@ export default function InterviewReportPage() {
                 </Link>
               )}
             </div>
-            <AIBadge label="evaluator output" />
+            <AIBadge label={t("interviews.report.evaluatorOutputBadge")} />
           </div>
         </CardHeader>
         <CardContent>

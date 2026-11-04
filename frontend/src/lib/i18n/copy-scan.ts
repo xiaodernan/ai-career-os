@@ -210,36 +210,58 @@ function isCode(value: string): boolean {
   return CODE_CHARS.test(value.replace(/&[a-z]+;/g, "x"));
 }
 
-function attributeOffenders(): Offender[] {
+/**
+ * Whether a copy-bearing attribute's value is copy.
+ *
+ * A capital is the easy yes. A lower-case start used to be the easy no -- "an
+ * identifier, a URL fragment or a token" -- but a copy-bearing attribute is
+ * exactly where a lower-case word is still a word the reader sees:
+ * `<AIBadge label="evaluator" />` and `placeholder="e.g. Shanghai"` printed
+ * English on every Chinese screen with the gate green. What is not copy is a
+ * shape, not a case: a URL, a mask with no letters in it, or code.
+ */
+function attributeCopy(value: string): boolean {
+  if (/^[A-Z]/.test(value)) return true;
+  if (/^[a-z][a-z0-9+.-]*:\/\//.test(value)) return false;
+  if (!/[a-zA-Z]/.test(value)) return false;
+  return !isCode(value);
+}
+
+/** The copy in one source's attributes, for the gate's probes. */
+export function attributeOffendersIn(file: string, text: string): Offender[] {
   const found: Offender[] = [];
-  for (const rel of browserSources()) {
-    const text = readFileSync(join(ROOT, rel), "utf-8");
-    for (const m of text.matchAll(ATTRIBUTE)) {
-      const value = m[2];
-      // A word that starts lower-case is an identifier, a URL fragment or a
-      // token, not a sentence. A single word that starts upper-case is a
-      // label ("Delete", "Save") and does count.
-      if (!/^[A-Z]/.test(value)) continue;
-      // A class name, a path or a slug never starts with a capital and a
-      // space; a copy string nearly always does.
-      found.push({ file: rel, attribute: m[1], value });
-    }
+  for (const m of text.matchAll(ATTRIBUTE)) {
+    const value = m[2];
+    if (attributeCopy(value)) found.push({ file, attribute: m[1], value });
+  }
+  return found;
+}
+
+function attributeOffenders(): Offender[] {
+  return browserSources().flatMap((rel) =>
+    attributeOffendersIn(rel, readFileSync(join(ROOT, rel), "utf-8"))
+  );
+}
+
+/** The copy in one source's object-literal properties, for the gate's probes. */
+export function objectLiteralOffendersIn(file: string, text: string): Offender[] {
+  const found: Offender[] = [];
+  for (const m of text.matchAll(OBJECT_LITERAL)) {
+    const value = m[2];
+    // A capital only. The attribute scan charges a lower-case word too,
+    // because there the value is what the reader gets; here it is often a
+    // translation key -- `title: auth.pillars.knowledge.title` -- which the
+    // page resolves before it renders.
+    if (!/^[A-Z]/.test(value)) continue;
+    found.push({ file, attribute: m[1], value });
   }
   return found;
 }
 
 function objectLiteralOffenders(): Offender[] {
-  const found: Offender[] = [];
-  for (const rel of browserSources()) {
-    const text = readFileSync(join(ROOT, rel), "utf-8");
-    for (const m of text.matchAll(OBJECT_LITERAL)) {
-      const value = m[2];
-      // The same rule as the attribute scan.
-      if (!/^[A-Z]/.test(value)) continue;
-      found.push({ file: rel, attribute: m[1], value });
-    }
-  }
-  return found;
+  return browserSources().flatMap((rel) =>
+    objectLiteralOffendersIn(rel, readFileSync(join(ROOT, rel), "utf-8"))
+  );
 }
 
 /**
@@ -288,11 +310,18 @@ function bare(value: string): string {
 }
 
 /**
- * The start of a sentence: a capital and a lower-case letter after it.
- * "AI", "OS" and "JD" are names, not sentences.
+ * The start of a sentence: a capital and a lower-case letter after it, or a
+ * capital that is a word on its own.
+ *
+ * "AI", "OS" and "JD" are names, not sentences, which is why the rule wanted
+ * a lower-case letter second. But an English sentence can open with the
+ * one-letter word "A" or "I", and that shape was a hole in every rule in this
+ * file: "A stronger answer, from your own material" sat as a heading on the
+ * interview page and the gate read nothing. A capital followed by whitespace
+ * is the same sentence head.
  */
 function sentenceHead(value: string): boolean {
-  return /^[A-Z][a-z]/.test(bare(value));
+  return /^[A-Z](?:[a-z]|\s)/.test(bare(value));
 }
 
 /**
@@ -426,8 +455,10 @@ export function expressionOffendersIn(file: string, source: string): Offender[] 
       found.push({ file, attribute: "expression", value });
       continue;
     }
-    // A sentence starts with a capital and a lower-case letter after it.
-    if (!/^[A-Z][a-z]/.test(value)) continue;
+    // A sentence starts with the same head the text scan reads -- including
+    // the one-letter word "A" or "I", which the old capital-then-lower-case
+    // rule skipped.
+    if (!sentenceHead(value)) continue;
     // Entirely upper case is a code: a variant, a language tag, an
     // initialism. "EN" is a language, not a word.
     if (/^[A-Z\s]+$/.test(value)) continue;
@@ -532,26 +563,31 @@ export function stripComments(source: string): string {
 const LITERAL = /"([^"\\\n]{2,})"/g;
 const SENTENCE_END = /[a-zA-Z.!?)\]…]$/;
 
-function literalOffenders(): Offender[] {
+/** The copy in one source's quoted literals, for the gate's probes. */
+export function literalOffendersIn(file: string, source: string): Offender[] {
+  const text = stripComments(source);
   const found: Offender[] = [];
-  for (const rel of browserSources()) {
-    const text = stripComments(readFileSync(join(ROOT, rel), "utf-8"));
-    const seen = new Set<string>();
-    for (const m of text.matchAll(LITERAL)) {
-      const value = m[1];
-      // A capital, and a space: a phrase rather than an identifier.
-      if (!/^[A-Z][a-z]/.test(value)) continue;
-      if (!value.includes(" ")) continue;
-      if (!SENTENCE_END.test(value)) continue;
-      if (isCode(value)) continue;
-      if (NOT_COPY.has(value.trim())) continue;
-      seen.add(value);
-    }
-    for (const value of seen) {
-      found.push({ file: rel, attribute: "literal", value });
-    }
+  const seen = new Set<string>();
+  for (const m of text.matchAll(LITERAL)) {
+    const value = m[1];
+    // A sentence head, and a space: a phrase rather than an identifier.
+    if (!sentenceHead(value)) continue;
+    if (!value.includes(" ")) continue;
+    if (!SENTENCE_END.test(value)) continue;
+    if (isCode(value)) continue;
+    if (NOT_COPY.has(value.trim())) continue;
+    seen.add(value);
+  }
+  for (const value of seen) {
+    found.push({ file, attribute: "literal", value });
   }
   return found;
+}
+
+function literalOffenders(): Offender[] {
+  return browserSources().flatMap((rel) =>
+    literalOffendersIn(rel, readFileSync(join(ROOT, rel), "utf-8"))
+  );
 }
 
 /**

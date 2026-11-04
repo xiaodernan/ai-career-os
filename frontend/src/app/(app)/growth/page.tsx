@@ -98,7 +98,7 @@ export default function GrowthPage() {
                 id="growth-role"
                 value={targetRole}
                 onChange={(e) => setTargetRole(e.target.value)}
-                placeholder="e.g. Senior Backend Engineer (Java)"
+                placeholder={t("growth.targetRolePlaceholder")}
                 autoComplete="off"
               />
             </div>
@@ -108,7 +108,7 @@ export default function GrowthPage() {
                 id="growth-location"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
-                placeholder="e.g. Shanghai"
+                placeholder={t("growth.locationPlaceholder")}
                 autoComplete="off"
               />
             </div>

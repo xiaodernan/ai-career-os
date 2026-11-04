@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  attributeOffendersIn,
   browserSources,
   everyOffender,
   expressionOffendersIn,
+  literalOffendersIn,
+  objectLiteralOffendersIn,
   templateOffendersIn,
   textOffendersIn,
   TEXT_NODE_LIMIT,
@@ -192,6 +195,67 @@ describe("the browser's copy", () => {
       "const z = list.map((v) => v.name).join(\", \");",
     ];
     for (const probe of probes) expect(textOffendersIn("probe.tsx", probe)).toEqual([]);
+  });
+
+  it("reads a sentence that opens with the one-letter word A", () => {
+    // The head rule wanted a capital and a lower-case letter after it, so
+    // "AI", "OS" and "JD" stayed names -- but an English sentence can open
+    // with "A " or "I ", and the interview page's "A stronger answer, from
+    // your own material" printed in English on every Chinese screen with the
+    // gate green. A capital followed by a space is the same sentence head, in
+    // the text, the literal and the expression scan alike.
+    const sentence = "A stronger answer, from your own material";
+    expect(textOffendersIn("probe.tsx", `export const x = <p>${sentence}</p>;`).map((o) => o.value)).toEqual([
+      sentence,
+    ]);
+    expect(
+      literalOffendersIn("probe.tsx", `const s = "${sentence}";`).map((o) => o.value)
+    ).toEqual([sentence]);
+    expect(
+      expressionOffendersIn("probe.tsx", 'const s = ok ? "A stronger answer" : "none";').map(
+        (o) => o.value
+      )
+    ).toEqual(["A stronger answer"]);
+    expect(textOffendersIn("probe.tsx", "<p>I shipped the API myself.</p>").map((o) => o.value)).toEqual([
+      "I shipped the API myself.",
+    ]);
+    // An initialism is still a name: the whole phrase is on the not-copy list.
+    expect(textOffendersIn("probe.tsx", "<p>AI Career OS</p>")).toEqual([]);
+  });
+
+  it("reads a lowercase word in a copy-bearing attribute", () => {
+    // The attribute scan treated a lower-case start as an identifier and
+    // said nothing. But a copy-bearing attribute is exactly where a
+    // lower-case word is still a word the reader sees: three badge labels
+    // ("evaluator", "evaluator output", "job") and eight `e.g.` placeholders
+    // printed English on every Chinese screen while the gate was green.
+    const probe = [
+      'export const a = <AIBadge label="evaluator" />;',
+      'export const b = <Input placeholder="e.g. Shanghai" />;',
+      'export const c = <AIBadge label="evaluator output" />;',
+    ].join("\n");
+    expect(
+      attributeOffendersIn("probe.tsx", probe).map((o) => `${o.attribute}=${o.value}`)
+    ).toEqual(["label=evaluator", "placeholder=e.g. Shanghai", "label=evaluator output"]);
+  });
+
+  it("leaves a URL and a mask alone in an attribute", () => {
+    // What is not copy is a shape, not a case: a URL is an address, and a
+    // mask has no letters in it. The object-literal scan keeps its capital
+    // rule because a lower-case value there is usually a translation key --
+    // `title: auth.pillars.knowledge.title` -- which the page resolves before
+    // it renders.
+    const probe = [
+      'export const a = <Input placeholder="https://example.com/careers/123" />;',
+      'export const b = <Input placeholder="••••••••••" />;',
+    ].join("\n");
+    expect(attributeOffendersIn("probe.tsx", probe)).toEqual([]);
+    expect(
+      objectLiteralOffendersIn("probe.tsx", 'const x = { title: "auth.pillars.knowledge.title" };')
+    ).toEqual([]);
+    expect(literalOffendersIn("probe.tsx", 'const x = { title: "auth.pillars.knowledge.title" };')).toEqual(
+      []
+    );
   });
 
   it("reads the prose a template literal carries between its values", () => {
