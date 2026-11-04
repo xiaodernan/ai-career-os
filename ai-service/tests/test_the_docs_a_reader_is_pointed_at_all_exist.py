@@ -36,6 +36,19 @@ directory rule in `.gitignore`, read in the order git reads it so a later `!` li
 the directory takes the exemption back, and the name carries the `YYYYMMDD-HHMMSS_` stamp the harness
 puts on every report it writes -- so the answer is the same on both planes, and a third case refuses
 the exemption from widening into a way to hide a real document.
+
+The second exempted class was this gate's own bug. Files the product *hands the reader* -- the
+export page's `career-os-export.json`, its Markdown half, a kept letter's download -- are not
+documents either, and they were exempted by a list of two names whose comment promised the set
+"stays two". The letter download made that sentence false without any doc saying anything wrong:
+the roadmap named `cover-letter-senior-frontend-engineer.md`, which is exactly the file the drawer
+writes, and the gate called it a dangling document. A list of the names somebody thought of is the
+same mistake as the anonymization policy that was a list of fields, so the population is now read
+off the browser -- every filename spelled at a `downloadText(...)` argument or a `filename={...}`
+prop, followed one hop through the identifier the call hands it to, with each `${...}` hole turned
+into a wildcard because a writer produces a family of names and a doc quotes one of its members.
+The next download needs no edit here; a download the code stops writing reddens the sentence that
+still promises it.
 """
 
 import re
@@ -58,8 +71,14 @@ ALIASES = {"master_prompt": "origin spec"}
 RUN_STAMP = re.compile(r"^\d{8}-\d{6}_")
 
 
+@lru_cache(maxsize=None)
 def read(path: Path) -> str:
-    """Shipped text with LF endings; `git archive` hands out CRLF on this host."""
+    """Shipped text with LF endings; `git archive` hands out CRLF on this host.
+
+    Cached because the download walk reaches the same browser modules many times over: every
+    identifier at every call site asks for the whole source tree, and re-opening those files turned
+    a census of six names into a ten-second gate.
+    """
     return path.read_text(encoding="utf-8", errors="replace").replace("\r\n", "\n")
 
 
@@ -206,14 +225,188 @@ def spellings(stem: str) -> set[tuple[str, ...]]:
     return {plain, tuple(alias.split())} if alias else {plain}
 
 
-# Files the *product* hands the reader, written down where the reader sees
-# them. The docs name them because the reader finds them on disk -- the
-# export page saves `career-os-export.json` and its Markdown half as
-# `career-os-export.md`. A gate that sent the reader to look for them in the
-# repository would be asking about the wrong file; and unlike the run
-# reports, these are named by the product's own writers, so the set is two
-# names and stays two.
-PRODUCT_OUTPUTS = frozenset({"career-os-export.json", "career-os-export.md"})
+# The files the *product* hands the reader, spelled by the code that hands them over.
+#
+# The docs name these because the reader finds them on disk: the export page saves
+# `career-os-export.json` and its Markdown half as `career-os-export.md`, and a kept letter leaves
+# as `cover-letter-<the posting's own words>.md`. A gate that sent the reader looking for them in
+# the repository would be asking about the wrong file.
+#
+# They were a list of two names, and the letter download made the list wrong: not because the name
+# was missing from it, but because a list is a claim about how many writers there are, and the next
+# download would have reddened a document that had said something true. So the population is read
+# off the browser instead -- every filename literal at a download site, one hop through the
+# identifier the call names (`filename={letterDownloadName(...)}` writes its file inside a
+# function, and `downloadText(name, ...)` inside a `const`) -- and a `${...}` hole becomes a
+# wildcard, because the writer produces a family of names and the docs quote one of its members.
+#
+# Two limits keep the exemption from widening into a way to hide a document. Only a *bare* name is
+# exempt: `docs/export.md` is a claim about this repository, and a download lands wherever the
+# reader's browser lands it. And a string inside a hole is the expression's own text, not a name --
+# the download button's fallback is `careeros-${...}`, whose hole mentions `document.md`, and a
+# reference to a bare `document.md` is not a file the product ever writes.
+FRONTEND = ROOT / "frontend" / "src"
+
+# The two shapes a download is named in: the first argument of the helper that saves the file, and
+# the `filename` prop of the button that calls it.
+DOWNLOAD_CALL = re.compile(r"\b(?:downloadText|downloadBlob)\(")
+DOWNLOAD_PROP = re.compile(r"\bfilename=\{")
+# A quoted or templated string that ends in a file the reader is handed. A backtick run may carry
+# quotes (the hole in `cover-letter-${stem || "letter"}.md` does); a quoted run may not.
+FILENAME_LITERAL = re.compile(
+    r"`([^`\n]{1,80}?\.(?:md|json|csv|txt))`"
+    r"|(?P<q>[\"'])(?P<quoted>[^\"'\n]{1,80}?\.(?:md|json|csv|txt))(?P=q)")
+IDENTIFIER = re.compile(r"\b([A-Za-z_]\w*)\b")
+# `name` -> the function that names it -> the literal it returns. Two hops is the deepest the
+# writers go; a third would be a scan chasing itself through the module.
+MAX_HOPS = 2
+
+
+@lru_cache(maxsize=1)
+def frontend_sources() -> list[Path]:
+    """The browser's own code, tests aside: they name sample files no reader is handed."""
+    out = [path for path in sorted(FRONTEND.rglob("*"))
+           if path.suffix in (".ts", ".tsx") and ".test." not in path.name]
+    assert out, f"no browser source under {FRONTEND.relative_to(ROOT)} -- the walk would judge no name"
+    return out
+
+
+def closes_at(text: str, start: int, opening: str) -> int:
+    """The index of the pair that closes the one at `start`, or -1."""
+    closing = {"(": ")", "{": "}"}[opening]
+    depth = 0
+    for index in range(start, len(text)):
+        if text[index] == opening:
+            depth += 1
+        elif text[index] == closing:
+            depth -= 1
+            if depth == 0:
+                return index
+    return -1
+
+
+def region_at(text: str, start: int, opening: str, label: str) -> str:
+    end = closes_at(text, start, opening)
+    assert end >= 0, f"unclosed {label} at {text[start:start + 40]!r}"
+    return text[start + 1:end]
+
+
+def first_argument(region: str) -> str:
+    """The download helper's name argument: up to the first comma at bracket depth zero."""
+    depth = 0
+    for index, char in enumerate(region):
+        if char in "([{":
+            depth += 1
+        elif char in ")]}":
+            depth -= 1
+        elif char == "," and depth == 0:
+            return region[:index]
+    return region
+
+
+def hole_spans(text: str) -> list[tuple[int, int]]:
+    """The `${...}` ranges of a template: inside one is an expression, not a name."""
+    spans, index = [], 0
+    while True:
+        start = text.find("${", index)
+        if start < 0:
+            return spans
+        end = closes_at(text, start + 1, "{")
+        assert end >= 0, f"unclosed hole at {text[start:start + 40]!r}"
+        spans.append((start, end + 1))
+        index = end + 1
+
+
+def blank(text: str, spans) -> str:
+    chars = list(text)
+    for start, end in spans:
+        chars[start:end] = [" "] * (end - start)
+    return "".join(chars)
+
+
+def written_names(region: str) -> list[str]:
+    """The filenames of a region, minus any string that only sits inside another template's hole."""
+    holes = hole_spans(region)
+    return [match.group(1) if match.group(1) is not None else match.group("quoted")
+            for match in FILENAME_LITERAL.finditer(region)
+            if not any(start <= match.start() < end for start, end in holes)]
+
+
+def expressions(region: str) -> str:
+    """A region with its names and holes removed: what is left is the code that decides the name."""
+    stripped = blank(region, hole_spans(region))
+    return blank(stripped, [(match.start(), match.end())
+                            for match in FILENAME_LITERAL.finditer(stripped)])
+
+
+def declaration_body(name: str, path: Path) -> str | None:
+    """The text a bare identifier's value is written in -- a function's body or a `const`'s."""
+    pattern = r"(?P<kind>function|const|let)\s+" + re.escape(name) + r"\s*(?P<tail>[=(])?"
+    for candidate in [path] + [p for p in frontend_sources() if p != path]:
+        text = read(candidate)
+        match = re.search(pattern, text)
+        if not match:
+            continue
+        if match.group("kind") == "function":
+            params = closes_at(text, match.start("tail"), "(")
+            brace = text.find("{", params) if params >= 0 else -1
+            return region_at(text, brace, "{", name) if brace >= 0 else None
+        start = match.end()
+        while start < len(text) and text[start] in " \t":
+            start += 1
+        stops = [len(text), text.find(";", start), text.find("\n", start)]
+        return text[start:min(stop for stop in stops if stop >= 0)]
+    return None
+
+
+@lru_cache(maxsize=1)
+def product_output_writers() -> frozenset[str]:
+    """Every filename the browser's own code spells, template holes and all."""
+    out, pending, seen = set(), [], set()
+    for path in frontend_sources():
+        text = read(path)
+        for match in DOWNLOAD_CALL.finditer(text):
+            region = first_argument(region_at(text, match.end() - 1, "(", "download"))
+            pending.append((path, region, 0))
+        for match in DOWNLOAD_PROP.finditer(text):
+            pending.append((path, region_at(text, match.end() - 1, "{", "filename"), 0))
+    while pending:
+        path, region, hops = pending.pop()
+        out.update(written_names(region))
+        if hops >= MAX_HOPS:
+            continue
+        for name in set(IDENTIFIER.findall(expressions(region))):
+            if (path, name, hops) in seen:
+                continue
+            seen.add((path, name, hops))
+            body = declaration_body(name, path)
+            if body is not None:
+                pending.append((path, body, hops + 1))
+    return frozenset(out)
+
+
+def output_pattern(written: str) -> re.Pattern:
+    """A writer's template as the names it produces: each `${...}` hole is one path segment."""
+    parts, index = [], 0
+    while True:
+        hole = written.find("${", index)
+        if hole < 0:
+            parts.append(re.escape(written[index:]))
+            return re.compile("".join(parts))
+        parts.append(re.escape(written[index:hole]))
+        parts.append("[^/]*")
+        end = closes_at(written, hole + 1, "{")
+        assert end >= 0, f"unclosed hole in {written!r}"
+        index = end + 1
+
+
+def is_product_output(reference: str) -> bool:
+    """Whether the browser itself writes a file by this name -- a bare name, never a path."""
+    parts = segments(reference)
+    if len(parts) != 1:
+        return False
+    return any(output_pattern(written).fullmatch(parts[0])
+               for written in product_output_writers())
 
 
 def test_every_document_the_docs_name_is_a_document_that_exists():
@@ -225,7 +418,7 @@ def test_every_document_the_docs_name_is_a_document_that_exists():
             for token in references(path)
             if token not in known
             and Path(token).name not in known
-            and Path(token).name not in PRODUCT_OUTPUTS
+            and not is_product_output(token)
             and not is_run_artifact(token)
         )
         if gone:
@@ -280,6 +473,56 @@ def test_a_generated_reference_is_exempt_only_because_the_repository_calls_it_ge
         f"an ignored-directory rule covers {swallowed}: a curated document that lives where "
         f"{GITIGNORE.name} says nothing is carried would stop being a document this gate can check, "
         "and references to it would be exempt forever"
+    )
+
+
+def test_the_product_writes_the_names_it_is_exempt_for_and_no_document_is_exempt_with_them():
+    """The download exemption's own mechanism, read the same way as the run artifact's.
+
+    Three things have to hold. The walk found names at all, and found one of each shape it claims:
+    a name spelled straight into a `downloadText` call, and a name that only arrives through the hop
+    into the function the button hands the call -- the letter's `cover-letter-${stem}.md`, written
+    one file away from the screen that offers it, is the case the old two-name list could not have
+    reached and the reason the list was wrong. At least one reference in the docs is classified by
+    the population, because an exemption nothing uses has stopped describing the files it was
+    written for. And the two limits bite: a path-spelled name is a claim about this repository, and
+    a name inside someone's `${...}` hole is an expression, not a file -- so `docs/API.md` and a bare
+    `document.md` stay graded, and the design document that happens to share a stem with a download
+    cannot be hidden by one.
+    """
+    writers = product_output_writers()
+    assert writers, f"no filename is written by the browser's code under {FRONTEND.name}/"
+    assert {"career-os-export.json", "career-os-export.md"} <= writers, (
+        f"the export page's own download names are not in {sorted(writers)}: the walk stopped "
+        "finding the call site that hands the reader the bundle")
+    assert any("${" in written and written.startswith("cover-letter-") for written in writers), (
+        f"{sorted(writers)} carries no templated letter name, so the hop into the function the "
+        "button names -- `filename={letterDownloadName(...)}` -- stopped running, and the roadmap's "
+        "example letter would be judged a document nobody committed")
+
+    refs = {token for path in curated_docs() for token in references(path)}
+    exempted = sorted(token for token in refs if is_product_output(token))
+    assert exempted, (
+        "no reference in the curated documents is a file the product writes, though the browser "
+        f"names {sorted(writers)}: either the docs stopped describing downloads, or the walk no "
+        "longer describes the code that makes them -- and a rule nobody uses exempts the next "
+        "dangling name just as easily"
+    )
+    for token in exempted:
+        assert len(segments(token)) == 1, (
+            f"{token} was exempted as a download while naming a directory: a path is a claim about "
+            "this repository, and the reader's browser never lands a download in one"
+        )
+
+    assert not is_product_output("docs/API.md"), (
+        "a path-spelled design document was exempted by a download name that shares its stem"
+    )
+    assert not is_product_output("document.md"), (
+        "`careeros-${isMarkdown ? \"document.md\" : \"document.txt\"}` is a hole's expression, not a "
+        "file the product hands over: the reader's letter never arrives as `document.md`"
+    )
+    assert not is_product_output("career-os-invented.md"), (
+        "a name no writer spells was exempted: the population is the writers, not a prefix"
     )
 
 
