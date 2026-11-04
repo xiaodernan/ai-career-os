@@ -139,7 +139,9 @@ export default function ResumeDetailPage() {
             <div className="min-w-0">
               <h1 className="font-serif text-display-sm font-medium text-balance">{r.title}</h1>
               <p className="mt-1 text-sm text-muted-foreground">
-                added {r.createdAt ? formatDate(r.createdAt, locale) : "—"} ·{" "}
+                {t("resumes.detail.addedOn", {
+                  when: r.createdAt ? formatDate(r.createdAt, locale) : "—",
+                })}{" · "}
                 <StatusBadge status={r.status} />
               </p>
             </div>

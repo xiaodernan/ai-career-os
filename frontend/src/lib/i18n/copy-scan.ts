@@ -160,10 +160,12 @@ export function browserSources(): string[] {
  * A fragment with a space and a closing mark is the tail of a sentence, and
  * the tail of a sentence is copy: it is read now.
  *
- * What the rule still does not catch is the lone lower-case word:
- * `} matching{" "}` is a piece of a sentence whose other pieces are
- * elsewhere, and no translation key can hold it by itself. A fragment with
- * a space but no closing mark is read by {@link sentenceContinuation}.
+ * A lone lower-case word is copy only when it is the label of a value:
+ * `added {date}` opens a tag and the value it names follows immediately, so
+ * the two are one phrase and one key -- {@link sentenceLabel} reads it. A
+ * word after a value, `} matching{" "}`, has its other half behind it and no
+ * key can hold it by itself. A fragment with a space but no closing mark is
+ * read by {@link sentenceContinuation}.
  */
 /**
  * The longest text node the scan will read.
@@ -275,6 +277,9 @@ export function textOffendersIn(file: string, text: string): Offender[] {
   for (const m of text.matchAll(TEXT_NODE)) {
     const value = m[1].trim();
     if (!value) continue;
+    // The character the lazy quantifier stopped at: a tag, or the value the
+    // text labels. A label is only likely in front of a value.
+    const after = text[m.index! + m[0].length] ?? "";
     // A translation key that was never resolved. The reader sees the key
     // instead of the copy, and it is the one failure the prose rules below
     // would miss -- so it is caught here rather than by them.
@@ -284,7 +289,8 @@ export function textOffendersIn(file: string, text: string): Offender[] {
       !sentenceHead(value) &&
       !sentenceTail(value) &&
       !sentenceLead(value, m[0][0]) &&
-      !sentenceContinuation(value, m[0][0])
+      !sentenceContinuation(value, m[0][0]) &&
+      !sentenceLabel(value, m[0][0], after)
     )
       continue;
     // Code, not copy.
@@ -358,6 +364,33 @@ function sentenceLead(value: string, opened: string): boolean {
   if (opened !== ">") return false;
   const head = bare(value);
   return /^[a-z]/.test(head) && /\s/.test(head) && !/["()]/.test(head) && !CODE_HEAD.test(head);
+}
+
+/**
+ * The label in front of a value: `added {date}`.
+ *
+ * A lone lower-case word has no space and no closing mark, so the head, tail,
+ * lead and continuation rules all skipped it -- and that was the shape the
+ * resume detail's metadata line was written in: `added {date} · <badge>`,
+ * printed in English on every Chinese screen with the gate green.
+ *
+ * What separates it from the identifier the old rules were protecting is
+ * position, not length: it opens a tag and the value it labels follows
+ * immediately, so the two are one phrase in the reader's language and one
+ * translation key can hold both (`added {when}`). A lower-case word *after* a
+ * value (`{count} matching {noun}`) still has no key that can hold it alone.
+ *
+ * A statement keyword is still code the text-node regex caught out of
+ * alignment, and a word shorter than three letters is a unit (`ms`), not a
+ * label.
+ */
+function sentenceLabel(value: string, opened: string, next: string): boolean {
+  if (opened !== ">") return false;
+  if (next !== "{") return false;
+  const head = bare(value);
+  if (!/^[a-z]+$/.test(head)) return false;
+  if (head.length < 3) return false;
+  return !CODE_HEAD.test(head);
 }
 
 /**

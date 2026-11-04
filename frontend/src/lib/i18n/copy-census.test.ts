@@ -185,6 +185,26 @@ describe("the browser's copy", () => {
     ]);
   });
 
+  it("reads a lone lower-case label in front of a value", () => {
+    // The resume detail's metadata line read `added {date} · <badge>`: the
+    // label is one lower-case word with no space and no closing mark, so the
+    // head, tail, lead and continuation rules all skipped it. What makes it
+    // copy is position -- it opens a tag and the value it names follows
+    // immediately, so the two are one phrase a key can hold.
+    const probe = "export const x = <p>added {formatDate(r.createdAt, locale)} · <StatusBadge /></p>;";
+    expect(textOffendersIn("probe.tsx", probe).map((o) => o.value)).toEqual(["added"]);
+    // A unit, a statement keyword, a word with no value behind it and a word
+    // that follows a value instead of labelling one stay out: the rule needs
+    // a tag anchor, a single word and a value in front of it together.
+    const quiet = [
+      "export const a = <p>ms{count}</p>;",
+      "export const b = <p>return {value}</p>;",
+      "export const c = <p>added</p>;",
+      "export const d = <p>{count} matching {noun}</p>;",
+    ];
+    for (const probe of quiet) expect(textOffendersIn("probe.tsx", probe)).toEqual([]);
+  });
+
   it("does not read code the text-node regex caught out of alignment", () => {
     // A regex that reads between `>` and `{` also reads code that happens to
     // sit in those characters. A statement's opening word, or the punctuation
@@ -196,7 +216,6 @@ describe("the browser's copy", () => {
     ];
     for (const probe of probes) expect(textOffendersIn("probe.tsx", probe)).toEqual([]);
   });
-
   it("reads a sentence that opens with the one-letter word A", () => {
     // The head rule wanted a capital and a lower-case letter after it, so
     // "AI", "OS" and "JD" stayed names -- but an English sentence can open
