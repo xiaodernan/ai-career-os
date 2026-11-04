@@ -39,7 +39,12 @@ vi.mock("@/lib/hooks/ingestion", () => ({
   useRunIngestionFeed: () => ({ mutate: () => {}, isPending: false, variables: undefined }),
 }));
 
-import { ScheduledFeedsPanel, feedSourceRequest, planTitles } from "./scheduled-feeds-panel";
+import {
+  ScheduledFeedsPanel,
+  feedSourceRequest,
+  feedSourceWord,
+  planTitles,
+} from "./scheduled-feeds-panel";
 
 /**
  * The scheduled-feeds panel is the browser's half of the nightly sweep
@@ -101,6 +106,24 @@ describe("feedSourceRequest", () => {
     // Unnamed, so the backend's own default label stands instead of one
     // the browser invented for a source the reader never named.
     expect(feedSourceRequest("feed")).toBeUndefined();
+  });
+});
+
+describe("feedSourceWord", () => {
+  it("names the three sources the form stores, and keeps a label it does not know", () => {
+    const table: Record<string, string> = {
+      "ingestion.sourceKindFeed": "RSS / Atom feed",
+      "ingestion.sourceKindGreenhouse": "Greenhouse board",
+      "ingestion.sourceKindLever": "Lever board",
+    };
+    const t = (key: string) => table[key] ?? key;
+    expect(feedSourceWord(t, "feed")).toBe("RSS / Atom feed");
+    expect(feedSourceWord(t, "greenhouse")).toBe("Greenhouse board");
+    expect(feedSourceWord(t, "lever")).toBe("Lever board");
+    // The column is open: a row another client named keeps its own spelling.
+    expect(feedSourceWord(t, "workday")).toBe("workday");
+    // A table that lost the key reads as the label, never as a raw key.
+    expect(feedSourceWord((key) => key, "greenhouse")).toBe("greenhouse");
   });
 });
 

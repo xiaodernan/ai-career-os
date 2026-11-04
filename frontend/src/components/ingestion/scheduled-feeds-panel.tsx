@@ -87,6 +87,21 @@ export function feedSourceRequest(source: FeedSource): string | undefined {
   return source === "feed" ? undefined : source;
 }
 
+/**
+ * The row's source label, in the reader's language.
+ *
+ * `ingestion_feeds.source` is an open label -- the backend stores whatever the request
+ * names, up to 40 characters -- and the three the form offers are the ones the
+ * connectors own. A row named by something else keeps its own spelling rather than
+ * losing it.
+ */
+export function feedSourceWord(t: (key: string) => string, source: string): string {
+  const key = SOURCE_LABEL_KEY[source as FeedSource];
+  if (!key) return source;
+  const word = t(key);
+  return word === key ? source : word;
+}
+
 /** The titles a stored plan proposes to create, read defensively from the engine's map. */
 export function planTitles(plan: Record<string, unknown> | null | undefined): string[] {
   const rows = plan?.create;
@@ -253,7 +268,7 @@ export function ScheduledFeedsPanel() {
                       <p className="truncate text-xs text-muted-foreground">{feed.url}</p>
                     </div>
                     <div className="flex shrink-0 items-center gap-1.5">
-                      <Badge variant="outline">{feed.source}</Badge>
+                      <Badge variant="outline">{feedSourceWord(t, feed.source)}</Badge>
                       <Switch
                         checked={feed.enabled}
                         aria-label={t("ingestion.toggleAria", { name: feed.name })}

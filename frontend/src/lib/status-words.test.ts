@@ -641,8 +641,9 @@ describe("the account role badge", () => {
   });
 });
 
-const VERSION_ORIGIN_SURFACES: [string, string][] = [
+const SOURCE_WORD_SURFACES: [string, string][] = [
   ["app/(app)/resumes/[id]/page.tsx", "resumeVersionKindWord(t, v.source)"],
+  ["components/ingestion/scheduled-feeds-panel.tsx", "feedSourceWord(t, feed.source)"],
 ];
 
 /**
@@ -650,19 +651,21 @@ const VERSION_ORIGIN_SURFACES: [string, string][] = [
  * `mapResumeVersions` still fills `source` from the wire's `kind`. A row that stopped
  * carrying it would make the line silently vanish, not print a wrong word.
  */
-const VERSION_ORIGIN_MAPS: [string, string][] = [
+const SOURCE_WORD_MAPS: [string, string][] = [
   ["lib/hooks/resources.ts", 'source: str(v, "kind", "source", "origin")'],
 ];
 
 /**
- * The charge is the drawn origin word, not every `.source`.
+ * The charge is a drawn `.source` word, not every `.source`.
  *
- * `mapResumeVersions` maps `resume_versions.kind` onto the view model's `source`, which
- * is why the kind charges below never saw this line: they spell `.kind`. Evidence rows
- * read a nested document (`e.source?.docTitle`), and a dotted tail is plumbing; a
- * version row's `source` is the schema's two words, and drawing it raw is the charge.
+ * Two vocabularies ride the field name. `mapResumeVersions` maps
+ * `resume_versions.kind` onto the view model's `source` -- which is why the kind
+ * charges below never saw the versions line: they spell `.kind` -- and a feed row
+ * draws `ingestion_feeds.source`. Evidence rows read a nested document
+ * (`e.source?.docTitle`), and a dotted tail is plumbing; either enum drawn on its
+ * own is the charge.
  */
-function rawVersionOriginSurfaces(files: { path: string; text: string }[]): string[] {
+function rawSourceWordSurfaces(files: { path: string; text: string }[]): string[] {
   return files
     .filter((f) => f.path !== STATUS_WORDS)
     .filter((f) => textNodeBodies(f.text).some((b) => printsEnum(b, "[A-Za-z_$][\\w$]*\\.source")))
@@ -680,59 +683,70 @@ function versionKindWordsInSchema(sql: string): string[] {
     .sort();
 }
 
-describe("the resume version's origin word", () => {
-  it("draws the mapped kind through the table", () => {
+describe("the wire source words", () => {
+  it("draw each surface's source through the table", () => {
     const files = sources();
     expect(files.length, "the scan read no files").toBeGreaterThan(150);
     // The charge runs before the seams: a name in this list says which page prints the
     // wire word, and a missing seam only says which call the gate expected.
-    const offenders = rawVersionOriginSurfaces(files);
+    const offenders = rawSourceWordSurfaces(files);
     expect(
       offenders,
-      `surfaces printing a version's wire origin:\n${offenders.join("\n")}`
+      `surfaces printing a wire source word:\n${offenders.join("\n")}`
     ).toEqual([]);
-    for (const [rel, seam] of VERSION_ORIGIN_SURFACES) {
+    for (const [rel, seam] of SOURCE_WORD_SURFACES) {
       const file = files.find((f) => f.path.endsWith(rel));
       expect(file, `${rel} is not in the walk`).toBeTruthy();
-      expect(file!.text, `${rel} no longer draws the origin word through ${seam}`).toContain(seam);
+      expect(file!.text, `${rel} no longer draws its source word through ${seam}`).toContain(seam);
     }
-    for (const [rel, seam] of VERSION_ORIGIN_MAPS) {
+    for (const [rel, seam] of SOURCE_WORD_MAPS) {
       const file = files.find((f) => f.path.endsWith(rel));
       expect(file, `${rel} is not in the walk`).toBeTruthy();
       expect(file!.text, `${rel} no longer carries the origin through ${seam}`).toContain(seam);
     }
   });
 
-  it("would still see a version line that drew the wire origin", () => {
-    // The pre-fix line: the mapper's field, lowercased by the page, inside a template
-    // literal. The kind charges spell `.kind`, and the string blanker used to swallow
-    // interpolations, so both read past it.
+  it("would still see a surface that drew the wire source", () => {
+    // The pre-fix versions line: the mapper's field, lowercased by the page, inside a
+    // template literal. The kind charges spell `.kind`, and the string blanker used to
+    // swallow interpolations, so both read past it.
     expect(
-      rawVersionOriginSurfaces([
+      rawSourceWordSurfaces([
         {
           path: "app/probe.tsx",
           text: '<p>{v.source ? `${v.source.replace(/_/g, " ")} · ` : ""}{v.createdAt}</p>',
         },
       ])
     ).toEqual(["app/probe.tsx"]);
+    // The pre-fix feeds badge: the row's stored label, drawn as it arrived.
     expect(
-      rawVersionOriginSurfaces([{ path: "app/probe.tsx", text: "<span>{v.source}</span>" }])
+      rawSourceWordSurfaces([
+        { path: "app/probe.tsx", text: '<Badge variant="outline">{feed.source}</Badge>' },
+      ])
     ).toEqual(["app/probe.tsx"]);
     expect(
-      rawVersionOriginSurfaces([{ path: "app/probe.tsx", text: "<span>{`${version.source}`}</span>" }])
+      rawSourceWordSurfaces([{ path: "app/probe.tsx", text: "<span>{v.source}</span>" }])
+    ).toEqual(["app/probe.tsx"]);
+    expect(
+      rawSourceWordSurfaces([{ path: "app/probe.tsx", text: "<span>{`${version.source}`}</span>" }])
     ).toEqual(["app/probe.tsx"]);
     // A nested document is not the enum: the card draws the document's own title.
     expect(
-      rawVersionOriginSurfaces([{ path: "app/ok.tsx", text: "<span>{e.source?.docTitle}</span>" }])
+      rawSourceWordSurfaces([{ path: "app/ok.tsx", text: "<span>{e.source?.docTitle}</span>" }])
     ).toEqual([]);
     // ...and the mapped word through the table, or tested for a comparison, is plumbing.
     expect(
-      rawVersionOriginSurfaces([
+      rawSourceWordSurfaces([
         { path: "app/ok.tsx", text: "<span>{resumeVersionKindWord(t, v.source)}</span>" },
       ])
     ).toEqual([]);
     expect(
-      rawVersionOriginSurfaces([
+      rawSourceWordSurfaces([
+        { path: "app/ok.tsx", text: "<span>{feedSourceWord(t, feed.source)}</span>" },
+      ])
+    ).toEqual([]);
+    expect(
+      rawSourceWordSurfaces([
         {
           path: "app/ok.tsx",
           text: '<span>{v.source === "tailored" ? t("a.t") : t("a.o")}</span>',
