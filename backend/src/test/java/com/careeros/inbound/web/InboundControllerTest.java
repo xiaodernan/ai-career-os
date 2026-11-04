@@ -159,7 +159,7 @@ class InboundControllerTest {
 
     @Test
     void theRepliesPageIsTheAccountsLettersAndAsksForTheFirstPage() throws Exception {
-        when(replies.list(argThat(ALICE::equals), any(), any(), any()))
+        when(replies.list(argThat(ALICE::equals), any(), any(), any(), eq(false)))
                 .thenReturn(PageDTO.of(List.of(item(APP)), 1, 0, 50));
 
         mvc.perform(get("/api/v1/inbound/mails"))
@@ -170,7 +170,7 @@ class InboundControllerTest {
                 .andExpect(jsonPath("$.data.total").value(1));
 
         verify(replies).list(argThat(ALICE::equals), argThat(pageable ->
-                pageable.getPageNumber() == 0 && pageable.getPageSize() == 50), isNull(), isNull());
+                pageable.getPageNumber() == 0 && pageable.getPageSize() == 50), isNull(), isNull(), eq(false));
         verifyNoInteractions(mail);
     }
 
@@ -179,14 +179,14 @@ class InboundControllerTest {
         // The page owns the words, the service trims and lowercases them; this route only has
         // to carry the box across, including its spaces, so the two never disagree about what
         // was asked.
-        when(replies.list(argThat(ALICE::equals), any(), eq("Acme"), isNull()))
+        when(replies.list(argThat(ALICE::equals), any(), eq("Acme"), isNull(), eq(false)))
                 .thenReturn(PageDTO.of(List.of(item(APP)), 1, 0, 50));
 
         mvc.perform(get("/api/v1/inbound/mails").param("q", "Acme"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.total").value(1));
 
-        verify(replies).list(argThat(ALICE::equals), any(Pageable.class), eq("Acme"), isNull());
+        verify(replies).list(argThat(ALICE::equals), any(Pageable.class), eq("Acme"), isNull(), eq(false));
     }
 
     @Test
@@ -194,29 +194,60 @@ class InboundControllerTest {
         // The numbers and the list are two answers to one question: the route carries `q` and
         // nothing else -- the picked reading is not sent, because each chip counts what it
         // would show rather than the one already showing.
-        when(replies.intentCounts(argThat(ALICE::equals), eq("Acme")))
-                .thenReturn(new IntentCounts(List.of(new IntentCount("unread", 2L))));
+        when(replies.intentCounts(argThat(ALICE::equals), eq("Acme"), eq(false)))
+                .thenReturn(new IntentCounts(List.of(new IntentCount("unread", 2L)), 2L));
 
         mvc.perform(get("/api/v1/inbound/mails/intents").param("q", "Acme"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.items[0].intent").value("unread"))
-                .andExpect(jsonPath("$.data.items[0].count").value(2));
+                .andExpect(jsonPath("$.data.items[0].count").value(2))
+                .andExpect(jsonPath("$.data.unfiled").value(2));
 
-        verify(replies).intentCounts(argThat(ALICE::equals), eq("Acme"));
+        verify(replies).intentCounts(argThat(ALICE::equals), eq("Acme"), eq(false));
     }
 
     @Test
     void aReadingChipTravelsToTheServiceAsTheReaderPickedIt() throws Exception {
         // The chip is the page's word; this route carries it unchanged beside the search, and
         // the service is the only place that decides which words are readings.
-        when(replies.list(argThat(ALICE::equals), any(), eq("Acme"), eq("rejection")))
+        when(replies.list(argThat(ALICE::equals), any(), eq("Acme"), eq("rejection"), eq(false)))
                 .thenReturn(PageDTO.of(List.of(item(APP)), 1, 0, 50));
 
         mvc.perform(get("/api/v1/inbound/mails").param("q", "Acme").param("intent", "rejection"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.total").value(1));
 
-        verify(replies).list(argThat(ALICE::equals), any(Pageable.class), eq("Acme"), eq("rejection"));
+        verify(replies).list(argThat(ALICE::equals), any(Pageable.class), eq("Acme"), eq("rejection"), eq(false));
+    }
+
+    @Test
+    void theWaitingSwitchTravelsToTheService() throws Exception {
+        // The switch is the page's question, not a filter this route invents: it rides
+        // beside the words and the reading, and the service is the only place that reads it.
+        when(replies.list(argThat(ALICE::equals), any(), any(), any(), eq(true)))
+                .thenReturn(PageDTO.of(List.of(item(APP)), 1, 0, 50));
+
+        mvc.perform(get("/api/v1/inbound/mails").param("unfiled", "true"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1));
+
+        verify(replies).list(argThat(ALICE::equals), any(Pageable.class), isNull(), isNull(),
+                eq(true));
+    }
+
+    @Test
+    void theWaitingNumberTravelsWithTheChipCounts() throws Exception {
+        // The answer carries the pile's own size even before the switch is pressed; the
+        // route only has to carry the flag and the number across.
+        when(replies.intentCounts(argThat(ALICE::equals), eq("Acme"), eq(true)))
+                .thenReturn(new IntentCounts(List.of(new IntentCount("unread", 1L)), 1L));
+
+        mvc.perform(get("/api/v1/inbound/mails/intents").param("q", "Acme")
+                        .param("unfiled", "true"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.unfiled").value(1));
+
+        verify(replies).intentCounts(argThat(ALICE::equals), eq("Acme"), eq(true));
     }
 
     @Test

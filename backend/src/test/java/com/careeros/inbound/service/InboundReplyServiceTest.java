@@ -288,10 +288,10 @@ class InboundReplyServiceTest {
         // An empty box that still narrowed the query would show nothing the moment a reader
         // backspaced the last character -- the page asks the same query with an empty needle,
         // whose first branch every row satisfies.
-        when(mails.findPage(eq(ALICE), eq(""), isNull(), eq(false), any(Pageable.class)))
+        when(mails.findPage(eq(ALICE), eq(""), isNull(), eq(false), eq(false), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 50), 0));
 
-        PageDTO<InboundMailItem> page = service.list(ALICE, PageRequest.of(0, 50), "   ", null);
+        PageDTO<InboundMailItem> page = service.list(ALICE, PageRequest.of(0, 50), "   ", null, false);
 
         assertThat(page.total()).isZero();
     }
@@ -301,12 +301,12 @@ class InboundReplyServiceTest {
         // Both filters are one question: the chip is a further narrowing of the words, not a
         // replacement. The words travel lowercased, like every other search on this page.
         InboundMail match = mail("Acme", "Backend Engineer");
-        when(mails.findPage(eq(ALICE), eq("acme"), eq("rejection"), eq(false), any(Pageable.class)))
+        when(mails.findPage(eq(ALICE), eq("acme"), eq("rejection"), eq(false), eq(false), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(match), PageRequest.of(0, 50), 1));
         when(applications.findAllById(any())).thenReturn(List.of());
 
         PageDTO<InboundMailItem> page =
-                service.list(ALICE, PageRequest.of(0, 50), "  ACME ", "Rejection");
+                service.list(ALICE, PageRequest.of(0, 50), "  ACME ", "Rejection", false);
 
         assertThat(page.total()).isEqualTo(1);
         assertThat(page.items()).hasSize(1);
@@ -316,10 +316,10 @@ class InboundReplyServiceTest {
     void theUnreadChipAsksForTheLettersNoReadingAnswered() {
         // `unread` is not a reading: it is the absence of one, and the page asks for exactly
         // the rows whose intent is null rather than for a word no letter carries.
-        when(mails.findPage(eq(ALICE), eq(""), isNull(), eq(true), any(Pageable.class)))
+        when(mails.findPage(eq(ALICE), eq(""), isNull(), eq(true), eq(false), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 50), 0));
 
-        PageDTO<InboundMailItem> page = service.list(ALICE, PageRequest.of(0, 50), null, "UNREAD");
+        PageDTO<InboundMailItem> page = service.list(ALICE, PageRequest.of(0, 50), null, "UNREAD", false);
 
         assertThat(page.total()).isZero();
     }
@@ -329,7 +329,7 @@ class InboundReplyServiceTest {
         // An empty page would read as "your inbox holds none of these", while the truth is
         // "that is not something the classifier says". The reader's answer is to fix the
         // filter, so the route says so rather than answering a fact about the inbox.
-        assertThatThrownBy(() -> service.list(ALICE, PageRequest.of(0, 50), null, "banana"))
+        assertThatThrownBy(() -> service.list(ALICE, PageRequest.of(0, 50), null, "banana", false))
                 .isInstanceOfSatisfying(ApiException.class,
                         e -> assertThat(e.code()).isEqualTo(ApiErrorCode.INBOUND_INTENT_UNKNOWN));
         verifyNoInteractions(mails);
@@ -340,10 +340,10 @@ class InboundReplyServiceTest {
         // The null group is the letters no reading answered; the page's chip is called
         // `unread`, and the number has to reach it under that word. Missing readings are
         // zeros, not absent keys: the page should not have to invent them.
-        when(mails.countByIntent(eq(ALICE), eq(""))).thenReturn(List.of(
+        when(mails.countByIntent(eq(ALICE), eq(""), eq(false))).thenReturn(List.of(
                 new Object[]{null, 2L}, new Object[]{"rejection", 1L}, new Object[]{"offer", 4L}));
 
-        IntentCounts counts = service.intentCounts(ALICE, null);
+        IntentCounts counts = service.intentCounts(ALICE, null, false);
 
         assertThat(counts.items()).extracting(IntentCount::intent)
                 .containsExactly("unread", "rejection", "interview", "offer", "info", "other");
@@ -355,20 +355,51 @@ class InboundReplyServiceTest {
     void theChipCountsNarrowWithTheSameWordsAsThePage() {
         // The numbers describe the search, not the whole inbox: a chip under "acme" counts
         // the acme letters, because that is the page it would open.
-        when(mails.countByIntent(eq(ALICE), eq("acme offer"))).thenReturn(List.of());
+        when(mails.countByIntent(eq(ALICE), eq("acme offer"), eq(false))).thenReturn(List.of());
 
-        IntentCounts counts = service.intentCounts(ALICE, "  Acme Offer ");
+        IntentCounts counts = service.intentCounts(ALICE, "  Acme Offer ", false);
 
         assertThat(counts.items()).allMatch(item -> item.count() == 0);
     }
 
     @Test
     void aBlankReadingIsNoFilterRatherThanAnEmptyRoom() {
-        when(mails.findPage(eq(ALICE), eq(""), isNull(), eq(false), any(Pageable.class)))
+        when(mails.findPage(eq(ALICE), eq(""), isNull(), eq(false), eq(false), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 50), 0));
 
-        PageDTO<InboundMailItem> page = service.list(ALICE, PageRequest.of(0, 50), null, "   ");
+        PageDTO<InboundMailItem> page = service.list(ALICE, PageRequest.of(0, 50), null, "   ", false);
 
         assertThat(page.total()).isZero();
+    }
+
+    @Test
+    void theWaitingSwitchKeepsOnlyTheLettersWithoutACard() {
+        // The switch is a scope, not a reading: it rides beside the words and the reading and
+        // reaches the repository's own filter, so the page and the pile are one question.
+        when(mails.findPage(eq(ALICE), eq(""), isNull(), eq(false), eq(true), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 50), 0));
+
+        PageDTO<InboundMailItem> page = service.list(ALICE, PageRequest.of(0, 50), null, null, true);
+
+        assertThat(page.total()).isZero();
+        verify(mails).findPage(eq(ALICE), eq(""), isNull(), eq(false), eq(true), any(Pageable.class));
+    }
+
+    @Test
+    void theCountsOnTheWaitingSwitchDescribeThePileItNames() {
+        // With the switch on, the six readings describe the waiting pile itself, and the
+        // answer's own number is that pile's total -- the switch can say how much waits before
+        // it is pressed. The broader count is not read at all when the scope is the pile.
+        when(mails.countByIntent(eq(ALICE), eq(""), eq(true))).thenReturn(List.of(
+                new Object[]{null, 2L}, new Object[]{"rejection", 1L}));
+
+        IntentCounts counts = service.intentCounts(ALICE, null, true);
+
+        assertThat(counts.items()).extracting(IntentCount::intent)
+                .containsExactly("unread", "rejection", "interview", "offer", "info", "other");
+        assertThat(counts.items()).extracting(IntentCount::count)
+                .containsExactly(2L, 1L, 0L, 0L, 0L, 0L);
+        assertThat(counts.unfiled()).isEqualTo(3L);
+        verify(mails, never()).countByIntent(eq(ALICE), eq(""), eq(false));
     }
 }
