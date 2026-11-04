@@ -479,7 +479,13 @@ export default function RepliesPage() {
             <EmptyState
               icon={<Inbox aria-hidden />}
               title={t("replies.noIntentMatch")}
-              description={t("replies.noIntentMatchDescription")}
+              // Under the waiting scope, letters may read this way and still be filed --
+              // saying none carry the reading would blame the reading for the scope's work.
+              description={
+                state.unfiled
+                  ? t("replies.noIntentUnfiledDescription")
+                  : t("replies.noIntentMatchDescription")
+              }
               action={
                 <Button size="sm" variant="outline" onClick={showAll}>
                   {t("replies.showAll")}

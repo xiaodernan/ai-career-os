@@ -1428,7 +1428,9 @@ export const translations = {
         "No letter matches those words under this filter. Show every letter to start over.",
       noIntentMatch: "Nothing under this filter",
       noIntentMatchDescription:
-        "No letter is filed under the reading you picked. Show every letter, or pick another reading.",
+        "No letter reads that way. Show every letter, or pick another reading.",
+      noIntentUnfiledDescription:
+        "No waiting letter reads that way. Show every letter, or pick another reading.",
       unavailable: "The replies could not be read. Try again in a moment.",
       unnamed: "A letter with no subject",
       senderUnknown: "Sender unknown",
@@ -4380,6 +4382,7 @@ export const translations = {
       noMatchFilterDescription: "这个筛选下没有匹配这些词的回信。看全部回信，重新开始。",
       noIntentMatch: "这个筛选下没有回信",
       noIntentMatchDescription: "你选的这个读数下没有信。看全部回信，或换一个读数。",
+      noIntentUnfiledDescription: "没有待归档的回信是这个读数。看全部回信，或换一个读数。",
       unavailable: "回信没能读取。稍后再试。",
       unnamed: "一封没有主题的信",
       senderUnknown: "发件人不明",

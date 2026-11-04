@@ -396,4 +396,40 @@ describe("the replies page", () => {
     expect(html).toContain("看全部回信");
     expect(html).not.toContain('href="/settings"');
   });
+
+  it("names the waiting scope, not the reading, when the pile is what emptied the page", () => {
+    // Letters can read this way and still have cards: under the waiting scope the page is
+    // empty because they are filed, so saying none carry the reading would blame the chip.
+    withLetters([]);
+    state.url = { q: undefined, intent: "unread", unfiled: true, page: 0 };
+
+    const html = render();
+
+    expect(html).toContain("No waiting letter reads that way");
+    expect(html).not.toContain("No letter reads that way");
+    expect(html).toContain("Show every letter");
+  });
+
+  it("names the waiting scope in the reader's language", () => {
+    withLetters([]);
+    state.url = { q: undefined, intent: "unread", unfiled: true, page: 0 };
+
+    const html = render("zh");
+
+    expect(html).toContain("没有待归档的回信是这个读数");
+    expect(html).not.toContain("你选的这个读数下没有信");
+  });
+
+  it("says a reading with no letters at all reads that way, not filed that way", () => {
+    // "Filed" is this screen's word for a letter that names its card; using it for the
+    // classifier's reading would make two systems share one verb.
+    withLetters([]);
+    state.url = { q: undefined, intent: "unread", page: 0 };
+
+    const html = render();
+
+    expect(html).toContain("No letter reads that way");
+    expect(html).not.toContain("No waiting letter");
+    expect(html).not.toContain("filed under the reading");
+  });
 });

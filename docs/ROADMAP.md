@@ -4081,12 +4081,16 @@ borrow the empty inbox's settings link.
   rest. An empty waiting pile says every reply already names its application instead of
   offering the settings card. The switch arrived with its production code but without
   compiling gates or documentation; this entry completes it: 2 service tests + 2 route tests,
-  3 wire tests + 2 mapper tests + 5 SSR tests; 1182 backend tests, 1069 frontend tests in 102
+  3 wire tests + 2 mapper tests + 5 SSR tests; 1182 backend tests, 1072 frontend tests in 102
   files. Two ai-service census gates followed the same edit: the message-token census's
   `types.ts` union pin moved 1638→1652 with the `InboundIntentCounts` block above it, and the
   window census answers thirteen rows again -- `list_wires` follows the hook's one same-file
   reader (`fetchInboundMails`), and its wire and page rows carry `unfiled`. 2022 ai-service
-  tests answer the tree, 2 skipped; six arms red exactly their predicted cases.)
+  tests answer the tree, 2 skipped; six arms red exactly their predicted cases. The intent
+  empty state also stopped answering for the wrong filter: under the waiting scope it names
+  the pile, because a letter can read that way and already have a card, and the English base
+  sentence no longer calls the classifier's reading "filed" -- this screen's word for a card.
+  Three more SSR tests pin both branches in both languages.)
 
 ## Epic 50 -- A kept letter is the reader's to manage
 
