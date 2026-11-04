@@ -928,8 +928,11 @@ def test_the_declaration_probes_reach_the_shapes_a_copy_would_miss():
     # and `normalizePacketMatch` are module-private because each answers one component of the
     # packet, and the exported `normalizeApplyPacket` composes them -- four names on one opener,
     # three of them the fourth non-exported reader the ban above has to reach.
-    assert len(re.findall(TS_OPENER.format(name=r"(\w+)"), source)) == 67, \
-        "58 exported mappers and 9 module-private ones, all through one opener"
+    # 68 with the kept letter's `normalizeCoverLetter` (1076949): the drawer reads a saved
+    # letter's row through the same opener as every other row, so the count moved with the
+    # letters wave; the sentence's split becomes 59 exported and 9 module-private.
+    assert len(re.findall(TS_OPENER.format(name=r"(\w+)"), source)) == 68, \
+        "59 exported mappers and 9 module-private ones, all through one opener"
     assert "export function normalizePage(" not in source, \
         "the generic really does sit between the name and the paren, so a literal opener finds nothing"
     assert _ts_function_body("normalizePage").startswith("export function normalizePage<T>(")
@@ -1050,12 +1053,15 @@ def test_the_java_probe_reads_every_record_the_backend_declares():
     # and the walk counts declarations, so it joins `Purge` in being held to this opener.
     # 199 with 48.2's `UnnamedObjectReclaimer.Reclaim`: the four verdicts one bucket pass reached,
     # counted against the listing they add up to. A sweep's receipt, like `Purge`, reaches no route.
-    # 201 measured on the tree this commit lands on: the letter wave declared `LetterItem` (the drawer's
-    # row) and `SaveLetterRequest` (the body the job page posts) in `ApplicationDtos` and repinned nothing,
-    # so HEAD reads two more than its own pin. Naming them here is the same arithmetic the sentences above
-    # keep -- a pin is a census, and a census that quietly absorbs someone else's rows stops being evidence.
-    assert len(declared) == 201, \
-        f"{len(declared)} records carry a declaration the shared opener reads, not the 201 measured"
+    # 205 measured on this tree. The sentences above add to 201: 5e9e6b3's 198, f429dc3's two
+    # kept-letter rows (`LetterItem`, `SaveLetterRequest`) and 48.2's own `Reclaim`. But four
+    # more records had already landed above 8fcfe64's sentence: `UpdateLetterRequest`
+    # (bff366d's correction), `LetterHit` (a7ea329's search group) and
+    # `IntentCount`/`IntentCounts` (362550b's chips). The gate was red on the tree that commit
+    # landed; this pin pays it. A pin is a census, and a census that quietly absorbs someone
+    # else's rows stops being evidence.
+    assert len(declared) == 205, \
+        f"{len(declared)} records carry a declaration the shared opener reads, not the 205 measured"
     problems, renamed = [], []
     for relative, record in declared:
         names = _record_components_at(relative, record)
@@ -1277,7 +1283,7 @@ def test_the_response_envelope_has_exactly_one_wrapper_and_one_unwrapper():
     files in two languages, and it is only safe while both halves stay where they are: widen the advice
     and the unwrap returns `undefined` for responses that were never wrapped, add a second unwrap and the
     one that is gated stops being the one that runs. Measured on this plane: two `success` reads and one
-    `?.data` unwrap, all of them in `lib/api/client.ts`, plus 56 `toast.success` lines the exclusion has
+    `?.data` unwrap, all of them in `lib/api/client.ts`, plus 59 `toast.success` lines the exclusion has
     to keep out. `client.ts` belongs to a concurrent session's file list, so this gate reads it and never
     edits it -- if a third reader appears, the test names it and a human decides where it belongs.
     """
@@ -1326,7 +1332,12 @@ def test_the_response_envelope_has_exactly_one_wrapper_and_one_unwrapper():
     # 56 with 37.4's replies pair: `useFileInboundMail` announces that a letter was filed, and
     # the page announces that a suggested stage was applied -- the second is written at its
     # mutation site (the apply hook is shared with the board), so both are counted here.
-    assert len(toasts) == 56, (f"{len(toasts)} `toast.success` lines came out of the same walk: that is "
+    # 59 with the letters wave's three: `useSaveApplicationLetter` (1076949),
+    # `useDeleteApplicationLetter` (5080e67) and `useUpdateApplicationLetter` (bff366d) each
+    # announce their write through the shared handler. The knowledge delete line moved
+    # verbatim in the same window (a rewrite of its surrounding block), which is why the
+    # total moved by three even though the raw diff adds four lines.
+    assert len(toasts) == 59, (f"{len(toasts)} `toast.success` lines came out of the same walk: that is "
                                "the floor proving the scan reached the pages and the hooks, so a walk "
                                "narrowed to the api directory cannot pass quietly")
 
@@ -3442,13 +3453,18 @@ def test_both_frame_parsers_default_a_nameless_frame_to_the_same_event_name():
         # 1602 rather than 1554: 47.1's packet types (+43 lines in cce4492), the attention row's
         # reply field (+3 in e011f88) and the reply line's link (+2 in c66a8a4) all joined above
         # the union. 48 lines, and the union's own text is byte-for-byte what it was.
+        # 1638 rather than 1602 since the letters and rehearsals waves' fields joined above the
+        # union (+38, -2 across seven commits: the kept letter's fields on `TailorResponse` and
+        # `CoverLetter`, the application's and the packet's letter counts, the rehearsal's
+        # application link and the packet's rehearsal count, and the requirement priority
+        # comment); the union itself did not change.
         # The third union left this list: 7e2f334 moved TraceKind from an inline union
         # in agent-timeline.tsx to the TRACE_KINDS roster in lib/trace-kinds.ts -- an
         # array form this token scan does not read (it matches `?`/`=`/`|`/`:` value
         # positions, not array elements). The kind's "message" member still exists and
         # is still the wire's vocabulary; the roster's own names are pinned by the
         # browser's suite (status-words.test.ts), which is where they are read.
-        ("types.ts", 1602, "kind:"),
+        ("types.ts", 1637, "kind:"),
         ('use-sse.ts', 15, 'event: SSEEventName | "message" | "progress" | "ping";'),
     ], (f"{[(r['file'], r['line'], r['head']) for r in by_role['type-union-member']]}: two type unions "
         "spell `message` now, and only one of them names a frame -- the other is the trace step kind "
