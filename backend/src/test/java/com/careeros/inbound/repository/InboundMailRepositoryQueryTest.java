@@ -23,7 +23,7 @@ class InboundMailRepositoryQueryTest {
     void thePageQueryReadsTheWholeLetterAndKeepsBothFilters() throws NoSuchMethodException {
         Query query = InboundMailRepository.class
                 .getMethod("findPage", UUID.class, String.class, String.class, boolean.class,
-                        Pageable.class)
+                        boolean.class, Pageable.class)
                 .getAnnotation(Query.class);
 
         assertThat(query).as("findPage is an annotated query, not a derived one").isNotNull();
@@ -31,7 +31,9 @@ class InboundMailRepositoryQueryTest {
         assertThat(jpql)
                 .as("the search reads every field a reader might remember")
                 .contains("m.subject", "m.fromaddress", "m.company", "m.role", "m.bodytext")
-                .contains(":intent", ":unread");
+                .contains(":intent", ":unread")
+                .as("the waiting switch keeps only the letters with no card (49.5)")
+                .contains(":unfiled", "m.applicationid is null");
     }
 
     @Test
@@ -40,13 +42,15 @@ class InboundMailRepositoryQueryTest {
         // five-field predicate side by side rather than sharing a string, so this test says
         // out loud that the copy is deliberate and that a field added to one is added here.
         Query query = InboundMailRepository.class
-                .getMethod("countByIntent", UUID.class, String.class)
+                .getMethod("countByIntent", UUID.class, String.class, boolean.class)
                 .getAnnotation(Query.class);
 
         assertThat(query).as("countByIntent is an annotated query").isNotNull();
         assertThat(query.value().toLowerCase(Locale.ROOT))
                 .as("the counts narrow under the same words as the page")
                 .contains("m.subject", "m.fromaddress", "m.company", "m.role", "m.bodytext")
-                .contains("group by m.intent");
+                .contains("group by m.intent")
+                .as("and under the same waiting switch (49.5)")
+                .contains(":unfiled", "m.applicationid is null");
     }
 }

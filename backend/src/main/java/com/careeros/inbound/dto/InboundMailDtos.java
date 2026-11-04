@@ -36,7 +36,12 @@ public final class InboundMailDtos {
     /**
      * The whole row of chips (49.4), in the order the page draws them. Every reading is
      * present, zeros included, so the page never has to invent a number for a word.
+     *
+     * <p>{@code unfiled} is the number on the waiting switch (49.5): how many of the letters
+     * under the same words still wait for a card. It is answered whether the switch is on or
+     * off, because it is the switch's own label -- with it on, {@code items} describe exactly
+     * that pile, so the six add up to it.
      */
-    public record IntentCounts(List<IntentCount> items) {
+    public record IntentCounts(List<IntentCount> items, long unfiled) {
     }
 }

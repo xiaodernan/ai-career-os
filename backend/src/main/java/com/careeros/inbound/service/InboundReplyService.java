@@ -96,9 +96,15 @@ public class InboundReplyService {
      * search, never a replacement that quietly drops the words. A word outside that set is
      * refused, because an unmatched word answered with an empty page would read as "your
      * inbox holds none of these" when the truth is "that is not a reading".
+     *
+     * <p>{@code unfiled} is the waiting switch (49.5): it keeps only the letters no reader
+     * has filed on a card, which is the pile the page exists to empty. It narrows beside the
+     * words and the reading rather than replacing either -- a reader asking for unread
+     * rejections that still need a card is asking one question.
      */
     @Transactional(readOnly = true)
-    public PageDTO<InboundMailItem> list(UUID userId, Pageable pageable, String query, String intent) {
+    public PageDTO<InboundMailItem> list(UUID userId, Pageable pageable, String query, String intent,
+                                         boolean unfiled) {
         String needle = trimmed(query);
         // The repository asks the empty string for "no search": that branch is always true,
         // so a blank box never becomes the reason the page came back empty.
@@ -118,7 +124,7 @@ public class InboundReplyService {
                 }
             }
         }
-        Page<InboundMail> page = mails.findPage(userId, q, named, unread, pageable);
+        Page<InboundMail> page = mails.findPage(userId, q, named, unread, unfiled, pageable);
         Map<UUID, Application> byId = applicationsOf(userId, page.getContent());
         return PageDTO.from(page, mail -> item(mail, byId.get(mail.getApplicationId())));
     }
@@ -132,23 +138,36 @@ public class InboundReplyService {
      * draws a fixed vocabulary, and a missing key would make the number a thing the client
      * invented; an absent `unread` key in particular would read as "nothing waiting", which
      * is a claim about the inbox rather than a layout choice.
+     *
+     * <p>The waiting switch (49.5) is the one filter that does narrow the chips, because it
+     * is a scope rather than one of the alternatives being counted: with it on, the six
+     * readings describe the pile that still needs a card. Its own number is always the pile
+     * under the words alone, so the switch can say how much waits before it is pressed -- and
+     * with it on the six readings add up to exactly that number.
      */
     @Transactional(readOnly = true)
-    public IntentCounts intentCounts(UUID userId, String query) {
+    public IntentCounts intentCounts(UUID userId, String query, boolean unfiled) {
         String needle = trimmed(query);
         String q = needle == null ? "" : needle.toLowerCase(Locale.ROOT);
-        Map<String, Long> counts = new HashMap<>();
-        for (Object[] row : mails.countByIntent(userId, q)) {
-            String reading = (String) row[0];
-            long count = ((Number) row[1]).longValue();
-            counts.merge(reading == null ? UNREAD : reading, count, Long::sum);
-        }
+        Map<String, Long> waiting = grouped(mails.countByIntent(userId, q, true));
+        Map<String, Long> counts = unfiled ? waiting : grouped(mails.countByIntent(userId, q, false));
         List<IntentCount> items = new ArrayList<>(READINGS.size() + 1);
         items.add(new IntentCount(UNREAD, counts.getOrDefault(UNREAD, 0L)));
         for (String reading : READINGS) {
             items.add(new IntentCount(reading, counts.getOrDefault(reading, 0L)));
         }
-        return new IntentCounts(items);
+        long waitingTotal = waiting.values().stream().mapToLong(Long::longValue).sum();
+        return new IntentCounts(items, waitingTotal);
+    }
+
+    private static Map<String, Long> grouped(List<Object[]> rows) {
+        Map<String, Long> counts = new HashMap<>();
+        for (Object[] row : rows) {
+            String reading = (String) row[0];
+            long count = ((Number) row[1]).longValue();
+            counts.merge(reading == null ? UNREAD : reading, count, Long::sum);
+        }
+        return counts;
     }
 
     /**

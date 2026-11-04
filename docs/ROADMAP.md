@@ -3945,10 +3945,45 @@ while no rule read it, so a meter cannot be born unwatched again.
   code that answers with two wordings is the defect `test_the_services_error_codes_are_classified`
   reads. 1125 backend tests in the non-IT selection, and the ai-service census gates answer the moved
   populations -- 67 mapper openers in normalize.ts, 198 records, 43 declarations in resources.ts.)
-- [ ] **48.2** A nightly pass reclaims the objects no row names. (List, subtract every key any row
+- [x] **48.2** A nightly pass reclaims the objects no row names. (List, subtract every key any row
   names in any status -- a retired row's key is still 44.2's trail, not garbage -- take only objects
   past a window so an upload mid-transaction keeps its bytes, and delete nothing when the listing
   failed. Rides the retention heartbeat, counts its outcomes, and alarms when the store refuses.)
+
+  (`UnnamedObjectReclaimer.reclaimBefore(cutoff)` lives beside the sweep that calls it rather than
+  in `storage`, because what it judges is the bucket against two other modules' tables and the port
+  must not learn that a resume has a repository. The two owner reads are whole columns --
+  `findAllFileKeys()` and `findAllSourceFileKeys()`, neither with a status filter, which is the
+  widening this bullet asks for and is asserted as a reading of the query text rather than as a
+  comment. The order of the reads is the safety: listing first, rows after, pinned with `InOrder`,
+  because the other order turns the window into a door -- a row that commits during the pass would
+  otherwise be judged by a table read taken before it existed. The window is its own knob
+  (`app.retention.unnamed-object-days`, `RETENTION_UNNAMED_OBJECT_DAYS`, 7, clamped at zero) and an
+  object is reclaimed only for being strictly older than the cutoff, so an undated object -- which
+  48.1 dates at the moment of the listing -- arrives young, and a store clock running ahead costs a
+  week of storage instead of a reader's file.
+  Four verdicts are counted on `careeros.storage.objects_judged{outcome}` (`named`, `young`,
+  `deleted`, `failed`) and they add up to the listing, so a pass that ended early is a sum that does
+  not close rather than a quiet night; one object's refused delete is counted, logged with its key
+  and does not stop the other ninety. The listing's own refusal is a fifth reading on a second
+  family, `careeros.storage.bucket_reads{outcome}` -- `listed` or `refused`, once per pass, not per
+  object -- because the pass cannot count objects it was never shown. It throws rather than
+  answering empty, the sweep's phase names `bucket_objects` among what did not finish, and
+  `CareerOSBucketListingRefused` pages on a `refused` day: the sweep's clock moves through that
+  night, so nothing else on the dashboard could tell a store that refused from a bucket that holds
+  nothing. The phase runs last, after 44.3's purge and its own reclaims, so an object the purge
+  freed is a candidate the same night. 12 cases in `UnnamedObjectReclaimTest` and 5 new ones in
+  `RetentionSweeperTest` (15), covering the order, the boundary, the shared key, the refusal and the
+  two windows not moving each other; 5 more in `UnnamedObjectSweepIT`, which is Docker-dependent and
+  therefore not counted here. 1168 tests in the non-IT selection, two of them red before this commit
+  landed and neither of them this one's: `ApiDocParamContractTest` reads `GET /interview/sessions`
+  and finds `applicationStatus` documented but not bound, and `page`/`size` bound but not documented
+  -- the interview wave's line, repinned next. The censuses this touched: the bucket gate's removers are three and
+  its listers one, the sweep trio joins the key's speller list, the record census is repinned to 201
+  -- with the letter wave's `LetterItem` and `SaveLetterRequest` named as the two rows that arrived
+  there without a repin -- and the knob ledger to 39 leaves, 36 of them interpolated, 28 fields.
+  `ops/prometheus/alerts.yml` carries twelve rules now, with a page in RUNBOOK.md, and DEPLOYMENT.md
+  stops calling an orphan a permanent loss.)
 - [ ] **48.3** Every meter that ships is alarmed or excused by name. (The alarms gate reads the
   rules and asks whether each metric they name is registered; it never asked the reverse, which is
   how `careeros.storage.objects_reclaimed` shipped with a runbook line telling an operator to read

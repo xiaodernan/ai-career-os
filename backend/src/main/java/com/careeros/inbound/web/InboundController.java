@@ -80,7 +80,8 @@ public class InboundController {
      * The replies page: the account's letters newest first, filed or waiting. A non-blank
      * {@code q} narrows the page to the letters whose subject, sender, company, role or own
      * text contains it, case aside; a non-blank {@code intent} keeps only the letters the
-     * classifier read that way ({@code unread} keeps the ones it has not read). Both filters
+     * classifier read that way ({@code unread} keeps the ones it has not read); and
+     * {@code unfiled} keeps the letters still waiting for a card (49.5). All three filters
      * apply together, and paging counts the narrowed total, not the whole inbox.
      */
     @GetMapping("/mails")
@@ -88,19 +89,23 @@ public class InboundController {
                                          @RequestParam(defaultValue = "0") int page,
                                          @RequestParam(defaultValue = "50") int size,
                                          @RequestParam(required = false) String q,
-                                         @RequestParam(required = false) String intent) {
-        return replies.list(user.id(), Paging.of(page, size).pageable(), q, intent);
+                                         @RequestParam(required = false) String intent,
+                                         @RequestParam(defaultValue = "false") boolean unfiled) {
+        return replies.list(user.id(), Paging.of(page, size).pageable(), q, intent, unfiled);
     }
 
     /**
      * The chips' numbers: every reading's count under the same {@code q}, zeros included, and
      * the letters no reading has answered under {@code unread}. The reading filter is not a
-     * parameter here -- a chip counts what it would show, not the one already picked.
+     * parameter here -- a chip counts what it would show, not the one already picked. The
+     * waiting switch (49.5) is: with {@code unfiled} on, the numbers describe the pile that
+     * still needs a card, and the answer's own {@code unfiled} says how big that pile is.
      */
     @GetMapping("/mails/intents")
     public IntentCounts intents(@CurrentUser AuthUser user,
-                                @RequestParam(required = false) String q) {
-        return replies.intentCounts(user.id(), q);
+                                @RequestParam(required = false) String q,
+                                @RequestParam(defaultValue = "false") boolean unfiled) {
+        return replies.intentCounts(user.id(), q, unfiled);
     }
 
     /** Ties one waiting letter to the card it answers; a double click on the same card is a no-op. */

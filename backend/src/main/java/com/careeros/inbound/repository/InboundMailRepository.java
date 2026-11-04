@@ -21,8 +21,9 @@ public interface InboundMailRepository extends JpaRepository<InboundMail, UUID> 
     /**
      * The replies page with its two filters (roadmap 49.1-49.2): the same ordering, narrowed
      * to the letters whose subject, sender, company, role or own text contains `q` (case
-     * aside) and to the reading `intent` -- or, when `unread` is true, to the letters no
-     * reading has answered yet.
+     * aside), to the reading `intent` -- or, when `unread` is true, to the letters no
+     * reading has answered yet -- and, when `unfiled` is true, to the letters no reader has
+     * filed on a card yet.
      *
      * The body is searched because the words a reader remembers are usually in the letter
      * itself ("we would like to schedule"), not in its subject line; an envelope-only search
@@ -46,9 +47,11 @@ public interface InboundMailRepository extends JpaRepository<InboundMail, UUID> 
                     OR LOCATE(:q, LOWER(COALESCE(m.bodyText, ''))) > 0)
                AND (:intent IS NULL OR m.intent = :intent)
                AND (:unread = FALSE OR m.intent IS NULL)
+               AND (:unfiled = FALSE OR m.applicationId IS NULL)
              ORDER BY m.receivedAt DESC, m.id DESC
             """)
-    Page<InboundMail> findPage(UUID userId, String q, String intent, boolean unread, Pageable pageable);
+    Page<InboundMail> findPage(UUID userId, String q, String intent, boolean unread, boolean unfiled,
+                               Pageable pageable);
 
     /**
      * What the chips above the list would show (roadmap 49.4): one count per reading, under the
@@ -56,9 +59,9 @@ public interface InboundMailRepository extends JpaRepository<InboundMail, UUID> 
      * the chips count their alternatives rather than the one already picked.
      *
      * <p>The search half mirrors {@link #findPage}: the same five fields, the same empty-string
-     * escape for a blank box, so the number on a chip and the page it opens are answers to the
-     * same question. A null intent (a letter no reading has answered) comes back as a null key;
-     * the service names it `unread`.
+     * escape for a blank box, and the same `unfiled` flag (49.5), so the number on a chip and
+     * the page it opens are answers to the same question. A null intent (a letter no reading
+     * has answered) comes back as a null key; the service names it `unread`.
      */
     @Query("""
             SELECT m.intent, COUNT(m) FROM InboundMail m
@@ -69,9 +72,10 @@ public interface InboundMailRepository extends JpaRepository<InboundMail, UUID> 
                     OR LOCATE(:q, LOWER(COALESCE(m.company, ''))) > 0
                     OR LOCATE(:q, LOWER(COALESCE(m.role, ''))) > 0
                     OR LOCATE(:q, LOWER(COALESCE(m.bodyText, ''))) > 0)
+               AND (:unfiled = FALSE OR m.applicationId IS NULL)
              GROUP BY m.intent
             """)
-    List<Object[]> countByIntent(UUID userId, String q);
+    List<Object[]> countByIntent(UUID userId, String q, boolean unfiled);
 
     /** What the inbox may carry (37.3): the letters already filed on an application. */
     List<InboundMail> findByUserIdAndApplicationIdIsNotNullOrderByReceivedAtDescIdDesc(

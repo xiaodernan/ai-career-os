@@ -248,12 +248,12 @@ class InboundReplyServiceTest {
         InboundMail waiting = mail("Globex", null);
         waiting.setIntent(null);
         ReflectionTestUtils.setField(waiting, "id", UUID.randomUUID());
-        when(mails.findPage(eq(ALICE), eq(""), isNull(), eq(false), any(Pageable.class)))
+        when(mails.findPage(eq(ALICE), eq(""), isNull(), eq(false), eq(false), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(filed, waiting), PageRequest.of(0, 50), 2));
         when(applications.findAllById(any())).thenReturn(List.of(
                 application(APP, "Backend Engineer", "Acme")));
 
-        PageDTO<InboundMailItem> page = service.list(ALICE, PageRequest.of(0, 50), null, null);
+        PageDTO<InboundMailItem> page = service.list(ALICE, PageRequest.of(0, 50), null, null, false);
 
         assertThat(page.total()).isEqualTo(2);
         assertThat(page.page()).isZero();
@@ -271,12 +271,13 @@ class InboundReplyServiceTest {
         // The reader types "  Acme Offer " into the box; the page asks the query for the same
         // words with the spaces gone and case aside, because the columns are compared lowercased.
         InboundMail match = mail("Acme", "Backend Engineer");
-        when(mails.findPage(eq(ALICE), eq("acme offer"), isNull(), eq(false), any(Pageable.class)))
+        when(mails.findPage(eq(ALICE), eq("acme offer"), isNull(), eq(false), eq(false),
+                any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(match), PageRequest.of(0, 50), 1));
         when(applications.findAllById(any())).thenReturn(List.of());
 
         PageDTO<InboundMailItem> page =
-                service.list(ALICE, PageRequest.of(0, 50), "  Acme Offer ", null);
+                service.list(ALICE, PageRequest.of(0, 50), "  Acme Offer ", null, false);
 
         assertThat(page.total()).isEqualTo(1);
         assertThat(page.items()).hasSize(1);
