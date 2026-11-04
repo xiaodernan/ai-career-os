@@ -29,6 +29,7 @@ import {
   salaryBandWord,
   seniorityWord,
   traceKindWord,
+  userRoleWord,
   FOLLOW_UP_PRIORITIES,
   HEALTH_VERDICTS,
   JOB_STATUSES,
@@ -43,6 +44,7 @@ import {
   RESUME_STATUSES,
   RUN_STATUSES,
   RUN_TRIGGERS,
+  USER_ROLES,
 } from "@/lib/status-words";
 
 /**
@@ -82,6 +84,7 @@ const ROSTERS: [string, readonly string[]][] = [
   ["knowledge.sources.statuses", KNOWLEDGE_SOURCE_STATUSES],
   ["monitoring.nightlyStatuses", NIGHTLY_STATUSES],
   ["ai.agentTimeline.kinds", TRACE_KINDS],
+  ["settings.roles", USER_ROLES],
 ];
 
 describe("the enum words", () => {
@@ -134,6 +137,8 @@ describe("the enum words", () => {
     expect(requirementPriorityWord(zh, "urgent")).toBe("Urgent");
     expect(marketPriorityWord(zh, "severe")).toBe("Severe");
     expect(followUpPriorityWord(zh, "someday")).toBe("Someday");
+    // `users.role` is the schema's pair; a role a later deployment adds still reads.
+    expect(userRoleWord(zh, "owner")).toBe("Owner");
     // `retired` and `indexing` reached the table in this unit; a status the ingest has
     // never written is what this case still has to degrade.
     expect(knowledgeSourceStatusWord(zh, "archiving")).toBe("Archiving");
@@ -171,6 +176,11 @@ describe("the enum words", () => {
     expect(followUpPriorityWord(en, "soon")).toBe("Due soon");
     expect(followUpPriorityWord(zh, "overdue")).toBe("已逾期");
     expect(followUpPriorityWord(zh, "fresh")).toBe("节奏正常");
+    // The account badge draws the row's authorization word: the schema's two roles.
+    expect(userRoleWord(en, "admin")).toBe("Admin");
+    expect(userRoleWord(en, "user")).toBe("User");
+    expect(userRoleWord(zh, "admin")).toBe("管理员");
+    expect(userRoleWord(zh, "user")).toBe("用户");
     // The knowledge row's badge and the evidence card's kind draw the wire through the table.
     expect(knowledgeSourceStatusWord(en, "ready")).toBe("Ready");
     expect(knowledgeSourceStatusWord(zh, "pending")).toBe("待处理");
@@ -520,6 +530,105 @@ describe("the requirement priority badges", () => {
     expect(
       rawPriorityLabels([{ path: "app/clean.tsx", text: "label: followUpPriorityWord(t, priority)," }])
     ).toEqual([]);
+  });
+});
+
+const ROLE_SURFACES: [string, string][] = [
+  ["app/(app)/settings/page.tsx", 'userRoleWord(t, user.role?.toLowerCase?.() ?? "user")'],
+];
+
+/**
+ * The charge is the print of `user.role`, not every `.role`.
+ *
+ * A contact's `role` in networking and a posting's `role` in a letter are free text --
+ * data the user typed or the sender wrote -- and stay off this walk. The account badge
+ * is the one surface that prints an authorization word; the field it reads is the one
+ * `MeResponse` carries. A bare `role` from the login principal would also pass the
+ * roster, which is why the charge is the row's field and not the word.
+ */
+function rawRoleSurfaces(files: { path: string; text: string }[]): string[] {
+  return files
+    .filter((f) => f.path !== STATUS_WORDS)
+    .filter((f) => textNodeBodies(f.text).some((b) => printsEnum(b, "user\\.role")))
+    .map((f) => f.path);
+}
+
+const USERS_SCHEMA = new URL(
+  "../../../backend/src/main/resources/db/migration/V1__init_schema.sql",
+  import.meta.url
+);
+
+/** The words `users.role`'s own column comment declares: `-- user | admin`. */
+function roleWordsInSchema(sql: string): string[] {
+  const table = sql.match(/CREATE TABLE users[\s\S]*?\n\s*\);/)?.[0] ?? "";
+  const comment = table.match(/^\s*role\s+text[^\n]*?--\s*([a-z_ |]+)$/m)?.[1] ?? "";
+  return comment
+    .split("|")
+    .map((w) => w.trim())
+    .filter(Boolean)
+    .sort();
+}
+
+describe("the account role badge", () => {
+  it("draws the row's role through the table", () => {
+    const files = sources();
+    expect(files.length, "the scan read no files").toBeGreaterThan(150);
+    // The charge runs before the seams: a name in this list says which page prints the
+    // wire word, and a missing seam only says which call the gate expected.
+    const offenders = rawRoleSurfaces(files);
+    expect(
+      offenders,
+      `surfaces printing the account's wire role:\n${offenders.join("\n")}`
+    ).toEqual([]);
+    for (const [rel, seam] of ROLE_SURFACES) {
+      const file = files.find((f) => f.path.endsWith(rel));
+      expect(file, `${rel} is not in the walk`).toBeTruthy();
+      expect(file!.text, `${rel} no longer draws the badge through ${seam}`).toContain(seam);
+    }
+  });
+
+  it("would still see a surface that printed the role itself", () => {
+    // The pre-fix shape: the field the response never carried, drawn with a CSS
+    // capitalization and a fallback that made every account look like the default.
+    expect(
+      rawRoleSurfaces([
+        {
+          path: "app/probe.tsx",
+          text: '<Badge variant="outline" className="capitalize">{user.role?.toLowerCase?.() ?? "user"}</Badge>',
+        },
+      ])
+    ).toEqual(["app/probe.tsx"]);
+    expect(rawRoleSurfaces([{ path: "app/probe.tsx", text: "<Badge>{user.role}</Badge>" }])).toEqual(
+      ["app/probe.tsx"]
+    );
+    // A contact's role and a posting's role are data, not authorization words.
+    expect(rawRoleSurfaces([{ path: "app/ok.tsx", text: "<span>{c.role}</span>" }])).toEqual([]);
+    expect(
+      rawRoleSurfaces([
+        { path: "app/ok.tsx", text: "<Badge>{userRoleWord(t, user.role)}</Badge>" },
+      ])
+    ).toEqual([]);
+    // A comparison asks about the role and draws something else.
+    expect(
+      rawRoleSurfaces([
+        { path: "app/ok.tsx", text: '{user.role === "admin" && <Badge>{t("a.admin")}</Badge>}' },
+      ])
+    ).toEqual([]);
+  });
+
+  it("are the words the users table declares", () => {
+    const words = roleWordsInSchema(readFileSync(fileURLToPath(USERS_SCHEMA), "utf8"));
+    expect(words.length, "the schema's role comment parsed empty").toBeGreaterThan(1);
+    expect([...USER_ROLES].sort()).toEqual(words);
+  });
+
+  it("would still see a schema that declares a third role", () => {
+    const planted =
+      "CREATE TABLE users (\n  role          text   NOT NULL DEFAULT 'user',        -- user | admin | owner\n);";
+    expect(roleWordsInSchema(planted)).toEqual(["admin", "owner", "user"]);
+    expect(USER_ROLES).not.toContain("owner");
+    // A file with no users table is an empty reading, not a pass dressed as one.
+    expect(roleWordsInSchema("CREATE TABLE jobs (id uuid);")).toEqual([]);
   });
 });
 

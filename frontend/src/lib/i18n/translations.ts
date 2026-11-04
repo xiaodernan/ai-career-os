@@ -1295,6 +1295,10 @@ export const translations = {
       account: "Account",
       accountDescription:
         "Live from /users/me — the display name is editable, the email rides on your login.",
+      roles: {
+        user: "User",
+        admin: "Admin",
+      },
       displayName: "Display name",
       signOut: "Sign out",
       signOutDescription: "Ends this session and revokes the refresh token.",
@@ -4238,6 +4242,10 @@ export const translations = {
       logOutConfirm: "退出登录",
       account: "账户",
       accountDescription: "实时来自 /users/me——显示名可以改，邮箱跟你的登录走。",
+      roles: {
+        user: "用户",
+        admin: "管理员",
+      },
       displayName: "显示名",
       signOut: "退出登录",
       signOutDescription: "结束当前会话，并吊销刷新令牌。",

@@ -98,6 +98,9 @@ class UserControllerTest {
         user.setId(ALICE);
         user.setEmail("ada@example.invalid");
         user.setDisplayName("Ada Lovelace");
+        // The entity defaults to "user" and the security principal below also says "user";
+        // an admin row is the only value that tells the row's role from either fallback.
+        user.setRole("admin");
         when(users.findById(ALICE)).thenReturn(Optional.of(user));
 
         UserProfile profile = new UserProfile();
@@ -126,6 +129,7 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.data.displayName").value("Ada Lovelace"))
                 .andExpect(jsonPath("$.data.email").value("ada@example.invalid"))
                 .andExpect(jsonPath("$.data.locale").value("en"))
+                .andExpect(jsonPath("$.data.role").value("admin"))
                 .andExpect(jsonPath("$.data.headline").value("Backend engineer"))
                 .andExpect(jsonPath("$.data.location").value("London"))
                 .andExpect(jsonPath("$.data.yearsExperience").value(7.5))
@@ -156,6 +160,7 @@ class UserControllerTest {
                         .content("{\"displayName\":\"  Ada King  \"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.displayName").value("Ada King"))
+                .andExpect(jsonPath("$.data.role").value("admin"))
                 .andExpect(jsonPath("$.data.headline").value("Backend engineer"))
                 .andExpect(jsonPath("$.data.location").value("London"))
                 .andExpect(jsonPath("$.data.yearsExperience").value(7.5))

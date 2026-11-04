@@ -425,7 +425,7 @@ export default function DataPortabilityPage() {
               <ul className="space-y-1 text-sm">
                 {Object.entries(applyImport.data.applied ?? {}).map(([section, counts]) => (
                   <li key={section} className="flex items-center justify-between gap-2">
-                    <span className="capitalize">{section.replace(/_/g, " ")}</span>
+                    <span>{sectionLabel(section)}</span>
                     <span className="text-xs text-muted-foreground">
                       {t("data.appliedCounts", {
                         created: counts.created ?? 0,
@@ -444,7 +444,7 @@ export default function DataPortabilityPage() {
                 <ul className="space-y-1 border-t border-border/60 pt-2 text-xs text-muted-foreground">
                   {(applyImport.data.skipped ?? []).map((s) => (
                     <li key={s.section}>
-                      <span className="font-medium capitalize">{s.section.replace(/_/g, " ")}</span>
+                      <span className="font-medium">{sectionLabel(s.section)}</span>
                       {" — "}
                       {s.reason}
                     </li>

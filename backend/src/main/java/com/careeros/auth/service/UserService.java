@@ -27,7 +27,7 @@ public class UserService {
     @Transactional(readOnly = true)
     public MeResponse get(UUID userId) {
         User user = requireUser(userId);
-        return MeResponse.of(user.getDisplayName(), user.getEmail(), user.getLocale(),
+        return MeResponse.of(user.getDisplayName(), user.getEmail(), user.getRole(), user.getLocale(),
                 requireProfile(userId));
     }
 
@@ -70,7 +70,7 @@ public class UserService {
         }
         users.save(user);
         profiles.save(profile);
-        return MeResponse.of(user.getDisplayName(), user.getEmail(), user.getLocale(), profile);
+        return MeResponse.of(user.getDisplayName(), user.getEmail(), user.getRole(), user.getLocale(), profile);
     }
 
     private User requireUser(UUID userId) {

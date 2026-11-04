@@ -32,6 +32,12 @@ export const JOB_STATUSES = ["open", "closed"] as const;
 
 export const REMOTE_TYPES = ["remote", "hybrid", "onsite"] as const;
 
+/**
+ * `users.role` — the V1 schema's own comment, `-- user | admin`. The account badge in
+ * settings is the only surface that draws it; `MeResponse.role` is the row's copy.
+ */
+export const USER_ROLES = ["user", "admin"] as const;
+
 /** `resume_versions.status` — the same five words the resumes page's badge draws. */
 export const RESUME_STATUSES = ["uploaded", "parsing", "ingesting", "parsed", "failed"] as const;
 
@@ -149,6 +155,11 @@ export function marketPriorityWord(t: TranslateFn, priority: string): string {
 /** The follow-up cadence band; the dashboard drew `overdue` on every language. */
 export function followUpPriorityWord(t: TranslateFn, priority: string): string {
   return wordFrom(t, "dashboard.followUpPriorities", priority, FOLLOW_UP_PRIORITIES);
+}
+
+/** The account badge: the row's authorization word, not the login principal's fallback. */
+export function userRoleWord(t: TranslateFn, role: string): string {
+  return wordFrom(t, "settings.roles", role, USER_ROLES);
 }
 
 export function knowledgeSourceStatusWord(t: TranslateFn, status: string): string {

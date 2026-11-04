@@ -82,7 +82,7 @@ screen. A malformed inbound value is replaced, never refused.
 
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/me` | account summary, including the account's language (locale, en or zh) |
+| GET | `/me` | account summary, including the account's role (user or admin, the users table's own words) and the account's language (locale, en or zh) |
 | PATCH | `/me` | `{displayName, headline, location, summary, yearsExperience, targetRoles, targetLocations, links, workAuthorization, preferences, locale}` — every field optional, `null` means leave unchanged. Locale is the language the account is written to: the screen's own copy is the browser's cookie, but the nightly letter has no browser, so this is the copy a sweep can read; anything but en or zh is a 400 |
 | PATCH | `/me/password` | `{currentPassword, newPassword}` — re-authenticates with the current password (a wrong one is a **401** `CURRENT_PASSWORD_INCORRECT`), refuses a new value equal to the current one (**400** `PASSWORD_UNCHANGED`), stores the new hash and revokes every refresh token, so every other device signs in again; the caller's own access token expires at its short lifetime like any other |
 | GET | `/users/me` | alias of `/me` (binding seam) |

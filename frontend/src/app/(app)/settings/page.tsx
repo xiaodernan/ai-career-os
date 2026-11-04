@@ -27,6 +27,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useLogout, useUser } from "@/lib/hooks/auth";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { useUpdateProfile } from "@/lib/hooks/actions";
+import { userRoleWord } from "@/lib/status-words";
 
 /** Mirrors `UpdateMeRequest`'s `@Size(min = 1, max = 120)` on the display name. */
 const MAX_NAME = 120;
@@ -100,7 +101,7 @@ export default function SettingsPage() {
                 </div>
                 <div className="flex items-center gap-2 pt-1">
                   <p className="text-sm text-muted-foreground">{user.email}</p>
-                  <Badge variant="outline" className="capitalize">{user.role?.toLowerCase?.() ?? "user"}</Badge>
+                  <Badge variant="outline">{userRoleWord(t, user.role?.toLowerCase?.() ?? "user")}</Badge>
                 </div>
               </div>
               <Separator />
