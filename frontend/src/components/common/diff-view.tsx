@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { AIBadge } from "@/components/ai/ai-badge";
 import { useLocale } from "@/lib/i18n/locale-context";
+import { diffStatWord } from "@/lib/status-words";
 import type { TailorChange } from "@/lib/api/types";
 
 /**
@@ -113,7 +114,7 @@ function DiffView({ accepted, rejected = [], notes, stats, className, ...props }
           {statChips.map(([k, v]) => (
             <li key={k}>
               <Badge variant="outline" className="text-2xs tabular-nums">
-                {k.replace(/_/g, " ")}: <span className="font-medium text-foreground">{String(v)}</span>
+                {diffStatWord(t, k)}: <span className="font-medium text-foreground">{String(v)}</span>
               </Badge>
             </li>
           ))}

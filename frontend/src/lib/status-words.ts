@@ -49,6 +49,13 @@ export const RESUME_STATUSES = ["uploaded", "parsing", "ingesting", "parsed", "f
 export const RESUME_VERSION_KINDS = ["original", "tailored"] as const;
 
 /**
+ * The two counters `tailor()` puts in `stats` (`ai-service/app/features/tailor.py`).
+ * The diff view's chip split the wire key on underscores, so a Chinese reader saw
+ * `accepted: 3` beside badges that already spoke their language.
+ */
+export const DIFF_STAT_KEYS = ["accepted", "rejected"] as const;
+
+/**
  * `knowledge_sources.status` and `documents.status` — one field on the wire.
  *
  * `GET /knowledge/sources/{id}/status` answers with the document's status whenever the
@@ -141,6 +148,11 @@ export function resumeStatusWord(t: TranslateFn, status: string): string {
 /** The version row's origin word; the metadata line drew `original` in every language. */
 export function resumeVersionKindWord(t: TranslateFn, kind: string): string {
   return wordFrom(t, "resumes.versionKinds", kind, RESUME_VERSION_KINDS);
+}
+
+/** The tailoring chip's counter word; the chip used to spell the wire key itself. */
+export function diffStatWord(t: TranslateFn, key: string): string {
+  return wordFrom(t, "diffView.stats", key, DIFF_STAT_KEYS);
 }
 
 export function healthVerdictWord(t: TranslateFn, verdict: string): string {

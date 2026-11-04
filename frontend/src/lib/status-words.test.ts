@@ -10,6 +10,7 @@ import { INTERVIEW_MODES } from "@/lib/interview-modes";
 import { sourceKindLabel } from "@/lib/source-kinds";
 import { TRACE_KINDS } from "@/lib/trace-kinds";
 import {
+  diffStatWord,
   followUpPriorityWord,
   healthVerdictWord,
   interviewModeHint,
@@ -31,6 +32,7 @@ import {
   seniorityWord,
   traceKindWord,
   userRoleWord,
+  DIFF_STAT_KEYS,
   FOLLOW_UP_PRIORITIES,
   HEALTH_VERDICTS,
   JOB_STATUSES,
@@ -88,6 +90,7 @@ const ROSTERS: [string, readonly string[]][] = [
   ["monitoring.nightlyStatuses", NIGHTLY_STATUSES],
   ["ai.agentTimeline.kinds", TRACE_KINDS],
   ["settings.roles", USER_ROLES],
+  ["diffView.stats", DIFF_STAT_KEYS],
 ];
 
 describe("the enum words", () => {
@@ -144,6 +147,8 @@ describe("the enum words", () => {
     expect(userRoleWord(zh, "owner")).toBe("Owner");
     // `resume_versions.kind` is the schema's pair too; a kind a later migration adds still reads.
     expect(resumeVersionKindWord(zh, "imported")).toBe("Imported");
+    // The diff chip's roster is the two counters `tailor()` returns; a third one still reads.
+    expect(diffStatWord(zh, "unchanged")).toBe("Unchanged");
     // `retired` and `indexing` reached the table in this unit; a status the ingest has
     // never written is what this case still has to degrade.
     expect(knowledgeSourceStatusWord(zh, "archiving")).toBe("Archiving");
@@ -190,6 +195,10 @@ describe("the enum words", () => {
     expect(resumeVersionKindWord(en, "original")).toBe("Original parse");
     expect(resumeVersionKindWord(zh, "original")).toBe("原始解析");
     expect(resumeVersionKindWord(zh, "tailored")).toBe("定制草稿");
+    // The tailoring chip's counters: the pre-fix badge split the wire key on underscores.
+    expect(diffStatWord(en, "accepted")).toBe("Applied");
+    expect(diffStatWord(zh, "accepted")).toBe("已采纳");
+    expect(diffStatWord(zh, "rejected")).toBe("已否决");
     // The knowledge row's badge and the evidence card's kind draw the wire through the table.
     expect(knowledgeSourceStatusWord(en, "ready")).toBe("Ready");
     expect(knowledgeSourceStatusWord(zh, "pending")).toBe("待处理");
@@ -768,6 +777,101 @@ describe("the wire source words", () => {
     expect(RESUME_VERSION_KINDS).not.toContain("imported");
     // A file with no resume_versions table is an empty reading, not a pass dressed as one.
     expect(versionKindWordsInSchema("CREATE TABLE jobs (id uuid);")).toEqual([]);
+  });
+});
+
+const TAILOR_PY = fileURLToPath(
+  new URL("../../../ai-service/app/features/tailor.py", import.meta.url)
+);
+
+/**
+ * The producer's own `stats` literal, read as source.
+ *
+ * `tailor()` returns exactly `{"accepted": …, "rejected": …}` and the chip draws whatever
+ * numbers arrive. A key added there without a word here would fall back to its English
+ * spelling rather than break, so the roster is reconciled with the dict, not with memory.
+ */
+function tailorStatKeys(py: string): string[] {
+  const body = py.match(/"stats":\s*\{([^}]*)\}/)?.[1] ?? "";
+  return [...body.matchAll(/"([a-z_]+)":/g)].map((m) => m[1]).sort();
+}
+
+/**
+ * The charge is the spelling recipe: a text node that splits a string on underscores is
+ * drawing a wire key, because `k.replace(/_/g, " ")` turns `accepted` into an English
+ * word and leaves it that way for every reader. A helper doing the same in a `.ts`
+ * module is not a text node and is not charged by this walk.
+ */
+function rawUnderscoreSplitSurfaces(files: { path: string; text: string }[]): string[] {
+  return files
+    .filter((f) => f.path !== STATUS_WORDS)
+    .filter((f) =>
+      textNodeBodies(f.text).some((b) => /\.replace\(\s*\/_\/g\s*,\s*["'][ _-]+["']\s*\)/.test(b))
+    )
+    .map((f) => f.path);
+}
+
+const STAT_SURFACES: [string, string][] = [
+  ["components/common/diff-view.tsx", "diffStatWord(t, k)"],
+];
+
+const STAT_MAPS: [string, string][] = [
+  ["lib/api/normalize.ts", "stats: rec(stats) ? (stats as Record<string, unknown>) : undefined"],
+];
+
+describe("the tailoring statistics chip", () => {
+  it("draws each counter through the table", () => {
+    const files = sources();
+    expect(files.length, "the scan read no files").toBeGreaterThan(150);
+    // The charge runs before the seams: a name in this list says which surface splits a
+    // wire key itself, and a missing seam only says which call the gate expected.
+    const offenders = rawUnderscoreSplitSurfaces(files);
+    expect(
+      offenders,
+      `surfaces splitting a wire key on underscores:\n${offenders.join("\n")}`
+    ).toEqual([]);
+    for (const [rel, seam] of [...STAT_SURFACES, ...STAT_MAPS]) {
+      const file = files.find((f) => f.path.endsWith(rel));
+      expect(file, `${rel} is not in the walk`).toBeTruthy();
+      expect(file!.text, `${rel} no longer draws the counter through ${seam}`).toContain(seam);
+    }
+  });
+
+  it("would still see a chip that spelled the wire key", () => {
+    expect(
+      rawUnderscoreSplitSurfaces([
+        {
+          path: "components/probe.tsx",
+          text: '<Badge>{k.replace(/_/g, " ")}: <span>{String(v)}</span></Badge>',
+        },
+      ])
+    ).toEqual(["components/probe.tsx"]);
+    // The table's own call is not a spelling recipe, and a helper outside a text node
+    // is not drawn by this surface.
+    expect(
+      rawUnderscoreSplitSurfaces([
+        { path: "components/ok.tsx", text: "<span>{diffStatWord(t, k)}</span>" },
+      ])
+    ).toEqual([]);
+    expect(
+      rawUnderscoreSplitSurfaces([
+        { path: "lib/ok.ts", text: 'const label = k.replace(/_/g, " ");' },
+      ])
+    ).toEqual([]);
+  });
+
+  it("are the counters tailor.py returns", () => {
+    const keys = tailorStatKeys(readFileSync(TAILOR_PY, "utf8"));
+    expect(keys.length, "the producer's stats dict parsed empty").toBeGreaterThan(1);
+    expect([...DIFF_STAT_KEYS].sort()).toEqual(keys);
+  });
+
+  it("would still see a producer that returns a third counter", () => {
+    const planted = 'return {"stats": {"accepted": 1, "rejected": 2, "unchanged": 3}}';
+    expect(tailorStatKeys(planted)).toEqual(["accepted", "rejected", "unchanged"]);
+    expect(DIFF_STAT_KEYS).not.toContain("unchanged");
+    // A stats dict with no keys is an empty reading, not a pass dressed as one.
+    expect(tailorStatKeys('return {"stats": {}}')).toEqual([]);
   });
 });
 

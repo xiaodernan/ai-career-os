@@ -346,6 +346,10 @@ export const translations = {
       skipped: "Skipped",
       applied: "Applied",
       statistics: "Tailoring statistics",
+      stats: {
+        accepted: "Applied",
+        rejected: "Rejected",
+      },
       agentNotes: "Agent notes",
       appliedChanges: "Applied changes",
       rejectedProposals: "Rejected proposals",
@@ -3310,6 +3314,10 @@ export const translations = {
       skipped: "已跳过",
       applied: "已应用",
       statistics: "定制统计",
+      stats: {
+        accepted: "已采纳",
+        rejected: "已否决",
+      },
       agentNotes: "代理备注",
       appliedChanges: "已采纳的改动",
       rejectedProposals: "被否决的提案",
