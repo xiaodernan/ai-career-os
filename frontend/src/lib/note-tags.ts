@@ -33,6 +33,26 @@ export function parseTags(input: string | null | undefined): string[] {
   return out;
 }
 
+/**
+ * 69.1: where a kept note can be read back.
+ *
+ * The report's four kinds of advice each carry `interview` plus their own kind
+ * (`study`, `answer`, `gap`, `prepare`), and "Kept in knowledge" is only a
+ * promise the reader can keep if there is a way to the note that does not
+ * involve scrolling every hand-written note. The kind tag is that door: it is
+ * the narrowest one the product mints, where `interview` alone opens all four
+ * kinds at once. A note with no kind tag (a hand-written one, or a draft from a
+ * caller that never minted one) opens the whole list rather than a filter that
+ * could not match it.
+ */
+export const NOTES_PATH = "/knowledge";
+
+export function noteHref(tags: readonly string[] | null | undefined): string {
+  const kinds = (tags ?? []).filter((tag) => tag !== PRODUCT_TAGS[0]);
+  const kind = kinds[kinds.length - 1];
+  return kind ? `${NOTES_PATH}?ntag=${encodeURIComponent(kind)}` : NOTES_PATH;
+}
+
 /** The same list, written back into the one input the form offers. */
 export function formatTags(tags: readonly string[] | null | undefined): string {
   return (tags ?? []).join(", ");

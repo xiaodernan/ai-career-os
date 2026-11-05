@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { MAX_TAGS, formatTags, parseTags } from "./note-tags";
+import { MAX_TAGS, formatTags, noteHref, parseTags } from "./note-tags";
 
 describe("parseTags", () => {
   it("splits on commas in either language and trims what is left", () => {
@@ -30,5 +30,26 @@ describe("formatTags", () => {
     expect(formatTags(["interview", "gap"])).toBe("interview, gap");
     expect(formatTags([])).toBe("");
     expect(formatTags(undefined)).toBe("");
+  });
+});
+
+describe("noteHref", () => {
+  it("opens the kind the draft minted, not the tag all four kinds share", () => {
+    expect(noteHref(["interview", "study"])).toBe("/knowledge?ntag=study");
+    expect(noteHref(["interview", "answer"])).toBe("/knowledge?ntag=answer");
+    expect(noteHref(["interview", "gap"])).toBe("/knowledge?ntag=gap");
+    expect(noteHref(["interview", "prepare"])).toBe("/knowledge?ntag=prepare");
+  });
+
+  it("opens the whole list when there is no narrower tag to open", () => {
+    expect(noteHref(["interview"])).toBe("/knowledge");
+    expect(noteHref([])).toBe("/knowledge");
+    expect(noteHref(undefined)).toBe("/knowledge");
+    expect(noteHref(null)).toBe("/knowledge");
+  });
+
+  it("carries a tag the reader typed through the URL intact", () => {
+    expect(noteHref(["interview", "system design"])).toBe("/knowledge?ntag=system%20design");
+    expect(noteHref(["interview", "a&b"])).toBe("/knowledge?ntag=a%26b");
   });
 });
