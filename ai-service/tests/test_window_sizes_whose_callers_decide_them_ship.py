@@ -119,7 +119,10 @@ WIRE = {
     "useCompanies": ("companies", "{ size: 20, ...(params ?? {}) }"),
     "useKnowledgeSources": ("knowledge", "{ size: 20, documentId, ...(params ?? {}) }"),
     "useKnowledgeNotes": ("knowledgeNotes", "{ size: 20, ...(params ?? {}) }"),
-    "useInterviewSessions": ("interviews", "{ size: 20, ...(params ?? {}) }"),
+    # 59.1 gave the hook an `enabled` flag the wire must not see, so the body splits the
+    # params and spreads only the rest; 62.1's runner is the third caller, asking for the
+    # card's siblings so a retry can read what the last completed rehearsal missed.
+    "useInterviewSessions": ("interviews", "{ size: 20, ...query }"),
     "useActivityRuns": ("activityRuns", "{ size: 30, ...(params ?? {}) }"),
     "useIngestionRuns": ("ingestionRuns", "{ size: 20, ...(params ?? {}) }"),
     "useConversations": ("conversations", "{ size: 20, ...(params ?? {}) }"),
@@ -162,9 +165,19 @@ SITES = {
                             "true, src, { page: state.page, size: PAGE_SIZE }")],
     "useKnowledgeNotes": [("components/knowledge/notes-panel.tsx",
                           "{ page: state.npage, size: PAGE_SIZE }")],
-    "useInterviewSessions": [("app/(app)/interviews/page.tsx",
-                              # 57.1's narrowed list passes the card it is showing.
-                              "{ page: state.page, size: PAGE_SIZE, applicationId, }")],
+    "useInterviewSessions": [
+        # 62.1's runner asks for the card's siblings so the retry can read what the last
+        # completed rehearsal missed; it only asks once the detail names the card.
+        ("app/(app)/interviews/[id]/page.tsx",
+         "{ applicationId: data?.applicationId ?? undefined, size: 20, "
+         "enabled: Boolean(data?.applicationId), }"),
+        # 59.1's report asks the same question behind the same flag.
+        ("app/(app)/interviews/[id]/report/page.tsx",
+         "{ applicationId: session.data?.applicationId ?? undefined, size: 20, "
+         "enabled: Boolean(session.data?.applicationId), }"),
+        ("app/(app)/interviews/page.tsx",
+         # 57.1's narrowed list passes the card it is showing.
+         "{ page: state.page, size: PAGE_SIZE, applicationId, }")],
     "useActivityRuns": [("app/(app)/activity/page.tsx",
                          "{ page: state.page, size: PAGE_SIZE }"),
                         ("app/(app)/dashboard/page.tsx", "{ size: 5 }")],

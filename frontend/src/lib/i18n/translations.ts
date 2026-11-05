@@ -2717,6 +2717,9 @@ export const translations = {
         openReport: "Open report",
         depthTitle: "Depth: {depth}/5",
         difficultyAria: "Difficulty level {level} of 5",
+        lastTimeMissed: "Last time you missed:",
+        lastTimeFocus: "Worth another look:",
+        readThatReport: "Read that report",
       },
       report: {
         solidPractice: "Solid practice — the weak dimensions below are the fastest wins.",
@@ -5529,6 +5532,9 @@ export const translations = {
         openReport: "打开报告",
         depthTitle: "深度：{depth}/5",
         difficultyAria: "难度等级 {level}（满分 5 级）",
+        lastTimeMissed: "上次没答到：",
+        lastTimeFocus: "值得再看：",
+        readThatReport: "看那场的报告",
       },
       report: {
         solidPractice: "练习得不错——下面薄弱的维度就是最快的提升点。",

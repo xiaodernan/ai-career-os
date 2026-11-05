@@ -14,6 +14,8 @@ export interface PracticeSession {
   id: string;
   overall?: number | null;
   startedAt?: string;
+  /** Only a `completed` sibling has a report to brief the next attempt from (62.1). */
+  status?: string;
 }
 
 export interface PracticeLine {
@@ -49,4 +51,27 @@ export function cardPractice(
     count: ordered.length,
     ...(graded.length > 0 ? { best: Math.max(...graded) } : {}),
   };
+}
+
+/**
+ * 62.1: the last finished rehearsal on this card, other than the one being taken.
+ *
+ * A retry starts from nothing today: the new session is built fresh, so whatever
+ * the previous report said to fix is only visible by leaving the page. The card's
+ * list already holds every sibling; this picks the newest `completed` one, which
+ * is the one whose report the runner can read for its gaps. Newest first by
+ * `startedAt`, ties broken by id so the choice cannot flap between renders.
+ */
+export function previousRehearsal(
+  sessions: readonly PracticeSession[],
+  currentId: string | null | undefined
+): PracticeSession | null {
+  if (!currentId) return null;
+  const finished = sessions
+    .filter((s) => s.id !== currentId && s.status === "completed")
+    .sort((a, b) => {
+      const byStart = (b.startedAt ?? "").localeCompare(a.startedAt ?? "");
+      return byStart !== 0 ? byStart : a.id.localeCompare(b.id);
+    });
+  return finished[0] ?? null;
 }

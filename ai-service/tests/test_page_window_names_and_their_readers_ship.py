@@ -121,6 +121,9 @@ READERS = {
     # `unread`, and the list is one unpaged answer, so no strip here reads a window.
     "items": ["app/(app)/applications/page.tsx", "app/(app)/copilot/page.tsx",
               "app/(app)/dashboard/page.tsx",
+              # 59.1's report and 62.1's runner both ask for the card's siblings; they read the
+              # rows and nothing else -- the window they want is the one the hook defaults to.
+              "app/(app)/interviews/[id]/page.tsx", "app/(app)/interviews/[id]/report/page.tsx",
               # 47.3's job page asks the pipeline one question -- is this posting already on the
               # board -- and the answer it reads is the page's `items`, empty or not. It pages
               # nothing and reads no window, so it joins `items` alone.

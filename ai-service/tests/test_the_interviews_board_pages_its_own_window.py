@@ -87,22 +87,38 @@ def hook_calls(hook: str) -> list[tuple[str, str]]:
 def test_the_hook_takes_a_window_and_keys_each_page_as_its_own_cache_entry():
     """Case 1: the signature, the key, and the spread over the hook's own 50 literal."""
     body = function_body(read(RESOURCES), "export function useInterviewSessions(")
-    assert re.search(r"export function useInterviewSessions\("
-                     r"params\?: \{ page\?: number; size\?: number; "
-                     r"applicationId\?: string;? \}\)",
-                     collapse(body)), (
-        f"the hook lost its window parameters, so the board cannot ask for a page: "
-        f"{collapse(body)[:140]}")
+    signature = collapse(body)
+    # 59.1 added the fourth parameter, `enabled`: the report and the runner ask only when
+    # the session names a card. It is a gate, not a window, so it is named here beside the
+    # three the board uses rather than folded into them.
+    for part in ("params?: {", "page?: number;", "size?: number;",
+                 "applicationId?: string;", "enabled?: boolean;"):
+        assert part in signature, (
+            f"the hook lost {part!r}, so the board cannot ask for a page: {signature[:160]}")
     assert re.search(r'queryKey: \["interview", "sessions", params\]', body), (
         f"the cache no longer separates pages, so page 1 would answer from page 0's entry: "
         f"{collapse(body)[:160]}")
-    assert re.search(r"api\.get<unknown>\(endpoints\.interviews, "
-                     r"\{ size: 20, \.\.\.\(params \?\? \{\}\) \}\)", collapse(body)), (
+    # `query` is `params` minus `enabled` (59.1): a gate that reached the wire would be a
+    # fourth query parameter the route does not bind.
+    assert re.search(r"const \{ enabled = true, \.\.\.query \} = params \?\? \{\};", body), (
+        f"the gate is no longer stripped before the request: {collapse(body)[:160]}")
+    assert re.search(r"api\.get<unknown>\(endpoints\.interviews, \{ size: 20, \.\.\.query \}\)",
+                     collapse(body)), (
         f"the caller's window is no longer spread over the literal, so an asked-for page "
         f"would never reach the wire: {collapse(body)}")
+    assert re.search(r"\benabled,\n", body) or re.search(r"enabled,", body), (
+        "the gate is no longer handed to useQuery, so a null card would still fetch")
     # #228 moved the literal to the route's own 20, so the two now agree; what this gate
     # still pins is that the caller's window is spread over it rather than spelled beside it.
+    # Three callers now: the board (its own page), the report (59.1) and the runner (62.1).
+    # The last two ask for one card's newest window and are gated on the card existing.
     assert hook_calls("useInterviewSessions") == [
+        ("app/(app)/interviews/[id]/page.tsx",
+         "{ applicationId: data?.applicationId ?? undefined, size: 20, "
+         "enabled: Boolean(data?.applicationId), }"),
+        ("app/(app)/interviews/[id]/report/page.tsx",
+         "{ applicationId: session.data?.applicationId ?? undefined, size: 20, "
+         "enabled: Boolean(session.data?.applicationId), }"),
         ("app/(app)/interviews/page.tsx",
          "{ page: state.page, size: PAGE_SIZE, applicationId, }"),
     ], f"the call sites moved: {hook_calls('useInterviewSessions')}"

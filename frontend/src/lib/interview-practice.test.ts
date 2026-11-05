@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { cardPractice } from "./interview-practice";
+import { cardPractice, previousRehearsal } from "./interview-practice";
 
 /**
  * 59.1: the practice line is a fold over the card's rehearsals.
@@ -35,5 +35,37 @@ describe("cardPractice", () => {
     expect(cardPractice(rows, null)).toBeNull();
     expect(cardPractice(rows, "someone-else")).toBeNull();
     expect(cardPractice([], "s1")).toBeNull();
+  });
+});
+
+describe("previousRehearsal", () => {
+  it("picks the newest finished sibling, not the one being taken", () => {
+    const previous = previousRehearsal(
+      [
+        { id: "current", startedAt: "2026-11-05T10:00:00Z", status: "active" },
+        { id: "older", startedAt: "2026-11-01T10:00:00Z", status: "completed" },
+        { id: "newer", startedAt: "2026-11-03T10:00:00Z", status: "completed" },
+      ],
+      "current"
+    );
+    expect(previous?.id).toBe("newer");
+  });
+
+  it("counts only completed rehearsals: a half-finished one has no report", () => {
+    const previous = previousRehearsal(
+      [
+        { id: "current", startedAt: "2026-11-05T10:00:00Z", status: "active" },
+        { id: "abandoned", startedAt: "2026-11-04T10:00:00Z", status: "abandoned" },
+        { id: "done", startedAt: "2026-11-02T10:00:00Z", status: "completed" },
+      ],
+      "current"
+    );
+    expect(previous?.id).toBe("done");
+  });
+
+  it("answers nothing for a free rehearsal or a card with no history", () => {
+    expect(previousRehearsal([{ id: "a", status: "completed" }], null)).toBeNull();
+    expect(previousRehearsal([{ id: "current", status: "active" }], "current")).toBeNull();
+    expect(previousRehearsal([], "current")).toBeNull();
   });
 });

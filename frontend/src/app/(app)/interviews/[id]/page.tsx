@@ -24,7 +24,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { interviewApplicationHref } from "@/lib/interview-target";
-import { cardPractice } from "@/lib/interview-practice";
+import { cardPractice, previousRehearsal } from "@/lib/interview-practice";
+import { normalizeInterviewReport } from "@/lib/api/normalize";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -99,6 +100,19 @@ export default function InterviewRunnerPage() {
     enabled: Boolean(data?.applicationId),
   });
   const practice = cardPractice(siblings.data?.items ?? [], data?.id ?? id);
+
+  // 62.1: a retry starts from nothing unless it reads the last finished sibling's
+  // report. The brief above the question is that read -- one detail query, gated on
+  // a completed sibling actually existing.
+  const previous = previousRehearsal(siblings.data?.items ?? [], data?.id ?? id);
+  const previousSession = useInterviewSession(previous?.id ?? null);
+  const previousReport = React.useMemo(
+    () =>
+      previousSession.data?.report
+        ? normalizeInterviewReport(previousSession.data.report)
+        : null,
+    [previousSession.data]
+  );
 
   // Seed from the server's current question; request the opening once when the
   // session is active but hasn't asked anything yet.
@@ -265,6 +279,39 @@ export default function InterviewRunnerPage() {
           className="w-full"
         />
       </div>
+
+      {/* 62.1: what the last attempt said to fix, before this one answers anything. */}
+      {!showingEvaluation &&
+        previous &&
+        previousReport &&
+        (previousReport.gaps.length > 0 || previousReport.study.length > 0) && (
+          <Card className="border-dashed bg-muted/20">
+            <CardContent className="space-y-1.5 py-3 text-sm">
+              {previousReport.gaps.length > 0 && (
+                <p>
+                  <span className="text-muted-foreground">
+                    {t("interviews.detail.lastTimeMissed")}
+                  </span>{" "}
+                  {previousReport.gaps.slice(0, 2).join(" · ")}
+                </p>
+              )}
+              {previousReport.study[0]?.title && (
+                <p>
+                  <span className="text-muted-foreground">
+                    {t("interviews.detail.lastTimeFocus")}
+                  </span>{" "}
+                  {previousReport.study[0].title}
+                </p>
+              )}
+              <Link
+                href={`/interviews/${previous.id}/report`}
+                className="inline-block text-xs underline underline-offset-2 hover:text-foreground"
+              >
+                {t("interviews.detail.readThatReport")}
+              </Link>
+            </CardContent>
+          </Card>
+        )}
 
       {/* Question / evaluation */}
       {!showingEvaluation && question && (
