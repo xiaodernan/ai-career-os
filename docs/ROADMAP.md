@@ -4428,6 +4428,23 @@ Every other list had already been through `LikePattern` or a JPQL `LOCATE`; this
   one grouped count), 2 IT cases (Docker-hosted; compiled here), 4 + 3 ai-service cases, and the
   whole ai-service suite at 2025 passed, 2 skipped.)
 
+## Epic 59 — the report says where this rehearsal sits
+
+The report is the page a reader lands on right after a rehearsal. It could say how this one
+scored, but not whether it was the first attempt or the fourth. The card's list already knows
+the whole history (57.1); the report should carry the same sentence.
+
+- [x] **59.1** The report knows where this rehearsal sits on its card.
+
+  (`cardPractice()` in `lib/interview-practice.ts` puts one rehearsal in the card's history:
+  oldest first by `startedAt`, the count, and the best score among graded rows only -- an
+  ungraded sibling is history, not a result. The report asks the narrowed sessions query with
+  the card the session names, and prints "Rehearsal 2 of 3 for this application - best 84/100"
+  under the *Open application* link; the first one says so instead of "1 of 1"; more than one
+  links to `/interviews?application=<id>`. The query gains an `enabled` gate that is stripped
+  before the request, so the wire stays the request 57.1 defined and no card means no query.
+  3 pure-function tests + the translation-key census.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
