@@ -732,6 +732,24 @@ export function useCreateInterviewSession() {
   });
 }
 
+/**
+ * 66.1: DELETE /interview/sessions/{id} has shipped since the start and had no
+ * caller -- a rehearsal started by mistake could only be hidden by scrolling
+ * past it. The whole sitting goes (its turns and its report cascade); the
+ * application card it was rehearsed for is not touched.
+ */
+export function useDeleteInterviewSession() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.remove(endpoints.interview(id)),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["interview"] });
+      toast.success(translate("toasts.interviewDeleted"));
+    },
+    onError: fail("failures.interviewDelete"),
+  });
+}
+
 export interface OpeningResponse {
   question: InterviewQuestion | null;
   raw: unknown;

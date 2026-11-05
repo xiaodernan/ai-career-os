@@ -42,6 +42,8 @@ vi.mock("@/lib/hooks/resources", () => ({
 
 vi.mock("@/lib/hooks/actions", () => ({
   useCreateInterviewSession: () => ({ mutate: () => undefined, isPending: false }),
+  // 66.1: the row's delete verb mounts on every row, so the page needs it too.
+  useDeleteInterviewSession: () => ({ mutate: () => undefined, isPending: false }),
 }));
 
 import InterviewsPage from "./page";

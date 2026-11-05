@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Briefcase, CalendarClock, FileBarChart, MessagesSquare, Plus } from "lucide-react";
+import { ArrowRight, Briefcase, CalendarClock, FileBarChart, MessagesSquare, Plus, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
 import { Pagination } from "@/components/common/pagination";
 import { lastPageOf } from "@/lib/page-window";
@@ -19,7 +19,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useCreateInterviewSession } from "@/lib/hooks/actions";
+import { ConfirmDialog } from "@/components/common/confirm-dialog";
+import { useCreateInterviewSession, useDeleteInterviewSession } from "@/lib/hooks/actions";
 import { useInterviewSessions } from "@/lib/hooks/resources";
 import { useUrlState } from "@/lib/hooks/use-url-state";
 import { useLocale } from "@/lib/i18n/locale-context";
@@ -233,6 +234,7 @@ export default function InterviewsPage() {
                           <ArrowRight aria-hidden />
                         </Link>
                       </Button>
+                      <DeleteSessionButton id={s.id} />
                     </CardContent>
                   </Card>
                 </li>
@@ -254,5 +256,40 @@ export default function InterviewsPage() {
         />
       )}
     </div>
+  );
+}
+
+/**
+ * 66.1: the delete verb the endpoint has always had. It sits on the row rather
+ * than in a menu because a list of rehearsals is exactly where a mistaken one
+ * is noticed; the dialog names what goes, including that the application card
+ * and any note kept from the report stay where they are.
+ */
+function DeleteSessionButton({ id }: { id: string }) {
+  const { t } = useLocale();
+  const [open, setOpen] = React.useState(false);
+  const remove = useDeleteInterviewSession();
+  return (
+    <>
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        className="shrink-0"
+        aria-label={t("interviews.deleteAria")}
+        onClick={() => setOpen(true)}
+      >
+        <Trash2 aria-hidden />
+      </Button>
+      <ConfirmDialog
+        open={open}
+        onOpenChange={setOpen}
+        title={t("interviews.deleteTitle")}
+        description={t("interviews.deleteDescription")}
+        confirmLabel={t("interviews.deleteConfirm")}
+        destructive
+        loading={remove.isPending}
+        onConfirm={() => remove.mutate(id, { onSuccess: () => setOpen(false) })}
+      />
+    </>
   );
 }
