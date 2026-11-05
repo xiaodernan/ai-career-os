@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { interviewApplicationHref } from "@/lib/interview-target";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft,
   ArrowRight,
@@ -34,10 +34,10 @@ import { SectionHeading } from "@/components/common/export-buttons";
 import { DimensionBars } from "@/components/common/skill-chips";
 import { MatchRing } from "@/components/ai/match-ring";
 import { AIBadge } from "@/components/ai/ai-badge";
-import { useFinalizeInterview } from "@/lib/hooks/actions";
+import { useCreateInterviewSession, useFinalizeInterview } from "@/lib/hooks/actions";
 import { useInterviewSession, useInterviewSessions } from "@/lib/hooks/resources";
 import { cardPractice, previousRehearsal, scoreDelta } from "@/lib/interview-practice";
-import { normalizeInterviewReport, type InterviewTrajectoryPoint } from "@/lib/api/normalize";
+import { normalizeInterviewReport, str, type InterviewTrajectoryPoint } from "@/lib/api/normalize";
 import { depthBand, depthLevel, formatDate } from "@/lib/format";
 import { interviewModeName } from "@/lib/status-words";
 import { safeHref } from "@/lib/safe-href";
@@ -50,6 +50,11 @@ export default function InterviewReportPage() {
   const id = params?.id ?? null;
   const session = useInterviewSession(id);
   const finalize = useFinalizeInterview(id ?? "");
+  const router = useRouter();
+  // 68.1: "Practice again" used to link back to *this* sitting, which is
+  // completed -- the runner then only said "finished". The verb belongs to the
+  // create route, with the same card (or, for free practice, the same role).
+  const restart = useCreateInterviewSession();
 
   // 59.1: the card's other rehearsals, read only when this session names one.
   // The list already answers each row's score, so the comparison is a fold over
@@ -129,6 +134,26 @@ export default function InterviewReportPage() {
     : data.startedAt
       ? t("interviews.report.noteOriginDate", { date: formatDate(data.startedAt, locale) })
       : undefined;
+
+  const practiceAgain = () =>
+    restart.mutate(
+      {
+        mode: data.mode,
+        ...(data.applicationId
+          ? { applicationId: data.applicationId }
+          : data.jobTitle
+            ? { positionTitle: data.jobTitle }
+            : {}),
+      },
+      {
+        onSuccess: (res) => {
+          const nextId =
+            str(res, "id", "session_id", "sessionId") ??
+            str((res as { session?: unknown }).session, "id");
+          if (nextId) router.push(`/interviews/${nextId}`);
+        },
+      }
+    );
 
   if (!hasReport) {
     return (
@@ -449,11 +474,15 @@ export default function InterviewReportPage() {
           <Button variant="outline" size="sm" asChild>
             <Link href="/interviews">{t("interviews.report.allInterviews")}</Link>
           </Button>
-          <Button variant="ai" size="sm" asChild>
-            <Link href={`/interviews/${data.id}`}>
-              <Play aria-hidden />
-              {t("interviews.report.practiceAgain")}
-            </Link>
+          <Button
+            variant="ai"
+            size="sm"
+            loading={restart.isPending}
+            disabled={restart.isPending}
+            onClick={practiceAgain}
+          >
+            <Play aria-hidden />
+            {t("interviews.report.practiceAgain")}
           </Button>
         </div>
       </div>
