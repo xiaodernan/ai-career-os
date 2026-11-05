@@ -4445,6 +4445,15 @@ the whole history (57.1); the report should carry the same sentence.
   before the request, so the wire stays the request 57.1 defined and no card means no query.
   3 pure-function tests + the translation-key census.)
 
+- [x] **59.2** The rehearsal row says how it went.
+
+  (The drawer counted the practice but never said what it scored. `ApplicationPacket` gains
+  `bestRehearsalScore` -- folded from the summary jsonb of the card's graded rehearsals in one
+  join, null when practice exists but none of it finished, and not read at all when the count
+  is zero. The row prints "3 rehearsals - best 84/100"; zero stays "None rehearsed yet" with
+  no door. 3 service tests + 1 route assertion + 2 normalizer assertions + 1 panel test; the
+  types census moved by the five lines the field brought with it.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
