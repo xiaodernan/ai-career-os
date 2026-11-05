@@ -4519,6 +4519,23 @@ sitting; the page dropped them.
   census now records that shared button as the writer's caller. 2 pure-function tests + 1
   markup test.)
 
+## Epic 62 -- a retry starts from what the last one missed
+
+Epic 61 taught the report to name the gaps and the questions to prepare, but a retry never saw
+them: a new sitting is generated fresh, and the only way back to the advice was to leave the
+page and open the old report. The card's rehearsal history already lives in one query.
+
+- [x] **62.1** The rehearsal opens with the last attempt's brief.
+
+  (`previousRehearsal()` sorts the card's siblings newest-first by `startedAt` (id breaks the
+  tie) and keeps the newest `completed` one other than the sitting being taken -- a running or
+  abandoned sibling has no report to learn from. The runner asks for that one detail and folds
+  its report through `normalizeInterviewReport`, so the brief reads the same gaps and study
+  items the report does. A dashed card above the question names the two biggest gaps and the
+  first thing to study, and links to that report; it disappears once this attempt is being
+  graded. 3 pure-function tests. The window census learned the hook's `enabled` split and its
+  third caller, and the envelope census its two new readers.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
