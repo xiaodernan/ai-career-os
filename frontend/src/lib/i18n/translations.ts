@@ -2182,6 +2182,8 @@ export const translations = {
         content: "Content",
         contentPlaceholder:
           "Write it down — the agents can quote this back with a citation.",
+        tagsLabel: "Tags",
+        tagsPlaceholder: "interview, study (comma separated)",
         saveNote: "Save note",
         untitled: "Untitled note",
         noteTitleLabel: "Note title",
@@ -5039,6 +5041,8 @@ export const translations = {
         titlePlaceholder: "例如：「为什么选我们」这个问题的答案",
         content: "内容",
         contentPlaceholder: "写下来——代理可以带着引用把它念回给你。",
+        tagsLabel: "标签",
+        tagsPlaceholder: "interview, study（用逗号分隔）",
         saveNote: "保存笔记",
         untitled: "无标题笔记",
         noteTitleLabel: "笔记标题",

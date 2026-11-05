@@ -683,10 +683,11 @@ export function useNoteMutations() {
       onError: fail("failures.noteSave"),
     }),
     update: useMutation({
-      mutationFn: (body: { id: string; title?: string; content?: string }) =>
+      mutationFn: (body: { id: string; title?: string; content?: string; tags?: string[] }) =>
         api.update<KnowledgeNote>(endpoints.knowledgeNote(body.id), {
           title: body.title,
           content: body.content,
+          tags: body.tags,
         }),
       onSuccess: () => {
         invalidate();

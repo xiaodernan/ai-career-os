@@ -5,6 +5,7 @@ import { Check, Pencil, StickyNote, Trash2, X } from "lucide-react";
 import { ModuleView } from "@/components/common/module-view";
 import { Pagination } from "@/components/common/pagination";
 import { lastPageOf } from "@/lib/page-window";
+import { formatTags, parseTags } from "@/lib/note-tags";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -30,8 +31,9 @@ import type { KnowledgeNote } from "@/lib/api/types";
  * `NoteRequest` validates title ≤ 200 chars and `content` `@NotBlank` on the
  * server, so the forms mirror both: a maxLength input, and a save button gated
  * on non-blank content rather than an error round-trip. Tags are accepted by
- * the backend and sent by the report's study button (60.1); this form does not
- * ask for them yet, so the row renders what exists.
+ * the backend and sent by the report's advice buttons; 64.1 gives this form its
+ * own tag input, so a note the reader writes is as findable as one the report
+ * kept, and the editor can fix a tag without retyping the note.
  */
 
 /** Mirrors `NoteRequest`'s `@Size(max = 200)` on the title. */
@@ -49,21 +51,23 @@ export function NoteCreateCard() {
   const { t } = useLocale();
   const [title, setTitle] = React.useState("");
   const [content, setContent] = React.useState("");
+  const [tags, setTags] = React.useState("");
   const { create } = useNoteMutations();
 
   const saveable = content.trim().length > 0;
   const submit = React.useCallback(() => {
     if (!saveable || create.isPending) return;
     create.mutate(
-      { title: title.trim(), content },
+      { title: title.trim(), content, tags: parseTags(tags) },
       {
         onSuccess: () => {
           setTitle("");
           setContent("");
+          setTags("");
         },
       }
     );
-  }, [create, content, saveable, title]);
+  }, [create, content, saveable, tags, title]);
 
   return (
     <Card>
@@ -89,6 +93,16 @@ export function NoteCreateCard() {
             rows={4}
           />
         </div>
+        <div className="space-y-2">
+          <Label htmlFor="note-tags">{t("knowledge.notes.tagsLabel")}</Label>
+          <Input
+            id="note-tags"
+            value={tags}
+            onChange={(e) => setTags(e.target.value)}
+            placeholder={t("knowledge.notes.tagsPlaceholder")}
+            autoComplete="off"
+          />
+        </div>
         <div className="flex justify-end">
           <Button variant="ai" size="sm" loading={create.isPending} disabled={!saveable || create.isPending} onClick={submit}>
             <StickyNote aria-hidden />
@@ -105,12 +119,14 @@ function NoteRow({ note }: { note: KnowledgeNote }) {
   const [editing, setEditing] = React.useState(false);
   const [title, setTitle] = React.useState(note.title);
   const [content, setContent] = React.useState(note.content ?? "");
+  const [tags, setTags] = React.useState(formatTags(note.tags));
   const [confirming, setConfirming] = React.useState(false);
   const { update, remove } = useNoteMutations();
 
   const start = () => {
     setTitle(note.title);
     setContent(note.content ?? "");
+    setTags(formatTags(note.tags));
     setEditing(true);
   };
   // The row mapper only falls back to "Untitled note" when the title is absent;
@@ -121,7 +137,7 @@ function NoteRow({ note }: { note: KnowledgeNote }) {
   const save = () => {
     if (!saveable || update.isPending) return;
     update.mutate(
-      { id: note.id, title: title.trim(), content },
+      { id: note.id, title: title.trim(), content, tags: parseTags(tags) },
       { onSuccess: () => setEditing(false) }
     );
   };
@@ -143,6 +159,13 @@ function NoteRow({ note }: { note: KnowledgeNote }) {
               value={content}
               onChange={(e) => setContent(e.target.value)}
               rows={5}
+            />
+            <Input
+              aria-label={t("knowledge.notes.tagsLabel")}
+              value={tags}
+              onChange={(e) => setTags(e.target.value)}
+              placeholder={t("knowledge.notes.tagsPlaceholder")}
+              autoComplete="off"
             />
             <div className="flex justify-end gap-2">
               <Button
