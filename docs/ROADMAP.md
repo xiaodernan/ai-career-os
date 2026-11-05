@@ -4655,6 +4655,16 @@ carried the whole transcript, and the page read one row of it.
   mount and never overwrites answers given since, so the transcript panel and the
   question counter agree with the server after a reload. 5 pure-function tests.)
 
+- [x] **67.2** A sitting can end without a report.
+
+  (`PATCH /interview/sessions/{id}` had no caller either. Finish asks for a
+  report now; delete throws the transcript away; abandoning is the middle --
+  the answers stay, the report page can still generate from them (finalize
+  reads the turns, not the status), and the list stops calling it in progress.
+  The runner's header carries the verb behind a dialog that says all of that,
+  and the `["interview"]` key moves the list and the header at once. 1 contract
+  case.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
