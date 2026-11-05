@@ -733,6 +733,25 @@ export function useCreateInterviewSession() {
 }
 
 /**
+ * 67.2: PATCH /interview/sessions/{id} shipped with pause / resume / abandon and
+ * had no caller either. Abandoning is the honest middle between finishing (which
+ * asks for a report now) and deleting (which throws the transcript away): the
+ * answers stay, the report page can still generate from them, and the list stops
+ * calling it in progress.
+ */
+export function useAbandonInterviewSession(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.update<unknown>(endpoints.interview(id), { status: "abandoned" }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["interview"] });
+      toast.success(translate("toasts.interviewAbandoned"));
+    },
+    onError: fail("failures.interviewAbandon"),
+  });
+}
+
+/**
  * 66.1: DELETE /interview/sessions/{id} has shipped since the start and had no
  * caller -- a rehearsal started by mistake could only be hidden by scrolling
  * past it. The whole sitting goes (its turns and its report cascade); the

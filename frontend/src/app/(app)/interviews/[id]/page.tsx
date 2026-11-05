@@ -40,7 +40,12 @@ import { PracticeLine } from "@/components/interviews/practice-line";
 import dynamic from "next/dynamic";
 import { AIBadge } from "@/components/ai/ai-badge";
 import { ProcessingSteps } from "@/components/ai/processing-steps";
-import { useInterviewOpening, useSubmitInterviewAnswer, useFinalizeInterview } from "@/lib/hooks/actions";
+import {
+  useAbandonInterviewSession,
+  useInterviewOpening,
+  useSubmitInterviewAnswer,
+  useFinalizeInterview,
+} from "@/lib/hooks/actions";
 import { useAnswerVoice } from "@/lib/hooks/voice";
 import { useInterviewSession, useInterviewSessions } from "@/lib/hooks/resources";
 import { depthBand, depthLevel, formatDate } from "@/lib/format";
@@ -67,6 +72,8 @@ export default function InterviewRunnerPage() {
   const opening = useInterviewOpening(id ?? "");
   const submit = useSubmitInterviewAnswer(id ?? "");
   const finalize = useFinalizeInterview(id ?? "");
+  const abandon = useAbandonInterviewSession(id ?? "");
+  const [confirmDiscard, setConfirmDiscard] = React.useState(false);
 
   const [question, setQuestion] = React.useState<{
     text: string;
@@ -269,6 +276,16 @@ export default function InterviewRunnerPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-5">
       <BackLink />
+
+      {/* 67.2: the verb PATCH always had. It sits in the header so it is not
+          mistaken for the answer box's "finish and get a report". */}
+      {!completed && (
+        <div className="flex justify-end">
+          <Button variant="ghost" size="xs" onClick={() => setConfirmDiscard(true)}>
+            {t("interviews.detail.discard")}
+          </Button>
+        </div>
+      )}
 
       {/* Session header */}
       <div className="flex flex-wrap items-center gap-2">
@@ -541,6 +558,18 @@ export default function InterviewRunnerPage() {
         </details>
       )}
 
+      <ConfirmDialog
+        open={confirmDiscard}
+        onOpenChange={setConfirmDiscard}
+        title={t("interviews.detail.discardTitle")}
+        description={t("interviews.detail.discardDescription")}
+        confirmLabel={t("interviews.detail.discardConfirm")}
+        destructive
+        loading={abandon.isPending}
+        onConfirm={() =>
+          abandon.mutate(undefined, { onSuccess: () => router.push("/interviews") })
+        }
+      />
       <ConfirmDialog
         open={confirmFinish}
         onOpenChange={setConfirmFinish}

@@ -18,8 +18,8 @@ InterviewController has two entry points with typed request bodies:
    ``AnswerRequest(answer)`` where ``answer`` is required (``@NotBlank``). The frontend calls this
    through ``useSubmitInterviewAnswer``, sending ``{ answer }``.
 
-Note: PATCH /{id} binds a generic ``Map<String, Object>`` rather than a typed DTO, so it is not
-included in this gate.
+Note: PATCH /{id} binds a generic ``Map<String, Object>`` rather than a typed DTO, so it has no
+record to compare against; case 10 pins the one status the app sends through it instead (67.2).
 
 This gate holds the contract at both ends:
 
@@ -268,3 +268,16 @@ def test_the_create_session_hook_declares_no_field_the_record_drops():
         f"useCreateInterviewSession offers {dropped}, which CreateSessionRequest has no component "
         "for -- the server drops the property without an error or a log line"
     )
+
+# --------------------------------------------------------------------------- case 10: the abandon hook sends a status
+
+def test_the_abandon_hook_ends_the_session_with_the_status_the_screens_read():
+    """67.2: PATCH takes a free Map, so the claim is the key/value the app sends."""
+    bodies = ts_call_bodies("useAbandonInterviewSession", actions_source())
+    assert bodies, "useAbandonInterviewSession not found in actions.ts"
+    body = bodies[0]
+    assert "endpoints.interview(id)" in body, (
+        "the abandon hook no longer PATCHes the session it was given")
+    assert re.search(r'status:\s*"abandoned"', body), (
+        "the abandon hook no longer sends the status the list row and the header read, so the "
+        "session would keep counting as in progress")
