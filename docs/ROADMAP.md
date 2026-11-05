@@ -4502,6 +4502,14 @@ sitting; the page dropped them.
   data" the study card's three names use); the field census binds the new `row` receiver to it
   and moves its four counts and the report's thirteen sites. 2 normalizer tests.)
 
+- [x] **61.2** The report names the gaps and the questions to prepare.
+
+  (`missing_concepts` and `follow_up_questions_to_prepare` are the report's other two unread
+  fields. They now render side by side under the well/weak cards and count toward
+  `hasContent`. With them, `dims` is the only declared name this reader does not read -- and
+  that one belongs to the dimension reader -- so the field census's subtraction is a single
+  name and its six counts move by the two reads. 1 normalizer test.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
