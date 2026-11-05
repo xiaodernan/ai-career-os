@@ -164,7 +164,9 @@ SITES = {
     "useKnowledgeSources": [("app/(app)/knowledge/page.tsx",
                             "true, src, { page: state.page, size: PAGE_SIZE }")],
     "useKnowledgeNotes": [("components/knowledge/notes-panel.tsx",
-                          "{ page: state.npage, size: PAGE_SIZE }")],
+                          # 64.2's tag chips narrow the same list; the filter rides beside
+                          # the window and the hook spreads whatever the page passes.
+                          "{ page: state.npage, size: PAGE_SIZE, tag: tag || undefined, }")],
     "useInterviewSessions": [
         # 62.1's runner asks for the card's siblings so the retry can read what the last
         # completed rehearsal missed; it only asks once the detail names the card.

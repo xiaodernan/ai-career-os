@@ -6,6 +6,16 @@
  * cannot become two chips; duplicates collapse; a tag is capped at 32 characters
  * and the list at 8, because a tag is a label rather than a document.
  */
+/**
+ * The tag vocabulary the interview report writes, offered as chips. A reader may
+ * type any other tag too; these are the five the product itself mints, so they
+ * are the ones the filter row can promise exist.
+ */
+export const PRODUCT_TAGS = ["interview", "study", "answer", "gap", "prepare"] as const;
+
+/** The filter row asks for one of these or for the whole list. */
+export type ProductTag = (typeof PRODUCT_TAGS)[number];
+
 export const MAX_TAGS = 8;
 export const MAX_TAG_LENGTH = 32;
 

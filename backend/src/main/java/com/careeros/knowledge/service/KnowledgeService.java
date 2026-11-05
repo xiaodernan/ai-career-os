@@ -140,9 +140,19 @@ public class KnowledgeService {
         return new DocumentStatus(doc.getId(), doc.getStatus(), doc.getError(), doc.getTitle());
     }
 
+    /**
+     * 64.2: the notes list can be asked for one tag. The report's advice carries
+     * its own tags (study, answer, gap, prepare), so this is how the knowledge
+     * page singles out "the advice a rehearsal left" from everything else. A
+     * blank tag is not a filter -- it is the whole list, in the order it always had.
+     */
     @Transactional(readOnly = true)
-    public PageDTO<NoteItem> listNotes(UUID userId, int page, int size) {
-        var result = notes.findByUserIdOrderByUpdatedAtDescIdAsc(userId, Paging.of(page, size).pageable());
+    public PageDTO<NoteItem> listNotes(UUID userId, int page, int size, String tag) {
+        var pageable = Paging.of(page, size).pageable();
+        String filter = tag == null ? "" : tag.trim();
+        var result = filter.isEmpty()
+                ? notes.findByUserIdOrderByUpdatedAtDescIdAsc(userId, pageable)
+                : notes.findByTag(userId, filter, pageable);
         return PageDTO.from(result, KnowledgeService::toNoteItem);
     }
 

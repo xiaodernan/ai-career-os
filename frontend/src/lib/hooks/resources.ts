@@ -578,7 +578,7 @@ export function useSourceStatus(id: string | null) {
   });
 }
 
-export function useKnowledgeNotes(params?: { page?: number; size?: number }) {
+export function useKnowledgeNotes(params?: { page?: number; size?: number; tag?: string }) {
   return useQuery({
     queryKey: ["knowledge", "notes", params],
     queryFn: async (): Promise<Page<KnowledgeNote>> =>

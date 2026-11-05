@@ -112,7 +112,7 @@ def test_the_notes_hook_takes_the_window_the_way_every_other_list_hook_does():
     """Case 2: `params?` on the notes reader, with the panel's call site spending it."""
     body = function_body(read(RESOURCES), "export function useKnowledgeNotes(")
     assert re.search(r"export function useKnowledgeNotes\("
-                     r"params\?: \{ page\?: number; size\?: number \}\)", body), (
+                     r"params\?: \{ page\?: number; size\?: number; tag\?: string \}\)", body), (
         f"the hook lost its window parameters, so the notes list cannot ask for a page: "
         f"{collapse(body)[:140]}")
     assert re.search(r'queryKey: \["knowledge", "notes", params\]', body), (
@@ -123,7 +123,8 @@ def test_the_notes_hook_takes_the_window_the_way_every_other_list_hook_does():
         f"the caller's window is no longer spread over the literal, so an asked-for page "
         f"would never reach the wire: {collapse(body)}")
     assert hook_calls("useKnowledgeNotes") == [
-        ("components/knowledge/notes-panel.tsx", "{ page: state.npage, size: PAGE_SIZE }"),
+        ("components/knowledge/notes-panel.tsx",
+         "{ page: state.npage, size: PAGE_SIZE, tag: tag || undefined, }"),
     ], f"the call sites moved: {hook_calls('useKnowledgeNotes')}"
 
 
@@ -179,17 +180,22 @@ def test_the_notes_pager_lives_on_its_own_url_key_and_its_own_answer():
     assert pinned and int(pinned.group(1)) == 20, (
         f"the window the notes list asks for is {pinned and pinned.group(1)}, not the "
         "route's own default this case measures it against")
-    assert re.search(r"const PAGE_DEFAULTS: \{ npage: number \} = \{ npage: 0 \};", panel), (
+    assert re.search(r"const PAGE_DEFAULTS: \{ npage: number; ntag\?: string \} = \{ npage: 0 \};",
+                     panel), (
         "the defaults object is no longer the module-level const `setUrl` needs to stay stable")
-    assert re.search(r"const \[state, setUrl\] = useUrlState<\{ npage: number \}>\(\n"
+    assert re.search(r"const \[state, setUrl\] = useUrlState<\{ npage: number; ntag\?: string \}>\(\n"
                      r"\s*PAGE_DEFAULTS,\n"
                      r"\s*\{ numericKeys: \[\"npage\"\] \}\n"
                      r"\s*\);", panel), (
-        "the notes page index no longer lives in the URL under its own key, so it would "
-        "share the sources list's index")
-    assert re.search(r"const notes = useKnowledgeNotes\(\{ page: state\.npage, size: PAGE_SIZE \}\);",
-                     panel), (
-        "the panel no longer asks for the URL's page, so the pager's numbers would govern nothing")
+        "the notes page index and its tag filter no longer live in the URL under their own "
+        "keys, so they would share the sources list's state")
+    assert re.search(r"const notes = useKnowledgeNotes\(\{\n"
+                     r"\s*page: state\.npage,\n"
+                     r"\s*size: PAGE_SIZE,\n"
+                     r"\s*tag: tag \|\| undefined,\n"
+                     r"\s*\}\);", panel), (
+        "the panel no longer asks for the URL's page and tag, so the pager's numbers and "
+        "the chips would govern nothing")
     assert re.search(r"const total = notes\.data\?\.total \?\? 0;", panel), (
         "the formula's numerator is no longer the answer's total")
     assert re.search(
@@ -229,7 +235,8 @@ def test_both_routes_bind_the_window_the_two_lists_restate_and_order_their_rows(
                      r'@RequestParam\(required = false\) UUID documentId', controller, re.S), (
         "the sources route's own window moved, so the page's PAGE_SIZE restates a different number")
     assert re.search(r'@GetMapping\("/notes"\).*?@RequestParam\(defaultValue = "0"\) int page, '
-                     r'@RequestParam\(defaultValue = "20"\) int size\)', controller, re.S), (
+                     r'@RequestParam\(defaultValue = "20"\) int size, '
+                     r'@RequestParam\(required = false\) String tag\)', controller, re.S), (
         "the notes route's own window moved, so the panel's PAGE_SIZE restates a different number")
     service = collapse(java(SERVICE))
     assert ("sources.findByUserIdOrderByCreatedAtDescIdAsc(userId, paging.pageable())" in service
@@ -237,9 +244,9 @@ def test_both_routes_bind_the_window_the_two_lists_restate_and_order_their_rows(
                 "paging.pageable())" in service), (
         "the sources query no longer comes back clamped and ordered in both branches, so "
         "pages of it would repeat or skip rows")
-    assert "notes.findByUserIdOrderByUpdatedAtDescIdAsc(userId, Paging.of(page, size).pageable())" \
-        in service, (
-        "the notes query no longer comes back clamped and ordered, so pages of it would "
-        "repeat or skip rows")
+    assert ("notes.findByUserIdOrderByUpdatedAtDescIdAsc(userId, pageable)" in service
+            and "notes.findByTag(userId, filter, pageable)" in service), (
+        "one of the notes queries no longer comes back clamped and ordered, so pages of it "
+        "would repeat or skip rows")
     assert "{footer}" in read(MODULE_VIEW), (
         "the shared shell no longer renders the footer slot both pagers arrive through")

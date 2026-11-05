@@ -58,8 +58,9 @@ public class KnowledgeController {
     @GetMapping("/notes")
     public PageDTO<NoteItem> notes(@CurrentUser AuthUser user,
                                    @RequestParam(defaultValue = "0") int page,
-                                   @RequestParam(defaultValue = "20") int size) {
-        return knowledge.listNotes(user.id(), page, size);
+                                   @RequestParam(defaultValue = "20") int size,
+                                   @RequestParam(required = false) String tag) {
+        return knowledge.listNotes(user.id(), page, size, tag);
     }
 
     @PostMapping("/notes")

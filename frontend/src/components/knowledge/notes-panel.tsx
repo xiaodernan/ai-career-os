@@ -5,7 +5,7 @@ import { Check, Pencil, StickyNote, Trash2, X } from "lucide-react";
 import { ModuleView } from "@/components/common/module-view";
 import { Pagination } from "@/components/common/pagination";
 import { lastPageOf } from "@/lib/page-window";
-import { formatTags, parseTags } from "@/lib/note-tags";
+import { PRODUCT_TAGS, formatTags, parseTags } from "@/lib/note-tags";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -45,7 +45,9 @@ const MAX_TITLE = 200;
 // `npage` rather than the page's own `page`: the sources list above keeps its index
 // under `?page=`, and two lists on one screen need two questions.
 const PAGE_SIZE = 20;
-const PAGE_DEFAULTS: { npage: number } = { npage: 0 };
+// `ntag` is the tag filter beside the window: another list on one screen needs
+// its own question, and a shared link should open the same narrowed list.
+const PAGE_DEFAULTS: { npage: number; ntag?: string } = { npage: 0 };
 
 export function NoteCreateCard() {
   const { t } = useLocale();
@@ -253,11 +255,16 @@ function NoteRow({ note }: { note: KnowledgeNote }) {
 export function NotesPanel() {
   const { t } = useLocale();
   // The page index lives in the URL, so a reload or a shared list link opens the same window.
-  const [state, setUrl] = useUrlState<{ npage: number }>(
+  const [state, setUrl] = useUrlState<{ npage: number; ntag?: string }>(
     PAGE_DEFAULTS,
     { numericKeys: ["npage"] }
   );
-  const notes = useKnowledgeNotes({ page: state.npage, size: PAGE_SIZE });
+  const tag = state.ntag ?? "";
+  const notes = useKnowledgeNotes({
+    page: state.npage,
+    size: PAGE_SIZE,
+    tag: tag || undefined,
+  });
 
   const total = notes.data?.total ?? 0;
   // A past-the-end page is an empty window over a real total, not an empty list: the answer's
@@ -273,12 +280,42 @@ export function NotesPanel() {
   return (
     <section aria-label={t("knowledge.notes.section")} className="space-y-4">
       <NoteCreateCard />
+      {/* 64.2: the report's four kinds of advice are tags; this row is how the
+          reader finds them without scrolling past every hand-written note. */}
+      <div
+        className="flex flex-wrap gap-1.5"
+        role="group"
+        aria-label={t("knowledge.notes.tagFilter")}
+      >
+        <Button
+          type="button"
+          size="sm"
+          variant={tag ? "ghost" : "secondary"}
+          onClick={() => setUrl({ npage: 0, ntag: undefined })}
+        >
+          {t("knowledge.notes.allTags")}
+        </Button>
+        {PRODUCT_TAGS.map((each) => (
+          <Button
+            key={each}
+            type="button"
+            size="sm"
+            variant={tag === each ? "secondary" : "ghost"}
+            aria-pressed={tag === each}
+            onClick={() => setUrl({ npage: 0, ntag: tag === each ? undefined : each })}
+          >
+            {each}
+          </Button>
+        ))}
+      </div>
       <ModuleView
         title={t("knowledge.notes.section")}
         description={t("knowledge.notes.description")}
         query={notes}
         emptyHint={{
-          title: t("knowledge.notes.noNotes"),
+          title: tag
+            ? t("knowledge.notes.noNotesWithTag", { tag })
+            : t("knowledge.notes.noNotes"),
           description: t("knowledge.notes.noNotesDescription"),
         }}
         footer={
