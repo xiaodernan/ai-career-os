@@ -4578,6 +4578,33 @@ two could become a note, so the other two still died with the tab.
   report's four kinds of advice therefore end in the same place: one ingested
   note the copilot can quote. 2 pure-function tests; copy census 157 -> 158.)
 
+## Epic 64 -- tags become something a reader can use
+
+The report's keep actions write tags (`interview` / `study` / `answer` / `gap` /
+`prepare`) so the knowledge page can tell the four kinds of advice apart, and
+the rows have drawn them as chips since 60.1. But a hand-written note had no way
+to get a tag, and no screen could ask for one.
+
+- [x] **64.1** A note the reader writes can carry its own tags.
+
+  (The create form and the editor share one forgiving tag input: commas in
+  either language and newlines split, case is folded so "Interview" and
+  "interview" cannot become two chips, duplicates collapse, and the list is
+  capped at 8 labels of 32 characters each -- a tag is a label, not a document.
+  The editor opens with the note's tags and writes them back through the same
+  parser, so a wrong tag is fixed by editing the note rather than retyping it.
+  `useNoteMutations().update` now forwards `tags`. 6 pure-function tests.)
+
+- [x] **64.2** The notes list can be narrowed to one tag.
+
+  (`GET /knowledge/notes` takes an optional `tag`; the service spends a native
+  `cast(:tag as text) = any(tags)` query -- the column is a Postgres `text[]`,
+  not an element collection Hibernate can walk in JPQL -- and a blank tag is
+  still the whole list. The panel puts the five product tags beside an
+  `?ntag=` that survives reload and sharing, resets the page when the filter
+  changes, and says "No notes tagged ..." when the narrowed list is empty. 2
+  service tests; the knowledge page's own gate and the window census re-pinned.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
