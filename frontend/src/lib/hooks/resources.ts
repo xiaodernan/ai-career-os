@@ -659,12 +659,16 @@ export function useInterviewSessions(params?: {
   page?: number;
   size?: number;
   applicationId?: string;
+  /** 59.1: the report asks only when the session names a card. Not sent on the wire. */
+  enabled?: boolean;
 }) {
+  const { enabled = true, ...query } = params ?? {};
   return useQuery({
     queryKey: ["interview", "sessions", params],
+    enabled,
     queryFn: async (): Promise<Page<InterviewSession>> =>
       normalizePage(
-        await api.get<unknown>(endpoints.interviews, { size: 20, ...(params ?? {}) }),
+        await api.get<unknown>(endpoints.interviews, { size: 20, ...query }),
         (s) => mapInterviewSessionItem(s)
       ),
   });

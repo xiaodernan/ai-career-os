@@ -27,7 +27,8 @@ import { DimensionBars } from "@/components/common/skill-chips";
 import { MatchRing } from "@/components/ai/match-ring";
 import { AIBadge } from "@/components/ai/ai-badge";
 import { useFinalizeInterview } from "@/lib/hooks/actions";
-import { useInterviewSession } from "@/lib/hooks/resources";
+import { useInterviewSession, useInterviewSessions } from "@/lib/hooks/resources";
+import { cardPractice } from "@/lib/interview-practice";
 import { normalizeInterviewReport, type InterviewTrajectoryPoint } from "@/lib/api/normalize";
 import { depthBand, depthLevel, formatDate } from "@/lib/format";
 import { interviewModeName } from "@/lib/status-words";
@@ -41,6 +42,15 @@ export default function InterviewReportPage() {
   const id = params?.id ?? null;
   const session = useInterviewSession(id);
   const finalize = useFinalizeInterview(id ?? "");
+
+  // 59.1: the card's other rehearsals, read only when this session names one.
+  // The list already answers each row's score, so the comparison is a fold over
+  // one narrow read rather than a new endpoint.
+  const siblings = useInterviewSessions({
+    applicationId: session.data?.applicationId ?? undefined,
+    size: 20,
+    enabled: Boolean(session.data?.applicationId),
+  });
 
   const data = session.data;
 
@@ -93,6 +103,8 @@ export default function InterviewReportPage() {
   }));
 
   const hasReport = normalized?.hasContent ?? false;
+
+  const practice = cardPractice(siblings.data?.items ?? [], data.id);
 
   if (!hasReport) {
     return (
@@ -161,6 +173,32 @@ export default function InterviewReportPage() {
                 >
                   {t("interviews.openApplication")}
                 </Link>
+              )}
+              {practice && (
+                // 59.1: one sitting answers "how did it go"; the practice line answers
+                // "is it getting better", which is the question a second rehearsal asks.
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {practice.count === 1
+                    ? t("interviews.report.firstForCard")
+                    : practice.best != null
+                      ? t("interviews.report.cardProgress", {
+                          position: practice.position,
+                          count: practice.count,
+                          best: Math.round(practice.best),
+                        })
+                      : t("interviews.report.cardProgressNoBest", {
+                          position: practice.position,
+                          count: practice.count,
+                        })}{" "}
+                  {practice.count > 1 && data.applicationId && (
+                    <Link
+                      href={`/interviews?application=${encodeURIComponent(data.applicationId)}`}
+                      className="underline underline-offset-2 hover:text-foreground"
+                    >
+                      {t("interviews.detail.allInterviews")}
+                    </Link>
+                  )}
+                </p>
               )}
             </div>
             <AIBadge label={t("interviews.report.evaluatorOutputBadge")} />
