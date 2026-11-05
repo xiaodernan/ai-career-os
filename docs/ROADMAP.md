@@ -4510,6 +4510,15 @@ sitting; the page dropped them.
   that one belongs to the dimension reader -- so the field census's subtraction is a single
   name and its six counts move by the two reads. 1 normalizer test.)
 
+- [x] **61.3** A stronger answer can be kept as a note too.
+
+  (`BetterAnswerNoteButton` titles the note with the question, keeps the answer and the 60.2
+  origin line as the body, and tags it `interview` / `answer`. The click itself -- one request,
+  a pending state, a latch that refuses a second copy -- moved into one shared
+  `KeepAsNoteButton`, so the study card and the rewrite cards cannot drift apart; the notes
+  census now records that shared button as the writer's caller. 2 pure-function tests + 1
+  markup test.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
