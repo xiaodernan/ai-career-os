@@ -4478,6 +4478,14 @@ because the sentence never reached a row.
   the notes census records the report as the writer's second screen, with the reader still
   belonging to the panel alone. 3 pure-function tests + 2 markup tests.)
 
+- [x] **60.2** A kept note remembers the rehearsal it came from.
+
+  (The note's body now ends with one line naming its source -- the target role when the
+  rehearsal had one, the date otherwise -- so the advice still has a provenance months later,
+  and the ingested chunk carries that line into retrieval. The page phrases it (one key per
+  case); `studyNoteDraft()` appends it and skips a blank origin instead of writing an empty
+  paragraph. 2 pure-function tests.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
