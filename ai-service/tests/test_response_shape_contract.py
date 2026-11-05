@@ -1283,7 +1283,7 @@ def test_the_response_envelope_has_exactly_one_wrapper_and_one_unwrapper():
     files in two languages, and it is only safe while both halves stay where they are: widen the advice
     and the unwrap returns `undefined` for responses that were never wrapped, add a second unwrap and the
     one that is gated stops being the one that runs. Measured on this plane: two `success` reads and one
-    `?.data` unwrap, all of them in `lib/api/client.ts`, plus 59 `toast.success` lines the exclusion has
+    `?.data` unwrap, all of them in `lib/api/client.ts`, plus 61 `toast.success` lines the exclusion has
     to keep out. `client.ts` belongs to a concurrent session's file list, so this gate reads it and never
     edits it -- if a third reader appears, the test names it and a human decides where it belongs.
     """
@@ -1332,12 +1332,16 @@ def test_the_response_envelope_has_exactly_one_wrapper_and_one_unwrapper():
     # 56 with 37.4's replies pair: `useFileInboundMail` announces that a letter was filed, and
     # the page announces that a suggested stage was applied -- the second is written at its
     # mutation site (the apply hook is shared with the board), so both are counted here.
+    # 61 with the rehearsal wave's two: `useDeleteInterviewSession` (60469d2) announces a
+    # sitting deleted, and `useAbandonInterview` (30e9251) announces that a sitting ended
+    # without a report -- both written through the same shared handler.
+
     # 59 with the letters wave's three: `useSaveApplicationLetter` (1076949),
     # `useDeleteApplicationLetter` (5080e67) and `useUpdateApplicationLetter` (bff366d) each
     # announce their write through the shared handler. The knowledge delete line moved
     # verbatim in the same window (a rewrite of its surrounding block), which is why the
     # total moved by three even though the raw diff adds four lines.
-    assert len(toasts) == 59, (f"{len(toasts)} `toast.success` lines came out of the same walk: that is "
+    assert len(toasts) == 61, (f"{len(toasts)} `toast.success` lines came out of the same walk: that is "
                                "the floor proving the scan reached the pages and the hooks, so a walk "
                                "narrowed to the api directory cannot pass quietly")
 

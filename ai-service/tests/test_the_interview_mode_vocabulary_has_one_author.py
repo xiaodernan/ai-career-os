@@ -34,6 +34,7 @@ MODULE_TEST = "frontend/src/lib/interview-modes.test.ts"
 INTERVIEWS_PAGE = "frontend/src/app/(app)/interviews/page.tsx"
 JOB_PAGE = "frontend/src/app/(app)/jobs/[id]/page.tsx"
 STATUS_WORDS = "frontend/src/lib/status-words.ts"
+GROWTH_PANEL = "frontend/src/components/growth/growth-engines-panel.tsx"
 FEATURE_PY = "ai-service/app/features/interview.py"
 JAVA_SESSION = "backend/src/main/java/com/careeros/interview/entity/InterviewSession.java"
 JAVA_DTO = "backend/src/main/java/com/careeros/interview/dto/InterviewDtos.java"
@@ -145,9 +146,11 @@ def test_the_client_list_has_one_author_and_every_reader_is_named() -> None:
         "send this field would then be free to offer different interviews")
     readers = sorted(rel for rel in files
                      if rel != MODULE and any(READER.finditer(read(rel))))
-    assert readers == sorted([INTERVIEWS_PAGE, JOB_PAGE, STATUS_WORDS]), (
+    assert readers == sorted([INTERVIEWS_PAGE, JOB_PAGE, GROWTH_PANEL, STATUS_WORDS]), (
         f"{SPECIFIER} is imported by {readers}, not the two menus and the words module that "
-        "names them for a reader; a screen that stops importing it has grown its own list again, "
+        "names them for a reader -- the growth panel's third menu (65.1) picks a mode for a "
+        "rehearsal as well, so it is a reader and not an accident; a screen that stops importing it "
+        "has grown its own list again, "
         "and a new importer is a new menu or a new vocabulary that no one checked against the "
         "personas")
 

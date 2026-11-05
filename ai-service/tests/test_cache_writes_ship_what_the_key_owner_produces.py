@@ -122,9 +122,10 @@ CLIENT_CALLS = {
     # 53 rather than 52 since 43.1: answering a due reminder on the dashboard also tells the
     # inbox to refetch, because it lists the same reminder as a row of its own. 56 with the kept
     # letter's three writes (1076949's save, 5080e67's delete and bff366d's correction): each
-    # refreshes the shelf it wrote to.
+    # refreshes the shelf it wrote to. 58 with 66.1's delete and 67.2's abandon, which both
+    # refresh the `["interview"]` family the list, the report and the runner read.
     ACTIONS: {"cancelQueries": 3, "getQueriesData": 2, "getQueryData": 1,
-              "invalidateQueries": 56, "removeQueries": 1, "setQueriesData": 2, "setQueryData": 5},
+              "invalidateQueries": 58, "removeQueries": 1, "setQueriesData": 2, "setQueryData": 5},
     # 38.3-38.5: three writes refresh the open-doors list, and the erase drops the cache.
     ACCOUNT_HOOKS: {"clear": 1, "invalidateQueries": 3},
     ANALYTICS_HOOKS: {"invalidateQueries": 1},
