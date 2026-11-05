@@ -4605,6 +4605,24 @@ to get a tag, and no screen could ask for one.
   changes, and says "No notes tagged ..." when the narrowed list is empty. 2
   service tests; the knowledge page's own gate and the window census re-pinned.)
 
+## Epic 65 -- the prep checklist leads into the sitting
+
+`/growth/interview-prep` answers with what to study and what to rehearse -- the
+two halves of a checklist -- and stopped there. Starting a rehearsal lived on
+`/interviews` and the job page, so a reader who had just been told what to
+practise had to leave the sentence and rebuild the context by hand.
+
+- [x] **65.1** The prep checklist can turn into a rehearsal.
+
+  (The prep result now carries a practice menu reading `INTERVIEW_MODES`, the
+  same list every other start surface offers. The create sends the role the
+  checklist was asked about as the session's `positionTitle` -- a field the
+  backend's create record already bound and the hook's body type did not carry,
+  so the title would have been dropped before reaching the wire -- and the
+  reader lands in the new sitting. A free rehearsal has no posting to inherit
+  from, which is why the role, not a job id, is the context it keeps. 3 gate
+  tests.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
