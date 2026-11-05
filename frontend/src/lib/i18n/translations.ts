@@ -2640,6 +2640,11 @@ export const translations = {
       pickATargetJob: "Pick a target job first",
       openApplication: "Open application",
       filteredToApplication: "Showing the rehearsals for one application",
+      practice: {
+        first: "This is the first rehearsal for this application.",
+        progress: "Rehearsal {position} of {count} for this application · best {best}/100",
+        progressNoBest: "Rehearsal {position} of {count} for this application",
+      },
       empty: "No mock interviews yet",
       emptyDescription:
         "Pick a mode above — the session is built from your resume and the job you're targeting, so answers are graded against evidence, not trivia.",
@@ -2747,9 +2752,6 @@ export const translations = {
         fromReport: "from report {id}",
         depthTrajectoryAria: "Depth trajectory across {count} questions",
         questionsCount: "{count} questions",
-        firstForCard: "This is the first rehearsal for this application.",
-        cardProgress: "Rehearsal {position} of {count} for this application · best {best}/100",
-        cardProgressNoBest: "Rehearsal {position} of {count} for this application",
         depthReached: "Reached depth {level} / 5 · {band}",
         legendDepth: "how many questions in a row the agent followed up on",
         legendScore: "your score",
@@ -5448,6 +5450,11 @@ export const translations = {
       pickATargetJob: "先挑一个目标职位",
       openApplication: "打开申请",
       filteredToApplication: "只显示这张申请的演练",
+      practice: {
+        first: "这是这张申请的第一场演练。",
+        progress: "这张申请的第 {position}/{count} 场演练 · 最好 {best}/100",
+        progressNoBest: "这张申请的第 {position}/{count} 场演练",
+      },
       empty: "还没有模拟面试",
       emptyDescription:
         "在上面选一种模式——这场面试是用你的简历和目标职位搭建的，所以回答是拿证据来评的，不是拿常识。",
@@ -5544,9 +5551,6 @@ export const translations = {
         fromReport: "来自报告 {id}",
         depthTrajectoryAria: "横跨 {count} 个问题的深度轨迹",
         questionsCount: "{count} 个问题",
-        firstForCard: "这是这张申请的第一场演练。",
-        cardProgress: "这张申请的第 {position}/{count} 场演练 · 最好 {best}/100",
-        cardProgressNoBest: "这张申请的第 {position}/{count} 场演练",
         depthReached: "达到深度 {level} / 5 · {band}",
         legendDepth: "代理连续追问了多少个问题",
         legendScore: "你的得分",

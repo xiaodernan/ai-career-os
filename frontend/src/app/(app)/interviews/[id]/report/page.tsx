@@ -22,6 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/common/empty-state";
 import { ErrorState } from "@/components/common/error-state";
+import { PracticeLine } from "@/components/interviews/practice-line";
 import { SectionHeading } from "@/components/common/export-buttons";
 import { DimensionBars } from "@/components/common/skill-chips";
 import { MatchRing } from "@/components/ai/match-ring";
@@ -174,32 +175,13 @@ export default function InterviewReportPage() {
                   {t("interviews.openApplication")}
                 </Link>
               )}
-              {practice && (
-                // 59.1: one sitting answers "how did it go"; the practice line answers
-                // "is it getting better", which is the question a second rehearsal asks.
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {practice.count === 1
-                    ? t("interviews.report.firstForCard")
-                    : practice.best != null
-                      ? t("interviews.report.cardProgress", {
-                          position: practice.position,
-                          count: practice.count,
-                          best: Math.round(practice.best),
-                        })
-                      : t("interviews.report.cardProgressNoBest", {
-                          position: practice.position,
-                          count: practice.count,
-                        })}{" "}
-                  {practice.count > 1 && data.applicationId && (
-                    <Link
-                      href={`/interviews?application=${encodeURIComponent(data.applicationId)}`}
-                      className="underline underline-offset-2 hover:text-foreground"
-                    >
-                      {t("interviews.detail.allInterviews")}
-                    </Link>
-                  )}
-                </p>
-              )}
+              {/* 59.1: one sitting answers "how did it go"; the practice line answers
+                  "is it getting better", which is the question a second rehearsal asks. */}
+              <PracticeLine
+                practice={practice}
+                applicationId={data.applicationId}
+                className="mt-1"
+              />
             </div>
             <AIBadge label={t("interviews.report.evaluatorOutputBadge")} />
           </div>

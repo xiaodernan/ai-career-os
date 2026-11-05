@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { interviewApplicationHref } from "@/lib/interview-target";
+import { cardPractice } from "@/lib/interview-practice";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -33,12 +34,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/common/empty-state";
 import { ErrorState } from "@/components/common/error-state";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
+import { PracticeLine } from "@/components/interviews/practice-line";
 import dynamic from "next/dynamic";
 import { AIBadge } from "@/components/ai/ai-badge";
 import { ProcessingSteps } from "@/components/ai/processing-steps";
 import { useInterviewOpening, useSubmitInterviewAnswer, useFinalizeInterview } from "@/lib/hooks/actions";
 import { useAnswerVoice } from "@/lib/hooks/voice";
-import { useInterviewSession } from "@/lib/hooks/resources";
+import { useInterviewSession, useInterviewSessions } from "@/lib/hooks/resources";
 import { depthBand, depthLevel } from "@/lib/format";
 import { interviewModeName } from "@/lib/status-words";
 import { interviewDimensionLabel } from "@/lib/dimensions";
@@ -87,6 +89,16 @@ export default function InterviewRunnerPage() {
   const busy = opening.isPending || submit.isPending;
   const data = session.data;
   const completed = data?.status === "completed" || data?.status === "abandoned";
+
+  // 59.3: the page the rehearsal happens on reads the same card history the report
+  // does, so "attempt 3, best 84 so far" is there while the answer is being written.
+  // A free rehearsal has no card, and the query is never sent.
+  const siblings = useInterviewSessions({
+    applicationId: data?.applicationId ?? undefined,
+    size: 20,
+    enabled: Boolean(data?.applicationId),
+  });
+  const practice = cardPractice(siblings.data?.items ?? [], data?.id ?? id);
 
   // Seed from the server's current question; request the opening once when the
   // session is active but hasn't asked anything yet.
@@ -247,6 +259,11 @@ export default function InterviewRunnerPage() {
         {typeof (question?.difficulty ?? data.difficulty) === "number" && (
           <DifficultyMeter value={question?.difficulty ?? data.difficulty!} />
         )}
+        <PracticeLine
+          practice={practice}
+          applicationId={data.applicationId}
+          className="w-full"
+        />
       </div>
 
       {/* Question / evaluation */}
