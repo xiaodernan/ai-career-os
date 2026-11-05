@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { betterAnswerNoteDraft, studyNoteDraft } from "./interview-study";
+import { betterAnswerNoteDraft, gapNoteDraft, studyNoteDraft } from "./interview-study";
 
 describe("studyNoteDraft", () => {
   it("keeps the topic as the title and moves the reason and resource into the body", () => {
@@ -65,5 +65,32 @@ describe("betterAnswerNoteDraft", () => {
     const draft = betterAnswerNoteDraft({ answer: "Say what breaks first." }, "Model answer");
     expect(draft.title).toBe("Model answer");
     expect(draft.content).toBe("Say what breaks first.");
+  });
+});
+
+describe("gapNoteDraft", () => {
+  it("keeps a one-line gap as the title and the origin as the body", () => {
+    const draft = gapNoteDraft(
+      "  Why a B-tree keeps its leaves linked  ",
+      "Gap from a rehearsal",
+      "From your rehearsal for Backend Engineer"
+    );
+
+    expect(draft.title).toBe("Why a B-tree keeps its leaves linked");
+    expect(draft.content).toBe(
+      "Why a B-tree keeps its leaves linked\n\nFrom your rehearsal for Backend Engineer"
+    );
+    expect(draft.tags).toEqual(["interview", "gap"]);
+  });
+
+  it("still writes a body when there is no origin", () => {
+    const draft = gapNoteDraft("Sharding vs partitioning", "Gap from a rehearsal");
+    expect(draft.content).toBe("Sharding vs partitioning");
+  });
+
+  it("falls back rather than saving a note with an empty title", () => {
+    const draft = gapNoteDraft("   ", "Gap from a rehearsal");
+    expect(draft.title).toBe("Gap from a rehearsal");
+    expect(draft.content).toBe("Gap from a rehearsal");
   });
 });

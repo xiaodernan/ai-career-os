@@ -74,3 +74,26 @@ export function betterAnswerNoteDraft(
     tags: [...BETTER_ANSWER_TAGS],
   };
 }
+
+/** 63.1: a gap the grader named is advice too, and its own tag says so. */
+export const GAP_NOTE_TAGS = ["interview", "gap"];
+
+/**
+ * 63.1: one missing concept, written as a note.
+ *
+ * A gap is usually one short line -- "could not explain why a B-tree keeps
+ * leaves linked" -- so the line itself is the title and, when the item says
+ * nothing else, the body too: an empty body is what `NoteRequest` refuses, and a
+ * gap with no explanation is still a thing to study. The 60.2 origin line rides
+ * along so the note remembers which rehearsal found it.
+ */
+export function gapNoteDraft(gap: string, fallbackTitle: string, origin?: string): NoteDraft {
+  const text = gap.trim();
+  const title = text.slice(0, MAX_TITLE) || fallbackTitle.slice(0, MAX_TITLE);
+  const body = [text, origin?.trim()].filter((part): part is string => Boolean(part));
+  return {
+    title,
+    content: body.length > 0 ? body.join("\n\n") : title,
+    tags: [...GAP_NOTE_TAGS],
+  };
+}

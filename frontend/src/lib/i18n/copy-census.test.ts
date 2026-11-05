@@ -95,8 +95,9 @@ describe("the browser's copy", () => {
     // `components/interviews/practice-line.tsx`, the sentence both rehearsal pages share
     // (59.3); 154 with `components/interviews/study-note-button.tsx`, the report's keep-as-note
     // action (60.1); and 156 with 61.3's two rewrites of it -- `keep-as-note-button.tsx`, the
-    // shared click, and `better-answer-note-button.tsx`, the card that keeps a stronger answer.
-    expect(browserSources().length).toBe(156);
+    // shared click, and `better-answer-note-button.tsx`, the card that keeps a stronger answer;
+    // 157 with `components/interviews/gap-note-button.tsx`, the gap card's keep action (63.1).
+    expect(browserSources().length).toBe(157);
   });
 
   it("finds a sentence, however long it is", () => {

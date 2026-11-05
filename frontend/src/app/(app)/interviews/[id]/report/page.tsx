@@ -28,6 +28,7 @@ import { ErrorState } from "@/components/common/error-state";
 import { PracticeLine } from "@/components/interviews/practice-line";
 import { BetterAnswerNoteButton } from "@/components/interviews/better-answer-note-button";
 import { StudyNoteButton } from "@/components/interviews/study-note-button";
+import { GapNoteButton } from "@/components/interviews/gap-note-button";
 import { SectionHeading } from "@/components/common/export-buttons";
 import { DimensionBars } from "@/components/common/skill-chips";
 import { MatchRing } from "@/components/ai/match-ring";
@@ -333,7 +334,11 @@ export default function InterviewReportPage() {
               <CardContent>
                 <ul className="ml-4 list-disc space-y-1.5 text-sm">
                   {gaps.map((gap, i) => (
-                    <li key={i}>{gap}</li>
+                    /* 63.1: a named gap is advice; keeping it makes it citable. */
+                    <li key={i} className="flex items-start justify-between gap-2">
+                      <span>{gap}</span>
+                      <GapNoteButton gap={gap} origin={studyOrigin} />
+                    </li>
                   ))}
                 </ul>
               </CardContent>
