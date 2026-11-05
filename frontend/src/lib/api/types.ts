@@ -444,6 +444,11 @@ export interface ApplicationPacket {
    * that is about what came *back* from the application rather than what was sent.
    */
   rehearsals?: number;
+  /**
+   * The best score among the graded rehearsals (59.2), 0-100 like every score the UI draws, or
+   * null when the card has practice but none of it finished. A count with no grade is not a zero.
+   */
+  bestRehearsalScore?: number | null;
 }
 
 /**

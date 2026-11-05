@@ -7,6 +7,8 @@ import com.careeros.application.dto.ApplicationDtos.PacketResume;
 import com.careeros.application.entity.Application;
 import com.careeros.application.repository.ApplicationLetterRepository;
 import com.careeros.common.Json;
+import com.careeros.interview.entity.InterviewEvaluation;
+import com.careeros.interview.repository.InterviewEvaluationRepository;
 import com.careeros.interview.repository.InterviewSessionRepository;
 import com.careeros.job.entity.Company;
 import com.careeros.job.entity.Job;
@@ -51,6 +53,7 @@ public class ApplicationPacketService {
     private final CompanyRepository companies;
     private final ApplicationLetterRepository letters;
     private final InterviewSessionRepository interviews;
+    private final InterviewEvaluationRepository evaluations;
 
     public ApplicationPacketService(ApplicationService applications,
                                     ResumeVersionRepository resumeVersions,
@@ -60,7 +63,8 @@ public class ApplicationPacketService {
                                     JobRepository jobs,
                                     CompanyRepository companies,
                                     ApplicationLetterRepository letters,
-                                    InterviewSessionRepository interviews) {
+                                    InterviewSessionRepository interviews,
+                                    InterviewEvaluationRepository evaluations) {
         this.applications = applications;
         this.resumeVersions = resumeVersions;
         this.resumes = resumes;
@@ -70,6 +74,7 @@ public class ApplicationPacketService {
         this.companies = companies;
         this.letters = letters;
         this.interviews = interviews;
+        this.evaluations = evaluations;
     }
 
     @Transactional(readOnly = true)
@@ -78,6 +83,7 @@ public class ApplicationPacketService {
         UUID resumeVersionId = app.getResumeVersionId();
         UUID jdId = app.getJdId();
         UUID matchId = app.getMatchId();
+        int rehearsals = (int) interviews.countByApplicationIdAndUserId(app.getId(), userId);
         return new ApplicationPacket(
                 app.getId(),
                 resumeVersionId != null, resume(userId, resumeVersionId),
@@ -89,7 +95,26 @@ public class ApplicationPacketService {
                 (int) letters.countByApplicationIdAndUserId(app.getId(), userId),
                 // 57.2: the practice the reader has done for this card. Scoped the
                 // same way, so a rehearsal of somebody else's card is not counted.
-                (int) interviews.countByApplicationIdAndUserId(app.getId(), userId));
+                rehearsals,
+                // 59.2: and how it went. No rehearsal means no read at all; a rehearsal
+                // that never finished has no row to fold, so it simply contributes nothing.
+                rehearsals == 0 ? null : bestRehearsalScore(userId, app.getId()));
+    }
+
+    /**
+     * 59.2: the packet's rehearsal row says how the practice went, not only how often. The
+     * evaluator's verdict is a key in the summary jsonb rather than a column, so the fold
+     * happens here; the result stays on the same 0..1 scale the evaluation is stored in.
+     */
+    private Float bestRehearsalScore(UUID userId, UUID applicationId) {
+        Float best = null;
+        for (InterviewEvaluation evaluation : evaluations.findForApplication(userId, applicationId)) {
+            Double overall = Json.dbl(evaluation.getSummary(), "overall");
+            if (overall != null && (best == null || overall > best)) {
+                best = overall.floatValue();
+            }
+        }
+        return best;
     }
 
     private PacketResume resume(UUID userId, UUID versionId) {

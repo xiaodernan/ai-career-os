@@ -714,6 +714,7 @@ describe("normalizeApplicationPacket", () => {
       match: null,
       letters: 0,
       rehearsals: 0,
+      bestRehearsalScore: null,
     });
 
     expect(packet).toEqual({
@@ -733,6 +734,7 @@ describe("normalizeApplicationPacket", () => {
       match: null,
       letters: 0,
       rehearsals: 0,
+      bestRehearsalScore: null,
     });
   });
 
@@ -747,6 +749,7 @@ describe("normalizeApplicationPacket", () => {
       match: { id: "m-1", jobId: "job-1", overall: 0.82, createdAt: "2026-10-03T09:00:00Z" },
       letters: 3,
       rehearsals: 2,
+      bestRehearsalScore: 0.84,
     });
 
     expect(packet.match).toEqual({
@@ -757,6 +760,8 @@ describe("normalizeApplicationPacket", () => {
     });
     expect(packet.letters).toBe(3);
     expect(packet.rehearsals).toBe(2);
+    // 59.2: the stored 0-1 grade reaches the panel on the 0-100 scale it prints.
+    expect(packet.bestRehearsalScore).toBe(84);
   });
 });
 

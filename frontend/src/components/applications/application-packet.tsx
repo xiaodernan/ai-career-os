@@ -120,15 +120,24 @@ function rehearsalsRow(
   t: Translate
 ): PacketRow {
   const count = packet.rehearsals ?? 0;
+  // 59.2: the count says how often, the best score says how it went. They are shown together
+  // only when a rehearsal actually finished -- "3 rehearsals" with no grade is not "best 0".
+  const best = packet.bestRehearsalScore;
   return {
     key: "rehearsals",
     label: t("applications.dialog.rehearsals"),
     primary:
       count > 0
-        ? t("applications.dialog.packet.rehearsalCount", {
-            count,
-            plural: count === 1 ? "" : "s",
-          })
+        ? best != null
+          ? t("applications.dialog.packet.rehearsalCountBest", {
+              count,
+              plural: count === 1 ? "" : "s",
+              best,
+            })
+          : t("applications.dialog.packet.rehearsalCount", {
+              count,
+              plural: count === 1 ? "" : "s",
+            })
         : t("applications.dialog.packet.noRehearsals"),
     href: count > 0 ? `/interviews?application=${encodeURIComponent(application.id)}` : undefined,
     state: count > 0 ? "ready" : "missing",

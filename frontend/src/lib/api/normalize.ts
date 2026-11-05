@@ -730,6 +730,9 @@ export function normalizeApplicationPacket(raw: unknown): ApplicationPacket {
     // Same rule for the rehearsals (57.2): a body without the field is a card
     // nobody has practised for, not a card with an unknown number of them.
     rehearsals: num(raw, "rehearsals") ?? 0,
+    // 59.2: the best grade on the card, on the 0-100 scale the report already prints.
+    // Absent or null reads as "no grade yet" -- a rehearsal that never finished is not a zero.
+    bestRehearsalScore: pct(num(raw, "bestRehearsalScore")) ?? null,
   };
 }
 

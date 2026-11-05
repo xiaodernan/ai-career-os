@@ -86,7 +86,8 @@ public final class ApplicationDtos {
                                     boolean resumeLinked, PacketResume resume,
                                     boolean jdLinked, PacketJd jd,
                                     boolean matchLinked, PacketMatch match,
-                                    int letters, int rehearsals) {
+                                    int letters, int rehearsals,
+                                    Float bestRehearsalScore) {
     }
 
     public record CreateApplicationRequest(@JsonAlias("job_id") UUID jobId,

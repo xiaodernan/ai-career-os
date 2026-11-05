@@ -38,6 +38,7 @@ const full: ApplicationPacket = {
   match: { id: "match-1", jobId: "job-1", overall: 0.82, createdAt: "2026-10-03T09:00:00Z" },
   letters: 2,
   rehearsals: 3,
+  bestRehearsalScore: 84,
 };
 
 const render = (props: React.ComponentProps<typeof ApplicationPacketPanel>) =>
@@ -54,7 +55,8 @@ describe("ApplicationPacketPanel", () => {
     expect(html).toContain('href="/jobs/job-1"');
     expect(html).toContain("applications.dialog.packet.letterCount");
     // 57.2: the count of what came back, and the door to the list it counts.
-    expect(html).toContain("applications.dialog.packet.rehearsalCount");
+    // 59.2: and how it went, beside the count rather than instead of it.
+    expect(html).toContain("applications.dialog.packet.rehearsalCountBest");
     expect(html).toContain('href="/interviews?application=app-1"');
   });
 
@@ -136,6 +138,29 @@ describe("ApplicationPacketPanel", () => {
     });
     expect(html).toContain("applications.dialog.packet.noRehearsals");
     expect(html).not.toContain('href="/interviews?application=');
+  });
+
+  it("keeps a count without a finished rehearsal free of a score", () => {
+    // Two sessions started, none finalised: there is history to count and no
+    // grade to show, and "best 0/100" would be a lie about work never done.
+    const html = render({
+      application,
+      packet: {
+        applicationId: "app-1",
+        resumeLinked: false,
+        resume: null,
+        jdLinked: false,
+        jd: null,
+        matchLinked: false,
+        match: null,
+        letters: 0,
+        rehearsals: 2,
+        bestRehearsalScore: null,
+      },
+    });
+    expect(html).toContain("applications.dialog.packet.rehearsalCount");
+    expect(html).not.toContain("applications.dialog.packet.rehearsalCountBest");
+    expect(html).toContain('href="/interviews?application=app-1"');
   });
 
   it("shows a loading state without drawing empty rows", () => {

@@ -9,6 +9,8 @@ import static org.mockito.Mockito.when;
 import com.careeros.application.dto.ApplicationDtos.ApplicationPacket;
 import com.careeros.application.entity.Application;
 import com.careeros.application.repository.ApplicationLetterRepository;
+import com.careeros.interview.entity.InterviewEvaluation;
+import com.careeros.interview.repository.InterviewEvaluationRepository;
 import com.careeros.interview.repository.InterviewSessionRepository;
 import com.careeros.job.entity.Company;
 import com.careeros.job.entity.Job;
@@ -23,6 +25,7 @@ import com.careeros.resume.entity.ResumeVersion;
 import com.careeros.resume.repository.ResumeRepository;
 import com.careeros.resume.repository.ResumeVersionRepository;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -52,6 +55,7 @@ class ApplicationPacketServiceTest {
     private CompanyRepository companies;
     private ApplicationLetterRepository letters;
     private InterviewSessionRepository interviews;
+    private InterviewEvaluationRepository evaluations;
     private ApplicationPacketService service;
     private Application app;
 
@@ -66,14 +70,16 @@ class ApplicationPacketServiceTest {
         companies = mock(CompanyRepository.class);
         letters = mock(ApplicationLetterRepository.class);
         interviews = mock(InterviewSessionRepository.class);
+        evaluations = mock(InterviewEvaluationRepository.class);
         service = new ApplicationPacketService(applications, resumeVersions, resumes, jds,
-                matches, jobs, companies, letters, interviews);
+                matches, jobs, companies, letters, interviews, evaluations);
 
         app = mock(Application.class);
         when(app.getId()).thenReturn(applicationId);
         when(applications.require(userId, applicationId)).thenReturn(app);
         when(letters.countByApplicationIdAndUserId(applicationId, userId)).thenReturn(2L);
         when(interviews.countByApplicationIdAndUserId(applicationId, userId)).thenReturn(1L);
+        when(evaluations.findForApplication(userId, applicationId)).thenReturn(List.of());
     }
 
     @Test
@@ -207,5 +213,70 @@ class ApplicationPacketServiceTest {
 
         assertThat(packet.rehearsals()).isEqualTo(4);
         verify(interviews).countByApplicationIdAndUserId(applicationId, userId);
+    }
+
+    /**
+     * 59.2: the row also says how the practice went. Every graded rehearsal on the card is a
+     * candidate and the highest wins -- a second attempt that scored lower does not drag the
+     * best down, which is the number a reader deciding whether to rehearse again wants.
+     */
+    @Test
+    void theBestScoreIsTheHighestGradedRehearsalOnTheCard() {
+        when(app.getResumeVersionId()).thenReturn(null);
+        when(app.getJdId()).thenReturn(null);
+        when(app.getMatchId()).thenReturn(null);
+        when(interviews.countByApplicationIdAndUserId(applicationId, userId)).thenReturn(3L);
+        // Built before the stub: Mockito refuses a mock being stubbed inside another
+        // `when(...)` argument.
+        InterviewEvaluation first = evaluationWith(0.62);
+        InterviewEvaluation best = evaluationWith(0.84);
+        InterviewEvaluation third = evaluationWith(0.71);
+        when(evaluations.findForApplication(userId, applicationId))
+                .thenReturn(List.of(first, best, third));
+
+        ApplicationPacket packet = service.packet(userId, applicationId);
+
+        assertThat(packet.rehearsals()).isEqualTo(3);
+        assertThat(packet.bestRehearsalScore()).isEqualTo(0.84f);
+        verify(evaluations).findForApplication(userId, applicationId);
+    }
+
+    /**
+     * A rehearsal that never finished has no evaluation row, so a card with practice but no
+     * grades has no best score -- and that is null, not zero: "no result yet" and "scored
+     * zero" are different things to show beside the count.
+     */
+    @Test
+    void practiceWithoutAGradeHasNoBestScore() {
+        when(app.getResumeVersionId()).thenReturn(null);
+        when(app.getJdId()).thenReturn(null);
+        when(app.getMatchId()).thenReturn(null);
+        when(interviews.countByApplicationIdAndUserId(applicationId, userId)).thenReturn(2L);
+        when(evaluations.findForApplication(userId, applicationId)).thenReturn(List.of());
+
+        ApplicationPacket packet = service.packet(userId, applicationId);
+
+        assertThat(packet.rehearsals()).isEqualTo(2);
+        assertThat(packet.bestRehearsalScore()).isNull();
+    }
+
+    @Test
+    void aCardNobodyPractisedForAsksTheEvaluatorNothing() {
+        when(app.getResumeVersionId()).thenReturn(null);
+        when(app.getJdId()).thenReturn(null);
+        when(app.getMatchId()).thenReturn(null);
+        when(interviews.countByApplicationIdAndUserId(applicationId, userId)).thenReturn(0L);
+
+        ApplicationPacket packet = service.packet(userId, applicationId);
+
+        assertThat(packet.rehearsals()).isZero();
+        assertThat(packet.bestRehearsalScore()).isNull();
+        verify(evaluations, never()).findForApplication(userId, applicationId);
+    }
+
+    private static InterviewEvaluation evaluationWith(double overall) {
+        InterviewEvaluation evaluation = mock(InterviewEvaluation.class);
+        when(evaluation.getSummary()).thenReturn(Map.of("overall", overall));
+        return evaluation;
     }
 }
