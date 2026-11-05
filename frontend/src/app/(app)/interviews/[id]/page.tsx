@@ -26,6 +26,7 @@ import { cn } from "@/lib/utils";
 import { interviewApplicationHref } from "@/lib/interview-target";
 import { cardPractice, previousRehearsal } from "@/lib/interview-practice";
 import { normalizeInterviewReport } from "@/lib/api/normalize";
+import { answeredTurns } from "@/lib/interview-history";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -121,6 +122,20 @@ export default function InterviewRunnerPage() {
   const previousDate = previous?.startedAt
     ? formatDate(previous.startedAt, locale)
     : null;
+
+  // 67.1: a reload brings the question back through the effect below, but the
+  // transcript panel and the question counter read local state. The server's
+  // turns are already here, so the pairs are folded in once -- and only when
+  // this mount has not answered anything yet.
+  const hydrated = React.useRef(false);
+  React.useEffect(() => {
+    if (hydrated.current || !data) return;
+    hydrated.current = true;
+    const answered = answeredTurns(data.history);
+    if (answered.length > 0) {
+      setTurns((prev) => (prev.length > 0 ? prev : answered));
+    }
+  }, [data]);
 
   // Seed from the server's current question; request the opening once when the
   // session is active but hasn't asked anything yet.
