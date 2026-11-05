@@ -4553,6 +4553,31 @@ page and open the old report. The card's rehearsal history already lives in one 
   briefs the next one. The copy census catches up with the four interview components 59.3-61.3
   added (152 -> 156).)
 
+## Epic 63 -- the advice the report names is advice you can keep
+
+By 62 every kind of advice has a reader on the report: what to study, how a
+stronger answer sounds, what was missing, and what to prepare. Only the first
+two could become a note, so the other two still died with the tab.
+
+- [x] **63.1** A missing concept can be kept as a note.
+
+  (`gapNoteDraft()` titles the note with the gap itself -- a missing concept is
+  usually one line -- and writes the 60.2 origin beneath it; a gap with no origin
+  still writes the concept as the body rather than the blank content
+  `NoteRequest` refuses, and a blank gap falls back to the page's title. The
+  tags are `interview` / `gap`, so the knowledge page can tell a missing concept
+  from a study item. `GapNoteButton` is the same shared `KeepAsNoteButton` the
+  other cards use. 3 pure-function tests; copy census 156 -> 157.)
+
+- [x] **63.2** A question to prepare can be kept as a note.
+
+  (`prepareNoteDraft()` titles the note with the question -- the phrase the
+  reader will search for before the next round -- and keeps the origin in the
+  body, tagged `interview` / `prepare`. The prepare card's list items are now
+  rows with the keep action on the right, like the gap and study cards. The
+  report's four kinds of advice therefore end in the same place: one ingested
+  note the copilot can quote. 2 pure-function tests; copy census 157 -> 158.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
