@@ -97,3 +97,29 @@ export function gapNoteDraft(gap: string, fallbackTitle: string, origin?: string
     tags: [...GAP_NOTE_TAGS],
   };
 }
+
+/** 63.2: a question the grader said to prepare is the third kind of advice. */
+export const PREPARE_NOTE_TAGS = ["interview", "prepare"];
+
+/**
+ * 63.2: one question to prepare, written as a note.
+ *
+ * The question is the title, which is how the reader will look for it later; the
+ * body carries the 60.2 origin so a note kept months ago still says which
+ * rehearsal asked for it. A blank question falls back rather than saving an
+ * untitled note, and the body never goes empty.
+ */
+export function prepareNoteDraft(
+  question: string,
+  fallbackTitle: string,
+  origin?: string
+): NoteDraft {
+  const text = question.trim();
+  const title = text.slice(0, MAX_TITLE) || fallbackTitle.slice(0, MAX_TITLE);
+  const body = [text, origin?.trim()].filter((part): part is string => Boolean(part));
+  return {
+    title,
+    content: body.length > 0 ? body.join("\n\n") : title,
+    tags: [...PREPARE_NOTE_TAGS],
+  };
+}

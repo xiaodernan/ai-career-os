@@ -29,6 +29,7 @@ import { PracticeLine } from "@/components/interviews/practice-line";
 import { BetterAnswerNoteButton } from "@/components/interviews/better-answer-note-button";
 import { StudyNoteButton } from "@/components/interviews/study-note-button";
 import { GapNoteButton } from "@/components/interviews/gap-note-button";
+import { PrepareNoteButton } from "@/components/interviews/prepare-note-button";
 import { SectionHeading } from "@/components/common/export-buttons";
 import { DimensionBars } from "@/components/common/skill-chips";
 import { MatchRing } from "@/components/ai/match-ring";
@@ -355,7 +356,11 @@ export default function InterviewReportPage() {
               <CardContent>
                 <ul className="ml-4 list-disc space-y-1.5 text-sm">
                   {prepare.map((question, i) => (
-                    <li key={i}>{question}</li>
+                    /* 63.2: the question is what the reader will search for later. */
+                    <li key={i} className="flex items-start justify-between gap-2">
+                      <span>{question}</span>
+                      <PrepareNoteButton question={question} origin={studyOrigin} />
+                    </li>
                   ))}
                 </ul>
               </CardContent>

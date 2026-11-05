@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { betterAnswerNoteDraft, gapNoteDraft, studyNoteDraft } from "./interview-study";
+import {
+  betterAnswerNoteDraft,
+  gapNoteDraft,
+  prepareNoteDraft,
+  studyNoteDraft,
+} from "./interview-study";
 
 describe("studyNoteDraft", () => {
   it("keeps the topic as the title and moves the reason and resource into the body", () => {
@@ -92,5 +97,27 @@ describe("gapNoteDraft", () => {
     const draft = gapNoteDraft("   ", "Gap from a rehearsal");
     expect(draft.title).toBe("Gap from a rehearsal");
     expect(draft.content).toBe("Gap from a rehearsal");
+  });
+});
+
+describe("prepareNoteDraft", () => {
+  it("titles the note with the question and keeps the origin in the body", () => {
+    const draft = prepareNoteDraft(
+      "  How would you shard a write-heavy table?  ",
+      "Question to prepare",
+      "From your rehearsal for Backend Engineer"
+    );
+
+    expect(draft.title).toBe("How would you shard a write-heavy table?");
+    expect(draft.content).toBe(
+      "How would you shard a write-heavy table?\n\nFrom your rehearsal for Backend Engineer"
+    );
+    expect(draft.tags).toEqual(["interview", "prepare"]);
+  });
+
+  it("falls back when the question is blank and still writes a body", () => {
+    const draft = prepareNoteDraft("", "Question to prepare");
+    expect(draft.title).toBe("Question to prepare");
+    expect(draft.content).toBe("Question to prepare");
   });
 });
