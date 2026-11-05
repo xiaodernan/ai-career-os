@@ -1519,6 +1519,8 @@ export interface InterviewReport {
   weak: string[];
   summary?: string;
   better: InterviewBetterAnswer[];
+  gaps: string[];
+  prepare: string[];
   study: InterviewStudyItem[];
   trajectory: InterviewTrajectoryPoint[];
   hasContent: boolean;
@@ -1588,17 +1590,28 @@ export function normalizeInterviewReport(raw: unknown): InterviewReport | null {
     })
     .filter((row): row is InterviewBetterAnswer => row !== null);
 
+  // 61.2: the two diagnosis lists the evaluator writes beside the rewrite -- the
+  // concepts the answers never reached, and the questions worth preparing for. Both
+  // are declared in `FINALIZE_FIELDS` and were read by nothing.
+  const gaps = list<string>(merged, "missing_concepts").map(String);
+  const prepare = list<string>(merged, "follow_up_questions_to_prepare").map(String);
+
   const hasContent =
     overall != null ||
     dims.length > 0 ||
     well.length > 0 ||
     weak.length > 0 ||
     better.length > 0 ||
+    gaps.length > 0 ||
+    prepare.length > 0 ||
     study.length > 0 ||
     trajectory.length > 0 ||
     !!summaryText;
 
-  return { overall, dims, well, weak, summary: summaryText, better, study, trajectory, hasContent };
+  return {
+    overall, dims, well, weak, summary: summaryText, better, gaps, prepare,
+    study, trajectory, hasContent,
+  };
 }
 
 /* --------------------------------- search --------------------------------- */

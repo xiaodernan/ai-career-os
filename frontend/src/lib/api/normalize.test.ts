@@ -1957,6 +1957,21 @@ describe("normalizeInterviewReport", () => {
     expect(report?.hasContent).toBe(false);
   });
 
+  it("reads the missed concepts and the questions worth preparing", () => {
+    // 61.2: `missing_concepts` and `follow_up_questions_to_prepare` are declared and
+    // written on every report; the page showed neither, so the two lists that say what
+    // to do next sat in the database unread.
+    const report = normalizeInterviewReport({
+      summary: {
+        missing_concepts: ["cache stampede", "idempotency keys"],
+        follow_up_questions_to_prepare: ["How would you handle 100k QPS?"],
+      },
+    });
+    expect(report?.gaps).toEqual(["cache stampede", "idempotency keys"]);
+    expect(report?.prepare).toEqual(["How would you handle 100k QPS?"]);
+    expect(report?.hasContent).toBe(true);
+  });
+
   it("an object with nothing scoreable reports no content", () => {
     const report = normalizeInterviewReport({ id: "x", dims: {}, summary: {}, trajectory: [] });
     expect(report).not.toBeNull();

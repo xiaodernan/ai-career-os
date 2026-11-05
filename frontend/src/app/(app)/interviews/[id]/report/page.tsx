@@ -10,6 +10,8 @@ import {
   BookOpen,
   ExternalLink,
   FileBarChart,
+  Lightbulb,
+  ListChecks,
   Play,
   Quote,
   ThumbsDown,
@@ -87,7 +89,7 @@ export default function InterviewReportPage() {
   }
 
   const normalized = normalizeInterviewReport(data.report);
-  const { overall, well, weak, summary, better, study, trajectory } =
+  const { overall, well, weak, summary, better, gaps, prepare, study, trajectory } =
     normalized ?? {
       overall: undefined,
       dims: [],
@@ -95,6 +97,8 @@ export default function InterviewReportPage() {
       weak: [],
       summary: undefined,
       better: [],
+      gaps: [],
+      prepare: [],
       study: [],
       trajectory: [],
     };
@@ -290,6 +294,46 @@ export default function InterviewReportPage() {
           </Card>
         )}
       </div>
+
+      {/* Gaps and preparation (61.2) */}
+      {(gaps.length > 0 || prepare.length > 0) && (
+        <div className="grid gap-4 sm:grid-cols-2">
+          {gaps.length > 0 && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Lightbulb className="size-4" aria-hidden />
+                  {t("interviews.report.missingConcepts")}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="ml-4 list-disc space-y-1.5 text-sm">
+                  {gaps.map((gap, i) => (
+                    <li key={i}>{gap}</li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          )}
+          {prepare.length > 0 && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <ListChecks className="size-4" aria-hidden />
+                  {t("interviews.report.questionsToPrepare")}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="ml-4 list-disc space-y-1.5 text-sm">
+                  {prepare.map((question, i) => (
+                    <li key={i}>{question}</li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
 
       {/* Better answers (61.1) */}
       {better.length > 0 && (
