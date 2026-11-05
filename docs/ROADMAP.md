@@ -4665,6 +4665,20 @@ carried the whole transcript, and the page read one row of it.
   and the `["interview"]` key moves the list and the header at once. 1 contract
   case.)
 
+## Epic 68 -- the buttons do what they say
+
+Found while walking the retry loop: the report's "Practice again" was a link to
+the sitting the report was about. A completed session renders as "finished --
+open report" in the runner, so the one action named practice could only walk
+the reader in a circle.
+
+- [x] **68.1** Practice again starts a rehearsal.
+
+  (It now spends `useCreateInterviewSession`: the report's `applicationId` when
+  the sitting was rehearsed for a card, the `jobTitle` as `positionTitle` when it
+  was free practice, and the report's own mode. The button carries the create's
+  pending state and lands on the new sitting's id. 2 gate tests.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
