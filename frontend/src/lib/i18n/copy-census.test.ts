@@ -91,8 +91,12 @@ describe("the browser's copy", () => {
     // version, JD analysis and match an application was sent with (47.1), and 151 with
     // `components/applications/application-letters.tsx`, the shelf a kept draft is read
     // back from (47.4), and 152 with `components/data/bundle-facts.tsx`, the card that draws
-    // the export's content hash and build instant (13.1).
-    expect(browserSources().length).toBe(152);
+    // the export's content hash and build instant (13.1); 153 with
+    // `components/interviews/practice-line.tsx`, the sentence both rehearsal pages share
+    // (59.3); 154 with `components/interviews/study-note-button.tsx`, the report's keep-as-note
+    // action (60.1); and 156 with 61.3's two rewrites of it -- `keep-as-note-button.tsx`, the
+    // shared click, and `better-answer-note-button.tsx`, the card that keeps a stronger answer.
+    expect(browserSources().length).toBe(156);
   });
 
   it("finds a sentence, however long it is", () => {

@@ -42,7 +42,7 @@ import { ProcessingSteps } from "@/components/ai/processing-steps";
 import { useInterviewOpening, useSubmitInterviewAnswer, useFinalizeInterview } from "@/lib/hooks/actions";
 import { useAnswerVoice } from "@/lib/hooks/voice";
 import { useInterviewSession, useInterviewSessions } from "@/lib/hooks/resources";
-import { depthBand, depthLevel } from "@/lib/format";
+import { depthBand, depthLevel, formatDate } from "@/lib/format";
 import { interviewModeName } from "@/lib/status-words";
 import { interviewDimensionLabel } from "@/lib/dimensions";
 import { useLocale } from "@/lib/i18n/locale-context";
@@ -58,7 +58,7 @@ const StreamingText = dynamic(() =>
 
 export default function InterviewRunnerPage() {
   const params = useParams<{ id: string }>();
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const id = params?.id ?? null;
   const router = useRouter();
 
@@ -113,6 +113,14 @@ export default function InterviewRunnerPage() {
         : null,
     [previousSession.data]
   );
+
+  // 62.3: advice is only actionable if the reader can tell how old it is and how
+  // that attempt went, so the brief carries both -- the row's score and the date.
+  const previousScore =
+    typeof previous?.overall === "number" ? Math.round(previous.overall) : null;
+  const previousDate = previous?.startedAt
+    ? formatDate(previous.startedAt, locale)
+    : null;
 
   // Seed from the server's current question; request the opening once when the
   // session is active but hasn't asked anything yet.
@@ -284,9 +292,19 @@ export default function InterviewRunnerPage() {
       {!showingEvaluation &&
         previous &&
         previousReport &&
-        (previousReport.gaps.length > 0 || previousReport.study.length > 0) && (
+        (previousReport.gaps.length > 0 ||
+          previousReport.study.length > 0 ||
+          previousReport.prepare.length > 0) && (
           <Card className="border-dashed bg-muted/20">
             <CardContent className="space-y-1.5 py-3 text-sm">
+              <p className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                <Badge variant="outline" className="text-2xs font-normal tabular-nums">
+                  {previousScore != null
+                    ? t("interviews.detail.lastTimeScore", { score: previousScore })
+                    : t("interviews.detail.lastTimeLabel")}
+                </Badge>
+                {previousDate && <span>{previousDate}</span>}
+              </p>
               {previousReport.gaps.length > 0 && (
                 <p>
                   <span className="text-muted-foreground">
@@ -301,6 +319,14 @@ export default function InterviewRunnerPage() {
                     {t("interviews.detail.lastTimeFocus")}
                   </span>{" "}
                   {previousReport.study[0].title}
+                </p>
+              )}
+              {previousReport.prepare[0] && (
+                <p>
+                  <span className="text-muted-foreground">
+                    {t("interviews.detail.lastTimePrepare")}
+                  </span>{" "}
+                  {previousReport.prepare[0]}
                 </p>
               )}
               <Link

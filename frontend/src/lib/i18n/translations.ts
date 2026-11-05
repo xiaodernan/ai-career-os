@@ -2720,6 +2720,9 @@ export const translations = {
         lastTimeMissed: "Last time you missed:",
         lastTimeFocus: "Worth another look:",
         readThatReport: "Read that report",
+        lastTimeScore: "Last attempt {score}/100",
+        lastTimeLabel: "Last attempt",
+        lastTimePrepare: "Last time suggested preparing:",
       },
       report: {
         solidPractice: "Solid practice — the weak dimensions below are the fastest wins.",
@@ -5537,6 +5540,9 @@ export const translations = {
         lastTimeMissed: "上次没答到：",
         lastTimeFocus: "值得再看：",
         readThatReport: "看那场的报告",
+        lastTimeScore: "上一场 {score}/100",
+        lastTimeLabel: "上一场",
+        lastTimePrepare: "上次建议准备：",
       },
       report: {
         solidPractice: "练习得不错——下面薄弱的维度就是最快的提升点。",
