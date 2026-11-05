@@ -108,6 +108,14 @@ export default function InterviewReportPage() {
 
   const practice = cardPractice(siblings.data?.items ?? [], data.id);
 
+  // 60.2: the role is the strongest fact a kept note can carry about where it came
+  // from; the date is the fallback for a free rehearsal with no target job.
+  const studyOrigin = data.jobTitle
+    ? t("interviews.report.noteOriginJob", { job: data.jobTitle })
+    : data.startedAt
+      ? t("interviews.report.noteOriginDate", { date: formatDate(data.startedAt, locale) })
+      : undefined;
+
   if (!hasReport) {
     return (
       <div className="mx-auto max-w-3xl space-y-6">
@@ -316,7 +324,7 @@ export default function InterviewReportPage() {
                   )}
                   {/* 60.1: the advice stops being a sentence on a page -- it becomes a
                       note the knowledge base has ingested and the copilot can quote. */}
-                  <StudyNoteButton item={s} />
+                  <StudyNoteButton item={s} origin={studyOrigin} />
                 </li>
               ))}
             </ul>

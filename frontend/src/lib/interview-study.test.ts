@@ -29,4 +29,20 @@ describe("studyNoteDraft", () => {
     const draft = studyNoteDraft({ title: "x".repeat(240) }, "fallback");
     expect(draft.title).toHaveLength(200);
   });
+
+  it("keeps the rehearsal it came from as the last paragraph", () => {
+    const draft = studyNoteDraft(
+      { title: "Consistent hashing", why: "asked twice" },
+      "Interview study item",
+      "From your rehearsal for Staff Backend Engineer."
+    );
+    expect(draft.content).toBe(
+      "asked twice\n\nFrom your rehearsal for Staff Backend Engineer."
+    );
+  });
+
+  it("draws no origin paragraph when the caller has nothing to say", () => {
+    const draft = studyNoteDraft({ why: "asked twice" }, "fallback", "   ");
+    expect(draft.content).toBe("asked twice");
+  });
 });

@@ -16,11 +16,13 @@ import { studyNoteDraft, type StudySource } from "@/lib/interview-study";
  * "kept" once the mutation lands and never offers a second copy of the same
  * item -- the note list is where duplicates would accumulate.
  */
-export function StudyNoteButton({ item }: { item: StudySource }) {
+export function StudyNoteButton({ item, origin }: { item: StudySource; origin?: string }) {
   const { t } = useLocale();
   const { create } = useNoteMutations();
   const [kept, setKept] = React.useState(false);
-  const draft = studyNoteDraft(item, t("interviews.report.untitledNote"));
+  // 60.2: the origin arrives already phrased ("from your rehearsal for ..."),
+  // and rides into the note body so the advice keeps its source.
+  const draft = studyNoteDraft(item, t("interviews.report.untitledNote"), origin);
 
   return (
     <Button

@@ -29,13 +29,18 @@ const MAX_TITLE = 200;
 
 /**
  * The note for one study item. The title is the topic (or the caller's fallback
- * for an untitled item); the body is the reason and the resource, each on its
- * own paragraph. An item with neither still keeps its topic as the body rather
+ * for an untitled item); the body is the reason, the resource and -- 60.2 -- the
+ * origin the caller phrased ("from your rehearsal for ..."), each on its own
+ * paragraph. An item with nothing else still keeps its topic as the body rather
  * than sending the blank content `NoteRequest` refuses.
  */
-export function studyNoteDraft(item: StudySource, fallbackTitle: string): StudyNoteDraft {
+export function studyNoteDraft(
+  item: StudySource,
+  fallbackTitle: string,
+  origin?: string
+): StudyNoteDraft {
   const title = (item.title ?? "").trim().slice(0, MAX_TITLE) || fallbackTitle.slice(0, MAX_TITLE);
-  const body = [item.why?.trim(), item.url?.trim()].filter(
+  const body = [item.why?.trim(), item.url?.trim(), origin?.trim()].filter(
     (part): part is string => Boolean(part)
   );
   return {
