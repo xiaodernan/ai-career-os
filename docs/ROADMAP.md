@@ -4639,6 +4639,22 @@ only way to keep the history readable was to ignore it.
   from that report. A delete that empties the last page is corrected by the
   pager rule the list already had. 1 page test.)
 
+## Epic 67 -- a rehearsal survives the tab
+
+The runner's state lived only in the mount: local `question` and `turns` were
+seeded from the opening POST and then mutated. The detail payload has always
+carried the whole transcript, and the page read one row of it.
+
+- [x] **67.1** A reloaded rehearsal remembers what was already said.
+
+  (`answeredTurns()` folds the server's turns into the pairs the panel draws: an
+  interviewer row followed by a candidate row, the trailing interviewer row left
+  out because that is the question being asked now, an orphaned candidate row
+  skipped rather than paired with someone else's question, and the candidate
+  row's own `evaluation.score` kept when it has one. The runner hydrates once per
+  mount and never overwrites answers given since, so the transcript panel and the
+  question counter agree with the server after a reload. 5 pure-function tests.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
