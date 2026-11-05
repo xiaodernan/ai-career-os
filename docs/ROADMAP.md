@@ -4428,6 +4428,23 @@ Every other list had already been through `LikePattern` or a JPQL `LOCATE`; this
   one grouped count), 2 IT cases (Docker-hosted; compiled here), 4 + 3 ai-service cases, and the
   whole ai-service suite at 2025 passed, 2 skipped.)
 
+- [x] **58.2** The company board asks its own question.
+
+  (`GET /companies?q=` had answered since #222 and no screen had ever asked it. The page header
+  gains a `role="search"` form in `ModuleView`'s existing `actions` slot -- one screen did not buy
+  itself a new shared prop. The box holds a draft and the submit writes `{ q, page: 0 }` through the
+  same `setUrl`, so the address bar stays the only record of what this list is showing: reload, back
+  button or a pasted link redraw the words beside the rows they matched. `PAGE_DEFAULTS` has to name
+  `q: undefined` for that to survive a reload, because `hydrateState` walks the keys of the defaults
+  object and `{ page: 0 }` alone would drop the word on the way back in. The empty state is two
+  empties now -- a catalog nobody has researched, and a catalog none of whose names match what the
+  reader typed -- and the second one's way out is the clear button, not a trip off to research a
+  company (49.2's rule for a filtered empty). Narrowing stayed server-side, so the pager counts the
+  matches rather than the catalog and page two of a name is the second page of that name. 6 page
+  tests -- the first screen tests this board has -- a fifth case in
+  `test_the_companies_board_pages_its_own_window.py`, the window gate's call-site table repinned
+  for the words that now ride with the window, and 5 new copy keys in both languages.)
+
 ## Epic 59 — the report says where this rehearsal sits
 
 The report is the page a reader lands on right after a rehearsal. It could say how this one

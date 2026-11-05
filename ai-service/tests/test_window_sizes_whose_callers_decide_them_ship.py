@@ -160,7 +160,10 @@ SITES = {
                         # a waiting letter could answer.
                         ("app/(app)/replies/page.tsx", "{ size: 100 }")],
     "useCompanies": [("app/(app)/companies/page.tsx",
-                      "{ page: state.page, size: PAGE_SIZE }")],
+                      # 58.2 gives the board the question its route has always answered: the
+                      # words ride beside the window, so the pager counts the matches rather
+                      # than the catalog and page two of a name is the second page of that name.
+                      "{ page: state.page, size: PAGE_SIZE, q: state.q }")],
     "useKnowledgeSources": [("app/(app)/knowledge/page.tsx",
                             "true, src, { page: state.page, size: PAGE_SIZE }")],
     "useKnowledgeNotes": [("components/knowledge/notes-panel.tsx",

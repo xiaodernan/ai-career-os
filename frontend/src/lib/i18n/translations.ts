@@ -2282,6 +2282,11 @@ export const translations = {
       roles: "roles",
       websiteLabel: "{name} website",
       paginationLabel: "companies",
+      searchPlaceholder: "Search companies",
+      searchLabel: "Search companies by name",
+      clearSearch: "Clear search",
+      noMatch: "No company matches “{query}”",
+      noMatchDescription: "Try a shorter word, or clear the search to see every company.",
       detail: {
         loadFailed: "Couldn't load this company",
         loading: "Loading company…",
@@ -5146,6 +5151,11 @@ export const translations = {
       roles: "个职位",
       websiteLabel: "{name} 官网",
       paginationLabel: "公司",
+      searchPlaceholder: "搜索公司",
+      searchLabel: "按公司名搜索",
+      clearSearch: "清除搜索",
+      noMatch: "没有与“{query}”匹配的公司",
+      noMatchDescription: "换个短一点的词，或者清除搜索，看全部公司。",
       detail: {
         loadFailed: "没能加载这家公司",
         loading: "正在加载公司…",

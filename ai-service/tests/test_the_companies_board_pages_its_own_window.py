@@ -34,6 +34,18 @@ wildcards -- so `?q=%` answered the whole shared catalog and `?q=cn1 Under_S_ore
 "cn1 Under_Score". Neither answer is empty and neither is an error; the board returned 200 the way it
 does today, which is why `CompanyNeedleIT` grades the matching and `SearchNeedleContractTest` grades
 the spelling across every file in the backend that reads a reader's words.
+
+58.2 is the half this file had been leaving open: the route answered `?q=` from #222 onward, and the
+screen that pages that answer never offered the question. A reader who wanted the 21st company had to
+page twenty at a time to find it, which is the complaint #222 was filed about, answered by the search
+the same route already had. The board now asks `{ page, size, q }`, keeps the words in the URL beside
+the page index -- so a reload, a back button or a pasted link redraws both the box and the rows -- and
+puts the form in `ModuleView`'s `actions` slot rather than inventing a shared prop for one screen. The
+two empties are separated on purpose: "nobody has researched a company yet" and "nothing here is
+named what you typed" are different situations with different next moves, and the second one must not
+send the reader off to research a company. That is #49's lesson about the replies inbox, applied here,
+and it is why the narrowed empty counts the matches through the same `total` the pager reads: page two
+of a word is the second page of the matches, not the second page of the catalog with its rows hidden.
 """
 
 import re
@@ -111,7 +123,7 @@ def test_the_hook_carries_the_window_the_board_asks_with():
         f"the caller's window is no longer spread over the literal, so an asked-for page "
         f"would never reach the wire: {collapse(body)}")
     assert hook_calls("useCompanies") == [
-        ("app/(app)/companies/page.tsx", "{ page: state.page, size: PAGE_SIZE }"),
+        ("app/(app)/companies/page.tsx", "{ page: state.page, size: PAGE_SIZE, q: state.q }"),
     ], f"the call sites moved: {hook_calls('useCompanies')}"
 
 
@@ -122,16 +134,23 @@ def test_the_board_puts_its_page_in_the_url_and_asks_for_it():
     assert pinned and int(pinned.group(1)) == 20, (
         f"the window the board asks for is {pinned and pinned.group(1)}, not the route's own "
         "default this case measures it against")
-    assert re.search(r"const PAGE_DEFAULTS: \{ page: number \} = \{ page: 0 \};", page), (
-        "the defaults object is no longer the module-level const `setUrl` needs to stay stable")
-    assert re.search(r"const \[state, setUrl\] = useUrlState<\{ page: number \}>\(\n"
+    # The `q: undefined` in the defaults is load-bearing, not decoration: `hydrateState` walks the
+    # union of the defaults' keys and the declared numeric keys, so a defaults object written as
+    # `{ page: 0 }` would drop `q` on reload and on every pasted link -- the words would vanish from
+    # the box while the rows under them stayed narrowed.
+    assert re.search(r"const PAGE_DEFAULTS: \{ page: number; q\?: string \} = "
+                     r"\{ page: 0, q: undefined \};", page), (
+        "the defaults object is no longer the module-level const `setUrl` needs to stay stable, "
+        "or no longer declares `q` as a key the URL may fill")
+    assert re.search(r"const \[state, setUrl\] = useUrlState<\{ page: number; q\?: string \}>\(\n"
                      r"\s*PAGE_DEFAULTS,\n"
                      r"\s*\{ numericKeys: \[\"page\"\] \}\n"
                      r"\s*\);", page), (
         "the page index no longer lives in the URL, so a shared list link always opens page 0")
-    assert re.search(r"const companies = useCompanies\(\{ page: state\.page, size: PAGE_SIZE \}\);",
-                     page), (
-        "the screen no longer asks for the URL's page, so the pager's numbers would govern nothing")
+    assert re.search(r"const companies = useCompanies\(\{ page: state\.page, size: PAGE_SIZE, "
+                     r"q: state\.q \}\);", page), (
+        "the screen no longer asks for the URL's page and words, so the pager's numbers and the "
+        "rows under them would govern nothing")
     assert re.search(r"const total = companies\.data\?\.total \?\? 0;", page), (
         "the formula's numerator is no longer the answer's total")
     assert re.search(
@@ -216,3 +235,79 @@ def test_the_route_forwards_the_window_and_the_pager_restates_its_default():
         "percent sign and underscore as wildcards instead of as their characters")
     assert 'Page<Company> searchByName(@Param("needle") String needle, Pageable pageable);' in repo, (
         "the repository no longer declares the needle query the service calls")
+
+
+def jsx_attr(source: str, name: str) -> str:
+    """The braces of one JSX expression attribute, `name={…}`, balanced from its opening brace."""
+    at = source.index(f"{name}={{") + len(name) + 1
+    return source[at : balanced(source, at, "{", "}") + 1]
+
+
+def test_the_board_asks_its_question_and_the_answer_says_whether_it_was_the_words():
+    """Case 5 (58.2): the box writes the URL, the server narrows, and the two empties differ."""
+    page = read(COMPANIES_PAGE)
+    # Typing is a draft and asking is a URL write: one `setUrl` carries the words and the reset
+    # page together, so a new question can never strand the reader on page 7 of the old answer's
+    # matches -- and the effect below is the other half of the same rule, letting the address bar
+    # (hydration, a back button, a pasted link) redraw the box rather than only the rows.
+    assert re.search(r'const \[draft, setDraft\] = React\.useState\(state\.q \?\? ""\);', page), (
+        "the box no longer opens with the words the URL carries, so a shared search would "
+        "show narrowed rows over an empty box")
+    assert re.search(r'React\.useEffect\(\(\) => setDraft\(state\.q \?\? ""\), \[state\.q\]\);',
+                     page), (
+        "the box no longer follows the URL, so clearing a search would leave the old words in it")
+    assert re.search(r"const ask = \(value: string\) => "
+                     r"setUrl\(\{ q: value\.trim\(\) \|\| undefined, page: 0 \}\);", page), (
+        "asking no longer trims, or no longer resets to the first page of the new matches, or "
+        "no longer leaves the URL free of an empty `q`")
+
+    form = jsx_attr(page, "actions")
+    assert re.search(r'<form\n\s*role="search"', form), (
+        "the words are no longer asked as a form, so there is no default to prevent and Enter "
+        "would reload the screen instead of searching it")
+    assert re.search(r"onSubmit=\{\(event\) => \{\n\s*event\.preventDefault\(\);\n\s*ask\(draft\);",
+                     form), (
+        f"submitting the box no longer asks the server with the draft: {collapse(form)[:120]}")
+    assert re.search(r'value=\{draft\}', form) and \
+        re.search(r"onChange=\{\(event\) => setDraft\(event\.target\.value\)\}", form), (
+        "the box is no longer the draft it will ask with, so what the reader sees and what the "
+        "URL says could be different sentences")
+    assert re.search(r'placeholder=\{t\("companies\.searchPlaceholder"\)\}', form) and \
+        re.search(r'aria-label=\{t\("companies\.searchLabel"\)\}', form), (
+        "the box no longer says what it searches, in either the visible or the announced copy")
+    assert re.search(r"autoComplete=\"off\"", form), (
+        "the box is offering the browser's own history again: a shared list of names this "
+        "reader once typed, which is not this product's data to leak that way")
+    assert re.search(r"\{state\.q \? \(", form), (
+        f"the clear button is no longer gated on a search being on: {collapse(form)[:160]}")
+    assert form.count("ask(\"\")") + form.count("ask('')") >= 1 and 'setDraft("")' in form, (
+        "clearing no longer drops both the box's words and the URL's, so one empty question "
+        "would still be on the wire")
+
+    # The empty copy is the answer's other half: a catalog nobody researched and a catalog none of
+    # which matches the words are different situations, and the second one's escape is the words,
+    # not a research prompt (#49's rule for the replies inbox).
+    empty = jsx_attr(page, "emptyHint")
+    assert re.search(r"emptyHint=\{\s*state\.q", page), (
+        "the empty state no longer branches on whether a search is on")
+    assert re.search(r'title: t\("companies\.noMatch", \{ query: state\.q \}\)', empty), (
+        "the narrowed empty no longer names the words that found nothing, so a reader cannot "
+        "tell a typo from an empty catalog")
+    assert re.search(r"action: \(", empty) and re.search(r't\("companies\.clearSearch"\)', empty), (
+        "the narrowed empty offers no way back to the whole catalog")
+    assert re.search(r'title: t\("companies\.noneResearched"\)', empty), (
+        "the unsearched empty lost the copy that sends the reader to research a company")
+    # The narrowing is the server's, so the pager's `total` and the rows agree. A client-side
+    # filter over `data.items` would make both the count and page two lie.
+    assert "toLowerCase()" not in page, (
+        "the board now narrows its own page instead of asking the route, so the pager would "
+        "count the whole catalog over a filtered slice of one window")
+
+    # The slot the box uses is the shell's existing one: a prop this screen passes and the shell
+    # already renders above the loading/empty/error branches, so the words stay editable while
+    # the previous answer is still arriving.
+    shell = read(MODULE_VIEW)
+    assert re.search(r"actions\?: React\.ReactNode;", shell), (
+        "the shared shell no longer declares the slot this screen's form goes through")
+    assert re.search(r"actions=\{\s*<>\s*\{actions\}", shell), (
+        "the shell no longer renders the actions slot, so the form would never appear")

@@ -2,9 +2,11 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Building2, Globe } from "lucide-react";
+import { Building2, Globe, Search } from "lucide-react";
 import { ModuleView } from "@/components/common/module-view";
 import { Pagination } from "@/components/common/pagination";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { lastPageOf } from "@/lib/page-window";
 import { safeHref } from "@/lib/safe-href";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,16 +20,24 @@ import { useLocale } from "@/lib/i18n/locale-context";
 const PAGE_SIZE = 20;
 
 // Module-level so `setUrl` (a `useCallback` keyed on this object) is stable across renders.
-const PAGE_DEFAULTS: { page: number } = { page: 0 };
+const PAGE_DEFAULTS: { page: number; q?: string } = { page: 0, q: undefined };
 
 export default function CompaniesPage() {
   const { t } = useLocale();
-  // The page index lives in the URL, so a reload or a shared list link opens the same window.
-  const [state, setUrl] = useUrlState<{ page: number }>(
+  // The page index and the words both live in the URL, so a reload or a shared link opens the
+  // same window of the same question -- the rule the replies board set (49.1) and the narrowed
+  // interview list follows (57.1).
+  const [state, setUrl] = useUrlState<{ page: number; q?: string }>(
     PAGE_DEFAULTS,
     { numericKeys: ["page"] }
   );
-  const companies = useCompanies({ page: state.page, size: PAGE_SIZE });
+  // The box holds what the reader is typing; the page holds what was asked. Keeping them apart is
+  // what makes the address bar the only answer to "what is this list showing", so a back button or
+  // a pasted link redraws the words in the box as well as the rows under it.
+  const [draft, setDraft] = React.useState(state.q ?? "");
+  React.useEffect(() => setDraft(state.q ?? ""), [state.q]);
+  const ask = (value: string) => setUrl({ q: value.trim() || undefined, page: 0 });
+  const companies = useCompanies({ page: state.page, size: PAGE_SIZE, q: state.q });
 
   const total = companies.data?.total ?? 0;
   // A past-the-end page is an empty window over a real total, not an empty list: the answer's
@@ -44,11 +54,79 @@ export default function CompaniesPage() {
     <ModuleView
       title={t("companies.title")}
       description={t("companies.description")}
+      // The question the route has always answered (`?q=`) and the screen never asked. It is the
+      // server's search rather than a filter over this page: the pager below counts the matches,
+      // so page two of a word is the second page of the matches -- and since 58.1 the words are
+      // read as characters, which is what lets a name carrying a percent or an underscore be found
+      // by spelling it.
+      actions={
+        <form
+          role="search"
+          className="flex items-center gap-2"
+          onSubmit={(event) => {
+            event.preventDefault();
+            ask(draft);
+          }}
+        >
+          <div className="relative">
+            <Search
+              aria-hidden
+              className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+            />
+            <Input
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+              placeholder={t("companies.searchPlaceholder")}
+              aria-label={t("companies.searchLabel")}
+              autoComplete="off"
+              className="w-40 pl-9 sm:w-60"
+            />
+          </div>
+          <Button type="submit" size="sm" variant="outline">
+            {t("chrome.search")}
+          </Button>
+          {state.q ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                setDraft("");
+                ask("");
+              }}
+            >
+              {t("companies.clearSearch")}
+            </Button>
+          ) : null}
+        </form>
+      }
       query={companies}
-      emptyHint={{
-        title: t("companies.noneResearched"),
-        description: t("companies.noneResearchedDescription"),
-      }}
+      // Two different empties: a catalog nobody has researched, and a catalog full of companies
+      // none of which is named what the reader typed. The second one must not send the reader off
+      // to research a company -- the replies board learned the same lesson in 49.2.
+      emptyHint={
+        state.q
+          ? {
+              title: t("companies.noMatch", { query: state.q }),
+              description: t("companies.noMatchDescription"),
+              action: (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setDraft("");
+                    ask("");
+                  }}
+                >
+                  {t("companies.clearSearch")}
+                </Button>
+              ),
+            }
+          : {
+              title: t("companies.noneResearched"),
+              description: t("companies.noneResearchedDescription"),
+            }
+      }
       ctaHref="/copilot"
       ctaLabel={t("companies.researchOne")}
       footer={
