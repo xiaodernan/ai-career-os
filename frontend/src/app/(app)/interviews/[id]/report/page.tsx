@@ -23,6 +23,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/common/empty-state";
 import { ErrorState } from "@/components/common/error-state";
 import { PracticeLine } from "@/components/interviews/practice-line";
+import { StudyNoteButton } from "@/components/interviews/study-note-button";
 import { SectionHeading } from "@/components/common/export-buttons";
 import { DimensionBars } from "@/components/common/skill-chips";
 import { MatchRing } from "@/components/ai/match-ring";
@@ -313,6 +314,9 @@ export default function InterviewReportPage() {
                       <ExternalLink className="size-3" aria-hidden />
                     </a>
                   )}
+                  {/* 60.1: the advice stops being a sentence on a page -- it becomes a
+                      note the knowledge base has ingested and the copilot can quote. */}
+                  <StudyNoteButton item={s} />
                 </li>
               ))}
             </ul>

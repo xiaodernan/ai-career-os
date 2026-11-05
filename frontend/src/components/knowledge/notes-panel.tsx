@@ -30,7 +30,8 @@ import type { KnowledgeNote } from "@/lib/api/types";
  * `NoteRequest` validates title ≤ 200 chars and `content` `@NotBlank` on the
  * server, so the forms mirror both: a maxLength input, and a save button gated
  * on non-blank content rather than an error round-trip. Tags are accepted by
- * the backend but no mutation sends them yet — the row renders what exists.
+ * the backend and sent by the report's study button (60.1); this form does not
+ * ask for them yet, so the row renders what exists.
  */
 
 /** Mirrors `NoteRequest`'s `@Size(max = 200)` on the title. */

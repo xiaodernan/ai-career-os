@@ -59,6 +59,10 @@ PALETTE = "frontend/src/components/common/command-palette.tsx"
 ENDPOINTS = "frontend/src/lib/api/endpoints.ts"
 NOTE_ROUTE = "/knowledge/notes"
 NOTES_PANEL = "frontend/src/components/knowledge/notes-panel.tsx"
+# 60.1's study button mounts the writer hook from the interview report: the same
+# `POST /knowledge/notes`, offered beside the advice it saves. The reader still
+# belongs to the panel alone -- the report has nothing of its own to list.
+STUDY_NOTE_BUTTON = "frontend/src/components/interviews/study-note-button.tsx"
 
 # The route, with the character after it pinned: `/knowledge/notes` is also the first half of
 # `components/knowledge/notes-panel.tsx`, so a bare substring search reports a file naming the panel
@@ -105,6 +109,8 @@ SPEAKERS: dict[str, str] = {
         "so the anonymized export has to forget them, and so the printable document has to carry them",
     NOTES_PANEL:
         "the panel's docstring spells the four verbs it calls",
+    STUDY_NOTE_BUTTON:
+        "the report's study button names the POST it writes a note through",
     "frontend/src/lib/api/endpoints.test.ts":
         "pins the body keys the POST takes",
     "frontend/src/lib/api/endpoints.ts":
@@ -258,7 +264,13 @@ def query_keys(rel: str) -> dict[str, list[tuple[str, str]]]:
 
 
 def test_the_notes_route_has_two_client_hooks_and_a_screen_reaches_both() -> None:
-    """`GET/POST/PATCH/DELETE /knowledge/notes` are served, and the notes panel is the one caller."""
+    """`GET/POST/PATCH/DELETE /knowledge/notes` are served, and two screens reach the writer.
+
+    The reader still has exactly one caller -- the panel that draws the list. The
+    writer gained a second screen in 60.1: the report's study button saves one
+    item through the same hook, so the two callers are the panel and that button,
+    and a third one is this test's cue to be re-measured.
+    """
     routes = re.findall(r'@(Get|Post|Patch|Delete)Mapping\("(/notes[^"]*)"\)', read(CONTROLLER))
     assert sorted(v.upper() for v, _ in routes) == ["DELETE", "GET", "PATCH", "POST"], \
         f"the server no longer binds the four note verbs this gate assumes: {routes}"
@@ -269,8 +281,11 @@ def test_the_notes_route_has_two_client_hooks_and_a_screen_reaches_both() -> Non
     assert set(hooks) == {"useKnowledgeNotes", "useNoteMutations"}, \
         f"the notes route now has a different set of client hooks: {hooks}"
 
-    callers = {name: hook_call_sites(name) for name in hooks}
-    assert all(sites == [NOTES_PANEL] for sites in callers.values()), \
+    callers = {name: sorted(hook_call_sites(name)) for name in hooks}
+    assert callers == {
+        "useKnowledgeNotes": [NOTES_PANEL],
+        "useNoteMutations": sorted([NOTES_PANEL, STUDY_NOTE_BUTTON]),
+    }, \
         f"the notes hooks gained or lost a caller, so this file's reach claim must be re-measured: {callers}"
     assert hooks["useKnowledgeNotes"] == RESOURCES and hooks["useNoteMutations"] == ACTIONS, \
         f"the two hooks moved off the files whose mappers the other cases read: {hooks}"

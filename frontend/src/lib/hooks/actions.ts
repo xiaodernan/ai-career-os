@@ -671,7 +671,10 @@ export function useNoteMutations() {
   const invalidate = () => qc.invalidateQueries({ queryKey: ["knowledge", "notes"] });
   return {
     create: useMutation({
-      mutationFn: (body: { title: string; content: string }) =>
+      // `tags` rides along when the caller has them (60.1's study button sends
+      // `interview`/`study`); the notes form sends none, and undefined is not
+      // serialized.
+      mutationFn: (body: { title: string; content: string; tags?: string[] }) =>
         api.create<KnowledgeNote>(endpoints.knowledgeNotes, body),
       onSuccess: () => {
         invalidate();
