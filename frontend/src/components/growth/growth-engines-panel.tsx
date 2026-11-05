@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import {
   BookOpen,
   Compass,
@@ -15,6 +16,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { EmptyState } from "@/components/common/empty-state";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   useGapAnalysis,
   useInterviewPrep,
@@ -37,8 +45,11 @@ import type {
   SkillProgress,
   StoryBank,
 } from "@/lib/api/types";
+import { useCreateInterviewSession } from "@/lib/hooks/actions";
 import { useLocale } from "@/lib/i18n/locale-context";
-import { marketPriorityWord, requirementPriorityWord } from "@/lib/status-words";
+import { str } from "@/lib/api/normalize";
+import { INTERVIEW_MODES } from "@/lib/interview-modes";
+import { interviewModeName, marketPriorityWord, requirementPriorityWord } from "@/lib/status-words";
 import { growthEngineLabel } from "@/lib/growth-engines";
 
 /**
@@ -186,9 +197,15 @@ export function GrowthEnginesPanel() {
           {t("growthEngines.run")} {growthEngineLabel(t, engine)}
         </Button>
 
-        <EngineResult engine={engine} state={resultFor(engine, {
-          gap, demand, priority, plan, prep, progression, stories, roles, progress,
-        })} />
+        <EngineResult
+          engine={engine}
+          state={resultFor(engine, {
+            gap, demand, priority, plan, prep, progression, stories, roles, progress,
+          })}
+        />
+        {engine === "prep" && prep.data ? (
+          <PrepPracticeAction role={role.trim()} />
+        ) : null}
       </CardContent>
     </Card>
   );
@@ -449,4 +466,52 @@ function EngineAnswer({ engine, data }: { engine: EngineKey; data: Record<string
       );
     }
   }
+}
+
+/**
+ * 65.1: the prep checklist used to end one screen away from the only place a
+ * rehearsal can start. This menu asks the mode and creates a free rehearsal
+ * titled with the role that shaped the checklist, so the report that comes back
+ * still says what it was for.
+ */
+function PrepPracticeAction({ role }: { role: string }) {
+  const { t } = useLocale();
+  const router = useRouter();
+  const startPractice = useCreateInterviewSession();
+  return (
+    <div className="flex flex-wrap items-center gap-2 pt-1">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button size="sm" variant="ai" loading={startPractice.isPending}>
+            <MessagesSquare aria-hidden />
+            {t("growthEngines.practiceThis")}
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-48">
+          <DropdownMenuLabel>{t("jobs.detail.mockInterviewMode")}</DropdownMenuLabel>
+          {INTERVIEW_MODES.map((m) => (
+            <DropdownMenuItem
+              key={m.value}
+              onClick={() =>
+                startPractice.mutate(
+                  { mode: m.value, positionTitle: role },
+                  {
+                    onSuccess: (res) => {
+                      const id =
+                        str(res, "id", "session_id", "sessionId") ??
+                        str((res as { session?: unknown }).session, "id");
+                      if (id) router.push(`/interviews/${id}`);
+                    },
+                  }
+                )
+              }
+            >
+              {interviewModeName(t, m.value)}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <p className="text-xs text-muted-foreground">{t("growthEngines.practiceThisHint")}</p>
+    </div>
+  );
 }

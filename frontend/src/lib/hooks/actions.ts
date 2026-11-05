@@ -716,7 +716,13 @@ export function useCreateInterviewSession() {
   return useMutation({
     // `difficulty` is not one of these: the create record has no component for it, so Jackson
     // would drop it without a word, and the ladder is set by the difficulty step instead.
-    mutationFn: (body: { jobId?: string; applicationId?: string; mode?: string }) =>
+    mutationFn: (body: {
+      jobId?: string;
+      applicationId?: string;
+      mode?: string;
+      /** 65.1: a rehearsal started from a role has no posting to inherit from. */
+      positionTitle?: string;
+    }) =>
       api.create<{ id?: string; session?: { id: string }; session_id?: string }>(
         endpoints.interviews,
         body
