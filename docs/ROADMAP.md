@@ -4486,6 +4486,22 @@ because the sentence never reached a row.
   case); `studyNoteDraft()` appends it and skips a blank origin instead of writing an empty
   paragraph. 2 pure-function tests.)
 
+## Epic 61 -- the report shows what a stronger answer sounds like
+
+`better_answers`, `missing_concepts` and `follow_up_questions_to_prepare` are three of the
+report's declared fields, and none of them had a reader. The evaluator wrote them on every
+sitting; the page dropped them.
+
+- [x] **61.1** The report shows the stronger answer it was given.
+
+  (`FINALIZE_FIELDS` declares `better_answers` as `[{question, model_answer}]` and the mock
+  writes exactly that shape, but nothing in `normalize.ts` asked for it. Each rewrite now
+  renders between the weak list and the depth chart -- the question in small type, the answer
+  below it with its own line breaks -- and a row without an answer is dropped rather than drawn
+  as an empty card. ai-service states the pair as `BETTER_ANSWER_FIELDS` (the same "contract as
+  data" the study card's three names use); the field census binds the new `row` receiver to it
+  and moves its four counts and the report's thirteen sites. 2 normalizer tests.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
