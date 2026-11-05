@@ -7,6 +7,7 @@ import com.careeros.network.dto.ContactDtos.ContactRequest;
 import com.careeros.network.entity.Contact;
 import com.careeros.network.repository.ContactRepository;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,8 +27,12 @@ public class ContactService {
     }
 
     @Transactional(readOnly = true)
-    public List<ContactItem> list(UUID userId) {
-        return contacts.findByUserIdOrderByUpdatedAtDesc(userId).stream()
+    public List<ContactItem> list(UUID userId, String q) {
+        // Read once per request, not per row: the box holds what the reader meant, and the columns
+        // are lower-cased by the query itself. Spaces alone are not a word, so a box the reader
+        // typed and deleted asks the whole registry.
+        String needle = q == null ? "" : q.trim().toLowerCase(Locale.ROOT);
+        return contacts.findBoard(userId, needle).stream()
                 .map(ContactItem::of)
                 .toList();
     }

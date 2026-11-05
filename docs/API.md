@@ -643,7 +643,7 @@ strings, and `lastTouchAt` is the user's claim about when contact last happened.
 
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/contacts` | this caller's people, most recently updated first |
+| GET | `/contacts` | the registry (`?q=`): this caller's people, most recently updated first, ties broken by the row's own id; `q` is a case-insensitive substring of a person's name, role, company, relation, email and notes whose characters are literal (`%` and `_` included, 70.3) — the five optional columns are read as empty rather than unknown, and spaces alone are no narrowing at all |
 | POST | `/contacts` | `{name, role, company, relation, email, notes, lastTouchAt}` → the row (201). `name` is the only required field |
 | PATCH | `/contacts/{id}` | same shape, full replace (the form's current values); 404 when the row is not the caller's |
 | DELETE | `/contacts/{id}` | forgets one contact; 204 |

@@ -35,7 +35,10 @@ import org.junit.jupiter.api.Test;
  * hand-wrapped), and the roster of needle owners is pinned beside them so a list that picks up a
  * {@code q=} has to be named here before it can ship -- where "named" means the other three tests then
  * grade it. 70.1 is the fifth owner: the pipeline board's word arrives on the same route that already
- * carried {@code status} and {@code jobId}, so all three are one query rather than eight.
+ * carried {@code status} and {@code jobId}, so all three are one query rather than eight. 70.3 is the
+ * sixth, and the one that answers a bare array: {@code GET /contacts} has no total beside its rows to
+ * hint that a filter was dropped, so a wrong needle here is invisible in the envelope and visible only
+ * in the people the registry stopped showing.
  */
 class SearchNeedleContractTest {
 
@@ -47,7 +50,8 @@ class SearchNeedleContractTest {
             "com/careeros/job/repository/CompanyRepository.java",
             "com/careeros/search/repository/SearchRepository.java",
             "com/careeros/inbound/repository/InboundMailRepository.java",
-            "com/careeros/application/repository/ApplicationRepository.java");
+            "com/careeros/application/repository/ApplicationRepository.java",
+            "com/careeros/network/repository/ContactRepository.java");
 
     /** {@code setParameter("companyLike", ...)} -- the site where a reader's value becomes a pattern. */
     private static final Pattern LIKE_BINDING =
@@ -181,5 +185,22 @@ class SearchNeedleContractTest {
                 // The name survives in this file's prose, which explains what the query replaced; a
                 // declaration of it is the defect, so that is the shape refused here.
                 .doesNotContain("Page<Company> findByNameContaining");
+    }
+
+    @Test
+    @DisplayName("the registry's needle reads the five columns a profile may leave blank")
+    void theContactsBranchReadsEveryColumnTheDialogWrites() {
+        String repo = read(MAIN.resolve("com/careeros/network/repository/ContactRepository.java"));
+        assertThat(repo).contains("LOCATE(:needle, LOWER(c.name)) > 0")
+                // `name` is the one column the schema refuses to leave empty. The other five are the
+                // dialog's optionals, and a person with no company recorded is still a person -- an
+                // unguarded `LOWER(c.role)` on a null column is not a miss, it is a NULL, and NULL is
+                // never greater than zero, so the search would silently skip every thin profile.
+                .contains("LOWER(COALESCE(c.role, ''))", "LOWER(COALESCE(c.company, ''))",
+                        "LOWER(COALESCE(c.relation, ''))", "LOWER(COALESCE(c.email, ''))",
+                        "LOWER(COALESCE(c.notes, ''))")
+                // Blank is the whole registry, not a search for the empty string.
+                .contains(":needle = ''")
+                .doesNotContain("Containing");
     }
 }
