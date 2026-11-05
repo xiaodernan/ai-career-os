@@ -15,7 +15,7 @@ export interface StudySource {
   url?: string;
 }
 
-export interface StudyNoteDraft {
+export interface NoteDraft {
   title: string;
   content: string;
   tags: string[];
@@ -23,6 +23,9 @@ export interface StudyNoteDraft {
 
 /** The two tags every kept study item carries, so the knowledge page can find them. */
 export const STUDY_NOTE_TAGS = ["interview", "study"];
+
+/** 61.3: a kept rewrite is the report's other kind of advice, and its own tag says so. */
+export const BETTER_ANSWER_TAGS = ["interview", "answer"];
 
 /** `NoteRequest` caps the title at 200 characters; the draft never asks for more. */
 const MAX_TITLE = 200;
@@ -38,7 +41,7 @@ export function studyNoteDraft(
   item: StudySource,
   fallbackTitle: string,
   origin?: string
-): StudyNoteDraft {
+): NoteDraft {
   const title = (item.title ?? "").trim().slice(0, MAX_TITLE) || fallbackTitle.slice(0, MAX_TITLE);
   const body = [item.why?.trim(), item.url?.trim(), origin?.trim()].filter(
     (part): part is string => Boolean(part)
@@ -47,5 +50,27 @@ export function studyNoteDraft(
     title,
     content: body.length > 0 ? body.join("\n\n") : title,
     tags: [...STUDY_NOTE_TAGS],
+  };
+}
+
+/**
+ * 61.3: one stronger answer, written as a note. The question becomes the title
+ * (so the note list reads like a list of answers to things), the rewrite becomes
+ * the body, and the origin line from 60.2 rides along. An answer with no question
+ * is still worth keeping -- the caller's fallback titles it.
+ */
+export function betterAnswerNoteDraft(
+  item: { question?: string; answer: string },
+  fallbackTitle: string,
+  origin?: string
+): NoteDraft {
+  const title = (item.question ?? "").trim().slice(0, MAX_TITLE) || fallbackTitle.slice(0, MAX_TITLE);
+  const body = [item.answer.trim(), origin?.trim()].filter(
+    (part): part is string => Boolean(part)
+  );
+  return {
+    title,
+    content: body.join("\n\n"),
+    tags: [...BETTER_ANSWER_TAGS],
   };
 }

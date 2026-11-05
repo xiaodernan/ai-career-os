@@ -62,7 +62,7 @@ NOTES_PANEL = "frontend/src/components/knowledge/notes-panel.tsx"
 # 60.1's study button mounts the writer hook from the interview report: the same
 # `POST /knowledge/notes`, offered beside the advice it saves. The reader still
 # belongs to the panel alone -- the report has nothing of its own to list.
-STUDY_NOTE_BUTTON = "frontend/src/components/interviews/study-note-button.tsx"
+KEEP_AS_NOTE_BUTTON = "frontend/src/components/interviews/keep-as-note-button.tsx"
 
 # The route, with the character after it pinned: `/knowledge/notes` is also the first half of
 # `components/knowledge/notes-panel.tsx`, so a bare substring search reports a file naming the panel
@@ -96,6 +96,10 @@ SPEAKERS: dict[str, str] = {
         "the row advertising GET / POST / PATCH / DELETE over the route and its {id} child",
     "docs/architecture.md":
         "prose: the notes the panel reads come from GET /knowledge/notes",
+    "docs/ROADMAP.md":
+        "60.1's entry names the route the study button writes through",
+    "docs/plans/plan_long_term.md":
+        "60.1's paragraph names the route the study button writes through",
     "e2e/tests/command-palette.spec.ts":
         "POSTs one note so the palette's server search has a real row to find",
     "e2e/tests/forward-surfaces.spec.ts":
@@ -109,8 +113,6 @@ SPEAKERS: dict[str, str] = {
         "so the anonymized export has to forget them, and so the printable document has to carry them",
     NOTES_PANEL:
         "the panel's docstring spells the four verbs it calls",
-    STUDY_NOTE_BUTTON:
-        "the report's study button names the POST it writes a note through",
     "frontend/src/lib/api/endpoints.test.ts":
         "pins the body keys the POST takes",
     "frontend/src/lib/api/endpoints.ts":
@@ -284,7 +286,7 @@ def test_the_notes_route_has_two_client_hooks_and_a_screen_reaches_both() -> Non
     callers = {name: sorted(hook_call_sites(name)) for name in hooks}
     assert callers == {
         "useKnowledgeNotes": [NOTES_PANEL],
-        "useNoteMutations": sorted([NOTES_PANEL, STUDY_NOTE_BUTTON]),
+        "useNoteMutations": sorted([NOTES_PANEL, KEEP_AS_NOTE_BUTTON]),
     }, \
         f"the notes hooks gained or lost a caller, so this file's reach claim must be re-measured: {callers}"
     assert hooks["useKnowledgeNotes"] == RESOURCES and hooks["useNoteMutations"] == ACTIONS, \

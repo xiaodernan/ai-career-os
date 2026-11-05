@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { studyNoteDraft } from "./interview-study";
+import { betterAnswerNoteDraft, studyNoteDraft } from "./interview-study";
 
 describe("studyNoteDraft", () => {
   it("keeps the topic as the title and moves the reason and resource into the body", () => {
@@ -44,5 +44,26 @@ describe("studyNoteDraft", () => {
   it("draws no origin paragraph when the caller has nothing to say", () => {
     const draft = studyNoteDraft({ why: "asked twice" }, "fallback", "   ");
     expect(draft.content).toBe("asked twice");
+  });
+});
+
+describe("betterAnswerNoteDraft", () => {
+  it("titles the note with the question and keeps the rewrite and its origin as the body", () => {
+    const draft = betterAnswerNoteDraft(
+      { question: "Why Redis?", answer: "Name the failure mode first." },
+      "Model answer",
+      "From your rehearsal for Staff Backend Engineer."
+    );
+    expect(draft.title).toBe("Why Redis?");
+    expect(draft.content).toBe(
+      "Name the failure mode first.\n\nFrom your rehearsal for Staff Backend Engineer."
+    );
+    expect(draft.tags).toEqual(["interview", "answer"]);
+  });
+
+  it("falls back to the caller's title when the rewrite has no question", () => {
+    const draft = betterAnswerNoteDraft({ answer: "Say what breaks first." }, "Model answer");
+    expect(draft.title).toBe("Model answer");
+    expect(draft.content).toBe("Say what breaks first.");
   });
 });

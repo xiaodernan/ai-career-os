@@ -26,6 +26,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/common/empty-state";
 import { ErrorState } from "@/components/common/error-state";
 import { PracticeLine } from "@/components/interviews/practice-line";
+import { BetterAnswerNoteButton } from "@/components/interviews/better-answer-note-button";
 import { StudyNoteButton } from "@/components/interviews/study-note-button";
 import { SectionHeading } from "@/components/common/export-buttons";
 import { DimensionBars } from "@/components/common/skill-chips";
@@ -348,11 +349,15 @@ export default function InterviewReportPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             {better.map((b, i) => (
-              <div key={i} className="space-y-1.5">
-                {b.question && (
-                  <p className="text-xs font-medium text-muted-foreground">{b.question}</p>
-                )}
-                <p className="whitespace-pre-line text-sm leading-relaxed">{b.answer}</p>
+              <div key={i} className="flex items-start gap-3">
+                <div className="min-w-0 flex-1 space-y-1.5">
+                  {b.question && (
+                    <p className="text-xs font-medium text-muted-foreground">{b.question}</p>
+                  )}
+                  <p className="whitespace-pre-line text-sm leading-relaxed">{b.answer}</p>
+                </div>
+                {/* 61.3: the rewrite is keepable too -- the question becomes the note's title. */}
+                <BetterAnswerNoteButton item={b} origin={studyOrigin} />
               </div>
             ))}
           </CardContent>
