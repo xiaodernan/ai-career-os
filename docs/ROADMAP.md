@@ -4623,6 +4623,22 @@ practise had to leave the sentence and rebuild the context by hand.
   from, which is why the role, not a job id, is the context it keeps. 3 gate
   tests.)
 
+## Epic 66 -- a rehearsal can be thrown away
+
+`DELETE /interview/sessions/{id}` shipped with the first schema and had no
+caller. An abandoned or accidental sitting stayed in the list forever, and the
+only way to keep the history readable was to ignore it.
+
+- [x] **66.1** A rehearsal started by mistake can be deleted.
+
+  (`useDeleteInterviewSession` spends the endpoint the page never did and
+  invalidates the `["interview"]` queries, so the list, the card's practice line
+  and the report's comparison all move at once. The row's trash button opens the
+  app's shared confirm dialog; its sentence names what goes -- questions,
+  answers, the report -- and what stays: the application card and any note kept
+  from that report. A delete that empties the last page is corrected by the
+  pager rule the list already had. 1 page test.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
