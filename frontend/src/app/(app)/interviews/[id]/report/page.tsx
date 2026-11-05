@@ -34,7 +34,7 @@ import { MatchRing } from "@/components/ai/match-ring";
 import { AIBadge } from "@/components/ai/ai-badge";
 import { useFinalizeInterview } from "@/lib/hooks/actions";
 import { useInterviewSession, useInterviewSessions } from "@/lib/hooks/resources";
-import { cardPractice } from "@/lib/interview-practice";
+import { cardPractice, previousRehearsal, scoreDelta } from "@/lib/interview-practice";
 import { normalizeInterviewReport, type InterviewTrajectoryPoint } from "@/lib/api/normalize";
 import { depthBand, depthLevel, formatDate } from "@/lib/format";
 import { interviewModeName } from "@/lib/status-words";
@@ -114,6 +114,11 @@ export default function InterviewReportPage() {
   const hasReport = normalized?.hasContent ?? false;
 
   const practice = cardPractice(siblings.data?.items ?? [], data.id);
+
+  // 62.2: the same fold that places this sitting names the attempt it followed,
+  // so the score can be read against that one instead of standing alone.
+  const previous = previousRehearsal(siblings.data?.items ?? [], data.id);
+  const delta = scoreDelta(previous?.overall, overall);
 
   // 60.2: the role is the strongest fact a kept note can carry about where it came
   // from; the date is the fallback for a free rehearsal with no target job.
@@ -233,6 +238,24 @@ export default function InterviewReportPage() {
                       level: depthLevel(data.difficulty),
                       band: t(`interviews.depthBands.${depthBand(data.difficulty)}`),
                     })}
+                  </Badge>
+                )}
+                {delta && (
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "text-2xs font-normal tabular-nums",
+                      delta.delta > 0 && "border-success/40 text-success",
+                      delta.delta < 0 && "border-warning/40 text-warning"
+                    )}
+                  >
+                    {delta.delta === 0
+                      ? t("interviews.report.sameAsLast", { score: delta.current })
+                      : t("interviews.report.comparedToLast", {
+                          previous: delta.previous,
+                          current: delta.current,
+                          delta: `${delta.delta > 0 ? "+" : ""}${delta.delta}`,
+                        })}
                   </Badge>
                 )}
               </div>

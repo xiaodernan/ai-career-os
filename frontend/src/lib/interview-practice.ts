@@ -75,3 +75,26 @@ export function previousRehearsal(
     });
   return finished[0] ?? null;
 }
+
+/**
+ * 62.2: this sitting's score read against the one it followed.
+ *
+ * The practice line answers "where am I in the history"; this answers "did the
+ * retry move it". Both numbers come from rows the page already has, and either
+ * one missing -- an ungraded sitting, a card with no earlier report -- means
+ * there is nothing to compare rather than a zero to show.
+ */
+export interface ScoreDelta {
+  previous: number;
+  current: number;
+  delta: number;
+}
+
+export function scoreDelta(
+  previous: number | null | undefined,
+  current: number | null | undefined
+): ScoreDelta | null {
+  if (previous == null || current == null) return null;
+  if (!Number.isFinite(previous) || !Number.isFinite(current)) return null;
+  return { previous, current, delta: current - previous };
+}

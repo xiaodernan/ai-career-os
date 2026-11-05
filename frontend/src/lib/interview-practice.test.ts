@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { cardPractice, previousRehearsal } from "./interview-practice";
+import { cardPractice, previousRehearsal, scoreDelta } from "./interview-practice";
 
 /**
  * 59.1: the practice line is a fold over the card's rehearsals.
@@ -67,5 +67,24 @@ describe("previousRehearsal", () => {
     expect(previousRehearsal([{ id: "a", status: "completed" }], null)).toBeNull();
     expect(previousRehearsal([{ id: "current", status: "active" }], "current")).toBeNull();
     expect(previousRehearsal([], "current")).toBeNull();
+  });
+});
+
+describe("scoreDelta", () => {
+  it("reads this attempt against the one it followed", () => {
+    expect(scoreDelta(62, 71)).toEqual({ previous: 62, current: 71, delta: 9 });
+    expect(scoreDelta(80, 76)).toEqual({ previous: 80, current: 76, delta: -4 });
+    expect(scoreDelta(74, 74)).toEqual({ previous: 74, current: 74, delta: 0 });
+  });
+
+  it("has nothing to say when either sitting is ungraded", () => {
+    expect(scoreDelta(undefined, 71)).toBeNull();
+    expect(scoreDelta(62, null)).toBeNull();
+    expect(scoreDelta(null, undefined)).toBeNull();
+  });
+
+  it("refuses a score that is not a number the ring could draw", () => {
+    expect(scoreDelta(Number.NaN, 71)).toBeNull();
+    expect(scoreDelta(62, Number.POSITIVE_INFINITY)).toBeNull();
   });
 });
