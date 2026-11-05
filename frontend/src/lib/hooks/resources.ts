@@ -662,13 +662,20 @@ export function useInterviewSessions(params?: {
   /** 59.1: the report asks only when the session names a card. Not sent on the wire. */
   enabled?: boolean;
 }) {
-  const { enabled = true, ...query } = params ?? {};
   return useQuery({
     queryKey: ["interview", "sessions", params],
-    enabled,
+    // The flag answers *whether* to ask, so it never reaches the route. The key list is spelled
+    // rather than spread: `...query` is a set of names this file cannot show the endpoints gate,
+    // and a parameter the gate cannot read is a parameter Spring may quietly ignore (49.1 took
+    // the same shape off the reply list for the same reason).
+    enabled: params?.enabled ?? true,
     queryFn: async (): Promise<Page<InterviewSession>> =>
       normalizePage(
-        await api.get<unknown>(endpoints.interviews, { size: 20, ...query }),
+        await api.get<unknown>(endpoints.interviews, {
+          size: params?.size ?? 20,
+          page: params?.page,
+          applicationId: params?.applicationId,
+        }),
         (s) => mapInterviewSessionItem(s)
       ),
   });

@@ -603,15 +603,22 @@ function allJava(dir: URL): string[] {
 
 let dtoIndex: Map<string, string> | undefined;
 
-/** What one request record accepts: every component under its own name and under each alias. */
+/** What one request record accepts: every component names itself and each `@JsonAlias` spelling. */
 interface RecordBindings {
   accepts: Set<string>;
   /** component name → the alias spellings that mean the same field */
   twins: Map<string, string[]>;
 }
 
-/** The request record the handler binds: its component names plus every `@JsonAlias` spelling. */
-function recordBindings(type: string): RecordBindings {
+/**
+ * Every `record` the backend's request sources declare, by name.
+ *
+ * This is the population a body type is looked up in, and the reason the gate can say "this
+ * handler binds no record" instead of throwing: a signature may name a type that is not a record
+ * at all (`Map<String, Object>`), which is a third answer about the body and has to be written
+ * down as one rather than crashing the reader that found it.
+ */
+function recordIndex(): Map<string, string> {
   if (!dtoIndex) {
     dtoIndex = new Map<string, string>();
     for (const file of allJava(DTO_SOURCES)) {
@@ -622,7 +629,12 @@ function recordBindings(type: string): RecordBindings {
       }
     }
   }
-  const components = dtoIndex.get(type);
+  return dtoIndex;
+}
+
+/** The request record the handler binds: its component names plus every `@JsonAlias` spelling. */
+function recordBindings(type: string): RecordBindings {
+  const components = recordIndex().get(type);
   if (components === undefined) throw new Error(`no record named ${type} in the backend sources`);
   const accepts = new Set<string>();
   const twins = new Map<string, string[]>();
@@ -874,6 +886,8 @@ describe("endpoints ↔ backend route parity", () => {
     site: CallSite;
     pattern: string;
     dto: string | undefined;
+    /** the handler names a body type that is no record, so nothing declares these keys' names */
+    untyped: boolean;
     keys: string[];
     unresolved: string[];
     accepts: Set<string>;
@@ -891,11 +905,20 @@ describe("endpoints ↔ backend route parity", () => {
         const pattern = mostSpecific([...table.keys()], c.path) ?? "";
         const dto = table.get(pattern)?.get(c.verb);
         const reading = readBody(c.body);
-        const bindings = dto ? recordBindings(dto) : { accepts: new Set<string>(), twins: new Map<string, string[]>() };
+        // Three answers, not two: a record names the keys, a `Map<String, Object>` accepts any of
+        // them, and no `@RequestBody` at all means Jackson drops every one the caller sent. The
+        // middle one is a real shape -- `PATCH /interview/sessions` takes the patch whole and
+        // reads the fields it knows -- so it joins the written-down list rather than crashing the
+        // reader that walked into it.
+        const untyped = dto !== undefined && !recordIndex().has(dto);
+        const bindings = dto && !untyped
+          ? recordBindings(dto)
+          : { accepts: new Set<string>(), twins: new Map<string, string[]>() };
         return {
           site: c,
           pattern,
           dto,
+          untyped,
           keys: reading.keys,
           unresolved: reading.unresolved,
           accepts: bindings.accepts,
@@ -920,6 +943,7 @@ describe("endpoints ↔ backend route parity", () => {
     "POST /knowledge/notes": "forwards the note editor's `body`, which carries the whole note form",
     "POST /contacts": "same registry form, same contactBody() — blanks stay absent",
     "POST /interview/sessions": "forwards the setup form's `body`",
+    "PATCH /interview/sessions/{}": "the handler binds the patch as a `Map<String, Object>`, so no record names these keys -- and the session's own status is the only one the browser sends",
     "PATCH /users/me/profile": "forwards the profile editor's `patch`, one key per form field the user edited",
     "PATCH /contacts/{}": "the registry form posts its current values through contactBody(), which builds the record key by key — blanks stay absent",
     "PATCH /users/me": "forwards the account form's `patch`",
@@ -928,14 +952,14 @@ describe("endpoints ↔ backend route parity", () => {
 
   function unreadableKeys(): string[] {
     return readBodies()
-      .filter((r) => r.unresolved.length > 0 || !r.dto)
+      .filter((r) => r.unresolved.length > 0 || !r.dto || r.untyped)
       .map((r) => `${r.site.verb} ${r.pattern}`)
       .sort();
   }
 
   it("every key a request body sends is a field the handler binds", () => {
     const dropped = readBodies()
-      .filter((r) => !r.unresolved.length && r.dto)
+      .filter((r) => !r.unresolved.length && r.dto && !r.untyped)
       .map((r) => ({ row: r, bad: r.keys.filter((k) => !r.accepts.has(k)) }))
       .filter((x) => x.bad.length)
       .map((x) => label(x.row, `sends ${JSON.stringify(x.bad)}, which Jackson drops`));
@@ -944,7 +968,7 @@ describe("endpoints ↔ backend route parity", () => {
 
   it("a body never names one field twice, under its own name and under an alias", () => {
     const clashes = readBodies()
-      .filter((r) => !r.unresolved.length && r.dto)
+      .filter((r) => !r.unresolved.length && r.dto && !r.untyped)
       .map((r) => ({ row: r, both: twinClash(r.keys, r.twins) }))
       .filter((x) => x.both.length)
       .map((x) => label(x.row, `posts ${JSON.stringify(x.both)} — a record cannot bind two spellings`));
@@ -970,7 +994,7 @@ describe("endpoints ↔ backend route parity", () => {
     // floor the gate could go vacuous in one edit: an unreadable reader passes every assertion
     // above exactly as quietly as a scanner that found no requests at all.
     expect(rows.length).toBeGreaterThanOrEqual(24);
-    const checked = rows.filter((r) => !r.unresolved.length && r.dto);
+    const checked = rows.filter((r) => !r.unresolved.length && r.dto && !r.untyped);
     expect(checked.length).toBeGreaterThanOrEqual(15);
     // the AI actions are the flows whose bodies broke, so their presence is asserted, not assumed
     const paths = new Set(checked.map((r) => `${r.site.verb} ${r.pattern}`));
@@ -1129,8 +1153,8 @@ describe("endpoints ↔ backend route parity", () => {
     expect(new Set(handlers.map((h) => `${h.verb} ${h.pattern}`)).size).toBe(handlers.length);
     expect(handlers.flatMap((h) => h.unparsed)).toEqual([]);
     const bound = handlers.flatMap((h) => h.params);
-    expect(bound.length).toBe(53);
-    // 53 parameters in 24 distinct names, measured: the reader's whole answer rather than a spot
+    expect(bound.length).toBe(54);
+    // 54 parameters in 25 distinct names, measured: the reader's whole answer rather than a spot
     // check, so a signature shape it stops understanding shrinks this set instead of passing quiet
     // (#225 retired `limit` from `/activity/runs`, which now pages like every other list route;
     // 19.2 brought the name back for `GET /ingestion/runs` as a newest-N history, and 19.5 retired
@@ -1143,12 +1167,14 @@ describe("endpoints ↔ backend route parity", () => {
     // `intent` to the same reply list (48 -> 49); a card's rehearsal list adds `applicationId`
     // to `/interviews` (49 -> 50), and 49.4's chip counts bind `q` again on their own route
     // (50 -> 51); 49.5's unfiled switch binds `unfiled` on the reply list and on its intent
-    // counts (51 -> 53), a name this set did not have. The four latest names are in it now.)
+    // counts (51 -> 53), a name this set did not have; 64.2's notes list narrows to one tag, so
+    // `/knowledge/notes` binds `tag` beside its page/size pair (53 -> 54) -- another name this set
+    // did not have. The latest names are in it now.)
     expect(new Set(bound.map((p) => p.name))).toEqual(
       new Set([
         "agent", "applicationId", "company", "documentId", "file", "intent", "jobId", "kind",
         "kinds", "locale", "location", "maxSalary", "minSalary", "page", "q", "remote",
-        "resumeId", "size", "skills", "sort", "status", "title", "token", "unfiled",
+        "resumeId", "size", "skills", "sort", "status", "tag", "title", "token", "unfiled",
       ])
     );
     // seven of them spell the name Spring matches on inside the annotation, so the reader's attribute

@@ -119,10 +119,13 @@ WIRE = {
     "useCompanies": ("companies", "{ size: 20, ...(params ?? {}) }"),
     "useKnowledgeSources": ("knowledge", "{ size: 20, documentId, ...(params ?? {}) }"),
     "useKnowledgeNotes": ("knowledgeNotes", "{ size: 20, ...(params ?? {}) }"),
-    # 59.1 gave the hook an `enabled` flag the wire must not see, so the body splits the
-    # params and spreads only the rest; 62.1's runner is the third caller, asking for the
-    # card's siblings so a retry can read what the last completed rehearsal missed.
-    "useInterviewSessions": ("interviews", "{ size: 20, ...query }"),
+    # 59.1 gave the hook an `enabled` flag the wire must not see, and the endpoints gate is why the
+    # other three names are spelled rather than spread: `...query` is exactly the shape the reader
+    # that checks every key against the handler's signature cannot follow, and a parameter it stops
+    # seeing is a parameter Spring may quietly ignore (49.1 took the reply list off the same cliff).
+    # 62.1's runner is the third caller, asking for the card's siblings so a retry can read what the
+    # last completed rehearsal missed.
+    "useInterviewSessions": ("interviews", "{ size: params?.size ?? 20, page: params?.page, applicationId: params?.applicationId, }"),
     "useActivityRuns": ("activityRuns", "{ size: 30, ...(params ?? {}) }"),
     "useIngestionRuns": ("ingestionRuns", "{ size: 20, ...(params ?? {}) }"),
     "useConversations": ("conversations", "{ size: 20, ...(params ?? {}) }"),
