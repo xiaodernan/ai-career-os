@@ -4454,6 +4454,30 @@ the whole history (57.1); the report should carry the same sentence.
   no door. 3 service tests + 1 route assertion + 2 normalizer assertions + 1 panel test; the
   types census moved by the five lines the field brought with it.)
 
+- [x] **59.3** The rehearsal's own page says which attempt this is.
+
+  (The runner now carries the same sentence as the report -- "rehearsal 2 of 3 for this
+  application - best 84/100 so far" -- while the answer is being written. Both pages draw it
+  from one `PracticeLine` component over `cardPractice()`, so the copy and the floor ("absent
+  for a free rehearsal") cannot drift; the copy moved to `interviews.practice.*` now that two
+  screens speak it. 5 component tests.)
+
+## Epic 60 -- practice that becomes knowledge
+
+The report tells the reader what to study. That advice was the one part of a sitting that did
+not survive the tab: the next session is generated fresh, and the copilot has nothing to cite
+because the sentence never reached a row.
+
+- [x] **60.1** The report's study advice can become a note.
+
+  (`POST /knowledge/notes` already ingests what it saves, so a note is citable evidence rather
+  than a dead row. Each study item now offers *Keep as a note*: `studyNoteDraft()` folds the
+  topic, the reason and the resource into a `NoteRequest` body -- title capped at the endpoint's
+  200 characters, the topic repeated as the body when the item says nothing else -- and tags it
+  `interview` / `study` so the knowledge page can find it. The writer hook carries `tags` now;
+  the notes census records the report as the writer's second screen, with the reader still
+  belonging to the panel alone. 3 pure-function tests + 2 markup tests.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
