@@ -4423,8 +4423,10 @@ Every other list had already been through `LikePattern` or a JPQL `LOCATE`; this
   literal `%`, a literal `_`, a mistyped underscore that must not match, and the blank box that
   stays the browse); `test_the_companies_board_pages_its_own_window.py` and
   `test_every_windowed_query_orders_by_a_total_key.py` repin the query name and the order its
-  pages partition by. 5 contract tests, 2 IT cases (Docker-hosted; compiled here), 4 + 3
-  ai-service cases, and the whole ai-service suite at 2025 passed, 2 skipped.)
+  pages partition by. 5 contract tests, 3 service tests that run without Docker (the needle
+  arrives trimmed and lower-cased, a blank box stays the browse, and the searched page keeps the
+  one grouped count), 2 IT cases (Docker-hosted; compiled here), 4 + 3 ai-service cases, and the
+  whole ai-service suite at 2025 passed, 2 skipped.)
 
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
