@@ -226,7 +226,7 @@ was already written (the retry re-sends the stored letter as it was).
 | POST | `/jobs/{id}/tailor` | `{resumeVersionId?}` → tailored version + diff |
 | POST | `/jobs/{id}/tailored-version` | `{resumeVersionId, tailored, diff, plaintext}` → keeps a reviewed draft as a new version of that resume (201) |
 | POST | `/jobs/{id}/cover-letter` | `{resumeVersionId?, mode, tone, length, previous, goal}` |
-| GET | `/companies` | list (`?q=&page=&size=`), name ascending — the order the pages partition by; each row is a CompanyItem — profile fields plus openRoleCount |
+| GET | `/companies` | list (`?q=&page=&size=`), name ascending — the order the pages partition by; `q` is a case-insensitive substring of the name and its characters are literal (`%` and `_` included, 58.1), a blank box is the unfiltered browse; each row is a CompanyItem — profile fields plus openRoleCount |
 | GET | `/companies/{id}` | `{company, openRoles}` — the profile including culture, interviewProcess and sources (the three POST accepts and no read path used to carry), and the company's status='open' roles in the board's own row shape, best match first, capped at Paging.MAX_PAGE_SIZE while company.openRoleCount stays the real total. Scoped by id, not by the board's ?company= name facet. Company rows are maintained by the application (the inline company field on job create/import); there are no client-facing write endpoints |
 | POST | `/companies/brief` | `{company, top?}` → what the corpus says about one company: its roles, the skills its postings ask for, and the interview topics they name. A deterministic read — a company the corpus does not carry answers with no rows rather than a plausible summary |
 

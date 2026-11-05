@@ -26,7 +26,27 @@ public interface CompanyRepository extends JpaRepository<Company, UUID> {
      */
     Page<Company> findAllByOrderByNameAsc(Pageable pageable);
 
-    Page<Company> findByNameContainingIgnoreCaseOrderByNameAsc(String q, Pageable pageable);
+    /**
+     * The board's searched branch, and the reason it is not a derived query (58.1).
+     *
+     * <p>What a reader types into a search box is data, and the spelling this method replaces treated
+     * it as a pattern: {@code findByNameContainingIgnoreCaseOrderByNameAsc} wrapped the value in
+     * {@code %…%} without escaping it, so {@code ?q=%} answered the whole catalog, {@code ?q=a_b}
+     * matched a company named "axb", and a name that genuinely carries an underscore could not be
+     * asked for by its own characters. That is the failure {@code common/LikePattern} exists to stop,
+     * arriving on the one list that had never been through it.
+     *
+     * <p>{@code LOCATE} asks the containment question without a pattern language at all, which is how
+     * {@code InboundMailRepository.findPage} answers the same one; the needle arrives already trimmed
+     * and lower-cased from the service, and the order stays part of the query because a page is only a
+     * partition of this catalog if it is.
+     */
+    @Query("""
+            SELECT c FROM Company c
+             WHERE LOCATE(:needle, LOWER(c.name)) > 0
+             ORDER BY c.name ASC
+            """)
+    Page<Company> searchByName(@Param("needle") String needle, Pageable pageable);
 
     @Query("SELECT c.id, COUNT(j.id) FROM Company c LEFT JOIN Job j ON j.companyId = c.id "
             + "AND j.status = 'open' GROUP BY c.id")

@@ -24,7 +24,7 @@ import org.springframework.http.MediaType;
  * order is whichever one the database feels like returning (#227).
  *
  * <p>Both list branches carry their order now -- {@code findAllByOrderByNameAsc} for the browse
- * and {@code findByNameContainingIgnoreCaseOrderByNameAsc} for {@code ?q=} -- so this proves the
+ * and {@code searchByName} (a JPQL {@code LOCATE}, since 58.1) for {@code ?q=} -- so this proves the
  * property that ordering buys rather than the SQL that spells it: every page is a slice of one
  * alphabet, no company is served twice, and none falls between two pages. Companies are shared
  * catalog data, so the seven rows created here carry a token no other test class can collide

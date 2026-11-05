@@ -31,7 +31,9 @@ JAVA = ROOT / "backend" / "src" / "main" / "java"
 # method name -> the unique column its ordering ends in. Everything else must end in the id.
 UNIQUE_BY_METHOD = {
     "findAllByOrderByNameAsc": "name",
-    "findByNameContainingIgnoreCaseOrderByNameAsc": "name",
+    # 58.1: the searched branch left Spring Data's derived containment query for a JPQL LOCATE,
+    # so the name the map keys on is the method's, and its ORDER BY still ends in unique `name`.
+    "searchByName": "name",
 }
 
 # Windowed queries whose order still ties, with the reason each is still here. Empty: the

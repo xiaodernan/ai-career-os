@@ -4402,6 +4402,30 @@ has to be able to show what was rehearsed for it. The rehearsal list is the same
   which is what the runner and the report headers read. 1 service test + 1 mapper test + 1 page
   assertion, and the resources census reconciled with the three commits it had drifted from.)
 
+## Epic 58 -- A search box holds words, not patterns
+
+The last containment query the backend spelled as a Spring Data derived method was the company
+board's. A derived `...Containing...` wraps the caller's value in `%…%` itself and escapes nothing
+in it, so the reader's characters arrive at SQL as a pattern rather than as the word they typed.
+Every other list had already been through `LikePattern` or a JPQL `LOCATE`; this one had not.
+
+- [x] **58.1** The company board reads `?q=` as characters.
+
+  (`GET /companies?q=` handed the value to
+  `findByNameContainingIgnoreCaseOrderByNameAsc`, so `?q=%` answered the whole shared catalog,
+  `?q=under_s_ore` found a company named `under_score`, and a company whose name really carries an
+  underscore could not be asked for by its own characters. The searched branch is one JPQL
+  `searchByName` now, `LOCATE(:needle, LOWER(c.name)) > 0` -- the spelling
+  `InboundMailRepository.findPage` already used -- with the service trimming and lower-casing the
+  needle once per request, and the browse branch unchanged. `SearchNeedleContractTest` pins the
+  four needle owners as a population and refuses every derived containment declaration or
+  hand-wrapped `%` in the backend; `CompanyNeedleIT` proves the matching over real HTTP (a
+  literal `%`, a literal `_`, a mistyped underscore that must not match, and the blank box that
+  stays the browse); `test_the_companies_board_pages_its_own_window.py` and
+  `test_every_windowed_query_orders_by_a_total_key.py` repin the query name and the order its
+  pages partition by. 5 contract tests, 2 IT cases (Docker-hosted; compiled here), 4 + 3
+  ai-service cases, and the whole ai-service suite at 2025 passed, 2 skipped.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

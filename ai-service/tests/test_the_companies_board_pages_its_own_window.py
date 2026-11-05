@@ -22,10 +22,18 @@ The route side pins the clamp and the forwarding, and -- since #227 -- the order
 partition by, which this unit's first draft flagged and left open: `listCompanies` used to page
 `companies.findAll(pageable)` with no `OrderBy`, so two requests for the same page could answer
 different rows and a company could fall between two pages. Both branches order by name now
-(`findAllByOrderByNameAsc`, `findByNameContainingIgnoreCaseOrderByNameAsc`), a column the schema
-declares unique, and `CompanyOrderingIT` proves the property that order buys rather than the SQL
-that spells it. The flag was right that the fix belonged to the repository owner; it was wrong that
+(`findAllByOrderByNameAsc` for the browse, and since 58.1 a JPQL `LOCATE` for `?q=`), on a column the
+schema declares unique, and `CompanyOrderingIT` proves the property that order buys rather than the
+SQL that spells it. The flag was right that the fix belonged to the repository owner; it was wrong that
 it had to wait, so the note this gate carried as an open question is now a contract.
+
+The searched branch is the one this file kept pinning by name, and 58.1 is why the name it now pins is
+different: `findByNameContainingIgnoreCaseOrderByNameAsc` was Spring Data's derived containment query,
+which wraps the caller's value in `%…%` with nothing between the reader's characters and SQL's
+wildcards -- so `?q=%` answered the whole shared catalog and `?q=cn1 Under_S_ore` found a company named
+"cn1 Under_Score". Neither answer is empty and neither is an error; the board returned 200 the way it
+does today, which is why `CompanyNeedleIT` grades the matching and `SearchNeedleContractTest` grades
+the spelling across every file in the backend that reads a reader's words.
 """
 
 import re
@@ -190,17 +198,21 @@ def test_the_route_forwards_the_window_and_the_pager_restates_its_default():
     # Both list branches carry the order their pages partition by (#227). Without it the board
     # would still page, but its pages would partition whatever the database felt like returning:
     # a repeat, a gap, or an unsorted page. `CompanyOrderingIT` holds the behaviour over real
-    # HTTP; this holds the two method names that behaviour reads through.
+    # HTTP; this holds the two queries that behaviour reads through -- and since 58.1 the searched
+    # one is a JPQL LOCATE rather than a derived `...Containing...`, which is a name the reader
+    # types characters into. See `SearchNeedleContractTest` for the rule that keeps it that way.
     service = collapse(java("com/careeros/job/service/JobService.java"))
     assert "? companies.findAllByOrderByNameAsc(pageable)" in service, (
         f"the browse branch no longer orders by name, so page N is not the same slice twice: "
         f"{service[service.index('var result ='):][:180]}")
-    assert ": companies.findByNameContainingIgnoreCaseOrderByNameAsc(q, pageable)" in service, (
-        f"the searched branch no longer orders by name, so a ?q= page is not the slice it was: "
-        f"{service[service.index('var result ='):][:180]}")
+    assert ": companies.searchByName(needle, pageable)" in service, (
+        f"the searched branch no longer asks the needle-shaped query, so a ?q= page is not the "
+        f"slice it was: {service[service.index('var result ='):][:180]}")
     repo = java("com/careeros/job/repository/CompanyRepository.java")
     assert "Page<Company> findAllByOrderByNameAsc(Pageable pageable);" in repo, (
         "the repository no longer declares the ordered browse query the service calls")
-    assert ("Page<Company> findByNameContainingIgnoreCaseOrderByNameAsc(String q, Pageable pageable);"
-            in repo), (
-        "the repository no longer declares the ordered search query the service calls")
+    assert "LOCATE(:needle, LOWER(c.name)) > 0" in repo, (
+        "the searched branch left LOCATE for a bound LIKE pattern, which reads the reader's "
+        "percent sign and underscore as wildcards instead of as their characters")
+    assert 'Page<Company> searchByName(@Param("needle") String needle, Pageable pageable);' in repo, (
+        "the repository no longer declares the needle query the service calls")

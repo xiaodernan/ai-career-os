@@ -35,6 +35,7 @@ import com.careeros.resume.entity.Resume;
 import com.careeros.resume.service.ResumeService;
 import com.careeros.search.service.QueryEmbeddingService;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -384,9 +385,15 @@ public class JobService {
     @Transactional(readOnly = true)
     public PageDTO<CompanyItem> listCompanies(String q, int page, int size) {
         var pageable = Paging.of(page, size).pageable();
-        var result = (q == null || q.isBlank())
+        // The needle is trimmed and lowered here rather than in SQL on every row, because the reader's
+        // words are one value per request. A blank box stays no filter rather than an empty room: it
+        // takes the browse branch, so the searched branch never has to decide what an empty needle
+        // means. 58.1: the searched branch reads these characters as characters -- see
+        // CompanyRepository.searchByName for what the previous spelling did with a percent sign.
+        String needle = q == null ? "" : q.trim().toLowerCase(Locale.ROOT);
+        var result = needle.isEmpty()
                 ? companies.findAllByOrderByNameAsc(pageable)
-                : companies.findByNameContainingIgnoreCaseOrderByNameAsc(q, pageable);
+                : companies.searchByName(needle, pageable);
         Map<UUID, Long> counts = new java.util.HashMap<>();
         for (Object[] row : companies.openRoleCounts()) {
             counts.put((UUID) row[0], ((Number) row[1]).longValue());
