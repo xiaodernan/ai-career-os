@@ -1144,8 +1144,17 @@
     整块看板。endpoints census 从 54 条绑参改到 55，API.md 那一行列出这个框。顺带修掉
     `ApiDocParamContractTest` 从 64.2 就带着的误读：`interview`/`study`/`answer` 之间的斜杠被当成一条路径
     `/`，现在一段必须带上字符，同一行里两条真路径改成断言仍然读得到。
-  - **70.2** 管道看板问出自己的问题（待做）：URL 带 `?q=`，`PAGE_DEFAULTS` 里要声明 `q`，草稿与提交分开，
-    两种空态各有各的出路，分页器数的是匹配数而不是整块看板。
+  - **70.2** 管道看板问出自己的问题（已完成 2026-11-06）：搜索框放在表头、和「添加」并排，两个动词都还在。
+    词走 `?q=` 交给服务端筛，而不是只过滤手里这一页——这样分页器数的是匹配数：141 条匹配、每页 100 条就是
+    这个词的两页，旁边的数字来自服务端的 total。`q` 同时写进 `PAGE_DEFAULTS` 和 `useUrlState` 的类型字面量，
+    因为水合是照着 defaults 的键走的：defaults 里漏一个键，贴进来的链接就恢复不了它；只带 `application` 的
+    链接不管有没有词都照样打开那张卡。草稿框和已提交的话分开存，理由和看板与公司页不同：卡片是要拖的东西，
+    半个词就重新请求会把手下正在写的那一页换掉。两种空态各有各的出路（49.2）：没开始的流水线指向建卡表单，
+    满是你输入的这个词没有的卡就指向那个框。新增 5 个 key × 2 语言；`applications/page.test.tsx` 是这块屏的
+    第一个屏幕测试（6 条，走真的 locale provider、真的 kanban、真的分页器）。两道门跟着改：`WIRE`/`SITES`
+    的 `useApplications` 行现在带上 `q`，被这个文件和 `test_applications_deep_link_reaches_any_page.py` 同时
+    钉住的 `useUrlState` 字面量加上第三个键。endpoints census 不动——`q` 从 70.1 起就是绑好的参数，这一条只是
+    给它配上读者。
   - **70.3** 联系人看板也答一个词（待做）：同一套 needle 纪律走 `GET /contacts?q=` 和 `/networking`。
 
 ## 开发协议

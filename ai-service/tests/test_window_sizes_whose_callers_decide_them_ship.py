@@ -115,7 +115,9 @@ WIRE = {
     "useSavedJobs": ("savedJobs", None),
     # 5080e67 spelled the board's query out (status and jobId beside page and size) when the
     # drawer's delete joined this gate; the hook still defaults the window to the route's 50.
-    "useApplications": ("applications", "{ size: params?.size ?? 50, page: params?.page, status: params?.status, jobId: params?.jobId, }"),
+    # 70.2 adds the board's own word: spelled like the other four, because a spread is a key this
+    # gate cannot see, and a key nobody reads is one the handler may quietly ignore (49.1).
+    "useApplications": ("applications", "{ size: params?.size ?? 50, page: params?.page, status: params?.status, jobId: params?.jobId, q: params?.q, }"),
     "useCompanies": ("companies", "{ size: 20, ...(params ?? {}) }"),
     "useKnowledgeSources": ("knowledge", "{ size: 20, documentId, ...(params ?? {}) }"),
     "useKnowledgeNotes": ("knowledgeNotes", "{ size: 20, ...(params ?? {}) }"),
@@ -154,7 +156,11 @@ SITES = {
                  'tab === "discover" ? filters : { size: filters.size, page: filters.page }')],
     "useSavedJobs": [("app/(app)/jobs/page.tsx", "")],
     "useApplications": [("app/(app)/applications/page.tsx",
-                         "{ page: state.page, size: PAGE_SIZE }"),
+                         # 70.2 gives the pipeline board the question its route has answered since
+                         # 58.1's rule reached it (70.1): the words ride beside the window, so the
+                         # pager counts the matches rather than the pipeline and page two of a word
+                         # is the second page of that word.
+                         "{ page: state.page, size: PAGE_SIZE, q: state.q }"),
                         # 47.3's job page asks the pipeline whether this posting is already on the
                         # board, so it names a window of one row it will never page through.
                         ("app/(app)/jobs/[id]/page.tsx",
@@ -576,8 +582,8 @@ def test_the_number_the_server_would_use_if_the_app_sent_none():
 def test_the_applications_board_asks_for_exactly_the_ceiling_and_pages_the_rest():
     """Case 7: 100 rows a request, and since #218 a pager that reaches the rows past the window."""
     sites = call_sites("useApplications")
-    assert ("app/(app)/applications/page.tsx", "{ page: state.page, size: PAGE_SIZE }") in sites, \
-        f"the board no longer asks its own window: {sites}"
+    assert ("app/(app)/applications/page.tsx", "{ page: state.page, size: PAGE_SIZE, q: state.q }") in sites, \
+        f"the board no longer asks its own window and its own word: {sites}"
     # 37.4's replies page spends the same hook for a picker, not a board: it asks the ceiling
     # once so every card a waiting letter could answer is in the menu, and renders no pager.
     assert ("app/(app)/replies/page.tsx", "{ size: 100 }") in sites, \
@@ -586,8 +592,12 @@ def test_the_applications_board_asks_for_exactly_the_ceiling_and_pages_the_rest(
     pinned = re.search(r"const PAGE_SIZE = (\d+);", apps)
     assert pinned and int(pinned.group(1)) == MAX_PAGE_SIZE, \
         f"the window the board asks for is {pinned and pinned.group(1)}, not the ceiling's own number"
-    assert "useUrlState<{ application?: string; page: number }>(" in collapse(apps), \
-        "the page index no longer lives in the URL, so a shared board link always opens page 0"
+    # 70.2: the words join the index in the URL, and `q` is declared in the defaults the same gate
+    # requires of the replies board (49.1) -- a key the defaults omit is a key a pasted link cannot
+    # restore, because hydration walks the defaults rather than the query string.
+    assert "useUrlState<{ application?: string; page: number; q?: string }>(" in collapse(apps), \
+        "the page index and the board's own word no longer live in the URL, so a shared board link " \
+        "always opens page 0 with no question in the box"
     assert re.search(r'numericKeys: \["page"\]', apps), \
         "page is no longer the URL-bound integer the board adopts back"
     assert "applications.data?.items ?? []" in collapse(apps), collapse(apps)[:200]

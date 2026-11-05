@@ -344,6 +344,12 @@ export function useApplications(params?: {
    * "already in the pipeline" -- a title search would have to walk pages the posting is not on.
    */
   jobId?: string;
+  /**
+   * The board's own question (70.2): one word the card spells in its title, company or notes.
+   * The server answers it as characters, so the pager below counts the matches rather than the
+   * pipeline and page two of a word is the second page of that word.
+   */
+  q?: string;
 }) {
   return useQuery({
     queryKey: ["applications", params],
@@ -354,6 +360,7 @@ export function useApplications(params?: {
           page: params?.page,
           status: params?.status,
           jobId: params?.jobId,
+          q: params?.q,
         }),
         normalizeApplication
       ),

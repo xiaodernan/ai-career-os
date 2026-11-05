@@ -2392,6 +2392,12 @@ export const translations = {
       addApplication: "Add application",
       add: "Add",
       paginationLabel: "applications",
+      searchPlaceholder: "Search applications",
+      searchLabel: "Search the pipeline by role, company or notes",
+      clearSearch: "Clear search",
+      noMatch: "No application matches “{query}”",
+      noMatchDescription:
+        "Try a shorter word, or clear the search to see every card in the pipeline.",
       dialog: {
         trackTitle: "Track an application",
         createDescription:
@@ -5259,6 +5265,11 @@ export const translations = {
       addApplication: "添加申请",
       add: "添加",
       paginationLabel: "申请",
+      searchPlaceholder: "搜索申请",
+      searchLabel: "按职位名、公司或备注搜索申请",
+      clearSearch: "清除搜索",
+      noMatch: "没有与“{query}”匹配的申请",
+      noMatchDescription: "换个短一点的词，或者清除搜索，看流水线里的全部卡片。",
       dialog: {
         trackTitle: "记录一个申请",
         createDescription: "在这里添加的任何内容都会从你选择的阶段开始，不需要关联职位。",

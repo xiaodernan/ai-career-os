@@ -88,7 +88,10 @@ def test_the_deep_link_reads_the_page_in_hand_first_and_fetches_the_rest():
         f"the attention row no longer writes the {LINK_PARAM!r} param this file reads")
 
     page = read(APPS_PAGE)
-    assert "useUrlState<{ application?: string; page: number }>(" in page, page
+    # 70.2 gives the same URL state a third key, so the deep link and the board's own word travel
+    # side by side rather than over each other: a link that names a card opens it whether or not the
+    # address also carries a `q`, because the param is declared in the defaults `useUrlState` walks.
+    assert "useUrlState<{ application?: string; page: number; q?: string }>(" in page, page
     assert "const deepLinkId = state.application;" in page, page
     assert re.search(r"const inPage = deepLinkId\s*\n\s*\? applications\.data\?\.items\.find"
                      r"\(\(a\) => a\.id === deepLinkId\)\s*\n\s*: undefined;", page), (

@@ -4728,7 +4728,28 @@ on two other things, so its needle cannot arrive as one more branch of the same 
   `/`, so a documented segment now has to carry a character and the same row's two real paths are
   asserted to still answer.)
 
-- [ ] **70.2** The pipeline board asks its own question.
+- [x] **70.2** The pipeline board asks its own question.
+
+  (The box joins the header beside the Add button, so the board keeps both verbs: a reader who is
+  looking for a card and a reader who is starting one are served by the same row of controls. The
+  words ride `?q=` rather than filtering the rows in hand, which is what makes the pager honest about
+  a narrowed board -- 141 matches over a hundred-row window is two pages of *that word*, and the
+  count beside the pager is the server's total rather than this page's length. `q` is declared in
+  `PAGE_DEFAULTS` and in the `useUrlState` type literal, because hydration walks the defaults: a key
+  left out of them is a key a pasted link cannot restore, and a link that names a card still opens
+  it whether or not the address carries a word. The draft box and the asked words are kept apart for
+  the reason this board is different from the company one: a card is a thing the reader drags, so a
+  keystroke must not refetch the page a pending move is about to write into. The two empties split
+  the way 49.2 taught -- a pipeline nobody has started points at the create form, a pipeline full of
+  cards that do not spell this word points at the box. 5 new keys x 2 locales; `frontend/src/app/
+  (app)/applications/page.test.tsx` is this board's first screen test (6 cases over the real locale
+  provider, the real kanban and the real pager: the params object, the box restored from the URL,
+  which empty is which in both languages, and the 201-241 window of a 241-match search). Two gates
+  moved with it: `WIRE`/`SITES` rows for `useApplications` now name `q`, and the `useUrlState`
+  literal this file and `test_applications_deep_link_reaches_any_page.py` both pin gained its third
+  key. The endpoints census did not move -- `q` on `/applications` has been a bound parameter since
+  70.1, and this task only gives it its reader.)
+
 - [ ] **70.3** The contacts board answers a word too.
 
 ## Definition of Done (per task)
