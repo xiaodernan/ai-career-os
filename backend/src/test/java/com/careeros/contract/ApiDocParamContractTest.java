@@ -143,6 +143,11 @@ class ApiDocParamContractTest {
         assertThat(errorCodes()).as("the error-code vocabulary the prose rule consults was read")
                 .contains("MAIL_LINK_INVALID", "LOGIN_SESSION_NOT_FOUND");
         assertThat(exampleQueries()).hasSizeGreaterThanOrEqualTo(2);
+        // The path scanner reads a chained list of quoted words as words, never as a route wedged
+        // between them: `/` was the glue in `interview`/`study`, and the same row's two real paths
+        // still have to answer, so the fix cannot be a scanner that simply reads less.
+        assertThat(documentedPublicPaths()).as("the slash between two quoted words is not a path")
+                .doesNotContain("/").contains("/knowledge/notes", "/knowledge/notes/{}");
         assertThat(Files.readString(DOC)).contains("## 2. Public API");
     }
 
@@ -766,7 +771,16 @@ class ApiDocParamContractTest {
                 .containsExactlyInAnyOrderElementsOf(chat.components());
     }
 
-    /** Every path the public table names in backticks, folded the way the routes are. */
+    /**
+     * Every path the public table names in backticks, folded the way the routes are.
+     *
+     * <p>Each segment has to carry a character. The table chains quoted words with a slash to save
+     * commas -- {@code `interview`/`study`/`answer`} -- and a pattern that let a segment be empty
+     * read the glue between two quoted words as a documented path of its own: the row invented a
+     * route {@code /}, which no line of the table claims and no controller serves. That ghost is
+     * what the "every documented path is served" rule reported, and a contract gate that accuses a
+     * row of something the row never says is a gate a reader learns to ignore.
+     */
     private static Set<String> documentedPublicPaths() {
         Set<String> out = new TreeSet<>();
         boolean inPublicApi = false;
@@ -778,7 +792,8 @@ class ApiDocParamContractTest {
             if (!inPublicApi || !line.startsWith("|")) {
                 continue;
             }
-            Matcher path = Pattern.compile("`(/[A-Za-z0-9_/{}.-]*)`").matcher(line);
+            Matcher path = Pattern.compile("`(/[A-Za-z0-9_{}.-]+(?:/[A-Za-z0-9_{}.-]*)*)`")
+                    .matcher(line);
             while (path.find()) {
                 out.add(documentedForm(path.group(1)));
             }

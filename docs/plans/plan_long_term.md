@@ -1130,6 +1130,24 @@
     报告的 `applicationId`，自由演练时把 `jobTitle` 当作 `positionTitle`，并沿用报告自己的 mode。按钮带着创建
     的进行中状态，成功后落在新那场的 id 上。2 条闸门测试。
 
+- **Epic 70 — 看板答得出一个词**（本段起）
+  - 盘点结论（2026-11-06）：Epic 58 只修了本来就有搜索框的那一块看板，剩下的看板是没有问题可问的——
+    投递管道、联系人、演练列表。管道先做，因为它是读者一天里看得最多的看板，而且它的路由本来就在按
+    `status` 和 `jobId` 筛，所以它的关键词不能再按老形状多开一条分支。
+  - **70.1** `GET /applications` 按字符答一个词（已完成 2026-11-06）：四条只差筛选条件的派生方法合成一条
+    `BOARD_WHERE`——`(:status = '' OR ...)` 与 `(:jobId IS NULL OR ...)`，空值是「不筛」而不是「筛空列」；
+    词用 `LOCATE(:needle, LOWER(col)) > 0` 查卡片自己的三列（title、company、notes，后两列 `COALESCE`，
+    没有备注的卡片也还是一张卡片）。留两条读法对应两个问题：整块看板按更新时间倒序，一列按读者自己排的
+    `position`。service 每请求 trim 加小写一次，controller 绑 `?q=`。`ApplicationRepository` 是 needle 名单
+    里的第五个。新增 2 条、改写 3 条 service 用例，`ApplicationNeedleIT` 3 条走真的 Postgres：字面 `%`、
+    字面 `_`、打错的 `Under_S_ore` 必须什么都找不到、框能读到公司与备注而 `status` 仍在收窄、空格框等于
+    整块看板。endpoints census 从 54 条绑参改到 55，API.md 那一行列出这个框。顺带修掉
+    `ApiDocParamContractTest` 从 64.2 就带着的误读：`interview`/`study`/`answer` 之间的斜杠被当成一条路径
+    `/`，现在一段必须带上字符，同一行里两条真路径改成断言仍然读得到。
+  - **70.2** 管道看板问出自己的问题（待做）：URL 带 `?q=`，`PAGE_DEFAULTS` 里要声明 `q`，草稿与提交分开，
+    两种空态各有各的出路，分页器数的是匹配数而不是整块看板。
+  - **70.3** 联系人看板也答一个词（待做）：同一套 needle 纪律走 `GET /contacts?q=` 和 `/networking`。
+
 ## 开发协议
 （每个任务）
 

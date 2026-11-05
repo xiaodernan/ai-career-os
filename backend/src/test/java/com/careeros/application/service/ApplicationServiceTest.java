@@ -177,13 +177,13 @@ class ApplicationServiceTest {
     void listNarrowsToThePostingWhenAJobIdIsGiven() {
         UUID jobId = UUID.randomUUID();
         Pageable pageable = PageRequest.of(0, 1);
-        when(applications.findByUserIdAndJobIdOrderByUpdatedAtDescIdAsc(userId, jobId, pageable))
+        when(applications.findPage(userId, "", jobId, "", pageable))
                 .thenReturn(Page.empty(pageable));
 
-        var page = service.list(userId, null, jobId, pageable);
+        var page = service.list(userId, null, jobId, null, pageable);
 
         assertThat(page.items()).isEmpty();
-        verify(applications).findByUserIdAndJobIdOrderByUpdatedAtDescIdAsc(userId, jobId, pageable);
+        verify(applications).findPage(userId, "", jobId, "", pageable);
         verify(applications, never()).findByUserIdOrderByUpdatedAtDescIdAsc(any(), any());
     }
 
@@ -192,17 +192,45 @@ class ApplicationServiceTest {
     void listKeepsTheStatusWhenItComesWithAPosting() {
         UUID jobId = UUID.randomUUID();
         Pageable pageable = PageRequest.of(0, 1);
-        when(applications.findByUserIdAndJobIdAndStatusOrderByPositionAscIdAsc(
-                        userId, jobId, "applied", pageable))
+        when(applications.findColumnPage(userId, "applied", jobId, "", pageable))
                 .thenReturn(Page.empty(pageable));
 
-        var page = service.list(userId, "applied", jobId, pageable);
+        var page = service.list(userId, "applied", jobId, null, pageable);
 
         assertThat(page.items()).isEmpty();
-        verify(applications).findByUserIdAndJobIdAndStatusOrderByPositionAscIdAsc(
-                userId, jobId, "applied", pageable);
-        verify(applications, never()).findByUserIdAndJobIdOrderByUpdatedAtDescIdAsc(
-                any(), any(), any());
+        verify(applications).findColumnPage(userId, "applied", jobId, "", pageable);
+        verify(applications, never()).findPage(any(), any(), any(), any(), any());
+    }
+
+    /**
+     * 70.1: the reader's word is data, so it is normalised once per request rather than per row, and
+     * SQL never sees the spaces the box kept or the case the keyboard was in.
+     */
+    @Test
+    void theNeedleArrivesTrimmedAndLowerCase() {
+        Pageable pageable = PageRequest.of(0, 50);
+        when(applications.findPage(userId, "", null, "acme_data", pageable))
+                .thenReturn(Page.empty(pageable));
+
+        service.list(userId, null, null, "  AcME_DaTa ", pageable);
+
+        verify(applications).findPage(userId, "", null, "acme_data", pageable);
+    }
+
+    /**
+     * A blank box is the board itself, not an empty room: 58.1's company branch takes a different
+     * query, but this route has filters beside the box that must keep applying either way, so the
+     * emptiness travels as the query's own escape value and the column stays narrowed.
+     */
+    @Test
+    void aBlankBoxIsNoFilterRatherThanAnEmptyBoard() {
+        Pageable pageable = PageRequest.of(0, 50);
+        when(applications.findColumnPage(userId, "interview", null, "", pageable))
+                .thenReturn(Page.empty(pageable));
+
+        service.list(userId, "interview", null, "   ", pageable);
+
+        verify(applications).findColumnPage(userId, "interview", null, "", pageable);
     }
 
     /** A record so the grouped-count projection has something to answer with. */
@@ -221,12 +249,12 @@ class ApplicationServiceTest {
         Application without = mock(Application.class);
         when(withLetters.getId()).thenReturn(appId);
         when(without.getId()).thenReturn(otherId);
-        when(applications.findByUserIdOrderByUpdatedAtDescIdAsc(userId, PageRequest.of(0, 50)))
+        when(applications.findPage(userId, "", null, "", PageRequest.of(0, 50)))
                 .thenReturn(new PageImpl<>(List.of(withLetters, without), PageRequest.of(0, 50), 2));
         when(letters.countByUserAndApplicationIds(userId, List.of(appId, otherId)))
                 .thenReturn(List.of(new Total(appId, 4)));
 
-        var page = service.list(userId, null, null, PageRequest.of(0, 50));
+        var page = service.list(userId, null, null, null, PageRequest.of(0, 50));
 
         assertThat(page.items()).extracting(ApplicationItem::letters).containsExactly(4, 0);
         verify(letters).countByUserAndApplicationIds(userId, List.of(appId, otherId));

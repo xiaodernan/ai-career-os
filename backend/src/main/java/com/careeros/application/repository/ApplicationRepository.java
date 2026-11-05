@@ -14,10 +14,53 @@ import org.springframework.data.repository.query.Param;
 
 public interface ApplicationRepository extends JpaRepository<Application, UUID> {
 
+    /**
+     * The card's own words, in the one spelling a reader's characters survive (70.1).
+     *
+     * <p>The board's list used to be four derived methods that differed only by which filter happened
+     * to be set, and a fifth filter would have meant eight. A reader's word is not a filter of that
+     * kind either: like the company board (58.1) and the reply inbox (49.1), the needle arrives already
+     * trimmed and lower-cased from the service and is asked with {@code LOCATE}, which has no pattern
+     * language to misunderstand a {@code %} or an underscore with. The three nullable columns are
+     * {@code COALESCE}d because a card with no note is still a card the reader may be looking for.
+     */
+    String BOARD_WHERE = """
+             WHERE a.userId = :userId
+               AND (:status = '' OR a.status = :status)
+               AND (:jobId IS NULL OR a.jobId = :jobId)
+               AND (:needle = ''
+                    OR LOCATE(:needle, LOWER(a.title)) > 0
+                    OR LOCATE(:needle, LOWER(COALESCE(a.companyName, ''))) > 0
+                    OR LOCATE(:needle, LOWER(COALESCE(a.notes, ''))) > 0)
+            """;
+
     Optional<Application> findByIdAndUserId(UUID id, UUID userId);
 
-    Page<Application> findByUserIdAndStatusOrderByPositionAscIdAsc(UUID userId, String status, Pageable pageable);
+    /**
+     * The board's own read, and the reason it is not a derived query.
+     *
+     * <p>The order is part of the question: a page is only a partition of this pipeline if two requests
+     * for the same window answer the same rows, so {@code id} breaks every tie the timestamp leaves.
+     */
+    @Query("SELECT a FROM Application a" + BOARD_WHERE + " ORDER BY a.updatedAt DESC, a.id ASC")
+    Page<Application> findPage(@Param("userId") UUID userId, @Param("status") String status,
+            @Param("jobId") UUID jobId, @Param("needle") String needle, Pageable pageable);
 
+    /**
+     * One column of the board, in the order the reader arranged it (70.1).
+     *
+     * <p>{@code status} is a requirement here rather than a choice: asking for a column by name is what
+     * makes {@code position} a total order to page over, and the same needle narrows inside it.
+     */
+    @Query("SELECT a FROM Application a" + BOARD_WHERE + " ORDER BY a.position ASC, a.id ASC")
+    Page<Application> findColumnPage(@Param("userId") UUID userId, @Param("status") String status,
+            @Param("jobId") UUID jobId, @Param("needle") String needle, Pageable pageable);
+
+    /**
+     * The whole pipeline, newest first, with nothing narrowed away. The board asks its filters through
+     * {@link #findPage}; this one belongs to the readers that take every row they have -- the weekly
+     * letter's funnel and the bundle's `applications` section.
+     */
     Page<Application> findByUserIdOrderByUpdatedAtDescIdAsc(UUID userId, Pageable pageable);
 
     List<Application> findByUserIdAndJobId(UUID userId, UUID jobId);
@@ -27,13 +70,6 @@ public interface ApplicationRepository extends JpaRepository<Application, UUID> 
      * page, so the stage badge costs the list one query rather than one per row.
      */
     List<Application> findByUserIdAndIdIn(UUID userId, Collection<UUID> ids);
-
-    Page<Application> findByUserIdAndJobIdOrderByUpdatedAtDescIdAsc(UUID userId, UUID jobId,
-                                                                   Pageable pageable);
-
-    Page<Application> findByUserIdAndJobIdAndStatusOrderByPositionAscIdAsc(UUID userId, UUID jobId,
-                                                                           String status,
-                                                                           Pageable pageable);
 
     /**
      * The cards a reply's employer names (roadmap 37.3), case aside and nothing else: a match

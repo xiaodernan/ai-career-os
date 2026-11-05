@@ -652,7 +652,7 @@ strings, and `lastTouchAt` is the user's claim about when contact last happened.
 
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/applications` | board (`?status=&jobId=&page=&size=`); `jobId` narrows to one posting, so a job page can ask whether it is already in the pipeline; every row carries letters, its cover-letter total, read for the whole page in one grouped query |
+| GET | `/applications` | board (`?status=&jobId=&q=&page=&size=`); `jobId` narrows to one posting, so a job page can ask whether it is already in the pipeline; `q` is a case-insensitive substring of a card's title, company and notes whose characters are literal (`%` and `_` included, 70.1) — spaces alone are no narrowing at all; every row carries letters, its cover-letter total, read for the whole page in one grouped query |
 | POST | `/applications` | create |
 | GET | `/applications/{id}` | detail |
 | PATCH | `/applications/{id}` | `{status, position, note, reminderAt, clearReminderAt, offerCompensation, rejectionReason}` — kanban drag & drop; `reminder_at` / `clear_reminder_at` are the accepted aliases, `note` (singular) is the writable one, a null component means "leave it alone" (so removing a reminder travels as `clearReminderAt: true`), and the outcome pair records the compensation on an offer or the reason on a rejection |

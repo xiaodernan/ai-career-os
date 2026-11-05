@@ -21,6 +21,7 @@ import java.time.OffsetDateTime;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -54,21 +55,24 @@ public class ApplicationService {
     }
 
     @Transactional(readOnly = true)
-    public PageDTO<ApplicationItem> list(UUID userId, String status, UUID jobId, Pageable pageable) {
+    public PageDTO<ApplicationItem> list(UUID userId, String status, UUID jobId, String q,
+                                         Pageable pageable) {
         // `jobId` is the reading side of "did I already apply to this posting": the job page asks
         // one posting's rows and opens the newest, instead of scanning pages the way a title
         // search would have to. A status still narrows the same posting when both are given.
-        boolean hasStatus = status != null && !status.isBlank();
-        var page = jobId != null
-                ? (hasStatus
-                        ? applications.findByUserIdAndJobIdAndStatusOrderByPositionAscIdAsc(
-                                userId, jobId, status, pageable)
-                        : applications.findByUserIdAndJobIdOrderByUpdatedAtDescIdAsc(
-                                userId, jobId, pageable))
-                : (hasStatus
-                        ? applications.findByUserIdAndStatusOrderByPositionAscIdAsc(
-                                userId, status, pageable)
-                        : applications.findByUserIdOrderByUpdatedAtDescIdAsc(userId, pageable));
+        //
+        // The needle is the board's own question (70.1), and it is trimmed and lower-cased here rather
+        // than per row because the reader's words are one value per request. Unlike the company board,
+        // this route has filters beside the box that must keep applying to the same window, so a blank
+        // box is the empty-string escape inside the query rather than a second branch -- one question,
+        // one answer, whatever else the address carries.
+        String needle = q == null ? "" : q.trim().toLowerCase(Locale.ROOT);
+        String column = status == null || status.isBlank() ? "" : status.trim();
+        // Two orders, because the board and a column ask different questions: the whole pipeline is read
+        // newest-first, while a column is read in the order the reader arranged its cards.
+        var page = column.isEmpty()
+                ? applications.findPage(userId, column, jobId, needle, pageable)
+                : applications.findColumnPage(userId, column, jobId, needle, pageable);
         // The card's fourth artifact is a count (53.1), and the board must not spend one request
         // per card to learn it: one grouped read answers the whole page, and an application with
         // no letters is simply absent from the map.

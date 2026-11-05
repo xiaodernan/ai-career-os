@@ -32,9 +32,10 @@ import org.junit.jupiter.api.Test;
  * works. Only the shape of the binding distinguishes a search from a pattern.
  *
  * <p>The rules are global on purpose (no file may derive a containment query, no wildcard may be
- * hand-wrapped), and the roster of needle owners is pinned beside them so a fifth list that picks up a
+ * hand-wrapped), and the roster of needle owners is pinned beside them so a list that picks up a
  * {@code q=} has to be named here before it can ship -- where "named" means the other three tests then
- * grade it.
+ * grade it. 70.1 is the fifth owner: the pipeline board's word arrives on the same route that already
+ * carried {@code status} and {@code jobId}, so all three are one query rather than eight.
  */
 class SearchNeedleContractTest {
 
@@ -45,7 +46,8 @@ class SearchNeedleContractTest {
             "com/careeros/job/repository/JobSearchRepository.java",
             "com/careeros/job/repository/CompanyRepository.java",
             "com/careeros/search/repository/SearchRepository.java",
-            "com/careeros/inbound/repository/InboundMailRepository.java");
+            "com/careeros/inbound/repository/InboundMailRepository.java",
+            "com/careeros/application/repository/ApplicationRepository.java");
 
     /** {@code setParameter("companyLike", ...)} -- the site where a reader's value becomes a pattern. */
     private static final Pattern LIKE_BINDING =

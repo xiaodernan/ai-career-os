@@ -4696,6 +4696,41 @@ the reader in a circle.
   was free practice, and the report's own mode. The button carries the create's
   pending state and lands on the new sitting's id. 2 gate tests.)
 
+## Epic 70 -- the boards answer a word
+
+Epic 58 stopped a search box from reading the reader's characters as SQL wildcards, and it did that
+for the one board that already had a box. What the inventory left behind is a list of boards with no
+question to ask: the pipeline, the contacts, the rehearsals. The pipeline goes first because it is
+the board the reader owns most of their day -- and because it is the one route that already filters
+on two other things, so its needle cannot arrive as one more branch of the same shape.
+
+- [x] **70.1** `GET /applications` answers a word, as characters.
+
+  (The list was four derived methods that differed only by which filter happened to be set --
+  status, jobId, both, neither -- and a fifth filter would have made eight. One `BOARD_WHERE` now
+  carries `(:status = '' OR a.status = :status)` and `(:jobId IS NULL OR a.jobId = :jobId)`, so a
+  blank value narrows nothing instead of asking for rows whose column is empty, and the word is
+  asked with `LOCATE(:needle, LOWER(col)) > 0` over the card's own three columns: title, company and
+  notes, the last two `COALESCE`d because a card with no note is still a card. Two reads stay,
+  because two questions stay -- `findPage` newest-first for the board, `findColumnPage` in the order
+  the reader arranged a column. The service trims and lower-cases the needle once per request and
+  the controller binds `?q=`. `ApplicationRepository` is the fifth name in
+  `SearchNeedleContractTest`'s needle roster. 2 new and 3 retargeted service cases (the posting
+  alone, the posting beside a status, the needle arriving trimmed and lower-cased, a box of spaces
+  that is no filter, the grouped letter count over the new read) and 3 cases in
+  `ApplicationNeedleIT`: a literal `%`, a literal `_`, a mistyped `Under_S_ore` that must find
+  nothing, the box reaching company and notes while `status` keeps narrowing, and an empty or
+  all-spaces box that stays the whole board -- all green against the real Postgres, which is also
+  where the `:jobId IS NULL` comparison and the shared `WHERE` fragment were proven to boot. The
+  endpoints census repins 54 -> 55 bound parameters and API.md's `/applications` row names the box.
+  `ApiDocParamContractTest` lost a scanner over-read it had carried since 64.2: a row that chains
+  quoted words with a slash -- `interview`/`study`/`answer` -- was read as documenting a path of
+  `/`, so a documented segment now has to carry a character and the same row's two real paths are
+  asserted to still answer.)
+
+- [ ] **70.2** The pipeline board asks its own question.
+- [ ] **70.3** The contacts board answers a word too.
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
