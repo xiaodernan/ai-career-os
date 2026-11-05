@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Users } from "lucide-react";
+import { Search, Users } from "lucide-react";
 import { ModuleView } from "@/components/common/module-view";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +25,7 @@ import {
 } from "@/lib/hooks/actions";
 import { useContacts } from "@/lib/hooks/resources";
 import { useOutreachDraft } from "@/lib/hooks/growth";
+import { useUrlState } from "@/lib/hooks/use-url-state";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { formatDate } from "@/lib/format";
 import type { Contact } from "@/lib/api/types";
@@ -39,9 +40,24 @@ import type { Contact } from "@/lib/api/types";
  * user's own claim ("I talked to her yesterday"), typed as a date and sent as the
  * day's midnight; the server does not guess it from request arrival.
  */
+// Module-level so `setUrl` (a `useCallback` keyed on this object) is stable across renders.
+// `q` is declared here even though it is usually absent: `useUrlState` hydrates by walking
+// these keys, so a word left out of the defaults is a word a pasted link cannot restore.
+const PAGE_DEFAULTS: { q?: string } = { q: undefined };
+
 export default function NetworkingPage() {
   const { t, locale } = useLocale();
-  const contacts = useContacts();
+  // The word lives in the URL, so a reload or a shared link opens the same question — the rule
+  // the replies board set (49.1) and the company (58.2) and pipeline (70.2) boards follow. The
+  // registry itself is not paged: the route answers every row this caller has.
+  const [state, setUrl] = useUrlState<{ q?: string }>(PAGE_DEFAULTS);
+  // The box holds what the reader is typing; the URL holds what was asked. Binding the box
+  // straight to the URL would make every character a new question: six keystrokes would be six
+  // requests and six cache entries, and the registry would answer a word nobody had finished.
+  const [word, setWord] = React.useState(state.q ?? "");
+  React.useEffect(() => setWord(state.q ?? ""), [state.q]);
+  const ask = (value: string) => setUrl({ q: value.trim() || undefined });
+  const contacts = useContacts({ q: state.q });
   const [editing, setEditing] = React.useState<Contact | null>(null);
   const [open, setOpen] = React.useState(false);
   // 11.2 — the outreach draft. The contact's own fields are the request, so
@@ -67,15 +83,84 @@ export default function NetworkingPage() {
         ctaHref="/copilot"
         ctaLabel={t("networking.draftWithCopilot")}
         actions={
-          <Button variant="ai" size="sm" onClick={startCreate}>
-            <Users aria-hidden />
-            {t("networking.addContact")}
-          </Button>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {/* The question 70.3 gave this route, and the one this board had no way to ask. It is the
+                server's search rather than a filter over the rows in hand -- and here there is no
+                window to filter, because the registry answers a bare list, so a word that only
+                reached the rows on screen would hide the people the server just found. The characters
+                are read as characters, which is what lets a person whose company really carries an
+                underscore be found by spelling the underscore. */}
+            <form
+              role="search"
+              className="flex items-center gap-2"
+              onSubmit={(event) => {
+                event.preventDefault();
+                ask(word);
+              }}
+            >
+              <div className="relative">
+                <Search
+                  aria-hidden
+                  className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+                />
+                <Input
+                  value={word}
+                  onChange={(event) => setWord(event.target.value)}
+                  placeholder={t("networking.searchPlaceholder")}
+                  aria-label={t("networking.searchLabel")}
+                  autoComplete="off"
+                  className="w-40 pl-9 sm:w-60"
+                />
+              </div>
+              <Button type="submit" size="sm" variant="outline">
+                {t("chrome.search")}
+              </Button>
+              {state.q ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    setWord("");
+                    ask("");
+                  }}
+                >
+                  {t("networking.clearSearch")}
+                </Button>
+              ) : null}
+            </form>
+            <Button variant="ai" size="sm" onClick={startCreate}>
+              <Users aria-hidden />
+              {t("networking.addContact")}
+            </Button>
+          </div>
         }
-        emptyHint={{
-          title: t("networking.noContacts"),
-          description: t("networking.noContactsDescription"),
-        }}
+        // Two different empties (49.2): a registry nobody has started, and a registry full of
+        // people none of whom spells the word the reader typed. The second one's way out is the
+        // box, not a button that opens a create form — the reader was not trying to add a person.
+        emptyHint={
+          state.q
+            ? {
+                title: t("networking.noMatch", { query: state.q }),
+                description: t("networking.noMatchDescription"),
+                action: (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setWord("");
+                      ask("");
+                    }}
+                  >
+                    {t("networking.clearSearch")}
+                  </Button>
+                ),
+              }
+            : {
+                title: t("networking.noContacts"),
+                description: t("networking.noContactsDescription"),
+              }
+        }
         renderItem={(c) => (
           <Card key={c.id}>
             <CardContent className="flex items-center gap-3">

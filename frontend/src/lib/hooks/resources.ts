@@ -482,12 +482,31 @@ export function useCompanies(params?: { page?: number; size?: number; q?: string
  * the page's ordering is a pass-through rather than a second opinion. The route answers
  * a bare list (every row is this user's; there is nothing to page), which the hook wraps
  * in the page envelope `ModuleView` renders, with total = items.
+ *
+ * So `total` counts the answer, not the registry: with a word in the request it is the
+ * number of people who spell it, which is what lets the board below say "no one matches
+ * this word" instead of the untrue "you have no contacts".
+ *
+ * The word belongs in the cache key as well as the request — two different words over one
+ * key are one cached answer, so typing a second word would repaint nothing. The registry's
+ * three writes invalidate `["contacts"]`, and react-query matches a prefix, so whatever
+ * word is on screen still refetches when a person is added, edited or deleted.
  */
-export function useContacts() {
+export function useContacts(params?: {
+  /**
+   * The board's own question (70.3): one word a person spells in their name, role, company,
+   * relation, email or notes. The server reads the characters as characters, so a name that
+   * really carries an underscore is found by spelling the underscore.
+   */
+  q?: string;
+}) {
   return useQuery({
-    queryKey: ["contacts"],
+    queryKey: ["contacts", params],
     queryFn: async (): Promise<Page<Contact>> => {
-      const items = listOf(await api.get<unknown>(endpoints.contacts), "items").map(mapContact);
+      const items = listOf(
+        await api.get<unknown>(endpoints.contacts, { q: params?.q }),
+        "items",
+      ).map(mapContact);
       return { items, total: items.length, page: 0, size: items.length };
     },
   });

@@ -1155,7 +1155,24 @@
     的 `useApplications` 行现在带上 `q`，被这个文件和 `test_applications_deep_link_reaches_any_page.py` 同时
     钉住的 `useUrlState` 字面量加上第三个键。endpoints census 不动——`q` 从 70.1 起就是绑好的参数，这一条只是
     给它配上读者。
-  - **70.3** 联系人看板也答一个词（待做）：同一套 needle 纪律走 `GET /contacts?q=` 和 `/networking`。
+  - **70.3** 联系人看板也答一个词（已完成 2026-11-06）：Epic 70 盘的最后一块板，也是唯一一块路由只答裸数组、不分窗的板——
+    改变的是「加搜索」的含义，而不是它的拼法。后端：`ContactRepository` 有自己的 `BOARD_WHERE` 和一条
+    `findBoard(userId, needle)`，用 `LOCATE(:needle, LOWER(col)) > 0` 读联系人全部的六列——姓名，加上五个可空列
+    `COALESCE` 成空串，因为没有邮箱的人照样是读者要找的人；`ORDER BY c.updatedAt DESC, c.id ASC` 保住名单自己的顺序并钉住
+    并列。派生的 `findByUserIdOrderByUpdatedAtDesc` 留着：导出包（40.3）要读整份名单，换成带 needle 的读法会从用户自己的备份
+    里悄悄丢人。service 每请求 trim 一次、小写一次，controller 绑 `?q=`；`ContactRepository` 是 `SearchNeedleContractTest`
+    roster 里的第六个名字，旁边新增一道判形状的用例（六个 `LOCATE` 和 `:needle = ''` 都在，任何 `Containing` 都不许出现）。
+    `ContactNeedleIT` 3 条跑在真 Postgres 上：字面的 `%`、字面的 `_`、打错的 `Under_S_ore` 必须谁都找不到、只有一个百分号的
+    框只答一个人；词伸进 role、公司、关系、邮箱、备注，而六列里什么都没有的那个人不在答案里；空框、纯空格、大写锁。前端：
+    `useContacts(params?: { q?: string })` 把词同时放进请求和 `queryKey`——两个词共用一个键就共用一份缓存，改词就什么也不
+    刷新；名单的三个写操作仍然 invalidate `["contacts"]`，react-query 按前缀匹配。裸数组意味着 total 数的就是匹配数，所以空态
+    可以怪那个词，而不是怪读者。`/networking` 加上 `useUrlState<{ q?: string }>`（键写进 `PAGE_DEFAULTS`）、草稿与提交分离
+    （半个词逐字符请求、每个字符存一份缓存）、`role="search"` 的框和「添加」并排、两种空态各有各的出路（49.2）。新增 5 个
+    key × 2 语言；`networking/page.test.tsx` 是这块屏的第一个屏幕测试（6 条：参数对象、从地址恢复的框、两种空态在两种语言里
+    各是哪句、框挤不掉一行自己的「起草」、名字并不拼这个词的行照样显示——看板展示服务端答的内容，而不是再筛一遍）。只有一道门
+    跟着改：endpoints census 把绑定参数从 55 钉到 56，并把 `GET /contacts q` 加进抽查——这是上一半提交欠下的账。窗口 census
+    不动：名单不分页，`useContacts` 保持 `List<ContactItem>` 那一行，调用点既不进 `WIRE` 也不进 `SITES`。给名单加分页是另一个
+    问题，这一条刻意没有顺手做。
 
 ## 开发协议
 （每个任务）

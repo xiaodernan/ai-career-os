@@ -4750,7 +4750,42 @@ on two other things, so its needle cannot arrive as one more branch of the same 
   key. The endpoints census did not move -- `q` on `/applications` has been a bound parameter since
   70.1, and this task only gives it its reader.)
 
-- [ ] **70.3** The contacts board answers a word too.
+- [x] **70.3** The contacts board answers a word too.
+
+  (The registry was the last board of the three that Epic 70 inventoried, and the only one whose
+  route answered a bare list rather than a window -- which changed what "add a search" means rather
+  than how it is spelled. Backend: `ContactRepository` now carries its own `BOARD_WHERE` and one
+  `findBoard(userId, needle)`, asking `LOCATE(:needle, LOWER(col)) > 0` over the six columns a
+  contact row owns -- the name, and the five optional ones `COALESCE`d, because a person whose
+  record has no email is still a person the reader is looking for. `ORDER BY c.updatedAt DESC,
+  c.id ASC` keeps the registry's own order and pins its ties. The derived
+  `findByUserIdOrderByUpdatedAtDesc` stays: the export bundle (40.3) reads the whole registry, and a
+  needle-bound read there would quietly drop people from the user's own backup. The service trims
+  and lower-cases once per request, the controller binds `?q=`, and `ContactRepository` is the
+  sixth name in `SearchNeedleContractTest`'s roster, beside a new case that grades its shape -- all
+  six `LOCATE` sites and `:needle = ''` present, no `Containing` anywhere. 3 cases in
+  `ContactNeedleIT` run against the real Postgres: a literal `%`, a literal `_`, an `Under_S_ore`
+  that must find nobody, and a box of one percent sign that answers one person rather than the
+  registry; the word reaching role, company, relation, email and notes while a person carrying
+  none of it stays out; and the empty, all-spaces and CAPS-LOCK boxes. `ApiDocParamContractTest`
+  and `DataPortabilityControllerTest` were re-run over the new read and did not move.
+  Frontend: `useContacts` takes `params?: { q?: string }` and puts the word in the request *and* in
+  the `queryKey` -- two words over one key are one cached answer, so a second keystroke-word would
+  repaint nothing -- while the registry's three writes still invalidate `["contacts"]`, which
+  react-query matches as a prefix. The route's bare list means `total` counts the matches, which is
+  what lets the empty strip blame the word instead of the reader. `/networking` gains
+  `useUrlState<{ q?: string }>` with the key declared in `PAGE_DEFAULTS`, a draft/ask split (a
+  half-typed word would otherwise spend a request per character and a cache entry per keystroke), a
+  `role="search"` box beside Add, and the two empties 49.2 asks for: this word found nobody, and
+  nobody is saved yet. 5 new keys x 2 locales. `networking/page.test.tsx` is the registry's first
+  screen test (6 cases over the real locale provider: the params object, the box restored from the
+  address, which empty is which in both languages, the row's own Draft button surviving the box,
+  and a row whose name does not spell the word still rendering -- the board shows what the server
+  answered rather than re-filtering it). One gate moved: the endpoints census repins 55 -> 56 bound
+  parameters and adds `GET /contacts q` to its spot-checks, which is the correction the backend
+  half owed the commit before this one. The window gates did not move -- the registry is not paged,
+  so `useContacts` keeps its `List<ContactItem>` row and its call site joins neither `WIRE` nor
+  `SITES`. Paging the registry is a separate question and was deliberately not folded in here.)
 
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +

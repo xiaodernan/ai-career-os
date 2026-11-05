@@ -1153,8 +1153,8 @@ describe("endpoints ↔ backend route parity", () => {
     expect(new Set(handlers.map((h) => `${h.verb} ${h.pattern}`)).size).toBe(handlers.length);
     expect(handlers.flatMap((h) => h.unparsed)).toEqual([]);
     const bound = handlers.flatMap((h) => h.params);
-    expect(bound.length).toBe(55);
-    // 55 parameters in 25 distinct names, measured: the reader's whole answer rather than a spot
+    expect(bound.length).toBe(56);
+    // 56 parameters in 25 distinct names, measured: the reader's whole answer rather than a spot
     // check, so a signature shape it stops understanding shrinks this set instead of passing quiet
     // (#225 retired `limit` from `/activity/runs`, which now pages like every other list route;
     // 19.2 brought the name back for `GET /ingestion/runs` as a newest-N history, and 19.5 retired
@@ -1170,7 +1170,9 @@ describe("endpoints ↔ backend route parity", () => {
     // counts (51 -> 53), a name this set did not have; 64.2's notes list narrows to one tag, so
     // `/knowledge/notes` binds `tag` beside its page/size pair (53 -> 54) -- another name this set
     // did not have; 70.1's pipeline box binds `q` on `/applications` (54 -> 55), a name the job
-    // board and the company board already answered. The latest names are in it now.)
+    // board and the company board already answered; 70.3's registry box binds it on `/contacts`
+    // too (55 -> 56) -- the route keeps answering a bare list, so the name arrives without the
+    // page/size pair every other searched list carries. The latest names are in it now.)
     expect(new Set(bound.map((p) => p.name))).toEqual(
       new Set([
         "agent", "applicationId", "company", "documentId", "file", "intent", "jobId", "kind",
@@ -1197,7 +1199,7 @@ describe("endpoints ↔ backend route parity", () => {
       .toEqual(["POST /knowledge/documents file", "POST /resumes/upload file"]);
     ["GET /activity/runs page", "GET /activity/runs size",
       "GET /applications status", "GET /applications page",
-      "GET /companies q", "GET /resume-versions resumeId",
+      "GET /companies q", "GET /contacts q", "GET /resume-versions resumeId",
       // the citation deep link, named as a pair: the browser sends this key and this handler binds it
       "GET /knowledge/sources documentId"].forEach((p) => expect(pairs).toContain(p));
     // the bookmark list is not paged by the server, so it must not arrive here carrying a page size

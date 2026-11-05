@@ -2093,6 +2093,12 @@ export const translations = {
       noContacts: "No contacts yet",
       noContactsDescription:
         "Add the referrers, mentors and peers you talk to — Copilot drafts messages for them, and the follow-up reminders will read this list.",
+      searchPlaceholder: "Search contacts",
+      searchLabel: "Search the registry by name, role, company or notes",
+      clearSearch: "Clear search",
+      noMatch: "No contact matches “{query}”",
+      noMatchDescription:
+        "Try a shorter word, or clear the search to see everyone in the registry.",
       addContact: "Add contact",
       editContact: "Edit contact",
       onlyNameRequired: "Only the name is required — fill in what you know, leave the rest.",
@@ -4988,6 +4994,11 @@ export const translations = {
       noContacts: "还没有联系人",
       noContactsDescription:
         "加上你联系的推荐人、导师和同行——副驾驶会为他们起草消息，跟进提醒也会读这份名单。",
+      searchPlaceholder: "搜索联系人",
+      searchLabel: "按姓名、职位、公司或备注搜索联系人",
+      clearSearch: "清除搜索",
+      noMatch: "没有与“{query}”匹配的联系人",
+      noMatchDescription: "换个短一点的词，或者清除搜索，看名单里的所有人。",
       addContact: "添加联系人",
       editContact: "编辑联系人",
       onlyNameRequired: "只有名字是必填的——知道什么填什么，其余留空。",
