@@ -4536,6 +4536,23 @@ page and open the old report. The card's rehearsal history already lives in one 
   graded. 3 pure-function tests. The window census learned the hook's `enabled` split and its
   third caller, and the envelope census its two new readers.)
 
+- [x] **62.2** The report reads its score against the attempt before it.
+
+  (`scoreDelta()` returns `{previous, current, delta}` only when both sittings are graded -- an
+  ungraded row is not a zero. The report's summary row carries one badge: "62 -> 71 (+9 vs last
+  attempt)", the same numbers in warning tint when the retry fell, and "same as last attempt"
+  on a tie. The attempt it compares with is the same `previousRehearsal()` sibling the runner
+  briefs from, so both screens name the same attempt. 3 pure-function tests.)
+
+- [x] **62.3** The brief says how old the advice is and what to prepare.
+
+  (Advice with no age or score is hard to trust: the card now opens with that attempt's score
+  and date -- "Last attempt 62/100" beside the day it ran -- and adds the first
+  `follow_up_questions_to_prepare` entry beside the gaps and the study item. The card renders
+  when any of the three has something to say, so an attempt with only prepare questions still
+  briefs the next one. The copy census catches up with the four interview components 59.3-61.3
+  added (152 -> 156).)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
