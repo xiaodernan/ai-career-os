@@ -193,6 +193,11 @@ FINALIZE_FIELDS = (
 # ...and the one nested list the report panel renders cards from.
 STUDY_ITEM_FIELDS = ("topic", "why", "resource_hint")
 
+# ...and the pair each stronger answer is written as. Stated as data for the same reason: the
+# report's rewrite reader may only ask for names this prompt asks for, and 61.1 is the first
+# reader to ask for any of them.
+BETTER_ANSWER_FIELDS = ("question", "model_answer")
+
 # Written by `finalize` itself rather than asked of the model, so it is guaranteed on every report
 # -- and it is the key the trajectory fold reads when the row list arrives inside the summary map
 # instead of as `EvaluationItem.trajectory`.

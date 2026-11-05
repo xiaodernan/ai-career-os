@@ -189,6 +189,8 @@ PRODUCERS = {
     "EvaluationItem": ("java", "interview/dto/InterviewDtos.java"),
     "FinalizeReport": ("pyconst", ("app/features/interview.py", "FINALIZE_FIELDS")),
     "StudyItem": ("pyconst", ("app/features/interview.py", "STUDY_ITEM_FIELDS")),
+    # 61.1: the rewrite pair the report's better-answer reader walks.
+    "BetterAnswer": ("pyconst", ("app/features/interview.py", "BETTER_ANSWER_FIELDS")),
     # `trajectory_detail` is written by `finalize` rather than asked of the model, and a trajectory
     # row is the dict literal `_trajectory_detail` builds -- neither has a record, and both are
     # stated exactly once in the source that produces them.
@@ -420,9 +422,10 @@ READERS: dict[str, dict] = {
         "record_of": {"raw": ["SessionDetail", "FinalizeResponse"],
                       "ev": "EvaluationItem",
                       "merged": ["EvaluationItem", "FinalizeReport", "FinalizeComputed"],
-                      "s": "StudyItem"},
+                      "s": "StudyItem",
+                      "row": "BetterAnswer"},
         "drilled": {"ev": ("raw", "evaluation")},
-        "elements": {"s": "merged"},
+        "elements": {"s": "merged", "row": "merged"},
         "blind": {},
         "dynamic": {},
     },
@@ -1979,13 +1982,13 @@ def test_a_producer_kind_is_dispatched_by_name_and_never_by_the_fallback():
     # (`normalizeApplyResult`, `a0eb950`) had been bound to a producer the table never named.
     # 87 with the kept-letter wave's two records: `LetterItem` (1076949), which `normalizeCoverLetter`
     # reads, and `LetterHit` (a7ea329), the seventh hit the search palette binds.
-    assert len(PRODUCERS) == 87, f"{len(PRODUCERS)} rows: the population the counts below are drawn from"
+    assert len(PRODUCERS) == 88, f"{len(PRODUCERS)} rows: the population the counts below are drawn from"
     assert set(counts) == dispatched, \
         (f"the table uses {sorted(set(counts) - dispatched)} with no branch and the chain compares "
          f"{sorted(dispatched - set(counts))} with no rows: a kind that lost its branch has to gain "
          "one, and a kind that lost its rows has to lose the branch or gain the rows back")
     assert sorted(counts.items()) == [("jamapof", 2), ("japut", 1), ("java", 53), ("pyadd", 1),
-                                      ("pyappend", 6), ("pycons", 1), ("pyconst", 3),
+                                      ("pyappend", 6), ("pycons", 1), ("pyconst", 4),
                                       ("pydantic", 3), ("pyfunc", 6), ("pyitem", 1), ("pyretsub", 1),
                                       ("pyskel", 9)], \
         f"{sorted(counts.items())}: which kind moved, not just how many rows did"
@@ -2007,7 +2010,7 @@ def test_a_producer_kind_is_dispatched_by_name_and_never_by_the_fallback():
     assert "nosuchkind" in raised and "BaseModel" not in raised, \
         (f"{raised}: an unknown kind must be named as itself -- pointing at a pydantic model is the "
          "misattribution this branch exists to remove")
-    assert len(PRODUCERS) == 87, "the planted row is still in the table the census above measured"
+    assert len(PRODUCERS) == 88, "the planted row is still in the table the census above measured"
 
 
 def _emitted_for(receiver: str | list[str]) -> set[str]:
@@ -2828,21 +2831,21 @@ def test_the_reads_are_actually_found():
     # never appeared -- which is exactly the kind of silence a union can hide, so the fact each
     # author carries `score` is asserted per author rather than inferred from the site being live.
     report = _sites("normalizeInterviewReport")
-    assert len(report) == 10
-    assert {s["receiver"] for s in report} == {"ev", "merged", "raw", "s"}
+    assert len(report) == 13
+    assert {s["receiver"] for s in report} == {"ev", "merged", "raw", "row", "s"}
     read_merged = {k for s in report if s["receiver"] == "merged" for k in s["keys"]}
     assert read_merged == {"overall", "what_you_did_well", "what_was_weak",
-                           "recommended_study", "trajectory_note"}
+                           "recommended_study", "trajectory_note", "better_answers"}
     assert read_merged <= _emitted("FinalizeReport")
     # Every name the report body tries is one `FINALIZE_FIELDS` declares -- which is #137's trim
     # stated as a floor: a new read has to name a declared field, and a field the prompt stops
     # asking for goes red here before a card on the page goes blank.
     assert _emitted("FinalizeReport") - read_merged == {"dims", "missing_concepts",
-                                                        "better_answers",
                                                         "follow_up_questions_to_prepare"}
-    # The four declared and not read here: `dims` is the dimension reader's, `better_answers` and
-    # `follow_up_questions_to_prepare` are rendered from the raw report elsewhere, and
+    # The three declared and not read here: `dims` is the dimension reader's,
+    # `follow_up_questions_to_prepare` is rendered from the raw report elsewhere, and
     # `missing_concepts` has no consumer yet. Named so the set cannot grow by accident.
+    # 61.1 moved `better_answers` into this reader, where the rewrite cards are drawn.
     assert {k for s in report if s["receiver"] == "s" for k in s["keys"]} == _emitted("StudyItem")
     # The study card reads exactly the three names of `STUDY_ITEM_FIELDS`, no more: after #137 there
     # is no undeclared name left in this reader, which is the whole reason it could be bound.
@@ -3476,7 +3479,7 @@ def test_the_census_sees_every_read_the_mappers_hold():
     # `normalizeNightlyVerdict`, none of them folded; 364 with the apply receipt's six reads --
     # `normalizeIngestionRun`'s two new pairs and `normalizeApplyResult`'s four calls. 403 with
     # the kept-letter and reply waves' fourteen, the same calls the key-position census counts.
-    assert len(whole) == 403, f"{len(whole)} reads by the oracle: recount both totals if this moved"
+    assert len(whole) == 407, f"{len(whole)} reads by the oracle: recount both totals if this moved"
     table_reads = _key_read_calls(_search_groups_table())
     # a7ea329 taught the table to read: the letters href asks a hit for its card id so the palette can
     # deep-link to that application. It is the only named read outside every mapper, and it is bound
@@ -3653,7 +3656,7 @@ def test_a_call_whose_key_is_a_variable_is_a_population_every_member_has_to_expl
     # kept-letter and reply waves' fourteen: 1076949's `normalizeCoverLetter` quotes ten names,
     # 43539de and 18433e9/f1ad0cf add the application's and the packet's letter and rehearsal
     # totals, and a7ea329's letter hit reads `applicationId` in `SEARCH_GROUPS`' href.
-    assert len(calls) == 418, (f"{len(calls)} accessor calls hand something to a key position: "
+    assert len(calls) == 422, (f"{len(calls)} accessor calls hand something to a key position: "
                                "recount the two halves below")
     assert len(nameless) == 16, f"{len(nameless)} calls put a variable where a name is expected"
     counted = {(row["line"], row["accessor"], row["receiver"]) for row in nameless} & \
@@ -4242,7 +4245,7 @@ def test_the_bare_read_scanner_agrees_with_a_paired_call_census():
     # seven paired reads in `normalizeNightlyVerdict`; 362 with the apply receipt's six --
     # `normalizeIngestionRun`'s two new pairs and `normalizeApplyResult`'s four calls. 401 with
     # the kept-letter and reply waves' fourteen, the calls the key-position census above lists.
-    assert len(paired) == 401, (f"{len(paired)} accessor calls: the population the bare-read census is "
+    assert len(paired) == 405, (f"{len(paired)} accessor calls: the population the bare-read census is "
                                 "drawn from -- if this drops, the census below is comparing less")
     assert sum(1 for row in paired if row["argc"] == 1) == 1, \
         f"{[(row['owner'], row['receiver']) for row in paired if row['argc'] == 1]} are the bare reads"
@@ -4260,7 +4263,7 @@ def test_the_bare_read_scanner_agrees_with_a_paired_call_census():
     # calls in `normalizeNightlyVerdict`; 353 with the apply receipt's six quoted calls (two
     # in `normalizeIngestionRun`, four in `normalizeApplyResult`). 392 with the kept-letter and
     # reply waves' fourteen quoted calls, the same ones again.
-    assert sum(1 for row in paired if row["argc"] > 1 and row["named"]) == 392, \
+    assert sum(1 for row in paired if row["argc"] > 1 and row["named"]) == 396, \
         f"{sum(1 for row in paired if row['argc'] > 1 and row['named'])}: every-name-quoted is what " \
         "`_sites` reads, so this number is the size of the census every other rule here trusts"
     loose = [row for row in paired if row["argc"] > 1 and not row["named"]]
@@ -4315,7 +4318,7 @@ def test_the_spread_receiver_scanner_agrees_with_the_paired_walk(monkeypatch):
     # ten reads in `normalizeNightlyReport`; 356 with 20.2's seven reads in
     # `normalizeNightlyVerdict`; 362 with the apply receipt's six, the same calls the census above
     # gained. 401 with the kept-letter and reply waves' fourteen, the same calls again.
-    assert len(walked) == 401, (f"{len(walked)} accessor calls: the population both censuses are drawn "
+    assert len(walked) == 405, (f"{len(walked)} accessor calls: the population both censuses are drawn "
                                  "from")
     spread = [row for row in walked if row["spread"]]
     assert [(row["name"], row["owner"], row["receiver"]) for row in spread] == [
@@ -4401,7 +4404,7 @@ def test_the_derived_holder_scanner_answers_for_every_local_a_call_builds(monkey
     # 92 with 19.6's voice-state reader; 93 with 20.1's `const steps = list<unknown>(raw, "steps")`;
     # 94 with the apply receipt's `const applied = rec(pick(raw, "appliedCounts", "applied_counts"))`,
     # a local whose accessor is handed another call and therefore joins the refused-by-name list below.
-    assert len(walked) == 94, (f"{len(walked)} locals are built by an accessor call: the population this "
+    assert len(walked) == 97, (f"{len(walked)} locals are built by an accessor call: the population this "
                                "rule's answers are drawn from")
     assert [row["holder"] for row in walked if row["wrap"]] == [], \
         (f"{[(row['holder'], row['line']) for row in walked if row['wrap']]}: a wrapped call is the "

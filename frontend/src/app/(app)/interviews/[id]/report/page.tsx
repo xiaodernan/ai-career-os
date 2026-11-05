@@ -11,6 +11,7 @@ import {
   ExternalLink,
   FileBarChart,
   Play,
+  Quote,
   ThumbsDown,
   ThumbsUp,
   TrendingUp,
@@ -86,13 +87,14 @@ export default function InterviewReportPage() {
   }
 
   const normalized = normalizeInterviewReport(data.report);
-  const { overall, well, weak, summary, study, trajectory } =
+  const { overall, well, weak, summary, better, study, trajectory } =
     normalized ?? {
       overall: undefined,
       dims: [],
       well: [],
       weak: [],
       summary: undefined,
+      better: [],
       study: [],
       trajectory: [],
     };
@@ -288,6 +290,30 @@ export default function InterviewReportPage() {
           </Card>
         )}
       </div>
+
+      {/* Better answers (61.1) */}
+      {better.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <SectionHeading
+              eyebrow={t("eyebrows.betweenSessions")}
+              icon={<Quote className="size-4" aria-hidden />}
+              title={t("interviews.report.betterAnswers")}
+              description={t("interviews.report.betterAnswersDescription")}
+            />
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {better.map((b, i) => (
+              <div key={i} className="space-y-1.5">
+                {b.question && (
+                  <p className="text-xs font-medium text-muted-foreground">{b.question}</p>
+                )}
+                <p className="whitespace-pre-line text-sm leading-relaxed">{b.answer}</p>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Depth trajectory */}
       {trajectory.length > 0 && <TrajectoryChart points={trajectory} />}

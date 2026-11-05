@@ -1518,9 +1518,22 @@ export interface InterviewReport {
   well: string[];
   weak: string[];
   summary?: string;
+  better: InterviewBetterAnswer[];
   study: InterviewStudyItem[];
   trajectory: InterviewTrajectoryPoint[];
   hasContent: boolean;
+}
+
+/**
+ * 61.1: one strengthened answer. The evaluator writes `better_answers` as
+ * `[{question, model_answer}]` -- the question it chose to rewrite and the answer
+ * a stronger candidate would have given. `question` is optional because a model
+ * may restate the rewrite without naming it; the answer is not, and a row without
+ * one is dropped rather than drawn as an empty card.
+ */
+export interface InterviewBetterAnswer {
+  question?: string;
+  answer: string;
 }
 
 export function normalizeInterviewReport(raw: unknown): InterviewReport | null {
@@ -1562,16 +1575,30 @@ export function normalizeInterviewReport(raw: unknown): InterviewReport | null {
   });
   const trajectory = normalizeTrajectory(merged);
 
+  // 61.1: every report has carried `better_answers` since FINALIZE shipped, and nothing
+  // read it -- the most reusable sentence of a sitting (what a stronger answer sounds
+  // like) never reached the page. The prompt names the pair exactly, so this reads the
+  // contract's own spelling and no alias.
+  const better = list<unknown>(merged, "better_answers")
+    .map((row): InterviewBetterAnswer | null => {
+      const answer = str(row, "model_answer")?.trim();
+      if (!answer) return null;
+      const question = str(row, "question")?.trim();
+      return { question: question || undefined, answer };
+    })
+    .filter((row): row is InterviewBetterAnswer => row !== null);
+
   const hasContent =
     overall != null ||
     dims.length > 0 ||
     well.length > 0 ||
     weak.length > 0 ||
+    better.length > 0 ||
     study.length > 0 ||
     trajectory.length > 0 ||
     !!summaryText;
 
-  return { overall, dims, well, weak, summary: summaryText, study, trajectory, hasContent };
+  return { overall, dims, well, weak, summary: summaryText, better, study, trajectory, hasContent };
 }
 
 /* --------------------------------- search --------------------------------- */

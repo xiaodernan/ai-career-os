@@ -1929,6 +1929,34 @@ describe("normalizeInterviewReport", () => {
     expect(normalizeInterviewReport("nope")).toBeNull();
   });
 
+  it("reads the stronger answers the evaluator wrote, question and all", () => {
+    // 61.1: `better_answers` is in FINALIZE_FIELDS and the mock's own payload; the
+    // report page simply never read it, so the most reusable sentence of a sitting
+    // -- what a stronger answer sounds like -- never reached the reader.
+    const report = normalizeInterviewReport({
+      summary: {
+        overall: 0.6,
+        better_answers: [
+          { question: "Why Redis?", model_answer: "Redis buys a shared, evictable cache." },
+          { model_answer: "Name the failure mode before the tool." },
+        ],
+      },
+    });
+    expect(report?.better).toEqual([
+      { question: "Why Redis?", answer: "Redis buys a shared, evictable cache." },
+      { question: undefined, answer: "Name the failure mode before the tool." },
+    ]);
+    expect(report?.hasContent).toBe(true);
+  });
+
+  it("drops a rewrite with no answer rather than drawing an empty card", () => {
+    const report = normalizeInterviewReport({
+      summary: { better_answers: [{ question: "Why Redis?" }, { model_answer: "   " }, "a string row"] },
+    });
+    expect(report?.better).toEqual([]);
+    expect(report?.hasContent).toBe(false);
+  });
+
   it("an object with nothing scoreable reports no content", () => {
     const report = normalizeInterviewReport({ id: "x", dims: {}, summary: {}, trajectory: [] });
     expect(report).not.toBeNull();
