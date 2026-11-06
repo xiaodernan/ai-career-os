@@ -48,12 +48,15 @@ UI_LESS_ROUTES = {
     "POST /mail/preferences/{}/{}/start/{}": "the rendered mail-settings page's own form posts here; the app never calls it",
     "POST /mail/preferences/{}/{}/stop/{}": "the one-click unsubscribe URL a mail client fires; the app never calls it",
     "POST /inbound/mail/{}": "a mail provider posts here, not the browser; the address is what the settings card hands out",
-    # 71.3's one real remaining gap. PATCH/DELETE of a letter used to be filed
-    # here too, with the reason "no edit screen" -- that was this walk losing the
-    # `applicationLetter` key, not a missing product surface: 50.2/50.4 shipped
-    # the in-place editor and the delete dialog. The reverse assertion below is
-    # what stops a reason like that from being filed again.
-    "GET /jds/{}": "the JD detail read is a recorded gap (71.3's queue): the app analyzes a pasted posting and reads the suggestions, but never fetches a stored JD by id",
+    # 71.3 closed its queue on 2026-11-07: `GET /jds/{}` left this ledger the way the
+    # invalidated-keys ledger says every entry should -- screen first. The analyze dialog
+    # now keeps the id `POST /jds` returns and rehydrates the stored row through
+    # `useStoredJd` when it reopens, so an accidental close no longer costs the reader a
+    # second analyst run. PATCH/DELETE of a letter had been filed here too, with the
+    # reason "no edit screen" -- that was this walk losing the `applicationLetter` key,
+    # not a missing product surface: 50.2/50.4 shipped the in-place editor and the
+    # delete dialog. The reverse assertion below is what stops a reason like that
+    # from being filed again.
 }
 
 _PARAM = re.compile(r"\{[^}]*\}")
