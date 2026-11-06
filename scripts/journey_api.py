@@ -133,10 +133,22 @@ if apps["items"]:
 call("growth report", "POST", "/growth-report", token,
      {"targetRole": "Senior Backend Engineer (Java)"})
 
+# 13.5 notes: a tagged note and the tag vocabulary it creates (69.2)
+call("create note", "POST", "/knowledge/notes", token,
+     {"title": "Journey note", "content": "The dial states live in one table the sweeps read.",
+      "tags": ["journey", "infrastructure"]})
+tags = call("tag vocabulary", "GET", "/knowledge/notes/tags", token)
+print(f"        tags: {[(t_.get('tag'), t_.get('count')) for t_ in (tags or [])][:4]}")
+assert any(t_.get("tag") == "journey" for t_ in (tags or [])), "the created note's tag must count"
+
 # 14. contacts
 contact = call("create contact", "POST", "/contacts", token,
                {"name": "李雷", "role": "Staff Engineer", "company": "Acme", "relation": "referrer"})
 call("list contacts", "GET", "/contacts", token)
+# 14.5 boards answering words (70.3): the registry narrows to one word
+by_word = call("contacts by word", "GET", "/contacts?q=%E6%9D%8E%E9%9B%B7", token)
+rows = by_word.get("items", by_word) if isinstance(by_word, dict) else by_word
+print(f"        contacts matching 李雷: {len(rows)}")
 
 # 15. copilot turn (search-backed artifact — the regression this run family caught)
 chat = call("copilot chat", "POST", "/copilot/chat", token,
@@ -148,6 +160,19 @@ assert chat.get("artifacts"), "the copilot turn must yield a job_list artifact"
 bundle = call("export bundle", "POST", "/data-portability/export", token, {"anonymized": False})
 print(f"        bundle sections: {sorted((bundle.get('data') or bundle).get('manifest', {}).get('counts', {}).keys())}")
 call("import plan", "POST", "/data-portability/import-plan", token, {"bundle": bundle})
+
+# 16.5 mail dials: read the three dials, flip one, read again (42.2)
+mail = call("mail settings", "GET", "/me/mail/settings", token)
+print(f"        dials: weekly={mail.get('weekly')} signals={mail.get('signals')} reminders={mail.get('reminders')}")
+flipped = call("flip weekly dial", "PUT", "/me/mail/settings/weekly", token, {"enabled": False})
+print(f"        weekly after flip: {flipped.get('weekly')}")
+assert flipped.get("weekly") is False, "the dial flip must answer the moved state"
+call("flip weekly back", "PUT", "/me/mail/settings/weekly", token, {"enabled": True})
+
+# 16.6 markdown render (13.1): the quick look at the bundle in the reader's language
+rendered = call("render markdown", "POST", "/data-portability/render", token,
+                {"bundle": bundle, "format": "markdown", "locale": "en"})
+print(f"        markdown: {len(rendered.get('markdown', ''))} chars")
 
 # 17. dashboard
 dash = call("dashboard", "GET", "/reports/dashboard", token)
