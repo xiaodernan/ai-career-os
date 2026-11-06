@@ -4731,9 +4731,9 @@ from the report to the note just kept, and a filter row that could say what sits
 
 Following Epic 69 (tag counts) and Epic 70 (boards answering words), this epic audits the codebase for remaining user experience loops and API endpoints that lack browser surface coverage, ensuring every backend surface has a corresponding frontend reader, and every frontend component has a documented backend contract.
 
-- [ ] **71.1** Audit API endpoints without frontend surfaces
+- [x] **71.1** Audit API endpoints without frontend surfaces
 
-  (Walk the public API in `API.md` and compare against frontend pages in `src/app/(app)/`. Identify any `/api/v1*` endpoints that have no corresponding page/component, and any frontend pages that read from endpoints not documented in the census. Record findings as a gate in `ai-service/tests/test_forward_features_contract.py` so new surfaces must be accounted for before shipping.)
+  (Walk the public API in `API.md` and compare against frontend pages in `src/app/(app)/`. Identify any `/api/v1*` endpoints that have no corresponding page/component, and any frontend pages that read from endpoints not documented in the census. Recorded as `ai-service/tests/test_browser_surface_audit.py` -- a dedicated gate, cleaner than squeezing the cross-stack walk into the forward-features contract: 181 public routes cross-walked, 161 with a reader, 20 filed UI-less with the reason each, and both directions gated -- a route with no reader and no reason is a red, and a ledger reason naming a route the backend stopped serving is a red too.)
 
 - [ ] **71.2** Audit UX loops without backend contract
 
