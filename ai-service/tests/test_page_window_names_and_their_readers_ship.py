@@ -5,9 +5,11 @@
 there. Neither asked the other direction: what does a screen actually do with the four names the
 envelope carries, once the server has decided the window for itself?
 
-Twelve query hooks annotate `Promise<Page<X>>`. Two sit over routes that answer bare lists --
-`GET /jobs/saved` and `GET /contacts` -- so their whole envelope is invented client-side; ten get a
-real `PageDTO`
+Twelve query hooks annotate `Promise<Page<X>>`. One sits over a route that answers a bare list --
+`GET /jobs/saved` -- so its whole envelope is invented client-side; eleven get a real `PageDTO`.
+72.1 moved `GET /contacts` off the bare list: its repository pages over the same needle the rows
+are narrowed with, and its count query repeats that clause, so the hook now reads the server's
+window off the wire and the registry's pager counts matches rather than everybody.
 (`GET /activity/runs` joined them in #225, when the feed stopped answering a bare array, and
 `GET /ingestion/runs` in 19.5, when the run history stopped being a newest-N list). `PageDTO` declares `items`, `total`, `page`, `size`, and both branches of
 `normalizePage` fill all four. `Paging.of` floors the page at 0 and keeps the window inside
@@ -100,7 +102,7 @@ PAGE_HOOKS = {
     "useSavedJobs": ("savedJobs", "List<SavedJobItem>"),
     "useApplications": ("applications", "PageDTO<ApplicationItem>"),
     "useCompanies": ("companies", "PageDTO<CompanyItem>"),
-    "useContacts": ("contacts", "List<ContactItem>"),
+    "useContacts": ("contacts", "PageDTO<ContactItem>"),
     "useKnowledgeSources": ("knowledge", "PageDTO<SourceItem>"),
     "useKnowledgeNotes": ("knowledgeNotes", "PageDTO<NoteItem>"),
     "useInterviewSessions": ("interviews", "PageDTO<SessionItem>"),
@@ -109,7 +111,7 @@ PAGE_HOOKS = {
     "useConversations": ("conversations", "PageDTO<ConversationItem>"),
 }
 
-BARE_LIST_HOOKS = ["useContacts", "useSavedJobs"]
+BARE_LIST_HOOKS = ["useSavedJobs"]
 
 ENVELOPE = ["items", "total", "page", "size"]
 
@@ -136,7 +138,8 @@ READERS = {
     "total": ["app/(app)/activity/page.tsx", "app/(app)/applications/page.tsx",
               "app/(app)/companies/page.tsx", "app/(app)/copilot/page.tsx",
               "app/(app)/interviews/page.tsx", "app/(app)/jobs/page.tsx",
-              "app/(app)/knowledge/page.tsx", "app/(app)/replies/page.tsx",
+              "app/(app)/knowledge/page.tsx", "app/(app)/networking/page.tsx",
+              "app/(app)/replies/page.tsx",
               "app/(app)/resumes/page.tsx",
               "components/ingestion/scheduled-feeds-panel.tsx",
               "components/knowledge/notes-panel.tsx",
@@ -144,7 +147,8 @@ READERS = {
     "page": ["app/(app)/activity/page.tsx", "app/(app)/applications/page.tsx",
              "app/(app)/companies/page.tsx", "app/(app)/copilot/page.tsx",
              "app/(app)/interviews/page.tsx", "app/(app)/jobs/page.tsx",
-             "app/(app)/knowledge/page.tsx", "app/(app)/replies/page.tsx",
+             "app/(app)/knowledge/page.tsx", "app/(app)/networking/page.tsx",
+             "app/(app)/replies/page.tsx",
              "app/(app)/resumes/page.tsx",
              "components/ingestion/scheduled-feeds-panel.tsx",
              "components/knowledge/notes-panel.tsx",
@@ -152,7 +156,8 @@ READERS = {
     "size": ["app/(app)/activity/page.tsx", "app/(app)/applications/page.tsx",
              "app/(app)/companies/page.tsx", "app/(app)/copilot/page.tsx",
              "app/(app)/interviews/page.tsx", "app/(app)/jobs/page.tsx",
-             "app/(app)/knowledge/page.tsx", "app/(app)/replies/page.tsx",
+             "app/(app)/knowledge/page.tsx", "app/(app)/networking/page.tsx",
+             "app/(app)/replies/page.tsx",
              "app/(app)/resumes/page.tsx",
              "components/ingestion/scheduled-feeds-panel.tsx",
              "components/knowledge/notes-panel.tsx"],
@@ -288,14 +293,14 @@ def envelope_reads() -> dict[str, list[str]]:
     return found
 
 
-def test_the_page_typed_hooks_are_twelve_and_two_sit_over_bare_lists():
+def test_the_page_typed_hooks_are_twelve_and_one_sits_over_a_bare_list():
     """Case 1: the population, derived from the annotations rather than from this table."""
     derived = page_typed_hooks()
     assert derived == PAGE_HOOKS, f"the page-typed hooks moved: {derived}"
     bare = sorted(name for name, (_, ret) in derived.items() if ret.startswith("List<"))
     assert bare == BARE_LIST_HOOKS, f"hooks that promise a page over a bare list: {bare}"
     paged = [ret for _, ret in derived.values() if ret.startswith("PageDTO<")]
-    assert len(paged) == len(derived) - len(bare) == 10, f"{paged}"
+    assert len(paged) == len(derived) - len(bare) == 11, f"{paged}"
 
 
 def test_the_envelope_is_four_names_that_both_branches_and_the_record_all_agree_on():
@@ -320,7 +325,7 @@ def test_the_envelope_is_four_names_that_both_branches_and_the_record_all_agree_
 
 
 def test_the_window_the_server_used_is_read_only_where_a_page_corrects_itself():
-    """Case 4: items, total and page have readers; size's only eleven are the corrections."""
+    """Case 4: items, total and page have readers; size's only twelve are the corrections."""
     reads = envelope_reads()
     assert reads == READERS, f"the envelope reader census moved: {reads}"
     assert "app/(app)/jobs/page.tsx" in reads["items"], (
@@ -362,22 +367,24 @@ def test_the_window_the_server_used_is_read_only_where_a_page_corrects_itself():
     assert reads["size"] == ["app/(app)/activity/page.tsx", "app/(app)/applications/page.tsx",
                              "app/(app)/companies/page.tsx", "app/(app)/copilot/page.tsx",
                              "app/(app)/interviews/page.tsx", "app/(app)/jobs/page.tsx",
-                             "app/(app)/knowledge/page.tsx", "app/(app)/replies/page.tsx",
+                             "app/(app)/knowledge/page.tsx", "app/(app)/networking/page.tsx",
+                             "app/(app)/replies/page.tsx",
                              "app/(app)/resumes/page.tsx",
                              "components/ingestion/scheduled-feeds-panel.tsx",
                              "components/knowledge/notes-panel.tsx"], (
-        f"the answer's window has readers beyond the eleven corrections: {reads['size']}")
+        f"the answer's window has readers beyond the twelve corrections: {reads['size']}")
 
 
-def test_the_twelve_pagers_are_fed_client_numbers_and_the_answered_window_still_is_not_one():
-    """Case 8: all twelve `<Pagination>`s take the window the caller asked with, never the answer's."""
+def test_the_thirteen_pagers_are_fed_client_numbers_and_the_answered_window_still_is_not_one():
+    """Case 8: all thirteen `<Pagination>`s take the window the caller asked with, never the answer's."""
     consumers = sorted(str(p.relative_to(FRONT)).replace("\\", "/")
                        for p in FRONT.rglob("*.tsx")
                        if 'from "@/components/common/pagination"' in read(p))
     assert consumers == ["app/(app)/activity/page.tsx", "app/(app)/applications/page.tsx",
                          "app/(app)/companies/page.tsx", "app/(app)/copilot/page.tsx",
                          "app/(app)/interviews/page.tsx", "app/(app)/jobs/page.tsx",
-                         "app/(app)/knowledge/page.tsx", "app/(app)/replies/page.tsx",
+                         "app/(app)/knowledge/page.tsx", "app/(app)/networking/page.tsx",
+                         "app/(app)/replies/page.tsx",
                          "app/(app)/resumes/page.tsx",
                          "components/ingestion/scheduled-feeds-panel.tsx",
                          "components/knowledge/notes-panel.tsx",

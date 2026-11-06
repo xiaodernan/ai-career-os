@@ -4,6 +4,8 @@ import com.careeros.network.entity.Contact;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -34,11 +36,17 @@ public interface ContactRepository extends JpaRepository<Contact, UUID> {
             """;
 
     /**
-     * The registry as the page asks it. The tiebreaker is the row's own id, so two people touched in
-     * the same instant keep one order across pages rather than trading places on every read.
+     * The registry as the page asks it (72.1). The tiebreaker is the row's own id, so two people
+     * touched in the same instant keep one order across pages rather than trading places on every
+     * read. The count query repeats the same {@code BOARD_WHERE} -- and only that clause -- so
+     * {@code total} counts the people who spell the word, not the whole registry: a pager that
+     * offered two pages of everybody while the board showed one page of matches would be answering
+     * a different question from the box above it.
      */
-    @Query("SELECT c FROM Contact c" + BOARD_WHERE + " ORDER BY c.updatedAt DESC, c.id ASC")
-    List<Contact> findBoard(@Param("userId") UUID userId, @Param("needle") String needle);
+    @Query(value = "SELECT c FROM Contact c" + BOARD_WHERE + " ORDER BY c.updatedAt DESC, c.id ASC",
+            countQuery = "SELECT COUNT(c) FROM Contact c" + BOARD_WHERE)
+    Page<Contact> findBoard(@Param("userId") UUID userId, @Param("needle") String needle,
+            Pageable pageable);
 
     /**
      * Every row the account owns, which is what the export bundle carries (roadmap 40.3): a bundle

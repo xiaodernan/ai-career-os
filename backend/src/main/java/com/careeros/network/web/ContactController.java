@@ -2,11 +2,12 @@ package com.careeros.network.web;
 
 import com.careeros.common.AuthUser;
 import com.careeros.common.CurrentUser;
+import com.careeros.common.PageDTO;
+import com.careeros.common.Paging;
 import com.careeros.network.dto.ContactDtos.ContactItem;
 import com.careeros.network.dto.ContactDtos.ContactRequest;
 import com.careeros.network.service.ContactService;
 import jakarta.validation.Valid;
-import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -36,9 +37,11 @@ public class ContactController {
     }
 
     @GetMapping
-    public List<ContactItem> list(@CurrentUser AuthUser user,
-                                  @RequestParam(required = false) String q) {
-        return contacts.list(user.id(), q);
+    public PageDTO<ContactItem> list(@CurrentUser AuthUser user,
+                                     @RequestParam(required = false) String q,
+                                     @RequestParam(defaultValue = "0") int page,
+                                     @RequestParam(defaultValue = "50") int size) {
+        return contacts.list(user.id(), q, Paging.of(page, size).pageable());
     }
 
     @PostMapping

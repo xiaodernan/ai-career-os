@@ -2,13 +2,14 @@ package com.careeros.network.service;
 
 import com.careeros.common.ApiErrorCode;
 import com.careeros.common.ApiException;
+import com.careeros.common.PageDTO;
 import com.careeros.network.dto.ContactDtos.ContactItem;
 import com.careeros.network.dto.ContactDtos.ContactRequest;
 import com.careeros.network.entity.Contact;
 import com.careeros.network.repository.ContactRepository;
-import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,14 +28,14 @@ public class ContactService {
     }
 
     @Transactional(readOnly = true)
-    public List<ContactItem> list(UUID userId, String q) {
+    public PageDTO<ContactItem> list(UUID userId, String q, Pageable pageable) {
         // Read once per request, not per row: the box holds what the reader meant, and the columns
         // are lower-cased by the query itself. Spaces alone are not a word, so a box the reader
-        // typed and deleted asks the whole registry.
+        // typed and deleted asks the whole registry. 72.1: the window is the server's now -- the
+        // answer carries the real total and the window really used, rather than the client
+        // inventing a one-page envelope over a bare list.
         String needle = q == null ? "" : q.trim().toLowerCase(Locale.ROOT);
-        return contacts.findBoard(userId, needle).stream()
-                .map(ContactItem::of)
-                .toList();
+        return PageDTO.from(contacts.findBoard(userId, needle, pageable), ContactItem::of);
     }
 
     @Transactional

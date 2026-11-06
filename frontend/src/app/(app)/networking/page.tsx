@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Search, Users } from "lucide-react";
 import { ModuleView } from "@/components/common/module-view";
+import { Pagination } from "@/components/common/pagination";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,7 @@ import { useOutreachDraft } from "@/lib/hooks/growth";
 import { useUrlState } from "@/lib/hooks/use-url-state";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { formatDate } from "@/lib/format";
+import { lastPageOf } from "@/lib/page-window";
 import type { Contact } from "@/lib/api/types";
 
 /**
@@ -41,23 +43,41 @@ import type { Contact } from "@/lib/api/types";
  * day's midnight; the server does not guess it from request arrival.
  */
 // Module-level so `setUrl` (a `useCallback` keyed on this object) is stable across renders.
-// `q` is declared here even though it is usually absent: `useUrlState` hydrates by walking
-// these keys, so a word left out of the defaults is a word a pasted link cannot restore.
-const PAGE_DEFAULTS: { q?: string } = { q: undefined };
+// `q` and `page` are declared here even though they are usually absent/zero: `useUrlState`
+// hydrates by walking these keys, so a key left out of the defaults is a question or a window
+// a pasted link cannot restore (70.2's rule, now the registry's too).
+const PAGE_DEFAULTS: { page: number; q?: string } = { page: 0, q: undefined };
+/** The window this board asks the route with, restated for the pager it feeds. */
+const PAGE_SIZE = 50;
 
 export default function NetworkingPage() {
   const { t, locale } = useLocale();
-  // The word lives in the URL, so a reload or a shared link opens the same question — the rule
-  // the replies board set (49.1) and the company (58.2) and pipeline (70.2) boards follow. The
-  // registry itself is not paged: the route answers every row this caller has.
-  const [state, setUrl] = useUrlState<{ q?: string }>(PAGE_DEFAULTS);
+  // The word and the window both live in the URL, so a reload or a shared link opens the same
+  // page of the same question — the rule the replies (49.1), company (58.2) and pipeline (70.2)
+  // boards follow. 72.1 gave the registry a real server window, so `page` restores people
+  // rather than being a number the client invented over a bare list.
+  const [state, setUrl] = useUrlState<{ page: number; q?: string }>(
+    PAGE_DEFAULTS,
+    { numericKeys: ["page"] }
+  );
   // The box holds what the reader is typing; the URL holds what was asked. Binding the box
   // straight to the URL would make every character a new question: six keystrokes would be six
   // requests and six cache entries, and the registry would answer a word nobody had finished.
   const [word, setWord] = React.useState(state.q ?? "");
   React.useEffect(() => setWord(state.q ?? ""), [state.q]);
-  const ask = (value: string) => setUrl({ q: value.trim() || undefined });
-  const contacts = useContacts({ q: state.q });
+  // Asking a new question starts at its first page: a word typed on page 4 must not leave the
+  // reader on a page the new, narrower answer does not have.
+  const ask = (value: string) => setUrl({ q: value.trim() || undefined, page: 0 });
+  const contacts = useContacts({ q: state.q, page: state.page, size: PAGE_SIZE });
+  const total = contacts.data?.total ?? 0;
+  // A past-the-end page is an empty window over a real total, not an empty registry: the
+  // answer's own window is the divisor and `lastPageOf` is that rule in one place, the same
+  // correction the company, pipeline and replies boards make. A layout effect, because the
+  // stale commit would otherwise paint the wrong empty copy first.
+  const lastPage = contacts.data ? lastPageOf(total, contacts.data.size) : 0;
+  React.useLayoutEffect(() => {
+    if (contacts.data && state.page > lastPage) setUrl({ page: lastPage });
+  }, [contacts.data, state.page, lastPage, setUrl]);
   const [editing, setEditing] = React.useState<Contact | null>(null);
   const [open, setOpen] = React.useState(false);
   // 11.2 — the outreach draft. The contact's own fields are the request, so
@@ -84,11 +104,10 @@ export default function NetworkingPage() {
         ctaLabel={t("networking.draftWithCopilot")}
         actions={
           <div className="flex flex-wrap items-center justify-end gap-2">
-            {/* The question 70.3 gave this route, and the one this board had no way to ask. It is the
-                server's search rather than a filter over the rows in hand -- and here there is no
-                window to filter, because the registry answers a bare list, so a word that only
-                reached the rows on screen would hide the people the server just found. The characters
-                are read as characters, which is what lets a person whose company really carries an
+            {/* The question 70.3 gave this route. It is the server's search, not a filter over the
+                rows in hand: since 72.1 those rows are one window of the matches, so filtering them
+                here would hide the people the server found on another page. The characters are read
+                as characters, which is what lets a person whose company really carries an
                 underscore be found by spelling the underscore. */}
             <form
               role="search"
@@ -210,6 +229,18 @@ export default function NetworkingPage() {
           </Card>
         )}
       />
+      {total > PAGE_SIZE && (
+        <Pagination
+          page={contacts.data?.page ?? state.page}
+          size={PAGE_SIZE}
+          total={total}
+          label={t("networking.title")}
+          onPageChange={(page) => {
+            setUrl({ page });
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+        />
+      )}
       {draft.data?.body && (
         <Card>
           <CardContent className="space-y-2">

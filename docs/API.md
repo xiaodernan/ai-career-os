@@ -644,7 +644,7 @@ strings, and `lastTouchAt` is the user's claim about when contact last happened.
 
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/contacts` | the registry (`?q=`): this caller's people, most recently updated first, ties broken by the row's own id; `q` is a case-insensitive substring of a person's name, role, company, relation, email and notes whose characters are literal (`%` and `_` included, 70.3) — the five optional columns are read as empty rather than unknown, and spaces alone are no narrowing at all |
+| GET | `/contacts` | the registry (`?q=&page=&size=`) → an envelope of items plus the total, page and size the server used (72.1): one window of this caller's people, most recently updated first, ties broken by the row's own id; total counts everyone who spells the word, not the rows in this window. `q` is a case-insensitive substring of a person's name, role, company, relation, email and notes whose characters are literal (`%` and `_` included, 70.3) — the five optional columns are read as empty rather than unknown, and spaces alone are no narrowing at all; page (default 0, floored) and size (default 50, clamped to 1..100) are the window |
 | POST | `/contacts` | `{name, role, company, relation, email, notes, lastTouchAt}` → the row (201). `name` is the only required field |
 | PATCH | `/contacts/{id}` | same shape, full replace (the form's current values); 404 when the row is not the caller's |
 | DELETE | `/contacts/{id}` | forgets one contact; 204 |

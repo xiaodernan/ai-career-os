@@ -4852,6 +4852,43 @@ on two other things, so its needle cannot arrive as one more branch of the same 
   so `useContacts` keeps its `List<ContactItem>` row and its call site joins neither `WIRE` nor
   `SITES`. Paging the registry is a separate question and was deliberately not folded in here.)
 
+## Epic 72 — the registry answers a real window
+
+70.3 deliberately left the contacts board unpaged: `GET /contacts` answered a bare list, and
+`useContacts` invented a one-page envelope over it (`total = items.length`). That was honest about
+the rows in hand but not about the question — a pager could never offer a second page of *matches*,
+and a future server-side cap would have been reported as "you have this many contacts". Epic 71's
+audits measured that shape from both planes; 72 closes it end to end.
+
+- [x] **72.1** `GET /contacts` pages on the server.
+
+  (`ContactRepository.findBoard` takes a `Pageable` and returns `Page<Contact>`; its `countQuery`
+  repeats the very same `BOARD_WHERE`, so `total` counts the people who spell the word rather than
+  everybody in the account. The `ORDER BY c.updatedAt DESC, c.id ASC` total order and all six
+  literal `LOCATE` columns stay. `ContactService.list` uses `PageDTO.from`, the controller binds
+  `?page=&?size=` through `Paging.of` (default 50, ceiling 100), and the export bundle still reads
+  the unfiltered `findByUserIdOrderByUpdatedAtDesc` — a backup cannot lose people to a window.
+  `ContactNeedleIT` walks three disjoint windows against real Postgres: total 5 over a window of 2,
+  no row on two pages, a past-the-end page with a live total, and the clamp that turns
+  `?size=5000&page=-1` into an answerable first page.)
+
+- [x] **72.2** The board reads the answer's window.
+
+  (`useContacts` drops the invented envelope for `normalizePage` and sends `q`, `page` and `size`
+  in both the request and the `queryKey`. `/networking` declares `page` in `PAGE_DEFAULTS` and in
+  `useUrlState`'s numeric keys, resets to page 0 on a new question, corrects a past-the-end link
+  through `lastPageOf` in a layout effect, and renders the shared `Pagination` when the server
+  counted more people than one window holds. The pager's label reuses the page's own title, so no
+  new locale key was needed. Eight screen tests, including the "1–50 of 120" count that a
+  client-made envelope could never have printed.)
+
+  Four census gates moved with the population: the page-envelope walk now counts eleven real
+  `PageDTO` hooks and one bare list, the pager-window census goes 12 → 13, the window-size table
+  registers the fourteenth hook (its wire literal, call site, server default and pager), and the
+  frontend endpoints census repins 56 → 58 bound parameters. API.md's `/contacts` row names the
+  new envelope and both coordinates. `PRODUCT.md` and `e2e/README.md` also settle the E2E count
+  owed by 71.3's new stored-JD case (65 → 66).
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

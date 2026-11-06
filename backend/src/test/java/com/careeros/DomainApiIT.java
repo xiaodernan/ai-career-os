@@ -235,7 +235,8 @@ class DomainApiIT extends ApiIntegrationTest {
 
         // Another account's registry is empty, and its id cannot touch Alice's row.
         mvc.perform(get("/api/v1/contacts").header(authHeader(), "Bearer " + bob))
-                .andExpect(jsonPath("$.data").isEmpty());
+                .andExpect(jsonPath("$.data.items").isEmpty())
+                .andExpect(jsonPath("$.data.total").value(0));
         mvc.perform(patch("/api/v1/contacts/" + id)
                         .header(authHeader(), "Bearer " + bob)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -265,7 +266,8 @@ class DomainApiIT extends ApiIntegrationTest {
         mvc.perform(delete("/api/v1/contacts/" + id).header(authHeader(), "Bearer " + alice))
                 .andExpect(status().isNoContent());
         mvc.perform(get("/api/v1/contacts").header(authHeader(), "Bearer " + alice))
-                .andExpect(jsonPath("$.data").isEmpty());
+                .andExpect(jsonPath("$.data.items").isEmpty())
+                .andExpect(jsonPath("$.data.total").value(0));
         mvc.perform(get("/api/v1/contacts"))
                 .andExpect(status().isUnauthorized());
     }

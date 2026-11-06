@@ -480,18 +480,19 @@ export function useCompanies(params?: { page?: number; size?: number; q?: string
  */
 /**
  * The registry list, most recently updated first — the order the backend orders by, so
- * the page's ordering is a pass-through rather than a second opinion. The route answers
- * a bare list (every row is this user's; there is nothing to page), which the hook wraps
- * in the page envelope `ModuleView` renders, with total = items.
+ * the page's ordering is a pass-through rather than a second opinion. 72.1 made the route
+ * answer a real `PageDTO`, so this hook no longer invents a one-page envelope over a bare
+ * array: `total` counts everyone who spells the word (the repository's count query uses the
+ * same `BOARD_WHERE`), and `page`/`size` are the window the server actually used. That is
+ * what lets the pager offer a second page of *matches* rather than a second page of
+ * everybody, and why the board can still say "no one matches this word" instead of the
+ * untrue "you have no contacts".
  *
- * So `total` counts the answer, not the registry: with a word in the request it is the
- * number of people who spell it, which is what lets the board below say "no one matches
- * this word" instead of the untrue "you have no contacts".
- *
- * The word belongs in the cache key as well as the request — two different words over one
- * key are one cached answer, so typing a second word would repaint nothing. The registry's
- * three writes invalidate `["contacts"]`, and react-query matches a prefix, so whatever
- * word is on screen still refetches when a person is added, edited or deleted.
+ * Every coordinate belongs in the cache key as well as the request — a word, a page and a
+ * window over one key are one cached answer, so changing any of them repaints nothing.
+ * The registry's three writes invalidate `["contacts"]`, and react-query matches a prefix,
+ * so whatever word or page is on screen still refetches when a person is added, edited or
+ * deleted.
  */
 export function useContacts(params?: {
   /**
@@ -500,16 +501,17 @@ export function useContacts(params?: {
    * really carries an underscore is found by spelling the underscore.
    */
   q?: string;
+  /** The server's window (72.1). A pasted `?page=` restores the same people. */
+  page?: number;
+  size?: number;
 }) {
   return useQuery({
     queryKey: ["contacts", params],
-    queryFn: async (): Promise<Page<Contact>> => {
-      const items = listOf(
-        await api.get<unknown>(endpoints.contacts, { q: params?.q }),
-        "items",
-      ).map(mapContact);
-      return { items, total: items.length, page: 0, size: items.length };
-    },
+    queryFn: async (): Promise<Page<Contact>> =>
+      normalizePage(
+        await api.get<unknown>(endpoints.contacts, { size: 50, ...(params ?? {}) }),
+        (row) => mapContact(row),
+      ),
   });
 }
 

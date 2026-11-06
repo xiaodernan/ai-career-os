@@ -14,9 +14,10 @@ wiring so the copies cannot quietly come back:
 * no other file under `frontend/src` derives a page count from a total (the census that would
   have caught the ten copies);
 * every board that runs the past-the-end correction names the shared helper, and the count is
-  pinned (the eleven server-window screens -- the ten boards plus the replies page 37.4 gave
-  a pager -- plus `job-filter.ts`, whose Saved tab clamps the same rule over a client-side
-  set), so a new board means a new call site rather than a twelfth copy.
+  pinned (the twelve server-window screens -- the eleven boards plus the replies page 37.4 gave
+  a pager, with the contacts registry 72.1 joining them -- plus `job-filter.ts`, whose Saved tab
+  clamps the same rule over a client-side set), so a new board means a new call site rather than
+  a thirteenth copy.
 """
 
 from pathlib import Path
@@ -28,7 +29,10 @@ COMPONENT = FRONT / "components" / "common" / "pagination.tsx"
 HELPER = FRONT / "lib" / "page-window.ts"
 HELPER_TEST = FRONT / "lib" / "page-window.test.ts"
 
-CORRECTION_SITES = 12
+# 72.1 gave the contacts registry a real server window, so its board joined the eleven
+# server-window screens plus `job-filter.ts` (the client-side Saved tab) as the thirteenth
+# caller of the shared rule. A new board must spend `lastPageOf`, not copy the arithmetic.
+CORRECTION_SITES = 13
 
 
 def read(path: Path) -> str:

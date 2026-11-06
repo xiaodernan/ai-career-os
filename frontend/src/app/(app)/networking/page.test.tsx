@@ -16,7 +16,7 @@ const state = vi.hoisted(() => ({
   // The page reads a partial URL state: a search nobody made is absent, not `undefined`, and
   // `useUrlState` is the piece SSR cannot hydrate (its adopt-the-query effect runs only in a
   // browser), so each test hands the page the query string it would have adopted.
-  url: {} as { q?: string },
+  url: {} as { page: number; q?: string },
   params: undefined as Record<string, unknown> | undefined,
 }));
 
@@ -48,11 +48,12 @@ import NetworkingPage from "./page";
 import { LocaleProvider } from "@/lib/i18n/locale-context";
 
 /**
- * The registry is the browser's half of 70.3, and it asks the same kind of question the company
- * (58.2) and pipeline (70.2) boards ask: the words in the box are the question the server answered,
- * not a filter over the rows already on screen. Here that distinction is the whole feature, because
- * the route answers a bare list — there is no window for a client-side filter to narrow, so a word
- * that only reached the rows in hand would silently hide everyone the server found instead.
+ * The registry is the browser's half of 70.3, and since 72.1 also of the server's window: the
+ * words in the box are the question the server answered, not a filter over the rows already on
+ * screen, and the rows are one page of that answer. A client-side filter would silently hide
+ * everyone the server found on another page. Rendered through the real locale provider, the real
+ * ModuleView and the real pager, so the count beside it is the server's total rather than the
+ * length of the rows in hand.
  *
  * Rendered through the real locale provider and the real `ModuleView`, because the copy is the
  * contract: the two empties are different sentences in both shipped languages, and only one of
@@ -73,7 +74,8 @@ const ITEMS: Contact[] = [
 
 function withContacts(items: Contact[], total: number): void {
   state.contacts = {
-    data: { items, total, page: 0, size: items.length },
+    // 72.1: the window is the server's, not a page the client invented over a bare list.
+    data: { items, total, page: 0, size: 50 },
     isPending: false,
     isError: false,
     isFetching: false,
@@ -98,7 +100,7 @@ function render(locale: "en" | "zh" = "en"): string {
 }
 
 beforeEach(() => {
-  state.url = {};
+  state.url = { page: 0 };
   state.params = undefined;
   state.contacts = {
     data: undefined,
@@ -112,14 +114,13 @@ beforeEach(() => {
 
 describe("the contacts registry", () => {
   it("asks the route for the word in the box, and shows it back", () => {
-    state.url = { q: "ada" };
+    state.url = { page: 0, q: "ada" };
     withContacts([ITEMS[0]], 1);
     const html = render();
 
-    // The registry is not paged, so the word is the only thing the request carries — and it
-    // carries it even when nobody has typed one, which is the difference between asking for
-    // `?q=` and asking for a different route.
-    expect(state.params).toEqual({ q: "ada" });
+    // The word travels beside the window the board asks with — and it carries `q` even when
+    // nobody has typed one, which is the difference between asking for `?q=` and a different route.
+    expect(state.params).toEqual({ page: 0, q: "ada", size: 50 });
     expect(html).toContain('role="search"');
     expect(html).toContain('placeholder="Search contacts"');
     expect(html).toContain('aria-label="Search the registry by name, role, company or notes"');
@@ -138,7 +139,7 @@ describe("the contacts registry", () => {
 
     // An absent word is no filter at all, so the browse the reader did not ask for still answers
     // the whole registry — and the box opens empty rather than with the string "undefined".
-    expect(state.params).toEqual({ q: undefined });
+    expect(state.params).toEqual({ page: 0, q: undefined, size: 50 });
     expect(html).toContain('value=""');
     expect(html).not.toContain("Clear search");
     expect(html).not.toContain("No contact matches");
@@ -147,7 +148,7 @@ describe("the contacts registry", () => {
   });
 
   it("says which empty it is: nobody spells that word, rather than nobody saved yet", () => {
-    state.url = { q: "zz" };
+    state.url = { page: 0, q: "zz" };
     withContacts([], 0);
     const html = render();
 
@@ -172,7 +173,7 @@ describe("the contacts registry", () => {
   });
 
   it("names the words that found nothing in the reader's language", () => {
-    state.url = { q: "acme" };
+    state.url = { page: 0, q: "acme" };
     withContacts([], 0);
 
     expect(render("zh")).toContain("没有与“acme”匹配的联系人");
@@ -186,13 +187,34 @@ describe("the contacts registry", () => {
     // the browse -- and the board must not narrow the answer a second time. This row's name does
     // not spell the word, and the page has no idea what it does spell (the server read the notes),
     // so a client-side filter would drop a person the reader was looking for.
-    state.url = { q: "under_score" };
+    state.url = { page: 0, q: "under_score" };
     withContacts([ITEMS[1]], 1);
     const html = render();
 
-    expect(state.params).toEqual({ q: "under_score" });
+    expect(state.params).toEqual({ page: 0, q: "under_score", size: 50 });
     expect(html).toContain('value="under_score"');
     expect(html).toContain("Under_Score Labs");
     expect(html).toContain("Bo Reyes");
+  });
+
+  it("offers a second page when the server counted more people than one window holds", () => {
+    state.url = { page: 0 };
+    withContacts(ITEMS, 120);
+    const html = render();
+
+    expect(state.params).toEqual({ page: 0, q: undefined, size: 50 });
+    // The number beside the pager is the server's total, not the two rows in hand: a client-made
+    // envelope over a bare list would have said "1–2 of 2" and offered no second page at all.
+    expect(html).toContain("1–50 of 120 Contacts");
+    expect(html).toContain("Pagination (Contacts)");
+  });
+
+  it("restores the pasted page and hides the pager when everything fits", () => {
+    state.url = { page: 2, q: "ada" };
+    withContacts([ITEMS[0]], 1);
+    const html = render();
+
+    expect(state.params).toEqual({ page: 2, q: "ada", size: 50 });
+    expect(html).not.toContain("Pagination (");
   });
 });

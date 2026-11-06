@@ -6,9 +6,10 @@ there the one that arrives? Three numbers can decide a request window -- the lit
 query hook, the argument the screen passes to that hook, and the `defaultValue` on the controller's
 `@RequestParam`. Only two of the three ever get spent, and the shipped text decides which per route.
 
-Thirteen hooks hand `normalizePage` a request. Twelve offer a `size` literal: resumes 20, jobs 20,
+Fourteen hooks hand `normalizePage` a request. Thirteen offer a `size` literal: resumes 20, jobs 20,
 applications 50, companies 20, knowledge sources 20, knowledge notes 20, interviews 20,
-conversations 20, activity runs 30 -- since #225 the feed's literal, replacing the
+conversations 20, activity runs 30, contacts 50 (72.1, when the registry stopped answering a bare
+list and its count query began narrowing with the same needle as its rows) -- since #225 the feed's literal, replacing the
 `{ limit: params?.limit }` it sent while `/activity/runs` was the one window the server still
 decided. `useSavedJobs` is the only hook that sends no window at all, because its route binds none
 and answers a bare list. 19.5 made the run history the eleventh: `useIngestionRuns` asks with the
@@ -119,6 +120,10 @@ WIRE = {
     # gate cannot see, and a key nobody reads is one the handler may quietly ignore (49.1).
     "useApplications": ("applications", "{ size: params?.size ?? 50, page: params?.page, status: params?.status, jobId: params?.jobId, q: params?.q, }"),
     "useCompanies": ("companies", "{ size: 20, ...(params ?? {}) }"),
+    # 72.1: the registry stopped answering a bare list, so its hook now spends the route's own
+    # 50 beside the word (70.3) and the window. The count query repeats the same needle clause,
+    # so the pager's total describes the matches rather than everybody in the caller's circle.
+    "useContacts": ("contacts", "{ size: 50, ...(params ?? {}) }"),
     "useKnowledgeSources": ("knowledge", "{ size: 20, documentId, ...(params ?? {}) }"),
     "useKnowledgeNotes": ("knowledgeNotes", "{ size: 20, ...(params ?? {}) }"),
     # 59.1 gave the hook an `enabled` flag the wire must not see, and the endpoints gate is why the
@@ -173,6 +178,10 @@ SITES = {
                       # words ride beside the window, so the pager counts the matches rather
                       # than the catalog and page two of a name is the second page of that name.
                       "{ page: state.page, size: PAGE_SIZE, q: state.q }")],
+    "useContacts": [("app/(app)/networking/page.tsx",
+                     # 72.1: the word, the index and the window ride together. A new question
+                     # resets the page, and a pasted link restores the same people.
+                     "{ q: state.q, page: state.page, size: PAGE_SIZE }")],
     "useKnowledgeSources": [("app/(app)/knowledge/page.tsx",
                             "true, src, { page: state.page, size: PAGE_SIZE }")],
     "useKnowledgeNotes": [("components/knowledge/notes-panel.tsx",
@@ -212,6 +221,7 @@ SERVER_SIZE = {
     "/api/v1/jobs/saved": None,
     "/api/v1/applications": "50",
     "/api/v1/companies": "20",
+    "/api/v1/contacts": "50",
     "/api/v1/knowledge/sources": "20",
     "/api/v1/knowledge/notes": "20",
     "/api/v1/interview/sessions": "20",
@@ -228,6 +238,7 @@ SIZE_LITERAL = {
     "useJobs": 20,
     "useApplications": 50,
     "useCompanies": 20,
+    "useContacts": 50,
     "useKnowledgeSources": 20,
     "useKnowledgeNotes": 20,
     "useInterviewSessions": 20,
@@ -441,17 +452,17 @@ def wire_sizes() -> dict[str, int | None]:
     return {hook: literal_size(params) for hook, (_, params) in list_wires().items()}
 
 
-def test_the_thirteen_list_hooks_and_their_wire_literals_are_this_table():
+def test_the_fourteen_list_hooks_and_their_wire_literals_are_this_table():
     """Case 1: the population and its numbers, derived from the hooks' bodies rather than from here."""
     derived = list_wires()
     assert derived == WIRE, f"a hook's request window changed shape: {derived}"
-    assert len(derived) == 13, f"{sorted(derived)}"
+    assert len(derived) == 14, f"{sorted(derived)}"
     keys = sorted(key for key, _ in derived.values())
-    assert len(keys) == len(set(keys)) == 13, f"two hooks spend the same endpoint key: {keys}"
+    assert len(keys) == len(set(keys)) == 14, f"two hooks spend the same endpoint key: {keys}"
 
 
 def test_every_number_a_hook_offers_is_inside_the_ceiling_the_server_enforces():
-    """Case 2: twelve of the thirteen offer a `size`, and no client asks for a window the clamp would refuse."""
+    """Case 2: thirteen of the fourteen offer a `size`, and no client asks for a window the clamp would refuse."""
     # The window reader is checked before its verdicts are spent: the plain literal, the defaulted
     # one 49.1 introduced, and a params object that states no number at all each have to answer the
     # way this file claims. Without the control, "twelve" could be a count of what one regex reached
@@ -462,12 +473,12 @@ def test_every_number_a_hook_offers_is_inside_the_ceiling_the_server_enforces():
         "the reader cannot see a defaulted window, so a hook that states its number would be counted " \
         "as offering none"
     assert literal_size("{ documentId, ...(params ?? {}) }") is None, \
-        "the reader matched a params object with no number in it, so the twelve below is not twelve"
+        "the reader matched a params object with no number in it, so the thirteen below is not thirteen"
 
     sizes = wire_sizes()
     assert sizes == {**SIZE_LITERAL, "useSavedJobs": None}, sizes
     asked = sorted(n for n in sizes.values() if n is not None)
-    assert len(asked) == 12, f"{sizes}"
+    assert len(asked) == 13, f"{sizes}"
     outside = [n for n in asked if not 1 <= n <= MAX_PAGE_SIZE]
     assert outside == [], f"a hook asks for a window Paging would clamp: {outside}"
     paging = java(PAGING)
@@ -494,7 +505,8 @@ def test_the_literals_every_caller_shadows_and_none_without_a_caller():
     with_size = sorted(h for h, value in shipped.items() if value is not None)
     shadowed = sorted(hook for hook in with_size
                       if derived[hook] and not any(offers_no_size(arg) for _, arg in derived[hook]))
-    assert shadowed == ["useActivityRuns", "useApplications", "useCompanies", "useConversations",
+    assert shadowed == ["useActivityRuns", "useApplications", "useCompanies", "useContacts",
+                        "useConversations",
                         "useInboundMails", "useIngestionRuns", "useInterviewSessions", "useJobs",
                         "useKnowledgeNotes", "useKnowledgeSources", "useNightlyReports"], \
         f"these literals are shadowed by every caller: {shadowed}"
@@ -607,7 +619,8 @@ def test_the_applications_board_asks_for_exactly_the_ceiling_and_pages_the_rest(
     assert renders == ["app/(app)/activity/page.tsx", "app/(app)/applications/page.tsx",
                        "app/(app)/companies/page.tsx", "app/(app)/copilot/page.tsx",
                        "app/(app)/interviews/page.tsx", "app/(app)/jobs/page.tsx",
-                       "app/(app)/knowledge/page.tsx", "app/(app)/replies/page.tsx",
+                       "app/(app)/knowledge/page.tsx", "app/(app)/networking/page.tsx",
+                       "app/(app)/replies/page.tsx",
                        "app/(app)/resumes/page.tsx",
                        "components/ingestion/scheduled-feeds-panel.tsx",
                        "components/knowledge/notes-panel.tsx",

@@ -18,11 +18,12 @@ import org.springframework.http.MediaType;
 /**
  * The networking registry reads a search box, and the box holds names (70.3).
  *
- * <p>{@code GET /contacts} is the sixth list in this codebase to take a reader's word, and it arrived
- * with a hazard the pipeline board did not have: it answers a bare array, so there is no total beside
- * the rows to hint that a filter was dropped. A needle that matched nothing would look like an empty
- * registry, and a needle that matched everything would look like a registry with six people in it.
- * Both are measured here by name, per account, because an account's circle is its own.
+ * <p>{@code GET /contacts} is the sixth list in this codebase to take a reader's word. Since 72.1
+ * it answers a real page envelope, so there is a total beside the rows: a needle that matched
+ * nothing is a zero total with people still in the registry, and a needle that matched five people
+ * over a two-row window is a total of five, not two. Both are measured here by name, per account,
+ * because an account's circle is its own -- and the count query repeats the very same needle clause,
+ * so the total cannot quietly describe a different question from the rows.
  *
  * <p>The columns are the profile as the dialog writes it -- name, role, company, relation, email and
  * notes -- and five of the six are nullable, which is why every one but the name is read
@@ -42,8 +43,8 @@ class ContactNeedleIT extends ApiIntegrationTest {
                 .andExpect(status().isCreated());
     }
 
-    /** The registry as asked: the box as `q`, anything else as further `key, value` pairs. */
-    private JsonNode search(String auth, String q, String... extras) throws Exception {
+    /** The whole answer as asked: the box as `q`, anything else as further `key, value` pairs. */
+    private JsonNode answer(String auth, String q, String... extras) throws Exception {
         var request = get("/api/v1/contacts").header("Authorization", auth).param("q", q);
         for (int i = 0; i < extras.length; i += 2) {
             request = request.param(extras[i], extras[i + 1]);
@@ -56,6 +57,11 @@ class ContactNeedleIT extends ApiIntegrationTest {
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }
+    }
+
+    /** The rows of one window (72.1): the envelope's own `items`, in the route's order. */
+    private JsonNode search(String auth, String q, String... extras) throws Exception {
+        return answer(auth, q, extras).path("items");
     }
 
     /** The rows the answer carries, in its own order -- the page's order. */
@@ -150,5 +156,45 @@ class ContactNeedleIT extends ApiIntegrationTest {
         // columns are lower-cased per row, and both answers are the two people.
         assertEquals(2, names(search(auth, token.toUpperCase())).size(),
                 "the box matched case-sensitively, so a word typed with Shift found nobody");
+    }
+
+    @Test
+    @DisplayName("a window holds part of the matches while total counts all of them")
+    void theWindowCountsTheMatchesNotThePage() throws Exception {
+        String auth = "Bearer " + register("ct-page-" + UUID.randomUUID() + "@example.com");
+        String token = "pg" + UUID.randomUUID().toString().replace("-", "").substring(0, 10);
+        for (int i = 0; i < 5; i++) {
+            createContact(auth, Map.of("name", token + " person " + i));
+        }
+        createContact(auth, Map.of("name", "someone else entirely"));
+
+        JsonNode first = answer(auth, token, "size", "2", "page", "0");
+        assertEquals(5, first.path("total").asInt(),
+                "total must count the people who spell the word, not the rows this window holds");
+        assertEquals(2, first.path("items").size(), "the first window holds two rows");
+        assertEquals(0, first.path("page").asInt(), "the answer carries the page the server used");
+        assertEquals(2, first.path("size").asInt(), "the answer carries the window the server used");
+
+        // Three disjoint windows over five matches, so the id tiebreaker and the count query are
+        // both proven against real Postgres rather than against a mocked repository.
+        List<String> seen = new ArrayList<>(names(first.path("items")));
+        seen.addAll(names(answer(auth, token, "size", "2", "page", "1").path("items")));
+        JsonNode last = answer(auth, token, "size", "2", "page", "2");
+        assertEquals(1, last.path("items").size(), "five matches over a window of two is three pages");
+        seen.addAll(names(last.path("items")));
+        assertEquals(5, seen.size(), "the three windows together hold every match");
+        assertEquals(5L, seen.stream().distinct().count(),
+                "a person appeared on two pages -- the total order broke across the window");
+
+        JsonNode beyond = answer(auth, token, "size", "2", "page", "9");
+        assertEquals(0, beyond.path("items").size(), "a page past the end is an empty window");
+        assertEquals(5, beyond.path("total").asInt(),
+                "an empty window is not an empty answer: the matches still exist");
+
+        // The same clamp the other boards get: a bookmarked typo is an answerable request, not a 500.
+        JsonNode clamped = answer(auth, token, "size", "5000", "page", "-1");
+        assertEquals(0, clamped.path("page").asInt(), "a negative page is floored to the first one");
+        assertEquals(100, clamped.path("size").asInt(), "a huge window is clamped to the ceiling");
+        assertEquals(5, clamped.path("items").size(), "the clamped first page still holds every match");
     }
 }
