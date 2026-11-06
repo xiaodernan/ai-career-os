@@ -201,6 +201,7 @@ public enum ApiErrorCode {
     PUSH_SUBSCRIPTION_LIMIT_REACHED(HttpStatus.BAD_REQUEST),
     /** The registration is not among the caller's; already forgotten, or never theirs. */
     PUSH_SUBSCRIPTION_NOT_FOUND(HttpStatus.NOT_FOUND),
+    IMPORT_BUNDLE_INVALID(HttpStatus.BAD_REQUEST),
     RATE_LIMITED(HttpStatus.TOO_MANY_REQUESTS),
     AI_SERVICE_BAD_REQUEST(HttpStatus.BAD_REQUEST),
     AI_SERVICE_CONFLICT(HttpStatus.CONFLICT),

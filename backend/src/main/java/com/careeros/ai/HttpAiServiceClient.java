@@ -737,6 +737,13 @@ public class HttpAiServiceClient implements AiServiceClient {
         }
         if (status == HttpStatus.BAD_REQUEST || status == HttpStatus.UNPROCESSABLE_ENTITY) {
             String detail = upstreamDetail(e);
+            // The refusal's own code crosses when this backend speaks it: the reader
+            // gets the typed sentence from the error table instead of a generic
+            // AI-service line. Unmapped codes stay AI_SERVICE_BAD_REQUEST.
+            ApiErrorCode code = upstreamCode(e);
+            if (code != null) {
+                return new ApiException(code, detail != null ? detail : code.name());
+            }
             return new ApiException(ApiErrorCode.AI_SERVICE_BAD_REQUEST,
                     detail != null ? detail : "AI service rejected the request");
         }
@@ -748,6 +755,37 @@ public class HttpAiServiceClient implements AiServiceClient {
         }
         log.error("AI service call failed with status {}", status);
         return new ApiException(ApiErrorCode.AI_SERVICE_UNAVAILABLE, "AI service request failed");
+    }
+
+    /**
+     * The upstream refusal's own code, when this backend speaks it. The typed refusals
+     * answer {"detail": {"code": ..., "message": ...}}; a code the backend's
+     * {@link ApiErrorCode} declares crosses as that code, so the reader's error table
+     * answers with the typed sentence instead of a generic AI-service line.
+     */
+    private static ApiErrorCode upstreamCode(RestClientResponseException e) {
+        try {
+            Map<?, ?> body = new com.fasterxml.jackson.databind.ObjectMapper()
+                    .readValue(e.getResponseBodyAsString(), Map.class);
+            // The ai-service's refusal handler answers FastAPI's shape: the typed refusal
+            // sits under "detail" ({"detail": {"code", "message", ...}}), not under an
+            // "error" envelope -- the crossing has no envelope to unwrap.
+            Object error = body.get("detail");
+            if (!(error instanceof Map<?, ?> typed)) {
+                return null;
+            }
+            Object code = typed.get("code");
+            if (!(code instanceof String name) || name.isBlank()) {
+                return null;
+            }
+            try {
+                return ApiErrorCode.valueOf(name);
+            } catch (IllegalArgumentException unknown) {
+                return null;
+            }
+        } catch (Exception parse) {
+            return null;
+        }
     }
 
     /** The upstream's own sentence, when it sent one that is a sentence. */

@@ -97,6 +97,7 @@ class ApiErrorCodeCensusTest {
                 // a letter that is not the account's, and one already filed elsewhere.
                 // 49.2: a filter word the classifier never says is the reader's mistake in the
                 // chip, not a fact about the inbox -- its own sentence rather than an empty page.
+                "IMPORT_BUNDLE_INVALID",
                 "INBOUND_INTENT_UNKNOWN",
                 "INBOUND_LINK_INVALID", "INBOUND_MAIL_ALREADY_FILED", "INBOUND_MAIL_NOT_FOUND",
                 "INBOUND_NOT_CONFIGURED",

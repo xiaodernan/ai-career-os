@@ -1732,6 +1732,7 @@ export const translations = {
       ABORTED: "The upload was cancelled.",
 
       AI_SERVICE_BAD_REQUEST: "The AI service returned a bad request.",
+      IMPORT_BUNDLE_INVALID: "That file is not a valid export bundle.",
       AI_SERVICE_CONFLICT: "The AI service is not ready yet.",
 
       AI_SERVICE_EMPTY_RESPONSE: "The AI service answered with nothing.",
@@ -4652,6 +4653,7 @@ export const translations = {
       AI_SERVICE_CONFLICT: "AI 服务还没准备好。",
 
       AI_SERVICE_BAD_REQUEST: "AI 服务请求错误",
+      IMPORT_BUNDLE_INVALID: "该文件不是有效的导出包。",
 
       AI_SERVICE_EMPTY_RESPONSE: "AI 服务返回了空内容。",
 
