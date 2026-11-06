@@ -4733,7 +4733,7 @@ Following Epic 69 (tag counts) and Epic 70 (boards answering words), this epic a
 
 - [x] **71.1** Audit API endpoints without frontend surfaces
 
-  (Walk the public API in `API.md` and compare against frontend pages in `src/app/(app)/`. Identify any `/api/v1*` endpoints that have no corresponding page/component, and any frontend pages that read from endpoints not documented in the census. Recorded as `ai-service/tests/test_browser_surface_audit.py` -- a dedicated gate, cleaner than squeezing the cross-stack walk into the forward-features contract: **181 public routes cross-walked, 165 with a reader, 16 filed UI-less with the reason each, 0 orphans.**)
+  (Walk the public API in `API.md` and compare against frontend pages in `src/app/(app)/`. Identify any `/api/v1*` endpoints that have no corresponding page/component, and any frontend pages that read from endpoints not documented in the census. Recorded as `ai-service/tests/test_browser_surface_audit.py` -- a dedicated gate, cleaner than squeezing the cross-stack walk into the forward-features contract: **181 public routes cross-walked, 166 with a reader, 15 filed UI-less with the reason each, 0 orphans** -- 165/16 at the 2026-11-07 correction; 71.3 then moved `GET /jds/{}` out of the ledger with a real reader.)
 
   **The first measurement was wrong, and the gate could not see it (corrected
   2026-11-07).** The endpoint-map parser resolved nested namespaces and *single*
@@ -4753,13 +4753,13 @@ Following Epic 69 (tag counts) and Epic 70 (boards answering words), this epic a
   the difference between an audit that records the product and one that invents
   a backlog for it -- 71.3 had been about to rebuild a surface that existed.)
 
-- [ ] **71.2** Audit UX loops without backend contract
+- [x] **71.2** Audit UX loops without backend contract
 
-  (Check that every frontend `useQuery`/`useMutation` in the knowledge, applications, and networking boards has a corresponding backend endpoint documented in `API.md` with proper request/response shapes. Missing contracts block the gate in `test_api_doc_contract.py`.)
+  (Measured and closed 2026-11-07. The third edge of the contract triangle was unmeasured: 71.1 grades backend routes against frontend readers, and `test_the_api_docs_public_tables_are_the_controllers_own.py` grades API.md's §2 rows against the controllers, but nothing asked whether every address `endpoints.ts` can *build* has a row in the contract. It does -- **the whole endpoint map, 0 undocumented** (measured at closure, 2026-11-07). `ai-service/tests/test_the_clients_addresses_have_contract_rows.py` holds that floor with **no exemption ledger**, lower bounds on both walks (a narrowed parser cannot clear it by reading nothing), and a pin on the two-argument letter address 71.1's parser once lost. The population is held by those lower bounds rather than a pinned key count, because a concurrent session added `endpoints.jd` while this gate was being written -- a census number would have been a lie by the time it landed. Shape *detail* is deliberately left to the response-shape and public-table gates: API.md describes some routes in prose and others in a row, so a length threshold here would grade the writing style rather than the contract. In-memory mutation probes: a new undocumented key reddens it, and an empty contract reader reddens it.)
 
-- [ ] **71.3** Fix documented gaps
+- [x] **71.3** Fix documented gaps
 
-  (For each gap found in 71.1-71.2, either add the missing frontend surface or remove the undocumented backend endpoint, and update the census and contracts accordingly. **Measured queue as of 2026-11-07: exactly one** -- `GET /jds/{}` reads a stored posting by id, while the browser only spends `POST /jds` on a pasted one and `GET /jds/suggestions`; no key in `endpoints.ts` reaches the stored read. The two cover-letter verbs left this queue when 71.1's parser was fixed: their editor and delete dialog have shipped since 50.2/50.4, so "add the missing surface" would have duplicated working code behind a second button.)
+  (For each gap found in 71.1-71.2, either add the missing frontend surface or remove the undocumented backend endpoint, and update the census and contracts accordingly. **Closed 2026-11-07 -- the queue emptied by wiring, not by deleting.** The two cover-letter verbs left when 71.1's parser was fixed: their editor and delete dialog had shipped since 50.2/50.4, so "add the missing surface" would have duplicated working code behind a second button. The one real gap, `GET /jds/{}`, closed with the reader the endpoint had been waiting for: the analyze dialog keeps the id `POST /jds` returns, and reopening it rehydrates the stored row through the new `useStoredJd` hook (`endpoints.jd`) instead of paying a second analyst run for text the service already holds; a gone row falls back to the paste state without retrying. The audit ledger moved screen first: 181 public routes, 166 with a reader, 15 filed UI-less, 0 orphans -- and the both-direction gate from the 71.1 correction is what proved the new reader real rather than assumed.)
 
 ## Epic 70 -- the boards answer a word
 
