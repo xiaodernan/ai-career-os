@@ -66,6 +66,8 @@ export const endpoints = {
   savedSearch: (id: string) => `/saved-searches/${seg(id)}`,
   jdAnalyze: "/jds",
   jdSuggestions: "/jds/suggestions",
+  /** 71.3: the stored analysis row, read back by id -- the dialog's rehydrate path. */
+  jd: (id: string) => `/jds/${seg(id)}`,
 
   /* ---------------- Applications ---------------- */
   applications: "/applications",

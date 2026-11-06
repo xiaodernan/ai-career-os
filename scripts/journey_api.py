@@ -90,9 +90,11 @@ jobs = call("search jobs", "GET", "/jobs?page=0&size=5&q=backend&sort=relevance"
 job_id = jobs["items"][0]["id"]
 print(f"        jobs: {jobs['total']} total, first: {jobs['items'][0]['title']}")
 
-# 7. JD analysis
-call("jd analyze", "POST", "/jds", token,
-     {"rawText": "Senior Backend Engineer. Required: Java, Spring Boot, PostgreSQL, Kubernetes, Kafka. Preferred: Redis, gRPC, OpenAPI. Responsibilities: design payment services, mentor engineers."})
+# 7. JD analysis + the stored read the dialog's rehydrate path makes (71.3)
+jd = call("jd analyze", "POST", "/jds", token,
+          {"rawText": "Senior Backend Engineer. Required: Java, Spring Boot, PostgreSQL, Kubernetes, Kafka. Preferred: Redis, gRPC, OpenAPI. Responsibilities: design payment services, mentor engineers."})
+stored = call("jd stored read", "GET", f"/jds/{jd['id']}", token)
+assert stored.get("id") == jd["id"], "the stored read must answer the row the analysis stored"
 
 # 8. match
 match = call("job match", "POST", f"/jobs/{job_id}/match", token,

@@ -193,8 +193,8 @@ def test_every_public_route_has_a_frontend_surface_or_a_recorded_reason():
         "new and needs a frontend surface (or a reason filed in UI_LESS_ROUTES above), "
         "or the endpoints map drifted from the controllers. 71.1's finding is that the "
         "accounted set is the shipped set: the UI-less routes are health, the calendar "
-        "feed, the MeController aliases, the rendered mail pages, the inbound "
-        "single-letter read and the stored-JD detail -- everything else has a reader.")
+        "feed, the MeController aliases, the rendered mail pages and the inbound "
+        "single-letter read -- everything else has a reader.")
     assert accounted >= 100, (
         f"only {accounted} routes accounted for -- the walk narrowed; the audit is stated "
         "about the whole public surface, and a narrowed walk would clear it by reading nothing")

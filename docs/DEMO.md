@@ -48,6 +48,7 @@ The UI above is a thin client over the backend's public API; shapes are in `docs
 | Upload / parse a resume | `POST /api/v1/resumes/upload`, `POST /api/v1/resumes/{id}/parse`, `POST /api/v1/resumes/{id}/set-current` |
 | Ingest pasted text into the knowledge base | `POST /api/v1/knowledge/text` |
 | Search jobs | `GET /api/v1/jobs` (authenticated) |
+| JD analysis | `POST /api/v1/jds`, `GET /api/v1/jds/{id}` (the stored read the analyze dialog's reopen makes) |
 | Match / tailor / cover letter | `POST /api/v1/jobs/{id}/match`, `/tailor`, `/cover-letter` |
 | Mock interview | `POST /api/v1/interview/sessions`, `/{id}/opening`, `/{id}/answer`, `/{id}/finalize` |
 | Track an application | `GET/POST /api/v1/applications`, `PATCH /api/v1/applications/{id}` |

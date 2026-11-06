@@ -51,6 +51,7 @@ vi.mock("@/lib/hooks/actions", async (importOriginal) => ({
   useImportJob: () => ({ mutate: () => undefined, isPending: false }),
   useAnalyzeJd: () => ({ mutate: () => undefined, isPending: false }),
   useResumeSuggestions: () => ({ mutate: () => undefined, isPending: false }),
+  useStoredJd: () => ({ data: null, isError: false }),
 }));
 
 import JobsPage from "./page";

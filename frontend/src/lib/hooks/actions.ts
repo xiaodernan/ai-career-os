@@ -214,6 +214,8 @@ export function useRunJobMatch(jobId: string) {
 }
 
 export interface JdAnalysis {
+  id?: string;
+  rawText?: string;
   requiredSkills: string[];
   preferredSkills: string[];
   responsibilities: string[];
@@ -227,10 +229,36 @@ export function useAnalyzeJd() {
     mutationFn: async (rawText: string): Promise<JdAnalysis> => {
       // `POST /jds` answers a JdItem and nothing else: no gap and no suggestion can come out of an
       // analysis, which is why the dialog calls /jds/suggestions for those two cards itself (#143).
+      // The id travels with the result: the row is stored, and the dialog that made it may close
+      // before its reader is done -- the rehydrate path below reads it back by id (71.3).
       const raw = await api.create<unknown>(endpoints.jdAnalyze, { rawText });
-      return { ...normalizeJdParsed(raw), raw };
+      return { id: str(raw, "id"), rawText, ...normalizeJdParsed(raw), raw };
     },
     onError: fail("failures.jdAnalysis"),
+  });
+}
+
+/**
+ * The stored analysis, by id (71.3): `POST /jds` persists the row, and the dialog that made it
+ * may be closed before its reader is done reading. Reopening reads the row back instead of
+ * paying a second analyst run for text the service already holds.
+ */
+export function useStoredJd(id: string | null) {
+  return useQuery({
+    queryKey: ["jd", id],
+    queryFn: async (): Promise<JdAnalysis> => {
+      const raw = await api.get<unknown>(endpoints.jd(id!));
+      return {
+        id: id ?? undefined,
+        rawText: str(raw, "rawText", "raw_text", "text", "content") ?? "",
+        ...normalizeJdParsed(raw),
+        raw,
+      };
+    },
+    enabled: id != null,
+    // A gone row (another session, a reset database) must not retry-loop: the paste
+    // state is the honest answer, and the dialog clears the id when the read fails.
+    retry: false,
   });
 }
 

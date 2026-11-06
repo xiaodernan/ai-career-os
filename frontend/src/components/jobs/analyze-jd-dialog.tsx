@@ -18,7 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { ProcessingSteps, seedSteps, type ProcessingStep } from "@/components/ai/processing-steps";
 import { AIBadge } from "@/components/ai/ai-badge";
-import { useAnalyzeJd, useResumeSuggestions, type JdAnalysis } from "@/lib/hooks/actions";
+import { useAnalyzeJd, useResumeSuggestions, useStoredJd, type JdAnalysis } from "@/lib/hooks/actions";
 import { missingSkillGaps } from "@/lib/api/normalize";
 import type { Suggestion } from "@/lib/api/types";
 import { ApiError } from "@/lib/api/client";
@@ -51,8 +51,12 @@ export function AnalyzeJdDialog({ onUseText }: { onUseText?: (text: string) => v
   const [open, setOpen] = React.useState(false);
   const [text, setText] = React.useState("");
   const [result, setResult] = React.useState<JdAnalysis | null>(null);
+  // The analysis is a stored row: the id is what a reopened dialog reads back (71.3),
+  // so an accidental close doesn't cost the reader a second analyst run.
+  const [lastAnalysisId, setLastAnalysisId] = React.useState<string | null>(null);
   const analyze = useAnalyzeJd();
   const suggest = useResumeSuggestions();
+  const stored = useStoredJd(open && !result ? lastAnalysisId : null);
 
   React.useEffect(() => {
     if (!open) {
@@ -63,6 +67,22 @@ export function AnalyzeJdDialog({ onUseText }: { onUseText?: (text: string) => v
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
+  React.useEffect(() => {
+    // The row is gone (another session, a reset database): stop asking, and the
+    // paste state is the honest answer.
+    if (stored.isError) setLastAnalysisId(null);
+  }, [stored.isError]);
+
+  React.useEffect(() => {
+    if (!open || result) return;
+    const restored = stored.data;
+    if (!restored) return;
+    setResult(restored);
+    setText(restored.rawText ?? "");
+    suggest.mutate({ jdRaw: restored.rawText ?? "" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, result, stored.data]);
+
   const issue = issueText(jdTextIssue(text), t);
 
   const run = () => {
@@ -71,6 +91,7 @@ export function AnalyzeJdDialog({ onUseText }: { onUseText?: (text: string) => v
     analyze.mutate(value, {
       onSuccess: (res) => {
         setResult(res);
+        setLastAnalysisId(res.id ?? null);
         // /jds never returns suggestions; compare against the parsed resume via /jds/suggestions.
         suggest.mutate({ jdRaw: value });
       },
@@ -119,6 +140,10 @@ export function AnalyzeJdDialog({ onUseText }: { onUseText?: (text: string) => v
             {result && (
               <div className="space-y-4">
                 <ProcessingSteps steps={stepsFor(t, false, true)} className="mb-4" />
+                {/* 71.3: this view came from the stored row, not a fresh run. */}
+                {!analyze.isSuccess && (
+                  <p className="text-xs text-muted-foreground">{t("jd.restoredNote")}</p>
+                )}
                 <JdResult
                   result={result}
                   suggestions={suggest.data?.suggestions ?? []}
