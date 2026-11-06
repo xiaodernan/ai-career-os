@@ -47,7 +47,7 @@ test("the funnel the API computed is the funnel on the screen", async ({ api, au
   for (const label of STAGE_LABELS) {
     await expect(
       authedPage.getByText(label, { exact: true }).first(),
-      `${stage} is on the funnel's answer but not on the screen`
+      `${label} is on the funnel's answer but not on the screen`
     ).toBeVisible({ timeout: 20_000 });
   }
 

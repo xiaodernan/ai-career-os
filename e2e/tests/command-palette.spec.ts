@@ -47,8 +47,9 @@ test("the keyboard shortcut opens the palette, and Escape closes it", async ({ a
 
   // The capability line is generated from the same table that decodes the response, so it
   // names every group /search answers with -- and it is only rendered before a query.
+  // The letters group joined the answer (52.1), and the line lists it last.
   await expect(
-    authedPage.getByText(/Search jobs, companies, resumes, notes, conversations and applications/)
+    authedPage.getByText(/Search jobs, companies, resumes, notes, conversations, applications and letters/)
   ).toBeVisible();
 
   // "Go to" is the client-side group: it is on screen before any request has been made.

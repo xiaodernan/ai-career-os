@@ -103,18 +103,20 @@ test("a section the reader withholds is gone from the bundle, and the bundle sti
   // 2. The manifest stops claiming the rows the bundle no longer carries.
   //    This is the one a reader sees: the badge under the hash, and the
   //    last line of the printable document. A count that still says
-  //    "applications: 1" tells the reader their pipeline is in the file
+  //    "Applications: 1" tells the reader their pipeline is in the file
   //    they are about to hand over -- the opposite of what they asked for.
+  //    The badges speak the reader's language (the i18n wave localized the
+  //    section names), so the assertions follow the screen's spellings.
   expect(
     redacted.manifest?.counts?.applications,
     "the manifest still counts the rows the bundle dropped"
   ).toBe(0);
   await expect(
-    authedPage.getByText("applications: 0", { exact: true }).first(),
+    authedPage.getByText("Applications: 0", { exact: true }).first(),
     "the screen's counts still claim the dropped rows"
   ).toBeVisible({ timeout: 20_000 });
   await expect(
-    authedPage.getByText("applications: 1", { exact: true }),
+    authedPage.getByText("Applications: 1", { exact: true }),
     "the screen's counts still claim the dropped rows"
   ).toHaveCount(0);
 
