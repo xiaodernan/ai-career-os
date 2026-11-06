@@ -10,6 +10,13 @@ reddens in the suite that ships the backend, before the frontend ever learns of 
 The walk resolves two entry spellings the endpoints map uses: nested namespaces
 (`auth: { login: ... }`) and multi-line arrow builders, and it grades a route as
 read when its key is referenced by any non-test frontend source.
+
+The ledger is graded in both directions -- a readerless route needs a reason, and
+a reason needs a readerless route. 71.1 graded only the first, and the parser lost
+`applicationLetter`, the map's only two-argument multi-line builder: PATCH/DELETE
+of a cover letter were filed as "no edit screen" while the editor and the delete
+dialog had shipped in 50.2/50.4. A lost key does not merely miss a route -- it
+invents a gap, and 71.3 would have rebuilt a surface that already existed.
 """
 
 import re
@@ -41,8 +48,11 @@ UI_LESS_ROUTES = {
     "POST /mail/preferences/{}/{}/start/{}": "the rendered mail-settings page's own form posts here; the app never calls it",
     "POST /mail/preferences/{}/{}/stop/{}": "the one-click unsubscribe URL a mail client fires; the app never calls it",
     "POST /inbound/mail/{}": "a mail provider posts here, not the browser; the address is what the settings card hands out",
-    "DELETE /applications/{}/letters/{}": "the cover-letter edit surface is a recorded gap (71.3's queue): the app reads letters and regenerates, but has no edit screen",
-    "PATCH /applications/{}/letters/{}": "the cover-letter edit surface is a recorded gap (71.3's queue): the app reads letters and regenerates, but has no edit screen",
+    # 71.3's one real remaining gap. PATCH/DELETE of a letter used to be filed
+    # here too, with the reason "no edit screen" -- that was this walk losing the
+    # `applicationLetter` key, not a missing product surface: 50.2/50.4 shipped
+    # the in-place editor and the delete dialog. The reverse assertion below is
+    # what stops a reason like that from being filed again.
     "GET /jds/{}": "the JD detail read is a recorded gap (71.3's queue): the app analyzes a pasted posting and reads the suggestions, but never fetches a stored JD by id",
 }
 
@@ -81,6 +91,18 @@ def _endpoint_keys():
             namespace = None
             continue
         body = line.lstrip()
+        # A builder whose template sits on the *next* line. endpoints.ts has exactly
+        # one: `applicationLetter: (id, letterId) =>` followed by its backtick string.
+        # The single-line pattern below cannot see it, so the key used to vanish from
+        # the map and every route it serves looked key-less -- which is how 71.1 filed
+        # PATCH/DELETE of a cover letter as "no edit screen" while the in-place editor
+        # and the delete dialog had shipped in 50.2/50.4. A walk that loses a key does
+        # not merely miss a route: it invents a gap the product already closed.
+        arrow_only = re.match(r"^(\w+): \([^)]*\) =>\s*$", body)
+        if arrow_only:
+            name = arrow_only.group(1)
+            pending = (f"{namespace}.{name}" if namespace else name, "")
+            continue
         entry = re.match(r'(\w+): (?:\(([^)]*)\) => )?(?:`([^`]*)`|"([^"]*)"),?\s*$', body)
         if not entry:
             if pending:
@@ -118,7 +140,16 @@ def _served_key(verb, path):
     return f"{verb} /{_PARAM.sub('{}', path).replace('/api/v1', '', 1).strip('/')}"
 
 
-def test_every_public_route_has_a_frontend_surface_or_a_recorded_reason():
+def _walk():
+    """(orphans, accounted, readerless) over the whole public route table.
+
+    `readerless` is the measured set of served routes no frontend source reads --
+    the exact population UI_LESS_ROUTES is allowed to name. Returning it (rather
+    than recomputing it in each test) is what lets the ledger be graded in both
+    directions: a route without a reader needs a reason, *and* a reason needs a
+    route without a reader. 71.1 gated only the first, so a key the parser lost
+    could be filed as a product gap that did not exist.
+    """
     routes = _backend_public_routes()
     keys = _endpoint_keys()
     used = _frontend_reader_keys()
@@ -130,7 +161,7 @@ def test_every_public_route_has_a_frontend_surface_or_a_recorded_reason():
     for (verb, path), f in routes.items():
         by_path.setdefault(fold(path), []).append((verb, path, f))
 
-    orphans, readered = [], 0
+    orphans, accounted, readerless = [], 0, set()
     for path, calls in sorted(by_path.items()):
         np = path.replace("/api/v1", "", 1).lstrip("/")
         hit = None
@@ -138,43 +169,76 @@ def test_every_public_route_has_a_frontend_surface_or_a_recorded_reason():
             if fold(tmpl).strip("/") == np:
                 hit = (k, k in used)
                 break
-        if hit is None:
-            for verb, _p, f in calls:
-                key = _served_key(verb, path)
-                if key in UI_LESS_ROUTES:
-                    readered += 1
-                    continue
-                orphans.append(f"{key} [{f}] no-key")
-            continue
-        if not hit[1]:
-            for verb, _p, f in calls:
-                key = _served_key(verb, path)
-                if key in UI_LESS_ROUTES:
-                    readered += 1
-                    continue
-                orphans.append(f"{key} [{f}] key={hit[0]} unreferenced")
-            continue
-        readered += len(calls)
+        for verb, _p, f in calls:
+            key = _served_key(verb, path)
+            if hit is not None and hit[1]:
+                accounted += 1
+                continue
+            readerless.add(key)
+            if key in UI_LESS_ROUTES:
+                accounted += 1
+            else:
+                detail = "no-key" if hit is None else f"key={hit[0]} unreferenced"
+                orphans.append(f"{key} [{f}] {detail}")
+    return orphans, accounted, readerless
 
+
+def test_every_public_route_has_a_frontend_surface_or_a_recorded_reason():
+    orphans, accounted, _ = _walk()
     assert not orphans, (
         f"{orphans}: public routes this audit cannot account for -- either the route is "
         "new and needs a frontend surface (or a reason filed in UI_LESS_ROUTES above), "
         "or the endpoints map drifted from the controllers. 71.1's finding is that the "
         "accounted set is the shipped set: the UI-less routes are health, the calendar "
-        "feed, the MeController aliases, the rendered mail pages and the inbound "
-        "single-letter read -- everything else has a reader.")
-    assert readered >= 100, (
-        f"only {readered} routes accounted for -- the walk narrowed; the audit is stated "
+        "feed, the MeController aliases, the rendered mail pages, the inbound "
+        "single-letter read and the stored-JD detail -- everything else has a reader.")
+    assert accounted >= 100, (
+        f"only {accounted} routes accounted for -- the walk narrowed; the audit is stated "
         "about the whole public surface, and a narrowed walk would clear it by reading nothing")
 
 
-def test_the_ui_less_ledger_names_only_routes_the_backend_serves():
-    """The reverse direction: every reason this gate files names a real route.
+def test_the_ui_less_ledger_is_exactly_the_routes_without_a_reader():
+    """Both directions of the ledger, measured from the same walk.
 
-    A reason for a route the backend stopped serving is a stale excuse -- the ledger
-    has to shrink with the route table, not just grow with it."""
+    A reason for a route the backend stopped serving is a stale excuse; a reason
+    for a route the browser *does* read is a lie about the product. 71.1 filed
+    PATCH/DELETE /applications/{}/letters/{} as "no edit screen" because this
+    parser lost their two-argument endpoint, while the editor had shipped in
+    50.2/50.4. Only the first direction was gated, so the lie passed. Both are
+    gated now.
+    """
     routes = {_served_key(verb, path) for (verb, path) in _backend_public_routes()}
     stale = sorted(key for key in UI_LESS_ROUTES if key not in routes)
     assert stale == [], (
         f"{stale}: the UI-less ledger names routes the backend no longer serves -- "
         "delete the stale reasons with the routes they excuse")
+
+    _orphans, _accounted, readerless = _walk()
+    invented = sorted(key for key in UI_LESS_ROUTES if key not in readerless)
+    assert invented == [], (
+        f"{invented}: the ledger files routes the frontend already reads -- a reason "
+        "is a claim that a surface is missing, so delete it (or fix the parser that "
+        "lost the endpoint key)")
+    unfiled = sorted(readerless - set(UI_LESS_ROUTES))
+    assert unfiled == [], (
+        f"{unfiled}: readerless routes with no recorded reason -- give each one a "
+        "reason in UI_LESS_ROUTES or wire the browser surface")
+
+
+def test_the_two_argument_builder_stays_in_the_endpoint_map():
+    """Pin the one entry spelling that made the ledger lie.
+
+    `applicationLetter` is endpoints.ts's only multi-line, two-argument builder;
+    losing it turns two served, read routes into key-less orphans. Assert the key,
+    its shape and its reader so a future parser change reddens here first.
+    """
+    keys = _endpoint_keys()
+    assert keys.get("applicationLetter") == "/applications/${seg(id)}/letters/${seg(letterId)}", (
+        "the two-argument builder was not resolved -- check _endpoint_keys' pending line handling")
+    assert "applicationLetter" in _frontend_reader_keys(), (
+        "the letter editor/delete hooks stopped naming this endpoint")
+    orphans, _, readerless = _walk()
+    assert [o for o in orphans if "/letters/{}" in o] == [], (
+        "the letter routes became orphans -- the walk can no longer see their reader")
+    assert not any("/letters/{}" in k for k in readerless), (
+        "the letter routes were filed as UI-less again -- their surface exists")

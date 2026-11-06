@@ -72,6 +72,11 @@ MENTION = re.compile(r"/knowledge/notes(?![\w-])")
 # A literal `api.<verb>("<path>")` call. Deliberately narrow, and the writer census counts what it
 # finds so the narrowness is a stated limit rather than a silent one.
 NOTE_OP = re.compile(r"""\.(get|post|put|patch|delete)\(\s*["'`]([^"'`\n]*)["'`]""")
+# The demo journey spells its verbs the other way round: `call("name", "POST", "/path", ...)`.
+# It still POSTs a real note row through the same handler, so leaving it invisible to the verb
+# scan would make the "every speaker's verbs are accounted for" claim below a lie by omission.
+JOURNEY_OP = re.compile(
+    r"""\bcall\(\s*["'][^"']*["']\s*,\s*["'](GET|POST|PUT|PATCH|DELETE)["']\s*,\s*["'`]([^"'`\n]*)["'`]""")
 
 # Each speaker of the notes route, with the reason it speaks. A new speaker has to join this ledger,
 # which is the point: the list is not a photograph of the repository, it is a claim about it.
@@ -104,6 +109,8 @@ SPEAKERS: dict[str, str] = {
         "60.1's entry names the route the study button writes through",
     "docs/plans/plan_long_term.md":
         "60.1's paragraph names the route the study button writes through",
+    "scripts/journey_api.py":
+        "69.2's demo station: call() POSTs one tagged note, then GETs /knowledge/notes/tags to prove the tag counted",
     "e2e/tests/command-palette.spec.ts":
         "POSTs one note so the palette's server search has a real row to find",
     "e2e/tests/forward-surfaces.spec.ts":
@@ -337,8 +344,10 @@ def test_the_only_writer_of_note_rows_is_behind_the_post_the_client_calls() -> N
                 table_speakers.append(rel)
             if mentions_route(text):
                 route_speakers.append(rel)
-                found = sorted((verb, target) for verb, target in NOTE_OP.findall(text)
-                               if NOTE_ROUTE in target)
+                found = sorted(
+                    [(verb, target) for verb, target in NOTE_OP.findall(text) if NOTE_ROUTE in target]
+                    + [(verb.lower(), target) for verb, target in JOURNEY_OP.findall(text)
+                       if NOTE_ROUTE in target])
                 if found:
                     operations[rel] = found
     assert walked > 30, f"the writer census read {walked} files, so its silence proves nothing"
@@ -350,7 +359,8 @@ def test_the_only_writer_of_note_rows_is_behind_the_post_the_client_calls() -> N
     assert table_speakers == [], (
         f"a path outside the Java service names the notes table itself ({table_speakers}): that is a second "
         "author of note rows, not a caller of the one the route serves")
-    assert route_speakers == ["e2e/tests/command-palette.spec.ts",
+    assert route_speakers == ["scripts/journey_api.py",
+                              "e2e/tests/command-palette.spec.ts",
                               "e2e/tests/forward-surfaces.spec.ts",
                               "e2e/tests/golden-journey.spec.ts",
                               "e2e/tests/pagination.spec.ts",
@@ -363,6 +373,7 @@ def test_the_only_writer_of_note_rows_is_behind_the_post_the_client_calls() -> N
     reads = {rel: [target for verb, target in ops if verb == "get"] for rel, ops in operations.items()}
     reads = {rel: paths for rel, paths in reads.items() if paths}
     assert writes == {
+        "scripts/journey_api.py": [("post", NOTE_ROUTE)],
         "e2e/tests/command-palette.spec.ts": [("post", NOTE_ROUTE)],
         "e2e/tests/forward-surfaces.spec.ts": [("post", NOTE_ROUTE)],
         "e2e/tests/pagination.spec.ts": [("post", NOTE_ROUTE), ("post", NOTE_ROUTE)],
@@ -372,13 +383,15 @@ def test_the_only_writer_of_note_rows_is_behind_the_post_the_client_calls() -> N
         "e2e/tests/redaction.spec.ts": [("post", NOTE_ROUTE), ("post", NOTE_ROUTE), ("post", NOTE_ROUTE)],
     }, (f"a note row is now authored by a path that is not the collection POST ({writes}): the panel writes "
         "through POST /knowledge/notes, and that is the only verb the Java clause above accounts for")
-    assert reads == {"e2e/tests/golden-journey.spec.ts": [NOTE_ROUTE],
+    assert reads == {"scripts/journey_api.py": [f"{NOTE_ROUTE}/tags"],
+                     "e2e/tests/golden-journey.spec.ts": [NOTE_ROUTE],
                      "e2e/tests/redaction.spec.ts": [NOTE_ROUTE]}, \
         f"the route's readers changed shape: {reads}"
-    # No separate "a speaker the verb scan cannot see" clause: the two equalities above already hold
-    # every one of the three names, so a file that lost its only readable call has lost its entry in
-    # `writes` or `reads` and reddens there first. The scan's limit is real -- a path built from a
-    # variable is invisible -- but it lands as a vanished writer, which is the message to read.
+    # No separate "a speaker the verb scan cannot see" clause: the two equalities above now hold
+    # every one of the six names, including the demo journey's `call("…", "POST", …)` spelling
+    # that JOURNEY_OP was added to read. A file that lost its only readable call has lost its entry
+    # in `writes` or `reads` and reddens there first. The scan's remaining limit is real -- a path
+    # built from a variable is invisible -- but it lands as a vanished writer, the message to read.
 
 
 def test_the_files_that_speak_of_the_notes_route() -> None:

@@ -4733,7 +4733,25 @@ Following Epic 69 (tag counts) and Epic 70 (boards answering words), this epic a
 
 - [x] **71.1** Audit API endpoints without frontend surfaces
 
-  (Walk the public API in `API.md` and compare against frontend pages in `src/app/(app)/`. Identify any `/api/v1*` endpoints that have no corresponding page/component, and any frontend pages that read from endpoints not documented in the census. Recorded as `ai-service/tests/test_browser_surface_audit.py` -- a dedicated gate, cleaner than squeezing the cross-stack walk into the forward-features contract: 181 public routes cross-walked, 161 with a reader, 20 filed UI-less with the reason each, and both directions gated -- a route with no reader and no reason is a red, and a ledger reason naming a route the backend stopped serving is a red too.)
+  (Walk the public API in `API.md` and compare against frontend pages in `src/app/(app)/`. Identify any `/api/v1*` endpoints that have no corresponding page/component, and any frontend pages that read from endpoints not documented in the census. Recorded as `ai-service/tests/test_browser_surface_audit.py` -- a dedicated gate, cleaner than squeezing the cross-stack walk into the forward-features contract: **181 public routes cross-walked, 165 with a reader, 16 filed UI-less with the reason each, 0 orphans.**)
+
+  **The first measurement was wrong, and the gate could not see it (corrected
+  2026-11-07).** The endpoint-map parser resolved nested namespaces and *single*
+  -line arrow builders, but not `applicationLetter` -- the map's only
+  two-argument builder whose template sits on the next line. Losing that key made
+  `PATCH` and `DELETE /applications/{}/letters/{}` look key-less, and the ledger
+  filed both with the reason "no edit screen" -- while `application-letters.tsx`
+  had shipped the in-place `LetterEditor` (50.2) and the delete confirm dialog,
+  and `actions.ts` spent both verbs. The old reverse assertion only asked whether
+  a reason still named a *served* route, so a reason naming a route the browser
+  genuinely reads passed as truth. The parser now resolves the multi-line builder;
+  the walk returns the measured `readerless` set and grades the ledger against it
+  in **both** directions (a readerless route needs a reason; a reason needs a
+  readerless route); the two false reasons are gone, and a third test pins the
+  key, its shape and its reader. Mutation probes: disabling the parser branch
+  reddens all three tests; re-filing a fake reason reddens exactly one. This is
+  the difference between an audit that records the product and one that invents
+  a backlog for it -- 71.3 had been about to rebuild a surface that existed.)
 
 - [ ] **71.2** Audit UX loops without backend contract
 
@@ -4741,7 +4759,7 @@ Following Epic 69 (tag counts) and Epic 70 (boards answering words), this epic a
 
 - [ ] **71.3** Fix documented gaps
 
-  (For each gap found in 71.1-71.2, either add the missing frontend surface or remove the undocumented backend endpoint, and update the census and contracts accordingly.)
+  (For each gap found in 71.1-71.2, either add the missing frontend surface or remove the undocumented backend endpoint, and update the census and contracts accordingly. **Measured queue as of 2026-11-07: exactly one** -- `GET /jds/{}` reads a stored posting by id, while the browser only spends `POST /jds` on a pasted one and `GET /jds/suggestions`; no key in `endpoints.ts` reaches the stored read. The two cover-letter verbs left this queue when 71.1's parser was fixed: their editor and delete dialog have shipped since 50.2/50.4, so "add the missing surface" would have duplicated working code behind a second button.)
 
 ## Epic 70 -- the boards answer a word
 
