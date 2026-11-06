@@ -49,7 +49,7 @@ security model: [docs/SECURITY.md](docs/SECURITY.md) · RAG design: [docs/RAG.md
 ## Quickstart (dev)
 
 ```bash
-cp .env.example .env                # then set LLM_API_KEY / EMBEDDING_API_KEY (see docs/DEPLOYMENT.md)
+cp .env.example .env                # offline first run needs no key (mock/hash); set secrets per docs/DEPLOYMENT.md
 docker compose up -d postgres redis minio
 docker compose run --rm seed-jobs    # 12 companies / 41 roles, so search and matching have data
 
