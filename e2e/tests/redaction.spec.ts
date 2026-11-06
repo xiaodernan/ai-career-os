@@ -76,7 +76,7 @@ test("a section the reader withholds is gone from the bundle, and the bundle sti
   const exported = ((await (await exportedReply).json()) as Envelope<Bundle>).data;
 
   await expect(
-    authedPage.getByText("applications: 1", { exact: true }).first(),
+    authedPage.getByText("Applications: 1", { exact: true }).first(),
     "the export does not count the application the bundle carries"
   ).toBeVisible({ timeout: 30_000 });
 

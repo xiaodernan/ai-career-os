@@ -30,7 +30,9 @@ import { unwrap } from "./fixtures";
  * the one the screen has to match, and it is the ai-service's
  * `features/analytics.py` `PIPELINE`.
  */
-const STAGE_LABELS = ["applied", "oa", "interview", "final round", "offer"];
+// The page renders the stage labels the reader's language spells — the en
+// table's own words, capitalized the way the stage rows spell them.
+const STAGE_LABELS = ["Applied", "Online assessment", "Interview", "Final round", "Offer"];
 
 test("the funnel the API computed is the funnel on the screen", async ({ api, authedPage }) => {
   const funnel = await unwrap<{ pipeline: Array<{ stage: string; count: number }> }>(
@@ -42,9 +44,9 @@ test("the funnel the API computed is the funnel on the screen", async ({ api, au
 
   // Every stage the engine answered with is on the page, spelled the way
   // the page spells it.
-  for (const stage of funnel.pipeline.map((s) => s.stage.replace(/_/g, " "))) {
+  for (const label of STAGE_LABELS) {
     await expect(
-      authedPage.getByText(stage, { exact: true }).first(),
+      authedPage.getByText(label, { exact: true }).first(),
       `${stage} is on the funnel's answer but not on the screen`
     ).toBeVisible({ timeout: 20_000 });
   }
@@ -69,8 +71,11 @@ test("the health verdict the report computed is the verdict on the screen", asyn
   expect(report.verdict, "the health report must carry a verdict").toBeTruthy();
 
   await authedPage.goto("/monitoring");
+  // The page speaks the reader's language: the verdict renders through
+  // healthVerdictWord(t, ...) — the en table capitalizes it ("Healthy").
+  const verdictWord = report.verdict.charAt(0).toUpperCase() + report.verdict.slice(1);
   await expect(
-    authedPage.getByText(report.verdict, { exact: true }).first(),
+    authedPage.getByText(verdictWord, { exact: true }).first(),
     `the report says "${report.verdict}" but the screen does not show it`
   ).toBeVisible({ timeout: 20_000 });
 });
