@@ -97,6 +97,8 @@ export const endpoints = {
   knowledgeSource: (id: string) => `/knowledge/sources/${seg(id)}`,
   knowledgeSourceStatus: (id: string) => `/knowledge/sources/${seg(id)}/status`,
   knowledgeNotes: "/knowledge/notes",
+  /** 69.2 -- the caller's own tag vocabulary with a count per tag; the filter row's question. */
+  knowledgeNoteTags: "/knowledge/notes/tags",
   knowledgeNote: (id: string) => `/knowledge/notes/${seg(id)}`,
   knowledgeText: "/knowledge/text",
   knowledgeDocuments: "/knowledge/documents",

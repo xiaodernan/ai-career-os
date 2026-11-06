@@ -13,6 +13,12 @@
  */
 export const PRODUCT_TAGS = ["interview", "study", "answer", "gap", "prepare"] as const;
 
+/** 69.2: one row of `GET /knowledge/notes/tags` -- a label and how many notes carry it. */
+export interface NoteTagCount {
+  tag: string;
+  count: number;
+}
+
 /** The filter row asks for one of these or for the whole list. */
 export type ProductTag = (typeof PRODUCT_TAGS)[number];
 
@@ -51,6 +57,35 @@ export function noteHref(tags: readonly string[] | null | undefined): string {
   const kinds = (tags ?? []).filter((tag) => tag !== PRODUCT_TAGS[0]);
   const kind = kinds[kinds.length - 1];
   return kind ? `${NOTES_PATH}?ntag=${encodeURIComponent(kind)}` : NOTES_PATH;
+}
+
+/**
+ * 69.2: the labels the filter row offers, in the order it draws them.
+ *
+ * The five the product mints come first and in their own order -- they are the
+ * kinds of advice, and a reader learns where each one sits. The labels the reader
+ * typed follow, most-used first (the counts arrive ordered), up to `ownLimit`:
+ * a row is a filter, not an index, and past a dozen buttons the question "which
+ * tag?" costs more than the list it narrows.
+ */
+export function tagRow(counts: readonly NoteTagCount[], ownLimit = 7): string[] {
+  const own = counts
+    .filter((each) => !(PRODUCT_TAGS as readonly string[]).includes(each.tag))
+    .slice(0, ownLimit)
+    .map((each) => each.tag);
+  return [...PRODUCT_TAGS, ...own];
+}
+
+/**
+ * 69.2: whether a tag is a click that cannot land anywhere.
+ *
+ * A zero count means the label is real and nothing carries it -- the row still
+ * offers it (the vocabulary is the point) but it must not be pressable. The tag
+ * currently applied is the exception: it stays live at zero, or a reader whose
+ * last note under it was just deleted could not turn the filter off.
+ */
+export function tagIsInert(count: number | undefined, tag: string, active: string): boolean {
+  return count === 0 && tag !== active;
 }
 
 /** The same list, written back into the one input the form offers. */

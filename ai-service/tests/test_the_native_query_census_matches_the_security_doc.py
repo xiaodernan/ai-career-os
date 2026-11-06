@@ -13,6 +13,11 @@ with it, and `document_chunks` is the one user table with no backend entity -- a
 writes it and V1's cascade removes it -- so only a native count over the table can say how
 much the window took.
 
+Seven with 69.2's `UserNoteRepository`: `tags` is a Postgres `text[]`, so counting the notes
+behind each tag is `unnest(tags)` grouped in SQL -- a shape JPQL cannot spell -- and 64.2's
+membership filter (`= any(tags)`) needed native SQL for the same reason. Both bind every
+value; the only literals are column and type names.
+
 This gate walks the backend for the two ways a native statement appears -- `createNativeQuery`
 and `nativeQuery = true` -- pins the exact set, and then reads the doc row back: the census is
 only useful if the document that states it states the same one. It also checks the claim the
@@ -40,6 +45,11 @@ NATIVE_QUERIES = {
     # database's cascade removes it -- so the only way to report how many rows the window took is
     # a native count over the table. Bound parameters, no spliced value, like the other five.
     "DocumentRepository.java",
+    # 69.2's tag counts: `tags` is a Postgres `text[]`, so grouping per tag means `unnest(tags)`
+    # over the array, which JPQL cannot express. 64.2's `findByTag` in the same class is the
+    # membership test (`= any(tags)`); both bind every value, the only literals being the column
+    # and the cast's `text` type name.
+    "UserNoteRepository.java",
 }
 
 # Where a value may be spliced into SQL text, and why each is not user data.

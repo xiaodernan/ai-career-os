@@ -4696,6 +4696,37 @@ the reader in a circle.
   was free practice, and the report's own mode. The button carries the create's
   pending state and lands on the new sitting's id. 2 gate tests.)
 
+## Epic 69 -- a kept note says where to read it, and the row counts what it offers
+
+The report's keep actions say "Kept in knowledge" and then leave the reader on a page that lists every
+note at once. The tag that would narrow it already existed (64.1/64.2); what was missing was a path
+from the report to the note just kept, and a filter row that could say what sits behind each label.
+
+- [x] **69.1** A kept note carries a way back to itself.
+
+  (The report's four kinds of advice each carry `interview` plus their own kind -- `study`, `answer`,
+  `gap`, `prepare` -- so `noteHref` opens the narrowest one: the kind tag, where `interview` alone
+  opens all four kinds at once. A note with no kind tag (a hand-written one, or a draft from a caller
+  that never minted one) opens the whole list rather than a filter that could not match it. Both keep
+  buttons use it.)
+
+- [x] **69.2** The tag row counts the notes behind each label.
+
+  (`GET /knowledge/notes/tags` reads `user_notes.tags`, a Postgres `text[]`: JPQL cannot say
+  `unnest(tags)`, so this is `UserNoteRepository`'s second native statement -- 64.2's `= any(tags)`
+  filter is the first -- with every value bound and only column and type names as literals. The
+  repository orders by count, so the service is a rename and not a sort; a reader with no tags gets an
+  empty list rather than one zero row. The client reads the `{data:[...]}` envelope through
+  `useKnowledgeNoteTagCounts`; `tagRow` keeps the five product-minted labels first and appends the
+  reader's own most-used first, up to seven; `tagIsInert` leaves a zero-count label visible but
+  unpressed -- except the one currently applied, or deleting its last note would lock the reader into
+  a filter that can no longer be turned off. `NoteTagFilterTest` 4, `lib/note-tags.test.ts` 14 and
+  `lib/hooks/note-tags.test.ts` 5 pin the service decision, the row and the envelope. The security
+  census moves from six native-query classes to seven, `SECURITY.md` names `UserNoteRepository` and
+  why, the response-shape pin moves 205 -> 206, and the windowed-order gate learns that native SQL is
+  allowed a lower-case `order by`. Backend non-IT suite 1200 green; ai-service 2032 passed, 2
+  skipped; frontend 1156 passed across 116 files.)
+
 ## Epic 70 -- the boards answer a word
 
 Epic 58 stopped a search box from reading the reader's characters as SQL wildcards, and it did that

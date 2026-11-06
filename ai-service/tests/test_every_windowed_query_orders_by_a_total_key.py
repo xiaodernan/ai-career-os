@@ -106,7 +106,11 @@ def ordering(name: str, query: str) -> list[str] | None:
     order in JPQL, and judging them by their names would read an ordering nobody executes.
     """
     if query:
-        found = re.search(r"ORDER BY ([^\"\']+)", query)
+        # Case-insensitive: a JPQL statement usually spells `ORDER BY`, but a native SQL
+        # block is free to spell `order by` (64.2's `findByTag` does), and the keyword
+        # being lower-case is not the same fact as the window being unordered. Matching
+        # only the upper-case spelling turned a real tie-break into "orders by nothing".
+        found = re.search(r"ORDER BY ([^\"\']+)", query, re.I)
         if found:
             keys = []
             for term in found.group(1).split(","):

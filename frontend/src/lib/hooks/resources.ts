@@ -31,6 +31,7 @@ import {
   str,
   num,
 } from "@/lib/api/normalize";
+import type { NoteTagCount } from "@/lib/note-tags";
 import type {
   ActivityRun,
   Application,
@@ -620,6 +621,37 @@ export function useKnowledgeNotes(params?: { page?: number; size?: number; tag?:
           createdAt: str(n, "createdAt", "created_at"),
           updatedAt: str(n, "updatedAt", "updated_at"),
         })),
+  });
+}
+
+/**
+ * 69.2: the notes' own tag vocabulary, with a count per tag.
+ *
+ * The filter row used to offer the five tags the product mints whether or not a
+ * note carried them, so a click could land on an empty list and the reader had
+ * no way to tell that from an empty knowledge base. One read answers that: the
+ * labels that exist, each with how many notes are behind it.
+ *
+ * Its key sits under `["knowledge","notes"]`, which is the prefix the note
+ * mutations invalidate -- so a note kept, edited or deleted moves the counts in
+ * the same breath as the list, with no second invalidation to forget.
+ */
+/** One row of `GET /knowledge/notes/tags`, read from either spelling of the count. */
+export function mapNoteTagCounts(raw: unknown): NoteTagCount[] {
+  const out: NoteTagCount[] = [];
+  for (const row of listOf<unknown>(raw, "data", "items", "tags")) {
+    const tag = (str(row, "tag", "label") ?? "").trim();
+    const count = Number(pick(row, "count", "total") ?? 0);
+    if (tag && Number.isFinite(count)) out.push({ tag, count });
+  }
+  return out;
+}
+
+export function useKnowledgeNoteTagCounts() {
+  return useQuery({
+    queryKey: ["knowledge", "notes", "tags"],
+    queryFn: async (): Promise<NoteTagCount[]> =>
+      mapNoteTagCounts(await api.get<unknown>(endpoints.knowledgeNoteTags)),
   });
 }
 

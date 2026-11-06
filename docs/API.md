@@ -612,6 +612,7 @@ catalogue, so the palette and the board rank one query the same way.
 | DELETE | `/knowledge/sources/{id}` | |
 | POST | `/knowledge/text` | ingest inline text (`{kind, title, refId?, text}`) |
 | POST | `/knowledge/documents` | ingest an uploaded document: multipart `file`, optional `kind` and `title`; the source row and its document row are filed in one transaction, so an upload that cannot store its document stores neither |
+| GET | `/knowledge/notes/tags` | the caller's own tag vocabulary with a count per tag (69.2); the labels are read from the same `text[]` column the notes list filters on, and a note with no tags is in the list's total but in no tag's count |
 | GET / POST / PATCH / DELETE | `/knowledge/notes`, `/knowledge/notes/{id}` | user notes; `GET` pages with `page`/`size` and narrows to one `tag` (64.2) — the report's keep actions tag their notes `interview`/`study`/`answer`/`gap`/`prepare`, so a tag is how the knowledge page finds the advice a rehearsal left |
 
 ### Interviews (`/interview/sessions`)

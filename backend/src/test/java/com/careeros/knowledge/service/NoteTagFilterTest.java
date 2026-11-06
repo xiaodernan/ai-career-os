@@ -8,6 +8,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.careeros.knowledge.dto.KnowledgeDtos.NoteTagCount;
 import com.careeros.knowledge.entity.UserNote;
 import com.careeros.knowledge.repository.DocumentRepository;
 import com.careeros.knowledge.repository.KnowledgeSourceRepository;
@@ -27,6 +28,12 @@ import org.springframework.data.domain.PageRequest;
  * badge nobody can query on. The service is the seam that decides which read the
  * endpoint spends, so that decision is what this test pins: a tag asks the
  * tagged query, a blank one asks the list the page has always shown.
+ *
+ * <p>69.2 adds the row's other question: how many notes sit behind each tag. The
+ * filter row used to offer five labels the product mints whether or not anything
+ * was behind them, so a click could land on an empty list; the counts are why it
+ * can say so first. The repository's order is the one the reader should see, so
+ * the map here is a rename and not a sort.
  */
 class NoteTagFilterTest {
 
@@ -67,6 +74,40 @@ class NoteTagFilterTest {
         assertThat(service.listNotes(userId, 0, 20, "   ").total()).isEqualTo(2);
 
         verify(notes, never()).findByTag(any(), any(), any());
+    }
+
+    @Test
+    void theTagCountsAreTheCallersOwnAndKeepTheReposOrder() {
+        when(notes.countByTag(userId))
+                .thenReturn(List.of(count("interview", 5), count("study", 2), count("gap", 2)));
+
+        var counts = service.noteTagCounts(userId);
+
+        assertThat(counts).extracting(NoteTagCount::tag)
+                .containsExactly("interview", "study", "gap");
+        assertThat(counts).extracting(NoteTagCount::count).containsExactly(5L, 2L, 2L);
+        verify(notes).countByTag(userId);
+    }
+
+    @Test
+    void aReaderWithNoTagsGetsNoRowsRatherThanOneZero() {
+        when(notes.countByTag(userId)).thenReturn(List.of());
+
+        assertThat(service.noteTagCounts(userId)).isEmpty();
+    }
+
+    private static UserNoteRepository.TagCount count(String tag, long total) {
+        return new UserNoteRepository.TagCount() {
+            @Override
+            public String getTag() {
+                return tag;
+            }
+
+            @Override
+            public long getTotal() {
+                return total;
+            }
+        };
     }
 
     private static UserNote note(String title) {

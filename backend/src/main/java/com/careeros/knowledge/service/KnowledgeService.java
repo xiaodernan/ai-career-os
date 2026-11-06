@@ -9,6 +9,7 @@ import com.careeros.knowledge.dto.KnowledgeDtos.DocumentStatus;
 import com.careeros.knowledge.dto.KnowledgeDtos.IngestResultDto;
 import com.careeros.knowledge.dto.KnowledgeDtos.NoteItem;
 import com.careeros.knowledge.dto.KnowledgeDtos.NoteRequest;
+import com.careeros.knowledge.dto.KnowledgeDtos.NoteTagCount;
 import com.careeros.knowledge.dto.KnowledgeDtos.SourceItem;
 import com.careeros.knowledge.dto.KnowledgeDtos.TextIngestResponse;
 import com.careeros.knowledge.entity.Document;
@@ -154,6 +155,19 @@ public class KnowledgeService {
                 ? notes.findByUserIdOrderByUpdatedAtDescIdAsc(userId, pageable)
                 : notes.findByTag(userId, filter, pageable);
         return PageDTO.from(result, KnowledgeService::toNoteItem);
+    }
+
+    /**
+     * 69.2: the reader's own tag vocabulary with its counts. Ordered by the count
+     * descending and then by the label, so the tag with the most behind it is the
+     * first thing the filter row offers -- and two tags with the same count keep a
+     * stable order instead of following whatever the planner returned.
+     */
+    @Transactional(readOnly = true)
+    public List<NoteTagCount> noteTagCounts(UUID userId) {
+        return notes.countByTag(userId).stream()
+                .map(row -> new NoteTagCount(row.getTag(), row.getTotal()))
+                .toList();
     }
 
     @Transactional

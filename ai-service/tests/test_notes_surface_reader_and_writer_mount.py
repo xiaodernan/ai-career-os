@@ -36,7 +36,7 @@ than re-checked: a note request whose path arrives from a variable or a shared h
 `writes` or `reads`, which is the same red a second writer would cost, so the equalities are the
 warning and no separate clause is needed to say so.
 
-Measured on the shapes the ledgers now hold: sixteen speakers, four path coincidences, three non-Java
+Measured on the shapes the ledgers now hold: eighteen speakers, four path coincidences, three non-Java
 speakers all in `e2e`, and four readable calls over them -- three POSTs to the collection and one GET.
 """
 
@@ -82,12 +82,16 @@ SPEAKERS: dict[str, str] = {
         "a census that searches for a route has to name it",
     "ai-service/tests/test_the_api_docs_public_tables_are_the_controllers_own.py":
         "explains why API.md's combined row over the four note verbs is held to its paths, not its verbs",
+    "ai-service/tests/test_response_shape_contract.py":
+        "69.2's record-count comment names GET /knowledge/notes/tags as where NoteTagCount is read",
     "ai-service/tests/test_the_data_model_names_columns_that_exist.py":
         "prose: the user_notes table is what serves GET /knowledge/notes, not a knowledge_sources row",
     "ai-service/tests/test_window_sizes_whose_callers_decide_them_ship.py":
         "pins the route's default window (20) against the caller that decides it",
     "backend/src/test/java/com/careeros/DomainApiIT.java":
         "drives create, read and a cross-user forbidden delete over the route",
+    "backend/src/test/java/com/careeros/contract/ApiDocParamContractTest.java":
+        "asserts API.md's combined row still spells both real note paths, not the bare slash",
     "backend/src/test/java/com/careeros/PagingApiIT.java":
         "pages the notes collection through the route",
     "backend/src/test/java/com/careeros/ratelimit/RateLimitFilterTest.java":
@@ -117,6 +121,10 @@ SPEAKERS: dict[str, str] = {
         "pins the body keys the POST takes",
     "frontend/src/lib/api/endpoints.ts":
         "the client's own map: knowledgeNotes and the knowledgeNote(id) child",
+    "frontend/src/lib/hooks/resources.ts":
+        "69.2's counts read names the route in its docstring; it asks endpoints.knowledgeNoteTags",
+    "frontend/src/lib/note-tags.ts":
+        "prose: the NoteTagCount type is described as one row of GET /knowledge/notes/tags",
 }
 
 # Files whose text contains the route's characters without mentioning the route, because the panel
@@ -274,8 +282,12 @@ def test_the_notes_route_has_two_client_hooks_and_a_screen_reaches_both() -> Non
     and a third one is this test's cue to be re-measured.
     """
     routes = re.findall(r'@(Get|Post|Patch|Delete)Mapping\("(/notes[^"]*)"\)', read(CONTROLLER))
-    assert sorted(v.upper() for v, _ in routes) == ["DELETE", "GET", "PATCH", "POST"], \
-        f"the server no longer binds the four note verbs this gate assumes: {routes}"
+    # Five mappings over the four verbs: 69.2 added a second GET, the tag counts
+    # the filter row reads before it offers a label. The verbs are still every one
+    # of the four, and the extra read is the collection's own child.
+    assert routes == [("Get", "/notes"), ("Get", "/notes/tags"), ("Post", "/notes"),
+                      ("Patch", "/notes/{id}"), ("Delete", "/notes/{id}")], \
+        f"the server no longer binds the note routes this gate assumes: {routes}"
 
     files = client_sources()
     assert len(files) > 40, f"the client census read almost nothing ({len(files)} files): the gate would prove reach by reading no source"
@@ -399,12 +411,14 @@ def test_the_files_that_speak_of_the_notes_route() -> None:
     # this file is what holds those four verbs, and a route rename there reddens it, not this list.
     unexplained = sorted(set(sites) - set(SPEAKERS))
     silent = sorted(set(SPEAKERS) - set(sites))
-    assert sites == sorted(SPEAKERS), (
+    # Both sides sorted: `sites` arrives in walk order, which is the filesystem's
+    # answer to "which directory came first", not the alphabetical one this list is.
+    assert sorted(sites) == sorted(SPEAKERS), (
         f"speakers with no reason recorded: {unexplained}; reasons whose speaker went silent: {silent}. "
         "A speaker is a claim about the route, so give it a reason in SPEAKERS or make it stop speaking")
     extra = sorted(set(loose_sites) - set(sites) - set(PATH_COINCIDENCES))
     stale = sorted(set(PATH_COINCIDENCES) - set(loose_sites))
-    assert sorted(set(SPEAKERS) | set(PATH_COINCIDENCES)) == loose_sites, (
+    assert sorted(set(SPEAKERS) | set(PATH_COINCIDENCES)) == sorted(loose_sites), (
         f"the loose substring search and the two ledgers disagree: {extra} contain the route's characters "
         f"without being declared a speaker or a path coincidence, and {stale} no longer contain them")
     assert not set(SPEAKERS) & set(PATH_COINCIDENCES), (
@@ -499,8 +513,11 @@ def test_the_note_mutations_invalidate_a_key_the_mounted_query_subscribes_to() -
     declared = {k for ks in readers.values() for k in ks}
     assert ("knowledge", "notes") in declared, \
         f"no hook declares the notes key the mutations invalidate: {sorted(declared)}"
-    subscriber = [name for name, ks in readers.items() if ("knowledge", "notes") in ks]
-    assert subscriber == ["useKnowledgeNotes"], \
+    subscriber = sorted(name for name, ks in readers.items() if ("knowledge", "notes") in ks)
+    # Two subscribers since 69.2: the list, and the counts the filter row draws.
+    # They share the prefix on purpose -- one invalidation has to move both, or a
+    # kept note would appear in the list while its tag still read the old count.
+    assert subscriber == ["useKnowledgeNoteTagCounts", "useKnowledgeNotes"], \
         f"the notes key is now subscribed by {subscriber}: re-read which query the invalidation refreshes"
     assert hook_call_sites("useKnowledgeNotes"), \
         "useKnowledgeNotes lost its caller, so the invalidation refreshes an empty set again"

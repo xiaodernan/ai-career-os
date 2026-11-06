@@ -7,11 +7,13 @@ import com.careeros.knowledge.dto.KnowledgeDtos.DocumentStatus;
 import com.careeros.knowledge.dto.KnowledgeDtos.IngestResultDto;
 import com.careeros.knowledge.dto.KnowledgeDtos.NoteItem;
 import com.careeros.knowledge.dto.KnowledgeDtos.NoteRequest;
+import com.careeros.knowledge.dto.KnowledgeDtos.NoteTagCount;
 import com.careeros.knowledge.dto.KnowledgeDtos.SourceItem;
 import com.careeros.knowledge.dto.KnowledgeDtos.TextIngestRequest;
 import com.careeros.knowledge.dto.KnowledgeDtos.TextIngestResponse;
 import com.careeros.knowledge.service.KnowledgeService;
 import jakarta.validation.Valid;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -61,6 +63,18 @@ public class KnowledgeController {
                                    @RequestParam(defaultValue = "20") int size,
                                    @RequestParam(required = false) String tag) {
         return knowledge.listNotes(user.id(), page, size, tag);
+    }
+
+    /**
+     * 69.2: the filter row's own question -- which tags exist and how many notes
+     * sit behind each -- in one read. `/notes/tags` is a literal segment where
+     * `/notes/{id}` takes a uuid, so the two cannot be confused; but it is
+     * declared before the `{id}` routes anyway, because Spring prefers the
+     * literal and a reader should not have to know that to trust the file.
+     */
+    @GetMapping("/notes/tags")
+    public List<NoteTagCount> noteTagCounts(@CurrentUser AuthUser user) {
+        return knowledge.noteTagCounts(user.id());
     }
 
     @PostMapping("/notes")

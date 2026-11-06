@@ -1060,8 +1060,10 @@ def test_the_java_probe_reads_every_record_the_backend_declares():
     # `IntentCount`/`IntentCounts` (362550b's chips). The gate was red on the tree that commit
     # landed; this pin pays it. A pin is a census, and a census that quietly absorbs someone
     # else's rows stops being evidence.
-    assert len(declared) == 205, \
-        f"{len(declared)} records carry a declaration the shared opener reads, not the 205 measured"
+    # 206 with 69.2's `NoteTagCount` (one label and how many notes carry it), which the tag
+    # filter row reads from `GET /knowledge/notes/tags`.
+    assert len(declared) == 206, \
+        f"{len(declared)} records carry a declaration the shared opener reads, not the 206 measured"
     problems, renamed = [], []
     for relative, record in declared:
         names = _record_components_at(relative, record)

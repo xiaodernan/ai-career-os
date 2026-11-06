@@ -1130,6 +1130,23 @@
     报告的 `applicationId`，自由演练时把 `jobTitle` 当作 `positionTitle`，并沿用报告自己的 mode。按钮带着创建
     的进行中状态，成功后落在新那场的 id 上。2 条闸门测试。
 
+- **Epic 69 — 留下的笔记知道去哪里读**（本段起）
+  - 盘点结论（2026-11-06）：报告的保留动作说「已存入知识库」，然后把读者留在一块列出全部笔记的页面上。能把列表收窄的
+    标签 64.1/64.2 已经有了；缺的是从报告走到刚留下那条笔记的一条路，以及标签行对自己每个标签背后有多少条笔记的说法。
+  - **69.1** 留下的笔记带一条回去的路（已完成 2026-11-06）：报告的四类建议每条都带 `interview` 加上自己的
+    kind（`study`、`answer`、`gap`、`prepare`），所以 `noteHref` 打开最窄的那一个——kind 标签；`interview` 单独会
+    一次打开全部四种。没有 kind 标签的手写笔记指向整块列表，而不是一个匹配不到任何东西的筛选。两个保留按钮都走它。
+  - **69.2** 标签行数得出每个标签背后的笔记（已完成 2026-11-06）：`GET /knowledge/notes/tags` 读
+    `user_notes.tags`，一个 Postgres `text[]`——JPQL 说不出 `unnest(tags)`，所以这是 `UserNoteRepository` 里
+    第二条原生语句（64.2 的 `= any(tags)` 是第一条），每个值都绑参，字面量只有列名和 `text` 类型名。repository
+    已按数量倒序，service 只改名不重排；没有标签的读者拿到空列表，而不是一条 0。前端 `useKnowledgeNoteTagCounts`
+    读 `{data:[...]}` 信封；`tagRow` 把产品自造的五种放前、读者自己的按常用度往后排（最多 7 个）；
+    `tagIsInert` 让计数为 0 的标签可见但按不动——正在生效的那个除外，否则删掉最后一条就会把自己锁在筛选里。
+    中英文各加 `knowledge.notes.tagEmpty`。`NoteTagFilterTest` 4 条、`lib/note-tags.test.ts` 14 条、
+    `lib/hooks/note-tags.test.ts` 5 条。安全普查从六类原生查询改到七类，`SECURITY.md` 点名
+    `UserNoteRepository` 与理由；response-shape 的钉子 205 -> 206；窗口排序门学会原生 SQL 允许小写 `order by`。
+    后端非 IT 套件 1200 绿；ai-service 2032 通过、2 跳过；前端 1156 通过、116 个文件。
+
 - **Epic 70 — 看板答得出一个词**（本段起）
   - 盘点结论（2026-11-06）：Epic 58 只修了本来就有搜索框的那一块看板，剩下的看板是没有问题可问的——
     投递管道、联系人、演练列表。管道先做，因为它是读者一天里看得最多的看板，而且它的路由本来就在按

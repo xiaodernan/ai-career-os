@@ -27,6 +27,15 @@ public final class KnowledgeDtos {
                            OffsetDateTime createdAt, OffsetDateTime updatedAt) {
     }
 
+    /**
+     * 69.2: one label and how many of the caller's notes carry it. The list this
+     * rides in is the filter row's own vocabulary, read from the rows rather than
+     * from the product's list of five: a tag the reader typed is as real as one
+     * the report minted, and the row has no other way to learn it exists.
+     */
+    public record NoteTagCount(String tag, long count) {
+    }
+
     public record NoteRequest(@Size(max = 200) String title, @NotBlank String content,
                               List<String> tags) {
     }

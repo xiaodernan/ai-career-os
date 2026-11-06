@@ -58,6 +58,7 @@ RECORD_FILES = {
     "CompanyRequest": "com/careeros/job/dto/JobDtos.java",
     "ContactItem": "com/careeros/network/dto/ContactDtos.java",
     "SourceItem": "com/careeros/knowledge/dto/KnowledgeDtos.java",
+    "NoteTagCount": "com/careeros/knowledge/dto/KnowledgeDtos.java",
     "SessionItem": "com/careeros/interview/dto/InterviewDtos.java",
     "SessionDetail": "com/careeros/interview/dto/InterviewDtos.java",
     "TurnItem": "com/careeros/interview/dto/InterviewDtos.java",
@@ -69,11 +70,15 @@ RECORD_FILES = {
 # mapCompany alias lists went away with it -- its eleven calls now ask eleven authored names, first.
 # `mapMemories` is the second envelope row: the memories list route answers `{items: [...]}`, and
 # the rows are shaped by normalizeMemory over in normalize.ts, not by a Java record this file binds.
+# `mapNoteTagCounts` is 69.2's row: the tag counts read a `{data:[...]}` envelope of
+# `NoteTagCount` rows, so the labels the filter row offers are the same shape on the wire
+# as everything else this file binds.
 NAMED_MAPPERS = ["mapResume", "mapResumeVersions", "mapResumeVersion", "mapCompany",
                  "mapCompanySource",
-                 "mapContact", "mapSource", "mapSessionScalars",
+                 "mapContact", "mapSource", "mapNoteTagCounts", "mapSessionScalars",
                  "mapInterviewSessionItem", "mapInterviewSessionDetail", "mapMemories"]
-EXPORTED_MAPPERS = ["mapResumeVersions", "mapResumeVersion", "mapInterviewSessionItem",
+EXPORTED_MAPPERS = ["mapResumeVersions", "mapResumeVersion", "mapNoteTagCounts",
+                    "mapInterviewSessionItem",
                     "mapInterviewSessionDetail", "mapMemories"]
 
 ROWS = {
@@ -83,6 +88,7 @@ ROWS = {
     ("mapCompany", "raw"): "CompanyItem",
     ("mapContact", "raw"): "ContactItem",
     ("mapSource", "raw"): "SourceItem",
+    ("mapNoteTagCounts", "row"): "NoteTagCount",
     ("mapSessionScalars", "s"): "SessionItem",
     ("mapInterviewSessionItem", "s"): "SessionItem",
     ("mapInterviewSessionDetail", "raw"): "SessionDetail",
@@ -109,6 +115,9 @@ CALLED = {
                             "updatedAt": 0},
     ("mapSource", "raw"): {"kind": 0, "title": 0, "status": 0, "error": 0, "chunkCount": None,
                            "createdAt": 0, "updatedAt": None, "taskId": None, "documentId": 0},
+    # Both calls ask the record's own name first; `label` and `total` are the fallbacks that
+    # would answer a differently-spelled payload, and `NoteTagCount` declares neither.
+    ("mapNoteTagCounts", "row"): {"tag": 0, "count": 0},
     ("mapSessionScalars", "s"): {"applicationId": 0, "applicationStatus": 0,
                                  "jobId": 0, "positionTitle": 0, "companyName": 0, "mode": 0,
                                  "status": 0, "difficulty": 0, "startedAt": 0, "finishedAt": 0},
@@ -130,6 +139,7 @@ SCANNER_SHAPE = {
     ("mapCompany", "raw"): (11, 11),
     ("mapContact", "raw"): (9, 9),
     ("mapSource", "raw"): (9, 21),
+    ("mapNoteTagCounts", "row"): (2, 4),
     ("mapSessionScalars", "s"): (10, 26),
     ("mapInterviewSessionItem", "s"): (2, 6),
     ("mapInterviewSessionDetail", "raw"): (3, 7),
@@ -152,6 +162,10 @@ UNAUTHORED = {
     ("mapSource", "raw"): {"chunkCount", "chunk_count", "chunks", "created_at", "document_id",
                            "errorMessage", "error_message", "fileName", "file_name", "name",
                            "taskId", "task_id", "type", "updatedAt", "updated_at"},
+    # `tag` and `count` are the record's own names; `label` and `total` are the
+    # fallbacks a differently-spelled payload would need, and `NoteTagCount`
+    # declares neither of them.
+    ("mapNoteTagCounts", "row"): {"label", "total"},
     ("mapSessionScalars", "s"): {"application_id", "application_status", "company_name",
                                  "createdAt", "created_at", "depth", "jobTitle", "job_title",
                                  "job_id", "kind", "level", "finished_at", "position",
@@ -186,6 +200,10 @@ DECLARED_NOWHERE = {
     # stays in UNAUTHORED: a mapper asking it is still asking something its DTO cannot answer.
     ("mapSource", "raw"): {"chunkCount", "chunk_count", "errorMessage", "error_message",
                            "fileName", "file_name", "type"},
+    # Both fallback names are declared by other records: `label` by
+    # `ResumeVersionItem`, `total` by the page envelope. They are foreign, not
+    # names nothing declares -- `NoteTagCount` simply does not answer them.
+    ("mapNoteTagCounts", "row"): set(),
     ("mapSessionScalars", "s"): {"depth", "level", "type"},
     ("mapInterviewSessionItem", "s"): {"overallScore", "turnCount"},
     ("mapInterviewSessionDetail", "raw"): {"answers"},
@@ -260,7 +278,7 @@ DEAD_NAME_TIERS = {
 # (`applicationId`) and its stage (`applicationStatus`), and both snake twins
 # (`application_id`, `application_status`) are asked by the mapper and answered by
 # no record -- dead names that reach no screen, which is what this bucket holds.
-WIDER_DEAD_NAMES = 32
+WIDER_DEAD_NAMES = 34
 TYPES_MIRROR_NAMES = {"chunkCount"}
 SCREEN_READ_NAMES = {"isCurrent", "versionNo"}
 
@@ -481,7 +499,9 @@ def test_the_unbound_mappers_ban_would_find_these_mappers_if_it_read_this_file()
     # resources.ts is not the file it reads.
     # 46 rather than 43 since 47.4's letters reader (`useApplicationLetters`) and
     # 54.2's resume-version pair (`mapResumeVersion`, `useResumeVersion`) joined.
-    assert len(seen) == 46, f"resources.ts now declares {len(seen)} functions for the ban's rule"
+    # 48 since 69.2's tag counts added a reader (`mapNoteTagCounts`) and the hook
+    # that mounts it (`useKnowledgeNoteTagCounts`).
+    assert len(seen) == 48, f"resources.ts now declares {len(seen)} functions for the ban's rule"
     assert [n for n in seen if n.startswith("map")] == NAMED_MAPPERS, \
         "the ban's own rule no longer recognizes these declarations in file order: " \
         f"{[n for n in seen if n.startswith('map')]}"
@@ -511,9 +531,9 @@ def test_the_scanner_finds_the_calls_and_names_each_row_actually_makes():
         assert len(found) == calls, f"{mapper}/{receiver}: {len(found)} calls, pinned {calls}"
         assert sum(len(lit) for _, lit in found) == names, \
             f"{mapper}/{receiver}: {sum(len(lit) for _, lit in found)} names, pinned {names}"
-    assert sum(len(v) for v in CALLED.values()) == 60, "the call table and the scan disagree"
-    assert sum(SCANNER_SHAPE[key][0] for key in SCANNER_SHAPE) == 62
-    assert sum(SCANNER_SHAPE[key][1] for key in SCANNER_SHAPE) == 123
+    assert sum(len(v) for v in CALLED.values()) == 62, "the call table and the scan disagree"
+    assert sum(SCANNER_SHAPE[key][0] for key in SCANNER_SHAPE) == 64
+    assert sum(SCANNER_SHAPE[key][1] for key in SCANNER_SHAPE) == 127
     # The calls the table above does not key are the envelopes': their receivers have no record, so
     # they are classified by payload shape in their own cases instead of by a first authored name.
     # Two rows now ride a bare list -- the versions history and the memories list.
@@ -544,7 +564,7 @@ def test_every_call_is_classified_against_the_record_behind_its_receiver():
         assert keyed == CALLED[(mapper, receiver)], \
             f"{mapper}/{receiver} no longer calls in the order the record answers: {keyed}"
     first_authored = [v for table in CALLED.values() for v in table.values()]
-    assert first_authored.count(0) == 52, first_authored.count(0)
+    assert first_authored.count(0) == 54, first_authored.count(0)
     assert first_authored.count(2) == 0, "a call asks its record's name third; re-measure which"
     assert first_authored.count(None) == 8, \
         f"{first_authored.count(None)} calls can never return a value, pinned 8"
@@ -624,7 +644,7 @@ def test_an_unauthored_name_is_a_snake_twin_a_foreign_name_or_a_name_no_record_d
         scanned_nowhere += len(nowhere)
     # Both ledger numbers come out of the scan above, so a row that stops reading names narrows the
     # total and gets named, instead of a table quietly agreeing with itself.
-    assert scanned_unauthored == 71, scanned_unauthored
+    assert scanned_unauthored == 73, scanned_unauthored
     # 27 rather than 28 since 25.1's `SessionResponse` declared `current`: the versions
     # mapper's legacy alias is still unauthored for `ResumeVersionItem`, but another route
     # now answers the name, which is the foreign class rather than this one.
@@ -912,7 +932,7 @@ def test_the_dead_names_spread_in_three_measured_tiers_and_three_reached_a_scree
     assert len(files) >= 228, (f"the frontend census walked {len(files)} files, below the 228 that "
                                "ship: the walk stopped reaching part of the tree")
     asked = {name for row in UNAUTHORED.values() for name in row}
-    assert len(asked) == 59, f"{len(asked)} dead names are asked, pinned 59"
+    assert len(asked) == 61, f"{len(asked)} dead names are asked, pinned 61"
     classified = set()
     for carriers, names in DEAD_NAME_TIERS.items():
         for name in sorted(names):

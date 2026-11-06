@@ -5,7 +5,7 @@ import { Check, Pencil, StickyNote, Trash2, X } from "lucide-react";
 import { ModuleView } from "@/components/common/module-view";
 import { Pagination } from "@/components/common/pagination";
 import { lastPageOf } from "@/lib/page-window";
-import { PRODUCT_TAGS, formatTags, parseTags } from "@/lib/note-tags";
+import { formatTags, parseTags, tagIsInert, tagRow } from "@/lib/note-tags";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useNoteMutations } from "@/lib/hooks/actions";
-import { useKnowledgeNotes } from "@/lib/hooks/resources";
+import { useKnowledgeNoteTagCounts, useKnowledgeNotes } from "@/lib/hooks/resources";
 import { useUrlState } from "@/lib/hooks/use-url-state";
 import { formatDate } from "@/lib/format";
 import { useLocale } from "@/lib/i18n/locale-context";
@@ -48,6 +48,10 @@ const PAGE_SIZE = 20;
 // `ntag` is the tag filter beside the window: another list on one screen needs
 // its own question, and a shared link should open the same narrowed list.
 const PAGE_DEFAULTS: { npage: number; ntag?: string } = { npage: 0 };
+// 69.2: how many labels the reader's own vocabulary may add to the five the
+// product mints. A row is a filter, not an index: past a dozen buttons the
+// question "which tag?" costs the reader more than the list it narrows.
+const OWN_TAGS = 7;
 
 export function NoteCreateCard() {
   const { t } = useLocale();
@@ -266,6 +270,13 @@ export function NotesPanel() {
     tag: tag || undefined,
   });
 
+  // 69.2: what the row is allowed to say about each label. The five the product mints
+  // keep their order (they are the kinds of advice, and a reader learns where they are),
+  // and the labels the reader typed follow, most-used first, up to `OWN_TAGS`.
+  const tagCounts = useKnowledgeNoteTagCounts();
+  const byTag = new Map((tagCounts.data ?? []).map((each) => [each.tag, each.count]));
+  const offered = tagRow(tagCounts.data ?? [], OWN_TAGS);
+
   const total = notes.data?.total ?? 0;
   // A past-the-end page is an empty window over a real total, not an empty list: the answer's
   // own window is the divisor (`data.size`), so the URL is corrected to the last page that
@@ -295,18 +306,27 @@ export function NotesPanel() {
         >
           {t("knowledge.notes.allTags")}
         </Button>
-        {PRODUCT_TAGS.map((each) => (
-          <Button
-            key={each}
-            type="button"
-            size="sm"
-            variant={tag === each ? "secondary" : "ghost"}
-            aria-pressed={tag === each}
-            onClick={() => setUrl({ npage: 0, ntag: tag === each ? undefined : each })}
-          >
-            {each}
-          </Button>
-        ))}
+        {offered.map((each) => {
+          const count = byTag.get(each);
+          const inert = tagIsInert(count, each, tag);
+          return (
+            <Button
+              key={each}
+              type="button"
+              size="sm"
+              variant={tag === each ? "secondary" : "ghost"}
+              aria-pressed={tag === each}
+              disabled={inert}
+              title={inert ? t("knowledge.notes.tagEmpty", { tag: each }) : undefined}
+              onClick={() => setUrl({ npage: 0, ntag: tag === each ? undefined : each })}
+            >
+              {each}
+              {count !== undefined && (
+                <span className="text-xs text-muted-foreground tabular-nums">{count}</span>
+              )}
+            </Button>
+          );
+        })}
       </div>
       <ModuleView
         title={t("knowledge.notes.section")}
