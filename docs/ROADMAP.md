@@ -4727,6 +4727,22 @@ from the report to the note just kept, and a filter row that could say what sits
   allowed a lower-case `order by`. Backend non-IT suite 1200 green; ai-service 2032 passed, 2
   skipped; frontend 1156 passed across 116 files.)
 
+## Epic 71 -- audit remaining UX loops and endpoints without browser surfaces
+
+Following Epic 69 (tag counts) and Epic 70 (boards answering words), this epic audits the codebase for remaining user experience loops and API endpoints that lack browser surface coverage, ensuring every backend surface has a corresponding frontend reader, and every frontend component has a documented backend contract.
+
+- [ ] **71.1** Audit API endpoints without frontend surfaces
+
+  (Walk the public API in `API.md` and compare against frontend pages in `src/app/(app)/`. Identify any `/api/v1*` endpoints that have no corresponding page/component, and any frontend pages that read from endpoints not documented in the census. Record findings as a gate in `ai-service/tests/test_forward_features_contract.py` so new surfaces must be accounted for before shipping.)
+
+- [ ] **71.2** Audit UX loops without backend contract
+
+  (Check that every frontend `useQuery`/`useMutation` in the knowledge, applications, and networking boards has a corresponding backend endpoint documented in `API.md` with proper request/response shapes. Missing contracts block the gate in `test_api_doc_contract.py`.)
+
+- [ ] **71.3** Fix documented gaps
+
+  (For each gap found in 71.1-71.2, either add the missing frontend surface or remove the undocumented backend endpoint, and update the census and contracts accordingly.)
+
 ## Epic 70 -- the boards answer a word
 
 Epic 58 stopped a search box from reading the reader's characters as SQL wildcards, and it did that

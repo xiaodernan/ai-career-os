@@ -63,7 +63,10 @@ def stem(path: str) -> str:
     segment" -- the same characters mean a wildcard to Spring's matcher and a parameter to
     the table gate.
     """
-    return re.sub(r"/(?:\.\.\.|\*+)$", "", path).rstrip("/")
+    # A bare star glued to the last segment (`/api/v1*`) is the same family claim --
+    # the roadmap's audit plan spells it that way, and the prefix it points at is the
+    # public base this function already grades against.
+    return re.sub(r"(?:/(?:\.\.\.|\*+)|\*)$", "", path).rstrip("/")
 
 
 def controller_routes() -> set[str]:
