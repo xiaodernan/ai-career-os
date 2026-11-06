@@ -44,6 +44,7 @@ register_refusal_handlers(app)
 @app.get("/health")
 async def health():
     from app.core import db
+    from app.providers.registry import embeddings_ready, llm_ready
 
     row = await db.fetchrow("SELECT 1 AS ok")
     s = get_settings()
@@ -51,7 +52,9 @@ async def health():
         "status": "ok",
         "db": bool(row),
         "llm_provider": s.llm_provider,
+        "llm_ready": llm_ready(s),
         "embedding_provider": s.embedding_provider,
+        "embedding_ready": embeddings_ready(s),
     }
 
 

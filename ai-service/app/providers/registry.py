@@ -105,6 +105,31 @@ def voice_configured(settings: Settings | None = None) -> bool:
     return s.voice_provider not in ("", "none")
 
 
+def _buildable(build) -> bool:
+    """Whether a provider factory can build what the deployment named.
+
+    The factory is the one source of truth for a provider's requirements, so
+    readiness is measured by calling it rather than by restating the rules a
+    second time: a key-less openai_compat is not ready here for the same reason
+    it raises ConfigError on the first AI call, and the two can never drift.
+    """
+    try:
+        build()
+    except ConfigError:
+        return False
+    return True
+
+
+def llm_ready(settings: Settings | None = None) -> bool:
+    """Whether get_llm would hand out a working provider -- what /health reports."""
+    return _buildable(lambda: get_llm(settings))
+
+
+def embeddings_ready(settings: Settings | None = None) -> bool:
+    """Whether get_embeddings would hand out a working provider -- what /health reports."""
+    return _buildable(lambda: get_embeddings(settings))
+
+
 async def embed_text(text: str) -> list[float] | None:
     """Embed one text with the configured provider, or None when that is impossible.
 
