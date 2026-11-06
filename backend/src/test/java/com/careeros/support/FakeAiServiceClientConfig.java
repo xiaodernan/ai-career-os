@@ -1,6 +1,11 @@
 package com.careeros.support;
 
 import com.careeros.ai.AiServiceClient;
+import com.careeros.knowledge.entity.Document;
+import com.careeros.knowledge.entity.KnowledgeSource;
+import com.careeros.knowledge.repository.DocumentRepository;
+import com.careeros.knowledge.repository.KnowledgeSourceRepository;
+import com.careeros.knowledge.service.FileIngestService;
 import com.careeros.common.ApiErrorCode;
 import com.careeros.common.ApiException;
 import java.util.ArrayList;
@@ -24,11 +29,23 @@ public class FakeAiServiceClientConfig {
 
     @Bean
     @Primary
-    public FakeAiServiceClient fakeAiServiceClient() {
-        return new FakeAiServiceClient();
+    public FakeAiServiceClient fakeAiServiceClient(DocumentRepository documents,
+                                                   KnowledgeSourceRepository sources) {
+        // The real ai-service persists the source and document rows itself (shared database);
+        // the double mirrors that, so an IT that consumes an ingest response's ids sees rows the
+        // ids actually name -- a delete of one of them works the way it does in production.
+        return new FakeAiServiceClient(documents, sources);
     }
 
     public static class FakeAiServiceClient implements AiServiceClient {
+
+        private final DocumentRepository documents;
+        private final KnowledgeSourceRepository sources;
+
+        public FakeAiServiceClient(DocumentRepository documents, KnowledgeSourceRepository sources) {
+            this.documents = documents;
+            this.sources = sources;
+        }
 
         /** When true, ingestion/document calls throw to simulate an ai-service outage. */
         public volatile boolean failIngest;
@@ -126,9 +143,32 @@ public class FakeAiServiceClientConfig {
         public Map<String, Object> ingestText(UUID userId, String title, String text, String kind, UUID refId) {
             record("ingestText");
             maybeFailIngest();
+            // The real /internal/ingest/text writes the source row, then the document row
+            // (no file key -- the text lives in meta.inline_text), and answers with their
+            // ids. The double mirrors that so an IT consuming the ids sees rows they name:
+            // a delete of one of them works the way it does against the live service.
+            KnowledgeSource source = new KnowledgeSource();
+            source.setUserId(userId);
+            source.setKind(kind);
+            source.setRefId(refId);
+            source.setTitle(title == null || title.isBlank() ? "Untitled" : title);
+            source.setStatus("ready");
+            sources.save(source);
+
+            Document doc = new Document();
+            doc.setUserId(userId);
+            doc.setSourceId(source.getId());
+            doc.setMediaType("text/plain");
+            doc.setTitle(title == null || title.isBlank() ? "Untitled" : title);
+            doc.setContentHash(FileIngestService.sha256(text.getBytes()));
+            doc.setTextExcerpt(text.length() > 2000 ? text.substring(0, 2000) : text);
+            doc.setMeta(Map.of("inline_text", text, "kind", kind));
+            doc.setStatus("ready");
+            documents.save(doc);
+
             return map("task_id", UUID.randomUUID().toString(),
-                    "document_id", UUID.randomUUID().toString(),
-                    "source_id", UUID.randomUUID().toString());
+                    "document_id", doc.getId().toString(),
+                    "source_id", source.getId().toString());
         }
 
         @Override
