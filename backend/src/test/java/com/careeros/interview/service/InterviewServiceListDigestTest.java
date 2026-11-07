@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -70,12 +69,12 @@ class InterviewServiceListDigestTest {
     }
 
     private void givenPage(InterviewSession... rows) {
-        when(sessions.findByUserIdOrderByStartedAtDescIdAsc(any(), any(Pageable.class)))
+        when(sessions.findPage(any(), any(), any(), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(rows), PageRequest.of(0, 20), rows.length));
     }
 
     private List<SessionItem> listed() {
-        PageDTO<SessionItem> page = service.list(userId, 0, 20, null);
+        PageDTO<SessionItem> page = service.list(userId, 0, 20, null, null);
         return page.items();
     }
 
@@ -87,18 +86,54 @@ class InterviewServiceListDigestTest {
         // over the whole history and show a page of nothing.
         UUID card = UUID.randomUUID();
         InterviewSession row = session(first, "A");
-        when(sessions.findByUserIdAndApplicationIdOrderByStartedAtDescIdAsc(
-                any(), any(), any(Pageable.class)))
-                .thenReturn(new PageImpl<>(List.of(row),
-                        PageRequest.of(0, 20), 1));
+        when(sessions.findPage(any(), any(), any(), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(row), PageRequest.of(0, 20), 1));
         when(digests.forSessions(any())).thenReturn(Map.of());
 
-        List<SessionItem> items = service.list(userId, 0, 20, card).items();
+        List<SessionItem> items = service.list(userId, 0, 20, card, null).items();
 
         assertThat(items).hasSize(1);
-        verify(sessions).findByUserIdAndApplicationIdOrderByStartedAtDescIdAsc(
-                eq(userId), eq(card), any(Pageable.class));
-        verify(sessions, never()).findByUserIdOrderByStartedAtDescIdAsc(any(), any(Pageable.class));
+        // One read for both questions now (70.4): the card id and the word ride the same query, and
+        // an absent box arrives as the empty needle that narrows nothing rather than as a null that
+        // would have to be spelled twice in the WHERE.
+        verify(sessions).findPage(eq(userId), eq(card), eq(""), any(Pageable.class));
+    }
+
+    @Test
+    void theWordArrivesTrimmedAndLowerCasedOnceForTheRequest() {
+        givenPage(session(first, "A"));
+        when(digests.forSessions(any())).thenReturn(Map.of());
+
+        service.list(userId, 0, 20, null, "  AcMe  ");
+
+        // The columns are lower-cased per row, so the needle has to be lower-cased here: a word
+        // typed with Shift is the same question, and the padding around it is not part of it.
+        verify(sessions).findPage(eq(userId), eq(null), eq("acme"), any(Pageable.class));
+    }
+
+    @Test
+    void aBoxOfSpacesIsTheBoxNobodyTypedIn() {
+        givenPage(session(first, "A"));
+        when(digests.forSessions(any())).thenReturn(Map.of());
+
+        service.list(userId, 0, 20, null, "   ");
+
+        // A blank needle that filtered would open the board on nothing -- the reader asked to
+        // browse, and spaces are the same empty question as no question at all.
+        verify(sessions).findPage(eq(userId), eq(null), eq(""), any(Pageable.class));
+    }
+
+    @Test
+    void theWordAndTheCardIdNarrowTheSameRead() {
+        givenPage(session(first, "A"));
+        when(digests.forSessions(any())).thenReturn(Map.of());
+        UUID card = UUID.randomUUID();
+
+        service.list(userId, 0, 20, card, "Acme");
+
+        // Two scopes, one query: the card's rehearsals that spell the word, not the word over the
+        // whole history and then a filter the browser applies to a page that already lost them.
+        verify(sessions).findPage(eq(userId), eq(card), eq("acme"), any(Pageable.class));
     }
 
     @Test

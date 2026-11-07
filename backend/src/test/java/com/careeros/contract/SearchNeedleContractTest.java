@@ -38,7 +38,11 @@ import org.junit.jupiter.api.Test;
  * carried {@code status} and {@code jobId}, so all three are one query rather than eight. 70.3 is the
  * sixth, and the one that answers a bare array: {@code GET /contacts} has no total beside its rows to
  * hint that a filter was dropped, so a wrong needle here is invisible in the envelope and visible only
- * in the people the registry stopped showing.
+ * in the people the registry stopped showing. 70.4 is the seventh: the rehearsals list, whose two
+ * derived reads differed only by whether a card id had been set, so a word would have arrived as the
+ * fourth permutation of a pair rather than as a query of its own. It is also the list whose columns a
+ * reader leaves empty by construction -- a rehearsal started from a job has no company recorded -- so
+ * the {@code COALESCE} here is a correctness requirement rather than tidiness.
  */
 class SearchNeedleContractTest {
 
@@ -51,7 +55,8 @@ class SearchNeedleContractTest {
             "com/careeros/search/repository/SearchRepository.java",
             "com/careeros/inbound/repository/InboundMailRepository.java",
             "com/careeros/application/repository/ApplicationRepository.java",
-            "com/careeros/network/repository/ContactRepository.java");
+            "com/careeros/network/repository/ContactRepository.java",
+            "com/careeros/interview/repository/InterviewSessionRepository.java");
 
     /** {@code setParameter("companyLike", ...)} -- the site where a reader's value becomes a pattern. */
     private static final Pattern LIKE_BINDING =
@@ -202,5 +207,27 @@ class SearchNeedleContractTest {
                 // Blank is the whole registry, not a search for the empty string.
                 .contains(":needle = ''")
                 .doesNotContain("Containing");
+    }
+
+    @Test
+    @DisplayName("the rehearsals list keeps both of its scopes inside one query")
+    void theRehearsalsBranchKeepsTheTwoScopesInOneQuery() {
+        String repo = read(MAIN.resolve("com/careeros/interview/repository/InterviewSessionRepository.java"));
+        assertThat(repo)
+                // A rehearsal started from a job records no company, and one started free-form
+                // records no position: those two columns are empty by construction, so an
+                // unguarded LOWER() on them would drop the row from the answer rather than miss
+                // the word in it.
+                .contains("LOCATE(:needle, LOWER(COALESCE(s.companyName, ''))) > 0")
+                .contains("LOCATE(:needle, LOWER(COALESCE(s.positionTitle, ''))) > 0")
+                .contains("LOCATE(:needle, LOWER(s.mode)) > 0")
+                .contains(":needle = ''")
+                // The card id is a second scope on top of the user, never a replacement for it,
+                // and never a reason to grow a second query for the same board.
+                .contains(":applicationId IS NULL OR s.applicationId = :applicationId")
+                .contains("ORDER BY s.startedAt DESC, s.id ASC")
+                .doesNotContain("Containing")
+                .doesNotContain("findByUserIdOrderByStartedAtDescIdAsc")
+                .doesNotContain("findByUserIdAndApplicationIdOrderByStartedAtDescIdAsc");
     }
 }

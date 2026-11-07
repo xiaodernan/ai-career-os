@@ -1190,6 +1190,26 @@
     不动：名单不分页，`useContacts` 保持 `List<ContactItem>` 那一行，调用点既不进 `WIRE` 也不进 `SITES`。给名单加分页是另一个
     问题，这一条刻意没有顺手做。
 
+  - **70.4** 演练列表也答一个词（已完成 2026-11-08）：Epic 70 点的第三块板，这是后端那一半。
+    原来是两个派生方法，只差「有没有卡片 id」——整段历史，和某张卡的演练（57.1）——再加一个词就会变成四个。
+    现在一个 `BOARD_WHERE` 同时装下 `(:applicationId IS NULL OR s.applicationId = :applicationId)` 与
+    `(:needle = '' OR ...)`，词用 `LOCATE(:needle, LOWER(col)) > 0` 问会话自己的三列文字：公司、职位、模式。
+    前两列 `COALESCE` 成空串，因为它们是构造上就可能没有的：自由演练不记公司，从职位起的演练可能不记自己的
+    职位标题；`ORDER BY s.startedAt DESC, s.id ASC` 保住看板自己的顺序，也把并列钉住——否则同一瞬间开始的
+    两场演练，每次请求都可能落在分页线的不同侧。搜索故意不 join 问答表：一场演练在这块板上是一行，接进它的
+    题目会把同一行按题目数答好几遍。service 每请求 trim + 小写一次，controller 在已有的 `applicationId`
+    旁边绑 `?q=`，`InterviewSessionRepository` 成为 `SearchNeedleContractTest` roster 的第七个名字，
+    旁边一条形状门：三处 `LOCATE`、两个 scope、全序都在，两个派生方法名一个都不许再声明。单测新增 3 条
+    （词 trim 小写后到达、全是空格等于没输入、词和卡片 id 收窄同一次读），controller 新增 1 条并改靶 1 条。
+    `InterviewNeedleIT` 5 条跑在真 Postgres 上：字面 `%`、字面 `_`、打错的 `Under_S_ore` 必须谁都找不到、
+    只填一个百分号的框只答那一场而不是整段历史；词走到公司、职位、模式，而什么都不带的那场留在外面，两列文字
+    都空的会话仍能靠它有的 mode 被找到；空框与全空格框；卡片 id 和词收窄同一次读，陌生人猜的卡片 id 答
+    total 0；五个匹配分成三个不相交窗口——Spring 从那一条 `@Query` 派生的 count 查询在这里被证明重复了
+    同一个 needle 子句，而不是数整段历史。API.md 的 `/interview/sessions` 行写上这个框
+    （`ApiDocParamContractTest` 正是先因为这条缺失而红），endpoints census 从 58 重新钉到 59
+    （`q` 这个名字集合里早就有，动的是答它的路线）。70.5 给这条路线配上读者。
+  - **70.5** 演练看板问出自己的问题（待做）：同一套 URL 状态与草稿框纪律走 `/interviews` 和
+    `useInterviewSessions`，词进 `queryKey`，两种空态各有各的出路。
 - **Epic 71 — 审计先学会不撒谎**（本段起）
   - 盘点结论（2026-11-07）：71.1 的浏览器界面闸门把 181 条公开路由里的 20 条记为「无界面」，其中两条是
     `PATCH`/`DELETE /applications/{}/letters/{}`，理由写着「没有编辑界面」。实测

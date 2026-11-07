@@ -4817,7 +4817,7 @@ on two other things, so its needle cannot arrive as one more branch of the same 
 
 - [x] **70.3** The contacts board answers a word too.
 
-  (The registry was the last board of the three that Epic 70 inventoried, and the only one whose
+  (The registry was the second of the three boards Epic 70 inventoried, and the only one whose
   route answered a bare list rather than a window -- which changed what "add a search" means rather
   than how it is spelled. Backend: `ContactRepository` now carries its own `BOARD_WHERE` and one
   `findBoard(userId, needle)`, asking `LOCATE(:needle, LOWER(col)) > 0` over the six columns a
@@ -4851,6 +4851,41 @@ on two other things, so its needle cannot arrive as one more branch of the same 
   half owed the commit before this one. The window gates did not move -- the registry is not paged,
   so `useContacts` keeps its `List<ContactItem>` row and its call site joins neither `WIRE` nor
   `SITES`. Paging the registry is a separate question and was deliberately not folded in here.)
+
+- [x] **70.4** `GET /interview/sessions` answers a word, as characters.
+
+  (The rehearsals list was two derived methods that differed only by whether a card id had been set
+  -- the whole history and one card's rehearsals (57.1) -- so a reader's word would have made them
+  four. One `BOARD_WHERE` now carries `(:applicationId IS NULL OR s.applicationId = :applicationId)`
+  beside `(:needle = '' OR ...)`, and the word is asked with `LOCATE(:needle, LOWER(col)) > 0` over
+  the session's own three text columns: company, position and mode. The first two are `COALESCE`d
+  because they are empty by construction -- a free rehearsal records no company, and one started
+  from a posting may record no position of its own -- and `ORDER BY s.startedAt DESC, s.id ASC`
+  keeps the board's order while pinning the ties a page boundary would otherwise split differently
+  on each request. The search deliberately does not join the turns: a rehearsal is one row on this
+  board, and a join into its questions would answer the same row once per question. The service
+  trims and lower-cases once per request, the controller binds `?q=` beside the `applicationId` it
+  already had, and `InterviewSessionRepository` is the seventh name in `SearchNeedleContractTest`'s
+  roster, beside a case that grades its shape -- all three `LOCATE` sites, both scopes and the total
+  order present, neither derived method declared anywhere. 3 new service cases (the word arriving
+  trimmed and lower-cased, a box of spaces that is the box nobody typed in, the word and the card id
+  narrowing one read) over the 6 already there, and 1 new controller case beside the retargeted card
+  filter. 5 cases in `InterviewNeedleIT` run against the real Postgres: a literal `%`, a literal `_`,
+  a mistyped `Under_S_ore` that must find nobody and a box of one percent sign that answers one
+  rehearsal rather than the history; the word reaching company, position and mode while a rehearsal
+  carrying none of it stays out, and a session with both text columns absent still found by the mode
+  it does have; the empty and all-spaces boxes; the card id and the word narrowing the same read,
+  with a stranger's guessed card id answering a zero total; and three disjoint windows over five
+  matches, which is where the count query Spring derives from the one `@Query` is proven to repeat
+  the needle clause rather than count the whole history. API.md's `/interview/sessions` row names the
+  box -- `ApiDocParamContractTest` reddened on exactly that omission before the row was written --
+  and the endpoints census repins 58 -> 59 bound parameters, a name (`q`) the set already had. One
+  ai-service gate followed the change rather than the spelling: `test_the_interviews_board_pages_its_own_window.py`
+  pinned both derived reads by name, so cases 4 and 5 now read the route's two window defaults and
+  `Paging.of` where they always lived, and the total order and the card's second scope out of the
+  repository's one query -- a stronger claim than a method name, since the user scope is asserted
+  beside the card scope rather than implied by it. 70.5 gives the route its reader and moves that
+  file's three frontend cases.)
 
 ## Epic 72 — the registry answers a real window
 

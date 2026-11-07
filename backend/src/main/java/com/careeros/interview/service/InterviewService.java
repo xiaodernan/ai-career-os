@@ -29,6 +29,7 @@ import com.careeros.job.repository.JobRepository;
 import java.time.OffsetDateTime;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
@@ -67,14 +68,16 @@ public class InterviewService {
     }
 
     @Transactional(readOnly = true)
-    public PageDTO<SessionItem> list(UUID userId, int page, int size, UUID applicationId) {
+    public PageDTO<SessionItem> list(UUID userId, int page, int size, UUID applicationId, String q) {
         // A narrowed list is still the caller's own rows: the card id is a
         // second scope on top of the user, never a replacement for it, so a
         // guessed id finds nothing rather than someone else's rehearsals.
-        var result = applicationId == null
-                ? sessions.findByUserIdOrderByStartedAtDescIdAsc(userId, Paging.of(page, size).pageable())
-                : sessions.findByUserIdAndApplicationIdOrderByStartedAtDescIdAsc(
-                        userId, applicationId, Paging.of(page, size).pageable());
+        // The word is the board's own question (70.4), trimmed and lower-cased once per request:
+        // the columns are lower-cased per row, so the two sides of the comparison agree without a
+        // collation the database happens to pick. A box nobody typed in -- or one holding spaces --
+        // narrows nothing, which is the browse the reader did not ask for.
+        String needle = q == null ? "" : q.trim().toLowerCase(Locale.ROOT);
+        var result = sessions.findPage(userId, applicationId, needle, Paging.of(page, size).pageable());
         // Two grouped reads for the whole page; a per-row query would scale with the board.
         Map<UUID, InterviewDigestRepository.Digest> rows = digests.forSessions(
                 result.getContent().stream().map(InterviewSession::getId).toList());

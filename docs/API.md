@@ -619,7 +619,7 @@ catalogue, so the palette and the board rank one query the same way.
 
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/interview/sessions` | list — `page` and `size` page it; `applicationId` (a filter) narrows to one card's rehearsals (57.1; the card id is a second scope on the caller's own rows, so a foreign id is an empty page); each row carries applicationStatus, the stage that card is in now (57.4), or null for free practice |
+| GET | `/interview/sessions` | list — `page` and `size` page it; `applicationId` (a filter) narrows to one card's rehearsals (57.1; the card id is a second scope on the caller's own rows, so a foreign id is an empty page); `q` (a filter) is a case-insensitive substring of the rehearsal's own company, position and mode whose characters are literal (`%` and `_` included, 70.4) — spaces alone are no narrowing at all, and the two columns a session may leave empty are read as empty strings, so a rehearsal with no company recorded still answers a word typed into its position; each row carries applicationStatus, the stage that card is in now (57.4), or null for free practice |
 | POST | `/interview/sessions` | `{jobId, jdId?, resumeVersionId?, applicationId?, companyName?, positionTitle?, mode, config}` — `applicationId` names the tracker card being rehearsed (56.1); the session inherits that card's posting, JD analysis and resume version for any field the request left empty, and a card that is not the caller's is **404** `APPLICATION_NOT_FOUND` |
 | GET | `/interview/sessions/{id}` | session + turns + evaluation |
 | PATCH | `/interview/sessions/{id}` | `{status, mode, difficulty, config}` — pause / resume / abandon |

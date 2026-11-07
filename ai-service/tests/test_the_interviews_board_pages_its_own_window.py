@@ -22,6 +22,13 @@ the board asked for.
 
 Nothing about `?size=` policy is fixed here either: `PAGE_SIZE` only ever restates
 the number the route would have used anyway.
+
+70.4 gave the route a word, and the two derived reads cases 4 and 5 used to pin by name are
+one `findPage(userId, applicationId, needle, pageable)` now. The claims did not move, so the
+cases follow them to where they now live: the window is still the route's own two defaults,
+the clamp is still `Paging.of`, and the total order and the card's second scope are read out
+of the repository's one query rather than out of a method name that spelled them. The board's
+own box arrives with 70.5.
 """
 
 import re
@@ -36,6 +43,7 @@ RESOURCES = FRONT / "lib" / "hooks" / "resources.ts"
 INTERVIEWS_PAGE = FRONT / "app" / "(app)" / "interviews" / "page.tsx"
 CONTROLLER = "com/careeros/interview/web/InterviewController.java"
 SERVICE = "com/careeros/interview/service/InterviewService.java"
+REPOSITORY = "com/careeros/interview/repository/InterviewSessionRepository.java"
 
 
 def read(path: Path) -> str:
@@ -198,20 +206,28 @@ def test_the_route_binds_the_page_the_board_sends_and_orders_the_rows_it_pages()
     controller = collapse(java(CONTROLLER))
     assert '@RequestMapping("/api/v1/interview/sessions")' in controller, (
         "this case reads the controller whose prefix the screen's endpoint composes from")
+    # 70.4 bound the board's word beside the card filter, so one more optional name sits
+    # between the filter and the window. What this case measures is the window: the two
+    # defaults `PAGE_SIZE` restates must not have moved with it.
     assert re.search(r'@RequestParam\(required = false\) UUID applicationId, '
+                     r'@RequestParam\(required = false\) String q, '
                      r'@RequestParam\(defaultValue = "0"\) int page, '
                      r'@RequestParam\(defaultValue = "20"\) int size\)', controller), (
         f"the route's own window moved, so the board's PAGE_SIZE restates a different "
         f"number: {controller[controller.index('@GetMapping'):][:220]}")
-    assert "return interviews.list(user.id(), page, size, applicationId);" in controller, (
+    assert "return interviews.list(user.id(), page, size, applicationId, q);" in controller, (
         "the handler no longer forwards the request's own page and size to the service, so "
         "the window the board asks for would be decided elsewhere")
     service = collapse(java(SERVICE))
-    assert ("findByUserIdOrderByStartedAtDescIdAsc(userId, Paging.of(page, size).pageable())"
+    assert ("sessions.findPage(userId, applicationId, needle, Paging.of(page, size).pageable())"
             in service), (
-        "the list no longer comes back clamped and in a deterministic order, so pages of it "
-        "would repeat or skip rows -- or a `?size=` past the ceiling would reach the query "
-        "unbounded")
+        "the list no longer comes back clamped, so a `?size=` past the ceiling would reach "
+        "the query unbounded")
+    # The order used to be spelled in the derived method's name; one query carries it now, so
+    # that is where the claim is read. Without the id tiebreaker two rehearsals begun in the
+    # same instant could land on either side of a page boundary on the next request.
+    assert "ORDER BY s.startedAt DESC, s.id ASC" in java(REPOSITORY), (
+        "the board's read lost its total order, so pages of it would repeat or skip rows")
 
 
 def test_the_board_narrows_to_a_card_when_the_url_names_one():
@@ -241,9 +257,18 @@ def test_the_board_narrows_to_a_card_when_the_url_names_one():
     assert '@RequestParam(required = false) UUID applicationId' in controller, (
         "the route no longer binds the filter the board sends")
     service = collapse(java(SERVICE))
-    assert ("findByUserIdAndApplicationIdOrderByStartedAtDescIdAsc( userId, applicationId, "
-            "Paging.of(page, size).pageable())"
-            ) in service, (
+    assert ("sessions.findPage(userId, applicationId, needle, Paging.of(page, size).pageable())"
+            in service), (
+        "the card filter is no longer handed to the board's own read, so a narrowed list "
+        "would be a second query -- or the whole history under a link that promised one card")
+    # 70.4 collapsed the two derived reads into one, so "scoped by the caller and the card
+    # together" is now a claim about the query: the user is the first scope and the card id is
+    # an optional second one inside it, never a replacement for it.
+    repo = collapse(java(REPOSITORY))
+    assert "WHERE s.userId = :userId" in repo, (
+        "the board's read is no longer scoped by the caller, so a guessed card id would answer "
+        "somebody else's rehearsals")
+    assert ":applicationId IS NULL OR s.applicationId = :applicationId" in repo, (
         "the narrowed read is not scoped by the caller and the card together")
 
 

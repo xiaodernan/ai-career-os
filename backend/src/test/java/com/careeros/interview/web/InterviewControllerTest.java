@@ -402,8 +402,7 @@ class InterviewControllerTest {
         // whole history under a link that promised one card's.
         UUID card = UUID.fromString("77777777-7777-4777-8777-777777777777");
         InterviewSession row = session("completed");
-        when(sessions.findByUserIdAndApplicationIdOrderByStartedAtDescIdAsc(
-                eq(ALICE), eq(card), any(Pageable.class)))
+        when(sessions.findPage(eq(ALICE), eq(card), eq(""), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(row),
                         PageRequest.of(0, 20), 1));
 
@@ -412,7 +411,26 @@ class InterviewControllerTest {
                 .andExpect(jsonPath("$.data.total").value(1))
                 .andExpect(jsonPath("$.data.items.length()").value(1));
 
-        verify(sessions, never()).findByUserIdOrderByStartedAtDescIdAsc(any(), any(Pageable.class));
+        // 70.4: one read carries both scopes now, so the card id is proven by the argument the query
+        // was handed rather than by the absence of a second method that was never called.
+        verify(sessions).findPage(eq(ALICE), eq(card), eq(""), any(Pageable.class));
+    }
+
+    @Test
+    void the_list_answers_the_word_the_reader_typed() throws Exception {
+        // 70.4: `?q=` is the board's own question. The route has to bind it and hand it down already
+        // normalised -- a handler that dropped it would answer the whole history under a box that
+        // promised one word. The underscore travels as a character, which is the whole point of
+        // asking with LOCATE instead of a LIKE pattern.
+        InterviewSession row = session("completed");
+        when(sessions.findPage(eq(ALICE), eq(null), eq("under_score"), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(row), PageRequest.of(0, 20), 1));
+
+        mvc.perform(get("/api/v1/interview/sessions").param("q", " Under_Score "))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1));
+
+        verify(sessions).findPage(eq(ALICE), eq(null), eq("under_score"), any(Pageable.class));
     }
 
     @Test

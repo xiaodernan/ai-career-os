@@ -1153,8 +1153,8 @@ describe("endpoints ↔ backend route parity", () => {
     expect(new Set(handlers.map((h) => `${h.verb} ${h.pattern}`)).size).toBe(handlers.length);
     expect(handlers.flatMap((h) => h.unparsed)).toEqual([]);
     const bound = handlers.flatMap((h) => h.params);
-    expect(bound.length).toBe(58);
-    // 58 parameters in 25 distinct names, measured: the reader's whole answer rather than a spot
+    expect(bound.length).toBe(59);
+    // 59 parameters in 25 distinct names, measured: the reader's whole answer rather than a spot
     // check, so a signature shape it stops understanding shrinks this set instead of passing quiet
     // (#225 retired `limit` from `/activity/runs`, which now pages like every other list route;
     // 19.2 brought the name back for `GET /ingestion/runs` as a newest-N history, and 19.5 retired
@@ -1173,7 +1173,11 @@ describe("endpoints ↔ backend route parity", () => {
     // board and the company board already answered; 70.3's registry box binds it on `/contacts`
     // too (55 -> 56) -- at the time the route still answered a bare list, so the name arrived
     // without the page/size pair every other searched list carries; 72.1 gave the registry a real
-    // server window and bound that pair there as well (56 -> 58), both names already in this set.
+    // server window and bound that pair there as well (56 -> 58), both names already in this set;
+    // 70.4's rehearsals box binds `q` on `/interview/sessions` (58 -> 59), the seventh list to
+    // read a reader's word and the last of the four boards Epic 70 set out to give one. The
+    // name is already in this set -- what moved is the route that answers to it, and the
+    // board's reader arrives with 70.5.
     // The latest names are in it now.)
     expect(new Set(bound.map((p) => p.name))).toEqual(
       new Set([
