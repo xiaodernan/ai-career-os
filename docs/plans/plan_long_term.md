@@ -10,7 +10,7 @@
 ## 当前状态 (2026-11-08)
 
 - **前端**: **1158 个 vitest 通过（116 个文件，70.4 落地后 2026-11-08 复测全绿）**；`tsc --noEmit` 干净（2026-11-08 实测）。2026-11-08 中转态曾有一个红——`endpoints.test.ts` 的绑定参数普查随 70.4 的 `q` 过滤参数落地重钉到 59（c220af0），红已结清。
-- **后端**: 非 IT 选集 **1200** 条全绿（`mvn -q "-Dtest=!*IT" test`；*IT 需真实栈，未假装通过）。
+- **后端**: 非 IT 选集 **1205 条全绿，Failures/Errors/Skipped 均为 0，BUILD SUCCESS（2026-11-08 实测，`mvn -B "-Dtest=!*IT" test`）**；*IT 需真实栈，未假装通过。2026-11-08 01:03 的一次同命令运行退出码 1，但事后逐份核对 159 份 surefire 报告：全部 `Failures: 0`，dumpstream 为仓库既有的良性 Windows Manifest 警告；同机并行两套他项目完整 pytest 后重跑，干净 BUILD SUCCESS。异常未复现，原因不写成定论。
 - **ai-service**: **2032 passed, 2 skipped**（2026-11-07 实测）。**2026-11-08 全量（c220af0 落地后复测）：2051 passed、2 skipped、0 failed（381s，`pytest ai-service/tests -q`）**——70.4 的红已结清；本轮提交的 roadmap 台账闸门（3）与旅程闸门（2）包含在内。
 - **E2E**: 24/24 golden journey（最近一次真实栈验证）。
 - **分支**: main 与 origin 同步（本次推送后）。
