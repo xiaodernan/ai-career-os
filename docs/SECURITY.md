@@ -403,7 +403,9 @@ shapes. **Re-measured 2026-11-08**: a fresh `pip-audit -r requirements.txt`
 flagged seven advisories against `pypdf==6.21.2`
 (CVE-2026-119203 / 119204 / 119205 / 119206 / 119207 / 119208 / 119209, all
 fixed in 6.21.3 or 6.21.4); the pin now ships `pypdf==6.21.4` and pip-audit
-reports no known vulnerabilities.
+reports no known vulnerabilities. The same command runs in CI as a gate
+(`.github/workflows/ci.yml`, ai-service job): a fresh known vulnerability now
+reddens the build instead of waiting for a reader to re-measure.
 
 ## Error envelope
 
