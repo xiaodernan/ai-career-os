@@ -4852,7 +4852,7 @@ on two other things, so its needle cannot arrive as one more branch of the same 
   so `useContacts` keeps its `List<ContactItem>` row and its call site joins neither `WIRE` nor
   `SITES`. Paging the registry is a separate question and was deliberately not folded in here.)
 
-Epic 72 — the registry answers a real window
+## Epic 72 — the registry answers a real window
 
 70.3 deliberately left the contacts board unpaged: `GET /contacts` answered a bare list, and
 `useContacts` invented a one-page envelope over it (`total = items.length`). That was honest about
@@ -4895,7 +4895,8 @@ Following Epic 71 (which closed the loop on 71.1–71.3), this epic re-measured 
 two cross-plane gates those epics left in place and wrote the result down. It
 landed no product change of its own; its deliverable is the re-measurement, the
 deduplicated ledger below, and the restored long-term plan (an earlier commit of
-this epic had truncated `docs/plans/plan_long_term.md` to a status one-liner).
+this epic had truncated the long-term development plan under
+`docs/plans/` to a status one-liner).
 
 - [x] **73.1** The browser-surface audit still holds the floor.
 
@@ -4916,7 +4917,11 @@ this epic had truncated `docs/plans/plan_long_term.md` to a status one-liner).
   (The audit found no orphans on either plane. The one real gap the series had
   inherited — `GET /jds/{}` — closed in 71.3 with the stored-row reader; nothing
   else was unaccounted for. Epic 73 therefore closes by verification, not by
-  wiring, and the deduplication of its own ROADMAP entry is part of the record.)
+  wiring, and the deduplication of its own ROADMAP entry is part of the record.
+  The ledger it keeps honest now has a gate of its own:
+  `tests/test_the_roadmap_names_each_epic_once.py` pins one `## Epic N` heading
+  per epic, reddening on a double insertion or on an entry that loses its
+  prefix.)
 
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
