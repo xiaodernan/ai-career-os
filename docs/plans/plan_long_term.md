@@ -11,7 +11,7 @@
 
 - **前端**: **1158 个 vitest 通过（116 个文件，70.4 落地后 2026-11-08 复测全绿）**；`tsc --noEmit` 干净（2026-11-08 实测）。2026-11-08 中转态曾有一个红——`endpoints.test.ts` 的绑定参数普查随 70.4 的 `q` 过滤参数落地重钉到 59（c220af0），红已结清。
 - **后端**: 非 IT 选集 **1205 条全绿，Failures/Errors/Skipped 均为 0，BUILD SUCCESS（2026-11-08 实测，`mvn -B "-Dtest=!*IT" test`）**；*IT 需真实栈，未假装通过。2026-11-08 01:03 的一次同命令运行退出码 1，但事后逐份核对 159 份 surefire 报告：全部 `Failures: 0`，dumpstream 为仓库既有的良性 Windows Manifest 警告；同机并行两套他项目完整 pytest 后重跑，干净 BUILD SUCCESS。异常未复现，原因不写成定论。
-- **ai-service**: **2032 passed, 2 skipped**（2026-11-07 实测）。**2026-11-08 全量（c220af0 落地后复测）：2051 passed、2 skipped、0 failed（381s，`pytest ai-service/tests -q`）**——70.4 的红已结清；本轮提交的 roadmap 台账闸门（3）与旅程闸门（2）包含在内。
+- **ai-service**: **2032 passed, 2 skipped**（2026-11-07 实测）。**2026-11-08 全量（c220af0 落地后复测）：2051 passed、2 skipped、0 failed（381s，`pytest ai-service/tests -q`）**——70.4 的红已结清；本轮提交的 roadmap 台账闸门（3）与旅程闸门（2）包含在内。**依赖安全波复测（pypdf 6.21.2→6.21.4，含进行中的 70.5 测试改动）：2056 passed、2 skipped、0 failed（412s）**；pip-audit（2026-11-08）报无已知漏洞。
 - **E2E**: 24/24 golden journey（最近一次真实栈验证）。
 - **分支**: main 与 origin 同步（本次推送后）。
 - **已完成**: Epics 69–73 收口（2026-11-06 → 11-08）：tag 计数、看板答词（70.4：重演列表以 `q` 按公司/职位/模式回答一个词，随 c220af0 收口）、无界面路由审计、联系人窗口翻页、跨栈契约再测量、roadmap 台账闸门、e2e 体检闸门（`tests/test_the_e2e_readme_keeps_its_own_arithmetic.py`，分项计数与标粗总数都对真实 spec 文件对账，三条变异探针实测变红）。
@@ -1208,8 +1208,31 @@
     同一个 needle 子句，而不是数整段历史。API.md 的 `/interview/sessions` 行写上这个框
     （`ApiDocParamContractTest` 正是先因为这条缺失而红），endpoints census 从 58 重新钉到 59
     （`q` 这个名字集合里早就有，动的是答它的路线）。70.5 给这条路线配上读者。
-  - **70.5** 演练看板问出自己的问题（待做）：同一套 URL 状态与草稿框纪律走 `/interviews` 和
-    `useInterviewSessions`，词进 `queryKey`，两种空态各有各的出路。
+  - **70.5** 演练看板问出自己的问题（已完成 2026-11-08）：Epic 70 收尾，只动前端——70.4 已经把
+    「答一个词」教会了路线，屏幕上却还没有人问。`useInterviewSessions` 收下 `q`，并在 wire 上逐格
+    写出 `q: params?.q`（挨着 `applicationId`），而不是 spread 整个 params：endpoints 闸门读的是 key
+    名，不是对象（49.1）。看板把「正在打的字」放在 `word`、「已经问出口的」放在 URL 的 `state.q`，
+    于是六次按键不是六次请求和六份缓存，路线也不会去答一个还没打完的词；`ask` 负责 trim、要么写
+    词要么什么都不写、并且永远回到第 0 页。空态从两种变成三种——有词、只有卡、两者都没有——而词排
+    在卡前面，因为它更窄：清掉词就回到这张卡的演练，放开卡却会扔掉读者打的字。行照答案原样渲染，
+    因为在服务已经筛过的一个窗口上再做一次客户端过滤，会把别的页面上的演练藏起来，而分页器旁边的
+    数字就不再描述眼前这块板了。
+    装框的过程中发现一个真缺陷。`hydrateState` 按「defaults 对象的 key ∪ 声明过的 numeric/boolean
+    key」重建状态，而这块板的 defaults 只声明了 `page`——于是 `/interviews?application=<id>` 这个每张
+    申请抽屉都会写的链接，从来就没被还原过：刷新或粘贴它，看板什么都不采纳，答出整段历史，却照样
+    挂着「只显示这张申请的演练」。代码的形状看不出这件事（状态一旦到位，`state.application` 读得
+    没问题），只有 defaults 对象看得出来，所以现在两个可选 key 都写进 defaults：规则在
+    `use-url-state.test.ts` 里被证明，并补了一条这块板的确切组合的用例；窗口闸门的 case 2 直接钉
+    defaults 对象，不再信任它上面那条注释。
+    `interviews/page.test.tsx` 是重写而不是加长。原来它把 `useLocale` mock 成一个把 key 原样吐回来
+    的函数——这就是它只有一条用例、并且完全看不见文案的原因。现在它走真的 locale provider、真的
+    `PageHeader`、真的分页器，用名单那块板立起来的 hoisted url/params 套路（70.3），一共九条主张：
+    词到达路线、没人输入时框是空的也不发问、三种空态各说各的句子、行没有被二次过滤、分页器旁边的
+    数是这一窗口的数、以及找不到词时空态用中文说。文案 5 个 key × 2 种语言。endpoints census 没有
+    动：它数的是绑定，不是调用者，所以一个把「处理程序早就绑好的参数」发出去的框在这里天生不可见
+    ——加进去的是 spot-check 里那一对 `GET /interview/sessions q`，那才是能看见浏览器在问的方向。
+    Epic 70 到此关闭：流水线、名单、演练三块板各自会答一个词也各自会问一个词，公司板从 58 起两半
+    都有。
 - **Epic 71 — 审计先学会不撒谎**（本段起）
   - 盘点结论（2026-11-07）：71.1 的浏览器界面闸门把 181 条公开路由里的 20 条记为「无界面」，其中两条是
     `PATCH`/`DELETE /applications/{}/letters/{}`，理由写着「没有编辑界面」。实测

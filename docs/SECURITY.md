@@ -384,25 +384,26 @@ residual risk rather than as a clean bill of health.
    prod-with-`smtp` starts, and the `@Component` wiring.
    `DEPLOYMENT.md`'s checklist and its Email section state the refusal.
 
-### Dependency audits (2026-10-24)
+### Dependency audits (2026-10-24, re-measured 2026-11-08)
 
 `npm audit --omit=dev` carried a critical and a high through PostCSS — both fixed
 (`f72eec5`): next to the 15.5.28 patch, plus an npm override pinning **every**
 transitive copy at `^8.5.31` (the deepest one ships inside next's own bundle, so
 no direct bump could reach it). Audit is now 0.
 
-`pip-audit` flags six starlette advisories (PYSEC-2026-161/248/249/1942/2280/2281,
-fixed across 0.49.1–1.3.1). **Assessed, not patched — deliberately.** Every one of
-those advisories rides a surface this service does not mount: no `FileResponse` /
-`StaticFiles` / `HTTPEndpoint`, no `request.form()` (multipart uploads land on the
-Spring backend, which caps file counts in `FileValidator`), no `request.url.path`
-trust. The pins exist because `fastapi==0.116.1` locks `starlette<0.42`, and the
-fix train crosses two major versions on both packages — an attempted upgrade
-(fastapi 0.161.1 / starlette 1.9) breaks the route-introspection the contract
-gates read (`app.routes` no longer flattens included routers), which was verified
-before reverting. The tracked path: land the fastapi migration on its own wave
-(route-scanner support for `_IncludedRouter` first), then take the starlette fix
-train. Until then, the exposure is theoretical for this deployment shape.
+The Python advisories that were assessed in 2026-10-24 landed as one wave in
+`6622f42` (2026-10-27) instead of staying an exposure: `fastapi==0.161.1` /
+`starlette==1.9.0` / `python-multipart==0.0.32`, pip-audit clean afterwards. The
+upgrade broke the route-introspection the contract gates read — 0.161 mounts
+included routers as `_IncludedRouter` proxies instead of flattening them, with
+two measured traps (an empty route table, then a self-reference on a naive walk)
+— so both scanners read through one flattener with a seen-set
+(`test_internal_contract._flat_routes`), verified against the recorded failure
+shapes. **Re-measured 2026-11-08**: a fresh `pip-audit -r requirements.txt`
+flagged seven advisories against `pypdf==6.21.2`
+(CVE-2026-119203 / 119204 / 119205 / 119206 / 119207 / 119208 / 119209, all
+fixed in 6.21.3 or 6.21.4); the pin now ships `pypdf==6.21.4` and pip-audit
+reports no known vulnerabilities.
 
 ## Error envelope
 
