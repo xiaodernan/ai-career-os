@@ -2998,10 +2998,15 @@ def _heartbeat_arguments() -> dict[str, list[dict]]:
     """
     kinds: dict[str, list[dict]] = {"declared": [], "overridden": [], "read": []}
     for path in sorted(AI_SERVICE_ROOT.rglob("*.py")):
-        if any(part.startswith(".") or part == "__pycache__" for part in path.parts):
+        # The prune is over the path *inside* the scanned tree, never over the
+        # absolute path: this repository may be checked out beneath a dotted
+        # parent (.local, .cache, any CI sandbox), and every segment before
+        # AI_SERVICE_ROOT would silently drop the whole walk -- the exact
+        # narrowing this contract exists to forbid.
+        rel = str(path.relative_to(AI_SERVICE_ROOT)).replace("\\", "/")
+        if any(part.startswith(".") or part == "__pycache__" for part in rel.split("/")):
             continue
         text = path.read_text(encoding="utf-8", errors="replace")
-        rel = str(path.relative_to(AI_SERVICE_ROOT)).replace("\\", "/")
         tree = ast.parse(text, filename=str(path))
         for node in ast.walk(tree):
             if isinstance(node, (ast.AsyncFunctionDef, ast.FunctionDef)) and \
