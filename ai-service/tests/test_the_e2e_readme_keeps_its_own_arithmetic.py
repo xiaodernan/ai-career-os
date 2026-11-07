@@ -123,3 +123,22 @@ def test_the_bold_total_is_the_sum_of_the_parts():
     assert total == stated_sum + remainder, (
         f"bold says {total}, parts say {stated_sum} + unnamed {remainder} = {stated_sum + remainder} "
         f"(unnamed files: {sorted(set(counts) - named)})")
+
+
+def test_product_md_names_the_same_count():
+    """PRODUCT.md records the live-stack verification result as NN/NN.
+
+    That sentence is a claim about the same population the README counts:
+    it drifts the same way. It is checked against the shipped specs, not
+    against the README, so the two documents cannot drift apart either.
+    """
+    product = (ROOT / "docs" / "PRODUCT.md").read_text(encoding="utf-8", errors="replace")
+    m = re.search(r"golden-journey suite passes\s+(\d+)/(\d+)", product)
+    assert m, "PRODUCT.md no longer records a Playwright golden-journey NN/NN result"
+    passed, total = int(m.group(1)), int(m.group(2))
+    shipped = sum(_counts().values())
+    assert total == shipped, (
+        f"PRODUCT.md says {total} cases in the suite, e2e/tests/ ships {shipped}")
+    assert passed == total, (
+        "PRODUCT.md says fewer passes than cases -- either the sentence is stale "
+        "or the suite is red, and neither belongs in 'verified against the live stack'")
