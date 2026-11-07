@@ -1176,8 +1176,11 @@ describe("endpoints ↔ backend route parity", () => {
     // server window and bound that pair there as well (56 -> 58), both names already in this set;
     // 70.4's rehearsals box binds `q` on `/interview/sessions` (58 -> 59), the seventh list to
     // read a reader's word and the last of the four boards Epic 70 set out to give one. The
-    // name is already in this set -- what moved is the route that answers to it, and the
-    // board's reader arrives with 70.5.
+    // name is already in this set -- what moved is the route that answers to it. 70.5 gave
+    // that route its reader and the number did not move: this census counts bindings, not
+    // callers, so a box sending a parameter the handler already binds is invisible here by
+    // design. What is not invisible is the pair below, which names the route the browser
+    // now asks with that parameter.
     // The latest names are in it now.)
     expect(new Set(bound.map((p) => p.name))).toEqual(
       new Set([
@@ -1205,7 +1208,10 @@ describe("endpoints ↔ backend route parity", () => {
       .toEqual(["POST /knowledge/documents file", "POST /resumes/upload file"]);
     ["GET /activity/runs page", "GET /activity/runs size",
       "GET /applications status", "GET /applications page",
-      "GET /companies q", "GET /contacts q", "GET /resume-versions resumeId",
+      "GET /companies q", "GET /contacts q",
+      // 70.4 bound the name and 70.5 spent it: the rehearsals board asks for its window
+      // of the matches, so the pair is now on both sides of the wire.
+      "GET /interview/sessions q", "GET /resume-versions resumeId",
       // the citation deep link, named as a pair: the browser sends this key and this handler binds it
       "GET /knowledge/sources documentId"].forEach((p) => expect(pairs).toContain(p));
     // the bookmark list is not paged by the server, so it must not arrive here carrying a page size

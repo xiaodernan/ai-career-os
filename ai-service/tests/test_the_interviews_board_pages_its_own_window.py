@@ -27,8 +27,13 @@ the number the route would have used anyway.
 one `findPage(userId, applicationId, needle, pageable)` now. The claims did not move, so the
 cases follow them to where they now live: the window is still the route's own two defaults,
 the clamp is still `Paging.of`, and the total order and the card's second scope are read out
-of the repository's one query rather than out of a method name that spelled them. The board's
-own box arrives with 70.5.
+of the repository's one query rather than out of a method name that spelled them.
+
+70.5 gave the route its reader, and cases 1, 2 and 5 moved with it: the hook now takes `q` and
+spells it on the wire beside `applicationId`, the board's defaults object declares the word so a
+pasted `/interviews?q=` link restores it, and its request carries both scopes at once. Case 7 is
+new and measures the box itself -- the draft and the question are separate state, asking resets
+the page, and the board now has three empties rather than two.
 """
 
 import re
@@ -98,22 +103,24 @@ def test_the_hook_takes_a_window_and_keys_each_page_as_its_own_cache_entry():
     signature = collapse(body)
     # 59.1 added the fourth parameter, `enabled`: the report and the runner ask only when
     # the session names a card. It is a gate, not a window, so it is named here beside the
-    # three the board uses rather than folded into them.
+    # three the board uses rather than folded into them. 70.5 added `q`, which is neither:
+    # it is the question the board asks its window of.
     for part in ("params?: {", "page?: number;", "size?: number;",
-                 "applicationId?: string;", "enabled?: boolean;"):
+                 "applicationId?: string;", "q?: string;", "enabled?: boolean;"):
         assert part in signature, (
             f"the hook lost {part!r}, so the board cannot ask for a page: {signature[:160]}")
     assert re.search(r'queryKey: \["interview", "sessions", params\]', body), (
         f"the cache no longer separates pages, so page 1 would answer from page 0's entry: "
         f"{collapse(body)[:160]}")
-    # `enabled` is a gate, not a window (59.1), and the other three are spelled rather than spread:
+    # `enabled` is a gate, not a window (59.1), and the other four are spelled rather than spread:
     # `...query` hides the key names from the endpoints reader that checks each one against the
     # handler's signature, and a parameter that reader stops seeing is one Spring may quietly ignore
     # -- 49.1 took the reply list off the same cliff.
     assert re.search(r"enabled: params\?\.enabled \?\? true,", body), (
         f"the gate is no longer answerable without reaching the wire: {collapse(body)[:160]}")
     assert re.search(r"api\.get<unknown>\(endpoints\.interviews, \{ size: params\?\.size \?\? 20, "
-                     r"page: params\?\.page, applicationId: params\?\.applicationId, \}\)",
+                     r"page: params\?\.page, applicationId: params\?\.applicationId, "
+                     r"q: params\?\.q, \}\)",
                      collapse(body)), (
         f"the caller's window no longer reaches the wire key by key: {collapse(body)}")
     request = collapse(body).split("endpoints.interviews, ")[1].split(")")[0]
@@ -132,7 +139,7 @@ def test_the_hook_takes_a_window_and_keys_each_page_as_its_own_cache_entry():
          "{ applicationId: session.data?.applicationId ?? undefined, size: 20, "
          "enabled: Boolean(session.data?.applicationId), }"),
         ("app/(app)/interviews/page.tsx",
-         "{ page: state.page, size: PAGE_SIZE, applicationId, }"),
+         "{ page: state.page, size: PAGE_SIZE, applicationId, q: state.q, }"),
     ], f"the call sites moved: {hook_calls('useInterviewSessions')}"
 
 
@@ -145,11 +152,16 @@ def test_the_board_puts_its_page_in_the_url_and_renders_the_pager_the_rows_earn(
         "default this case measures it against")
     assert "import { Pagination } from \"@/components/common/pagination\";" in page, (
         "the shared pager is no longer imported, so the rows past the first window stay unreachable")
-    assert re.search(r"const PAGE_DEFAULTS: \{ page: number; application\?: string \} = "
-                     r"\{ page: 0 \};", page), (
-        "the defaults object is no longer the module-level const `setUrl` needs to stay stable")
+    # Both optional keys are declared in the defaults, not only the word: `hydrateState` walks the
+    # union of `initial`'s keys and the numeric ones, so the card filter had been silently
+    # un-restorable from a pasted link since 57.1 shipped it. 70.5 found that while adding `q`, and
+    # the shape is pinned here so neither key can be dropped from the defaults again.
+    assert re.search(r"const PAGE_DEFAULTS: \{ page: number; application\?: string; q\?: string \} "
+                     r"= \{\s*page: 0,\s*application: undefined,\s*q: undefined,\s*\};", page), (
+        "the defaults object is no longer the module-level const `setUrl` needs to stay stable, "
+        "or it stopped declaring a key a pasted link has to restore")
     assert re.search(r"const \[state, setUrl\] = "
-                     r"useUrlState<\{ page: number; application\?: string \}>\(\n"
+                     r"useUrlState<\{ page: number; application\?: string; q\?: string \}>\(\n"
                      r"\s*PAGE_DEFAULTS,\n"
                      r"\s*\{ numericKeys: \[\"page\"\] \}\n"
                      r"\s*\);", page), (
@@ -158,8 +170,10 @@ def test_the_board_puts_its_page_in_the_url_and_renders_the_pager_the_rows_earn(
                      r"\s*page: state\.page,\n"
                      r"\s*size: PAGE_SIZE,\n"
                      r"\s*applicationId,\n"
+                     r"\s*q: state\.q,\n"
                      r"\s*\}\);", page), (
-        "the screen no longer asks for the URL's page, so the pager's numbers would govern nothing")
+        "the screen no longer asks for the URL's page and word, so the pager's numbers would govern "
+        "nothing and the box would be a filter over rows the server already narrowed")
 
     at = page.index("<Pagination")
     block = page[at:page.index("/>", at)]
@@ -242,8 +256,12 @@ def test_the_board_narrows_to_a_card_when_the_url_names_one():
     page = read(INTERVIEWS_PAGE)
     assert "const applicationId = state.application;" in page, (
         "the board no longer reads the card filter out of the URL state")
-    assert re.search(r"applicationId,\s*\n\s*\}\);", page), (
-        "the hook is no longer given the card filter, so the list would be the whole history")
+    # 70.5 put the word in the same request, so the tail of the board's call is where both
+    # scopes are visible at once: a card filter the reader can only reach by dropping the words,
+    # or a word that costs a second query, is the shape this pins out.
+    assert re.search(r"applicationId,\n\s*q: state\.q,\n\s*\}\);", page), (
+        "the hook is no longer handed the card filter and the word in one request, so a narrowed "
+        "list would be the whole history -- or the word would be a second question")
     assert 't("interviews.filteredToApplication")' in page, (
         "nothing on the page says the list is narrowed")
     assert page.count("setUrl({ page: 0, application: undefined })") == 2, (
@@ -284,3 +302,52 @@ def test_starting_a_rehearsal_from_a_cards_list_starts_it_for_that_card():
     assert re.search(r"\{ mode, \.\.\.\(applicationId \? \{ applicationId \} : "
                      r"\{\}\) \},", page), (
         "the create no longer carries the card the list is narrowed to")
+
+
+def test_the_board_asks_its_own_question_and_keeps_the_asking_apart_from_the_typing():
+    """Case 7 (70.5): the box, its draft, and the three empties it can leave the reader with.
+
+    The route has answered a word since 70.4; this is the reader that asks it. Two claims hold the
+    box honest. The first is that the characters in it are not yet a question -- binding the input
+    straight to the URL would make every keystroke a request and a cache entry, and the board would
+    answer a word nobody had finished typing. The second is that the answer is not filtered here:
+    the rows are one window of the matches, so a client-side pass over them would hide the
+    rehearsals the server found on another page and leave the pager counting a set the screen is
+    not showing.
+    """
+    page = read(INTERVIEWS_PAGE)
+    assert 'role="search"' in page, (
+        "the board no longer marks its question as a search, so a screen reader cannot find it")
+    assert "const [word, setWord] = React.useState(state.q ?? \"\");" in page, (
+        "the box is no longer its own state, so every keystroke asks the route a new question")
+    assert "React.useEffect(() => setWord(state.q ?? \"\"), [state.q]);" in page, (
+        "the box no longer follows the URL back, so a pasted or cleared link leaves words on the "
+        "screen the board is not asking")
+    assert re.search(r"const ask = \(value: string\) => "
+                     r"setUrl\(\{ q: value\.trim\(\) \|\| undefined, page: 0 \}\);", page), (
+        "asking no longer trims the box, resets the page, or leaves an empty question unasked")
+    assert re.search(r"event\.preventDefault\(\);\n\s*ask\(word\);", page), (
+        "submitting the form no longer asks the typed words, so the box is decoration")
+    assert 'placeholder={t("interviews.searchPlaceholder")}' in page and \
+           'aria-label={t("interviews.searchLabel")}' in page, (
+        "the box's own copy no longer comes from the locale table, so one language would ask "
+        "for a word the other never shows")
+
+    # The way out of a question that found nothing is the question, not a create form.
+    assert re.search(r"\.\.\.\(state\.q\b", page), (
+        "the empty no longer branches on the word, so a board full of rehearsals none of which "
+        "spells it would tell the reader nobody has ever rehearsed")
+    assert 't("interviews.noMatch", { query: state.q })' in page and \
+           't("interviews.noMatchDescription")' in page, (
+        "the word's empty lost its own sentence")
+    assert page.count('{t("interviews.clearSearch")}') == 2, (
+        "both the box and the empty it can leave have to offer to clear the question")
+
+    # And the answer arrives already narrowed: the board renders the rows it was given.
+    assert "page.items.map((s) => {" in page, (
+        "the board no longer renders the answer's own rows, so the pager beside it is counting a "
+        "set the screen is not showing")
+    rendered = collapse(page[page.index("{(page) =>"):])
+    assert ".filter(" not in rendered, (
+        "the board re-narrows the rows it was given, so it hides rehearsals the server found on "
+        f"another page: {rendered[:120]}")

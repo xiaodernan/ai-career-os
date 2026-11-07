@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Briefcase, CalendarClock, FileBarChart, MessagesSquare, Plus, Trash2 } from "lucide-react";
+import { ArrowRight, Briefcase, CalendarClock, FileBarChart, MessagesSquare, Plus, Search, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
 import { Pagination } from "@/components/common/pagination";
 import { lastPageOf } from "@/lib/page-window";
@@ -12,6 +12,7 @@ import { LoadingListSkeleton } from "@/components/common/loading-skeletons";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,12 +38,22 @@ import { stageLabel } from "@/lib/pipeline";
 const PAGE_SIZE = 20;
 
 // Module-level so `setUrl` (a `useCallback` keyed on this object) is stable across renders.
-const PAGE_DEFAULTS: { page: number; application?: string } = { page: 0 };
+// Both optional keys are declared here even though they are usually absent: `hydrateState` walks
+// the union of these keys and the numeric ones, so a key left out of the defaults is a filter a
+// pasted link cannot restore -- which is how `/interviews?application=<id>` used to open the whole
+// history on reload, under a chip the drawer had just written (70.2's rule, now this board's too).
+const PAGE_DEFAULTS: { page: number; application?: string; q?: string } = {
+  page: 0,
+  application: undefined,
+  q: undefined,
+};
 
 export default function InterviewsPage() {
   const { t, locale } = useLocale();
-  // The page index lives in the URL, so a reload or a shared list link opens the same window.
-  const [state, setUrl] = useUrlState<{ page: number; application?: string }>(
+  // The page index and the word both live in the URL, so a reload or a shared list link opens the
+  // same page of the same question -- the rule the replies (49.1), company (58.2), pipeline (70.2)
+  // and registry (70.3) boards follow.
+  const [state, setUrl] = useUrlState<{ page: number; application?: string; q?: string }>(
     PAGE_DEFAULTS,
     { numericKeys: ["page"] }
   );
@@ -50,10 +61,19 @@ export default function InterviewsPage() {
   // The filter travels in the URL like the page does, so the narrowed list is
   // shareable and a reload does not silently widen it back to everything.
   const applicationId = state.application;
+  // The box holds what the reader is typing; the URL holds what was asked. Binding the box straight
+  // to the URL would make every character a new question: six keystrokes would be six requests and
+  // six cache entries, and the board would answer a word nobody had finished.
+  const [word, setWord] = React.useState(state.q ?? "");
+  React.useEffect(() => setWord(state.q ?? ""), [state.q]);
+  // Asking a new question starts at its first page: a word typed on page 4 must not leave the
+  // reader on a page the new, narrower answer does not have.
+  const ask = (value: string) => setUrl({ q: value.trim() || undefined, page: 0 });
   const sessions = useInterviewSessions({
     page: state.page,
     size: PAGE_SIZE,
     applicationId,
+    q: state.q,
   });
   const create = useCreateInterviewSession();
   const router = useRouter();
@@ -91,7 +111,51 @@ export default function InterviewsPage() {
         title={t("interviews.title")}
         description={t("interviews.description")}
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {/* The question 70.4 gave this route and this board never asked. It is the server's
+                search, not a filter over the rows in hand: the pager counts the matches, so page
+                two of a word is the second page of the matches -- and the characters are read as
+                characters, which is what lets a rehearsal at a company that really carries an
+                underscore be found by spelling the underscore. */}
+            <form
+              role="search"
+              className="flex items-center gap-2"
+              onSubmit={(event) => {
+                event.preventDefault();
+                ask(word);
+              }}
+            >
+              <div className="relative">
+                <Search
+                  aria-hidden
+                  className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+                />
+                <Input
+                  value={word}
+                  onChange={(event) => setWord(event.target.value)}
+                  placeholder={t("interviews.searchPlaceholder")}
+                  aria-label={t("interviews.searchLabel")}
+                  autoComplete="off"
+                  className="w-40 pl-9 sm:w-60"
+                />
+              </div>
+              <Button type="submit" size="sm" variant="outline">
+                {t("chrome.search")}
+              </Button>
+              {state.q ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    setWord("");
+                    ask("");
+                  }}
+                >
+                  {t("interviews.clearSearch")}
+                </Button>
+              ) : null}
+            </form>
             {applicationId && (
               <Button
                 variant="outline"
@@ -142,26 +206,50 @@ export default function InterviewsPage() {
         skeleton={<LoadingListSkeleton rows={4} />}
         empty={{
           icon: <CalendarClock aria-hidden />,
-          title: t("interviews.empty"),
-          // A card with no rehearsals yet is not "no interviews ever": the
-          // narrowed list gets its own action, so the way out is the honest
-          // one -- widen the list -- rather than "pick a target job".
-          description: applicationId
-            ? t("interviews.filteredToApplication")
-            : t("interviews.emptyDescription"),
-          action: applicationId ? (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setUrl({ page: 0, application: undefined })}
-            >
-              {t("interviews.detail.allInterviews")}
-            </Button>
-          ) : (
-            <Button variant="outline" size="sm" asChild>
-              <Link href="/jobs">{t("interviews.pickATargetJob")}</Link>
-            </Button>
-          ),
+          // Three different empties (49.2's rule, now three deep). The word is read ahead of the
+          // card because it is the narrower of the two: clearing it brings this card's rehearsals
+          // back, while widening the card would drop the words the reader was looking for.
+          ...(state.q
+            ? {
+                title: t("interviews.noMatch", { query: state.q }),
+                description: t("interviews.noMatchDescription"),
+                // The escape is the words, not a create form -- the reader was not trying to
+                // start a rehearsal, and a board of them is full.
+                action: (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setWord("");
+                      ask("");
+                    }}
+                  >
+                    {t("interviews.clearSearch")}
+                  </Button>
+                ),
+              }
+            : {
+                title: t("interviews.empty"),
+                // A card with no rehearsals yet is not "no interviews ever": the
+                // narrowed list gets its own action, so the way out is the honest
+                // one -- widen the list -- rather than "pick a target job".
+                description: applicationId
+                  ? t("interviews.filteredToApplication")
+                  : t("interviews.emptyDescription"),
+                action: applicationId ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setUrl({ page: 0, application: undefined })}
+                  >
+                    {t("interviews.detail.allInterviews")}
+                  </Button>
+                ) : (
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href="/jobs">{t("interviews.pickATargetJob")}</Link>
+                  </Button>
+                ),
+              }),
         }}
         notLive={{
           title: t("common.notLiveTitle"),

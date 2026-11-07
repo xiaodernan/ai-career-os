@@ -50,6 +50,31 @@ describe("hydrateState", () => {
     expect(hydrateState(FOCUS, "?src=")).toEqual({ src: "" });
   });
 
+  it("adopts every optional key a board declares, not only the first", () => {
+    // `/interviews` carries two filters beside its page index -- the card the drawer named and the
+    // word the board asks with -- and `numericKeys` holds only `page`. A board that declares one and
+    // not the other shares half a link: the reload came back narrowed to the card and searched for
+    // nothing, which is the shape 70.5 found on this screen and fixed by declaring both.
+    const BOARD = {
+      page: 0,
+      application: undefined as string | undefined,
+      q: undefined as string | undefined,
+    };
+    const opts = { numericKeys: ["page"] as ("page" | "application" | "q")[] };
+    expect(hydrateState(BOARD, "?page=2&application=app-9&q=acme", opts)).toEqual({
+      page: 2,
+      application: "app-9",
+      q: "acme",
+    });
+    // Declaring a key costs nothing when the link does not carry it: it stays absent rather than
+    // arriving as the string "undefined", so the wire asks no filter at all.
+    expect(hydrateState(BOARD, "?page=1", opts)).toEqual({
+      page: 1,
+      application: undefined,
+      q: undefined,
+    });
+  });
+
   it("parses booleans from 1/true and treats anything else as false", () => {
     expect(hydrateState(INITIAL, "?remote=1", OPTS).remote).toBe(true);
     expect(hydrateState(INITIAL, "?remote=true", OPTS).remote).toBe(true);

@@ -4887,6 +4887,43 @@ on two other things, so its needle cannot arrive as one more branch of the same 
   beside the card scope rather than implied by it. 70.5 gives the route its reader and moves that
   file's three frontend cases.)
 
+- [x] **70.5** The rehearsals board asks its own question.
+
+  (Frontend only -- 70.4 had already taught the route to answer a word, and nothing on the screen
+  asked one. `useInterviewSessions` takes `q` and spells `q: params?.q` on the wire beside
+  `applicationId` rather than spreading the params object, because the endpoints reader follows key
+  names and not objects (49.1). The board keeps the characters in the box in `word` and the question
+  in the URL in `state.q`, so six keystrokes are not six requests and six cache entries and the
+  route is never asked a word nobody finished typing; `ask` trims, writes the word or nothing, and
+  always returns to page 0. The empty is three deep now -- word, card, neither -- and the word is
+  read ahead of the card because it is the narrower of the two: clearing it brings this card's
+  rehearsals back, while widening the card would throw away the words. The rows are rendered
+  exactly as the answer carries them, because a client-side pass over one window of the matches
+  would hide the rehearsals sitting on every other page and leave the pager counting a set the
+  screen is not showing.
+
+  The box found a defect on the way in. `hydrateState` rebuilds state from the union of the
+  defaults object's keys and the declared numeric/boolean keys, and this board's defaults declared
+  only `page` -- so `/interviews?application=<id>`, the link every application drawer writes, had
+  never been restorable: reload or paste it and the board adopted nothing, asked the whole history,
+  and printed the chip claiming it was showing one card. The shape of the code hides this
+  (`state.application` reads correctly once the state arrives) and only the defaults object shows
+  it, so both optional keys are declared now; the rule is proven in `use-url-state.test.ts` beside
+  a new case for this board's exact combination, and case 2 of the window gate pins the defaults
+  object itself rather than trusting the comment above it.
+
+  `interviews/page.test.tsx` was rewritten rather than extended. It had mocked `useLocale` with a
+  function that echoed the key back, which is why it carried one case and could not see any copy;
+  it now renders through the real locale provider, the real `PageHeader` and the real pager, on the
+  hoisted url/params pattern the registry's test set (70.3), and holds nine claims -- the word
+  reaching the route, the box unasked and empty, each of the three empties saying its own sentence,
+  the rows not re-filtered, the window's own count beside the pager, and the word's empty in
+  Chinese. 5 keys x 2 locales. The endpoints census did not move: it counts bindings, not callers,
+  so a box sending a parameter its handler already binds is invisible to it by design -- what is
+  added is the pair `GET /interview/sessions q` to the spot-checks, which is the direction that can
+  see a browser asking. Epic 70 is closed: the pipeline, the registry and the rehearsals each
+  answer a word and ask one, and the companies board has had both halves since 58.)
+
 ## Epic 72 — the registry answers a real window
 
 70.3 deliberately left the contacts board unpaged: `GET /contacts` answered a bare list, and

@@ -719,6 +719,13 @@ export function useInterviewSessions(params?: {
   page?: number;
   size?: number;
   applicationId?: string;
+  /**
+   * The board's own question (70.5): one word the rehearsal spells in its company, position or
+   * mode. 70.4 gave the route this filter, so the pager below counts the matches rather than the
+   * history and page two of a word is the second page of that word. It narrows *beside* the card
+   * id, not instead of it -- one query carries both scopes.
+   */
+  q?: string;
   /** 59.1: the report asks only when the session names a card. Not sent on the wire. */
   enabled?: boolean;
 }) {
@@ -735,6 +742,7 @@ export function useInterviewSessions(params?: {
           size: params?.size ?? 20,
           page: params?.page,
           applicationId: params?.applicationId,
+          q: params?.q,
         }),
         (s) => mapInterviewSessionItem(s)
       ),

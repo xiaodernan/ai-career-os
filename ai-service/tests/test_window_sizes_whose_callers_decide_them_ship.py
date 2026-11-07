@@ -127,12 +127,12 @@ WIRE = {
     "useKnowledgeSources": ("knowledge", "{ size: 20, documentId, ...(params ?? {}) }"),
     "useKnowledgeNotes": ("knowledgeNotes", "{ size: 20, ...(params ?? {}) }"),
     # 59.1 gave the hook an `enabled` flag the wire must not see, and the endpoints gate is why the
-    # other three names are spelled rather than spread: `...query` is exactly the shape the reader
+    # other four names are spelled rather than spread: `...query` is exactly the shape the reader
     # that checks every key against the handler's signature cannot follow, and a parameter it stops
     # seeing is a parameter Spring may quietly ignore (49.1 took the reply list off the same cliff).
     # 62.1's runner is the third caller, asking for the card's siblings so a retry can read what the
-    # last completed rehearsal missed.
-    "useInterviewSessions": ("interviews", "{ size: params?.size ?? 20, page: params?.page, applicationId: params?.applicationId, }"),
+    # last completed rehearsal missed. The fourth name on this row is 70.5's: the board's own word.
+    "useInterviewSessions": ("interviews", "{ size: params?.size ?? 20, page: params?.page, applicationId: params?.applicationId, q: params?.q, }"),
     "useActivityRuns": ("activityRuns", "{ size: 30, ...(params ?? {}) }"),
     "useIngestionRuns": ("ingestionRuns", "{ size: 20, ...(params ?? {}) }"),
     "useConversations": ("conversations", "{ size: 20, ...(params ?? {}) }"),
@@ -199,8 +199,8 @@ SITES = {
          "{ applicationId: session.data?.applicationId ?? undefined, size: 20, "
          "enabled: Boolean(session.data?.applicationId), }"),
         ("app/(app)/interviews/page.tsx",
-         # 57.1's narrowed list passes the card it is showing.
-         "{ page: state.page, size: PAGE_SIZE, applicationId, }")],
+         # 57.1's narrowed list passes the card it is showing; 70.5 adds the word it asks with.
+         "{ page: state.page, size: PAGE_SIZE, applicationId, q: state.q, }")],
     "useActivityRuns": [("app/(app)/activity/page.tsx",
                          "{ page: state.page, size: PAGE_SIZE }"),
                         ("app/(app)/dashboard/page.tsx", "{ size: 5 }")],

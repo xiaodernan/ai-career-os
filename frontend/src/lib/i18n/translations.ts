@@ -2668,6 +2668,12 @@ export const translations = {
       pickATargetJob: "Pick a target job first",
       openApplication: "Open application",
       filteredToApplication: "Showing the rehearsals for one application",
+      searchPlaceholder: "Search interviews",
+      searchLabel: "Search interviews by company, role or mode",
+      clearSearch: "Clear search",
+      noMatch: "No interview matches “{query}”",
+      noMatchDescription:
+        "Try a shorter word, or clear the search to see every rehearsal.",
       practice: {
         first: "This is the first rehearsal for this application.",
         progress: "Rehearsal {position} of {count} for this application · best {best}/100",
@@ -5537,6 +5543,11 @@ export const translations = {
       pickATargetJob: "先挑一个目标职位",
       openApplication: "打开申请",
       filteredToApplication: "只显示这张申请的演练",
+      searchPlaceholder: "搜索面试",
+      searchLabel: "按公司、职位或模式搜索面试",
+      clearSearch: "清除搜索",
+      noMatch: "没有与“{query}”匹配的面试",
+      noMatchDescription: "换个短一点的词，或者清除搜索，看全部演练。",
       practice: {
         first: "这是这张申请的第一场演练。",
         progress: "这张申请的第 {position}/{count} 场演练 · 最好 {best}/100",
