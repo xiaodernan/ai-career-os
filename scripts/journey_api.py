@@ -124,12 +124,22 @@ call("interview finalize", "POST", f"/interview/sessions/{sid}/finalize", token,
      {"turns": [{"role": "interviewer", "content": "Tell me about a system you designed."},
                 {"role": "candidate", "content": "I led the migration of a monolith to services."}]})
 
-# 12. tracker: the application the match created, plus a status move
+# 12. tracker: a card for the posting the match was computed for, then a status
+# move. A match does not create an application by itself -- the old script assumed
+# one appeared, printed `applications: 0`, and skipped the whole tracker leg while
+# still claiming the journey covered it. Create the card explicitly and assert both
+# halves, so the script really is the regression gate its docstring claims to be.
+card = call("create application", "POST", "/applications", token,
+            {"jobId": job_id, "title": jobs["items"][0]["title"]})
 apps = call("list applications", "GET", "/applications?page=0&size=5", token)
 print(f"        applications: {apps['total']}")
-if apps["items"]:
-    app_id = apps["items"][0]["id"]
-    call("move application", "PATCH", f"/applications/{app_id}", token, {"status": "applied"})
+assert apps["total"] >= 1, "the card just created must appear in the pipeline"
+assert any(row["id"] == card["id"] for row in apps["items"]), (
+    "the pipeline must list the card the journey created")
+moved = call("move application", "PATCH", f"/applications/{card['id']}", token,
+             {"status": "applied"})
+assert str(moved.get("status", "")).lower() == "applied", (
+    f"the status move must answer the moved state: {moved}")
 
 # 13. growth report (the 10.2 bridge)
 call("growth report", "POST", "/growth-report", token,
@@ -160,7 +170,12 @@ assert chat.get("artifacts"), "the copilot turn must yield a job_list artifact"
 
 # 16. export bundle (13.x) + import plan round-trip
 bundle = call("export bundle", "POST", "/data-portability/export", token, {"anonymized": False})
-print(f"        bundle sections: {sorted((bundle.get('data') or bundle).get('manifest', {}).get('counts', {}).keys())}")
+# `call()` already unwraps `{success, data, error}`; `bundle["data"]` is the sections
+# payload, not another envelope. Reaching into it used to print an empty section list
+# for a bundle that was in fact full.
+counts = bundle.get("manifest", {}).get("counts", {})
+print(f"        bundle sections: {sorted(counts.keys())}")
+assert counts, "the export bundle must name the sections it carries"
 call("import plan", "POST", "/data-portability/import-plan", token, {"bundle": bundle})
 
 # 16.5 mail dials: read the three dials, flip one, read again (42.2)

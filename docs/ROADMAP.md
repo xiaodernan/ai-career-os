@@ -2362,6 +2362,22 @@ so one grep reconstructs one request.
   correlation section now shows the line and says what the status column means and
   what is never printed.)
 
+## Epic 73 — cross-stack contract & surface audit (in planning)
+
+Following Epic 71 (which closed the loop on 71.1–71.3), this epic continues the audit and hardening of the codebase’s cross-layer contracts, ensuring every backend surface has a verified frontend reader, every frontend component has a documented contract, and no route or component silently drifts out of sync.
+
+- [ ] **73.1** Verify API endpoint → frontend surface coverage
+
+  (Re-audit the 181 public routes previously measured: confirm 166 have readers, 15 are UI‑less with reasons, 0 orphans. The gate `test_browser_surface_audit.py` holds this floor with lower‑bound walks and a no‑exemption ledger, so a concurrent session adding a new endpoint cannot silently inflate the count.)
+
+- [ ] **73.2** Enforce contract on the endpoint‑map side
+
+  (`test_the_clients_addresses_have_contract_rows.py` guards that every address `endpoints.ts` can build has a row in the contract — whole map, 0 undocumented. Mutation probes: a new undocumented key reddens it, and an empty contract reader reddens it. No exemption ledger exists; population is held by lower bounds, not a pinned key count, because a concurrent session may add endpoints while this gate runs.)
+
+- [ ] **73.3** Close any gap that appears between backend and frontend surfaces
+
+  (For each gap found in 73.1–73.2, either add the missing frontend surface, remove the undocumented backend endpoint, or update the census and contracts accordingly. Updates land via the same gate‑in‑the‑loop pattern: implement, run the gate, commit with explicit paths, push.)
+
 ## Epic 33 — The Bell Rings Without the Tab
 
 The bell already carries a count on every page (29.3), and the morning letter
@@ -4852,7 +4868,23 @@ on two other things, so its needle cannot arrive as one more branch of the same 
   so `useContacts` keeps its `List<ContactItem>` row and its call site joins neither `WIRE` nor
   `SITES`. Paging the registry is a separate question and was deliberately not folded in here.)
 
-## Epic 72 — the registry answers a real window
+## Epic 73 — cross-stack contract & surface audit (in progress)
+
+Following Epic 71 (which closed the loop on 71.1–71.3), this epic continues the audit and hardening of the codebase’s cross-layer contracts, ensuring every backend surface has a verified frontend reader, every frontend component has a documented contract, and no route or component silently drifts out of sync.
+
+- [ ] **73.1** Verify API endpoint → frontend surface coverage
+
+  (Re-audit the 181 public routes previously measured: confirm 166 have readers, 15 are UI‑less with reasons, 0 orphans. The gate `test_browser_surface_audit.py` holds this floor with lower‑bound walks and a no‑exemption ledger, so a concurrent session adding a new endpoint cannot silently inflate the count.)
+
+- [ ] **73.2** Enforce contract on the endpoint‑map side
+
+  (`test_the_clients_addresses_have_contract_rows.py` guards that every address `endpoints.ts` can build has a row in the contract — whole map, 0 undocumented. Mutation probes: a new undocumented key reddens it, and an empty contract reader reddens it. No exemption ledger exists; population is held by lower bounds, not a pinned key count, because a concurrent session may add endpoints while this gate runs.)
+
+- [ ] **73.3** Close any gap that appears between backend and frontend surfaces
+
+  (For each gap found in 73.1–73.2, either add the missing frontend surface, remove the undocumented backend endpoint, or update the census and contracts accordingly. Updates land via the same gate‑in‑the‑loop pattern: implement, run the gate, commit with explicit paths, push.)
+
+Epic 72 — the registry answers a real window
 
 70.3 deliberately left the contacts board unpaged: `GET /contacts` answered a bare list, and
 `useContacts` invented a one-page envelope over it (`total = items.length`). That was honest about
