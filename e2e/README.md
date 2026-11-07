@@ -51,7 +51,7 @@ E2E_TRACE=on E2E_HTML=1 npx playwright test --headed
 npx playwright show-report
 ```
 
-Expected result: **66 passed** (19 golden journey, 6 routes, 2 memory, 4 locale, 12
+Expected result: **66 passed** (19 golden journey, 6 routes, 2 memory, 3 locale, 12
 forward surfaces, 3 ingest surfaces, 1 activity trace, 5 a11y keyboard, 1 title, 6
 redaction, 4 command palette, 1 networking, 1 stored-JD rehydrate (71.3), and the
 pagination suite). Each run takes
