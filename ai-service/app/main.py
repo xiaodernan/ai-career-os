@@ -9,6 +9,13 @@ from app.core.logging import setup_logging
 from app.ops.embed_jobs import embed_loop
 
 
+_PUBLISHED_INTERNAL_TOKENS = {
+    "shared-secret-between-backend-and-ai-service",
+    "change-me",
+    "CHANGE_ME",
+}
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings = get_settings()
@@ -17,6 +24,10 @@ async def lifespan(app: FastAPI):
         raise RuntimeError("mock LLM provider forbidden in prod")
     if settings.voice_provider == "mock" and settings.app_env == "prod":
         raise RuntimeError("mock voice provider forbidden in prod")
+    if settings.app_env == "prod":
+        token = (settings.internal_api_token or "").strip()
+        if not token or token in _PUBLISHED_INTERNAL_TOKENS or "CHANGE_ME" in token.upper():
+            raise RuntimeError("published or empty internal API token forbidden in prod")
     pool = await init_db()
     app.state.pool = pool
     # Fresh vectors without an ops step: the loop sweeps jobs.embedding IS NULL, so a

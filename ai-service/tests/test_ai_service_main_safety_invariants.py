@@ -20,10 +20,13 @@ def test_ai_service_does_not_install_cors_middleware() -> None:
     )
 
 
-def test_ai_service_forbids_mock_providers_in_prod() -> None:
+def test_ai_service_forbids_mock_providers_and_default_internal_token_in_prod() -> None:
     text = MAIN.read_text(encoding="utf-8")
     assert 'mock LLM provider forbidden in prod' in text, "prod must refuse mock LLM provider"
     assert 'mock voice provider forbidden in prod' in text, "prod must refuse mock voice provider"
+    assert "published or empty internal API token forbidden in prod" in text, (
+        "prod must refuse published/empty internal API token"
+    )
     assert 'settings.app_env == "prod"' in text or "app_env" in text, (
         "prod guards must be tied to app_env"
     )
