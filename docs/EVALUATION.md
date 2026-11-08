@@ -369,3 +369,37 @@ For a real provider, start the CPU-derived model rather than the GPU one —
 `CUDA_VISIBLE_DEVICES="" ollama serve` with `qwen2.5-cpu` (`num_gpu 0`), and keep
 `EMBEDDING_PROVIDER=hash`. The GPU path is broken on this host and an inference
 crash there produces an all-error run, not a slow one.
+
+## 6. Guarding a baseline in CI
+
+`app/ops/verify_eval_baseline.py` grades a report **before** it grades a number:
+
+```bash
+cd ai-service
+python -m app.ops.verify_eval_baseline --report evals/reports/<stamp>.json \
+  --baseline evals/baseline.json
+```
+
+The order is the product, learned from two runs in this repository's history:
+
+1. **errors** — a non-zero `aggregate.errors` / `infra_errors` / `agent_errors`
+   is an outage, not a ranking result.
+2. **population** — zero scored cases is an absence, not a score.
+3. **skipped** — a baseline needs the whole golden set; a run that scored 3 of 15
+   cases once printed 1.0 across the board.
+4. **provider fallback** — with generation on and a real provider configured, any
+   case judged `lexical` means an inference never came back. The historical
+   all-error run had 13 of 15 cases fall back (two happened to succeed), so
+   "every case fell back" would have missed it while the aggregate alone read as
+   a catastrophic regression.
+5. **shared metrics** — only metrics the baseline itself names, within its
+   tolerance. An `--answer` run's extra generation metrics are not invented as
+   zeros against a retrieval-only baseline.
+
+Exit codes are `0` clean, `1` regression or not-a-measurement, `2` a broken
+CLI/file contract. `evals/baseline.json` is checked in and records its source
+(the 15/15 mock/hash report of 2026-10-14), provider, population and tolerance.
+It was produced by `--write-baseline` from that real report, not typed by hand;
+the gate `tests/test_verify_eval_baseline.py` pins its provenance. Update a
+baseline deliberately, with the date and the reason in the commit — never edit a
+number to make a red run green.

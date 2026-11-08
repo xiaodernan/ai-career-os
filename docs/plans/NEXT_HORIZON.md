@@ -99,7 +99,20 @@ account sees an honest empty, and no other account's row can appear.
 
 ---
 
-## Epic 82 — quality regressions are visible over time
+## Epic 82 — quality regressions are visible over time — **CLOSED 2026-11-09**
+
+> **Shipped.** `app/ops/verify_eval_baseline.py` grades errors -> population ->
+> skipped -> provider fallback -> shared metrics, with exit codes 0/1/2;
+> `evals/baseline.json` is checked in from the real 15/15 report of 2026-10-14;
+> `tests/test_verify_eval_baseline.py` (20 cases + a mutation probe) pins both.
+> Verified against three real historical reports: the 13/15 lexical-fallback
+> outage is refused *before* any aggregate is read, the 12-skip run is refused,
+> and the low-score strategy run is named as a regression.
+> `docs/EVALUATION.md` §6 carries the CI command and the baseline-editing rule.
+> What remains is an operator choice, not code: wire the command into the nightly
+> workflow once the team decides which run is authoritative.
+
+**Original brief (kept for the reasoning).**
 
 **Measured.** The eval harnesses write reports to `ai-service/evals/reports/`
 (gitignored) and can `--diff` two runs, but nothing compares a run to the last

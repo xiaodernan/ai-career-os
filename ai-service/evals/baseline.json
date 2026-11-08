@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "source": "evals/reports/20261014-100818_hybrid-baseline-container.json",
+  "recorded_at": "2026-10-14T10:08:18+0000",
+  "provider": "mock/hash",
+  "n_cases": 15,
+  "tolerance": 0.05,
+  "aggregate": {
+    "recall_at_k": 1.0,
+    "precision_at_k": 1.0,
+    "mrr": 1.0,
+    "ndcg_at_k": 1.0,
+    "hit_at_k": 1.0,
+    "context_relevance": 0.9333
+  },
+  "note": "Derived from a real report by --write-baseline. Update deliberately, with the date and the reason in the commit; never edit a number to make a red run green."
+}

@@ -97,7 +97,13 @@ def document_files() -> list[Path]:
     from them certifies one plane and accuses another of the same tree. `known_documents()` therefore
     reads the curated set, and `is_run_artifact()` decides the generated class from `.gitignore`.
     """
-    return curated_docs()
+    # `docs/plans/*.md` are checked-in documents a reader is pointed at (the long-term
+    # plan, the expansion backlog and the forward horizon), but `curated_docs()` walks
+    # only `docs/*.md`. Leaving them out of the *known* set made every reference to a
+    # real, tracked plan read as a dangling file. They join the known set here without
+    # joining the walk: what a plan quotes internally is its own prose, not a document
+    # the navigation promise has to answer for.
+    return curated_docs() + sorted(DOCS.glob("plans/*.md"))
 
 
 def segments(reference_or_path: str) -> tuple[str, ...]:
