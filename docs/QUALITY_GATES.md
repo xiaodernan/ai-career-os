@@ -38,7 +38,8 @@
 ### CI / schema / ops / docs integrity
 - Flyway migration naming/version monotonicity; CI/nightly referenced paths + ops modules exist/importable.
 - `SECURITY.md`/`RUNBOOK.md`/`architecture.md` structure; README/DEPLOYMENT markdown links resolve; expansion backlog structure.
-- Observability wiring (request-id/error handlers) and health endpoints present.
+- Observability wiring (request-id/error handlers) and health endpoints present; ai-service JSON logs carry `request_id` (unit-tested).
+- `scripts/verify_gates.{ps1,sh}` run a representative offline gate set in one command.
 
 ## Rules for adding gates
 - Prove the gap with a failing case (destructive proof or mutation) when feasible; restore state.
