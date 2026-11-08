@@ -177,6 +177,8 @@
   python contract gates 2 passed; destructive proof removed the CORS allow entry → gate
   failed → reapplied. JSON logs unit-test (`test_json_log_formatter_carries_request_id`):
   request id lands as `request_id` in JSON lines; core fields and ctx merge covered.
+  Golden journey (`scripts/journey_api.py`) propagates one `X-Request-Id` across all
+  stations and prints it in the intro line; gate `test_journey_api_propagates_request_id`.
   **74.1 files untouched**.
 - **Worktree consolidation (2026-11-08, audited)**: committed detached worktree HEADs are
   ancestors of `main` (no merge required). Stale dirty `u256/wt` (372 behind, 667 files,
