@@ -60,7 +60,11 @@ def _index_defs() -> tuple[dict[str, list], dict[str, str], dict[str, list]]:
     defs: dict[str, list] = {}
     models: dict[str, list] = {}
     aliased: dict[str, set] = {}
-    for path in sorted(_app_root().rglob("*.py")):
+    root = _app_root()
+    for path in sorted(root.rglob("*.py")):
+        rel = path.relative_to(root).as_posix()
+        if any(part.startswith(".") or part == "__pycache__" for part in rel.split("/")):
+            continue
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
         for node in ast.walk(tree):
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
@@ -1398,7 +1402,11 @@ def _published_frame_names() -> set[str]:
     assumes (see #181: the first version of this rule counted one spelling and reported zero).
     """
     names: set[str] = set()
-    for path in _app_root().rglob("*.py"):
+    root = _app_root()
+    for path in root.rglob("*.py"):
+        rel = path.relative_to(root).as_posix()
+        if any(part.startswith(".") or part == "__pycache__" for part in rel.split("/")):
+            continue
         text = path.read_text(encoding="utf-8")
         names.update(re.findall(r'publish\(\s*task_id\s*,\s*"(\w+)"', text))
         names.update(re.findall(r'_emit\(\s*task_id\s*,\s*"(\w+)"', text))
@@ -1656,7 +1664,11 @@ def _published_payload_keys() -> dict[str, set[str]]:
     while `error`'s row came only from `subscribe`'s "task not found" yield. See `_ternary_publish_rows`.
     """
     out: dict[str, set[str]] = {}
-    for path in _app_root().rglob("*.py"):
+    root = _app_root()
+    for path in root.rglob("*.py"):
+        rel = path.relative_to(root).as_posix()
+        if any(part.startswith(".") or part == "__pycache__" for part in rel.split("/")):
+            continue
         text = path.read_text(encoding="utf-8")
         for found in PUBLISH_CALL.finditer(text):
             start = found.end()
