@@ -163,11 +163,14 @@
   `npm audit`: **0 vulnerabilities** (was 26: 2 critical via vitest/tinypool/vite; highs via
   shadcn/zod/registry). vitest.config.ts→.mts with `oxc.jsx=automatic` (vite 8/oxc ignores esbuild
   options), testTimeout 15s; CI node 20→22. Verified 1162 passed (x2 runs), tsc clean.
+- **Build integrity (verified 2026-11-09)**: `npm run build` (Next.js production build) passes
+  with the upgraded toolchain (vitest 5/vite 8/shadcn 1.0.0). No 74.1 files touched.
 - **Authz (Epic 77, measured 2026-11-09, `25a1af9` + `0977d8b`)**: live `TestClient` authz matrix modules —
   `test_every_internal_route_refuses_unauthenticated.py` (63 route/method cases, 401) and
   `test_every_internal_route_requires_user_id.py` (62 route/method cases, 400 when the token is valid
   but `X-User-Id` is absent). The dependency-tree gate proves the wiring; these prove the runtime
   answer; `verify_gates.{ps1,sh}` includes both.
+- **Observability (Epic 78, `cbbb90f`)**: `/health` reports
   `buildSha` (backend) / `build_sha` (ai-service) from `APP_BUILD_SHA` env (default "dev");
   Dockerfiles declare `ARG APP_BUILD_SHA` + `ENV`; dev/prod compose thread the build arg;
   `journey_api.py` probes `/health` before any station and prints `== build: <sha> ==`; gates
