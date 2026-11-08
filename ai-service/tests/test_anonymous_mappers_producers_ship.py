@@ -35,6 +35,11 @@ now. The `AIUsageSummary` interface that mirrors the mapper's shape is still nam
 `types.ts`.
 """
 
+# 74.2 note (measured 2026-11-09): `GET /jobs/saved` answers `PageDTO<SavedJobItem>` now, so
+# the array branch of `normalizePage` is no longer the reachable one on this route and the four
+# envelope names are live there -- the Saved tab reads `data.items` and `data.total` off the
+# server's clamped window. `windowSavedRows` is retired with them.
+
 import re
 from pathlib import Path
 
@@ -84,7 +89,7 @@ HOOK_ROUTES = {
 
 # Measured from the annotations: client path -> (verb, return type, handler, controller).
 ROUTES = {
-    "savedJobs": ("Get", "List<SavedJobItem>", "saved", "com/careeros/job/web/JobController.java"),
+    "savedJobs": ("Get", "PageDTO<SavedJobItem>", "saved", "com/careeros/job/web/JobController.java"),
     "knowledgeNotes": ("Get", "PageDTO<NoteItem>", "notes",
                        "com/careeros/knowledge/web/KnowledgeController.java"),
     "conversations": ("Get", "PageDTO<ConversationItem>", "list",
@@ -178,7 +183,7 @@ CALLERS = {
     "useAIUsage": ["app/(app)/dashboard/page.tsx"],
 }
 COPILOT_READS = {"createdAt", "id", "lastMessagePreview", "title", "updatedAt"}
-JOBS_SAVED_READS = {"items", "total"}
+JOBS_SAVED_READS = {"total"}
 
 
 def read(path: Path) -> str:
@@ -445,8 +450,8 @@ def test_the_usage_hook_does_not_re_unwrap_the_envelope_the_client_already_unwra
             "receiver has to be reclassified")
 
 
-def test_jobs_saved_answers_a_bare_list_so_the_page_envelope_names_are_dead_there():
-    """The array branch of normalizePage is the only reachable one on this route.
+def test_jobs_saved_answers_a_page_envelope_so_the_page_names_are_live_there():
+    """74.2 gave the shelf the same envelope every other list answers.
 
     `ret` is read off the annotation by the same walk case 3 uses, not out of this file's own table:
     the whole claim is about what the handler declares, and a table re-asserting itself would stay
@@ -456,17 +461,17 @@ def test_jobs_saved_answers_a_bare_list_so_the_page_envelope_names_are_dead_ther
     gets = [entry for entry in spring_routes()[API_PREFIX + path] if entry[0] == "Get"]
     assert len(gets) == 1, f"{path} resolves to {gets}, not one GET"
     ret = gets[0][1]
-    assert ret == "List<SavedJobItem>", f"/jobs/saved now answers {ret}"
+    assert ret == "PageDTO<SavedJobItem>", f"/jobs/saved now answers {ret}"
     assert ROUTES["savedJobs"][1] == ret, "this file's route table and the shipped annotation disagree"
     page = function_body(read(NORMALIZE), "export function normalizePage<T>(")
-    assert re.search(r"if \(Array\.isArray\(raw\)\) \{\n\s*return \{ items: raw\.map\(map\)", page), (
-        "normalizePage no longer short-circuits on an array, so a bare List is read as an object "
-        "and the envelope names below become live")
-    assert "PageDTO" not in ret
+    assert "PageDTO" in ret
     for name in PAGE_ENVELOPE:
         assert name not in record_components("SavedJobItem"), (
-            f"SavedJobItem now ships {name!r}; the page shape would be reachable under the wrapper")
+            f"SavedJobItem now ships {name!r}; the wrapper would carry the envelope's slots")
     jobs = read(JOBS_PAGE)
+    # 74.2: the Saved tab no longer reaches for `items` off the envelope directly — its rows
+    # flow through the shared `listView` the Discover tab reads, so the only dotted read left
+    # on the wrapper is the tab badge's count.
     assert {m.group(1) for m in re.finditer(r"saved\.data\??\.(\w+)", jobs)} == JOBS_SAVED_READS, (
         "the saved tab reads a different pair off the page object than this file describes")
 

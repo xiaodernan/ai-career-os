@@ -61,6 +61,12 @@ disagreement this file measured is closed rather than merely described, by the s
 past-the-end corrections call.
 """
 
+# 74.2 gave `GET /jobs/saved` the same four names every other list answers (it binds `page`/`size`
+# now, window clamped by `Paging.of`, total the server's own COUNT over the same WHERE), so the
+# hook over it reads the envelope like every other hook -- twelve page-typed hooks, no bare list.
+# The `useSavedJobs` reader row and the "saved tab swaps in a client-side window" claims below
+# went with the client-side window.
+
 import re
 from pathlib import Path
 
@@ -97,10 +103,12 @@ API_PREFIX = "/api/v1"
 
 # Measured off this plane, then re-derived by case 1 from the annotations themselves: hook ->
 # (the endpoint key its query spends, the return type the route behind that key declares).
+# 74.2 gave `GET /jobs/saved` the same envelope every other list answers, so no hook sits over a
+# bare list anymore.
 PAGE_HOOKS = {
     "useResumes": ("resumes", "PageDTO<ResumeListItem>"),
     "useJobs": ("jobs", "PageDTO<JobListItem>"),
-    "useSavedJobs": ("savedJobs", "List<SavedJobItem>"),
+    "useSavedJobs": ("savedJobs", "PageDTO<SavedJobItem>"),
     "useApplications": ("applications", "PageDTO<ApplicationItem>"),
     "useCompanies": ("companies", "PageDTO<CompanyItem>"),
     "useContacts": ("contacts", "PageDTO<ContactItem>"),
@@ -112,7 +120,7 @@ PAGE_HOOKS = {
     "useConversations": ("conversations", "PageDTO<ConversationItem>"),
 }
 
-BARE_LIST_HOOKS = ["useSavedJobs"]
+BARE_LIST_HOOKS = []
 
 ENVELOPE = ["items", "total", "page", "size"]
 
@@ -301,7 +309,7 @@ def test_the_page_typed_hooks_are_twelve_and_one_sits_over_a_bare_list():
     bare = sorted(name for name, (_, ret) in derived.items() if ret.startswith("List<"))
     assert bare == BARE_LIST_HOOKS, f"hooks that promise a page over a bare list: {bare}"
     paged = [ret for _, ret in derived.values() if ret.startswith("PageDTO<")]
-    assert len(paged) == len(derived) - len(bare) == 11, f"{paged}"
+    assert len(paged) == len(derived) - len(bare) == 12, f"{paged}"
 
 
 def test_the_envelope_is_four_names_that_both_branches_and_the_record_all_agree_on():
@@ -572,28 +580,31 @@ def test_the_url_number_that_reaches_the_pager_has_no_floor_and_no_ceiling():
     jobs = read(JOBS_PAGE)
     assert re.search(r"numericKeys: \[[^\]]*\"size\"", jobs), "size is no longer URL-bound"
     assert re.search(r"size: %d," % DEFAULT_SIZE, jobs), "the default window moved"
-    assert re.search(r"const listView = tab === \"saved\" \? \(\{ \.\.\.saved, data: savedPage \}"
-                     r" as typeof saved\) : jobs;", jobs), (
-        "the Saved tab no longer swaps in a client-side window, so the pager's numbers come "
-        "from somewhere else now")
+    # 74.2: the Saved tab reads the same server-windowed envelope the discover tab does.
+    assert "windowSavedRows" not in jobs, (
+        "the client-side window is back; the Saved tab would be cutting pages off a list the "
+        "server no longer answers")
+    assert re.search(r"const listView = tab === \"discover\" \? jobs : saved;", jobs), (
+        "the Saved tab no longer reads one envelope for both tabs; the pager's numbers come "
+        "from somewhere other than the server window")
 
 
 def test_the_size_zero_window_is_floored_in_the_one_place_both_clamps_read():
-    """Case 11: the client-side windower refuses a non-positive window; the shared rule floors it.
+    """Case 11: no client window remains; the shared clamp floors zero, not the caller.
 
-    74.1 took the filtering half of this function away and left the windowing half exactly as this
-    case reads it -- which is the point: a `?size=0` in the address bar still has to land on a
-    window the pager can print honestly, whether or not the rows inside it were chosen here.
+    74.2 retired `windowSavedRows` entirely: the server answers a clamped page and its own
+    COUNT(*), so the two clamps that did the disagreeing here (the client's windower and the
+    shared rule) are gone together. A `?size=0` now reaches the server, which floors the window
+    through the one place both boards read -- `Paging.of`. This case pins that the client no
+    longer carries its own window arithmetic, and that the shared rule still floors what it
+    divides.
     """
-    filtered = function_body(read(JOB_FILTER), "export function windowSavedRows(")
-    assert re.search(r"const size = filters\.size && filters\.size > 0 \? filters\.size : "
-                     r"items\.length \|\| 1;", filtered), (
-        f"the client window no longer falls back off a 0 size: {filtered[:200]}")
-    assert re.search(r"const page = Math\.min\(Math\.max\(0, filters\.page \?\? 0\), lastPage\);",
-                     filtered), "the client page index is no longer clamped"
-    assert re.search(r"total: items\.length,\s*page,\s*size,", filtered), (
-        "windowSavedRows no longer returns its own honest window in the envelope shape, which "
-        "is the number the pager is not given")
+    source = read(JOB_FILTER)
+    assert "windowSavedRows" not in source, (
+        "the client-side window grew back; the server answers the window now and the "
+        "client reads its envelope")
+    assert "items.slice(" not in source, (
+        "the client slices rows again; the server hands over one clamped page")
     pgn = read(PAGINATION)
     assert "Math.ceil" not in pgn, (
         "pagination.tsx derives its own page count again, so the floor and the clamp it shares "
@@ -610,30 +621,32 @@ def test_the_size_zero_window_is_floored_in_the_one_place_both_clamps_read():
         "size zero windowSavedRows refuses")
 
 
-def test_the_bare_list_route_binds_no_window_at_all_so_its_hook_cannot_ask_for_one():
-    """Case 12: /jobs/saved takes the caller and the panel, and still no window; /jobs binds both.
+def test_the_bare_list_route_binds_a_window_and_its_hook_spends_it():
+    """Case 12: /jobs/saved binds the window /jobs binds; the hook spends it too.
 
-    74.1 put seven of the panel's keys on this signature. What did not move is the sentence this
-    case was written for: the shelf answers whole, so a `page`/`size` in the request would be a
-    number the server never reads -- which is why the hook strips them, pinned below from the same
-    walk. A route that gained a window has to take this case's reason with it, and the strip too.
+    74.1 put seven of the panel's keys on this signature; 74.2 gave it the same window every other
+    list reads -- so the route, its return type, its bound parameters and the hook's query object
+    all moved in the same direction. A route that carries a window and a hook that strips it would
+    be a pager printing a number the server never reads.
     """
     gets = spring_gets()
     saved = gets[endpoint_path("savedJobs")]
-    assert len(saved) == 1 and saved[0][0].startswith("List<"), saved
+    assert len(saved) == 1 and saved[0][0].startswith("PageDTO<"), saved
     ret, handler, controller = saved[0]
     text = java(controller)
     at = text.index(f"{ret} {handler}(")
     params = top_level_args(text, text.index("(", at))
     bound = [p.split()[-1] for p in params]
     assert bound == ["user", "q", "skills", "location", "remote", "company",
-                     "minSalary", "maxSalary"], (
+                     "minSalary", "maxSalary", "page", "size"], (
         f"/jobs/saved now binds {[p for p in params]}")
-    assert not {"page", "size"} & set(bound), (
-        "the shelf gained a window, so the hook's strip and this case's reason both move")
-    assert "page: undefined, size: undefined" in read(RESOURCES), (
-        "the route binds no window but the hook no longer strips one, so a URL number would ride "
-        "to a parameter Spring drops")
+    assert {"page", "size"} & set(bound), (
+        "the shelf lost the window it was given; the pager would promise rows the server never read")
+    assert "page: undefined, size: undefined" not in read(RESOURCES), (
+        "the route binds the window but the hook still strips it, so a URL number rides "
+        "to a parameter the route ignores")
+    assert "...params, sort: undefined" in read(RESOURCES), (
+        "the hook no longer spends the route's window, so the pager's numbers come from somewhere else")
     jobs = gets[endpoint_path("jobs")]
     assert len(jobs) == 1, jobs
     ret, handler, controller = jobs[0]

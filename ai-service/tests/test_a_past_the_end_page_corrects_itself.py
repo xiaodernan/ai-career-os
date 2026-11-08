@@ -15,9 +15,9 @@ at 1, and a layout effect rewrites the URL page when the requested one is past t
 first: React flushes a layout
 effect's state update before the browser paints, so the wrong screen is replaced, not seen.
 
-The Saved tab needs no second mechanism: its window is computed client-side
-(`windowSavedRows`) and already clamps the page index, so the correction there writes the page
-the clamp already chose -- the URL heals, the screen does not move. `?size=` policy and the
+The Saved tab needs no second mechanism: 74.2 gave it the same server-windowed envelope
+the Discover tab reads, so the correction there reads the same divisor and runs the same
+effect — the URL heals, the screen does not move. `?size=` policy and the
 pagers' own numbers stay owner decisions (#194, #195); this file pins only the correction.
 """
 
@@ -63,7 +63,7 @@ def test_the_applications_board_corrects_a_past_the_end_page_before_it_paints():
 
 
 def test_the_jobs_board_corrects_the_same_way_over_the_window_both_tabs_share():
-    """Case 2: `listView` is the jobs answer on Discover and the client window on Saved."""
+    """Case 2: `listView` is the jobs answer on Discover and the shelf answer on Saved."""
     page = read(JOBS_PAGE)
     assert re.search(r"const total = listView\.data\?\.total \?\? 0;", page), (
         "the formula's numerator is no longer the shared window's total")
@@ -105,28 +105,32 @@ def test_the_divisor_floors_at_one_because_the_empty_window_can_report_size_zero
 
 
 def test_the_saved_tabs_window_already_clamps_so_the_same_correction_is_idempotent_there():
-    """Case 4: on Saved the answer is `windowSavedRows`'s window, whose page index is
-    clamped to the same last page the correction computes -- so the effect's write there
-    names the page the clamp already chose (#194 case 7 pins the clamp itself; this binds
-    it as the correction's Saved half, reachable through the `listView` swap).
+    """Case 4: the Saved tab reads the same correction; the client window is gone.
 
-    74.1 renamed the function and emptied it of the other half: the shelf's rows arrive already
-    narrowed by the route, so what is left to window is what the client still decides, and what
-    decided which rows belong is not. The clamp is the part this case reads, and it is the part
-    that survived -- which is the whole reason a past-the-end URL still lands on a real page.
+    74.2 gave the shelf a real server window — same `Paging.of`, same COUNT fragment,
+    same `lastPageOf` on the answer's own window — so the correction needs no second
+    mechanism on that tab and the client-side `windowSavedRows` went with it. This case
+    now pins that absence: a client that windows again would reintroduce the
+    invented-total defect 74.2 exists to remove.
     """
-    filtered = read(JOB_FILTER)
-    assert re.search(r"const lastPage = lastPageOf\(items\.length, size\);",
-                     filtered), "windowSavedRows no longer derives its own last page"
-    assert re.search(r"const page = Math\.min\(Math\.max\(0, filters\.page \?\? 0\), lastPage\);",
-                     filtered), (
-        "the client window no longer clamps the page index, so the Saved correction would "
-        "stop being idempotent there")
+    source = read(JOB_FILTER)
+    assert "windowSavedRows" not in source, (
+        "the client-side window grew back; the server answers the window now")
     page = read(JOBS_PAGE)
+    assert re.search(r"const total = listView\.data\?\.total \?\? 0;", page), (
+        "the formula's numerator is no longer the shared window's total")
     assert re.search(
-        r"const savedPage = React\.useMemo\(\n"
-        r"\s*\(\) => \(saved\.data \? windowSavedRows\(saved\.data\.items, filters\) : undefined\),",
-        page), "the Saved window is no longer the answer the correction reads"
+        r"const lastPage = listView\.data \? lastPageOf\(total, listView\.data\.size\) : 0;",
+        page), (
+        "the board no longer derives lastPage from the answer's own window and total")
     assert re.search(
-        r"const listView = tab === \"saved\" \? \(\{ \.\.\.saved, data: savedPage \} as typeof saved\) : jobs;",
-        page), "the correction no longer reaches the Saved window through this swap"
+        r"if \(listView\.data && filters\.page > lastPage\) setFilters\(\{ page: lastPage \}\);",
+        page), (
+        "no layout effect corrects a past-the-end URL page from the shared window, so the "
+        "stale empty copy can paint before the correction runs")
+    # The Saved tab now reaches the correction through the same `listView` the Discover
+    # tab reads; either arrangement is the same evidence, and a client swap would be a
+    # third shape this file has no case for.
+    assert re.search(r"const listView = tab === \"discover\" \? jobs : saved;", page), (
+        "the shared correction no longer reaches both tabs through one `listView`; the "
+        "Saved tab must not need a second mechanism")

@@ -15,9 +15,9 @@ wiring so the copies cannot quietly come back:
   have caught the ten copies);
 * every board that runs the past-the-end correction names the shared helper, and the count is
   pinned (the twelve server-window screens -- the eleven boards plus the replies page 37.4 gave
-  a pager, with the contacts registry 72.1 joining them -- plus `job-filter.ts`, whose Saved tab
-  clamps the same rule over a client-side set), so a new board means a new call site rather than
-  a thirteenth copy.
+  a pager, with the contacts registry 72.1 joining them), so a new board means a new call site
+  rather than a thirteenth copy. The Saved tab used to be a thirteenth caller through
+  `windowSavedRows`; 74.2 folded it into the jobs board's own call site.
 """
 
 from pathlib import Path
@@ -31,8 +31,11 @@ HELPER_TEST = FRONT / "lib" / "page-window.test.ts"
 
 # 72.1 gave the contacts registry a real server window, so its board joined the eleven
 # server-window screens plus `job-filter.ts` (the client-side Saved tab) as the thirteenth
-# caller of the shared rule. A new board must spend `lastPageOf`, not copy the arithmetic.
-CORRECTION_SITES = 13
+# caller of the shared rule. 74.2 retired `windowSavedRows`, so the Saved tab now runs the
+# correction through the same shared helper the discover tab reads -- it is the same
+# twelfth call site the jobs board already names. Twelve server-window screens call
+# `lastPageOf`; a new board must spend it, not copy the arithmetic.
+CORRECTION_SITES = 12
 
 
 def read(path: Path) -> str:

@@ -11,11 +11,11 @@ applications 50, companies 20, knowledge sources 20, knowledge notes 20, intervi
 conversations 20, activity runs 30, contacts 50 (72.1, when the registry stopped answering a bare
 list and its count query began narrowing with the same needle as its rows) -- since #225 the feed's literal, replacing the
 `{ limit: params?.limit }` it sent while `/activity/runs` was the one window the server still
-decided. `useSavedJobs` is the only hook that sends no window at all, because its route binds none
-and answers a bare list. 74.1 gave that same route the panel's other seven keys, so the hook now
-sends a query -- the board's own `serializeJobFilters` object, with `page`, `size` and `sort`
-stripped because the shelf reads neither a window nor an ordering -- and it is still the only
-hook with no window, for the same reason as before. 19.5 made the run history the eleventh: `useIngestionRuns` asks with the
+decided. `useSavedJobs` is the one hook with no `size` literal in its query: since 74.1 it sends the board's
+`serializeJobFilters` object with `sort` stripped, and since 74.2 its window is a URL-bound filter
+(clamped server-side by `Paging.of` exactly as the jobs board's is), so the hook asks for no number of
+its own -- the wire's answer to "which number decides" here is "the URL's", spent by the server, never
+by a literal. 19.5 made the run history the eleventh: `useIngestionRuns` asks with the
 same `{ size: 20, ...(params ?? {}) }` shape every board uses, replacing the `limit` the hook used
 to name while `GET /ingestion/runs` was a newest-N history. 20.1 made the nightly history the
 twelfth, and the first outside `resources.ts`: `useNightlyReports` lives in `monitoring.ts` beside
@@ -116,11 +116,11 @@ MAX_PAGE_SIZE = 100
 WIRE = {
     "useResumes": ("resumes", "{ size: 20, ...(params ?? {}) }"),
     "useJobs": ("jobs", "{ size: 20, ...clean }"),
-    # 74.1: the shelf reads the panel now, so its hook sends the same serialized filter object the
-    # board sends -- with the window and the ordering stripped, because this route binds neither. The
-    # params gate cannot see through a function call any more than through `...clean`, and the reason
-    # it stays quiet lives in endpoints.test.ts's unreadable list.
-    "useSavedJobs": ("savedJobs", "{ ...serializeJobFilters({ ...params, page: undefined, size: undefined, sort: undefined }), }"),
+    # 74.2: the shelf reads the panel and the window now, so its hook sends the same serialized
+    # filter object the board sends -- minus only `sort`, which this route does not bind. The
+    # params gate cannot see through a function call any more than through `...clean`, and the
+    # reason it stays quiet lives in endpoints.test.ts's unreadable list.
+    "useSavedJobs": ("savedJobs", "{ ...serializeJobFilters({ ...params, sort: undefined }), }"),
     # 5080e67 spelled the board's query out (status and jobId beside page and size) when the
     # drawer's delete joined this gate; the hook still defaults the window to the route's 50.
     # 70.2 adds the board's own word: spelled like the other four, because a spread is a key this
@@ -225,7 +225,7 @@ SITES = {
 SERVER_SIZE = {
     "/api/v1/resumes": "20",
     "/api/v1/jobs": "20",
-    "/api/v1/jobs/saved": None,
+    "/api/v1/jobs/saved": "20",
     "/api/v1/applications": "50",
     "/api/v1/companies": "20",
     "/api/v1/contacts": "50",
