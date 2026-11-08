@@ -7,6 +7,8 @@ silently stop varying the thing it claims to vary.
 
 import json
 
+import pytest
+
 from app.eval import run_eval as ev
 
 
@@ -73,3 +75,25 @@ def test_measured_metric_keys_keep_citation_out_of_retrieval_only_runs():
     retrieval-only run would publish 0.0 as a measurement."""
     assert "citation_correctness" in ev.measured_metric_keys(True)
     assert "citation_correctness" not in ev.measured_metric_keys(False)
+
+
+def test_require_all_cases_is_opt_in():
+    """A hand-written --dataset may legitimately cover only part of a corpus."""
+    assert ev.parse_args(["--user-id", "u"]).require_all_cases is False
+    assert ev.parse_args(["--user-id", "u",
+                          "--require-all-cases"]).require_all_cases is True
+
+
+def test_a_complete_run_passes_the_strict_gate():
+    ev.assert_every_case_was_measured({"skipped": []})
+
+
+def test_a_partial_run_names_the_missing_cases_and_the_repair():
+    """3 of 15 scored is a tidy report about a corpus that lost twelve answers."""
+    report = {"skipped": [{"id": "gs-01", "reason": "no_ground_truth"},
+                          {"id": "gs-04", "reason": "no_ground_truth"}]}
+    with pytest.raises(SystemExit) as exc:
+        ev.assert_every_case_was_measured(report)
+    msg = str(exc.value)
+    assert "gs-01" in msg and "gs-04" in msg
+    assert "seed_eval_corpus" in msg and "--require-all-cases" in msg

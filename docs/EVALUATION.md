@@ -335,3 +335,37 @@ the scorer's eight dimensions to the ones the product prompt emits;
 `test_interview_eval_runner.py` holds the runner's artifact shape and its
 refusal to exit 0 over a degenerate fixture set. A drifting benchmark fails CI,
 not the product.
+
+## 5. Reproducing a baseline run
+
+A report is only comparable to another report if both measured the *same* cases.
+The corpus half is shipped and idempotent — `app/ops/seed_eval_corpus.py` ingests
+`scripts/eval-corpus.json` through the public ingest path and polls until the
+document is `ready` (it exits non-zero where the corpus fails to land, rather
+than letting the eval runner discover it as `0 of N scored`):
+
+```bash
+cd ai-service
+python -m app.ops.seed_eval_corpus --user-id <uuid> --corpus ../scripts/eval-corpus.json
+LLM_PROVIDER=mock EMBEDDING_PROVIDER=hash \
+  python -m app.eval.run_eval --user-id <uuid> --require-all-cases
+```
+
+`--require-all-cases` is the strict reading of the same report that
+`assert_something_was_measured` grades. That guard deliberately allows *some*
+cases to be skipped, because a hand-written `--dataset` may legitimately cover
+only part of a corpus. A baseline cannot: three of fifteen cases scored still
+prints a tidy aggregate, and nothing in the summary says twelve answers were
+never measured. With the flag, any `no_ground_truth` skip is a non-zero exit
+that names the missing case ids and the seed command. The flag is recorded in
+the report's `config`, so a run that passed the strict gate says so.
+
+Two rules for reading the output, in this order: **check `errors` first** (an
+all-error real-provider run once looked like a clean regression), then check
+`skipped` before any aggregate. A number averaged over fewer cases is not a
+smaller experiment; it is a different question.
+
+For a real provider, start the CPU-derived model rather than the GPU one —
+`CUDA_VISIBLE_DEVICES="" ollama serve` with `qwen2.5-cpu` (`num_gpu 0`), and keep
+`EMBEDDING_PROVIDER=hash`. The GPU path is broken on this host and an inference
+crash there produces an all-error run, not a slow one.

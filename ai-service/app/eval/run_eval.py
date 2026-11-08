@@ -172,7 +172,10 @@ async def run(args: argparse.Namespace) -> dict:
               "chunk_target_tokens": s.chunk_target_tokens,
               "strategy": strategy,
               "max_expansions": max_expansions if max_expansions is not None else -1,
-              "answer_prompt": args.prompt or "default"}
+              "answer_prompt": args.prompt or "default",
+              # Recorded so a report that passed the strict gate says so: the same
+              # aggregate over 3 of 15 cases is a different claim from 15 of 15.
+              "require_all_cases": args.require_all_cases}
     report = {
         "experiment": args.experiment,
         "generated_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
@@ -285,6 +288,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--diff", default=None,
                    help="compare this run's reported metrics against that JSON report")
     p.add_argument("--out", default="evals/reports")
+    p.add_argument("--require-all-cases", action="store_true",
+                   help="refuse a run that skipped any golden case: a corpus that lost most "
+                        "of its answers must not read as a clean, smaller evaluation")
     return p.parse_args(argv)
 
 
@@ -307,6 +313,31 @@ def assert_something_was_measured(report: dict) -> None:
         "  `scripts/smoke-fullstack.sh` writes, so check that its ingest step\n"
         "  reported `ready` for this user before reading anything into this run.\n"
         "  The empty aggregate in this run's summary is an absence, not a score.\n"
+    )
+
+
+def assert_every_case_was_measured(report: dict) -> None:
+    """The opt-in stricter reading: *any* skip is a failed reproducibility run.
+
+    `assert_something_was_measured` deliberately allows some cases to be skipped,
+    because a hand-written `--dataset` may legitimately cover only part of a corpus.
+    A baseline run cannot afford that: 3 of 15 cases scored produces a tidy report
+    with real-looking aggregates, and nothing in the summary says twelve answers
+    were never measured. This gate is what `--require-all-cases` asks for, and its
+    message names the seed command that repairs the corpus rather than blaming the
+    metrics.
+    """
+    skipped = report.get("skipped") or []
+    if not skipped:
+        return
+    ids = ", ".join(str(s.get("id", "?")) for s in skipped)
+    raise SystemExit(
+        f"\n{len(skipped)} golden case(s) skipped as no_ground_truth: {ids}.\n"
+        "  --require-all-cases was passed, so a partial corpus is a failed run, not\n"
+        "  a smaller evaluation. Seed it for this user with\n"
+        "  `python -m app.ops.seed_eval_corpus --user-id <uuid> "
+        "--corpus scripts/eval-corpus.json`\n"
+        "  and wait for the ingest to report `ready` before re-running.\n"
     )
 
 
@@ -355,6 +386,8 @@ async def main(argv: list[str] | None = None) -> None:
                       "aggregate": report["aggregate"],
                       "files": report["_files"]}, ensure_ascii=False, indent=2))
     assert_something_was_measured(report)
+    if args.require_all_cases:
+        assert_every_case_was_measured(report)
 
 
 if __name__ == "__main__":

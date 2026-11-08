@@ -58,8 +58,16 @@ written to `backups/worktree-consolidation/` (gitignored, kept locally):
 
 - `<name>.patch` — 27,254,570 bytes in total;
 - `<name>.status.txt` — the exact dirty-file population;
-- `<name>-untracked/<path>` — the four untracked tests;
+- `<name>__<basename>.py.txt` — the four untracked tests, **flattened**;
 - `manifest.json` — path, HEAD, dirty-file count and patch size per worktree.
+
+The untracked copies were first written preserving their `ai-service/tests/`
+paths, which made the repository's offline-Python census see a second `tests`
+tree under `backups/` and redden (`test_response_shape_contract.py`:
+"a `tests` directory in another tree is a directory this census would start
+excusing files in"). They were renamed to flat `.txt` archives in the same
+backup directory. **A backup inside the repository is still part of the tree
+the gates walk** — keep it out of any path shape a census recognises.
 
 Because each HEAD is an ancestor of `main`, any patch can be replayed from the
 commit it names. Nothing was discarded that cannot be reconstructed.

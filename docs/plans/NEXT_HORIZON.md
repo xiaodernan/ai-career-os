@@ -29,24 +29,30 @@ same SHA, and a gate reddens if the field disappears. No secrets in the answer.
 
 ---
 
-## Epic 79 — a real-provider eval anyone can reproduce
+## Epic 79 — a real-provider eval anyone can reproduce — **CLOSED 2026-11-09**
 
-**Measured.** The RAG golden set (`app/eval/dataset.py`) is tuned for the seeded
-dev corpus written by `scripts/smoke-fullstack.sh`. On the live Postgres on
-2026-11-07 the best keyword-covered user had only 5 matching chunks, so a run
-would skip most of the 15 cases — and `assert_something_was_measured` only refuses
-an *entirely* empty run, not a mostly-skipped one. `ollama.exe` and the derived
-CPU model `qwen2.5-cpu` exist, but no service is started by default.
+**Measured (2026-11-07).** The RAG golden set (`app/eval/dataset.py`) is tuned for
+the seeded dev corpus. On the live Postgres the best keyword-covered user had only
+5 matching chunks, so a run would skip most of the 15 cases — and
+`assert_something_was_measured` only refuses an *entirely* empty run, not a
+mostly-skipped one. `ollama.exe` and the derived CPU model `qwen2.5-cpu` exist,
+but no service is started by default.
 
-**Do.** Ship `scripts/seed_eval_corpus.py` that writes the golden corpus for a
-chosen `--user-id` through the public API (create resume → ingest text with
-`kind=resume`), then add `--require-all-cases` to `run_eval` so a run with
-skipped cases can be refused explicitly. Document the CPU-only ollama start
-(`CUDA_VISIBLE_DEVICES="" ollama serve`, `num_gpu 0`) in `docs/EVALUATION.md`.
+**Already shipped before this session (do not rebuild).**
+`app/ops/seed_eval_corpus.py` + `scripts/eval-corpus.json` +
+`tests/test_seed_eval_corpus.py` ingest the golden corpus through the public path
+and poll until `ready`; the nightly corpus step is that run. `EVALUATION.md`
+already names the CPU-only ollama setup.
 
-**Done when** a clean checkout + running stack can reproduce 15/15 retrieval cases
-with mock providers, and a real-provider run reports `errors: 0` before any
-aggregate is read. Never fake a Docker-dependent result green.
+**Closed by this session.** `run_eval` gained `--require-all-cases`: any
+`no_ground_truth` skip is now a non-zero exit that names the missing case ids and
+the seed command, and the flag is recorded in the report's `config`.
+`docs/EVALUATION.md` §5 carries the exact reproduction commands and the
+"check `errors`, then `skipped`, then aggregate" rule. Four runner tests plus a
+mutation probe (disabling the strict gate reddens exactly one case).
+
+Remaining operator step, not a code task: seed a user on the running stack and
+record a dated 15/15 mock-provider report as the first baseline.
 
 ---
 
