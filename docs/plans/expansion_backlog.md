@@ -140,14 +140,18 @@
   (XFO/XCTO/Referrer/Permissions/COOP/CORP/HSTS, all routes, `poweredByHeader:false`) regression
   gate; prod compose data services (postgres/redis/minio) must not publish host ports; dev compose
   data services must bind loopback; `.env.prod.example` sensitive values must be placeholders
-  (no real/dev-default secrets). Backend source-level invariants: `SecurityConfig` keeps
-  `/api/internal/**` permitted but `InternalApiFilter` enforces `X-Internal-Token` before JWT,
-  key public routes preserved; actuator exposure exactly `health,prometheus` and redis health
-  indicator disabled.
-- **Schema/CI/ops hygiene**: Flyway migration naming/version monotonicity gate; CI/nightly
+  (no real/dev-default secrets). Backend: `SecurityConfig` default-deny (`anyRequest().authenticated()`),
+  `/api/internal/**` guarded by `InternalApiFilter` (constant-time `MessageDigest.isEqual`, `X-Internal-Token`,
+  401) before JWT, key public routes preserved; actuator exposure exactly `health,prometheus` and redis
+  health indicator disabled; backend `application.yml`/`pom.xml` runtime-schema/dependency invariants;
+  BCrypt `$2B`/12 gate.
+- **Schema/CI/ops/build hygiene**: Flyway migration naming/version monotonicity gate; CI/nightly
   referenced paths+ops modules exist and ops modules (`embed_jobs,seed_eval_corpus,check_export,
   nightly_report`) import cleanly; CI frontend adds non-blocking `npm audit --audit-level=high`
   visibility (blocking deferred until controlled remediation). Existing pip-audit gate remains.
+  Prod/dev compose pulled images pinned (no `:latest`/untagged); service Dockerfiles + prod build
+  contexts exist; `scripts/` shell shebangs + Python syntax; frontend/ai-service CI tooling and
+  core dependency declarations; request-id/error-handler wiring gates.
 - **Doc/service integrity**: `README.md`/`docs/DEPLOYMENT.md` relative markdown doc links resolve;
   `docs/architecture.md` key sections gate; every `ai-service/app/api` `APIRouter` declares `tags=`;
   ai-service `main.py` forbids mock LLM/voice in prod and has no CORS middleware (internal-only);
