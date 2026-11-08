@@ -149,17 +149,19 @@
   referenced paths+ops modules exist and ops modules (`embed_jobs,seed_eval_corpus,check_export,
   nightly_report`) import cleanly; CI frontend adds non-blocking `npm audit --audit-level=high`
   visibility (blocking deferred until controlled remediation). Existing pip-audit gate remains.
-  Prod/dev compose pulled images pinned (no `:latest`/untagged); service Dockerfiles + prod build
-  contexts exist; `scripts/` shell shebangs + Python syntax; frontend/ai-service CI tooling and
-  core dependency declarations; request-id/error-handler wiring gates.
+  Prod/dev compose pulled images pinned (no `:latest`/untagged); prod compose services define
+  `restart:`; service Dockerfiles + prod build contexts exist; `scripts/` shell shebangs +
+  Python syntax; frontend/ai-service CI tooling and core dependency declarations;
+  request-id/error-handler wiring gates.
 - **Doc/service integrity**: `README.md`/`docs/DEPLOYMENT.md` relative markdown doc links resolve;
   `docs/architecture.md` key sections gate; every `ai-service/app/api` `APIRouter` declares `tags=`;
   ai-service `main.py` forbids mock LLM/voice in prod and has no CORS middleware (internal-only);
   ai-service `pytest.ini` + frontend `tsconfig strict` CI-critical settings.
 - **Security fixes (Epic 77, verified)**: `ai-service` `require_internal` uses
-  `secrets.compare_digest` for `X-Internal-Token` (timing-safe) + regression gate; ai-service
-  lifespan rejects published/empty `INTERNAL_API_TOKEN` in prod; backend `ProductionGuard`
-  existence/`INTERNAL_API_TOKEN` guard gate; backend BCrypt `$2B`/strength 12 gate; `.gitignore`
+  `secrets.compare_digest`, rejects empty configured internal token, and requires non-whitespace
+  `X-User-Id` (+ regression gates); ai-service lifespan rejects published/empty `INTERNAL_API_TOKEN`
+  in prod; backend `InternalApiFilter` constant-time compare + rejects blank configured token (401)
+  and backend `ProductionGuard` guards `INTERNAL_API_TOKEN`; BCrypt `$2B`/12 gate; `.gitignore`
   protects `.env*`/build artifacts.
 - **Worktree consolidation (2026-11-08, audited)**: committed detached worktree HEADs are
   ancestors of `main` (no merge required). Stale dirty `u256/wt` (372 behind, 667 files,
