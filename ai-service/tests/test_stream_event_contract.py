@@ -33,7 +33,13 @@ INGEST_STEPS = FRONTEND / "lib" / "ingest-steps.ts"
 
 
 def _sources() -> list[tuple[Path, str]]:
-    return [(p, p.read_text(encoding="utf-8")) for p in sorted(APP_ROOT.rglob("*.py"))]
+    out = []
+    for p in sorted(APP_ROOT.rglob("*.py")):
+        rel = p.relative_to(APP_ROOT).as_posix()
+        if any(part.startswith(".") or part == "__pycache__" for part in rel.split("/")):
+            continue
+        out.append((p, p.read_text(encoding="utf-8")))
+    return out
 
 
 def _stream_emitters() -> set[str]:

@@ -59,6 +59,9 @@ def _501_producer_sites() -> list[str]:
     ai_root = REPO / "ai-service" / "app"
     if ai_root.exists():
         for f in sorted(ai_root.rglob("*.py")):
+            rel = f.relative_to(ai_root).as_posix()
+            if any(part.startswith(".") or part == "__pycache__" for part in rel.split("/")):
+                continue
             text = _read(f)
             if "501" in text:
                 hits.append(f.relative_to(REPO).as_posix())
