@@ -163,7 +163,11 @@
   `npm audit`: **0 vulnerabilities** (was 26: 2 critical via vitest/tinypool/vite; highs via
   shadcn/zod/registry). vitest.config.ts→.mts with `oxc.jsx=automatic` (vite 8/oxc ignores esbuild
   options), testTimeout 15s; CI node 20→22. Verified 1162 passed (x2 runs), tsc clean.
-- **Observability (Epic 78 done as part of 75/78 slice, `cbbb90f`)**: `/health` reports
+- **Authz (Epic 77, measured 2026-11-09, `25a1af9`)**: live `TestClient` authz matrix module —
+  `test_every_internal_route_refuses_unauthenticated.py` hits every `/internal` APIRoute with every
+  declared method and asserts **401** without `X-Internal-Token`. 63 route/method cases pass
+  (24.77s); the dependency-tree gate (`test_every_internal_route_requires_internal_auth`) proves the
+  wiring, this proves the runtime answer. `verify_gates.{ps1,sh}` includes the matrix.
   `buildSha` (backend) / `build_sha` (ai-service) from `APP_BUILD_SHA` env (default "dev");
   Dockerfiles declare `ARG APP_BUILD_SHA` + `ENV`; dev/prod compose thread the build arg;
   `journey_api.py` probes `/health` before any station and prints `== build: <sha> ==`; gates
