@@ -62,7 +62,7 @@ record a dated 15/15 mock-provider report as the first baseline.
 
 ---
 
-## Epic 80 — the registry narrows by relationship
+## Epic 80 — the registry narrows by relationship — **CLOSED 2026-11-09**
 
 **Measured.** Epic 70.3 gave the contacts board a word and 72 gave it a real
 window. The `relation` column (referrer / mentor / peer) is written by the dialog
@@ -77,6 +77,20 @@ choice, and keeps the word and the window narrowing together.
 **Done when** three disjoint filters (word, relation, page) compose in one real
 Postgres IT test, and the endpoints / needle / window censuses move in the same
 change.
+
+**Shipped 2026-11-09.** `GET /contacts` binds `relation` with the same
+"blank means no constraint" shape as the word (lower-cased by the caller,
+matched case-insensitively); the count query repeats the same `BOARD_WHERE`
+so the pager total is the chip-and-word total, not the window's. New
+`GET /contacts/relations` returns the chip row's counts in query order (count
+descending, relation name tiebreak). `/networking` gained its chip row: the
+word, the chip and the window travel together in one `useContacts` call, the
+chip resets `page` to 0, and the empty states name which narrowing left the
+registry empty (`networking.noRelationContacts`). `PagePool` census moved: 209
+records (`ContactDtos.RelationCount`), native-query pin moved
+(`ContactRepository.java`, SECURITY.md SQL-injection row updated to name the
+eight). Full suites green incl. `ContactRelationIT` 2/2 against the live stack.
+
 
 ---
 

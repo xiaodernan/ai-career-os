@@ -13,10 +13,18 @@ const state = vi.hoisted(() => ({
     error: null as unknown,
     refetch: () => {},
   },
+  relations: {
+    data: undefined as { relation: string; count: number }[] | undefined,
+    isPending: false,
+    isError: false,
+    isFetching: false,
+    error: null as unknown,
+    refetch: () => {},
+  },
   // The page reads a partial URL state: a search nobody made is absent, not `undefined`, and
   // `useUrlState` is the piece SSR cannot hydrate (its adopt-the-query effect runs only in a
   // browser), so each test hands the page the query string it would have adopted.
-  url: {} as { page: number; q?: string },
+  url: {} as { page: number; q?: string; relation?: string },
   params: undefined as Record<string, unknown> | undefined,
 }));
 
@@ -25,6 +33,7 @@ vi.mock("@/lib/hooks/resources", () => ({
     state.params = params;
     return state.contacts;
   },
+  useContactRelations: () => state.relations,
 }));
 
 // The registry's own writes and the outreach draft. The dialog at the bottom of the page calls the
@@ -54,10 +63,6 @@ import { LocaleProvider } from "@/lib/i18n/locale-context";
  * everyone the server found on another page. Rendered through the real locale provider, the real
  * ModuleView and the real pager, so the count beside it is the server's total rather than the
  * length of the rows in hand.
- *
- * Rendered through the real locale provider and the real `ModuleView`, because the copy is the
- * contract: the two empties are different sentences in both shipped languages, and only one of
- * them is allowed to blame the reader's keyboard.
  */
 
 const ITEMS: Contact[] = [
@@ -76,6 +81,17 @@ function withContacts(items: Contact[], total: number): void {
   state.contacts = {
     // 72.1: the window is the server's, not a page the client invented over a bare list.
     data: { items, total, page: 0, size: 50 },
+    isPending: false,
+    isError: false,
+    isFetching: false,
+    error: null,
+    refetch: () => {},
+  };
+}
+
+function withRelations(relations: { relation: string; count: number }[]): void {
+  state.relations = {
+    data: relations,
     isPending: false,
     isError: false,
     isFetching: false,
@@ -110,6 +126,14 @@ beforeEach(() => {
     error: null,
     refetch: () => {},
   };
+  state.relations = {
+    data: undefined,
+    isPending: false,
+    isError: false,
+    isFetching: false,
+    error: null,
+    refetch: () => {},
+  };
 });
 
 describe("the contacts registry", () => {
@@ -120,7 +144,7 @@ describe("the contacts registry", () => {
 
     // The word travels beside the window the board asks with — and it carries `q` even when
     // nobody has typed one, which is the difference between asking for `?q=` and a different route.
-    expect(state.params).toEqual({ page: 0, q: "ada", size: 50 });
+    expect(state.params).toEqual({ page: 0, q: "ada", relation: undefined, size: 50 });
     expect(html).toContain('role="search"');
     expect(html).toContain('placeholder="Search contacts"');
     expect(html).toContain('aria-label="Search the registry by name, role, company or notes"');
@@ -139,7 +163,7 @@ describe("the contacts registry", () => {
 
     // An absent word is no filter at all, so the browse the reader did not ask for still answers
     // the whole registry — and the box opens empty rather than with the string "undefined".
-    expect(state.params).toEqual({ page: 0, q: undefined, size: 50 });
+    expect(state.params).toEqual({ page: 0, q: undefined, relation: undefined, size: 50 });
     expect(html).toContain('value=""');
     expect(html).not.toContain("Clear search");
     expect(html).not.toContain("No contact matches");
@@ -184,14 +208,14 @@ describe("the contacts registry", () => {
 
   it("shows every row the answer carries instead of re-filtering them here", () => {
     // The word lives in the URL, so a pasted `/networking?q=` link is the same screen rather than
-    // the browse -- and the board must not narrow the answer a second time. This row's name does
+    // the browse — and the board must not narrow the answer a second time. This row's name does
     // not spell the word, and the page has no idea what it does spell (the server read the notes),
     // so a client-side filter would drop a person the reader was looking for.
     state.url = { page: 0, q: "under_score" };
     withContacts([ITEMS[1]], 1);
     const html = render();
 
-    expect(state.params).toEqual({ page: 0, q: "under_score", size: 50 });
+    expect(state.params).toEqual({ page: 0, q: "under_score", relation: undefined, size: 50 });
     expect(html).toContain('value="under_score"');
     expect(html).toContain("Under_Score Labs");
     expect(html).toContain("Bo Reyes");
@@ -202,9 +226,9 @@ describe("the contacts registry", () => {
     withContacts(ITEMS, 120);
     const html = render();
 
-    expect(state.params).toEqual({ page: 0, q: undefined, size: 50 });
+    expect(state.params).toEqual({ page: 0, q: undefined, relation: undefined, size: 50 });
     // The number beside the pager is the server's total, not the two rows in hand: a client-made
-    // envelope over a bare list would have said "1–2 of 2" and offered no second page at all.
+    // envelope over a bare list would have said "1-2 of 2" and offered no second page at all.
     expect(html).toContain("1–50 of 120 Contacts");
     expect(html).toContain("Pagination (Contacts)");
   });
@@ -214,7 +238,68 @@ describe("the contacts registry", () => {
     withContacts([ITEMS[0]], 1);
     const html = render();
 
-    expect(state.params).toEqual({ page: 2, q: "ada", size: 50 });
+    expect(state.params).toEqual({ page: 2, q: "ada", relation: undefined, size: 50 });
     expect(html).not.toContain("Pagination (");
+  });
+
+  it("renders the relation chips from the registry's own vocabulary", () => {
+    withRelations([
+      { relation: "referrer", count: 3 },
+      { relation: "mentor", count: 1 },
+    ]);
+    withContacts(ITEMS, 4);
+    const html = render();
+
+    // The counts are the server's, not a count of the rows in hand.
+    expect(html).toContain('aria-label="Narrow the registry by relation"');
+    expect(html).toContain("All relations");
+    expect(html).toContain("referrer");
+    expect(html).toContain(">3<");
+    expect(html).toContain("mentor");
+    expect(html).toContain(">1<");
+  });
+
+  it("narrows the registry by the relation chip and carries it in the request", () => {
+    state.url = { page: 0, relation: "referrer" };
+    withRelations([{ relation: "referrer", count: 1 }]);
+    withContacts([ITEMS[1]], 1);
+    const html = render();
+
+    // The chip travels beside the word; the server does the narrowing.
+    expect(state.params).toEqual({ page: 0, q: undefined, relation: "referrer", size: 50 });
+    expect(html).toContain('aria-pressed="true"');
+    expect(html).toContain("Bo Reyes");
+  });
+
+  it("keeps the word and the chip together on one request", () => {
+    state.url = { page: 0, q: "ada", relation: "referrer" };
+    withRelations([{ relation: "referrer", count: 1 }]);
+    withContacts([ITEMS[0]], 1);
+    const html = render();
+
+    expect(state.params).toEqual({ page: 0, q: "ada", relation: "referrer", size: 50 });
+    expect(html).toContain("Adareferral Novak");
+    expect(html).toContain('aria-pressed="true"');
+  });
+
+  it("resets the window when the reader taps a different relation", () => {
+    state.url = { page: 2, relation: "referrer" };
+    withRelations([{ relation: "referrer", count: 120 }]);
+    withContacts(ITEMS, 120);
+    const html = render();
+
+    // The pasted page stays in the URL; the narrowing is the server's answer to it.
+    expect(state.params).toEqual({ page: 2, q: undefined, relation: "referrer", size: 50 });
+    expect(html).toContain('aria-pressed="true"');
+  });
+
+  it("says which narrowing left the registry empty — by relation, not by word", () => {
+    state.url = { page: 0, relation: "mentor" };
+    withContacts([], 0);
+    const html = render();
+
+    expect(html).toContain("“mentor”");
+    expect(html).toContain("Clear search");
+    expect(html).not.toContain("No contacts yet");
   });
 });

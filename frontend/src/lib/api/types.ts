@@ -1684,6 +1684,16 @@ export interface Contact {
   updatedAt?: string;
 }
 
+/**
+ * One relation the registry holds, with the count behind it (`RelationCount`) — the chip row's
+ * own question: `GET /contacts/relations` answers which relations exist and how many rows sit
+ * behind each, so the chips can name the count and the narrowing can be trusted.
+ */
+export interface ContactRelation {
+  relation: string;
+  count: number;
+}
+
 /* ------------------------------------------------------------------ */
 /* Growth report                                                       */
 /* ------------------------------------------------------------------ */

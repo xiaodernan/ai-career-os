@@ -44,6 +44,14 @@ public final class ContactDtos {
         }
     }
 
+    /** One relation the reader's own contacts carry, and how many rows sit behind it (80). */
+    public record RelationCount(String relation, long count) {
+
+        public static RelationCount of(Object[] row) {
+            return new RelationCount((String) row[0], ((Number) row[1]).longValue());
+        }
+    }
+
     private ContactDtos() {
     }
 }

@@ -40,6 +40,7 @@ import type {
   CoverLetter,
   Company,
   Contact,
+  ContactRelation,
   CompanyDetail,
   CompanySource,
   Conversation,
@@ -510,6 +511,8 @@ export function useContacts(params?: {
    * really carries an underscore is found by spelling the underscore.
    */
   q?: string;
+  /** 80 -- the relation chip the reader tapped; the server narrows the same window with it. */
+  relation?: string;
   /** The server's window (72.1). A pasted `?page=` restores the same people. */
   page?: number;
   size?: number;
@@ -538,6 +541,25 @@ function mapContact(raw: unknown): Contact {
     createdAt: str(raw, "createdAt"),
     updatedAt: str(raw, "updatedAt"),
   };
+}
+
+/** One row of `GET /contacts/relations`, read under `RelationCount`'s names (80). */
+export function mapRelationCounts(raw: unknown): ContactRelation[] {
+  const out: ContactRelation[] = [];
+  for (const row of listOf<unknown>(raw, "data", "items", "relations")) {
+    const relation = (str(row, "relation", "name") ?? "").trim();
+    const count = Number(pick(row, "count", "total") ?? 0);
+    if (relation && Number.isFinite(count)) out.push({ relation, count });
+  }
+  return out;
+}
+
+export function useContactRelations() {
+  return useQuery({
+    queryKey: ["contacts", "relations"],
+    queryFn: async (): Promise<ContactRelation[]> =>
+      mapRelationCounts(await api.get<unknown>(endpoints.contactsRelations)),
+  });
 }
 
 export function useCompany(id: string | null) {

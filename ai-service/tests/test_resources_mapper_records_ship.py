@@ -57,6 +57,7 @@ RECORD_FILES = {
     "CompanyDetail": "com/careeros/job/dto/JobDtos.java",
     "CompanyRequest": "com/careeros/job/dto/JobDtos.java",
     "ContactItem": "com/careeros/network/dto/ContactDtos.java",
+    "RelationCount": "com/careeros/network/dto/ContactDtos.java",
     "SourceItem": "com/careeros/knowledge/dto/KnowledgeDtos.java",
     "NoteTagCount": "com/careeros/knowledge/dto/KnowledgeDtos.java",
     "SessionItem": "com/careeros/interview/dto/InterviewDtos.java",
@@ -75,9 +76,10 @@ RECORD_FILES = {
 # as everything else this file binds.
 NAMED_MAPPERS = ["mapResume", "mapResumeVersions", "mapResumeVersion", "mapCompany",
                  "mapCompanySource",
-                 "mapContact", "mapSource", "mapNoteTagCounts", "mapSessionScalars",
-                 "mapInterviewSessionItem", "mapInterviewSessionDetail", "mapMemories"]
-EXPORTED_MAPPERS = ["mapResumeVersions", "mapResumeVersion", "mapNoteTagCounts",
+                 "mapContact", "mapRelationCounts", "mapSource", "mapNoteTagCounts",
+                 "mapSessionScalars", "mapInterviewSessionItem", "mapInterviewSessionDetail", "mapMemories"]
+EXPORTED_MAPPERS = ["mapResumeVersions", "mapResumeVersion", "mapRelationCounts",
+                    "mapNoteTagCounts",
                     "mapInterviewSessionItem",
                     "mapInterviewSessionDetail", "mapMemories"]
 
@@ -87,6 +89,7 @@ ROWS = {
     ("mapResumeVersions", "v"): "ResumeVersionItem",
     ("mapCompany", "raw"): "CompanyItem",
     ("mapContact", "raw"): "ContactItem",
+    ("mapRelationCounts", "row"): "RelationCount",
     ("mapSource", "raw"): "SourceItem",
     ("mapNoteTagCounts", "row"): "NoteTagCount",
     ("mapSessionScalars", "s"): "SessionItem",
@@ -113,6 +116,7 @@ CALLED = {
     ("mapContact", "raw"): {"name": 0, "role": 0, "company": 0, "relation": 0,
                             "email": 0, "notes": 0, "lastTouchAt": 0, "createdAt": 0,
                             "updatedAt": 0},
+    ("mapRelationCounts", "row"): {"relation": 0, "count": 0},
     ("mapSource", "raw"): {"kind": 0, "title": 0, "status": 0, "error": 0, "chunkCount": None,
                            "createdAt": 0, "updatedAt": None, "taskId": None, "documentId": 0},
     # Both calls ask the record's own name first; `label` and `total` are the fallbacks that
@@ -138,6 +142,7 @@ SCANNER_SHAPE = {
     ("mapResumeVersions", "v"): (8, 23),
     ("mapCompany", "raw"): (11, 11),
     ("mapContact", "raw"): (9, 9),
+    ("mapRelationCounts", "row"): (2, 4),
     ("mapSource", "raw"): (9, 21),
     ("mapNoteTagCounts", "row"): (2, 4),
     ("mapSessionScalars", "s"): (10, 26),
@@ -166,6 +171,7 @@ UNAUTHORED = {
     # fallbacks a differently-spelled payload would need, and `NoteTagCount`
     # declares neither of them.
     ("mapNoteTagCounts", "row"): {"label", "total"},
+    ("mapRelationCounts", "row"): {"name", "total"},
     ("mapSessionScalars", "s"): {"application_id", "application_status", "company_name",
                                  "createdAt", "created_at", "depth", "jobTitle", "job_title",
                                  "job_id", "kind", "level", "finished_at", "position",
@@ -204,6 +210,10 @@ DECLARED_NOWHERE = {
     # `ResumeVersionItem`, `total` by the page envelope. They are foreign, not
     # names nothing declares -- `NoteTagCount` simply does not answer them.
     ("mapNoteTagCounts", "row"): set(),
+    # Both fallback names are declared by other records: `name` by `ResumeListItem` among
+    # others, `total` by the contact-patched envelope. They are foreign, not names nothing
+    # declares -- RelationCount simply does not answer them.
+    ("mapRelationCounts", "row"): set(),
     ("mapSessionScalars", "s"): {"depth", "level", "type"},
     ("mapInterviewSessionItem", "s"): {"overallScore", "turnCount"},
     ("mapInterviewSessionDetail", "raw"): {"answers"},
@@ -500,8 +510,10 @@ def test_the_unbound_mappers_ban_would_find_these_mappers_if_it_read_this_file()
     # 46 rather than 43 since 47.4's letters reader (`useApplicationLetters`) and
     # 54.2's resume-version pair (`mapResumeVersion`, `useResumeVersion`) joined.
     # 48 since 69.2's tag counts added a reader (`mapNoteTagCounts`) and the hook
-    # that mounts it (`useKnowledgeNoteTagCounts`).
-    assert len(seen) == 48, f"resources.ts now declares {len(seen)} functions for the ban's rule"
+    # that mounts it (`useKnowledgeNoteTagCounts`). 49 with the 74.2 window body
+    # leaving the module — no new declarations. 50 with 80's `useContactRelations`
+    # and its `mapRelationCounts` joining the named mappers together.
+    assert len(seen) == 50, f"resources.ts now declares {len(seen)} functions for the ban's rule"
     assert [n for n in seen if n.startswith("map")] == NAMED_MAPPERS, \
         "the ban's own rule no longer recognizes these declarations in file order: " \
         f"{[n for n in seen if n.startswith('map')]}"
@@ -531,9 +543,9 @@ def test_the_scanner_finds_the_calls_and_names_each_row_actually_makes():
         assert len(found) == calls, f"{mapper}/{receiver}: {len(found)} calls, pinned {calls}"
         assert sum(len(lit) for _, lit in found) == names, \
             f"{mapper}/{receiver}: {sum(len(lit) for _, lit in found)} names, pinned {names}"
-    assert sum(len(v) for v in CALLED.values()) == 62, "the call table and the scan disagree"
-    assert sum(SCANNER_SHAPE[key][0] for key in SCANNER_SHAPE) == 64
-    assert sum(SCANNER_SHAPE[key][1] for key in SCANNER_SHAPE) == 127
+    assert sum(len(v) for v in CALLED.values()) == 64, "the call table and the scan disagree"
+    assert sum(SCANNER_SHAPE[key][0] for key in SCANNER_SHAPE) == 66
+    assert sum(SCANNER_SHAPE[key][1] for key in SCANNER_SHAPE) == 131
     # The calls the table above does not key are the envelopes': their receivers have no record, so
     # they are classified by payload shape in their own cases instead of by a first authored name.
     # Two rows now ride a bare list -- the versions history and the memories list.
@@ -564,7 +576,7 @@ def test_every_call_is_classified_against_the_record_behind_its_receiver():
         assert keyed == CALLED[(mapper, receiver)], \
             f"{mapper}/{receiver} no longer calls in the order the record answers: {keyed}"
     first_authored = [v for table in CALLED.values() for v in table.values()]
-    assert first_authored.count(0) == 54, first_authored.count(0)
+    assert first_authored.count(0) == 56, first_authored.count(0)
     assert first_authored.count(2) == 0, "a call asks its record's name third; re-measure which"
     assert first_authored.count(None) == 8, \
         f"{first_authored.count(None)} calls can never return a value, pinned 8"
@@ -644,7 +656,7 @@ def test_an_unauthored_name_is_a_snake_twin_a_foreign_name_or_a_name_no_record_d
         scanned_nowhere += len(nowhere)
     # Both ledger numbers come out of the scan above, so a row that stops reading names narrows the
     # total and gets named, instead of a table quietly agreeing with itself.
-    assert scanned_unauthored == 73, scanned_unauthored
+    assert scanned_unauthored == 75, scanned_unauthored
     # 27 rather than 28 since 25.1's `SessionResponse` declared `current`: the versions
     # mapper's legacy alias is still unauthored for `ResumeVersionItem`, but another route
     # now answers the name, which is the foreign class rather than this one.

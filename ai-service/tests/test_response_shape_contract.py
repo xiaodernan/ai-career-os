@@ -1070,8 +1070,10 @@ def test_the_java_probe_reads_every_record_the_backend_declares():
     # panel's own vocabulary, never a limit) and `SavedRow` (the list item plus the two names
     # the wrapper owns: the note written at save time and when). Neither reaches the wire; the
     # walk reads declarations, so both join the receipt records above in being pinned here.
-    assert len(declared) == 208, \
-        f"{len(declared)} records carry a declaration the shared opener reads, not the 208 measured"
+    # 209 with 80's `ContactDtos.RelationCount` (one relation and its count behind it — the chip
+    # row's own read). Pure data, on the wire, read by the networking panel; pinned here.
+    assert len(declared) == 209, \
+        f"{len(declared)} records carry a declaration the shared opener reads, not the 209 measured"
     problems, renamed = [], []
     for relative, record in declared:
         names = _record_components_at(relative, record)

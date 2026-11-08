@@ -188,7 +188,9 @@ SITES = {
     "useContacts": [("app/(app)/networking/page.tsx",
                      # 72.1: the word, the index and the window ride together. A new question
                      # resets the page, and a pasted link restores the same people.
-                     "{ q: state.q, page: state.page, size: PAGE_SIZE }")],
+                     # 80: the relation chip narrows the same list, and it rides beside the
+                     # word and the window in one request rather than two round-trips.
+                     "{ q: state.q, relation: state.relation, page: state.page, size: PAGE_SIZE, }")],
     "useKnowledgeSources": [("app/(app)/knowledge/page.tsx",
                             "true, src, { page: state.page, size: PAGE_SIZE }")],
     "useKnowledgeNotes": [("components/knowledge/notes-panel.tsx",

@@ -24,7 +24,7 @@ import {
   useDeleteContact,
   useUpdateContact,
 } from "@/lib/hooks/actions";
-import { useContacts } from "@/lib/hooks/resources";
+import { useContacts, useContactRelations } from "@/lib/hooks/resources";
 import { useOutreachDraft } from "@/lib/hooks/growth";
 import { useUrlState } from "@/lib/hooks/use-url-state";
 import { useLocale } from "@/lib/i18n/locale-context";
@@ -43,10 +43,10 @@ import type { Contact } from "@/lib/api/types";
  * day's midnight; the server does not guess it from request arrival.
  */
 // Module-level so `setUrl` (a `useCallback` keyed on this object) is stable across renders.
-// `q` and `page` are declared here even though they are usually absent/zero: `useUrlState`
-// hydrates by walking these keys, so a key left out of the defaults is a question or a window
-// a pasted link cannot restore (70.2's rule, now the registry's too).
-const PAGE_DEFAULTS: { page: number; q?: string } = { page: 0, q: undefined };
+// `q`, `relation` and `page` are declared here even though they are usually absent/zero:
+// `useUrlState` hydrates by walking these keys, so a key left out of the defaults is a
+// question or a window a pasted link cannot restore (70.2's rule, now the registry's too).
+const PAGE_DEFAULTS: { page: number; q?: string; relation?: string } = { page: 0, q: undefined, relation: undefined };
 /** The window this board asks the route with, restated for the pager it feeds. */
 const PAGE_SIZE = 50;
 
@@ -56,7 +56,7 @@ export default function NetworkingPage() {
   // page of the same question — the rule the replies (49.1), company (58.2) and pipeline (70.2)
   // boards follow. 72.1 gave the registry a real server window, so `page` restores people
   // rather than being a number the client invented over a bare list.
-  const [state, setUrl] = useUrlState<{ page: number; q?: string }>(
+  const [state, setUrl] = useUrlState<{ page: number; q?: string; relation?: string }>(
     PAGE_DEFAULTS,
     { numericKeys: ["page"] }
   );
@@ -68,7 +68,15 @@ export default function NetworkingPage() {
   // Asking a new question starts at its first page: a word typed on page 4 must not leave the
   // reader on a page the new, narrower answer does not have.
   const ask = (value: string) => setUrl({ q: value.trim() || undefined, page: 0 });
-  const contacts = useContacts({ q: state.q, page: state.page, size: PAGE_SIZE });
+  const pickRelation = (relation: string | undefined) =>
+    setUrl({ relation: relation === state.relation ? undefined : relation, page: 0 });
+  const contacts = useContacts({
+    q: state.q,
+    relation: state.relation,
+    page: state.page,
+    size: PAGE_SIZE,
+  });
+  const relations = useContactRelations();
   const total = contacts.data?.total ?? 0;
   // A past-the-end page is an empty window over a real total, not an empty registry: the
   // answer's own window is the divisor and `lastPageOf` is that rule in one place, the same
@@ -96,6 +104,38 @@ export default function NetworkingPage() {
 
   return (
     <>
+      {/* 80: the relation chips — the same narrowing the badge names, in the same order the
+          server ranks them. The row is only rendered when the registry actually holds one,
+          and tapping a chip resets the window because the answer's rows changed. */}
+      {(relations.data ?? []).length > 0 ? (
+        <section
+          className="flex flex-wrap items-center gap-1.5"
+          role="group"
+          aria-label={t("networking.relationFilter")}
+        >
+          <Button
+            type="button"
+            size="sm"
+            variant={state.relation ? "ghost" : "secondary"}
+            onClick={() => setUrl({ relation: undefined, page: 0 })}
+          >
+            {t("networking.relationFilterAll")}
+          </Button>
+          {relations.data?.map(({ relation, count }) => (
+            <Button
+              key={relation}
+              type="button"
+              size="sm"
+              variant={state.relation === relation ? "secondary" : "ghost"}
+              onClick={() => pickRelation(relation)}
+              aria-pressed={state.relation === relation}
+            >
+              {relation}
+              <span className="ml-1 tabular-nums text-muted-foreground">{count}</span>
+            </Button>
+          ))}
+        </section>
+      ) : null}
       <ModuleView
         title={t("networking.title")}
         description={t("networking.description")}
@@ -158,9 +198,11 @@ export default function NetworkingPage() {
         // people none of whom spells the word the reader typed. The second one's way out is the
         // box, not a button that opens a create form — the reader was not trying to add a person.
         emptyHint={
-          state.q
+          state.q || state.relation
             ? {
-                title: t("networking.noMatch", { query: state.q }),
+                title: state.relation
+                  ? t("networking.noRelationContacts", { relation: state.relation })
+                  : t("networking.noMatch", { query: state.q ?? "" }),
                 description: t("networking.noMatchDescription"),
                 action: (
                   <Button
@@ -168,7 +210,7 @@ export default function NetworkingPage() {
                     size="sm"
                     onClick={() => {
                       setWord("");
-                      ask("");
+                      setUrl({ q: undefined, relation: undefined, page: 0 });
                     }}
                   >
                     {t("networking.clearSearch")}

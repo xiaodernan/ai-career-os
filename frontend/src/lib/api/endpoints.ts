@@ -107,6 +107,8 @@ export const endpoints = {
 
   /* ---------------- AI actions (thin proxies over ai-service) ------------ */
   contacts: "/contacts",
+  /** 80 -- the caller's own relation vocabulary with a count behind each chip. */
+  contactsRelations: "/contacts/relations",
   contact: (id: string) => `/contacts/${seg(id)}`,
   growthReport: "/growth-report",
   copilotChat: "/copilot/chat",

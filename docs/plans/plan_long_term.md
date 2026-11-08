@@ -1311,8 +1311,17 @@
     实测：`SavedJobBoardIT` 4/4 全绿（真实 Docker 栈），`JobSearchRepositoryTest` 断言 LIMIT/OFFSET
     绑定与发现板 predicate 逐字节一致、COUNT 语句不绑窗口、ORDER BY 恒以 `sj.job_id ASC` 结尾；
     `JobServiceSavedTest` 锁住 PageDTO 的 items/total/page/size 与 SavedBoard 的 page/size 原样直达 SQL；
-    全量复核 **ai-service 2281 passed, 2 skipped / frontend 1157 ×1（-5 个 windowSavedRows 用例）, npx tsc --noEmit 干净, npm next build 通过 /
-    backend 1210 ×0 failures BUILD SUCCESS；npm audit 0 漏洞**。
+    全量复核 **ai-service 2281 passed, 2 skipped / frontend 1157 ×1, npx tsc --noEmit 干净, npm next build 通过 /
+    backend 1211 ×0 failures BUILD SUCCESS；npm audit 0 漏洞**。
+- **Epic 80 — the registry narrows by relationship**（已落地，2026-11-09）：`GET /contacts` 现在绑 `relation`
+  （与 word 同一个"空即不过滤"形状：调用方 lower-case、不区分大小写匹配），总数计数的也是同一段 `BOARD_WHERE`——
+  分页器画的当然也是这个交集。`GET /contacts/relations` 是 chip 行自己的问题：`[ {relation, count} ]`，按
+  count 降序、名称字母序 tiebreak，一切非空关系一条不漏，这是列表不去数整个注册表的唯一体法。`/networking`
+  拥有自己的 chip 行（chip 与 word 与 window 同一个 queryFn 携带），换片重置 `page`，空态说的是哪个 chip
+  让名单空了：`networking.noRelationContacts`。
+  实测：`ContactRelationIT` 2/2 全绿（word ∩ relation ∩ page，chip 与 word 同时收窄、counts 与 narrowing 一致）、
+  `ContactNeedleIT` 4/4 共6/6、backend 1211 全绿、ai-service 2185 全绿（含 209 record 规尺 + 8 个原生查询 +
+  64/66/127/56 扫描尺）、frontend 117/1157、typecheck 干净、i18n 59 键零出入。
 
 ## 开发协议
 （每个任务）

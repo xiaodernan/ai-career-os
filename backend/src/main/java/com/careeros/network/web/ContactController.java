@@ -6,8 +6,10 @@ import com.careeros.common.PageDTO;
 import com.careeros.common.Paging;
 import com.careeros.network.dto.ContactDtos.ContactItem;
 import com.careeros.network.dto.ContactDtos.ContactRequest;
+import com.careeros.network.dto.ContactDtos.RelationCount;
 import com.careeros.network.service.ContactService;
 import jakarta.validation.Valid;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -39,9 +41,20 @@ public class ContactController {
     @GetMapping
     public PageDTO<ContactItem> list(@CurrentUser AuthUser user,
                                      @RequestParam(required = false) String q,
+                                     @RequestParam(required = false) String relation,
                                      @RequestParam(defaultValue = "0") int page,
                                      @RequestParam(defaultValue = "50") int size) {
-        return contacts.list(user.id(), q, Paging.of(page, size).pageable());
+        return contacts.list(user.id(), q, relation, Paging.of(page, size).pageable());
+    }
+
+    /**
+     * The chip row's own read (80): which relations the registry holds and how many rows sit
+     * behind each. A literal segment so Spring cannot match it as an `{id}`, and deliberately
+     * the same names the dialog writes, so the chip and the row always agree.
+     */
+    @GetMapping("/relations")
+    public List<RelationCount> relations(@CurrentUser AuthUser user) {
+        return contacts.relationCounts(user.id());
     }
 
     @PostMapping

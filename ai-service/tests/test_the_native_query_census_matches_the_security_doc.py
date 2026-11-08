@@ -50,6 +50,11 @@ NATIVE_QUERIES = {
     # membership test (`= any(tags)`); both bind every value, the only literals being the column
     # and the cast's `text` type name.
     "UserNoteRepository.java",
+    # 80's relation counts: the chip row's own question is one native count over the table — the
+    # registry's vocabulary and the rows behind it — because `Contact` is the entity and a group-by
+    # over `relation` is the only shape `relations` asks. Bound parameter, no literal, like the
+    # other seven.
+    "ContactRepository.java",
 }
 
 # Where a value may be spliced into SQL text, and why each is not user data.

@@ -5030,6 +5030,25 @@ client made up. This epic makes the Saved tab answer like the board it sits on, 
   statement pair. The client's `windowSavedRows` is gone with the predicates it guarded; the Saved
   tab reads the envelope exactly as the Discover tab does. Measured by
   `SavedJobBoardIT` (4/4 green against the live stack) and the full suites, listed below.)
+
+## Epic 80 -- the registry narrows by relationship
+
+The fourth board to take a reader's word (70.x) and a real server window (72.1). The contacts
+dialog has always asked `relation` (referrer / mentor / peer), and the cadence engine reads
+that column back to know when to nudge — but no screen ever let the reader take their own
+answer to it. `/networking` had a chip for nothing. This epic gives the chips a question.
+
+- [x] **80** Contacts?relation= narrows the same window (measured 2026-11-09).
+
+  (`GET /contacts` binds `relation` with the same "blank means no constraint" shape as the word —
+  lower-cased by the caller, matched case-insensitively — and `total` counts the intersection,
+  not everybody who spells the word. `GET /contacts/relations` reports the chip row's own
+  question: one `{relation, count}` per non-blank relation the registry holds, ordered by count
+  descending with a relation name tiebreak. The networking page asks `relation` beside the word
+  and the window, resets `page` when a chip is tapped, and offers the same tags the report's tag
+  row taught it: the chips show the server's count, not the count of the rows in hand.
+  Measured against the live stack by `ContactRelationIT` (2/2 green: word ∩ relation ∩ page compose,
+  chip and word narrow together, counts agree with the narrowing) and the full suites listed below.)
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

@@ -183,6 +183,15 @@
   every `ai-service/app/api` `APIRouter` declares `tags=`; ai-service `main.py` forbids mock LLM/voice
   in prod and has no CORS middleware (internal-only); ai-service `pytest.ini` + frontend
   `tsconfig strict` CI-critical settings.
+- **Epic 80 (shipped 2026-11-09, `networking.relations`)**: `GET /contacts` binds `relation` with the
+  same blank-means-no-constraint shape as the word (chip lowers itself; server `LOWER(COALESCE(c.relation,''))`);
+  `total` counts the intersection chip∩word, not the window. `GET /contacts/relations` reports the chip
+  vocabulary's counts in order. Frontend gains the `networking.relationFilter`/`relationFilterAll` chip row
+  (`useContactRelations`, `mapRelationCounts`), PAGE_DEFAULTS gains `relation`, narrowed request is
+  `{ q: state.q, relation: state.relation, page: state.page, size: PAGE_SIZE }`. census pins moved: 209
+  Java records (+ `ContactDtos.RelationCount`), 8 native classes (+ `ContactRepository`), 50 mapped functions
+  (+ `useContactRelations`/`mapRelationCounts`). Measured green (backend 1211 IT-compile + all ITs, frontend
+  1162/117, ai-service 2281, networking i18n 59); `ContactRelationIT` 2/2 against live Postgres.
 - **Security fixes (Epic 77, verified)**: `ai-service` `require_internal` uses
   `secrets.compare_digest`, rejects empty configured internal token, and requires non-whitespace
   `X-User-Id` (+ regression gates); ai-service lifespan rejects published/empty `INTERNAL_API_TOKEN`

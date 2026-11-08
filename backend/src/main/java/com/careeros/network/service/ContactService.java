@@ -5,8 +5,10 @@ import com.careeros.common.ApiException;
 import com.careeros.common.PageDTO;
 import com.careeros.network.dto.ContactDtos.ContactItem;
 import com.careeros.network.dto.ContactDtos.ContactRequest;
+import com.careeros.network.dto.ContactDtos.RelationCount;
 import com.careeros.network.entity.Contact;
 import com.careeros.network.repository.ContactRepository;
+import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 import org.springframework.data.domain.Pageable;
@@ -27,15 +29,29 @@ public class ContactService {
         this.contacts = contacts;
     }
 
+    /**
+     * The reader's people, narrowed by whatever the box holds and by the relation the chip row
+     * chose (70.3/72.1/80). A blank needle asks nothing, a blank relation asks nothing, and the
+     * count query is the same predicate, so the page and the pager agree on which people the
+     * chip and the box point at.
+     */
     @Transactional(readOnly = true)
-    public PageDTO<ContactItem> list(UUID userId, String q, Pageable pageable) {
+    public PageDTO<ContactItem> list(UUID userId, String q, String relation, Pageable pageable) {
         // Read once per request, not per row: the box holds what the reader meant, and the columns
         // are lower-cased by the query itself. Spaces alone are not a word, so a box the reader
         // typed and deleted asks the whole registry. 72.1: the window is the server's now -- the
         // answer carries the real total and the window really used, rather than the client
-        // inventing a one-page envelope over a bare list.
+        // inventing a one-page envelope over a bare list. 80: the relation chip is the same shape,
+        // so an untyped chip is not a filter either.
         String needle = q == null ? "" : q.trim().toLowerCase(Locale.ROOT);
-        return PageDTO.from(contacts.findBoard(userId, needle, pageable), ContactItem::of);
+        String rel = relation == null ? "" : relation.trim().toLowerCase(Locale.ROOT);
+        return PageDTO.from(contacts.findBoard(userId, needle, rel, pageable), ContactItem::of);
+    }
+
+    /** The chip row's own question: which relations the reader's registry holds, and how many (80). */
+    @Transactional(readOnly = true)
+    public List<RelationCount> relationCounts(UUID userId) {
+        return contacts.relationCounts(userId).stream().map(RelationCount::of).toList();
     }
 
     @Transactional
