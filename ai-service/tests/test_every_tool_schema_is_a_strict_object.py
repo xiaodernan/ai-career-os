@@ -19,4 +19,11 @@ def test_every_tool_schema_is_a_strict_object() -> None:
             bad.append((tool.name, "type", schema.get("type")))
         if schema.get("additionalProperties") is not False:
             bad.append((tool.name, "additionalProperties", schema.get("additionalProperties")))
-    assert not bad, f"non-strict tool schemas: {bad}"
+        props = schema.get("properties")
+        if props is not None and not isinstance(props, dict):
+            bad.append((tool.name, "properties", type(props).__name__))
+        prop_keys = set((props or {}).keys()) if isinstance(props, dict) else set()
+        for req in schema.get("required") or []:
+            if not isinstance(req, str) or req not in prop_keys:
+                bad.append((tool.name, "required", req))
+    assert not bad, f"invalid tool schemas: {bad}"
