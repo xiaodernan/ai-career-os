@@ -157,12 +157,12 @@
   request-id/error-handler and health endpoint wiring gates; backend rate-limit filter wired
   (auth/ai/mail/mfa/inbound buckets, 429/`RATE_LIMITED`, registered after JWT) + rate-limit
   config keys defined.
-- **Frontend dependency security (Epic 77, measured 2026-11-09, `cbf6fab`)**: npm overrides pin
-  three high-severity transitive dev deps to patched versions (`body-parser ^2.4.0`,
-  `systeminformation ^5.33.19`, `undici ^7.30.2`). `npm audit` before/after: moderate 16→15,
-  high 7→4, low 1 unchanged, critical 2 unchanged (vitest/vite/tinypool and shadcn/zod/registry —
-  all require breaking major upgrades, deliberately not forced). Verified vitest 1162 passed +
-  tsc clean. 74.1 files untouched.
+- **Frontend dependency security (Epic 77, measured 2026-11-09, `cbf6fab` + later upgrade)**: npm
+  overrides pin transitive dev deps (`body-parser`, `systeminformation`, `undici`); direct upgrades
+  `vitest` ^2→^5.1.0 / `vite` ^8.3.6 / `@types/node` ^24 and `shadcn` ^4→^1.0.0 (dev-only CLI).
+  `npm audit`: **0 vulnerabilities** (was 26: 2 critical via vitest/tinypool/vite; highs via
+  shadcn/zod/registry). vitest.config.ts→.mts with `oxc.jsx=automatic` (vite 8/oxc ignores esbuild
+  options), testTimeout 15s; CI node 20→22. Verified 1162 passed (x2 runs), tsc clean.
 - **Doc/service integrity**: `README.md`/`docs/DEPLOYMENT.md` relative markdown doc links resolve;
   `docs/architecture.md` key sections gate; `docs/QUALITY_GATES.md` factual gate index + structure gate;
   every `ai-service/app/api` `APIRouter` declares `tags=`; ai-service `main.py` forbids mock LLM/voice
