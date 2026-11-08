@@ -23,3 +23,6 @@ def test_require_internal_compares_internal_token_in_constant_time() -> None:
     assert "not expected or" in text, (
         "require_internal must reject empty/missing configured internal token (misconfiguration defense)"
     )
+    assert 'if not user_id:' in text and ('user_id = (x_user_id or "").strip()' in text or '.strip()' in text), (
+        "require_internal must require a non-whitespace X-User-Id"
+    )
