@@ -39,7 +39,7 @@ public class InternalApiFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         String presented = request.getHeader("X-Internal-Token");
         String expected = props.getInternal().getToken();
-        boolean ok = presented != null && expected != null
+        boolean ok = expected != null && !expected.isBlank() && presented != null
                 && MessageDigest.isEqual(presented.getBytes(StandardCharsets.UTF_8),
                         expected.getBytes(StandardCharsets.UTF_8));
         if (!ok) {
