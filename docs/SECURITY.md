@@ -154,7 +154,10 @@ that rejects invented skills/numbers not present in the source evidence.
 
 - CORS is allow-listed from `APP_CORS_ORIGINS` (default
   `http://localhost:3000`); methods `GET/POST/PUT/PATCH/DELETE/OPTIONS`; headers
-  `Authorization`, `Content-Type`, `X-Internal-Token` only.
+  `Authorization`, `Content-Type`, `X-Internal-Token`, `X-Request-Id` only.
+  X-Request-Id is the browser-minted correlation id the backend echoes on the
+  answer and writes into the access log line; the browser must be allowed to send
+  it, or preflight blocks the trace header (Epic 75/78).
 - With `APP_ENV=prod` the backend refuses to start on a CORS list that is blank, a
   non-http(s) entry, a loopback host, the example's domain, a spelling a browser's
   `Origin` header cannot equal (bare host, trailing slash, path, query), or a list

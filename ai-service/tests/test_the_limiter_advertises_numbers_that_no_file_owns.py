@@ -99,7 +99,12 @@ SCAN_POPULATION = (ROOT,)
 # is a carrier the census would silently never read.
 SCAN_SUFFIXES = {".md", ".yml", ".yaml", ".ts", ".tsx", ".ps1", ".sh", ".py", ".java", ".example"}
 SKIP_DIRS = {"node_modules", ".next", "target", "dist", "__pycache__", ".venv",
-             "playwright-report", "test-results", "evals"}
+             "playwright-report", "test-results", "evals",
+             # 27 MB of `git diff --binary` from the worktree consolidation (9a86a83):
+             # historical patches of deleted checkouts. Not shipped text, not an
+             # operator override -- a census that read them would classify numbers no
+             # deploy ever had.
+             "backups"}
 # The population this scan walked before it was widened. Kept as an assertion, not a comment: a pruning
 # rule that quietly swallows `docs`, `e2e` or either env example has to be caught by the census itself.
 BASELINE_POPULATION = (ROOT / "README.md", ROOT / "docs", ROOT / "e2e", ROOT / "scripts",

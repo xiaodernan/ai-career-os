@@ -3912,12 +3912,12 @@ def test_the_stream_media_type_is_written_in_four_spellings_and_read_in_none():
          "census would have no classification for")
     senders = by_kind["request-header"]
     # 322 rather than 237 since the XHR upload transport and the shared envelopeError helper
-    # joined client.ts above postSSE, moving its Accept line down. The relay's own Accept
-    # sits at 87 rather than 71 since the ops request-id lines joined above its request
-    # builder -- same line, same meaning, counted again rather than assumed unmoved.
+    # joined client.ts above postSSE, moving its Accept line down. 347 rather than 322 since
+    # the `newRequestId()` helper joined client.ts above postSSE, moving its Accept line down
+    # again -- same line, same meaning, counted again rather than assumed unmoved.
     assert [(row["file"], row["line"]) for row in senders] == [
         ("backend/src/main/java/com/careeros/ai/SseRelayService.java", 87),
-        ("frontend/src/lib/api/client.ts", 322),
+        ("frontend/src/lib/api/client.ts", 347),
         ("frontend/src/lib/sse/use-sse.ts", 92)], \
         (f"{[(r['file'], r['line']) for r in senders]}: three senders arm the stream -- the relay, the "
          "one-shot copilot client and the run panel's hook -- each in its own language's shape, so a "
