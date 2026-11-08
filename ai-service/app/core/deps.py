@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import secrets
 
 from fastapi import Header, HTTPException
 
@@ -17,7 +18,7 @@ async def require_internal(
     x_run_id: str = Header(default="", alias="X-Run-Id"),
 ) -> Ctx:
     s = get_settings()
-    if x_internal_token != s.internal_api_token:
+    if not secrets.compare_digest(x_internal_token, s.internal_api_token):
         raise HTTPException(status_code=401, detail="invalid internal token")
     if not x_user_id:
         raise HTTPException(status_code=400, detail="X-User-Id required")
