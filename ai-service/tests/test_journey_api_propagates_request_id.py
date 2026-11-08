@@ -21,3 +21,7 @@ def test_journey_api_sets_one_request_id_on_every_call() -> None:
     assert text.count("X-Request-Id") >= 2, "X-Request-Id must appear in the call() helper and in the intro line"
     # The id must be printed with the first line so the operator can grep it.
     assert "X-Request-Id: {REQUEST_ID}" in text, "journey header line must print REQUEST_ID"
+    # Epic 78: the journey must also name the commit it measured, from /health.
+    assert "== build:" in text, "journey must print the build sha"
+    assert "/health" in text, "journey must read /health before any station"
+    assert "buildSha" in text or "build_sha" in text, "journey must surface the backend/ai-service build sha"

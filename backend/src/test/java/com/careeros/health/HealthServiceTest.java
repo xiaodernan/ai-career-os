@@ -70,8 +70,9 @@ class HealthServiceTest {
     void allFourAnsweringReportsOk() {
         Map<String, Object> report = service().report();
 
-        assertThat(report.keySet()).containsExactly("status", "db", "redis", "storage", "ai");
+        assertThat(report.keySet()).containsExactly("status", "db", "redis", "storage", "ai", "buildSha");
         assertThat(report)
+                .containsEntry("buildSha", "dev") // untagged image default; the Dockerfile bakes the commit
                 .containsEntry("status", "ok")
                 .containsEntry("db", true)
                 .containsEntry("redis", true)

@@ -44,6 +44,18 @@ def call(name, method, path, token=None, body=None, base=BASE, raw=False):
 
 print(f"== the golden journey, one API call per station (X-Request-Id: {REQUEST_ID}) ==")
 
+# 0. the commit this stack was built from (Epic 78): name it before any verdict,
+#    so the latency report always names the code it measured. Untimed: this call
+#    is the probe, not a station.
+_sha = "unknown"
+try:
+    with urllib.request.urlopen(urllib.request.Request(BASE + "/health", method="GET"), timeout=10) as res:
+        _health = json.loads(res.read().decode("utf-8"))
+        _sha = _health.get("buildSha") or _health.get("build_sha") or "unknown"
+except Exception as _err:
+    print(f"[warn] /health did not answer for build sha: {_err}")
+print(f"== build: {_sha} ==")
+
 # 1. register / who am I
 me = call("register", "POST", "/auth/register",
           body={"email": EMAIL, "password": PASS, "displayName": "Journey Walker"})

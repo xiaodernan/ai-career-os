@@ -44,6 +44,8 @@ public class HealthService {
     private final Optional<StorageService> storage;
     private final AiServiceClient aiService;
     private final Duration probeTimeout;
+    /** The image's own commit: `APP_BUILD_SHA` env (baked by the Dockerfile), else "dev". */
+    private final String buildSha;
 
     @Autowired
     public HealthService(DataSource dataSource, RedisTemplate<String, ?> redisTemplate,
@@ -60,6 +62,8 @@ public class HealthService {
         this.storage = storage;
         this.aiService = aiService;
         this.probeTimeout = probeTimeout;
+        String env = System.getenv("APP_BUILD_SHA");
+        this.buildSha = env != null && !env.isBlank() ? env.trim() : "dev";
     }
 
     /**
@@ -86,6 +90,9 @@ public class HealthService {
         body.put("redis", redisUp);
         body.put("storage", storageUp);
         body.put("ai", aiUp);
+        // The commit this process was built from: a probe that cannot name the code it
+        // measured cannot tell a stale image from a fixed one (Epic 78).
+        body.put("buildSha", buildSha);
         return body;
     }
 

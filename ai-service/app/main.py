@@ -66,6 +66,7 @@ async def health():
         "llm_ready": llm_ready(s),
         "embedding_provider": s.embedding_provider,
         "embedding_ready": embeddings_ready(s),
+        "build_sha": s.app_build_sha,
     }
 
 

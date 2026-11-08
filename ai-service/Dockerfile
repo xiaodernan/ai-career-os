@@ -6,6 +6,9 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY app ./app
 RUN adduser --disabled-password --gecos "" app && mkdir -p /srv/evals/reports && chown -R app /srv
+# Epic 78: bake the commit this image is built from, so /health can name it.
+ARG APP_BUILD_SHA=dev
+ENV APP_BUILD_SHA=${APP_BUILD_SHA}
 USER app
 EXPOSE 8000
 # ONE worker, deliberately. The bus that streams agent progress is a module-level dict

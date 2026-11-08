@@ -11,6 +11,8 @@ class Settings(BaseSettings):
     app_env: str = "dev"
     service_name: str = "career-os-ai"
     port: int = 8000
+    # The commit this image was built from: baked by the Dockerfile (Epic 78).
+    app_build_sha: str = "dev"
 
     database_url: str = "postgresql://career_os:dev_pg_pass_9f3k@localhost:5432/career_os"
     db_pool_min: int = 2
