@@ -157,6 +157,12 @@
   request-id/error-handler and health endpoint wiring gates; backend rate-limit filter wired
   (auth/ai/mail/mfa/inbound buckets, 429/`RATE_LIMITED`, registered after JWT) + rate-limit
   config keys defined.
+- **Frontend dependency security (Epic 77, measured 2026-11-09, `cbf6fab`)**: npm overrides pin
+  three high-severity transitive dev deps to patched versions (`body-parser ^2.4.0`,
+  `systeminformation ^5.33.19`, `undici ^7.30.2`). `npm audit` before/after: moderate 16→15,
+  high 7→4, low 1 unchanged, critical 2 unchanged (vitest/vite/tinypool and shadcn/zod/registry —
+  all require breaking major upgrades, deliberately not forced). Verified vitest 1162 passed +
+  tsc clean. 74.1 files untouched.
 - **Doc/service integrity**: `README.md`/`docs/DEPLOYMENT.md` relative markdown doc links resolve;
   `docs/architecture.md` key sections gate; `docs/QUALITY_GATES.md` factual gate index + structure gate;
   every `ai-service/app/api` `APIRouter` declares `tags=`; ai-service `main.py` forbids mock LLM/voice
