@@ -29,12 +29,9 @@ def test_internal_api_surface_is_permitted_but_guarded_by_token_filter() -> None
         "SecurityConfig must register InternalApiFilter before JwtAuthFilter"
     )
     assert "/api/internal" in flt, "InternalApiFilter must scope to /api/internal paths"
-    assert "X-Internal-Token" in flt or "internal" in flt.lower(), (
-        "InternalApiFilter must enforce the internal token"
-    )
-    assert "constant" in flt.lower() or "MessageDigest.isEqual" in flt or "timing" in flt.lower(), (
-        "InternalApiFilter should compare tokens in constant time (timing-safe)"
-    )
+    assert "X-Internal-Token" in flt, "InternalApiFilter must read X-Internal-Token"
+    assert "MessageDigest.isEqual" in flt, "InternalApiFilter must compare tokens in constant time"
+    assert "SC_UNAUTHORIZED" in flt or "401" in flt, "InternalApiFilter must reject invalid tokens with 401"
 
 
 def test_public_routes_documented_by_security_model_remain_permitted() -> None:
