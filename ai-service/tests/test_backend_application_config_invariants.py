@@ -25,3 +25,9 @@ def test_backend_application_config_safety_invariants() -> None:
     # Docs paths the security config permits.
     assert "api-docs.path: /api-docs" in text
     assert "swagger-ui.path: /api-docs/ui" in text
+
+
+def test_backend_application_config_defines_rate_limits() -> None:
+    text = APP_YML.read_text(encoding="utf-8")
+    for key in ("auth-per-minute", "ai-per-minute", "mail-per-minute", "mfa-per-minute", "inbound-per-minute"):
+        assert key in text, f"application.yml must define ratelimit {key}"
