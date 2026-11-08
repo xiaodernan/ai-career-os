@@ -128,6 +128,9 @@ def test_every_task_the_app_makes_records_the_caller_it_belongs_to():
     """
     sites = []
     for source in sorted(APP.rglob("*.py")):
+        rel = source.relative_to(APP).as_posix()
+        if any(part.startswith(".") or part == "__pycache__" for part in rel.split("/")):
+            continue
         text = source.read_text(encoding="utf-8")
         for match in re.finditer(r"taskbus\.new_task\(", text):
             sites.append((source.name, text[:match.start()].count("\n") + 1,

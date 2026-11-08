@@ -127,6 +127,9 @@ def sql_statements() -> list[tuple[str, str]]:
     """
     out: list[tuple[str, str]] = []
     for path in sorted(SOURCES.rglob("*.py")):
+        rel_to_sources = path.relative_to(SOURCES).as_posix()
+        if any(part.startswith(".") or part == "__pycache__" for part in rel_to_sources.split("/")):
+            continue
         text = path.read_text(encoding="utf-8")
         rel = str(path.relative_to(MAIN)).replace("\\", "/")
         for body in string_literals(text):
