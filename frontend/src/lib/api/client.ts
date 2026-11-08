@@ -60,6 +60,24 @@ function buildUrl(path: string, params?: RequestOptions["params"]): string {
   return url.toString();
 }
 
+/**
+ * One correlation id for one logical request.
+ *
+ * The backend `RequestIdFilter` accepts an inbound `X-Request-Id` (8-64 chars of
+ * letters/digits/dot/dash/underscore) and echoes it on the answer and into MDC; the
+ * ai-service middleware does the same with the same alphabet. Minting one id per
+ * logical request in the browser is what makes a "the export failed at 14:03"
+ * report greppable across all three services' logs. `crypto.randomUUID()` is
+ * universally available in the browsers this app targets and in Node (vitest);
+ * the fallback just keeps exotic runtimes working without weakening the shape.
+ */
+export function newRequestId(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `req-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
 /* ------------------------------------------------------------------ */
 /* Automatic refresh-on-401 with a shared in-flight promise queue.     */
 /* ------------------------------------------------------------------ */
@@ -149,6 +167,10 @@ export function backoffFor(attempt: number): number {
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { body, params, auth = true, _retry = false, headers, ...rest } = options;
 
+  // One id for the whole logical request (its retries share it), so the server's
+  // logs for every retry of this call carry the same correlation id.
+  const requestId = newRequestId();
+
   const finalHeaders = new Headers(headers);
   finalHeaders.set("Accept", "application/json");
   if (body !== undefined && !(body instanceof FormData)) {
@@ -156,6 +178,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   }
   const token = tokenStore.getAccess();
   if (auth && token) finalHeaders.set("Authorization", `Bearer ${token}`);
+  finalHeaders.set("X-Request-Id", requestId);
 
   const attemptRequest = async (attempt: number): Promise<T> => {
     const finalHeaders = new Headers(headers);
@@ -165,6 +188,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     }
     const token = tokenStore.getAccess();
     if (auth && token) finalHeaders.set("Authorization", `Bearer ${token}`);
+    finalHeaders.set("X-Request-Id", requestId);
 
     let res: Response;
     try {
@@ -264,6 +288,7 @@ export async function download(
   const { _retry = false } = options;
   const finalHeaders = new Headers();
   finalHeaders.set("Accept", "application/octet-stream");
+  finalHeaders.set("X-Request-Id", newRequestId());
   const token = tokenStore.getAccess();
   if (token) finalHeaders.set("Authorization", `Bearer ${token}`);
 
@@ -320,6 +345,7 @@ export async function postSSE<T>(
 
   const finalHeaders = new Headers(headers);
   finalHeaders.set("Accept", "text/event-stream");
+  finalHeaders.set("X-Request-Id", newRequestId());
   if (body !== undefined) finalHeaders.set("Content-Type", "application/json");
   const token = tokenStore.getAccess();
   if (auth && token) finalHeaders.set("Authorization", `Bearer ${token}`);
@@ -661,6 +687,7 @@ export const api = {
       if (token) {
         xhr.setRequestHeader("Authorization", `Bearer ${token}`);
       }
+      xhr.setRequestHeader("X-Request-Id", newRequestId());
 
       xhr.upload.addEventListener("progress", (event) => {
         if (event.lengthComputable && onProgress) {

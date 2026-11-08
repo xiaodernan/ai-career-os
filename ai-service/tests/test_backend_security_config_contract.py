@@ -53,6 +53,10 @@ def test_public_routes_documented_by_security_model_remain_permitted() -> None:
     assert not missing, f"SecurityConfig missing required public-route patterns: {missing}"
     # Swagger/OpenAPI docs must remain publicly reachable.
     assert "/api-docs" in cfg and "/swagger-ui" in cfg, "SecurityConfig must permit API docs/Swagger UI"
+    # Frontend mints X-Request-Id per logical request; CORS must allow it, or browser preflight blocks the trace id.
+    assert "setAllowedHeaders(" in cfg and '"X-Request-Id"' in cfg, (
+        "SecurityConfig CORS must allow X-Request-Id (browser → backend trace propagation)"
+    )
     # Default-deny: anything not explicitly permitted must require authentication.
     assert "anyRequest().authenticated()" in cfg, (
         "SecurityConfig must require authentication by default (anyRequest().authenticated())"
