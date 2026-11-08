@@ -55,6 +55,9 @@ FORWARD = {
     "/internal/features/pipeline-funnel": ("PipelineFunnelReq", set()),
     "/internal/features/response-rate": ("ResponseRateReq", set()),
     "/internal/features/insight-digest": ("InsightDigestReq", set()),
+    # Epic 81 -- one timeline over the whole loop. The events arrive from the
+    # caller, empty allowed (an account that has not started answers empty).
+    "/internal/features/career-timeline": ("CareerTimelineReq", set()),
     "/internal/features/dedupe-jobs": ("DedupeJobsReq", {"postings"}),
     "/internal/features/freshness-sweep": ("FreshnessSweepReq", {"postings"}),
     # `plan_ingest` takes either an already-parsed list or the raw feed text, so

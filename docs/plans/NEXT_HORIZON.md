@@ -94,7 +94,14 @@ eight). Full suites green incl. `ContactRelationIT` 2/2 against the live stack.
 
 ---
 
-## Epic 81 — one timeline over the whole loop
+## Epic 81 — one timeline over the whole loop — **STARTED 2026-11-09, engine-only**
+
+**Shipped 2026-11-09.** `POST /internal/features/career-timeline` exists and pins the
+contract in `test_forward_features_contract.py`; the engine is pure and deterministic
+(`app/features/career_timeline.py`, sorted by `(at, kind, refId)`); api-doc §3.2 records it
+as forward-not-yet-called. Backend bridge + frontend page not landed yet — the epic stays
+open until then.
+
 
 **Measured.** The product stores resume versions, JD analyses, matches, tailored
 materials, interview sessions, applications, notes, contacts, offers and digests,

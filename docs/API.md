@@ -798,11 +798,13 @@ Seven routes that no backend caller builds do sit in section 3, and each says so
 Purpose cell; the gate that partitions the unreached surface charges those seven with
 carrying the marker and every other row with not carrying it.
 
-Every engine now has a backend caller, so this table is empty — a new engine that ships
-ahead of its bridge joins it again, and the split is re-measured.
+Every engine now has a backend caller before Epic 81 landed ahead of its bridge, so this
+table is empty no more — `/internal/features/career-timeline` is registered and waiting for
+the backend's `GET /api/v1/timeline` bridge to exist and call it.
 
 | Method | Path | Purpose |
 |---|---|---|
+| POST | `/internal/features/career-timeline` | Epic 81 -- one timeline over the whole loop: merges the per-user event rows the bridge reads (applications, notes, contacts, tailored materials, interviews, matches, digests) into a single `{at, kind, title, refId, summary}` list, deterministic sort, no LLM. The bridge that calls it does not exist yet, so the route waits here. |
 
 ## 4. Worked examples
 

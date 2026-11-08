@@ -178,6 +178,13 @@
   backend non-IT **1210 passed / 0 failures BUILD SUCCESS**; compose/Dockerfile gates 10 passed;
   **74.1 files untouched**. Live stack serves older image without buildSha; redeploy left to the
   owning session.
+- **Epic 81 — one timeline over the whole loop — STARTED 2026-11-09, ai-service engine landed**:
+  `app/features/career_timeline.py` merges the caller's event rows into one `{at, kind, title,
+  refId, summary}` list, deterministic sort by `(at, kind, refId)`, zero model call; `POST
+  /internal/features/career-timeline` wired with `require_internal`, its forward-features pin and
+  the doc row added. Still to land (honestly open): the backend `GET /api/v1/timeline` bridge that
+  reads applications/notes/contacts/etc. and passes their rows through, and the `/timeline`
+  frontend page. No claim of full Epic 81 until those ship.
 - **Doc/service integrity**: `README.md`/`docs/DEPLOYMENT.md` relative markdown doc links resolve;
   `docs/architecture.md` key sections gate; `docs/QUALITY_GATES.md` factual gate index + structure gate;
   every `ai-service/app/api` `APIRouter` declares `tags=`; ai-service `main.py` forbids mock LLM/voice

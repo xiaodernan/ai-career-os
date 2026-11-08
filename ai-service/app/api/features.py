@@ -32,6 +32,7 @@ from app.features import progression as progression_mod
 from app.features import prioritize as prioritize_mod
 from app.features import interview_prep as interview_prep_mod
 from app.features import analytics as analytics_mod
+from app.features import career_timeline as career_timeline_mod
 from app.features import ingestion as ingestion_mod
 from app.features import monitoring as monitoring_mod
 from app.features import import_plan as import_plan_mod
@@ -911,6 +912,27 @@ async def render_resume_ep(req: ResumeRenderReq, ctx: Ctx = Depends(require_inte
         req.resume, req.locale, title=req.title, subtitle=req.subtitle, text=req.text)
     await observability.finish_run(run_id, "completed")
     return {"format": "html", "html": html_text}
+
+
+class CareerTimelineReq(BaseModel):
+    """The timeline's input (Epic 81).
+
+    `events` is whatever the caller has read for this account. Empty is a real
+    state, not a malformed one: a workspace that hasn't started answers with an
+    honest empty timeline, which the `/timeline` page renders as the same
+    nothing every empty state renders.
+    """
+
+    events: list[dict] = Field(default_factory=list)
+
+
+@router.post("/career-timeline")
+async def career_timeline_ep(req: CareerTimelineReq, ctx: Ctx = Depends(require_internal)):
+    """Epic 81 -- one timeline over the whole loop, no LLM."""
+    run_id = await _run(ctx, "job_research", "career_timeline")
+    result = career_timeline_mod.build_timeline([a for a in (req.events or [])])
+    await observability.finish_run(run_id, "completed")
+    return result
 
 
 class ClassifyReplyReq(BaseModel):
