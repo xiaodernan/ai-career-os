@@ -19,5 +19,7 @@ def test_verify_gates_script_exists_and_is_representative() -> None:
         text = script.read_text(encoding="utf-8", errors="replace")
         assert "pytest" in text
         assert "test_every_internal_route_requires_internal_auth.py" in text
+        assert "test_json_log_formatter_carries_request_id.py" in text
+        assert "test_rate_limit_filter_is_wired.py" in text
         assert "not a substitute" in text.lower() or "full suites" in text.lower()
         assert "*IT" in text or "E2E" in text or "Docker" in text
