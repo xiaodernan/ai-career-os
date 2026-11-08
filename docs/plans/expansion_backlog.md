@@ -194,6 +194,12 @@
   Golden journey (`scripts/journey_api.py`) propagates one `X-Request-Id` across all
   stations and prints it in the intro line; gate `test_journey_api_propagates_request_id`.
   **74.1 files untouched**.
+- **Full-suite reconciliation (2026-11-09, `b84c7b0`)**: after the X-Request-Id + worktree-
+  consolidation changes, three cross-repo gates broke and were fixed (SECURITY.md documents the
+  CORS allow-list including `X-Request-Id`; `test_response_shape_contract.py` client.ts line
+  322→347; `backups/` dir excluded from limiter census). Full ai-service suite re-measured:
+  **2155 passed, 2 skipped, 1 failed** — remaining failure is the known 74.1-in-flight
+  `test_the_java_probe_reads_every_record_the_backend_declares` (DTO mismatch owned by 74.1).
 - **Worktree consolidation (2026-11-08, audited)**: committed detached worktree HEADs are
   ancestors of `main` (no merge required). Stale dirty `u256/wt` (372 behind, 667 files,
   large churn) not force-merged over 74.1 in-flight work.
