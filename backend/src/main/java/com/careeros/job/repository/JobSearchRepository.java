@@ -54,6 +54,34 @@ public class JobSearchRepository {
         }
     }
 
+    /**
+     * What the Saved tab narrows by: the filter panel's own predicates and nothing else (74.1).
+     *
+     * <p>A separate name rather than {@link Filters} because this board has no ranking, no sort and
+     * no window yet, and a caller should not have to invent values for components the statement
+     * never reads. {@link #asFilters()} is the one place those components are said to be unread.
+     */
+    public record SavedBoard(UUID userId, String q, List<String> skills, String location,
+                             String remote, String company, Integer minSalary, Integer maxSalary) {
+
+        /**
+         * The predicate half of the discover board's own parameter record. The four trailing
+         * components -- status, sort, window and vector -- are what {@code applyWhere} and
+         * {@code bindFilterValues} provably do not read: both helpers test only the predicate names,
+         * and {@code hybrid} is false without a vector, so no ranking fragment is ever built from
+         * this. A blank status and a blank sort are therefore "no constraint", not a default the
+         * reader could have asked for differently.
+         */
+        Filters asFilters() {
+            return new Filters(userId, q, skills, location, remote, company, minSalary, maxSalary,
+                    "", "", 0, 0, null);
+        }
+    }
+
+    /** One bookmark as the saved board reads it: the list row, plus the two names the wrapper owns. */
+    public record SavedRow(JobListItem job, String note, OffsetDateTime savedAt) {
+    }
+
     /** Matches {@code _RRF_K} in ai-service's tools.py: one fusion constant, two callers. */
     static final int RRF_K = 60;
 
@@ -169,6 +197,45 @@ public class JobSearchRepository {
     }
 
     /**
+     * The Saved tab's board (74.1): the postings the reader kept, narrowed by the panel's own
+     * predicates.
+     *
+     * <p>Only the FROM is new. {@code saved_jobs} decides which rows are in the set and everything
+     * after it is what the discover board appends -- {@link #applyWhere}, {@link #bindFilterValues}
+     * and the same join to {@code companies} -- which is the entire point. A word meant
+     * "title, company or description" on one tab cannot mean "title or company" on the other while
+     * both boards are one statement's answer, because there is no second copy of the decision left
+     * to drift. {@code SavedJobBoardIT} measures that agreement instead of asserting it.
+     *
+     * <p>The match-score lateral join is absent on purpose: the saved board answers what the reader
+     * kept and when, and a score is the discover board's ranking. Leaving it out also keeps
+     * {@code :userId} to one question in this statement -- the bookmark owner -- rather than two.
+     *
+     * <p>The order belongs to the reader, not the posting: newest bookmark first, ending in
+     * {@code job_id} because {@code created_at} is a column default, so two rows written by one
+     * action share it to the microsecond and would otherwise be ordered by whatever the visit
+     * produced. {@code SavedJobRepository.findByUserIdOrderByCreatedAtDesc} ordered by that column
+     * alone, which is the shape this replaces.
+     */
+    public List<SavedRow> saved(SavedBoard b) {
+        StringBuilder sql = new StringBuilder(SAVED_COLUMNS);
+        Filters f = b.asFilters();
+        applyWhere(f, sql);
+        sql.append(" ORDER BY sj.created_at DESC, sj.job_id ASC");
+        Query query = em.createNativeQuery(sql.toString());
+        // :userId has a referent here (the bookmark owner), unlike matchStats, and no window is
+        // bound because this statement does not page yet -- 74.2 gives it one.
+        query.setParameter("userId", b.userId());
+        bindFilterValues(f, query);
+        return ((List<Object[]>) query.getResultList()).stream().map(JobSearchRepository::toSavedRow)
+                .toList();
+    }
+
+    private static SavedRow toSavedRow(Object[] row) {
+        return new SavedRow(toItem(row), (String) row[18], Times.offset(row[19]));
+    }
+
+    /**
      * The hybrid statement only makes sense for a relevance search that was given a vector: any
      * other sort is an explicit ordering the caller asked for, and a missing vector is the
      * keyword-only world this class answered in before vectors existed.
@@ -200,6 +267,26 @@ public class JobSearchRepository {
                      WHERE jm.job_id = j.id AND jm.user_id = :userId
                      ORDER BY jm.created_at DESC LIMIT 1) m ON TRUE
              WHERE 1=1
+            """;
+
+    /**
+     * The saved board's rows: the discover board's seventeen hydration columns, in the order
+     * {@link #toItem} reads them, with the two columns the wrapper owns after them.
+     *
+     * <p>Positions 16 and 17 are the match score this board does not rank by, so they are written as
+     * the NULLs the discover statement's {@code COALESCE(m.overall, NULL)} would answer for a posting
+     * nobody has scored. {@code jobs.company_id} is {@code NOT NULL REFERENCES companies}, so the
+     * inner join cannot drop a bookmark the way it drops nothing on the discover board.
+     */
+    private static final String SAVED_COLUMNS = """
+            SELECT j.id, j.title, j.company_id, c.name, j.location, j.remote_type,
+                   j.employment_type, j.salary_min, j.salary_max, j.salary_currency,
+                   j.experience_years, j.status, j.source, j.external_url, j.posted_at,
+                   j.skills, NULL, NULL, sj.note, sj.created_at
+              FROM saved_jobs sj
+              JOIN jobs j ON j.id = sj.job_id
+              JOIN companies c ON c.id = j.company_id
+             WHERE sj.user_id = :userId
             """;
 
     private static final String COUNT_WHERE = """

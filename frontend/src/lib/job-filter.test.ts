@@ -1,11 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import {
-  filterAndPaginate,
   hasActiveJobFilters,
-  matchesJobFilters,
   profileSkillSuggestions,
   salaryFromInput,
+  windowSavedRows,
 } from "@/lib/job-filter";
 import { serializeJobFilters } from "@/lib/api/normalize";
 import type { Job } from "@/lib/api/types";
@@ -50,77 +49,45 @@ const SET = [
 
 const ids = (jobs: Job[]) => jobs.map((j) => j.id);
 
-describe("matchesJobFilters", () => {
-  it("keeps every row when nothing is constrained", () => {
-    expect(matchesJobFilters(SET[0], {})).toBe(true);
-    expect(ids(SET.filter((j) => matchesJobFilters(j, { q: "", skills: " " })))).toEqual(ids(SET));
+describe("the module that used to decide which rows match", () => {
+  const source = readFileSync(new URL("./job-filter.ts", import.meta.url), "utf8");
+  const page = readFileSync(new URL("../app/(app)/jobs/page.tsx", import.meta.url), "utf8");
+
+  it("exports no predicate over a row", () => {
+    // 74.1 moved the answer to SQL, and the mirror went with it. A second export here would be a
+    // second copy of the board's WHERE -- which is what this file documented as "narrower than
+    // Discover, never wider", and what a reader experienced as the same chip losing roles.
+    expect(source).not.toMatch(/function matchesJobFilters/);
+    expect(source).not.toMatch(/function contains\(/);
+    expect(source).not.toMatch(/function hasAnySkill\(/);
+    expect(page).not.toContain("matchesJobFilters");
   });
 
-  it("reads keyword against title and company, case-insensitively", () => {
-    expect(ids(SET.filter((j) => matchesJobFilters(j, { q: "RUST systems" })))).toEqual(["rust-remote"]);
-    expect(ids(SET.filter((j) => matchesJobFilters(j, { q: "acme" })))).toEqual(["java-hybrid", "no-salary"]);
+  it("touches a job row only to count it and slice it", () => {
+    // The clause list, column by column: a row inspected for title, company, location, remote
+    // type or salary is the mirror coming back, and the server's answer is the only copy of
+    // that question now. `s.skills` is the resume profile's grouped buckets, which the chip
+    // builder reads; it is not a job row.
+    const windower = source.match(/export function windowSavedRows[\s\S]*?\n}/)?.[0] ?? "";
+    expect(windower).toContain("items.length");
+    expect(windower).toContain("items.slice(");
+    // `hasActiveJobFilters` names the same words as wire keys -- `location`, `company` -- so the
+    // guard is a member access, not a substring: this is about reading a row, not about a name.
+    const rowReads = (text: string, column: string) => new RegExp(`\\.${column}\\b`).test(text);
+    for (const column of ["title", "skills", "location", "salaryMin", "salaryMax", "remoteType", "company"]) {
+      expect(rowReads(windower, column), column).toBe(false);
+    }
+    const outsideWindower = source.replace(windower, "");
+    for (const column of ["title", "location", "salaryMin", "salaryMax", "remoteType", "companyName"]) {
+      expect(rowReads(outsideWindower, column), column).toBe(false);
+    }
   });
 
-  it("cannot match description text the saved payload never carries", () => {
-    // The server's keyword branch also ORs the tsvector over the full posting; the
-    // list rows have no description, so a body-only hit is a documented narrower.
-    const bodyOnly = job({ id: "body", title: "Engineer", description: "postgres and pgvector" });
-    expect(matchesJobFilters(bodyOnly, { q: "postgres" })).toBe(false);
-  });
-
-  it("matches a nested company object and a flat company column alike", () => {
-    expect(ids(SET.filter((j) => matchesJobFilters(j, { company: "cloud" })))).toEqual([
-      "rust-remote",
-      "java-hybrid",
-      "no-salary",
-    ]);
-    expect(ids(SET.filter((j) => matchesJobFilters(j, { company: "ferrous" })))).toEqual(["rust-remote"]);
-  });
-
-  it("treats location as containment and drops an unstated location", () => {
-    expect(ids(SET.filter((j) => matchesJobFilters(j, { location: "han" })))).toEqual(["java-hybrid"]);
-    expect(ids(SET.filter((j) => matchesJobFilters(j, { location: "shang" })))).toEqual(["java-hybrid"]);
-    expect(matchesJobFilters(SET[2], { location: "anywhere" })).toBe(false);
-  });
-
-  it("sends the remote switch to the remote_type domain value, not a boolean", () => {
-    expect(ids(SET.filter((j) => matchesJobFilters(j, { remote: true })))).toEqual(["rust-remote"]);
-    expect(ids(SET.filter((j) => matchesJobFilters(j, { remote: undefined })))).toEqual(ids(SET));
-  });
-
-  it("drops a job whose remote_type is null, the way `= :remote` drops a NULL", () => {
-    expect(matchesJobFilters(job({ id: "unknown-remote" }), { remote: true })).toBe(false);
-  });
-
-  it("overlaps salary against the opposite bound, and NULL never satisfies a bound", () => {
-    // A band only partly inside the range still counts: min tests salaryMax, max tests
-    // salaryMin. `no-salary` states neither, and SQL's `NULL <= x` is not true either.
-    expect(ids(SET.filter((j) => matchesJobFilters(j, { min_salary: 100_000 })))).toEqual(["rust-remote"]);
-    expect(ids(SET.filter((j) => matchesJobFilters(j, { max_salary: 80_000 })))).toEqual(["java-hybrid"]);
-    expect(ids(SET.filter((j) => matchesJobFilters(j, { min_salary: 60_000, max_salary: 90_000 })))).toEqual([
-      "java-hybrid",
-    ]);
-  });
-
-  it("drops a job with no salary stated instead of treating it as free", () => {
-    expect(matchesJobFilters(job({ id: "unpaid" }), { min_salary: 1 })).toBe(false);
-    expect(matchesJobFilters(job({ id: "unpaid" }), { max_salary: 999_999 })).toBe(false);
-  });
-
-  it("keeps a row that carries ANY selected skill, matching the SQL's EXISTS", () => {
-    expect(ids(SET.filter((j) => matchesJobFilters(j, { skills: "Rust,Java" })))).toEqual([
-      "rust-remote",
-      "java-hybrid",
-    ]);
-    expect(ids(SET.filter((j) => matchesJobFilters(j, { skills: "Elixir" })))).toEqual([]);
-  });
-
-  it("compares skills ignoring case so a chip cannot silently match nothing", () => {
-    expect(ids(SET.filter((j) => matchesJobFilters(j, { skills: "kubernetes" })))).toEqual(["rust-remote"]);
-  });
-
-  it("ignores a whitespace-only skill list rather than filtering everything out", () => {
-    expect(ids(SET.filter((j) => matchesJobFilters(j, { skills: " ,  , " })))).toEqual(ids(SET));
+  it("keeps the two decisions a server read cannot make for the browser", () => {
+    // What a `type="number"` box holds, and whether the panel is showing a filtered view: both
+    // are UI facts, and neither belongs in SQL.
+    expect(source).toMatch(/export function salaryFromInput/);
+    expect(source).toMatch(/export function hasActiveJobFilters/);
   });
 });
 
@@ -145,18 +112,22 @@ describe("hasActiveJobFilters", () => {
   });
 });
 
-describe("filterAndPaginate", () => {
-  it("reports the filtered count, which is what the panel says it is showing", () => {
-    const page = filterAndPaginate(SET, { company: "Acme" });
-    expect(page.total).toBe(2);
-    expect(ids(page.items)).toEqual(["java-hybrid", "no-salary"]);
+describe("windowSavedRows", () => {
+  it("changes nothing about which rows are in the set", () => {
+    // The whole point of 74.1: `company: "Acme"` used to be answered here, against the rows in
+    // hand, and dropped `rust-remote` for a reason the Discover tab did not have. The server
+    // answers it now, so what reaches this function is already the shelf the reader asked for
+    // and its job is only to window. `total` is the shelf's length, not a count of survivors.
+    const page = windowSavedRows(SET, { company: "Acme" });
+    expect(ids(page.items)).toEqual(ids(SET));
+    expect(page.total).toBe(SET.length);
   });
 
-  it("pages the filtered set in the order the server sent it", () => {
-    const many = Array.from({ length: 30 }, (_, i) => job({ id: `j-${i}`, title: `Role ${i}` }));
-    const first = filterAndPaginate(many, { page: 0, size: 12 });
-    const second = filterAndPaginate(many, { page: 1, size: 12 });
-    const last = filterAndPaginate(many, { page: 2, size: 12 });
+  it("pages the shelf in the order the server sent it", () => {
+    const many = Array.from({ length: 30 }, (_, i) => job({ id: `j-${i}` }));
+    const first = windowSavedRows(many, { page: 0, size: 12 });
+    const second = windowSavedRows(many, { page: 1, size: 12 });
+    const last = windowSavedRows(many, { page: 2, size: 12 });
     expect(first.items).toHaveLength(12);
     expect(ids(second.items)[0]).toBe("j-12");
     expect(last.items).toHaveLength(6);
@@ -164,23 +135,29 @@ describe("filterAndPaginate", () => {
   });
 
   it("clamps a stale page instead of rendering an empty list over live rows", () => {
-    // Filters and page index both live in the URL, so `?q=acme&page=4` is a shareable
-    // state pointing past a two-row result.
-    const page = filterAndPaginate(SET, { company: "Acme", page: 4, size: 12 });
+    // Filters and page index both live in the URL, so `?page=4` is a shareable state pointing
+    // past a three-bookmark shelf.
+    const page = windowSavedRows(SET, { page: 4, size: 12 });
     expect(page.page).toBe(0);
-    expect(ids(page.items)).toEqual(["java-hybrid", "no-salary"]);
+    expect(ids(page.items)).toEqual(ids(SET));
   });
 
-  it("keeps a filtered-empty result at zero rather than falling back to the full set", () => {
-    const page = filterAndPaginate(SET, { skills: "Elixir", page: 3, size: 12 });
+  it("windows an empty shelf as page zero of nothing", () => {
+    // A filter the shelf can answer with nothing must not fall back to a page of everything:
+    // this is the state that used to render "no bookmarks" over a full set of rows.
+    const page = windowSavedRows([], { page: 3, size: 12 });
     expect(page.items).toEqual([]);
     expect(page.total).toBe(0);
+    expect(page.page).toBe(0);
   });
 
-  it("returns the same array untouched when nothing is constrained", () => {
-    const page = filterAndPaginate(SET, {});
+  it("puts a shelf with no window in the URL on one page", () => {
+    // `size` is absent until the panel pages for real (74.2); without a divisor the shelf is
+    // one page, and the pager's own arithmetic divides by zero.
+    const page = windowSavedRows(SET, {});
+    expect(page.size).toBe(3);
+    expect(page.page).toBe(0);
     expect(ids(page.items)).toEqual(ids(SET));
-    expect(page.total).toBe(3);
   });
 });
 
@@ -189,10 +166,27 @@ describe("the saved tab's list screen", () => {
   // the panel's controls real on this tab: without it the filters move the URL while
   // the rendered rows never change.
   const source = readFileSync(new URL("../app/(app)/jobs/page.tsx", import.meta.url), "utf8");
+  const resources = readFileSync(new URL("./hooks/resources.ts", import.meta.url), "utf8");
 
-  it("filters and pages the bookmarks it already has", () => {
+  it("sends the panel to the shelf read", () => {
+    // The narrow half of 74.1's wiring: the request carries the controls, so the rows that come
+    // back are the answer, not an input to be filtered again here.
+    // Written as a pattern rather than a quoted call: a source walk that counts the app's real
+    // call sites (`ai-service`'s window census) must not mistake this line for one.
+    expect(source).toMatch(/const saved = useSavedJobs\(\s*tab === "saved" \? filters : undefined\s*\);/);
+    expect(resources).toMatch(/export function useSavedJobs\(params\?: JobFilters\)/);
+    expect(resources).toContain('queryKey: ["saved-jobs", params]');
+    expect(resources).toContain(
+      "...serializeJobFilters({ ...params, page: undefined, size: undefined, sort: undefined })"
+    );
+  });
+
+  it("windows the shelf it was answered, and filters nothing", () => {
     expect(source).toContain('from "@/lib/job-filter"');
-    expect(source).toContain("filterAndPaginate(saved.data.items, filters)");
+    expect(source).toContain("windowSavedRows(saved.data.items, filters)");
+    // The page must not reach for a predicate of its own -- that is the mirror, and it is
+    // what made the two tabs disagree about the same chip.
+    expect(source).not.toMatch(/filterAndPaginate|matchesJobFilters/);
   });
 
   it("hands the derived page to the boundary, not the raw query", () => {
@@ -202,7 +196,8 @@ describe("the saved tab's list screen", () => {
     // are still in flight — that would render someone else's list under the bookmark
     // heading. Only `data` is swapped out.
     expect(source).toMatch(/const listView = tab === "saved" \? \(\{ \.\.\.saved, data: savedPage \}/);
-    // The count the panel prints under "matching roles" is the filtered one.
+    // The count the panel prints under "matching roles" is the answer's own total, which the
+    // server narrowed. It is no longer a count of survivors in the browser.
     expect(source).toContain("resultCount={listView.data ? total : undefined}");
   });
 
@@ -210,12 +205,15 @@ describe("the saved tab's list screen", () => {
     expect(source).toContain("page={listView.data?.page ?? filters.page}");
   });
 
-  it("says which kind of empty the Saved tab is", () => {
+  it("says which kind of empty the Saved tab is from the panel, not the payload", () => {
     // The two empty states are named in the translation table now, so the
     // page reads them through keys rather than carrying the copy itself.
     expect(source).toContain('t("jobs.noSavedMatch")');
-    expect(source).toContain("hasActiveJobFilters(filters)");
-    // A bookmark set that is genuinely empty must still get its own state.
+    // A filtered shelf says nothing about how many bookmarks sit behind the filter, so the
+    // only honest "did a control cause this" is whether a control is set.
+    expect(source).toContain("const filteredToEmpty = hasActiveJobFilters(filters);");
+    expect(source).toContain("tab === \"saved\" && filteredToEmpty");
+    // A shelf the server answered with nothing, filter set or not, still gets its own state.
     expect(source).toContain('t("jobs.nothingSaved")');
   });
 });
@@ -260,12 +258,16 @@ describe("profileSkillSuggestions", () => {
     expect(profileSkillSuggestions({ structured: { skills: [skill("Elixir")] } })).toEqual([]);
   });
 
-  it("suggests only chips the rows can actually answer", () => {
-    // A chip is worth rendering only if picking it filters; the panel and the server
-    // both compare skills case-insensitively, so folded spelling must not break that.
+  it("suggests only chips the answer can actually read", () => {
+    // A chip is worth rendering only if picking it filters. The filtering is SQL now, so what
+    // this side owes is that the chip's own spelling survives the request: the server's skill
+    // clause compares skills case-insensitively -- SavedJobBoardIT holds the shelf and the board
+    // to the same word -- and a chip folded or split on the way there is a filter that silently
+    // matches nothing.
     const suggestion = profileSkillSuggestions({ skills: [skill("Kubernetes", "cloud")] })[0];
-    expect(matchesJobFilters(job({ skills: ["kubernetes"] }), { skills: suggestion })).toBe(true);
-    expect(matchesJobFilters(job({ skills: ["Java"] }), { skills: suggestion })).toBe(false);
+    expect(suggestion).toBe("Kubernetes");
+    expect(serializeJobFilters({ skills: suggestion })).toEqual({ skills: "Kubernetes" });
+    expect(serializeJobFilters({ skills: "Kubernetes,Go" })).toEqual({ skills: "Kubernetes,Go" });
   });
 });
 
@@ -333,21 +335,41 @@ describe("every job filter the UI can send is a parameter the endpoint binds", (
   const probe = Object.fromEntries(declared.map((k) => [k, k === "remote" ? true : "x"]));
   const emitted = Object.keys(serializeJobFilters(probe));
 
-  // only the parameters *this* endpoint declares: another handler in the same file binding
+  // only the parameters *these* endpoints declare: another handler in the same file binding
   // `company` must not stand in for the list, or the gate passes while the filter goes unanswered
-  const listBlock = controller.match(/PageDTO<JobListItem> list\(([\s\S]*?)\) \{/)?.[1] ?? "";
-  const bound = [...listBlock.matchAll(/@RequestParam\b(?:\(([^)]*)\))?\s+(?:[\w.]+(?:<[^>]*>)?)\s+(\w+)/g)]
-    .map((m) => m[1]?.match(/name\s*=\s*"([^"]+)"/)?.[1] ?? m[2]);
+  const paramsOf = (signature: string) =>
+    [...signature.matchAll(/@RequestParam\b(?:\(([^)]*)\))?\s+(?:[\w.]+(?:<[^>]*>)?)\s+(\w+)/g)]
+      .map((m) => m[1]?.match(/name\s*=\s*"([^"]+)"/)?.[1] ?? m[2]);
+  const boundList = paramsOf(controller.match(/PageDTO<JobListItem> list\(([\s\S]*?)\) \{/)?.[1] ?? "");
+  const boundSaved = paramsOf(controller.match(/List<SavedJobItem> saved\(([\s\S]*?)\) \{/)?.[1] ?? "");
+
+  // what the shelf is actually sent: `useSavedJobs` strips the window and the ordering this route
+  // does not read, so a stripped key is not a key that went unanswered -- it never left. The strip
+  // itself is pinned in "the saved tab's list screen", which is what makes this a projection and
+  // not a guess.
+  const shelfEmitted = emitted.filter((k) => k !== "page" && k !== "size" && k !== "sort");
 
   it("reads both sides, not an empty list of them", () => {
     expect(declared.length).toBeGreaterThanOrEqual(8);
-    expect(bound).toEqual(expect.arrayContaining(["q", "skills", "minSalary", "maxSalary", "sort"]));
+    expect(boundList).toEqual(expect.arrayContaining(["q", "skills", "minSalary", "maxSalary", "sort"]));
+    expect(boundSaved).toEqual(expect.arrayContaining(["q", "skills", "minSalary", "maxSalary", "remote"]));
     expect(emitted).toEqual(expect.arrayContaining(["q", "minSalary", "maxSalary", "remote"]));
     expect(emitted).not.toContain("min_salary");
   });
 
-  it("sends nothing the endpoint has not declared", () => {
-    expect(emitted.filter((key) => !bound.includes(key))).toEqual([]);
+  it("sends nothing the board has not declared", () => {
+    expect(emitted.filter((key) => !boundList.includes(key))).toEqual([]);
+  });
+
+  it("asks the shelf the panel's whole question", () => {
+    // 74.1 is the reason this half exists: while the route bound only `user`, every control in
+    // the panel moved the URL on the Saved tab and moved nothing on the screen, which is what
+    // forced a browser-side copy of the WHERE clause. A control dropped from this signature
+    // reopens that hole.
+    for (const key of ["q", "skills", "location", "company", "remote", "minSalary", "maxSalary"]) {
+      expect(boundSaved, key).toContain(key);
+    }
+    expect(shelfEmitted.filter((key) => !boundSaved.includes(key))).toEqual([]);
   });
 });
 
@@ -389,7 +411,19 @@ describe("the board's sort control", () => {
     expect(serializeJobFilters({ sort: "salary" })).toEqual({ sort: "salary" });
   });
 
-  it("is a Discover question — the Saved tab pages rows already in hand", () => {
+  it("is a Discover question while the shelf binds no ordering", () => {
+    // Two ways to be wrong here, and they are the same way: a control the route cannot answer,
+    // and an answer the control cannot reach. The Saved tab's shelf comes back in bookmark
+    // order and `JobController#saved` declares no `sort`, so the control is guarded -- and the
+    // guard is tied to the signature rather than to a comment, so 74.2's `sort` parameter is
+    // what has to move this case.
+    const controller = readFileSync(
+      new URL("../../../backend/src/main/java/com/careeros/job/web/JobController.java", import.meta.url),
+      "utf8",
+    );
+    const savedSignature = controller.match(/List<SavedJobItem> saved\(([\s\S]*?)\) \{/)?.[1] ?? "";
+    expect(savedSignature).not.toContain("String sort");
+
     const guard = page.indexOf('{tab === "discover" && (');
     expect(guard).toBeGreaterThan(-1);
     expect(page.indexOf("<Select")).toBeGreaterThan(guard);

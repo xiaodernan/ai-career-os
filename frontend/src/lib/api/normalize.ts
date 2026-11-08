@@ -1620,9 +1620,14 @@ export function normalizeInterviewReport(raw: unknown): InterviewReport | null {
  * Turn Jobs filter/URL state (snake_case) into the query string the backend
  * actually binds: salary is `@RequestParam(minSalary/maxSalary)` in camelCase.
  * Drops empty/undefined values. Any other key passes through unchanged.
+ *
+ * The answer is a query string, and every value the panel holds is a scalar, so the return type
+ * says so: `Record<string, unknown>` made the result unusable where it is spent — `api.get`'s
+ * parameter list wants `string | number | boolean | undefined`, and a caller spreading this had
+ * to argue with the compiler about a shape the serializer already guarantees.
  */
-export function serializeJobFilters(params: object): Record<string, unknown> {
-  const out: Record<string, unknown> = {};
+export function serializeJobFilters(params: object): Record<string, string | number | boolean | undefined> {
+  const out: Record<string, string | number | boolean | undefined> = {};
   for (const [k, v] of Object.entries(params)) {
     if (v === "" || v === undefined || v === false) continue;
     if (k === "min_salary") out.minSalary = v;

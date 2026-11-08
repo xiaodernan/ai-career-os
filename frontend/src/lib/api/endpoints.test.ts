@@ -1051,18 +1051,27 @@ describe("endpoints ↔ backend route parity", () => {
   const COVERED_ELSEWHERE: Record<string, { file: URL; markers: string[] }> = {
     "GET /jobs": {
       file: new URL("../job-filter.test.ts", import.meta.url),
-      markers: ["sends nothing the endpoint has not declared", "JobController.java"],
+      markers: ["sends nothing the board has not declared", "JobController.java"],
+    },
+    "GET /jobs/saved": {
+      // 74.1 gave the shelf the board's query, and with it the board's unreadable spread. The
+      // gate that pays for the exemption is the same one, reading the same controller, for the
+      // handler the Saved tab actually calls.
+      file: new URL("../job-filter.test.ts", import.meta.url),
+      markers: ["asks the shelf the panel's whole question", "JobController.java"],
     },
   };
 
   /**
    * Query objects whose key list this reader cannot produce, each with the reason it stays quiet.
-   * Shrink-only, like the body list above: `...clean` is the one entry today because the job
-   * filters are gated by name in `job-filter.test.ts`.
+   * Shrink-only, like the body list above: both entries are `serializeJobFilters`' own key list,
+   * and the two job routes are gated by name in `job-filter.test.ts`.
    */
   const UNREADABLE_QUERIES: Record<string, string> = {
     "GET /jobs":
       "`...clean` is serializeJobFilters' own key list, and job-filter.test.ts gates those names against this handler's parameters",
+    "GET /jobs/saved":
+      "the shelf now sends the same `...serializeJobFilters(...)` as the board, and job-filter.test.ts reads `JobController#saved`'s signature for it",
   };
 
   function unreadableQueries(): string[] {
@@ -1116,7 +1125,7 @@ describe("endpoints ↔ backend route parity", () => {
   });
 
   it("the queries this gate cannot read are written down, with a reason each", () => {
-    expect(unreadableQueries()).toEqual(["GET /jobs"].sort());
+    expect(unreadableQueries()).toEqual(["GET /jobs", "GET /jobs/saved"].sort());
     Object.entries(UNREADABLE_QUERIES).forEach(([site, why]) =>
       expect(why, `${site} needs a reason, not a blank`).not.toBe(""));
     for (const [site, gate] of Object.entries(COVERED_ELSEWHERE)) {
@@ -1153,8 +1162,8 @@ describe("endpoints ↔ backend route parity", () => {
     expect(new Set(handlers.map((h) => `${h.verb} ${h.pattern}`)).size).toBe(handlers.length);
     expect(handlers.flatMap((h) => h.unparsed)).toEqual([]);
     const bound = handlers.flatMap((h) => h.params);
-    expect(bound.length).toBe(59);
-    // 59 parameters in 25 distinct names, measured: the reader's whole answer rather than a spot
+    expect(bound.length).toBe(66);
+    // 66 parameters in 25 distinct names, measured: the reader's whole answer rather than a spot
     // check, so a signature shape it stops understanding shrinks this set instead of passing quiet
     // (#225 retired `limit` from `/activity/runs`, which now pages like every other list route;
     // 19.2 brought the name back for `GET /ingestion/runs` as a newest-N history, and 19.5 retired
@@ -1180,7 +1189,11 @@ describe("endpoints ↔ backend route parity", () => {
     // that route its reader and the number did not move: this census counts bindings, not
     // callers, so a box sending a parameter the handler already binds is invisible here by
     // design. What is not invisible is the pair below, which names the route the browser
-    // now asks with that parameter.
+    // now asks with that parameter. 74.1 is the first entry here that belongs to a route with
+    // no window: the bookmark shelf gained `q`, `skills`, `location`, `remote`, `company`,
+    // `minSalary` and `maxSalary` (59 -> 66). Every one of those names was already in this set —
+    // what moved is that the shelf answers them itself, instead of the browser keeping a second
+    // copy of the board's WHERE clause to answer them after the fact.
     // The latest names are in it now.)
     expect(new Set(bound.map((p) => p.name))).toEqual(
       new Set([
@@ -1189,10 +1202,13 @@ describe("endpoints ↔ backend route parity", () => {
         "resumeId", "size", "skills", "sort", "status", "tag", "title", "token", "unfiled",
       ])
     );
-    // seven of them spell the name Spring matches on inside the annotation, so the reader's attribute
+    // nine of them spell the name Spring matches on inside the annotation, so the reader's attribute
     // path is exercised by real source rather than by the variable name that happens to agree
+    // (74.1 put a second pair of salary names on that path, because the shelf binds the salary
+    // bounds the same way the board does -- a route that paraphrased them as `min_salary` would
+    // not appear here at all, it would just quietly stop filtering)
     expect(bound.filter((p) => p.spelledInAttribute).map((p) => p.name).sort()).toEqual([
-      "file", "file", "locale", "maxSalary", "minSalary", "resumeId", "token",
+      "file", "file", "locale", "maxSalary", "maxSalary", "minSalary", "minSalary", "resumeId", "token",
     ]);
     // The whole answer of the helper the required-parameter rule consumes, route-qualified. Without
     // this the rule would be green because it found nothing to ask for — and the multipart
@@ -1214,8 +1230,15 @@ describe("endpoints ↔ backend route parity", () => {
       "GET /interview/sessions q", "GET /resume-versions resumeId",
       // the citation deep link, named as a pair: the browser sends this key and this handler binds it
       "GET /knowledge/sources documentId"].forEach((p) => expect(pairs).toContain(p));
-    // the bookmark list is not paged by the server, so it must not arrive here carrying a page size
-    expect([...pairs].some((p) => p.startsWith("GET /jobs/saved"))).toBe(false);
+    // The bookmark list is not paged by the server, and its query is a spread this reader cannot
+    // follow, so the `pairs` rule above has nothing to say about it -- and an assertion that is
+    // green because the reader found nothing is the thing this file keeps warning about. What it
+    // can say is read off the call site itself: the only route with no window must send no
+    // window. 74.2 gives the route a page and turns this strip back into a pair above.
+    const shelf = callSites().filter((c) => c.path === "/jobs/saved").map((c) => c.query).join(" ");
+    expect(shelf).not.toBe("");
+    expect(shelf).toContain("page: undefined");
+    expect(shelf).not.toMatch(/\b(?:page|size):\s*(?!undefined)\S/);
   });
 
   it("no dead routes that the backend removed (regression guards)", () => {

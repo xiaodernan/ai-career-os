@@ -58,9 +58,22 @@ public class JobController {
                 status, sort, page, size);
     }
 
+    /**
+     * The Saved tab's board (74.1). The names are the filter panel's own and they bind the way the
+     * discover route binds them, because both tabs read the panel's state from one URL: a control
+     * that moves the address must move the answer with it, or the screen is showing a question the
+     * wire never got. No page or size yet -- 74.2 gives this route a window.
+     */
     @GetMapping("/saved")
-    public List<SavedJobItem> saved(@CurrentUser AuthUser user) {
-        return jobs.saved(user.id());
+    public List<SavedJobItem> saved(@CurrentUser AuthUser user,
+                                    @RequestParam(required = false) String q,
+                                    @RequestParam(required = false) List<String> skills,
+                                    @RequestParam(required = false) String location,
+                                    @RequestParam(required = false) String remote,
+                                    @RequestParam(required = false) String company,
+                                    @RequestParam(name = "minSalary", required = false) Integer minSalary,
+                                    @RequestParam(name = "maxSalary", required = false) Integer maxSalary) {
+        return jobs.saved(user.id(), q, skills, location, remote, company, minSalary, maxSalary);
     }
 
     @PostMapping

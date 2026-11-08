@@ -22,7 +22,7 @@ import { relativeTime } from "@/lib/format";
 import { useJobs, useResumes, useResume, useSavedJobs } from "@/lib/hooks/resources";
 import { useUrlState } from "@/lib/hooks/use-url-state";
 import { useLocale } from "@/lib/i18n/locale-context";
-import { filterAndPaginate, hasActiveJobFilters, profileSkillSuggestions } from "@/lib/job-filter";
+import { hasActiveJobFilters, profileSkillSuggestions, windowSavedRows } from "@/lib/job-filter";
 
 type FilterState = {
   q: string;
@@ -72,7 +72,9 @@ export default function JobsPage() {
   const [mobileFilters, setMobileFilters] = React.useState(false);
 
   const jobs = useJobs(tab === "discover" ? filters : { size: filters.size, page: filters.page });
-  const saved = useSavedJobs();
+  // Both tabs send the panel. The shelf answers it in SQL now (74.1), so the bookmarks that come
+  // back are the ones the reader asked about -- and this screen no longer decides which rows match.
+  const saved = useSavedJobs(tab === "saved" ? filters : undefined);
   const resumes = useResumes();
   const firstResumeId = resumes.data?.items?.[0]?.id ?? null;
   const resume = useResume(firstResumeId);
@@ -82,31 +84,25 @@ export default function JobsPage() {
   );
 
   const active = tab === "discover" ? jobs : saved;
-  // `GET /jobs/saved` accepts no query parameters and returns the whole bookmark set,
-  // so on this tab the panel's predicates run here over rows already in hand —
-  // otherwise every control still moves the URL while the wire carries nothing.
-  // Discover keeps filtering in SQL; both tabs read the same filter values.
+  // The answer is the whole (filtered) shelf, because the route reads no window yet; the URL's page
+  // and size are still cut here, and 74.2 moves that to the server with a real total.
   const savedPage = React.useMemo(
-    () => (saved.data ? filterAndPaginate(saved.data.items, filters) : undefined),
+    () => (saved.data ? windowSavedRows(saved.data.items, filters) : undefined),
     [saved.data, filters]
   );
   // Only `data` is swapped, and react-query's result is a discriminated union the
   // spread cannot re-narrow on its own, so the swap is asserted back into shape.
   const listView = tab === "saved" ? ({ ...saved, data: savedPage } as typeof saved) : jobs;
   const total = listView.data?.total ?? 0;
-  // Empty means two different things on the Saved tab and only one of them is "you
-  // have saved nothing": a filter can empty a list that still has rows behind it.
-  const savedFilteredToEmpty =
-    tab === "saved" && hasActiveJobFilters(filters) && (saved.data?.items.length ?? 0) > 0;
-  // Discover cannot tell "filters emptied it" from "the board is empty": the filtered
-  // answer never says how many rows sit behind the filter. What it can tell is whether
-  // any filter is set, and with none set the copy must not blame them for the emptiness.
-  const discoverFilteredToEmpty = tab === "discover" && hasActiveJobFilters(filters);
+  // Both tabs now ask the server the same question, and a filtered answer says nothing about how
+  // many rows sit behind the filter. What either tab can say is whether a filter is set -- and with
+  // none set the copy must not blame them for the emptiness.
+  const filteredToEmpty = hasActiveJobFilters(filters);
   // The same correction as the applications board, over the window both tabs share: the
   // answer's own window is the divisor (`data.size`) and `lastPageOf`
   // (lib/page-window.ts) is that rule in one place, so a past-the-end page lands on the
-  // last page that exists. On Saved the window is the client's and `filterAndPaginate`
-  // already clamps, so the write there only names the page the clamp already chose. A
+  // last page that exists. On Saved the window is still the client's and `windowSavedRows`
+  // already clamps, so the write there only names the page the clamp chose. A
   // layout effect, because the stale commit paints its empty copy first -- React flushes
   // this update before the browser paints, so the wrong screen is replaced, not seen.
   const lastPage = listView.data ? lastPageOf(total, listView.data.size) : 0;
@@ -172,6 +168,9 @@ export default function JobsPage() {
                 <TabsTrigger value="saved">
                   <Bookmark aria-hidden />
                   {t("jobs.savedTab")}
+                  {/* The shelf is filtered on the wire now (74.1), so this is the number of
+                      bookmarks that answer the panel -- the same count the panel prints -- rather
+                      than the size of the whole shelf. */}
                   {saved.data?.total ? (
                     <span className="ml-1 text-2xs text-muted-foreground tabular-nums">{saved.data.total}</span>
                   ) : null}
@@ -179,8 +178,9 @@ export default function JobsPage() {
               </TabsList>
             </Tabs>
 
-            {/* Ordering is a Discover question: the Saved tab pages the bookmark set it
-                already has, so a sort there would move the URL and nothing else. */}
+            {/* Ordering is a Discover question: the shelf answers the panel's predicates but no
+                sort, so a sort here would move the URL and nothing else -- 74.2 is where the Saved
+                tab gets an ordering of its own, along with the window it needs one for. */}
             {tab === "discover" && (
               <div className="flex items-center gap-2">
                 <Label htmlFor="jobs-sort" className="text-xs text-muted-foreground">
@@ -210,7 +210,7 @@ export default function JobsPage() {
             skeleton={<LoadingJobCardSkeleton count={4} />}
             className="gap-3"
             empty={
-              tab === "saved" && savedFilteredToEmpty
+              tab === "saved" && filteredToEmpty
                 ? {
                     icon: <SlidersHorizontal aria-hidden />,
                     title: t("jobs.noSavedMatch"),
@@ -232,7 +232,7 @@ export default function JobsPage() {
                         </Button>
                       ),
                     }
-                  : discoverFilteredToEmpty
+                  : filteredToEmpty
                     ? {
                         icon: <Briefcase aria-hidden />,
                         title: t("jobs.boardIsQuiet"),

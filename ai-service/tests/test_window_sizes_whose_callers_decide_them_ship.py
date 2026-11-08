@@ -12,7 +12,10 @@ conversations 20, activity runs 30, contacts 50 (72.1, when the registry stopped
 list and its count query began narrowing with the same needle as its rows) -- since #225 the feed's literal, replacing the
 `{ limit: params?.limit }` it sent while `/activity/runs` was the one window the server still
 decided. `useSavedJobs` is the only hook that sends no window at all, because its route binds none
-and answers a bare list. 19.5 made the run history the eleventh: `useIngestionRuns` asks with the
+and answers a bare list. 74.1 gave that same route the panel's other seven keys, so the hook now
+sends a query -- the board's own `serializeJobFilters` object, with `page`, `size` and `sort`
+stripped because the shelf reads neither a window nor an ordering -- and it is still the only
+hook with no window, for the same reason as before. 19.5 made the run history the eleventh: `useIngestionRuns` asks with the
 same `{ size: 20, ...(params ?? {}) }` shape every board uses, replacing the `limit` the hook used
 to name while `GET /ingestion/runs` was a newest-N history. 20.1 made the nightly history the
 twelfth, and the first outside `resources.ts`: `useNightlyReports` lives in `monitoring.ts` beside
@@ -113,7 +116,11 @@ MAX_PAGE_SIZE = 100
 WIRE = {
     "useResumes": ("resumes", "{ size: 20, ...(params ?? {}) }"),
     "useJobs": ("jobs", "{ size: 20, ...clean }"),
-    "useSavedJobs": ("savedJobs", None),
+    # 74.1: the shelf reads the panel now, so its hook sends the same serialized filter object the
+    # board sends -- with the window and the ordering stripped, because this route binds neither. The
+    # params gate cannot see through a function call any more than through `...clean`, and the reason
+    # it stays quiet lives in endpoints.test.ts's unreadable list.
+    "useSavedJobs": ("savedJobs", "{ ...serializeJobFilters({ ...params, page: undefined, size: undefined, sort: undefined }), }"),
     # 5080e67 spelled the board's query out (status and jobId beside page and size) when the
     # drawer's delete joined this gate; the hook still defaults the window to the route's 50.
     # 70.2 adds the board's own word: spelled like the other four, because a spread is a key this
@@ -159,7 +166,7 @@ SITES = {
     "useJobs": [("app/(app)/dashboard/page.tsx", "{ size: 3 }"),
                 ("app/(app)/jobs/page.tsx",
                  'tab === "discover" ? filters : { size: filters.size, page: filters.page }')],
-    "useSavedJobs": [("app/(app)/jobs/page.tsx", "")],
+    "useSavedJobs": [("app/(app)/jobs/page.tsx", 'tab === "saved" ? filters : undefined')],
     "useApplications": [("app/(app)/applications/page.tsx",
                          # 70.2 gives the pipeline board the question its route has answered since
                          # 58.1's rule reached it (70.1): the words ride beside the window, so the
@@ -518,9 +525,17 @@ def test_the_literals_every_caller_shadows_and_none_without_a_caller():
 
 
 def test_the_spread_that_shadows_the_jobs_20_carries_the_callers_size_unchanged():
-    """Case 4: `serializeJobFilters` renames three keys and drops three value kinds; `size` is neither."""
-    body = function_body(read(NORMALIZE),
-                         "export function serializeJobFilters(params: object): Record<string, unknown> {")
+    """Case 4: `serializeJobFilters` renames three keys and drops three value kinds; `size` is neither.
+
+    The signature is part of what this case reads: 74.1 put the serializer's answer on a second
+    route, and the type a caller has to spread it through is the difference between a query
+    parameter and a compiler argument. The renames and the drop set are unchanged, which is the
+    claim -- a value this function cannot inspect is a value it cannot lose.
+    """
+    body = function_body(
+        read(NORMALIZE),
+        "export function serializeJobFilters(params: object): "
+        "Record<string, string | number | boolean | undefined> {")
     renamed = sorted(set(re.findall(r'k === "(\w+)"', body)))
     assert renamed == ["max_salary", "min_salary", "remote"], \
         f"the rename set grew, so a key this file calls a pass-through may now be rewritten: {renamed}"

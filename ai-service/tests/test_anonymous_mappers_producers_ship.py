@@ -168,8 +168,11 @@ READER_VOCABULARY = {"list": "listOf", "pick": "pick", "str": "str", "num": "num
 # Which files outside resources.ts name a hook (the reach), and what those screens read.
 CALLERS = {
     # The jobs page's own board test stubs this hook so the page renders its empty state;
-    # it names `useSavedJobs` without mounting a second screen.
-    "useSavedJobs": ["app/(app)/jobs/page.test.tsx", "app/(app)/jobs/page.tsx"],
+    # it names `useSavedJobs` without mounting a second screen. 74.1 adds a third name for the
+    # same reason -- job-filter.test.ts reads the page's source and pins that the panel rides to
+    # this hook -- so it, too, names the call without mounting anything.
+    "useSavedJobs": ["app/(app)/jobs/page.test.tsx", "app/(app)/jobs/page.tsx",
+                     "lib/job-filter.test.ts"],
     "useConversations": ["app/(app)/copilot/page.tsx"],
     "useKnowledgeNotes": ["components/knowledge/notes-panel.tsx"],
     "useAIUsage": ["app/(app)/dashboard/page.tsx"],

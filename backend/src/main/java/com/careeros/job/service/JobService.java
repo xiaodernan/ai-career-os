@@ -220,40 +220,28 @@ public class JobService {
         return new MatchResponse(match, matchId, Json.obj(result.get("jd")));
     }
 
+    /**
+     * The reader's bookmarks, narrowed by the filter panel's own predicates (74.1).
+     *
+     * <p>One statement, whatever N is. The three-read batch this replaces was itself an N+1 fix and
+     * it stayed correct -- but it decided nothing about <em>which</em> rows matched, because the
+     * route bound no predicates at all, so the browser kept its own copy of the board's WHERE
+     * ({@code frontend/src/lib/job-filter.ts}) and that copy drifted: the same word in the same box
+     * searched title and company on the Saved tab and title, company <em>and</em> description on
+     * Discover. A read that answers the panel's question cannot drift, because there is one answer
+     * to read.
+     *
+     * <p>`status` is not among the predicates because the panel never sends it, on either tab --
+     * adding a parameter no caller passes would be the same invention the client's copy of the
+     * filter was, only on the other side of the wire.
+     */
     @Transactional(readOnly = true)
-    public List<SavedJobItem> saved(UUID userId) {
-        List<SavedJob> saved = savedJobs.findByUserIdOrderByCreatedAtDesc(userId);
-        if (saved.isEmpty()) {
-            return List.of();
-        }
-        // Batched lookups, not per-row ones. The previous shape called jobs.findById and
-        // companies.findById inside the map, so a list of N bookmarks cost 1 + 2N queries
-        // (PRD §36 calls out N+1 explicitly). Three queries now, whatever N is; the saved
-        // order is preserved because we still iterate `saved`.
-        Map<UUID, Job> jobsById = jobs.findAllById(
-                        saved.stream().map(SavedJob::getJobId).collect(Collectors.toSet()))
-                .stream().collect(Collectors.toMap(Job::getId, j -> j));
-
-        Set<UUID> companyIds = jobsById.values().stream()
-                .map(Job::getCompanyId).filter(Objects::nonNull).collect(Collectors.toSet());
-        Map<UUID, String> companyNames = companyIds.isEmpty() ? Map.of()
-                : companies.findAllById(companyIds).stream()
-                        .collect(Collectors.toMap(Company::getId, Company::getName));
-
-        return saved.stream()
-                .map(s -> {
-                    Job job = jobsById.get(s.getJobId());
-                    if (job == null) {
-                        return null;
-                    }
-                    // Guard the null id explicitly: Map.of() is immutable and its
-                    // getOrDefault rejects a null key with an NPE, so a job without a
-                    // company would blow up the whole list rather than render unnamed.
-                    UUID companyId = job.getCompanyId();
-                    String name = companyId == null ? "" : companyNames.getOrDefault(companyId, "");
-                    return new SavedJobItem(toItem(job, name), s.getNote(), s.getCreatedAt());
-                })
-                .filter(Objects::nonNull)
+    public List<SavedJobItem> saved(UUID userId, String q, List<String> skills, String location,
+                                    String remote, String company, Integer minSalary,
+                                    Integer maxSalary) {
+        return search.saved(new JobSearchRepository.SavedBoard(userId, q, skills, location, remote,
+                company, minSalary, maxSalary)).stream()
+                .map(r -> new SavedJobItem(r.job(), r.note(), r.savedAt()))
                 .toList();
     }
 

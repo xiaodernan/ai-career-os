@@ -45,7 +45,8 @@ docstring says a negative page is passed through because "the window it reports 
 the Discover tab the window is the server's (`num(raw, "page")`) and `?size=5000` asks for 5000 rows,
 gets the 100 the ceiling allows, and then `total > filters.size` is false, so the pager that would
 reach row 101 is never rendered. On the Saved tab the same URL number drives the client-side window:
-`filterAndPaginate` refuses a non-positive size and falls back to `filtered.length || 1`, so all the
+`windowSavedRows` (named for what 74.1 left it doing) refuses a non-positive size and falls back
+to `items.length || 1`, so all the
 rows show, while `<Pagination>` is handed `size={0}` and prints `from = 0 * 0 + 1`, `to = min(total,
 1 * 0)` -- "1-0 of 7" over a list that is showing seven. The saved hook's own comment already
 concedes the wire half ("a page size here would be a number the server never reads"); this file pins
@@ -55,7 +56,7 @@ Nothing about `?size=` policy is fixed here: the jobs pager that `?size=5000` hi
 decision. What lands is the measurement, per name and per file, from one walk.
 
 Since that walk the pager has stopped deriving its own window: `pageWindow` (lib/page-window.ts)
-holds the arithmetic, and it floors the divisor `filterAndPaginate` refuses to floor -- so the
+holds the arithmetic, and it floors the divisor `windowSavedRows` refuses to floor -- so the
 disagreement this file measured is closed rather than merely described, by the same rule the nine
 past-the-end corrections call.
 """
@@ -578,15 +579,20 @@ def test_the_url_number_that_reaches_the_pager_has_no_floor_and_no_ceiling():
 
 
 def test_the_size_zero_window_is_floored_in_the_one_place_both_clamps_read():
-    """Case 11: filterAndPaginate refuses a non-positive window; the shared rule floors it."""
-    filtered = function_body(read(JOB_FILTER), "export function filterAndPaginate(")
+    """Case 11: the client-side windower refuses a non-positive window; the shared rule floors it.
+
+    74.1 took the filtering half of this function away and left the windowing half exactly as this
+    case reads it -- which is the point: a `?size=0` in the address bar still has to land on a
+    window the pager can print honestly, whether or not the rows inside it were chosen here.
+    """
+    filtered = function_body(read(JOB_FILTER), "export function windowSavedRows(")
     assert re.search(r"const size = filters\.size && filters\.size > 0 \? filters\.size : "
-                     r"filtered\.length \|\| 1;", filtered), (
+                     r"items\.length \|\| 1;", filtered), (
         f"the client window no longer falls back off a 0 size: {filtered[:200]}")
     assert re.search(r"const page = Math\.min\(Math\.max\(0, filters\.page \?\? 0\), lastPage\);",
                      filtered), "the client page index is no longer clamped"
-    assert re.search(r"total: filtered\.length,\s*page,\s*size,", filtered), (
-        "filterAndPaginate no longer returns its own honest window in the envelope shape, which "
+    assert re.search(r"total: items\.length,\s*page,\s*size,", filtered), (
+        "windowSavedRows no longer returns its own honest window in the envelope shape, which "
         "is the number the pager is not given")
     pgn = read(PAGINATION)
     assert "Math.ceil" not in pgn, (
@@ -601,11 +607,17 @@ def test_the_size_zero_window_is_floored_in_the_one_place_both_clamps_read():
         "the label's upper bound moved")
     assert re.search(r"Math\.max\(1, size\)", helper), (
         "the shared rule no longer floors the divisor, so the pager would divide by the very "
-        "size zero filterAndPaginate refuses")
+        "size zero windowSavedRows refuses")
 
 
 def test_the_bare_list_route_binds_no_window_at_all_so_its_hook_cannot_ask_for_one():
-    """Case 12: /jobs/saved takes only the caller, while /jobs binds page and size."""
+    """Case 12: /jobs/saved takes the caller and the panel, and still no window; /jobs binds both.
+
+    74.1 put seven of the panel's keys on this signature. What did not move is the sentence this
+    case was written for: the shelf answers whole, so a `page`/`size` in the request would be a
+    number the server never reads -- which is why the hook strips them, pinned below from the same
+    walk. A route that gained a window has to take this case's reason with it, and the strip too.
+    """
     gets = spring_gets()
     saved = gets[endpoint_path("savedJobs")]
     assert len(saved) == 1 and saved[0][0].startswith("List<"), saved
@@ -613,8 +625,15 @@ def test_the_bare_list_route_binds_no_window_at_all_so_its_hook_cannot_ask_for_o
     text = java(controller)
     at = text.index(f"{ret} {handler}(")
     params = top_level_args(text, text.index("(", at))
-    assert [p.split()[-1] for p in params] == ["user"], (
+    bound = [p.split()[-1] for p in params]
+    assert bound == ["user", "q", "skills", "location", "remote", "company",
+                     "minSalary", "maxSalary"], (
         f"/jobs/saved now binds {[p for p in params]}")
+    assert not {"page", "size"} & set(bound), (
+        "the shelf gained a window, so the hook's strip and this case's reason both move")
+    assert "page: undefined, size: undefined" in read(RESOURCES), (
+        "the route binds no window but the hook no longer strips one, so a URL number would ride "
+        "to a parameter Spring drops")
     jobs = gets[endpoint_path("jobs")]
     assert len(jobs) == 1, jobs
     ret, handler, controller = jobs[0]

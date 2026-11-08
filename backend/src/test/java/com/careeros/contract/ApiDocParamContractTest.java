@@ -47,8 +47,8 @@ class ApiDocParamContractTest {
     private static final String API_PREFIX = "/api/v1";
 
     /** Rows that must keep spelling their parameters out, so the gate cannot be dodged by deleting the list. */
-    private static final List<String> MUST_DOCUMENT = List.of("/jobs", "/applications", "/companies",
-            "/activity/runs", "/search", "/memories", "/knowledge/sources");
+    private static final List<String> MUST_DOCUMENT = List.of("/jobs", "/jobs/saved", "/applications",
+            "/companies", "/activity/runs", "/search", "/memories", "/knowledge/sources");
 
     @Test
     void everyParameterTheDocAdvertisesIsOneTheEndpointBinds() {

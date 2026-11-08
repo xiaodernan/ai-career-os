@@ -4995,6 +4995,35 @@ this epic had truncated the long-term development plan under
   per epic, reddening on a double insertion or on an entry that loses its
   prefix.)
 
+## Epic 74 -- the saved tab asks the same question
+
+Epic 70 gave four boards a word and Epic 72 gave the registry a window. The inventory that opened
+Epic 74 walked every repository method that answers a `List` and asked which of them a browser
+renders whole; the answer is a short list, and one name on it is not a bug but a split personality:
+`GET /jobs/saved` binds no parameter at all, so the Jobs page runs the filter panel's predicates a
+second time in the browser (`lib/job-filter.ts` says so in its own header -- "Local filtering for a
+set the server already handed over whole"). The consequence the reader feels is that the *same* word
+in the *same* box has two meanings: on Discover it is `tsv @@ plainto_tsquery` over the description
+too, on Saved it is a `contains` over title and company only, so a bookmark whose only "postgres" is
+in its body disappears -- and the mirror's own comment calls that "narrower than Discover, never
+wider", which is a documented divergence rather than a fix. `status` is not mirrored at all. The
+panel's salary boxes are mirrored, its chips are mirrored, and `total` on that tab is a number the
+client made up. This epic makes the Saved tab answer like the board it sits on, in the same two steps
+70 and 72 used: the route learns the predicates, then it learns the window.
+
+- [x] **74.1** `GET /jobs/saved` answers the panel's predicates (measured 2026-11-09).
+
+  (The saved board reads the same rows the discover board filters, so it binds the same fragments:
+  the statement joins `saved_jobs` to `jobs` and `companies`, scopes by `sj.user_id`, and appends
+  `JobSearchRepository`'s own `applyWhere` rather than a paraphrase of it. The mirror module then
+  stops deciding which rows match, and a word means one thing on both tabs.
+  Measured on the real stack by `SavedJobBoardIT` (4/4 green: one word, both tabs; every panel
+  control; scope; needle safety) plus `JobSearchRepositoryTest`; full suites green.)
+
+- [ ] **74.2** The Saved tab reads a window it did not count itself.
+
+  (A page the server never read is a number the pager cannot be trusted for; with the predicates on
+  the wire the window can follow, and `filterAndPaginate` loses the last half it still owned.)
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

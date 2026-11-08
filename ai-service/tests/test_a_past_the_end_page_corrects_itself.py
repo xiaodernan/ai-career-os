@@ -16,7 +16,7 @@ first: React flushes a layout
 effect's state update before the browser paints, so the wrong screen is replaced, not seen.
 
 The Saved tab needs no second mechanism: its window is computed client-side
-(`filterAndPaginate`) and already clamps the page index, so the correction there writes the page
+(`windowSavedRows`) and already clamps the page index, so the correction there writes the page
 the clamp already chose -- the URL heals, the screen does not move. `?size=` policy and the
 pagers' own numbers stay owner decisions (#194, #195); this file pins only the correction.
 """
@@ -105,13 +105,19 @@ def test_the_divisor_floors_at_one_because_the_empty_window_can_report_size_zero
 
 
 def test_the_saved_tabs_window_already_clamps_so_the_same_correction_is_idempotent_there():
-    """Case 4: on Saved the answer is `filterAndPaginate`'s window, whose page index is
+    """Case 4: on Saved the answer is `windowSavedRows`'s window, whose page index is
     clamped to the same last page the correction computes -- so the effect's write there
     names the page the clamp already chose (#194 case 7 pins the clamp itself; this binds
-    it as the correction's Saved half, reachable through the `listView` swap)."""
+    it as the correction's Saved half, reachable through the `listView` swap).
+
+    74.1 renamed the function and emptied it of the other half: the shelf's rows arrive already
+    narrowed by the route, so what is left to window is what the client still decides, and what
+    decided which rows belong is not. The clamp is the part this case reads, and it is the part
+    that survived -- which is the whole reason a past-the-end URL still lands on a real page.
+    """
     filtered = read(JOB_FILTER)
-    assert re.search(r"const lastPage = lastPageOf\(filtered\.length, size\);",
-                     filtered), "filterAndPaginate no longer derives its own last page"
+    assert re.search(r"const lastPage = lastPageOf\(items\.length, size\);",
+                     filtered), "windowSavedRows no longer derives its own last page"
     assert re.search(r"const page = Math\.min\(Math\.max\(0, filters\.page \?\? 0\), lastPage\);",
                      filtered), (
         "the client window no longer clamps the page index, so the Saved correction would "
@@ -119,7 +125,7 @@ def test_the_saved_tabs_window_already_clamps_so_the_same_correction_is_idempote
     page = read(JOBS_PAGE)
     assert re.search(
         r"const savedPage = React\.useMemo\(\n"
-        r"\s*\(\) => \(saved\.data \? filterAndPaginate\(saved\.data\.items, filters\) : undefined\),",
+        r"\s*\(\) => \(saved\.data \? windowSavedRows\(saved\.data\.items, filters\) : undefined\),",
         page), "the Saved window is no longer the answer the correction reads"
     assert re.search(
         r"const listView = tab === \"saved\" \? \(\{ \.\.\.saved, data: savedPage \} as typeof saved\) : jobs;",

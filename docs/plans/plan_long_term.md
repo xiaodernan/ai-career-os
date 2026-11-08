@@ -1287,6 +1287,25 @@
     只留一份，放在 Epic 72 之后并标记关闭；给台账加了闸门 `tests/test_the_roadmap_names_each_epic_once.py`
     （每个 `## Epic N` 只能出现一次，双插入或丢前缀都会红），两个变异探针实测变红。
 
+- **Epic 74 — 收藏的那半板也会答同一个问题**（本段起）
+  - 盘点结论（2026-11-08）：把后端所有回答 `List` 的仓储方法过一遍，问「哪一条被浏览器整份画出来」，
+    名单不长，但其中一个不是缺陷而是人格分裂：`GET /jobs/saved` 一个参数都不绑，于是职位页在浏览器里
+    把筛选面板的那套判断又跑了一遍——`lib/job-filter.ts` 的文件头自己就写着「为服务端已经整份交来的集合
+    做本地筛选」。读者真正感觉到的是：同一个框里的同一个词在两个标签页有两种含义。发现页是
+    `tsv @@ plainto_tsquery`，正文也算；收藏页是 `contains`，只看标题和公司名，于是唯一把 "postgres"
+    写在正文里的那条收藏会凭空消失——而那段镜像自己的注释把这称为「比发现页窄，不会更宽」，这是在给分歧
+    写说明书，不是在修它。`status` 干脆没有镜像。薪资框镜像了，技能 chip 镜像了，而这一页的 `total`
+    是客户端自己编的。本 epic 按 Epic 70/72 已经验证过的两步走：先让路线学会判断，再让它学会窗口。
+  - **74.1** `GET /jobs/saved` 答面板的判断（已落地，2026-11-09）：收藏板筛的就是发现板那批行，所以它绑的也该是
+    同一段碎片——语句把 `saved_jobs` 接到 `jobs` 与 `companies`，按 `sj.user_id` 收窄，然后追加
+    `JobSearchRepository.applyWhere` 自己，而不是它的一次转述。镜像模块从此不再决定哪些行算命中。
+    实测：`SavedJobBoardIT` 4/4 全绿（同一个词在两张标签页答同一批行、面板每一控件都收窄货架、
+    只看自己的书签、百分号/下划线都是字符），`JobSearchRepositoryTest`/`JobServiceSavedTest` 绿；
+    全量复核 **ai-service 2281 passed, 2 skipped / frontend 1162 ×3, tsc 干净, next build 通过 /
+    backend 1210 ×0 failures BUILD SUCCESS；npm audit 0 漏洞；SECURITY.md CORS 头列表补齐 X-Request-Id**。
+  - **74.2** 收藏页读一个自己没有数过的窗口（待做）：路线没读过的页数，分页器就不可信；判断上了线，
+    窗口就能跟上，`filterAndPaginate` 交出它最后还握着的那一半。
+
 ## 开发协议
 （每个任务）
 

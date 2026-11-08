@@ -246,20 +246,30 @@ export function useJob(id: string | null) {
   });
 }
 
-export function useSavedJobs() {
+export function useSavedJobs(params?: JobFilters) {
   return useQuery({
-    queryKey: ["saved-jobs"],
+    queryKey: ["saved-jobs", params],
     queryFn: async (): Promise<Page<Job>> =>
-      // GET /jobs/saved binds no parameters and answers with the whole bookmark list, so a page
-      // size here would be a number the server never reads. Each row is a SavedJobItem: the spread
-      // hands `job` to `normalizeJob`, which stops at the unwrap, so the two names the wrapper
-      // itself owns -- the note written at save time and when that was -- are read here.
-      normalizePage(await api.get<unknown>(endpoints.savedJobs), (j) => ({
-        ...normalizeJob(j),
-        saved: true,
-        note: str(j, "note"),
-        savedAt: str(j, "savedAt"),
-      })),
+      // The shelf answers the panel (74.1): the same keys the Discover board sends, so the same
+      // word means the same thing on both tabs. What this route does not read is stripped rather
+      // than sent -- the window, because it has none yet, and `sort`, because the shelf comes back
+      // in bookmark order. Spring drops a parameter it has no @RequestParam for, and a key that
+      // quietly does nothing is how a filter used to look applied while the rows never moved.
+      // 74.2 gives the route a window and an ordering, and this call back what it strips.
+      // Each row is a SavedJobItem: the spread hands `job` to `normalizeJob`, which stops at the
+      // unwrap, so the two names the wrapper itself owns -- the note written at save time and when
+      // that was -- are read here.
+      normalizePage(
+        await api.get<unknown>(endpoints.savedJobs, {
+          ...serializeJobFilters({ ...params, page: undefined, size: undefined, sort: undefined }),
+        }),
+        (j) => ({
+          ...normalizeJob(j),
+          saved: true,
+          note: str(j, "note"),
+          savedAt: str(j, "savedAt"),
+        })
+      ),
   });
 }
 

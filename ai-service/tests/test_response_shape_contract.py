@@ -1066,8 +1066,12 @@ def test_the_java_probe_reads_every_record_the_backend_declares():
     # else's rows stops being evidence.
     # 206 with 69.2's `NoteTagCount` (one label and how many notes carry it), which the tag
     # filter row reads from `GET /knowledge/notes/tags`.
-    assert len(declared) == 206, \
-        f"{len(declared)} records carry a declaration the shared opener reads, not the 206 measured"
+    # 208 with 74.1's `JobSearchRepository.SavedBoard` (the saved board's predicates — the
+    # panel's own vocabulary, never a limit) and `SavedRow` (the list item plus the two names
+    # the wrapper owns: the note written at save time and when). Neither reaches the wire; the
+    # walk reads declarations, so both join the receipt records above in being pinned here.
+    assert len(declared) == 208, \
+        f"{len(declared)} records carry a declaration the shared opener reads, not the 208 measured"
     problems, renamed = [], []
     for relative, record in declared:
         names = _record_components_at(relative, record)

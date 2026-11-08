@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 
 import com.careeros.job.repository.JobSearchRepository.Filters;
 import com.careeros.job.repository.JobSearchRepository.MatchStats;
+import com.careeros.job.repository.JobSearchRepository.SavedBoard;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 import java.time.OffsetDateTime;
@@ -430,5 +431,101 @@ class JobSearchRepositoryTest {
                 .contains(":companyLike").contains(":minSalary").contains(":maxSalary")
                 .contains(":status").contains(":skills");
         assertThat(placeholders(sql)).isEqualTo(bound);
+    }
+
+    /**
+     * The clause list the panel contributed to a captured statement: everything from the first
+     * {@code AND} after that board's own WHERE head up to the ordering that follows it. The head is
+     * named rather than found by {@code lastIndexOf}, because the ranked board's last WHERE sits
+     * inside a ranking CTE and slicing there would compare the wrong text. The FROM and the WHERE
+     * head are the two boards' deliberate difference -- the shelf adds {@code saved_jobs} -- so what
+     * is left has to be byte-identical, because it is one fragment running twice rather than a
+     * paraphrase of it. Comparing the two statements the repository built is the point: a helper
+     * called twice on its own would say the same thing about itself no matter what either board did.
+     */
+    private static String filterClauses(String sql) {
+        int where = sql.indexOf("WHERE 1=1");
+        if (where < 0) {
+            where = sql.indexOf("WHERE sj.user_id = :userId");
+        }
+        assertThat(where).isGreaterThan(0);
+        int and = sql.indexOf(" AND ", where);
+        assertThat(and).isGreaterThan(where);
+        int order = sql.indexOf(" ORDER BY ", where);
+        int limit = sql.indexOf(" LIMIT ", where);
+        int end = sql.length();
+        if (order >= 0 || limit >= 0) {
+            end = order < 0 ? limit : (limit < 0 ? order : Math.min(order, limit));
+        }
+        return sql.substring(and, end).trim();
+    }
+
+    /** The panel's whole predicate set, spelled the same way for both boards. */
+    private static final String SHELF_Q = "java";
+    private static final List<String> SHELF_SKILLS = List.of("spring", "kafka");
+    private static final String SHELF_LOCATION = "Remote";
+    private static final String SHELF_REMOTE = "remote";
+    private static final String SHELF_COMPANY = "Acme";
+
+    private SavedBoard shelf() {
+        return new SavedBoard(userId, SHELF_Q, SHELF_SKILLS, SHELF_LOCATION, SHELF_REMOTE,
+                SHELF_COMPANY, 100, 200);
+    }
+
+    private Filters boardWithoutStatus() {
+        return new Filters(userId, SHELF_Q, SHELF_SKILLS, SHELF_LOCATION, SHELF_REMOTE,
+                SHELF_COMPANY, 100, 200, "", "posted", 0, 20, null);
+    }
+
+    @Test
+    void theSavedBoardBindsExactlyTheParametersItsSqlReferences() {
+        repo.saved(shelf());
+        String sql = capturedSql();
+        assertThat(placeholders(sql)).isEqualTo(bound);
+        assertThat(bound).containsExactlyInAnyOrder("userId", "q", "qLike", "locationLike", "remote",
+                "companyLike", "minSalary", "maxSalary", "skills");
+        assertThat(sql).contains("FROM saved_jobs sj").contains("JOIN jobs j ON j.id = sj.job_id")
+                .contains("WHERE sj.user_id = :userId");
+    }
+
+    /**
+     * The headline 74.1 exists for. The discover board and the shelf are two statements -- one
+     * answers the catalogue, one answers what the reader kept -- and every predicate after their
+     * differing FROM heads has to be the same text. A paraphrase would let a word mean
+     * "title or company" on one tab and "title, company or description" on the other, which is the
+     * divergence {@code lib/job-filter.ts} used to document as "narrower than Discover, never
+     * wider".
+     */
+    @Test
+    void theSavedBoardAppendsTheDiscoverBoardsOwnPredicateFragment() {
+        repo.search(boardWithoutStatus());
+        repo.saved(shelf());
+        ArgumentCaptor<String> statements = ArgumentCaptor.forClass(String.class);
+        verify(em, times(2)).createNativeQuery(statements.capture());
+        String discover = filterClauses(statements.getAllValues().get(0));
+        String shelf = filterClauses(statements.getAllValues().get(1));
+        assertThat(shelf).isEqualTo(discover);
+        // The description half, which the client's copy could never reach.
+        assertThat(discover).contains("j.tsv @@ plainto_tsquery('simple', :q)");
+    }
+
+    @Test
+    void theSavedBoardEndsItsOrderInTheBookmarkKeySoTheShelfIsATotalOrder() {
+        // `created_at` is a column default, so bookmarks written by one action share it to the
+        // microsecond; the old derived read ordered by that column alone.
+        repo.saved(shelf());
+        assertThat(orderByClause(capturedSql())).isEqualTo("sj.created_at DESC, sj.job_id ASC");
+    }
+
+    @Test
+    void theSavedBoardPagesNothingYetAndBindsNoWindow() {
+        // 74.1 moves the predicates and deliberately not the window: a server page over rows the
+        // panel still filtered in the browser would be a window on the wrong set. This case is the
+        // seam 74.2 has to break, and it breaks on purpose.
+        repo.saved(shelf());
+        String sql = capturedSql();
+        assertThat(sql).doesNotContain("LIMIT").doesNotContain("OFFSET");
+        assertThat(bound).doesNotContain("limit", "offset", "vec");
+        assertThat(sql).doesNotContain("job_matches");
     }
 }
