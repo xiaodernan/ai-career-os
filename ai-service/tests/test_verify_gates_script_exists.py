@@ -14,9 +14,10 @@ SCRIPT = ROOT / "scripts" / "verify_gates.ps1"
 
 
 def test_verify_gates_script_exists_and_is_representative() -> None:
-    assert SCRIPT.is_file(), "scripts/verify_gates.ps1 missing"
-    text = SCRIPT.read_text(encoding="utf-8", errors="replace")
-    assert "pytest" in text
-    assert "test_every_internal_route_requires_internal_auth.py" in text
-    assert "not a substitute" in text.lower() or "full suites" in text.lower()
-    assert "*IT" in text or "E2E" in text or "Docker" in text
+    for script in (ROOT / "scripts" / "verify_gates.ps1", ROOT / "scripts" / "verify_gates.sh"):
+        assert script.is_file(), f"{script.name} missing"
+        text = script.read_text(encoding="utf-8", errors="replace")
+        assert "pytest" in text
+        assert "test_every_internal_route_requires_internal_auth.py" in text
+        assert "not a substitute" in text.lower() or "full suites" in text.lower()
+        assert "*IT" in text or "E2E" in text or "Docker" in text
