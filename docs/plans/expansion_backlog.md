@@ -148,7 +148,9 @@
   referenced paths+ops modules exist and ops modules (`embed_jobs,seed_eval_corpus,check_export,
   nightly_report`) import cleanly; CI frontend adds non-blocking `npm audit --audit-level=high`
   visibility (blocking deferred until controlled remediation). Existing pip-audit gate remains.
-- **Doc integrity**: `README.md`/`docs/DEPLOYMENT.md` relative markdown doc links resolve.
+- **Doc/service integrity**: `README.md`/`docs/DEPLOYMENT.md` relative markdown doc links resolve;
+  `docs/architecture.md` key sections gate; every `ai-service/app/api` `APIRouter` declares `tags=`;
+  ai-service `main.py` forbids mock LLM/voice in prod and has no CORS middleware (internal-only).
 - **Worktree consolidation (2026-11-08, audited)**: committed detached worktree HEADs are
   ancestors of `main` (no merge required). Stale dirty `u256/wt` (372 behind, 667 files,
   large churn) not force-merged over 74.1 in-flight work.
