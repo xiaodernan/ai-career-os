@@ -22,7 +22,7 @@ import { relativeTime } from "@/lib/format";
 import { useJobs, useResumes, useResume, useSavedJobs } from "@/lib/hooks/resources";
 import { useUrlState } from "@/lib/hooks/use-url-state";
 import { useLocale } from "@/lib/i18n/locale-context";
-import { hasActiveJobFilters, profileSkillSuggestions, windowSavedRows } from "@/lib/job-filter";
+import { hasActiveJobFilters, profileSkillSuggestions } from "@/lib/job-filter";
 
 type FilterState = {
   q: string;
@@ -72,8 +72,10 @@ export default function JobsPage() {
   const [mobileFilters, setMobileFilters] = React.useState(false);
 
   const jobs = useJobs(tab === "discover" ? filters : { size: filters.size, page: filters.page });
-  // Both tabs send the panel. The shelf answers it in SQL now (74.1), so the bookmarks that come
-  // back are the ones the reader asked about -- and this screen no longer decides which rows match.
+  // Both tabs send the panel and the window. The shelf answers both in SQL now (74.1/74.2), so
+  // the bookmarks that come back are the ones the reader asked about, in one clamped page, with a
+  // count the server made -- and this screen no longer decides which rows match nor how the page is
+  // cut.
   const saved = useSavedJobs(tab === "saved" ? filters : undefined);
   const resumes = useResumes();
   const firstResumeId = resumes.data?.items?.[0]?.id ?? null;
@@ -83,16 +85,7 @@ export default function JobsPage() {
     [resume.data?.structured]
   );
 
-  const active = tab === "discover" ? jobs : saved;
-  // The answer is the whole (filtered) shelf, because the route reads no window yet; the URL's page
-  // and size are still cut here, and 74.2 moves that to the server with a real total.
-  const savedPage = React.useMemo(
-    () => (saved.data ? windowSavedRows(saved.data.items, filters) : undefined),
-    [saved.data, filters]
-  );
-  // Only `data` is swapped, and react-query's result is a discriminated union the
-  // spread cannot re-narrow on its own, so the swap is asserted back into shape.
-  const listView = tab === "saved" ? ({ ...saved, data: savedPage } as typeof saved) : jobs;
+  const listView = tab === "discover" ? jobs : saved;
   const total = listView.data?.total ?? 0;
   // Both tabs now ask the server the same question, and a filtered answer says nothing about how
   // many rows sit behind the filter. What either tab can say is whether a filter is set -- and with
@@ -101,10 +94,11 @@ export default function JobsPage() {
   // The same correction as the applications board, over the window both tabs share: the
   // answer's own window is the divisor (`data.size`) and `lastPageOf`
   // (lib/page-window.ts) is that rule in one place, so a past-the-end page lands on the
-  // last page that exists. On Saved the window is still the client's and `windowSavedRows`
-  // already clamps, so the write there only names the page the clamp chose. A
-  // layout effect, because the stale commit paints its empty copy first -- React flushes
-  // this update before the browser paints, so the wrong screen is replaced, not seen.
+  // last page that exists. Both windows are the server's (74.1 predicates, 74.2 window),
+  // and the total is the server's own COUNT, so the clamp only names the page the server
+  // would clamp to anyway. A layout effect, because the stale commit paints its empty copy
+  // first -- React flushes this update before the browser paints, so the wrong screen is
+  // replaced, not seen.
   const lastPage = listView.data ? lastPageOf(total, listView.data.size) : 0;
   React.useLayoutEffect(() => {
     if (listView.data && filters.page > lastPage) setFilters({ page: lastPage });
@@ -152,7 +146,7 @@ export default function JobsPage() {
               onApply={(next) => setFilters(next, { replaceAll: true })}
               skillSuggestions={suggestions}
               resultCount={listView.data ? total : undefined}
-              loading={active.isFetching}
+              loading={listView.isFetching}
             />
           </div>
         </aside>

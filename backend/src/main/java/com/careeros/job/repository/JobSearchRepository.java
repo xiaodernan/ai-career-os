@@ -55,18 +55,21 @@ public class JobSearchRepository {
     }
 
     /**
-     * What the Saved tab narrows by: the filter panel's own predicates and nothing else (74.1).
+     * What the Saved tab narrows by: the filter panel's own predicates and nothing else (74.1/74.2).
      *
-     * <p>A separate name rather than {@link Filters} because this board has no ranking, no sort and
-     * no window yet, and a caller should not have to invent values for components the statement
-     * never reads. {@link #asFilters()} is the one place those components are said to be unread.
+     * <p>A separate name rather than {@link Filters} because this board has no ranking and no sort, and
+     * a caller should not have to invent values for components the statement never reads.
+     * {@link #asFilters()} is the one place those components are said to be unread. The window, though,
+     * it reads: 74.2 gives the shelf a page the server answered, not a window the client cut after
+     * the fact, so the same two coordinates travel with the predicates.
      */
     public record SavedBoard(UUID userId, String q, List<String> skills, String location,
-                             String remote, String company, Integer minSalary, Integer maxSalary) {
+                             String remote, String company, Integer minSalary, Integer maxSalary,
+                             int page, int size) {
 
         /**
-         * The predicate half of the discover board's own parameter record. The four trailing
-         * components -- status, sort, window and vector -- are what {@code applyWhere} and
+         * The predicate half of the discover board's own parameter record. The three trailing
+         * components -- status, sort and vector -- are what {@code applyWhere} and
          * {@code bindFilterValues} provably do not read: both helpers test only the predicate names,
          * and {@code hybrid} is false without a vector, so no ranking fragment is ever built from
          * this. A blank status and a blank sort are therefore "no constraint", not a default the
@@ -74,7 +77,7 @@ public class JobSearchRepository {
          */
         Filters asFilters() {
             return new Filters(userId, q, skills, location, remote, company, minSalary, maxSalary,
-                    "", "", 0, 0, null);
+                    "", "", page, size, null);
         }
     }
 
@@ -215,20 +218,40 @@ public class JobSearchRepository {
      * {@code job_id} because {@code created_at} is a column default, so two rows written by one
      * action share it to the microsecond and would otherwise be ordered by whatever the visit
      * produced. {@code SavedJobRepository.findByUserIdOrderByCreatedAtDesc} ordered by that column
-     * alone, which is the shape this replaces.
+     * alone, which is the shape this replaces. The ORDER BY ends in {@code job_id} so the paged
+     * answer is a partition of the shelf rather than of a plan's mood.
+     *
+     * <p>The window is the server's (74.2): {@code LIMIT :limit OFFSET :offset}, bound the way
+     * {@code search} binds it, against the same clamped {@link Paging} the URL controls -- so the
+     * count the client shows is a number the server itself counted, and the page the URL asks for
+     * is the page the answer carries.
      */
     public List<SavedRow> saved(SavedBoard b) {
         StringBuilder sql = new StringBuilder(SAVED_COLUMNS);
         Filters f = b.asFilters();
         applyWhere(f, sql);
         sql.append(" ORDER BY sj.created_at DESC, sj.job_id ASC");
+        sql.append(" LIMIT :limit OFFSET :offset");
         Query query = em.createNativeQuery(sql.toString());
-        // :userId has a referent here (the bookmark owner), unlike matchStats, and no window is
-        // bound because this statement does not page yet -- 74.2 gives it one.
-        query.setParameter("userId", b.userId());
-        bindFilterValues(f, query);
+        // :userId has a referent here (the bookmark owner), unlike matchStats; the window binds
+        // with everything else on this statement.
+        bind(f, query, Paging.of(f.page(), f.size()));
         return ((List<Object[]>) query.getResultList()).stream().map(JobSearchRepository::toSavedRow)
                 .toList();
+    }
+
+    /**
+     * The Saved tab's count, over the same fragment the page is read against: one number, the
+     * shelf's own reader's, narrowed by the panel -- the pager cannot promise rows the statement
+     * would not answer, because the two predicates are spelled out of one source.
+     */
+    public long savedCount(SavedBoard b) {
+        StringBuilder statement = new StringBuilder(SAVED_COUNT_WHERE);
+        Filters f = b.asFilters();
+        applyWhere(f, statement);
+        Query query = em.createNativeQuery(statement.toString());
+        bind(f, query, null);
+        return ((Number) query.getSingleResult()).longValue();
     }
 
     private static SavedRow toSavedRow(Object[] row) {
@@ -283,6 +306,14 @@ public class JobSearchRepository {
                    j.employment_type, j.salary_min, j.salary_max, j.salary_currency,
                    j.experience_years, j.status, j.source, j.external_url, j.posted_at,
                    j.skills, NULL, NULL, sj.note, sj.created_at
+              FROM saved_jobs sj
+              JOIN jobs j ON j.id = sj.job_id
+              JOIN companies c ON c.id = j.company_id
+             WHERE sj.user_id = :userId
+            """;
+
+    private static final String SAVED_COUNT_WHERE = """
+            SELECT COUNT(*)
               FROM saved_jobs sj
               JOIN jobs j ON j.id = sj.job_id
               JOIN companies c ON c.id = j.company_id

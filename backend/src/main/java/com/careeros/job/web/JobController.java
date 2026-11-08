@@ -59,21 +59,25 @@ public class JobController {
     }
 
     /**
-     * The Saved tab's board (74.1). The names are the filter panel's own and they bind the way the
-     * discover route binds them, because both tabs read the panel's state from one URL: a control
-     * that moves the address must move the answer with it, or the screen is showing a question the
-     * wire never got. No page or size yet -- 74.2 gives this route a window.
+     * The Saved tab's board (74.1/74.2). The names are the filter panel's own and they bind the way
+     * the discover route binds them, because both tabs read the panel's state from one URL: a
+     * control that moves the address must move the answer with it, or the screen is showing a
+     * question the wire never got. The window (74.2) is the same window the discover route reads:
+     * the count is the server's own COUNT(*) and the answer is one clamped page of the shelf.
      */
     @GetMapping("/saved")
-    public List<SavedJobItem> saved(@CurrentUser AuthUser user,
+    public PageDTO<SavedJobItem> saved(@CurrentUser AuthUser user,
                                     @RequestParam(required = false) String q,
                                     @RequestParam(required = false) List<String> skills,
                                     @RequestParam(required = false) String location,
                                     @RequestParam(required = false) String remote,
                                     @RequestParam(required = false) String company,
                                     @RequestParam(name = "minSalary", required = false) Integer minSalary,
-                                    @RequestParam(name = "maxSalary", required = false) Integer maxSalary) {
-        return jobs.saved(user.id(), q, skills, location, remote, company, minSalary, maxSalary);
+                                    @RequestParam(name = "maxSalary", required = false) Integer maxSalary,
+                                    @RequestParam(defaultValue = "0") int page,
+                                    @RequestParam(defaultValue = "20") int size) {
+        return jobs.saved(user.id(), q, skills, location, remote, company, minSalary, maxSalary,
+                page, size);
     }
 
     @PostMapping

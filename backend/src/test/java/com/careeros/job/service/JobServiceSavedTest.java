@@ -19,6 +19,7 @@ import com.careeros.job.repository.JobSearchRepository;
 import com.careeros.job.repository.JobSearchRepository.SavedBoard;
 import com.careeros.job.repository.JobSearchRepository.SavedRow;
 import com.careeros.job.repository.SavedJobRepository;
+import com.careeros.common.PageDTO;
 import com.careeros.resume.service.ResumeService;
 import com.careeros.search.service.QueryEmbeddingService;
 import com.careeros.support.TestTransactions;
@@ -78,25 +79,32 @@ class JobServiceSavedTest {
         when(search.saved(any(SavedBoard.class)))
                 .thenReturn(List.of(row("Backend Engineer", "a"), row("Data Engineer", "b"),
                         row("SRE", "c")));
+        when(search.savedCount(any(SavedBoard.class))).thenReturn(3L);
 
-        List<SavedJobItem> out = service.saved(userId, "java", List.of("spring"), "Remote",
-                "remote", "Acme", 40, 80);
+        PageDTO<SavedJobItem> out = service.saved(userId, "java", List.of("spring"), "Remote",
+                "remote", "Acme", 40, 80, 2, 5);
 
-        assertThat(out).extracting(i -> i.job().title())
+        // 74.2: the pager's number is the server's own COUNT, the page and size are the ones the
+        // URL asked for after the server clamped them, and items carry the rows themselves.
+        assertThat(out.page()).isEqualTo(2);
+        assertThat(out.size()).isEqualTo(5);
+        assertThat(out.total()).isEqualTo(3);
+        assertThat(out.items()).extracting(i -> i.job().title())
                 .containsExactly("Backend Engineer", "Data Engineer", "SRE");
-        assertThat(out).extracting(SavedJobItem::note).containsExactly("a", "b", "c");
+        assertThat(out.items()).extracting(SavedJobItem::note).containsExactly("a", "b", "c");
         // The read's own ordering is the answer's ordering; a service that sorted, filtered or
         // dropped rows here would be a second, drifting copy of the board's logic.
-        assertThat(out).allSatisfy(i -> assertThat(i.job().companyName()).isEqualTo("Acme"));
-        assertThat(out).allSatisfy(i -> assertThat(i.savedAt())
+        assertThat(out.items()).allSatisfy(i -> assertThat(i.job().companyName()).isEqualTo("Acme"));
+        assertThat(out.items()).allSatisfy(i -> assertThat(i.savedAt())
                 .isEqualTo(OffsetDateTime.parse("2026-01-03T04:05:06Z")));
     }
 
     @Test
     void noBookmarkJobOrCompanyRepositoryIsReachableFromTheList() {
         when(search.saved(any(SavedBoard.class))).thenReturn(List.of(row("SRE", null)));
+        when(search.savedCount(any(SavedBoard.class))).thenReturn(1L);
 
-        service.saved(userId, null, null, null, null, null, null, null);
+        service.saved(userId, null, null, null, null, null, null, null, 0, 20);
 
         // The batch this replaces needed findAllById on both tables; the join needs neither. Any
         // per-row path back through these mocks -- findById, findAllById, or the bookmark scan the
@@ -112,12 +120,14 @@ class JobServiceSavedTest {
     @Test
     void thePanelsWholeSetOfPredicatesRidesToTheReadUntouched() {
         when(search.saved(any(SavedBoard.class))).thenReturn(List.of());
+        when(search.savedCount(any(SavedBoard.class))).thenReturn(0L);
         List<String> skills = List.of("spring", "kafka");
 
-        service.saved(userId, "java", skills, "Remote", "hybrid", "Acme", 40, 80);
+        service.saved(userId, "java", skills, "Remote", "hybrid", "Acme", 40, 80, 3, 9);
 
         ArgumentCaptor<SavedBoard> board = ArgumentCaptor.forClass(SavedBoard.class);
         verify(search).saved(board.capture());
+        verify(search).savedCount(board.capture());
         assertThat(board.getValue().userId()).isEqualTo(userId);
         assertThat(board.getValue().q()).isEqualTo("java");
         assertThat(board.getValue().skills()).isEqualTo(skills);
@@ -126,13 +136,17 @@ class JobServiceSavedTest {
         assertThat(board.getValue().company()).isEqualTo("Acme");
         assertThat(board.getValue().minSalary()).isEqualTo(40);
         assertThat(board.getValue().maxSalary()).isEqualTo(80);
+        // 74.2: the window rides with the predicates, clamped by the service before it reaches SQL.
+        assertThat(board.getValue().page()).isEqualTo(3);
+        assertThat(board.getValue().size()).isEqualTo(9);
     }
 
     @Test
     void aBoxNobodyTypedIsHandedToTheReadAsNothingRatherThanAsAWildcard() {
         when(search.saved(any(SavedBoard.class))).thenReturn(List.of());
+        when(search.savedCount(any(SavedBoard.class))).thenReturn(0L);
 
-        service.saved(userId, null, null, null, null, null, null, null);
+        service.saved(userId, null, null, null, null, null, null, null, 0, 20);
 
         ArgumentCaptor<SavedBoard> board = ArgumentCaptor.forClass(SavedBoard.class);
         verify(search).saved(board.capture());
@@ -146,8 +160,9 @@ class JobServiceSavedTest {
     @Test
     void anEmptyShelfAnswersEmptyWithoutReachingForTheRowTables() {
         when(search.saved(any(SavedBoard.class))).thenReturn(List.of());
+        when(search.savedCount(any(SavedBoard.class))).thenReturn(0L);
 
-        assertThat(service.saved(userId, "java", List.of(), "Remote", null, null, null, null))
+        assertThat(service.saved(userId, "java", List.of(), "Remote", null, null, null, null, 0, 20).items())
                 .isEmpty();
 
         verify(jobs, never()).findAllById(any());

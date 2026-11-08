@@ -250,18 +250,17 @@ export function useSavedJobs(params?: JobFilters) {
   return useQuery({
     queryKey: ["saved-jobs", params],
     queryFn: async (): Promise<Page<Job>> =>
-      // The shelf answers the panel (74.1): the same keys the Discover board sends, so the same
-      // word means the same thing on both tabs. What this route does not read is stripped rather
-      // than sent -- the window, because it has none yet, and `sort`, because the shelf comes back
-      // in bookmark order. Spring drops a parameter it has no @RequestParam for, and a key that
-      // quietly does nothing is how a filter used to look applied while the rows never moved.
-      // 74.2 gives the route a window and an ordering, and this call back what it strips.
+      // The shelf answers the panel and the window (74.1/74.2): the same keys the Discover board
+      // sends, so the same word means the same thing on both tabs, and the page/size the URL asks
+      // for are the ones the server answers with — the pager's total is the server's own COUNT, not
+      // a number this file derives. `sort` is stripped: the shelf answers in bookmark order, and a
+      // sort word the route does not read is a key that quietly does nothing.
       // Each row is a SavedJobItem: the spread hands `job` to `normalizeJob`, which stops at the
       // unwrap, so the two names the wrapper itself owns -- the note written at save time and when
       // that was -- are read here.
       normalizePage(
         await api.get<unknown>(endpoints.savedJobs, {
-          ...serializeJobFilters({ ...params, page: undefined, size: undefined, sort: undefined }),
+          ...serializeJobFilters({ ...params, sort: undefined }),
         }),
         (j) => ({
           ...normalizeJob(j),

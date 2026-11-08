@@ -33,8 +33,9 @@ import org.springframework.test.web.servlet.MvcResult;
  * <p>The fragment itself is pinned without a database in {@code JobSearchRepositoryTest}, which
  * compares the two statements clause for clause; what belongs here is the answer, because
  * {@code j.tsv} is a generated column and its tokenisation is not something a captured string can
- * speak for. Comparisons are set comparisons on purpose: the order the shelf comes back in is 74.2's
- * claim, and a set is the half that is true today.
+ * speak for. 74.2 gave the route the window it always promised, so the shelf's order (newest
+ * bookmark first, ending in job_id so the answer is a partition of the shelf rather than a plan's
+ * mood) is pinned here too.
  */
 class SavedJobBoardIT extends ApiIntegrationTest {
 
@@ -67,8 +68,10 @@ class SavedJobBoardIT extends ApiIntegrationTest {
         for (int i = 0; i < extras.length; i += 2) {
             request = request.param(extras[i], extras[i + 1]);
         }
+        // The route now answers the same envelope every list route answers (74.2): one clamped
+        // page of the shelf plus the server's own COUNT(*). Read the items branch.
         return MAPPER.readTree(mvc.perform(request).andExpect(status().isOk())
-                .andReturn().getResponse().getContentAsString()).path("data");
+                .andReturn().getResponse().getContentAsString()).path("data").path("items");
     }
 
     private List<String> shelfIds(String auth, String... extras) throws Exception {
@@ -240,5 +243,39 @@ class SavedJobBoardIT extends ApiIntegrationTest {
         // typed, and the shelf answers everything it keeps.
         assertEquals(List.of(percent), shelfIds(auth, "q", "%"),
                 "a box of one percent sign answered a role that does not spell a percent sign");
+    }
+
+    @Test
+    @DisplayName("the shelf answers in bookmark order, one window at a time")
+    void theShelfIsNewestBookmarkFirstAndAnsweredInWindows() throws Exception {
+        String auth = "Bearer " + register("saved-order-" + UUID.randomUUID() + "@example.com");
+        String token = "so" + UUID.randomUUID().toString().replace("-", "").substring(0, 10);
+        String company = token + " Ordering Co";
+        String first = createRole(auth, Map.of("title", token + " First Kept",
+                "company", Map.of("name", company, "industry", "ai")));
+        // created_at is a column default, so two saves in quick succession share it to the
+        // microsecond; the ORDER BY ends in job_id to keep the partition total.
+        String second = createRole(auth, Map.of("title", token + " Second Kept",
+                "company", Map.of("name", company, "industry", "ai")));
+        String third = createRole(auth, Map.of("title", token + " Third Kept",
+                "company", Map.of("name", company, "industry", "ai")));
+        bookmark(auth, first, "one");
+        bookmark(auth, second, "two");
+        bookmark(auth, third, "three");
+
+        List<String> all = shelfIds(auth);
+        assertEquals(List.of(third, second, first), all,
+                "the shelf answered in anything but bookmark order (newest first, job_id breaking ties)");
+
+        // The window the URL asks for is the window the server answers with.
+        List<String> page1 = shelfIds(auth, "page", "0", "size", "2");
+        List<String> page2 = shelfIds(auth, "page", "1", "size", "2");
+        assertEquals(List.of(third, second), page1,
+                "the first window did not carry the newest bookmarks");
+        assertEquals(List.of(first), page2,
+                "the second window did not carry the row the first window could not");
+        java.util.Set<String> union = new java.util.LinkedHashSet<>(page1);
+        union.addAll(page2);
+        assertEquals(3, union.size(), "the two windows overlap; a window is a partition of the shelf");
     }
 }

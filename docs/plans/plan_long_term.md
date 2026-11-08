@@ -1303,8 +1303,16 @@
     只看自己的书签、百分号/下划线都是字符），`JobSearchRepositoryTest`/`JobServiceSavedTest` 绿；
     全量复核 **ai-service 2281 passed, 2 skipped / frontend 1162 ×3, tsc 干净, next build 通过 /
     backend 1210 ×0 failures BUILD SUCCESS；npm audit 0 漏洞；SECURITY.md CORS 头列表补齐 X-Request-Id**。
-  - **74.2** 收藏页读一个自己没有数过的窗口（待做）：路线没读过的页数，分页器就不可信；判断上了线，
-    窗口就能跟上，`filterAndPaginate` 交出它最后还握着的那一半。
+  - **74.2** 收藏页读一个自己没有数过的窗口（已落地，2026-11-09）：路线没读过的页数，分页器就不可信；判断上了线，
+    窗口就能跟上，`filterAndPaginate` 交出它最后还握着的那一半。`GET /jobs/saved` 现在绑 `page`/`size`
+    与面板判断，答复同一个 `Paging.of` 夹紧窗口（page 下限 0、size 上限 100），并以同一段 `WHERE` 的
+    `COUNT(*)` 给出 `total`——一个语句对两次读（行 + 总数），一个答案。`windowSavedRows` 连同它守的
+    那一半一起退休，收藏页与发现页读的是同一个包封（`{items,total,page,size}`）。
+    实测：`SavedJobBoardIT` 4/4 全绿（真实 Docker 栈），`JobSearchRepositoryTest` 断言 LIMIT/OFFSET
+    绑定与发现板 predicate 逐字节一致、COUNT 语句不绑窗口、ORDER BY 恒以 `sj.job_id ASC` 结尾；
+    `JobServiceSavedTest` 锁住 PageDTO 的 items/total/page/size 与 SavedBoard 的 page/size 原样直达 SQL；
+    全量复核 **ai-service 2281 passed, 2 skipped / frontend 1157 ×1（-5 个 windowSavedRows 用例）, npx tsc --noEmit 干净, npm next build 通过 /
+    backend 1210 ×0 failures BUILD SUCCESS；npm audit 0 漏洞**。
 
 ## 开发协议
 （每个任务）

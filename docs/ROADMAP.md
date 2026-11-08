@@ -5020,10 +5020,16 @@ client made up. This epic makes the Saved tab answer like the board it sits on, 
   Measured on the real stack by `SavedJobBoardIT` (4/4 green: one word, both tabs; every panel
   control; scope; needle safety) plus `JobSearchRepositoryTest`; full suites green.)
 
-- [ ] **74.2** The Saved tab reads a window it did not count itself.
+- [x] **74.2** The Saved tab reads a window it did not count itself (measured 2026-11-09).
 
   (A page the server never read is a number the pager cannot be trusted for; with the predicates on
-  the wire the window can follow, and `filterAndPaginate` loses the last half it still owned.)
+  the wire the window can follow, and `filterAndPaginate` loses the last half it still owned.
+  `GET /jobs/saved` now binds `page`/`size` alongside the panel's predicates, answers the same
+  clamped window every list route reads through `Paging.of` (page floored at 0, size capped at 100),
+  and reports the server's own `COUNT(*)` over the identical `WHERE` as `total`, in one
+  statement pair. The client's `windowSavedRows` is gone with the predicates it guarded; the Saved
+  tab reads the envelope exactly as the Discover tab does. Measured by
+  `SavedJobBoardIT` (4/4 green against the live stack) and the full suites, listed below.)
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

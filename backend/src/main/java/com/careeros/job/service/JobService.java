@@ -221,7 +221,8 @@ public class JobService {
     }
 
     /**
-     * The reader's bookmarks, narrowed by the filter panel's own predicates (74.1).
+     * The reader's bookmarks, narrowed by the filter panel's own predicates and answered with the
+     * window the URL asked for (74.1/74.2).
      *
      * <p>One statement, whatever N is. The three-read batch this replaces was itself an N+1 fix and
      * it stayed correct -- but it decided nothing about <em>which</em> rows matched, because the
@@ -234,15 +235,22 @@ public class JobService {
      * <p>`status` is not among the predicates because the panel never sends it, on either tab --
      * adding a parameter no caller passes would be the same invention the client's copy of the
      * filter was, only on the other side of the wire.
+     *
+     * <p>74.2: the pager's number is the server's own {@code COUNT(*)} over the same fragment, the
+     * rows are one window of the shelf in bookmark order, and the page/size the caller is told is
+     * the one the server clamped -- not a total the client derived after the fact.
      */
     @Transactional(readOnly = true)
-    public List<SavedJobItem> saved(UUID userId, String q, List<String> skills, String location,
-                                    String remote, String company, Integer minSalary,
-                                    Integer maxSalary) {
-        return search.saved(new JobSearchRepository.SavedBoard(userId, q, skills, location, remote,
-                company, minSalary, maxSalary)).stream()
+    public PageDTO<SavedJobItem> saved(UUID userId, String q, List<String> skills, String location,
+                                       String remote, String company, Integer minSalary,
+                                       Integer maxSalary, int page, int size) {
+        Paging.Window window = Paging.of(page, size);
+        var board = new JobSearchRepository.SavedBoard(userId, q, skills, location, remote,
+                company, minSalary, maxSalary, window.page(), window.size());
+        List<SavedJobItem> items = search.saved(board).stream()
                 .map(r -> new SavedJobItem(r.job(), r.note(), r.savedAt()))
                 .toList();
+        return PageDTO.of(items, search.savedCount(board), window.page(), window.size());
     }
 
     @Transactional

@@ -1,11 +1,8 @@
-import type { Job } from "@/lib/api/types";
 import type { JobFilters } from "@/lib/hooks/resources";
-import type { NormalizedPage } from "@/lib/api/normalize";
 import { normalizeStructuredResume, serializeJobFilters } from "@/lib/api/normalize";
-import { lastPageOf } from "@/lib/page-window";
 
 /**
- * The panel's own vocabulary, and the window the Saved tab still cuts locally.
+ * The panel's own vocabulary, and the predicates the server runs.
  *
  * <p>This module used to answer which rows match. It did so because
  * `GET /jobs/saved` bound no query parameters and handed back every bookmark, so the Jobs page had
@@ -15,10 +12,10 @@ import { lastPageOf } from "@/lib/page-window";
  * description text, and the list payload carries no description, so a word found a role on Discover
  * and lost it on Saved (74.1).
  *
- * <p>The route reads the panel now, so the mirror is gone: there is one predicate, it is SQL, and
- * both tabs read its answer. What remains here is what no server read can decide — how a salary box
- * turns into a number the route can bind, which controls count as "a filter is set", and the window
- * the Saved tab still pages by hand because its route answers the shelf whole (74.2 moves that too).
+ * <p>The route reads the panel now (74.1) and the window now (74.2), so the mirror and the local
+ * window are gone: there is one predicate, it is SQL, and both tabs read its answer. What remains
+ * here is what no server read can decide — how a salary box turns into a number the route can
+ * bind, which controls count as "a filter is set", and the skill chips the profile offers.
  */
 
 /** Wire-form filter: `page`/`size` are carried through and ignored here. */
@@ -52,31 +49,6 @@ export function hasActiveJobFilters(filters: JobFilters): boolean {
     const v = wire[k];
     return typeof v === "string" ? v.trim() !== "" : v != null;
   });
-}
-
-/**
- * The URL's window over rows the server already narrowed.
- *
- * The page index is clamped rather than trusted: the filter values live in the URL too, so a
- * reload of `?q=rust&page=3` points past a shelf that is now two bookmarks long. A clamped read
- * still shows those two and says so in the count, while an unclamped slice would render an empty
- * list under a pager that is already on the right page.
- *
- * <p>The order is the answer's. Nothing here sorts: a client that reordered the shelf would put the
- * paged windows out of step with each other, which is the defect every board in this app is guarded
- * against by ending its ORDER BY in the row's own id. That is 74.2's job — this function's whole
- * contract is to window and to change nothing else.
- */
-export function windowSavedRows(items: Job[], filters: JobFilters): NormalizedPage<Job> {
-  const size = filters.size && filters.size > 0 ? filters.size : items.length || 1;
-  const lastPage = lastPageOf(items.length, size);
-  const page = Math.min(Math.max(0, filters.page ?? 0), lastPage);
-  return {
-    items: items.slice(page * size, page * size + size),
-    total: items.length,
-    page,
-    size,
-  };
 }
 
 /**

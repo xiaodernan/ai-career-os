@@ -468,8 +468,10 @@ class JobSearchRepositoryTest {
     private static final String SHELF_COMPANY = "Acme";
 
     private SavedBoard shelf() {
+        // 74.2: page 2 of size 7 asks the server for rows 14..20, and the count is the server's own
+        // COUNT(*) over the same fragment.
         return new SavedBoard(userId, SHELF_Q, SHELF_SKILLS, SHELF_LOCATION, SHELF_REMOTE,
-                SHELF_COMPANY, 100, 200);
+                SHELF_COMPANY, 100, 200, 2, 7);
     }
 
     private Filters boardWithoutStatus() {
@@ -483,7 +485,7 @@ class JobSearchRepositoryTest {
         String sql = capturedSql();
         assertThat(placeholders(sql)).isEqualTo(bound);
         assertThat(bound).containsExactlyInAnyOrder("userId", "q", "qLike", "locationLike", "remote",
-                "companyLike", "minSalary", "maxSalary", "skills");
+                "companyLike", "minSalary", "maxSalary", "skills", "limit", "offset");
         assertThat(sql).contains("FROM saved_jobs sj").contains("JOIN jobs j ON j.id = sj.job_id")
                 .contains("WHERE sj.user_id = :userId");
     }
@@ -518,14 +520,38 @@ class JobSearchRepositoryTest {
     }
 
     @Test
-    void theSavedBoardPagesNothingYetAndBindsNoWindow() {
-        // 74.1 moves the predicates and deliberately not the window: a server page over rows the
-        // panel still filtered in the browser would be a window on the wrong set. This case is the
-        // seam 74.2 has to break, and it breaks on purpose.
+    void theSavedCountAndThePageReadCarryTheSameFragment() {
+        // 74.2: the pager's number and the rows on the page are two reads of one WHERE. If they
+        // ever diverge the pager promises rows the shelf would not draw.
+        repo.savedCount(shelf());
         repo.saved(shelf());
+        ArgumentCaptor<String> statements = ArgumentCaptor.forClass(String.class);
+        verify(em, times(2)).createNativeQuery(statements.capture());
+        String countSql = statements.getAllValues().get(0);
+        String pageSql = statements.getAllValues().get(1);
+
+        assertThat(countSql).contains("SELECT COUNT(*)").contains("WHERE sj.user_id = :userId")
+                .doesNotContain(" LIMIT ").doesNotContain(" OFFSET ").doesNotContain(" ORDER BY ");
+        assertThat(pageSql).contains("LIMIT :limit OFFSET :offset")
+                .contains(" ORDER BY sj.created_at DESC, sj.job_id ASC");
+        // The predicate region both statements share, byte for byte.
+        int countWhere = countSql.indexOf("WHERE sj.user_id = :userId");
+        int pageWhere = pageSql.indexOf("WHERE sj.user_id = :userId");
+        int pageOrder = pageSql.indexOf(" ORDER BY ", pageWhere);
+        assertThat(countSql.substring(countWhere).trim())
+                .isEqualTo(pageSql.substring(pageWhere, pageOrder).trim());
+    }
+
+    @Test
+    void theSavedCountWalksTheFragmentWithoutAWindow() {
+        // The pager's total is the count over the same predicates; it answers the whole matching
+        // shelf whatever window the URL asked for, and it never binds a limit of its own.
+        repo.savedCount(new SavedBoard(userId, SHELF_Q, null, null, null, null, null, null, 0, 0));
         String sql = capturedSql();
-        assertThat(sql).doesNotContain("LIMIT").doesNotContain("OFFSET");
-        assertThat(bound).doesNotContain("limit", "offset", "vec");
-        assertThat(sql).doesNotContain("job_matches");
+        assertThat(sql).doesNotContain("LIMIT").doesNotContain("OFFSET")
+                .contains("WHERE sj.user_id = :userId");
+        assertThat(bound).doesNotContain("limit", "offset");
+        // And it names the reader's own rows and no one else's, even with no predicates at all.
+        assertThat(sql).contains("sj.user_id = :userId");
     }
 }

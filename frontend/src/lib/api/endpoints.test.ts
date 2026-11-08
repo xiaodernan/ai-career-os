@@ -1162,8 +1162,8 @@ describe("endpoints ↔ backend route parity", () => {
     expect(new Set(handlers.map((h) => `${h.verb} ${h.pattern}`)).size).toBe(handlers.length);
     expect(handlers.flatMap((h) => h.unparsed)).toEqual([]);
     const bound = handlers.flatMap((h) => h.params);
-    expect(bound.length).toBe(66);
-    // 66 parameters in 25 distinct names, measured: the reader's whole answer rather than a spot
+    expect(bound.length).toBe(68);
+    // 68 parameters in 25 distinct names, measured: the reader's whole answer rather than a spot
     // check, so a signature shape it stops understanding shrinks this set instead of passing quiet
     // (#225 retired `limit` from `/activity/runs`, which now pages like every other list route;
     // 19.2 brought the name back for `GET /ingestion/runs` as a newest-N history, and 19.5 retired
@@ -1193,7 +1193,9 @@ describe("endpoints ↔ backend route parity", () => {
     // no window: the bookmark shelf gained `q`, `skills`, `location`, `remote`, `company`,
     // `minSalary` and `maxSalary` (59 -> 66). Every one of those names was already in this set —
     // what moved is that the shelf answers them itself, instead of the browser keeping a second
-    // copy of the board's WHERE clause to answer them after the fact.
+    // copy of the board's WHERE clause to answer them after the fact. 74.2 gave the shelf the
+    // same `page`/`size` pair every other list carries (66 -> 68); both names were already in
+    // this set.
     // The latest names are in it now.)
     expect(new Set(bound.map((p) => p.name))).toEqual(
       new Set([
@@ -1230,15 +1232,15 @@ describe("endpoints ↔ backend route parity", () => {
       "GET /interview/sessions q", "GET /resume-versions resumeId",
       // the citation deep link, named as a pair: the browser sends this key and this handler binds it
       "GET /knowledge/sources documentId"].forEach((p) => expect(pairs).toContain(p));
-    // The bookmark list is not paged by the server, and its query is a spread this reader cannot
-    // follow, so the `pairs` rule above has nothing to say about it -- and an assertion that is
-    // green because the reader found nothing is the thing this file keeps warning about. What it
-    // can say is read off the call site itself: the only route with no window must send no
-    // window. 74.2 gives the route a page and turns this strip back into a pair above.
+    // 74.2: the shelf is paged by the server now, so the window is a pair above, like every other
+    // list; the page-goes-nowhere rule that used to guard the strip is gone with it, and the `pairs`
+    // rule above says `page`/`size` are on both sides of the wire for this route too. The one key
+    // the shelf still strips is `sort` -- the route does not bind it, and a key that quietly does
+    // nothing is the defect this gate exists for. The call-site spread still absorbs `sort`.
     const shelf = callSites().filter((c) => c.path === "/jobs/saved").map((c) => c.query).join(" ");
     expect(shelf).not.toBe("");
-    expect(shelf).toContain("page: undefined");
-    expect(shelf).not.toMatch(/\b(?:page|size):\s*(?!undefined)\S/);
+    expect(shelf).toContain("sort: undefined");
+    expect(shelf).not.toMatch(/\bsort:\s*(?!undefined)\S/);
   });
 
   it("no dead routes that the backend removed (regression guards)", () => {
