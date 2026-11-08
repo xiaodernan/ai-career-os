@@ -122,3 +122,27 @@
 1. Keep shipping independent gates/hardening on `main` (no 74.1 conflicts).
 2. After 74.1 lands: full verification → measured status update → 74.2 → then select Epic 75/77
    slices that can be delivered with real gates in the current environment.
+
+## Measured progress (additive, verified)
+> Recorded 2026-11-08 (this session chain, `origin/main` advancing). Each item shipped with
+> a gate and destructive proof where applicable; 74.1 in-flight files were not touched.
+
+- **OpenAPI/agent/internal contract gates** (ai-service, pytest): route inventory fully
+  documented in OpenAPI; every OpenAPI operation has summary/description; route path hygiene;
+  every `/internal/*` route requires `require_internal` (62 routes, floor 50) — security gate.
+  AGENTS.md↔registry (26 tools, 8 subagents, bounds, memory 40, write set) and tool schema
+  invariants (strict object, required refs, async handlers, unique names, handoff enum).
+- **Doc↔reality/deploy gates**: `DEPLOYMENT.md` host ports vs dev/prod compose; `.env.prod.example`
+  covers compose.prod required vars and uses placeholders for sensitive keys; `.env.example`
+  covers dev compose vars; `SECURITY.md`/`RUNBOOK.md` required sections/anchors; expansion backlog
+  structure gate.
+- **Security/config hardening gates**: frontend `next.config.ts` baseline security headers
+  (XFO/XCTO/Referrer/Permissions/COOP/CORP/HSTS, all routes, `poweredByHeader:false`) regression
+  gate; prod compose data services (postgres/redis/minio) must not publish host ports; dev compose
+  data services must bind loopback.
+- **Schema/CI hygiene**: Flyway migration naming/version monotonicity gate; CI frontend adds
+  non-blocking `npm audit --audit-level=high` visibility (Epic 77; blocking deferred until
+  controlled remediation). Existing pip-audit gate remains in ai-service CI.
+- **Worktree consolidation (2026-11-08, audited)**: committed detached worktree HEADs are
+  ancestors of `main` (no merge required). Stale dirty `u256/wt` (372 behind) not force-merged
+  over 74.1 in-flight work.
